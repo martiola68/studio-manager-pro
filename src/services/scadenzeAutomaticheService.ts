@@ -427,25 +427,7 @@ export const scadenzeAutomaticheService = {
       errors: [],
     };
 
-  const tipi = await loadTipiScadenzeAttive();
-
-const targetNome = "presentazione dichiarazione annuale Iva (E' UNA PROVA DI ALERT AUTOMATICO)";
-
-const tipiIva = tipi
-  .filter((t) => (t.nome || "").toLowerCase().includes("iva"))
-  .map((t) => `${t.id} | ${t.nome} | attivo=${t.attivo} | data=${t.data_scadenza} | p1=${t.giorni_preavviso_1}`);
-
-result.errors.push(
-  `[DEBUG IVA ATTIVE] ${tipiIva.length > 0 ? tipiIva.join(" || ") : "nessuna scadenza IVA attiva caricata"}`
-);
-
-const targetPresente = tipi.some((t) => t.nome === targetNome);
-
-if (!targetPresente) {
-  result.errors.push(
-    `[DEBUG TARGET NON TROVATO] ${targetNome}`
-  );
-}
+const tipi = await loadTipiScadenzeAttive();
 
     for (const tipo of tipi) {
       try {
@@ -457,17 +439,15 @@ if (!targetPresente) {
         const preavviso1 = Number(tipo.giorni_preavviso_1 ?? 15);
         const preavviso2 = Number(tipo.giorni_preavviso_2 ?? 7);
 
-       if (tipo.nome === targetNome) {
-  const alreadySent1 = await alertAlreadySent(tipo.id, annoInvio, "preavviso_1");
+     if (tipo.id === "d47567fe-5faf-4c80-b1c6-d48dc1d26902") {
+  const alreadySentDebug = await alertAlreadySent(tipo.id, annoInvio, "preavviso_1");
 
   result.errors.push(
-    `[DEBUG] target trovato: id=${tipo.id} nome=${tipo.nome} data_scadenza=${tipo.data_scadenza} giorniMancanti=${giorniMancanti} preavviso1=${preavviso1} attivo=${tipo.attivo} alreadySent1=${alreadySent1}`
+    `[DEBUG TARGET] id=${tipo.id} nome=${tipo.nome} giorniMancanti=${giorniMancanti} preavviso1=${preavviso1} alreadySent=${alreadySentDebug}`
   );
 }
 
-const isScadenzaTarget = tipo.nome === "presentazione dichiarazione annuale Iva (E' UNA PROVA DI ALERT AUTOMATICO)";
-
-if (isScadenzaTarget || giorniMancanti === preavviso1) {
+if (giorniMancanti === preavviso1) {
   const alreadySent = await alertAlreadySent(tipo.id, annoInvio, "preavviso_1");
 
   if (!alreadySent) {
