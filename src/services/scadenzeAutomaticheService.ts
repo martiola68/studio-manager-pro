@@ -1,11 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
+import { sendEmail } from "@/services/emailService";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
-
-import { sendComunicazioneEmail } from "@/services/emailService";
 
 type TipoScadenza = {
   id: string;
@@ -33,6 +32,11 @@ type ProcessResult = {
   errors: string[];
 };
 
+type DestinatarioEmail = {
+  email: string;
+  nome: string;
+};
+
 function startOfDay(date: Date): Date {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
@@ -54,6 +58,76 @@ function addOneYear(dateString: string): string {
 function formatDateIT(dateString: string): string {
   const d = new Date(dateString);
   return d.toLocaleDateString("it-IT");
+}
+
+function buildHtmlScadenzaEmail(oggetto: string, messaggio: string): string {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f4;
+    }
+    .container {
+      max-width: 700px;
+      margin: 20px auto;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .header {
+      background: #111827;
+      color: white;
+      padding: 20px;
+      font-size: 20px;
+      font-weight: bold;
+    }
+    .content {
+      padding: 24px;
+    }
+    .message {
+      background: #f9fafb;
+      border-left: 4px solid #2563eb;
+      padding: 16px;
+      border-radius: 4px;
+      white-space: pre-wrap;
+    }
+    .footer {
+      background: #f3f4f6;
+      padding: 16px;
+      text-align: center;
+      font-size: 12px;
+      color: #666;
+      border-top: 1px solid #e5e7eb;
+    }
+    .footer p {
+      margin: 5px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">${oggetto}</div>
+    <div class="content">
+      <div class="message">${messaggio.replace(/\n/g, "<br>")}</div>
+    </div>
+    <div class="footer">
+      <p><strong>Studio Manager Pro</strong></p>
+      <p>Questa è una email automatica, non rispondere a questo messaggio</p>
+    </div>
+  </div>
+</body>
+</html>
+  `.trim();
 }
 
 async function loadTipiScadenzeAttive(): Promise<TipoScadenza[]> {
@@ -134,9 +208,9 @@ async function rinnovaScadenzaAutomatica(tipo: TipoScadenza): Promise<void> {
   if (error) throw error;
 }
 
-async function loadDestinatariInterniPerScadenza(
+async function loadDestinatariInterniEmailPerScadenza(
   tipo: TipoScadenza
-): Promise<string[]> {
+): Promise<DestinatarioEmail[]> {
   if (!tipo.studio_id) return [];
 
   const settori: string[] = [];
@@ -148,14 +222,19 @@ async function loadDestinatariInterniPerScadenza(
 
   const { data, error } = await supabase
     .from("tbutenti")
-    .select("id")
+    .select("id, nome, cognome, email")
     .eq("attivo", true)
     .eq("studio_id", tipo.studio_id)
     .in("settore", settori);
 
   if (error) throw error;
 
-  return [...new Set((data || []).map((u: any) => u.id).filter(Boolean))];
+  return (data || [])
+    .filter((u: any) => !!u.email)
+    .map((u: any) => ({
+      email: u.email as string,
+      nome: [u.cognome, u.nome].filter(Boolean).join(" ").trim(),
+    }));
 }
 
 async function loadNominativiPerTipoScadenza(
@@ -262,13 +341,37 @@ function buildMessaggioScadenza(
   return { oggetto, messaggio };
 }
 
+async function sendScadenzaEmails(
+  recipients: DestinatarioEmail[],
+  oggetto: string,
+  messaggio: string
+): Promise<number> {
+  let sent = 0;
+  const html = buildHtmlScadenzaEmail(oggetto, messaggio);
+
+  for (const recipient of recipients) {
+    const result = await sendEmail({
+      to: recipient.email,
+      subject: oggetto,
+      html,
+      text: messaggio,
+    });
+
+    if (result.success) {
+      sent += 1;
+    }
+  }
+
+  return sent;
+}
+
 async function inviaEmailScadenza(
   tipo: TipoScadenza,
   tipoAlert: AlertType,
   giorniMancanti: number
 ): Promise<boolean> {
-  const destinatariIds = await loadDestinatariInterniPerScadenza(tipo);
-  if (destinatariIds.length === 0) return false;
+  const recipients = await loadDestinatariInterniEmailPerScadenza(tipo);
+  if (recipients.length === 0) return false;
 
   const nominativi = await loadNominativiPerTipoScadenza(tipo.id);
   const { oggetto, messaggio } = buildMessaggioScadenza(
@@ -278,14 +381,8 @@ async function inviaEmailScadenza(
     giorniMancanti
   );
 
-  const result = await sendComunicazioneEmail({
-    tipo: "interna",
-    destinatariIds,
-    oggetto,
-    messaggio,
-  });
-
-  return !!result.success;
+  const sentCount = await sendScadenzaEmails(recipients, oggetto, messaggio);
+  return sentCount > 0;
 }
 
 export const scadenzeAutomaticheService = {
