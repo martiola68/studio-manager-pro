@@ -443,6 +443,10 @@ async function inviaEmailScadenza(
   for (const recipient of recipients) {
     const nominativi = await loadNominativiPerTipoScadenza(tipo.id, recipient.id);
 
+    if (nominativi.length === 0) {
+      continue;
+    }
+
     const { oggetto, messaggio } = buildMessaggioScadenza(
       tipo,
       tipoAlert,
@@ -462,6 +466,7 @@ async function inviaEmailScadenza(
 
   return sentTotale;
 }
+
 async function processAlertInvio(
   tipo: TipoScadenza,
   annoInvio: number,
