@@ -332,40 +332,101 @@ function getRowsForToday<T extends RigaScadenzarioBase>(
   });
 }
 
-function filterOpenIvaRows(rows: RigaIva[]): RigaIva[] {
+function filterOpenIvaRows(
+  rows: Array<
+    RigaScadenzarioBase & {
+      utente_operatore_id: string | null;
+      utente_professionista_id: string | null;
+      mod_inviato?: boolean | null;
+      conferma_riga?: boolean | null;
+    }
+  >
+) {
   return rows.filter((r) => !r.mod_inviato || !r.conferma_riga);
 }
 
-function filterOpenCcggRows(rows: RigaCcgg[]): RigaCcgg[] {
+function filterOpenCcggRows(
+  rows: Array<
+    RigaScadenzarioBase & {
+      utente_operatore_id: string | null;
+      utente_professionista_id: string | null;
+      f24_comunicato?: boolean | null;
+      conferma_riga?: boolean | null;
+    }
+  >
+) {
   return rows.filter((r) => !r.f24_comunicato || !r.conferma_riga);
 }
 
-function filterOpenCuRows(rows: RigaCu[]): RigaCu[] {
+function filterOpenCuRows(
+  rows: Array<
+    RigaScadenzarioBase & {
+      utente_operatore_id: string | null;
+      utente_professionista_id: string | null;
+      inviate?: boolean | null;
+      conferma_riga?: boolean | null;
+    }
+  >
+) {
   return rows.filter((r) => !r.inviate || !r.conferma_riga);
 }
 
-function filterOpenFiscaliRows(rows: RigaFiscali[]): RigaFiscali[] {
+function filterOpenFiscaliRows(
+  rows: Array<
+    RigaScadenzarioBase & {
+      utente_operatore_id: string | null;
+      utente_professionista_id: string | null;
+      conferma_invii?: boolean | null;
+      conferma_riga?: boolean | null;
+    }
+  >
+) {
   return rows.filter((r) => !r.conferma_invii || !r.conferma_riga);
 }
 
-function filterOpenBilanciRows(rows: RigaBilanci[]): RigaBilanci[] {
+function filterOpenBilanciRows(
+  rows: Array<
+    RigaScadenzarioBase & {
+      utente_operatore_id: string | null;
+      utente_professionista_id: string | null;
+      invio_bil?: boolean | null;
+      conferma_riga?: boolean | null;
+    }
+  >
+) {
   return rows.filter((r) => !r.invio_bil || !r.conferma_riga);
 }
 
-function filterOpen770Rows(rows: Riga770[]): Riga770[] {
+function filterOpen770Rows(
+  rows: Array<
+    RigaScadenzarioBase & {
+      utente_operatore_id: string | null;
+      utente_professionista_id: string | null;
+      mod_inviato?: boolean | null;
+      conferma_riga?: boolean | null;
+    }
+  >
+) {
   return rows.filter((r) => !r.mod_inviato || !r.conferma_riga);
 }
 
-async function processTable<
-  T extends RigaScadenzarioBase & {
-    utente_operatore_id: string | null;
-    utente_professionista_id: string | null;
-  }
->(params: {
+async function processTable(params: {
   tableName: string;
   titolo: string;
   select: string;
-  filterOpenRows: (rows: T[]) => T[];
+  filterOpenRows: (
+    rows: Array<
+      RigaScadenzarioBase & {
+        utente_operatore_id: string | null;
+        utente_professionista_id: string | null;
+      }
+    >
+  ) => Array<
+    RigaScadenzarioBase & {
+      utente_operatore_id: string | null;
+      utente_professionista_id: string | null;
+    }
+  >;
   alertNumero: 1 | 2;
   oggi: string;
   forceSend?: boolean;
@@ -387,34 +448,37 @@ async function processTable<
 
   if (error) throw error;
 
-  const rows = ((data || []) as unknown) as T[];
+  const rows = ((data || []) as unknown) as Array<
+    RigaScadenzarioBase & {
+      utente_operatore_id: string | null;
+      utente_professionista_id: string | null;
+    }
+  >;
 
-  const dueTodayRows = getRowsForToday(
-    rows,
-    oggi,
-    alertNumero,
-    forceSend
-  );
-
+  const dueTodayRows = getRowsForToday(rows, oggi, alertNumero, forceSend);
   const openRows = filterOpenRows(dueTodayRows);
   const grouped = groupByUserId(openRows);
 
   let sentTotal = 0;
 
-  for (const [userId, rows] of grouped.entries()) {
-    if (rows.length === 0) continue;
+  for (const [userId, userRows] of grouped.entries()) {
+    if (userRows.length === 0) continue;
 
     const destinatario = await loadDestinatarioByUserId(userId);
     if (!destinatario) continue;
 
-    const { oggetto, messaggio } = buildEmailMessage(titolo, rows, alertNumero);
+    const { oggetto, messaggio } = buildEmailMessage(
+      titolo,
+      userRows,
+      alertNumero
+    );
 
     const sentCount = await sendEmails([destinatario], oggetto, messaggio);
 
     if (sentCount > 0) {
       await markAlertSent(
         tableName,
-        rows.map((r) => r.id),
+        userRows.map((r) => r.id),
         alertNumero
       );
       sentTotal += sentCount;
