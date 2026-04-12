@@ -583,30 +583,37 @@ export default function GenerazioneScadenzariPage() {
     }
   };
 
-  const handleGenera = async () => {
-    const scadenzariSelezionati = Object.entries(scadenzariFlags)
-      .filter(([_, selected]) => selected)
-      .map(([key]) => key);
+ const handleGenera = async () => {
+  const scadenzariSelezionati = Object.entries(scadenzariFlags)
+    .filter(([_, selected]) => selected)
+    .map(([key]) => key);
 
-    if (scadenzariSelezionati.length === 0) {
-      toast({
-        title: "Attenzione",
-        description: "Seleziona almeno uno scadenzario da generare",
-      });
-      return;
-    }
+  if (scadenzariSelezionati.length === 0) {
+    toast({
+      title: "Attenzione",
+      description: "Seleziona almeno uno scadenzario da generare",
+    });
+    return;
+  }
 
-    if (hasScadenzariConData) {
-      setShowScadenzeModal(true);
-      return;
-    }
+  if (
+    scadenzariFlags.iva ||
+    scadenzariFlags.ccgg ||
+    scadenzariFlags.cu ||
+    scadenzariFlags.fiscali ||
+    scadenzariFlags.bilanci ||
+    scadenzariFlags.modello770
+  ) {
+    setShowScadenzeModal(true);
+    return;
+  }
 
-    if (!confirm(`Sei sicuro di voler generare gli scadenzari selezionati per l'anno ${annoGenerazione}?\n\nVerranno creati record per tutti i clienti attivi in base ai flag attivi.`)) {
-      return;
-    }
+  if (!confirm(`Sei sicuro di voler generare gli scadenzari selezionati per l'anno ${annoGenerazione}?\n\nVerranno creati record per tutti i clienti attivi in base ai flag attivi.`)) {
+    return;
+  }
 
-    await executeGenerazione();
-  };
+  await executeGenerazione();
+};
 
   const handleConfermaDateEModale = async () => {
     const scadenzariConDataMancante = validateScadenzeAdempimento();
