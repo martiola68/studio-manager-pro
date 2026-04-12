@@ -13,5 +13,11 @@
     }
   ],
   "cleanUrls": true,
-  "trailingSlash": false
+  "trailingSlash": false,
+  "crons": [
+    {
+      "path": "/api/scadenze/processa-scadenzari",
+      "schedule": "0 8 * * *"
+    }
+  ]
 }
