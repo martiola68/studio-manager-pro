@@ -11,6 +11,20 @@ export default async function handler(
     error: "Metodo non consentito",
   });
 }
+  const cronSecret = process.env.CRON_SECRET;
+
+const authHeader = req.headers.authorization;
+
+const bearerToken = authHeader?.startsWith("Bearer ")
+  ? authHeader.slice(7)
+  : null;
+
+if (!cronSecret || bearerToken !== cronSecret) {
+  return res.status(401).json({
+    success: false,
+    error: "Non autorizzato",
+  });
+}
 
   try {
  const forceAlert1 =
