@@ -25,45 +25,43 @@ type RigaScadenzarioBase = {
 type RigaIva = RigaScadenzarioBase & {
   utente_operatore_id: string | null;
   utente_professionista_id: string | null;
-  mod_definitivo: boolean | null;
   mod_inviato: boolean | null;
+  conferma_riga: boolean | null;
 };
 
 type RigaCcgg = RigaScadenzarioBase & {
   utente_operatore_id: string | null;
   utente_professionista_id: string | null;
-  f24_generato: boolean | null;
   f24_comunicato: boolean | null;
+  conferma_riga: boolean | null;
 };
 
 type RigaCu = RigaScadenzarioBase & {
   utente_operatore_id: string | null;
   utente_professionista_id: string | null;
-  generate: boolean | null;
   inviate: boolean | null;
+  conferma_riga: boolean | null;
 };
 
 type RigaFiscali = RigaScadenzarioBase & {
   utente_operatore_id: string | null;
   utente_professionista_id: string | null;
-  mod_r_definitivo: boolean | null;
-  mod_r_inviato: boolean | null;
-  mod_i_definitivo: boolean | null;
-  mod_i_inviato: boolean | null;
+  conferma_invii: boolean | null;
+  conferma_riga: boolean | null;
 };
 
 type RigaBilanci = RigaScadenzarioBase & {
   utente_operatore_id: string | null;
   utente_professionista_id: string | null;
-  bilancio_def: boolean | null;
   invio_bil: boolean | null;
+  conferma_riga: boolean | null;
 };
 
 type Riga770 = RigaScadenzarioBase & {
   utente_operatore_id: string | null;
   utente_professionista_id: string | null;
-  mod_definitivo: boolean | null;
   mod_inviato: boolean | null;
+  conferma_riga: boolean | null;
 };
 
 type ProcessResult = {
@@ -219,7 +217,9 @@ async function sendEmails(
   return sent;
 }
 
-async function loadDestinatarioByUserId(userId: string): Promise<DestinatarioEmail | null> {
+async function loadDestinatarioByUserId(
+  userId: string
+): Promise<DestinatarioEmail | null> {
   const { data, error } = await supabase
     .from("tbutenti")
     .select("id, nome, cognome, email")
@@ -237,9 +237,12 @@ async function loadDestinatarioByUserId(userId: string): Promise<DestinatarioEma
   };
 }
 
-function groupByUserId<T extends { utente_operatore_id: string | null; utente_professionista_id: string | null }>(
-  rows: T[]
-): Map<string, T[]> {
+function groupByUserId<
+  T extends {
+    utente_operatore_id: string | null;
+    utente_professionista_id: string | null;
+  }
+>(rows: T[]): Map<string, T[]> {
   const grouped = new Map<string, T[]>();
 
   for (const row of rows) {
@@ -273,7 +276,9 @@ function buildEmailMessage(
     `Ti segnalo uno scadenzario con clienti ancora da lavorare.`,
     "",
     `Scadenzario: ${titolo}`,
-    `Data scadenza adempimento: ${dataScadenza ? formatDateIT(dataScadenza) : "-"}`,
+    `Data scadenza adempimento: ${
+      dataScadenza ? formatDateIT(dataScadenza) : "-"
+    }`,
     `Giorni mancanti: ${giorniMancanti}`,
     `Numero avviso: ${alertNumero}`,
     "",
@@ -320,50 +325,43 @@ function getRowsForToday<T extends RigaScadenzarioBase>(
     if (!row.data_scadenza_adempimento) return false;
 
     if (alertNumero === 1) {
-      return (
-        ((row.data_avviso_1 === oggi) || forceSend) &&
-        !row.alert_1_inviato
-      );
+      return (row.data_avviso_1 === oggi || forceSend) && !row.alert_1_inviato;
     }
 
-    return (
-      ((row.data_avviso_2 === oggi) || forceSend) &&
-      !row.alert_2_inviato
-    );
+    return (row.data_avviso_2 === oggi || forceSend) && !row.alert_2_inviato;
   });
 }
 
 function filterOpenIvaRows(rows: RigaIva[]): RigaIva[] {
-  return rows.filter((r) => !r.mod_definitivo || !r.mod_inviato);
+  return rows.filter((r) => !r.mod_inviato || !r.conferma_riga);
 }
 
 function filterOpenCcggRows(rows: RigaCcgg[]): RigaCcgg[] {
-  return rows.filter((r) => !r.f24_generato || !r.f24_comunicato);
+  return rows.filter((r) => !r.f24_comunicato || !r.conferma_riga);
 }
 
 function filterOpenCuRows(rows: RigaCu[]): RigaCu[] {
-  return rows.filter((r) => !r.generate || !r.inviate);
+  return rows.filter((r) => !r.inviate || !r.conferma_riga);
 }
 
 function filterOpenFiscaliRows(rows: RigaFiscali[]): RigaFiscali[] {
-  return rows.filter(
-    (r) =>
-      !r.mod_r_definitivo ||
-      !r.mod_r_inviato ||
-      !r.mod_i_definitivo ||
-      !r.mod_i_inviato
-  );
+  return rows.filter((r) => !r.conferma_invii || !r.conferma_riga);
 }
 
 function filterOpenBilanciRows(rows: RigaBilanci[]): RigaBilanci[] {
-  return rows.filter((r) => !r.bilancio_def || !r.invio_bil);
+  return rows.filter((r) => !r.invio_bil || !r.conferma_riga);
 }
 
 function filterOpen770Rows(rows: Riga770[]): Riga770[] {
-  return rows.filter((r) => !r.mod_definitivo || !r.mod_inviato);
+  return rows.filter((r) => !r.mod_inviato || !r.conferma_riga);
 }
 
-async function processTable<T extends RigaScadenzarioBase & { utente_operatore_id: string | null; utente_professionista_id: string | null }>(params: {
+async function processTable<
+  T extends RigaScadenzarioBase & {
+    utente_operatore_id: string | null;
+    utente_professionista_id: string | null;
+  }
+>(params: {
   tableName: string;
   titolo: string;
   select: string;
@@ -371,8 +369,16 @@ async function processTable<T extends RigaScadenzarioBase & { utente_operatore_i
   alertNumero: 1 | 2;
   oggi: string;
   forceSend?: boolean;
-}): Promise<number> {
-  const { tableName, titolo, select, filterOpenRows, alertNumero, oggi, forceSend } = params;
+}): Promise<{ emailsSent: number; processedRows: number }> {
+  const {
+    tableName,
+    titolo,
+    select,
+    filterOpenRows,
+    alertNumero,
+    oggi,
+    forceSend,
+  } = params;
 
   const { data, error } = await supabase
     .from(tableName as any)
@@ -381,7 +387,12 @@ async function processTable<T extends RigaScadenzarioBase & { utente_operatore_i
 
   if (error) throw error;
 
-  const dueTodayRows = getRowsForToday((data || []) as T[], oggi, alertNumero, forceSend);
+  const dueTodayRows = getRowsForToday(
+    (data || []) as T[],
+    oggi,
+    alertNumero,
+    forceSend
+  );
   const openRows = filterOpenRows(dueTodayRows);
   const grouped = groupByUserId(openRows);
 
@@ -407,7 +418,10 @@ async function processTable<T extends RigaScadenzarioBase & { utente_operatore_i
     }
   }
 
-  return sentTotal;
+  return {
+    emailsSent: sentTotal,
+    processedRows: openRows.length,
+  };
 }
 
 export const scadenzariAutomaticiService = {
@@ -429,42 +443,42 @@ export const scadenzariAutomaticiService = {
         tableName: "tbscadiva",
         titolo: "IVA",
         select:
-          "id, nominativo, studio_id, utente_operatore_id, utente_professionista_id, data_scadenza_adempimento, data_avviso_1, data_avviso_2, alert_1_inviato, alert_2_inviato, mod_definitivo, mod_inviato",
+          "id, nominativo, studio_id, utente_operatore_id, utente_professionista_id, data_scadenza_adempimento, data_avviso_1, data_avviso_2, alert_1_inviato, alert_2_inviato, mod_inviato, conferma_riga",
         filterOpenRows: filterOpenIvaRows,
       },
       {
         tableName: "tbscadccgg",
         titolo: "CCGG",
         select:
-          "id, nominativo, studio_id, utente_operatore_id, utente_professionista_id, data_scadenza_adempimento, data_avviso_1, data_avviso_2, alert_1_inviato, alert_2_inviato, f24_generato, f24_comunicato",
+          "id, nominativo, studio_id, utente_operatore_id, utente_professionista_id, data_scadenza_adempimento, data_avviso_1, data_avviso_2, alert_1_inviato, alert_2_inviato, f24_comunicato, conferma_riga",
         filterOpenRows: filterOpenCcggRows,
       },
       {
         tableName: "tbscadcu",
         titolo: "CU",
         select:
-          "id, nominativo, studio_id, utente_operatore_id, utente_professionista_id, data_scadenza_adempimento, data_avviso_1, data_avviso_2, alert_1_inviato, alert_2_inviato, generate, inviate",
+          "id, nominativo, studio_id, utente_operatore_id, utente_professionista_id, data_scadenza_adempimento, data_avviso_1, data_avviso_2, alert_1_inviato, alert_2_inviato, inviate, conferma_riga",
         filterOpenRows: filterOpenCuRows,
       },
       {
         tableName: "tbscadfiscali",
         titolo: "Fiscali",
         select:
-          "id, nominativo, studio_id, utente_operatore_id, utente_professionista_id, data_scadenza_adempimento, data_avviso_1, data_avviso_2, alert_1_inviato, alert_2_inviato, mod_r_definitivo, mod_r_inviato, mod_i_definitivo, mod_i_inviato",
+          "id, nominativo, studio_id, utente_operatore_id, utente_professionista_id, data_scadenza_adempimento, data_avviso_1, data_avviso_2, alert_1_inviato, alert_2_inviato, conferma_invii, conferma_riga",
         filterOpenRows: filterOpenFiscaliRows,
       },
       {
         tableName: "tbscadbilanci",
         titolo: "Bilanci",
         select:
-          "id, nominativo, studio_id, utente_operatore_id, utente_professionista_id, data_scadenza_adempimento, data_avviso_1, data_avviso_2, alert_1_inviato, alert_2_inviato, bilancio_def, invio_bil",
+          "id, nominativo, studio_id, utente_operatore_id, utente_professionista_id, data_scadenza_adempimento, data_avviso_1, data_avviso_2, alert_1_inviato, alert_2_inviato, invio_bil, conferma_riga",
         filterOpenRows: filterOpenBilanciRows,
       },
       {
         tableName: "tbscad770",
         titolo: "770",
         select:
-          "id, nominativo, studio_id, utente_operatore_id, utente_professionista_id, data_scadenza_adempimento, data_avviso_1, data_avviso_2, alert_1_inviato, alert_2_inviato, mod_definitivo, mod_inviato",
+          "id, nominativo, studio_id, utente_operatore_id, utente_professionista_id, data_scadenza_adempimento, data_avviso_1, data_avviso_2, alert_1_inviato, alert_2_inviato, mod_inviato, conferma_riga",
         filterOpenRows: filterOpen770Rows,
       },
     ] as const;
@@ -473,24 +487,28 @@ export const scadenzariAutomaticiService = {
       try {
         result.processedTables += 1;
 
-        const sentAlert1 = await processTable({
+        const alert1Result = await processTable({
           ...config,
           alertNumero: 1,
           oggi,
           forceSend: options?.forceAlert1 === true,
         });
 
-        const sentAlert2 = await processTable({
+        const alert2Result = await processTable({
           ...config,
           alertNumero: 2,
           oggi,
           forceSend: options?.forceAlert2 === true,
         });
 
-        result.emailsSent += sentAlert1 + sentAlert2;
+        result.emailsSent += alert1Result.emailsSent + alert2Result.emailsSent;
+        result.processedRows +=
+          alert1Result.processedRows + alert2Result.processedRows;
       } catch (error: any) {
         result.errors.push(
-          `Errore su ${config.titolo}: ${error?.message || "errore sconosciuto"}`
+          `Errore su ${config.titolo}: ${
+            error?.message || "errore sconosciuto"
+          }`
         );
       }
     }
