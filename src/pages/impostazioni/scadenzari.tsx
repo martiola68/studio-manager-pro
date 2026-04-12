@@ -10,6 +10,32 @@ import { Archive, Plus, AlertTriangle, CalendarCog, Trash2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 
+type ScadenzeAdempimentoState = {
+  iva: string;
+  ccgg: string;
+  cu: string;
+  fiscali: string;
+  bilanci: string;
+  modello770: string;
+};
+
+function buildDefaultScadenzeAdempimento(anno: number): ScadenzeAdempimentoState {
+  return {
+    iva: `${anno}-04-30`,
+    ccgg: `${anno}-06-16`,
+    cu: `${anno}-03-31`,
+    fiscali: `${anno}-10-31`,
+    bilanci: `${anno}-04-30`,
+    modello770: `${anno}-10-31`,
+  };
+}
+
+function subtractDays(dateString: string, days: number): string {
+  const date = new Date(dateString);
+  date.setDate(date.getDate() - days);
+  return date.toISOString().split("T")[0];
+}
+
 export default function GenerazioneScadenzariPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -17,6 +43,10 @@ export default function GenerazioneScadenzariPage() {
   const [processing, setProcessing] = useState(false);
   const [annoArchiviazione, setAnnoArchiviazione] = useState(new Date().getFullYear() - 1);
   const [annoGenerazione, setAnnoGenerazione] = useState(new Date().getFullYear());
+
+  const [scadenzeAdempimento, setScadenzeAdempimento] = useState<ScadenzeAdempimentoState>(
+    buildDefaultScadenzeAdempimento(new Date().getFullYear())
+  );
   
   // Flag per scelta scadenzari
   const [scadenzariFlags, setScadenzariFlags] = useState({
@@ -36,6 +66,10 @@ export default function GenerazioneScadenzariPage() {
     checkAuth();
   }, []);
 
+  useEffect(() => {
+    setScadenzeAdempimento(buildDefaultScadenzeAdempimento(annoGenerazione));
+  }, [annoGenerazione]);
+
   const checkAuth = async () => {
     try {
       const authUser = await authService.getCurrentUser();
@@ -44,7 +78,8 @@ export default function GenerazioneScadenzariPage() {
         return;
       }
 
-      const profile = await authService.getUserProfile(authUser.id);
+      await authService.getUserProfile(authUser.id);
+
       const { data: utente } = await supabase
         .from("tbutenti")
         .select("tipo_utente")
@@ -72,9 +107,9 @@ export default function GenerazioneScadenzariPage() {
       setProcessing(true);
 
       const { error } = await supabase
-        .from(nomeTabella as any) // Fix: cast a any per evitare errore TS
+        .from(nomeTabella as any)
         .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000'); // Elimina tutti i record
+        .neq("id", "00000000-0000-0000-0000-000000000000");
 
       if (error) throw error;
 
@@ -103,11 +138,6 @@ export default function GenerazioneScadenzariPage() {
     try {
       setProcessing(true);
 
-      // TODO: Implementare logica di archiviazione
-      // 1. Creare tabelle archivio (es. TBScadIva_2023, TBScadCCGG_2023, ecc.)
-      // 2. Copiare i dati nelle tabelle archivio
-      // 3. Eliminare i dati dalle tabelle correnti
-
       toast({
         title: "Funzionalità in sviluppo",
         description: "L'archiviazione delle scadenze sarà implementata a breve",
@@ -125,15 +155,46 @@ export default function GenerazioneScadenzariPage() {
     }
   };
 
+  const handleScadenzaChange = (key: keyof ScadenzeAdempimentoState, value: string) => {
+    setScadenzeAdempimento((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+
+  const validateScadenzeAdempimento = (): string[] => {
+    const errors: string[] = [];
+
+    if (scadenzariFlags.iva && !scadenzeAdempimento.iva) errors.push("IVA");
+    if (scadenzariFlags.ccgg && !scadenzeAdempimento.ccgg) errors.push("CCGG");
+    if (scadenzariFlags.cu && !scadenzeAdempimento.cu) errors.push("CU");
+    if (scadenzariFlags.fiscali && !scadenzeAdempimento.fiscali) errors.push("Fiscali");
+    if (scadenzariFlags.bilanci && !scadenzeAdempimento.bilanci) errors.push("Bilanci");
+    if (scadenzariFlags.modello770 && !scadenzeAdempimento.modello770) errors.push("Modello 770");
+
+    return errors;
+  };
+
   const handleGenera = async () => {
     const scadenzariSelezionati = Object.entries(scadenzariFlags)
       .filter(([_, selected]) => selected)
-      .map(([key, _]) => key);
+      .map(([key]) => key);
 
     if (scadenzariSelezionati.length === 0) {
       toast({
         title: "Attenzione",
         description: "Seleziona almeno uno scadenzario da generare",
+      });
+      return;
+    }
+
+    const scadenzariConDataMancante = validateScadenzeAdempimento();
+
+    if (scadenzariConDataMancante.length > 0) {
+      toast({
+        title: "Attenzione",
+        description: `Inserisci la data scadenza adempimento per: ${scadenzariConDataMancante.join(", ")}`,
+        variant: "destructive"
       });
       return;
     }
@@ -145,7 +206,6 @@ export default function GenerazioneScadenzariPage() {
     try {
       setProcessing(true);
 
-      // Recupera lo studio_id dell'utente corrente
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast({
@@ -173,7 +233,6 @@ export default function GenerazioneScadenzariPage() {
 
       const currentStudioId = utenteData.studio_id;
 
-      // Carica tutti i clienti attivi dello stesso studio
       const { data: clienti, error: clientiError } = await supabase
         .from("tbclienti")
         .select("*")
@@ -192,6 +251,24 @@ export default function GenerazioneScadenzariPage() {
 
       let generati = 0;
       let errori = 0;
+
+      const ivaAlert1 = subtractDays(scadenzeAdempimento.iva, 15);
+      const ivaAlert2 = subtractDays(scadenzeAdempimento.iva, 7);
+
+      const ccggAlert1 = subtractDays(scadenzeAdempimento.ccgg, 15);
+      const ccggAlert2 = subtractDays(scadenzeAdempimento.ccgg, 7);
+
+      const cuAlert1 = subtractDays(scadenzeAdempimento.cu, 15);
+      const cuAlert2 = subtractDays(scadenzeAdempimento.cu, 7);
+
+      const fiscaliAlert1 = subtractDays(scadenzeAdempimento.fiscali, 15);
+      const fiscaliAlert2 = subtractDays(scadenzeAdempimento.fiscali, 7);
+
+      const bilanciAlert1 = subtractDays(scadenzeAdempimento.bilanci, 15);
+      const bilanciAlert2 = subtractDays(scadenzeAdempimento.bilanci, 7);
+
+      const modello770Alert1 = subtractDays(scadenzeAdempimento.modello770, 15);
+      const modello770Alert2 = subtractDays(scadenzeAdempimento.modello770, 7);
 
       for (const cliente of clienti) {
         try {
@@ -212,7 +289,14 @@ export default function GenerazioneScadenzariPage() {
                   nominativo: cliente.ragione_sociale,
                   utente_operatore_id: cliente.utente_operatore_id,
                   utente_professionista_id: cliente.utente_professionista_id,
-                  conferma_riga: false
+                  conferma_riga: false,
+                  data_scadenza_adempimento: scadenzeAdempimento.iva,
+                  data_avviso_1: ivaAlert1,
+                  data_avviso_2: ivaAlert2,
+                  alert_1_inviato: false,
+                  alert_2_inviato: false,
+                  data_invio_alert_1: null,
+                  data_invio_alert_2: null,
                 });
               if (!error) generati++;
               else {
@@ -239,7 +323,14 @@ export default function GenerazioneScadenzariPage() {
                   nominativo: cliente.ragione_sociale,
                   utente_operatore_id: cliente.utente_operatore_id,
                   utente_professionista_id: cliente.utente_professionista_id,
-                  conferma_riga: false
+                  conferma_riga: false,
+                  data_scadenza_adempimento: scadenzeAdempimento.ccgg,
+                  data_avviso_1: ccggAlert1,
+                  data_avviso_2: ccggAlert2,
+                  alert_1_inviato: false,
+                  alert_2_inviato: false,
+                  data_invio_alert_1: null,
+                  data_invio_alert_2: null,
                 });
               if (!error) generati++;
               else errori++;
@@ -263,7 +354,14 @@ export default function GenerazioneScadenzariPage() {
                   nominativo: cliente.ragione_sociale,
                   utente_operatore_id: cliente.utente_operatore_id,
                   utente_professionista_id: cliente.utente_professionista_id,
-                  conferma_riga: false
+                  conferma_riga: false,
+                  data_scadenza_adempimento: scadenzeAdempimento.cu,
+                  data_avviso_1: cuAlert1,
+                  data_avviso_2: cuAlert2,
+                  alert_1_inviato: false,
+                  alert_2_inviato: false,
+                  data_invio_alert_1: null,
+                  data_invio_alert_2: null,
                 });
               if (!error) generati++;
               else errori++;
@@ -288,7 +386,14 @@ export default function GenerazioneScadenzariPage() {
                   utente_operatore_id: cliente.utente_operatore_id,
                   utente_professionista_id: cliente.utente_professionista_id,
                   tipo_redditi: cliente.tipo_redditi,
-                  conferma_riga: false
+                  conferma_riga: false,
+                  data_scadenza_adempimento: scadenzeAdempimento.fiscali,
+                  data_avviso_1: fiscaliAlert1,
+                  data_avviso_2: fiscaliAlert2,
+                  alert_1_inviato: false,
+                  alert_2_inviato: false,
+                  data_invio_alert_1: null,
+                  data_invio_alert_2: null,
                 });
               if (!error) generati++;
               else errori++;
@@ -312,7 +417,14 @@ export default function GenerazioneScadenzariPage() {
                   nominativo: cliente.ragione_sociale,
                   utente_operatore_id: cliente.utente_operatore_id,
                   utente_professionista_id: cliente.utente_professionista_id,
-                  conferma_riga: false
+                  conferma_riga: false,
+                  data_scadenza_adempimento: scadenzeAdempimento.bilanci,
+                  data_avviso_1: bilanciAlert1,
+                  data_avviso_2: bilanciAlert2,
+                  alert_1_inviato: false,
+                  alert_2_inviato: false,
+                  data_invio_alert_1: null,
+                  data_invio_alert_2: null,
                 });
               if (!error) generati++;
               else errori++;
@@ -336,7 +448,14 @@ export default function GenerazioneScadenzariPage() {
                   nominativo: cliente.ragione_sociale,
                   utente_operatore_id: cliente.utente_operatore_id,
                   utente_professionista_id: cliente.utente_professionista_id,
-                  conferma_riga: false
+                  conferma_riga: false,
+                  data_scadenza_adempimento: scadenzeAdempimento.modello770,
+                  data_avviso_1: modello770Alert1,
+                  data_avviso_2: modello770Alert2,
+                  alert_1_inviato: false,
+                  alert_2_inviato: false,
+                  data_invio_alert_1: null,
+                  data_invio_alert_2: null,
                 });
               if (!error) generati++;
               else errori++;
@@ -421,7 +540,6 @@ export default function GenerazioneScadenzariPage() {
               .maybeSingle();
 
             if (!existing) {
-              // Ottieni i nomi completi degli utenti
               let operatoreNome = null;
               let professionistaNome = null;
 
@@ -470,7 +588,7 @@ export default function GenerazioneScadenzariPage() {
 
       toast({
         title: "Generazione completata",
-        description: `Generati ${generati} nuovi scadenzari per ${clienti.length} clienti${errori > 0 ? ` (${errori} errori)` : ''}`
+        description: `Generati ${generati} nuovi scadenzari per ${clienti.length} clienti${errori > 0 ? ` (${errori} errori)` : ""}`
       });
 
     } catch (error) {
@@ -672,6 +790,7 @@ export default function GenerazioneScadenzariPage() {
                   <li>Vengono creati solo gli scadenzari relativi ai flag attivi del cliente</li>
                   <li>Se uno scadenzario esiste già, NON viene duplicato</li>
                   <li>I nominativi vengono inseriti automaticamente in base ai flag attivi</li>
+                  <li>Per IVA, CCGG, CU, Fiscali, Bilanci e 770 viene salvata anche la data scadenza adempimento con i due alert automatici a 15 e 7 giorni prima</li>
                 </ul>
               </div>
             </div>
@@ -778,6 +897,89 @@ export default function GenerazioneScadenzariPage() {
                   />
                   <label htmlFor="flag_imu" className="text-sm cursor-pointer">IMU</label>
                 </div>
+              </div>
+            </div>
+
+            <div className="space-y-3 border rounded-lg p-4 bg-gray-50">
+              <Label>Date scadenza adempimento</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {scadenzariFlags.iva && (
+                  <div className="space-y-2">
+                    <Label htmlFor="scad_iva">IVA</Label>
+                    <input
+                      id="scad_iva"
+                      type="date"
+                      value={scadenzeAdempimento.iva}
+                      onChange={(e) => handleScadenzaChange("iva", e.target.value)}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
+                  </div>
+                )}
+
+                {scadenzariFlags.ccgg && (
+                  <div className="space-y-2">
+                    <Label htmlFor="scad_ccgg">CCGG</Label>
+                    <input
+                      id="scad_ccgg"
+                      type="date"
+                      value={scadenzeAdempimento.ccgg}
+                      onChange={(e) => handleScadenzaChange("ccgg", e.target.value)}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
+                  </div>
+                )}
+
+                {scadenzariFlags.cu && (
+                  <div className="space-y-2">
+                    <Label htmlFor="scad_cu">CU</Label>
+                    <input
+                      id="scad_cu"
+                      type="date"
+                      value={scadenzeAdempimento.cu}
+                      onChange={(e) => handleScadenzaChange("cu", e.target.value)}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
+                  </div>
+                )}
+
+                {scadenzariFlags.fiscali && (
+                  <div className="space-y-2">
+                    <Label htmlFor="scad_fiscali">Fiscali</Label>
+                    <input
+                      id="scad_fiscali"
+                      type="date"
+                      value={scadenzeAdempimento.fiscali}
+                      onChange={(e) => handleScadenzaChange("fiscali", e.target.value)}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
+                  </div>
+                )}
+
+                {scadenzariFlags.bilanci && (
+                  <div className="space-y-2">
+                    <Label htmlFor="scad_bilanci">Bilanci</Label>
+                    <input
+                      id="scad_bilanci"
+                      type="date"
+                      value={scadenzeAdempimento.bilanci}
+                      onChange={(e) => handleScadenzaChange("bilanci", e.target.value)}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
+                  </div>
+                )}
+
+                {scadenzariFlags.modello770 && (
+                  <div className="space-y-2">
+                    <Label htmlFor="scad_770">Modello 770</Label>
+                    <input
+                      id="scad_770"
+                      type="date"
+                      value={scadenzeAdempimento.modello770}
+                      onChange={(e) => handleScadenzaChange("modello770", e.target.value)}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
