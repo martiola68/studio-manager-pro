@@ -16,8 +16,12 @@
   "trailingSlash": false,
   "crons": [
     {
-      "path": "/api/scadenze/processa-scadenzari",
+      "path": "/api/scadenze/processa",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/scadenze/processa-scadenzari",
+      "schedule": "5 8 * * *"
     }
   ]
 }
