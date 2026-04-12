@@ -387,12 +387,15 @@ async function processTable<
 
   if (error) throw error;
 
-  const dueTodayRows = getRowsForToday(
-    (data || []) as T[],
-    oggi,
-    alertNumero,
-    forceSend
-  );
+const rows = ((data || []) as unknown) as T[];
+
+const dueTodayRows = getRowsForToday(
+  rows,
+  oggi,
+  alertNumero,
+  forceSend
+);
+  
   const openRows = filterOpenRows(dueTodayRows);
   const grouped = groupByUserId(openRows);
 
