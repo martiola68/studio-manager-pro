@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/lib/supabase/client";
 import { authService } from "@/services/authService";
@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Archive, Plus, AlertTriangle, CalendarCog, Trash2 } from "lucide-react";
+import { Archive, Plus, AlertTriangle, CalendarCog, Trash2, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -25,7 +25,7 @@ function buildDefaultScadenzeAdempimento(anno: number): ScadenzeAdempimentoState
     ccgg: `${anno}-06-16`,
     cu: `${anno}-03-31`,
     fiscali: `${anno}-10-31`,
-    bilanci: `${anno}-04-30`,
+    bilanci: `${anno}-05-30`,
     modello770: `${anno}-10-31`,
   };
 }
@@ -39,16 +39,18 @@ function subtractDays(dateString: string, days: number): string {
 export default function GenerazioneScadenzariPage() {
   const router = useRouter();
   const { toast } = useToast();
+
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [annoArchiviazione, setAnnoArchiviazione] = useState(new Date().getFullYear() - 1);
   const [annoGenerazione, setAnnoGenerazione] = useState(new Date().getFullYear());
 
+  const [showScadenzeModal, setShowScadenzeModal] = useState(false);
+
   const [scadenzeAdempimento, setScadenzeAdempimento] = useState<ScadenzeAdempimentoState>(
     buildDefaultScadenzeAdempimento(new Date().getFullYear())
   );
   
-  // Flag per scelta scadenzari
   const [scadenzariFlags, setScadenzariFlags] = useState({
     iva: true,
     ccgg: true,
@@ -69,6 +71,23 @@ export default function GenerazioneScadenzariPage() {
   useEffect(() => {
     setScadenzeAdempimento(buildDefaultScadenzeAdempimento(annoGenerazione));
   }, [annoGenerazione]);
+
+  const scadenzariConData = useMemo(
+    () => ({
+      iva: scadenzariFlags.iva,
+      ccgg: scadenzariFlags.ccgg,
+      cu: scadenzariFlags.cu,
+      fiscali: scadenzariFlags.fiscali,
+      bilanci: scadenzariFlags.bilanci,
+      modello770: scadenzariFlags.modello770,
+    }),
+    [scadenzariFlags]
+  );
+
+  const hasScadenzariConData = useMemo(
+    () => Object.values(scadenzariConData).some(Boolean),
+    [scadenzariConData]
+  );
 
   const checkAuth = async () => {
     try {
@@ -117,7 +136,6 @@ export default function GenerazioneScadenzariPage() {
         title: "Successo",
         description: `Scadenzario ${nomeScadenzario} azzerato completamente`
       });
-
     } catch (error) {
       console.error("Errore azzeramento:", error);
       toast({
@@ -142,7 +160,6 @@ export default function GenerazioneScadenzariPage() {
         title: "Funzionalità in sviluppo",
         description: "L'archiviazione delle scadenze sarà implementata a breve",
       });
-
     } catch (error) {
       console.error("Errore archiviazione:", error);
       toast({
@@ -175,34 +192,7 @@ export default function GenerazioneScadenzariPage() {
     return errors;
   };
 
-  const handleGenera = async () => {
-    const scadenzariSelezionati = Object.entries(scadenzariFlags)
-      .filter(([_, selected]) => selected)
-      .map(([key]) => key);
-
-    if (scadenzariSelezionati.length === 0) {
-      toast({
-        title: "Attenzione",
-        description: "Seleziona almeno uno scadenzario da generare",
-      });
-      return;
-    }
-
-    const scadenzariConDataMancante = validateScadenzeAdempimento();
-
-    if (scadenzariConDataMancante.length > 0) {
-      toast({
-        title: "Attenzione",
-        description: `Inserisci la data scadenza adempimento per: ${scadenzariConDataMancante.join(", ")}`,
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!confirm(`Sei sicuro di voler generare gli scadenzari selezionati per l'anno ${annoGenerazione}?\n\nVerranno creati record per tutti i clienti attivi in base ai flag attivi.`)) {
-      return;
-    }
-
+  const executeGenerazione = async () => {
     try {
       setProcessing(true);
 
@@ -272,7 +262,6 @@ export default function GenerazioneScadenzariPage() {
 
       for (const cliente of clienti) {
         try {
-          // TBScadIva
           if (scadenzariFlags.iva && cliente.flag_iva) {
             const { data: existing } = await supabase
               .from("tbscadiva")
@@ -306,7 +295,6 @@ export default function GenerazioneScadenzariPage() {
             }
           }
 
-          // TBScadCCGG
           if (scadenzariFlags.ccgg && cliente.flag_ccgg) {
             const { data: existing } = await supabase
               .from("tbscadccgg")
@@ -337,7 +325,6 @@ export default function GenerazioneScadenzariPage() {
             }
           }
 
-          // TBScadCU
           if (scadenzariFlags.cu && cliente.flag_cu) {
             const { data: existing } = await supabase
               .from("tbscadcu")
@@ -368,7 +355,6 @@ export default function GenerazioneScadenzariPage() {
             }
           }
 
-          // TBScadFiscali
           if (scadenzariFlags.fiscali && cliente.flag_fiscali) {
             const { data: existing } = await supabase
               .from("tbscadfiscali")
@@ -400,7 +386,6 @@ export default function GenerazioneScadenzariPage() {
             }
           }
 
-          // TBScadBilanci
           if (scadenzariFlags.bilanci && cliente.flag_bilancio) {
             const { data: existing } = await supabase
               .from("tbscadbilanci")
@@ -431,7 +416,6 @@ export default function GenerazioneScadenzariPage() {
             }
           }
 
-          // TBScad770
           if (scadenzariFlags.modello770 && cliente.flag_770) {
             const { data: existing } = await supabase
               .from("tbscad770")
@@ -462,7 +446,6 @@ export default function GenerazioneScadenzariPage() {
             }
           }
 
-          // TBScadLipe
           if (scadenzariFlags.lipe && cliente.flag_lipe) {
             const { data: existing } = await supabase
               .from("tbscadlipe")
@@ -485,7 +468,6 @@ export default function GenerazioneScadenzariPage() {
             }
           }
 
-          // TBScadEstero
           if (scadenzariFlags.esterometro && cliente.flag_esterometro) {
             const { data: existing } = await supabase
               .from("tbscadestero")
@@ -508,7 +490,6 @@ export default function GenerazioneScadenzariPage() {
             }
           }
 
-          // TBScadProforma
           if (scadenzariFlags.proforma && cliente.flag_proforma) {
             const { data: existing } = await supabase
               .from("tbscadproforma")
@@ -531,7 +512,6 @@ export default function GenerazioneScadenzariPage() {
             }
           }
 
-          // TBScadIMU
           if (scadenzariFlags.imu && cliente.flag_imu) {
             const { data: existing } = await supabase
               .from("tbscadimu")
@@ -579,7 +559,6 @@ export default function GenerazioneScadenzariPage() {
               else errori++;
             }
           }
-
         } catch (error) {
           console.error(`Errore elaborazione cliente ${cliente.ragione_sociale}:`, error);
           errori++;
@@ -591,6 +570,7 @@ export default function GenerazioneScadenzariPage() {
         description: `Generati ${generati} nuovi scadenzari per ${clienti.length} clienti${errori > 0 ? ` (${errori} errori)` : ""}`
       });
 
+      setShowScadenzeModal(false);
     } catch (error) {
       console.error("Errore generazione:", error);
       toast({
@@ -601,6 +581,50 @@ export default function GenerazioneScadenzariPage() {
     } finally {
       setProcessing(false);
     }
+  };
+
+  const handleGenera = async () => {
+    const scadenzariSelezionati = Object.entries(scadenzariFlags)
+      .filter(([_, selected]) => selected)
+      .map(([key]) => key);
+
+    if (scadenzariSelezionati.length === 0) {
+      toast({
+        title: "Attenzione",
+        description: "Seleziona almeno uno scadenzario da generare",
+      });
+      return;
+    }
+
+    if (hasScadenzariConData) {
+      setShowScadenzeModal(true);
+      return;
+    }
+
+    if (!confirm(`Sei sicuro di voler generare gli scadenzari selezionati per l'anno ${annoGenerazione}?\n\nVerranno creati record per tutti i clienti attivi in base ai flag attivi.`)) {
+      return;
+    }
+
+    await executeGenerazione();
+  };
+
+  const handleConfermaDateEModale = async () => {
+    const scadenzariConDataMancante = validateScadenzeAdempimento();
+
+    if (scadenzariConDataMancante.length > 0) {
+      toast({
+        title: "Attenzione",
+        description: `Inserisci la data scadenza adempimento per: ${scadenzariConDataMancante.join(", ")}`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!confirm(`Sei sicuro di voler generare gli scadenzari selezionati per l'anno ${annoGenerazione}?\n\nVerranno creati record per tutti i clienti attivi in base ai flag attivi.`)) {
+      return;
+    }
+
+    await executeGenerazione();
   };
 
   if (loading) {
@@ -617,297 +641,404 @@ export default function GenerazioneScadenzariPage() {
   const anni = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i);
 
   return (
-    <div className="max-w-6xl mx-auto p-4 md:p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Generazione Scadenzari</h1>
-        <p className="text-gray-500 mt-1">Archivia scadenze precedenti, genera nuovi scadenzari o azzera dati esistenti</p>
+    <>
+      <div className="max-w-6xl mx-auto p-4 md:p-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Generazione Scadenzari</h1>
+          <p className="text-gray-500 mt-1">Archivia scadenze precedenti, genera nuovi scadenzari o azzera dati esistenti</p>
+        </div>
+
+        <div className="space-y-6">
+          <Card className="border-l-4 border-l-red-600">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-red-700">
+                <Archive className="h-5 w-5" />
+                Archivia Scadenze
+              </CardTitle>
+              <CardDescription>
+                Archivia tutte le scadenze di un anno precedente
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex gap-3">
+                  <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-red-800">
+                    <p className="font-semibold mb-1">ATTENZIONE!</p>
+                    <p>L'archiviazione sposterà tutte le scadenze dell'anno selezionato in tabelle archivio separate. Questa operazione NON può essere annullata.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="anno_archiviazione">Anno da Archiviare</Label>
+                <Select
+                  value={annoArchiviazione.toString()}
+                  onValueChange={(value) => setAnnoArchiviazione(parseInt(value))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {anni.map((anno) => (
+                      <SelectItem key={anno} value={anno.toString()}>
+                        {anno}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-3">
+                <Label>Scadenzari da Archiviare</Label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="arch_iva"
+                      checked={scadenzariFlags.iva}
+                      onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, iva: checked as boolean})}
+                    />
+                    <label htmlFor="arch_iva" className="text-sm cursor-pointer">IVA</label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="arch_ccgg"
+                      checked={scadenzariFlags.ccgg}
+                      onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, ccgg: checked as boolean})}
+                    />
+                    <label htmlFor="arch_ccgg" className="text-sm cursor-pointer">CCGG</label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="arch_cu"
+                      checked={scadenzariFlags.cu}
+                      onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, cu: checked as boolean})}
+                    />
+                    <label htmlFor="arch_cu" className="text-sm cursor-pointer">CU</label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="arch_fiscali"
+                      checked={scadenzariFlags.fiscali}
+                      onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, fiscali: checked as boolean})}
+                    />
+                    <label htmlFor="arch_fiscali" className="text-sm cursor-pointer">Fiscali</label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="arch_bilanci"
+                      checked={scadenzariFlags.bilanci}
+                      onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, bilanci: checked as boolean})}
+                    />
+                    <label htmlFor="arch_bilanci" className="text-sm cursor-pointer">Bilanci</label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="arch_770"
+                      checked={scadenzariFlags.modello770}
+                      onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, modello770: checked as boolean})}
+                    />
+                    <label htmlFor="arch_770" className="text-sm cursor-pointer">Modello 770</label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="arch_lipe"
+                      checked={scadenzariFlags.lipe}
+                      onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, lipe: checked as boolean})}
+                    />
+                    <label htmlFor="arch_lipe" className="text-sm cursor-pointer">LIPE</label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="arch_esterometro"
+                      checked={scadenzariFlags.esterometro}
+                      onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, esterometro: checked as boolean})}
+                    />
+                    <label htmlFor="arch_esterometro" className="text-sm cursor-pointer">Esterometro</label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="arch_proforma"
+                      checked={scadenzariFlags.proforma}
+                      onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, proforma: checked as boolean})}
+                    />
+                    <label htmlFor="arch_proforma" className="text-sm cursor-pointer">Proforma</label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="arch_imu"
+                      checked={scadenzariFlags.imu}
+                      onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, imu: checked as boolean})}
+                    />
+                    <label htmlFor="arch_imu" className="text-sm cursor-pointer">IMU</label>
+                  </div>
+                </div>
+              </div>
+
+              <Button
+                onClick={handleArchivia}
+                disabled={processing}
+                variant="destructive"
+                className="w-full"
+              >
+                {processing ? (
+                  <>
+                    <div className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                    Archiviazione in corso...
+                  </>
+                ) : (
+                  <>
+                    <Archive className="h-4 w-4 mr-2" />
+                    Archivia Selezionati {annoArchiviazione}
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="border-l-4 border-l-green-600">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-green-700">
+                <CalendarCog className="h-5 w-5" />
+                Genera Nuovi Scadenzari
+              </CardTitle>
+              <CardDescription>
+                Genera automaticamente gli scadenzari per l'anno selezionato
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="text-sm text-blue-800">
+                  <p className="font-semibold mb-1">Come funziona:</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    <li>Vengono generati scadenzari solo per i clienti ATTIVI</li>
+                    <li>Vengono creati solo gli scadenzari relativi ai flag attivi del cliente</li>
+                    <li>Se uno scadenzario esiste già, NON viene duplicato</li>
+                    <li>Per IVA, CCGG, CU, Fiscali, Bilanci e 770 si apre una modale per inserire la data scadenza adempimento</li>
+                    <li>Alla generazione vengono salvati anche gli alert automatici a 15 e 7 giorni prima</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="anno_generazione">Anno da Generare</Label>
+                <Select
+                  value={annoGenerazione.toString()}
+                  onValueChange={(value) => setAnnoGenerazione(parseInt(value))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {anni.map((anno) => (
+                      <SelectItem key={anno} value={anno.toString()}>
+                        {anno}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-3">
+                <Label>Scadenzari da Generare</Label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="flag_iva"
+                      checked={scadenzariFlags.iva}
+                      onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, iva: checked as boolean})}
+                    />
+                    <label htmlFor="flag_iva" className="text-sm cursor-pointer">IVA</label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="flag_ccgg"
+                      checked={scadenzariFlags.ccgg}
+                      onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, ccgg: checked as boolean})}
+                    />
+                    <label htmlFor="flag_ccgg" className="text-sm cursor-pointer">CCGG</label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="flag_cu"
+                      checked={scadenzariFlags.cu}
+                      onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, cu: checked as boolean})}
+                    />
+                    <label htmlFor="flag_cu" className="text-sm cursor-pointer">CU</label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="flag_fiscali"
+                      checked={scadenzariFlags.fiscali}
+                      onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, fiscali: checked as boolean})}
+                    />
+                    <label htmlFor="flag_fiscali" className="text-sm cursor-pointer">Fiscali</label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="flag_bilanci"
+                      checked={scadenzariFlags.bilanci}
+                      onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, bilanci: checked as boolean})}
+                    />
+                    <label htmlFor="flag_bilanci" className="text-sm cursor-pointer">Bilanci</label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="flag_770"
+                      checked={scadenzariFlags.modello770}
+                      onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, modello770: checked as boolean})}
+                    />
+                    <label htmlFor="flag_770" className="text-sm cursor-pointer">Modello 770</label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="flag_lipe"
+                      checked={scadenzariFlags.lipe}
+                      onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, lipe: checked as boolean})}
+                    />
+                    <label htmlFor="flag_lipe" className="text-sm cursor-pointer">LIPE</label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="flag_esterometro"
+                      checked={scadenzariFlags.esterometro}
+                      onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, esterometro: checked as boolean})}
+                    />
+                    <label htmlFor="flag_esterometro" className="text-sm cursor-pointer">Esterometro</label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="flag_proforma"
+                      checked={scadenzariFlags.proforma}
+                      onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, proforma: checked as boolean})}
+                    />
+                    <label htmlFor="flag_proforma" className="text-sm cursor-pointer">Proforma</label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="flag_imu"
+                      checked={scadenzariFlags.imu}
+                      onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, imu: checked as boolean})}
+                    />
+                    <label htmlFor="flag_imu" className="text-sm cursor-pointer">IMU</label>
+                  </div>
+                </div>
+              </div>
+
+              <Button
+                onClick={handleGenera}
+                disabled={processing}
+                className="w-full bg-green-600 hover:bg-green-700"
+              >
+                {processing ? (
+                  <>
+                    <div className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                    Generazione in corso...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Genera Scadenzari Selezionati {annoGenerazione}
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="border-l-4 border-l-orange-600">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-orange-700">
+                <Trash2 className="h-5 w-5" />
+                Azzera Scadenzari
+              </CardTitle>
+              <CardDescription>
+                Elimina TUTTI i dati di uno scadenzario specifico
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                <div className="flex gap-3">
+                  <AlertTriangle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-orange-800">
+                    <p className="font-semibold mb-1">ATTENZIONE!</p>
+                    <p>L'azzeramento eliminerà PERMANENTEMENTE tutti i dati dello scadenzario selezionato. Questa operazione NON può essere annullata!</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                <Button onClick={() => handleAzzeraScadenzario("IVA", "tbscadiva")} disabled={processing} variant="outline" className="border-orange-300 hover:bg-orange-50">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Azzera IVA
+                </Button>
+                <Button onClick={() => handleAzzeraScadenzario("CCGG", "tbscadccgg")} disabled={processing} variant="outline" className="border-orange-300 hover:bg-orange-50">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Azzera CCGG
+                </Button>
+                <Button onClick={() => handleAzzeraScadenzario("CU", "tbscadcu")} disabled={processing} variant="outline" className="border-orange-300 hover:bg-orange-50">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Azzera CU
+                </Button>
+                <Button onClick={() => handleAzzeraScadenzario("Fiscali", "tbscadfiscali")} disabled={processing} variant="outline" className="border-orange-300 hover:bg-orange-50">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Azzera Fiscali
+                </Button>
+                <Button onClick={() => handleAzzeraScadenzario("Bilanci", "tbscadbilanci")} disabled={processing} variant="outline" className="border-orange-300 hover:bg-orange-50">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Azzera Bilanci
+                </Button>
+                <Button onClick={() => handleAzzeraScadenzario("Modello 770", "tbscad770")} disabled={processing} variant="outline" className="border-orange-300 hover:bg-orange-50">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Azzera 770
+                </Button>
+                <Button onClick={() => handleAzzeraScadenzario("LIPE", "tbscadlipe")} disabled={processing} variant="outline" className="border-orange-300 hover:bg-orange-50">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Azzera LIPE
+                </Button>
+                <Button onClick={() => handleAzzeraScadenzario("Esterometro", "tbscadestero")} disabled={processing} variant="outline" className="border-orange-300 hover:bg-orange-50">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Azzera Esterometro
+                </Button>
+                <Button onClick={() => handleAzzeraScadenzario("Proforma", "tbscadproforma")} disabled={processing} variant="outline" className="border-orange-300 hover:bg-orange-50">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Azzera Proforma
+                </Button>
+                <Button onClick={() => handleAzzeraScadenzario("IMU", "tbscadimu")} disabled={processing} variant="outline" className="border-orange-300 hover:bg-orange-50">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Azzera IMU
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
-      <div className="space-y-6">
-        <Card className="border-l-4 border-l-red-600">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-700">
-              <Archive className="h-5 w-5" />
-              Archivia Scadenze
-            </CardTitle>
-            <CardDescription>
-              Archivia tutte le scadenze di un anno precedente
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <div className="flex gap-3">
-                <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-red-800">
-                  <p className="font-semibold mb-1">ATTENZIONE!</p>
-                  <p>L'archiviazione sposterà tutte le scadenze dell'anno selezionato in tabelle archivio separate. Questa operazione NON può essere annullata.</p>
-                </div>
+      {showScadenzeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-3xl rounded-xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b px-6 py-4">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">Inserisci date scadenza adempimento</h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  Le date verranno salvate negli scadenzari generati insieme agli alert automatici a 15 e 7 giorni prima.
+                </p>
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="anno_archiviazione">Anno da Archiviare</Label>
-              <Select
-                value={annoArchiviazione.toString()}
-                onValueChange={(value) => setAnnoArchiviazione(parseInt(value))}
+              <button
+                type="button"
+                onClick={() => setShowScadenzeModal(false)}
+                className="rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {anni.map((anno) => (
-                    <SelectItem key={anno} value={anno.toString()}>
-                      {anno}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <X className="h-5 w-5" />
+              </button>
             </div>
 
-            <div className="space-y-3">
-              <Label>Scadenzari da Archiviare</Label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="arch_iva" 
-                    checked={scadenzariFlags.iva}
-                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, iva: checked as boolean})}
-                  />
-                  <label htmlFor="arch_iva" className="text-sm cursor-pointer">IVA</label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="arch_ccgg" 
-                    checked={scadenzariFlags.ccgg}
-                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, ccgg: checked as boolean})}
-                  />
-                  <label htmlFor="arch_ccgg" className="text-sm cursor-pointer">CCGG</label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="arch_cu" 
-                    checked={scadenzariFlags.cu}
-                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, cu: checked as boolean})}
-                  />
-                  <label htmlFor="arch_cu" className="text-sm cursor-pointer">CU</label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="arch_fiscali" 
-                    checked={scadenzariFlags.fiscali}
-                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, fiscali: checked as boolean})}
-                  />
-                  <label htmlFor="arch_fiscali" className="text-sm cursor-pointer">Fiscali</label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="arch_bilanci" 
-                    checked={scadenzariFlags.bilanci}
-                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, bilanci: checked as boolean})}
-                  />
-                  <label htmlFor="arch_bilanci" className="text-sm cursor-pointer">Bilanci</label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="arch_770" 
-                    checked={scadenzariFlags.modello770}
-                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, modello770: checked as boolean})}
-                  />
-                  <label htmlFor="arch_770" className="text-sm cursor-pointer">Modello 770</label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="arch_lipe" 
-                    checked={scadenzariFlags.lipe}
-                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, lipe: checked as boolean})}
-                  />
-                  <label htmlFor="arch_lipe" className="text-sm cursor-pointer">LIPE</label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="arch_esterometro" 
-                    checked={scadenzariFlags.esterometro}
-                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, esterometro: checked as boolean})}
-                  />
-                  <label htmlFor="arch_esterometro" className="text-sm cursor-pointer">Esterometro</label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="arch_proforma" 
-                    checked={scadenzariFlags.proforma}
-                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, proforma: checked as boolean})}
-                  />
-                  <label htmlFor="arch_proforma" className="text-sm cursor-pointer">Proforma</label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="arch_imu" 
-                    checked={scadenzariFlags.imu}
-                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, imu: checked as boolean})}
-                  />
-                  <label htmlFor="arch_imu" className="text-sm cursor-pointer">IMU</label>
-                </div>
-              </div>
-            </div>
-
-            <Button
-              onClick={handleArchivia}
-              disabled={processing}
-              variant="destructive"
-              className="w-full"
-            >
-              {processing ? (
-                <>
-                  <div className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                  Archiviazione in corso...
-                </>
-              ) : (
-                <>
-                  <Archive className="h-4 w-4 mr-2" />
-                  Archivia Selezionati {annoArchiviazione}
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-green-600">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-green-700">
-              <CalendarCog className="h-5 w-5" />
-              Genera Nuovi Scadenzari
-            </CardTitle>
-            <CardDescription>
-              Genera automaticamente gli scadenzari per l'anno selezionato
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="text-sm text-blue-800">
-                <p className="font-semibold mb-1">Come funziona:</p>
-                <ul className="list-disc list-inside space-y-1">
-                  <li>Vengono generati scadenzari solo per i clienti ATTIVI</li>
-                  <li>Vengono creati solo gli scadenzari relativi ai flag attivi del cliente</li>
-                  <li>Se uno scadenzario esiste già, NON viene duplicato</li>
-                  <li>I nominativi vengono inseriti automaticamente in base ai flag attivi</li>
-                  <li>Per IVA, CCGG, CU, Fiscali, Bilanci e 770 viene salvata anche la data scadenza adempimento con i due alert automatici a 15 e 7 giorni prima</li>
-                </ul>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="anno_generazione">Anno da Generare</Label>
-              <Select
-                value={annoGenerazione.toString()}
-                onValueChange={(value) => setAnnoGenerazione(parseInt(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {anni.map((anno) => (
-                    <SelectItem key={anno} value={anno.toString()}>
-                      {anno}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-3">
-              <Label>Scadenzari da Generare</Label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="flag_iva" 
-                    checked={scadenzariFlags.iva}
-                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, iva: checked as boolean})}
-                  />
-                  <label htmlFor="flag_iva" className="text-sm cursor-pointer">IVA</label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="flag_ccgg" 
-                    checked={scadenzariFlags.ccgg}
-                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, ccgg: checked as boolean})}
-                  />
-                  <label htmlFor="flag_ccgg" className="text-sm cursor-pointer">CCGG</label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="flag_cu" 
-                    checked={scadenzariFlags.cu}
-                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, cu: checked as boolean})}
-                  />
-                  <label htmlFor="flag_cu" className="text-sm cursor-pointer">CU</label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="flag_fiscali" 
-                    checked={scadenzariFlags.fiscali}
-                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, fiscali: checked as boolean})}
-                  />
-                  <label htmlFor="flag_fiscali" className="text-sm cursor-pointer">Fiscali</label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="flag_bilanci" 
-                    checked={scadenzariFlags.bilanci}
-                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, bilanci: checked as boolean})}
-                  />
-                  <label htmlFor="flag_bilanci" className="text-sm cursor-pointer">Bilanci</label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="flag_770" 
-                    checked={scadenzariFlags.modello770}
-                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, modello770: checked as boolean})}
-                  />
-                  <label htmlFor="flag_770" className="text-sm cursor-pointer">Modello 770</label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="flag_lipe" 
-                    checked={scadenzariFlags.lipe}
-                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, lipe: checked as boolean})}
-                  />
-                  <label htmlFor="flag_lipe" className="text-sm cursor-pointer">LIPE</label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="flag_esterometro" 
-                    checked={scadenzariFlags.esterometro}
-                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, esterometro: checked as boolean})}
-                  />
-                  <label htmlFor="flag_esterometro" className="text-sm cursor-pointer">Esterometro</label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="flag_proforma" 
-                    checked={scadenzariFlags.proforma}
-                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, proforma: checked as boolean})}
-                  />
-                  <label htmlFor="flag_proforma" className="text-sm cursor-pointer">Proforma</label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="flag_imu" 
-                    checked={scadenzariFlags.imu}
-                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, imu: checked as boolean})}
-                  />
-                  <label htmlFor="flag_imu" className="text-sm cursor-pointer">IMU</label>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-3 border rounded-lg p-4 bg-gray-50">
-              <Label>Date scadenza adempimento</Label>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="px-6 py-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {scadenzariFlags.iva && (
                   <div className="space-y-2">
-                    <Label htmlFor="scad_iva">IVA</Label>
+                    <Label htmlFor="modal_scad_iva">IVA</Label>
                     <input
-                      id="scad_iva"
+                      id="modal_scad_iva"
                       type="date"
                       value={scadenzeAdempimento.iva}
                       onChange={(e) => handleScadenzaChange("iva", e.target.value)}
@@ -918,9 +1049,9 @@ export default function GenerazioneScadenzariPage() {
 
                 {scadenzariFlags.ccgg && (
                   <div className="space-y-2">
-                    <Label htmlFor="scad_ccgg">CCGG</Label>
+                    <Label htmlFor="modal_scad_ccgg">CCGG</Label>
                     <input
-                      id="scad_ccgg"
+                      id="modal_scad_ccgg"
                       type="date"
                       value={scadenzeAdempimento.ccgg}
                       onChange={(e) => handleScadenzaChange("ccgg", e.target.value)}
@@ -931,9 +1062,9 @@ export default function GenerazioneScadenzariPage() {
 
                 {scadenzariFlags.cu && (
                   <div className="space-y-2">
-                    <Label htmlFor="scad_cu">CU</Label>
+                    <Label htmlFor="modal_scad_cu">CU</Label>
                     <input
-                      id="scad_cu"
+                      id="modal_scad_cu"
                       type="date"
                       value={scadenzeAdempimento.cu}
                       onChange={(e) => handleScadenzaChange("cu", e.target.value)}
@@ -944,9 +1075,9 @@ export default function GenerazioneScadenzariPage() {
 
                 {scadenzariFlags.fiscali && (
                   <div className="space-y-2">
-                    <Label htmlFor="scad_fiscali">Fiscali</Label>
+                    <Label htmlFor="modal_scad_fiscali">Fiscali</Label>
                     <input
-                      id="scad_fiscali"
+                      id="modal_scad_fiscali"
                       type="date"
                       value={scadenzeAdempimento.fiscali}
                       onChange={(e) => handleScadenzaChange("fiscali", e.target.value)}
@@ -957,9 +1088,9 @@ export default function GenerazioneScadenzariPage() {
 
                 {scadenzariFlags.bilanci && (
                   <div className="space-y-2">
-                    <Label htmlFor="scad_bilanci">Bilanci</Label>
+                    <Label htmlFor="modal_scad_bilanci">Bilanci</Label>
                     <input
-                      id="scad_bilanci"
+                      id="modal_scad_bilanci"
                       type="date"
                       value={scadenzeAdempimento.bilanci}
                       onChange={(e) => handleScadenzaChange("bilanci", e.target.value)}
@@ -970,9 +1101,9 @@ export default function GenerazioneScadenzariPage() {
 
                 {scadenzariFlags.modello770 && (
                   <div className="space-y-2">
-                    <Label htmlFor="scad_770">Modello 770</Label>
+                    <Label htmlFor="modal_scad_770">Modello 770</Label>
                     <input
-                      id="scad_770"
+                      id="modal_scad_770"
                       type="date"
                       value={scadenzeAdempimento.modello770}
                       onChange={(e) => handleScadenzaChange("modello770", e.target.value)}
@@ -983,142 +1114,37 @@ export default function GenerazioneScadenzariPage() {
               </div>
             </div>
 
-            <Button
-              onClick={handleGenera}
-              disabled={processing}
-              className="w-full bg-green-600 hover:bg-green-700"
-            >
-              {processing ? (
-                <>
-                  <div className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                  Generazione in corso...
-                </>
-              ) : (
-                <>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Genera Scadenzari Selezionati {annoGenerazione}
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-orange-600">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-orange-700">
-              <Trash2 className="h-5 w-5" />
-              Azzera Scadenzari
-            </CardTitle>
-            <CardDescription>
-              Elimina TUTTI i dati di uno scadenzario specifico
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-              <div className="flex gap-3">
-                <AlertTriangle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-orange-800">
-                  <p className="font-semibold mb-1">ATTENZIONE!</p>
-                  <p>L'azzeramento eliminerà PERMANENTEMENTE tutti i dati dello scadenzario selezionato. Questa operazione NON può essere annullata!</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="flex items-center justify-end gap-3 border-t px-6 py-4">
               <Button
-                onClick={() => handleAzzeraScadenzario("IVA", "tbscadiva")}
-                disabled={processing}
+                type="button"
                 variant="outline"
-                className="border-orange-300 hover:bg-orange-50"
+                onClick={() => setShowScadenzeModal(false)}
+                disabled={processing}
               >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Azzera IVA
+                Annulla
               </Button>
               <Button
-                onClick={() => handleAzzeraScadenzario("CCGG", "tbscadccgg")}
+                type="button"
+                onClick={handleConfermaDateEModale}
                 disabled={processing}
-                variant="outline"
-                className="border-orange-300 hover:bg-orange-50"
+                className="bg-green-600 hover:bg-green-700"
               >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Azzera CCGG
-              </Button>
-              <Button
-                onClick={() => handleAzzeraScadenzario("CU", "tbscadcu")}
-                disabled={processing}
-                variant="outline"
-                className="border-orange-300 hover:bg-orange-50"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Azzera CU
-              </Button>
-              <Button
-                onClick={() => handleAzzeraScadenzario("Fiscali", "tbscadfiscali")}
-                disabled={processing}
-                variant="outline"
-                className="border-orange-300 hover:bg-orange-50"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Azzera Fiscali
-              </Button>
-              <Button
-                onClick={() => handleAzzeraScadenzario("Bilanci", "tbscadbilanci")}
-                disabled={processing}
-                variant="outline"
-                className="border-orange-300 hover:bg-orange-50"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Azzera Bilanci
-              </Button>
-              <Button
-                onClick={() => handleAzzeraScadenzario("Modello 770", "tbscad770")}
-                disabled={processing}
-                variant="outline"
-                className="border-orange-300 hover:bg-orange-50"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Azzera 770
-              </Button>
-              <Button
-                onClick={() => handleAzzeraScadenzario("LIPE", "tbscadlipe")}
-                disabled={processing}
-                variant="outline"
-                className="border-orange-300 hover:bg-orange-50"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Azzera LIPE
-              </Button>
-              <Button
-                onClick={() => handleAzzeraScadenzario("Esterometro", "tbscadestero")}
-                disabled={processing}
-                variant="outline"
-                className="border-orange-300 hover:bg-orange-50"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Azzera Esterometro
-              </Button>
-              <Button
-                onClick={() => handleAzzeraScadenzario("Proforma", "tbscadproforma")}
-                disabled={processing}
-                variant="outline"
-                className="border-orange-300 hover:bg-orange-50"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Azzera Proforma
-              </Button>
-              <Button
-                onClick={() => handleAzzeraScadenzario("IMU", "tbscadimu")}
-                disabled={processing}
-                variant="outline"
-                className="border-orange-300 hover:bg-orange-50"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Azzera IMU
+                {processing ? (
+                  <>
+                    <div className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                    Generazione in corso...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Conferma e genera
+                  </>
+                )}
               </Button>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
