@@ -13,7 +13,11 @@ export default async function handler(
 }
 
   try {
-    const { forceAlert1, forceAlert2 } = req.body || {};
+ const forceAlert1 =
+  req.method === "GET" ? false : req.body?.forceAlert1 === true;
+
+const forceAlert2 =
+  req.method === "GET" ? false : req.body?.forceAlert2 === true;
 
     const result =
       await scadenzariAutomaticiService.processaScadenzariAutomatici({
