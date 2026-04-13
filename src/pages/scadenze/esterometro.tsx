@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import React from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -413,7 +414,7 @@ export default function ScadenzeEsterometroPage() {
                           : "bg-gray-50/30";
 
                         return (
-                          <tr.Fragment key={`${scadenza.id}-${month.prefix}`}>
+                          <React.Fragment key={`${scadenza.id}-${month.prefix}`}>
                             <td
                               className={`p-1 align-middle text-center border-l ${monthBgClass}`}
                               style={{ width: "60px", minWidth: "60px" }}
