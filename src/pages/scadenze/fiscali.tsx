@@ -444,15 +444,16 @@ export default function ScadenzeFiscaliPage() {
                         : "hover:bg-green-50"
                         }`}
                     >
-                      <td
-  className={`p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-cell border-r font-medium min-w-[200px] ${
-    scadenza.conferma_riga
-      ? "bg-green-100 hover:bg-green-200"
-      : "bg-white hover:bg-green-50"
-  }`}
->
-  {scadenza.nominativo}
-</td>
+               <td
+                      style={{
+                        backgroundColor: scadenza.conferma_riga ? "#dcfce7" : "#ffffff",
+                          }}
+                    className={`p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-cell border-r font-medium min-w-[200px] ${
+                        scadenza.conferma_riga ? "hover:bg-green-200" : "hover:bg-green-50"
+                        }`}
+                        >
+                      {scadenza.nominativo}
+                      </td>
 
                       <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[180px]">
                         {scadenza.professionista}
