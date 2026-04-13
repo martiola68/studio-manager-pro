@@ -224,7 +224,6 @@ export default function ScadenzeFiscaliPage() {
     setNoteTimers((prev) => ({ ...prev, [scadenzaId]: timer }));
   };
 
-  // ✅ RIPRISTINATA: mancava nella riscrittura precedente
   const handleDelete = async (id: string) => {
     if (!confirm("Sei sicuro di voler eliminare questo record?")) return;
 
@@ -375,49 +374,43 @@ export default function ScadenzeFiscaliPage() {
                     Tipo Redditi
                   </th>
                   <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[140px]">
-                    Mod R Compilato
+                    Compilato
                   </th>
                   <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[140px]">
-                    Mod R Definitivo
+                    Definitivo
                   </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[140px]">
-                    Saldo Acc CCIAA
+                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[160px]">
+                    Saldo/1° Acc./cciaa
                   </th>
                   <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[130px]">
-                    Data Com 1
+                    Comunicato il
+                  </th>
+                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[110px]">
+                    2° Acconto
+                  </th>
+                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[130px]">
+                    Comunicato il
+                  </th>
+                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[140px]">
+                    Invio Redditi
+                  </th>
+                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[130px]">
+                    Inviato il
                   </th>
                   <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[100px]">
-                    Acc 2
-                  </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[130px]">
-                    Data Com 2
+                    IRAP
                   </th>
                   <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[140px]">
-                    Mod R Inviato
-                  </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[130px]">
-                    Data R Invio
-                  </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[120px]">
-                    Ricevuta R
-                  </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[100px]">
-                    Con IRAP
+                    Compilato
                   </th>
                   <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[140px]">
-                    Mod I Compilato
+                    Definitivo
                   </th>
                   <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[140px]">
-                    Mod I Definitivo
-                  </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[140px]">
-                    Mod I Inviato
+                    Invio IRAP
                   </th>
                   <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[130px]">
-                    Data I Invio
-                  </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[130px]">
-                    Conferma Invii
+                    Inviato il
                   </th>
                   <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[200px]">
                     Note
@@ -435,7 +428,7 @@ export default function ScadenzeFiscaliPage() {
                 {filteredScadenze.length === 0 ? (
                   <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                     <td
-                      colSpan={22}
+                      colSpan={20}
                       className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center text-gray-500"
                     >
                       Nessun record trovato
@@ -446,7 +439,7 @@ export default function ScadenzeFiscaliPage() {
                     <tr
                       key={scadenza.id}
                       className={`border-b transition-colors data-[state=selected]:bg-muted ${
-                        scadenza.conferma_invii
+                        scadenza.conferma_riga
                           ? "bg-red-100 hover:bg-red-200"
                           : "hover:bg-green-50"
                       }`}
@@ -504,7 +497,7 @@ export default function ScadenzeFiscaliPage() {
                         />
                       </td>
 
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[140px]">
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[160px]">
                         <Checkbox
                           checked={scadenza.saldo_acc_cciaa || false}
                           onCheckedChange={() =>
@@ -532,7 +525,7 @@ export default function ScadenzeFiscaliPage() {
                         />
                       </td>
 
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[100px]">
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[110px]">
                         <Checkbox
                           checked={scadenza.acc2 || false}
                           onCheckedChange={() =>
@@ -581,19 +574,6 @@ export default function ScadenzeFiscaliPage() {
                             )
                           }
                           className="w-full"
-                        />
-                      </td>
-
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
-                        <Checkbox
-                          checked={scadenza.ricevuta_r || false}
-                          onCheckedChange={() =>
-                            handleToggleField(
-                              scadenza.id,
-                              "ricevuta_r",
-                              scadenza.ricevuta_r
-                            )
-                          }
                         />
                       </td>
 
@@ -661,19 +641,6 @@ export default function ScadenzeFiscaliPage() {
                             )
                           }
                           className="w-full"
-                        />
-                      </td>
-
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[130px]">
-                        <Checkbox
-                          checked={scadenza.conferma_invii || false}
-                          onCheckedChange={() =>
-                            handleToggleField(
-                              scadenza.id,
-                              "conferma_invii",
-                              scadenza.conferma_invii
-                            )
-                          }
                         />
                       </td>
 
