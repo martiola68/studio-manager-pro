@@ -39,6 +39,9 @@ export default function Scadenze770Page() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterSettore, setFilterSettore] = useState("__all__");
 
+  const [filterOperatoreFiscale, setFilterOperatoreFiscale] = useState("__all__");
+const [filterOperatorePayroll, setFilterOperatorePayroll] = useState("__all__");
+
   const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
   const [noteTimers, setNoteTimers] = useState<Record<string, NodeJS.Timeout>>({});
 
@@ -227,17 +230,34 @@ export default function Scadenze770Page() {
     }
   };
 
-  const filteredScadenze = scadenze.filter((s) => {
-    const matchSearch = s.nominativo?.toLowerCase().includes(searchQuery.toLowerCase());
+const filteredScadenze = scadenze.filter((s) => {
+  const matchSearch = (s.nominativo || "")
+    .toLowerCase()
+    .includes(searchQuery.toLowerCase());
 
-    const hasFiscale = s.cliente?.settore_fiscale === true;
-    const hasLavoro = s.cliente?.settore_lavoro === true;
+  const hasFiscale = s.cliente?.settore_fiscale === true;
+  const hasLavoro = s.cliente?.settore_lavoro === true;
 
-    const matchSettore =
-      filterSettore === "__all__" || (filterSettore === "Fiscale" && hasFiscale) || (filterSettore === "Lavoro" && hasLavoro);
+  const matchSettore =
+    filterSettore === "__all__" ||
+    (filterSettore === "Fiscale" && hasFiscale) ||
+    (filterSettore === "Lavoro" && hasLavoro);
 
-    return matchSearch && matchSettore;
-  });
+  const matchOperatoreFiscale =
+    filterOperatoreFiscale === "__all__" ||
+    s.utente_operatore_id === filterOperatoreFiscale;
+
+  const matchOperatorePayroll =
+    filterOperatorePayroll === "__all__" ||
+    s.utente_payroll_id === filterOperatorePayroll;
+
+  return (
+    matchSearch &&
+    matchSettore &&
+    matchOperatoreFiscale &&
+    matchOperatorePayroll
+  );
+});
 
   if (loading) {
     return (
@@ -285,29 +305,68 @@ export default function Scadenze770Page() {
           <CardTitle>Filtri e Ricerca</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Cerca Nominativo</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input placeholder="Cerca..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
-              </div>
-            </div>
+       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+  <div className="space-y-2">
+    <Label>Cerca Nominativo</Label>
+    <div className="relative">
+      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+      <Input
+        placeholder="Cerca..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        className="pl-10"
+      />
+    </div>
+  </div>
 
-            <div className="space-y-2">
-              <Label>Settore</Label>
-              <Select value={filterSettore} onValueChange={setFilterSettore}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Tutti" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">Tutti</SelectItem>
-                  <SelectItem value="Fiscale">Fiscale</SelectItem>
-                  <SelectItem value="Lavoro">Lavoro</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+  <div className="space-y-2">
+    <Label>Settore</Label>
+    <Select value={filterSettore} onValueChange={setFilterSettore}>
+      <SelectTrigger>
+        <SelectValue placeholder="Tutti" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="__all__">Tutti</SelectItem>
+        <SelectItem value="Fiscale">Fiscale</SelectItem>
+        <SelectItem value="Lavoro">Lavoro</SelectItem>
+      </SelectContent>
+    </Select>
+  </div>
+
+  <div className="space-y-2">
+    <Label>Operatore fiscale</Label>
+    <Select value={filterOperatoreFiscale} onValueChange={setFilterOperatoreFiscale}>
+      <SelectTrigger>
+        <SelectValue placeholder="Tutti" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="__all__">Tutti</SelectItem>
+        {utenti.map((u) => (
+          <SelectItem key={u.id} value={u.id}>
+            {u.nome} {u.cognome}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  </div>
+
+  <div className="space-y-2">
+    <Label>Operatore payroll</Label>
+    <Select value={filterOperatorePayroll} onValueChange={setFilterOperatorePayroll}>
+      <SelectTrigger>
+        <SelectValue placeholder="Tutti" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="__all__">Tutti</SelectItem>
+        {utenti.map((u) => (
+          <SelectItem key={u.id} value={u.id}>
+            {u.nome} {u.cognome}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  </div>
+</div>
         </CardContent>
       </Card>
 
@@ -357,11 +416,20 @@ export default function Scadenze770Page() {
                     return (
                       <tr
                         key={scadenza.id}
-                        className={`border-b transition-colors ${
-                          isConfermata ? "bg-red-50 hover:bg-red-50" : "hover:bg-green-50"
-                        } data-[state=selected]:bg-muted`}
+                       className={`border-b transition-colors ${
+  isConfermata ? "bg-green-100 hover:bg-green-100" : "hover:bg-green-50"
+} data-[state=selected]:bg-muted`}
                       >
-                        <td className="p-2 align-middle sticky-col-cell border-r font-medium min-w-[200px]">{scadenza.nominativo}</td>
+                       <td
+  style={{
+    backgroundColor: isConfermata ? "#dcfce7" : "#ffffff",
+  }}
+  className={`p-2 align-middle sticky-col-cell border-r font-medium min-w-[200px] ${
+    isConfermata ? "hover:bg-green-100" : "hover:bg-green-50"
+  }`}
+>
+  {scadenza.nominativo}
+</td>
 
                         <td className="p-2 align-middle min-w-[120px]">
                           <div className="flex flex-col gap-1">
