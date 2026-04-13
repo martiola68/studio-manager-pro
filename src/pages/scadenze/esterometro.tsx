@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -177,16 +176,18 @@ export default function ScadenzeEsterometroPage() {
     value: any
   ) => {
     try {
+      const normalizedValue = value === "" ? null : Number(value);
+
       const { error } = await supabase
         .from("tbscadestero")
-        .update({ [field]: value === "" ? null : value })
+        .update({ [field]: normalizedValue })
         .eq("id", scadenzaId);
 
       if (error) throw error;
 
       setScadenze((prev) =>
         prev.map((s) =>
-          s.id === scadenzaId ? { ...s, [field]: value === "" ? null : value } : s
+          s.id === scadenzaId ? { ...s, [field]: normalizedValue } : s
         )
       );
     } catch (error: any) {
@@ -287,7 +288,7 @@ export default function ScadenzeEsterometroPage() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
                 type="text"
                 placeholder="Cerca nominativo..."
@@ -388,7 +389,7 @@ export default function ScadenzeEsterometroPage() {
               <tbody className="[&_tr:last-child]:border-0">
                 {filteredScadenze.length === 0 ? (
                   <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                    <td colSpan={39} className="p-4 text-center text-gray-500">
+                    <td colSpan={40} className="p-4 text-center text-gray-500">
                       Nessun record trovato
                     </td>
                   </tr>
@@ -440,8 +441,7 @@ export default function ScadenzeEsterometroPage() {
                             >
                               <Checkbox
                                 checked={
-                                  (scadenza as any)[`${month.prefix}_invio`] ||
-                                  false
+                                  (scadenza as any)[`${month.prefix}_invio`] || false
                                 }
                                 onCheckedChange={() =>
                                   handleToggleField(
@@ -473,7 +473,7 @@ export default function ScadenzeEsterometroPage() {
                                 }
                               />
                             </td>
-                          </tr.Fragment>
+                          </React.Fragment>
                         );
                       })}
 
