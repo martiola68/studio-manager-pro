@@ -96,7 +96,7 @@ export default function ScadenzeLipePage() {
   const [utenti, setUtenti] = useState<Utente[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterOperatore, setFilterOperatore] = useState("__all__");
-  const [filterProfessionista, setFilterProfessionista] = useState("__all__");
+ const [filterTipoLiq, setFilterTipoLiq] = useState("__all__");
 
   useEffect(() => {
     loadData();
@@ -240,14 +240,20 @@ export default function ScadenzeLipePage() {
     }
   };
 
-  const filteredScadenze = scadenze.filter((s) => {
-    const matchSearch = (s.nominativo || "").toLowerCase().includes(searchQuery.toLowerCase());
-    const matchOperatore =
-      filterOperatore === "__all__" || s.utente_operatore_id === filterOperatore;
-    const matchProfessionista =
-      filterProfessionista === "__all__" || s.utente_professionista_id === filterProfessionista;
-    return matchSearch && matchOperatore && matchProfessionista;
-  });
+const filteredScadenze = scadenze.filter((s) => {
+  const matchSearch = (s.nominativo || "")
+    .toLowerCase()
+    .includes(searchQuery.toLowerCase());
+
+  const matchOperatore =
+    filterOperatore === "__all__" || s.utente_operatore_id === filterOperatore;
+
+  const tipoLiq = s.TipoLiq || "Mensile";
+  const matchTipoLiq =
+    filterTipoLiq === "__all__" || tipoLiq === filterTipoLiq;
+
+  return matchSearch && matchOperatore && matchTipoLiq;
+});
 
   if (loading) {
     return (
@@ -261,8 +267,8 @@ export default function ScadenzeLipePage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Scadenzario LIPE</h1>
-          <p className="text-gray-500 mt-1">Gestione Liquidazioni Periodiche IVA</p>
+          <h1 className="text-3xl font-bold text-gray-900">Scadenzario Liquidazioni IVA e LIPE</h1>
+          <p className="text-gray-500 mt-1">Gestione liquidazioni IVA periodiche e LIPE</p>
         </div>
       </div>
 
@@ -271,37 +277,52 @@ export default function ScadenzeLipePage() {
           <CardTitle>Filtri e Ricerca</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Cerca Nominativo</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Cerca per nominativo..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+  <div className="space-y-2">
+    <label className="text-sm font-medium">Cerca Nominativo</label>
+    <div className="relative">
+      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+      <Input
+        placeholder="Cerca per nominativo..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        className="pl-10"
+      />
+    </div>
+  </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Utente Operatore</label>
-              <Select value={filterOperatore} onValueChange={setFilterOperatore}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Tutti gli operatori" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">Tutti gli operatori</SelectItem>
-                  {utenti.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {u.nome} {u.cognome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+  <div className="space-y-2">
+    <label className="text-sm font-medium">Utente Operatore</label>
+    <Select value={filterOperatore} onValueChange={setFilterOperatore}>
+      <SelectTrigger>
+        <SelectValue placeholder="Tutti gli operatori" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="__all__">Tutti gli operatori</SelectItem>
+        {utenti.map((u) => (
+          <SelectItem key={u.id} value={u.id}>
+            {u.nome} {u.cognome}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  </div>
 
+  <div className="space-y-2">
+    <label className="text-sm font-medium">Tipo liquidazione</label>
+    <Select value={filterTipoLiq} onValueChange={setFilterTipoLiq}>
+      <SelectTrigger>
+        <SelectValue placeholder="Tutti i tipi" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="__all__">Tutti i tipi</SelectItem>
+        <SelectItem value="Mensile">Mensile</SelectItem>
+        <SelectItem value="Trimestrale">Trimestrale</SelectItem>
+        <SelectItem value="Esterna">Esterna</SelectItem>
+      </SelectContent>
+    </Select>
+  </div>
+</div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Utente Professionista</label>
               <Select value={filterProfessionista} onValueChange={setFilterProfessionista}>
@@ -338,7 +359,7 @@ export default function ScadenzeLipePage() {
                     Operatore
                   </th>
                   <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[170px] border-r border-gray-300 bg-white">
-                    TipoLiq
+                    Tipo liquidazione
                   </th>
 
                   <th className={`${baseHeaderClass} ${groupHeaderQ1} min-w-[60px]`}>Gen</th>
