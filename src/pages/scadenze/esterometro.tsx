@@ -207,12 +207,18 @@ export default function ScadenzeEsterometroPage() {
 
       if (error) throw error;
 
+        setScadenze((prev) => prev.filter((s) => s.id !== id));
+
+      setStats((prev) => ({
+        ...prev,
+        totale: Math.max(0, prev.totale - 1),
+      }));
+
       toast({
         title: "Successo",
         description: "Record eliminato",
       });
-
-      await loadData();
+      
     } catch (error: any) {
       toast({
         title: "Errore",
