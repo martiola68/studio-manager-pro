@@ -25,42 +25,36 @@ type RigaScadenzarioBase = {
 type RigaIva = RigaScadenzarioBase & {
   utente_operatore_id: string | null;
   utente_professionista_id: string | null;
-  mod_inviato: boolean | null;
   conferma_riga: boolean | null;
 };
 
 type RigaCcgg = RigaScadenzarioBase & {
   utente_operatore_id: string | null;
   utente_professionista_id: string | null;
-  f24_comunicato: boolean | null;
   conferma_riga: boolean | null;
 };
 
 type RigaCu = RigaScadenzarioBase & {
   utente_operatore_id: string | null;
   utente_professionista_id: string | null;
-  inviate: boolean | null;
   conferma_riga: boolean | null;
 };
 
 type RigaFiscali = RigaScadenzarioBase & {
   utente_operatore_id: string | null;
   utente_professionista_id: string | null;
-  conferma_invii: boolean | null;
   conferma_riga: boolean | null;
 };
 
 type RigaBilanci = RigaScadenzarioBase & {
   utente_operatore_id: string | null;
   utente_professionista_id: string | null;
-  invio_bil: boolean | null;
   conferma_riga: boolean | null;
 };
 
 type Riga770 = RigaScadenzarioBase & {
   utente_operatore_id: string | null;
   utente_professionista_id: string | null;
-  mod_inviato: boolean | null;
   conferma_riga: boolean | null;
 };
 
@@ -337,12 +331,11 @@ function filterOpenIvaRows(
     RigaScadenzarioBase & {
       utente_operatore_id: string | null;
       utente_professionista_id: string | null;
-      mod_inviato?: boolean | null;
       conferma_riga?: boolean | null;
     }
   >
 ) {
-  return rows.filter((r) => !r.mod_inviato || !r.conferma_riga);
+  return rows.filter((r) => !r.conferma_riga);
 }
 
 function filterOpenCcggRows(
@@ -350,12 +343,11 @@ function filterOpenCcggRows(
     RigaScadenzarioBase & {
       utente_operatore_id: string | null;
       utente_professionista_id: string | null;
-      f24_comunicato?: boolean | null;
       conferma_riga?: boolean | null;
     }
   >
 ) {
-  return rows.filter((r) => !r.f24_comunicato || !r.conferma_riga);
+  return rows.filter((r) => !r.conferma_riga);
 }
 
 function filterOpenCuRows(
@@ -363,12 +355,11 @@ function filterOpenCuRows(
     RigaScadenzarioBase & {
       utente_operatore_id: string | null;
       utente_professionista_id: string | null;
-      inviate?: boolean | null;
       conferma_riga?: boolean | null;
     }
   >
 ) {
-  return rows.filter((r) => !r.inviate || !r.conferma_riga);
+  return rows.filter((r) => !r.conferma_riga);
 }
 
 function filterOpenFiscaliRows(
@@ -376,12 +367,11 @@ function filterOpenFiscaliRows(
     RigaScadenzarioBase & {
       utente_operatore_id: string | null;
       utente_professionista_id: string | null;
-      conferma_invii?: boolean | null;
       conferma_riga?: boolean | null;
     }
   >
 ) {
-  return rows.filter((r) => !r.conferma_invii || !r.conferma_riga);
+  return rows.filter((r) => !r.conferma_riga);
 }
 
 function filterOpenBilanciRows(
@@ -389,12 +379,11 @@ function filterOpenBilanciRows(
     RigaScadenzarioBase & {
       utente_operatore_id: string | null;
       utente_professionista_id: string | null;
-      invio_bil?: boolean | null;
       conferma_riga?: boolean | null;
     }
   >
 ) {
-  return rows.filter((r) => !r.invio_bil || !r.conferma_riga);
+  return rows.filter((r) => !r.conferma_riga);
 }
 
 function filterOpen770Rows(
@@ -402,12 +391,11 @@ function filterOpen770Rows(
     RigaScadenzarioBase & {
       utente_operatore_id: string | null;
       utente_professionista_id: string | null;
-      mod_inviato?: boolean | null;
       conferma_riga?: boolean | null;
     }
   >
 ) {
-  return rows.filter((r) => !r.mod_inviato || !r.conferma_riga);
+  return rows.filter((r) => !r.conferma_riga);
 }
 
 async function processTable(params: {
@@ -510,42 +498,42 @@ export const scadenzariAutomaticiService = {
         tableName: "tbscadiva",
         titolo: "IVA",
         select:
-          "id, nominativo, studio_id, utente_operatore_id, utente_professionista_id, data_scadenza_adempimento, data_avviso_1, data_avviso_2, alert_1_inviato, alert_2_inviato, mod_inviato, conferma_riga",
+          "id, nominativo, studio_id, utente_operatore_id, utente_professionista_id, data_scadenza_adempimento, data_avviso_1, data_avviso_2, alert_1_inviato, alert_2_inviato, conferma_riga",
         filterOpenRows: filterOpenIvaRows,
       },
       {
         tableName: "tbscadccgg",
         titolo: "CCGG",
         select:
-          "id, nominativo, studio_id, utente_operatore_id, utente_professionista_id, data_scadenza_adempimento, data_avviso_1, data_avviso_2, alert_1_inviato, alert_2_inviato, f24_comunicato, conferma_riga",
+          "id, nominativo, studio_id, utente_operatore_id, utente_professionista_id, data_scadenza_adempimento, data_avviso_1, data_avviso_2, alert_1_inviato, alert_2_inviato, conferma_riga",
         filterOpenRows: filterOpenCcggRows,
       },
       {
         tableName: "tbscadcu",
         titolo: "CU",
         select:
-          "id, nominativo, studio_id, utente_operatore_id, utente_professionista_id, data_scadenza_adempimento, data_avviso_1, data_avviso_2, alert_1_inviato, alert_2_inviato, inviate, conferma_riga",
+          "id, nominativo, studio_id, utente_operatore_id, utente_professionista_id, data_scadenza_adempimento, data_avviso_1, data_avviso_2, alert_1_inviato, alert_2_inviato, conferma_riga",
         filterOpenRows: filterOpenCuRows,
       },
       {
         tableName: "tbscadfiscali",
         titolo: "Fiscali",
-        select:
-          "id, nominativo, studio_id, utente_operatore_id, utente_professionista_id, data_scadenza_adempimento, data_avviso_1, data_avviso_2, alert_1_inviato, alert_2_inviato, conferma_invii, conferma_riga",
+       select:
+  "id, nominativo, studio_id, utente_operatore_id, utente_professionista_id, data_scadenza_adempimento, data_avviso_1, data_avviso_2, alert_1_inviato, alert_2_inviato, conferma_riga",
         filterOpenRows: filterOpenFiscaliRows,
       },
       {
         tableName: "tbscadbilanci",
         titolo: "Bilanci",
         select:
-          "id, nominativo, studio_id, utente_operatore_id, utente_professionista_id, data_scadenza_adempimento, data_avviso_1, data_avviso_2, alert_1_inviato, alert_2_inviato, invio_bil, conferma_riga",
+          "id, nominativo, studio_id, utente_operatore_id, utente_professionista_id, data_scadenza_adempimento, data_avviso_1, data_avviso_2, alert_1_inviato, alert_2_inviato, conferma_riga",
         filterOpenRows: filterOpenBilanciRows,
       },
       {
         tableName: "tbscad770",
         titolo: "770",
         select:
-          "id, nominativo, studio_id, utente_operatore_id, utente_professionista_id, data_scadenza_adempimento, data_avviso_1, data_avviso_2, alert_1_inviato, alert_2_inviato, mod_inviato, conferma_riga",
+          "id, nominativo, studio_id, utente_operatore_id, utente_professionista_id, data_scadenza_adempimento, data_avviso_1, data_avviso_2, alert_1_inviato, alert_2_inviato, conferma_riga",
         filterOpenRows: filterOpen770Rows,
       },
     ] as const;
