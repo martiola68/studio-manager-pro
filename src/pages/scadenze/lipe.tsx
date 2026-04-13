@@ -322,7 +322,7 @@ const filteredScadenze = scadenze.filter((s) => {
       </SelectContent>
     </Select>
   </div>
-</div>
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Utente Professionista</label>
               <Select value={filterProfessionista} onValueChange={setFilterProfessionista}>
