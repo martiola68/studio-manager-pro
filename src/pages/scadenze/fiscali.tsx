@@ -438,15 +438,21 @@ export default function ScadenzeFiscaliPage() {
                   filteredScadenze.map((scadenza) => (
                     <tr
                       key={scadenza.id}
-                      className={`border-b transition-colors data-[state=selected]:bg-muted ${
-                        scadenza.conferma_riga
-                          ? "bg-red-100 hover:bg-red-200"
-                          : "hover:bg-green-50"
-                      }`}
+                    className={`border-b transition-colors data-[state=selected]:bg-muted ${
+                    scadenza.conferma_riga
+                      ? "bg-green-100 hover:bg-green-200"
+                        : "hover:bg-green-50"
+                        }`}
                     >
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-cell border-r font-medium min-w-[200px]">
-                        {scadenza.nominativo}
-                      </td>
+                      <td
+  className={`p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-cell border-r font-medium min-w-[200px] ${
+    scadenza.conferma_riga
+      ? "bg-green-100 hover:bg-green-200"
+      : "bg-white hover:bg-green-50"
+  }`}
+>
+  {scadenza.nominativo}
+</td>
 
                       <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[180px]">
                         {scadenza.professionista}
