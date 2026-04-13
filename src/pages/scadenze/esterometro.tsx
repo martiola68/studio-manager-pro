@@ -1,15 +1,22 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Search, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
-type ScadenzaEsterometroRow = Database["public"]["Tables"]["tbscadestero"]["Row"];
+type ScadenzaEsterometroRow =
+  Database["public"]["Tables"]["tbscadestero"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
 type ScadenzaEsterometro = ScadenzaEsterometroRow & {
@@ -30,19 +37,18 @@ const MONTHS = [
   { prefix: "ott", label: "Ott", index: 10 },
   { prefix: "nov", label: "Nov", index: 11 },
   { prefix: "dic", label: "Dic", index: 12 },
-];
+] as const;
 
 export default function ScadenzeEsterometroPage() {
   const router = useRouter();
   const { toast } = useToast();
+
   const [loading, setLoading] = useState(true);
   const [scadenze, setScadenze] = useState<ScadenzaEsterometro[]>([]);
   const [utenti, setUtenti] = useState<Utente[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterOperatore, setFilterOperatore] = useState("__all__");
 
-  
-  
   const [stats, setStats] = useState({
     totale: 0,
     confermate: 0,
@@ -54,11 +60,15 @@ export default function ScadenzeEsterometroPage() {
 
   const checkAuthAndLoad = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       if (!session) {
         router.push("/login");
         return;
       }
+
       await loadData();
     } catch (error) {
       console.error("Errore:", error);
@@ -69,13 +79,15 @@ export default function ScadenzeEsterometroPage() {
   const loadData = async () => {
     try {
       setLoading(true);
+
       const [scadenzeData, utentiData] = await Promise.all([
         loadScadenze(),
-        loadUtenti()
+        loadUtenti(),
       ]);
+
       setScadenze(scadenzeData);
       setUtenti(utentiData);
-      
+
       setStats({
         totale: scadenzeData.length,
         confermate: 0,
@@ -85,7 +97,7 @@ export default function ScadenzeEsterometroPage() {
       toast({
         title: "Errore",
         description: "Impossibile caricare i dati",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -95,26 +107,28 @@ export default function ScadenzeEsterometroPage() {
   const loadScadenze = async (): Promise<ScadenzaEsterometro[]> => {
     const { data, error } = await supabase
       .from("tbscadestero")
-      .select(`
+      .select(
+        `
         *,
         professionista:tbutenti!tbscadestero_utente_professionista_id_fkey(nome, cognome),
         operatore:tbutenti!tbscadestero_utente_operatore_id_fkey(nome, cognome)
-      `)
+      `
+      )
       .order("nominativo", { ascending: true });
-    
+
     if (error) {
       console.error("Errore query:", error);
       throw error;
     }
-    
+
     return (data || []).map((record: any) => ({
       ...record,
-      professionista: record.professionista 
+      professionista: record.professionista
         ? `${record.professionista.nome} ${record.professionista.cognome}`
         : "-",
       operatore: record.operatore
         ? `${record.operatore.nome} ${record.operatore.cognome}`
-        : "-"
+        : "-",
     })) as ScadenzaEsterometro[];
   };
 
@@ -123,19 +137,23 @@ export default function ScadenzeEsterometroPage() {
       .from("tbutenti")
       .select("*")
       .order("cognome", { ascending: true });
-    
+
     if (error) throw error;
     return data || [];
   };
 
-  const handleToggleField = async (scadenzaId: string, field: keyof ScadenzaEsterometro, currentValue: boolean | null) => {
+  const handleToggleField = async (
+    scadenzaId: string,
+    field: keyof ScadenzaEsterometro,
+    currentValue: boolean | null
+  ) => {
     try {
       const newValue = !currentValue;
-      
-      setScadenze(prev => prev.map(s => 
-        s.id === scadenzaId ? { ...s, [field]: newValue } : s
-      ));
-      
+
+      setScadenze((prev) =>
+        prev.map((s) => (s.id === scadenzaId ? { ...s, [field]: newValue } : s))
+      );
+
       const { error } = await supabase
         .from("tbscadestero")
         .update({ [field]: newValue })
@@ -146,73 +164,83 @@ export default function ScadenzeEsterometroPage() {
       toast({
         title: "Errore aggiornamento",
         description: error.message,
-        variant: "destructive"
+        variant: "destructive",
       });
       await loadData();
     }
   };
 
-  const handleUpdateField = async (scadenzaId: string, field: keyof ScadenzaEsterometro, value: any) => {
+  const handleUpdateField = async (
+    scadenzaId: string,
+    field: keyof ScadenzaEsterometro,
+    value: any
+  ) => {
     try {
       const { error } = await supabase
         .from("tbscadestero")
         .update({ [field]: value === "" ? null : value })
         .eq("id", scadenzaId);
-      
+
       if (error) throw error;
-      
-      setScadenze(prev => prev.map(s => 
-        s.id === scadenzaId ? { ...s, [field]: value === "" ? null : value } : s
-      ));
+
+      setScadenze((prev) =>
+        prev.map((s) =>
+          s.id === scadenzaId ? { ...s, [field]: value === "" ? null : value } : s
+        )
+      );
     } catch (error: any) {
       toast({
         title: "Errore aggiornamento",
         description: error.message,
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
 
   const handleDelete = async (id: string) => {
-  if (!confirm("Sei sicuro di voler eliminare questo record?")) return;
+    if (!confirm("Sei sicuro di voler eliminare questo record?")) return;
 
-  try {
-    const { error } = await supabase
-      .from("tbscadestero")
-      .delete()
-      .eq("id", id);
+    try {
+      const { error } = await supabase.from("tbscadestero").delete().eq("id", id);
 
-    if (error) throw error;
+      if (error) throw error;
 
-    toast({
-      title: "Successo",
-      description: "Record eliminato",
-    });
+      toast({
+        title: "Successo",
+        description: "Record eliminato",
+      });
 
-    await loadData();
-  } catch (error: any) {
-    toast({
-      title: "Errore",
-      description: error.message || "Impossibile eliminare il record",
-      variant: "destructive",
-    });
-  }
-};
+      await loadData();
+    } catch (error: any) {
+      toast({
+        title: "Errore",
+        description: error.message || "Impossibile eliminare il record",
+        variant: "destructive",
+      });
+    }
+  };
 
- const filteredScadenze = scadenze.filter(s => {
-  const matchSearch = (s.nominativo || "").toLowerCase().includes(searchQuery.toLowerCase());
-  const matchOperatore = filterOperatore === "__all__" || s.utente_operatore_id === filterOperatore;
-  return matchSearch && matchOperatore;
-});
+  const filteredScadenze = scadenze.filter((s) => {
+    const matchSearch = (s.nominativo || "")
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
+
+    const matchOperatore =
+      filterOperatore === "__all__" || s.utente_operatore_id === filterOperatore;
+
+    return matchSearch && matchOperatore;
+  });
 
   const calculateTotalDocs = (row: ScadenzaEsterometro) => {
     let sum = 0;
+
     for (let i = 1; i <= 12; i++) {
       const val = row[`nmese${i}` as keyof ScadenzaEsterometro];
-      if (typeof val === 'number') {
+      if (typeof val === "number") {
         sum += val;
       }
     }
+
     return sum;
   };
 
@@ -231,8 +259,12 @@ export default function ScadenzeEsterometroPage() {
     <div className="w-full max-w-none px-4 py-8 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Scadenzario Esterometro</h1>
-          <p className="text-gray-500 mt-1">Gestione scadenze Esterometro mensili</p>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Scadenzario Esterometro
+          </h1>
+          <p className="text-gray-500 mt-1">
+            Gestione scadenze Esterometro mensili
+          </p>
         </div>
       </div>
 
@@ -240,7 +272,9 @@ export default function ScadenzeEsterometroPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-sm text-gray-600 mb-1">Totale Record</div>
-            <div className="text-3xl font-bold text-gray-900">{stats.totale}</div>
+            <div className="text-3xl font-bold text-gray-900">
+              {stats.totale}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -250,7 +284,7 @@ export default function ScadenzeEsterometroPage() {
           <CardTitle>Filtri e Ricerca</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
@@ -261,7 +295,7 @@ export default function ScadenzeEsterometroPage() {
                 className="pl-10"
               />
             </div>
-            
+
             <div>
               <Select value={filterOperatore} onValueChange={setFilterOperatore}>
                 <SelectTrigger>
@@ -269,7 +303,7 @@ export default function ScadenzeEsterometroPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all__">Tutti gli operatori</SelectItem>
-                  {utenti.map(u => (
+                  {utenti.map((u) => (
                     <SelectItem key={u.id} value={u.id}>
                       {u.nome} {u.cognome}
                     </SelectItem>
@@ -277,8 +311,7 @@ export default function ScadenzeEsterometroPage() {
                 </SelectContent>
               </Select>
             </div>
-
-           </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -288,36 +321,69 @@ export default function ScadenzeEsterometroPage() {
             <table className="w-full caption-bottom text-sm border-collapse">
               <thead className="[&_tr]:border-b sticky top-0 z-30 bg-white shadow-sm">
                 <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                  <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 sticky left-0 z-40 min-w-[200px] bg-white border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Nominativo</th>
-                  <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[150px] border-r">Operatore</th>
-                                 
-                  {MONTHS.map(month => (
-                    <th key={month.prefix} colSpan={3} className="h-12 px-2 text-center align-middle font-medium text-muted-foreground border-r border-l border-gray-200 bg-gray-50/50">
+                  <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground sticky left-0 z-40 min-w-[200px] bg-white border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+                    Nominativo
+                  </th>
+                  <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px] border-r">
+                    Operatore
+                  </th>
+
+                  {MONTHS.map((month) => (
+                    <th
+                      key={month.prefix}
+                      colSpan={3}
+                      className="h-12 px-2 text-center align-middle font-medium text-muted-foreground border-r border-l border-gray-200 bg-gray-50/50"
+                    >
                       {month.label}
                     </th>
                   ))}
-                  
-                  <th className="h-12 px-2 text-center align-middle font-bold text-gray-900 [&:has([role=checkbox])]:pr-0 min-w-[80px] bg-gray-100">Tot Doc</th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[90px] bg-white">Azioni</th>
+
+                  <th className="h-12 px-2 text-center align-middle font-bold text-gray-900 min-w-[80px] bg-gray-100">
+                    Tot Doc
+                  </th>
+                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[90px] bg-white">
+                    Azioni
+                  </th>
                 </tr>
+
                 <tr className="border-b text-xs text-gray-500 bg-gray-50">
                   <th className="bg-white sticky left-0 z-40 border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]"></th>
                   <th className="bg-white border-r"></th>
-                 {MONTHS.map(month => {
-                  const isInviato = (scadenza as any)[`${month.prefix}_invio`] || false;
-                  const monthBgClass = isInviato ? "bg-green-100" : "bg-gray-50/30";
 
-                      return (
-                    <>
-                      <th key={`${month.prefix}-prev`} className="px-1 py-1 text-center font-normal border-l" style={{ width: '60px', minWidth: '60px' }}>Prev</th>
-                      <th key={`${month.prefix}-inv`} className="px-1 py-1 text-center font-normal" style={{ width: '60px', minWidth: '60px' }}>Inv</th>
-                      <th key={`${month.prefix}-num`} className="px-1 py-1 text-center font-normal border-r" style={{ width: '60px', minWidth: '60px' }}>N. Doc</th>
-                    </>
+                  {MONTHS.map((month) => (
+                    <th
+                      key={`head-${month.prefix}`}
+                      colSpan={3}
+                      className="p-0"
+                    >
+                      <div className="grid grid-cols-3">
+                        <div
+                          className="px-1 py-1 text-center font-normal border-l"
+                          style={{ width: "60px", minWidth: "60px" }}
+                        >
+                          Prev
+                        </div>
+                        <div
+                          className="px-1 py-1 text-center font-normal"
+                          style={{ width: "60px", minWidth: "60px" }}
+                        >
+                          Inv
+                        </div>
+                        <div
+                          className="px-1 py-1 text-center font-normal border-r"
+                          style={{ width: "60px", minWidth: "60px" }}
+                        >
+                          N. Doc
+                        </div>
+                      </div>
+                    </th>
                   ))}
+
                   <th className="bg-gray-100"></th>
                   <th className="bg-white"></th>
                 </tr>
               </thead>
+
               <tbody className="[&_tr:last-child]:border-0">
                 {filteredScadenze.length === 0 ? (
                   <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
@@ -327,52 +393,103 @@ export default function ScadenzeEsterometroPage() {
                   </tr>
                 ) : (
                   filteredScadenze.map((scadenza) => (
-                    <tr key={scadenza.id} className="border-b transition-colors hover:bg-green-50 data-[state=selected]:bg-muted group">
+                    <tr
+                      key={scadenza.id}
+                      className="border-b transition-colors hover:bg-green-50 data-[state=selected]:bg-muted group"
+                    >
                       <td className="p-2 align-middle sticky left-0 z-20 border-r font-medium min-w-[200px] bg-white group-hover:bg-green-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                         {scadenza.nominativo}
                       </td>
-                      <td className="p-2 align-middle min-w-[150px] border-r text-xs">{scadenza.operatore}</td>
 
-                      {MONTHS.map(month => (
-                        <>
-                          <td key={`${scadenza.id}-${month.prefix}-prev`} className={`p-1 align-middle text-center border-l ${monthBgClass}`} style={{ width: '60px', minWidth: '60px' }}>
-                            <Checkbox
-                              checked={(scadenza as any)[`${month.prefix}_previsto`] || false}
-                              onCheckedChange={() => handleToggleField(scadenza.id, `${month.prefix}_previsto` as keyof ScadenzaEsterometro, (scadenza as any)[`${month.prefix}_previsto`])}
-                            />
-                          </td>
-                         <td key={`${scadenza.id}-${month.prefix}-inv`} className={`p-1 align-middle text-center ${monthBgClass}`} style={{ width: '60px', minWidth: '60px' }}>
-                            <Checkbox
-                              checked={(scadenza as any)[`${month.prefix}_invio`] || false}
-                              onCheckedChange={() => handleToggleField(scadenza.id, `${month.prefix}_invio` as keyof ScadenzaEsterometro, (scadenza as any)[`${month.prefix}_invio`])}
-                            />
-                          </td>
-                        <td key={`${scadenza.id}-${month.prefix}-num`} className={`p-1 align-middle border-r ${monthBgClass}`} style={{ width: '60px', minWidth: '60px' }}>
-                            <Input
-                              type="number"
-                              className="h-8 w-full text-center px-1"
-                              style={{ width: '60px', minWidth: '60px' }}
-                              value={(scadenza as any)[`nmese${month.index}`] ?? ""}
-                              onChange={(e) => handleUpdateField(scadenza.id, `nmese${month.index}` as keyof ScadenzaEsterometro, e.target.value)}
-                            />
-                          </td>
-                      </>
-  );
-})}
+                      <td className="p-2 align-middle min-w-[150px] border-r text-xs">
+                        {scadenza.operatore}
+                      </td>
 
-                     <td className="p-2 align-middle text-center font-bold bg-gray-100 min-w-[80px]">
-  {calculateTotalDocs(scadenza)}
-</td>
-<td className="p-2 align-middle text-center min-w-[90px]">
-  <button
-    type="button"
-    onClick={() => handleDelete(scadenza.id)}
-    className="inline-flex items-center justify-center text-red-600 hover:text-red-700"
-    title="Elimina record"
-  >
-    <Trash2 className="h-4 w-4" />
-  </button>
-</td>
+                      {MONTHS.map((month) => {
+                        const isInviato =
+                          (scadenza as any)[`${month.prefix}_invio`] || false;
+                        const monthBgClass = isInviato
+                          ? "bg-green-100"
+                          : "bg-gray-50/30";
+
+                        return (
+                          <tr.Fragment key={`${scadenza.id}-${month.prefix}`}>
+                            <td
+                              className={`p-1 align-middle text-center border-l ${monthBgClass}`}
+                              style={{ width: "60px", minWidth: "60px" }}
+                            >
+                              <Checkbox
+                                checked={
+                                  (scadenza as any)[`${month.prefix}_previsto`] ||
+                                  false
+                                }
+                                onCheckedChange={() =>
+                                  handleToggleField(
+                                    scadenza.id,
+                                    `${month.prefix}_previsto` as keyof ScadenzaEsterometro,
+                                    (scadenza as any)[`${month.prefix}_previsto`]
+                                  )
+                                }
+                              />
+                            </td>
+
+                            <td
+                              className={`p-1 align-middle text-center ${monthBgClass}`}
+                              style={{ width: "60px", minWidth: "60px" }}
+                            >
+                              <Checkbox
+                                checked={
+                                  (scadenza as any)[`${month.prefix}_invio`] ||
+                                  false
+                                }
+                                onCheckedChange={() =>
+                                  handleToggleField(
+                                    scadenza.id,
+                                    `${month.prefix}_invio` as keyof ScadenzaEsterometro,
+                                    (scadenza as any)[`${month.prefix}_invio`]
+                                  )
+                                }
+                              />
+                            </td>
+
+                            <td
+                              className={`p-1 align-middle border-r ${monthBgClass}`}
+                              style={{ width: "60px", minWidth: "60px" }}
+                            >
+                              <Input
+                                type="number"
+                                className="h-8 w-full text-center px-1"
+                                style={{ width: "60px", minWidth: "60px" }}
+                                value={
+                                  (scadenza as any)[`nmese${month.index}`] ?? ""
+                                }
+                                onChange={(e) =>
+                                  handleUpdateField(
+                                    scadenza.id,
+                                    `nmese${month.index}` as keyof ScadenzaEsterometro,
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </td>
+                          </tr.Fragment>
+                        );
+                      })}
+
+                      <td className="p-2 align-middle text-center font-bold bg-gray-100 min-w-[80px]">
+                        {calculateTotalDocs(scadenza)}
+                      </td>
+
+                      <td className="p-2 align-middle text-center min-w-[90px]">
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(scadenza.id)}
+                          className="inline-flex items-center justify-center text-red-600 hover:text-red-700"
+                          title="Elimina record"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </td>
                     </tr>
                   ))
                 )}
