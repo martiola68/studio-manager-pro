@@ -332,15 +332,12 @@ const filteredScadenze = scadenze.filter((s) => {
             <table className="w-full caption-bottom text-sm border-collapse">
               <thead className="sticky top-0 z-30 bg-white">
                 <tr className="border-b border-gray-300">
-                  <th className="sticky-col-header h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[200px] border-r border-gray-300 bg-white">
-                    Nominativo
+                 <th className="sticky-col-header h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[320px] border-r border-gray-300 bg-white">
+                  Nominativo
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px] border-r border-gray-300 bg-white">
-                    Professionista
-                  </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px] border-r border-gray-300 bg-white">
-                    Operatore
-                  </th>
+                    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px] border-r border-gray-300 bg-white">
+                      Operatore
+                    </th>
                   <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[170px] border-r border-gray-300 bg-white">
                     Tipo liquidazione
                   </th>
@@ -378,22 +375,19 @@ const filteredScadenze = scadenze.filter((s) => {
               <tbody>
                 {filteredScadenze.length === 0 ? (
                   <tr className="border-b border-gray-300">
-                    <td colSpan={26} className="p-4 text-center text-gray-500">
+                   <td colSpan={25} className="p-4 text-center text-gray-500">
                       Nessun record trovato
                     </td>
                   </tr>
                 ) : (
                   filteredScadenze.map((scadenza) => (
                     <tr key={scadenza.id} className="border-b border-gray-300 hover:bg-green-50/40">
-                      <td className="sticky-col-cell p-2 align-middle font-medium min-w-[200px] border-r border-gray-300 bg-white">
+                      <td className="sticky-col-cell p-2 align-middle font-medium min-w-[320px] border-r border-gray-300 bg-white">
                         {scadenza.nominativo}
-                      </td>
-                      <td className="p-2 align-middle min-w-[180px] border-r border-gray-300">
-                        {scadenza.professionista}
-                      </td>
-                      <td className="p-2 align-middle min-w-[180px] border-r border-gray-300">
-                        {scadenza.operatore}
-                      </td>
+                        </td>
+                          <td className="p-2 align-middle min-w-[180px] border-r border-gray-300">
+                            {scadenza.operatore}
+                          </td>
 
                       <td className="p-2 align-middle min-w-[170px] border-r border-gray-300">
                         <Select
