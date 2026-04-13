@@ -278,6 +278,7 @@ const filteredScadenze = scadenze.filter((s) => {
         </CardHeader>
         <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+ <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
   <div className="space-y-2">
     <label className="text-sm font-medium">Cerca Nominativo</label>
     <div className="relative">
@@ -322,24 +323,7 @@ const filteredScadenze = scadenze.filter((s) => {
       </SelectContent>
     </Select>
   </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Utente Professionista</label>
-              <Select value={filterProfessionista} onValueChange={setFilterProfessionista}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Tutti i professionisti" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">Tutti i professionisti</SelectItem>
-                  {utenti.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {u.nome} {u.cognome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+</div>
         </CardContent>
       </Card>
 
