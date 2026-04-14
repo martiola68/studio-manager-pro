@@ -132,47 +132,47 @@ export default function ComunicazioniPage() {
     }
   };
 
-  const uploadAllegato = async (): Promise<{
-    nome: string;
-    url: string;
-    tipo: string;
-    dimensione: number;
-  } | null> => {
-    if (!selectedFile) return null;
+const uploadAllegato = async (): Promise<{
+  nome: string;
+  url: string;
+  tipo: string;
+  dimensione: number;
+} | null> => {
+  if (!selectedFile) return null;
 
-    try {
-      const supabase = getSupabaseClient();
+  try {
+    const supabase = getSupabaseClient();
+    const BUCKET_NAME = "allegati";
 
-      const fileExt = selectedFile.name.split(".").pop() || "bin";
-      const safeName = selectedFile.name.replace(/[^\w.\-]+/g, "_");
-      const fileName = `${Date.now()}_${safeName}`;
-      const filePath = `allegati/${fileName}`;
+    const safeName = selectedFile.name.replace(/[^\w.\-]+/g, "_");
+    const fileName = `${Date.now()}_${safeName}`;
+    const filePath = `allegati/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from("comunicazioni-assets")
-        .upload(filePath, selectedFile, {
-          cacheControl: "3600",
-          upsert: false,
-          contentType: selectedFile.type || undefined
-        });
+    const { error: uploadError } = await supabase.storage
+      .from(BUCKET_NAME)
+      .upload(filePath, selectedFile, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: selectedFile.type || undefined
+      });
 
-      if (uploadError) throw uploadError;
+    if (uploadError) throw uploadError;
 
-      const {
-        data: { publicUrl }
-      } = supabase.storage.from("comunicazioni-assets").getPublicUrl(filePath);
+    const {
+      data: { publicUrl }
+    } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
 
-      return {
-        nome: selectedFile.name,
-        url: publicUrl,
-        tipo: selectedFile.type,
-        dimensione: selectedFile.size
-      };
-    } catch (error) {
-      console.error("Errore upload:", error);
-      throw new Error("Errore caricamento allegato");
-    }
-  };
+    return {
+      nome: selectedFile.name,
+      url: publicUrl,
+      tipo: selectedFile.type,
+      dimensione: selectedFile.size
+    };
+  } catch (error) {
+    console.error("Errore upload:", error);
+    throw new Error("Errore caricamento allegato");
+  }
+};
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
