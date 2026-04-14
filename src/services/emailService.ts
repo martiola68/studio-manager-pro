@@ -595,7 +595,7 @@ export async function sendComunicazioneEmail(
       };
     }
 
- const htmlContent = `
+const htmlContent = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -631,7 +631,6 @@ export async function sendComunicazioneEmail(
       margin: 0;
       font-size: 28px;
       font-weight: 700;
-      color: #ffffff;
     }
 
     .header-subtitle {
@@ -644,20 +643,29 @@ export async function sendComunicazioneEmail(
       padding: 28px 24px 20px 24px;
     }
 
-    .subject {
-      font-size: 22px;
+    .badge {
+      background: #e6f0ff;
+      color: #1d4ed8;
+      padding: 10px;
+      border-radius: 6px;
       font-weight: 700;
+      text-align: center;
+    }
+
+    .spacer-small {
+      height: 20px;
+    }
+
+    .spacer-large {
+      height: 50px;
+    }
+
+    .subject {
+      font-size: 15px;
       color: #111827;
-      margin: 0 0 18px 0;
     }
 
     .message {
-      background: #f8fafc;
-      border: 1px solid #dbeafe;
-      border-left: 5px solid #2563eb;
-      border-radius: 8px;
-      padding: 18px;
-      margin: 0 0 18px 0;
       white-space: pre-wrap;
       font-size: 15px;
       color: #1f2937;
@@ -672,6 +680,7 @@ export async function sendComunicazioneEmail(
       color: #1d4ed8;
       font-size: 14px;
       font-weight: 600;
+      text-align: center;
     }
 
     .footer {
@@ -688,18 +697,38 @@ export async function sendComunicazioneEmail(
     }
   </style>
 </head>
+
 <body>
   <div class="container">
+    
+    <!-- HEADER -->
     <div class="header">
       <p class="header-title">Studio Manager Pro</p>
       <p class="header-subtitle">Sistema Gestionale Integrato</p>
     </div>
 
+    <!-- CONTENUTO -->
     <div class="content">
-      <div class="subject">${data.oggetto}</div>
 
+      <!-- BADGE -->
+      <div class="badge">
+        COMUNICAZIONE INTERNA DI STUDIO
+      </div>
+
+      <div class="spacer-small"></div>
+      <div class="spacer-small"></div>
+
+      <!-- OGGETTO -->
+      <div class="subject">
+        <strong>Oggetto:</strong> ${data.oggetto}
+      </div>
+
+      <div class="spacer-small"></div>
+      <div class="spacer-small"></div>
+
+      <!-- MESSAGGIO -->
       <div class="message">
-        ${data.messaggio.replace(/\n/g, "<br>")}
+        ${data.messaggio.replace(/\\n/g, "<br>")}
       </div>
 
       ${
@@ -707,18 +736,27 @@ export async function sendComunicazioneEmail(
           ? `<div class="attachment-box">Questa comunicazione contiene ${data.allegati.length} allegato/i</div>`
           : ""
       }
+
+      <div class="spacer-large"></div>
+      <div class="spacer-large"></div>
+      <div class="spacer-large"></div>
+      <div class="spacer-large"></div>
+      <div class="spacer-large"></div>
+
     </div>
 
+    <!-- FOOTER -->
     <div class="footer">
+      <p>Questa comunicazione contiene ${data.allegati?.length || 0} allegato/i</p>
       <p><strong>Studio Manager Pro</strong> - Sistema Gestionale Integrato</p>
       <p>Powered by ProWork Studio M</p>
       <p>Questa è una email automatica, non rispondere a questo messaggio</p>
     </div>
+
   </div>
 </body>
 </html>
-    `.trim();
-
+`.trim();
     const textContent = `
 ${data.oggetto}
 
