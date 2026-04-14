@@ -131,21 +131,21 @@ async function sendEmailViaMicrosoft(
 
     const attachments = await buildMicrosoftAttachments(data.attachments);
 
-    const message = {
-      subject: data.subject,
-      body: {
-        contentType: "HTML" as const,
-        content: data.html,
+  const message = {
+  subject: data.subject,
+  body: {
+    contentType: "HTML" as const,
+    content: data.html,
+  },
+  toRecipients: [
+    {
+      emailAddress: {
+        address: data.to,
       },
-      toRecipients: [
-        {
-          emailAddress: {
-            address: data.to,
-          },
-        },
-      ],
-      attachments,
-    };
+    },
+  ],
+  ...(attachments.length > 0 ? { attachments } : {}),
+};
 
     await microsoftGraphService.sendEmail(
       userId,
@@ -631,6 +631,7 @@ const htmlContent = `
       margin: 0;
       font-size: 28px;
       font-weight: 700;
+      color: #ffffff;
     }
 
     .header-subtitle {
@@ -646,10 +647,11 @@ const htmlContent = `
     .badge {
       background: #e6f0ff;
       color: #1d4ed8;
-      padding: 10px;
+      padding: 12px 14px;
       border-radius: 6px;
       font-weight: 700;
       text-align: center;
+      font-size: 14px;
     }
 
     .spacer-small {
@@ -663,16 +665,18 @@ const htmlContent = `
     .subject {
       font-size: 15px;
       color: #111827;
+      margin: 0;
     }
 
     .message {
-      white-space: pre-wrap;
+      white-space: normal;
       font-size: 15px;
       color: #1f2937;
+      margin: 0;
     }
 
     .attachment-box {
-      margin-top: 16px;
+      margin-top: 18px;
       padding: 14px 16px;
       background: #eff6ff;
       border: 1px solid #bfdbfe;
@@ -700,17 +704,12 @@ const htmlContent = `
 
 <body>
   <div class="container">
-    
-    <!-- HEADER -->
     <div class="header">
       <p class="header-title">Studio Manager Pro</p>
       <p class="header-subtitle">Sistema Gestionale Integrato</p>
     </div>
 
-    <!-- CONTENUTO -->
     <div class="content">
-
-      <!-- BADGE -->
       <div class="badge">
         COMUNICAZIONE INTERNA DI STUDIO
       </div>
@@ -718,17 +717,15 @@ const htmlContent = `
       <div class="spacer-small"></div>
       <div class="spacer-small"></div>
 
-      <!-- OGGETTO -->
-      <div class="subject">
+      <p class="subject">
         <strong>Oggetto:</strong> ${data.oggetto}
-      </div>
+      </p>
 
       <div class="spacer-small"></div>
       <div class="spacer-small"></div>
 
-      <!-- MESSAGGIO -->
       <div class="message">
-        ${data.messaggio.replace(/\\n/g, "<br>")}
+        ${data.messaggio.replace(/\n/g, "<br>")}
       </div>
 
       ${
@@ -742,21 +739,23 @@ const htmlContent = `
       <div class="spacer-large"></div>
       <div class="spacer-large"></div>
       <div class="spacer-large"></div>
-
     </div>
 
-    <!-- FOOTER -->
     <div class="footer">
-      <p>Questa comunicazione contiene ${data.allegati?.length || 0} allegato/i</p>
+      ${
+        data.allegati && Array.isArray(data.allegati) && data.allegati.length > 0
+          ? `<p>Questa comunicazione contiene ${data.allegati.length} allegato/i</p>`
+          : ""
+      }
       <p><strong>Studio Manager Pro</strong> - Sistema Gestionale Integrato</p>
       <p>Powered by ProWork Studio M</p>
       <p>Questa è una email automatica, non rispondere a questo messaggio</p>
     </div>
-
   </div>
 </body>
 </html>
 `.trim();
+    
     const textContent = `
 ${data.oggetto}
 
