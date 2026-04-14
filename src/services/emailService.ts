@@ -555,55 +555,72 @@ export async function sendComunicazioneEmail(
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: Arial, Helvetica, sans-serif;
       line-height: 1.6;
       color: #1f2937;
       margin: 0;
       padding: 24px 0;
       background-color: #f3f4f6;
     }
+
     .container {
       max-width: 700px;
       margin: 0 auto;
       background: #ffffff;
-      border: 1px solid #e5e7eb;
+      border: 1px solid #dbe3ef;
       border-radius: 10px;
       overflow: hidden;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
     }
+
     .header {
-      background: #111827;
+      background: #1d4ed8;
       color: #ffffff;
-      padding: 20px 24px;
+      padding: 18px 24px;
     }
-    .header h1 {
+
+    .header-title {
       margin: 0;
+      font-size: 28px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .header-subtitle {
+      margin: 6px 0 0 0;
+      font-size: 13px;
+      color: #dbeafe;
+    }
+
+    .content {
+      padding: 28px 24px 20px 24px;
+    }
+
+    .subject {
       font-size: 22px;
       font-weight: 700;
-    }
-    .content {
-      padding: 24px;
-    }
-    .subject {
-      font-size: 18px;
-      font-weight: 700;
-      margin: 0 0 16px 0;
       color: #111827;
+      margin: 0 0 18px 0;
     }
+
     .message {
-      font-size: 15px;
-      background: #f9fafb;
-      border: 1px solid #e5e7eb;
+      background: #f8fafc;
+      border: 1px solid #dbeafe;
+      border-left: 5px solid #2563eb;
       border-radius: 8px;
       padding: 18px;
       margin: 0 0 18px 0;
       white-space: pre-wrap;
+      font-size: 15px;
+      color: #1f2937;
     }
-    .attachments {
-      margin-top: 12px;
+
+    .attachment-box {
+      margin-top: 16px;
       padding: 14px 16px;
       background: #eff6ff;
       border: 1px solid #bfdbfe;
@@ -612,6 +629,7 @@ export async function sendComunicazioneEmail(
       font-size: 14px;
       font-weight: 600;
     }
+
     .footer {
       background: #f9fafb;
       padding: 18px 24px;
@@ -620,6 +638,7 @@ export async function sendComunicazioneEmail(
       color: #6b7280;
       border-top: 1px solid #e5e7eb;
     }
+
     .footer p {
       margin: 4px 0;
     }
@@ -628,7 +647,8 @@ export async function sendComunicazioneEmail(
 <body>
   <div class="container">
     <div class="header">
-      <h1>Studio Manager Pro</h1>
+      <p class="header-title">Studio Manager Pro</p>
+      <p class="header-subtitle">Sistema Gestionale Integrato</p>
     </div>
 
     <div class="content">
@@ -639,8 +659,8 @@ export async function sendComunicazioneEmail(
       </div>
 
       ${
-        data.allegati && data.allegati.length > 0
-          ? `<div class="attachments">Questa comunicazione contiene ${data.allegati.length} allegato/i</div>`
+        data.allegati && Array.isArray(data.allegati) && data.allegati.length > 0
+          ? `<div class="attachment-box">Questa comunicazione contiene ${data.allegati.length} allegato/i</div>`
           : ""
       }
     </div>
@@ -653,7 +673,7 @@ export async function sendComunicazioneEmail(
   </div>
 </body>
 </html>
-`.trim();
+    `.trim();
 
     const textContent = `
 ${data.oggetto}
