@@ -29,8 +29,52 @@ type Scadenza770 = Database["public"]["Tables"]["tbscad770"]["Row"] & {
 
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
-const TIPO_INVIO_OPTIONS = ["Ordinario", "Correttivo", "Integrativo"] as const;
-const TIPO_770_OPTIONS = ["Mod. Ordinario", "Mod. Semplificato"] as const;
+const loadScadenze = async (): Promise<Scadenza770[]> => {
+  const { data: anniData, error: anniError } = await supabase
+    .from("tbscad770" as any)
+    .select("anno_riferimento")
+    .order("anno_riferimento", { ascending: true });
+
+  if (anniError) throw anniError;
+
+  const anni = Array.from(
+    new Set(
+      (((anniData ?? []) as any[]) || [])
+        .map((r) => r.anno_riferimento)
+        .filter((a): a is number => typeof a === "number")
+    )
+  ).sort((a, b) => a - b);
+
+  setAnniDisponibili(anni);
+
+  const annoDaUsare =
+    anni.length > 0 && !anni.includes(annoConsultazione)
+      ? anni[anni.length - 1]
+      : annoConsultazione;
+
+  if (annoDaUsare !== annoConsultazione) {
+    setAnnoConsultazione(annoDaUsare);
+  }
+
+  const { data, error } = await supabase
+    .from("tbscad770" as any)
+    .select(
+      `
+      *,
+      cliente:tbclienti!tbscad770_cliente_id_fkey(
+        settore_fiscale,
+        settore_lavoro,
+        settore_consulenza
+      )
+    `
+    )
+    .eq("anno_riferimento", annoDaUsare)
+    .order("nominativo", { ascending: true });
+
+  if (error) throw error;
+
+  return ((data ?? []) as unknown) as Scadenza770[];
+};
 
 export default function Scadenze770Page() {
   const router = useRouter();
