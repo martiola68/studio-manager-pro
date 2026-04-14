@@ -321,26 +321,29 @@ export default function ScadenzeCUPage() {
 
     const operatoreNome = getUtenteNome(filterOperatore);
 
-    const righeHtml = filteredScadenze
-      .map(
-        (scadenza, index) => `
-          <tr>
-            <td>${index + 1}</td>
-            <td>${scadenza.nominativo ?? ""}</td>
-            <td style="text-align:center;">${scadenza.cu_autonomi ? "✓" : ""}</td>
-            <td style="text-align:center;">${scadenza.inserite ? "✓" : ""}</td>
-            <td style="text-align:center;">${scadenza.generate ? "✓" : ""}</td>
-            <td style="text-align:center;">${scadenza.inviate ? "✓" : ""}</td>
-            <td>${isoToDDMMYYYY(scadenza.data_invio)}</td>
-            <td>${scadenza.num_cu ?? ""}</td>
-            <td style="text-align:center; font-weight:700;">${
-              scadenza.conferma_riga ? "✓" : "X"
-            }</td>
-          </tr>
-        `
-      )
-      .join("");
-
+  const righeHtml = filteredScadenze
+  .map(
+    (scadenza, index) => `
+    <tr>
+      <td>${index + 1}</td>
+      <td class="col-nominativo">${scadenza.nominativo ?? ""}</td>
+      <td style="text-align:center;">
+        ${scadenza.inviate ? "✓" : ""}
+      </td>
+      <td>
+        ${scadenza.data_invio ?? ""}
+      </td>
+      <td>
+        ${scadenza.num_cu ?? ""}
+      </td>
+      <td style="text-align:center; font-weight:700;">
+        ${scadenza.conferma_riga ? "✓" : "X"}
+      </td>
+    </tr>
+  `
+  )
+  .join("");
+    
     const printWindow = window.open("", "_blank", "width=1000,height=700");
     if (!printWindow) return;
 
@@ -389,10 +392,11 @@ export default function ScadenzeCUPage() {
               width: 40px;
               text-align: center;
             }
-            .col-nominativo {
-              width: 34%;
-            }
-            .col-small {
+           .col-nominativo {
+  width: 60%;
+  white-space: normal;
+  word-break: break-word;
+}            .col-small {
               width: 65px;
               text-align: center;
             }
@@ -417,17 +421,14 @@ export default function ScadenzeCUPage() {
 
           <table>
             <thead>
-              <tr>
-                <th class="col-num">#</th>
-                <th class="col-nominativo">Nominativo</th>
-                <th class="col-small">Aut.</th>
-                <th class="col-small">Ins.</th>
-                <th class="col-small">Gen.</th>
-                <th class="col-small">Inv.</th>
-                <th class="col-data">Data invio</th>
-                <th class="col-numcu">Num CU</th>
-                <th class="col-small">Conf.</th>
-              </tr>
+             <tr>
+  <th class="col-num">#</th>
+  <th class="col-nominativo">Nominativo</th>
+  <th class="col-small">Inv.</th>
+  <th class="col-small">Data invio</th>
+  <th class="col-small">Num CU</th>
+  <th class="col-small">Conf.</th>
+</tr>
             </thead>
             <tbody>
               ${
