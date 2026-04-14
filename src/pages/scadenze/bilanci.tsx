@@ -37,6 +37,7 @@ export default function ScadenzeBilanciPage() {
   const [filterOperatore, setFilterOperatore] = useState("__all__");
   const [filterConferma, setFilterConferma] = useState("__all__");
   const [annoConsultazione, setAnnoConsultazione] = useState(currentYear);
+  const [anniDisponibili, setAnniDisponibili] = useState<number[]>([]);
 
   const [dataApprovazioneInputs, setDataApprovazioneInputs] = useState<
     Record<string, string>
@@ -120,11 +121,37 @@ export default function ScadenzeBilanciPage() {
     }
   };
 
- const loadScadenze = async (): Promise<ScadenzaBilancioExt[]> => {
+const loadScadenze = async (): Promise<ScadenzaBilancioExt[]> => {
+  const { data: anniData, error: anniError } = await supabase
+    .from("tbscadbilanci" as any)
+    .select("anno_riferimento")
+    .order("anno_riferimento", { ascending: true });
+
+  if (anniError) throw anniError;
+
+  const anni = Array.from(
+    new Set(
+      (((anniData ?? []) as any[]) || [])
+        .map((r) => r.anno_riferimento)
+        .filter((a): a is number => typeof a === "number")
+    )
+  ).sort((a, b) => a - b);
+
+  setAnniDisponibili(anni);
+
+  const annoDaUsare =
+    anni.length > 0 && !anni.includes(annoConsultazione)
+      ? anni[anni.length - 1]
+      : annoConsultazione;
+
+  if (annoDaUsare !== annoConsultazione) {
+    setAnnoConsultazione(annoDaUsare);
+  }
+
   const { data, error } = await supabase
     .from("tbscadbilanci" as any)
     .select("*")
-    .eq("anno_riferimento", annoConsultazione)
+    .eq("anno_riferimento", annoDaUsare)
     .order("nominativo", { ascending: true });
 
   if (error) throw error;
@@ -583,7 +610,7 @@ export default function ScadenzeBilanciPage() {
       .filter(Boolean)
       .join(" ");
 
-  const anni = Array.from({ length: 10 }, (_, i) => currentYear - 5 + i);
+  const anni = anniDisponibili;
 
   return (
     <div className="space-y-6">
@@ -696,21 +723,21 @@ export default function ScadenzeBilanciPage() {
               <label className="text-sm font-medium mb-2 block">
                 Anno consultazione
               </label>
-              <Select
-                value={annoConsultazione.toString()}
-                onValueChange={(value) => setAnnoConsultazione(parseInt(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleziona anno" />
-                </SelectTrigger>
-                <SelectContent>
-                  {anni.map((anno) => (
-                    <SelectItem key={anno} value={anno.toString()}>
-                      {anno}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+             <Select
+  value={annoConsultazione.toString()}
+  onValueChange={(value) => setAnnoConsultazione(parseInt(value))}
+>
+  <SelectTrigger>
+    <SelectValue placeholder="Seleziona anno" />
+  </SelectTrigger>
+  <SelectContent>
+    {anni.map((anno) => (
+      <SelectItem key={anno} value={anno.toString()}>
+        {anno}
+      </SelectItem>
+    ))}
+  </SelectContent>
+</Select>
             </div>
           </div>
         </CardContent>
