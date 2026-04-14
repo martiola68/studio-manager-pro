@@ -347,6 +347,20 @@ export default function ImuPage() {
   return (
     <>
       <style jsx global>{`
+        .sticky-col-header {
+          position: sticky;
+          left: 0;
+          z-index: 40;
+          background: white;
+        }
+
+        .sticky-col-cell {
+          position: sticky;
+          left: 0;
+          z-index: 20;
+          background: white;
+        }
+
         @media print {
           body * {
             visibility: hidden;
@@ -536,273 +550,295 @@ export default function ImuPage() {
               </p>
             </div>
 
-            <div className="relative w-full overflow-auto max-h-[600px] no-print">
-              <table className="w-full caption-bottom text-sm">
-                <thead className="[&_tr]:border-b sticky top-0 z-30 bg-white shadow-sm">
-                  <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground border-r min-w-[200px]">
-                      Nominativo
-                    </th>
-                    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">
-                      Operatore
-                    </th>
-                    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
-                      Acconto IMU
-                    </th>
-                    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px] print-hide">
-                      Dovuto
-                    </th>
-                    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
-                      Comunicato
-                    </th>
-                    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[160px] print-hide">
-                      Data comunicazione
-                    </th>
-                    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
-                      Saldo IMU
-                    </th>
-                    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px] print-hide">
-                      Dovuto
-                    </th>
-                    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
-                      Comunicato
-                    </th>
-                    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[160px] print-hide">
-                      Data comunicazione
-                    </th>
-                    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[140px] print-hide">
-                      Con dic. IMU
-                    </th>
-                    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[170px] print-hide">
-                      Data scadenza dic.
-                    </th>
-                    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[140px] print-hide">
-                      Dic. presentata
-                    </th>
-                    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[300px] print-hide">
-                      Note
-                    </th>
-                    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[140px] text-center">
-                      Conferma dati
-                    </th>
-                    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[100px] text-center print-hide">
-                      Azioni
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody className="[&_tr:last-child]:border-0">
-                  {filteredScadenze.length === 0 ? (
-                    <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                      <td
-                        colSpan={16}
-                        className="p-2 align-middle text-center py-8 text-gray-500"
-                      >
-                        Nessun record trovato
-                      </td>
+            <div className="w-full overflow-x-auto no-print">
+              <div className="relative min-w-max overflow-y-auto max-h-[600px]">
+                <table className="w-full caption-bottom text-sm">
+                  <thead className="[&_tr]:border-b sticky top-0 z-30 bg-white shadow-sm">
+                    <tr className="border-b border-gray-400 transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                      <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground sticky-col-header border-r min-w-[220px]">
+                        Nominativo
+                      </th>
+                      <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">
+                        Operatore
+                      </th>
+                      <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">
+                        Acconto IMU
+                      </th>
+                      <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px] print-hide">
+                        Dovuto
+                      </th>
+                      <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">
+                        Comunicato
+                      </th>
+                      <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[160px] print-hide">
+                        Data comunicazione
+                      </th>
+                      <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">
+                        Saldo IMU
+                      </th>
+                      <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px] print-hide">
+                        Dovuto
+                      </th>
+                      <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">
+                        Comunicato
+                      </th>
+                      <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[160px] print-hide">
+                        Data comunicazione
+                      </th>
+                      <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[140px] print-hide">
+                        Con dic. IMU
+                      </th>
+                      <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[170px] print-hide">
+                        Data scadenza dic.
+                      </th>
+                      <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[140px] print-hide">
+                        Dic. presentata
+                      </th>
+                      <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[300px] print-hide">
+                        Note
+                      </th>
+                      <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[140px]">
+                        Conferma dati
+                      </th>
+                      <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[100px] print-hide">
+                        Azioni
+                      </th>
                     </tr>
-                  ) : (
-                    filteredScadenze.map((scadenza) => (
-                      <tr
-                        key={scadenza.id}
-                        className={[
-                          "border-b transition-colors",
-                          scadenza.conferma_riga
-                            ? "bg-red-50 hover:bg-red-50"
-                            : "hover:bg-green-50",
-                        ].join(" ")}
-                      >
-                        <td className="p-2 align-middle border-r font-medium min-w-[200px]">
-                          {scadenza.nominativo}
-                        </td>
-                        <td className="p-2 align-middle min-w-[150px]">
-                          {(scadenza.utente_operatore_id &&
-                            operatoriMap[scadenza.utente_operatore_id]) ||
-                            "-"}
-                        </td>
+                  </thead>
 
-                        <td className="p-2 align-middle text-center min-w-[120px]">
-                          <Checkbox
-                            checked={scadenza.acconto_imu || false}
-                            onCheckedChange={() =>
-                              handleToggleField(
-                                scadenza.id,
-                                "acconto_imu",
-                                scadenza.acconto_imu
-                              )
-                            }
-                          />
-                        </td>
-                        <td className="p-2 align-middle text-center min-w-[120px] print-hide">
-                          <Checkbox
-                            checked={scadenza.acconto_dovuto || false}
-                            onCheckedChange={() =>
-                              handleToggleField(
-                                scadenza.id,
-                                "acconto_dovuto",
-                                scadenza.acconto_dovuto
-                              )
-                            }
-                          />
-                        </td>
-                        <td className="p-2 align-middle text-center min-w-[120px]">
-                          <Checkbox
-                            checked={scadenza.acconto_comunicato || false}
-                            onCheckedChange={() =>
-                              handleToggleField(
-                                scadenza.id,
-                                "acconto_comunicato",
-                                scadenza.acconto_comunicato
-                              )
-                            }
-                          />
-                        </td>
-                        <td className="p-2 align-middle min-w-[160px] print-hide">
-                          <Input
-                            type="date"
-                            value={scadenza.data_com_acconto || ""}
-                            onChange={(e) =>
-                              handleUpdateField(
-                                scadenza.id,
-                                "data_com_acconto",
-                                e.target.value
-                              )
-                            }
-                            className={dateInputClass(scadenza.data_com_acconto)}
-                          />
-                        </td>
-
-                        <td className="p-2 align-middle text-center min-w-[120px]">
-                          <Checkbox
-                            checked={scadenza.saldo_imu || false}
-                            onCheckedChange={() =>
-                              handleToggleField(
-                                scadenza.id,
-                                "saldo_imu",
-                                scadenza.saldo_imu
-                              )
-                            }
-                          />
-                        </td>
-                        <td className="p-2 align-middle text-center min-w-[120px] print-hide">
-                          <Checkbox
-                            checked={scadenza.saldo_dovuto || false}
-                            onCheckedChange={() =>
-                              handleToggleField(
-                                scadenza.id,
-                                "saldo_dovuto",
-                                scadenza.saldo_dovuto
-                              )
-                            }
-                          />
-                        </td>
-                        <td className="p-2 align-middle text-center min-w-[120px]">
-                          <Checkbox
-                            checked={scadenza.saldo_comunicato || false}
-                            onCheckedChange={() =>
-                              handleToggleField(
-                                scadenza.id,
-                                "saldo_comunicato",
-                                scadenza.saldo_comunicato
-                              )
-                            }
-                          />
-                        </td>
-                        <td className="p-2 align-middle min-w-[160px] print-hide">
-                          <Input
-                            type="date"
-                            value={scadenza.data_com_saldo || ""}
-                            onChange={(e) =>
-                              handleUpdateField(
-                                scadenza.id,
-                                "data_com_saldo",
-                                e.target.value
-                              )
-                            }
-                            className={dateInputClass(scadenza.data_com_saldo)}
-                          />
-                        </td>
-
-                        <td className="p-2 align-middle text-center min-w-[140px] print-hide">
-                          <Checkbox
-                            checked={scadenza.dichiarazione_imu || false}
-                            onCheckedChange={() =>
-                              handleToggleField(
-                                scadenza.id,
-                                "dichiarazione_imu",
-                                scadenza.dichiarazione_imu
-                              )
-                            }
-                          />
-                        </td>
-                        <td className="p-2 align-middle min-w-[170px] print-hide">
-                          <Input
-                            type="date"
-                            value={scadenza.data_scad_dichiarazione || ""}
-                            onChange={(e) =>
-                              handleUpdateField(
-                                scadenza.id,
-                                "data_scad_dichiarazione",
-                                e.target.value
-                              )
-                            }
-                            className={dateInputClass(
-                              scadenza.data_scad_dichiarazione
-                            )}
-                          />
-                        </td>
-                        <td className="p-2 align-middle text-center min-w-[140px] print-hide">
-                          <Checkbox
-                            checked={scadenza.dichiarazione_presentata || false}
-                            onCheckedChange={() =>
-                              handleToggleField(
-                                scadenza.id,
-                                "dichiarazione_presentata",
-                                scadenza.dichiarazione_presentata
-                              )
-                            }
-                          />
-                        </td>
-
-                        <td className="p-2 align-middle min-w-[300px] print-hide">
-                          <Textarea
-                            value={localNotes[scadenza.id] ?? scadenza.note ?? ""}
-                            onChange={(e) =>
-                              handleNoteChange(scadenza.id, e.target.value)
-                            }
-                            placeholder="Aggiungi note..."
-                            className="min-h-[60px] resize-none"
-                          />
-                        </td>
-
-                        <td className="p-2 align-middle text-center min-w-[140px]">
-                          <Checkbox
-                            checked={scadenza.conferma_riga || false}
-                            onCheckedChange={() =>
-                              handleToggleField(
-                                scadenza.id,
-                                "conferma_riga",
-                                scadenza.conferma_riga
-                              )
-                            }
-                          />
-                        </td>
-
-                        <td className="p-2 align-middle text-center min-w-[100px] print-hide">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(scadenza.id)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                  <tbody className="[&_tr:last-child]:border-0">
+                    {filteredScadenze.length === 0 ? (
+                      <tr className="border-b border-gray-400 transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                        <td
+                          colSpan={16}
+                          className="p-2 align-middle text-center py-8 text-gray-500"
+                        >
+                          Nessun record trovato
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : (
+                      filteredScadenze.map((scadenza) => {
+                        const isGreenRow = scadenza.conferma_riga === true;
+
+                        return (
+                          <tr
+                            key={scadenza.id}
+                            className={`border-b border-gray-400 transition-colors data-[state=selected]:bg-muted ${
+                              isGreenRow
+                                ? "bg-green-300 hover:bg-green-300"
+                                : "hover:bg-muted/50"
+                            }`}
+                          >
+                            <td
+                              className={`p-2 align-middle sticky-col-cell border-r font-medium min-w-[220px] ${
+                                isGreenRow ? "!bg-green-300" : ""
+                              }`}
+                            >
+                              {scadenza.nominativo}
+                            </td>
+
+                            <td className="p-2 align-middle min-w-[150px]">
+                              {(scadenza.utente_operatore_id &&
+                                operatoriMap[scadenza.utente_operatore_id]) ||
+                                "-"}
+                            </td>
+
+                            <td className="p-2 align-middle text-center min-w-[120px]">
+                              <Checkbox
+                                checked={scadenza.acconto_imu || false}
+                                onCheckedChange={() =>
+                                  handleToggleField(
+                                    scadenza.id,
+                                    "acconto_imu",
+                                    scadenza.acconto_imu
+                                  )
+                                }
+                              />
+                            </td>
+
+                            <td className="p-2 align-middle text-center min-w-[120px] print-hide">
+                              <Checkbox
+                                checked={scadenza.acconto_dovuto || false}
+                                onCheckedChange={() =>
+                                  handleToggleField(
+                                    scadenza.id,
+                                    "acconto_dovuto",
+                                    scadenza.acconto_dovuto
+                                  )
+                                }
+                              />
+                            </td>
+
+                            <td className="p-2 align-middle text-center min-w-[120px]">
+                              <Checkbox
+                                checked={scadenza.acconto_comunicato || false}
+                                onCheckedChange={() =>
+                                  handleToggleField(
+                                    scadenza.id,
+                                    "acconto_comunicato",
+                                    scadenza.acconto_comunicato
+                                  )
+                                }
+                              />
+                            </td>
+
+                            <td className="p-2 align-middle min-w-[160px] print-hide">
+                              <Input
+                                type="date"
+                                value={scadenza.data_com_acconto || ""}
+                                onChange={(e) =>
+                                  handleUpdateField(
+                                    scadenza.id,
+                                    "data_com_acconto",
+                                    e.target.value
+                                  )
+                                }
+                                className={dateInputClass(
+                                  scadenza.data_com_acconto
+                                )}
+                              />
+                            </td>
+
+                            <td className="p-2 align-middle text-center min-w-[120px]">
+                              <Checkbox
+                                checked={scadenza.saldo_imu || false}
+                                onCheckedChange={() =>
+                                  handleToggleField(
+                                    scadenza.id,
+                                    "saldo_imu",
+                                    scadenza.saldo_imu
+                                  )
+                                }
+                              />
+                            </td>
+
+                            <td className="p-2 align-middle text-center min-w-[120px] print-hide">
+                              <Checkbox
+                                checked={scadenza.saldo_dovuto || false}
+                                onCheckedChange={() =>
+                                  handleToggleField(
+                                    scadenza.id,
+                                    "saldo_dovuto",
+                                    scadenza.saldo_dovuto
+                                  )
+                                }
+                              />
+                            </td>
+
+                            <td className="p-2 align-middle text-center min-w-[120px]">
+                              <Checkbox
+                                checked={scadenza.saldo_comunicato || false}
+                                onCheckedChange={() =>
+                                  handleToggleField(
+                                    scadenza.id,
+                                    "saldo_comunicato",
+                                    scadenza.saldo_comunicato
+                                  )
+                                }
+                              />
+                            </td>
+
+                            <td className="p-2 align-middle min-w-[160px] print-hide">
+                              <Input
+                                type="date"
+                                value={scadenza.data_com_saldo || ""}
+                                onChange={(e) =>
+                                  handleUpdateField(
+                                    scadenza.id,
+                                    "data_com_saldo",
+                                    e.target.value
+                                  )
+                                }
+                                className={dateInputClass(
+                                  scadenza.data_com_saldo
+                                )}
+                              />
+                            </td>
+
+                            <td className="p-2 align-middle text-center min-w-[140px] print-hide">
+                              <Checkbox
+                                checked={scadenza.dichiarazione_imu || false}
+                                onCheckedChange={() =>
+                                  handleToggleField(
+                                    scadenza.id,
+                                    "dichiarazione_imu",
+                                    scadenza.dichiarazione_imu
+                                  )
+                                }
+                              />
+                            </td>
+
+                            <td className="p-2 align-middle min-w-[170px] print-hide">
+                              <Input
+                                type="date"
+                                value={scadenza.data_scad_dichiarazione || ""}
+                                onChange={(e) =>
+                                  handleUpdateField(
+                                    scadenza.id,
+                                    "data_scad_dichiarazione",
+                                    e.target.value
+                                  )
+                                }
+                                className={dateInputClass(
+                                  scadenza.data_scad_dichiarazione
+                                )}
+                              />
+                            </td>
+
+                            <td className="p-2 align-middle text-center min-w-[140px] print-hide">
+                              <Checkbox
+                                checked={scadenza.dichiarazione_presentata || false}
+                                onCheckedChange={() =>
+                                  handleToggleField(
+                                    scadenza.id,
+                                    "dichiarazione_presentata",
+                                    scadenza.dichiarazione_presentata
+                                  )
+                                }
+                              />
+                            </td>
+
+                            <td className="p-2 align-middle min-w-[300px] print-hide">
+                              <Textarea
+                                value={localNotes[scadenza.id] ?? scadenza.note ?? ""}
+                                onChange={(e) =>
+                                  handleNoteChange(scadenza.id, e.target.value)
+                                }
+                                placeholder="Aggiungi note..."
+                                className="min-h-[60px] resize-none"
+                              />
+                            </td>
+
+                            <td className="p-2 align-middle text-center min-w-[140px]">
+                              <Checkbox
+                                checked={scadenza.conferma_riga || false}
+                                onCheckedChange={() =>
+                                  handleToggleField(
+                                    scadenza.id,
+                                    "conferma_riga",
+                                    scadenza.conferma_riga
+                                  )
+                                }
+                              />
+                            </td>
+
+                            <td className="p-2 align-middle text-center min-w-[100px] print-hide">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDelete(scadenza.id)}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             <div className="hidden print:block p-4">
