@@ -29,53 +29,6 @@ type Scadenza770 = Database["public"]["Tables"]["tbscad770"]["Row"] & {
 
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
-const loadScadenze = async (): Promise<Scadenza770[]> => {
-  const { data: anniData, error: anniError } = await supabase
-    .from("tbscad770" as any)
-    .select("anno_riferimento")
-    .order("anno_riferimento", { ascending: true });
-
-  if (anniError) throw anniError;
-
-  const anni = Array.from(
-    new Set(
-      (((anniData ?? []) as any[]) || [])
-        .map((r) => r.anno_riferimento)
-        .filter((a): a is number => typeof a === "number")
-    )
-  ).sort((a, b) => a - b);
-
-  setAnniDisponibili(anni);
-
-  const annoDaUsare =
-    anni.length > 0 && !anni.includes(annoConsultazione)
-      ? anni[anni.length - 1]
-      : annoConsultazione;
-
-  if (annoDaUsare !== annoConsultazione) {
-    setAnnoConsultazione(annoDaUsare);
-  }
-
-  const { data, error } = await supabase
-    .from("tbscad770" as any)
-    .select(
-      `
-      *,
-      cliente:tbclienti!tbscad770_cliente_id_fkey(
-        settore_fiscale,
-        settore_lavoro,
-        settore_consulenza
-      )
-    `
-    )
-    .eq("anno_riferimento", annoDaUsare)
-    .order("nominativo", { ascending: true });
-
-  if (error) throw error;
-
-  return ((data ?? []) as unknown) as Scadenza770[];
-};
-
 export default function Scadenze770Page() {
   const router = useRouter();
   const { toast } = useToast();
@@ -159,53 +112,53 @@ export default function Scadenze770Page() {
     }
   };
 
-  const loadScadenze = async (): Promise<Scadenza770[]> => {
-    const { data: anniData, error: anniError } = await supabase
-      .from("tbscad770" as any)
-      .select("anno_riferimento")
-      .order("anno_riferimento", { ascending: true });
+const loadScadenze = async (): Promise<Scadenza770[]> => {
+  const { data: anniData, error: anniError } = await supabase
+    .from("tbscad770" as any)
+    .select("anno_riferimento")
+    .order("anno_riferimento", { ascending: true });
 
-    if (anniError) throw anniError;
+  if (anniError) throw anniError;
 
-    const anni = Array.from(
-      new Set(
-        (((anniData ?? []) as any[]) || [])
-          .map((r) => r.anno_riferimento)
-          .filter((a): a is number => typeof a === "number")
-      )
-    ).sort((a, b) => a - b);
+  const anni = Array.from(
+    new Set(
+      (((anniData ?? []) as any[]) || [])
+        .map((r) => r.anno_riferimento)
+        .filter((a): a is number => typeof a === "number")
+    )
+  ).sort((a, b) => a - b);
 
-    setAnniDisponibili(anni);
+  setAnniDisponibili(anni);
 
-    const annoDaUsare =
-      anni.length > 0 && !anni.includes(annoConsultazione)
-        ? anni[anni.length - 1]
-        : annoConsultazione;
+  const annoDaUsare =
+    anni.length > 0 && !anni.includes(annoConsultazione)
+      ? anni[anni.length - 1]
+      : annoConsultazione;
 
-    if (annoDaUsare !== annoConsultazione) {
-      setAnnoConsultazione(annoDaUsare);
-    }
+  if (annoDaUsare !== annoConsultazione) {
+    setAnnoConsultazione(annoDaUsare);
+  }
 
-    const { data, error } = await supabase
-      .from("tbscad770" as any)
-      .select(
-        `
+  const { data, error } = await supabase
+    .from("tbscad770" as any)
+    .select(
+      `
         *,
-        cliente:tbclienti!tbscad770_id_fkey(
+        cliente:tbclienti!tbscad770_cliente_id_fkey(
           settore_fiscale,
           settore_lavoro,
           settore_consulenza
         )
       `
-      )
-      .eq("anno_riferimento", annoDaUsare)
-      .order("nominativo", { ascending: true });
+    )
+    .eq("anno_riferimento", annoDaUsare)
+    .order("nominativo", { ascending: true });
 
-    if (error) throw error;
+  if (error) throw error;
 
-    return ((data ?? []) as unknown) as Scadenza770[];
-  };
-
+  return ((data ?? []) as unknown) as Scadenza770[];
+};
+  
   const loadUtenti = async (): Promise<Utente[]> => {
     const { data, error } = await supabase
       .from("tbutenti")
