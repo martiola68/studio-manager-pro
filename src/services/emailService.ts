@@ -103,7 +103,7 @@ async function filePathToBase64(
 }
 
 async function buildMicrosoftAttachments(
-  attachments?: { nome: string; path: string; tipo?: string; bucket?: string }[]
+  attachments?: { nome?: string; url: string; tipo?: string }[]
 ): Promise<
   {
     "@odata.type": "#microsoft.graph.fileAttachment";
@@ -122,12 +122,13 @@ async function buildMicrosoftAttachments(
   }[] = [];
 
   for (const attachment of attachments) {
-    const bucket = attachment.bucket || "documenti";
-    const contentBytes = await filePathToBase64(bucket, attachment.path);
+    if (!attachment.url) continue;
+
+    const contentBytes = await fileUrlToBase64(attachment.url);
 
     results.push({
       "@odata.type": "#microsoft.graph.fileAttachment",
-      name: attachment.nome,
+      name: attachment.nome || "allegato",
       contentType: attachment.tipo || "application/octet-stream",
       contentBytes,
     });
@@ -135,6 +136,7 @@ async function buildMicrosoftAttachments(
 
   return results;
 }
+
 async function sendEmailViaMicrosoft(
   userId: string,
   data: EmailData
@@ -643,36 +645,27 @@ const htmlContent = `
       padding: 30px 24px 20px 24px;
     }
 
-    .badge {
-      background: #1d4ed8;
-      color: #ffffff;
-      padding: 16px 20px;
-      text-align: center;
-      font-size: 28px;
-      font-weight: 700;
-      line-height: 1.2;
-    }
+  .badge {
+  background: #1d4ed8;
+  color: #ffffff;
+  padding: 16px 20px;
+  text-align: center;
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 25px; /* 👈 spazio sotto badge */
+}
+   
+  .subject {
+  font-size: 15px;
+  color: #111827;
+  margin-bottom: 25px; /* 👈 spazio sotto oggetto */
+}
 
-    .spacer-1 {
-      height: 26px;
-    }
-
-    .spacer-2 {
-      height: 34px;
-    }
-
-    .subject {
-      font-size: 15px;
-      color: #111827;
-      margin: 0;
-    }
-
-    .message-row {
-      font-size: 15px;
-      color: #1f2937;
-      margin: 0;
-      white-space: normal;
-    }
+.message-row {
+  font-size: 15px;
+  color: #1f2937;
+  margin-bottom: 20px;
+}
 
     .attachment-box {
       margin-top: 22px;
@@ -708,14 +701,12 @@ const htmlContent = `
         COMUNICAZIONE INTERNA
       </div>
 
-      <div class="spacer-1"></div>
-
+  
       <p class="subject">
         <strong>Oggetto:</strong> ${data.oggetto}
       </p>
 
-      <div class="spacer-2"></div>
-
+   
       <p class="message-row">
         <strong>Messaggio:</strong> ${data.messaggio.replace(/\n/g, "<br>")}
       </p>
