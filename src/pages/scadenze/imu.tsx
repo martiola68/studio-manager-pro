@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/lib/supabase/client";
-import type { Database } from "@/lib/supabase/types";
+import type { Database } from "@/integrations/supabase/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,7 +17,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-type ScadenzaImu = Database["public"]["Tables"]["tbscadimu"]["Row"];
+type ScadenzaImuBase = Database["public"]["Tables"]["tbscadimu"]["Row"];
+
+type ScadenzaImu = ScadenzaImuBase & {
+  anno_riferimento: number | null;
+  archiviato: boolean | null;
+  data_archiviazione: string | null;
+};
 
 export default function ImuPage() {
   const router = useRouter();
@@ -82,17 +88,17 @@ export default function ImuPage() {
     }
   };
 
-  const anniDisponibili = useMemo(() => {
-    const years = Array.from(
-      new Set(
-        scadenze
-          .map((s) => s.anno_riferimento)
-          .filter((v): v is number => typeof v === "number")
-      )
-    ).sort((a, b) => b - a);
+const anniDisponibili = useMemo(() => {
+  const years = Array.from(
+    new Set(
+      scadenze
+        .map((s: ScadenzaImu) => s.anno_riferimento)
+        .filter((v): v is number => typeof v === "number")
+    )
+  ).sort((a, b) => b - a);
 
-    return years;
-  }, [scadenze]);
+  return years;
+}, [scadenze]);
 
   const operatoriDisponibili = useMemo(() => {
     const operatori = Array.from(
@@ -106,38 +112,38 @@ export default function ImuPage() {
     return operatori;
   }, [scadenze]);
 
-  const filteredScadenze = useMemo(() => {
-    return scadenze.filter((s) => {
-      const q = searchQuery.trim().toLowerCase();
+const filteredScadenze = useMemo(() => {
+  return scadenze.filter((s: ScadenzaImu) => {
+    const q = searchQuery.trim().toLowerCase();
 
-      const matchSearch =
-        !q ||
-        (s.nominativo || "").toLowerCase().includes(q) ||
-        (s.operatore || "").toLowerCase().includes(q);
+    const matchSearch =
+      !q ||
+      (s.nominativo || "").toLowerCase().includes(q) ||
+      (s.operatore || "").toLowerCase().includes(q);
 
-      const matchConferma =
-        filterConferma === "__all__" ||
-        (filterConferma === "true" ? !!s.conferma_riga : !s.conferma_riga);
+    const matchConferma =
+      filterConferma === "__all__" ||
+      (filterConferma === "true" ? !!s.conferma_riga : !s.conferma_riga);
 
-      const matchAnno =
-        filterAnno === "__all__" ||
-        String(s.anno_riferimento || "") === filterAnno;
+    const matchAnno =
+      filterAnno === "__all__" ||
+      String(s.anno_riferimento || "") === filterAnno;
 
-      const matchOperatore =
-        filterOperatore === "__all__" ||
-        (s.operatore || "") === filterOperatore;
+    const matchOperatore =
+      filterOperatore === "__all__" ||
+      (s.operatore || "") === filterOperatore;
 
-      return matchSearch && matchConferma && matchAnno && matchOperatore;
-    });
-  }, [scadenze, searchQuery, filterConferma, filterAnno, filterOperatore]);
+    return matchSearch && matchConferma && matchAnno && matchOperatore;
+  });
+}, [scadenze, searchQuery, filterConferma, filterAnno, filterOperatore]);
 
-  const stats = useMemo(() => {
-    return {
-      totale: filteredScadenze.length,
-      confermate: filteredScadenze.filter((s) => !!s.conferma_riga).length,
-      nonConfermate: filteredScadenze.filter((s) => !s.conferma_riga).length,
-    };
-  }, [filteredScadenze]);
+ const stats = useMemo(() => {
+  return {
+    totale: filteredScadenze.length,
+    confermate: filteredScadenze.filter((s: ScadenzaImu) => !!s.conferma_riga).length,
+    nonConfermate: filteredScadenze.filter((s: ScadenzaImu) => !s.conferma_riga).length,
+  };
+}, [filteredScadenze]);
 
   const handleToggleField = async (
     id: string,
