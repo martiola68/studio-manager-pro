@@ -137,6 +137,8 @@ const uploadAllegato = async (): Promise<{
   url: string;
   tipo: string;
   dimensione: number;
+  bucket: string;
+  path: string;
 } | null> => {
   if (!selectedFile) return null;
 
@@ -153,20 +155,22 @@ const uploadAllegato = async (): Promise<{
       .upload(filePath, selectedFile, {
         cacheControl: "3600",
         upsert: false,
-        contentType: selectedFile.type || undefined,
+        contentType: selectedFile.type || undefined
       });
 
     if (uploadError) throw uploadError;
 
     const {
-      data: { publicUrl },
+      data: { publicUrl }
     } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
 
     return {
       nome: selectedFile.name,
       url: publicUrl,
-      tipo: selectedFile.type,
+      tipo: selectedFile.type || "application/octet-stream",
       dimensione: selectedFile.size,
+      bucket: BUCKET_NAME,
+      path: filePath
     };
   } catch (error) {
     console.error("Errore upload:", error);
@@ -207,11 +211,21 @@ const uploadAllegato = async (): Promise<{
     try {
       setSending(true);
 
-      let allegati: any[] | null = null;
-      if (selectedFile) {
-        const fileData = await uploadAllegato();
-        allegati = fileData ? [fileData] : null;
-      }
+      let allegati:
+  | Array<{
+      nome: string;
+      url: string;
+      tipo: string;
+      dimensione: number;
+      bucket: string;
+      path: string;
+    }>
+  | null = null;
+
+if (selectedFile) {
+  const fileData = await uploadAllegato();
+  allegati = fileData ? [fileData] : null;
+}
 
       let destinatariCount = 0;
       if (formData.tipo === "singola") {
