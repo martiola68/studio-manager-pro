@@ -30,7 +30,13 @@ export interface ComunicazioneEmailData {
   destinatariIds?: string[];
   oggetto: string;
   messaggio: string;
-  allegati?: any;
+  allegati?: {
+    nome: string;
+    tipo: string;
+    dimensione?: number;
+    bucket: string;
+    path: string;
+  }[] | null;
   microsoftConnectionId?: string;
 }
 
@@ -41,11 +47,12 @@ export interface EmailData {
   text: string;
   microsoftConnectionId?: string;
   attachments?: {
-  nome: string;
-  path: string;
-  tipo?: string;
-  bucket?: string;
-}[];
+    nome: string;
+    path: string;
+    tipo?: string;
+    bucket?: string;
+  }[];
+}
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
