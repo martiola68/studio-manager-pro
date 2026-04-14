@@ -6,7 +6,13 @@ import {
   LogLevel,
   AccountInfo,
 } from "@azure/msal-node";
-
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: "10mb",
+    },
+  },
+};
 export function getDecryptedClientSecret(encryptedSecret: string) {
   if (!encryptedSecret) {
     throw new Error("client_secret mancante");
