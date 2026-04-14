@@ -447,105 +447,126 @@ export default function ScadenzeBilanciPage() {
     return utente ? `${utente.nome} ${utente.cognome}` : "-";
   };
 
-  const handlePrintOperatore = () => {
-    if (filterOperatore === "__all__") return;
+ const handlePrintOperatore = () => {
+  if (filterOperatore === "__all__") return;
 
-    const operatoreNome = getUtenteNome(filterOperatore);
+  const operatoreNome = getUtenteNome(filterOperatore);
 
-    const righeHtml = filteredScadenze
-      .map(
-        (scadenza, index) => `
-          <tr>
-            <td>${index + 1}</td>
-            <td>${scadenza.nominativo ?? ""}</td>
-            <td>${getUtenteNome(scadenza.utente_operatore_id)}</td>
-            <td>${scadenza.conferma_riga ? "Confermata" : "Non confermata"}</td>
-            <td>${formatFromISODate(scadenza.data_approvazione)}</td>
-            <td>${formatFromISODate(scadenza.data_scad_pres)}</td>
-            <td>${formatFromISODate(scadenza.data_invio)}</td>
-          </tr>
-        `
-      )
-      .join("");
+  const righeHtml = filteredScadenze
+    .map(
+      (scadenza, index) => `
+        <tr>
+          <td>${index + 1}</td>
+          <td>${scadenza.nominativo ?? ""}</td>
+          <td style="text-align:center; font-weight:700;">${
+            scadenza.conferma_riga ? "✓" : "X"
+          }</td>
+          <td>${formatFromISODate(scadenza.data_approvazione)}</td>
+          <td>${formatFromISODate(scadenza.data_scad_pres)}</td>
+          <td>${formatFromISODate(scadenza.data_invio)}</td>
+        </tr>
+      `
+    )
+    .join("");
 
-    const printWindow = window.open("", "_blank", "width=1000,height=700");
-    if (!printWindow) return;
+  const printWindow = window.open("", "_blank", "width=1000,height=700");
+  if (!printWindow) return;
 
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Stampa Scadenzario Bilanci</title>
-          <style>
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Stampa Scadenzario Bilanci</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            padding: 18px;
+            color: #111;
+            font-size: 11px;
+          }
+          h1 {
+            font-size: 18px;
+            margin-bottom: 4px;
+          }
+          .meta {
+            margin-bottom: 12px;
+            color: #444;
+            font-size: 12px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+            table-layout: fixed;
+          }
+          th, td {
+            border: 1px solid #999;
+            padding: 6px;
+            text-align: left;
+            vertical-align: top;
+            word-wrap: break-word;
+          }
+          th {
+            background: #f3f4f6;
+          }
+          .count {
+            margin-bottom: 10px;
+            font-weight: bold;
+            font-size: 12px;
+          }
+          .col-num {
+            width: 40px;
+            text-align: center;
+          }
+          .col-nominativo {
+            width: 42%;
+          }
+          .col-conferma {
+            width: 70px;
+            text-align: center;
+          }
+          .col-data {
+            width: 15%;
+          }
+          @media print {
             body {
-              font-family: Arial, sans-serif;
-              padding: 24px;
-              color: #111;
+              padding: 0;
             }
-            h1 {
-              font-size: 22px;
-              margin-bottom: 4px;
-            }
-            .meta {
-              margin-bottom: 20px;
-              color: #444;
-              font-size: 14px;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              font-size: 13px;
-            }
-            th, td {
-              border: 1px solid #999;
-              padding: 8px;
-              text-align: left;
-              vertical-align: top;
-            }
-            th {
-              background: #f3f4f6;
-            }
-            .count {
-              margin-bottom: 12px;
-              font-weight: bold;
-            }
-            @media print {
-              body {
-                padding: 0;
-              }
-            }
-          </style>
-        </head>
-        <body>
-          <h1>Scadenzario Bilanci</h1>
-          <div class="meta">Anno consultazione: ${annoConsultazione}</div>
-          <div class="meta">Operatore: ${operatoreNome}</div>
-          <div class="count">Totale record stampati: ${filteredScadenze.length}</div>
-          <table>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Nominativo</th>
-                <th>Operatore</th>
-                <th>Conferma</th>
-                <th>Data approvazione</th>
-                <th>Data scadenza</th>
-                <th>Data invio</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${righeHtml || `<tr><td colspan="7">Nessun record trovato</td></tr>`}
-            </tbody>
-          </table>
-        </body>
-      </html>
-    `);
+          }
+        </style>
+      </head>
+      <body>
+        <h1>Scadenzario Bilanci</h1>
+        <div class="meta">Anno consultazione: ${annoConsultazione}</div>
+        <div class="meta">Operatore: ${operatoreNome}</div>
+        <div class="count">Totale record stampati: ${filteredScadenze.length}</div>
 
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
-  };
+        <table>
+          <thead>
+            <tr>
+              <th class="col-num">#</th>
+              <th class="col-nominativo">Nominativo</th>
+              <th class="col-conferma">Conf.</th>
+              <th class="col-data">Data approvazione</th>
+              <th class="col-data">Data scadenza</th>
+              <th class="col-data">Data invio</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${
+              righeHtml ||
+              `<tr><td colspan="6">Nessun record trovato</td></tr>`
+            }
+          </tbody>
+        </table>
+      </body>
+    </html>
+  `);
 
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
+  printWindow.close();
+};
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
