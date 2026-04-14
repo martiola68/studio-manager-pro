@@ -864,6 +864,18 @@ const handleSave = async () => {
 const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
   try {
     const supabase = getSupabaseClient();
+    const annoRiferimento = new Date().getFullYear();
+
+    const studioIdEffettivo = (cliente as any).studio_id ?? studioId ?? null;
+
+    if (!studioIdEffettivo) {
+      toast({
+        title: "Errore",
+        description: "Studio ID mancante, impossibile inserire negli scadenzari",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const scadenzariAttivi: string[] = [];
     if (cliente.flag_iva) scadenzariAttivi.push("IVA");
@@ -886,9 +898,11 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
     }
 
     const baseData = {
-      id: cliente.id,
+      cliente_id: cliente.id,
+      anno_riferimento: annoRiferimento,
+      archiviato: false,
+      studio_id: studioIdEffettivo,
       nominativo: cliente.ragione_sociale,
-      studio_id: studioId ?? null,
       utente_operatore_id: cliente.utente_operatore_id ?? null,
       utente_professionista_id: cliente.utente_professionista_id ?? null,
     };
@@ -905,6 +919,7 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
           .maybeSingle();
 
         if (opErr) throw opErr;
+
         if (operatore) {
           operatoreNome = `${safeString(operatore.nome)} ${safeString(
             operatore.cognome
@@ -920,6 +935,7 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
           .maybeSingle();
 
         if (prErr) throw prErr;
+
         if (professionista) {
           professionistaNome = `${safeString(professionista.nome)} ${safeString(
             professionista.cognome
@@ -928,96 +944,261 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
       }
     }
 
-    const eseguiUpsert = async (
+    const esisteRecord = async (tabella: string) => {
+      const { data, error } = await supabase
+        .from(tabella as any)
+        .select("id")
+        .eq("cliente_id", cliente.id)
+        .eq("anno_riferimento", annoRiferimento)
+        .maybeSingle();
+
+      if (error) throw error;
+      return !!data;
+    };
+
+    const eseguiInsert = async (
       tabella: string,
       payload: Record<string, any>,
       nome: string
     ) => {
       const { error } = await supabase
         .from(tabella as any)
-        .upsert(payload, { onConflict: "id" });
+        .insert(payload as any);
 
       if (error) {
         throw new Error(`${nome}: ${error.message}`);
       }
     };
 
+    let inseriti = 0;
+    let giaPresenti = 0;
+
     for (const s of scadenzariAttivi) {
       switch (s) {
-        case "IVA":
-          await eseguiUpsert("tbscadiva", { ...baseData }, "IVA");
-          break;
+        case "IVA": {
+          const exists = await esisteRecord("tbscadiva");
+          if (exists) {
+            giaPresenti++;
+            break;
+          }
 
-        case "LIPE":
-          await eseguiUpsert("tbscadlipe", { ...baseData }, "LIPE");
+          await eseguiInsert(
+            "tbscadiva",
+            {
+              ...baseData,
+              conferma_riga: false,
+              alert_1_inviato: false,
+              alert_2_inviato: false,
+            },
+            "IVA"
+          );
+          inseriti++;
           break;
+        }
 
-        case "CU":
-          await eseguiUpsert("tbscadcu", { ...baseData }, "CU");
+        case "LIPE": {
+          const exists = await esisteRecord("tbscadlipe");
+          if (exists) {
+            giaPresenti++;
+            break;
+          }
+
+          await eseguiInsert(
+            "tbscadlipe",
+            {
+              ...baseData,
+              alert_1_inviato: false,
+              alert_2_inviato: false,
+            },
+            "LIPE"
+          );
+          inseriti++;
           break;
+        }
 
-        case "Bilanci":
-          await eseguiUpsert("tbscadbilanci", { ...baseData }, "Bilanci");
+        case "CU": {
+          const exists = await esisteRecord("tbscadcu");
+          if (exists) {
+            giaPresenti++;
+            break;
+          }
+
+          await eseguiInsert(
+            "tbscadcu",
+            {
+              ...baseData,
+              conferma_riga: false,
+              alert_1_inviato: false,
+              alert_2_inviato: false,
+            },
+            "CU"
+          );
+          inseriti++;
           break;
+        }
 
-        case "Fiscali":
-          await eseguiUpsert(
+        case "Bilanci": {
+          const exists = await esisteRecord("tbscadbilanci");
+          if (exists) {
+            giaPresenti++;
+            break;
+          }
+
+          await eseguiInsert(
+            "tbscadbilanci",
+            {
+              ...baseData,
+              conferma_riga: false,
+              consorzio: false,
+              alert_1_inviato: false,
+              alert_2_inviato: false,
+            },
+            "Bilanci"
+          );
+          inseriti++;
+          break;
+        }
+
+        case "Fiscali": {
+          const exists = await esisteRecord("tbscadfiscali");
+          if (exists) {
+            giaPresenti++;
+            break;
+          }
+
+          await eseguiInsert(
             "tbscadfiscali",
             {
               ...baseData,
               tipo_redditi: cliente.tipo_redditi ?? null,
+              conferma_riga: false,
+              alert_1_inviato: false,
+              alert_2_inviato: false,
             },
             "Fiscali"
           );
+          inseriti++;
           break;
+        }
 
-        case "770":
-          await eseguiUpsert(
+        case "770": {
+          const exists = await esisteRecord("tbscad770");
+          if (exists) {
+            giaPresenti++;
+            break;
+          }
+
+          await eseguiInsert(
             "tbscad770",
             {
               ...baseData,
               utente_payroll_id: cliente.utente_payroll_id ?? null,
               professionista_payroll_id:
                 cliente.professionista_payroll_id ?? null,
+              conferma_riga: false,
+              alert_1_inviato: false,
+              alert_2_inviato: false,
             },
             "770"
           );
+          inseriti++;
           break;
+        }
 
-        case "Proforma":
-          await eseguiUpsert("tbscadproforma", { ...baseData }, "Proforma");
+        case "Proforma": {
+          const exists = await esisteRecord("tbscadproforma");
+          if (exists) {
+            giaPresenti++;
+            break;
+          }
+
+          await eseguiInsert(
+            "tbscadproforma",
+            {
+              ...baseData,
+            },
+            "Proforma"
+          );
+          inseriti++;
           break;
+        }
 
-        case "Esterometro":
-          await eseguiUpsert("tbscadestero", { ...baseData }, "Esterometro");
+        case "Esterometro": {
+          const exists = await esisteRecord("tbscadestero");
+          if (exists) {
+            giaPresenti++;
+            break;
+          }
+
+          await eseguiInsert(
+            "tbscadestero",
+            {
+              ...baseData,
+            },
+            "Esterometro"
+          );
+          inseriti++;
           break;
+        }
 
-        case "CCGG":
-          await eseguiUpsert("tbscadccgg", { ...baseData }, "CCGG");
+        case "CCGG": {
+          const exists = await esisteRecord("tbscadccgg");
+          if (exists) {
+            giaPresenti++;
+            break;
+          }
+
+          await eseguiInsert(
+            "tbscadccgg",
+            {
+              ...baseData,
+              conferma_riga: false,
+              alert_1_inviato: false,
+              alert_2_inviato: false,
+            },
+            "CCGG"
+          );
+          inseriti++;
           break;
+        }
 
-        case "IMU":
-          await eseguiUpsert(
+        case "IMU": {
+          const exists = await esisteRecord("tbscadimu");
+          if (exists) {
+            giaPresenti++;
+            break;
+          }
+
+          await eseguiInsert(
             "tbscadimu",
             {
-              id: cliente.id,
+              cliente_id: cliente.id,
+              anno_riferimento: annoRiferimento,
+              archiviato: false,
+              studio_id: studioIdEffettivo,
               nominativo: cliente.ragione_sociale,
-              studio_id: studioId ?? null,
               operatore: operatoreNome,
               professionista: professionistaNome,
               conferma_riga: false,
+              alert_1_inviato: false,
+              alert_2_inviato: false,
             },
             "IMU"
           );
+          inseriti++;
           break;
+        }
       }
     }
 
     toast({
       title: "Successo",
-      description: `Cliente inserito in ${scadenzariAttivi.length} scadenzari: ${scadenzariAttivi.join(
-        ", "
-      )}`,
+      description:
+        inseriti > 0
+          ? `Inseriti ${inseriti} scadenzari per l'anno ${annoRiferimento}${
+              giaPresenti > 0 ? ` (${giaPresenti} già presenti)` : ""
+            }`
+          : `Tutti gli scadenzari risultano già presenti per l'anno ${annoRiferimento}`,
     });
   } catch (error: any) {
     console.error("Errore inserimento scadenzari:", error);
