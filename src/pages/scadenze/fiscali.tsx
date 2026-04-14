@@ -403,8 +403,8 @@ export default function ScadenzeFiscaliPage() {
                 <th class="col-nominativo">Nominativo</th>
                 <th class="col-conferma">Conf.</th>
                 <th>Tipo Redditi</th>
-                <th class="col-small">Compilato</th>
-                <th class="col-small">Definitivo</th>
+               <th class="col-small">Comp.</th>
+                <th class="col-small">Def.</th>
                 <th class="col-small">Inviato</th>
                 <th class="col-data">Data invio</th>
               </tr>
@@ -558,15 +558,15 @@ export default function ScadenzeFiscaliPage() {
                   <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[180px]">
                     Operatore
                   </th>
-                  <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[150px]">
-                    Tipo Redditi
-                  </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[140px]">
-                    Compilato
-                  </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[140px]">
-                    Definitivo
-                  </th>
+                 <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[120px]">
+  Tipo Redditi
+</th>
+<th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[80px]">
+  Comp.
+</th>
+<th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[80px]">
+  Def.
+</th>
                   <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[160px]">
                     Saldo/1° Acc./cciaa
                   </th>
@@ -651,46 +651,46 @@ export default function ScadenzeFiscaliPage() {
                         {getUtenteNome(scadenza.utente_operatore_id)}
                       </td>
 
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
-                        <Input
-                          type="text"
-                          value={scadenza.tipo_redditi || ""}
-                          onChange={(e) =>
-                            handleUpdateField(
-                              scadenza.id,
-                              "tipo_redditi",
-                              e.target.value
-                            )
-                          }
-                          className="w-full"
-                        />
-                      </td>
+                     <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[120px]">
+  <Input
+    type="text"
+    value={scadenza.tipo_redditi || ""}
+    onChange={(e) =>
+      handleUpdateField(
+        scadenza.id,
+        "tipo_redditi",
+        e.target.value
+      )
+    }
+    className="w-full"
+  />
+</td>
 
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[140px]">
-                        <Checkbox
-                          checked={scadenza.mod_r_compilato || false}
-                          onCheckedChange={() =>
-                            handleToggleField(
-                              scadenza.id,
-                              "mod_r_compilato",
-                              scadenza.mod_r_compilato
-                            )
-                          }
-                        />
-                      </td>
+<td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[80px]">
+  <Checkbox
+    checked={scadenza.mod_r_compilato || false}
+    onCheckedChange={() =>
+      handleToggleField(
+        scadenza.id,
+        "mod_r_compilato",
+        scadenza.mod_r_compilato
+      )
+    }
+  />
+</td>
 
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[140px]">
-                        <Checkbox
-                          checked={scadenza.mod_r_definitivo || false}
-                          onCheckedChange={() =>
-                            handleToggleField(
-                              scadenza.id,
-                              "mod_r_definitivo",
-                              scadenza.mod_r_definitivo
-                            )
-                          }
-                        />
-                      </td>
+<td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[80px]">
+  <Checkbox
+    checked={scadenza.mod_r_definitivo || false}
+    onCheckedChange={() =>
+      handleToggleField(
+        scadenza.id,
+        "mod_r_definitivo",
+        scadenza.mod_r_definitivo
+      )
+    }
+  />
+</td>
 
                       <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[160px]">
                         <Checkbox
