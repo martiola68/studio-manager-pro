@@ -130,6 +130,19 @@ const anniDisponibili = useMemo(() => {
   return years.length > 0 ? years : [currentYear];
 }, [scadenze, currentYear]);
 
+const sortByCognome = (a: string, b: string) => {
+  const splitA = a.trim().split(/\s+/);
+  const splitB = b.trim().split(/\s+/);
+
+  const cognomeA = splitA.length > 1 ? splitA[splitA.length - 1] : splitA[0] || "";
+  const cognomeB = splitB.length > 1 ? splitB[splitB.length - 1] : splitB[0] || "";
+
+  const bySurname = cognomeA.localeCompare(cognomeB, "it");
+  if (bySurname !== 0) return bySurname;
+
+  return a.localeCompare(b, "it");
+};
+
 const operatoriDisponibili = useMemo(() => {
   const operatori = Array.from(
     new Set(
@@ -140,7 +153,7 @@ const operatoriDisponibili = useMemo(() => {
         })
         .filter((v) => v.length > 0)
     )
-  ).sort((a, b) => a.localeCompare(b, "it"));
+  ).sort(sortByCognome);
 
   return operatori;
 }, [scadenze, operatoriMap]);
@@ -363,14 +376,25 @@ const filteredScadenze = useMemo(() => {
       `}</style>
 
       <div className="space-y-6">
-        <div className="flex items-center justify-between no-print">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Scadenzario IMU</h1>
-            <p className="text-gray-500 mt-1">
-              Gestione dichiarazioni e versamenti IMU
-            </p>
-          </div>
-        </div>
+      <div className="flex items-center justify-between no-print">
+  <div>
+    <h1 className="text-3xl font-bold text-gray-900">Scadenzario IMU</h1>
+    <p className="text-gray-500 mt-1">
+      Gestione dichiarazioni e versamenti IMU
+    </p>
+  </div>
+
+  {filterOperatore !== "__all__" && (
+    <Button
+      type="button"
+      onClick={handlePrint}
+      className="bg-black hover:bg-neutral-800 text-white"
+    >
+      <Printer className="h-4 w-4 mr-2" />
+      Stampa elenco operatore
+    </Button>
+  )}
+</div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 no-print">
           <Card>
@@ -469,18 +493,7 @@ const filteredScadenze = useMemo(() => {
               </div>
             </div>
 
-            <div className="mt-4 flex justify-end">
-              <Button
-                type="button"
-                onClick={handlePrint}
-                variant="outline"
-                className="border-blue-300 text-blue-700 hover:bg-blue-50"
-              >
-                <Printer className="h-4 w-4 mr-2" />
-                Stampa
-              </Button>
-            </div>
-          </CardContent>
+           </CardContent>
         </Card>
 
         <Card id="imu-print-area">
