@@ -74,9 +74,10 @@ export default function ImuPage() {
         .order("anno_riferimento", { ascending: false })
         .order("nominativo", { ascending: true });
 
-      if (error) throw error;
+     if (error) throw error;
 
-      setScadenze(data || []);
+setScadenze(((data || []) as unknown) as ScadenzaImu[]);
+      
     } catch (error: any) {
       toast({
         title: "Errore",
