@@ -157,21 +157,16 @@ const uploadAllegato = async (): Promise<{
         upsert: false,
         contentType: selectedFile.type || undefined
       });
+if (uploadError) throw uploadError;
 
-    if (uploadError) throw uploadError;
-
-    const {
-      data: { publicUrl }
-    } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
-
-    return {
-      nome: selectedFile.name,
-      url: publicUrl,
-      tipo: selectedFile.type || "application/octet-stream",
-      dimensione: selectedFile.size,
-      bucket: BUCKET_NAME,
-      path: filePath
-    };
+return {
+  nome: selectedFile.name,
+  tipo: selectedFile.type || "application/octet-stream",
+  dimensione: selectedFile.size,
+  bucket: BUCKET_NAME,
+  path: filePath,
+};
+    
   } catch (error) {
     console.error("Errore upload:", error);
     throw new Error("Errore caricamento allegato");
