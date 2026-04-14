@@ -245,7 +245,7 @@ export default function GenerazioneScadenzariPage() {
             archiviato: true,
             data_archiviazione: new Date().toISOString(),
             archiviato_da: session.user.id,
-          })
+          } as any)
           .eq("anno_riferimento", annoArchiviazione)
           .eq("archiviato", false);
 
@@ -389,7 +389,7 @@ export default function GenerazioneScadenzariPage() {
               .maybeSingle();
 
             if (!existing) {
-              const { error } = await supabase.from("tbscadiva").insert({
+              const { error } = await supabase.from("tbscadiva" as any).insert({
                 cliente_id: cliente.id,
                 anno_riferimento: annoGenerazione,
                 archiviato: false,
@@ -424,7 +424,7 @@ export default function GenerazioneScadenzariPage() {
               .maybeSingle();
 
             if (!existing) {
-              const { error } = await supabase.from("tbscadccgg").insert({
+              const { error } = await supabase.from("tbscadccgg" as any).insert({
                 cliente_id: cliente.id,
                 anno_riferimento: annoGenerazione,
                 archiviato: false,
@@ -459,7 +459,7 @@ export default function GenerazioneScadenzariPage() {
               .maybeSingle();
 
             if (!existing) {
-              const { error } = await supabase.from("tbscadcu").insert({
+              const { error } = await supabase.from("tbscadcu" as any).insert({
                 cliente_id: cliente.id,
                 anno_riferimento: annoGenerazione,
                 archiviato: false,
@@ -494,7 +494,7 @@ export default function GenerazioneScadenzariPage() {
               .maybeSingle();
 
             if (!existing) {
-              const { error } = await supabase.from("tbscadfiscali").insert({
+              const { error } = await supabase.from("tbscadfiscali" as any).insert({
                 cliente_id: cliente.id,
                 anno_riferimento: annoGenerazione,
                 archiviato: false,
@@ -530,7 +530,7 @@ export default function GenerazioneScadenzariPage() {
               .maybeSingle();
 
             if (!existing) {
-              const { error } = await supabase.from("tbscadbilanci").insert({
+              const { error } = await supabase.from("tbscadbilanci" as any).insert({
                 cliente_id: cliente.id,
                 anno_riferimento: annoGenerazione,
                 archiviato: false,
@@ -565,7 +565,7 @@ export default function GenerazioneScadenzariPage() {
               .maybeSingle();
 
             if (!existing) {
-              const { error } = await supabase.from("tbscad770").insert({
+              const { error } = await supabase.from("tbscad770" as any).insert({
                 cliente_id: cliente.id,
                 anno_riferimento: annoGenerazione,
                 archiviato: false,
@@ -602,7 +602,7 @@ export default function GenerazioneScadenzariPage() {
               .maybeSingle();
 
             if (!existing) {
-              const { error } = await supabase.from("tbscadlipe").insert({
+              const { error } = await supabase.from("tbscadlipe" as any).insert({
                 cliente_id: cliente.id,
                 anno_riferimento: annoGenerazione,
                 archiviato: false,
@@ -629,7 +629,7 @@ export default function GenerazioneScadenzariPage() {
               .maybeSingle();
 
             if (!existing) {
-              const { error } = await supabase.from("tbscadestero").insert({
+              const { error } = await supabase.from("tbscadestero" as any).insert({
                 cliente_id: cliente.id,
                 anno_riferimento: annoGenerazione,
                 archiviato: false,
@@ -656,7 +656,7 @@ export default function GenerazioneScadenzariPage() {
               .maybeSingle();
 
             if (!existing) {
-              const { error } = await supabase.from("tbscadproforma").insert({
+              const { error } = await supabase.from("tbscadproforma" as any).insert({
                 cliente_id: cliente.id,
                 anno_riferimento: annoGenerazione,
                 archiviato: false,
@@ -710,7 +710,7 @@ export default function GenerazioneScadenzariPage() {
                 }
               }
 
-              const { error } = await supabase.from("tbscadimu").insert({
+              const { error } = await supabase.from("tbscadimu" as any).insert({
                 cliente_id: cliente.id,
                 anno_riferimento: annoGenerazione,
                 archiviato: false,
