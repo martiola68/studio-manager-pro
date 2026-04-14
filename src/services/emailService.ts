@@ -633,45 +633,26 @@ const htmlContent = `
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
     }
 
-    .header {
-      background: #1d4ed8;
-      color: #ffffff;
-      padding: 18px 24px;
-    }
-
-    .header-title {
-      margin: 0;
-      font-size: 28px;
-      font-weight: 700;
-      color: #ffffff;
-    }
-
-    .header-subtitle {
-      margin: 6px 0 0 0;
-      font-size: 13px;
-      color: #dbeafe;
-    }
-
     .content {
-      padding: 28px 24px 20px 24px;
+      padding: 30px 24px 20px 24px;
     }
 
     .badge {
-      background: #e6f0ff;
-      color: #1d4ed8;
-      padding: 12px 14px;
-      border-radius: 6px;
-      font-weight: 700;
+      background: #1d4ed8;
+      color: #ffffff;
+      padding: 16px 20px;
       text-align: center;
-      font-size: 14px;
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1.2;
     }
 
-    .spacer-small {
-      height: 20px;
+    .spacer-1 {
+      height: 26px;
     }
 
-    .spacer-large {
-      height: 50px;
+    .spacer-2 {
+      height: 34px;
     }
 
     .subject {
@@ -680,15 +661,15 @@ const htmlContent = `
       margin: 0;
     }
 
-    .message {
-      white-space: normal;
+    .message-row {
       font-size: 15px;
       color: #1f2937;
       margin: 0;
+      white-space: normal;
     }
 
     .attachment-box {
-      margin-top: 18px;
+      margin-top: 22px;
       padding: 14px 16px;
       background: #eff6ff;
       border: 1px solid #bfdbfe;
@@ -713,32 +694,25 @@ const htmlContent = `
     }
   </style>
 </head>
-
 <body>
   <div class="container">
-    <div class="header">
-      <p class="header-title">Studio Manager Pro</p>
-      <p class="header-subtitle">Sistema Gestionale Integrato</p>
-    </div>
-
     <div class="content">
+
       <div class="badge">
-        COMUNICAZIONE INTERNA DI STUDIO
+        COMUNICAZIONE INTERNA
       </div>
 
-      <div class="spacer-small"></div>
-      <div class="spacer-small"></div>
+      <div class="spacer-1"></div>
 
       <p class="subject">
         <strong>Oggetto:</strong> ${data.oggetto}
       </p>
 
-      <div class="spacer-small"></div>
-      <div class="spacer-small"></div>
+      <div class="spacer-2"></div>
 
-      <div class="message">
-        ${data.messaggio.replace(/\n/g, "<br>")}
-      </div>
+      <p class="message-row">
+        <strong>Messaggio:</strong> ${data.messaggio.replace(/\n/g, "<br>")}
+      </p>
 
       ${
         data.allegati && Array.isArray(data.allegati) && data.allegati.length > 0
@@ -746,11 +720,7 @@ const htmlContent = `
           : ""
       }
 
-      <div class="spacer-large"></div>
-      <div class="spacer-large"></div>
-      <div class="spacer-large"></div>
-      <div class="spacer-large"></div>
-      <div class="spacer-large"></div>
+      <div style="height: 70px;"></div>
     </div>
 
     <div class="footer">
