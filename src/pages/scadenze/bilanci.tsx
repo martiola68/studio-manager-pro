@@ -120,27 +120,29 @@ export default function ScadenzeBilanciPage() {
     }
   };
 
-  const loadScadenze = async (): Promise<ScadenzaBilancioExt[]> => {
-    const { data, error } = await supabase
-      .from("tbscadbilanci" as any)
-      .select("*")
-      .eq("anno_riferimento", annoConsultazione)
-      .order("nominativo", { ascending: true });
+ const loadScadenze = async (): Promise<ScadenzaBilancioExt[]> => {
+  const { data, error } = await supabase
+    .from("tbscadbilanci" as any)
+    .select("*")
+    .eq("anno_riferimento", annoConsultazione)
+    .order("nominativo", { ascending: true });
 
-    if (error) throw error;
-    return (data as ScadenzaBilancioExt[]) || [];
-  };
+  if (error) throw error;
 
-  const loadUtenti = async (): Promise<Utente[]> => {
-    const { data, error } = await supabase
-      .from("tbutenti")
-      .select("*")
-      .order("cognome", { ascending: true });
+  return ((data ?? []) as unknown) as ScadenzaBilancioExt[];
+};
 
-    if (error) throw error;
-    return data || [];
-  };
+ const loadUtenti = async (): Promise<Utente[]> => {
+  const { data, error } = await supabase
+    .from("tbutenti")
+    .select("*")
+    .order("cognome", { ascending: true });
 
+  if (error) throw error;
+
+  return ((data ?? []) as unknown) as Utente[];
+};
+  
   const addDaysToISODate = (isoDate: string, days: number): string => {
     const [y, m, d] = isoDate.split("-").map(Number);
     const dt = new Date(Date.UTC(y, m - 1, d));
