@@ -674,7 +674,7 @@ export default function GenerazioneScadenzariPage() {
             }
           }
 
-        if (scadenzariFlags.imu && cliente.flag_imu) {
+     if (scadenzariFlags.imu && cliente.flag_imu) {
   const { data: existing } = await supabase
     .from("tbscadimu")
     .select("id")
@@ -691,6 +691,12 @@ export default function GenerazioneScadenzariPage() {
       nominativo: cliente.ragione_sociale,
       utente_operatore_id: cliente.utente_operatore_id,
       conferma_riga: false,
+      alert_1_inviato: false,
+      alert_2_inviato: false,
+      data_invio_alert_1: null,
+      data_invio_alert_2: null,
+      data_archiviazione: null,
+      archiviato_da: null,
     });
 
     if (!error) generati++;
