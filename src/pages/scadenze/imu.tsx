@@ -26,18 +26,25 @@ type ScadenzaImu = ScadenzaImuBase & {
   utente_operatore_id: string | null;
 };
 
+type UtenteLight = {
+  id: string;
+  nome: string | null;
+  cognome: string | null;
+};
+
 export default function ImuPage() {
   const router = useRouter();
   const { toast } = useToast();
+
+  const currentYear = new Date().getFullYear();
 
   const [loading, setLoading] = useState(true);
   const [scadenze, setScadenze] = useState<ScadenzaImu[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterConferma, setFilterConferma] = useState("__all__");
- const currentYear = new Date().getFullYear();
-const [filterAnno, setFilterAnno] = useState(String(currentYear));
-const [filterOperatore, setFilterOperatore] = useState("__all__");
-const [operatoriMap, setOperatoriMap] = useState<Record<string, string>>({});
+  const [filterAnno, setFilterAnno] = useState(String(currentYear));
+  const [filterOperatore, setFilterOperatore] = useState("__all__");
+  const [operatoriMap, setOperatoriMap] = useState<Record<string, string>>({});
 
   const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
   const [noteTimers, setNoteTimers] = useState<Record<string, NodeJS.Timeout>>(
@@ -67,47 +74,47 @@ const [operatoriMap, setOperatoriMap] = useState<Record<string, string>>({});
     await loadScadenze();
   };
 
- const loadScadenze = async () => {
-  try {
-    setLoading(true);
+  const loadScadenze = async () => {
+    try {
+      setLoading(true);
 
-    const { data, error } = await supabase
-      .from("tbscadimu")
-      .select("*")
-      .order("anno_riferimento", { ascending: false })
-      .order("nominativo", { ascending: true });
+      const { data, error } = await supabase
+        .from("tbscadimu")
+        .select("*")
+        .order("anno_riferimento", { ascending: false })
+        .order("nominativo", { ascending: true });
 
-    if (error) throw error;
+      if (error) throw error;
 
-    const rows = ((data || []) as unknown) as ScadenzaImu[];
-    setScadenze(rows);
+      const rows = ((data || []) as unknown) as ScadenzaImu[];
+      setScadenze(rows);
 
-    const operatoreIds = Array.from(
-      new Set(
-        rows
-          .map((r) => r.utente_operatore_id)
-          .filter((v): v is string => !!v)
-      )
-    );
+      const operatoreIds = Array.from(
+        new Set(
+          rows
+            .map((r) => r.utente_operatore_id)
+            .filter((v): v is string => !!v)
+        )
+      );
 
-    if (operatoreIds.length > 0) {
-      const { data: utentiData, error: utentiError } = await supabase
-        .from("tbutenti")
-        .select("id, nome, cognome")
-        .in("id", operatoreIds);
+      if (operatoreIds.length > 0) {
+        const { data: utentiData, error: utentiError } = await supabase
+          .from("tbutenti")
+          .select("id, nome, cognome")
+          .in("id", operatoreIds);
 
-      if (utentiError) throw utentiError;
+        if (utentiError) throw utentiError;
 
-      const map: Record<string, string> = {};
-      (utentiData || []).forEach((u: any) => {
-        map[u.id] = `${u.nome || ""} ${u.cognome || ""}`.trim();
-      });
+        const map: Record<string, string> = {};
+        ((utentiData || []) as UtenteLight[]).forEach((u) => {
+          map[u.id] = `${u.nome || ""} ${u.cognome || ""}`.trim();
+        });
 
-      setOperatoriMap(map);
-    } else {
-      setOperatoriMap({});
-    }
-  } catch (error: any) {
+        setOperatoriMap(map);
+      } else {
+        setOperatoriMap({});
+      }
+    } catch (error: any) {
       toast({
         title: "Errore",
         description: error.message,
@@ -118,77 +125,89 @@ const [operatoriMap, setOperatoriMap] = useState<Record<string, string>>({});
     }
   };
 
-const anniDisponibili = useMemo(() => {
-  const years = Array.from(
-    new Set(
-      scadenze
-        .map((s: ScadenzaImu) => s.anno_riferimento)
-        .filter((v): v is number => typeof v === "number")
-    )
-  ).sort((a, b) => b - a);
+  const anniDisponibili = useMemo(() => {
+    const years = Array.from(
+      new Set(
+        scadenze
+          .map((s: ScadenzaImu) => s.anno_riferimento)
+          .filter((v): v is number => typeof v === "number")
+      )
+    ).sort((a, b) => b - a);
 
-  return years.length > 0 ? years : [currentYear];
-}, [scadenze, currentYear]);
+    return years.length > 0 ? years : [currentYear];
+  }, [scadenze, currentYear]);
 
-const sortByCognome = (a: string, b: string) => {
-  const splitA = a.trim().split(/\s+/);
-  const splitB = b.trim().split(/\s+/);
+  const sortByCognome = (a: string, b: string) => {
+    const splitA = a.trim().split(/\s+/);
+    const splitB = b.trim().split(/\s+/);
 
-  const cognomeA = splitA.length > 1 ? splitA[splitA.length - 1] : splitA[0] || "";
-  const cognomeB = splitB.length > 1 ? splitB[splitB.length - 1] : splitB[0] || "";
+    const cognomeA =
+      splitA.length > 1 ? splitA[splitA.length - 1] : splitA[0] || "";
+    const cognomeB =
+      splitB.length > 1 ? splitB[splitB.length - 1] : splitB[0] || "";
 
-  const bySurname = cognomeA.localeCompare(cognomeB, "it");
-  if (bySurname !== 0) return bySurname;
+    const bySurname = cognomeA.localeCompare(cognomeB, "it");
+    if (bySurname !== 0) return bySurname;
 
-  return a.localeCompare(b, "it");
-};
-
-const operatoriDisponibili = useMemo(() => {
-  const operatori = Array.from(
-    new Set(
-      scadenze
-        .map((s: ScadenzaImu) => {
-          const id = s.utente_operatore_id || "";
-          return id && operatoriMap[id] ? operatoriMap[id] : "";
-        })
-        .filter((v) => v.length > 0)
-    )
-  ).sort(sortByCognome);
-
-  return operatori;
-}, [scadenze, operatoriMap]);
-
-const filteredScadenze = useMemo(() => {
-  return scadenze.filter((s: ScadenzaImu) => {
-    const q = searchQuery.trim().toLowerCase();
-    const operatoreNome =
-      (s.utente_operatore_id && operatoriMap[s.utente_operatore_id]) || "";
-
-    const matchSearch =
-      !q ||
-      (s.nominativo || "").toLowerCase().includes(q) ||
-      operatoreNome.toLowerCase().includes(q);
-
-    const matchConferma =
-      filterConferma === "__all__" ||
-      (filterConferma === "true" ? !!s.conferma_riga : !s.conferma_riga);
-
-    const matchAnno = String(s.anno_riferimento || "") === filterAnno;
-
-    const matchOperatore =
-      filterOperatore === "__all__" || operatoreNome === filterOperatore;
-
-    return matchSearch && matchConferma && matchAnno && matchOperatore;
-  });
-}, [scadenze, searchQuery, filterConferma, filterAnno, filterOperatore, operatoriMap]);
-  
- const stats = useMemo(() => {
-  return {
-    totale: filteredScadenze.length,
-    confermate: filteredScadenze.filter((s: ScadenzaImu) => !!s.conferma_riga).length,
-    nonConfermate: filteredScadenze.filter((s: ScadenzaImu) => !s.conferma_riga).length,
+    return a.localeCompare(b, "it");
   };
-}, [filteredScadenze]);
+
+  const operatoriDisponibili = useMemo(() => {
+    const operatori = Array.from(
+      new Set(
+        scadenze
+          .map((s: ScadenzaImu) => {
+            const id = s.utente_operatore_id || "";
+            return id && operatoriMap[id] ? operatoriMap[id] : "";
+          })
+          .filter((v) => v.length > 0)
+      )
+    ).sort(sortByCognome);
+
+    return operatori;
+  }, [scadenze, operatoriMap]);
+
+  const filteredScadenze = useMemo(() => {
+    return scadenze.filter((s: ScadenzaImu) => {
+      const q = searchQuery.trim().toLowerCase();
+      const operatoreNome =
+        (s.utente_operatore_id && operatoriMap[s.utente_operatore_id]) || "";
+
+      const matchSearch =
+        !q ||
+        (s.nominativo || "").toLowerCase().includes(q) ||
+        operatoreNome.toLowerCase().includes(q);
+
+      const matchConferma =
+        filterConferma === "__all__" ||
+        (filterConferma === "true" ? !!s.conferma_riga : !s.conferma_riga);
+
+      const matchAnno = String(s.anno_riferimento || "") === filterAnno;
+
+      const matchOperatore =
+        filterOperatore === "__all__" || operatoreNome === filterOperatore;
+
+      return matchSearch && matchConferma && matchAnno && matchOperatore;
+    });
+  }, [
+    scadenze,
+    searchQuery,
+    filterConferma,
+    filterAnno,
+    filterOperatore,
+    operatoriMap,
+  ]);
+
+  const stats = useMemo(() => {
+    return {
+      totale: filteredScadenze.length,
+      confermate: filteredScadenze.filter((s: ScadenzaImu) => !!s.conferma_riga)
+        .length,
+      nonConfermate: filteredScadenze.filter(
+        (s: ScadenzaImu) => !s.conferma_riga
+      ).length,
+    };
+  }, [filteredScadenze]);
 
   const handleToggleField = async (
     id: string,
@@ -376,31 +395,35 @@ const filteredScadenze = useMemo(() => {
       `}</style>
 
       <div className="space-y-6">
-      <div className="flex items-center justify-between no-print">
-  <div>
-    <h1 className="text-3xl font-bold text-gray-900">Scadenzario IMU</h1>
-    <p className="text-gray-500 mt-1">
-      Gestione dichiarazioni e versamenti IMU
-    </p>
-  </div>
+        <div className="flex items-center justify-between no-print">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Scadenzario IMU</h1>
+            <p className="text-gray-500 mt-1">
+              Gestione dichiarazioni e versamenti IMU
+            </p>
+          </div>
 
-  {filterOperatore !== "__all__" && (
-    <Button
-      type="button"
-      onClick={handlePrint}
-      className="bg-black hover:bg-neutral-800 text-white"
-    >
-      <Printer className="h-4 w-4 mr-2" />
-      Stampa elenco operatore
-    </Button>
-  )}
-</div>
+          {filterOperatore !== "__all__" && (
+            <Button
+              type="button"
+              onClick={handlePrint}
+              className="bg-black hover:bg-neutral-800 text-white"
+            >
+              <Printer className="h-4 w-4 mr-2" />
+              Stampa elenco operatore
+            </Button>
+          )}
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 no-print">
           <Card>
             <CardContent className="pt-6">
-              <div className="text-sm text-gray-600 mb-1">Totale Dichiarazioni</div>
-              <div className="text-3xl font-bold text-gray-900">{stats.totale}</div>
+              <div className="text-sm text-gray-600 mb-1">
+                Totale Dichiarazioni
+              </div>
+              <div className="text-3xl font-bold text-gray-900">
+                {stats.totale}
+              </div>
             </CardContent>
           </Card>
           <Card>
@@ -441,23 +464,9 @@ const filteredScadenze = useMemo(() => {
               </div>
 
               <div>
-                <label className="text-sm font-medium mb-2 block">Anno</label>
-               <Select value={filterAnno} onValueChange={setFilterAnno}>
-  <SelectTrigger>
-    <SelectValue placeholder="Seleziona anno" />
-  </SelectTrigger>
-  <SelectContent>
-    {anniDisponibili.map((anno) => (
-      <SelectItem key={anno} value={String(anno)}>
-        {anno}
-      </SelectItem>
-    ))}
-  </SelectContent>
-</Select>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium mb-2 block">Operatore</label>
+                <label className="text-sm font-medium mb-2 block">
+                  Operatore
+                </label>
                 <Select
                   value={filterOperatore}
                   onValueChange={setFilterOperatore}
@@ -491,9 +500,26 @@ const filteredScadenze = useMemo(() => {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
 
-           </CardContent>
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Anno consultazione
+                </label>
+                <Select value={filterAnno} onValueChange={setFilterAnno}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleziona anno" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {anniDisponibili.map((anno) => (
+                      <SelectItem key={anno} value={String(anno)}>
+                        {anno}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
         </Card>
 
         <Card id="imu-print-area">
@@ -502,12 +528,12 @@ const filteredScadenze = useMemo(() => {
               <h2 className="text-xl font-bold text-center mb-1">
                 Scadenzario IMU
               </h2>
-             <p className="text-sm text-center text-gray-600 mb-4">
-  {`Anno: ${filterAnno}`}
-  {filterOperatore !== "__all__"
-    ? ` - Operatore: ${filterOperatore}`
-    : ""}
-</p>
+              <p className="text-sm text-center text-gray-600 mb-4">
+                Anno: {filterAnno}
+                {filterOperatore !== "__all__"
+                  ? ` - Operatore: ${filterOperatore}`
+                  : ""}
+              </p>
             </div>
 
             <div className="relative w-full overflow-auto max-h-[600px] no-print">
@@ -520,7 +546,6 @@ const filteredScadenze = useMemo(() => {
                     <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">
                       Operatore
                     </th>
-
                     <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
                       Acconto IMU
                     </th>
@@ -533,7 +558,6 @@ const filteredScadenze = useMemo(() => {
                     <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[160px] print-hide">
                       Data comunicazione
                     </th>
-
                     <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
                       Saldo IMU
                     </th>
@@ -546,7 +570,6 @@ const filteredScadenze = useMemo(() => {
                     <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[160px] print-hide">
                       Data comunicazione
                     </th>
-
                     <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[140px] print-hide">
                       Con dic. IMU
                     </th>
@@ -556,7 +579,6 @@ const filteredScadenze = useMemo(() => {
                     <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[140px] print-hide">
                       Dic. presentata
                     </th>
-
                     <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[300px] print-hide">
                       Note
                     </th>
@@ -593,11 +615,12 @@ const filteredScadenze = useMemo(() => {
                         <td className="p-2 align-middle border-r font-medium min-w-[200px]">
                           {scadenza.nominativo}
                         </td>
-                      <td className="p-2 align-middle min-w-[150px]">
-  {(scadenza.utente_operatore_id &&
-    operatoriMap[scadenza.utente_operatore_id]) ||
-    "-"}
-</td>
+                        <td className="p-2 align-middle min-w-[150px]">
+                          {(scadenza.utente_operatore_id &&
+                            operatoriMap[scadenza.utente_operatore_id]) ||
+                            "-"}
+                        </td>
+
                         <td className="p-2 align-middle text-center min-w-[120px]">
                           <Checkbox
                             checked={scadenza.acconto_imu || false}
@@ -786,6 +809,7 @@ const filteredScadenze = useMemo(() => {
               <table className="print-table">
                 <thead>
                   <tr>
+                    <th>Nominativo</th>
                     <th>Acconto IMU</th>
                     <th>Comunicato</th>
                     <th>Saldo IMU</th>
@@ -796,11 +820,14 @@ const filteredScadenze = useMemo(() => {
                 <tbody>
                   {filteredScadenze.length === 0 ? (
                     <tr>
-                      <td colSpan={5}>Nessun record trovato</td>
+                      <td colSpan={6}>Nessun record trovato</td>
                     </tr>
                   ) : (
                     filteredScadenze.map((scadenza) => (
                       <tr key={scadenza.id}>
+                        <td style={{ textAlign: "left" }}>
+                          {scadenza.nominativo || "-"}
+                        </td>
                         <td>{scadenza.acconto_imu ? "Sì" : "No"}</td>
                         <td>{scadenza.acconto_comunicato ? "Sì" : "No"}</td>
                         <td>{scadenza.saldo_imu ? "Sì" : "No"}</td>
