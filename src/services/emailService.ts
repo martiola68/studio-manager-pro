@@ -98,10 +98,22 @@ async function fileUrlToBase64(url: string): Promise<string> {
 
 async function buildMicrosoftAttachments(
   attachments?: { nome: string; url: string; tipo?: string }[]
-) {
+): Promise<
+  {
+    "@odata.type": "#microsoft.graph.fileAttachment";
+    name: string;
+    contentType: string;
+    contentBytes: string;
+  }[]
+> {
   if (!attachments || attachments.length === 0) return [];
 
-  const results = [];
+  const results: {
+    "@odata.type": "#microsoft.graph.fileAttachment";
+    name: string;
+    contentType: string;
+    contentBytes: string;
+  }[] = [];
 
   for (const attachment of attachments) {
     const contentBytes = await fileUrlToBase64(attachment.url);
