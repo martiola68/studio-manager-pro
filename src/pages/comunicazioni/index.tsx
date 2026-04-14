@@ -244,28 +244,51 @@ export default function ComunicazioniPage() {
           : utenti.filter((u) => u.attivo).length;
       }
 
-      await comunicazioneService.createComunicazione({
-        tipo: formData.tipo,
-        oggetto: formData.oggetto,
-        messaggio: formData.messaggio,
-        allegati,
-        destinatari_count: destinatariCount,
-        stato: "Inviata",
-        data_invio: new Date().toISOString(),
-      });
+   await comunicazioneService.createComunicazione({
+  tipo: formData.tipo,
+  oggetto: formData.oggetto,
+  messaggio: formData.messaggio,
+  allegati,
+  destinatari_count: destinatariCount,
+  stato: "Inviata",
+  data_invio: new Date().toISOString(),
+});
 
-      const emailResult = await emailService.sendComunicazioneEmail({
-        tipo: formData.tipo,
-        destinatarioId:
-          formData.tipo === "singola" ? formData.destinatario_id : undefined,
-        destinatariIds:
-          formData.tipo === "interna" && multiDestinatari
-            ? selectedDestinatari
-            : undefined,
-        oggetto: formData.oggetto,
-        messaggio: formData.messaggio,
-        allegati,
-      });
+const supabase = getSupabaseClient();
+
+const {
+  data: { session },
+} = await supabase.auth.getSession();
+
+let microsoftConnectionId: string | undefined = undefined;
+
+if (session?.user?.email) {
+  const { data: utenteRow, error: utenteRowError } = await supabase
+    .from("tbutenti")
+    .select("microsoft_connection_id")
+    .eq("email", session.user.email)
+    .maybeSingle();
+
+  if (utenteRowError) {
+    throw utenteRowError;
+  }
+
+  microsoftConnectionId = utenteRow?.microsoft_connection_id || undefined;
+}
+
+const emailResult = await emailService.sendComunicazioneEmail({
+  tipo: formData.tipo,
+  destinatarioId:
+    formData.tipo === "singola" ? formData.destinatario_id : undefined,
+  destinatariIds:
+    formData.tipo === "interna" && multiDestinatari
+      ? selectedDestinatari
+      : undefined,
+  oggetto: formData.oggetto,
+  messaggio: formData.messaggio,
+  allegati,
+  microsoftConnectionId,
+});
 
       if (emailResult?.success) {
         const details = [
