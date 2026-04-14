@@ -706,6 +706,7 @@ export default function GenerazioneScadenzariPage() {
       errori++;
     }
   }
+     }
         } catch (error) {
           console.error(
             `Errore elaborazione cliente ${cliente.ragione_sociale}:`,
