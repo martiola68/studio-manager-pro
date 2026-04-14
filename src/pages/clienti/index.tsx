@@ -897,16 +897,6 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
       return;
     }
 
-    const baseData = {
-      cliente_id: cliente.id,
-      anno_riferimento: annoRiferimento,
-      archiviato: false,
-      studio_id: studioIdEffettivo,
-      nominativo: cliente.ragione_sociale,
-      utente_operatore_id: cliente.utente_operatore_id ?? null,
-      utente_professionista_id: cliente.utente_professionista_id ?? null,
-    };
-
     let operatoreNome: string | null = null;
     let professionistaNome: string | null = null;
 
@@ -956,6 +946,8 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
       return !!data;
     };
 
+    const nuovoId = () => crypto.randomUUID();
+
     const eseguiInsert = async (
       tabella: string,
       payload: Record<string, any>,
@@ -985,7 +977,14 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
           await eseguiInsert(
             "tbscadiva",
             {
-              ...baseData,
+              id: nuovoId(),
+              cliente_id: cliente.id,
+              anno_riferimento: annoRiferimento,
+              archiviato: false,
+              studio_id: studioIdEffettivo,
+              nominativo: cliente.ragione_sociale,
+              utente_operatore_id: cliente.utente_operatore_id ?? null,
+              utente_professionista_id: cliente.utente_professionista_id ?? null,
               conferma_riga: false,
               alert_1_inviato: false,
               alert_2_inviato: false,
@@ -1006,7 +1005,14 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
           await eseguiInsert(
             "tbscadlipe",
             {
-              ...baseData,
+              id: nuovoId(),
+              cliente_id: cliente.id,
+              anno_riferimento: annoRiferimento,
+              archiviato: false,
+              studio_id: studioIdEffettivo,
+              nominativo: cliente.ragione_sociale,
+              utente_operatore_id: cliente.utente_operatore_id ?? null,
+              utente_professionista_id: cliente.utente_professionista_id ?? null,
               alert_1_inviato: false,
               alert_2_inviato: false,
             },
@@ -1026,7 +1032,14 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
           await eseguiInsert(
             "tbscadcu",
             {
-              ...baseData,
+              id: nuovoId(),
+              cliente_id: cliente.id,
+              anno_riferimento: annoRiferimento,
+              archiviato: false,
+              studio_id: studioIdEffettivo,
+              nominativo: cliente.ragione_sociale,
+              utente_operatore_id: cliente.utente_operatore_id ?? null,
+              utente_professionista_id: cliente.utente_professionista_id ?? null,
               conferma_riga: false,
               alert_1_inviato: false,
               alert_2_inviato: false,
@@ -1047,7 +1060,14 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
           await eseguiInsert(
             "tbscadbilanci",
             {
-              ...baseData,
+              id: nuovoId(),
+              cliente_id: cliente.id,
+              anno_riferimento: annoRiferimento,
+              archiviato: false,
+              studio_id: studioIdEffettivo,
+              nominativo: cliente.ragione_sociale,
+              utente_operatore_id: cliente.utente_operatore_id ?? null,
+              utente_professionista_id: cliente.utente_professionista_id ?? null,
               conferma_riga: false,
               consorzio: false,
               alert_1_inviato: false,
@@ -1069,7 +1089,14 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
           await eseguiInsert(
             "tbscadfiscali",
             {
-              ...baseData,
+              id: nuovoId(),
+              cliente_id: cliente.id,
+              anno_riferimento: annoRiferimento,
+              archiviato: false,
+              studio_id: studioIdEffettivo,
+              nominativo: cliente.ragione_sociale,
+              utente_operatore_id: cliente.utente_operatore_id ?? null,
+              utente_professionista_id: cliente.utente_professionista_id ?? null,
               tipo_redditi: cliente.tipo_redditi ?? null,
               conferma_riga: false,
               alert_1_inviato: false,
@@ -1091,7 +1118,14 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
           await eseguiInsert(
             "tbscad770",
             {
-              ...baseData,
+              id: nuovoId(),
+              cliente_id: cliente.id,
+              anno_riferimento: annoRiferimento,
+              archiviato: false,
+              studio_id: studioIdEffettivo,
+              nominativo: cliente.ragione_sociale,
+              utente_operatore_id: cliente.utente_operatore_id ?? null,
+              utente_professionista_id: cliente.utente_professionista_id ?? null,
               utente_payroll_id: cliente.utente_payroll_id ?? null,
               professionista_payroll_id:
                 cliente.professionista_payroll_id ?? null,
@@ -1115,7 +1149,14 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
           await eseguiInsert(
             "tbscadproforma",
             {
-              ...baseData,
+              id: nuovoId(),
+              cliente_id: cliente.id,
+              anno_riferimento: annoRiferimento,
+              archiviato: false,
+              studio_id: studioIdEffettivo,
+              nominativo: cliente.ragione_sociale,
+              utente_operatore_id: cliente.utente_operatore_id ?? null,
+              utente_professionista_id: cliente.utente_professionista_id ?? null,
             },
             "Proforma"
           );
@@ -1133,7 +1174,14 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
           await eseguiInsert(
             "tbscadestero",
             {
-              ...baseData,
+              id: nuovoId(),
+              cliente_id: cliente.id,
+              anno_riferimento: annoRiferimento,
+              archiviato: false,
+              studio_id: studioIdEffettivo,
+              nominativo: cliente.ragione_sociale,
+              utente_operatore_id: cliente.utente_operatore_id ?? null,
+              utente_professionista_id: cliente.utente_professionista_id ?? null,
             },
             "Esterometro"
           );
@@ -1151,7 +1199,14 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
           await eseguiInsert(
             "tbscadccgg",
             {
-              ...baseData,
+              id: nuovoId(),
+              cliente_id: cliente.id,
+              anno_riferimento: annoRiferimento,
+              archiviato: false,
+              studio_id: studioIdEffettivo,
+              nominativo: cliente.ragione_sociale,
+              utente_operatore_id: cliente.utente_operatore_id ?? null,
+              utente_professionista_id: cliente.utente_professionista_id ?? null,
               conferma_riga: false,
               alert_1_inviato: false,
               alert_2_inviato: false,
@@ -1172,6 +1227,7 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
           await eseguiInsert(
             "tbscadimu",
             {
+              id: nuovoId(),
               cliente_id: cliente.id,
               anno_riferimento: annoRiferimento,
               archiviato: false,
