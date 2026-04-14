@@ -4,53 +4,72 @@ import { supabase } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, Trash2 } from "lucide-react";
+import { Search, Trash2, Printer } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/lib/supabase/types";
 
 type ScadenzaBilancio = Database["public"]["Tables"]["tbscadbilanci"]["Row"];
 type ScadenzaBilancioExt = ScadenzaBilancio & {
   consorzio?: boolean | null;
+  anno_riferimento?: number | null;
+  archiviato?: boolean | null;
 };
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
 export default function ScadenzeBilanciPage() {
   const router = useRouter();
   const { toast } = useToast();
+
+  const currentYear = new Date().getFullYear();
+
   const [loading, setLoading] = useState(true);
   const [scadenze, setScadenze] = useState<ScadenzaBilancioExt[]>([]);
   const [utenti, setUtenti] = useState<Utente[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterOperatore, setFilterOperatore] = useState("__all__");
-  const [filterProfessionista, setFilterProfessionista] = useState("__all__");
   const [filterConferma, setFilterConferma] = useState("__all__");
+  const [annoConsultazione, setAnnoConsultazione] = useState(currentYear);
 
-  const [dataApprovazioneInputs, setDataApprovazioneInputs] = useState<Record<string, string>>({});
-  const [dataInvioInputs, setDataInvioInputs] = useState<Record<string, string>>({});
+  const [dataApprovazioneInputs, setDataApprovazioneInputs] = useState<
+    Record<string, string>
+  >({});
+  const [dataInvioInputs, setDataInvioInputs] = useState<Record<string, string>>(
+    {}
+  );
 
   const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
- const [noteTimers, setNoteTimers] = useState<Record<string, ReturnType<typeof setTimeout>>>({});
+  const [noteTimers, setNoteTimers] = useState<
+    Record<string, ReturnType<typeof setTimeout>>
+  >({});
   const [stats, setStats] = useState({
     totale: 0,
     confermate: 0,
-    nonConfermate: 0
+    nonConfermate: 0,
   });
 
   useEffect(() => {
     checkAuthAndLoad();
-  }, []);
+  }, [annoConsultazione]);
 
   const checkAuthAndLoad = async () => {
     try {
       const {
-        data: { session }
+        data: { session },
       } = await supabase.auth.getSession();
+
       if (!session) {
         router.push("/login");
         return;
       }
+
       await loadData();
     } catch (error) {
       console.error("Errore:", error);
@@ -61,34 +80,40 @@ export default function ScadenzeBilanciPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [scadenzeData, utentiData] = await Promise.all([loadScadenze(), loadUtenti()]);
+
+      const [scadenzeData, utentiData] = await Promise.all([
+        loadScadenze(),
+        loadUtenti(),
+      ]);
+
       setScadenze(scadenzeData);
       setUtenti(utentiData);
 
       setDataApprovazioneInputs(
-  Object.fromEntries(
-    scadenzeData.map((s) => [s.id, formatFromISODate(s.data_approvazione)])
-  )
-);
+        Object.fromEntries(
+          scadenzeData.map((s) => [s.id, formatFromISODate(s.data_approvazione)])
+        )
+      );
 
-setDataInvioInputs(
-  Object.fromEntries(
-    scadenzeData.map((s) => [s.id, formatFromISODate(s.data_invio)])
-  )
-);
+      setDataInvioInputs(
+        Object.fromEntries(
+          scadenzeData.map((s) => [s.id, formatFromISODate(s.data_invio)])
+        )
+      );
 
       const confermate = scadenzeData.filter((s) => s.conferma_riga).length;
+
       setStats({
         totale: scadenzeData.length,
         confermate,
-        nonConfermate: scadenzeData.length - confermate
+        nonConfermate: scadenzeData.length - confermate,
       });
     } catch (error) {
       console.error("Errore caricamento:", error);
       toast({
         title: "Errore",
         description: "Impossibile caricare i dati",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -96,21 +121,27 @@ setDataInvioInputs(
   };
 
   const loadScadenze = async (): Promise<ScadenzaBilancioExt[]> => {
-  const { data, error } = await supabase.from("tbscadbilanci").select("*").order("nominativo", { ascending: true });
+    const { data, error } = await supabase
+      .from("tbscadbilanci" as any)
+      .select("*")
+      .eq("anno_riferimento", annoConsultazione)
+      .order("nominativo", { ascending: true });
 
-  if (error) throw error;
-  return (data as ScadenzaBilancioExt[]) || [];
-};
+    if (error) throw error;
+    return (data as ScadenzaBilancioExt[]) || [];
+  };
 
   const loadUtenti = async (): Promise<Utente[]> => {
-    const { data, error } = await supabase.from("tbutenti").select("*").order("cognome", { ascending: true });
+    const { data, error } = await supabase
+      .from("tbutenti")
+      .select("*")
+      .order("cognome", { ascending: true });
 
     if (error) throw error;
     return data || [];
   };
 
   const addDaysToISODate = (isoDate: string, days: number): string => {
-    // isoDate atteso: YYYY-MM-DD
     const [y, m, d] = isoDate.split("-").map(Number);
     const dt = new Date(Date.UTC(y, m - 1, d));
     dt.setUTCDate(dt.getUTCDate() + days);
@@ -120,206 +151,219 @@ setDataInvioInputs(
     return `${yyyy}-${mm}-${dd}`;
   };
 
-const formatToISODate = (date: string): string | null => {
-  if (!date) return null;
+  const formatToISODate = (date: string): string | null => {
+    if (!date) return null;
 
-  const parts = date.split("/");
-  if (parts.length !== 3) return null;
+    const parts = date.split("/");
+    if (parts.length !== 3) return null;
 
-  const [dd, mm, yyyy] = parts;
+    const [dd, mm, yyyy] = parts;
 
-  if (dd.length !== 2 || mm.length !== 2 || yyyy.length !== 4) return null;
+    if (dd.length !== 2 || mm.length !== 2 || yyyy.length !== 4) return null;
 
-  const day = Number(dd);
-  const month = Number(mm);
-  const year = Number(yyyy);
+    const day = Number(dd);
+    const month = Number(mm);
+    const year = Number(yyyy);
 
-  if (
-    Number.isNaN(day) ||
-    Number.isNaN(month) ||
-    Number.isNaN(year) ||
-    day < 1 ||
-    day > 31 ||
-    month < 1 ||
-    month > 12
-  ) {
-    return null;
-  }
-
-  return `${yyyy}-${mm}-${dd}`;
-};
-
-const formatFromISODate = (iso: string | null): string => {
-  if (!iso) return "";
-
-  if (!iso.includes("-")) return "";
-
-  const parts = iso.split("-");
-  if (parts.length !== 3) return "";
-
-  const [yyyy, mm, dd] = parts;
-  if (!yyyy || !mm || !dd) return "";
-
-  return `${dd}/${mm}/${yyyy}`;
-};
-
-const formatDateInput = (value: string): string => {
-  const numbersOnly = value.replace(/\D/g, "").slice(0, 8);
-
-  if (numbersOnly.length <= 2) return numbersOnly;
-  if (numbersOnly.length <= 4) return `${numbersOnly.slice(0, 2)}/${numbersOnly.slice(2)}`;
-
-  return `${numbersOnly.slice(0, 2)}/${numbersOnly.slice(2, 4)}/${numbersOnly.slice(4, 8)}`;
-};
-  
-const handleToggleField = async (
-  scadenzaId: string,
-  field: keyof ScadenzaBilancioExt,
-  currentValue: any
-) => {
-  try {
-    const newValue = !currentValue;
-    const currentYear = new Date().getFullYear();
-    const dataConsorzio = `${currentYear}-02-28`;
-
-    setScadenze((prev) =>
-      prev.map((s) => {
-        if (s.id !== scadenzaId) return s;
-
-        if (field === "consorzio") {
-          return {
-            ...s,
-            consorzio: newValue,
-            data_scad_pres: newValue
-              ? dataConsorzio
-              : s.data_approvazione
-              ? addDaysToISODate(s.data_approvazione, 30)
-              : null
-          };
-        }
-
-        return { ...s, [field]: newValue };
-      })
-    );
-
-    if (field === "conferma_riga") {
-      setStats((prev) => ({
-        ...prev,
-        confermate: newValue ? prev.confermate + 1 : prev.confermate - 1,
-        nonConfermate: newValue ? prev.nonConfermate - 1 : prev.nonConfermate + 1
-      }));
+    if (
+      Number.isNaN(day) ||
+      Number.isNaN(month) ||
+      Number.isNaN(year) ||
+      day < 1 ||
+      day > 31 ||
+      month < 1 ||
+      month > 12
+    ) {
+      return null;
     }
 
-    const updates: any = { [field]: newValue };
+    return `${yyyy}-${mm}-${dd}`;
+  };
 
-    if (field === "consorzio") {
-      const record = scadenze.find((s) => s.id === scadenzaId);
+  const formatFromISODate = (iso: string | null): string => {
+    if (!iso) return "";
+    if (!iso.includes("-")) return "";
 
-      updates.data_scad_pres = newValue
-        ? dataConsorzio
-        : record?.data_approvazione
-        ? addDaysToISODate(record.data_approvazione, 30)
-        : null;
+    const parts = iso.split("-");
+    if (parts.length !== 3) return "";
+
+    const [yyyy, mm, dd] = parts;
+    if (!yyyy || !mm || !dd) return "";
+
+    return `${dd}/${mm}/${yyyy}`;
+  };
+
+  const formatDateInput = (value: string): string => {
+    const numbersOnly = value.replace(/\D/g, "").slice(0, 8);
+
+    if (numbersOnly.length <= 2) return numbersOnly;
+    if (numbersOnly.length <= 4) {
+      return `${numbersOnly.slice(0, 2)}/${numbersOnly.slice(2)}`;
     }
 
-    const { error } = await supabase.from("tbscadbilanci").update(updates).eq("id", scadenzaId);
-    if (error) throw error;
-  } catch (error) {
-    console.error("Errore aggiornamento:", error);
-    toast({
-      title: "Errore",
-      description: "Impossibile aggiornare il campo",
-      variant: "destructive"
-    });
-    await loadData();
-  }
-};
+    return `${numbersOnly.slice(0, 2)}/${numbersOnly.slice(
+      2,
+      4
+    )}/${numbersOnly.slice(4, 8)}`;
+  };
 
-const handleUpdateField = async (
-  scadenzaId: string,
-  field: keyof ScadenzaBilancioExt,
-  value: any
-) => {
-  try {
-    const record = scadenze.find((s) => s.id === scadenzaId);
-    if (!record) return;
-
-    if (field === "data_approvazione") {
-      const isoDate = formatToISODate(value);
-      const currentYear = new Date().getFullYear();
-
-      const newDataScadPres = record.consorzio
-        ? `${currentYear}-02-28`
-        : isoDate
-        ? addDaysToISODate(isoDate, 30)
-        : null;
+  const handleToggleField = async (
+    scadenzaId: string,
+    field: keyof ScadenzaBilancioExt,
+    currentValue: any
+  ) => {
+    try {
+      const newValue = !currentValue;
+      const dataConsorzio = `${annoConsultazione}-02-28`;
 
       setScadenze((prev) =>
-        prev.map((s) =>
-          s.id === scadenzaId
-            ? {
-                ...s,
-                data_approvazione: isoDate,
-                data_scad_pres: newDataScadPres
-              }
-            : s
-        )
-      );
+        prev.map((s) => {
+          if (s.id !== scadenzaId) return s;
 
-      const { error } = await supabase
-        .from("tbscadbilanci")
-        .update({
-          data_approvazione: isoDate,
-          data_scad_pres: newDataScadPres
+          if (field === "consorzio") {
+            return {
+              ...s,
+              consorzio: newValue,
+              data_scad_pres: newValue
+                ? dataConsorzio
+                : s.data_approvazione
+                ? addDaysToISODate(s.data_approvazione, 30)
+                : null,
+            };
+          }
+
+          return { ...s, [field]: newValue };
         })
+      );
+
+      if (field === "conferma_riga") {
+        setStats((prev) => ({
+          ...prev,
+          confermate: newValue ? prev.confermate + 1 : prev.confermate - 1,
+          nonConfermate: newValue
+            ? prev.nonConfermate - 1
+            : prev.nonConfermate + 1,
+        }));
+      }
+
+      const updates: any = { [field]: newValue };
+
+      if (field === "consorzio") {
+        const record = scadenze.find((s) => s.id === scadenzaId);
+
+        updates.data_scad_pres = newValue
+          ? dataConsorzio
+          : record?.data_approvazione
+          ? addDaysToISODate(record.data_approvazione, 30)
+          : null;
+      }
+
+      const { error } = await supabase
+        .from("tbscadbilanci" as any)
+        .update(updates)
         .eq("id", scadenzaId);
 
       if (error) throw error;
-      return;
+    } catch (error) {
+      console.error("Errore aggiornamento:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile aggiornare il campo",
+        variant: "destructive",
+      });
+      await loadData();
     }
+  };
 
-    if (field === "data_invio") {
-      const isoDate = formatToISODate(value);
+  const handleUpdateField = async (
+    scadenzaId: string,
+    field: keyof ScadenzaBilancioExt,
+    value: any
+  ) => {
+    try {
+      const record = scadenze.find((s) => s.id === scadenzaId);
+      if (!record) return;
+
+      if (field === "data_approvazione") {
+        const isoDate = formatToISODate(value);
+        const newDataScadPres = record.consorzio
+          ? `${annoConsultazione}-02-28`
+          : isoDate
+          ? addDaysToISODate(isoDate, 30)
+          : null;
+
+        setScadenze((prev) =>
+          prev.map((s) =>
+            s.id === scadenzaId
+              ? {
+                  ...s,
+                  data_approvazione: isoDate,
+                  data_scad_pres: newDataScadPres,
+                }
+              : s
+          )
+        );
+
+        const { error } = await supabase
+          .from("tbscadbilanci" as any)
+          .update({
+            data_approvazione: isoDate,
+            data_scad_pres: newDataScadPres,
+          })
+          .eq("id", scadenzaId);
+
+        if (error) throw error;
+        return;
+      }
+
+      if (field === "data_invio") {
+        const isoDate = formatToISODate(value);
+
+        setScadenze((prev) =>
+          prev.map((s) =>
+            s.id === scadenzaId
+              ? {
+                  ...s,
+                  data_invio: isoDate,
+                }
+              : s
+          )
+        );
+
+        const { error } = await supabase
+          .from("tbscadbilanci" as any)
+          .update({ data_invio: isoDate })
+          .eq("id", scadenzaId);
+
+        if (error) throw error;
+        return;
+      }
 
       setScadenze((prev) =>
         prev.map((s) =>
-          s.id === scadenzaId
-            ? {
-                ...s,
-                data_invio: isoDate
-              }
-            : s
+          s.id === scadenzaId ? { ...s, [field]: value || null } : s
         )
       );
 
+      const updates: any = { [field]: value || null };
+
       const { error } = await supabase
-        .from("tbscadbilanci")
-        .update({ data_invio: isoDate })
+        .from("tbscadbilanci" as any)
+        .update(updates)
         .eq("id", scadenzaId);
 
       if (error) throw error;
-      return;
+    } catch (error) {
+      console.error("Errore aggiornamento:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile aggiornare il campo",
+        variant: "destructive",
+      });
+      await loadData();
     }
+  };
 
-    setScadenze((prev) =>
-      prev.map((s) => (s.id === scadenzaId ? { ...s, [field]: value || null } : s))
-    );
-
-    const updates: any = { [field]: value || null };
-    const { error } = await supabase.from("tbscadbilanci").update(updates).eq("id", scadenzaId);
-
-    if (error) throw error;
-  } catch (error) {
-    console.error("Errore aggiornamento:", error);
-    toast({
-      title: "Errore",
-      description: "Impossibile aggiornare il campo",
-      variant: "destructive"
-    });
-    await loadData();
-  }
-};
-  
   const handleNoteChange = (scadenzaId: string, value: string) => {
     setLocalNotes((prev) => ({ ...prev, [scadenzaId]: value }));
 
@@ -329,17 +373,22 @@ const handleUpdateField = async (
 
     const timer = setTimeout(async () => {
       try {
-        const { error } = await supabase.from("tbscadbilanci").update({ note: value || null }).eq("id", scadenzaId);
+        const { error } = await supabase
+          .from("tbscadbilanci" as any)
+          .update({ note: value || null })
+          .eq("id", scadenzaId);
 
         if (error) throw error;
 
-        setScadenze((prev) => prev.map((s) => (s.id === scadenzaId ? { ...s, note: value } : s)));
+        setScadenze((prev) =>
+          prev.map((s) => (s.id === scadenzaId ? { ...s, note: value } : s))
+        );
       } catch (error) {
         console.error("Errore salvataggio nota:", error);
         toast({
           title: "Errore",
           description: "Impossibile salvare la nota",
-          variant: "destructive"
+          variant: "destructive",
         });
       }
     }, 1000);
@@ -351,38 +400,148 @@ const handleUpdateField = async (
     if (!confirm("Sei sicuro di voler eliminare questo record?")) return;
 
     try {
-      const { error } = await supabase.from("tbscadbilanci").delete().eq("id", id);
+      const { error } = await supabase
+        .from("tbscadbilanci" as any)
+        .delete()
+        .eq("id", id);
 
       if (error) throw error;
 
       toast({
         title: "Successo",
-        description: "Record eliminato"
+        description: "Record eliminato",
       });
+
       await loadData();
     } catch (error) {
       console.error("Errore eliminazione:", error);
       toast({
         title: "Errore",
         description: "Impossibile eliminare il record",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
 
   const filteredScadenze = scadenze.filter((s) => {
-    const matchSearch = (s.nominativo || "").toLowerCase().includes(searchQuery.toLowerCase());
-    const matchOperatore = filterOperatore === "__all__" || s.utente_operatore_id === filterOperatore;
-    const matchProfessionista = filterProfessionista === "__all__" || s.utente_professionista_id === filterProfessionista;
+    const matchSearch = (s.nominativo || "")
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
+
+    const matchOperatore =
+      filterOperatore === "__all__" ||
+      s.utente_operatore_id === filterOperatore;
+
     const matchConferma =
-      filterConferma === "__all__" || (filterConferma === "true" ? s.conferma_riga : !s.conferma_riga);
-    return matchSearch && matchOperatore && matchProfessionista && matchConferma;
+      filterConferma === "__all__" ||
+      (filterConferma === "true" ? s.conferma_riga : !s.conferma_riga);
+
+    return matchSearch && matchOperatore && matchConferma;
   });
 
   const getUtenteNome = (utenteId: string | null): string => {
     if (!utenteId) return "-";
     const utente = utenti.find((u) => u.id === utenteId);
     return utente ? `${utente.nome} ${utente.cognome}` : "-";
+  };
+
+  const handlePrintOperatore = () => {
+    if (filterOperatore === "__all__") return;
+
+    const operatoreNome = getUtenteNome(filterOperatore);
+
+    const righeHtml = filteredScadenze
+      .map(
+        (scadenza, index) => `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${scadenza.nominativo ?? ""}</td>
+            <td>${getUtenteNome(scadenza.utente_operatore_id)}</td>
+            <td>${scadenza.conferma_riga ? "Confermata" : "Non confermata"}</td>
+            <td>${formatFromISODate(scadenza.data_approvazione)}</td>
+            <td>${formatFromISODate(scadenza.data_scad_pres)}</td>
+            <td>${formatFromISODate(scadenza.data_invio)}</td>
+          </tr>
+        `
+      )
+      .join("");
+
+    const printWindow = window.open("", "_blank", "width=1000,height=700");
+    if (!printWindow) return;
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Stampa Scadenzario Bilanci</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              padding: 24px;
+              color: #111;
+            }
+            h1 {
+              font-size: 22px;
+              margin-bottom: 4px;
+            }
+            .meta {
+              margin-bottom: 20px;
+              color: #444;
+              font-size: 14px;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              font-size: 13px;
+            }
+            th, td {
+              border: 1px solid #999;
+              padding: 8px;
+              text-align: left;
+              vertical-align: top;
+            }
+            th {
+              background: #f3f4f6;
+            }
+            .count {
+              margin-bottom: 12px;
+              font-weight: bold;
+            }
+            @media print {
+              body {
+                padding: 0;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <h1>Scadenzario Bilanci</h1>
+          <div class="meta">Anno consultazione: ${annoConsultazione}</div>
+          <div class="meta">Operatore: ${operatoreNome}</div>
+          <div class="count">Totale record stampati: ${filteredScadenze.length}</div>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Nominativo</th>
+                <th>Operatore</th>
+                <th>Conferma</th>
+                <th>Data approvazione</th>
+                <th>Data scadenza</th>
+                <th>Data invio</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${righeHtml || `<tr><td colspan="7">Nessun record trovato</td></tr>`}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
   };
 
   if (loading) {
@@ -396,40 +555,60 @@ const handleUpdateField = async (
     );
   }
 
- const dateInputClass = (_value?: string | null, locked: boolean = false) =>
-  [
-    "w-full",
-    locked ? "bg-gray-100 cursor-not-allowed" : ""
-  ]
-    .filter(Boolean)
-    .join(" ");
-  
+  const dateInputClass = (_value?: string | null, locked: boolean = false) =>
+    ["w-full", locked ? "bg-gray-100 cursor-not-allowed" : ""]
+      .filter(Boolean)
+      .join(" ");
+
+  const anni = Array.from({ length: 10 }, (_, i) => currentYear - 5 + i);
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Scadenzario Bilanci</h1>
-          <p className="text-gray-500 mt-1">Gestione bilanci annuali e documentazione contabile</p>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Scadenzario Bilanci
+          </h1>
+          <p className="text-gray-500 mt-1">
+            Gestione bilanci annuali e documentazione contabile
+          </p>
         </div>
+
+        {filterOperatore !== "__all__" && (
+          <Button
+            type="button"
+            onClick={handlePrintOperatore}
+            className="bg-black text-white hover:bg-zinc-800"
+          >
+            <Printer className="h-4 w-4 mr-2" />
+            Stampa elenco operatore
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="text-sm text-gray-600 mb-1">Totale Bilanci</div>
-            <div className="text-3xl font-bold text-gray-900">{stats.totale}</div>
+            <div className="text-3xl font-bold text-gray-900">
+              {stats.totale}
+            </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <div className="text-sm text-gray-600 mb-1">Confermate</div>
-            <div className="text-3xl font-bold text-green-600">{stats.confermate}</div>
+            <div className="text-3xl font-bold text-green-600">
+              {stats.confermate}
+            </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <div className="text-sm text-gray-600 mb-1">Non Confermate</div>
-            <div className="text-3xl font-bold text-orange-600">{stats.nonConfermate}</div>
+            <div className="text-3xl font-bold text-orange-600">
+              {stats.nonConfermate}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -441,7 +620,9 @@ const handleUpdateField = async (
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="text-sm font-medium mb-2 block">Cerca Nominativo</label>
+              <label className="text-sm font-medium mb-2 block">
+                Cerca Nominativo
+              </label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
@@ -452,8 +633,11 @@ const handleUpdateField = async (
                 />
               </div>
             </div>
+
             <div>
-              <label className="text-sm font-medium mb-2 block">Utente Operatore</label>
+              <label className="text-sm font-medium mb-2 block">
+                Utente Operatore
+              </label>
               <Select value={filterOperatore} onValueChange={setFilterOperatore}>
                 <SelectTrigger>
                   <SelectValue placeholder="Tutti" />
@@ -468,24 +652,11 @@ const handleUpdateField = async (
                 </SelectContent>
               </Select>
             </div>
+
             <div>
-              <label className="text-sm font-medium mb-2 block">Utente Professionista</label>
-              <Select value={filterProfessionista} onValueChange={setFilterProfessionista}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Tutti" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">Tutti</SelectItem>
-                  {utenti.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {u.nome} {u.cognome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Stato Conferma</label>
+              <label className="text-sm font-medium mb-2 block">
+                Stato Conferma
+              </label>
               <Select value={filterConferma} onValueChange={setFilterConferma}>
                 <SelectTrigger>
                   <SelectValue placeholder="Tutti" />
@@ -497,6 +668,27 @@ const handleUpdateField = async (
                 </SelectContent>
               </Select>
             </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                Anno consultazione
+              </label>
+              <Select
+                value={annoConsultazione.toString()}
+                onValueChange={(value) => setAnnoConsultazione(parseInt(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleziona anno" />
+                </SelectTrigger>
+                <SelectContent>
+                  {anni.map((anno) => (
+                    <SelectItem key={anno} value={anno.toString()}>
+                      {anno}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -505,116 +697,137 @@ const handleUpdateField = async (
         <CardContent className="p-0">
           <div className="relative w-full overflow-auto max-h-[600px]">
             <table className="w-full caption-bottom text-sm">
-            <thead className="[&_tr]:border-b sticky top-0 z-30 bg-white shadow-sm">
-  <tr className="border-b-2 border-gray-300 transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground sticky-col-header border-r-2 border-gray-300 min-w-[200px]">
-      Nominativo
-    </th>
-    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">
-      Professionista
-    </th>
-    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">
-      Operatore
-    </th>
-    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
-      Consorzio
-    </th>
-    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
-      Bilancio def
-    </th>
-    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
-      Verbale def
-    </th>
-    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
-      Rel. gestione
-    </th>
-    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
-      Rel. Sindaci
-    </th>
-    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
-      Rel. Revisore
-    </th>
-    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">
-      Data approvazione
-    </th>
-    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">
-      Data scadenza
-    </th>
-    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
-      Approvato
-    </th>
-    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
-      Inviato
-    </th>
-    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">
-      Data invio
-    </th>
-    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
-      Ricevuta
-    </th>
-    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[300px]">
-      Note
-    </th>
-    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[120px] text-center">
-      Conferma
-    </th>
-    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[100px] text-center">
-      Azioni
-    </th>
-  </tr>
-</thead>
+              <thead className="[&_tr]:border-b sticky top-0 z-30 bg-white shadow-sm">
+                <tr className="border-b-2 border-gray-300 transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground sticky-col-header border-r-2 border-gray-300 min-w-[200px]">
+                    Nominativo
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">
+                    Operatore
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+                    Consorzio
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+                    Bilancio def
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+                    Verbale def
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+                    Rel. gestione
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+                    Rel. Sindaci
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+                    Rel. Revisore
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">
+                    Data approvazione
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">
+                    Data scadenza
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+                    Approvato
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+                    Inviato
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">
+                    Data invio
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+                    Ricevuta
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[300px]">
+                    Note
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[120px] text-center">
+                    Conferma
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[100px] text-center">
+                    Azioni
+                  </th>
+                </tr>
+              </thead>
 
               <tbody className="[&_tr:last-child]:border-0">
                 {filteredScadenze.length === 0 ? (
                   <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                   <td colSpan={18} className="p-2 align-middle text-center py-8 text-gray-500">
-  Nessun record trovato
-</td>
+                    <td
+                      colSpan={17}
+                      className="p-2 align-middle text-center py-8 text-gray-500"
+                    >
+                      Nessun record trovato
+                    </td>
                   </tr>
                 ) : (
                   filteredScadenze.map((scadenza) => (
-                 <tr
-  key={scadenza.id}
-  className={[
-    "border-b-2 border-gray-500 transition-colors",
-    scadenza.conferma_riga ? "bg-green-300 hover:bg-green-300" : "hover:bg-green-50"
-  ].join(" ")}
->
-<td
-  className={[
-    "p-2 align-middle sticky-col-cell border-r-2 border-gray-300 font-medium min-w-[200px]",
-    scadenza.conferma_riga ? "!bg-green-300" : "!bg-white"
-  ].join(" ")}
->
-  {scadenza.nominativo}
-</td>
+                    <tr
+                      key={scadenza.id}
+                      className={[
+                        "border-b-2 border-gray-500 transition-colors",
+                        scadenza.conferma_riga
+                          ? "bg-green-300 hover:bg-green-300"
+                          : "hover:bg-green-50",
+                      ].join(" ")}
+                    >
+                      <td
+                        className={[
+                          "p-2 align-middle sticky-col-cell border-r-2 border-gray-300 font-medium min-w-[200px]",
+                          scadenza.conferma_riga ? "!bg-green-300" : "!bg-white",
+                        ].join(" ")}
+                      >
+                        {scadenza.nominativo}
+                      </td>
 
-  <td className="p-2 align-middle min-w-[180px]">{getUtenteNome(scadenza.utente_professionista_id)}</td>
-  <td className="p-2 align-middle min-w-[180px]">{getUtenteNome(scadenza.utente_operatore_id)}</td>
+                      <td className="p-2 align-middle min-w-[180px]">
+                        {getUtenteNome(scadenza.utente_operatore_id)}
+                      </td>
 
-  <td className="p-2 align-middle text-center min-w-[120px]">
-  <input
-  type="checkbox"
-  checked={scadenza.consorzio || false}
-  onChange={() => handleToggleField(scadenza.id, "consorzio", scadenza.consorzio)}
-  className="rounded w-4 h-4 cursor-pointer"
-/>
-  </td>
+                      <td className="p-2 align-middle text-center min-w-[120px]">
+                        <input
+                          type="checkbox"
+                          checked={scadenza.consorzio || false}
+                          onChange={() =>
+                            handleToggleField(
+                              scadenza.id,
+                              "consorzio",
+                              scadenza.consorzio
+                            )
+                          }
+                          className="rounded w-4 h-4 cursor-pointer"
+                        />
+                      </td>
 
-  <td className="p-2 align-middle text-center min-w-[120px]">
-    <input
-      type="checkbox"
-      checked={scadenza.bilancio_def || false}
-      onChange={() => handleToggleField(scadenza.id, "bilancio_def", scadenza.bilancio_def)}
-      className="rounded w-4 h-4 cursor-pointer"
-    />
-  </td>
+                      <td className="p-2 align-middle text-center min-w-[120px]">
+                        <input
+                          type="checkbox"
+                          checked={scadenza.bilancio_def || false}
+                          onChange={() =>
+                            handleToggleField(
+                              scadenza.id,
+                              "bilancio_def",
+                              scadenza.bilancio_def
+                            )
+                          }
+                          className="rounded w-4 h-4 cursor-pointer"
+                        />
+                      </td>
 
                       <td className="p-2 align-middle text-center min-w-[120px]">
                         <input
                           type="checkbox"
                           checked={scadenza.verbale_app || false}
-                          onChange={() => handleToggleField(scadenza.id, "verbale_app", scadenza.verbale_app)}
+                          onChange={() =>
+                            handleToggleField(
+                              scadenza.id,
+                              "verbale_app",
+                              scadenza.verbale_app
+                            )
+                          }
                           className="rounded w-4 h-4 cursor-pointer"
                         />
                       </td>
@@ -623,7 +836,13 @@ const handleUpdateField = async (
                         <input
                           type="checkbox"
                           checked={scadenza.relazione_gest || false}
-                          onChange={() => handleToggleField(scadenza.id, "relazione_gest", scadenza.relazione_gest)}
+                          onChange={() =>
+                            handleToggleField(
+                              scadenza.id,
+                              "relazione_gest",
+                              scadenza.relazione_gest
+                            )
+                          }
                           className="rounded w-4 h-4 cursor-pointer"
                         />
                       </td>
@@ -633,7 +852,11 @@ const handleUpdateField = async (
                           type="checkbox"
                           checked={scadenza.relazione_sindaci || false}
                           onChange={() =>
-                            handleToggleField(scadenza.id, "relazione_sindaci", scadenza.relazione_sindaci)
+                            handleToggleField(
+                              scadenza.id,
+                              "relazione_sindaci",
+                              scadenza.relazione_sindaci
+                            )
                           }
                           className="rounded w-4 h-4 cursor-pointer"
                         />
@@ -644,96 +867,121 @@ const handleUpdateField = async (
                           type="checkbox"
                           checked={scadenza.relazione_revisore || false}
                           onChange={() =>
-                            handleToggleField(scadenza.id, "relazione_revisore", scadenza.relazione_revisore)
+                            handleToggleField(
+                              scadenza.id,
+                              "relazione_revisore",
+                              scadenza.relazione_revisore
+                            )
                           }
                           className="rounded w-4 h-4 cursor-pointer"
                         />
                       </td>
 
-<td className="p-2 align-middle min-w-[150px]">
-  <Input
-    type="text"
-    value={dataApprovazioneInputs[scadenza.id] ?? ""}
-    maxLength={10}
-    onChange={(e) => {
-      const formatted = formatDateInput(e.target.value);
-      setDataApprovazioneInputs((prev) => ({
-        ...prev,
-        [scadenza.id]: formatted
-      }));
-    }}
-    onBlur={() =>
-      handleUpdateField(
-        scadenza.id,
-        "data_approvazione",
-        dataApprovazioneInputs[scadenza.id] ?? ""
-      )
-    }
-    placeholder="DD/MM/YYYY"
-    inputMode="numeric"
-    className={dateInputClass(scadenza.data_approvazione)}
-  />
-</td>
+                      <td className="p-2 align-middle min-w-[150px]">
+                        <Input
+                          type="text"
+                          value={dataApprovazioneInputs[scadenza.id] ?? ""}
+                          maxLength={10}
+                          onChange={(e) => {
+                            const formatted = formatDateInput(e.target.value);
+                            setDataApprovazioneInputs((prev) => ({
+                              ...prev,
+                              [scadenza.id]: formatted,
+                            }));
+                          }}
+                          onBlur={() =>
+                            handleUpdateField(
+                              scadenza.id,
+                              "data_approvazione",
+                              dataApprovazioneInputs[scadenza.id] ?? ""
+                            )
+                          }
+                          placeholder="DD/MM/YYYY"
+                          inputMode="numeric"
+                          className={dateInputClass(scadenza.data_approvazione)}
+                        />
+                      </td>
 
-<td className="p-2 align-middle min-w-[150px]">
-  <Input
-    type="text"
-    value={formatFromISODate(scadenza.data_scad_pres)}
-    readOnly
-    placeholder="DD/MM/YYYY"
-    inputMode="numeric"
-    className={dateInputClass(scadenza.data_scad_pres, true)}
-  />
-</td>
+                      <td className="p-2 align-middle min-w-[150px]">
+                        <Input
+                          type="text"
+                          value={formatFromISODate(scadenza.data_scad_pres)}
+                          readOnly
+                          placeholder="DD/MM/YYYY"
+                          inputMode="numeric"
+                          className={dateInputClass(
+                            scadenza.data_scad_pres,
+                            true
+                          )}
+                        />
+                      </td>
 
-<td className="p-2 align-middle text-center min-w-[120px]">
-  <input
-    type="checkbox"
-    checked={scadenza.bil_approvato || false}
-    onChange={() => handleToggleField(scadenza.id, "bil_approvato", scadenza.bil_approvato)}
-    className="rounded w-4 h-4 cursor-pointer"
-  />
-</td>
+                      <td className="p-2 align-middle text-center min-w-[120px]">
+                        <input
+                          type="checkbox"
+                          checked={scadenza.bil_approvato || false}
+                          onChange={() =>
+                            handleToggleField(
+                              scadenza.id,
+                              "bil_approvato",
+                              scadenza.bil_approvato
+                            )
+                          }
+                          className="rounded w-4 h-4 cursor-pointer"
+                        />
+                      </td>
 
-<td className="p-2 align-middle text-center min-w-[120px]">
-  <input
-    type="checkbox"
-    checked={scadenza.invio_bil || false}
-    onChange={() => handleToggleField(scadenza.id, "invio_bil", scadenza.invio_bil)}
-    className="rounded w-4 h-4 cursor-pointer"
-  />
-</td>
+                      <td className="p-2 align-middle text-center min-w-[120px]">
+                        <input
+                          type="checkbox"
+                          checked={scadenza.invio_bil || false}
+                          onChange={() =>
+                            handleToggleField(
+                              scadenza.id,
+                              "invio_bil",
+                              scadenza.invio_bil
+                            )
+                          }
+                          className="rounded w-4 h-4 cursor-pointer"
+                        />
+                      </td>
 
-<td className="p-2 align-middle min-w-[150px]">
-  <Input
-    type="text"
-    value={dataInvioInputs[scadenza.id] ?? ""}
-    maxLength={10}
-    onChange={(e) => {
-      const formatted = formatDateInput(e.target.value);
-      setDataInvioInputs((prev) => ({
-        ...prev,
-        [scadenza.id]: formatted
-      }));
-    }}
-    onBlur={() =>
-      handleUpdateField(
-        scadenza.id,
-        "data_invio",
-        dataInvioInputs[scadenza.id] ?? ""
-      )
-    }
-    placeholder="DD/MM/YYYY"
-    inputMode="numeric"
-    className={dateInputClass(scadenza.data_invio)}
-  />
-</td>
+                      <td className="p-2 align-middle min-w-[150px]">
+                        <Input
+                          type="text"
+                          value={dataInvioInputs[scadenza.id] ?? ""}
+                          maxLength={10}
+                          onChange={(e) => {
+                            const formatted = formatDateInput(e.target.value);
+                            setDataInvioInputs((prev) => ({
+                              ...prev,
+                              [scadenza.id]: formatted,
+                            }));
+                          }}
+                          onBlur={() =>
+                            handleUpdateField(
+                              scadenza.id,
+                              "data_invio",
+                              dataInvioInputs[scadenza.id] ?? ""
+                            )
+                          }
+                          placeholder="DD/MM/YYYY"
+                          inputMode="numeric"
+                          className={dateInputClass(scadenza.data_invio)}
+                        />
+                      </td>
 
                       <td className="p-2 align-middle text-center min-w-[120px]">
                         <input
                           type="checkbox"
                           checked={scadenza.ricevuta || false}
-                          onChange={() => handleToggleField(scadenza.id, "ricevuta", scadenza.ricevuta)}
+                          onChange={() =>
+                            handleToggleField(
+                              scadenza.id,
+                              "ricevuta",
+                              scadenza.ricevuta
+                            )
+                          }
                           className="rounded w-4 h-4 cursor-pointer"
                         />
                       </td>
@@ -741,7 +989,9 @@ const handleUpdateField = async (
                       <td className="p-2 align-middle min-w-[300px]">
                         <Textarea
                           value={localNotes[scadenza.id] ?? scadenza.note ?? ""}
-                          onChange={(e) => handleNoteChange(scadenza.id, e.target.value)}
+                          onChange={(e) =>
+                            handleNoteChange(scadenza.id, e.target.value)
+                          }
                           placeholder="Aggiungi note..."
                           className="min-h-[60px] resize-none"
                         />
@@ -751,7 +1001,13 @@ const handleUpdateField = async (
                         <input
                           type="checkbox"
                           checked={scadenza.conferma_riga || false}
-                          onChange={() => handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga)}
+                          onChange={() =>
+                            handleToggleField(
+                              scadenza.id,
+                              "conferma_riga",
+                              scadenza.conferma_riga
+                            )
+                          }
                           className="rounded w-4 h-4 cursor-pointer"
                         />
                       </td>
