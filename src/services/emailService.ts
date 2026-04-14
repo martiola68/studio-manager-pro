@@ -40,7 +40,11 @@ export interface EmailData {
   html: string;
   text: string;
   microsoftConnectionId?: string;
-   attachments?: any[];
+  attachments?: {
+    nome: string;
+    url: string;
+    tipo?: string;
+  }[];
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -72,6 +76,47 @@ async function getCurrentUserId(): Promise<string | null> {
   return session?.user?.id ?? null;
 }
 
+async function fileUrlToBase64(url: string): Promise<string> {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Impossibile scaricare allegato: ${response.status}`);
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  const bytes = new Uint8Array(arrayBuffer);
+
+  let binary = "";
+  const chunkSize = 0x8000;
+
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+
+  return btoa(binary);
+}
+
+async function buildMicrosoftAttachments(
+  attachments?: { nome: string; url: string; tipo?: string }[]
+) {
+  if (!attachments || attachments.length === 0) return [];
+
+  const results = [];
+
+  for (const attachment of attachments) {
+    const contentBytes = await fileUrlToBase64(attachment.url);
+
+    results.push({
+      "@odata.type": "#microsoft.graph.fileAttachment",
+      name: attachment.nome,
+      contentType: attachment.tipo || "application/octet-stream",
+      contentBytes,
+    });
+  }
+
+  return results;
+}
+
 async function sendEmailViaMicrosoft(
   userId: string,
   data: EmailData
@@ -84,7 +129,9 @@ async function sendEmailViaMicrosoft(
       };
     }
 
-    const message: any = {
+    const attachments = await buildMicrosoftAttachments(data.attachments);
+
+    const message = {
       subject: data.subject,
       body: {
         contentType: "HTML" as const,
@@ -97,11 +144,8 @@ async function sendEmailViaMicrosoft(
           },
         },
       ],
+      attachments,
     };
-
-    if (data.attachments && data.attachments.length > 0) {
-      message.attachments = data.attachments;
-    }
 
     await microsoftGraphService.sendEmail(
       userId,
@@ -695,14 +739,14 @@ Questa è una email automatica, non rispondere a questo messaggio
       const recipient = validRecipients[i];
 
       try {
-       const result = await sendEmail({
-  to: recipient.email,
-  subject: data.oggetto,
-  html: htmlContent,
-  text: textContent,
-  microsoftConnectionId: data.microsoftConnectionId,
-  attachments: data.allegati,
-});
+     const result = await sendEmail({
+          to: recipient.email,
+          subject: data.oggetto,
+          html: htmlContent,
+          text: textContent,
+          microsoftConnectionId: data.microsoftConnectionId,
+          attachments: Array.isArray(data.allegati) ? data.allegati : [],
+        });
 
         if (result.success) {
           sent++;
