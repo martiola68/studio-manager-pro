@@ -893,17 +893,18 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
       utente_professionista_id: cliente.utente_professionista_id ?? null,
     };
 
-    let operatoreNome = null;
-    let professionistaNome = null;
+    let operatoreNome: string | null = null;
+    let professionistaNome: string | null = null;
 
     if (cliente.flag_imu) {
       if (cliente.utente_operatore_id) {
-        const { data: operatore } = await supabase
+        const { data: operatore, error: opErr } = await supabase
           .from("tbutenti")
           .select("nome, cognome")
           .eq("id", cliente.utente_operatore_id)
           .maybeSingle();
 
+        if (opErr) throw opErr;
         if (operatore) {
           operatoreNome = `${safeString(operatore.nome)} ${safeString(
             operatore.cognome
@@ -912,12 +913,13 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
       }
 
       if (cliente.utente_professionista_id) {
-        const { data: professionista } = await supabase
+        const { data: professionista, error: prErr } = await supabase
           .from("tbutenti")
           .select("nome, cognome")
           .eq("id", cliente.utente_professionista_id)
           .maybeSingle();
 
+        if (prErr) throw prErr;
         if (professionista) {
           professionistaNome = `${safeString(professionista.nome)} ${safeString(
             professionista.cognome
@@ -926,88 +928,90 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
       }
     }
 
-    await Promise.all(
-      scadenzariAttivi.map((s) => {
-        switch (s) {
-          case "IVA":
-            return supabase
-              .from("tbscadiva")
-              .upsert({ ...baseData }, { onConflict: "id" });
+    const eseguiUpsert = async (
+      tabella: string,
+      payload: Record<string, any>,
+      nome: string
+    ) => {
+      const { error } = await supabase
+        .from(tabella as any)
+        .upsert(payload, { onConflict: "id" });
 
-          case "LIPE":
-            return supabase
-              .from("tbscadlipe")
-              .upsert({ ...baseData }, { onConflict: "id" });
+      if (error) {
+        throw new Error(`${nome}: ${error.message}`);
+      }
+    };
 
-          case "CU":
-            return supabase
-              .from("tbscadcu")
-              .upsert({ ...baseData }, { onConflict: "id" });
+    for (const s of scadenzariAttivi) {
+      switch (s) {
+        case "IVA":
+          await eseguiUpsert("tbscadiva", { ...baseData }, "IVA");
+          break;
 
-          case "Bilanci":
-            return supabase
-              .from("tbscadbilanci")
-              .upsert({ ...baseData }, { onConflict: "id" });
+        case "LIPE":
+          await eseguiUpsert("tbscadlipe", { ...baseData }, "LIPE");
+          break;
 
-          case "Fiscali":
-            return supabase
-              .from("tbscadfiscali")
-              .upsert(
-                {
-                  ...baseData,
-                  tipo_redditi: cliente.tipo_redditi ?? null,
-                },
-                { onConflict: "id" }
-              );
+        case "CU":
+          await eseguiUpsert("tbscadcu", { ...baseData }, "CU");
+          break;
 
-          case "770":
-            return supabase
-              .from("tbscad770")
-              .upsert(
-                {
-                  ...baseData,
-                  utente_payroll_id: cliente.utente_payroll_id ?? null,
-                  professionista_payroll_id:
-                    cliente.professionista_payroll_id ?? null,
-                },
-                { onConflict: "id" }
-              );
+        case "Bilanci":
+          await eseguiUpsert("tbscadbilanci", { ...baseData }, "Bilanci");
+          break;
 
-          case "Proforma":
-            return supabase
-              .from("tbscadproforma")
-              .upsert({ ...baseData }, { onConflict: "id" });
+        case "Fiscali":
+          await eseguiUpsert(
+            "tbscadfiscali",
+            {
+              ...baseData,
+              tipo_redditi: cliente.tipo_redditi ?? null,
+            },
+            "Fiscali"
+          );
+          break;
 
-          case "Esterometro":
-            return supabase
-              .from("tbscadestero")
-              .upsert({ ...baseData }, { onConflict: "id" });
+        case "770":
+          await eseguiUpsert(
+            "tbscad770",
+            {
+              ...baseData,
+              utente_payroll_id: cliente.utente_payroll_id ?? null,
+              professionista_payroll_id:
+                cliente.professionista_payroll_id ?? null,
+            },
+            "770"
+          );
+          break;
 
-          case "CCGG":
-            return supabase
-              .from("tbscadccgg")
-              .upsert({ ...baseData }, { onConflict: "id" });
+        case "Proforma":
+          await eseguiUpsert("tbscadproforma", { ...baseData }, "Proforma");
+          break;
 
-          case "IMU":
-            return supabase
-              .from("tbscadimu")
-              .upsert(
-                {
-                  id: cliente.id,
-                  nominativo: cliente.ragione_sociale,
-                  studio_id: studioId ?? null,
-                  operatore: operatoreNome,
-                  professionista: professionistaNome,
-                  conferma_riga: false,
-                },
-                { onConflict: "id" }
-              );
+        case "Esterometro":
+          await eseguiUpsert("tbscadestero", { ...baseData }, "Esterometro");
+          break;
 
-          default:
-            return Promise.resolve(null);
-        }
-      })
-    );
+        case "CCGG":
+          await eseguiUpsert("tbscadccgg", { ...baseData }, "CCGG");
+          break;
+
+        case "IMU":
+          await eseguiUpsert(
+            "tbscadimu",
+            {
+              id: cliente.id,
+              nominativo: cliente.ragione_sociale,
+              studio_id: studioId ?? null,
+              operatore: operatoreNome,
+              professionista: professionistaNome,
+              conferma_riga: false,
+            },
+            "IMU"
+          );
+          break;
+      }
+    }
 
     toast({
       title: "Successo",
@@ -1015,11 +1019,12 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
         ", "
       )}`,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Errore inserimento scadenzari:", error);
     toast({
       title: "Errore",
-      description: "Impossibile inserire il cliente negli scadenzari",
+      description:
+        error?.message || "Impossibile inserire il cliente negli scadenzari",
       variant: "destructive",
     });
   }
