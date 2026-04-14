@@ -674,7 +674,7 @@ export default function GenerazioneScadenzariPage() {
             }
           }
 
-     if (scadenzariFlags.imu && cliente.flag_imu) {
+   if (scadenzariFlags.imu && cliente.flag_imu) {
   const { data: existing } = await supabase
     .from("tbscadimu")
     .select("id")
@@ -684,6 +684,7 @@ export default function GenerazioneScadenzariPage() {
 
   if (!existing) {
     const { error } = await supabase.from("tbscadimu" as any).insert({
+      id: crypto.randomUUID(),
       cliente_id: cliente.id,
       anno_riferimento: annoGenerazione,
       archiviato: false,
@@ -705,7 +706,6 @@ export default function GenerazioneScadenzariPage() {
       errori++;
     }
   }
-}
         } catch (error) {
           console.error(
             `Errore elaborazione cliente ${cliente.ragione_sociale}:`,
