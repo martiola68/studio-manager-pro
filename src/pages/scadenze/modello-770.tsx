@@ -29,6 +29,18 @@ type Scadenza770 = Database["public"]["Tables"]["tbscad770"]["Row"] & {
 
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
+const TIPO_INVIO_OPTIONS = ["Totale", "Invio Separato"] as const;
+
+const TIPO_770_OPTIONS = [
+  "Solo aut",
+  "Solo cap",
+  "Solo Dip",
+  "Aut+Dip",
+  "Aut+Cap",
+  "Aut+Dip+Cap",
+  "Dip+Cap",
+] as const;
+
 export default function Scadenze770Page() {
   const router = useRouter();
   const { toast } = useToast();
