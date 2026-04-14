@@ -134,7 +134,6 @@ export default function ComunicazioniPage() {
 
 const uploadAllegato = async (): Promise<{
   nome: string;
-  url: string;
   tipo: string;
   dimensione: number;
   bucket: string;
@@ -208,13 +207,12 @@ return {
 
       let allegati:
   | Array<{
-      nome: string;
-      url: string;
-      tipo: string;
-      dimensione: number;
-      bucket: string;
-      path: string;
-    }>
+  nome: string;
+  tipo: string;
+  dimensione: number;
+  bucket: string;
+  path: string;
+}>
   | null = null;
 
 if (selectedFile) {
