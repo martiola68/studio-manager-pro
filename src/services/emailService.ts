@@ -134,7 +134,7 @@ async function buildMicrosoftAttachments(
   }[] = [];
 
   for (const attachment of attachments) {
-    if (!attachment.path) continue;
+    if (!attachment?.path) continue;
 
     const contentBytes = await filePathToBase64(
       attachment.bucket || "messaggi-allegati",
@@ -151,6 +151,7 @@ async function buildMicrosoftAttachments(
 
   return results;
 }
+
 async function sendEmailViaMicrosoft(
   userId: string,
   data: EmailData
@@ -165,21 +166,21 @@ async function sendEmailViaMicrosoft(
 
     const attachments = await buildMicrosoftAttachments(data.attachments);
 
-  const message = {
-  subject: data.subject,
-  body: {
-    contentType: "HTML" as const,
-    content: data.html,
-  },
-  toRecipients: [
-    {
-      emailAddress: {
-        address: data.to,
+    const message = {
+      subject: data.subject,
+      body: {
+        contentType: "HTML" as const,
+        content: data.html,
       },
-    },
-  ],
-  ...(attachments.length > 0 ? { attachments } : {}),
-};
+      toRecipients: [
+        {
+          emailAddress: {
+            address: data.to,
+          },
+        },
+      ],
+      ...(attachments.length > 0 ? { attachments } : {}),
+    };
 
     await microsoftGraphService.sendEmail(
       userId,
