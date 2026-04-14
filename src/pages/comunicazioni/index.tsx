@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { comunicazioneService } from "@/services/comunicazioneService";
@@ -14,7 +14,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from "@/components/ui/select";
 import {
   Dialog,
@@ -22,9 +22,16 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger
+  DialogTrigger,
 } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Send, Plus, Paperclip, Search, Trash2, Users } from "lucide-react";
@@ -34,6 +41,16 @@ import type { Database } from "@/lib/supabase/types";
 type Comunicazione = Database["public"]["Tables"]["tbcomunicazioni"]["Row"];
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
+
+type TipoComunicazione = "newsletter" | "scadenze" | "singola" | "interna";
+
+type AllegatoComunicazione = {
+  nome: string;
+  tipo: string;
+  dimensione: number;
+  bucket: string;
+  path: string;
+};
 
 export default function ComunicazioniPage() {
   const router = useRouter();
@@ -55,15 +72,14 @@ export default function ComunicazioniPage() {
   const [searchDestinatari, setSearchDestinatari] = useState("");
 
   const [formData, setFormData] = useState({
-    tipo: "newsletter" as "newsletter" | "scadenze" | "singola" | "interna",
+    tipo: "newsletter" as TipoComunicazione,
     destinatario_id: "",
     oggetto: "",
-    messaggio: ""
+    messaggio: "",
   });
 
   useEffect(() => {
-    checkAuthAndLoad();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    void checkAuthAndLoad();
   }, []);
 
   const checkAuthAndLoad = async () => {
@@ -71,20 +87,20 @@ export default function ComunicazioniPage() {
       const supabase = getSupabaseClient();
       const {
         data: { session },
-        error
+        error,
       } = await supabase.auth.getSession();
 
       if (error) throw error;
 
       if (!session) {
-        router.push("/login");
+        await router.push("/login");
         return;
       }
 
       await loadData();
     } catch (error) {
       console.error("Errore auth:", error);
-      router.push("/login");
+      await router.push("/login");
     }
   };
 
@@ -95,7 +111,7 @@ export default function ComunicazioniPage() {
       const [comunicazioniData, clientiData, utentiData] = await Promise.all([
         comunicazioneService.getComunicazioni(),
         clienteService.getClienti(),
-        loadUtenti()
+        loadUtenti(),
       ]);
 
       setComunicazioni(comunicazioniData);
@@ -106,7 +122,7 @@ export default function ComunicazioniPage() {
       toast({
         title: "Errore",
         description: "Impossibile caricare i dati",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -126,60 +142,54 @@ export default function ComunicazioniPage() {
     return data || [];
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
     }
   };
 
-const uploadAllegato = async (): Promise<{
-  nome: string;
-  tipo: string;
-  dimensione: number;
-  bucket: string;
-  path: string;
-} | null> => {
-  if (!selectedFile) return null;
+  const uploadAllegato = async (): Promise<AllegatoComunicazione | null> => {
+    if (!selectedFile) return null;
 
-  try {
-    const supabase = getSupabaseClient();
-    const BUCKET_NAME = "messaggi-allegati";
+    try {
+      const supabase = getSupabaseClient();
+      const BUCKET_NAME = "messaggi-allegati";
 
-    const safeName = selectedFile.name.replace(/[^\w.\-]+/g, "_");
-    const fileName = `${Date.now()}_${safeName}`;
-    const filePath = `comunicazioni/${fileName}`;
+      const safeName = selectedFile.name.replace(/[^\w.\-]+/g, "_");
+      const fileName = `${Date.now()}_${safeName}`;
+      const filePath = `comunicazioni/${fileName}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from(BUCKET_NAME)
-      .upload(filePath, selectedFile, {
-        cacheControl: "3600",
-        upsert: false,
-        contentType: selectedFile.type || undefined
-      });
-if (uploadError) throw uploadError;
+      const { error: uploadError } = await supabase.storage
+        .from(BUCKET_NAME)
+        .upload(filePath, selectedFile, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: selectedFile.type || undefined,
+        });
 
-return {
-  nome: selectedFile.name,
-  tipo: selectedFile.type || "application/octet-stream",
-  dimensione: selectedFile.size,
-  bucket: BUCKET_NAME,
-  path: filePath,
-};
-    
-  } catch (error) {
-    console.error("Errore upload:", error);
-    throw new Error("Errore caricamento allegato");
-  }
-};
+      if (uploadError) throw uploadError;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+      return {
+        nome: selectedFile.name,
+        tipo: selectedFile.type || "application/octet-stream",
+        dimensione: selectedFile.size,
+        bucket: BUCKET_NAME,
+        path: filePath,
+      };
+    } catch (error) {
+      console.error("Errore upload:", error);
+      throw new Error("Errore caricamento allegato");
+    }
+  };
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!formData.oggetto || !formData.messaggio) {
       toast({
         title: "Errore",
         description: "Oggetto e messaggio sono obbligatori",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -188,16 +198,20 @@ return {
       toast({
         title: "Errore",
         description: "Seleziona un destinatario",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
 
-    if (formData.tipo === "interna" && multiDestinatari && selectedDestinatari.length === 0) {
+    if (
+      formData.tipo === "interna" &&
+      multiDestinatari &&
+      selectedDestinatari.length === 0
+    ) {
       toast({
         title: "Errore",
         description: "Seleziona almeno un destinatario",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -205,22 +219,15 @@ return {
     try {
       setSending(true);
 
-      let allegati:
-  | Array<{
-  nome: string;
-  tipo: string;
-  dimensione: number;
-  bucket: string;
-  path: string;
-}>
-  | null = null;
+      let allegati: AllegatoComunicazione[] | null = null;
 
-if (selectedFile) {
-  const fileData = await uploadAllegato();
-  allegati = fileData ? [fileData] : null;
-}
+      if (selectedFile) {
+        const fileData = await uploadAllegato();
+        allegati = fileData ? [fileData] : null;
+      }
 
       let destinatariCount = 0;
+
       if (formData.tipo === "singola") {
         destinatariCount = 1;
       } else if (formData.tipo === "newsletter") {
@@ -232,46 +239,55 @@ if (selectedFile) {
           (c) => c.attivo && c.flag_mail_attivo && c.flag_mail_scadenze
         ).length;
       } else if (formData.tipo === "interna") {
-        destinatariCount = multiDestinatari ? selectedDestinatari.length : utenti.filter((u) => u.attivo).length;
+        destinatariCount = multiDestinatari
+          ? selectedDestinatari.length
+          : utenti.filter((u) => u.attivo).length;
       }
 
       await comunicazioneService.createComunicazione({
         tipo: formData.tipo,
         oggetto: formData.oggetto,
         messaggio: formData.messaggio,
-        allegati: allegati,
+        allegati,
         destinatari_count: destinatariCount,
         stato: "Inviata",
-        data_invio: new Date().toISOString()
+        data_invio: new Date().toISOString(),
       });
 
       const emailResult = await emailService.sendComunicazioneEmail({
         tipo: formData.tipo,
-        destinatarioId: formData.tipo === "singola" ? formData.destinatario_id : undefined,
-        destinatariIds: formData.tipo === "interna" && multiDestinatari ? selectedDestinatari : undefined,
+        destinatarioId:
+          formData.tipo === "singola" ? formData.destinatario_id : undefined,
+        destinatariIds:
+          formData.tipo === "interna" && multiDestinatari
+            ? selectedDestinatari
+            : undefined,
         oggetto: formData.oggetto,
         messaggio: formData.messaggio,
-        allegati: allegati
+        allegati,
       });
 
       if (emailResult?.success) {
         const details = [
           `${emailResult.sent} inviate`,
           emailResult.failed > 0 ? `${emailResult.failed} fallite` : null,
-          emailResult.skipped > 0 ? `${emailResult.skipped} escluse (formato invalido)` : null
+          emailResult.skipped > 0
+            ? `${emailResult.skipped} escluse (formato invalido)`
+            : null,
         ]
           .filter(Boolean)
           .join(", ");
 
         toast({
           title: "Comunicazione inviata",
-          description: details
+          description: details,
         });
       } else {
         toast({
           title: "Errore parziale",
-          description: emailResult?.error || "Alcune email non sono state inviate",
-          variant: "destructive"
+          description:
+            emailResult?.error || "Alcune email non sono state inviate",
+          variant: "destructive",
         });
       }
 
@@ -283,7 +299,7 @@ if (selectedFile) {
       toast({
         title: "Errore",
         description: "Impossibile inviare la comunicazione",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setSending(false);
@@ -295,7 +311,7 @@ if (selectedFile) {
       tipo: "newsletter",
       destinatario_id: "",
       oggetto: "",
-      messaggio: ""
+      messaggio: "",
     });
     setSelectedFile(null);
     setMultiDestinatari(false);
@@ -304,13 +320,15 @@ if (selectedFile) {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Sei sicuro di voler eliminare questo messaggio dallo storico?")) return;
+    if (!confirm("Sei sicuro di voler eliminare questo messaggio dallo storico?")) {
+      return;
+    }
 
     try {
       await comunicazioneService.deleteComunicazione(id);
       toast({
         title: "Eliminato",
-        description: "Messaggio eliminato dallo storico"
+        description: "Messaggio eliminato dallo storico",
       });
       await loadData();
     } catch (error) {
@@ -318,14 +336,16 @@ if (selectedFile) {
       toast({
         title: "Errore",
         description: "Impossibile eliminare il messaggio",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
 
   const handleDestinatarioToggle = (utenteId: string) => {
     setSelectedDestinatari((prev) =>
-      prev.includes(utenteId) ? prev.filter((id) => id !== utenteId) : [...prev, utenteId]
+      prev.includes(utenteId)
+        ? prev.filter((id) => id !== utenteId)
+        : [...prev, utenteId]
     );
   };
 
@@ -337,7 +357,6 @@ if (selectedFile) {
 
     const nuoviIds = utentiFiltrati.map((u) => u.id);
 
-    // AGGIUNGI invece di sostituire
     setSelectedDestinatari((prev) => {
       const newSelection = [...prev];
       nuoviIds.forEach((id) => {
@@ -354,20 +373,26 @@ if (selectedFile) {
   const getUtentiFiltrati = () => {
     return utenti.filter((u) => {
       const fullName = `${u.nome} ${u.cognome}`.toLowerCase();
-      return searchDestinatari === "" || fullName.includes(searchDestinatari.toLowerCase());
+      return (
+        searchDestinatari === "" ||
+        fullName.includes(searchDestinatari.toLowerCase())
+      );
     });
   };
 
   const filteredComunicazioni = comunicazioni.filter((c) => {
     const q = searchQuery.toLowerCase();
-    return (c.oggetto || "").toLowerCase().includes(q) || (c.messaggio || "").toLowerCase().includes(q);
+    return (
+      (c.oggetto || "").toLowerCase().includes(q) ||
+      (c.messaggio || "").toLowerCase().includes(q)
+    );
   });
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">
-          <div className="inline-block h-12 w-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <div className="inline-block h-12 w-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
           <p className="text-gray-600">Caricamento...</p>
         </div>
       </div>
@@ -379,7 +404,9 @@ if (selectedFile) {
       <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Comunicazioni</h1>
-          <p className="text-gray-500 mt-1">Gestione invio email e comunicazioni massive</p>
+          <p className="text-gray-500 mt-1">
+            Gestione invio email e comunicazioni massive
+          </p>
         </div>
 
         <Dialog
@@ -399,15 +426,20 @@ if (selectedFile) {
           <DialogContent className="max-w-3xl h-[80vh] overflow-hidden flex flex-col">
             <DialogHeader>
               <DialogTitle>Nuova Comunicazione</DialogTitle>
-              <DialogDescription>Invia email a singoli clienti o gruppi di distribuzione</DialogDescription>
+              <DialogDescription>
+                Invia email a singoli clienti o gruppi di distribuzione
+              </DialogDescription>
             </DialogHeader>
 
-            <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto flex-1 pr-2">
+            <form
+              onSubmit={handleSubmit}
+              className="space-y-4 overflow-y-auto flex-1 pr-2"
+            >
               <div className="space-y-2">
                 <Label htmlFor="tipo">Tipo Invio</Label>
                 <Select
                   value={formData.tipo}
-                  onValueChange={(value: any) => {
+                  onValueChange={(value: TipoComunicazione) => {
                     setFormData({ ...formData, tipo: value });
                     setMultiDestinatari(false);
                     setSelectedDestinatari([]);
@@ -417,10 +449,16 @@ if (selectedFile) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="newsletter">Newsletter (Tutti iscritti)</SelectItem>
-                    <SelectItem value="scadenze">Avviso Scadenze</SelectItem>
+                    <SelectItem value="newsletter">
+                      Newsletter (Tutti iscritti)
+                    </SelectItem>
+                    <SelectItem value="scadenze">
+                      Avviso Scadenze
+                    </SelectItem>
                     <SelectItem value="singola">Singolo Cliente</SelectItem>
-                    <SelectItem value="interna">Comunicazione Interna</SelectItem>
+                    <SelectItem value="interna">
+                      Comunicazione Interna
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -430,7 +468,9 @@ if (selectedFile) {
                   <Label htmlFor="destinatario">Destinatario</Label>
                   <Select
                     value={formData.destinatario_id}
-                    onValueChange={(value) => setFormData({ ...formData, destinatario_id: value })}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, destinatario_id: value })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona cliente" />
@@ -459,7 +499,10 @@ if (selectedFile) {
                         if (!checked) setSelectedDestinatari([]);
                       }}
                     />
-                    <Label htmlFor="multiDestinatari" className="font-medium cursor-pointer">
+                    <Label
+                      htmlFor="multiDestinatari"
+                      className="font-medium cursor-pointer"
+                    >
                       Invio a più destinatari
                     </Label>
                   </div>
@@ -471,45 +514,83 @@ if (selectedFile) {
                         <Input
                           placeholder="Cerca destinatari..."
                           value={searchDestinatari}
-                          onChange={(e) => setSearchDestinatari(e.target.value)}
+                          onChange={(e) =>
+                            setSearchDestinatari(e.target.value)
+                          }
                         />
                       </div>
 
                       <div className="flex flex-wrap gap-2">
-                        <Button type="button" variant="outline" size="sm" onClick={() => handleSelezionaTuttiSettore("lavoro")}>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            handleSelezionaTuttiSettore("lavoro")
+                          }
+                        >
                           Settore Lavoro
                         </Button>
-                        <Button type="button" variant="outline" size="sm" onClick={() => handleSelezionaTuttiSettore("fiscale")}>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            handleSelezionaTuttiSettore("fiscale")
+                          }
+                        >
                           Settore Fiscale
                         </Button>
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() => handleSelezionaTuttiSettore("consulenza")}
+                          onClick={() =>
+                            handleSelezionaTuttiSettore("consulenza")
+                          }
                         >
                           Settore Consulenza
                         </Button>
-                        <Button type="button" variant="outline" size="sm" onClick={() => handleSelezionaTuttiSettore("tutti")}>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleSelezionaTuttiSettore("tutti")}
+                        >
                           Tutti
                         </Button>
-                        <Button type="button" variant="outline" size="sm" onClick={handleDeselezionaTutti}>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleDeselezionaTutti}
+                        >
                           Deseleziona Tutti
                         </Button>
                       </div>
 
                       <div className="border rounded-md max-h-[220px] overflow-y-auto p-2 bg-white">
                         {getUtentiFiltrati().map((utente) => (
-                          <div key={utente.id} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
+                          <div
+                            key={utente.id}
+                            className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded"
+                          >
                             <Checkbox
                               id={`utente-${utente.id}`}
                               checked={selectedDestinatari.includes(utente.id)}
-                              onCheckedChange={() => handleDestinatarioToggle(utente.id)}
+                              onCheckedChange={() =>
+                                handleDestinatarioToggle(utente.id)
+                              }
                             />
-                            <Label htmlFor={`utente-${utente.id}`} className="flex-1 cursor-pointer">
+                            <Label
+                              htmlFor={`utente-${utente.id}`}
+                              className="flex-1 cursor-pointer"
+                            >
                               {utente.nome} {utente.cognome}
                               {utente.settore && (
-                                <span className="text-gray-500 text-sm ml-1">({utente.settore})</span>
+                                <span className="text-gray-500 text-sm ml-1">
+                                  ({utente.settore})
+                                </span>
                               )}
                             </Label>
                           </div>
@@ -517,7 +598,11 @@ if (selectedFile) {
                       </div>
 
                       <div className="text-sm text-gray-600">
-                        Selezionati: <span className="font-medium">{selectedDestinatari.length}</span> utenti
+                        Selezionati:{" "}
+                        <span className="font-medium">
+                          {selectedDestinatari.length}
+                        </span>{" "}
+                        utenti
                       </div>
                     </>
                   )}
@@ -529,7 +614,9 @@ if (selectedFile) {
                 <Input
                   id="oggetto"
                   value={formData.oggetto}
-                  onChange={(e) => setFormData({ ...formData, oggetto: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, oggetto: e.target.value })
+                  }
                   placeholder="Oggetto della mail..."
                   required
                 />
@@ -540,7 +627,9 @@ if (selectedFile) {
                 <Textarea
                   id="messaggio"
                   value={formData.messaggio}
-                  onChange={(e) => setFormData({ ...formData, messaggio: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, messaggio: e.target.value })
+                  }
                   placeholder="Scrivi qui il tuo messaggio..."
                   rows={8}
                   required
@@ -550,7 +639,12 @@ if (selectedFile) {
               <div className="space-y-2">
                 <Label htmlFor="allegato">Allegato</Label>
                 <div className="flex items-center gap-2">
-                  <Input id="allegato" type="file" onChange={handleFileChange} className="cursor-pointer" />
+                  <Input
+                    id="allegato"
+                    type="file"
+                    onChange={handleFileChange}
+                    className="cursor-pointer"
+                  />
                   {selectedFile && (
                     <Badge variant="secondary" className="px-2 py-1">
                       {selectedFile.name}
@@ -560,10 +654,19 @@ if (selectedFile) {
               </div>
 
               <div className="flex justify-end gap-3 pt-4">
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} disabled={sending}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setDialogOpen(false)}
+                  disabled={sending}
+                >
                   Annulla
                 </Button>
-                <Button type="submit" disabled={sending} className="bg-blue-600">
+                <Button
+                  type="submit"
+                  disabled={sending}
+                  className="bg-blue-600"
+                >
                   {sending ? (
                     <>Invio in corso...</>
                   ) : (
@@ -619,7 +722,9 @@ if (selectedFile) {
                 filteredComunicazioni.map((comm) => (
                   <TableRow key={comm.id}>
                     <TableCell className="text-sm">
-                      {comm.data_invio ? new Date(comm.data_invio).toLocaleDateString("it-IT") : "-"}
+                      {comm.data_invio
+                        ? new Date(comm.data_invio).toLocaleDateString("it-IT")
+                        : "-"}
                     </TableCell>
 
                     <TableCell>
@@ -634,7 +739,9 @@ if (selectedFile) {
                                 : "secondary"
                         }
                       >
-                        {comm.tipo === "interna" ? "INTERNA" : String(comm.tipo || "").toUpperCase()}
+                        {comm.tipo === "interna"
+                          ? "INTERNA"
+                          : String(comm.tipo || "").toUpperCase()}
                       </Badge>
                     </TableCell>
 
@@ -643,12 +750,18 @@ if (selectedFile) {
                     <TableCell>
                       <div className="flex items-center gap-1">
                         <Users className="h-3 w-3 text-gray-500" />
-                        <span className="text-sm">{comm.destinatari_count || 0}</span>
+                        <span className="text-sm">
+                          {comm.destinatari_count || 0}
+                        </span>
                       </div>
                     </TableCell>
 
                     <TableCell>
-                      {comm.allegati ? <Paperclip className="h-4 w-4 text-blue-600" /> : <span className="text-gray-300">-</span>}
+                      {comm.allegati ? (
+                        <Paperclip className="h-4 w-4 text-blue-600" />
+                      ) : (
+                        <span className="text-gray-300">-</span>
+                      )}
                     </TableCell>
 
                     <TableCell className="text-right">
