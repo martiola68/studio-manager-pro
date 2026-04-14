@@ -125,6 +125,12 @@ export type GraphSendMailMessage = {
   toRecipients: Array<{ emailAddress: { address: string } }>;
   ccRecipients?: Array<{ emailAddress: { address: string } }>;
   bccRecipients?: Array<{ emailAddress: { address: string } }>;
+  attachments?: Array<{
+    "@odata.type": "#microsoft.graph.fileAttachment";
+    name: string;
+    contentType: string;
+    contentBytes: string;
+  }>;
 };
 
 export async function sendEmail(
