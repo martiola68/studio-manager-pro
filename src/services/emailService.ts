@@ -110,7 +110,12 @@ async function filePathToBase64(
 }
 
 async function buildMicrosoftAttachments(
-  attachments?: { nome?: string; url: string; tipo?: string }[]
+  attachments?: {
+    nome: string;
+    path: string;
+    tipo?: string;
+    bucket?: string;
+  }[]
 ): Promise<
   {
     "@odata.type": "#microsoft.graph.fileAttachment";
@@ -129,9 +134,12 @@ async function buildMicrosoftAttachments(
   }[] = [];
 
   for (const attachment of attachments) {
-    if (!attachment.url) continue;
+    if (!attachment.path) continue;
 
-    const contentBytes = await fileUrlToBase64(attachment.url);
+    const contentBytes = await filePathToBase64(
+      attachment.bucket || "messaggi-allegati",
+      attachment.path
+    );
 
     results.push({
       "@odata.type": "#microsoft.graph.fileAttachment",
@@ -143,7 +151,6 @@ async function buildMicrosoftAttachments(
 
   return results;
 }
-
 async function sendEmailViaMicrosoft(
   userId: string,
   data: EmailData
