@@ -674,60 +674,32 @@ export default function GenerazioneScadenzariPage() {
             }
           }
 
-          if (scadenzariFlags.imu && cliente.flag_imu) {
-            const { data: existing } = await supabase
-              .from("tbscadimu")
-              .select("id")
-              .eq("cliente_id", cliente.id)
-              .eq("anno_riferimento", annoGenerazione)
-              .maybeSingle();
+        if (scadenzariFlags.imu && cliente.flag_imu) {
+  const { data: existing } = await supabase
+    .from("tbscadimu")
+    .select("id")
+    .eq("cliente_id", cliente.id)
+    .eq("anno_riferimento", annoGenerazione)
+    .maybeSingle();
 
-            if (!existing) {
-              let operatoreNome = null;
-              let professionistaNome = null;
+  if (!existing) {
+    const { error } = await supabase.from("tbscadimu" as any).insert({
+      cliente_id: cliente.id,
+      anno_riferimento: annoGenerazione,
+      archiviato: false,
+      studio_id: currentStudioId,
+      nominativo: cliente.ragione_sociale,
+      utente_operatore_id: cliente.utente_operatore_id,
+      conferma_riga: false,
+    });
 
-              if (cliente.utente_operatore_id) {
-                const { data: operatore } = await supabase
-                  .from("tbutenti")
-                  .select("nome, cognome")
-                  .eq("id", cliente.utente_operatore_id)
-                  .single();
-
-                if (operatore) {
-                  operatoreNome = `${operatore.nome} ${operatore.cognome}`;
-                }
-              }
-
-              if (cliente.utente_professionista_id) {
-                const { data: professionista } = await supabase
-                  .from("tbutenti")
-                  .select("nome, cognome")
-                  .eq("id", cliente.utente_professionista_id)
-                  .single();
-
-                if (professionista) {
-                  professionistaNome = `${professionista.nome} ${professionista.cognome}`;
-                }
-              }
-
-              const { error } = await supabase.from("tbscadimu" as any).insert({
-                cliente_id: cliente.id,
-                anno_riferimento: annoGenerazione,
-                archiviato: false,
-                studio_id: currentStudioId,
-                nominativo: cliente.ragione_sociale,
-                operatore: operatoreNome,
-                professionista: professionistaNome,
-                conferma_riga: false,
-              });
-
-              if (!error) generati++;
-              else {
-                console.error("Errore inserimento IMU:", error);
-                errori++;
-              }
-            }
-          }
+    if (!error) generati++;
+    else {
+      console.error("Errore inserimento IMU:", error);
+      errori++;
+    }
+  }
+}
         } catch (error) {
           console.error(
             `Errore elaborazione cliente ${cliente.ragione_sociale}:`,
