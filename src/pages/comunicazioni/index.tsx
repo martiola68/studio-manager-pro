@@ -142,31 +142,31 @@ const uploadAllegato = async (): Promise<{
 
   try {
     const supabase = getSupabaseClient();
-    const BUCKET_NAME = "allegati";
+    const BUCKET_NAME = "messaggi-allegati";
 
     const safeName = selectedFile.name.replace(/[^\w.\-]+/g, "_");
     const fileName = `${Date.now()}_${safeName}`;
-    const filePath = `allegati/${fileName}`;
+    const filePath = `comunicazioni/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
       .from(BUCKET_NAME)
       .upload(filePath, selectedFile, {
         cacheControl: "3600",
         upsert: false,
-        contentType: selectedFile.type || undefined
+        contentType: selectedFile.type || undefined,
       });
 
     if (uploadError) throw uploadError;
 
     const {
-      data: { publicUrl }
+      data: { publicUrl },
     } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
 
     return {
       nome: selectedFile.name,
       url: publicUrl,
       tipo: selectedFile.type,
-      dimensione: selectedFile.size
+      dimensione: selectedFile.size,
     };
   } catch (error) {
     console.error("Errore upload:", error);
