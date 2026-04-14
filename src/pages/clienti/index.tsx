@@ -230,6 +230,12 @@ export default function ClientiPage() {
 const [importingVisura, setImportingVisura] = useState(false);
 const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const strongFieldClass =
+  "border-2 border-zinc-400 focus-visible:border-black focus-visible:ring-0 focus-visible:ring-offset-0";
+
+const strongFieldErrorClass =
+  "border-2 border-red-500 focus-visible:border-red-600 focus-visible:ring-0 focus-visible:ring-offset-0";
+
 async function handleImportVisura(e: React.ChangeEvent<HTMLInputElement>) {
   const file = e.target.files?.[0];
   if (!file) return;
@@ -534,108 +540,102 @@ setRappLegali(rappLegaliData);
     setIsDialogOpen(true);
   };
 
-  const handleEdit = async (cliente: ClienteRow) => {
-    setIsDialogOpen(true);
-    setEditingCliente(cliente);
+const handleEdit = async (cliente: ClienteRow) => {
+  setIsDialogOpen(true);
+  setEditingCliente(cliente);
 
-    const supabase = getSupabaseClient();
+  const supabase = getSupabaseClient();
 
-    // rileggo record completo dal DB
-    let clienteDb: ClienteRow = cliente;
+  let clienteDb: ClienteRow = cliente;
+  try {
+    const { data, error } = await supabase
+      .from("tbclienti")
+      .select("*")
+      .eq("id", cliente.id)
+      .maybeSingle();
+
+    if (!error && data) clienteDb = data;
+  } catch (e) {
+    console.error("Errore lettura cliente:", e);
+  }
+
+  let clienteData: ClienteRow & Record<string, unknown> = clienteDb as ClienteRow &
+    Record<string, unknown>;
+
+  if (encryptionEnabled && !encryptionLocked) {
     try {
-      const { data, error } = await supabase
-        .from("tbclienti")
-        .select("*")
-        .eq("id", cliente.id)
-        .maybeSingle();
-
-      if (!error && data) clienteDb = data;
+      const decrypted = await decryptClienteSensitiveData({
+        codice_fiscale: clienteData.codice_fiscale,
+        partita_iva: clienteData.partita_iva,
+        matricola_inps: clienteData.matricola_inps,
+        pat_inail: clienteData.pat_inail,
+        codice_ditta_ce: clienteData.codice_ditta_ce,
+        note: clienteData.note,
+      });
+      clienteData = { ...clienteData, ...decrypted };
     } catch (e) {
-      console.error("Errore lettura cliente:", e);
+      console.error("Decryption error:", e);
     }
+  }
 
-    // decrypt se possibile
-    let clienteData: ClienteRow & Record<string, unknown> = clienteDb as ClienteRow &
-      Record<string, unknown>;
+  setFormData({
+    cod_cliente: clienteData.cod_cliente || "",
+    tipo_cliente: clienteData.tipo_cliente || "Persona fisica",
+    tipologia_cliente:
+      (clienteData.tipologia_cliente as "Interno" | "Esterno") || "Interno",
+    settore_fiscale: clienteData.settore_fiscale ?? true,
+    settore_lavoro: clienteData.settore_lavoro ?? false,
+    settore_consulenza: clienteData.settore_consulenza ?? false,
+    ragione_sociale: clienteData.ragione_sociale || "",
+    partita_iva: clienteData.partita_iva || "",
+    codice_fiscale: clienteData.codice_fiscale || "",
+    indirizzo: clienteData.indirizzo || "",
+    cap: clienteData.cap || "",
+    citta: clienteData.citta || "",
+    provincia: clienteData.provincia || "",
+    rapp_legale_id: clienteData.rapp_legale_id ?? "",
+    email: clienteData.email || "",
+    attivo: clienteData.attivo ?? true,
+    cassetto_fiscale_id: clienteData.cassetto_fiscale_id || "",
 
-    if (encryptionEnabled && !encryptionLocked) {
-      try {
-        const decrypted = await decryptClienteSensitiveData({
-          codice_fiscale: clienteData.codice_fiscale,
-          partita_iva: clienteData.partita_iva,
-          matricola_inps: clienteData.matricola_inps,
-          pat_inail: clienteData.pat_inail,
-          codice_ditta_ce: clienteData.codice_ditta_ce,
-          note: clienteData.note,
-        });
-        clienteData = { ...clienteData, ...decrypted };
-      } catch (e) {
-        console.error("Decryption error:", e);
-      }
-    }
+    matricola_inps: clienteData.matricola_inps || "",
+    pat_inail: clienteData.pat_inail || "",
+    codice_ditta_ce: clienteData.codice_ditta_ce || "",
 
-    setFormData({
-      cod_cliente: clienteData.cod_cliente || "",
-      tipo_cliente: clienteData.tipo_cliente || "Persona fisica",
-      tipologia_cliente:
-        (clienteData.tipologia_cliente as "Interno" | "Esterno") || "Interno",
-      settore_fiscale: clienteData.settore_fiscale ?? true,
-      settore_lavoro: clienteData.settore_lavoro ?? false,
-      settore_consulenza: clienteData.settore_consulenza ?? false,
-      ragione_sociale: clienteData.ragione_sociale || "",
-      partita_iva: clienteData.partita_iva || "",
-      codice_fiscale: clienteData.codice_fiscale || "",
-      indirizzo: clienteData.indirizzo || "",
-      cap: clienteData.cap || "",
-      citta: clienteData.citta || "",
-      provincia: clienteData.provincia || "",
-      rapp_legale_id: clienteData.rapp_legale_id ?? "",
-      email: "",
-      attivo: clienteData.attivo ?? true,
-      cassetto_fiscale_id: clienteData.cassetto_fiscale_id || "",
+    utente_operatore_id: clienteData.utente_operatore_id || "",
+    utente_professionista_id: clienteData.utente_professionista_id || "",
+    utente_payroll_id: clienteData.utente_payroll_id || "",
+    professionista_payroll_id: clienteData.professionista_payroll_id || "",
 
-      matricola_inps: clienteData.matricola_inps || "",
-      pat_inail: clienteData.pat_inail || "",
-      codice_ditta_ce: clienteData.codice_ditta_ce || "",
+    contatto1_id: clienteData.contatto1_id || "",
+    referente_esterno: clienteData.referente_esterno || "",
 
-      utente_operatore_id: clienteData.utente_operatore_id || "",
-      utente_professionista_id: clienteData.utente_professionista_id || "",
-      utente_payroll_id: clienteData.utente_payroll_id || "",
-      professionista_payroll_id: clienteData.professionista_payroll_id || "",
+    tipo_prestazione_id: clienteData.tipo_prestazione_id || "",
+    tipo_redditi:
+      (clienteData.tipo_redditi as "USC" | "USP" | "ENC" | "UPF" | "730") ||
+      undefined,
 
-      contatto1_id: clienteData.contatto1_id || "",
-      referente_esterno: clienteData.referente_esterno || "",
+    note: clienteData.note || "",
 
-      tipo_prestazione_id: clienteData.tipo_prestazione_id || "",
-      tipo_redditi:
-        (clienteData.tipo_redditi as
-          | "USC"
-          | "USP"
-          | "ENC"
-          | "UPF"
-          | "730") || undefined,
+    flag_mail_attivo: clienteData.flag_mail_attivo ?? false,
+    flag_mail_scadenze: clienteData.flag_mail_scadenze ?? false,
+    flag_mail_newsletter: clienteData.flag_mail_newsletter ?? false,
+  });
 
-      note: clienteData.note || "",
-
-      flag_mail_attivo: clienteData.flag_mail_attivo ?? false,
-      flag_mail_scadenze: clienteData.flag_mail_scadenze ?? false,
-      flag_mail_newsletter: clienteData.flag_mail_newsletter ?? false,
-    });
-
-    setScadenzari({
-      iva: clienteData.flag_iva ?? false,
-      cu: clienteData.flag_cu ?? false,
-      bilancio: clienteData.flag_bilancio ?? false,
-      fiscali: clienteData.flag_fiscali ?? false,
-      lipe: clienteData.flag_lipe ?? false,
-      modello_770: clienteData.flag_770 ?? false,
-      esterometro: clienteData.flag_esterometro ?? false,
-      ccgg: clienteData.flag_ccgg ?? false,
-      proforma: clienteData.flag_proforma ?? false,
-      imu: clienteData.flag_imu ?? false,
-    });
-  };
-
+  setScadenzari({
+    iva: clienteData.flag_iva ?? false,
+    cu: clienteData.flag_cu ?? false,
+    bilancio: clienteData.flag_bilancio ?? false,
+    fiscali: clienteData.flag_fiscali ?? false,
+    lipe: clienteData.flag_lipe ?? false,
+    modello_770: clienteData.flag_770 ?? false,
+    esterometro: clienteData.flag_esterometro ?? false,
+    ccgg: clienteData.flag_ccgg ?? false,
+    proforma: clienteData.flag_proforma ?? false,
+    imu: clienteData.flag_imu ?? false,
+  });
+};
+  
 const handleSave = async () => {
   const supabase = getSupabaseClient();
 
@@ -861,95 +861,170 @@ const handleSave = async () => {
     }
   };
 
-  const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
-    try {
-      const supabase = getSupabaseClient();
+const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
+  try {
+    const supabase = getSupabaseClient();
 
-      const scadenzariAttivi: string[] = [];
-      if (cliente.flag_iva) scadenzariAttivi.push("IVA");
-      if (cliente.flag_lipe) scadenzariAttivi.push("LIPE");
-      if (cliente.flag_cu) scadenzariAttivi.push("CU");
-      if (cliente.flag_770) scadenzariAttivi.push("770");
-      if (cliente.flag_bilancio) scadenzariAttivi.push("Bilanci");
-      if (cliente.flag_fiscali) scadenzariAttivi.push("Fiscali");
-      if (cliente.flag_proforma) scadenzariAttivi.push("Proforma");
+    const scadenzariAttivi: string[] = [];
+    if (cliente.flag_iva) scadenzariAttivi.push("IVA");
+    if (cliente.flag_lipe) scadenzariAttivi.push("LIPE");
+    if (cliente.flag_cu) scadenzariAttivi.push("CU");
+    if (cliente.flag_770) scadenzariAttivi.push("770");
+    if (cliente.flag_bilancio) scadenzariAttivi.push("Bilanci");
+    if (cliente.flag_fiscali) scadenzariAttivi.push("Fiscali");
+    if (cliente.flag_proforma) scadenzariAttivi.push("Proforma");
+    if (cliente.flag_esterometro) scadenzariAttivi.push("Esterometro");
+    if (cliente.flag_ccgg) scadenzariAttivi.push("CCGG");
+    if (cliente.flag_imu) scadenzariAttivi.push("IMU");
 
-      const baseData = {
-        id: cliente.id,
-        nominativo: cliente.ragione_sociale,
-        studio_id: studioId ?? null,
-        utente_operatore_id: cliente.utente_operatore_id ?? null,
-        utente_professionista_id: cliente.utente_professionista_id ?? null,
-      };
-
-      await Promise.all(
-        scadenzariAttivi.map((s) => {
-          switch (s) {
-            case "IVA":
-              return supabase
-                .from("tbscadiva")
-                .upsert({ ...baseData }, { onConflict: "id" });
-
-            case "LIPE":
-              return supabase
-                .from("tbscadlipe")
-                .upsert({ ...baseData }, { onConflict: "id" });
-
-            case "CU":
-              return supabase
-                .from("tbscadcu")
-                .upsert({ ...baseData }, { onConflict: "id" });
-
-            case "Bilanci":
-              return supabase
-                .from("tbscadbilanci")
-                .upsert({ ...baseData }, { onConflict: "id" });
-
-            case "Fiscali":
-              return supabase
-                .from("tbscadfiscali")
-                .upsert({ ...baseData }, { onConflict: "id" });
-
-            case "770":
-              return supabase
-                .from("tbscad770")
-                .upsert(
-                  {
-                    ...baseData,
-                    utente_payroll_id: cliente.utente_payroll_id ?? null,
-                    professionista_payroll_id:
-                      cliente.professionista_payroll_id ?? null,
-                  },
-                  { onConflict: "id" }
-                );
-
-            case "Proforma":
-              return supabase
-                .from("tbscadproforma")
-                .upsert({ ...baseData }, { onConflict: "id" });
-
-            default:
-              return Promise.resolve(null);
-          }
-        })
-      );
-
+    if (scadenzariAttivi.length === 0) {
       toast({
-        title: "Successo",
-        description: `Cliente inserito in ${scadenzariAttivi.length} scadenzari: ${scadenzariAttivi.join(
-          ", "
-        )}`,
+        title: "Attenzione",
+        description: "Per questo cliente non risultano scadenzari attivi",
       });
-    } catch (error) {
-      console.error("Errore inserimento scadenzari:", error);
-      toast({
-        title: "Errore",
-        description: "Impossibile inserire il cliente negli scadenzari",
-        variant: "destructive",
-      });
+      return;
     }
-  };
 
+    const baseData = {
+      id: cliente.id,
+      nominativo: cliente.ragione_sociale,
+      studio_id: studioId ?? null,
+      utente_operatore_id: cliente.utente_operatore_id ?? null,
+      utente_professionista_id: cliente.utente_professionista_id ?? null,
+    };
+
+    let operatoreNome = null;
+    let professionistaNome = null;
+
+    if (cliente.flag_imu) {
+      if (cliente.utente_operatore_id) {
+        const { data: operatore } = await supabase
+          .from("tbutenti")
+          .select("nome, cognome")
+          .eq("id", cliente.utente_operatore_id)
+          .maybeSingle();
+
+        if (operatore) {
+          operatoreNome = `${safeString(operatore.nome)} ${safeString(
+            operatore.cognome
+          )}`.trim();
+        }
+      }
+
+      if (cliente.utente_professionista_id) {
+        const { data: professionista } = await supabase
+          .from("tbutenti")
+          .select("nome, cognome")
+          .eq("id", cliente.utente_professionista_id)
+          .maybeSingle();
+
+        if (professionista) {
+          professionistaNome = `${safeString(professionista.nome)} ${safeString(
+            professionista.cognome
+          )}`.trim();
+        }
+      }
+    }
+
+    await Promise.all(
+      scadenzariAttivi.map((s) => {
+        switch (s) {
+          case "IVA":
+            return supabase
+              .from("tbscadiva")
+              .upsert({ ...baseData }, { onConflict: "id" });
+
+          case "LIPE":
+            return supabase
+              .from("tbscadlipe")
+              .upsert({ ...baseData }, { onConflict: "id" });
+
+          case "CU":
+            return supabase
+              .from("tbscadcu")
+              .upsert({ ...baseData }, { onConflict: "id" });
+
+          case "Bilanci":
+            return supabase
+              .from("tbscadbilanci")
+              .upsert({ ...baseData }, { onConflict: "id" });
+
+          case "Fiscali":
+            return supabase
+              .from("tbscadfiscali")
+              .upsert(
+                {
+                  ...baseData,
+                  tipo_redditi: cliente.tipo_redditi ?? null,
+                },
+                { onConflict: "id" }
+              );
+
+          case "770":
+            return supabase
+              .from("tbscad770")
+              .upsert(
+                {
+                  ...baseData,
+                  utente_payroll_id: cliente.utente_payroll_id ?? null,
+                  professionista_payroll_id:
+                    cliente.professionista_payroll_id ?? null,
+                },
+                { onConflict: "id" }
+              );
+
+          case "Proforma":
+            return supabase
+              .from("tbscadproforma")
+              .upsert({ ...baseData }, { onConflict: "id" });
+
+          case "Esterometro":
+            return supabase
+              .from("tbscadestero")
+              .upsert({ ...baseData }, { onConflict: "id" });
+
+          case "CCGG":
+            return supabase
+              .from("tbscadccgg")
+              .upsert({ ...baseData }, { onConflict: "id" });
+
+          case "IMU":
+            return supabase
+              .from("tbscadimu")
+              .upsert(
+                {
+                  id: cliente.id,
+                  nominativo: cliente.ragione_sociale,
+                  studio_id: studioId ?? null,
+                  operatore: operatoreNome,
+                  professionista: professionistaNome,
+                  conferma_riga: false,
+                },
+                { onConflict: "id" }
+              );
+
+          default:
+            return Promise.resolve(null);
+        }
+      })
+    );
+
+    toast({
+      title: "Successo",
+      description: `Cliente inserito in ${scadenzariAttivi.length} scadenzari: ${scadenzariAttivi.join(
+        ", "
+      )}`,
+    });
+  } catch (error) {
+    console.error("Errore inserimento scadenzari:", error);
+    toast({
+      title: "Errore",
+      description: "Impossibile inserire il cliente negli scadenzari",
+      variant: "destructive",
+    });
+  }
+};
+  
   const downloadTemplate = () => {
     const headers = [
       "Tipo Cliente",
