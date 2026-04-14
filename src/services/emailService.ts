@@ -40,6 +40,7 @@ export interface EmailData {
   html: string;
   text: string;
   microsoftConnectionId?: string;
+   attachments?: any[];
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -83,7 +84,7 @@ async function sendEmailViaMicrosoft(
       };
     }
 
-    const message = {
+    const message: any = {
       subject: data.subject,
       body: {
         contentType: "HTML" as const,
@@ -97,6 +98,10 @@ async function sendEmailViaMicrosoft(
         },
       ],
     };
+
+    if (data.attachments && data.attachments.length > 0) {
+      message.attachments = data.attachments;
+    }
 
     await microsoftGraphService.sendEmail(
       userId,
@@ -546,29 +551,100 @@ export async function sendComunicazioneEmail(
       };
     }
 
-    const htmlContent = `
+ const htmlContent = `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
-    .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    .content { padding: 30px 20px; }
-    .message { background: #f9f9f9; padding: 20px; border-left: 4px solid #667eea; border-radius: 4px; margin: 20px 0; white-space: pre-wrap; }
-    .footer { background: #f4f4f4; padding: 20px; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #ddd; }
-    .footer p { margin: 5px 0; }
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      color: #1f2937;
+      margin: 0;
+      padding: 24px 0;
+      background-color: #f3f4f6;
+    }
+    .container {
+      max-width: 700px;
+      margin: 0 auto;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .header {
+      background: #111827;
+      color: #ffffff;
+      padding: 20px 24px;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 700;
+    }
+    .content {
+      padding: 24px;
+    }
+    .subject {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0 0 16px 0;
+      color: #111827;
+    }
+    .message {
+      font-size: 15px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 18px;
+      margin: 0 0 18px 0;
+      white-space: pre-wrap;
+    }
+    .attachments {
+      margin-top: 12px;
+      padding: 14px 16px;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      color: #1d4ed8;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .footer {
+      background: #f9fafb;
+      padding: 18px 24px;
+      text-align: center;
+      font-size: 12px;
+      color: #6b7280;
+      border-top: 1px solid #e5e7eb;
+    }
+    .footer p {
+      margin: 4px 0;
+    }
   </style>
 </head>
 <body>
   <div class="container">
+    <div class="header">
+      <h1>Studio Manager Pro</h1>
+    </div>
+
     <div class="content">
+      <div class="subject">${data.oggetto}</div>
+
       <div class="message">
         ${data.messaggio.replace(/\n/g, "<br>")}
       </div>
-      ${data.allegati ? "<p><strong>Questa comunicazione contiene allegati</strong></p>" : ""}
+
+      ${
+        data.allegati && data.allegati.length > 0
+          ? `<div class="attachments">Questa comunicazione contiene ${data.allegati.length} allegato/i</div>`
+          : ""
+      }
     </div>
+
     <div class="footer">
       <p><strong>Studio Manager Pro</strong> - Sistema Gestionale Integrato</p>
       <p>Powered by ProWork Studio M</p>
@@ -577,7 +653,7 @@ export async function sendComunicazioneEmail(
   </div>
 </body>
 </html>
-    `.trim();
+`.trim();
 
     const textContent = `
 ${data.oggetto}
@@ -599,13 +675,14 @@ Questa è una email automatica, non rispondere a questo messaggio
       const recipient = validRecipients[i];
 
       try {
-        const result = await sendEmail({
-          to: recipient.email,
-          subject: data.oggetto,
-          html: htmlContent,
-          text: textContent,
-          microsoftConnectionId: data.microsoftConnectionId,
-        });
+       const result = await sendEmail({
+  to: recipient.email,
+  subject: data.oggetto,
+  html: htmlContent,
+  text: textContent,
+  microsoftConnectionId: data.microsoftConnectionId,
+  attachments: data.allegati,
+});
 
         if (result.success) {
           sent++;
