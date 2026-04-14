@@ -41,11 +41,11 @@ export interface EmailData {
   text: string;
   microsoftConnectionId?: string;
   attachments?: {
-    nome: string;
-    url: string;
-    tipo?: string;
-  }[];
-}
+  nome: string;
+  path: string;
+  tipo?: string;
+  bucket?: string;
+}[];
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -76,13 +76,19 @@ async function getCurrentUserId(): Promise<string | null> {
   return session?.user?.id ?? null;
 }
 
-async function fileUrlToBase64(url: string): Promise<string> {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Impossibile scaricare allegato: ${response.status}`);
+async function filePathToBase64(
+  bucket: string,
+  path: string
+): Promise<string> {
+  const { data, error } = await supabase.storage.from(bucket).download(path);
+
+  if (error || !data) {
+    throw new Error(
+      `Impossibile scaricare allegato da storage: ${error?.message || path}`
+    );
   }
 
-  const arrayBuffer = await response.arrayBuffer();
+  const arrayBuffer = await data.arrayBuffer();
   const bytes = new Uint8Array(arrayBuffer);
 
   let binary = "";
@@ -97,7 +103,7 @@ async function fileUrlToBase64(url: string): Promise<string> {
 }
 
 async function buildMicrosoftAttachments(
-  attachments?: { nome: string; url: string; tipo?: string }[]
+  attachments?: { nome: string; path: string; tipo?: string; bucket?: string }[]
 ): Promise<
   {
     "@odata.type": "#microsoft.graph.fileAttachment";
@@ -116,7 +122,8 @@ async function buildMicrosoftAttachments(
   }[] = [];
 
   for (const attachment of attachments) {
-    const contentBytes = await fileUrlToBase64(attachment.url);
+    const bucket = attachment.bucket || "documenti";
+    const contentBytes = await filePathToBase64(bucket, attachment.path);
 
     results.push({
       "@odata.type": "#microsoft.graph.fileAttachment",
@@ -128,7 +135,6 @@ async function buildMicrosoftAttachments(
 
   return results;
 }
-
 async function sendEmailViaMicrosoft(
   userId: string,
   data: EmailData
