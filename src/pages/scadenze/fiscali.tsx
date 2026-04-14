@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Trash2 } from "lucide-react";
+import { Search, Trash2, Printer } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -21,24 +21,28 @@ type ScadenzaFiscaliRow = Database["public"]["Tables"]["tbscadfiscali"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
 type ScadenzaFiscali = ScadenzaFiscaliRow & {
-  professionista?: string;
-  operatore?: string;
+  anno_riferimento?: number | null;
+  archiviato?: boolean | null;
 };
 
 export default function ScadenzeFiscaliPage() {
   const router = useRouter();
   const { toast } = useToast();
+
+  const currentYear = new Date().getFullYear();
+
   const [loading, setLoading] = useState(true);
   const [scadenze, setScadenze] = useState<ScadenzaFiscali[]>([]);
   const [utenti, setUtenti] = useState<Utente[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterOperatore, setFilterOperatore] = useState("__all__");
-  const [filterProfessionista, setFilterProfessionista] = useState("__all__");
+  const [annoConsultazione, setAnnoConsultazione] = useState(currentYear);
+  const [anniDisponibili, setAnniDisponibili] = useState<number[]>([]);
 
   const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
-  const [noteTimers, setNoteTimers] = useState<Record<string, NodeJS.Timeout>>(
-    {}
-  );
+  const [noteTimers, setNoteTimers] = useState<
+    Record<string, ReturnType<typeof setTimeout>>
+  >({});
 
   const [stats, setStats] = useState({
     totale: 0,
@@ -48,17 +52,19 @@ export default function ScadenzeFiscaliPage() {
 
   useEffect(() => {
     checkAuthAndLoad();
-  }, []);
+  }, [annoConsultazione]);
 
   const checkAuthAndLoad = async () => {
     try {
       const {
         data: { session },
       } = await supabase.auth.getSession();
+
       if (!session) {
         router.push("/login");
         return;
       }
+
       await loadData();
     } catch (error) {
       console.error("Errore:", error);
@@ -69,14 +75,17 @@ export default function ScadenzeFiscaliPage() {
   const loadData = async () => {
     try {
       setLoading(true);
+
       const [scadenzeData, utentiData] = await Promise.all([
         loadScadenze(),
         loadUtenti(),
       ]);
+
       setScadenze(scadenzeData);
       setUtenti(utentiData);
 
       const confermate = scadenzeData.filter((s) => s.conferma_riga).length;
+
       setStats({
         totale: scadenzeData.length,
         confermate,
@@ -95,28 +104,41 @@ export default function ScadenzeFiscaliPage() {
   };
 
   const loadScadenze = async (): Promise<ScadenzaFiscali[]> => {
-    const { data, error } = await supabase
-      .from("tbscadfiscali")
-      .select(
-        `
-        *,
-        professionista:tbutenti!tbscadfiscali_utente_professionista_id_fkey(nome, cognome),
-        operatore:tbutenti!tbscadfiscali_utente_operatore_id_fkey(nome, cognome)
-      `
+    const { data: anniData, error: anniError } = await supabase
+      .from("tbscadfiscali" as any)
+      .select("anno_riferimento")
+      .order("anno_riferimento", { ascending: true });
+
+    if (anniError) throw anniError;
+
+    const anni = Array.from(
+      new Set(
+        (((anniData ?? []) as any[]) || [])
+          .map((r) => r.anno_riferimento)
+          .filter((a): a is number => typeof a === "number")
       )
+    ).sort((a, b) => a - b);
+
+    setAnniDisponibili(anni);
+
+    const annoDaUsare =
+      anni.length > 0 && !anni.includes(annoConsultazione)
+        ? anni[anni.length - 1]
+        : annoConsultazione;
+
+    if (annoDaUsare !== annoConsultazione) {
+      setAnnoConsultazione(annoDaUsare);
+    }
+
+    const { data, error } = await supabase
+      .from("tbscadfiscali" as any)
+      .select("*")
+      .eq("anno_riferimento", annoDaUsare)
       .order("nominativo", { ascending: true });
 
     if (error) throw error;
 
-    return (data || []).map((record: any) => ({
-      ...record,
-      professionista: record.professionista
-        ? `${record.professionista.nome} ${record.professionista.cognome}`
-        : "-",
-      operatore: record.operatore
-        ? `${record.operatore.nome} ${record.operatore.cognome}`
-        : "-",
-    })) as ScadenzaFiscali[];
+    return ((data ?? []) as unknown) as ScadenzaFiscali[];
   };
 
   const loadUtenti = async (): Promise<Utente[]> => {
@@ -126,7 +148,7 @@ export default function ScadenzeFiscaliPage() {
       .order("cognome", { ascending: true });
 
     if (error) throw error;
-    return data || [];
+    return ((data ?? []) as unknown) as Utente[];
   };
 
   const handleToggleField = async (
@@ -152,7 +174,7 @@ export default function ScadenzeFiscaliPage() {
       }
 
       const { error } = await supabase
-        .from("tbscadfiscali")
+        .from("tbscadfiscali" as any)
         .update({ [field]: newValue } as any)
         .eq("id", scadenzaId);
 
@@ -174,7 +196,7 @@ export default function ScadenzeFiscaliPage() {
   ) => {
     try {
       const { error } = await supabase
-        .from("tbscadfiscali")
+        .from("tbscadfiscali" as any)
         .update({ [field]: value || null } as any)
         .eq("id", scadenzaId);
 
@@ -202,7 +224,7 @@ export default function ScadenzeFiscaliPage() {
     const timer = setTimeout(async () => {
       try {
         const { error } = await supabase
-          .from("tbscadfiscali")
+          .from("tbscadfiscali" as any)
           .update({ note: value || null })
           .eq("id", scadenzaId);
 
@@ -228,7 +250,10 @@ export default function ScadenzeFiscaliPage() {
     if (!confirm("Sei sicuro di voler eliminare questo record?")) return;
 
     try {
-      const { error } = await supabase.from("tbscadfiscali").delete().eq("id", id);
+      const { error } = await supabase
+        .from("tbscadfiscali" as any)
+        .delete()
+        .eq("id", id);
 
       if (error) throw error;
 
@@ -236,6 +261,7 @@ export default function ScadenzeFiscaliPage() {
         title: "Successo",
         description: "Record eliminato",
       });
+
       await loadData();
     } catch (error) {
       console.error("Errore eliminazione:", error);
@@ -251,13 +277,154 @@ export default function ScadenzeFiscaliPage() {
     const matchSearch = (s.nominativo || "")
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
+
     const matchOperatore =
-      filterOperatore === "__all__" || s.utente_operatore_id === filterOperatore;
-    const matchProfessionista =
-      filterProfessionista === "__all__" ||
-      s.utente_professionista_id === filterProfessionista;
-    return matchSearch && matchOperatore && matchProfessionista;
+      filterOperatore === "__all__" ||
+      s.utente_operatore_id === filterOperatore;
+
+    return matchSearch && matchOperatore;
   });
+
+  const getUtenteNome = (utenteId: string | null): string => {
+    if (!utenteId) return "-";
+    const utente = utenti.find((u) => u.id === utenteId);
+    return utente ? `${utente.nome} ${utente.cognome}` : "-";
+  };
+
+  const handlePrintOperatore = () => {
+    if (filterOperatore === "__all__") return;
+
+    const operatoreNome = getUtenteNome(filterOperatore);
+
+    const righeHtml = filteredScadenze
+      .map(
+        (scadenza, index) => `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${scadenza.nominativo ?? ""}</td>
+            <td style="text-align:center; font-weight:700;">${
+              scadenza.conferma_riga ? "✓" : "X"
+            }</td>
+            <td>${scadenza.tipo_redditi ?? ""}</td>
+            <td style="text-align:center;">${
+              scadenza.mod_r_compilato ? "✓" : ""
+            }</td>
+            <td style="text-align:center;">${
+              scadenza.mod_r_definitivo ? "✓" : ""
+            }</td>
+            <td style="text-align:center;">${
+              scadenza.mod_r_inviato ? "✓" : ""
+            }</td>
+            <td>${scadenza.data_r_invio ?? ""}</td>
+          </tr>
+        `
+      )
+      .join("");
+
+    const printWindow = window.open("", "_blank", "width=1000,height=700");
+    if (!printWindow) return;
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Stampa Scadenzario Fiscali</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              padding: 18px;
+              color: #111;
+              font-size: 11px;
+            }
+            h1 {
+              font-size: 18px;
+              margin-bottom: 4px;
+            }
+            .meta {
+              margin-bottom: 12px;
+              color: #444;
+              font-size: 12px;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              font-size: 11px;
+              table-layout: fixed;
+            }
+            th, td {
+              border: 1px solid #999;
+              padding: 6px;
+              text-align: left;
+              vertical-align: top;
+              word-wrap: break-word;
+            }
+            th {
+              background: #f3f4f6;
+            }
+            .count {
+              margin-bottom: 10px;
+              font-weight: bold;
+              font-size: 12px;
+            }
+            .col-num {
+              width: 40px;
+              text-align: center;
+            }
+            .col-nominativo {
+              width: 42%;
+            }
+            .col-conferma {
+              width: 70px;
+              text-align: center;
+            }
+            .col-small {
+              width: 90px;
+              text-align: center;
+            }
+            .col-data {
+              width: 120px;
+            }
+            @media print {
+              body {
+                padding: 0;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <h1>Scadenzario Fiscali</h1>
+          <div class="meta">Anno consultazione: ${annoConsultazione}</div>
+          <div class="meta">Operatore: ${operatoreNome}</div>
+          <div class="count">Totale record stampati: ${filteredScadenze.length}</div>
+
+          <table>
+            <thead>
+              <tr>
+                <th class="col-num">#</th>
+                <th class="col-nominativo">Nominativo</th>
+                <th class="col-conferma">Conf.</th>
+                <th>Tipo Redditi</th>
+                <th class="col-small">Compilato</th>
+                <th class="col-small">Definitivo</th>
+                <th class="col-small">Inviato</th>
+                <th class="col-data">Data invio</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${
+                righeHtml ||
+                `<tr><td colspan="8">Nessun record trovato</td></tr>`
+              }
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
+  };
 
   if (loading) {
     return (
@@ -270,32 +437,57 @@ export default function ScadenzeFiscaliPage() {
     );
   }
 
+  const anni = anniDisponibili;
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Scadenzario Fiscali</h1>
-          <p className="text-gray-500 mt-1">Gestione dichiarazioni fiscali e versamenti</p>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Scadenzario Fiscali
+          </h1>
+          <p className="text-gray-500 mt-1">
+            Gestione dichiarazioni fiscali e versamenti
+          </p>
         </div>
+
+        {filterOperatore !== "__all__" && (
+          <Button
+            type="button"
+            onClick={handlePrintOperatore}
+            className="bg-black text-white hover:bg-zinc-800"
+          >
+            <Printer className="h-4 w-4 mr-2" />
+            Stampa elenco operatore
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="pt-6">
-            <div className="text-sm text-gray-600 mb-1">Totale Dichiarazioni</div>
-            <div className="text-3xl font-bold text-gray-900">{stats.totale}</div>
+            <div className="text-sm text-gray-600 mb-1">
+              Totale Dichiarazioni
+            </div>
+            <div className="text-3xl font-bold text-gray-900">
+              {stats.totale}
+            </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <div className="text-sm text-gray-600 mb-1">Confermate</div>
-            <div className="text-3xl font-bold text-green-600">{stats.confermate}</div>
+            <div className="text-3xl font-bold text-green-600">
+              {stats.confermate}
+            </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <div className="text-sm text-gray-600 mb-1">Non Confermate</div>
-            <div className="text-3xl font-bold text-orange-600">{stats.nonConfermate}</div>
+            <div className="text-3xl font-bold text-orange-600">
+              {stats.nonConfermate}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -335,17 +527,16 @@ export default function ScadenzeFiscaliPage() {
 
             <div>
               <Select
-                value={filterProfessionista}
-                onValueChange={setFilterProfessionista}
+                value={annoConsultazione.toString()}
+                onValueChange={(value) => setAnnoConsultazione(parseInt(value))}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Utente Professionista" />
+                  <SelectValue placeholder="Anno consultazione" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__all__">Tutti i professionisti</SelectItem>
-                  {utenti.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {u.nome} {u.cognome}
+                  {anni.map((anno) => (
+                    <SelectItem key={anno} value={anno.toString()}>
+                      {anno}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -361,11 +552,8 @@ export default function ScadenzeFiscaliPage() {
             <table className="w-full caption-bottom text-sm">
               <thead className="[&_tr]:border-b sticky top-0 z-30 bg-white shadow-sm">
                 <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                  <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 sticky-col-header border-r min-w-[200px]">
+                  <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 sticky-col-header border-r min-w-[300px]">
                     Nominativo
-                  </th>
-                  <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[180px]">
-                    Professionista
                   </th>
                   <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[180px]">
                     Operatore
@@ -428,7 +616,7 @@ export default function ScadenzeFiscaliPage() {
                 {filteredScadenze.length === 0 ? (
                   <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                     <td
-                      colSpan={20}
+                      colSpan={19}
                       className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center text-gray-500"
                     >
                       Nessun record trovato
@@ -438,29 +626,29 @@ export default function ScadenzeFiscaliPage() {
                   filteredScadenze.map((scadenza) => (
                     <tr
                       key={scadenza.id}
-                    className={`border-b transition-colors data-[state=selected]:bg-muted ${
-                    scadenza.conferma_riga
-                      ? "bg-green-100 hover:bg-green-200"
-                        : "hover:bg-green-50"
-                        }`}
+                      className={`border-b transition-colors data-[state=selected]:bg-muted ${
+                        scadenza.conferma_riga
+                          ? "bg-green-100 hover:bg-green-200"
+                          : "hover:bg-green-50"
+                      }`}
                     >
-               <td
-                      style={{
-                        backgroundColor: scadenza.conferma_riga ? "#dcfce7" : "#ffffff",
-                          }}
-                    className={`p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-cell border-r font-medium min-w-[200px] ${
-                        scadenza.conferma_riga ? "hover:bg-green-200" : "hover:bg-green-50"
+                      <td
+                        style={{
+                          backgroundColor: scadenza.conferma_riga
+                            ? "#dcfce7"
+                            : "#ffffff",
+                        }}
+                        className={`p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-cell border-r font-medium min-w-[300px] ${
+                          scadenza.conferma_riga
+                            ? "hover:bg-green-200"
+                            : "hover:bg-green-50"
                         }`}
-                        >
-                      {scadenza.nominativo}
+                      >
+                        {scadenza.nominativo}
                       </td>
 
                       <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[180px]">
-                        {scadenza.professionista}
-                      </td>
-
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[180px]">
-                        {scadenza.operatore}
+                        {getUtenteNome(scadenza.utente_operatore_id)}
                       </td>
 
                       <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
