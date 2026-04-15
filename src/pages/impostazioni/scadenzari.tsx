@@ -396,7 +396,6 @@ export default function GenerazioneScadenzariPage() {
                 studio_id: currentStudioId,
                 nominativo: cliente.ragione_sociale,
                 utente_operatore_id: cliente.utente_operatore_id,
-                utente_professionista_id: cliente.utente_professionista_id,
                 conferma_riga: false,
                 data_scadenza_adempimento: scadenzeAdempimento.iva,
                 data_avviso_1: ivaAlert1,
@@ -431,7 +430,6 @@ export default function GenerazioneScadenzariPage() {
                 studio_id: currentStudioId,
                 nominativo: cliente.ragione_sociale,
                 utente_operatore_id: cliente.utente_operatore_id,
-                utente_professionista_id: cliente.utente_professionista_id,
                 conferma_riga: false,
                 data_scadenza_adempimento: scadenzeAdempimento.ccgg,
                 data_avviso_1: ccggAlert1,
@@ -466,7 +464,6 @@ export default function GenerazioneScadenzariPage() {
                 studio_id: currentStudioId,
                 nominativo: cliente.ragione_sociale,
                 utente_operatore_id: cliente.utente_operatore_id,
-                utente_professionista_id: cliente.utente_professionista_id,
                 conferma_riga: false,
                 data_scadenza_adempimento: scadenzeAdempimento.cu,
                 data_avviso_1: cuAlert1,
@@ -501,7 +498,6 @@ export default function GenerazioneScadenzariPage() {
                 studio_id: currentStudioId,
                 nominativo: cliente.ragione_sociale,
                 utente_operatore_id: cliente.utente_operatore_id,
-                utente_professionista_id: cliente.utente_professionista_id,
                 tipo_redditi: cliente.tipo_redditi,
                 conferma_riga: false,
                 data_scadenza_adempimento: scadenzeAdempimento.fiscali,
@@ -537,7 +533,6 @@ export default function GenerazioneScadenzariPage() {
                 studio_id: currentStudioId,
                 nominativo: cliente.ragione_sociale,
                 utente_operatore_id: cliente.utente_operatore_id,
-                utente_professionista_id: cliente.utente_professionista_id,
                 conferma_riga: false,
                 data_scadenza_adempimento: scadenzeAdempimento.bilanci,
                 data_avviso_1: bilanciAlert1,
@@ -572,7 +567,6 @@ export default function GenerazioneScadenzariPage() {
                 studio_id: currentStudioId,
                 nominativo: cliente.ragione_sociale,
                 utente_operatore_id: cliente.utente_operatore_id,
-                utente_professionista_id: cliente.utente_professionista_id,
                 utente_payroll_id: cliente.utente_payroll_id,
                 professionista_payroll_id: cliente.professionista_payroll_id,
                 conferma_riga: false,
@@ -609,7 +603,6 @@ export default function GenerazioneScadenzariPage() {
                 studio_id: currentStudioId,
                 nominativo: cliente.ragione_sociale,
                 utente_operatore_id: cliente.utente_operatore_id,
-                utente_professionista_id: cliente.utente_professionista_id,
               });
 
               if (!error) generati++;
@@ -636,7 +629,6 @@ export default function GenerazioneScadenzariPage() {
                 studio_id: currentStudioId,
                 nominativo: cliente.ragione_sociale,
                 utente_operatore_id: cliente.utente_operatore_id,
-                utente_professionista_id: cliente.utente_professionista_id,
               });
 
               if (!error) generati++;
@@ -663,7 +655,6 @@ export default function GenerazioneScadenzariPage() {
                 studio_id: currentStudioId,
                 nominativo: cliente.ragione_sociale,
                 utente_operatore_id: cliente.utente_operatore_id,
-                utente_professionista_id: cliente.utente_professionista_id,
               });
 
               if (!error) generati++;
@@ -674,39 +665,39 @@ export default function GenerazioneScadenzariPage() {
             }
           }
 
-   if (scadenzariFlags.imu && cliente.flag_imu) {
-  const { data: existing } = await supabase
-    .from("tbscadimu")
-    .select("id")
-    .eq("cliente_id", cliente.id)
-    .eq("anno_riferimento", annoGenerazione)
-    .maybeSingle();
+          if (scadenzariFlags.imu && cliente.flag_imu) {
+            const { data: existing } = await supabase
+              .from("tbscadimu")
+              .select("id")
+              .eq("cliente_id", cliente.id)
+              .eq("anno_riferimento", annoGenerazione)
+              .maybeSingle();
 
-  if (!existing) {
-    const { error } = await supabase.from("tbscadimu" as any).insert({
-      id: crypto.randomUUID(),
-      cliente_id: cliente.id,
-      anno_riferimento: annoGenerazione,
-      archiviato: false,
-      studio_id: currentStudioId,
-      nominativo: cliente.ragione_sociale,
-      utente_operatore_id: cliente.utente_operatore_id,
-      conferma_riga: false,
-      alert_1_inviato: false,
-      alert_2_inviato: false,
-      data_invio_alert_1: null,
-      data_invio_alert_2: null,
-      data_archiviazione: null,
-      archiviato_da: null,
-    });
+            if (!existing) {
+              const { error } = await supabase.from("tbscadimu" as any).insert({
+                id: crypto.randomUUID(),
+                cliente_id: cliente.id,
+                anno_riferimento: annoGenerazione,
+                archiviato: false,
+                studio_id: currentStudioId,
+                nominativo: cliente.ragione_sociale,
+                utente_operatore_id: cliente.utente_operatore_id,
+                conferma_riga: false,
+                alert_1_inviato: false,
+                alert_2_inviato: false,
+                data_invio_alert_1: null,
+                data_invio_alert_2: null,
+                data_archiviazione: null,
+                archiviato_da: null,
+              });
 
-    if (!error) generati++;
-    else {
-      console.error("Errore inserimento IMU:", error);
-      errori++;
-    }
-  }
-     }
+              if (!error) generati++;
+              else {
+                console.error("Errore inserimento IMU:", error);
+                errori++;
+              }
+            }
+          }
         } catch (error) {
           console.error(
             `Errore elaborazione cliente ${cliente.ragione_sociale}:`,
