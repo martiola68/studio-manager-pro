@@ -120,6 +120,9 @@ export default function GenerazioneScadenzariPage() {
 
   const [showScadenzeModal, setShowScadenzeModal] = useState(false);
 
+  const [anniArchiviabili, setAnniArchiviabili] = useState<number[]>([]);
+const [anniEliminabili, setAnniEliminabili] = useState<number[]>([]);
+
   const [scadenzeAdempimento, setScadenzeAdempimento] =
     useState<ScadenzeAdempimentoState>(
       buildDefaultScadenzeAdempimento(currentYear)
@@ -146,6 +149,31 @@ export default function GenerazioneScadenzariPage() {
   useEffect(() => {
     setScadenzeAdempimento(buildDefaultScadenzeAdempimento(annoGenerazione));
   }, [annoGenerazione]);
+
+  useEffect(() => {
+  if (!loading) {
+    loadAnniDisponibili();
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [loading, scadenzariFlags]);
+
+useEffect(() => {
+  if (
+    anniArchiviabili.length > 0 &&
+    !anniArchiviabili.includes(annoArchiviazione)
+  ) {
+    setAnnoArchiviazione(anniArchiviabili[0]);
+  }
+}, [anniArchiviabili, annoArchiviazione]);
+
+useEffect(() => {
+  if (
+    anniEliminabili.length > 0 &&
+    !anniEliminabili.includes(annoEliminazione)
+  ) {
+    setAnnoEliminazione(anniEliminabili[0]);
+  }
+}, [anniEliminabili, annoEliminazione]);
 
   const anni = useMemo(
     () => Array.from({ length: 10 }, (_, i) => currentYear - 5 + i),
@@ -223,6 +251,62 @@ export default function GenerazioneScadenzariPage() {
     return errors;
   };
 
+  const loadAnniDisponibili = async () => {
+  try {
+    const selezionati = getSelectedScadenzari();
+
+    if (selezionati.length === 0) {
+      setAnniArchiviabili([]);
+      setAnniEliminabili([]);
+      return;
+    }
+
+    const anniArchSet = new Set<number>();
+    const anniElimSet = new Set<number>();
+
+    for (const item of selezionati) {
+      const { data: dataArch, error: errorArch } = await supabase
+        .from(item.table as any)
+        .select("anno_riferimento")
+        .eq("archiviato", false);
+
+      if (errorArch) throw errorArch;
+
+      (((dataArch ?? []) as any[]) || []).forEach((row) => {
+        if (typeof row.anno_riferimento === "number") {
+          anniArchSet.add(row.anno_riferimento);
+        }
+      });
+
+      const { data: dataElim, error: errorElim } = await supabase
+        .from(item.table as any)
+        .select("anno_riferimento")
+        .eq("archiviato", true);
+
+      if (errorElim) throw errorElim;
+
+      (((dataElim ?? []) as any[]) || []).forEach((row) => {
+        if (typeof row.anno_riferimento === "number") {
+          anniElimSet.add(row.anno_riferimento);
+        }
+      });
+    }
+
+    const archiviabili = Array.from(anniArchSet).sort((a, b) => b - a);
+    const eliminabili = Array.from(anniElimSet).sort((a, b) => b - a);
+
+    setAnniArchiviabili(archiviabili);
+    setAnniEliminabili(eliminabili);
+  } catch (error) {
+    console.error("Errore caricamento anni disponibili:", error);
+    toast({
+      title: "Errore",
+      description: "Impossibile caricare gli anni disponibili",
+      variant: "destructive",
+    });
+  }
+};
+  
   const handleArchivia = async () => {
     const selezionati = getSelectedScadenzari();
 
@@ -986,23 +1070,28 @@ export default function GenerazioneScadenzariPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="anno_archiviazione">Anno da Archiviare</Label>
-                <Select
-                  value={annoArchiviazione.toString()}
-                  onValueChange={(value) =>
-                    setAnnoArchiviazione(parseInt(value))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {anni.map((anno) => (
-                      <SelectItem key={anno} value={anno.toString()}>
-                        {anno}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+               <Select
+  value={annoArchiviazione.toString()}
+  onValueChange={(value) => setAnnoArchiviazione(parseInt(value))}
+  disabled={anniArchiviabili.length === 0}
+>
+  <SelectTrigger>
+    <SelectValue
+      placeholder={
+        anniArchiviabili.length === 0
+          ? "Nessun anno archiviabile"
+          : "Seleziona anno"
+      }
+    />
+  </SelectTrigger>
+  <SelectContent>
+    {anniArchiviabili.map((anno) => (
+      <SelectItem key={anno} value={anno.toString()}>
+        {anno}
+      </SelectItem>
+    ))}
+  </SelectContent>
+</Select>
               </div>
 
               <div className="space-y-3">
@@ -1036,7 +1125,7 @@ export default function GenerazioneScadenzariPage() {
 
               <Button
                 onClick={handleArchivia}
-                disabled={processing}
+                disabled={processing || anniArchiviabili.length === 0}
                 variant="destructive"
                 className="w-full"
               >
@@ -1188,23 +1277,28 @@ export default function GenerazioneScadenzariPage() {
                 <Label htmlFor="anno_eliminazione">
                   Anno Archivi da Eliminare
                 </Label>
-                <Select
-                  value={annoEliminazione.toString()}
-                  onValueChange={(value) =>
-                    setAnnoEliminazione(parseInt(value))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {anni.map((anno) => (
-                      <SelectItem key={anno} value={anno.toString()}>
-                        {anno}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+               <Select
+  value={annoEliminazione.toString()}
+  onValueChange={(value) => setAnnoEliminazione(parseInt(value))}
+  disabled={anniEliminabili.length === 0}
+>
+  <SelectTrigger>
+    <SelectValue
+      placeholder={
+        anniEliminabili.length === 0
+          ? "Nessun anno eliminabile"
+          : "Seleziona anno"
+      }
+    />
+  </SelectTrigger>
+  <SelectContent>
+    {anniEliminabili.map((anno) => (
+      <SelectItem key={anno} value={anno.toString()}>
+        {anno}
+      </SelectItem>
+    ))}
+  </SelectContent>
+</Select>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1212,7 +1306,7 @@ export default function GenerazioneScadenzariPage() {
                   <Button
                     key={`del_${item.key}`}
                     onClick={() => handleEliminaArchivi(item.label, item.table)}
-                    disabled={processing}
+                    disabled={processing || anniEliminabili.length === 0}
                     variant="outline"
                     className="border-orange-300 hover:bg-orange-50"
                   >
