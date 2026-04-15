@@ -2,7 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/lib/supabase/client";
 import { authService } from "@/services/authService";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -56,8 +62,18 @@ const SCADENZARI_CONFIG: ScadenzarioConfig[] = [
   { key: "iva", label: "IVA", table: "tbscadiva", hasScadenzaAdempimento: true },
   { key: "ccgg", label: "CCGG", table: "tbscadccgg", hasScadenzaAdempimento: true },
   { key: "cu", label: "CU", table: "tbscadcu", hasScadenzaAdempimento: true },
-  { key: "fiscali", label: "Fiscali", table: "tbscadfiscali", hasScadenzaAdempimento: true },
-  { key: "bilanci", label: "Bilanci", table: "tbscadbilanci", hasScadenzaAdempimento: true },
+  {
+    key: "fiscali",
+    label: "Fiscali",
+    table: "tbscadfiscali",
+    hasScadenzaAdempimento: true,
+  },
+  {
+    key: "bilanci",
+    label: "Bilanci",
+    table: "tbscadbilanci",
+    hasScadenzaAdempimento: true,
+  },
   {
     key: "modello770",
     label: "Modello 770",
@@ -149,6 +165,7 @@ export default function GenerazioneScadenzariPage() {
   const checkAuth = async () => {
     try {
       const authUser = await authService.getCurrentUser();
+
       if (!authUser || !authUser.id) {
         router.push("/login");
         return;
@@ -193,12 +210,15 @@ export default function GenerazioneScadenzariPage() {
     if (scadenzariFlags.iva && !scadenzeAdempimento.iva) errors.push("IVA");
     if (scadenzariFlags.ccgg && !scadenzeAdempimento.ccgg) errors.push("CCGG");
     if (scadenzariFlags.cu && !scadenzeAdempimento.cu) errors.push("CU");
-    if (scadenzariFlags.fiscali && !scadenzeAdempimento.fiscali)
+    if (scadenzariFlags.fiscali && !scadenzeAdempimento.fiscali) {
       errors.push("Fiscali");
-    if (scadenzariFlags.bilanci && !scadenzeAdempimento.bilanci)
+    }
+    if (scadenzariFlags.bilanci && !scadenzeAdempimento.bilanci) {
       errors.push("Bilanci");
-    if (scadenzariFlags.modello770 && !scadenzeAdempimento.modello770)
+    }
+    if (scadenzariFlags.modello770 && !scadenzeAdempimento.modello770) {
       errors.push("Modello 770");
+    }
 
     return errors;
   };
@@ -341,22 +361,6 @@ export default function GenerazioneScadenzariPage() {
 
       const currentStudioId = utenteData.studio_id;
 
-      const { data: clienti, error: clientiError } = await supabase
-        .from("tbclienti")
-        .select("*")
-        .eq("attivo", true)
-        .eq("studio_id", currentStudioId);
-
-      if (clientiError) throw clientiError;
-
-      if (!clienti || clienti.length === 0) {
-        toast({
-          title: "Attenzione",
-          description: "Nessun cliente attivo trovato",
-        });
-        return;
-      }
-
       let generati = 0;
       let errori = 0;
 
@@ -375,12 +379,32 @@ export default function GenerazioneScadenzariPage() {
       const bilanciAlert1 = subtractDays(scadenzeAdempimento.bilanci, 15);
       const bilanciAlert2 = subtractDays(scadenzeAdempimento.bilanci, 7);
 
-      const modello770Alert1 = subtractDays(scadenzeAdempimento.modello770, 15);
-      const modello770Alert2 = subtractDays(scadenzeAdempimento.modello770, 7);
+      const modello770Alert1 = subtractDays(
+        scadenzeAdempimento.modello770,
+        15
+      );
+      const modello770Alert2 = subtractDays(
+        scadenzeAdempimento.modello770,
+        7
+      );
 
-      for (const cliente of clienti) {
-        try {
-          if (scadenzariFlags.iva && cliente.flag_iva) {
+      const getClientiByFlag = async (flagColumn: string) => {
+        const { data, error } = await supabase
+          .from("tbclienti")
+          .select("*")
+          .eq("attivo", true)
+          .eq("studio_id", currentStudioId)
+          .eq(flagColumn, true);
+
+        if (error) throw error;
+        return data || [];
+      };
+
+      if (scadenzariFlags.iva) {
+        const clientiIva = await getClientiByFlag("flag_iva");
+
+        for (const cliente of clientiIva) {
+          try {
             const { data: existing } = await supabase
               .from("tbscadiva")
               .select("id")
@@ -406,15 +430,28 @@ export default function GenerazioneScadenzariPage() {
                 data_invio_alert_2: null,
               });
 
-              if (!error) generati++;
-              else {
+              if (!error) {
+                generati++;
+              } else {
                 console.error("Errore inserimento IVA:", error);
                 errori++;
               }
             }
+          } catch (error) {
+            console.error(
+              `Errore elaborazione IVA ${cliente.ragione_sociale}:`,
+              error
+            );
+            errori++;
           }
+        }
+      }
 
-          if (scadenzariFlags.ccgg && cliente.flag_ccgg) {
+      if (scadenzariFlags.ccgg) {
+        const clientiCcgg = await getClientiByFlag("flag_ccgg");
+
+        for (const cliente of clientiCcgg) {
+          try {
             const { data: existing } = await supabase
               .from("tbscadccgg")
               .select("id")
@@ -423,32 +460,47 @@ export default function GenerazioneScadenzariPage() {
               .maybeSingle();
 
             if (!existing) {
-              const { error } = await supabase.from("tbscadccgg" as any).insert({
-                cliente_id: cliente.id,
-                anno_riferimento: annoGenerazione,
-                archiviato: false,
-                studio_id: currentStudioId,
-                nominativo: cliente.ragione_sociale,
-                utente_operatore_id: cliente.utente_operatore_id,
-                conferma_riga: false,
-                data_scadenza_adempimento: scadenzeAdempimento.ccgg,
-                data_avviso_1: ccggAlert1,
-                data_avviso_2: ccggAlert2,
-                alert_1_inviato: false,
-                alert_2_inviato: false,
-                data_invio_alert_1: null,
-                data_invio_alert_2: null,
-              });
+              const { error } = await supabase
+                .from("tbscadccgg" as any)
+                .insert({
+                  cliente_id: cliente.id,
+                  anno_riferimento: annoGenerazione,
+                  archiviato: false,
+                  studio_id: currentStudioId,
+                  nominativo: cliente.ragione_sociale,
+                  utente_operatore_id: cliente.utente_operatore_id,
+                  conferma_riga: false,
+                  data_scadenza_adempimento: scadenzeAdempimento.ccgg,
+                  data_avviso_1: ccggAlert1,
+                  data_avviso_2: ccggAlert2,
+                  alert_1_inviato: false,
+                  alert_2_inviato: false,
+                  data_invio_alert_1: null,
+                  data_invio_alert_2: null,
+                });
 
-              if (!error) generati++;
-              else {
+              if (!error) {
+                generati++;
+              } else {
                 console.error("Errore inserimento CCGG:", error);
                 errori++;
               }
             }
+          } catch (error) {
+            console.error(
+              `Errore elaborazione CCGG ${cliente.ragione_sociale}:`,
+              error
+            );
+            errori++;
           }
+        }
+      }
 
-          if (scadenzariFlags.cu && cliente.flag_cu) {
+      if (scadenzariFlags.cu) {
+        const clientiCu = await getClientiByFlag("flag_cu");
+
+        for (const cliente of clientiCu) {
+          try {
             const { data: existing } = await supabase
               .from("tbscadcu")
               .select("id")
@@ -474,15 +526,28 @@ export default function GenerazioneScadenzariPage() {
                 data_invio_alert_2: null,
               });
 
-              if (!error) generati++;
-              else {
+              if (!error) {
+                generati++;
+              } else {
                 console.error("Errore inserimento CU:", error);
                 errori++;
               }
             }
+          } catch (error) {
+            console.error(
+              `Errore elaborazione CU ${cliente.ragione_sociale}:`,
+              error
+            );
+            errori++;
           }
+        }
+      }
 
-          if (scadenzariFlags.fiscali && cliente.flag_fiscali) {
+      if (scadenzariFlags.fiscali) {
+        const clientiFiscali = await getClientiByFlag("flag_fiscali");
+
+        for (const cliente of clientiFiscali) {
+          try {
             const { data: existing } = await supabase
               .from("tbscadfiscali")
               .select("id")
@@ -491,33 +556,48 @@ export default function GenerazioneScadenzariPage() {
               .maybeSingle();
 
             if (!existing) {
-              const { error } = await supabase.from("tbscadfiscali" as any).insert({
-                cliente_id: cliente.id,
-                anno_riferimento: annoGenerazione,
-                archiviato: false,
-                studio_id: currentStudioId,
-                nominativo: cliente.ragione_sociale,
-                utente_operatore_id: cliente.utente_operatore_id,
-                tipo_redditi: cliente.tipo_redditi,
-                conferma_riga: false,
-                data_scadenza_adempimento: scadenzeAdempimento.fiscali,
-                data_avviso_1: fiscaliAlert1,
-                data_avviso_2: fiscaliAlert2,
-                alert_1_inviato: false,
-                alert_2_inviato: false,
-                data_invio_alert_1: null,
-                data_invio_alert_2: null,
-              });
+              const { error } = await supabase
+                .from("tbscadfiscali" as any)
+                .insert({
+                  cliente_id: cliente.id,
+                  anno_riferimento: annoGenerazione,
+                  archiviato: false,
+                  studio_id: currentStudioId,
+                  nominativo: cliente.ragione_sociale,
+                  utente_operatore_id: cliente.utente_operatore_id,
+                  tipo_redditi: cliente.tipo_redditi,
+                  conferma_riga: false,
+                  data_scadenza_adempimento: scadenzeAdempimento.fiscali,
+                  data_avviso_1: fiscaliAlert1,
+                  data_avviso_2: fiscaliAlert2,
+                  alert_1_inviato: false,
+                  alert_2_inviato: false,
+                  data_invio_alert_1: null,
+                  data_invio_alert_2: null,
+                });
 
-              if (!error) generati++;
-              else {
+              if (!error) {
+                generati++;
+              } else {
                 console.error("Errore inserimento Fiscali:", error);
                 errori++;
               }
             }
+          } catch (error) {
+            console.error(
+              `Errore elaborazione Fiscali ${cliente.ragione_sociale}:`,
+              error
+            );
+            errori++;
           }
+        }
+      }
 
-          if (scadenzariFlags.bilanci && cliente.flag_bilancio) {
+      if (scadenzariFlags.bilanci) {
+        const clientiBilanci = await getClientiByFlag("flag_bilancio");
+
+        for (const cliente of clientiBilanci) {
+          try {
             const { data: existing } = await supabase
               .from("tbscadbilanci")
               .select("id")
@@ -526,32 +606,47 @@ export default function GenerazioneScadenzariPage() {
               .maybeSingle();
 
             if (!existing) {
-              const { error } = await supabase.from("tbscadbilanci" as any).insert({
-                cliente_id: cliente.id,
-                anno_riferimento: annoGenerazione,
-                archiviato: false,
-                studio_id: currentStudioId,
-                nominativo: cliente.ragione_sociale,
-                utente_operatore_id: cliente.utente_operatore_id,
-                conferma_riga: false,
-                data_scadenza_adempimento: scadenzeAdempimento.bilanci,
-                data_avviso_1: bilanciAlert1,
-                data_avviso_2: bilanciAlert2,
-                alert_1_inviato: false,
-                alert_2_inviato: false,
-                data_invio_alert_1: null,
-                data_invio_alert_2: null,
-              });
+              const { error } = await supabase
+                .from("tbscadbilanci" as any)
+                .insert({
+                  cliente_id: cliente.id,
+                  anno_riferimento: annoGenerazione,
+                  archiviato: false,
+                  studio_id: currentStudioId,
+                  nominativo: cliente.ragione_sociale,
+                  utente_operatore_id: cliente.utente_operatore_id,
+                  conferma_riga: false,
+                  data_scadenza_adempimento: scadenzeAdempimento.bilanci,
+                  data_avviso_1: bilanciAlert1,
+                  data_avviso_2: bilanciAlert2,
+                  alert_1_inviato: false,
+                  alert_2_inviato: false,
+                  data_invio_alert_1: null,
+                  data_invio_alert_2: null,
+                });
 
-              if (!error) generati++;
-              else {
+              if (!error) {
+                generati++;
+              } else {
                 console.error("Errore inserimento Bilanci:", error);
                 errori++;
               }
             }
+          } catch (error) {
+            console.error(
+              `Errore elaborazione Bilanci ${cliente.ragione_sociale}:`,
+              error
+            );
+            errori++;
           }
+        }
+      }
 
-          if (scadenzariFlags.modello770 && cliente.flag_770) {
+      if (scadenzariFlags.modello770) {
+        const clienti770 = await getClientiByFlag("flag_770");
+
+        for (const cliente of clienti770) {
+          try {
             const { data: existing } = await supabase
               .from("tbscad770")
               .select("id")
@@ -579,15 +674,28 @@ export default function GenerazioneScadenzariPage() {
                 data_invio_alert_2: null,
               });
 
-              if (!error) generati++;
-              else {
+              if (!error) {
+                generati++;
+              } else {
                 console.error("Errore inserimento 770:", error);
                 errori++;
               }
             }
+          } catch (error) {
+            console.error(
+              `Errore elaborazione 770 ${cliente.ragione_sociale}:`,
+              error
+            );
+            errori++;
           }
+        }
+      }
 
-          if (scadenzariFlags.lipe && cliente.flag_lipe) {
+      if (scadenzariFlags.lipe) {
+        const clientiLipe = await getClientiByFlag("flag_lipe");
+
+        for (const cliente of clientiLipe) {
+          try {
             const { data: existing } = await supabase
               .from("tbscadlipe")
               .select("id")
@@ -605,15 +713,28 @@ export default function GenerazioneScadenzariPage() {
                 utente_operatore_id: cliente.utente_operatore_id,
               });
 
-              if (!error) generati++;
-              else {
+              if (!error) {
+                generati++;
+              } else {
                 console.error("Errore inserimento LIPE:", error);
                 errori++;
               }
             }
+          } catch (error) {
+            console.error(
+              `Errore elaborazione LIPE ${cliente.ragione_sociale}:`,
+              error
+            );
+            errori++;
           }
+        }
+      }
 
-          if (scadenzariFlags.esterometro && cliente.flag_esterometro) {
+      if (scadenzariFlags.esterometro) {
+        const clientiEstero = await getClientiByFlag("flag_esterometro");
+
+        for (const cliente of clientiEstero) {
+          try {
             const { data: existing } = await supabase
               .from("tbscadestero")
               .select("id")
@@ -622,24 +743,39 @@ export default function GenerazioneScadenzariPage() {
               .maybeSingle();
 
             if (!existing) {
-              const { error } = await supabase.from("tbscadestero" as any).insert({
-                cliente_id: cliente.id,
-                anno_riferimento: annoGenerazione,
-                archiviato: false,
-                studio_id: currentStudioId,
-                nominativo: cliente.ragione_sociale,
-                utente_operatore_id: cliente.utente_operatore_id,
-              });
+              const { error } = await supabase
+                .from("tbscadestero" as any)
+                .insert({
+                  cliente_id: cliente.id,
+                  anno_riferimento: annoGenerazione,
+                  archiviato: false,
+                  studio_id: currentStudioId,
+                  nominativo: cliente.ragione_sociale,
+                  utente_operatore_id: cliente.utente_operatore_id,
+                });
 
-              if (!error) generati++;
-              else {
+              if (!error) {
+                generati++;
+              } else {
                 console.error("Errore inserimento Esterometro:", error);
                 errori++;
               }
             }
+          } catch (error) {
+            console.error(
+              `Errore elaborazione Esterometro ${cliente.ragione_sociale}:`,
+              error
+            );
+            errori++;
           }
+        }
+      }
 
-          if (scadenzariFlags.proforma && cliente.flag_proforma) {
+      if (scadenzariFlags.proforma) {
+        const clientiProforma = await getClientiByFlag("flag_proforma");
+
+        for (const cliente of clientiProforma) {
+          try {
             const { data: existing } = await supabase
               .from("tbscadproforma")
               .select("id")
@@ -648,24 +784,39 @@ export default function GenerazioneScadenzariPage() {
               .maybeSingle();
 
             if (!existing) {
-              const { error } = await supabase.from("tbscadproforma" as any).insert({
-                cliente_id: cliente.id,
-                anno_riferimento: annoGenerazione,
-                archiviato: false,
-                studio_id: currentStudioId,
-                nominativo: cliente.ragione_sociale,
-                utente_operatore_id: cliente.utente_operatore_id,
-              });
+              const { error } = await supabase
+                .from("tbscadproforma" as any)
+                .insert({
+                  cliente_id: cliente.id,
+                  anno_riferimento: annoGenerazione,
+                  archiviato: false,
+                  studio_id: currentStudioId,
+                  nominativo: cliente.ragione_sociale,
+                  utente_operatore_id: cliente.utente_operatore_id,
+                });
 
-              if (!error) generati++;
-              else {
+              if (!error) {
+                generati++;
+              } else {
                 console.error("Errore inserimento Proforma:", error);
                 errori++;
               }
             }
+          } catch (error) {
+            console.error(
+              `Errore elaborazione Proforma ${cliente.ragione_sociale}:`,
+              error
+            );
+            errori++;
           }
+        }
+      }
 
-          if (scadenzariFlags.imu && cliente.flag_imu) {
+      if (scadenzariFlags.imu) {
+        const clientiImu = await getClientiByFlag("flag_imu");
+
+        for (const cliente of clientiImu) {
+          try {
             const { data: existing } = await supabase
               .from("tbscadimu")
               .select("id")
@@ -691,19 +842,20 @@ export default function GenerazioneScadenzariPage() {
                 archiviato_da: null,
               });
 
-              if (!error) generati++;
-              else {
+              if (!error) {
+                generati++;
+              } else {
                 console.error("Errore inserimento IMU:", error);
                 errori++;
               }
             }
+          } catch (error) {
+            console.error(
+              `Errore elaborazione IMU ${cliente.ragione_sociale}:`,
+              error
+            );
+            errori++;
           }
-        } catch (error) {
-          console.error(
-            `Errore elaborazione cliente ${cliente.ragione_sociale}:`,
-            error
-          );
-          errori++;
         }
       }
 
@@ -1059,9 +1211,7 @@ export default function GenerazioneScadenzariPage() {
                 {SCADENZARI_CONFIG.map((item) => (
                   <Button
                     key={`del_${item.key}`}
-                    onClick={() =>
-                      handleEliminaArchivi(item.label, item.table)
-                    }
+                    onClick={() => handleEliminaArchivi(item.label, item.table)}
                     disabled={processing}
                     variant="outline"
                     className="border-orange-300 hover:bg-orange-50"
