@@ -1,474 +1,622 @@
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
-
-const studioId = "f9d3ca10-6134-4061-a2b4-0be74e8c7654";
 
 type ClienteOption = {
   id: string;
-  nominativo: string;
+  ragione_sociale: string | null;
+  nome?: string | null;
+  cognome?: string | null;
 };
 
-type UtenteOption = {
-  id: string;
-  nome: string;
-  cognome: string;
-};
-
-type ContrattoAffitto = {
-  id: string;
-  studio_id: string;
-  cliente_id: string;
-  utente_operatore_id?: string | null;
-  nominativo: string;
-  descrizione_immobile_locato?: string | null;
-  data_registrazione_atto: string;
-  durata_contratto_anni: number;
-  codice_identificativo_registrazione?: string | null;
-  importo_registrazione?: number | null;
-  contatore_anni: number;
-  data_prossima_scadenza: string;
-  alert1_inviato: boolean;
-  alert2_inviato: boolean;
-  alert3_inviato: boolean;
-  attivo: boolean;
-  contratto_concluso: boolean;
-  created_at?: string;
-  updated_at?: string;
-};
-
-type FormDataType = {
+type ContrattoFormData = {
   cliente_id: string;
   utente_operatore_id: string;
+  nominativo: string;
   descrizione_immobile_locato: string;
   data_registrazione_atto: string;
   durata_contratto_anni: string;
   codice_identificativo_registrazione: string;
   importo_registrazione: string;
+  contatore_anni: string;
+  data_prossima_scadenza: string;
+  alert1_inviato: boolean;
+  alert1_inviato_at: string;
+  alert2_inviato: boolean;
+  alert2_inviato_at: string;
+  alert3_inviato: boolean;
+  alert3_inviato_at: string;
+  attivo: boolean;
+  contratto_concluso: boolean;
 };
 
-const initialForm: FormDataType = {
+const emptyForm: ContrattoFormData = {
   cliente_id: "",
   utente_operatore_id: "",
+  nominativo: "",
   descrizione_immobile_locato: "",
   data_registrazione_atto: "",
   durata_contratto_anni: "",
   codice_identificativo_registrazione: "",
   importo_registrazione: "",
+  contatore_anni: "1",
+  data_prossima_scadenza: "",
+  alert1_inviato: false,
+  alert1_inviato_at: "",
+  alert2_inviato: false,
+  alert2_inviato_at: "",
+  alert3_inviato: false,
+  alert3_inviato_at: "",
+  attivo: true,
+  contratto_concluso: false,
 };
 
-function addOneYear(dateString: string) {
-  if (!dateString) return "";
-  const d = new Date(dateString);
-  if (Number.isNaN(d.getTime())) return "";
-  d.setFullYear(d.getFullYear() + 1);
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
+function addYearsToDate(dateString: string, years: number) {
+  if (!dateString || !years || Number.isNaN(years)) return "";
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return "";
+  date.setFullYear(date.getFullYear() + years);
+  return date.toISOString().slice(0, 10);
 }
 
-export default function ScadenzarioAffittiPage() {
+function formatDateTimeLocalInput(value?: string | null) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  const mm = pad(d.getMonth() + 1);
+  const dd = pad(d.getDate());
+  const hh = pad(d.getHours());
+  const mi = pad(d.getMinutes());
+  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+}
+
+function toNullableNumber(value: string) {
+  if (value === "" || value == null) return null;
+  const n = Number(String(value).replace(",", "."));
+  return Number.isNaN(n) ? null : n;
+}
+
+export default function NuovoContrattoAffittoPage() {
+  const router = useRouter();
+  const { id } = router.query;
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [studioId, setStudioId] = useState<string>("");
+  const [formData, setFormData] = useState<ContrattoFormData>(emptyForm);
   const [clienti, setClienti] = useState<ClienteOption[]>([]);
-  const [utenti, setUtenti] = useState<UtenteOption[]>([]);
-  const [contratti, setContratti] = useState<ContrattoAffitto[]>([]);
-  const [search, setSearch] = useState("");
-  const [formData, setFormData] = useState<FormDataType>(initialForm);
+
+  const isEdit = useMemo(() => typeof id === "string" && !!id, [id]);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (!router.isReady) return;
+    initialize();
+  }, [router.isReady, id]);
 
-  async function loadData() {
+  const initialize = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
       const supabase = getSupabaseClient();
 
-      const [clientiRes, utentiRes, contrattiRes] = await Promise.all([
-        (supabase as any)
-          .from("tbclienti")
-          .select("id, ragione_sociale, nominativo, nome, cognome")
-          .eq("studio_id", studioId)
-          .order("ragione_sociale", { ascending: true }),
-        (supabase as any)
-          .from("tbutenti")
-          .select("id, nome, cognome")
-          .order("cognome", { ascending: true }),
-        (supabase as any)
-          .from("tbscadaffitti")
-          .select("*")
-          .eq("studio_id", studioId)
-          .order("nominativo", { ascending: true }),
-      ]);
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-      if (clientiRes.error) throw clientiRes.error;
-      if (utentiRes.error) throw utentiRes.error;
-      if (contrattiRes.error) throw contrattiRes.error;
+      if (!user) {
+        console.error("Utente non autenticato");
+        setLoading(false);
+        return;
+      }
 
-      const clientiOptions: ClienteOption[] = (clientiRes.data || []).map((c: any) => ({
-        id: c.id,
-        nominativo:
-          c.ragione_sociale ||
-          c.nominativo ||
-          [c.cognome, c.nome].filter(Boolean).join(" ").trim() ||
-          c.id,
-      }));
+      const { data: studioUser, error: studioError } = await supabase
+        .from("tbutenti")
+        .select("studio_id")
+        .eq("id", user.id)
+        .single();
 
-      setClienti(clientiOptions);
-      setUtenti((utentiRes.data || []) as UtenteOption[]);
-      setContratti((contrattiRes.data || []) as ContrattoAffitto[]);
-    } catch (error) {
-      console.error("Errore caricamento scadenzario affitti:", error);
-      alert("Errore nel caricamento dei dati");
+      if (studioError || !studioUser?.studio_id) {
+        console.error("Errore recupero studio_id:", studioError);
+        setLoading(false);
+        return;
+      }
+
+      const currentStudioId = studioUser.studio_id as string;
+      setStudioId(currentStudioId);
+
+      await loadClienti(currentStudioId);
+
+      if (typeof id === "string" && id) {
+        await loadContratto(currentStudioId, id);
+      } else {
+        setFormData((prev) => ({
+          ...prev,
+          utente_operatore_id: user.id,
+        }));
+      }
+    } catch (err) {
+      console.error("Errore inizializzazione pagina affitti:", err);
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  const clientiMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    clienti.forEach((c) => {
-      map[c.id] = c.nominativo;
+  const loadClienti = async (currentStudioId: string) => {
+    const supabase = getSupabaseClient();
+
+    const { data, error } = await supabase
+      .from("tbclienti")
+      .select("id, ragione_sociale, nome, cognome")
+      .eq("studio_id", currentStudioId)
+      .order("ragione_sociale", { ascending: true });
+
+    if (error) {
+      console.error("Errore caricamento clienti:", error);
+      setClienti([]);
+      return;
+    }
+
+    setClienti((data as ClienteOption[]) || []);
+  };
+
+  const loadContratto = async (currentStudioId: string, recordId: string) => {
+    const supabase = getSupabaseClient();
+
+    const { data, error } = await supabase
+      .from("tbscadaffitti")
+      .select("*")
+      .eq("id", recordId)
+      .eq("studio_id", currentStudioId)
+      .single();
+
+    if (error || !data) {
+      console.error("Errore caricamento contratto:", error);
+      return;
+    }
+
+    setFormData({
+      cliente_id: data.cliente_id || "",
+      utente_operatore_id: data.utente_operatore_id || "",
+      nominativo: data.nominativo || "",
+      descrizione_immobile_locato: data.descrizione_immobile_locato || "",
+      data_registrazione_atto: data.data_registrazione_atto || "",
+      durata_contratto_anni: String(data.durata_contratto_anni ?? ""),
+      codice_identificativo_registrazione:
+        data.codice_identificativo_registrazione || "",
+      importo_registrazione:
+        data.importo_registrazione != null
+          ? String(data.importo_registrazione)
+          : "",
+      contatore_anni: String(data.contatore_anni ?? 1),
+      data_prossima_scadenza: data.data_prossima_scadenza || "",
+      alert1_inviato: !!data.alert1_inviato,
+      alert1_inviato_at: formatDateTimeLocalInput(data.alert1_inviato_at),
+      alert2_inviato: !!data.alert2_inviato,
+      alert2_inviato_at: formatDateTimeLocalInput(data.alert2_inviato_at),
+      alert3_inviato: !!data.alert3_inviato,
+      alert3_inviato_at: formatDateTimeLocalInput(data.alert3_inviato_at),
+      attivo: !!data.attivo,
+      contratto_concluso: !!data.contratto_concluso,
     });
-    return map;
-  }, [clienti]);
+  };
 
-  const utentiMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    utenti.forEach((u) => {
-      map[u.id] = [u.cognome, u.nome].filter(Boolean).join(" ").trim();
-    });
-    return map;
-  }, [utenti]);
-
-  const filteredContratti = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return contratti;
-
-    return contratti.filter((c) => {
-      return (
-        (c.nominativo || "").toLowerCase().includes(q) ||
-        (c.descrizione_immobile_locato || "").toLowerCase().includes(q) ||
-        (c.codice_identificativo_registrazione || "").toLowerCase().includes(q)
-      );
-    });
-  }, [contratti, search]);
-
-  function handleChange<K extends keyof FormDataType>(field: K, value: FormDataType[K]) {
+  const handleChange = (
+    field: keyof ContrattoFormData,
+    value: string | boolean
+  ) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
     }));
-  }
+  };
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  const handleClienteChange = async (clienteId: string) => {
+    handleChange("cliente_id", clienteId);
+
+    const clienteSelezionato = clienti.find((c) => c.id === clienteId);
+
+    if (!clienteSelezionato) {
+      setFormData((prev) => ({
+        ...prev,
+        cliente_id: clienteId,
+        nominativo: "",
+      }));
+      return;
+    }
+
+    const nominativo =
+      clienteSelezionato.ragione_sociale?.trim() ||
+      `${clienteSelezionato.cognome || ""} ${clienteSelezionato.nome || ""}`.trim();
+
+    setFormData((prev) => ({
+      ...prev,
+      cliente_id: clienteId,
+      nominativo,
+    }));
+  };
+
+  const handleCalcolaScadenza = () => {
+    const data = formData.data_registrazione_atto;
+    const anni = Number(formData.contatore_anni || "1");
+
+    if (!data || !anni || Number.isNaN(anni)) return;
+
+    const nuovaData = addYearsToDate(data, anni);
+    handleChange("data_prossima_scadenza", nuovaData);
+  };
+
+  const validateForm = () => {
+    if (!studioId) {
+      alert("Studio non disponibile.");
+      return false;
+    }
 
     if (!formData.cliente_id) {
-      alert("Seleziona il cliente");
-      return;
+      alert("Seleziona il cliente.");
+      return false;
+    }
+
+    if (!formData.nominativo.trim()) {
+      alert("Il campo nominativo è obbligatorio.");
+      return false;
     }
 
     if (!formData.data_registrazione_atto) {
-      alert("Inserisci la data registrazione atto");
-      return;
+      alert("La data di registrazione atto è obbligatoria.");
+      return false;
     }
 
     if (!formData.durata_contratto_anni || Number(formData.durata_contratto_anni) < 1) {
-      alert("Inserisci una durata contratto valida");
-      return;
+      alert("La durata contratto deve essere almeno 1 anno.");
+      return false;
     }
 
-    const nominativo = clientiMap[formData.cliente_id] || "";
-
-    if (!nominativo) {
-      alert("Impossibile determinare il nominativo del cliente");
-      return;
+    if (!formData.contatore_anni || Number(formData.contatore_anni) < 1) {
+      alert("Il contatore anni deve essere almeno 1.");
+      return false;
     }
 
-    const dataProssimaScadenza = addOneYear(formData.data_registrazione_atto);
+    if (!formData.data_prossima_scadenza) {
+      alert("La data prossima scadenza è obbligatoria.");
+      return false;
+    }
 
+    return true;
+  };
+
+  const handleSave = async () => {
+    if (!validateForm()) return;
+
+    setSaving(true);
     try {
-      setSaving(true);
       const supabase = getSupabaseClient();
 
       const payload = {
         studio_id: studioId,
         cliente_id: formData.cliente_id,
         utente_operatore_id: formData.utente_operatore_id || null,
-        nominativo,
-        descrizione_immobile_locato: formData.descrizione_immobile_locato || null,
+        nominativo: formData.nominativo.trim(),
+        descrizione_immobile_locato:
+          formData.descrizione_immobile_locato.trim() || null,
         data_registrazione_atto: formData.data_registrazione_atto,
         durata_contratto_anni: Number(formData.durata_contratto_anni),
         codice_identificativo_registrazione:
-          formData.codice_identificativo_registrazione || null,
-        importo_registrazione: formData.importo_registrazione
-          ? Number(formData.importo_registrazione)
+          formData.codice_identificativo_registrazione.trim() || null,
+        importo_registrazione: toNullableNumber(formData.importo_registrazione),
+        contatore_anni: Number(formData.contatore_anni),
+        data_prossima_scadenza: formData.data_prossima_scadenza,
+        alert1_inviato: !!formData.alert1_inviato,
+        alert1_inviato_at: formData.alert1_inviato
+          ? formData.alert1_inviato_at || new Date().toISOString()
           : null,
-        contatore_anni: 1,
-        data_prossima_scadenza: dataProssimaScadenza,
-        alert1_inviato: false,
-        alert2_inviato: false,
-        alert3_inviato: false,
-        attivo: true,
-        contratto_concluso: false,
+        alert2_inviato: !!formData.alert2_inviato,
+        alert2_inviato_at: formData.alert2_inviato
+          ? formData.alert2_inviato_at || new Date().toISOString()
+          : null,
+        alert3_inviato: !!formData.alert3_inviato,
+        alert3_inviato_at: formData.alert3_inviato
+          ? formData.alert3_inviato_at || new Date().toISOString()
+          : null,
+        attivo: !!formData.attivo,
+        contratto_concluso: !!formData.contratto_concluso,
       };
 
-      const { error } = await (supabase as any).from("tbscadaffitti").insert(payload);
+      if (isEdit && typeof id === "string") {
+        const { error } = await supabase
+          .from("tbscadaffitti")
+          .update(payload)
+          .eq("id", id)
+          .eq("studio_id", studioId);
 
-      if (error) throw error;
+        if (error) {
+          console.error("Errore aggiornamento contratto:", error);
+          alert("Errore durante il salvataggio.");
+          return;
+        }
 
-      setFormData(initialForm);
-      await loadData();
-      alert("Contratto di affitto registrato correttamente");
-    } catch (error) {
-      console.error("Errore salvataggio contratto affitto:", error);
-      alert("Errore durante il salvataggio");
+        alert("Contratto aggiornato correttamente.");
+      } else {
+        const { error } = await supabase.from("tbscadaffitti").insert(payload);
+
+        if (error) {
+          console.error("Errore inserimento contratto:", error);
+          alert("Errore durante il salvataggio.");
+          return;
+        }
+
+        alert("Contratto creato correttamente.");
+      }
+
+      router.push("/scadenze/affitti");
+    } catch (err) {
+      console.error("Errore salvataggio contratto:", err);
+      alert("Errore inatteso durante il salvataggio.");
     } finally {
       setSaving(false);
     }
-  }
+  };
 
-  async function handleToggleAttivo(record: ContrattoAffitto) {
-    try {
-      const supabase = getSupabaseClient();
-
-      const { error } = await (supabase as any)
-        .from("tbscadaffitti")
-        .update({
-          attivo: !record.attivo,
-          contratto_concluso: record.attivo ? true : false,
-        })
-        .eq("id", record.id);
-
-      if (error) throw error;
-      await loadData();
-    } catch (error) {
-      console.error("Errore aggiornamento stato contratto:", error);
-      alert("Errore aggiornamento stato contratto");
-    }
-  }
+  const handleBack = () => {
+    router.push("/scadenze/affitti");
+  };
 
   if (loading) {
-    return (
-      <div className="p-6">
-        <div>Caricamento scadenzario affitti...</div>
-      </div>
-    );
+    return <div className="p-6">Caricamento...</div>;
   }
 
   return (
-    <div className="p-4 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Scadenzario Contratti di Affitto</h1>
-        <p className="text-sm text-gray-600 mt-1">
-          Registrazione contratti e gestione rinnovi annuali F24
-        </p>
+    <div className="p-6">
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold">
+          {isEdit ? "Modifica contratto di affitto" : "Nuovo contratto di affitto"}
+        </h1>
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={handleBack}
+            className="rounded border px-4 py-2"
+          >
+            Indietro
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-60"
+          >
+            {saving ? "Salvataggio..." : "Salva"}
+          </button>
+        </div>
       </div>
 
-      <div className="border rounded bg-white p-4">
-        <h2 className="text-lg font-semibold mb-4">Nuovo contratto</h2>
+      <div className="grid grid-cols-1 gap-4 rounded border bg-white p-4 md:grid-cols-2">
+        <div>
+          <label className="mb-1 block text-sm font-medium">Cliente *</label>
+          <select
+            value={formData.cliente_id}
+            onChange={(e) => handleClienteChange(e.target.value)}
+            className="w-full rounded border px-3 py-2"
+          >
+            <option value="">Seleziona cliente</option>
+            {clienti.map((cliente) => {
+              const label =
+                cliente.ragione_sociale?.trim() ||
+                `${cliente.cognome || ""} ${cliente.nome || ""}`.trim() ||
+                "Senza nome";
 
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="flex flex-col">
-            <label className="text-sm font-medium mb-1">Cliente</label>
-            <select
-              value={formData.cliente_id}
-              onChange={(e) => handleChange("cliente_id", e.target.value)}
-              className="border rounded px-3 py-2"
-              required
-            >
-              <option value="">Seleziona cliente</option>
-              {clienti.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nominativo}
+              return (
+                <option key={cliente.id} value={cliente.id}>
+                  {label}
                 </option>
-              ))}
-            </select>
-          </div>
+              );
+            })}
+          </select>
+        </div>
 
-          <div className="flex flex-col">
-            <label className="text-sm font-medium mb-1">Operatore</label>
-            <select
-              value={formData.utente_operatore_id}
-              onChange={(e) => handleChange("utente_operatore_id", e.target.value)}
-              className="border rounded px-3 py-2"
-            >
-              <option value="">Seleziona operatore</option>
-              {utenti.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {[u.cognome, u.nome].filter(Boolean).join(" ").trim()}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium">Nominativo *</label>
+          <input
+            type="text"
+            value={formData.nominativo}
+            onChange={(e) => handleChange("nominativo", e.target.value)}
+            className="w-full rounded border px-3 py-2"
+          />
+        </div>
 
-          <div className="flex flex-col md:col-span-2">
-            <label className="text-sm font-medium mb-1">Descrizione immobile locato</label>
-            <input
-              type="text"
-              value={formData.descrizione_immobile_locato}
-              onChange={(e) =>
-                handleChange("descrizione_immobile_locato", e.target.value)
-              }
-              className="border rounded px-3 py-2"
-              placeholder="Es. Appartamento via Roma 10, interno 3"
-            />
-          </div>
+        <div className="md:col-span-2">
+          <label className="mb-1 block text-sm font-medium">
+            Descrizione immobile locato
+          </label>
+          <input
+            type="text"
+            value={formData.descrizione_immobile_locato}
+            onChange={(e) =>
+              handleChange("descrizione_immobile_locato", e.target.value)
+            }
+            className="w-full rounded border px-3 py-2"
+          />
+        </div>
 
-          <div className="flex flex-col">
-            <label className="text-sm font-medium mb-1">Data registrazione atto</label>
+        <div>
+          <label className="mb-1 block text-sm font-medium">
+            Data registrazione atto *
+          </label>
+          <input
+            type="date"
+            value={formData.data_registrazione_atto}
+            onChange={(e) =>
+              handleChange("data_registrazione_atto", e.target.value)
+            }
+            className="w-full rounded border px-3 py-2"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium">
+            Durata contratto anni *
+          </label>
+          <input
+            type="number"
+            min={1}
+            value={formData.durata_contratto_anni}
+            onChange={(e) =>
+              handleChange("durata_contratto_anni", e.target.value)
+            }
+            className="w-full rounded border px-3 py-2"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium">
+            Codice identificativo registrazione
+          </label>
+          <input
+            type="text"
+            value={formData.codice_identificativo_registrazione}
+            onChange={(e) =>
+              handleChange("codice_identificativo_registrazione", e.target.value)
+            }
+            className="w-full rounded border px-3 py-2"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium">
+            Importo registrazione
+          </label>
+          <input
+            type="number"
+            step="0.01"
+            value={formData.importo_registrazione}
+            onChange={(e) =>
+              handleChange("importo_registrazione", e.target.value)
+            }
+            className="w-full rounded border px-3 py-2"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium">Contatore anni *</label>
+          <input
+            type="number"
+            min={1}
+            value={formData.contatore_anni}
+            onChange={(e) => handleChange("contatore_anni", e.target.value)}
+            className="w-full rounded border px-3 py-2"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium">
+            Data prossima scadenza *
+          </label>
+          <div className="flex gap-2">
             <input
               type="date"
-              value={formData.data_registrazione_atto}
-              onChange={(e) => handleChange("data_registrazione_atto", e.target.value)}
-              className="border rounded px-3 py-2"
-              required
-            />
-          </div>
-
-          <div className="flex flex-col">
-            <label className="text-sm font-medium mb-1">Durata contratto (anni)</label>
-            <input
-              type="number"
-              min="1"
-              value={formData.durata_contratto_anni}
-              onChange={(e) => handleChange("durata_contratto_anni", e.target.value)}
-              className="border rounded px-3 py-2"
-              placeholder="Es. 4"
-              required
-            />
-          </div>
-
-          <div className="flex flex-col">
-            <label className="text-sm font-medium mb-1">
-              Codice identificativo registrazione
-            </label>
-            <input
-              type="text"
-              value={formData.codice_identificativo_registrazione}
+              value={formData.data_prossima_scadenza}
               onChange={(e) =>
-                handleChange("codice_identificativo_registrazione", e.target.value)
+                handleChange("data_prossima_scadenza", e.target.value)
               }
-              className="border rounded px-3 py-2"
+              className="w-full rounded border px-3 py-2"
             />
-          </div>
-
-          <div className="flex flex-col">
-            <label className="text-sm font-medium mb-1">Importo registrazione</label>
-            <input
-              type="number"
-              step="0.01"
-              value={formData.importo_registrazione}
-              onChange={(e) => handleChange("importo_registrazione", e.target.value)}
-              className="border rounded px-3 py-2"
-              placeholder="Es. 120.00"
-            />
-          </div>
-
-          <div className="md:col-span-2 flex justify-end">
             <button
-              type="submit"
-              disabled={saving}
-              className="bg-black text-white px-4 py-2 rounded disabled:opacity-50"
+              type="button"
+              onClick={handleCalcolaScadenza}
+              className="whitespace-nowrap rounded border px-3 py-2"
             >
-              {saving ? "Salvataggio..." : "Salva contratto"}
+              Calcola
             </button>
           </div>
-        </form>
+        </div>
       </div>
 
-      <div className="border rounded bg-white p-4">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-4">
-          <div>
-            <h2 className="text-lg font-semibold">Contratti registrati</h2>
-            <p className="text-sm text-gray-600">
-              Totale risultati: {filteredContratti.length}
-            </p>
+      <div className="mt-6 rounded border bg-white p-4">
+        <h2 className="mb-4 text-lg font-semibold">Alert annuali</h2>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="rounded border p-3">
+            <label className="mb-2 flex items-center gap-2 text-sm font-medium">
+              <input
+                type="checkbox"
+                checked={formData.alert1_inviato}
+                onChange={(e) => handleChange("alert1_inviato", e.target.checked)}
+              />
+              Alert 1 inviato
+            </label>
+
+            <input
+              type="datetime-local"
+              value={formData.alert1_inviato_at}
+              onChange={(e) => handleChange("alert1_inviato_at", e.target.value)}
+              className="w-full rounded border px-3 py-2"
+            />
           </div>
 
-          <div className="flex flex-col">
-            <label className="text-sm font-medium mb-1">Cerca</label>
+          <div className="rounded border p-3">
+            <label className="mb-2 flex items-center gap-2 text-sm font-medium">
+              <input
+                type="checkbox"
+                checked={formData.alert2_inviato}
+                onChange={(e) => handleChange("alert2_inviato", e.target.checked)}
+              />
+              Alert 2 inviato
+            </label>
+
             <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="border rounded px-3 py-2 min-w-[260px]"
-              placeholder="Cliente, immobile o codice registrazione..."
+              type="datetime-local"
+              value={formData.alert2_inviato_at}
+              onChange={(e) => handleChange("alert2_inviato_at", e.target.value)}
+              className="w-full rounded border px-3 py-2"
+            />
+          </div>
+
+          <div className="rounded border p-3">
+            <label className="mb-2 flex items-center gap-2 text-sm font-medium">
+              <input
+                type="checkbox"
+                checked={formData.alert3_inviato}
+                onChange={(e) => handleChange("alert3_inviato", e.target.checked)}
+              />
+              Alert 3 inviato
+            </label>
+
+            <input
+              type="datetime-local"
+              value={formData.alert3_inviato_at}
+              onChange={(e) => handleChange("alert3_inviato_at", e.target.value)}
+              className="w-full rounded border px-3 py-2"
             />
           </div>
         </div>
+      </div>
 
-        {filteredContratti.length === 0 ? (
-          <div className="text-sm text-gray-600">Nessun contratto trovato.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full border text-sm">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="p-2 text-left">Cliente</th>
-                  <th className="p-2 text-left">Operatore</th>
-                  <th className="p-2 text-left">Immobile</th>
-                  <th className="p-2 text-center">Data registrazione</th>
-                  <th className="p-2 text-center">Durata</th>
-                  <th className="p-2 text-center">Anno</th>
-                  <th className="p-2 text-center">Prossima scadenza</th>
-                  <th className="p-2 text-left">Codice registrazione</th>
-                  <th className="p-2 text-right">Importo</th>
-                  <th className="p-2 text-center">Stato</th>
-                  <th className="p-2 text-center">Azioni</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredContratti.map((c) => (
-                  <tr key={c.id} className="border-t">
-                    <td className="p-2">{c.nominativo}</td>
-                    <td className="p-2">
-                      {c.utente_operatore_id
-                        ? utentiMap[c.utente_operatore_id] || c.utente_operatore_id
-                        : ""}
-                    </td>
-                    <td className="p-2">{c.descrizione_immobile_locato || ""}</td>
-                    <td className="p-2 text-center">{c.data_registrazione_atto || ""}</td>
-                    <td className="p-2 text-center">{c.durata_contratto_anni}</td>
-                    <td className="p-2 text-center">{c.contatore_anni}</td>
-                    <td className="p-2 text-center">{c.data_prossima_scadenza}</td>
-                    <td className="p-2">
-                      {c.codice_identificativo_registrazione || ""}
-                    </td>
-                    <td className="p-2 text-right">
-                      {c.importo_registrazione !== null &&
-                      c.importo_registrazione !== undefined
-                        ? Number(c.importo_registrazione).toFixed(2)
-                        : ""}
-                    </td>
-                    <td className="p-2 text-center">
-                      <span
-                        className={`px-2 py-1 rounded text-xs font-medium ${
-                          c.attivo
-                            ? "bg-green-100 text-green-700"
-                            : "bg-gray-100 text-gray-600"
-                        }`}
-                      >
-                        {c.attivo ? "Attivo" : "Chiuso"}
-                      </span>
-                    </td>
-                    <td className="p-2 text-center">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleAttivo(c)}
-                        className="text-sm border rounded px-3 py-1 hover:bg-gray-50"
-                      >
-                        {c.attivo ? "Chiudi" : "Riattiva"}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <div className="mt-6 rounded border bg-white p-4">
+        <h2 className="mb-4 text-lg font-semibold">Stato contratto</h2>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <label className="flex items-center gap-2 text-sm font-medium">
+            <input
+              type="checkbox"
+              checked={formData.attivo}
+              onChange={(e) => handleChange("attivo", e.target.checked)}
+            />
+            Contratto attivo
+          </label>
+
+          <label className="flex items-center gap-2 text-sm font-medium">
+            <input
+              type="checkbox"
+              checked={formData.contratto_concluso}
+              onChange={(e) =>
+                handleChange("contratto_concluso", e.target.checked)
+              }
+            />
+            Contratto concluso
+          </label>
+        </div>
       </div>
     </div>
   );
