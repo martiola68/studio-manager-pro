@@ -147,7 +147,7 @@ export default function NuovoContrattoAffittoPage() {
 
     const { data, error } = await supabase
       .from("tbclienti")
-      .select("id, ragione_sociale, nome, cognome")
+      .select("id, ragione_sociale")
       .eq("studio_id", currentStudioId)
       .order("ragione_sociale", { ascending: true });
 
@@ -157,7 +157,7 @@ export default function NuovoContrattoAffittoPage() {
       return;
     }
 
-    setClienti((data as ClienteOption[]) || []);
+    setClienti(((data as unknown) as ClienteOption[]) || []);
   };
 
   const loadContratto = async (currentStudioId: string, recordId: string) => {
