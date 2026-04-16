@@ -33,54 +33,40 @@ type RigaRiepilogo = {
   stato_ccgg?: string | null;
   stato_cu?: string | null;
   stato_imu?: string | null;
+  confermata_iva?: boolean | null;
+  confermata_fiscali?: boolean | null;
+  confermata_bilanci?: boolean | null;
+  confermata_770?: boolean | null;
+  confermata_ccgg?: boolean | null;
+  confermata_cu?: boolean | null;
+  confermata_imu?: boolean | null;
 };
-
 type UtenteOption = {
   id: string;
   nome: string;
 };
 
 const getProgress = (r: RigaRiepilogo) => {
-  const stati = [
-    r.stato_iva,
-    r.stato_fiscali,
-    r.stato_bilanci,
-    r.stato_770,
-    r.stato_ccgg,
-    r.stato_cu,
-    r.stato_imu,
-  ].filter((s) => s !== null && s !== undefined && String(s).trim() !== "");
+  const items = [
+    { stato: r.stato_iva, confermata: r.confermata_iva },
+    { stato: r.stato_fiscali, confermata: r.confermata_fiscali },
+    { stato: r.stato_bilanci, confermata: r.confermata_bilanci },
+    { stato: r.stato_770, confermata: r.confermata_770 },
+    { stato: r.stato_ccgg, confermata: r.confermata_ccgg },
+    { stato: r.stato_cu, confermata: r.confermata_cu },
+    { stato: r.stato_imu, confermata: r.confermata_imu },
+  ].filter(
+    (item) =>
+      item.stato !== null &&
+      item.stato !== undefined &&
+      String(item.stato).trim() !== ""
+  );
 
-  if (stati.length === 0) return 0;
+  if (items.length === 0) return 0;
 
-  const score = stati.reduce((tot, stato) => {
-    const s = String(stato).toUpperCase().trim();
+  const completati = items.filter((item) => item.confermata === true).length;
 
-    if (
-      [
-        "INVIATO",
-        "COMUNICATO",
-        "DICHIARAZIONE PRESENTATA",
-        "COMPLETO",
-        "DEFINITIVO",
-        "APPROVATO",
-        "GENERATO",
-        "CALCOLATO",
-        "INSERITO",
-        "AUTONOMI",
-      ].includes(s)
-    ) {
-      return tot + 1;
-    }
-
-    if (["PREDISPOSTO", "IN CORSO"].includes(s)) {
-      return tot + 0.5;
-    }
-
-    return tot;
-  }, 0);
-
-  return Math.round((score / stati.length) * 100);
+  return Math.round((completati / items.length) * 100);
 };
 
 const getProgressColor = (percent: number) => {
