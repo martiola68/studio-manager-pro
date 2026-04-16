@@ -820,7 +820,6 @@ export default function ImuPage() {
 </tbody>
                 </table>
               </div>
-            </div>
 
             <div className="hidden print:block p-4">
               <table className="print-table">
