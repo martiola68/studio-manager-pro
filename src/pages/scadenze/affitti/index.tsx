@@ -62,7 +62,7 @@ export default function ScadenzarioAffittiIndex() {
     try {
       const supabase = getSupabaseClient();
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("tbscadaffitti")
         .select("*")
         .order("data_prossima_scadenza", { ascending: true });
