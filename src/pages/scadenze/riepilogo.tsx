@@ -323,5 +323,3 @@ const filteredRows = useMemo(() => {
         </div>
       )}
     </div>
-  );
-}
