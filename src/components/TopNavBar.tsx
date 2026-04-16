@@ -265,6 +265,7 @@ export function TopNavBar() {
         { label: "770", href: "/scadenze/modello-770", icon: null },
         { label: "LIPE", href: "/scadenze/lipe", icon: null },
         { label: "Esterometro", href: "/scadenze/esterometro", icon: null },
+        { label: "Affitti", href: "/scadenze/affitti" },
         { label: "Proforma", href: "/scadenze/proforma", icon: null },
       ],
     },
