@@ -73,7 +73,7 @@ export default function ScadenzarioAffittiIndex() {
         return;
       }
 
-      setContratti((data as ContrattoAffitto[]) || []);
+      setContratti(((data as unknown) as ContrattoAffitto[]) || []);
     } catch (err) {
       console.error("Errore inatteso caricamento contratti affitto:", err);
       setContratti([]);
