@@ -59,7 +59,7 @@ export default function ScadenzarioRiepilogo() {
       const supabase = getSupabaseClient();
 
       const { data, error } = await (supabase as any)
-        .from("vw_scadenzario_dashboard_societa")
+        .from("vw_scadenzario_riepilogativo_societa")
         .select("*")
         .eq("studio_id", studioId)
         .order("nominativo", { ascending: true });
@@ -126,23 +126,60 @@ export default function ScadenzarioRiepilogo() {
     .sort((a, b) => a.nome.localeCompare(b.nome, "it", { sensitivity: "base" }));
 }, [rows, utentiMap]);
 
-  const filteredRows = useMemo(() => {
-    return rows.filter((r) => {
-      const matchesSearch = (r.nominativo || "")
-        .toLowerCase()
-        .includes(search.trim().toLowerCase());
+const filteredRows = useMemo(() => {
+  const getStatoGenerale = (r: RigaRiepilogo) => {
+    const stati = [
+      r.stato_iva,
+      r.stato_fiscali,
+      r.stato_bilanci,
+      r.stato_770,
+      r.stato_ccgg,
+      r.stato_cu,
+      r.stato_imu,
+    ]
+      .filter(Boolean)
+      .map((s) => String(s).toUpperCase());
 
-      const matchesStato =
-        statoFilter === "TUTTI" ||
-        (r.stato_generale || "").toUpperCase() === statoFilter;
+    if (stati.length === 0) return "";
 
-      const matchesOperatore =
-        operatore === "TUTTI" || r.utente_operatore_id === operatore;
+    if (stati.includes("DA FARE")) return "DA FARE";
 
-      return matchesSearch && matchesStato && matchesOperatore;
-    });
-  }, [rows, search, statoFilter, operatore]);
+    const statiVerdi = [
+      "INVIATO",
+      "COMUNICATO",
+      "DICHIARAZIONE PRESENTATA",
+      "COMPLETO",
+      "DEFINITIVO",
+      "APPROVATO",
+      "GENERATO",
+      "CALCOLATO",
+      "INSERITO",
+      "AUTONOMI",
+    ];
 
+    const tuttiVerdi = stati.every((s) => statiVerdi.includes(s));
+    if (tuttiVerdi) return "COMPLETO";
+
+    return "IN CORSO";
+  };
+
+  return rows.filter((r) => {
+    const statoGenerale = getStatoGenerale(r);
+
+    const matchesSearch = (r.nominativo || "")
+      .toLowerCase()
+      .includes(search.trim().toLowerCase());
+
+    const matchesStato =
+      statoFilter === "TUTTI" || statoGenerale.toUpperCase() === statoFilter;
+
+    const matchesOperatore =
+      operatore === "TUTTI" || r.utente_operatore_id === operatore;
+
+    return matchesSearch && matchesStato && matchesOperatore;
+  });
+}, [rows, search, statoFilter, operatore]);
+  
   return (
     <div className="p-4">
       <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
@@ -223,7 +260,7 @@ export default function ScadenzarioRiepilogo() {
 
             <tbody>
               {filteredRows.map((r) => (
-                <tr key={r.cliente_id} className="border-t">
+                <tr key={`${r.cliente_id}-${r.nominativo}`} className="border-t">
                   <td className="p-2">{r.nominativo}</td>
 
                   <td className="p-2">
