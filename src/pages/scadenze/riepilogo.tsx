@@ -40,6 +40,55 @@ type UtenteOption = {
   nome: string;
 };
 
+const getProgress = (r: RigaRiepilogo) => {
+  const stati = [
+    r.stato_iva,
+    r.stato_fiscali,
+    r.stato_bilanci,
+    r.stato_770,
+    r.stato_ccgg,
+    r.stato_cu,
+    r.stato_imu,
+  ].filter((s) => s !== null && s !== undefined && String(s).trim() !== "");
+
+  if (stati.length === 0) return 0;
+
+  const score = stati.reduce((tot, stato) => {
+    const s = String(stato).toUpperCase().trim();
+
+    if (
+      [
+        "INVIATO",
+        "COMUNICATO",
+        "DICHIARAZIONE PRESENTATA",
+        "COMPLETO",
+        "DEFINITIVO",
+        "APPROVATO",
+        "GENERATO",
+        "CALCOLATO",
+        "INSERITO",
+        "AUTONOMI",
+      ].includes(s)
+    ) {
+      return tot + 1;
+    }
+
+    if (["PREDISPOSTO", "IN CORSO"].includes(s)) {
+      return tot + 0.5;
+    }
+
+    return tot;
+  }, 0);
+
+  return Math.round((score / stati.length) * 100);
+};
+
+const getProgressColor = (percent: number) => {
+  if (percent === 100) return "bg-green-100 text-green-700";
+  if (percent >= 50) return "bg-yellow-100 text-yellow-700";
+  return "bg-red-100 text-red-700";
+};
+
 export default function ScadenzarioRiepilogo() {
   const [rows, setRows] = useState<RigaRiepilogo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -109,77 +158,79 @@ export default function ScadenzarioRiepilogo() {
     }
   }
 
- const operatori = useMemo<UtenteOption[]>(() => {
-  const ids = [
-    ...new Set(
-      rows
-        .map((r) => r.utente_operatore_id)
-        .filter((v): v is string => !!v)
-    ),
-  ];
-
-  return ids
-    .map((id) => ({
-      id,
-      nome: utentiMap[id] || id,
-    }))
-    .sort((a, b) => a.nome.localeCompare(b.nome, "it", { sensitivity: "base" }));
-}, [rows, utentiMap]);
-
-const filteredRows = useMemo(() => {
-  const getStatoGenerale = (r: RigaRiepilogo) => {
-    const stati = [
-      r.stato_iva,
-      r.stato_fiscali,
-      r.stato_bilanci,
-      r.stato_770,
-      r.stato_ccgg,
-      r.stato_cu,
-      r.stato_imu,
-    ]
-      .filter(Boolean)
-      .map((s) => String(s).toUpperCase());
-
-    if (stati.length === 0) return "";
-
-    if (stati.includes("DA FARE")) return "DA FARE";
-
-    const statiVerdi = [
-      "INVIATO",
-      "COMUNICATO",
-      "DICHIARAZIONE PRESENTATA",
-      "COMPLETO",
-      "DEFINITIVO",
-      "APPROVATO",
-      "GENERATO",
-      "CALCOLATO",
-      "INSERITO",
-      "AUTONOMI",
+  const operatori = useMemo<UtenteOption[]>(() => {
+    const ids = [
+      ...new Set(
+        rows
+          .map((r) => r.utente_operatore_id)
+          .filter((v): v is string => !!v)
+      ),
     ];
 
-    const tuttiVerdi = stati.every((s) => statiVerdi.includes(s));
-    if (tuttiVerdi) return "COMPLETO";
+    return ids
+      .map((id) => ({
+        id,
+        nome: utentiMap[id] || id,
+      }))
+      .sort((a, b) =>
+        a.nome.localeCompare(b.nome, "it", { sensitivity: "base" })
+      );
+  }, [rows, utentiMap]);
 
-    return "IN CORSO";
-  };
+  const filteredRows = useMemo(() => {
+    const getStatoGenerale = (r: RigaRiepilogo) => {
+      const stati = [
+        r.stato_iva,
+        r.stato_fiscali,
+        r.stato_bilanci,
+        r.stato_770,
+        r.stato_ccgg,
+        r.stato_cu,
+        r.stato_imu,
+      ]
+        .filter(Boolean)
+        .map((s) => String(s).toUpperCase());
 
-  return rows.filter((r) => {
-    const statoGenerale = getStatoGenerale(r);
+      if (stati.length === 0) return "";
 
-    const matchesSearch = (r.nominativo || "")
-      .toLowerCase()
-      .includes(search.trim().toLowerCase());
+      if (stati.includes("DA FARE")) return "DA FARE";
 
-    const matchesStato =
-      statoFilter === "TUTTI" || statoGenerale.toUpperCase() === statoFilter;
+      const statiVerdi = [
+        "INVIATO",
+        "COMUNICATO",
+        "DICHIARAZIONE PRESENTATA",
+        "COMPLETO",
+        "DEFINITIVO",
+        "APPROVATO",
+        "GENERATO",
+        "CALCOLATO",
+        "INSERITO",
+        "AUTONOMI",
+      ];
 
-    const matchesOperatore =
-      operatore === "TUTTI" || r.utente_operatore_id === operatore;
+      const tuttiVerdi = stati.every((s) => statiVerdi.includes(s));
+      if (tuttiVerdi) return "COMPLETO";
 
-    return matchesSearch && matchesStato && matchesOperatore;
-  });
-}, [rows, search, statoFilter, operatore]);
-  
+      return "IN CORSO";
+    };
+
+    return rows.filter((r) => {
+      const statoGenerale = getStatoGenerale(r);
+
+      const matchesSearch = (r.nominativo || "")
+        .toLowerCase()
+        .includes(search.trim().toLowerCase());
+
+      const matchesStato =
+        statoFilter === "TUTTI" || statoGenerale.toUpperCase() === statoFilter;
+
+      const matchesOperatore =
+        operatore === "TUTTI" || r.utente_operatore_id === operatore;
+
+      return matchesSearch && matchesStato && matchesOperatore;
+    });
+  }, [rows, search, statoFilter, operatore]);
+
   return (
     <div className="p-4">
       <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
@@ -247,7 +298,7 @@ const filteredRows = useMemo(() => {
               <tr className="bg-gray-100">
                 <th className="p-2 text-left">Nominativo</th>
                 <th className="p-2 text-left">Operatore</th>
-                <th className="p-2">Stato</th>
+                <th className="p-2">Avanz.</th>
                 <th className="p-2">IVA</th>
                 <th className="p-2">Fiscali</th>
                 <th className="p-2">Bilanci</th>
@@ -259,67 +310,89 @@ const filteredRows = useMemo(() => {
             </thead>
 
             <tbody>
-              {filteredRows.map((r) => (
-                <tr key={`${r.cliente_id}-${r.nominativo}`} className="border-t">
-                  <td className="p-2">{r.nominativo}</td>
+              {filteredRows.map((r) => {
+                const progress = getProgress(r);
 
-                  <td className="p-2">
-                    {r.utente_operatore_id
-                      ? utentiMap[r.utente_operatore_id] || r.utente_operatore_id
-                      : ""}
-                  </td>
+                return (
+                  <tr key={`${r.cliente_id}-${r.nominativo}`} className="border-t">
+                    <td className="p-2">{r.nominativo}</td>
 
-                  <td
-                    className={`p-2 text-center ${getColor(
-                      r.stato_generale || ""
-                    )}`}
-                  >
-                    {r.stato_generale || ""}
-                  </td>
+                    <td className="p-2">
+                      {r.utente_operatore_id
+                        ? utentiMap[r.utente_operatore_id] || r.utente_operatore_id
+                        : ""}
+                    </td>
 
-                  <td className={`p-2 text-center ${getColor(r.stato_iva || "")}`}>
-                    {r.stato_iva || ""}
-                  </td>
+                    <td className="p-2 text-center">
+                      <div className="flex flex-col items-center gap-1">
+                        <span
+                          className={`px-2 py-1 rounded text-xs font-medium ${getProgressColor(
+                            progress
+                          )}`}
+                        >
+                          {progress}%
+                        </span>
+                        <div className="w-20 h-2 bg-gray-200 rounded overflow-hidden">
+                          <div
+                            className={`h-2 ${
+                              progress === 100
+                                ? "bg-green-500"
+                                : progress >= 50
+                                  ? "bg-yellow-500"
+                                  : "bg-red-500"
+                            }`}
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                      </div>
+                    </td>
 
-                  <td
-                    className={`p-2 text-center ${getColor(
-                      r.stato_fiscali || ""
-                    )}`}
-                  >
-                    {r.stato_fiscali || ""}
-                  </td>
+                    <td className={`p-2 text-center ${getColor(r.stato_iva || "")}`}>
+                      {r.stato_iva || ""}
+                    </td>
 
-                  <td
-                    className={`p-2 text-center ${getColor(
-                      r.stato_bilanci || ""
-                    )}`}
-                  >
-                    {r.stato_bilanci || ""}
-                  </td>
+                    <td
+                      className={`p-2 text-center ${getColor(
+                        r.stato_fiscali || ""
+                      )}`}
+                    >
+                      {r.stato_fiscali || ""}
+                    </td>
 
-                  <td className={`p-2 text-center ${getColor(r.stato_770 || "")}`}>
-                    {r.stato_770 || ""}
-                  </td>
+                    <td
+                      className={`p-2 text-center ${getColor(
+                        r.stato_bilanci || ""
+                      )}`}
+                    >
+                      {r.stato_bilanci || ""}
+                    </td>
 
-                  <td
-                    className={`p-2 text-center ${getColor(
-                      r.stato_ccgg || ""
-                    )}`}
-                  >
-                    {r.stato_ccgg || ""}
-                  </td>
+                    <td className={`p-2 text-center ${getColor(r.stato_770 || "")}`}>
+                      {r.stato_770 || ""}
+                    </td>
 
-                  <td className={`p-2 text-center ${getColor(r.stato_cu || "")}`}>
-                    {r.stato_cu || ""}
-                  </td>
+                    <td
+                      className={`p-2 text-center ${getColor(
+                        r.stato_ccgg || ""
+                      )}`}
+                    >
+                      {r.stato_ccgg || ""}
+                    </td>
 
-                  <td className={`p-2 text-center ${getColor(r.stato_imu || "")}`}>
-                    {r.stato_imu || ""}
-                  </td>
-                </tr>
-              ))}
+                    <td className={`p-2 text-center ${getColor(r.stato_cu || "")}`}>
+                      {r.stato_cu || ""}
+                    </td>
+
+                    <td className={`p-2 text-center ${getColor(r.stato_imu || "")}`}>
+                      {r.stato_imu || ""}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       )}
     </div>
+  );
+}
