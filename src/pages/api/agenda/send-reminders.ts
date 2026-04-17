@@ -119,7 +119,7 @@ export default async function handler(
 
         const { data: responsabile, error: responsabileError } = await supabase
           .from("tbutenti")
-          .select("nome, cognome, email")
+          .select("id, nome, cognome, email, microsoft_connection_id")
           .eq("id", masterRow.utente_id)
           .single();
 
@@ -221,6 +221,10 @@ export default async function handler(
           clienteNome,
           riunione_teams: masterRow.riunione_teams || false,
           link_teams: masterRow.link_teams || undefined,
+          senderUserId: String(responsabile.id),
+          microsoftConnectionId: responsabile.microsoft_connection_id
+            ? String(responsabile.microsoft_connection_id)
+            : undefined,
         });
 
         if (!result.success) {
