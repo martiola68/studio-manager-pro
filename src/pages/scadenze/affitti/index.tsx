@@ -14,6 +14,7 @@ type ContrattoAffittoRow = {
   importo_registrazione: number | null;
   contatore_anni: number;
   data_prossima_scadenza: string;
+  emailperalert: string | null;
   alert1_inviato: boolean;
   alert1_inviato_at: string | null;
   alert2_inviato: boolean;
@@ -22,7 +23,6 @@ type ContrattoAffittoRow = {
   alert3_inviato_at: string | null;
   attivo: boolean;
   contratto_concluso: boolean;
-  emailperalert: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -93,12 +93,8 @@ export default function ScadenzarioAffittiIndex() {
       const contrattiRows = ((data as unknown) as ContrattoAffittoRow[]) || [];
 
       const clienteIds = Array.from(
-        new Set(
-          contrattiRows
-            .map((r) => r.cliente_id)
-            .filter((v): v is string => !!v)
-        )
-      );
+        new Set(contrattiRows.map((r) => r.cliente_id).filter(Boolean))
+      ) as string[];
 
       const utenteIds = Array.from(
         new Set(
@@ -118,7 +114,7 @@ export default function ScadenzarioAffittiIndex() {
           .in("id", clienteIds);
 
         if (clientiError) {
-          console.error("Errore caricamento clienti affitti:", clientiError);
+          console.error("Errore caricamento clienti:", clientiError);
         } else {
           const clienti = ((clientiData as unknown) as ClienteLite[]) || [];
           clientiMap = new Map(clienti.map((c) => [c.id, c]));
@@ -132,7 +128,7 @@ export default function ScadenzarioAffittiIndex() {
           .in("id", utenteIds);
 
         if (utentiError) {
-          console.error("Errore caricamento utenti affitti:", utentiError);
+          console.error("Errore caricamento utenti:", utentiError);
         } else {
           const utenti = ((utentiData as unknown) as UtenteLite[]) || [];
           utentiMap = new Map(utenti.map((u) => [u.id, u]));
@@ -151,7 +147,7 @@ export default function ScadenzarioAffittiIndex() {
 
       setContratti(merged);
     } catch (err) {
-      console.error("Errore inatteso caricamento contratti affitto:", err);
+      console.error("Errore inatteso caricamento contratti:", err);
       setContratti([]);
     } finally {
       setLoading(false);
@@ -163,17 +159,17 @@ export default function ScadenzarioAffittiIndex() {
     if (!q) return contratti;
 
     return contratti.filter((row) => {
-      const searchable = [
+      const testo = [
         row.cliente_label,
-        row.descrizione_immobile_locato ?? "",
-        row.codice_identificativo_registrazione ?? "",
-        row.operatore_email ?? "",
-        row.emailperalert ?? "",
+        row.descrizione_immobile_locato || "",
+        row.codice_identificativo_registrazione || "",
+        row.operatore_email || "",
+        row.emailperalert || "",
       ]
         .join(" ")
         .toLowerCase();
 
-      return searchable.includes(q);
+      return testo.includes(q);
     });
   }, [contratti, search]);
 
@@ -215,9 +211,9 @@ export default function ScadenzarioAffittiIndex() {
             <tr>
               <th className="p-3 text-left">Cliente</th>
               <th className="p-3 text-left">Immobile locato</th>
-              <th className="p-3 text-left">Data registrazione</th>
+              <th className="p-3 text-left">Registrazione</th>
               <th className="p-3 text-left">Prossima scadenza</th>
-              <th className="p-3 text-left">Anno</th>
+              <th className="p-3 text-left">Annualità</th>
               <th className="p-3 text-left">Alert</th>
               <th className="p-3 text-left">Operatore</th>
               <th className="p-3 text-left">Email alert</th>
