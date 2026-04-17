@@ -10,7 +10,6 @@ type ClienteOption = {
 
 type ContattoOption = {
   id: string;
-  denominazione: string | null;
   nome: string | null;
   cognome: string | null;
   email: string | null;
@@ -163,12 +162,8 @@ function calcolaDateAlert(dataScadenza: string) {
 }
 
 function getContattoLabel(contatto: ContattoOption) {
-  const denominazione = contatto.denominazione?.trim();
-  if (denominazione) return denominazione;
-
-  const nominativo = `${contatto.cognome || ""} ${contatto.nome || ""}`.trim();
-  if (nominativo) return nominativo;
-
+  const fullName = `${contatto.cognome || ""} ${contatto.nome || ""}`.trim();
+  if (fullName) return fullName;
   return contatto.email || "Contatto";
 }
 
@@ -380,15 +375,16 @@ export default function NuovoContrattoAffittoPage() {
 
       let query = supabase
         .from("tbcontatti")
-        .select("id, denominazione, nome, cognome, email")
-        .eq("studio_id", studioId)
+        .select("id, nome, cognome, email")
         .not("email", "is", null)
-        .order("denominazione", { ascending: true })
+        .order("cognome", { ascending: true })
         .limit(20);
 
-      if (term.trim()) {
+      const trimmed = term.trim();
+
+      if (trimmed) {
         query = query.or(
-          `denominazione.ilike.%${term}%,nome.ilike.%${term}%,cognome.ilike.%${term}%,email.ilike.%${term}%`
+          `nome.ilike.%${trimmed}%,cognome.ilike.%${trimmed}%,email.ilike.%${trimmed}%`
         );
       }
 
@@ -842,7 +838,7 @@ export default function NuovoContrattoAffittoPage() {
 
       {showEmailModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-          <div className="w-full max-w-3xl rounded-lg bg-white shadow-xl">
+          <div className="w-full max-w-2xl rounded-lg bg-white shadow-xl">
             <div className="flex items-center justify-between border-b px-4 py-3">
               <h3 className="text-lg font-semibold">Seleziona email da tbcontatti</h3>
               <button
@@ -854,13 +850,13 @@ export default function NuovoContrattoAffittoPage() {
               </button>
             </div>
 
-            <div className="p-4">
+            <div className="max-h-[70vh] overflow-auto p-4">
               <div className="mb-4 flex gap-2">
                 <input
                   type="text"
                   value={emailSearch}
                   onChange={(e) => setEmailSearch(e.target.value)}
-                  placeholder="Cerca per nominativo o email"
+                  placeholder="Cerca per nome, cognome o email"
                   className="w-full rounded border px-3 py-2"
                 />
                 <button
@@ -918,7 +914,7 @@ export default function NuovoContrattoAffittoPage() {
 
       {showConduttoreModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-          <div className="w-full max-w-3xl rounded-lg bg-white shadow-xl">
+          <div className="w-full max-w-2xl rounded-lg bg-white shadow-xl">
             <div className="flex items-center justify-between border-b px-4 py-3">
               <h3 className="text-lg font-semibold">
                 Seleziona conduttore da tbclienti
@@ -932,7 +928,7 @@ export default function NuovoContrattoAffittoPage() {
               </button>
             </div>
 
-            <div className="p-4">
+            <div className="max-h-[70vh] overflow-auto p-4">
               <div className="mb-4 flex gap-2">
                 <input
                   type="text"
