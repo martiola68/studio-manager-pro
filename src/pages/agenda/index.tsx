@@ -1393,66 +1393,41 @@ const sendSingleNotifications = async (
 ) => {
   const { eventoService } = await import("@/services/eventoService");
 
-  const owner = utenti.find((u) => String(u.id) === String(ownerUserId)) || null;
+  const groupedRows = new Map<string, any[]>();
 
-  const targetUserIds = [
-    ...new Set(
-      [
-        ...(internalParticipantIds ?? []),
-        ...rows.map((r) => String(r?.utente_id || "")),
-      ]
-        .filter(Boolean)
-        .map((id) => String(id))
-    ),
-  ];
+  for (const row of rows ?? []) {
+    const groupKey = String(row?.gruppo_evento || row?.id || "");
+    if (!groupKey) continue;
 
-  const finalTargetUserIds =
-    targetUserIds.filter((id) => String(id) !== String(ownerUserId)).length > 0
-      ? targetUserIds.filter((id) => String(id) !== String(ownerUserId))
-      : [String(ownerUserId)];
+    if (!groupedRows.has(groupKey)) {
+      groupedRows.set(groupKey, []);
+    }
 
-  const sentKeys = new Set<string>();
+    groupedRows.get(groupKey)!.push(row);
+  }
 
-  for (const userId of finalTargetUserIds) {
-    const rowForUser = rows.find(
-      (r) => String(r?.utente_id || "") === String(userId)
-    );
+  for (const [, groupRows] of groupedRows.entries()) {
+    const masterRow =
+      groupRows.find((r) => String(r?.utente_id || "") === String(ownerUserId)) ||
+      groupRows[0];
 
-    if (!rowForUser?.id) continue;
+    if (!masterRow?.id) continue;
 
-    const groupKey = String(rowForUser.gruppo_evento || rowForUser.id);
-    const dedupeKey = `${groupKey}:${String(userId)}:${action}`;
-
-    if (sentKeys.has(dedupeKey)) continue;
-    sentKeys.add(dedupeKey);
-
-    const participantIds = toArrayOfStrings((rowForUser as any)?.partecipanti);
-
-    const participantUsers = participantIds
-      .map((id) => utenti.find((u) => String(u.id) === String(id)))
-      .filter((u): u is UtenteAgenda => Boolean(u));
-
-    const isOwnerFallback = String(userId) === String(ownerUserId);
-
-    const visibleParticipants = participantUsers.filter((u) =>
-      isOwnerFallback ? true : String(u.id) !== String(ownerUserId)
-    );
+    const participantIds = [
+      ...new Set(
+        [
+          String(ownerUserId),
+          ...toArrayOfStrings((masterRow as any)?.partecipanti),
+          ...(internalParticipantIds ?? []).map((id) => String(id)),
+          ...groupRows.map((r) => String(r?.utente_id || "")),
+        ].filter(Boolean)
+      ),
+    ];
 
     const payload = {
-      ...rowForUser,
+      ...masterRow,
       utente_id: ownerUserId,
-      utente: owner || rowForUser.utente,
-      responsabile_nome: owner ? `${owner.nome} ${owner.cognome}` : "",
-      partecipanti_notifica: visibleParticipants.map((u) => ({
-        id: u.id,
-        nome: u.nome,
-        cognome: u.cognome,
-        email: u.email,
-        settore: u.settore ?? null,
-      })),
-      partecipanti_nomi: visibleParticipants.map(
-        (u) => `${u.nome} ${u.cognome}`
-      ),
+      partecipanti: participantIds,
     };
 
     await eventoService.sendEventNotification(
