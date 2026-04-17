@@ -15,9 +15,12 @@ type ContrattoFormData = {
   durata_contratto_anni: string;
   codice_identificativo_registrazione: string;
   importo_registrazione: string;
+  emailperalert: string;
   contatore_anni: string;
   data_prossima_scadenza: string;
-  emailperalert: string;
+  alert1_data: string;
+  alert2_data: string;
+  alert3_data: string;
   alert1_inviato: boolean;
   alert1_inviato_at: string;
   alert2_inviato: boolean;
@@ -36,9 +39,12 @@ const emptyForm: ContrattoFormData = {
   durata_contratto_anni: "",
   codice_identificativo_registrazione: "",
   importo_registrazione: "",
-  contatore_anni: "1",
-  data_prossima_scadenza: "",
   emailperalert: "",
+  contatore_anni: "",
+  data_prossima_scadenza: "",
+  alert1_data: "",
+  alert2_data: "",
+  alert3_data: "",
   alert1_inviato: false,
   alert1_inviato_at: "",
   alert2_inviato: false,
@@ -49,12 +55,25 @@ const emptyForm: ContrattoFormData = {
   contratto_concluso: false,
 };
 
-function addYearsToDate(dateString: string, years: number) {
-  if (!dateString || !years || Number.isNaN(years)) return "";
-  const date = new Date(dateString);
-  if (Number.isNaN(date.getTime())) return "";
-  date.setFullYear(date.getFullYear() + years);
-  return date.toISOString().slice(0, 10);
+function addYears(dateString: string, yearsToAdd: number) {
+  const d = new Date(dateString);
+  if (Number.isNaN(d.getTime())) return "";
+  d.setFullYear(d.getFullYear() + yearsToAdd);
+  return d.toISOString().slice(0, 10);
+}
+
+function subtractDays(dateString: string, days: number) {
+  const d = new Date(dateString);
+  if (Number.isNaN(d.getTime())) return "";
+  d.setDate(d.getDate() - days);
+  return d.toISOString().slice(0, 10);
+}
+
+function formatDate(value?: string | null) {
+  if (!value) return "-";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "-";
+  return d.toLocaleDateString("it-IT");
 }
 
 function formatDateTimeLocalInput(value?: string | null) {
@@ -71,9 +90,65 @@ function formatDateTimeLocalInput(value?: string | null) {
 }
 
 function toNullableNumber(value: string) {
-  if (value === "" || value == null) return null;
+  if (!value) return null;
   const n = Number(String(value).replace(",", "."));
   return Number.isNaN(n) ? null : n;
+}
+
+function calcolaAnnualitaCorrente(
+  dataRegistrazione: string,
+  durataAnni: number,
+  today: Date = new Date()
+) {
+  if (!dataRegistrazione || !durataAnni || durataAnni < 1) {
+    return {
+      contatore_anni: "",
+      data_prossima_scadenza: "",
+      contratto_concluso: false,
+      attivo: true,
+    };
+  }
+
+  const oggi = new Date(today);
+  oggi.setHours(0, 0, 0, 0);
+
+  for (let annualita = 1; annualita <= durataAnni; annualita++) {
+    const scadenza = addYears(dataRegistrazione, annualita - 1);
+    const dataScadenza = new Date(scadenza);
+    dataScadenza.setHours(0, 0, 0, 0);
+
+    if (dataScadenza >= oggi) {
+      return {
+        contatore_anni: String(annualita),
+        data_prossima_scadenza: scadenza,
+        contratto_concluso: false,
+        attivo: true,
+      };
+    }
+  }
+
+  return {
+    contatore_anni: String(durataAnni),
+    data_prossima_scadenza: addYears(dataRegistrazione, durataAnni - 1),
+    contratto_concluso: true,
+    attivo: false,
+  };
+}
+
+function calcolaDateAlert(dataScadenza: string) {
+  if (!dataScadenza) {
+    return {
+      alert1_data: "",
+      alert2_data: "",
+      alert3_data: "",
+    };
+  }
+
+  return {
+    alert1_data: subtractDays(dataScadenza, 30),
+    alert2_data: subtractDays(dataScadenza, 15),
+    alert3_data: dataScadenza,
+  };
 }
 
 export default function NuovoContrattoAffittoPage() {
@@ -82,10 +157,10 @@ export default function NuovoContrattoAffittoPage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [studioId, setStudioId] = useState<string>("");
-  const [operatoreEmail, setOperatoreEmail] = useState<string>("");
-  const [formData, setFormData] = useState<ContrattoFormData>(emptyForm);
+  const [studioId, setStudioId] = useState("");
+  const [operatoreEmail, setOperatoreEmail] = useState("");
   const [clienti, setClienti] = useState<ClienteOption[]>([]);
+  const [formData, setFormData] = useState<ContrattoFormData>(emptyForm);
 
   const isEdit = useMemo(() => typeof id === "string" && !!id, [id]);
 
@@ -93,6 +168,41 @@ export default function NuovoContrattoAffittoPage() {
     if (!router.isReady) return;
     initialize();
   }, [router.isReady, id]);
+
+  useEffect(() => {
+    if (!formData.data_registrazione_atto || !formData.durata_contratto_anni) {
+      setFormData((prev) => ({
+        ...prev,
+        contatore_anni: "",
+        data_prossima_scadenza: "",
+        alert1_data: "",
+        alert2_data: "",
+        alert3_data: "",
+      }));
+      return;
+    }
+
+    const durata = Number(formData.durata_contratto_anni);
+    if (!durata || Number.isNaN(durata) || durata < 1) return;
+
+    const annualita = calcolaAnnualitaCorrente(
+      formData.data_registrazione_atto,
+      durata
+    );
+
+    const alerts = calcolaDateAlert(annualita.data_prossima_scadenza);
+
+    setFormData((prev) => ({
+      ...prev,
+      contatore_anni: annualita.contatore_anni,
+      data_prossima_scadenza: annualita.data_prossima_scadenza,
+      alert1_data: alerts.alert1_data,
+      alert2_data: alerts.alert2_data,
+      alert3_data: alerts.alert3_data,
+      attivo: annualita.attivo,
+      contratto_concluso: annualita.contratto_concluso,
+    }));
+  }, [formData.data_registrazione_atto, formData.durata_contratto_anni]);
 
   const initialize = async () => {
     setLoading(true);
@@ -127,7 +237,18 @@ export default function NuovoContrattoAffittoPage() {
       setStudioId(currentStudioId);
       setOperatoreEmail(utenteDb.email || user.email || "");
 
-      await loadClienti(currentStudioId);
+      const { data: clientiData, error: clientiError } = await supabase
+        .from("tbclienti")
+        .select("id, ragione_sociale")
+        .eq("studio_id", currentStudioId)
+        .order("ragione_sociale", { ascending: true });
+
+      if (clientiError) {
+        console.error("Errore caricamento clienti:", clientiError);
+        setClienti([]);
+      } else {
+        setClienti(((clientiData as unknown) as ClienteOption[]) || []);
+      }
 
       if (typeof id === "string" && id) {
         const { data: contratto, error: contrattoError } = await supabaseAny
@@ -140,6 +261,8 @@ export default function NuovoContrattoAffittoPage() {
         if (contrattoError || !contratto) {
           console.error("Errore caricamento contratto:", contrattoError);
         } else {
+          const alerts = calcolaDateAlert(contratto.data_prossima_scadenza || "");
+
           setFormData({
             cliente_id: contratto.cliente_id || "",
             utente_operatore_id: contratto.utente_operatore_id || user.id,
@@ -153,9 +276,12 @@ export default function NuovoContrattoAffittoPage() {
               contratto.importo_registrazione != null
                 ? String(contratto.importo_registrazione)
                 : "",
-            contatore_anni: String(contratto.contatore_anni ?? 1),
-            data_prossima_scadenza: contratto.data_prossima_scadenza || "",
             emailperalert: contratto.emailperalert || "",
+            contatore_anni: String(contratto.contatore_anni ?? ""),
+            data_prossima_scadenza: contratto.data_prossima_scadenza || "",
+            alert1_data: alerts.alert1_data,
+            alert2_data: alerts.alert2_data,
+            alert3_data: alerts.alert3_data,
             alert1_inviato: !!contratto.alert1_inviato,
             alert1_inviato_at: formatDateTimeLocalInput(
               contratto.alert1_inviato_at
@@ -168,7 +294,8 @@ export default function NuovoContrattoAffittoPage() {
             alert3_inviato_at: formatDateTimeLocalInput(
               contratto.alert3_inviato_at
             ),
-            attivo: !!contratto.attivo,
+            attivo:
+              typeof contratto.attivo === "boolean" ? contratto.attivo : true,
             contratto_concluso: !!contratto.contratto_concluso,
           });
         }
@@ -179,28 +306,10 @@ export default function NuovoContrattoAffittoPage() {
         }));
       }
     } catch (err) {
-      console.error("Errore inizializzazione pagina affitti:", err);
+      console.error("Errore inizializzazione pagina:", err);
     } finally {
       setLoading(false);
     }
-  };
-
-  const loadClienti = async (currentStudioId: string) => {
-    const supabase = getSupabaseClient();
-
-    const { data, error } = await supabase
-      .from("tbclienti")
-      .select("id, ragione_sociale")
-      .eq("studio_id", currentStudioId)
-      .order("ragione_sociale", { ascending: true });
-
-    if (error) {
-      console.error("Errore caricamento clienti:", error);
-      setClienti([]);
-      return;
-    }
-
-    setClienti(((data as unknown) as ClienteOption[]) || []);
   };
 
   const handleChange = (
@@ -211,16 +320,6 @@ export default function NuovoContrattoAffittoPage() {
       ...prev,
       [field]: value,
     }));
-  };
-
-  const handleCalcolaScadenza = () => {
-    const data = formData.data_registrazione_atto;
-    const anni = Number(formData.contatore_anni || "1");
-
-    if (!data || !anni || Number.isNaN(anni)) return;
-
-    const nuovaData = addYearsToDate(data, anni);
-    handleChange("data_prossima_scadenza", nuovaData);
   };
 
   const validateForm = () => {
@@ -247,13 +346,8 @@ export default function NuovoContrattoAffittoPage() {
       return false;
     }
 
-    if (!formData.contatore_anni || Number(formData.contatore_anni) < 1) {
-      alert("Il contatore anni deve essere almeno 1.");
-      return false;
-    }
-
     if (!formData.data_prossima_scadenza) {
-      alert("La data prossima scadenza è obbligatoria.");
+      alert("Impossibile determinare la prossima scadenza.");
       return false;
     }
 
@@ -273,9 +367,6 @@ export default function NuovoContrattoAffittoPage() {
         (c) => c.id === formData.cliente_id
       );
 
-      const ragioneSocialeLegacy =
-        clienteSelezionato?.ragione_sociale?.trim() || null;
-
       const payload = {
         studio_id: studioId,
         cliente_id: formData.cliente_id,
@@ -287,9 +378,9 @@ export default function NuovoContrattoAffittoPage() {
         codice_identificativo_registrazione:
           formData.codice_identificativo_registrazione.trim() || null,
         importo_registrazione: toNullableNumber(formData.importo_registrazione),
+        emailperalert: formData.emailperalert.trim() || null,
         contatore_anni: Number(formData.contatore_anni),
         data_prossima_scadenza: formData.data_prossima_scadenza,
-        emailperalert: formData.emailperalert.trim() || null,
         alert1_inviato: !!formData.alert1_inviato,
         alert1_inviato_at: formData.alert1_inviato
           ? formData.alert1_inviato_at || new Date().toISOString()
@@ -305,8 +396,8 @@ export default function NuovoContrattoAffittoPage() {
         attivo: !!formData.attivo,
         contratto_concluso: !!formData.contratto_concluso,
 
-        // legacy temporaneo: tienilo finché la colonna esiste nel DB
-        nominativo: ragioneSocialeLegacy,
+        // legacy temporaneo finché la colonna esiste
+        nominativo: clienteSelezionato?.ragione_sociale?.trim() || null,
       };
 
       if (isEdit && typeof id === "string") {
@@ -483,40 +574,6 @@ export default function NuovoContrattoAffittoPage() {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium">Contatore anni *</label>
-          <input
-            type="number"
-            min={1}
-            value={formData.contatore_anni}
-            onChange={(e) => handleChange("contatore_anni", e.target.value)}
-            className="w-full rounded border px-3 py-2"
-          />
-        </div>
-
-        <div>
-          <label className="mb-1 block text-sm font-medium">
-            Data prossima scadenza *
-          </label>
-          <div className="flex gap-2">
-            <input
-              type="date"
-              value={formData.data_prossima_scadenza}
-              onChange={(e) =>
-                handleChange("data_prossima_scadenza", e.target.value)
-              }
-              className="w-full rounded border px-3 py-2"
-            />
-            <button
-              type="button"
-              onClick={handleCalcolaScadenza}
-              className="whitespace-nowrap rounded border px-3 py-2"
-            >
-              Calcola
-            </button>
-          </div>
-        </div>
-
-        <div className="md:col-span-2">
           <label className="mb-1 block text-sm font-medium">Email per alert</label>
           <input
             type="email"
@@ -526,64 +583,60 @@ export default function NuovoContrattoAffittoPage() {
             placeholder="Inserisci email manualmente"
           />
         </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium">
+            Annualità corrente
+          </label>
+          <input
+            type="text"
+            value={
+              formData.contatore_anni && formData.durata_contratto_anni
+                ? `${formData.contatore_anni}/${formData.durata_contratto_anni}`
+                : ""
+            }
+            readOnly
+            className="w-full rounded border bg-gray-100 px-3 py-2"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium">
+            Prossima scadenza
+          </label>
+          <input
+            type="text"
+            value={formatDate(formData.data_prossima_scadenza)}
+            readOnly
+            className="w-full rounded border bg-gray-100 px-3 py-2"
+          />
+        </div>
       </div>
 
       <div className="mt-6 rounded border bg-white p-4">
-        <h2 className="mb-4 text-lg font-semibold">Alert annuali</h2>
+        <h2 className="mb-4 text-lg font-semibold">Alert annuali automatici</h2>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="rounded border p-3">
-            <label className="mb-2 flex items-center gap-2 text-sm font-medium">
-              <input
-                type="checkbox"
-                checked={formData.alert1_inviato}
-                onChange={(e) => handleChange("alert1_inviato", e.target.checked)}
-              />
-              Alert 1 inviato
-            </label>
-
-            <input
-              type="datetime-local"
-              value={formData.alert1_inviato_at}
-              onChange={(e) => handleChange("alert1_inviato_at", e.target.value)}
-              className="w-full rounded border px-3 py-2"
-            />
+            <div className="mb-2 text-sm font-medium">Alert 1</div>
+            <div className="text-sm text-gray-700">
+              30 giorni prima: <strong>{formatDate(formData.alert1_data)}</strong>
+            </div>
           </div>
 
           <div className="rounded border p-3">
-            <label className="mb-2 flex items-center gap-2 text-sm font-medium">
-              <input
-                type="checkbox"
-                checked={formData.alert2_inviato}
-                onChange={(e) => handleChange("alert2_inviato", e.target.checked)}
-              />
-              Alert 2 inviato
-            </label>
-
-            <input
-              type="datetime-local"
-              value={formData.alert2_inviato_at}
-              onChange={(e) => handleChange("alert2_inviato_at", e.target.value)}
-              className="w-full rounded border px-3 py-2"
-            />
+            <div className="mb-2 text-sm font-medium">Alert 2</div>
+            <div className="text-sm text-gray-700">
+              15 giorni prima: <strong>{formatDate(formData.alert2_data)}</strong>
+            </div>
           </div>
 
           <div className="rounded border p-3">
-            <label className="mb-2 flex items-center gap-2 text-sm font-medium">
-              <input
-                type="checkbox"
-                checked={formData.alert3_inviato}
-                onChange={(e) => handleChange("alert3_inviato", e.target.checked)}
-              />
-              Alert 3 inviato
-            </label>
-
-            <input
-              type="datetime-local"
-              value={formData.alert3_inviato_at}
-              onChange={(e) => handleChange("alert3_inviato_at", e.target.value)}
-              className="w-full rounded border px-3 py-2"
-            />
+            <div className="mb-2 text-sm font-medium">Alert 3</div>
+            <div className="text-sm text-gray-700">
+              Giorno della scadenza:{" "}
+              <strong>{formatDate(formData.alert3_data)}</strong>
+            </div>
           </div>
         </div>
       </div>
@@ -592,25 +645,27 @@ export default function NuovoContrattoAffittoPage() {
         <h2 className="mb-4 text-lg font-semibold">Stato contratto</h2>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <label className="flex items-center gap-2 text-sm font-medium">
+          <div>
+            <label className="mb-1 block text-sm font-medium">Attivo</label>
             <input
-              type="checkbox"
-              checked={formData.attivo}
-              onChange={(e) => handleChange("attivo", e.target.checked)}
+              type="text"
+              readOnly
+              value={formData.attivo ? "Sì" : "No"}
+              className="w-full rounded border bg-gray-100 px-3 py-2"
             />
-            Contratto attivo
-          </label>
+          </div>
 
-          <label className="flex items-center gap-2 text-sm font-medium">
+          <div>
+            <label className="mb-1 block text-sm font-medium">
+              Contratto concluso
+            </label>
             <input
-              type="checkbox"
-              checked={formData.contratto_concluso}
-              onChange={(e) =>
-                handleChange("contratto_concluso", e.target.checked)
-              }
+              type="text"
+              readOnly
+              value={formData.contratto_concluso ? "Sì" : "No"}
+              className="w-full rounded border bg-gray-100 px-3 py-2"
             />
-            Contratto concluso
-          </label>
+          </div>
         </div>
       </div>
     </div>
