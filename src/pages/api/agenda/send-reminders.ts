@@ -59,20 +59,11 @@ export default async function handler(
   }
 
   try {
-    const authHeader = req.headers.authorization;
-    const cronSecret = process.env.CRON_SECRET;
-
-    if (cronSecret) {
-      const bearer = authHeader?.replace("Bearer ", "") || "";
-      if (bearer !== cronSecret) {
-        return res.status(401).json({ success: false, error: "Unauthorized" });
-      }
-    }
-
     const today = new Date();
     const yyyy = today.getFullYear();
     const mm = String(today.getMonth() + 1).padStart(2, "0");
     const dd = String(today.getDate()).padStart(2, "0");
+
     const todayStart = `${yyyy}-${mm}-${dd}T00:00:00.000Z`;
     const todayEnd = `${yyyy}-${mm}-${dd}T23:59:59.999Z`;
 
@@ -94,9 +85,9 @@ export default async function handler(
     if (agendaRows.length === 0) {
       return res.status(200).json({
         success: true,
-        message: "Nessun promemoria da inviare",
         processedGroups: 0,
         updatedRows: 0,
+        message: "Nessun promemoria da inviare",
       });
     }
 
@@ -204,8 +195,8 @@ export default async function handler(
           }
         };
 
-        const emailData = {
-          action: "reminder" as any,
+        const result = await emailService.sendEventNotification({
+          action: "reminder",
           eventoId: masterRow.id,
           eventoTitolo: masterRow.titolo || "Evento senza titolo",
           eventoData: formatDate(masterRow.data_inizio),
@@ -215,11 +206,11 @@ export default async function handler(
           eventoOraFine: masterRow.ora_fine
             ? masterRow.ora_fine.substring(0, 5)
             : formatTime(masterRow.data_fine),
-          eventoInSede: Boolean(masterRow.in_sede),
           eventoLuogo: masterRow.in_sede
             ? masterRow.sala || undefined
             : masterRow.luogo || undefined,
           eventoDescrizione: masterRow.descrizione || undefined,
+          eventoInSede: Boolean(masterRow.in_sede),
           responsabileEmail: responsabile.email,
           responsabileNome:
             `${responsabile.nome || ""} ${responsabile.cognome || ""}`.trim() ||
@@ -230,12 +221,10 @@ export default async function handler(
           clienteNome,
           riunione_teams: masterRow.riunione_teams || false,
           link_teams: masterRow.link_teams || undefined,
-        };
+        });
 
-        const result = await emailService.sendEventNotification(emailData);
-
-        if (!result?.success) {
-          errors.push(`Gruppo ${groupKey}: invio email fallito`);
+        if (!result.success) {
+          errors.push(`Gruppo ${groupKey}: invio reminder fallito`);
           continue;
         }
 
@@ -247,7 +236,7 @@ export default async function handler(
           .in("id", idsToUpdate);
 
         if (updateError) {
-          errors.push(`Gruppo ${groupKey}: email inviata ma update reminder fallito`);
+          errors.push(`Gruppo ${groupKey}: reminder inviato ma update fallito`);
           continue;
         }
 
