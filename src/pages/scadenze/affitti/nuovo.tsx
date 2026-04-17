@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 
 type ClienteOption = {
   id: string;
@@ -172,6 +172,10 @@ function getContattoLabel(contatto: ContattoOption) {
   return contatto.email || "Contatto";
 }
 
+function getClienteLabel(cliente: ClienteOption) {
+  return cliente.ragione_sociale?.trim() || "Cliente";
+}
+
 export default function NuovoContrattoAffittoPage() {
   const router = useRouter();
   const { id } = router.query;
@@ -183,10 +187,15 @@ export default function NuovoContrattoAffittoPage() {
   const [clienti, setClienti] = useState<ClienteOption[]>([]);
   const [formData, setFormData] = useState<ContrattoFormData>(emptyForm);
 
-  const [contattiSearch, setContattiSearch] = useState("");
-  const [contattiResults, setContattiResults] = useState<ContattoOption[]>([]);
-  const [showContattiPicker, setShowContattiPicker] = useState(false);
-  const [loadingContatti, setLoadingContatti] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailSearch, setEmailSearch] = useState("");
+  const [emailResults, setEmailResults] = useState<ContattoOption[]>([]);
+  const [loadingEmailResults, setLoadingEmailResults] = useState(false);
+
+  const [showConduttoreModal, setShowConduttoreModal] = useState(false);
+  const [conduttoreSearch, setConduttoreSearch] = useState("");
+  const [conduttoreResults, setConduttoreResults] = useState<ClienteOption[]>([]);
+  const [loadingConduttoreResults, setLoadingConduttoreResults] = useState(false);
 
   const isEdit = useMemo(() => typeof id === "string" && !!id, [id]);
 
@@ -351,11 +360,20 @@ export default function NuovoContrattoAffittoPage() {
     }));
   };
 
-  const searchContatti = async () => {
+  const openEmailModal = async () => {
+    setShowEmailModal(true);
+    await loadEmailResults("");
+  };
+
+  const openConduttoreModal = async () => {
+    setShowConduttoreModal(true);
+    await loadConduttoreResults("");
+  };
+
+  const loadEmailResults = async (term: string) => {
     if (!studioId) return;
 
-    setLoadingContatti(true);
-    setShowContattiPicker(true);
+    setLoadingEmailResults(true);
 
     try {
       const supabase = getSupabaseClient();
@@ -368,9 +386,7 @@ export default function NuovoContrattoAffittoPage() {
         .order("denominazione", { ascending: true })
         .limit(20);
 
-      const term = contattiSearch.trim();
-
-      if (term) {
+      if (term.trim()) {
         query = query.or(
           `denominazione.ilike.%${term}%,nome.ilike.%${term}%,cognome.ilike.%${term}%,email.ilike.%${term}%`
         );
@@ -380,25 +396,69 @@ export default function NuovoContrattoAffittoPage() {
 
       if (error) {
         console.error("Errore ricerca contatti:", error);
-        setContattiResults([]);
+        setEmailResults([]);
         return;
       }
 
-      setContattiResults(((data as unknown) as ContattoOption[]) || []);
+      setEmailResults(((data as unknown) as ContattoOption[]) || []);
     } catch (err) {
       console.error("Errore inatteso ricerca contatti:", err);
-      setContattiResults([]);
+      setEmailResults([]);
     } finally {
-      setLoadingContatti(false);
+      setLoadingEmailResults(false);
     }
   };
 
-  const handleSelectContattoEmail = (email: string | null) => {
+  const loadConduttoreResults = async (term: string) => {
+    if (!studioId) return;
+
+    setLoadingConduttoreResults(true);
+
+    try {
+      const supabase = getSupabaseClient();
+
+      let query = supabase
+        .from("tbclienti")
+        .select("id, ragione_sociale")
+        .eq("studio_id", studioId)
+        .order("ragione_sociale", { ascending: true })
+        .limit(20);
+
+      if (term.trim()) {
+        query = query.ilike("ragione_sociale", `%${term}%`);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error("Errore ricerca conduttori:", error);
+        setConduttoreResults([]);
+        return;
+      }
+
+      setConduttoreResults(((data as unknown) as ClienteOption[]) || []);
+    } catch (err) {
+      console.error("Errore inatteso ricerca conduttori:", err);
+      setConduttoreResults([]);
+    } finally {
+      setLoadingConduttoreResults(false);
+    }
+  };
+
+  const handleSelectEmail = (email: string | null) => {
     setFormData((prev) => ({
       ...prev,
       emailperalert: email || "",
     }));
-    setShowContattiPicker(false);
+    setShowEmailModal(false);
+  };
+
+  const handleSelectConduttore = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      conduttore: value,
+    }));
+    setShowConduttoreModal(false);
   };
 
   const validateForm = () => {
@@ -475,8 +535,6 @@ export default function NuovoContrattoAffittoPage() {
           : null,
         attivo: !!formData.attivo,
         contratto_concluso: !!formData.contratto_concluso,
-
-        // legacy temporaneo
         nominativo: locatoreSelezionato?.ragione_sociale?.trim() || null,
       };
 
@@ -526,302 +584,417 @@ export default function NuovoContrattoAffittoPage() {
   }
 
   return (
-    <div className="p-6">
-      <div className="mb-6 flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold">
-          {isEdit ? "Modifica contratto di affitto" : "Nuovo contratto di affitto"}
-        </h1>
-
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={handleBack}
-            className="rounded border px-4 py-2"
-          >
-            Indietro
-          </button>
-
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-60"
-          >
-            {saving ? "Salvataggio..." : "Salva"}
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 rounded border bg-white p-4 md:grid-cols-2">
-        <div>
-          <label className="mb-1 block text-sm font-medium">Locatore *</label>
-          <select
-            value={formData.cliente_id}
-            onChange={(e) => handleChange("cliente_id", e.target.value)}
-            className="w-full rounded border px-3 py-2"
-          >
-            <option value="">Seleziona locatore</option>
-            {clienti.map((cliente) => (
-              <option key={cliente.id} value={cliente.id}>
-                {cliente.ragione_sociale?.trim() || "Senza nome"}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="mb-1 block text-sm font-medium">Conduttore</label>
-          <input
-            type="text"
-            value={formData.conduttore}
-            onChange={(e) => handleChange("conduttore", e.target.value)}
-            className="w-full rounded border px-3 py-2"
-          />
-        </div>
-
-        <div>
-          <label className="mb-1 block text-sm font-medium">
-            Operatore creatore
-          </label>
-          <input
-            type="text"
-            value={operatoreLabel}
-            readOnly
-            className="w-full rounded border bg-gray-100 px-3 py-2"
-          />
-        </div>
-
-        <div className="md:col-span-2">
-          <label className="mb-1 block text-sm font-medium">
-            Descrizione immobile locato
-          </label>
-          <input
-            type="text"
-            value={formData.descrizione_immobile_locato}
-            onChange={(e) =>
-              handleChange("descrizione_immobile_locato", e.target.value)
-            }
-            className="w-full rounded border px-3 py-2"
-          />
-        </div>
-
-        <div>
-          <label className="mb-1 block text-sm font-medium">
-            Data registrazione atto *
-          </label>
-          <input
-            type="date"
-            value={formData.data_registrazione_atto}
-            onChange={(e) =>
-              handleChange("data_registrazione_atto", e.target.value)
-            }
-            className="w-full rounded border px-3 py-2"
-          />
-        </div>
-
-        <div>
-          <label className="mb-1 block text-sm font-medium">
-            Durata contratto anni *
-          </label>
-          <input
-            type="number"
-            min={1}
-            value={formData.durata_contratto_anni}
-            onChange={(e) =>
-              handleChange("durata_contratto_anni", e.target.value)
-            }
-            className="w-full rounded border px-3 py-2"
-          />
-        </div>
-
-        <div>
-          <label className="mb-1 block text-sm font-medium">
-            Codice identificativo registrazione
-          </label>
-          <input
-            type="text"
-            value={formData.codice_identificativo_registrazione}
-            onChange={(e) =>
-              handleChange("codice_identificativo_registrazione", e.target.value)
-            }
-            className="w-full rounded border px-3 py-2"
-          />
-        </div>
-
-        <div>
-          <label className="mb-1 block text-sm font-medium">
-            Importo registrazione
-          </label>
-          <input
-            type="number"
-            step="0.01"
-            value={formData.importo_registrazione}
-            onChange={(e) =>
-              handleChange("importo_registrazione", e.target.value)
-            }
-            className="w-full rounded border px-3 py-2"
-          />
-        </div>
-
-        <div className="md:col-span-2">
-          <label className="mb-1 block text-sm font-medium">Email per alert</label>
+    <>
+      <div className="p-6">
+        <div className="mb-6 flex items-center justify-between gap-4">
+          <h1 className="text-2xl font-bold">
+            {isEdit ? "Modifica contratto di affitto" : "Nuovo contratto di affitto"}
+          </h1>
 
           <div className="flex gap-2">
-            <input
-              type="email"
-              value={formData.emailperalert}
-              onChange={(e) => handleChange("emailperalert", e.target.value)}
-              className="w-full rounded border px-3 py-2"
-              placeholder="Inserisci email manualmente o importa da contatti"
-            />
+            <button
+              type="button"
+              onClick={handleBack}
+              className="rounded border px-4 py-2"
+            >
+              Indietro
+            </button>
 
             <button
               type="button"
-              onClick={searchContatti}
-              className="flex items-center gap-2 rounded border px-3 py-2"
-              title="Cerca in rubrica"
+              onClick={handleSave}
+              disabled={saving}
+              className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-60"
             >
-              <Search size={16} />
-              Cerca
+              {saving ? "Salvataggio..." : "Salva"}
             </button>
           </div>
-
-          <div className="mt-2 flex gap-2">
-            <input
-              type="text"
-              value={contattiSearch}
-              onChange={(e) => setContattiSearch(e.target.value)}
-              placeholder="Cerca contatto per nome, denominazione o email"
-              className="w-full rounded border px-3 py-2"
-            />
-
-            <button
-              type="button"
-              onClick={searchContatti}
-              className="rounded border px-3 py-2"
-            >
-              Trova
-            </button>
-          </div>
-
-          {showContattiPicker && (
-            <div className="mt-3 rounded border bg-gray-50 p-3">
-              <div className="mb-2 text-sm font-medium">
-                Seleziona un'email da tbcontatti
-              </div>
-
-              {loadingContatti ? (
-                <div className="text-sm text-gray-600">Ricerca in corso...</div>
-              ) : contattiResults.length === 0 ? (
-                <div className="text-sm text-gray-600">Nessun contatto trovato</div>
-              ) : (
-                <div className="max-h-56 overflow-auto rounded border bg-white">
-                  {contattiResults.map((contatto) => (
-                    <button
-                      key={contatto.id}
-                      type="button"
-                      onClick={() => handleSelectContattoEmail(contatto.email)}
-                      className="flex w-full items-start justify-between gap-4 border-b px-3 py-2 text-left hover:bg-gray-100"
-                    >
-                      <div>
-                        <div className="font-medium">{getContattoLabel(contatto)}</div>
-                        <div className="text-sm text-gray-600">
-                          {contatto.email || "-"}
-                        </div>
-                      </div>
-                      <div className="text-xs text-blue-600">Seleziona</div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
-        <div>
-          <label className="mb-1 block text-sm font-medium">
-            Annualità corrente
-          </label>
-          <input
-            type="text"
-            value={
-              formData.contatore_anni && formData.durata_contratto_anni
-                ? `${formData.contatore_anni}/${formData.durata_contratto_anni}`
-                : ""
-            }
-            readOnly
-            className="w-full rounded border bg-gray-100 px-3 py-2"
-          />
-        </div>
-
-        <div>
-          <label className="mb-1 block text-sm font-medium">
-            Prossima scadenza
-          </label>
-          <input
-            type="text"
-            value={formatDate(formData.data_prossima_scadenza)}
-            readOnly
-            className="w-full rounded border bg-gray-100 px-3 py-2"
-          />
-        </div>
-      </div>
-
-      <div className="mt-6 rounded border bg-white p-4">
-        <h2 className="mb-4 text-lg font-semibold">Alert annuali automatici</h2>
-
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="rounded border p-3">
-            <div className="mb-2 text-sm font-medium">Alert 1</div>
-            <div className="text-sm text-gray-700">
-              30 giorni prima: <strong>{formatDate(formData.alert1_data)}</strong>
-            </div>
-          </div>
-
-          <div className="rounded border p-3">
-            <div className="mb-2 text-sm font-medium">Alert 2</div>
-            <div className="text-sm text-gray-700">
-              15 giorni prima: <strong>{formatDate(formData.alert2_data)}</strong>
-            </div>
-          </div>
-
-          <div className="rounded border p-3">
-            <div className="mb-2 text-sm font-medium">Alert 3</div>
-            <div className="text-sm text-gray-700">
-              Giorno della scadenza:{" "}
-              <strong>{formatDate(formData.alert3_data)}</strong>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-6 rounded border bg-white p-4">
-        <h2 className="mb-4 text-lg font-semibold">Stato contratto</h2>
-
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 rounded border bg-white p-4 md:grid-cols-2">
           <div>
-            <label className="mb-1 block text-sm font-medium">Attivo</label>
+            <label className="mb-1 block text-sm font-medium">Locatore *</label>
+            <select
+              value={formData.cliente_id}
+              onChange={(e) => handleChange("cliente_id", e.target.value)}
+              className="w-full rounded border px-3 py-2"
+            >
+              <option value="">Seleziona locatore</option>
+              {clienti.map((cliente) => (
+                <option key={cliente.id} value={cliente.id}>
+                  {cliente.ragione_sociale?.trim() || "Senza nome"}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">Conduttore</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={formData.conduttore}
+                onChange={(e) => handleChange("conduttore", e.target.value)}
+                className="w-full rounded border px-3 py-2"
+                placeholder="Inserisci manualmente o importa da tbclienti"
+              />
+              <button
+                type="button"
+                onClick={openConduttoreModal}
+                className="flex items-center gap-2 rounded border px-3 py-2"
+              >
+                <Search size={16} />
+                Cerca
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">
+              Operatore creatore
+            </label>
             <input
               type="text"
+              value={operatoreLabel}
               readOnly
-              value={formData.attivo ? "Sì" : "No"}
+              className="w-full rounded border bg-gray-100 px-3 py-2"
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="mb-1 block text-sm font-medium">
+              Descrizione immobile locato
+            </label>
+            <input
+              type="text"
+              value={formData.descrizione_immobile_locato}
+              onChange={(e) =>
+                handleChange("descrizione_immobile_locato", e.target.value)
+              }
+              className="w-full rounded border px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">
+              Data registrazione atto *
+            </label>
+            <input
+              type="date"
+              value={formData.data_registrazione_atto}
+              onChange={(e) =>
+                handleChange("data_registrazione_atto", e.target.value)
+              }
+              className="w-full rounded border px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">
+              Durata contratto anni *
+            </label>
+            <input
+              type="number"
+              min={1}
+              value={formData.durata_contratto_anni}
+              onChange={(e) =>
+                handleChange("durata_contratto_anni", e.target.value)
+              }
+              className="w-full rounded border px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">
+              Codice identificativo registrazione
+            </label>
+            <input
+              type="text"
+              value={formData.codice_identificativo_registrazione}
+              onChange={(e) =>
+                handleChange("codice_identificativo_registrazione", e.target.value)
+              }
+              className="w-full rounded border px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">
+              Importo registrazione
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              value={formData.importo_registrazione}
+              onChange={(e) =>
+                handleChange("importo_registrazione", e.target.value)
+              }
+              className="w-full rounded border px-3 py-2"
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="mb-1 block text-sm font-medium">Email per alert</label>
+            <div className="flex gap-2">
+              <input
+                type="email"
+                value={formData.emailperalert}
+                onChange={(e) => handleChange("emailperalert", e.target.value)}
+                className="w-full rounded border px-3 py-2"
+                placeholder="Inserisci manualmente o importa da tbcontatti"
+              />
+              <button
+                type="button"
+                onClick={openEmailModal}
+                className="flex items-center gap-2 rounded border px-3 py-2"
+              >
+                <Search size={16} />
+                Cerca
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">
+              Annualità corrente
+            </label>
+            <input
+              type="text"
+              value={
+                formData.contatore_anni && formData.durata_contratto_anni
+                  ? `${formData.contatore_anni}/${formData.durata_contratto_anni}`
+                  : ""
+              }
+              readOnly
               className="w-full rounded border bg-gray-100 px-3 py-2"
             />
           </div>
 
           <div>
             <label className="mb-1 block text-sm font-medium">
-              Contratto concluso
+              Prossima scadenza
             </label>
             <input
               type="text"
+              value={formatDate(formData.data_prossima_scadenza)}
               readOnly
-              value={formData.contratto_concluso ? "Sì" : "No"}
               className="w-full rounded border bg-gray-100 px-3 py-2"
             />
           </div>
         </div>
+
+        <div className="mt-6 rounded border bg-white p-4">
+          <h2 className="mb-4 text-lg font-semibold">Alert annuali automatici</h2>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="rounded border p-3">
+              <div className="mb-2 text-sm font-medium">Alert 1</div>
+              <div className="text-sm text-gray-700">
+                30 giorni prima: <strong>{formatDate(formData.alert1_data)}</strong>
+              </div>
+            </div>
+
+            <div className="rounded border p-3">
+              <div className="mb-2 text-sm font-medium">Alert 2</div>
+              <div className="text-sm text-gray-700">
+                15 giorni prima: <strong>{formatDate(formData.alert2_data)}</strong>
+              </div>
+            </div>
+
+            <div className="rounded border p-3">
+              <div className="mb-2 text-sm font-medium">Alert 3</div>
+              <div className="text-sm text-gray-700">
+                Giorno della scadenza:{" "}
+                <strong>{formatDate(formData.alert3_data)}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 rounded border bg-white p-4">
+          <h2 className="mb-4 text-lg font-semibold">Stato contratto</h2>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium">Attivo</label>
+              <input
+                type="text"
+                readOnly
+                value={formData.attivo ? "Sì" : "No"}
+                className="w-full rounded border bg-gray-100 px-3 py-2"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium">
+                Contratto concluso
+              </label>
+              <input
+                type="text"
+                readOnly
+                value={formData.contratto_concluso ? "Sì" : "No"}
+                className="w-full rounded border bg-gray-100 px-3 py-2"
+              />
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+
+      {showEmailModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+          <div className="w-full max-w-3xl rounded-lg bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b px-4 py-3">
+              <h3 className="text-lg font-semibold">Seleziona email da tbcontatti</h3>
+              <button
+                type="button"
+                onClick={() => setShowEmailModal(false)}
+                className="text-gray-600 hover:text-black"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-4">
+              <div className="mb-4 flex gap-2">
+                <input
+                  type="text"
+                  value={emailSearch}
+                  onChange={(e) => setEmailSearch(e.target.value)}
+                  placeholder="Cerca per nominativo o email"
+                  className="w-full rounded border px-3 py-2"
+                />
+                <button
+                  type="button"
+                  onClick={() => loadEmailResults(emailSearch)}
+                  className="rounded border px-4 py-2"
+                >
+                  Cerca
+                </button>
+              </div>
+
+              <div className="overflow-hidden rounded border">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="p-3 text-left">Nominativo</th>
+                      <th className="p-3 text-left">Indirizzo email</th>
+                      <th className="p-3 text-left">Seleziona</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loadingEmailResults ? (
+                      <tr>
+                        <td colSpan={3} className="p-4 text-center">
+                          Caricamento...
+                        </td>
+                      </tr>
+                    ) : emailResults.length === 0 ? (
+                      <tr>
+                        <td colSpan={3} className="p-4 text-center">
+                          Nessun contatto trovato
+                        </td>
+                      </tr>
+                    ) : (
+                      emailResults.map((contatto) => (
+                        <tr key={contatto.id} className="border-t">
+                          <td className="p-3">{getContattoLabel(contatto)}</td>
+                          <td className="p-3">{contatto.email || "-"}</td>
+                          <td className="p-3">
+                            <input
+                              type="checkbox"
+                              onChange={() => handleSelectEmail(contatto.email)}
+                            />
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showConduttoreModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+          <div className="w-full max-w-3xl rounded-lg bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b px-4 py-3">
+              <h3 className="text-lg font-semibold">
+                Seleziona conduttore da tbclienti
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowConduttoreModal(false)}
+                className="text-gray-600 hover:text-black"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-4">
+              <div className="mb-4 flex gap-2">
+                <input
+                  type="text"
+                  value={conduttoreSearch}
+                  onChange={(e) => setConduttoreSearch(e.target.value)}
+                  placeholder="Cerca per ragione sociale"
+                  className="w-full rounded border px-3 py-2"
+                />
+                <button
+                  type="button"
+                  onClick={() => loadConduttoreResults(conduttoreSearch)}
+                  className="rounded border px-4 py-2"
+                >
+                  Cerca
+                </button>
+              </div>
+
+              <div className="overflow-hidden rounded border">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="p-3 text-left">Nominativo</th>
+                      <th className="p-3 text-left">Ragione sociale</th>
+                      <th className="p-3 text-left">Seleziona</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loadingConduttoreResults ? (
+                      <tr>
+                        <td colSpan={3} className="p-4 text-center">
+                          Caricamento...
+                        </td>
+                      </tr>
+                    ) : conduttoreResults.length === 0 ? (
+                      <tr>
+                        <td colSpan={3} className="p-4 text-center">
+                          Nessun cliente trovato
+                        </td>
+                      </tr>
+                    ) : (
+                      conduttoreResults.map((cliente) => (
+                        <tr key={cliente.id} className="border-t">
+                          <td className="p-3">{getClienteLabel(cliente)}</td>
+                          <td className="p-3">{getClienteLabel(cliente)}</td>
+                          <td className="p-3">
+                            <input
+                              type="checkbox"
+                              onChange={() =>
+                                handleSelectConduttore(getClienteLabel(cliente))
+                              }
+                            />
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
