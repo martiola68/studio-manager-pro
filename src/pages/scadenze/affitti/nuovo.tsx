@@ -840,7 +840,7 @@ export default function NuovoContrattoAffittoPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
           <div className="w-full max-w-2xl rounded-lg bg-white shadow-xl">
             <div className="flex items-center justify-between border-b px-4 py-3">
-              <h3 className="text-lg font-semibold">Seleziona email da tbcontatti</h3>
+              <h3 className="text-lg font-semibold">Seleziona email conduttore</h3>
               <button
                 type="button"
                 onClick={() => setShowEmailModal(false)}
@@ -917,7 +917,7 @@ export default function NuovoContrattoAffittoPage() {
           <div className="w-full max-w-2xl rounded-lg bg-white shadow-xl">
             <div className="flex items-center justify-between border-b px-4 py-3">
               <h3 className="text-lg font-semibold">
-                Seleziona conduttore da tbclienti
+                Seleziona conduttore
               </h3>
               <button
                 type="button"
