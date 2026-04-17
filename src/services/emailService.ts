@@ -14,6 +14,7 @@ export interface EventEmailData {
   eventoOraFine: string;
   eventoLuogo?: string;
   eventoDescrizione?: string;
+  eventoInSede?: boolean;
   responsabileEmail: string;
   responsabileNome: string;
   partecipantiEmails: string[];
