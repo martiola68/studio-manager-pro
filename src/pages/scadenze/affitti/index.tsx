@@ -2,12 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 
-type ContrattoAffitto = {
+type ContrattoAffittoRow = {
   id: string;
   studio_id: string;
   cliente_id: string;
   utente_operatore_id: string | null;
-  nominativo: string;
   descrizione_immobile_locato: string | null;
   data_registrazione_atto: string;
   durata_contratto_anni: number;
@@ -23,8 +22,24 @@ type ContrattoAffitto = {
   alert3_inviato_at: string | null;
   attivo: boolean;
   contratto_concluso: boolean;
+  emailperalert: string | null;
   created_at: string;
   updated_at: string;
+};
+
+type ClienteLite = {
+  id: string;
+  ragione_sociale: string | null;
+};
+
+type UtenteLite = {
+  id: string;
+  email: string | null;
+};
+
+type ContrattoAffittoView = ContrattoAffittoRow & {
+  cliente_label: string;
+  operatore_email: string;
 };
 
 function formatDate(value?: string | null) {
@@ -34,7 +49,7 @@ function formatDate(value?: string | null) {
   return d.toLocaleDateString("it-IT");
 }
 
-function getAlertProgress(row: ContrattoAffitto) {
+function getAlertProgress(row: ContrattoAffittoRow) {
   let count = 0;
   if (row.alert1_inviato) count += 1;
   if (row.alert2_inviato) count += 1;
@@ -42,14 +57,14 @@ function getAlertProgress(row: ContrattoAffitto) {
   return `${count}/3`;
 }
 
-function getStato(row: ContrattoAffitto) {
+function getStato(row: ContrattoAffittoRow) {
   if (row.contratto_concluso || !row.attivo) return "CHIUSO";
   return "ATTIVO";
 }
 
 export default function ScadenzarioAffittiIndex() {
   const router = useRouter();
-  const [contratti, setContratti] = useState<ContrattoAffitto[]>([]);
+  const [contratti, setContratti] = useState<ContrattoAffittoView[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
@@ -59,10 +74,12 @@ export default function ScadenzarioAffittiIndex() {
 
   const loadContratti = async () => {
     setLoading(true);
+
     try {
       const supabase = getSupabaseClient();
+      const supabaseAny = supabase as any;
 
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabaseAny
         .from("tbscadaffitti")
         .select("*")
         .order("data_prossima_scadenza", { ascending: true });
@@ -73,7 +90,66 @@ export default function ScadenzarioAffittiIndex() {
         return;
       }
 
-      setContratti(((data as unknown) as ContrattoAffitto[]) || []);
+      const contrattiRows = ((data as unknown) as ContrattoAffittoRow[]) || [];
+
+      const clienteIds = Array.from(
+        new Set(
+          contrattiRows
+            .map((r) => r.cliente_id)
+            .filter((v): v is string => !!v)
+        )
+      );
+
+      const utenteIds = Array.from(
+        new Set(
+          contrattiRows
+            .map((r) => r.utente_operatore_id)
+            .filter((v): v is string => !!v)
+        )
+      );
+
+      let clientiMap = new Map<string, ClienteLite>();
+      let utentiMap = new Map<string, UtenteLite>();
+
+      if (clienteIds.length > 0) {
+        const { data: clientiData, error: clientiError } = await supabase
+          .from("tbclienti")
+          .select("id, ragione_sociale")
+          .in("id", clienteIds);
+
+        if (clientiError) {
+          console.error("Errore caricamento clienti affitti:", clientiError);
+        } else {
+          const clienti = ((clientiData as unknown) as ClienteLite[]) || [];
+          clientiMap = new Map(clienti.map((c) => [c.id, c]));
+        }
+      }
+
+      if (utenteIds.length > 0) {
+        const { data: utentiData, error: utentiError } = await supabase
+          .from("tbutenti")
+          .select("id, email")
+          .in("id", utenteIds);
+
+        if (utentiError) {
+          console.error("Errore caricamento utenti affitti:", utentiError);
+        } else {
+          const utenti = ((utentiData as unknown) as UtenteLite[]) || [];
+          utentiMap = new Map(utenti.map((u) => [u.id, u]));
+        }
+      }
+
+      const merged: ContrattoAffittoView[] = contrattiRows.map((row) => ({
+        ...row,
+        cliente_label:
+          clientiMap.get(row.cliente_id)?.ragione_sociale?.trim() || "-",
+        operatore_email:
+          (row.utente_operatore_id
+            ? utentiMap.get(row.utente_operatore_id)?.email
+            : null) || "-",
+      }));
+
+      setContratti(merged);
     } catch (err) {
       console.error("Errore inatteso caricamento contratti affitto:", err);
       setContratti([]);
@@ -88,9 +164,11 @@ export default function ScadenzarioAffittiIndex() {
 
     return contratti.filter((row) => {
       const searchable = [
-        row.nominativo,
+        row.cliente_label,
         row.descrizione_immobile_locato ?? "",
         row.codice_identificativo_registrazione ?? "",
+        row.operatore_email ?? "",
+        row.emailperalert ?? "",
       ]
         .join(" ")
         .toLowerCase();
@@ -126,7 +204,7 @@ export default function ScadenzarioAffittiIndex() {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Cerca per nominativo, immobile o codice registrazione..."
+          placeholder="Cerca per cliente, immobile, email o codice registrazione..."
           className="w-full rounded border px-3 py-2"
         />
       </div>
@@ -135,12 +213,14 @@ export default function ScadenzarioAffittiIndex() {
         <table className="w-full text-sm">
           <thead className="bg-gray-100">
             <tr>
-              <th className="p-3 text-left">Nominativo</th>
+              <th className="p-3 text-left">Cliente</th>
               <th className="p-3 text-left">Immobile locato</th>
               <th className="p-3 text-left">Data registrazione</th>
               <th className="p-3 text-left">Prossima scadenza</th>
               <th className="p-3 text-left">Anno</th>
               <th className="p-3 text-left">Alert</th>
+              <th className="p-3 text-left">Operatore</th>
+              <th className="p-3 text-left">Email alert</th>
               <th className="p-3 text-left">Stato</th>
               <th className="p-3 text-left">Azioni</th>
             </tr>
@@ -149,13 +229,13 @@ export default function ScadenzarioAffittiIndex() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={8} className="p-4 text-center">
+                <td colSpan={10} className="p-4 text-center">
                   Caricamento...
                 </td>
               </tr>
             ) : contrattiFiltrati.length === 0 ? (
               <tr>
-                <td colSpan={8} className="p-4 text-center">
+                <td colSpan={10} className="p-4 text-center">
                   Nessun contratto trovato
                 </td>
               </tr>
@@ -165,7 +245,7 @@ export default function ScadenzarioAffittiIndex() {
 
                 return (
                   <tr key={row.id} className="border-t">
-                    <td className="p-3">{row.nominativo}</td>
+                    <td className="p-3">{row.cliente_label}</td>
                     <td className="p-3">{row.descrizione_immobile_locato || "-"}</td>
                     <td className="p-3">{formatDate(row.data_registrazione_atto)}</td>
                     <td className="p-3">{formatDate(row.data_prossima_scadenza)}</td>
@@ -173,6 +253,8 @@ export default function ScadenzarioAffittiIndex() {
                       {row.contatore_anni}/{row.durata_contratto_anni}
                     </td>
                     <td className="p-3">{getAlertProgress(row)}</td>
+                    <td className="p-3">{row.operatore_email}</td>
+                    <td className="p-3">{row.emailperalert || "-"}</td>
                     <td className="p-3">
                       <span
                         className={`rounded px-2 py-1 text-xs font-medium ${
