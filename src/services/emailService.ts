@@ -6,7 +6,7 @@ import {
 import { microsoftGraphService } from "./microsoftGraphService";
 
 export interface EventEmailData {
-  action?: "created" | "updated" | "cancelled";
+  action?: "created" | "updated" | "cancelled" | "reminder";
   eventoId: string;
   eventoTitolo: string;
   eventoData: string;
@@ -464,20 +464,29 @@ export async function triggerEventReminders(): Promise<{
   error?: string;
 }> {
   try {
-    const { data: result, error } = await supabase.functions.invoke(
-      "send-event-reminder"
-    );
+    const response = await fetch("/api/agenda/send-reminders", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
 
-    if (error) {
+    const result = await response.json().catch(() => null);
+
+    if (!response.ok) {
       return {
         success: false,
         events_processed: 0,
         reminders_sent: 0,
-        error: error.message,
+        error: result?.error || "Errore invocazione route promemoria",
       };
     }
 
-    return result;
+    return {
+      success: true,
+      events_processed: Number(result?.processedGroups || 0),
+      reminders_sent: Number(result?.updatedRows || 0),
+    };
   } catch (error) {
     console.error("Error triggering reminders:", error);
     return {
