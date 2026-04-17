@@ -47,6 +47,9 @@ export interface EmailData {
   html: string;
   text: string;
   microsoftConnectionId?: string;
+  senderUserId?: string;
+  sendMode?: "studio" | "user";
+  fromEmail?: string;
   attachments?: {
     nome: string;
     path: string;
@@ -82,6 +85,83 @@ async function getCurrentUserId(): Promise<string | null> {
   } = await supabase.auth.getSession();
 
   return session?.user?.id ?? null;
+}
+
+async function getCurrentUserContext(): Promise<{
+  id: string;
+  email: string;
+  studio_id: string;
+  microsoft_connection_id: string | null;
+} | null> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  const authEmail = session?.user?.email;
+  const authUserId = session?.user?.id;
+
+  if (!authEmail || !authUserId) return null;
+
+  const { data, error } = await (supabase as any)
+    .from("tbutenti")
+    .select("id, email, studio_id, microsoft_connection_id")
+    .eq("id", authUserId)
+    .single();
+
+  if (error || !data?.id || !data?.studio_id || !data?.email) {
+    return null;
+  }
+
+  return {
+    id: String(data.id),
+    email: String(data.email),
+    studio_id: String(data.studio_id),
+    microsoft_connection_id: data.microsoft_connection_id
+      ? String(data.microsoft_connection_id)
+      : null,
+  };
+}
+
+async function getStudioMailContext(): Promise<{
+  senderUserId: string;
+  studioEmail: string;
+  microsoftConnectionId: string | null;
+} | null> {
+  const currentUser = await getCurrentUserContext();
+  if (!currentUser?.studio_id) return null;
+
+  const { data: studio, error: studioError } = await (supabase as any)
+    .from("tbstudio")
+    .select("email")
+    .eq("id", currentUser.studio_id)
+    .single();
+
+  if (studioError || !studio?.email) {
+    return null;
+  }
+
+  const { data: connections, error: connError } = await (supabase as any)
+    .from("microsoft365_connections")
+    .select("id, is_default, enabled, sort_order")
+    .eq("studio_id", currentUser.studio_id)
+    .eq("enabled", true)
+    .order("is_default", { ascending: false })
+    .order("sort_order", { ascending: true });
+
+  if (connError) {
+    return null;
+  }
+
+  const defaultConnection =
+    (connections ?? []).find((c: any) => c.is_default) ?? connections?.[0] ?? null;
+
+  return {
+    senderUserId: currentUser.id,
+    studioEmail: String(studio.email),
+    microsoftConnectionId: defaultConnection?.id
+      ? String(defaultConnection.id)
+      : currentUser.microsoft_connection_id,
+  };
 }
 
 async function filePathToBase64(
@@ -167,7 +247,7 @@ async function sendEmailViaMicrosoft(
 
     const attachments = await buildMicrosoftAttachments(data.attachments);
 
-    const message = {
+    const message: any = {
       subject: data.subject,
       body: {
         contentType: "HTML" as const,
@@ -182,6 +262,19 @@ async function sendEmailViaMicrosoft(
       ],
       ...(attachments.length > 0 ? { attachments } : {}),
     };
+
+    if (data.fromEmail) {
+      message.from = {
+        emailAddress: {
+          address: data.fromEmail,
+        },
+      };
+      message.sender = {
+        emailAddress: {
+          address: data.fromEmail,
+        },
+      };
+    }
 
     await microsoftGraphService.sendEmail(
       userId,
@@ -199,42 +292,61 @@ async function sendEmailViaMicrosoft(
   }
 }
 
-async function sendEmailViaEdgeFunction(
-  data: EmailData
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    const { data: result, error } = await supabase.functions.invoke("send-email", {
-      body: data,
-    });
-
-    if (error) {
-      console.warn("Edge function 'send-email' not found or error:", error);
-      return { success: false, error: error.message };
-    }
-
-    return { success: true, ...result };
-  } catch (error) {
-    console.error("Error sending email via edge function:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  }
-}
-
 export async function sendEmail(
   data: EmailData
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const userId = await getCurrentUserId();
+    const sendMode = data.sendMode || "user";
 
-    if (data.microsoftConnectionId && userId) {
-      console.log("📧 Sending email via Microsoft 365...");
-      return await sendEmailViaMicrosoft(userId, data);
+    if (sendMode === "studio") {
+      const studioCtx = await getStudioMailContext();
+
+      if (!studioCtx?.senderUserId) {
+        return {
+          success: false,
+          error: "Impossibile determinare il contesto studio per l'invio email",
+        };
+      }
+
+      if (!studioCtx.microsoftConnectionId) {
+        return {
+          success: false,
+          error: "Connessione Microsoft dello studio non trovata",
+        };
+      }
+
+      return await sendEmailViaMicrosoft(studioCtx.senderUserId, {
+        ...data,
+        microsoftConnectionId:
+          data.microsoftConnectionId || studioCtx.microsoftConnectionId,
+        fromEmail: data.fromEmail || studioCtx.studioEmail,
+      });
     }
 
-    console.log("📧 Sending email via Edge Function (Resend)...");
-    return await sendEmailViaEdgeFunction(data);
+    const currentUser = await getCurrentUserContext();
+
+    const senderUserId = data.senderUserId || currentUser?.id || null;
+    const microsoftConnectionId =
+      data.microsoftConnectionId || currentUser?.microsoft_connection_id || null;
+
+    if (!senderUserId) {
+      return {
+        success: false,
+        error: "Utente mittente non determinato",
+      };
+    }
+
+    if (!microsoftConnectionId) {
+      return {
+        success: false,
+        error: "Connessione Microsoft utente non trovata",
+      };
+    }
+
+    return await sendEmailViaMicrosoft(senderUserId, {
+      ...data,
+      microsoftConnectionId,
+    });
   } catch (error) {
     console.error("Error in sendEmail:", error);
     return {
@@ -285,6 +397,7 @@ Questa è una email automatica, non rispondere a questo messaggio
       html: htmlContent,
       text: textContent,
       microsoftConnectionId,
+      sendMode: "studio",
     });
   } catch (error) {
     console.error("Error sending welcome email:", error);
@@ -341,6 +454,7 @@ Questa è una email automatica, non rispondere a questo messaggio
       html: htmlContent,
       text: textContent,
       microsoftConnectionId,
+      sendMode: "studio",
     });
   } catch (error) {
     console.error("Error sending password reset email:", error);
@@ -351,8 +465,176 @@ Questa è una email automatica, non rispondere a questo messaggio
   }
 }
 
+function buildEventNotificationHtml(data: EventEmailData): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const action = data.action || "created";
+
+  let headerTitle = "Nuovo Evento";
+  let introText = "Hai un nuovo evento in agenda!";
+  let emailSubject = `📅 Nuovo Evento: ${data.eventoTitolo}`;
+
+  if (action === "updated") {
+    headerTitle = "Evento Modificato";
+    introText = "È stato modificato un evento in agenda.";
+    emailSubject = `✏️ Evento modificato: ${data.eventoTitolo}`;
+  }
+
+  if (action === "cancelled") {
+    headerTitle = "Evento Annullato";
+    introText = "È stato annullato un evento in agenda.";
+    emailSubject = `❌ Evento annullato: ${data.eventoTitolo}`;
+  }
+
+  if (action === "reminder") {
+    headerTitle = "Promemoria Evento";
+    introText = "Ti ricordiamo che oggi è previsto questo evento in agenda.";
+    emailSubject = `🔔 Promemoria evento di oggi: ${data.eventoTitolo}`;
+  }
+
+  const luogoLabel = data.eventoInSede
+    ? `In Sede${data.eventoLuogo ? ` – ${data.eventoLuogo}` : ""}`
+    : data.eventoLuogo || "";
+
+  const luogoSection = luogoLabel
+    ? `<p style="margin: 10px 0; font-size: 14px; color: #555;">
+         <strong>📍 Luogo:</strong> ${luogoLabel}
+       </p>`
+    : "";
+
+  const clienteSection = data.clienteNome
+    ? `<p style="margin: 10px 0; font-size: 14px; color: #555;">
+         <strong>🏢 Cliente:</strong> ${data.clienteNome}
+       </p>`
+    : "";
+
+  const teamsSection =
+    data.link_teams && action !== "cancelled"
+      ? `<p style="margin: 10px 0; font-size: 14px; color: #555;">
+           <strong>💻 Riunione Teams:</strong><br/>
+           <a href="${data.link_teams}" target="_blank" rel="noopener noreferrer" style="color: #2563eb; text-decoration: none;">
+             Partecipa alla riunione Teams
+           </a>
+         </p>`
+      : "";
+
+  const partecipantiSection =
+    data.partecipantiNomi && data.partecipantiNomi.length > 0
+      ? `
+        <div style="margin: 15px 0;">
+          <p style="margin: 0 0 8px 0; font-size: 14px; color: #333;">
+            <strong>👥 Partecipanti:</strong>
+          </p>
+          <div style="font-size: 14px; color: #555; line-height: 1.6;">
+            ${data.partecipantiNomi.map((nome) => `<div>• ${nome}</div>`).join("")}
+          </div>
+        </div>
+      `
+      : "";
+
+  const descrizioneSection = data.eventoDescrizione
+    ? `<div style="margin: 20px 0; padding: 15px; background-color: #f9f9f9; border-left: 4px solid #3b82f6; border-radius: 4px;">
+         <p style="margin: 0; font-size: 14px; color: #333;">
+           <strong>📝 Note:</strong><br/>
+           ${data.eventoDescrizione}
+         </p>
+       </div>`
+    : "";
+
+  const headerColor =
+    action === "updated"
+      ? "#f59e0b"
+      : action === "cancelled"
+      ? "#ef4444"
+      : action === "reminder"
+      ? "#0f766e"
+      : "#2563eb";
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 0; }
+        .header { color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background-color: #ffffff; padding: 20px; border: none; }
+        .footer { margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280; text-align: center; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header" style="background: ${headerColor};">
+          <h1 style="margin: 0; font-size: 28px;">${headerTitle}</h1>
+          <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">${data.eventoTitolo}</p>
+        </div>
+        <div class="content">
+          <p style="margin: 0 0 20px 0; font-size: 16px; color: #111;">
+            ${introText}
+          </p>
+
+          <div style="background-color: #f3f4f6; padding: 20px; border-radius: 6px; margin: 20px 0;">
+            <p style="margin: 10px 0; font-size: 14px; color: #555;">
+              <strong>📅 Data:</strong> ${data.eventoData}
+            </p>
+            <p style="margin: 10px 0; font-size: 14px; color: #555;">
+              <strong>⏰ Orario:</strong> ${data.eventoOraInizio} - ${data.eventoOraFine}
+            </p>
+            ${luogoSection}
+            <p style="margin: 10px 0; font-size: 14px; color: #555;">
+              <strong>👤 Responsabile:</strong> ${data.responsabileNome}
+            </p>
+            ${clienteSection}
+            ${teamsSection}
+          </div>
+
+          ${partecipantiSection}
+          ${descrizioneSection}
+
+          <div style="margin-top: 30px; text-align: center;">
+            <p style="margin: 0; font-size: 14px; color: #6b7280;">
+              Accedi a Studio Manager Pro per visualizzare tutti i dettagli
+            </p>
+          </div>
+        </div>
+        <div class="footer">
+          <p style="margin: 5px 0;">Studio Manager Pro - Sistema di Gestione Studio</p>
+          <p style="margin: 5px 0;">Questa è una email automatica, non rispondere a questo messaggio.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const text = `
+${headerTitle}
+
+${data.eventoTitolo}
+
+${introText}
+
+Data: ${data.eventoData}
+Orario: ${data.eventoOraInizio} - ${data.eventoOraFine}
+${luogoLabel ? `Luogo: ${luogoLabel}` : ""}
+Responsabile: ${data.responsabileNome}
+${data.clienteNome ? `Cliente: ${data.clienteNome}` : ""}
+${data.link_teams && action !== "cancelled" ? `Link Teams: ${data.link_teams}` : ""}
+${data.partecipantiNomi?.length ? `Partecipanti: ${data.partecipantiNomi.join(", ")}` : ""}
+${data.eventoDescrizione ? `Note: ${data.eventoDescrizione}` : ""}
+  `.trim();
+
+  return {
+    subject: emailSubject,
+    html,
+    text,
+  };
+}
+
 export async function sendEventNotification(
-  data: EventEmailData & { microsoftConnectionId?: string }
+  data: EventEmailData & { microsoftConnectionId?: string; senderUserId?: string }
 ): Promise<{
   success: boolean;
   sent: number;
@@ -416,35 +698,41 @@ export async function sendEventNotification(
       };
     }
 
-    const action = data.action || "created";
+    const built = buildEventNotificationHtml(data);
 
-    const { data: result, error } = await supabase.functions.invoke(
-      "send-event-notification",
-      {
-        body: {
-          ...data,
-          action,
-          recipients,
-        },
+    let sent = 0;
+    let failed = 0;
+
+    for (let i = 0; i < recipients.length; i++) {
+      const recipient = recipients[i];
+
+      const result = await sendEmail({
+        to: recipient,
+        subject: built.subject,
+        html: built.html,
+        text: built.text,
+        microsoftConnectionId: data.microsoftConnectionId,
+        senderUserId: data.senderUserId,
+        sendMode: "user",
+      });
+
+      if (result.success) {
+        sent++;
+      } else {
+        failed++;
       }
-    );
 
-    if (error) {
-      return {
-        success: false,
-        sent: 0,
-        failed: 0,
-        total: recipients.length,
-        error: error.message,
-      };
+      if (i < recipients.length - 1) {
+        await sleep(300);
+      }
     }
 
     return {
-      success: true,
-      sent: recipients.length,
-      failed: 0,
+      success: sent > 0,
+      sent,
+      failed,
       total: recipients.length,
-      ...result,
+      error: failed > 0 ? `${failed} email non inviate` : undefined,
     };
   } catch (error) {
     console.error("💥 Error sending event notification:", error);
@@ -594,7 +882,10 @@ export async function sendComunicazioneEmail(
 
         recipients = (utenti || [])
           .filter((u) => u.email)
-          .map((u) => ({ email: u.email as string, nome: `${u.nome} ${u.cognome}` }));
+          .map((u) => ({
+            email: u.email as string,
+            nome: `${u.nome} ${u.cognome}`,
+          }));
       } else {
         const { data: utenti, error } = await supabase
           .from("tbutenti")
@@ -613,7 +904,10 @@ export async function sendComunicazioneEmail(
 
         recipients = (utenti || [])
           .filter((u) => u.email)
-          .map((u) => ({ email: u.email as string, nome: `${u.nome} ${u.cognome}` }));
+          .map((u) => ({
+            email: u.email as string,
+            nome: `${u.nome} ${u.cognome}`,
+          }));
       }
     }
 
@@ -640,7 +934,7 @@ export async function sendComunicazioneEmail(
       };
     }
 
-const htmlContent = `
+    const htmlContent = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -670,27 +964,27 @@ const htmlContent = `
       padding: 30px 24px 20px 24px;
     }
 
-  .badge {
-  background: #1d4ed8;
-  color: #ffffff;
-  padding: 16px 20px;
-  text-align: center;
-  font-size: 28px;
-  font-weight: 700;
-  margin-bottom: 25px; /* 👈 spazio sotto badge */
-}
-   
-  .subject {
-  font-size: 15px;
-  color: #111827;
-  margin-bottom: 25px; /* 👈 spazio sotto oggetto */
-}
+    .badge {
+      background: #1d4ed8;
+      color: #ffffff;
+      padding: 16px 20px;
+      text-align: center;
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 25px;
+    }
 
-.message-row {
-  font-size: 15px;
-  color: #1f2937;
-  margin-bottom: 20px;
-}
+    .subject {
+      font-size: 15px;
+      color: #111827;
+      margin-bottom: 25px;
+    }
+
+    .message-row {
+      font-size: 15px;
+      color: #1f2937;
+      margin-bottom: 20px;
+    }
 
     .attachment-box {
       margin-top: 22px;
@@ -721,17 +1015,14 @@ const htmlContent = `
 <body>
   <div class="container">
     <div class="content">
-
       <div class="badge">
         COMUNICAZIONE INTERNA
       </div>
 
-  
       <p class="subject">
         <strong>Oggetto:</strong> ${data.oggetto}
       </p>
 
-   
       <p class="message-row">
         <strong>Messaggio:</strong> ${data.messaggio.replace(/\n/g, "<br>")}
       </p>
@@ -759,7 +1050,7 @@ const htmlContent = `
 </body>
 </html>
 `.trim();
-    
+
     const textContent = `
 ${data.oggetto}
 
@@ -780,13 +1071,14 @@ Questa è una email automatica, non rispondere a questo messaggio
       const recipient = validRecipients[i];
 
       try {
-     const result = await sendEmail({
+        const result = await sendEmail({
           to: recipient.email,
           subject: data.oggetto,
           html: htmlContent,
           text: textContent,
           microsoftConnectionId: data.microsoftConnectionId,
           attachments: Array.isArray(data.allegati) ? data.allegati : [],
+          sendMode: "studio",
         });
 
         if (result.success) {
