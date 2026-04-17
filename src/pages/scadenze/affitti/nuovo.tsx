@@ -5,14 +5,11 @@ import { getSupabaseClient } from "@/lib/supabaseClient";
 type ClienteOption = {
   id: string;
   ragione_sociale: string | null;
-  nome?: string | null;
-  cognome?: string | null;
 };
 
 type ContrattoFormData = {
   cliente_id: string;
   utente_operatore_id: string;
-  nominativo: string;
   descrizione_immobile_locato: string;
   data_registrazione_atto: string;
   durata_contratto_anni: string;
@@ -20,6 +17,7 @@ type ContrattoFormData = {
   importo_registrazione: string;
   contatore_anni: string;
   data_prossima_scadenza: string;
+  emailperalert: string;
   alert1_inviato: boolean;
   alert1_inviato_at: string;
   alert2_inviato: boolean;
@@ -33,7 +31,6 @@ type ContrattoFormData = {
 const emptyForm: ContrattoFormData = {
   cliente_id: "",
   utente_operatore_id: "",
-  nominativo: "",
   descrizione_immobile_locato: "",
   data_registrazione_atto: "",
   durata_contratto_anni: "",
@@ -41,6 +38,7 @@ const emptyForm: ContrattoFormData = {
   importo_registrazione: "",
   contatore_anni: "1",
   data_prossima_scadenza: "",
+  emailperalert: "",
   alert1_inviato: false,
   alert1_inviato_at: "",
   alert2_inviato: false,
@@ -85,6 +83,7 @@ export default function NuovoContrattoAffittoPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [studioId, setStudioId] = useState<string>("");
+  const [operatoreEmail, setOperatoreEmail] = useState<string>("");
   const [formData, setFormData] = useState<ContrattoFormData>(emptyForm);
   const [clienti, setClienti] = useState<ClienteOption[]>([]);
 
@@ -97,8 +96,10 @@ export default function NuovoContrattoAffittoPage() {
 
   const initialize = async () => {
     setLoading(true);
+
     try {
       const supabase = getSupabaseClient();
+      const supabaseAny = supabase as any;
 
       const {
         data: { user },
@@ -110,25 +111,67 @@ export default function NuovoContrattoAffittoPage() {
         return;
       }
 
-      const { data: studioUser, error: studioError } = await supabase
+      const { data: utenteDb, error: utenteError } = await supabase
         .from("tbutenti")
-        .select("studio_id")
+        .select("id, studio_id, email")
         .eq("id", user.id)
         .single();
 
-      if (studioError || !studioUser?.studio_id) {
-        console.error("Errore recupero studio_id:", studioError);
+      if (utenteError || !utenteDb?.studio_id) {
+        console.error("Errore recupero dati utente:", utenteError);
         setLoading(false);
         return;
       }
 
-      const currentStudioId = studioUser.studio_id as string;
+      const currentStudioId = utenteDb.studio_id as string;
       setStudioId(currentStudioId);
+      setOperatoreEmail(utenteDb.email || user.email || "");
 
       await loadClienti(currentStudioId);
 
       if (typeof id === "string" && id) {
-        await loadContratto(currentStudioId, id);
+        const { data: contratto, error: contrattoError } = await supabaseAny
+          .from("tbscadaffitti")
+          .select("*")
+          .eq("id", id)
+          .eq("studio_id", currentStudioId)
+          .single();
+
+        if (contrattoError || !contratto) {
+          console.error("Errore caricamento contratto:", contrattoError);
+        } else {
+          setFormData({
+            cliente_id: contratto.cliente_id || "",
+            utente_operatore_id: contratto.utente_operatore_id || user.id,
+            descrizione_immobile_locato:
+              contratto.descrizione_immobile_locato || "",
+            data_registrazione_atto: contratto.data_registrazione_atto || "",
+            durata_contratto_anni: String(contratto.durata_contratto_anni ?? ""),
+            codice_identificativo_registrazione:
+              contratto.codice_identificativo_registrazione || "",
+            importo_registrazione:
+              contratto.importo_registrazione != null
+                ? String(contratto.importo_registrazione)
+                : "",
+            contatore_anni: String(contratto.contatore_anni ?? 1),
+            data_prossima_scadenza: contratto.data_prossima_scadenza || "",
+            emailperalert: contratto.emailperalert || "",
+            alert1_inviato: !!contratto.alert1_inviato,
+            alert1_inviato_at: formatDateTimeLocalInput(
+              contratto.alert1_inviato_at
+            ),
+            alert2_inviato: !!contratto.alert2_inviato,
+            alert2_inviato_at: formatDateTimeLocalInput(
+              contratto.alert2_inviato_at
+            ),
+            alert3_inviato: !!contratto.alert3_inviato,
+            alert3_inviato_at: formatDateTimeLocalInput(
+              contratto.alert3_inviato_at
+            ),
+            attivo: !!contratto.attivo,
+            contratto_concluso: !!contratto.contratto_concluso,
+          });
+        }
       } else {
         setFormData((prev) => ({
           ...prev,
@@ -160,47 +203,6 @@ export default function NuovoContrattoAffittoPage() {
     setClienti(((data as unknown) as ClienteOption[]) || []);
   };
 
-  const loadContratto = async (currentStudioId: string, recordId: string) => {
-    const supabase = getSupabaseClient();
-
-    const { data, error } = await supabase
-      .from("tbscadaffitti")
-      .select("*")
-      .eq("id", recordId)
-      .eq("studio_id", currentStudioId)
-      .single();
-
-    if (error || !data) {
-      console.error("Errore caricamento contratto:", error);
-      return;
-    }
-
-    setFormData({
-      cliente_id: data.cliente_id || "",
-      utente_operatore_id: data.utente_operatore_id || "",
-      nominativo: data.nominativo || "",
-      descrizione_immobile_locato: data.descrizione_immobile_locato || "",
-      data_registrazione_atto: data.data_registrazione_atto || "",
-      durata_contratto_anni: String(data.durata_contratto_anni ?? ""),
-      codice_identificativo_registrazione:
-        data.codice_identificativo_registrazione || "",
-      importo_registrazione:
-        data.importo_registrazione != null
-          ? String(data.importo_registrazione)
-          : "",
-      contatore_anni: String(data.contatore_anni ?? 1),
-      data_prossima_scadenza: data.data_prossima_scadenza || "",
-      alert1_inviato: !!data.alert1_inviato,
-      alert1_inviato_at: formatDateTimeLocalInput(data.alert1_inviato_at),
-      alert2_inviato: !!data.alert2_inviato,
-      alert2_inviato_at: formatDateTimeLocalInput(data.alert2_inviato_at),
-      alert3_inviato: !!data.alert3_inviato,
-      alert3_inviato_at: formatDateTimeLocalInput(data.alert3_inviato_at),
-      attivo: !!data.attivo,
-      contratto_concluso: !!data.contratto_concluso,
-    });
-  };
-
   const handleChange = (
     field: keyof ContrattoFormData,
     value: string | boolean
@@ -208,31 +210,6 @@ export default function NuovoContrattoAffittoPage() {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
-    }));
-  };
-
-  const handleClienteChange = async (clienteId: string) => {
-    handleChange("cliente_id", clienteId);
-
-    const clienteSelezionato = clienti.find((c) => c.id === clienteId);
-
-    if (!clienteSelezionato) {
-      setFormData((prev) => ({
-        ...prev,
-        cliente_id: clienteId,
-        nominativo: "",
-      }));
-      return;
-    }
-
-    const nominativo =
-      clienteSelezionato.ragione_sociale?.trim() ||
-      `${clienteSelezionato.cognome || ""} ${clienteSelezionato.nome || ""}`.trim();
-
-    setFormData((prev) => ({
-      ...prev,
-      cliente_id: clienteId,
-      nominativo,
     }));
   };
 
@@ -257,17 +234,15 @@ export default function NuovoContrattoAffittoPage() {
       return false;
     }
 
-    if (!formData.nominativo.trim()) {
-      alert("Il campo nominativo è obbligatorio.");
-      return false;
-    }
-
     if (!formData.data_registrazione_atto) {
       alert("La data di registrazione atto è obbligatoria.");
       return false;
     }
 
-    if (!formData.durata_contratto_anni || Number(formData.durata_contratto_anni) < 1) {
+    if (
+      !formData.durata_contratto_anni ||
+      Number(formData.durata_contratto_anni) < 1
+    ) {
       alert("La durata contratto deve essere almeno 1 anno.");
       return false;
     }
@@ -289,14 +264,22 @@ export default function NuovoContrattoAffittoPage() {
     if (!validateForm()) return;
 
     setSaving(true);
+
     try {
       const supabase = getSupabaseClient();
+      const supabaseAny = supabase as any;
+
+      const clienteSelezionato = clienti.find(
+        (c) => c.id === formData.cliente_id
+      );
+
+      const ragioneSocialeLegacy =
+        clienteSelezionato?.ragione_sociale?.trim() || null;
 
       const payload = {
         studio_id: studioId,
         cliente_id: formData.cliente_id,
         utente_operatore_id: formData.utente_operatore_id || null,
-        nominativo: formData.nominativo.trim(),
         descrizione_immobile_locato:
           formData.descrizione_immobile_locato.trim() || null,
         data_registrazione_atto: formData.data_registrazione_atto,
@@ -306,6 +289,7 @@ export default function NuovoContrattoAffittoPage() {
         importo_registrazione: toNullableNumber(formData.importo_registrazione),
         contatore_anni: Number(formData.contatore_anni),
         data_prossima_scadenza: formData.data_prossima_scadenza,
+        emailperalert: formData.emailperalert.trim() || null,
         alert1_inviato: !!formData.alert1_inviato,
         alert1_inviato_at: formData.alert1_inviato
           ? formData.alert1_inviato_at || new Date().toISOString()
@@ -320,10 +304,13 @@ export default function NuovoContrattoAffittoPage() {
           : null,
         attivo: !!formData.attivo,
         contratto_concluso: !!formData.contratto_concluso,
+
+        // legacy temporaneo: tienilo finché la colonna esiste nel DB
+        nominativo: ragioneSocialeLegacy,
       };
 
       if (isEdit && typeof id === "string") {
-        const { error } = await supabase
+        const { error } = await supabaseAny
           .from("tbscadaffitti")
           .update(payload)
           .eq("id", id)
@@ -337,7 +324,9 @@ export default function NuovoContrattoAffittoPage() {
 
         alert("Contratto aggiornato correttamente.");
       } else {
-        const { error } = await supabase.from("tbscadaffitti").insert(payload);
+        const { error } = await supabaseAny
+          .from("tbscadaffitti")
+          .insert(payload);
 
         if (error) {
           console.error("Errore inserimento contratto:", error);
@@ -397,32 +386,27 @@ export default function NuovoContrattoAffittoPage() {
           <label className="mb-1 block text-sm font-medium">Cliente *</label>
           <select
             value={formData.cliente_id}
-            onChange={(e) => handleClienteChange(e.target.value)}
+            onChange={(e) => handleChange("cliente_id", e.target.value)}
             className="w-full rounded border px-3 py-2"
           >
             <option value="">Seleziona cliente</option>
-            {clienti.map((cliente) => {
-              const label =
-                cliente.ragione_sociale?.trim() ||
-                `${cliente.cognome || ""} ${cliente.nome || ""}`.trim() ||
-                "Senza nome";
-
-              return (
-                <option key={cliente.id} value={cliente.id}>
-                  {label}
-                </option>
-              );
-            })}
+            {clienti.map((cliente) => (
+              <option key={cliente.id} value={cliente.id}>
+                {cliente.ragione_sociale?.trim() || "Senza nome"}
+              </option>
+            ))}
           </select>
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium">Nominativo *</label>
+          <label className="mb-1 block text-sm font-medium">
+            Email operatore creatore
+          </label>
           <input
             type="text"
-            value={formData.nominativo}
-            onChange={(e) => handleChange("nominativo", e.target.value)}
-            className="w-full rounded border px-3 py-2"
+            value={operatoreEmail}
+            readOnly
+            className="w-full rounded border bg-gray-100 px-3 py-2"
           />
         </div>
 
@@ -530,6 +514,17 @@ export default function NuovoContrattoAffittoPage() {
               Calcola
             </button>
           </div>
+        </div>
+
+        <div className="md:col-span-2">
+          <label className="mb-1 block text-sm font-medium">Email per alert</label>
+          <input
+            type="email"
+            value={formData.emailperalert}
+            onChange={(e) => handleChange("emailperalert", e.target.value)}
+            className="w-full rounded border px-3 py-2"
+            placeholder="Inserisci email manualmente"
+          />
         </div>
       </div>
 
