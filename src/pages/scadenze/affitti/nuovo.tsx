@@ -1,15 +1,25 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
+import { Search } from "lucide-react";
 
 type ClienteOption = {
   id: string;
   ragione_sociale: string | null;
 };
 
+type ContattoOption = {
+  id: string;
+  denominazione: string | null;
+  nome: string | null;
+  cognome: string | null;
+  email: string | null;
+};
+
 type ContrattoFormData = {
   cliente_id: string;
   utente_operatore_id: string;
+  conduttore: string;
   descrizione_immobile_locato: string;
   data_registrazione_atto: string;
   durata_contratto_anni: string;
@@ -34,6 +44,7 @@ type ContrattoFormData = {
 const emptyForm: ContrattoFormData = {
   cliente_id: "",
   utente_operatore_id: "",
+  conduttore: "",
   descrizione_immobile_locato: "",
   data_registrazione_atto: "",
   durata_contratto_anni: "",
@@ -151,6 +162,16 @@ function calcolaDateAlert(dataScadenza: string) {
   };
 }
 
+function getContattoLabel(contatto: ContattoOption) {
+  const denominazione = contatto.denominazione?.trim();
+  if (denominazione) return denominazione;
+
+  const nominativo = `${contatto.cognome || ""} ${contatto.nome || ""}`.trim();
+  if (nominativo) return nominativo;
+
+  return contatto.email || "Contatto";
+}
+
 export default function NuovoContrattoAffittoPage() {
   const router = useRouter();
   const { id } = router.query;
@@ -158,9 +179,14 @@ export default function NuovoContrattoAffittoPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [studioId, setStudioId] = useState("");
-  const [operatoreEmail, setOperatoreEmail] = useState("");
+  const [operatoreLabel, setOperatoreLabel] = useState("");
   const [clienti, setClienti] = useState<ClienteOption[]>([]);
   const [formData, setFormData] = useState<ContrattoFormData>(emptyForm);
+
+  const [contattiSearch, setContattiSearch] = useState("");
+  const [contattiResults, setContattiResults] = useState<ContattoOption[]>([]);
+  const [showContattiPicker, setShowContattiPicker] = useState(false);
+  const [loadingContatti, setLoadingContatti] = useState(false);
 
   const isEdit = useMemo(() => typeof id === "string" && !!id, [id]);
 
@@ -223,7 +249,7 @@ export default function NuovoContrattoAffittoPage() {
 
       const { data: utenteDb, error: utenteError } = await supabase
         .from("tbutenti")
-        .select("id, studio_id, email")
+        .select("id, studio_id, nome, cognome, email")
         .eq("id", user.id)
         .single();
 
@@ -235,7 +261,9 @@ export default function NuovoContrattoAffittoPage() {
 
       const currentStudioId = utenteDb.studio_id as string;
       setStudioId(currentStudioId);
-      setOperatoreEmail(utenteDb.email || user.email || "");
+
+      const fullName = `${utenteDb.cognome || ""} ${utenteDb.nome || ""}`.trim();
+      setOperatoreLabel(fullName || utenteDb.email || user.email || "");
 
       const { data: clientiData, error: clientiError } = await supabase
         .from("tbclienti")
@@ -244,7 +272,7 @@ export default function NuovoContrattoAffittoPage() {
         .order("ragione_sociale", { ascending: true });
 
       if (clientiError) {
-        console.error("Errore caricamento clienti:", clientiError);
+        console.error("Errore caricamento locatori:", clientiError);
         setClienti([]);
       } else {
         setClienti(((clientiData as unknown) as ClienteOption[]) || []);
@@ -266,6 +294,7 @@ export default function NuovoContrattoAffittoPage() {
           setFormData({
             cliente_id: contratto.cliente_id || "",
             utente_operatore_id: contratto.utente_operatore_id || user.id,
+            conduttore: contratto.conduttore || "",
             descrizione_immobile_locato:
               contratto.descrizione_immobile_locato || "",
             data_registrazione_atto: contratto.data_registrazione_atto || "",
@@ -322,6 +351,56 @@ export default function NuovoContrattoAffittoPage() {
     }));
   };
 
+  const searchContatti = async () => {
+    if (!studioId) return;
+
+    setLoadingContatti(true);
+    setShowContattiPicker(true);
+
+    try {
+      const supabase = getSupabaseClient();
+
+      let query = supabase
+        .from("tbcontatti")
+        .select("id, denominazione, nome, cognome, email")
+        .eq("studio_id", studioId)
+        .not("email", "is", null)
+        .order("denominazione", { ascending: true })
+        .limit(20);
+
+      const term = contattiSearch.trim();
+
+      if (term) {
+        query = query.or(
+          `denominazione.ilike.%${term}%,nome.ilike.%${term}%,cognome.ilike.%${term}%,email.ilike.%${term}%`
+        );
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error("Errore ricerca contatti:", error);
+        setContattiResults([]);
+        return;
+      }
+
+      setContattiResults(((data as unknown) as ContattoOption[]) || []);
+    } catch (err) {
+      console.error("Errore inatteso ricerca contatti:", err);
+      setContattiResults([]);
+    } finally {
+      setLoadingContatti(false);
+    }
+  };
+
+  const handleSelectContattoEmail = (email: string | null) => {
+    setFormData((prev) => ({
+      ...prev,
+      emailperalert: email || "",
+    }));
+    setShowContattiPicker(false);
+  };
+
   const validateForm = () => {
     if (!studioId) {
       alert("Studio non disponibile.");
@@ -329,7 +408,7 @@ export default function NuovoContrattoAffittoPage() {
     }
 
     if (!formData.cliente_id) {
-      alert("Seleziona il cliente.");
+      alert("Seleziona il locatore.");
       return false;
     }
 
@@ -363,7 +442,7 @@ export default function NuovoContrattoAffittoPage() {
       const supabase = getSupabaseClient();
       const supabaseAny = supabase as any;
 
-      const clienteSelezionato = clienti.find(
+      const locatoreSelezionato = clienti.find(
         (c) => c.id === formData.cliente_id
       );
 
@@ -371,6 +450,7 @@ export default function NuovoContrattoAffittoPage() {
         studio_id: studioId,
         cliente_id: formData.cliente_id,
         utente_operatore_id: formData.utente_operatore_id || null,
+        conduttore: formData.conduttore.trim() || null,
         descrizione_immobile_locato:
           formData.descrizione_immobile_locato.trim() || null,
         data_registrazione_atto: formData.data_registrazione_atto,
@@ -396,8 +476,8 @@ export default function NuovoContrattoAffittoPage() {
         attivo: !!formData.attivo,
         contratto_concluso: !!formData.contratto_concluso,
 
-        // legacy temporaneo finché la colonna esiste
-        nominativo: clienteSelezionato?.ragione_sociale?.trim() || null,
+        // legacy temporaneo
+        nominativo: locatoreSelezionato?.ragione_sociale?.trim() || null,
       };
 
       if (isEdit && typeof id === "string") {
@@ -474,13 +554,13 @@ export default function NuovoContrattoAffittoPage() {
 
       <div className="grid grid-cols-1 gap-4 rounded border bg-white p-4 md:grid-cols-2">
         <div>
-          <label className="mb-1 block text-sm font-medium">Cliente *</label>
+          <label className="mb-1 block text-sm font-medium">Locatore *</label>
           <select
             value={formData.cliente_id}
             onChange={(e) => handleChange("cliente_id", e.target.value)}
             className="w-full rounded border px-3 py-2"
           >
-            <option value="">Seleziona cliente</option>
+            <option value="">Seleziona locatore</option>
             {clienti.map((cliente) => (
               <option key={cliente.id} value={cliente.id}>
                 {cliente.ragione_sociale?.trim() || "Senza nome"}
@@ -490,12 +570,22 @@ export default function NuovoContrattoAffittoPage() {
         </div>
 
         <div>
+          <label className="mb-1 block text-sm font-medium">Conduttore</label>
+          <input
+            type="text"
+            value={formData.conduttore}
+            onChange={(e) => handleChange("conduttore", e.target.value)}
+            className="w-full rounded border px-3 py-2"
+          />
+        </div>
+
+        <div>
           <label className="mb-1 block text-sm font-medium">
-            Email operatore creatore
+            Operatore creatore
           </label>
           <input
             type="text"
-            value={operatoreEmail}
+            value={operatoreLabel}
             readOnly
             className="w-full rounded border bg-gray-100 px-3 py-2"
           />
@@ -573,15 +663,79 @@ export default function NuovoContrattoAffittoPage() {
           />
         </div>
 
-        <div>
+        <div className="md:col-span-2">
           <label className="mb-1 block text-sm font-medium">Email per alert</label>
-          <input
-            type="email"
-            value={formData.emailperalert}
-            onChange={(e) => handleChange("emailperalert", e.target.value)}
-            className="w-full rounded border px-3 py-2"
-            placeholder="Inserisci email manualmente"
-          />
+
+          <div className="flex gap-2">
+            <input
+              type="email"
+              value={formData.emailperalert}
+              onChange={(e) => handleChange("emailperalert", e.target.value)}
+              className="w-full rounded border px-3 py-2"
+              placeholder="Inserisci email manualmente o importa da contatti"
+            />
+
+            <button
+              type="button"
+              onClick={searchContatti}
+              className="flex items-center gap-2 rounded border px-3 py-2"
+              title="Cerca in rubrica"
+            >
+              <Search size={16} />
+              Cerca
+            </button>
+          </div>
+
+          <div className="mt-2 flex gap-2">
+            <input
+              type="text"
+              value={contattiSearch}
+              onChange={(e) => setContattiSearch(e.target.value)}
+              placeholder="Cerca contatto per nome, denominazione o email"
+              className="w-full rounded border px-3 py-2"
+            />
+
+            <button
+              type="button"
+              onClick={searchContatti}
+              className="rounded border px-3 py-2"
+            >
+              Trova
+            </button>
+          </div>
+
+          {showContattiPicker && (
+            <div className="mt-3 rounded border bg-gray-50 p-3">
+              <div className="mb-2 text-sm font-medium">
+                Seleziona un'email da tbcontatti
+              </div>
+
+              {loadingContatti ? (
+                <div className="text-sm text-gray-600">Ricerca in corso...</div>
+              ) : contattiResults.length === 0 ? (
+                <div className="text-sm text-gray-600">Nessun contatto trovato</div>
+              ) : (
+                <div className="max-h-56 overflow-auto rounded border bg-white">
+                  {contattiResults.map((contatto) => (
+                    <button
+                      key={contatto.id}
+                      type="button"
+                      onClick={() => handleSelectContattoEmail(contatto.email)}
+                      className="flex w-full items-start justify-between gap-4 border-b px-3 py-2 text-left hover:bg-gray-100"
+                    >
+                      <div>
+                        <div className="font-medium">{getContattoLabel(contatto)}</div>
+                        <div className="text-sm text-gray-600">
+                          {contatto.email || "-"}
+                        </div>
+                      </div>
+                      <div className="text-xs text-blue-600">Seleziona</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div>
