@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
+import { Eye, Trash2 } from "lucide-react";
 
 type ContrattoAffittoRow = {
   id: string;
   studio_id: string;
   cliente_id: string;
   utente_operatore_id: string | null;
+  conduttore: string | null;
   descrizione_immobile_locato: string | null;
   data_registrazione_atto: string;
   durata_contratto_anni: number;
@@ -34,12 +36,14 @@ type ClienteLite = {
 
 type UtenteLite = {
   id: string;
+  nome: string | null;
+  cognome: string | null;
   email: string | null;
 };
 
 type ContrattoAffittoView = ContrattoAffittoRow & {
-  cliente_label: string;
-  operatore_email: string;
+  locatore_label: string;
+  operatore_label: string;
 };
 
 function formatDate(value?: string | null) {
@@ -60,6 +64,14 @@ function getAlertProgress(row: ContrattoAffittoRow) {
 function getStato(row: ContrattoAffittoRow) {
   if (row.contratto_concluso || !row.attivo) return "CHIUSO";
   return "ATTIVO";
+}
+
+function getOperatoreLabel(utente?: UtenteLite) {
+  if (!utente) return "-";
+
+  const fullName = `${utente.cognome || ""} ${utente.nome || ""}`.trim();
+  if (fullName) return fullName;
+  return utente.email || "-";
 }
 
 export default function ScadenzarioAffittiIndex() {
@@ -114,7 +126,7 @@ export default function ScadenzarioAffittiIndex() {
           .in("id", clienteIds);
 
         if (clientiError) {
-          console.error("Errore caricamento clienti:", clientiError);
+          console.error("Errore caricamento locatori:", clientiError);
         } else {
           const clienti = ((clientiData as unknown) as ClienteLite[]) || [];
           clientiMap = new Map(clienti.map((c) => [c.id, c]));
@@ -124,7 +136,7 @@ export default function ScadenzarioAffittiIndex() {
       if (utenteIds.length > 0) {
         const { data: utentiData, error: utentiError } = await supabase
           .from("tbutenti")
-          .select("id, email")
+          .select("id, nome, cognome, email")
           .in("id", utenteIds);
 
         if (utentiError) {
@@ -137,13 +149,24 @@ export default function ScadenzarioAffittiIndex() {
 
       const merged: ContrattoAffittoView[] = contrattiRows.map((row) => ({
         ...row,
-        cliente_label:
+        locatore_label:
           clientiMap.get(row.cliente_id)?.ragione_sociale?.trim() || "-",
-        operatore_email:
-          (row.utente_operatore_id
-            ? utentiMap.get(row.utente_operatore_id)?.email
-            : null) || "-",
+        operatore_label: row.utente_operatore_id
+          ? getOperatoreLabel(utentiMap.get(row.utente_operatore_id))
+          : "-",
       }));
+
+      merged.sort((a, b) => {
+        const dateCompare =
+          new Date(a.data_prossima_scadenza).getTime() -
+          new Date(b.data_prossima_scadenza).getTime();
+
+        if (dateCompare !== 0) return dateCompare;
+
+        return a.locatore_label.localeCompare(b.locatore_label, "it", {
+          sensitivity: "base",
+        });
+      });
 
       setContratti(merged);
     } catch (err) {
@@ -160,10 +183,11 @@ export default function ScadenzarioAffittiIndex() {
 
     return contratti.filter((row) => {
       const testo = [
-        row.cliente_label,
+        row.locatore_label,
+        row.conduttore || "",
         row.descrizione_immobile_locato || "",
         row.codice_identificativo_registrazione || "",
-        row.operatore_email || "",
+        row.operatore_label || "",
         row.emailperalert || "",
       ]
         .join(" ")
@@ -179,6 +203,31 @@ export default function ScadenzarioAffittiIndex() {
 
   const handleApri = (id: string) => {
     router.push(`/scadenze/affitti/nuovo?id=${id}`);
+  };
+
+  const handleDelete = async (id: string) => {
+    const conferma = window.confirm(
+      "Vuoi eliminare definitivamente questo contratto?"
+    );
+    if (!conferma) return;
+
+    try {
+      const supabase = getSupabaseClient();
+      const supabaseAny = supabase as any;
+
+      const { error } = await supabaseAny.from("tbscadaffitti").delete().eq("id", id);
+
+      if (error) {
+        console.error("Errore eliminazione contratto:", error);
+        alert("Errore durante l'eliminazione del contratto.");
+        return;
+      }
+
+      await loadContratti();
+    } catch (err) {
+      console.error("Errore inatteso eliminazione contratto:", err);
+      alert("Errore inatteso durante l'eliminazione.");
+    }
   };
 
   return (
@@ -200,7 +249,7 @@ export default function ScadenzarioAffittiIndex() {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Cerca per cliente, immobile, email o codice registrazione..."
+          placeholder="Cerca per locatore, conduttore, immobile, email o codice registrazione..."
           className="w-full rounded border px-3 py-2"
         />
       </div>
@@ -209,8 +258,10 @@ export default function ScadenzarioAffittiIndex() {
         <table className="w-full text-sm">
           <thead className="bg-gray-100">
             <tr>
-              <th className="p-3 text-left">Cliente</th>
+              <th className="p-3 text-left">Locatore</th>
+              <th className="p-3 text-left">Conduttore</th>
               <th className="p-3 text-left">Immobile locato</th>
+              <th className="p-3 text-left">Codice identificativo</th>
               <th className="p-3 text-left">Registrazione</th>
               <th className="p-3 text-left">Prossima scadenza</th>
               <th className="p-3 text-left">Annualità</th>
@@ -225,13 +276,13 @@ export default function ScadenzarioAffittiIndex() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={10} className="p-4 text-center">
+                <td colSpan={12} className="p-4 text-center">
                   Caricamento...
                 </td>
               </tr>
             ) : contrattiFiltrati.length === 0 ? (
               <tr>
-                <td colSpan={10} className="p-4 text-center">
+                <td colSpan={12} className="p-4 text-center">
                   Nessun contratto trovato
                 </td>
               </tr>
@@ -241,15 +292,19 @@ export default function ScadenzarioAffittiIndex() {
 
                 return (
                   <tr key={row.id} className="border-t">
-                    <td className="p-3">{row.cliente_label}</td>
+                    <td className="p-3">{row.locatore_label}</td>
+                    <td className="p-3">{row.conduttore || "-"}</td>
                     <td className="p-3">{row.descrizione_immobile_locato || "-"}</td>
+                    <td className="p-3">
+                      {row.codice_identificativo_registrazione || "-"}
+                    </td>
                     <td className="p-3">{formatDate(row.data_registrazione_atto)}</td>
                     <td className="p-3">{formatDate(row.data_prossima_scadenza)}</td>
                     <td className="p-3">
                       {row.contatore_anni}/{row.durata_contratto_anni}
                     </td>
                     <td className="p-3">{getAlertProgress(row)}</td>
-                    <td className="p-3">{row.operatore_email}</td>
+                    <td className="p-3">{row.operatore_label}</td>
                     <td className="p-3">{row.emailperalert || "-"}</td>
                     <td className="p-3">
                       <span
@@ -263,13 +318,25 @@ export default function ScadenzarioAffittiIndex() {
                       </span>
                     </td>
                     <td className="p-3">
-                      <button
-                        type="button"
-                        onClick={() => handleApri(row.id)}
-                        className="text-blue-600 underline hover:text-blue-800"
-                      >
-                        Apri
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => handleApri(row.id)}
+                          className="text-blue-600 hover:text-blue-800"
+                          title="Apri"
+                        >
+                          <Eye size={18} />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(row.id)}
+                          className="text-red-600 hover:text-red-800"
+                          title="Elimina"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
