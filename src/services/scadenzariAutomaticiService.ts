@@ -58,6 +58,37 @@ type Riga770 = RigaScadenzarioBase & {
   conferma_riga: boolean | null;
 };
 
+type RigaAffitti = {
+  id: string;
+  studio_id: string;
+  cliente_id: string;
+  utente_operatore_id: string | null;
+  conduttore: string | null;
+  descrizione_immobile_locato: string | null;
+  data_registrazione_atto: string;
+  data_rinnovo_atto: string | null;
+  durata_contratto_anni: number;
+  codice_identificativo_registrazione: string | null;
+  importo_registrazione: number | null;
+  contatore_anni: number;
+  data_prossima_scadenza: string;
+  emailperalert: string | null;
+  alert1_inviato: boolean;
+  alert1_inviato_at: string | null;
+  alert2_inviato: boolean;
+  alert2_inviato_at: string | null;
+  alert3_inviato: boolean;
+  alert3_inviato_at: string | null;
+  attivo: boolean;
+  rinnovo: boolean;
+  contratto_concluso: boolean;
+};
+
+type ClienteAffittoLite = {
+  id: string;
+  ragione_sociale: string | null;
+};
+
 type ProcessResult = {
   processedTables: number;
   processedRows: number;
@@ -309,6 +340,20 @@ async function markAlertSent(
   if (error) throw error;
 }
 
+function addYears(dateString: string, yearsToAdd: number): string {
+  const d = new Date(dateString);
+  d.setHours(0, 0, 0, 0);
+  d.setFullYear(d.getFullYear() + yearsToAdd);
+  return d.toISOString().split("T")[0];
+}
+
+function subtractDays(dateString: string, days: number): string {
+  const d = new Date(dateString);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - days);
+  return d.toISOString().split("T")[0];
+}
+
 function getRowsForToday<T extends RigaScadenzarioBase>(
   rows: T[],
   oggi: string,
@@ -396,6 +441,285 @@ function filterOpen770Rows(
   >
 ) {
   return rows.filter((r) => !r.conferma_riga);
+}
+
+function getAffittoDecorrenza(row: RigaAffitti): string {
+  return row.rinnovo && row.data_rinnovo_atto
+    ? row.data_rinnovo_atto
+    : row.data_registrazione_atto;
+}
+
+function getAffittoAlertDate(
+  row: RigaAffitti,
+  alertNumero: 1 | 2 | 3
+): string | null {
+  if (!row.data_prossima_scadenza) return null;
+
+  if (alertNumero === 1) {
+    return subtractDays(row.data_prossima_scadenza, 30);
+  }
+
+  if (alertNumero === 2) {
+    return subtractDays(row.data_prossima_scadenza, 15);
+  }
+
+  return row.data_prossima_scadenza;
+}
+
+function buildAffittoEmailMessage(params: {
+  row: RigaAffitti;
+  locatore: string;
+  alertNumero: 1 | 2 | 3;
+}): { oggetto: string; messaggio: string } {
+  const { row, locatore, alertNumero } = params;
+
+  const giorniMancanti = row.data_prossima_scadenza
+    ? diffDaysFromToday(row.data_prossima_scadenza)
+    : 0;
+
+  const oggetto =
+    alertNumero === 1
+      ? `Promemoria rinnovo contratto affitto a 30 giorni — ${locatore}`
+      : alertNumero === 2
+      ? `Promemoria rinnovo contratto affitto a 15 giorni — ${locatore}`
+      : `Promemoria scadenza rinnovo contratto affitto — ${locatore}`;
+
+  const messaggio = [
+    "Ti segnalo che un contratto di affitto richiede attenzione.",
+    "",
+    `Locatore: ${locatore}`,
+    `Conduttore: ${row.conduttore || "-"}`,
+    `Immobile locato: ${row.descrizione_immobile_locato || "-"}`,
+    `Codice identificativo registrazione: ${
+      row.codice_identificativo_registrazione || "-"
+    }`,
+    `Data decorrenza: ${formatDateIT(getAffittoDecorrenza(row))}`,
+    `Data scadenza annualità: ${
+      row.data_prossima_scadenza ? formatDateIT(row.data_prossima_scadenza) : "-"
+    }`,
+    `Annualità corrente: ${row.contatore_anni}/${row.durata_contratto_anni}`,
+    `Giorni mancanti: ${giorniMancanti}`,
+    `Numero avviso: ${alertNumero}`,
+    "",
+    row.importo_registrazione != null
+      ? `Imposta registrata a sistema: € ${Number(row.importo_registrazione).toFixed(2)}`
+      : "Imposta registrata a sistema: -",
+    "",
+    "L’imposta comunicata è stata calcolata sulla base del valore registrato all’origine del contratto.",
+    "In caso di variazione del canone di locazione o di altri elementi contrattuali rilevanti, l’importo dovrà essere aggiornato e ricalcolato prima del versamento.",
+  ].join("\n");
+
+  return { oggetto, messaggio };
+}
+
+async function markAffittoAlertSent(
+  ids: string[],
+  alertNumero: 1 | 2 | 3
+): Promise<void> {
+  if (ids.length === 0) return;
+
+  const nowIso = new Date().toISOString();
+
+  const payload =
+    alertNumero === 1
+      ? {
+          alert1_inviato: true,
+          alert1_inviato_at: nowIso,
+        }
+      : alertNumero === 2
+      ? {
+          alert2_inviato: true,
+          alert2_inviato_at: nowIso,
+        }
+      : {
+          alert3_inviato: true,
+          alert3_inviato_at: nowIso,
+        };
+
+  const { error } = await supabase
+    .from("tbscadaffitti" as any)
+    .update(payload)
+    .in("id", ids);
+
+  if (error) throw error;
+}
+
+async function advanceOrCloseAffitto(row: RigaAffitti): Promise<void> {
+  const nowIso = new Date().toISOString();
+
+  if (row.contatore_anni >= row.durata_contratto_anni) {
+    const { error } = await supabase
+      .from("tbscadaffitti" as any)
+      .update({
+        alert3_inviato: true,
+        alert3_inviato_at: nowIso,
+        attivo: false,
+        contratto_concluso: true,
+      })
+      .eq("id", row.id);
+
+    if (error) throw error;
+    return;
+  }
+
+  const nextAnnualita = row.contatore_anni + 1;
+  const decorrenza = getAffittoDecorrenza(row);
+  const nextScadenza = addYears(decorrenza, nextAnnualita - 1);
+
+  const { error } = await supabase
+    .from("tbscadaffitti" as any)
+    .update({
+      alert1_inviato: false,
+      alert1_inviato_at: null,
+      alert2_inviato: false,
+      alert2_inviato_at: null,
+      alert3_inviato: false,
+      alert3_inviato_at: null,
+      contatore_anni: nextAnnualita,
+      data_prossima_scadenza: nextScadenza,
+      attivo: true,
+      contratto_concluso: false,
+    })
+    .eq("id", row.id);
+
+  if (error) throw error;
+}
+
+async function processAffittiAutomatici(oggi: string): Promise<{
+  emailsSent: number;
+  processedRows: number;
+}> {
+  const { data, error } = await supabase
+    .from("tbscadaffitti" as any)
+    .select(`
+      id,
+      studio_id,
+      cliente_id,
+      utente_operatore_id,
+      conduttore,
+      descrizione_immobile_locato,
+      data_registrazione_atto,
+      data_rinnovo_atto,
+      durata_contratto_anni,
+      codice_identificativo_registrazione,
+      importo_registrazione,
+      contatore_anni,
+      data_prossima_scadenza,
+      emailperalert,
+      alert1_inviato,
+      alert1_inviato_at,
+      alert2_inviato,
+      alert2_inviato_at,
+      alert3_inviato,
+      alert3_inviato_at,
+      attivo,
+      rinnovo,
+      contratto_concluso
+    `)
+    .eq("attivo", true)
+    .eq("contratto_concluso", false)
+    .not("data_prossima_scadenza", "is", null);
+
+  if (error) throw error;
+
+  const rows = ((data || []) as unknown) as RigaAffitti[];
+
+  if (rows.length === 0) {
+    return { emailsSent: 0, processedRows: 0 };
+  }
+
+  const clienteIds = Array.from(
+    new Set(rows.map((r) => r.cliente_id).filter(Boolean))
+  ) as string[];
+
+  const clientiMap = new Map<string, ClienteAffittoLite>();
+
+  if (clienteIds.length > 0) {
+    const { data: clientiData, error: clientiError } = await supabase
+      .from("tbclienti")
+      .select("id, ragione_sociale")
+      .in("id", clienteIds);
+
+    if (clientiError) throw clientiError;
+
+    const clienti = ((clientiData || []) as unknown) as ClienteAffittoLite[];
+    for (const c of clienti) {
+      clientiMap.set(c.id, c);
+    }
+  }
+
+  let processedRows = 0;
+  let emailsSent = 0;
+
+  for (const row of rows) {
+    let alertNumero: 1 | 2 | 3 | null = null;
+
+    const dataAlert1 = getAffittoAlertDate(row, 1);
+    const dataAlert2 = getAffittoAlertDate(row, 2);
+    const dataAlert3 = getAffittoAlertDate(row, 3);
+
+    if (dataAlert1 === oggi && !row.alert1_inviato) {
+      alertNumero = 1;
+    } else if (dataAlert2 === oggi && !row.alert2_inviato) {
+      alertNumero = 2;
+    } else if (dataAlert3 === oggi && !row.alert3_inviato) {
+      alertNumero = 3;
+    }
+
+    if (!alertNumero) continue;
+
+    processedRows += 1;
+
+    const destinatari: DestinatarioEmail[] = [];
+    const seenEmails = new Set<string>();
+
+    if (row.utente_operatore_id) {
+      const utente = await loadDestinatarioByUserId(row.utente_operatore_id);
+      if (utente?.email && !seenEmails.has(utente.email)) {
+        destinatari.push(utente);
+        seenEmails.add(utente.email);
+      }
+    }
+
+    if (row.emailperalert && !seenEmails.has(row.emailperalert)) {
+      destinatari.push({
+        id: `affitto-${row.id}`,
+        email: row.emailperalert,
+        nome: row.conduttore || "Destinatario contratto affitto",
+      });
+      seenEmails.add(row.emailperalert);
+    }
+
+    if (destinatari.length === 0) continue;
+
+    const locatore =
+      clientiMap.get(row.cliente_id)?.ragione_sociale ||
+      row.cliente_id ||
+      "Locatore";
+
+    const { oggetto, messaggio } = buildAffittoEmailMessage({
+      row,
+      locatore,
+      alertNumero,
+    });
+
+    const sentCount = await sendEmails(destinatari, oggetto, messaggio);
+
+    if (sentCount > 0) {
+      if (alertNumero === 3) {
+        await advanceOrCloseAffitto(row);
+      } else {
+        await markAffittoAlertSent([row.id], alertNumero);
+      }
+
+      emailsSent += sentCount;
+    }
+  }
+
+  return {
+    emailsSent,
+    processedRows,
+  };
 }
 
 async function processTable(params: {
@@ -518,8 +842,8 @@ export const scadenzariAutomaticiService = {
       {
         tableName: "tbscadfiscali",
         titolo: "Fiscali",
-       select:
-  "id, nominativo, studio_id, utente_operatore_id, utente_professionista_id, data_scadenza_adempimento, data_avviso_1, data_avviso_2, alert_1_inviato, alert_2_inviato, conferma_riga",
+        select:
+          "id, nominativo, studio_id, utente_operatore_id, utente_professionista_id, data_scadenza_adempimento, data_avviso_1, data_avviso_2, alert_1_inviato, alert_2_inviato, conferma_riga",
         filterOpenRows: filterOpenFiscaliRows,
       },
       {
@@ -566,6 +890,19 @@ export const scadenzariAutomaticiService = {
           }`
         );
       }
+    }
+
+    try {
+      result.processedTables += 1;
+
+      const affittiResult = await processAffittiAutomatici(oggi);
+
+      result.emailsSent += affittiResult.emailsSent;
+      result.processedRows += affittiResult.processedRows;
+    } catch (error: any) {
+      result.errors.push(
+        `Errore su Affitti: ${error?.message || "errore sconosciuto"}`
+      );
     }
 
     return result;
