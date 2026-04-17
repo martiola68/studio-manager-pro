@@ -21,6 +21,7 @@ type ContrattoFormData = {
   conduttore: string;
   descrizione_immobile_locato: string;
   data_registrazione_atto: string;
+  data_rinnovo_atto: string;
   durata_contratto_anni: string;
   codice_identificativo_registrazione: string;
   importo_registrazione: string;
@@ -37,6 +38,7 @@ type ContrattoFormData = {
   alert3_inviato: boolean;
   alert3_inviato_at: string;
   attivo: boolean;
+  rinnovo: boolean;
   contratto_concluso: boolean;
 };
 
@@ -46,6 +48,7 @@ const emptyForm: ContrattoFormData = {
   conduttore: "",
   descrizione_immobile_locato: "",
   data_registrazione_atto: "",
+  data_rinnovo_atto: "",
   durata_contratto_anni: "",
   codice_identificativo_registrazione: "",
   importo_registrazione: "",
@@ -62,6 +65,7 @@ const emptyForm: ContrattoFormData = {
   alert3_inviato: false,
   alert3_inviato_at: "",
   attivo: true,
+  rinnovo: false,
   contratto_concluso: false,
 };
 
@@ -105,12 +109,19 @@ function toNullableNumber(value: string) {
   return Number.isNaN(n) ? null : n;
 }
 
+function getDecorrenzaCalcolo(formData: ContrattoFormData) {
+  if (formData.rinnovo && formData.data_rinnovo_atto) {
+    return formData.data_rinnovo_atto;
+  }
+  return formData.data_registrazione_atto;
+}
+
 function calcolaAnnualitaCorrente(
-  dataRegistrazione: string,
+  dataDecorrenza: string,
   durataAnni: number,
   today: Date = new Date()
 ) {
-  if (!dataRegistrazione || !durataAnni || durataAnni < 1) {
+  if (!dataDecorrenza || !durataAnni || durataAnni < 1) {
     return {
       contatore_anni: "",
       data_prossima_scadenza: "",
@@ -123,7 +134,7 @@ function calcolaAnnualitaCorrente(
   oggi.setHours(0, 0, 0, 0);
 
   for (let annualita = 1; annualita <= durataAnni; annualita++) {
-    const scadenza = addYears(dataRegistrazione, annualita - 1);
+    const scadenza = addYears(dataDecorrenza, annualita - 1);
     const dataScadenza = new Date(scadenza);
     dataScadenza.setHours(0, 0, 0, 0);
 
@@ -139,7 +150,7 @@ function calcolaAnnualitaCorrente(
 
   return {
     contatore_anni: String(durataAnni),
-    data_prossima_scadenza: addYears(dataRegistrazione, durataAnni - 1),
+    data_prossima_scadenza: addYears(dataDecorrenza, durataAnni - 1),
     contratto_concluso: true,
     attivo: false,
   };
@@ -200,7 +211,9 @@ export default function NuovoContrattoAffittoPage() {
   }, [router.isReady, id]);
 
   useEffect(() => {
-    if (!formData.data_registrazione_atto || !formData.durata_contratto_anni) {
+    const dataDecorrenza = getDecorrenzaCalcolo(formData);
+
+    if (!dataDecorrenza || !formData.durata_contratto_anni) {
       setFormData((prev) => ({
         ...prev,
         contatore_anni: "",
@@ -215,11 +228,7 @@ export default function NuovoContrattoAffittoPage() {
     const durata = Number(formData.durata_contratto_anni);
     if (!durata || Number.isNaN(durata) || durata < 1) return;
 
-    const annualita = calcolaAnnualitaCorrente(
-      formData.data_registrazione_atto,
-      durata
-    );
-
+    const annualita = calcolaAnnualitaCorrente(dataDecorrenza, durata);
     const alerts = calcolaDateAlert(annualita.data_prossima_scadenza);
 
     setFormData((prev) => ({
@@ -232,7 +241,12 @@ export default function NuovoContrattoAffittoPage() {
       attivo: annualita.attivo,
       contratto_concluso: annualita.contratto_concluso,
     }));
-  }, [formData.data_registrazione_atto, formData.durata_contratto_anni]);
+  }, [
+    formData.data_registrazione_atto,
+    formData.data_rinnovo_atto,
+    formData.durata_contratto_anni,
+    formData.rinnovo,
+  ]);
 
   const initialize = async () => {
     setLoading(true);
@@ -302,6 +316,7 @@ export default function NuovoContrattoAffittoPage() {
             descrizione_immobile_locato:
               contratto.descrizione_immobile_locato || "",
             data_registrazione_atto: contratto.data_registrazione_atto || "",
+            data_rinnovo_atto: contratto.data_rinnovo_atto || "",
             durata_contratto_anni: String(contratto.durata_contratto_anni ?? ""),
             codice_identificativo_registrazione:
               contratto.codice_identificativo_registrazione || "",
@@ -329,6 +344,7 @@ export default function NuovoContrattoAffittoPage() {
             ),
             attivo:
               typeof contratto.attivo === "boolean" ? contratto.attivo : true,
+            rinnovo: !!contratto.rinnovo,
             contratto_concluso: !!contratto.contratto_concluso,
           });
         }
@@ -355,6 +371,40 @@ export default function NuovoContrattoAffittoPage() {
     }));
   };
 
+  const handleRinnovo = () => {
+    if (!isEdit) {
+      alert("Il rinnovo è disponibile solo su un contratto già salvato.");
+      return;
+    }
+
+    const conferma = window.confirm(
+      "Vuoi attivare il rinnovo del contratto? La data rinnovo diventerà modificabile e la durata dovrà essere reinserita."
+    );
+    if (!conferma) return;
+
+    const oggi = new Date().toISOString().slice(0, 10);
+
+    setFormData((prev) => ({
+      ...prev,
+      rinnovo: true,
+      data_rinnovo_atto: prev.data_rinnovo_atto || oggi,
+      durata_contratto_anni: "",
+      contatore_anni: "",
+      data_prossima_scadenza: "",
+      alert1_data: "",
+      alert2_data: "",
+      alert3_data: "",
+      alert1_inviato: false,
+      alert1_inviato_at: "",
+      alert2_inviato: false,
+      alert2_inviato_at: "",
+      alert3_inviato: false,
+      alert3_inviato_at: "",
+      attivo: true,
+      contratto_concluso: false,
+    }));
+  };
+
   const openEmailModal = async () => {
     setShowEmailModal(true);
     await loadEmailResults("");
@@ -366,8 +416,6 @@ export default function NuovoContrattoAffittoPage() {
   };
 
   const loadEmailResults = async (term: string) => {
-    if (!studioId) return;
-
     setLoadingEmailResults(true);
 
     try {
@@ -473,6 +521,11 @@ export default function NuovoContrattoAffittoPage() {
       return false;
     }
 
+    if (formData.rinnovo && !formData.data_rinnovo_atto) {
+      alert("La data rinnovo atto è obbligatoria.");
+      return false;
+    }
+
     if (
       !formData.durata_contratto_anni ||
       Number(formData.durata_contratto_anni) < 1
@@ -510,6 +563,7 @@ export default function NuovoContrattoAffittoPage() {
         descrizione_immobile_locato:
           formData.descrizione_immobile_locato.trim() || null,
         data_registrazione_atto: formData.data_registrazione_atto,
+        data_rinnovo_atto: formData.data_rinnovo_atto || null,
         durata_contratto_anni: Number(formData.durata_contratto_anni),
         codice_identificativo_registrazione:
           formData.codice_identificativo_registrazione.trim() || null,
@@ -530,6 +584,7 @@ export default function NuovoContrattoAffittoPage() {
           ? formData.alert3_inviato_at || new Date().toISOString()
           : null,
         attivo: !!formData.attivo,
+        rinnovo: !!formData.rinnovo,
         contratto_concluso: !!formData.contratto_concluso,
         nominativo: locatoreSelezionato?.ragione_sociale?.trim() || null,
       };
@@ -598,6 +653,14 @@ export default function NuovoContrattoAffittoPage() {
 
             <button
               type="button"
+              onClick={handleRinnovo}
+              className="rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700"
+            >
+              Rinnovo
+            </button>
+
+            <button
+              type="button"
               onClick={handleSave}
               disabled={saving}
               className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-60"
@@ -637,9 +700,8 @@ export default function NuovoContrattoAffittoPage() {
               <button
                 type="button"
                 onClick={openConduttoreModal}
-                className="flex items-center gap-2 rounded border px-3 py-2"
+                className="rounded border px-3 py-2 text-blue-600 hover:text-blue-800"
               >
-                <Search size={16} />
                 Cerca
               </button>
             </div>
@@ -671,33 +733,55 @@ export default function NuovoContrattoAffittoPage() {
             />
           </div>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium">
-              Data registrazione atto *
-            </label>
-            <input
-              type="date"
-              value={formData.data_registrazione_atto}
-              onChange={(e) =>
-                handleChange("data_registrazione_atto", e.target.value)
-              }
-              className="w-full rounded border px-3 py-2"
-            />
-          </div>
+          <div className="grid grid-cols-1 gap-4 md:col-span-2 md:grid-cols-3">
+            <div>
+              <label className="mb-1 block text-sm font-medium">
+                Data registrazione atto *
+              </label>
+              <input
+                type="date"
+                value={formData.data_registrazione_atto}
+                onChange={(e) =>
+                  handleChange("data_registrazione_atto", e.target.value)
+                }
+                readOnly={formData.rinnovo}
+                className={`w-full rounded border px-3 py-2 ${
+                  formData.rinnovo ? "bg-gray-100" : ""
+                }`}
+              />
+            </div>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium">
-              Durata contratto anni *
-            </label>
-            <input
-              type="number"
-              min={1}
-              value={formData.durata_contratto_anni}
-              onChange={(e) =>
-                handleChange("durata_contratto_anni", e.target.value)
-              }
-              className="w-full rounded border px-3 py-2"
-            />
+            <div>
+              <label className="mb-1 block text-sm font-medium">
+                Data rinnovo atto
+              </label>
+              <input
+                type="date"
+                value={formData.data_rinnovo_atto}
+                onChange={(e) =>
+                  handleChange("data_rinnovo_atto", e.target.value)
+                }
+                readOnly={!formData.rinnovo}
+                className={`w-full rounded border px-3 py-2 ${
+                  !formData.rinnovo ? "bg-gray-100" : ""
+                }`}
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium">
+                Durata contratto anni *
+              </label>
+              <input
+                type="number"
+                min={1}
+                value={formData.durata_contratto_anni}
+                onChange={(e) =>
+                  handleChange("durata_contratto_anni", e.target.value)
+                }
+                className="w-full rounded border px-3 py-2"
+              />
+            </div>
           </div>
 
           <div>
@@ -742,9 +826,8 @@ export default function NuovoContrattoAffittoPage() {
               <button
                 type="button"
                 onClick={openEmailModal}
-                className="flex items-center gap-2 rounded border px-3 py-2"
+                className="rounded border px-3 py-2 text-blue-600 hover:text-blue-800"
               >
-                <Search size={16} />
                 Cerca
               </button>
             </div>
@@ -810,13 +893,23 @@ export default function NuovoContrattoAffittoPage() {
         <div className="mt-6 rounded border bg-white p-4">
           <h2 className="mb-4 text-lg font-semibold">Stato contratto</h2>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>
               <label className="mb-1 block text-sm font-medium">Attivo</label>
               <input
                 type="text"
                 readOnly
                 value={formData.attivo ? "Sì" : "No"}
+                className="w-full rounded border bg-gray-100 px-3 py-2"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium">Rinnovo</label>
+              <input
+                type="text"
+                readOnly
+                value={formData.rinnovo ? "Sì" : "No"}
                 className="w-full rounded border bg-gray-100 px-3 py-2"
               />
             </div>
@@ -840,7 +933,7 @@ export default function NuovoContrattoAffittoPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
           <div className="w-full max-w-2xl rounded-lg bg-white shadow-xl">
             <div className="flex items-center justify-between border-b px-4 py-3">
-              <h3 className="text-lg font-semibold">Seleziona email conduttore</h3>
+              <h3 className="text-lg font-semibold">Selezione email conduttore</h3>
               <button
                 type="button"
                 onClick={() => setShowEmailModal(false)}
@@ -862,7 +955,7 @@ export default function NuovoContrattoAffittoPage() {
                 <button
                   type="button"
                   onClick={() => loadEmailResults(emailSearch)}
-                  className="rounded border px-4 py-2"
+                  className="rounded border px-4 py-2 text-blue-600 hover:text-blue-800"
                 >
                   Cerca
                 </button>
@@ -916,9 +1009,7 @@ export default function NuovoContrattoAffittoPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
           <div className="w-full max-w-2xl rounded-lg bg-white shadow-xl">
             <div className="flex items-center justify-between border-b px-4 py-3">
-              <h3 className="text-lg font-semibold">
-                Seleziona conduttore
-              </h3>
+              <h3 className="text-lg font-semibold">Seleziona conduttore</h3>
               <button
                 type="button"
                 onClick={() => setShowConduttoreModal(false)}
@@ -940,7 +1031,7 @@ export default function NuovoContrattoAffittoPage() {
                 <button
                   type="button"
                   onClick={() => loadConduttoreResults(conduttoreSearch)}
-                  className="rounded border px-4 py-2"
+                  className="rounded border px-4 py-2 text-blue-600 hover:text-blue-800"
                 >
                   Cerca
                 </button>
