@@ -1420,9 +1420,10 @@ const sendSingleNotifications = async (
 
     if (!rowForUser?.id) continue;
 
-    const dedupeKey = `${String(rowForUser.id)}:${String(userId)}:${action}`;
-    if (sentKeys.has(dedupeKey)) continue;
+    const groupKey = String(rowForUser.gruppo_evento || rowForUser.id);
+    const dedupeKey = `${groupKey}:${String(userId)}:${action}`;
 
+    if (sentKeys.has(dedupeKey)) continue;
     sentKeys.add(dedupeKey);
 
     const participantIds = toArrayOfStrings((rowForUser as any)?.partecipanti);
