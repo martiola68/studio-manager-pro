@@ -15,53 +15,50 @@ export interface Allegato {
 }
 
 export const promemoriaService = {
- async getPromemoria(
-  studioId?: string | null,
-  userId?: string,
-  isResponsabile?: boolean,
-  userSettore?: string | null
-) {
-  let query = supabase
-    .from("tbpromemoria")
-    .select(`
-      *,
-      operatore:tbutenti!tbpromemoria_operatore_id_fkey(id, nome, cognome, settore, responsabile),
-      destinatario:tbutenti!tbpromemoria_destinatario_id_fkey(id, nome, cognome, settore, responsabile)
-    `);
+async getPromemoria(
+    studioId?: string | null,
+    userId?: string,
+    isResponsabile?: boolean,
+    userSettore?: string | null
+  ) {
+    let query = supabase
+      .from("tbpromemoria")
+      .select(`
+        *,
+        operatore:tbutenti!tbpromemoria_operatore_id_fkey(id, nome, cognome, settore, responsabile),
+        destinatario:tbutenti!tbpromemoria_destinatario_id_fkey(id, nome, cognome, settore, responsabile)
+      `);
 
-  if (studioId) {
-    query = query.eq("studio_id", studioId);
-  }
+    if (studioId) {
+      query = query.eq("studio_id", studioId);
+    }
 
-  query = query.order("data_scadenza", { ascending: true, nullsFirst: false });
+    query = query.order("data_scadenza", { ascending: true, nullsFirst: false });
 
-  const { data, error } = await query;
+    const { data, error } = await query;
 
-  if (error) throw error;
+    if (error) throw error;
 
-  let filteredData = data || [];
+    let filteredData = data || [];
 
-  if (isResponsabile && userSettore) {
-    filteredData = filteredData.filter((p) => {
-      const op = p.operatore;
+    if (isResponsabile && userSettore) {
+      filteredData = filteredData.filter((p) => {
+        const op = p.operatore;
 
-      // 1. L'utente vede sempre i promemoria dove è operatore o destinatario
-      if (p.operatore_id === userId || p.destinatario_id === userId) return true;
+        if (p.operatore_id === userId || p.destinatario_id === userId) return true;
 
-      // 2. Il responsabile vede i promemoria creati da operatori NON responsabili del proprio settore
-      if (op?.settore === userSettore && op?.responsabile === false) return true;
+        if (op?.settore === userSettore && op?.responsabile === false) return true;
 
-      return false;
-    });
-  } else {
-    // Non responsabile: vede solo quelli dove è operatore o destinatario
-    filteredData = filteredData.filter(
-      (p) => p.operatore_id === userId || p.destinatario_id === userId
-    );
-  }
+        return false;
+      });
+    } else {
+      filteredData = filteredData.filter(
+        (p) => p.destinatario_id === userId || p.operatore_id === userId
+      );
+    }
 
-  return filteredData as Promemoria[];
-},
+    return filteredData as Promemoria[];
+  },
 
   async getAllegati(promemoriaId: string) {
     const { data, error } = await supabase
