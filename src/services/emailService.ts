@@ -132,20 +132,45 @@ async function getStudioMailContext(): Promise<{
 
   const { data: studio, error: studioError } = await (supabase as any)
     .from("tbstudio")
-    .select("email, microsoft_connection_id")
+    .select(`
+      email,
+      microsoft_connection_id,
+      email_tenant2,
+      microsoft_connection_id_tenant2
+    `)
     .eq("id", currentUser.studio_id)
     .single();
 
-  if (studioError || !studio?.email) {
+  if (studioError || !studio) {
     return null;
+  }
+
+  const userConnectionId = currentUser.microsoft_connection_id
+    ? String(currentUser.microsoft_connection_id)
+    : null;
+
+  const tenant1ConnectionId = studio.microsoft_connection_id
+    ? String(studio.microsoft_connection_id)
+    : null;
+
+  const tenant2ConnectionId = studio.microsoft_connection_id_tenant2
+    ? String(studio.microsoft_connection_id_tenant2)
+    : null;
+
+  if (userConnectionId && tenant2ConnectionId && userConnectionId === tenant2ConnectionId) {
+    return {
+      senderUserId: currentUser.id,
+      studioEmail: studio.email_tenant2
+        ? String(studio.email_tenant2)
+        : String(studio.email || ""),
+      microsoftConnectionId: tenant2ConnectionId,
+    };
   }
 
   return {
     senderUserId: currentUser.id,
-    studioEmail: String(studio.email),
-    microsoftConnectionId: studio.microsoft_connection_id
-      ? String(studio.microsoft_connection_id)
-      : null,
+    studioEmail: studio.email ? String(studio.email) : "",
+    microsoftConnectionId: tenant1ConnectionId,
   };
 }
 
