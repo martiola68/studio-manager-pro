@@ -1,5 +1,5 @@
 import { getSupabaseClient } from "@/lib/supabaseClient";
-import { sendEmailViaMicrosoft } from "@/services/microsoftEmailService";
+import { sendEmail } from "@/services/emailService";
 
 type SendRichiestaDocumentoParams = {
   recordId: string;
