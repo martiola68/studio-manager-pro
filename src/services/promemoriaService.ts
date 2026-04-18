@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/types";
 import { messaggioService } from "./messaggioService";
 import { teamsNotificationService } from "./teamsNotificationService";
+import { sendEmail } from "@/services/emailService";
 
 export type Promemoria = Database["public"]["Tables"]["tbpromemoria"]["Row"];
 
@@ -131,111 +132,199 @@ export const promemoriaService = {
     return data || [];
   },
 
-  async controllaEInviaNotificheScadenza(currentUserId: string, studioId: string) {
-    try {
-      console.log("Controllo promemoria in scadenza...");
+ async controllaEInviaNotificheScadenza(currentUserId: string, studioId: string) {
+  try {
+    console.log("Controllo promemoria in scadenza...");
 
-      const oggi = new Date();
-      oggi.setHours(0, 0, 0, 0);
-      const domani = new Date(oggi);
-      domani.setDate(domani.getDate() + 1);
-      const dopodomani = new Date(oggi);
-      dopodomani.setDate(dopodomani.getDate() + 2);
+    const oggi = new Date();
+    oggi.setHours(0, 0, 0, 0);
 
-      const { data: promemoria, error } = await supabase
-        .from("tbpromemoria")
-        .select(`
-          *,
-          destinatario:tbutenti!destinatario_id (
-            id, nome, cognome, email
-          )
-        `)
-        .in("working_progress", ["Aperto", "In lavorazione"])
-        .gte("data_scadenza", oggi.toISOString().split("T")[0])
-        .lte("data_scadenza", dopodomani.toISOString().split("T")[0]);
+    const traSetteGiorni = new Date(oggi);
+    traSetteGiorni.setDate(traSetteGiorni.getDate() + 7);
 
-      if (error) {
-        console.error("Errore recupero promemoria per notifiche:", error);
-        return;
+    const oggiIso = oggi.toISOString().split("T")[0];
+    const setteGiorniIso = traSetteGiorni.toISOString().split("T")[0];
+
+    const { data: promemoria, error } = await supabase
+      .from("tbpromemoria")
+      .select(`
+        *,
+        destinatario:tbutenti!destinatario_id (
+          id, nome, cognome, email
+        )
+      `)
+      .in("working_progress", ["Aperto", "In lavorazione"])
+      .in("data_scadenza", [oggiIso, setteGiorniIso]);
+
+    if (error) {
+      console.error("Errore recupero promemoria per notifiche:", error);
+      return;
+    }
+
+    if (!promemoria || promemoria.length === 0) {
+      console.log("Nessun promemoria da notificare");
+      return;
+    }
+
+    console.log(`Trovati ${promemoria.length} promemoria da notificare`);
+
+    for (const p of promemoria) {
+      if (!p.destinatario_id || !p.destinatario) continue;
+
+      const scadenza = new Date(p.data_scadenza);
+      scadenza.setHours(0, 0, 0, 0);
+
+      const giorniRimasti = Math.round(
+        (scadenza.getTime() - oggi.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      if (giorniRimasti !== 7 && giorniRimasti !== 0) {
+        continue;
       }
 
-      if (!promemoria || promemoria.length === 0) {
-        console.log("Nessun promemoria in scadenza");
-        return;
+      const tipoNotifica = giorniRimasti === 7 ? "7GIORNI" : "SCADENZA";
+      const urgenza =
+        giorniRimasti === 7
+          ? "PROMEMORIA IN SCADENZA TRA 7 GIORNI"
+          : "PROMEMORIA IN SCADENZA OGGI";
+
+      const dataScadenzaFormattata = new Date(p.data_scadenza).toLocaleDateString("it-IT");
+
+      const markerMessaggio =
+        giorniRimasti === 7
+          ? `[PROMEMORIA-7GG-${p.id}]`
+          : `[PROMEMORIA-OGGI-${p.id}]`;
+
+      const { data: notificheEsistenti, error: checkError } = await supabase
+        .from("tbmessaggi")
+        .select("id")
+        .ilike("testo", `%${markerMessaggio}%`)
+        .gte("created_at", oggi.toISOString());
+
+      if (checkError) {
+        console.error("Errore verifica notifiche esistenti:", checkError);
       }
 
-      console.log(`Trovati ${promemoria.length} promemoria in scadenza`);
+      if (notificheEsistenti && notificheEsistenti.length > 0) {
+        console.log(`Notifica già inviata per promemoria: ${p.titolo} (${tipoNotifica})`);
+        continue;
+      }
 
-      for (const p of promemoria) {
-        if (!p.destinatario_id || !p.destinatario) continue;
+      const messaggioTesto = `${markerMessaggio}
+${urgenza}
 
-        const scadenza = new Date(p.data_scadenza);
-        scadenza.setHours(0, 0, 0, 0);
-        
-        let urgenza = "";
-        let giorniRimasti = 0;
+Promemoria: ${p.titolo}
 
-        if (scadenza.getTime() === oggi.getTime()) {
-          urgenza = "SCADE OGGI";
-          giorniRimasti = 0;
-        } else if (scadenza.getTime() === domani.getTime()) {
-          urgenza = "SCADE DOMANI";
-          giorniRimasti = 1;
-        } else {
-          urgenza = "SCADE TRA 2 GIORNI";
-          giorniRimasti = 2;
-        }
+Scadenza: ${dataScadenzaFormattata}
+Descrizione: ${p.descrizione || "Nessuna descrizione"}
+Priorità: ${p.priorita}
+Stato: ${p.working_progress}
 
-        const { data: notificheEsistenti } = await supabase
-          .from("tbmessaggi")
-          .select("id")
-          .ilike("testo", `%Promemoria in scadenza: ${p.titolo}%`)
-          .gte("created_at", oggi.toISOString());
+Vai su /promemoria per gestire questo promemoria.`;
 
-        if (notificheEsistenti && notificheEsistenti.length > 0) {
-          console.log(`Notifica già inviata per promemoria: ${p.titolo}`);
-          continue;
-        }
+      try {
+        const conversazione = await messaggioService.getOrCreateConversazioneDiretta(
+          currentUserId,
+          p.destinatario_id,
+          studioId
+        );
 
-        try {
-          const conversazione = await messaggioService.getOrCreateConversazioneDiretta(
-            currentUserId,
-            p.destinatario_id,
-            studioId
-          );
-
-          if (!conversazione) {
-            console.error(`Impossibile creare conversazione per promemoria: ${p.titolo}`);
-            continue;
-          }
-
-          const dataScadenzaFormattata = new Date(p.data_scadenza).toLocaleDateString("it-IT");
-
-          const messaggioTesto = `${urgenza}\n\nPromemoria in scadenza: ${p.titolo}\n\n` +
-            `Scadenza: ${dataScadenzaFormattata} (${giorniRimasti === 0 ? "oggi" : giorniRimasti === 1 ? "domani" : "tra 2 giorni"})\n` +
-            `Descrizione: ${p.descrizione || "Nessuna descrizione"}\n` +
-            `Priorità: ${p.priorita}\n` +
-            `Stato: ${p.working_progress}\n\n` +
-            `Vai su /promemoria per gestire questo promemoria.`;
-
+        if (conversazione) {
           await messaggioService.inviaMessaggio(
             conversazione.id,
             currentUserId,
             messaggioTesto
           );
 
-          console.log(`Notifica inviata per promemoria: ${p.titolo} a ${p.destinatario.nome} ${p.destinatario.cognome}`);
-
-        } catch (msgError) {
-          console.error(`Errore invio notifica per promemoria ${p.titolo}:`, msgError);
+          console.log(
+            `Messaggio interno inviato per promemoria: ${p.titolo} a ${p.destinatario.nome} ${p.destinatario.cognome}`
+          );
+        } else {
+          console.error(`Impossibile creare conversazione per promemoria: ${p.titolo}`);
         }
+      } catch (msgError) {
+        console.error(`Errore invio messaggio interno per promemoria ${p.titolo}:`, msgError);
       }
 
-      console.log("Controllo notifiche completato");
-    } catch (error) {
-      console.error("Errore controllo notifiche scadenza:", error);
+      try {
+        if (p.destinatario.email) {
+          const emailSubject =
+            giorniRimasti === 7
+              ? `Promemoria in scadenza tra 7 giorni: ${p.titolo}`
+              : `Promemoria in scadenza oggi: ${p.titolo}`;
+
+          const emailHtml = `
+            <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
+              <p>Gentile ${p.destinatario.nome || "utente"},</p>
+
+              <p>
+                ${
+                  giorniRimasti === 7
+                    ? "ti ricordiamo che il seguente promemoria andrà in scadenza tra 7 giorni."
+                    : "ti ricordiamo che il seguente promemoria scade oggi."
+                }
+              </p>
+
+              <p><strong>Dettagli promemoria</strong></p>
+              <ul>
+                <li><strong>Titolo:</strong> ${p.titolo}</li>
+                <li><strong>Scadenza:</strong> ${dataScadenzaFormattata}</li>
+                <li><strong>Priorità:</strong> ${p.priorita || "-"}</li>
+                <li><strong>Stato:</strong> ${p.working_progress || "-"}</li>
+                <li><strong>Descrizione:</strong> ${p.descrizione || "Nessuna descrizione"}</li>
+              </ul>
+
+              <p>
+                Accedi a Studio Manager Pro per gestire il promemoria.
+              </p>
+
+              <p>
+                Questa comunicazione è stata generata automaticamente dal sistema promemoria.
+              </p>
+            </div>
+          `.trim();
+
+          const emailText = `
+${giorniRimasti === 7 ? "Promemoria in scadenza tra 7 giorni" : "Promemoria in scadenza oggi"}
+
+Titolo: ${p.titolo}
+Scadenza: ${dataScadenzaFormattata}
+Priorità: ${p.priorita || "-"}
+Stato: ${p.working_progress || "-"}
+Descrizione: ${p.descrizione || "Nessuna descrizione"}
+
+Accedi a Studio Manager Pro per gestire il promemoria.
+          `.trim();
+
+          const emailResult = await sendEmail({
+            to: p.destinatario.email,
+            subject: emailSubject,
+            html: emailHtml,
+            text: emailText,
+            sendMode: "studio",
+          });
+
+          if (!emailResult.success) {
+            console.error(
+              `Errore invio email promemoria ${p.titolo} a ${p.destinatario.email}:`,
+              emailResult.error
+            );
+          } else {
+            console.log(
+              `Email inviata per promemoria: ${p.titolo} a ${p.destinatario.email}`
+            );
+          }
+        }
+      } catch (mailError) {
+        console.error(`Errore invio email per promemoria ${p.titolo}:`, mailError);
+      }
     }
-  },
+
+    console.log("Controllo notifiche promemoria completato");
+  } catch (error) {
+    console.error("Errore controllo notifiche scadenza promemoria:", error);
+  }
+}
 
   async createPromemoria(nuovoPromemoria: {
     titolo: string;
