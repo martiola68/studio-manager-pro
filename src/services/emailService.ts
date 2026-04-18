@@ -698,7 +698,7 @@ export async function sendEventNotification(
         text: built.text,
         microsoftConnectionId: data.microsoftConnectionId,
         senderUserId: data.senderUserId,
-        sendMode: "user",
+        sendMode: "studio",
       });
 
       if (result.success) {
