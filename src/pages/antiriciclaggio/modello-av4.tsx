@@ -921,36 +921,70 @@ export default function ModelloAV4() {
           return;
         }
 
-        const html = `
-          <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
-            <p>Gentile ${nomeDestinatario},</p>
+       const html = `
+  <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
+    <p>Gentile ${nomeDestinatario},</p>
 
-            <p>può compilare il <strong>Modello AV4</strong> tramite il seguente collegamento riservato:</p>
+    <p>
+      ai fini degli adempimenti previsti dalla normativa antiriciclaggio
+      di cui al D.Lgs. 231/2007 e successive modifiche e integrazioni,
+      Le trasmettiamo il <strong>Modello AV4 - Dichiarazione del Cliente</strong>,
+      che deve essere compilato obbligatoriamente dal soggetto richiedente
+      la prestazione professionale.
+    </p>
 
-            <p>
-              <a href="${url}" target="_blank" rel="noopener noreferrer">Apri il link per inserimento/modifica dei dati</a>
-            </p>
+    <p>
+      Il modello dovrà essere:
+    </p>
 
-            <p><strong>Istruzioni rapide:</strong></p>
-            <ol style="padding-left: 18px;">
-              <li>apra il link;</li>
-              <li>compili i dati richiesti;</li>
-              <li>salvi e stampi il PDF;</li>
-              <li>firmi il documento;</li>
-              <li>ricarichi il PDF firmato;</li>
-              <li>clicchi su "Salva e chiudi".</li>
-            </ol>
+    <ol style="padding-left: 18px;">
+      <li>compilato in ogni sua parte;</li>
+      <li>sottoscritto dal richiedente, con firma digitale oppure con firma manuale;</li>
+      <li>ricaricato nella stessa pagina al termine della procedura.</li>
+    </ol>
 
-            <p>⚠️ Il link sarà disattivato dopo l’invio.</p>
+    <p>
+      Può accedere alla pagina riservata tramite il seguente collegamento:
+    </p>
 
-            <p>Cordiali saluti,<br/>${nomeOperatore}</p>
-          </div>
-        `;
+    <p>
+      <a href="${url}" target="_blank" rel="noopener noreferrer">
+        Apri il link per compilazione, firma e caricamento del Modello AV4
+      </a>
+    </p>
 
-        const text = `
+    <p><strong>Istruzioni rapide:</strong></p>
+    <ol style="padding-left: 18px;">
+      <li>apra il link;</li>
+      <li>compili i dati richiesti;</li>
+      <li>salvi e stampi il PDF;</li>
+      <li>firmi il documento digitalmente oppure manualmente;</li>
+      <li>ricarichi il PDF firmato;</li>
+      <li>clicchi su "Salva e chiudi".</li>
+    </ol>
+
+    <p>
+      ⚠️ Il collegamento sarà disattivato al completamento della procedura.
+    </p>
+
+    <p>Cordiali saluti,<br/>${nomeOperatore}</p>
+  </div>
+`;
+const text = `
 Gentile ${nomeDestinatario},
 
-può compilare il Modello AV4 tramite il seguente collegamento riservato:
+ai fini degli adempimenti previsti dalla normativa antiriciclaggio
+di cui al D.Lgs. 231/2007 e successive modifiche e integrazioni,
+Le trasmettiamo il Modello AV4 - Dichiarazione del Cliente,
+che deve essere compilato obbligatoriamente dal soggetto richiedente
+la prestazione professionale.
+
+Il modello dovrà essere:
+1. compilato in ogni sua parte;
+2. sottoscritto dal richiedente, con firma digitale oppure con firma manuale;
+3. ricaricato nella stessa pagina al termine della procedura.
+
+Può accedere alla pagina riservata tramite il seguente collegamento:
 
 ${url}
 
@@ -958,15 +992,15 @@ Istruzioni rapide:
 1. apra il link;
 2. compili i dati richiesti;
 3. salvi e stampi il PDF;
-4. firmi il documento;
+4. firmi il documento digitalmente oppure manualmente;
 5. ricarichi il PDF firmato;
 6. clicchi su "Salva e chiudi".
 
-Il link sarà disattivato dopo l’invio.
+Il collegamento sarà disattivato al completamento della procedura.
 
 Cordiali saluti,
 ${nomeOperatore}
-        `.trim();
+`.trim();
 
         const emailResult = await sendEmail({
           to: destinatario,
