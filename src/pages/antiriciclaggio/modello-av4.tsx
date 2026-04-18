@@ -753,15 +753,15 @@ export default function ModelloAV4() {
     router.push("/antiriciclaggio");
   }
 
-  function handlePrint() {
-    if (!av4Id) {
-      alert("Salva prima l'AV4, poi potrai stamparlo.");
-      return;
-    }
-    router.push(`/antiriciclaggio/stampa-av4?id=${av4Id}`);
+function handlePrint() {
+  if (!av4Id) {
+    alert("Salva prima l'AV4, poi potrai stamparlo.");
+    return;
   }
+  router.push(`/antiriciclaggio/stampa-av4?id=${av4Id}`);
+}
 
- function handleApriPdfFirmato() {
+function handleApriPdfFirmato() {
   const openPdf = async () => {
     if (!form.allegato_pdf_cliente) {
       alert("PDF firmato non presente.");
@@ -790,22 +790,6 @@ export default function ModelloAV4() {
 
   masterPasswordGate.requireUnlock(openPdf);
 }
-
-      const supabase = getSupabaseClient() as any;
-
-      const { data } = supabase.storage
-        .from("messaggi-allegati")
-        .getPublicUrl(form.allegato_pdf_cliente);
-
-      const url = data?.publicUrl || "";
-
-      if (url) {
-        window.open(url, "_blank");
-      } else {
-        alert("Errore apertura PDF.");
-      }
-    });
-  }
 
   async function handleInvioPubblico() {
     const runAction = async () => {
