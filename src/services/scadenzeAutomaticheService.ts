@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { sendEmail } from "@/services/emailService";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -358,48 +359,6 @@ function buildMessaggioScadenza(
   return { oggetto, messaggio };
 }
 
-async function sendEmailDirectServerSide(
-  to: string,
-  subject: string,
-  html: string,
-  text: string
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-email`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
-        },
-        body: JSON.stringify({
-          to,
-          subject,
-          html,
-          text,
-        }),
-      }
-    );
-
-    const result = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-      return {
-        success: false,
-        error: result?.error || `HTTP ${response.status}`,
-      };
-    }
-
-    return { success: true };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  }
-}
-
 async function sendScadenzaEmails(
   recipients: DestinatarioEmail[],
   oggetto: string,
@@ -409,12 +368,13 @@ async function sendScadenzaEmails(
   const html = buildHtmlScadenzaEmail(oggetto, messaggio);
 
   for (const recipient of recipients) {
-    const result = await sendEmailDirectServerSide(
-      recipient.email,
-      oggetto,
+    const result = await sendEmail({
+      to: recipient.email,
+      subject: oggetto,
       html,
-      messaggio
-    );
+      text: messaggio,
+      sendMode: "studio",
+    });
 
     if (result.success) {
       sent += 1;
@@ -526,33 +486,33 @@ export const scadenzeAutomaticheService = {
         const preavviso1 = Number(tipo.giorni_preavviso_1 ?? 15);
         const preavviso2 = Number(tipo.giorni_preavviso_2 ?? 7);
 
-      const forceThisTipo =
-  options?.ignoreAlreadySent === true &&
-  options?.forceTipoScadenzaId === tipo.id;
+        const forceThisTipo =
+          options?.ignoreAlreadySent === true &&
+          options?.forceTipoScadenzaId === tipo.id;
 
-if (giorniMancanti === preavviso1 || forceThisTipo) {
-  await processAlertInvio(
-    tipo,
-    annoInvio,
-    "preavviso_1",
-    giorniMancanti,
-    result,
-    undefined,
-    forceThisTipo
-  );
-}
+        if (giorniMancanti === preavviso1 || forceThisTipo) {
+          await processAlertInvio(
+            tipo,
+            annoInvio,
+            "preavviso_1",
+            giorniMancanti,
+            result,
+            undefined,
+            forceThisTipo
+          );
+        }
 
-if (giorniMancanti === preavviso2 || forceThisTipo) {
-  await processAlertInvio(
-    tipo,
-    annoInvio,
-    "preavviso_2",
-    giorniMancanti,
-    result,
-    undefined,
-    forceThisTipo
-  );
-}
+        if (giorniMancanti === preavviso2 || forceThisTipo) {
+          await processAlertInvio(
+            tipo,
+            annoInvio,
+            "preavviso_2",
+            giorniMancanti,
+            result,
+            undefined,
+            forceThisTipo
+          );
+        }
 
         if (giorniMancanti < 0 && tipo.ricorrente) {
           const alertRinnovo = await getAlertRecord(
