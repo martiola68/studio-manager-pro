@@ -691,15 +691,13 @@ export async function sendEventNotification(
     for (let i = 0; i < recipients.length; i++) {
       const recipient = recipients[i];
 
-      const result = await sendEmail({
-        to: recipient,
-        subject: built.subject,
-        html: built.html,
-        text: built.text,
-        microsoftConnectionId: data.microsoftConnectionId,
-        senderUserId: data.senderUserId,
-        sendMode: "studio",
-      });
+     const result = await sendEmail({
+  to: recipient,
+  subject: built.subject,
+  html: built.html,
+  text: built.text,
+  sendMode: "studio",
+});
 
       if (result.success) {
         sent++;
