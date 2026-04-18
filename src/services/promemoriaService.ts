@@ -327,7 +327,7 @@ Accedi a Studio Manager Pro per gestire il promemoria.
   } catch (error) {
     console.error("Errore controllo notifiche scadenza promemoria:", error);
   }
-}
+},
 
   async createPromemoria(nuovoPromemoria: {
     titolo: string;
