@@ -99,9 +99,8 @@ export default function PromemoriaPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectAll, setSelectAll] = useState(false);
 
-  // NUOVO: Stato per filtro destinatario
-    // NUOVO: Stato per filtro destinatario
-  const [filtroDestinatario, setFiltroDestinatario] = useState<string>("");
+  // NUOVO: Stato per filtro operatore
+  const [filtroOperatore, setFiltroOperatore] = useState<string>("");
 
   // NUOVO: flag per responsabili di settore
   const [visualizzaTuttiSettore, setVisualizzaTuttiSettore] = useState(false);
@@ -172,7 +171,7 @@ export default function PromemoriaPage() {
       
       if (userProfile) {
         setCurrentUser(userProfile);
-          setFiltroDestinatario(userProfile.id);
+          setFiltroOperatore(userProfile.id);
 
             if (userProfile.responsabile !== true) {
               setVisualizzaTuttiSettore(false);
@@ -710,41 +709,40 @@ export default function PromemoriaPage() {
       </div>
 
         {/* FILTRI */}
-      <div className="mb-4 flex flex-wrap items-center gap-6">
-        <div className="flex items-center gap-4">
-          <Label className="text-sm font-medium">Filtra per Destinatario:</Label>
-        <Select value={filtroDestinatario} onValueChange={setFiltroDestinatario}>
-            <SelectTrigger className="w-64">
-              <SelectValue placeholder="Seleziona destinatario" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="tutti">Tutti i destinatari</SelectItem>
-                {utenti.map(u => (
-                <SelectItem key={u.id} value={u.id}>
-                {u.nome} {u.cognome} {u.settore ? `(${u.settore})` : ''}
-              </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-        </div>
+     <div className="mb-4 flex flex-wrap items-center gap-6">
+  <div className="flex items-center gap-4">
+    <Label className="text-sm font-medium">Filtra per Operatore:</Label>
+    <Select value={filtroOperatore} onValueChange={setFiltroOperatore}>
+      <SelectTrigger className="w-64">
+        <SelectValue placeholder="Seleziona operatore" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="tutti">Tutti gli operatori</SelectItem>
+        {utenti.map((u) => (
+          <SelectItem key={u.id} value={u.id}>
+            {u.nome} {u.cognome} {u.settore ? `(${u.settore})` : ""}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  </div>
 
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="visualizza-tutti-settore"
-            checked={visualizzaTuttiSettore}
-            disabled={!isResponsabileSettore}
-            onCheckedChange={(checked) => setVisualizzaTuttiSettore(!!checked)}
-          />
-          <Label
-            htmlFor="visualizza-tutti-settore"
-            className={!isResponsabileSettore ? "cursor-not-allowed opacity-60" : "cursor-pointer"}
-          >
-            Visualizza tutti i promemoria
-            {currentUser?.settore ? ` del settore ${currentUser.settore}` : ""}
-          </Label>
-        </div>
-      </div>
-
+  <div className="flex items-center space-x-2">
+    <Checkbox
+      id="visualizza-tutti-settore"
+      checked={visualizzaTuttiSettore}
+      disabled={!isResponsabileSettore}
+      onCheckedChange={(checked) => setVisualizzaTuttiSettore(!!checked)}
+    />
+    <Label
+      htmlFor="visualizza-tutti-settore"
+      className={!isResponsabileSettore ? "cursor-not-allowed opacity-60" : "cursor-pointer"}
+    >
+      Visualizza tutti i promemoria degli operatori
+      {currentUser?.settore ? ` del settore ${currentUser.settore}` : ""}
+    </Label>
+  </div>
+</div>
            <Table>
         <TableHeader>
           <TableRow>
@@ -770,17 +768,19 @@ export default function PromemoriaPage() {
 
         <TableBody>
           {promemoria
-            .filter((p) => {
-                if (visualizzaTuttiSettore && isResponsabileSettore) {
-                  return p.settore === currentUser?.settore;
-                      }
+          .filter((p) => {
+  const operatorePromemoria = utenti.find((u) => u.id === p.operatore_id);
 
-                        if (filtroDestinatario === "tutti") {
-                    return true;
-                        }
+  if (visualizzaTuttiSettore && isResponsabileSettore) {
+    return operatorePromemoria?.settore === currentUser?.settore;
+  }
 
-                    return p.destinatario_id === filtroDestinatario;
-                    })
+  if (filtroOperatore === "tutti") {
+    return true;
+  }
+
+  return p.operatore_id === filtroOperatore;
+})
             .sort((a, b) => {
               const prioritaDiff =
                 getPrioritaOrder(a.priorita) - getPrioritaOrder(b.priorita);
@@ -925,17 +925,19 @@ export default function PromemoriaPage() {
               );
             })}
 
-          {promemoria.filter((p) => {
-            if (visualizzaTuttiSettore && isResponsabileSettore) {
-              return p.settore === currentUser?.settore;
-              }
+         {promemoria.filter((p) => {
+  const operatorePromemoria = utenti.find((u) => u.id === p.operatore_id);
 
-                if (filtroDestinatario === "tutti") {
-                return true;
-                  }
+  if (visualizzaTuttiSettore && isResponsabileSettore) {
+    return operatorePromemoria?.settore === currentUser?.settore;
+  }
 
-              return p.destinatario_id === filtroDestinatario;
-                  }).length === 0 && (
+  if (filtroOperatore === "tutti") {
+    return true;
+  }
+
+  return p.operatore_id === filtroOperatore;
+}).length === 0 && (
             <TableRow>
               <TableCell colSpan={12} className="text-center py-8 text-gray-500">
                 Nessun promemoria trovato
