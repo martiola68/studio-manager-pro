@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase/client";
-import { sendEmailViaMicrosoft } from "@/services/microsoftEmailService";
+import { sendEmail } from "@/services/emailService";
 
 type ContrattoAffittoRow = {
   id: string;
@@ -157,26 +157,45 @@ function buildEmailHtml(params: {
   `.trim();
 }
 
-async function getMicrosoftConnectionIdForUser(
-  studioId: string,
-  userId: string
-): Promise<string | null> {
-  const { data: tokenRow, error: tokenErr } = await (supabase as any)
-    .from("tbmicrosoft365_user_tokens")
-    .select("microsoft_connection_id, connected_at")
-    .eq("studio_id", studioId)
-    .eq("user_id", userId)
-    .is("revoked_at", null)
-    .order("connected_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+function buildEmailText(params: {
+  locatore: string;
+  conduttore: string;
+  immobile: string;
+  codiceRegistrazione: string;
+  decorrenza: string;
+  scadenza: string;
+  annualita: number;
+  durata: number;
+  tipoAlert: 1 | 2 | 3;
+  importoRegistrazione: number | null;
+  operatore: string;
+}) {
+  const introByAlert = {
+    1: "Si ricorda che tra 30 giorni scadrà il termine per il rinnovo dell’annualità del contratto di affitto.",
+    2: "Si ricorda che tra 15 giorni scadrà il termine per il rinnovo dell’annualità del contratto di affitto.",
+    3: "Si ricorda che in data odierna scade il termine per il rinnovo dell’annualità del contratto di affitto.",
+  } as const;
 
-  if (tokenErr) {
-    console.error("Errore lettura token Microsoft:", tokenErr);
-    return null;
-  }
-
-  return tokenRow?.microsoft_connection_id || null;
+  return [
+    "Gentile utente,",
+    "",
+    introByAlert[params.tipoAlert],
+    "",
+    "Dettagli contratto",
+    `Locatore: ${params.locatore || "-"}`,
+    `Conduttore: ${params.conduttore || "-"}`,
+    `Immobile locato: ${params.immobile || "-"}`,
+    `Codice identificativo registrazione: ${params.codiceRegistrazione || "-"}`,
+    `Data decorrenza: ${formatDateIT(params.decorrenza)}`,
+    `Scadenza annualità: ${formatDateIT(params.scadenza)}`,
+    `Annualità: ${params.annualita}/${params.durata}`,
+    "",
+    getImpostaMessage(params.importoRegistrazione),
+    "",
+    `Operatore incaricato: ${params.operatore || "-"}`,
+    "",
+    "Questa comunicazione è stata generata automaticamente dallo scadenzario affitti.",
+  ].join("\n");
 }
 
 export async function processaScadenzeAffittiAutomatiche() {
@@ -275,22 +294,9 @@ export async function processaScadenzeAffittiAutomatiche() {
         continue;
       }
 
-      const microsoftConnectionId = await getMicrosoftConnectionIdForUser(
-        row.studio_id,
-        row.utente_operatore_id
-      );
-
-      if (!microsoftConnectionId) {
-        result.errors.push(
-          `Contratto ${row.id}: nessuna connessione Microsoft valida per l'utente ${row.utente_operatore_id}`
-        );
-        continue;
-      }
-
-      const destinatari = [
-        utente?.email || "",
-        row.emailperalert || "",
-      ].filter(Boolean);
+      const destinatari = [utente?.email || "", row.emailperalert || ""]
+        .filter(Boolean)
+        .filter((value, index, arr) => arr.indexOf(value) === index);
 
       if (destinatari.length === 0) {
         result.errors.push(
@@ -299,28 +305,63 @@ export async function processaScadenzeAffittiAutomatiche() {
         continue;
       }
 
-      await sendEmailViaMicrosoft(row.utente_operatore_id, {
-        microsoftConnectionId,
-        to: destinatari,
-        subject: buildEmailSubject({
-          locatore,
-          annualita: row.contatore_anni,
-          tipoAlert,
-        }),
-        html: buildEmailHtml({
-          locatore,
-          conduttore: row.conduttore || "-",
-          immobile: row.descrizione_immobile_locato || "-",
-          codiceRegistrazione: row.codice_identificativo_registrazione || "-",
-          decorrenza,
-          scadenza: row.data_prossima_scadenza,
-          annualita: row.contatore_anni,
-          durata: row.durata_contratto_anni,
-          tipoAlert,
-          importoRegistrazione: row.importo_registrazione,
-          operatore,
-        }),
+      const subject = buildEmailSubject({
+        locatore,
+        annualita: row.contatore_anni,
+        tipoAlert,
       });
+
+      const html = buildEmailHtml({
+        locatore,
+        conduttore: row.conduttore || "-",
+        immobile: row.descrizione_immobile_locato || "-",
+        codiceRegistrazione: row.codice_identificativo_registrazione || "-",
+        decorrenza,
+        scadenza: row.data_prossima_scadenza,
+        annualita: row.contatore_anni,
+        durata: row.durata_contratto_anni,
+        tipoAlert,
+        importoRegistrazione: row.importo_registrazione,
+        operatore,
+      });
+
+      const text = buildEmailText({
+        locatore,
+        conduttore: row.conduttore || "-",
+        immobile: row.descrizione_immobile_locato || "-",
+        codiceRegistrazione: row.codice_identificativo_registrazione || "-",
+        decorrenza,
+        scadenza: row.data_prossima_scadenza,
+        annualita: row.contatore_anni,
+        durata: row.durata_contratto_anni,
+        tipoAlert,
+        importoRegistrazione: row.importo_registrazione,
+        operatore,
+      });
+
+      let inviiRiusciti = 0;
+
+      for (const destinatario of destinatari) {
+        const emailResult = await sendEmail({
+          to: destinatario,
+          subject,
+          html,
+          text,
+          sendMode: "studio",
+        });
+
+        if (emailResult.success) {
+          inviiRiusciti += 1;
+        } else {
+          result.errors.push(
+            `Contratto ${row.id}: invio fallito verso ${destinatario} - ${emailResult.error || "errore sconosciuto"}`
+          );
+        }
+      }
+
+      if (inviiRiusciti === 0) {
+        continue;
+      }
 
       const nowIso = new Date().toISOString();
 
@@ -337,7 +378,7 @@ export async function processaScadenzeAffittiAutomatiche() {
           throw new Error(`Errore update alert1: ${updError.message}`);
         }
 
-        result.alert1Sent += 1;
+        result.alert1Sent += inviiRiusciti;
         continue;
       }
 
@@ -354,7 +395,7 @@ export async function processaScadenzeAffittiAutomatiche() {
           throw new Error(`Errore update alert2: ${updError.message}`);
         }
 
-        result.alert2Sent += 1;
+        result.alert2Sent += inviiRiusciti;
         continue;
       }
 
@@ -373,7 +414,7 @@ export async function processaScadenzeAffittiAutomatiche() {
           throw new Error(`Errore chiusura contratto: ${closeError.message}`);
         }
 
-        result.alert3Sent += 1;
+        result.alert3Sent += inviiRiusciti;
         result.closed += 1;
         continue;
       }
@@ -401,7 +442,7 @@ export async function processaScadenzeAffittiAutomatiche() {
         throw new Error(`Errore avanzamento annualità: ${advanceError.message}`);
       }
 
-      result.alert3Sent += 1;
+      result.alert3Sent += inviiRiusciti;
       result.advanced += 1;
     } catch (err: any) {
       result.errors.push(
