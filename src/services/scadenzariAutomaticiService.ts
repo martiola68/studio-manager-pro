@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { sendEmail } from "@/services/emailService";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -174,48 +175,6 @@ function buildHtmlEmail(oggetto: string, messaggio: string): string {
   `.trim();
 }
 
-async function sendEmailDirectServerSide(
-  to: string,
-  subject: string,
-  html: string,
-  text: string
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-email`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
-        },
-        body: JSON.stringify({
-          to,
-          subject,
-          html,
-          text,
-        }),
-      }
-    );
-
-    const result = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-      return {
-        success: false,
-        error: result?.error || `HTTP ${response.status}`,
-      };
-    }
-
-    return { success: true };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  }
-}
-
 async function sendEmails(
   recipients: DestinatarioEmail[],
   oggetto: string,
@@ -225,12 +184,13 @@ async function sendEmails(
   const html = buildHtmlEmail(oggetto, messaggio);
 
   for (const recipient of recipients) {
-    const result = await sendEmailDirectServerSide(
-      recipient.email,
-      oggetto,
+    const result = await sendEmail({
+      to: recipient.email,
+      subject: oggetto,
       html,
-      messaggio
-    );
+      text: messaggio,
+      sendMode: "studio",
+    });
 
     if (result.success) {
       sent += 1;
