@@ -10,7 +10,7 @@ import { MasterPasswordDialog } from "@/components/security/MasterPasswordDialog
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import FormStickyHeader from "@/components/antiriciclaggio/FormStickyHeader";
-import { sendEmailViaMicrosoft } from "@/services/microsoftEmailService";
+import { sendEmail } from "@/services/emailService";
 
 type FormState = {
   studio_id: string;
@@ -18,7 +18,7 @@ type FormState = {
   av1_id: string;
   rapp_legale_id: string;
   microsoft_connection_id: string;
-  
+
   dichiarante_nome_cognome: string;
   dichiarante_codice_fiscale: string;
   dichiarante_luogo_nascita: string;
@@ -76,7 +76,7 @@ type FormState = {
   data_firma_bis: string;
   pdf_firmato_cliente: string;
   allegato_pdf_cliente: string;
-  
+
   stato: string;
   versione: number;
 };
@@ -189,7 +189,9 @@ function mapDbRowToForm(row: any): FormState {
     cliente_id: row?.cliente_id ? String(row.cliente_id) : "",
     av1_id: row?.av1_id != null ? String(row.av1_id) : "",
     rapp_legale_id: row?.rapp_legale_id ? String(row.rapp_legale_id) : "",
-    microsoft_connection_id: row?.microsoft_connection_id ? String(row.microsoft_connection_id) : "",
+    microsoft_connection_id: row?.microsoft_connection_id
+      ? String(row.microsoft_connection_id)
+      : "",
 
     dichiarante_nome_cognome: row?.dichiarante_nome_cognome ?? "",
     dichiarante_codice_fiscale: row?.dichiarante_codice_fiscale ?? "",
@@ -286,24 +288,24 @@ export default function ModelloAV4() {
   const [form, setForm] = useState<FormState>(initialFormState());
   const [encryptionEnabled, setEncryptionEnabled] = useState(false);
 
-   const masterPasswordGate = useMasterPasswordGate({
+  const masterPasswordGate = useMasterPasswordGate({
     studioId: form.studio_id,
     onUnlocked: async () => {},
   });
 
   async function refreshEncryptionEnabled(studioId: string) {
-  try {
-    if (!studioId) {
+    try {
+      if (!studioId) {
+        setEncryptionEnabled(false);
+        return;
+      }
+      const enabled = await isEncryptionEnabled(studioId);
+      setEncryptionEnabled(Boolean(enabled));
+    } catch (e) {
+      console.error("Errore controllo cifratura:", e);
       setEncryptionEnabled(false);
-      return;
     }
-  const enabled = await isEncryptionEnabled(studioId);
-    setEncryptionEnabled(Boolean(enabled));
-  } catch (e) {
-    console.error("Errore controllo cifratura:", e);
-    setEncryptionEnabled(false);
   }
-}
 
   function clearRappresentanteFields() {
     setForm((prev) => ({
@@ -373,9 +375,9 @@ export default function ModelloAV4() {
         ...prev,
         cliente_id: String(clienteId),
         rapp_legale_id: String(rappRow.id),
-          microsoft_connection_id: rappRow?.microsoft_connection_id
+        microsoft_connection_id: rappRow?.microsoft_connection_id
           ? String(rappRow.microsoft_connection_id)
-            : "",
+          : "",
         dichiarante_nome_cognome: rappRow?.nome_cognome ?? "",
         dichiarante_codice_fiscale: rappRow?.codice_fiscale ?? "",
         dichiarante_luogo_nascita: rappRow?.luogo_nascita ?? "",
@@ -571,12 +573,12 @@ export default function ModelloAV4() {
   }, [router.isReady, router.query.rapp_saved, form.cliente_id]);
 
   useEffect(() => {
-  if (form.studio_id) {
-    void refreshEncryptionEnabled(form.studio_id);
-  } else {
-    setEncryptionEnabled(false);
-  }
-}, [form.studio_id]);
+    if (form.studio_id) {
+      void refreshEncryptionEnabled(form.studio_id);
+    } else {
+      setEncryptionEnabled(false);
+    }
+  }, [form.studio_id]);
 
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -759,176 +761,167 @@ export default function ModelloAV4() {
     router.push(`/antiriciclaggio/stampa-av4?id=${av4Id}`);
   }
 
-function handleApriPdfFirmato() {
-  if (!encryptionEnabled) {
-    if (!form.allegato_pdf_cliente) {
-      alert("PDF firmato non presente.");
+  function handleApriPdfFirmato() {
+    if (!encryptionEnabled) {
+      if (!form.allegato_pdf_cliente) {
+        alert("PDF firmato non presente.");
+        return;
+      }
+
+      const supabase = getSupabaseClient() as any;
+
+      const { data } = supabase.storage
+        .from("messaggi-allegati")
+        .getPublicUrl(form.allegato_pdf_cliente);
+
+      const url = data?.publicUrl || "";
+
+      if (url) {
+        window.open(url, "_blank");
+      } else {
+        alert("Errore apertura PDF.");
+      }
       return;
     }
 
-    const supabase = getSupabaseClient() as any;
+    masterPasswordGate.requireUnlock(async () => {
+      if (!form.allegato_pdf_cliente) {
+        alert("PDF firmato non presente.");
+        return;
+      }
 
-    const { data } = supabase.storage
-      .from("messaggi-allegati")
-      .getPublicUrl(form.allegato_pdf_cliente);
+      const supabase = getSupabaseClient() as any;
 
-    const url = data?.publicUrl || "";
+      const { data } = supabase.storage
+        .from("messaggi-allegati")
+        .getPublicUrl(form.allegato_pdf_cliente);
 
-    if (url) {
-      window.open(url, "_blank");
-    } else {
-      alert("Errore apertura PDF.");
-    }
-    return;
+      const url = data?.publicUrl || "";
+
+      if (url) {
+        window.open(url, "_blank");
+      } else {
+        alert("Errore apertura PDF.");
+      }
+    });
   }
 
-  masterPasswordGate.requireUnlock(async () => {
-    if (!form.allegato_pdf_cliente) {
-      alert("PDF firmato non presente.");
-      return;
-    }
-
-    const supabase = getSupabaseClient() as any;
-
-    const { data } = supabase.storage
-      .from("messaggi-allegati")
-      .getPublicUrl(form.allegato_pdf_cliente);
-
-    const url = data?.publicUrl || "";
-
-    if (url) {
-      window.open(url, "_blank");
-    } else {
-      alert("Errore apertura PDF.");
-    }
-  });
-}
-  
-async function handleInvioPubblico() {
-  const runAction = async () => {
-    if (!av4Id) {
-      alert("Salva prima l'AV4.");
-      return;
-    }
-
-    if (!form.studio_id) {
-      alert("Studio non valorizzato.");
-      return;
-    }
-
-    if (!form.rapp_legale_id) {
-      alert("Rappresentante legale non valorizzato.");
-      return;
-    }
-
-    if (!form.microsoft_connection_id) {
-      alert("Connessione Microsoft non valorizzata per il rappresentante selezionato.");
-      return;
-    }
-
-    if (!process.env.NEXT_PUBLIC_PUBLIC_APP_URL) {
-      alert("Variabile NEXT_PUBLIC_PUBLIC_APP_URL non configurata.");
-      return;
-    }
-
-    const supabase = getSupabaseClient() as any;
-
-    let token = "";
-    let url = "";
-    let destinatario = "";
-    let nomeDestinatario = "Cliente";
-    let userId: string | null = null;
-    const subject = "Compilazione Modello AV4";
-
-    try {
-      setLoading(true);
-
-      token =
-        typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID()
-          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-
-      const updatePayload: any = {
-        public_token: token,
-        public_enabled: true,
-        public_sent_at: new Date().toISOString(),
-        Av4InviatoCL: true,
-        compilato_da_cliente: false,
-      };
-
-      const { error: updateError } = await supabase
-        .from("tbAV4")
-        .update(updatePayload)
-        .eq("id", av4Id);
-
-      if (updateError) {
-        console.error("Errore aggiornamento AV4 pubblico:", updateError);
-        alert(
-          `Errore durante la generazione del link pubblico: ${updateError.message || "update tbAV4 fallito"}`
-        );
+  async function handleInvioPubblico() {
+    const runAction = async () => {
+      if (!av4Id) {
+        alert("Salva prima l'AV4.");
         return;
       }
 
-      url = `${process.env.NEXT_PUBLIC_PUBLIC_APP_URL}/compilazione-av4/${token}`;
-      setPublicUrl(url);
-
-      const { data: rappRow, error: rappError } = await supabase
-        .from("rapp_legali")
-        .select("email, nome_cognome")
-        .eq("id", form.rapp_legale_id)
-        .single();
-
-      if (rappError) {
-        console.error("Errore recupero email rappresentante:", rappError);
-        alert(
-          `Link pubblico generato, ma non è stato possibile recuperare l'email del rappresentante legale: ${rappError.message}\n${url}`
-        );
+      if (!form.studio_id) {
+        alert("Studio non valorizzato.");
         return;
       }
 
-      destinatario = rappRow?.email?.trim() || "";
-      nomeDestinatario = rappRow?.nome_cognome?.trim() || "Cliente";
-
-      if (!destinatario) {
-        alert(
-          `Link pubblico generato, ma il rappresentante legale non ha un indirizzo email valorizzato.\n${url}`
-        );
+      if (!form.rapp_legale_id) {
+        alert("Rappresentante legale non valorizzato.");
         return;
       }
 
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      if (!process.env.NEXT_PUBLIC_PUBLIC_APP_URL) {
+        alert("Variabile NEXT_PUBLIC_PUBLIC_APP_URL non configurata.");
+        return;
+      }
 
-      let nomeOperatore = session?.user?.email || "";
+      const supabase = getSupabaseClient() as any;
 
-      if (session?.user?.email) {
-        const { data: userRow } = await supabase
-          .from("tbutenti")
-          .select("nome, cognome")
-          .eq("email", session.user.email)
+      let token = "";
+      let url = "";
+      let destinatario = "";
+      let nomeDestinatario = "Cliente";
+      let userId: string | null = null;
+      const subject = "Compilazione Modello AV4";
+
+      try {
+        setLoading(true);
+
+        token =
+          typeof crypto !== "undefined" && "randomUUID" in crypto
+            ? crypto.randomUUID()
+            : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+        const updatePayload: any = {
+          public_token: token,
+          public_enabled: true,
+          public_sent_at: new Date().toISOString(),
+          Av4InviatoCL: true,
+          compilato_da_cliente: false,
+        };
+
+        const { error: updateError } = await supabase
+          .from("tbAV4")
+          .update(updatePayload)
+          .eq("id", av4Id);
+
+        if (updateError) {
+          console.error("Errore aggiornamento AV4 pubblico:", updateError);
+          alert(
+            `Errore durante la generazione del link pubblico: ${updateError.message || "update tbAV4 fallito"}`
+          );
+          return;
+        }
+
+        url = `${process.env.NEXT_PUBLIC_PUBLIC_APP_URL}/compilazione-av4/${token}`;
+        setPublicUrl(url);
+
+        const { data: rappRow, error: rappError } = await supabase
+          .from("rapp_legali")
+          .select("email, nome_cognome")
+          .eq("id", form.rapp_legale_id)
           .single();
 
-        if (userRow) {
-          nomeOperatore =
-            [userRow.nome, userRow.cognome].filter(Boolean).join(" ").trim();
+        if (rappError) {
+          console.error("Errore recupero email rappresentante:", rappError);
+          alert(
+            `Link pubblico generato, ma non è stato possibile recuperare l'email del rappresentante legale: ${rappError.message}\n${url}`
+          );
+          return;
         }
-      }
 
-      userId = session?.user?.id ?? null;
+        destinatario = rappRow?.email?.trim() || "";
+        nomeDestinatario = rappRow?.nome_cognome?.trim() || "Cliente";
 
-      if (!userId) {
-        alert(
-          `Link pubblico generato, ma non è stato possibile identificare l'utente mittente.\n${url}`
-        );
-        return;
-      }
+        if (!destinatario) {
+          alert(
+            `Link pubblico generato, ma il rappresentante legale non ha un indirizzo email valorizzato.\n${url}`
+          );
+          return;
+        }
 
-      await sendEmailViaMicrosoft(userId, {
-        microsoftConnectionId: form.microsoft_connection_id,
-        to: destinatario,
-        subject,
-        html: `
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        let nomeOperatore = session?.user?.email || "";
+
+        if (session?.user?.email) {
+          const { data: userRow } = await supabase
+            .from("tbutenti")
+            .select("nome, cognome")
+            .eq("email", session.user.email)
+            .single();
+
+          if (userRow) {
+            nomeOperatore =
+              [userRow.nome, userRow.cognome].filter(Boolean).join(" ").trim();
+          }
+        }
+
+        userId = session?.user?.id ?? null;
+
+        if (!userId) {
+          alert(
+            `Link pubblico generato, ma non è stato possibile identificare l'utente mittente.\n${url}`
+          );
+          return;
+        }
+
+        const html = `
           <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
             <p>Gentile ${nomeDestinatario},</p>
 
@@ -952,172 +945,203 @@ async function handleInvioPubblico() {
 
             <p>Cordiali saluti,<br/>${nomeOperatore}</p>
           </div>
-        `,
-      });
+        `;
 
-      const { error: logError } = await supabase.from("tbAMLComunicazioni").insert({
-        studio_id: form.studio_id,
-        tipo_comunicazione: "invio_av4",
-        cliente_id: form.cliente_id || null,
-        rapp_legale_id: form.rapp_legale_id || null,
-        av4_id: av4Id,
-        destinatario_email: destinatario,
-        oggetto: subject,
-        body_preview: `Invio AV4 a ${destinatario}. Link pubblico: ${url}`,
-        stato_invio: "inviata",
-        data_invio: new Date().toISOString(),
-        utente_id: userId,
-        public_token: token,
-        note: "Invio AV4 al cliente da modello AV4",
-      });
+        const text = `
+Gentile ${nomeDestinatario},
 
-      if (logError) {
-        console.error("Errore salvataggio log tbAMLComunicazioni AV4:", logError);
-        alert(
-          `Email AV4 inviata a ${destinatario}, ma il log comunicazioni non è stato salvato: ${logError.message}`
-        );
-        return;
-      }
+può compilare il Modello AV4 tramite il seguente collegamento riservato:
 
-      alert(`Link pubblico generato e email inviata correttamente a ${destinatario}.`);
-    } catch (error: any) {
-      console.error("Errore invio pubblico AV4:", error);
+${url}
 
-      try {
-        if (form.studio_id && av4Id) {
-          await supabase.from("tbAMLComunicazioni").insert({
-            studio_id: form.studio_id,
-            tipo_comunicazione: "invio_av4",
-            cliente_id: form.cliente_id || null,
-            rapp_legale_id: form.rapp_legale_id || null,
-            av4_id: av4Id,
-            destinatario_email: destinatario || null,
-            oggetto: subject,
-            body_preview: `Errore invio AV4 a ${destinatario || "-"}.`,
-            stato_invio: "errore",
-            data_invio: new Date().toISOString(),
-            utente_id: userId,
-            public_token: token || null,
-            note: error?.message || "Errore durante invio pubblico AV4",
-          });
+Istruzioni rapide:
+1. apra il link;
+2. compili i dati richiesti;
+3. salvi e stampi il PDF;
+4. firmi il documento;
+5. ricarichi il PDF firmato;
+6. clicchi su "Salva e chiudi".
+
+Il link sarà disattivato dopo l’invio.
+
+Cordiali saluti,
+${nomeOperatore}
+        `.trim();
+
+        const emailResult = await sendEmail({
+          to: destinatario,
+          subject,
+          html,
+          text,
+          sendMode: "studio",
+        });
+
+        if (!emailResult.success) {
+          throw new Error(emailResult.error || "Errore durante l'invio email AV4.");
         }
-      } catch (logError) {
-        console.error("Errore salvataggio log errore tbAMLComunicazioni AV4:", logError);
+
+        const { error: logError } = await supabase.from("tbAMLComunicazioni").insert({
+          studio_id: form.studio_id,
+          tipo_comunicazione: "invio_av4",
+          cliente_id: form.cliente_id || null,
+          rapp_legale_id: form.rapp_legale_id || null,
+          av4_id: av4Id,
+          destinatario_email: destinatario,
+          oggetto: subject,
+          body_preview: `Invio AV4 a ${destinatario}. Link pubblico: ${url}`,
+          stato_invio: "inviata",
+          data_invio: new Date().toISOString(),
+          utente_id: userId,
+          public_token: token,
+          note: "Invio AV4 al cliente da modello AV4",
+        });
+
+        if (logError) {
+          console.error("Errore salvataggio log tbAMLComunicazioni AV4:", logError);
+          alert(
+            `Email AV4 inviata a ${destinatario}, ma il log comunicazioni non è stato salvato: ${logError.message}`
+          );
+          return;
+        }
+
+        alert(`Link pubblico generato e email inviata correttamente a ${destinatario}.`);
+      } catch (error: any) {
+        console.error("Errore invio pubblico AV4:", error);
+
+        try {
+          if (form.studio_id && av4Id) {
+            await supabase.from("tbAMLComunicazioni").insert({
+              studio_id: form.studio_id,
+              tipo_comunicazione: "invio_av4",
+              cliente_id: form.cliente_id || null,
+              rapp_legale_id: form.rapp_legale_id || null,
+              av4_id: av4Id,
+              destinatario_email: destinatario || null,
+              oggetto: subject,
+              body_preview: `Errore invio AV4 a ${destinatario || "-"}.`,
+              stato_invio: "errore",
+              data_invio: new Date().toISOString(),
+              utente_id: userId,
+              public_token: token || null,
+              note: error?.message || "Errore durante invio pubblico AV4",
+            });
+          }
+        } catch (logError) {
+          console.error("Errore salvataggio log errore tbAMLComunicazioni AV4:", logError);
+        }
+
+        alert(
+          `Errore durante la generazione del link pubblico: ${error?.message || "errore sconosciuto"}`
+        );
+      } finally {
+        setLoading(false);
       }
+    };
 
-      alert(
-        `Errore durante la generazione del link pubblico: ${error?.message || "errore sconosciuto"}`
-      );
-    } finally {
-      setLoading(false);
+    if (!encryptionEnabled) {
+      await runAction();
+      return;
     }
-  };
 
-  if (!encryptionEnabled) {
-    await runAction();
-    return;
+    masterPasswordGate.requireUnlock(runAction);
   }
 
-  masterPasswordGate.requireUnlock(runAction);
-}
-  
   function normalizeCf(value: string) {
-  return (value || "").trim().toUpperCase();
-}
-
-function normalizeText(value: string) {
-  return (value || "").trim().toUpperCase();
-}
-
-function validaCodiceFiscale(cf: string) {
-  const value = (cf || "").trim().toUpperCase();
-  if (!value) return false;
-
-  return /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$/.test(value);
-}
-
-async function caricaTitolariSezione(sezione: "domanda7" | "domanda8" | "domanda9") {
-  if (!av4Id) return [];
-
-  const supabase = getSupabaseClient() as any;
-
-  const { data, error } = await supabase
-    .from("tbAV4_titolari")
-    .select("*")
-    .eq("av4_id", av4Id)
-    .eq("sezione", sezione);
-
-  if (error) {
-    throw new Error(`Errore caricamento titolari ${sezione}.`);
+    return (value || "").trim().toUpperCase();
   }
 
-  return data || [];
-}
+  function normalizeText(value: string) {
+    return (value || "").trim().toUpperCase();
+  }
 
-async function validaTitolariPrimaDelSalvataggio() {
-  const sezioniDaControllare: Array<"domanda7" | "domanda8" | "domanda9"> = [];
+  function validaCodiceFiscale(cf: string) {
+    const value = (cf || "").trim().toUpperCase();
+    if (!value) return false;
 
-  if (form.domanda7) sezioniDaControllare.push("domanda7");
-  if (form.domanda8) sezioniDaControllare.push("domanda8");
-  if (form.domanda9) sezioniDaControllare.push("domanda9");
+    return /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$/.test(value);
+  }
 
-  for (const sezione of sezioniDaControllare) {
-    const titolari = await caricaTitolariSezione(sezione);
+  async function caricaTitolariSezione(sezione: "domanda7" | "domanda8" | "domanda9") {
+    if (!av4Id) return [];
 
-    for (let i = 0; i < titolari.length; i++) {
-      const titolare = titolari[i];
+    const supabase = getSupabaseClient() as any;
 
-      if (!titolare?.codice_fiscale || !String(titolare.codice_fiscale).trim()) {
-        throw new Error(
-          `Codice fiscale obbligatorio per il titolare effettivo #${i + 1} della sezione ${sezione}.`
-        );
-      }
+    const { data, error } = await supabase
+      .from("tbAV4_titolari")
+      .select("*")
+      .eq("av4_id", av4Id)
+      .eq("sezione", sezione);
 
-      if (!validaCodiceFiscale(String(titolare.codice_fiscale))) {
-        throw new Error(
-          `Codice fiscale non valido per il titolare effettivo "${titolare.nome_cognome || `#${i + 1}`}" della sezione ${sezione}.`
-        );
-      }
+    if (error) {
+      throw new Error(`Errore caricamento titolari ${sezione}.`);
+    }
 
-      if (isDuplicateTitolare(titolari, titolare, i)) {
-        throw new Error(
-          `Titolare effettivo duplicato nella sezione ${sezione}: "${titolare.nome_cognome || titolare.codice_fiscale}".`
-        );
+    return data || [];
+  }
+
+  async function validaTitolariPrimaDelSalvataggio() {
+    const sezioniDaControllare: Array<"domanda7" | "domanda8" | "domanda9"> = [];
+
+    if (form.domanda7) sezioniDaControllare.push("domanda7");
+    if (form.domanda8) sezioniDaControllare.push("domanda8");
+    if (form.domanda9) sezioniDaControllare.push("domanda9");
+
+    for (const sezione of sezioniDaControllare) {
+      const titolari = await caricaTitolariSezione(sezione);
+
+      for (let i = 0; i < titolari.length; i++) {
+        const titolare = titolari[i];
+
+        if (!titolare?.codice_fiscale || !String(titolare.codice_fiscale).trim()) {
+          throw new Error(
+            `Codice fiscale obbligatorio per il titolare effettivo #${i + 1} della sezione ${sezione}.`
+          );
+        }
+
+        if (!validaCodiceFiscale(String(titolare.codice_fiscale))) {
+          throw new Error(
+            `Codice fiscale non valido per il titolare effettivo "${titolare.nome_cognome || `#${i + 1}`}" della sezione ${sezione}.`
+          );
+        }
+
+        if (isDuplicateTitolare(titolari, titolare, i)) {
+          throw new Error(
+            `Titolare effettivo duplicato nella sezione ${sezione}: "${titolare.nome_cognome || titolare.codice_fiscale}".`
+          );
+        }
       }
     }
   }
-}
-  
-function isDuplicateTitolare(
-  titolari: any[],
-  candidato: any,
-  currentIndex?: number
-) {
-  const cf = normalizeCf(candidato.codice_fiscale);
 
-  // 🔴 BLOCCO CF OBBLIGATORIO
-  if (!cf) {
-    throw new Error("Il codice fiscale è obbligatorio per il titolare effettivo.");
+  function isDuplicateTitolare(
+    titolari: any[],
+    candidato: any,
+    currentIndex?: number
+  ) {
+    const cf = normalizeCf(candidato.codice_fiscale);
+
+    if (!cf) {
+      throw new Error("Il codice fiscale è obbligatorio per il titolare effettivo.");
+    }
+
+    return titolari.some((t, index) => {
+      if (currentIndex !== undefined && index === currentIndex) return false;
+
+      const cfT = normalizeCf(t.codice_fiscale);
+
+      return cfT && cfT === cf;
+    });
   }
 
-  return titolari.some((t, index) => {
-    if (currentIndex !== undefined && index === currentIndex) return false;
+  async function salvaAV4() {
+    if (!validateBeforeSave()) return;
 
-    const cfT = normalizeCf(t.codice_fiscale);
+    const supabase = getSupabaseClient() as any;
 
-    return cfT && cfT === cf;
-  });
-}
-  
- async function salvaAV4() {
-  if (!validateBeforeSave()) return;
+    try {
+      setLoading(true);
 
-  const supabase = getSupabaseClient() as any;
-
-  try {
-    setLoading(true);
-
-    await validaTitolariPrimaDelSalvataggio();
+      await validaTitolariPrimaDelSalvataggio();
 
       const payload = {
         studio_id: form.studio_id,
@@ -1222,7 +1246,7 @@ function isDuplicateTitolare(
           `/antiriciclaggio/modello-av4?studio_id=${form.studio_id}&av1_id=${form.av1_id}&cliente_id=${form.cliente_id}&id=${savedId}`
         );
       }
-     } catch (error: any) {
+    } catch (error: any) {
       console.error("Errore imprevisto salvataggio AV4:", error);
       alert(error?.message || "Errore durante il salvataggio AV4.");
     } finally {
@@ -1230,7 +1254,7 @@ function isDuplicateTitolare(
     }
   }
 
-const noteAllegato = `Allegato alla Dichiarazione del Cliente
+  const noteAllegato = `Allegato alla Dichiarazione del Cliente
 
 (Nota 1)
 Per “riciclaggio” (art. 2, co. 4 e 5, d.lgs. 231/2007) si intende:
@@ -1263,20 +1287,20 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
 5. Qualora l’applicazione dei criteri di cui ai precedenti commi non consenta di individuare univocamente uno o più titolari effettivi, il titolare effettivo coincide con la persona fisica o le persone fisiche titolari conformemente ai rispettivi assetti organizzativi o statutari, di poteri di rappresentanza legale, amministrazione o direzione della società o del cliente comunque diverso dalla persona fisica.
 6. I soggetti obbligati conservano traccia delle verifiche effettuate ai fini dell'individuazione del titolare effettivo nonché, con specifico riferimento al titolare effettivo individuato ai sensi del comma 5, delle ragioni che non hanno consentito di individuare il titolare effettivo ai sensi dei commi 1, 2, 3 e 4 del presente articolo.
 `;
-  
+
   return (
     <div className="flex h-[calc(100vh-64px)] flex-col overflow-hidden bg-background">
-<FormStickyHeader
-  title="Modello AV4"
-  subtitle="Dichiarazione del Cliente"
-  onSave={salvaAV4}
-  onPrint={handlePrint}
-  onClose={handleChiudiModello}
-  onSendToClient={handleInvioPubblico}
-  showSendToClient
-  sendToClientDisabled={!av4Id || loading}
-  saving={loading}
-/>
+      <FormStickyHeader
+        title="Modello AV4"
+        subtitle="Dichiarazione del Cliente"
+        onSave={salvaAV4}
+        onPrint={handlePrint}
+        onClose={handleChiudiModello}
+        onSendToClient={handleInvioPubblico}
+        showSendToClient
+        sendToClientDisabled={!av4Id || loading}
+        saving={loading}
+      />
 
       <div className="flex-1 overflow-hidden">
         <div className="h-full overflow-y-auto">
@@ -1580,211 +1604,212 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                     </label>
                   </div>
 
-               <div>
-  <label className="flex items-center gap-2">
-    <input
-      type="checkbox"
-      name="domanda7"
-      checked={form.domanda7}
-      onChange={handleChange}
-    />
-    di agire per conto dei seguenti titolari effettivi
-  </label>
-</div>
+                  <div>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        name="domanda7"
+                        checked={form.domanda7}
+                        onChange={handleChange}
+                      />
+                      di agire per conto dei seguenti titolari effettivi
+                    </label>
+                  </div>
 
-{form.domanda7 && (
-  <div className="rounded-lg border p-4">
-    <TitolariEffettiviForm
-      sezione="domanda7"
-      av4_id={av4Id || ""}
-      studio_id={form.studio_id}
-      cliente_id={form.cliente_id}
-    />
-  </div>
-)}
+                  {form.domanda7 && (
+                    <div className="rounded-lg border p-4">
+                      <TitolariEffettiviForm
+                        sezione="domanda7"
+                        av4_id={av4Id || ""}
+                        studio_id={form.studio_id}
+                        cliente_id={form.cliente_id}
+                      />
+                    </div>
+                  )}
 
-<div>
-  <label className="flex items-center gap-2">
-    <input
-      type="checkbox"
-      name="domanda8"
-      checked={form.domanda8}
-      onChange={handleChange}
-    />
-    di agire per conto della società/ente
-  </label>
-</div>
+                  <div>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        name="domanda8"
+                        checked={form.domanda8}
+                        onChange={handleChange}
+                      />
+                      di agire per conto della società/ente
+                    </label>
+                  </div>
 
-{form.domanda8 && (
-  <div className="space-y-4 rounded-lg border p-4">
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-      <div>
-        <label className="mb-1 block text-sm font-medium">Nome società / ente</label>
-        <input
-          name="nome_soc"
-          value={form.nome_soc}
-          onChange={handleChange}
-          className="w-full rounded-md border px-3 py-2"
-        />
-      </div>
-      <div>
-        <label className="mb-1 block text-sm font-medium">Sede legale</label>
-        <input
-          name="sede_legale"
-          value={form.sede_legale}
-          onChange={handleChange}
-          className="w-full rounded-md border px-3 py-2"
-        />
-      </div>
-      <div>
-        <label className="mb-1 block text-sm font-medium">Indirizzo sede</label>
-        <input
-          name="indirizzo_sede"
-          value={form.indirizzo_sede}
-          onChange={handleChange}
-          className="w-full rounded-md border px-3 py-2"
-        />
-      </div>
-      <div>
-        <label className="mb-1 block text-sm font-medium">Registro imprese</label>
-        <input
-          name="reg_imprese"
-          value={form.reg_imprese}
-          onChange={handleChange}
-          className="w-full rounded-md border px-3 py-2"
-        />
-      </div>
-      <div>
-        <label className="mb-1 block text-sm font-medium">Numero registro imprese</label>
-        <input
-          name="num_reg_imprese"
-          value={form.num_reg_imprese}
-          onChange={handleChange}
-          className="w-full rounded-md border px-3 py-2"
-        />
-      </div>
-      <div>
-        <label className="mb-1 block text-sm font-medium">Codice fiscale società</label>
-        <input
-          name="cod_fiscale_soc"
-          value={form.cod_fiscale_soc}
-          onChange={handleChange}
-          className="w-full rounded-md border px-3 py-2"
-        />
-      </div>
-    </div>
+                  {form.domanda8 && (
+                    <div className="space-y-4 rounded-lg border p-4">
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div>
+                          <label className="mb-1 block text-sm font-medium">Nome società / ente</label>
+                          <input
+                            name="nome_soc"
+                            value={form.nome_soc}
+                            onChange={handleChange}
+                            className="w-full rounded-md border px-3 py-2"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-sm font-medium">Sede legale</label>
+                          <input
+                            name="sede_legale"
+                            value={form.sede_legale}
+                            onChange={handleChange}
+                            className="w-full rounded-md border px-3 py-2"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-sm font-medium">Indirizzo sede</label>
+                          <input
+                            name="indirizzo_sede"
+                            value={form.indirizzo_sede}
+                            onChange={handleChange}
+                            className="w-full rounded-md border px-3 py-2"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-sm font-medium">Registro imprese</label>
+                          <input
+                            name="reg_imprese"
+                            value={form.reg_imprese}
+                            onChange={handleChange}
+                            className="w-full rounded-md border px-3 py-2"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-sm font-medium">Numero registro imprese</label>
+                          <input
+                            name="num_reg_imprese"
+                            value={form.num_reg_imprese}
+                            onChange={handleChange}
+                            className="w-full rounded-md border px-3 py-2"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-sm font-medium">Codice fiscale società</label>
+                          <input
+                            name="cod_fiscale_soc"
+                            value={form.cod_fiscale_soc}
+                            onChange={handleChange}
+                            className="w-full rounded-md border px-3 py-2"
+                          />
+                        </div>
+                      </div>
 
-    <div className="text-sm">
-      in qualità di legale rappresentante, munito dei necessari poteri, e attesta che il/i titolare/i effettivi sono:
-    </div>
+                      <div className="text-sm">
+                        in qualità di legale rappresentante, munito dei necessari poteri, e attesta che il/i titolare/i effettivi sono:
+                      </div>
 
-    <div className="rounded-lg border p-4">
-      <TitolariEffettiviForm
-        sezione="domanda8"
-        av4_id={av4Id || ""}
-        studio_id={form.studio_id}
-        cliente_id={form.cliente_id}
-      />
-    </div>
-  </div>
-)}
+                      <div className="rounded-lg border p-4">
+                        <TitolariEffettiviForm
+                          sezione="domanda8"
+                          av4_id={av4Id || ""}
+                          studio_id={form.studio_id}
+                          cliente_id={form.cliente_id}
+                        />
+                      </div>
+                    </div>
+                  )}
 
-<div>
-  <label className="flex items-center gap-2">
-    <input
-      type="checkbox"
-      name="domanda9"
-      checked={form.domanda9}
-      onChange={handleChange}
-    />
-    (caso residuale, in assenza di controllo o partecipazioni rilevanti) di agire per conto della società/ente
-  </label>
-</div>
+                  <div>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        name="domanda9"
+                        checked={form.domanda9}
+                        onChange={handleChange}
+                      />
+                      (caso residuale, in assenza di controllo o partecipazioni rilevanti) di agire per conto della società/ente
+                    </label>
+                  </div>
 
-{form.domanda9 && (
-  <div className="space-y-4 rounded-lg border p-4">
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-      <div>
-        <label className="mb-1 block text-sm font-medium">Nome società / ente</label>
-        <input
-          name="nome_soc_bis"
-          value={form.nome_soc_bis}
-          onChange={handleChange}
-          className="w-full rounded-md border px-3 py-2"
-        />
-      </div>
-      <div>
-        <label className="mb-1 block text-sm font-medium">Sede legale</label>
-        <input
-          name="sede_legale_bis"
-          value={form.sede_legale_bis}
-          onChange={handleChange}
-          className="w-full rounded-md border px-3 py-2"
-        />
-      </div>
-      <div>
-        <label className="mb-1 block text-sm font-medium">Indirizzo sede</label>
-        <input
-          name="indirizzo_sede_bis"
-          value={form.indirizzo_sede_bis}
-          onChange={handleChange}
-          className="w-full rounded-md border px-3 py-2"
-        />
-      </div>
-      <div>
-        <label className="mb-1 block text-sm font-medium">Registro imprese</label>
-        <input
-          name="reg_imprese_bis"
-          value={form.reg_imprese_bis}
-          onChange={handleChange}
-          className="w-full rounded-md border px-3 py-2"
-        />
-      </div>
-      <div>
-        <label className="mb-1 block text-sm font-medium">Numero registro imprese</label>
-        <input
-          name="num_reg_imprese_bis"
-          value={form.num_reg_imprese_bis}
-          onChange={handleChange}
-          className="w-full rounded-md border px-3 py-2"
-        />
-      </div>
-      <div>
-        <label className="mb-1 block text-sm font-medium">Codice fiscale società</label>
-        <input
-          name="cod_fiscale_soc_bis"
-          value={form.cod_fiscale_soc_bis}
-          onChange={handleChange}
-          className="w-full rounded-md border px-3 py-2"
-        />
-      </div>
-      <div className="md:col-span-2">
-        <label className="mb-1 block text-sm font-medium">
-          Denominazione società per art. 20, comma 4
-        </label>
-        <input
-          name="nome_soc_ter"
-          value={form.nome_soc_ter}
-          onChange={handleChange}
-          className="w-full rounded-md border px-3 py-2"
-        />
-      </div>
-    </div>
+                  {form.domanda9 && (
+                    <div className="space-y-4 rounded-lg border p-4">
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div>
+                          <label className="mb-1 block text-sm font-medium">Nome società / ente</label>
+                          <input
+                            name="nome_soc_bis"
+                            value={form.nome_soc_bis}
+                            onChange={handleChange}
+                            className="w-full rounded-md border px-3 py-2"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-sm font-medium">Sede legale</label>
+                          <input
+                            name="sede_legale_bis"
+                            value={form.sede_legale_bis}
+                            onChange={handleChange}
+                            className="w-full rounded-md border px-3 py-2"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-sm font-medium">Indirizzo sede</label>
+                          <input
+                            name="indirizzo_sede_bis"
+                            value={form.indirizzo_sede_bis}
+                            onChange={handleChange}
+                            className="w-full rounded-md border px-3 py-2"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-sm font-medium">Registro imprese</label>
+                          <input
+                            name="reg_imprese_bis"
+                            value={form.reg_imprese_bis}
+                            onChange={handleChange}
+                            className="w-full rounded-md border px-3 py-2"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-sm font-medium">Numero registro imprese</label>
+                          <input
+                            name="num_reg_imprese_bis"
+                            value={form.num_reg_imprese_bis}
+                            onChange={handleChange}
+                            className="w-full rounded-md border px-3 py-2"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-sm font-medium">Codice fiscale società</label>
+                          <input
+                            name="cod_fiscale_soc_bis"
+                            value={form.cod_fiscale_soc_bis}
+                            onChange={handleChange}
+                            className="w-full rounded-md border px-3 py-2"
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="mb-1 block text-sm font-medium">
+                            Denominazione società per art. 20, comma 4
+                          </label>
+                          <input
+                            name="nome_soc_ter"
+                            value={form.nome_soc_ter}
+                            onChange={handleChange}
+                            className="w-full rounded-md border px-3 py-2"
+                          />
+                        </div>
+                      </div>
 
-    <div className="text-sm">
-      in qualità di legale rappresentante, munito dei necessari poteri, e attesta che ai sensi dell’articolo 20, comma 4, D.Lgs. 231/2007, i titolari effettivi sono:
-    </div>
+                      <div className="text-sm">
+                        in qualità di legale rappresentante, munito dei necessari poteri, e attesta che ai sensi dell’articolo 20, comma 4, D.Lgs. 231/2007, i titolari effettivi sono:
+                      </div>
 
-    <div className="rounded-lg border p-4">
-      <TitolariEffettiviForm
-        sezione="domanda9"
-        av4_id={av4Id || ""}
-        studio_id={form.studio_id}
-        cliente_id={form.cliente_id}
-      />
-    </div>
-  </div>
-)}
+                      <div className="rounded-lg border p-4">
+                        <TitolariEffettiviForm
+                          sezione="domanda9"
+                          av4_id={av4Id || ""}
+                          studio_id={form.studio_id}
+                          cliente_id={form.cliente_id}
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   <div className="font-semibold">PPE titolari effettivi</div>
 
                   <div>
@@ -1910,123 +1935,120 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
               </CardHeader>
 
               <CardContent>
-               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-  <div>
-    <label className="mb-1 block text-sm font-medium">Luogo</label>
-    <input
-      name="luogo_firma"
-      value={form.luogo_firma}
-      onChange={handleChange}
-      className="w-full rounded-md border px-3 py-2"
-    />
-  </div>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">Luogo</label>
+                    <input
+                      name="luogo_firma"
+                      value={form.luogo_firma}
+                      onChange={handleChange}
+                      className="w-full rounded-md border px-3 py-2"
+                    />
+                  </div>
 
-  <div>
-    <label className="mb-1 block text-sm font-medium">Data</label>
-    <input
-      type="date"
-      name="data_firma"
-      value={form.data_firma}
-      onChange={handleChange}
-      className="w-full rounded-md border px-3 py-2"
-    />
-  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">Data</label>
+                    <input
+                      type="date"
+                      name="data_firma"
+                      value={form.data_firma}
+                      onChange={handleChange}
+                      className="w-full rounded-md border px-3 py-2"
+                    />
+                  </div>
+                </div>
 
- </div>
+                <div className="md:col-span-2 mt-2">
+                  <div className="mx-auto max-w-md pt-8 text-center">
+                    <div className="mx-auto mb-2 h-px w-full bg-black" />
+                    <div className="text-sm italic">Firma Cliente o Esecutore</div>
+                  </div>
+                </div>
 
-  <div className="md:col-span-2 mt-2">
-    <div className="mx-auto max-w-md pt-8 text-center">
-      <div className="mx-auto mb-2 h-px w-full bg-black" />
-      <div className="text-sm italic">Firma Cliente o Esecutore</div>
-    </div>
-  </div>
+                <div className="md:col-span-2 mt-4 whitespace-pre-line text-xs leading-5 text-gray-700">
+                  {noteAllegato}
+                </div>
 
-                 
-                 
- <div className="md:col-span-2 mt-4 whitespace-pre-line text-xs leading-5 text-gray-700">
-  {noteAllegato}
-</div>
-                 
-  <div>
-    <label className="mb-1 block text-sm font-medium">Luogo</label>
-    <input
-      name="luogo_firma_bis"
-      value={form.luogo_firma_bis}
-      onChange={handleChange}
-      className="w-full rounded-md border px-3 py-2"
-    />
-  </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Luogo</label>
+                  <input
+                    name="luogo_firma_bis"
+                    value={form.luogo_firma_bis}
+                    onChange={handleChange}
+                    className="w-full rounded-md border px-3 py-2"
+                  />
+                </div>
 
-  <div>
-    <label className="mb-1 block text-sm font-medium">Data</label>
-    <input
-      type="date"
-      name="data_firma_bis"
-      value={form.data_firma_bis}
-      onChange={handleChange}
-      className="w-full rounded-md border px-3 py-2"
-    />
-  </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Data</label>
+                  <input
+                    type="date"
+                    name="data_firma_bis"
+                    value={form.data_firma_bis}
+                    onChange={handleChange}
+                    className="w-full rounded-md border px-3 py-2"
+                  />
+                </div>
 
-  <div className="md:col-span-2 mt-2">
-    <div className="mx-auto max-w-md pt-8 text-center">
-      <div className="mx-auto mb-2 h-px w-full bg-black" />
-      <div className="text-sm italic">Firma Cliente o Esecutore</div>
-    </div>
-  </div>
+                <div className="md:col-span-2 mt-2">
+                  <div className="mx-auto max-w-md pt-8 text-center">
+                    <div className="mx-auto mb-2 h-px w-full bg-black" />
+                    <div className="text-sm italic">Firma Cliente o Esecutore</div>
+                  </div>
+                </div>
 
-  {av4Id && (
-    <div className="md:col-span-2">
-      <p className="text-sm text-green-700">
-        AV4 salvato. ID pratica: {av4Id}
-      </p>
-    </div>
-  )}
+                {av4Id && (
+                  <div className="md:col-span-2">
+                    <p className="text-sm text-green-700">
+                      AV4 salvato. ID pratica: {av4Id}
+                    </p>
+                  </div>
+                )}
 
-  {publicUrl && (
-    <div className="md:col-span-2">
-      <label className="mb-1 block text-sm font-medium">Link pubblico AV4</label>
-      <input
-        value={publicUrl}
-        readOnly
-        className="w-full rounded-md border bg-gray-50 px-3 py-2 text-sm"
-      />
-    </div>
-  )}
+                {publicUrl && (
+                  <div className="md:col-span-2">
+                    <label className="mb-1 block text-sm font-medium">Link pubblico AV4</label>
+                    <input
+                      value={publicUrl}
+                      readOnly
+                      className="w-full rounded-md border bg-gray-50 px-3 py-2 text-sm"
+                    />
+                  </div>
+                )}
 
-<div className="md:col-span-2">
-  <button
-    type="button"
-    onClick={handleApriPdfFirmato}
-    className="rounded bg-emerald-600 px-4 py-2 text-white shadow hover:bg-emerald-700"
-  >
-    Apri PDF firmato
-  </button>
+                <div className="md:col-span-2">
+                  <button
+                    type="button"
+                    onClick={handleApriPdfFirmato}
+                    className="rounded bg-emerald-600 px-4 py-2 text-white shadow hover:bg-emerald-700"
+                  >
+                    Apri PDF firmato
+                  </button>
 
-  {form.allegato_pdf_cliente? (
-    <p className="mt-2 break-all text-xs text-gray-500">
-      Percorso file: {form.allegato_pdf_cliente}
-    </p>
-  ) : (
-    <p className="mt-2 text-xs text-gray-500">
-      Nessun PDF firmato presente.
-    </p>
-  )}
-</div>
-  
-  <div className="md:col-span-2">
-    <div className="rounded-md border bg-slate-50 px-4 py-3 text-sm text-slate-700">
-      Usa i pulsanti in alto a destra per <strong>salvare</strong>,{" "}
-      <strong>stampare</strong> o <strong>chiudere</strong> il modello.
-    </div>
-  </div>
+                  {form.allegato_pdf_cliente ? (
+                    <p className="mt-2 break-all text-xs text-gray-500">
+                      Percorso file: {form.allegato_pdf_cliente}
+                    </p>
+                  ) : (
+                    <p className="mt-2 text-xs text-gray-500">
+                      Nessun PDF firmato presente.
+                    </p>
+                  )}
+                </div>
+
+                <div className="md:col-span-2">
+                  <div className="rounded-md border bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                    Usa i pulsanti in alto a destra per <strong>salvare</strong>,{" "}
+                    <strong>stampare</strong> o <strong>chiudere</strong> il modello.
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
         </div>
       </div>
 
-       <MasterPasswordDialog
+      <MasterPasswordDialog
         open={masterPasswordGate.open}
         onOpenChange={masterPasswordGate.setOpen}
         password={masterPasswordGate.password}
@@ -2034,7 +2056,6 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
         onUnlock={masterPasswordGate.handleUnlock}
         loading={masterPasswordGate.unlocking}
       />
-      
     </div>
   );
 }
