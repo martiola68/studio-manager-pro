@@ -24,7 +24,6 @@ export async function sendRichiestaDocumentoRappresentante(
     nomeDestinatario,
     email,
     nomeOperatore,
-    microsoftConnectionId,
     clienteId = null,
     av4Id = null,
     note = "Invio richiesta documento da anagrafica rappresentante",
@@ -37,9 +36,6 @@ export async function sendRichiestaDocumentoRappresentante(
   if (!studioId) throw new Error("studio_id non disponibile.");
   if (!email || !String(email).trim()) {
     throw new Error("Il rappresentante non ha un indirizzo email valorizzato.");
-  }
-  if (!microsoftConnectionId || !String(microsoftConnectionId).trim()) {
-    throw new Error("Connessione Microsoft non valorizzata.");
   }
 
   token =
@@ -68,71 +64,104 @@ export async function sendRichiestaDocumentoRappresentante(
   }
 
   const destinatario = String(email).trim();
- const subject = "Richiesta aggiornamento documento di riconoscimento";
-const bodyPreview = `Richiesta aggiornamento documento inviata a ${destinatario}. Link pubblico: ${url}`;
-const firmaOperatore = String(nomeOperatore || "").trim();
+  const subject = "Richiesta aggiornamento documento di riconoscimento";
+  const bodyPreview = `Richiesta aggiornamento documento inviata a ${destinatario}. Link pubblico: ${url}`;
+  const firmaOperatore = String(nomeOperatore || "").trim();
 
-const html = `
-  <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
-    <p>Gentile ${nomeDestinatario || "Cliente"},</p>
+  const html = `
+    <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
+      <p>Gentile ${nomeDestinatario || "Cliente"},</p>
 
-    <p>
-      La invitiamo ad allegare un documento di riconoscimento in corso di validità.
-    </p>
+      <p>
+        La invitiamo ad allegare un documento di riconoscimento in corso di validità.
+      </p>
 
-    <p>
-      La invitiamo inoltre a verificare la correttezza dei dati relativi alla residenza
-      (città, indirizzo e CAP) e, qualora mancanti o non aggiornati, a completarli
-      direttamente nella pagina di caricamento.
-    </p>
+      <p>
+        La invitiamo inoltre a verificare la correttezza dei dati relativi alla residenza
+        (città, indirizzo e CAP) e, qualora mancanti o non aggiornati, a completarli
+        direttamente nella pagina di caricamento.
+      </p>
 
-    <p>
-      Può caricare il nuovo documento tramite il pulsante seguente:
-    </p>
+      <p>
+        Può caricare il nuovo documento tramite il pulsante seguente:
+      </p>
 
-    <p style="margin-top: 10px; margin-bottom: 18px;">
-      <a href="${url}" target="_blank" rel="noopener noreferrer" style="display:inline-block; background:#2563eb; color:#ffffff; text-decoration:none; padding:12px 18px; border-radius:8px; font-weight:600;">
-  Carica documento e verifica dati residenza
-</a>
-    </p>
+      <p style="margin-top: 10px; margin-bottom: 18px;">
+        <a href="${url}" target="_blank" rel="noopener noreferrer" style="display:inline-block; background:#2563eb; color:#ffffff; text-decoration:none; padding:12px 18px; border-radius:8px; font-weight:600;">
+          Carica documento e verifica dati residenza
+        </a>
+      </p>
 
-    <p><strong>Documenti accettati:</strong></p>
+      <p><strong>Documenti accettati:</strong></p>
 
-    <ul style="padding-left: 18px; margin: 8px 0;">
-      <li>Carta di identità</li>
-      <li>Passaporto</li>
-      <li>Patente</li>
-    </ul>
+      <ul style="padding-left: 18px; margin: 8px 0;">
+        <li>Carta di identità</li>
+        <li>Passaporto</li>
+        <li>Patente</li>
+      </ul>
 
-    <p>
-      Il documento allegato dovrà essere completo e chiaramente leggibile, senza tagli,
-      sfocature, riflessi o parti coperte.
-    </p>
+      <p>
+        Il documento allegato dovrà essere completo e chiaramente leggibile, senza tagli,
+        sfocature, riflessi o parti coperte.
+      </p>
 
-    <p>
-      Le chiediamo di compilare i campi richiesti, verificare i dati di residenza
-      e allegare il documento aggiornato.
-    </p>
+      <p>
+        Le chiediamo di compilare i campi richiesti, verificare i dati di residenza
+        e allegare il documento aggiornato.
+      </p>
 
-    <p>
-      Una volta completata la procedura, il collegamento non sarà più riutilizzabile.
-    </p>
+      <p>
+        Una volta completata la procedura, il collegamento non sarà più riutilizzabile.
+      </p>
 
-    ${
-      firmaOperatore
-        ? `<p>Cordiali saluti,<br/>${firmaOperatore}</p>`
-        : ""
-    }
-  </div>
-`;
+      ${
+        firmaOperatore
+          ? `<p>Cordiali saluti,<br/>${firmaOperatore}</p>`
+          : ""
+      }
+    </div>
+  `;
+
+  const text = `
+Gentile ${nomeDestinatario || "Cliente"},
+
+La invitiamo ad allegare un documento di riconoscimento in corso di validità.
+
+La invitiamo inoltre a verificare la correttezza dei dati relativi alla residenza
+(città, indirizzo e CAP) e, qualora mancanti o non aggiornati, a completarli
+direttamente nella pagina di caricamento.
+
+Può caricare il nuovo documento tramite il link seguente:
+${url}
+
+Documenti accettati:
+- Carta di identità
+- Passaporto
+- Patente
+
+Il documento allegato dovrà essere completo e chiaramente leggibile, senza tagli,
+sfocature, riflessi o parti coperte.
+
+Le chiediamo di compilare i campi richiesti, verificare i dati di residenza
+e allegare il documento aggiornato.
+
+Una volta completata la procedura, il collegamento non sarà più riutilizzabile.
+
+${firmaOperatore ? `Cordiali saluti,\n${firmaOperatore}` : ""}
+  `.trim();
 
   try {
-    await sendEmailViaMicrosoft(userId, {
-      microsoftConnectionId,
+    const emailResult = await sendEmail({
       to: destinatario,
       subject,
       html,
+      text,
+      sendMode: "studio",
     });
+
+    if (!emailResult.success) {
+      throw new Error(emailResult.error || "Errore durante l'invio email.");
+    }
 
     const { error: updateError } = await supabase
       .from("rapp_legali")
@@ -143,7 +172,6 @@ const html = `
         public_doc_opened_at: null,
         public_doc_submitted_at: null,
         doc_richiesto_il: nowIso,
-        microsoft_connection_id: microsoftConnectionId,
       })
       .eq("id", recordId);
 
