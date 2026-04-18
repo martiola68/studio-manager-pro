@@ -132,7 +132,7 @@ async function getStudioMailContext(): Promise<{
 
   const { data: studio, error: studioError } = await (supabase as any)
     .from("tbstudio")
-    .select("email")
+    .select("email, microsoft_connection_id")
     .eq("id", currentUser.studio_id)
     .single();
 
@@ -140,27 +140,12 @@ async function getStudioMailContext(): Promise<{
     return null;
   }
 
-  const { data: connections, error: connError } = await (supabase as any)
-    .from("microsoft365_connections")
-    .select("id, is_default, enabled, sort_order")
-    .eq("studio_id", currentUser.studio_id)
-    .eq("enabled", true)
-    .order("is_default", { ascending: false })
-    .order("sort_order", { ascending: true });
-
-  if (connError) {
-    return null;
-  }
-
-  const defaultConnection =
-    (connections ?? []).find((c: any) => c.is_default) ?? connections?.[0] ?? null;
-
   return {
     senderUserId: currentUser.id,
     studioEmail: String(studio.email),
-    microsoftConnectionId: defaultConnection?.id
-      ? String(defaultConnection.id)
-      : currentUser.microsoft_connection_id,
+    microsoftConnectionId: studio.microsoft_connection_id
+      ? String(studio.microsoft_connection_id)
+      : null,
   };
 }
 
@@ -311,7 +296,7 @@ export async function sendEmail(
       if (!studioCtx.microsoftConnectionId) {
         return {
           success: false,
-          error: "Connessione Microsoft dello studio non trovata",
+          error: "Connessione Microsoft dello studio non trovata su tbstudio",
         };
       }
 
