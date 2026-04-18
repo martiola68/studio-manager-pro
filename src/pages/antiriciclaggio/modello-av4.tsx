@@ -761,34 +761,35 @@ export default function ModelloAV4() {
     router.push(`/antiriciclaggio/stampa-av4?id=${av4Id}`);
   }
 
-  function handleApriPdfFirmato() {
-    if (!encryptionEnabled) {
-      if (!form.allegato_pdf_cliente) {
-        alert("PDF firmato non presente.");
-        return;
-      }
-
-      const supabase = getSupabaseClient() as any;
-
-      const { data } = supabase.storage
-        .from("messaggi-allegati")
-        .getPublicUrl(form.allegato_pdf_cliente);
-
-      const url = data?.publicUrl || "";
-
-      if (url) {
-        window.open(url, "_blank");
-      } else {
-        alert("Errore apertura PDF.");
-      }
+ function handleApriPdfFirmato() {
+  const openPdf = async () => {
+    if (!form.allegato_pdf_cliente) {
+      alert("PDF firmato non presente.");
       return;
     }
 
-    masterPasswordGate.requireUnlock(async () => {
-      if (!form.allegato_pdf_cliente) {
-        alert("PDF firmato non presente.");
-        return;
-      }
+    const supabase = getSupabaseClient() as any;
+
+    const { data } = supabase.storage
+      .from("allegati")
+      .getPublicUrl(form.allegato_pdf_cliente);
+
+    const url = data?.publicUrl || "";
+
+    if (url) {
+      window.open(url, "_blank");
+    } else {
+      alert("Errore apertura PDF.");
+    }
+  };
+
+  if (!encryptionEnabled) {
+    void openPdf();
+    return;
+  }
+
+  masterPasswordGate.requireUnlock(openPdf);
+}
 
       const supabase = getSupabaseClient() as any;
 
