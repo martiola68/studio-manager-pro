@@ -999,7 +999,7 @@ export async function sendComunicazioneEmail(
   <div class="container">
     <div class="content">
       <div class="badge">
-        COMUNICAZIONE INTERNA
+        COMUNICAZIONE INTERNA-test noreplay
       </div>
 
       <p class="subject">
