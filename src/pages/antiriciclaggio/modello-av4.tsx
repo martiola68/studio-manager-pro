@@ -771,7 +771,7 @@ function handleApriPdfFirmato() {
     const supabase = getSupabaseClient() as any;
 
     const { data } = supabase.storage
-      .from("allegati")
+      .from("messaggi-allegati")
       .getPublicUrl(form.allegato_pdf_cliente);
 
     const url = data?.publicUrl || "";
