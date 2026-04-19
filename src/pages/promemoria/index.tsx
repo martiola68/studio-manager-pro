@@ -796,7 +796,7 @@ export default function PromemoriaPage() {
             }}
           />
           <Label htmlFor="vista-promemoria-creati" className="cursor-pointer">
-            Visualizza solo i promemoria creati da me
+            Visualizza i promemoria che ho inviato
           </Label>
         </div>
 
@@ -812,7 +812,7 @@ export default function PromemoriaPage() {
             }}
           />
           <Label htmlFor="vista-promemoria-tutti" className="cursor-pointer">
-            Visualizza tutti i miei promemoria
+            Visualizza tutto
           </Label>
         </div>
 
