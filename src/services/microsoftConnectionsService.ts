@@ -60,6 +60,20 @@ export async function createMicrosoftConnection(input: {
 }): Promise<MicrosoftConnection> {
   const client = supabase as any;
 
+  const { count: connectionsCount, error: countError } = await client
+    .from("microsoft365_connections")
+    .select("id", { count: "exact", head: true })
+    .eq("studio_id", input.studio_id);
+
+  if (countError) {
+    console.error("Errore conteggio connessioni Microsoft:", countError);
+    throw countError;
+  }
+
+  if ((connectionsCount || 0) >= 2) {
+    throw new Error("Limite massimo di 2 connessioni Microsoft raggiunto per questo studio");
+  }
+
   if (input.is_default) {
     const { error: resetError } = await client
       .from("microsoft365_connections")
