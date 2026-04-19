@@ -105,8 +105,11 @@ export default function PromemoriaPage() {
   // NUOVO: flag per responsabili di settore
   const [visualizzaTuttiSettore, setVisualizzaTuttiSettore] = useState(false);
 
-  const isResponsabileSettore = currentUser?.responsabile === true && !!currentUser?.settore;
+  // NUOVO: filtro vista promemoria
+  const [filtroVistaPromemoria, setFiltroVistaPromemoria] = useState<"tutti" | "miei" | "creati">("tutti");
 
+  const isResponsabileSettore = currentUser?.responsabile === true && !!currentUser?.settore;
+  
   const getPrioritaOrder = (priorita?: string | null) => {
     switch ((priorita || "").toLowerCase()) {
       case "alta":
@@ -171,12 +174,12 @@ export default function PromemoriaPage() {
       
       if (userProfile) {
         setCurrentUser(userProfile);
-          setFiltroOperatore(userProfile.id);
+        setFiltroOperatore("tutti");
 
-            if (userProfile.responsabile !== true) {
-              setVisualizzaTuttiSettore(false);
-              }
-            }
+        if (userProfile.responsabile !== true) {
+          setVisualizzaTuttiSettore(false);
+        }
+      }
       
       // Determina se l'utente è responsabile
       const isResponsabile = userProfile?.responsabile === true;
@@ -674,12 +677,46 @@ export default function PromemoriaPage() {
     }
   };
 
-  const utentiFiltrati = utenti.filter(u => {
+ const utentiFiltrati = utenti.filter(u => {
     const searchLower = searchDestinatari.toLowerCase();
     return (
       u.nome?.toLowerCase().includes(searchLower) ||
       u.cognome?.toLowerCase().includes(searchLower)
     );
+  });
+
+  const promemoriaFiltrati = promemoria.filter((p) => {
+    const operatorePromemoria = utenti.find((u) => u.id === p.operatore_id);
+
+    // Se il responsabile attiva la vista settore, prevale questa
+    if (visualizzaTuttiSettore && isResponsabileSettore) {
+      if (operatorePromemoria?.settore !== currentUser?.settore) {
+        return false;
+      }
+
+      if (filtroOperatore !== "tutti" && p.operatore_id !== filtroOperatore) {
+        return false;
+      }
+
+      return true;
+    }
+
+    // Filtro operatore
+    if (filtroOperatore !== "tutti" && p.operatore_id !== filtroOperatore) {
+      return false;
+    }
+
+    // Vista personale
+    if (filtroVistaPromemoria === "miei") {
+      return p.destinatario_id === currentUser?.id;
+    }
+
+    if (filtroVistaPromemoria === "creati") {
+      return p.operatore_id === currentUser?.id;
+    }
+
+    // tutti = destinatario oppure operatore
+    return p.destinatario_id === currentUser?.id || p.operatore_id === currentUser?.id;
   });
 
   if (loading && promemoria.length === 0) {
@@ -708,41 +745,98 @@ export default function PromemoriaPage() {
         </div>
       </div>
 
-        {/* FILTRI */}
-     <div className="mb-4 flex flex-wrap items-center gap-6">
-  <div className="flex items-center gap-4">
-    <Label className="text-sm font-medium">Filtra per Operatore:</Label>
-    <Select value={filtroOperatore} onValueChange={setFiltroOperatore}>
-      <SelectTrigger className="w-64">
-        <SelectValue placeholder="Seleziona operatore" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="tutti">Tutti gli operatori</SelectItem>
-        {utenti.map((u) => (
-          <SelectItem key={u.id} value={u.id}>
-            {u.nome} {u.cognome} {u.settore ? `(${u.settore})` : ""}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  </div>
+    {/* FILTRI */}
+      <div className="mb-4 flex flex-wrap items-center gap-6">
+        <div className="flex items-center gap-4">
+          <Label className="text-sm font-medium">Filtra per Operatore:</Label>
+          <Select value={filtroOperatore} onValueChange={setFiltroOperatore}>
+            <SelectTrigger className="w-64">
+              <SelectValue placeholder="Seleziona operatore" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="tutti">Tutti gli operatori</SelectItem>
+              {utenti.map((u) => (
+                <SelectItem key={u.id} value={u.id}>
+                  {u.nome} {u.cognome} {u.settore ? `(${u.settore})` : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-  <div className="flex items-center space-x-2">
-    <Checkbox
-      id="visualizza-tutti-settore"
-      checked={visualizzaTuttiSettore}
-      disabled={!isResponsabileSettore}
-      onCheckedChange={(checked) => setVisualizzaTuttiSettore(!!checked)}
-    />
-    <Label
-      htmlFor="visualizza-tutti-settore"
-      className={!isResponsabileSettore ? "cursor-not-allowed opacity-60" : "cursor-pointer"}
-    >
-      Visualizza tutti i promemoria degli operatori
-      {currentUser?.settore ? ` del settore ${currentUser.settore}` : ""}
-    </Label>
-  </div>
-</div>
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="vista-miei-promemoria"
+            checked={filtroVistaPromemoria === "miei"}
+            onCheckedChange={(checked) => {
+              if (checked) {
+                setFiltroVistaPromemoria("miei");
+                setVisualizzaTuttiSettore(false);
+              } else {
+                setFiltroVistaPromemoria("tutti");
+              }
+            }}
+          />
+          <Label htmlFor="vista-miei-promemoria" className="cursor-pointer">
+            Visualizza i miei promemoria
+          </Label>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="vista-promemoria-creati"
+            checked={filtroVistaPromemoria === "creati"}
+            onCheckedChange={(checked) => {
+              if (checked) {
+                setFiltroVistaPromemoria("creati");
+                setVisualizzaTuttiSettore(false);
+              } else {
+                setFiltroVistaPromemoria("tutti");
+              }
+            }}
+          />
+          <Label htmlFor="vista-promemoria-creati" className="cursor-pointer">
+            Visualizza solo i promemoria creati da me
+          </Label>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="vista-promemoria-tutti"
+            checked={filtroVistaPromemoria === "tutti" && !visualizzaTuttiSettore}
+            onCheckedChange={(checked) => {
+              if (checked) {
+                setFiltroVistaPromemoria("tutti");
+                setVisualizzaTuttiSettore(false);
+              }
+            }}
+          />
+          <Label htmlFor="vista-promemoria-tutti" className="cursor-pointer">
+            Visualizza tutti i miei promemoria
+          </Label>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="visualizza-tutti-settore"
+            checked={visualizzaTuttiSettore}
+            disabled={!isResponsabileSettore}
+            onCheckedChange={(checked) => {
+              const isChecked = !!checked;
+              setVisualizzaTuttiSettore(isChecked);
+              if (isChecked) {
+                setFiltroVistaPromemoria("tutti");
+              }
+            }}
+          />
+          <Label
+            htmlFor="visualizza-tutti-settore"
+            className={!isResponsabileSettore ? "cursor-not-allowed opacity-60" : "cursor-pointer"}
+          >
+            Visualizza tutti i promemoria del proprio settore
+          </Label>
+        </div>
+      </div>
            <Table>
         <TableHeader>
           <TableRow>
@@ -767,21 +861,9 @@ export default function PromemoriaPage() {
         </TableHeader>
 
         <TableBody>
-          {promemoria
-          .filter((p) => {
-  const operatorePromemoria = utenti.find((u) => u.id === p.operatore_id);
-
-  if (visualizzaTuttiSettore && isResponsabileSettore) {
-    return operatorePromemoria?.settore === currentUser?.settore;
-  }
-
-  if (filtroOperatore === "tutti") {
-    return true;
-  }
-
-  return p.operatore_id === filtroOperatore;
-})
+       {promemoriaFiltrati
             .sort((a, b) => {
+              
               const prioritaDiff =
                 getPrioritaOrder(a.priorita) - getPrioritaOrder(b.priorita);
 
@@ -925,19 +1007,7 @@ export default function PromemoriaPage() {
               );
             })}
 
-         {promemoria.filter((p) => {
-  const operatorePromemoria = utenti.find((u) => u.id === p.operatore_id);
-
-  if (visualizzaTuttiSettore && isResponsabileSettore) {
-    return operatorePromemoria?.settore === currentUser?.settore;
-  }
-
-  if (filtroOperatore === "tutti") {
-    return true;
-  }
-
-  return p.operatore_id === filtroOperatore;
-}).length === 0 && (
+ {promemoriaFiltrati.length === 0 && (
             <TableRow>
               <TableCell colSpan={12} className="text-center py-8 text-gray-500">
                 Nessun promemoria trovato
