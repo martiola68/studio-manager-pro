@@ -747,23 +747,6 @@ export default function PromemoriaPage() {
 
     {/* FILTRI */}
       <div className="mb-4 flex flex-wrap items-center gap-6">
-        <div className="flex items-center gap-4">
-          <Label className="text-sm font-medium">Filtra per Operatore:</Label>
-          <Select value={filtroOperatore} onValueChange={setFiltroOperatore}>
-            <SelectTrigger className="w-64">
-              <SelectValue placeholder="Seleziona operatore" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="tutti">Tutti gli operatori</SelectItem>
-              {utenti.map((u) => (
-                <SelectItem key={u.id} value={u.id}>
-                  {u.nome} {u.cognome} {u.settore ? `(${u.settore})` : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
         <div className="flex items-center space-x-2">
           <Checkbox
             id="vista-miei-promemoria"
@@ -831,12 +814,17 @@ export default function PromemoriaPage() {
           />
           <Label
             htmlFor="visualizza-tutti-settore"
-            className={!isResponsabileSettore ? "cursor-not-allowed opacity-60" : "cursor-pointer"}
+            className={
+              !isResponsabileSettore
+                ? "cursor-not-allowed opacity-60 text-red-600"
+                : "cursor-pointer text-red-600 font-medium"
+            }
           >
             Visualizza tutti i promemoria del proprio settore
           </Label>
         </div>
       </div>
+      
            <Table>
         <TableHeader>
           <TableRow>
