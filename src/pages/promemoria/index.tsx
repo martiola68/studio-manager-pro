@@ -316,65 +316,59 @@ export default function PromemoriaPage() {
     return <File className="h-4 w-4 text-gray-500" />;
   };
 
-       const sendPromemoriaCreationEmail = async (destinatario: Utente | undefined) => {
-    if (!currentUser || !destinatario?.email) return;
+   const sendPromemoriaCreationEmail = async (destinatario: Utente | undefined) => {
+  if (!currentUser || !destinatario?.email) return;
 
-    try {
-      const subject = `Nuovo promemoria: ${formData.titolo}`;
+  try {
+    const subject = `Nuovo promemoria: ${formData.titolo}`;
 
-     const priorityBadgeStyle =
-        formData.priorita === "Alta"
-          ? "display:inline-block; padding:4px 10px; border-radius:999px; background:#fee2e2; color:#b91c1c; border:1px solid #f87171; font-weight:700; font-size:12px;"
-          : formData.priorita === "Media"
-          ? "display:inline-block; padding:4px 10px; border-radius:999px; background:#ffedd5; color:#c2410c; border:1px solid #fb923c; font-weight:700; font-size:12px;"
-          : "display:inline-block; padding:4px 10px; border-radius:999px; background:#dcfce7; color:#15803d; border:1px solid #4ade80; font-weight:700; font-size:12px;";
+    const priorityBadgeStyle =
+      formData.priorita === "Alta"
+        ? "display:inline-block;padding:6px 12px;border-radius:999px;background:#fee2e2;color:#b91c1c;border:1px solid #f87171;font-weight:700;font-size:12px;"
+       : formData.priorita === "Media"
+? "display:inline-block;padding:6px 12px;border-radius:999px;background:#fef3c7;color:#b45309;border:1px solid #f59e0b;font-weight:700;font-size:12px;"
+        : "display:inline-block;padding:6px 12px;border-radius:999px;background:#dcfce7;color:#15803d;border:1px solid #4ade80;font-weight:700;font-size:12px;";
 
-      const html = `
-        <div style="font-family: Arial, sans-serif; font-size: 14px; color: #111;">
-          <p>Gentile ${destinatario.nome || ""} ${destinatario.cognome || ""},</p>
+    const html = `
+      <div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#111827;">
+        <p>Gentile ${destinatario.nome || ""} ${destinatario.cognome || ""},</p>
 
-          <p>ti è stato assegnato un nuovo promemoria.</p>
+        <p>ti è stato assegnato un nuovo promemoria.</p>
 
-          <div style="margin: 12px 0 16px 0;">
-            <div style="margin-bottom: 10px;">
-              <span style="${priorityBadgeStyle}">${formData.priorita}</span>
-            </div>
-
-            <div style="font-size: 20px; font-weight: 700; line-height: 1.3; margin-bottom: 12px;">
-              ${formData.titolo}
-            </div>
-
-            <p style="margin: 0 0 6px 0;">
-              <strong>Descrizione:</strong> ${formData.descrizione || "-"}
-            </p>
-            <p style="margin: 0 0 6px 0;">
-              <strong>Data inserimento:</strong> ${format(formData.data_inserimento, "dd/MM/yyyy")}
-            </p>
-            <p style="margin: 0 0 6px 0;">
-              <strong>Data scadenza:</strong> ${format(formData.data_scadenza, "dd/MM/yyyy")}
-            </p>
-            <p style="margin: 0 0 6px 0;">
-              <strong>Stato:</strong> ${formData.working_progress}
-            </p>
-            <p style="margin: 0;">
-              <strong>Operatore:</strong> ${currentUser.nome || ""} ${currentUser.cognome || ""}
-            </p>
+        <div style="margin:16px 0;padding:16px;border:1px solid #e5e7eb;border-radius:12px;background:#ffffff;">
+          <div style="margin-bottom:12px;">
+            <span style="${priorityBadgeStyle}">
+              Priorità ${formData.priorita}
+            </span>
           </div>
 
-          <p>Accedi al gestionale per visualizzare il dettaglio del promemoria.</p>
-        </div>
-      `;
+          <div style="font-size:20px;font-weight:700;line-height:1.3;margin-bottom:12px;">
+            ${formData.titolo}
+          </div>
 
-      await (sendEmailViaMicrosoft as any)({
-        to: destinatario.email,
-        subject,
-        html,
-        microsoftConnectionId: currentUser.microsoft_connection_id || null,
-      });
-    } catch (error) {
-      console.error("Errore invio email promemoria:", error);
-    }
-  };
+          <p style="margin:0 0 8px 0;"><strong>Descrizione:</strong> ${formData.descrizione || "-"}</p>
+          <p style="margin:0 0 8px 0;"><strong>Data inserimento:</strong> ${format(formData.data_inserimento, "dd/MM/yyyy")}</p>
+          <p style="margin:0 0 8px 0;"><strong>Data scadenza:</strong> ${format(formData.data_scadenza, "dd/MM/yyyy")}</p>
+          <p style="margin:0 0 8px 0;"><strong>Stato:</strong> ${formData.working_progress}</p>
+          <p style="margin:0;"><strong>Operatore:</strong> ${currentUser.nome || ""} ${currentUser.cognome || ""}</p>
+        </div>
+
+        <p>Accedi al gestionale per visualizzare il dettaglio completo del promemoria.</p>
+      </div>
+    `;
+
+    const result = await (sendEmailViaMicrosoft as any)({
+      to: destinatario.email,
+      subject,
+      html,
+      microsoftConnectionId: currentUser.microsoft_connection_id || null,
+    });
+
+    console.log("Email promemoria inviata:", result);
+  } catch (error) {
+    console.error("Errore invio email promemoria:", error);
+  }
+};
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -470,8 +464,10 @@ export default function PromemoriaPage() {
             }
           }
 
-         // Email automatica al destinatario
-          await sendPromemoriaCreationEmail(destinatario);
+        // Email automatica al destinatario
+if (destinatario?.email) {
+  await sendPromemoriaCreationEmail(destinatario);
+}
 
           // Notifica Teams
           if (formData.invia_teams && newPromemoria && currentUser) {
@@ -529,10 +525,12 @@ export default function PromemoriaPage() {
           }
         }
 
-        const destinatario = utenti.find(u => u.id === formData.destinatario_id);
+     const destinatario = utenti.find(u => u.id === formData.destinatario_id);
 
-        // Email automatica al destinatario
-        await sendPromemoriaCreationEmail(destinatario);
+// Email automatica al destinatario
+if (destinatario?.email) {
+  await sendPromemoriaCreationEmail(destinatario);
+}
 
         // Notifica Teams singolo
         if (formData.invia_teams && newPromemoria && currentUser && formData.destinatario_id) {
