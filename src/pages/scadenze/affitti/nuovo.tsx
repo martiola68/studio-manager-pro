@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
-import { Search, X } from "lucide-react";
+import { X } from "lucide-react";
+import { useMasterPasswordGate } from "@/hooks/useMasterPasswordGate";
+import { MasterPasswordDialog } from "@/components/security/MasterPasswordDialog";
+import { runProtectedSubmit } from "@/lib/security/masterPasswordActions";
+import { isEncryptionEnabled } from "@/services/encryptionService";
 
 type ClienteOption = {
   id: string;
@@ -193,6 +197,12 @@ export default function NuovoContrattoAffittoPage() {
   const [clienti, setClienti] = useState<ClienteOption[]>([]);
   const [formData, setFormData] = useState<ContrattoFormData>(emptyForm);
 
+  const [encryptionEnabled, setEncryptionEnabled] = useState(false);
+
+const masterPasswordGate = useMasterPasswordGate({
+  studioId,
+});
+
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailSearch, setEmailSearch] = useState("");
   const [emailResults, setEmailResults] = useState<ContattoOption[]>([]);
@@ -277,12 +287,14 @@ export default function NuovoContrattoAffittoPage() {
         return;
       }
 
-      const currentStudioId = utenteDb.studio_id as string;
-      setStudioId(currentStudioId);
+     const currentStudioId = utenteDb.studio_id as string;
+setStudioId(currentStudioId);
 
-      const fullName = `${utenteDb.cognome || ""} ${utenteDb.nome || ""}`.trim();
-      setOperatoreLabel(fullName || utenteDb.email || user.email || "");
+const enabled = await isEncryptionEnabled(currentStudioId);
+setEncryptionEnabled(Boolean(enabled));
 
+const fullName = `${utenteDb.cognome || ""} ${utenteDb.nome || ""}`.trim();
+setOperatoreLabel(fullName || utenteDb.email || user.email || "");
       const { data: clientiData, error: clientiError } = await supabase
         .from("tbclienti")
         .select("id, ragione_sociale")
@@ -542,89 +554,95 @@ export default function NuovoContrattoAffittoPage() {
     return true;
   };
 
-  const handleSave = async () => {
-    if (!validateForm()) return;
+const handleSave = async () => {
+  if (!validateForm()) return;
 
-    setSaving(true);
+  try {
+    await runProtectedSubmit({
+      encryptionEnabled,
+      requireUnlock: masterPasswordGate.requireUnlock,
+      action: async () => {
+        setSaving(true);
 
-    try {
-      const supabase = getSupabaseClient();
-      const supabaseAny = supabase as any;
+        const supabase = getSupabaseClient();
+        const supabaseAny = supabase as any;
 
-      const locatoreSelezionato = clienti.find(
-        (c) => c.id === formData.cliente_id
-      );
+        const locatoreSelezionato = clienti.find(
+          (c) => c.id === formData.cliente_id
+        );
 
-      const payload = {
-        studio_id: studioId,
-        cliente_id: formData.cliente_id,
-        utente_operatore_id: formData.utente_operatore_id || null,
-        conduttore: formData.conduttore.trim() || null,
-        descrizione_immobile_locato:
-          formData.descrizione_immobile_locato.trim() || null,
-        data_registrazione_atto: formData.data_registrazione_atto,
-        data_rinnovo_atto: formData.data_rinnovo_atto || null,
-        durata_contratto_anni: Number(formData.durata_contratto_anni),
-        codice_identificativo_registrazione:
-          formData.codice_identificativo_registrazione.trim() || null,
-        importo_registrazione: toNullableNumber(formData.importo_registrazione),
-        emailperalert: formData.emailperalert.trim() || null,
-        contatore_anni: Number(formData.contatore_anni),
-        data_prossima_scadenza: formData.data_prossima_scadenza,
-        alert1_inviato: !!formData.alert1_inviato,
-        alert1_inviato_at: formData.alert1_inviato
-          ? formData.alert1_inviato_at || new Date().toISOString()
-          : null,
-        alert2_inviato: !!formData.alert2_inviato,
-        alert2_inviato_at: formData.alert2_inviato
-          ? formData.alert2_inviato_at || new Date().toISOString()
-          : null,
-        alert3_inviato: !!formData.alert3_inviato,
-        alert3_inviato_at: formData.alert3_inviato
-          ? formData.alert3_inviato_at || new Date().toISOString()
-          : null,
-        attivo: !!formData.attivo,
-        rinnovo: !!formData.rinnovo,
-        contratto_concluso: !!formData.contratto_concluso,
-        nominativo: locatoreSelezionato?.ragione_sociale?.trim() || null,
-      };
+        const payload = {
+          studio_id: studioId,
+          cliente_id: formData.cliente_id,
+          utente_operatore_id: formData.utente_operatore_id || null,
+          conduttore: formData.conduttore.trim() || null,
+          descrizione_immobile_locato:
+            formData.descrizione_immobile_locato.trim() || null,
+          data_registrazione_atto: formData.data_registrazione_atto,
+          data_rinnovo_atto: formData.data_rinnovo_atto || null,
+          durata_contratto_anni: Number(formData.durata_contratto_anni),
+          codice_identificativo_registrazione:
+            formData.codice_identificativo_registrazione.trim() || null,
+          importo_registrazione: toNullableNumber(formData.importo_registrazione),
+          emailperalert: formData.emailperalert.trim() || null,
+          contatore_anni: Number(formData.contatore_anni),
+          data_prossima_scadenza: formData.data_prossima_scadenza,
+          alert1_inviato: !!formData.alert1_inviato,
+          alert1_inviato_at: formData.alert1_inviato
+            ? formData.alert1_inviato_at || new Date().toISOString()
+            : null,
+          alert2_inviato: !!formData.alert2_inviato,
+          alert2_inviato_at: formData.alert2_inviato
+            ? formData.alert2_inviato_at || new Date().toISOString()
+            : null,
+          alert3_inviato: !!formData.alert3_inviato,
+          alert3_inviato_at: formData.alert3_inviato
+            ? formData.alert3_inviato_at || new Date().toISOString()
+            : null,
+          attivo: !!formData.attivo,
+          rinnovo: !!formData.rinnovo,
+          contratto_concluso: !!formData.contratto_concluso,
+          nominativo: locatoreSelezionato?.ragione_sociale?.trim() || null,
+        };
 
-      if (isEdit && typeof id === "string") {
-        const { error } = await supabaseAny
-          .from("tbscadaffitti")
-          .update(payload)
-          .eq("id", id)
-          .eq("studio_id", studioId);
+        if (isEdit && typeof id === "string") {
+          const { error } = await supabaseAny
+            .from("tbscadaffitti")
+            .update(payload)
+            .eq("id", id)
+            .eq("studio_id", studioId);
 
-        if (error) {
-          console.error("Errore aggiornamento contratto:", error);
-          alert("Errore durante il salvataggio.");
-          return;
+          if (error) {
+            console.error("Errore aggiornamento contratto:", error);
+            alert("Errore durante il salvataggio.");
+            return;
+          }
+
+          alert("Contratto aggiornato correttamente.");
+        } else {
+          const { error } = await supabaseAny
+            .from("tbscadaffitti")
+            .insert(payload);
+
+          if (error) {
+            console.error("Errore inserimento contratto:", error);
+            alert("Errore durante il salvataggio.");
+            return;
+          }
+
+          alert("Contratto creato correttamente.");
         }
 
-        alert("Contratto aggiornato correttamente.");
-      } else {
-        const { error } = await supabaseAny
-          .from("tbscadaffitti")
-          .insert(payload);
-
-        if (error) {
-          console.error("Errore inserimento contratto:", error);
-          alert("Errore durante il salvataggio.");
-          return;
-        }
-
-        alert("Contratto creato correttamente.");
-      }
-
-      router.push("/scadenze/affitti");
-    } catch (err) {
-      console.error("Errore salvataggio contratto:", err);
-      alert("Errore inatteso durante il salvataggio.");
-    } finally {
-      setSaving(false);
-    }
-  };
+        router.push("/scadenze/affitti");
+      },
+    });
+  } catch (err) {
+    console.error("Errore salvataggio contratto:", err);
+    alert("Errore inatteso durante il salvataggio.");
+  } finally {
+    setSaving(false);
+  }
+};
 
   const handleBack = () => {
     router.push("/scadenze/affitti");
@@ -643,31 +661,41 @@ export default function NuovoContrattoAffittoPage() {
           </h1>
 
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={handleBack}
-              className="rounded border px-4 py-2"
-            >
-              Indietro
-            </button>
+  {encryptionEnabled && (
+    <button
+      type="button"
+      onClick={() => masterPasswordGate.setOpen(true)}
+      className="rounded border px-4 py-2"
+    >
+      Sblocca
+    </button>
+  )}
 
-            <button
-              type="button"
-              onClick={handleRinnovo}
-              className="rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700"
-            >
-              Rinnovo
-            </button>
+  <button
+    type="button"
+    onClick={handleBack}
+    className="rounded border px-4 py-2"
+  >
+    Indietro
+  </button>
 
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={saving}
-              className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-60"
-            >
-              {saving ? "Salvataggio..." : "Salva"}
-            </button>
-          </div>
+  <button
+    type="button"
+    onClick={handleRinnovo}
+    className="rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700"
+  >
+    Rinnovo
+  </button>
+
+  <button
+    type="button"
+    onClick={handleSave}
+    disabled={saving}
+    className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-60"
+  >
+    {saving ? "Salvataggio..." : "Salva"}
+  </button>
+</div>
         </div>
 
         <div className="grid grid-cols-1 gap-4 rounded border bg-white p-4 md:grid-cols-2">
@@ -1082,6 +1110,14 @@ export default function NuovoContrattoAffittoPage() {
           </div>
         </div>
       )}
+      <MasterPasswordDialog
+        open={masterPasswordGate.open}
+        onOpenChange={masterPasswordGate.setOpen}
+        password={masterPasswordGate.password}
+        onPasswordChange={masterPasswordGate.setPassword}
+        onUnlock={masterPasswordGate.handleUnlock}
+        loading={masterPasswordGate.unlocking}
+      />
     </>
   );
 }
