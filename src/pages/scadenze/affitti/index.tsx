@@ -2,6 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { Eye, Trash2 } from "lucide-react";
+import { useMasterPasswordGate } from "@/hooks/useMasterPasswordGate";
+import { MasterPasswordDialog } from "@/components/security/MasterPasswordDialog";
+import { runProtectedSubmit } from "@/lib/security/masterPasswordActions";
+import { isEncryptionEnabled } from "@/services/encryptionService";
 
 type ContrattoAffittoRow = {
   id: string;
@@ -76,9 +80,16 @@ function getOperatoreLabel(utente?: UtenteLite) {
 
 export default function ScadenzarioAffittiIndex() {
   const router = useRouter();
+
   const [contratti, setContratti] = useState<ContrattoAffittoView[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [studioId, setStudioId] = useState("");
+  const [encryptionEnabled, setEncryptionEnabled] = useState(false);
+
+  const masterPasswordGate = useMasterPasswordGate({
+    studioId,
+  });
 
   useEffect(() => {
     loadContratti();
@@ -91,9 +102,37 @@ export default function ScadenzarioAffittiIndex() {
       const supabase = getSupabaseClient();
       const supabaseAny = supabase as any;
 
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setContratti([]);
+        return;
+      }
+
+      const { data: utenteDb, error: utenteError } = await supabase
+        .from("tbutenti")
+        .select("id, studio_id")
+        .eq("id", user.id)
+        .single();
+
+      if (utenteError || !utenteDb?.studio_id) {
+        console.error("Errore recupero studio utente:", utenteError);
+        setContratti([]);
+        return;
+      }
+
+      const currentStudioId = utenteDb.studio_id as string;
+      setStudioId(currentStudioId);
+
+      const enabled = await isEncryptionEnabled(currentStudioId);
+      setEncryptionEnabled(Boolean(enabled));
+
       const { data, error } = await supabaseAny
         .from("tbscadaffitti")
         .select("*")
+        .eq("studio_id", currentStudioId)
         .order("data_prossima_scadenza", { ascending: true });
 
       if (error) {
@@ -212,18 +251,28 @@ export default function ScadenzarioAffittiIndex() {
     if (!conferma) return;
 
     try {
-      const supabase = getSupabaseClient();
-      const supabaseAny = supabase as any;
+      await runProtectedSubmit({
+        encryptionEnabled,
+        requireUnlock: masterPasswordGate.requireUnlock,
+        action: async () => {
+          const supabase = getSupabaseClient();
+          const supabaseAny = supabase as any;
 
-      const { error } = await supabaseAny.from("tbscadaffitti").delete().eq("id", id);
+          const { error } = await supabaseAny
+            .from("tbscadaffitti")
+            .delete()
+            .eq("id", id)
+            .eq("studio_id", studioId);
 
-      if (error) {
-        console.error("Errore eliminazione contratto:", error);
-        alert("Errore durante l'eliminazione del contratto.");
-        return;
-      }
+          if (error) {
+            console.error("Errore eliminazione contratto:", error);
+            alert("Errore durante l'eliminazione del contratto.");
+            return;
+          }
 
-      await loadContratti();
+          await loadContratti();
+        },
+      });
     } catch (err) {
       console.error("Errore inatteso eliminazione contratto:", err);
       alert("Errore inatteso durante l'eliminazione.");
@@ -231,120 +280,149 @@ export default function ScadenzarioAffittiIndex() {
   };
 
   return (
-    <div className="p-6">
-      <div className="mb-6 flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold">Contratti di affitto</h1>
+    <>
+      <div className="p-6">
+        <div className="mb-6 flex items-center justify-between gap-4">
+          <h1 className="text-2xl font-bold">Contratti di affitto</h1>
 
-        <button
-          type="button"
-          onClick={handleNuovo}
-          className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-        >
-          Nuovo contratto
-        </button>
-      </div>
-
-      <div className="mb-4">
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Cerca per locatore, conduttore, immobile, email o codice registrazione..."
-          className="w-full rounded border px-3 py-2"
-        />
-      </div>
-
-      <div className="overflow-x-auto rounded border bg-white">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="p-3 text-left">Locatore</th>
-              <th className="p-3 text-left">Conduttore</th>
-              <th className="p-3 text-left">Immobile locato</th>
-              <th className="p-3 text-left">Codice identificativo</th>
-              <th className="p-3 text-left">Registrazione</th>
-              <th className="p-3 text-left">Prossima scadenza</th>
-              <th className="p-3 text-left">Annualità</th>
-              <th className="p-3 text-left">Alert</th>
-              <th className="p-3 text-left">Operatore</th>
-              <th className="p-3 text-left">Email alert</th>
-              <th className="p-3 text-left">Stato</th>
-              <th className="p-3 text-left">Azioni</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={12} className="p-4 text-center">
-                  Caricamento...
-                </td>
-              </tr>
-            ) : contrattiFiltrati.length === 0 ? (
-              <tr>
-                <td colSpan={12} className="p-4 text-center">
-                  Nessun contratto trovato
-                </td>
-              </tr>
-            ) : (
-              contrattiFiltrati.map((row) => {
-                const stato = getStato(row);
-
-                return (
-                  <tr key={row.id} className="border-t">
-                    <td className="p-3">{row.locatore_label}</td>
-                    <td className="p-3">{row.conduttore || "-"}</td>
-                    <td className="p-3">{row.descrizione_immobile_locato || "-"}</td>
-                    <td className="p-3">
-                      {row.codice_identificativo_registrazione || "-"}
-                    </td>
-                    <td className="p-3">{formatDate(row.data_registrazione_atto)}</td>
-                    <td className="p-3">{formatDate(row.data_prossima_scadenza)}</td>
-                    <td className="p-3">
-                      {row.contatore_anni}/{row.durata_contratto_anni}
-                    </td>
-                    <td className="p-3">{getAlertProgress(row)}</td>
-                    <td className="p-3">{row.operatore_label}</td>
-                    <td className="p-3">{row.emailperalert || "-"}</td>
-                    <td className="p-3">
-                      <span
-                        className={`rounded px-2 py-1 text-xs font-medium ${
-                          stato === "ATTIVO"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-gray-200 text-gray-700"
-                        }`}
-                      >
-                        {stato}
-                      </span>
-                    </td>
-                    <td className="p-3">
-                      <div className="flex items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={() => handleApri(row.id)}
-                          className="text-blue-600 hover:text-blue-800"
-                          title="Apri"
-                        >
-                          <Eye size={18} />
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(row.id)}
-                          className="text-red-600 hover:text-red-800"
-                          title="Elimina"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
+          <div className="flex gap-2">
+            {encryptionEnabled && (
+              <button
+                type="button"
+                onClick={() => masterPasswordGate.setOpen(true)}
+                className="rounded border px-4 py-2"
+              >
+                Sblocca
+              </button>
             )}
-          </tbody>
-        </table>
+
+            <button
+              type="button"
+              onClick={handleNuovo}
+              className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+            >
+              Nuovo contratto
+            </button>
+          </div>
+        </div>
+
+        <div className="mb-4">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cerca per locatore, conduttore, immobile, email o codice registrazione..."
+            className="w-full rounded border px-3 py-2"
+          />
+        </div>
+
+        <div className="overflow-x-auto rounded border bg-white">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="p-3 text-left">Locatore</th>
+                <th className="p-3 text-left">Conduttore</th>
+                <th className="p-3 text-left">Immobile locato</th>
+                <th className="p-3 text-left">Codice identificativo</th>
+                <th className="p-3 text-left">Registrazione</th>
+                <th className="p-3 text-left">Prossima scadenza</th>
+                <th className="p-3 text-left">Annualità</th>
+                <th className="p-3 text-left">Alert</th>
+                <th className="p-3 text-left">Operatore</th>
+                <th className="p-3 text-left">Email alert</th>
+                <th className="p-3 text-left">Stato</th>
+                <th className="p-3 text-left">Azioni</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={12} className="p-4 text-center">
+                    Caricamento...
+                  </td>
+                </tr>
+              ) : contrattiFiltrati.length === 0 ? (
+                <tr>
+                  <td colSpan={12} className="p-4 text-center">
+                    Nessun contratto trovato
+                  </td>
+                </tr>
+              ) : (
+                contrattiFiltrati.map((row) => {
+                  const stato = getStato(row);
+
+                  return (
+                    <tr key={row.id} className="border-t">
+                      <td className="p-3">{row.locatore_label}</td>
+                      <td className="p-3">{row.conduttore || "-"}</td>
+                      <td className="p-3">
+                        {row.descrizione_immobile_locato || "-"}
+                      </td>
+                      <td className="p-3">
+                        {row.codice_identificativo_registrazione || "-"}
+                      </td>
+                      <td className="p-3">
+                        {formatDate(row.data_registrazione_atto)}
+                      </td>
+                      <td className="p-3">
+                        {formatDate(row.data_prossima_scadenza)}
+                      </td>
+                      <td className="p-3">
+                        {row.contatore_anni}/{row.durata_contratto_anni}
+                      </td>
+                      <td className="p-3">{getAlertProgress(row)}</td>
+                      <td className="p-3">{row.operatore_label}</td>
+                      <td className="p-3">{row.emailperalert || "-"}</td>
+                      <td className="p-3">
+                        <span
+                          className={`rounded px-2 py-1 text-xs font-medium ${
+                            stato === "ATTIVO"
+                              ? "bg-green-100 text-green-700"
+                              : "bg-gray-200 text-gray-700"
+                          }`}
+                        >
+                          {stato}
+                        </span>
+                      </td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => handleApri(row.id)}
+                            className="text-blue-600 hover:text-blue-800"
+                            title="Apri"
+                          >
+                            <Eye size={18} />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(row.id)}
+                            className="text-red-600 hover:text-red-800"
+                            title="Elimina"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
+
+      <MasterPasswordDialog
+        open={masterPasswordGate.open}
+        onOpenChange={masterPasswordGate.setOpen}
+        password={masterPasswordGate.password}
+        onPasswordChange={masterPasswordGate.setPassword}
+        onUnlock={masterPasswordGate.handleUnlock}
+        loading={masterPasswordGate.unlocking}
+      />
+    </>
   );
 }
