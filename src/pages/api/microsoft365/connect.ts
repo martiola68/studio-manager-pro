@@ -97,14 +97,33 @@ export default async function handler(
       userRow = data;
     }
 
-    const userId = userRow.id;
-    const studioId = userRow.studio_id;
+  const userId = userRow.id;
+const studioId = userRow.studio_id;
 
-    if (!studioId) {
-      return res.status(400).json({ error: "Studio utente non trovato" });
-    }
+if (!studioId) {
+  return res.status(400).json({ error: "Studio utente non trovato" });
+}
 
-    // 3) Recupera microsoft_connection_id dalla richiesta
+// BLOCCO SICUREZZA: massimo 2 connessioni Microsoft per studio
+const { count: connectionsCount, error: countErr } = await supabaseAdmin
+  .from("microsoft365_connections")
+  .select("id", { count: "exact", head: true })
+  .eq("studio_id", studioId);
+
+if (countErr) {
+  return res.status(500).json({
+    error: `Errore conteggio connessioni Microsoft: ${countErr.message}`,
+  });
+}
+
+if ((connectionsCount || 0) > 2) {
+  return res.status(400).json({
+    error: "Limite massimo di 2 connessioni Microsoft superato per questo studio",
+  });
+}
+
+// 3) Recupera microsoft_connection_id dalla richiesta
+    
     const microsoftConnectionId =
       typeof req.query.microsoft_connection_id === "string"
         ? req.query.microsoft_connection_id
