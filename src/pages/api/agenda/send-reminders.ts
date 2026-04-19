@@ -77,18 +77,56 @@ const getRomeDateParts = () => {
   };
 };
 
+const getRomeDateKeyFromIso = (isoDate: string): string | null => {
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Europe/Rome",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date(isoDate));
+
+    const map = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+    return `${map.year}-${map.month}-${map.day}`;
+  } catch {
+    return null;
+  }
+};
+
+const formatDateIt = (dateStr: string) => {
+  try {
+    return new Date(dateStr).toLocaleDateString("it-IT");
+  } catch {
+    return dateStr;
+  }
+};
+
+const formatTimeIt = (dateStr: string) => {
+  try {
+    return new Date(dateStr).toLocaleTimeString("it-IT", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "00:00";
+  }
+};
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
   if (req.method !== "GET" && req.method !== "POST") {
-    return res.status(405).json({ success: false, error: "Method not allowed" });
+    return res.status(405).json({
+      success: false,
+      error: "Method not allowed",
+    });
   }
 
-    try {
+  try {
     const romeNow = getRomeDateParts();
 
-    // esegue solo alle 07:00 ora italiana
+    // Esegue solo alle 07:00 ora italiana
     if (romeNow.hour !== "07") {
       return res.status(200).json({
         success: true,
@@ -112,28 +150,17 @@ export default async function handler(
 
     if (error) {
       console.error("Errore lettura eventi promemoria:", error);
-      return res.status(500).json({ success: false, error: error.message });
+      return res.status(500).json({
+        success: false,
+        error: error.message,
+      });
     }
 
     const agendaRows = ((rows || []) as AgendaRow[]).filter((row) => {
-      try {
-        const parts = new Intl.DateTimeFormat("en-CA", {
-          timeZone: "Europe/Rome",
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-        }).formatToParts(new Date(row.data_inizio));
-
-        const map = Object.fromEntries(parts.map((p) => [p.type, p.value]));
-        const rowDateKey = `${map.year}-${map.month}-${map.day}`;
-
-        return rowDateKey === romeNow.dateKey;
-      } catch {
-        return false;
-      }
+      const rowDateKey = getRomeDateKeyFromIso(row.data_inizio);
+      return rowDateKey === romeNow.dateKey;
     });
 
-if (agendaRows.length === 0) {
     if (agendaRows.length === 0) {
       return res.status(200).json({
         success: true,
@@ -147,7 +174,9 @@ if (agendaRows.length === 0) {
 
     for (const row of agendaRows) {
       const key = String(row.gruppo_evento || row.id);
-      if (!grouped.has(key)) grouped.set(key, []);
+      if (!grouped.has(key)) {
+        grouped.set(key, []);
+      }
       grouped.get(key)!.push(row);
     }
 
@@ -176,7 +205,9 @@ if (agendaRows.length === 0) {
           .single();
 
         if (responsabileError || !responsabile?.email) {
-          errors.push(`Gruppo ${groupKey}: responsabile non trovato o senza email`);
+          errors.push(
+            `Gruppo ${groupKey}: responsabile non trovato o senza email`
+          );
           continue;
         }
 
@@ -199,16 +230,24 @@ if (agendaRows.length === 0) {
             .in("id", participantIds);
 
           if (!partecipantiError && partecipanti) {
-            partecipantiEmails = partecipanti
-              .filter((p) => Boolean(p.email))
-              .map((p) => String(p.email));
+            partecipantiEmails = [
+              ...new Set(
+                partecipanti
+                  .filter((p) => Boolean(p.email))
+                  .map((p) => String(p.email))
+              ),
+            ];
 
-            partecipantiNomi = partecipanti.map(
-              (p) =>
-                `${p.nome || ""} ${p.cognome || ""}`.trim() ||
-                p.email ||
-                "Utente"
-            );
+            partecipantiNomi = [
+              ...new Set(
+                partecipanti.map(
+                  (p) =>
+                    `${p.nome || ""} ${p.cognome || ""}`.trim() ||
+                    p.email ||
+                    "Utente"
+                )
+              ),
+            ];
           }
         }
 
@@ -228,36 +267,17 @@ if (agendaRows.length === 0) {
           }
         }
 
-        const formatDate = (dateStr: string) => {
-          try {
-            return new Date(dateStr).toLocaleDateString("it-IT");
-          } catch {
-            return dateStr;
-          }
-        };
-
-        const formatTime = (dateStr: string) => {
-          try {
-            return new Date(dateStr).toLocaleTimeString("it-IT", {
-              hour: "2-digit",
-              minute: "2-digit",
-            });
-          } catch {
-            return "00:00";
-          }
-        };
-
         const result = await emailService.sendEventNotification({
           action: "reminder",
           eventoId: masterRow.id,
           eventoTitolo: masterRow.titolo || "Evento senza titolo",
-          eventoData: formatDate(masterRow.data_inizio),
+          eventoData: formatDateIt(masterRow.data_inizio),
           eventoOraInizio: masterRow.ora_inizio
             ? masterRow.ora_inizio.substring(0, 5)
-            : formatTime(masterRow.data_inizio),
+            : formatTimeIt(masterRow.data_inizio),
           eventoOraFine: masterRow.ora_fine
             ? masterRow.ora_fine.substring(0, 5)
-            : formatTime(masterRow.data_fine),
+            : formatTimeIt(masterRow.data_fine),
           eventoLuogo: masterRow.in_sede
             ? masterRow.sala || undefined
             : masterRow.luogo || undefined,
@@ -300,7 +320,9 @@ if (agendaRows.length === 0) {
         updatedRows += idsToUpdate.length;
       } catch (groupError: any) {
         console.error("Errore gruppo reminder:", groupKey, groupError);
-        errors.push(`Gruppo ${groupKey}: ${groupError?.message || "errore sconosciuto"}`);
+        errors.push(
+          `Gruppo ${groupKey}: ${groupError?.message || "errore sconosciuto"}`
+        );
       }
     }
 
