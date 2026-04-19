@@ -95,9 +95,11 @@ export default function Microsoft365Page() {
   const [selectedClientSecret, setSelectedClientSecret] = useState("");
 
   const selectedConnection = useMemo(
-    () => connections.find((c) => c.id === selectedConnectionId) ?? null,
-    [connections, selectedConnectionId]
-  );
+  () => connections.find((c) => c.id === selectedConnectionId) ?? null,
+  [connections, selectedConnectionId]
+);
+
+const maxConnectionsReached = connections.length >= 2;
 
   const [testResult, setTestResult] = useState<TestResult | null>(null);
 
@@ -389,21 +391,26 @@ const studioConfigValid = useMemo(() => {
     }
   }
 
-  async function handleCreateConnection() {
-    if (!studioId) {
-      setError("Studio ID non trovato");
-      return;
-    }
+ async function handleCreateConnection() {
+  if (!studioId) {
+    setError("Studio ID non trovato");
+    return;
+  }
 
-    if (
-      !newConnectionName.trim() ||
-      !newConnectionTenantId.trim() ||
-      !newConnectionClientId.trim() ||
-      !newConnectionClientSecret.trim()
-    ) {
-      setError("Compila tutti i campi della nuova connessione");
-      return;
-    }
+  if (connections.length >= 2) {
+    setError("Limite massimo di 2 connessioni Microsoft raggiunto per questo studio");
+    return;
+  }
+
+  if (
+    !newConnectionName.trim() ||
+    !newConnectionTenantId.trim() ||
+    !newConnectionClientId.trim() ||
+    !newConnectionClientSecret.trim()
+  ) {
+    setError("Compila tutti i campi della nuova connessione");
+    return;
+  }
 
     setCreatingConnection(true);
     setError(null);
@@ -754,14 +761,31 @@ const studioConfigValid = useMemo(() => {
             </div>
 
             <Button
-              type="button"
-              variant={showNewConnectionForm ? "outline" : "default"}
-              onClick={() => setShowNewConnectionForm((prev) => !prev)}
-              className="gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              {showNewConnectionForm ? "Chiudi" : "Nuova connessione"}
-            </Button>
+  type="button"
+  variant={showNewConnectionForm ? "outline" : "default"}
+  onClick={() => {
+    if (maxConnectionsReached) {
+      setError("Limite massimo di 2 connessioni Microsoft raggiunto per questo studio");
+      return;
+    }
+    setShowNewConnectionForm((prev) => !prev);
+  }}
+  className="gap-2"
+  disabled={!showNewConnectionForm && maxConnectionsReached}
+>
+  <Plus className="h-4 w-4" />
+  {showNewConnectionForm
+    ? "Chiudi"
+    : maxConnectionsReached
+    ? "Limite raggiunto (max 2)"
+    : "Nuova connessione"}
+</Button>
+
+            {maxConnectionsReached && (
+  <p className="text-sm text-red-600">
+    Hai già 2 connessioni Microsoft registrate. Non è possibile crearne altre.
+  </p>
+)}
           </div>
         </CardHeader>
 
