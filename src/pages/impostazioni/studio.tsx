@@ -57,8 +57,9 @@ export default function DatiStudioPage() {
   const [showResetConfirmPassword, setShowResetConfirmPassword] = useState(false);
   const [resettingPassword, setResettingPassword] = useState(false);
 
-  const [formData, setFormData] = useState({
+ const [formData, setFormData] = useState({
     ragione_sociale: "",
+    ragione_sociale_tenant2: "",
     denominazione_breve: "",
     partita_iva: "",
     codice_fiscale: "",
@@ -111,8 +112,9 @@ export default function DatiStudioPage() {
       if (studioData) {
         setStudio(studioData);
         setIsPasswordProtected(studioData.protezione_attiva || false);
-        setFormData({
+         setFormData({
           ragione_sociale: studioData.ragione_sociale || "",
+          ragione_sociale_tenant2: studioData.ragione_sociale_tenant2 || "",
           denominazione_breve: studioData.denominazione_breve || "",
           partita_iva: studioData.partita_iva || "",
           codice_fiscale: studioData.codice_fiscale || "",
@@ -670,7 +672,7 @@ export default function DatiStudioPage() {
               <CardTitle>Dati Anagrafici</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="ragione_sociale">Ragione Sociale *</Label>
                   <Input
@@ -680,6 +682,16 @@ export default function DatiStudioPage() {
                     required
                   />
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="ragione_sociale_tenant2">Ragione Sociale Tenant 2</Label>
+                  <Input
+                    id="ragione_sociale_tenant2"
+                    value={formData.ragione_sociale_tenant2}
+                    onChange={(e) => setFormData({ ...formData, ragione_sociale_tenant2: e.target.value })}
+                  />
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="denominazione_breve">Denominazione Breve *</Label>
                   <Input
