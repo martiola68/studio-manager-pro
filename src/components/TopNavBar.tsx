@@ -43,17 +43,7 @@ type TopNavUser = Pick<
   | "attivo"
   | "created_at"
   | "updated_at"
-  | "studio_id"
-  | "microsoft_connection_id"
 >;
-
-type StudioTopBar = {
-  id: string;
-  ragione_sociale: string | null;
-  ragione_sociale_tenant2: string | null;
-  microsoft_connection_id: string | null;
-  microsoft_connection_id_tenant2: string | null;
-};
 
 interface MenuItem {
   label: string;
@@ -65,7 +55,6 @@ interface MenuItem {
 
 export function TopNavBar() {
   const [currentUser, setCurrentUser] = useState<TopNavUser | null>(null);
-  const [studioLabel, setStudioLabel] = useState("");
   const [loading, setLoading] = useState(true);
 
   const [messaggiNonLetti, setMessaggiNonLetti] = useState(0);
@@ -80,28 +69,6 @@ export function TopNavBar() {
     ? `${pathname}?${searchParams.toString()}`
     : pathname;
 
- const getStudioLabelForUser = (utente: TopNavUser, studio: StudioTopBar | null) => {
-  if (!studio || !utente.microsoft_connection_id) return studio?.ragione_sociale || "";
-
-  const isTenantPrincipale =
-    !!studio.microsoft_connection_id &&
-    utente.microsoft_connection_id === studio.microsoft_connection_id;
-
-  const isTenantSecondario =
-    !!studio.microsoft_connection_id_tenant2 &&
-    utente.microsoft_connection_id === studio.microsoft_connection_id_tenant2;
-
-  if (isTenantSecondario) {
-    return studio.ragione_sociale_tenant2 || studio.ragione_sociale || "";
-  }
-
-  if (isTenantPrincipale) {
-    return studio.ragione_sociale || "";
-  }
-
-  return studio.ragione_sociale || "";
-};
-
   const loadCurrentUser = async () => {
     try {
       const supabase = getSupabaseClient();
@@ -113,7 +80,7 @@ export function TopNavBar() {
         const { data: utente, error } = await supabase
           .from("tbutenti")
           .select(
-            "id, nome, cognome, email, tipo_utente, ruolo_operatore_id, attivo, created_at, updated_at, studio_id, microsoft_connection_id"
+            "id, nome, cognome, email, tipo_utente, ruolo_operatore_id, attivo, created_at, updated_at"
           )
           .eq("email", session.user.email)
           .maybeSingle();
@@ -121,43 +88,17 @@ export function TopNavBar() {
         if (error) {
           console.error("Errore caricamento utente:", error);
           setCurrentUser(null);
-          setStudioLabel("");
         } else if (utente) {
-          const typedUser = utente as TopNavUser;
-          setCurrentUser(typedUser);
-
-          if (typedUser.studio_id) {
-            const { data: studio, error: studioError } = await supabase
-              .from("tbstudio")
-              .select(
-                "id, ragione_sociale, ragione_sociale_tenant2, microsoft_connection_id, microsoft_connection_id_tenant2"
-              )
-              .eq("id", typedUser.studio_id)
-              .maybeSingle();
-
-            if (studioError) {
-              console.error("Errore caricamento studio topbar:", studioError);
-              setStudioLabel("");
-            } else {
-              setStudioLabel(
-                getStudioLabelForUser(typedUser, (studio as StudioTopBar | null) ?? null)
-              );
-            }
-          } else {
-            setStudioLabel("");
-          }
+          setCurrentUser(utente as TopNavUser);
         } else {
           setCurrentUser(null);
-          setStudioLabel("");
         }
       } else {
         setCurrentUser(null);
-        setStudioLabel("");
       }
     } catch (error) {
       console.error("Errore caricamento utente:", error);
       setCurrentUser(null);
-      setStudioLabel("");
     } finally {
       setLoading(false);
     }
@@ -537,27 +478,10 @@ export function TopNavBar() {
 
   return (
     <nav className="w-full bg-white border-b border-gray-200 shadow-sm sticky top-16 z-30">
-      <div className="flex items-center justify-between gap-4 px-4 py-2">
-        <div className="overflow-x-auto">
-          <div className="flex items-center gap-1 min-w-max">
-            {menuItems.map((item) => renderMenuItem(item))}
-          </div>
+      <div className="overflow-x-auto">
+        <div className="flex items-center gap-1 px-4 py-2 min-w-max">
+          {menuItems.map((item) => renderMenuItem(item))}
         </div>
-
-        {currentUser && (
-          <div className="shrink-0 text-sm text-gray-700 whitespace-nowrap">
-            <span className="font-medium">
-              {currentUser.nome} {currentUser.cognome}
-            </span>
-            {studioLabel && (
-              <span className="text-gray-500"> — {studioLabel}</span>
-            )}
-          </div>
-        )}
-      </div>
-
-      <div className="border-t border-gray-100 px-4 py-2 text-xs text-gray-500">
-        © {new Date().getFullYear()} Studio Manager Pro. Creato da Artiola Mario. Tutti i diritti riservati. Opera tutelata ai sensi della Legge 22 aprile 1941, n. 633, e successive modificazioni.
       </div>
     </nav>
   );
