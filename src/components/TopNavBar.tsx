@@ -80,20 +80,27 @@ export function TopNavBar() {
     ? `${pathname}?${searchParams.toString()}`
     : pathname;
 
-  const getStudioLabelForUser = (utente: TopNavUser, studio: StudioTopBar | null) => {
-    if (!studio) return "";
+ const getStudioLabelForUser = (utente: TopNavUser, studio: StudioTopBar | null) => {
+  if (!studio || !utente.microsoft_connection_id) return studio?.ragione_sociale || "";
 
-    const isTenantSecondario =
-      !!utente.microsoft_connection_id &&
-      !!studio.microsoft_connection_id_tenant2 &&
-      utente.microsoft_connection_id === studio.microsoft_connection_id_tenant2;
+  const isTenantPrincipale =
+    !!studio.microsoft_connection_id &&
+    utente.microsoft_connection_id === studio.microsoft_connection_id;
 
-    if (isTenantSecondario) {
-      return studio.ragione_sociale_tenant2 || studio.ragione_sociale || "";
-    }
+  const isTenantSecondario =
+    !!studio.microsoft_connection_id_tenant2 &&
+    utente.microsoft_connection_id === studio.microsoft_connection_id_tenant2;
 
+  if (isTenantSecondario) {
+    return studio.ragione_sociale_tenant2 || studio.ragione_sociale || "";
+  }
+
+  if (isTenantPrincipale) {
     return studio.ragione_sociale || "";
-  };
+  }
+
+  return studio.ragione_sociale || "";
+};
 
   const loadCurrentUser = async () => {
     try {
