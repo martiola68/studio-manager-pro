@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 
-import { sendEmailViaMicrosoft } from "@/services/microsoftEmailService";
+import { sendEmail } from "@/services/emailService";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -316,57 +316,80 @@ export default function PromemoriaPage() {
     return <File className="h-4 w-4 text-gray-500" />;
   };
 
-   const sendPromemoriaCreationEmail = async (destinatario: Utente | undefined) => {
-  if (!currentUser || !destinatario?.email) return;
+ const sendPromemoriaCreationEmail = async (destinatario: Utente | undefined) => {
+  if (!destinatario?.email) return;
 
   try {
     const subject = `Nuovo promemoria: ${formData.titolo}`;
 
     const priorityBadgeStyle =
       formData.priorita === "Alta"
-        ? "display:inline-block;padding:6px 12px;border-radius:999px;background:#fee2e2;color:#b91c1c;border:1px solid #f87171;font-weight:700;font-size:12px;"
-       : formData.priorita === "Media"
-? "display:inline-block;padding:6px 12px;border-radius:999px;background:#fef3c7;color:#b45309;border:1px solid #f59e0b;font-weight:700;font-size:12px;"
-        : "display:inline-block;padding:6px 12px;border-radius:999px;background:#dcfce7;color:#15803d;border:1px solid #4ade80;font-weight:700;font-size:12px;";
+        ? "display:inline-block; padding:6px 12px; border-radius:999px; background:#fee2e2; color:#b91c1c; border:1px solid #f87171; font-weight:700; font-size:12px;"
+        : formData.priorita === "Media"
+        ? "display:inline-block; padding:6px 12px; border-radius:999px; background:#fef3c7; color:#b45309; border:1px solid #f59e0b; font-weight:700; font-size:12px;"
+        : "display:inline-block; padding:6px 12px; border-radius:999px; background:#dcfce7; color:#15803d; border:1px solid #4ade80; font-weight:700; font-size:12px;";
 
     const html = `
-      <div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#111827;">
+      <div style="font-family: Arial, sans-serif; font-size: 14px; color: #111827; line-height: 1.6;">
         <p>Gentile ${destinatario.nome || ""} ${destinatario.cognome || ""},</p>
 
         <p>ti è stato assegnato un nuovo promemoria.</p>
 
-        <div style="margin:16px 0;padding:16px;border:1px solid #e5e7eb;border-radius:12px;background:#ffffff;">
-          <div style="margin-bottom:12px;">
-            <span style="${priorityBadgeStyle}">
-              Priorità ${formData.priorita}
-            </span>
+        <div style="margin: 16px 0; padding: 16px; border: 1px solid #e5e7eb; border-radius: 12px; background: #ffffff;">
+          <div style="margin-bottom: 12px;">
+            <span style="${priorityBadgeStyle}">Priorità ${formData.priorita}</span>
           </div>
 
-          <div style="font-size:20px;font-weight:700;line-height:1.3;margin-bottom:12px;">
+          <div style="font-size: 20px; font-weight: 700; line-height: 1.3; margin-bottom: 12px;">
             ${formData.titolo}
           </div>
 
-          <p style="margin:0 0 8px 0;"><strong>Descrizione:</strong> ${formData.descrizione || "-"}</p>
-          <p style="margin:0 0 8px 0;"><strong>Data inserimento:</strong> ${format(formData.data_inserimento, "dd/MM/yyyy")}</p>
-          <p style="margin:0 0 8px 0;"><strong>Data scadenza:</strong> ${format(formData.data_scadenza, "dd/MM/yyyy")}</p>
-          <p style="margin:0 0 8px 0;"><strong>Stato:</strong> ${formData.working_progress}</p>
-          <p style="margin:0;"><strong>Operatore:</strong> ${currentUser.nome || ""} ${currentUser.cognome || ""}</p>
+          <p style="margin: 0 0 8px 0;"><strong>Descrizione:</strong> ${formData.descrizione || "-"}</p>
+          <p style="margin: 0 0 8px 0;"><strong>Data inserimento:</strong> ${format(formData.data_inserimento, "dd/MM/yyyy")}</p>
+          <p style="margin: 0 0 8px 0;"><strong>Data scadenza:</strong> ${format(formData.data_scadenza, "dd/MM/yyyy")}</p>
+          <p style="margin: 0 0 8px 0;"><strong>Stato:</strong> ${formData.working_progress}</p>
+          <p style="margin: 0;"><strong>Operatore:</strong> ${currentUser?.nome || ""} ${currentUser?.cognome || ""}</p>
         </div>
 
         <p>Accedi al gestionale per visualizzare il dettaglio completo del promemoria.</p>
       </div>
     `;
 
-    const result = await (sendEmailViaMicrosoft as any)({
+    const text = `
+Nuovo promemoria assegnato
+
+Titolo: ${formData.titolo}
+Descrizione: ${formData.descrizione || "-"}
+Data inserimento: ${format(formData.data_inserimento, "dd/MM/yyyy")}
+Data scadenza: ${format(formData.data_scadenza, "dd/MM/yyyy")}
+Priorità: ${formData.priorita}
+Stato: ${formData.working_progress}
+Operatore: ${currentUser?.nome || ""} ${currentUser?.cognome || ""}
+    `.trim();
+
+    const result = await sendEmail({
       to: destinatario.email,
       subject,
       html,
-      microsoftConnectionId: currentUser.microsoft_connection_id || null,
+      text,
+      sendMode: "studio",
     });
 
-    console.log("Email promemoria inviata:", result);
+    if (!result.success) {
+      console.error("Errore invio email promemoria:", result.error);
+      toast({
+        title: "Email non inviata",
+        description: result.error || "Invio email fallito",
+        variant: "destructive",
+      });
+    }
   } catch (error) {
     console.error("Errore invio email promemoria:", error);
+    toast({
+      title: "Email non inviata",
+      description: error instanceof Error ? error.message : "Errore sconosciuto",
+      variant: "destructive",
+    });
   }
 };
 
