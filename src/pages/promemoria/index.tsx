@@ -706,13 +706,13 @@ export default function PromemoriaPage() {
       return false;
     }
 
-    // Vista personale
+ // Vista personale
     if (filtroVistaPromemoria === "miei") {
       return p.destinatario_id === currentUser?.id;
     }
 
     if (filtroVistaPromemoria === "creati") {
-      return p.operatore_id === currentUser?.id;
+      return p.operatore_id === currentUser?.id && p.destinatario_id !== currentUser?.id;
     }
 
     // tutti = destinatario oppure operatore
