@@ -32,8 +32,12 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
   const [currentUser, setCurrentUser] = useState<HeaderUser | null>(null);
   const [studio, setStudio] = useState<Studio | null>(null);
 
-  const getStudioLabelForUser = (utente: HeaderUser | null, studioData: Studio | null) => {
+  const getStudioLabelForUser = (
+    utente: HeaderUser | null,
+    studioData: Studio | null
+  ) => {
     if (!studioData) return "";
+
     if (!utente?.microsoft_connection_id) {
       return studioData.ragione_sociale || "";
     }
@@ -102,14 +106,16 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
 
     loadUserAndStudio();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_OUT" || !session) {
-        setCurrentUser(null);
-        setStudio(null);
-      } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-        loadUserAndStudio();
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === "SIGNED_OUT" || !session) {
+          setCurrentUser(null);
+          setStudio(null);
+        } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+          loadUserAndStudio();
+        }
       }
-    });
+    );
 
     return () => {
       authListener.subscription.unsubscribe();
@@ -123,40 +129,38 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
 
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
-      <div className="px-6 py-4">
-        <div className="flex items-center justify-between w-full gap-4">
-          <div className="flex items-center gap-4 min-w-0">
-            <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMenuToggle}>
+      <div className="px-4 md:px-6 py-3 md:py-4">
+        <div className="flex items-center justify-between gap-3 md:gap-4">
+          <div className="flex items-center gap-3 md:gap-4 min-w-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden shrink-0"
+              onClick={onMenuToggle}
+            >
               <Menu className="h-6 w-6" />
             </Button>
 
             <img
               src="/logo-elma.png"
               alt="Studio Manager Pro"
-              className="h-12 w-auto object-contain"
+              className="h-10 md:h-12 w-auto object-contain shrink-0"
             />
 
-            <div className="min-w-0">
-              <h1 className="text-xl font-bold text-gray-900">
+            <div className="min-w-0 hidden sm:block">
+              <h1 className="text-lg md:text-xl font-bold text-gray-900 leading-tight">
                 {title || "Studio Manager Pro"}
               </h1>
-              <p className="text-sm text-gray-500">Sistema Gestionale Integrato</p>
+              <p className="text-xs md:text-sm text-gray-500">
+                Sistema Gestionale Integrato
+              </p>
             </div>
           </div>
 
           {currentUser && (
-            <div className="flex-1 flex justify-center min-w-0">
-              <div className="text-sm text-gray-700 font-medium text-center truncate">
-                Utente: {currentUser.nome} {currentUser.cognome}
-                {displayedStudioName ? ` - ${displayedStudioName}` : ""}
-              </div>
-            </div>
-          )}
-
-          {currentUser && (
-            <div className="flex items-center gap-4 shrink-0">
+            <div className="flex items-center gap-2 md:gap-4 shrink-0">
               <div className="text-right">
-                <p className="text-sm font-semibold text-gray-900">
+                <p className="text-sm font-semibold text-gray-900 leading-tight">
                   {currentUser.nome} {currentUser.cognome}
                 </p>
                 <p className="text-xs text-gray-500">
@@ -164,7 +168,7 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
                 </p>
               </div>
 
-              <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
+              <div className="h-9 w-9 md:h-10 md:w-10 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
                 <User className="h-5 w-5 text-blue-600" />
               </div>
 
@@ -172,7 +176,7 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
                 variant="ghost"
                 size="icon"
                 onClick={handleLogout}
-                className="text-gray-600 hover:text-red-600"
+                className="text-gray-600 hover:text-red-600 shrink-0"
                 aria-label="Logout"
                 title="Logout"
               >
@@ -181,10 +185,28 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
             </div>
           )}
         </div>
+
+        <div className="mt-2 text-center">
+          <div className="sm:hidden">
+            <h1 className="text-lg font-bold text-gray-900 leading-tight">
+              {title || "Studio Manager Pro"}
+            </h1>
+            <p className="text-xs text-gray-500">Sistema Gestionale Integrato</p>
+          </div>
+
+          {currentUser && (
+            <div className="text-xs md:text-sm text-gray-700 font-medium mt-1 break-words">
+              Utente: {currentUser.nome} {currentUser.cognome}
+              {displayedStudioName ? ` - ${displayedStudioName}` : ""}
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="border-t border-gray-100 px-6 py-2 text-xs text-gray-500">
-        © {new Date().getFullYear()} Studio Manager Pro. Creato da Artiola Mario. Tutti i diritti riservati. Opera tutelata ai sensi della Legge 22 aprile 1941, n. 633, e successive modificazioni.
+      <div className="border-t border-gray-100 px-4 md:px-6 py-2 text-[10px] md:text-xs text-gray-500 text-center">
+        © {new Date().getFullYear()} Studio Manager Pro. Creato da Artiola Mario.
+        Tutti i diritti riservati. Opera tutelata ai sensi della Legge 22 aprile
+        1941, n. 633, e successive modificazioni.
       </div>
     </header>
   );
