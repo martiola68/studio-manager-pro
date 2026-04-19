@@ -6,7 +6,14 @@ import { Button } from "@/components/ui/button";
 import { hardLogout } from "@/services/logoutService";
 import type { Database } from "@/lib/supabase/types";
 
-type Studio = Database["public"]["Tables"]["tbstudio"]["Row"];
+type StudioBase = Database["public"]["Tables"]["tbstudio"]["Row"];
+
+type Studio = StudioBase & {
+  microsoft_connection_id_tenant2?: string | null;
+  ragione_sociale_tenant2?: string | null;
+  email_tenant2?: string | null;
+};
+
 type UtenteRow = Database["public"]["Tables"]["tbutenti"]["Row"];
 
 type HeaderUser = Pick<
