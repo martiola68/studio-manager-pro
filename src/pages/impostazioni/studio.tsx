@@ -69,6 +69,7 @@ export default function DatiStudioPage() {
     provincia: "",
     telefono: "",
     email: "",
+    email_tenant2: "",
     pec: "",
     sito_web: "",
     note: ""
@@ -112,7 +113,7 @@ export default function DatiStudioPage() {
       if (studioData) {
         setStudio(studioData);
         setIsPasswordProtected(studioData.protezione_attiva || false);
-         setFormData({
+        setFormData({
           ragione_sociale: studioData.ragione_sociale || "",
           ragione_sociale_tenant2: studioData.ragione_sociale_tenant2 || "",
           denominazione_breve: studioData.denominazione_breve || "",
@@ -124,6 +125,7 @@ export default function DatiStudioPage() {
           provincia: studioData.provincia || "",
           telefono: studioData.telefono || "",
           email: studioData.email || "",
+          email_tenant2: studioData.email_tenant2 || "",
           pec: studioData.pec || "",
           sito_web: studioData.sito_web || "",
           note: studioData.note || ""
@@ -703,23 +705,36 @@ export default function DatiStudioPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="partita_iva">Partita IVA *</Label>
+                  <Label htmlFor="telefono">Telefono *</Label>
                   <Input
-                    id="partita_iva"
-                    value={formData.partita_iva}
-                    onChange={(e) => setFormData({ ...formData, partita_iva: e.target.value })}
+                    id="telefono"
+                    type="tel"
+                    value={formData.telefono}
+                    onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
                     required
                   />
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="codice_fiscale">Codice Fiscale *</Label>
+                  <Label htmlFor="email">Email *</Label>
                   <Input
-                    id="codice_fiscale"
-                    value={formData.codice_fiscale}
-                    onChange={(e) => setFormData({ ...formData, codice_fiscale: e.target.value })}
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email_tenant2">Email Tenant 2</Label>
+                  <Input
+                    id="email_tenant2"
+                    type="email"
+                    value={formData.email_tenant2}
+                    onChange={(e) => setFormData({ ...formData, email_tenant2: e.target.value })}
                   />
                 </div>
               </div>
