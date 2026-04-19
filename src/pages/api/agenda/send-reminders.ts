@@ -50,6 +50,33 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY as string
 );
 
+const getRomeDateParts = () => {
+  const now = new Date();
+
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Rome",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(now);
+
+  const map = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+
+  return {
+    year: map.year,
+    month: map.month,
+    day: map.day,
+    hour: map.hour,
+    minute: map.minute,
+    second: map.second,
+    dateKey: `${map.year}-${map.month}-${map.day}`,
+  };
+};
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -58,14 +85,22 @@ export default async function handler(
     return res.status(405).json({ success: false, error: "Method not allowed" });
   }
 
-  try {
-    const today = new Date();
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, "0");
-    const dd = String(today.getDate()).padStart(2, "0");
+    try {
+    const romeNow = getRomeDateParts();
 
-    const todayStart = `${yyyy}-${mm}-${dd}T00:00:00.000Z`;
-    const todayEnd = `${yyyy}-${mm}-${dd}T23:59:59.999Z`;
+    // esegue solo alle 07:00 ora italiana
+    if (romeNow.hour !== "07") {
+      return res.status(200).json({
+        success: true,
+        skipped: true,
+        processedGroups: 0,
+        updatedRows: 0,
+        message: `Invio saltato: ora italiana corrente ${romeNow.hour}:${romeNow.minute}`,
+      });
+    }
+
+    const todayStart = `${romeNow.dateKey}T00:00:00.000Z`;
+    const todayEnd = `${romeNow.dateKey}T23:59:59.999Z`;
 
     const { data: rows, error } = await supabase
       .from("tbagenda")
@@ -80,8 +115,25 @@ export default async function handler(
       return res.status(500).json({ success: false, error: error.message });
     }
 
-    const agendaRows = (rows || []) as AgendaRow[];
+    const agendaRows = ((rows || []) as AgendaRow[]).filter((row) => {
+      try {
+        const parts = new Intl.DateTimeFormat("en-CA", {
+          timeZone: "Europe/Rome",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        }).formatToParts(new Date(row.data_inizio));
 
+        const map = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+        const rowDateKey = `${map.year}-${map.month}-${map.day}`;
+
+        return rowDateKey === romeNow.dateKey;
+      } catch {
+        return false;
+      }
+    });
+
+if (agendaRows.length === 0) {
     if (agendaRows.length === 0) {
       return res.status(200).json({
         success: true,
