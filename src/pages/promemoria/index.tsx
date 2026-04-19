@@ -1162,255 +1162,319 @@ ${formData.descrizione || "-"}<br><br>
             <DialogTitle>Nuovo Promemoria</DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleCreate} className="space-y-4 pt-4">
-            <div>
-              <Label>Titolo *</Label>
-              <Input
-                value={formData.titolo}
-                onChange={(e) => setFormData((prev) => ({ ...prev, titolo: e.target.value }))}
-                required
-              />
-            </div>
+         <form onSubmit={handleCreate} className="space-y-4 pt-4">
+  <div>
+    <Label>Titolo *</Label>
+    <Input
+      value={formData.titolo}
+      onChange={(e) =>
+        setFormData((prev) => ({
+          ...prev,
+          titolo: e.target.value,
+        }))
+      }
+      required
+    />
+  </div>
 
-            <div>
-              <Label>Descrizione</Label>
-              <Textarea
-                value={formData.descrizione}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, descrizione: e.target.value }))
-                }
-              />
-            </div>
+  <div>
+    <Label>Descrizione</Label>
+    <Textarea
+      value={formData.descrizione}
+      onChange={(e) =>
+        setFormData((prev) => ({
+          ...prev,
+          descrizione: e.target.value,
+        }))
+      }
+    />
+  </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Data Inserimento</Label>
-                <Input
-                  type="date"
-                  value={format(formData.data_inserimento, "yyyy-MM-dd")}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      data_inserimento: new Date(e.target.value),
-                    }))
-                  }
-                />
-              </div>
+  <div className="grid grid-cols-2 gap-4">
+    <div>
+      <Label>Data Inserimento</Label>
+      <Input
+        type="date"
+        value={format(formData.data_inserimento, "yyyy-MM-dd")}
+        onChange={(e) =>
+          setFormData((prev) => ({
+            ...prev,
+            data_inserimento: new Date(e.target.value),
+          }))
+        }
+      />
+    </div>
 
-                            <div>
-                <Label>Data Scadenza (calcolata automaticamente)</Label>
-                <Input
-                  type="date"
-                  value={format(formData.data_scadenza, "yyyy-MM-dd")}
-                  disabled
-                  className="bg-gray-100"
-                />
-              </div>
+    <div>
+      <Label>Giorni Scadenza</Label>
+      <Input
+        type="number"
+        min="0"
+        value={formData.giorni_scadenza}
+        onChange={(e) =>
+          setFormData((prev) => ({
+            ...prev,
+            giorni_scadenza: parseInt(e.target.value, 10) || 0,
+          }))
+        }
+      />
+    </div>
+  </div>
 
-              <div className="flex items-center space-x-2 p-4 border rounded-lg bg-gray-50">
-                <Checkbox
-                  id="invio-multiplo-create"
-                  checked={invioMultiplo}
-                  onCheckedChange={(checked) => {
-                    const val = !!checked;
-                    setInvioMultiplo(val);
-                    if (val) {
-                      setFormData((prev) => ({
-                        ...prev,
-                        destinatario_id: "",
-                        settore: "",
-                      }));
-                    } else {
-                      setFormData((prev) => ({
-                        ...prev,
-                        destinatari_multipli: [],
-                      }));
-                    }
-                  }}
-                />
-                <Label htmlFor="invio-multiplo-create" className="cursor-pointer font-medium">
-                  Invio a più destinatari
-                </Label>
-              </div>
+  <div>
+    <Label>Data Scadenza (calcolata automaticamente)</Label>
+    <Input
+      type="date"
+      value={format(formData.data_scadenza, "yyyy-MM-dd")}
+      disabled
+      className="bg-gray-100"
+    />
+  </div>
 
-              {!invioMultiplo ? (
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Destinatario</Label>
-                    <Select
-                      value={formData.destinatario_id || "none"}
-                      onValueChange={handleDestinatarioChange}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleziona..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Nessuno</SelectItem>
-                        {utenti.map((u) => (
-                          <SelectItem key={u.id} value={u.id}>
-                            {u.nome} {u.cognome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+  <div className="flex items-center space-x-2 p-4 border rounded-lg bg-gray-50">
+    <Checkbox
+      id="invio-multiplo-create"
+      checked={invioMultiplo}
+      onCheckedChange={(checked) => {
+        const value = !!checked;
+        setInvioMultiplo(value);
 
-                  <div>
-                    <Label>Settore</Label>
-                    <Input value={formData.settore} disabled className="bg-gray-100" />
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4 border rounded-lg p-4">
-                  <Label>Destinatari Multipli</Label>
+        if (value) {
+          setFormData((prev) => ({
+            ...prev,
+            destinatario_id: "",
+            settore: "",
+          }));
+        } else {
+          setFormData((prev) => ({
+            ...prev,
+            destinatari_multipli: [],
+          }));
+        }
+      }}
+    />
+    <Label htmlFor="invio-multiplo-create" className="cursor-pointer font-medium">
+      Invio a più destinatari
+    </Label>
+  </div>
 
-                  <Input
-                    placeholder="Cerca destinatari..."
-                    value={searchDestinatari}
-                    onChange={(e) => setSearchDestinatari(e.target.value)}
-                  />
+  {!invioMultiplo ? (
+    <div className="grid grid-cols-2 gap-4">
+      <div>
+        <Label>Destinatario</Label>
+        <Select
+          value={formData.destinatario_id || "none"}
+          onValueChange={handleDestinatarioChange}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Seleziona..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Nessuno</SelectItem>
+            {utenti.map((u) => (
+              <SelectItem key={u.id} value={u.id}>
+                {u.nome} {u.cognome}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-                  <div className="flex flex-wrap gap-2">
-                    <Button type="button" size="sm" variant="outline" onClick={handleSelezioneLavoro}>
-                      Lavoro
-                    </Button>
-                    <Button type="button" size="sm" variant="outline" onClick={handleSelezioneFiscale}>
-                      Fiscale
-                    </Button>
-                    <Button type="button" size="sm" variant="outline" onClick={handleSelezioneConsulenza}>
-                      Consulenza
-                    </Button>
-                    <Button type="button" size="sm" variant="outline" onClick={handleSelezioneTutti}>
-                      Tutti
-                    </Button>
-                    <Button type="button" size="sm" variant="outline" onClick={handleDeselezionaTutti}>
-                      Reset
-                    </Button>
-                  </div>
+      <div>
+        <Label>Settore</Label>
+        <Input value={formData.settore} disabled className="bg-gray-100" />
+      </div>
+    </div>
+  ) : (
+    <div className="space-y-4 border rounded-lg p-4">
+      <Label>Destinatari Multipli</Label>
 
-                  <div className="max-h-60 overflow-y-auto border rounded p-3 space-y-2">
-                    {utentiFiltrati.map((u) => (
-                      <div key={u.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          checked={formData.destinatari_multipli.includes(u.id)}
-                          onCheckedChange={() => toggleDestinatario(u.id)}
-                        />
-                        <Label className="cursor-pointer">
-                          {u.nome} {u.cognome} {u.settore ? `(${u.settore})` : ""}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+      <Input
+        placeholder="Cerca destinatari..."
+        value={searchDestinatari}
+        onChange={(e) => setSearchDestinatari(e.target.value)}
+        className="mb-2"
+      />
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Priorità</Label>
-                  <Select
-                    value={formData.priorita}
-                    onValueChange={(v) =>
-                      setFormData((prev) => ({ ...prev, priorita: v }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Bassa">Bassa</SelectItem>
-                      <SelectItem value="Media">Media</SelectItem>
-                      <SelectItem value="Alta">Alta</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+      <div className="flex flex-wrap gap-2 mb-3">
+        <Button type="button" variant="outline" size="sm" onClick={handleSelezioneLavoro}>
+          Settore Lavoro
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={handleSelezioneFiscale}>
+          Settore Fiscale
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={handleSelezioneConsulenza}>
+          Settore Consulenza
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={handleSelezioneTutti}>
+          Tutti
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={handleDeselezionaTutti}>
+          Deseleziona Tutti
+        </Button>
+      </div>
 
-                <div>
-                  <Label>Stato</Label>
-                  <Select
-                    value={formData.working_progress}
-                    onValueChange={(val) =>
-                      setFormData((prev) => ({ ...prev, working_progress: val }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Aperto">Aperto</SelectItem>
-                      <SelectItem value="In lavorazione">In lavorazione</SelectItem>
-                      <SelectItem value="Completato">Completato</SelectItem>
-                      <SelectItem value="Presa visione">Presa visione</SelectItem>
-                      <SelectItem value="Richiesta confronto">Richiesta confronto</SelectItem>
-                      <SelectItem value="Annullata">Annullata</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+      <div className="max-h-60 overflow-y-auto space-y-2 border rounded p-3 bg-white">
+        {utentiFiltrati.map((u) => (
+          <div key={u.id} className="flex items-center space-x-2">
+            <Checkbox
+              id={`dest-${u.id}`}
+              checked={formData.destinatari_multipli.includes(u.id)}
+              onCheckedChange={() => toggleDestinatario(u.id)}
+            />
+            <Label htmlFor={`dest-${u.id}`} className="cursor-pointer flex-1">
+              {u.nome} {u.cognome} {u.settore ? `(${u.settore})` : ""}
+            </Label>
+          </div>
+        ))}
 
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  checked={formData.invia_teams}
-                  onCheckedChange={(checked) =>
-                    setFormData((prev) => ({ ...prev, invia_teams: !!checked }))
-                  }
-                />
-                <Label className="cursor-pointer flex items-center gap-1">
-                  <MessageSquare className="h-4 w-4" />
-                  Notifica Teams
-                </Label>
-              </div>
+        {utentiFiltrati.length === 0 && (
+          <p className="text-sm text-gray-500 italic">Nessun utente trovato</p>
+        )}
+      </div>
 
-              <div>
-                <Label>Tipo Promemoria</Label>
-                <Select
-                  value={formData.tipo_promemoria_id}
-                  onValueChange={(v) =>
-                    setFormData((prev) => ({ ...prev, tipo_promemoria_id: v }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleziona..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tipiPromemoria.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>
-                        {t.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+      <p className="text-sm text-gray-600">
+        Selezionati: {formData.destinatari_multipli.length} utent
+        {formData.destinatari_multipli.length === 1 ? "e" : "i"}
+      </p>
+    </div>
+  )}
 
-              <div>
-                <Label>Allegati</Label>
-                <Input type="file" multiple onChange={handleFileSelect} />
+  <div className="grid grid-cols-2 gap-4">
+    <div>
+      <Label>Priorità</Label>
+      <Select
+        value={formData.priorita}
+        onValueChange={(v) =>
+          setFormData((prev) => ({
+            ...prev,
+            priorita: v,
+          }))
+        }
+      >
+        <SelectTrigger>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="Bassa">Bassa</SelectItem>
+          <SelectItem value="Media">Media</SelectItem>
+          <SelectItem value="Alta">Alta</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
 
-                <div className="space-y-2 mt-2">
-                  {filesToUpload.map((file, idx) => (
-                    <div key={idx} className="flex justify-between items-center border p-2 rounded">
-                      <span className="truncate text-sm">{file.name}</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeFileToUpload(idx)}
-                      >
-                        <X className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
+    <div>
+      <Label>Stato</Label>
+      <Select
+        value={formData.working_progress}
+        onValueChange={(val) =>
+          setFormData((prev) => ({
+            ...prev,
+            working_progress: val,
+          }))
+        }
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Seleziona stato" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="Aperto">Aperto</SelectItem>
+          <SelectItem value="In lavorazione">In lavorazione</SelectItem>
+          <SelectItem value="Completato">Completato</SelectItem>
+          <SelectItem value="Presa visione">Presa visione</SelectItem>
+          <SelectItem value="Richiesta confronto">Richiesta confronto</SelectItem>
+          <SelectItem value="Annullata">Annullata</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  </div>
 
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                  Annulla
-                </Button>
-                <Button type="submit" disabled={loading}>
-                  {loading ? "Salvataggio..." : "Crea"}
-                </Button>
-              </DialogFooter>
-            </form>
+  <div className="flex items-center space-x-2 py-2">
+    <Checkbox
+      id="invia-teams-create"
+      checked={formData.invia_teams}
+      onCheckedChange={(checked) =>
+        setFormData((prev) => ({
+          ...prev,
+          invia_teams: !!checked,
+        }))
+      }
+    />
+    <div className="grid gap-1.5 leading-none">
+      <Label htmlFor="invia-teams-create" className="flex items-center gap-1 cursor-pointer">
+        <MessageSquare className="h-3.5 w-3.5 text-blue-600" />
+        Invia notifica su Teams
+      </Label>
+    </div>
+  </div>
+
+  <div>
+    <Label>Tipo Promemoria</Label>
+    <Select
+      value={formData.tipo_promemoria_id}
+      onValueChange={(v) =>
+        setFormData((prev) => ({
+          ...prev,
+          tipo_promemoria_id: v,
+        }))
+      }
+    >
+      <SelectTrigger>
+        <SelectValue placeholder="Seleziona tipo..." />
+      </SelectTrigger>
+      <SelectContent>
+        {tipiPromemoria.map((t) => (
+          <SelectItem key={t.id} value={t.id}>
+            {t.nome}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  </div>
+
+  <div>
+    <Label className="flex items-center gap-2 mb-2">
+      <Paperclip className="h-4 w-4" /> Allegati
+    </Label>
+
+    <div className="border border-dashed rounded-md p-4 bg-gray-50">
+      <Input
+        type="file"
+        multiple
+        onChange={handleFileSelect}
+        className="cursor-pointer mb-2"
+      />
+
+      <div className="space-y-2 mt-2">
+        {filesToUpload.map((file, idx) => (
+          <div
+            key={idx}
+            className="flex justify-between items-center text-sm bg-white p-2 rounded border"
+          >
+            <span className="truncate">{file.name}</span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => removeFileToUpload(idx)}
+            >
+              <X className="h-4 w-4 text-red-500" />
+            </Button>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+
+  <DialogFooter>
+    <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+      Annulla
+    </Button>
+    <Button type="submit" disabled={loading || isUploading}>
+      {loading || isUploading ? "Salvataggio..." : "Crea"}
+    </Button>
+  </DialogFooter>
+</form>
           </DialogContent>
         </Dialog>
 
