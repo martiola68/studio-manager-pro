@@ -753,10 +753,16 @@ const handleApriAV2 = async (row: AV1Row) => {
       }
     }
 
+    await loadRowsBySocieta(societaFilter);
+
     if (av2?.id) {
-      router.push(`/antiriciclaggio/modello-av2?id=${av2.id}`);
+      router.push(
+        `/antiriciclaggio/modello-av2?id=${av2.id}&av1_id=${row.id}&cliente_id=${row.cliente_id || ""}&studio_id=${row.studio_id || ""}`
+      );
     } else {
-      router.push(`/antiriciclaggio/modello-av2?av1_id=${row.id}`);
+      router.push(
+        `/antiriciclaggio/modello-av2?av1_id=${row.id}&cliente_id=${row.cliente_id || ""}&studio_id=${row.studio_id || ""}`
+      );
     }
   } catch (error) {
     console.error("Errore apertura AV2:", error);
@@ -765,6 +771,7 @@ const handleApriAV2 = async (row: AV1Row) => {
     setWorkingId(null);
   }
 };
+  
       await loadRowsBySocieta(societaFilter);
 
       if (av2?.id) {
