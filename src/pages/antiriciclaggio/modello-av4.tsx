@@ -464,7 +464,7 @@ export default function ModelloAV4() {
         console.error("Errore caricamento tbPraticheAML:", praticaError);
       }
 
-      if (praticaRow) {
+        if (praticaRow) {
         resolvedStudioId = pickString(
           praticaRow?.studio_id,
           resolvedStudioId
@@ -483,6 +483,11 @@ export default function ModelloAV4() {
         resolvedAv1Id = pickString(
           praticaRow?.av1_id,
           resolvedAv1Id
+        );
+
+        naturaPrestazione = pickString(
+          praticaRow?.tipo_prestazione,
+          naturaPrestazione
         );
       }
     }
@@ -837,14 +842,10 @@ function validateBeforeSave() {
   return true;
 }
 
-  function handleChiudiModello() {
-    if (form.pratica_id) {
-      router.push(`/antiriciclaggio/pratiche-aml?id=${form.pratica_id}`);
-      return;
-    }
-
+ function handleChiudiModello() {
     router.push("/antiriciclaggio");
   }
+  
 function handlePrint() {
   if (!av4Id) {
     alert("Salva prima l'AV4, poi potrai stamparlo.");
