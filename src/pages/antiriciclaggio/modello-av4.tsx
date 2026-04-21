@@ -918,17 +918,49 @@ function handleApriPdfFirmato() {
       try {
         setLoading(true);
 
+          const previousPdfPath =
+          typeof form.allegato_pdf_cliente === "string"
+            ? form.allegato_pdf_cliente.trim()
+            : "";
+
+        if (previousPdfPath) {
+          const { error: removeOldPdfError } = await supabase.storage
+            .from("messaggi-allegati")
+            .remove([previousPdfPath]);
+
+          if (removeOldPdfError) {
+            console.error("Errore rimozione vecchio PDF AV4:", removeOldPdfError);
+          }
+
+          const { error: deleteOldDocError } = await supabase
+            .from("tbAVFascicoliDocumenti")
+            .delete()
+            .eq("storage_path", previousPdfPath)
+            .eq("origine", "av4_pdf");
+
+          if (deleteOldDocError) {
+            console.error(
+              "Errore rimozione vecchio fascicolo AV4:",
+              deleteOldDocError
+            );
+          }
+        }
+
         token =
           typeof crypto !== "undefined" && "randomUUID" in crypto
             ? crypto.randomUUID()
             : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-        const updatePayload: any = {
+       const updatePayload: any = {
           public_token: token,
           public_enabled: true,
           public_sent_at: new Date().toISOString(),
           Av4InviatoCL: true,
           compilato_da_cliente: false,
+          public_opened_at: null,
+          public_submitted_at: null,
+          allegato_pdf_cliente: null,
+          pdf_firmato_cliente: null,
         };
 
         const { error: updateError } = await supabase
