@@ -15,10 +15,12 @@ import { sendEmail } from "@/services/emailService";
 type FormState = {
   studio_id: string;
   cliente_id: string;
+  pratica_id: string;
+  societa_id: string;
   av1_id: string;
   rapp_legale_id: string;
   microsoft_connection_id: string;
-
+  
   dichiarante_nome_cognome: string;
   dichiarante_codice_fiscale: string;
   dichiarante_luogo_nascita: string;
@@ -84,14 +86,18 @@ type FormState = {
 const initialFormState = (
   studioId = "",
   av1Id = "",
-  clienteId = ""
+  clienteId = "",
+  praticaId = "",
+  societaId = ""
 ): FormState => ({
   studio_id: studioId,
   cliente_id: clienteId,
+  pratica_id: praticaId,
+  societa_id: societaId,
   av1_id: av1Id,
   rapp_legale_id: "",
   microsoft_connection_id: "",
-
+  
   dichiarante_nome_cognome: "",
   dichiarante_codice_fiscale: "",
   dichiarante_luogo_nascita: "",
@@ -187,8 +193,11 @@ function mapDbRowToForm(row: any): FormState {
   return {
     studio_id: row?.studio_id ?? "",
     cliente_id: row?.cliente_id ? String(row.cliente_id) : "",
+    pratica_id: row?.pratica_id ? String(row.pratica_id) : "",
+    societa_id: row?.societa_id ? String(row.societa_id) : "",
     av1_id: row?.av1_id != null ? String(row.av1_id) : "",
     rapp_legale_id: row?.rapp_legale_id ? String(row.rapp_legale_id) : "",
+    
     microsoft_connection_id: row?.microsoft_connection_id
       ? String(row.microsoft_connection_id)
       : "",
@@ -268,8 +277,12 @@ function pickString(...values: any[]): string {
 export default function ModelloAV4() {
   const router = useRouter();
 
-  const studioIdFromQuery =
+ const studioIdFromQuery =
     typeof router.query.studio_id === "string" ? router.query.studio_id : "";
+  const praticaIdFromQuery =
+    typeof router.query.pratica_id === "string" ? router.query.pratica_id : "";
+  const societaIdFromQuery =
+    typeof router.query.societa_id === "string" ? router.query.societa_id : "";
   const av1IdFromQuery =
     typeof router.query.av1_id === "string" ? router.query.av1_id : "";
   const clienteIdFromQuery =
@@ -424,22 +437,61 @@ export default function ModelloAV4() {
     alert("Amministratore importato correttamente.");
   }
 
-  async function prefillFromAV1(
+ async function prefillFromPraticaOrAV1(
     studioIdValue: string,
+    praticaIdValue: string,
+    societaIdValue: string,
     av1IdValue: string,
     clienteIdValue: string
   ) {
     const supabase = getSupabaseClient() as any;
 
     let resolvedStudioId = studioIdValue || "";
+    let resolvedPraticaId = praticaIdValue || "";
+    let resolvedSocietaId = societaIdValue || "";
+    let resolvedAv1Id = av1IdValue || "";
     let resolvedClienteId = clienteIdValue || "";
     let naturaPrestazione = "";
 
-    if (av1IdValue) {
+    if (resolvedPraticaId) {
+      const { data: praticaRow, error: praticaError } = await supabase
+        .from("tbPraticheAML")
+        .select("*")
+        .eq("id", resolvedPraticaId)
+        .single();
+
+      if (praticaError) {
+        console.error("Errore caricamento tbPraticheAML:", praticaError);
+      }
+
+      if (praticaRow) {
+        resolvedStudioId = pickString(
+          praticaRow?.studio_id,
+          resolvedStudioId
+        );
+
+        resolvedClienteId = pickString(
+          praticaRow?.cliente_id,
+          resolvedClienteId
+        );
+
+        resolvedSocietaId = pickString(
+          praticaRow?.societa_id,
+          resolvedSocietaId
+        );
+
+        resolvedAv1Id = pickString(
+          praticaRow?.av1_id,
+          resolvedAv1Id
+        );
+      }
+    }
+
+    if (resolvedAv1Id) {
       const { data: av1Row, error: av1Error } = await supabase
         .from("tbAV1")
         .select("*")
-        .eq("id", av1IdValue)
+        .eq("id", resolvedAv1Id)
         .single();
 
       if (av1Error) {
@@ -458,7 +510,7 @@ export default function ModelloAV4() {
           av1Row?.cliente_id,
           av1Row?.ClienteID,
           av1Row?.clienteId,
-          clienteIdValue
+          resolvedClienteId
         );
 
         naturaPrestazione = pickString(
@@ -471,9 +523,17 @@ export default function ModelloAV4() {
 
     setForm((prev) => ({
       ...prev,
-      ...initialFormState(resolvedStudioId, av1IdValue, resolvedClienteId),
+      ...initialFormState(
+        resolvedStudioId,
+        resolvedAv1Id,
+        resolvedClienteId,
+        resolvedPraticaId,
+        resolvedSocietaId
+      ),
       studio_id: resolvedStudioId || prev.studio_id || "",
-      av1_id: av1IdValue || prev.av1_id || "",
+      pratica_id: resolvedPraticaId || prev.pratica_id || "",
+      societa_id: resolvedSocietaId || prev.societa_id || "",
+      av1_id: resolvedAv1Id || prev.av1_id || "",
       cliente_id: resolvedClienteId || prev.cliente_id || "",
       natura_prestazione: naturaPrestazione || prev.natura_prestazione || "",
     }));
@@ -514,6 +574,20 @@ export default function ModelloAV4() {
           }
         }
 
+        if (!existingRow && praticaIdFromQuery) {
+          const { data, error } = await supabase
+            .from("tbAV4")
+            .select("*")
+            .eq("pratica_id", praticaIdFromQuery)
+            .maybeSingle();
+
+          if (error) {
+            console.error("Errore caricamento AV4 da pratica_id:", error);
+          } else {
+            existingRow = data || null;
+          }
+        }
+
         if (!existingRow && av1IdFromQuery) {
           const { data, error } = await supabase
             .from("tbAV4")
@@ -531,8 +605,12 @@ export default function ModelloAV4() {
         if (existingRow) {
           setAv4Id(String(existingRow.id));
 
-          const mapped = mapDbRowToForm(existingRow);
-          setForm(mapped);
+         const mapped = mapDbRowToForm(existingRow);
+          setForm({
+            ...mapped,
+            pratica_id: mapped.pratica_id || praticaIdFromQuery || "",
+            societa_id: mapped.societa_id || societaIdFromQuery || "",
+          });
 
           if (mapped.cliente_id) {
             await hydrateClienteAndRappresentante(mapped.cliente_id);
@@ -541,8 +619,10 @@ export default function ModelloAV4() {
             clearRappresentanteFields();
           }
         } else {
-          await prefillFromAV1(
+           await prefillFromPraticaOrAV1(
             studioIdFromQuery,
+            praticaIdFromQuery,
+            societaIdFromQuery,
             av1IdFromQuery,
             clienteIdFromQuery
           );
@@ -559,7 +639,9 @@ export default function ModelloAV4() {
   }, [
     router.isReady,
     initialized,
-    studioIdFromQuery,
+     studioIdFromQuery,
+    praticaIdFromQuery,
+    societaIdFromQuery,
     av1IdFromQuery,
     clienteIdFromQuery,
     av4IdFromQuery,
@@ -725,34 +807,44 @@ export default function ModelloAV4() {
     });
   }
 
-  function validateBeforeSave() {
-    if (!form.av1_id) {
-      alert("Manca av1_id.");
-      return false;
-    }
-
-    if (!form.studio_id) {
-      alert("Studio non valorizzato: impossibile salvare AV4.");
-      return false;
-    }
-
-    if (!form.cliente_id) {
-      alert("Cliente non valorizzato.");
-      return false;
-    }
-
-    if (!form.rapp_legale_id) {
-      alert("Per il cliente selezionato non risulta un rappresentante collegato.");
-      return false;
-    }
-
-    return true;
+function validateBeforeSave() {
+  if (!form.pratica_id && !form.av1_id) {
+    alert("Manca pratica_id e non è presente neppure av1_id come fallback legacy.");
+    return false;
   }
+
+  if (!form.studio_id) {
+    alert("Studio non valorizzato: impossibile salvare AV4.");
+    return false;
+  }
+
+  // 👇 QUESTO È QUELLO CHE TI MANCA
+  if (form.pratica_id && !form.societa_id) {
+    alert("Società non valorizzata: impossibile salvare AV4 nel nuovo flusso pratica.");
+    return false;
+  }
+
+  if (!form.cliente_id) {
+    alert("Cliente non valorizzato.");
+    return false;
+  }
+
+  if (!form.rapp_legale_id) {
+    alert("Per il cliente selezionato non risulta un rappresentante collegato.");
+    return false;
+  }
+
+  return true;
+}
 
   function handleChiudiModello() {
+    if (form.pratica_id) {
+      router.push(`/antiriciclaggio/pratiche-aml?id=${form.pratica_id}`);
+      return;
+    }
+
     router.push("/antiriciclaggio");
   }
-
 function handlePrint() {
   if (!av4Id) {
     alert("Salva prima l'AV4, poi potrai stamparlo.");
@@ -999,8 +1091,10 @@ ${nomeOperatore}
           throw new Error(emailResult.error || "Errore durante l'invio email AV4.");
         }
 
-        const { error: logError } = await supabase.from("tbAMLComunicazioni").insert({
+         const { error: logError } = await supabase.from("tbAMLComunicazioni").insert({
           studio_id: form.studio_id,
+          pratica_id: form.pratica_id || null,
+          societa_id: form.societa_id || null,
           tipo_comunicazione: "invio_av4",
           cliente_id: form.cliente_id || null,
           rapp_legale_id: form.rapp_legale_id || null,
@@ -1031,6 +1125,8 @@ ${nomeOperatore}
           if (form.studio_id && av4Id) {
             await supabase.from("tbAMLComunicazioni").insert({
               studio_id: form.studio_id,
+              pratica_id: form.pratica_id || null,
+              societa_id: form.societa_id || null,
               tipo_comunicazione: "invio_av4",
               cliente_id: form.cliente_id || null,
               rapp_legale_id: form.rapp_legale_id || null,
@@ -1165,8 +1261,11 @@ ${nomeOperatore}
       const payload = {
         studio_id: form.studio_id,
         cliente_id: form.cliente_id,
-        av1_id: Number(form.av1_id),
+        pratica_id: form.pratica_id || null,
+        societa_id: form.societa_id || null,
+        av1_id: form.av1_id ? Number(form.av1_id) : null,
         rapp_legale_id: form.rapp_legale_id || null,
+        
         // microsoft_connection_id: form.microsoft_connection_id || null,
 
         dichiarante_nome_cognome: form.dichiarante_nome_cognome || null,
@@ -1257,12 +1356,29 @@ ${nomeOperatore}
         savedId = String(data.id);
         setAv4Id(savedId);
       }
+  if (savedId && form.pratica_id) {
+        const { error: praticaUpdateError } = await supabase
+          .from("tbPraticheAML")
+          .update({
+            av4_id: savedId,
+            stato: "av4_compilato",
+          })
+          .eq("id", form.pratica_id);
 
+        if (praticaUpdateError) {
+          console.error("Errore aggiornamento tbPraticheAML:", praticaUpdateError);
+          alert(
+            `AV4 salvato, ma non è stato possibile aggiornare la pratica AML: ${praticaUpdateError.message}`
+          );
+          return;
+        }
+      }
+      
       alert("AV4 salvato correttamente.");
 
-      if (savedId) {
+       if (savedId) {
         await router.replace(
-          `/antiriciclaggio/modello-av4?studio_id=${form.studio_id}&av1_id=${form.av1_id}&cliente_id=${form.cliente_id}&id=${savedId}`
+          `/antiriciclaggio/modello-av4?studio_id=${form.studio_id}&pratica_id=${form.pratica_id || ""}&societa_id=${form.societa_id || ""}&av1_id=${form.av1_id || ""}&cliente_id=${form.cliente_id}&id=${savedId}`
         );
       }
     } catch (error: any) {
@@ -1390,12 +1506,14 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                           return;
                         }
 
-                        const query = new URLSearchParams({
+                      const query = new URLSearchParams({
                           from: "av4",
                           cliente_id: form.cliente_id,
+                          pratica_id: form.pratica_id || "",
+                          societa_id: form.societa_id || "",
                           av1_id: form.av1_id,
                           av4_id: av4Id || "",
-                          returnTo: `/antiriciclaggio/modello-av4?studio_id=${form.studio_id}&av1_id=${form.av1_id}&cliente_id=${form.cliente_id}&id=${av4Id || ""}`,
+                          returnTo: `/antiriciclaggio/modello-av4?studio_id=${form.studio_id}&pratica_id=${form.pratica_id || ""}&societa_id=${form.societa_id || ""}&av1_id=${form.av1_id}&cliente_id=${form.cliente_id}&id=${av4Id || ""}`,
                         });
 
                         router.push(`/antiriciclaggio/rappresentanti/nuovo?${query.toString()}`);
