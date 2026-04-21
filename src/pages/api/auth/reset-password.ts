@@ -52,7 +52,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { error: resetError } = await supabaseAdmin.auth.resetPasswordForEmail(
       email,
       {
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/auth/callback`
+        const appBaseUrl =
+            process.env.NEXT_PUBLIC_APP_URL || "https://studio-manager-pro.vercel.app";
+
       }
     );
 
