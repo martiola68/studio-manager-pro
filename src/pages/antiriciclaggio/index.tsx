@@ -705,49 +705,66 @@ const getAV4IconBorderClass = (row: AV1Row) => {
     }
   };
 
-  const handleNuovoAV1 = () => {
-    if (!canAccessAntiriciclaggio) return;
-    router.push("/antiriciclaggio/modello-av1");
-  };
+const handleNuovoAV1 = () => {
+  if (!canAccessAntiriciclaggio) return;
+  router.push(
+    selectedSocietaId
+      ? `/antiriciclaggio/pratiche/nuovo?societa_id=${selectedSocietaId}`
+      : "/antiriciclaggio/pratiche/nuovo"
+  );
+};
 
-  const handleApriAV1 = (id: string) => {
-    if (!canAccessAntiriciclaggio) return;
-    router.push(`/antiriciclaggio/modello-av1?id=${id}`);
-  };
+const handleApriAV1 = (id: string) => {
+  if (!canAccessAntiriciclaggio) return;
+  router.push(`/antiriciclaggio/modello-av1?id=${id}`);
+};
 
-  const handleApriAV2 = async (row: AV1Row) => {
-    if (!canAccessAntiriciclaggio) return;
+const handleApriAV2 = async (row: AV1Row) => {
+  if (!canAccessAntiriciclaggio) return;
 
-    try {
-      setWorkingId(row.id);
+  try {
+    setWorkingId(row.id);
 
-      const supabase = getSupabaseClient();
-      const supabaseAny = supabase as any;
+    const supabase = getSupabaseClient();
+    const supabaseAny = supabase as any;
 
-      const { data: av2, error: av2Error } = await supabaseAny
-        .from("tbAV2")
-        .select("id")
-        .eq("av1_id", row.id)
-        .maybeSingle();
+    const { data: av2, error: av2Error } = await supabaseAny
+      .from("tbAV2")
+      .select("id")
+      .eq("av1_id", row.id)
+      .maybeSingle();
 
-      if (av2Error) {
-        console.error("Errore ricerca AV2:", av2Error);
-        alert("Errore durante la ricerca del modello AV2.");
+    if (av2Error) {
+      console.error("Errore ricerca AV2:", av2Error);
+      alert("Errore durante la ricerca del modello AV2.");
+      return;
+    }
+
+    if (!row.AV2Generato) {
+      const { error: updateError } = await supabaseAny
+        .from("tbAV1")
+        .update({ AV2Generato: true })
+        .eq("id", row.id);
+
+      if (updateError) {
+        console.error("Errore aggiornamento AV2Generato:", updateError);
+        alert("Errore durante l'aggiornamento del flag AV2.");
         return;
       }
+    }
 
-      if (!row.AV2Generato) {
-        const { error: updateError } = await supabaseAny
-          .from("tbAV1")
-          .update({ AV2Generato: true })
-          .eq("id", row.id);
-
-        if (updateError) {
-          console.error("Errore aggiornamento AV2Generato:", updateError);
-          alert("Errore durante l'aggiornamento del flag AV2.");
-          return;
-        }
-      }
+    if (av2?.id) {
+      router.push(`/antiriciclaggio/modello-av2?id=${av2.id}`);
+    } else {
+      router.push(`/antiriciclaggio/modello-av2?av1_id=${row.id}`);
+    }
+  } catch (error) {
+    console.error("Errore apertura AV2:", error);
+    alert("Errore durante l'apertura del modello AV2.");
+  } finally {
+    setWorkingId(null);
+  }
+};
 
       await loadRowsBySocieta(societaFilter);
 
