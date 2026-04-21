@@ -131,15 +131,18 @@ export default function GestioneUtentiPage() {
           .eq("email", session.user.email)
           .single();
 
-        if (currentUser?.studio_id) {
-          const { data: licenza } = await supabase
-            .from("tbsoftware_licenze")
-            .select("numero_licenze, stato")
-            .eq("studio_id", currentUser.studio_id)
-            .in("stato", ["attivo", "in_scadenza"])
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
+      if (currentUser?.studio_id) {
+  const { data: licenza } = await (supabase as any)
+    .from("tbsoftware_licenze")
+    .select("numero_licenze, stato")
+    .eq("studio_id", currentUser.studio_id)
+    .in("stato", ["attivo", "in_scadenza"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  setMaxUtenti(licenza?.numero_licenze || 5);
+}
 
           const utentiAttivi = sortedData.filter((u) => u.attivo ?? true).length;
           const numeroLicenze = Number(licenza?.numero_licenze || 5);
