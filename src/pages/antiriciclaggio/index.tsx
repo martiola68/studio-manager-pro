@@ -853,7 +853,14 @@ const handleApriAV2 = async (row: AV1Row) => {
   if (!canAccessAntiriciclaggio) return;
 
   try {
-    setWorkingId(row.id);
+    setWorkingId(row.id || row.pratica_id || null);
+
+    if (row.pratica_id) {
+      router.push(
+        `/antiriciclaggio/modello-av2?pratica_id=${row.pratica_id}&societa_id=${row.societa_id || ""}&cliente_id=${row.cliente_id || ""}&studio_id=${row.studio_id || ""}`
+      );
+      return;
+    }
 
     const supabase = getSupabaseClient();
     const supabaseAny = supabase as any;
@@ -905,12 +912,19 @@ const handleApriAV2 = async (row: AV1Row) => {
     setWorkingId(null);
   }
 };
-
+  
 const handleApriAV4 = async (row: AV1Row) => {
   if (!canAccessAntiriciclaggio) return;
 
   try {
-    setWorkingId(row.id);
+    setWorkingId(row.id || row.pratica_id || null);
+
+    if (row.pratica_id) {
+      router.push(
+        `/antiriciclaggio/modello-av4?pratica_id=${row.pratica_id}&societa_id=${row.societa_id || ""}&cliente_id=${row.cliente_id || ""}&studio_id=${row.studio_id || ""}`
+      );
+      return;
+    }
 
     const supabase = getSupabaseClient();
     const supabaseAny = supabase as any;
@@ -1335,7 +1349,7 @@ const handleEliminaCompleto = async (row: AV1Row) => {
                           <button
                             type="button"
                             onClick={() => handleApriAV2(row)}
-                            disabled={workingId === row.id || row.is_pratica_only}
+                            disabled={workingId === row.id || workingId === row.pratica_id}
                             className={`rounded-[28px] bg-white p-1 transition hover:scale-105 disabled:opacity-60 ${getIconBorderClass(
                               !!row.AV2Generato
                             )}`}
@@ -1349,7 +1363,7 @@ const handleEliminaCompleto = async (row: AV1Row) => {
  <button
   type="button"
   onClick={() => handleApriAV4(row)}
-  disabled={workingId === row.id || row.is_pratica_only}
+  disabled={workingId === row.id || workingId === row.pratica_id}
   className={`rounded-[28px] bg-white p-1 transition hover:scale-105 disabled:opacity-60 ${getAV4IconBorderClass(
     row
   )}`}
