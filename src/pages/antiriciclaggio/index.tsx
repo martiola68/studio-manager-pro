@@ -971,18 +971,19 @@ const handleApriDocumenti = (row: AV1Row) => {
   );
 };
 
- const handleEliminaCompleto = async (row: AV1Row) => {
+const handleEliminaCompleto = async (row: AV1Row) => {
   if (!canAccessAntiriciclaggio) return;
 
-  if (row.is_pratica_only && row.pratica_id) {
-    const conferma = window.confirm(
-      "Vuoi eliminare questa pratica AML anche se non sono ancora stati creati i moduli collegati?"
-    );
-    if (!conferma) return;
+  try {
+    const supabase = getSupabaseClient();
+    const supabaseAny = supabase as any;
 
-    try {
-      const supabase = getSupabaseClient();
-      const supabaseAny = supabase as any;
+    // CASO 1: pratica senza moduli ancora creati
+    if (row.is_pratica_only && row.pratica_id) {
+      const conferma = window.confirm(
+        `Vuoi eliminare questa pratica AML?\n\nID pratica: ${row.pratica_id}`
+      );
+      if (!conferma) return;
 
       const { error: deletePraticaError } = await supabaseAny
         .from("tbPraticheAML")
@@ -992,34 +993,23 @@ const handleApriDocumenti = (row: AV1Row) => {
       if (deletePraticaError) throw deletePraticaError;
 
       await loadRowsBySocieta(societaFilter);
-    } catch (err: any) {
-      console.error("Errore eliminazione pratica AML:", err);
-      alert(
-        `Errore durante l'eliminazione della pratica: ${
-          err?.message || "errore sconosciuto"
-        }`
-      );
+      return;
     }
 
-    return;
-  }
+    // CASO 2: riga AV1 reale
+    const av1Id = row.id;
 
-  const av1Id = row.id;
+    if (!av1Id) {
+      alert("Impossibile eliminare il record: identificativo AV1 mancante.");
+      return;
+    }
 
-  if (!av1Id) {
-    alert("Impossibile eliminare il record: identificativo AV1 mancante.");
-    return;
-  }
+    const conferma = window.confirm(
+      "Vuoi eliminare la pratica completa con AV1 e gli eventuali AV2/AV4 collegati?"
+    );
+    if (!conferma) return;
 
-  const conferma = window.confirm(
-    "Vuoi eliminare AV1 e gli eventuali AV2/AV4 collegati?"
-  );
-  if (!conferma) return;
-
-  try {
-    const supabase = getSupabaseClient();
-    const supabaseAny = supabase as any;
-
+    // prima recupero gli eventuali AV4 collegati
     const { data: av4Rows, error: av4Error } = await supabaseAny
       .from("tbAV4")
       .select("id")
@@ -1058,6 +1048,15 @@ const handleApriDocumenti = (row: AV1Row) => {
       .eq("id", av1Id);
 
     if (deleteAV1Error) throw deleteAV1Error;
+
+    // QUESTO ERA IL PEZZO CHE MANCAVA:
+    // elimina anche la pratica AML collegata a quell'AV1
+    const { error: deletePraticaByAv1Error } = await supabaseAny
+      .from("tbPraticheAML")
+      .delete()
+      .eq("av1_id", av1Id);
+
+    if (deletePraticaByAv1Error) throw deletePraticaByAv1Error;
 
     await loadRowsBySocieta(societaFilter);
   } catch (err: any) {
