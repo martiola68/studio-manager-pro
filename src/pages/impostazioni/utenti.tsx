@@ -31,6 +31,12 @@ export default function GestioneUtentiPage() {
   const [resettingPassword, setResettingPassword] = useState<string | null>(null);
   const [connections, setConnections] = useState<any[]>([]);
 
+   const [licenzaInfo, setLicenzaInfo] = useState<{
+    numero_licenze: number;
+    utenti_attivi: number;
+    posti_disponibili: number;
+  } | null>(null);
+
   const [formData, setFormData] = useState({
     nome: "",
     cognome: "",
@@ -113,6 +119,48 @@ export default function GestioneUtentiPage() {
 
       setUtenti(sortedData);
       setRuoli(ruoliData);
+
+        const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session?.user?.email) {
+        const { data: currentUser } = await supabase
+          .from("tbutenti")
+          .select("studio_id")
+          .eq("email", session.user.email)
+          .single();
+
+        if (currentUser?.studio_id) {
+          const { data: licenza } = await supabase
+            .from("tbsoftware_licenze")
+            .select("numero_licenze, stato")
+            .eq("studio_id", currentUser.studio_id)
+            .in("stato", ["attivo", "in_scadenza"])
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          const utentiAttivi = sortedData.filter((u) => u.attivo ?? true).length;
+          const numeroLicenze = Number(licenza?.numero_licenze || 5);
+          const postiDisponibili = Math.max(0, numeroLicenze - utentiAttivi);
+
+          setLicenzaInfo({
+            numero_licenze: numeroLicenze,
+            utenti_attivi: utentiAttivi,
+            posti_disponibili: postiDisponibili,
+          });
+        } else {
+          const utentiAttivi = sortedData.filter((u) => u.attivo ?? true).length;
+
+          setLicenzaInfo({
+            numero_licenze: 5,
+            utenti_attivi: utentiAttivi,
+            posti_disponibili: Math.max(0, 5 - utentiAttivi),
+          });
+        }
+      }
+      
     } catch (error) {
       console.error("Errore caricamento dati:", error);
       toast({
@@ -172,6 +220,15 @@ export default function GestioneUtentiPage() {
         resetForm();
         await loadData();
       } else {
+        if (licenzaInfo && licenzaInfo.posti_disponibili <= 0) {
+          toast({
+            title: "Limite licenze raggiunto",
+            description:
+              "Non è possibile creare nuovi utenti: il numero licenze acquistato è stato raggiunto.",
+            variant: "destructive",
+          });
+          return;
+        }
         const utentiEsistenti = (await utenteService.getUtenti()) as Utente[];
         const utenteEsistente = utentiEsistenti.find(
           (u) => u.email.toLowerCase() === formData.email.toLowerCase()
@@ -463,9 +520,14 @@ const response = await fetch("/api/auth/create-user", {
           }}
         >
           <DialogTrigger asChild>
-            <Button className="bg-blue-600 hover:bg-blue-700">
+            <Button
+              className="bg-blue-600 hover:bg-blue-700"
+              disabled={!!licenzaInfo && licenzaInfo.posti_disponibili <= 0}
+            >
               <UserPlus className="h-4 w-4 mr-2" />
-              Nuovo Utente
+              {licenzaInfo && licenzaInfo.posti_disponibili <= 0
+                ? "Limite raggiunto"
+                : "Nuovo Utente"}
             </Button>
           </DialogTrigger>
 
@@ -681,6 +743,39 @@ const response = await fetch("/api/auth/create-user", {
           </DialogContent>
         </Dialog>
       </div>
+
+       {licenzaInfo && (
+        <Card className="mb-6 border-blue-200 bg-blue-50">
+          <CardContent className="py-4">
+            <div className="grid grid-cols-1 gap-3 text-sm md:grid-cols-3">
+              <div>
+                <p className="text-gray-500">Licenze utenti acquistate</p>
+                <p className="text-lg font-bold text-gray-900">
+                  {licenzaInfo.numero_licenze}
+                </p>
+              </div>
+              <div>
+                <p className="text-gray-500">Utenti attivi</p>
+                <p className="text-lg font-bold text-gray-900">
+                  {licenzaInfo.utenti_attivi}
+                </p>
+              </div>
+              <div>
+                <p className="text-gray-500">Posti disponibili</p>
+                <p
+                  className={`text-lg font-bold ${
+                    licenzaInfo.posti_disponibili > 0
+                      ? "text-green-700"
+                      : "text-red-700"
+                  }`}
+                >
+                  {licenzaInfo.posti_disponibili}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="mb-6">
         <CardHeader>
