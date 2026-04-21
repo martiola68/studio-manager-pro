@@ -82,7 +82,7 @@ const [tipoPrestazione, setTipoPrestazione] = useState("");
           throw new Error(societaError.message || "Errore caricamento società.");
         }
 
-      const { data: prestazioniData, error: prestazioniError } = await supabaseAny
+       const { data: prestazioniData, error: prestazioniError } = await supabaseAny
           .from("tbElencoPrestAR")
           .select("id, TipoPrestazioneAR, RischioTipoPrestAR, PunteggioPrestAR")
           .order("TipoPrestazioneAR", { ascending: true });
