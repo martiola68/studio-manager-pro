@@ -708,8 +708,8 @@ const getAV4IconBorderClass = (row: AV1Row) => {
 const handleNuovoAV1 = () => {
   if (!canAccessAntiriciclaggio) return;
   router.push(
-    selectedSocieta
-      ? `/antiriciclaggio/pratiche/nuovo?societa_id=${selectedSocieta}`
+    selectedSocieta?.id
+      ? `/antiriciclaggio/pratiche/nuovo?societa_id=${selectedSocieta.id}`
       : "/antiriciclaggio/pratiche/nuovo"
   );
 };
@@ -833,62 +833,13 @@ const handleApriAV4 = async (row: AV1Row) => {
   }
 };
 
-  const handleApriAV4 = async (row: AV1Row) => {
-    if (!canAccessAntiriciclaggio) return;
+const handleApriDocumenti = (row: AV1Row) => {
+  if (!canAccessAntiriciclaggio) return;
 
-    try {
-      setWorkingId(row.id);
-
-      const supabase = getSupabaseClient();
-      const supabaseAny = supabase as any;
-
-      const { data: av4, error: av4Error } = await supabaseAny
-        .from("tbAV4")
-        .select("id")
-        .eq("av1_id", row.id)
-        .maybeSingle();
-
-      if (av4Error) {
-        console.error("Errore ricerca AV4:", av4Error);
-        alert("Errore durante la ricerca del modello AV4.");
-        return;
-      }
-
-      if (!row.AV4Generato) {
-        const { error: updateError } = await supabaseAny
-          .from("tbAV1")
-          .update({ AV4Generato: true })
-          .eq("id", row.id);
-
-        if (updateError) {
-          console.error("Errore aggiornamento AV4Generato:", updateError);
-          alert("Errore durante l'aggiornamento del flag AV4.");
-          return;
-        }
-      }
-
-      await loadRowsBySocieta(societaFilter);
-
-      if (av4?.id) {
-        router.push(
-          `/antiriciclaggio/modello-av4?id=${av4.id}&av1_id=${row.id}&cliente_id=${row.cliente_id || ""}&studio_id=${row.studio_id || ""}`
-        );
-      } else {
-        router.push(
-          `/antiriciclaggio/modello-av4?av1_id=${row.id}&cliente_id=${row.cliente_id || ""}&studio_id=${row.studio_id || ""}`
-        );
-      }
-    } catch (err: any) {
-      console.error("Errore apertura AV4:", err);
-      alert(
-        `Errore durante l'apertura del modello AV4: ${
-          err?.message || "errore sconosciuto"
-        }`
-      );
-    } finally {
-      setWorkingId(null);
-    }
-  };
+  router.push(
+    `/antiriciclaggio/fascicolo-documenti?av1_id=${row.id}&cliente_id=${row.cliente_id || ""}`
+  );
+};
 
  const handleApriDocumenti = (row: AV1Row) => {
   if (!canAccessAntiriciclaggio) return;
