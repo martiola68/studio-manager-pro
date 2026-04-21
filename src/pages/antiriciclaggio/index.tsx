@@ -409,16 +409,40 @@ const getAV4IconBorderClass = (row: AV1Row) => {
       return;
     }
 
-    const praticheRows = (praticheData as PraticaAMLRow[]) || [];
+const praticheRows = (praticheData as PraticaAMLRow[]) || [];
+
     const av1IdsPresenti = new Set(
       av1Rows.map((row) => String(row.id)).filter(Boolean)
     );
+
+    const normalizeDate = (value?: string | null) => {
+      if (!value) return "";
+      return String(value).includes("T")
+        ? String(value).split("T")[0]
+        : String(value);
+    };
 
     const praticheOnlyRows: AV1Row[] = praticheRows
       .filter((pratica) => {
         if (pratica.av1_id && av1IdsPresenti.has(String(pratica.av1_id))) {
           return false;
         }
+
+        const hasMatchingAV1 = av1Rows.some((row) => {
+          const sameCliente =
+            String(row.cliente_id || "") === String(pratica.cliente_id || "");
+
+          const sameDate =
+            normalizeDate(row.DataVerifica) ===
+            normalizeDate(pratica.data_apertura);
+
+          return sameCliente && sameDate;
+        });
+
+        if (hasMatchingAV1) {
+          return false;
+        }
+
         return true;
       })
       .map((pratica) => ({
@@ -440,6 +464,7 @@ const getAV4IconBorderClass = (row: AV1Row) => {
       }));
 
     setRows([...praticheOnlyRows, ...av1Rows]);
+    
   } catch (err: any) {
     console.error("Errore loadRowsBySocieta:", err);
     alert(`Errore loadRowsBySocieta: ${err?.message || "errore sconosciuto"}`);
