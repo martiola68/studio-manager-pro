@@ -1314,8 +1314,7 @@ const handleApriDocumenti = (row: AV1Row) => {
 <button
   type="button"
   onClick={() => handleEliminaCompleto(row.id)}
-  disabled={row.is_pratica_only}
-  className="ml-2 flex h-8 w-8 items-center justify-center rounded-full bg-white transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50"
+  className="ml-2 flex h-8 w-8 items-center justify-center rounded-full bg-white transition hover:scale-105"
   title="Elimina record completo"
 >
   <Trash2
