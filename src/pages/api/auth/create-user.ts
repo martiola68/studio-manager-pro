@@ -134,12 +134,12 @@ export default async function handler(
       });
     }
 
-    const { data: adminRow, error: adminRowError } = await supabaseAdmin
-      .from("tbutenti")
-      .select("id, email, tipo_utente, studio_id")
-      .eq("email", adminUser.email)
-      .single();
-
+  const { data: adminRow, error: adminRowError } = await supabaseAdmin
+  .from("tbutenti")
+  .select("id, email, tipo_utente, studio_id, attivo")
+  .eq("email", adminUser.email)
+  .single();
+    
     if (adminRowError || !adminRow) {
       return res.status(403).json({
         error: "Utente amministratore non trovato",
@@ -159,8 +159,49 @@ export default async function handler(
       });
     }
 
+     // 🔒 Controllo limite licenze utenti dello studio
+    const { data: licenzaAttiva, error: licenzaError } = await supabaseAdmin
+      .from("tbsoftware_licenze")
+      .select("id, numero_licenze, stato")
+      .eq("studio_id", adminRow.studio_id)
+      .in("stato", ["attivo", "in_scadenza"])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (licenzaError) {
+      return res.status(500).json({
+        error: "Errore verifica licenza studio",
+        details: licenzaError.message,
+      });
+    }
+
+    const numeroLicenzeDisponibili = Number(licenzaAttiva?.numero_licenze || 5);
+
+    const { count: utentiAttiviCount, error: utentiCountError } = await supabaseAdmin
+      .from("tbutenti")
+      .select("*", { count: "exact", head: true })
+      .eq("studio_id", adminRow.studio_id)
+      .eq("attivo", true);
+
+    if (utentiCountError) {
+      return res.status(500).json({
+        error: "Errore conteggio utenti attivi",
+        details: utentiCountError.message,
+      });
+    }
+
+    const utentiAttivi = Number(utentiAttiviCount || 0);
+
+    if (utentiAttivi >= numeroLicenzeDisponibili) {
+      return res.status(400).json({
+        error: "Limite licenze raggiunto",
+        details: `Utenti attivi: ${utentiAttivi} / ${numeroLicenzeDisponibili}. Acquista un nuovo pacchetto utenti per procedere.`,
+      });
+    }
+
     const {
-      email,
+      email: normalizedEmail,
       nome,
       cognome,
       tipo_utente,
@@ -177,6 +218,28 @@ export default async function handler(
       });
     }
 
+    const normalizedEmail = String(email).trim().toLowerCase();
+
+    const { data: existingUser, error: existingUserError } = await supabaseAdmin
+      .from("tbutenti")
+      .select("id")
+      .eq("email", normalizedEmail)
+      .maybeSingle();
+
+    if (existingUserError) {
+      return res.status(500).json({
+        error: "Errore controllo utente esistente",
+        details: existingUserError.message,
+      });
+    }
+
+    if (existingUser?.id) {
+      return res.status(400).json({
+        error: "Utente già esistente",
+        details: `Esiste già un utente con email ${normalizedEmail}`,
+      });
+    }
+
     const passwordGenerata = generateSecurePassword();
 
     if (!validatePassword(passwordGenerata)) {
@@ -186,16 +249,16 @@ export default async function handler(
       });
     }
 
-    const { data: authData, error: authError } =
-      await supabaseAdmin.auth.admin.createUser({
-        email,
-        password: passwordGenerata,
-        email_confirm: true,
-        user_metadata: {
-          nome,
-          cognome,
-        },
-      });
+   const { data: authData, error: authError } =
+  await supabaseAdmin.auth.admin.createUser({
+    email: normalizedEmail,
+    password: passwordGenerata,
+    email_confirm: true,
+    user_metadata: {
+      nome,
+      cognome,
+    },
+  });
 
     if (authError || !authData?.user?.id) {
       console.error("Errore creazione Auth:", authError);
@@ -213,7 +276,7 @@ export default async function handler(
       studio_id: adminRow.studio_id,
       nome,
       cognome,
-      email,
+      email: normalizedEmail,
       tipo_utente: tipo_utente || "User",
       ruolo_operatore_id: ruolo_operatore_id || null,
       attivo: typeof attivo === "boolean" ? attivo : true,
@@ -226,23 +289,23 @@ export default async function handler(
       .from("tbutenti")
       .upsert(payload, { onConflict: "id" });
 
-    if (upsertError) {
-      console.error("Errore aggiornamento/anagrafica tbutenti:", upsertError);
-      return res.status(500).json({
-        error: "Utente Auth creato ma anagrafica non aggiornata",
-        details: upsertError.message,
-      });
-    }
+  if (upsertError) {
+  console.error("Errore aggiornamento/anagrafica tbutenti:", upsertError);
+
+  await supabaseAdmin.auth.admin.deleteUser(newUserId);
+
+  return res.status(500).json({
+    error: "Utente non creato",
+    details: upsertError.message,
+  });
+}
 
     // Invio email di primo accesso / impostazione password
 
-    const appBaseUrl =
-      process.env.NEXT_PUBLIC_APP_URL ||
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      "http://localhost:3000";
+   const appBaseUrl =
+  process.env.NEXT_PUBLIC_APP_URL || "https://studio-manager-pro.vercel.app";
 
-    const loginUrl = `${appBaseUrl.replace(/\/$/, "")}/login`;
-
+const loginUrl = `${appBaseUrl.replace(/\/$/, "")}/login`;
     const edgeBaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(
       ".supabase.co",
       ".supabase.co/functions/v1"
@@ -256,7 +319,7 @@ export default async function handler(
 
     const emailHtml = buildUserCreatedEmailHtml({
       nome,
-      email,
+      email: normalizedEmail,
       password: passwordGenerata,
       loginUrl,
     });
@@ -287,19 +350,26 @@ Studio Manager Pro`,
 
     const sendEmailResult = await sendEmailResponse.json().catch(() => null);
 
-    if (!sendEmailResponse.ok || !sendEmailResult?.success) {
-      console.error("Errore invio email utente creato:", sendEmailResult);
-      return res.status(500).json({
-        error: "Utente creato ma email non inviata",
-        details: sendEmailResult?.error || sendEmailResult?.message || "Errore invio email",
-      });
-    }
+   if (!sendEmailResponse.ok || !sendEmailResult?.success) {
+  console.error("Errore invio email utente creato:", sendEmailResult);
+
+  await supabaseAdmin.from("tbutenti").delete().eq("id", newUserId);
+  await supabaseAdmin.auth.admin.deleteUser(newUserId);
+
+  return res.status(500).json({
+    error: "Utente non creato",
+    details:
+      sendEmailResult?.error ||
+      sendEmailResult?.message ||
+      "Errore invio email",
+  });
+}
   
 
     return res.status(200).json({
       success: true,
       userId: newUserId,
-      email,
+      email: normalizedEmail,
       message: "Utente creato ed email inviata con successo",
     });
   } catch (error: any) {
