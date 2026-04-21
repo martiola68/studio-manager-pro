@@ -119,7 +119,7 @@ export default function NuovaPraticaAMLPage() {
         throw new Error(error.message || "Errore creazione pratica.");
       }
 
-      router.push(`/antiriciclaggio/pratica/${data.id}`);
+      router.push("/antiriciclaggio");
     } catch (err: any) {
       console.error("Errore creazione pratica AML:", err);
       alert(err?.message || "Errore creazione pratica.");
