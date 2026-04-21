@@ -841,14 +841,6 @@ const handleApriDocumenti = (row: AV1Row) => {
   );
 };
 
- const handleApriDocumenti = (row: AV1Row) => {
-  if (!canAccessAntiriciclaggio) return;
-
-  router.push(
-    `/antiriciclaggio/fascicolo-documenti?av1_id=${row.id}&cliente_id=${row.cliente_id || ""}`
-  );
-};
-  
   const handleEliminaCompleto = async (av1Id: string) => {
     if (!canAccessAntiriciclaggio) return;
 
