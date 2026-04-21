@@ -16,6 +16,7 @@ type Cliente = {
 
 type AV2FormState = {
   id?: string;
+  pratica_id?: string;
   studio_id: string;
   cliente_id: string;
   av1_id: string;
@@ -27,6 +28,7 @@ type AV2FormState = {
 const buildInitialForm = (studioId: string): AV2FormState => {
   const base: AV2FormState = {
     id: "",
+    pratica_id: "",
     studio_id: studioId,
     cliente_id: "",
     av1_id: "",
@@ -56,7 +58,7 @@ function normalizeDateValue(value: unknown) {
 
 export default function ModelloAV2Page() {
   const router = useRouter();
-  const { id, av1_id } = router.query;
+  const { id, av1_id, pratica_id, cliente_id, studio_id } = router.query;
 
   const [studioId, setStudioId] = useState<string>("");
   const [clienti, setClienti] = useState<Cliente[]>([]);
@@ -104,6 +106,50 @@ export default function ModelloAV2Page() {
     }
   };
 
+   const prefillFromPratica = async (studioIdValue: string, praticaIdValue: string) => {
+    try {
+      if (!praticaIdValue) return;
+
+      const { data: praticaRow, error: praticaError } = await (supabase as any)
+        .from("tbPraticheAML")
+        .select("id, studio_id, cliente_id, data_apertura, av1_id")
+        .eq("id", praticaIdValue)
+        .single();
+
+      if (praticaError) {
+        console.error("Errore caricamento pratica AML:", praticaError);
+        setError(praticaError.message);
+        return;
+      }
+
+      if (!praticaRow) return;
+
+      const resolvedStudioId =
+        praticaRow.studio_id ||
+        studioIdValue ||
+        (typeof studio_id === "string" ? studio_id : "") ||
+        "";
+
+      const resolvedClienteId =
+        praticaRow.cliente_id ||
+        (typeof cliente_id === "string" ? cliente_id : "") ||
+        "";
+
+      setForm((prev) => ({
+        ...buildInitialForm(resolvedStudioId),
+        ...prev,
+        pratica_id: String(praticaRow.id),
+        studio_id: resolvedStudioId,
+        cliente_id: resolvedClienteId,
+        av1_id: praticaRow.av1_id ? String(praticaRow.av1_id) : "",
+        data_check: normalizeDateValue(praticaRow.data_apertura),
+      }));
+    } catch (err: any) {
+      console.error("Errore prefill AV2 da pratica:", err);
+      setError(err?.message || "Errore durante il prefill da pratica.");
+    }
+  };
+  
   useEffect(() => {
     const init = async () => {
       try {
@@ -144,11 +190,15 @@ export default function ModelloAV2Page() {
             return;
           }
 
-          if (data) {
+           if (data) {
             setForm({
               ...buildInitialForm(data.studio_id || currentStudioId),
               ...data,
               id: String(data.id),
+              pratica_id:
+                data.pratica_id ||
+                (typeof pratica_id === "string" ? pratica_id : "") ||
+                "",
               studio_id: data.studio_id || currentStudioId,
               cliente_id: data.cliente_id || "",
               av1_id: data.av1_id ? String(data.av1_id) : "",
@@ -159,10 +209,17 @@ export default function ModelloAV2Page() {
           }
         }
 
-        if (av1_id && typeof av1_id === "string") {
+       if (av1_id && typeof av1_id === "string") {
           await prefillFromAV1(currentStudioId, av1_id);
+        } else if (pratica_id && typeof pratica_id === "string") {
+          await prefillFromPratica(currentStudioId, pratica_id);
         } else {
-          setForm(buildInitialForm(currentStudioId));
+          setForm((prev) => ({
+            ...buildInitialForm(currentStudioId),
+            pratica_id: typeof pratica_id === "string" ? pratica_id : "",
+            studio_id: currentStudioId,
+            cliente_id: typeof cliente_id === "string" ? cliente_id : "",
+          }));
         }
       } catch (err: any) {
         console.error("Errore init AV2:", err);
@@ -174,7 +231,7 @@ export default function ModelloAV2Page() {
 
     if (!router.isReady) return;
     void init();
-  }, [router.isReady, id, av1_id]);
+   }, [router.isReady, id, av1_id, pratica_id, cliente_id, studio_id]);
 
   const handleAnnotazioneChange = (index: number, value: string) => {
     setForm((prev) => ({
@@ -205,15 +262,11 @@ export default function ModelloAV2Page() {
         return;
       }
 
-      if (!form.av1_id) {
-        alert("AV1 non collegato.");
-        return;
-      }
-
-      const payload: Record<string, unknown> = {
+     const payload: Record<string, unknown> = {
         studio_id: studioId,
         cliente_id: form.cliente_id,
-        av1_id: Number(form.av1_id),
+        pratica_id: form.pratica_id || null,
+        av1_id: form.av1_id ? Number(form.av1_id) : null,
         data_check: form.data_check || null,
         firma_check: form.firma_check || null,
       };
@@ -252,22 +305,36 @@ export default function ModelloAV2Page() {
         savedId = String(data.id);
       }
 
-      const { error: av1UpdateError } = await (supabase as any)
-        .from("tbAV1")
-        .update({ AV2Generato: true })
-        .eq("id", Number(form.av1_id));
+      if (form.av1_id) {
+        const { error: av1UpdateError } = await (supabase as any)
+          .from("tbAV1")
+          .update({ AV2Generato: true })
+          .eq("id", Number(form.av1_id));
 
-      if (av1UpdateError) {
-        console.error("Errore aggiornamento AV2Generato:", av1UpdateError);
+        if (av1UpdateError) {
+          console.error("Errore aggiornamento AV2Generato:", av1UpdateError);
+        }
       }
-
-      setForm((prev) => ({
+      
+       setForm((prev) => ({
         ...prev,
         id: savedId,
+        pratica_id:
+          prev.pratica_id ||
+          (typeof pratica_id === "string" ? pratica_id : "") ||
+          "",
       }));
-
       alert("Scheda AV2 salvata correttamente.");
-      await router.replace(`/antiriciclaggio/modello-av2?id=${savedId}&av1_id=${form.av1_id}`);
+
+      const praticaQuery =
+        form.pratica_id || (typeof pratica_id === "string" ? pratica_id : "");
+
+      await router.replace(
+        praticaQuery
+          ? `/antiriciclaggio/modello-av2?id=${savedId}&av1_id=${form.av1_id || ""}&pratica_id=${praticaQuery}`
+          : `/antiriciclaggio/modello-av2?id=${savedId}&av1_id=${form.av1_id || ""}`
+      );
+      
     } catch (err: any) {
       console.error("Errore salvataggio AV2:", err);
       setError(err?.message || "Errore durante il salvataggio della scheda AV2.");
