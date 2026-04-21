@@ -764,36 +764,74 @@ const handleApriAV2 = async (row: AV1Row) => {
         `/antiriciclaggio/modello-av2?av1_id=${row.id}&cliente_id=${row.cliente_id || ""}&studio_id=${row.studio_id || ""}`
       );
     }
-  } catch (error) {
-    console.error("Errore apertura AV2:", error);
-    alert("Errore durante l'apertura del modello AV2.");
+  } catch (err: any) {
+    console.error("Errore apertura AV2:", err);
+    alert(
+      `Errore durante l'apertura del modello AV2: ${
+        err?.message || "errore sconosciuto"
+      }`
+    );
   } finally {
     setWorkingId(null);
   }
 };
-  
-      await loadRowsBySocieta(societaFilter);
 
-      if (av2?.id) {
-        router.push(
-          `/antiriciclaggio/modello-av2?id=${av2.id}&av1_id=${row.id}&cliente_id=${row.cliente_id || ""}&studio_id=${row.studio_id || ""}`
-        );
-      } else {
-        router.push(
-          `/antiriciclaggio/modello-av2?av1_id=${row.id}&cliente_id=${row.cliente_id || ""}&studio_id=${row.studio_id || ""}`
-        );
-      }
-    } catch (err: any) {
-      console.error("Errore apertura AV2:", err);
-      alert(
-        `Errore durante l'apertura del modello AV2: ${
-          err?.message || "errore sconosciuto"
-        }`
-      );
-    } finally {
-      setWorkingId(null);
+const handleApriAV4 = async (row: AV1Row) => {
+  if (!canAccessAntiriciclaggio) return;
+
+  try {
+    setWorkingId(row.id);
+
+    const supabase = getSupabaseClient();
+    const supabaseAny = supabase as any;
+
+    const { data: av4, error: av4Error } = await supabaseAny
+      .from("tbAV4")
+      .select("id")
+      .eq("av1_id", row.id)
+      .maybeSingle();
+
+    if (av4Error) {
+      console.error("Errore ricerca AV4:", av4Error);
+      alert("Errore durante la ricerca del modello AV4.");
+      return;
     }
-  };
+
+    if (!row.AV4Generato) {
+      const { error: updateError } = await supabaseAny
+        .from("tbAV1")
+        .update({ AV4Generato: true })
+        .eq("id", row.id);
+
+      if (updateError) {
+        console.error("Errore aggiornamento AV4Generato:", updateError);
+        alert("Errore durante l'aggiornamento del flag AV4.");
+        return;
+      }
+    }
+
+    await loadRowsBySocieta(societaFilter);
+
+    if (av4?.id) {
+      router.push(
+        `/antiriciclaggio/modello-av4?id=${av4.id}&av1_id=${row.id}&cliente_id=${row.cliente_id || ""}&studio_id=${row.studio_id || ""}`
+      );
+    } else {
+      router.push(
+        `/antiriciclaggio/modello-av4?av1_id=${row.id}&cliente_id=${row.cliente_id || ""}&studio_id=${row.studio_id || ""}`
+      );
+    }
+  } catch (err: any) {
+    console.error("Errore apertura AV4:", err);
+    alert(
+      `Errore durante l'apertura del modello AV4: ${
+        err?.message || "errore sconosciuto"
+      }`
+    );
+  } finally {
+    setWorkingId(null);
+  }
+};
 
   const handleApriAV4 = async (row: AV1Row) => {
     if (!canAccessAntiriciclaggio) return;
