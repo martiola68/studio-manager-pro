@@ -41,6 +41,7 @@ type ResponsabileAV = {
 
 type FormDataType = {
   id?: string;
+  pratica_id?: string;
   studio_id: string;
   cliente_id: string;
   Prestazione: string;
@@ -167,6 +168,7 @@ const defaultSectionScores = {
 
 const initialFormData: FormDataType = {
   id: "",
+  pratica_id: "",
   studio_id: "",
   cliente_id: "",
   Prestazione: "",
@@ -276,7 +278,7 @@ function getCategoriaRischio(value: number) {
 
 export default function ModelloAV1Page() {
   const router = useRouter();
-  const { id } = router.query;
+  const { id, pratica_id, cliente_id, studio_id } = router.query;
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   const [clienti, setClienti] = useState<Cliente[]>([]);
@@ -443,7 +445,7 @@ const refreshEncryptionEnabled = async (studioIdValue?: string) => {
     }
   };
 
-  const loadRecordById = async (recordId: string) => {
+ const loadRecordById = async (recordId: string) => {
     setError(null);
 
     try {
@@ -487,16 +489,77 @@ const refreshEncryptionEnabled = async (studioIdValue?: string) => {
     }
   };
 
+  const loadPraticaById = async (praticaId: string) => {
+    setError(null);
+
+    try {
+      const supabase = getSupabaseClient() as any;
+
+      const { data, error } = await supabase
+        .from("tbPraticheAML")
+        .select("*")
+        .eq("id", praticaId)
+        .single();
+
+      if (error) throw new Error(error.message);
+      if (!data) return;
+
+      setFormData((prev) => ({
+        ...prev,
+        pratica_id: String(data.id),
+        studio_id:
+          data.studio_id ??
+          (typeof studio_id === "string" ? studio_id : "") ??
+          prev.studio_id ??
+          "",
+        cliente_id:
+          data.cliente_id ??
+          (typeof cliente_id === "string" ? cliente_id : "") ??
+          prev.cliente_id ??
+          "",
+        Prestazione: data.tipo_prestazione ?? prev.Prestazione ?? "",
+        DataVerifica:
+          normalizeDateValue(data.data_apertura) ||
+          prev.DataVerifica ||
+          "",
+      }));
+
+      await refreshEncryptionEnabled(data.studio_id ?? "");
+    } catch (err: any) {
+      setError(err?.message || "Errore caricamento pratica AML.");
+    }
+  };
+
   useEffect(() => {
     void loadData();
   }, []);
-
-  useEffect(() => {
+  
+ useEffect(() => {
     if (!router.isReady) return;
-    if (!id || typeof id !== "string") return;
 
-    void loadRecordById(id);
-  }, [router.isReady, id]);
+    if (id && typeof id === "string") {
+      void loadRecordById(id);
+      return;
+    }
+
+    if (pratica_id && typeof pratica_id === "string") {
+      void loadPraticaById(pratica_id);
+      return;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      pratica_id: typeof pratica_id === "string" ? pratica_id : "",
+      studio_id:
+        prev.studio_id ||
+        (typeof studio_id === "string" ? studio_id : "") ||
+        "",
+      cliente_id:
+        prev.cliente_id ||
+        (typeof cliente_id === "string" ? cliente_id : "") ||
+        "",
+    }));
+  }, [router.isReady, id, pratica_id, cliente_id, studio_id]);
 
 const handlePrestazioneChange = (prestazioneValue: string) => {
   const prestazioneSelezionata = prestazioni.find(
@@ -799,16 +862,35 @@ const handleRinnovoVerifica = async () => {
         savedId = String(data.id);
       }
 
+      if (formData.pratica_id && savedId) {
+        const { error: praticaUpdateError } = await supabase
+          .from("tbPraticheAML")
+          .update({
+            av1_id: savedId,
+          })
+          .eq("id", formData.pratica_id);
+
+        if (praticaUpdateError) throw new Error(praticaUpdateError.message);
+      }
+
       setFormData((prev) => ({
         ...prev,
         id: savedId,
+        pratica_id: prev.pratica_id || (typeof pratica_id === "string" ? pratica_id : "") || "",
         ScadenzaVerifica: ScadenzaVerificaCalcolata,
       }));
 
       alert("Record AV1 salvato correttamente.");
 
-      if (savedId) {
-        void router.replace(`/antiriciclaggio/modello-av1?id=${savedId}`);
+       if (savedId) {
+        const praticaQuery =
+          formData.pratica_id || (typeof pratica_id === "string" ? pratica_id : "");
+
+        void router.replace(
+          praticaQuery
+            ? `/antiriciclaggio/modello-av1?id=${savedId}&pratica_id=${praticaQuery}`
+            : `/antiriciclaggio/modello-av1?id=${savedId}`
+        );
       }
     } catch (err: any) {
       setError(err?.message || "Errore salvataggio AV1.");
