@@ -15,13 +15,10 @@ type SocietaOption = {
 };
 
 type PrestazioneOption = {
-  id: string;
-  Descrizione?: string | null;
-  descrizione?: string | null;
-  Prestazione?: string | null;
-  prestazione?: string | null;
-  valore_rischio_inerente?: string | number | null;
-  ValoreRischioInerente?: string | number | null;
+  id: number;
+  TipoPrestazioneAR?: string | null;
+  RischioTipoPrestAR?: string | null;
+  PunteggioPrestAR?: number | null;
 };
 
 export default function NuovaPraticaAMLPage() {
@@ -87,8 +84,8 @@ const [tipoPrestazione, setTipoPrestazione] = useState("");
 
       const { data: prestazioniData, error: prestazioniError } = await supabaseAny
           .from("tbElencoPrestAR")
-          .select("*")
-          .order("Descrizione", { ascending: true });
+          .select("id, TipoPrestazioneAR, RischioTipoPrestAR, PunteggioPrestAR")
+          .order("TipoPrestazioneAR", { ascending: true });
 
         if (prestazioniError) {
           throw new Error(prestazioniError.message || "Errore caricamento prestazioni.");
@@ -112,13 +109,7 @@ const [tipoPrestazione, setTipoPrestazione] = useState("");
 
   // 👇 INSERISCI QUI
 const getPrestazioneLabel = (prestazione: PrestazioneOption) => {
-  return (
-    prestazione.Descrizione ||
-    prestazione.descrizione ||
-    prestazione.Prestazione ||
-    prestazione.prestazione ||
-    prestazione.id
-  );
+  return prestazione.TipoPrestazioneAR || String(prestazione.id);
 };
 
   const handleCreate = async () => {
