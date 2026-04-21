@@ -134,12 +134,12 @@ export default async function handler(
       });
     }
 
-  const { data: adminRow, error: adminRowError } = await supabaseAdmin
-  .from("tbutenti")
-  .select("id, email, tipo_utente, studio_id, attivo")
-  .eq("email", adminUser.email)
-  .single();
-    
+    const { data: adminRow, error: adminRowError } = await supabaseAdmin
+      .from("tbutenti")
+      .select("id, email, tipo_utente, studio_id, attivo")
+      .eq("email", adminUser.email)
+      .single();
+
     if (adminRowError || !adminRow) {
       return res.status(403).json({
         error: "Utente amministratore non trovato",
@@ -159,7 +159,6 @@ export default async function handler(
       });
     }
 
-     // 🔒 Controllo limite licenze utenti dello studio
     const { data: licenzaAttiva, error: licenzaError } = await supabaseAdmin
       .from("tbsoftware_licenze")
       .select("id, numero_licenze, stato")
@@ -178,11 +177,12 @@ export default async function handler(
 
     const numeroLicenzeDisponibili = Number(licenzaAttiva?.numero_licenze || 5);
 
-    const { count: utentiAttiviCount, error: utentiCountError } = await supabaseAdmin
-      .from("tbutenti")
-      .select("*", { count: "exact", head: true })
-      .eq("studio_id", adminRow.studio_id)
-      .eq("attivo", true);
+    const { count: utentiAttiviCount, error: utentiCountError } =
+      await supabaseAdmin
+        .from("tbutenti")
+        .select("*", { count: "exact", head: true })
+        .eq("studio_id", adminRow.studio_id)
+        .eq("attivo", true);
 
     if (utentiCountError) {
       return res.status(500).json({
@@ -201,7 +201,7 @@ export default async function handler(
     }
 
     const {
-      email: normalizedEmail,
+      email,
       nome,
       cognome,
       tipo_utente,
@@ -249,16 +249,16 @@ export default async function handler(
       });
     }
 
-   const { data: authData, error: authError } =
-  await supabaseAdmin.auth.admin.createUser({
-    email: normalizedEmail,
-    password: passwordGenerata,
-    email_confirm: true,
-    user_metadata: {
-      nome,
-      cognome,
-    },
-  });
+    const { data: authData, error: authError } =
+      await supabaseAdmin.auth.admin.createUser({
+        email: normalizedEmail,
+        password: passwordGenerata,
+        email_confirm: true,
+        user_metadata: {
+          nome,
+          cognome,
+        },
+      });
 
     if (authError || !authData?.user?.id) {
       console.error("Errore creazione Auth:", authError);
@@ -285,33 +285,36 @@ export default async function handler(
       microsoft_connection_id: microsoft_connection_id || null,
     };
 
-  const { error: upsertError } = await supabaseAdmin
+    const { error: upsertError } = await supabaseAdmin
       .from("tbutenti")
       .upsert(payload, { onConflict: "id" });
 
-  if (upsertError) {
-  console.error("Errore aggiornamento/anagrafica tbutenti:", upsertError);
+    if (upsertError) {
+      console.error("Errore aggiornamento/anagrafica tbutenti:", upsertError);
 
-  await supabaseAdmin.auth.admin.deleteUser(newUserId);
+      await supabaseAdmin.auth.admin.deleteUser(newUserId);
 
-  return res.status(500).json({
-    error: "Utente non creato",
-    details: upsertError.message,
-  });
-}
+      return res.status(500).json({
+        error: "Utente non creato",
+        details: upsertError.message,
+      });
+    }
 
-    // Invio email di primo accesso / impostazione password
+    const appBaseUrl =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      "https://studio-manager-pro.vercel.app";
 
-   const appBaseUrl =
-  process.env.NEXT_PUBLIC_APP_URL || "https://studio-manager-pro.vercel.app";
+    const loginUrl = `${appBaseUrl.replace(/\/$/, "")}/login`;
 
-const loginUrl = `${appBaseUrl.replace(/\/$/, "")}/login`;
     const edgeBaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(
       ".supabase.co",
       ".supabase.co/functions/v1"
     );
 
     if (!edgeBaseUrl) {
+      await supabaseAdmin.from("tbutenti").delete().eq("id", newUserId);
+      await supabaseAdmin.auth.admin.deleteUser(newUserId);
+
       return res.status(500).json({
         error: "URL Supabase non configurato",
       });
@@ -332,14 +335,14 @@ const loginUrl = `${appBaseUrl.replace(/\/$/, "")}/login`;
         apikey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
       },
       body: JSON.stringify({
-        to: email,
+        to: normalizedEmail,
         subject: "Utente creato - Studio Manager Pro",
         html: emailHtml,
         text: `Ciao ${nome},
 
 Il tuo account è stato creato correttamente.
 
-Email: ${email}
+Email: ${normalizedEmail}
 Password: ${passwordGenerata}
 
 Accedi qui: ${loginUrl}
@@ -350,21 +353,20 @@ Studio Manager Pro`,
 
     const sendEmailResult = await sendEmailResponse.json().catch(() => null);
 
-   if (!sendEmailResponse.ok || !sendEmailResult?.success) {
-  console.error("Errore invio email utente creato:", sendEmailResult);
+    if (!sendEmailResponse.ok || !sendEmailResult?.success) {
+      console.error("Errore invio email utente creato:", sendEmailResult);
 
-  await supabaseAdmin.from("tbutenti").delete().eq("id", newUserId);
-  await supabaseAdmin.auth.admin.deleteUser(newUserId);
+      await supabaseAdmin.from("tbutenti").delete().eq("id", newUserId);
+      await supabaseAdmin.auth.admin.deleteUser(newUserId);
 
-  return res.status(500).json({
-    error: "Utente non creato",
-    details:
-      sendEmailResult?.error ||
-      sendEmailResult?.message ||
-      "Errore invio email",
-  });
-}
-  
+      return res.status(500).json({
+        error: "Utente non creato",
+        details:
+          sendEmailResult?.error ||
+          sendEmailResult?.message ||
+          "Errore invio email",
+      });
+    }
 
     return res.status(200).json({
       success: true,
