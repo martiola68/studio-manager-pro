@@ -708,8 +708,8 @@ const getAV4IconBorderClass = (row: AV1Row) => {
 const handleNuovoAV1 = () => {
   if (!canAccessAntiriciclaggio) return;
   router.push(
-    selectedSocietaId
-      ? `/antiriciclaggio/pratiche/nuovo?societa_id=${selectedSocietaId}`
+    selectedSocieta
+      ? `/antiriciclaggio/pratiche/nuovo?societa_id=${selectedSocieta}`
       : "/antiriciclaggio/pratiche/nuovo"
   );
 };
@@ -765,7 +765,6 @@ const handleApriAV2 = async (row: AV1Row) => {
     setWorkingId(null);
   }
 };
-
       await loadRowsBySocieta(societaFilter);
 
       if (av2?.id) {
