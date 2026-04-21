@@ -49,6 +49,22 @@ type AV1Row = {
   AV4Generato?: boolean | null;
   tbclienti?: Cliente | Cliente[] | null;
   av4_info?: AV4Info | AV4Info[] | null;
+
+  pratica_id?: string | null;
+  societa_id?: string | null;
+  stato_pratica?: string | null;
+  is_pratica_only?: boolean;
+};
+
+type PraticaAMLRow = {
+  id: string;
+  studio_id?: string | null;
+  cliente_id?: string | null;
+  societa_id?: string | null;
+  data_apertura?: string | null;
+  stato?: string | null;
+  av1_id?: string | null;
+  tbclienti?: Cliente | Cliente[] | null;
 };
 
 const AML_SESSION_KEY = "antiriciclaggio_unlocked_societa_id";
@@ -160,17 +176,19 @@ return "ok";
     return responsabili.find((r) => r.id === id) || null;
   };
 
-  const getRowClassName = (row: AV1Row) => {
-    const scadenzaStatus = getScadenzaStatus(row.ScadenzaVerifica);
+ const getRowClassName = (row: AV1Row) => {
+  if (row.is_pratica_only) return "bg-blue-50";
 
-    if (scadenzaStatus === "expired") return "bg-red-100";
-    if (scadenzaStatus === "warning") return "bg-orange-50";
-    if (!row.AV1Conferma || !row.AV2Generato || !row.AV4Generato) {
-      return "bg-red-50";
-    }
+  const scadenzaStatus = getScadenzaStatus(row.ScadenzaVerifica);
 
-    return "";
-  };
+  if (scadenzaStatus === "expired") return "bg-red-100";
+  if (scadenzaStatus === "warning") return "bg-orange-50";
+  if (!row.AV1Conferma || !row.AV2Generato || !row.AV4Generato) {
+    return "bg-red-50";
+  }
+
+  return "";
+};
 
   const getScadenzaCellClassName = (dateString?: string | null) => {
     const status = getScadenzaStatus(dateString);
@@ -182,16 +200,24 @@ if (status === "warning") return "font-semibold text-yellow-600";
     return "";
   };
 
-  const getStatoInfo = (row: AV1Row) => {
-    const scadenzaStatus = getScadenzaStatus(row.ScadenzaVerifica);
+ const getStatoInfo = (row: AV1Row) => {
+  if (row.is_pratica_only) {
+    return {
+      dotClass: "bg-blue-500",
+      text: "Pratica aperta",
+      className: "font-semibold text-blue-700",
+    };
+  }
 
-    if (scadenzaStatus === "expired") {
-      return {
-        dotClass: "bg-red-500",
-        text: "Scaduta",
-        className: "font-bold text-red-700",
-      };
-    }
+  const scadenzaStatus = getScadenzaStatus(row.ScadenzaVerifica);
+
+  if (scadenzaStatus === "expired") {
+    return {
+      dotClass: "bg-red-500",
+      text: "Scaduta",
+      className: "font-bold text-red-700",
+    };
+  }
 
     if (scadenzaStatus === "warning") {
       return {
@@ -294,23 +320,21 @@ const getAV4IconBorderClass = (row: AV1Row) => {
     }
   };
 
-  const loadRowsBySocieta = async (societaId: string) => {
-    try {
-      setLoading(true);
-      setRows([]);
+ const loadRowsBySocieta = async (societaId: string) => {
+  try {
+    setLoading(true);
+    setRows([]);
 
-      const responsabiliIds = responsabili
-        .filter((r) => r.societa_id === societaId)
-        .map((r) => r.id);
+    const responsabiliIds = responsabili
+      .filter((r) => r.societa_id === societaId)
+      .map((r) => r.id);
 
-      if (responsabiliIds.length === 0) {
-        setRows([]);
-        return;
-      }
+    const supabase = getSupabaseClient();
+    const supabaseAny = supabase as any;
 
-      const supabase = getSupabaseClient();
-      const supabaseAny = supabase as any;
+    let av1Rows: AV1Row[] = [];
 
+    if (responsabiliIds.length > 0) {
       const { data, error } = await supabaseAny
         .from("tbAV1")
         .select(`
@@ -325,14 +349,14 @@ const getAV4IconBorderClass = (row: AV1Row) => {
           AV4Generato,
           tbclienti (
             id,
-          cod_cliente,
-          ragione_sociale,
-          utente_operatore_id,
-          utente_operatore:tbutenti!tbclienti_utente_operatore_id_fkey (
-          nome,
-          cognome
+            cod_cliente,
+            ragione_sociale,
+            utente_operatore_id,
+            utente_operatore:tbutenti!tbclienti_utente_operatore_id_fkey (
+              nome,
+              cognome
             )
-            ),
+          ),
           av4_info:tbAV4 (
             id,
             av1_id,
@@ -351,15 +375,79 @@ const getAV4IconBorderClass = (row: AV1Row) => {
         return;
       }
 
-      setRows((data as AV1Row[]) || []);
-    } catch (err: any) {
-      console.error("Errore loadRowsBySocieta:", err);
-      alert(`Errore loadRowsBySocieta: ${err?.message || "errore sconosciuto"}`);
-      setRows([]);
-    } finally {
-      setLoading(false);
+      av1Rows = (data as AV1Row[]) || [];
     }
-  };
+
+    const { data: praticheData, error: praticheError } = await supabaseAny
+      .from("tbPraticheAML")
+      .select(`
+        id,
+        studio_id,
+        cliente_id,
+        societa_id,
+        data_apertura,
+        stato,
+        av1_id,
+        tbclienti (
+          id,
+          cod_cliente,
+          ragione_sociale,
+          utente_operatore_id,
+          utente_operatore:tbutenti!tbclienti_utente_operatore_id_fkey (
+            nome,
+            cognome
+          )
+        )
+      `)
+      .eq("societa_id", societaId)
+      .order("data_apertura", { ascending: false });
+
+    if (praticheError) {
+      console.error("Errore caricamento tbPraticheAML:", praticheError);
+      alert(`Errore caricamento tbPraticheAML: ${praticheError.message}`);
+      setRows([]);
+      return;
+    }
+
+    const praticheRows = (praticheData as PraticaAMLRow[]) || [];
+    const av1IdsPresenti = new Set(
+      av1Rows.map((row) => String(row.id)).filter(Boolean)
+    );
+
+    const praticheOnlyRows: AV1Row[] = praticheRows
+      .filter((pratica) => {
+        if (pratica.av1_id && av1IdsPresenti.has(String(pratica.av1_id))) {
+          return false;
+        }
+        return true;
+      })
+      .map((pratica) => ({
+        id: "",
+        pratica_id: pratica.id,
+        societa_id: pratica.societa_id || null,
+        studio_id: pratica.studio_id || null,
+        cliente_id: pratica.cliente_id || null,
+        incaricato_adeguata_verifica_id: null,
+        DataVerifica: pratica.data_apertura || null,
+        ScadenzaVerifica: null,
+        AV1Conferma: false,
+        AV2Generato: false,
+        AV4Generato: false,
+        tbclienti: pratica.tbclienti || null,
+        av4_info: null,
+        stato_pratica: pratica.stato || "aperta",
+        is_pratica_only: true,
+      }));
+
+    setRows([...praticheOnlyRows, ...av1Rows]);
+  } catch (err: any) {
+    console.error("Errore loadRowsBySocieta:", err);
+    alert(`Errore loadRowsBySocieta: ${err?.message || "errore sconosciuto"}`);
+    setRows([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const clearAmlTimers = () => {
     if (inactivityTimeoutRef.current) {
@@ -602,14 +690,18 @@ const getAV4IconBorderClass = (row: AV1Row) => {
     };
   }, [router.events]);
 
-  const filteredRows = useMemo(() => {
-    if (!societaFilter || !canAccessAntiriciclaggio) return [];
+ const filteredRows = useMemo(() => {
+  if (!societaFilter || !canAccessAntiriciclaggio) return [];
 
-    return rows.filter((row) => {
-      const responsabile = getResponsabileById(row.incaricato_adeguata_verifica_id);
-      return responsabile?.societa_id === societaFilter;
-    });
-  }, [rows, responsabili, societaFilter, canAccessAntiriciclaggio]);
+  return rows.filter((row) => {
+    if (row.is_pratica_only) {
+      return row.societa_id === societaFilter;
+    }
+
+    const responsabile = getResponsabileById(row.incaricato_adeguata_verifica_id);
+    return responsabile?.societa_id === societaFilter;
+  });
+}, [rows, responsabili, societaFilter, canAccessAntiriciclaggio]);
 
   const handleSocietaChange = (societaId: string) => {
     if (isSocietaSelectionLocked) return;
@@ -714,11 +806,24 @@ const handleNuovoAV1 = () => {
   );
 };
 
-const handleApriAV1 = (id: string) => {
+const handleApriAV1 = (row: AV1Row) => {
   if (!canAccessAntiriciclaggio) return;
-  router.push(`/antiriciclaggio/modello-av1?id=${id}`);
-};
 
+  if (row.id) {
+    router.push(`/antiriciclaggio/modello-av1?id=${row.id}`);
+    return;
+  }
+
+  if (row.pratica_id) {
+    router.push(
+      `/antiriciclaggio/modello-av1?pratica_id=${row.pratica_id}&societa_id=${row.societa_id || ""}&cliente_id=${row.cliente_id || ""}&studio_id=${row.studio_id || ""}`
+    );
+    return;
+  }
+
+  alert("Impossibile aprire AV1: pratica non valida.");
+};
+  
 const handleApriAV2 = async (row: AV1Row) => {
   if (!canAccessAntiriciclaggio) return;
 
@@ -1074,8 +1179,11 @@ const handleApriDocumenti = (row: AV1Row) => {
                 filteredRows.map((row) => {
                   const cliente = getCliente(row);
                   const av4Info = getAV4Info(row);
-                  const nomeCliente =
-                    cliente?.ragione_sociale || cliente?.cod_cliente || "-";
+                 const nomeCliente =
+  cliente?.ragione_sociale ||
+  cliente?.cod_cliente ||
+  cliente?.codice_fiscale ||
+  "-";
                   const statoInfo = getStatoInfo(row);
 
                   return (
@@ -1151,7 +1259,7 @@ const handleApriDocumenti = (row: AV1Row) => {
                         <div className="flex items-center justify-center gap-3">
                           <button
                             type="button"
-                            onClick={() => handleApriAV1(row.id)}
+                            onClick={() => handleApriAV1(row)}
                             className={`rounded-[28px] bg-white p-1 transition hover:scale-105 ${getIconBorderClass(
                               !!row.AV1Conferma
                             )}`}
@@ -1165,7 +1273,7 @@ const handleApriDocumenti = (row: AV1Row) => {
                           <button
                             type="button"
                             onClick={() => handleApriAV2(row)}
-                            disabled={workingId === row.id}
+                            disabled={workingId === row.id || row.is_pratica_only}
                             className={`rounded-[28px] bg-white p-1 transition hover:scale-105 disabled:opacity-60 ${getIconBorderClass(
                               !!row.AV2Generato
                             )}`}
@@ -1179,7 +1287,7 @@ const handleApriDocumenti = (row: AV1Row) => {
  <button
   type="button"
   onClick={() => handleApriAV4(row)}
-  disabled={workingId === row.id}
+  disabled={workingId === row.id || row.is_pratica_only}
   className={`rounded-[28px] bg-white p-1 transition hover:scale-105 disabled:opacity-60 ${getAV4IconBorderClass(
     row
   )}`}
@@ -1193,7 +1301,8 @@ const handleApriDocumenti = (row: AV1Row) => {
 <button
   type="button"
   onClick={() => handleApriDocumenti(row)}
-  className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-blue-500 bg-white shadow-[0_0_8px_rgba(59,130,246,0.35)] transition hover:scale-105"
+  disabled={row.is_pratica_only}
+  className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-blue-500 bg-white shadow-[0_0_8px_rgba(59,130,246,0.35)] transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50"
   title="Apri fascicolo documenti"
 >
   <FolderOpen
@@ -1205,7 +1314,8 @@ const handleApriDocumenti = (row: AV1Row) => {
 <button
   type="button"
   onClick={() => handleEliminaCompleto(row.id)}
-  className="ml-2 flex h-8 w-8 items-center justify-center rounded-full bg-white transition hover:scale-105"
+  disabled={row.is_pratica_only}
+  className="ml-2 flex h-8 w-8 items-center justify-center rounded-full bg-white transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50"
   title="Elimina record completo"
 >
   <Trash2
