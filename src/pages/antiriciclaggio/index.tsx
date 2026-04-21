@@ -946,11 +946,12 @@ const handleApriDocumenti = (row: AV1Row) => {
   );
 };
 
-  const handleEliminaCompleto = async (av1Id: string) => {
-    if (!canAccessAntiriciclaggio) return;
+ const handleEliminaCompleto = async (row: AV1Row) => {
+  if (!canAccessAntiriciclaggio) return;
 
+  if (row.is_pratica_only && row.pratica_id) {
     const conferma = window.confirm(
-      "Vuoi eliminare AV1 e gli eventuali AV2/AV4 collegati?"
+      "Vuoi eliminare questa pratica AML anche se non sono ancora stati creati i moduli collegati?"
     );
     if (!conferma) return;
 
@@ -958,55 +959,91 @@ const handleApriDocumenti = (row: AV1Row) => {
       const supabase = getSupabaseClient();
       const supabaseAny = supabase as any;
 
-      const { data: av4Rows, error: av4Error } = await supabaseAny
-        .from("tbAV4")
-        .select("id")
-        .eq("av1_id", av1Id);
-
-      if (av4Error) throw av4Error;
-
-      const av4Ids = (av4Rows || []).map((r: any) => r.id);
-
-      if (av4Ids.length > 0) {
-        const { error: titolariError } = await supabaseAny
-          .from("tbAV4_titolari")
-          .delete()
-          .in("av4_id", av4Ids);
-
-        if (titolariError) throw titolariError;
-
-        const { error: deleteAV4Error } = await supabaseAny
-          .from("tbAV4")
-          .delete()
-          .in("id", av4Ids);
-
-        if (deleteAV4Error) throw deleteAV4Error;
-      }
-
-      const { error: deleteAV2Error } = await supabaseAny
-        .from("tbAV2")
+      const { error: deletePraticaError } = await supabaseAny
+        .from("tbPraticheAML")
         .delete()
-        .eq("av1_id", av1Id);
+        .eq("id", row.pratica_id);
 
-      if (deleteAV2Error) throw deleteAV2Error;
-
-      const { error: deleteAV1Error } = await supabaseAny
-        .from("tbAV1")
-        .delete()
-        .eq("id", av1Id);
-
-      if (deleteAV1Error) throw deleteAV1Error;
+      if (deletePraticaError) throw deletePraticaError;
 
       await loadRowsBySocieta(societaFilter);
     } catch (err: any) {
-      console.error("Errore eliminazione completa:", err);
+      console.error("Errore eliminazione pratica AML:", err);
       alert(
-        `Errore durante l'eliminazione del record: ${
+        `Errore durante l'eliminazione della pratica: ${
           err?.message || "errore sconosciuto"
         }`
       );
     }
-  };
+
+    return;
+  }
+
+  const av1Id = row.id;
+
+  if (!av1Id) {
+    alert("Impossibile eliminare il record: identificativo AV1 mancante.");
+    return;
+  }
+
+  const conferma = window.confirm(
+    "Vuoi eliminare AV1 e gli eventuali AV2/AV4 collegati?"
+  );
+  if (!conferma) return;
+
+  try {
+    const supabase = getSupabaseClient();
+    const supabaseAny = supabase as any;
+
+    const { data: av4Rows, error: av4Error } = await supabaseAny
+      .from("tbAV4")
+      .select("id")
+      .eq("av1_id", av1Id);
+
+    if (av4Error) throw av4Error;
+
+    const av4Ids = (av4Rows || []).map((r: any) => r.id);
+
+    if (av4Ids.length > 0) {
+      const { error: titolariError } = await supabaseAny
+        .from("tbAV4_titolari")
+        .delete()
+        .in("av4_id", av4Ids);
+
+      if (titolariError) throw titolariError;
+
+      const { error: deleteAV4Error } = await supabaseAny
+        .from("tbAV4")
+        .delete()
+        .in("id", av4Ids);
+
+      if (deleteAV4Error) throw deleteAV4Error;
+    }
+
+    const { error: deleteAV2Error } = await supabaseAny
+      .from("tbAV2")
+      .delete()
+      .eq("av1_id", av1Id);
+
+    if (deleteAV2Error) throw deleteAV2Error;
+
+    const { error: deleteAV1Error } = await supabaseAny
+      .from("tbAV1")
+      .delete()
+      .eq("id", av1Id);
+
+    if (deleteAV1Error) throw deleteAV1Error;
+
+    await loadRowsBySocieta(societaFilter);
+  } catch (err: any) {
+    console.error("Errore eliminazione completa:", err);
+    alert(
+      `Errore durante l'eliminazione del record: ${
+        err?.message || "errore sconosciuto"
+      }`
+    );
+  }
+};
 
   return (
     <div className="p-6">
@@ -1313,7 +1350,7 @@ const handleApriDocumenti = (row: AV1Row) => {
 
 <button
   type="button"
-  onClick={() => handleEliminaCompleto(row.id)}
+  onClick={() => handleEliminaCompleto(row)}
   className="ml-2 flex h-8 w-8 items-center justify-center rounded-full bg-white transition hover:scale-105"
   title="Elimina record completo"
 >
