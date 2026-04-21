@@ -978,29 +978,31 @@ const handleEliminaCompleto = async (row: AV1Row) => {
     const supabase = getSupabaseClient();
     const supabaseAny = supabase as any;
 
-    // CASO 1: pratica senza moduli ancora creati
-    if (row.is_pratica_only && row.pratica_id) {
+    // CASO PRATICA NUOVA DA tbPraticheAML
+    if (row.pratica_id) {
       const conferma = window.confirm(
-        `Vuoi eliminare questa pratica AML?\n\nID pratica: ${row.pratica_id}`
+        `Vuoi eliminare questa pratica AML?\n\nPratica ID: ${row.pratica_id}`
       );
       if (!conferma) return;
 
-      const { error: deletePraticaError } = await supabaseAny
+      const { error } = await supabaseAny
         .from("tbPraticheAML")
         .delete()
         .eq("id", row.pratica_id);
 
-      if (deletePraticaError) throw deletePraticaError;
+      if (error) throw error;
+
+      console.log("DELETE tbPraticheAML OK:", row.pratica_id);
 
       await loadRowsBySocieta(societaFilter);
       return;
     }
 
-    // CASO 2: riga AV1 reale
+    // CASO PRATICA VECCHIA BASATA SU AV1
     const av1Id = row.id;
 
     if (!av1Id) {
-      alert("Impossibile eliminare il record: identificativo AV1 mancante.");
+      alert("Impossibile eliminare il record: mancano sia pratica_id che id AV1.");
       return;
     }
 
@@ -1009,7 +1011,6 @@ const handleEliminaCompleto = async (row: AV1Row) => {
     );
     if (!conferma) return;
 
-    // prima recupero gli eventuali AV4 collegati
     const { data: av4Rows, error: av4Error } = await supabaseAny
       .from("tbAV4")
       .select("id")
@@ -1049,14 +1050,14 @@ const handleEliminaCompleto = async (row: AV1Row) => {
 
     if (deleteAV1Error) throw deleteAV1Error;
 
-    // QUESTO ERA IL PEZZO CHE MANCAVA:
-    // elimina anche la pratica AML collegata a quell'AV1
     const { error: deletePraticaByAv1Error } = await supabaseAny
       .from("tbPraticheAML")
       .delete()
       .eq("av1_id", av1Id);
 
     if (deletePraticaByAv1Error) throw deletePraticaByAv1Error;
+
+    console.log("DELETE pratica vecchia OK:", av1Id);
 
     await loadRowsBySocieta(societaFilter);
   } catch (err: any) {
@@ -1374,7 +1375,10 @@ const handleEliminaCompleto = async (row: AV1Row) => {
 
 <button
   type="button"
-  onClick={() => handleEliminaCompleto(row)}
+  onClick={() => {
+  console.log("DELETE ROW", row);
+  handleEliminaCompleto(row);
+}}
   className="ml-2 flex h-8 w-8 items-center justify-center rounded-full bg-white transition hover:scale-105"
   title="Elimina record completo"
 >
