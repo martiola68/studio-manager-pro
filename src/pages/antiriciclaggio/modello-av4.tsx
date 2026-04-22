@@ -274,6 +274,15 @@ function pickString(...values: any[]): string {
   return "";
 }
 
+function escapeHtml(value: string): string {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export default function ModelloAV4() {
   const router = useRouter();
 
@@ -1031,9 +1040,14 @@ function handleApriPdfFirmato() {
           return;
         }
 
-       const html = `
+        const safeNomeDestinatario = escapeHtml(nomeDestinatario);
+const safeNomeOperatore = escapeHtml(nomeOperatore);
+const safeUrl = String(url || "").trim();
+
+
+ const html = `
   <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
-    <p>Gentile ${nomeDestinatario},</p>
+    <p>Gentile ${safeNomeDestinatario},</p>
 
     <p>
       ai fini degli adempimenti previsti dalla normativa antiriciclaggio
@@ -1058,7 +1072,7 @@ function handleApriPdfFirmato() {
     </p>
 
     <p>
-      <a href="${url}" target="_blank" rel="noopener noreferrer">
+      <a href="${safeUrl}" target="_blank" rel="noopener noreferrer">
         Apri il link per compilazione, firma e caricamento del Modello AV4
       </a>
     </p>
@@ -1077,9 +1091,10 @@ function handleApriPdfFirmato() {
       ⚠️ Il collegamento sarà disattivato al completamento della procedura.
     </p>
 
-    <p>Cordiali saluti,<br/>${nomeOperatore}</p>
+    <p>Cordiali saluti,<br/>${safeNomeOperatore}</p>
   </div>
 `;
+        
 const text = `
 Gentile ${nomeDestinatario},
 
