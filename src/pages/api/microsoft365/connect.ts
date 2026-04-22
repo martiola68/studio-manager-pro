@@ -1,11 +1,22 @@
 // src/pages/api/microsoft365/connect.ts
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import crypto from "crypto";
 
 function getBearerToken(req: NextApiRequest) {
-  const h = req.headers.authorization || "";
-  const m = h.match(/^Bearer\s+(.+)$/i);
-  return m?.[1] || null;
+  const header = typeof req.headers.authorization === "string"
+    ? req.headers.authorization
+    : "";
+
+  if (!header) return null;
+
+  const lower = header.toLowerCase();
+  if (!lower.startsWith("bearer ")) {
+    return null;
+  }
+
+  const token = header.slice(7).trim();
+  return token || null;
 }
 
 function appBaseUrl(req: NextApiRequest) {
@@ -20,14 +31,8 @@ function appBaseUrl(req: NextApiRequest) {
   return `${proto}://${host}`;
 }
 
-function randomState(len = 48) {
-  const chars =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let out = "";
-  for (let i = 0; i < len; i++) {
-    out += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return out;
+function randomState(byteLength = 48) {
+  return crypto.randomBytes(byteLength).toString("hex");
 }
 
 export default async function handler(
