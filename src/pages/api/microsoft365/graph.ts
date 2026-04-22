@@ -73,7 +73,7 @@ function isAllowedGraphPath(pathname: string): boolean {
   );
 }
 
-function normalizeGraphUrl(endpoint: string): string {
+function normalizeGraphPath(endpoint: string): string {
   if (typeof endpoint !== "string") {
     throw new Error("Endpoint non valido");
   }
@@ -84,58 +84,33 @@ function normalizeGraphUrl(endpoint: string): string {
     throw new Error("Endpoint mancante");
   }
 
-  // Blocca esplicitamente schemi non consentiti
-  if (/^http:\/\//i.test(trimmed)) {
-    throw new Error("Sono consentiti solo endpoint HTTPS di Microsoft Graph");
+  // Non accettiamo URL assoluti: solo path relativi di Microsoft Graph
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)) {
+    throw new Error("Passare solo path relativi Microsoft Graph");
   }
 
-  // Se arriva già come URL assoluto, lo accettiamo solo se è Graph ufficiale
-  if (/^https:\/\//i.test(trimmed)) {
-    const absoluteUrl = new URL(trimmed);
-
-    if (
-      absoluteUrl.protocol !== "https:" ||
-      absoluteUrl.hostname !== "graph.microsoft.com" ||
-      absoluteUrl.username ||
-      absoluteUrl.password ||
-      absoluteUrl.port ||
-      !isAllowedGraphPath(absoluteUrl.pathname)
-    ) {
-      throw new Error("Endpoint Microsoft Graph non consentito");
-    }
-
-    return `https://graph.microsoft.com${absoluteUrl.pathname}${absoluteUrl.search}`;
-  }
-
-  // Da qui in poi accettiamo solo path relativi Graph
   const ep = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
   const fullPath =
     ep.startsWith("/v1.0") || ep.startsWith("/beta") ? ep : `/v1.0${ep}`;
 
   const parsed = new URL(`https://graph.microsoft.com${fullPath}`);
 
-  if (!isAllowedGraphPath(parsed.pathname)) {
+  if (
+    parsed.protocol !== "https:" ||
+    parsed.hostname !== "graph.microsoft.com" ||
+    parsed.username ||
+    parsed.password ||
+    parsed.port ||
+    !isAllowedGraphPath(parsed.pathname)
+  ) {
     throw new Error("Path Microsoft Graph non consentito");
   }
 
-  return `https://graph.microsoft.com${parsed.pathname}${parsed.search}`;
+  return `${parsed.pathname}${parsed.search}`;
 }
 
-function isAllowedGraphUrl(urlStr: string): boolean {
-  try {
-    const u = new URL(urlStr);
-
-    return (
-      u.protocol === "https:" &&
-      u.hostname === "graph.microsoft.com" &&
-      !u.username &&
-      !u.password &&
-      !u.port &&
-      isAllowedGraphPath(u.pathname)
-    );
-  } catch {
-    return false;
-  }
+function buildGraphUrlFromPath(pathnameWithQuery: string): string {
+  return `https://graph.microsoft.com${pathnameWithQuery}`;
 }
 
 async function resolveMicrosoftConnection(
@@ -397,7 +372,6 @@ export default async function handler(
       return res.status(401).json({ error: "Invalid session" });
     }
 
-   const authUserId = userData.user.id;
 const authUserEmail = userData.user.email || "";
 
 const { data: sessionUserRow, error: sessionUserErr } = await supabaseAdmin
@@ -444,12 +418,8 @@ const sessionStudioId = String(sessionUserRow.studio_id);
       return res.status(403).json({ error: "Utente target fuori dallo studio" });
     }
 
-    const url = normalizeGraphUrl(String(endpoint));
-    if (!isAllowedGraphUrl(url)) {
-      return res.status(400).json({
-        error: "Endpoint non consentito (solo graph.microsoft.com)",
-      });
-    }
+   const graphPath = normalizeGraphPath(String(endpoint));
+const url = buildGraphUrlFromPath(graphPath);
 
     const httpMethod = String(method).toUpperCase();
     if (!["GET", "POST", "PUT", "PATCH", "DELETE"].includes(httpMethod)) {
