@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import path from "path";
 import { createClient } from "@supabase/supabase-js";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 
 function getServerSupabase() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -52,35 +52,41 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // puoi cambiare il path se metti il file altrove
     const filePath = path.join(process.cwd(), "gi_comuni_validita.xlsx");
 
-    const workbook = XLSX.readFile(filePath);
-    const sheetName = workbook.SheetNames[0];
-    const sheet = workbook.Sheets[sheetName];
+    const workbook = new ExcelJS.Workbook();
+await workbook.xlsx.readFile(filePath);
 
-    const rawRows: unknown[][] = XLSX.utils.sheet_to_json(sheet, {
-      header: 1,
-      raw: false,
-      blankrows: false,
-    });
+const worksheet = workbook.worksheets[0];
 
-    const rows: ComuneRow[] = rawRows
-      .map((row) => {
-        const codice = String(row?.[0] || "").trim().toUpperCase();
-        const comune = String(row?.[1] || "").trim();
-        const sigla = String(row?.[2] || "").trim().toUpperCase();
-        const dataInizio = parseExcelDate(row?.[3]);
-        const dataFine = parseExcelDate(row?.[4]);
+if (!worksheet) {
+  return res.status(400).json({ error: "Nessun foglio trovato nel file Excel" });
+}
 
-        if (!codice || !comune) return null;
+const rawRows: unknown[][] = [];
 
-        return {
-          codice_catastale: codice,
-          comune,
-          sigla_provincia: sigla || null,
-          data_inizio_validita: dataInizio,
-          data_fine_validita: dataFine,
-        };
-      })
-      .filter((x): x is ComuneRow => !!x);
+worksheet.eachRow({ includeEmpty: false }, (row) => {
+  const values = Array.isArray(row.values) ? row.values.slice(1) : [];
+  rawRows.push(values);
+});
+
+const rows: ComuneRow[] = rawRows
+  .map((row) => {
+    const codice = String(row?.[0] || "").trim().toUpperCase();
+    const comune = String(row?.[1] || "").trim();
+    const sigla = String(row?.[2] || "").trim().toUpperCase();
+    const dataInizio = parseExcelDate(row?.[3]);
+    const dataFine = parseExcelDate(row?.[4]);
+
+    if (!codice || !comune) return null;
+
+    return {
+      codice_catastale: codice,
+      comune,
+      sigla_provincia: sigla || null,
+      data_inizio_validita: dataInizio,
+      data_fine_validita: dataFine,
+    };
+  })
+  .filter((x): x is ComuneRow => !!x);
 
     if (!rows.length) {
       return res.status(400).json({ error: "Nessuna riga valida trovata nel file Excel" });
