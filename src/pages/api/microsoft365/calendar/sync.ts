@@ -6,9 +6,20 @@ import { ConfidentialClientApplication, LogLevel, AccountInfo } from "@azure/msa
 import { getDecryptedClientSecret } from "../graph";
 
 function getBearerToken(req: NextApiRequest): string | null {
-  const h = req.headers.authorization || "";
-  const m = h.match(/^Bearer\s+(.+)$/i);
-  return m?.[1] ?? null;
+  const header =
+    typeof req.headers.authorization === "string"
+      ? req.headers.authorization
+      : "";
+
+  if (!header) return null;
+
+  const lower = header.toLowerCase();
+  if (!lower.startsWith("bearer ")) {
+    return null;
+  }
+
+  const token = header.slice(7).trim();
+  return token || null;
 }
 
 async function getAuthUser(req: NextApiRequest) {
