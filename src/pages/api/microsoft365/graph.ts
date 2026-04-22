@@ -64,24 +64,75 @@ function buildScopes(scopesStr: string | null): string[] {
   return scopes.length ? scopes : ["User.Read"];
 }
 
+function isAllowedGraphPath(pathname: string): boolean {
+  return (
+    pathname === "/v1.0" ||
+    pathname.startsWith("/v1.0/") ||
+    pathname === "/beta" ||
+    pathname.startsWith("/beta/")
+  );
+}
+
 function normalizeGraphUrl(endpoint: string): string {
-  if (endpoint.startsWith("https://")) {
-    return endpoint;
+  if (typeof endpoint !== "string") {
+    throw new Error("Endpoint non valido");
   }
 
-  const ep = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  const trimmed = endpoint.trim();
 
-  if (ep.startsWith("/v1.0/") || ep.startsWith("/beta/")) {
-    return `https://graph.microsoft.com${ep}`;
+  if (!trimmed) {
+    throw new Error("Endpoint mancante");
   }
 
-  return `https://graph.microsoft.com/v1.0${ep}`;
+  // Blocca esplicitamente schemi non consentiti
+  if (/^http:\/\//i.test(trimmed)) {
+    throw new Error("Sono consentiti solo endpoint HTTPS di Microsoft Graph");
+  }
+
+  // Se arriva già come URL assoluto, lo accettiamo solo se è Graph ufficiale
+  if (/^https:\/\//i.test(trimmed)) {
+    const absoluteUrl = new URL(trimmed);
+
+    if (
+      absoluteUrl.protocol !== "https:" ||
+      absoluteUrl.hostname !== "graph.microsoft.com" ||
+      absoluteUrl.username ||
+      absoluteUrl.password ||
+      absoluteUrl.port ||
+      !isAllowedGraphPath(absoluteUrl.pathname)
+    ) {
+      throw new Error("Endpoint Microsoft Graph non consentito");
+    }
+
+    return `https://graph.microsoft.com${absoluteUrl.pathname}${absoluteUrl.search}`;
+  }
+
+  // Da qui in poi accettiamo solo path relativi Graph
+  const ep = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  const fullPath =
+    ep.startsWith("/v1.0") || ep.startsWith("/beta") ? ep : `/v1.0${ep}`;
+
+  const parsed = new URL(`https://graph.microsoft.com${fullPath}`);
+
+  if (!isAllowedGraphPath(parsed.pathname)) {
+    throw new Error("Path Microsoft Graph non consentito");
+  }
+
+  return `https://graph.microsoft.com${parsed.pathname}${parsed.search}`;
 }
 
 function isAllowedGraphUrl(urlStr: string): boolean {
   try {
     const u = new URL(urlStr);
-    return u.hostname === "graph.microsoft.com";
+
+    return (
+      u.protocol === "https:" &&
+      u.hostname === "graph.microsoft.com" &&
+      !u.username &&
+      !u.password &&
+      !u.port &&
+      isAllowedGraphPath(u.pathname)
+    );
   } catch {
     return false;
   }
