@@ -91,7 +91,11 @@
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
   },
-  "overrides": {
-    "undici": "6.24.0"
-  }
+ "overrides": {
+  "undici": "6.24.0",
+  "basic-ftp": "^5.2.1",
+  "flatted": "^3.3.4",
+  "minimatch": "^9.0.6",
+  "path-to-regexp": "^8.3.2"
+}
 }
