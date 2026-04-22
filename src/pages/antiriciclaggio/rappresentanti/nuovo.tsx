@@ -181,6 +181,41 @@ function isConnectionEnabled(conn: MicrosoftConnectionRow): boolean {
   return true;
 }
 
+function isSafeInternalReturnPath(value: string): boolean {
+  if (!value) return false;
+
+  // solo path interni relativi
+  if (!value.startsWith("/")) return false;
+
+  // blocca protocol-relative //evil.com
+  if (value.startsWith("//")) return false;
+
+  // blocca tentativi javascript:, data:, ecc.
+  const lower = value.trim().toLowerCase();
+  if (
+    lower.startsWith("javascript:") ||
+    lower.startsWith("data:") ||
+    lower.startsWith("vbscript:")
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+function getSafeInternalReturnPath(value: string, fallback: string): string {
+  return isSafeInternalReturnPath(value) ? value : fallback;
+}
+
+function isSafeHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 export default function NuovoRappresentantePage() {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -561,35 +596,42 @@ export default function NuovoRappresentantePage() {
     }
   }
 
-  async function handleOpenDoc() {
-    if (!form.allegato_doc) return;
+ async function handleOpenDoc() {
+  if (!form.allegato_doc) return;
 
-    setErrMsg(null);
+  setErrMsg(null);
 
-    try {
-      const response = await fetch("/api/rapp-legali/open-doc", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ path: form.allegato_doc }),
-      });
+  try {
+    const response = await fetch("/api/rapp-legali/open-doc", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ path: form.allegato_doc }),
+    });
 
-      const result = await response.json();
+    const result = await response.json();
 
-      if (!response.ok || !result?.ok) {
-        throw new Error(result?.error || "Errore apertura documento");
-      }
-
-      if (!result?.signedUrl) {
-        throw new Error("URL documento non disponibile.");
-      }
-
-      window.open(result.signedUrl, "_blank", "noopener,noreferrer");
-    } catch (error: any) {
-      setErrMsg(error?.message || "Errore apertura documento");
+    if (!response.ok || !result?.ok) {
+      throw new Error(result?.error || "Errore apertura documento");
     }
+
+    const signedUrl =
+      typeof result?.signedUrl === "string" ? result.signedUrl.trim() : "";
+
+    if (!signedUrl) {
+      throw new Error("URL documento non disponibile.");
+    }
+
+    if (!isSafeHttpUrl(signedUrl)) {
+      throw new Error("URL documento non valido.");
+    }
+
+    window.open(signedUrl, "_blank", "noopener,noreferrer");
+  } catch (error: any) {
+    setErrMsg(error?.message || "Errore apertura documento");
   }
+}
 
  function handleRemoveDoc() {
   setForm((prev) => ({
@@ -759,11 +801,15 @@ async function handleInviaRichiestaDocumento() {
             );
           }
 
-          if (returnTo) {
-            const sep = returnTo.includes("?") ? "&" : "?";
-            await router.push(`${returnTo}${sep}rapp_saved=1`);
-            return;
-          }
+        if (returnTo) {
+  const safeReturnTo = getSafeInternalReturnPath(
+    returnTo,
+    "/antiriciclaggio/rappresentanti"
+  );
+  const sep = safeReturnTo.includes("?") ? "&" : "?";
+  await router.push(`${safeReturnTo}${sep}rapp_saved=1`);
+  return;
+}
 
           const fallbackParams = new URLSearchParams({
             av1_id: av1IdFromQuery || "",
@@ -793,14 +839,16 @@ async function handleInviaRichiestaDocumento() {
 }
 
   function handleCancel() {
-    if (from === "av4" && returnTo) {
-      void router.push(returnTo);
-      return;
-    }
-
-    void router.push("/antiriciclaggio/rappresentanti");
+  if (from === "av4" && returnTo) {
+    void router.push(
+      getSafeInternalReturnPath(returnTo, "/antiriciclaggio/rappresentanti")
+    );
+    return;
   }
 
+  void router.push("/antiriciclaggio/rappresentanti");
+}
+  
   return (
     <div className="p-6 space-y-6">
       <Card>
