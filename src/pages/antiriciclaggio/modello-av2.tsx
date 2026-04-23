@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/lib/supabase/client";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 import { getStudioId } from "@/services/getStudioId";
 import { useRouter } from "next/router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,21 +20,23 @@ type AV2FormState = {
   studio_id: string;
   cliente_id: string;
   av1_id: string;
+  av4_id: string;
   data_check: string;
   firma_check: string;
   [key: string]: string | boolean | undefined;
 };
 
 const buildInitialForm = (studioId: string): AV2FormState => {
-  const base: AV2FormState = {
-    id: "",
-    pratica_id: "",
-    studio_id: studioId,
-    cliente_id: "",
-    av1_id: "",
-    data_check: "",
-    firma_check: "",
-  };
+ const base: AV2FormState = {
+  id: "",
+  pratica_id: "",
+  studio_id: studioId,
+  cliente_id: "",
+  av1_id: "",
+  av4_id: "",
+  data_check: "",
+  firma_check: "",
+};
 
   for (let i = 1; i <= 23; i++) {
     base[`spunta${i}`] = false;
@@ -76,12 +78,14 @@ export default function ModelloAV2Page() {
     try {
       if (!av1IdValue) return;
 
-      const { data: av1Row, error: av1Error } = await (supabase as any)
-        .from("tbAV1")
-        .select("id, studio_id, cliente_id, DataVerifica")
-        .eq("id", Number(av1IdValue))
-        .single();
+     const supabase = getSupabaseClient() as any;
 
+const { data: av1Row, error: av1Error } = await supabase
+  .from("tbAV1")
+  .select("id, studio_id, cliente_id, pratica_id, DataVerifica")
+  .eq("id", Number(av1IdValue))
+  .single();
+      
       if (av1Error) {
         console.error("Errore caricamento AV1:", av1Error);
         setError(av1Error.message);
@@ -93,13 +97,18 @@ export default function ModelloAV2Page() {
       const resolvedStudioId = av1Row.studio_id || studioIdValue || "";
       const resolvedClienteId = av1Row.cliente_id || "";
 
-      setForm((prev) => ({
-        ...buildInitialForm(resolvedStudioId),
-        ...prev,
-        studio_id: resolvedStudioId,
-        av1_id: String(av1Row.id),
-        cliente_id: resolvedClienteId,
-      }));
+     setForm((prev) => ({
+  ...buildInitialForm(resolvedStudioId),
+  ...prev,
+  pratica_id:
+    av1Row.pratica_id
+      ? String(av1Row.pratica_id)
+      : prev.pratica_id || "",
+  studio_id: resolvedStudioId,
+  av1_id: String(av1Row.id),
+  cliente_id: resolvedClienteId,
+}));
+      
     } catch (err: any) {
       console.error("Errore prefill AV2 da AV1:", err);
       setError(err?.message || "Errore durante il prefill da AV1.");
@@ -110,12 +119,14 @@ export default function ModelloAV2Page() {
     try {
       if (!praticaIdValue) return;
 
-      const { data: praticaRow, error: praticaError } = await (supabase as any)
-        .from("tbPraticheAML")
-        .select("id, studio_id, cliente_id, data_apertura, av1_id")
-        .eq("id", praticaIdValue)
-        .single();
+     const supabase = getSupabaseClient() as any;
 
+const { data: praticaRow, error: praticaError } = await supabase
+  .from("tbPraticheAML")
+  .select("id, studio_id, cliente_id, data_apertura, av1_id, av1_corrente_id, av4_id, av4_corrente_id")
+  .eq("id", praticaIdValue)
+  .single();
+      
       if (praticaError) {
         console.error("Errore caricamento pratica AML:", praticaError);
         setError(praticaError.message);
@@ -135,15 +146,24 @@ export default function ModelloAV2Page() {
         (typeof cliente_id === "string" ? cliente_id : "") ||
         "";
 
-      setForm((prev) => ({
-        ...buildInitialForm(resolvedStudioId),
-        ...prev,
-        pratica_id: String(praticaRow.id),
-        studio_id: resolvedStudioId,
-        cliente_id: resolvedClienteId,
-        av1_id: praticaRow.av1_id ? String(praticaRow.av1_id) : "",
-        data_check: normalizeDateValue(praticaRow.data_apertura),
-      }));
+     setForm((prev) => ({
+  ...buildInitialForm(resolvedStudioId),
+  ...prev,
+  pratica_id: String(praticaRow.id),
+  studio_id: resolvedStudioId,
+  cliente_id: resolvedClienteId,
+  av1_id: praticaRow.av1_corrente_id
+    ? String(praticaRow.av1_corrente_id)
+    : praticaRow.av1_id
+    ? String(praticaRow.av1_id)
+    : "",
+  av4_id: praticaRow.av4_corrente_id
+    ? String(praticaRow.av4_corrente_id)
+    : praticaRow.av4_id
+    ? String(praticaRow.av4_id)
+    : "",
+  data_check: normalizeDateValue(praticaRow.data_apertura),
+}));
     } catch (err: any) {
       console.error("Errore prefill AV2 da pratica:", err);
       setError(err?.message || "Errore durante il prefill da pratica.");
@@ -191,20 +211,21 @@ export default function ModelloAV2Page() {
           }
 
            if (data) {
-            setForm({
-              ...buildInitialForm(data.studio_id || currentStudioId),
-              ...data,
-              id: String(data.id),
-              pratica_id:
-                data.pratica_id ||
-                (typeof pratica_id === "string" ? pratica_id : "") ||
-                "",
-              studio_id: data.studio_id || currentStudioId,
-              cliente_id: data.cliente_id || "",
-              av1_id: data.av1_id ? String(data.av1_id) : "",
-              data_check: normalizeDateValue(data.data_check),
-              firma_check: data.firma_check || "",
-            });
+           setForm({
+  ...buildInitialForm(data.studio_id || currentStudioId),
+  ...data,
+  id: String(data.id),
+  pratica_id:
+    data.pratica_id ||
+    (typeof pratica_id === "string" ? pratica_id : "") ||
+    "",
+  studio_id: data.studio_id || currentStudioId,
+  cliente_id: data.cliente_id || "",
+  av1_id: data.av1_id ? String(data.av1_id) : "",
+  av4_id: data.av4_id ? String(data.av4_id) : "",
+  data_check: normalizeDateValue(data.data_check),
+  firma_check: data.firma_check || "",
+});
             return;
           }
         }
@@ -252,6 +273,8 @@ export default function ModelloAV2Page() {
       setSaving(true);
       setError(null);
 
+      const supabase = getSupabaseClient() as any;
+
       if (!studioId) {
         alert("Studio non disponibile.");
         return;
@@ -262,15 +285,20 @@ export default function ModelloAV2Page() {
         return;
       }
 
-     const payload: Record<string, unknown> = {
-        studio_id: studioId,
-        cliente_id: form.cliente_id,
-        pratica_id: form.pratica_id || null,
-        av1_id: form.av1_id ? Number(form.av1_id) : null,
-        data_check: form.data_check || null,
-        firma_check: form.firma_check || null,
-      };
+      if (!form.av4_id) {
+  alert("AV4 corrente non disponibile. Apri prima o salva il modello AV4 della pratica.");
+  return;
+}
 
+    const payload: Record<string, unknown> = {
+  studio_id: studioId,
+  cliente_id: form.cliente_id,
+  pratica_id: form.pratica_id || null,
+  av1_id: form.av1_id ? Number(form.av1_id) : null,
+  av4_id: form.av4_id || null,
+  data_check: form.data_check || null,
+  firma_check: form.firma_check || null,
+};
       for (let i = 1; i <= 23; i++) {
         payload[`spunta${i}`] = !!form[`spunta${i}`];
         payload[`annotazioni${i}`] = String(form[`annotazioni${i}`] || "");
@@ -315,6 +343,21 @@ export default function ModelloAV2Page() {
           console.error("Errore aggiornamento AV2Generato:", av1UpdateError);
         }
       }
+
+      if (savedId && form.pratica_id) {
+  const { error: praticaUpdateError } = await supabase
+    .from("tbPraticheAML")
+    .update({
+      av2_id: savedId,
+      av2_corrente_id: savedId,
+      stato_ciclo: "av2_in_lavorazione",
+    })
+    .eq("id", form.pratica_id);
+
+  if (praticaUpdateError) {
+    console.error("Errore aggiornamento pratica AV2 corrente:", praticaUpdateError);
+  }
+}
       
        setForm((prev) => ({
         ...prev,
