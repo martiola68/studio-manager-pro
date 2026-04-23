@@ -473,32 +473,33 @@ export default function ModelloAV4() {
         console.error("Errore caricamento tbPraticheAML:", praticaError);
       }
 
-        if (praticaRow) {
-        resolvedStudioId = pickString(
-          praticaRow?.studio_id,
-          resolvedStudioId
-        );
+ if (praticaRow) {
+  resolvedStudioId = pickString(
+    praticaRow?.studio_id,
+    resolvedStudioId
+  );
 
-        resolvedClienteId = pickString(
-          praticaRow?.cliente_id,
-          resolvedClienteId
-        );
+  resolvedClienteId = pickString(
+    praticaRow?.cliente_id,
+    resolvedClienteId
+  );
 
-        resolvedSocietaId = pickString(
-          praticaRow?.societa_id,
-          resolvedSocietaId
-        );
+  resolvedSocietaId = pickString(
+    praticaRow?.societa_id,
+    resolvedSocietaId
+  );
 
-        resolvedAv1Id = pickString(
-          praticaRow?.av1_id,
-          resolvedAv1Id
-        );
+  resolvedAv1Id = pickString(
+    praticaRow?.av1_id,
+    praticaRow?.av1_corrente_id,
+    resolvedAv1Id
+  );
 
-        naturaPrestazione = pickString(
-          praticaRow?.tipo_prestazione,
-          naturaPrestazione
-        );
-      }
+  naturaPrestazione = pickString(
+    praticaRow?.tipo_prestazione,
+    naturaPrestazione
+  );
+}
     }
 
     if (resolvedAv1Id) {
@@ -588,19 +589,38 @@ export default function ModelloAV4() {
           }
         }
 
-        if (!existingRow && praticaIdFromQuery) {
-          const { data, error } = await supabase
-            .from("tbAV4")
-            .select("*")
-            .eq("pratica_id", praticaIdFromQuery)
-            .maybeSingle();
+      if (!existingRow && praticaIdFromQuery) {
+  const { data: praticaRow, error: praticaError } = await supabase
+    .from("tbPraticheAML")
+    .select("id, av4_id, av4_corrente_id")
+    .eq("id", praticaIdFromQuery)
+    .maybeSingle();
 
-          if (error) {
-            console.error("Errore caricamento AV4 da pratica_id:", error);
-          } else {
-            existingRow = data || null;
-          }
-        }
+  if (praticaError) {
+    console.error("Errore caricamento pratica AML per AV4 corrente:", praticaError);
+  } else {
+    const currentAv4Id =
+      praticaRow?.av4_corrente_id != null
+        ? String(praticaRow.av4_corrente_id)
+        : praticaRow?.av4_id != null
+        ? String(praticaRow.av4_id)
+        : "";
+
+    if (currentAv4Id) {
+      const { data, error } = await supabase
+        .from("tbAV4")
+        .select("*")
+        .eq("id", currentAv4Id)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Errore caricamento AV4 corrente da pratica:", error);
+      } else {
+        existingRow = data || null;
+      }
+    }
+  }
+}
 
         if (!existingRow && av1IdFromQuery) {
           const { data, error } = await supabase
@@ -833,10 +853,9 @@ function validateBeforeSave() {
   }
 
   // 👇 QUESTO È QUELLO CHE TI MANCA
-  if (form.pratica_id && !form.societa_id) {
-    alert("Società non valorizzata: impossibile salvare AV4 nel nuovo flusso pratica.");
-    return false;
-  }
+ if (form.pratica_id && !form.societa_id) {
+  console.warn("societa_id non valorizzato su AV4: fallback legacy attivo.");
+}
 
   if (!form.cliente_id) {
     alert("Cliente non valorizzato.");
@@ -1403,24 +1422,28 @@ ${nomeOperatore}
 
         savedId = String(data.id);
         setAv4Id(savedId);
-      }
-  if (savedId && form.pratica_id) {
-        const { error: praticaUpdateError } = await supabase
-          .from("tbPraticheAML")
-          .update({
-            av4_id: savedId,
-            stato: "av4_compilato",
-          })
-          .eq("id", form.pratica_id);
+if (savedId && form.pratica_id) {
+  const praticaUpdatePayload: any = {
+    av4_id: savedId,
+    stato: "av4_compilato",
+  };
 
-        if (praticaUpdateError) {
-          console.error("Errore aggiornamento tbPraticheAML:", praticaUpdateError);
-          alert(
-            `AV4 salvato, ma non è stato possibile aggiornare la pratica AML: ${praticaUpdateError.message}`
-          );
-          return;
-        }
-      }
+  praticaUpdatePayload.av4_corrente_id = savedId;
+  praticaUpdatePayload.stato_ciclo = "av4_compilato";
+
+  const { error: praticaUpdateError } = await supabase
+    .from("tbPraticheAML")
+    .update(praticaUpdatePayload)
+    .eq("id", form.pratica_id);
+
+  if (praticaUpdateError) {
+    console.error("Errore aggiornamento tbPraticheAML:", praticaUpdateError);
+    alert(
+      `AV4 salvato, ma non è stato possibile aggiornare la pratica AML: ${praticaUpdateError.message}`
+    );
+    return;
+  }
+}
       
       alert("AV4 salvato correttamente.");
 
@@ -2184,9 +2207,9 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
 
                 {av4Id && (
                   <div className="md:col-span-2">
-                    <p className="text-sm text-green-700">
-                      AV4 salvato. ID pratica: {av4Id}
-                    </p>
+                 <p className="text-sm text-green-700">
+                  AV4 salvato. ID AV4: {av4Id}
+                  </p>
                   </div>
                 )}
 
