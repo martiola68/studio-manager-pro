@@ -574,9 +574,8 @@ if (currentAv1Id) {
   return;
 }
 
-   setFormData((prev) => ({
+  setFormData((prev) => ({
   ...initialFormData,
-  studio_id: prev.studio_id,
   ...prev,
   id: "",
   pratica_id: String(data.id),
