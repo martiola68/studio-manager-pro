@@ -456,32 +456,83 @@ const refreshEncryptionEnabled = async (studioIdValue?: string) => {
       if (error) throw new Error(error.message);
       if (!data) return;
 
-      setFormData((prev) => ({
-        ...prev,
-        ...data,
-        id: String(data.id),
-        studio_id: data.studio_id ?? prev.studio_id ?? "",
-        cliente_id: data.cliente_id ?? "",
-        Prestazione: data.Prestazione ?? "",
-        ValRischioIner: data.ValRischioIner ?? "",
-        DataVerifica: normalizeDateValue(data.DataVerifica),
-        ScadenzaVerifica: normalizeDateValue(data.ScadenzaVerifica),
-        AV1Conferma: normalizeBoolean(data.AV1Conferma),
-        AV4Generato: normalizeBoolean(data.AV4Generato),
-        allegato_av1_firmato: data.allegato_av1_firmato ?? "",
-        incaricato_adeguata_verifica_id: data.incaricato_adeguata_verifica_id ?? "",
-        A1: normalizeScore(data.A1),
-        A2: normalizeScore(data.A2),
-        A3: normalizeScore(data.A3),
-        A4: normalizeScore(data.A4),
-        B1: normalizeScore(data.B1),
-        B2: normalizeScore(data.B2),
-        B3: normalizeScore(data.B3),
-        B4: normalizeScore(data.B4),
-        B5: normalizeScore(data.B5),
-        B6: normalizeScore(data.B6),
-      }));
+     setFormData((prev) => ({
+  ...prev,
+  ...data,
+  id: String(data.id),
+  pratica_id: data.pratica_id ?? prev.pratica_id ?? "",
+  studio_id: data.studio_id ?? prev.studio_id ?? "",
+  cliente_id: data.cliente_id ?? "",
+  Prestazione: data.Prestazione ?? "",
+  ValRischioIner: data.ValRischioIner ?? "",
+  DataVerifica: normalizeDateValue(data.DataVerifica),
+  ScadenzaVerifica: normalizeDateValue(data.ScadenzaVerifica),
+  AV1Conferma: normalizeBoolean(data.AV1Conferma),
+  AV4Generato: normalizeBoolean(data.AV4Generato),
+  allegato_av1_firmato: data.allegato_av1_firmato ?? "",
+  incaricato_adeguata_verifica_id: data.incaricato_adeguata_verifica_id ?? "",
 
+  A1: normalizeScore(data.A1),
+  a1a: normalizeBoolean(data.a1a),
+  a1b: normalizeBoolean(data.a1b),
+  a1c: normalizeBoolean(data.a1c),
+  a1d: normalizeBoolean(data.a1d),
+  a1e: normalizeBoolean(data.a1e),
+  a1f: normalizeBoolean(data.a1f),
+
+  A2: normalizeScore(data.A2),
+  a2a: normalizeBoolean(data.a2a),
+  a2b: normalizeBoolean(data.a2b),
+  a2c: normalizeBoolean(data.a2c),
+  a2d: normalizeBoolean(data.a2d),
+
+  A3: normalizeScore(data.A3),
+  a3a: normalizeBoolean(data.a3a),
+  a3b: normalizeBoolean(data.a3b),
+  a3c: normalizeBoolean(data.a3c),
+  a3d: normalizeBoolean(data.a3d),
+  a3e: normalizeBoolean(data.a3e),
+
+  A4: normalizeScore(data.A4),
+  a4a: normalizeBoolean(data.a4a),
+  a4b: normalizeBoolean(data.a4b),
+  a4c: normalizeBoolean(data.a4c),
+
+  B1: normalizeScore(data.B1),
+  b1a: normalizeBoolean(data.b1a),
+  b1b: normalizeBoolean(data.b1b),
+  b1c: normalizeBoolean(data.b1c),
+  b1d: normalizeBoolean(data.b1d),
+
+  B2: normalizeScore(data.B2),
+  b2a: normalizeBoolean(data.b2a),
+  b2b: normalizeBoolean(data.b2b),
+  b2c: normalizeBoolean(data.b2c),
+  b2d: normalizeBoolean(data.b2d),
+  b2e: normalizeBoolean(data.b2e),
+
+  B3: normalizeScore(data.B3),
+  b3a: normalizeBoolean(data.b3a),
+  b3b: normalizeBoolean(data.b3b),
+  b3c: normalizeBoolean(data.b3c),
+
+  B4: normalizeScore(data.B4),
+  b4a: normalizeBoolean(data.b4a),
+  b4b: normalizeBoolean(data.b4b),
+  b4c: normalizeBoolean(data.b4c),
+
+  B5: normalizeScore(data.B5),
+  b5a: normalizeBoolean(data.b5a),
+  b5b: normalizeBoolean(data.b5b),
+  b5c: normalizeBoolean(data.b5c),
+  b5d: normalizeBoolean(data.b5d),
+
+  B6: normalizeScore(data.B6),
+  b6a: normalizeBoolean(data.b6a),
+  b6b: normalizeBoolean(data.b6b),
+  b6c: normalizeBoolean(data.b6c),
+  b6d: normalizeBoolean(data.b6d),
+}));
       await refreshEncryptionEnabled(data.studio_id ?? "");
       
     } catch (err: any) {
@@ -489,46 +540,113 @@ const refreshEncryptionEnabled = async (studioIdValue?: string) => {
     }
   };
 
-  const loadPraticaById = async (praticaId: string) => {
-    setError(null);
+ const loadPraticaById = async (praticaId: string) => {
+  setError(null);
 
-    try {
-      const supabase = getSupabaseClient() as any;
+  try {
+    const supabase = getSupabaseClient() as any;
 
-      const { data, error } = await supabase
-        .from("tbPraticheAML")
-        .select("*")
-        .eq("id", praticaId)
-        .single();
+    const { data, error } = await supabase
+      .from("tbPraticheAML")
+      .select("*")
+      .eq("id", praticaId)
+      .single();
 
-      if (error) throw new Error(error.message);
-      if (!data) return;
+    if (error) throw new Error(error.message);
+    if (!data) return;
 
-      setFormData((prev) => ({
-        ...prev,
-        pratica_id: String(data.id),
-        studio_id:
-          data.studio_id ??
-          (typeof studio_id === "string" ? studio_id : "") ??
-          prev.studio_id ??
-          "",
-        cliente_id:
-          data.cliente_id ??
-          (typeof cliente_id === "string" ? cliente_id : "") ??
-          prev.cliente_id ??
-          "",
-        Prestazione: data.tipo_prestazione ?? prev.Prestazione ?? "",
-        DataVerifica:
-          normalizeDateValue(data.data_apertura) ||
-          prev.DataVerifica ||
-          "",
-      }));
+    const praticaStudioId =
+      data.studio_id ??
+      (typeof studio_id === "string" ? studio_id : "") ??
+      "";
 
-      await refreshEncryptionEnabled(data.studio_id ?? "");
-    } catch (err: any) {
-      setError(err?.message || "Errore caricamento pratica AML.");
+    await refreshEncryptionEnabled(praticaStudioId);
+
+    if (data.av1_id) {
+      await loadRecordById(String(data.av1_id));
+      return;
     }
-  };
+
+    setFormData((prev) => ({
+      ...prev,
+      id: "",
+      pratica_id: String(data.id),
+      studio_id:
+        data.studio_id ??
+        (typeof studio_id === "string" ? studio_id : "") ??
+        prev.studio_id ??
+        "",
+      cliente_id:
+        data.cliente_id ??
+        (typeof cliente_id === "string" ? cliente_id : "") ??
+        prev.cliente_id ??
+        "",
+      Prestazione: data.tipo_prestazione ?? prev.Prestazione ?? "",
+      DataVerifica:
+        normalizeDateValue(data.data_apertura) ||
+        prev.DataVerifica ||
+        "",
+      ScadenzaVerifica: "",
+      AV1Conferma: false,
+      AV4Generato: false,
+      allegato_av1_firmato: "",
+      incaricato_adeguata_verifica_id: "",
+      A1: 0,
+      A2: 0,
+      A3: 0,
+      A4: 0,
+      B1: 0,
+      B2: 0,
+      B3: 0,
+      B4: 0,
+      B5: 0,
+      B6: 0,
+      a1a: false,
+      a1b: false,
+      a1c: false,
+      a1d: false,
+      a1e: false,
+      a1f: false,
+      a2a: false,
+      a2b: false,
+      a2c: false,
+      a2d: false,
+      a3a: false,
+      a3b: false,
+      a3c: false,
+      a3d: false,
+      a3e: false,
+      a4a: false,
+      a4b: false,
+      a4c: false,
+      b1a: false,
+      b1b: false,
+      b1c: false,
+      b1d: false,
+      b2a: false,
+      b2b: false,
+      b2c: false,
+      b2d: false,
+      b2e: false,
+      b3a: false,
+      b3b: false,
+      b3c: false,
+      b4a: false,
+      b4b: false,
+      b4c: false,
+      b5a: false,
+      b5b: false,
+      b5c: false,
+      b5d: false,
+      b6a: false,
+      b6b: false,
+      b6c: false,
+      b6d: false,
+    }));
+  } catch (err: any) {
+    setError(err?.message || "Errore caricamento pratica AML.");
+  }
+};
 
   useEffect(() => {
     void loadData();
@@ -637,39 +755,48 @@ const handlePrestazioneChange = (prestazioneValue: string) => {
   };
 
 const handleUploadFirmato = async (file: File) => {
-  try {
-    if (!formData.studio_id) {
-      alert("Studio non disponibile.");
-      return;
+  const run = async () => {
+    try {
+      if (!formData.studio_id) {
+        alert("Studio non disponibile.");
+        return;
+      }
+
+      setUploadingFirmato(true);
+      setError(null);
+
+      const supabase = getSupabaseClient() as any;
+      const safeName = file.name.replace(/\s+/g, "_");
+      const path = `av1_firmati/${formData.studio_id}/${Date.now()}_${safeName}`;
+
+      const { error } = await supabase.storage
+        .from(BUCKET_NAME)
+        .upload(path, file, { upsert: true });
+
+      if (error) {
+        alert(error.message || "Errore caricamento file firmato.");
+        throw error;
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        allegato_av1_firmato: path,
+      }));
+
+      alert("File caricato correttamente. Ora premi Salva AV1.");
+    } catch (err: any) {
+      setError(err?.message || "Errore caricamento file firmato.");
+    } finally {
+      setUploadingFirmato(false);
     }
+  };
 
-    setUploadingFirmato(true);
-    setError(null);
-
-    const supabase = getSupabaseClient() as any;
-    const safeName = file.name.replace(/\s+/g, "_");
-    const path = `av1_firmati/${formData.studio_id}/${Date.now()}_${safeName}`;
-
-    const { data, error } = await supabase.storage
-      .from(BUCKET_NAME)
-      .upload(path, file, { upsert: true });
-
-    if (error) {
-      alert(error.message || "Errore caricamento file firmato.");
-      throw error;
-    }
-
-    setFormData((prev) => ({
-      ...prev,
-      allegato_av1_firmato: path,
-    }));
-
-    alert("File caricato correttamente. Ora premi Salva AV1.");
-  } catch (err: any) {
-    setError(err?.message || "Errore caricamento file firmato.");
-  } finally {
-    setUploadingFirmato(false);
+  if (encryptionEnabled && isEncryptionLocked()) {
+    requireUnlock(run);
+    return;
   }
+
+  await run();
 };
 
 const handleOpenFirmato = async () => {
@@ -679,9 +806,9 @@ const handleOpenFirmato = async () => {
 
       const supabase = getSupabaseClient() as any;
 
-      const { data, error } = await supabase.storage
-        .from(BUCKET_NAME)
-        .createSignedUrl(formData.allegato_av1_firmato, 60);
+    const { error } = await supabase.storage
+  .from(BUCKET_NAME)
+  .upload(path, file, { upsert: true });
 
       if (error) {
         throw new Error(error.message || "Errore apertura file.");
@@ -723,19 +850,24 @@ const handleRemoveFirmato = async () => {
 
 const handleRinnovoVerifica = async () => {
   const run = async () => {
+    if (!formData.studio_id) {
+      alert("Studio non disponibile.");
+      return;
+    }
+
+    if (!formData.cliente_id) {
+      alert("Cliente non disponibile.");
+      return;
+    }
+
+    if (!formData.Prestazione) {
+      alert("Prestazione non disponibile.");
+      return;
+    }
+
     const today = new Date().toISOString().split("T")[0];
     const rischioInerentePonderatoReset = Number((punteggioPrestazione * 0.3).toFixed(2));
     const adeguataReset = calcolaAdeguataVerifica(rischioInerentePonderatoReset);
-
-    setFormData((prev) => ({
-      ...prev,
-      DataVerifica: today,
-      ScadenzaVerifica: "",
-      AV1Conferma: false,
-      ...defaultSectionScores,
-    }));
-
-    if (!formData.id) return;
 
     try {
       setSaving(true);
@@ -744,19 +876,79 @@ const handleRinnovoVerifica = async () => {
       const supabase = getSupabaseClient() as any;
 
       const payload = {
+        pratica_id: formData.pratica_id || null,
+        studio_id: formData.studio_id,
+        cliente_id: formData.cliente_id,
+        Prestazione: formData.Prestazione,
+        ValRischioIner: formData.ValRischioIner,
         DataVerifica: today,
         ScadenzaVerifica: null,
         AV1Conferma: false,
+        AV4Generato: false,
+        allegato_av1_firmato: null,
+        incaricato_adeguata_verifica_id: formData.incaricato_adeguata_verifica_id || null,
+
         A1: 0,
+        a1a: false,
+        a1b: false,
+        a1c: false,
+        a1d: false,
+        a1e: false,
+        a1f: false,
+
         A2: 0,
+        a2a: false,
+        a2b: false,
+        a2c: false,
+        a2d: false,
+
         A3: 0,
+        a3a: false,
+        a3b: false,
+        a3c: false,
+        a3d: false,
+        a3e: false,
+
         A4: 0,
+        a4a: false,
+        a4b: false,
+        a4c: false,
+
         B1: 0,
+        b1a: false,
+        b1b: false,
+        b1c: false,
+        b1d: false,
+
         B2: 0,
+        b2a: false,
+        b2b: false,
+        b2c: false,
+        b2d: false,
+        b2e: false,
+
         B3: 0,
+        b3a: false,
+        b3b: false,
+        b3c: false,
+
         B4: 0,
+        b4a: false,
+        b4b: false,
+        b4c: false,
+
         B5: 0,
+        b5a: false,
+        b5b: false,
+        b5c: false,
+        b5d: false,
+
         B6: 0,
+        b6a: false,
+        b6b: false,
+        b6c: false,
+        b6d: false,
+
         TotA: 0,
         TotB: 0,
         MediaPunteggio: 0,
@@ -767,11 +959,100 @@ const handleRinnovoVerifica = async () => {
         AdeguataVerifica: adeguataReset,
       };
 
-      const { error } = await supabase.from("tbAV1").update(payload).eq("id", formData.id);
+      const { data, error } = await supabase
+        .from("tbAV1")
+        .insert([payload])
+        .select("id")
+        .single();
 
       if (error) throw new Error(error.message);
 
-      alert("Rinnovo verifica eseguito correttamente.");
+    const newId = String(data.id);
+
+if (formData.pratica_id) {
+  const { error: praticaUpdateError } = await supabase
+    .from("tbPraticheAML")
+    .update({
+      av1_id: newId,
+    })
+    .eq("id", formData.pratica_id);
+
+  if (praticaUpdateError) {
+    throw new Error(praticaUpdateError.message);
+  }
+}
+
+setFormData((prev) => ({
+  ...prev,
+  id: newId,
+  DataVerifica: today,
+  ScadenzaVerifica: "",
+  AV1Conferma: false,
+  AV4Generato: false,
+  allegato_av1_firmato: "",
+  A1: 0,
+  A2: 0,
+  A3: 0,
+  A4: 0,
+  B1: 0,
+  B2: 0,
+  B3: 0,
+  B4: 0,
+  B5: 0,
+  B6: 0,
+  a1a: false,
+  a1b: false,
+  a1c: false,
+  a1d: false,
+  a1e: false,
+  a1f: false,
+  a2a: false,
+  a2b: false,
+  a2c: false,
+  a2d: false,
+  a3a: false,
+  a3b: false,
+  a3c: false,
+  a3d: false,
+  a3e: false,
+  a4a: false,
+  a4b: false,
+  a4c: false,
+  b1a: false,
+  b1b: false,
+  b1c: false,
+  b1d: false,
+  b2a: false,
+  b2b: false,
+  b2c: false,
+  b2d: false,
+  b2e: false,
+  b3a: false,
+  b3b: false,
+  b3c: false,
+  b4a: false,
+  b4b: false,
+  b4c: false,
+  b5a: false,
+  b5b: false,
+  b5c: false,
+  b5d: false,
+  b6a: false,
+  b6b: false,
+  b6c: false,
+  b6d: false,
+}));
+
+      alert("Nuova adeguata verifica creata correttamente.");
+
+      const praticaQuery =
+        formData.pratica_id || (typeof pratica_id === "string" ? pratica_id : "");
+
+      void router.replace(
+        praticaQuery
+          ? `/antiriciclaggio/modello-av1?id=${newId}&pratica_id=${praticaQuery}`
+          : `/antiriciclaggio/modello-av1?id=${newId}`
+      );
     } catch (err: any) {
       setError(err?.message || "Errore durante il rinnovo verifica.");
     } finally {
@@ -820,37 +1101,89 @@ const handleRinnovoVerifica = async () => {
     try {
       const supabase = getSupabaseClient() as any;
 
-      const payload = {
-        studio_id: formData.studio_id,
-        cliente_id: formData.cliente_id,
-        Prestazione: formData.Prestazione,
-        ValRischioIner: formData.ValRischioIner,
-        DataVerifica: formData.DataVerifica,
-        ScadenzaVerifica: ScadenzaVerificaCalcolata || null,
-        allegato_av1_firmato: formData.allegato_av1_firmato || null,
-        incaricato_adeguata_verifica_id: formData.incaricato_adeguata_verifica_id || null,
-        A1: normalizeScore(formData.A1),
-        A2: normalizeScore(formData.A2),
-        A3: normalizeScore(formData.A3),
-        A4: normalizeScore(formData.A4),
-        B1: normalizeScore(formData.B1),
-        B2: normalizeScore(formData.B2),
-        B3: normalizeScore(formData.B3),
-        B4: normalizeScore(formData.B4),
-        B5: normalizeScore(formData.B5),
-        B6: normalizeScore(formData.B6),
-        TotA,
-        TotB,
-        MediaPunteggio,
-        LivelloRischio,
-        RisInerentePonderato,
-        RisSpecificoPonderato,
-        RischioEffettivo,
-        AdeguataVerifica,
-        AV1Conferma: normalizeBoolean(formData.AV1Conferma),
-        AV4Generato: normalizeBoolean(formData.AV4Generato),
-      };
+ const payload = {
+  pratica_id: formData.pratica_id || null,
+  studio_id: formData.studio_id,
+  cliente_id: formData.cliente_id,
+  Prestazione: formData.Prestazione,
+  ValRischioIner: formData.ValRischioIner,
+  DataVerifica: formData.DataVerifica,
+  ScadenzaVerifica: ScadenzaVerificaCalcolata || null,
+  allegato_av1_firmato: formData.allegato_av1_firmato || null,
+  incaricato_adeguata_verifica_id: formData.incaricato_adeguata_verifica_id || null,
 
+  A1: normalizeScore(formData.A1),
+  a1a: normalizeBoolean(formData.a1a),
+  a1b: normalizeBoolean(formData.a1b),
+  a1c: normalizeBoolean(formData.a1c),
+  a1d: normalizeBoolean(formData.a1d),
+  a1e: normalizeBoolean(formData.a1e),
+  a1f: normalizeBoolean(formData.a1f),
+
+  A2: normalizeScore(formData.A2),
+  a2a: normalizeBoolean(formData.a2a),
+  a2b: normalizeBoolean(formData.a2b),
+  a2c: normalizeBoolean(formData.a2c),
+  a2d: normalizeBoolean(formData.a2d),
+
+  A3: normalizeScore(formData.A3),
+  a3a: normalizeBoolean(formData.a3a),
+  a3b: normalizeBoolean(formData.a3b),
+  a3c: normalizeBoolean(formData.a3c),
+  a3d: normalizeBoolean(formData.a3d),
+  a3e: normalizeBoolean(formData.a3e),
+
+  A4: normalizeScore(formData.A4),
+  a4a: normalizeBoolean(formData.a4a),
+  a4b: normalizeBoolean(formData.a4b),
+  a4c: normalizeBoolean(formData.a4c),
+
+  B1: normalizeScore(formData.B1),
+  b1a: normalizeBoolean(formData.b1a),
+  b1b: normalizeBoolean(formData.b1b),
+  b1c: normalizeBoolean(formData.b1c),
+  b1d: normalizeBoolean(formData.b1d),
+
+  B2: normalizeScore(formData.B2),
+  b2a: normalizeBoolean(formData.b2a),
+  b2b: normalizeBoolean(formData.b2b),
+  b2c: normalizeBoolean(formData.b2c),
+  b2d: normalizeBoolean(formData.b2d),
+  b2e: normalizeBoolean(formData.b2e),
+
+  B3: normalizeScore(formData.B3),
+  b3a: normalizeBoolean(formData.b3a),
+  b3b: normalizeBoolean(formData.b3b),
+  b3c: normalizeBoolean(formData.b3c),
+
+  B4: normalizeScore(formData.B4),
+  b4a: normalizeBoolean(formData.b4a),
+  b4b: normalizeBoolean(formData.b4b),
+  b4c: normalizeBoolean(formData.b4c),
+
+  B5: normalizeScore(formData.B5),
+  b5a: normalizeBoolean(formData.b5a),
+  b5b: normalizeBoolean(formData.b5b),
+  b5c: normalizeBoolean(formData.b5c),
+  b5d: normalizeBoolean(formData.b5d),
+
+  B6: normalizeScore(formData.B6),
+  b6a: normalizeBoolean(formData.b6a),
+  b6b: normalizeBoolean(formData.b6b),
+  b6c: normalizeBoolean(formData.b6c),
+  b6d: normalizeBoolean(formData.b6d),
+
+  TotA,
+  TotB,
+  MediaPunteggio,
+  LivelloRischio,
+  RisInerentePonderato,
+  RisSpecificoPonderato,
+  RischioEffettivo,
+  AdeguataVerifica,
+  AV1Conferma: normalizeBoolean(formData.AV1Conferma),
+  AV4Generato: normalizeBoolean(formData.AV4Generato),
+};
       let savedId = formData.id || "";
 
       if (formData.id) {
