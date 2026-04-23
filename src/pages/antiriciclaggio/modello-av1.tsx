@@ -804,12 +804,14 @@ const handleOpenFirmato = async () => {
     try {
       if (!formData.allegato_av1_firmato) return;
 
-      const supabase = getSupabaseClient() as any;
+const supabase = getSupabaseClient() as any;
+const safeName = file.name.replace(/\s+/g, "_");
+const path = `av1_firmati/${formData.studio_id}/${Date.now()}_${safeName}`;
 
-    const { error } = await supabase.storage
+const { error } = await supabase.storage
   .from(BUCKET_NAME)
   .upload(path, file, { upsert: true });
-
+      
       if (error) {
         throw new Error(error.message || "Errore apertura file.");
       }
