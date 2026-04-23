@@ -414,9 +414,14 @@ const sessionStudioId = String(sessionUserRow.studio_id);
       return res.status(400).json({ error: "Utente target non trovato" });
     }
 
-    if (String(targetUserRow.studio_id) !== sessionStudioId) {
-      return res.status(403).json({ error: "Utente target fuori dallo studio" });
-    }
+  const sameStudio = String(targetUserRow.studio_id) === sessionStudioId;
+
+// Se sto lavorando con una connessione Microsoft esplicita, non blocco qui
+// il multi-tenant solo perché lo studio_id del target non coincide.
+// Il controllo di autorizzazione passa dalla connessione selezionata.
+if (!sameStudio && !microsoftConnectionId) {
+  return res.status(403).json({ error: "Utente target fuori dallo studio" });
+}
 
    const graphPath = normalizeGraphPath(String(endpoint));
 const url = buildGraphUrlFromPath(graphPath);
