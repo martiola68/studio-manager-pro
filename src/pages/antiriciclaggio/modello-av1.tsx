@@ -868,14 +868,10 @@ const handleRinnovoVerifica = async () => {
       return;
     }
 
-    if (!formData.Prestazione) {
-      alert("Prestazione non disponibile.");
+    if (!formData.pratica_id) {
+      alert("Pratica AML non disponibile.");
       return;
     }
-
-    const today = new Date().toISOString().split("T")[0];
-    const rischioInerentePonderatoReset = Number((punteggioPrestazione * 0.3).toFixed(2));
-    const adeguataReset = calcolaAdeguataVerifica(rischioInerentePonderatoReset);
 
     try {
       setSaving(true);
@@ -883,190 +879,27 @@ const handleRinnovoVerifica = async () => {
 
       const supabase = getSupabaseClient() as any;
 
-      const payload = {
-        pratica_id: formData.pratica_id || null,
-        studio_id: formData.studio_id,
-        cliente_id: formData.cliente_id,
-        Prestazione: formData.Prestazione,
-        ValRischioIner: formData.ValRischioIner,
-        DataVerifica: today,
-        ScadenzaVerifica: null,
-        AV1Conferma: false,
-        AV4Generato: false,
-        allegato_av1_firmato: null,
-        incaricato_adeguata_verifica_id: formData.incaricato_adeguata_verifica_id || null,
+      const { error: praticaUpdateError } = await supabase
+        .from("tbPraticheAML")
+        .update({
+          av2_corrente_id: null,
+          av1_corrente_id: null,
+          stato_ciclo: "av4_da_inviare",
+          data_prossimo_rinnovo: null,
+        })
+        .eq("id", formData.pratica_id);
 
-        A1: 0,
-        a1a: false,
-        a1b: false,
-        a1c: false,
-        a1d: false,
-        a1e: false,
-        a1f: false,
+      if (praticaUpdateError) {
+        throw new Error(praticaUpdateError.message);
+      }
 
-        A2: 0,
-        a2a: false,
-        a2b: false,
-        a2c: false,
-        a2d: false,
+      alert("Rinnovo verifica avviato correttamente. Procedi con il nuovo AV4.");
 
-        A3: 0,
-        a3a: false,
-        a3b: false,
-        a3c: false,
-        a3d: false,
-        a3e: false,
-
-        A4: 0,
-        a4a: false,
-        a4b: false,
-        a4c: false,
-
-        B1: 0,
-        b1a: false,
-        b1b: false,
-        b1c: false,
-        b1d: false,
-
-        B2: 0,
-        b2a: false,
-        b2b: false,
-        b2c: false,
-        b2d: false,
-        b2e: false,
-
-        B3: 0,
-        b3a: false,
-        b3b: false,
-        b3c: false,
-
-        B4: 0,
-        b4a: false,
-        b4b: false,
-        b4c: false,
-
-        B5: 0,
-        b5a: false,
-        b5b: false,
-        b5c: false,
-        b5d: false,
-
-        B6: 0,
-        b6a: false,
-        b6b: false,
-        b6c: false,
-        b6d: false,
-
-        TotA: 0,
-        TotB: 0,
-        MediaPunteggio: 0,
-        LivelloRischio: "Non significativo",
-        RisInerentePonderato: rischioInerentePonderatoReset,
-        RisSpecificoPonderato: 0,
-        RischioEffettivo: rischioInerentePonderatoReset,
-        AdeguataVerifica: adeguataReset,
-      };
-
-      const { data, error } = await supabase
-        .from("tbAV1")
-        .insert([payload])
-        .select("id")
-        .single();
-
-      if (error) throw new Error(error.message);
-
-    const newId = String(data.id);
-
-if (formData.pratica_id) {
-  const { error: praticaUpdateError } = await supabase
-    .from("tbPraticheAML")
-    .update({
-      av1_id: Number(newId),
-      av1_corrente_id: Number(newId),
-      av2_corrente_id: null,
-      stato_ciclo: "av4_da_inviare",
-      data_prossimo_rinnovo: null,
-    })
-    .eq("id", formData.pratica_id);
-
-  if (praticaUpdateError) {
-    throw new Error(praticaUpdateError.message);
-  }
-}
-
-setFormData((prev) => ({
-  ...prev,
-  id: newId,
-  DataVerifica: today,
-  ScadenzaVerifica: "",
-  AV1Conferma: false,
-  AV4Generato: false,
-  allegato_av1_firmato: "",
-  A1: 0,
-  A2: 0,
-  A3: 0,
-  A4: 0,
-  B1: 0,
-  B2: 0,
-  B3: 0,
-  B4: 0,
-  B5: 0,
-  B6: 0,
-  a1a: false,
-  a1b: false,
-  a1c: false,
-  a1d: false,
-  a1e: false,
-  a1f: false,
-  a2a: false,
-  a2b: false,
-  a2c: false,
-  a2d: false,
-  a3a: false,
-  a3b: false,
-  a3c: false,
-  a3d: false,
-  a3e: false,
-  a4a: false,
-  a4b: false,
-  a4c: false,
-  b1a: false,
-  b1b: false,
-  b1c: false,
-  b1d: false,
-  b2a: false,
-  b2b: false,
-  b2c: false,
-  b2d: false,
-  b2e: false,
-  b3a: false,
-  b3b: false,
-  b3c: false,
-  b4a: false,
-  b4b: false,
-  b4c: false,
-  b5a: false,
-  b5b: false,
-  b5c: false,
-  b5d: false,
-  b6a: false,
-  b6b: false,
-  b6c: false,
-  b6d: false,
-}));
-
-      alert("Nuova adeguata verifica creata correttamente.");
-
-      const praticaQuery =
-        formData.pratica_id || (typeof pratica_id === "string" ? pratica_id : "");
-
-      void router.replace(
-        praticaQuery
-          ? `/antiriciclaggio/modello-av1?id=${newId}&pratica_id=${praticaQuery}`
-          : `/antiriciclaggio/modello-av1?id=${newId}`
+      void router.push(
+        `/antiriciclaggio/modello-av4?studio_id=${formData.studio_id}&pratica_id=${formData.pratica_id}&cliente_id=${formData.cliente_id}`
       );
     } catch (err: any) {
-      setError(err?.message || "Errore durante il rinnovo verifica.");
+      setError(err?.message || "Errore durante l'avvio del rinnovo verifica.");
     } finally {
       setSaving(false);
     }
@@ -1285,14 +1118,14 @@ setFormData((prev) => ({
               <span>Conferma AV1</span>
             </label>
 
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleRinnovoVerifica}
-              disabled={saving || loading}
-            >
-              Rinnovo verifica
-            </Button>
+           <Button
+  type="button"
+  variant="outline"
+  onClick={handleRinnovoVerifica}
+  disabled={saving || loading}
+>
+  Avvia rinnovo verifica
+</Button>
           </div>
         }
       />
