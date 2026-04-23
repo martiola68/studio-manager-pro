@@ -96,6 +96,10 @@ export default function AntiriciclaggioPage() {
     Math.floor(AML_WARNING_MS / 1000)
   );
 
+  const [amlAttivo, setAmlAttivo] = useState<boolean | null>(null);
+
+  const REVISIONI_BYPASS_ID = "f9d3ca10-6134-4061-a2b4-0be74e8c7654";
+
  useEffect(() => {
   if (typeof window === "undefined") return;
 
@@ -319,6 +323,44 @@ const getAV4IconBorderClass = (row: AV1Row) => {
       setResponsabili([]);
     }
   };
+
+  const loadLicenzaAML = async () => {
+  try {
+    const studioId = await getStudioId();
+    if (!studioId) return;
+
+    // Revisioni Commerciali sempre attivo
+    if (String(studioId) === REVISIONI_BYPASS_ID) {
+      setAmlAttivo(true);
+      return;
+    }
+
+    const supabase = getSupabaseClient() as any;
+
+    const { data, error } = await supabase
+      .from("tbsoftware_licenze")
+      .select("piano, prezzo_aml, stato")
+      .eq("studio_id", studioId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    const piano = String(data?.piano || "");
+    const prezzoAml = Number(data?.prezzo_aml || 0);
+    const stato = String(data?.stato || "");
+
+    const attivo =
+      stato === "attivo" &&
+      (piano.includes("AML") || prezzoAml > 0);
+
+    setAmlAttivo(attivo);
+  } catch (err) {
+    console.error("Errore caricamento licenza AML:", err);
+    setAmlAttivo(false);
+  }
+};
 
  const loadRowsBySocieta = async (societaId: string) => {
   try {
@@ -596,16 +638,17 @@ const praticheRows = (praticheData as PraticaAMLRow[]) || [];
     await loadRowsBySocieta(societa.id);
   };
 
-  useEffect(() => {
-    const init = async () => {
-      setLoading(true);
-      await loadSocietaOptions();
-      await loadResponsabili();
-      setLoading(false);
-    };
+ useEffect(() => {
+  const init = async () => {
+    setLoading(true);
+    await loadSocietaOptions();
+    await loadResponsabili();
+    await loadLicenzaAML();
+    setLoading(false);
+  };
 
-    void init();
-  }, []);
+  void init();
+}, []);
 
    useEffect(() => {
     if (!societaFilter || societaOptions.length === 0) {
@@ -1187,6 +1230,26 @@ const handleEliminaCompleto = async (row: AV1Row) => {
               </tr>
             </tbody>
           </table>
+        </div>
+     ) : amlAttivo === false ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-800">
+          <div className="mb-2 text-base font-semibold text-red-700">
+            Modulo Antiriciclaggio non attivo
+          </div>
+
+          <p className="mb-4">
+            Il Piano Base NON INCLUDE il modulo per la gestione dell’adeguata
+            verifica (AV1, AV2, AV4), del fascicolo cliente e della documentazione
+            antiriciclaggio.
+          </p>
+
+          <button
+            type="button"
+            onClick={() => router.push("/attivazione-studio")}
+            className="rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700"
+          >
+            Attiva Modulo Antiriciclaggio (AML)
+          </button>
         </div>
       ) : !canAccessAntiriciclaggio ? (
         <div className="overflow-x-auto rounded-lg border bg-white">
