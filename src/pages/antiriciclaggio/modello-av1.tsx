@@ -798,7 +798,7 @@ const handleUploadFirmato = async (file: File) => {
 
   await run();
 };
-
+  
 const handleOpenFirmato = async () => {
   const run = async () => {
     try {
