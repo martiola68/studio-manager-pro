@@ -176,6 +176,8 @@ const { data: praticaRow, error: praticaError } = await supabase
         setLoading(true);
         setError(null);
 
+        const supabase = getSupabaseClient() as any;
+
         const currentStudioId = await getStudioId();
 
         if (!currentStudioId) {
@@ -185,8 +187,8 @@ const { data: praticaRow, error: praticaError } = await supabase
 
         setStudioId(currentStudioId);
 
-        const { data: clientiData, error: clientiError } = await (supabase as any)
-          .from("tbclienti")
+        const { data: clientiData, error: clientiError } = await supabase
+  .from("tbclienti")
           .select("id, cod_cliente, ragione_sociale, codice_fiscale, partita_iva")
           .eq("studio_id", currentStudioId)
           .order("ragione_sociale", { ascending: true });
@@ -199,7 +201,7 @@ const { data: praticaRow, error: praticaError } = await supabase
         setClienti((clientiData || []) as Cliente[]);
 
         if (id && typeof id === "string") {
-          const { data, error } = await (supabase as any)
+          const { data, error } = await supabase
             .from("tbAV2")
             .select("*")
             .eq("id", id)
@@ -318,7 +320,7 @@ const { data: praticaRow, error: praticaError } = await supabase
           return;
         }
       } else {
-        const { data, error } = await (supabase as any)
+        const { data, error } = await supabase
           .from("tbAV2")
           .insert([payload])
           .select("id")
