@@ -1315,150 +1315,151 @@ ${nomeOperatore}
     });
   }
 
-  async function salvaAV4() {
-    if (!validateBeforeSave()) return;
+ async function salvaAV4() {
+  if (!validateBeforeSave()) return;
 
-    const supabase = getSupabaseClient() as any;
+  const supabase = getSupabaseClient() as any;
 
-    try {
-      setLoading(true);
+  try {
+    setLoading(true);
 
-      await validaTitolariPrimaDelSalvataggio();
+    await validaTitolariPrimaDelSalvataggio();
 
-      const payload = {
-        studio_id: form.studio_id,
-        cliente_id: form.cliente_id,
-        pratica_id: form.pratica_id || null,
-        societa_id: form.societa_id || null,
-        av1_id: form.av1_id ? Number(form.av1_id) : null,
-        rapp_legale_id: form.rapp_legale_id || null,
-        
-        // microsoft_connection_id: form.microsoft_connection_id || null,
+    const payload = {
+      studio_id: form.studio_id,
+      cliente_id: form.cliente_id,
+      pratica_id: form.pratica_id || null,
+      societa_id: form.societa_id || null,
+      av1_id: form.av1_id ? Number(form.av1_id) : null,
+      rapp_legale_id: form.rapp_legale_id || null,
 
-        dichiarante_nome_cognome: form.dichiarante_nome_cognome || null,
-        dichiarante_codice_fiscale: form.dichiarante_codice_fiscale || null,
-        dichiarante_luogo_nascita: form.dichiarante_luogo_nascita || null,
-        dichiarante_data_nascita: form.dichiarante_data_nascita || null,
-        dichiarante_indirizzo_residenza: form.dichiarante_indirizzo_residenza || null,
-        dichiarante_citta_residenza: form.dichiarante_citta_residenza || null,
-        dichiarante_cap_residenza: form.dichiarante_cap_residenza || null,
-        dichiarante_nazionalita: form.dichiarante_nazionalita || null,
+      // microsoft_connection_id: form.microsoft_connection_id || null,
 
-        natura_prestazione: form.natura_prestazione || null,
+      dichiarante_nome_cognome: form.dichiarante_nome_cognome || null,
+      dichiarante_codice_fiscale: form.dichiarante_codice_fiscale || null,
+      dichiarante_luogo_nascita: form.dichiarante_luogo_nascita || null,
+      dichiarante_data_nascita: form.dichiarante_data_nascita || null,
+      dichiarante_indirizzo_residenza: form.dichiarante_indirizzo_residenza || null,
+      dichiarante_citta_residenza: form.dichiarante_citta_residenza || null,
+      dichiarante_cap_residenza: form.dichiarante_cap_residenza || null,
+      dichiarante_nazionalita: form.dichiarante_nazionalita || null,
 
-        domanda1: !!form.domanda1,
-        domanda2: !!form.domanda2,
-        domanda3: !!form.domanda3,
-        domanda4: !!form.domanda4,
-        domanda5: !!form.domanda5,
-        spec_domanda5: form.spec_domanda5 || null,
+      natura_prestazione: form.natura_prestazione || null,
 
-        domanda6: !!form.domanda6,
-        domanda7: !!form.domanda7,
-        domanda8: !!form.domanda8,
-        domanda9: !!form.domanda9,
+      domanda1: !!form.domanda1,
+      domanda2: !!form.domanda2,
+      domanda3: !!form.domanda3,
+      domanda4: !!form.domanda4,
+      domanda5: !!form.domanda5,
+      spec_domanda5: form.spec_domanda5 || null,
 
-        nome_soc: form.nome_soc || null,
-        sede_legale: form.sede_legale || null,
-        indirizzo_sede: form.indirizzo_sede || null,
-        reg_imprese: form.reg_imprese || null,
-        num_reg_imprese: form.num_reg_imprese || null,
-        cod_fiscale_soc: form.cod_fiscale_soc || null,
+      domanda6: !!form.domanda6,
+      domanda7: !!form.domanda7,
+      domanda8: !!form.domanda8,
+      domanda9: !!form.domanda9,
 
-        nome_soc_bis: form.nome_soc_bis || null,
-        sede_legale_bis: form.sede_legale_bis || null,
-        indirizzo_sede_bis: form.indirizzo_sede_bis || null,
-        reg_imprese_bis: form.reg_imprese_bis || null,
-        num_reg_imprese_bis: form.num_reg_imprese_bis || null,
-        cod_fiscale_soc_bis: form.cod_fiscale_soc_bis || null,
-        nome_soc_ter: form.nome_soc_ter || null,
+      nome_soc: form.nome_soc || null,
+      sede_legale: form.sede_legale || null,
+      indirizzo_sede: form.indirizzo_sede || null,
+      reg_imprese: form.reg_imprese || null,
+      num_reg_imprese: form.num_reg_imprese || null,
+      cod_fiscale_soc: form.cod_fiscale_soc || null,
 
-        domanda10: !!form.domanda10,
-        domanda11: !!form.domanda11,
-        specifica12: form.specifica12 || null,
+      nome_soc_bis: form.nome_soc_bis || null,
+      sede_legale_bis: form.sede_legale_bis || null,
+      indirizzo_sede_bis: form.indirizzo_sede_bis || null,
+      reg_imprese_bis: form.reg_imprese_bis || null,
+      num_reg_imprese_bis: form.num_reg_imprese_bis || null,
+      cod_fiscale_soc_bis: form.cod_fiscale_soc_bis || null,
+      nome_soc_ter: form.nome_soc_ter || null,
 
-        specifica10b: form.specifica10b || null,
-        specifica10c: form.specifica10c || null,
-        specifica11c: form.specifica11c || null,
+      domanda10: !!form.domanda10,
+      domanda11: !!form.domanda11,
+      specifica12: form.specifica12 || null,
 
-        specifica10d: form.specifica10d || null,
-        specifica10e: form.specifica10e || null,
-        specifica10f: form.specifica10f || null,
+      specifica10b: form.specifica10b || null,
+      specifica10c: form.specifica10c || null,
+      specifica11c: form.specifica11c || null,
 
-        luogo_firma: form.luogo_firma || null,
-        data_firma: form.data_firma || null,
-        luogo_firma_bis: form.luogo_firma_bis || null,
-        data_firma_bis: form.data_firma_bis || null,
+      specifica10d: form.specifica10d || null,
+      specifica10e: form.specifica10e || null,
+      specifica10f: form.specifica10f || null,
 
-        stato: form.stato,
-        versione: form.versione,
+      luogo_firma: form.luogo_firma || null,
+      data_firma: form.data_firma || null,
+      luogo_firma_bis: form.luogo_firma_bis || null,
+      data_firma_bis: form.data_firma_bis || null,
+
+      stato: form.stato,
+      versione: form.versione,
+    };
+
+    let savedId: string | null = av4Id;
+
+    if (av4Id) {
+      const { error } = await supabase
+        .from("tbAV4")
+        .update(payload)
+        .eq("id", av4Id);
+
+      if (error) {
+        console.error("Errore aggiornamento AV4:", error);
+        alert("Errore durante l'aggiornamento AV4.");
+        return;
+      }
+    } else {
+      const { data, error } = await supabase
+        .from("tbAV4")
+        .insert([payload])
+        .select("id")
+        .single();
+
+      if (error) {
+        console.error("Errore salvataggio AV4:", error);
+        alert("Errore durante il salvataggio AV4.");
+        return;
+      }
+
+      savedId = String(data.id);
+      setAv4Id(savedId);
+    }
+
+    if (savedId && form.pratica_id) {
+      const praticaUpdatePayload: any = {
+        av4_id: savedId,
+        av4_corrente_id: savedId,
+        stato: "av4_compilato",
+        stato_ciclo: "av4_compilato",
       };
 
-      let savedId: string | null = av4Id;
+      const { error: praticaUpdateError } = await supabase
+        .from("tbPraticheAML")
+        .update(praticaUpdatePayload)
+        .eq("id", form.pratica_id);
 
-      if (av4Id) {
-        const { error } = await supabase
-          .from("tbAV4")
-          .update(payload)
-          .eq("id", av4Id);
+      if (praticaUpdateError) {
+        console.error("Errore aggiornamento tbPraticheAML:", praticaUpdateError);
+        alert(
+          `AV4 salvato, ma non è stato possibile aggiornare la pratica AML: ${praticaUpdateError.message}`
+        );
+        return;
+      }
+    }
 
-        if (error) {
-          console.error("Errore aggiornamento AV4:", error);
-          alert("Errore durante l'aggiornamento AV4.");
-          return;
-        }
-      } else {
-        const { data, error } = await supabase
-          .from("tbAV4")
-          .insert([payload])
-          .select("id")
-          .single();
+    alert("AV4 salvato correttamente.");
 
-        if (error) {
-          console.error("Errore salvataggio AV4:", error);
-          alert("Errore durante il salvataggio AV4.");
-          return;
-        }
-
-        savedId = String(data.id);
-        setAv4Id(savedId);
-if (savedId && form.pratica_id) {
-  const praticaUpdatePayload: any = {
-    av4_id: savedId,
-    stato: "av4_compilato",
-  };
-
-  praticaUpdatePayload.av4_corrente_id = savedId;
-  praticaUpdatePayload.stato_ciclo = "av4_compilato";
-
-  const { error: praticaUpdateError } = await supabase
-    .from("tbPraticheAML")
-    .update(praticaUpdatePayload)
-    .eq("id", form.pratica_id);
-
-  if (praticaUpdateError) {
-    console.error("Errore aggiornamento tbPraticheAML:", praticaUpdateError);
-    alert(
-      `AV4 salvato, ma non è stato possibile aggiornare la pratica AML: ${praticaUpdateError.message}`
-    );
-    return;
+    if (savedId) {
+      await router.replace(
+        `/antiriciclaggio/modello-av4?studio_id=${form.studio_id}&pratica_id=${form.pratica_id || ""}&societa_id=${form.societa_id || ""}&av1_id=${form.av1_id || ""}&cliente_id=${form.cliente_id}&id=${savedId}`
+      );
+    }
+  } catch (error: any) {
+    console.error("Errore imprevisto salvataggio AV4:", error);
+    alert(error?.message || "Errore durante il salvataggio AV4.");
+  } finally {
+    setLoading(false);
   }
 }
-      
-      alert("AV4 salvato correttamente.");
-
-       if (savedId) {
-        await router.replace(
-          `/antiriciclaggio/modello-av4?studio_id=${form.studio_id}&pratica_id=${form.pratica_id || ""}&societa_id=${form.societa_id || ""}&av1_id=${form.av1_id || ""}&cliente_id=${form.cliente_id}&id=${savedId}`
-        );
-      }
-    } catch (error: any) {
-      console.error("Errore imprevisto salvataggio AV4:", error);
-      alert(error?.message || "Errore durante il salvataggio AV4.");
-    } finally {
-      setLoading(false);
-    }
-  }
 
   const noteAllegato = `Allegato alla Dichiarazione del Cliente
 
