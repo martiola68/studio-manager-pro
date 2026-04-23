@@ -562,15 +562,24 @@ const refreshEncryptionEnabled = async (studioIdValue?: string) => {
 
     await refreshEncryptionEnabled(praticaStudioId);
 
-    if (data.av1_id) {
-      await loadRecordById(String(data.av1_id));
-      return;
-    }
+   const currentAv1Id =
+  data.av1_corrente_id != null
+    ? String(data.av1_corrente_id)
+    : data.av1_id != null
+    ? String(data.av1_id)
+    : "";
 
-    setFormData((prev) => ({
-      ...prev,
-      id: "",
-      pratica_id: String(data.id),
+if (currentAv1Id) {
+  await loadRecordById(currentAv1Id);
+  return;
+}
+
+   setFormData((prev) => ({
+  ...initialFormData,
+  studio_id: prev.studio_id,
+  ...prev,
+  id: "",
+  pratica_id: String(data.id),
       studio_id:
         data.studio_id ??
         (typeof studio_id === "string" ? studio_id : "") ??
@@ -973,7 +982,11 @@ if (formData.pratica_id) {
   const { error: praticaUpdateError } = await supabase
     .from("tbPraticheAML")
     .update({
-      av1_id: newId,
+      av1_id: Number(newId),
+      av1_corrente_id: Number(newId),
+      av2_corrente_id: null,
+      stato_ciclo: "av4_da_inviare",
+      data_prossimo_rinnovo: null,
     })
     .eq("id", formData.pratica_id);
 
@@ -1195,16 +1208,19 @@ setFormData((prev) => ({
         savedId = String(data.id);
       }
 
-      if (formData.pratica_id && savedId) {
-        const { error: praticaUpdateError } = await supabase
-          .from("tbPraticheAML")
-          .update({
-            av1_id: savedId,
-          })
-          .eq("id", formData.pratica_id);
+    if (formData.pratica_id && savedId) {
+  const { error: praticaUpdateError } = await supabase
+    .from("tbPraticheAML")
+    .update({
+     av1_id: Number(savedId),
+      av1_corrente_id: Number(savedId),
+      stato_ciclo: "chiuso",
+      data_prossimo_rinnovo: ScadenzaVerificaCalcolata || null,
+    })
+    .eq("id", formData.pratica_id);
 
-        if (praticaUpdateError) throw new Error(praticaUpdateError.message);
-      }
+  if (praticaUpdateError) throw new Error(praticaUpdateError.message);
+}
 
       setFormData((prev) => ({
         ...prev,
