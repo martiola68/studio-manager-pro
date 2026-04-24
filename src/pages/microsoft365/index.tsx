@@ -67,7 +67,8 @@ export default function Microsoft365Page() {
 
   const [studioId, setStudioId] = useState("");
   const [userId, setUserId] = useState("");
-  const [userMicrosoftConnectionId, setUserMicrosoftConnectionId] = useState("");
+const [userMicrosoftConnectionId, setUserMicrosoftConnectionId] = useState("");
+const [isAdmin, setIsAdmin] = useState(false);
 
   const [loading, setLoading] = useState(true);
 
@@ -240,10 +241,10 @@ const studioConfigValid = useMemo(() => {
       setUserId(currentUserId);
 
       const { data: user, error: userErr } = await supabase
-        .from("tbutenti")
-        .select("studio_id, microsoft_connection_id")
-        .eq("id", currentUserId)
-        .single();
+  .from("tbutenti")
+  .select("studio_id, microsoft_connection_id, ruolo")
+  .eq("id", currentUserId)
+  .single();
 
       if (userErr) throw userErr;
 
@@ -253,7 +254,8 @@ const studioConfigValid = useMemo(() => {
       }
 
       setStudioId(user.studio_id);
-      setUserMicrosoftConnectionId(user.microsoft_connection_id || "");
+setUserMicrosoftConnectionId(user.microsoft_connection_id || "");
+setIsAdmin(user.ruolo === "amministratore" || user.ruolo === "admin");
 
       const { data: rawData, error: cfgErr } = await supabase
         .from("microsoft365_config")
@@ -312,8 +314,13 @@ const studioConfigValid = useMemo(() => {
     }
   }
 
-  async function handleSave() {
-    if (!studioId) {
+ async function handleSave() {
+  if (!isAdmin) {
+    setError("Solo l'amministratore può modificare le credenziali Microsoft 365.");
+    return;
+  }
+
+  if (!studioId) {
       setError("Studio ID non trovato");
       return;
     }
@@ -391,7 +398,12 @@ const studioConfigValid = useMemo(() => {
     }
   }
 
- async function handleCreateConnection() {
+async function handleCreateConnection() {
+  if (!isAdmin) {
+    setError("Solo l'amministratore può creare connessioni Microsoft 365.");
+    return;
+  }
+
   if (!studioId) {
     setError("Studio ID non trovato");
     return;
@@ -764,14 +776,21 @@ const studioConfigValid = useMemo(() => {
   type="button"
   variant={showNewConnectionForm ? "outline" : "default"}
   onClick={() => {
-    if (maxConnectionsReached) {
-      setError("Limite massimo di 2 connessioni Microsoft raggiunto per questo studio");
-      return;
-    }
-    setShowNewConnectionForm((prev) => !prev);
-  }}
+   onClick={() => {
+  if (!isAdmin) {
+    setError("Solo l'amministratore può creare o modificare connessioni Microsoft 365.");
+    return;
+  }
+
+  if (maxConnectionsReached) {
+    setError("Limite massimo di 2 connessioni Microsoft raggiunto per questo studio");
+    return;
+  }
+
+  setShowNewConnectionForm((prev) => !prev);
+}}
   className="gap-2"
-  disabled={!showNewConnectionForm && maxConnectionsReached}
+  disabled={!isAdmin || (!showNewConnectionForm && maxConnectionsReached)}
 >
   <Plus className="h-4 w-4" />
   {showNewConnectionForm
@@ -798,6 +817,7 @@ const studioConfigValid = useMemo(() => {
                 placeholder="Es. Tenant Eius Advisory"
                 value={newConnectionName}
                 onChange={(e) => setNewConnectionName(e.target.value)}
+                 disabled={!isAdmin}
               />
             </div>
 
@@ -809,6 +829,7 @@ const studioConfigValid = useMemo(() => {
                 value={newConnectionTenantId}
                 onChange={(e) => setNewConnectionTenantId(e.target.value)}
                 autoComplete="off"
+                disabled={!isAdmin}
               />
             </div>
 
@@ -820,6 +841,7 @@ const studioConfigValid = useMemo(() => {
                 value={newConnectionClientId}
                 onChange={(e) => setNewConnectionClientId(e.target.value)}
                 autoComplete="off"
+                disabled={!isAdmin}
               />
             </div>
 
@@ -832,6 +854,7 @@ const studioConfigValid = useMemo(() => {
                 value={newConnectionClientSecret}
                 onChange={(e) => setNewConnectionClientSecret(e.target.value)}
                 autoComplete="new-password"
+                disabled={!isAdmin}
               />
             </div>
 
@@ -841,6 +864,7 @@ const studioConfigValid = useMemo(() => {
                   type="checkbox"
                   checked={newConnectionEnabled}
                   onChange={(e) => setNewConnectionEnabled(e.target.checked)}
+                  disabled={!isAdmin}
                 />
                 Connessione attiva
               </label>
@@ -850,6 +874,7 @@ const studioConfigValid = useMemo(() => {
                   type="checkbox"
                   checked={newConnectionIsDefault}
                   onChange={(e) => setNewConnectionIsDefault(e.target.checked)}
+                  disabled={!isAdmin}
                 />
                 Imposta come connessione predefinita dello studio
               </label>
@@ -1062,6 +1087,15 @@ const studioConfigValid = useMemo(() => {
             </Alert>
           )}
 
+          {!isAdmin && (
+          <Alert>
+            <Info className="h-4 w-4" />
+                  <AlertDescription>
+              Le credenziali Microsoft 365 possono essere inserite o modificate solo dall'amministratore.
+                Gli altri utenti possono solo selezionare la connessione e collegare il proprio account.
+                </AlertDescription>
+              </Alert>
+                  )}
           <Card>
             <CardHeader>
               <CardTitle>Credenziali Azure AD (Connessione selezionata)</CardTitle>
@@ -1087,7 +1121,7 @@ const studioConfigValid = useMemo(() => {
                   value={selectedClientId}
                   onChange={(e) => setSelectedClientId(e.target.value)}
                   autoComplete="off"
-                  disabled={!selectedConnectionId}
+                  disabled={!isAdmin || !selectedConnectionId}
                 />
               </div>
 
@@ -1109,7 +1143,7 @@ const studioConfigValid = useMemo(() => {
                   value={selectedClientSecret}
                   onChange={(e) => setSelectedClientSecret(e.target.value)}
                   autoComplete="new-password"
-                  disabled={!selectedConnectionId}
+                  disabled={!isAdmin || !selectedConnectionId}
                 />
                 <p className="text-xs text-muted-foreground">
                   Il secret viene cifrato prima del salvataggio.
@@ -1124,19 +1158,20 @@ const studioConfigValid = useMemo(() => {
                   value={selectedTenantId}
                   onChange={(e) => setSelectedTenantId(e.target.value)}
                   autoComplete="off"
-                  disabled={!selectedConnectionId}
+                  disabled={!isAdmin || !selectedConnectionId}
                 />
               </div>
 
               <div className="flex gap-3 pt-4">
                 <Button
                   onClick={handleSave}
-                  disabled={
-                    saving ||
-                    !selectedConnectionId ||
-                    !selectedClientId ||
-                    !selectedTenantId
-                  }
+                 disabled={
+  !isAdmin ||
+  saving ||
+  !selectedConnectionId ||
+  !selectedClientId ||
+  !selectedTenantId
+}
                 >
                   {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Salva configurazione
@@ -1250,10 +1285,11 @@ const studioConfigValid = useMemo(() => {
 
                   <div className="mt-3 flex flex-wrap gap-2">
                     {!conn.is_default && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={async () => {
+                     <Button
+  type="button"
+  variant="outline"
+  disabled={!isAdmin}
+  onClick={async () => {
                           await setDefaultMicrosoftConnection(studioId, conn.id);
                           await loadConnections();
                           setSelectedConnectionId(conn.id);
