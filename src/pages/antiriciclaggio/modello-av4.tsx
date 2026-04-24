@@ -1425,12 +1425,11 @@ ${nomeOperatore}
     }
 
     if (savedId && form.pratica_id) {
-      const praticaUpdatePayload: any = {
-        av4_id: savedId,
-        av4_corrente_id: savedId,
-        stato: "av4_compilato",
-        stato_ciclo: "av4_compilato",
-      };
+     const praticaUpdatePayload: any = {
+  av4_id: savedId,
+  av4_corrente_id: savedId,
+  stato_ciclo: "av4_compilato",
+};
 
       const { error: praticaUpdateError } = await supabase
         .from("tbPraticheAML")
