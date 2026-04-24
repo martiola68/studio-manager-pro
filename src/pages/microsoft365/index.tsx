@@ -772,23 +772,22 @@ async function handleCreateConnection() {
               </CardDescription>
             </div>
 
-            <Button
+  <Button
   type="button"
   variant={showNewConnectionForm ? "outline" : "default"}
   onClick={() => {
-   onClick={() => {
-  if (!isAdmin) {
-    setError("Solo l'amministratore può creare o modificare connessioni Microsoft 365.");
-    return;
-  }
+    if (!isAdmin) {
+      setError("Solo l'amministratore può creare o modificare connessioni Microsoft 365.");
+      return;
+    }
 
-  if (maxConnectionsReached) {
-    setError("Limite massimo di 2 connessioni Microsoft raggiunto per questo studio");
-    return;
-  }
+    if (maxConnectionsReached) {
+      setError("Limite massimo di 2 connessioni Microsoft raggiunto per questo studio");
+      return;
+    }
 
-  setShowNewConnectionForm((prev) => !prev);
-}}
+    setShowNewConnectionForm((prev) => !prev);
+  }}
   className="gap-2"
   disabled={!isAdmin || (!showNewConnectionForm && maxConnectionsReached)}
 >
