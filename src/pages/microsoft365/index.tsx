@@ -240,9 +240,9 @@ const studioConfigValid = useMemo(() => {
       const currentUserId = session.user.id;
       setUserId(currentUserId);
 
-      const { data: user, error: userErr } = await supabase
+     const { data: user, error: userErr } = await supabase
   .from("tbutenti")
-  .select("studio_id, microsoft_connection_id, ruolo")
+  .select("studio_id, microsoft_connection_id, tipo_utente")
   .eq("id", currentUserId)
   .single();
 
@@ -255,7 +255,7 @@ const studioConfigValid = useMemo(() => {
 
       setStudioId(user.studio_id);
 setUserMicrosoftConnectionId(user.microsoft_connection_id || "");
-setIsAdmin(user.ruolo === "amministratore" || user.ruolo === "admin");
+setIsAdmin(user.tipo_utente === "Admin");
 
       const { data: rawData, error: cfgErr } = await supabase
         .from("microsoft365_config")
