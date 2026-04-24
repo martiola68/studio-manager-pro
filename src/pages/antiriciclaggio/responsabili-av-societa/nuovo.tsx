@@ -135,6 +135,37 @@ export default function NuovaSocietaRespAVPage() {
     return Array.isArray(data) && data.length > 0;
   };
 
+    const checkTenantSocietaLimit = async (studioId: string) => {
+  const supabase = getSupabaseClient() as any;
+
+  const { data: studioRow, error: studioError } = await supabase
+    .from("tbstudio")
+    .select("ragione_sociale_tenant2")
+    .eq("id", studioId)
+    .single();
+
+  if (studioError) throw new Error(studioError.message);
+
+  const tenant2Attivo =
+    typeof studioRow?.ragione_sociale_tenant2 === "string" &&
+    studioRow.ragione_sociale_tenant2.trim() !== "";
+
+  const maxSocieta = tenant2Attivo ? 2 : 1;
+
+  const { count, error: countError } = await supabase
+    .from("tbRespAVSocieta")
+    .select("id", { count: "exact", head: true })
+    .eq("studio_id", studioId);
+
+  if (countError) throw new Error(countError.message);
+
+  return {
+    maxSocieta,
+    societaEsistenti: count || 0,
+    limiteRaggiunto: (count || 0) >= maxSocieta,
+  };
+};
+
   const savePasswordSettings = async (societaId: string) => {
     const trimmedPassword = newPassword.trim();
     const trimmedConfirmPassword = confirmPassword.trim();
@@ -230,13 +261,24 @@ export default function NuovaSocietaRespAVPage() {
         return;
       }
 
-      setSaving(true);
+    setSaving(true);
 
-      const duplicate = await checkDuplicate(
-        studioId,
-        codiceFiscale,
-        isEdit ? (id as string) : undefined
-      );
+if (!isEdit) {
+  const tenantLimit = await checkTenantSocietaLimit(studioId);
+
+  if (tenantLimit.limiteRaggiunto) {
+    alert(
+      `Limite società responsabili raggiunto: puoi creare massimo ${tenantLimit.maxSocieta} società per i tenant attivi.`
+    );
+    return;
+  }
+}
+
+const duplicate = await checkDuplicate(
+  studioId,
+  codiceFiscale,
+  isEdit ? (id as string) : undefined
+);
 
       if (duplicate) {
         alert("Esiste già una società con questo codice fiscale.");
