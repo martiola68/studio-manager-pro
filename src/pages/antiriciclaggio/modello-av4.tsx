@@ -1497,17 +1497,24 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
 
   return (
     <div className="flex h-[calc(100vh-64px)] flex-col overflow-hidden bg-background">
-      <FormStickyHeader
-        title="Modello AV4"
-        subtitle="Dichiarazione del Cliente"
-        onSave={salvaAV4}
-        onPrint={handlePrint}
-        onClose={handleChiudiModello}
-        onSendToClient={handleInvioPubblico}
-        showSendToClient
-        sendToClientDisabled={!av4Id || loading}
-        saving={loading}
-      />
+     <FormStickyHeader
+  title="Modello AV4"
+  subtitle="Dichiarazione del Cliente"
+  onSave={salvaAV4}
+  onPrint={handlePrint}
+  onClose={handleChiudiModello}
+  onSendToClient={async () => {
+    if (!av4Id) {
+      await salvaAV4();
+      return;
+    }
+
+    await handleInvioPubblico();
+  }}
+  showSendToClient
+  sendToClientDisabled={loading}
+  saving={loading}
+/>
 
       <div className="flex-1 overflow-hidden">
         <div className="h-full overflow-y-auto">
