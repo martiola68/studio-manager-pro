@@ -477,7 +477,7 @@ export function TopNavBar() {
   }
 
 return (
-  <nav className="w-full bg-white border-b border-gray-200 shadow-sm sticky top-16 z-30">
+  <nav className="w-full bg-white border-b border-gray-200 shadow-sm sticky top-[148px] z-40">
     <div className="overflow-x-auto">
       <div className="flex items-center gap-1 px-4 py-2 min-w-max">
         {menuItems.map((item) => renderMenuItem(item))}
