@@ -187,7 +187,7 @@ useEffect(() => {
         </div>
 
 <div className="flex gap-2">
- <Link href="/contenzioso/tipi-atto">
+<Link href="/contenzioso/atti/nuovo">
   <Button>
     <Plus className="mr-2 h-4 w-4" />
     Nuovo atto
