@@ -102,6 +102,20 @@ export default function NuovoAvvisoBonario() {
     });
   };
 
+ const openPdf = (path: string) => {
+    if (!path) return;
+
+    const supabase = getSupabaseClient();
+
+    const { data } = supabase.storage
+      .from("messaggi-allegati")
+      .getPublicUrl(path);
+
+    if (data?.publicUrl) {
+      window.open(data.publicUrl, "_blank");
+    }
+  };
+
   const handlePdfUpload = async (
   field: "allegato_atto" | "allegato_civis" | "allegato_responso",
   file: File | null
@@ -550,8 +564,6 @@ const supabase = getSupabaseClient();
       Apri
     </button>
   </div>
-</div>
-)}
 </div>    
         </div>
 
