@@ -59,62 +59,56 @@ export default function ContenziosoIndexPage() {
   const [tipiAtto, setTipiAtto] = useState<TipoAtto[]>([]);
 
   const [search, setSearch] = useState("");
-  const [tipoFiltro, setTipoFiltro] = useState("all");
-  const [statoFiltro, setStatoFiltro] = useState("all");
+const [archivioFiltro, setArchivioFiltro] = useState("avvisi");
+const [tipoFiltro, setTipoFiltro] = useState("all");
+const [statoFiltro, setStatoFiltro] = useState("all");
+  
+async function loadData() {
+  const supabase = getSupabaseClient();
 
-  async function loadData() {
-    const supabase = getSupabaseClient();
+  try {
+    setLoading(true);
 
-    try {
-      setLoading(true);
+    const tabella =
+      archivioFiltro === "avvisi"
+        ? "tbcontenzioso_avvisi_bonari"
+        : "tbcontenzioso_esattoriale";
 
-      const [tipiRes, scadenzeRes] = await Promise.all([
-        supabase
-          .from("tbcontenzioso_tipi_atto" as any)
-          .select("id, descrizione")
-          .eq("attivo", true)
-          .order("descrizione"),
+    const [tipiRes, scadenzeRes] = await Promise.all([
+      (supabase as any)
+        .from("tbcontenzioso_tipi_atto")
+        .select("id, descrizione")
+        .eq("attivo", true)
+        .order("descrizione"),
 
-        supabase
-        const tabella =
-  archivioFiltro === "avvisi"
-    ? "tbcontenzioso_avvisi_bonari"
-    : "tbcontenzioso_esattoriale";
-
-const scadenzeRes = await (supabase as any)
-  .from(tabella)
-  .select(`
-    *,
-    tbclienti:cliente_id(id, ragione_sociale),
-    tbcontenzioso_tipi_atto:tipo_atto_id(id, descrizione, giorni_scadenza)
-  `)
-  .order("data_scadenza", { ascending: true });
-          .select(
-            `
-            *,
-            tbclienti:cliente_id(id, ragione_sociale),
-            tbcontenzioso_tipi_atto:tipo_atto_id(id, descrizione, giorni_scadenza)
+      (supabase as any)
+        .from(tabella)
+        .select(
           `
-          )
-          .order("data_scadenza", { ascending: true }),
-      ]);
+          *,
+          tbclienti:cliente_id(id, ragione_sociale),
+          tbcontenzioso_tipi_atto:tipo_atto_id(id, descrizione, giorni_scadenza)
+        `
+        )
+        .order("data_scadenza", { ascending: true }),
+    ]);
 
-      if (tipiRes.error) throw tipiRes.error;
-      if (scadenzeRes.error) throw scadenzeRes.error;
+    if (tipiRes.error) throw tipiRes.error;
+    if (scadenzeRes.error) throw scadenzeRes.error;
 
-      setTipiAtto(((tipiRes.data || []) as unknown) as TipoAtto[]);
-      setScadenze(((scadenzeRes.data || []) as unknown) as Scadenza[]);
-    } catch (error: any) {
-      toast({
-        title: "Errore",
-        description: error?.message || "Impossibile caricare il contenzioso",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+    setTipiAtto(((tipiRes.data || []) as unknown) as TipoAtto[]);
+    setScadenze(((scadenzeRes.data || []) as unknown) as Scadenza[]);
+  } catch (error: any) {
+    toast({
+      title: "Errore",
+      description: error?.message || "Impossibile caricare il contenzioso",
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
   }
-
+}
+  
 useEffect(() => {
   void loadData();
 }, [archivioFiltro]);
@@ -215,8 +209,18 @@ useEffect(() => {
         <CardHeader>
           <CardTitle>Filtri</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Input
+       <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-4">
+  <Select value={archivioFiltro} onValueChange={setArchivioFiltro}>
+    <SelectTrigger>
+      <SelectValue placeholder="Archivio" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="avvisi">Avvisi bonari</SelectItem>
+      <SelectItem value="esattoriale">Accertamenti e cartelle</SelectItem>
+    </SelectContent>
+  </Select>
+
+  <Input
             placeholder="Cerca cliente, numero atto, tipo..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
