@@ -11,7 +11,8 @@ type TipoAtto = {
 export default function TipiAttoPage() {
   const [tipi, setTipi] = useState<TipoAtto[]>([]);
   const [loading, setLoading] = useState(false);
-  const [errore, setErrore] = useState("");
+ const [errore, setErrore] = useState("");
+const [successo, setSuccesso] = useState("");
  const [editingId, setEditingId] = useState<string | null>(null);
   
   const [form, setForm] = useState({
