@@ -277,9 +277,13 @@ export function TopNavBar() {
 {
   label: "Contenzioso",
   icon: <FileText className="h-4 w-4" />,
-  href: "/contenzioso",
+  children: [
+    { label: "Elenco contenzioso", href: "/contenzioso", icon: null },
+    { label: "Tipi atto", href: "/contenzioso/tipi-atto", icon: null },
+    { label: "Avvisi bonari", href: "/contenzioso/avvisi-bonari", icon: null },
+  ],
 },
-
+    
 {
   label: "Antiriciclaggio",
       icon: <ShieldCheck className="h-5 w-5" />,
