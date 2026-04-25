@@ -49,9 +49,7 @@ export default function NuovoAvvisoBonario() {
   }, []);
 
   const getClienteLabel = (cliente: Cliente) => {
-  return `${cliente.ragione_sociale || "Cliente senza nome"}${
-    cliente.codice_fiscale ? ` - ${cliente.codice_fiscale}` : ""
-  }`;
+return cliente.ragione_sociale || "Cliente senza nome";
 };
 
   const addDays = (dateString: string, days: number) => {
