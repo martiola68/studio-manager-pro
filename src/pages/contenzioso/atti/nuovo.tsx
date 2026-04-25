@@ -60,11 +60,16 @@ if (session?.user?.email) {
 }
 
 const [c, t, u, tr] = await Promise.all([
-      supabase.from("tbclienti").select("id, ragione_sociale"),
-      supabase.from("tbcontenzioso_tipi_atto").select("*").eq("attivo", true),
-      supabase.from("tbutenti").select("id, nome, cognome"),
-      supabase.from("tbcontenzioso_codici_tributo").select("*"),
-    ]);
+  supabase.from("tbclienti").select("id, ragione_sociale"),
+  (supabase as any)
+    .from("tbcontenzioso_tipi_atto")
+    .select("*")
+    .eq("attivo", true),
+  supabase.from("tbutenti").select("id, nome, cognome"),
+  (supabase as any)
+    .from("tbcontenzioso_codici_tributo")
+    .select("*"),
+]);
 
     setClienti(c.data || []);
     setTipiAtto(t.data || []);
