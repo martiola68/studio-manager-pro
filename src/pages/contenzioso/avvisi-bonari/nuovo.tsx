@@ -102,6 +102,39 @@ export default function NuovoAvvisoBonario() {
     });
   };
 
+  const handlePdfUpload = async (
+  field: "allegato_atto" | "allegato_civis" | "allegato_responso",
+  file: File | null
+) => {
+  if (!file) return;
+
+  if (file.type !== "application/pdf") {
+    setErrore("Puoi caricare solo file PDF.");
+    return;
+  }
+
+  const supabase = getSupabaseClient();
+
+  const fileExt = file.name.split(".").pop();
+  const fileName = `${field}_${Date.now()}.${fileExt}`;
+  const filePath = `contenzioso/avvisi-bonari/${fileName}`;
+
+  const { error } = await supabase.storage
+    .from("messaggi-allegati")
+    .upload(filePath, file, {
+      cacheControl: "3600",
+      upsert: true,
+    });
+
+  if (error) {
+    console.error(error);
+    setErrore("Errore durante il caricamento del PDF.");
+    return;
+  }
+
+  handleChange(field, filePath);
+};
+
   const handleSave = async () => {
     setErrore("");
     setSuccesso("");
@@ -447,43 +480,62 @@ const supabase = getSupabaseClient();
             </label>
           </div>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium">
-              Allegato atto
-            </label>
-            <input
-              value={form.allegato_atto}
-              onChange={(e) => handleChange("allegato_atto", e.target.value)}
-              placeholder="Percorso/nome file"
-              className="w-full rounded-lg border p-2"
-            />
-          </div>
+       <div>
+  <label className="mb-1 block text-sm font-medium">
+    Allegato atto
+  </label>
+  <input
+    type="file"
+    accept="application/pdf"
+    onChange={(e) =>
+      handlePdfUpload("allegato_atto", e.target.files?.[0] || null)
+    }
+    className="w-full rounded-lg border p-2"
+  />
+  {form.allegato_atto && (
+    <p className="mt-1 text-xs text-green-700">
+      PDF caricato: {form.allegato_atto}
+    </p>
+  )}
+</div>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium">
-              Allegato CIVIS
-            </label>
-            <input
-              value={form.allegato_civis}
-              onChange={(e) => handleChange("allegato_civis", e.target.value)}
-              placeholder="Percorso/nome file"
-              className="w-full rounded-lg border p-2"
-            />
-          </div>
+<div>
+  <label className="mb-1 block text-sm font-medium">
+    Allegato CIVIS
+  </label>
+  <input
+    type="file"
+    accept="application/pdf"
+    onChange={(e) =>
+      handlePdfUpload("allegato_civis", e.target.files?.[0] || null)
+    }
+    className="w-full rounded-lg border p-2"
+  />
+  {form.allegato_civis && (
+    <p className="mt-1 text-xs text-green-700">
+      PDF caricato: {form.allegato_civis}
+    </p>
+  )}
+</div>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium">
-              Allegato responso
-            </label>
-            <input
-              value={form.allegato_responso}
-              onChange={(e) =>
-                handleChange("allegato_responso", e.target.value)
-              }
-              placeholder="Percorso/nome file"
-              className="w-full rounded-lg border p-2"
-            />
-          </div>
+<div>
+  <label className="mb-1 block text-sm font-medium">
+    Allegato responso
+  </label>
+  <input
+    type="file"
+    accept="application/pdf"
+    onChange={(e) =>
+      handlePdfUpload("allegato_responso", e.target.files?.[0] || null)
+    }
+    className="w-full rounded-lg border p-2"
+  />
+  {form.allegato_responso && (
+    <p className="mt-1 text-xs text-green-700">
+      PDF caricato: {form.allegato_responso}
+    </p>
+  )}
+</div>    
         </div>
 
         <div className="mt-8 flex justify-end gap-3">
