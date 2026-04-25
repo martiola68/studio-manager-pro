@@ -480,88 +480,77 @@ const supabase = getSupabaseClient();
             </label>
           </div>
 
-       <div>
+    <div>
   <label className="mb-1 block text-sm font-medium">
     Allegato atto
   </label>
-  <input
-    type="file"
-    accept="application/pdf"
-    onChange={(e) =>
-      handlePdfUpload("allegato_atto", e.target.files?.[0] || null)
-    }
-    className="w-full rounded-lg border p-2"
-  />
-   PDF caricato: {form.allegato_atto}
+  <div className="flex gap-2">
+    <input
+      type="file"
+      accept="application/pdf"
+      onChange={(e) =>
+        handlePdfUpload("allegato_atto", e.target.files?.[0] || null)
+      }
+      className="w-full rounded-lg border p-2"
+    />
+    <button
+      type="button"
+      disabled={!form.allegato_atto}
+      onClick={() => openPdf(form.allegato_atto)}
+      className="rounded-lg border px-4 py-2 text-sm disabled:opacity-40"
+    >
+      Apri
+    </button>
+  </div>
 </div>
 
 <div>
   <label className="mb-1 block text-sm font-medium">
     Allegato CIVIS
   </label>
-  <input
-    type="file"
-    accept="application/pdf"
-    onChange={(e) =>
-      handlePdfUpload("allegato_civis", e.target.files?.[0] || null)
-    }
-    className="w-full rounded-lg border p-2"
-  />
-  {form.allegato_civis && (
-   <div className="mt-1 flex items-center gap-2">
-    <span className="text-xs text-green-700">PDF caricato</span>
+  <div className="flex gap-2">
+    <input
+      type="file"
+      accept="application/pdf"
+      onChange={(e) =>
+        handlePdfUpload("allegato_civis", e.target.files?.[0] || null)
+      }
+      className="w-full rounded-lg border p-2"
+    />
     <button
       type="button"
-      onClick={async () => {
-        const supabase = getSupabaseClient();
-        const { data } = supabase.storage
-          .from("messaggi-allegati")
-          .getPublicUrl(form.allegato_atto);
-
-        if (data?.publicUrl) {
-          window.open(data.publicUrl, "_blank");
-        }
-      }}
-      className="text-xs text-blue-600 underline"
+      disabled={!form.allegato_civis}
+      onClick={() => openPdf(form.allegato_civis)}
+      className="rounded-lg border px-4 py-2 text-sm disabled:opacity-40"
     >
-      Apri PDF
+      Apri
     </button>
   </div>
-)}
 </div>
 
 <div>
   <label className="mb-1 block text-sm font-medium">
     Allegato responso
   </label>
-  <input
-    type="file"
-    accept="application/pdf"
-    onChange={(e) =>
-      handlePdfUpload("allegato_responso", e.target.files?.[0] || null)
-    }
-    className="w-full rounded-lg border p-2"
-  />
-  {form.allegato_responso && (
-    <div className="mt-1 flex items-center gap-2">
-    <span className="text-xs text-green-700">PDF caricato</span>
+  <div className="flex gap-2">
+    <input
+      type="file"
+      accept="application/pdf"
+      onChange={(e) =>
+        handlePdfUpload("allegato_responso", e.target.files?.[0] || null)
+      }
+      className="w-full rounded-lg border p-2"
+    />
     <button
       type="button"
-      onClick={async () => {
-        const supabase = getSupabaseClient();
-        const { data } = supabase.storage
-          .from("messaggi-allegati")
-          .getPublicUrl(form.allegato_atto);
-
-        if (data?.publicUrl) {
-          window.open(data.publicUrl, "_blank");
-        }
-      }}
-      className="text-xs text-blue-600 underline"
+      disabled={!form.allegato_responso}
+      onClick={() => openPdf(form.allegato_responso)}
+      className="rounded-lg border px-4 py-2 text-sm disabled:opacity-40"
     >
-      Apri PDF
+      Apri
     </button>
   </div>
+</div>
 )}
 </div>    
         </div>
