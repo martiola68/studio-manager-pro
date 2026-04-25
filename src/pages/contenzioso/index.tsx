@@ -52,8 +52,6 @@ type TipoAtto = {
 export default function ContenziosoIndexPage() {
   const { toast } = useToast();
 
-  const [archivioFiltro, setArchivioFiltro] = useState("avvisi");
-
   const [loading, setLoading] = useState(true);
   const [scadenze, setScadenze] = useState<Scadenza[]>([]);
   const [tipiAtto, setTipiAtto] = useState<TipoAtto[]>([]);
