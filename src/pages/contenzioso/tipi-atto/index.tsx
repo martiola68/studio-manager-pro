@@ -12,8 +12,8 @@ export default function TipiAttoPage() {
   const [tipi, setTipi] = useState<TipoAtto[]>([]);
   const [loading, setLoading] = useState(false);
   const [errore, setErrore] = useState("");
-  const [successo, setSuccesso] = useState("");
-
+ const [editingId, setEditingId] = useState<string | null>(null);
+  
   const [form, setForm] = useState({
     descrizione: "",
     giorni_scadenza: 60,
@@ -46,44 +46,64 @@ export default function TipiAttoPage() {
   }, []);
 
   const handleSave = async () => {
-    setErrore("");
-    setSuccesso("");
+  setErrore("");
+  setSuccesso("");
 
-    if (!form.descrizione.trim()) {
-      setErrore("Inserisci la descrizione del tipo atto.");
-      return;
-    }
+  if (!form.descrizione.trim()) {
+    setErrore("Inserisci la descrizione del tipo atto.");
+    return;
+  }
 
-    if (!form.giorni_scadenza || form.giorni_scadenza <= 0) {
-      setErrore("Inserisci giorni scadenza validi.");
-      return;
-    }
+  if (!form.giorni_scadenza || form.giorni_scadenza <= 0) {
+    setErrore("Inserisci giorni scadenza validi.");
+    return;
+  }
 
-    const supabase = getSupabaseClient();
+  const supabase = getSupabaseClient();
 
-    const { error } = await (supabase as any)
-      .from("tbcontenzioso_tipi_atto")
-      .insert({
-        descrizione: form.descrizione.trim(),
-        giorni_scadenza: form.giorni_scadenza,
-        attivo: true,
-      });
-
-    if (error) {
-      console.error(error);
-      setErrore("Errore salvataggio tipo atto. Verifica che non esista già.");
-      return;
-    }
-
-    setForm({
-      descrizione: "",
-      giorni_scadenza: 60,
-    });
-
-    setSuccesso("Tipo atto salvato correttamente.");
-    loadTipi();
+  const payload = {
+    descrizione: form.descrizione.trim(),
+    giorni_scadenza: form.giorni_scadenza,
+    attivo: true,
   };
 
+  const { error } = editingId
+    ? await (supabase as any)
+        .from("tbcontenzioso_tipi_atto")
+        .update(payload)
+        .eq("id", editingId)
+    : await (supabase as any)
+        .from("tbcontenzioso_tipi_atto")
+        .insert(payload);
+
+  if (error) {
+    console.error(error);
+    setErrore("Errore salvataggio tipo atto. Verifica che non esista già.");
+    return;
+  }
+
+  setForm({
+    descrizione: "",
+    giorni_scadenza: 60,
+  });
+  setEditingId(null);
+  setSuccesso(
+    editingId
+      ? "Tipo atto aggiornato correttamente."
+      : "Tipo atto salvato correttamente."
+  );
+
+  loadTipi();
+};
+
+  const handleEdit = (tipo: TipoAtto) => {
+  setEditingId(tipo.id);
+  setForm({
+    descrizione: tipo.descrizione,
+    giorni_scadenza: tipo.giorni_scadenza,
+  });
+};
+  
   const toggleAttivo = async (tipo: TipoAtto) => {
     const supabase = getSupabaseClient();
 
@@ -161,7 +181,7 @@ export default function TipiAttoPage() {
               onClick={handleSave}
               className="w-full rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
             >
-              Salva tipo atto
+             {editingId ? "Aggiorna tipo atto" : "Salva tipo atto"}
             </button>
           </div>
         </div>
@@ -213,6 +233,15 @@ export default function TipiAttoPage() {
                       )}
                     </td>
                     <td className="p-3 text-right">
+
+                      <button
+                        type="button"
+                          onClick={() => handleEdit(tipo)}
+                          className="mr-2 rounded-lg border px-3 py-1 text-sm hover:bg-gray-100"
+                            >
+                        Modifica
+                      </button>
+                      
                       <button
                         type="button"
                         onClick={() => toggleAttivo(tipo)}
