@@ -23,10 +23,10 @@ export default function TipiAttoPage() {
 
     setLoading(true);
 
-    const { data, error } = await supabase
-      .from("tbcontenzioso_tipi_atto")
-      .select("*")
-      .order("descrizione");
+  const { data, error } = await (supabase as any)
+  .from("tbcontenzioso_tipi_atto")
+  .select("*")
+  .order("descrizione");
 
     if (error) {
       setErrore("Errore caricamento tipi atto");
@@ -52,9 +52,9 @@ export default function TipiAttoPage() {
 
     const supabase = getSupabaseClient();
 
-    const { error } = await supabase
-      .from("tbcontenzioso_tipi_atto")
-      .insert({
+   const { error } = await (supabase as any)
+  .from("tbcontenzioso_tipi_atto")
+  .insert({
         descrizione: form.descrizione.trim(),
         giorni_scadenza: form.giorni_scadenza,
       });
@@ -71,9 +71,9 @@ export default function TipiAttoPage() {
   const handleDelete = async (id: string) => {
     const supabase = getSupabaseClient();
 
-    await supabase
-      .from("tbcontenzioso_tipi_atto")
-      .delete()
+   await (supabase as any)
+  .from("tbcontenzioso_tipi_atto")
+  .delete()
       .eq("id", id);
 
     loadTipi();
