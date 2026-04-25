@@ -130,7 +130,7 @@ type ClienteFormData = {
   referente_esterno: string;
 
   tipo_prestazione_id: string;
-  tipo_redditi?: "USC" | "USP" | "ENC" | "UPF" | "730";
+  tipo_redditi?: "USC" | "USP" | "ENC" | "UPF-NO PI" | "UPF-ORD." | "UPF-FOR." | "730";
 
   note: string;
 
@@ -612,7 +612,7 @@ const handleEdit = async (cliente: ClienteRow) => {
 
     tipo_prestazione_id: clienteData.tipo_prestazione_id || "",
     tipo_redditi:
-      (clienteData.tipo_redditi as "USC" | "USP" | "ENC" | "UPF" | "730") ||
+   (clienteData.tipo_redditi as "USC" | "USP" | "ENC" | "UPF-NO PI" | "UPF-ORD." | "UPF-FOR." | "730") ||
       undefined,
 
     note: clienteData.note || "",
@@ -2504,7 +2504,7 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
     onValueChange={(value: string) =>
       setFormData({
         ...formData,
-        tipo_redditi: value as "USC" | "USP" | "ENC" | "UPF" | "730",
+        tipo_redditi: value as "USC" | "USP" | "ENC" | "UPF-NO PI" | "UPF-ORD." | "UPF-FOR." | "730",
       })
     }
   >
@@ -2515,7 +2515,9 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
       <SelectItem value="USC">USC</SelectItem>
       <SelectItem value="USP">USP</SelectItem>
       <SelectItem value="ENC">ENC</SelectItem>
-      <SelectItem value="UPF">UPF</SelectItem>
+     <SelectItem value="UPF-NO PI">UPF-NO IVA</SelectItem>
+      <SelectItem value="UPF-ORD.">UPF-ORD.</SelectItem>
+      <SelectItem value="UPF-FOR.">UPF-FOR.</SelectItem>
       <SelectItem value="730">730</SelectItem>
     </SelectContent>
   </Select>
