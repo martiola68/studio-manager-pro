@@ -254,7 +254,7 @@ const supabase = getSupabaseClient();
     }
 
     setSuccesso("Avviso bonario salvato correttamente.");
-    router.push("/contenzioso/avvisi-bonari");
+    router.push("/contenzioso");
   };
 
   return (
@@ -272,7 +272,7 @@ const supabase = getSupabaseClient();
 
           <button
             type="button"
-            onClick={() => router.push("/contenzioso/avvisi-bonari")}
+            onClick={() => router.push("/contenzioso")}
             className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-100"
           >
             Indietro
@@ -640,7 +640,7 @@ const supabase = getSupabaseClient();
         <div className="mt-8 flex justify-end gap-3">
           <button
             type="button"
-            onClick={() => router.push("/contenzioso/avvisi-bonari")}
+            onClick={() => router.push("/contenzioso")}
             className="rounded-lg border px-5 py-2 hover:bg-gray-100"
           >
             Annulla
