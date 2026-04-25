@@ -673,54 +673,30 @@ const handleSave = async () => {
         const newErrors: Record<string, boolean> = {};
         const missingFields: string[] = [];
 
-        const hasFiscaleOrConsulenza =
-          !!formData.settore_fiscale || !!formData.settore_consulenza;
+    if (!formData.ragione_sociale.trim()) {
+  newErrors.ragione_sociale = true;
+  missingFields.push("Ragione Sociale");
+}
 
-        const hasLavoro = !!formData.settore_lavoro;
+// if (!formData.codice_fiscale.trim()) {
+//   newErrors.codice_fiscale = true;
+//   missingFields.push("Codice Fiscale");
+// }
 
-        if (!formData.ragione_sociale.trim()) {
-          newErrors.ragione_sociale = true;
-          missingFields.push("Ragione Sociale");
-        }
+if (
+  !formData.settore_fiscale &&
+  !formData.settore_lavoro &&
+  !formData.settore_consulenza
+) {
+  newErrors.settori = true;
+  missingFields.push("Selezionare almeno un settore");
+}
 
-        if (!formData.settore_fiscale && !formData.settore_lavoro && !formData.settore_consulenza) {
-          newErrors.settori = true;
-          missingFields.push("Selezionare almeno un Settore");
-        }
-
-        if (hasFiscaleOrConsulenza) {
-          if (!formData.utente_operatore_id) {
-            newErrors.utente_operatore_id = true;
-            missingFields.push("Utente Fiscale");
-          }
-
-          if (!formData.utente_professionista_id) {
-            newErrors.utente_professionista_id = true;
-            missingFields.push("Professionista Fiscale");
-          }
-        }
-
-        if (hasLavoro) {
-          if (!formData.utente_payroll_id) {
-            newErrors.utente_payroll_id = true;
-            missingFields.push("Utente Payroll");
-          }
-
-          if (!formData.professionista_payroll_id) {
-            newErrors.professionista_payroll_id = true;
-            missingFields.push("Professionista Payroll");
-          }
-        }
-
-        if (!formData.tipo_prestazione_id) {
-          newErrors.tipo_prestazione_id = true;
-          missingFields.push("Tipo Prestazione");
-        }
-
-        if (!formData.tipo_redditi) {
-          newErrors.tipo_redditi = true;
-          missingFields.push("Tipo Redditi");
-        }
+if (!formData.utente_operatore_id && !formData.utente_payroll_id) {
+  newErrors.utente_operatore_id = true;
+  newErrors.utente_payroll_id = true;
+  missingFields.push("Selezionare almeno Utente Fiscale o Utente Payroll");
+}
 
         if (missingFields.length > 0) {
           setErrors(newErrors);
@@ -2153,11 +2129,14 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
           </div>
 
           <div>
-            <Label htmlFor="codice_fiscale">Codice Fiscale</Label>
+           <Label htmlFor="codice_fiscale">
+  Codice Fiscale <span className="text-red-500">*</span>
+</Label>
             <div className="relative">
-              <Input
-                id="codice_fiscale"
-                value={formData.codice_fiscale}
+             <Input
+  id="codice_fiscale"
+  className={errors.codice_fiscale ? "border-red-500" : ""}
+  value={formData.codice_fiscale}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
@@ -2329,8 +2308,8 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
           </div>
 
           <div>
-        <Label htmlFor="utente_professionista_id">
-  Professionista Fiscale <span className="text-red-500">*</span>
+      <Label htmlFor="utente_professionista_id">
+  Professionista Fiscale
 </Label>
             <Select
               value={formData.utente_professionista_id || "none"}
@@ -2365,10 +2344,9 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
           </div>
 
          <div>
-  <Label htmlFor="utente_payroll_id">
-    Utente Payroll
-    {formData.settore_lavoro ? <span className="text-red-500"> *</span> : null}
-  </Label>
+<Label htmlFor="utente_payroll_id">
+  Utente Payroll <span className="text-red-500">*</span>
+</Label>
 
   <Select
     value={formData.utente_payroll_id || "none"}
@@ -2403,10 +2381,9 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
 </div>
 
          <div>
-  <Label htmlFor="professionista_payroll_id">
-    Professionista Payroll
-    {formData.settore_lavoro ? <span className="text-red-500"> *</span> : null}
-  </Label>
+ <Label htmlFor="professionista_payroll_id">
+  Professionista Payroll
+</Label>
 
   <Select
     value={formData.professionista_payroll_id || "none"}
@@ -2490,9 +2467,9 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
 </div>
 
 <div>
-  <Label htmlFor="tipo_prestazione_id">
-    Tipo Prestazione <span className="text-red-500">*</span>
-  </Label>
+<Label htmlFor="tipo_prestazione_id">
+  Tipo Prestazione
+</Label>
   <Select
     value={formData.tipo_prestazione_id || "none"}
     onValueChange={(value) =>
@@ -2519,9 +2496,9 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
 </div>
 
 <div>
-  <Label htmlFor="tipo_redditi">
-    Tipo Redditi <span className="text-red-500">*</span>
-  </Label>
+ <Label htmlFor="tipo_redditi">
+  Tipo Redditi
+</Label>
   <Select
     value={formData.tipo_redditi || undefined}
     onValueChange={(value: string) =>
