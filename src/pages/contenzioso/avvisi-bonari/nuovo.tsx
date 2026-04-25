@@ -116,6 +116,27 @@ export default function NuovoAvvisoBonario() {
     }
   };
 
+  const removePdf = async (
+  field: "allegato_atto" | "allegato_civis" | "allegato_responso",
+  path: string
+) => {
+  if (!path) return;
+
+  const supabase = getSupabaseClient();
+
+  const { error } = await supabase.storage
+    .from("messaggi-allegati")
+    .remove([path]);
+
+  if (error) {
+    console.error(error);
+    setErrore("Errore durante l'eliminazione del PDF.");
+    return;
+  }
+
+  handleChange(field, "");
+};
+
   const handlePdfUpload = async (
   field: "allegato_atto" | "allegato_civis" | "allegato_responso",
   file: File | null
@@ -515,6 +536,15 @@ const supabase = getSupabaseClient();
     >
       Apri
     </button>
+<button
+  type="button"
+  disabled={!form.allegato_atto}
+  onClick={() => removePdf("allegato_atto", form.allegato_atto)}
+  className="rounded-lg border border-red-300 px-4 py-2 text-sm text-red-600 disabled:opacity-40"
+>
+  Elimina
+</button>
+    
   </div>
 </div>
 
@@ -539,6 +569,14 @@ const supabase = getSupabaseClient();
     >
       Apri
     </button>
+    <button
+  type="button"
+  disabled={!form.allegato_civis}
+  onClick={() => removePdf("allegato_atto", form.allegato_atto)}
+  className="rounded-lg border border-red-300 px-4 py-2 text-sm text-red-600 disabled:opacity-40"
+>
+  Elimina
+</button>
   </div>
 </div>
 
@@ -563,6 +601,14 @@ const supabase = getSupabaseClient();
     >
       Apri
     </button>
+    <button
+  type="button"
+  disabled={!form.allegato_responso}
+  onClick={() => removePdf("allegato_atto", form.allegato_atto)}
+  className="rounded-lg border border-red-300 px-4 py-2 text-sm text-red-600 disabled:opacity-40"
+>
+  Elimina
+</button>
   </div>
 </div>    
         </div>
