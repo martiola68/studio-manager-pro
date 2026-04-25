@@ -69,7 +69,7 @@ return cliente.ragione_sociale || "Cliente senza nome";
   const { data, error } = await (supabase as any)
     .from("tbcontenzioso_tipi_atto")
     .select("id, descrizione, giorni_scadenza")
-    .eq("descrizione", TIPO_ATTO_AVVISO_BONARIO)
+    .ilike("descrizione", TIPO_ATTO_AVVISO_BONARIO)
     .eq("attivo", true)
     .single();
 
