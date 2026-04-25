@@ -43,10 +43,12 @@ export default function NuovoAvvisoBonario() {
   const [saving, setSaving] = useState(false);
   const [errore, setErrore] = useState("");
   const [successo, setSuccesso] = useState("");
+const [giorniScadenza, setGiorniScadenza] = useState(60);
 
-  useEffect(() => {
-    loadClienti();
-  }, []);
+ useEffect(() => {
+  loadClienti();
+  loadTipoAtto();
+}, []);
 
   const getClienteLabel = (cliente: Cliente) => {
 return cliente.ragione_sociale || "Cliente senza nome";
@@ -60,6 +62,31 @@ return cliente.ragione_sociale || "Cliente senza nome";
 
     return date.toISOString().split("T")[0];
   };
+
+  const loadTipoAtto = async () => {
+  const supabase = getSupabaseClient();
+
+  const { data, error } = await (supabase as any)
+    .from("tbcontenzioso_tipi_atto")
+    .select("id, descrizione, giorni_scadenza")
+    .eq("descrizione", TIPO_ATTO_AVVISO_BONARIO)
+    .eq("attivo", true)
+    .single();
+
+  if (error) {
+    console.error(error);
+    setErrore("Tipo atto Avviso bonario non trovato.");
+    return;
+  }
+
+  if (data?.giorni_scadenza) {
+    setGiorniScadenza(data.giorni_scadenza);
+
+    if (form.data_ricezione) {
+      handleChange("data_scadenza", addDays(form.data_ricezione, data.giorni_scadenza));
+    }
+  }
+};
 
  const loadClienti = async () => {
   const supabase = getSupabaseClient();
@@ -92,10 +119,9 @@ return cliente.ragione_sociale || "Cliente senza nome";
         [field]: value,
       };
 
-      if (field === "data_ricezione" && typeof value === "string") {
-        next.data_scadenza = addDays(value, 60);
-      }
-
+    if (field === "data_ricezione" && typeof value === "string") {
+  next.data_scadenza = addDays(value, giorniScadenza);
+}
       return next;
     });
   };
@@ -374,7 +400,7 @@ const supabase = getSupabaseClient();
               className="w-full rounded-lg border bg-gray-100 p-2"
             />
             <p className="mt-1 text-xs text-gray-500">
-              Calcolata automaticamente: data ricezione + 60 giorni
+              Calcolata automaticamente: data ricezione + {giorniScadenza} giorni
             </p>
           </div>
 
