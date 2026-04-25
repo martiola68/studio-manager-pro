@@ -52,6 +52,8 @@ type TipoAtto = {
 export default function ContenziosoIndexPage() {
   const { toast } = useToast();
 
+  const [archivioFiltro, setArchivioFiltro] = useState("avvisi");
+
   const [loading, setLoading] = useState(true);
   const [scadenze, setScadenze] = useState<Scadenza[]>([]);
   const [tipiAtto, setTipiAtto] = useState<TipoAtto[]>([]);
@@ -74,7 +76,19 @@ export default function ContenziosoIndexPage() {
           .order("descrizione"),
 
         supabase
-          .from("tbcontenzioso_scadenze" as any)
+        const tabella =
+  archivioFiltro === "avvisi"
+    ? "tbcontenzioso_avvisi_bonari"
+    : "tbcontenzioso_esattoriale";
+
+const scadenzeRes = await (supabase as any)
+  .from(tabella)
+  .select(`
+    *,
+    tbclienti:cliente_id(id, ragione_sociale),
+    tbcontenzioso_tipi_atto:tipo_atto_id(id, descrizione, giorni_scadenza)
+  `)
+  .order("data_scadenza", { ascending: true });
           .select(
             `
             *,
@@ -101,9 +115,9 @@ export default function ContenziosoIndexPage() {
     }
   }
 
-  useEffect(() => {
-    void loadData();
-  }, []);
+useEffect(() => {
+  void loadData();
+}, [archivioFiltro]);
 
   function getStatoScadenza(dataScadenza?: string | null) {
     if (!dataScadenza) return "Senza scadenza";
@@ -207,6 +221,16 @@ export default function ContenziosoIndexPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+
+          <Select value={archivioFiltro} onValueChange={setArchivioFiltro}>
+  <SelectTrigger>
+    <SelectValue placeholder="Archivio" />
+  </SelectTrigger>
+  <SelectContent>
+    <SelectItem value="avvisi">Avvisi bonari</SelectItem>
+    <SelectItem value="esattoriale">Accertamenti e cartelle</SelectItem>
+  </SelectContent>
+</Select>
 
           <Select value={tipoFiltro} onValueChange={setTipoFiltro}>
             <SelectTrigger>
