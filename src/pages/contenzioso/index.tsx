@@ -88,8 +88,8 @@ export default function ContenziosoIndexPage() {
       if (tipiRes.error) throw tipiRes.error;
       if (scadenzeRes.error) throw scadenzeRes.error;
 
-      setTipiAtto((tipiRes.data || []) as TipoAtto[]);
-      setScadenze((scadenzeRes.data || []) as Scadenza[]);
+      setTipiAtto(((tipiRes.data || []) as unknown) as TipoAtto[]);
+      setScadenze(((scadenzeRes.data || []) as unknown) as Scadenza[]);
     } catch (error: any) {
       toast({
         title: "Errore",
