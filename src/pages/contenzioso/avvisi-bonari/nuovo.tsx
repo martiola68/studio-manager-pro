@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 
@@ -36,8 +36,7 @@ const initialForm = {
 
 export default function NuovoAvvisoBonario() {
   const router = useRouter();
-  const supabase = useMemo(() => getSupabaseClient(), []);
-
+ 
   const [clienti, setClienti] = useState<Cliente[]>([]);
   const [form, setForm] = useState(initialForm);
   const [loading, setLoading] = useState(false);
@@ -64,8 +63,10 @@ export default function NuovoAvvisoBonario() {
     return date.toISOString().split("T")[0];
   };
 
-  const loadClienti = async () => {
-    setLoading(true);
+ const loadClienti = async () => {
+  const supabase = getSupabaseClient();
+
+  setLoading(true);
     setErrore("");
 
     const { data, error } = await supabase
@@ -120,7 +121,10 @@ export default function NuovoAvvisoBonario() {
       return;
     }
 
-    setSaving(true);
+   setSaving(true);
+
+const supabase = getSupabaseClient();
+
 
     const payload = {
       cliente_id: form.cliente_id,
