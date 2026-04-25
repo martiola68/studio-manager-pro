@@ -81,7 +81,22 @@ export default function TipiAttoPage() {
 
   return (
     <div className="p-6">
-      <h1 className="text-xl font-bold mb-4">Tipi Atto</h1>
+   <div className="mb-4 flex items-center justify-between">
+  <h1 className="text-xl font-bold">Tipi Atto</h1>
+
+  <button
+    type="button"
+    onClick={() =>
+      setForm({
+        descrizione: "",
+        giorni_scadenza: 60,
+      })
+    }
+    className="rounded-lg bg-black px-4 py-2 text-sm text-white"
+  >
+    + Nuovo atto
+  </button>
+</div>
 
       {errore && (
         <div className="mb-4 text-red-600 text-sm">{errore}</div>
