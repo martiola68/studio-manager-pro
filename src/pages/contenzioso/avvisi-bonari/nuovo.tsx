@@ -5,8 +5,6 @@ import { getSupabaseClient } from "@/lib/supabaseClient";
 type Cliente = {
   id: string;
   ragione_sociale?: string | null;
-  nome?: string | null;
-  cognome?: string | null;
   codice_fiscale?: string | null;
 };
 
@@ -52,14 +50,10 @@ export default function NuovoAvvisoBonario() {
   }, []);
 
   const getClienteLabel = (cliente: Cliente) => {
-    const nominativo =
-      cliente.ragione_sociale ||
-      `${cliente.cognome || ""} ${cliente.nome || ""}`.trim();
-
-    return `${nominativo || "Cliente senza nome"}${
-      cliente.codice_fiscale ? ` - ${cliente.codice_fiscale}` : ""
-    }`;
-  };
+  return `${cliente.ragione_sociale || "Cliente senza nome"}${
+    cliente.codice_fiscale ? ` - ${cliente.codice_fiscale}` : ""
+  }`;
+};
 
   const addDays = (dateString: string, days: number) => {
     if (!dateString) return "";
@@ -76,7 +70,7 @@ export default function NuovoAvvisoBonario() {
 
     const { data, error } = await supabase
       .from("tbclienti")
-      .select("id, ragione_sociale, nome, cognome, codice_fiscale")
+      .select("id, ragione_sociale, codice_fiscale")
       .order("ragione_sociale", { ascending: true });
 
     if (error) {
