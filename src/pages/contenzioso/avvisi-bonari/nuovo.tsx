@@ -492,11 +492,7 @@ const supabase = getSupabaseClient();
     }
     className="w-full rounded-lg border p-2"
   />
-  {form.allegato_atto && (
-    <p className="mt-1 text-xs text-green-700">
-      PDF caricato: {form.allegato_atto}
-    </p>
-  )}
+   PDF caricato: {form.allegato_atto}
 </div>
 
 <div>
@@ -512,10 +508,26 @@ const supabase = getSupabaseClient();
     className="w-full rounded-lg border p-2"
   />
   {form.allegato_civis && (
-    <p className="mt-1 text-xs text-green-700">
-      PDF caricato: {form.allegato_civis}
-    </p>
-  )}
+   <div className="mt-1 flex items-center gap-2">
+    <span className="text-xs text-green-700">PDF caricato</span>
+    <button
+      type="button"
+      onClick={async () => {
+        const supabase = getSupabaseClient();
+        const { data } = supabase.storage
+          .from("messaggi-allegati")
+          .getPublicUrl(form.allegato_atto);
+
+        if (data?.publicUrl) {
+          window.open(data.publicUrl, "_blank");
+        }
+      }}
+      className="text-xs text-blue-600 underline"
+    >
+      Apri PDF
+    </button>
+  </div>
+)}
 </div>
 
 <div>
@@ -531,10 +543,26 @@ const supabase = getSupabaseClient();
     className="w-full rounded-lg border p-2"
   />
   {form.allegato_responso && (
-    <p className="mt-1 text-xs text-green-700">
-      PDF caricato: {form.allegato_responso}
-    </p>
-  )}
+    <div className="mt-1 flex items-center gap-2">
+    <span className="text-xs text-green-700">PDF caricato</span>
+    <button
+      type="button"
+      onClick={async () => {
+        const supabase = getSupabaseClient();
+        const { data } = supabase.storage
+          .from("messaggi-allegati")
+          .getPublicUrl(form.allegato_atto);
+
+        if (data?.publicUrl) {
+          window.open(data.publicUrl, "_blank");
+        }
+      }}
+      className="text-xs text-blue-600 underline"
+    >
+      Apri PDF
+    </button>
+  </div>
+)}
 </div>    
         </div>
 
