@@ -272,10 +272,16 @@ export function TopNavBar() {
 
     { label: "Accesso Portali", icon: <Key className="h-4 w-4" />, href: "/accesso-portali" },
     { label: "Cassetti Fiscali", icon: <FileText className="h-4 w-4" />, href: "/cassetti-fiscali" },
-    { label: "Comunicazioni", icon: <Mail className="h-4 w-4" />, href: "/comunicazioni" },
+   { label: "Comunicazioni", icon: <Mail className="h-4 w-4" />, href: "/comunicazioni" },
 
-    {
-      label: "Antiriciclaggio",
+{
+  label: "Contenzioso",
+  icon: <FileText className="h-4 w-4" />,
+  href: "/contenzioso",
+},
+
+{
+  label: "Antiriciclaggio",
       icon: <ShieldCheck className="h-5 w-5" />,
       children: [
         { label: "Elenco Antiriciclaggio", href: "/antiriciclaggio", icon: null },
