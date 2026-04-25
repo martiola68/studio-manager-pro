@@ -146,10 +146,9 @@ export default function NuovoAvvisoBonario() {
       allegato_responso: form.allegato_responso || null,
     };
 
-    const { error } = await supabase
-      .from("tbcontenzioso_scadenze")
-      .insert(payload);
-
+    const { error } = await (supabase as any)
+  .from("tbcontenzioso_scadenze")
+  .insert(payload);
     setSaving(false);
 
     if (error) {
