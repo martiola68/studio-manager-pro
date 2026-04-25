@@ -5,6 +5,7 @@ import { getSupabaseClient } from "@/lib/supabaseClient";
 export default function NuovoAtto() {
   const router = useRouter();
 
+    const [studioId, setStudioId] = useState<string>("");
   const [clienti, setClienti] = useState<any[]>([]);
   const [tipiAtto, setTipiAtto] = useState<any[]>([]);
   const [utenti, setUtenti] = useState<any[]>([]);
@@ -35,9 +36,30 @@ export default function NuovoAtto() {
   }, []);
 
   const loadData = async () => {
-    const supabase = getSupabaseClient();
+   const supabase = getSupabaseClient();
 
-    const [c, t, u, tr] = await Promise.all([
+    if (!studioId) {
+  alert("Studio non trovato.");
+  return;
+}
+
+const {
+  data: { session },
+} = await supabase.auth.getSession();
+
+if (session?.user?.email) {
+  const { data: utente } = await supabase
+    .from("tbutenti")
+    .select("studio_id")
+    .eq("email", session.user.email)
+    .maybeSingle();
+
+  if (utente?.studio_id) {
+    setStudioId(utente.studio_id);
+  }
+}
+
+const [c, t, u, tr] = await Promise.all([
       supabase.from("tbclienti").select("id, ragione_sociale"),
       supabase.from("tbcontenzioso_tipi_atto").select("*").eq("attivo", true),
       supabase.from("tbutenti").select("id, nome, cognome"),
@@ -77,11 +99,12 @@ export default function NuovoAtto() {
 
     const { data: atto, error } = await (supabase as any)
       .from("tbcontenzioso_esattoriale")
-      .insert({
-        ...form,
-        anno_riferimento: form.anno_riferimento || null,
-        valore_pratica: form.valore_pratica || null,
-      })
+     .insert({
+  ...form,
+  studio_id: studioId,
+  anno_riferimento: form.anno_riferimento || null,
+  valore_pratica: form.valore_pratica || null,
+})
       .select()
       .single();
 
