@@ -351,7 +351,7 @@ export default function NuovaCartella() {
               className="w-full rounded-lg border p-2"
               disabled={!form.cliente_id}
             >
-              <option value="">Blank / Nessun avviso collegato</option>
+              <option value="">Nessun avviso collegato</option>
               {avvisi.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.numero_atto || "Avviso senza numero"} -{" "}
