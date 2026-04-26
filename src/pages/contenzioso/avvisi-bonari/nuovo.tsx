@@ -5,31 +5,35 @@ import { getSupabaseClient } from "@/lib/supabaseClient";
 type Cliente = {
   id: string;
   ragione_sociale?: string | null;
-  codice_fiscale?: string | null;
+};
+
+type TipoAtto = {
+  id: string;
+  descrizione: string;
+  giorni_scadenza: number;
 };
 
 const TIPO_ATTO_AVVISO_BONARIO = "Avviso bonario";
+const BUCKET = "messaggi-allegati";
 
 const initialForm = {
   cliente_id: "",
   numero_atto: "",
-  tipo_atto_id: TIPO_ATTO_AVVISO_BONARIO,
   tipo_atto_dettaglio: "",
   anno_riferimento: "",
   data_emissione: "",
   data_ricezione: "",
-  data_scadenza: "",
- importo_dovuto: "",
-importo_sgravato: "",
-importo_residuo: "",
-motivazione: "",
+  importo_dovuto: "",
+  importo_sgravato: "",
+  importo_residuo: "0",
+  motivazione: "",
   contestazione: "No",
   tipo_contestazione: "",
   data_invio_contestazione: "",
   responso: "",
-  comunicato_cliente: "No",
+  comunicato_al_cliente: false,
   data_comunicazione: "",
-  fare_ricorso: "No",
+  fare_ricorso: false,
   motivazione_ricorso: "",
   genera_scadenza_ricorso: false,
   allegato_atto: "",
@@ -39,23 +43,24 @@ motivazione: "",
 
 export default function NuovoAvvisoBonario() {
   const router = useRouter();
- 
+
+  const [studioId, setStudioId] = useState("");
+  const [tipoAtto, setTipoAtto] = useState<TipoAtto | null>(null);
   const [clienti, setClienti] = useState<Cliente[]>([]);
   const [form, setForm] = useState(initialForm);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errore, setErrore] = useState("");
   const [successo, setSuccesso] = useState("");
-const [giorniScadenza, setGiorniScadenza] = useState(60);
 
- useEffect(() => {
-  loadClienti();
-  loadTipoAtto();
-}, []);
+  useEffect(() => {
+    loadData();
+  }, []);
 
-  const getClienteLabel = (cliente: Cliente) => {
-return cliente.ragione_sociale || "Cliente senza nome";
-};
+  const toNumber = (val: string) => {
+    if (!val) return 0;
+    return parseFloat(val.replace(",", ".")) || 0;
+  };
 
   const addDays = (dateString: string, days: number) => {
     if (!dateString) return "";
@@ -66,74 +71,62 @@ return cliente.ragione_sociale || "Cliente senza nome";
     return date.toISOString().split("T")[0];
   };
 
-  const loadTipoAtto = async () => {
-  const supabase = getSupabaseClient();
+  const dataScadenza = form.data_ricezione
+    ? addDays(form.data_ricezione, tipoAtto?.giorni_scadenza || 60)
+    : "";
 
-  const { data, error } = await (supabase as any)
-    .from("tbcontenzioso_tipi_atto")
-    .select("id, descrizione, giorni_scadenza")
-    .ilike("descrizione", TIPO_ATTO_AVVISO_BONARIO)
-    .eq("attivo", true)
-    .single();
+  const loadData = async () => {
+    const supabase = getSupabaseClient();
 
-  if (error) {
-    console.error(error);
-    setErrore("Tipo atto Avviso bonario non trovato.");
-    return;
-  }
-
-  if (data?.giorni_scadenza) {
-    setGiorniScadenza(data.giorni_scadenza);
-
-    if (form.data_ricezione) {
-      handleChange("data_scadenza", addDays(form.data_ricezione, data.giorni_scadenza));
-    }
-  }
-};
-
- const loadClienti = async () => {
-  const supabase = getSupabaseClient();
-
-  setLoading(true);
+    setLoading(true);
     setErrore("");
 
-    const { data, error } = await supabase
-      .from("tbclienti")
-      .select("id, ragione_sociale, codice_fiscale")
-      .order("ragione_sociale", { ascending: true });
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
-    if (error) {
+    if (session?.user?.email) {
+      const { data: utente } = await supabase
+        .from("tbutenti")
+        .select("studio_id")
+        .eq("email", session.user.email)
+        .maybeSingle();
+
+      if ((utente as any)?.studio_id) {
+        setStudioId((utente as any).studio_id);
+      }
+    }
+
+    const [clientiRes, tipoAttoRes] = await Promise.all([
+      supabase
+        .from("tbclienti")
+        .select("id, ragione_sociale")
+        .order("ragione_sociale", { ascending: true }),
+
+      (supabase as any)
+        .from("tbcontenzioso_tipi_atto")
+        .select("id, descrizione, giorni_scadenza")
+        .ilike("descrizione", TIPO_ATTO_AVVISO_BONARIO)
+        .eq("attivo", true)
+        .single(),
+    ]);
+
+    if (clientiRes.error) {
       setErrore("Errore nel caricamento dei clienti.");
       setLoading(false);
       return;
     }
 
-    setClienti(data || []);
+    if (tipoAttoRes.error) {
+      setErrore("Tipo atto Avviso bonario non trovato.");
+      setLoading(false);
+      return;
+    }
+
+    setClienti((clientiRes.data || []) as Cliente[]);
+    setTipoAtto(tipoAttoRes.data as TipoAtto);
     setLoading(false);
   };
-
-  const formatCurrencyInput = (value: string) => {
-  const onlyNumbers = value.replace(/\D/g, "");
-
-  if (!onlyNumbers) return "";
-
-  const numberValue = Number(onlyNumbers) / 100;
-
-  return numberValue.toLocaleString("it-IT", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-};
-
-const parseCurrency = (value: string) => {
-  if (!value) return 0;
-
-  return Number(
-    value
-      .replace(/\./g, "")
-      .replace(",", ".")
-  );
-};
 
   const handleChange = (
     field: keyof typeof initialForm,
@@ -145,77 +138,72 @@ const parseCurrency = (value: string) => {
         [field]: value,
       };
 
-    if (field === "data_ricezione" && typeof value === "string") {
-  next.data_scadenza = addDays(value, giorniScadenza);
-}
-if (field === "responso" && typeof value === "string") {
-  if (!value) {
-  next.importo_sgravato = "";
-  next.importo_residuo = "0,00";
-}
-  const dovuto = parseCurrency(next.importo_dovuto || "");
+      if (field === "responso" && typeof value === "string") {
+        const dovuto = toNumber(next.importo_dovuto);
 
-  if (value === "Sgravio totale") {
-   next.importo_sgravato = dovuto
-  ? dovuto.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-  : "";
-  next.importo_residuo = "0,00";
-  }
+        if (!value) {
+          next.importo_sgravato = "";
+          next.importo_residuo = "0";
+        }
 
-  if (value === "Respinto") {
-    next.importo_sgravato = "0";
-    next.importo_residuo = dovuto ? String(dovuto) : "";
-  }
+        if (value === "Sgravio totale") {
+          next.importo_sgravato = String(dovuto);
+          next.importo_residuo = "0";
+        }
 
-  if (value === "Sgravio parziale") {
-    next.importo_sgravato = "";
-    next.importo_residuo = "";
-  }
-}
+        if (value === "Sgravio parziale") {
+          next.importo_sgravato = "";
+          next.importo_residuo = "";
+        }
 
-if (field === "importo_sgravato" && typeof value === "string") {
-  const dovuto = parseCurrency(next.importo_dovuto || "");
-  const sgravato = parseCurrency(value || "");
+        if (value === "Respinto") {
+          next.importo_sgravato = "0";
+          next.importo_residuo = String(dovuto);
+        }
+      }
 
-  if (next.responso === "Sgravio parziale") {
-    next.importo_residuo = Math.max(dovuto - sgravato, 0).toLocaleString("it-IT", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-  }
-}
+      if (field === "importo_dovuto" && typeof value === "string") {
+        const dovuto = toNumber(value);
+        const sgravato = toNumber(next.importo_sgravato);
 
-if (field === "importo_dovuto" && typeof value === "string") {
-  const dovuto = parseCurrency(value || "");
-  const sgravato = parseCurrency(next.importo_sgravato || "");
+        if (!next.responso) {
+          next.importo_residuo = "0";
+        }
 
-  if (next.responso === "Sgravio totale") {
-    next.importo_sgravato = dovuto ? String(dovuto) : "";
-    next.importo_residuo = "0";
-  }
+        if (next.responso === "Sgravio totale") {
+          next.importo_sgravato = String(dovuto);
+          next.importo_residuo = "0";
+        }
 
-  if (next.responso === "Respinto") {
-    next.importo_sgravato = "0";
-    next.importo_residuo = dovuto ? String(dovuto) : "";
-  }
+        if (next.responso === "Respinto") {
+          next.importo_sgravato = "0";
+          next.importo_residuo = String(dovuto);
+        }
 
-  if (next.responso === "Sgravio parziale") {
-    next.importo_residuo = String(Math.max(dovuto - sgravato, 0));
-  }
-}
-      
+        if (next.responso === "Sgravio parziale") {
+          next.importo_residuo = String(Math.max(dovuto - sgravato, 0));
+        }
+      }
+
+      if (field === "importo_sgravato" && typeof value === "string") {
+        const dovuto = toNumber(next.importo_dovuto);
+        const sgravato = toNumber(value);
+
+        if (next.responso === "Sgravio parziale") {
+          next.importo_residuo = String(Math.max(dovuto - sgravato, 0));
+        }
+      }
+
       return next;
     });
   };
 
- const openPdf = (path: string) => {
+  const openPdf = (path: string) => {
     if (!path) return;
 
     const supabase = getSupabaseClient();
 
-    const { data } = supabase.storage
-      .from("messaggi-allegati")
-      .getPublicUrl(path);
+    const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
 
     if (data?.publicUrl) {
       window.open(data.publicUrl, "_blank");
@@ -223,62 +211,68 @@ if (field === "importo_dovuto" && typeof value === "string") {
   };
 
   const removePdf = async (
-  field: "allegato_atto" | "allegato_civis" | "allegato_responso",
-  path: string
-) => {
-  if (!path) return;
+    field: "allegato_atto" | "allegato_civis" | "allegato_responso",
+    path: string
+  ) => {
+    if (!path) return;
 
-  const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient();
 
-  const { error } = await supabase.storage
-    .from("messaggi-allegati")
-    .remove([path]);
+    const { error } = await supabase.storage.from(BUCKET).remove([path]);
 
-  if (error) {
-    console.error(error);
-    setErrore("Errore durante l'eliminazione del PDF.");
-    return;
-  }
+    if (error) {
+      setErrore("Errore durante l'eliminazione del PDF.");
+      return;
+    }
 
-  handleChange(field, "");
-};
+    handleChange(field, "");
+  };
 
   const handlePdfUpload = async (
-  field: "allegato_atto" | "allegato_civis" | "allegato_responso",
-  file: File | null
-) => {
-  if (!file) return;
+    field: "allegato_atto" | "allegato_civis" | "allegato_responso",
+    file: File | null
+  ) => {
+    if (!file) return;
 
-  if (file.type !== "application/pdf") {
-    setErrore("Puoi caricare solo file PDF.");
-    return;
-  }
+    if (file.type !== "application/pdf") {
+      setErrore("Puoi caricare solo file PDF.");
+      return;
+    }
 
-  const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient();
 
-  const fileExt = file.name.split(".").pop();
-  const fileName = `${field}_${Date.now()}.${fileExt}`;
-  const filePath = `contenzioso/avvisi-bonari/${fileName}`;
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${field}_${Date.now()}.${fileExt}`;
+    const filePath = `contenzioso/avvisi-bonari/${fileName}`;
 
-  const { error } = await supabase.storage
-    .from("messaggi-allegati")
-    .upload(filePath, file, {
+    const { error } = await supabase.storage.from(BUCKET).upload(filePath, file, {
       cacheControl: "3600",
       upsert: true,
     });
 
-  if (error) {
-    console.error(error);
-    setErrore("Errore durante il caricamento del PDF.");
-    return;
-  }
+    if (error) {
+      setErrore("Errore durante il caricamento del PDF.");
+      return;
+    }
 
-  handleChange(field, filePath);
-};
+    handleChange(field, filePath);
+  };
 
   const handleSave = async () => {
+    const supabase = getSupabaseClient();
+
     setErrore("");
     setSuccesso("");
+
+    if (!studioId) {
+      setErrore("Studio non trovato.");
+      return;
+    }
+
+    if (!tipoAtto?.id) {
+      setErrore("Tipo atto Avviso bonario non trovato.");
+      return;
+    }
 
     if (!form.cliente_id) {
       setErrore("Seleziona un cliente.");
@@ -295,31 +289,34 @@ if (field === "importo_dovuto" && typeof value === "string") {
       return;
     }
 
-   setSaving(true);
-
-const supabase = getSupabaseClient();
-
+    setSaving(true);
 
     const payload = {
+      studio_id: studioId,
       cliente_id: form.cliente_id,
       numero_atto: form.numero_atto.trim(),
-      tipo_atto_id: TIPO_ATTO_AVVISO_BONARIO,
-      tipo_atto_dettaglio: form.tipo_atto_dettaglio || null,
-      anno_riferimento: form.anno_riferimento || null,
+      tipo_atto: TIPO_ATTO_AVVISO_BONARIO,
+      tipo_atto_id: tipoAtto.id,
+      anno_riferimento: form.anno_riferimento
+        ? Number(form.anno_riferimento)
+        : null,
       data_emissione: form.data_emissione || null,
-      data_ricezione: form.data_ricezione || null,
-      data_scadenza: form.data_scadenza || null,
-importo_dovuto: form.importo_dovuto ? parseCurrency(form.importo_dovuto) : null,
-importo_sgravato: form.importo_sgravato ? parseCurrency(form.importo_sgravato) : null,
-importo_residuo: form.importo_residuo ? parseCurrency(form.importo_residuo) : null,
-motivazione: form.motivazione || null,
-      contestazione: form.contestazione || "No",
+      data_ricezione: form.data_ricezione,
+      importo_dovuto: form.importo_dovuto ? toNumber(form.importo_dovuto) : null,
+      importo_sgravato: form.importo_sgravato
+        ? toNumber(form.importo_sgravato)
+        : null,
+      importo_residuo: form.importo_residuo
+        ? toNumber(form.importo_residuo)
+        : null,
+      motivazione: form.motivazione || null,
+      contestazione: form.contestazione,
       tipo_contestazione: form.tipo_contestazione || null,
       data_invio_contestazione: form.data_invio_contestazione || null,
       responso: form.responso || null,
-      comunicato_cliente: form.comunicato_cliente || "No",
+      comunicato_al_cliente: form.comunicato_al_cliente,
       data_comunicazione: form.data_comunicazione || null,
-      fare_ricorso: form.fare_ricorso || "No",
+      fare_ricorso: form.fare_ricorso,
       motivazione_ricorso: form.motivazione_ricorso || null,
       genera_scadenza_ricorso: form.genera_scadenza_ricorso,
       allegato_atto: form.allegato_atto || null,
@@ -328,8 +325,9 @@ motivazione: form.motivazione || null,
     };
 
     const { error } = await (supabase as any)
-  .from("tbcontenzioso_scadenze")
-  .insert(payload);
+      .from("tbcontenzioso_avvisi_bonari")
+      .insert(payload);
+
     setSaving(false);
 
     if (error) {
@@ -342,18 +340,17 @@ motivazione: form.motivazione || null,
     router.push("/contenzioso");
   };
 
+  if (loading) {
+    return <div className="p-6">Caricamento...</div>;
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="mx-auto max-w-6xl rounded-2xl bg-white p-6 shadow">
         <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Nuovo avviso bonario
-            </h1>
-            <p className="text-sm text-gray-500">
-              Form dedicato alla gestione degli Avvisi bonari
-            </p>
-          </div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Nuovo avviso bonario
+          </h1>
 
           <button
             type="button"
@@ -383,21 +380,18 @@ motivazione: form.motivazione || null,
               value={form.cliente_id}
               onChange={(e) => handleChange("cliente_id", e.target.value)}
               className="w-full rounded-lg border p-2"
-              disabled={loading}
             >
               <option value="">Seleziona cliente</option>
               {clienti.map((cliente) => (
                 <option key={cliente.id} value={cliente.id}>
-                  {getClienteLabel(cliente)}
+                  {cliente.ragione_sociale || "Cliente senza nome"}
                 </option>
               ))}
             </select>
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium">
-              Tipo atto
-            </label>
+            <label className="mb-1 block text-sm font-medium">Tipo atto</label>
             <input
               value={TIPO_ATTO_AVVISO_BONARIO}
               disabled
@@ -406,9 +400,7 @@ motivazione: form.motivazione || null,
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium">
-              Numero atto
-            </label>
+            <label className="mb-1 block text-sm font-medium">Numero atto</label>
             <input
               value={form.numero_atto}
               onChange={(e) => handleChange("numero_atto", e.target.value)}
@@ -440,14 +432,17 @@ motivazione: form.motivazione || null,
             <label className="mb-1 block text-sm font-medium">
               Anno riferimento
             </label>
-          <input
-  type="text"
-  inputMode="numeric"
-  maxLength={4}
-  value={form.anno_riferimento}
-  onChange={(e) =>
-    handleChange("anno_riferimento", e.target.value.replace(/\D/g, "").slice(0, 4))
-  }
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={4}
+              value={form.anno_riferimento}
+              onChange={(e) =>
+                handleChange(
+                  "anno_riferimento",
+                  e.target.value.replace(/\D/g, "").slice(0, 4)
+                )
+              }
               className="w-full rounded-lg border p-2"
             />
           </div>
@@ -482,42 +477,45 @@ motivazione: form.motivazione || null,
             </label>
             <input
               type="date"
-              value={form.data_scadenza}
+              value={dataScadenza}
               disabled
               className="w-full rounded-lg border bg-gray-100 p-2"
             />
             <p className="mt-1 text-xs text-gray-500">
-              Calcolata automaticamente: data ricezione + {giorniScadenza} giorni
+              Calcolata automaticamente: data ricezione +{" "}
+              {tipoAtto?.giorni_scadenza || 60} giorni
             </p>
           </div>
- <div>
-  <label className="mb-1 block text-sm font-medium">
-    Importo dovuto
-  </label>
-  <input
-  type="text"
-  inputMode="decimal"
-  value={form.importo_dovuto}
-  onChange={(e) =>
-    handleChange("importo_dovuto", formatCurrencyInput(e.target.value))
-  }
-    className="w-full rounded-lg border p-2"
-    placeholder="Importo"
-  />
-</div>
 
-<div className="md:col-span-2">
-  <label className="mb-1 block text-sm font-medium">
-    Motivazione
-  </label>
-  <input
-    type="text"
-    value={form.motivazione}
-    onChange={(e) => handleChange("motivazione", e.target.value)}
-    className="w-full rounded-lg border p-2"
-    placeholder="Motivazione"
-  />
-</div>
+          <div>
+            <label className="mb-1 block text-sm font-medium">
+              Importo dovuto
+            </label>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={form.importo_dovuto}
+              onChange={(e) =>
+                handleChange(
+                  "importo_dovuto",
+                  e.target.value.replace(/[^0-9.,]/g, "")
+                )
+              }
+              className="w-full rounded-lg border p-2"
+              placeholder="Importo"
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="mb-1 block text-sm font-medium">Motivazione</label>
+            <input
+              type="text"
+              value={form.motivazione}
+              onChange={(e) => handleChange("motivazione", e.target.value)}
+              className="w-full rounded-lg border p-2"
+              placeholder="Motivazione"
+            />
+          </div>
 
           <div>
             <label className="mb-1 block text-sm font-medium">
@@ -529,7 +527,7 @@ motivazione: form.motivazione || null,
               className="w-full rounded-lg border p-2"
             >
               <option value="No">No</option>
-              <option value="Sì">Sì</option>
+              <option value="Si">Sì</option>
               <option value="Parziale">Parziale</option>
             </select>
           </div>
@@ -538,18 +536,18 @@ motivazione: form.motivazione || null,
             <label className="mb-1 block text-sm font-medium">
               Tipo contestazione
             </label>
-          <select
-  value={form.tipo_contestazione}
-  onChange={(e) =>
-    handleChange("tipo_contestazione", e.target.value)
-  }
-  className="w-full rounded-lg border p-2"
->
-  <option value="">---</option>
-  <option value="CIVIS">CIVIS</option>
-  <option value="Autotutela PEC">Autotutela PEC</option>
-  <option value="Autotutela ufficio">Autotutela ufficio</option>
-</select>
+            <select
+              value={form.tipo_contestazione}
+              onChange={(e) =>
+                handleChange("tipo_contestazione", e.target.value)
+              }
+              className="w-full rounded-lg border p-2"
+            >
+              <option value="">---</option>
+              <option value="CIVIS">CIVIS</option>
+              <option value="Autotutela PEC">Autotutela PEC</option>
+              <option value="Autotutela ufficio">Autotutela ufficio</option>
+            </select>
           </div>
 
           <div>
@@ -566,63 +564,67 @@ motivazione: form.motivazione || null,
             />
           </div>
 
-      <div>
-  <label className="mb-1 block text-sm font-medium">Responso</label>
-  <select
-    value={form.responso}
-    onChange={(e) => handleChange("responso", e.target.value)}
-    className="w-full rounded-lg border p-2"
-  >
-    <option value="">---</option>
-    <option value="Sgravio totale">Sgravio totale</option>
-    <option value="Sgravio parziale">Sgravio parziale</option>
-    <option value="Respinto">Respinto</option>
-  </select>
-</div>
+          <div>
+            <label className="mb-1 block text-sm font-medium">Responso</label>
+            <select
+              value={form.responso}
+              onChange={(e) => handleChange("responso", e.target.value)}
+              className="w-full rounded-lg border p-2"
+            >
+              <option value="">---</option>
+              <option value="Sgravio totale">Sgravio totale</option>
+              <option value="Sgravio parziale">Sgravio parziale</option>
+              <option value="Respinto">Respinto</option>
+            </select>
+          </div>
 
-<div>
-  <label className="mb-1 block text-sm font-medium">
-    Importo sgravato
-  </label>
- <input
-  type="text"
-  inputMode="decimal"
-  value={form.importo_sgravato}
-  onChange={(e) =>
-    handleChange("importo_sgravato", formatCurrencyInput(e.target.value))
-  }
-    className="w-full rounded-lg border p-2"
-    disabled={form.responso === "Sgravio totale" || form.responso === "Respinto"}
-  />
-</div>
+          <div>
+            <label className="mb-1 block text-sm font-medium">
+              Importo sgravato
+            </label>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={form.importo_sgravato}
+              onChange={(e) =>
+                handleChange(
+                  "importo_sgravato",
+                  e.target.value.replace(/[^0-9.,]/g, "")
+                )
+              }
+              className="w-full rounded-lg border p-2"
+              disabled={
+                form.responso === "Sgravio totale" ||
+                form.responso === "Respinto"
+              }
+            />
+          </div>
 
-<div>
-  <label className="mb-1 block text-sm font-medium">
-    Importo residuo
-  </label>
-  <input
-  type="text"
-  inputMode="decimal"
-  value={form.importo_residuo}
-    onChange={(e) => handleChange("importo_residuo", e.target.value)}
-    className="w-full rounded-lg border bg-gray-100 p-2"
-    disabled
-  />
-</div>
+          <div>
+            <label className="mb-1 block text-sm font-medium">
+              Importo residuo
+            </label>
+            <input
+              type="text"
+              value={form.importo_residuo}
+              disabled
+              className="w-full rounded-lg border bg-gray-100 p-2"
+            />
+          </div>
 
           <div>
             <label className="mb-1 block text-sm font-medium">
               Comunicato al cliente
             </label>
             <select
-              value={form.comunicato_cliente}
+              value={form.comunicato_al_cliente ? "Si" : "No"}
               onChange={(e) =>
-                handleChange("comunicato_cliente", e.target.value)
+                handleChange("comunicato_al_cliente", e.target.value === "Si")
               }
               className="w-full rounded-lg border p-2"
             >
               <option value="No">No</option>
-              <option value="Sì">Sì</option>
+              <option value="Si">Sì</option>
             </select>
           </div>
 
@@ -645,12 +647,14 @@ motivazione: form.motivazione || null,
               Genera pratica ricorso
             </label>
             <select
-              value={form.fare_ricorso}
-              onChange={(e) => handleChange("fare_ricorso", e.target.value)}
+              value={form.fare_ricorso ? "Si" : "No"}
+              onChange={(e) =>
+                handleChange("fare_ricorso", e.target.value === "Si")
+              }
               className="w-full rounded-lg border p-2"
             >
               <option value="No">No</option>
-              <option value="Sì">Sì</option>
+              <option value="Si">Sì</option>
             </select>
           </div>
 
@@ -681,102 +685,64 @@ motivazione: form.motivazione || null,
             </label>
           </div>
 
-    <div>
-  <label className="mb-1 block text-sm font-medium">
-    Allegato atto
-  </label>
-  <div className="flex gap-2">
-    <input
-      type="file"
-      accept="application/pdf"
-      onChange={(e) =>
-        handlePdfUpload("allegato_atto", e.target.files?.[0] || null)
-      }
-      className="w-full rounded-lg border p-2"
-    />
-    <button
-      type="button"
-      disabled={!form.allegato_atto}
-      onClick={() => openPdf(form.allegato_atto)}
-      className="rounded-lg border px-4 py-2 text-sm disabled:opacity-40"
-    >
-      Apri
-    </button>
-<button
-  type="button"
-  disabled={!form.allegato_atto}
-  onClick={() => removePdf("allegato_atto", form.allegato_atto)}
-  className="rounded-lg border border-red-300 px-4 py-2 text-sm text-red-600 disabled:opacity-40"
->
-  Elimina
-</button>
-    
-  </div>
-</div>
+          {[
+            ["allegato_atto", "Allegato atto"],
+            ["allegato_civis", "Allegato CIVIS"],
+            ["allegato_responso", "Allegato responso"],
+          ].map(([field, label]) => {
+            const path = form[field as keyof typeof form] as string;
 
-<div>
-  <label className="mb-1 block text-sm font-medium">
-    Allegato CIVIS
-  </label>
-  <div className="flex gap-2">
-    <input
-      type="file"
-      accept="application/pdf"
-      onChange={(e) =>
-        handlePdfUpload("allegato_civis", e.target.files?.[0] || null)
-      }
-      className="w-full rounded-lg border p-2"
-    />
-    <button
-      type="button"
-      disabled={!form.allegato_civis}
-      onClick={() => openPdf(form.allegato_civis)}
-      className="rounded-lg border px-4 py-2 text-sm disabled:opacity-40"
-    >
-      Apri
-    </button>
-    <button
-  type="button"
-  disabled={!form.allegato_civis}
-  onClick={() => removePdf("allegato_civis", form.allegato_civis)}
-  className="rounded-lg border border-red-300 px-4 py-2 text-sm text-red-600 disabled:opacity-40"
->
-  Elimina
-</button>
-  </div>
-</div>
+            return (
+              <div key={field}>
+                <label className="mb-1 block text-sm font-medium">
+                  {label}
+                </label>
 
-<div>
-  <label className="mb-1 block text-sm font-medium">
-    Allegato responso
-  </label>
-  <div className="flex gap-2">
-    <input
-      type="file"
-      accept="application/pdf"
-      onChange={(e) =>
-        handlePdfUpload("allegato_responso", e.target.files?.[0] || null)
-      }
-      className="w-full rounded-lg border p-2"
-    />
-    <button
-      type="button"
-      disabled={!form.allegato_responso}
-      onClick={() => openPdf(form.allegato_responso)}
-      className="rounded-lg border px-4 py-2 text-sm disabled:opacity-40"
-    >
-      Apri
-    </button>
-    <button
-  type="button"
-  disabled={!form.allegato_responso}
-  onClick={() => removePdf("allegato_responso", form.allegato_responso)}
-  className="rounded-lg border border-red-300 px-4 py-2 text-sm text-red-600 disabled:opacity-40"
->
-  Elimina
-</button>
-  </div>
-</div>    
+                <div className="flex gap-2">
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    onChange={(e) =>
+                      handlePdfUpload(
+                        field as
+                          | "allegato_atto"
+                          | "allegato_civis"
+                          | "allegato_responso",
+                        e.target.files?.[0] || null
+                      )
+                    }
+                    className="w-full rounded-lg border p-2"
+                  />
+
+                  <button
+                    type="button"
+                    disabled={!path}
+                    onClick={() => openPdf(path)}
+                    className="rounded-lg border px-4 py-2 text-sm disabled:opacity-40"
+                  >
+                    Apri
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={!path}
+                    onClick={() =>
+                      removePdf(
+                        field as
+                          | "allegato_atto"
+                          | "allegato_civis"
+                          | "allegato_responso",
+                        path
+                      )
+                    }
+                    className="rounded-lg border border-red-300 px-4 py-2 text-sm text-red-600 disabled:opacity-40"
+                  >
+                    Elimina
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         <div className="mt-8 flex justify-end gap-3">
