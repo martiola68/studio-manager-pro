@@ -13,6 +13,13 @@ type Cliente = {
   ragione_sociale?: string | null;
 };
 
+type TipoAtto = {
+  id: string;
+  descrizione: string;
+  giorni_scadenza: number;
+};
+
+
 type TributoConstatazione = {
   id: string;
   descrizione: string;
