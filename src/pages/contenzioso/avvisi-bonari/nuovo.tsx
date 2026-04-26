@@ -701,7 +701,7 @@ motivazione: form.motivazione || null,
     <button
   type="button"
   disabled={!form.allegato_civis}
-  onClick={() => removePdf("allegato_atto", form.allegato_atto)}
+  onClick={() => removePdf("allegato_civis", form.allegato_civis)}
   className="rounded-lg border border-red-300 px-4 py-2 text-sm text-red-600 disabled:opacity-40"
 >
   Elimina
@@ -733,7 +733,7 @@ motivazione: form.motivazione || null,
     <button
   type="button"
   disabled={!form.allegato_responso}
-  onClick={() => removePdf("allegato_atto", form.allegato_atto)}
+  onClick={() => removePdf("allegato_responso", form.allegato_responso)}
   className="rounded-lg border border-red-300 px-4 py-2 text-sm text-red-600 disabled:opacity-40"
 >
   Elimina
