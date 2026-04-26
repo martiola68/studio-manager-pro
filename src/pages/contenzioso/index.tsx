@@ -210,19 +210,21 @@ export default function ContenziosoIndexPage() {
           </p>
         </div>
 
+           <div className="flex gap-2">
           <Link href="/contenzioso/avvisi-bonari/nuovo">
             <Button>
               <Plus className="mr-2 h-4 w-4" />
               Avviso bonario
             </Button>
           </Link>
+        
           <Link href="/contenzioso/cartelle/nuovo">
             <Button>
               <Plus className="mr-2 h-4 w-4" />
               Cartella esattoriale
             </Button>
           </Link>
-            <div className="flex gap-2">
+                   
           <Link href="/contenzioso/atti/nuovo">
             <Button>
               <Plus className="mr-2 h-4 w-4" />
