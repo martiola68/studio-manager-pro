@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
+import { Wand2 } from "lucide-react";
 
 type Cliente = { id: string; ragione_sociale: string | null };
 type TipoAtto = { id: string; descrizione: string; giorni_scadenza: number };
@@ -420,20 +421,27 @@ export default function NuovaCartella() {
             <label className="mb-1 block text-sm font-medium">
               Rif. avviso bonario
             </label>
-            <select
-              value={form.avviso_bonario_id}
-              onChange={(e) => handleAvvisoChange(e.target.value)}
-              className="w-full rounded-lg border p-2"
-              disabled={!form.cliente_id}
-            >
-              <option value="">Nessun avviso collegato</option>
-              {avvisi.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.numero_atto || "Avviso senza numero"} -{" "}
-                  {a.anno_riferimento || "-"}
-                </option>
-              ))}
-            </select>
+         
+         <select
+  value={form.avviso_bonario_id}
+  onChange={(e) => handleAvvisoChange(e.target.value)}
+  className="w-full rounded-lg border p-2"
+  disabled={!form.cliente_id}
+>
+  <option value="">---</option>
+  {avvisi.length === 0 ? (
+    <option value="" disabled>
+      Nessun avviso bonario trovato
+    </option>
+  ) : (
+    avvisi.map((a) => (
+      <option key={a.id} value={a.id}>
+        {a.numero_atto || "Avviso senza numero"} -{" "}
+        {a.anno_riferimento || "-"}
+      </option>
+    ))
+  )}
+</select>
           </div>
 
           <div>
@@ -449,18 +457,11 @@ export default function NuovaCartella() {
 
           <div>
             <label className="mb-1 block text-sm font-medium">Tipo atto</label>
-            <select
-              value={form.tipo_atto_id}
-              onChange={(e) => handleChange("tipo_atto_id", e.target.value)}
+            <input
+              value={tipoSelezionato?.descrizione || "Cartella esattoriale"}
+              disabled
               className="w-full rounded-lg border bg-gray-100 p-2"
-            >
-              <option value="">Seleziona tipo atto</option>
-              {tipiAtto.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.descrizione}
-                </option>
-              ))}
-            </select>
+            />
           </div>
 
           <div>
@@ -643,18 +644,35 @@ export default function NuovaCartella() {
             />
           </div>
 
-          <div className="flex items-end">
-            <label className="flex items-center gap-2 text-sm font-medium">
-              <input
-                type="checkbox"
-                checked={form.genera_ricorso}
-                onChange={(e) =>
-                  handleChange("genera_ricorso", e.target.checked)
-                }
-              />
-              Genera ricorso
-            </label>
-          </div>
+         <div>
+  <label className="mb-1 block text-sm font-medium">
+    Genera ricorso
+  </label>
+  <div className="flex gap-2">
+    <select
+      value={form.genera_ricorso ? "Si" : "No"}
+      onChange={(e) =>
+        handleChange("genera_ricorso", e.target.value === "Si")
+      }
+      className="w-full rounded-lg border p-2"
+    >
+      <option value="No">No</option>
+      <option value="Si">Sì</option>
+    </select>
+
+    <button
+      type="button"
+      disabled={!form.genera_ricorso}
+      onClick={() => {
+        // funzione da collegare dopo
+      }}
+      className="rounded-lg border px-3 py-2 text-sm disabled:opacity-40"
+      title="Genera pratica ricorso"
+    >
+      <Wand2 className="h-4 w-4" />
+    </button>
+  </div>
+</div>
 
           <div className="md:col-span-3">
             <label className="mb-1 block text-sm font-medium">
