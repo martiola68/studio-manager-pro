@@ -357,11 +357,20 @@ export default function NuovoAtto() {
               className="w-full rounded-lg border p-2"
             >
               <option value="">Seleziona tipo atto</option>
-              {tipiAtto.map((tipo) => (
-                <option key={tipo.id} value={tipo.id}>
-                  {tipo.descrizione}
-                </option>
-              ))}
+             {tipiAtto
+  .filter((tipo) => {
+    const descrizione = tipo.descrizione?.toLowerCase().trim();
+
+    return (
+      descrizione !== "avviso bonario" &&
+      descrizione !== "cartella esattoriale"
+    );
+  })
+  .map((tipo) => (
+    <option key={tipo.id} value={tipo.id}>
+      {tipo.descrizione}
+    </option>
+  ))}
             </select>
           </div>
 
