@@ -2,6 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { Wand2 } from "lucide-react";
+import {
+  calcolaGiorniResidui,
+  getClasseGiorniResidui,
+  getLabelGiorniResidui,
+} from "@/utils/contenziosoScadenze";
 
 type Cliente = { id: string; ragione_sociale: string | null };
 type TipoAtto = { id: string; descrizione: string; giorni_scadenza: number };
@@ -63,6 +68,10 @@ export default function NuovaCartella() {
 
     return d.toISOString().split("T")[0];
   }, [form.data_ricezione, tipoSelezionato]);
+
+  const giorniResidui = useMemo(() => {
+  return calcolaGiorniResidui(dataScadenza);
+}, [dataScadenza]);
 
   useEffect(() => {
     loadData();
@@ -334,6 +343,8 @@ export default function NuovaCartella() {
         : null,
       data_ruolo: form.data_ruolo || null,
       data_ricezione: form.data_ricezione,
+      data_scadenza: dataScadenza || null,
+      giorni_residui: giorniResidui,
       importo_dovuto: form.importo_dovuto ? toNumber(form.importo_dovuto) : null,
       importo_sgravato: form.importo_sgravato
         ? toNumber(form.importo_sgravato)
@@ -505,17 +516,33 @@ export default function NuovaCartella() {
             />
           </div>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium">
-              Data scadenza
-            </label>
-            <input
-              type="date"
-              value={dataScadenza}
-              disabled
-              className="w-full rounded-lg border bg-gray-100 p-2"
-            />
-          </div>
+        <div>
+  <label className="mb-1 block text-sm font-medium">
+    Data scadenza
+  </label>
+
+  <div className="grid grid-cols-2 gap-2">
+    <input
+      type="date"
+      value={dataScadenza}
+      disabled
+      className="w-full rounded-lg border bg-gray-100 p-2"
+    />
+
+    <div
+      className={`flex items-center justify-center rounded-lg px-3 py-2 text-sm font-semibold ${getClasseGiorniResidui(
+        giorniResidui
+      )}`}
+    >
+      {getLabelGiorniResidui(giorniResidui)}
+    </div>
+  </div>
+
+  <p className="mt-1 text-xs text-gray-500">
+    Calcolata automaticamente: data ricezione +{" "}
+    {tipoSelezionato?.giorni_scadenza ?? 0} giorni
+  </p>
+</div>
 
           <div>
             <label className="mb-1 block text-sm font-medium">
