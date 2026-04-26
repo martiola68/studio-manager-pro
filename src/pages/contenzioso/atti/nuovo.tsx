@@ -19,6 +19,11 @@ type Utente = {
   cognome: string | null;
 };
 
+type TributoConstatazione = {
+  id: string;
+  descrizione: string;
+};
+
 type Tributo = {
   id: string;
   tributo: string;
@@ -38,6 +43,9 @@ export default function NuovoAtto() {
   const [studioId, setStudioId] = useState("");
   const [clienti, setClienti] = useState<Cliente[]>([]);
   const [tipiAtto, setTipiAtto] = useState<TipoAtto[]>([]);
+  const [tributiConstatazione, setTributiConstatazione] = useState<
+    TributoConstatazione[]
+  >([]);
   const [utenti, setUtenti] = useState<Utente[]>([]);
   const [tributi, setTributi] = useState<Tributo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,6 +57,7 @@ export default function NuovoAtto() {
   const [form, setForm] = useState({
     cliente_id: "",
     tipo_atto_id: "",
+    tributo_constatazione_id: "",
     numero_atto: "",
     anno_riferimento: "",
     data_ricezione: "",
@@ -105,8 +114,6 @@ export default function NuovoAtto() {
         data: { session },
       } = await supabase.auth.getSession();
 
-      let currentStudioId = "";
-
       if (session?.user?.email) {
         const { data: utente, error: utenteError } = await supabase
           .from("tbutenti")
@@ -119,12 +126,17 @@ export default function NuovoAtto() {
         }
 
         if ((utente as any)?.studio_id) {
-          currentStudioId = (utente as any).studio_id;
-          setStudioId(currentStudioId);
+          setStudioId((utente as any).studio_id);
         }
       }
 
-      const [clientiRes, tipiRes, utentiRes, tributiRes] = await Promise.all([
+      const [
+        clientiRes,
+        tipiRes,
+        tributiConstatazioneRes,
+        utentiRes,
+        tributiRes,
+      ] = await Promise.all([
         supabase
           .from("tbclienti")
           .select("id, ragione_sociale")
@@ -135,6 +147,12 @@ export default function NuovoAtto() {
           .select("id, descrizione, giorni_scadenza")
           .eq("attivo", true)
           .order("descrizione", { ascending: true }),
+
+        (supabase as any)
+          .from("tbcontenzioso_tributi_constatazione")
+          .select("id, descrizione")
+          .eq("attivo", true)
+          .order("ordine", { ascending: true }),
 
         supabase
           .from("tbutenti")
@@ -150,11 +168,15 @@ export default function NuovoAtto() {
 
       if (clientiRes.error) throw clientiRes.error;
       if (tipiRes.error) throw tipiRes.error;
+      if (tributiConstatazioneRes.error) throw tributiConstatazioneRes.error;
       if (utentiRes.error) throw utentiRes.error;
       if (tributiRes.error) throw tributiRes.error;
 
       setClienti((clientiRes.data || []) as Cliente[]);
       setTipiAtto((tipiRes.data || []) as TipoAtto[]);
+      setTributiConstatazione(
+        (tributiConstatazioneRes.data || []) as TributoConstatazione[]
+      );
       setUtenti((utentiRes.data || []) as Utente[]);
       setTributi((tributiRes.data || []) as Tributo[]);
     } catch (error) {
@@ -217,6 +239,11 @@ export default function NuovoAtto() {
       return;
     }
 
+    if (!form.tributo_constatazione_id) {
+      setErrore("Seleziona il tributo/contributo.");
+      return;
+    }
+
     if (!form.data_ricezione) {
       setErrore("Inserisci la data di ricezione.");
       return;
@@ -228,17 +255,19 @@ export default function NuovoAtto() {
       studio_id: studioId,
       cliente_id: form.cliente_id,
       tipo_atto_id: form.tipo_atto_id,
+      tributo_constatazione_id: form.tributo_constatazione_id || null,
       numero_atto: form.numero_atto || null,
       anno_riferimento: form.anno_riferimento
         ? Number(form.anno_riferimento)
         : null,
       data_ricezione: form.data_ricezione,
+      data_scadenza: dataScadenzaCalcolata || null,
       professionista_incaricato_id:
         form.professionista_incaricato_id || null,
       referente_id: form.referente_id || null,
       descrizione: form.descrizione || null,
       valore_pratica: form.valore_pratica
-        ? Number(form.valore_pratica)
+        ? Number(form.valore_pratica.replace(",", "."))
         : null,
       note: form.note || null,
       esito: form.esito,
@@ -270,7 +299,7 @@ export default function NuovoAtto() {
         esattoriale_id: atto.id,
         anno: r.anno ? Number(r.anno) : null,
         codice_tributo_id: r.codice_tributo_id || null,
-        importo: r.importo ? Number(r.importo) : null,
+        importo: r.importo ? Number(r.importo.replace(",", ".")) : null,
         imposta: r.imposta,
       }));
 
@@ -299,9 +328,7 @@ export default function NuovoAtto() {
       <div className="mx-auto max-w-7xl rounded-2xl bg-white p-6 shadow">
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Nuovo atto
-            </h1>
+            <h1 className="text-2xl font-bold text-gray-900">Nuovo atto</h1>
             <p className="text-sm text-gray-500">
               Inserimento atto esattoriale / accertamento
             </p>
@@ -348,29 +375,27 @@ export default function NuovoAtto() {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium">
-              Tipo atto
-            </label>
+            <label className="mb-1 block text-sm font-medium">Tipo atto</label>
             <select
               value={form.tipo_atto_id}
               onChange={(e) => handleChange("tipo_atto_id", e.target.value)}
               className="w-full rounded-lg border p-2"
             >
               <option value="">Seleziona tipo atto</option>
-             {tipiAtto
-  .filter((tipo) => {
-    const descrizione = tipo.descrizione?.toLowerCase().trim();
+              {tipiAtto
+                .filter((tipo) => {
+                  const descrizione = tipo.descrizione?.toLowerCase().trim();
 
-    return (
-      descrizione !== "avviso bonario" &&
-      descrizione !== "cartella esattoriale"
-    );
-  })
-  .map((tipo) => (
-    <option key={tipo.id} value={tipo.id}>
-      {tipo.descrizione}
-    </option>
-  ))}
+                  return (
+                    descrizione !== "avviso bonario" &&
+                    descrizione !== "cartella esattoriale"
+                  );
+                })
+                .map((tipo) => (
+                  <option key={tipo.id} value={tipo.id}>
+                    {tipo.descrizione}
+                  </option>
+                ))}
             </select>
           </div>
 
@@ -388,13 +413,38 @@ export default function NuovoAtto() {
 
           <div>
             <label className="mb-1 block text-sm font-medium">
+              Tributo / contributo oggetto della constatazione
+            </label>
+            <select
+              value={form.tributo_constatazione_id}
+              onChange={(e) =>
+                handleChange("tributo_constatazione_id", e.target.value)
+              }
+              className="w-full rounded-lg border p-2"
+            >
+              <option value="">Seleziona tributo/contributo</option>
+              {tributiConstatazione.map((tributo) => (
+                <option key={tributo.id} value={tributo.id}>
+                  {tributo.descrizione}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">
               Anno riferimento
             </label>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
+              maxLength={4}
               value={form.anno_riferimento}
               onChange={(e) =>
-                handleChange("anno_riferimento", e.target.value)
+                handleChange(
+                  "anno_riferimento",
+                  e.target.value.replace(/\D/g, "").slice(0, 4)
+                )
               }
               className="w-full rounded-lg border p-2"
               placeholder="Es. 2024"
@@ -449,9 +499,7 @@ export default function NuovoAtto() {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium">
-              Referente
-            </label>
+            <label className="mb-1 block text-sm font-medium">Referente</label>
             <select
               value={form.referente_id}
               onChange={(e) => handleChange("referente_id", e.target.value)}
@@ -471,10 +519,15 @@ export default function NuovoAtto() {
               Valore pratica
             </label>
             <input
-              type="number"
-              step="0.01"
+              type="text"
+              inputMode="decimal"
               value={form.valore_pratica}
-              onChange={(e) => handleChange("valore_pratica", e.target.value)}
+              onChange={(e) =>
+                handleChange(
+                  "valore_pratica",
+                  e.target.value.replace(/[^0-9.,]/g, "")
+                )
+              }
               className="w-full rounded-lg border p-2"
               placeholder="Importo"
             />
@@ -494,9 +547,7 @@ export default function NuovoAtto() {
           </div>
 
           <div className="md:col-span-3">
-            <label className="mb-1 block text-sm font-medium">
-              Note
-            </label>
+            <label className="mb-1 block text-sm font-medium">Note</label>
             <textarea
               value={form.note}
               onChange={(e) => handleChange("note", e.target.value)}
@@ -507,9 +558,7 @@ export default function NuovoAtto() {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium">
-              Esito
-            </label>
+            <label className="mb-1 block text-sm font-medium">Esito</label>
             <select
               value={form.esito}
               onChange={(e) => handleChange("esito", e.target.value)}
@@ -601,10 +650,16 @@ export default function NuovoAtto() {
                       Anno
                     </label>
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={4}
                       value={riga.anno}
                       onChange={(e) =>
-                        updateRiga(index, "anno", e.target.value)
+                        updateRiga(
+                          index,
+                          "anno",
+                          e.target.value.replace(/\D/g, "").slice(0, 4)
+                        )
                       }
                       className="w-full rounded-lg border p-2"
                     />
@@ -639,11 +694,15 @@ export default function NuovoAtto() {
                       Importo
                     </label>
                     <input
-                      type="number"
-                      step="0.01"
+                      type="text"
+                      inputMode="decimal"
                       value={riga.importo}
                       onChange={(e) =>
-                        updateRiga(index, "importo", e.target.value)
+                        updateRiga(
+                          index,
+                          "importo",
+                          e.target.value.replace(/[^0-9.,]/g, "")
+                        )
                       }
                       className="w-full rounded-lg border p-2"
                     />
