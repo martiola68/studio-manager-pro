@@ -482,44 +482,44 @@ const giorniResidui = calcolaGiorniResidui(dataScadenza);
             />
           </div>
 
-         <div>
+  <div>
   <label className="mb-1 block text-sm font-medium">
     Data scadenza automatica
   </label>
 
- <div className="grid grid-cols-2 gap-2 items-start">
-  <div>
-    <label className="mb-1 block text-sm font-medium">
-      Data scadenza automatica
-    </label>
+<div>
+  <div className="grid grid-cols-2 gap-2 items-start">
+    <div>
+      <label className="mb-1 block text-sm font-medium">
+        Data scadenza automatica
+      </label>
 
-    <input
-      type="date"
-      value={dataScadenza}
-      disabled
-      className="w-full rounded-lg border bg-gray-100 p-2"
-    />
-  </div>
+      <input
+        type="date"
+        value={dataScadenza}
+        disabled
+        className="w-full rounded-lg border bg-gray-100 p-2"
+      />
+    </div>
 
-  <div>
-    <label className="mb-1 block text-sm font-medium">
-      Giorni restanti
-    </label>
+    <div>
+      <label className="mb-1 block text-sm font-medium">
+        Giorni restanti
+      </label>
 
-    <div
-      className={`h-[42px] flex items-center justify-center rounded-lg px-3 text-sm font-semibold ${getClasseGiorniResidui(
-        giorniResidui
-      )}`}
-    >
-      {getLabelGiorniResidui(giorniResidui)}
+      <div
+        className={`h-[42px] flex items-center justify-center rounded-lg px-3 text-sm font-semibold ${getClasseGiorniResidui(
+          giorniResidui
+        )}`}
+      >
+        {getLabelGiorniResidui(giorniResidui)}
+      </div>
     </div>
   </div>
-</div>
 
-<p className="mt-1 text-xs text-gray-500">
-  Calcolata automaticamente: data ricezione +{" "}
-  {tipoSelezionato?.giorni_scadenza ?? 0} giorni
-</p>
+  <p className="mt-1 text-xs text-gray-500">
+    Calcolata automaticamente: data ricezione + {giorniScadenza} giorni
+  </p>
 </div>
 
           <div>
