@@ -112,6 +112,29 @@ return cliente.ragione_sociale || "Cliente senza nome";
     setLoading(false);
   };
 
+  const formatCurrencyInput = (value: string) => {
+  const onlyNumbers = value.replace(/\D/g, "");
+
+  if (!onlyNumbers) return "";
+
+  const numberValue = Number(onlyNumbers) / 100;
+
+  return numberValue.toLocaleString("it-IT", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+};
+
+const parseCurrency = (value: string) => {
+  if (!value) return 0;
+
+  return Number(
+    value
+      .replace(/\./g, "")
+      .replace(",", ".")
+  );
+};
+
   const handleChange = (
     field: keyof typeof initialForm,
     value: string | boolean
@@ -125,13 +148,18 @@ return cliente.ragione_sociale || "Cliente senza nome";
     if (field === "data_ricezione" && typeof value === "string") {
   next.data_scadenza = addDays(value, giorniScadenza);
 }
-
-      if (field === "responso" && typeof value === "string") {
-  const dovuto = Number(next.importo_dovuto || 0);
+if (field === "responso" && typeof value === "string") {
+  if (!value) {
+  next.importo_sgravato = "";
+  next.importo_residuo = "0,00";
+}
+  const dovuto = parseCurrency(next.importo_dovuto || "");
 
   if (value === "Sgravio totale") {
-    next.importo_sgravato = dovuto ? String(dovuto) : "";
-    next.importo_residuo = "0";
+   next.importo_sgravato = dovuto
+  ? dovuto.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  : "";
+  next.importo_residuo = "0,00";
   }
 
   if (value === "Respinto") {
@@ -146,17 +174,20 @@ return cliente.ragione_sociale || "Cliente senza nome";
 }
 
 if (field === "importo_sgravato" && typeof value === "string") {
-  const dovuto = Number(next.importo_dovuto || 0);
-  const sgravato = Number(value || 0);
+  const dovuto = parseCurrency(next.importo_dovuto || "");
+  const sgravato = parseCurrency(value || "");
 
   if (next.responso === "Sgravio parziale") {
-    next.importo_residuo = String(Math.max(dovuto - sgravato, 0));
+    next.importo_residuo = Math.max(dovuto - sgravato, 0).toLocaleString("it-IT", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
   }
 }
 
 if (field === "importo_dovuto" && typeof value === "string") {
-  const dovuto = Number(value || 0);
-  const sgravato = Number(next.importo_sgravato || 0);
+  const dovuto = parseCurrency(value || "");
+  const sgravato = parseCurrency(next.importo_sgravato || "");
 
   if (next.responso === "Sgravio totale") {
     next.importo_sgravato = dovuto ? String(dovuto) : "";
@@ -278,9 +309,9 @@ const supabase = getSupabaseClient();
       data_emissione: form.data_emissione || null,
       data_ricezione: form.data_ricezione || null,
       data_scadenza: form.data_scadenza || null,
-     importo_dovuto: form.importo_dovuto ? Number(form.importo_dovuto) : null,
-importo_sgravato: form.importo_sgravato ? Number(form.importo_sgravato) : null,
-importo_residuo: form.importo_residuo ? Number(form.importo_residuo) : null,
+importo_dovuto: form.importo_dovuto ? parseCurrency(form.importo_dovuto) : null,
+importo_sgravato: form.importo_sgravato ? parseCurrency(form.importo_sgravato) : null,
+importo_residuo: form.importo_residuo ? parseCurrency(form.importo_residuo) : null,
 motivazione: form.motivazione || null,
       contestazione: form.contestazione || "No",
       tipo_contestazione: form.tipo_contestazione || null,
@@ -409,12 +440,14 @@ motivazione: form.motivazione || null,
             <label className="mb-1 block text-sm font-medium">
               Anno riferimento
             </label>
-            <input
-              type="number"
-              value={form.anno_riferimento}
-              onChange={(e) =>
-                handleChange("anno_riferimento", e.target.value)
-              }
+          <input
+  type="text"
+  inputMode="numeric"
+  maxLength={4}
+  value={form.anno_riferimento}
+  onChange={(e) =>
+    handleChange("anno_riferimento", e.target.value.replace(/\D/g, "").slice(0, 4))
+  }
               className="w-full rounded-lg border p-2"
             />
           </div>
@@ -462,10 +495,12 @@ motivazione: form.motivazione || null,
     Importo dovuto
   </label>
   <input
-    type="number"
-    step="0.01"
-    value={form.importo_dovuto}
-    onChange={(e) => handleChange("importo_dovuto", e.target.value)}
+  type="text"
+  inputMode="decimal"
+  value={form.importo_dovuto}
+  onChange={(e) =>
+    handleChange("importo_dovuto", formatCurrencyInput(e.target.value))
+  }
     className="w-full rounded-lg border p-2"
     placeholder="Importo"
   />
@@ -549,11 +584,13 @@ motivazione: form.motivazione || null,
   <label className="mb-1 block text-sm font-medium">
     Importo sgravato
   </label>
-  <input
-    type="number"
-    step="0.01"
-    value={form.importo_sgravato}
-    onChange={(e) => handleChange("importo_sgravato", e.target.value)}
+ <input
+  type="text"
+  inputMode="decimal"
+  value={form.importo_sgravato}
+  onChange={(e) =>
+    handleChange("importo_sgravato", formatCurrencyInput(e.target.value))
+  }
     className="w-full rounded-lg border p-2"
     disabled={form.responso === "Sgravio totale" || form.responso === "Respinto"}
   />
@@ -564,9 +601,9 @@ motivazione: form.motivazione || null,
     Importo residuo
   </label>
   <input
-    type="number"
-    step="0.01"
-    value={form.importo_residuo}
+  type="text"
+  inputMode="decimal"
+  value={form.importo_residuo}
     onChange={(e) => handleChange("importo_residuo", e.target.value)}
     className="w-full rounded-lg border bg-gray-100 p-2"
     disabled
