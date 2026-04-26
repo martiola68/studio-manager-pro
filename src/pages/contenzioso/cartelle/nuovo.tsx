@@ -383,24 +383,13 @@ export default function NuovaCartella() {
             </p>
           </div>
 
-         <button
-  type="button"
-  disabled={!form.genera_ricorso}
-  onClick={() => {
-    // funzione
-  }}
-  className="
-    flex items-center gap-1
-    rounded-lg px-3 py-2 text-sm
-    bg-blue-600 text-white
-    hover:bg-blue-700
-    transition
-    disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed
-  "
->
-  <Wand2 className="h-4 w-4" />
-  Genera
-</button>
+     <button
+            type="button"
+            onClick={() => router.push("/contenzioso")}
+            className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-100"
+          >
+            Indietro
+          </button>
         </div>
 
         {errore && (
