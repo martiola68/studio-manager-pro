@@ -488,12 +488,19 @@ const giorniResidui = calcolaGiorniResidui(dataScadenza);
   </label>
 
   <div className="grid grid-cols-2 gap-2">
+  <div>
     <input
       type="date"
       value={dataScadenza}
       disabled
       className="w-full rounded-lg border bg-gray-100 p-2"
     />
+  </div>
+
+  <div>
+    <label className="mb-1 block text-xs font-medium text-gray-600">
+      Giorni restanti
+    </label>
 
     <div
       className={`flex items-center justify-center rounded-lg px-3 py-2 text-sm font-semibold ${getClasseGiorniResidui(
@@ -503,7 +510,7 @@ const giorniResidui = calcolaGiorniResidui(dataScadenza);
       {getLabelGiorniResidui(giorniResidui)}
     </div>
   </div>
-
+</div>
  <p className="mt-1 text-xs text-gray-500">
   Calcolata automaticamente: data ricezione + {giorniScadenza} giorni
 </p>
