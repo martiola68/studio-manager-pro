@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
+import { Wand2 } from "lucide-react";
 
 type Cliente = {
   id: string;
@@ -35,7 +36,6 @@ const initialForm = {
   data_comunicazione: "",
   fare_ricorso: false,
   motivazione_ricorso: "",
-  genera_scadenza_ricorso: false,
   allegato_atto: "",
   allegato_civis: "",
   allegato_responso: "",
@@ -318,7 +318,6 @@ export default function NuovoAvvisoBonario() {
       data_comunicazione: form.data_comunicazione || null,
       fare_ricorso: form.fare_ricorso,
       motivazione_ricorso: form.motivazione_ricorso || null,
-      genera_scadenza_ricorso: form.genera_scadenza_ricorso,
       allegato_atto: form.allegato_atto || null,
       allegato_civis: form.allegato_civis || null,
       allegato_responso: form.allegato_responso || null,
@@ -642,22 +641,36 @@ export default function NuovoAvvisoBonario() {
             />
           </div>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium">
-              Genera pratica ricorso
-            </label>
-            <select
-              value={form.fare_ricorso ? "Si" : "No"}
-              onChange={(e) =>
-                handleChange("fare_ricorso", e.target.value === "Si")
-              }
-              className="w-full rounded-lg border p-2"
-            >
-              <option value="No">No</option>
-              <option value="Si">Sì</option>
-            </select>
-          </div>
+<div>
+  <label className="mb-1 block text-sm font-medium">
+    Genera pratica ricorso
+  </label>
 
+  <div className="flex gap-2">
+    <select
+      value={form.fare_ricorso ? "Si" : "No"}
+      onChange={(e) =>
+        handleChange("fare_ricorso", e.target.value === "Si")
+      }
+      className="w-full rounded-lg border p-2"
+    >
+      <option value="No">No</option>
+      <option value="Si">Sì</option>
+    </select>
+
+    <button
+      type="button"
+      disabled={!form.fare_ricorso}
+      onClick={() => {
+        // funzione esterna da collegare dopo
+      }}
+      className="rounded-lg border px-3 py-2 text-sm disabled:opacity-40"
+      title="Genera pratica ricorso"
+    >
+      <Wand2 className="h-4 w-4" />
+    </button>
+  </div>
+</div>
           <div className="md:col-span-3">
             <label className="mb-1 block text-sm font-medium">
               Motivazione ricorso
@@ -672,20 +685,7 @@ export default function NuovoAvvisoBonario() {
             />
           </div>
 
-          <div className="md:col-span-3">
-            <label className="flex items-center gap-2 text-sm font-medium">
-              <input
-                type="checkbox"
-                checked={form.genera_scadenza_ricorso}
-                onChange={(e) =>
-                  handleChange("genera_scadenza_ricorso", e.target.checked)
-                }
-              />
-              Genera scadenza ricorso
-            </label>
-          </div>
-
-          {[
+           {[
             ["allegato_atto", "Allegato atto"],
             ["allegato_civis", "Allegato CIVIS"],
             ["allegato_responso", "Allegato responso"],
