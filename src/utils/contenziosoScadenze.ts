@@ -12,11 +12,23 @@ export function calcolaGiorniResidui(dataScadenza?: string | null): number | nul
 }
 
 export function getClasseGiorniResidui(giorni: number | null | undefined): string {
-  if (giorni === null || giorni === undefined) return "bg-gray-200 text-gray-700";
-  if (giorni < 0) return "bg-red-600 text-white";
-  if (giorni <= 7) return "bg-red-500 text-white";
-  if (giorni <= 15) return "bg-orange-400 text-white";
-  return "bg-green-500 text-white";
+  if (giorni === null || giorni === undefined) {
+    return "bg-gray-200 text-gray-700";
+  }
+
+  if (giorni < 0) {
+    return "bg-red-700 text-white"; // scaduto
+  }
+
+  if (giorni <= 20) {
+    return "bg-red-500 text-white"; // 🔴 URGENTE
+  }
+
+  if (giorni <= 40) {
+    return "bg-orange-400 text-white"; // 🟠 attenzione
+  }
+
+  return "bg-green-500 text-white"; // 🟢 ok
 }
 
 export function getLabelGiorniResidui(giorni: number | null | undefined): string {
