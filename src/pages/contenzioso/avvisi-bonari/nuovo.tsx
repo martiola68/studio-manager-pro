@@ -482,11 +482,6 @@ const giorniResidui = calcolaGiorniResidui(dataScadenza);
             />
           </div>
 
-  <div>
-  <label className="mb-1 block text-sm font-medium">
-    Data scadenza automatica
-  </label>
-
 <div>
   <div className="grid grid-cols-2 gap-2 items-start">
     <div>
