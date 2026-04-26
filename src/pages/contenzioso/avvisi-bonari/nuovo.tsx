@@ -658,17 +658,24 @@ export default function NuovoAvvisoBonario() {
       <option value="Si">Sì</option>
     </select>
 
-    <button
-      type="button"
-      disabled={!form.fare_ricorso}
-      onClick={() => {
-        // funzione esterna da collegare dopo
-      }}
-      className="rounded-lg border px-3 py-2 text-sm disabled:opacity-40"
-      title="Genera pratica ricorso"
-    >
-      <Wand2 className="h-4 w-4" />
-    </button>
+   <button
+  type="button"
+  disabled={!form.fare_ricorso}
+  onClick={() => {
+    // funzione
+  }}
+  className="
+    flex items-center gap-1
+    rounded-lg px-3 py-2 text-sm
+    bg-blue-600 text-white
+    hover:bg-blue-700
+    transition
+    disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed
+  "
+>
+  <Wand2 className="h-4 w-4" />
+  Genera
+</button>
   </div>
 </div>
           <div className="md:col-span-3">
