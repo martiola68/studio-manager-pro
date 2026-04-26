@@ -65,7 +65,6 @@ export default function NuovoAtto() {
     referente_id: "",
     descrizione: "",
     valore_pratica: "",
-    note: "",
     esito: "Pratica aperta",
     errore_studio: false,
     comunicato: false,
@@ -269,7 +268,6 @@ export default function NuovoAtto() {
       valore_pratica: form.valore_pratica
         ? Number(form.valore_pratica.replace(",", "."))
         : null,
-      note: form.note || null,
       esito: form.esito,
       errore_studio: form.errore_studio,
       comunicato: form.comunicato,
@@ -514,48 +512,37 @@ export default function NuovoAtto() {
             </select>
           </div>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium">
-              Valore pratica
-            </label>
-            <input
-              type="text"
-              inputMode="decimal"
-              value={form.valore_pratica}
-              onChange={(e) =>
-                handleChange(
-                  "valore_pratica",
-                  e.target.value.replace(/[^0-9.,]/g, "")
-                )
-              }
-              className="w-full rounded-lg border p-2"
-              placeholder="Importo"
-            />
-          </div>
+         <div>
+  <label className="mb-1 block text-sm font-medium">
+    Valore pratica
+  </label>
+  <input
+    type="text"
+    inputMode="decimal"
+    value={form.valore_pratica}
+    onChange={(e) =>
+      handleChange(
+        "valore_pratica",
+        e.target.value.replace(/[^0-9.,]/g, "")
+      )
+    }
+    className="w-full rounded-lg border p-2"
+    placeholder="Importo"
+  />
+</div>
 
-          <div className="md:col-span-3">
-            <label className="mb-1 block text-sm font-medium">
-              Descrizione
-            </label>
-            <textarea
-              value={form.descrizione}
-              onChange={(e) => handleChange("descrizione", e.target.value)}
-              className="w-full rounded-lg border p-2"
-              rows={3}
-              placeholder="Descrizione della pratica"
-            />
-          </div>
-
-          <div className="md:col-span-3">
-            <label className="mb-1 block text-sm font-medium">Note</label>
-            <textarea
-              value={form.note}
-              onChange={(e) => handleChange("note", e.target.value)}
-              className="w-full rounded-lg border p-2"
-              rows={3}
-              placeholder="Note interne"
-            />
-          </div>
+<div className="md:col-span-2">
+  <label className="mb-1 block text-sm font-medium">
+    Descrizione
+  </label>
+  <textarea
+    value={form.descrizione}
+    onChange={(e) => handleChange("descrizione", e.target.value)}
+    className="w-full rounded-lg border p-2"
+    rows={3}
+    placeholder="Descrizione della pratica"
+  />
+</div>
 
           <div>
             <label className="mb-1 block text-sm font-medium">Esito</label>
