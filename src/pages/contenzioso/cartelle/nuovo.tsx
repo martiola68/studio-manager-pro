@@ -552,7 +552,7 @@ export default function NuovaCartella() {
 
 <p className="mt-1 text-xs text-gray-500">
   Calcolata automaticamente: data ricezione +{" "}
-  {giorniScadenza} giorni
+  {tipoSelezionato?.giorni_scadenza ?? 0} giorni
 </p>
 </div>
 
