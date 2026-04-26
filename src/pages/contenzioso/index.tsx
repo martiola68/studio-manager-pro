@@ -28,14 +28,18 @@ type Scadenza = {
   id: string;
   cliente_id: string;
   tipo_atto_id: string;
-  numero_atto: string | null;
-  tipo_atto_dettaglio: string | null;
+  numero_atto?: string | null;
+  numero_cartella?: string | null;
+  tipo_atto_dettaglio?: string | null;
   anno_riferimento: number | null;
   data_ricezione: string | null;
   data_scadenza: string | null;
-  contestazione: string | null;
-  responso: string | null;
-  fare_ricorso: boolean | null;
+  contestazione?: string | null;
+  contestabile?: string | null;
+  responso?: string | null;
+  esito_contestazione?: string | null;
+  fare_ricorso?: boolean | null;
+  genera_ricorso?: boolean | null;
   tbclienti?: { id: string; ragione_sociale: string | null } | null;
   tbcontenzioso_tipi_atto?: {
     id: string;
@@ -57,59 +61,61 @@ export default function ContenziosoIndexPage() {
   const [tipiAtto, setTipiAtto] = useState<TipoAtto[]>([]);
 
   const [search, setSearch] = useState("");
-const [archivioFiltro, setArchivioFiltro] = useState("avvisi");
-const [tipoFiltro, setTipoFiltro] = useState("all");
-const [statoFiltro, setStatoFiltro] = useState("all");
-  
-async function loadData() {
-  const supabase = getSupabaseClient();
+  const [archivioFiltro, setArchivioFiltro] = useState("avvisi");
+  const [tipoFiltro, setTipoFiltro] = useState("all");
+  const [statoFiltro, setStatoFiltro] = useState("all");
 
-  try {
-    setLoading(true);
+  async function loadData() {
+    const supabase = getSupabaseClient();
 
-    const tabella =
-      archivioFiltro === "avvisi"
-        ? "tbcontenzioso_avvisi_bonari"
-        : "tbcontenzioso_esattoriale";
+    try {
+      setLoading(true);
 
-    const [tipiRes, scadenzeRes] = await Promise.all([
-      (supabase as any)
-        .from("tbcontenzioso_tipi_atto")
-        .select("id, descrizione")
-        .eq("attivo", true)
-        .order("descrizione"),
+      const tabella =
+        archivioFiltro === "avvisi"
+          ? "tbcontenzioso_avvisi_bonari"
+          : archivioFiltro === "cartelle"
+          ? "tbcontenzioso_cartelle"
+          : "tbcontenzioso_processo";
 
-      (supabase as any)
-        .from(tabella)
-        .select(
+      const [tipiRes, scadenzeRes] = await Promise.all([
+        (supabase as any)
+          .from("tbcontenzioso_tipi_atto")
+          .select("id, descrizione")
+          .eq("attivo", true)
+          .order("descrizione"),
+
+        (supabase as any)
+          .from(tabella)
+          .select(
+            `
+            *,
+            tbclienti:cliente_id(id, ragione_sociale),
+            tbcontenzioso_tipi_atto:tipo_atto_id(id, descrizione, giorni_scadenza)
           `
-          *,
-          tbclienti:cliente_id(id, ragione_sociale),
-          tbcontenzioso_tipi_atto:tipo_atto_id(id, descrizione, giorni_scadenza)
-        `
-        )
-        .order("data_scadenza", { ascending: true }),
-    ]);
+          )
+          .order("data_scadenza", { ascending: true }),
+      ]);
 
-    if (tipiRes.error) throw tipiRes.error;
-    if (scadenzeRes.error) throw scadenzeRes.error;
+      if (tipiRes.error) throw tipiRes.error;
+      if (scadenzeRes.error) throw scadenzeRes.error;
 
-    setTipiAtto(((tipiRes.data || []) as unknown) as TipoAtto[]);
-    setScadenze(((scadenzeRes.data || []) as unknown) as Scadenza[]);
-  } catch (error: any) {
-    toast({
-      title: "Errore",
-      description: error?.message || "Impossibile caricare il contenzioso",
-      variant: "destructive",
-    });
-  } finally {
-    setLoading(false);
+      setTipiAtto(((tipiRes.data || []) as unknown) as TipoAtto[]);
+      setScadenze(((scadenzeRes.data || []) as unknown) as Scadenza[]);
+    } catch (error: any) {
+      toast({
+        title: "Errore",
+        description: error?.message || "Impossibile caricare il contenzioso",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   }
-}
-  
-useEffect(() => {
-  void loadData();
-}, [archivioFiltro]);
+
+  useEffect(() => {
+    void loadData();
+  }, [archivioFiltro]);
 
   function getStatoScadenza(dataScadenza?: string | null) {
     if (!dataScadenza) return "Senza scadenza";
@@ -138,20 +144,38 @@ useEffect(() => {
     return "default";
   }
 
-  function getEditHref(row: Scadenza) {
-    const tipo = row.tbcontenzioso_tipi_atto?.descrizione?.toLowerCase();
+  function getNumero(row: Scadenza) {
+    return row.numero_cartella || row.numero_atto || "-";
+  }
 
-    if (tipo === "avviso bonario") {
+  function getContestazione(row: Scadenza) {
+    return row.contestazione || row.contestabile || "-";
+  }
+
+  function getResponso(row: Scadenza) {
+    return row.responso || row.esito_contestazione || "-";
+  }
+
+  function getRicorso(row: Scadenza) {
+    return row.fare_ricorso || row.genera_ricorso ? "Sì" : "No";
+  }
+
+  function getEditHref(row: Scadenza) {
+    if (archivioFiltro === "avvisi") {
       return `/contenzioso/avvisi-bonari/${row.id}`;
     }
 
-    return `/contenzioso`;
+    if (archivioFiltro === "cartelle") {
+      return `/contenzioso/cartelle/${row.id}`;
+    }
+
+    return `/contenzioso/atti/${row.id}`;
   }
 
   const filtered = useMemo(() => {
     return scadenze.filter((row) => {
       const cliente = row.tbclienti?.ragione_sociale || "";
-      const numero = row.numero_atto || "";
+      const numero = getNumero(row);
       const tipo = row.tbcontenzioso_tipi_atto?.descrizione || "";
       const stato = getStatoScadenza(row.data_scadenza);
 
@@ -186,53 +210,52 @@ useEffect(() => {
           </p>
         </div>
 
-<div className="flex gap-2">
-<Link href="/contenzioso/atti/nuovo">
-  <Button>
-    <Plus className="mr-2 h-4 w-4" />
-    Nuovo atto
-  </Button>
-</Link>
+        <div className="flex gap-2">
+          <Link href="/contenzioso/atti/nuovo">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Processo tributario
+            </Button>
+          </Link>
 
-  <Link href="/contenzioso/avvisi-bonari/nuovo">
-    <Button>
-      <Plus className="mr-2 h-4 w-4" />
-      Nuovo avviso bonario
-    </Button>
-  </Link>
-</div>
+          <Link href="/contenzioso/cartelle/nuovo">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Cartella esattoriale
+            </Button>
+          </Link>
+
+          <Link href="/contenzioso/avvisi-bonari/nuovo">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Avviso bonario
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <Card className="mb-6">
         <CardHeader>
           <CardTitle>Filtri</CardTitle>
         </CardHeader>
-       <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-4">
-  <Select value={archivioFiltro} onValueChange={setArchivioFiltro}>
-    <SelectTrigger>
-      <SelectValue placeholder="Archivio" />
-    </SelectTrigger>
-    <SelectContent>
-      <SelectItem value="avvisi">Avvisi bonari</SelectItem>
-      <SelectItem value="esattoriale">Accertamenti e cartelle</SelectItem>
-    </SelectContent>
-  </Select>
 
-  <Input
+        <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Select value={archivioFiltro} onValueChange={setArchivioFiltro}>
+            <SelectTrigger>
+              <SelectValue placeholder="Archivio" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="avvisi">Avvisi bonari</SelectItem>
+              <SelectItem value="cartelle">Cartelle esattoriali</SelectItem>
+              <SelectItem value="processo">Processo tributario</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Input
             placeholder="Cerca cliente, numero atto, tipo..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-
-          <Select value={archivioFiltro} onValueChange={setArchivioFiltro}>
-  <SelectTrigger>
-    <SelectValue placeholder="Archivio" />
-  </SelectTrigger>
-  <SelectContent>
-    <SelectItem value="avvisi">Avvisi bonari</SelectItem>
-    <SelectItem value="esattoriale">Accertamenti e cartelle</SelectItem>
-  </SelectContent>
-</Select>
 
           <Select value={tipoFiltro} onValueChange={setTipoFiltro}>
             <SelectTrigger>
@@ -280,7 +303,7 @@ useEffect(() => {
                   <TableRow>
                     <TableHead>Cliente</TableHead>
                     <TableHead>Tipo atto</TableHead>
-                    <TableHead>Numero atto</TableHead>
+                    <TableHead>Numero</TableHead>
                     <TableHead>Dettaglio</TableHead>
                     <TableHead>Anno</TableHead>
                     <TableHead>Ricezione</TableHead>
@@ -305,7 +328,7 @@ useEffect(() => {
                         <TableCell>
                           {row.tbcontenzioso_tipi_atto?.descrizione || "-"}
                         </TableCell>
-                        <TableCell>{row.numero_atto || "-"}</TableCell>
+                        <TableCell>{getNumero(row)}</TableCell>
                         <TableCell>{row.tipo_atto_dettaglio || "-"}</TableCell>
                         <TableCell>{row.anno_riferimento || "-"}</TableCell>
                         <TableCell>{row.data_ricezione || "-"}</TableCell>
@@ -315,9 +338,9 @@ useEffect(() => {
                             {stato}
                           </Badge>
                         </TableCell>
-                        <TableCell>{row.contestazione || "-"}</TableCell>
-                        <TableCell>{row.responso || "-"}</TableCell>
-                        <TableCell>{row.fare_ricorso ? "Sì" : "No"}</TableCell>
+                        <TableCell>{getContestazione(row)}</TableCell>
+                        <TableCell>{getResponso(row)}</TableCell>
+                        <TableCell>{getRicorso(row)}</TableCell>
                         <TableCell className="text-right">
                           <Link href={getEditHref(row)}>
                             <Button variant="ghost" size="icon">
