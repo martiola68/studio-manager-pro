@@ -249,7 +249,7 @@ export default function NuovoAtto() {
     };
 
     const { data: atto, error } = await (supabase as any)
-      .from("tbcontenzioso_esattoriale")
+      .from("tbcontenzioso_cartelle")
       .insert(payload)
       .select("id")
       .single();
