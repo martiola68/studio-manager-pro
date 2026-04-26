@@ -457,8 +457,6 @@ motivazione: form.motivazione || null,
               Calcolata automaticamente: data ricezione + {giorniScadenza} giorni
             </p>
           </div>
-
-          <div>
  <div>
   <label className="mb-1 block text-sm font-medium">
     Importo dovuto
