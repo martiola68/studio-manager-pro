@@ -2,6 +2,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { Wand2 } from "lucide-react";
+import {
+  calcolaGiorniResidui,
+  getClasseGiorniResidui,
+  getLabelGiorniResidui,
+} from "@/utils/contenziosoScadenze";
 
 type Cliente = {
   id: string;
@@ -63,17 +68,22 @@ export default function NuovoAvvisoBonario() {
   };
 
   const addDays = (dateString: string, days: number) => {
-    if (!dateString) return "";
+  if (!dateString) return "";
 
-    const date = new Date(dateString);
-    date.setDate(date.getDate() + days);
+  const date = new Date(dateString);
+  date.setDate(date.getDate() + days);
 
-    return date.toISOString().split("T")[0];
-  };
+  return date.toISOString().split("T")[0];
+};
 
-  const dataScadenza = form.data_ricezione
-    ? addDays(form.data_ricezione, tipoAtto?.giorni_scadenza || 60)
+const giorniScadenza = tipoAtto?.giorni_scadenza ?? 0;
+
+const dataScadenza =
+  form.data_ricezione && giorniScadenza > 0
+    ? addDays(form.data_ricezione, giorniScadenza)
     : "";
+
+const giorniResidui = calcolaGiorniResidui(dataScadenza);
 
   const loadData = async () => {
     const supabase = getSupabaseClient();
@@ -302,6 +312,8 @@ export default function NuovoAvvisoBonario() {
         : null,
       data_emissione: form.data_emissione || null,
       data_ricezione: form.data_ricezione,
+      data_scadenza: dataScadenza || null,
+      giorni_residui: giorniResidui,
       importo_dovuto: form.importo_dovuto ? toNumber(form.importo_dovuto) : null,
       importo_sgravato: form.importo_sgravato
         ? toNumber(form.importo_sgravato)
@@ -470,21 +482,32 @@ export default function NuovoAvvisoBonario() {
             />
           </div>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium">
-              Data scadenza automatica
-            </label>
-            <input
-              type="date"
-              value={dataScadenza}
-              disabled
-              className="w-full rounded-lg border bg-gray-100 p-2"
-            />
-            <p className="mt-1 text-xs text-gray-500">
-              Calcolata automaticamente: data ricezione +{" "}
-              {tipoAtto?.giorni_scadenza || 60} giorni
-            </p>
-          </div>
+         <div>
+  <label className="mb-1 block text-sm font-medium">
+    Data scadenza automatica
+  </label>
+
+  <div className="grid grid-cols-2 gap-2">
+    <input
+      type="date"
+      value={dataScadenza}
+      disabled
+      className="w-full rounded-lg border bg-gray-100 p-2"
+    />
+
+    <div
+      className={`flex items-center justify-center rounded-lg px-3 py-2 text-sm font-semibold ${getClasseGiorniResidui(
+        giorniResidui
+      )}`}
+    >
+      {getLabelGiorniResidui(giorniResidui)}
+    </div>
+  </div>
+
+ <p className="mt-1 text-xs text-gray-500">
+  Calcolata automaticamente: data ricezione + {giorniScadenza} giorni
+</p>
+</div>
 
           <div>
             <label className="mb-1 block text-sm font-medium">
