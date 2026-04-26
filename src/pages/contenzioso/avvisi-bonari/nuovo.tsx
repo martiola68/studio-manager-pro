@@ -487,8 +487,12 @@ const giorniResidui = calcolaGiorniResidui(dataScadenza);
     Data scadenza automatica
   </label>
 
-  <div className="grid grid-cols-2 gap-2">
+ <div className="grid grid-cols-2 gap-2 items-start">
   <div>
+    <label className="mb-1 block text-sm font-medium">
+      Data scadenza automatica
+    </label>
+
     <input
       type="date"
       value={dataScadenza}
@@ -498,12 +502,12 @@ const giorniResidui = calcolaGiorniResidui(dataScadenza);
   </div>
 
   <div>
-    <label className="mb-1 block text-xs font-medium text-gray-600">
+    <label className="mb-1 block text-sm font-medium">
       Giorni restanti
     </label>
 
     <div
-      className={`flex items-center justify-center rounded-lg px-3 py-2 text-sm font-semibold ${getClasseGiorniResidui(
+      className={`h-[42px] flex items-center justify-center rounded-lg px-3 text-sm font-semibold ${getClasseGiorniResidui(
         giorniResidui
       )}`}
     >
@@ -511,8 +515,10 @@ const giorniResidui = calcolaGiorniResidui(dataScadenza);
     </div>
   </div>
 </div>
- <p className="mt-1 text-xs text-gray-500">
-  Calcolata automaticamente: data ricezione + {giorniScadenza} giorni
+
+<p className="mt-1 text-xs text-gray-500">
+  Calcolata automaticamente: data ricezione +{" "}
+  {giorniScadenza} giorni
 </p>
 </div>
 
