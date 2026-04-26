@@ -518,19 +518,11 @@ export default function NuovaCartella() {
               className="w-full rounded-lg border p-2"
             />
           </div>
-
-        <div>
-  <label className="mb-1 block text-sm font-medium">
-    Data scadenza
-  </label>
-
- <div className="grid grid-cols-2 gap-2 items-start">
-
-  <div>
+<div>
   <div className="grid grid-cols-2 gap-2 items-start">
     <div>
       <label className="mb-1 block text-sm font-medium">
-        Data scadenza automatica
+        Data scadenza
       </label>
 
       <input
