@@ -19,8 +19,10 @@ const initialForm = {
   data_emissione: "",
   data_ricezione: "",
   data_scadenza: "",
-  importo_dovuto: "",
-  motivazione: "",
+ importo_dovuto: "",
+importo_sgravato: "",
+importo_residuo: "",
+motivazione: "",
   contestazione: "No",
   tipo_contestazione: "",
   data_invio_contestazione: "",
@@ -123,6 +125,54 @@ return cliente.ragione_sociale || "Cliente senza nome";
     if (field === "data_ricezione" && typeof value === "string") {
   next.data_scadenza = addDays(value, giorniScadenza);
 }
+
+      if (field === "responso" && typeof value === "string") {
+  const dovuto = Number(next.importo_dovuto || 0);
+
+  if (value === "Sgravio totale") {
+    next.importo_sgravato = dovuto ? String(dovuto) : "";
+    next.importo_residuo = "0";
+  }
+
+  if (value === "Respinto") {
+    next.importo_sgravato = "0";
+    next.importo_residuo = dovuto ? String(dovuto) : "";
+  }
+
+  if (value === "Sgravio parziale") {
+    next.importo_sgravato = "";
+    next.importo_residuo = "";
+  }
+}
+
+if (field === "importo_sgravato" && typeof value === "string") {
+  const dovuto = Number(next.importo_dovuto || 0);
+  const sgravato = Number(value || 0);
+
+  if (next.responso === "Sgravio parziale") {
+    next.importo_residuo = String(Math.max(dovuto - sgravato, 0));
+  }
+}
+
+if (field === "importo_dovuto" && typeof value === "string") {
+  const dovuto = Number(value || 0);
+  const sgravato = Number(next.importo_sgravato || 0);
+
+  if (next.responso === "Sgravio totale") {
+    next.importo_sgravato = dovuto ? String(dovuto) : "";
+    next.importo_residuo = "0";
+  }
+
+  if (next.responso === "Respinto") {
+    next.importo_sgravato = "0";
+    next.importo_residuo = dovuto ? String(dovuto) : "";
+  }
+
+  if (next.responso === "Sgravio parziale") {
+    next.importo_residuo = String(Math.max(dovuto - sgravato, 0));
+  }
+}
+      
       return next;
     });
   };
@@ -228,8 +278,10 @@ const supabase = getSupabaseClient();
       data_emissione: form.data_emissione || null,
       data_ricezione: form.data_ricezione || null,
       data_scadenza: form.data_scadenza || null,
-      importo_dovuto: form.importo_dovuto ? Number(form.importo_dovuto) : null,
-      motivazione: form.motivazione || null,
+     importo_dovuto: form.importo_dovuto ? Number(form.importo_dovuto) : null,
+importo_sgravato: form.importo_sgravato ? Number(form.importo_sgravato) : null,
+importo_residuo: form.importo_residuo ? Number(form.importo_residuo) : null,
+motivazione: form.motivazione || null,
       contestazione: form.contestazione || "No",
       tipo_contestazione: form.tipo_contestazione || null,
       data_invio_contestazione: form.data_invio_contestazione || null,
@@ -407,6 +459,7 @@ const supabase = getSupabaseClient();
           </div>
 
           <div>
+ <div>
   <label className="mb-1 block text-sm font-medium">
     Importo dovuto
   </label>
@@ -420,17 +473,18 @@ const supabase = getSupabaseClient();
   />
 </div>
 
-          <div className="md:col-span-3">
-            <label className="mb-1 block text-sm font-medium">
-              Motivazione
-            </label>
-            <textarea
-              value={form.motivazione}
-              onChange={(e) => handleChange("motivazione", e.target.value)}
-              className="w-full rounded-lg border p-2"
-              rows={3}
-            />
-          </div>
+<div className="md:col-span-2">
+  <label className="mb-1 block text-sm font-medium">
+    Motivazione
+  </label>
+  <input
+    type="text"
+    value={form.motivazione}
+    onChange={(e) => handleChange("motivazione", e.target.value)}
+    className="w-full rounded-lg border p-2"
+    placeholder="Motivazione"
+  />
+</div>
 
           <div>
             <label className="mb-1 block text-sm font-medium">
@@ -479,19 +533,47 @@ const supabase = getSupabaseClient();
             />
           </div>
 
-          <div className="md:col-span-3">
-            <label className="mb-1 block text-sm font-medium">Responso</label>
-           <select
-  value={form.responso}
-  onChange={(e) => handleChange("responso", e.target.value)}
-  className="w-full rounded-lg border p-2"
->
-  <option value="">---</option>
-  <option value="Sgravio totale">Sgravio totale</option>
-  <option value="Sgravio parziale">Sgravio parziale</option>
-  <option value="Respinto">Respinto</option>
-</select>
-          </div>
+      <div>
+  <label className="mb-1 block text-sm font-medium">Responso</label>
+  <select
+    value={form.responso}
+    onChange={(e) => handleChange("responso", e.target.value)}
+    className="w-full rounded-lg border p-2"
+  >
+    <option value="">---</option>
+    <option value="Sgravio totale">Sgravio totale</option>
+    <option value="Sgravio parziale">Sgravio parziale</option>
+    <option value="Respinto">Respinto</option>
+  </select>
+</div>
+
+<div>
+  <label className="mb-1 block text-sm font-medium">
+    Importo sgravato
+  </label>
+  <input
+    type="number"
+    step="0.01"
+    value={form.importo_sgravato}
+    onChange={(e) => handleChange("importo_sgravato", e.target.value)}
+    className="w-full rounded-lg border p-2"
+    disabled={form.responso === "Sgravio totale" || form.responso === "Respinto"}
+  />
+</div>
+
+<div>
+  <label className="mb-1 block text-sm font-medium">
+    Importo residuo
+  </label>
+  <input
+    type="number"
+    step="0.01"
+    value={form.importo_residuo}
+    onChange={(e) => handleChange("importo_residuo", e.target.value)}
+    className="w-full rounded-lg border bg-gray-100 p-2"
+    disabled
+  />
+</div>
 
           <div>
             <label className="mb-1 block text-sm font-medium">
