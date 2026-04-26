@@ -19,6 +19,7 @@ const initialForm = {
   data_emissione: "",
   data_ricezione: "",
   data_scadenza: "",
+  importo_dovuto: "",
   motivazione: "",
   contestazione: "No",
   tipo_contestazione: "",
@@ -227,6 +228,7 @@ const supabase = getSupabaseClient();
       data_emissione: form.data_emissione || null,
       data_ricezione: form.data_ricezione || null,
       data_scadenza: form.data_scadenza || null,
+      importo_dovuto: form.importo_dovuto ? Number(form.importo_dovuto) : null,
       motivazione: form.motivazione || null,
       contestazione: form.contestazione || "No",
       tipo_contestazione: form.tipo_contestazione || null,
@@ -266,7 +268,7 @@ const supabase = getSupabaseClient();
               Nuovo avviso bonario
             </h1>
             <p className="text-sm text-gray-500">
-              Form dedicato per Avviso bonario su tbcontenzioso_scadenze
+              Form dedicato alla gestione degli Avvisi bonari
             </p>
           </div>
 
@@ -404,6 +406,20 @@ const supabase = getSupabaseClient();
             </p>
           </div>
 
+          <div>
+  <label className="mb-1 block text-sm font-medium">
+    Importo dovuto
+  </label>
+  <input
+    type="number"
+    step="0.01"
+    value={form.importo_dovuto}
+    onChange={(e) => handleChange("importo_dovuto", e.target.value)}
+    className="w-full rounded-lg border p-2"
+    placeholder="Importo"
+  />
+</div>
+
           <div className="md:col-span-3">
             <label className="mb-1 block text-sm font-medium">
               Motivazione
@@ -435,13 +451,18 @@ const supabase = getSupabaseClient();
             <label className="mb-1 block text-sm font-medium">
               Tipo contestazione
             </label>
-            <input
-              value={form.tipo_contestazione}
-              onChange={(e) =>
-                handleChange("tipo_contestazione", e.target.value)
-              }
-              className="w-full rounded-lg border p-2"
-            />
+          <select
+  value={form.tipo_contestazione}
+  onChange={(e) =>
+    handleChange("tipo_contestazione", e.target.value)
+  }
+  className="w-full rounded-lg border p-2"
+>
+  <option value="">---</option>
+  <option value="CIVIS">CIVIS</option>
+  <option value="Autotutela PEC">Autotutela PEC</option>
+  <option value="Autotutela ufficio">Autotutela ufficio</option>
+</select>
           </div>
 
           <div>
@@ -460,12 +481,16 @@ const supabase = getSupabaseClient();
 
           <div className="md:col-span-3">
             <label className="mb-1 block text-sm font-medium">Responso</label>
-            <textarea
-              value={form.responso}
-              onChange={(e) => handleChange("responso", e.target.value)}
-              className="w-full rounded-lg border p-2"
-              rows={3}
-            />
+           <select
+  value={form.responso}
+  onChange={(e) => handleChange("responso", e.target.value)}
+  className="w-full rounded-lg border p-2"
+>
+  <option value="">---</option>
+  <option value="Sgravio totale">Sgravio totale</option>
+  <option value="Sgravio parziale">Sgravio parziale</option>
+  <option value="Respinto">Respinto</option>
+</select>
           </div>
 
           <div>
@@ -500,7 +525,7 @@ const supabase = getSupabaseClient();
 
           <div>
             <label className="mb-1 block text-sm font-medium">
-              Fare ricorso
+              Genera pratica ricorso
             </label>
             <select
               value={form.fare_ricorso}
