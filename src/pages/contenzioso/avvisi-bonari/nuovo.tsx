@@ -13,10 +13,9 @@ type Cliente = {
   ragione_sociale?: string | null;
 };
 
-type TipoAtto = {
+type TributoConstatazione = {
   id: string;
   descrizione: string;
-  giorni_scadenza: number;
 };
 
 const TIPO_ATTO_AVVISO_BONARIO = "Avviso bonario";
@@ -25,7 +24,7 @@ const BUCKET = "messaggi-allegati";
 const initialForm = {
   cliente_id: "",
   numero_atto: "",
-  tipo_atto_dettaglio: "",
+  tributo_constatazione_id: "",
   anno_riferimento: "",
   data_emissione: "",
   data_ricezione: "",
@@ -52,6 +51,7 @@ export default function NuovoAvvisoBonario() {
   const [studioId, setStudioId] = useState("");
   const [tipoAtto, setTipoAtto] = useState<TipoAtto | null>(null);
   const [clienti, setClienti] = useState<Cliente[]>([]);
+  const [tributiConstatazione, setTributiConstatazione] = useState<TributoConstatazione[]>([]);
   const [form, setForm] = useState(initialForm);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -107,20 +107,26 @@ const giorniResidui = calcolaGiorniResidui(dataScadenza);
       }
     }
 
-    const [clientiRes, tipoAttoRes] = await Promise.all([
-      supabase
-        .from("tbclienti")
-        .select("id, ragione_sociale")
-        .order("ragione_sociale", { ascending: true }),
+  const [clientiRes, tipoAttoRes, tributiConstatazioneRes] = await Promise.all([
+  supabase
+    .from("tbclienti")
+    .select("id, ragione_sociale")
+    .order("ragione_sociale", { ascending: true }),
 
-      (supabase as any)
-        .from("tbcontenzioso_tipi_atto")
-        .select("id, descrizione, giorni_scadenza")
-        .ilike("descrizione", TIPO_ATTO_AVVISO_BONARIO)
-        .eq("attivo", true)
-        .single(),
-    ]);
+  (supabase as any)
+    .from("tbcontenzioso_tipi_atto")
+    .select("id, descrizione, giorni_scadenza")
+    .ilike("descrizione", TIPO_ATTO_AVVISO_BONARIO)
+    .eq("attivo", true)
+    .single(),
 
+  (supabase as any)
+    .from("tbcontenzioso_tributi_constatazione")
+    .select("id, descrizione")
+    .eq("attivo", true)
+    .order("ordine", { ascending: true }),
+]);
+    
     if (clientiRes.error) {
       setErrore("Errore nel caricamento dei clienti.");
       setLoading(false);
@@ -133,7 +139,16 @@ const giorniResidui = calcolaGiorniResidui(dataScadenza);
       return;
     }
 
+    if (tributiConstatazioneRes.error) {
+  setErrore("Errore nel caricamento dei tributi/contributi.");
+  setLoading(false);
+  return;
+}
+
     setClienti((clientiRes.data || []) as Cliente[]);
+    setTributiConstatazione(
+  (tributiConstatazioneRes.data || []) as TributoConstatazione[]
+);
     setTipoAtto(tipoAttoRes.data as TipoAtto);
     setLoading(false);
   };
@@ -294,6 +309,11 @@ const giorniResidui = calcolaGiorniResidui(dataScadenza);
       return;
     }
 
+    if (!form.tributo_constatazione_id) {
+  setErrore("Seleziona il tributo/contributo.");
+  return;
+}
+
     if (!form.data_ricezione) {
       setErrore("Inserisci la data di ricezione.");
       return;
@@ -307,6 +327,7 @@ const giorniResidui = calcolaGiorniResidui(dataScadenza);
       numero_atto: form.numero_atto.trim(),
       tipo_atto: TIPO_ATTO_AVVISO_BONARIO,
       tipo_atto_id: tipoAtto.id,
+      tributo_constatazione_id: form.tributo_constatazione_id || null,
       anno_riferimento: form.anno_riferimento
         ? Number(form.anno_riferimento)
         : null,
@@ -420,24 +441,24 @@ const giorniResidui = calcolaGiorniResidui(dataScadenza);
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium">
-              Tipo atto dettaglio
-            </label>
-            <select
-              value={form.tipo_atto_dettaglio}
-              onChange={(e) =>
-                handleChange("tipo_atto_dettaglio", e.target.value)
-              }
-              className="w-full rounded-lg border p-2"
-            >
-              <option value="">---</option>
-              <option value="Redditi">Redditi</option>
-              <option value="IVA">IVA</option>
-              <option value="770">770</option>
-              <option value="IRAP">IRAP</option>
-              <option value="Altro">Altro</option>
-            </select>
-          </div>
+  <label className="mb-1 block text-sm font-medium">
+    Tributo / contributo oggetto della constatazione
+  </label>
+  <select
+    value={form.tributo_constatazione_id}
+    onChange={(e) =>
+      handleChange("tributo_constatazione_id", e.target.value)
+    }
+    className="w-full rounded-lg border p-2"
+  >
+    <option value="">Seleziona tributo/contributo</option>
+    {tributiConstatazione.map((tributo) => (
+      <option key={tributo.id} value={tributo.id}>
+        {tributo.descrizione}
+      </option>
+    ))}
+  </select>
+</div>
 
           <div>
             <label className="mb-1 block text-sm font-medium">
