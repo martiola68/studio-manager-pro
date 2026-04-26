@@ -11,6 +11,11 @@ import {
 type Cliente = { id: string; ragione_sociale: string | null };
 type TipoAtto = { id: string; descrizione: string; giorni_scadenza: number };
 
+type TributoConstatazione = {
+  id: string;
+  descrizione: string;
+};
+
 type AvvisoBonario = {
   id: string;
   numero_atto: string | null;
@@ -27,6 +32,7 @@ export default function NuovaCartella() {
   const [studioId, setStudioId] = useState("");
   const [clienti, setClienti] = useState<Cliente[]>([]);
   const [tipiAtto, setTipiAtto] = useState<TipoAtto[]>([]);
+  const [tributiConstatazione, setTributiConstatazione] = useState<TributoConstatazione[]>([]);
   const [avvisi, setAvvisi] = useState<AvvisoBonario[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -38,6 +44,7 @@ export default function NuovaCartella() {
     numero_cartella: "",
     avviso_bonario_id: "",
     tipo_atto_id: "",
+    tributo_constatazione_id: "",
     anno_riferimento: "",
     data_ruolo: "",
     data_ricezione: "",
@@ -180,21 +187,28 @@ export default function NuovaCartella() {
         }
       }
 
-      const [clientiRes, tipiRes] = await Promise.all([
+      const [clientiRes, tipiRes, tributiConstatazioneRes] = await Promise.all([
         supabase
           .from("tbclienti")
           .select("id, ragione_sociale")
           .order("ragione_sociale", { ascending: true }),
 
-        (supabase as any)
-          .from("tbcontenzioso_tipi_atto")
-          .select("id, descrizione, giorni_scadenza")
-          .eq("attivo", true)
-          .order("descrizione", { ascending: true }),
+       (supabase as any)
+  .from("tbcontenzioso_tipi_atto")
+  .select("id, descrizione, giorni_scadenza")
+  .eq("attivo", true)
+  .order("descrizione", { ascending: true }),
+
+(supabase as any)
+  .from("tbcontenzioso_tributi_constatazione")
+  .select("id, descrizione")
+  .eq("attivo", true)
+  .order("ordine", { ascending: true }),
       ]);
 
       if (clientiRes.error) throw clientiRes.error;
-      if (tipiRes.error) throw tipiRes.error;
+     if (tipiRes.error) throw tipiRes.error;
+    if (tributiConstatazioneRes.error) throw tributiConstatazioneRes.error;
 
       const tipi = (tipiRes.data || []) as TipoAtto[];
       const cartella = tipi.find(
@@ -203,6 +217,9 @@ export default function NuovaCartella() {
 
       setClienti((clientiRes.data || []) as Cliente[]);
       setTipiAtto(tipi);
+setTributiConstatazione(
+  (tributiConstatazioneRes.data || []) as TributoConstatazione[]
+);
 
       if (cartella?.id) {
         setForm((prev) => ({
@@ -338,6 +355,7 @@ export default function NuovaCartella() {
       numero_cartella: form.numero_cartella || null,
       avviso_bonario_id: form.avviso_bonario_id || null,
       tipo_atto_id: form.tipo_atto_id || null,
+      tributo_constatazione_id: form.tributo_constatazione_id || null,
       anno_riferimento: form.anno_riferimento
         ? Number(form.anno_riferimento)
         : null,
@@ -469,19 +487,39 @@ export default function NuovaCartella() {
             />
           </div>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium">Tipo atto</label>
-            <input
-              value={tipoSelezionato?.descrizione || "Cartella esattoriale"}
-              disabled
-              className="w-full rounded-lg border bg-gray-100 p-2"
-            />
-          </div>
+         <div>
+  <label className="mb-1 block text-sm font-medium">Tipo atto</label>
+  <input
+    value={tipoSelezionato?.descrizione || "Cartella esattoriale"}
+    disabled
+    className="w-full rounded-lg border bg-gray-100 p-2"
+  />
+</div>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium">
-              Anno riferimento
-            </label>
+<div>
+  <label className="mb-1 block text-sm font-medium">
+    Tributo / contributo oggetto della constatazione
+  </label>
+  <select
+    value={form.tributo_constatazione_id}
+    onChange={(e) =>
+      handleChange("tributo_constatazione_id", e.target.value)
+    }
+    className="w-full rounded-lg border p-2"
+  >
+    <option value="">Seleziona tributo/contributo</option>
+    {tributiConstatazione.map((tributo) => (
+      <option key={tributo.id} value={tributo.id}>
+        {tributo.descrizione}
+      </option>
+    ))}
+  </select>
+</div>
+
+<div>
+  <label className="mb-1 block text-sm font-medium">
+    Anno riferimento
+  </label>
             <input
               type="text"
               inputMode="numeric"
