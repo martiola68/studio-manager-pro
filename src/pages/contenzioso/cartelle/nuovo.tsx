@@ -396,6 +396,9 @@ export default function NuovaCartella() {
 
      <button
             type="button"
+
+
+       
             onClick={() => router.push("/contenzioso")}
             className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-100"
           >
@@ -522,38 +525,41 @@ export default function NuovaCartella() {
   </label>
 
  <div className="grid grid-cols-2 gap-2 items-start">
-  <div>
-    <label className="mb-1 block text-sm font-medium">
-      Data scadenza automatica
-    </label>
-
-    <input
-      type="date"
-      value={dataScadenza}
-      disabled
-      className="w-full rounded-lg border bg-gray-100 p-2"
-    />
-  </div>
 
   <div>
-    <label className="mb-1 block text-sm font-medium">
-      Giorni restanti
-    </label>
+  <div className="grid grid-cols-2 gap-2 items-start">
+    <div>
+      <label className="mb-1 block text-sm font-medium">
+        Data scadenza automatica
+      </label>
 
-    <div
-      className={`h-[42px] flex items-center justify-center rounded-lg px-3 text-sm font-semibold ${getClasseGiorniResidui(
-        giorniResidui
-      )}`}
-    >
-      {getLabelGiorniResidui(giorniResidui)}
+      <input
+        type="date"
+        value={dataScadenza}
+        disabled
+        className="w-full rounded-lg border bg-gray-100 p-2"
+      />
+    </div>
+
+    <div>
+      <label className="mb-1 block text-sm font-medium">
+        Giorni restanti
+      </label>
+
+      <div
+        className={`h-[42px] flex items-center justify-center rounded-lg px-3 text-sm font-semibold ${getClasseGiorniResidui(
+          giorniResidui
+        )}`}
+      >
+        {getLabelGiorniResidui(giorniResidui)}
+      </div>
     </div>
   </div>
-</div>
 
-<p className="mt-1 text-xs text-gray-500">
-  Calcolata automaticamente: data ricezione +{" "}
-  {tipoSelezionato?.giorni_scadenza ?? 0} giorni
-</p>
+  <p className="mt-1 text-xs text-gray-500">
+    Calcolata automaticamente: data ricezione +{" "}
+    {tipoSelezionato?.giorni_scadenza ?? 0} giorni
+  </p>
 </div>
 
           <div>
