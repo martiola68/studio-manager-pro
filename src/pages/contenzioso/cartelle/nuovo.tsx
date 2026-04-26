@@ -342,6 +342,11 @@ setTributiConstatazione(
       return;
     }
 
+    if (!form.tributo_constatazione_id) {
+  setErrore("Seleziona il tributo/contributo.");
+  return;
+}
+
     if (!form.data_ricezione) {
       setErrore("Inserisci la data ricezione.");
       return;
