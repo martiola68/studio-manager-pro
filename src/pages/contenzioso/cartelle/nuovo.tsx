@@ -2,26 +2,18 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 
-type Cliente = {
-  id: string;
-  ragione_sociale: string | null;
-};
-
-type TipoAtto = {
-  id: string;
-  descrizione: string;
-  giorni_scadenza: number;
-};
+type Cliente = { id: string; ragione_sociale: string | null };
+type TipoAtto = { id: string; descrizione: string; giorni_scadenza: number };
 
 type AvvisoBonario = {
   id: string;
   numero_atto: string | null;
   anno_riferimento: number | null;
-  tipo_atto_id: string | null;
   importo_dovuto: number | null;
 };
 
 const BUCKET = "messaggi-allegati";
+const TIPO_ATTO_CARTELLA = "Cartella esattoriale";
 
 export default function NuovaCartella() {
   const router = useRouter();
@@ -44,6 +36,8 @@ export default function NuovaCartella() {
     data_ruolo: "",
     data_ricezione: "",
     importo_dovuto: "",
+    importo_sgravato: "",
+    importo_residuo: "0",
     note: "",
     contestabile: "No",
     modalita_contestazione: "",
@@ -81,11 +75,76 @@ export default function NuovaCartella() {
     }
   }, [form.cliente_id]);
 
+  const toNumber = (val: string) => {
+    if (!val) return 0;
+    return parseFloat(val.replace(",", ".")) || 0;
+  };
+
   const handleChange = (field: keyof typeof form, value: any) => {
-    setForm((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setForm((prev) => {
+      const next = {
+        ...prev,
+        [field]: value,
+      };
+
+      if (field === "esito_contestazione" && typeof value === "string") {
+        const dovuto = toNumber(next.importo_dovuto);
+
+        if (!value) {
+          next.importo_sgravato = "";
+          next.importo_residuo = "0";
+        }
+
+        if (value === "Sgravio totale") {
+          next.importo_sgravato = String(dovuto);
+          next.importo_residuo = "0";
+        }
+
+        if (value === "Sgravio parziale") {
+          next.importo_sgravato = "";
+          next.importo_residuo = "";
+        }
+
+        if (value === "Respinto") {
+          next.importo_sgravato = "0";
+          next.importo_residuo = String(dovuto);
+        }
+      }
+
+      if (field === "importo_dovuto" && typeof value === "string") {
+        const dovuto = toNumber(value);
+        const sgravato = toNumber(next.importo_sgravato);
+
+        if (!next.esito_contestazione) {
+          next.importo_residuo = "0";
+        }
+
+        if (next.esito_contestazione === "Sgravio totale") {
+          next.importo_sgravato = String(dovuto);
+          next.importo_residuo = "0";
+        }
+
+        if (next.esito_contestazione === "Respinto") {
+          next.importo_sgravato = "0";
+          next.importo_residuo = String(dovuto);
+        }
+
+        if (next.esito_contestazione === "Sgravio parziale") {
+          next.importo_residuo = String(Math.max(dovuto - sgravato, 0));
+        }
+      }
+
+      if (field === "importo_sgravato" && typeof value === "string") {
+        const dovuto = toNumber(next.importo_dovuto);
+        const sgravato = toNumber(value);
+
+        if (next.esito_contestazione === "Sgravio parziale") {
+          next.importo_residuo = String(Math.max(dovuto - sgravato, 0));
+        }
+      }
+
+      return next;
+    });
   };
 
   const loadData = async () => {
@@ -127,8 +186,20 @@ export default function NuovaCartella() {
       if (clientiRes.error) throw clientiRes.error;
       if (tipiRes.error) throw tipiRes.error;
 
+      const tipi = (tipiRes.data || []) as TipoAtto[];
+      const cartella = tipi.find(
+        (t) => t.descrizione?.toLowerCase() === TIPO_ATTO_CARTELLA.toLowerCase()
+      );
+
       setClienti((clientiRes.data || []) as Cliente[]);
-      setTipiAtto((tipiRes.data || []) as TipoAtto[]);
+      setTipiAtto(tipi);
+
+      if (cartella?.id) {
+        setForm((prev) => ({
+          ...prev,
+          tipo_atto_id: cartella.id,
+        }));
+      }
     } catch (error) {
       console.error(error);
       setErrore("Errore durante il caricamento dei dati.");
@@ -142,7 +213,7 @@ export default function NuovaCartella() {
 
     const { data, error } = await (supabase as any)
       .from("tbcontenzioso_avvisi_bonari")
-      .select("id, numero_atto, anno_riferimento, tipo_atto_id, importo_dovuto")
+      .select("id, numero_atto, anno_riferimento, importo_dovuto")
       .eq("cliente_id", clienteId)
       .order("data_ricezione", { ascending: false });
 
@@ -164,10 +235,10 @@ export default function NuovaCartella() {
       anno_riferimento: avviso?.anno_riferimento
         ? String(avviso.anno_riferimento)
         : prev.anno_riferimento,
-      tipo_atto_id: avviso?.tipo_atto_id || prev.tipo_atto_id,
       importo_dovuto: avviso?.importo_dovuto
         ? String(avviso.importo_dovuto)
         : prev.importo_dovuto,
+      importo_residuo: !prev.esito_contestazione ? "0" : prev.importo_residuo,
     }));
   };
 
@@ -205,7 +276,6 @@ export default function NuovaCartella() {
     if (!path) return;
 
     const supabase = getSupabaseClient();
-
     const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
 
     if (data?.publicUrl) {
@@ -220,7 +290,6 @@ export default function NuovaCartella() {
     if (!path) return;
 
     const supabase = getSupabaseClient();
-
     await supabase.storage.from(BUCKET).remove([path]);
 
     handleChange(field, "");
@@ -264,7 +333,13 @@ export default function NuovaCartella() {
         : null,
       data_ruolo: form.data_ruolo || null,
       data_ricezione: form.data_ricezione,
-      importo_dovuto: form.importo_dovuto ? Number(form.importo_dovuto) : null,
+      importo_dovuto: form.importo_dovuto ? toNumber(form.importo_dovuto) : null,
+      importo_sgravato: form.importo_sgravato
+        ? toNumber(form.importo_sgravato)
+        : null,
+      importo_residuo: form.importo_residuo
+        ? toNumber(form.importo_residuo)
+        : null,
       note: form.note || null,
       contestabile: form.contestabile,
       modalita_contestazione: form.modalita_contestazione || null,
@@ -377,7 +452,7 @@ export default function NuovaCartella() {
             <select
               value={form.tipo_atto_id}
               onChange={(e) => handleChange("tipo_atto_id", e.target.value)}
-              className="w-full rounded-lg border p-2"
+              className="w-full rounded-lg border bg-gray-100 p-2"
             >
               <option value="">Seleziona tipo atto</option>
               {tipiAtto.map((t) => (
@@ -393,10 +468,15 @@ export default function NuovaCartella() {
               Anno riferimento
             </label>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
+              maxLength={4}
               value={form.anno_riferimento}
               onChange={(e) =>
-                handleChange("anno_riferimento", e.target.value)
+                handleChange(
+                  "anno_riferimento",
+                  e.target.value.replace(/\D/g, "").slice(0, 4)
+                )
               }
               className="w-full rounded-lg border p-2"
             />
@@ -441,21 +521,30 @@ export default function NuovaCartella() {
               Importo dovuto
             </label>
             <input
-              type="number"
-              step="0.01"
+              type="text"
+              inputMode="decimal"
               value={form.importo_dovuto}
-              onChange={(e) => handleChange("importo_dovuto", e.target.value)}
+              onChange={(e) =>
+                handleChange(
+                  "importo_dovuto",
+                  e.target.value.replace(/[^0-9.,]/g, "")
+                )
+              }
               className="w-full rounded-lg border p-2"
+              placeholder="Importo"
             />
           </div>
 
-          <div className="md:col-span-3">
-            <label className="mb-1 block text-sm font-medium">Note</label>
-            <textarea
+          <div className="md:col-span-2">
+            <label className="mb-1 block text-sm font-medium">
+              Motivazione
+            </label>
+            <input
+              type="text"
               value={form.note}
               onChange={(e) => handleChange("note", e.target.value)}
               className="w-full rounded-lg border p-2"
-              rows={3}
+              placeholder="Motivazione"
             />
           </div>
 
@@ -493,9 +582,7 @@ export default function NuovaCartella() {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium">
-              Data invio
-            </label>
+            <label className="mb-1 block text-sm font-medium">Data invio</label>
             <input
               type="date"
               value={form.data_invio}
@@ -520,6 +607,40 @@ export default function NuovaCartella() {
               <option value="Sgravio parziale">Sgravio parziale</option>
               <option value="Respinto">Respinto</option>
             </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">
+              Importo sgravato
+            </label>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={form.importo_sgravato}
+              onChange={(e) =>
+                handleChange(
+                  "importo_sgravato",
+                  e.target.value.replace(/[^0-9.,]/g, "")
+                )
+              }
+              disabled={
+                form.esito_contestazione === "Sgravio totale" ||
+                form.esito_contestazione === "Respinto"
+              }
+              className="w-full rounded-lg border p-2"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">
+              Importo residuo
+            </label>
+            <input
+              type="text"
+              value={form.importo_residuo}
+              disabled
+              className="w-full rounded-lg border bg-gray-100 p-2"
+            />
           </div>
 
           <div className="flex items-end">
