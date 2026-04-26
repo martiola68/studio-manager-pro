@@ -673,7 +673,7 @@ export default function NuovaCartella() {
 
 <button
   type="button"
-  disabled={!form.fare_ricorso}
+  disabled={!form.genera_ricorso}
   onClick={() => {
     // funzione
   }}
