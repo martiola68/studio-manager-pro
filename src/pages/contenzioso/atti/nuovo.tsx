@@ -275,6 +275,12 @@ export default function NuovoAtto() {
       data_comunicazione: form.data_comunicazione || null,
     };
 
+const { data: atto, error } = await (supabase as any)
+  .from("tbcontenzioso_processo")
+  .insert(payload)
+  .select("id")
+  .single();
+
 if (error) {
   console.error(error);
   setErrore("Errore durante il salvataggio dell'atto.");
