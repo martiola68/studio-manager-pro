@@ -37,16 +37,6 @@ type RigaTributo = {
   imposta: boolean;
 };
 
-type WorkflowTipo =
-  | ""
-  | "PVC"
-  | "SCHEMA_ATTO"
-  | "ADESIONE"
-  | "INTERPELLO"
-  | "RICORSO_PRIMO_GRADO"
-  | "RICORSO_SECONDO_GRADO"
-  | "CASSAZIONE";
-
 export default function NuovoAtto() {
   const router = useRouter();
 
@@ -80,27 +70,6 @@ export default function NuovoAtto() {
     comunicato: false,
     pratica_chiusa: false,
     data_comunicazione: "",
-
-workflow_tipo: "" as WorkflowTipo,
-
-data_notifica_pvc: "",
-data_notifica_schema: "",
-data_notifica_atto_adesione: "",
-data_presentazione_istanza: "",
-data_presentazione_interpello: "",
-tipo_interpello: "ordinario",
-
-data_notifica_ricorso: "",
-data_udienza_primo_grado: "",
-
-data_notifica_sentenza_primo_grado: "",
-data_deposito_sentenza_primo_grado: "",
-data_notifica_appello: "",
-data_udienza_secondo_grado: "",
-
-data_notifica_sentenza_secondo_grado: "",
-data_deposito_sentenza_secondo_grado: "",
-data_udienza_cassazione: "",
   });
 
   const [righe, setRighe] = useState<RigaTributo[]>([]);
@@ -306,20 +275,25 @@ data_udienza_cassazione: "",
       data_comunicazione: form.data_comunicazione || null,
     };
 
-    const { data: atto, error } = await (supabase as any)
-      .from("tbcontenzioso_processo")
-      .insert(payload)
-      .select("id")
-      .single();
+if (error) {
+  console.error(error);
+  setErrore("Errore durante il salvataggio dell'atto.");
+  setSaving(false);
+  return;
+}
 
-   const processoId = atto.id;
+const processoId = atto.id;
+const tipoDescrizione = tipoSelezionato?.descrizione?.toLowerCase().trim() || "";
 
-if (form.workflow_tipo === "PVC") {
+if (
+  tipoDescrizione === "pvc" ||
+  tipoDescrizione === "pvc (processo verbale di constatazione)"
+) {
   const { error: pvcError } = await (supabase as any)
     .from("tbcontenzioso_pvc")
     .insert({
       processo_id: processoId,
-      data_notifica_pvc: form.data_notifica_pvc || null,
+      data_notifica_pvc: form.data_ricezione || null,
     });
 
   if (pvcError) {
@@ -330,51 +304,17 @@ if (form.workflow_tipo === "PVC") {
   }
 }
 
-if (form.workflow_tipo === "SCHEMA_ATTO") {
+if (tipoDescrizione === "schema d'atto" || tipoDescrizione === "schema atto") {
   const { error: schemaError } = await (supabase as any)
     .from("tbcontenzioso_schema_atto")
     .insert({
       processo_id: processoId,
-      data_notifica_schema: form.data_notifica_schema || null,
+      data_notifica_schema: form.data_ricezione || null,
     });
 
   if (schemaError) {
     console.error(schemaError);
     setErrore("Atto salvato, ma errore nella creazione dello schema d'atto.");
-    setSaving(false);
-    return;
-  }
-}
-
-if (form.workflow_tipo === "ADESIONE") {
-  const { error: adesioneError } = await (supabase as any)
-    .from("tbcontenzioso_adesione")
-    .insert({
-      processo_id: processoId,
-      data_notifica_atto: form.data_notifica_atto_adesione || null,
-      data_presentazione_istanza: form.data_presentazione_istanza || null,
-    });
-
-  if (adesioneError) {
-    console.error(adesioneError);
-    setErrore("Atto salvato, ma errore nella creazione dell'adesione.");
-    setSaving(false);
-    return;
-  }
-}
-
-if (form.workflow_tipo === "INTERPELLO") {
-  const { error: interpelloError } = await (supabase as any)
-    .from("tbcontenzioso_interpello")
-    .insert({
-      processo_id: processoId,
-      tipo_interpello: form.tipo_interpello || "ordinario",
-      data_presentazione: form.data_presentazione_interpello || null,
-    });
-
-  if (interpelloError) {
-    console.error(interpelloError);
-    setErrore("Atto salvato, ma errore nella creazione dell'interpello.");
     setSaving(false);
     return;
   }
@@ -553,141 +493,19 @@ if (form.workflow_tipo === "INTERPELLO") {
             />
           </div>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium">
-              Data scadenza
-            </label>
-
-            <div className="md:col-span-3 rounded-xl border p-4">
-  <h2 className="mb-4 text-lg font-semibold">
-    Workflow contenzioso
-  </h2>
-
-  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-    <div>
-      <label className="mb-1 block text-sm font-medium">
-        Tipo workflow
-      </label>
-      <select
-        value={form.workflow_tipo}
-        onChange={(e) =>
-          handleChange("workflow_tipo", e.target.value as WorkflowTipo)
-        }
-        className="w-full rounded-lg border p-2"
-      >
-        <option value="">Nessun workflow automatico</option>
-        <option value="PVC">PVC</option>
-        <option value="SCHEMA_ATTO">Schema d'atto</option>
-        <option value="ADESIONE">Accertamento con adesione</option>
-        <option value="INTERPELLO">Interpello</option>
-        <option value="RICORSO_PRIMO_GRADO">Ricorso 1° grado</option>
-        <option value="RICORSO_SECONDO_GRADO">Ricorso 2° grado</option>
-        <option value="CASSAZIONE">Cassazione</option>
-      </select>
-    </div>
-
-    {form.workflow_tipo === "PVC" && (
-      <div>
-        <label className="mb-1 block text-sm font-medium">
-          Data notifica PVC
-        </label>
-        <input
-          type="date"
-          value={form.data_notifica_pvc}
-          onChange={(e) =>
-            handleChange("data_notifica_pvc", e.target.value)
-          }
-          className="w-full rounded-lg border p-2"
-        />
-      </div>
-    )}
-
-    {form.workflow_tipo === "SCHEMA_ATTO" && (
-      <div>
-        <label className="mb-1 block text-sm font-medium">
-          Data notifica schema d'atto
-        </label>
-        <input
-          type="date"
-          value={form.data_notifica_schema}
-          onChange={(e) =>
-            handleChange("data_notifica_schema", e.target.value)
-          }
-          className="w-full rounded-lg border p-2"
-        />
-      </div>
-    )}
-
-    {form.workflow_tipo === "ADESIONE" && (
-      <>
         <div>
-          <label className="mb-1 block text-sm font-medium">
-            Data notifica atto
-          </label>
-          <input
-            type="date"
-            value={form.data_notifica_atto_adesione}
-            onChange={(e) =>
-              handleChange("data_notifica_atto_adesione", e.target.value)
-            }
-            className="w-full rounded-lg border p-2"
-          />
-        </div>
-
-        <div>
-          <label className="mb-1 block text-sm font-medium">
-            Data presentazione istanza
-          </label>
-          <input
-            type="date"
-            value={form.data_presentazione_istanza}
-            onChange={(e) =>
-              handleChange("data_presentazione_istanza", e.target.value)
-            }
-            className="w-full rounded-lg border p-2"
-          />
-        </div>
-      </>
-    )}
-
-    {form.workflow_tipo === "INTERPELLO" && (
-      <>
-        <div>
-          <label className="mb-1 block text-sm font-medium">
-            Tipo interpello
-          </label>
-          <select
-            value={form.tipo_interpello}
-            onChange={(e) =>
-              handleChange("tipo_interpello", e.target.value)
-            }
-            className="w-full rounded-lg border p-2"
-          >
-            <option value="ordinario">Ordinario</option>
-            <option value="qualificatorio">Qualificatorio</option>
-            <option value="probatorio">Probatorio</option>
-            <option value="antiabuso">Antiabuso</option>
-            <option value="disapplicativo">Disapplicativo</option>
-            <option value="nuovi_investimenti">Nuovi investimenti</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="mb-1 block text-sm font-medium">
-            Data presentazione interpello
-          </label>
-          <input
-            type="date"
-            value={form.data_presentazione_interpello}
-            onChange={(e) =>
-              handleChange("data_presentazione_interpello", e.target.value)
-            }
-            className="w-full rounded-lg border p-2"
-          />
-        </div>
-      </>
-    )}
-  </div>
+  <label className="mb-1 block text-sm font-medium">
+    Data scadenza
+  </label>
+  <input
+    type="date"
+    value={dataScadenzaCalcolata}
+    disabled
+    className="w-full rounded-lg border bg-gray-100 p-2"
+  />
+  <p className="mt-1 text-xs text-gray-500">
+    Calcolata da data ricezione + giorni del tipo atto
+  </p>
 </div>
             
             <input
