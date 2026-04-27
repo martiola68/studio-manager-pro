@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +17,7 @@ type Scadenza = {
 };
 
 export default function ScadenzeContenzioso() {
+   const router = useRouter();
   const [scadenze, setScadenze] = useState<Scadenza[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -151,9 +153,19 @@ export default function ScadenzeContenzioso() {
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <Card>
-        <CardHeader>
-          <CardTitle>Scadenze contenzioso</CardTitle>
-        </CardHeader>
+       <CardHeader>
+  <div className="flex items-center justify-between">
+    <CardTitle>Scadenze contenzioso</CardTitle>
+
+    <button
+      type="button"
+      onClick={() => router.push("/contenzioso")}
+      className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-100"
+    >
+      Indietro
+    </button>
+  </div>
+</CardHeader>
 
         <CardContent className="space-y-3">
           {scadenze.length === 0 ? (
