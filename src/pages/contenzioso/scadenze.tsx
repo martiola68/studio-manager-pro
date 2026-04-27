@@ -65,6 +65,15 @@ const { data } = await (supabase as any)
     return <div className="p-6">Caricamento scadenze...</div>;
   }
 
+  export default function ScadenzePage() {
+
+  const formatDateIT = (date?: string | null) => {
+    if (!date) return "-";
+    const [yyyy, mm, dd] = date.split("-");
+    return `${dd}/${mm}/${yyyy}`;
+  };
+
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <Card>
