@@ -280,8 +280,7 @@ export function TopNavBar() {
   children: [
     { label: "Elenco contenzioso", href: "/contenzioso", icon: null },
     { label: "Tipi atto", href: "/contenzioso/tipi-atto", icon: null },
-    { label: "Avvisi bonari", href: "/contenzioso/avvisi-bonari", icon: null },
-  ],
+     ],
 },
     
 {
