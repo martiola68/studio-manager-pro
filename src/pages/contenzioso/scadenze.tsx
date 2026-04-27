@@ -28,10 +28,10 @@ export default function ScadenzeContenzioso() {
   const loadScadenze = async () => {
     const supabase = getSupabaseClient();
 
-    const { data } = await supabase
-      .from("tbcontenzioso_scadenze_generate")
-      .select("*")
-      .order("data_scadenza", { ascending: true });
+    const { data } = await (supabase as any)
+  .from("tbcontenzioso_scadenze_generate")
+  .select("*")
+  .order("data_scadenza", { ascending: true });
 
     setScadenze(data || []);
     setLoading(false);
