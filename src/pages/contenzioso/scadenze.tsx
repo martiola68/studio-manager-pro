@@ -15,6 +15,16 @@ type Scadenza = {
   data_scadenza: string;
   giorni_residui: number;
   stato: string;
+  tbcontenzioso_processo?: {
+    numero_atto?: string | null;
+    anno_riferimento?: number | null;
+    tbclienti?: {
+      ragione_sociale?: string | null;
+    } | null;
+    tbcontenzioso_tributi_constatazione?: {
+      descrizione?: string | null;
+    } | null;
+  } | null;
 };
 
 export default function ScadenzeContenzioso() {
@@ -28,9 +38,17 @@ export default function ScadenzeContenzioso() {
   const loadScadenze = async () => {
     const supabase = getSupabaseClient();
 
-    const { data } = await (supabase as any)
+const { data } = await (supabase as any)
   .from("tbcontenzioso_scadenze_generate")
-  .select("*")
+  .select(`
+    *,
+    tbcontenzioso_processo:processo_id(
+      numero_atto,
+      anno_riferimento,
+      tbclienti:cliente_id(ragione_sociale),
+      tbcontenzioso_tributi_constatazione:tributo_constatazione_id(descrizione)
+    )
+  `)
   .order("data_scadenza", { ascending: true });
 
     setScadenze(data || []);
@@ -61,11 +79,22 @@ export default function ScadenzeContenzioso() {
               className="flex items-center justify-between border p-3 rounded-lg"
             >
               <div>
-                <div className="font-semibold">{s.descrizione}</div>
-                <div className="text-sm text-gray-500">
-                  {s.modulo} - {s.data_scadenza}
-                </div>
-              </div>
+  <div className="font-semibold">{s.descrizione}</div>
+
+  <div className="text-sm text-gray-700">
+    {s.tbcontenzioso_processo?.tbclienti?.ragione_sociale || "Cliente non indicato"}
+  </div>
+
+  <div className="text-sm text-gray-500">
+    Atto n. {s.tbcontenzioso_processo?.numero_atto || "-"} ·{" "}
+    Anno {s.tbcontenzioso_processo?.anno_riferimento || "-"} ·{" "}
+    {s.tbcontenzioso_processo?.tbcontenzioso_tributi_constatazione?.descrizione || "Tributo non indicato"}
+  </div>
+
+  <div className="text-xs text-gray-400">
+    {s.modulo} - {s.data_scadenza}
+  </div>
+</div>
 
               <Badge className={getColor(s.giorni_residui)}>
                 {s.giorni_residui} gg
