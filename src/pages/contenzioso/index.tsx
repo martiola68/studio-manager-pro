@@ -22,7 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit } from "lucide-react";
+import { Plus, Edit, Trash2 } from "lucide-react";
 
 type Scadenza = {
   id: string;
@@ -210,6 +210,45 @@ export default function ContenziosoIndexPage() {
     return `/contenzioso/avvisi-bonari/${row.id}`;
   }
 
+   async function handleDelete(row: Scadenza) {
+  const supabase = getSupabaseClient();
+
+  const conferma = confirm("Vuoi eliminare questo elemento?");
+  if (!conferma) return;
+
+  let tabella = "";
+
+  if (row.archivio === "avvisi") {
+    tabella = "tbcontenzioso_avvisi_bonari";
+  } else if (row.archivio === "cartelle") {
+    tabella = "tbcontenzioso_cartelle";
+  } else {
+    tabella = "tbcontenzioso_processo";
+  }
+
+  const { error } = await (supabase as any)
+    .from(tabella)
+    .delete()
+    .eq("id", row.id);
+
+  if (error) {
+    console.error(error);
+    toast({
+      title: "Errore",
+      description: "Errore durante eliminazione",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  toast({
+    title: "Eliminato",
+    description: "Record eliminato correttamente",
+  });
+
+  loadData(); // refresh tabella
+}
+
   if (row.archivio === "cartelle") {
     return `/contenzioso/cartelle/${row.id}`;
   }
@@ -393,13 +432,24 @@ export default function ContenziosoIndexPage() {
                         <TableCell>{getContestazione(row)}</TableCell>
                         <TableCell>{getResponso(row)}</TableCell>
                         <TableCell>{getRicorso(row)}</TableCell>
-                        <TableCell className="text-right">
-                          <Link href={getEditHref(row)}>
-                            <Button variant="ghost" size="icon">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </Link>
-                        </TableCell>
+                       <TableCell className="text-right">
+  <div className="flex justify-end gap-2">
+    <Link href={getEditHref(row)}>
+      <Button variant="ghost" size="icon">
+        <Edit className="h-4 w-4" />
+      </Button>
+    </Link>
+
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={() => handleDelete(row)}
+      className="text-red-600 hover:text-red-700"
+    >
+      <Trash2 className="h-4 w-4" />
+    </Button>
+  </div>
+</TableCell>
                       </TableRow>
                     );
                   })}
