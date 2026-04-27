@@ -16,6 +16,12 @@ type TributoConstatazione = {
   descrizione: string;
 };
 
+type Utente = {
+  id: string;
+  nome: string | null;
+  cognome: string | null;
+};
+
 type AvvisoBonario = {
   id: string;
   numero_atto: string | null;
@@ -33,6 +39,7 @@ export default function NuovaCartella() {
   const [clienti, setClienti] = useState<Cliente[]>([]);
   const [tipiAtto, setTipiAtto] = useState<TipoAtto[]>([]);
   const [tributiConstatazione, setTributiConstatazione] = useState<TributoConstatazione[]>([]);
+  const [utenti, setUtenti] = useState<Utente[]>([]);
   const [avvisi, setAvvisi] = useState<AvvisoBonario[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -56,6 +63,7 @@ export default function NuovaCartella() {
     modalita_contestazione: "",
     data_invio: "",
     esito_contestazione: "",
+    operatore_responsabile_id: "",
     genera_ricorso: false,
     note_motivazione_ricorso: "",
     allegato_cartella: "",
@@ -187,7 +195,7 @@ export default function NuovaCartella() {
         }
       }
 
-      const [clientiRes, tipiRes, tributiConstatazioneRes] = await Promise.all([
+     const [clientiRes, tipiRes, tributiConstatazioneRes, utentiRes] = await Promise.all([
         supabase
           .from("tbclienti")
           .select("id, ragione_sociale")
@@ -206,9 +214,15 @@ export default function NuovaCartella() {
   .order("ordine", { ascending: true }),
       ]);
 
+      supabase
+  .from("tbutenti")
+  .select("id, nome, cognome")
+  .order("cognome", { ascending: true }),
+
       if (clientiRes.error) throw clientiRes.error;
      if (tipiRes.error) throw tipiRes.error;
     if (tributiConstatazioneRes.error) throw tributiConstatazioneRes.error;
+      if (utentiRes.error) throw utentiRes.error;
 
       const tipi = (tipiRes.data || []) as TipoAtto[];
       const cartella = tipi.find(
@@ -220,6 +234,8 @@ export default function NuovaCartella() {
 setTributiConstatazione(
   (tributiConstatazioneRes.data || []) as TributoConstatazione[]
 );
+
+      setUtenti((utentiRes.data || []) as Utente[]);
 
       if (cartella?.id) {
         setForm((prev) => ({
@@ -380,6 +396,7 @@ setTributiConstatazione(
       modalita_contestazione: form.modalita_contestazione || null,
       data_invio: form.data_invio || null,
       esito_contestazione: form.esito_contestazione || null,
+      operatore_responsabile_id: form.operatore_responsabile_id || null,
       genera_ricorso: form.genera_ricorso,
       note_motivazione_ricorso: form.note_motivazione_ricorso || null,
       allegato_cartella: form.allegato_cartella || null,
@@ -723,6 +740,27 @@ setTributiConstatazione(
               className="w-full rounded-lg border bg-gray-100 p-2"
             />
           </div>
+
+          <div>
+  <label className="mb-1 block text-sm font-medium">
+    Operatore responsabile
+  </label>
+
+  <select
+    value={form.operatore_responsabile_id}
+    onChange={(e) =>
+      handleChange("operatore_responsabile_id", e.target.value)
+    }
+    className="w-full rounded-lg border p-2"
+  >
+    <option value="">Seleziona operatore</option>
+    {utenti.map((utente) => (
+      <option key={utente.id} value={utente.id}>
+        {`${utente.nome || ""} ${utente.cognome || ""}`.trim() || "Operatore"}
+      </option>
+    ))}
+  </select>
+</div>
 
          <div>
   <label className="mb-1 block text-sm font-medium">
