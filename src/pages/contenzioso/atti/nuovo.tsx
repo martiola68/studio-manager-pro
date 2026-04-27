@@ -499,21 +499,10 @@ if (tipoDescrizione === "schema d'atto" || tipoDescrizione === "schema atto") {
             />
           </div>
 
-        <div>
-  <label className="mb-1 block text-sm font-medium">
-    Data scadenza
-  </label>
-  <input
-    type="date"
-    value={dataScadenzaCalcolata}
-    disabled
-    className="w-full rounded-lg border bg-gray-100 p-2"
-  />
-  <p className="mt-1 text-xs text-gray-500">
-    Calcolata da data ricezione + giorni del tipo atto
-  </p>
-</div>
-            
+     <div>
+            <label className="mb-1 block text-sm font-medium">
+              Data scadenza
+            </label>
             <input
               type="date"
               value={dataScadenzaCalcolata}
