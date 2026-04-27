@@ -26,6 +26,7 @@ import { Plus, Edit } from "lucide-react";
 
 type Scadenza = {
   id: string;
+  archivio: "avvisi" | "cartelle" | "processo";
   cliente_id: string;
   tipo_atto_id: string;
   numero_atto?: string | null;
@@ -61,57 +62,101 @@ export default function ContenziosoIndexPage() {
   const [tipiAtto, setTipiAtto] = useState<TipoAtto[]>([]);
 
   const [search, setSearch] = useState("");
-  const [archivioFiltro, setArchivioFiltro] = useState("avvisi");
+  const [archivioFiltro, setArchivioFiltro] = useState("all");
   const [tipoFiltro, setTipoFiltro] = useState("all");
   const [statoFiltro, setStatoFiltro] = useState("all");
 
-  async function loadData() {
-    const supabase = getSupabaseClient();
+ async function loadData() {
+  const supabase = getSupabaseClient();
 
-    try {
-      setLoading(true);
+  try {
+    setLoading(true);
 
-      const tabella =
-        archivioFiltro === "avvisi"
-          ? "tbcontenzioso_avvisi_bonari"
-          : archivioFiltro === "cartelle"
-          ? "tbcontenzioso_cartelle"
-          : "tbcontenzioso_processo";
+    const tipiRes = await (supabase as any)
+      .from("tbcontenzioso_tipi_atto")
+      .select("id, descrizione")
+      .eq("attivo", true)
+      .order("descrizione");
 
-      const [tipiRes, scadenzeRes] = await Promise.all([
-        (supabase as any)
-          .from("tbcontenzioso_tipi_atto")
-          .select("id, descrizione")
-          .eq("attivo", true)
-          .order("descrizione"),
+    if (tipiRes.error) throw tipiRes.error;
 
-        (supabase as any)
-          .from(tabella)
-          .select(
-            `
-            *,
-            tbclienti:cliente_id(id, ragione_sociale),
-            tbcontenzioso_tipi_atto:tipo_atto_id(id, descrizione, giorni_scadenza)
-          `
-          )
-          .order("data_scadenza", { ascending: true }),
-      ]);
+    const selectQuery = `
+      *,
+      tbclienti:cliente_id(id, ragione_sociale),
+      tbcontenzioso_tipi_atto:tipo_atto_id(id, descrizione, giorni_scadenza)
+    `;
 
-      if (tipiRes.error) throw tipiRes.error;
-      if (scadenzeRes.error) throw scadenzeRes.error;
+    let risultati: Scadenza[] = [];
 
-      setTipiAtto(((tipiRes.data || []) as unknown) as TipoAtto[]);
-      setScadenze(((scadenzeRes.data || []) as unknown) as Scadenza[]);
-    } catch (error: any) {
-      toast({
-        title: "Errore",
-        description: error?.message || "Impossibile caricare il contenzioso",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+    if (archivioFiltro === "all" || archivioFiltro === "avvisi") {
+      const { data, error } = await (supabase as any)
+        .from("tbcontenzioso_avvisi_bonari")
+        .select(selectQuery)
+        .order("data_scadenza", { ascending: true });
+
+      if (error) throw error;
+
+      risultati = [
+        ...risultati,
+        ...((data || []).map((row: any) => ({
+          ...row,
+          archivio: "avvisi",
+        })) as Scadenza[]),
+      ];
     }
+
+    if (archivioFiltro === "all" || archivioFiltro === "cartelle") {
+      const { data, error } = await (supabase as any)
+        .from("tbcontenzioso_cartelle")
+        .select(selectQuery)
+        .order("data_scadenza", { ascending: true });
+
+      if (error) throw error;
+
+      risultati = [
+        ...risultati,
+        ...((data || []).map((row: any) => ({
+          ...row,
+          archivio: "cartelle",
+        })) as Scadenza[]),
+      ];
+    }
+
+    if (archivioFiltro === "all" || archivioFiltro === "processo") {
+      const { data, error } = await (supabase as any)
+        .from("tbcontenzioso_processo")
+        .select(selectQuery)
+        .order("data_scadenza", { ascending: true });
+
+      if (error) throw error;
+
+      risultati = [
+        ...risultati,
+        ...((data || []).map((row: any) => ({
+          ...row,
+          archivio: "processo",
+        })) as Scadenza[]),
+      ];
+    }
+
+    risultati.sort((a, b) => {
+      const da = a.data_scadenza || "9999-12-31";
+      const db = b.data_scadenza || "9999-12-31";
+      return da.localeCompare(db);
+    });
+
+    setTipiAtto(((tipiRes.data || []) as unknown) as TipoAtto[]);
+    setScadenze(risultati);
+  } catch (error: any) {
+    toast({
+      title: "Errore",
+      description: error?.message || "Impossibile caricare il contenzioso",
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
   }
+}
 
   useEffect(() => {
     void loadData();
@@ -160,17 +205,17 @@ export default function ContenziosoIndexPage() {
     return row.fare_ricorso || row.genera_ricorso ? "Sì" : "No";
   }
 
-  function getEditHref(row: Scadenza) {
-    if (archivioFiltro === "avvisi") {
-      return `/contenzioso/avvisi-bonari/${row.id}`;
-    }
-
-    if (archivioFiltro === "cartelle") {
-      return `/contenzioso/cartelle/${row.id}`;
-    }
-
-    return `/contenzioso/atti/${row.id}`;
+ function getEditHref(row: Scadenza) {
+  if (row.archivio === "avvisi") {
+    return `/contenzioso/avvisi-bonari/${row.id}`;
   }
+
+  if (row.archivio === "cartelle") {
+    return `/contenzioso/cartelle/${row.id}`;
+  }
+
+  return `/contenzioso/atti/${row.id}`;
+}
 
   const filtered = useMemo(() => {
     return scadenze.filter((row) => {
@@ -251,6 +296,7 @@ export default function ContenziosoIndexPage() {
               <SelectValue placeholder="Archivio" />
             </SelectTrigger>
             <SelectContent>
+               <SelectItem value="all">Tutti</SelectItem>
               <SelectItem value="avvisi">Avvisi bonari</SelectItem>
               <SelectItem value="cartelle">Cartelle esattoriali</SelectItem>
               <SelectItem value="processo">Processo tributario</SelectItem>
