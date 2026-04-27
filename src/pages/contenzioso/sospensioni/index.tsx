@@ -158,6 +158,12 @@ export default function SospensioniTerminiPage() {
     return <div className="p-6">Caricamento sospensioni...</div>;
   }
 
+  const formatDateIT = (date?: string | null) => {
+  if (!date) return "-";
+  const [yyyy, mm, dd] = date.split("-");
+  return `${dd}/${mm}/${yyyy}`;
+};
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="mx-auto max-w-7xl rounded-2xl bg-white p-6 shadow">
@@ -330,8 +336,8 @@ export default function SospensioniTerminiPage() {
               {sospensioni.map((s) => (
                 <tr key={s.id} className="border-t">
                   <td className="p-3 font-medium">{s.descrizione}</td>
-                  <td className="p-3">{s.data_inizio}</td>
-                  <td className="p-3">{s.data_fine}</td>
+                  <td className="p-3">{formatDateIT(s.data_inizio)}</td>
+                  <td className="p-3">{formatDateIT(s.data_fine)}</td>
                   <td className="p-3">
                     {s.attivo ? (
                       <span className="rounded-full bg-green-100 px-3 py-1 text-xs text-green-700">
