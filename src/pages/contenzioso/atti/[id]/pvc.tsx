@@ -166,8 +166,7 @@ export default function PvcAttoPage() {
       return;
     }
 
-    setSuccesso("PVC salvato correttamente.");
-    await loadPvc(String(id));
+    router.push(`/contenzioso/atti/${id}`);
   };
 
   if (loading) {
