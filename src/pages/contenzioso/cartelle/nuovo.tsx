@@ -195,29 +195,30 @@ export default function NuovaCartella() {
         }
       }
 
-     const [clientiRes, tipiRes, tributiConstatazioneRes, utentiRes] = await Promise.all([
-        supabase
-          .from("tbclienti")
-          .select("id, ragione_sociale")
-          .order("ragione_sociale", { ascending: true }),
+    const [clientiRes, tipiRes, tributiConstatazioneRes, utentiRes] =
+  await Promise.all([
+    supabase
+      .from("tbclienti")
+      .select("id, ragione_sociale")
+      .order("ragione_sociale", { ascending: true }),
 
-       (supabase as any)
-  .from("tbcontenzioso_tipi_atto")
-  .select("id, descrizione, giorni_scadenza")
-  .eq("attivo", true)
-  .order("descrizione", { ascending: true }),
+    (supabase as any)
+      .from("tbcontenzioso_tipi_atto")
+      .select("id, descrizione, giorni_scadenza")
+      .eq("attivo", true)
+      .order("descrizione", { ascending: true }),
 
-(supabase as any)
-  .from("tbcontenzioso_tributi_constatazione")
-  .select("id, descrizione")
-  .eq("attivo", true)
-  .order("ordine", { ascending: true }),
-      ]);
+    (supabase as any)
+      .from("tbcontenzioso_tributi_constatazione")
+      .select("id, descrizione")
+      .eq("attivo", true)
+      .order("ordine", { ascending: true }),
 
-      supabase
-  .from("tbutenti")
-  .select("id, nome, cognome")
-  .order("cognome", { ascending: true }),
+    supabase
+      .from("tbutenti")
+      .select("id, nome, cognome")
+      .order("cognome", { ascending: true }),
+  ]);
 
       if (clientiRes.error) throw clientiRes.error;
      if (tipiRes.error) throw tipiRes.error;
