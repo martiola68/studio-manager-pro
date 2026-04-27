@@ -278,7 +278,7 @@ export function TopNavBar() {
   label: "Contenzioso",
   icon: <FileText className="h-4 w-4" />,
   children: [
-    { label: "Elenco contenzioso", href: "/contenzioso", icon: null },
+    { label: "Pratiche contenzioso", href: "/contenzioso", icon: null },
     { label: "Tipi atto", href: "/contenzioso/tipi-atto", icon: null },
      ],
 },
