@@ -211,11 +211,11 @@ export default function ContenziosoIndexPage() {
         </div>
 
            <div className="flex gap-2">
-               <Link href="/contenzioso/scadenze">
-    <Button variant="secondary">
-      Scadenze automatiche
-    </Button>
-  </Link>
+<Link href="/contenzioso/scadenze">
+  <Button variant="destructive">
+    Scadenze automatiche
+  </Button>
+</Link>
           <Link href="/contenzioso/avvisi-bonari/nuovo">
             <Button>
               <Plus className="mr-2 h-4 w-4" />
