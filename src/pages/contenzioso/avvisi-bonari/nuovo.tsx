@@ -24,6 +24,12 @@ type TributoConstatazione = {
   descrizione: string;
 };
 
+type Utente = {
+  id: string;
+  nome: string | null;
+  cognome: string | null;
+};
+
 const TIPO_ATTO_AVVISO_BONARIO = "Avviso bonario";
 const BUCKET = "messaggi-allegati";
 
@@ -44,6 +50,7 @@ const initialForm = {
   responso: "",
   comunicato_al_cliente: false,
   data_comunicazione: "",
+  operatore_responsabile_id: "",
   allegato_atto: "",
   allegato_civis: "",
   allegato_responso: "",
@@ -56,6 +63,7 @@ export default function NuovoAvvisoBonario() {
   const [tipoAtto, setTipoAtto] = useState<TipoAtto | null>(null);
   const [clienti, setClienti] = useState<Cliente[]>([]);
   const [tributiConstatazione, setTributiConstatazione] = useState<TributoConstatazione[]>([]);
+  const [utenti, setUtenti] = useState<Utente[]>([]);
   const [form, setForm] = useState(initialForm);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -111,7 +119,7 @@ const giorniResidui = calcolaGiorniResidui(dataScadenza);
       }
     }
 
-  const [clientiRes, tipoAttoRes, tributiConstatazioneRes] = await Promise.all([
+  const [clientiRes, tipoAttoRes, tributiConstatazioneRes, utentiRes] = await Promise.all([
   supabase
     .from("tbclienti")
     .select("id, ragione_sociale")
@@ -129,6 +137,11 @@ const giorniResidui = calcolaGiorniResidui(dataScadenza);
     .select("id, descrizione")
     .eq("attivo", true)
     .order("ordine", { ascending: true }),
+    
+    supabase
+  .from("tbutenti")
+  .select("id, nome, cognome")
+  .order("cognome", { ascending: true }),
 ]);
     
     if (clientiRes.error) {
@@ -149,10 +162,17 @@ const giorniResidui = calcolaGiorniResidui(dataScadenza);
   return;
 }
 
+    if (utentiRes.error) {
+  setErrore("Errore nel caricamento degli operatori.");
+  setLoading(false);
+  return;
+}
+
     setClienti((clientiRes.data || []) as Cliente[]);
     setTributiConstatazione(
   (tributiConstatazioneRes.data || []) as TributoConstatazione[]
 );
+    setUtenti((utentiRes.data || []) as Utente[]);
     setTipoAtto(tipoAttoRes.data as TipoAtto);
     setLoading(false);
   };
@@ -353,6 +373,7 @@ const giorniResidui = calcolaGiorniResidui(dataScadenza);
       responso: form.responso || null,
       comunicato_al_cliente: form.comunicato_al_cliente,
       data_comunicazione: form.data_comunicazione || null,
+      operatore_responsabile_id: form.operatore_responsabile_id || null,
       allegato_atto: form.allegato_atto || null,
       allegato_civis: form.allegato_civis || null,
       allegato_responso: form.allegato_responso || null,
@@ -694,6 +715,27 @@ const giorniResidui = calcolaGiorniResidui(dataScadenza);
               className="w-full rounded-lg border p-2"
             />
           </div>
+
+          <div className="md:col-span-3">
+  <label className="mb-1 block text-sm font-medium">
+    Operatore responsabile
+  </label>
+
+  <select
+    value={form.operatore_responsabile_id}
+    onChange={(e) =>
+      handleChange("operatore_responsabile_id", e.target.value)
+    }
+    className="w-full rounded-lg border p-2"
+  >
+    <option value="">Seleziona operatore</option>
+    {utenti.map((utente) => (
+      <option key={utente.id} value={utente.id}>
+        {`${utente.nome || ""} ${utente.cognome || ""}`.trim() || "Operatore"}
+      </option>
+    ))}
+  </select>
+</div>
 
            {[
             ["allegato_atto", "Allegato atto"],
