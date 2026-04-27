@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
-import { Wand2 } from "lucide-react";
 import {
   calcolaGiorniResidui,
   getClasseGiorniResidui,
@@ -45,8 +44,6 @@ const initialForm = {
   responso: "",
   comunicato_al_cliente: false,
   data_comunicazione: "",
-  fare_ricorso: false,
-  motivazione_ricorso: "",
   allegato_atto: "",
   allegato_civis: "",
   allegato_responso: "",
@@ -356,8 +353,6 @@ const giorniResidui = calcolaGiorniResidui(dataScadenza);
       responso: form.responso || null,
       comunicato_al_cliente: form.comunicato_al_cliente,
       data_comunicazione: form.data_comunicazione || null,
-      fare_ricorso: form.fare_ricorso,
-      motivazione_ricorso: form.motivazione_ricorso || null,
       allegato_atto: form.allegato_atto || null,
       allegato_civis: form.allegato_civis || null,
       allegato_responso: form.allegato_responso || null,
@@ -697,57 +692,6 @@ const giorniResidui = calcolaGiorniResidui(dataScadenza);
                 handleChange("data_comunicazione", e.target.value)
               }
               className="w-full rounded-lg border p-2"
-            />
-          </div>
-
-<div>
-  <label className="mb-1 block text-sm font-medium">
-    Genera pratica ricorso
-  </label>
-
-  <div className="flex gap-2">
-    <select
-      value={form.fare_ricorso ? "Si" : "No"}
-      onChange={(e) =>
-        handleChange("fare_ricorso", e.target.value === "Si")
-      }
-      className="w-full rounded-lg border p-2"
-    >
-      <option value="No">No</option>
-      <option value="Si">Sì</option>
-    </select>
-
-   <button
-  type="button"
-  disabled={!form.fare_ricorso}
-  onClick={() => {
-    // funzione
-  }}
-  className="
-    flex items-center gap-1
-    rounded-lg px-3 py-2 text-sm
-    bg-blue-600 text-white
-    hover:bg-blue-700
-    transition
-    disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed
-  "
->
-  <Wand2 className="h-4 w-4" />
-  Genera
-</button>
-  </div>
-</div>
-          <div className="md:col-span-3">
-            <label className="mb-1 block text-sm font-medium">
-              Motivazione ricorso
-            </label>
-            <textarea
-              value={form.motivazione_ricorso}
-              onChange={(e) =>
-                handleChange("motivazione_ricorso", e.target.value)
-              }
-              className="w-full rounded-lg border p-2"
-              rows={3}
             />
           </div>
 
