@@ -280,6 +280,7 @@ export function TopNavBar() {
   children: [
     { label: "Pratiche contenzioso", href: "/contenzioso", icon: null },
     { label: "Regole scadenze", href: "/contenzioso/regole-scadenze", icon: null },
+    { label: "Sospensioni termini", href: "/contenzioso/sospensioni", icon: null },
     { label: "Tipi atto", href: "/contenzioso/tipi-atto", icon: null },
      ],
 },
