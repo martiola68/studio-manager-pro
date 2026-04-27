@@ -716,7 +716,7 @@ const giorniResidui = calcolaGiorniResidui(dataScadenza);
             />
           </div>
 
-          <div className="md:col-span-3">
+ <div>
   <label className="mb-1 block text-sm font-medium">
     Operatore responsabile
   </label>
