@@ -210,21 +210,26 @@ export default function ContenziosoIndexPage() {
     return `/contenzioso/avvisi-bonari/${row.id}`;
   }
 
-   async function handleDelete(row: Scadenza) {
+
+  if (row.archivio === "cartelle") {
+    return `/contenzioso/cartelle/${row.id}`;
+  }
+
+  return `/contenzioso/atti/${row.id}`;
+}
+
+  async function handleDelete(row: Scadenza) {
   const supabase = getSupabaseClient();
 
   const conferma = confirm("Vuoi eliminare questo elemento?");
   if (!conferma) return;
 
-  let tabella = "";
-
-  if (row.archivio === "avvisi") {
-    tabella = "tbcontenzioso_avvisi_bonari";
-  } else if (row.archivio === "cartelle") {
-    tabella = "tbcontenzioso_cartelle";
-  } else {
-    tabella = "tbcontenzioso_processo";
-  }
+  const tabella =
+    row.archivio === "avvisi"
+      ? "tbcontenzioso_avvisi_bonari"
+      : row.archivio === "cartelle"
+      ? "tbcontenzioso_cartelle"
+      : "tbcontenzioso_processo";
 
   const { error } = await (supabase as any)
     .from(tabella)
@@ -235,7 +240,7 @@ export default function ContenziosoIndexPage() {
     console.error(error);
     toast({
       title: "Errore",
-      description: "Errore durante eliminazione",
+      description: "Errore durante eliminazione.",
       variant: "destructive",
     });
     return;
@@ -243,17 +248,10 @@ export default function ContenziosoIndexPage() {
 
   toast({
     title: "Eliminato",
-    description: "Record eliminato correttamente",
+    description: "Record eliminato correttamente.",
   });
 
-  loadData(); // refresh tabella
-}
-
-  if (row.archivio === "cartelle") {
-    return `/contenzioso/cartelle/${row.id}`;
-  }
-
-  return `/contenzioso/atti/${row.id}`;
+  await loadData();
 }
 
   const filtered = useMemo(() => {
