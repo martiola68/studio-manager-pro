@@ -279,6 +279,7 @@ export function TopNavBar() {
   icon: <FileText className="h-4 w-4" />,
   children: [
     { label: "Pratiche contenzioso", href: "/contenzioso", icon: null },
+    { label: "Regole scadenze", href: "/contenzioso/regole-scadenze", icon: null },
     { label: "Tipi atto", href: "/contenzioso/tipi-atto", icon: null },
      ],
 },
