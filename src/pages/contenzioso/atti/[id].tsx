@@ -445,73 +445,77 @@ setLoading(false);
         <div className="rounded-2xl bg-white p-6 shadow">
           <h2 className="mb-4 text-lg font-semibold">Moduli operativi</h2>
 
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-           <Link href={`/contenzioso/atti/${processo.id}/pvc`}>
-  <button
-    className={`w-full rounded-lg border px-4 py-3 text-left font-semibold ${getModuloButtonColor(
-      moduliAttivi.pvc
-    )}`}
-  >
-    PVC {moduliAttivi.pvc ? "✓" : "✕"}
-  </button>
-</Link>
+       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+  <Link href={`/contenzioso/atti/${processo.id}/pvc`}>
+    <button
+      className={`w-full rounded-lg border px-4 py-3 text-left font-semibold ${getModuloButtonColor(
+        moduliAttivi.pvc
+      )}`}
+    >
+      PVC {moduliAttivi.pvc ? "✓" : "✕"}
+    </button>
+  </Link>
 
-          <Link href={`/contenzioso/atti/${processo.id}/schema-atto`}>
-  <button
-    className={`w-full rounded-lg border px-4 py-3 text-left font-semibold ${getModuloButtonColor(
-      moduliAttivi.schemaAtto
-    )}`}
-  >
-    Schema d’atto {moduliAttivi.schemaAtto ? "✓" : "✕"}
-  </button>
-<Link href={`/contenzioso/atti/${processo.id}/adesione`}>
-  <button
-    className={`w-full rounded-lg border px-4 py-3 text-left font-semibold ${getModuloButtonColor(
-      moduliAttivi.adesione
-    )}`}
-  >
-    Accertamento con adesione {moduliAttivi.adesione ? "✓" : "✕"}
-  </button>
-</Link>
-         <Link href={`/contenzioso/atti/${processo.id}/interpello`}>
-  <button
-    className={`w-full rounded-lg border px-4 py-3 text-left font-semibold ${getModuloButtonColor(
-      moduliAttivi.interpello
-    )}`}
-  >
-    Interpello {moduliAttivi.interpello ? "✓" : "✕"}
-  </button>
-</Link>
+  <Link href={`/contenzioso/atti/${processo.id}/schema-atto`}>
+    <button
+      className={`w-full rounded-lg border px-4 py-3 text-left font-semibold ${getModuloButtonColor(
+        moduliAttivi.schemaAtto
+      )}`}
+    >
+      Schema d’atto {moduliAttivi.schemaAtto ? "✓" : "✕"}
+    </button>
+  </Link>
 
-          <Link href={`/contenzioso/atti/${processo.id}/primo-grado`}>
-  <button
-    className={`w-full rounded-lg border px-4 py-3 text-left font-semibold ${getModuloButtonColor(
-      moduliAttivi.primoGrado
-    )}`}
-  >
-    Ricorso 1° grado {moduliAttivi.primoGrado ? "✓" : "✕"}
-  </button>
-</Link>
-         <Link href={`/contenzioso/atti/${processo.id}/secondo-grado`}>
-  <button
-    className={`w-full rounded-lg border px-4 py-3 text-left font-semibold ${getModuloButtonColor(
-      moduliAttivi.secondoGrado
-    )}`}
-  >
-    Ricorso 2° grado {moduliAttivi.secondoGrado ? "✓" : "✕"}
-  </button>
-</Link>
+  <Link href={`/contenzioso/atti/${processo.id}/adesione`}>
+    <button
+      className={`w-full rounded-lg border px-4 py-3 text-left font-semibold ${getModuloButtonColor(
+        moduliAttivi.adesione
+      )}`}
+    >
+      Accertamento con adesione {moduliAttivi.adesione ? "✓" : "✕"}
+    </button>
+  </Link>
 
-           <Link href={`/contenzioso/atti/${processo.id}/cassazione`}>
-  <button
-    className={`w-full rounded-lg border px-4 py-3 text-left font-semibold ${getModuloButtonColor(
-      moduliAttivi.cassazione
-    )}`}
-  >
-    Cassazione {moduliAttivi.cassazione ? "✓" : "✕"}
-  </button>
-</Link>
-          </div>
+  <Link href={`/contenzioso/atti/${processo.id}/interpello`}>
+    <button
+      className={`w-full rounded-lg border px-4 py-3 text-left font-semibold ${getModuloButtonColor(
+        moduliAttivi.interpello
+      )}`}
+    >
+      Interpello {moduliAttivi.interpello ? "✓" : "✕"}
+    </button>
+  </Link>
+
+  <Link href={`/contenzioso/atti/${processo.id}/primo-grado`}>
+    <button
+      className={`w-full rounded-lg border px-4 py-3 text-left font-semibold ${getModuloButtonColor(
+        moduliAttivi.primoGrado
+      )}`}
+    >
+      Ricorso 1° grado {moduliAttivi.primoGrado ? "✓" : "✕"}
+    </button>
+  </Link>
+
+  <Link href={`/contenzioso/atti/${processo.id}/secondo-grado`}>
+    <button
+      className={`w-full rounded-lg border px-4 py-3 text-left font-semibold ${getModuloButtonColor(
+        moduliAttivi.secondoGrado
+      )}`}
+    >
+      Ricorso 2° grado {moduliAttivi.secondoGrado ? "✓" : "✕"}
+    </button>
+  </Link>
+
+  <Link href={`/contenzioso/atti/${processo.id}/cassazione`}>
+    <button
+      className={`w-full rounded-lg border px-4 py-3 text-left font-semibold ${getModuloButtonColor(
+        moduliAttivi.cassazione
+      )}`}
+    >
+      Cassazione {moduliAttivi.cassazione ? "✓" : "✕"}
+    </button>
+  </Link>
+</div>
         </div>
       </div>
     </div>
