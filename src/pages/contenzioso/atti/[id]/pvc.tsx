@@ -94,12 +94,23 @@ export default function PvcAttoPage() {
         data_incarico_interpello: data.data_incarico_interpello || "",
         data_interpello: data.data_interpello || "",
       });
-    } else {
-      setForm({
-        ...initialForm,
-        processo_id: processoId,
-      });
-    }
+   } else {
+  const { data: processoData, error: processoError } = await (supabase as any)
+    .from("tbcontenzioso_processo")
+    .select("data_ricezione")
+    .eq("id", processoId)
+    .single();
+
+  if (processoError) {
+    console.error(processoError);
+  }
+
+  setForm({
+    ...initialForm,
+    processo_id: processoId,
+    data_notifica_pvc: processoData?.data_ricezione || "",
+  });
+}
 
     setLoading(false);
   };
