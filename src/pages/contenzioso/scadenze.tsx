@@ -21,6 +21,9 @@ export default function ScadenzeContenzioso() {
   const [scadenze, setScadenze] = useState<Scadenza[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [invioAlert, setInvioAlert] = useState(false);
+  const [messaggioAlert, setMessaggioAlert] = useState("");
+
   useEffect(() => {
     loadScadenze();
   }, []);
@@ -150,21 +153,64 @@ export default function ScadenzeContenzioso() {
     return <div className="p-6">Caricamento scadenze...</div>;
   }
 
+  const testInvioAlert = async () => {
+  setInvioAlert(true);
+  setMessaggioAlert("");
+
+  try {
+    const res = await fetch("/api/contenzioso/invia-alert", {
+      method: "POST",
+    });
+
+    const json = await res.json();
+
+    if (!res.ok || !json.success) {
+      setMessaggioAlert(json.error || "Errore durante invio alert.");
+      return;
+    }
+
+    setMessaggioAlert(
+      `Alert processati: ${json.processati}, inviati: ${json.inviati}, falliti: ${json.falliti}`
+    );
+  } catch (error) {
+    setMessaggioAlert("Errore durante il test invio alert.");
+  } finally {
+    setInvioAlert(false);
+  }
+};
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <Card>
-       <CardHeader>
+     <CardHeader>
   <div className="flex items-center justify-between">
     <CardTitle>Scadenze contenzioso</CardTitle>
 
-    <button
-      type="button"
-      onClick={() => router.push("/contenzioso")}
-      className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-100"
-    >
-      Indietro
-    </button>
+    <div className="flex gap-2">
+      <button
+        type="button"
+        onClick={testInvioAlert}
+        disabled={invioAlert}
+        className="rounded-lg bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700 disabled:opacity-50"
+      >
+        {invioAlert ? "Invio..." : "Test invio alert"}
+      </button>
+
+      <button
+        type="button"
+        onClick={() => window.history.back()}
+        className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-100"
+      >
+        Indietro
+      </button>
+    </div>
   </div>
+
+  {messaggioAlert && (
+    <div className="mt-3 rounded-lg border bg-gray-50 p-3 text-sm">
+      {messaggioAlert}
+    </div>
+  )}
 </CardHeader>
 
         <CardContent className="space-y-3">
