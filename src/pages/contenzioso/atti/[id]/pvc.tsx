@@ -184,6 +184,50 @@ export default function PvcAttoPage() {
     return <div className="p-6">Caricamento PVC...</div>;
   }
 
+  const handleDelete = async () => {
+  if (!form.id || !id) return;
+
+  const conferma = window.confirm(
+    "Vuoi eliminare il PVC collegato e le relative scadenze?"
+  );
+
+  if (!conferma) return;
+
+  const supabase = getSupabaseClient();
+
+  setErrore("");
+  setSuccesso("");
+  setSaving(true);
+
+  const { error: scadenzeError } = await (supabase as any)
+    .from("tbcontenzioso_scadenze_generate")
+    .delete()
+    .eq("processo_id", String(id))
+    .eq("modulo", "PVC");
+
+  if (scadenzeError) {
+    console.error(scadenzeError);
+    setErrore("Errore durante l'eliminazione delle scadenze PVC.");
+    setSaving(false);
+    return;
+  }
+
+  const { error: pvcError } = await (supabase as any)
+    .from("tbcontenzioso_pvc")
+    .delete()
+    .eq("id", form.id);
+
+  if (pvcError) {
+    console.error(pvcError);
+    setErrore("Errore durante l'eliminazione del PVC.");
+    setSaving(false);
+    return;
+  }
+
+  setSaving(false);
+  router.push(`/contenzioso/atti/${id}`);
+};
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="mx-auto max-w-5xl rounded-2xl bg-white p-6 shadow">
@@ -327,6 +371,17 @@ export default function PvcAttoPage() {
             />
           </div>
         </div>
+
+        {form.id && (
+  <button
+    type="button"
+    onClick={handleDelete}
+    disabled={saving}
+    className="rounded-lg bg-red-600 px-5 py-2 text-white hover:bg-red-700 disabled:opacity-50"
+  >
+    Elimina PVC
+  </button>
+)}
 
         <div className="mt-8 flex justify-end gap-3">
           <button
