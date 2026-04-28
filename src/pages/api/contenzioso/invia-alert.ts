@@ -2,6 +2,11 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 import { sendEmail } from "@/services/emailService";
 
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
     return res.status(405).json({ success: false, error: "Metodo non consentito" });
@@ -39,11 +44,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (operatoreError || !operatore?.id || !operatore?.microsoft_connection_id) {
           throw new Error("Operatore senza connessione Microsoft valida");
         }
-
-        const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-          );
 
         const result = await sendEmail({
           to: item.email_destinatario,
