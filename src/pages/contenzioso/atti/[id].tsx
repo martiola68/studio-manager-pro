@@ -134,8 +134,38 @@ const [moduliAttivi, setModuliAttivi] = useState({
       console.error(scadenzeError);
     }
 
- const { data: pvcData } = await (supabase as any)
+const { data: pvcData } = await (supabase as any)
   .from("tbcontenzioso_pvc")
+  .select("id")
+  .eq("processo_id", processoId)
+  .maybeSingle();
+
+const { data: cassazioneData } = await (supabase as any)
+  .from("tbcontenzioso_cassazione")
+  .select("id")
+  .eq("processo_id", processoId)
+  .maybeSingle();
+
+const { data: interpelloData } = await (supabase as any)
+  .from("tbcontenzioso_interpello")
+  .select("id")
+  .eq("processo_id", processoId)
+  .maybeSingle();
+
+const { data: primoGradoData } = await (supabase as any)
+  .from("tbcontenzioso_ricorso_primo_grado")
+  .select("id")
+  .eq("processo_id", processoId)
+  .maybeSingle();
+
+const { data: secondoGradoData } = await (supabase as any)
+  .from("tbcontenzioso_ricorso_secondo_grado")
+  .select("id")
+  .eq("processo_id", processoId)
+  .maybeSingle();
+
+const { data: schemaAttoData } = await (supabase as any)
+  .from("tbcontenzioso_schema_atto")
   .select("id")
   .eq("processo_id", processoId)
   .maybeSingle();
@@ -143,8 +173,12 @@ const [moduliAttivi, setModuliAttivi] = useState({
 setModuliAttivi((prev) => ({
   ...prev,
   pvc: !!pvcData,
+  cassazione: !!cassazioneData,
+  interpello: !!interpelloData,
+  primoGrado: !!primoGradoData,
+  secondoGrado: !!secondoGradoData,
+  schemaAtto: !!schemaAttoData,
 }));
-
 setScadenze((scadenzeData || []) as Scadenza[]);
 setLoading(false);
   };
@@ -414,11 +448,15 @@ setLoading(false);
   </button>
 </Link>
 
-            <Link href={`/contenzioso/atti/${processo.id}/schema-atto`}>
-              <button className="w-full rounded-lg border px-4 py-3 text-left hover:bg-gray-50">
-                Schema d’atto
-              </button>
-            </Link>
+          <Link href={`/contenzioso/atti/${processo.id}/schema-atto`}>
+  <button
+    className={`w-full rounded-lg border px-4 py-3 text-left font-semibold ${getModuloButtonColor(
+      moduliAttivi.schemaAtto
+    )}`}
+  >
+    Schema d’atto {moduliAttivi.schemaAtto ? "✓" : "✕"}
+  </button>
+</Link>
 
             <Link href={`/contenzioso/atti/${processo.id}/adesione`}>
               <button className="w-full rounded-lg border px-4 py-3 text-left hover:bg-gray-50">
@@ -426,29 +464,44 @@ setLoading(false);
               </button>
             </Link>
 
-            <Link href={`/contenzioso/atti/${processo.id}/interpello`}>
-              <button className="w-full rounded-lg border px-4 py-3 text-left hover:bg-gray-50">
-                Interpello
-              </button>
-            </Link>
+         <Link href={`/contenzioso/atti/${processo.id}/interpello`}>
+  <button
+    className={`w-full rounded-lg border px-4 py-3 text-left font-semibold ${getModuloButtonColor(
+      moduliAttivi.interpello
+    )}`}
+  >
+    Interpello {moduliAttivi.interpello ? "✓" : "✕"}
+  </button>
+</Link>
 
-            <Link href={`/contenzioso/atti/${processo.id}/primo-grado`}>
-              <button className="w-full rounded-lg border px-4 py-3 text-left hover:bg-gray-50">
-                Ricorso 1° grado
-              </button>
-            </Link>
+          <Link href={`/contenzioso/atti/${processo.id}/primo-grado`}>
+  <button
+    className={`w-full rounded-lg border px-4 py-3 text-left font-semibold ${getModuloButtonColor(
+      moduliAttivi.primoGrado
+    )}`}
+  >
+    Ricorso 1° grado {moduliAttivi.primoGrado ? "✓" : "✕"}
+  </button>
+</Link>
+         <Link href={`/contenzioso/atti/${processo.id}/secondo-grado`}>
+  <button
+    className={`w-full rounded-lg border px-4 py-3 text-left font-semibold ${getModuloButtonColor(
+      moduliAttivi.secondoGrado
+    )}`}
+  >
+    Ricorso 2° grado {moduliAttivi.secondoGrado ? "✓" : "✕"}
+  </button>
+</Link>
 
-            <Link href={`/contenzioso/atti/${processo.id}/secondo-grado`}>
-              <button className="w-full rounded-lg border px-4 py-3 text-left hover:bg-gray-50">
-                Ricorso 2° grado
-              </button>
-            </Link>
-
-            <Link href={`/contenzioso/atti/${processo.id}/cassazione`}>
-              <button className="w-full rounded-lg border px-4 py-3 text-left hover:bg-gray-50">
-                Cassazione
-              </button>
-            </Link>
+           <Link href={`/contenzioso/atti/${processo.id}/cassazione`}>
+  <button
+    className={`w-full rounded-lg border px-4 py-3 text-left font-semibold ${getModuloButtonColor(
+      moduliAttivi.cassazione
+    )}`}
+  >
+    Cassazione {moduliAttivi.cassazione ? "✓" : "✕"}
+  </button>
+</Link>
           </div>
         </div>
       </div>
