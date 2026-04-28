@@ -120,6 +120,25 @@ export default function RegoleScadenzePage() {
     return <div className="p-6">Caricamento regole scadenze...</div>;
   }
 
+  const rigeneraScadenze = async () => {
+  const supabase = getSupabaseClient();
+
+  setErrore("");
+  setSuccesso("");
+
+  const { error } = await (supabase as any).rpc(
+    "rigenera_scadenze_contenzioso_base"
+  );
+
+  if (error) {
+    console.error(error);
+    setErrore("Errore durante la rigenerazione delle scadenze.");
+    return;
+  }
+
+  setSuccesso("Scadenze rigenerate correttamente.");
+};
+  
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="mx-auto max-w-7xl rounded-2xl bg-white p-6 shadow">
@@ -133,6 +152,15 @@ export default function RegoleScadenzePage() {
             </p>
           </div>
 
+          <div className="flex gap-2">
+  <button
+    type="button"
+    onClick={rigeneraScadenze}
+    className="rounded-lg bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700"
+  >
+    Rigenera scadenze
+  </button>
+            
           <button
             type="button"
             onClick={() => router.push("/contenzioso")}
