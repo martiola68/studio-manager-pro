@@ -372,38 +372,40 @@ export default function PvcAttoPage() {
           </div>
         </div>
 
-      <div className="mt-8 flex items-center justify-between gap-3">
-  <div>
-    {form.id && (
-      <button
-        type="button"
-        onClick={handleDelete}
-        disabled={saving}
-        className="rounded-lg bg-red-600 px-5 py-2 text-white hover:bg-red-700 disabled:opacity-50"
-      >
-        Elimina PVC
-      </button>
-    )}
-  </div>
+ <div className="mt-8 flex items-center justify-between gap-3">
+          <div>
+            {form.id && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={saving}
+                className="rounded-lg bg-red-600 px-5 py-2 text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                Elimina PVC
+              </button>
+            )}
+          </div>
 
-  <div className="flex gap-3">
-    <button
-      type="button"
-      onClick={() => router.push(`/contenzioso/atti/${id}`)}
-      className="rounded-lg border px-5 py-2 hover:bg-gray-100"
-    >
-      Annulla
-    </button>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => router.push(`/contenzioso/atti/${id}`)}
+              className="rounded-lg border px-5 py-2 hover:bg-gray-100"
+            >
+              Annulla
+            </button>
 
-    <button
-      type="button"
-      onClick={handleSave}
-      disabled={saving}
-      className="rounded-lg bg-blue-600 px-5 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
-    >
-      {saving ? "Salvataggio..." : "Salva PVC"}
-    </button>
-  </div>
-</div>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="rounded-lg bg-blue-600 px-5 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {saving ? "Salvataggio..." : "Salva PVC"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
