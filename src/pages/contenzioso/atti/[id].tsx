@@ -33,7 +33,19 @@ export default function DettaglioAtto() {
   const [processo, setProcesso] = useState<Processo | null>(null);
   const [scadenze, setScadenze] = useState<Scadenza[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [errore, setErrore] = useState("");
+  const [messaggio, setMessaggio] = useState("");
+
+  const [form, setForm] = useState({
+    numero_atto: "",
+    anno_riferimento: "",
+    data_ricezione: "",
+    data_scadenza: "",
+    descrizione: "",
+    valore_pratica: "",
+    esito: "",
+  });
 
   useEffect(() => {
     if (id) {
@@ -58,6 +70,7 @@ export default function DettaglioAtto() {
 
     setLoading(true);
     setErrore("");
+    setMessaggio("");
 
     const { data: processoData, error: processoError } = await (supabase as any)
       .from("tbcontenzioso_processo")
@@ -77,6 +90,24 @@ export default function DettaglioAtto() {
       return;
     }
 
+    const processo = processoData as Processo;
+
+    setProcesso(processo);
+    setForm({
+      numero_atto: processo.numero_atto || "",
+      anno_riferimento: processo.anno_riferimento
+        ? String(processo.anno_riferimento)
+        : "",
+      data_ricezione: processo.data_ricezione || "",
+      data_scadenza: processo.data_scadenza || "",
+      descrizione: processo.descrizione || "",
+      valore_pratica:
+        processo.valore_pratica !== null && processo.valore_pratica !== undefined
+          ? String(processo.valore_pratica)
+          : "",
+      esito: processo.esito || "",
+    });
+
     const { data: scadenzeData, error: scadenzeError } = await (supabase as any)
       .from("tbcontenzioso_scadenze_generate")
       .select("*")
@@ -87,16 +118,63 @@ export default function DettaglioAtto() {
       console.error(scadenzeError);
     }
 
-    setProcesso(processoData as Processo);
     setScadenze((scadenzeData || []) as Scadenza[]);
     setLoading(false);
+  };
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSave = async () => {
+    if (!processo) return;
+
+    const supabase = getSupabaseClient();
+
+    setSaving(true);
+    setErrore("");
+    setMessaggio("");
+
+    const payload = {
+      numero_atto: form.numero_atto || null,
+      anno_riferimento: form.anno_riferimento
+        ? Number(form.anno_riferimento)
+        : null,
+      data_ricezione: form.data_ricezione || null,
+      data_scadenza: form.data_scadenza || null,
+      descrizione: form.descrizione || null,
+      valore_pratica: form.valore_pratica ? Number(form.valore_pratica) : null,
+      esito: form.esito || null,
+    };
+
+    const { error } = await (supabase as any)
+      .from("tbcontenzioso_processo")
+      .update(payload)
+      .eq("id", processo.id);
+
+    if (error) {
+      console.error(error);
+      setErrore("Errore durante il salvataggio dell'atto.");
+      setSaving(false);
+      return;
+    }
+
+    setMessaggio("Atto salvato correttamente.");
+    await loadData(processo.id);
+    setSaving(false);
   };
 
   if (loading) {
     return <div className="p-6">Caricamento pratica...</div>;
   }
 
-  if (errore) {
+  if (errore && !processo) {
     return <div className="p-6 text-red-600">{errore}</div>;
   }
 
@@ -110,7 +188,7 @@ export default function DettaglioAtto() {
         <div className="flex items-center justify-between rounded-2xl bg-white p-6 shadow">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
-              Dettaglio atto
+              Modifica atto
             </h1>
             <p className="text-sm text-gray-500">
               {processo.tbclienti?.ragione_sociale || "Cliente non indicato"}
@@ -126,26 +204,33 @@ export default function DettaglioAtto() {
           </button>
         </div>
 
+        {errore && (
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            {errore}
+          </div>
+        )}
+
+        {messaggio && (
+          <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-700">
+            {messaggio}
+          </div>
+        )}
+
         <div className="rounded-2xl bg-white p-6 shadow">
           <h2 className="mb-4 text-lg font-semibold">Dati pratica</h2>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>
-              <div className="text-xs text-gray-500">Tipo atto</div>
+              <div className="text-xs text-gray-500">Cliente</div>
               <div className="font-medium">
-                {processo.tbcontenzioso_tipi_atto?.descrizione || "-"}
+                {processo.tbclienti?.ragione_sociale || "-"}
               </div>
             </div>
 
             <div>
-              <div className="text-xs text-gray-500">Numero atto</div>
-              <div className="font-medium">{processo.numero_atto || "-"}</div>
-            </div>
-
-            <div>
-              <div className="text-xs text-gray-500">Anno</div>
+              <div className="text-xs text-gray-500">Tipo atto</div>
               <div className="font-medium">
-                {processo.anno_riferimento || "-"}
+                {processo.tbcontenzioso_tipi_atto?.descrizione || "-"}
               </div>
             </div>
 
@@ -156,42 +241,103 @@ export default function DettaglioAtto() {
                   "-"}
               </div>
             </div>
+          </div>
 
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
             <div>
-              <div className="text-xs text-gray-500">Data ricezione</div>
-              <div className="font-medium">
-                {formatDateIT(processo.data_ricezione)}
-              </div>
+              <label className="text-xs text-gray-500">Numero atto</label>
+              <input
+                name="numero_atto"
+                value={form.numero_atto}
+                onChange={handleChange}
+                className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+              />
             </div>
 
             <div>
-              <div className="text-xs text-gray-500">Data scadenza</div>
-              <div className="font-medium">
-                {formatDateIT(processo.data_scadenza)}
-              </div>
+              <label className="text-xs text-gray-500">Anno</label>
+              <input
+                name="anno_riferimento"
+                type="number"
+                value={form.anno_riferimento}
+                onChange={handleChange}
+                className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+              />
             </div>
 
             <div>
-              <div className="text-xs text-gray-500">Valore pratica</div>
-              <div className="font-medium">
-                {processo.valore_pratica ?? "-"}
-              </div>
+              <label className="text-xs text-gray-500">Data ricezione</label>
+              <input
+                name="data_ricezione"
+                type="date"
+                value={form.data_ricezione}
+                onChange={handleChange}
+                className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+              />
             </div>
 
             <div>
-              <div className="text-xs text-gray-500">Esito</div>
-              <div className="font-medium">{processo.esito || "-"}</div>
+              <label className="text-xs text-gray-500">Data scadenza</label>
+              <input
+                name="data_scadenza"
+                type="date"
+                value={form.data_scadenza}
+                onChange={handleChange}
+                className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs text-gray-500">Valore pratica</label>
+              <input
+                name="valore_pratica"
+                type="number"
+                step="0.01"
+                value={form.valore_pratica}
+                onChange={handleChange}
+                className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs text-gray-500">Esito</label>
+              <select
+                name="esito"
+                value={form.esito}
+                onChange={handleChange}
+                className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+              >
+                <option value="">---</option>
+                <option value="In corso">In corso</option>
+                <option value="Accolto">Accolto</option>
+                <option value="Rigettato">Rigettato</option>
+                <option value="Parziale">Parziale</option>
+                <option value="Chiuso">Chiuso</option>
+              </select>
             </div>
           </div>
 
-          {processo.descrizione && (
-            <div className="mt-4">
-              <div className="text-xs text-gray-500">Descrizione</div>
-              <div className="rounded-lg border bg-gray-50 p-3 text-sm">
-                {processo.descrizione}
-              </div>
-            </div>
-          )}
+          <div className="mt-4">
+            <label className="text-xs text-gray-500">Descrizione</label>
+            <textarea
+              name="descrizione"
+              value={form.descrizione}
+              onChange={handleChange}
+              rows={4}
+              className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+            />
+          </div>
+
+          <div className="mt-6 flex justify-end">
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+            >
+              {saving ? "Salvataggio..." : "Salva modifiche"}
+            </button>
+          </div>
         </div>
 
         <div className="rounded-2xl bg-white p-6 shadow">
