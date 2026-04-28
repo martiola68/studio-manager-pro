@@ -64,6 +64,7 @@ export default function NuovaCartella() {
     data_invio: "",
     esito_contestazione: "",
     operatore_responsabile_id: "",
+    pratica_chiusa: false,
     genera_ricorso: false,
     note_motivazione_ricorso: "",
     allegato_cartella: "",
@@ -398,6 +399,7 @@ setTributiConstatazione(
       data_invio: form.data_invio || null,
       esito_contestazione: form.esito_contestazione || null,
       operatore_responsabile_id: form.operatore_responsabile_id || null,
+      pratica_chiusa: form.pratica_chiusa,
       genera_ricorso: form.genera_ricorso,
       note_motivazione_ricorso: form.note_motivazione_ricorso || null,
       allegato_cartella: form.allegato_cartella || null,
@@ -873,24 +875,41 @@ setTributiConstatazione(
           })}
         </div>
 
-        <div className="mt-8 flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={() => router.push("/contenzioso")}
-            className="rounded-lg border px-5 py-2 hover:bg-gray-100"
-          >
-            Annulla
-          </button>
+       <div className="mt-8 flex items-center justify-between gap-3">
+  <div className="flex items-center gap-3">
+    <label className="text-sm font-medium">Pratica chiusa</label>
 
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            className="rounded-lg bg-blue-600 px-5 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            {saving ? "Salvataggio..." : "Salva cartella"}
-          </button>
-        </div>
+    <select
+      value={form.pratica_chiusa ? "Si" : "No"}
+      onChange={(e) =>
+        handleChange("pratica_chiusa", e.target.value === "Si")
+      }
+      className="rounded-lg border p-2"
+    >
+      <option value="No">No</option>
+      <option value="Si">Sì</option>
+    </select>
+  </div>
+
+  <div className="flex justify-end gap-3">
+    <button
+      type="button"
+      onClick={() => router.push("/contenzioso")}
+      className="rounded-lg border px-5 py-2 hover:bg-gray-100"
+    >
+      Annulla
+    </button>
+
+    <button
+      type="button"
+      onClick={handleSave}
+      disabled={saving}
+      className="rounded-lg bg-blue-600 px-5 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+    >
+      {saving ? "Salvataggio..." : "Salva cartella"}
+    </button>
+  </div>
+</div>
       </div>
     </div>
   );
