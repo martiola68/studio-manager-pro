@@ -170,6 +170,12 @@ const { data: schemaAttoData } = await (supabase as any)
   .eq("processo_id", processoId)
   .maybeSingle();
 
+const { data: adesioneData } = await (supabase as any)
+  .from("tbcontenzioso_adesione")
+  .select("id")
+  .eq("processo_id", processoId)
+  .maybeSingle();
+
 setModuliAttivi((prev) => ({
   ...prev,
   pvc: !!pvcData,
@@ -178,7 +184,9 @@ setModuliAttivi((prev) => ({
   primoGrado: !!primoGradoData,
   secondoGrado: !!secondoGradoData,
   schemaAtto: !!schemaAttoData,
+  adesione: !!adesioneData,
 }));
+    
 setScadenze((scadenzeData || []) as Scadenza[]);
 setLoading(false);
   };
@@ -456,14 +464,15 @@ setLoading(false);
   >
     Schema d’atto {moduliAttivi.schemaAtto ? "✓" : "✕"}
   </button>
+<Link href={`/contenzioso/atti/${processo.id}/adesione`}>
+  <button
+    className={`w-full rounded-lg border px-4 py-3 text-left font-semibold ${getModuloButtonColor(
+      moduliAttivi.adesione
+    )}`}
+  >
+    Accertamento con adesione {moduliAttivi.adesione ? "✓" : "✕"}
+  </button>
 </Link>
-
-            <Link href={`/contenzioso/atti/${processo.id}/adesione`}>
-              <button className="w-full rounded-lg border px-4 py-3 text-left hover:bg-gray-50">
-                Accertamento con adesione
-              </button>
-            </Link>
-
          <Link href={`/contenzioso/atti/${processo.id}/interpello`}>
   <button
     className={`w-full rounded-lg border px-4 py-3 text-left font-semibold ${getModuloButtonColor(
