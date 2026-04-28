@@ -51,6 +51,7 @@ const initialForm = {
   comunicato_al_cliente: false,
   data_comunicazione: "",
   operatore_responsabile_id: "",
+  pratica_chiusa: false,
   allegato_atto: "",
   allegato_civis: "",
   allegato_responso: "",
@@ -374,6 +375,7 @@ const giorniResidui = calcolaGiorniResidui(dataScadenza);
       comunicato_al_cliente: form.comunicato_al_cliente,
       data_comunicazione: form.data_comunicazione || null,
       operatore_responsabile_id: form.operatore_responsabile_id || null,
+      pratica_chiusa: form.pratica_chiusa,
       allegato_atto: form.allegato_atto || null,
       allegato_civis: form.allegato_civis || null,
       allegato_responso: form.allegato_responso || null,
@@ -797,24 +799,41 @@ const giorniResidui = calcolaGiorniResidui(dataScadenza);
           })}
         </div>
 
-        <div className="mt-8 flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={() => router.push("/contenzioso")}
-            className="rounded-lg border px-5 py-2 hover:bg-gray-100"
-          >
-            Annulla
-          </button>
+       <div className="mt-8 flex items-center justify-between gap-3">
+  <div className="flex items-center gap-3">
+    <label className="text-sm font-medium">Pratica chiusa</label>
 
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            className="rounded-lg bg-blue-600 px-5 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            {saving ? "Salvataggio..." : "Salva avviso bonario"}
-          </button>
-        </div>
+    <select
+      value={form.pratica_chiusa ? "Si" : "No"}
+      onChange={(e) =>
+        handleChange("pratica_chiusa", e.target.value === "Si")
+      }
+      className="rounded-lg border p-2"
+    >
+      <option value="No">No</option>
+      <option value="Si">Sì</option>
+    </select>
+  </div>
+
+  <div className="flex justify-end gap-3">
+    <button
+      type="button"
+      onClick={() => router.push("/contenzioso")}
+      className="rounded-lg border px-5 py-2 hover:bg-gray-100"
+    >
+      Annulla
+    </button>
+
+    <button
+      type="button"
+      onClick={handleSave}
+      disabled={saving}
+      className="rounded-lg bg-blue-600 px-5 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+    >
+      {saving ? "Salvataggio..." : "Salva avviso bonario"}
+    </button>
+  </div>
+</div>
       </div>
     </div>
   );
