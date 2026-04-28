@@ -35,8 +35,18 @@ export default function DettaglioAtto() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errore, setErrore] = useState("");
-  const [messaggio, setMessaggio] = useState("");
+const [messaggio, setMessaggio] = useState("");
 
+const [moduliAttivi, setModuliAttivi] = useState({
+  pvc: false,
+  schemaAtto: false,
+  adesione: false,
+  interpello: false,
+  primoGrado: false,
+  secondoGrado: false,
+  cassazione: false,
+});
+  
   const [form, setForm] = useState({
     numero_atto: "",
     anno_riferimento: "",
@@ -64,6 +74,12 @@ export default function DettaglioAtto() {
     if (giorni <= 10) return "bg-orange-500 text-white";
     return "bg-green-600 text-white";
   };
+
+  const getModuloButtonColor = (attivo: boolean) => {
+  return attivo
+    ? "bg-green-600 text-white hover:bg-green-700 border-green-600"
+    : "bg-red-600 text-white hover:bg-red-700 border-red-600";
+};
 
   const loadData = async (processoId: string) => {
     const supabase = getSupabaseClient();
@@ -118,8 +134,19 @@ export default function DettaglioAtto() {
       console.error(scadenzeError);
     }
 
-    setScadenze((scadenzeData || []) as Scadenza[]);
-    setLoading(false);
+ const { data: pvcData } = await (supabase as any)
+  .from("tbcontenzioso_pvc")
+  .select("id")
+  .eq("processo_id", processoId)
+  .maybeSingle();
+
+setModuliAttivi((prev) => ({
+  ...prev,
+  pvc: !!pvcData,
+}));
+
+setScadenze((scadenzeData || []) as Scadenza[]);
+setLoading(false);
   };
 
   const handleChange = (
@@ -377,11 +404,15 @@ export default function DettaglioAtto() {
           <h2 className="mb-4 text-lg font-semibold">Moduli operativi</h2>
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-            <Link href={`/contenzioso/atti/${processo.id}/pvc`}>
-              <button className="w-full rounded-lg border px-4 py-3 text-left hover:bg-gray-50">
-                PVC
-              </button>
-            </Link>
+           <Link href={`/contenzioso/atti/${processo.id}/pvc`}>
+  <button
+    className={`w-full rounded-lg border px-4 py-3 text-left font-semibold ${getModuloButtonColor(
+      moduliAttivi.pvc
+    )}`}
+  >
+    PVC {moduliAttivi.pvc ? "✓" : "✕"}
+  </button>
+</Link>
 
             <Link href={`/contenzioso/atti/${processo.id}/schema-atto`}>
               <button className="w-full rounded-lg border px-4 py-3 text-left hover:bg-gray-50">
