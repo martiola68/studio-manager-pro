@@ -22,7 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, FileText } from "lucide-react";
 
 type Scadenza = {
   id: string;
@@ -216,6 +216,10 @@ export default function ContenziosoIndexPage() {
   }
 
   return `/contenzioso/atti/${row.id}`;
+}
+
+  function getRiepilogoHref(row: Scadenza) {
+  return `/contenzioso/pratica/${row.archivio}/${row.id}`;
 }
 
   async function handleDelete(row: Scadenza) {
@@ -430,10 +434,16 @@ export default function ContenziosoIndexPage() {
                         <TableCell>{getContestazione(row)}</TableCell>
                         <TableCell>{getResponso(row)}</TableCell>
                         <TableCell>{getRicorso(row)}</TableCell>
-                       <TableCell className="text-right">
+ <TableCell className="text-right">
   <div className="flex justify-end gap-2">
+    <Link href={getRiepilogoHref(row)}>
+      <Button variant="ghost" size="icon" title="Riepilogo pratica">
+        <FileText className="h-4 w-4" />
+      </Button>
+    </Link>
+
     <Link href={getEditHref(row)}>
-      <Button variant="ghost" size="icon">
+      <Button variant="ghost" size="icon" title="Modifica">
         <Edit className="h-4 w-4" />
       </Button>
     </Link>
@@ -443,6 +453,7 @@ export default function ContenziosoIndexPage() {
       size="icon"
       onClick={() => handleDelete(row)}
       className="text-red-600 hover:text-red-700"
+      title="Elimina"
     >
       <Trash2 className="h-4 w-4" />
     </Button>
