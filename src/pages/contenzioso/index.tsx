@@ -434,7 +434,7 @@ export default function ContenziosoIndexPage() {
                         <TableCell>{getContestazione(row)}</TableCell>
                         <TableCell>{getResponso(row)}</TableCell>
                         <TableCell>{getRicorso(row)}</TableCell>
- <TableCell className="text-right">
+<TableCell className="text-right">
   <div className="flex justify-end gap-2">
     <Link href={getRiepilogoHref(row)}>
       <Button variant="ghost" size="icon" title="Riepilogo pratica">
@@ -443,7 +443,7 @@ export default function ContenziosoIndexPage() {
     </Link>
 
     <Link href={getEditHref(row)}>
-      <Button variant="ghost" size="icon" title="Modifica">
+      <Button variant="ghost" size="icon" title="Modifica atto">
         <Edit className="h-4 w-4" />
       </Button>
     </Link>
