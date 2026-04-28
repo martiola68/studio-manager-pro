@@ -307,12 +307,11 @@ export default function DettaglioAtto() {
                 onChange={handleChange}
                 className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
               >
-                <option value="">---</option>
-                <option value="In corso">In corso</option>
-                <option value="Accolto">Accolto</option>
-                <option value="Rigettato">Rigettato</option>
-                <option value="Parziale">Parziale</option>
-                <option value="Chiuso">Chiuso</option>
+               <option value="">---</option>
+              <option value="aperto">Aperto</option>
+              <option value="in_lavorazione">In lavorazione</option>
+              <option value="chiuso">Chiuso</option>
+<option value="annullato">Annullato</option>
               </select>
             </div>
           </div>
