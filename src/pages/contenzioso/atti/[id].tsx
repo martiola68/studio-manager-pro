@@ -263,6 +263,44 @@ setLoading(false);
     }));
   };
 
+  const handleSave = async () => {
+  if (!processo) return;
+
+  const supabase = getSupabaseClient();
+
+  setSaving(true);
+  setErrore("");
+  setMessaggio("");
+
+  const payload = {
+    numero_atto: form.numero_atto || null,
+    anno_riferimento: form.anno_riferimento
+      ? Number(form.anno_riferimento)
+      : null,
+    data_ricezione: form.data_ricezione || null,
+    data_scadenza: form.data_scadenza || null,
+    descrizione: form.descrizione || null,
+    valore_pratica: form.valore_pratica ? Number(form.valore_pratica) : null,
+    esito: form.esito || null,
+  };
+
+  const { error } = await (supabase as any)
+    .from("tbcontenzioso_processo")
+    .update(payload)
+    .eq("id", processo.id);
+
+  if (error) {
+    console.error(error);
+    setErrore("Errore durante il salvataggio dell'atto.");
+    setSaving(false);
+    return;
+  }
+
+  setMessaggio("Atto salvato correttamente.");
+  await loadData(processo.id);
+  setSaving(false);
+};
+
   const handlePvcChange = (field: keyof PvcForm, value: string) => {
   setPvcForm((prev) => ({
     ...prev,
