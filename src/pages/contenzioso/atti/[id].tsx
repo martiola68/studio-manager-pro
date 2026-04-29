@@ -26,6 +26,27 @@ type Scadenza = {
   stato: string;
 };
 
+type PvcForm = {
+  id?: string;
+  processo_id: string;
+  data_notifica_pvc: string;
+  data_effettiva_osservazioni: string;
+  data_incarico_parere: string;
+  data_parere: string;
+  data_incarico_interpello: string;
+  data_interpello: string;
+};
+
+const initialPvcForm: PvcForm = {
+  processo_id: "",
+  data_notifica_pvc: "",
+  data_effettiva_osservazioni: "",
+  data_incarico_parere: "",
+  data_parere: "",
+  data_incarico_interpello: "",
+  data_interpello: "",
+};
+
 export default function DettaglioAtto() {
   const router = useRouter();
   const { id } = router.query;
@@ -36,6 +57,9 @@ export default function DettaglioAtto() {
   const [saving, setSaving] = useState(false);
   const [errore, setErrore] = useState("");
 const [messaggio, setMessaggio] = useState("");
+
+  const [pvcAttivo, setPvcAttivo] = useState(false);
+const [pvcForm, setPvcForm] = useState<PvcForm>(initialPvcForm);
 
 const [moduliAttivi, setModuliAttivi] = useState({
   pvc: false,
@@ -74,6 +98,23 @@ const [moduliAttivi, setModuliAttivi] = useState({
     if (giorni <= 10) return "bg-orange-500 text-white";
     return "bg-green-600 text-white";
   };
+
+  const addDays = (dateString: string, days: number) => {
+  if (!dateString) return "";
+
+  const date = new Date(dateString);
+  date.setDate(date.getDate() + days);
+
+  return date.toISOString().split("T")[0];
+};
+
+const dataScadenzaAdesionePvc = pvcForm.data_notifica_pvc
+  ? addDays(pvcForm.data_notifica_pvc, 30)
+  : "";
+
+const dataScadenzaOsservazioniPvc = pvcForm.data_notifica_pvc
+  ? addDays(pvcForm.data_notifica_pvc, 60)
+  : "";
 
   const getModuloButtonColor = (attivo: boolean) => {
   return attivo
@@ -136,9 +177,30 @@ const [moduliAttivi, setModuliAttivi] = useState({
 
 const { data: pvcData } = await (supabase as any)
   .from("tbcontenzioso_pvc")
-  .select("id")
+  .select("*")
   .eq("processo_id", processoId)
   .maybeSingle();
+
+if (pvcData) {
+  setPvcAttivo(true);
+  setPvcForm({
+    id: pvcData.id,
+    processo_id: pvcData.processo_id,
+    data_notifica_pvc: pvcData.data_notifica_pvc || "",
+    data_effettiva_osservazioni: pvcData.data_effettiva_osservazioni || "",
+    data_incarico_parere: pvcData.data_incarico_parere || "",
+    data_parere: pvcData.data_parere || "",
+    data_incarico_interpello: pvcData.data_incarico_interpello || "",
+    data_interpello: pvcData.data_interpello || "",
+  });
+} else {
+  setPvcAttivo(false);
+  setPvcForm({
+    ...initialPvcForm,
+    processo_id: processoId,
+    data_notifica_pvc: processo.data_ricezione || "",
+  });
+}
 
 const { data: cassazioneData } = await (supabase as any)
   .from("tbcontenzioso_cassazione")
@@ -201,43 +263,76 @@ setLoading(false);
     }));
   };
 
-  const handleSave = async () => {
-    if (!processo) return;
+  const handlePvcChange = (field: keyof PvcForm, value: string) => {
+  setPvcForm((prev) => ({
+    ...prev,
+    [field]: value,
+  }));
+};
 
-    const supabase = getSupabaseClient();
+ const handleSavePvc = async () => {
+  if (!processo) return;
 
-    setSaving(true);
-    setErrore("");
-    setMessaggio("");
+  const supabase = getSupabaseClient();
 
-    const payload = {
-      numero_atto: form.numero_atto || null,
-      anno_riferimento: form.anno_riferimento
-        ? Number(form.anno_riferimento)
-        : null,
-      data_ricezione: form.data_ricezione || null,
-      data_scadenza: form.data_scadenza || null,
-      descrizione: form.descrizione || null,
-      valore_pratica: form.valore_pratica ? Number(form.valore_pratica) : null,
-      esito: form.esito || null,
-    };
+  setSaving(true);
+  setErrore("");
+  setMessaggio("");
 
-    const { error } = await (supabase as any)
-      .from("tbcontenzioso_processo")
-      .update(payload)
-      .eq("id", processo.id);
-
-    if (error) {
-      console.error(error);
-      setErrore("Errore durante il salvataggio dell'atto.");
-      setSaving(false);
-      return;
-    }
-
-    setMessaggio("Atto salvato correttamente.");
-    await loadData(processo.id);
+  if (!pvcForm.data_notifica_pvc) {
+    setErrore("Inserisci la data notifica PVC.");
     setSaving(false);
+    return;
+  }
+
+  const payload = {
+    processo_id: processo.id,
+    data_notifica_pvc: pvcForm.data_notifica_pvc || null,
+    data_effettiva_osservazioni:
+      pvcForm.data_effettiva_osservazioni || null,
+    data_incarico_parere: pvcForm.data_incarico_parere || null,
+    data_parere: pvcForm.data_parere || null,
+    data_incarico_interpello: pvcForm.data_incarico_interpello || null,
+    data_interpello: pvcForm.data_interpello || null,
   };
+
+  let error = null;
+
+  if (pvcForm.id) {
+    const res = await (supabase as any)
+      .from("tbcontenzioso_pvc")
+      .update(payload)
+      .eq("id", pvcForm.id);
+
+    error = res.error;
+  } else {
+    const res = await (supabase as any)
+      .from("tbcontenzioso_pvc")
+      .insert(payload)
+      .select("id")
+      .single();
+
+    error = res.error;
+
+    if (res.data?.id) {
+      setPvcForm((prev) => ({
+        ...prev,
+        id: res.data.id,
+      }));
+    }
+  }
+
+  if (error) {
+    console.error(error);
+    setErrore(error.message || "Errore durante il salvataggio del PVC.");
+    setSaving(false);
+    return;
+  }
+
+  setMessaggio("PVC salvato correttamente.");
+  await loadData(processo.id);
+  setSaving(false);
+};
 
   if (loading) {
     return <div className="p-6">Caricamento pratica...</div>;
@@ -311,7 +406,7 @@ setLoading(false);
               </div>
             </div>
           </div>
-
+         
           <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
             <div>
               <label className="text-xs text-gray-500">Numero atto</label>
@@ -407,6 +502,148 @@ setLoading(false);
             </button>
           </div>
         </div>
+<div className="rounded-2xl bg-white p-6 shadow">
+  <div className="mb-4 flex items-center justify-between">
+    <div>
+      <h2 className="text-lg font-semibold">PVC</h2>
+      <p className="text-sm text-gray-500">
+        Processo Verbale di Constatazione
+      </p>
+    </div>
+
+    <label className="flex items-center gap-2 text-sm font-medium">
+      <input
+        type="checkbox"
+        checked={pvcAttivo}
+        onChange={(e) => setPvcAttivo(e.target.checked)}
+      />
+      Attiva PVC
+    </label>
+  </div>
+
+  {pvcAttivo && (
+    <>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div>
+          <label className="mb-1 block text-sm font-medium">
+            Data notifica PVC
+          </label>
+          <input
+            type="date"
+            value={pvcForm.data_notifica_pvc}
+            onChange={(e) =>
+              handlePvcChange("data_notifica_pvc", e.target.value)
+            }
+            className="w-full rounded-lg border p-2"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium">
+            Scadenza adesione
+          </label>
+          <input
+            type="date"
+            value={dataScadenzaAdesionePvc}
+            disabled
+            className="w-full rounded-lg border bg-gray-100 p-2"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium">
+            Scadenza osservazioni
+          </label>
+          <input
+            type="date"
+            value={dataScadenzaOsservazioniPvc}
+            disabled
+            className="w-full rounded-lg border bg-gray-100 p-2"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium">
+            Data effettiva osservazioni
+          </label>
+          <input
+            type="date"
+            value={pvcForm.data_effettiva_osservazioni}
+            onChange={(e) =>
+              handlePvcChange("data_effettiva_osservazioni", e.target.value)
+            }
+            className="w-full rounded-lg border p-2"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium">
+            Data incarico parere
+          </label>
+          <input
+            type="date"
+            value={pvcForm.data_incarico_parere}
+            onChange={(e) =>
+              handlePvcChange("data_incarico_parere", e.target.value)
+            }
+            className="w-full rounded-lg border p-2"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium">
+            Data parere
+          </label>
+          <input
+            type="date"
+            value={pvcForm.data_parere}
+            onChange={(e) => handlePvcChange("data_parere", e.target.value)}
+            className="w-full rounded-lg border p-2"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium">
+            Data incarico interpello
+          </label>
+          <input
+            type="date"
+            value={pvcForm.data_incarico_interpello}
+            onChange={(e) =>
+              handlePvcChange("data_incarico_interpello", e.target.value)
+            }
+            className="w-full rounded-lg border p-2"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium">
+            Data interpello
+          </label>
+          <input
+            type="date"
+            value={pvcForm.data_interpello}
+            onChange={(e) => handlePvcChange("data_interpello", e.target.value)}
+            className="w-full rounded-lg border p-2"
+          />
+        </div>
+      </div>
+
+      <div className="mt-6 flex justify-end">
+        <button
+          type="button"
+          onClick={handleSavePvc}
+          disabled={saving}
+          className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+        >
+          {saving ? "Salvataggio..." : "Salva PVC"}
+        </button>
+      </div>
+    </>
+  )}
+</div>
+
+        
 
         <div className="rounded-2xl bg-white p-6 shadow">
           <h2 className="mb-4 text-lg font-semibold">Scadenze collegate</h2>
