@@ -1046,9 +1046,15 @@ const handleApriAV4 = async (row: AV1Row) => {
 const handleApriDocumenti = (row: AV1Row) => {
   if (!canAccessAntiriciclaggio) return;
 
-  router.push(
-    `/antiriciclaggio/fascicolo-documenti?av1_id=${row.id}&cliente_id=${row.cliente_id || ""}`
-  );
+  const query = new URLSearchParams({
+    pratica_id: row.pratica_id || "",
+    av1_id: row.id || row.av1_id || "",
+    cliente_id: row.cliente_id || "",
+    societa_id: row.societa_id || "",
+    studio_id: row.studio_id || "",
+  });
+
+  router.push(`/antiriciclaggio/fascicolo-documenti?${query.toString()}`);
 };
 
 const handleEliminaCompleto = async (row: AV1Row) => {
@@ -1475,7 +1481,7 @@ const handleEliminaCompleto = async (row: AV1Row) => {
 <button
   type="button"
   onClick={() => handleApriDocumenti(row)}
-  disabled={row.is_pratica_only}
+  disabled={!row.id && !row.pratica_id}
   className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-blue-500 bg-white shadow-[0_0_8px_rgba(59,130,246,0.35)] transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50"
   title="Apri fascicolo documenti"
 >
