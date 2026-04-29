@@ -63,8 +63,12 @@ type PraticaAMLRow = {
   societa_id?: string | null;
   data_apertura?: string | null;
   stato?: string | null;
+  stato_ciclo?: string | null;
   av1_id?: string | null;
+  av4_id?: string | null;
+  av4_corrente_id?: string | null;
   tbclienti?: Cliente | Cliente[] | null;
+  av4_info?: AV4Info | AV4Info[] | null;
 };
 
 const AML_SESSION_KEY = "antiriciclaggio_unlocked_societa_id";
@@ -271,11 +275,20 @@ if (status === "warning") return "font-semibold text-yellow-600";
 const getAV4IconBorderClass = (row: AV1Row) => {
   const av4Info = getAV4Info(row);
 
-  if (av4Info?.compilato_da_cliente) {
+  const av4Ricevuto =
+    av4Info?.compilato_da_cliente ||
+    row.stato_pratica === "av4_ricevuto";
+
+  const av4Inviato =
+    av4Info?.Av4InviatoCL ||
+    av4Info?.public_sent_at ||
+    row.stato_pratica === "av4_inviato";
+
+  if (av4Ricevuto) {
     return "border-2 border-lime-500 shadow-[0_0_10px_rgba(132,204,22,0.9)]";
   }
 
-  if (av4Info?.Av4InviatoCL || av4Info?.public_sent_at) {
+  if (av4Inviato) {
     return "border-2 border-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.9)]";
   }
 
@@ -420,27 +433,37 @@ const getAV4IconBorderClass = (row: AV1Row) => {
       av1Rows = (data as AV1Row[]) || [];
     }
 
-    const { data: praticheData, error: praticheError } = await supabaseAny
-      .from("tbPraticheAML")
-      .select(`
-        id,
-        studio_id,
-        cliente_id,
-        societa_id,
-        data_apertura,
-        stato,
-        av1_id,
-        tbclienti (
-          id,
-          cod_cliente,
-          ragione_sociale,
-          utente_operatore_id,
-          utente_operatore:tbutenti!tbclienti_utente_operatore_id_fkey (
-            nome,
-            cognome
-          )
-        )
-      `)
+   const { data: praticheData, error: praticheError } = await supabaseAny
+  .from("tbPraticheAML")
+  .select(`
+    id,
+    studio_id,
+    cliente_id,
+    societa_id,
+    data_apertura,
+    stato,
+    stato_ciclo,
+    av1_id,
+    av4_id,
+    av4_corrente_id,
+    tbclienti (
+      id,
+      cod_cliente,
+      ragione_sociale,
+      utente_operatore_id,
+      utente_operatore:tbutenti!tbclienti_utente_operatore_id_fkey (
+        nome,
+        cognome
+      )
+    ),
+    av4_info:tbAV4!fk_tbpraticheaml_av4_corrente (
+      id,
+      av1_id,
+      Av4InviatoCL,
+      public_sent_at,
+      compilato_da_cliente
+    )
+  `)
       .eq("societa_id", societaId)
       .order("data_apertura", { ascending: false });
 
@@ -500,7 +523,7 @@ const praticheRows = (praticheData as PraticaAMLRow[]) || [];
         AV2Generato: false,
         AV4Generato: false,
         tbclienti: pratica.tbclienti || null,
-        av4_info: null,
+       av4_info: pratica.av4_info || null,
         stato_pratica: pratica.stato || "aperta",
         is_pratica_only: true,
       }));
@@ -1370,29 +1393,41 @@ const handleEliminaCompleto = async (row: AV1Row) => {
                         {row.AV2Generato ? "Sì" : "No"}
                       </td>
 
-                         <td
-                        className={`p-3 text-center font-semibold ${
-                          av4Info?.Av4InviatoCL || av4Info?.public_sent_at
-                            ? "text-green-600"
-                            : "text-red-600"
-                        }`}
-                      >
-                        {av4Info?.Av4InviatoCL || av4Info?.public_sent_at ? "Sì" : "No"}
-                      </td>
+                     <td
+  className={`p-3 text-center font-semibold ${
+    av4Info?.Av4InviatoCL ||
+    av4Info?.public_sent_at ||
+    row.stato_pratica === "av4_inviato" ||
+    row.stato_pratica === "av4_ricevuto"
+      ? "text-green-600"
+      : "text-red-600"
+  }`}
+>
+  {av4Info?.Av4InviatoCL ||
+  av4Info?.public_sent_at ||
+  row.stato_pratica === "av4_inviato" ||
+  row.stato_pratica === "av4_ricevuto"
+    ? "Sì"
+    : "No"}
+</td>
 
                       <td className="p-3 text-center">
                         {formatDateTime(av4Info?.public_sent_at)}
                       </td>
 
-                      <td
-                        className={`p-3 text-center font-semibold ${
-                          av4Info?.compilato_da_cliente
-                            ? "text-green-600"
-                            : "text-red-600"
-                        }`}
-                      >
-                        {av4Info?.compilato_da_cliente ? "Sì" : "No"}
-                      </td>
+                     <td
+  className={`p-3 text-center font-semibold ${
+    av4Info?.compilato_da_cliente ||
+    row.stato_pratica === "av4_ricevuto"
+      ? "text-green-600"
+      : "text-red-600"
+  }`}
+>
+  {av4Info?.compilato_da_cliente ||
+  row.stato_pratica === "av4_ricevuto"
+    ? "Sì"
+    : "No"}
+</td>
 
                       <td className="p-3">
                         <div className="flex items-center justify-center gap-3">
