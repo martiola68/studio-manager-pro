@@ -1020,23 +1020,29 @@ const handleTogglePhase = (
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <div className="mx-auto max-w-7xl space-y-6">
-        <div className="flex items-center justify-between rounded-2xl bg-white p-6 shadow">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Modifica atto</h1>
-            <p className="text-sm text-gray-500">
-              {processo.tbclienti?.ragione_sociale || "Cliente non indicato"}
-            </p>
-          </div>
+<div className="mb-6 rounded-xl border border-slate-200 bg-slate-100 p-5">
+  <div className="flex items-center justify-between">
+    
+    <div>
+      <h1 className="text-lg font-semibold text-slate-900">
+        Modifica atto
+      </h1>
 
-          <button
-            type="button"
-            onClick={() => router.push("/contenzioso")}
-            className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-100"
-          >
-            Indietro
-          </button>
-        </div>
+      <p className="mt-1 text-sm text-slate-600">
+        {nomeCliente || "-"}
+      </p>
+    </div>
+
+    <button
+      type="button"
+      onClick={() => router.back()}
+      className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+    >
+      Indietro
+    </button>
+
+  </div>
+</div>
 
         {errore && (
           <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
