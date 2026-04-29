@@ -401,7 +401,7 @@ if (av1_id) {
   cliente_id:
     typeof cliente_id === "string" && cliente_id.trim() !== ""
       ? cliente_id
-      : null
+      : null,
           nome_file: file.name,
           storage_path: filePath,
           bucket_name: "allegati",
