@@ -14,6 +14,13 @@ type SocietaOption = {
   Denominazione: string;
 };
 
+type OperatoreOption = {
+  id: string;
+  nome?: string | null;
+  cognome?: string | null;
+  email?: string | null;
+};
+
 type PrestazioneOption = {
   id: number;
   TipoPrestazioneAR?: string | null;
@@ -26,18 +33,28 @@ export default function NuovaPraticaAMLPage() {
 
   const [clienti, setClienti] = useState<ClienteOption[]>([]);
   const [societaOptions, setSocietaOptions] = useState<SocietaOption[]>([]);
-
+  const [operatori, setOperatori] = useState<OperatoreOption[]>([]);
   const [prestazioni, setPrestazioni] = useState<PrestazioneOption[]>([]);
-const [tipoPrestazione, setTipoPrestazione] = useState("");
 
   const [clienteId, setClienteId] = useState("");
   const [societaId, setSocietaId] = useState("");
+  const [operatoreResponsabileId, setOperatoreResponsabileId] = useState("");
+  const [tipoPrestazione, setTipoPrestazione] = useState("");
   const [dataApertura, setDataApertura] = useState(
     new Date().toISOString().slice(0, 10)
   );
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  const getPrestazioneLabel = (prestazione: PrestazioneOption) => {
+    return prestazione.TipoPrestazioneAR || String(prestazione.id);
+  };
+
+  const getOperatoreLabel = (op: OperatoreOption) => {
+    const nomeCompleto = [op.cognome, op.nome].filter(Boolean).join(" ");
+    return op.email ? `${nomeCompleto || op.id} (${op.email})` : nomeCompleto || op.id;
+  };
 
   useEffect(() => {
     const init = async () => {
@@ -82,20 +99,31 @@ const [tipoPrestazione, setTipoPrestazione] = useState("");
           throw new Error(societaError.message || "Errore caricamento società.");
         }
 
-       const { data: prestazioniData, error: prestazioniError } = await supabaseAny
-          .from("tbElencoPrestAR")
-          .select("id, TipoPrestazioneAR, RischioTipoPrestAR, PunteggioPrestAR")
-          .order("TipoPrestazioneAR", { ascending: true });
+        const { data: operatoriData, error: operatoriError } = await supabaseAny
+          .from("tbutenti")
+          .select("id, nome, cognome, email")
+          .order("cognome", { ascending: true });
+
+        if (operatoriError) {
+          throw new Error(operatoriError.message || "Errore caricamento operatori.");
+        }
+
+        const { data: prestazioniData, error: prestazioniError } =
+          await supabaseAny
+            .from("tbElencoPrestAR")
+            .select("id, TipoPrestazioneAR, RischioTipoPrestAR, PunteggioPrestAR")
+            .order("TipoPrestazioneAR", { ascending: true });
 
         if (prestazioniError) {
-          throw new Error(prestazioniError.message || "Errore caricamento prestazioni.");
+          throw new Error(
+            prestazioniError.message || "Errore caricamento prestazioni."
+          );
         }
 
         setClienti((clientiData || []) as ClienteOption[]);
         setSocietaOptions((societaData || []) as SocietaOption[]);
+        setOperatori((operatoriData || []) as OperatoreOption[]);
         setPrestazioni((prestazioniData || []) as PrestazioneOption[]);
-
-        
       } catch (err: any) {
         console.error("Errore inizializzazione nuova pratica AML:", err);
         alert(err?.message || "Errore caricamento dati.");
@@ -106,11 +134,6 @@ const [tipoPrestazione, setTipoPrestazione] = useState("");
 
     void init();
   }, [router.query.societa_id]);
-
-  // 👇 INSERISCI QUI
-const getPrestazioneLabel = (prestazione: PrestazioneOption) => {
-  return prestazione.TipoPrestazioneAR || String(prestazione.id);
-};
 
   const handleCreate = async () => {
     try {
@@ -146,7 +169,9 @@ const getPrestazioneLabel = (prestazione: PrestazioneOption) => {
         .maybeSingle();
 
       if (duplicataError) {
-        throw new Error(duplicataError.message || "Errore controllo duplicato pratica.");
+        throw new Error(
+          duplicataError.message || "Errore controllo duplicato pratica."
+        );
       }
 
       if (duplicata) {
@@ -160,12 +185,13 @@ const getPrestazioneLabel = (prestazione: PrestazioneOption) => {
         }
       }
 
-      const { data, error } = await supabaseAny
+      const { error } = await supabaseAny
         .from("tbPraticheAML")
         .insert({
           studio_id: studioId,
           cliente_id: clienteId,
           societa_id: societaId || null,
+          operatore_responsabile_id: operatoreResponsabileId || null,
           data_apertura: dataApertura,
           tipo_prestazione: tipoPrestazione,
           stato: "aperta",
@@ -249,6 +275,24 @@ const getPrestazioneLabel = (prestazione: PrestazioneOption) => {
                 {societaOptions.map((societa) => (
                   <option key={societa.id} value={societa.id}>
                     {societa.Denominazione}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">
+                Operatore responsabile
+              </label>
+              <select
+                value={operatoreResponsabileId}
+                onChange={(e) => setOperatoreResponsabileId(e.target.value)}
+                className="w-full rounded-md border px-3 py-2"
+              >
+                <option value="">Seleziona operatore</option>
+                {operatori.map((op) => (
+                  <option key={op.id} value={op.id}>
+                    {getOperatoreLabel(op)}
                   </option>
                 ))}
               </select>
