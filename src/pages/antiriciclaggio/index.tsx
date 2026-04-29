@@ -1048,7 +1048,7 @@ const handleApriDocumenti = (row: AV1Row) => {
 
   const query = new URLSearchParams({
     pratica_id: row.pratica_id || "",
-    av1_id: row.id || row.av1_id || "",
+    av1_id: row.id || "",
     cliente_id: row.cliente_id || "",
     societa_id: row.societa_id || "",
     studio_id: row.studio_id || "",
