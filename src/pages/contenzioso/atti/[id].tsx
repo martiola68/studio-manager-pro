@@ -954,6 +954,58 @@ setCassazioneForm(
   );
 };
 
+  const canActivatePhase = (fase: string) => {
+  if (fase === "schemaAtto" && !moduliAttivi.pvc) {
+    alert("Devi prima salvare la fase PVC.");
+    return false;
+  }
+
+  if (fase === "adesione" && !moduliAttivi.schemaAtto) {
+    alert("Devi prima salvare la fase Schema d’atto.");
+    return false;
+  }
+
+  if (fase === "interpello" && !moduliAttivi.pvc) {
+    alert("Devi prima salvare la fase PVC.");
+    return false;
+  }
+
+  if (fase === "primoGrado" && !moduliAttivi.adesione) {
+    alert("Devi prima salvare la fase Accertamento con adesione.");
+    return false;
+  }
+
+  if (fase === "secondoGrado" && !moduliAttivi.primoGrado) {
+    alert("Devi prima salvare la fase Ricorso 1° grado.");
+    return false;
+  }
+
+  if (fase === "cassazione" && !moduliAttivi.secondoGrado) {
+    alert("Devi prima salvare la fase Ricorso 2° grado.");
+    return false;
+  }
+
+  return true;
+};
+
+const handleTogglePhase = (
+  checked: boolean,
+  hasSavedData: boolean,
+  fase: string,
+  setAttivo: (value: boolean) => void
+) => {
+  if (!checked && hasSavedData) {
+    alert("Questa fase contiene dati salvati. Usa il pulsante Elimina fase per rimuoverla.");
+    return;
+  }
+
+  if (checked && !canActivatePhase(fase)) {
+    return;
+  }
+
+  setAttivo(checked);
+};
+
   if (loading) {
     return <div className="p-6">Caricamento pratica...</div>;
   }
@@ -1158,7 +1210,7 @@ setCassazioneForm(
         </div>
 
         <div className="rounded-2xl bg-white p-6 shadow">
-          <div className="mb-4 flex items-center justify-between">
+         <div className="mb-4 flex items-center justify-between rounded-xl bg-blue-50 px-4 py-3">
             <div>
               <h2 className="text-lg font-semibold">PVC</h2>
               <p className="text-sm text-gray-500">
@@ -1170,14 +1222,9 @@ setCassazioneForm(
               <input
                 type="checkbox"
                 checked={pvcAttivo}
-                onChange={(e) => {
-                if (!e.target.checked && pvcForm.id) {
-                alert("La fase PVC contiene dati salvati. Usa il pulsante Elimina fase per rimuoverla.");
-                return;
-                  }
-
-  setPvcAttivo(e.target.checked);
-}}
+           onChange={(e) =>
+  handleTogglePhase(e.target.checked, !!pvcForm.id, "pvc", setPvcAttivo)
+}
               />
               Attiva fase PVC
             </label>
@@ -1267,9 +1314,9 @@ setCassazioneForm(
         </div>
 
         <div className="rounded-2xl bg-white p-6 shadow">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold">Schema d’atto</h2>
+       <div className="mb-4 flex items-center justify-between rounded-xl bg-blue-50 px-4 py-3">
+  <div>
+    <h2 className="text-lg font-bold uppercase text-blue-900">SCHEMA D’ATTO</h2>
               <p className="text-sm text-gray-500">
                 Gestione osservazioni allo schema d’atto
               </p>
@@ -1279,14 +1326,14 @@ setCassazioneForm(
               <input
                 type="checkbox"
                 checked={schemaAttoAttivo}
-                onChange={(e) => {
-  if (!e.target.checked && schemaAttoForm.id) {
-    alert("La fase Schema d’atto contiene dati salvati. Usa il pulsante Elimina fase per rimuoverla.");
-    return;
-  }
-
-  setSchemaAttoAttivo(e.target.checked);
-}}
+    onChange={(e) =>
+  handleTogglePhase(
+    e.target.checked,
+    !!schemaAttoForm.id,
+    "schemaAtto",
+    setSchemaAttoAttivo
+  )
+}
               />
               Attiva fase Schema d’atto
             </label>
@@ -1355,11 +1402,11 @@ setCassazioneForm(
         </div>
 
         <div className="rounded-2xl bg-white p-6 shadow">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold">
-                Accertamento con adesione
-              </h2>
+          <div className="mb-4 flex items-center justify-between rounded-xl bg-blue-50 px-4 py-3">
+  <div>
+    <h2 className="text-lg font-bold uppercase text-blue-900">
+      ACCERTAMENTO CON ADESIONE
+    </h2>
               <p className="text-sm text-gray-500">
                 Istanza, sospensione termini e pagamento adesione
               </p>
@@ -1369,15 +1416,15 @@ setCassazioneForm(
               <input
                 type="checkbox"
                 checked={adesioneAttivo}
-               onChange={(e) => {
-  if (!e.target.checked && adesioneForm.id) {
-    alert("La fase Adesione contiene dati salvati. Usa il pulsante Elimina fase per rimuoverla.");
-    return;
-  }
-
-  setAdesioneAttivo(e.target.checked);
-}}
-              />
+  onChange={(e) =>
+  handleTogglePhase(
+    e.target.checked,
+    !!adesioneForm.id,
+    "adesione",
+    setAdesioneAttivo
+  )
+}
+                />
               Attiva fase Adesione
             </label>
           </div>
@@ -1475,9 +1522,9 @@ setCassazioneForm(
         </div>
 
         <div className="rounded-2xl bg-white p-6 shadow">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold">Interpello</h2>
+          <div className="mb-4 flex items-center justify-between rounded-xl bg-blue-50 px-4 py-3">
+  <div>
+    <h2 className="text-lg font-bold uppercase text-blue-900">INTERPELLO</h2>
               <p className="text-sm text-gray-500">
                 Presentazione interpello, integrazioni e risposta
               </p>
@@ -1487,14 +1534,14 @@ setCassazioneForm(
               <input
                 type="checkbox"
                 checked={interpelloAttivo}
-               onChange={(e) => {
-  if (!e.target.checked && interpelloForm.id) {
-    alert("La fase Interpello contiene dati salvati. Usa il pulsante Elimina fase per rimuoverla.");
-    return;
-  }
-
-  setInterpelloAttivo(e.target.checked);
-}}
+ onChange={(e) =>
+  handleTogglePhase(
+    e.target.checked,
+    !!interpelloForm.id,
+    "interpello",
+    setInterpelloAttivo
+  )
+}
               />
               Attiva fase Interpello
             </label>
@@ -1620,9 +1667,9 @@ setCassazioneForm(
         </div>
 
         <div className="rounded-2xl bg-white p-6 shadow">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold">Ricorso 1° grado</h2>
+          <div className="mb-4 flex items-center justify-between rounded-xl bg-blue-50 px-4 py-3">
+  <div>
+    <h2 className="text-lg font-bold uppercase text-blue-900">RICORSO 1° GRADO</h2>
               <p className="text-sm text-gray-500">
                 Ricorso, costituzione, udienza, documenti, memorie e repliche
               </p>
@@ -1632,14 +1679,14 @@ setCassazioneForm(
               <input
                 type="checkbox"
                 checked={primoGradoAttivo}
-                onChange={(e) => {
-  if (!e.target.checked && primoGradoForm.id) {
-    alert("La fase Ricorso 1° grado contiene dati salvati. Usa il pulsante Elimina fase per rimuoverla.");
-    return;
-  }
-
-  setPrimoGradoAttivo(e.target.checked);
-}}
+       onChange={(e) =>
+  handleTogglePhase(
+    e.target.checked,
+    !!primoGradoForm.id,
+    "primoGrado",
+    setPrimoGradoAttivo
+  )
+}
               />
               Attiva fase Ricorso 1° grado
             </label>
@@ -1772,9 +1819,9 @@ setCassazioneForm(
         </div>
 
         <div className="rounded-2xl bg-white p-6 shadow">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold">Ricorso 2° grado</h2>
+         <div className="mb-4 flex items-center justify-between rounded-xl bg-blue-50 px-4 py-3">
+  <div>
+    <h2 className="text-lg font-bold uppercase text-blue-900">RICORSO 2° GRADO</h2>
               <p className="text-sm text-gray-500">
                 Appello, costituzione, udienza e sentenza di secondo grado
               </p>
@@ -1783,15 +1830,14 @@ setCassazioneForm(
             <label className="flex items-center gap-2 text-sm font-medium">
               <input
                 type="checkbox"
-                checked={secondoGradoAttivo}
-               onChange={(e) => {
-  if (!e.target.checked && secondoGradoForm.id) {
-    alert("La fase Ricorso 2° grado contiene dati salvati. Usa il pulsante Elimina fase per rimuoverla.");
-    return;
-  }
-
-  setSecondoGradoAttivo(e.target.checked);
-}}
+onChange={(e) =>
+  handleTogglePhase(
+    e.target.checked,
+    !!secondoGradoForm.id,
+    "secondoGrado",
+    setSecondoGradoAttivo
+  )
+}
               />
               Attiva fase Ricorso 2° grado
             </label>
@@ -1905,9 +1951,9 @@ setCassazioneForm(
         </div>
 
         <div className="rounded-2xl bg-white p-6 shadow">
-  <div className="mb-4 flex items-center justify-between">
-    <div>
-      <h2 className="text-lg font-semibold">Cassazione</h2>
+<div className="mb-4 flex items-center justify-between rounded-xl bg-blue-50 px-4 py-3"> 
+  <div> 
+    <h2 className="text-lg font-bold uppercase text-blue-900">CASSAZIONE</h2>
       <p className="text-sm text-gray-500">
         Ricorso per cassazione, controricorso, adunanza e decisione
       </p>
@@ -1917,16 +1963,15 @@ setCassazioneForm(
       <input
         type="checkbox"
         checked={cassazioneAttivo}
-        onChange={(e) => {
-          if (!e.target.checked && cassazioneForm.id) {
-            alert(
-              "La fase Cassazione contiene dati salvati. Usa il pulsante Elimina fase per rimuoverla."
-            );
-            return;
-          }
-
-          setCassazioneAttivo(e.target.checked);
-        }}
+      onChange={(e) =>
+  handleTogglePhase(
+    e.target.checked,
+    !!cassazioneForm.id,
+    "cassazione",
+    setCassazioneAttivo
+  )
+}
+        
       />
       Attiva fase Cassazione
     </label>
