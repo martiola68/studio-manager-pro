@@ -646,8 +646,7 @@ if (av1_id) {
                       {doc.tipo_documento || "-"}
                     </td>
 
-                   <td className="p-3">
-                   <td className="p-3 text-gray-800">
+                    <td className="p-3 text-gray-800">
                     {getDisplayFileName(doc.nome_file)}
                       </td>
 
