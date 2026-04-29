@@ -1068,7 +1068,14 @@ export default function DettaglioAtto() {
               <input
                 type="checkbox"
                 checked={pvcAttivo}
-                onChange={(e) => setPvcAttivo(e.target.checked)}
+                onChange={(e) => {
+                if (!e.target.checked && pvcForm.id) {
+                alert("La fase PVC contiene dati salvati. Usa il pulsante Elimina fase per rimuoverla.");
+                return;
+                  }
+
+  setPvcAttivo(e.target.checked);
+}}
               />
               Attiva fase PVC
             </label>
@@ -1170,7 +1177,14 @@ export default function DettaglioAtto() {
               <input
                 type="checkbox"
                 checked={schemaAttoAttivo}
-                onChange={(e) => setSchemaAttoAttivo(e.target.checked)}
+                onChange={(e) => {
+  if (!e.target.checked && schemaAttoForm.id) {
+    alert("La fase Schema d’atto contiene dati salvati. Usa il pulsante Elimina fase per rimuoverla.");
+    return;
+  }
+
+  setSchemaAttoAttivo(e.target.checked);
+}}
               />
               Attiva fase Schema d’atto
             </label>
@@ -1253,7 +1267,14 @@ export default function DettaglioAtto() {
               <input
                 type="checkbox"
                 checked={adesioneAttivo}
-                onChange={(e) => setAdesioneAttivo(e.target.checked)}
+               onChange={(e) => {
+  if (!e.target.checked && adesioneForm.id) {
+    alert("La fase Adesione contiene dati salvati. Usa il pulsante Elimina fase per rimuoverla.");
+    return;
+  }
+
+  setAdesioneAttivo(e.target.checked);
+}}
               />
               Attiva fase Adesione
             </label>
@@ -1364,7 +1385,14 @@ export default function DettaglioAtto() {
               <input
                 type="checkbox"
                 checked={interpelloAttivo}
-                onChange={(e) => setInterpelloAttivo(e.target.checked)}
+               onChange={(e) => {
+  if (!e.target.checked && interpelloForm.id) {
+    alert("La fase Interpello contiene dati salvati. Usa il pulsante Elimina fase per rimuoverla.");
+    return;
+  }
+
+  setInterpelloAttivo(e.target.checked);
+}}
               />
               Attiva fase Interpello
             </label>
@@ -1502,7 +1530,14 @@ export default function DettaglioAtto() {
               <input
                 type="checkbox"
                 checked={primoGradoAttivo}
-                onChange={(e) => setPrimoGradoAttivo(e.target.checked)}
+                onChange={(e) => {
+  if (!e.target.checked && primoGradoForm.id) {
+    alert("La fase Ricorso 1° grado contiene dati salvati. Usa il pulsante Elimina fase per rimuoverla.");
+    return;
+  }
+
+  setPrimoGradoAttivo(e.target.checked);
+}}
               />
               Attiva fase Ricorso 1° grado
             </label>
@@ -1647,7 +1682,14 @@ export default function DettaglioAtto() {
               <input
                 type="checkbox"
                 checked={secondoGradoAttivo}
-                onChange={(e) => setSecondoGradoAttivo(e.target.checked)}
+               onChange={(e) => {
+  if (!e.target.checked && secondoGradoForm.id) {
+    alert("La fase Ricorso 2° grado contiene dati salvati. Usa il pulsante Elimina fase per rimuoverla.");
+    return;
+  }
+
+  setSecondoGradoAttivo(e.target.checked);
+}}
               />
               Attiva fase Ricorso 2° grado
             </label>
