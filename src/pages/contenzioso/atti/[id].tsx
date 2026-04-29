@@ -37,6 +37,24 @@ type PvcForm = {
   data_interpello: string;
 };
 
+type SchemaAttoForm = {
+  id?: string;
+  processo_id: string;
+  data_notifica_schema: string;
+  data_effettiva_osservazioni: string;
+  data_emissione_atto_definitivo: string;
+  note: string;
+};
+
+const initialSchemaAttoForm: SchemaAttoForm = {
+  processo_id: "",
+  data_notifica_schema: "",
+  data_effettiva_osservazioni: "",
+  data_emissione_atto_definitivo: "",
+  note: "",
+};
+
+
 const initialPvcForm: PvcForm = {
   processo_id: "",
   data_notifica_pvc: "",
@@ -60,6 +78,10 @@ const [messaggio, setMessaggio] = useState("");
 
   const [pvcAttivo, setPvcAttivo] = useState(false);
 const [pvcForm, setPvcForm] = useState<PvcForm>(initialPvcForm);
+
+  const [schemaAttoAttivo, setSchemaAttoAttivo] = useState(false);
+const [schemaAttoForm, setSchemaAttoForm] =
+  useState<SchemaAttoForm>(initialSchemaAttoForm);
 
 const [moduliAttivi, setModuliAttivi] = useState({
   pvc: false,
@@ -115,6 +137,11 @@ const dataScadenzaAdesionePvc = pvcForm.data_notifica_pvc
 const dataScadenzaOsservazioniPvc = pvcForm.data_notifica_pvc
   ? addDays(pvcForm.data_notifica_pvc, 60)
   : "";
+
+  const dataScadenzaOsservazioniSchemaAtto =
+  schemaAttoForm.data_notifica_schema
+    ? addDays(schemaAttoForm.data_notifica_schema, 60)
+    : "";
 
   const getModuloButtonColor = (attivo: boolean) => {
   return attivo
@@ -199,6 +226,33 @@ if (pvcData) {
     ...initialPvcForm,
     processo_id: processoId,
     data_notifica_pvc: processo.data_ricezione || "",
+  });
+}
+
+    const { data: schemaAttoFullData } = await (supabase as any)
+  .from("tbcontenzioso_schema_atto")
+  .select("*")
+  .eq("processo_id", processoId)
+  .maybeSingle();
+
+if (schemaAttoFullData) {
+  setSchemaAttoAttivo(true);
+  setSchemaAttoForm({
+    id: schemaAttoFullData.id,
+    processo_id: schemaAttoFullData.processo_id,
+    data_notifica_schema: schemaAttoFullData.data_notifica_schema || "",
+    data_effettiva_osservazioni:
+      schemaAttoFullData.data_effettiva_osservazioni || "",
+    data_emissione_atto_definitivo:
+      schemaAttoFullData.data_emissione_atto_definitivo || "",
+    note: schemaAttoFullData.note || "",
+  });
+} else {
+  setSchemaAttoAttivo(false);
+  setSchemaAttoForm({
+    ...initialSchemaAttoForm,
+    processo_id: processoId,
+    data_notifica_schema: processo.data_ricezione || "",
   });
 }
 
