@@ -555,7 +555,7 @@ setLoading(false);
         checked={pvcAttivo}
         onChange={(e) => setPvcAttivo(e.target.checked)}
       />
-      Attiva PVC
+      Attiva fase PVC
     </label>
   </div>
 
@@ -717,19 +717,23 @@ setLoading(false);
           )}
         </div>
 
-        <div className="rounded-2xl bg-white p-6 shadow">
-          <h2 className="mb-4 text-lg font-semibold">Moduli operativi</h2>
+       <div className="rounded-2xl bg-white p-6 shadow">
+  <h2 className="mb-2 text-lg font-semibold">Riepilogo fasi procedimento</h2>
+  <p className="mb-4 text-sm text-gray-500">
+    Stato delle fasi collegate alla pratica. Le fasi verranno progressivamente integrate nella pagina unica.
+  </p>
 
-       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-  <Link href={`/contenzioso/atti/${processo.id}/pvc`}>
-    <button
-      className={`w-full rounded-lg border px-4 py-3 text-left font-semibold ${getModuloButtonColor(
-        moduliAttivi.pvc
-      )}`}
-    >
-      PVC {moduliAttivi.pvc ? "✓" : "✕"}
-    </button>
-  </Link>
+<div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+  <div
+    className={`rounded-lg border px-4 py-3 font-semibold ${getModuloButtonColor(
+      moduliAttivi.pvc
+    )}`}
+  >
+    PVC {moduliAttivi.pvc ? "✓" : "✕"}
+    <div className="mt-1 text-xs font-normal opacity-90">
+      Integrato nella pagina
+    </div>
+  </div>
 
   <Link href={`/contenzioso/atti/${processo.id}/schema-atto`}>
     <button
@@ -738,6 +742,9 @@ setLoading(false);
       )}`}
     >
       Schema d’atto {moduliAttivi.schemaAtto ? "✓" : "✕"}
+      <div className="mt-1 text-xs font-normal opacity-90">
+        Da integrare
+      </div>
     </button>
   </Link>
 
@@ -748,6 +755,9 @@ setLoading(false);
       )}`}
     >
       Accertamento con adesione {moduliAttivi.adesione ? "✓" : "✕"}
+      <div className="mt-1 text-xs font-normal opacity-90">
+        Da integrare
+      </div>
     </button>
   </Link>
 
@@ -758,6 +768,9 @@ setLoading(false);
       )}`}
     >
       Interpello {moduliAttivi.interpello ? "✓" : "✕"}
+      <div className="mt-1 text-xs font-normal opacity-90">
+        Da integrare
+      </div>
     </button>
   </Link>
 
@@ -768,6 +781,9 @@ setLoading(false);
       )}`}
     >
       Ricorso 1° grado {moduliAttivi.primoGrado ? "✓" : "✕"}
+      <div className="mt-1 text-xs font-normal opacity-90">
+        Da integrare
+      </div>
     </button>
   </Link>
 
@@ -778,6 +794,9 @@ setLoading(false);
       )}`}
     >
       Ricorso 2° grado {moduliAttivi.secondoGrado ? "✓" : "✕"}
+      <div className="mt-1 text-xs font-normal opacity-90">
+        Da integrare
+      </div>
     </button>
   </Link>
 
@@ -788,6 +807,9 @@ setLoading(false);
       )}`}
     >
       Cassazione {moduliAttivi.cassazione ? "✓" : "✕"}
+      <div className="mt-1 text-xs font-normal opacity-90">
+        Da integrare
+      </div>
     </button>
   </Link>
 </div>
