@@ -2,6 +2,7 @@
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { getStudioId } from "@/services/getStudioId";
+import { FileText, Image as ImageIcon, File } from "lucide-react";
 
 type ClienteRow = {
   id: string;
@@ -101,9 +102,25 @@ function getFormatoLabel(mime?: string | null) {
   return mime;
 }
 
+function getFormatoIcon(mime?: string | null) {
+  if (!mime) return <File className="w-4 h-4 text-gray-400" />;
+
+  if (mime.includes("pdf")) {
+    return <FileText className="w-4 h-4 text-red-500" />;
+  }
+
+  if (mime.includes("image")) {
+    return <ImageIcon className="w-4 h-4 text-blue-500" />;
+  }
+
+  return <File className="w-4 h-4 text-gray-400" />;
+}
+
 export default function FascicoloDocumentiPage() {
   const router = useRouter();
  const { av1_id, pratica_id, cliente_id } = router.query;
+
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [clienteNome, setClienteNome] = useState("Cliente");
@@ -279,7 +296,9 @@ export default function FascicoloDocumentiPage() {
           clienteId: effectiveClienteId,
           tipoDocumento: "Documento identità",
           storagePath: rappresentanteData.allegato_doc,
-          bucketName: "messaggi-allegati",
+          bucketName: rappresentanteData.allegato_doc.startsWith("av4/")
+          ? "messaggi-allegati"
+          : "allegati",
           mimeType: getMimeTypeFromPath(rappresentanteData.allegato_doc),
           origine: "documento_rappresentante",
           note: rappresentanteData?.tipo_doc
@@ -449,7 +468,7 @@ if (av1_id) {
         return;
       }
 
-      window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+   setPreviewUrl(data.signedUrl);
     } catch (err: any) {
       console.error("Errore apertura documento:", err);
       alert(err?.message || "Errore apertura documento");
@@ -498,6 +517,27 @@ if (av1_id) {
   useEffect(() => {
     void loadData();
   }, [router.isReady, av1_id, cliente_id]);
+
+  {previewUrl && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+    <div className="relative w-[90%] h-[90%] bg-white rounded-xl shadow-lg overflow-hidden">
+      
+      {/* Bottone chiudi */}
+      <button
+        onClick={() => setPreviewUrl(null)}
+        className="absolute top-3 right-3 z-10 rounded-lg bg-white/90 px-3 py-1 text-sm font-medium shadow hover:bg-white"
+      >
+        Chiudi
+      </button>
+
+      {/* Preview PDF */}
+      <iframe
+        src={previewUrl}
+        className="w-full h-full"
+      />
+    </div>
+  </div>
+)}
 
   return (
     <div className="p-6">
@@ -627,9 +667,16 @@ if (av1_id) {
                       {doc.tipo_documento || "-"}
                     </td>
 
-                    <td className="p-3 text-gray-800">
-                      {getDisplayFileName(doc.nome_file)}
-                    </td>
+                   <td className="p-3">
+  <button
+    type="button"
+    onClick={() => void handleApriDocumento(doc)}
+    disabled={isWorking}
+    className="text-left text-blue-700 hover:underline disabled:opacity-60"
+  >
+    {getDisplayFileName(doc.nome_file)}
+  </button>
+</td>
 
                     <td className="p-3">
                       <span
@@ -641,9 +688,14 @@ if (av1_id) {
                       </span>
                     </td>
 
-                    <td className="p-3 text-gray-700">
-                      {getFormatoLabel(doc.mime_type)}
-                    </td>
+                    <td className="p-3">
+  <div className="flex items-center gap-2 text-gray-700">
+    {getFormatoIcon(doc.mime_type || getMimeTypeFromPath(doc.storage_path))}
+    <span>
+      {getFormatoLabel(doc.mime_type || getMimeTypeFromPath(doc.storage_path)) || "-"}
+    </span>
+  </div>
+</td>
 
                     <td className="p-3 text-gray-700">
                       {formatSize(doc.dimensione)}
