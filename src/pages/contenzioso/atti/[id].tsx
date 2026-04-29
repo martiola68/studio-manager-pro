@@ -1210,9 +1210,9 @@ const handleTogglePhase = (
         </div>
 
         <div className="rounded-2xl bg-white p-6 shadow">
-         <div className="mb-4 flex items-center justify-between rounded-xl bg-blue-50 px-4 py-3">
-            <div>
-              <h2 className="text-lg font-semibold">PVC</h2>
+       <div className="mb-4 flex items-center justify-between rounded-xl bg-blue-50 px-4 py-3">
+  <div>
+    <h2 className="text-lg font-bold uppercase text-blue-900">PVC</h2>
               <p className="text-sm text-gray-500">
                 Processo Verbale di Constatazione
               </p>
