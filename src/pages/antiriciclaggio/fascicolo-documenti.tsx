@@ -13,6 +13,7 @@ type ClienteRow = {
 type DocumentoRow = {
   id: string;
   av1_id?: string | number | null;
+  pratica_id?: string | null;
   cliente_id?: string | null;
   av4_id?: string | number | null;
   tipo_documento?: string | null;
@@ -102,7 +103,7 @@ function getFormatoLabel(mime?: string | null) {
 
 export default function FascicoloDocumentiPage() {
   const router = useRouter();
-  const { av1_id, cliente_id } = router.query;
+ const { av1_id, pratica_id, cliente_id } = router.query;
 
   const [loading, setLoading] = useState(true);
   const [clienteNome, setClienteNome] = useState("Cliente");
@@ -291,7 +292,7 @@ export default function FascicoloDocumentiPage() {
 
   const loadData = async () => {
     try {
-      if (!router.isReady || !av1_id) return;
+     if (!router.isReady || (!av1_id && !pratica_id)) return;
 
       setLoading(true);
 
@@ -310,26 +311,40 @@ export default function FascicoloDocumentiPage() {
 
       await syncDocumentiCollegati(supabase, studioId, av1IdNum, clienteIdValue);
 
-      const { data, error } = await supabase
-        .from("tbAVFascicoliDocumenti")
-        .select(`
-          id,
-          av1_id,
-          cliente_id,
-          av4_id,
-          tipo_documento,
-          nome_file,
-          storage_path,
-          bucket_name,
-          mime_type,
-          dimensione,
-          origine,
-          note,
-          created_at
-        `)
-        .eq("studio_id", studioId)
-        .eq("av1_id", av1IdNum)
-        .order("created_at", { ascending: false });
+     let query = supabase
+  .from("tbAVFascicoliDocumenti")
+  .select(`
+    id,
+    av1_id,
+    pratica_id,
+    cliente_id,
+    av4_id,
+    tipo_documento,
+    nome_file,
+    storage_path,
+    bucket_name,
+    mime_type,
+    dimensione,
+    origine,
+    note,
+    created_at
+  `)
+  .eq("studio_id", studioId)
+  .order("created_at", { ascending: false });
+
+if (av1_id) {
+  query = query.eq("av1_id", Number(av1_id));
+} else if (pratica_id) {
+  query = query.eq("pratica_id", pratica_id);
+}
+
+const { data, error } = await query;
+
+if (av1_id) {
+  query = query.eq("av1_id", Number(av1_id));
+} else if (pratica_id) {
+  query = query.eq("pratica_id", pratica_id);
+}
 
       if (error) {
         console.error("Errore caricamento documenti:", error);
@@ -350,7 +365,7 @@ export default function FascicoloDocumentiPage() {
 
   const handleUploadFile = async (file: File) => {
     try {
-      if (!file || !av1_id) return;
+     if (!file || (!av1_id && !pratica_id)) return;
 
       setUploading(true);
 
@@ -365,7 +380,8 @@ export default function FascicoloDocumentiPage() {
       const originalName = file.name || "file";
       const safeOriginalName = originalName.replace(/\s+/g, "_");
       const fileName = `${Date.now()}_${safeOriginalName}`;
-      const filePath = `antiriciclaggio/fascicoli/${studioId}/${av1_id}/${fileName}`;
+      const fascicoloKey = av1_id || pratica_id;
+      const filePath = `antiriciclaggio/fascicoli/${studioId}/${fascicoloKey}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from("allegati")
@@ -376,12 +392,16 @@ export default function FascicoloDocumentiPage() {
       const { error: insertError } = await supabase
         .from("tbAVFascicoliDocumenti")
         .insert({
-          studio_id: studioId,
-          av1_id: Number(av1_id),
-          cliente_id:
-            typeof cliente_id === "string" && cliente_id.trim() !== ""
-              ? cliente_id
-              : null,
+  studio_id: studioId,
+  av1_id: av1_id ? Number(av1_id) : null,
+  pratica_id:
+    typeof pratica_id === "string" && pratica_id.trim() !== ""
+      ? pratica_id
+      : null,
+  cliente_id:
+    typeof cliente_id === "string" && cliente_id.trim() !== ""
+      ? cliente_id
+      : null
           nome_file: file.name,
           storage_path: filePath,
           bucket_name: "allegati",
