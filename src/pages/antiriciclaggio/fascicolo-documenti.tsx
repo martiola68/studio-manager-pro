@@ -712,24 +712,28 @@ if (av1_id) {
               })
             )}
           </tbody>
-        </table>
-      {previewUrl && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-    <div className="relative w-[90%] h-[90%] bg-white rounded-xl shadow-lg overflow-hidden">
-      
-      {/* Bottone chiudi */}
-      <button
-        onClick={() => setPreviewUrl(null)}
-        className="absolute top-3 right-3 z-10 rounded-lg bg-white/90 px-3 py-1 text-sm font-medium shadow hover:bg-white"
-      >
-        Chiudi
-      </button>
+      </table>
+      </div>
 
-      {/* Preview PDF */}
-      <iframe
-        src={previewUrl}
-        className="w-full h-full"
-      />
+      {previewUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+          <div className="relative h-[90vh] w-[90vw] overflow-hidden rounded-xl bg-white shadow-lg">
+            <button
+              type="button"
+              onClick={() => setPreviewUrl(null)}
+              className="absolute right-3 top-3 z-10 rounded-lg bg-white px-3 py-1 text-sm font-medium shadow hover:bg-gray-100"
+            >
+              Chiudi
+            </button>
+
+            <iframe
+              src={previewUrl}
+              title="Anteprima documento"
+              className="h-full w-full"
+            />
+          </div>
+        </div>
+      )}
     </div>
-  </div>
-)}
+  );
+}
