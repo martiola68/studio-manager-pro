@@ -647,15 +647,9 @@ if (av1_id) {
                     </td>
 
                    <td className="p-3">
-  <button
-    type="button"
-    onClick={() => void handleApriDocumento(doc)}
-    disabled={isWorking}
-    className="text-left text-blue-700 hover:underline disabled:opacity-60"
-  >
-    {getDisplayFileName(doc.nome_file)}
-  </button>
-</td>
+                   <td className="p-3 text-gray-800">
+                    {getDisplayFileName(doc.nome_file)}
+                      </td>
 
                     <td className="p-3">
                       <span
