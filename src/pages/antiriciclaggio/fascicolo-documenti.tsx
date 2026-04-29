@@ -518,27 +518,6 @@ if (av1_id) {
     void loadData();
   }, [router.isReady, av1_id, cliente_id]);
 
-  {previewUrl && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-    <div className="relative w-[90%] h-[90%] bg-white rounded-xl shadow-lg overflow-hidden">
-      
-      {/* Bottone chiudi */}
-      <button
-        onClick={() => setPreviewUrl(null)}
-        className="absolute top-3 right-3 z-10 rounded-lg bg-white/90 px-3 py-1 text-sm font-medium shadow hover:bg-white"
-      >
-        Chiudi
-      </button>
-
-      {/* Preview PDF */}
-      <iframe
-        src={previewUrl}
-        className="w-full h-full"
-      />
-    </div>
-  </div>
-)}
-
   return (
     <div className="p-6">
       <div className="mb-6 flex items-start justify-between gap-4">
@@ -661,6 +640,26 @@ if (av1_id) {
                 const isWorking = workingDocumentId === doc.id;
                 const canDelete = doc.origine === "manuale";
 
+                  {previewUrl && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+    <div className="relative w-[90%] h-[90%] bg-white rounded-xl shadow-lg overflow-hidden">
+      
+      {/* Bottone chiudi */}
+      <button
+        onClick={() => setPreviewUrl(null)}
+        className="absolute top-3 right-3 z-10 rounded-lg bg-white/90 px-3 py-1 text-sm font-medium shadow hover:bg-white"
+      >
+        Chiudi
+      </button>
+
+      {/* Preview PDF */}
+      <iframe
+        src={previewUrl}
+        className="w-full h-full"
+      />
+    </div>
+  </div>
+)}
                 return (
                   <tr key={doc.id} className="border-t border-gray-100">
                     <td className="p-3 text-gray-900">
