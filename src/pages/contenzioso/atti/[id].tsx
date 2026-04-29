@@ -99,6 +99,20 @@ type SecondoGradoForm = {
   note: string;
 };
 
+type CassazioneForm = {
+  id?: string;
+  processo_id: string;
+  data_notifica_sentenza_secondo_grado: string;
+  data_deposito_sentenza_secondo_grado: string;
+  data_notifica_ricorso_cassazione: string;
+  data_deposito_ricorso_cassazione: string;
+  data_notifica_controricorso: string;
+  data_udienza_o_adunanza: string;
+  data_sentenza_ordinanza: string;
+  esito: string;
+  note: string;
+};
+
 const initialPvcForm: PvcForm = {
   processo_id: "",
   data_notifica_pvc: "",
@@ -166,6 +180,19 @@ const initialSecondoGradoForm: SecondoGradoForm = {
   note: "",
 };
 
+const initialCassazioneForm: CassazioneForm = {
+  processo_id: "",
+  data_notifica_sentenza_secondo_grado: "",
+  data_deposito_sentenza_secondo_grado: "",
+  data_notifica_ricorso_cassazione: "",
+  data_deposito_ricorso_cassazione: "",
+  data_notifica_controricorso: "",
+  data_udienza_o_adunanza: "",
+  data_sentenza_ordinanza: "",
+  esito: "",
+  note: "",
+};
+
 export default function DettaglioAtto() {
   const router = useRouter();
   const { id } = router.query;
@@ -183,6 +210,7 @@ export default function DettaglioAtto() {
   const [interpelloAttivo, setInterpelloAttivo] = useState(false);
   const [primoGradoAttivo, setPrimoGradoAttivo] = useState(false);
   const [secondoGradoAttivo, setSecondoGradoAttivo] = useState(false);
+  const [cassazioneAttivo, setCassazioneAttivo] = useState(false);
 
   const [pvcForm, setPvcForm] = useState<PvcForm>(initialPvcForm);
   const [schemaAttoForm, setSchemaAttoForm] =
@@ -195,6 +223,8 @@ export default function DettaglioAtto() {
     useState<PrimoGradoForm>(initialPrimoGradoForm);
   const [secondoGradoForm, setSecondoGradoForm] =
     useState<SecondoGradoForm>(initialSecondoGradoForm);
+  const [cassazioneForm, setCassazioneForm] =
+  useState<CassazioneForm>(initialCassazioneForm);
 
   const [moduliAttivi, setModuliAttivi] = useState({
     pvc: false,
@@ -358,6 +388,20 @@ export default function DettaglioAtto() {
     ? subDays(secondoGradoForm.data_udienza, 5)
     : "";
 
+  const dataScadenzaRicorsoCassazioneBreve =
+  cassazioneForm.data_notifica_sentenza_secondo_grado
+    ? addDays(cassazioneForm.data_notifica_sentenza_secondo_grado, 60)
+    : "";
+
+const dataScadenzaRicorsoCassazioneLungo =
+  cassazioneForm.data_deposito_sentenza_secondo_grado
+    ? addMonths(cassazioneForm.data_deposito_sentenza_secondo_grado, 6)
+    : "";
+
+const dataMemoriaCassazione = cassazioneForm.data_udienza_o_adunanza
+  ? subDays(cassazioneForm.data_udienza_o_adunanza, 10)
+  : "";
+
   const loadData = async (processoId: string) => {
     const supabase = getSupabaseClient();
 
@@ -443,12 +487,12 @@ export default function DettaglioAtto() {
       .eq("processo_id", processoId)
       .maybeSingle();
 
-    const { data: cassazioneData } = await (supabase as any)
-      .from("tbcontenzioso_cassazione")
-      .select("id")
-      .eq("processo_id", processoId)
-      .maybeSingle();
-
+   const { data: cassazioneData } = await (supabase as any)
+  .from("tbcontenzioso_cassazione")
+  .select("*")
+  .eq("processo_id", processoId)
+  .maybeSingle();
+    
     setPvcAttivo(!!pvcData);
     setPvcForm(
       pvcData
@@ -588,6 +632,35 @@ export default function DettaglioAtto() {
             processo_id: processoId,
           }
     );
+
+    setCassazioneAttivo(!!cassazioneData);
+setCassazioneForm(
+  cassazioneData
+    ? {
+        id: cassazioneData.id,
+        processo_id: cassazioneData.processo_id,
+        data_notifica_sentenza_secondo_grado:
+          cassazioneData.data_notifica_sentenza_secondo_grado || "",
+        data_deposito_sentenza_secondo_grado:
+          cassazioneData.data_deposito_sentenza_secondo_grado || "",
+        data_notifica_ricorso_cassazione:
+          cassazioneData.data_notifica_ricorso_cassazione || "",
+        data_deposito_ricorso_cassazione:
+          cassazioneData.data_deposito_ricorso_cassazione || "",
+        data_notifica_controricorso:
+          cassazioneData.data_notifica_controricorso || "",
+        data_udienza_o_adunanza:
+          cassazioneData.data_udienza_o_adunanza || "",
+        data_sentenza_ordinanza:
+          cassazioneData.data_sentenza_ordinanza || "",
+        esito: cassazioneData.esito || "",
+        note: cassazioneData.note || "",
+      }
+    : {
+        ...initialCassazioneForm,
+        processo_id: processoId,
+      }
+);
 
     setModuliAttivi({
       pvc: !!pvcData,
@@ -851,6 +924,35 @@ export default function DettaglioAtto() {
       "Ricorso 2° grado salvato correttamente."
     );
   };
+
+  const handleSaveCassazione = async () => {
+  if (!processo) return;
+
+  await saveTable(
+    "tbcontenzioso_cassazione",
+    cassazioneForm.id,
+    {
+      processo_id: processo.id,
+      data_notifica_sentenza_secondo_grado:
+        cassazioneForm.data_notifica_sentenza_secondo_grado || null,
+      data_deposito_sentenza_secondo_grado:
+        cassazioneForm.data_deposito_sentenza_secondo_grado || null,
+      data_notifica_ricorso_cassazione:
+        cassazioneForm.data_notifica_ricorso_cassazione || null,
+      data_deposito_ricorso_cassazione:
+        cassazioneForm.data_deposito_ricorso_cassazione || null,
+      data_notifica_controricorso:
+        cassazioneForm.data_notifica_controricorso || null,
+      data_udienza_o_adunanza:
+        cassazioneForm.data_udienza_o_adunanza || null,
+      data_sentenza_ordinanza:
+        cassazioneForm.data_sentenza_ordinanza || null,
+      esito: cassazioneForm.esito || null,
+      note: cassazioneForm.note || null,
+    },
+    "Cassazione salvata correttamente."
+  );
+};
 
   if (loading) {
     return <div className="p-6">Caricamento pratica...</div>;
@@ -1801,6 +1903,174 @@ export default function DettaglioAtto() {
             </>
           )}
         </div>
+
+        <div className="rounded-2xl bg-white p-6 shadow">
+  <div className="mb-4 flex items-center justify-between">
+    <div>
+      <h2 className="text-lg font-semibold">Cassazione</h2>
+      <p className="text-sm text-gray-500">
+        Ricorso per cassazione, controricorso, adunanza e decisione
+      </p>
+    </div>
+
+    <label className="flex items-center gap-2 text-sm font-medium">
+      <input
+        type="checkbox"
+        checked={cassazioneAttivo}
+        onChange={(e) => {
+          if (!e.target.checked && cassazioneForm.id) {
+            alert(
+              "La fase Cassazione contiene dati salvati. Usa il pulsante Elimina fase per rimuoverla."
+            );
+            return;
+          }
+
+          setCassazioneAttivo(e.target.checked);
+        }}
+      />
+      Attiva fase Cassazione
+    </label>
+  </div>
+
+  {cassazioneAttivo && (
+    <>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <DateField
+          label="Data notifica sentenza 2° grado"
+          value={cassazioneForm.data_notifica_sentenza_secondo_grado}
+          onChange={(value) =>
+            setCassazioneForm((prev) => ({
+              ...prev,
+              data_notifica_sentenza_secondo_grado: value,
+            }))
+          }
+        />
+
+        <DateField
+          label="Scadenza ricorso breve"
+          value={dataScadenzaRicorsoCassazioneBreve}
+          disabled
+        />
+
+        <DateField
+          label="Data deposito sentenza 2° grado"
+          value={cassazioneForm.data_deposito_sentenza_secondo_grado}
+          onChange={(value) =>
+            setCassazioneForm((prev) => ({
+              ...prev,
+              data_deposito_sentenza_secondo_grado: value,
+            }))
+          }
+        />
+
+        <DateField
+          label="Scadenza ricorso lungo"
+          value={dataScadenzaRicorsoCassazioneLungo}
+          disabled
+        />
+
+        <DateField
+          label="Data notifica ricorso cassazione"
+          value={cassazioneForm.data_notifica_ricorso_cassazione}
+          onChange={(value) =>
+            setCassazioneForm((prev) => ({
+              ...prev,
+              data_notifica_ricorso_cassazione: value,
+            }))
+          }
+        />
+
+        <DateField
+          label="Data deposito ricorso cassazione"
+          value={cassazioneForm.data_deposito_ricorso_cassazione}
+          onChange={(value) =>
+            setCassazioneForm((prev) => ({
+              ...prev,
+              data_deposito_ricorso_cassazione: value,
+            }))
+          }
+        />
+
+        <DateField
+          label="Data notifica controricorso"
+          value={cassazioneForm.data_notifica_controricorso}
+          onChange={(value) =>
+            setCassazioneForm((prev) => ({
+              ...prev,
+              data_notifica_controricorso: value,
+            }))
+          }
+        />
+
+        <DateField
+          label="Data udienza / adunanza"
+          value={cassazioneForm.data_udienza_o_adunanza}
+          onChange={(value) =>
+            setCassazioneForm((prev) => ({
+              ...prev,
+              data_udienza_o_adunanza: value,
+            }))
+          }
+        />
+
+        <DateField
+          label="Data memoria cassazione"
+          value={dataMemoriaCassazione}
+          disabled
+        />
+
+        <DateField
+          label="Data sentenza / ordinanza"
+          value={cassazioneForm.data_sentenza_ordinanza}
+          onChange={(value) =>
+            setCassazioneForm((prev) => ({
+              ...prev,
+              data_sentenza_ordinanza: value,
+            }))
+          }
+        />
+
+        <TextField
+          label="Esito"
+          value={cassazioneForm.esito}
+          onChange={(value) =>
+            setCassazioneForm((prev) => ({
+              ...prev,
+              esito: value,
+            }))
+          }
+        />
+
+        <TextAreaField
+          label="Note"
+          value={cassazioneForm.note}
+          onChange={(value) =>
+            setCassazioneForm((prev) => ({
+              ...prev,
+              note: value,
+            }))
+          }
+        />
+      </div>
+
+      <PhaseActions
+        saving={saving}
+        saveLabel="Salva Cassazione"
+        onSave={handleSaveCassazione}
+        onDelete={
+          cassazioneForm.id
+            ? () =>
+                deletePhase(
+                  "tbcontenzioso_cassazione",
+                  cassazioneForm.id,
+                  "CASSAZIONE"
+                )
+            : undefined
+        }
+      />
+    </>
+  )}
+</div>
 
         <div className="rounded-2xl bg-white p-6 shadow">
           <h2 className="mb-4 text-lg font-semibold">Scadenze collegate</h2>
