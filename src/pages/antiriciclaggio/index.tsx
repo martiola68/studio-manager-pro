@@ -54,6 +54,8 @@ type AV1Row = {
   societa_id?: string | null;
   stato_pratica?: string | null;
   is_pratica_only?: boolean;
+   fascicolo_completo?: boolean | null;
+  fascicolo_mancanti?: string[];
 };
 
 type PraticaAMLRow = {
@@ -259,6 +261,14 @@ if (status === "warning") return "font-semibold text-yellow-600";
       };
     }
 
+     if (row.fascicolo_completo === false) {
+      return {
+        dotClass: "bg-yellow-500",
+        text: "Fascicolo incompleto",
+        className: "font-semibold text-yellow-700",
+      };
+    }
+
     return {
       dotClass: "bg-green-500",
       text: "Completa",
@@ -373,6 +383,117 @@ const getAV4IconBorderClass = (row: AV1Row) => {
     console.error("Errore caricamento licenza AML:", err);
     setAmlAttivo(false);
   }
+};
+
+  const checkFascicoloDocumenti = async (row: AV1Row) => {
+  const supabase = getSupabaseClient() as any;
+
+  let query = supabase
+    .from("tbAVFascicoliDocumenti")
+    .select("tipo_documento, origine");
+
+  if (row.pratica_id) {
+    query = query.eq("pratica_id", row.pratica_id);
+  } else if (row.id) {
+    query = query.eq("av1_id", row.id);
+  } else {
+    return {
+      completo: false,
+      mancanti: ["Fascicolo non collegato alla pratica"],
+    };
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("Errore controllo fascicolo:", error);
+    return {
+      completo: false,
+      mancanti: ["Errore controllo fascicolo"],
+    };
+  }
+
+  const docs = data || [];
+
+  const normalizza = (value: any) =>
+    String(value || "").toLowerCase().trim();
+
+  const hasDoc = (check: (doc: any) => boolean) => docs.some(check);
+
+  const av1 = hasDoc((doc) => {
+    const origine = normalizza(doc.origine);
+    const tipo = normalizza(doc.tipo_documento);
+
+    return (
+      origine === "av1_pdf" ||
+      origine === "av1 firmato" ||
+      tipo === "av1 firmato" ||
+      tipo === "modulo firmato"
+    );
+  });
+
+  const av4 = hasDoc((doc) => {
+    const origine = normalizza(doc.origine);
+    const tipo = normalizza(doc.tipo_documento);
+
+    return (
+      origine === "av4_pdf" ||
+      origine === "av4 firmato" ||
+      tipo === "av4 firmato"
+    );
+  });
+
+  const documentoIdentita = hasDoc((doc) => {
+    const origine = normalizza(doc.origine);
+    const tipo = normalizza(doc.tipo_documento);
+
+    return (
+      origine === "documento_rappresentante" ||
+      origine === "documento rappresentante" ||
+      tipo === "documento identità" ||
+      tipo === "documento identita"
+    );
+  });
+
+  const cliente = getCliente(row);
+  const nomeCliente = normalizza(cliente?.ragione_sociale || cliente?.cod_cliente);
+
+  const isSocietaCliente =
+    nomeCliente.includes("s.r.l") ||
+    nomeCliente.includes("srl") ||
+    nomeCliente.includes("s.p.a") ||
+    nomeCliente.includes("spa") ||
+    nomeCliente.includes("società") ||
+    nomeCliente.includes("societa");
+
+  const visura = !isSocietaCliente
+    ? true
+    : hasDoc((doc) => {
+        const origine = normalizza(doc.origine);
+        const tipo = normalizza(doc.tipo_documento);
+
+        return origine.includes("visura") || tipo.includes("visura");
+      });
+
+  const contratto = hasDoc((doc) => {
+    const origine = normalizza(doc.origine);
+    const tipo = normalizza(doc.tipo_documento);
+
+    return origine.includes("contratto") || tipo.includes("contratto");
+  });
+
+  const mancanti: string[] = [];
+
+  if (!av1) mancanti.push("AV1 firmato");
+  if (!av4) mancanti.push("AV4 firmato");
+  if (!documentoIdentita) mancanti.push("Documento identità");
+  if (isSocietaCliente && !visura) mancanti.push("Visura camerale");
+  if (!contratto) mancanti.push("Contratto professionale");
+
+  return {
+    completo: mancanti.length === 0,
+    mancanti,
+  };
 };
 
  const loadRowsBySocieta = async (societaId: string) => {
@@ -528,7 +649,19 @@ const praticheRows = (praticheData as PraticaAMLRow[]) || [];
         is_pratica_only: true,
       }));
 
-    setRows([...praticheOnlyRows, ...av1Rows]);
+    const rowsConFascicolo = await Promise.all(
+  [...praticheOnlyRows, ...av1Rows].map(async (row) => {
+    const check = await checkFascicoloDocumenti(row);
+
+    return {
+      ...row,
+      fascicolo_completo: check.completo,
+      fascicolo_mancanti: check.mancanti,
+    };
+  })
+);
+
+setRows(rowsConFascicolo);
     
   } catch (err: any) {
     console.error("Errore loadRowsBySocieta:", err);
