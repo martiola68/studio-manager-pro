@@ -318,81 +318,89 @@ export default function ModificaAvvisoBonario() {
     handleChange(field, filePath);
   };
 
-  const handleSave = async () => {
-    if (!id) return;
+const handleSave = async () => {
+  if (!id) return;
 
-    const supabase = getSupabaseClient();
+  const supabase = getSupabaseClient();
 
-    setErrore("");
-    setSuccesso("");
+  setErrore("");
+  setSuccesso("");
 
-    if (!form.cliente_id) {
-      setErrore("Seleziona un cliente.");
-      return;
-    }
+  if (!form.cliente_id) {
+    setErrore("Seleziona un cliente.");
+    return;
+  }
 
-    if (!form.numero_atto.trim()) {
-      setErrore("Inserisci il numero atto.");
-      return;
-    }
+  if (!form.numero_atto.trim()) {
+    setErrore("Inserisci il numero atto.");
+    return;
+  }
 
-    if (!form.tributo_constatazione_id) {
-      setErrore("Seleziona il tributo/contributo.");
-      return;
-    }
+  if (!form.tributo_constatazione_id) {
+    setErrore("Seleziona il tributo/contributo.");
+    return;
+  }
 
-    if (!form.data_ricezione) {
-      setErrore("Inserisci la data di ricezione.");
-      return;
-    }
+  if (!form.data_ricezione) {
+    setErrore("Inserisci la data di ricezione.");
+    return;
+  }
 
-    setSaving(true);
+  setSaving(true);
 
-    const payload = {
-      cliente_id: form.cliente_id,
-      numero_atto: form.numero_atto.trim(),
-      tributo_constatazione_id: form.tributo_constatazione_id || null,
-      anno_riferimento: form.anno_riferimento
-        ? Number(form.anno_riferimento)
-        : null,
-      data_emissione: form.data_emissione || null,
-      data_ricezione: form.data_ricezione,
-      giorni_restanti: giorniResidui,
-      importo_dovuto: form.importo_dovuto ? toNumber(form.importo_dovuto) : null,
-      importo_sgravato: form.importo_sgravato
-        ? toNumber(form.importo_sgravato)
-        : null,
-      importo_residuo: form.importo_residuo
-        ? toNumber(form.importo_residuo)
-        : null,
-      motivazione: form.motivazione || null,
-      contestazione: form.contestazione,
-      tipo_contestazione: form.tipo_contestazione || null,
-      data_invio_contestazione: form.data_invio_contestazione || null,
-      responso: form.responso || null,
-      comunicato_al_cliente: form.comunicato_al_cliente,
-      data_comunicazione: form.data_comunicazione || null,
-      operatore_responsabile_id: form.operatore_responsabile_id || null,
-      pratica_chiusa: form.pratica_chiusa,
-      allegato_atto: form.allegato_atto || null,
-      allegato_civis: form.allegato_civis || null,
-      allegato_responso: form.allegato_responso || null,
-    };
+  const payload = {
+    cliente_id: form.cliente_id,
+    numero_atto: form.numero_atto.trim(),
+    tributo_constatazione_id: form.tributo_constatazione_id || null,
+    anno_riferimento: form.anno_riferimento
+      ? Number(form.anno_riferimento)
+      : null,
+    data_emissione: form.data_emissione || null,
+    data_ricezione: form.data_ricezione,
+    giorni_restanti: giorniResidui,
+    importo_dovuto: form.importo_dovuto
+      ? toNumber(form.importo_dovuto)
+      : null,
+    importo_sgravato: form.importo_sgravato
+      ? toNumber(form.importo_sgravato)
+      : null,
+    importo_residuo: form.importo_residuo
+      ? toNumber(form.importo_residuo)
+      : null,
+    motivazione: form.motivazione || null,
+    contestazione: form.contestazione,
+    tipo_contestazione: form.tipo_contestazione || null,
+    data_invio_contestazione:
+      form.data_invio_contestazione || null,
+    responso: form.responso || null,
+    comunicato_al_cliente: form.comunicato_al_cliente,
+    data_comunicazione: form.data_comunicazione || null,
+    operatore_responsabile_id:
+      form.operatore_responsabile_id || null,
+    pratica_chiusa: form.pratica_chiusa,
+    allegato_atto: form.allegato_atto || null,
+    allegato_civis: form.allegato_civis || null,
+    allegato_responso: form.allegato_responso || null,
+  };
 
-    const { error } = await (supabase as any)
-  .from("tbcontenzioso_avvisi_bonari")
-  .update(payload)
-  .eq("id", String(id));
+  const { error } = await (supabase as any)
+    .from("tbcontenzioso_avvisi_bonari")
+    .update(payload)
+    .eq("id", String(id));
 
-setSaving(false);
+  setSaving(false);
 
-if (error) {
-  console.error(error);
-  setErrore(error.message || "Errore durante il salvataggio dell'avviso bonario.");
-  return;
-}
+  if (error) {
+    console.error(error);
+    setErrore(
+      error.message ||
+        "Errore durante il salvataggio dell'avviso bonario."
+    );
+    return;
+  }
 
-router.push("/contenzioso");
+  router.push("/contenzioso");
+};
 
   if (loading) {
     return <div className="p-6">Caricamento...</div>;
