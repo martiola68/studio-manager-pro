@@ -210,7 +210,7 @@ function mapDbRowToForm(row: any): FormState {
   : "",
   invia_altra_email: !!row?.invia_altra_email,
   email_destinatario_alternativa: row?.email_destinatario_alternativa ?? "",
-    amm_no_associato: !!row?.amm_no_associato
+    amm_no_associato: !!row?.amm_no_associato,
 
     dichiarante_nome_cognome: row?.dichiarante_nome_cognome ?? "",
     dichiarante_codice_fiscale: row?.dichiarante_codice_fiscale ?? "",
