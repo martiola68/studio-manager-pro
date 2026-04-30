@@ -20,6 +20,9 @@ type FormState = {
   av1_id: string;
   rapp_legale_id: string;
   microsoft_connection_id: string;
+
+  invia_altra_email: boolean;
+  email_destinatario_alternativa: string;
   
   dichiarante_nome_cognome: string;
   dichiarante_codice_fiscale: string;
@@ -96,7 +99,9 @@ const initialFormState = (
   societa_id: societaId,
   av1_id: av1Id,
   rapp_legale_id: "",
-  microsoft_connection_id: "",
+   microsoft_connection_id: "",
+  invia_altra_email: false,
+  email_destinatario_alternativa: "",
   
   dichiarante_nome_cognome: "",
   dichiarante_codice_fiscale: "",
@@ -198,9 +203,11 @@ function mapDbRowToForm(row: any): FormState {
     av1_id: row?.av1_id != null ? String(row.av1_id) : "",
     rapp_legale_id: row?.rapp_legale_id ? String(row.rapp_legale_id) : "",
     
-    microsoft_connection_id: row?.microsoft_connection_id
-      ? String(row.microsoft_connection_id)
-      : "",
+   microsoft_connection_id: row?.microsoft_connection_id
+  ? String(row.microsoft_connection_id)
+  : "",
+  invia_altra_email: !!row?.invia_altra_email,
+  email_destinatario_alternativa: row?.email_destinatario_alternativa ?? "",
 
     dichiarante_nome_cognome: row?.dichiarante_nome_cognome ?? "",
     dichiarante_codice_fiscale: row?.dichiarante_codice_fiscale ?? "",
@@ -862,10 +869,15 @@ function validateBeforeSave() {
     return false;
   }
 
-  if (!form.rapp_legale_id) {
-    alert("Per il cliente selezionato non risulta un rappresentante collegato.");
-    return false;
-  }
+ if (!form.rapp_legale_id && !form.invia_altra_email) {
+  alert("Per il cliente selezionato non risulta un rappresentante collegato.");
+  return false;
+}
+
+if (form.invia_altra_email && !form.email_destinatario_alternativa.trim()) {
+  alert("Inserisci l'email alternativa a cui inviare l'AV4.");
+  return false;
+}
 
   return true;
 }
@@ -924,10 +936,15 @@ function handleApriPdfFirmato() {
         return;
       }
 
-      if (!form.rapp_legale_id) {
-        alert("Rappresentante legale non valorizzato.");
-        return;
-      }
+     if (!form.rapp_legale_id && !form.invia_altra_email) {
+  alert("Rappresentante legale non valorizzato.");
+  return;
+}
+
+if (form.invia_altra_email && !form.email_destinatario_alternativa.trim()) {
+  alert("Inserisci l'email alternativa a cui inviare l'AV4.");
+  return;
+}
 
       if (!process.env.NEXT_PUBLIC_PUBLIC_APP_URL) {
         alert("Variabile NEXT_PUBLIC_PUBLIC_APP_URL non configurata.");
@@ -979,8 +996,12 @@ function handleApriPdfFirmato() {
             ? crypto.randomUUID()
             : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-       const updatePayload: any = {
-          public_token: token,
+      const updatePayload: any = {
+        public_token: token,
+        invia_altra_email: !!form.invia_altra_email,
+        email_destinatario_alternativa: form.invia_altra_email
+        ? form.email_destinatario_alternativa.trim()
+          : null,
           public_enabled: true,
           public_sent_at: new Date().toISOString(),
           Av4InviatoCL: true,
@@ -1007,30 +1028,37 @@ function handleApriPdfFirmato() {
         url = `${process.env.NEXT_PUBLIC_PUBLIC_APP_URL}/compilazione-av4/${token}`;
         setPublicUrl(url);
 
-        const { data: rappRow, error: rappError } = await supabase
-          .from("rapp_legali")
-          .select("email, nome_cognome")
-          .eq("id", form.rapp_legale_id)
-          .single();
+       if (form.invia_altra_email) {
+  destinatario = form.email_destinatario_alternativa.trim();
+  nomeDestinatario =
+    form.dichiarante_nome_cognome?.trim() ||
+    clienteLabel ||
+    "Cliente";
+} else {
+  const { data: rappRow, error: rappError } = await supabase
+    .from("rapp_legali")
+    .select("email, nome_cognome")
+    .eq("id", form.rapp_legale_id)
+    .single();
 
-        if (rappError) {
-          console.error("Errore recupero email rappresentante:", rappError);
-          alert(
-            `Link pubblico generato, ma non è stato possibile recuperare l'email del rappresentante legale: ${rappError.message}\n${url}`
-          );
-          return;
-        }
+  if (rappError) {
+    console.error("Errore recupero email rappresentante:", rappError);
+    alert(
+      `Link pubblico generato, ma non è stato possibile recuperare l'email del rappresentante legale: ${rappError.message}\n${url}`
+    );
+    return;
+  }
 
-        destinatario = rappRow?.email?.trim() || "";
-        nomeDestinatario = rappRow?.nome_cognome?.trim() || "Cliente";
+  destinatario = rappRow?.email?.trim() || "";
+  nomeDestinatario = rappRow?.nome_cognome?.trim() || "Cliente";
 
-        if (!destinatario) {
-          alert(
-            `Link pubblico generato, ma il rappresentante legale non ha un indirizzo email valorizzato.\n${url}`
-          );
-          return;
-        }
-
+  if (!destinatario) {
+    alert(
+      `Link pubblico generato, ma il rappresentante legale non ha un indirizzo email valorizzato.\n${url}`
+    );
+    return;
+  }
+}
         const {
           data: { session },
         } = await supabase.auth.getSession();
@@ -1333,6 +1361,11 @@ ${nomeOperatore}
       av1_id: form.av1_id ? Number(form.av1_id) : null,
       rapp_legale_id: form.rapp_legale_id || null,
 
+      invia_altra_email: !!form.invia_altra_email,
+      email_destinatario_alternativa: form.invia_altra_email
+      ? form.email_destinatario_alternativa.trim()
+      : null,
+
       // microsoft_connection_id: form.microsoft_connection_id || null,
 
       dichiarante_nome_cognome: form.dichiarante_nome_cognome || null,
@@ -1600,7 +1633,46 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                     >
                       Nuovo rappresentante
                     </button>
-                  </div>
+                    
+                    <button
+                      type="button"
+                        onClick={clearRappresentanteFields}
+                          className="rounded border border-red-300 px-4 py-2 text-red-700 shadow hover:bg-red-50"
+                      >
+                          Azzera rappresentante
+                        </button>
+                        </div>
+<div className="rounded-lg border bg-slate-50 p-4">
+  <label className="flex items-center gap-2 text-sm font-medium">
+    <input
+      type="checkbox"
+      name="invia_altra_email"
+      checked={form.invia_altra_email}
+      onChange={handleChange}
+    />
+    Invia AV4 ad altra email
+  </label>
+
+  {form.invia_altra_email && (
+    <div className="mt-3">
+      <label className="mb-1 block text-sm font-medium">
+        Email destinatario AV4
+      </label>
+      <input
+        type="email"
+        name="email_destinatario_alternativa"
+        value={form.email_destinatario_alternativa}
+        onChange={handleChange}
+        className="w-full rounded-md border px-3 py-2"
+        placeholder="email@dominio.it"
+      />
+      <p className="mt-1 text-xs text-gray-500">
+        Se valorizzata, l’AV4 verrà inviata a questa email invece che a quella del rappresentante.
+      </p>
+    </div>
+  )}
+</div>
+                  
 
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
