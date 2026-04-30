@@ -949,6 +949,119 @@ function handleApriPdfFirmato() {
   masterPasswordGate.requireUnlock(openPdf);
 }
 
+async function handleUploadPdfFirmatoDiretto(
+  e: React.ChangeEvent<HTMLInputElement>
+) {
+  const file = e.target.files?.[0];
+
+  if (!file) return;
+
+  if (!av4Id) {
+    alert("Salva prima l'AV4, poi carica il PDF firmato.");
+    e.target.value = "";
+    return;
+  }
+
+  if (file.type !== "application/pdf") {
+    alert("Puoi caricare solo file PDF.");
+    e.target.value = "";
+    return;
+  }
+
+  const supabase = getSupabaseClient() as any;
+
+  try {
+    setLoading(true);
+
+    const safeName = file.name
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9._-]/g, "_");
+
+    const storagePath = `av4/${av4Id}/${Date.now()}_${safeName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("messaggi-allegati")
+      .upload(storagePath, file, {
+        contentType: "application/pdf",
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error(uploadError);
+      alert("Errore caricamento PDF firmato.");
+      return;
+    }
+
+    const { error: updateError } = await supabase
+      .from("tbAV4")
+      .update({
+        allegato_pdf_cliente: storagePath,
+        pdf_firmato_cliente: storagePath,
+        compilato_da_cliente: true,
+        public_enabled: false,
+        public_token: null,
+        public_submitted_at: new Date().toISOString(),
+        stato: "firmato",
+      })
+      .eq("id", av4Id);
+
+    if (updateError) {
+      console.error(updateError);
+      alert("PDF caricato, ma errore aggiornamento AV4.");
+      return;
+    }
+
+    const fascicoloPayload = {
+      studio_id: form.studio_id,
+      pratica_id: form.pratica_id || null,
+      av1_id: form.av1_id ? Number(form.av1_id) : null,
+      av4_id: av4Id,
+      cliente_id: form.cliente_id || null,
+      tipo_documento: "AV4 firmato",
+      nome_file: safeName,
+      storage_path: storagePath,
+      bucket_name: "messaggi-allegati",
+      mime_type: "application/pdf",
+      dimensione: file.size,
+      origine: "av4_pdf",
+      caricato_da: null,
+    };
+
+    const { data: existingDoc } = await supabase
+      .from("tbAVFascicoliDocumenti")
+      .select("id")
+      .eq("origine", "av4_pdf")
+      .eq("av4_id", av4Id)
+      .maybeSingle();
+
+    if (existingDoc?.id) {
+      await supabase
+        .from("tbAVFascicoliDocumenti")
+        .update(fascicoloPayload)
+        .eq("id", existingDoc.id);
+    } else {
+      await supabase.from("tbAVFascicoliDocumenti").insert(fascicoloPayload);
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      allegato_pdf_cliente: storagePath,
+      pdf_firmato_cliente: storagePath,
+      stato: "firmato",
+    }));
+
+    alert("PDF firmato caricato correttamente.");
+  } catch (error) {
+    console.error(error);
+    alert("Errore durante il caricamento diretto del PDF.");
+  } finally {
+    setLoading(false);
+    e.target.value = "";
+  }
+}
+  
+
   async function handleInvioPubblico() {
     const runAction = async () => {
       if (!av4Id) {
@@ -2377,6 +2490,16 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                   >
                     Apri PDF firmato
                   </button>
+
+                  <label className="ml-3 inline-block cursor-pointer rounded bg-blue-600 px-4 py-2 text-white shadow hover:bg-blue-700">
+  Carica PDF firmato
+  <input
+    type="file"
+    accept="application/pdf"
+    onChange={handleUploadPdfFirmatoDiretto}
+    className="hidden"
+  />
+</label>
 
                   {form.allegato_pdf_cliente ? (
                     <p className="mt-2 break-all text-xs text-gray-500">
