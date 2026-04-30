@@ -107,33 +107,61 @@ const checkFascicoloCompleto = async (
   const hasDoc = (predicate: (doc: any) => boolean) =>
     docs.some((doc: any) => predicate(doc));
 
-  const av1 = hasDoc(
-    (doc) =>
-      doc.origine === "av1_pdf" || doc.tipo_documento === "AV1 firmato"
-  );
+const normalizza = (value: any) =>
+  String(value || "")
+    .toLowerCase()
+    .trim();
 
-  const av4 = hasDoc(
-    (doc) =>
-      doc.origine === "av4_pdf" || doc.tipo_documento === "AV4 firmato"
-  );
+const av1 = hasDoc((doc) => {
+  const origine = normalizza(doc.origine);
+  const tipo = normalizza(doc.tipo_documento);
 
-  const documento_identita = hasDoc(
-    (doc) => doc.origine === "documento_rappresentante"
+  return (
+    origine === "av1_pdf" ||
+    origine === "av1 firmato" ||
+    tipo === "av1 firmato" ||
+    tipo === "modulo firmato"
   );
+});
 
-  const visura = !isSocieta
-    ? true
-    : hasDoc((doc) =>
-        String(doc.tipo_documento || "")
-          .toLowerCase()
-          .includes("visura")
-      );
+const av4 = hasDoc((doc) => {
+  const origine = normalizza(doc.origine);
+  const tipo = normalizza(doc.tipo_documento);
 
-  const contratto = hasDoc((doc) =>
-    String(doc.tipo_documento || "")
-      .toLowerCase()
-      .includes("contratto")
+  return (
+    origine === "av4_pdf" ||
+    origine === "av4 firmato" ||
+    tipo === "av4 firmato"
   );
+});
+
+const documento_identita = hasDoc((doc) => {
+  const origine = normalizza(doc.origine);
+  const tipo = normalizza(doc.tipo_documento);
+
+  return (
+    origine === "documento_rappresentante" ||
+    origine === "documento rappresentante" ||
+    tipo === "documento identità" ||
+    tipo === "documento identita"
+  );
+});
+
+ const visura = !isSocieta
+  ? true
+  : hasDoc((doc) => {
+      const origine = normalizza(doc.origine);
+      const tipo = normalizza(doc.tipo_documento);
+
+      return origine.includes("visura") || tipo.includes("visura");
+    });
+
+const contratto = hasDoc((doc) => {
+  const origine = normalizza(doc.origine);
+  const tipo = normalizza(doc.tipo_documento);
+
+  return origine.includes("contratto") || tipo.includes("contratto");
+});
 
   const mancanti: string[] = [];
 
