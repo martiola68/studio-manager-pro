@@ -380,20 +380,19 @@ export default function ModificaAvvisoBonario() {
     };
 
     const { error } = await (supabase as any)
-      .from("tbcontenzioso_avvisi_bonari")
-      .update(payload)
-      .eq("id", id);
+  .from("tbcontenzioso_avvisi_bonari")
+  .update(payload)
+  .eq("id", String(id));
 
-    setSaving(false);
+setSaving(false);
 
-    if (error) {
-      console.error(error);
-      setErrore("Errore durante il salvataggio dell'avviso bonario.");
-      return;
-    }
+if (error) {
+  console.error(error);
+  setErrore(error.message || "Errore durante il salvataggio dell'avviso bonario.");
+  return;
+}
 
-    setSuccesso("Avviso bonario aggiornato correttamente.");
-  };
+router.push("/contenzioso");
 
   if (loading) {
     return <div className="p-6">Caricamento...</div>;
