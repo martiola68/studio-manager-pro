@@ -586,8 +586,7 @@ if (currentAv1Id) {
   ...prev,
   id: "",
   pratica_id: String(data.id),
-   AV4Generato: Boolean(existingAv4Id), 
-      studio_id:
+        studio_id:
         data.studio_id ??
         (typeof studio_id === "string" ? studio_id : "") ??
         prev.studio_id ??
