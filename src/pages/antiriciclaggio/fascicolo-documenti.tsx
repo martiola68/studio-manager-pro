@@ -371,20 +371,41 @@ export default function FascicoloDocumentiPage() {
     return origine.includes("contratto") || tipo.includes("contratto");
   });
 
-  const isSocieta =
-    clienteNome.toLowerCase().includes("s.r.l") ||
-    clienteNome.toLowerCase().includes("srl") ||
-    clienteNome.toLowerCase().includes("s.p.a") ||
-    clienteNome.toLowerCase().includes("spa");
+ const clienteNomeNormalizzato = clienteNome
+  .toLowerCase()
+  .replace(/\s+/g, "")
+  .replace(/\./g, "");
 
+const isSocieta =
+  clienteNomeNormalizzato.includes("srl") ||
+  clienteNomeNormalizzato.includes("spa") ||
+  clienteNomeNormalizzato.includes("snc") ||
+  clienteNomeNormalizzato.includes("sas") ||
+  clienteNomeNormalizzato.includes("sapa") ||
+  clienteNomeNormalizzato.includes("societa") ||
+  clienteNomeNormalizzato.includes("società");
   const mancanti: string[] = [];
 
   if (!hasAV1) mancanti.push("AV1 firmato");
   if (!hasAV4) mancanti.push("AV4 firmato");
-  if (!hasDocumentoIdentita) mancanti.push("Documento identità");
-  if (isSocieta && !hasVisura) mancanti.push("Visura camerale");
-  if (!hasContratto) mancanti.push("Contratto professionale");
+ const hasCodiceFiscale = hasDoc((doc) => {
+  const origine = normalizza(doc.origine);
+  const tipo = normalizza(doc.tipo_documento);
 
+  return (
+    origine.includes("codice fiscale") ||
+    origine.includes("codice_fiscale") ||
+    tipo.includes("codice fiscale") ||
+    tipo.includes("codice_fiscale")
+  );
+});
+
+if (!hasDocumentoIdentita) mancanti.push("Documento identità");
+if (isSocieta && !hasVisura) mancanti.push("Visura camerale");
+if (!hasContratto) mancanti.push("Contratto professionale");
+
+// opzionale: non blocca il fascicolo
+// if (!hasCodiceFiscale) mancanti.push("Codice fiscale");
   setDocumentiMancanti(mancanti);
   setFascicoloCompleto(mancanti.length === 0);
 };
