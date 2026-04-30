@@ -666,12 +666,24 @@ export default function ModelloAV4() {
             societa_id: mapped.societa_id || societaIdFromQuery || "",
           });
 
-          if (mapped.cliente_id) {
-            await hydrateClienteAndRappresentante(mapped.cliente_id);
-          } else {
-            setClienteLabel("");
-            clearRappresentanteFields();
-          }
+         if (mapped.cliente_id) {
+  if (mapped.amm_no_associato) {
+    const supabase = getSupabaseClient() as any;
+
+    const { data: clienteRow } = await supabase
+      .from("tbclienti")
+      .select("*")
+      .eq("id", mapped.cliente_id)
+      .maybeSingle();
+
+    setClienteLabel(clienteRow ? buildClienteLabel(clienteRow) : "");
+  } else {
+    await hydrateClienteAndRappresentante(mapped.cliente_id);
+  }
+} else {
+  setClienteLabel("");
+  clearRappresentanteFields();
+}
         } else {
            await prefillFromPraticaOrAV1(
             studioIdFromQuery,
