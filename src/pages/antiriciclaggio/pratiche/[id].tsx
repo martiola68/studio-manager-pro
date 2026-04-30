@@ -29,6 +29,17 @@ type SocietaRow = {
   codice_fiscale?: string | null;
 };
 
+type FascicoloCheck = {
+  av1: boolean;
+  av4: boolean;
+  documento_identita: boolean;
+  visura: boolean;
+  contratto: boolean;
+  completo: boolean;
+  mancanti: string[];
+};
+
+
 const formatDate = (value?: string | null) => {
   if (!value) return "-";
   const d = new Date(value);
@@ -68,9 +79,80 @@ export default function PraticaAMLDetailPage() {
   const [cliente, setCliente] = useState<ClienteRow | null>(null);
   const [societa, setSocieta] = useState<SocietaRow | null>(null);
 
+  const [fascicoloCheck, setFascicoloCheck] = useState<FascicoloCheck | null>(null);
+
   const praticaId = useMemo(() => {
     return typeof id === "string" ? id : "";
   }, [id]);
+
+  // ✅ 👉 INSERISCI QUI
+const checkFascicoloCompleto = async (
+  praticaId: string,
+  isSocieta: boolean
+): Promise<FascicoloCheck> => {
+  const supabase = getSupabaseClient();
+  const supabaseAny = supabase as any;
+
+  const { data, error } = await supabaseAny
+    .from("tbAVFascicoliDocumenti")
+    .select("tipo_documento, origine")
+    .eq("pratica_id", praticaId);
+
+  if (error) {
+    throw new Error(error.message || "Errore controllo fascicolo AML.");
+  }
+
+  const docs = data || [];
+
+  const hasDoc = (predicate: (doc: any) => boolean) =>
+    docs.some((doc: any) => predicate(doc));
+
+  const av1 = hasDoc(
+    (doc) =>
+      doc.origine === "av1_pdf" || doc.tipo_documento === "AV1 firmato"
+  );
+
+  const av4 = hasDoc(
+    (doc) =>
+      doc.origine === "av4_pdf" || doc.tipo_documento === "AV4 firmato"
+  );
+
+  const documento_identita = hasDoc(
+    (doc) => doc.origine === "documento_rappresentante"
+  );
+
+  const visura = !isSocieta
+    ? true
+    : hasDoc((doc) =>
+        String(doc.tipo_documento || "")
+          .toLowerCase()
+          .includes("visura")
+      );
+
+  const contratto = hasDoc((doc) =>
+    String(doc.tipo_documento || "")
+      .toLowerCase()
+      .includes("contratto")
+  );
+
+  const mancanti: string[] = [];
+
+  if (!av1) mancanti.push("AV1 firmato");
+  if (!av4) mancanti.push("AV4 firmato");
+  if (!documento_identita) mancanti.push("Documento di riconoscimento");
+  if (isSocieta && !visura) mancanti.push("Visura camerale");
+  if (!contratto) mancanti.push("Contratto professionale");
+
+  return {
+    av1,
+    av4,
+    documento_identita,
+    visura,
+    contratto,
+    completo: mancanti.length === 0,
+    mancanti,
+  };
+};
 
   const loadPratica = async () => {
     if (!praticaId) return;
@@ -105,17 +187,26 @@ export default function PraticaAMLDetailPage() {
         setCliente(null);
       }
 
-      if (praticaData?.societa_id) {
-        const { data: societaData } = await supabaseAny
-          .from("tbRespAVSocieta")
-          .select("id, Denominazione, codice_fiscale")
-          .eq("id", praticaData.societa_id)
-          .single();
+    if (praticaData?.societa_id) {
+  const { data: societaData } = await supabaseAny
+    .from("tbRespAVSocieta")
+    .select("id, Denominazione, codice_fiscale")
+    .eq("id", praticaData.societa_id)
+    .single();
 
-        setSocieta(societaData || null);
-      } else {
-        setSocieta(null);
-      }
+  setSocieta(societaData || null);
+} else {
+  setSocieta(null);
+}
+
+// 👉 AGGIUNGI QUESTO BLOCCO
+const check = await checkFascicoloCompleto(
+  praticaData.id,
+  Boolean(praticaData?.societa_id)
+);
+
+setFascicoloCheck(check);
+      
     } catch (err: any) {
       console.error("Errore caricamento pratica AML:", err);
       alert(err?.message || "Errore caricamento pratica.");
@@ -132,6 +223,14 @@ export default function PraticaAMLDetailPage() {
   const handleApriAV4 = async () => {
     if (!pratica) return;
 
+if (fascicoloCheck && !fascicoloCheck.completo) {
+  alert(
+    `Fascicolo AML incompleto.\n\nDocumenti mancanti:\n- ${fascicoloCheck.mancanti.join(
+      "\n- "
+    )}`
+  );
+  return;
+}
     try {
       setWorking("av4");
 
@@ -352,13 +451,27 @@ export default function PraticaAMLDetailPage() {
               </p>
             </div>
 
-            <span
-              className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold ${statoBadge(
-                pratica.stato
-              )}`}
-            >
-              {pratica.stato || "aperta"}
-            </span>
+           <div className="flex flex-col gap-2 md:items-end">
+  <span
+    className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold ${statoBadge(
+      pratica.stato
+    )}`}
+  >
+    {pratica.stato || "aperta"}
+  </span>
+
+  <span
+    className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold ${
+      fascicoloCheck?.completo
+        ? "bg-emerald-100 text-emerald-700"
+        : "bg-yellow-100 text-yellow-700"
+    }`}
+  >
+    {fascicoloCheck?.completo
+      ? "🟢 Fascicolo completo"
+      : "🟡 Fascicolo incompleto"}
+  </span>
+</div>
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -410,11 +523,19 @@ export default function PraticaAMLDetailPage() {
           </div>
         </div>
 
+        {fascicoloCheck && !fascicoloCheck.completo ? (
+          <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-900">
+            <div className="font-semibold">Fascicolo AML incompleto</div>
+            <div className="mt-1">
+              Documenti mancanti: {fascicoloCheck.mancanti.join(", ")}.
+            </div>
+          </div>
+        ) : null}
+
         <div className="rounded-lg border bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-lg font-semibold text-slate-900">
             Workflow pratica
           </h2>
-
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
             <div className="rounded-lg border p-4">
               <div className="mb-2 text-sm font-semibold text-slate-900">
