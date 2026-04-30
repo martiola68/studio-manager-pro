@@ -1206,7 +1206,7 @@ ${nomeOperatore}
           tipo_comunicazione: "invio_av4",
           cliente_id: form.cliente_id || null,
           rapp_legale_id: form.rapp_legale_id || null,
-           amm_no_associato: !!form.amm_no_associato,
+          // amm_no_associato: !!form.amm_no_associato,
           av4_id: av4Id,
           destinatario_email: destinatario,
           oggetto: subject,
