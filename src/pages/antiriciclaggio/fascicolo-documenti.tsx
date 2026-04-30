@@ -129,6 +129,10 @@ export default function FascicoloDocumentiPage() {
   const [workingDocumentId, setWorkingDocumentId] = useState<string | null>(null);
   const [tipoDocumento, setTipoDocumento] = useState("Documento generico");
 
+  const [documentiMancanti, setDocumentiMancanti] = useState<string[]>([]);
+  const [fascicoloCompleto, setFascicoloCompleto] = useState(false);
+
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const formatDateTime = (value?: string | null) => {
@@ -309,6 +313,82 @@ export default function FascicoloDocumentiPage() {
     }
   };
 
+  const calcolaStatoFascicolo = (docs: DocumentoRow[]) => {
+  const normalizza = (value: any) =>
+    String(value || "").toLowerCase().trim();
+
+  const hasDoc = (check: (doc: DocumentoRow) => boolean) =>
+    docs.some(check);
+
+  const hasAV1 = hasDoc((doc) => {
+    const origine = normalizza(doc.origine);
+    const tipo = normalizza(doc.tipo_documento);
+
+    return (
+      origine === "av1_firmato" ||
+      origine === "av1 firmato" ||
+      origine === "av1_pdf" ||
+      tipo === "av1 firmato" ||
+      tipo === "modulo firmato"
+    );
+  });
+
+  const hasAV4 = hasDoc((doc) => {
+    const origine = normalizza(doc.origine);
+    const tipo = normalizza(doc.tipo_documento);
+
+    return (
+      origine === "av4_pdf" ||
+      origine === "av4_firmato" ||
+      origine === "av4 firmato" ||
+      tipo === "av4 firmato"
+    );
+  });
+
+  const hasDocumentoIdentita = hasDoc((doc) => {
+    const origine = normalizza(doc.origine);
+    const tipo = normalizza(doc.tipo_documento);
+
+    return (
+      origine === "documento_rappresentante" ||
+      origine === "documento rappresentante" ||
+      tipo === "documento identità" ||
+      tipo === "documento identita"
+    );
+  });
+
+  const hasVisura = hasDoc((doc) => {
+    const origine = normalizza(doc.origine);
+    const tipo = normalizza(doc.tipo_documento);
+
+    return origine.includes("visura") || tipo.includes("visura");
+  });
+
+  const hasContratto = hasDoc((doc) => {
+    const origine = normalizza(doc.origine);
+    const tipo = normalizza(doc.tipo_documento);
+
+    return origine.includes("contratto") || tipo.includes("contratto");
+  });
+
+  const isSocieta =
+    clienteNome.toLowerCase().includes("s.r.l") ||
+    clienteNome.toLowerCase().includes("srl") ||
+    clienteNome.toLowerCase().includes("s.p.a") ||
+    clienteNome.toLowerCase().includes("spa");
+
+  const mancanti: string[] = [];
+
+  if (!hasAV1) mancanti.push("AV1 firmato");
+  if (!hasAV4) mancanti.push("AV4 firmato");
+  if (!hasDocumentoIdentita) mancanti.push("Documento identità");
+  if (isSocieta && !hasVisura) mancanti.push("Visura camerale");
+  if (!hasContratto) mancanti.push("Contratto professionale");
+
+  setDocumentiMancanti(mancanti);
+  setFascicoloCompleto(mancanti.length === 0);
+};
+
   const loadData = async () => {
     try {
      if (!router.isReady || (!av1_id && !pratica_id)) return;
@@ -359,12 +439,6 @@ if (av1_id) {
 
 const { data, error } = await query;
 
-if (av1_id) {
-  query = query.eq("av1_id", Number(av1_id));
-} else if (pratica_id) {
-  query = query.eq("pratica_id", pratica_id);
-}
-
       if (error) {
         console.error("Errore caricamento documenti:", error);
         alert(`Errore caricamento documenti: ${error.message}`);
@@ -373,6 +447,7 @@ if (av1_id) {
       }
 
       setDocumenti(data || []);
+      calcolaStatoFascicolo(data || []);
     } catch (err: any) {
       console.error("Errore loadData fascicolo:", err);
       alert(err?.message || "Errore caricamento fascicolo documenti");
@@ -514,10 +589,10 @@ if (av1_id) {
     }
   };
 
-  useEffect(() => {
-    void loadData();
-  }, [router.isReady, av1_id, cliente_id]);
-
+useEffect(() => {
+  void loadData();
+}, [router.isReady, av1_id, pratica_id, cliente_id]);
+  
   return (
     <div className="p-6">
       <div className="mb-6 flex items-start justify-between gap-4">
@@ -540,6 +615,26 @@ if (av1_id) {
           Torna all'elenco
         </button>
       </div>
+
+        {loading ? null : fascicoloCompleto ? (
+        <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+          <div className="font-semibold">Fascicolo AML completo</div>
+          <div className="mt-1">
+            Tutti i documenti obbligatori risultano presenti.
+          </div>
+        </div>
+      ) : (
+        <div className="mb-4 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-900">
+          <div className="font-semibold">Fascicolo AML incompleto</div>
+          <div className="mt-1">Documenti mancanti:</div>
+
+          <ul className="mt-2 list-disc pl-5">
+            {documentiMancanti.map((doc) => (
+              <li key={doc}>{doc}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="mb-4 flex items-end justify-between gap-4">
         <div className="text-sm text-gray-600">
