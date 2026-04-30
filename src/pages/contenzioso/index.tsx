@@ -36,7 +36,7 @@ type Scadenza = {
   tipo_atto_id: string;
   numero_atto?: string | null;
   numero_cartella?: string | null;
-  tipo_atto_dettaglio?: string | null;
+  tributo_constatazione_id?: string | null;
   anno_riferimento: number | null;
   data_ricezione: string | null;
   data_scadenza: string | null;
