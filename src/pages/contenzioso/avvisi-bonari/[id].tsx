@@ -65,10 +65,27 @@ export default function ModificaAvvisoBonario() {
   const [errore, setErrore] = useState("");
   const [successo, setSuccesso] = useState("");
 
-  const toNumber = (val: string) => {
-    if (!val) return 0;
-    return parseFloat(val.replace(",", ".")) || 0;
-  };
+ const toNumber = (val: string) => {
+  if (!val) return 0;
+
+  return (
+    parseFloat(
+      val
+        .replace(/\./g, "")
+        .replace(",", ".")
+    ) || 0
+  );
+};
+
+const formatCurrencyInput = (val: string) => {
+  const num = toNumber(val);
+  if (!num) return "";
+
+  return num.toLocaleString("it-IT", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+};
 
   const addDays = (dateString: string, days: number) => {
     if (!dateString) return "";
@@ -331,21 +348,40 @@ const handleSave = async () => {
     return;
   }
 
-  if (!form.numero_atto.trim()) {
-    setErrore("Inserisci il numero atto.");
-    return;
-  }
+if (!form.operatore_responsabile_id) {
+  setErrore("Seleziona l'operatore responsabile.");
+  return;
+}
 
-  if (!form.tributo_constatazione_id) {
-    setErrore("Seleziona il tributo/contributo.");
-    return;
-  }
+if (!form.numero_atto.trim()) {
+  setErrore("Inserisci il numero atto.");
+  return;
+}
 
-  if (!form.data_ricezione) {
-    setErrore("Inserisci la data di ricezione.");
-    return;
-  }
+if (!form.tributo_constatazione_id) {
+  setErrore("Seleziona il tributo/contributo.");
+  return;
+}
 
+if (!form.anno_riferimento) {
+  setErrore("Inserisci l'anno di riferimento.");
+  return;
+}
+
+if (!form.data_emissione) {
+  setErrore("Inserisci la data di emissione.");
+  return;
+}
+
+if (!form.data_ricezione) {
+  setErrore("Inserisci la data di ricezione.");
+  return;
+}
+
+if (!form.importo_dovuto || toNumber(form.importo_dovuto) <= 0) {
+  setErrore("Inserisci l'importo dovuto.");
+  return;
+}
   setSaving(true);
 
   const payload = {
@@ -558,16 +594,22 @@ const handleSave = async () => {
             <label className="mb-1 block text-sm font-medium">
               Importo dovuto
             </label>
-            <input
-              value={form.importo_dovuto}
-              onChange={(e) =>
-                handleChange(
-                  "importo_dovuto",
-                  e.target.value.replace(/[^0-9.,]/g, "")
-                )
-              }
-              className="w-full rounded-lg border p-2"
-            />
+           <input
+  type="text"
+  inputMode="decimal"
+  value={form.importo_dovuto}
+  onChange={(e) =>
+    handleChange(
+      "importo_dovuto",
+      e.target.value.replace(/[^0-9.,]/g, "")
+    )
+  }
+  onBlur={() =>
+    handleChange("importo_dovuto", formatCurrencyInput(form.importo_dovuto))
+  }
+  className="w-full rounded-lg border p-2"
+  placeholder="0,00"
+/>
           </div>
 
           <div className="md:col-span-2">
