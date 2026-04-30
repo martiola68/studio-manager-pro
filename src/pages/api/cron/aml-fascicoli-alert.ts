@@ -1,23 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
+import { sendEmail } from "@/services/emailService";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
-
-async function sendEmail({
-  to,
-  subject,
-  html,
-}: {
-  to: string;
-  subject: string;
-  html: string;
-}) {
-  // TODO: qui colleghiamo il tuo provider email: Resend, SendGrid, SMTP, Brevo, ecc.
-  console.log("EMAIL DA INVIARE", { to, subject, html });
-}
 
 function prossimoLunediOre9() {
   const now = new Date();
@@ -90,6 +78,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const mancanti = alert.documenti_mancanti || [];
       const opzionali = alert.documenti_opzionali_mancanti || [];
 
+      const { data: studio } = await supabaseAdmin
+  .from("tbstudio")
+  .select("email, microsoft_connection_id")
+  .eq("id", alert.studio_id)
+  .maybeSingle();
+
+if (!studio?.microsoft_connection_id) {
+  saltati++;
+  continue;
+}
+      
       const html = `
         <div style="font-family: Arial, sans-serif; font-size: 14px; color: #111827;">
           <h2>Fascicolo AML incompleto</h2>
@@ -121,11 +120,41 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         </div>
       `;
 
-      await sendEmail({
-        to: utente.email,
-        subject: `Fascicolo AML incompleto - ${nomeCliente}`,
-        html,
-      });
+    const text = `
+Fascicolo AML incompleto - ${nomeCliente}
+
+Il fascicolo AML del cliente ${nomeCliente} risulta ancora incompleto.
+
+Documenti mancanti:
+${mancanti.map((doc: string) => `- ${doc}`).join("\n")}
+
+${
+  opzionali.length > 0
+    ? `Documenti opzionali mancanti:\n${opzionali
+        .map((doc: string) => `- ${doc}`)
+        .join("\n")}`
+    : ""
+}
+
+Questo promemoria verrà inviato ogni lunedì mattina fino al completamento del fascicolo.
+`.trim();
+
+const result = await sendEmail({
+  to: utente.email,
+  subject: `Fascicolo AML incompleto - ${nomeCliente}`,
+  html,
+  text,
+  senderUserId: utente.id,
+  microsoftConnectionId: studio.microsoft_connection_id,
+  fromEmail: studio.email || undefined,
+  sendMode: "user",
+});
+
+if (!result.success) {
+  console.error("Errore invio email AML:", result.error);
+  saltati++;
+  continue;
+}
 
       await supabaseAdmin
         .from("tbAVFascicoliAlert")
