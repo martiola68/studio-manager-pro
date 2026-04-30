@@ -420,6 +420,7 @@ if (!hasCodiceFiscale) opzionaliMancanti.push("Codice fiscale");
 setDocumentiMancanti(mancanti);
 setDocumentiOpzionaliMancanti(opzionaliMancanti);
 setFascicoloCompleto(mancanti.length === 0);
+};
 
   const loadData = async () => {
     try {
