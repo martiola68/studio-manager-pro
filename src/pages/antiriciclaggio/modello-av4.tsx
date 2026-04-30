@@ -1002,7 +1002,7 @@ async function handleUploadPdfFirmatoDiretto(
         public_enabled: false,
         public_token: null,
         public_submitted_at: new Date().toISOString(),
-        stato: "firmato",
+        stato: "completato",
       })
       .eq("id", av4Id);
 
@@ -1048,7 +1048,7 @@ async function handleUploadPdfFirmatoDiretto(
       ...prev,
       allegato_pdf_cliente: storagePath,
       pdf_firmato_cliente: storagePath,
-      stato: "firmato",
+      stato: "completato",
     }));
 
     alert("PDF firmato caricato correttamente.");
