@@ -420,7 +420,6 @@ if (!hasCodiceFiscale) opzionaliMancanti.push("Codice fiscale");
 setDocumentiMancanti(mancanti);
 setDocumentiOpzionaliMancanti(opzionaliMancanti);
 setFascicoloCompleto(mancanti.length === 0);
-};
    
 void fetch("/api/antiriciclaggio/fascicolo-alert/upsert", {
   method: "POST",
@@ -436,6 +435,8 @@ void fetch("/api/antiriciclaggio/fascicolo-alert/upsert", {
     completo: mancanti.length === 0,
   }),
 });
+};
+
 
   const loadData = async () => {
     try {
