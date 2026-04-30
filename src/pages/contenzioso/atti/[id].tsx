@@ -1029,7 +1029,7 @@ const handleTogglePhase = (
       </h1>
 
       <p className="mt-1 text-sm text-slate-600">
-        {pratica?.cliente?.ragione_sociale || "-"}
+        {processo.tbclienti?.ragione_sociale || "-"}
       </p>
     </div>
 
