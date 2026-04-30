@@ -124,12 +124,17 @@ export default function FascicoloDocumentiPage() {
 
   const [loading, setLoading] = useState(true);
   const [clienteNome, setClienteNome] = useState("Cliente");
+  
+  const [clienteIsSocieta, setClienteIsSocieta] = useState(false);
+  
   const [documenti, setDocumenti] = useState<DocumentoRow[]>([]);
   const [uploading, setUploading] = useState(false);
   const [workingDocumentId, setWorkingDocumentId] = useState<string | null>(null);
   const [tipoDocumento, setTipoDocumento] = useState("Documento generico");
 
   const [documentiMancanti, setDocumentiMancanti] = useState<string[]>([]);
+
+  const [documentiOpzionaliMancanti, setDocumentiOpzionaliMancanti] = useState<string[]>([]);
   const [fascicoloCompleto, setFascicoloCompleto] = useState(false);
 
 
@@ -274,11 +279,27 @@ export default function FascicoloDocumentiPage() {
       throw clienteError;
     }
 
-    if (clienteData) {
-      const cliente = clienteData as ClienteRow;
-      setClienteNome(cliente.ragione_sociale || cliente.cod_cliente || "Cliente");
-    }
+  if (clienteData) {
+  const cliente = clienteData as ClienteRow;
+  const nome = cliente.ragione_sociale || cliente.cod_cliente || "Cliente";
 
+  setClienteNome(nome);
+
+  const nomeNormalizzato = nome
+    .toLowerCase()
+    .replace(/\s+/g, "")
+    .replace(/\./g, "");
+
+  setClienteIsSocieta(
+    nomeNormalizzato.includes("srl") ||
+      nomeNormalizzato.includes("spa") ||
+      nomeNormalizzato.includes("snc") ||
+      nomeNormalizzato.includes("sas") ||
+      nomeNormalizzato.includes("sapa") ||
+      nomeNormalizzato.includes("societa") ||
+      nomeNormalizzato.includes("società")
+  );
+}
     const rappLegaleId = clienteData?.rapp_legale_id || null;
 
     if (rappLegaleId) {
@@ -371,19 +392,7 @@ export default function FascicoloDocumentiPage() {
     return origine.includes("contratto") || tipo.includes("contratto");
   });
 
- const clienteNomeNormalizzato = clienteNome
-  .toLowerCase()
-  .replace(/\s+/g, "")
-  .replace(/\./g, "");
-
-const isSocieta =
-  clienteNomeNormalizzato.includes("srl") ||
-  clienteNomeNormalizzato.includes("spa") ||
-  clienteNomeNormalizzato.includes("snc") ||
-  clienteNomeNormalizzato.includes("sas") ||
-  clienteNomeNormalizzato.includes("sapa") ||
-  clienteNomeNormalizzato.includes("societa") ||
-  clienteNomeNormalizzato.includes("società");
+const isSocieta = clienteIsSocieta;
   const mancanti: string[] = [];
 
   if (!hasAV1) mancanti.push("AV1 firmato");
@@ -404,11 +413,13 @@ if (!hasDocumentoIdentita) mancanti.push("Documento identità");
 if (isSocieta && !hasVisura) mancanti.push("Visura camerale");
 if (!hasContratto) mancanti.push("Contratto professionale");
 
-// opzionale: non blocca il fascicolo
-// if (!hasCodiceFiscale) mancanti.push("Codice fiscale");
-  setDocumentiMancanti(mancanti);
-  setFascicoloCompleto(mancanti.length === 0);
-};
+const opzionaliMancanti: string[] = [];
+
+if (!hasCodiceFiscale) opzionaliMancanti.push("Codice fiscale");
+
+setDocumentiMancanti(mancanti);
+setDocumentiOpzionaliMancanti(opzionaliMancanti);
+setFascicoloCompleto(mancanti.length === 0);
 
   const loadData = async () => {
     try {
@@ -649,11 +660,22 @@ useEffect(() => {
           <div className="font-semibold">Fascicolo AML incompleto</div>
           <div className="mt-1">Documenti mancanti:</div>
 
-          <ul className="mt-2 list-disc pl-5">
-            {documentiMancanti.map((doc) => (
-              <li key={doc}>{doc}</li>
-            ))}
-          </ul>
+         <ul className="mt-2 list-disc pl-5">
+  {documentiMancanti.map((doc) => (
+    <li key={doc}>{doc}</li>
+  ))}
+</ul>
+
+{documentiOpzionaliMancanti.length > 0 ? (
+  <div className="mt-3">
+    <div className="font-medium">Documenti opzionali mancanti:</div>
+    <ul className="mt-1 list-disc pl-5">
+      {documentiOpzionaliMancanti.map((doc) => (
+        <li key={doc}>{doc}</li>
+      ))}
+    </ul>
+  </div>
+) : null}
         </div>
       )}
 
