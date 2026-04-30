@@ -91,8 +91,7 @@ export default function ContenziosoIndexPage() {
     if (archivioFiltro === "all" || archivioFiltro === "avvisi") {
       const { data, error } = await (supabase as any)
         .from("tbcontenzioso_avvisi_bonari")
-        .select(selectQuery)
-        .order("data_scadenza", { ascending: true });
+        .select(selectQuery);
 
       if (error) throw error;
 
@@ -108,8 +107,7 @@ export default function ContenziosoIndexPage() {
     if (archivioFiltro === "all" || archivioFiltro === "cartelle") {
       const { data, error } = await (supabase as any)
         .from("tbcontenzioso_cartelle")
-        .select(selectQuery)
-        .order("data_scadenza", { ascending: true });
+        .select(selectQuery);
 
       if (error) throw error;
 
@@ -125,8 +123,7 @@ export default function ContenziosoIndexPage() {
     if (archivioFiltro === "all" || archivioFiltro === "processo") {
       const { data, error } = await (supabase as any)
         .from("tbcontenzioso_processo")
-        .select(selectQuery)
-        .order("data_scadenza", { ascending: true });
+        .select(selectQuery);
 
       if (error) throw error;
 
@@ -292,7 +289,7 @@ export default function ContenziosoIndexPage() {
         <div>
           <h1 className="text-3xl font-bold">Contenzioso</h1>
           <p className="text-muted-foreground mt-1">
-            Riepilogo generale scadenze contenzioso
+            Registro atti del contenzioso
           </p>
         </div>
 
@@ -381,13 +378,13 @@ export default function ContenziosoIndexPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Elenco scadenze</CardTitle>
+          <CardTitle>Elenco atti</CardTitle>
         </CardHeader>
 
         <CardContent>
           {filtered.length === 0 ? (
             <div className="py-12 text-center text-muted-foreground">
-              Nessuna scadenza trovata.
+              Nessun atto trovato.
             </div>
           ) : (
             <div className="overflow-x-auto">
