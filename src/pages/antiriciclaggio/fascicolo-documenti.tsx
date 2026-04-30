@@ -334,7 +334,7 @@ export default function FascicoloDocumentiPage() {
     }
   };
 
-  const calcolaStatoFascicolo = (docs: DocumentoRow[]) => {
+ const calcolaStatoFascicolo = (docs: DocumentoRow[], isSocietaCliente: boolean) => {
   const normalizza = (value: any) =>
     String(value || "").toLowerCase().trim();
 
@@ -392,7 +392,7 @@ export default function FascicoloDocumentiPage() {
     return origine.includes("contratto") || tipo.includes("contratto");
   });
 
-const isSocieta = clienteIsSocieta;
+const isSocieta = isSocietaCliente;
   const mancanti: string[] = [];
 
   if (!hasAV1) mancanti.push("AV1 firmato");
@@ -441,9 +441,34 @@ setFascicoloCompleto(mancanti.length === 0);
           ? cliente_id
           : null;
 
-      await syncDocumentiCollegati(supabase, studioId, av1IdNum, clienteIdValue);
+   await syncDocumentiCollegati(supabase, studioId, av1IdNum, clienteIdValue);
 
-     let query = supabase
+const { data: clienteCheckData } = await supabase
+  .from("tbclienti")
+  .select("ragione_sociale, cod_cliente")
+  .eq("id", clienteIdValue)
+  .maybeSingle();
+
+const nomeClienteCheck =
+  clienteCheckData?.ragione_sociale ||
+  clienteCheckData?.cod_cliente ||
+  clienteNome;
+
+const nomeClienteNormalizzato = String(nomeClienteCheck || "")
+  .toLowerCase()
+  .replace(/\s+/g, "")
+  .replace(/\./g, "");
+
+const isSocietaCliente =
+  nomeClienteNormalizzato.includes("srl") ||
+  nomeClienteNormalizzato.includes("spa") ||
+  nomeClienteNormalizzato.includes("snc") ||
+  nomeClienteNormalizzato.includes("sas") ||
+  nomeClienteNormalizzato.includes("sapa") ||
+  nomeClienteNormalizzato.includes("societa") ||
+  nomeClienteNormalizzato.includes("società");
+
+let query = supabase
   .from("tbAVFascicoliDocumenti")
   .select(`
     id,
@@ -480,7 +505,7 @@ const { data, error } = await query;
       }
 
       setDocumenti(data || []);
-      calcolaStatoFascicolo(data || []);
+      calcolaStatoFascicolo(data || [], isSocietaCliente);
     } catch (err: any) {
       console.error("Errore loadData fascicolo:", err);
       alert(err?.message || "Errore caricamento fascicolo documenti");
