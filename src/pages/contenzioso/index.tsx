@@ -53,7 +53,7 @@ type Scadenza = {
     giorni_scadenza: number;
   } | null;
 
-  tbcontenzioso_tributi_constatazione?: {
+tbcontenzioso_codici_tributo?: {
   descrizione: string | null;
 } | null;
   
@@ -90,12 +90,12 @@ export default function ContenziosoIndexPage() {
 
     if (tipiRes.error) throw tipiRes.error;
 
-    const selectQuery = `
-      *,
-      tbclienti:cliente_id(id, ragione_sociale),
-      tbcontenzioso_tipi_atto:tipo_atto_id(id, descrizione, giorni_scadenza)
-      tbcontenzioso_tributi_constatazione:tributo_constatazione_id(descrizione)
-    `;
+   const selectQuery = `
+  *,
+  tbclienti:cliente_id(id, ragione_sociale),
+  tbcontenzioso_tipi_atto:tipo_atto_id(id, descrizione, giorni_scadenza),
+  tbcontenzioso_codici_tributo:tributo_constatazione_id(descrizione)
+`;
 
     let risultati: Scadenza[] = [];
 
@@ -430,11 +430,9 @@ export default function ContenziosoIndexPage() {
                           {row.tbcontenzioso_tipi_atto?.descrizione || "-"}
                         </TableCell>
                         <TableCell>{getNumero(row)}</TableCell>
-                        <TableCell>
-                        {row.tbcontenzioso_tributi_constatazione?.descrizione
-                        ? row.tbcontenzioso_tributi_constatazione.descrizione
-                        : row.tributo_constatazione_id || "-"}
-                          </TableCell>
+                       <TableCell>
+                        {row.tbcontenzioso_codici_tributo?.descrizione || "-"}
+                        </TableCell>
                         <TableCell>{row.anno_riferimento || "-"}</TableCell>
                         <TableCell>{formatDate(row.data_ricezione)}</TableCell>
                         <TableCell>{formatDate(row.data_scadenza)}</TableCell>
