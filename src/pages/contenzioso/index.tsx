@@ -24,6 +24,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Trash2, FileText } from "lucide-react";
 
+const formatDate = (date?: string | null) => {
+  if (!date) return "-";
+  return new Date(date).toLocaleDateString("it-IT");
+};
+
 type Scadenza = {
   id: string;
   archivio: "avvisi" | "cartelle" | "processo";
@@ -426,11 +431,13 @@ export default function ContenziosoIndexPage() {
                         </TableCell>
                         <TableCell>{getNumero(row)}</TableCell>
                         <TableCell>
-                        {row.tbcontenzioso_tributi_constatazione?.descrizione || "-"}
-                        </TableCell>
+                        {row.tbcontenzioso_tributi_constatazione?.descrizione
+                        ? row.tbcontenzioso_tributi_constatazione.descrizione
+                        : row.tributo_constatazione_id || "-"}
+                          </TableCell>
                         <TableCell>{row.anno_riferimento || "-"}</TableCell>
-                        <TableCell>{row.data_ricezione || "-"}</TableCell>
-                        <TableCell>{row.data_scadenza || "-"}</TableCell>
+                        <TableCell>{formatDate(row.data_ricezione)}</TableCell>
+                        <TableCell>{formatDate(row.data_scadenza)}</TableCell>
                         <TableCell>
                           <Badge variant={getBadgeVariant(stato) as any}>
                             {stato}
