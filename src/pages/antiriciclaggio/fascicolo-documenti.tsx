@@ -421,6 +421,21 @@ setDocumentiMancanti(mancanti);
 setDocumentiOpzionaliMancanti(opzionaliMancanti);
 setFascicoloCompleto(mancanti.length === 0);
 };
+   
+void fetch("/api/antiriciclaggio/fascicolo-alert/upsert", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    av1_id: av1_id ? Number(av1_id) : null,
+    pratica_id: typeof pratica_id === "string" ? pratica_id : null,
+    cliente_id: typeof cliente_id === "string" ? cliente_id : null,
+    documenti_mancanti: mancanti,
+    documenti_opzionali_mancanti: opzionaliMancanti,
+    completo: mancanti.length === 0,
+  }),
+});
 
   const loadData = async () => {
     try {
