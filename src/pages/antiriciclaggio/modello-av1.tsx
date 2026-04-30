@@ -548,12 +548,19 @@ const refreshEncryptionEnabled = async (studioIdValue?: string) => {
 
     const { data, error } = await supabase
       .from("tbPraticheAML")
-      .select("*")
+      .select("*, av4_id, av4_corrente_id")
       .eq("id", praticaId)
       .single();
 
     if (error) throw new Error(error.message);
     if (!data) return;
+
+    const existingAv4Id =
+  data.av4_corrente_id != null
+    ? String(data.av4_corrente_id)
+    : data.av4_id != null
+    ? String(data.av4_id)
+    : "";
 
     const praticaStudioId =
       data.studio_id ??
@@ -579,6 +586,7 @@ if (currentAv1Id) {
   ...prev,
   id: "",
   pratica_id: String(data.id),
+   AV4Generato: Boolean(existingAv4Id), 
       studio_id:
         data.studio_id ??
         (typeof studio_id === "string" ? studio_id : "") ??
@@ -596,7 +604,7 @@ if (currentAv1Id) {
         "",
       ScadenzaVerifica: "",
       AV1Conferma: false,
-      AV4Generato: false,
+      AV4Generato: Boolean(existingAv4Id),
       allegato_av1_firmato: "",
       incaricato_adeguata_verifica_id: "",
       A1: 0,
