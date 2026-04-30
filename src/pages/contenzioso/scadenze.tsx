@@ -9,7 +9,7 @@ type Scadenza = {
   modulo: string;
   descrizione: string;
   data_scadenza: string;
-  giorni_residui: number;
+  giorni_restanti: number;
   cliente?: string | null;
   numero_atto?: string | null;
   anno_riferimento?: number | null;
@@ -20,9 +20,6 @@ export default function ScadenzeContenzioso() {
    const router = useRouter();
   const [scadenze, setScadenze] = useState<Scadenza[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const [invioAlert, setInvioAlert] = useState(false);
-  const [messaggioAlert, setMessaggioAlert] = useState("");
 
   useEffect(() => {
     loadScadenze();
@@ -56,7 +53,7 @@ export default function ScadenzeContenzioso() {
             numero_atto,
             anno_riferimento,
             tbclienti:cliente_id(ragione_sociale),
-            tbcontenzioso_tributi_constatazione:tributo_constatazione_id(descrizione)
+            tbcontenzioso_codici_tributo:tributo_constatazione_id(descrizione)
           )
         `),
 
@@ -67,9 +64,9 @@ export default function ScadenzeContenzioso() {
           numero_atto,
           anno_riferimento,
           data_scadenza,
-          giorni_residui,
+          giorni_restanti,
           tbclienti:cliente_id(ragione_sociale),
-          tbcontenzioso_tributi_constatazione:tributo_constatazione_id(descrizione)
+          tbcontenzioso_codici_tributo:tributo_constatazione_id(descrizione)
         `),
 
       (supabase as any)
@@ -79,55 +76,55 @@ export default function ScadenzeContenzioso() {
           numero_cartella,
           anno_riferimento,
           data_scadenza,
-          giorni_residui,
+          giorni_restanti,
           tbclienti:cliente_id(ragione_sociale),
-          tbcontenzioso_tributi_constatazione:tributo_constatazione_id(descrizione)
+          tbcontenzioso_codici_tributo:tributo_constatazione_id(descrizione)
         `),
     ]);
 
-    const processo: Scadenza[] = (processoRes.data || []).map((s: any) => ({
-      id: `processo-${s.id}`,
-      modulo: s.modulo || "Processo tributario",
-      descrizione: s.descrizione || "Scadenza processo tributario",
-      data_scadenza: s.data_scadenza,
-      giorni_residui: s.giorni_residui ?? calcolaGiorniResidui(s.data_scadenza),
-      cliente:
-        s.tbcontenzioso_processo?.tbclienti?.ragione_sociale ||
-        "Cliente non indicato",
-      numero_atto: s.tbcontenzioso_processo?.numero_atto || "-",
-      anno_riferimento: s.tbcontenzioso_processo?.anno_riferimento || null,
-      tributo:
-        s.tbcontenzioso_processo?.tbcontenzioso_tributi_constatazione
-          ?.descrizione || "Tributo non indicato",
-    }));
+  const processo: Scadenza[] = (processoRes.data || []).map((s: any) => ({
+  id: `processo-${s.id}`,
+  modulo: s.modulo || "Processo tributario",
+  descrizione: s.descrizione || "Scadenza processo tributario",
+  data_scadenza: s.data_scadenza,
+  giorni_restanti: s.giorni_residui ?? calcolaGiorniResidui(s.data_scadenza),
+  cliente:
+    s.tbcontenzioso_processo?.tbclienti?.ragione_sociale ||
+    "Cliente non indicato",
+  numero_atto: s.tbcontenzioso_processo?.numero_atto || "-",
+  anno_riferimento: s.tbcontenzioso_processo?.anno_riferimento || null,
+  tributo:
+    s.tbcontenzioso_processo?.tbcontenzioso_codici_tributo?.descrizione ||
+    "Tributo non indicato",
+}));
 
-    const avvisi: Scadenza[] = (avvisiRes.data || []).map((s: any) => ({
-      id: `avviso-${s.id}`,
-      modulo: "Avviso bonario",
-      descrizione: "Scadenza avviso bonario",
-      data_scadenza: s.data_scadenza,
-      giorni_residui: s.giorni_residui ?? calcolaGiorniResidui(s.data_scadenza),
-      cliente: s.tbclienti?.ragione_sociale || "Cliente non indicato",
-      numero_atto: s.numero_atto || "-",
-      anno_riferimento: s.anno_riferimento || null,
-      tributo:
-        s.tbcontenzioso_tributi_constatazione?.descrizione ||
-        "Tributo non indicato",
-    }));
+const avvisi: Scadenza[] = (avvisiRes.data || []).map((s: any) => ({
+  id: `avviso-${s.id}`,
+  modulo: "Avviso bonario",
+  descrizione: "Scadenza avviso bonario",
+  data_scadenza: s.data_scadenza,
+  giorni_restanti: s.giorni_restanti ?? calcolaGiorniResidui(s.data_scadenza),
+  cliente: s.tbclienti?.ragione_sociale || "Cliente non indicato",
+  numero_atto: s.numero_atto || "-",
+  anno_riferimento: s.anno_riferimento || null,
+  tributo:
+    s.tbcontenzioso_codici_tributo?.descrizione ||
+    "Tributo non indicato",
+}));
 
-    const cartelle: Scadenza[] = (cartelleRes.data || []).map((s: any) => ({
-      id: `cartella-${s.id}`,
-      modulo: "Cartella esattoriale",
-      descrizione: "Scadenza cartella esattoriale",
-      data_scadenza: s.data_scadenza,
-      giorni_residui: s.giorni_residui ?? calcolaGiorniResidui(s.data_scadenza),
-      cliente: s.tbclienti?.ragione_sociale || "Cliente non indicato",
-      numero_atto: s.numero_cartella || "-",
-      anno_riferimento: s.anno_riferimento || null,
-      tributo:
-        s.tbcontenzioso_tributi_constatazione?.descrizione ||
-        "Tributo non indicato",
-    }));
+const cartelle: Scadenza[] = (cartelleRes.data || []).map((s: any) => ({
+  id: `cartella-${s.id}`,
+  modulo: "Cartella esattoriale",
+  descrizione: "Scadenza cartella esattoriale",
+  data_scadenza: s.data_scadenza,
+  giorni_restanti: s.giorni_restanti ?? calcolaGiorniResidui(s.data_scadenza),
+  cliente: s.tbclienti?.ragione_sociale || "Cliente non indicato",
+  numero_atto: s.numero_cartella || "-",
+  anno_riferimento: s.anno_riferimento || null,
+  tributo:
+    s.tbcontenzioso_codici_tributo?.descrizione ||
+    "Tributo non indicato",
+}));
 
     const tutte = [...processo, ...avvisi, ...cartelle]
       .filter((s) => !!s.data_scadenza)
@@ -153,64 +150,21 @@ export default function ScadenzeContenzioso() {
     return <div className="p-6">Caricamento scadenze...</div>;
   }
 
-  const testInvioAlert = async () => {
-  setInvioAlert(true);
-  setMessaggioAlert("");
-
-  try {
-    const res = await fetch("/api/contenzioso/invia-alert", {
-      method: "POST",
-    });
-
-    const json = await res.json();
-
-    if (!res.ok || !json.success) {
-      setMessaggioAlert(json.error || "Errore durante invio alert.");
-      return;
-    }
-
-    setMessaggioAlert(
-      `Alert processati: ${json.processati}, inviati: ${json.inviati}, falliti: ${json.falliti}`
-    );
-  } catch (error) {
-    setMessaggioAlert("Errore durante il test invio alert.");
-  } finally {
-    setInvioAlert(false);
-  }
-};
-
-  return (
+   return (
     <div className="p-6 max-w-7xl mx-auto">
       <Card>
-     <CardHeader>
+   <CardHeader>
   <div className="flex items-center justify-between">
     <CardTitle>Scadenze contenzioso</CardTitle>
 
-    <div className="flex gap-2">
-      <button
-        type="button"
-        onClick={testInvioAlert}
-        disabled={invioAlert}
-        className="rounded-lg bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700 disabled:opacity-50"
-      >
-        {invioAlert ? "Invio..." : "Test invio alert"}
-      </button>
-
-      <button
-        type="button"
-        onClick={() => window.history.back()}
-        className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-100"
-      >
-        Indietro
-      </button>
-    </div>
+    <button
+      type="button"
+      onClick={() => router.push("/contenzioso")}
+      className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-100"
+    >
+      Indietro
+    </button>
   </div>
-
-  {messaggioAlert && (
-    <div className="mt-3 rounded-lg border bg-gray-50 p-3 text-sm">
-      {messaggioAlert}
-    </div>
-  )}
 </CardHeader>
 
         <CardContent className="space-y-3">
@@ -242,9 +196,7 @@ export default function ScadenzeContenzioso() {
                   </div>
                 </div>
 
-                <Badge className={getColor(s.giorni_residui)}>
-                  {s.giorni_residui} gg
-                </Badge>
+                <Badge className={getColor(s.giorni_restanti)}>  {s.giorni_restanti} gg</Badge>
               </div>
             ))
           )}
