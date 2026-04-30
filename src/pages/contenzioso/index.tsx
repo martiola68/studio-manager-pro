@@ -47,6 +47,11 @@ type Scadenza = {
     descrizione: string;
     giorni_scadenza: number;
   } | null;
+
+  tbcontenzioso_tributi_constatazione?: {
+  descrizione: string | null;
+} | null;
+  
 };
 
 type TipoAtto = {
