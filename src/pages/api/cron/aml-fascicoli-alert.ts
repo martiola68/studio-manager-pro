@@ -47,12 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const { data: cliente, error: clienteError } = await supabaseAdmin
         .from("tbclienti")
-        .select(`
-          id,
-          ragione_sociale,
-          cod_cliente,
-          utente_operatore_id
-        `)
+        .select("id, ragione_sociale, cod_cliente, utente_operatore_id")
         .eq("id", alert.cliente_id)
         .maybeSingle();
 
@@ -72,33 +67,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         continue;
       }
 
+      const { data: studio } = await supabaseAdmin
+        .from("tbstudio")
+        .select("email, microsoft_connection_id")
+        .eq("id", alert.studio_id)
+        .maybeSingle();
+
+      if (!studio?.microsoft_connection_id) {
+        saltati++;
+        continue;
+      }
+
       const nomeCliente =
         cliente.ragione_sociale || cliente.cod_cliente || "Cliente";
 
-      const mancanti = alert.documenti_mancanti || [];
-      const opzionali = alert.documenti_opzionali_mancanti || [];
+      const mancanti: string[] = alert.documenti_mancanti || [];
+      const opzionali: string[] = alert.documenti_opzionali_mancanti || [];
 
-      const { data: studio } = await supabaseAdmin
-  .from("tbstudio")
-  .select("email, microsoft_connection_id")
-  .eq("id", alert.studio_id)
-  .maybeSingle();
-
-if (!studio?.microsoft_connection_id) {
-  saltati++;
-  continue;
-}
-      
       const html = `
         <div style="font-family: Arial, sans-serif; font-size: 14px; color: #111827;">
-          <h2>Fascicolo AML incompleto</h2>
+          <h2 style="color: #b45309;">Fascicolo documenti AML da completare</h2>
 
           <p>
-            Il fascicolo AML del cliente <strong>${nomeCliente}</strong>
-            risulta ancora incompleto.
+            Il fascicolo documenti AML del cliente <strong>${nomeCliente}</strong>
+            risulta incompleto.
           </p>
 
-          <p><strong>Documenti mancanti:</strong></p>
+          <p>
+            Ti chiediamo di completare il fascicolo caricando i documenti mancanti indicati di seguito.
+          </p>
+
+          <p><strong>Documenti obbligatori mancanti:</strong></p>
           <ul>
             ${mancanti.map((doc: string) => `<li>${doc}</li>`).join("")}
           </ul>
@@ -115,17 +114,23 @@ if (!studio?.microsoft_connection_id) {
           }
 
           <p>
-            Questo promemoria verrà inviato ogni lunedì mattina fino al completamento del fascicolo.
+            Il promemoria verrà inviato ogni lunedì mattina fino a quando il fascicolo documenti AML non risulterà completo.
+          </p>
+
+          <p style="margin-top: 24px; font-size: 12px; color: #6b7280;">
+            Questa è una comunicazione automatica di Studio Manager Pro.
           </p>
         </div>
       `;
 
-    const text = `
-Fascicolo AML incompleto - ${nomeCliente}
+      const text = `
+Fascicolo documenti AML da completare
 
-Il fascicolo AML del cliente ${nomeCliente} risulta ancora incompleto.
+Il fascicolo documenti AML del cliente ${nomeCliente} risulta incompleto.
 
-Documenti mancanti:
+Ti chiediamo di completare il fascicolo caricando i documenti mancanti indicati di seguito.
+
+Documenti obbligatori mancanti:
 ${mancanti.map((doc: string) => `- ${doc}`).join("\n")}
 
 ${
@@ -136,25 +141,28 @@ ${
     : ""
 }
 
-Questo promemoria verrà inviato ogni lunedì mattina fino al completamento del fascicolo.
+Il promemoria verrà inviato ogni lunedì mattina fino a quando il fascicolo documenti AML non risulterà completo.
+
+Studio Manager Pro
+Comunicazione automatica.
 `.trim();
 
-const result = await sendEmail({
-  to: utente.email,
-  subject: `Fascicolo AML incompleto - ${nomeCliente}`,
-  html,
-  text,
-  senderUserId: utente.id,
-  microsoftConnectionId: studio.microsoft_connection_id,
-  fromEmail: studio.email || undefined,
-  sendMode: "user",
-});
+      const result = await sendEmail({
+        to: utente.email,
+        subject: `Completa fascicolo documenti AML - ${nomeCliente}`,
+        html,
+        text,
+        senderUserId: utente.id,
+        microsoftConnectionId: studio.microsoft_connection_id,
+        fromEmail: studio.email || undefined,
+        sendMode: "user",
+      });
 
-if (!result.success) {
-  console.error("Errore invio email AML:", result.error);
-  saltati++;
-  continue;
-}
+      if (!result.success) {
+        console.error("Errore invio email AML:", result.error);
+        saltati++;
+        continue;
+      }
 
       await supabaseAdmin
         .from("tbAVFascicoliAlert")
