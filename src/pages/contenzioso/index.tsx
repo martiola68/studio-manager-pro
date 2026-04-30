@@ -84,6 +84,7 @@ export default function ContenziosoIndexPage() {
       *,
       tbclienti:cliente_id(id, ragione_sociale),
       tbcontenzioso_tipi_atto:tipo_atto_id(id, descrizione, giorni_scadenza)
+      tbcontenzioso_tributi_constatazione:tributo_constatazione_id(descrizione)
     `;
 
     let risultati: Scadenza[] = [];
@@ -394,7 +395,7 @@ export default function ContenziosoIndexPage() {
                     <TableHead>Cliente</TableHead>
                     <TableHead>Tipo atto</TableHead>
                     <TableHead>Numero</TableHead>
-                    <TableHead>Dettaglio</TableHead>
+                    <TableHead>Imposta</TableHead>
                     <TableHead>Anno</TableHead>
                     <TableHead>Ricezione</TableHead>
                     <TableHead>Scadenza</TableHead>
@@ -419,7 +420,9 @@ export default function ContenziosoIndexPage() {
                           {row.tbcontenzioso_tipi_atto?.descrizione || "-"}
                         </TableCell>
                         <TableCell>{getNumero(row)}</TableCell>
-                        <TableCell>{row.tipo_atto_dettaglio || "-"}</TableCell>
+                        <TableCell>
+                        {row.tbcontenzioso_tributi_constatazione?.descrizione || "-"}
+                        </TableCell>
                         <TableCell>{row.anno_riferimento || "-"}</TableCell>
                         <TableCell>{row.data_ricezione || "-"}</TableCell>
                         <TableCell>{row.data_scadenza || "-"}</TableCell>
