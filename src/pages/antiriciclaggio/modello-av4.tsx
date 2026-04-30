@@ -23,6 +23,7 @@ type FormState = {
 
   invia_altra_email: boolean;
   email_destinatario_alternativa: string;
+  amm_no_associato: boolean;
   
   dichiarante_nome_cognome: string;
   dichiarante_codice_fiscale: string;
@@ -102,6 +103,7 @@ const initialFormState = (
    microsoft_connection_id: "",
   invia_altra_email: false,
   email_destinatario_alternativa: "",
+  amm_no_associato: false,
   
   dichiarante_nome_cognome: "",
   dichiarante_codice_fiscale: "",
@@ -208,6 +210,7 @@ function mapDbRowToForm(row: any): FormState {
   : "",
   invia_altra_email: !!row?.invia_altra_email,
   email_destinatario_alternativa: row?.email_destinatario_alternativa ?? "",
+    amm_no_associato: !!row?.amm_no_associato
 
     dichiarante_nome_cognome: row?.dichiarante_nome_cognome ?? "",
     dichiarante_codice_fiscale: row?.dichiarante_codice_fiscale ?? "",
@@ -336,9 +339,10 @@ export default function ModelloAV4() {
     }
   }
 
-  function clearRappresentanteFields() {
-    setForm((prev) => ({
-      ...prev,
+ function clearRappresentanteFields() {
+  setForm((prev) => ({
+    ...prev,
+      amm_no_associato: true,
       rapp_legale_id: "",
       microsoft_connection_id: "",
       dichiarante_nome_cognome: "",
@@ -353,6 +357,9 @@ export default function ModelloAV4() {
   }
 
   async function hydrateClienteAndRappresentante(clienteId: string) {
+    if (form.amm_no_associato) {
+  return;
+}
     if (!clienteId) {
       setClienteLabel("");
       clearRappresentanteFields();
@@ -430,6 +437,12 @@ export default function ModelloAV4() {
       alert("Cliente non valorizzato.");
       return;
     }
+
+    setForm((prev) => ({
+  ...prev,
+  amm_no_associato: false,
+}));
+
 
     await hydrateClienteAndRappresentante(form.cliente_id);
 
@@ -869,7 +882,7 @@ function validateBeforeSave() {
     return false;
   }
 
- if (!form.rapp_legale_id && !form.invia_altra_email) {
+if (!form.rapp_legale_id && !form.invia_altra_email && !form.amm_no_associato) {
   alert("Per il cliente selezionato non risulta un rappresentante collegato.");
   return false;
 }
@@ -1193,6 +1206,7 @@ ${nomeOperatore}
           tipo_comunicazione: "invio_av4",
           cliente_id: form.cliente_id || null,
           rapp_legale_id: form.rapp_legale_id || null,
+           amm_no_associato: !!form.amm_no_associato,
           av4_id: av4Id,
           destinatario_email: destinatario,
           oggetto: subject,
@@ -1672,6 +1686,33 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
     </div>
   )}
 </div>
+
+              <div className="rounded-lg border bg-amber-50 p-4">
+  <label className="flex items-center gap-2 text-sm font-medium">
+    <input
+      type="checkbox"
+      name="amm_no_associato"
+      checked={form.amm_no_associato}
+      onChange={(e) => {
+        const checked = e.target.checked;
+
+        setForm((prev) => ({
+          ...prev,
+          amm_no_associato: checked,
+        }));
+
+        if (!checked && form.cliente_id) {
+          void hydrateClienteAndRappresentante(form.cliente_id);
+        }
+      }}
+    />
+    Amministratore non associato
+  </label>
+
+  <p className="mt-1 text-xs text-gray-500">
+    Se attivo, l’AV4 non ricarica automaticamente il rappresentante dall’anagrafica cliente.
+  </p>
+</div>    
                   
 
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
