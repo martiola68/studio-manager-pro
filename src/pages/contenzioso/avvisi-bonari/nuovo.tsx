@@ -358,7 +358,6 @@ const giorniResidui = calcolaGiorniResidui(dataScadenza);
         : null,
       data_emissione: form.data_emissione || null,
       data_ricezione: form.data_ricezione,
-      data_scadenza: dataScadenza || null,
       giorni_restanti: giorniResidui,
       importo_dovuto: form.importo_dovuto ? toNumber(form.importo_dovuto) : null,
       importo_sgravato: form.importo_sgravato
