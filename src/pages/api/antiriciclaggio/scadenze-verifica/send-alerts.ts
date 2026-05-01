@@ -206,11 +206,13 @@ Verifica se la pratica deve essere rinnovata oppure archiviata.
         sendMode: "studio",
       });
 
-      if (!result.success) {
-        console.error("Errore invio alert scadenza AML:", result.error);
-        saltate++;
-        continue;
-      }
+   if (!result.success) {
+  debugEmails[debugEmails.length - 1].errore_invio = result.error || "Errore invio sconosciuto";
+
+  console.error("Errore invio alert scadenza AML:", result.error);
+  saltate++;
+  continue;
+}
 
       const { error: insertAlertError } = await supabaseAdmin
         .from("tbAVScadenzeVerificaAlert")
