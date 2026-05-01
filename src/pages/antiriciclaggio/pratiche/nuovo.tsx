@@ -185,25 +185,100 @@ export default function NuovaPraticaAMLPage() {
         }
       }
 
-      const { error } = await supabaseAny
-        .from("tbPraticheAML")
-        .insert({
-          studio_id: studioId,
-          cliente_id: clienteId,
-          societa_id: societaId || null,
-          operatore_responsabile_id: operatoreResponsabileId || null,
-          data_apertura: dataApertura,
-          tipo_prestazione: tipoPrestazione,
-          stato: "aperta",
-        })
-        .select("id")
-        .single();
+     const { data: praticaData, error: praticaError } = await supabaseAny
+  .from("tbPraticheAML")
+  .insert({
+    studio_id: studioId,
+    cliente_id: clienteId,
+    societa_id: societaId || null,
+    operatore_responsabile_id: operatoreResponsabileId || null,
+    data_apertura: dataApertura,
+    tipo_prestazione: tipoPrestazione,
+    stato: "aperta",
+  })
+  .select("id")
+  .single();
 
-      if (error) {
-        throw new Error(error.message || "Errore creazione pratica.");
-      }
+if (praticaError || !praticaData?.id) {
+  throw new Error(praticaError?.message || "Errore creazione pratica.");
+}
 
-      router.push("/antiriciclaggio");
+const praticaId = praticaData.id;
+
+const { data: av1Data, error: av1Error } = await supabaseAny
+  .from("tbAV1")
+  .insert({
+    studio_id: studioId,
+    cliente_id: clienteId,
+    societa_id: societaId || null,
+    pratica_id: praticaId,
+    incaricato_adeguata_verifica_id: null,
+    DataVerifica: dataApertura,
+    ScadenzaVerifica: null,
+    AV1Conferma: false,
+    AV2Generato: true,
+    AV4Generato: true,
+  })
+  .select("id")
+  .single();
+
+if (av1Error || !av1Data?.id) {
+  throw new Error(av1Error?.message || "Errore creazione AV1.");
+}
+
+const av1Id = av1Data.id;
+
+const { data: av2Data, error: av2Error } = await supabaseAny
+  .from("tbAV2")
+  .insert({
+    studio_id: studioId,
+    cliente_id: clienteId,
+    societa_id: societaId || null,
+    pratica_id: praticaId,
+    av1_id: av1Id,
+  })
+  .select("id")
+  .single();
+
+if (av2Error || !av2Data?.id) {
+  throw new Error(av2Error?.message || "Errore creazione AV2.");
+}
+
+const { data: av4Data, error: av4Error } = await supabaseAny
+  .from("tbAV4")
+  .insert({
+    studio_id: studioId,
+    cliente_id: clienteId,
+    societa_id: societaId || null,
+    pratica_id: praticaId,
+    av1_id: av1Id,
+    stato: "bozza",
+  })
+  .select("id")
+  .single();
+
+if (av4Error || !av4Data?.id) {
+  throw new Error(av4Error?.message || "Errore creazione AV4.");
+}
+
+const { error: updatePraticaError } = await supabaseAny
+  .from("tbPraticheAML")
+  .update({
+    av1_id: av1Id,
+    av2_id: av2Data.id,
+    av4_id: av4Data.id,
+    av4_corrente_id: av4Data.id,
+  })
+  .eq("id", praticaId);
+
+if (updatePraticaError) {
+  throw new Error(
+    updatePraticaError.message || "Errore aggiornamento collegamenti pratica."
+  );
+}
+
+router.push("/antiriciclaggio");
+      
     } catch (err: any) {
       console.error("Errore creazione pratica AML:", err);
       alert(err?.message || "Errore creazione pratica.");
