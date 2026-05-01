@@ -13,7 +13,7 @@ type ClienteRow = {
 
 type DocumentoRow = {
   id: string;
-  av1_id?: string | number | null;
+  //av1_id?: string | number | null;
   pratica_id?: string | null;
   cliente_id?: string | null;
   av4_id?: string | number | null;
@@ -118,7 +118,7 @@ function getFormatoIcon(mime?: string | null) {
 
 export default function FascicoloDocumentiPage() {
   const router = useRouter();
- const { av1_id, pratica_id, cliente_id } = router.query;
+ const { pratica_id, cliente_id } = router.query;
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
@@ -157,75 +157,180 @@ export default function FascicoloDocumentiPage() {
     return `${(value / (1024 * 1024)).toFixed(2)} MB`;
   };
 
-  const ensureDocumentoInFascicolo = async ({
-    supabase,
-    studioId,
-    av1Id,
-    clienteId,
-    av4Id = null,
-    tipoDocumento,
-    storagePath,
-    bucketName = "allegati",
-    mimeType = null,
-    origine,
-    note = null,
-  }: {
-    supabase: any;
-    studioId: string;
-    av1Id: number;
-    clienteId: string | null;
-    av4Id?: number | null;
-    tipoDocumento: string;
-    storagePath: string;
-    bucketName?: string;
-    mimeType?: string | null;
-    origine: string;
-    note?: string | null;
-  }) => {
-    const { data: existing, error: existingError } = await supabase
-      .from("tbAVFascicoliDocumenti")
-      .select("id")
-      .eq("studio_id", studioId)
-      .eq("av1_id", av1Id)
-      .eq("storage_path", storagePath)
-      .eq("origine", origine)
+const ensureDocumentoInFascicolo = async ({
+  supabase,
+  studioId,
+  praticaId,
+  clienteId,
+  tipoDocumento,
+  storagePath,
+  bucketName = "allegati",
+  mimeType = null,
+  origine,
+  note = null,
+}: {
+  supabase: any;
+  studioId: string;
+  praticaId: string;
+  clienteId: string | null;
+  tipoDocumento: string;
+  storagePath: string;
+  bucketName?: string;
+  mimeType?: string | null;
+  origine: string;
+  note?: string | null;
+}) => {
+  const { data: existing, error: existingError } = await supabase
+    .from("tbAVFascicoliDocumenti")
+    .select("id")
+    .eq("studio_id", studioId)
+    .eq("pratica_id", praticaId)
+    .eq("storage_path", storagePath)
+    .eq("origine", origine)
+    .maybeSingle();
+
+  if (existingError && existingError.code !== "PGRST116") {
+    throw existingError;
+  }
+
+  if (existing?.id) {
+    return;
+  }
+
+  const { error: insertError } = await supabase
+    .from("tbAVFascicoliDocumenti")
+    .insert({
+      studio_id: studioId,
+      pratica_id: praticaId,
+      cliente_id: clienteId,
+      tipo_documento: tipoDocumento,
+      nome_file: getFileNameFromPath(storagePath),
+      storage_path: storagePath,
+      bucket_name: bucketName,
+      mime_type: mimeType,
+      dimensione: null,
+      origine,
+      note,
+    });
+
+  if (insertError) {
+    throw insertError;
+  }
+};
+const syncDocumentiCollegati = async (
+  supabase: any,
+  studioId: string,
+  praticaId: string,
+  clienteIdFromQuery: string | null
+) => {
+  const { data: praticaData, error: praticaError } = await supabase
+    .from("tbPraticheAML")
+    .select("id, cliente_id")
+    .eq("studio_id", studioId)
+    .eq("id", praticaId)
+    .maybeSingle();
+
+  if (praticaError) {
+    throw praticaError;
+  }
+
+  const effectiveClienteId = clienteIdFromQuery || praticaData?.cliente_id || null;
+
+  if (!effectiveClienteId) {
+    return;
+  }
+
+  const { data: av1DocumentoData, error: av1DocumentoError } = await supabase
+    .from("tbAV1")
+    .select("id, allegato_av1_firmato")
+    .eq("studio_id", studioId)
+    .eq("pratica_id", praticaId)
+    .maybeSingle();
+
+  if (av1DocumentoError) {
+    throw av1DocumentoError;
+  }
+
+  if (av1DocumentoData?.allegato_av1_firmato) {
+    await ensureDocumentoInFascicolo({
+      supabase,
+      studioId,
+      praticaId,
+      clienteId: effectiveClienteId,
+      tipoDocumento: "Modulo firmato",
+      storagePath: av1DocumentoData.allegato_av1_firmato,
+      bucketName: "allegati",
+      mimeType: getMimeTypeFromPath(av1DocumentoData.allegato_av1_firmato),
+      origine: "av1_firmato",
+      note: "Importato da AV1 firmato",
+    });
+  }
+
+  const { data: clienteData, error: clienteError } = await supabase
+    .from("tbclienti")
+    .select("id, ragione_sociale, cod_cliente, rapp_legale_id")
+    .eq("id", effectiveClienteId)
+    .maybeSingle();
+
+  if (clienteError) {
+    throw clienteError;
+  }
+
+  if (clienteData) {
+    const cliente = clienteData as ClienteRow;
+    const nome = cliente.ragione_sociale || cliente.cod_cliente || "Cliente";
+
+    setClienteNome(nome);
+
+    const nomeNormalizzato = nome
+      .toLowerCase()
+      .replace(/\s+/g, "")
+      .replace(/\./g, "");
+
+    setClienteIsSocieta(
+      nomeNormalizzato.includes("srl") ||
+        nomeNormalizzato.includes("spa") ||
+        nomeNormalizzato.includes("snc") ||
+        nomeNormalizzato.includes("sas") ||
+        nomeNormalizzato.includes("sapa") ||
+        nomeNormalizzato.includes("societa") ||
+        nomeNormalizzato.includes("società")
+    );
+  }
+
+  const rappLegaleId = clienteData?.rapp_legale_id || null;
+
+  if (rappLegaleId) {
+    const { data: rappresentanteData, error: rappresentanteError } = await supabase
+      .from("rapp_legali")
+      .select("id, allegato_doc, tipo_doc")
+      .eq("id", rappLegaleId)
       .maybeSingle();
 
-    if (existingError && existingError.code !== "PGRST116") {
-      throw existingError;
+    if (rappresentanteError) {
+      throw rappresentanteError;
     }
 
-    if (existing?.id) {
-      return;
-    }
-
-    const { error: insertError } = await supabase
-      .from("tbAVFascicoliDocumenti")
-      .insert({
-        studio_id: studioId,
-        av1_id: av1Id,
-        cliente_id: clienteId,
-        tipo_documento: tipoDocumento,
-        nome_file: getFileNameFromPath(storagePath),
-        storage_path: storagePath,
-        bucket_name: bucketName,
-        mime_type: mimeType,
-        dimensione: null,
-        origine,
-        note,
+    if (rappresentanteData?.allegato_doc) {
+      await ensureDocumentoInFascicolo({
+        supabase,
+        studioId,
+        praticaId,
+        clienteId: effectiveClienteId,
+        tipoDocumento: "Documento identità",
+        storagePath: rappresentanteData.allegato_doc,
+        bucketName: rappresentanteData.allegato_doc.startsWith("av4/")
+          ? "messaggi-allegati"
+          : "allegati",
+        mimeType: getMimeTypeFromPath(rappresentanteData.allegato_doc),
+        origine: "documento_rappresentante",
+        note: rappresentanteData?.tipo_doc
+          ? `Importato da documento rappresentante (${rappresentanteData.tipo_doc})`
+          : "Importato da documento rappresentante",
       });
-
-    if (insertError) {
-      throw insertError;
     }
-  };
-
-  const syncDocumentiCollegati = async (
-    supabase: any,
-    studioId: string,
-    av1IdNum: number,
-    clienteIdFromQuery: string | null
-  ) => {
+  }
+};
     const { data: av1Data, error: av1Error } = await supabase
       .from("tbAV1")
       .select("id, cliente_id")
@@ -426,9 +531,8 @@ void fetch("/api/antiriciclaggio/fascicolo-alert/upsert", {
   headers: {
     "Content-Type": "application/json",
   },
-  body: JSON.stringify({
-    av1_id: av1_id ? Number(av1_id) : null,
-    pratica_id: typeof pratica_id === "string" ? pratica_id : null,
+body: JSON.stringify({
+  pratica_id: typeof pratica_id === "string" ? pratica_id : null,
     cliente_id: typeof cliente_id === "string" ? cliente_id : null,
     documenti_mancanti: mancanti,
     documenti_opzionali_mancanti: opzionaliMancanti,
@@ -440,7 +544,7 @@ void fetch("/api/antiriciclaggio/fascicolo-alert/upsert", {
 
   const loadData = async () => {
     try {
-     if (!router.isReady || (!av1_id && !pratica_id)) return;
+    if (!router.isReady || typeof pratica_id !== "string" || !pratica_id) return;
 
       setLoading(true);
 
@@ -451,14 +555,12 @@ void fetch("/api/antiriciclaggio/fascicolo-alert/upsert", {
       }
 
       const supabase = getSupabaseClient() as any;
-      const av1IdNum = Number(av1_id);
-      const clienteIdValue =
-        typeof cliente_id === "string" && cliente_id.trim() !== ""
-          ? cliente_id
-          : null;
+     const clienteIdValue =
+  typeof cliente_id === "string" && cliente_id.trim() !== ""
+    ? cliente_id
+    : null;
 
-   await syncDocumentiCollegati(supabase, studioId, av1IdNum, clienteIdValue);
-
+await syncDocumentiCollegati(supabase, studioId, pratica_id, clienteIdValue);
 const { data: clienteCheckData } = await supabase
   .from("tbclienti")
   .select("ragione_sociale, cod_cliente")
@@ -488,7 +590,6 @@ let query = supabase
   .from("tbAVFascicoliDocumenti")
   .select(`
     id,
-    av1_id,
     pratica_id,
     cliente_id,
     av4_id,
@@ -505,11 +606,7 @@ let query = supabase
   .eq("studio_id", studioId)
   .order("created_at", { ascending: false });
 
-if (av1_id) {
-  query = query.eq("av1_id", Number(av1_id));
-} else if (pratica_id) {
-  query = query.eq("pratica_id", pratica_id);
-}
+query = query.eq("pratica_id", pratica_id);
 
 const { data, error } = await query;
 
@@ -533,7 +630,7 @@ const { data, error } = await query;
 
   const handleUploadFile = async (file: File) => {
     try {
-     if (!file || (!av1_id && !pratica_id)) return;
+     if (!file || typeof pratica_id !== "string" || !pratica_id) return;
 
       setUploading(true);
 
@@ -548,7 +645,7 @@ const { data, error } = await query;
       const originalName = file.name || "file";
       const safeOriginalName = originalName.replace(/\s+/g, "_");
       const fileName = `${Date.now()}_${safeOriginalName}`;
-      const fascicoloKey = av1_id || pratica_id;
+      const fascicoloKey = pratica_id;
       const filePath = `antiriciclaggio/fascicoli/${studioId}/${fascicoloKey}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
@@ -561,11 +658,7 @@ const { data, error } = await query;
         .from("tbAVFascicoliDocumenti")
         .insert({
   studio_id: studioId,
-  av1_id: av1_id ? Number(av1_id) : null,
-  pratica_id:
-    typeof pratica_id === "string" && pratica_id.trim() !== ""
-      ? pratica_id
-      : null,
+  pratica_id,
   cliente_id:
     typeof cliente_id === "string" && cliente_id.trim() !== ""
       ? cliente_id
@@ -665,7 +758,7 @@ const { data, error } = await query;
 
 useEffect(() => {
   void loadData();
-}, [router.isReady, av1_id, pratica_id, cliente_id]);
+}, [router.isReady, pratica_id, cliente_id]);
   
   return (
     <div className="p-6">
@@ -677,7 +770,7 @@ useEffect(() => {
           <p className="text-lg font-bold text-gray-900">{clienteNome}</p>
 
           <p className="mt-1 text-sm text-gray-600">
-            AV1 ID: <span className="font-semibold">{String(av1_id || "-")}</span>
+           Pratica ID: <span className="font-semibold">{String(pratica_id || "-")}</span>
           </p>
         </div>
 
