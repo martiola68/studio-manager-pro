@@ -37,29 +37,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const scadenze = targetDates.map((x) => x.date);
 
-  const { data: av1Rows, error: av1Error } = await supabaseAdmin
-  .from("tbAV1")
-  .select(`
-    id,
-    studio_id,
-    cliente_id,
-    pratica_id,
-    ScadenzaVerifica,
-    tbclienti (
-      id,
-      ragione_sociale,
-      cod_cliente,
-      utente_operatore_id,
-      utente_operatore:tbutenti!tbclienti_utente_operatore_id_fkey (
+    const { data: av1Rows, error: av1Error } = await supabaseAdmin
+      .from("tbAV1")
+      .select(`
         id,
-        email,
-        nome,
-        cognome
-      )
-    )
-  `)
-  .not("pratica_id", "is", null)
-  .in("ScadenzaVerifica", scadenze);
+        studio_id,
+        cliente_id,
+        pratica_id,
+        ScadenzaVerifica,
+        tbclienti (
+          id,
+          ragione_sociale,
+          cod_cliente
+        )
+      `)
+      .not("pratica_id", "is", null)
+      .in("ScadenzaVerifica", scadenze);
 
     if (av1Error) throw av1Error;
 
@@ -70,18 +63,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     for (const av1 of av1Rows || []) {
       processate++;
 
-      const pratica = Array.isArray((av1 as any).tbPraticheAML)
-        ? (av1 as any).tbPraticheAML[0]
-        : (av1 as any).tbPraticheAML;
+      if (!av1.pratica_id || !av1.ScadenzaVerifica) {
+        saltate++;
+        continue;
+      }
+
+      const { data: pratica, error: praticaError } = await supabaseAdmin
+        .from("tbPraticheAML")
+        .select(`
+          id,
+          studio_id,
+          cliente_id,
+          operatore_responsabile_id,
+          tipo_prestazione,
+          ciclo_aml,
+          stato
+        `)
+        .eq("id", av1.pratica_id)
+        .maybeSingle();
+
+      if (praticaError || !pratica?.id) {
+        saltate++;
+        continue;
+      }
 
       const cliente = Array.isArray((av1 as any).tbclienti)
         ? (av1 as any).tbclienti[0]
         : (av1 as any).tbclienti;
 
-      if (!pratica?.id || !av1.pratica_id || !av1.ScadenzaVerifica) {
-        saltate++;
-        continue;
-      }
+      const nomeCliente =
+        cliente?.ragione_sociale || cliente?.cod_cliente || "Cliente";
 
       const target = targetDates.find((x) => x.date === av1.ScadenzaVerifica);
 
@@ -100,14 +111,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .limit(1)
         .maybeSingle();
 
-      const { data: rinnovoDaPrecedente } = await supabaseAdmin
-        .from("tbPraticheAML")
-        .select("id")
-        .eq("pratica_precedente_id", pratica.id)
-        .limit(1)
-        .maybeSingle();
-
-      if (rinnovo || rinnovoDaPrecedente) {
+      if (rinnovo) {
         saltate++;
         continue;
       }
@@ -125,18 +129,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         continue;
       }
 
-      const operatore = cliente?.utente_operatore;
-      const emailDestinatario = operatore?.email;
-
-      if (!emailDestinatario) {
+      if (!pratica.operatore_responsabile_id) {
         saltate++;
         continue;
       }
 
-      const nomeCliente =
-        cliente?.ragione_sociale || cliente?.cod_cliente || "Cliente";
+      const { data: operatore, error: operatoreError } = await supabaseAdmin
+        .from("tbutenti")
+        .select("id, email, nome, cognome")
+        .eq("id", pratica.operatore_responsabile_id)
+        .maybeSingle();
 
-      const nomeOperatore = [operatore?.nome, operatore?.cognome]
+      if (operatoreError || !operatore?.email) {
+        saltate++;
+        continue;
+      }
+
+      const emailDestinatario = operatore.email;
+
+      const nomeOperatore = [operatore.nome, operatore.cognome]
         .filter(Boolean)
         .join(" ");
 
