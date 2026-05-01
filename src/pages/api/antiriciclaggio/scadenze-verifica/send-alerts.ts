@@ -209,7 +209,7 @@ if (studioError || !studio?.microsoft_connection_id) {
   saltate++;
   continue;
 }
-     try {
+  try {
   await microsoftGraphService.sendEmail(
     operatore.id,
     studio.microsoft_connection_id,
@@ -226,20 +226,6 @@ if (studioError || !studio?.microsoft_connection_id) {
           },
         },
       ],
-      from: studio.email
-        ? {
-            emailAddress: {
-              address: studio.email,
-            },
-          }
-        : undefined,
-      sender: studio.email
-        ? {
-            emailAddress: {
-              address: studio.email,
-            },
-          }
-        : undefined,
     }
   );
 } catch (sendError: any) {
