@@ -496,95 +496,36 @@ const getAV4IconBorderClass = (row: AV1Row) => {
   };
 };
 
- const loadRowsBySocieta = async (societaId: string) => {
+const loadRowsBySocieta = async (societaId: string) => {
   try {
     setLoading(true);
     setRows([]);
 
-    const responsabiliIds = responsabili
-      .filter((r) => r.societa_id === societaId)
-      .map((r) => r.id);
-
     const supabase = getSupabaseClient();
     const supabaseAny = supabase as any;
 
-    let av1Rows: AV1Row[] = [];
-
-    if (responsabiliIds.length > 0) {
-      const { data, error } = await supabaseAny
-        .from("tbAV1")
-        .select(`
+    const { data: praticheData, error: praticheError } = await supabaseAny
+      .from("tbPraticheAML")
+      .select(`
+        id,
+        studio_id,
+        cliente_id,
+        societa_id,
+        data_apertura,
+        stato,
+        stato_ciclo,
+        tbclienti (
           id,
-          studio_id,
-          cliente_id,
-          incaricato_adeguata_verifica_id,
-          DataVerifica,
-          ScadenzaVerifica,
-          AV1Conferma,
-          AV2Generato,
-          AV4Generato,
-          tbclienti (
-            id,
-            cod_cliente,
-            ragione_sociale,
-            utente_operatore_id,
-            utente_operatore:tbutenti!tbclienti_utente_operatore_id_fkey (
-              nome,
-              cognome
-            )
-          ),
-          av4_info:tbAV4 (
-            id,
-            av1_id,
-            Av4InviatoCL,
-            public_sent_at,
-            compilato_da_cliente
+          cod_cliente,
+          ragione_sociale,
+          codice_fiscale,
+          utente_operatore_id,
+          utente_operatore:tbutenti!tbclienti_utente_operatore_id_fkey (
+            nome,
+            cognome
           )
-        `)
-        .in("incaricato_adeguata_verifica_id", responsabiliIds)
-        .order("DataVerifica", { ascending: false });
-
-      if (error) {
-        console.error("Errore caricamento tbAV1:", error);
-        alert(`Errore caricamento tbAV1: ${error.message}`);
-        setRows([]);
-        return;
-      }
-
-      av1Rows = (data as AV1Row[]) || [];
-    }
-
-   const { data: praticheData, error: praticheError } = await supabaseAny
-  .from("tbPraticheAML")
-  .select(`
-    id,
-    studio_id,
-    cliente_id,
-    societa_id,
-    data_apertura,
-    stato,
-    stato_ciclo,
-    av1_id,
-    av4_id,
-    av4_corrente_id,
-    tbclienti (
-      id,
-      cod_cliente,
-      ragione_sociale,
-      utente_operatore_id,
-      utente_operatore:tbutenti!tbclienti_utente_operatore_id_fkey (
-        nome,
-        cognome
-      )
-    ),
-    av4_info:tbAV4!fk_tbpraticheaml_av4_corrente (
-      id,
-      av1_id,
-      Av4InviatoCL,
-      public_sent_at,
-      compilato_da_cliente
-    )
-  `)
+        )
+      `)
       .eq("societa_id", societaId)
       .order("data_apertura", { ascending: false });
 
@@ -595,88 +536,85 @@ const getAV4IconBorderClass = (row: AV1Row) => {
       return;
     }
 
-const praticheRows = (praticheData as PraticaAMLRow[]) || [];
+    const praticheRows = (praticheData as PraticaAMLRow[]) || [];
 
-    const av1IdsPresenti = new Set(
-      av1Rows.map((row) => String(row.id)).filter(Boolean)
+    const rowsBase: AV1Row[] = await Promise.all(
+      praticheRows.map(async (pratica) => {
+        const [{ data: av1 }, { data: av2 }, { data: av4 }] =
+          await Promise.all([
+            supabaseAny
+              .from("tbAV1")
+              .select(`
+                id,
+                studio_id,
+                cliente_id,
+                societa_id,
+                pratica_id,
+                incaricato_adeguata_verifica_id,
+                DataVerifica,
+                ScadenzaVerifica,
+                AV1Conferma,
+                AV2Generato,
+                AV4Generato
+              `)
+              .eq("pratica_id", pratica.id)
+              .maybeSingle(),
+
+            supabaseAny
+              .from("tbAV2")
+              .select("id")
+              .eq("pratica_id", pratica.id)
+              .maybeSingle(),
+
+            supabaseAny
+              .from("tbAV4")
+              .select(`
+                id,
+                av1_id,
+                Av4InviatoCL,
+                public_sent_at,
+                compilato_da_cliente
+              `)
+              .eq("pratica_id", pratica.id)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle(),
+          ]);
+
+        return {
+          id: av1?.id ? String(av1.id) : "",
+          pratica_id: pratica.id,
+          societa_id: pratica.societa_id || null,
+          studio_id: pratica.studio_id || null,
+          cliente_id: pratica.cliente_id || null,
+          incaricato_adeguata_verifica_id:
+            av1?.incaricato_adeguata_verifica_id || null,
+          DataVerifica: av1?.DataVerifica || pratica.data_apertura || null,
+          ScadenzaVerifica: av1?.ScadenzaVerifica || null,
+          AV1Conferma: !!av1?.AV1Conferma,
+          AV2Generato: !!av2?.id,
+          AV4Generato: !!av4?.id,
+          tbclienti: pratica.tbclienti || null,
+          av4_info: av4 || null,
+          stato_pratica: pratica.stato || "aperta",
+          is_pratica_only: !av1?.id,
+        };
+      })
     );
 
-    const normalizeDate = (value?: string | null) => {
-      if (!value) return "";
-      return String(value).includes("T")
-        ? String(value).split("T")[0]
-        : String(value);
-    };
+    const rowsConFascicolo = await Promise.all(
+      rowsBase.map(async (row) => {
+        const check = await checkFascicoloDocumenti(row);
 
-    const praticheOnlyRows: AV1Row[] = praticheRows
-      .filter((pratica) => {
-        if (pratica.av1_id && av1IdsPresenti.has(String(pratica.av1_id))) {
-          return false;
-        }
-
-        const hasMatchingAV1 = av1Rows.some((row) => {
-          const sameCliente =
-            String(row.cliente_id || "") === String(pratica.cliente_id || "");
-
-          const sameDate =
-            normalizeDate(row.DataVerifica) ===
-            normalizeDate(pratica.data_apertura);
-
-          return sameCliente && sameDate;
-        });
-
-        if (hasMatchingAV1) {
-          return false;
-        }
-
-        return true;
+        return {
+          ...row,
+          fascicolo_completo: check.completo,
+          fascicolo_mancanti: check.mancanti,
+        };
       })
-      .map((pratica) => ({
-        id: "",
-        pratica_id: pratica.id,
-        societa_id: pratica.societa_id || null,
-        studio_id: pratica.studio_id || null,
-        cliente_id: pratica.cliente_id || null,
-        incaricato_adeguata_verifica_id: null,
-        DataVerifica: pratica.data_apertura || null,
-        ScadenzaVerifica: null,
-        AV1Conferma: false,
-        AV2Generato: false,
-        AV4Generato: false,
-        tbclienti: pratica.tbclienti || null,
-       av4_info: pratica.av4_info || null,
-        stato_pratica: pratica.stato || "aperta",
-        is_pratica_only: true,
-      }));
+    );
 
- const rowsFinali = [...praticheOnlyRows, ...av1Rows];
-
-const rowsUniche = Array.from(
-  new Map(
-    rowsFinali.map((row) => {
-      const key = row.pratica_id
-        ? `pratica-${row.pratica_id}`
-        : `av1-${row.id}`;
-
-      return [key, row];
-    })
-  ).values()
-);
-
-const rowsConFascicolo = await Promise.all(
-  rowsUniche.map(async (row) => {
-    const check = await checkFascicoloDocumenti(row);
-
-    return {
-      ...row,
-      fascicolo_completo: check.completo,
-      fascicolo_mancanti: check.mancanti,
-    };
-  })
-);
-
-setRows(rowsConFascicolo);
-    
+    setRows(rowsConFascicolo);
   } catch (err: any) {
     console.error("Errore loadRowsBySocieta:", err);
     alert(`Errore loadRowsBySocieta: ${err?.message || "errore sconosciuto"}`);
@@ -685,7 +623,6 @@ setRows(rowsConFascicolo);
     setLoading(false);
   }
 };
-
   const clearAmlTimers = () => {
     if (inactivityTimeoutRef.current) {
       clearTimeout(inactivityTimeoutRef.current);
