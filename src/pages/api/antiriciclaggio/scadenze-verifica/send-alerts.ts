@@ -102,20 +102,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         continue;
       }
 
-      const { data: rinnovo } = await supabaseAdmin
-        .from("tbPraticheAML")
-        .select("id")
-        .eq("studio_id", pratica.studio_id)
-        .eq("cliente_id", pratica.cliente_id)
-        .eq("tipo_prestazione", pratica.tipo_prestazione)
-        .limit(1)
-        .maybeSingle();
-
-      if (rinnovo) {
-        saltate++;
-        continue;
-      }
-
+  
       const { data: alreadySent } = await supabaseAdmin
         .from("tbAVScadenzeVerificaAlert")
         .select("id")
