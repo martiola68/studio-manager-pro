@@ -78,7 +78,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           cliente_id,
           operatore_responsabile_id,
           tipo_prestazione,
-          ciclo_aml,
           stato
         `)
         .eq("id", av1.pratica_id)
@@ -109,7 +108,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .eq("studio_id", pratica.studio_id)
         .eq("cliente_id", pratica.cliente_id)
         .eq("tipo_prestazione", pratica.tipo_prestazione)
-        .gt("ciclo_aml", Number(pratica.ciclo_aml || 1))
         .limit(1)
         .maybeSingle();
 
@@ -189,9 +187,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             <p style="margin: 6px 0 0 0;">
               <strong>Tipo prestazione:</strong> ${pratica.tipo_prestazione || "-"}
             </p>
-            <p style="margin: 6px 0 0 0;">
-              <strong>Ciclo AML:</strong> ${pratica.ciclo_aml || 1}
-            </p>
+          
           </div>
 
           <p>
@@ -211,7 +207,6 @@ La verifica AML del cliente ${nomeCliente} scade ${giorniLabel}.
 
 Data scadenza: ${formatDateIT(av1.ScadenzaVerifica)}
 Tipo prestazione: ${pratica.tipo_prestazione || "-"}
-Ciclo AML: ${pratica.ciclo_aml || 1}
 
 Verifica se la pratica deve essere rinnovata oppure archiviata.
       `.trim();
