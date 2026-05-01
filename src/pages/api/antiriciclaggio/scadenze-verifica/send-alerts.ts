@@ -37,38 +37,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const scadenze = targetDates.map((x) => x.date);
 
-    const { data: av1Rows, error: av1Error } = await supabaseAdmin
-      .from("tbAV1")
-      .select(`
+  const { data: av1Rows, error: av1Error } = await supabaseAdmin
+  .from("tbAV1")
+  .select(`
+    id,
+    studio_id,
+    cliente_id,
+    pratica_id,
+    ScadenzaVerifica,
+    tbclienti (
+      id,
+      ragione_sociale,
+      cod_cliente,
+      utente_operatore_id,
+      utente_operatore:tbutenti!tbclienti_utente_operatore_id_fkey (
         id,
-        studio_id,
-        cliente_id,
-        pratica_id,
-        ScadenzaVerifica,
-        tbclienti (
-          id,
-          ragione_sociale,
-          cod_cliente,
-          utente_operatore_id,
-          utente_operatore:tbutenti!tbclienti_utente_operatore_id_fkey (
-            id,
-            email,
-            nome,
-            cognome
-          )
-        ),
-        tbPraticheAML!tbAV1_pratica_id_fkey (
-          id,
-          studio_id,
-          cliente_id,
-          tipo_prestazione,
-          ciclo_aml,
-          pratica_precedente_id,
-          stato
-        )
-      `)
-      .not("pratica_id", "is", null)
-      .in("ScadenzaVerifica", scadenze);
+        email,
+        nome,
+        cognome
+      )
+    )
+  `)
+  .not("pratica_id", "is", null)
+  .in("ScadenzaVerifica", scadenze);
 
     if (av1Error) throw av1Error;
 
