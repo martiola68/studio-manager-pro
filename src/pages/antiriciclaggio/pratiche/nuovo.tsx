@@ -261,22 +261,6 @@ if (av4Error || !av4Data?.id) {
   throw new Error(av4Error?.message || "Errore creazione AV4.");
 }
 
-const { error: updatePraticaError } = await supabaseAny
-  .from("tbPraticheAML")
-  .update({
-    av1_id: av1Id,
-    av2_id: av2Data.id,
-    av4_id: av4Data.id,
-    av4_corrente_id: av4Data.id,
-  })
-  .eq("id", praticaId);
-
-if (updatePraticaError) {
-  throw new Error(
-    updatePraticaError.message || "Errore aggiornamento collegamenti pratica."
-  );
-}
-
 router.push("/antiriciclaggio");
       
     } catch (err: any) {
