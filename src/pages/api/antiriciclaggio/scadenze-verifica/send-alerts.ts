@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
-import { sendEmail } from "@/services/emailService";
+import { microsoftGraphService } from "@/services/microsoftGraphService";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -197,23 +197,58 @@ Tipo prestazione: ${pratica.tipo_prestazione || "-"}
 
 Verifica se la pratica deve essere rinnovata oppure archiviata.
       `.trim();
+const { data: studio, error: studioError } = await supabaseAdmin
+  .from("tbstudio")
+  .select("email, microsoft_connection_id")
+  .eq("id", pratica.studio_id)
+  .maybeSingle();
 
-      const result = await sendEmail({
-        to: emailDestinatario,
-        subject,
-        html,
-        text,
-        sendMode: "studio",
-      });
-
-   if (!result.success) {
-  debugEmails[debugEmails.length - 1].errore_invio = result.error || "Errore invio sconosciuto";
-
-  console.error("Errore invio alert scadenza AML:", result.error);
+if (studioError || !studio?.microsoft_connection_id) {
+  debugEmails[debugEmails.length - 1].errore_invio =
+    studioError?.message || "Connessione Microsoft studio mancante";
   saltate++;
   continue;
 }
+     try {
+  await microsoftGraphService.sendEmail(
+    operatore.id,
+    studio.microsoft_connection_id,
+    {
+      subject,
+      body: {
+        contentType: "HTML",
+        content: html,
+      },
+      toRecipients: [
+        {
+          emailAddress: {
+            address: emailDestinatario,
+          },
+        },
+      ],
+      from: studio.email
+        ? {
+            emailAddress: {
+              address: studio.email,
+            },
+          }
+        : undefined,
+      sender: studio.email
+        ? {
+            emailAddress: {
+              address: studio.email,
+            },
+          }
+        : undefined,
+    }
+  );
+} catch (sendError: any) {
+  debugEmails[debugEmails.length - 1].errore_invio =
+    sendError?.message || "Errore invio Microsoft Graph";
 
+  saltate++;
+  continue;
+}
       const { error: insertAlertError } = await supabaseAdmin
         .from("tbAVScadenzeVerificaAlert")
         .insert({
