@@ -865,18 +865,11 @@ const loadRowsBySocieta = async (societaId: string) => {
     };
   }, [router.events]);
 
- const filteredRows = useMemo(() => {
+const filteredRows = useMemo(() => {
   if (!societaFilter || !canAccessAntiriciclaggio) return [];
 
-  return rows.filter((row) => {
-    if (row.is_pratica_only) {
-      return row.societa_id === societaFilter;
-    }
-
-    const responsabile = getResponsabileById(row.incaricato_adeguata_verifica_id);
-    return responsabile?.societa_id === societaFilter;
-  });
-}, [rows, responsabili, societaFilter, canAccessAntiriciclaggio]);
+  return rows.filter((row) => row.societa_id === societaFilter);
+}, [rows, societaFilter, canAccessAntiriciclaggio]);
 
   const handleSocietaChange = (societaId: string) => {
     if (isSocietaSelectionLocked) return;
