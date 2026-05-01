@@ -16,9 +16,7 @@ function formatDateIT(value: string) {
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const secret = req.query.secret;
-
-    if (secret !== process.env.CRON_SECRET) {
+    if (req.query.secret !== process.env.CRON_SECRET) {
       return res.status(401).json({ error: "Non autorizzato" });
     }
 
@@ -52,6 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         )
       `)
       .not("pratica_id", "is", null)
+      .not("ScadenzaVerifica", "is", null)
       .in("ScadenzaVerifica", scadenze);
 
     if (av1Error) throw av1Error;
@@ -65,10 +64,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     for (const av1 of av1Rows || []) {
       processate++;
 
-      if (!av1.pratica_id || !av1.ScadenzaVerifica) {
+      const praticaId = av1.pratica_id;
+      const scadenzaVerifica = av1.ScadenzaVerifica;
+
+      const debug: any = {
+        pratica_id: praticaId,
+        av1_id_usato_solo_debug: av1.id,
+        scadenza_verifica: scadenzaVerifica,
+        step: "inizio",
+      };
+
+      debugEmails.push(debug);
+
+      if (!praticaId || !scadenzaVerifica) {
+        debug.motivo_salto = "pratica_id o ScadenzaVerifica mancanti";
         saltate++;
         continue;
       }
+
+      const target = targetDates.find((x) => x.date === scadenzaVerifica);
+
+      if (!target) {
+        debug.motivo_salto = "scadenza non nel range alert";
+        saltate++;
+        continue;
+      }
+
+      debug.giorni_prima = target.giorni;
 
       const { data: pratica, error: praticaError } = await supabaseAdmin
         .from("tbPraticheAML")
@@ -80,43 +102,53 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           tipo_prestazione,
           stato
         `)
-        .eq("id", av1.pratica_id)
+        .eq("id", praticaId)
         .maybeSingle();
 
-      if (praticaError || !pratica?.id) {
+      if (praticaError || !pratica) {
+        debug.motivo_salto = praticaError?.message || "pratica non trovata";
         saltate++;
         continue;
       }
+
+      debug.studio_id = pratica.studio_id;
+      debug.cliente_id = pratica.cliente_id;
+      debug.operatore_responsabile_id = pratica.operatore_responsabile_id;
+      debug.stato_pratica = pratica.stato;
 
       const cliente = Array.isArray((av1 as any).tbclienti)
         ? (av1 as any).tbclienti[0]
         : (av1 as any).tbclienti;
 
       const nomeCliente =
-        cliente?.ragione_sociale || cliente?.cod_cliente || "Cliente";
+        cliente?.ragione_sociale ||
+        cliente?.cod_cliente ||
+        `Cliente ${pratica.cliente_id || av1.cliente_id || ""}`.trim();
 
-      const target = targetDates.find((x) => x.date === av1.ScadenzaVerifica);
+      debug.cliente = nomeCliente;
 
-      if (!target) {
-        saltate++;
-        continue;
-      }
-
-  
-      const { data: alreadySent } = await supabaseAdmin
+      const { data: alreadySent, error: alreadySentError } = await supabaseAdmin
         .from("tbAVScadenzeVerificaAlert")
         .select("id")
         .eq("pratica_id", pratica.id)
         .eq("giorni_prima", target.giorni)
-        .eq("scadenza_verifica", av1.ScadenzaVerifica)
+        .eq("scadenza_verifica", scadenzaVerifica)
         .maybeSingle();
 
+      if (alreadySentError) {
+        debug.motivo_salto = alreadySentError.message;
+        saltate++;
+        continue;
+      }
+
       if (alreadySent) {
+        debug.motivo_salto = "alert già inviato";
         saltate++;
         continue;
       }
 
       if (!pratica.operatore_responsabile_id) {
+        debug.motivo_salto = "operatore_responsabile_id mancante";
         saltate++;
         continue;
       }
@@ -127,18 +159,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .eq("id", pratica.operatore_responsabile_id)
         .maybeSingle();
 
-      debugEmails.push({
-  pratica_id: pratica.id,
-  cliente: nomeCliente,
-  operatore_responsabile_id: pratica.operatore_responsabile_id,
-  email_trovata: operatore?.email || null,
-  nome_operatore: operatore
-    ? [operatore.nome, operatore.cognome].filter(Boolean).join(" ")
-    : null,
-  errore_operatore: operatoreError?.message || null,
-});
+      debug.email_trovata = operatore?.email || null;
+      debug.nome_operatore = operatore
+        ? [operatore.nome, operatore.cognome].filter(Boolean).join(" ")
+        : null;
 
       if (operatoreError || !operatore?.email) {
+        debug.motivo_salto =
+          operatoreError?.message || "email operatore mancante";
+        saltate++;
+        continue;
+      }
+
+      const { data: studio, error: studioError } = await supabaseAdmin
+        .from("tbstudio")
+        .select("email, microsoft_connection_id")
+        .eq("id", pratica.studio_id)
+        .maybeSingle();
+
+      debug.studio_email = studio?.email || null;
+      debug.microsoft_connection_id = studio?.microsoft_connection_id || null;
+
+      if (studioError || !studio?.microsoft_connection_id) {
+        debug.motivo_salto =
+          studioError?.message || "Connessione Microsoft studio mancante";
         saltate++;
         continue;
       }
@@ -169,12 +213,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
           <div style="margin: 18px 0; padding: 14px 16px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px;">
             <p style="margin: 0;">
-              <strong>Data scadenza:</strong> ${formatDateIT(av1.ScadenzaVerifica)}
+              <strong>Data scadenza:</strong> ${formatDateIT(scadenzaVerifica)}
             </p>
             <p style="margin: 6px 0 0 0;">
               <strong>Tipo prestazione:</strong> ${pratica.tipo_prestazione || "-"}
             </p>
-          
           </div>
 
           <p>
@@ -187,84 +230,69 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         </div>
       `.trim();
 
-      const text = `
-Scadenza verifica AML - ${nomeCliente}
+      try {
+        debug.step = "invio_email";
 
-La verifica AML del cliente ${nomeCliente} scade ${giorniLabel}.
+        await microsoftGraphService.sendEmail(
+          operatore.id,
+          studio.microsoft_connection_id,
+          {
+            subject,
+            body: {
+              contentType: "HTML",
+              content: html,
+            },
+            toRecipients: [
+              {
+                emailAddress: {
+                  address: emailDestinatario,
+                },
+              },
+            ],
+          }
+        );
 
-Data scadenza: ${formatDateIT(av1.ScadenzaVerifica)}
-Tipo prestazione: ${pratica.tipo_prestazione || "-"}
+        debug.step = "email_inviata";
+      } catch (sendError: any) {
+        debug.motivo_salto =
+          sendError?.message || "Errore invio Microsoft Graph";
+        saltate++;
+        continue;
+      }
 
-Verifica se la pratica deve essere rinnovata oppure archiviata.
-      `.trim();
-const { data: studio, error: studioError } = await supabaseAdmin
-  .from("tbstudio")
-  .select("email, microsoft_connection_id")
-  .eq("id", pratica.studio_id)
-  .maybeSingle();
-
-if (studioError || !studio?.microsoft_connection_id) {
-  debugEmails[debugEmails.length - 1].errore_invio =
-    studioError?.message || "Connessione Microsoft studio mancante";
-  saltate++;
-  continue;
-}
-  try {
-  await microsoftGraphService.sendEmail(
-    operatore.id,
-    studio.microsoft_connection_id,
-    {
-      subject,
-      body: {
-        contentType: "HTML",
-        content: html,
-      },
-      toRecipients: [
-        {
-          emailAddress: {
-            address: emailDestinatario,
-          },
-        },
-      ],
-    }
-  );
-} catch (sendError: any) {
-  debugEmails[debugEmails.length - 1].errore_invio =
-    sendError?.message || "Errore invio Microsoft Graph";
-
-  saltate++;
-  continue;
-}
       const { error: insertAlertError } = await supabaseAdmin
         .from("tbAVScadenzeVerificaAlert")
         .insert({
-          studio_id: av1.studio_id,
+          studio_id: pratica.studio_id,
           pratica_id: pratica.id,
-          cliente_id: av1.cliente_id,
-          av1_id: av1.id,
+          cliente_id: pratica.cliente_id || av1.cliente_id,
           giorni_prima: target.giorni,
-          scadenza_verifica: av1.ScadenzaVerifica,
+          scadenza_verifica: scadenzaVerifica,
           destinatario_email: emailDestinatario,
         });
 
       if (insertAlertError) {
-        console.error("Errore salvataggio alert scadenza AML:", insertAlertError);
+        debug.alert_salvato = false;
+        debug.errore_salvataggio_alert = insertAlertError.message;
+      } else {
+        debug.alert_salvato = true;
       }
 
       inviate++;
     }
 
-  return res.status(200).json({
-  ok: true,
-  processate,
-  inviate,
-  saltate,
-  debugEmails,
-});
+    return res.status(200).json({
+      ok: true,
+      processate,
+      inviate,
+      saltate,
+      debugEmails,
+    });
   } catch (err: any) {
     console.error("Errore cron scadenze verifica AML:", err);
 
     return res.status(500).json({
+      ok: false,
       error: err?.message || "Errore cron scadenze verifica AML",
     });
   }
