@@ -22,20 +22,10 @@
     {
       "path": "/api/scadenze/processa-scadenzari",
       "schedule": "5 8 * * *"
+    },
+    {
+      "path": "/api/antiriciclaggio/scadenze-verifica/send-alerts?secret=123",
+      "schedule": "10 8 * * *"
     }
   ]
 }
-"crons": [
-  {
-    "path": "/api/scadenze/processa",
-    "schedule": "0 8 * * *"
-  },
-  {
-    "path": "/api/scadenze/processa-scadenzari",
-    "schedule": "5 8 * * *"
-  },
-  {
-    "path": "/api/antiriciclaggio/scadenze-verifica/send-alerts?secret=123",
-    "schedule": "10 8 * * *"
-  }
-]
