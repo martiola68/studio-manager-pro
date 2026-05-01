@@ -16,9 +16,9 @@ function formatDateIT(value: string) {
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const cronSecret = req.headers.authorization?.replace("Bearer ", "");
+    const secret = req.query.secret;
 
-    if (cronSecret !== process.env.CRON_SECRET) {
+    if (secret !== process.env.CRON_SECRET) {
       return res.status(401).json({ error: "Non autorizzato" });
     }
 
@@ -28,6 +28,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const targetDates = GIORNI_ALERT.map((giorni) => {
       const d = new Date(today);
       d.setDate(d.getDate() + giorni);
+
       return {
         giorni,
         date: d.toISOString().slice(0, 10),
@@ -92,6 +93,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       const target = targetDates.find((x) => x.date === av1.ScadenzaVerifica);
+
       if (!target) {
         saltate++;
         continue;
@@ -148,9 +150,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .join(" ");
 
       const giorniLabel =
-        target.giorni === 0
-          ? "oggi"
-          : `tra ${target.giorni} giorni`;
+        target.giorni === 0 ? "oggi" : `tra ${target.giorni} giorni`;
 
       const subject = `Scadenza verifica AML ${giorniLabel} - ${nomeCliente}`;
 
@@ -160,9 +160,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             Scadenza verifica AML
           </h2>
 
-          <p>
-            Ciao ${nomeOperatore || ""},
-          </p>
+          <p>Ciao ${nomeOperatore || ""},</p>
 
           <p>
             la verifica AML del cliente <strong>${nomeCliente}</strong>
@@ -244,6 +242,7 @@ Verifica se la pratica deve essere rinnovata oppure archiviata.
     });
   } catch (err: any) {
     console.error("Errore cron scadenze verifica AML:", err);
+
     return res.status(500).json({
       error: err?.message || "Errore cron scadenze verifica AML",
     });
