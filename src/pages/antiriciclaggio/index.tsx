@@ -649,8 +649,22 @@ const praticheRows = (praticheData as PraticaAMLRow[]) || [];
         is_pratica_only: true,
       }));
 
-    const rowsConFascicolo = await Promise.all(
-  [...praticheOnlyRows, ...av1Rows].map(async (row) => {
+ const rowsFinali = [...praticheOnlyRows, ...av1Rows];
+
+const rowsUniche = Array.from(
+  new Map(
+    rowsFinali.map((row) => {
+      const key = row.pratica_id
+        ? `pratica-${row.pratica_id}`
+        : `av1-${row.id}`;
+
+      return [key, row];
+    })
+  ).values()
+);
+
+const rowsConFascicolo = await Promise.all(
+  rowsUniche.map(async (row) => {
     const check = await checkFascicoloDocumenti(row);
 
     return {
