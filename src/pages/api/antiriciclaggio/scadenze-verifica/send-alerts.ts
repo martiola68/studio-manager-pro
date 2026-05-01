@@ -60,6 +60,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let inviate = 0;
     let saltate = 0;
 
+    const debugEmails: any[] = [];
+
     for (const av1 of av1Rows || []) {
       processate++;
 
@@ -139,6 +141,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .select("id, email, nome, cognome")
         .eq("id", pratica.operatore_responsabile_id)
         .maybeSingle();
+
+      debugEmails.push({
+  pratica_id: pratica.id,
+  cliente: nomeCliente,
+  operatore_responsabile_id: pratica.operatore_responsabile_id,
+  email_trovata: operatore?.email || null,
+  nome_operatore: operatore
+    ? [operatore.nome, operatore.cognome].filter(Boolean).join(" ")
+    : null,
+  errore_operatore: operatoreError?.message || null,
+});
 
       if (operatoreError || !operatore?.email) {
         saltate++;
@@ -236,12 +249,13 @@ Verifica se la pratica deve essere rinnovata oppure archiviata.
       inviate++;
     }
 
-    return res.status(200).json({
-      ok: true,
-      processate,
-      inviate,
-      saltate,
-    });
+  return res.status(200).json({
+  ok: true,
+  processate,
+  inviate,
+  saltate,
+  debugEmails,
+});
   } catch (err: any) {
     console.error("Errore cron scadenze verifica AML:", err);
 
