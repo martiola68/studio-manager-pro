@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
-import { microsoftGraphService } from "@/services/microsoftGraphService";
+import { sendEmail } from "@/lib/sendEmail";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -184,24 +184,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         continue;
       }
 
-      const { data: studio, error: studioError } = await supabaseAdmin
-        .from("tbstudio")
-        .select(`
-          email,
-          microsoft_connection_id
-        `)
-        .eq("id", pratica.studio_id)
-        .maybeSingle();
-
-      if (studioError || !studio?.microsoft_connection_id) {
-        debug.motivo_salto =
-          studioError?.message || "Connessione Microsoft studio mancante";
-        saltate++;
-        continue;
-      }
-
-      debug.microsoft_connection_id = studio.microsoft_connection_id;
-
       const giorniLabel =
         target.giorni === 0 ? "oggi" : `tra ${target.giorni} giorni`;
 
@@ -239,35 +221,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         </div>
       `.trim();
 
-      try {
-        debug.step = "invio_email";
+    try {
+  debug.step = "invio_email";
 
-        await microsoftGraphService.sendEmail(
-          operatore.id,
-          studio.microsoft_connection_id,
-          {
-            subject,
-            body: {
-              contentType: "HTML",
-              content: html,
-            },
-            toRecipients: [
-              {
-                emailAddress: {
-                  address: emailDestinatario,
-                },
-              },
-            ],
-          }
-        );
+  await sendEmail({
+    to: emailDestinatario,
+    subject,
+    html,
+  });
 
-        debug.step = "email_inviata";
-      } catch (sendError: any) {
-        debug.motivo_salto =
-          sendError?.message || "Errore invio Microsoft Graph";
-        saltate++;
-        continue;
-      }
+  debug.step = "email_inviata";
+} catch (sendError: any) {
+  debug.motivo_salto =
+    sendError?.message || "Errore invio email";
+  saltate++;
+  continue;
+}
 
       const { error: insertAlertError } = await supabaseAdmin
         .from("tbAVScadenzeVerificaAlert")
