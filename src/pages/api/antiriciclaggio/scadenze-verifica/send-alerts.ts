@@ -197,44 +197,83 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const subject = `Scadenza verifica AML ${giorniLabel} - ${nomeCliente}`;
 
-    const html = `
-<div style="font-family: Arial, sans-serif; font-size: 14px; color: #111; line-height: 1.6;">
-  
-  <p>Gentile ${nomeOperatore || "utente"},</p>
+const html = `
+<!DOCTYPE html>
+<html>
+<body style="margin:0; padding:0; background:#f3f4f6; font-family:Arial, Helvetica, sans-serif; color:#111827;">
+  <div style="max-width:680px; margin:0 auto; padding:28px 16px;">
+    <div style="background:#ffffff; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
+      
+      <div style="background:#1d4ed8; color:#ffffff; padding:22px 26px;">
+        <div style="font-size:20px; font-weight:700;">
+          Studio Manager Pro
+        </div>
+        <div style="font-size:13px; margin-top:4px; opacity:0.9;">
+          Promemoria verifica antiriciclaggio
+        </div>
+      </div>
 
-  <p>
-    ti informiamo che la verifica antiriciclaggio relativa al cliente 
-    <strong>${nomeCliente}</strong> è in scadenza <strong>${giorniLabel}</strong>.
-  </p>
+      <div style="padding:26px;">
+        <p style="margin:0 0 16px 0; font-size:15px;">
+          Gentile ${nomeOperatore || "utente"},
+        </p>
 
-  <div style="margin: 20px 0; padding: 15px; background-color: #f5f7fa; border-left: 4px solid #2563eb;">
-    <p style="margin: 5px 0;">
-      <strong>Data scadenza:</strong> ${formatDateIT(scadenzaVerifica)}
-    </p>
-    <p style="margin: 5px 0;">
-      <strong>Tipo prestazione:</strong> ${pratica.tipo_prestazione || "-"}
-    </p>
+        <p style="margin:0 0 18px 0; font-size:15px; line-height:1.6;">
+          la verifica antiriciclaggio relativa al cliente
+          <strong>${nomeCliente}</strong> è in scadenza
+          <strong>${giorniLabel}</strong>.
+        </p>
+
+        <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:18px; margin:22px 0;">
+          <div style="font-size:13px; color:#1d4ed8; font-weight:700; text-transform:uppercase; margin-bottom:12px;">
+            Dettagli scadenza
+          </div>
+
+          <table style="width:100%; border-collapse:collapse; font-size:14px;">
+            <tr>
+              <td style="padding:8px 0; color:#6b7280;">Cliente</td>
+              <td style="padding:8px 0; text-align:right; font-weight:700;">
+                ${nomeCliente}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:8px 0; color:#6b7280;">Data scadenza</td>
+              <td style="padding:8px 0; text-align:right; font-weight:700;">
+                ${formatDateIT(scadenzaVerifica)}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:8px 0; color:#6b7280;">Tipo prestazione</td>
+              <td style="padding:8px 0; text-align:right; font-weight:700;">
+                ${pratica.tipo_prestazione || "-"}
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <p style="margin:0 0 12px 0; font-size:15px; line-height:1.6;">
+          Si consiglia di verificare la posizione e procedere con il rinnovo
+          della verifica oppure con la chiusura della pratica, se non più necessaria.
+        </p>
+
+        <div style="margin-top:24px; padding:14px 16px; background:#f9fafb; border-radius:8px; font-size:13px; color:#374151;">
+          Questa comunicazione è stata generata automaticamente dal sistema di monitoraggio scadenze AML.
+        </div>
+
+        <p style="margin:26px 0 0 0; font-size:15px;">
+          Cordiali saluti,<br/>
+          <strong>Studio Manager Pro</strong>
+        </p>
+      </div>
+
+      <div style="background:#f9fafb; border-top:1px solid #e5e7eb; padding:16px 26px; text-align:center; font-size:12px; color:#6b7280;">
+        Email automatica — non rispondere a questo messaggio.
+      </div>
+
+    </div>
   </div>
-
-  <p>
-    Si consiglia di verificare la posizione e procedere con:
-  </p>
-
-  <ul>
-    <li>eventuale rinnovo della verifica</li>
-    <li>oppure chiusura della pratica, se non più necessaria</li>
-  </ul>
-
-  <p style="margin-top: 25px;">
-    Cordiali saluti,<br/>
-    <strong>Studio Manager Pro</strong>
-  </p>
-
-  <p style="font-size: 12px; color: #666; margin-top: 20px;">
-    Questo è un messaggio automatico, si prega di non rispondere.
-  </p>
-
-</div>
+</body>
+</html>
 `.trim();
 
       const text = `
