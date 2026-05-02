@@ -6,62 +6,28 @@ export async function sendEmailServer(params: {
   to: string;
   subject: string;
   html: string;
-  text?: string;
-  fromEmail?: string;
 }) {
   try {
-    if (!params.senderUserId) {
-      return {
-        success: false,
-        error: "senderUserId mancante",
-      };
-    }
-
-    if (!params.microsoftConnectionId) {
-      return {
-        success: false,
-        error: "microsoftConnectionId mancante",
-      };
-    }
-
-    const message: any = {
-      subject: params.subject,
-      body: {
-        contentType: "HTML",
-        content: params.html,
-      },
-      toRecipients: [
-        {
-          emailAddress: {
-            address: params.to,
-          },
-        },
-      ],
-    };
-
-    if (params.fromEmail) {
-      message.from = {
-        emailAddress: {
-          address: params.fromEmail,
-        },
-      };
-
-      message.sender = {
-        emailAddress: {
-          address: params.fromEmail,
-        },
-      };
-    }
-
     await microsoftGraphService.sendEmail(
       params.senderUserId,
       params.microsoftConnectionId,
-      message
+      {
+        subject: params.subject,
+        body: {
+          contentType: "HTML",
+          content: params.html,
+        },
+        toRecipients: [
+          {
+            emailAddress: {
+              address: params.to,
+            },
+          },
+        ],
+      }
     );
 
-    return {
-      success: true,
-    };
+    return { success: true };
   } catch (error: any) {
     return {
       success: false,
