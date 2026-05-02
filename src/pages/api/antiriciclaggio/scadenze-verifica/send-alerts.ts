@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
-import { sendEmail } from "@/services/emailService";
+import { sendEmailServer } from "@/services/sendEmailServer";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -230,13 +230,25 @@ Tipo prestazione: ${pratica.tipo_prestazione || "-"}
 Verifica se la pratica deve essere rinnovata oppure archiviata.
       `.trim();
 
-      const emailResult = await sendEmail({
-        to: emailDestinatario,
-        subject,
-        html,
-        text,
-        sendMode: "studio",
-      });
+    const { data: studio } = await (supabaseAdmin as any)
+  .from("tbstudio")
+  .select("microsoft_connection_id")
+  .eq("id", pratica.studio_id)
+  .maybeSingle();
+
+if (!studio?.microsoft_connection_id) {
+  debug.motivo_salto = "microsoft_connection_id mancante";
+  result.saltate++;
+  continue;
+}
+
+const emailResult = await sendEmailServer({
+  userId: operatore.id,
+  microsoftConnectionId: studio.microsoft_connection_id,
+  to: emailDestinatario,
+  subject,
+  html,
+});
 
       if (!emailResult.success) {
         debug.motivo_salto = emailResult.error || "errore invio email";
