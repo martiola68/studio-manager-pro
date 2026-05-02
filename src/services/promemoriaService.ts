@@ -304,7 +304,7 @@ Accedi a Studio Manager Pro per gestire il promemoria.
   continue;
 }
 
-const { data: studio } = await supabase
+const { data: studio } = await (supabase as any)
   .from("tbstudio")
   .select("microsoft_connection_id")
   .eq("id", p.studio_id)
