@@ -197,27 +197,45 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const subject = `Scadenza verifica AML ${giorniLabel} - ${nomeCliente}`;
 
-      const html = `
-        <div style="font-family: Arial, sans-serif; font-size: 14px; color: #111;">
-          <p>Ciao ${nomeOperatore || ""},</p>
+    const html = `
+<div style="font-family: Arial, sans-serif; font-size: 14px; color: #111; line-height: 1.6;">
+  
+  <p>Gentile ${nomeOperatore || "utente"},</p>
 
-          <p>
-            La verifica AML del cliente <strong>${nomeCliente}</strong>
-            scade <strong>${giorniLabel}</strong>.
-          </p>
+  <p>
+    ti informiamo che la verifica antiriciclaggio relativa al cliente 
+    <strong>${nomeCliente}</strong> è in scadenza <strong>${giorniLabel}</strong>.
+  </p>
 
-          <ul>
-            <li><strong>Data scadenza:</strong> ${formatDateIT(scadenzaVerifica)}</li>
-            <li><strong>Tipo prestazione:</strong> ${pratica.tipo_prestazione || "-"}</li>
-          </ul>
+  <div style="margin: 20px 0; padding: 15px; background-color: #f5f7fa; border-left: 4px solid #2563eb;">
+    <p style="margin: 5px 0;">
+      <strong>Data scadenza:</strong> ${formatDateIT(scadenzaVerifica)}
+    </p>
+    <p style="margin: 5px 0;">
+      <strong>Tipo prestazione:</strong> ${pratica.tipo_prestazione || "-"}
+    </p>
+  </div>
 
-          <p>Verifica se la pratica deve essere rinnovata oppure archiviata.</p>
+  <p>
+    Si consiglia di verificare la posizione e procedere con:
+  </p>
 
-          <p style="font-size: 12px; color: #666;">
-            Questa è una email automatica, non rispondere a questo messaggio.
-          </p>
-        </div>
-      `.trim();
+  <ul>
+    <li>eventuale rinnovo della verifica</li>
+    <li>oppure chiusura della pratica, se non più necessaria</li>
+  </ul>
+
+  <p style="margin-top: 25px;">
+    Cordiali saluti,<br/>
+    <strong>Studio Manager Pro</strong>
+  </p>
+
+  <p style="font-size: 12px; color: #666; margin-top: 20px;">
+    Questo è un messaggio automatico, si prega di non rispondere.
+  </p>
+
+</div>
+`.trim();
 
       const text = `
 Scadenza verifica AML - ${nomeCliente}
