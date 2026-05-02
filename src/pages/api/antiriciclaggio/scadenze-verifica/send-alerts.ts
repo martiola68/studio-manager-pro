@@ -41,12 +41,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const scadenze = targetDates.map((x) => x.date);
 
-    /**
-     * LOGICA:
-     * tbAV1 contiene la scadenza
-     * tbAV1.pratica_id collega la scadenza alla pratica
-     * tbPraticheAML contiene cliente + email operatore
-     */
     const { data: av1Rows, error: av1Error } = await supabaseAdmin
       .from("tbAV1")
       .select(`
@@ -94,8 +88,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .select(`
           id,
           studio_id,
+          societa_id,
           cliente_id,
-          nome_cliente,
           email_operatore,
           tipo_prestazione,
           stato
@@ -104,25 +98,41 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .maybeSingle();
 
       if (praticaError || !pratica) {
-        debug.motivo_salto =
-          praticaError?.message || "pratica non trovata";
+        debug.motivo_salto = praticaError?.message || "pratica non trovata";
+        saltate++;
+        continue;
+      }
+
+      const { data: cliente, error: clienteError } = await supabaseAdmin
+        .from("tbclienti")
+        .select(`
+          id,
+          ragione_sociale,
+          cod_cliente
+        `)
+        .eq("id", pratica.cliente_id)
+        .maybeSingle();
+
+      if (clienteError) {
+        debug.motivo_salto = clienteError.message;
         saltate++;
         continue;
       }
 
       const nomeCliente =
-        pratica.nome_cliente ||
-        pratica.cliente_id ||
-        `Pratica ${pratica.id}`;
+        cliente?.ragione_sociale ||
+        cliente?.cod_cliente ||
+        `Cliente ${pratica.cliente_id}`;
 
       const emailDestinatario = pratica.email_operatore;
 
+      debug.cliente_id = pratica.cliente_id;
       debug.cliente = nomeCliente;
       debug.email_trovata = emailDestinatario || null;
       debug.studio_id = pratica.studio_id;
 
       if (!emailDestinatario) {
-        debug.motivo_salto = "email operatore mancante nella pratica";
+        debug.motivo_salto = "email_operatore mancante nella pratica";
         saltate++;
         continue;
       }
