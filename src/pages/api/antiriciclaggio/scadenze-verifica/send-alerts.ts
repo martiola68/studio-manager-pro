@@ -243,7 +243,7 @@ if (!studio?.microsoft_connection_id) {
 }
 
 const emailResult = await sendEmailServer({
-  userId: operatore.id,
+  senderUserId: operatore.id,
   microsoftConnectionId: studio.microsoft_connection_id,
   to: emailDestinatario,
   subject,
