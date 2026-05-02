@@ -2,6 +2,17 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { supabase } from "@/lib/supabase/client";
 import { sendEmail } from "@/services/emailService";
 
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  }
+);
+
 const GIORNI_ALERT = [30, 15, 7, 0];
 
 function formatDateIT(value: string) {
@@ -37,7 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       debugEmails: [] as any[],
     };
 
-    const { data: av1Rows, error: av1Error } = await supabase
+ const { data: av1Rows, error: av1Error } = await (supabaseAdmin as any)
       .from("tbAV1")
       .select("pratica_id, ScadenzaVerifica")
       .not("pratica_id", "is", null)
