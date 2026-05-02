@@ -90,7 +90,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           studio_id,
           societa_id,
           cliente_id,
-          email_operatore,
+          operatore_responsabile_id,
           tipo_prestazione,
           stato
         `)
@@ -99,6 +99,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       if (praticaError || !pratica) {
         debug.motivo_salto = praticaError?.message || "pratica non trovata";
+        saltate++;
+        continue;
+      }
+
+      debug.studio_id = pratica.studio_id;
+      debug.cliente_id = pratica.cliente_id;
+      debug.operatore_responsabile_id = pratica.operatore_responsabile_id;
+
+      if (!pratica.operatore_responsabile_id) {
+        debug.motivo_salto = "operatore_responsabile_id mancante";
         saltate++;
         continue;
       }
@@ -124,18 +134,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         cliente?.cod_cliente ||
         `Cliente ${pratica.cliente_id}`;
 
-      const emailDestinatario = pratica.email_operatore;
-
-      debug.cliente_id = pratica.cliente_id;
       debug.cliente = nomeCliente;
-      debug.email_trovata = emailDestinatario || null;
-      debug.studio_id = pratica.studio_id;
 
-      if (!emailDestinatario) {
-        debug.motivo_salto = "email_operatore mancante nella pratica";
+      const { data: operatore, error: operatoreError } = await supabaseAdmin
+        .from("tbutenti")
+        .select(`
+          id,
+          email,
+          nome,
+          cognome
+        `)
+        .eq("id", pratica.operatore_responsabile_id)
+        .maybeSingle();
+
+      if (operatoreError || !operatore?.email) {
+        debug.email_trovata = operatore?.email || null;
+        debug.motivo_salto =
+          operatoreError?.message || "email operatore mancante in tbutenti";
         saltate++;
         continue;
       }
+
+      const emailDestinatario = operatore.email;
+
+      const nomeOperatore = [operatore.nome, operatore.cognome]
+        .filter(Boolean)
+        .join(" ");
+
+      debug.email_trovata = emailDestinatario;
+      debug.nome_operatore = nomeOperatore || null;
 
       const { data: alreadySent, error: alreadySentError } = await supabaseAdmin
         .from("tbAVScadenzeVerificaAlert")
@@ -159,7 +186,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const { data: studio, error: studioError } = await supabaseAdmin
         .from("tbstudio")
-        .select("email, microsoft_connection_id")
+        .select(`
+          email,
+          microsoft_connection_id
+        `)
         .eq("id", pratica.studio_id)
         .maybeSingle();
 
@@ -182,6 +212,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           <h2 style="margin: 0 0 16px 0; color: #b45309;">
             Scadenza verifica AML
           </h2>
+
+          <p>Ciao ${nomeOperatore || ""},</p>
 
           <p>
             La verifica AML del cliente <strong>${nomeCliente}</strong>
@@ -211,7 +243,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         debug.step = "invio_email";
 
         await microsoftGraphService.sendEmail(
-          pratica.studio_id,
+          operatore.id,
           studio.microsoft_connection_id,
           {
             subject,
