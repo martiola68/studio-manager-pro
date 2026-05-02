@@ -12,6 +12,26 @@ export default async function handler(
     });
   }
 
+  const cronSecret = process.env.CRON_SECRET;
+
+  const querySecret =
+    typeof req.query.secret === "string" ? req.query.secret : null;
+
+  const authHeader = req.headers.authorization;
+
+  const bearerToken = authHeader?.startsWith("Bearer ")
+    ? authHeader.slice(7)
+    : null;
+
+  const receivedSecret = querySecret || bearerToken;
+
+  if (!cronSecret || receivedSecret !== cronSecret) {
+    return res.status(401).json({
+      ok: false,
+      error: "Non autorizzato",
+    });
+  }
+
   try {
     const result = await processaScadenzeAffittiAutomatiche();
 
