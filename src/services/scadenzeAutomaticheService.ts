@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { sendEmail } from "@/services/emailService";
+import { sendEmailServer } from "@/services/sendEmailServer";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -368,12 +368,38 @@ async function sendScadenzaEmails(
   const html = buildHtmlScadenzaEmail(oggetto, messaggio);
 
   for (const recipient of recipients) {
-    const result = await sendEmail({
+    const { data: utente, error: utenteError } = await (supabase as any)
+      .from("tbutenti")
+      .select("id, studio_id")
+      .eq("id", recipient.id)
+      .maybeSingle();
+
+    if (utenteError || !utente?.id || !utente?.studio_id) {
+      console.error(
+        `❌ Invio email fallito per ${recipient.email}: utente/studio non trovato`
+      );
+      continue;
+    }
+
+    const { data: studio, error: studioError } = await (supabase as any)
+      .from("tbstudio")
+      .select("microsoft_connection_id")
+      .eq("id", utente.studio_id)
+      .maybeSingle();
+
+    if (studioError || !studio?.microsoft_connection_id) {
+      console.error(
+        `❌ Invio email fallito per ${recipient.email}: microsoft_connection_id studio mancante`
+      );
+      continue;
+    }
+
+    const result = await sendEmailServer({
+      senderUserId: utente.id,
+      microsoftConnectionId: studio.microsoft_connection_id,
       to: recipient.email,
       subject: oggetto,
       html,
-      text: messaggio,
-      sendMode: "studio",
     });
 
     if (result.success) {
@@ -388,7 +414,6 @@ async function sendScadenzaEmails(
 
   return sent;
 }
-
 async function inviaEmailScadenza(
   tipo: TipoScadenza,
   tipoAlert: AlertType,
