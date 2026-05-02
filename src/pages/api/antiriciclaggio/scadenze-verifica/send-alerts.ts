@@ -1,7 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { supabase } from "@/lib/supabase/client";
-import { sendEmail } from "@/services/emailService";
 import { createClient } from "@supabase/supabase-js";
+import { sendEmail } from "@/services/emailService";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -22,11 +21,34 @@ function formatDateIT(value: string) {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  try {
-    if (req.query.secret !== process.env.CRON_SECRET) {
-      return res.status(401).json({ error: "Non autorizzato" });
-    }
+  if (req.method !== "GET" && req.method !== "POST") {
+    return res.status(405).json({
+      ok: false,
+      error: "Metodo non consentito",
+    });
+  }
 
+  const cronSecret = process.env.CRON_SECRET;
+
+  const querySecret =
+    typeof req.query.secret === "string" ? req.query.secret : null;
+
+  const authHeader = req.headers.authorization;
+
+  const bearerToken = authHeader?.startsWith("Bearer ")
+    ? authHeader.slice(7)
+    : null;
+
+  const receivedSecret = querySecret || bearerToken;
+
+  if (!cronSecret || receivedSecret !== cronSecret) {
+    return res.status(401).json({
+      ok: false,
+      error: "Non autorizzato",
+    });
+  }
+
+  try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -49,7 +71,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       debugEmails: [] as any[],
     };
 
- const { data: av1Rows, error: av1Error } = await (supabaseAdmin as any)
+    const { data: av1Rows, error: av1Error } = await (supabaseAdmin as any)
       .from("tbAV1")
       .select("pratica_id, ScadenzaVerifica")
       .not("pratica_id", "is", null)
@@ -79,7 +101,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         continue;
       }
 
-     const { data: pratica, error: praticaError } = await (supabaseAdmin as any)
+      debug.giorni_prima = target.giorni;
+
+      const { data: pratica, error: praticaError } = await (supabaseAdmin as any)
         .from("tbPraticheAML")
         .select(`
           id,
@@ -103,36 +127,52 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         continue;
       }
 
-      const { data: cliente } = await (supabaseAdmin as any)
+      const { data: cliente, error: clienteError } = await (supabaseAdmin as any)
         .from("tbclienti")
         .select("id, ragione_sociale, cod_cliente")
         .eq("id", pratica.cliente_id)
         .maybeSingle();
 
-      const { data: operatore } = await (supabaseAdmin as any)
+      if (clienteError) {
+        debug.motivo_salto = clienteError.message;
+        result.saltate++;
+        continue;
+      }
+
+      const { data: operatore, error: operatoreError } = await (
+        supabaseAdmin as any
+      )
         .from("tbutenti")
         .select("id, nome, cognome, email")
         .eq("id", pratica.operatore_responsabile_id)
         .maybeSingle();
+
+      if (operatoreError || !operatore?.email) {
+        debug.motivo_salto =
+          operatoreError?.message || "email operatore mancante";
+        result.saltate++;
+        continue;
+      }
 
       const nomeCliente =
         cliente?.ragione_sociale ||
         cliente?.cod_cliente ||
         `Cliente ${pratica.cliente_id}`;
 
-      const emailDestinatario = operatore?.email || "";
+      const emailDestinatario = operatore.email;
+
+      const nomeOperatore = [operatore.nome, operatore.cognome]
+        .filter(Boolean)
+        .join(" ");
 
       debug.cliente = nomeCliente;
       debug.operatore_responsabile_id = pratica.operatore_responsabile_id;
-      debug.email_trovata = emailDestinatario || null;
+      debug.email_trovata = emailDestinatario;
+      debug.nome_operatore = nomeOperatore || null;
 
-      if (!emailDestinatario) {
-        debug.motivo_salto = "email operatore mancante";
-        result.saltate++;
-        continue;
-      }
-
-      const { data: alreadySent } = await (supabaseAdmin as any)
+      const { data: alreadySent, error: alreadySentError } = await (
+        supabaseAdmin as any
+      )
         .from("tbAVScadenzeVerificaAlert")
         .select("id")
         .eq("pratica_id", pratica.id)
@@ -140,15 +180,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .eq("scadenza_verifica", scadenzaVerifica)
         .maybeSingle();
 
+      if (alreadySentError) {
+        debug.motivo_salto = alreadySentError.message;
+        result.saltate++;
+        continue;
+      }
+
       if (alreadySent) {
         debug.motivo_salto = "alert già inviato";
         result.saltate++;
         continue;
       }
-
-      const nomeOperatore = [operatore?.nome, operatore?.cognome]
-        .filter(Boolean)
-        .join(" ");
 
       const giorniLabel =
         target.giorni === 0 ? "oggi" : `tra ${target.giorni} giorni`;
@@ -202,14 +244,22 @@ Verifica se la pratica deve essere rinnovata oppure archiviata.
         continue;
       }
 
-      await (supabaseAdmin as any).from("tbAVScadenzeVerificaAlert").insert({
-        studio_id: pratica.studio_id,
-        pratica_id: pratica.id,
-        cliente_id: pratica.cliente_id,
-        giorni_prima: target.giorni,
-        scadenza_verifica: scadenzaVerifica,
-        destinatario_email: emailDestinatario,
-      });
+      const { error: insertError } = await (supabaseAdmin as any)
+        .from("tbAVScadenzeVerificaAlert")
+        .insert({
+          studio_id: pratica.studio_id,
+          pratica_id: pratica.id,
+          cliente_id: pratica.cliente_id,
+          giorni_prima: target.giorni,
+          scadenza_verifica: scadenzaVerifica,
+          destinatario_email: emailDestinatario,
+        });
+
+      if (insertError) {
+        debug.motivo_salto = insertError.message;
+        result.saltate++;
+        continue;
+      }
 
       debug.email_inviata = true;
       result.inviate++;
