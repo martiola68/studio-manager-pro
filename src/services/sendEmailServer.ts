@@ -1,77 +1,63 @@
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  }
-);
+import { microsoftGraphService } from "@/services/microsoftGraphService";
 
 export async function sendEmailServer(params: {
-  userId: string;
+  senderUserId: string;
   microsoftConnectionId: string;
   to: string;
   subject: string;
   html: string;
+  text?: string;
+  fromEmail?: string;
 }) {
   try {
-    const { data: connection, error: connectionError } = await (
-      supabaseAdmin as any
-    )
-      .from("microsoft_connections")
-      .select("access_token")
-      .eq("id", params.microsoftConnectionId)
-      .maybeSingle();
-
-    if (connectionError || !connection?.access_token) {
+    if (!params.senderUserId) {
       return {
         success: false,
-        error:
-          connectionError?.message ||
-          "Access token Microsoft mancante",
+        error: "senderUserId mancante",
       };
     }
 
-    const response = await fetch(
-      `https://graph.microsoft.com/v1.0/users/${params.userId}/sendMail`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${connection.access_token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: {
-            subject: params.subject,
-            body: {
-              contentType: "HTML",
-              content: params.html,
-            },
-            toRecipients: [
-              {
-                emailAddress: {
-                  address: params.to,
-                },
-              },
-            ],
+    if (!params.microsoftConnectionId) {
+      return {
+        success: false,
+        error: "microsoftConnectionId mancante",
+      };
+    }
+
+    const message: any = {
+      subject: params.subject,
+      body: {
+        contentType: "HTML",
+        content: params.html,
+      },
+      toRecipients: [
+        {
+          emailAddress: {
+            address: params.to,
           },
-          saveToSentItems: true,
-        }),
-      }
-    );
+        },
+      ],
+    };
 
-    if (!response.ok) {
-      const errorText = await response.text();
+    if (params.fromEmail) {
+      message.from = {
+        emailAddress: {
+          address: params.fromEmail,
+        },
+      };
 
-      return {
-        success: false,
-        error: `Errore Microsoft Graph ${response.status}: ${errorText}`,
+      message.sender = {
+        emailAddress: {
+          address: params.fromEmail,
+        },
       };
     }
+
+    await microsoftGraphService.sendEmail(
+      params.senderUserId,
+      params.microsoftConnectionId,
+      message
+    );
 
     return {
       success: true,
