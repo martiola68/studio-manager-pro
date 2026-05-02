@@ -16,11 +16,11 @@
   "trailingSlash": false,
   "crons": [
     {
-      "path": "/api/scadenze/processa?secret=123",
+      "path": "/api/scadenze/processa?secret=x9KfP2LmQ8zYtA71vBnR",
       "schedule": "0 8 * * *"
     },
     {
-      "path": "/api/scadenze/processa-scadenzari?secret=123",
+      "path": "/api/scadenze/processa-scadenzari?secret=x9KfP2LmQ8zYtA71vBnR",
       "schedule": "5 8 * * *"
     },
     {
