@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { sendEmail } from "@/services/emailService";
+import { sendEmailServer } from "@/services/sendEmailServer";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -353,13 +353,26 @@ export async function processaScadenzeAffittiAutomatiche() {
       let inviiRiusciti = 0;
 
       for (const destinatario of destinatari) {
-        const emailResult = await sendEmail({
-          to: destinatario,
-          subject,
-          html,
-          text,
-          sendMode: "studio",
-        });
+      const { data: studio, error: studioError } = await (supabase as any)
+  .from("tbstudio")
+  .select("microsoft_connection_id")
+  .eq("id", row.studio_id)
+  .maybeSingle();
+
+if (studioError || !studio?.microsoft_connection_id) {
+  result.errors.push(
+    `Contratto ${row.id}: microsoft_connection_id studio mancante`
+  );
+  continue;
+}
+
+const emailResult = await sendEmailServer({
+  senderUserId: row.utente_operatore_id,
+  microsoftConnectionId: studio.microsoft_connection_id,
+  to: destinatario,
+  subject,
+  html,
+});
 
         if (emailResult.success) {
           inviiRiusciti += 1;
