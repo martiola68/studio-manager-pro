@@ -299,7 +299,12 @@ Descrizione: ${p.descrizione || "Nessuna descrizione"}
 Accedi a Studio Manager Pro per gestire il promemoria.
           `.trim();
 
-        const { data: studio } = await supabase
+ if (!p.studio_id) {
+  console.error(`studio_id mancante per promemoria ${p.titolo}`);
+  continue;
+}
+
+const { data: studio } = await supabase
   .from("tbstudio")
   .select("microsoft_connection_id")
   .eq("id", p.studio_id)
