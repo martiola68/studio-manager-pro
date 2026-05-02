@@ -1,17 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase/client";
 import { sendEmail } from "@/services/emailService";
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  }
-);
 
 const GIORNI_ALERT = [30, 15, 7, 0];
 
@@ -41,26 +30,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const scadenze = targetDates.map((x) => x.date);
 
-    const { data: av1Rows, error: av1Error } = await supabaseAdmin
+    const result = {
+      processate: 0,
+      inviate: 0,
+      saltate: 0,
+      debugEmails: [] as any[],
+    };
+
+    const { data: av1Rows, error: av1Error } = await supabase
       .from("tbAV1")
-      .select(`
-        pratica_id,
-        ScadenzaVerifica
-      `)
+      .select("pratica_id, ScadenzaVerifica")
       .not("pratica_id", "is", null)
       .not("ScadenzaVerifica", "is", null)
       .in("ScadenzaVerifica", scadenze);
 
     if (av1Error) throw av1Error;
 
-    let processate = 0;
-    let inviate = 0;
-    let saltate = 0;
-
-    const debugEmails: any[] = [];
-
     for (const av1 of av1Rows || []) {
-      processate++;
+      result.processate++;
 
       const praticaId = av1.pratica_id;
       const scadenzaVerifica = av1.ScadenzaVerifica;
@@ -68,103 +55,72 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const debug: any = {
         pratica_id: praticaId,
         scadenza_verifica: scadenzaVerifica,
-        step: "inizio",
       };
 
-      debugEmails.push(debug);
+      result.debugEmails.push(debug);
 
       const target = targetDates.find((x) => x.date === scadenzaVerifica);
 
       if (!target) {
-        debug.motivo_salto = "scadenza non valida per alert";
-        saltate++;
+        debug.motivo_salto = "scadenza fuori target";
+        result.saltate++;
         continue;
       }
 
-      debug.giorni_prima = target.giorni;
-
-      const { data: pratica, error: praticaError } = await supabaseAdmin
+      const { data: pratica, error: praticaError } = await supabase
         .from("tbPraticheAML")
         .select(`
           id,
           studio_id,
-          societa_id,
           cliente_id,
           operatore_responsabile_id,
-          tipo_prestazione,
-          stato
+          tipo_prestazione
         `)
         .eq("id", praticaId)
         .maybeSingle();
 
       if (praticaError || !pratica) {
         debug.motivo_salto = praticaError?.message || "pratica non trovata";
-        saltate++;
+        result.saltate++;
         continue;
       }
-
-      debug.studio_id = pratica.studio_id;
-      debug.cliente_id = pratica.cliente_id;
-      debug.operatore_responsabile_id = pratica.operatore_responsabile_id;
 
       if (!pratica.operatore_responsabile_id) {
         debug.motivo_salto = "operatore_responsabile_id mancante";
-        saltate++;
+        result.saltate++;
         continue;
       }
 
-      const { data: cliente, error: clienteError } = await supabaseAdmin
+      const { data: cliente } = await supabase
         .from("tbclienti")
-        .select(`
-          id,
-          ragione_sociale,
-          cod_cliente
-        `)
+        .select("id, ragione_sociale, cod_cliente")
         .eq("id", pratica.cliente_id)
         .maybeSingle();
 
-      if (clienteError) {
-        debug.motivo_salto = clienteError.message;
-        saltate++;
-        continue;
-      }
+      const { data: operatore } = await supabase
+        .from("tbutenti")
+        .select("id, nome, cognome, email")
+        .eq("id", pratica.operatore_responsabile_id)
+        .maybeSingle();
 
       const nomeCliente =
         cliente?.ragione_sociale ||
         cliente?.cod_cliente ||
         `Cliente ${pratica.cliente_id}`;
 
+      const emailDestinatario = operatore?.email || "";
+
       debug.cliente = nomeCliente;
+      debug.operatore_responsabile_id = pratica.operatore_responsabile_id;
+      debug.email_trovata = emailDestinatario || null;
 
-      const { data: operatore, error: operatoreError } = await supabaseAdmin
-        .from("tbutenti")
-        .select(`
-          id,
-          email,
-          nome,
-          cognome
-        `)
-        .eq("id", pratica.operatore_responsabile_id)
-        .maybeSingle();
-
-      if (operatoreError || !operatore?.email) {
-        debug.email_trovata = operatore?.email || null;
-        debug.motivo_salto =
-          operatoreError?.message || "email operatore mancante in tbutenti";
-        saltate++;
+      if (!emailDestinatario) {
+        debug.motivo_salto = "email operatore mancante";
+        result.saltate++;
         continue;
       }
 
-      const emailDestinatario = operatore.email;
-
-      const nomeOperatore = [operatore.nome, operatore.cognome]
-        .filter(Boolean)
-        .join(" ");
-
-      debug.email_trovata = emailDestinatario;
-      debug.nome_operatore = nomeOperatore || null;
-
-      const { data: alreadySent, error: alreadySentError } = await supabaseAdmin
+      const { data: alreadySent } = await supabase
         .from("tbAVScadenzeVerificaAlert")
         .select("id")
         .eq("pratica_id", pratica.id)
@@ -172,17 +128,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .eq("scadenza_verifica", scadenzaVerifica)
         .maybeSingle();
 
-      if (alreadySentError) {
-        debug.motivo_salto = alreadySentError.message;
-        saltate++;
+      if (alreadySent) {
+        debug.motivo_salto = "alert già inviato";
+        result.saltate++;
         continue;
       }
 
-      if (alreadySent) {
-        debug.motivo_salto = "alert già inviato";
-        saltate++;
-        continue;
-      }
+      const nomeOperatore = [operatore?.nome, operatore?.cognome]
+        .filter(Boolean)
+        .join(" ");
 
       const giorniLabel =
         target.giorni === 0 ? "oggi" : `tra ${target.giorni} giorni`;
@@ -190,11 +144,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const subject = `Scadenza verifica AML ${giorniLabel} - ${nomeCliente}`;
 
       const html = `
-        <div style="font-family: Arial, sans-serif; color: #111827; font-size: 14px; line-height: 1.6;">
-          <h2 style="margin: 0 0 16px 0; color: #b45309;">
-            Scadenza verifica AML
-          </h2>
-
+        <div style="font-family: Arial, sans-serif; font-size: 14px; color: #111;">
           <p>Ciao ${nomeOperatore || ""},</p>
 
           <p>
@@ -202,20 +152,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             scade <strong>${giorniLabel}</strong>.
           </p>
 
-          <div style="margin: 18px 0; padding: 14px 16px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px;">
-            <p style="margin: 0;">
-              <strong>Data scadenza:</strong> ${formatDateIT(scadenzaVerifica)}
-            </p>
-            <p style="margin: 6px 0 0 0;">
-              <strong>Tipo prestazione:</strong> ${pratica.tipo_prestazione || "-"}
-            </p>
-          </div>
+          <ul>
+            <li><strong>Data scadenza:</strong> ${formatDateIT(scadenzaVerifica)}</li>
+            <li><strong>Tipo prestazione:</strong> ${pratica.tipo_prestazione || "-"}</li>
+          </ul>
 
-          <p>
-            Verifica se la pratica deve essere rinnovata oppure archiviata.
-          </p>
+          <p>Verifica se la pratica deve essere rinnovata oppure archiviata.</p>
 
-          <p style="margin-top: 24px; color: #6b7280; font-size: 12px;">
+          <p style="font-size: 12px; color: #666;">
             Questa è una email automatica, non rispondere a questo messaggio.
           </p>
         </div>
@@ -224,71 +168,46 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const text = `
 Scadenza verifica AML - ${nomeCliente}
 
-Ciao ${nomeOperatore || ""},
-
 La verifica AML del cliente ${nomeCliente} scade ${giorniLabel}.
 
 Data scadenza: ${formatDateIT(scadenzaVerifica)}
 Tipo prestazione: ${pratica.tipo_prestazione || "-"}
 
 Verifica se la pratica deve essere rinnovata oppure archiviata.
-
-Questa è una email automatica, non rispondere a questo messaggio.
       `.trim();
 
-      try {
-        debug.step = "invio_email";
+      const emailResult = await sendEmail({
+        to: emailDestinatario,
+        subject,
+        html,
+        text,
+        sendMode: "studio",
+      });
 
-        const emailResult = await sendEmail({
-          to: emailDestinatario,
-          subject,
-          html,
-          text,
-          sendMode: "studio",
-        });
-
-        if (!emailResult.success) {
-          throw new Error(emailResult.error || "Errore invio email");
-        }
-
-        debug.step = "email_inviata";
-      } catch (sendError: any) {
-        debug.motivo_salto = sendError?.message || "Errore invio email";
-        saltate++;
+      if (!emailResult.success) {
+        debug.motivo_salto = emailResult.error || "errore invio email";
+        result.saltate++;
         continue;
       }
 
-      const { error: insertAlertError } = await supabaseAdmin
-        .from("tbAVScadenzeVerificaAlert")
-        .insert({
-          studio_id: pratica.studio_id,
-          pratica_id: pratica.id,
-          cliente_id: pratica.cliente_id,
-          giorni_prima: target.giorni,
-          scadenza_verifica: scadenzaVerifica,
-          destinatario_email: emailDestinatario,
-        });
+      await supabase.from("tbAVScadenzeVerificaAlert").insert({
+        studio_id: pratica.studio_id,
+        pratica_id: pratica.id,
+        cliente_id: pratica.cliente_id,
+        giorni_prima: target.giorni,
+        scadenza_verifica: scadenzaVerifica,
+        destinatario_email: emailDestinatario,
+      });
 
-      if (insertAlertError) {
-        debug.alert_salvato = false;
-        debug.errore_salvataggio_alert = insertAlertError.message;
-      } else {
-        debug.alert_salvato = true;
-      }
-
-      inviate++;
+      debug.email_inviata = true;
+      result.inviate++;
     }
 
     return res.status(200).json({
       ok: true,
-      processate,
-      inviate,
-      saltate,
-      debugEmails,
+      ...result,
     });
   } catch (err: any) {
-    console.error("Errore cron scadenze verifica AML:", err);
-
     return res.status(500).json({
       ok: false,
       error: err?.message || "Errore cron scadenze verifica AML",
