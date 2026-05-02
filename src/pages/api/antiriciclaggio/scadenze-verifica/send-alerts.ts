@@ -221,22 +221,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         </div>
       `.trim();
 
-    try {
-  debug.step = "invio_email";
+      const text = `
+Scadenza verifica AML - ${nomeCliente}
 
-  await sendEmail({
-    to: emailDestinatario,
-    subject,
-    html,
-  });
+Ciao ${nomeOperatore || ""},
 
-  debug.step = "email_inviata";
-} catch (sendError: any) {
-  debug.motivo_salto =
-    sendError?.message || "Errore invio email";
-  saltate++;
-  continue;
-}
+La verifica AML del cliente ${nomeCliente} scade ${giorniLabel}.
+
+Data scadenza: ${formatDateIT(scadenzaVerifica)}
+Tipo prestazione: ${pratica.tipo_prestazione || "-"}
+
+Verifica se la pratica deve essere rinnovata oppure archiviata.
+
+Questa è una email automatica, non rispondere a questo messaggio.
+      `.trim();
+
+      try {
+        debug.step = "invio_email";
+
+        const emailResult = await sendEmail({
+          to: emailDestinatario,
+          subject,
+          html,
+          text,
+          sendMode: "studio",
+        });
+
+        if (!emailResult.success) {
+          throw new Error(emailResult.error || "Errore invio email");
+        }
+
+        debug.step = "email_inviata";
+      } catch (sendError: any) {
+        debug.motivo_salto = sendError?.message || "Errore invio email";
+        saltate++;
+        continue;
+      }
 
       const { error: insertAlertError } = await supabaseAdmin
         .from("tbAVScadenzeVerificaAlert")
