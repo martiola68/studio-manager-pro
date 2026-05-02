@@ -2,7 +2,7 @@ import { supabase } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/types";
 import { messaggioService } from "./messaggioService";
 import { teamsNotificationService } from "./teamsNotificationService";
-import { sendEmail } from "@/services/emailService";
+import { sendEmailServer } from "@/services/sendEmailServer";
 
 export type Promemoria = Database["public"]["Tables"]["tbpromemoria"]["Row"];
 
@@ -299,14 +299,24 @@ Descrizione: ${p.descrizione || "Nessuna descrizione"}
 Accedi a Studio Manager Pro per gestire il promemoria.
           `.trim();
 
-          const emailResult = await sendEmail({
-            to: p.destinatario.email,
-            subject: emailSubject,
-            html: emailHtml,
-            text: emailText,
-            sendMode: "studio",
-          });
+        const { data: studio } = await supabase
+  .from("tbstudio")
+  .select("microsoft_connection_id")
+  .eq("id", p.studio_id)
+  .maybeSingle();
 
+if (!studio?.microsoft_connection_id) {
+  console.error(`Connessione Microsoft studio mancante per promemoria ${p.titolo}`);
+  continue;
+}
+
+const emailResult = await sendEmailServer({
+  senderUserId: currentUserId,
+  microsoftConnectionId: studio.microsoft_connection_id,
+  to: p.destinatario.email,
+  subject: emailSubject,
+  html: emailHtml,
+});
           if (!emailResult.success) {
             console.error(
               `Errore invio email promemoria ${p.titolo} a ${p.destinatario.email}:`,
