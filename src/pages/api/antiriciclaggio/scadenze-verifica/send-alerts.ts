@@ -79,7 +79,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         continue;
       }
 
-      const { data: pratica, error: praticaError } = await supabase
+     const { data: pratica, error: praticaError } = await (supabaseAdmin as any)
         .from("tbPraticheAML")
         .select(`
           id,
@@ -103,13 +103,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         continue;
       }
 
-      const { data: cliente } = await supabase
+      const { data: cliente } = await (supabaseAdmin as any)
         .from("tbclienti")
         .select("id, ragione_sociale, cod_cliente")
         .eq("id", pratica.cliente_id)
         .maybeSingle();
 
-      const { data: operatore } = await supabase
+      const { data: operatore } = await (supabaseAdmin as any)
         .from("tbutenti")
         .select("id, nome, cognome, email")
         .eq("id", pratica.operatore_responsabile_id)
@@ -132,7 +132,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         continue;
       }
 
-      const { data: alreadySent } = await supabase
+      const { data: alreadySent } = await (supabaseAdmin as any)
         .from("tbAVScadenzeVerificaAlert")
         .select("id")
         .eq("pratica_id", pratica.id)
@@ -202,7 +202,7 @@ Verifica se la pratica deve essere rinnovata oppure archiviata.
         continue;
       }
 
-      await supabase.from("tbAVScadenzeVerificaAlert").insert({
+      await (supabaseAdmin as any).from("tbAVScadenzeVerificaAlert").insert({
         studio_id: pratica.studio_id,
         pratica_id: pratica.id,
         cliente_id: pratica.cliente_id,
