@@ -142,30 +142,91 @@ function buildEmailHtml(params: {
     3: "Si ricorda che in data odierna scade il termine per il rinnovo dell’annualità del contratto di affitto.",
   } as const;
 
-  return `
-    <div style="font-family: Arial, sans-serif; font-size: 14px; color: #111;">
-      <p>Gentile utente,</p>
+ return `
+<!DOCTYPE html>
+<html>
+<body style="margin:0; padding:0; background:#f3f4f6; font-family:Arial, Helvetica, sans-serif; color:#111827;">
+  <div style="max-width:720px; margin:0 auto; padding:28px 16px;">
+    <div style="background:#ffffff; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
+      <div style="background:#1d4ed8; color:#ffffff; padding:22px 26px;">
+        <div style="font-size:20px; font-weight:700;">Studio Manager Pro</div>
+        <div style="font-size:13px; margin-top:4px; opacity:0.9;">
+          Promemoria rinnovo contratto di affitto
+        </div>
+      </div>
 
-      <p>${introByAlert[params.tipoAlert]}</p>
+      <div style="padding:26px;">
+        <p style="margin:0 0 16px 0; font-size:15px;">
+          Gentile utente,
+        </p>
 
-      <p><strong>Dettagli contratto</strong></p>
-      <ul>
-        <li><strong>Locatore:</strong> ${params.locatore || "-"}</li>
-        <li><strong>Conduttore:</strong> ${params.conduttore || "-"}</li>
-        <li><strong>Immobile locato:</strong> ${params.immobile || "-"}</li>
-        <li><strong>Codice identificativo registrazione:</strong> ${params.codiceRegistrazione || "-"}</li>
-        <li><strong>Data decorrenza:</strong> ${formatDateIT(params.decorrenza)}</li>
-        <li><strong>Scadenza annualità:</strong> ${formatDateIT(params.scadenza)}</li>
-        <li><strong>Annualità:</strong> ${params.annualita}/${params.durata}</li>
-      </ul>
+        <p style="margin:0 0 18px 0; font-size:15px; line-height:1.6;">
+          ${introByAlert[params.tipoAlert]}
+        </p>
 
-      <p>${getImpostaMessage(params.importoRegistrazione)}</p>
+        <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:18px; margin:22px 0;">
+          <div style="font-size:13px; color:#1d4ed8; font-weight:700; text-transform:uppercase; margin-bottom:12px;">
+            Dettagli contratto
+          </div>
 
-      <p><strong>Operatore incaricato:</strong> ${params.operatore || "-"}</p>
+          <table style="width:100%; border-collapse:collapse; font-size:14px;">
+            <tr>
+              <td style="padding:8px 0; color:#6b7280;">Locatore</td>
+              <td style="padding:8px 0; text-align:right; font-weight:700;">${params.locatore || "-"}</td>
+            </tr>
+            <tr>
+              <td style="padding:8px 0; color:#6b7280;">Conduttore</td>
+              <td style="padding:8px 0; text-align:right; font-weight:700;">${params.conduttore || "-"}</td>
+            </tr>
+            <tr>
+              <td style="padding:8px 0; color:#6b7280;">Immobile locato</td>
+              <td style="padding:8px 0; text-align:right; font-weight:700;">${params.immobile || "-"}</td>
+            </tr>
+            <tr>
+              <td style="padding:8px 0; color:#6b7280;">Codice registrazione</td>
+              <td style="padding:8px 0; text-align:right; font-weight:700;">${params.codiceRegistrazione || "-"}</td>
+            </tr>
+            <tr>
+              <td style="padding:8px 0; color:#6b7280;">Data decorrenza</td>
+              <td style="padding:8px 0; text-align:right; font-weight:700;">${formatDateIT(params.decorrenza)}</td>
+            </tr>
+            <tr>
+              <td style="padding:8px 0; color:#6b7280;">Scadenza annualità</td>
+              <td style="padding:8px 0; text-align:right; font-weight:700;">${formatDateIT(params.scadenza)}</td>
+            </tr>
+            <tr>
+              <td style="padding:8px 0; color:#6b7280;">Annualità</td>
+              <td style="padding:8px 0; text-align:right; font-weight:700;">${params.annualita}/${params.durata}</td>
+            </tr>
+          </table>
+        </div>
 
-      <p>Questa comunicazione è stata generata automaticamente dallo scadenzario affitti.</p>
+        <div style="margin:20px 0; padding:14px 16px; background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; font-size:14px; line-height:1.6;">
+          ${getImpostaMessage(params.importoRegistrazione)}
+        </div>
+
+        <p style="margin:0 0 12px 0; font-size:15px; line-height:1.6;">
+          Si consiglia di verificare la posizione e procedere con gli adempimenti necessari.
+        </p>
+
+        <p style="margin:20px 0 0 0; font-size:14px; color:#374151;">
+          <strong>Operatore incaricato:</strong> ${params.operatore || "-"}
+        </p>
+
+        <p style="margin:26px 0 0 0; font-size:15px;">
+          Cordiali saluti,<br/>
+          <strong>Studio Manager Pro</strong>
+        </p>
+      </div>
+
+      <div style="background:#f9fafb; border-top:1px solid #e5e7eb; padding:16px 26px; text-align:center; font-size:12px; color:#6b7280;">
+        Email automatica — non rispondere a questo messaggio.
+      </div>
     </div>
-  `.trim();
+  </div>
+</body>
+</html>
+`.trim();
 }
 
 function buildEmailText(params: {
