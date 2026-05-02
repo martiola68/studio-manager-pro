@@ -209,13 +209,9 @@ function buildEmailHtml(params: {
           Si consiglia di verificare la posizione e procedere con gli adempimenti necessari.
         </p>
 
-        <p style="margin:20px 0 0 0; font-size:14px; color:#374151;">
-          <strong>Operatore incaricato:</strong> ${params.operatore || "-"}
-        </p>
-
         <p style="margin:26px 0 0 0; font-size:15px;">
           Cordiali saluti,<br/>
-          <strong>Studio Manager Pro</strong>
+          <strong>${params.operatore || "-"}</strong>
         </p>
       </div>
 
