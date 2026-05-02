@@ -9,7 +9,10 @@ export default async function handler(
     return res.status(405).json({ error: "Metodo non consentito" });
   }
 
-  const cronSecret = process.env.CRON_SECRET;
+const cronSecret = process.env.CRON_SECRET;
+
+const querySecret =
+  typeof req.query.secret === "string" ? req.query.secret : null;
 
 const authHeader = req.headers.authorization;
 
@@ -17,7 +20,9 @@ const bearerToken = authHeader?.startsWith("Bearer ")
   ? authHeader.slice(7)
   : null;
 
-if (!cronSecret || bearerToken !== cronSecret) {
+const receivedSecret = querySecret || bearerToken;
+
+if (!cronSecret || receivedSecret !== cronSecret) {
   return res.status(401).json({
     success: false,
     error: "Non autorizzato",
