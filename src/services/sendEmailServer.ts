@@ -4,7 +4,7 @@ export async function sendEmailServer(params: {
   to: string;
   subject: string;
   html: string;
-}) {
+}): Promise<{ success: boolean; error?: string }> {
   try {
     const baseUrl =
       process.env.NEXT_PUBLIC_APP_URL ||
@@ -17,40 +17,43 @@ export async function sendEmailServer(params: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${process.env.CRON_SECRET}`,
       },
-   body: JSON.stringify({
-  userId: params.senderUserId,
-  endpoint: "/me/sendMail",
-  method: "POST",
-  microsoftConnectionId: params.microsoftConnectionId,
-  body: {
-    message: {
-      subject: params.subject,
-      body: {
-        contentType: "HTML",
-        content: params.html,
-      },
-      toRecipients: [
-        {
-          emailAddress: {
-            address: params.to,
+      body: JSON.stringify({
+        userId: params.senderUserId,
+        endpoint: "/me/sendMail",
+        method: "POST",
+        microsoftConnectionId: params.microsoftConnectionId,
+        body: {
+          message: {
+            subject: params.subject,
+            body: {
+              contentType: "HTML",
+              content: params.html,
+            },
+            toRecipients: [
+              {
+                emailAddress: {
+                  address: params.to,
+                },
+              },
+            ],
           },
+          saveToSentItems: true,
         },
-      ],
-    },
-    saveToSentItems: true,
-  },
-}),
+      }),
+    });
 
     const text = await response.text();
 
     if (!response.ok) {
       return {
         success: false,
-        error: text || `Errore Graph proxy ${response.status}`,
+        error: text || `Errore graph-cron ${response.status}`,
       };
     }
 
-    return { success: true };
+    return {
+      success: true,
+    };
   } catch (error: any) {
     return {
       success: false,
