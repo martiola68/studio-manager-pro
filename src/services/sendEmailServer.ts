@@ -11,36 +11,35 @@ export async function sendEmailServer(params: {
       process.env.NEXT_PUBLIC_SITE_URL ||
       "https://studio-manager-pro.vercel.app";
 
-    const response = await fetch(`${baseUrl}/api/microsoft365/graph`, {
+    const response = await fetch(`${baseUrl}/api/microsoft365/graph-cron`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${process.env.CRON_SECRET}`,
       },
-      body: JSON.stringify({
-        userId: params.senderUserId,
-        endpoint: "/me/sendMail",
-        method: "POST",
-        microsoftConnectionId: params.microsoftConnectionId,
-        body: JSON.stringify({
-          message: {
-            subject: params.subject,
-            body: {
-              contentType: "HTML",
-              content: params.html,
-            },
-            toRecipients: [
-              {
-                emailAddress: {
-                  address: params.to,
-                },
-              },
-            ],
+   body: JSON.stringify({
+  userId: params.senderUserId,
+  endpoint: "/me/sendMail",
+  method: "POST",
+  microsoftConnectionId: params.microsoftConnectionId,
+  body: {
+    message: {
+      subject: params.subject,
+      body: {
+        contentType: "HTML",
+        content: params.html,
+      },
+      toRecipients: [
+        {
+          emailAddress: {
+            address: params.to,
           },
-          saveToSentItems: true,
-        }),
-      }),
-    });
+        },
+      ],
+    },
+    saveToSentItems: true,
+  },
+}),
 
     const text = await response.text();
 
