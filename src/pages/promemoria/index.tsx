@@ -938,23 +938,30 @@ if (destinatario?.email) {
 
         <TableBody>
        {promemoriaFiltrati
-            .sort((a, b) => {
-              
-              const prioritaDiff =
-                getPrioritaOrder(a.priorita) - getPrioritaOrder(b.priorita);
+          .sort((a, b) => {
+  // 1. Stato: Completato sempre per ultimo
+  const statoA = a.working_progress === "Completato" ? 1 : 0;
+  const statoB = b.working_progress === "Completato" ? 1 : 0;
 
-              if (prioritaDiff !== 0) return prioritaDiff;
+  if (statoA !== statoB) return statoA - statoB;
 
-              const dataA = a.data_scadenza
-                ? new Date(a.data_scadenza).getTime()
-                : Number.MAX_SAFE_INTEGER;
+  // 2. Data scadenza: prima le più vicine
+  const dataA = a.data_scadenza
+    ? new Date(a.data_scadenza).getTime()
+    : Number.MAX_SAFE_INTEGER;
 
-              const dataB = b.data_scadenza
-                ? new Date(b.data_scadenza).getTime()
-                : Number.MAX_SAFE_INTEGER;
+  const dataB = b.data_scadenza
+    ? new Date(b.data_scadenza).getTime()
+    : Number.MAX_SAFE_INTEGER;
 
-              return dataA - dataB;
-            })
+  if (dataA !== dataB) return dataA - dataB;
+
+  // 3. Priorità: Alta, Bassa, Normale/Media
+  const prioritaDiff =
+    getPrioritaOrder(a.priorita) - getPrioritaOrder(b.priorita);
+
+  return prioritaDiff;
+})
             .map((p) => {
               const isOverdue =
                 new Date(p.data_scadenza) < new Date() &&
