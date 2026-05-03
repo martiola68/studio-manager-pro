@@ -87,7 +87,7 @@ export default function ScadenzeContenzioso() {
   modulo: s.modulo || "Processo tributario",
   descrizione: s.descrizione || "Scadenza processo tributario",
   data_scadenza: s.data_scadenza,
-  giorni_restanti: s.giorni_residui ?? calcolaGiorniResidui(s.data_scadenza),
+  giorni_restanti: s.giorni_restanti ?? calcolaGiorniResidui(s.data_scadenza),
   cliente:
     s.tbcontenzioso_processo?.tbclienti?.ragione_sociale ||
     "Cliente non indicato",
@@ -103,7 +103,7 @@ const avvisi: Scadenza[] = (avvisiRes.data || []).map((s: any) => ({
   modulo: "Avviso bonario",
   descrizione: "Scadenza avviso bonario",
   data_scadenza: s.data_scadenza,
-  giorni_restanti: s.giorni_restanti ?? calcolaGiorniResidui(s.data_scadenza),
+  giorni_restanti: calcolaGiorniResidui(s.data_scadenza),
   cliente: s.tbclienti?.ragione_sociale || "Cliente non indicato",
   numero_atto: s.numero_atto || "-",
   anno_riferimento: s.anno_riferimento || null,
@@ -111,13 +111,13 @@ const avvisi: Scadenza[] = (avvisiRes.data || []).map((s: any) => ({
     s.tbcontenzioso_codici_tributo?.descrizione ||
     "Tributo non indicato",
 }));
-
+    
 const cartelle: Scadenza[] = (cartelleRes.data || []).map((s: any) => ({
   id: `cartella-${s.id}`,
   modulo: "Cartella esattoriale",
   descrizione: "Scadenza cartella esattoriale",
   data_scadenza: s.data_scadenza,
-  giorni_restanti: s.giorni_restanti ?? calcolaGiorniResidui(s.data_scadenza),
+  giorni_restanti: calcolaGiorniResidui(s.data_scadenza),
   cliente: s.tbclienti?.ragione_sociale || "Cliente non indicato",
   numero_atto: s.numero_cartella || "-",
   anno_riferimento: s.anno_riferimento || null,
