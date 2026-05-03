@@ -126,6 +126,7 @@ type TokenUserRow = {
   user_id: string;
   token_cache_encrypted: string;
   revoked_at: string | null;
+  microsoft_connection_id: string | null;
 };
 
 function buildCalendarViewUrl(rangeDays: number) {
@@ -170,11 +171,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!clientSecret) return res.status(400).json({ error: "client_secret mancante in configurazione Microsoft 365" });
 
     // 4) Prendi tutti gli utenti dello studio con token attivo
-    const { data: tokenUsers, error: tokenUsersErr } = await supabaseAdmin
-      .from("tbmicrosoft365_user_tokens")
-      .select("user_id, token_cache_encrypted, revoked_at")
-      .eq("studio_id", studioId)
-      .is("revoked_at", null);
+  const { data: tokenUsers, error: tokenUsersErr } = await supabaseAdmin
+  .from("tbmicrosoft365_user_tokens")
+  .select("user_id, token_cache_encrypted, revoked_at, microsoft_connection_id")
+  .eq("studio_id", studioId)
+  .is("revoked_at", null)
+  .not("microsoft_connection_id", "is", null);
 
     if (tokenUsersErr) {
       return res.status(500).json({ error: "Errore lettura utenti Microsoft", details: tokenUsersErr.message });
@@ -212,12 +214,48 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // A) Deserializza cache utente
         const oldSerializedCache = decrypt(row.token_cache_encrypted);
 
+        if (!row.microsoft_connection_id) {
+  perUser.push({
+    user_id: targetUserId,
+    ok: false,
+    error: "microsoft_connection_id mancante sul token",
+  });
+  continue;
+}
+
+const { data: connection, error: connectionError } = await supabaseAdmin
+  .from("microsoft365_connections")
+  .select("tenant_id, client_id, client_secret")
+  .eq("id", row.microsoft_connection_id)
+  .eq("studio_id", studioId)
+  .eq("enabled", true)
+  .maybeSingle();
+
+if (
+  connectionError ||
+  !connection?.client_id ||
+  !connection?.tenant_id ||
+  !connection?.client_secret
+) {
+  perUser.push({
+    user_id: targetUserId,
+    ok: false,
+    error: "Connessione Microsoft non trovata o incompleta",
+  });
+  continue;
+}
+
+const connectionTenantId = connection.tenant_id;
+const connectionClientSecret = getDecryptedClientSecret(
+  connection.client_secret
+);
+
         // B) MSAL app
-        const msalApp = buildMsalApp({
-          clientId: cfgRes.cfg.client_id,
-          tenantId,
-          clientSecret,
-        });
+      const msalApp = buildMsalApp({
+  clientId: connection.client_id,
+  tenantId,
+  clientSecret,
+});
 
         // C) access token (silent)
         const tokenRes = await acquireAccessTokenFromCache({
