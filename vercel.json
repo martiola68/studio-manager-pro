@@ -1,19 +1,5 @@
 {
-  "buildCommand": "next build",
   "framework": "nextjs",
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        }
-      ]
-    }
-  ],
-  "cleanUrls": true,
-  "trailingSlash": false,
   "crons": [
     {
       "path": "/api/cron/hourly?secret=x9KfP2LmQ8zYtA71vBnR",
