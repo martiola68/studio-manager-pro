@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { controllaEInviaNotificheScadenza } from "@/services/promemoriaService";
+import { supabase } from "@/lib/supabase/client";
+import { promemoriaService } from "@/services/promemoriaService";
 
 const SECRET = process.env.CRON_SECRET || "x9KfP2LmQ8zYtA71vBnR";
 
@@ -22,7 +23,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const result = await controllaEInviaNotificheScadenza();
+    const { data: sender, error } = await supabase
+      .from("tbutenti")
+      .select("id, studio_id")
+      .not("studio_id", "is", null)
+      .limit(1)
+      .maybeSingle();
+
+    if (error || !sender?.id || !sender?.studio_id) {
+      throw new Error("Nessun utente/studio valido per invio alert promemoria");
+    }
+
+    const result = await promemoriaService.controllaEInviaNotificheScadenza(
+      sender.id,
+      sender.studio_id
+    );
 
     return res.status(200).json({
       success: true,
