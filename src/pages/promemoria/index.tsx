@@ -110,18 +110,19 @@ export default function PromemoriaPage() {
 
   const isResponsabileSettore = currentUser?.responsabile === true && !!currentUser?.settore;
   
-  const getPrioritaOrder = (priorita?: string | null) => {
-    switch ((priorita || "").toLowerCase()) {
-      case "alta":
-        return 0;
-      case "media":
-        return 1;
-      case "bassa":
-        return 2;
-      default:
-        return 3;
-    }
-  };
+ const getPrioritaOrder = (priorita?: string | null) => {
+  switch ((priorita || "").toLowerCase()) {
+    case "alta":
+      return 0;
+    case "bassa":
+      return 1;
+    case "normale":
+    case "media":
+      return 2;
+    default:
+      return 3;
+  }
+};
 
   const [formData, setFormData] = useState({
     titolo: "",
