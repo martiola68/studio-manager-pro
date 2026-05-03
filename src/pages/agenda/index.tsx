@@ -565,6 +565,8 @@ export default function AgendaPage() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [filtroUtenti, setFiltroUtenti] = useState<string[]>([]);
 
+  const [filtroSettori, setFiltroSettori] = useState<Array<"Fiscale" | "Consulenza" | "Lavoro">>([]);
+
   // dialog
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -727,13 +729,24 @@ export default function AgendaPage() {
 
 const filteredEvents = useMemo(() => {
   return groupedEvents.filter((e) => {
-    if (filtroUtenti.length === 0) return true;
+    const activeUserIds = new Set<string>(filtroUtenti);
+
+    if (filtroSettori.length > 0) {
+      utenti
+        .filter((u) => {
+          const settore = normalizeSettore(u.settore);
+          return settore && filtroSettori.includes(settore as "Fiscale" | "Consulenza" | "Lavoro");
+        })
+        .forEach((u) => activeUserIds.add(String(u.id)));
+    }
+
+    if (activeUserIds.size === 0) return true;
 
     return e.rows.some((row) =>
-      filtroUtenti.includes(String(row.utente_id || ""))
+      activeUserIds.has(String(row.utente_id || ""))
     );
   });
-}, [groupedEvents, filtroUtenti]);
+}, [groupedEvents, filtroUtenti, filtroSettori, utenti]);
 
   const loggedUser = useMemo(
     () => utenti.find((u) => String(u.id) === String(currentUserId || "")) || null,
@@ -2552,23 +2565,51 @@ const handleDeleteEvento = async () => {
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-[220px] justify-between">
-                    {filtroUtenti.length === 0 ? "Tutti gli utenti" : `${filtroUtenti.length} selezionati`}
+                    {filtroUtenti.length === 0 && filtroSettori.length === 0
+  ? "Tutti gli utenti"
+  : `${filtroUtenti.length + filtroSettori.length} selezionati`}
                   </Button>
                 </PopoverTrigger>
 
-                <PopoverContent className="w-[260px] p-2">
-                  <div
-                    className="flex items-center gap-2 px-2 py-2 rounded hover:bg-muted cursor-pointer"
-                    onClick={() => setFiltroUtenti([])}
-                  >
-                    <Checkbox checked={filtroUtenti.length === 0} />
-                    <span>Tutti gli utenti</span>
-                  </div>
+              <PopoverContent className="w-[260px] p-2">
+  <div
+    className="flex items-center gap-2 px-2 py-2 rounded hover:bg-muted cursor-pointer"
+    onClick={() => {
+      setFiltroUtenti([]);
+      setFiltroSettori([]);
+    }}
+  >
+    <Checkbox checked={filtroUtenti.length === 0 && filtroSettori.length === 0} />
+    <span>Tutti gli utenti</span>
+  </div>
 
-                  <div className="my-2 border-t" />
+  <div className="my-2 border-t" />
 
-                  <div className="max-h-[260px] overflow-auto">
-                    {utenti.map((u) => {
+  {(["Fiscale", "Consulenza", "Lavoro"] as const).map((settore) => {
+    const checked = filtroSettori.includes(settore);
+
+    return (
+      <div
+        key={settore}
+        className="flex items-center gap-2 px-2 py-2 rounded hover:bg-muted cursor-pointer"
+        onClick={() => {
+          setFiltroSettori((prev) =>
+            prev.includes(settore)
+              ? prev.filter((s) => s !== settore)
+              : [...prev, settore]
+          );
+        }}
+      >
+        <Checkbox checked={checked} />
+        <span>{settore}</span>
+      </div>
+    );
+  })}
+
+  <div className="my-2 border-t" />
+
+  <div className="max-h-[260px] overflow-auto">
+    {utenti.map((u) => {
                       const checked = filtroUtenti.includes(u.id);
 
                       return (
