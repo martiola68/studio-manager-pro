@@ -19,9 +19,7 @@ export function calcolaGiorniResidui(dataScadenza?: string | null): number | nul
   return Math.round(diffMs / (1000 * 60 * 60 * 24));
 }
 
-export function getClasseGiorniResidui(
-  giorni: number | null | undefined
-): string {
+export function getClasseGiorniResidui(giorni: number | null | undefined): string {
   if (giorni === null || giorni === undefined) {
     return "bg-gray-200 text-gray-700";
   }
@@ -30,6 +28,8 @@ export function getClasseGiorniResidui(
     return "bg-red-700 text-white";
   }
 
+  // 60 giorni divisi in 3 fasce:
+  // 0-20 rosso, 21-40 arancio, 41-60 verde
   if (giorni <= 20) {
     return "bg-red-500 text-white";
   }
