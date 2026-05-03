@@ -29,18 +29,7 @@ export default function ScadenzeContenzioso() {
     loadScadenze();
   }, []);
 
-    const oggi = new Date();
-    oggi.setHours(0, 0, 0, 0);
-
-    const scadenza = new Date(dataScadenza);
-    scadenza.setHours(0, 0, 0, 0);
-
-    return Math.ceil(
-      (scadenza.getTime() - oggi.getTime()) / (1000 * 60 * 60 * 24)
-    );
-  };
-
-  const loadScadenze = async () => {
+   const loadScadenze = async () => {
     const supabase = getSupabaseClient();
 
     setLoading(true);
@@ -88,7 +77,7 @@ export default function ScadenzeContenzioso() {
   modulo: s.modulo || "Processo tributario",
   descrizione: s.descrizione || "Scadenza processo tributario",
   data_scadenza: s.data_scadenza,
-  giorni_restanti: s.giorni_restanti ?? calcolaGiorniResidui(s.data_scadenza),
+  giorni_restanti: calcolaGiorniResidui(s.data_scadenza) ?? 0,
   cliente:
     s.tbcontenzioso_processo?.tbclienti?.ragione_sociale ||
     "Cliente non indicato",
@@ -104,7 +93,7 @@ const avvisi: Scadenza[] = (avvisiRes.data || []).map((s: any) => ({
   modulo: "Avviso bonario",
   descrizione: "Scadenza avviso bonario",
   data_scadenza: s.data_scadenza,
-  giorni_restanti: calcolaGiorniResidui(s.data_scadenza),
+  giorni_restanti: calcolaGiorniResidui(s.data_scadenza) ?? 0,
   cliente: s.tbclienti?.ragione_sociale || "Cliente non indicato",
   numero_atto: s.numero_atto || "-",
   anno_riferimento: s.anno_riferimento || null,
@@ -118,7 +107,7 @@ const cartelle: Scadenza[] = (cartelleRes.data || []).map((s: any) => ({
   modulo: "Cartella esattoriale",
   descrizione: "Scadenza cartella esattoriale",
   data_scadenza: s.data_scadenza,
-  giorni_restanti: calcolaGiorniResidui(s.data_scadenza),
+  giorni_restanti: calcolaGiorniResidui(s.data_scadenza) ?? 0,
   cliente: s.tbclienti?.ragione_sociale || "Cliente non indicato",
   numero_atto: s.numero_cartella || "-",
   anno_riferimento: s.anno_riferimento || null,
