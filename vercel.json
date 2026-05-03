@@ -14,9 +14,10 @@
   ],
   "cleanUrls": true,
   "trailingSlash": false,
-"crons": [
-  {
-    "path": "/api/cron/hourly?secret=x9KfP2LmQ8zYtA71vBnR",
-    "schedule": "0 * * * *"
-  }
-]
+  "crons": [
+    {
+      "path": "/api/cron/hourly?secret=x9KfP2LmQ8zYtA71vBnR",
+      "schedule": "0 * * * *"
+    }
+  ]
+}
