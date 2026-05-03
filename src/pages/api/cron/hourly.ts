@@ -80,13 +80,15 @@ export default async function handler(
       )
     );
 
-    // CONTENZIOSO (EMAIL ALERT)
-    results.push(
-      await callInternal(
-        `/api/contenzioso/alert?secret=${SECRET}`,
-        "POST"
-      )
-    );
+   // CONTENZIOSO
+results.push(
+  await callInternal(`/api/contenzioso/alert?secret=${SECRET}`, "POST")
+);
+
+// PROMEMORIA
+results.push(
+  await callInternal(`/api/promemoria/alert?secret=${SECRET}`, "POST")
+);
   }
 
   return res.status(200).json({
