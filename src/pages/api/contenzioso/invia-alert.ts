@@ -2,6 +2,8 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 import { sendEmail } from "@/services/emailService";
 
+const SECRET = process.env.CRON_SECRET || "x9KfP2LmQ8zYtA71vBnR";
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -10,6 +12,16 @@ const supabase = createClient(
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
     return res.status(405).json({ success: false, error: "Metodo non consentito" });
+  }
+
+  const querySecret =
+    typeof req.query.secret === "string" ? req.query.secret : null;
+
+  if (!SECRET || querySecret !== SECRET) {
+    return res.status(401).json({
+      success: false,
+      error: "Non autorizzato",
+    });
   }
 
   try {
