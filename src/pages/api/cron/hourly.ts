@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 
-const SECRET = process.env.CRON_SECRET;
+const SECRET = process.env.CRON_SECRET || "x9KfP2LmQ8zYtA71vBnR";
 
 async function callInternal(path: string) {
   const baseUrl =
