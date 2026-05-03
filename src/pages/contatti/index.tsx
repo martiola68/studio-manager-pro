@@ -1130,28 +1130,146 @@ const visibleLetters = letterFilter
             </CardContent>
           </Card>
         ) : (
-         visibleLetters.map((letter) => (
-  <div key={letter} className="space-y-3">
+   {filteredContatti.length === 0 ? (
+  <Card>
+    <CardContent className="py-12 text-center">
+      <UserCircle className="mx-auto mb-4 h-16 w-16 text-gray-300" />
+      <p className="text-lg text-gray-500">Nessun contatto trovato</p>
+      <p className="mt-2 text-sm text-gray-400">
+        {searchQuery || letterFilter
+          ? "Prova a modificare i filtri di ricerca"
+          : "Inizia aggiungendo il tuo primo contatto"}
+      </p>
+    </CardContent>
+  </Card>
+) : (
+  visibleLetters.map((letter) => (
+    <div key={letter} className="space-y-3">
+      <div className="rounded-xl border bg-green-600 px-5 py-3 text-xl font-bold text-white shadow-sm">
+        {letter}
+      </div>
 
-    {/* LETTERA */}
-    <div className="rounded-xl border bg-green-600 px-5 py-3 text-xl font-bold text-white shadow-sm">
-      {letter}
+      {groupedContatti[letter].map((contatto) => (
+        <Card key={contatto.id} className="transition-shadow hover:shadow-md">
+          <CardContent className="p-3">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-700 text-lg font-bold text-white md:h-16 md:w-16 md:text-xl">
+                  {getInitials(contatto.nome || "", contatto.cognome)}
+                </div>
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <h3 className="truncate text-base font-bold text-gray-900 md:text-lg">
+                      {contatto.cognome} {contatto.nome}
+                    </h3>
+
+                    {contatto.contatto_principale && (
+                      <Badge
+                        variant="secondary"
+                        className="mt-1 bg-blue-100 text-blue-800"
+                      >
+                        <User className="mr-1 h-3 w-3" />
+                        {contatto.contatto_principale}
+                      </Badge>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => void handleEdit(contatto)}
+                      className="h-10 w-10"
+                      title="Modifica"
+                    >
+                      <Edit className="h-5 w-5 text-blue-600" />
+                    </Button>
+
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => void handleDelete(contatto.id)}
+                      className="h-10 w-10 text-red-600 hover:bg-red-50 hover:text-red-700"
+                      title="Elimina"
+                    >
+                      <Trash2 className="h-5 w-5" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
+                  {contatto.email && (
+                    <a
+                      href={`mailto:${contatto.email}`}
+                      className="group flex items-center gap-2 text-sm text-gray-700 transition-colors hover:text-blue-600"
+                    >
+                      <Mail className="h-4 w-4 flex-shrink-0 text-gray-400 group-hover:text-blue-600" />
+                      <span className="truncate">{contatto.email}</span>
+                    </a>
+                  )}
+
+                  {contatto.pec && (
+                    <a
+                      href={`mailto:${contatto.pec}`}
+                      className="group flex items-center gap-2 text-sm text-gray-700 transition-colors hover:text-blue-600"
+                    >
+                      <Mail className="h-4 w-4 flex-shrink-0 text-amber-500 group-hover:text-blue-600" />
+                      <span className="truncate">PEC: {contatto.pec}</span>
+                    </a>
+                  )}
+
+                  {contatto.email_secondaria && (
+                    <a
+                      href={`mailto:${contatto.email_secondaria}`}
+                      className="group flex items-center gap-2 text-sm text-gray-700 transition-colors hover:text-blue-600"
+                    >
+                      <Mail className="h-4 w-4 flex-shrink-0 text-gray-400 group-hover:text-blue-600" />
+                      <span className="truncate">
+                        {contatto.email_secondaria}
+                      </span>
+                    </a>
+                  )}
+
+                  {contatto.cell && (
+                    <a
+                      href={`tel:${contatto.cell}`}
+                      className="group flex items-center gap-2 text-sm text-gray-700 transition-colors hover:text-green-600"
+                    >
+                      <Smartphone className="h-4 w-4 flex-shrink-0 text-gray-400 group-hover:text-green-600" />
+                      <span>{contatto.cell}</span>
+                    </a>
+                  )}
+
+                  {contatto.tel && (
+                    <a
+                      href={`tel:${contatto.tel}`}
+                      className="group flex items-center gap-2 text-sm text-gray-700 transition-colors hover:text-green-600"
+                    >
+                      <Phone className="h-4 w-4 flex-shrink-0 text-gray-400 group-hover:text-green-600" />
+                      <span>{contatto.tel}</span>
+                    </a>
+                  )}
+                </div>
+
+                {contatto.note && (
+                  <div className="mt-3 border-t pt-3">
+                    <p className="line-clamp-2 text-sm text-gray-600">
+                      <span className="font-semibold">Note:</span>{" "}
+                      {contatto.note}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
     </div>
-
-    {/* CONTATTI DELLA LETTERA */}
-    {groupedContatti[letter].map((contatto) => (
-
-      <Card key={contatto.id} className="transition-shadow hover:shadow-md">
-
-        {/* ⬇️ QUI INCOLLA IL CONTENUTO DELLA TUA CARD (senza modificarlo) */}
-
-      </Card>
-
-    ))}
-
-  </div>
-))
-        )}
+  ))
+)}
       </div>
 
       <MasterPasswordDialog
