@@ -107,6 +107,27 @@ export default function ContattiPage() {
 
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
+const getContattoLetter = (contatto: Contatto) => {
+  const value = (contatto.cognome || contatto.nome || "#").trim();
+  const first = value.charAt(0).toUpperCase();
+
+  return /^[A-Z]$/.test(first) ? first : "#";
+};
+
+const groupedContatti = filteredContatti.reduce<Record<string, Contatto[]>>(
+  (acc, contatto) => {
+    const letter = getContattoLetter(contatto);
+    if (!acc[letter]) acc[letter] = [];
+    acc[letter].push(contatto);
+    return acc;
+  },
+  {}
+);
+
+const visibleLetters = letterFilter
+  ? [letterFilter]
+  : alphabet.filter((letter) => groupedContatti[letter]?.length);
+
   useEffect(() => {
     void checkAuthAndLoad();
   }, []);
@@ -1064,24 +1085,32 @@ export default function ContattiPage() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Button
-              variant={letterFilter === "" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setLetterFilter("")}
-              className="min-w-[44px]"
-            >
-              Tutti
-            </Button>
+           <Button
+  variant="outline"
+  size="sm"
+  onClick={() => setLetterFilter("")}
+  className={
+    letterFilter === ""
+      ? "min-w-[44px] border-green-600 bg-green-600 text-white hover:bg-green-700"
+      : "min-w-[44px]"
+  }
+>
+  Tutti
+</Button>
             {alphabet.map((letter) => (
-              <Button
-                key={letter}
-                variant={letterFilter === letter ? "default" : "outline"}
-                size="sm"
-                onClick={() => setLetterFilter(letter)}
-                className="h-10 w-10"
-              >
-                {letter}
-              </Button>
+             <Button
+  key={letter}
+  variant="outline"
+  size="sm"
+  onClick={() => setLetterFilter(letter)}
+  className={
+    letterFilter === letter
+      ? "h-10 w-10 border-green-600 bg-green-600 text-white hover:bg-green-700"
+      : "h-10 w-10"
+  }
+>
+  {letter}
+</Button>
             ))}
           </div>
         </CardContent>
@@ -1101,122 +1130,27 @@ export default function ContattiPage() {
             </CardContent>
           </Card>
         ) : (
-          filteredContatti.map((contatto) => (
-            <Card key={contatto.id} className="transition-shadow hover:shadow-md">
-              <CardContent className="p-3">
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-700 text-lg font-bold text-white md:h-16 md:w-16 md:text-xl">
-                      {getInitials(contatto.nome || "", contatto.cognome)}
-                    </div>
-                  </div>
+         visibleLetters.map((letter) => (
+  <div key={letter} className="space-y-3">
 
-                  <div className="min-w-0 flex-1">
-                    <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
-                        <h3 className="truncate text-base font-bold text-gray-900 md:text-lg">
-                          {contatto.cognome} {contatto.nome}
-                        </h3>
-                        {contatto.contatto_principale && (
-                          <Badge
-                            variant="secondary"
-                            className="mt-1 bg-blue-100 text-blue-800"
-                          >
-                            <User className="mr-1 h-3 w-3" />
-                            {contatto.contatto_principale}
-                          </Badge>
-                        )}
-                      </div>
+    {/* LETTERA */}
+    <div className="rounded-xl border bg-green-600 px-5 py-3 text-xl font-bold text-white shadow-sm">
+      {letter}
+    </div>
 
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => void handleEdit(contatto)}
-                          className="h-10 w-10"
-                          title="Modifica"
-                        >
-                          <Edit className="h-5 w-5 text-blue-600" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => void handleDelete(contatto.id)}
-                          className="h-10 w-10 text-red-600 hover:bg-red-50 hover:text-red-700"
-                          title="Elimina"
-                        >
-                          <Trash2 className="h-5 w-5" />
-                        </Button>
-                      </div>
-                    </div>
+    {/* CONTATTI DELLA LETTERA */}
+    {groupedContatti[letter].map((contatto) => (
 
-                    <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
-                      {contatto.email && (
-                        <a
-                          href={`mailto:${contatto.email}`}
-                          className="group flex items-center gap-2 text-sm text-gray-700 transition-colors hover:text-blue-600"
-                        >
-                          <Mail className="h-4 w-4 flex-shrink-0 text-gray-400 group-hover:text-blue-600" />
-                          <span className="truncate">{contatto.email}</span>
-                        </a>
-                      )}
+      <Card key={contatto.id} className="transition-shadow hover:shadow-md">
 
-                      {contatto.pec && (
-                        <a
-                          href={`mailto:${contatto.pec}`}
-                          className="group flex items-center gap-2 text-sm text-gray-700 transition-colors hover:text-blue-600"
-                        >
-                          <Mail className="h-4 w-4 flex-shrink-0 text-amber-500 group-hover:text-blue-600" />
-                          <span className="truncate">PEC: {contatto.pec}</span>
-                        </a>
-                      )}
+        {/* ⬇️ QUI INCOLLA IL CONTENUTO DELLA TUA CARD (senza modificarlo) */}
 
-                      {contatto.email_secondaria && (
-                        <a
-                          href={`mailto:${contatto.email_secondaria}`}
-                          className="group flex items-center gap-2 text-sm text-gray-700 transition-colors hover:text-blue-600"
-                        >
-                          <Mail className="h-4 w-4 flex-shrink-0 text-gray-400 group-hover:text-blue-600" />
-                          <span className="truncate">
-                            {contatto.email_secondaria}
-                          </span>
-                        </a>
-                      )}
+      </Card>
 
-                      {contatto.cell && (
-                        <a
-                          href={`tel:${contatto.cell}`}
-                          className="group flex items-center gap-2 text-sm text-gray-700 transition-colors hover:text-green-600"
-                        >
-                          <Smartphone className="h-4 w-4 flex-shrink-0 text-gray-400 group-hover:text-green-600" />
-                          <span>{contatto.cell}</span>
-                        </a>
-                      )}
+    ))}
 
-                      {contatto.tel && (
-                        <a
-                          href={`tel:${contatto.tel}`}
-                          className="group flex items-center gap-2 text-sm text-gray-700 transition-colors hover:text-green-600"
-                        >
-                          <Phone className="h-4 w-4 flex-shrink-0 text-gray-400 group-hover:text-green-600" />
-                          <span>{contatto.tel}</span>
-                        </a>
-                      )}
-                    </div>
-
-                    {contatto.note && (
-                      <div className="mt-3 border-t pt-3">
-                        <p className="line-clamp-2 text-sm text-gray-600">
-                          <span className="font-semibold">Note:</span>{" "}
-                          {contatto.note}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+  </div>
+))
         )}
       </div>
 
