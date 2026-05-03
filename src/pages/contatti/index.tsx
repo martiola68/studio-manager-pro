@@ -757,9 +757,14 @@ const visibleLetters = letterFilter
       <div className="mb-6 md:mb-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">
-              Rubrica Contatti
-            </h1>
+           <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">
+  Rubrica Contatti
+  {letterFilter && (
+    <span className="ml-3 rounded-full bg-green-600 px-3 py-1 text-base text-white">
+      Lettera {letterFilter}
+    </span>
+  )}
+</h1>
             <p className="mt-1 text-sm text-gray-500 md:text-base">
               Gestisci i contatti della rubrica
             </p>
