@@ -26,6 +26,10 @@
     {
       "path": "/api/antiriciclaggio/scadenze-verifica/send-alerts?secret=x9KfP2LmQ8zYtA71vBnR",
       "schedule": "10 8 * * *"
-    }
+    },
+    {
+  "path": "/api/microsoft365/calendar/sync-cron?secret=x9KfP2LmQ8zYtA71vBnR",
+  "schedule": "0 * * * *"
+}
   ]
 }
