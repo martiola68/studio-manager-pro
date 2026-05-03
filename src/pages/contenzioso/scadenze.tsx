@@ -3,6 +3,10 @@ import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  calcolaGiorniResidui,
+  getClasseGiorniResidui,
+} from "@/utils/contenziosoScadenze";
 
 type Scadenza = {
   id: string;
@@ -25,8 +29,7 @@ export default function ScadenzeContenzioso() {
     loadScadenze();
   }, []);
 
-  const calcolaGiorniResidui = (dataScadenza?: string | null) => {
-    if (!dataScadenza) return 0;
+     if (!dataScadenza) return 0;
 
     const oggi = new Date();
     oggi.setHours(0, 0, 0, 0);
@@ -134,12 +137,6 @@ const cartelle: Scadenza[] = (cartelleRes.data || []).map((s: any) => ({
     setLoading(false);
   };
 
-  const getColor = (giorni: number) => {
-    if (giorni <= 5) return "bg-red-600 text-white";
-    if (giorni <= 10) return "bg-orange-500 text-white";
-    return "bg-green-600 text-white";
-  };
-
   const formatDateIT = (date?: string | null) => {
     if (!date) return "-";
     const [yyyy, mm, dd] = date.split("-");
@@ -196,7 +193,9 @@ const cartelle: Scadenza[] = (cartelleRes.data || []).map((s: any) => ({
                   </div>
                 </div>
 
-                <Badge className={getColor(s.giorni_restanti)}>  {s.giorni_restanti} gg</Badge>
+                <Badge className={getClasseGiorniResidui(s.giorni_restanti)}>
+  {s.giorni_restanti} gg
+</Badge>
               </div>
             ))
           )}
