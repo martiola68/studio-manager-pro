@@ -2,7 +2,10 @@ import type { NextApiRequest, NextApiResponse } from "next";
 
 const SECRET = process.env.CRON_SECRET || "x9KfP2LmQ8zYtA71vBnR";
 
-async function callInternal(path: string, method: "GET" | "POST" = "GET") {
+async function callInternal(
+  path: string,
+  method: "GET" | "POST" = "GET"
+) {
   const baseUrl =
     process.env.NEXT_PUBLIC_APP_URL ||
     process.env.NEXT_PUBLIC_SITE_URL ||
@@ -20,7 +23,10 @@ async function callInternal(path: string, method: "GET" | "POST" = "GET") {
   };
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   const querySecret =
     typeof req.query.secret === "string" ? req.query.secret : null;
 
@@ -33,35 +39,53 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const results = [];
 
-  // Sync calendario Microsoft: ogni ora
+  // =========================
+  // 🔄 SEMPRE (OGNI ORA)
+  // =========================
   results.push(
-    await callInternal(`/api/microsoft365/calendar/sync-cron?secret=${SECRET}`)
+    await callInternal(
+      `/api/microsoft365/calendar/sync-cron?secret=${SECRET}`
+    )
   );
 
   const hourUtc = new Date().getUTCHours();
 
-  // Alert giornalieri alle 08:00 UTC
+  // =========================
+  // ⏰ JOB GIORNALIERI (08 UTC)
+  // =========================
   if (hourUtc === 8) {
+    // SCADENZE GENERICHE
     results.push(
       await callInternal(`/api/scadenze/processa?secret=${SECRET}`)
     );
 
+    // SCADENZARI
     results.push(
-      await callInternal(`/api/scadenze/processa-scadenzari?secret=${SECRET}`)
+      await callInternal(
+        `/api/scadenze/processa-scadenzari?secret=${SECRET}`
+      )
     );
 
+    // AFFITTI
     results.push(
-      await callInternal(`/api/scadenze/affitti/processa?secret=${SECRET}`)
+      await callInternal(
+        `/api/scadenze/affitti/processa?secret=${SECRET}`
+      )
     );
 
+    // ANTIRICICLAGGIO (AML)
     results.push(
       await callInternal(
         `/api/antiriciclaggio/scadenze-verifica/send-alerts?secret=${SECRET}`
       )
     );
 
+    // CONTENZIOSO (EMAIL ALERT)
     results.push(
-      await callInternal(`/api/contenzioso/alert?secret=${SECRET}`, "POST")
+      await callInternal(
+        `/api/contenzioso/alert?secret=${SECRET}`,
+        "POST"
+      )
     );
   }
 
