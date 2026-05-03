@@ -149,14 +149,31 @@ export default async function handler(
   }
 
   try {
-    const { data: tokenUsers, error: tokenUsersErr } = await supabaseAdmin
-      .from("tbmicrosoft365_user_tokens")
-      .select(
-        "studio_id, user_id, token_cache_encrypted, revoked_at, microsoft_connection_id"
-      )
-      .is("revoked_at", null)
-      .not("microsoft_connection_id", "is", null);
+    const filterUserId =
+  typeof req.query.userId === "string" ? req.query.userId : null;
 
+const filterConnectionId =
+  typeof req.query.microsoftConnectionId === "string"
+    ? req.query.microsoftConnectionId
+    : null;
+
+let tokenQuery = supabaseAdmin
+  .from("tbmicrosoft365_user_tokens")
+  .select(
+    "studio_id, user_id, token_cache_encrypted, revoked_at, microsoft_connection_id"
+  )
+  .is("revoked_at", null)
+  .not("microsoft_connection_id", "is", null);
+
+if (filterUserId) {
+  tokenQuery = tokenQuery.eq("user_id", filterUserId);
+}
+
+if (filterConnectionId) {
+  tokenQuery = tokenQuery.eq("microsoft_connection_id", filterConnectionId);
+}
+
+const { data: tokenUsers, error: tokenUsersErr } = await tokenQuery;
     if (tokenUsersErr) {
       return res.status(500).json({
         ok: false,
