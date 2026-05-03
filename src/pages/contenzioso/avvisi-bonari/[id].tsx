@@ -87,12 +87,22 @@ const formatCurrencyInput = (val: string) => {
   });
 };
 
-  const addDays = (dateString: string, days: number) => {
-    if (!dateString) return "";
-    const date = new Date(dateString);
-    date.setDate(date.getDate() + days);
-    return date.toISOString().split("T")[0];
-  };
+ const addDays = (dateString: string, days: number) => {
+  if (!dateString) return "";
+
+  const [yyyy, mm, dd] = dateString.split("-").map(Number);
+
+  if (!yyyy || !mm || !dd) return "";
+
+  const date = new Date(yyyy, mm - 1, dd);
+  date.setDate(date.getDate() + days);
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
 
   const giorniScadenza = 60;
 
