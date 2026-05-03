@@ -1116,146 +1116,107 @@ const visibleLetters = letterFilter
         </CardContent>
       </Card>
 
-  <div className="space-y-3">
-        {filteredContatti.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <UserCircle className="mx-auto mb-4 h-16 w-16 text-gray-300" />
-              <p className="text-lg text-gray-500">Nessun contatto trovato</p>
-              <p className="mt-2 text-sm text-gray-400">
-                {searchQuery || letterFilter
-                  ? "Prova a modificare i filtri di ricerca"
-                  : "Inizia aggiungendo il tuo primo contatto"}
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          visibleLetters.map((letter) => (
-            <div key={letter} className="space-y-3">
-              <div className="rounded-xl border bg-green-600 px-5 py-3 text-xl font-bold text-white shadow-sm">
-                {letter}
+<div className="space-y-6">
+  {filteredContatti.length === 0 ? (
+    <Card>
+      <CardContent className="py-12 text-center">
+        <UserCircle className="mx-auto mb-4 h-16 w-16 text-gray-300" />
+        <p className="text-lg text-gray-500">Nessun contatto trovato</p>
+        <p className="mt-2 text-sm text-gray-400">
+          {searchQuery || letterFilter
+            ? "Prova a modificare i filtri di ricerca"
+            : "Inizia aggiungendo il tuo primo contatto"}
+        </p>
+      </CardContent>
+    </Card>
+  ) : (
+    visibleLetters.map((letter) => (
+      <Card key={letter} className="overflow-hidden border-2 border-green-100 shadow-sm">
+        <CardHeader className="bg-green-600 py-3 text-white">
+          <CardTitle className="flex items-center justify-between text-xl">
+            <span>Lettera {letter}</span>
+            <span className="rounded-full bg-white/20 px-3 py-1 text-sm">
+              {(groupedContatti[letter] || []).length} contatti
+            </span>
+          </CardTitle>
+        </CardHeader>
+
+        <CardContent className="divide-y p-0">
+          {(groupedContatti[letter] || []).map((contatto) => (
+            <div
+              key={contatto.id}
+              className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-green-50"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="text-base font-bold text-gray-900">
+                  {contatto.cognome} {contatto.nome}
+                </div>
+
+                <div className="mt-1 grid grid-cols-1 gap-2 text-sm text-gray-600 md:grid-cols-3">
+                  {contatto.email && (
+                    <a href={`mailto:${contatto.email}`} className="flex items-center gap-2 truncate hover:text-blue-600">
+                      <Mail className="h-4 w-4 text-gray-400" />
+                      <span className="truncate">{contatto.email}</span>
+                    </a>
+                  )}
+
+                  {contatto.pec && (
+                    <a href={`mailto:${contatto.pec}`} className="flex items-center gap-2 truncate hover:text-blue-600">
+                      <Mail className="h-4 w-4 text-amber-500" />
+                      <span className="truncate">PEC: {contatto.pec}</span>
+                    </a>
+                  )}
+
+                  {contatto.cell && (
+                    <a href={`tel:${contatto.cell}`} className="flex items-center gap-2 hover:text-green-600">
+                      <Smartphone className="h-4 w-4 text-gray-400" />
+                      <span>{contatto.cell}</span>
+                    </a>
+                  )}
+                </div>
+
+                {contatto.contatto_principale && (
+                  <Badge variant="secondary" className="mt-2 bg-blue-100 text-blue-800">
+                    <User className="mr-1 h-3 w-3" />
+                    {contatto.contatto_principale}
+                  </Badge>
+                )}
+
+                {contatto.note && (
+                  <p className="mt-2 line-clamp-2 text-sm text-gray-500">
+                    <span className="font-semibold">Note:</span> {contatto.note}
+                  </p>
+                )}
               </div>
 
-              {groupedContatti[letter].map((contatto) => (
-                <Card key={contatto.id} className="transition-shadow hover:shadow-md">
-                  <CardContent className="p-3">
-                    <div className="flex items-start gap-4">
-                      <div className="flex-shrink-0">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-700 text-lg font-bold text-white md:h-16 md:w-16 md:text-xl">
-                          {getInitials(contatto.nome || "", contatto.cognome)}
-                        </div>
-                      </div>
+              <div className="flex shrink-0 gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => void handleEdit(contatto)}
+                  className="h-9 w-9"
+                  title="Modifica"
+                >
+                  <Edit className="h-4 w-4 text-blue-600" />
+                </Button>
 
-                      <div className="min-w-0 flex-1">
-                        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                          <div>
-                            <h3 className="truncate text-base font-bold text-gray-900 md:text-lg">
-                              {contatto.cognome} {contatto.nome}
-                            </h3>
-
-                            {contatto.contatto_principale && (
-                              <Badge
-                                variant="secondary"
-                                className="mt-1 bg-blue-100 text-blue-800"
-                              >
-                                <User className="mr-1 h-3 w-3" />
-                                {contatto.contatto_principale}
-                              </Badge>
-                            )}
-                          </div>
-
-                          <div className="flex gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => void handleEdit(contatto)}
-                              className="h-10 w-10"
-                              title="Modifica"
-                            >
-                              <Edit className="h-5 w-5 text-blue-600" />
-                            </Button>
-
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => void handleDelete(contatto.id)}
-                              className="h-10 w-10 text-red-600 hover:bg-red-50 hover:text-red-700"
-                              title="Elimina"
-                            >
-                              <Trash2 className="h-5 w-5" />
-                            </Button>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
-                          {contatto.email && (
-                            <a
-                              href={`mailto:${contatto.email}`}
-                              className="group flex items-center gap-2 text-sm text-gray-700 transition-colors hover:text-blue-600"
-                            >
-                              <Mail className="h-4 w-4 flex-shrink-0 text-gray-400 group-hover:text-blue-600" />
-                              <span className="truncate">{contatto.email}</span>
-                            </a>
-                          )}
-
-                          {contatto.pec && (
-                            <a
-                              href={`mailto:${contatto.pec}`}
-                              className="group flex items-center gap-2 text-sm text-gray-700 transition-colors hover:text-blue-600"
-                            >
-                              <Mail className="h-4 w-4 flex-shrink-0 text-amber-500 group-hover:text-blue-600" />
-                              <span className="truncate">PEC: {contatto.pec}</span>
-                            </a>
-                          )}
-
-                          {contatto.email_secondaria && (
-                            <a
-                              href={`mailto:${contatto.email_secondaria}`}
-                              className="group flex items-center gap-2 text-sm text-gray-700 transition-colors hover:text-blue-600"
-                            >
-                              <Mail className="h-4 w-4 flex-shrink-0 text-gray-400 group-hover:text-blue-600" />
-                              <span className="truncate">{contatto.email_secondaria}</span>
-                            </a>
-                          )}
-
-                          {contatto.cell && (
-                            <a
-                              href={`tel:${contatto.cell}`}
-                              className="group flex items-center gap-2 text-sm text-gray-700 transition-colors hover:text-green-600"
-                            >
-                              <Smartphone className="h-4 w-4 flex-shrink-0 text-gray-400 group-hover:text-green-600" />
-                              <span>{contatto.cell}</span>
-                            </a>
-                          )}
-
-                          {contatto.tel && (
-                            <a
-                              href={`tel:${contatto.tel}`}
-                              className="group flex items-center gap-2 text-sm text-gray-700 transition-colors hover:text-green-600"
-                            >
-                              <Phone className="h-4 w-4 flex-shrink-0 text-gray-400 group-hover:text-green-600" />
-                              <span>{contatto.tel}</span>
-                            </a>
-                          )}
-                        </div>
-
-                        {contatto.note && (
-                          <div className="mt-3 border-t pt-3">
-                            <p className="line-clamp-2 text-sm text-gray-600">
-                              <span className="font-semibold">Note:</span>{" "}
-                              {contatto.note}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => void handleDelete(contatto.id)}
+                  className="h-9 w-9 text-red-600 hover:bg-red-50 hover:text-red-700"
+                  title="Elimina"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-          ))
-        )}
-      </div>
+          ))}
+        </CardContent>
+      </Card>
+    ))
+  )}
+</div>
 
       <MasterPasswordDialog
         open={masterPasswordGate.open}
