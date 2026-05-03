@@ -60,11 +60,12 @@ export default async function handler(
     });
   }
 
-  const { data: tokens, error: tokenError } = await (supabaseAdmin as any)
-    .from("tbmicrosoft365_user_tokens")
-    .select("studio_id, user_id, microsoft_connection_id")
-    .is("revoked_at", null)
-    .not("microsoft_connection_id", "is", null);
+const { data: tokens, error: tokenError } = await (supabaseAdmin as any)
+  .from("tbmicrosoft365_user_tokens")
+  .select("studio_id, user_id, microsoft_connection_id")
+  .is("revoked_at", null)
+  .not("microsoft_connection_id", "is", null)
+  .not("token_cache_encrypted", "is", null);
 
   if (tokenError) {
     return res.status(500).json({
