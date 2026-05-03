@@ -14,22 +14,9 @@
   ],
   "cleanUrls": true,
   "trailingSlash": false,
-  "crons": [
-    {
-      "path": "/api/scadenze/processa?secret=x9KfP2LmQ8zYtA71vBnR",
-      "schedule": "0 8 * * *"
-    },
-    {
-      "path": "/api/scadenze/processa-scadenzari?secret=x9KfP2LmQ8zYtA71vBnR",
-      "schedule": "5 8 * * *"
-    },
-    {
-      "path": "/api/antiriciclaggio/scadenze-verifica/send-alerts?secret=x9KfP2LmQ8zYtA71vBnR",
-      "schedule": "10 8 * * *"
-    },
-    {
-  "path": "/api/microsoft365/calendar/sync-cron?secret=x9KfP2LmQ8zYtA71vBnR",
-  "schedule": "0 * * * *"
-}
-  ]
-}
+"crons": [
+  {
+    "path": "/api/cron/hourly?secret=x9KfP2LmQ8zYtA71vBnR",
+    "schedule": "0 * * * *"
+  }
+]
