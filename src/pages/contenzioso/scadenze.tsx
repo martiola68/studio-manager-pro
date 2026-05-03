@@ -29,8 +29,6 @@ export default function ScadenzeContenzioso() {
     loadScadenze();
   }, []);
 
-     if (!dataScadenza) return 0;
-
     const oggi = new Date();
     oggi.setHours(0, 0, 0, 0);
 
