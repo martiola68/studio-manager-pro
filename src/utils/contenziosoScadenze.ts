@@ -2,39 +2,52 @@ export function calcolaGiorniResidui(dataScadenza?: string | null): number | nul
   if (!dataScadenza) return null;
 
   const oggi = new Date();
-  oggi.setHours(0, 0, 0, 0);
+  const oggiLocale = new Date(
+    oggi.getFullYear(),
+    oggi.getMonth(),
+    oggi.getDate()
+  );
 
-  const scadenza = new Date(dataScadenza);
-  scadenza.setHours(0, 0, 0, 0);
+  const [yyyy, mm, dd] = dataScadenza.split("-").map(Number);
 
-  const diffMs = scadenza.getTime() - oggi.getTime();
-  return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  if (!yyyy || !mm || !dd) return null;
+
+  const scadenzaLocale = new Date(yyyy, mm - 1, dd);
+
+  const diffMs = scadenzaLocale.getTime() - oggiLocale.getTime();
+
+  return Math.round(diffMs / (1000 * 60 * 60 * 24));
 }
 
-export function getClasseGiorniResidui(giorni: number | null | undefined): string {
+export function getClasseGiorniResidui(
+  giorni: number | null | undefined
+): string {
   if (giorni === null || giorni === undefined) {
     return "bg-gray-200 text-gray-700";
   }
 
   if (giorni < 0) {
-    return "bg-red-700 text-white"; // scaduto
+    return "bg-red-700 text-white";
   }
 
   if (giorni <= 20) {
-    return "bg-red-500 text-white"; // 🔴 URGENTE
+    return "bg-red-500 text-white";
   }
 
   if (giorni <= 40) {
-    return "bg-orange-400 text-white"; // 🟠 attenzione
+    return "bg-orange-400 text-white";
   }
 
-  return "bg-green-500 text-white"; // 🟢 ok
+  return "bg-green-500 text-white";
 }
 
-export function getLabelGiorniResidui(giorni: number | null | undefined): string {
+export function getLabelGiorniResidui(
+  giorni: number | null | undefined
+): string {
   if (giorni === null || giorni === undefined) return "N/D";
   if (giorni < 0) return `Scaduto da ${Math.abs(giorni)} gg`;
   if (giorni === 0) return "Scade oggi";
   if (giorni === 1) return "1 giorno";
+
   return `${giorni} giorni`;
 }
