@@ -3,7 +3,7 @@
   "crons": [
     {
       "path": "/api/cron/hourly?secret=x9KfP2LmQ8zYtA71vBnR",
-      "schedule": "0 8 * * *"
+      "schedule": "*/15 * * * *"
     }
   ]
 }
