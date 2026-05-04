@@ -39,61 +39,52 @@ export default async function handler(
 
   const results = [];
 
-  // =========================
-  // 🔄 SEMPRE (OGNI ORA)
-  // =========================
-  results.push(
-    await callInternal(
-      `/api/microsoft365/calendar/sync-cron?secret=${SECRET}`
-    )
-  );
+  const now = new Date();
+  const hourUtc = now.getUTCHours();
+  const minuteUtc = now.getUTCMinutes();
 
-  const hourUtc = new Date().getUTCHours();
+  // CALENDARIO: ogni 15 minuti
+  if (minuteUtc % 15 === 0) {
+    results.push(
+      await callInternal(
+        `/api/microsoft365/calendar/sync-cron?secret=${SECRET}`
+      )
+    );
+  }
 
-  // =========================
-  // ⏰ JOB GIORNALIERI (08 UTC)
-  // =========================
-  if (hourUtc === 8) {
-    // SCADENZE GENERICHE
+  // JOB GIORNALIERI: una volta al giorno alle 08:00 UTC
+  if (hourUtc === 8 && minuteUtc === 0) {
     results.push(
       await callInternal(`/api/scadenze/processa?secret=${SECRET}`)
     );
 
-    // SCADENZARI
     results.push(
-      await callInternal(
-        `/api/scadenze/processa-scadenzari?secret=${SECRET}`
-      )
+      await callInternal(`/api/scadenze/processa-scadenzari?secret=${SECRET}`)
     );
 
-    // AFFITTI
     results.push(
-      await callInternal(
-        `/api/scadenze/affitti/processa?secret=${SECRET}`
-      )
+      await callInternal(`/api/scadenze/affitti/processa?secret=${SECRET}`)
     );
 
-    // ANTIRICICLAGGIO (AML)
     results.push(
       await callInternal(
         `/api/antiriciclaggio/scadenze-verifica/send-alerts?secret=${SECRET}`
       )
     );
 
-   // CONTENZIOSO
-results.push(
-  await callInternal(`/api/contenzioso/alert?secret=${SECRET}`, "POST")
-);
+    results.push(
+      await callInternal(`/api/contenzioso/alert?secret=${SECRET}`, "POST")
+    );
 
-// PROMEMORIA
-results.push(
-  await callInternal(`/api/promemoria/alert?secret=${SECRET}`, "POST")
-);
+    results.push(
+      await callInternal(`/api/promemoria/alert?secret=${SECRET}`, "POST")
+    );
   }
 
   return res.status(200).json({
     ok: true,
     hourUtc,
+    minuteUtc,
     results,
   });
 }
