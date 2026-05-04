@@ -110,11 +110,24 @@ function buildCalendarViewUrl(rangeDays: number) {
 
   end.setDate(end.getDate() + rangeDays);
 
+  const selectFields = [
+    "id",
+    "subject",
+    "bodyPreview",
+    "start",
+    "end",
+    "isAllDay",
+    "location",
+    "isOnlineMeeting",
+    "onlineMeetingUrl",
+  ].join(",");
+
   return (
     `https://graph.microsoft.com/v1.0/me/calendarView` +
     `?startDateTime=${encodeURIComponent(start.toISOString())}` +
     `&endDateTime=${encodeURIComponent(end.toISOString())}` +
-    `&$top=50` +
+    `&$select=${encodeURIComponent(selectFields)}` +
+    `&$top=100` +
     `&$orderby=start/dateTime`
   );
 }
