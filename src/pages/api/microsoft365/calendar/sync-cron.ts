@@ -197,7 +197,7 @@ const { data: tokenUsers, error: tokenUsersErr } = await tokenQuery;
     const rows = ((tokenUsers || []) as unknown) as TokenUserRow[];
 
     const scopes = ["User.Read", "Calendars.ReadWrite", "Mail.Send"];
-    const RANGE_DAYS = 60;
+    const RANGE_DAYS = 20;
 
     let totalFetched = 0;
     let totalSaved = 0;
