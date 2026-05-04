@@ -287,69 +287,56 @@ const { data: tokenUsers, error: tokenUsersErr } = await tokenQuery;
 
         const agendaPayloads: any[] = [];
 
-        while (graphUrl) {
-          const graphRes = await fetch(graphUrl, {
-            headers: {
-              Authorization: `Bearer ${tokenRes.accessToken}`,
-              Accept: "application/json",
-              Prefer: 'outlook.timezone="W. Europe Standard Time"',
-            },
-          });
-
-          const body = await graphRes.json();
-
-          if (!graphRes.ok) {
-            throw new Error(
-              `Graph error ${graphRes.status}: ${JSON.stringify(body).slice(
-                0,
-                300
-              )}`
-            );
-          }
-
-          const events = Array.isArray(body?.value) ? body.value : [];
-          fetchedThisUser += events.length;
-
-       for (const e of events) {
-  if (!e?.id) continue;
-  if (!e?.start?.dateTime || !e?.end?.dateTime) continue;
-
-  const isAllDay = !!e.isAllDay;
-
-  const startDateTime = e.start?.dateTime ?? null;
-  const endDateTime = e.end?.dateTime ?? null;
-
-  agendaPayloads.push({
-    titolo: e.subject || "(senza titolo)",
-    descrizione: e.bodyPreview || null,
-
-    data_inizio: startDateTime,
-    data_fine: endDateTime,
-
-    ora_inizio: isAllDay ? null : startDateTime?.substring(11, 19) ?? null,
-    ora_fine: isAllDay ? null : endDateTime?.substring(11, 19) ?? null,
-
-    tutto_giorno: isAllDay,
-    luogo: e.location?.displayName || null,
-
-    microsoft_event_id: e.id,
-    provider: "microsoft",
-    external_id: e.id,
-
-    studio_id: studioId,
-    utente_id: targetUserId,
-
-    outlook_synced: true,
-
-    riunione_teams: !!e.isOnlineMeeting,
-    link_teams: e.onlineMeetingUrl || null,
-
-    updated_at: new Date().toISOString(),
+       while (graphUrl) {
+  const graphRes = await fetch(graphUrl, {
+    headers: {
+      Authorization: `Bearer ${tokenRes.accessToken}`,
+      Accept: "application/json",
+      Prefer: 'outlook.timezone="W. Europe Standard Time"',
+    },
   });
-}
-          }
 
-       graphUrl = body?.["@odata.nextLink"] || "";
+  const body = await graphRes.json();
+
+  if (!graphRes.ok) {
+    throw new Error(
+      `Graph error ${graphRes.status}: ${JSON.stringify(body).slice(0, 300)}`
+    );
+  }
+
+  const events = Array.isArray(body?.value) ? body.value : [];
+  fetchedThisUser += events.length;
+
+  for (const e of events) {
+    if (!e?.id) continue;
+    if (!e?.start?.dateTime || !e?.end?.dateTime) continue;
+
+    const isAllDay = !!e.isAllDay;
+    const startDateTime = e.start?.dateTime ?? null;
+    const endDateTime = e.end?.dateTime ?? null;
+
+    agendaPayloads.push({
+      titolo: e.subject || "(senza titolo)",
+      descrizione: e.bodyPreview || null,
+      data_inizio: startDateTime,
+      data_fine: endDateTime,
+      ora_inizio: isAllDay ? null : startDateTime?.substring(11, 19) ?? null,
+      ora_fine: isAllDay ? null : endDateTime?.substring(11, 19) ?? null,
+      tutto_giorno: isAllDay,
+      luogo: e.location?.displayName || null,
+      microsoft_event_id: e.id,
+      provider: "microsoft",
+      external_id: e.id,
+      studio_id: studioId,
+      utente_id: targetUserId,
+      outlook_synced: true,
+      riunione_teams: !!e.isOnlineMeeting,
+      link_teams: e.onlineMeetingUrl || null,
+      updated_at: new Date().toISOString(),
+    });
+  }
+
+  graphUrl = body?.["@odata.nextLink"] || "";
 }
 
 if (agendaPayloads.length > 0) {
