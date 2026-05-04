@@ -46,6 +46,7 @@ type Scadenza = {
   esito_contestazione?: string | null;
   fare_ricorso?: boolean | null;
   genera_ricorso?: boolean | null;
+  pratica_chiusa?: boolean | null;
   tbclienti?: { id: string; ragione_sociale: string | null } | null;
   tbcontenzioso_tipi_atto?: {
     id: string;
@@ -170,32 +171,37 @@ export default function ContenziosoIndexPage() {
     void loadData();
   }, [archivioFiltro]);
 
-  function getStatoScadenza(dataScadenza?: string | null) {
-    if (!dataScadenza) return "Senza scadenza";
+ function getStatoScadenza(row: Scadenza) {
+  if (row.pratica_chiusa) return "Chiusa";
 
-    const oggi = new Date();
-    oggi.setHours(0, 0, 0, 0);
+  const dataScadenza = row.data_scadenza;
 
-    const scad = new Date(dataScadenza);
-    scad.setHours(0, 0, 0, 0);
+  if (!dataScadenza) return "Senza scadenza";
 
-    if (scad < oggi) return "Scaduta";
+  const oggi = new Date();
+  oggi.setHours(0, 0, 0, 0);
 
-    const diff = Math.ceil(
-      (scad.getTime() - oggi.getTime()) / (1000 * 60 * 60 * 24)
-    );
+  const scad = new Date(dataScadenza);
+  scad.setHours(0, 0, 0, 0);
 
-    if (diff <= 15) return "In scadenza";
+  if (scad < oggi) return "Scaduta";
 
-    return "Aperta";
-  }
+  const diff = Math.ceil(
+    (scad.getTime() - oggi.getTime()) / (1000 * 60 * 60 * 24)
+  );
 
-  function getBadgeVariant(stato: string) {
-    if (stato === "Scaduta") return "destructive";
-    if (stato === "In scadenza") return "destructive";
-    if (stato === "Senza scadenza") return "secondary";
-    return "default";
-  }
+  if (diff <= 15) return "In scadenza";
+
+  return "Aperta";
+}
+
+ function getBadgeClass(stato: string) {
+  if (stato === "Chiusa") return "bg-green-600 text-white";
+  if (stato === "Scaduta") return "bg-red-600 text-white";
+  if (stato === "In scadenza") return "bg-red-500 text-white";
+  if (stato === "Senza scadenza") return "bg-gray-400 text-white";
+  return "bg-black text-white";
+}
 
   function getNumero(row: Scadenza) {
     return row.numero_cartella || row.numero_atto || "-";
@@ -208,6 +214,24 @@ export default function ContenziosoIndexPage() {
   function getResponso(row: Scadenza) {
     return row.responso || row.esito_contestazione || "-";
   }
+
+  function getResponsoClass(responso: string) {
+  const value = responso.toLowerCase();
+
+  if (value.includes("sgravio totale")) {
+    return "bg-green-600 text-white";
+  }
+
+  if (value.includes("sgravio parziale")) {
+    return "bg-orange-500 text-white";
+  }
+
+  if (value.includes("respinto")) {
+    return "bg-red-600 text-white";
+  }
+
+  return "";
+}
 
   function getRicorso(row: Scadenza) {
     return row.fare_ricorso || row.genera_ricorso ? "Sì" : "No";
@@ -271,7 +295,7 @@ export default function ContenziosoIndexPage() {
       const cliente = row.tbclienti?.ragione_sociale || "";
       const numero = getNumero(row);
       const tipo = row.tbcontenzioso_tipi_atto?.descrizione || "";
-      const stato = getStatoScadenza(row.data_scadenza);
+      const stato = getStatoScadenza(row);
 
       const searchOk =
         !search.trim() ||
@@ -419,7 +443,7 @@ export default function ContenziosoIndexPage() {
 
                 <TableBody>
                   {filtered.map((row) => {
-                    const stato = getStatoScadenza(row.data_scadenza);
+                    const stato = getStatoScadenza(row);
 
                     return (
                       <TableRow key={row.id}>
@@ -437,12 +461,20 @@ export default function ContenziosoIndexPage() {
                         <TableCell>{formatDate(row.data_ricezione)}</TableCell>
                         <TableCell>{formatDate(row.data_scadenza)}</TableCell>
                         <TableCell>
-                          <Badge variant={getBadgeVariant(stato) as any}>
-                            {stato}
-                          </Badge>
+                        <Badge className={getBadgeClass(stato)}>
+  {stato}
+</Badge>
                         </TableCell>
                         <TableCell>{getContestazione(row)}</TableCell>
-                        <TableCell>{getResponso(row)}</TableCell>
+                       <TableCell>
+  {getResponso(row) !== "-" ? (
+    <Badge className={getResponsoClass(getResponso(row))}>
+      {getResponso(row)}
+    </Badge>
+  ) : (
+    "-"
+  )}
+</TableCell>
                         <TableCell>{getRicorso(row)}</TableCell>
 <TableCell className="text-right">
   <div className="flex justify-end gap-2">
