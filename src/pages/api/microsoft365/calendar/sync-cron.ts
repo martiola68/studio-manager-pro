@@ -285,6 +285,8 @@ const { data: tokenUsers, error: tokenUsersErr } = await tokenQuery;
         let fetchedThisUser = 0;
         let savedThisUser = 0;
 
+        const agendaPayloads: any[] = [];
+
         while (graphUrl) {
           const graphRes = await fetch(graphUrl, {
             headers: {
@@ -308,70 +310,67 @@ const { data: tokenUsers, error: tokenUsersErr } = await tokenQuery;
           const events = Array.isArray(body?.value) ? body.value : [];
           fetchedThisUser += events.length;
 
-          for (const e of events) {
-            if (!e?.id) continue;
-            if (!e?.start?.dateTime || !e?.end?.dateTime) continue;
+       for (const e of events) {
+  if (!e?.id) continue;
+  if (!e?.start?.dateTime || !e?.end?.dateTime) continue;
 
-            const isAllDay = !!e.isAllDay;
+  const isAllDay = !!e.isAllDay;
 
-            const startDateTime = e.start?.dateTime ?? null;
-            const endDateTime = e.end?.dateTime ?? null;
+  const startDateTime = e.start?.dateTime ?? null;
+  const endDateTime = e.end?.dateTime ?? null;
 
-            const agendaPayload = {
-              titolo: e.subject || "(senza titolo)",
-              descrizione: e.bodyPreview || null,
+  agendaPayloads.push({
+    titolo: e.subject || "(senza titolo)",
+    descrizione: e.bodyPreview || null,
 
-              data_inizio: startDateTime,
-              data_fine: endDateTime,
+    data_inizio: startDateTime,
+    data_fine: endDateTime,
 
-              ora_inizio: isAllDay
-                ? null
-                : startDateTime?.substring(11, 19) ?? null,
+    ora_inizio: isAllDay ? null : startDateTime?.substring(11, 19) ?? null,
+    ora_fine: isAllDay ? null : endDateTime?.substring(11, 19) ?? null,
 
-              ora_fine: isAllDay
-                ? null
-                : endDateTime?.substring(11, 19) ?? null,
+    tutto_giorno: isAllDay,
+    luogo: e.location?.displayName || null,
 
-              tutto_giorno: isAllDay,
-              luogo: e.location?.displayName || null,
+    microsoft_event_id: e.id,
+    provider: "microsoft",
+    external_id: e.id,
 
-              microsoft_event_id: e.id,
-              provider: "microsoft",
-              external_id: e.id,
+    studio_id: studioId,
+    utente_id: targetUserId,
 
-              studio_id: studioId,
-              utente_id: targetUserId,
+    outlook_synced: true,
 
-              outlook_synced: true,
+    riunione_teams: !!e.isOnlineMeeting,
+    link_teams: e.onlineMeetingUrl || null,
 
-              riunione_teams: !!e.isOnlineMeeting,
-              link_teams: e.onlineMeetingUrl || null,
-
-              updated_at: new Date().toISOString(),
-            };
-
-            const { error: upErr } = await supabaseAdmin
-              .from("tbagenda")
-              .upsert(agendaPayload, {
-                onConflict: "provider,external_id",
-              });
-
-            if (upErr) {
-              errors.push({
-                studio_id: studioId,
-                user_id: targetUserId,
-                event_id: e.id,
-                message: upErr.message,
-              });
-            } else {
-              savedThisUser += 1;
-            }
+    updated_at: new Date().toISOString(),
+  });
+}
           }
 
-          graphUrl = body?.["@odata.nextLink"] || "";
-        }
+       graphUrl = body?.["@odata.nextLink"] || "";
+}
 
-        await persistCacheIfChanged({
+if (agendaPayloads.length > 0) {
+  const { error: upsertBatchError } = await supabaseAdmin
+    .from("tbagenda")
+    .upsert(agendaPayloads, {
+      onConflict: "provider,external_id",
+    });
+
+  if (upsertBatchError) {
+    errors.push({
+      studio_id: studioId,
+      user_id: targetUserId,
+      message: upsertBatchError.message,
+    });
+  } else {
+    savedThisUser = agendaPayloads.length;
+  }
+}
+
+await persistCacheIfChanged({
           studioId,
           userId: targetUserId,
           microsoftConnectionId: row.microsoft_connection_id,
