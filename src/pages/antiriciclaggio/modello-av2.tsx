@@ -287,17 +287,17 @@ const { data: praticaRow, error: praticaError } = await supabase
         return;
       }
 
-      if (!form.av4_id) {
-  alert("AV4 corrente non disponibile. Apri prima o salva il modello AV4 della pratica.");
-  return;
-}
+//  if (!form.av4_id) {
+//  alert("AV4 corrente non disponibile. Apri prima o salva il modello AV4 della pratica.");
+//  return;
+// }
 
     const payload: Record<string, unknown> = {
   studio_id: studioId,
   cliente_id: form.cliente_id,
   pratica_id: form.pratica_id || null,
-  av1_id: form.av1_id ? Number(form.av1_id) : null,
-  av4_id: form.av4_id || null,
+ // av1_id: form.av1_id ? Number(form.av1_id) : null,
+//  av4_id: form.av4_id || null,
   data_check: form.data_check || null,
   firma_check: form.firma_check || null,
 };
