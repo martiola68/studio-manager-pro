@@ -122,6 +122,20 @@ async function getCurrentUserContext(): Promise<{
   };
 }
 
+async function getTokenOwnerUserId(
+  microsoftConnectionId: string
+): Promise<string | null> {
+  const { data, error } = await (supabase as any)
+    .from("tbmicrosoft365_user_tokens")
+    .select("user_id")
+    .eq("microsoft_connection_id", microsoftConnectionId)
+    .maybeSingle();
+
+  if (error || !data?.user_id) return null;
+
+  return String(data.user_id);
+}
+
 async function getStudioMailContext(): Promise<{
   senderUserId: string;
   studioEmail: string;
@@ -158,20 +172,26 @@ async function getStudioMailContext(): Promise<{
     : null;
 
   if (userConnectionId && tenant2ConnectionId && userConnectionId === tenant2ConnectionId) {
-    return {
-      senderUserId: currentUser.id,
-      studioEmail: studio.email_tenant2
-        ? String(studio.email_tenant2)
-        : String(studio.email || ""),
-      microsoftConnectionId: tenant2ConnectionId,
-    };
+   const tokenOwnerUserId = await getTokenOwnerUserId(tenant2ConnectionId);
+
+return {
+  senderUserId: tokenOwnerUserId || currentUser.id,
+  studioEmail: studio.email_tenant2
+    ? String(studio.email_tenant2)
+    : String(studio.email || ""),
+  microsoftConnectionId: tenant2ConnectionId,
+};
   }
 
-  return {
-    senderUserId: currentUser.id,
-    studioEmail: studio.email ? String(studio.email) : "",
-    microsoftConnectionId: tenant1ConnectionId,
-  };
+  rconst tokenOwnerUserId = tenant1ConnectionId
+  ? await getTokenOwnerUserId(tenant1ConnectionId)
+  : null;
+
+return {
+  senderUserId: tokenOwnerUserId || currentUser.id,
+  studioEmail: studio.email ? String(studio.email) : "",
+  microsoftConnectionId: tenant1ConnectionId,
+};
 }
 
 async function filePathToBase64(
