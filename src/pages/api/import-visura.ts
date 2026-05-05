@@ -60,7 +60,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (mimetype === "application/pdf" || originalFilename.endsWith(".pdf")) {
       const text = await extractTextFromPDF(buffer);
-      return res.status(200).json({ text });
+      return res.status(200).json({
+  success: true,
+  text,
+  mode: "preview",
+});
     }
 
     return res.status(400).json({ error: "Formato non supportato. Usa PDF o TXT." });
