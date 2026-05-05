@@ -526,37 +526,38 @@ export default function ScadenzeFiscaliPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Scadenzario Fiscali
-          </h1>
-          <p className="text-gray-500 mt-1">
-            Gestione dichiarazioni fiscali e versamenti
-          </p>
-        </div>
-
-      {filterOperatore !== "__all__" && (
-  <div className="flex gap-2">
-    <Button
-      type="button"
-      onClick={handleExportExcelOperatore}
-      className="bg-green-600 text-white hover:bg-green-700"
-    >
-      <FileSpreadsheet className="h-4 w-4 mr-2" />
-      Esporta Excel
-    </Button>
-
-    <Button
-      type="button"
-      onClick={handlePrintOperatore}
-      className="bg-black text-white hover:bg-zinc-800"
-    >
-      <Printer className="h-4 w-4 mr-2" />
-      Stampa elenco operatore
-    </Button>
+    <div className="flex items-center justify-between gap-4 flex-wrap">
+  <div>
+    <h1 className="text-3xl font-bold text-gray-900">
+      Scadenzario Fiscali
+    </h1>
+    <p className="text-gray-500 mt-1">
+      Gestione dichiarazioni fiscali e versamenti
+    </p>
   </div>
-)}
+
+  {filterOperatore !== "__all__" && (
+    <div className="flex gap-2">
+      <Button
+        type="button"
+        onClick={handleExportExcelOperatore}
+        className="bg-green-600 text-white hover:bg-green-700"
+      >
+        <FileSpreadsheet className="h-4 w-4 mr-2" />
+        Esporta Excel
+      </Button>
+
+      <Button
+        type="button"
+        onClick={handlePrintOperatore}
+        className="bg-black text-white hover:bg-zinc-800"
+      >
+        <Printer className="h-4 w-4 mr-2" />
+        Stampa elenco operatore
+      </Button>
+    </div>
+  )}
+</div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
