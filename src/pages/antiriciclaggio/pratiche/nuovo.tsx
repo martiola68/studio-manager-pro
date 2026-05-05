@@ -29,7 +29,14 @@ type PrestazioneOption = {
 };
 
 export default function NuovaPraticaAMLPage() {
-  const router = useRouter();
+const router = useRouter();
+
+const preselectedSocietaId =
+  typeof router.query.societa_id === "string"
+    ? router.query.societa_id
+    : "";
+
+const societaBloccata = !!preselectedSocietaId;
 
   const [clienti, setClienti] = useState<ClienteOption[]>([]);
   const [societaOptions, setSocietaOptions] = useState<SocietaOption[]>([]);
@@ -326,11 +333,14 @@ router.push("/antiriciclaggio");
               <label className="mb-1 block text-sm font-medium text-slate-700">
                 Soggetto responsabile / tenant AML
               </label>
-              <select
-                value={societaId}
-                onChange={(e) => setSocietaId(e.target.value)}
-                className="w-full rounded-md border px-3 py-2"
-              >
+             <select
+  value={societaId}
+  onChange={(e) => setSocietaId(e.target.value)}
+  disabled={societaBloccata}
+  className={`w-full rounded-md border px-3 py-2 ${
+    societaBloccata ? "cursor-not-allowed bg-gray-100 text-gray-500" : ""
+  }`}
+>
                 <option value="">Seleziona soggetto responsabile</option>
                 {societaOptions.map((societa) => (
                   <option key={societa.id} value={societa.id}>
