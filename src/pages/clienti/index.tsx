@@ -230,6 +230,16 @@ export default function ClientiPage() {
 const [importingVisura, setImportingVisura] = useState(false);
 const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  type VisuraClienteField = {
+  key: keyof ClienteFormData;
+  label: string;
+  value: string;
+  selected: boolean;
+};
+
+const [visuraPreviewOpen, setVisuraPreviewOpen] = useState(false);
+const [visuraClienteFields, setVisuraClienteFields] = useState<VisuraClienteField[]>([]);
+
   const strongFieldClass =
   "border-2 border-zinc-400 focus-visible:border-black focus-visible:ring-0 focus-visible:ring-offset-0";
 
@@ -269,26 +279,55 @@ text = data.text || "";
 
 const { cliente } = mapVisuraText(text);
 
-console.log("VISURA_TEXT_START");
-console.log(text);
-console.log("VISURA_TEXT_END");
-console.log("VISURA_CLIENTE", cliente);
+const fields = Array.isArray(cliente)
+  ? cliente.filter((field) => field.value)
+  : [
+      {
+        key: "ragione_sociale",
+        label: "Ragione sociale",
+        value: cliente.ragione_sociale || "",
+        selected: !!cliente.ragione_sociale,
+      },
+      {
+        key: "codice_fiscale",
+        label: "Codice fiscale",
+        value: cliente.codice_fiscale || "",
+        selected: !!cliente.codice_fiscale,
+      },
+      {
+        key: "partita_iva",
+        label: "Partita IVA",
+        value: cliente.partita_iva || "",
+        selected: !!cliente.partita_iva,
+      },
+      {
+        key: "indirizzo",
+        label: "Indirizzo",
+        value: cliente.indirizzo || "",
+        selected: !!cliente.indirizzo,
+      },
+      {
+        key: "cap",
+        label: "CAP",
+        value: cliente.cap || "",
+        selected: !!cliente.cap,
+      },
+      {
+        key: "citta",
+        label: "Città",
+        value: cliente.citta || "",
+        selected: !!cliente.citta,
+      },
+      {
+        key: "provincia",
+        label: "Provincia",
+        value: cliente.provincia || "",
+        selected: !!cliente.provincia,
+      },
+    ].filter((field) => field.value);
 
-// =========================
-// POPOLA FORM (NO RESET)
-// =========================
-setFormData((prev) => ({
-  ...prev,
-  ragione_sociale: cliente.ragione_sociale || "",
-  codice_fiscale: cliente.codice_fiscale || "",
-  partita_iva: cliente.partita_iva || "",
-  indirizzo: cliente.indirizzo || "",
-  cap: cliente.cap || "",
-  citta: cliente.citta || "",
-  provincia: cliente.provincia || "",
-}));
-    
-   alert("Dati anagrafici cliente importati correttamente.");
+setVisuraClienteFields(fields as VisuraClienteField[]);
+setVisuraPreviewOpen(true);
     
   } catch (error: any) {
     alert(error?.message || "Errore import visura");
@@ -2720,6 +2759,83 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
   </DialogContent>
 </Dialog>
 
+      <Dialog open={visuraPreviewOpen} onOpenChange={setVisuraPreviewOpen}>
+  <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+    <DialogHeader>
+      <DialogTitle>Dati trovati nella visura</DialogTitle>
+    </DialogHeader>
+
+    <div className="space-y-3">
+      {visuraClienteFields.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          Nessun dato importabile trovato.
+        </p>
+      ) : (
+        visuraClienteFields.map((field, index) => (
+          <div
+            key={`${field.key}-${index}`}
+            className="flex items-start gap-3 rounded-md border p-3"
+          >
+            <Checkbox
+              checked={field.selected}
+              onCheckedChange={(checked) =>
+                setVisuraClienteFields((prev) =>
+                  prev.map((item, i) =>
+                    i === index
+                      ? { ...item, selected: checked === true }
+                      : item
+                  )
+                )
+              }
+            />
+
+            <div className="flex-1">
+              <div className="text-sm font-medium">{field.label}</div>
+              <div className="text-sm text-muted-foreground break-words">
+                {field.value}
+              </div>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+
+    <div className="flex justify-end gap-3 pt-4 border-t">
+      <Button
+        variant="outline"
+        onClick={() => setVisuraPreviewOpen(false)}
+      >
+        Annulla
+      </Button>
+
+      <Button
+        onClick={() => {
+          setFormData((prev) => {
+            const next = { ...prev };
+
+            visuraClienteFields
+              .filter((field) => field.selected)
+              .forEach((field) => {
+                (next as any)[field.key] = field.value;
+              });
+
+            return next;
+          });
+
+          setVisuraPreviewOpen(false);
+
+          toast({
+            title: "Import visura",
+            description: "Dati selezionati importati nel form.",
+          });
+        }}
+      >
+        Importa selezionati
+      </Button>
+    </div>
+  </DialogContent>
+</Dialog>
+      
 {/* DIALOG SBLOCCO */}
 <MasterPasswordDialog
   open={masterPasswordGate.open}
