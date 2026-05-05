@@ -342,7 +342,7 @@ export default function ModelloAV4() {
  function clearRappresentanteFields() {
   setForm((prev) => ({
     ...prev,
-      amm_no_associato: true,
+      amm_no_associato: false,
       rapp_legale_id: "",
       microsoft_connection_id: "",
       dichiarante_nome_cognome: "",
