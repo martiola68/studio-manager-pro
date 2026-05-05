@@ -27,16 +27,19 @@ type UtenteLite = {
 };
 
 type Props = {
+  userId: string | null;
   onOpenPromemoriaPage?: () => void;
 };
 
-export default function PromemoriaImminentiCard({ onOpenPromemoriaPage }: Props) {
+export default function PromemoriaImminentiCard({ userId, onOpenPromemoriaPage }: Props) {
   const [items, setItems] = useState<PromemoriaItem[]>([]);
   const [utentiMap, setUtentiMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const load = async () => {
+ useEffect(() => {
+  if (!userId) return;
+
+  const load = async () => {
       try {
         setLoading(true);
 
@@ -79,10 +82,7 @@ export default function PromemoriaImminentiCard({ onOpenPromemoriaPage }: Props)
           const scadenza = startOfDay(new Date(p.data_scadenza));
           const diff = differenceInCalendarDays(scadenza, today);
 
-          const canView =
-            currentUser.responsabile === true
-              ? !currentUser.settore || p.settore === currentUser.settore || p.destinatario_id === currentUser.id
-              : p.destinatario_id === currentUser.id || p.settore === currentUser.settore;
+        const canView = p.destinatario_id === userId;
 
           return canView && diff <= 7;
         });
@@ -110,7 +110,7 @@ export default function PromemoriaImminentiCard({ onOpenPromemoriaPage }: Props)
     };
 
     load();
-  }, []);
+  }, [userId]);
 
   const grouped = useMemo(() => {
     const today = startOfDay(new Date());
