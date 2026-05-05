@@ -766,7 +766,7 @@ for (const r of candidati) {
           )}
         </CardContent>
       </Card>
-    </div>
+  
     {previewOpen && (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
     <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white p-6 shadow-lg">
@@ -833,6 +833,7 @@ for (const r of candidati) {
       </div>
     </div>
   </div>
-)}
+  )}
+    </div>
   );
 }
