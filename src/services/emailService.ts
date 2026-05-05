@@ -183,7 +183,7 @@ return {
 };
   }
 
-  rconst tokenOwnerUserId = tenant1ConnectionId
+  const tokenOwnerUserId = tenant1ConnectionId
   ? await getTokenOwnerUserId(tenant1ConnectionId)
   : null;
 
