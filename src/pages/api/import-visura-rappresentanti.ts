@@ -160,11 +160,107 @@ async function enrichSubjectFromCF(supabase: any, subject: any) {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   console.log("API import-visura-rappresentanti chiamata:", req.method);
 
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Metodo non consentito" });
-  }
+ if (req.method !== "POST") {
+  return res.status(405).json({ error: "Metodo non consentito" });
+}
 
-  try {
+try {
+  const contentType = req.headers["content-type"] || "";
+
+  if (contentType.includes("application/json")) {
+    const body = await readJsonBody(req);
+
+    const studioId = body?.studioId;
+    const conferma = body?.conferma === true;
+    const rappresentanti = Array.isArray(body?.rappresentanti)
+      ? body.rappresentanti
+      : [];
+
+    if (!conferma) {
+      return res.status(400).json({ error: "conferma mancante" });
+    }
+
+    if (!studioId || typeof studioId !== "string") {
+      return res.status(400).json({ error: "studioId mancante" });
+    }
+
+    if (rappresentanti.length === 0) {
+      return res.status(400).json({ error: "Nessun rappresentante selezionato" });
+    }
+
+    const supabase = getServerSupabase() as any;
+
+    const validi = rappresentanti.filter(
+      (item: any) => !!item.codice_fiscale && !!String(item.codice_fiscale).trim()
+    );
+
+    const unici = dedupeByCodiceFiscale(
+      validi.map((item: any) => ({
+        ...item,
+        codice_fiscale: normalizeCF(item.codice_fiscale || ""),
+      }))
+    );
+
+    const cfList = unici
+      .map((item: any) => normalizeCF(item.codice_fiscale || ""))
+      .filter(Boolean);
+
+    let existingSet = new Set<string>();
+
+    if (cfList.length > 0) {
+      const { data: existingRows, error: existingError } = await supabase
+        .from("rapp_legali")
+        .select("codice_fiscale")
+        .eq("studio_id", studioId)
+        .in("codice_fiscale", cfList);
+
+      if (existingError) throw existingError;
+
+      existingSet = new Set(
+        (existingRows || [])
+          .map((row: any) => normalizeCF(row.codice_fiscale || ""))
+          .filter(Boolean)
+      );
+    }
+
+    const daInserire = unici.filter(
+      (item: any) => !existingSet.has(normalizeCF(item.codice_fiscale || ""))
+    );
+
+    const rowsToInsert = await buildRowsToInsert(
+      supabase,
+      studioId,
+      daInserire
+    );
+
+    let inserted = 0;
+
+    if (rowsToInsert.length > 0) {
+      const { data: insertedRows, error: insertError } = await supabase
+        .from("rapp_legali")
+        .insert(rowsToInsert)
+        .select("id");
+
+      if (insertError) throw insertError;
+
+      inserted = insertedRows?.length || rowsToInsert.length;
+    }
+
+    return res.status(200).json({
+      ok: true,
+      inserted,
+      duplicates: unici.length - daInserire.length,
+      skipped: rappresentanti.length - validi.length,
+      stats: {
+        selezionati: rappresentanti.length,
+        validiConCodiceFiscale: validi.length,
+        uniciPerCodiceFiscale: unici.length,
+        giaPresentiInArchivio: unici.length - daInserire.length,
+        inseriti: inserted,
+        scartatiSenzaCodiceFiscale: rappresentanti.length - validi.length,
+      },
+    });
+  }
     const { fields, files } = await new Promise<{
       fields: formidable.Fields;
       files: formidable.Files;
@@ -269,6 +365,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       (item: any) => !existingSet.has(normalizeCF(item.codice_fiscale || ""))
     );
 
+  const previewMode =
+  (Array.isArray(fields.preview) ? fields.preview[0] : fields.preview) === "true";
+
+if (previewMode) {
+  return res.status(200).json({
+    ok: true,
+    preview: true,
+    rappresentanti: daInserire.map((item: any) => ({
+      ...item,
+      codice_fiscale: normalizeCF(item.codice_fiscale || ""),
+      selected: true,
+      rappresentante_legale: isRappresentanteLegaleRole(getSubjectRole(item)),
+    })),
+    duplicates: giaPresenti.length,
+    skipped: scartatiSenzaCf.length,
+    totalFound: parsed.length,
+    stats: {
+      trovatiNelPdf: parsed.length,
+      validiConCodiceFiscale: validi.length,
+      uniciPerCodiceFiscale: unici.length,
+      duplicatiInterniPdf,
+      giaPresentiInArchivio: giaPresenti.length,
+      daImportare: daInserire.length,
+      scartatiSenzaCodiceFiscale: scartatiSenzaCf.length,
+    },
+  });
+}
+
     console.log("=== GIA PRESENTI ===");
     console.log(JSON.stringify(giaPresenti, null, 2));
 
@@ -288,25 +412,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }))
     );
 
-    const rowsToInsert = await Promise.all(
-      daInserire.map(async (subject: any) => {
-        const enriched = await enrichSubjectFromCF(supabase, subject);
-
-        return {
-          studio_id: studioId,
-          nome_cognome: subject.nome_cognome || null,
-          codice_fiscale: enriched.codice_fiscale,
-          luogo_nascita: enriched.luogo_nascita,
-          data_nascita: enriched.data_nascita,
-          citta_residenza: subject.citta_residenza || null,
-          indirizzo_residenza: subject.indirizzo_residenza || null,
-          nazionalita: enriched.nazionalita,
-          CAP: subject.CAP || null,
-          rappresentante_legale: isRappresentanteLegaleRole(getSubjectRole(subject)),
-        };
-      })
-    );
-
+ const rowsToInsert = await buildRowsToInsert(
+  supabase,
+  studioId,
+  daInserire
+);
     console.log("=== ROWS TO INSERT ===");
     console.log(JSON.stringify(rowsToInsert, null, 2));
 
