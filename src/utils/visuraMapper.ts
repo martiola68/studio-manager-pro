@@ -45,18 +45,65 @@ export function mapVisuraText(text: string) {
     }))
     .filter((x) => x.nome_cognome);
 
-  return {
-    cliente: {
-      ragione_sociale: denominazione,
-      partita_iva,
-      codice_fiscale,
-      indirizzo,
-      cap,
-      citta,
-      provincia,
-      sede_legale_completa: sedeLegaleFull,
+return {
+  cliente: [
+    {
+      key: "ragione_sociale",
+      label: "Ragione sociale",
+      value: denominazione,
+      selected: !!denominazione,
     },
-    rappresentanti: amministratori,
-    sociPersoneFisiche,
-  };
-}
+    {
+      key: "partita_iva",
+      label: "Partita IVA",
+      value: partita_iva,
+      selected: !!partita_iva,
+    },
+    {
+      key: "codice_fiscale",
+      label: "Codice fiscale",
+      value: codice_fiscale,
+      selected: !!codice_fiscale,
+    },
+    {
+      key: "indirizzo",
+      label: "Indirizzo",
+      value: indirizzo,
+      selected: !!indirizzo,
+    },
+    {
+      key: "cap",
+      label: "CAP",
+      value: cap,
+      selected: !!cap,
+    },
+    {
+      key: "citta",
+      label: "Città",
+      value: citta,
+      selected: !!citta,
+    },
+    {
+      key: "provincia",
+      label: "Provincia",
+      value: provincia,
+      selected: !!provincia,
+    },
+    {
+      key: "sede_legale_completa",
+      label: "Sede legale completa",
+      value: sedeLegaleFull,
+      selected: !!sedeLegaleFull,
+    },
+  ],
+
+  rappresentanti: amministratori.map((a) => ({
+    ...a,
+    selected: true,
+  })),
+
+  sociPersoneFisiche: sociPersoneFisiche.map((s) => ({
+    ...s,
+    selected: true,
+  })),
+};
