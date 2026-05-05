@@ -126,6 +126,8 @@ export default function AntiriciclaggioPage() {
   const autoCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastActivityRef = useRef<number>(Date.now());
 
+  const hiddenTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return "-";
 
@@ -638,6 +640,12 @@ const loadRowsBySocieta = async (societaId: string) => {
       clearTimeout(autoCloseTimeoutRef.current);
       autoCloseTimeoutRef.current = null;
     }
+
+    if (hiddenTimeoutRef.current) {
+  clearTimeout(hiddenTimeoutRef.current);
+  hiddenTimeoutRef.current = null;
+}
+    
   };
 
   const closeTimeoutModal = () => {
@@ -843,6 +851,61 @@ const loadRowsBySocieta = async (societaId: string) => {
       }
     };
   }, [canAccessAntiriciclaggio]);
+
+  useEffect(() => {
+  if (typeof window === "undefined" || !canAccessAntiriciclaggio) return;
+
+  const closeAfterHidden = () => {
+    if (hiddenTimeoutRef.current) {
+      clearTimeout(hiddenTimeoutRef.current);
+      hiddenTimeoutRef.current = null;
+    }
+
+    hiddenTimeoutRef.current = setTimeout(() => {
+      handleCloseAccess();
+    }, AML_TIMEOUT_MS);
+  };
+
+  const cancelHiddenClose = () => {
+    if (hiddenTimeoutRef.current) {
+      clearTimeout(hiddenTimeoutRef.current);
+      hiddenTimeoutRef.current = null;
+    }
+
+    resetInactivityTimer();
+  };
+
+  const handleVisibilityChange = () => {
+    if (document.hidden) {
+      closeAfterHidden();
+    } else {
+      cancelHiddenClose();
+    }
+  };
+
+  const handleWindowBlur = () => {
+    closeAfterHidden();
+  };
+
+  const handleWindowFocus = () => {
+    cancelHiddenClose();
+  };
+
+  document.addEventListener("visibilitychange", handleVisibilityChange);
+  window.addEventListener("blur", handleWindowBlur);
+  window.addEventListener("focus", handleWindowFocus);
+
+  return () => {
+    document.removeEventListener("visibilitychange", handleVisibilityChange);
+    window.removeEventListener("blur", handleWindowBlur);
+    window.removeEventListener("focus", handleWindowFocus);
+
+    if (hiddenTimeoutRef.current) {
+      clearTimeout(hiddenTimeoutRef.current);
+      hiddenTimeoutRef.current = null;
+    }
+  };
+}, [canAccessAntiriciclaggio]);
 
    useEffect(() => {
     if (typeof window === "undefined") return;
