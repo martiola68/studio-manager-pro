@@ -279,52 +279,7 @@ text = data.text || "";
 
 const { cliente } = mapVisuraText(text);
 
-const fields = Array.isArray(cliente)
-  ? cliente.filter((field) => field.value)
-  : [
-      {
-        key: "ragione_sociale",
-        label: "Ragione sociale",
-        value: cliente.ragione_sociale || "",
-        selected: !!cliente.ragione_sociale,
-      },
-      {
-        key: "codice_fiscale",
-        label: "Codice fiscale",
-        value: cliente.codice_fiscale || "",
-        selected: !!cliente.codice_fiscale,
-      },
-      {
-        key: "partita_iva",
-        label: "Partita IVA",
-        value: cliente.partita_iva || "",
-        selected: !!cliente.partita_iva,
-      },
-      {
-        key: "indirizzo",
-        label: "Indirizzo",
-        value: cliente.indirizzo || "",
-        selected: !!cliente.indirizzo,
-      },
-      {
-        key: "cap",
-        label: "CAP",
-        value: cliente.cap || "",
-        selected: !!cliente.cap,
-      },
-      {
-        key: "citta",
-        label: "Città",
-        value: cliente.citta || "",
-        selected: !!cliente.citta,
-      },
-      {
-        key: "provincia",
-        label: "Provincia",
-        value: cliente.provincia || "",
-        selected: !!cliente.provincia,
-      },
-    ].filter((field) => field.value);
+const fields = cliente.filter((field: any) => field.value);
 
 setVisuraClienteFields(fields as VisuraClienteField[]);
 setVisuraPreviewOpen(true);
