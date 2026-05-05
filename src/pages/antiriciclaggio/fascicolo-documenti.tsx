@@ -1,4 +1,4 @@
-  import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { getStudioId } from "@/services/getStudioId";
@@ -66,9 +66,11 @@ function getDisplayFileName(name?: string | null) {
 function getOrigineLabel(orig?: string | null) {
   switch (orig) {
     case "av1_firmato":
-      return "AV1 firmato";
-    case "av4_pdf":
-      return "AV4 firmato";
+  return "AV1 firmato";
+case "av2_firmato":
+  return "AV2 firmato";
+case "av4_pdf":
+  return "AV4 firmato";
     case "documento_rappresentante":
       return "Documento rappresentante";
     case "manuale":
@@ -80,10 +82,12 @@ function getOrigineLabel(orig?: string | null) {
 
 function getOrigineBadgeClass(orig?: string | null) {
   switch (orig) {
-    case "av1_firmato":
-      return "bg-blue-50 text-blue-700 border-blue-200";
-    case "av4_pdf":
-      return "bg-violet-50 text-violet-700 border-violet-200";
+  case "av1_firmato":
+  return "bg-blue-50 text-blue-700 border-blue-200";
+case "av2_firmato":
+  return "bg-cyan-50 text-cyan-700 border-cyan-200";
+case "av4_pdf":
+  return "bg-violet-50 text-violet-700 border-violet-200";
     case "documento_rappresentante":
       return "bg-emerald-50 text-emerald-700 border-emerald-200";
     case "manuale":
@@ -266,6 +270,34 @@ const syncDocumentiCollegati = async (
     });
   }
 
+  const { data: av2DocumentoData, error: av2DocumentoError } = await supabase
+  .from("tbAV2")
+  .select("id, allegato_av2_firmato")
+  .eq("studio_id", studioId)
+  .eq("pratica_id", praticaId)
+  .order("created_at", { ascending: false })
+  .limit(1)
+  .maybeSingle();
+
+if (av2DocumentoError) {
+  throw av2DocumentoError;
+}
+
+if (av2DocumentoData?.allegato_av2_firmato) {
+  await ensureDocumentoInFascicolo({
+    supabase,
+    studioId,
+    praticaId,
+    clienteId: effectiveClienteId,
+    tipoDocumento: "Modulo firmato",
+    storagePath: av2DocumentoData.allegato_av2_firmato,
+    bucketName: "allegati",
+    mimeType: getMimeTypeFromPath(av2DocumentoData.allegato_av2_firmato),
+    origine: "av2_firmato",
+    note: "Importato da AV2 firmato",
+  });
+}
+
   const { data: clienteData, error: clienteError } = await supabase
     .from("tbclienti")
     .select("id, ragione_sociale, cod_cliente, rapp_legale_id")
@@ -364,6 +396,17 @@ const syncDocumentiCollegati = async (
     );
   });
 
+   const hasAV2 = hasDoc((doc) => {
+  const origine = normalizza(doc.origine);
+  const tipo = normalizza(doc.tipo_documento);
+
+  return (
+    origine === "av2_firmato" ||
+    origine === "av2 firmato" ||
+    tipo === "av2 firmato"
+  );
+});
+
   const hasDocumentoIdentita = hasDoc((doc) => {
     const origine = normalizza(doc.origine);
     const tipo = normalizza(doc.tipo_documento);
@@ -414,6 +457,7 @@ if (!hasContratto) mancanti.push("Contratto professionale");
 const opzionaliMancanti: string[] = [];
 
 if (!hasCodiceFiscale) opzionaliMancanti.push("Codice fiscale");
+if (!hasAV2) opzionaliMancanti.push("AV2 firmato");
 
 setDocumentiMancanti(mancanti);
 setDocumentiOpzionaliMancanti(opzionaliMancanti);
