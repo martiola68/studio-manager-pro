@@ -293,18 +293,18 @@ async function sendEmailViaMicrosoft(
       ...(attachments.length > 0 ? { attachments } : {}),
     };
 
-    if (data.fromEmail) {
-      message.from = {
-        emailAddress: {
-          address: data.fromEmail,
-        },
-      };
-      message.sender = {
-        emailAddress: {
-          address: data.fromEmail,
-        },
-      };
-    }
+ //   if (data.fromEmail) {
+//      message.from = {
+  //      emailAddress: {
+   //       address: data.fromEmail,
+ //       },
+ //     };
+//      message.sender = {
+//        emailAddress: {
+  //        address: data.fromEmail,
+   //     },
+//      };
+//    }
 
     await microsoftGraphService.sendEmail(
       userId,
