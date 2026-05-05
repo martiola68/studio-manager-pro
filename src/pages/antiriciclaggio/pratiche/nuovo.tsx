@@ -218,6 +218,7 @@ const { data: av1Data, error: av1Error } = await supabaseAny
     AV1Conferma: false,
     AV2Generato: true,
     AV4Generato: true,
+     Prestazione: tipoPrestazione, // 👈 AGGIUNGI QUESTA RIGA
   })
   .select("id")
   .single();
