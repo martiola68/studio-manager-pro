@@ -43,15 +43,6 @@ export default async function handler(
   const hourUtc = now.getUTCHours();
   const minuteUtc = now.getUTCMinutes();
 
-  // CALENDARIO: ogni 15 minuti
-  if (minuteUtc % 15 === 0) {
-    results.push(
-      await callInternal(
-        `/api/microsoft365/calendar/sync-cron?secret=${SECRET}`
-      )
-    );
-  }
-
   // JOB GIORNALIERI: una volta al giorno alle 08:00 UTC
   if (hourUtc === 8 && minuteUtc === 0) {
     results.push(
