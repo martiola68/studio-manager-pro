@@ -4,6 +4,7 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { sendRichiestaDocumentoRappresentante } from "@/services/rappresentantiDocumentiService";
 import { Eye, Pencil, Trash2 } from "lucide-react";
 
@@ -25,6 +26,14 @@ type Rapp = {
   doc_richiesto_il?: string | null;
   microsoft_connection_id?: string | null;
   created_at?: string | null;
+};
+
+type RappPreview = {
+  nome_cognome: string;
+  codice_fiscale?: string | null;
+  qualifica?: string | null;
+  tipo_soggetto: "amministratore" | "socio";
+  selected: boolean;
 };
 
 function formatDateEU(value: string | null | undefined) {
@@ -188,6 +197,10 @@ export default function RappresentantiIndexPage() {
   const [q, setQ] = useState("");
   const [importingVisura, setImportingVisura] = useState(false);
   const [sendingMassivo, setSendingMassivo] = useState(false);
+
+  const [previewOpen, setPreviewOpen] = useState(false);
+const [previewRows, setPreviewRows] = useState<RappPreview[]>([]);
+const [previewStats, setPreviewStats] = useState<any>(null);
 
   const [microsoftConnections, setMicrosoftConnections] = useState<any[]>([]);
 const [loadingMicrosoftConnections, setLoadingMicrosoftConnections] = useState(false);
@@ -372,61 +385,116 @@ const [loadingMicrosoftConnections, setLoadingMicrosoftConnections] = useState(f
     }
   }
 
-  async function handleImportVisura(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+async function handleImportVisura(e: React.ChangeEvent<HTMLInputElement>) {
+  const file = e.target.files?.[0];
+  if (!file) return;
 
-    if (!studioId) {
-      alert("Studio non disponibile");
-      e.target.value = "";
-      return;
-    }
-
-    try {
-      setImportingVisura(true);
-
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("studioId", studioId);
-
-      const response = await fetch("/api/import-visura-rappresentanti", {
-        method: "POST",
-        body: formData,
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result?.error || "Errore durante importazione visura");
-      }
-
-      await loadRappresentanti();
-
-      const stats = result?.stats;
-
-      if (stats) {
-        alert(
-          `Import completato.\n` +
-            `Trovati nel PDF: ${stats.trovatiNelPdf ?? 0}\n` +
-            `Validi con codice fiscale: ${stats.validiConCodiceFiscale ?? 0}\n` +
-            `Unici per codice fiscale: ${stats.uniciPerCodiceFiscale ?? 0}\n` +
-            `Duplicati interni PDF: ${stats.duplicatiInterniPdf ?? 0}\n` +
-            `Già presenti in archivio: ${stats.giaPresentiInArchivio ?? 0}\n` +
-            `Inseriti: ${stats.inseriti ?? 0}\n` +
-            `Scartati senza codice fiscale: ${stats.scartatiSenzaCodiceFiscale ?? 0}`
-        );
-      } else {
-        alert(
-          `Import completato.\nInseriti: ${result.inserted ?? 0}\nDuplicati: ${result.duplicates ?? 0}\nScartati: ${result.skipped ?? 0}`
-        );
-      }
-    } catch (error: any) {
-      alert(error?.message || "Errore durante importazione visura");
-    } finally {
-      setImportingVisura(false);
-      e.target.value = "";
-    }
+  if (!studioId) {
+    alert("Studio non disponibile");
+    e.target.value = "";
+    return;
   }
+
+  try {
+    setImportingVisura(true);
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("studioId", studioId);
+    formData.append("preview", "true");
+
+    const response = await fetch("/api/import-visura-rappresentanti", {
+      method: "POST",
+      body: formData,
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result?.error || "Errore durante importazione visura");
+    }
+
+    const rows = Array.isArray(result?.rappresentanti)
+      ? result.rappresentanti
+      : Array.isArray(result?.items)
+      ? result.items
+      : [];
+
+    if (!rows.length) {
+      throw new Error("Nessun rappresentante trovato nella visura.");
+    }
+
+    setPreviewRows(
+      rows.map((r: any) => ({
+        nome_cognome: r.nome_cognome || "",
+        codice_fiscale: r.codice_fiscale || null,
+        qualifica: r.qualifica || null,
+        tipo_soggetto: r.tipo_soggetto || "amministratore",
+        selected: true,
+      }))
+    );
+
+    setPreviewStats(result?.stats || null);
+    setPreviewOpen(true);
+  } catch (error: any) {
+    alert(error?.message || "Errore durante importazione visura");
+  } finally {
+    setImportingVisura(false);
+    e.target.value = "";
+  }
+}
+
+  async function handleConfermaImportVisura() {
+  if (!studioId) {
+    alert("Studio non disponibile");
+    return;
+  }
+
+  const selected = previewRows.filter((r) => r.selected);
+
+  if (selected.length === 0) {
+    alert("Seleziona almeno un rappresentante da importare.");
+    return;
+  }
+
+  try {
+    setImportingVisura(true);
+
+    const response = await fetch("/api/import-visura-rappresentanti", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        studioId,
+        conferma: true,
+        rappresentanti: selected,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result?.error || "Errore conferma import");
+    }
+
+    setPreviewOpen(false);
+    setPreviewRows([]);
+    setPreviewStats(null);
+
+    await loadRappresentanti();
+
+    alert(
+      `Import completato.\nInseriti: ${result.inserted ?? result?.stats?.inseriti ?? 0}\nDuplicati: ${
+        result.duplicates ?? result?.stats?.giaPresentiInArchivio ?? 0
+      }\nScartati: ${result.skipped ?? 0}`
+    );
+  } catch (error: any) {
+    alert(error?.message || "Errore conferma import");
+  } finally {
+    setImportingVisura(false);
+  }
+}
 
   async function handleInvioMassivoRichiesteDocumento() {
     if (!studioId) {
@@ -699,5 +767,72 @@ for (const r of candidati) {
         </CardContent>
       </Card>
     </div>
+    {previewOpen && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white p-6 shadow-lg">
+      <h2 className="mb-2 text-xl font-semibold">
+        Rappresentanti trovati nella visura
+      </h2>
+
+      {previewStats && (
+        <p className="mb-4 text-sm text-muted-foreground">
+          Trovati nel PDF: {previewStats.trovatiNelPdf ?? previewRows.length}
+        </p>
+      )}
+
+      <div className="space-y-3">
+        {previewRows.map((r, index) => (
+          <div
+            key={`${r.codice_fiscale || r.nome_cognome}-${index}`}
+            className="flex items-start gap-3 rounded-md border p-3"
+          >
+            <Checkbox
+              checked={r.selected}
+              onCheckedChange={(checked) =>
+                setPreviewRows((prev) =>
+                  prev.map((item, i) =>
+                    i === index
+                      ? { ...item, selected: checked === true }
+                      : item
+                  )
+                )
+              }
+            />
+
+            <div className="flex-1">
+              <div className="font-medium">{r.nome_cognome || "-"}</div>
+              <div className="text-sm text-muted-foreground">
+                {r.codice_fiscale || "CF mancante"} •{" "}
+                {r.qualifica || r.tipo_soggetto}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-6 flex justify-end gap-3 border-t pt-4">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            setPreviewOpen(false);
+            setPreviewRows([]);
+            setPreviewStats(null);
+          }}
+        >
+          Annulla
+        </Button>
+
+        <Button
+          type="button"
+          disabled={importingVisura}
+          onClick={handleConfermaImportVisura}
+        >
+          {importingVisura ? "Importazione..." : "Importa selezionati"}
+        </Button>
+      </div>
+    </div>
+  </div>
+)}
   );
 }
