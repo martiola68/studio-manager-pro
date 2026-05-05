@@ -172,12 +172,21 @@ const router = useRouter();
    * ✅ Load dashboard stats, clienti, eventi, scadenze
    * (NOT doing auth redirects here)
    */
-  const loadDashboardData = async (userIdForMessages?: string) => {
-    try {
-      const clienti = await clienteService.getClienti();
-      const appuntamenti = await eventoService.getEventi();
+ const loadDashboardData = async (userIdForMessages?: string) => {
+  try {
+    const clienti = await clienteService.getClienti();
 
-      const clientiAttivi = clienti.filter((c: any) => c.attivo).length;
+    const { data: appuntamentiData, error: appuntamentiError } = await supabase
+      .from("tbagenda")
+      .select("*")
+      .eq("utente_id", userIdForMessages)
+      .order("data_inizio", { ascending: true });
+
+    if (appuntamentiError) throw appuntamentiError;
+
+    const appuntamenti = appuntamentiData || [];
+
+    const clientiAttivi = clienti.filter((c: any) => c.attivo).length;
 
       const oggi = new Date();
       const setteDopo = new Date();
