@@ -157,6 +157,47 @@ async function enrichSubjectFromCF(supabase: any, subject: any) {
   };
 }
 
+async function readJsonBody(req: NextApiRequest): Promise<any> {
+  const chunks: Buffer[] = [];
+
+  for await (const chunk of req) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+
+  const raw = Buffer.concat(chunks).toString("utf8");
+
+  if (!raw.trim()) return null;
+
+  return JSON.parse(raw);
+}
+
+async function buildRowsToInsert(
+  supabase: any,
+  studioId: string,
+  subjects: any[]
+) {
+  return Promise.all(
+    subjects.map(async (subject: any) => {
+      const enriched = await enrichSubjectFromCF(supabase, subject);
+
+      return {
+        studio_id: studioId,
+        nome_cognome: subject.nome_cognome || null,
+        codice_fiscale: enriched.codice_fiscale,
+        luogo_nascita: enriched.luogo_nascita,
+        data_nascita: enriched.data_nascita,
+        citta_residenza: subject.citta_residenza || null,
+        indirizzo_residenza: subject.indirizzo_residenza || null,
+        nazionalita: enriched.nazionalita,
+        CAP: subject.CAP || subject.cap || null,
+        rappresentante_legale:
+          subject.rappresentante_legale ??
+          isRappresentanteLegaleRole(getSubjectRole(subject)),
+      };
+    })
+  );
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   console.log("API import-visura-rappresentanti chiamata:", req.method);
 
