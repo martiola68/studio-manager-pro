@@ -110,14 +110,13 @@ export default function PromemoriaPage() {
 
   const isResponsabileSettore = currentUser?.responsabile === true && !!currentUser?.settore;
   
- const getPrioritaOrder = (priorita?: string | null) => {
+const getPrioritaOrder = (priorita?: string | null) => {
   switch ((priorita || "").toLowerCase()) {
     case "alta":
       return 0;
-    case "bassa":
-      return 1;
-    case "normale":
     case "media":
+      return 1;
+    case "bassa":
       return 2;
     default:
       return 3;
@@ -939,14 +938,20 @@ if (destinatario?.email) {
 
         <TableBody>
        {promemoriaFiltrati
-          .sort((a, b) => {
+.sort((a, b) => {
   // 1. Stato: Completato sempre per ultimo
   const statoA = a.working_progress === "Completato" ? 1 : 0;
   const statoB = b.working_progress === "Completato" ? 1 : 0;
 
   if (statoA !== statoB) return statoA - statoB;
 
-  // 2. Data scadenza: prima le più vicine
+  // 2. Priorità: Alta, Media, Bassa
+  const prioritaDiff =
+    getPrioritaOrder(a.priorita) - getPrioritaOrder(b.priorita);
+
+  if (prioritaDiff !== 0) return prioritaDiff;
+
+  // 3. Data scadenza: prima le più vicine
   const dataA = a.data_scadenza
     ? new Date(a.data_scadenza).getTime()
     : Number.MAX_SAFE_INTEGER;
@@ -955,13 +960,7 @@ if (destinatario?.email) {
     ? new Date(b.data_scadenza).getTime()
     : Number.MAX_SAFE_INTEGER;
 
-  if (dataA !== dataB) return dataA - dataB;
-
-  // 3. Priorità: Alta, Bassa, Normale/Media
-  const prioritaDiff =
-    getPrioritaOrder(a.priorita) - getPrioritaOrder(b.priorita);
-
-  return prioritaDiff;
+  return dataA - dataB;
 })
             .map((p) => {
               const isOverdue =
