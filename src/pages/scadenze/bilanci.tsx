@@ -12,7 +12,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, Trash2, Printer } from "lucide-react";
+import { Search, Trash2, Printer, FileSpreadsheet } from "lucide-react";
+import ExcelJS from "exceljs";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/lib/supabase/types";
 
@@ -496,6 +497,8 @@ const loadScadenze = async (): Promise<ScadenzaBilancioExt[]> => {
     )
     .join("");
 
+   
+
   const printWindow = window.open("", "_blank", "width=1000,height=700");
   if (!printWindow) return;
 
@@ -594,6 +597,87 @@ const loadScadenze = async (): Promise<ScadenzaBilancioExt[]> => {
   printWindow.print();
   printWindow.close();
 };
+
+  const handleExportExcelOperatore = async () => {
+  if (filterOperatore === "__all__") return;
+
+  const operatoreNome = getUtenteNome(filterOperatore);
+
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Bilanci");
+
+  worksheet.columns = [
+    { header: "#", key: "num", width: 6 },
+    { header: "Nominativo", key: "nominativo", width: 45 },
+    { header: "Operatore", key: "operatore", width: 25 },
+    { header: "Confermato", key: "confermato", width: 14 },
+    { header: "Data approvazione", key: "data_approvazione", width: 18 },
+    { header: "Data scadenza", key: "data_scadenza", width: 18 },
+    { header: "Data invio", key: "data_invio", width: 18 },
+    { header: "Consorzio", key: "consorzio", width: 12 },
+    { header: "Bilancio def", key: "bilancio_def", width: 14 },
+    { header: "Verbale def", key: "verbale_def", width: 14 },
+    { header: "Rel. gestione", key: "rel_gestione", width: 14 },
+    { header: "Rel. Sindaci", key: "rel_sindaci", width: 14 },
+    { header: "Rel. Revisore", key: "rel_revisore", width: 14 },
+    { header: "Approvato", key: "approvato", width: 12 },
+    { header: "Inviato", key: "inviato", width: 12 },
+    { header: "Ricevuta", key: "ricevuta", width: 12 },
+    { header: "Note", key: "note", width: 50 },
+  ];
+
+  filteredScadenze.forEach((s, index) => {
+    worksheet.addRow({
+      num: index + 1,
+      nominativo: s.nominativo || "",
+      operatore: operatoreNome,
+      confermato: s.conferma_riga ? "SI" : "NO",
+      data_approvazione: formatFromISODate(s.data_approvazione),
+      data_scadenza: formatFromISODate(s.data_scad_pres),
+      data_invio: formatFromISODate(s.data_invio),
+      consorzio: s.consorzio ? "SI" : "NO",
+      bilancio_def: s.bilancio_def ? "SI" : "NO",
+      verbale_def: s.verbale_app ? "SI" : "NO",
+      rel_gestione: s.relazione_gest ? "SI" : "NO",
+      rel_sindaci: s.relazione_sindaci ? "SI" : "NO",
+      rel_revisore: s.relazione_revisore ? "SI" : "NO",
+      approvato: s.bil_approvato ? "SI" : "NO",
+      inviato: s.invio_bil ? "SI" : "NO",
+      ricevuta: s.ricevuta ? "SI" : "NO",
+      note: s.note || "",
+    });
+  });
+
+  worksheet.getRow(1).font = { bold: true };
+  worksheet.getRow(1).alignment = { vertical: "middle", horizontal: "center" };
+
+  worksheet.eachRow((row) => {
+    row.eachCell((cell) => {
+      cell.border = {
+        top: { style: "thin" },
+        left: { style: "thin" },
+        bottom: { style: "thin" },
+        right: { style: "thin" },
+      };
+      cell.alignment = { vertical: "top", wrapText: true };
+    });
+  });
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = `scadenzario_bilanci_${operatoreNome.replace(/\s+/g, "_")}_${annoConsultazione}.xlsx`;
+  link.click();
+
+  window.URL.revokeObjectURL(url);
+};
+  
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -623,17 +707,27 @@ const loadScadenze = async (): Promise<ScadenzaBilancioExt[]> => {
             Gestione bilanci annuali e documentazione contabile
           </p>
         </div>
+{filterOperatore !== "__all__" && (
+  <div className="flex gap-2">
+    <Button
+      type="button"
+      onClick={handleExportExcelOperatore}
+      className="bg-green-600 text-white hover:bg-green-700"
+    >
+      <FileSpreadsheet className="h-4 w-4 mr-2" />
+      Esporta Excel
+    </Button>
 
-        {filterOperatore !== "__all__" && (
-          <Button
-            type="button"
-            onClick={handlePrintOperatore}
-            className="bg-black text-white hover:bg-zinc-800"
-          >
-            <Printer className="h-4 w-4 mr-2" />
-            Stampa elenco operatore
-          </Button>
-        )}
+    <Button
+      type="button"
+      onClick={handlePrintOperatore}
+      className="bg-black text-white hover:bg-zinc-800"
+    >
+      <Printer className="h-4 w-4 mr-2" />
+      Stampa elenco operatore
+    </Button>
+  </div>
+)}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
