@@ -319,6 +319,13 @@ const isTB1 = tipoTBPrestazione === "TB1";
     [prestazioni, formData.Prestazione]
   );
 
+  const rischioInerentePrestazione = useMemo(
+  () =>
+    prestazioni.find((p) => p.TipoPrestazioneAR === formData.Prestazione)
+      ?.RischioTipoPrestAR || formData.ValRischioIner || "",
+  [prestazioni, formData.Prestazione, formData.ValRischioIner]
+);
+
   const TotA =
     normalizeScore(formData.A1) +
     normalizeScore(formData.A2) +
@@ -958,7 +965,7 @@ const handleRinnovoVerifica = async () => {
   studio_id: formData.studio_id,
   cliente_id: formData.cliente_id,
   Prestazione: formData.Prestazione,
-  ValRischioIner: formData.ValRischioIner,
+  ValRischioIner: rischioInerentePrestazione,
   DataVerifica: formData.DataVerifica,
   ScadenzaVerifica: ScadenzaVerificaCalcolata || null,
   allegato_av1_firmato: formData.allegato_av1_firmato || null,
@@ -1191,14 +1198,14 @@ const handleRinnovoVerifica = async () => {
                       <label className="mb-1 block text-sm font-medium">
                         Valore rischio inerente
                       </label>
-                      <input
-                        type="text"
-                        className={`w-full rounded-md border px-3 py-2 ${getLivelloRischioBgClass(
-                          formData.ValRischioIner
-                        )}`}
-                        value={formData.ValRischioIner}
-                        readOnly
-                      />
+                     <input
+  type="text"
+  className={`w-full rounded-md border px-3 py-2 ${getLivelloRischioBgClass(
+    rischioInerentePrestazione
+  )}`}
+  value={rischioInerentePrestazione}
+  readOnly
+/>
                     </div>
 
                     <div>
