@@ -13,7 +13,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Trash2, Printer } from "lucide-react";
+import { Search, Trash2, Printer, FileSpreadsheet } from "lucide-react";
+import ExcelJS from "exceljs";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -426,6 +427,90 @@ export default function ScadenzeFiscaliPage() {
     printWindow.close();
   };
 
+  const handleExportExcelOperatore = async () => {
+  if (filterOperatore === "__all__") return;
+
+  const operatoreNome = getUtenteNome(filterOperatore);
+
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Fiscali");
+
+  worksheet.columns = [
+    { header: "#", key: "num", width: 6 },
+    { header: "Nominativo", key: "nominativo", width: 45 },
+    { header: "Operatore", key: "operatore", width: 25 },
+    { header: "Confermato", key: "confermato", width: 14 },
+    { header: "Tipo Redditi", key: "tipo_redditi", width: 18 },
+    { header: "Redditi compilato", key: "mod_r_compilato", width: 18 },
+    { header: "Redditi definitivo", key: "mod_r_definitivo", width: 18 },
+    { header: "Saldo/1° Acc./CCIAA", key: "saldo_acc_cciaa", width: 22 },
+    { header: "Comunicato 1", key: "data_com1", width: 16 },
+    { header: "2° Acconto", key: "acc2", width: 14 },
+    { header: "Comunicato 2", key: "data_com2", width: 16 },
+    { header: "Invio Redditi", key: "mod_r_inviato", width: 16 },
+    { header: "Data invio Redditi", key: "data_r_invio", width: 18 },
+    { header: "IRAP", key: "con_irap", width: 10 },
+    { header: "IRAP compilato", key: "mod_i_compilato", width: 18 },
+    { header: "IRAP definitivo", key: "mod_i_definitivo", width: 18 },
+    { header: "Invio IRAP", key: "mod_i_inviato", width: 16 },
+    { header: "Data invio IRAP", key: "data_i_invio", width: 18 },
+    { header: "Note", key: "note", width: 50 },
+  ];
+
+  filteredScadenze.forEach((s, index) => {
+    worksheet.addRow({
+      num: index + 1,
+      nominativo: s.nominativo || "",
+      operatore: operatoreNome,
+      confermato: s.conferma_riga ? "SI" : "NO",
+      tipo_redditi: s.tipo_redditi || "",
+      mod_r_compilato: s.mod_r_compilato ? "SI" : "NO",
+      mod_r_definitivo: s.mod_r_definitivo ? "SI" : "NO",
+      saldo_acc_cciaa: s.saldo_acc_cciaa ? "SI" : "NO",
+      data_com1: s.data_com1 || "",
+      acc2: s.acc2 ? "SI" : "NO",
+      data_com2: s.data_com2 || "",
+      mod_r_inviato: s.mod_r_inviato ? "SI" : "NO",
+      data_r_invio: s.data_r_invio || "",
+      con_irap: s.con_irap ? "SI" : "NO",
+      mod_i_compilato: s.mod_i_compilato ? "SI" : "NO",
+      mod_i_definitivo: s.mod_i_definitivo ? "SI" : "NO",
+      mod_i_inviato: s.mod_i_inviato ? "SI" : "NO",
+      data_i_invio: s.data_i_invio || "",
+      note: s.note || "",
+    });
+  });
+
+  worksheet.getRow(1).font = { bold: true };
+  worksheet.getRow(1).alignment = { vertical: "middle", horizontal: "center" };
+
+  worksheet.eachRow((row) => {
+    row.eachCell((cell) => {
+      cell.border = {
+        top: { style: "thin" },
+        left: { style: "thin" },
+        bottom: { style: "thin" },
+        right: { style: "thin" },
+      };
+      cell.alignment = { vertical: "top", wrapText: true };
+    });
+  });
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = `scadenzario_fiscali_${operatoreNome.replace(/\s+/g, "_")}_${annoConsultazione}.xlsx`;
+  link.click();
+
+  window.URL.revokeObjectURL(url);
+};
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -451,17 +536,27 @@ export default function ScadenzeFiscaliPage() {
           </p>
         </div>
 
-        {filterOperatore !== "__all__" && (
-          <Button
-            type="button"
-            onClick={handlePrintOperatore}
-            className="bg-black text-white hover:bg-zinc-800"
-          >
-            <Printer className="h-4 w-4 mr-2" />
-            Stampa elenco operatore
-          </Button>
-        )}
-      </div>
+      {filterOperatore !== "__all__" && (
+  <div className="flex gap-2">
+    <Button
+      type="button"
+      onClick={handleExportExcelOperatore}
+      className="bg-green-600 text-white hover:bg-green-700"
+    >
+      <FileSpreadsheet className="h-4 w-4 mr-2" />
+      Esporta Excel
+    </Button>
+
+    <Button
+      type="button"
+      onClick={handlePrintOperatore}
+      className="bg-black text-white hover:bg-zinc-800"
+    >
+      <Printer className="h-4 w-4 mr-2" />
+      Stampa elenco operatore
+    </Button>
+  </div>
+)}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
