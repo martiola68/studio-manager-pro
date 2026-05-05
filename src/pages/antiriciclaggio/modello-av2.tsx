@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { getStudioId } from "@/services/getStudioId";
 import { useRouter } from "next/router";
@@ -23,8 +23,11 @@ type AV2FormState = {
   av4_id: string;
   data_check: string;
   firma_check: string;
+  allegato_av2_firmato?: string;
   [key: string]: string | boolean | undefined;
 };
+
+const BUCKET_NAME = "allegati";
 
 const buildInitialForm = (studioId: string): AV2FormState => {
  const base: AV2FormState = {
@@ -36,6 +39,7 @@ const buildInitialForm = (studioId: string): AV2FormState => {
   av4_id: "",
   data_check: "",
   firma_check: "",
+   allegato_av2_firmato: "",
 };
 
   for (let i = 1; i <= 23; i++) {
@@ -68,6 +72,9 @@ export default function ModelloAV2Page() {
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  const fileRef = useRef<HTMLInputElement | null>(null);
+const [uploadingFirmato, setUploadingFirmato] = useState(false);
 
   const clienteSelezionato = useMemo(
     () => clienti.find((c) => c.id === form.cliente_id) || null,
@@ -213,7 +220,7 @@ const { data: praticaRow, error: praticaError } = await supabase
           }
 
            if (data) {
-           setForm({
+         setForm({
   ...buildInitialForm(data.studio_id || currentStudioId),
   ...data,
   id: String(data.id),
@@ -224,9 +231,10 @@ const { data: praticaRow, error: praticaError } = await supabase
   studio_id: data.studio_id || currentStudioId,
   cliente_id: data.cliente_id || "",
   av1_id: data.av1_id ? String(data.av1_id) : "",
-  av4_id: data.av4_id ? String(data.av4_id) : "",
+  av4_id: "",
   data_check: normalizeDateValue(data.data_check),
   firma_check: data.firma_check || "",
+  allegato_av2_firmato: data.allegato_av2_firmato || "",
 });
             return;
           }
@@ -300,6 +308,7 @@ const { data: praticaRow, error: praticaError } = await supabase
 //  av4_id: form.av4_id || null,
   data_check: form.data_check || null,
   firma_check: form.firma_check || null,
+  allegato_av2_firmato: form.allegato_av2_firmato || null,
 };
       for (let i = 1; i <= 23; i++) {
         payload[`spunta${i}`] = !!form[`spunta${i}`];
@@ -400,6 +409,65 @@ const { data: praticaRow, error: praticaError } = await supabase
   const handleChiudiModello = () => {
     router.push("/antiriciclaggio");
   };
+
+  const handleUploadFirmato = async (file: File) => {
+  try {
+    if (!form.studio_id) {
+      alert("Studio non disponibile.");
+      return;
+    }
+
+    setUploadingFirmato(true);
+    setError(null);
+
+    const supabase = getSupabaseClient() as any;
+    const safeName = file.name.replace(/\s+/g, "_");
+    const path = `av2_firmati/${form.studio_id}/${Date.now()}_${safeName}`;
+
+    const { error } = await supabase.storage
+      .from(BUCKET_NAME)
+      .upload(path, file, { upsert: true });
+
+    if (error) throw error;
+
+    setForm((prev) => ({
+      ...prev,
+      allegato_av2_firmato: path,
+    }));
+
+    alert("File caricato correttamente. Ora premi Salva AV2.");
+  } catch (err: any) {
+    setError(err?.message || "Errore caricamento file firmato.");
+  } finally {
+    setUploadingFirmato(false);
+  }
+};
+
+const handleOpenFirmato = async () => {
+  try {
+    if (!form.allegato_av2_firmato) return;
+
+    const supabase = getSupabaseClient() as any;
+
+    const { data, error } = await supabase.storage
+      .from(BUCKET_NAME)
+      .createSignedUrl(form.allegato_av2_firmato, 60);
+
+    if (error) throw error;
+    if (!data?.signedUrl) throw new Error("URL firmato non disponibile.");
+
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  } catch (err: any) {
+    setError(err?.message || "Errore apertura file.");
+  }
+};
+
+const handleRemoveFirmato = async () => {
+  setForm((prev) => ({
+    ...prev,
+    allegato_av2_firmato: "",
+  }));
+};
 
   return (
     <div className="flex h-[calc(100vh-64px)] flex-col overflow-hidden bg-background">
@@ -529,6 +597,75 @@ const { data: praticaRow, error: praticaError } = await supabase
                       ))}
                     </div>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>Allegato AV2 firmato</CardTitle>
+              </CardHeader>
+
+              <CardContent>
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium">
+                    File firmato digitale o autografo
+                  </label>
+
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept=".pdf,.p7m,.jpg,.jpeg,.png"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        void handleUploadFirmato(file);
+                      }
+                      e.currentTarget.value = "";
+                    }}
+                  />
+
+                  <input
+                    type="text"
+                    readOnly
+                    value={form.allegato_av2_firmato || ""}
+                    placeholder="Nessun file allegato"
+                    className="w-full cursor-default rounded-md border px-3 py-2"
+                  />
+
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => fileRef.current?.click()}
+                      disabled={uploadingFirmato}
+                      className="rounded bg-gray-200 px-4 py-2 hover:bg-gray-300 disabled:opacity-60"
+                    >
+                      {uploadingFirmato ? "Caricamento..." : "Allega file"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleOpenFirmato}
+                      disabled={!form.allegato_av2_firmato}
+                      className="rounded border px-4 py-2 hover:bg-gray-50 disabled:opacity-60"
+                    >
+                      Apri
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleRemoveFirmato}
+                      disabled={!form.allegato_av2_firmato || uploadingFirmato}
+                      className="rounded px-4 py-2 text-red-600 hover:bg-red-50 disabled:opacity-60"
+                    >
+                      Rimuovi
+                    </button>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground">
+                    Formati consentiti: PDF, P7M, JPG, JPEG, PNG
+                  </p>
                 </div>
               </CardContent>
             </Card>
