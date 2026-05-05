@@ -526,6 +526,15 @@ export function parseVisuraRappresentanti(rawText: string): VisuraRappresentante
   return dedupeRappresentanti(merged);
 }
 
-export function mapVisuraRappresentanti(rawText: string): VisuraRappresentante[] {
-  return parseVisuraRappresentanti(rawText);
+export type VisuraRappresentanteImportabile = VisuraRappresentante & {
+  selected: boolean;
+};
+
+export function mapVisuraRappresentanti(
+  rawText: string
+): VisuraRappresentanteImportabile[] {
+  return parseVisuraRappresentanti(rawText).map((r) => ({
+    ...r,
+    selected: true,
+  }));
 }
