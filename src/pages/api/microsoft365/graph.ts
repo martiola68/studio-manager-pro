@@ -413,14 +413,27 @@ const sessionStudioId = String(sessionUserRow.studio_id);
     if (targetUserErr || !targetUserRow?.studio_id) {
       return res.status(400).json({ error: "Utente target non trovato" });
     }
+const sameStudio = String(targetUserRow.studio_id) === sessionStudioId;
 
-  const sameStudio = String(targetUserRow.studio_id) === sessionStudioId;
+if (!sameStudio) {
+  if (!microsoftConnectionId) {
+    return res.status(403).json({ error: "Utente target fuori dallo studio" });
+  }
 
-// Se sto lavorando con una connessione Microsoft esplicita, non blocco qui
-// il multi-tenant solo perché lo studio_id del target non coincide.
-// Il controllo di autorizzazione passa dalla connessione selezionata.
-if (!sameStudio && !microsoftConnectionId) {
-  return res.status(403).json({ error: "Utente target fuori dallo studio" });
+  const { data: allowedConnection, error: allowedConnectionErr } =
+    await supabaseAdmin
+      .from("microsoft365_connections")
+      .select("id, studio_id, enabled")
+      .eq("id", microsoftConnectionId)
+      .eq("studio_id", sessionStudioId)
+      .eq("enabled", true)
+      .maybeSingle();
+
+  if (allowedConnectionErr || !allowedConnection?.id) {
+    return res.status(403).json({
+      error: "Connessione Microsoft non autorizzata per questo studio",
+    });
+  }
 }
 
    const graphPath = normalizeGraphPath(String(endpoint));
