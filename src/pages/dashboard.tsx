@@ -490,8 +490,9 @@ const router = useRouter();
   </Card>
 
   <PromemoriaImminentiCard
-    onOpenPromemoriaPage={() => router.push("/promemoria")}
-  />
+  userId={currentUserId}
+  onOpenPromemoriaPage={() => router.push("/promemoria")}
+/>
 </div>
 
       <Card>
