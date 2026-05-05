@@ -172,7 +172,7 @@ const router = useRouter();
    * ✅ Load dashboard stats, clienti, eventi, scadenze
    * (NOT doing auth redirects here)
    */
- const loadDashboardData = async (userIdForMessages?: string) => {
+ const loadDashboardData = async (userIdForMessages: string) => {
   try {
     const clienti = await clienteService.getClienti();
 
