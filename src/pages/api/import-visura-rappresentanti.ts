@@ -413,12 +413,32 @@ if (previewMode) {
   return res.status(200).json({
     ok: true,
     preview: true,
-    rappresentanti: daInserire.map((item: any) => ({
-      ...item,
-      codice_fiscale: normalizeCF(item.codice_fiscale || ""),
-      selected: true,
-      rappresentante_legale: isRappresentanteLegaleRole(getSubjectRole(item)),
-    })),
+    rappresentanti: unici.map((item: any) => {
+      const cf = normalizeCF(item.codice_fiscale || "");
+      const giaPresente = existingSet.has(cf);
+
+      return {
+        ...item,
+        codice_fiscale: cf,
+        selected: !giaPresente,
+        gia_presente: giaPresente,
+        rappresentante_legale: isRappresentanteLegaleRole(getSubjectRole(item)),
+      };
+    }),
+    duplicates: giaPresenti.length,
+    skipped: scartatiSenzaCf.length,
+    totalFound: parsed.length,
+    stats: {
+      trovatiNelPdf: parsed.length,
+      validiConCodiceFiscale: validi.length,
+      uniciPerCodiceFiscale: unici.length,
+      duplicatiInterniPdf,
+      giaPresentiInArchivio: giaPresenti.length,
+      daImportare: daInserire.length,
+      scartatiSenzaCodiceFiscale: scartatiSenzaCf.length,
+    },
+  });
+}
     duplicates: giaPresenti.length,
     skipped: scartatiSenzaCf.length,
     totalFound: parsed.length,
