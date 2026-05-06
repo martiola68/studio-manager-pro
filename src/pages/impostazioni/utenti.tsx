@@ -201,17 +201,17 @@ export default function GestioneUtentiPage() {
 
       if (editingUtente) {
         await utenteService.updateUtente(editingUtente.id, {
-          nome: formData.nome,
-          cognome: formData.cognome,
-          email: formData.email,
-          tipo_utente: formData.tipo_utente,
-          ruolo_operatore_id: formData.ruolo_operatore_id || null,
-          attivo: formData.attivo,
-          settore: formData.settore || null,
-          responsabile: formData.responsabile,
-          microsoft_connection_id: formData.microsoft_connection_id || null,
-          tipo_rapporto: formData.tipo_rapporto || null,
-        });
+  nome: formData.nome,
+  cognome: formData.cognome,
+  email: formData.email,
+  tipo_utente: formData.tipo_utente,
+  ruolo_operatore_id: formData.ruolo_operatore_id || null,
+  attivo: formData.attivo,
+  settore: formData.settore || null,
+  responsabile: formData.responsabile,
+  microsoft_connection_id: formData.microsoft_connection_id || null,
+  tipo_rapporto: formData.tipo_rapporto || null,
+} as any);
 
         toast({
           title: "✅ Utente aggiornato",
