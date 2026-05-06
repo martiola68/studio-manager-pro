@@ -47,6 +47,7 @@ export default function GestioneUtentiPage() {
     settore: "" as "Fiscale" | "Lavoro" | "Consulenza" | "",
     responsabile: false,
     microsoft_connection_id: "",
+    tipo_rapporto: "" as "Dipendente" | "Collaboratore" | "Praticante" | "Socio" | "",
   });
 
   useEffect(() => {
@@ -209,6 +210,7 @@ export default function GestioneUtentiPage() {
           settore: formData.settore || null,
           responsabile: formData.responsabile,
           microsoft_connection_id: formData.microsoft_connection_id || null,
+          tipo_rapporto: formData.tipo_rapporto || null,
         });
 
         toast({
@@ -264,6 +266,7 @@ const response = await fetch("/api/auth/create-user", {
     settore: formData.settore || null,
     responsabile: formData.responsabile,
     microsoft_connection_id: formData.microsoft_connection_id || null,
+    tipo_rapporto: formData.tipo_rapporto || null,
   }),
 });
 
@@ -282,6 +285,7 @@ const response = await fetch("/api/auth/create-user", {
             settore: formData.settore || null,
             responsabile: formData.responsabile,
             microsoft_connection_id: formData.microsoft_connection_id || null,
+            tipo_rapporto: formData.tipo_rapporto || null,
           })
           .eq("id", result.userId);
 
@@ -455,6 +459,7 @@ const response = await fetch("/api/auth/create-user", {
       settore: (utente.settore as "Fiscale" | "Lavoro" | "Consulenza") || "",
       responsabile: utente.responsabile ?? false,
       microsoft_connection_id: utente.microsoft_connection_id || "",
+      tipo_rapporto: ((utente as any).tipo_rapporto as "Dipendente" | "Collaboratore" | "Praticante" | "Socio") || "",
     });
     setDialogOpen(true);
   };
@@ -470,6 +475,7 @@ const response = await fetch("/api/auth/create-user", {
       settore: "",
       responsabile: false,
       microsoft_connection_id: "",
+      tipo_rapporto: "",
     });
     setEditingUtente(null);
   };
@@ -664,31 +670,60 @@ const response = await fetch("/api/auth/create-user", {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="settore">Settore</Label>
-                <Select
-                  value={formData.settore || "__none__"}
-                  onValueChange={(value) =>
-                    setFormData({
-                      ...formData,
-                      settore:
-                        value === "__none__"
-                          ? ""
-                          : (value as "Fiscale" | "Lavoro" | "Consulenza"),
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleziona settore" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">Nessuno</SelectItem>
-                    <SelectItem value="Fiscale">Fiscale</SelectItem>
-                    <SelectItem value="Lavoro">Lavoro</SelectItem>
-                    <SelectItem value="Consulenza">Consulenza</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="grid grid-cols-2 gap-4">
+  <div className="space-y-2">
+    <Label htmlFor="settore">Settore</Label>
+    <Select
+      value={formData.settore || "__none__"}
+      onValueChange={(value) =>
+        setFormData({
+          ...formData,
+          settore:
+            value === "__none__"
+              ? ""
+              : (value as "Fiscale" | "Lavoro" | "Consulenza"),
+        })
+      }
+    >
+      <SelectTrigger>
+        <SelectValue placeholder="Seleziona settore" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="__none__">Nessuno</SelectItem>
+        <SelectItem value="Fiscale">Fiscale</SelectItem>
+        <SelectItem value="Lavoro">Lavoro</SelectItem>
+        <SelectItem value="Consulenza">Consulenza</SelectItem>
+      </SelectContent>
+    </Select>
+  </div>
+
+  <div className="space-y-2">
+    <Label htmlFor="tipo_rapporto">Tipo di rapporto</Label>
+    <Select
+      value={formData.tipo_rapporto || "__none__"}
+      onValueChange={(value) =>
+        setFormData({
+          ...formData,
+          tipo_rapporto:
+            value === "__none__"
+              ? ""
+              : (value as "Dipendente" | "Collaboratore" | "Praticante" | "Socio"),
+        })
+      }
+    >
+      <SelectTrigger>
+        <SelectValue placeholder="Seleziona rapporto" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="__none__">Nessuno</SelectItem>
+        <SelectItem value="Dipendente">Dipendente</SelectItem>
+        <SelectItem value="Collaboratore">Collaboratore</SelectItem>
+        <SelectItem value="Praticante">Praticante</SelectItem>
+        <SelectItem value="Socio">Socio</SelectItem>
+      </SelectContent>
+    </Select>
+  </div>
+</div>
 
               <div className="flex flex-col gap-3 pt-2">
                 <div className="flex items-center space-x-2">
