@@ -185,7 +185,25 @@ function isOlderThan7Days(value: string | null | undefined): boolean {
 }
 
 function shouldSendDocumentRequest(r: Rapp): boolean {
-    r: Rapp
+  if (r.rappresentante_legale !== true) return false;
+  if (!r.email?.trim()) return false;
+  if (!r.microsoft_connection_id?.trim()) return false;
+
+  const hasValidDoc =
+    !!r.allegato_doc?.trim() && getScadenzaStatus(r.scadenza_doc) === "valid";
+
+  if (hasValidDoc) return false;
+
+  const alreadyRequestedRecently =
+    !!r.doc_richiesto_il && !isOlderThan7Days(r.doc_richiesto_il);
+
+  if (alreadyRequestedRecently) return false;
+
+  return true;
+}
+
+function getDocumentoFilterState(
+  r: Rapp
 ): "mancante" | "richiesto" | "presente" | "scaduto" {
   const hasDoc = !!r.allegato_doc?.trim();
   const scadenzaStatus = getScadenzaStatus(r.scadenza_doc);
