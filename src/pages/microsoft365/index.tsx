@@ -293,11 +293,17 @@ setIsAdmin(user.tipo_utente === "Admin");
     if (!uid || !connectionId) return;
 
     try {
-      const { data: tokenData, error: tokenErr } = await supabase
-        .from("tbmicrosoft365_user_tokens")
-        .select("connected_at, updated_at, revoked_at")
-        .eq("user_id", uid)
-        .eq("microsoft_connection_id", connectionId)
+     const response = await fetch(
+  `/api/microsoft365/status?connection_id=${encodeURIComponent(connectionId)}`
+);
+
+const result = await response.json();
+
+if (!response.ok || !result?.ok) {
+  throw new Error(result?.error || "Errore verifica connessione Microsoft");
+}
+
+const tokenData = result?.data || null;
         .maybeSingle();
 
       if (tokenErr) throw tokenErr;
