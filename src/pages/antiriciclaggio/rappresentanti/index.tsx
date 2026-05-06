@@ -635,7 +635,7 @@ for (const r of candidati) {
     <div className="p-3">
       <Card>
         <CardHeader className="flex flex-col gap-2 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle className="text-base">Antiriciclaggio • Rappresentanti</CardTitle>
+          <CardTitle className="text-base">ANTIRICICLAGGIO • RAPPRESENTANTI LEGALI</CardTitle>
 
           <div className="flex flex-wrap gap-2">
             <input
