@@ -650,7 +650,7 @@ for (const r of candidati) {
               type="button"
               variant="outline"
               disabled={importingVisura || !studioId}
-              className="h-9 px-3 text-sm"
+              className="h-9 px-3 text-sm bg-zinc-300 text-black hover:bg-zinc-400 border-zinc-400"
               onClick={() => fileInputRef.current?.click()}
             >
               {importingVisura ? "Importazione..." : "Importa visura"}
@@ -660,7 +660,7 @@ for (const r of candidati) {
               type="button"
               variant="outline"
               disabled={sendingMassivo || !studioId}
-              className="h-9 px-3 text-sm"
+              className="h-9 px-3 text-sm bg-zinc-300 text-black hover:bg-zinc-400 border-zinc-400"
               onClick={() => {
                 void handleInvioMassivoRichiesteDocumento();
               }}
@@ -670,7 +670,7 @@ for (const r of candidati) {
 
             <Button
               type="button"
-              className="h-9 px-3 text-sm"
+              className="h-9 px-3 text-sm bg-zinc-300 text-black hover:bg-zinc-400 border-zinc-400"
               onClick={() => router.push("/antiriciclaggio/rappresentanti/nuovo")}
             >
               Nuovo rappresentante
