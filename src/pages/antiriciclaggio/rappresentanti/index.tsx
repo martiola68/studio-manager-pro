@@ -9,6 +9,14 @@ import { sendRichiestaDocumentoRappresentante } from "@/services/rappresentantiD
 import { Eye, Pencil, Trash2 } from "lucide-react";
 
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+import {
   getMicrosoftConnectionsForUser,
   resolveMicrosoftConnectionId,
 } from "@/services/microsoftConnectionsService";
@@ -177,6 +185,25 @@ function isOlderThan7Days(value: string | null | undefined): boolean {
 }
 
 function shouldSendDocumentRequest(r: Rapp): boolean {
+    r: Rapp
+): "mancante" | "richiesto" | "presente" | "scaduto" {
+  const hasDoc = !!r.allegato_doc?.trim();
+  const scadenzaStatus = getScadenzaStatus(r.scadenza_doc);
+
+  if (hasDoc && scadenzaStatus === "valid") {
+    return "presente";
+  }
+
+  if (hasDoc && scadenzaStatus === "expired") {
+    return "scaduto";
+  }
+
+  if (r.doc_richiesto_il) {
+    return "richiesto";
+  }
+
+  return "mancante";
+}
   if (r.rappresentante_legale !== true) return false;
   if (!r.email?.trim()) return false;
   if (!r.microsoft_connection_id?.trim()) return false;
@@ -201,6 +228,9 @@ export default function RappresentantiIndexPage() {
   const [rows, setRows] = useState<Rapp[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
+  const [documentoFilter, setDocumentoFilter] = useState<
+  "tutti" | "mancante" | "richiesto" | "presente" | "scaduto"
+  >("tutti");
   const [importingVisura, setImportingVisura] = useState(false);
   const [sendingMassivo, setSendingMassivo] = useState(false);
 
@@ -325,17 +355,26 @@ const [loadingMicrosoftConnections, setLoadingMicrosoftConnections] = useState(f
     void loadRappresentanti();
   }, [studioId, loadRappresentanti]);
 
-  const filtered = useMemo(() => {
-    const s = q.trim().toLowerCase();
-    if (!s) return rows;
+ const filtered = useMemo(() => {
+  const s = q.trim().toLowerCase();
 
-    return rows.filter(
-      (r) =>
-        (r.nome_cognome || "").toLowerCase().includes(s) ||
-        (r.email || "").toLowerCase().includes(s) ||
-        (r.tipo_doc || "").toLowerCase().includes(s)
-    );
-  }, [rows, q]);
+  return rows.filter((r) => {
+    const matchSearch =
+      !s ||
+      (r.nome_cognome || "").toLowerCase().includes(s) ||
+      (r.email || "").toLowerCase().includes(s) ||
+      (r.tipo_doc || "").toLowerCase().includes(s);
+
+    const statoDocumento = getDocumentoFilterState(r);
+
+    const matchDocumento =
+      documentoFilter === "tutti"
+        ? true
+        : statoDocumento === documentoFilter;
+
+    return matchSearch && matchDocumento;
+  });
+}, [rows, q, documentoFilter]);
 
   async function handleOpenDoc(path: string) {
     try {
@@ -638,13 +677,31 @@ for (const r of candidati) {
         </CardHeader>
 
         <CardContent className="space-y-3 px-3 pb-3 pt-0">
-          <Input
-            placeholder="Cerca per cognome e nome, email, tipo documento..."
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            className="h-9 text-sm"
-          />
+        <div className="flex flex-col gap-2 md:flex-row">
+  <Input
+    placeholder="Cerca per cognome e nome, email, tipo documento..."
+    value={q}
+    onChange={(e) => setQ(e.target.value)}
+    className="h-9 text-sm"
+  />
 
+  <Select
+    value={documentoFilter}
+    onValueChange={(value: any) => setDocumentoFilter(value)}
+  >
+    <SelectTrigger className="h-9 w-[220px]">
+      <SelectValue placeholder="Filtro documento" />
+    </SelectTrigger>
+
+    <SelectContent>
+      <SelectItem value="tutti">Tutti i documenti</SelectItem>
+      <SelectItem value="mancante">Documento mancante</SelectItem>
+      <SelectItem value="richiesto">Documento richiesto</SelectItem>
+      <SelectItem value="presente">Documento presente</SelectItem>
+      <SelectItem value="scaduto">Documento scaduto</SelectItem>
+    </SelectContent>
+  </Select>
+</div>
           {loading ? (
             <div className="py-6 text-center text-sm text-muted-foreground">
               Caricamento elenco...
