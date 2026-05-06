@@ -116,7 +116,7 @@ const initialFormState: FormState = {
   scadenza_doc: "",
   allegato_doc: "",
   microsoft_connection_id: "",
-  rappresentante_legale: false,
+  rappresentante_legale: true,
 };
 
 /* =========================================================
@@ -160,7 +160,7 @@ const safeTipo: TipoDocumento =
     scadenza_doc: normalizeDateForInput(row?.scadenza_doc),
     allegato_doc: row?.allegato_doc ?? "",
     microsoft_connection_id: row?.microsoft_connection_id ?? "",
-    rappresentante_legale: row?.rappresentante_legale ?? false,
+    rappresentante_legale: true,
   };
 }
 
@@ -767,7 +767,7 @@ async function handleInviaRichiestaDocumento() {
             form.tipo_doc === "__NONE__" ? null : form.scadenza_doc || null,
           allegato_doc: form.allegato_doc || null,
           microsoft_connection_id: form.microsoft_connection_id || null,
-          rappresentante_legale: form.rappresentante_legale ?? false,
+          rappresentante_legale: true,
         };
 
         const url = isEditMode
@@ -951,15 +951,10 @@ async function handleInviaRichiestaDocumento() {
 
                 <div className="md:col-span-2 flex items-center gap-2 rounded-md border p-3">
                   <Checkbox
-                    id="rappresentante_legale"
-                    checked={form.rappresentante_legale}
-                    onCheckedChange={(checked) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        rappresentante_legale: checked === true,
-                      }))
-                    }
-                  />
+  id="rappresentante_legale"
+  checked={true}
+  disabled
+/>
                   <Label htmlFor="rappresentante_legale" className="cursor-pointer">
                     Rappresentante legale
                   </Label>
@@ -1187,6 +1182,10 @@ async function handleInviaRichiestaDocumento() {
                       {sendingPublicDoc ? "Invio..." : "Richiedi nuovo documento"}
                     </Button>
                   </div>
+
+                  <p className="text-xs text-muted-foreground">
+                    Formati supportati: PDF, JPG, PNG • Max 15 MB
+                    </p>
 
                   {publicDocUrl && (
                     <div className="pt-1">
