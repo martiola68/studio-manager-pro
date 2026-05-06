@@ -49,9 +49,7 @@ function toIsoDate(date: string | null | undefined): string | null {
   }
 
   const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (isoMatch) {
-    return trimmed;
-  }
+  if (isoMatch) return trimmed;
 
   return null;
 }
@@ -65,22 +63,6 @@ function normalizeRole(value: string | null | undefined): string {
     .trim();
 }
 
-function isRappresentanteLegaleRole(value: string | null | undefined): boolean {
-  const role = normalizeRole(value);
-  if (!role) return false;
-
-  const labels = [
-    "amministratore delegato",
-    "amministratrice delegata",
-    "presidente del consiglio di amministrazione",
-    "amministratore unico",
-    "amministratore",
-    "liquidatore",
-  ];
-
-  return labels.some((label) => role.includes(label));
-}
-
 function getSubjectRole(subject: any): string | null {
   return (
     subject?.qualifica ||
@@ -92,15 +74,34 @@ function getSubjectRole(subject: any): string | null {
   );
 }
 
+function isAmministratoreRole(value: string | null | undefined): boolean {
+  const role = normalizeRole(value);
+  if (!role) return false;
+
+  const labels = [
+    "amministratore unico",
+    "amministratrice unica",
+    "amministratore delegato",
+    "amministratrice delegata",
+    "presidente del consiglio di amministrazione",
+    "presidente",
+    "amministratore",
+    "amministratrice",
+    "liquidatore",
+    "rappresentante dell'impresa",
+    "rappresentante dell impresa",
+  ];
+
+  return labels.some((label) => role.includes(label));
+}
+
 async function getComuneFromCFServer(
   supabase: any,
   codiceFiscale: string
 ): Promise<{ comune: string; nazionalita: string } | null> {
   const cf = normalizeCF(codiceFiscale);
 
-  if (!cf || cf.length !== 16 || !isValidCF(cf)) {
-    return null;
-  }
+  if (!cf || cf.length !== 16 || !isValidCF(cf)) return null;
 
   const codiceCatastale = extractCodiceCatastaleFromCF(cf);
   if (!codiceCatastale) return null;
@@ -165,7 +166,6 @@ async function readJsonBody(req: NextApiRequest): Promise<any> {
   }
 
   const raw = Buffer.concat(chunks).toString("utf8");
-
   if (!raw.trim()) return null;
 
   return JSON.parse(raw);
@@ -190,48 +190,178 @@ async function buildRowsToInsert(
         indirizzo_residenza: subject.indirizzo_residenza || null,
         nazionalita: enriched.nazionalita,
         CAP: subject.CAP || subject.cap || null,
-        rappresentante_legale:
-          subject.rappresentante_legale ??
-          isRappresentanteLegaleRole(getSubjectRole(subject)),
+        rappresentante_legale: true,
       };
     })
   );
 }
 
+async function insertSelectedAmministratori(
+  supabase: any,
+  studioId: string,
+  subjects: any[]
+) {
+  const validi = subjects.filter(
+    (item: any) => !!item.codice_fiscale && !!String(item.codice_fiscale).trim()
+  );
+
+  const unici = dedupeByCodiceFiscale(
+    validi.map((item: any) => ({
+      ...item,
+      codice_fiscale: normalizeCF(item.codice_fiscale || ""),
+    }))
+  );
+
+  const cfList = unici
+    .map((item: any) => normalizeCF(item.codice_fiscale || ""))
+    .filter(Boolean);
+
+  let existingSet = new Set<string>();
+
+  if (cfList.length > 0) {
+    const { data: existingRows, error: existingError } = await supabase
+      .from("rapp_legali")
+      .select("codice_fiscale")
+      .eq("studio_id", studioId)
+      .in("codice_fiscale", cfList);
+
+    if (existingError) throw existingError;
+
+    existingSet = new Set(
+      (existingRows || [])
+        .map((row: any) => normalizeCF(row.codice_fiscale || ""))
+        .filter(Boolean)
+    );
+  }
+
+  const daInserire = unici.filter(
+    (item: any) => !existingSet.has(normalizeCF(item.codice_fiscale || ""))
+  );
+
+  const rowsToInsert = await buildRowsToInsert(supabase, studioId, daInserire);
+
+  let inserted = 0;
+
+  if (rowsToInsert.length > 0) {
+    const { data: insertedRows, error: insertError } = await supabase
+      .from("rapp_legali")
+      .insert(rowsToInsert)
+      .select("id");
+
+    if (insertError) throw insertError;
+
+    inserted = insertedRows?.length || rowsToInsert.length;
+  }
+
+  return {
+    inserted,
+    duplicates: unici.length - daInserire.length,
+    skipped: subjects.length - validi.length,
+    validi: validi.length,
+    unici: unici.length,
+  };
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   console.log("API import-visura-rappresentanti chiamata:", req.method);
 
- if (req.method !== "POST") {
-  return res.status(405).json({ error: "Metodo non consentito" });
-}
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Metodo non consentito" });
+  }
 
-try {
-  const contentType = req.headers["content-type"] || "";
+  try {
+    const contentType = req.headers["content-type"] || "";
+    const supabase = getServerSupabase() as any;
 
-  if (contentType.includes("application/json")) {
-    const body = await readJsonBody(req);
+    if (contentType.includes("application/json")) {
+      const body = await readJsonBody(req);
 
-    const studioId = body?.studioId;
-    const conferma = body?.conferma === true;
-    const rappresentanti = Array.isArray(body?.rappresentanti)
-      ? body.rappresentanti
-      : [];
+      const studioId = body?.studioId;
+      const conferma = body?.conferma === true;
+      const rappresentanti = Array.isArray(body?.rappresentanti)
+        ? body.rappresentanti
+        : [];
 
-    if (!conferma) {
-      return res.status(400).json({ error: "conferma mancante" });
+      if (!conferma) {
+        return res.status(400).json({ error: "conferma mancante" });
+      }
+
+      if (!studioId || typeof studioId !== "string") {
+        return res.status(400).json({ error: "studioId mancante" });
+      }
+
+      if (rappresentanti.length === 0) {
+        return res
+          .status(400)
+          .json({ error: "Nessun amministratore selezionato" });
+      }
+
+      const result = await insertSelectedAmministratori(
+        supabase,
+        studioId,
+        rappresentanti
+      );
+
+      return res.status(200).json({
+        ok: true,
+        inserted: result.inserted,
+        duplicates: result.duplicates,
+        skipped: result.skipped,
+        stats: {
+          selezionati: rappresentanti.length,
+          validiConCodiceFiscale: result.validi,
+          uniciPerCodiceFiscale: result.unici,
+          giaPresentiInArchivio: result.duplicates,
+          inseriti: result.inserted,
+          scartatiSenzaCodiceFiscale: result.skipped,
+        },
+      });
     }
+
+    const { fields, files } = await new Promise<{
+      fields: formidable.Fields;
+      files: formidable.Files;
+    }>((resolve, reject) => {
+      const form = formidable({ multiples: false });
+
+      form.parse(req, (err, fields, files) => {
+        if (err) reject(err);
+        else resolve({ fields, files });
+      });
+    });
+
+    const studioId = Array.isArray(fields.studioId)
+      ? fields.studioId[0]
+      : fields.studioId;
+
+    const uploadedFile = Array.isArray(files.file) ? files.file[0] : files.file;
 
     if (!studioId || typeof studioId !== "string") {
       return res.status(400).json({ error: "studioId mancante" });
     }
 
-    if (rappresentanti.length === 0) {
-      return res.status(400).json({ error: "Nessun rappresentante selezionato" });
+    if (!uploadedFile?.filepath) {
+      return res.status(400).json({ error: "File PDF mancante" });
     }
 
-    const supabase = getServerSupabase() as any;
+    const previewMode =
+      (Array.isArray(fields.preview) ? fields.preview[0] : fields.preview) ===
+      "true";
 
-    const validi = rappresentanti.filter(
+    const buffer = fs.readFileSync(uploadedFile.filepath);
+    const text = await extractTextFromPdfBuffer(buffer);
+
+    const parsed = parseVisuraRappresentanti(text);
+
+    const amministratori = parsed.filter((item: any) =>
+      isAmministratoreRole(getSubjectRole(item))
+    );
+
+    const scartatiSenzaCf = amministratori.filter(
+      (item: any) => !item.codice_fiscale || !String(item.codice_fiscale).trim()
+    );
+
+    const validi = amministratori.filter(
       (item: any) => !!item.codice_fiscale && !!String(item.codice_fiscale).trim()
     );
 
@@ -242,9 +372,11 @@ try {
       }))
     );
 
+    const duplicatiInterniPdf = validi.length - unici.length;
+
     const cfList = unici
       .map((item: any) => normalizeCF(item.codice_fiscale || ""))
-      .filter(Boolean);
+      .filter((cf: unknown): cf is string => !!cf && typeof cf === "string");
 
     let existingSet = new Set<string>();
 
@@ -264,140 +396,6 @@ try {
       );
     }
 
-    const daInserire = unici.filter(
-      (item: any) => !existingSet.has(normalizeCF(item.codice_fiscale || ""))
-    );
-
-    const rowsToInsert = await buildRowsToInsert(
-      supabase,
-      studioId,
-      daInserire
-    );
-
-    let inserted = 0;
-
-    if (rowsToInsert.length > 0) {
-      const { data: insertedRows, error: insertError } = await supabase
-        .from("rapp_legali")
-        .insert(rowsToInsert)
-        .select("id");
-
-      if (insertError) throw insertError;
-
-      inserted = insertedRows?.length || rowsToInsert.length;
-    }
-
-    return res.status(200).json({
-      ok: true,
-      inserted,
-      duplicates: unici.length - daInserire.length,
-      skipped: rappresentanti.length - validi.length,
-      stats: {
-        selezionati: rappresentanti.length,
-        validiConCodiceFiscale: validi.length,
-        uniciPerCodiceFiscale: unici.length,
-        giaPresentiInArchivio: unici.length - daInserire.length,
-        inseriti: inserted,
-        scartatiSenzaCodiceFiscale: rappresentanti.length - validi.length,
-      },
-    });
-  }
-    const { fields, files } = await new Promise<{
-      fields: formidable.Fields;
-      files: formidable.Files;
-    }>((resolve, reject) => {
-      const form = formidable({ multiples: false });
-
-      form.parse(req, (err, fields, files) => {
-        if (err) reject(err);
-        else resolve({ fields, files });
-      });
-    });
-
-    const studioId = Array.isArray(fields.studioId) ? fields.studioId[0] : fields.studioId;
-    const uploadedFile = Array.isArray(files.file) ? files.file[0] : files.file;
-
-    if (!studioId || typeof studioId !== "string") {
-      return res.status(400).json({ error: "studioId mancante" });
-    }
-
-    if (!uploadedFile?.filepath) {
-      return res.status(400).json({ error: "File PDF mancante" });
-    }
-
-    const buffer = fs.readFileSync(uploadedFile.filepath);
-    const text = await extractTextFromPdfBuffer(buffer);
-
-    console.log("=== TESTO ESTRATTO INIZIO ===");
-    console.log(text?.slice(0, 12000));
-    console.log("=== TESTO ESTRATTO FINE ===");
-
-    const parsed = parseVisuraRappresentanti(text);
-
-    console.log(
-      "=== DATE PARSER DEBUG ===",
-      parsed.map((x: any) => ({
-        nome: x.nome_cognome,
-        cf: x.codice_fiscale,
-        data_nascita: x.data_nascita,
-        ruolo: getSubjectRole(x),
-        rappresentante_legale: isRappresentanteLegaleRole(getSubjectRole(x)),
-      }))
-    );
-
-    console.log("=== SOGGETTI PARSATI RAW ===");
-    console.log(JSON.stringify(parsed, null, 2));
-
-    const supabase = getServerSupabase() as any;
-
-    const scartatiSenzaCf = parsed.filter(
-      (item: any) => !item.codice_fiscale || !String(item.codice_fiscale).trim()
-    );
-
-    const validi = parsed.filter(
-      (item: any) => !!item.codice_fiscale && !!String(item.codice_fiscale).trim()
-    );
-
-    const unici = dedupeByCodiceFiscale(
-      validi.map((item: any) => ({
-        ...item,
-        codice_fiscale: normalizeCF(item.codice_fiscale || ""),
-      }))
-    );
-
-    const duplicatiInterniPdf = validi.length - unici.length;
-
-    console.log("=== SOGGETTI VALIDI ===");
-    console.log(JSON.stringify(validi, null, 2));
-
-    console.log("=== SOGGETTI UNICI PER CF ===");
-    console.log(JSON.stringify(unici, null, 2));
-
-    const cfList = unici
-      .map((item: any) => normalizeCF(item.codice_fiscale || ""))
-      .filter((cf: unknown): cf is string => !!cf && typeof cf === "string");
-
-    let existingSet = new Set<string>();
-
-    if (cfList.length > 0) {
-      const { data: existingRows, error: existingError } = await supabase
-        .from("rapp_legali")
-        .select("codice_fiscale")
-        .in("codice_fiscale", cfList);
-
-      if (existingError) {
-        throw existingError;
-      }
-
-      existingSet = new Set(
-        (existingRows || [])
-          .map((row: { codice_fiscale?: string | null }) =>
-            normalizeCF(row.codice_fiscale || "")
-          )
-          .filter(Boolean)
-      );
-    }
-
     const giaPresenti = unici.filter((item: any) =>
       existingSet.has(normalizeCF(item.codice_fiscale || ""))
     );
@@ -406,127 +404,67 @@ try {
       (item: any) => !existingSet.has(normalizeCF(item.codice_fiscale || ""))
     );
 
-  const previewMode =
-  (Array.isArray(fields.preview) ? fields.preview[0] : fields.preview) === "true";
+    if (previewMode) {
+      return res.status(200).json({
+        ok: true,
+        preview: true,
+        rappresentanti: unici.map((item: any) => {
+          const cf = normalizeCF(item.codice_fiscale || "");
+          const giaPresente = existingSet.has(cf);
 
-if (previewMode) {
-  return res.status(200).json({
-    ok: true,
-    preview: true,
-    rappresentanti: unici.map((item: any) => {
-      const cf = normalizeCF(item.codice_fiscale || "");
-      const giaPresente = existingSet.has(cf);
-
-      return {
-        ...item,
-        codice_fiscale: cf,
-        selected: !giaPresente,
-        gia_presente: giaPresente,
-        rappresentante_legale: isRappresentanteLegaleRole(getSubjectRole(item)),
-      };
-    }),
-    duplicates: giaPresenti.length,
-    skipped: scartatiSenzaCf.length,
-    totalFound: parsed.length,
-    stats: {
-      trovatiNelPdf: parsed.length,
-      validiConCodiceFiscale: validi.length,
-      uniciPerCodiceFiscale: unici.length,
-      duplicatiInterniPdf,
-      giaPresentiInArchivio: giaPresenti.length,
-      daImportare: daInserire.length,
-      scartatiSenzaCodiceFiscale: scartatiSenzaCf.length,
-    },
-  });
-}
-    duplicates: giaPresenti.length,
-    skipped: scartatiSenzaCf.length,
-    totalFound: parsed.length,
-    stats: {
-      trovatiNelPdf: parsed.length,
-      validiConCodiceFiscale: validi.length,
-      uniciPerCodiceFiscale: unici.length,
-      duplicatiInterniPdf,
-      giaPresentiInArchivio: giaPresenti.length,
-      daImportare: daInserire.length,
-      scartatiSenzaCodiceFiscale: scartatiSenzaCf.length,
-    },
-  });
-}
-
-    console.log("=== GIA PRESENTI ===");
-    console.log(JSON.stringify(giaPresenti, null, 2));
-
-    console.log("=== DA INSERIRE ===");
-    console.log(JSON.stringify(daInserire, null, 2));
-
-    console.log(
-      "=== DATE DEBUG ===",
-      daInserire.map((x: any) => ({
-        nome: x.nome_cognome,
-        cf: normalizeCF(x.codice_fiscale || ""),
-        originale: x.data_nascita,
-        convertita: toIsoDate(x.data_nascita),
-        da_cf: extractDataNascitaFromCF(normalizeCF(x.codice_fiscale || "")),
-        ruolo: getSubjectRole(x),
-        rappresentante_legale: isRappresentanteLegaleRole(getSubjectRole(x)),
-      }))
-    );
-
- const rowsToInsert = await buildRowsToInsert(
-  supabase,
-  studioId,
-  daInserire
-);
-    console.log("=== ROWS TO INSERT ===");
-    console.log(JSON.stringify(rowsToInsert, null, 2));
-
-    let inserted = 0;
-
-    if (rowsToInsert.length > 0) {
-      const { data: insertedRows, error: insertError } = await supabase
-        .from("rapp_legali")
-        .insert(rowsToInsert)
-        .select("id");
-
-      if (insertError) {
-        throw insertError;
-      }
-
-      inserted = insertedRows?.length || rowsToInsert.length;
+          return {
+            ...item,
+            codice_fiscale: cf,
+            tipo_soggetto: "amministratore",
+            selected: !giaPresente,
+            gia_presente: giaPresente,
+            rappresentante_legale: true,
+          };
+        }),
+        duplicates: giaPresenti.length,
+        skipped: scartatiSenzaCf.length,
+        totalFound: amministratori.length,
+        stats: {
+          trovatiNelPdf: amministratori.length,
+          validiConCodiceFiscale: validi.length,
+          uniciPerCodiceFiscale: unici.length,
+          duplicatiInterniPdf,
+          giaPresentiInArchivio: giaPresenti.length,
+          daImportare: daInserire.length,
+          scartatiSenzaCodiceFiscale: scartatiSenzaCf.length,
+        },
+      });
     }
+
+    const result = await insertSelectedAmministratori(
+      supabase,
+      studioId,
+      daInserire
+    );
 
     return res.status(200).json({
       ok: true,
       message: "Import completato",
-      inserted,
-      duplicates: giaPresenti.length,
-      skipped: scartatiSenzaCf.length,
-      totalFound: parsed.length,
+      inserted: result.inserted,
+      duplicates: result.duplicates,
+      skipped: result.skipped,
+      totalFound: amministratori.length,
       stats: {
-        trovatiNelPdf: parsed.length,
-        validiConCodiceFiscale: validi.length,
-        uniciPerCodiceFiscale: unici.length,
+        trovatiNelPdf: amministratori.length,
+        validiConCodiceFiscale: result.validi,
+        uniciPerCodiceFiscale: result.unici,
         duplicatiInterniPdf,
-        giaPresentiInArchivio: giaPresenti.length,
-        inseriti: inserted,
-        scartatiSenzaCodiceFiscale: scartatiSenzaCf.length,
-      },
-      debug: {
-        parsed,
-        validi,
-        unici,
-        giaPresenti,
-        daInserire,
-        scartatiSenzaCf,
-        rowsToInsert,
+        giaPresentiInArchivio: result.duplicates,
+        inseriti: result.inserted,
+        scartatiSenzaCodiceFiscale: result.skipped,
       },
     });
   } catch (error: any) {
     console.error("Errore import visura rappresentanti:", error);
 
     return res.status(500).json({
-      error: error?.message || "Errore durante importazione visura rappresentanti",
+      error:
+        error?.message || "Errore durante importazione visura rappresentanti",
     });
   }
 }
