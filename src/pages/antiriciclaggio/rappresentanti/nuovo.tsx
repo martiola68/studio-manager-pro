@@ -557,44 +557,60 @@ export default function NuovoRappresentantePage() {
     }
   }
 
-  async function handleUploadDoc(file: File) {
-    if (!studioId) {
-      setErrMsg("studio_id non disponibile: impossibile caricare il documento.");
-      return;
-    }
+async function handleUploadDoc(file: File) {
+  if (!studioId) {
+    setErrMsg("studio_id non disponibile: impossibile caricare il documento.");
+    return;
+  }
 
-    setUploading(true);
-    setErrMsg(null);
-    setOkMsg(null);
+  const MAX_SIZE = 15 * 1024 * 1024; // 15 MB
 
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("studio_id", studioId);
+  if (file.size > MAX_SIZE) {
+    setErrMsg("File troppo grande. Dimensione massima consentita: 15 MB.");
+    return;
+  }
 
-      const response = await fetch("/api/rapp-legali/upload", {
-        method: "POST",
-        body: formData,
+  const allowedTypes = ["application/pdf", "image/jpeg", "image/png"];
+
+  if (!allowedTypes.includes(file.type)) {
+    setErrMsg("Formato non supportato. Carica PDF, JPG o PNG.");
+    return;
+  }
+
+  setUploading(true);
+  setErrMsg(null);
+  setOkMsg(null);
+
+  try {
+    const supabase = getSupabaseClient() as any;
+
+    const ext = file.name.split(".").pop()?.toLowerCase() || "pdf";
+    const path = `${studioId}/rapp-legali/${crypto.randomUUID()}.${ext}`;
+
+    const { error } = await supabase.storage
+      .from(BUCKET_NAME)
+      .upload(path, file, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: file.type,
       });
 
-      const result = await response.json();
-
-      if (!response.ok || !result?.ok) {
-        throw new Error(result?.error || "Errore upload documento");
-      }
-
-      setForm((prev) => ({
-        ...prev,
-        allegato_doc: result.path || "",
-      }));
-
-      setOkMsg("✅ Documento allegato.");
-    } catch (error: any) {
-      setErrMsg(error?.message || "Errore upload documento");
-    } finally {
-      setUploading(false);
+    if (error) {
+      throw error;
     }
+
+    setForm((prev) => ({
+      ...prev,
+      allegato_doc: path,
+    }));
+
+    setOkMsg("✅ Documento allegato.");
+  } catch (error: any) {
+    setErrMsg(error?.message || "Errore upload documento");
+  } finally {
+    setUploading(false);
   }
+}
 
  async function handleOpenDoc() {
   if (!form.allegato_doc) return;
