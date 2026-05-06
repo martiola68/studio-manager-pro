@@ -32,7 +32,13 @@ type RappPreview = {
   nome_cognome: string;
   codice_fiscale?: string | null;
   qualifica?: string | null;
-  tipo_soggetto: "amministratore" | "socio";
+
+  tipo_soggetto: "amministratore";
+
+  rappresentante_legale?: boolean;
+
+  gia_presente?: boolean;
+
   selected: boolean;
 };
 
@@ -425,14 +431,16 @@ async function handleImportVisura(e: React.ChangeEvent<HTMLInputElement>) {
     }
 
     setPreviewRows(
-      rows.map((r: any) => ({
-        nome_cognome: r.nome_cognome || "",
-        codice_fiscale: r.codice_fiscale || null,
-        qualifica: r.qualifica || null,
-        tipo_soggetto: r.tipo_soggetto || "amministratore",
-        selected: true,
-      }))
-    );
+  rows.map((r: any) => ({
+    nome_cognome: r.nome_cognome || "",
+    codice_fiscale: r.codice_fiscale || null,
+    qualifica: r.qualifica || null,
+    tipo_soggetto: "amministratore",
+    selected: r.selected !== false,
+    gia_presente: r.gia_presente === true,
+    rappresentante_legale: true,
+  }))
+);
 
     setPreviewStats(result?.stats || null);
     setPreviewOpen(true);
@@ -450,8 +458,14 @@ async function handleImportVisura(e: React.ChangeEvent<HTMLInputElement>) {
     return;
   }
 
-  const selected = previewRows.filter((r) => r.selected);
-
+ const selected = previewRows
+  .filter((r) => r.selected)
+  .map((r) => ({
+    ...r,
+    nome_cognome: String(r.nome_cognome || "").trim(),
+    rappresentante_legale: true,
+  }))
+  .filter((r) => r.nome_cognome);
   if (selected.length === 0) {
     alert("Seleziona almeno un rappresentante da importare.");
     return;
@@ -800,11 +814,24 @@ for (const r of candidati) {
             />
 
             <div className="flex-1">
-              <div className="font-medium">{r.nome_cognome || "-"}</div>
+             <Input
+  value={r.nome_cognome || ""}
+  onChange={(e) =>
+    setPreviewRows((prev) =>
+      prev.map((item, i) =>
+        i === index
+          ? { ...item, nome_cognome: e.target.value }
+          : item
+      )
+    )
+  }
+  className="h-8 font-medium"
+/>
               <div className="text-sm text-muted-foreground">
-                {r.codice_fiscale || "CF mancante"} •{" "}
-                {r.qualifica || r.tipo_soggetto}
-              </div>
+  {r.codice_fiscale || "CF mancante"} •{" "}
+  {r.qualifica || r.tipo_soggetto} • Rappresentante legale: SI
+  {r.gia_presente ? " • già presente" : ""}
+</div>
             </div>
           </div>
         ))}
