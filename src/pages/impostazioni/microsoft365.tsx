@@ -165,11 +165,15 @@ export default function Microsoft365Settings() {
     if (!uid) return;
 
     try {
-      const { data: tokenData, error: tokenErr } = await (supabase as any)
-  .from("tbmicrosoft365_user_tokens")
-  .select("connected_at, updated_at, revoked_at")
-  .eq("user_id", uid)
-  .maybeSingle();
+  const response = await fetch("/api/microsoft365/status");
+
+const result = await response.json();
+
+if (!response.ok || !result?.ok) {
+  throw new Error(result?.error || "Errore verifica connessione Microsoft");
+}
+
+const tokenData = result?.data || null;
 
       if (tokenErr) throw tokenErr;
 
