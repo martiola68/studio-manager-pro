@@ -304,9 +304,6 @@ if (!response.ok || !result?.ok) {
 }
 
 const tokenData = result?.data || null;
-        .maybeSingle();
-
-      if (tokenErr) throw tokenErr;
 
       const connected = !!tokenData?.connected_at && !tokenData?.revoked_at;
 
