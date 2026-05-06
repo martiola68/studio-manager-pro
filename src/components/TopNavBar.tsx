@@ -302,7 +302,7 @@ export function TopNavBar() {
       icon: <Users className="h-4 w-4" />,
       children: [
         { label: "Clienti", href: "/clienti", icon: null },
-        { label: "Rappresentanti e soci", href: "/antiriciclaggio/rappresentanti", icon: null },
+        { label: "Rappresentanti legali", href: "/antiriciclaggio/rappresentanti", icon: null },
       ],
     },
 
