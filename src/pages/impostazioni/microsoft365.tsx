@@ -175,8 +175,6 @@ if (!response.ok || !result?.ok) {
 
 const tokenData = result?.data || null;
 
-      if (tokenErr) throw tokenErr;
-
       if (tokenData) {
         setUserConnection({
           isConnected: true,
