@@ -222,22 +222,6 @@ function getDocumentoFilterState(
 
   return "mancante";
 }
-  if (r.rappresentante_legale !== true) return false;
-  if (!r.email?.trim()) return false;
-  if (!r.microsoft_connection_id?.trim()) return false;
-
-  const hasValidDoc =
-    !!r.allegato_doc?.trim() && getScadenzaStatus(r.scadenza_doc) === "valid";
-
-  if (hasValidDoc) return false;
-
-  const alreadyRequestedRecently =
-    !!r.doc_richiesto_il && !isOlderThan7Days(r.doc_richiesto_il);
-
-  if (alreadyRequestedRecently) return false;
-
-  return true;
-}
 
 export default function RappresentantiIndexPage() {
   const router = useRouter();
