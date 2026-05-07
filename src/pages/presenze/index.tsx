@@ -92,6 +92,8 @@ function getBrowserSupabaseClient() {
 const DEFAULT_WORKDAY_CODE = 'Pp';
 const DEFAULT_NON_WORKDAY_CODE = 'N';
 
+const MIN_MONTH_INDEX = 3; // Aprile = 3
+
 const MONTHS = [
   'Gennaio',
   'Febbraio',
@@ -152,6 +154,13 @@ function getDefaultCode(day: DayInfo) {
 function getTodayKey() {
   const today = new Date();
   return toDateKey(today.getFullYear(), today.getMonth(), today.getDate());
+}
+
+function isBeforeEnabledPeriod(year: number, monthIndex: number) {
+  return (
+    year < MIN_YEAR ||
+    (year === MIN_YEAR && monthIndex < MIN_MONTH_INDEX)
+  );
 }
 
 function summarize(codes: string[]): RowSummary {
@@ -283,6 +292,8 @@ const requiredOrder = [
   }, [codici]);
 
   const isResponsabilePaghe = Boolean(currentUser?.responsabile_paghe);
+
+  const isLockedPeriod = isBeforeEnabledPeriod(year, monthIndex);
 
   const loadData = useCallback(async () => {
     if (typeof window === 'undefined') return;
@@ -574,11 +585,25 @@ if (overLimitEmployee) {
             <Button variant="outline" onClick={exportCsv} disabled={loading || dipendenti.length === 0}>
               Export CSV
             </Button>
-            <Button onClick={saveMonth} disabled={loading || saving || dipendenti.length === 0}>
+            <Button
+  onClick={saveMonth}
+  disabled={
+    loading ||
+    saving ||
+    dipendenti.length === 0 ||
+    isLockedPeriod
+  }
+>
               {saving ? 'Salvataggio...' : 'Salva mese'}
             </Button>
           </div>
         </div>
+
+        {isLockedPeriod && (
+  <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+    La gestione presenze è attiva solo a partire da Aprile 2026.
+  </div>
+)}
 
         <Card>
           <CardHeader className="pb-3">
@@ -716,7 +741,8 @@ if (overLimitEmployee) {
                             const code = getCode(dipendente.id, day);
                             return (
                               <TableCell key={`${dipendente.id}-${day.date}`} className="p-1 text-center">
-                                <select
+                               <select
+                                  disabled={isLockedPeriod}
                                   value={code}
                                   onChange={(event) => handleChange(dipendente.id, day.date, event.target.value)}
                                   title={day.holidayDescription}
