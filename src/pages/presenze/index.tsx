@@ -406,7 +406,7 @@ const requiredOrder = [
       .eq('attivo', true)
       .order('cognome', { ascending: true })
       .order('nome', { ascending: true })
- : supabase
+: supabase
     .from('tbdipendenti')
     .select(`
       id,
@@ -430,9 +430,9 @@ const requiredOrder = [
       attivo
     `)
     .eq('studio_id', typedUser.studio_id)
-    .eq('attivo', true)
-    .or(`utente_id.eq.${typedUser.id},email.eq.${typedUser.email}`);
-
+    .eq('utente_id', typedUser.id)
+    .eq('attivo', true);
+      
       const [codiciResult, festivitaResult, dipendentiResult] = (await Promise.all([
         codiciQuery,
         festivitaQuery,
@@ -451,6 +451,10 @@ const requiredOrder = [
       setCodici((codiciResult.data ?? []) as CodicePresenza[]);
       setFestivita((festivitaResult.data ?? []) as Festivita[]);
       setDipendenti(loadedDipendenti);
+
+      console.log('PRESENZE typedUser', typedUser);
+      console.log('PRESENZE dipendentiResult', dipendentiResult);
+      console.log('PRESENZE loadedDipendenti', loadedDipendenti);
 
       const employeeIds = loadedDipendenti.map((item) => item.utente_id);
       if (employeeIds.length === 0) {
