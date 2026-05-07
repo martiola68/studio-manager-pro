@@ -341,6 +341,22 @@ export function TopNavBar() {
         icon: <RefreshCcw className="h-4 w-4" />,
       },
     ],
+    },
+  {
+    label: "Impostazioni",
+    icon: <Settings className="h-4 w-4" />,
+    adminOnly: true,
+    children: [
+      { label: "Utenti", href: "/impostazioni/utenti", icon: <Users className="h-4 w-4" /> },
+      { label: "Dati Studio", href: "/impostazioni/studio", icon: <Building2 className="h-4 w-4" /> },
+      { label: "Ruoli", href: "/impostazioni/ruoli", icon: <Settings className="h-4 w-4" /> },
+      { label: "Prestazioni", href: "/impostazioni/prestazioni", icon: <Settings className="h-4 w-4" /> },
+      { label: "Scadenzari", href: "/impostazioni/scadenzari", icon: <Settings className="h-4 w-4" /> },
+      { label: "Tipi Scadenze", href: "/impostazioni/tipi-scadenze", icon: <Settings className="h-4 w-4" /> },
+      { label: "Tipo Promemoria", href: "/impostazioni/tipo-promemoria", icon: <Settings className="h-4 w-4" /> },
+    ],
+  },
+];
    const isExactRoute = (href?: string) => {
     if (!href) return false;
     return currentRoute === href;
