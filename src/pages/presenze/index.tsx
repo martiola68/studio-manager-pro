@@ -37,6 +37,7 @@ type Dipendente = {
   id: string;
   studio_id: string;
   utente_id: string;
+   codice_ditta: string | null;
   codice_dipendente: string | null;
   matricola_paghe: string | null;
   nome: string | null;
@@ -498,6 +499,7 @@ const requiredOrder = [
         id,
         studio_id,
         utente_id,
+        codice_ditta,
         codice_dipendente,
         matricola_paghe,
         nome,
@@ -525,6 +527,7 @@ const requiredOrder = [
       id,
       studio_id,
       utente_id,
+      codice_ditta,
       codice_dipendente,
       matricola_paghe,
       nome,
