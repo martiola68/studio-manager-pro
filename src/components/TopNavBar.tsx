@@ -264,7 +264,7 @@ export function TopNavBar() {
         { label: "Fiscali", href: "/scadenze/fiscali", icon: null },
         { label: "Bilanci", href: "/scadenze/bilanci", icon: null },
         { label: "770", href: "/scadenze/modello-770", icon: null },
-        { label: "LIPE", href: "/scadenze/lipe", icon: null },
+        { label: "LIQUIDAZIONI IVA - LIPE", href: "/scadenze/lipe", icon: null },
         { label: "Esterometro", href: "/scadenze/esterometro", icon: null },
         { label: "Affitti", href: "/scadenze/affitti", icon: null },
         { label: "Proforma", href: "/scadenze/proforma", icon: null },
