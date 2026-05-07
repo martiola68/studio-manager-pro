@@ -16,9 +16,11 @@ const utentiSelect = `
   created_at,
   updated_at,
   responsabile,
+  responsabile_paghe,
   studio_id,
   settore,
-  microsoft_connection_id
+  microsoft_connection_id,
+  tipo_rapporto
 `;
 
 export const utenteService = {
@@ -38,7 +40,7 @@ export const utenteService = {
       throw error;
     }
 
-    return (data ?? []) as Utente[];
+   return (data ?? []) as unknown as Utente[];
   },
 
   async getUtenteById(id: string): Promise<Utente | null> {
