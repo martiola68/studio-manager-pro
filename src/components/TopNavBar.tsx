@@ -431,6 +431,18 @@ export function TopNavBar() {
             {item.children?.map((child) => {
               const childActive = isActive(child);
 
+          const childShowMessaggiBadge =
+  child.label === "Messaggi" && messaggiNonLetti > 0;
+
+const childShowPromemoriaRicevutiBadge =
+  child.label === "Promemoria" && promemoriaRicevuti > 0;
+
+const childShowPromemoriaAlert =
+  child.label === "Promemoria" && promemoriaAttivi > 0;
+
+const childShowAgendaBadge =
+  child.label === "Agenda" && eventiImminenti > 0;
+
               return (
                 <DropdownMenuItem key={child.label} asChild>
                   <Link
