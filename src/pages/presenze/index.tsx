@@ -237,49 +237,64 @@ export default function PresenzePage() {
       const email = sessionData.session?.user?.email;
       if (!email) throw new Error('Sessione non trovata. Effettua nuovamente il login.');
 
-      const { data: user, error: userError } = await supabase
+      const userQuery = supabase
         .from('tbutenti')
         .select('id, studio_id, nome, cognome, email, tipo_rapporto, responsabile_paghe, attivo')
         .eq('email', email)
         .eq('attivo', true)
         .single();
 
+      const { data: user, error: userError } = (await userQuery) as unknown as {
+        data: Utente | null;
+        error: Error | null;
+      };
+
       if (userError) throw userError;
       if (!user) throw new Error('Utente non trovato in tbutenti.');
 
-      const typedUser = user as Utente;
+      const typedUser = user;
       if (typedUser.tipo_rapporto !== 'Dipendente') {
         throw new Error('Il modulo presenze è disponibile solo per utenti con rapporto Dipendente.');
       }
 
       setCurrentUser(typedUser);
 
-      const [codiciResult, festivitaResult, dipendentiResult] = await Promise.all([
-        supabase
-          .from('tbpresenze_codici')
-          .select('codice, descrizione, tipo, ordine, attivo')
-          .eq('attivo', true)
-          .order('ordine', { ascending: true }),
-        supabase
-          .from('tbfestivita')
-          .select('data_festivita, descrizione, tipo')
-          .gte('data_festivita', startDate)
-          .lte('data_festivita', endDate)
-          .in('tipo', ['nazionale', 'aziendale']),
-        typedUser.responsabile_paghe
-          ? supabase
-              .from('tbutenti')
-              .select('id, studio_id, nome, cognome, email, tipo_rapporto, responsabile_paghe, attivo')
-              .eq('studio_id', typedUser.studio_id)
-              .eq('tipo_rapporto', 'Dipendente')
-              .eq('attivo', true)
-              .order('cognome', { ascending: true })
-              .order('nome', { ascending: true })
-          : supabase
-              .from('tbutenti')
-              .select('id, studio_id, nome, cognome, email, tipo_rapporto, responsabile_paghe, attivo')
-              .eq('id', typedUser.id),
-      ]);
+      const codiciQuery = supabase
+        .from('tbpresenze_codici')
+        .select('codice, descrizione, tipo, ordine, attivo')
+        .eq('attivo', true)
+        .order('ordine', { ascending: true });
+
+      const festivitaQuery = supabase
+        .from('tbfestivita')
+        .select('data_festivita, descrizione, tipo')
+        .gte('data_festivita', startDate)
+        .lte('data_festivita', endDate)
+        .in('tipo', ['nazionale', 'aziendale']);
+
+      const dipendentiQuery = typedUser.responsabile_paghe
+        ? supabase
+            .from('tbutenti')
+            .select('id, studio_id, nome, cognome, email, tipo_rapporto, responsabile_paghe, attivo')
+            .eq('studio_id', typedUser.studio_id)
+            .eq('tipo_rapporto', 'Dipendente')
+            .eq('attivo', true)
+            .order('cognome', { ascending: true })
+            .order('nome', { ascending: true })
+        : supabase
+            .from('tbutenti')
+            .select('id, studio_id, nome, cognome, email, tipo_rapporto, responsabile_paghe, attivo')
+            .eq('id', typedUser.id);
+
+      const [codiciResult, festivitaResult, dipendentiResult] = (await Promise.all([
+        codiciQuery,
+        festivitaQuery,
+        dipendentiQuery,
+      ])) as unknown as [
+        { data: CodicePresenza[] | null; error: Error | null },
+        { data: Festivita[] | null; error: Error | null },
+        { data: Utente[] | null; error: Error | null },
+      ];
 
       if (codiciResult.error) throw codiciResult.error;
       if (festivitaResult.error) throw festivitaResult.error;
