@@ -39,9 +39,20 @@ export async function hasMicrosoft365(
       Pragma: "no-cache",
     },
   });
+   
+if (res.status === 401) {
+  console.warn("[hasMicrosoft365] status 401: sessione non valida o token scaduto");
+  return false;
+}
 
-  const json = await res.json().catch(() => null);
-  return !!json?.connected;
+const json = await res.json().catch(() => null);
+
+if (!res.ok) {
+  console.warn("[hasMicrosoft365] status error:", res.status, json);
+  return false;
+}
+
+return !!json?.connected;
 }
 
 /* =========================================================
