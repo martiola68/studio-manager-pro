@@ -46,6 +46,7 @@ export default function GestioneUtentiPage() {
     attivo: true,
     settore: "" as "Fiscale" | "Lavoro" | "Consulenza" | "",
     responsabile: false,
+    responsabile_paghe: false,
     microsoft_connection_id: "",
     tipo_rapporto: "" as "Dipendente" | "Collaboratore" | "Praticante" | "Socio" | "",
   });
@@ -209,6 +210,7 @@ export default function GestioneUtentiPage() {
   attivo: formData.attivo,
   settore: formData.settore || null,
   responsabile: formData.responsabile,
+  responsabile_paghe: formData.responsabile_paghe,         
   microsoft_connection_id: formData.microsoft_connection_id || null,
   tipo_rapporto: formData.tipo_rapporto || null,
 } as any);
@@ -265,6 +267,7 @@ const response = await fetch("/api/auth/create-user", {
     attivo: formData.attivo,
     settore: formData.settore || null,
     responsabile: formData.responsabile,
+    responsabile_paghe: formData.responsabile_paghe,
     microsoft_connection_id: formData.microsoft_connection_id || null,
     tipo_rapporto: formData.tipo_rapporto || null,
   }),
@@ -284,6 +287,7 @@ const response = await fetch("/api/auth/create-user", {
             attivo: formData.attivo,
             settore: formData.settore || null,
             responsabile: formData.responsabile,
+            responsabile_paghe: formData.responsabile_paghe,
             microsoft_connection_id: formData.microsoft_connection_id || null,
             tipo_rapporto: formData.tipo_rapporto || null,
           })
@@ -458,6 +462,7 @@ const response = await fetch("/api/auth/create-user", {
       attivo: utente.attivo ?? true,
       settore: (utente.settore as "Fiscale" | "Lavoro" | "Consulenza") || "",
       responsabile: utente.responsabile ?? false,
+      responsabile_paghe: (utente as any).responsabile_paghe ?? false,
       microsoft_connection_id: utente.microsoft_connection_id || "",
       tipo_rapporto: ((utente as any).tipo_rapporto as "Dipendente" | "Collaboratore" | "Praticante" | "Socio") || "",
     });
@@ -474,6 +479,7 @@ const response = await fetch("/api/auth/create-user", {
       attivo: true,
       settore: "",
       responsabile: false,
+      responsabile_paghe: false,
       microsoft_connection_id: "",
       tipo_rapporto: "",
     });
@@ -738,6 +744,21 @@ const response = await fetch("/api/auth/create-user", {
                     Responsabile (può vedere promemoria del gruppo)
                   </Label>
                 </div>
+
+                <div className="flex items-center space-x-2">
+  <input
+    type="checkbox"
+    id="responsabile_paghe"
+    checked={formData.responsabile_paghe}
+    onChange={(e) =>
+      setFormData({ ...formData, responsabile_paghe: e.target.checked })
+    }
+    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+  />
+  <Label htmlFor="responsabile_paghe" className="cursor-pointer font-medium">
+    Responsabile paghe (può gestire presenze dipendenti)
+  </Label>
+</div>
 
                 <div className="flex items-center space-x-2">
                   <input
