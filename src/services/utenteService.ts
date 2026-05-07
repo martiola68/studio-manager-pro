@@ -54,7 +54,7 @@ export const utenteService = {
       throw error;
     }
 
-    return data as Utente | null;
+    return data as unknown as Utente | null;
   },
 
   async createUtente(utente: UtenteInsert): Promise<Utente | null> {
