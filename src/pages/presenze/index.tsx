@@ -75,6 +75,11 @@ type RowSummary = {
   permessiOre: number;
 };
 
+type LooseSupabaseClient = {
+  auth: ReturnType<typeof getSupabaseClient>['auth'];
+  from: (table: string) => any;
+};
+
 const DEFAULT_WORKDAY_CODE = 'Pp';
 const DEFAULT_NON_WORKDAY_CODE = 'N';
 
@@ -180,7 +185,10 @@ export default function PresenzePage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const supabase = useMemo(() => getSupabaseClient(), []);
+  const supabase = useMemo(
+    () => getSupabaseClient() as unknown as LooseSupabaseClient,
+    [],
+  );
 
   const startDate = useMemo(() => toDateKey(year, monthIndex, 1), [year, monthIndex]);
   const endDate = useMemo(
