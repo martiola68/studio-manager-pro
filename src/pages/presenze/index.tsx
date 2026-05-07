@@ -33,6 +33,28 @@ type Utente = {
   attivo: boolean | null;
 };
 
+type Dipendente = {
+  id: string;
+  studio_id: string;
+  utente_id: string;
+  codice_dipendente: string | null;
+  matricola_paghe: string | null;
+  nome: string | null;
+  cognome: string | null;
+  email: string | null;
+  codice_fiscale: string | null;
+  orario_giornaliero: number | null;
+  ore_settimanali: number | null;
+  giorni_lavorativi_settimana: number | null;
+  percentuale_part_time: number | null;
+  qualifica: string | null;
+  livello: string | null;
+  tipo_contratto: string | null;
+  sede_lavoro: string | null;
+  centro_costo: string | null;
+  attivo: boolean | null;
+};
+
 type CodicePresenza = {
   codice: string;
   descrizione: string | null;
@@ -137,7 +159,7 @@ function getDaysInMonth(year: number, monthIndex: number) {
   return new Date(year, monthIndex + 1, 0).getDate();
 }
 
-function getEmployeeName(user: Utente) {
+function getEmployeeName(user: Utente | Dipendente) {
   const fullName = `${user.cognome ?? ''} ${user.nome ?? ''}`.trim();
   return fullName || user.email || 'Dipendente';
 }
@@ -221,7 +243,7 @@ export default function PresenzePage() {
   const [currentUser, setCurrentUser] = useState<Utente | null>(null);
   const [codici, setCodici] = useState<CodicePresenza[]>([]);
   const [festivita, setFestivita] = useState<Festivita[]>([]);
-  const [dipendenti, setDipendenti] = useState<Utente[]>([]);
+ const [dipendenti, setDipendenti] = useState<Dipendente[]>([]);
   const [values, setValues] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -356,19 +378,59 @@ const requiredOrder = [
         .lte('data_festivita', endDate)
         .in('tipo', ['nazionale', 'aziendale']);
 
-      const dipendentiQuery = typedUser.responsabile_paghe
-        ? supabase
-            .from('tbutenti')
-            .select('id, studio_id, nome, cognome, email, tipo_rapporto, responsabile_paghe, attivo')
-            .eq('studio_id', typedUser.studio_id)
-            .eq('tipo_rapporto', 'Dipendente')
-            .eq('attivo', true)
-            .order('cognome', { ascending: true })
-            .order('nome', { ascending: true })
-        : supabase
-            .from('tbutenti')
-            .select('id, studio_id, nome, cognome, email, tipo_rapporto, responsabile_paghe, attivo')
-            .eq('id', typedUser.id);
+     const dipendentiQuery = typedUser.responsabile_paghe
+  ? supabase
+      .from('tbdipendenti')
+      .select(`
+        id,
+        studio_id,
+        utente_id,
+        codice_dipendente,
+        matricola_paghe,
+        nome,
+        cognome,
+        email,
+        codice_fiscale,
+        orario_giornaliero,
+        ore_settimanali,
+        giorni_lavorativi_settimana,
+        percentuale_part_time,
+        qualifica,
+        livello,
+        tipo_contratto,
+        sede_lavoro,
+        centro_costo,
+        attivo
+      `)
+      .eq('studio_id', typedUser.studio_id)
+      .eq('attivo', true)
+      .order('cognome', { ascending: true })
+      .order('nome', { ascending: true })
+  : supabase
+      .from('tbdipendenti')
+      .select(`
+        id,
+        studio_id,
+        utente_id,
+        codice_dipendente,
+        matricola_paghe,
+        nome,
+        cognome,
+        email,
+        codice_fiscale,
+        orario_giornaliero,
+        ore_settimanali,
+        giorni_lavorativi_settimana,
+        percentuale_part_time,
+        qualifica,
+        livello,
+        tipo_contratto,
+        sede_lavoro,
+        centro_costo,
+        attivo
+      `)
+      .eq('utente_id', typedUser.id)
+      .eq('attivo', true);
 
       const [codiciResult, festivitaResult, dipendentiResult] = (await Promise.all([
         codiciQuery,
@@ -377,19 +439,19 @@ const requiredOrder = [
       ])) as unknown as [
         { data: CodicePresenza[] | null; error: Error | null },
         { data: Festivita[] | null; error: Error | null },
-        { data: Utente[] | null; error: Error | null },
+        { data: Dipendente[] | null; error: Error | null },
       ];
 
       if (codiciResult.error) throw codiciResult.error;
       if (festivitaResult.error) throw festivitaResult.error;
       if (dipendentiResult.error) throw dipendentiResult.error;
 
-      const loadedDipendenti = (dipendentiResult.data ?? []) as Utente[];
+      const loadedDipendenti = (dipendentiResult.data ?? []) as Dipendente[];
       setCodici((codiciResult.data ?? []) as CodicePresenza[]);
       setFestivita((festivitaResult.data ?? []) as Festivita[]);
       setDipendenti(loadedDipendenti);
 
-      const employeeIds = loadedDipendenti.map((item) => item.id);
+      const employeeIds = loadedDipendenti.map((item) => item.utente_id);
       if (employeeIds.length === 0) {
         setValues({});
         return;
@@ -435,7 +497,7 @@ const requiredOrder = [
 
       loadedDipendenti.forEach((dipendente) => {
         monthDaysForDefaults.forEach((day) => {
-          const key = `${dipendente.id}|${day.date}`;
+          const key = `${dipendente.utente_id}|${day.date}`;
 
           // Default automatico solo per i giorni già maturati fino a oggi.
           // Se esiste già una presenza salvata/modificata, quella prevale sempre.
@@ -488,7 +550,7 @@ const getCode = (utenteId: string, day: DayInfo) => {
 
     try {
       const overLimitEmployee = dipendenti.find((dipendente) => {
-  const summary = getSummaryForEmployee(dipendente.id);
+  const summary = getSummaryForEmployee(dipendente.utente_id);
   return summary.permessi104Ore > 24;
 });
 
@@ -499,18 +561,18 @@ if (overLimitEmployee) {
   );
 }
       const editableDipendenti = dipendenti.filter((dipendente) =>
-  canEditEmployee(dipendente.id)
+  canEditEmployee(dipendente.utente_id)
 );
 
 const rows = editableDipendenti.flatMap((dipendente) =>
         days
           .map((day) => {
-            const codicePresenza = getCode(dipendente.id, day);
+            const codicePresenza = getCode(dipendente.utente_id, day);
             if (!codicePresenza) return null;
 
             return {
               studio_id: currentUser.studio_id,
-              utente_id: dipendente.id,
+              utente_id: dipendente.utente_id,
               data_presenza: day.date,
               codice_presenza: codicePresenza,
               inserito_da: currentUser.id,
@@ -552,6 +614,10 @@ const rows = editableDipendenti.flatMap((dipendente) =>
   ];
 
   const columnsHeader = [
+    'Codice dipendente',
+  'Matricola paghe',
+  'Codice fiscale',
+  'Orario giornaliero',
     'Dipendente',
     'Email',
     ...days.map((day) => `${day.day}`),
@@ -565,20 +631,24 @@ const rows = editableDipendenti.flatMap((dipendente) =>
   ];
 
   const rows = dipendenti.map((dipendente) => {
-    const summary = getSummaryForEmployee(dipendente.id);
+    const summary = getSummaryForEmployee(dipendente.utente_id);
 
-    return [
-      getEmployeeName(dipendente),
-      dipendente.email ?? '',
-      ...days.map((day) => getCode(dipendente.id, day)),
-      String(summary.pp),
-      String(summary.ps),
-      String(summary.ferie),
-      String(summary.malattia),
-      String(summary.festivi),
-      String(summary.permessiOre),
-      String(summary.permessi104Ore),
-    ];
+   return [
+  dipendente.codice_dipendente ?? '',
+  dipendente.matricola_paghe ?? '',
+  dipendente.codice_fiscale ?? '',
+  String(dipendente.orario_giornaliero ?? 8),
+  getEmployeeName(dipendente),
+  dipendente.email ?? '',
+  ...days.map((day) => getCode(dipendente.utente_id, day)),
+  String(summary.pp),
+  String(summary.ps),
+  String(summary.ferie),
+  String(summary.malattia),
+  String(summary.festivi),
+  String(summary.permessiOre),
+  String(summary.permessi104Ore),
+];
   });
 
   downloadCsv(
@@ -625,7 +695,7 @@ const rows = editableDipendenti.flatMap((dipendente) =>
     loading ||
     saving ||
     isLockedPeriod ||
-    !dipendenti.some((dipendente) => canEditEmployee(dipendente.id))
+    !dipendenti.some((dipendente) => canEditEmployee(dipendente.utente_id))
   }
 >
               {saving ? 'Salvataggio...' : 'Salva mese'}
@@ -758,10 +828,10 @@ const rows = editableDipendenti.flatMap((dipendente) =>
 
                   <TableBody>
                     {dipendenti.map((dipendente) => {
-                      const summary = getSummaryForEmployee(dipendente.id);
+                      const summary = getSummaryForEmployee(dipendente.utente_id);
 
                       return (
-                        <TableRow key={dipendente.id}>
+                        <TableRow key={dipendente.utente_id}>
                           <TableCell className="sticky left-0 z-10 bg-background font-medium shadow-sm">
                             <div className="flex flex-col">
                               <span>{getEmployeeName(dipendente)}</span>
@@ -772,13 +842,13 @@ const rows = editableDipendenti.flatMap((dipendente) =>
                           </TableCell>
 
                           {days.map((day) => {
-                            const code = getCode(dipendente.id, day);
+                            const code = getCode(dipendente.utente_id, day);
                             return (
-                              <TableCell key={`${dipendente.id}-${day.date}`} className="p-1 text-center">
+                              <TableCell key={`${dipendente.utente_id}-${day.date}`} className="p-1 text-center">
                                <select
-                                  disabled={isLockedPeriod || !canEditEmployee(dipendente.id)}
+                                  disabled={isLockedPeriod || !canEditEmployee(dipendente.utente_id)}
                                   value={code}
-                                  onChange={(event) => handleChange(dipendente.id, day.date, event.target.value)}
+                                  onChange={(event) => handleChange(dipendente.utente_id, day.date, event.target.value)}
                                   title={day.holidayDescription}
                                   className={`h-8 w-[82px] rounded-md border px-2 text-xs outline-none ${
                                     code
