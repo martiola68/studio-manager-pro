@@ -26,19 +26,17 @@ export async function hasMicrosoft365(
   if (!token) return false;
   if (!userId || !microsoftConnectionId) return false;
 
-  const qs = new URLSearchParams();
-  qs.set("userId", userId);
-  qs.set("microsoftConnectionId", microsoftConnectionId);
+const {
+  data: { session },
+} = await supabase.auth.getSession();
 
-  const res = await fetch(`/api/microsoft365/status?${qs.toString()}`, {
-    method: "GET",
-    cache: "no-store",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Cache-Control": "no-cache",
-      Pragma: "no-cache",
-    },
-  });
+const res = await fetch(`/api/microsoft365/status?${qs.toString()}`, {
+  method: "GET",
+  cache: "no-store",
+  headers: {
+    Authorization: `Bearer ${session?.access_token}`,
+  },
+});
    
 if (res.status === 401) {
   console.warn("[hasMicrosoft365] status 401: sessione non valida o token scaduto");
