@@ -290,45 +290,48 @@ setIsAdmin(user.tipo_utente === "Admin");
   }
 
   async function loadUserConnectionStatus(uid: string, connectionId: string) {
-    if (!uid || !connectionId) return;
+  if (!uid || !connectionId) return;
 
-    try {
-  const {
-  data: { session },
-} = await supabase.auth.getSession();
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
-const response = await fetch(
-  `/api/microsoft365/status?connection_id=${encodeURIComponent(connectionId)}`,
-  {
-    method: "GET",
-    cache: "no-store",
-    headers: session?.access_token
-      ? {
-          Authorization: `Bearer ${session.access_token}`,
-        }
-      : {},
-  }
-);
+    const qs = new URLSearchParams();
+    qs.set("userId", uid);
+    qs.set("microsoftConnectionId", connectionId);
 
-const result = await response.json();
+    const response = await fetch(`/api/microsoft365/status?${qs.toString()}`, {
+      method: "GET",
+      cache: "no-store",
+      headers: session?.access_token
+        ? {
+            Authorization: `Bearer ${session.access_token}`,
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          }
+        : {},
+    });
 
-if (!response.ok || !result?.ok) {
-  throw new Error(result?.error || "Errore verifica connessione Microsoft");
-}
+    const result = await response.json().catch(() => null);
 
-const tokenData = result?.data || null;
-
-      const connected = !!tokenData?.connected_at && !tokenData?.revoked_at;
-
-      setUserConnection({
-        isConnected: connected,
-        lastConnection: tokenData?.updated_at ? new Date(tokenData.updated_at) : undefined,
-      });
-    } catch (err) {
-      console.error("Error loading user connection status:", err);
-      setUserConnection({ isConnected: false });
+    if (!response.ok) {
+      throw new Error(result?.error || "Errore verifica connessione Microsoft");
     }
+
+    const connected = !!result?.connected;
+
+    setUserConnection({
+      isConnected: connected,
+      lastConnection: result?.connected_at
+        ? new Date(result.connected_at)
+        : undefined,
+    });
+  } catch (err) {
+    console.error("Error loading user connection status:", err);
+    setUserConnection({ isConnected: false });
   }
+}
 
  async function handleSave() {
   if (!isAdmin) {
