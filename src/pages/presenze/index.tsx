@@ -406,31 +406,32 @@ const requiredOrder = [
       .eq('attivo', true)
       .order('cognome', { ascending: true })
       .order('nome', { ascending: true })
-  : supabase
-      .from('tbdipendenti')
-      .select(`
-        id,
-        studio_id,
-        utente_id,
-        codice_dipendente,
-        matricola_paghe,
-        nome,
-        cognome,
-        email,
-        codice_fiscale,
-        orario_giornaliero,
-        ore_settimanali,
-        giorni_lavorativi_settimana,
-        percentuale_part_time,
-        qualifica,
-        livello,
-        tipo_contratto,
-        sede_lavoro,
-        centro_costo,
-        attivo
-      `)
-      .eq('utente_id', typedUser.id)
-      .eq('attivo', true);
+ : supabase
+    .from('tbdipendenti')
+    .select(`
+      id,
+      studio_id,
+      utente_id,
+      codice_dipendente,
+      matricola_paghe,
+      nome,
+      cognome,
+      email,
+      codice_fiscale,
+      orario_giornaliero,
+      ore_settimanali,
+      giorni_lavorativi_settimana,
+      percentuale_part_time,
+      qualifica,
+      livello,
+      tipo_contratto,
+      sede_lavoro,
+      centro_costo,
+      attivo
+    `)
+    .eq('studio_id', typedUser.studio_id)
+    .eq('attivo', true)
+    .or(`utente_id.eq.${typedUser.id},email.eq.${typedUser.email}`);
 
       const [codiciResult, festivitaResult, dipendentiResult] = (await Promise.all([
         codiciQuery,
