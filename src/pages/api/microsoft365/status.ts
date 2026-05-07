@@ -51,13 +51,13 @@ export default async function handler(
         ? req.query.userId
         : utente.id;
 
-  const requestedConnectionId =
+ const requestedConnectionId =
   typeof req.query.microsoftConnectionId === "string" && req.query.microsoftConnectionId
     ? req.query.microsoftConnectionId
     : typeof req.query.connection_id === "string" && req.query.connection_id
       ? req.query.connection_id
       : null;
-
+    
     let tokenQuery = supabaseAdmin
       .from("tbmicrosoft365_user_tokens")
       .select("token_cache_encrypted, revoked_at, scopes, connected_at")
