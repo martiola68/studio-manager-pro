@@ -241,9 +241,12 @@ export default function DipendentiPayrollPage() {
                         </td>
 
                         <td className="p-2 text-center">
-                          <Badge variant={dip.attivo ? 'default' : 'secondary'}>
-                            {dip.attivo ? 'Attivo' : 'Disattivato'}
-                          </Badge>
+                        <input
+  type="checkbox"
+  checked={Boolean(dip.attivo)}
+  onChange={(e) => updateField(dip.id, 'attivo', e.target.checked)}
+  className="h-4 w-4"
+/>
                         </td>
 
                         <td className="p-2 text-right">
