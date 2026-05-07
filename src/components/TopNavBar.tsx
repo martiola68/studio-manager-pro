@@ -19,6 +19,7 @@ import {
   Cloud,
   Link2,
   RefreshCcw,
+   Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -297,19 +298,25 @@ export function TopNavBar() {
       ],
     },
 
-    {
-      label: "Anagrafiche",
-      icon: <Users className="h-4 w-4" />,
-      children: [
-        { label: "Clienti", href: "/clienti", icon: null },
-        { label: "Rappresentanti legali", href: "/antiriciclaggio/rappresentanti", icon: null },
-      ],
-    },
+   {
+  label: "Anagrafiche",
+  icon: <Users className="h-4 w-4" />,
+  children: [
+    { label: "Clienti", href: "/clienti", icon: null },
+    { label: "Rappresentanti legali", href: "/antiriciclaggio/rappresentanti", icon: null },
+  ],
+},
 
-    {
-      label: "Microsoft 365",
-      icon: <Cloud className="h-4 w-4" />,
-      children: [
+{
+  label: "Presenze",
+  icon: <Clock className="h-4 w-4" />,
+  href: "/presenze",
+},
+
+{
+  label: "Microsoft 365",
+  icon: <Cloud className="h-4 w-4" />,
+  children: [
         {
           label: "Connessioni",
           href: "/microsoft365?tab=connessioni",
