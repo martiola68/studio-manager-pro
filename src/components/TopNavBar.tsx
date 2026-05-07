@@ -274,7 +274,6 @@ const menuItems: MenuItem[] = [
       { label: "Newsletter e comunicazioni", href: "/comunicazioni", icon: <Mail className="h-4 w-4" /> },
       { label: "Accesso Portali", icon: <Key className="h-4 w-4" />, href: "/accesso-portali" },
       { label: "Cassetti Fiscali", icon: <FileText className="h-4 w-4" />, href: "/cassetti-fiscali" },
-      { label: "Presenze lavorative", icon: <Clock className="h-4 w-4" />, href: "/presenze" },
     ],
   },
 
@@ -352,6 +351,15 @@ const menuItems: MenuItem[] = [
       },
     ],
   },
+
+  {
+  label: "Payroll",
+  icon: <Clock className="h-4 w-4" />,
+  children: [
+    { label: "Presenze", href: "/presenze", icon: <Clock className="h-4 w-4" /> },
+    { label: "Dipendenti", href: "/payroll/dipendenti", icon: <Users className="h-4 w-4" /> },
+  ],
+},
 
   {
     label: "Impostazioni",
