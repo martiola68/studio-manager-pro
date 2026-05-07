@@ -17,25 +17,23 @@ export async function hasMicrosoft365(
   userId: string,
   microsoftConnectionId: string
 ): Promise<boolean> {
-  const supabase = getSupabaseClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  const token = session?.access_token;
-  if (!token) return false;
-  if (!userId || !microsoftConnectionId) return false;
+ 
+const supabase = getSupabaseClient();
 
 const {
-  data: { session },
+  data: { session: supabaseSession },
 } = await supabase.auth.getSession();
+
+const token = supabaseSession?.access_token;
 
 const res = await fetch(`/api/microsoft365/status?${qs.toString()}`, {
   method: "GET",
   cache: "no-store",
-  headers: {
-    Authorization: `Bearer ${session?.access_token}`,
-  },
+  headers: token
+    ? {
+        Authorization: `Bearer ${token}`,
+      }
+    : {},
 });
    
 if (res.status === 401) {
