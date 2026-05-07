@@ -106,6 +106,7 @@ export default function DipendentiPayrollPage() {
       const { error } = await supabase
         .from('tbdipendenti')
         .update({
+          codice_ditta: dipendente.codice_ditta,
           codice_dipendente: dipendente.codice_dipendente,
           matricola_paghe: dipendente.matricola_paghe,
           codice_fiscale: dipendente.codice_fiscale,
@@ -173,6 +174,7 @@ export default function DipendentiPayrollPage() {
                     <tr>
                       <th className="p-2 text-left">Dipendente</th>
                       <th className="p-2 text-left">Email</th>
+                      <th className="p-2 text-left">Cod. ditta</th>
                       <th className="p-2 text-left">Cod. dip.</th>
                       <th className="p-2 text-left">Matricola</th>
                       <th className="p-2 text-left">Cod. fiscale</th>
@@ -197,9 +199,23 @@ export default function DipendentiPayrollPage() {
                         </td>
                         <td className="p-2">{dip.email}</td>
 
-                        <td className="p-2">
-                          <Input value={dip.codice_dipendente ?? ''} onChange={(e) => updateField(dip.id, 'codice_dipendente', e.target.value)} />
-                        </td>
+                     <td className="p-2">
+  <Input
+    value={dip.codice_ditta ?? ''}
+    onChange={(e) =>
+      updateField(dip.id, 'codice_ditta', e.target.value)
+    }
+  />
+</td>
+
+<td className="p-2">
+  <Input
+    value={dip.codice_dipendente ?? ''}
+    onChange={(e) =>
+      updateField(dip.id, 'codice_dipendente', e.target.value)
+    }
+  />
+</td>
 
                         <td className="p-2">
                           <Input value={dip.matricola_paghe ?? ''} onChange={(e) => updateField(dip.id, 'matricola_paghe', e.target.value)} />
