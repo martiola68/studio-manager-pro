@@ -106,6 +106,8 @@ const MONTHS = [
   'Dicembre',
 ];
 
+const WEEKDAYS_SHORT = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+
 const PRESENCE_COLORS: Record<string, string> = {
   N: 'bg-gray-100 text-gray-700 border-gray-200',
   F: 'bg-sky-100 text-sky-800 border-sky-200',
@@ -197,6 +199,7 @@ export default function PresenzePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [accessDenied, setAccessDenied] = useState(false);
 
   const startDate = useMemo(() => toDateKey(year, monthIndex, 1), [year, monthIndex]);
   const endDate = useMemo(
@@ -274,8 +277,13 @@ export default function PresenzePage() {
 
       const typedUser = user;
       if (typedUser.tipo_rapporto !== 'Dipendente') {
-        throw new Error('Il modulo presenze è disponibile solo per utenti con rapporto Dipendente.');
+        setAccessDenied(true);
+        setDipendenti([]);
+        setValues({});
+        return;
       }
+
+      setAccessDenied(false);
 
       setCurrentUser(typedUser);
 
@@ -571,6 +579,10 @@ export default function PresenzePage() {
           <CardContent>
             {loading ? (
               <div className="py-8 text-center text-sm text-muted-foreground">Caricamento presenze...</div>
+            ) : accessDenied ? (
+              <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-6 text-center text-sm text-amber-900">
+                Accesso non consentito: il modulo presenze è disponibile solo per utenti con rapporto Dipendente.
+              </div>
             ) : dipendenti.length === 0 ? (
               <div className="py-8 text-center text-sm text-muted-foreground">Nessun dipendente trovato.</div>
             ) : (
@@ -594,7 +606,8 @@ export default function PresenzePage() {
                           }`}
                         >
                           <div className="flex flex-col items-center leading-tight">
-                            <span>{day.day}</span>
+                            <span className="text-[11px] uppercase">{WEEKDAYS_SHORT[day.weekday]}</span>
+                            <span className="text-sm font-semibold">{day.day}</span>
                             {day.isHoliday && <span className="text-[10px]">fest.</span>}
                           </div>
                         </TableHead>
