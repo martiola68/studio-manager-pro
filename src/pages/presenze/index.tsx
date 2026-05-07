@@ -328,12 +328,16 @@ const requiredOrder = [
       if (!user) throw new Error('Utente non trovato in tbutenti.');
 
       const typedUser = user;
-      if (typedUser.tipo_rapporto !== 'Dipendente') {
-        setAccessDenied(true);
-        setDipendenti([]);
-        setValues({});
-        return;
-      }
+       const canAccessPresenze =
+          typedUser.tipo_rapporto === 'Dipendente' ||
+          typedUser.responsabile_paghe === true;
+
+          if (!canAccessPresenze) {
+            setAccessDenied(true);
+            setDipendenti([]);
+            setValues({});
+            return;
+          }
 
       setAccessDenied(false);
 
