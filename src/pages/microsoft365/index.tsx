@@ -293,8 +293,21 @@ setIsAdmin(user.tipo_utente === "Admin");
     if (!uid || !connectionId) return;
 
     try {
-     const response = await fetch(
-  `/api/microsoft365/status?connection_id=${encodeURIComponent(connectionId)}`
+  const {
+  data: { session },
+} = await supabase.auth.getSession();
+
+const response = await fetch(
+  `/api/microsoft365/status?connection_id=${encodeURIComponent(connectionId)}`,
+  {
+    method: "GET",
+    cache: "no-store",
+    headers: session?.access_token
+      ? {
+          Authorization: `Bearer ${session.access_token}`,
+        }
+      : {},
+  }
 );
 
 const result = await response.json();
