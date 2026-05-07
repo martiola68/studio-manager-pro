@@ -458,7 +458,12 @@ const requiredOrder = [
     loadData();
   }, [loadData]);
 
-  const handleChange = (utenteId: string, date: string, code: string) => {
+ const handleChange = (utenteId: string, date: string, code: string) => {
+  if (!canEditEmployee(utenteId)) return;
+
+  setSuccess(null);
+  setValues((prev) => ({ ...prev, [`${utenteId}|${date}`]: code }));
+};
     setSuccess(null);
     setValues((prev) => ({ ...prev, [`${utenteId}|${date}`]: code }));
   };
@@ -469,6 +474,10 @@ const requiredOrder = [
 
   const getSummaryForEmployee = (utenteId: string) => {
     return summarize(days.map((day) => getCode(utenteId, day)));
+  };
+
+  const canEditEmployee = (utenteId: string) => {
+  return currentUser?.id === utenteId;
   };
 
   const saveMonth = async () => {
@@ -492,7 +501,11 @@ if (overLimitEmployee) {
     `Limite permessi L.104 superato per ${getEmployeeName(overLimitEmployee)}: ${summary.permessi104Ore}h su massimo 24h mensili.`,
   );
 }
-      const rows = dipendenti.flatMap((dipendente) =>
+      const editableDipendenti = dipendenti.filter((dipendente) =>
+  canEditEmployee(dipendente.id)
+);
+
+const rows = editableDipendenti.flatMap((dipendente) =>
         days
           .map((day) => {
             const codicePresenza = getCode(dipendente.id, day);
@@ -530,39 +543,58 @@ if (overLimitEmployee) {
     }
   };
 
-  const exportCsv = () => {
-    const header = [
-      'Dipendente',
-      'Email',
-      ...days.map((day) => `${day.day}`),
-      'Giorni Pp',
-      'Giorni Ps',
-      'Ferie',
-      'Malattia',
-      'Festivi',
-      'Permessi ore',
-      'Permessi L.104 ore',
+ const exportCsv = () => {
+  const header = [
+    'MESE',
+    MONTHS[monthIndex],
+  ];
+
+  const secondHeader = [
+    'ANNO',
+    String(year),
+  ];
+
+  const columnsHeader = [
+    'Dipendente',
+    'Email',
+    ...days.map((day) => `${day.day}`),
+    'Giorni Pp',
+    'Giorni Ps',
+    'Ferie',
+    'Malattia',
+    'Festivi',
+    'Permessi ore',
+    'Permessi L.104 ore',
+  ];
+
+  const rows = dipendenti.map((dipendente) => {
+    const summary = getSummaryForEmployee(dipendente.id);
+
+    return [
+      getEmployeeName(dipendente),
+      dipendente.email ?? '',
+      ...days.map((day) => getCode(dipendente.id, day)),
+      String(summary.pp),
+      String(summary.ps),
+      String(summary.ferie),
+      String(summary.malattia),
+      String(summary.festivi),
+      String(summary.permessiOre),
+      String(summary.permessi104Ore),
     ];
+  });
 
-    const rows = dipendenti.map((dipendente) => {
-      const summary = getSummaryForEmployee(dipendente.id);
-      return [
-        getEmployeeName(dipendente),
-        dipendente.email ?? '',
-        ...days.map((day) => getCode(dipendente.id, day)),
-        String(summary.pp),
-        String(summary.ps),
-        String(summary.ferie),
-        String(summary.malattia),
-        String(summary.festivi),
-        String(summary.permessiOre),
-        String(summary.permessi104Ore),
-      ];
-    });
-
-    downloadCsv(`presenze_${year}_${pad2(monthIndex + 1)}.csv`, [header, ...rows]);
-  };
-
+  downloadCsv(
+    `presenze_${year}_${pad2(monthIndex + 1)}.csv`,
+    [
+      header,
+      secondHeader,
+      [],
+      columnsHeader,
+      ...rows,
+    ],
+  );
+};
   return (
     <>
       <Head>
@@ -590,13 +622,13 @@ if (overLimitEmployee) {
             <Button variant="outline" onClick={exportCsv} disabled={loading || dipendenti.length === 0}>
               Export CSV
             </Button>
-            <Button
+           <Button
   onClick={saveMonth}
   disabled={
     loading ||
     saving ||
-    dipendenti.length === 0 ||
-    isLockedPeriod
+    isLockedPeriod ||
+    !dipendenti.some((dipendente) => canEditEmployee(dipendente.id))
   }
 >
               {saving ? 'Salvataggio...' : 'Salva mese'}
@@ -747,7 +779,7 @@ if (overLimitEmployee) {
                             return (
                               <TableCell key={`${dipendente.id}-${day.date}`} className="p-1 text-center">
                                <select
-                                  disabled={isLockedPeriod}
+                                  disabled={isLockedPeriod || !canEditEmployee(dipendente.id)}
                                   value={code}
                                   onChange={(event) => handleChange(dipendente.id, day.date, event.target.value)}
                                   title={day.holidayDescription}
