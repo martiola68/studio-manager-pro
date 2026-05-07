@@ -3,7 +3,6 @@ import Link from "next/link";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { usePathname, useSearchParams } from "next/navigation";
 import type { Database } from "@/lib/supabase/types";
-import { ShieldCheck } from "lucide-react";
 import {
   LayoutDashboard,
   Users,
@@ -19,7 +18,11 @@ import {
   Cloud,
   Link2,
   RefreshCcw,
-   Clock,
+  Clock,
+  ShieldCheck,
+  BriefcaseBusiness,
+  FolderKanban,
+  Scale,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -243,32 +246,118 @@ export function TopNavBar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
 
-  const menuItems: MenuItem[] = [
-    { label: "Dashboard", icon: <LayoutDashboard className="h-4 w-4" />, href: "/dashboard" },
-    { label: "Messaggi", icon: <MessageSquare className="h-4 w-4" />, href: "/messaggi" },
-    { label: "Agenda", icon: <Calendar className="h-4 w-4" />, href: "/agenda" },
-    { label: "Rubrica", icon: <UserCircle className="h-4 w-4" />, href: "/contatti" },
-    { label: "Promemoria", icon: <FileText className="h-4 w-4" />, href: "/promemoria" },
+ const menuItems: MenuItem[] = [
+  {
+    label: "Dashboard",
+    icon: <LayoutDashboard className="h-4 w-4" />,
+    href: "/dashboard",
+  },
 
-    {
-      label: "Scadenzario",
-      icon: <FileText className="h-4 w-4" />,
-      children: [
-        { label: "Elenco Generale", href: "/scadenze/elenco-generale", icon: null },
-        { label: "Calendario", href: "/scadenze/calendario", icon: null },
-        { label: "Riepilogo", href: "/scadenze/riepilogo", icon: null },
-        { label: "IVA", href: "/scadenze/iva", icon: null },
-        { label: "CCGG", href: "/scadenze/ccgg", icon: null },
-        { label: "CU", href: "/scadenze/cu", icon: null },
-        { label: "IMU", href: "/scadenze/imu", icon: null },
-        { label: "Fiscali", href: "/scadenze/fiscali", icon: null },
-        { label: "Bilanci", href: "/scadenze/bilanci", icon: null },
-        { label: "770", href: "/scadenze/modello-770", icon: null },
-        { label: "LIQUIDAZIONI IVA - LIPE", href: "/scadenze/lipe", icon: null },
-        { label: "Esterometro", href: "/scadenze/esterometro", icon: null },
-        { label: "Affitti", href: "/scadenze/affitti", icon: null },
-        { label: "Proforma", href: "/scadenze/proforma", icon: null },
-      ],
+  {
+    label: "Operativo",
+    icon: <BriefcaseBusiness className="h-4 w-4" />,
+    children: [
+      { label: "Messaggi", icon: <MessageSquare className="h-4 w-4" />, href: "/messaggi" },
+      { label: "Agenda", icon: <Calendar className="h-4 w-4" />, href: "/agenda" },
+      { label: "Promemoria", icon: <FileText className="h-4 w-4" />, href: "/promemoria" },
+      { label: "Presenze", icon: <Clock className="h-4 w-4" />, href: "/presenze" },
+      { label: "Accesso Portali", icon: <Key className="h-4 w-4" />, href: "/accesso-portali" },
+      { label: "Cassetti Fiscali", icon: <FileText className="h-4 w-4" />, href: "/cassetti-fiscali" },
+    ],
+  },
+
+  {
+    label: "Clienti e Anagrafiche",
+    icon: <Users className="h-4 w-4" />,
+    children: [
+      { label: "Clienti", href: "/clienti", icon: <Users className="h-4 w-4" /> },
+      { label: "Rubrica", href: "/contatti", icon: <UserCircle className="h-4 w-4" /> },
+      {
+        label: "Rappresentanti legali",
+        href: "/antiriciclaggio/rappresentanti",
+        icon: <UserCircle className="h-4 w-4" />,
+      },
+    ],
+  },
+
+  {
+    label: "Scadenzario",
+    icon: <Calendar className="h-4 w-4" />,
+    children: [
+      { label: "Elenco Generale", href: "/scadenze/elenco-generale", icon: null },
+      { label: "Calendario", href: "/scadenze/calendario", icon: null },
+      { label: "Riepilogo", href: "/scadenze/riepilogo", icon: null },
+      { label: "IVA", href: "/scadenze/iva", icon: null },
+      { label: "CCGG", href: "/scadenze/ccgg", icon: null },
+      { label: "CU", href: "/scadenze/cu", icon: null },
+      { label: "IMU", href: "/scadenze/imu", icon: null },
+      { label: "Fiscali", href: "/scadenze/fiscali", icon: null },
+      { label: "Bilanci", href: "/scadenze/bilanci", icon: null },
+      { label: "770", href: "/scadenze/modello-770", icon: null },
+      { label: "Liquidazioni IVA - LIPE", href: "/scadenze/lipe", icon: null },
+      { label: "Esterometro", href: "/scadenze/esterometro", icon: null },
+      { label: "Affitti", href: "/scadenze/affitti", icon: null },
+      { label: "Proforma", href: "/scadenze/proforma", icon: null },
+    ],
+  },
+
+  {
+    label: "AML",
+    icon: <ShieldCheck className="h-4 w-4" />,
+    children: [
+      { label: "Elenco Antiriciclaggio", href: "/antiriciclaggio", icon: null },
+      { label: "Rappresentanti legali", href: "/antiriciclaggio/rappresentanti", icon: null },
+      { label: "Prestazioni AR", href: "/impostazioni/elenco-prestazioni-ar", icon: null },
+      { label: "Professionisti", href: "/antiriciclaggio/responsabili-av", icon: null },
+      { label: "Soggetti responsabili", href: "/antiriciclaggio/responsabili-av-societa", icon: null },
+      { label: "Comunicazioni inviate", href: "/antiriciclaggio/comunicazioni", icon: null },
+    ],
+  },
+
+  {
+    label: "Contenzioso",
+    icon: <Scale className="h-4 w-4" />,
+    children: [
+      { label: "Pratiche contenzioso", href: "/contenzioso", icon: null },
+      { label: "Regole scadenze", href: "/contenzioso/regole-scadenze", icon: null },
+      { label: "Sospensioni termini", href: "/contenzioso/sospensioni", icon: null },
+      { label: "Tipi atto", href: "/contenzioso/tipi-atto", icon: null },
+    ],
+  },
+
+  {
+    label: "Comunicazioni",
+    icon: <Mail className="h-4 w-4" />,
+    children: [
+      { label: "Comunicazioni", href: "/comunicazioni", icon: <Mail className="h-4 w-4" /> },
+      {
+        label: "Microsoft 365 - Connessioni",
+        href: "/microsoft365?tab=connessioni",
+        icon: <Link2 className="h-4 w-4" />,
+      },
+      {
+        label: "Microsoft 365 - Sync",
+        href: "/microsoft365?tab=sync",
+        icon: <RefreshCcw className="h-4 w-4" />,
+      },
+    ],
+  },
+
+  {
+    label: "Impostazioni",
+    icon: <Settings className="h-4 w-4" />,
+    adminOnly: true,
+    children: [
+      { label: "Utenti", href: "/impostazioni/utenti", icon: <Users className="h-4 w-4" /> },
+      { label: "Dati Studio", href: "/impostazioni/studio", icon: <Building2 className="h-4 w-4" /> },
+      { label: "Ruoli", href: "/impostazioni/ruoli", icon: <Settings className="h-4 w-4" /> },
+      { label: "Prestazioni", href: "/impostazioni/prestazioni", icon: <Settings className="h-4 w-4" /> },
+      { label: "Scadenzari", href: "/impostazioni/scadenzari", icon: <Settings className="h-4 w-4" /> },
+      { label: "Tipi Scadenze", href: "/impostazioni/tipi-scadenze", icon: <Settings className="h-4 w-4" /> },
+      { label: "Tipo Promemoria", href: "/impostazioni/tipo-promemoria", icon: <Settings className="h-4 w-4" /> },
+    ],
+  },
+];
     },
 
     { label: "Accesso Portali", icon: <Key className="h-4 w-4" />, href: "/accesso-portali" },
@@ -431,6 +520,29 @@ export function TopNavBar() {
                   >
                     {child.icon}
                     <span>{child.label}</span>
+                    {childShowMessaggiBadge && (
+  <Badge variant="destructive" className="ml-auto px-1.5 py-0 h-5 min-w-[20px] text-xs">
+    {messaggiNonLetti > 99 ? "99+" : messaggiNonLetti}
+  </Badge>
+)}
+
+{childShowPromemoriaRicevutiBadge && (
+  <Badge variant="destructive" className="ml-auto px-1.5 py-0 h-5 min-w-[20px] text-xs">
+    {promemoriaRicevuti > 99 ? "99+" : promemoriaRicevuti}
+  </Badge>
+)}
+
+{childShowPromemoriaAlert && (
+  <Badge variant="destructive" className="ml-auto px-1.5 py-0 h-5 min-w-[20px] text-xs">
+    {promemoriaAttivi > 99 ? "99+" : promemoriaAttivi}
+  </Badge>
+)}
+
+{childShowAgendaBadge && (
+  <Badge variant="destructive" className="ml-auto px-1.5 py-0 h-5 min-w-[20px] text-xs">
+    {eventiImminenti > 99 ? "99+" : eventiImminenti}
+  </Badge>
+)}
                   </Link>
                 </DropdownMenuItem>
               );
