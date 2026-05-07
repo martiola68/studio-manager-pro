@@ -92,7 +92,8 @@ function getBrowserSupabaseClient() {
 const DEFAULT_WORKDAY_CODE = 'Pp';
 const DEFAULT_NON_WORKDAY_CODE = 'N';
 
-const MIN_MONTH_INDEX = 3; // Aprile = 3
+const MIN_YEAR = 2026;
+const MIN_MONTH_INDEX = 3; // Aprile
 
 const MONTHS = [
   'Gennaio',
