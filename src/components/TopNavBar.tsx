@@ -246,7 +246,7 @@ export function TopNavBar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
 
- const menuItems: MenuItem[] = [
+const menuItems: MenuItem[] = [
   {
     label: "Dashboard",
     icon: <LayoutDashboard className="h-4 w-4" />,
@@ -254,29 +254,22 @@ export function TopNavBar() {
   },
 
   {
+    label: "Agenda",
+    icon: <Calendar className="h-4 w-4" />,
+    href: "/agenda",
+  },
+
+  {
     label: "Operativo",
     icon: <BriefcaseBusiness className="h-4 w-4" />,
     children: [
       { label: "Messaggi", icon: <MessageSquare className="h-4 w-4" />, href: "/messaggi" },
-      { label: "Agenda", icon: <Calendar className="h-4 w-4" />, href: "/agenda" },
       { label: "Promemoria", icon: <FileText className="h-4 w-4" />, href: "/promemoria" },
       { label: "Presenze", icon: <Clock className="h-4 w-4" />, href: "/presenze" },
+      { label: "Rubrica", href: "/contatti", icon: <UserCircle className="h-4 w-4" /> },
+      { label: "Comunicazioni", href: "/comunicazioni", icon: <Mail className="h-4 w-4" /> },
       { label: "Accesso Portali", icon: <Key className="h-4 w-4" />, href: "/accesso-portali" },
       { label: "Cassetti Fiscali", icon: <FileText className="h-4 w-4" />, href: "/cassetti-fiscali" },
-    ],
-  },
-
-  {
-    label: "Clienti e Anagrafiche",
-    icon: <Users className="h-4 w-4" />,
-    children: [
-      { label: "Clienti", href: "/clienti", icon: <Users className="h-4 w-4" /> },
-      { label: "Rubrica", href: "/contatti", icon: <UserCircle className="h-4 w-4" /> },
-      {
-        label: "Rappresentanti legali",
-        href: "/antiriciclaggio/rappresentanti",
-        icon: <UserCircle className="h-4 w-4" />,
-      },
     ],
   },
 
@@ -326,10 +319,9 @@ export function TopNavBar() {
   },
 
   {
-    label: "Comunicazioni",
-    icon: <Mail className="h-4 w-4" />,
+    label: "Connessioni",
+    icon: <Cloud className="h-4 w-4" />,
     children: [
-      { label: "Comunicazioni", href: "/comunicazioni", icon: <Mail className="h-4 w-4" /> },
       {
         label: "Microsoft 365 - Connessioni",
         href: "/microsoft365?tab=connessioni",
@@ -341,7 +333,21 @@ export function TopNavBar() {
         icon: <RefreshCcw className="h-4 w-4" />,
       },
     ],
-    },
+  },
+
+  {
+    label: "Anagrafiche",
+    icon: <Users className="h-4 w-4" />,
+    children: [
+      { label: "Clienti", href: "/clienti", icon: <Users className="h-4 w-4" /> },
+      {
+        label: "Rappresentanti legali",
+        href: "/antiriciclaggio/rappresentanti",
+        icon: <UserCircle className="h-4 w-4" />,
+      },
+    ],
+  },
+
   {
     label: "Impostazioni",
     icon: <Settings className="h-4 w-4" />,
