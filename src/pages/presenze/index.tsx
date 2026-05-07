@@ -73,6 +73,7 @@ type RowSummary = {
   malattia: number;
   festivi: number;
   permessiOre: number;
+  permessi104Ore: number;
 };
 
 type LooseSupabaseClient = {
@@ -139,6 +140,7 @@ function getEmployeeName(user: Utente) {
 }
 
 function getCellClass(code: string) {
+  if (/^P[1-8]\.104$/.test(code)) return 'bg-pink-100 text-pink-800 border-pink-200';
   if (/^P[1-8]$/.test(code)) return 'bg-orange-100 text-orange-800 border-orange-200';
   return PRESENCE_COLORS[code] ?? 'bg-white text-gray-800 border-gray-200';
 }
@@ -161,9 +163,20 @@ function summarize(codes: string[]): RowSummary {
       if (code === 'M') acc.malattia += 1;
       if (code === 'N') acc.festivi += 1;
       if (/^P[1-8]$/.test(code)) acc.permessiOre += Number(code.replace('P', ''));
+      if (/^P[1-8]\.104$/.test(code)) {
+        acc.permessi104Ore += Number(code.replace('P', '').replace('.104', ''));
+      }
       return acc;
     },
-    { pp: 0, ps: 0, ferie: 0, malattia: 0, festivi: 0, permessiOre: 0 },
+    {
+      pp: 0,
+      ps: 0,
+      ferie: 0,
+      malattia: 0,
+      festivi: 0,
+      permessiOre: 0,
+      permessi104Ore: 0,
+    },
   );
 }
 
@@ -238,7 +251,29 @@ export default function PresenzePage() {
 
   const allowedCodes = useMemo(() => {
     const withoutOldP = codici.filter((item) => item.codice !== 'P');
-    const requiredOrder = ['Pp', 'Ps', 'F', 'M', 'N', 'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8'];
+const requiredOrder = [
+  'Pp',
+  'Ps',
+  'F',
+  'M',
+  'N',
+  'P1',
+  'P2',
+  'P3',
+  'P4',
+  'P5',
+  'P6',
+  'P7',
+  'P8',
+  'P1.104',
+  'P2.104',
+  'P3.104',
+  'P4.104',
+  'P5.104',
+  'P6.104',
+  'P7.104',
+  'P8.104',
+];
     return [...withoutOldP].sort((a, b) => {
       const ai = requiredOrder.indexOf(a.codice);
       const bi = requiredOrder.indexOf(b.codice);
@@ -430,6 +465,17 @@ export default function PresenzePage() {
     setSuccess(null);
 
     try {
+      const overLimitEmployee = dipendenti.find((dipendente) => {
+  const summary = getSummaryForEmployee(dipendente.id);
+  return summary.permessi104Ore > 24;
+});
+
+if (overLimitEmployee) {
+  const summary = getSummaryForEmployee(overLimitEmployee.id);
+  throw new Error(
+    `Limite permessi L.104 superato per ${getEmployeeName(overLimitEmployee)}: ${summary.permessi104Ore}h su massimo 24h mensili.`,
+  );
+}
       const rows = dipendenti.flatMap((dipendente) =>
         days
           .map((day) => {
@@ -479,6 +525,7 @@ export default function PresenzePage() {
       'Malattia',
       'Festivi',
       'Permessi ore',
+      'Permessi L.104 ore',
     ];
 
     const rows = dipendenti.map((dipendente) => {
@@ -493,6 +540,7 @@ export default function PresenzePage() {
         String(summary.malattia),
         String(summary.festivi),
         String(summary.permessiOre),
+        String(summary.permessi104Ore),
       ];
     });
 
@@ -577,6 +625,9 @@ export default function PresenzePage() {
                 <Badge className="border bg-red-100 text-red-800 hover:bg-red-100">M malattia</Badge>
                 <Badge className="border bg-gray-100 text-gray-700 hover:bg-gray-100">N non lavorativo</Badge>
                 <Badge className="border bg-orange-100 text-orange-800 hover:bg-orange-100">P1-P8 permessi</Badge>
+                <Badge className="border bg-pink-100 text-pink-800 hover:bg-pink-100">
+                  P1.104-P8.104 L.104
+                  </Badge>
               </div>
             </div>
           </CardContent>
@@ -642,6 +693,7 @@ export default function PresenzePage() {
                       <TableHead className="w-[60px] text-center">M</TableHead>
                       <TableHead className="w-[60px] text-center">N</TableHead>
                       <TableHead className="w-[80px] text-center">Perm.</TableHead>
+                      <TableHead className="w-[90px] text-center">L.104</TableHead>
                     </TableRow>
                   </TableHeader>
 
@@ -695,6 +747,13 @@ export default function PresenzePage() {
                           <TableCell className="text-center font-medium">{summary.malattia}</TableCell>
                           <TableCell className="text-center font-medium">{summary.festivi}</TableCell>
                           <TableCell className="text-center font-medium">{summary.permessiOre}h</TableCell>
+                          <TableCell
+                            className={`text-center font-medium ${
+                              summary.permessi104Ore > 24 ? 'text-red-700' : ''
+                            }`}
+                          >
+                        {summary.permessi104Ore}h
+                          </TableCell>
                         </TableRow>
                       );
                     })}
