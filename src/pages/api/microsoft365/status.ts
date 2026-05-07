@@ -36,12 +36,27 @@ export default async function handler(
     }
 
     // 🔎 stato Microsoft 365 (UNICA VERITÀ)
-    const { data: tokenRow } = await supabaseAdmin
-      .from("tbmicrosoft365_user_tokens")
-      .select("token_cache_encrypted, revoked_at, scopes, connected_at")
-      .eq("studio_id", utente.studio_id)
-      .eq("user_id", utente.id)
-      .maybeSingle()
+   const requestedUserId =
+  typeof req.query.userId === "string" && req.query.userId
+    ? req.query.userId
+    : utente.id;
+
+const requestedConnectionId =
+  typeof req.query.microsoftConnectionId === "string" && req.query.microsoftConnectionId
+    ? req.query.microsoftConnectionId
+    : null;
+
+let tokenQuery = supabaseAdmin
+  .from("tbmicrosoft365_user_tokens")
+  .select("token_cache_encrypted, revoked_at, scopes, connected_at")
+  .eq("studio_id", utente.studio_id)
+  .eq("user_id", requestedUserId);
+
+if (requestedConnectionId) {
+  tokenQuery = tokenQuery.eq("microsoft_connection_id", requestedConnectionId);
+}
+
+const { data: tokenRow } = await tokenQuery.maybeSingle();
 
     console.log("[m365/status] studio_id:", utente.studio_id, "user_id:", utente.id);
 console.log("[m365/status] tokenRow:", {
