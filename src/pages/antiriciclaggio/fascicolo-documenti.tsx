@@ -144,6 +144,8 @@ export default function FascicoloDocumentiPage() {
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const syncedRef = useRef<string | null>(null);
+
   const formatDateTime = (value?: string | null) => {
     if (!value) return "-";
 
@@ -184,14 +186,18 @@ const ensureDocumentoInFascicolo = async ({
   origine: string;
   note?: string | null;
 }) => {
-  const { data: existing, error: existingError } = await supabase
-    .from("tbAVFascicoliDocumenti")
-    .select("id")
-    .eq("studio_id", studioId)
-    .eq("pratica_id", praticaId)
-    .eq("storage_path", storagePath)
-    .eq("origine", origine)
-    .maybeSingle();
+  
+const nomeFile = getFileNameFromPath(storagePath);
+
+const { data: existing, error: existingError } = await supabase
+  .from("tbAVFascicoliDocumenti")
+  .select("id")
+  .eq("studio_id", studioId)
+  .eq("pratica_id", praticaId)
+  .eq("origine", origine)
+  .or(`storage_path.eq.${storagePath},nome_file.eq.${nomeFile}`)
+  .limit(1)
+  .maybeSingle();
 
   if (existingError && existingError.code !== "PGRST116") {
     throw existingError;
@@ -208,7 +214,7 @@ const ensureDocumentoInFascicolo = async ({
       pratica_id: praticaId,
       cliente_id: clienteId,
       tipo_documento: tipoDocumento,
-      nome_file: getFileNameFromPath(storagePath),
+      nome_file: nomeFile,
       storage_path: storagePath,
       bucket_name: bucketName,
       mime_type: mimeType,
@@ -497,7 +503,13 @@ body: JSON.stringify({
     ? cliente_id
     : null;
 
-await syncDocumentiCollegati(supabase, studioId, pratica_id, clienteIdValue);
+const syncKey = `${studioId}|${pratica_id}|${clienteIdValue || ""}`;
+
+if (syncedRef.current !== syncKey) {
+  syncedRef.current = syncKey;
+  await syncDocumentiCollegati(supabase, studioId, pratica_id, clienteIdValue);
+}
+      
 const { data: clienteCheckData } = await supabase
   .from("tbclienti")
   .select("ragione_sociale, cod_cliente")
