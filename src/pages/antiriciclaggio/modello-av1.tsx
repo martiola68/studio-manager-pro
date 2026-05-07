@@ -1403,15 +1403,15 @@ const handleRinnovoVerifica = async () => {
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-sm font-medium">Livello rischio</label>
+                   <label className="mb-1 block text-sm font-medium">Livello rischio effettivo</label>
                     <input
-                      type="text"
-                      className={`w-full rounded-md border px-3 py-2 ${getLivelloRischioBgClass(
-                        LivelloRischio
-                      )}`}
-                      value={LivelloRischio}
+                  type="text"
+                    className={`w-full rounded-md border px-3 py-2 ${getLivelloRischioBgClass(
+                      LivelloRischioEffettivo
+                          )}`}
+                      value={LivelloRischioEffettivo}
                       readOnly
-                    />
+                      />
                   </div>
 
                   <div>
