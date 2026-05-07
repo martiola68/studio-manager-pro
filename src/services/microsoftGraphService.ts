@@ -26,6 +26,11 @@ const {
 
 const token = supabaseSession?.access_token;
 
+const qs = new URLSearchParams();
+
+qs.set("userId", userId);
+qs.set("microsoftConnectionId", microsoftConnectionId);
+
 const res = await fetch(`/api/microsoft365/status?${qs.toString()}`, {
   method: "GET",
   cache: "no-store",
