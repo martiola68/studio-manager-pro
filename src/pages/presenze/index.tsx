@@ -235,6 +235,119 @@ function downloadCsv(filename: string, rows: string[][]) {
   URL.revokeObjectURL(url);
 }
 
+function padRight(value: string, length: number) {
+  return value.slice(0, length).padEnd(length, ' ');
+}
+
+function onlyDigits(value?: string | null) {
+  return String(value ?? '').replace(/\D/g, '');
+}
+
+function formatZucchettiHours(hours: number) {
+  const safeHours = Math.max(0, hours || 0);
+  const h = Math.floor(safeHours);
+  const minutes = Math.round((safeHours - h) * 60);
+
+  return `${String(h).padStart(2, '0')}${String(minutes).padStart(2, '0')}00`;
+}
+
+function buildZucchettiHeaderRecord(codiceDitta: string, matricola: string) {
+  const record = `00                     ${codiceDitta.padStart(4, '0')}${matricola.padStart(7, '0')}N`;
+  return padRight(record, 100);
+}
+
+function buildZucchettiMovementRecord({
+  causale,
+  sottoCausale,
+  date,
+  hours,
+  flag = 'N',
+}: {
+  causale: string;
+  sottoCausale: string;
+  date: string;
+  hours: number;
+  flag?: 'N' | 'S';
+}) {
+  const yyyymmdd = date.replaceAll('-', '');
+  const hhmmss = formatZucchettiHours(hours);
+
+  const record = `01${causale.padEnd(4, ' ')} ${sottoCausale.padEnd(2, ' ')}${yyyymmdd}${hhmmss}${flag} 0`;
+  return padRight(record, 100);
+}
+
+function getZucchettiMovement(code: string, date: string, dailyHours: number) {
+  if (code === 'Pp' || code === 'Ps') {
+    return buildZucchettiMovementRecord({
+      causale: 'DIUR',
+      sottoCausale: '01',
+      date,
+      hours: dailyHours,
+    });
+  }
+
+  if (code === 'F') {
+    return buildZucchettiMovementRecord({
+      causale: 'FERG',
+      sottoCausale: 'FE',
+      date,
+      hours: dailyHours,
+    });
+  }
+
+  if (code === 'M') {
+    return buildZucchettiMovementRecord({
+      causale: 'MALA',
+      sottoCausale: 'MA',
+      date,
+      hours: dailyHours,
+    });
+  }
+
+  if (code === 'N') {
+    return buildZucchettiMovementRecord({
+      causale: 'FEST',
+      sottoCausale: '',
+      date,
+      hours: 0,
+      flag: 'S',
+    });
+  }
+
+  if (/^P[1-8]$/.test(code)) {
+    return buildZucchettiMovementRecord({
+      causale: 'PERM',
+      sottoCausale: 'RL',
+      date,
+      hours: Number(code.replace('P', '')),
+    });
+  }
+
+  if (/^P[1-8]\.104$/.test(code)) {
+    return buildZucchettiMovementRecord({
+      causale: 'P104',
+      sottoCausale: 'PG',
+      date,
+      hours: Number(code.replace('P', '').replace('.104', '')),
+    });
+  }
+
+  return null;
+}
+
+function downloadDat(filename: string, content: string) {
+  const blob = new Blob([content], { type: 'text/plain;charset=us-ascii;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 export default function PresenzePage() {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
@@ -637,7 +750,7 @@ const rows = editableDipendenti.flatMap((dipendente) =>
 
   const rows = dipendenti.map((dipendente) => {
     const summary = getSummaryForEmployee(dipendente.utente_id);
-
+    
    return [
   dipendente.codice_dipendente ?? '',
   dipendente.matricola_paghe ?? '',
@@ -667,6 +780,51 @@ const rows = editableDipendenti.flatMap((dipendente) =>
     ],
   );
 };
+
+const exportZucchettiDat = () => {
+  const records: string[] = [];
+
+  dipendenti.forEach((dipendente) => {
+    const codiceDitta = onlyDigits(dipendente.codice_ditta);
+    const matricola = onlyDigits(dipendente.matricola_paghe || dipendente.codice_dipendente);
+    const dailyHours = Number(dipendente.orario_giornaliero ?? 8);
+
+    if (!codiceDitta || !matricola) {
+      return;
+    }
+
+    const employeeRecords: string[] = [
+      buildZucchettiHeaderRecord(codiceDitta, matricola),
+    ];
+
+    days.forEach((day) => {
+      const code = getCode(dipendente.utente_id, day);
+      if (!code) return;
+
+      const movement = getZucchettiMovement(code, day.date, dailyHours);
+      if (movement) {
+        employeeRecords.push(movement);
+      }
+    });
+
+    if (employeeRecords.length > 1) {
+      records.push(...employeeRecords);
+    }
+  });
+
+  if (records.length === 0) {
+    setError(
+      'Nessun dato esportabile per Zucchetti. Verifica codice ditta, matricola paghe e presenze.',
+    );
+    return;
+  }
+
+  downloadDat(
+    `trripa_${year}_${pad2(monthIndex + 1)}.dat`,
+    records.join(''),
+  );
+};
+  
   return (
     <>
       <Head>
@@ -694,6 +852,13 @@ const rows = editableDipendenti.flatMap((dipendente) =>
             <Button variant="outline" onClick={exportCsv} disabled={loading || dipendenti.length === 0}>
               Export CSV
             </Button>
+            <Button
+  variant="outline"
+  onClick={exportZucchettiDat}
+  disabled={loading || dipendenti.length === 0}
+>
+  Export Zucchetti DAT
+</Button>
            <Button
   onClick={saveMonth}
   disabled={
