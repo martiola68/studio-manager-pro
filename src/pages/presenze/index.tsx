@@ -147,6 +147,11 @@ function getDefaultCode(day: DayInfo) {
   return day.isWeekend || day.isHoliday ? DEFAULT_NON_WORKDAY_CODE : DEFAULT_WORKDAY_CODE;
 }
 
+function getTodayKey() {
+  const today = new Date();
+  return toDateKey(today.getFullYear(), today.getMonth(), today.getDate());
+}
+
 function summarize(codes: string[]): RowSummary {
   return codes.reduce<RowSummary>(
     (acc, code) => {
@@ -375,10 +380,17 @@ export default function PresenzePage() {
         };
       });
 
+      const todayKey = getTodayKey();
+
       loadedDipendenti.forEach((dipendente) => {
         monthDaysForDefaults.forEach((day) => {
           const key = `${dipendente.id}|${day.date}`;
-          if (!loadedValues[key]) loadedValues[key] = getDefaultCode(day);
+
+          // Default automatico solo per i giorni già maturati fino a oggi.
+          // Se esiste già una presenza salvata/modificata, quella prevale sempre.
+          if (!loadedValues[key] && day.date <= todayKey) {
+            loadedValues[key] = getDefaultCode(day);
+          }
         });
       });
 
@@ -401,7 +413,7 @@ export default function PresenzePage() {
   };
 
   const getCode = (utenteId: string, day: DayInfo) => {
-    return values[`${utenteId}|${day.date}`] ?? getDefaultCode(day);
+    return values[`${utenteId}|${day.date}`] ?? '';
   };
 
   const getSummaryForEmployee = (utenteId: string) => {
@@ -419,15 +431,27 @@ export default function PresenzePage() {
 
     try {
       const rows = dipendenti.flatMap((dipendente) =>
-        days.map((day) => ({
-          studio_id: currentUser.studio_id,
-          utente_id: dipendente.id,
-          data_presenza: day.date,
-          codice_presenza: getCode(dipendente.id, day),
-          inserito_da: currentUser.id,
-          updated_at: new Date().toISOString(),
-        })),
+        days
+          .map((day) => {
+            const codicePresenza = getCode(dipendente.id, day);
+            if (!codicePresenza) return null;
+
+            return {
+              studio_id: currentUser.studio_id,
+              utente_id: dipendente.id,
+              data_presenza: day.date,
+              codice_presenza: codicePresenza,
+              inserito_da: currentUser.id,
+              updated_at: new Date().toISOString(),
+            };
+          })
+          .filter(Boolean),
       );
+
+      if (rows.length === 0) {
+        setSuccess('Nessuna presenza da salvare.');
+        return;
+      }
 
       const { error: upsertError } = await supabase
         .from('tbpresenze_dipendenti')
@@ -645,9 +669,16 @@ export default function PresenzePage() {
                                   onChange={(event) => handleChange(dipendente.id, day.date, event.target.value)}
                                   title={day.holidayDescription}
                                   className={`h-8 w-[82px] rounded-md border px-2 text-xs outline-none ${
-                                    day.isHoliday ? getHolidayCellClass(code) : getCellClass(code)
+                                    code
+                                      ? day.isHoliday
+                                        ? getHolidayCellClass(code)
+                                        : getCellClass(code)
+                                      : day.date <= getTodayKey()
+                                        ? 'bg-yellow-50 text-gray-700 border-yellow-300'
+                                        : 'bg-white text-gray-400 border-gray-200'
                                   }`}
                                 >
+                                  <option value="">-</option>
                                   {allowedCodes.map((item) => (
                                     <option key={item.codice} value={item.codice}>
                                       {item.codice}
