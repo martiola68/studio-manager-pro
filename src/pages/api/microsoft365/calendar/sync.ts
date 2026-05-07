@@ -14,7 +14,9 @@ function getBearerToken(req: NextApiRequest): string | null {
   if (!header) return null;
 
   const lower = header.toLowerCase();
-  if (!lower.startsWith("bearer ")) return null;
+  if (!lower.startsWith("bearer ")) {
+    return null;
+  }
 
   const token = header.slice(7).trim();
   return token || null;
@@ -30,6 +32,7 @@ async function getAuthUser(req: NextApiRequest) {
   return { user: data.user, token };
 }
 
+// Serve: studio_id dell'utente che lancia il sync
 async function getUtenteStudio(authUser: { id: string; email?: string | null }) {
   const { data: utente, error } = await supabaseAdmin
     .from("tbutenti")
@@ -92,10 +95,11 @@ async function acquireAccessTokenFromCache(opts: {
 
     if (!result?.accessToken) return { error: "Access token mancante" as const };
 
+    const newSerializedCache = opts.msalApp.getTokenCache().serialize();
     return {
       accessToken: result.accessToken,
       account,
-      newSerializedCache: opts.msalApp.getTokenCache().serialize(),
+      newSerializedCache,
     };
   } catch (e: any) {
     return {
@@ -106,22 +110,14 @@ async function acquireAccessTokenFromCache(opts: {
   }
 }
 
-async function persistCacheIfChanged(
-  studioId: string,
-  userId: string,
-  oldSerialized: string,
-  newSerialized: string
-) {
+async function persistCacheIfChanged(studioId: string, userId: string, oldSerialized: string, newSerialized: string) {
   if (!newSerialized || newSerialized === oldSerialized) return;
 
   const newEncryptedCache = encrypt(newSerialized);
 
   await supabaseAdmin
     .from("tbmicrosoft365_user_tokens")
-    .update({
-      token_cache_encrypted: newEncryptedCache,
-      updated_at: new Date().toISOString(),
-    })
+    .update({ token_cache_encrypted: newEncryptedCache, updated_at: new Date().toISOString() })
     .eq("studio_id", studioId)
     .eq("user_id", userId);
 }
@@ -134,63 +130,56 @@ type TokenUserRow = {
 };
 
 function buildCalendarViewUrl(rangeDays: number) {
-  const start = new Date();
+  const start = new Date(); // oggi
   const end = new Date();
   end.setDate(end.getDate() + rangeDays);
 
+  const startIso = start.toISOString();
+  const endIso = end.toISOString();
+
+  // calendarView = eventi in un range date
   return (
     `https://graph.microsoft.com/v1.0/me/calendarView` +
-    `?startDateTime=${encodeURIComponent(start.toISOString())}` +
-    `&endDateTime=${encodeURIComponent(end.toISOString())}` +
+    `?startDateTime=${encodeURIComponent(startIso)}` +
+    `&endDateTime=${encodeURIComponent(endIso)}` +
     `&$top=50` +
     `&$orderby=start/dateTime`
   );
-}
-
-function getSyncStartIso() {
-  return new Date().toISOString();
-}
-
-function getSyncEndIso(rangeDays: number) {
-  const end = new Date();
-  end.setDate(end.getDate() + rangeDays);
-  return end.toISOString();
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {
+    // 1) Auth utente (Supabase access token)
     const auth = await getAuthUser(req);
     if ("error" in auth) return res.status(401).json({ error: auth.error });
 
+    // 2) Mappa su tbutenti + verifica responsabile
     const mapped = await getUtenteStudio({ id: auth.user.id, email: auth.user.email });
     if ("error" in mapped) return res.status(400).json({ error: mapped.error });
 
     const requesterUserId = mapped.utente.id;
     const studioId = mapped.utente.studio_id;
 
+      // 3) Config studio MSAL
     const cfgRes = await getM365Config(studioId);
     if ("error" in cfgRes) return res.status(400).json({ error: cfgRes.error });
 
     const tenantId = cfgRes.cfg.tenant_id || "common";
     const clientSecret = getDecryptedClientSecret(cfgRes.cfg.client_secret);
-    if (!clientSecret) {
-      return res.status(400).json({ error: "client_secret mancante in configurazione Microsoft 365" });
-    }
+    if (!clientSecret) return res.status(400).json({ error: "client_secret mancante in configurazione Microsoft 365" });
 
-    const { data: tokenUsers, error: tokenUsersErr } = await supabaseAdmin
-      .from("tbmicrosoft365_user_tokens")
-      .select("user_id, token_cache_encrypted, revoked_at, microsoft_connection_id")
-      .eq("studio_id", studioId)
-      .is("revoked_at", null)
-      .not("microsoft_connection_id", "is", null);
+    // 4) Prendi tutti gli utenti dello studio con token attivo
+  const { data: tokenUsers, error: tokenUsersErr } = await supabaseAdmin
+  .from("tbmicrosoft365_user_tokens")
+  .select("user_id, token_cache_encrypted, revoked_at, microsoft_connection_id")
+  .eq("studio_id", studioId)
+  .is("revoked_at", null)
+  .not("microsoft_connection_id", "is", null);
 
     if (tokenUsersErr) {
-      return res.status(500).json({
-        error: "Errore lettura utenti Microsoft",
-        details: tokenUsersErr.message,
-      });
+      return res.status(500).json({ error: "Errore lettura utenti Microsoft", details: tokenUsersErr.message });
     }
 
     const rows = (tokenUsers || []) as TokenUserRow[];
@@ -202,76 +191,73 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         users_processed: 0,
         totalFetched: 0,
         totalSaved: 0,
-        totalDeleted: 0,
         perUser: [],
         errors: [],
         message: "Nessun utente con connessione Microsoft attiva nello studio.",
       });
     }
 
-    const scopes = ["User.Read", "Calendars.ReadWrite", "Mail.Send"];
+    // 5) Loop utenti: sync per ognuno
+   const scopes = ["User.Read", "Calendars.ReadWrite", "Mail.Send"];
     const RANGE_DAYS = 60;
 
     let totalFetched = 0;
     let totalSaved = 0;
-    let totalDeleted = 0;
 
-    const perUser: Array<{
-      user_id: string;
-      ok: boolean;
-      fetched?: number;
-      saved?: number;
-      deleted?: number;
-      error?: string;
-    }> = [];
-
+    const perUser: Array<{ user_id: string; ok: boolean; fetched?: number; saved?: number; error?: string }> = [];
     const errors: Array<{ user_id: string; event_id?: string; message: string }> = [];
 
     for (const row of rows) {
       const targetUserId = row.user_id;
 
       try {
+        // A) Deserializza cache utente
         const oldSerializedCache = decrypt(row.token_cache_encrypted);
 
         if (!row.microsoft_connection_id) {
-          perUser.push({
-            user_id: targetUserId,
-            ok: false,
-            error: "microsoft_connection_id mancante sul token",
-          });
-          continue;
-        }
+  perUser.push({
+    user_id: targetUserId,
+    ok: false,
+    error: "microsoft_connection_id mancante sul token",
+  });
+  continue;
+}
 
-        const { data: connection, error: connectionError } = await supabaseAdmin
-          .from("microsoft365_connections")
-          .select("tenant_id, client_id, client_secret")
-          .eq("id", row.microsoft_connection_id)
-          .eq("studio_id", studioId)
-          .eq("enabled", true)
-          .maybeSingle();
+const { data: connection, error: connectionError } = await supabaseAdmin
+  .from("microsoft365_connections")
+  .select("tenant_id, client_id, client_secret")
+  .eq("id", row.microsoft_connection_id)
+  .eq("studio_id", studioId)
+  .eq("enabled", true)
+  .maybeSingle();
 
-        if (
-          connectionError ||
-          !connection?.client_id ||
-          !connection?.tenant_id ||
-          !connection?.client_secret
-        ) {
-          perUser.push({
-            user_id: targetUserId,
-            ok: false,
-            error: "Connessione Microsoft non trovata o incompleta",
-          });
-          continue;
-        }
+if (
+  connectionError ||
+  !connection?.client_id ||
+  !connection?.tenant_id ||
+  !connection?.client_secret
+) {
+  perUser.push({
+    user_id: targetUserId,
+    ok: false,
+    error: "Connessione Microsoft non trovata o incompleta",
+  });
+  continue;
+}
 
-        const connectionClientSecret = getDecryptedClientSecret(connection.client_secret);
+const connectionTenantId = connection.tenant_id;
+const connectionClientSecret = getDecryptedClientSecret(
+  connection.client_secret
+);
 
-        const msalApp = buildMsalApp({
-          clientId: connection.client_id,
-          tenantId: connection.tenant_id || tenantId,
-          clientSecret: connectionClientSecret || clientSecret,
-        });
+        // B) MSAL app
+      const msalApp = buildMsalApp({
+  clientId: connection.client_id,
+  tenantId,
+  clientSecret,
+});
 
+        // C) access token (silent)
         const tokenRes = await acquireAccessTokenFromCache({
           msalApp,
           serializedCache: oldSerializedCache,
@@ -283,22 +269,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           continue;
         }
 
+        // D) Graph calendarView (oggi -> +60 giorni) con paginazione
         let graphUrl = buildCalendarViewUrl(RANGE_DAYS);
 
         let fetchedThisUser = 0;
         let savedThisUser = 0;
-        let deletedThisUser = 0;
-
-        const microsoftEventIds = new Set<string>();
 
         while (graphUrl) {
-          const graphRes = await fetch(graphUrl, {
-            headers: {
-              Authorization: `Bearer ${tokenRes.accessToken}`,
-              Accept: "application/json",
-              Prefer: 'outlook.timezone="W. Europe Standard Time"',
-            },
-          });
+         const graphRes = await fetch(graphUrl, {
+        headers: {
+          Authorization: `Bearer ${tokenRes.accessToken}`,
+            Accept: "application/json",
+                Prefer: 'outlook.timezone="W. Europe Standard Time"',
+              },
+            });
 
           const body = await graphRes.json();
 
@@ -309,154 +293,103 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           const events = Array.isArray(body?.value) ? body.value : [];
           fetchedThisUser += events.length;
 
+          // E) Salva su tbagenda (chiave unica provider+external_id)
           for (const e of events) {
-            if (!studioId || !targetUserId) {
-              errors.push({
-                user_id: targetUserId || "MISSING",
-                message: "SALVATAGGIO BLOCCATO: studio_id o utente_id mancante",
-              });
-              continue;
-            }
+  if (!studioId || !targetUserId) {
+    errors.push({
+      user_id: targetUserId || "MISSING",
+      message: "SALVATAGGIO BLOCCATO: studio_id o utente_id mancante",
+    });
+    continue;
+  }
 
-            if (!e?.id) continue;
+  if (!e?.id) continue;
+  if (!e?.start?.dateTime || !e?.end?.dateTime) continue;
+  if (!studioId || !targetUserId) continue;
 
-            microsoftEventIds.add(e.id);
+  const isAllDay = !!e.isAllDay;
 
-            if (!e?.start?.dateTime || !e?.end?.dateTime) continue;
+  const startDateTime = e.start?.dateTime ?? null;
+  const endDateTime = e.end?.dateTime ?? null;
 
-            const isAllDay = !!e.isAllDay;
-            const startDateTime = e.start?.dateTime ?? null;
-            const endDateTime = e.end?.dateTime ?? null;
+  const oraInizio = isAllDay
+    ? null
+    : (startDateTime?.substring(11, 19) ?? null);
 
-            const oraInizio = isAllDay ? null : startDateTime?.substring(11, 19) ?? null;
-            const oraFine = isAllDay ? null : endDateTime?.substring(11, 19) ?? null;
+  const oraFine = isAllDay
+    ? null
+    : (endDateTime?.substring(11, 19) ?? null);
 
-            const agendaPayload = {
-              titolo: e.subject || "(senza titolo)",
-              descrizione: e.bodyPreview || null,
+  const agendaPayload = {
+    titolo: e.subject || "(senza titolo)",
+    descrizione: e.bodyPreview || null,
 
-              data_inizio: startDateTime,
-              data_fine: endDateTime,
+    data_inizio: startDateTime,
+    data_fine: endDateTime,
 
-              ora_inizio: oraInizio,
-              ora_fine: oraFine,
+    ora_inizio: oraInizio,
+    ora_fine: oraFine,
 
-              tutto_giorno: isAllDay,
-              luogo: e.location?.displayName || null,
+    tutto_giorno: isAllDay,
+    luogo: e.location?.displayName || null,
 
-              microsoft_event_id: e.id,
-              provider: "microsoft",
-              external_id: e.id,
+    microsoft_event_id: e.id,
+    provider: "microsoft",
+    external_id: e.id,
 
-              studio_id: studioId,
-              utente_id: targetUserId,
+    studio_id: studioId,
+    utente_id: targetUserId,
 
-              outlook_synced: true,
+    outlook_synced: true,
 
-              riunione_teams: !!e.isOnlineMeeting,
-              link_teams: e.onlineMeetingUrl || null,
+    riunione_teams: !!e.isOnlineMeeting,
+    link_teams: e.onlineMeetingUrl || null,
 
-              updated_at: new Date().toISOString(),
-            };
+    updated_at: new Date().toISOString(),
+  };
 
-            const { error: upErr } = await supabaseAdmin
-              .from("tbagenda")
-              .upsert(agendaPayload, { onConflict: "provider,external_id" });
+  const { error: upErr } = await supabaseAdmin
+    .from("tbagenda")
+    .upsert(agendaPayload, { onConflict: "provider,external_id" });
 
-            if (upErr) {
-              errors.push({
-                user_id: targetUserId,
-                event_id: e.id,
-                message: upErr.message,
-              });
-            } else {
-              savedThisUser++;
-            }
-          }
+  if (upErr) {
+    errors.push({
+      user_id: targetUserId,
+      event_id: e.id,
+      message: upErr.message,
+    });
+  } else {
+    savedThisUser++;
+  }
+}
 
           graphUrl = body?.["@odata.nextLink"] || "";
         }
-
-        const { data: localEvents, error: localEventsError } = await supabaseAdmin
-          .from("tbagenda")
-          .select("id, microsoft_event_id, external_id")
-          .eq("studio_id", studioId)
-          .eq("utente_id", targetUserId)
-          .eq("provider", "microsoft")
-          .gte("data_inizio", getSyncStartIso())
-          .lte("data_inizio", getSyncEndIso(RANGE_DAYS));
-
-        if (localEventsError) {
-          errors.push({
-            user_id: targetUserId,
-            message: `Errore lettura eventi locali Microsoft: ${localEventsError.message}`,
-          });
-        } else {
-          const idsToDelete = (localEvents || [])
-            .filter((item: any) => {
-              const externalId = item.external_id || item.microsoft_event_id;
-              return externalId && !microsoftEventIds.has(externalId);
-            })
-            .map((item: any) => item.id);
-
-          if (idsToDelete.length > 0) {
-            const { error: deleteError } = await supabaseAdmin
-              .from("tbagenda")
-              .delete()
-              .in("id", idsToDelete);
-
-            if (deleteError) {
-              errors.push({
-                user_id: targetUserId,
-                message: `Errore eliminazione eventi cancellati da Outlook: ${deleteError.message}`,
-              });
-            } else {
-              deletedThisUser = idsToDelete.length;
-            }
-          }
-        }
-
-        await persistCacheIfChanged(
-          studioId,
-          targetUserId,
-          oldSerializedCache,
-          tokenRes.newSerializedCache
-        );
+        // F) Salva cache se cambiata
+        await persistCacheIfChanged(studioId, targetUserId, oldSerializedCache, tokenRes.newSerializedCache);
 
         totalFetched += fetchedThisUser;
         totalSaved += savedThisUser;
-        totalDeleted += deletedThisUser;
 
-        perUser.push({
-          user_id: targetUserId,
-          ok: true,
-          fetched: fetchedThisUser,
-          saved: savedThisUser,
-          deleted: deletedThisUser,
-        });
+        perUser.push({ user_id: targetUserId, ok: true, fetched: fetchedThisUser, saved: savedThisUser });
       } catch (e: any) {
-        perUser.push({
-          user_id: targetUserId,
-          ok: false,
-          error: e?.message || String(e),
-        });
+        perUser.push({ user_id: targetUserId, ok: false, error: e?.message || String(e) });
       }
     }
 
-    return res.status(200).json({
-      ok: true,
-      studio_id: studioId,
-      requested_by: requesterUserId,
-      users_processed: rows.length,
-      range_days: RANGE_DAYS,
-      totalFetched,
-      totalSaved,
-      totalDeleted,
-      updated: totalSaved,
-      deleted: totalDeleted,
-      perUser,
-      errors,
-    });
+    // 6) Risposta per UI
+  return res.status(200).json({
+  ok: true,
+  studio_id: studioId,
+  requested_by: requesterUserId,
+  users_processed: rows.length,
+  range_days: 60,
+  totalFetched,
+  totalSaved,
+  updated: totalSaved,
+  perUser,
+  errors,
+});
   } catch (e: any) {
     console.error("[calendar/sync]", e);
     return res.status(500).json({ error: e?.message || "Errore interno sync" });
