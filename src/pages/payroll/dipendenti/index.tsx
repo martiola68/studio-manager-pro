@@ -24,6 +24,7 @@ type Dipendente = {
   giorni_lavorativi_settimana: number | null;
   percentuale_part_time: number | null;
   qualifica: string | null;
+  qualifica_id: string | null;
   livello: string | null;
   tipo_contratto: string | null;
   sede_lavoro: string | null;
@@ -31,8 +32,16 @@ type Dipendente = {
   attivo: boolean | null;
 };
 
+type Qualifica = {
+  id: string;
+  codice: string;
+  descrizione: string;
+  attivo: boolean | null;
+};
+
 export default function DipendentiPayrollPage() {
-  const [dipendenti, setDipendenti] = useState<Dipendente[]>([]);
+const [dipendenti, setDipendenti] = useState<Dipendente[]>([]);
+const [qualifiche, setQualifiche] = useState<Qualifica[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
 
@@ -62,16 +71,28 @@ export default function DipendentiPayrollPage() {
         return;
       }
 
-      const { data, error } = await supabase
-        .from('tbdipendenti')
-        .select('*')
-        .eq('studio_id', user.studio_id)
-        .order('cognome', { ascending: true })
-        .order('nome', { ascending: true });
+    const [{ data, error }, { data: qualificheData, error: qualificheError }] =
+  await Promise.all([
+    supabase
+      .from('tbdipendenti')
+      .select('*')
+      .eq('studio_id', user.studio_id)
+      .order('cognome', { ascending: true })
+      .order('nome', { ascending: true }),
 
-      if (error) throw error;
+    supabase
+      .from('tbpayroll_qualifiche')
+      .select('id, codice, descrizione, attivo')
+      .eq('studio_id', user.studio_id)
+      .eq('attivo', true)
+      .order('codice', { ascending: true }),
+  ]);
 
-      setDipendenti(data ?? []);
+if (error) throw error;
+if (qualificheError) throw qualificheError;
+
+setDipendenti(data ?? []);
+setQualifiche(qualificheData ?? []);
     } catch (error) {
       console.error('Errore caricamento dipendenti payroll:', error);
       alert('Errore caricamento dipendenti payroll');
@@ -115,6 +136,7 @@ export default function DipendentiPayrollPage() {
           giorni_lavorativi_settimana: dipendente.giorni_lavorativi_settimana,
           percentuale_part_time: dipendente.percentuale_part_time,
           qualifica: dipendente.qualifica,
+          qualifica_id: dipendente.qualifica_id,
           livello: dipendente.livello,
           tipo_contratto: dipendente.tipo_contratto,
           sede_lavoro: dipendente.sede_lavoro,
@@ -186,7 +208,7 @@ export default function DipendentiPayrollPage() {
                       <th className="p-2 text-left">Livello</th>
                       <th className="p-2 text-left">Contratto</th>
                       <th className="p-2 text-left">Centro costo</th>
-                      <th className="p-2 text-center">Stato</th>
+                      <th className="p-2 text-center">Attivo</th>
                       <th className="p-2 text-right">Azioni</th>
                     </tr>
                   </thead>
@@ -241,9 +263,20 @@ export default function DipendentiPayrollPage() {
                           <Input type="number" step="0.01" value={dip.percentuale_part_time ?? 100} onChange={(e) => updateField(dip.id, 'percentuale_part_time', Number(e.target.value))} />
                         </td>
 
-                        <td className="p-2">
-                          <Input value={dip.qualifica ?? ''} onChange={(e) => updateField(dip.id, 'qualifica', e.target.value)} />
-                        </td>
+                       <td className="p-2">
+  <select
+    value={dip.qualifica_id ?? ''}
+    onChange={(e) => updateField(dip.id, 'qualifica_id', e.target.value || null)}
+    className="h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+  >
+    <option value="">-</option>
+    {qualifiche.map((qualifica) => (
+      <option key={qualifica.id} value={qualifica.id}>
+        {qualifica.codice} - {qualifica.descrizione}
+      </option>
+    ))}
+  </select>
+</td>
 
                         <td className="p-2">
                           <Input value={dip.livello ?? ''} onChange={(e) => updateField(dip.id, 'livello', e.target.value)} />
