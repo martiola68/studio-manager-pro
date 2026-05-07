@@ -555,7 +555,7 @@ const getCode = (utenteId: string, day: DayInfo) => {
 });
 
 if (overLimitEmployee) {
-  const summary = getSummaryForEmployee(overLimitEmployee.id);
+  const summary = getSummaryForEmployee(overLimitEmployee.utente_id);
   throw new Error(
     `Limite permessi L.104 superato per ${getEmployeeName(overLimitEmployee)}: ${summary.permessi104Ore}h su massimo 24h mensili.`,
   );
