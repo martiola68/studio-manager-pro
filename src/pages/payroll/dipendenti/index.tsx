@@ -12,6 +12,7 @@ type Dipendente = {
   id: string;
   studio_id: string;
   utente_id: string;
+  codice_ditta: string | null;
   codice_dipendente: string | null;
   matricola_paghe: string | null;
   nome: string | null;
