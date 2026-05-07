@@ -260,16 +260,21 @@ const menuItems: MenuItem[] = [
   },
 
   {
-    label: "Operativo",
+  label: "Promemoria",
+  icon: <FileText className="h-4 w-4" />,
+  href: "/promemoria",
+},
+
+  {
+    label: "Strumenti",
     icon: <BriefcaseBusiness className="h-4 w-4" />,
     children: [
-      { label: "Messaggi", icon: <MessageSquare className="h-4 w-4" />, href: "/messaggi" },
-      { label: "Promemoria", icon: <FileText className="h-4 w-4" />, href: "/promemoria" },
-      { label: "Presenze", icon: <Clock className="h-4 w-4" />, href: "/presenze" },
+      { label: "Messaggistica", icon: <MessageSquare className="h-4 w-4" />, href: "/messaggi" },
       { label: "Rubrica", href: "/contatti", icon: <UserCircle className="h-4 w-4" /> },
-      { label: "Comunicazioni", href: "/comunicazioni", icon: <Mail className="h-4 w-4" /> },
+      { label: "Newsletter e comunicazioni", href: "/comunicazioni", icon: <Mail className="h-4 w-4" /> },
       { label: "Accesso Portali", icon: <Key className="h-4 w-4" />, href: "/accesso-portali" },
       { label: "Cassetti Fiscali", icon: <FileText className="h-4 w-4" />, href: "/cassetti-fiscali" },
+      { label: "Presenze lavorative", icon: <Clock className="h-4 w-4" />, href: "/presenze" },
     ],
   },
 
