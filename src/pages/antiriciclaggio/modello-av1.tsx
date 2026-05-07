@@ -352,8 +352,8 @@ const MediaPunteggio = Number(((TotA + TotB) / divisoreMedia).toFixed(2));
   const AdeguataVerifica = calcolaAdeguataVerifica(RischioEffettivo);
   const ScadenzaVerificaCalcolata = calcolaScadenzaFinale(formData.DataVerifica, AdeguataVerifica);
 
-  const categoriaInerente = getCategoriaRischio(punteggioPrestazione);
-  const categoriaVulnerabilita = getCategoriaRischio(MediaPunteggio);
+ const categoriaInerente = getCategoriaRischio(RischioEffettivo);
+const categoriaVulnerabilita = getCategoriaRischio(RischioEffettivo);
 
   const isActiveCell = (row: string, col: string) => {
     if (categoriaInerente === row && categoriaVulnerabilita === col) {
@@ -1724,7 +1724,7 @@ const handleRinnovoVerifica = async () => {
                 </div>
 
                 <div className="mt-4 text-sm text-gray-600">
-                  Livello rischio effettivo calcolato: <strong>{LivelloRischioEffettivo}</strong>
+                Rischio effettivo calcolato: <strong>{RischioEffettivo} - {LivelloRischioEffettivo}</strong>
                 </div>
               </CardContent>
             </Card>
