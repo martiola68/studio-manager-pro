@@ -80,6 +80,14 @@ type LooseSupabaseClient = {
   from: (table: string) => any;
 };
 
+function getBrowserSupabaseClient() {
+  if (typeof window === 'undefined') {
+    throw new Error('Supabase client disponibile solo nel browser.');
+  }
+
+  return getSupabaseClient() as unknown as LooseSupabaseClient;
+}
+
 const DEFAULT_WORKDAY_CODE = 'Pp';
 const DEFAULT_NON_WORKDAY_CODE = 'N';
 
@@ -185,11 +193,6 @@ export default function PresenzePage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const supabase = useMemo(
-    () => getSupabaseClient() as unknown as LooseSupabaseClient,
-    [],
-  );
-
   const startDate = useMemo(() => toDateKey(year, monthIndex, 1), [year, monthIndex]);
   const endDate = useMemo(
     () => toDateKey(year, monthIndex, getDaysInMonth(year, monthIndex)),
@@ -234,6 +237,10 @@ export default function PresenzePage() {
   const isResponsabilePaghe = Boolean(currentUser?.responsabile_paghe);
 
   const loadData = useCallback(async () => {
+    if (typeof window === 'undefined') return;
+
+    const supabase = getBrowserSupabaseClient();
+
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -348,7 +355,7 @@ export default function PresenzePage() {
     } finally {
       setLoading(false);
     }
-  }, [days, endDate, startDate, supabase]);
+  }, [days, endDate, startDate]);
 
   useEffect(() => {
     loadData();
@@ -369,6 +376,8 @@ export default function PresenzePage() {
 
   const saveMonth = async () => {
     if (!currentUser) return;
+
+    const supabase = getBrowserSupabaseClient();
 
     setSaving(true);
     setError(null);
