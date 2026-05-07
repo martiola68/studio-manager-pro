@@ -114,6 +114,11 @@ const PRESENCE_COLORS: Record<string, string> = {
   Ps: 'bg-violet-100 text-violet-800 border-violet-200',
 };
 
+function getHolidayCellClass(code: string) {
+  if (code === 'N') return 'bg-lime-300 text-lime-950 border-lime-500 font-semibold';
+  return getCellClass(code);
+}
+
 function pad2(value: number) {
   return String(value).padStart(2, '0');
 }
@@ -341,8 +346,29 @@ export default function PresenzePage() {
         loadedValues[`${presence.utente_id}|${presence.data_presenza}`] = presence.codice_presenza;
       });
 
+      const loadedFestivita = (festivitaResult.data ?? []) as Festivita[];
+      const loadedHolidaysByDate = new Map<string, Festivita>();
+      loadedFestivita.forEach((item) => loadedHolidaysByDate.set(item.data_festivita, item));
+
+      const totalDays = getDaysInMonth(year, monthIndex);
+      const monthDaysForDefaults: DayInfo[] = Array.from({ length: totalDays }, (_, index) => {
+        const day = index + 1;
+        const date = toDateKey(year, monthIndex, day);
+        const weekday = new Date(year, monthIndex, day).getDay();
+        const holiday = loadedHolidaysByDate.get(date);
+
+        return {
+          date,
+          day,
+          weekday,
+          isWeekend: weekday === 0 || weekday === 6,
+          isHoliday: Boolean(holiday),
+          holidayDescription: holiday?.descrizione ?? undefined,
+        };
+      });
+
       loadedDipendenti.forEach((dipendente) => {
-        days.forEach((day) => {
+        monthDaysForDefaults.forEach((day) => {
           const key = `${dipendente.id}|${day.date}`;
           if (!loadedValues[key]) loadedValues[key] = getDefaultCode(day);
         });
@@ -355,7 +381,7 @@ export default function PresenzePage() {
     } finally {
       setLoading(false);
     }
-  }, [days, endDate, startDate]);
+  }, [endDate, monthIndex, startDate, year]);
 
   useEffect(() => {
     loadData();
@@ -559,8 +585,12 @@ export default function PresenzePage() {
                         <TableHead
                           key={day.date}
                           title={day.holidayDescription}
-                          className={`w-[72px] text-center ${
-                            day.isWeekend || day.isHoliday ? 'bg-gray-50 text-gray-500' : ''
+                          className={`w-[88px] text-center ${
+                            day.isHoliday
+                              ? 'bg-lime-200 text-lime-950 font-semibold'
+                              : day.isWeekend
+                                ? 'bg-gray-50 text-gray-500'
+                                : ''
                           }`}
                         >
                           <div className="flex flex-col items-center leading-tight">
@@ -597,24 +627,20 @@ export default function PresenzePage() {
                             const code = getCode(dipendente.id, day);
                             return (
                               <TableCell key={`${dipendente.id}-${day.date}`} className="p-1 text-center">
-                                <Select
+                                <select
                                   value={code}
-                                  onValueChange={(value) => handleChange(dipendente.id, day.date, value)}
+                                  onChange={(event) => handleChange(dipendente.id, day.date, event.target.value)}
+                                  title={day.holidayDescription}
+                                  className={`h-8 w-[82px] rounded-md border px-2 text-xs outline-none ${
+                                    day.isHoliday ? getHolidayCellClass(code) : getCellClass(code)
+                                  }`}
                                 >
-                                  <SelectTrigger
-                                    className={`h-8 w-[64px] border px-2 text-xs ${getCellClass(code)}`}
-                                    title={day.holidayDescription}
-                                  >
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {allowedCodes.map((item) => (
-                                      <SelectItem key={item.codice} value={item.codice}>
-                                        {item.codice} - {item.descrizione ?? ''}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                  {allowedCodes.map((item) => (
+                                    <option key={item.codice} value={item.codice}>
+                                      {item.codice}
+                                    </option>
+                                  ))}
+                                </select>
                               </TableCell>
                             );
                           })}
