@@ -462,9 +462,15 @@ const response = await fetch("/api/auth/create-user", {
       attivo: utente.attivo ?? true,
       settore: (utente.settore as "Fiscale" | "Lavoro" | "Consulenza") || "",
       responsabile: utente.responsabile ?? false,
-      responsabile_paghe: (utente as any).responsabile_paghe ?? false,
+      responsabile_paghe: Boolean((utente as any).responsabile_paghe),
       microsoft_connection_id: utente.microsoft_connection_id || "",
-      tipo_rapporto: ((utente as any).tipo_rapporto as "Dipendente" | "Collaboratore" | "Praticante" | "Socio") || "",
+     tipo_rapporto:
+  ((utente as any).tipo_rapporto as
+    | "Dipendente"
+    | "Collaboratore"
+    | "Praticante"
+    | "Socio"
+    | null) ?? "",
     });
     setDialogOpen(true);
   };
