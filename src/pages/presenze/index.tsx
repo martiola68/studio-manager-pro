@@ -785,15 +785,22 @@ const rows = editableDipendenti.flatMap((dipendente) =>
 };
 
 const exportZucchettiDat = () => {
-  const records: string[] = [];
+  const groupedByDitta: Record<string, string[]> = {};
 
   dipendenti.forEach((dipendente) => {
     const codiceDitta = onlyDigits(dipendente.codice_ditta);
-    const matricola = onlyDigits(dipendente.matricola_paghe || dipendente.codice_dipendente);
+    const matricola = onlyDigits(
+      dipendente.matricola_paghe || dipendente.codice_dipendente,
+    );
+
     const dailyHours = Number(dipendente.orario_giornaliero ?? 8);
 
     if (!codiceDitta || !matricola) {
       return;
+    }
+
+    if (!groupedByDitta[codiceDitta]) {
+      groupedByDitta[codiceDitta] = [];
     }
 
     const employeeRecords: string[] = [
@@ -802,30 +809,42 @@ const exportZucchettiDat = () => {
 
     days.forEach((day) => {
       const code = getCode(dipendente.utente_id, day);
+
       if (!code) return;
 
-      const movement = getZucchettiMovement(code, day.date, dailyHours);
+      const movement = getZucchettiMovement(
+        code,
+        day.date,
+        dailyHours,
+      );
+
       if (movement) {
         employeeRecords.push(movement);
       }
     });
 
     if (employeeRecords.length > 1) {
-      records.push(...employeeRecords);
+      groupedByDitta[codiceDitta].push(...employeeRecords);
     }
   });
 
-  if (records.length === 0) {
+  const ditte = Object.keys(groupedByDitta);
+
+  if (ditte.length === 0) {
     setError(
       'Nessun dato esportabile per Zucchetti. Verifica codice ditta, matricola paghe e presenze.',
     );
     return;
   }
 
-  downloadDat(
-    `trripa_${year}_${pad2(monthIndex + 1)}.dat`,
-    records.join(''),
-  );
+  ditte.forEach((codiceDitta) => {
+    const content = groupedByDitta[codiceDitta].join('');
+
+    downloadDat(
+      `trripa_${codiceDitta}_${year}_${pad2(monthIndex + 1)}.dat`,
+      content,
+    );
+  });
 };
   
   return (
