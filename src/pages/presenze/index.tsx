@@ -458,19 +458,16 @@ const requiredOrder = [
     loadData();
   }, [loadData]);
 
- const handleChange = (utenteId: string, date: string, code: string) => {
+const handleChange = (utenteId: string, date: string, code: string) => {
   if (!canEditEmployee(utenteId)) return;
 
   setSuccess(null);
   setValues((prev) => ({ ...prev, [`${utenteId}|${date}`]: code }));
 };
-    setSuccess(null);
-    setValues((prev) => ({ ...prev, [`${utenteId}|${date}`]: code }));
-  };
 
-  const getCode = (utenteId: string, day: DayInfo) => {
-    return values[`${utenteId}|${day.date}`] ?? '';
-  };
+const getCode = (utenteId: string, day: DayInfo) => {
+  return values[`${utenteId}|${day.date}`] ?? '';
+};
 
   const getSummaryForEmployee = (utenteId: string) => {
     return summarize(days.map((day) => getCode(utenteId, day)));
