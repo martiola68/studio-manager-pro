@@ -357,6 +357,59 @@ if (agendaPayloads.length > 0) {
   }
 }
 
+        const microsoftEventIds = new Set(
+  agendaPayloads
+    .map((item) => item.external_id || item.microsoft_event_id)
+    .filter(Boolean)
+);
+
+const syncStart = new Date();
+syncStart.setHours(0, 0, 0, 0);
+
+const syncEnd = new Date();
+syncEnd.setDate(syncEnd.getDate() + RANGE_DAYS);
+syncEnd.setHours(23, 59, 59, 999);
+
+const { data: localEvents, error: localEventsError } = await supabaseAdmin
+  .from("tbagenda")
+  .select("id, microsoft_event_id, external_id")
+  .eq("studio_id", studioId)
+  .eq("utente_id", targetUserId)
+  .eq("provider", "microsoft")
+  .eq("outlook_synced", true)
+  .gte("data_inizio", syncStart.toISOString())
+  .lte("data_inizio", syncEnd.toISOString());
+
+if (localEventsError) {
+  errors.push({
+    studio_id: studioId,
+    user_id: targetUserId,
+    message: `Errore lettura eventi locali Microsoft: ${localEventsError.message}`,
+  });
+} else {
+  const idsToDelete = (localEvents || [])
+    .filter((item: any) => {
+      const externalId = item.external_id || item.microsoft_event_id;
+      return externalId && !microsoftEventIds.has(externalId);
+    })
+    .map((item: any) => item.id);
+
+  if (idsToDelete.length > 0) {
+    const { error: deleteError } = await supabaseAdmin
+      .from("tbagenda")
+      .delete()
+      .in("id", idsToDelete);
+
+    if (deleteError) {
+      errors.push({
+        studio_id: studioId,
+        user_id: targetUserId,
+        message: `Errore eliminazione eventi cancellati da Outlook: ${deleteError.message}`,
+      });
+    }
+  }
+}
+
 await persistCacheIfChanged({
           studioId,
           userId: targetUserId,
