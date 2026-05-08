@@ -382,9 +382,13 @@ const filteredScadenze = scadenze.filter((s) => {
                 ) : (
                   filteredScadenze.map((scadenza) => (
                     <tr key={scadenza.id} className="border-b border-gray-300 hover:bg-green-50/40">
-                      <td className="sticky-col-cell p-2 align-middle font-medium min-w-[320px] border-r border-gray-300 bg-white">
-                        {scadenza.nominativo}
-                        </td>
+                      <td
+  className={`sticky-col-cell p-2 align-middle font-medium min-w-[320px] border-r border-gray-300 bg-white ${
+    getTipoLiq(scadenza) === "Esterna" ? "text-red-600 font-bold" : ""
+  }`}
+>
+  {scadenza.nominativo}
+</td>
                           <td className="p-2 align-middle min-w-[180px] border-r border-gray-300">
                             {scadenza.operatore}
                           </td>
