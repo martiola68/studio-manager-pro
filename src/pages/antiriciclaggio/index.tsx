@@ -931,7 +931,28 @@ const loadRowsBySocieta = async (societaId: string) => {
 const filteredRows = useMemo(() => {
   if (!societaFilter || !canAccessAntiriciclaggio) return [];
 
-  return rows.filter((row) => row.societa_id === societaFilter);
+  return rows
+    .filter((row) => row.societa_id === societaFilter)
+    .sort((a, b) => {
+      const clienteA = getCliente(a);
+      const clienteB = getCliente(b);
+
+      const nomeA = String(
+        clienteA?.ragione_sociale ||
+          clienteA?.cod_cliente ||
+          clienteA?.codice_fiscale ||
+          ""
+      ).toLowerCase();
+
+      const nomeB = String(
+        clienteB?.ragione_sociale ||
+          clienteB?.cod_cliente ||
+          clienteB?.codice_fiscale ||
+          ""
+      ).toLowerCase();
+
+      return nomeA.localeCompare(nomeB, "it");
+    });
 }, [rows, societaFilter, canAccessAntiriciclaggio]);
 
   const handleSocietaChange = (societaId: string) => {
