@@ -949,6 +949,84 @@ function handleApriPdfFirmato() {
   masterPasswordGate.requireUnlock(openPdf);
 }
 
+  function handleRimuoviPdfFirmato() {
+  const removePdf = async () => {
+    if (!av4Id) {
+      alert("AV4 non salvato.");
+      return;
+    }
+
+    if (!form.allegato_pdf_cliente) {
+      alert("Nessun PDF firmato da rimuovere.");
+      return;
+    }
+
+    const conferma = window.confirm("Vuoi rimuovere il PDF firmato allegato?");
+    if (!conferma) return;
+
+    const supabase = getSupabaseClient() as any;
+
+    try {
+      setLoading(true);
+
+      const storagePath = form.allegato_pdf_cliente;
+
+      const { error: removeError } = await supabase.storage
+        .from("messaggi-allegati")
+        .remove([storagePath]);
+
+      if (removeError) {
+        console.error(removeError);
+      }
+
+      const { error: updateError } = await supabase
+        .from("tbAV4")
+        .update({
+          allegato_pdf_cliente: null,
+          pdf_firmato_cliente: null,
+          compilato_da_cliente: false,
+          stato: "bozza",
+        })
+        .eq("id", av4Id);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      const { error: fascicoloError } = await supabase
+        .from("tbAVFascicoliDocumenti")
+        .delete()
+        .eq("storage_path", storagePath)
+        .eq("origine", "av4_pdf");
+
+      if (fascicoloError) {
+        console.error(fascicoloError);
+      }
+
+      setForm((prev) => ({
+        ...prev,
+        allegato_pdf_cliente: "",
+        pdf_firmato_cliente: "",
+        stato: "bozza",
+      }));
+
+      alert("PDF firmato rimosso correttamente.");
+    } catch (error: any) {
+      console.error(error);
+      alert(error?.message || "Errore durante la rimozione del PDF firmato.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!encryptionEnabled) {
+    void removePdf();
+    return;
+  }
+
+  masterPasswordGate.requireUnlock(removePdf);
+}
+  
 async function handleUploadPdfFirmatoDiretto(
   e: React.ChangeEvent<HTMLInputElement>
 ) {
@@ -2500,6 +2578,15 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
     className="hidden"
   />
 </label>
+
+                  <button
+  type="button"
+  onClick={handleRimuoviPdfFirmato}
+  disabled={!form.allegato_pdf_cliente || loading}
+  className="ml-3 rounded border border-red-300 px-4 py-2 text-red-700 shadow hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+>
+  Rimuovi PDF firmato
+</button>
 
                   {form.allegato_pdf_cliente ? (
                     <p className="mt-2 break-all text-xs text-gray-500">
