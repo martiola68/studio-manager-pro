@@ -148,15 +148,17 @@ function buildCalendarViewUrl(rangeDays: number) {
 }
 
 function getSyncStartIso() {
-  return new Date().toISOString();
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  return start.toISOString();
 }
 
 function getSyncEndIso(rangeDays: number) {
   const end = new Date();
   end.setDate(end.getDate() + rangeDays);
+  end.setHours(23, 59, 59, 999);
   return end.toISOString();
 }
-
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
