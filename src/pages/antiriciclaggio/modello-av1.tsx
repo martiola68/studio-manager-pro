@@ -1752,7 +1752,11 @@ const handleRinnovoVerifica = async () => {
                     </div>
 
                     <div className="grid grid-cols-5 border-b border-l border-r border-gray-400">
-                      <div className="border border-gray-400 bg-white p-4" />
+                      <div className="flex items-center justify-center border border-gray-400 bg-white p-4 text-center font-bold">
+  RISCHIO INERENTE
+  <br />
+  30%
+</div>
                       <div className="border border-gray-400 bg-green-200 p-3 text-center font-semibold">
                         Non significativa
                         <div className="text-sm font-normal">1 - 1,59</div>
@@ -1769,10 +1773,10 @@ const handleRinnovoVerifica = async () => {
                         Molto significativa
                         <div className="text-sm font-normal">3,6 - 4</div>
                       </div>
-
-                      <div className="col-span-5 border border-gray-400 bg-white p-4 text-center text-xl font-bold">
-                        VULNERABILITÀ 70%
-                      </div>
+<div className="col-span-1 border border-gray-400 bg-white p-4" />
+<div className="col-span-4 border border-gray-400 bg-white p-4 text-center text-xl font-bold">
+  VULNERABILITÀ 70%
+</div>
                     </div>
                   </div>
                 </div>
