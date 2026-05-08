@@ -322,6 +322,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
             if (!e?.id) continue;
 
+            if ((e.subject || "").toLowerCase().includes("riproviamo")) {
+  console.log("[m365 sync] evento ancora restituito da Graph", {
+    id: e.id,
+    subject: e.subject,
+    isCancelled: e.isCancelled,
+    start: e.start,
+    end: e.end,
+  });
+}
+
             microsoftEventIds.add(e.id);
 
             if (!e?.start?.dateTime || !e?.end?.dateTime) continue;
