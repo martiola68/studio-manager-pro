@@ -309,7 +309,8 @@ export default function ModelloAV1Page() {
   [prestazioni, formData.Prestazione]
 );
 
-const isTB1 = tipoTBPrestazione === "TB1";
+const isPrestazioneTabella1 = tipoTBPrestazione === "TB1";
+const includeQuadroB = !isPrestazioneTabella1;
 
   const punteggioPrestazione = useMemo(
     () =>
@@ -332,16 +333,16 @@ const isTB1 = tipoTBPrestazione === "TB1";
     normalizeScore(formData.A3) +
     normalizeScore(formData.A4);
 
-const TotB = isTB1
-  ? 0
-  : normalizeScore(formData.B1) +
+const TotB = includeQuadroB
+  ? normalizeScore(formData.B1) +
     normalizeScore(formData.B2) +
     normalizeScore(formData.B3) +
     normalizeScore(formData.B4) +
     normalizeScore(formData.B5) +
-    normalizeScore(formData.B6);
+    normalizeScore(formData.B6)
+  : 0;
 
-const divisoreMedia = isTB1 ? 4 : 10;
+const divisoreMedia = includeQuadroB ? 10 : 4;
 const MediaPunteggio = Number(((TotA + TotB) / divisoreMedia).toFixed(2));
   
   const LivelloRischio = calcolaLivelloRischio(MediaPunteggio);
@@ -1248,23 +1249,23 @@ const handleRinnovoVerifica = async () => {
                  {Object.entries(av1Labels).map(([sectionKey, fields]) => {
   const isBStart = sectionKey === "B1";
   const isBSection = sectionKey.startsWith("B");
-  const disableSection = isTB1 && isBSection;
+  const disableSection = isPrestazioneTabella1 && isBSection;
 
   return (
     <div key={sectionKey}>
       {isBStart && (
         <div
           className={`mb-6 rounded-md border p-4 ${
-            isTB1
+            isPrestazioneTabella1
               ? "border-red-500 bg-red-50"
               : "border-transparent bg-transparent p-0"
           }`}
         >
-          <h3 className={`text-xl font-semibold ${isTB1 ? "text-red-700" : ""}`}>
+          <h3 className={`text-xl font-semibold ${isPrestazioneTabella1 ? "text-red-700" : ""}`}>
             B. Aspetti connessi all’operazione e/o prestazione professionale
           </h3>
 
-          {isTB1 && (
+          {isPrestazioneTabella1 && (
             <p className="mt-2 text-sm font-medium text-red-700">
               Sezione B non obbligatoria per prestazione rientrante nella tabella 1
             </p>
@@ -1306,7 +1307,7 @@ const handleRinnovoVerifica = async () => {
         type="checkbox"
         className="mt-1"
         checked={Boolean(formData[fieldKey])}
-        disabled={isTB1 && sectionKey.startsWith("B")}
+        disabled={isPrestazioneTabella1 && sectionKey.startsWith("B")}
         onChange={(e) =>
           setFormData((prev) => ({
             ...prev,
@@ -1382,7 +1383,7 @@ const handleRinnovoVerifica = async () => {
 
                   <div>
                   <label className="mb-1 block text-sm font-medium">
-  TotB {isTB1 ? "(non obbligatorio per TB1)" : ""}
+  TotB {isPrestazioneTabella1 ? "(non obbligatorio per TB1)" : ""}
 </label>
                     <input
                       type="text"
