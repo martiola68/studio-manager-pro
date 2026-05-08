@@ -353,8 +353,8 @@ const MediaPunteggio = Number(((TotA + TotB) / divisoreMedia).toFixed(2));
   const AdeguataVerifica = calcolaAdeguataVerifica(RischioEffettivo);
   const ScadenzaVerificaCalcolata = calcolaScadenzaFinale(formData.DataVerifica, AdeguataVerifica);
 
-const categoriaInerente = getCategoriaRischio(punteggioPrestazione);
-const categoriaVulnerabilita = getCategoriaRischio(MediaPunteggio);
+const categoriaInerente = getCategoriaRischio(RisInerentePonderato);
+const categoriaVulnerabilita = getCategoriaRischio(RisSpecificoPonderato);
 
   const isActiveCell = (row: string, col: string) => {
     if (categoriaInerente === row && categoriaVulnerabilita === col) {
