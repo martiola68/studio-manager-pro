@@ -353,8 +353,8 @@ const MediaPunteggio = Number(((TotA + TotB) / divisoreMedia).toFixed(2));
   const AdeguataVerifica = calcolaAdeguataVerifica(RischioEffettivo);
   const ScadenzaVerificaCalcolata = calcolaScadenzaFinale(formData.DataVerifica, AdeguataVerifica);
 
- const categoriaInerente = getCategoriaRischio(RischioEffettivo);
-const categoriaVulnerabilita = getCategoriaRischio(RischioEffettivo);
+const categoriaInerente = getCategoriaRischio(punteggioPrestazione);
+const categoriaVulnerabilita = getCategoriaRischio(MediaPunteggio);
 
   const isActiveCell = (row: string, col: string) => {
     if (categoriaInerente === row && categoriaVulnerabilita === col) {
@@ -857,10 +857,63 @@ const handleOpenFirmato = async () => {
 
 const handleRemoveFirmato = async () => {
   const run = async () => {
-    setFormData((prev) => ({
-      ...prev,
-      allegato_av1_firmato: "",
-    }));
+    if (!formData.allegato_av1_firmato) {
+      alert("Nessun allegato AV1 da rimuovere.");
+      return;
+    }
+
+    const conferma = window.confirm("Vuoi rimuovere l'allegato AV1 firmato?");
+    if (!conferma) return;
+
+    try {
+      setUploadingFirmato(true);
+      setError(null);
+
+      const supabase = getSupabaseClient() as any;
+      const storagePath = formData.allegato_av1_firmato;
+
+      const { error: removeError } = await supabase.storage
+        .from(BUCKET_NAME)
+        .remove([storagePath]);
+
+      if (removeError) {
+        console.error("Errore rimozione file AV1:", removeError);
+      }
+
+      if (formData.id) {
+        const { error: updateError } = await supabase
+          .from("tbAV1")
+          .update({
+            allegato_av1_firmato: null,
+          })
+          .eq("id", formData.id);
+
+        if (updateError) {
+          throw new Error(updateError.message);
+        }
+      }
+
+      const { error: fascicoloError } = await supabase
+        .from("tbAVFascicoliDocumenti")
+        .delete()
+        .eq("storage_path", storagePath)
+        .eq("origine", "av1_firmato");
+
+      if (fascicoloError) {
+        console.error("Errore rimozione fascicolo AV1:", fascicoloError);
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        allegato_av1_firmato: "",
+      }));
+
+      alert("Allegato AV1 firmato rimosso correttamente.");
+    } catch (err: any) {
+      setError(err?.message || "Errore rimozione allegato AV1.");
+    } finally {
+      setUploadingFirmato(false);
+    }
   };
 
   if (encryptionEnabled && isEncryptionLocked()) {
