@@ -1659,29 +1659,34 @@ const handleEliminaCompleto = async (row: AV1Row) => {
                       </td>
 
                      <td
+<td
   className={`p-3 text-center font-semibold ${
-    av4Info?.Av4InviatoCL ||
-    av4Info?.public_sent_at ||
-    row.stato_pratica === "av4_inviato" ||
-    row.stato_pratica === "av4_ricevuto"
+    av4Info?.av4_caricato_manualmente
+      ? "text-gray-400"
+      : av4Info?.Av4InviatoCL ||
+        av4Info?.public_sent_at ||
+        row.stato_pratica === "av4_inviato" ||
+        row.stato_pratica === "av4_ricevuto"
       ? "text-green-600"
       : "text-red-600"
   }`}
 >
-  {av4Info?.Av4InviatoCL ||
-  av4Info?.public_sent_at ||
-  row.stato_pratica === "av4_inviato" ||
-  row.stato_pratica === "av4_ricevuto"
+  {av4Info?.av4_caricato_manualmente
+    ? "-"
+    : av4Info?.Av4InviatoCL ||
+      av4Info?.public_sent_at ||
+      row.stato_pratica === "av4_inviato" ||
+      row.stato_pratica === "av4_ricevuto"
     ? "Sì"
     : "No"}
 </td>
 
-                      <td
+ <td
   className={`p-3 text-center font-semibold ${
-    av4Info?.av4_caricato_manualmente ? "text-blue-600" : "text-gray-400"
+    av4Info?.av4_caricato_manualmente ? "text-red-600" : "text-gray-400"
   }`}
 >
-  {av4Info?.av4_caricato_manualmente ? "Sì" : "No"}
+  {av4Info?.av4_caricato_manualmente ? "Sì" : "-"}
 </td>
 
                       <td className="p-3 text-center">
