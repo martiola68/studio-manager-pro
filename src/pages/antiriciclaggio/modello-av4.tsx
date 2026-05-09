@@ -1236,8 +1236,9 @@ if (form.invia_altra_email && !form.email_destinatario_alternativa.trim()) {
           : null,
           public_enabled: true,
           public_sent_at: new Date().toISOString(),
-          Av4InviatoCL: true,
-          compilato_da_cliente: false,
+         Av4InviatoCL: true,
+        av4_caricato_manualmente: false,
+        compilato_da_cliente: false,
           public_opened_at: null,
           public_submitted_at: null,
           allegato_pdf_cliente: null,
@@ -1658,7 +1659,7 @@ ${nomeOperatore}
 
       av4_caricato_manualmente: !!form.av4_caricato_manualmente,
       compilato_da_cliente: !!form.av4_caricato_manualmente || !!form.allegato_pdf_cliente,
-      Av4InviatoCL: !!form.av4_caricato_manualmente ? true : undefined,
+      Av4InviatoCL: form.av4_caricato_manualmente ? null : form.stato === "completato",
 
       stato: form.av4_caricato_manualmente ? "completato" : form.stato,
       versione: form.versione,
@@ -1887,7 +1888,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                         </button>
                         </div>
 <div className="rounded-lg border bg-slate-50 p-4">
-  <label className="flex items-center gap-2 text-sm font-medium">
+ <label className="flex items-center gap-2 text-base font-bold text-red-600">
     <input
       type="checkbox"
       name="invia_altra_email"
@@ -2599,12 +2600,19 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                     Apri PDF firmato
                   </button>
 
-                  <label className="ml-3 inline-block cursor-pointer rounded bg-blue-600 px-4 py-2 text-white shadow hover:bg-blue-700">
+ <label
+  className={`ml-3 inline-block rounded px-4 py-2 text-white shadow ${
+    form.av4_caricato_manualmente
+      ? "cursor-pointer bg-blue-600 hover:bg-blue-700"
+      : "cursor-not-allowed bg-gray-400"
+  }`}
+>
   Carica PDF firmato
   <input
     type="file"
     accept="application/pdf"
     onChange={handleUploadPdfFirmatoDiretto}
+    disabled={!form.av4_caricato_manualmente}
     className="hidden"
   />
 </label>
