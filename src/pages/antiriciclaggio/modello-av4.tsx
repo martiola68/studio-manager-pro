@@ -1888,7 +1888,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                         </button>
                         </div>
 <div className="rounded-lg border bg-slate-50 p-4">
- <label className="flex items-center gap-2 text-base font-bold text-red-600">
+<label className="flex items-center gap-2 text-sm font-medium">
     <input
       type="checkbox"
       name="invia_altra_email"
@@ -1919,7 +1919,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
 </div>
 
               <div className="rounded-lg border bg-amber-50 p-4">
- <label className="flex items-center gap-2 text-base font-bold text-red-600">
+ <label className="flex items-center gap-2 text-sm font-medium">
     <input
       type="checkbox"
       name="amm_no_associato"
@@ -2576,7 +2576,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
 )}
 
 <div className="md:col-span-2 rounded-lg border bg-amber-50 p-4">
-  <label className="flex items-center gap-2 text-sm font-medium">
+ <label className="flex items-center gap-2 text-base font-bold text-red-600">
     <input
       type="checkbox"
       name="av4_caricato_manualmente"
