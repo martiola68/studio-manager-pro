@@ -583,13 +583,14 @@ const loadRowsBySocieta = async (societaId: string) => {
 
             supabaseAny
               .from("tbAV4")
-              .select(`
-                id,
-                av1_id,
-                Av4InviatoCL,
-                public_sent_at,
-                compilato_da_cliente
-              `)
+           .select(`
+  id,
+  av1_id,
+  Av4InviatoCL,
+  public_sent_at,
+  compilato_da_cliente,
+  av4_caricato_manualmente
+`)
               .eq("pratica_id", pratica.id)
               .order("created_at", { ascending: false })
               .limit(1)
@@ -1413,21 +1414,37 @@ const handleEliminaCompleto = async (row: AV1Row) => {
                 <th className="p-3 text-left">Utente fiscale</th>
                 <th className="p-3 text-left">Data verifica</th>
                 <th className="p-3 text-left">Scadenza verifica</th>
-                <th className="p-3 text-center">AV1 conferma</th>
-                <th className="p-3 text-center">AV2 generato</th>
-                <th className="w-[90px] p-2 text-center leading-tight">
-                  AV4
-                  <br />
-                  inviato
-                </th>
-                <th className="p-3 text-center">Data invio AV4</th>
-                <th className="p-3 text-center">AV4 confermato</th>
-                <th className="p-3 text-center">Azioni</th>
+               <th className="w-[80px] p-2 text-center leading-tight">
+  AV1
+  <br />
+  conferma
+</th>
+<th className="w-[80px] p-2 text-center leading-tight">
+  AV2
+  <br />
+  generato
+</th>
+<th className="w-[80px] p-2 text-center leading-tight">
+  AV4
+  <br />
+  inviato
+</th>
+<th className="w-[80px] p-2 text-center leading-tight">
+  AV4
+  <br />
+  manuale
+</th>
+<th className="p-3 text-center">Data invio AV4</th>
+<th className="w-[90px] p-2 text-center leading-tight">
+  AV4
+  <br />
+  confermato
+</th>                <th className="p-3 text-center">Azioni</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td colSpan={11} className="p-4 text-center">
+                <td colSpan={12} className="p-4 text-center">
                   Seleziona un soggetto responsabile per visualizzare le pratiche
                 </td>
               </tr>
@@ -1458,23 +1475,59 @@ const handleEliminaCompleto = async (row: AV1Row) => {
         <div className="overflow-x-auto rounded-lg border bg-white">
           <table className="w-full text-sm">
             <thead className="bg-gray-100">
-              <tr>
-                <th className="p-3 text-left">Stato</th>
-                <th className="p-3 text-left">Cliente</th>
-                <th className="p-3 text-left">Utente di riferimento</th>
-                <th className="p-3 text-left">Data verifica</th>
-                <th className="p-3 text-left">Scadenza verifica</th>
-                <th className="p-3 text-center">AV1 conferma</th>
-                <th className="p-3 text-center">AV2 generato</th>
-                <th className="w-[90px] p-2 text-center leading-tight">
-                  AV4
-                  <br />
-                  inviato
-                </th>
-                <th className="p-3 text-center">Data invio AV4</th>
-                <th className="p-3 text-center">AV4 confermato</th>
-                <th className="p-3 text-center">Azioni</th>
-              </tr>
+             <tr>
+  <th className="p-3 text-left">Stato</th>
+
+  <th className="p-3 text-left">Cliente</th>
+
+  <th className="p-3 text-left">
+    Utente di riferimento
+  </th>
+
+  <th className="p-3 text-left">
+    Data verifica
+  </th>
+
+  <th className="p-3 text-left">
+    Scadenza verifica
+  </th>
+
+  <th className="w-[80px] p-2 text-center leading-tight">
+    AV1
+    <br />
+    conferma
+  </th>
+
+  <th className="w-[80px] p-2 text-center leading-tight">
+    AV2
+    <br />
+    generato
+  </th>
+
+  <th className="w-[80px] p-2 text-center leading-tight">
+    AV4
+    <br />
+    inviato
+  </th>
+
+  <th className="w-[80px] p-2 text-center leading-tight">
+    AV4
+    <br />
+    manuale
+  </th>
+
+  <th className="p-3 text-center">
+    Data invio AV4
+  </th>
+
+  <th className="w-[90px] p-2 text-center leading-tight">
+    AV4
+    <br />
+    confermato
+  </th>
+
+  <th className="p-3 text-center">Azioni</th>
+</tr>
             </thead>
             <tbody>
               <tr>
@@ -1589,6 +1642,14 @@ const handleEliminaCompleto = async (row: AV1Row) => {
   row.stato_pratica === "av4_ricevuto"
     ? "Sì"
     : "No"}
+</td>
+
+                      <td
+  className={`p-3 text-center font-semibold ${
+    av4Info?.av4_caricato_manualmente ? "text-blue-600" : "text-gray-400"
+  }`}
+>
+  {av4Info?.av4_caricato_manualmente ? "Sì" : "No"}
 </td>
 
                       <td className="p-3 text-center">
