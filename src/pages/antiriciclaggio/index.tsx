@@ -22,6 +22,7 @@ type AV4Info = {
   Av4InviatoCL?: boolean | null;
   public_sent_at?: string | null;
   compilato_da_cliente?: boolean | null;
+  av4_caricato_manualmente?: boolean | null;
 };
 
 type ResponsabileAV = {
