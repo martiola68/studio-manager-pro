@@ -82,6 +82,7 @@ type FormState = {
   data_firma_bis: string;
   pdf_firmato_cliente: string;
   allegato_pdf_cliente: string;
+  av4_caricato_manualmente: boolean;
 
   stato: string;
   versione: number;
@@ -162,6 +163,7 @@ const initialFormState = (
   data_firma_bis: "",
   pdf_firmato_cliente: "",
   allegato_pdf_cliente: "",
+  av4_caricato_manualmente: false,
 
   stato: "bozza",
   versione: 1,
@@ -268,6 +270,7 @@ function mapDbRowToForm(row: any): FormState {
     data_firma_bis: normalizeDateForInput(row?.data_firma_bis),
     pdf_firmato_cliente: row?.pdf_firmato_cliente ?? "",
     allegato_pdf_cliente: row?.allegato_pdf_cliente ?? "",
+    av4_caricato_manualmente: !!row?.av4_caricato_manualmente,
     stato: row?.stato ?? "bozza",
     versione: Number(row?.versione ?? 1),
   };
@@ -1654,6 +1657,7 @@ ${nomeOperatore}
       data_firma_bis: form.data_firma_bis || null,
 
       stato: form.stato,
+      stato: form.av4_caricato_manualmente ? "completato" : form.stato,
       versione: form.versione,
     };
 
@@ -2549,18 +2553,34 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                   </div>
                 )}
 
-                {publicUrl && (
-                  <div className="md:col-span-2">
-                    <label className="mb-1 block text-sm font-medium">Link pubblico AV4</label>
-                    <input
-                      value={publicUrl}
-                      readOnly
-                      className="w-full rounded-md border bg-gray-50 px-3 py-2 text-sm"
-                    />
-                  </div>
-                )}
+               {publicUrl && (
+  <div className="md:col-span-2">
+    <label className="mb-1 block text-sm font-medium">Link pubblico AV4</label>
+    <input
+      value={publicUrl}
+      readOnly
+      className="w-full rounded-md border bg-gray-50 px-3 py-2 text-sm"
+    />
+  </div>
+)}
 
-                <div className="md:col-span-2">
+<div className="md:col-span-2 rounded-lg border bg-amber-50 p-4">
+  <label className="flex items-center gap-2 text-sm font-medium">
+    <input
+      type="checkbox"
+      name="av4_caricato_manualmente"
+      checked={form.av4_caricato_manualmente}
+      onChange={handleChange}
+    />
+    AV4 caricato manualmente
+  </label>
+
+  <p className="mt-1 text-xs text-gray-500">
+    Se attivo, la pratica considera l’AV4 completato anche senza invio del link al cliente.
+  </p>
+</div>
+
+<div className="md:col-span-2">
                   <button
                     type="button"
                     onClick={handleApriPdfFirmato}
