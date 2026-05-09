@@ -1656,6 +1656,10 @@ ${nomeOperatore}
       luogo_firma_bis: form.luogo_firma_bis || null,
       data_firma_bis: form.data_firma_bis || null,
 
+      av4_caricato_manualmente: !!form.av4_caricato_manualmente,
+      compilato_da_cliente: !!form.av4_caricato_manualmente || !!form.allegato_pdf_cliente,
+      Av4InviatoCL: !!form.av4_caricato_manualmente ? true : undefined,
+
       stato: form.av4_caricato_manualmente ? "completato" : form.stato,
       versione: form.versione,
     };
@@ -1710,6 +1714,13 @@ ${nomeOperatore}
         return;
       }
     }
+
+    setForm((prev) => ({
+  ...prev,
+  av4_caricato_manualmente: !!form.av4_caricato_manualmente,
+  compilato_da_cliente: !!form.av4_caricato_manualmente || !!form.allegato_pdf_cliente,
+  stato: form.av4_caricato_manualmente ? "completato" : prev.stato,
+}));
 
     alert("AV4 salvato correttamente.");
 
