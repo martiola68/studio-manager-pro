@@ -1656,7 +1656,6 @@ ${nomeOperatore}
       luogo_firma_bis: form.luogo_firma_bis || null,
       data_firma_bis: form.data_firma_bis || null,
 
-      stato: form.stato,
       stato: form.av4_caricato_manualmente ? "completato" : form.stato,
       versione: form.versione,
     };
