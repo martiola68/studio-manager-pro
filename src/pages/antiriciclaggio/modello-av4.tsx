@@ -1919,7 +1919,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
 </div>
 
               <div className="rounded-lg border bg-amber-50 p-4">
-  <label className="flex items-center gap-2 text-sm font-medium">
+ <label className="flex items-center gap-2 text-base font-bold text-red-600">
     <input
       type="checkbox"
       name="amm_no_associato"
