@@ -298,15 +298,16 @@ const getAV4IconBorderClass = (row: AV1Row) => {
 
   const av4Ricevuto =
     av4Info?.compilato_da_cliente ||
+    av4Info?.av4_caricato_manualmente ||
     row.stato_pratica === "av4_ricevuto";
 
-  const av4Completato =
-  av4Info?.compilato_da_cliente ||
-  av4Info?.Av4InviatoCL ||
-  av4Info?.public_sent_at ||
-  av4Info?.av4_caricato_manualmente ||
-  row.stato_pratica === "av4_inviato" ||
-  row.stato_pratica === "av4_ricevuto";
+  const av4Inviato =
+    av4Info?.Av4InviatoCL ||
+    av4Info?.public_sent_at ||
+    av4Info?.compilato_da_cliente ||
+    av4Info?.av4_caricato_manualmente ||
+    row.stato_pratica === "av4_inviato" ||
+    row.stato_pratica === "av4_ricevuto";
 
   if (av4Ricevuto) {
     return "border-2 border-lime-500 shadow-[0_0_10px_rgba(132,204,22,0.9)]";
