@@ -1657,8 +1657,6 @@ const handleEliminaCompleto = async (row: AV1Row) => {
                       >
                         {row.AV2Generato ? "Sì" : "No"}
                       </td>
-
-                     <td
 <td
   className={`p-3 text-center font-semibold ${
     av4Info?.av4_caricato_manualmente
