@@ -1408,39 +1408,47 @@ const handleEliminaCompleto = async (row: AV1Row) => {
         <div className="overflow-x-auto rounded-lg border bg-white">
           <table className="w-full text-sm">
             <thead className="bg-gray-100">
-              <tr>
-                <th className="p-3 text-left">Stato</th>
-                <th className="p-3 text-left">Cliente</th>
-                <th className="p-3 text-left">Utente fiscale</th>
-                <th className="p-3 text-left">Data verifica</th>
-                <th className="p-3 text-left">Scadenza verifica</th>
-               <th className="w-[80px] p-2 text-center leading-tight">
-  AV1
-  <br />
-  conferma
-</th>
-<th className="w-[80px] p-2 text-center leading-tight">
-  AV2
-  <br />
-  generato
-</th>
-<th className="w-[80px] p-2 text-center leading-tight">
-  AV4
-  <br />
-  inviato
-</th>
-<th className="w-[80px] p-2 text-center leading-tight">
-  AV4
-  <br />
-  manuale
-</th>
-<th className="p-3 text-center">Data invio AV4</th>
-<th className="w-[90px] p-2 text-center leading-tight">
-  AV4
-  <br />
-  confermato
-</th>                <th className="p-3 text-center">Azioni</th>
-              </tr>
+             <tr>
+  <th className="p-3 text-left">Stato</th>
+  <th className="p-3 text-left">Cliente</th>
+  <th className="p-3 text-left">Utente di riferimento</th>
+  <th className="p-3 text-left">Data verifica</th>
+  <th className="p-3 text-left">Scadenza verifica</th>
+
+  <th className="w-[80px] p-2 text-center leading-tight">
+    AV1
+    <br />
+    conferma
+  </th>
+
+  <th className="w-[80px] p-2 text-center leading-tight">
+    AV2
+    <br />
+    generato
+  </th>
+
+  <th className="w-[80px] p-2 text-center leading-tight">
+    AV4
+    <br />
+    inviato
+  </th>
+
+  <th className="w-[80px] p-2 text-center leading-tight">
+    AV4
+    <br />
+    manuale
+  </th>
+
+  <th className="p-3 text-center">Data invio AV4</th>
+
+  <th className="w-[90px] p-2 text-center leading-tight">
+    AV4
+    <br />
+    confermato
+  </th>
+
+  <th className="p-3 text-center">Azioni</th>
+</tr>
             </thead>
             <tbody>
               <tr>
@@ -1531,7 +1539,7 @@ const handleEliminaCompleto = async (row: AV1Row) => {
             </thead>
             <tbody>
               <tr>
-                <td colSpan={11} className="p-4 text-center">
+               <td colSpan={12} className="p-4 text-center">
                   Accesso riservato: inserisci la password della società per
                   consultare le pratiche.
                 </td>
