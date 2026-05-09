@@ -254,15 +254,23 @@ if (status === "warning") return "font-semibold text-yellow-600";
         className: "font-semibold text-red-700",
       };
     }
+const av4Info = getAV4Info(row);
 
-     if (!(getAV4Info(row)?.Av4InviatoCL || getAV4Info(row)?.public_sent_at)) {
-      return {
-        dotClass: "bg-red-500",
-        text: "AV4 da generare",
-        className: "font-semibold text-red-700",
-      };
-    }
+const av4Ok =
+  av4Info?.Av4InviatoCL ||
+  av4Info?.public_sent_at ||
+  av4Info?.compilato_da_cliente ||
+  av4Info?.av4_caricato_manualmente ||
+  row.stato_pratica === "av4_inviato" ||
+  row.stato_pratica === "av4_ricevuto";
 
+if (!av4Ok) {
+  return {
+    dotClass: "bg-red-500",
+    text: "AV4 da generare",
+    className: "font-semibold text-red-700",
+  };
+}
      if (row.fascicolo_completo === false) {
       return {
         dotClass: "bg-yellow-500",
@@ -291,10 +299,13 @@ const getAV4IconBorderClass = (row: AV1Row) => {
     av4Info?.compilato_da_cliente ||
     row.stato_pratica === "av4_ricevuto";
 
-  const av4Inviato =
-    av4Info?.Av4InviatoCL ||
-    av4Info?.public_sent_at ||
-    row.stato_pratica === "av4_inviato";
+  const av4Completato =
+  av4Info?.compilato_da_cliente ||
+  av4Info?.Av4InviatoCL ||
+  av4Info?.public_sent_at ||
+  av4Info?.av4_caricato_manualmente ||
+  row.stato_pratica === "av4_inviato" ||
+  row.stato_pratica === "av4_ricevuto";
 
   if (av4Ricevuto) {
     return "border-2 border-lime-500 shadow-[0_0_10px_rgba(132,204,22,0.9)]";
