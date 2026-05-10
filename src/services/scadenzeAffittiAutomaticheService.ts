@@ -261,7 +261,7 @@ function buildEmailText(params: {
   } as const;
 
   return [
-    ${saluto}
+    ${saluto},
     "",
     introByAlert[params.tipoAlert],
     "",
