@@ -28,8 +28,10 @@ type ContrattoFormData = {
   data_rinnovo_atto: string;
   durata_contratto_anni: string;
   codice_identificativo_registrazione: string;
-  importo_registrazione: string;
-  emailperalert: string;
+ importo_registrazione: string;
+tipo_tributo: string;
+codice_tributo: string;
+emailperalert: string;
   contatore_anni: string;
   data_prossima_scadenza: string;
   alert1_data: string;
@@ -55,8 +57,10 @@ const emptyForm: ContrattoFormData = {
   data_rinnovo_atto: "",
   durata_contratto_anni: "",
   codice_identificativo_registrazione: "",
-  importo_registrazione: "",
-  emailperalert: "",
+ importo_registrazione: "",
+tipo_tributo: "F",
+codice_tributo: "1501",
+emailperalert: "",
   contatore_anni: "",
   data_prossima_scadenza: "",
   alert1_data: "",
@@ -92,6 +96,22 @@ function formatDate(value?: string | null) {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "-";
   return d.toLocaleDateString("it-IT");
+}
+
+function getYearFromDate(value?: string | null) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return String(d.getFullYear());
+}
+
+function formatEuro(value?: string | null) {
+  const n = toNullableNumber(value || "");
+  if (n == null) return "";
+  return new Intl.NumberFormat("it-IT", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(n);
 }
 
 function formatDateTimeLocalInput(value?: string | null) {
@@ -333,10 +353,12 @@ setOperatoreLabel(fullName || utenteDb.email || user.email || "");
             codice_identificativo_registrazione:
               contratto.codice_identificativo_registrazione || "",
             importo_registrazione:
-              contratto.importo_registrazione != null
-                ? String(contratto.importo_registrazione)
-                : "",
-            emailperalert: contratto.emailperalert || "",
+  contratto.importo_registrazione != null
+    ? String(contratto.importo_registrazione)
+    : "",
+tipo_tributo: contratto.tipo_tributo || "F",
+codice_tributo: contratto.codice_tributo || "1501",
+emailperalert: contratto.emailperalert || "",
             contatore_anni: String(contratto.contatore_anni ?? ""),
             data_prossima_scadenza: contratto.data_prossima_scadenza || "",
             alert1_data: alerts.alert1_data,
@@ -583,8 +605,10 @@ const handleSave = async () => {
           durata_contratto_anni: Number(formData.durata_contratto_anni),
           codice_identificativo_registrazione:
             formData.codice_identificativo_registrazione.trim() || null,
-          importo_registrazione: toNullableNumber(formData.importo_registrazione),
-          emailperalert: formData.emailperalert.trim() || null,
+         importo_registrazione: toNullableNumber(formData.importo_registrazione),
+tipo_tributo: formData.tipo_tributo.trim() || "F",
+codice_tributo: formData.codice_tributo.trim() || "1501",
+emailperalert: formData.emailperalert.trim() || null,
           contatore_anni: Number(formData.contatore_anni),
           data_prossima_scadenza: formData.data_prossima_scadenza,
           alert1_inviato: !!formData.alert1_inviato,
@@ -887,6 +911,74 @@ const handleSave = async () => {
               readOnly
               className="w-full rounded border bg-gray-100 px-3 py-2"
             />
+          </div>
+
+          <div className="md:col-span-2 mt-4 rounded border bg-sky-50 p-4">
+            <div className="mb-3 bg-sky-200 px-3 py-2 text-sm font-bold uppercase text-white">
+              Sezione Erario ed Altro
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600">
+                  Tipo
+                </label>
+                <input
+                  type="text"
+                  value={formData.tipo_tributo}
+                  onChange={(e) => handleChange("tipo_tributo", e.target.value)}
+                  className="w-full rounded border bg-white px-3 py-2 text-center font-semibold"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="mb-1 block text-xs font-medium text-gray-600">
+                  Elementi identificativi
+                </label>
+                <input
+                  type="text"
+                  value={formData.codice_identificativo_registrazione}
+                  readOnly
+                  className="w-full rounded border bg-gray-100 px-3 py-2 font-semibold"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600">
+                  Codice
+                </label>
+                <input
+                  type="text"
+                  value={formData.codice_tributo}
+                  onChange={(e) => handleChange("codice_tributo", e.target.value)}
+                  className="w-full rounded border bg-white px-3 py-2 text-center font-semibold"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600">
+                  Anno riferimento
+                </label>
+                <input
+                  type="text"
+                  value={getYearFromDate(formData.data_prossima_scadenza)}
+                  readOnly
+                  className="w-full rounded border bg-gray-100 px-3 py-2 text-center font-semibold"
+                />
+              </div>
+
+              <div className="md:col-span-5">
+                <label className="mb-1 block text-xs font-medium text-gray-600">
+                  Importi a debito versati
+                </label>
+                <input
+                  type="text"
+                  value={formatEuro(formData.importo_registrazione)}
+                  readOnly
+                  className="w-full rounded border bg-gray-100 px-3 py-2 text-right font-semibold"
+                />
+              </div>
+            </div>
           </div>
         </div>
 
