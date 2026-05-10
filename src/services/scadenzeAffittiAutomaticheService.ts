@@ -24,7 +24,9 @@ type ContrattoAffittoRow = {
   durata_contratto_anni: number;
   codice_identificativo_registrazione: string | null;
   importo_registrazione: number | null;
-  contatore_anni: number;
+tipo_tributo: string | null;
+codice_tributo: string | null;
+contatore_anni: number;
   data_prossima_scadenza: string;
   emailperalert: string | null;
   alert1_inviato: boolean;
@@ -87,6 +89,13 @@ function formatDateIT(value?: string | null) {
   return d.toLocaleDateString("it-IT");
 }
 
+function getYearFromDate(value?: string | null) {
+  if (!value) return "-";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "-";
+  return String(d.getFullYear());
+}
+
 function formatEuroIT(value: number | null) {
   if (value == null) return "-";
   return new Intl.NumberFormat("it-IT", {
@@ -143,9 +152,11 @@ function buildEmailHtml(params: {
   annualita: number;
   durata: number;
   tipoAlert: 1 | 2 | 3;
-  importoRegistrazione: number | null;
-  operatore: string;
-  tipoDestinatario: TipoDestinatario;
+ importoRegistrazione: number | null;
+tipoTributo: string;
+codiceTributo: string;
+operatore: string;
+tipoDestinatario: TipoDestinatario;
 }) {
   const introByAlert = {
     1: "Si ricorda che tra 30 giorni scadrà il termine per il rinnovo dell’annualità del contratto di affitto.",
@@ -219,6 +230,48 @@ function buildEmailHtml(params: {
             <tr>
               <td style="padding:8px 0; color:#6b7280;">Importo imposta di registro</td>
               <td style="padding:8px 0; text-align:right; font-weight:700;">${formatEuroIT(params.importoRegistrazione)}</td>
+            </tr>
+          </table>
+        </div>
+
+         <div style="background:#eef9ff; border:1px solid #dbeafe; border-radius:10px; padding:16px; margin:22px 0;">
+          <div style="background:#bae6fd; color:#ffffff; font-size:13px; font-weight:700; text-transform:uppercase; padding:10px 12px; margin-bottom:14px;">
+            Sezione Erario ed Altro
+          </div>
+
+          <table style="width:100%; border-collapse:collapse; font-size:13px;">
+            <tr>
+              <td style="padding:0 6px 6px 0; color:#374151; font-size:12px;">Tipo</td>
+              <td style="padding:0 6px 6px 0; color:#374151; font-size:12px;">Elementi identificativi</td>
+              <td style="padding:0 6px 6px 0; color:#374151; font-size:12px;">Codice</td>
+              <td style="padding:0 0 6px 0; color:#374151; font-size:12px;">Anno riferimento</td>
+            </tr>
+
+            <tr>
+              <td style="padding:10px; background:#f3f4f6; border:1px solid #e5e7eb; font-weight:700; text-align:center;">
+                ${params.tipoTributo || "F"}
+              </td>
+              <td style="padding:10px; background:#f3f4f6; border:1px solid #e5e7eb; font-weight:700;">
+                ${params.codiceRegistrazione || "-"}
+              </td>
+              <td style="padding:10px; background:#f3f4f6; border:1px solid #e5e7eb; font-weight:700; text-align:center;">
+                ${params.codiceTributo || "1501"}
+              </td>
+              <td style="padding:10px; background:#f3f4f6; border:1px solid #111827; font-weight:700; text-align:center;">
+                ${getYearFromDate(params.scadenza)}
+              </td>
+            </tr>
+
+            <tr>
+              <td colspan="4" style="padding:12px 0 6px 0; color:#374151; font-size:12px;">
+                Importi a debito versati
+              </td>
+            </tr>
+
+            <tr>
+              <td colspan="4" style="padding:10px; background:#f3f4f6; border:1px solid #e5e7eb; font-weight:700; text-align:right;">
+                ${formatEuroIT(params.importoRegistrazione)}
+              </td>
             </tr>
           </table>
         </div>
@@ -442,28 +495,14 @@ export async function processaScadenzeAffittiAutomatiche() {
           annualita: row.contatore_anni,
           durata: row.durata_contratto_anni,
           tipoAlert,
-          importoRegistrazione: row.importo_registrazione,
-          operatore,
-          tipoDestinatario,
+        importoRegistrazione: row.importo_registrazione,
+tipoTributo: row.tipo_tributo || "F",
+codiceTributo: row.codice_tributo || "1501",
+operatore,
+tipoDestinatario,
         });
 
-        const text = buildEmailText({
-          locatore,
-          conduttore: row.conduttore || "-",
-          immobile: row.descrizione_immobile_locato || "-",
-          codiceRegistrazione:
-            row.codice_identificativo_registrazione || "-",
-          decorrenza,
-          scadenza: row.data_prossima_scadenza,
-          annualita: row.contatore_anni,
-          durata: row.durata_contratto_anni,
-          tipoAlert,
-          importoRegistrazione: row.importo_registrazione,
-          operatore,
-          tipoDestinatario,
-        });
-
-     const emailResult = await sendEmailServer({
+  const emailResult = await sendEmailServer({
   senderUserId: row.utente_operatore_id,
   microsoftConnectionId: studio.microsoft_connection_id,
   to: destinatario,
