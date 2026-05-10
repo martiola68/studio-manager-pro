@@ -463,14 +463,13 @@ export async function processaScadenzeAffittiAutomatiche() {
           tipoDestinatario,
         });
 
-        const emailResult = await sendEmailServer({
-          senderUserId: row.utente_operatore_id,
-          microsoftConnectionId: studio.microsoft_connection_id,
-          to: destinatario,
-          subject,
-          html,
-          text,
-        });
+     const emailResult = await sendEmailServer({
+  senderUserId: row.utente_operatore_id,
+  microsoftConnectionId: studio.microsoft_connection_id,
+  to: destinatario,
+  subject,
+  html,
+});
 
         if (emailResult.success) {
           inviiRiusciti += 1;
