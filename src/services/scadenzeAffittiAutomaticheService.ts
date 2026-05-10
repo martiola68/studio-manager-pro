@@ -123,6 +123,14 @@ function buildEmailSubject(params: {
   return `Promemoria rinnovo contratto affitto - ${params.locatore} - Annualità ${params.annualita} - Alert ${params.tipoAlert}`;
 }
 
+function formatEuroIT(value: number | null) {
+  if (value == null) return "-";
+  return new Intl.NumberFormat("it-IT", {
+    style: "currency",
+    currency: "EUR",
+  }).format(value);
+}
+
 function buildEmailHtml(params: {
   locatore: string;
   conduttore: string;
@@ -135,6 +143,7 @@ function buildEmailHtml(params: {
   tipoAlert: 1 | 2 | 3;
   importoRegistrazione: number | null;
   operatore: string;
+  tipoDestinatario?: "interno" | "esterno";
 }) {
   const introByAlert = {
     1: "Si ricorda che tra 30 giorni scadrà il termine per il rinnovo dell’annualità del contratto di affitto.",
@@ -149,25 +158,28 @@ function buildEmailHtml(params: {
   <div style="max-width:720px; margin:0 auto; padding:28px 16px;">
     <div style="background:#ffffff; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
       <div style="background:#1d4ed8; color:#ffffff; padding:22px 26px;">
-        <div style="font-size:20px; font-weight:700;">Studio Manager Pro</div>
-        <div style="font-size:13px; margin-top:4px; opacity:0.9;">
-          Promemoria rinnovo contratto di affitto
-        </div>
+      <div style="font-size:22px; font-weight:700; letter-spacing:0.2px;">
+  AVVISO DI SCADENZA
+</div>
+<div style="font-size:13px; margin-top:6px; opacity:0.95; text-transform:uppercase;">
+  PROMEMORIA RINNOVO CONTRATTO DI AFFITTO IN SCADENZA
+</div>
       </div>
 
       <div style="padding:26px;">
         <p style="margin:0 0 16px 0; font-size:15px;">
-          Gentile utente,
+          const saluto =
+          params.tipoDestinatario === "esterno" ? "Gentile cliente," : "Gentile utente,";
         </p>
 
         <p style="margin:0 0 18px 0; font-size:15px; line-height:1.6;">
           ${introByAlert[params.tipoAlert]}
         </p>
 
-        <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:18px; margin:22px 0;">
-          <div style="font-size:13px; color:#1d4ed8; font-weight:700; text-transform:uppercase; margin-bottom:12px;">
-            Dettagli contratto
-          </div>
+       <div style="background:#ffffff; border:1px solid #dbeafe; border-radius:10px; padding:18px; margin:22px 0;">
+  <div style="font-size:14px; color:#1d4ed8; font-weight:700; text-transform:uppercase; margin-bottom:14px;">
+    Dettaglio contratto
+  </div>
 
           <table style="width:100%; border-collapse:collapse; font-size:14px;">
             <tr>
@@ -198,12 +210,16 @@ function buildEmailHtml(params: {
               <td style="padding:8px 0; color:#6b7280;">Annualità</td>
               <td style="padding:8px 0; text-align:right; font-weight:700;">${params.annualita}/${params.durata}</td>
             </tr>
+            <tr>
+              <td style="padding:8px 0; color:#6b7280;">Importo imposta di registro</td>
+                <td style="padding:8px 0; text-align:right; font-weight:700;">${formatEuroIT(params.importoRegistrazione)}</td>
+              </tr>
           </table>
         </div>
 
-        <div style="margin:20px 0; padding:14px 16px; background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; font-size:14px; line-height:1.6;">
-          ${getImpostaMessage(params.importoRegistrazione)}
-        </div>
+        <div style="margin:20px 0; padding:14px 16px; background:#ffffff; border:1px solid #fed7aa; border-radius:8px; font-size:14px; line-height:1.6;">
+  ${getImpostaMessage(params.importoRegistrazione)}
+</div>
 
         <p style="margin:0 0 12px 0; font-size:15px; line-height:1.6;">
           Si consiglia di verificare la posizione e procedere con gli adempimenti necessari.
@@ -245,7 +261,7 @@ function buildEmailText(params: {
   } as const;
 
   return [
-    "Gentile utente,",
+    ${saluto}
     "",
     introByAlert[params.tipoAlert],
     "",
@@ -379,19 +395,21 @@ export async function processaScadenzeAffittiAutomatiche() {
         tipoAlert,
       });
 
-      const html = buildEmailHtml({
-        locatore,
-        conduttore: row.conduttore || "-",
-        immobile: row.descrizione_immobile_locato || "-",
-        codiceRegistrazione: row.codice_identificativo_registrazione || "-",
-        decorrenza,
-        scadenza: row.data_prossima_scadenza,
-        annualita: row.contatore_anni,
-        durata: row.durata_contratto_anni,
-        tipoAlert,
-        importoRegistrazione: row.importo_registrazione,
-        operatore,
-      });
+    const html = buildEmailHtml({
+  locatore,
+  conduttore: row.conduttore || "-",
+  immobile: row.descrizione_immobile_locato || "-",
+  codiceRegistrazione: row.codice_identificativo_registrazione || "-",
+  decorrenza,
+  scadenza: row.data_prossima_scadenza,
+  annualita: row.contatore_anni,
+  durata: row.durata_contratto_anni,
+  tipoAlert,
+  importoRegistrazione: row.importo_registrazione,
+  operatore,
+  tipoDestinatario:
+    destinatario === row.emailperalert ? "esterno" : "interno",
+});
 
       const text = buildEmailText({
         locatore,
