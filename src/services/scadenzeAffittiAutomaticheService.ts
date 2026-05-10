@@ -50,6 +50,8 @@ type UtenteLite = {
   email: string | null;
 };
 
+type TipoDestinatario = "interno" | "esterno";
+
 function normalizeDate(date: Date) {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
@@ -85,6 +87,14 @@ function formatDateIT(value?: string | null) {
   return d.toLocaleDateString("it-IT");
 }
 
+function formatEuroIT(value: number | null) {
+  if (value == null) return "-";
+  return new Intl.NumberFormat("it-IT", {
+    style: "currency",
+    currency: "EUR",
+  }).format(value);
+}
+
 function getDecorrenza(row: ContrattoAffittoRow) {
   return row.rinnovo && row.data_rinnovo_atto
     ? row.data_rinnovo_atto
@@ -110,9 +120,9 @@ function getImpostaMessage(importoRegistrazione: number | null) {
     return "L’imposta comunicata è stata calcolata sulla base del valore registrato all’origine del contratto. In caso di variazione del canone di locazione o di altri elementi contrattuali rilevanti, l’importo dovrà essere aggiornato e ricalcolato prima del versamento.";
   }
 
-  return `L’imposta comunicata per questa annualità è pari a € ${Number(
+  return `L’imposta comunicata per questa annualità è pari a ${formatEuroIT(
     importoRegistrazione
-  ).toFixed(2)} ed è stata calcolata sulla base del valore registrato all’origine del contratto. In caso di variazione del canone di locazione o di altri elementi contrattuali rilevanti, l’importo dovrà essere aggiornato e ricalcolato prima del versamento.`;
+  )} ed è stata calcolata sulla base del valore registrato all’origine del contratto. In caso di variazione del canone di locazione o di altri elementi contrattuali rilevanti, l’importo dovrà essere aggiornato e ricalcolato prima del versamento.`;
 }
 
 function buildEmailSubject(params: {
@@ -121,14 +131,6 @@ function buildEmailSubject(params: {
   tipoAlert: 1 | 2 | 3;
 }) {
   return `Promemoria rinnovo contratto affitto - ${params.locatore} - Annualità ${params.annualita} - Alert ${params.tipoAlert}`;
-}
-
-function formatEuroIT(value: number | null) {
-  if (value == null) return "-";
-  return new Intl.NumberFormat("it-IT", {
-    style: "currency",
-    currency: "EUR",
-  }).format(value);
 }
 
 function buildEmailHtml(params: {
@@ -143,7 +145,7 @@ function buildEmailHtml(params: {
   tipoAlert: 1 | 2 | 3;
   importoRegistrazione: number | null;
   operatore: string;
-  tipoDestinatario?: "interno" | "esterno";
+  tipoDestinatario: TipoDestinatario;
 }) {
   const introByAlert = {
     1: "Si ricorda che tra 30 giorni scadrà il termine per il rinnovo dell’annualità del contratto di affitto.",
@@ -151,35 +153,39 @@ function buildEmailHtml(params: {
     3: "Si ricorda che in data odierna scade il termine per il rinnovo dell’annualità del contratto di affitto.",
   } as const;
 
- return `
+  const saluto =
+    params.tipoDestinatario === "esterno"
+      ? "Gentile cliente,"
+      : "Gentile utente,";
+
+  return `
 <!DOCTYPE html>
 <html>
 <body style="margin:0; padding:0; background:#f3f4f6; font-family:Arial, Helvetica, sans-serif; color:#111827;">
-  <div style="max-width:720px; margin:0 auto; padding:28px 16px;">
+  <div style="max-width:760px; margin:0 auto; padding:28px 16px;">
     <div style="background:#ffffff; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
       <div style="background:#1d4ed8; color:#ffffff; padding:22px 26px;">
-      <div style="font-size:22px; font-weight:700; letter-spacing:0.2px;">
-  AVVISO DI SCADENZA
-</div>
-<div style="font-size:13px; margin-top:6px; opacity:0.95; text-transform:uppercase;">
-  PROMEMORIA RINNOVO CONTRATTO DI AFFITTO IN SCADENZA
-</div>
+        <div style="font-size:22px; font-weight:700; letter-spacing:0.2px;">
+          AVVISO DI SCADENZA
+        </div>
+        <div style="font-size:13px; margin-top:6px; opacity:0.95; text-transform:uppercase;">
+          PROMEMORIA RINNOVO CONTRATTO DI AFFITTO IN SCADENZA
+        </div>
       </div>
 
       <div style="padding:26px;">
         <p style="margin:0 0 16px 0; font-size:15px;">
-          const saluto =
-          params.tipoDestinatario === "esterno" ? "Gentile cliente," : "Gentile utente,";
+          ${saluto}
         </p>
 
         <p style="margin:0 0 18px 0; font-size:15px; line-height:1.6;">
           ${introByAlert[params.tipoAlert]}
         </p>
 
-       <div style="background:#ffffff; border:1px solid #dbeafe; border-radius:10px; padding:18px; margin:22px 0;">
-  <div style="font-size:14px; color:#1d4ed8; font-weight:700; text-transform:uppercase; margin-bottom:14px;">
-    Dettaglio contratto
-  </div>
+        <div style="background:#ffffff; border:1px solid #dbeafe; border-radius:10px; padding:18px; margin:22px 0;">
+          <div style="font-size:14px; color:#1d4ed8; font-weight:700; text-transform:uppercase; margin-bottom:14px;">
+            Dettaglio contratto
+          </div>
 
           <table style="width:100%; border-collapse:collapse; font-size:14px;">
             <tr>
@@ -212,14 +218,14 @@ function buildEmailHtml(params: {
             </tr>
             <tr>
               <td style="padding:8px 0; color:#6b7280;">Importo imposta di registro</td>
-                <td style="padding:8px 0; text-align:right; font-weight:700;">${formatEuroIT(params.importoRegistrazione)}</td>
-              </tr>
+              <td style="padding:8px 0; text-align:right; font-weight:700;">${formatEuroIT(params.importoRegistrazione)}</td>
+            </tr>
           </table>
         </div>
 
         <div style="margin:20px 0; padding:14px 16px; background:#ffffff; border:1px solid #fed7aa; border-radius:8px; font-size:14px; line-height:1.6;">
-  ${getImpostaMessage(params.importoRegistrazione)}
-</div>
+          ${getImpostaMessage(params.importoRegistrazione)}
+        </div>
 
         <p style="margin:0 0 12px 0; font-size:15px; line-height:1.6;">
           Si consiglia di verificare la posizione e procedere con gli adempimenti necessari.
@@ -253,6 +259,7 @@ function buildEmailText(params: {
   tipoAlert: 1 | 2 | 3;
   importoRegistrazione: number | null;
   operatore: string;
+  tipoDestinatario: TipoDestinatario;
 }) {
   const introByAlert = {
     1: "Si ricorda che tra 30 giorni scadrà il termine per il rinnovo dell’annualità del contratto di affitto.",
@@ -260,12 +267,17 @@ function buildEmailText(params: {
     3: "Si ricorda che in data odierna scade il termine per il rinnovo dell’annualità del contratto di affitto.",
   } as const;
 
+  const saluto =
+    params.tipoDestinatario === "esterno"
+      ? "Gentile cliente,"
+      : "Gentile utente,";
+
   return [
-    ${saluto},
+    saluto,
     "",
     introByAlert[params.tipoAlert],
     "",
-    "Dettagli contratto",
+    "Dettaglio contratto",
     `Locatore: ${params.locatore || "-"}`,
     `Conduttore: ${params.conduttore || "-"}`,
     `Immobile locato: ${params.immobile || "-"}`,
@@ -273,12 +285,16 @@ function buildEmailText(params: {
     `Data decorrenza: ${formatDateIT(params.decorrenza)}`,
     `Scadenza annualità: ${formatDateIT(params.scadenza)}`,
     `Annualità: ${params.annualita}/${params.durata}`,
+    `Importo imposta di registro: ${formatEuroIT(params.importoRegistrazione)}`,
     "",
     getImpostaMessage(params.importoRegistrazione),
     "",
-    `Operatore incaricato: ${params.operatore || "-"}`,
+    "Si consiglia di verificare la posizione e procedere con gli adempimenti necessari.",
     "",
-    "Questa comunicazione è stata generata automaticamente dallo scadenzario affitti.",
+    "Cordiali saluti,",
+    params.operatore || "-",
+    "",
+    "Email automatica — non rispondere a questo messaggio.",
   ].join("\n");
 }
 
@@ -362,6 +378,7 @@ export async function processaScadenzeAffittiAutomatiche() {
 
       const locatore =
         clientiMap.get(row.cliente_id)?.ragione_sociale?.trim() || "Locatore";
+
       const utente = utentiMap.get(row.utente_operatore_id);
       const operatore = getOperatoreLabel(utente);
       const decorrenza = getDecorrenza(row);
@@ -389,71 +406,79 @@ export async function processaScadenzeAffittiAutomatiche() {
         continue;
       }
 
+      const { data: studio, error: studioError } = await (supabase as any)
+        .from("tbstudio")
+        .select("microsoft_connection_id")
+        .eq("id", row.studio_id)
+        .maybeSingle();
+
+      if (studioError || !studio?.microsoft_connection_id) {
+        result.errors.push(
+          `Contratto ${row.id}: microsoft_connection_id studio mancante`
+        );
+        continue;
+      }
+
       const subject = buildEmailSubject({
         locatore,
         annualita: row.contatore_anni,
         tipoAlert,
       });
 
-    const html = buildEmailHtml({
-  locatore,
-  conduttore: row.conduttore || "-",
-  immobile: row.descrizione_immobile_locato || "-",
-  codiceRegistrazione: row.codice_identificativo_registrazione || "-",
-  decorrenza,
-  scadenza: row.data_prossima_scadenza,
-  annualita: row.contatore_anni,
-  durata: row.durata_contratto_anni,
-  tipoAlert,
-  importoRegistrazione: row.importo_registrazione,
-  operatore,
-  tipoDestinatario:
-    destinatario === row.emailperalert ? "esterno" : "interno",
-});
-
-      const text = buildEmailText({
-        locatore,
-        conduttore: row.conduttore || "-",
-        immobile: row.descrizione_immobile_locato || "-",
-        codiceRegistrazione: row.codice_identificativo_registrazione || "-",
-        decorrenza,
-        scadenza: row.data_prossima_scadenza,
-        annualita: row.contatore_anni,
-        durata: row.durata_contratto_anni,
-        tipoAlert,
-        importoRegistrazione: row.importo_registrazione,
-        operatore,
-      });
-
       let inviiRiusciti = 0;
 
       for (const destinatario of destinatari) {
-      const { data: studio, error: studioError } = await (supabase as any)
-  .from("tbstudio")
-  .select("microsoft_connection_id")
-  .eq("id", row.studio_id)
-  .maybeSingle();
+        const tipoDestinatario: TipoDestinatario =
+          destinatario === row.emailperalert ? "esterno" : "interno";
 
-if (studioError || !studio?.microsoft_connection_id) {
-  result.errors.push(
-    `Contratto ${row.id}: microsoft_connection_id studio mancante`
-  );
-  continue;
-}
+        const html = buildEmailHtml({
+          locatore,
+          conduttore: row.conduttore || "-",
+          immobile: row.descrizione_immobile_locato || "-",
+          codiceRegistrazione:
+            row.codice_identificativo_registrazione || "-",
+          decorrenza,
+          scadenza: row.data_prossima_scadenza,
+          annualita: row.contatore_anni,
+          durata: row.durata_contratto_anni,
+          tipoAlert,
+          importoRegistrazione: row.importo_registrazione,
+          operatore,
+          tipoDestinatario,
+        });
 
-const emailResult = await sendEmailServer({
-  senderUserId: row.utente_operatore_id,
-  microsoftConnectionId: studio.microsoft_connection_id,
-  to: destinatario,
-  subject,
-  html,
-});
+        const text = buildEmailText({
+          locatore,
+          conduttore: row.conduttore || "-",
+          immobile: row.descrizione_immobile_locato || "-",
+          codiceRegistrazione:
+            row.codice_identificativo_registrazione || "-",
+          decorrenza,
+          scadenza: row.data_prossima_scadenza,
+          annualita: row.contatore_anni,
+          durata: row.durata_contratto_anni,
+          tipoAlert,
+          importoRegistrazione: row.importo_registrazione,
+          operatore,
+          tipoDestinatario,
+        });
+
+        const emailResult = await sendEmailServer({
+          senderUserId: row.utente_operatore_id,
+          microsoftConnectionId: studio.microsoft_connection_id,
+          to: destinatario,
+          subject,
+          html,
+          text,
+        });
 
         if (emailResult.success) {
           inviiRiusciti += 1;
         } else {
           result.errors.push(
-            `Contratto ${row.id}: invio fallito verso ${destinatario} - ${emailResult.error || "errore sconosciuto"}`
+            `Contratto ${row.id}: invio fallito verso ${destinatario} - ${
+              emailResult.error || "errore sconosciuto"
+            }`
           );
         }
       }
