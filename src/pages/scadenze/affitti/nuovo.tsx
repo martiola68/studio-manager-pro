@@ -924,11 +924,11 @@ emailperalert: formData.emailperalert.trim() || null,
                   Tipo
                 </label>
                 <input
-                  type="text"
-                  value={formData.tipo_tributo}
-                  onChange={(e) => handleChange("tipo_tributo", e.target.value)}
-                  className="w-full rounded border bg-white px-3 py-2 text-center font-semibold"
-                />
+  type="text"
+  value={formData.tipo_tributo}
+  readOnly
+  className="w-full rounded border bg-gray-100 px-3 py-2 text-center font-semibold"
+/>
               </div>
 
               <div className="md:col-span-2">
@@ -947,11 +947,11 @@ emailperalert: formData.emailperalert.trim() || null,
                 <label className="mb-1 block text-xs font-medium text-gray-600">
                   Codice
                 </label>
-                <input
-                  type="text"
+               <input
+                type="text"
                   value={formData.codice_tributo}
-                  onChange={(e) => handleChange("codice_tributo", e.target.value)}
-                  className="w-full rounded border bg-white px-3 py-2 text-center font-semibold"
+                  readOnly
+                  className="w-full rounded border bg-gray-100 px-3 py-2 text-center font-semibold"
                 />
               </div>
 
