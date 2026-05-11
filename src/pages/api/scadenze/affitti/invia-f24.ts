@@ -39,21 +39,39 @@ function buildF24Html(body: any) {
   <div style="max-width:760px; margin:0 auto; padding:28px 16px;">
     <div style="background:#ffffff; border:1px solid #e5e7eb; border-radius:14px; overflow:hidden;">
 
-      <div style="background:#1d4ed8; color:#ffffff; padding:24px 28px;">
-        <div style="font-size:22px; font-weight:700; letter-spacing:0.2px;">
-          Fac simile modello F24 Elide
-        </div>
-        <div style="font-size:13px; margin-top:6px; opacity:0.95;">
-          Contratto di affitto — Imposta di registro
-        </div>
-      </div>
+      font-weight:700;
+      color:#1e3a8a;
+      text-transform:uppercase;
+      letter-spacing:0.3px;
+    "
+  >
+    Scadenza imposta di registro locazioni
+  </div>
+
+  <div
+    style="
+      margin-top:8px;
+      font-size:14px;
+      color:#1d4ed8;
+      font-weight:600;
+      text-transform:uppercase;
+    "
+  >
+    Fac simile Mod. F24 Elementi Identificativi
+  </div>
+</div>
 
       <div style="padding:26px 28px;">
-        <p style="margin:0 0 16px 0; font-size:15px; line-height:1.6;">
-          In allegato si trasmette il fac simile del modello F24 Elide relativo al contratto di affitto indicato di seguito.
-        </p>
+      <div style="margin-bottom:22px; font-size:15px; line-height:1.8; color:#111827;">
+  <p style="margin:0 0 14px 0;">
+    Si trasmette il fac-simile del modello F24 Elide relativo al contratto di affitto indicato di seguito.
+  </p>
 
-        <div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; padding:16px; margin:18px 0;">
+  <p style="margin:0;">
+    Il pagamento dovrà essere effettuato entro il termine indicato nella presente comunicazione.
+  </p>
+</div>
+<div style="border:1px solid #e5e7eb; border-radius:10px; padding:16px; margin:18px 0;">
           <div style="font-size:13px; font-weight:700; color:#1d4ed8; text-transform:uppercase; margin-bottom:12px;">
             Dati contratto
           </div>
@@ -78,7 +96,7 @@ function buildF24Html(body: any) {
           </table>
         </div>
 
-        <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:16px; margin:20px 0;">
+      <div style="border:1px solid #dbeafe; border-radius:10px; padding:16px; margin:20px 0;">
           <div style="font-size:13px; font-weight:700; color:#1d4ed8; text-transform:uppercase; margin-bottom:12px;">
             Sezione Erario ed Altro
           </div>
@@ -111,7 +129,7 @@ function buildF24Html(body: any) {
           </table>
         </div>
 
-        <div style="background:#fff7ed; border:1px solid #fed7aa; border-radius:10px; padding:16px; margin:20px 0;">
+      <div style="border:1px solid #fed7aa; border-radius:10px; padding:16px; margin:20px 0;">
           <div style="font-size:14px; line-height:1.6;">
             Il pagamento dovrà essere effettuato entro il giorno
             <strong>${formatDateIT(body.data_pagamento)}</strong>.
@@ -121,9 +139,13 @@ function buildF24Html(body: any) {
           </div>
         </div>
 
-        <p style="margin:24px 0 0 0; font-size:15px; line-height:1.6;">
-          Cordiali saluti
-        </p>
+       <div style="margin-top:28px; font-size:15px; line-height:1.8;">
+  <div>Cordiali saluti</div>
+
+  <div style="margin-top:18px; font-weight:700; color:#111827;">
+    ${body.nome_operatore || ""}
+  </div>
+</div>
       </div>
 
       <div style="background:#f9fafb; border-top:1px solid #e5e7eb; padding:14px 28px; text-align:center; font-size:12px; color:#6b7280;">
