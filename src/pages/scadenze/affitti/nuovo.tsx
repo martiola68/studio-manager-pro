@@ -314,6 +314,7 @@ export default function NuovoContrattoAffittoPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [studioId, setStudioId] = useState("");
+  const [currentUserId, setCurrentUserId] = useState("");
   const [operatoreLabel, setOperatoreLabel] = useState("");
   const [clienti, setClienti] = useState<ClienteOption[]>([]);
   const [formData, setFormData] = useState<ContrattoFormData>(emptyForm);
@@ -414,11 +415,13 @@ const initialize = async () => {
         data: { user },
       } = await supabase.auth.getUser();
 
-      if (!user) {
-        console.error("Utente non autenticato");
-        setLoading(false);
-        return;
-      }
+    if (!user) {
+  console.error("Utente non autenticato");
+  setLoading(false);
+  return;
+}
+
+setCurrentUserId(user.id);
 
       const { data: utenteDb, error: utenteError } = await supabase
         .from("tbutenti")
@@ -823,14 +826,20 @@ emailperalert: formData.emailperalert.trim() || null,
 
   const dataPagamento = getNextWorkingDate(formData.data_prossima_scadenza);
 
-    if (!formData.emailperalert.trim()) {
+if (!formData.emailperalert.trim()) {
   alert("Inserisci prima l'email per alert.");
   return;
 }
+
+if (!currentUserId) {
+  alert("Utente loggato non disponibile.");
+  return;
+}
     
-  const payload = {
+ const payload = {
   contratto_id: typeof id === "string" ? id : null,
   studio_id: studioId,
+  mittente_user_id: currentUserId,
   destinatario: formData.emailperalert.trim(),
   locatore: locatoreSelezionato?.ragione_sociale || "",
   conduttore: formData.conduttore,
