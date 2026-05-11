@@ -1136,182 +1136,186 @@ if (typeof id === "string") {
 
           <div>
             <label className="mb-1 block text-sm font-medium">
-              Codice identificativo registrazione
-            </label>
-            <input
-              type="text"
-              value={formData.codice_identificativo_registrazione}
-              onChange={(e) =>
-                handleChange("codice_identificativo_registrazione", e.target.value)
-              }
-              className="w-full rounded border px-3 py-2"
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium">
-              Imposta di registro
-            </label>
-           <input
-  type="number"
-  step="0.01"
-  value={formData.importo_registrazione}
-  readOnly
-  className="w-full rounded border bg-gray-100 px-3 py-2"
-/>
-          </div>
-
-          <div className="md:col-span-2">
-            <label className="mb-1 block text-sm font-medium">Email per alert</label>
-            <div className="flex gap-2">
-              <input
-                type="email"
-                value={formData.emailperalert}
-                onChange={(e) => handleChange("emailperalert", e.target.value)}
-                className="w-full rounded border px-3 py-2"
-                placeholder="Inserisci manualmente o importa da tbcontatti"
-              />
-              <button
-                type="button"
-                onClick={openEmailModal}
-                className="rounded border px-3 py-2 text-blue-600 hover:text-blue-800"
-              >
-                Cerca
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium">
-              Annualità corrente
-            </label>
-            <input
-              type="text"
-              value={
-                formData.contatore_anni && formData.durata_contratto_anni
-                  ? `${formData.contatore_anni}/${formData.durata_contratto_anni}`
-                  : ""
-              }
-              readOnly
-              className="w-full rounded border bg-gray-100 px-3 py-2"
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium">
-              Prossima scadenza
-            </label>
-            <input
-              type="text"
-              value={formatDate(formData.data_prossima_scadenza)}
-              readOnly
-              className="w-full rounded border bg-gray-100 px-3 py-2"
-            />
-          </div>
-
-          <div className="md:col-span-2 mt-4 rounded border bg-sky-50 p-4">
-            <div className="mb-3 flex items-center justify-between bg-sky-200 px-3 py-2">
-  <div className="text-sm font-bold uppercase text-white">
-    Sezione Erario ed Altro
-  </div>
-
-  <button
-    type="button"
-    onClick={() => setShowInvioF24Modal(true)}
-    className="rounded bg-blue-600 px-3 py-1 text-xs font-semibold text-white hover:bg-blue-700"
-  >
-    Invia F24 via email
-  </button>
-</div>
-
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
+             <div className="grid grid-cols-1 gap-4 md:col-span-2 md:grid-cols-4">
   <div>
-    <label className="mb-1 block text-xs font-medium text-gray-600">
-      Tipo
-    </label>
-    <input
-      type="text"
-      value={formData.tipo_tributo}
-      readOnly
-      className="w-full rounded border bg-gray-100 px-2 py-2 text-center font-semibold"
-    />
-  </div>
-
-  <div className="md:col-span-2">
-    <label className="mb-1 block text-xs font-medium text-gray-600">
-      Elementi identificativi
+    <label className="mb-1 block text-sm font-medium">
+      Codice identificativo registrazione
     </label>
     <input
       type="text"
       value={formData.codice_identificativo_registrazione}
-      readOnly
-      className="w-full rounded border bg-gray-100 px-2 py-2 font-semibold"
+      onChange={(e) =>
+        handleChange("codice_identificativo_registrazione", e.target.value)
+      }
+      className="w-full rounded border px-3 py-2"
     />
   </div>
 
   <div>
-    <label className="mb-1 block text-xs font-medium text-gray-600">
-      Codice
+    <label className="mb-1 block text-sm font-medium">
+      Imposta di registro
     </label>
     <input
-      type="text"
-      value={formData.codice_tributo}
+      type="number"
+      step="0.01"
+      value={formData.importo_registrazione}
       readOnly
-      className="w-full rounded border bg-gray-100 px-2 py-2 text-center font-semibold"
+      className="w-full rounded border bg-gray-100 px-3 py-2"
     />
   </div>
 
   <div>
-    <label className="mb-1 block text-xs font-medium text-gray-600">
-      Anno riferimento
+    <label className="mb-1 block text-sm font-medium">
+      Annualità corrente
     </label>
     <input
       type="text"
-      value={getYearFromDate(formData.data_prossima_scadenza)}
+      value={
+        formData.contatore_anni && formData.durata_contratto_anni
+          ? `${formData.contatore_anni}/${formData.durata_contratto_anni}`
+          : ""
+      }
       readOnly
-      className="w-full rounded border bg-gray-100 px-2 py-2 text-center font-semibold"
+      className="w-full rounded border bg-gray-100 px-3 py-2"
     />
   </div>
 
   <div>
-    <label className="mb-1 block text-xs font-medium text-gray-600">
-      Importi a debito versati
+    <label className="mb-1 block text-sm font-medium">
+      Prossima scadenza
     </label>
     <input
       type="text"
-      value={formatEuro(formData.importo_registrazione)}
+      value={formatDate(formData.data_prossima_scadenza)}
       readOnly
-      className="w-full rounded border bg-gray-100 px-2 py-2 text-right font-semibold"
-    />
-  </div>
-
-  <div className="md:col-span-3">
-    <label className="mb-1 block text-xs font-medium text-gray-600">
-      Data scadenza
-    </label>
-    <input
-      type="text"
-      value={formatDate(getNextWorkingDate(formData.data_prossima_scadenza))}
-      readOnly
-      className="w-full rounded border bg-gray-100 px-2 py-2 font-semibold"
-    />
-  </div>
-
-  <div className="md:col-span-3">
-    <label className="mb-1 block text-xs font-medium text-gray-600">
-      Data invio F24
-    </label>
-    <input
-      type="text"
-      value={formData.data_invio_f24 ? formatDate(formData.data_invio_f24) : "-"}
-      readOnly
-      className="w-full rounded border bg-gray-100 px-2 py-2 font-semibold"
+      className="w-full rounded border bg-gray-100 px-3 py-2"
     />
   </div>
 </div>
-            </div>
-          </div>
-        </div>
+
+<div className="md:col-span-2 rounded border bg-sky-50 p-4">
+  <div className="mb-3 flex items-center justify-between bg-sky-200 px-3 py-2">
+    <div className="text-sm font-bold uppercase text-white">
+      Sezione Erario ed Altro
+    </div>
+
+    <button
+      type="button"
+      onClick={() => setShowInvioF24Modal(true)}
+      className="rounded bg-blue-600 px-3 py-1 text-xs font-semibold text-white hover:bg-blue-700"
+    >
+      Invia F24 via email
+    </button>
+  </div>
+
+  <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
+    <div className="md:col-span-1">
+      <label className="mb-1 block text-xs font-medium text-gray-600">
+        Tipo
+      </label>
+      <input
+        type="text"
+        value={formData.tipo_tributo}
+        readOnly
+        className="w-full rounded border bg-gray-100 px-2 py-2 text-center font-semibold"
+      />
+    </div>
+
+    <div className="md:col-span-4">
+      <label className="mb-1 block text-xs font-medium text-gray-600">
+        Elementi identificativi
+      </label>
+      <input
+        type="text"
+        value={formData.codice_identificativo_registrazione}
+        readOnly
+        className="w-full rounded border bg-gray-100 px-2 py-2 font-semibold"
+      />
+    </div>
+
+    <div className="md:col-span-2">
+      <label className="mb-1 block text-xs font-medium text-gray-600">
+        Codice
+      </label>
+      <input
+        type="text"
+        value={formData.codice_tributo}
+        readOnly
+        className="w-full rounded border bg-gray-100 px-2 py-2 text-center font-semibold"
+      />
+    </div>
+
+    <div className="md:col-span-2">
+      <label className="mb-1 block text-xs font-medium text-gray-600">
+        Anno riferimento
+      </label>
+      <input
+        type="text"
+        value={getYearFromDate(formData.data_prossima_scadenza)}
+        readOnly
+        className="w-full rounded border bg-gray-100 px-2 py-2 text-center font-semibold"
+      />
+    </div>
+
+    <div className="md:col-span-3">
+      <label className="mb-1 block text-xs font-medium text-gray-600">
+        Importi a debito versati
+      </label>
+      <input
+        type="text"
+        value={formatEuro(formData.importo_registrazione)}
+        readOnly
+        className="w-full rounded border bg-gray-100 px-2 py-2 text-right font-semibold"
+      />
+    </div>
+
+    <div className="md:col-span-3">
+      <label className="mb-1 block text-xs font-medium text-gray-600">
+        Data scadenza
+      </label>
+      <input
+        type="text"
+        value={formatDate(getNextWorkingDate(formData.data_prossima_scadenza))}
+        readOnly
+        className="w-full rounded border bg-gray-100 px-2 py-2 font-semibold"
+      />
+    </div>
+
+    <div className="md:col-span-3">
+      <label className="mb-1 block text-xs font-medium text-gray-600">
+        Data invio F24
+      </label>
+      <input
+        type="text"
+        value={formData.data_invio_f24 ? formatDate(formData.data_invio_f24) : "-"}
+        readOnly
+        className="w-full rounded border bg-gray-100 px-2 py-2 font-semibold"
+      />
+    </div>
+
+    <div className="md:col-span-6">
+      <label className="mb-1 block text-xs font-medium text-gray-600">
+        Email per alert
+      </label>
+      <div className="flex gap-2">
+        <input
+          type="email"
+          value={formData.emailperalert}
+          onChange={(e) => handleChange("emailperalert", e.target.value)}
+          className="w-full rounded border bg-white px-2 py-2"
+          placeholder="Inserisci manualmente o importa da tbcontatti"
+        />
+        <button
+          type="button"
+          onClick={openEmailModal}
+          className="rounded border bg-white px-3 py-2 text-blue-600 hover:text-blue-800"
+        >
+          Cerca
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
         <div className="mt-6 rounded border bg-white p-4">
           <h2 className="mb-4 text-lg font-semibold">Alert annuali automatici</h2>
