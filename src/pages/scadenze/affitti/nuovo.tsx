@@ -32,8 +32,9 @@ type ContrattoFormData = {
   canone_iniziale: string;
   perc_imposta: string;
   canone_attuale: string;
-  forza_imposta: boolean;
-  tipo_tributo: string;
+ forza_imposta: boolean;
+data_invio_f24: string;
+tipo_tributo: string;
   codice_tributo: string;
   emailperalert: string;
   contatore_anni: string;
@@ -66,6 +67,7 @@ canone_iniziale: "",
 perc_imposta: "2",
 canone_attuale: "",
 forza_imposta: false,
+data_invio_f24: "",
 tipo_tributo: "F",
 codice_tributo: "1501",
 emailperalert: "",
@@ -150,15 +152,22 @@ function calcolaImpostaRegistro(formData: ContrattoFormData) {
   const perc = toNullableNumber(formData.perc_imposta);
   if (perc == null) return "";
 
+  const canoneBase = toNullableNumber(formData.canone_iniziale);
   const canoneAttuale = toNullableNumber(formData.canone_attuale);
-  const canoneIniziale = toNullableNumber(formData.canone_iniziale);
 
-  const baseCalcolo =
-    canoneAttuale != null && canoneAttuale > 0 ? canoneAttuale : canoneIniziale;
+  if (canoneBase == null) return "";
 
-  if (baseCalcolo == null) return "";
+  let imponibile = canoneBase;
 
-  return formatNumberForInput(baseCalcolo * (perc / 100));
+  if (
+    formData.forza_imposta &&
+    canoneAttuale != null &&
+    canoneAttuale > 0
+  ) {
+    imponibile = canoneAttuale;
+  }
+
+  return ((imponibile * perc) / 100).toFixed(2);
 }
 
 function isItalianHoliday(date: Date) {
@@ -376,9 +385,7 @@ const [sendingF24, setSendingF24] = useState(false);
 
   useEffect(() => {
   const importoCalcolato = calcolaImpostaRegistro(formData);
-  const canoneAttuale = toNullableNumber(formData.canone_attuale);
-  const forzaImposta = canoneAttuale != null && canoneAttuale > 0;
-
+ 
   setFormData((prev) => {
     if (
       prev.importo_registrazione === importoCalcolato &&
@@ -390,8 +397,7 @@ const [sendingF24, setSendingF24] = useState(false);
     return {
       ...prev,
       importo_registrazione: importoCalcolato,
-      forza_imposta: forzaImposta,
-    };
+       };
   });
 }, [
   formData.canone_iniziale,
@@ -484,6 +490,7 @@ perc_imposta:
 canone_attuale:
   contratto.canone_attuale != null ? String(contratto.canone_attuale) : "",
 forza_imposta: !!contratto.forza_imposta,
+data_invio_f24: formatDateTimeLocalInput(contratto.data_invio_f24),
 tipo_tributo: contratto.tipo_tributo || "F",
 codice_tributo: contratto.codice_tributo || "1501",
 emailperalert: contratto.emailperalert || "",
@@ -738,6 +745,7 @@ canone_iniziale: toNullableNumber(formData.canone_iniziale),
 perc_imposta: toNullableNumber(formData.perc_imposta),
 canone_attuale: toNullableNumber(formData.canone_attuale),
 forza_imposta: !!formData.forza_imposta,
+data_invio_f24: formData.data_invio_f24 || null,
 tipo_tributo: formData.tipo_tributo.trim() || "F",
 codice_tributo: formData.codice_tributo.trim() || "1501",
 emailperalert: formData.emailperalert.trim() || null,
@@ -859,6 +867,24 @@ emailperalert: formData.emailperalert.trim() || null,
     }
 
     alert("Fac simile F24 inviato correttamente.");
+    const nowIso = new Date().toISOString();
+
+setFormData((prev) => ({
+  ...prev,
+  data_invio_f24: nowIso,
+}));
+
+if (typeof id === "string") {
+  const supabase = getSupabaseClient();
+
+  await (supabase as any)
+    .from("tbscadaffitti")
+    .update({
+      data_invio_f24: nowIso,
+    })
+    .eq("id", id)
+    .eq("studio_id", studioId);
+}
     setShowInvioF24Modal(false);
     setCcF24("");
   } catch (err) {
@@ -1012,23 +1038,37 @@ emailperalert: formData.emailperalert.trim() || null,
     />
   </div>
 
-  <div>
-    <label className="mb-1 block text-sm font-medium">
-      Forza imposta
-    </label>
-    <div className="flex h-[42px] items-center rounded border bg-gray-100 px-3">
-      <input
-        type="checkbox"
-        checked={formData.forza_imposta}
-        readOnly
-        disabled
-        className="mr-2"
-      />
-      <span className="text-sm">
-        {formData.forza_imposta ? "Sì" : "No"}
-      </span>
-    </div>
+<div>
+  <label className="mb-1 block text-sm font-medium">
+    Forza imposta
+  </label>
+
+  <div
+    className={`flex h-[42px] items-center rounded border px-3 ${
+      formData.canone_attuale ? "bg-white" : "bg-gray-100"
+    }`}
+  >
+    <input
+      type="checkbox"
+      checked={formData.forza_imposta}
+      disabled={
+        !formData.canone_attuale ||
+        Number(formData.canone_attuale) <= 0
+      }
+      onChange={(e) =>
+        handleChange("forza_imposta", e.target.checked)
+      }
+      className="mr-2"
+    />
+
+    <span className="text-sm">
+      {formData.forza_imposta ? "Sì" : "No"}
+    </span>
   </div>
+
+  <p className="mt-1 text-xs text-gray-500">
+    Se attivo, l’imposta viene ricalcolata sul canone attuale.
+  </p>
 </div>
 
 <div className="md:col-span-2">
@@ -1186,66 +1226,91 @@ emailperalert: formData.emailperalert.trim() || null,
   </button>
 </div>
 
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">
-                  Tipo
-                </label>
-                <input
-  type="text"
-  value={formData.tipo_tributo}
-  readOnly
-  className="w-full rounded border bg-gray-100 px-3 py-2 text-center font-semibold"
-/>
-              </div>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
+  <div>
+    <label className="mb-1 block text-xs font-medium text-gray-600">
+      Tipo
+    </label>
+    <input
+      type="text"
+      value={formData.tipo_tributo}
+      readOnly
+      className="w-full rounded border bg-gray-100 px-2 py-2 text-center font-semibold"
+    />
+  </div>
 
-              <div className="md:col-span-2">
-                <label className="mb-1 block text-xs font-medium text-gray-600">
-                  Elementi identificativi
-                </label>
-                <input
-                  type="text"
-                  value={formData.codice_identificativo_registrazione}
-                  readOnly
-                  className="w-full rounded border bg-gray-100 px-3 py-2 font-semibold"
-                />
-              </div>
+  <div className="md:col-span-2">
+    <label className="mb-1 block text-xs font-medium text-gray-600">
+      Elementi identificativi
+    </label>
+    <input
+      type="text"
+      value={formData.codice_identificativo_registrazione}
+      readOnly
+      className="w-full rounded border bg-gray-100 px-2 py-2 font-semibold"
+    />
+  </div>
 
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">
-                  Codice
-                </label>
-               <input
-                type="text"
-                  value={formData.codice_tributo}
-                  readOnly
-                  className="w-full rounded border bg-gray-100 px-3 py-2 text-center font-semibold"
-                />
-              </div>
+  <div>
+    <label className="mb-1 block text-xs font-medium text-gray-600">
+      Codice
+    </label>
+    <input
+      type="text"
+      value={formData.codice_tributo}
+      readOnly
+      className="w-full rounded border bg-gray-100 px-2 py-2 text-center font-semibold"
+    />
+  </div>
 
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">
-                  Anno riferimento
-                </label>
-                <input
-                  type="text"
-                  value={getYearFromDate(formData.data_prossima_scadenza)}
-                  readOnly
-                  className="w-full rounded border bg-gray-100 px-3 py-2 text-center font-semibold"
-                />
-              </div>
+  <div>
+    <label className="mb-1 block text-xs font-medium text-gray-600">
+      Anno riferimento
+    </label>
+    <input
+      type="text"
+      value={getYearFromDate(formData.data_prossima_scadenza)}
+      readOnly
+      className="w-full rounded border bg-gray-100 px-2 py-2 text-center font-semibold"
+    />
+  </div>
 
-              <div className="md:col-span-5">
-                <label className="mb-1 block text-xs font-medium text-gray-600">
-                  Importi a debito versati
-                </label>
-                <input
-                  type="text"
-                  value={formatEuro(formData.importo_registrazione)}
-                  readOnly
-                  className="w-full rounded border bg-gray-100 px-3 py-2 text-right font-semibold"
-                />
-              </div>
+  <div>
+    <label className="mb-1 block text-xs font-medium text-gray-600">
+      Importi a debito versati
+    </label>
+    <input
+      type="text"
+      value={formatEuro(formData.importo_registrazione)}
+      readOnly
+      className="w-full rounded border bg-gray-100 px-2 py-2 text-right font-semibold"
+    />
+  </div>
+
+  <div className="md:col-span-3">
+    <label className="mb-1 block text-xs font-medium text-gray-600">
+      Data scadenza
+    </label>
+    <input
+      type="text"
+      value={formatDate(getNextWorkingDate(formData.data_prossima_scadenza))}
+      readOnly
+      className="w-full rounded border bg-gray-100 px-2 py-2 font-semibold"
+    />
+  </div>
+
+  <div className="md:col-span-3">
+    <label className="mb-1 block text-xs font-medium text-gray-600">
+      Data invio F24
+    </label>
+    <input
+      type="text"
+      value={formData.data_invio_f24 ? formatDate(formData.data_invio_f24) : "-"}
+      readOnly
+      className="w-full rounded border bg-gray-100 px-2 py-2 font-semibold"
+    />
+  </div>
+</div>
             </div>
           </div>
         </div>
