@@ -36,58 +36,97 @@ function buildF24Html(body: any) {
 <html>
 <body style="margin:0; padding:0; background:#f3f4f6; font-family:Arial, Helvetica, sans-serif; color:#111827;">
   <div style="max-width:760px; margin:0 auto; padding:28px 16px;">
-    <div style="background:#ffffff; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
-      <div style="background:#1d4ed8; color:#ffffff; padding:22px 26px;">
-        <div style="font-size:22px; font-weight:700;">FAC SIMILE MODELLO F24 ELIDE</div>
+    <div style="background:#ffffff; border:1px solid #e5e7eb; border-radius:14px; overflow:hidden;">
+
+      <div style="background:#1d4ed8; color:#ffffff; padding:24px 28px;">
+        <div style="font-size:22px; font-weight:700; letter-spacing:0.2px;">
+          Fac simile modello F24 Elide
+        </div>
         <div style="font-size:13px; margin-top:6px; opacity:0.95;">
-          Contratto di affitto - Imposta di registro
+          Contratto di affitto — Imposta di registro
         </div>
       </div>
 
-      <div style="padding:26px;">
-        <p style="font-size:15px; line-height:1.6;">
-          In allegato si invia il fac simile del modello F24 Elide relativo al contratto di affitto
-          ${body.locatore ? `del locatore <strong>${body.locatore}</strong>` : ""}
-          ${body.conduttore ? `con conduttore <strong>${body.conduttore}</strong>` : ""}.
+      <div style="padding:26px 28px;">
+        <p style="margin:0 0 16px 0; font-size:15px; line-height:1.6;">
+          In allegato si trasmette il fac simile del modello F24 Elide relativo al contratto di affitto indicato di seguito.
         </p>
 
-        <p style="font-size:15px; line-height:1.6;">
-          Il pagamento dovrà essere effettuato entro il giorno
-          <strong>${formatDateIT(body.data_pagamento)}</strong>.
-        </p>
+        <div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; padding:16px; margin:18px 0;">
+          <div style="font-size:13px; font-weight:700; color:#1d4ed8; text-transform:uppercase; margin-bottom:12px;">
+            Dati contratto
+          </div>
 
-        <div style="background:#eef9ff; border:1px solid #dbeafe; border-radius:10px; padding:16px; margin:22px 0;">
-          <div style="background:#bae6fd; color:#ffffff; font-size:13px; font-weight:700; text-transform:uppercase; padding:10px 12px; margin-bottom:14px;">
+          <table style="width:100%; border-collapse:collapse; font-size:14px;">
+            <tr>
+              <td style="padding:7px 0; color:#6b7280;">Locatore</td>
+              <td style="padding:7px 0; text-align:right; font-weight:700;">${body.locatore || "-"}</td>
+            </tr>
+            <tr>
+              <td style="padding:7px 0; color:#6b7280;">Conduttore</td>
+              <td style="padding:7px 0; text-align:right; font-weight:700;">${body.conduttore || "-"}</td>
+            </tr>
+            <tr>
+              <td style="padding:7px 0; color:#6b7280;">Immobile</td>
+              <td style="padding:7px 0; text-align:right; font-weight:700;">${body.immobile || "-"}</td>
+            </tr>
+            <tr>
+              <td style="padding:7px 0; color:#6b7280;">Codice identificativo registrazione</td>
+              <td style="padding:7px 0; text-align:right; font-weight:700;">${body.codice_identificativo_registrazione || "-"}</td>
+            </tr>
+          </table>
+        </div>
+
+        <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:16px; margin:20px 0;">
+          <div style="font-size:13px; font-weight:700; color:#1d4ed8; text-transform:uppercase; margin-bottom:12px;">
             Sezione Erario ed Altro
           </div>
 
           <table style="width:100%; border-collapse:collapse; font-size:13px;">
             <tr>
-              <td style="padding:0 6px 6px 0; font-size:12px;">Tipo</td>
-              <td style="padding:0 6px 6px 0; font-size:12px;">Elementi identificativi</td>
-              <td style="padding:0 6px 6px 0; font-size:12px;">Codice</td>
-              <td style="padding:0 6px 6px 0; font-size:12px;">Anno riferimento</td>
-              <td style="padding:0 0 6px 0; font-size:12px;">Importi a debito versati</td>
+              <td style="padding:0 6px 6px 0; color:#6b7280;">Tipo</td>
+              <td style="padding:0 6px 6px 0; color:#6b7280;">Elementi identificativi</td>
+              <td style="padding:0 6px 6px 0; color:#6b7280;">Codice</td>
+              <td style="padding:0 6px 6px 0; color:#6b7280;">Anno riferimento</td>
+              <td style="padding:0 0 6px 0; color:#6b7280;">Importo</td>
             </tr>
             <tr>
-              <td style="padding:10px; background:#f3f4f6; border:1px solid #e5e7eb; font-weight:700; text-align:center;">${body.tipo_tributo || "F"}</td>
-              <td style="padding:10px; background:#f3f4f6; border:1px solid #e5e7eb; font-weight:700;">${body.codice_identificativo_registrazione || "-"}</td>
-              <td style="padding:10px; background:#f3f4f6; border:1px solid #e5e7eb; font-weight:700; text-align:center;">${body.codice_tributo || "1501"}</td>
-              <td style="padding:10px; background:#f3f4f6; border:1px solid #111827; font-weight:700; text-align:center;">${body.anno_riferimento || "-"}</td>
-              <td style="padding:10px; background:#f3f4f6; border:1px solid #e5e7eb; font-weight:700; text-align:right;">${formatEuroIT(body.importo_registrazione)}</td>
+              <td style="padding:11px 10px; background:#ffffff; border:1px solid #dbeafe; font-weight:700; text-align:center;">
+                ${body.tipo_tributo || "F"}
+              </td>
+              <td style="padding:11px 10px; background:#ffffff; border:1px solid #dbeafe; font-weight:700;">
+                ${body.codice_identificativo_registrazione || "-"}
+              </td>
+              <td style="padding:11px 10px; background:#ffffff; border:1px solid #dbeafe; font-weight:700; text-align:center;">
+                ${body.codice_tributo || "1501"}
+              </td>
+              <td style="padding:11px 10px; background:#ffffff; border:1px solid #dbeafe; font-weight:700; text-align:center;">
+                ${body.anno_riferimento || "-"}
+              </td>
+              <td style="padding:11px 10px; background:#ffffff; border:1px solid #dbeafe; font-weight:700; text-align:right;">
+                ${formatEuroIT(body.importo_registrazione)}
+              </td>
             </tr>
           </table>
         </div>
 
-        <p style="font-size:14px; line-height:1.6; color:#374151;">
-          Immobile: <strong>${body.immobile || "-"}</strong><br/>
-          Codice identificativo registrazione: <strong>${body.codice_identificativo_registrazione || "-"}</strong><br/>
-          Scadenza originaria: <strong>${formatDateIT(body.data_scadenza)}</strong>
-        </p>
+        <div style="background:#fff7ed; border:1px solid #fed7aa; border-radius:10px; padding:16px; margin:20px 0;">
+          <div style="font-size:14px; line-height:1.6;">
+            Il pagamento dovrà essere effettuato entro il giorno
+            <strong>${formatDateIT(body.data_pagamento)}</strong>.
+          </div>
+          <div style="font-size:12px; color:#6b7280; margin-top:6px;">
+            Scadenza originaria: ${formatDateIT(body.data_scadenza)}
+          </div>
+        </div>
 
-        <p style="margin-top:26px; font-size:15px;">
+        <p style="margin:24px 0 0 0; font-size:15px; line-height:1.6;">
           Cordiali saluti
         </p>
+      </div>
+
+      <div style="background:#f9fafb; border-top:1px solid #e5e7eb; padding:14px 28px; text-align:center; font-size:12px; color:#6b7280;">
+        Comunicazione generata automaticamente da Studio Manager Pro.
       </div>
     </div>
   </div>
