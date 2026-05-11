@@ -840,6 +840,7 @@ if (!currentUserId) {
   contratto_id: typeof id === "string" ? id : null,
   studio_id: studioId,
   mittente_user_id: currentUserId,
+   nome_operatore: operatoreLabel,
   destinatario: formData.emailperalert.trim(),
   locatore: locatoreSelezionato?.ragione_sociale || "",
   conduttore: formData.conduttore,
