@@ -28,10 +28,7 @@ type ContrattoFormData = {
   data_rinnovo_atto: string;
   durata_contratto_anni: string;
   codice_identificativo_registrazione: string;
- importo_registrazione: string;
-tipo_tributo: string;
-codice_tributo: string;
-emailperalert: string;
+  importo_registrazione: string;
   contatore_anni: string;
   data_prossima_scadenza: string;
   alert1_data: string;
@@ -58,6 +55,10 @@ const emptyForm: ContrattoFormData = {
   durata_contratto_anni: "",
   codice_identificativo_registrazione: "",
  importo_registrazione: "",
+canone_iniziale: "",
+perc_imposta: "2",
+canone_attuale: "",
+forza_imposta: false,
 tipo_tributo: "F",
 codice_tributo: "1501",
 emailperalert: "",
@@ -131,6 +132,90 @@ function toNullableNumber(value: string) {
   if (!value) return null;
   const n = Number(String(value).replace(",", "."));
   return Number.isNaN(n) ? null : n;
+}
+
+function formatNumberForInput(value: number) {
+  if (!Number.isFinite(value)) return "";
+  return value.toFixed(2);
+}
+
+function calcolaImpostaRegistro(formData: ContrattoFormData) {
+  const perc = toNullableNumber(formData.perc_imposta);
+  if (perc == null) return "";
+
+  const canoneAttuale = toNullableNumber(formData.canone_attuale);
+  const canoneIniziale = toNullableNumber(formData.canone_iniziale);
+
+  const baseCalcolo =
+    canoneAttuale != null && canoneAttuale > 0 ? canoneAttuale : canoneIniziale;
+
+  if (baseCalcolo == null) return "";
+
+  return formatNumberForInput(baseCalcolo * (perc / 100));
+}
+
+function isItalianHoliday(date: Date) {
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+
+  const fixedHolidays = [
+    "1-1",
+    "1-6",
+    "4-25",
+    "5-1",
+    "6-2",
+    "8-15",
+    "11-1",
+    "12-8",
+    "12-25",
+    "12-26",
+  ];
+
+  if (fixedHolidays.includes(`${month}-${day}`)) return true;
+
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const easterMonth = Math.floor((h + l - 7 * m + 114) / 31);
+  const easterDay = ((h + l - 7 * m + 114) % 31) + 1;
+
+  const easterMonday = new Date(year, easterMonth - 1, easterDay);
+  easterMonday.setDate(easterMonday.getDate() + 1);
+
+  return (
+    date.getFullYear() === easterMonday.getFullYear() &&
+    date.getMonth() === easterMonday.getMonth() &&
+    date.getDate() === easterMonday.getDate()
+  );
+}
+
+function getNextWorkingDate(value?: string | null) {
+  if (!value) return "";
+
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+
+  d.setHours(0, 0, 0, 0);
+
+  while (
+    d.getDay() === 0 ||
+    d.getDay() === 6 ||
+    isItalianHoliday(d)
+  ) {
+    d.setDate(d.getDate() + 1);
+  }
+
+  return d.toISOString().slice(0, 10);
 }
 
 function getDecorrenzaCalcolo(formData: ContrattoFormData) {
@@ -233,6 +318,10 @@ const masterPasswordGate = useMasterPasswordGate({
   const [conduttoreResults, setConduttoreResults] = useState<ClienteOption[]>([]);
   const [loadingConduttoreResults, setLoadingConduttoreResults] = useState(false);
 
+  const [showInvioF24Modal, setShowInvioF24Modal] = useState(false);
+const [ccF24, setCcF24] = useState("");
+const [sendingF24, setSendingF24] = useState(false);
+
   const isEdit = useMemo(() => typeof id === "string" && !!id, [id]);
 
   useEffect(() => {
@@ -277,6 +366,31 @@ const masterPasswordGate = useMasterPasswordGate({
     formData.durata_contratto_anni,
     formData.rinnovo,
   ]);
+
+  useEffect(() => {
+  const importoCalcolato = calcolaImpostaRegistro(formData);
+  const canoneAttuale = toNullableNumber(formData.canone_attuale);
+  const forzaImposta = canoneAttuale != null && canoneAttuale > 0;
+
+  setFormData((prev) => {
+    if (
+      prev.importo_registrazione === importoCalcolato &&
+      prev.forza_imposta === forzaImposta
+    ) {
+      return prev;
+    }
+
+    return {
+      ...prev,
+      importo_registrazione: importoCalcolato,
+      forza_imposta: forzaImposta,
+    };
+  });
+}, [
+  formData.canone_iniziale,
+  formData.perc_imposta,
+  formData.canone_attuale,
+]);
 
   const initialize = async () => {
     setLoading(true);
@@ -352,10 +466,17 @@ setOperatoreLabel(fullName || utenteDb.email || user.email || "");
             durata_contratto_anni: String(contratto.durata_contratto_anni ?? ""),
             codice_identificativo_registrazione:
               contratto.codice_identificativo_registrazione || "",
-            importo_registrazione:
+        importo_registrazione:
   contratto.importo_registrazione != null
     ? String(contratto.importo_registrazione)
     : "",
+canone_iniziale:
+  contratto.canone_iniziale != null ? String(contratto.canone_iniziale) : "",
+perc_imposta:
+  contratto.perc_imposta != null ? String(contratto.perc_imposta) : "2",
+canone_attuale:
+  contratto.canone_attuale != null ? String(contratto.canone_attuale) : "",
+forza_imposta: !!contratto.forza_imposta,
 tipo_tributo: contratto.tipo_tributo || "F",
 codice_tributo: contratto.codice_tributo || "1501",
 emailperalert: contratto.emailperalert || "",
@@ -605,7 +726,11 @@ const handleSave = async () => {
           durata_contratto_anni: Number(formData.durata_contratto_anni),
           codice_identificativo_registrazione:
             formData.codice_identificativo_registrazione.trim() || null,
-         importo_registrazione: toNullableNumber(formData.importo_registrazione),
+        importo_registrazione: toNullableNumber(formData.importo_registrazione),
+canone_iniziale: toNullableNumber(formData.canone_iniziale),
+perc_imposta: toNullableNumber(formData.perc_imposta),
+canone_attuale: toNullableNumber(formData.canone_attuale),
+forza_imposta: !!formData.forza_imposta,
 tipo_tributo: formData.tipo_tributo.trim() || "F",
 codice_tributo: formData.codice_tributo.trim() || "1501",
 emailperalert: formData.emailperalert.trim() || null,
@@ -665,6 +790,69 @@ emailperalert: formData.emailperalert.trim() || null,
     alert("Errore inatteso durante il salvataggio.");
   } finally {
     setSaving(false);
+  }
+};
+
+  const handleInviaF24 = async () => {
+  if (!formData.cliente_id) {
+    alert("Seleziona prima il locatore.");
+    return;
+  }
+
+  if (!formData.importo_registrazione) {
+    alert("Importo imposta non disponibile.");
+    return;
+  }
+
+  const locatoreSelezionato = clienti.find(
+    (c) => c.id === formData.cliente_id
+  );
+
+  const dataPagamento = getNextWorkingDate(formData.data_prossima_scadenza);
+
+  const payload = {
+    contratto_id: typeof id === "string" ? id : null,
+    studio_id: studioId,
+    locatore: locatoreSelezionato?.ragione_sociale || "",
+    conduttore: formData.conduttore,
+    immobile: formData.descrizione_immobile_locato,
+    codice_identificativo_registrazione:
+      formData.codice_identificativo_registrazione,
+    tipo_tributo: formData.tipo_tributo,
+    codice_tributo: formData.codice_tributo,
+    anno_riferimento: getYearFromDate(formData.data_prossima_scadenza),
+    importo_registrazione: formData.importo_registrazione,
+    data_scadenza: formData.data_prossima_scadenza,
+    data_pagamento: dataPagamento,
+    cc: ccF24,
+  };
+
+  try {
+    setSendingF24(true);
+
+    const response = await fetch("/api/scadenze/affitti/invia-f24", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result?.success) {
+      alert(result?.error || "Errore durante l’invio del fac simile F24.");
+      return;
+    }
+
+    alert("Fac simile F24 inviato correttamente.");
+    setShowInvioF24Modal(false);
+    setCcF24("");
+  } catch (err) {
+    console.error("Errore invio F24:", err);
+    alert("Errore inatteso durante l’invio.");
+  } finally {
+    setSendingF24(false);
   }
 };
 
@@ -759,22 +947,81 @@ emailperalert: formData.emailperalert.trim() || null,
             </div>
           </div>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium">
-              Operatore creatore
-            </label>
-            <input
-              type="text"
-              value={operatoreLabel}
-              readOnly
-              className="w-full rounded border bg-gray-100 px-3 py-2"
-            />
-          </div>
+        <div>
+  <label className="mb-1 block text-sm font-medium">
+    Operatore creatore
+  </label>
+  <input
+    type="text"
+    value={operatoreLabel}
+    readOnly
+    className="w-full rounded border bg-gray-100 px-3 py-2"
+  />
+</div>
 
-          <div className="md:col-span-2">
-            <label className="mb-1 block text-sm font-medium">
-              Descrizione immobile locato
-            </label>
+<div className="grid grid-cols-1 gap-4 md:col-span-2 md:grid-cols-4">
+  <div>
+    <label className="mb-1 block text-sm font-medium">
+      Canone iniziale
+    </label>
+    <input
+      type="number"
+      step="0.01"
+      value={formData.canone_iniziale}
+      onChange={(e) => handleChange("canone_iniziale", e.target.value)}
+      className="w-full rounded border px-3 py-2"
+    />
+  </div>
+
+  <div>
+    <label className="mb-1 block text-sm font-medium">
+      Perc. imposta
+    </label>
+    <input
+      type="number"
+      step="0.01"
+      value={formData.perc_imposta}
+      onChange={(e) => handleChange("perc_imposta", e.target.value)}
+      className="w-full rounded border px-3 py-2"
+    />
+  </div>
+
+  <div>
+    <label className="mb-1 block text-sm font-medium">
+      Canone attuale
+    </label>
+    <input
+      type="number"
+      step="0.01"
+      value={formData.canone_attuale}
+      onChange={(e) => handleChange("canone_attuale", e.target.value)}
+      className="w-full rounded border px-3 py-2"
+    />
+  </div>
+
+  <div>
+    <label className="mb-1 block text-sm font-medium">
+      Forza imposta
+    </label>
+    <div className="flex h-[42px] items-center rounded border bg-gray-100 px-3">
+      <input
+        type="checkbox"
+        checked={formData.forza_imposta}
+        readOnly
+        disabled
+        className="mr-2"
+      />
+      <span className="text-sm">
+        {formData.forza_imposta ? "Sì" : "No"}
+      </span>
+    </div>
+  </div>
+</div>
+
+<div className="md:col-span-2">
+  <label className="mb-1 block text-sm font-medium">
+    Descrizione immobile locato
+  </label>
             <input
               type="text"
               value={formData.descrizione_immobile_locato}
@@ -852,17 +1099,15 @@ emailperalert: formData.emailperalert.trim() || null,
 
           <div>
             <label className="mb-1 block text-sm font-medium">
-              Importo registrazione
+              Imposta di registro
             </label>
-            <input
-              type="number"
-              step="0.01"
-              value={formData.importo_registrazione}
-              onChange={(e) =>
-                handleChange("importo_registrazione", e.target.value)
-              }
-              className="w-full rounded border px-3 py-2"
-            />
+           <input
+  type="number"
+  step="0.01"
+  value={formData.importo_registrazione}
+  readOnly
+  className="w-full rounded border bg-gray-100 px-3 py-2"
+/>
           </div>
 
           <div className="md:col-span-2">
@@ -914,9 +1159,19 @@ emailperalert: formData.emailperalert.trim() || null,
           </div>
 
           <div className="md:col-span-2 mt-4 rounded border bg-sky-50 p-4">
-            <div className="mb-3 bg-sky-200 px-3 py-2 text-sm font-bold uppercase text-white">
-              Sezione Erario ed Altro
-            </div>
+            <div className="mb-3 flex items-center justify-between bg-sky-200 px-3 py-2">
+  <div className="text-sm font-bold uppercase text-white">
+    Sezione Erario ed Altro
+  </div>
+
+  <button
+    type="button"
+    onClick={() => setShowInvioF24Modal(true)}
+    className="rounded bg-blue-600 px-3 py-1 text-xs font-semibold text-white hover:bg-blue-700"
+  >
+    Invia F24 via email
+  </button>
+</div>
 
             <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
               <div>
@@ -1202,6 +1457,76 @@ emailperalert: formData.emailperalert.trim() || null,
           </div>
         </div>
       )}
+
+      {showInvioF24Modal && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+    <div className="w-full max-w-xl rounded-lg bg-white shadow-xl">
+      <div className="flex items-center justify-between border-b px-4 py-3">
+        <h3 className="text-lg font-semibold">Invio fac simile F24 Elide</h3>
+        <button
+          type="button"
+          onClick={() => setShowInvioF24Modal(false)}
+          className="text-gray-600 hover:text-black"
+        >
+          <X size={20} />
+        </button>
+      </div>
+
+      <div className="p-4">
+        <p className="mb-4 text-sm text-gray-700">
+          Il fac simile sarà inviato all’indirizzo email del locatore.
+          Puoi indicare ulteriori destinatari in conoscenza.
+        </p>
+
+        <label className="mb-1 block text-sm font-medium">
+          Destinatari in conoscenza
+        </label>
+        <input
+          type="text"
+          value={ccF24}
+          onChange={(e) => setCcF24(e.target.value)}
+          placeholder="email1@dominio.it, email2@dominio.it"
+          className="mb-4 w-full rounded border px-3 py-2"
+        />
+
+        <div className="rounded bg-gray-50 p-3 text-sm">
+          <div>
+            <strong>Scadenza originaria:</strong>{" "}
+            {formatDate(formData.data_prossima_scadenza)}
+          </div>
+          <div>
+            <strong>Data pagamento utile:</strong>{" "}
+            {formatDate(getNextWorkingDate(formData.data_prossima_scadenza))}
+          </div>
+          <div>
+            <strong>Importo:</strong>{" "}
+            {formatEuro(formData.importo_registrazione)}
+          </div>
+        </div>
+
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setShowInvioF24Modal(false)}
+            className="rounded border px-4 py-2"
+          >
+            Annulla
+          </button>
+
+          <button
+            type="button"
+            onClick={handleInviaF24}
+            disabled={sendingF24}
+            className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-60"
+          >
+            {sendingF24 ? "Invio..." : "Invia email"}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+      
       <MasterPasswordDialog
         open={masterPasswordGate.open}
         onOpenChange={masterPasswordGate.setOpen}
