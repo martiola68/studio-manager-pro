@@ -113,7 +113,7 @@ export default function ComunicazioniPage() {
   const [searchDestinatari, setSearchDestinatari] = useState("");
 
 const [formData, setFormData] = useState({
-  tipo: "singola" as TipoComunicazione,
+  tipo: "newsletter" as TipoComunicazione,
   destinatario_id: "",
   destinatario_email: "",
   oggetto: "",
@@ -495,8 +495,8 @@ const emailResult = await emailService.sendComunicazioneEmail({
   };
 
  const resetForm = () => {
- setFormData({
-  tipo: "singola",
+setFormData({
+  tipo: "newsletter",
   destinatario_id: "",
   destinatario_email: "",
   oggetto: "",
@@ -645,7 +645,13 @@ const emailResult = await emailService.sendComunicazioneEmail({
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                 <SelectContent>
+  <SelectItem value="newsletter">
+    Newsletter (Tutti iscritti)
+  </SelectItem>
+  <SelectItem value="scadenze">
+    Avviso Scadenze
+  </SelectItem>
   <SelectItem value="singola">Singolo Cliente</SelectItem>
   <SelectItem value="interna">
     Comunicazione Interna
@@ -848,38 +854,53 @@ const emailResult = await emailService.sendComunicazioneEmail({
   </div>
 )}
 
-              {formData.tipo === "singola" && (
-                <div className="space-y-2">
-                  <Label htmlFor="destinatario">Destinatario</Label>
-                <Select
-  value={formData.destinatario_id}
-  onValueChange={(value) => {
-    const cliente = clienti.find((c) => c.id === value) as any;
+{formData.tipo === "singola" && (
+  <div className="space-y-4">
+    <div className="space-y-2">
+      <Label htmlFor="destinatario">Destinatario</Label>
 
-    setFormData({
-      ...formData,
-      destinatario_id: value,
-      destinatario_email:
-        cliente?.email ||
-        cliente?.email_amministrativa ||
-        cliente?.pec ||
-        "",
-    });
-  }}
->
-  <SelectTrigger>
-    <SelectValue placeholder="Seleziona cliente" />
-  </SelectTrigger>
-  <SelectContent>
-    {clienti
-      .filter((c) => c.attivo)
-      .map((cliente) => (
-        <SelectItem key={cliente.id} value={cliente.id}>
-          {cliente.ragione_sociale}
-        </SelectItem>
-      ))}
-  </SelectContent>
-</Select>
+      <Select
+        value={formData.destinatario_id}
+        onValueChange={(value) =>
+          setFormData({ ...formData, destinatario_id: value })
+        }
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Seleziona cliente" />
+        </SelectTrigger>
+
+        <SelectContent>
+          {clienti
+            .filter((c) => c.attivo)
+            .map((cliente) => (
+              <SelectItem key={cliente.id} value={cliente.id}>
+                {cliente.ragione_sociale}
+              </SelectItem>
+            ))}
+        </SelectContent>
+      </Select>
+    </div>
+
+    <div className="space-y-2">
+      <Label htmlFor="destinatario_email">
+        Email destinatario *
+      </Label>
+
+      <Input
+        id="destinatario_email"
+        type="email"
+        value={formData.destinatario_email}
+        onChange={(e) =>
+          setFormData({
+            ...formData,
+            destinatario_email: e.target.value,
+          })
+        }
+        placeholder="email@cliente.it"
+      />
+    </div>
+  </div>
+)}
 
 {formData.destinatario_id && (
   <div className="rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-700">
