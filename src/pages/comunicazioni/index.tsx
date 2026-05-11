@@ -322,6 +322,17 @@ Cordiali saluti`;
   }));
 };
 
+  const getClienteEmail = (clienteId: string) => {
+  const cliente = clienti.find((c) => c.id === clienteId);
+
+  return (
+    (cliente as any)?.email ||
+    (cliente as any)?.pec ||
+    (cliente as any)?.email_amministrativa ||
+    "-"
+  );
+};
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -469,26 +480,26 @@ const emailResult = await emailService.sendComunicazioneEmail({
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      tipo: "newsletter",
-      destinatario_id: "",
-      oggetto: "",
-      messaggio: "",
-    });
-    setSelectedFile(null);
-    setMultiDestinatari(false);
-    setSelectedDestinatari([]);
-    setSearchDestinatari("");
-setTemplateData({
-  template: "",
-  periodoTipo: "mese",
-  periodo: "",
-  anno: String(new Date().getFullYear()),
-  dataScadenza: "",
-  associaRitenute: false,
-});
-  };
+ const resetForm = () => {
+  setFormData({
+    tipo: "newsletter",
+    destinatario_id: "",
+    oggetto: "",
+    messaggio: "",
+  });
+  setSelectedFile(null);
+  setMultiDestinatari(false);
+  setSelectedDestinatari([]);
+  setSearchDestinatari("");
+  setTemplateData({
+    template: "",
+    periodoTipo: "mese",
+    periodo: "",
+    anno: String(new Date().getFullYear()),
+    dataScadenza: "",
+    associaRitenute: false,
+  });
+};
 
   const handleDelete = async (id: string) => {
     if (!confirm("Sei sicuro di voler eliminare questo messaggio dallo storico?")) {
@@ -814,25 +825,34 @@ setTemplateData({
               {formData.tipo === "singola" && (
                 <div className="space-y-2">
                   <Label htmlFor="destinatario">Destinatario</Label>
-                  <Select
-                    value={formData.destinatario_id}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, destinatario_id: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleziona cliente" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clienti
-                        .filter((c) => c.attivo)
-                        .map((cliente) => (
-                          <SelectItem key={cliente.id} value={cliente.id}>
-                            {cliente.ragione_sociale}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
+                <Select
+  value={formData.destinatario_id}
+  onValueChange={(value) =>
+    setFormData({ ...formData, destinatario_id: value })
+  }
+>
+  <SelectTrigger>
+    <SelectValue placeholder="Seleziona cliente" />
+  </SelectTrigger>
+  <SelectContent>
+    {clienti
+      .filter((c) => c.attivo)
+      .map((cliente) => (
+        <SelectItem key={cliente.id} value={cliente.id}>
+          {cliente.ragione_sociale}
+        </SelectItem>
+      ))}
+  </SelectContent>
+</Select>
+
+{formData.destinatario_id && (
+  <div className="rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-700">
+    Email destinatario:{" "}
+    <span className="font-medium">
+      {getClienteEmail(formData.destinatario_id)}
+    </span>
+  </div>
+)}
                 </div>
               )}
 
@@ -1002,14 +1022,17 @@ setTemplateData({
               </div>
 
               <div className="flex justify-end gap-3 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setDialogOpen(false)}
-                  disabled={sending}
-                >
-                  Annulla
-                </Button>
+               <Button
+  type="button"
+  variant="outline"
+  onClick={() => {
+    resetForm();
+    setDialogOpen(false);
+  }}
+  disabled={sending}
+>
+  Annulla
+</Button>
                 <Button
                   type="submit"
                   disabled={sending}
