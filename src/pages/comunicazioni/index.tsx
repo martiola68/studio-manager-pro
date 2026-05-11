@@ -862,7 +862,10 @@ setFormData({
       <Select
         value={formData.destinatario_id}
         onValueChange={(value) =>
-          setFormData({ ...formData, destinatario_id: value })
+          setFormData({
+            ...formData,
+            destinatario_id: value,
+          })
         }
       >
         <SelectTrigger>
@@ -873,13 +876,25 @@ setFormData({
           {clienti
             .filter((c) => c.attivo)
             .map((cliente) => (
-              <SelectItem key={cliente.id} value={cliente.id}>
+              <SelectItem
+                key={cliente.id}
+                value={cliente.id}
+              >
                 {cliente.ragione_sociale}
               </SelectItem>
             ))}
         </SelectContent>
       </Select>
     </div>
+
+    {formData.destinatario_id && (
+      <div className="rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-700">
+        Email destinatario:{" "}
+        <span className="font-medium">
+          {getClienteEmail(formData.destinatario_id)}
+        </span>
+      </div>
+    )}
 
     <div className="space-y-2">
       <Label htmlFor="destinatario_email">
@@ -901,17 +916,6 @@ setFormData({
     </div>
   </div>
 )}
-
-{formData.destinatario_id && (
-  <div className="rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-700">
-    Email destinatario:{" "}
-    <span className="font-medium">
-      {getClienteEmail(formData.destinatario_id)}
-    </span>
-  </div>
-)}
-                </div>
-              )}
 
               {formData.tipo === "interna" && (
                 <div className="space-y-4 border rounded-lg p-4 bg-gray-50">
