@@ -28,6 +28,7 @@ export interface EventEmailData {
 export interface ComunicazioneEmailData {
   tipo: "newsletter" | "scadenze" | "singola" | "interna";
   destinatarioId?: string;
+  destinatarioEmail?: string;
   destinatariIds?: string[];
   oggetto: string;
   messaggio: string;
