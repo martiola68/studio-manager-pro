@@ -383,7 +383,6 @@ const [sendingF24, setSendingF24] = useState(false);
     formData.rinnovo,
   ]);
 
-  useEffect(() => {
 useEffect(() => {
   const importoCalcolato = calcolaImpostaRegistro(formData);
 
@@ -403,7 +402,8 @@ useEffect(() => {
   formData.canone_attuale,
   formData.forza_imposta,
 ]);
-  const initialize = async () => {
+
+const initialize = async () => {
     setLoading(true);
 
     try {
