@@ -1064,9 +1064,10 @@ if (typeof id === "string") {
     </span>
   </div>
 
-  <p className="mt-1 text-xs text-gray-500">
-    Se attivo, l’imposta viene ricalcolata sul canone attuale.
-  </p>
+ <p className="mt-1 text-xs text-gray-500">
+  Se attivo, l’imposta viene ricalcolata sul canone attuale.
+</p>
+</div>
 </div>
 
 <div className="md:col-span-2">
