@@ -817,11 +817,17 @@ emailperalert: formData.emailperalert.trim() || null,
 
   const dataPagamento = getNextWorkingDate(formData.data_prossima_scadenza);
 
+    if (!formData.emailperalert.trim()) {
+  alert("Inserisci prima l'email per alert.");
+  return;
+}
+    
   const payload = {
-    contratto_id: typeof id === "string" ? id : null,
-    studio_id: studioId,
-    locatore: locatoreSelezionato?.ragione_sociale || "",
-    conduttore: formData.conduttore,
+  contratto_id: typeof id === "string" ? id : null,
+  studio_id: studioId,
+  destinatario: formData.emailperalert.trim(),
+  locatore: locatoreSelezionato?.ragione_sociale || "",
+  conduttore: formData.conduttore,
     immobile: formData.descrizione_immobile_locato,
     codice_identificativo_registrazione:
       formData.codice_identificativo_registrazione,
@@ -1481,7 +1487,8 @@ emailperalert: formData.emailperalert.trim() || null,
 
       <div className="p-4">
         <p className="mb-4 text-sm text-gray-700">
-          Il fac simile sarà inviato all’indirizzo email del locatore.
+          Il fac simile sarà inviato all’indirizzo indicato nel campo Email per alert:
+          <strong> {formData.emailperalert || "-"}</strong>
           Puoi indicare ulteriori destinatari in conoscenza.
         </p>
 
