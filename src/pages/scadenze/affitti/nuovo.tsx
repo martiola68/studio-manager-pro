@@ -1135,9 +1135,7 @@ if (typeof id === "string") {
             </div>
           </div>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium">
-             <div className="grid grid-cols-1 gap-4 md:col-span-2 md:grid-cols-4">
+                <div className="grid grid-cols-1 gap-4 md:col-span-2 md:grid-cols-4">
   <div>
     <label className="mb-1 block text-sm font-medium">
       Codice identificativo registrazione
@@ -1317,6 +1315,7 @@ if (typeof id === "string") {
     </div>
   </div>
 </div>
+           </div>
 
         <div className="mt-6 rounded border bg-white p-4">
           <h2 className="mb-4 text-lg font-semibold">Alert annuali automatici</h2>
