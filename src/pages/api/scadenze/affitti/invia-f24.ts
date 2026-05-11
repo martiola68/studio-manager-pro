@@ -121,19 +121,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    const { data: sender, error: senderError } = await supabase
-      .from("tbutenti")
-      .select("id, studio_id")
-      .eq("studio_id", body.studio_id)
-      .limit(1)
-      .maybeSingle();
+  if (!body.mittente_user_id) {
+  return res.status(400).json({
+    success: false,
+    error: "Utente mittente mancante.",
+  });
+}
 
-    if (senderError || !sender?.id) {
-      return res.status(400).json({
-        success: false,
-        error: "Utente mittente non trovato.",
-      });
-    }
+const { data: sender, error: senderError } = await supabase
+  .from("tbutenti")
+  .select("id, studio_id")
+  .eq("id", body.mittente_user_id)
+  .eq("studio_id", body.studio_id)
+  .maybeSingle();
+
+if (senderError || !sender?.id) {
+  return res.status(400).json({
+    success: false,
+    error: "Utente mittente non trovato.",
+  });
+}
 
     const { data: studio, error: studioError } = await (supabase as any)
       .from("tbstudio")
