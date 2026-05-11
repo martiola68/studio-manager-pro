@@ -112,9 +112,10 @@ export default function ComunicazioniPage() {
   const [selectedDestinatari, setSelectedDestinatari] = useState<string[]>([]);
   const [searchDestinatari, setSearchDestinatari] = useState("");
 
-  const [formData, setFormData] = useState({
-  tipo: "newsletter" as TipoComunicazione,
+const [formData, setFormData] = useState({
+  tipo: "singola" as TipoComunicazione,
   destinatario_id: "",
+  destinatario_email: "",
   oggetto: "",
   messaggio: "",
 });
@@ -336,14 +337,23 @@ Cordiali saluti`;
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!formData.oggetto || !formData.messaggio) {
-      toast({
-        title: "Errore",
-        description: "Oggetto e messaggio sono obbligatori",
-        variant: "destructive",
-      });
-      return;
-    }
+   if (!formData.oggetto || !formData.messaggio) {
+  toast({
+    title: "Errore",
+    description: "Oggetto e messaggio sono obbligatori",
+    variant: "destructive",
+  });
+  return;
+}
+
+if (formData.tipo === "singola" && !formData.destinatario_email.trim()) {
+  toast({
+    title: "Email destinatario obbligatoria",
+    description: "Inserisci l'indirizzo email prima di inviare.",
+    variant: "destructive",
+  });
+  return;
+}
 
     if (formData.tipo === "singola" && !formData.destinatario_id) {
       toast({
@@ -431,6 +441,10 @@ const emailResult = await emailService.sendComunicazioneEmail({
   tipo: formData.tipo,
   destinatarioId:
     formData.tipo === "singola" ? formData.destinatario_id : undefined,
+  destinatarioEmail:
+    formData.tipo === "singola"
+      ? formData.destinatario_email.trim()
+      : undefined,
   destinatariIds:
     formData.tipo === "interna" && multiDestinatari
       ? selectedDestinatari
@@ -481,12 +495,13 @@ const emailResult = await emailService.sendComunicazioneEmail({
   };
 
  const resetForm = () => {
-  setFormData({
-    tipo: "newsletter",
-    destinatario_id: "",
-    oggetto: "",
-    messaggio: "",
-  });
+ setFormData({
+  tipo: "singola",
+  destinatario_id: "",
+  destinatario_email: "",
+  oggetto: "",
+  messaggio: "",
+});
   setSelectedFile(null);
   setMultiDestinatari(false);
   setSelectedDestinatari([]);
@@ -631,19 +646,30 @@ const emailResult = await emailService.sendComunicazioneEmail({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="newsletter">
-                      Newsletter (Tutti iscritti)
-                    </SelectItem>
-                    <SelectItem value="scadenze">
-                      Avviso Scadenze
-                    </SelectItem>
-                    <SelectItem value="singola">Singolo Cliente</SelectItem>
-                    <SelectItem value="interna">
-                      Comunicazione Interna
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+  <SelectItem value="singola">Singolo Cliente</SelectItem>
+  <SelectItem value="interna">
+    Comunicazione Interna
+  </SelectItem>
+</SelectContent>
+              </Select>
+
+<div className="space-y-2">
+  <Label htmlFor="destinatario_email">Email destinatario *</Label>
+  <Input
+    id="destinatario_email"
+    type="email"
+    value={formData.destinatario_email}
+    onChange={(e) =>
+      setFormData({
+        ...formData,
+        destinatario_email: e.target.value,
+      })
+    }
+    placeholder="email@cliente.it"
+    required
+  />
+</div>
+</div>
 
               {formData.tipo === "scadenze" && (
   <div className="space-y-4 rounded-lg border bg-blue-50 p-4">
@@ -813,7 +839,7 @@ const emailResult = await emailService.sendComunicazioneEmail({
       <Button
         type="button"
         className="bg-blue-600 hover:bg-blue-700"
-        onClick={() => generaMessaggioScadenza()}
+        onClick={() => generaMessaggioScadenza()
         disabled={!templateData.template}
       >
         Compila messaggio
@@ -827,9 +853,19 @@ const emailResult = await emailService.sendComunicazioneEmail({
                   <Label htmlFor="destinatario">Destinatario</Label>
                 <Select
   value={formData.destinatario_id}
-  onValueChange={(value) =>
-    setFormData({ ...formData, destinatario_id: value })
-  }
+  onValueChange={(value) => {
+    const cliente = clienti.find((c) => c.id === value) as any;
+
+    setFormData({
+      ...formData,
+      destinatario_id: value,
+      destinatario_email:
+        cliente?.email ||
+        cliente?.email_amministrativa ||
+        cliente?.pec ||
+        "",
+    });
+  }}
 >
   <SelectTrigger>
     <SelectValue placeholder="Seleziona cliente" />
