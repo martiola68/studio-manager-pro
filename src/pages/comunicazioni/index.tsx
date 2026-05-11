@@ -837,13 +837,13 @@ const emailResult = await emailService.sendComunicazioneEmail({
       </div>
 
       <Button
-        type="button"
-        className="bg-blue-600 hover:bg-blue-700"
-        onClick={() => generaMessaggioScadenza()
-        disabled={!templateData.template}
-      >
-        Compila messaggio
-      </Button>
+  type="button"
+  className="bg-blue-600 hover:bg-blue-700"
+  onClick={() => generaMessaggioScadenza()}
+  disabled={!templateData.template}
+>
+  Compila messaggio
+</Button>
     </div>
   </div>
 )}
