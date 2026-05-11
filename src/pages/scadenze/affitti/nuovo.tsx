@@ -29,6 +29,13 @@ type ContrattoFormData = {
   durata_contratto_anni: string;
   codice_identificativo_registrazione: string;
   importo_registrazione: string;
+  canone_iniziale: string;
+  perc_imposta: string;
+  canone_attuale: string;
+  forza_imposta: boolean;
+  tipo_tributo: string;
+  codice_tributo: string;
+  emailperalert: string;
   contatore_anni: string;
   data_prossima_scadenza: string;
   alert1_data: string;
