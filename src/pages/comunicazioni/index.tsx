@@ -44,6 +44,47 @@ type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
 type TipoComunicazione = "newsletter" | "scadenze" | "singola" | "interna";
 
+type TemplateScadenza =
+  | "iva_trimestrale"
+  | "iva_mensile"
+  | "ritenute"
+  | "imu"
+  | "f24_dipendenti"
+  | "imposte"
+  | "altro";
+
+const templateScadenze = [
+  { value: "iva_trimestrale", label: "IVA trimestrale" },
+  { value: "iva_mensile", label: "IVA mensile" },
+  { value: "ritenute", label: "Ritenute d'acconto" },
+  { value: "imu", label: "IMU" },
+  { value: "f24_dipendenti", label: "F24 dipendenti" },
+  { value: "imposte", label: "Imposte" },
+  { value: "altro", label: "Altro F24" },
+] as const;
+
+const mesi = [
+  "Gennaio",
+  "Febbraio",
+  "Marzo",
+  "Aprile",
+  "Maggio",
+  "Giugno",
+  "Luglio",
+  "Agosto",
+  "Settembre",
+  "Ottobre",
+  "Novembre",
+  "Dicembre",
+];
+
+const trimestri = [
+  "1° trimestre",
+  "2° trimestre",
+  "3° trimestre",
+  "4° trimestre",
+];
+
 type AllegatoComunicazione = {
   nome: string;
   tipo: string;
@@ -72,11 +113,20 @@ export default function ComunicazioniPage() {
   const [searchDestinatari, setSearchDestinatari] = useState("");
 
   const [formData, setFormData] = useState({
-    tipo: "newsletter" as TipoComunicazione,
-    destinatario_id: "",
-    oggetto: "",
-    messaggio: "",
-  });
+  tipo: "newsletter" as TipoComunicazione,
+  destinatario_id: "",
+  oggetto: "",
+  messaggio: "",
+});
+
+const [templateData, setTemplateData] = useState({
+  template: "" as TemplateScadenza | "",
+  periodoTipo: "mese" as "mese" | "trimestre" | "anno" | "rata",
+  periodo: "",
+  anno: String(new Date().getFullYear()),
+  dataScadenza: "",
+  associaRitenute: false,
+});
 
   useEffect(() => {
     void checkAuthAndLoad();
@@ -181,6 +231,96 @@ export default function ComunicazioniPage() {
       throw new Error("Errore caricamento allegato");
     }
   };
+
+  const formatDateIT = (value: string) => {
+  if (!value) return "[data scadenza]";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "[data scadenza]";
+  return d.toLocaleDateString("it-IT");
+};
+
+const getTemplateLabel = (value: string) => {
+  return templateScadenze.find((t) => t.value === value)?.label || "";
+};
+
+const generaMessaggioScadenza = (data = templateData) => {
+  const tipoLabel = getTemplateLabel(data.template);
+  const periodo = data.periodo || "[periodo]";
+  const anno = data.anno || String(new Date().getFullYear());
+  const scadenza = formatDateIT(data.dataScadenza);
+
+  let oggetto = "";
+  let messaggio = "";
+
+  if (data.template === "iva_trimestrale") {
+    oggetto = `Invio modello F24 IVA - ${periodo} ${anno}`;
+    messaggio = `Gentile Cliente,
+
+in allegato si trasmette il modello F24 relativo al pagamento dell'IVA del ${periodo} ${anno}.
+
+Il versamento dovrà essere effettuato entro il giorno ${scadenza}.`;
+  } else if (data.template === "iva_mensile") {
+    oggetto = `Invio modello F24 IVA - mese di ${periodo} ${anno}`;
+    messaggio = `Gentile Cliente,
+
+in allegato si trasmette il modello F24 relativo al pagamento dell'IVA del mese di ${periodo} ${anno}.
+
+Il versamento dovrà essere effettuato entro il giorno ${scadenza}.`;
+  } else if (data.template === "ritenute") {
+    oggetto = `Invio modello F24 ritenute - ${periodo} ${anno}`;
+    messaggio = `Gentile Cliente,
+
+in allegato si trasmette il modello F24 relativo al versamento delle ritenute d'acconto riferite al periodo ${periodo} ${anno}.
+
+Il versamento dovrà essere effettuato entro il giorno ${scadenza}.`;
+  } else if (data.template === "imu") {
+    oggetto = `Invio modello F24 IMU - ${periodo} ${anno}`;
+    messaggio = `Gentile Cliente,
+
+in allegato si trasmette il modello F24 relativo al pagamento IMU per ${periodo} ${anno}.
+
+Il versamento dovrà essere effettuato entro il giorno ${scadenza}.`;
+  } else if (data.template === "f24_dipendenti") {
+    oggetto = `Invio modello F24 dipendenti - ${periodo} ${anno}`;
+    messaggio = `Gentile Cliente,
+
+in allegato si trasmette il modello F24 relativo ai versamenti connessi al personale dipendente per il periodo ${periodo} ${anno}.
+
+Il versamento dovrà essere effettuato entro il giorno ${scadenza}.`;
+  } else if (data.template === "imposte") {
+    oggetto = `Invio modello F24 imposte - ${periodo} ${anno}`;
+    messaggio = `Gentile Cliente,
+
+in allegato si trasmette il modello F24 relativo al pagamento delle imposte per ${periodo} ${anno}.
+
+Il versamento dovrà essere effettuato entro il giorno ${scadenza}.`;
+  } else if (data.template === "altro") {
+    oggetto = `Invio modello F24 - ${periodo} ${anno}`;
+    messaggio = `Gentile Cliente,
+
+in allegato si trasmette il modello F24 relativo alla scadenza ${tipoLabel || "indicata"} per ${periodo} ${anno}.
+
+Il versamento dovrà essere effettuato entro il giorno ${scadenza}.`;
+  }
+
+  if (data.associaRitenute && data.template !== "ritenute") {
+    oggetto += " e ritenute";
+    messaggio += `
+
+La comunicazione comprende anche le eventuali ritenute d'acconto associate alla medesima scadenza.`;
+  }
+
+  messaggio += `
+
+Cordiali saluti`;
+
+  setFormData((prev) => ({
+    ...prev,
+    tipo: "scadenze",
+    oggetto,
+    messaggio,
+  }));
+};
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -340,6 +480,14 @@ const emailResult = await emailService.sendComunicazioneEmail({
     setMultiDestinatari(false);
     setSelectedDestinatari([]);
     setSearchDestinatari("");
+setTemplateData({
+  template: "",
+  periodoTipo: "mese",
+  periodo: "",
+  anno: String(new Date().getFullYear()),
+  dataScadenza: "",
+  associaRitenute: false,
+});
   };
 
   const handleDelete = async (id: string) => {
@@ -485,6 +633,183 @@ const emailResult = await emailService.sendComunicazioneEmail({
                   </SelectContent>
                 </Select>
               </div>
+
+              {formData.tipo === "scadenze" && (
+  <div className="space-y-4 rounded-lg border bg-blue-50 p-4">
+    <div>
+      <Label className="mb-2 block">Template scadenza</Label>
+
+      <div className="flex flex-wrap gap-2">
+        {templateScadenze.map((template) => (
+          <Button
+            key={template.value}
+            type="button"
+            variant={
+              templateData.template === template.value
+                ? "default"
+                : "outline"
+            }
+            size="sm"
+            onClick={() => {
+              const next = {
+                ...templateData,
+                template: template.value as TemplateScadenza,
+                periodoTipo:
+                  template.value === "iva_trimestrale"
+                    ? "trimestre"
+                    : templateData.periodoTipo,
+              };
+
+              setTemplateData(next);
+            }}
+          >
+            {template.label}
+          </Button>
+        ))}
+      </div>
+    </div>
+
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+      <div className="space-y-2">
+        <Label>Periodo tipo</Label>
+        <Select
+          value={templateData.periodoTipo}
+          onValueChange={(value: "mese" | "trimestre" | "anno" | "rata") =>
+            setTemplateData({
+              ...templateData,
+              periodoTipo: value,
+              periodo: "",
+            })
+          }
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="mese">Mese</SelectItem>
+            <SelectItem value="trimestre">Trimestre</SelectItem>
+            <SelectItem value="anno">Anno</SelectItem>
+            <SelectItem value="rata">Rata</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Periodo</Label>
+
+        {templateData.periodoTipo === "mese" && (
+          <Select
+            value={templateData.periodo}
+            onValueChange={(value) =>
+              setTemplateData({ ...templateData, periodo: value })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Seleziona mese" />
+            </SelectTrigger>
+            <SelectContent>
+              {mesi.map((mese) => (
+                <SelectItem key={mese} value={mese}>
+                  {mese}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        {templateData.periodoTipo === "trimestre" && (
+          <Select
+            value={templateData.periodo}
+            onValueChange={(value) =>
+              setTemplateData({ ...templateData, periodo: value })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Seleziona trimestre" />
+            </SelectTrigger>
+            <SelectContent>
+              {trimestri.map((trimestre) => (
+                <SelectItem key={trimestre} value={trimestre}>
+                  {trimestre}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        {(templateData.periodoTipo === "anno" ||
+          templateData.periodoTipo === "rata") && (
+          <Input
+            value={templateData.periodo}
+            onChange={(e) =>
+              setTemplateData({
+                ...templateData,
+                periodo: e.target.value,
+              })
+            }
+            placeholder={
+              templateData.periodoTipo === "anno"
+                ? "Esempio: saldo/acconto"
+                : "Esempio: 1ª rata"
+            }
+          />
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Label>Anno</Label>
+        <Input
+          type="number"
+          value={templateData.anno}
+          onChange={(e) =>
+            setTemplateData({ ...templateData, anno: e.target.value })
+          }
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Scadenza pagamento</Label>
+        <Input
+          type="date"
+          value={templateData.dataScadenza}
+          onChange={(e) =>
+            setTemplateData({
+              ...templateData,
+              dataScadenza: e.target.value,
+            })
+          }
+        />
+      </div>
+    </div>
+
+    <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center gap-2">
+        <Checkbox
+          id="associaRitenute"
+          checked={templateData.associaRitenute}
+          onCheckedChange={(checked) =>
+            setTemplateData({
+              ...templateData,
+              associaRitenute: !!checked,
+            })
+          }
+        />
+        <Label htmlFor="associaRitenute" className="cursor-pointer">
+          Associa anche ritenute d'acconto
+        </Label>
+      </div>
+
+      <Button
+        type="button"
+        className="bg-blue-600 hover:bg-blue-700"
+        onClick={() => generaMessaggioScadenza()}
+        disabled={!templateData.template}
+      >
+        Compila messaggio
+      </Button>
+    </div>
+  </div>
+)}
 
               {formData.tipo === "singola" && (
                 <div className="space-y-2">
