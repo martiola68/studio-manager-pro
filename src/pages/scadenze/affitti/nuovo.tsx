@@ -946,376 +946,375 @@ if (typeof id === "string") {
   </button>
 </div>
         </div>
-
-        <div className="grid grid-cols-1 gap-4 rounded border bg-white p-4 md:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-sm font-medium">Locatore *</label>
-            <select
-              value={formData.cliente_id}
-              onChange={(e) => handleChange("cliente_id", e.target.value)}
-              className="w-full rounded border px-3 py-2"
-            >
-              <option value="">Seleziona locatore</option>
-              {clienti.map((cliente) => (
-                <option key={cliente.id} value={cliente.id}>
-                  {cliente.ragione_sociale?.trim() || "Senza nome"}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium">Conduttore</label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={formData.conduttore}
-                onChange={(e) => handleChange("conduttore", e.target.value)}
-                className="w-full rounded border px-3 py-2"
-                placeholder="Inserisci manualmente o importa da tbclienti"
-              />
-              <button
-                type="button"
-                onClick={openConduttoreModal}
-                className="rounded border px-3 py-2 text-blue-600 hover:text-blue-800"
-              >
-                Cerca
-              </button>
-            </div>
-          </div>
-
-        <div>
-  <label className="mb-1 block text-sm font-medium">
-    Operatore creatore
-  </label>
-  <input
-    type="text"
-    value={operatoreLabel}
-    readOnly
-    className="w-full rounded border bg-gray-100 px-3 py-2"
-  />
-</div>
-
-<div className="grid grid-cols-1 gap-4 md:col-span-2 md:grid-cols-4">
+<div className="grid grid-cols-1 gap-4 rounded border bg-white p-4 md:grid-cols-2">
   <div>
-    <label className="mb-1 block text-sm font-medium">
-      Canone iniziale
-    </label>
-    <input
-      type="number"
-      step="0.01"
-      value={formData.canone_iniziale}
-      onChange={(e) => handleChange("canone_iniziale", e.target.value)}
+    <label className="mb-1 block text-sm font-medium">Locatore *</label>
+    <select
+      value={formData.cliente_id}
+      onChange={(e) => handleChange("cliente_id", e.target.value)}
       className="w-full rounded border px-3 py-2"
-    />
-  </div>
-
-  <div>
-    <label className="mb-1 block text-sm font-medium">
-      Perc. imposta
-    </label>
-    <input
-      type="number"
-      step="0.01"
-      value={formData.perc_imposta}
-      onChange={(e) => handleChange("perc_imposta", e.target.value)}
-      className="w-full rounded border px-3 py-2"
-    />
-  </div>
-
-  <div>
-    <label className="mb-1 block text-sm font-medium">
-      Canone attuale
-    </label>
-    <input
-      type="number"
-      step="0.01"
-      value={formData.canone_attuale}
-      onChange={(e) => handleChange("canone_attuale", e.target.value)}
-      className="w-full rounded border px-3 py-2"
-    />
-  </div>
-
-<div>
-  <label className="mb-1 block text-sm font-medium">
-    Forza imposta
-  </label>
-
-  <div
-    className={`flex h-[42px] items-center rounded border px-3 ${
-      formData.canone_attuale ? "bg-white" : "bg-gray-100"
-    }`}
-  >
-    <input
-      type="checkbox"
-      checked={formData.forza_imposta}
-      disabled={
-        !formData.canone_attuale ||
-        Number(formData.canone_attuale) <= 0
-      }
-      onChange={(e) =>
-        handleChange("forza_imposta", e.target.checked)
-      }
-      className="mr-2"
-    />
-
-    <span className="text-sm">
-      {formData.forza_imposta ? "Sì" : "No"}
-    </span>
-  </div>
-
- <p className="mt-1 text-xs text-gray-500">
-  Se attivo, l’imposta viene ricalcolata sul canone attuale.
-</p>
-</div>
-</div>
-
-<div className="md:col-span-2">
-  <label className="mb-1 block text-sm font-medium">
-    Descrizione immobile locato
-  </label>
-            <input
-              type="text"
-              value={formData.descrizione_immobile_locato}
-              onChange={(e) =>
-                handleChange("descrizione_immobile_locato", e.target.value)
-              }
-              className="w-full rounded border px-3 py-2"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 md:col-span-2 md:grid-cols-3">
-            <div>
-              <label className="mb-1 block text-sm font-medium">
-                Data registrazione atto *
-              </label>
-              <input
-                type="date"
-                value={formData.data_registrazione_atto}
-                onChange={(e) =>
-                  handleChange("data_registrazione_atto", e.target.value)
-                }
-                readOnly={formData.rinnovo}
-                className={`w-full rounded border px-3 py-2 ${
-                  formData.rinnovo ? "bg-gray-100" : ""
-                }`}
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium">
-                Data rinnovo atto
-              </label>
-              <input
-                type="date"
-                value={formData.data_rinnovo_atto}
-                onChange={(e) =>
-                  handleChange("data_rinnovo_atto", e.target.value)
-                }
-                readOnly={!formData.rinnovo}
-                className={`w-full rounded border px-3 py-2 ${
-                  !formData.rinnovo ? "bg-gray-100" : ""
-                }`}
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium">
-                Durata contratto anni *
-              </label>
-              <input
-                type="number"
-                min={1}
-                value={formData.durata_contratto_anni}
-                onChange={(e) =>
-                  handleChange("durata_contratto_anni", e.target.value)
-                }
-                className="w-full rounded border px-3 py-2"
-              />
-            </div>
-          </div>
-
-                <div className="grid grid-cols-1 gap-4 md:col-span-2 md:grid-cols-4">
-  <div>
-    <label className="mb-1 block text-sm font-medium">
-      Codice identificativo registrazione
-    </label>
-    <input
-      type="text"
-      value={formData.codice_identificativo_registrazione}
-      onChange={(e) =>
-        handleChange("codice_identificativo_registrazione", e.target.value)
-      }
-      className="w-full rounded border px-3 py-2"
-    />
-  </div>
-
-  <div>
-    <label className="mb-1 block text-sm font-medium">
-      Imposta di registro
-    </label>
-    <input
-      type="number"
-      step="0.01"
-      value={formData.importo_registrazione}
-      readOnly
-      className="w-full rounded border bg-gray-100 px-3 py-2"
-    />
-  </div>
-
-  <div>
-    <label className="mb-1 block text-sm font-medium">
-      Annualità corrente
-    </label>
-    <input
-      type="text"
-      value={
-        formData.contatore_anni && formData.durata_contratto_anni
-          ? `${formData.contatore_anni}/${formData.durata_contratto_anni}`
-          : ""
-      }
-      readOnly
-      className="w-full rounded border bg-gray-100 px-3 py-2"
-    />
-  </div>
-
-  <div>
-    <label className="mb-1 block text-sm font-medium">
-      Prossima scadenza
-    </label>
-    <input
-      type="text"
-      value={formatDate(formData.data_prossima_scadenza)}
-      readOnly
-      className="w-full rounded border bg-gray-100 px-3 py-2"
-    />
-  </div>
-</div>
-
-<div className="md:col-span-2 rounded border bg-sky-50 p-4">
-  <div className="mb-3 flex items-center justify-between bg-sky-200 px-3 py-2">
-    <div className="text-sm font-bold uppercase text-white">
-      Sezione Erario ed Altro
-    </div>
-
-    <button
-      type="button"
-      onClick={() => setShowInvioF24Modal(true)}
-      className="rounded bg-blue-600 px-3 py-1 text-xs font-semibold text-white hover:bg-blue-700"
     >
-      Invia F24 via email
-    </button>
+      <option value="">Seleziona locatore</option>
+      {clienti.map((cliente) => (
+        <option key={cliente.id} value={cliente.id}>
+          {cliente.ragione_sociale?.trim() || "Senza nome"}
+        </option>
+      ))}
+    </select>
   </div>
 
-  <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
-    <div className="md:col-span-1">
-      <label className="mb-1 block text-xs font-medium text-gray-600">
-        Tipo
-      </label>
+  <div>
+    <label className="mb-1 block text-sm font-medium">Conduttore</label>
+    <div className="flex gap-2">
       <input
         type="text"
-        value={formData.tipo_tributo}
-        readOnly
-        className="w-full rounded border bg-gray-100 px-2 py-2 text-center font-semibold"
+        value={formData.conduttore}
+        onChange={(e) => handleChange("conduttore", e.target.value)}
+        className="w-full rounded border px-3 py-2"
+        placeholder="Inserisci manualmente o importa da tbclienti"
+      />
+      <button
+        type="button"
+        onClick={openConduttoreModal}
+        className="rounded border px-3 py-2 text-blue-600 hover:text-blue-800"
+      >
+        Cerca
+      </button>
+    </div>
+  </div>
+
+  <div>
+    <label className="mb-1 block text-sm font-medium">
+      Operatore creatore
+    </label>
+    <input
+      type="text"
+      value={operatoreLabel}
+      readOnly
+      className="w-full rounded border bg-gray-100 px-3 py-2"
+    />
+  </div>
+
+  <div className="grid grid-cols-1 gap-4 md:col-span-2 md:grid-cols-4">
+    <div>
+      <label className="mb-1 block text-sm font-medium">
+        Canone iniziale
+      </label>
+      <input
+        type="number"
+        step="0.01"
+        value={formData.canone_iniziale}
+        onChange={(e) => handleChange("canone_iniziale", e.target.value)}
+        className="w-full rounded border px-3 py-2"
       />
     </div>
 
-    <div className="md:col-span-4">
-      <label className="mb-1 block text-xs font-medium text-gray-600">
-        Elementi identificativi
+    <div>
+      <label className="mb-1 block text-sm font-medium">
+        Perc. imposta
+      </label>
+      <input
+        type="number"
+        step="0.01"
+        value={formData.perc_imposta}
+        onChange={(e) => handleChange("perc_imposta", e.target.value)}
+        className="w-full rounded border px-3 py-2"
+      />
+    </div>
+
+    <div>
+      <label className="mb-1 block text-sm font-medium">
+        Canone attuale
+      </label>
+      <input
+        type="number"
+        step="0.01"
+        value={formData.canone_attuale}
+        onChange={(e) => handleChange("canone_attuale", e.target.value)}
+        className="w-full rounded border px-3 py-2"
+      />
+    </div>
+
+    <div>
+      <label className="mb-1 block text-sm font-medium">
+        Forza imposta
+      </label>
+
+      <div
+        className={`flex h-[42px] items-center rounded border px-3 ${
+          formData.canone_attuale ? "bg-white" : "bg-gray-100"
+        }`}
+      >
+        <input
+          type="checkbox"
+          checked={formData.forza_imposta}
+          disabled={
+            !formData.canone_attuale ||
+            Number(formData.canone_attuale) <= 0
+          }
+          onChange={(e) =>
+            handleChange("forza_imposta", e.target.checked)
+          }
+          className="mr-2"
+        />
+
+        <span className="text-sm">
+          {formData.forza_imposta ? "Sì" : "No"}
+        </span>
+      </div>
+
+      <p className="mt-1 text-xs text-gray-500">
+        Se attivo, l’imposta viene ricalcolata sul canone attuale.
+      </p>
+    </div>
+  </div>
+
+  <div className="md:col-span-2">
+    <label className="mb-1 block text-sm font-medium">
+      Descrizione immobile locato
+    </label>
+    <input
+      type="text"
+      value={formData.descrizione_immobile_locato}
+      onChange={(e) =>
+        handleChange("descrizione_immobile_locato", e.target.value)
+      }
+      className="w-full rounded border px-3 py-2"
+    />
+  </div>
+
+  <div className="grid grid-cols-1 gap-4 md:col-span-2 md:grid-cols-3">
+    <div>
+      <label className="mb-1 block text-sm font-medium">
+        Data registrazione atto *
+      </label>
+      <input
+        type="date"
+        value={formData.data_registrazione_atto}
+        onChange={(e) =>
+          handleChange("data_registrazione_atto", e.target.value)
+        }
+        readOnly={formData.rinnovo}
+        className={`w-full rounded border px-3 py-2 ${
+          formData.rinnovo ? "bg-gray-100" : ""
+        }`}
+      />
+    </div>
+
+    <div>
+      <label className="mb-1 block text-sm font-medium">
+        Data rinnovo atto
+      </label>
+      <input
+        type="date"
+        value={formData.data_rinnovo_atto}
+        onChange={(e) =>
+          handleChange("data_rinnovo_atto", e.target.value)
+        }
+        readOnly={!formData.rinnovo}
+        className={`w-full rounded border px-3 py-2 ${
+          !formData.rinnovo ? "bg-gray-100" : ""
+        }`}
+      />
+    </div>
+
+    <div>
+      <label className="mb-1 block text-sm font-medium">
+        Durata contratto anni *
+      </label>
+      <input
+        type="number"
+        min={1}
+        value={formData.durata_contratto_anni}
+        onChange={(e) =>
+          handleChange("durata_contratto_anni", e.target.value)
+        }
+        className="w-full rounded border px-3 py-2"
+      />
+    </div>
+  </div>
+
+  <div className="grid grid-cols-1 gap-4 md:col-span-2 md:grid-cols-4">
+    <div>
+      <label className="mb-1 block text-sm font-medium">
+        Codice identificativo registrazione
       </label>
       <input
         type="text"
         value={formData.codice_identificativo_registrazione}
-        readOnly
-        className="w-full rounded border bg-gray-100 px-2 py-2 font-semibold"
+        onChange={(e) =>
+          handleChange("codice_identificativo_registrazione", e.target.value)
+        }
+        className="w-full rounded border px-3 py-2"
       />
     </div>
 
-    <div className="md:col-span-2">
-      <label className="mb-1 block text-xs font-medium text-gray-600">
-        Codice
+    <div>
+      <label className="mb-1 block text-sm font-medium">
+        Imposta di registro
+      </label>
+      <input
+        type="number"
+        step="0.01"
+        value={formData.importo_registrazione}
+        readOnly
+        className="w-full rounded border bg-gray-100 px-3 py-2"
+      />
+    </div>
+
+    <div>
+      <label className="mb-1 block text-sm font-medium">
+        Annualità corrente
       </label>
       <input
         type="text"
-        value={formData.codice_tributo}
+        value={
+          formData.contatore_anni && formData.durata_contratto_anni
+            ? `${formData.contatore_anni}/${formData.durata_contratto_anni}`
+            : ""
+        }
         readOnly
-        className="w-full rounded border bg-gray-100 px-2 py-2 text-center font-semibold"
+        className="w-full rounded border bg-gray-100 px-3 py-2"
       />
     </div>
 
-    <div className="md:col-span-2">
-      <label className="mb-1 block text-xs font-medium text-gray-600">
-        Anno riferimento
+    <div>
+      <label className="mb-1 block text-sm font-medium">
+        Prossima scadenza
       </label>
       <input
         type="text"
-        value={getYearFromDate(formData.data_prossima_scadenza)}
+        value={formatDate(formData.data_prossima_scadenza)}
         readOnly
-        className="w-full rounded border bg-gray-100 px-2 py-2 text-center font-semibold"
+        className="w-full rounded border bg-gray-100 px-3 py-2"
       />
     </div>
+  </div>
 
-    <div className="md:col-span-3">
-      <label className="mb-1 block text-xs font-medium text-gray-600">
-        Importi a debito versati
-      </label>
-      <input
-        type="text"
-        value={formatEuro(formData.importo_registrazione)}
-        readOnly
-        className="w-full rounded border bg-gray-100 px-2 py-2 text-right font-semibold"
-      />
+  <div className="md:col-span-2 rounded border bg-sky-50 p-4">
+    <div className="mb-3 flex items-center justify-between bg-sky-200 px-3 py-2">
+      <div className="text-sm font-bold uppercase text-white">
+        Sezione Erario ed Altro
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setShowInvioF24Modal(true)}
+        className="rounded bg-blue-600 px-3 py-1 text-xs font-semibold text-white hover:bg-blue-700"
+      >
+        Invia F24 via email
+      </button>
     </div>
 
-    <div className="md:col-span-3">
-      <label className="mb-1 block text-xs font-medium text-gray-600">
-        Data scadenza
-      </label>
-      <input
-        type="text"
-        value={formatDate(getNextWorkingDate(formData.data_prossima_scadenza))}
-        readOnly
-        className="w-full rounded border bg-gray-100 px-2 py-2 font-semibold"
-      />
-    </div>
-
-    <div className="md:col-span-3">
-      <label className="mb-1 block text-xs font-medium text-gray-600">
-        Data invio F24
-      </label>
-      <input
-        type="text"
-        value={formData.data_invio_f24 ? formatDate(formData.data_invio_f24) : "-"}
-        readOnly
-        className="w-full rounded border bg-gray-100 px-2 py-2 font-semibold"
-      />
-    </div>
-
-    <div className="md:col-span-6">
-      <label className="mb-1 block text-xs font-medium text-gray-600">
-        Email per alert
-      </label>
-      <div className="flex gap-2">
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
+      <div className="md:col-span-1">
+        <label className="mb-1 block text-xs font-medium text-gray-600">
+          Tipo
+        </label>
         <input
-          type="email"
-          value={formData.emailperalert}
-          onChange={(e) => handleChange("emailperalert", e.target.value)}
-          className="w-full rounded border bg-white px-2 py-2"
-          placeholder="Inserisci manualmente o importa da tbcontatti"
+          type="text"
+          value={formData.tipo_tributo}
+          readOnly
+          className="w-full rounded border bg-gray-100 px-2 py-2 text-center font-semibold"
         />
-        <button
-          type="button"
-          onClick={openEmailModal}
-          className="rounded border bg-white px-3 py-2 text-blue-600 hover:text-blue-800"
-        >
-          Cerca
-        </button>
+      </div>
+
+      <div className="md:col-span-4">
+        <label className="mb-1 block text-xs font-medium text-gray-600">
+          Elementi identificativi
+        </label>
+        <input
+          type="text"
+          value={formData.codice_identificativo_registrazione}
+          readOnly
+          className="w-full rounded border bg-gray-100 px-2 py-2 font-semibold"
+        />
+      </div>
+
+      <div className="md:col-span-2">
+        <label className="mb-1 block text-xs font-medium text-gray-600">
+          Codice
+        </label>
+        <input
+          type="text"
+          value={formData.codice_tributo}
+          readOnly
+          className="w-full rounded border bg-gray-100 px-2 py-2 text-center font-semibold"
+        />
+      </div>
+
+      <div className="md:col-span-2">
+        <label className="mb-1 block text-xs font-medium text-gray-600">
+          Anno riferimento
+        </label>
+        <input
+          type="text"
+          value={getYearFromDate(formData.data_prossima_scadenza)}
+          readOnly
+          className="w-full rounded border bg-gray-100 px-2 py-2 text-center font-semibold"
+        />
+      </div>
+
+      <div className="md:col-span-3">
+        <label className="mb-1 block text-xs font-medium text-gray-600">
+          Importi a debito versati
+        </label>
+        <input
+          type="text"
+          value={formatEuro(formData.importo_registrazione)}
+          readOnly
+          className="w-full rounded border bg-gray-100 px-2 py-2 text-right font-semibold"
+        />
+      </div>
+
+      <div className="md:col-span-3">
+        <label className="mb-1 block text-xs font-medium text-gray-600">
+          Data scadenza
+        </label>
+        <input
+          type="text"
+          value={formatDate(getNextWorkingDate(formData.data_prossima_scadenza))}
+          readOnly
+          className="w-full rounded border bg-gray-100 px-2 py-2 font-semibold"
+        />
+      </div>
+
+      <div className="md:col-span-3">
+        <label className="mb-1 block text-xs font-medium text-gray-600">
+          Data invio F24
+        </label>
+        <input
+          type="text"
+          value={formData.data_invio_f24 ? formatDate(formData.data_invio_f24) : "-"}
+          readOnly
+          className="w-full rounded border bg-gray-100 px-2 py-2 font-semibold"
+        />
+      </div>
+
+      <div className="md:col-span-6">
+        <label className="mb-1 block text-xs font-medium text-gray-600">
+          Email per alert
+        </label>
+        <div className="flex gap-2">
+          <input
+            type="email"
+            value={formData.emailperalert}
+            onChange={(e) => handleChange("emailperalert", e.target.value)}
+            className="w-full rounded border bg-white px-2 py-2"
+            placeholder="Inserisci manualmente o importa da tbcontatti"
+          />
+          <button
+            type="button"
+            onClick={openEmailModal}
+            className="rounded border bg-white px-3 py-2 text-blue-600 hover:text-blue-800"
+          >
+            Cerca
+          </button>
+        </div>
       </div>
     </div>
   </div>
 </div>
-           </div>
 
         <div className="mt-6 rounded border bg-white p-4">
           <h2 className="mb-4 text-lg font-semibold">Alert annuali automatici</h2>
