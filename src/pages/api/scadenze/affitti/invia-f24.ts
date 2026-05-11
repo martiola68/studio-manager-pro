@@ -31,6 +31,7 @@ function formatEuroIT(value?: string | number | null) {
 }
 
 function buildF24Html(body: any) {
+  
   return `
 <!DOCTYPE html>
 <html>
