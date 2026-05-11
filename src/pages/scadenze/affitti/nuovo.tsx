@@ -384,27 +384,25 @@ const [sendingF24, setSendingF24] = useState(false);
   ]);
 
   useEffect(() => {
+useEffect(() => {
   const importoCalcolato = calcolaImpostaRegistro(formData);
- 
+
   setFormData((prev) => {
-    if (
-      prev.importo_registrazione === importoCalcolato &&
-      prev.forza_imposta === forzaImposta
-    ) {
+    if (prev.importo_registrazione === importoCalcolato) {
       return prev;
     }
 
     return {
       ...prev,
       importo_registrazione: importoCalcolato,
-       };
+    };
   });
 }, [
   formData.canone_iniziale,
   formData.perc_imposta,
   formData.canone_attuale,
+  formData.forza_imposta,
 ]);
-
   const initialize = async () => {
     setLoading(true);
 
