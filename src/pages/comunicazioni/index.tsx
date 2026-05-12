@@ -115,7 +115,7 @@ export default function ComunicazioniPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   const [multiDestinatari, setMultiDestinatari] = useState(false);
   const [selectedDestinatari, setSelectedDestinatari] = useState<string[]>([]);
@@ -125,9 +125,10 @@ export default function ComunicazioniPage() {
 const [contattiResults, setContattiResults] = useState<ContattoOption[]>([]);
 const [loadingContatti, setLoadingContatti] = useState(false);
 
-const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState({
   tipo: "newsletter" as TipoComunicazione,
   destinatario_id: "",
+  destinatario_cliente: "",
   destinatario_email: "",
   oggetto: "",
   messaggio: "",
@@ -206,45 +207,54 @@ const [templateData, setTemplateData] = useState({
     return data || [];
   };
 
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
-    }
-  };
+const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+  if (!e.target.files) return;
 
-  const uploadAllegato = async (): Promise<AllegatoComunicazione | null> => {
-    if (!selectedFile) return null;
+  setSelectedFiles(Array.from(e.target.files));
+};
 
-    try {
-      const supabase = getSupabaseClient();
-      const BUCKET_NAME = "messaggi-allegati";
+const uploadAllegati = async (): Promise<AllegatoComunicazione[]> => {
+  if (selectedFiles.length === 0) return [];
 
-      const safeName = selectedFile.name.replace(/[^\w.\-]+/g, "_");
+  try {
+    const supabase = getSupabaseClient();
+    const BUCKET_NAME = "messaggi-allegati";
+
+    const uploadedFiles: AllegatoComunicazione[] = [];
+
+    for (const file of selectedFiles) {
+      const safeName = file.name.replace(/[^\w.\-]+/g, "_");
+
       const fileName = `${Date.now()}_${safeName}`;
       const filePath = `comunicazioni/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from(BUCKET_NAME)
-        .upload(filePath, selectedFile, {
+        .upload(filePath, file, {
           cacheControl: "3600",
           upsert: false,
-          contentType: selectedFile.type || undefined,
+          contentType: file.type || undefined,
         });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        throw uploadError;
+      }
 
-      return {
-        nome: selectedFile.name,
-        tipo: selectedFile.type || "application/octet-stream",
-        dimensione: selectedFile.size,
+      uploadedFiles.push({
+        nome: file.name,
+        tipo: file.type || "application/octet-stream",
+        dimensione: file.size,
         bucket: BUCKET_NAME,
         path: filePath,
-      };
-    } catch (error) {
-      console.error("Errore upload:", error);
-      throw new Error("Errore caricamento allegato");
+      });
     }
-  };
+
+    return uploadedFiles;
+  } catch (error) {
+    console.error("Errore upload:", error);
+    throw new Error("Errore caricamento allegati");
+  }
+};
 
   const formatDateIT = (value: string) => {
   if (!value) return "[data scadenza]";
@@ -405,11 +415,11 @@ const getContattoLabel = (contatto: ContattoOption) => {
 
 if (
   (formData.tipo === "singola" || formData.tipo === "scadenze") &&
-  !formData.destinatario_email.trim()
+  !formData.destinatario_cliente.trim()
 ) {
   toast({
-    title: "Email destinatario obbligatoria",
-    description: "Inserisci l'indirizzo email prima di inviare.",
+    title: "Cliente destinatario obbligatorio",
+    description: "Inserisci o seleziona il cliente destinatario prima di inviare.",
     variant: "destructive",
   });
   return;
@@ -440,12 +450,11 @@ if (
     try {
       setSending(true);
 
-      let allegati: AllegatoComunicazione[] | null = null;
+    let allegati: AllegatoComunicazione[] = [];
 
-      if (selectedFile) {
-        const fileData = await uploadAllegato();
-        allegati = fileData ? [fileData] : null;
-      }
+if (selectedFiles.length > 0) {
+  allegati = await uploadAllegati();
+}
 
       let destinatariCount = 0;
 
@@ -604,11 +613,12 @@ const emailResult = await emailService.sendComunicazioneEmail({
 setFormData({
   tipo: "newsletter",
   destinatario_id: "",
+  destinatario_cliente: "",
   destinatario_email: "",
   oggetto: "",
   messaggio: "",
 });
-  setSelectedFile(null);
+  setSelectedFiles([]);
   setMultiDestinatari(false);
   setSelectedDestinatari([]);
   setSearchDestinatari("");
@@ -945,6 +955,25 @@ setContattiResults([]);
     </div>
 
     <div className="space-y-3 rounded-lg border bg-white p-4">
+
+      <div className="space-y-2">
+  <Label htmlFor="destinatario_cliente">
+    Cliente destinatario *
+  </Label>
+
+  <Input
+    id="destinatario_cliente"
+    value={formData.destinatario_cliente}
+    onChange={(e) =>
+      setFormData({
+        ...formData,
+        destinatario_cliente: e.target.value,
+      })
+    }
+    placeholder="Ragione sociale cliente"
+  />
+</div>
+      
       <Label>Destinatario comunicazione scadenza *</Label>
 
       <div className="flex gap-2">
@@ -977,12 +1006,13 @@ setContattiResults([]);
               type="button"
               className="flex w-full items-center justify-between border-b px-3 py-2 text-left text-sm hover:bg-gray-50"
               onClick={() =>
-                setFormData({
-                  ...formData,
-                  destinatario_id: contatto.id,
-                  destinatario_email: contatto.email || "",
-                })
-              }
+  setFormData({
+    ...formData,
+    destinatario_id: contatto.id,
+    destinatario_cliente: getContattoLabel(contatto),
+    destinatario_email: contatto.email || "",
+  })
+}
             >
               <span>
                 {getContattoLabel(contatto)}
@@ -1235,17 +1265,26 @@ setContattiResults([]);
               <div className="space-y-2">
                 <Label htmlFor="allegato">Allegato</Label>
                 <div className="flex items-center gap-2">
-                  <Input
-                    id="allegato"
-                    type="file"
-                    onChange={handleFileChange}
-                    className="cursor-pointer"
-                  />
-                  {selectedFile && (
-                    <Badge variant="secondary" className="px-2 py-1">
-                      {selectedFile.name}
-                    </Badge>
-                  )}
+                 <Input
+  id="allegato"
+  type="file"
+  multiple
+  onChange={handleFileChange}
+  className="cursor-pointer"
+/>
+                 {selectedFiles.length > 0 && (
+  <div className="flex flex-wrap gap-2">
+    {selectedFiles.map((file, index) => (
+      <Badge
+        key={`${file.name}-${index}`}
+        variant="secondary"
+        className="px-2 py-1"
+      >
+        {file.name}
+      </Badge>
+    ))}
+  </div>
+)}
                 </div>
               </div>
 
