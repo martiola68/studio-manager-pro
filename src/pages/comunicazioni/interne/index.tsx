@@ -254,16 +254,19 @@ export default function ComunicazioniInternePage() {
           <CardContent className="space-y-4">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_360px] md:items-start">
   <div className="space-y-2">
+  <div className="space-y-2">
+  <div className="h-[24px] flex items-center">
     <Label>Cerca destinatari</Label>
+  </div>
 
-    <Input
-      value={searchUtenti}
-      onChange={(e) => setSearchUtenti(e.target.value)}
-      placeholder="Cerca utenti..."
-      className="w-full"
-    />
+  <Input
+    value={searchUtenti}
+    onChange={(e) => setSearchUtenti(e.target.value)}
+    placeholder="Cerca utenti..."
+    className="w-full"
+  />
 
-    <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
+  <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
       <Button type="button" variant="outline" size="sm" onClick={() => handleSelectBySettore("fiscale")}>
         Fiscale
       </Button>
@@ -290,7 +293,7 @@ export default function ComunicazioniInternePage() {
     </p>
   </div>
 
-<div className="max-h-[150px] overflow-y-auto rounded-md border p-2">
+<div className="mt-[24px] max-h-[150px] overflow-y-auto rounded-md border p-2">
     {utentiFiltrati.map((utente) => (
       <label
         key={utente.id}
