@@ -202,3 +202,322 @@ export default function ComunicazioniClientiPage() {
   useEffect(() => {
     void loadData();
   }, []);
+const loadData = async () => {
+    try {
+      setLoading(true);
+
+      const [
+        comunicazioniData,
+        clientiData,
+      ] = await Promise.all([
+        comunicazioneService.getComunicazioni(),
+        clienteService.getClienti(),
+      ]);
+
+      setComunicazioni(
+        comunicazioniData.filter(
+          (c) =>
+            c.tipo === "singola" ||
+            c.tipo === "scadenze"
+        )
+      );
+
+      setClienti(clientiData);
+    } catch (error) {
+      console.error(error);
+
+      toast({
+        title: "Errore",
+        description:
+          "Errore caricamento dati",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const uploadAllegati =
+    async (): Promise<
+      AllegatoComunicazione[]
+    > => {
+      if (selectedFiles.length === 0) {
+        return [];
+      }
+
+      const supabase =
+        getSupabaseClient();
+
+      const uploadedFiles:
+        AllegatoComunicazione[] =
+        [];
+
+      for (const file of selectedFiles) {
+        const safeName =
+          file.name.replace(
+            /[^\w.\-]+/g,
+            "_"
+          );
+
+        const fileName = `${Date.now()}_${safeName}`;
+
+        const filePath = `comunicazioni/${fileName}`;
+
+        const { error } =
+          await supabase.storage
+            .from("messaggi-allegati")
+            .upload(
+              filePath,
+              file
+            );
+
+        if (error) {
+          throw error;
+        }
+
+        uploadedFiles.push({
+          nome: file.name,
+          tipo: file.type,
+          dimensione:
+            file.size,
+          bucket:
+            "messaggi-allegati",
+          path: filePath,
+        });
+      }
+
+      return uploadedFiles;
+    };
+
+  const loadClientiDestinatari =
+    async (
+      term: string
+    ) => {
+      const supabase =
+        getSupabaseClient();
+
+      let query =
+        supabase
+          .from("tbclienti")
+          .select("*")
+          .eq("attivo", true)
+          .limit(30);
+
+      if (term.trim()) {
+        query = query.ilike(
+          "ragione_sociale",
+          `%${term}%`
+        );
+      }
+
+      const { data } =
+        await query;
+
+      setClientiResults(
+        (data as Cliente[]) ||
+          []
+      );
+    };
+
+  const loadContattiDestinatari =
+    async (
+      term: string
+    ) => {
+      const supabase =
+        getSupabaseClient();
+
+      let query =
+        supabase
+          .from("tbcontatti")
+          .select(
+            "id, nome, cognome, email"
+          )
+          .not(
+            "email",
+            "is",
+            null
+          )
+          .limit(30);
+
+      if (term.trim()) {
+        query = query.or(
+          `nome.ilike.%${term}%,cognome.ilike.%${term}%,email.ilike.%${term}%`
+        );
+      }
+
+      const { data } =
+        await query;
+
+      setContattiResults(
+        (data as ContattoOption[]) ||
+          []
+      );
+    };
+
+  const getContattoLabel = (
+    contatto: ContattoOption
+  ) => {
+    return `${contatto.cognome || ""} ${
+      contatto.nome || ""
+    }`.trim();
+  };
+
+  const formatDateIT = (
+    value: string
+  ) => {
+    if (!value)
+      return "[data scadenza]";
+
+    const d = new Date(value);
+
+    return d.toLocaleDateString(
+      "it-IT"
+    );
+  };
+
+  const getTemplateLabel = (
+    value: string
+  ) => {
+    return (
+      templateScadenze.find(
+        (t) =>
+          t.value === value
+      )?.label || ""
+    );
+  };
+
+  const generaMessaggioScadenza =
+    (
+      data = templateData
+    ) => {
+      const tipoLabel =
+        getTemplateLabel(
+          data.template
+        );
+
+      const periodo =
+        data.periodo;
+
+      const anno =
+        data.anno;
+
+      const scadenza =
+        formatDateIT(
+          data.dataScadenza
+        );
+
+      let oggetto = "";
+
+      let messaggio = "";
+
+      if (
+        data.template ===
+        "iva_trimestrale"
+      ) {
+        oggetto = `Invio modello F24 IVA - ${periodo} ${anno}`;
+
+        messaggio = `Gentile ${formData.destinatario_cliente},
+
+in allegato si trasmette il modello F24 relativo al pagamento dell'IVA del periodo ${periodo} ${anno}.
+
+Il versamento dovrà essere effettuato entro il giorno ${scadenza}.
+
+Cordiali saluti`;
+      }
+
+      if (
+        data.template ===
+        "iva_mensile"
+      ) {
+        oggetto = `Invio modello F24 IVA - mese di ${periodo} ${anno}`;
+
+        messaggio = `Gentile ${formData.destinatario_cliente},
+
+in allegato si trasmette il modello F24 relativo al pagamento IVA del mese di ${periodo} ${anno}.
+
+Il versamento dovrà essere effettuato entro il giorno ${scadenza}.
+
+Cordiali saluti`;
+      }
+
+      if (
+        data.template ===
+        "ritenute"
+      ) {
+        oggetto = `Invio modello F24 ritenute - ${periodo} ${anno}`;
+
+        messaggio = `Gentile ${formData.destinatario_cliente},
+
+in allegato si trasmette il modello F24 relativo alle ritenute del periodo ${periodo} ${anno}.
+
+Il versamento dovrà essere effettuato entro il giorno ${scadenza}.
+
+Cordiali saluti`;
+      }
+
+      if (
+        data.template ===
+        "imu"
+      ) {
+        oggetto = `Invio modello F24 IMU - ${periodo} ${anno}`;
+
+        messaggio = `Gentile ${formData.destinatario_cliente},
+
+in allegato si trasmette il modello F24 IMU relativo al periodo ${periodo} ${anno}.
+
+Il versamento dovrà essere effettuato entro il giorno ${scadenza}.
+
+Cordiali saluti`;
+      }
+
+      if (
+        data.template ===
+        "f24_dipendenti"
+      ) {
+        oggetto = `Invio F24 dipendenti - ${periodo} ${anno}`;
+
+        messaggio = `Gentile ${formData.destinatario_cliente},
+
+in allegato si trasmette il modello F24 dipendenti relativo al periodo ${periodo} ${anno}.
+
+Il versamento dovrà essere effettuato entro il giorno ${scadenza}.
+
+Cordiali saluti`;
+      }
+
+      if (
+        data.template ===
+        "imposte"
+      ) {
+        oggetto = `Invio F24 imposte - ${periodo} ${anno}`;
+
+        messaggio = `Gentile ${formData.destinatario_cliente},
+
+in allegato si trasmette il modello F24 relativo alle imposte per ${periodo} ${anno}.
+
+Il versamento dovrà essere effettuato entro il giorno ${scadenza}.
+
+Cordiali saluti`;
+      }
+
+      if (
+        data.template ===
+        "altro"
+      ) {
+        oggetto = `Invio modello F24 - ${tipoLabel}`;
+
+        messaggio = `Gentile ${formData.destinatario_cliente},
+
+in allegato si trasmette il modello F24 relativo alla scadenza ${tipoLabel}.
+
+Il versamento dovrà essere effettuato entro il giorno ${scadenza}.
+
+Cordiali saluti`;
+      }
+
+      setFormData({
+        ...formData,
+        oggetto,
+        messaggio,
+      });
+    };
