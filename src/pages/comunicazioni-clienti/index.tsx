@@ -521,3 +521,591 @@ Cordiali saluti`;
         messaggio,
       });
     };
+const handleSubmit =
+    async () => {
+      try {
+        if (
+          !formData.destinatario_email ||
+          !formData.oggetto ||
+          !formData.messaggio
+        ) {
+          toast({
+            title: "Errore",
+            description:
+              "Compila tutti i campi obbligatori",
+            variant:
+              "destructive",
+          });
+
+          return;
+        }
+
+        setSending(true);
+
+        let allegati:
+          AllegatoComunicazione[] =
+          [];
+
+        if (
+          selectedFiles.length > 0
+        ) {
+          allegati =
+            await uploadAllegati();
+        }
+
+        await comunicazioneService.createComunicazione(
+          {
+            tipo:
+              modalita ===
+              "scadenze"
+                ? "scadenze"
+                : "singola",
+
+            oggetto:
+              formData.oggetto,
+
+            messaggio:
+              formData.messaggio,
+
+            allegati,
+
+            destinatari_count: 1,
+
+            stato: "Inviata",
+
+            data_invio:
+              new Date().toISOString(),
+          }
+        );
+
+        if (
+          simulazioneInvio
+        ) {
+          toast({
+            title:
+              "Simulazione invio",
+
+            description:
+              "Nessuna email inviata",
+          });
+
+          return;
+        }
+
+        await emailService.sendComunicazioneEmail(
+          {
+            tipo:
+              modalita ===
+              "scadenze"
+                ? "singola"
+                : "singola",
+
+            destinatarioId:
+              formData.destinatario_id,
+
+            destinatarioEmail:
+              formData.destinatario_email,
+
+            oggetto:
+              formData.oggetto,
+
+            messaggio:
+              formData.messaggio,
+
+            allegati,
+          }
+        );
+
+        toast({
+          title:
+            "Comunicazione inviata",
+        });
+
+        setFormData({
+          destinatario_id: "",
+          destinatario_cliente:
+            "",
+          destinatario_email:
+            "",
+          oggetto: "",
+          messaggio: "",
+        });
+
+        setSelectedFiles([]);
+
+        await loadData();
+      } catch (error) {
+        console.error(error);
+
+        toast({
+          title: "Errore",
+          description:
+            "Errore invio comunicazione",
+          variant:
+            "destructive",
+        });
+      } finally {
+        setSending(false);
+      }
+    };
+
+  const handleDelete =
+    async (id: string) => {
+      try {
+        await comunicazioneService.deleteComunicazione(
+          id
+        );
+
+        toast({
+          title:
+            "Comunicazione eliminata",
+        });
+
+        await loadData();
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        Caricamento...
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-7xl p-4 md:p-8">
+      <HeaderComunicazioni
+        titolo="Comunicazioni Clienti"
+        descrizione="Invio comunicazioni singole e avvisi scadenze"
+      />
+
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              Nuova Comunicazione
+            </CardTitle>
+          </CardHeader>
+
+          <CardContent className="space-y-6">
+            <Tabs
+              value={modalita}
+              onValueChange={(
+                value
+              ) =>
+                setModalita(
+                  value as
+                    | "singola"
+                    | "scadenze"
+                )
+              }
+            >
+              <TabsList>
+                <TabsTrigger value="singola">
+                  Comunicazione Cliente
+                </TabsTrigger>
+
+                <TabsTrigger value="scadenze">
+                  Avviso Scadenza
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent
+                value="singola"
+                className="space-y-6"
+              >
+                <div className="space-y-2">
+                  <Label>
+                    Cliente
+                  </Label>
+
+                  <div className="flex gap-2">
+                    <Input
+                      value={
+                        searchClienti
+                      }
+                      onChange={(
+                        e
+                      ) =>
+                        setSearchClienti(
+                          e.target
+                            .value
+                        )
+                      }
+                      placeholder="Cerca cliente..."
+                    />
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() =>
+                        loadClientiDestinatari(
+                          searchClienti
+                        )
+                      }
+                    >
+                      Cerca
+                    </Button>
+                  </div>
+
+                  <div className="max-h-[200px] overflow-y-auto rounded-md border">
+                    {clientiResults.map(
+                      (
+                        cliente
+                      ) => (
+                        <button
+                          key={
+                            cliente.id
+                          }
+                          type="button"
+                          className="flex w-full items-center justify-between border-b px-3 py-2 text-left hover:bg-gray-50"
+                          onClick={() => {
+                            setFormData(
+                              {
+                                ...formData,
+                                destinatario_id:
+                                  cliente.id,
+                                destinatario_cliente:
+                                  cliente.ragione_sociale ||
+                                  "",
+                              }
+                            );
+                          }}
+                        >
+                          <span>
+                            {
+                              cliente.ragione_sociale
+                            }
+                          </span>
+
+                          {formData.destinatario_id ===
+                            cliente.id && (
+                            <Badge>
+                              Selezionato
+                            </Badge>
+                          )}
+                        </button>
+                      )
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>
+                    Destinatario Email
+                  </Label>
+
+                  <div className="flex gap-2">
+                    <Input
+                      value={
+                        searchContatti
+                      }
+                      onChange={(
+                        e
+                      ) =>
+                        setSearchContatti(
+                          e.target
+                            .value
+                        )
+                      }
+                      placeholder="Cerca contatto..."
+                    />
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() =>
+                        loadContattiDestinatari(
+                          searchContatti
+                        )
+                      }
+                    >
+                      Cerca
+                    </Button>
+                  </div>
+
+                  <div className="max-h-[200px] overflow-y-auto rounded-md border">
+                    {contattiResults.map(
+                      (
+                        contatto
+                      ) => (
+                        <button
+                          key={
+                            contatto.id
+                          }
+                          type="button"
+                          className="flex w-full items-center justify-between border-b px-3 py-2 text-left hover:bg-gray-50"
+                          onClick={() => {
+                            setFormData(
+                              {
+                                ...formData,
+                                destinatario_email:
+                                  contatto.email ||
+                                  "",
+                              }
+                            );
+                          }}
+                        >
+                          <span>
+                            {getContattoLabel(
+                              contatto
+                            )}
+
+                            <span className="ml-2 text-gray-500">
+                              {
+                                contatto.email
+                              }
+                            </span>
+                          </span>
+                        </button>
+                      )
+                    )}
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent
+                value="scadenze"
+                className="space-y-6"
+              >
+                <div className="space-y-2">
+                  <Label>
+                    Template Scadenza
+                  </Label>
+
+                  <div className="flex flex-wrap gap-2">
+                    {templateScadenze.map(
+                      (
+                        template
+                      ) => (
+                        <Button
+                          key={
+                            template.value
+                          }
+                          type="button"
+                          variant={
+                            templateData.template ===
+                            template.value
+                              ? "default"
+                              : "outline"
+                          }
+                          onClick={() =>
+                            setTemplateData(
+                              {
+                                ...templateData,
+                                template:
+                                  template.value as TemplateScadenza,
+                              }
+                            )
+                          }
+                        >
+                          {
+                            template.label
+                          }
+                        </Button>
+                      )
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <div>
+                    <Label>
+                      Periodo
+                    </Label>
+
+                    <Select
+                      value={
+                        templateData.periodo
+                      }
+                      onValueChange={(
+                        value
+                      ) =>
+                        setTemplateData(
+                          {
+                            ...templateData,
+                            periodo:
+                              value,
+                          }
+                        )
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+
+                      <SelectContent>
+                        {mesi.map(
+                          (
+                            mese
+                          ) => (
+                            <SelectItem
+                              key={
+                                mese
+                              }
+                              value={
+                                mese
+                              }
+                            >
+                              {
+                                mese
+                              }
+                            </SelectItem>
+                          )
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label>
+                      Anno
+                    </Label>
+
+                    <Input
+                      value={
+                        templateData.anno
+                      }
+                      onChange={(
+                        e
+                      ) =>
+                        setTemplateData(
+                          {
+                            ...templateData,
+                            anno:
+                              e.target
+                                .value,
+                          }
+                        )
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <Label>
+                      Data Scadenza
+                    </Label>
+
+                    <Input
+                      type="date"
+                      value={
+                        templateData.dataScadenza
+                      }
+                      onChange={(
+                        e
+                      ) =>
+                        setTemplateData(
+                          {
+                            ...templateData,
+                            dataScadenza:
+                              e.target
+                                .value,
+                          }
+                        )
+                      }
+                    />
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  className="bg-blue-600 hover:bg-blue-700"
+                  onClick={() =>
+                    generaMessaggioScadenza()
+                  }
+                >
+                  Genera Messaggio Automatico
+                </Button>
+              </TabsContent>
+            </Tabs>
+
+            <div className="space-y-2">
+              <Label>
+                Oggetto
+              </Label>
+
+              <Input
+                value={
+                  formData.oggetto
+                }
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    oggetto:
+                      e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>
+                Messaggio
+              </Label>
+
+              <Textarea
+                rows={10}
+                value={
+                  formData.messaggio
+                }
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    messaggio:
+                      e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <UploadAllegati
+              files={
+                selectedFiles
+              }
+              onChange={
+                setSelectedFiles
+              }
+            />
+
+            <SimulazioneInvio
+              value={
+                simulazioneInvio
+              }
+              onChange={
+                setSimulazioneInvio
+              }
+            />
+
+            <div className="flex justify-end">
+              <Button
+                onClick={
+                  handleSubmit
+                }
+                disabled={sending}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Send className="mr-2 h-4 w-4" />
+
+                {sending
+                  ? "Invio..."
+                  : "Invia Comunicazione"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <StoricoComunicazioni
+          comunicazioni={
+            comunicazioni
+          }
+          onDelete={
+            handleDelete
+          }
+        />
+      </div>
+    </div>
+  );
+}
