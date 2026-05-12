@@ -200,10 +200,12 @@ setQualifiche(qualificheData ?? []);
                     <tr>
                       <th className="p-2 text-left">Dipendente</th>
                       <th className="p-2 text-left">Email</th>
-                      <th className="p-2 text-left">Cod. ditta</th>
+                     <th className="p-2 text-left">Cod. ditta</th>
                       <th className="p-2 text-left">Cod. dip.</th>
-                      <th className="p-2 text-left">Matricola</th>
-                      <th className="p-2 text-left">Cod. fiscale</th>
+                        <th className="p-2 text-left">Cod. sogg. paghe</th>
+                        <th className="p-2 text-left">Num. rapp.</th>
+                        <th className="p-2 text-left">Matricola</th>
+                        <th className="p-2 text-left">Cod. fiscale</th>
                       <th className="p-2 text-left">Ore giorno</th>
                       <th className="p-2 text-left">Ore sett.</th>
                       <th className="p-2 text-left">Giorni sett.</th>
@@ -212,8 +214,6 @@ setQualifiche(qualificheData ?? []);
                       <th className="p-2 text-left">Livello</th>
                       <th className="p-2 text-left">Contratto</th>
                       <th className="p-2 text-left">Centro costo</th>
-                      <th className="p-2 text-left">Cod. sogg. paghe</th>
-                      <th className="p-2 text-left">Num. rapp.</th>
                       <th className="p-2 text-center">Attivo</th>
                       <th className="p-2 text-right">Azioni</th>
                     </tr>
