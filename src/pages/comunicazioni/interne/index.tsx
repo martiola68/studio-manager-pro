@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Send } from "lucide-react";
 
 import HeaderComunicazioni from "@/components/comunicazioni/HeaderComunicazioni";
-import SimulazioneInvio from "@/components/comunicazioni/SimulazioneInvio";
+
 import StoricoComunicazioni from "@/components/comunicazioni/StoricoComunicazioni";
 import UploadAllegati from "@/components/comunicazioni/UploadAllegati";
 
@@ -65,10 +65,7 @@ export default function ComunicazioniInternePage() {
   const [selectedFiles, setSelectedFiles] =
     useState<File[]>([]);
 
-  const [simulazioneInvio, setSimulazioneInvio] =
-    useState(true);
-
-  const [searchUtenti, setSearchUtenti] =
+   const [searchUtenti, setSearchUtenti] =
     useState("");
 
   const [selectedDestinatari, setSelectedDestinatari] =
@@ -453,16 +450,7 @@ export default function ComunicazioniInternePage() {
               }
             />
 
-            <SimulazioneInvio
-              value={
-                simulazioneInvio
-              }
-              onChange={
-                setSimulazioneInvio
-              }
-            />
-
-            <div className="flex justify-end">
+                  <div className="flex justify-end">
               <Button
                 onClick={
                   handleSubmit
