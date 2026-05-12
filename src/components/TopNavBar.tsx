@@ -271,7 +271,7 @@ export function TopNavBar() {
 
     { label: "Newsletter", href: "/newsletter", icon: <Mail className="h-4 w-4" /> },
     { label: "Comunicazioni interne", href: "/comunicazioni/interne", icon: <MessageSquare className="h-4 w-4" /> },
-    { label: "Comunicazioni clienti", href: "/comunicazioni/clienti", icon: <Mail className="h-4 w-4" /> },
+    { label: "Comunicazioni clienti", href: "/comunicazioni-clienti", icon: <Mail className="h-4 w-4" /> },
 
     { label: "Accesso Portali", icon: <Key className="h-4 w-4" />, href: "/accesso-portali" },
     { label: "Cassetti Fiscali", icon: <FileText className="h-4 w-4" />, href: "/cassetti-fiscali" },
