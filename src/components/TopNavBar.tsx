@@ -262,17 +262,21 @@ export function TopNavBar() {
       icon: <FileText className="h-4 w-4" />,
       href: "/promemoria",
     },
-    {
-      label: "Strumenti",
-      icon: <BriefcaseBusiness className="h-4 w-4" />,
-      children: [
-        { label: "Messaggistica", icon: <MessageSquare className="h-4 w-4" />, href: "/messaggi" },
-        { label: "Rubrica", href: "/contatti", icon: <UserCircle className="h-4 w-4" /> },
-        { label: "Newsletter e comunicazioni", href: "/comunicazioni", icon: <Mail className="h-4 w-4" /> },
-        { label: "Accesso Portali", icon: <Key className="h-4 w-4" />, href: "/accesso-portali" },
-        { label: "Cassetti Fiscali", icon: <FileText className="h-4 w-4" />, href: "/cassetti-fiscali" },
-      ],
-    },
+   {
+  label: "Strumenti",
+  icon: <BriefcaseBusiness className="h-4 w-4" />,
+  children: [
+    { label: "Messaggistica", icon: <MessageSquare className="h-4 w-4" />, href: "/messaggi" },
+    { label: "Rubrica", href: "/contatti", icon: <UserCircle className="h-4 w-4" /> },
+
+    { label: "Newsletter", href: "/newsletter", icon: <Mail className="h-4 w-4" /> },
+    { label: "Comunicazioni interne", href: "/comunicazioni/interne", icon: <MessageSquare className="h-4 w-4" /> },
+    { label: "Comunicazioni clienti", href: "/comunicazioni/clienti", icon: <Mail className="h-4 w-4" /> },
+
+    { label: "Accesso Portali", icon: <Key className="h-4 w-4" />, href: "/accesso-portali" },
+    { label: "Cassetti Fiscali", icon: <FileText className="h-4 w-4" />, href: "/cassetti-fiscali" },
+  ],
+  },
     {
       label: "Scadenzario",
       icon: <Calendar className="h-4 w-4" />,
