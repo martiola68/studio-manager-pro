@@ -42,6 +42,13 @@ type Comunicazione = Database["public"]["Tables"]["tbcomunicazioni"]["Row"];
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
+type ContattoOption = {
+  id: string;
+  nome: string | null;
+  cognome: string | null;
+  email: string | null;
+};
+
 type TipoComunicazione = "newsletter" | "scadenze" | "singola" | "interna";
 
 type TemplateScadenza =
