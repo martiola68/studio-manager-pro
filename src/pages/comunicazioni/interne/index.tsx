@@ -252,7 +252,7 @@ export default function ComunicazioniInternePage() {
           </CardHeader>
 
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_360px] md:items-start">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_360px] md:items-center">
   <div className="space-y-2">
     <Label>Cerca destinatari</Label>
 
@@ -290,7 +290,7 @@ export default function ComunicazioniInternePage() {
     </p>
   </div>
 
-  <div className="max-h-[150px] overflow-y-auto rounded-md border p-2">
+ <div className="mt-7 max-h-[150px] overflow-y-auto rounded-md border p-2">
     {utentiFiltrati.map((utente) => (
       <label
         key={utente.id}
