@@ -37,9 +37,11 @@ type Dipendente = {
   id: string;
   studio_id: string;
   utente_id: string;
-   codice_ditta: string | null;
-  codice_dipendente: string | null;
-  matricola_paghe: string | null;
+ codice_ditta: string | null;
+codice_dipendente: string | null;
+codice_soggetto_paghe: string | null;
+numero_rapporto_paghe: string | null;
+matricola_paghe: string | null;
   nome: string | null;
   cognome: string | null;
   email: string | null;
@@ -244,90 +246,103 @@ function onlyDigits(value?: string | null) {
   return String(value ?? '').replace(/\D/g, '');
 }
 
-function formatZucchettiHours(hours: number) {
-  const safeHours = Math.max(0, hours || 0);
-  const h = Math.floor(safeHours);
-  const minutes = Math.round((safeHours - h) * 60);
+function buildRipa00(dipendente: Dipendente) {
+  const codDipnRP = padRight(dipendente.codice_dipendente ?? '', 21);
+  const codSoggDipn = padRight(dipendente.codice_soggetto_paghe ?? '', 8);
+  const numRapp = onlyDigits(dipendente.numero_rapporto_paghe).padStart(3, '0');
+  const vfGenrAutmTeor = 'N';
 
-  return `${String(h).padStart(2, '0')}${String(minutes).padStart(2, '0')}00`;
+  return padRight(
+    `00${codDipnRP}${codSoggDipn}${numRapp}${vfGenrAutmTeor}`,
+    100,
+  );
 }
 
-function buildZucchettiHeaderRecord(codiceDitta: string, matricola: string) {
-  const record = `00                     ${codiceDitta.padStart(4, '0')}${matricola.padStart(7, '0')}N`;
-  return padRight(record, 100);
-}
-
-function buildZucchettiMovementRecord({
-  causale,
-  sottoCausale,
+function buildRipa01({
+  codGiusvRP,
+  codGiusvPA,
   date,
   hours,
-  flag = 'N',
+  riposo = ' ',
 }: {
-  causale: string;
-  sottoCausale: string;
+  codGiusvRP: string;
+  codGiusvPA: string;
   date: string;
   hours: number;
-  flag?: 'N' | 'S';
+  riposo?: ' ' | 'S' | 'N';
 }) {
   const yyyymmdd = date.replaceAll('-', '');
-  const hhmmss = formatZucchettiHours(hours);
+  const ore = Math.floor(Math.max(0, hours || 0));
+  const minuti = Math.round((Math.max(0, hours || 0) - ore) * 60);
 
-  const record = `01${causale.padEnd(4, ' ')} ${sottoCausale.padEnd(2, ' ')}${yyyymmdd}${hhmmss}${flag} 0`;
+  const record =
+    '01' +
+    padRight(codGiusvRP, 5) +
+    padRight(codGiusvPA, 2) +
+    yyyymmdd +
+    String(ore).padStart(2, '0') +
+    String(minuti).padStart(2, '0') +
+    '00' +
+    riposo +
+    ' ' +
+    '0' +
+    padRight('', 16) +
+    padRight('', 40);
+
   return padRight(record, 100);
 }
 
-function getZucchettiMovement(code: string, date: string, dailyHours: number) {
+function getRipa01Movement(code: string, date: string, dailyHours: number) {
   if (code === 'Pp' || code === 'Ps') {
-    return buildZucchettiMovementRecord({
-      causale: 'DIUR',
-      sottoCausale: '01',
+    return buildRipa01({
+      codGiusvRP: '',
+      codGiusvPA: '01',
       date,
       hours: dailyHours,
     });
   }
 
   if (code === 'F') {
-    return buildZucchettiMovementRecord({
-      causale: 'FERG',
-      sottoCausale: 'FE',
+    return buildRipa01({
+      codGiusvRP: 'FERG',
+      codGiusvPA: 'FE',
       date,
       hours: dailyHours,
     });
   }
 
   if (code === 'M') {
-    return buildZucchettiMovementRecord({
-      causale: 'MALA',
-      sottoCausale: 'MA',
+    return buildRipa01({
+      codGiusvRP: 'MALA',
+      codGiusvPA: 'MA',
       date,
       hours: dailyHours,
     });
   }
 
   if (code === 'N') {
-    return buildZucchettiMovementRecord({
-      causale: 'FEST',
-      sottoCausale: '',
+    return buildRipa01({
+      codGiusvRP: '',
+      codGiusvPA: '99',
       date,
       hours: 0,
-      flag: 'S',
+      riposo: 'S',
     });
   }
 
   if (/^P[1-8]$/.test(code)) {
-    return buildZucchettiMovementRecord({
-      causale: 'PERM',
-      sottoCausale: 'RL',
+    return buildRipa01({
+      codGiusvRP: 'PERM',
+      codGiusvPA: 'RL',
       date,
       hours: Number(code.replace('P', '')),
     });
   }
 
   if (/^P[1-8]\.104$/.test(code)) {
-    return buildZucchettiMovementRecord({
-      causale: 'P104',
-      sottoCausale: 'PG',
+    return buildRipa01({
+      codGiusvRP: 'P104',
+      codGiusvPA: 'PG',
       date,
       hours: Number(code.replace('P', '').replace('.104', '')),
     });
@@ -500,8 +515,10 @@ const requiredOrder = [
         studio_id,
         utente_id,
         codice_ditta,
-        codice_dipendente,
-        matricola_paghe,
+      codice_dipendente,
+      codice_soggetto_paghe,
+      numero_rapporto_paghe,
+      matricola_paghe,
         nome,
         cognome,
         email,
@@ -789,34 +806,34 @@ const exportZucchettiDat = () => {
 
   dipendenti.forEach((dipendente) => {
     const codiceDitta = onlyDigits(dipendente.codice_ditta);
-    const matricola = onlyDigits(
-      dipendente.matricola_paghe || dipendente.codice_dipendente,
-    );
+  const matricola = onlyDigits(
+  dipendente.codice_dipendente,
+);
 
     const dailyHours = Number(dipendente.orario_giornaliero ?? 8);
 
-    if (!codiceDitta || !matricola) {
-      return;
-    }
-
+  if (!codiceDitta || !matricola) {
+  return;
+}
+    
     if (!groupedByDitta[codiceDitta]) {
       groupedByDitta[codiceDitta] = [];
     }
 
-    const employeeRecords: string[] = [
-      buildZucchettiHeaderRecord(codiceDitta, matricola),
-    ];
-
+   const employeeRecords: string[] = [
+  buildRipa00(dipendente),
+];
+    
     days.forEach((day) => {
       const code = getCode(dipendente.utente_id, day);
 
       if (!code) return;
 
-      const movement = getZucchettiMovement(
-        code,
-        day.date,
-        dailyHours,
-      );
+      const movement = getRipa01Movement(
+  code,
+  day.date,
+  dailyHours,
+);
 
       if (movement) {
         employeeRecords.push(movement);
@@ -879,7 +896,7 @@ const exportZucchettiDat = () => {
   onClick={exportZucchettiDat}
   disabled={loading || dipendenti.length === 0}
 >
-  Export Zucchetti DAT
+  Export TRRIPA
 </Button>
            <Button
   onClick={saveMonth}
