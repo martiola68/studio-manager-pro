@@ -780,32 +780,43 @@ const handleSubmit =
     />
   </div>
 
-  <div className="space-y-2">
-    <Label>Template comunicazione</Label>
+    <div className="space-y-2">
+  <Label>Template comunicazione</Label>
 
-    <div className="flex flex-wrap gap-2">
-      {templateScadenze.map((template) => (
-        <Button
-          key={template.value}
-          type="button"
-          variant={
-            templateData.template === template.value
-              ? "default"
-              : "outline"
-          }
-          onClick={() =>
-            setTemplateData({
-              ...templateData,
-              template: template.value as TemplateScadenza,
-              periodo: "",
-            })
-          }
-        >
-          {template.label}
-        </Button>
-      ))}
-    </div>
+  <div className="flex flex-wrap items-center gap-2">
+    {templateScadenze.map((template) => (
+      <Button
+        key={template.value}
+        type="button"
+        variant={
+          templateData.template === template.value
+            ? "default"
+            : "outline"
+        }
+        onClick={() =>
+          setTemplateData({
+            ...templateData,
+            template: template.value as TemplateScadenza,
+            periodo: "",
+          })
+        }
+      >
+        {template.label}
+      </Button>
+    ))}
+
+    <Button
+      type="button"
+      className="bg-blue-600 hover:bg-blue-700"
+      onClick={() => generaMessaggioScadenza()}
+      disabled={!templateData.template}
+    >
+      {templateData.template === "altro"
+        ? "Prepara email"
+        : "Genera messaggio"}
+    </Button>
   </div>
+</div>
 
   {templateData.template !== "altro" && (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
