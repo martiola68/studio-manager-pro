@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Send } from "lucide-react";
 
 import HeaderComunicazioni from "@/components/comunicazioni/HeaderComunicazioni";
-import SimulazioneInvio from "@/components/comunicazioni/SimulazioneInvio";
+
 import StoricoComunicazioni from "@/components/comunicazioni/StoricoComunicazioni";
 import UploadAllegati from "@/components/comunicazioni/UploadAllegati";
 
@@ -57,9 +57,6 @@ export default function NewsletterPage() {
 
   const [selectedFiles, setSelectedFiles] =
     useState<File[]>([]);
-
-  const [simulazioneInvio, setSimulazioneInvio] =
-    useState(true);
 
   const [formData, setFormData] = useState({
     oggetto: "",
@@ -188,17 +185,7 @@ export default function NewsletterPage() {
           new Date().toISOString(),
       });
 
-      if (simulazioneInvio) {
-        toast({
-          title:
-            "Simulazione invio",
-          description: `Nessuna email inviata. Email previste: ${destinatariCount}`,
-        });
-
-        return;
-      }
-
-      await emailService.sendComunicazioneEmail({
+        await emailService.sendComunicazioneEmail({
         tipo: "newsletter",
         oggetto: formData.oggetto,
         messaggio: formData.messaggio,
@@ -315,15 +302,7 @@ export default function NewsletterPage() {
               }
             />
 
-            <SimulazioneInvio
-              value={
-                simulazioneInvio
-              }
-              onChange={
-                setSimulazioneInvio
-              }
-            />
-
+        
             <div className="flex justify-end">
               <Button
                 onClick={
