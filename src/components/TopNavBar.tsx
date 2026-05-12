@@ -246,138 +246,129 @@ export function TopNavBar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
 
-const menuItems: MenuItem[] = [
-  {
-    label: "Dashboard",
-    icon: <LayoutDashboard className="h-4 w-4" />,
-    href: "/dashboard",
-  },
+  const menuItems: MenuItem[] = [
+    {
+      label: "Dashboard",
+      icon: <LayoutDashboard className="h-4 w-4" />,
+      href: "/dashboard",
+    },
+    {
+      label: "Agenda",
+      icon: <Calendar className="h-4 w-4" />,
+      href: "/agenda",
+    },
+    {
+      label: "Promemoria",
+      icon: <FileText className="h-4 w-4" />,
+      href: "/promemoria",
+    },
+    {
+      label: "Strumenti",
+      icon: <BriefcaseBusiness className="h-4 w-4" />,
+      children: [
+        { label: "Messaggistica", icon: <MessageSquare className="h-4 w-4" />, href: "/messaggi" },
+        { label: "Rubrica", href: "/contatti", icon: <UserCircle className="h-4 w-4" /> },
+        { label: "Newsletter e comunicazioni", href: "/comunicazioni", icon: <Mail className="h-4 w-4" /> },
+        { label: "Accesso Portali", icon: <Key className="h-4 w-4" />, href: "/accesso-portali" },
+        { label: "Cassetti Fiscali", icon: <FileText className="h-4 w-4" />, href: "/cassetti-fiscali" },
+      ],
+    },
+    {
+      label: "Scadenzario",
+      icon: <Calendar className="h-4 w-4" />,
+      children: [
+        { label: "Elenco Generale", href: "/scadenze/elenco-generale", icon: <FileText className="h-4 w-4" /> },
+        { label: "Calendario", href: "/scadenze/calendario", icon: <Calendar className="h-4 w-4" /> },
+        { label: "Riepilogo", href: "/scadenze/riepilogo", icon: <FileText className="h-4 w-4" /> },
+        { label: "IVA", href: "/scadenze/iva", icon: <FileText className="h-4 w-4" /> },
+        { label: "CCGG", href: "/scadenze/ccgg", icon: <FileText className="h-4 w-4" /> },
+        { label: "CU", href: "/scadenze/cu", icon: <FileText className="h-4 w-4" /> },
+        { label: "IMU", href: "/scadenze/imu", icon: <FileText className="h-4 w-4" /> },
+        { label: "Fiscali", href: "/scadenze/fiscali", icon: <FileText className="h-4 w-4" /> },
+        { label: "Bilanci", href: "/scadenze/bilanci", icon: <FileText className="h-4 w-4" /> },
+        { label: "770", href: "/scadenze/modello-770", icon: <FileText className="h-4 w-4" /> },
+        { label: "Liquidazioni IVA - LIPE", href: "/scadenze/lipe", icon: <FileText className="h-4 w-4" /> },
+        { label: "Esterometro", href: "/scadenze/esterometro", icon: <FileText className="h-4 w-4" /> },
+        { label: "Affitti", href: "/scadenze/affitti", icon: <FileText className="h-4 w-4" /> },
+        { label: "Proforma", href: "/scadenze/proforma", icon: <FileText className="h-4 w-4" /> },
+      ],
+    },
+    {
+      label: "Contenzioso",
+      icon: <Scale className="h-4 w-4" />,
+      children: [
+        { label: "Pratiche contenzioso", href: "/contenzioso", icon: <FolderKanban className="h-4 w-4" /> },
+        { label: "Regole scadenze", href: "/contenzioso/regole-scadenze", icon: <Settings className="h-4 w-4" /> },
+        { label: "Sospensioni termini", href: "/contenzioso/sospensioni", icon: <Clock className="h-4 w-4" /> },
+        { label: "Tipi atto", href: "/contenzioso/tipi-atto", icon: <FileText className="h-4 w-4" /> },
+      ],
+    },
+    {
+      label: "AML",
+      icon: <ShieldCheck className="h-4 w-4" />,
+      children: [
+        { label: "Elenco Antiriciclaggio", href: "/antiriciclaggio", icon: <ShieldCheck className="h-4 w-4" /> },
+        { label: "Rappresentanti legali", href: "/antiriciclaggio/rappresentanti", icon: <UserCircle className="h-4 w-4" /> },
+        { label: "Prestazioni AR", href: "/impostazioni/elenco-prestazioni-ar", icon: <FileText className="h-4 w-4" /> },
+        { label: "Professionisti", href: "/antiriciclaggio/responsabili-av", icon: <Users className="h-4 w-4" /> },
+        { label: "Soggetti responsabili", href: "/antiriciclaggio/responsabili-av-societa", icon: <Users className="h-4 w-4" /> },
+        { label: "Comunicazioni inviate", href: "/antiriciclaggio/comunicazioni", icon: <Mail className="h-4 w-4" /> },
+      ],
+    },
+    {
+      label: "Anagrafiche",
+      icon: <Users className="h-4 w-4" />,
+      children: [
+        { label: "Clienti", href: "/clienti", icon: <Users className="h-4 w-4" /> },
+        {
+          label: "Rappresentanti legali",
+          href: "/antiriciclaggio/rappresentanti",
+          icon: <UserCircle className="h-4 w-4" />,
+        },
+      ],
+    },
+    {
+      label: "Payroll",
+      icon: <Clock className="h-4 w-4" />,
+      children: [
+        { label: "Presenze", href: "/presenze", icon: <Clock className="h-4 w-4" /> },
+        { label: "Dipendenti", href: "/payroll/dipendenti", icon: <Users className="h-4 w-4" /> },
+        { label: "Qualifiche", href: "/payroll/qualifiche", icon: <FileText className="h-4 w-4" /> },
+      ],
+    },
+    {
+      label: "Connessioni",
+      icon: <Cloud className="h-4 w-4" />,
+      children: [
+        {
+          label: "Microsoft 365 - Connessioni",
+          href: "/microsoft365?tab=connessioni",
+          icon: <Link2 className="h-4 w-4" />,
+        },
+        {
+          label: "Microsoft 365 - Sync",
+          href: "/microsoft365?tab=sync",
+          icon: <RefreshCcw className="h-4 w-4" />,
+        },
+      ],
+    },
+    {
+      label: "Impostazioni",
+      icon: <Settings className="h-4 w-4" />,
+      adminOnly: true,
+      children: [
+        { label: "Utenti", href: "/impostazioni/utenti", icon: <Users className="h-4 w-4" /> },
+        { label: "Dati Studio", href: "/impostazioni/studio", icon: <Building2 className="h-4 w-4" /> },
+        { label: "Ruoli", href: "/impostazioni/ruoli", icon: <Settings className="h-4 w-4" /> },
+        { label: "Prestazioni", href: "/impostazioni/prestazioni", icon: <Settings className="h-4 w-4" /> },
+        { label: "Scadenzari", href: "/impostazioni/scadenzari", icon: <Settings className="h-4 w-4" /> },
+        { label: "Tipi Scadenze", href: "/impostazioni/tipi-scadenze", icon: <Settings className="h-4 w-4" /> },
+        { label: "Tipo Promemoria", href: "/impostazioni/tipo-promemoria", icon: <Settings className="h-4 w-4" /> },
+      ],
+    },
+  ];
 
-  {
-    label: "Agenda",
-    icon: <Calendar className="h-4 w-4" />,
-    href: "/agenda",
-  },
-
-  {
-  label: "Promemoria",
-  icon: <FileText className="h-4 w-4" />,
-  href: "/promemoria",
-},
-
-  {
-    label: "Strumenti",
-    icon: <BriefcaseBusiness className="h-4 w-4" />,
-    children: [
-      { label: "Messaggistica", icon: <MessageSquare className="h-4 w-4" />, href: "/messaggi" },
-      { label: "Rubrica", href: "/contatti", icon: <UserCircle className="h-4 w-4" /> },
-      { label: "Newsletter e comunicazioni", href: "/comunicazioni", icon: <Mail className="h-4 w-4" /> },
-      { label: "Accesso Portali", icon: <Key className="h-4 w-4" />, href: "/accesso-portali" },
-      { label: "Cassetti Fiscali", icon: <FileText className="h-4 w-4" />, href: "/cassetti-fiscali" },
-    ],
-  },
-
- {
-  label: "Scadenzario",
-  icon: <Calendar className="h-4 w-4" />,
-  children: [
-    { label: "Elenco Generale", href: "/scadenze/elenco-generale", icon: <FileText className="h-4 w-4" /> },
-    { label: "Calendario", href: "/scadenze/calendario", icon: <Calendar className="h-4 w-4" /> },
-    { label: "Riepilogo", href: "/scadenze/riepilogo", icon: <FileText className="h-4 w-4" /> },
-    { label: "IVA", href: "/scadenze/iva", icon: <FileText className="h-4 w-4" /> },
-    { label: "CCGG", href: "/scadenze/ccgg", icon: <FileText className="h-4 w-4" /> },
-    { label: "CU", href: "/scadenze/cu", icon: <FileText className="h-4 w-4" /> },
-    { label: "IMU", href: "/scadenze/imu", icon: <FileText className="h-4 w-4" /> },
-    { label: "Fiscali", href: "/scadenze/fiscali", icon: <FileText className="h-4 w-4" /> },
-    { label: "Bilanci", href: "/scadenze/bilanci", icon: <FileText className="h-4 w-4" /> },
-    { label: "770", href: "/scadenze/modello-770", icon: <FileText className="h-4 w-4" /> },
-    { label: "Liquidazioni IVA - LIPE", href: "/scadenze/lipe", icon: <FileText className="h-4 w-4" /> },
-    { label: "Esterometro", href: "/scadenze/esterometro", icon: <FileText className="h-4 w-4" /> },
-    { label: "Affitti", href: "/scadenze/affitti", icon: <FileText className="h-4 w-4" /> },
-    { label: "Proforma", href: "/scadenze/proforma", icon: <FileText className="h-4 w-4" /> },
-  ],
-},
-
-  {
-    label: "AML",
-    icon: <ShieldCheck className="h-4 w-4" />,
-    children: [
-      { label: "Elenco Antiriciclaggio", href: "/antiriciclaggio", icon: <ShieldCheck className="h-4 w-4" /> },
-      { label: "Rappresentanti legali", href: "/antiriciclaggio/rappresentanti", icon: <UserCircle className="h-4 w-4" /> },
-      { label: "Prestazioni AR", href: "/impostazioni/elenco-prestazioni-ar", icon: <FileText className="h-4 w-4" /> },
-      { label: "Professionisti", href: "/antiriciclaggio/responsabili-av", icon: <Users className="h-4 w-4" /> },
-      { label: "Soggetti responsabili", href: "/antiriciclaggio/responsabili-av-societa", icon: <Users className="h-4 w-4" /> },
-      { label: "Comunicazioni inviate", href: "/antiriciclaggio/comunicazioni", icon: <Mail className="h-4 w-4" /> },
-    ],
-  },
-
- {
-  label: "Contenzioso",
-  icon: <Scale className="h-4 w-4" />,
-  children: [
-    { label: "Pratiche contenzioso", href: "/contenzioso", icon: <FolderKanban className="h-4 w-4" /> },
-    { label: "Regole scadenze", href: "/contenzioso/regole-scadenze", icon: <Settings className="h-4 w-4" /> },
-    { label: "Sospensioni termini", href: "/contenzioso/sospensioni", icon: <Clock className="h-4 w-4" /> },
-    { label: "Tipi atto", href: "/contenzioso/tipi-atto", icon: <FileText className="h-4 w-4" /> },
-  ],
-},
-
-  {
-    label: "Connessioni",
-    icon: <Cloud className="h-4 w-4" />,
-    children: [
-      {
-        label: "Microsoft 365 - Connessioni",
-        href: "/microsoft365?tab=connessioni",
-        icon: <Link2 className="h-4 w-4" />,
-      },
-      {
-        label: "Microsoft 365 - Sync",
-        href: "/microsoft365?tab=sync",
-        icon: <RefreshCcw className="h-4 w-4" />,
-      },
-    ],
-  },
-
-  {
-    label: "Anagrafiche",
-    icon: <Users className="h-4 w-4" />,
-    children: [
-      { label: "Clienti", href: "/clienti", icon: <Users className="h-4 w-4" /> },
-      {
-        label: "Rappresentanti legali",
-        href: "/antiriciclaggio/rappresentanti",
-        icon: <UserCircle className="h-4 w-4" />,
-      },
-    ],
-  },
-
-  {
-  label: "Payroll",
-  icon: <Clock className="h-4 w-4" />,
-  children: [
-    { label: "Presenze", href: "/presenze", icon: <Clock className="h-4 w-4" /> },
-    { label: "Dipendenti", href: "/payroll/dipendenti", icon: <Users className="h-4 w-4" /> },
-    { label: "Qualifiche", href: "/payroll/qualifiche", icon: <FileText className="h-4 w-4" /> },
-  ],
-},
-
-  {
-    label: "Impostazioni",
-    icon: <Settings className="h-4 w-4" />,
-    adminOnly: true,
-    children: [
-      { label: "Utenti", href: "/impostazioni/utenti", icon: <Users className="h-4 w-4" /> },
-      { label: "Dati Studio", href: "/impostazioni/studio", icon: <Building2 className="h-4 w-4" /> },
-      { label: "Ruoli", href: "/impostazioni/ruoli", icon: <Settings className="h-4 w-4" /> },
-      { label: "Prestazioni", href: "/impostazioni/prestazioni", icon: <Settings className="h-4 w-4" /> },
-      { label: "Scadenzari", href: "/impostazioni/scadenzari", icon: <Settings className="h-4 w-4" /> },
-      { label: "Tipi Scadenze", href: "/impostazioni/tipi-scadenze", icon: <Settings className="h-4 w-4" /> },
-      { label: "Tipo Promemoria", href: "/impostazioni/tipo-promemoria", icon: <Settings className="h-4 w-4" /> },
-    ],
-  },
-];
-   const isExactRoute = (href?: string) => {
+  const isExactRoute = (href?: string) => {
     if (!href) return false;
     return currentRoute === href;
   };
@@ -451,17 +442,17 @@ const menuItems: MenuItem[] = [
             {item.children?.map((child) => {
               const childActive = isActive(child);
 
-          const childShowMessaggiBadge =
-  child.label === "Messaggi" && messaggiNonLetti > 0;
+              const childShowMessaggiBadge =
+                child.label === "Messaggi" && messaggiNonLetti > 0;
 
-const childShowPromemoriaRicevutiBadge =
-  child.label === "Promemoria" && promemoriaRicevuti > 0;
+              const childShowPromemoriaRicevutiBadge =
+                child.label === "Promemoria" && promemoriaRicevuti > 0;
 
-const childShowPromemoriaAlert =
-  child.label === "Promemoria" && promemoriaAttivi > 0;
+              const childShowPromemoriaAlert =
+                child.label === "Promemoria" && promemoriaAttivi > 0;
 
-const childShowAgendaBadge =
-  child.label === "Agenda" && eventiImminenti > 0;
+              const childShowAgendaBadge =
+                child.label === "Agenda" && eventiImminenti > 0;
 
               return (
                 <DropdownMenuItem key={child.label} asChild>
@@ -474,29 +465,30 @@ const childShowAgendaBadge =
                   >
                     {child.icon}
                     <span>{child.label}</span>
+
                     {childShowMessaggiBadge && (
-  <Badge variant="destructive" className="ml-auto px-1.5 py-0 h-5 min-w-[20px] text-xs">
-    {messaggiNonLetti > 99 ? "99+" : messaggiNonLetti}
-  </Badge>
-)}
+                      <Badge variant="destructive" className="ml-auto px-1.5 py-0 h-5 min-w-[20px] text-xs">
+                        {messaggiNonLetti > 99 ? "99+" : messaggiNonLetti}
+                      </Badge>
+                    )}
 
-{childShowPromemoriaRicevutiBadge && (
-  <Badge variant="destructive" className="ml-auto px-1.5 py-0 h-5 min-w-[20px] text-xs">
-    {promemoriaRicevuti > 99 ? "99+" : promemoriaRicevuti}
-  </Badge>
-)}
+                    {childShowPromemoriaRicevutiBadge && (
+                      <Badge variant="destructive" className="ml-auto px-1.5 py-0 h-5 min-w-[20px] text-xs">
+                        {promemoriaRicevuti > 99 ? "99+" : promemoriaRicevuti}
+                      </Badge>
+                    )}
 
-{childShowPromemoriaAlert && (
-  <Badge variant="destructive" className="ml-auto px-1.5 py-0 h-5 min-w-[20px] text-xs">
-    {promemoriaAttivi > 99 ? "99+" : promemoriaAttivi}
-  </Badge>
-)}
+                    {childShowPromemoriaAlert && (
+                      <Badge variant="destructive" className="ml-auto px-1.5 py-0 h-5 min-w-[20px] text-xs">
+                        {promemoriaAttivi > 99 ? "99+" : promemoriaAttivi}
+                      </Badge>
+                    )}
 
-{childShowAgendaBadge && (
-  <Badge variant="destructive" className="ml-auto px-1.5 py-0 h-5 min-w-[20px] text-xs">
-    {eventiImminenti > 99 ? "99+" : eventiImminenti}
-  </Badge>
-)}
+                    {childShowAgendaBadge && (
+                      <Badge variant="destructive" className="ml-auto px-1.5 py-0 h-5 min-w-[20px] text-xs">
+                        {eventiImminenti > 99 ? "99+" : eventiImminenti}
+                      </Badge>
+                    )}
                   </Link>
                 </DropdownMenuItem>
               );
@@ -560,13 +552,13 @@ const childShowAgendaBadge =
     );
   }
 
-return (
-  <nav className="w-full bg-white border-b border-gray-200 shadow-sm sticky top-[140px] z-40">
-    <div className="overflow-x-auto">
-      <div className="flex items-center gap-1 px-4 py-2 min-w-max">
-        {menuItems.map((item) => renderMenuItem(item))}
+  return (
+    <nav className="w-full bg-white border-b border-gray-200 shadow-sm sticky top-[140px] z-40">
+      <div className="overflow-x-auto">
+        <div className="flex items-center gap-1 px-4 py-2 min-w-max">
+          {menuItems.map((item) => renderMenuItem(item))}
+        </div>
       </div>
-    </div>
-  </nav>
-);
+    </nav>
+  );
 }
