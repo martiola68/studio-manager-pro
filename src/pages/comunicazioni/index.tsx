@@ -121,9 +121,13 @@ export default function ComunicazioniPage() {
   const [selectedDestinatari, setSelectedDestinatari] = useState<string[]>([]);
   const [searchDestinatari, setSearchDestinatari] = useState("");
 
-  const [searchContatti, setSearchContatti] = useState("");
+const [searchContatti, setSearchContatti] = useState("");
 const [contattiResults, setContattiResults] = useState<ContattoOption[]>([]);
 const [loadingContatti, setLoadingContatti] = useState(false);
+
+const [searchClienti, setSearchClienti] = useState("");
+const [clientiResults, setClientiResults] = useState<Cliente[]>([]);
+const [loadingClienti, setLoadingClienti] = useState(false);
 
   const [formData, setFormData] = useState({
   tipo: "newsletter" as TipoComunicazione,
@@ -278,49 +282,49 @@ const generaMessaggioScadenza = (data = templateData) => {
 
   if (data.template === "iva_trimestrale") {
     oggetto = `Invio modello F24 IVA - ${periodo} ${anno}`;
-    messaggio = `Gentile Cliente,
+  messaggio = `Gentile ${formData.destinatario_cliente || "Cliente"},
 
-in allegato si trasmette il modello F24 relativo al pagamento dell'IVA del ${periodo} ${anno}.
+in allegato si trasmette il modello F24 relativo al pagamento dell'IVA del mese di ${periodo} ${anno}.
 
 Il versamento dovrà essere effettuato entro il giorno ${scadenza}.`;
   } else if (data.template === "iva_mensile") {
     oggetto = `Invio modello F24 IVA - mese di ${periodo} ${anno}`;
-    messaggio = `Gentile Cliente,
+    messaggio = `Gentile ${formData.destinatario_cliente || "Cliente"},
 
 in allegato si trasmette il modello F24 relativo al pagamento dell'IVA del mese di ${periodo} ${anno}.
 
 Il versamento dovrà essere effettuato entro il giorno ${scadenza}.`;
   } else if (data.template === "ritenute") {
     oggetto = `Invio modello F24 ritenute - ${periodo} ${anno}`;
-    messaggio = `Gentile Cliente,
+    messaggio = `Gentile ${formData.destinatario_cliente || "Cliente"},
 
 in allegato si trasmette il modello F24 relativo al versamento delle ritenute d'acconto riferite al periodo ${periodo} ${anno}.
 
 Il versamento dovrà essere effettuato entro il giorno ${scadenza}.`;
   } else if (data.template === "imu") {
     oggetto = `Invio modello F24 IMU - ${periodo} ${anno}`;
-    messaggio = `Gentile Cliente,
+    messaggio = `Gentile ${formData.destinatario_cliente || "Cliente"},
 
 in allegato si trasmette il modello F24 relativo al pagamento IMU per ${periodo} ${anno}.
 
 Il versamento dovrà essere effettuato entro il giorno ${scadenza}.`;
   } else if (data.template === "f24_dipendenti") {
     oggetto = `Invio modello F24 dipendenti - ${periodo} ${anno}`;
-    messaggio = `Gentile Cliente,
+    messaggio = `Gentile ${formData.destinatario_cliente || "Cliente"},
 
 in allegato si trasmette il modello F24 relativo ai versamenti connessi al personale dipendente per il periodo ${periodo} ${anno}.
 
 Il versamento dovrà essere effettuato entro il giorno ${scadenza}.`;
   } else if (data.template === "imposte") {
     oggetto = `Invio modello F24 imposte - ${periodo} ${anno}`;
-    messaggio = `Gentile Cliente,
+    messaggio = `Gentile ${formData.destinatario_cliente || "Cliente"},
 
 in allegato si trasmette il modello F24 relativo al pagamento delle imposte per ${periodo} ${anno}.
 
 Il versamento dovrà essere effettuato entro il giorno ${scadenza}.`;
   } else if (data.template === "altro") {
     oggetto = `Invio modello F24 - ${periodo} ${anno}`;
-    messaggio = `Gentile Cliente,
+    messaggio = `Gentile ${formData.destinatario_cliente || "Cliente"},
 
 in allegato si trasmette il modello F24 relativo alla scadenza ${tipoLabel || "indicata"} per ${periodo} ${anno}.
 
@@ -398,6 +402,42 @@ const getContattoLabel = (contatto: ContattoOption) => {
     setContattiResults([]);
   } finally {
     setLoadingContatti(false);
+  }
+};
+
+  const loadClientiDestinatari = async (term: string) => {
+  setLoadingClienti(true);
+
+  try {
+    const supabase = getSupabaseClient();
+
+    let query = supabase
+      .from("tbclienti")
+      .select("*")
+      .eq("attivo", true)
+      .order("ragione_sociale", { ascending: true })
+      .limit(30);
+
+    const trimmed = term.trim();
+
+    if (trimmed) {
+      query = query.ilike("ragione_sociale", `%${trimmed}%`);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("Errore ricerca clienti:", error);
+      setClientiResults([]);
+      return;
+    }
+
+    setClientiResults((data as Cliente[]) || []);
+  } catch (err) {
+    console.error("Errore inatteso ricerca clienti:", err);
+    setClientiResults([]);
+  } finally {
+    setLoadingClienti(false);
   }
 };
   
@@ -622,8 +662,10 @@ setFormData({
   setMultiDestinatari(false);
   setSelectedDestinatari([]);
   setSearchDestinatari("");
-   setSearchContatti("");
+setSearchContatti("");
 setContattiResults([]);
+setSearchClienti("");
+setClientiResults([]);
   setTemplateData({
     template: "",
     periodoTipo: "mese",
@@ -956,22 +998,66 @@ setContattiResults([]);
 
     <div className="space-y-3 rounded-lg border bg-white p-4">
 
-      <div className="space-y-2">
+    <div className="space-y-2">
   <Label htmlFor="destinatario_cliente">
     Cliente destinatario *
   </Label>
 
-  <Input
-    id="destinatario_cliente"
-    value={formData.destinatario_cliente}
-    onChange={(e) =>
-      setFormData({
-        ...formData,
-        destinatario_cliente: e.target.value,
-      })
-    }
-    placeholder="Ragione sociale cliente"
-  />
+  <div className="flex gap-2">
+    <Input
+      id="destinatario_cliente"
+      value={formData.destinatario_cliente}
+      onChange={(e) => {
+        setFormData({
+          ...formData,
+          destinatario_cliente: e.target.value,
+        });
+        setSearchClienti(e.target.value);
+      }}
+      placeholder="Ragione sociale cliente"
+    />
+
+    <Button
+      type="button"
+      variant="outline"
+      onClick={() => loadClientiDestinatari(searchClienti || formData.destinatario_cliente)}
+    >
+      Cerca
+    </Button>
+  </div>
+
+  <div className="max-h-[180px] overflow-y-auto rounded border bg-white">
+    {loadingClienti ? (
+      <div className="p-3 text-sm text-gray-500">Caricamento...</div>
+    ) : clientiResults.length === 0 ? (
+      <div className="p-3 text-sm text-gray-500">
+        Nessun cliente selezionato o trovato
+      </div>
+    ) : (
+      clientiResults.map((cliente) => (
+        <button
+          key={cliente.id}
+          type="button"
+          className="flex w-full items-center justify-between border-b px-3 py-2 text-left text-sm hover:bg-gray-50"
+          onClick={() => {
+            setFormData({
+              ...formData,
+              destinatario_id: cliente.id,
+              destinatario_cliente: cliente.ragione_sociale || "",
+            });
+            setSearchClienti(cliente.ragione_sociale || "");
+            setClientiResults([]);
+          }}
+        >
+          <span>{cliente.ragione_sociale || "Cliente senza nome"}</span>
+
+          {formData.destinatario_id === cliente.id && (
+            <Badge variant="secondary">Selezionato</Badge>
+          )}
+        </button>
+      ))
+    )}
+  </div>
 </div>
       
       <Label>Destinatario comunicazione scadenza *</Label>
