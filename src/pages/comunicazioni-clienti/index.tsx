@@ -574,21 +574,7 @@ const handleSubmit =
           }
         );
 
-        if (
-          simulazioneInvio
-        ) {
-          toast({
-            title:
-              "Simulazione invio",
-
-            description:
-              "Nessuna email inviata",
-          });
-
-          return;
-        }
-
-        await emailService.sendComunicazioneEmail(
+             await emailService.sendComunicazioneEmail(
           {
             tipo:
               modalita ===
