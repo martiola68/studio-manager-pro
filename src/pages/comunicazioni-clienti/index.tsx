@@ -33,13 +33,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -80,35 +73,24 @@ type TemplateScadenza =
   | "altro";
 
 const templateScadenze = [
-  {
-    value: "iva_trimestrale",
-    label: "IVA trimestrale",
-  },
-  {
-    value: "iva_mensile",
-    label: "IVA mensile",
-  },
-  {
-    value: "ritenute",
-    label: "Ritenute",
-  },
-  {
-    value: "imu",
-    label: "IMU",
-  },
-  {
-    value: "f24_dipendenti",
-    label: "F24 dipendenti",
-  },
-  {
-    value: "imposte",
-    label: "Imposte",
-  },
-  {
-    value: "altro",
-    label: "Altro",
-  },
+  { value: "iva_trimestrale", label: "IVA trimestrale" },
+  { value: "iva_mensile", label: "IVA mensile" },
+  { value: "ritenute", label: "Ritenute" },
+  { value: "imu", label: "IMU" },
+  { value: "f24_dipendenti", label: "F24 dipendenti" },
+  { value: "imposte", label: "Imposte" },
+  { value: "altro", label: "Altro / email libera" },
 ] as const;
+
+const periodiIvaTrimestrale = [
+  "1° trimestre",
+  "2° trimestre",
+  "3° trimestre",
+  "Acconto",
+  "4° trimestre",
+];
+
+const periodiImu = ["Giugno", "Dicembre"];
 
 const mesi = [
   "Gennaio",
@@ -141,10 +123,7 @@ export default function ComunicazioniClientiPage() {
   const [sending, setSending] =
     useState(false);
 
-  const [modalita, setModalita] =
-    useState<
-      "singola" | "scadenze"
-    >("singola");
+  const [modalita] = useState<"scadenze">("scadenze");
 
   const [comunicazioni, setComunicazioni] =
     useState<Comunicazione[]>([]);
@@ -386,6 +365,32 @@ const loadData = async () => {
     );
   };
 
+  const getPeriodiDisponibili = () => {
+  if (templateData.template === "iva_trimestrale") {
+    return periodiIvaTrimestrale;
+  }
+
+  if (templateData.template === "imu") {
+    return periodiImu;
+  }
+
+  return mesi;
+};
+
+const getDettaglioImu = () => {
+  if (templateData.template !== "imu") return "";
+
+  if (templateData.periodo === "Giugno") {
+    return "Acconto / Unica soluzione";
+  }
+
+  if (templateData.periodo === "Dicembre") {
+    return "Saldo";
+  }
+
+  return "";
+};
+
   const generaMessaggioScadenza =
     (
       data = templateData
@@ -455,20 +460,19 @@ Il versamento dovrà essere effettuato entro il giorno ${scadenza}.
 Cordiali saluti`;
       }
 
-      if (
-        data.template ===
-        "imu"
-      ) {
-        oggetto = `Invio modello F24 IMU - ${periodo} ${anno}`;
+     if (data.template === "imu") {
+  const dettaglioImu = getDettaglioImu();
 
-        messaggio = `Gentile ${formData.destinatario_cliente},
+  oggetto = `Invio modello F24 IMU - ${dettaglioImu} ${anno}`;
 
-in allegato si trasmette il modello F24 IMU relativo al periodo ${periodo} ${anno}.
+  messaggio = `Gentile ${formData.destinatario_cliente || "Cliente"},
+
+in allegato si trasmette il modello F24 IMU relativo a ${dettaglioImu} ${anno}.
 
 Il versamento dovrà essere effettuato entro il giorno ${scadenza}.
 
 Cordiali saluti`;
-      }
+}
 
       if (
         data.template ===
@@ -500,20 +504,15 @@ Il versamento dovrà essere effettuato entro il giorno ${scadenza}.
 Cordiali saluti`;
       }
 
-      if (
-        data.template ===
-        "altro"
-      ) {
-        oggetto = `Invio modello F24 - ${tipoLabel}`;
+     if (data.template === "altro") {
+  oggetto = "";
 
-        messaggio = `Gentile ${formData.destinatario_cliente},
+  messaggio = `Gentile ${formData.destinatario_cliente || "Cliente"},
 
-in allegato si trasmette il modello F24 relativo alla scadenza ${tipoLabel}.
-
-Il versamento dovrà essere effettuato entro il giorno ${scadenza}.
+scrivi qui il testo della comunicazione.
 
 Cordiali saluti`;
-      }
+}
 
       setFormData({
         ...formData,
@@ -691,336 +690,210 @@ const handleSubmit =
           </CardHeader>
 
           <CardContent className="space-y-6">
-            <Tabs
-              value={modalita}
-              onValueChange={(
-                value
-              ) =>
-                setModalita(
-                  value as
-                    | "singola"
-                    | "scadenze"
-                )
-              }
-            >
-              <TabsList>
-                <TabsTrigger value="singola">
-                  Comunicazione Cliente
-                </TabsTrigger>
+          <div className="space-y-6">
+  <div className="space-y-2">
+    <Label>Cliente</Label>
 
-                <TabsTrigger value="scadenze">
-                  Avviso Scadenza
-                </TabsTrigger>
-              </TabsList>
+    <div className="flex gap-2">
+      <Input
+        value={searchClienti}
+        onChange={(e) => setSearchClienti(e.target.value)}
+        placeholder="Cerca cliente..."
+      />
 
-              <TabsContent
-                value="singola"
-                className="space-y-6"
-              >
-                <div className="space-y-2">
-                  <Label>
-                    Cliente
-                  </Label>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => loadClientiDestinatari(searchClienti)}
+      >
+        Cerca
+      </Button>
+    </div>
 
-                  <div className="flex gap-2">
-                    <Input
-                      value={
-                        searchClienti
-                      }
-                      onChange={(
-                        e
-                      ) =>
-                        setSearchClienti(
-                          e.target
-                            .value
-                        )
-                      }
-                      placeholder="Cerca cliente..."
-                    />
+    <div className="max-h-[200px] overflow-y-auto rounded-md border">
+      {clientiResults.map((cliente) => (
+        <button
+          key={cliente.id}
+          type="button"
+          className="flex w-full items-center justify-between border-b px-3 py-2 text-left hover:bg-gray-50"
+          onClick={() => {
+            setFormData({
+              ...formData,
+              destinatario_id: cliente.id,
+              destinatario_cliente: cliente.ragione_sociale || "",
+            });
+            setSearchClienti(cliente.ragione_sociale || "");
+            setClientiResults([]);
+          }}
+        >
+          <span>{cliente.ragione_sociale}</span>
 
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() =>
-                        loadClientiDestinatari(
-                          searchClienti
-                        )
-                      }
-                    >
-                      Cerca
-                    </Button>
-                  </div>
+          {formData.destinatario_id === cliente.id && (
+            <Badge>Selezionato</Badge>
+          )}
+        </button>
+      ))}
+    </div>
+  </div>
 
-                  <div className="max-h-[200px] overflow-y-auto rounded-md border">
-                    {clientiResults.map(
-                      (
-                        cliente
-                      ) => (
-                        <button
-                          key={
-                            cliente.id
-                          }
-                          type="button"
-                          className="flex w-full items-center justify-between border-b px-3 py-2 text-left hover:bg-gray-50"
-                          onClick={() => {
-                            setFormData(
-                              {
-                                ...formData,
-                                destinatario_id:
-                                  cliente.id,
-                                destinatario_cliente:
-                                  cliente.ragione_sociale ||
-                                  "",
-                              }
-                            );
-                          }}
-                        >
-                          <span>
-                            {
-                              cliente.ragione_sociale
-                            }
-                          </span>
+  <div className="space-y-2">
+    <Label>Destinatario Email</Label>
 
-                          {formData.destinatario_id ===
-                            cliente.id && (
-                            <Badge>
-                              Selezionato
-                            </Badge>
-                          )}
-                        </button>
-                      )
-                    )}
-                  </div>
-                </div>
+    <div className="flex gap-2">
+      <Input
+        value={searchContatti}
+        onChange={(e) => setSearchContatti(e.target.value)}
+        placeholder="Cerca contatto..."
+      />
 
-                <div className="space-y-2">
-                  <Label>
-                    Destinatario Email
-                  </Label>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => loadContattiDestinatari(searchContatti)}
+      >
+        Cerca
+      </Button>
+    </div>
 
-                  <div className="flex gap-2">
-                    <Input
-                      value={
-                        searchContatti
-                      }
-                      onChange={(
-                        e
-                      ) =>
-                        setSearchContatti(
-                          e.target
-                            .value
-                        )
-                      }
-                      placeholder="Cerca contatto..."
-                    />
+    <div className="max-h-[200px] overflow-y-auto rounded-md border">
+      {contattiResults.map((contatto) => (
+        <button
+          key={contatto.id}
+          type="button"
+          className="flex w-full items-center justify-between border-b px-3 py-2 text-left hover:bg-gray-50"
+          onClick={() => {
+            setFormData({
+              ...formData,
+              destinatario_email: contatto.email || "",
+            });
+            setSearchContatti(contatto.email || "");
+            setContattiResults([]);
+          }}
+        >
+          <span>
+            {getContattoLabel(contatto)}
+            <span className="ml-2 text-gray-500">
+              {contatto.email}
+            </span>
+          </span>
+        </button>
+      ))}
+    </div>
+  </div>
 
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() =>
-                        loadContattiDestinatari(
-                          searchContatti
-                        )
-                      }
-                    >
-                      Cerca
-                    </Button>
-                  </div>
+  <div className="space-y-2">
+    <Label>Email destinatario *</Label>
 
-                  <div className="max-h-[200px] overflow-y-auto rounded-md border">
-                    {contattiResults.map(
-                      (
-                        contatto
-                      ) => (
-                        <button
-                          key={
-                            contatto.id
-                          }
-                          type="button"
-                          className="flex w-full items-center justify-between border-b px-3 py-2 text-left hover:bg-gray-50"
-                          onClick={() => {
-                            setFormData(
-                              {
-                                ...formData,
-                                destinatario_email:
-                                  contatto.email ||
-                                  "",
-                              }
-                            );
-                          }}
-                        >
-                          <span>
-                            {getContattoLabel(
-                              contatto
-                            )}
+    <Input
+      type="email"
+      value={formData.destinatario_email}
+      onChange={(e) =>
+        setFormData({
+          ...formData,
+          destinatario_email: e.target.value,
+        })
+      }
+      placeholder="email@cliente.it"
+    />
+  </div>
 
-                            <span className="ml-2 text-gray-500">
-                              {
-                                contatto.email
-                              }
-                            </span>
-                          </span>
-                        </button>
-                      )
-                    )}
-                  </div>
-                </div>
-              </TabsContent>
+  <div className="space-y-2">
+    <Label>Template comunicazione</Label>
 
-              <TabsContent
-                value="scadenze"
-                className="space-y-6"
-              >
-                <div className="space-y-2">
-                  <Label>
-                    Template Scadenza
-                  </Label>
+    <div className="flex flex-wrap gap-2">
+      {templateScadenze.map((template) => (
+        <Button
+          key={template.value}
+          type="button"
+          variant={
+            templateData.template === template.value
+              ? "default"
+              : "outline"
+          }
+          onClick={() =>
+            setTemplateData({
+              ...templateData,
+              template: template.value as TemplateScadenza,
+              periodo: "",
+            })
+          }
+        >
+          {template.label}
+        </Button>
+      ))}
+    </div>
+  </div>
 
-                  <div className="flex flex-wrap gap-2">
-                    {templateScadenze.map(
-                      (
-                        template
-                      ) => (
-                        <Button
-                          key={
-                            template.value
-                          }
-                          type="button"
-                          variant={
-                            templateData.template ===
-                            template.value
-                              ? "default"
-                              : "outline"
-                          }
-                          onClick={() =>
-                            setTemplateData(
-                              {
-                                ...templateData,
-                                template:
-                                  template.value as TemplateScadenza,
-                              }
-                            )
-                          }
-                        >
-                          {
-                            template.label
-                          }
-                        </Button>
-                      )
-                    )}
-                  </div>
-                </div>
+  {templateData.template !== "altro" && (
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div>
+        <Label>Periodo</Label>
 
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                  <div>
-                    <Label>
-                      Periodo
-                    </Label>
+        <Select
+          value={templateData.periodo}
+          onValueChange={(value) =>
+            setTemplateData({
+              ...templateData,
+              periodo: value,
+            })
+          }
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Seleziona periodo" />
+          </SelectTrigger>
 
-                    <Select
-                      value={
-                        templateData.periodo
-                      }
-                      onValueChange={(
-                        value
-                      ) =>
-                        setTemplateData(
-                          {
-                            ...templateData,
-                            periodo:
-                              value,
-                          }
-                        )
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
+          <SelectContent>
+            {getPeriodiDisponibili().map((periodo) => (
+              <SelectItem key={periodo} value={periodo}>
+                {periodo}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-                      <SelectContent>
-                        {mesi.map(
-                          (
-                            mese
-                          ) => (
-                            <SelectItem
-                              key={
-                                mese
-                              }
-                              value={
-                                mese
-                              }
-                            >
-                              {
-                                mese
-                              }
-                            </SelectItem>
-                          )
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
+      <div>
+        <Label>Anno</Label>
 
-                  <div>
-                    <Label>
-                      Anno
-                    </Label>
+        <Input
+          value={templateData.anno}
+          onChange={(e) =>
+            setTemplateData({
+              ...templateData,
+              anno: e.target.value,
+            })
+          }
+        />
+      </div>
 
-                    <Input
-                      value={
-                        templateData.anno
-                      }
-                      onChange={(
-                        e
-                      ) =>
-                        setTemplateData(
-                          {
-                            ...templateData,
-                            anno:
-                              e.target
-                                .value,
-                          }
-                        )
-                      }
-                    />
-                  </div>
+      <div>
+        <Label>Data Scadenza</Label>
 
-                  <div>
-                    <Label>
-                      Data Scadenza
-                    </Label>
+        <Input
+          type="date"
+          value={templateData.dataScadenza}
+          onChange={(e) =>
+            setTemplateData({
+              ...templateData,
+              dataScadenza: e.target.value,
+            })
+          }
+        />
+      </div>
+    </div>
+  )}
 
-                    <Input
-                      type="date"
-                      value={
-                        templateData.dataScadenza
-                      }
-                      onChange={(
-                        e
-                      ) =>
-                        setTemplateData(
-                          {
-                            ...templateData,
-                            dataScadenza:
-                              e.target
-                                .value,
-                          }
-                        )
-                      }
-                    />
-                  </div>
-                </div>
-
-                <Button
-                  type="button"
-                  className="bg-blue-600 hover:bg-blue-700"
-                  onClick={() =>
-                    generaMessaggioScadenza()
-                  }
-                >
-                  Genera Messaggio Automatico
-                </Button>
-              </TabsContent>
-            </Tabs>
+  <Button
+    type="button"
+    className="bg-blue-600 hover:bg-blue-700"
+    onClick={() => generaMessaggioScadenza()}
+    disabled={!templateData.template}
+  >
+    {templateData.template === "altro"
+      ? "Prepara email libera"
+      : "Genera Messaggio Automatico"}
+  </Button>
+</div>
 
             <div className="space-y-2">
               <Label>
