@@ -658,7 +658,7 @@ const handleSubmit =
   }
 
   return (
-    <div className="mx-auto max-w-7xl p-4 md:p-8">
+    <div className="mx-auto max-w-7xl px-4 pb-8 pt-2 md:px-8 md:pb-8 md:pt-3">
       <HeaderComunicazioni
         titolo="Comunicazioni Clienti"
         descrizione="Invio comunicazioni singole e avvisi scadenze"
