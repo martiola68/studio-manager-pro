@@ -238,121 +238,56 @@ function downloadCsv(filename: string, rows: string[][]) {
   URL.revokeObjectURL(url);
 }
 
-function padRight(value: string, length: number) {
-  return value.slice(0, length).padEnd(length, ' ');
+function escapeXml(value: string | number | null | undefined) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
 }
 
-function onlyDigits(value?: string | null) {
-  return String(value ?? '').replace(/\D/g, '');
-}
-
-function buildRipa00(dipendente: Dipendente) {
-  const codDipnRP = padRight(dipendente.codice_dipendente ?? '', 21);
-  const codSoggDipn = padRight(dipendente.codice_soggetto_paghe ?? '', 8);
-  const numRapp = onlyDigits(dipendente.numero_rapporto_paghe).padStart(3, '0');
-  const vfGenrAutmTeor = 'N';
-
-  return padRight(
-    `00${codDipnRP}${codSoggDipn}${numRapp}${vfGenrAutmTeor}`,
-    100,
-  );
-}
-
-function buildRipa01({
-  codGiusvRP,
-  codGiusvPA,
-  date,
-  hours,
-  riposo = ' ',
-}: {
-  codGiusvRP: string;
-  codGiusvPA: string;
-  date: string;
-  hours: number;
-  riposo?: ' ' | 'S' | 'N';
-}) {
-  const yyyymmdd = date.replaceAll('-', '');
-  const ore = Math.floor(Math.max(0, hours || 0));
-  const minuti = Math.round((Math.max(0, hours || 0) - ore) * 60);
-
-  const record =
-    '01' +
-    padRight(codGiusvRP, 5) +
-    padRight(codGiusvPA, 2) +
-    yyyymmdd +
-    String(ore).padStart(2, '0') +
-    String(minuti).padStart(2, '0') +
-    '00' +
-    riposo +
-    ' ' +
-    '0' +
-    padRight('', 16) +
-    padRight('', 40);
-
-  return padRight(record, 100);
-}
-
-function getRipa01Movement(code: string, date: string, dailyHours: number) {
-  if (code === 'Pp' || code === 'Ps') {
-    return buildRipa01({
-      codGiusvRP: '',
-      codGiusvPA: '01',
-      date,
-      hours: dailyHours,
-    });
-  }
-
-  if (code === 'F') {
-    return buildRipa01({
-      codGiusvRP: 'FERG',
-      codGiusvPA: 'FE',
-      date,
-      hours: dailyHours,
-    });
-  }
-
-  if (code === 'M') {
-    return buildRipa01({
-      codGiusvRP: 'MALA',
-      codGiusvPA: 'MA',
-      date,
-      hours: dailyHours,
-    });
-  }
-
-  if (code === 'N') {
-    return buildRipa01({
-      codGiusvRP: '',
-      codGiusvPA: '99',
-      date,
-      hours: 0,
-      riposo: 'S',
-    });
+function getPresenceHours(code: string, dailyHours: number) {
+  if (code === 'Pp' || code === 'Ps' || code === 'F' || code === 'M') {
+    return dailyHours;
   }
 
   if (/^P[1-8]$/.test(code)) {
-    return buildRipa01({
-      codGiusvRP: 'PERM',
-      codGiusvPA: 'RL',
-      date,
-      hours: Number(code.replace('P', '')),
-    });
+    return Number(code.replace('P', ''));
   }
 
   if (/^P[1-8]\.104$/.test(code)) {
-    return buildRipa01({
-      codGiusvRP: 'P104',
-      codGiusvPA: 'PG',
-      date,
-      hours: Number(code.replace('P', '').replace('.104', '')),
-    });
+    return Number(code.replace('P', '').replace('.104', ''));
   }
+
+  return 0;
+}
+
+function getXmlGiustificativo(code: string) {
+  if (code === 'Pp' || code === 'Ps') return '01';
+  if (code === 'F') return 'FE';
+  if (code === 'M') return 'MA';
+  if (/^P[1-8]$/.test(code)) return 'RL';
+  if (/^P[1-8]\.104$/.test(code)) return 'PG';
 
   return null;
 }
 
-function downloadDat(filename: string, content: string) {
-  const blob = new Blob([content], { type: 'text/plain;charset=us-ascii;' });
+function splitHoursToOreMinuti(hours: number) {
+  const safeHours = Math.max(0, hours || 0);
+  const ore = Math.floor(safeHours);
+  const minuti = Math.round((safeHours - ore) * 60);
+  const centesimi = Math.round((minuti / 60) * 100);
+
+  return {
+    ore,
+    minuti,
+    centesimi,
+  };
+}
+
+function downloadXml(filename: string, content: string) {
+  const blob = new Blob([content], { type: 'application/xml;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
 
@@ -801,67 +736,73 @@ const rows = editableDipendenti.flatMap((dipendente) =>
   );
 };
 
-const exportZucchettiDat = () => {
-  const groupedByDitta: Record<string, string[]> = {};
+const exportZucchettiXml = () => {
+  const dipendentiConMovimenti = dipendenti
+    .map((dipendente) => {
+      const codiceDitta = dipendente.codice_ditta?.trim();
+      const codiceDipendente =
+        dipendente.codice_soggetto_paghe?.trim() ||
+        dipendente.codice_dipendente?.trim();
 
-  dipendenti.forEach((dipendente) => {
-    const codiceDitta = onlyDigits(dipendente.codice_ditta);
-  const matricola = onlyDigits(
-  dipendente.codice_dipendente,
-);
+      const dailyHours = Number(dipendente.orario_giornaliero ?? 8);
 
-    const dailyHours = Number(dipendente.orario_giornaliero ?? 8);
-
-  if (!codiceDitta || !matricola) {
-  return;
-}
-    
-    if (!groupedByDitta[codiceDitta]) {
-      groupedByDitta[codiceDitta] = [];
-    }
-
-   const employeeRecords: string[] = [
-  buildRipa00(dipendente),
-];
-    
-    days.forEach((day) => {
-      const code = getCode(dipendente.utente_id, day);
-
-      if (!code) return;
-
-      const movement = getRipa01Movement(
-  code,
-  day.date,
-  dailyHours,
-);
-
-      if (movement) {
-        employeeRecords.push(movement);
+      if (!codiceDitta || !codiceDipendente) {
+        return null;
       }
-    });
 
-    if (employeeRecords.length > 1) {
-      groupedByDitta[codiceDitta].push(...employeeRecords);
-    }
-  });
+      const movimenti = days
+        .map((day) => {
+          const code = getCode(dipendente.utente_id, day);
+          const giustificativo = getXmlGiustificativo(code);
 
-  const ditte = Object.keys(groupedByDitta);
+          if (!giustificativo) return null;
 
-  if (ditte.length === 0) {
+          const hours = getPresenceHours(code, dailyHours);
+          const { ore, minuti, centesimi } = splitHoursToOreMinuti(hours);
+
+          return `
+      <Movimento>
+        <CodGiustificativoRilPres>${escapeXml(giustificativo)}</CodGiustificativoRilPres>
+        <CodGiustificativoUfficiale>${escapeXml(giustificativo)}</CodGiustificativoUfficiale>
+        <Data>${escapeXml(day.date)}</Data>
+        <NumOre>${ore}</NumOre>
+        <NumMinuti>${minuti}</NumMinuti>
+        <NumMinutiInCentesimi>${centesimi}</NumMinutiInCentesimi>
+        <GiornoDiRiposo>N</GiornoDiRiposo>
+        <GiornoChiusuraStraordinari>N</GiornoChiusuraStraordinari>
+      </Movimento>`;
+        })
+        .filter(Boolean)
+        .join('');
+
+      if (!movimenti) return null;
+
+      return `
+  <Dipendente CodAziendaUfficiale="${escapeXml(codiceDitta)}" CodDipendenteUfficiale="${escapeXml(codiceDipendente)}">
+    <Movimenti GenerazioneAutomaticaDaTeorico="N">${movimenti}
+    </Movimenti>
+  </Dipendente>`;
+    })
+    .filter(Boolean)
+    .join('');
+
+  if (!dipendentiConMovimenti) {
     setError(
-      'Nessun dato esportabile per Zucchetti. Verifica codice ditta, matricola paghe e presenze.',
+      'Nessun dato esportabile per XML Paghe. Verifica codice ditta, codice dipendente/soggetto paghe e presenze.',
     );
     return;
   }
 
-  ditte.forEach((codiceDitta) => {
-    const content = groupedByDitta[codiceDitta].join('');
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<ImportPresenze>
+${dipendentiConMovimenti}
+</ImportPresenze>
+`;
 
-    downloadDat(
-      `trripa_${codiceDitta}_${year}_${pad2(monthIndex + 1)}.dat`,
-      content,
-    );
-  });
+  downloadXml(
+    `presenze_paghe_${year}_${pad2(monthIndex + 1)}.xml`,
+    xml,
+  );
 };
   
   return (
@@ -891,12 +832,12 @@ const exportZucchettiDat = () => {
             <Button variant="outline" onClick={exportCsv} disabled={loading || dipendenti.length === 0}>
               Export CSV
             </Button>
-            <Button
+<Button
   variant="outline"
-  onClick={exportZucchettiDat}
+  onClick={exportZucchettiXml}
   disabled={loading || dipendenti.length === 0}
 >
-  Export TRRIPA
+  Export XML Paghe
 </Button>
            <Button
   onClick={saveMonth}
