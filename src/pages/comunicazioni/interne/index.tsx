@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
-
 import { Send } from "lucide-react";
 
 import HeaderComunicazioni from "@/components/comunicazioni/HeaderComunicazioni";
-
 import StoricoComunicazioni from "@/components/comunicazioni/StoricoComunicazioni";
 import UploadAllegati from "@/components/comunicazioni/UploadAllegati";
 
@@ -11,33 +9,19 @@ import { comunicazioneService } from "@/services/comunicazioneService";
 import { emailService } from "@/services/emailService";
 
 import { getSupabaseClient } from "@/lib/supabase/client";
-
 import type { Database } from "@/lib/supabase/types";
 
 import { useToast } from "@/hooks/use-toast";
 
 import { Button } from "@/components/ui/button";
-
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-
 import { Label } from "@/components/ui/label";
-
 import { Textarea } from "@/components/ui/textarea";
-
 import { Checkbox } from "@/components/ui/checkbox";
 
-type Comunicazione =
-  Database["public"]["Tables"]["tbcomunicazioni"]["Row"];
-
-type Utente =
-  Database["public"]["Tables"]["tbutenti"]["Row"];
+type Comunicazione = Database["public"]["Tables"]["tbcomunicazioni"]["Row"];
+type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
 type AllegatoComunicazione = {
   nome: string;
@@ -50,26 +34,15 @@ type AllegatoComunicazione = {
 export default function ComunicazioniInternePage() {
   const { toast } = useToast();
 
-  const [loading, setLoading] =
-    useState(true);
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
 
-  const [sending, setSending] =
-    useState(false);
+  const [comunicazioni, setComunicazioni] = useState<Comunicazione[]>([]);
+  const [utenti, setUtenti] = useState<Utente[]>([]);
 
-  const [comunicazioni, setComunicazioni] =
-    useState<Comunicazione[]>([]);
-
-  const [utenti, setUtenti] =
-    useState<Utente[]>([]);
-
-  const [selectedFiles, setSelectedFiles] =
-    useState<File[]>([]);
-
-   const [searchUtenti, setSearchUtenti] =
-    useState("");
-
-  const [selectedDestinatari, setSelectedDestinatari] =
-    useState<string[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [searchUtenti, setSearchUtenti] = useState("");
+  const [selectedDestinatari, setSelectedDestinatari] = useState<string[]>([]);
 
   const [formData, setFormData] = useState({
     oggetto: "",
@@ -84,15 +57,10 @@ export default function ComunicazioniInternePage() {
     try {
       setLoading(true);
 
-      const supabase =
-        getSupabaseClient();
+      const supabase = getSupabaseClient();
 
-      const [
-        comunicazioniData,
-        utentiData,
-      ] = await Promise.all([
+      const [comunicazioniData, utentiData] = await Promise.all([
         comunicazioneService.getComunicazioni(),
-
         supabase
           .from("tbutenti")
           .select("*")
@@ -101,21 +69,16 @@ export default function ComunicazioniInternePage() {
       ]);
 
       setComunicazioni(
-        comunicazioniData.filter(
-          (c) => c.tipo === "interna"
-        )
+        comunicazioniData.filter((c) => c.tipo === "interna")
       );
 
-      setUtenti(
-        utentiData.data || []
-      );
+      setUtenti(utentiData.data || []);
     } catch (error) {
       console.error(error);
 
       toast({
         title: "Errore",
-        description:
-          "Errore caricamento dati",
+        description: "Errore caricamento dati",
         variant: "destructive",
       });
     } finally {
@@ -123,203 +86,141 @@ export default function ComunicazioniInternePage() {
     }
   };
 
-  const uploadAllegati =
-    async (): Promise<
-      AllegatoComunicazione[]
-    > => {
-      if (selectedFiles.length === 0) {
-        return [];
-      }
+  const uploadAllegati = async (): Promise<AllegatoComunicazione[]> => {
+    if (selectedFiles.length === 0) return [];
 
-      const supabase =
-        getSupabaseClient();
+    const supabase = getSupabaseClient();
+    const uploadedFiles: AllegatoComunicazione[] = [];
 
-      const uploadedFiles:
-        AllegatoComunicazione[] = [];
+    for (const file of selectedFiles) {
+      const safeName = file.name.replace(/[^\w.\-]+/g, "_");
+      const fileName = `${Date.now()}_${safeName}`;
+      const filePath = `comunicazioni/${fileName}`;
 
-      for (const file of selectedFiles) {
-        const safeName =
-          file.name.replace(
-            /[^\w.\-]+/g,
-            "_"
-          );
+      const { error } = await supabase.storage
+        .from("messaggi-allegati")
+        .upload(filePath, file);
 
-        const fileName = `${Date.now()}_${safeName}`;
+      if (error) throw error;
 
-        const filePath = `comunicazioni/${fileName}`;
+      uploadedFiles.push({
+        nome: file.name,
+        tipo: file.type,
+        dimensione: file.size,
+        bucket: "messaggi-allegati",
+        path: filePath,
+      });
+    }
 
-        const { error } =
-          await supabase.storage
-            .from("messaggi-allegati")
-            .upload(
-              filePath,
-              file
-            );
+    return uploadedFiles;
+  };
 
-        if (error) {
-          throw error;
-        }
-
-        uploadedFiles.push({
-          nome: file.name,
-          tipo: file.type,
-          dimensione: file.size,
-          bucket:
-            "messaggi-allegati",
-          path: filePath,
-        });
-      }
-
-      return uploadedFiles;
-    };
-
-  const handleToggleUtente = (
-    id: string
-  ) => {
-    setSelectedDestinatari(
-      (prev) =>
-        prev.includes(id)
-          ? prev.filter(
-              (x) => x !== id
-            )
-          : [...prev, id]
+  const handleToggleUtente = (id: string) => {
+    setSelectedDestinatari((prev) =>
+      prev.includes(id)
+        ? prev.filter((x) => x !== id)
+        : [...prev, id]
     );
   };
 
-  const handleSubmit =
-    async () => {
-      try {
-        if (
-          !formData.oggetto ||
-          !formData.messaggio
-        ) {
-          toast({
-            title: "Errore",
-            description:
-              "Oggetto e messaggio obbligatori",
-            variant:
-              "destructive",
-          });
+  const handleSelectAll = () => {
+    setSelectedDestinatari(utentiFiltrati.map((u) => u.id));
+  };
 
-          return;
-        }
+  const handleClearAll = () => {
+    setSelectedDestinatari([]);
+  };
 
-        if (
-          selectedDestinatari.length ===
-          0
-        ) {
-          toast({
-            title: "Errore",
-            description:
-              "Seleziona almeno un destinatario",
-            variant:
-              "destructive",
-          });
-
-          return;
-        }
-
-        setSending(true);
-
-        let allegati:
-          AllegatoComunicazione[] =
-          [];
-
-        if (
-          selectedFiles.length > 0
-        ) {
-          allegati =
-            await uploadAllegati();
-        }
-
-        await comunicazioneService.createComunicazione(
-          {
-            tipo: "interna",
-            oggetto:
-              formData.oggetto,
-            messaggio:
-              formData.messaggio,
-            allegati,
-            destinatari_count:
-              selectedDestinatari.length,
-            stato: "Inviata",
-            data_invio:
-              new Date().toISOString(),
-          }
-        );
-
-      await emailService.sendComunicazioneEmail(
-          {
-            tipo: "interna",
-            destinatariIds:
-              selectedDestinatari,
-            oggetto:
-              formData.oggetto,
-            messaggio:
-              formData.messaggio,
-            allegati,
-          }
-        );
-
-        toast({
-          title:
-            "Comunicazione inviata",
-        });
-
-        setFormData({
-          oggetto: "",
-          messaggio: "",
-        });
-
-        setSelectedFiles([]);
-
-        setSelectedDestinatari(
-          []
-        );
-
-        await loadData();
-      } catch (error) {
-        console.error(error);
-
+  const handleSubmit = async () => {
+    try {
+      if (!formData.oggetto || !formData.messaggio) {
         toast({
           title: "Errore",
-          description:
-            "Errore invio comunicazione",
-          variant:
-            "destructive",
+          description: "Oggetto e messaggio obbligatori",
+          variant: "destructive",
         });
-      } finally {
-        setSending(false);
+
+        return;
       }
-    };
 
-  const handleDelete =
-    async (id: string) => {
-      try {
-        await comunicazioneService.deleteComunicazione(
-          id
-        );
-
+      if (selectedDestinatari.length === 0) {
         toast({
-          title:
-            "Comunicazione eliminata",
+          title: "Errore",
+          description: "Seleziona almeno un destinatario",
+          variant: "destructive",
         });
 
-        await loadData();
-      } catch (error) {
-        console.error(error);
+        return;
       }
-    };
 
-  const utentiFiltrati =
-    utenti.filter((u) => {
-      const nome =
-        `${u.nome} ${u.cognome}`.toLowerCase();
+      setSending(true);
 
-      return nome.includes(
-        searchUtenti.toLowerCase()
-      );
-    });
+      const allegati =
+        selectedFiles.length > 0 ? await uploadAllegati() : [];
+
+      await comunicazioneService.createComunicazione({
+        tipo: "interna",
+        oggetto: formData.oggetto,
+        messaggio: formData.messaggio,
+        allegati,
+        destinatari_count: selectedDestinatari.length,
+        stato: "Inviata",
+        data_invio: new Date().toISOString(),
+      });
+
+      await emailService.sendComunicazioneEmail({
+        tipo: "interna",
+        destinatariIds: selectedDestinatari,
+        oggetto: formData.oggetto,
+        messaggio: formData.messaggio,
+        allegati,
+      });
+
+      toast({
+        title: "Comunicazione inviata",
+      });
+
+      setFormData({
+        oggetto: "",
+        messaggio: "",
+      });
+
+      setSelectedFiles([]);
+      setSelectedDestinatari([]);
+
+      await loadData();
+    } catch (error) {
+      console.error(error);
+
+      toast({
+        title: "Errore",
+        description: "Errore invio comunicazione",
+        variant: "destructive",
+      });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await comunicazioneService.deleteComunicazione(id);
+
+      toast({
+        title: "Comunicazione eliminata",
+      });
+
+      await loadData();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const utentiFiltrati = utenti.filter((u) => {
+    const nome = `${u.nome || ""} ${u.cognome || ""}`.toLowerCase();
+
+    return nome.includes(searchUtenti.toLowerCase());
+  });
 
   if (loading) {
     return (
@@ -330,139 +231,125 @@ export default function ComunicazioniInternePage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl p-4 md:p-8">
+    <div className="mx-auto max-w-7xl px-4 pb-8 pt-1 md:px-8 md:pb-8 md:pt-2">
       <HeaderComunicazioni
         titolo="Comunicazioni Interne"
         descrizione="Invio comunicazioni agli operatori dello studio"
       />
 
-      <div className="space-y-6">
+      <div className="space-y-5">
         <Card>
-          <CardHeader>
-            <CardTitle>
-              Nuova Comunicazione
-            </CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle>Nuova Comunicazione</CardTitle>
           </CardHeader>
 
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <Label>
-                Cerca destinatari
-              </Label>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_2fr]">
+              <div className="space-y-2">
+                <Label>Cerca destinatari</Label>
 
-              <Input
-                value={
-                  searchUtenti
-                }
-                onChange={(e) =>
-                  setSearchUtenti(
-                    e.target.value
-                  )
-                }
-                placeholder="Cerca utenti..."
-              />
-            </div>
+                <Input
+                  value={searchUtenti}
+                  onChange={(e) => setSearchUtenti(e.target.value)}
+                  placeholder="Cerca utenti..."
+                />
 
-            <div className="max-h-[260px] overflow-y-auto rounded-md border p-2">
-              {utentiFiltrati.map(
-                (utente) => (
-                  <div
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSelectAll}
+                  >
+                    Seleziona tutti
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleClearAll}
+                  >
+                    Deseleziona
+                  </Button>
+                </div>
+
+                <p className="text-sm text-gray-500">
+                  Selezionati: {selectedDestinatari.length}
+                </p>
+              </div>
+
+              <div className="max-h-[170px] overflow-y-auto rounded-md border p-2">
+                {utentiFiltrati.map((utente) => (
+                  <label
                     key={utente.id}
-                    className="flex items-center gap-2 border-b py-2"
+                    className="flex cursor-pointer items-center gap-2 border-b py-2 text-sm hover:bg-gray-50"
                   >
                     <Checkbox
-                      checked={selectedDestinatari.includes(
-                        utente.id
-                      )}
-                      onCheckedChange={() =>
-                        handleToggleUtente(
-                          utente.id
-                        )
-                      }
+                      checked={selectedDestinatari.includes(utente.id)}
+                      onCheckedChange={() => handleToggleUtente(utente.id)}
                     />
 
                     <span>
-                      {utente.nome}{" "}
-                      {utente.cognome}
+                      {utente.nome} {utente.cognome}
                     </span>
-                  </div>
-                )
-              )}
+                  </label>
+                ))}
+              </div>
             </div>
 
             <div className="space-y-2">
-              <Label>
-                Oggetto
-              </Label>
+              <Label>Oggetto</Label>
 
               <Input
-                value={
-                  formData.oggetto
-                }
+                value={formData.oggetto}
                 onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    oggetto:
-                      e.target.value,
-                  })
+                  setFormData((prev) => ({
+                    ...prev,
+                    oggetto: e.target.value,
+                  }))
                 }
               />
             </div>
 
             <div className="space-y-2">
-              <Label>
-                Messaggio
-              </Label>
+              <Label>Messaggio</Label>
 
               <Textarea
-                rows={10}
-                value={
-                  formData.messaggio
-                }
+                rows={9}
+                value={formData.messaggio}
                 onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    messaggio:
-                      e.target.value,
-                  })
+                  setFormData((prev) => ({
+                    ...prev,
+                    messaggio: e.target.value,
+                  }))
                 }
               />
             </div>
 
-            <UploadAllegati
-              files={
-                selectedFiles
-              }
-              onChange={
-                setSelectedFiles
-              }
-            />
+            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+              <div className="w-full md:max-w-xl">
+                <UploadAllegati
+                  files={selectedFiles}
+                  onChange={setSelectedFiles}
+                />
+              </div>
 
-                  <div className="flex justify-end">
               <Button
-                onClick={
-                  handleSubmit
-                }
+                onClick={handleSubmit}
                 disabled={sending}
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 <Send className="mr-2 h-4 w-4" />
-
-                {sending
-                  ? "Invio..."
-                  : "Invia Comunicazione"}
+                {sending ? "Invio..." : "Invia Comunicazione"}
               </Button>
             </div>
           </CardContent>
         </Card>
 
         <StoricoComunicazioni
-          comunicazioni={
-            comunicazioni
-          }
-          onDelete={
-            handleDelete
-          }
+          comunicazioni={comunicazioni}
+          onDelete={handleDelete}
         />
       </div>
     </div>
