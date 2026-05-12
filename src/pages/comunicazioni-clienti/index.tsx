@@ -877,16 +877,6 @@ const handleSubmit =
     </div>
   )}
 
-  <Button
-    type="button"
-    className="bg-blue-600 hover:bg-blue-700"
-    onClick={() => generaMessaggioScadenza()}
-    disabled={!templateData.template}
-  >
-    {templateData.template === "altro"
-      ? "Prepara email libera"
-      : "Genera Messaggio Automatico"}
-  </Button>
 </div>
 
             <div className="space-y-2">
