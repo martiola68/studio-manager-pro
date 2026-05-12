@@ -248,19 +248,7 @@ export default function ComunicazioniInternePage() {
           }
         );
 
-        if (
-          simulazioneInvio
-        ) {
-          toast({
-            title:
-              "Simulazione invio",
-            description: `Nessuna email inviata. Destinatari previsti: ${selectedDestinatari.length}`,
-          });
-
-          return;
-        }
-
-        await emailService.sendComunicazioneEmail(
+      await emailService.sendComunicazioneEmail(
           {
             tipo: "interna",
             destinatariIds:
