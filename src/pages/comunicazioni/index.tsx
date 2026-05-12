@@ -112,6 +112,10 @@ export default function ComunicazioniPage() {
   const [selectedDestinatari, setSelectedDestinatari] = useState<string[]>([]);
   const [searchDestinatari, setSearchDestinatari] = useState("");
 
+  const [searchContatti, setSearchContatti] = useState("");
+const [contattiResults, setContattiResults] = useState<ContattoOption[]>([]);
+const [loadingContatti, setLoadingContatti] = useState(false);
+
 const [formData, setFormData] = useState({
   tipo: "newsletter" as TipoComunicazione,
   destinatario_id: "",
@@ -334,6 +338,44 @@ Cordiali saluti`;
   );
 };
 
+  const loadContattiDestinatari = async (term: string) => {
+  setLoadingContatti(true);
+
+  try {
+    const supabase = getSupabaseClient();
+
+    let query = supabase
+      .from("tbcontatti")
+      .select("id, nome, cognome, email")
+      .not("email", "is", null)
+      .order("cognome", { ascending: true })
+      .limit(30);
+
+    const trimmed = term.trim();
+
+    if (trimmed) {
+      query = query.or(
+        `nome.ilike.%${trimmed}%,cognome.ilike.%${trimmed}%,email.ilike.%${trimmed}%`
+      );
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("Errore ricerca contatti:", error);
+      setContattiResults([]);
+      return;
+    }
+
+    setContattiResults(((data as unknown) as ContattoOption[]) || []);
+  } catch (err) {
+    console.error("Errore inatteso ricerca contatti:", err);
+    setContattiResults([]);
+  } finally {
+    setLoadingContatti(false);
+  }
+};
+  
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -346,7 +388,10 @@ Cordiali saluti`;
   return;
 }
 
-if (formData.tipo === "singola" && !formData.destinatario_email.trim()) {
+if (
+  (formData.tipo === "singola" || formData.tipo === "scadenze") &&
+  !formData.destinatario_email.trim()
+) {
   toast({
     title: "Email destinatario obbligatoria",
     description: "Inserisci l'indirizzo email prima di inviare.",
@@ -395,10 +440,8 @@ if (formData.tipo === "singola" && !formData.destinatario_email.trim()) {
         destinatariCount = clienti.filter(
           (c) => c.attivo && c.flag_mail_attivo && c.flag_mail_newsletter
         ).length;
-      } else if (formData.tipo === "scadenze") {
-        destinatariCount = clienti.filter(
-          (c) => c.attivo && c.flag_mail_attivo && c.flag_mail_scadenze
-        ).length;
+     } else if (formData.tipo === "scadenze") {
+  destinatariCount = 1;
       } else if (formData.tipo === "interna") {
         destinatariCount = multiDestinatari
           ? selectedDestinatari.length
@@ -438,11 +481,13 @@ if (session?.user?.email) {
 }
 
 const emailResult = await emailService.sendComunicazioneEmail({
-  tipo: formData.tipo,
+  tipo: formData.tipo === "scadenze" ? "singola" : formData.tipo,
   destinatarioId:
-    formData.tipo === "singola" ? formData.destinatario_id : undefined,
+    formData.tipo === "singola" || formData.tipo === "scadenze"
+      ? formData.destinatario_id
+      : undefined,
   destinatarioEmail:
-    formData.tipo === "singola"
+    formData.tipo === "singola" || formData.tipo === "scadenze"
       ? formData.destinatario_email.trim()
       : undefined,
   destinatariIds:
@@ -506,6 +551,8 @@ setFormData({
   setMultiDestinatari(false);
   setSelectedDestinatari([]);
   setSearchDestinatari("");
+   setSearchContatti("");
+setContattiResults([]);
   setTemplateData({
     template: "",
     periodoTipo: "mese",
@@ -659,22 +706,6 @@ setFormData({
 </SelectContent>
               </Select>
 
-<div className="space-y-2">
-  <Label htmlFor="destinatario_email">Email destinatario *</Label>
-  <Input
-    id="destinatario_email"
-    type="email"
-    value={formData.destinatario_email}
-    onChange={(e) =>
-      setFormData({
-        ...formData,
-        destinatario_email: e.target.value,
-      })
-    }
-    placeholder="email@cliente.it"
-    required
-  />
-</div>
 </div>
 
               {formData.tipo === "scadenze" && (
@@ -842,7 +873,7 @@ setFormData({
         </Label>
       </div>
 
-      <Button
+<Button
   type="button"
   className="bg-blue-600 hover:bg-blue-700"
   onClick={() => generaMessaggioScadenza()}
@@ -850,6 +881,81 @@ setFormData({
 >
   Compila messaggio
 </Button>
+    </div>
+
+    <div className="space-y-3 rounded-lg border bg-white p-4">
+      <Label>Destinatario comunicazione scadenza *</Label>
+
+      <div className="flex gap-2">
+        <Input
+          placeholder="Cerca contatto per nome, cognome o email..."
+          value={searchContatti}
+          onChange={(e) => setSearchContatti(e.target.value)}
+        />
+
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => loadContattiDestinatari(searchContatti)}
+        >
+          Cerca
+        </Button>
+      </div>
+
+      <div className="max-h-[220px] overflow-y-auto rounded border bg-white">
+        {loadingContatti ? (
+          <div className="p-3 text-sm text-gray-500">Caricamento...</div>
+        ) : contattiResults.length === 0 ? (
+          <div className="p-3 text-sm text-gray-500">
+            Nessun contatto selezionato o trovato
+          </div>
+        ) : (
+          contattiResults.map((contatto) => (
+            <button
+              key={contatto.id}
+              type="button"
+              className="flex w-full items-center justify-between border-b px-3 py-2 text-left text-sm hover:bg-gray-50"
+              onClick={() =>
+                setFormData({
+                  ...formData,
+                  destinatario_id: contatto.id,
+                  destinatario_email: contatto.email || "",
+                })
+              }
+            >
+              <span>
+                {getContattoLabel(contatto)}
+                <span className="ml-2 text-gray-500">
+                  {contatto.email || "-"}
+                </span>
+              </span>
+
+              {formData.destinatario_email === contatto.email && (
+                <Badge variant="secondary">Selezionato</Badge>
+              )}
+            </button>
+          ))
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="destinatario_email_scadenze">
+          Email destinatario *
+        </Label>
+
+        <Input
+          id="destinatario_email_scadenze"
+          type="email"
+          value={formData.destinatario_email}
+          onChange={(e) =>
+            setFormData({
+              ...formData,
+              destinatario_email: e.target.value,
+            })
+          }
+          placeholder="email@cliente.it"
+        />
+      </div>
     </div>
   </div>
 )}
