@@ -29,6 +29,8 @@ type Dipendente = {
   tipo_contratto: string | null;
   sede_lavoro: string | null;
   centro_costo: string | null;
+  codice_soggetto_paghe: string | null;
+  numero_rapporto_paghe: string | null;
   attivo: boolean | null;
 };
 
@@ -142,6 +144,8 @@ setQualifiche(qualificheData ?? []);
           sede_lavoro: dipendente.sede_lavoro,
           centro_costo: dipendente.centro_costo,
           attivo: dipendente.attivo,
+          codice_soggetto_paghe: dipendente.codice_soggetto_paghe,
+          numero_rapporto_paghe: dipendente.numero_rapporto_paghe,
           updated_at: new Date().toISOString(),
         })
         .eq('id', dipendente.id);
@@ -208,6 +212,8 @@ setQualifiche(qualificheData ?? []);
                       <th className="p-2 text-left">Livello</th>
                       <th className="p-2 text-left">Contratto</th>
                       <th className="p-2 text-left">Centro costo</th>
+                      <th className="p-2 text-left">Cod. sogg. paghe</th>
+                      <th className="p-2 text-left">Num. rapp.</th>
                       <th className="p-2 text-center">Attivo</th>
                       <th className="p-2 text-right">Azioni</th>
                     </tr>
@@ -235,6 +241,26 @@ setQualifiche(qualificheData ?? []);
     value={dip.codice_dipendente ?? ''}
     onChange={(e) =>
       updateField(dip.id, 'codice_dipendente', e.target.value)
+    }
+  />
+</td>
+
+                        <td className="p-2">
+  <Input
+    maxLength={8}
+    value={dip.codice_soggetto_paghe ?? ''}
+    onChange={(e) =>
+      updateField(dip.id, 'codice_soggetto_paghe', e.target.value)
+    }
+  />
+</td>
+
+<td className="p-2">
+  <Input
+    maxLength={3}
+    value={dip.numero_rapporto_paghe ?? ''}
+    onChange={(e) =>
+      updateField(dip.id, 'numero_rapporto_paghe', e.target.value)
     }
   />
 </td>
