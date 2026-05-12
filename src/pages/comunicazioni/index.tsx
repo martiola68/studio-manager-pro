@@ -345,6 +345,12 @@ Cordiali saluti`;
   );
 };
 
+const getContattoLabel = (contatto: ContattoOption) => {
+  const fullName = `${contatto.cognome || ""} ${contatto.nome || ""}`.trim();
+
+  return fullName || contatto.email || "Contatto";
+};
+
   const loadContattiDestinatari = async (term: string) => {
   setLoadingContatti(true);
 
