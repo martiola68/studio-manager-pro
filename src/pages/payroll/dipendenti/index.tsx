@@ -12,26 +12,21 @@ type Dipendente = {
   id: string;
   studio_id: string;
   utente_id: string;
+
   codice_ditta: string | null;
   codice_dipendente: string | null;
-  matricola_paghe: string | null;
+
+  codice_soggetto_paghe: string | null;
+  numero_rapporto_paghe: string | null;
+
   nome: string | null;
   cognome: string | null;
   email: string | null;
-  codice_fiscale: string | null;
+
   orario_giornaliero: number | null;
-  ore_settimanali: number | null;
-  giorni_lavorativi_settimana: number | null;
-  percentuale_part_time: number | null;
-  qualifica: string | null;
-  qualifica_id: string | null;
-  livello: string | null;
-  tipo_contratto: string | null;
-  sede_lavoro: string | null;
-  centro_costo: string | null;
-  codice_soggetto_paghe: string | null;
-  numero_rapporto_paghe: string | null;
+
   data_cessazione: string | null;
+
   attivo: boolean | null;
 };
 
