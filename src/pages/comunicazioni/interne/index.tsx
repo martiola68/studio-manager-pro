@@ -252,61 +252,67 @@ export default function ComunicazioniInternePage() {
           </CardHeader>
 
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_2fr]">
-              <div className="space-y-2">
-                <Label>Cerca destinatari</Label>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_360px] md:items-start">
+  <div className="space-y-2">
+    <Label>Cerca destinatari</Label>
 
-                <Input
-                  value={searchUtenti}
-                  onChange={(e) => setSearchUtenti(e.target.value)}
-                  placeholder="Cerca utenti..."
-                />
+    <Input
+      value={searchUtenti}
+      onChange={(e) => setSearchUtenti(e.target.value)}
+      placeholder="Cerca utenti..."
+      className="w-full"
+    />
 
-               <div className="flex flex-wrap gap-2">
-  <Button type="button" variant="outline" size="sm" onClick={() => handleSelectBySettore("fiscale")}>
-    Fiscale
-  </Button>
+    <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
+      <Button type="button" variant="outline" size="sm" onClick={() => handleSelectBySettore("fiscale")}>
+        Fiscale
+      </Button>
 
-  <Button type="button" variant="outline" size="sm" onClick={() => handleSelectBySettore("lavoro")}>
-    Lavoro
-  </Button>
+      <Button type="button" variant="outline" size="sm" onClick={() => handleSelectBySettore("lavoro")}>
+        Lavoro
+      </Button>
 
-  <Button type="button" variant="outline" size="sm" onClick={() => handleSelectBySettore("consulenza")}>
-    Consulenza
-  </Button>
+      <Button type="button" variant="outline" size="sm" onClick={() => handleSelectBySettore("consulenza")}>
+        Consulenza
+      </Button>
 
-  <Button type="button" variant="outline" size="sm" onClick={handleSelectAll}>
-    Tutti
-  </Button>
+      <Button type="button" variant="outline" size="sm" onClick={handleSelectAll}>
+        Tutti
+      </Button>
 
-  <Button type="button" variant="outline" size="sm" onClick={handleClearAll}>
-    Deseleziona
-  </Button>
+      <Button type="button" variant="outline" size="sm" onClick={handleClearAll}>
+        Deseleziona
+      </Button>
+    </div>
+
+    <p className="text-sm text-gray-500">
+      Selezionati: {selectedDestinatari.length}
+    </p>
+  </div>
+
+  <div className="max-h-[150px] overflow-y-auto rounded-md border p-2">
+    {utentiFiltrati.map((utente) => (
+      <label
+        key={utente.id}
+        className="flex cursor-pointer items-center gap-2 border-b py-2 text-sm hover:bg-gray-50"
+      >
+        <Checkbox
+          checked={selectedDestinatari.includes(utente.id)}
+          onCheckedChange={() => handleToggleUtente(utente.id)}
+        />
+
+        <span>
+          {utente.nome} {utente.cognome}
+          {(utente as any).settore && (
+            <span className="ml-2 text-gray-500">
+              ({(utente as any).settore})
+            </span>
+          )}
+        </span>
+      </label>
+    ))}
+  </div>
 </div>
-
-                <p className="text-sm text-gray-500">
-                  Selezionati: {selectedDestinatari.length}
-                </p>
-              </div>
-
-              <div className="max-h-[170px] overflow-y-auto rounded-md border p-2">
-                {utentiFiltrati.map((utente) => (
-                  <label
-                    key={utente.id}
-                    className="flex cursor-pointer items-center gap-2 border-b py-2 text-sm hover:bg-gray-50"
-                  >
-                    <Checkbox
-                      checked={selectedDestinatari.includes(utente.id)}
-                      onCheckedChange={() => handleToggleUtente(utente.id)}
-                    />
-
-                    <span>
-                      {utente.nome} {utente.cognome}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </div>
 
             <div className="space-y-2">
               <Label>Oggetto</Label>
