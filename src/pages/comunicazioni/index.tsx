@@ -107,6 +107,8 @@ export default function ComunicazioniPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
 
+  const [simulazioneInvio, setSimulazioneInvio] = useState(true);
+
   const [comunicazioni, setComunicazioni] = useState<Comunicazione[]>([]);
   const [clienti, setClienti] = useState<Cliente[]>([]);
   const [utenti, setUtenti] = useState<Utente[]>([]);
@@ -491,6 +493,46 @@ if (session?.user?.email) {
   }
 
   microsoftConnectionId = utenteRow?.microsoft_connection_id || undefined;
+}
+
+      if (simulazioneInvio) {
+  const tipoInvioReale =
+    formData.tipo === "scadenze" ? "singola" : formData.tipo;
+
+  const destinatariPrevisti =
+    tipoInvioReale === "singola"
+      ? formData.destinatario_email.trim()
+        ? 1
+        : 0
+      : formData.tipo === "interna" && multiDestinatari
+        ? selectedDestinatari.length
+        : formData.tipo === "interna"
+          ? utenti.filter((u) => u.attivo).length
+          : formData.tipo === "newsletter"
+            ? clienti.filter(
+                (c) =>
+                  c.attivo &&
+                  c.flag_mail_attivo &&
+                  c.flag_mail_newsletter
+              ).length
+            : 0;
+
+  toast({
+    title: "Simulazione invio",
+    description: `Nessuna email inviata. Email previste: ${destinatariPrevisti}. Tipo invio reale: ${tipoInvioReale}.`,
+  });
+
+  console.log("SIMULAZIONE INVIO", {
+    tipoForm: formData.tipo,
+    tipoInvioReale,
+    destinatariPrevisti,
+    destinatarioEmail: formData.destinatario_email,
+    destinatarioId: formData.destinatario_id,
+    oggetto: formData.oggetto,
+  });
+
+  setSending(false);
+  return;
 }
 
 const emailResult = await emailService.sendComunicazioneEmail({
@@ -1201,7 +1243,18 @@ setContattiResults([]);
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4">
+<div className="flex items-center gap-2 rounded-md border bg-yellow-50 p-3">
+  <Checkbox
+    id="simulazioneInvio"
+    checked={simulazioneInvio}
+    onCheckedChange={(checked) => setSimulazioneInvio(!!checked)}
+  />
+  <Label htmlFor="simulazioneInvio" className="cursor-pointer">
+    Modalità simulazione: non inviare email reali
+  </Label>
+</div>
+
+<div className="flex justify-end gap-3 pt-4">
                <Button
   type="button"
   variant="outline"
