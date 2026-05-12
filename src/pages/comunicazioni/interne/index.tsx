@@ -131,6 +131,14 @@ export default function ComunicazioniInternePage() {
     setSelectedDestinatari([]);
   };
 
+  const handleSelectBySettore = (settore: string) => {
+  const ids = utenti
+    .filter((u) => String((u as any).settore || "").toLowerCase() === settore)
+    .map((u) => u.id);
+
+  setSelectedDestinatari(ids);
+};
+
   const handleSubmit = async () => {
     try {
       if (!formData.oggetto || !formData.messaggio) {
@@ -254,25 +262,27 @@ export default function ComunicazioniInternePage() {
                   placeholder="Cerca utenti..."
                 />
 
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSelectAll}
-                  >
-                    Seleziona tutti
-                  </Button>
+               <div className="flex flex-wrap gap-2">
+  <Button type="button" variant="outline" size="sm" onClick={() => handleSelectBySettore("fiscale")}>
+    Fiscale
+  </Button>
 
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleClearAll}
-                  >
-                    Deseleziona
-                  </Button>
-                </div>
+  <Button type="button" variant="outline" size="sm" onClick={() => handleSelectBySettore("lavoro")}>
+    Lavoro
+  </Button>
+
+  <Button type="button" variant="outline" size="sm" onClick={() => handleSelectBySettore("consulenza")}>
+    Consulenza
+  </Button>
+
+  <Button type="button" variant="outline" size="sm" onClick={handleSelectAll}>
+    Tutti
+  </Button>
+
+  <Button type="button" variant="outline" size="sm" onClick={handleClearAll}>
+    Deseleziona
+  </Button>
+</div>
 
                 <p className="text-sm text-gray-500">
                   Selezionati: {selectedDestinatari.length}
