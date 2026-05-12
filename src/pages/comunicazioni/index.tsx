@@ -535,6 +535,12 @@ if (session?.user?.email) {
   return;
 }
 
+      console.log("INVIO REALE", {
+  tipo: formData.tipo,
+  destinatario_email: formData.destinatario_email,
+  destinatario_id: formData.destinatario_id,
+});
+      
 const emailResult = await emailService.sendComunicazioneEmail({
   tipo: formData.tipo === "scadenze" ? "singola" : formData.tipo,
   destinatarioId:
