@@ -31,6 +31,7 @@ type Dipendente = {
   centro_costo: string | null;
   codice_soggetto_paghe: string | null;
   numero_rapporto_paghe: string | null;
+  data_cessazione: string | null;
   attivo: boolean | null;
 };
 
@@ -129,26 +130,16 @@ setQualifiche(qualificheData ?? []);
       const { error } = await supabase
         .from('tbdipendenti')
         .update({
-          codice_ditta: dipendente.codice_ditta,
+         codice_ditta: dipendente.codice_ditta,
           codice_dipendente: dipendente.codice_dipendente,
-          matricola_paghe: dipendente.matricola_paghe,
-          codice_fiscale: dipendente.codice_fiscale,
-          orario_giornaliero: dipendente.orario_giornaliero,
-          ore_settimanali: dipendente.ore_settimanali,
-          giorni_lavorativi_settimana: dipendente.giorni_lavorativi_settimana,
-          percentuale_part_time: dipendente.percentuale_part_time,
-          qualifica: dipendente.qualifica,
-          qualifica_id: dipendente.qualifica_id,
-          livello: dipendente.livello,
-          tipo_contratto: dipendente.tipo_contratto,
-          sede_lavoro: dipendente.sede_lavoro,
-          centro_costo: dipendente.centro_costo,
-          attivo: dipendente.attivo,
           codice_soggetto_paghe: dipendente.codice_soggetto_paghe,
-          numero_rapporto_paghe: dipendente.numero_rapporto_paghe,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', dipendente.id);
+            numero_rapporto_paghe: dipendente.numero_rapporto_paghe,
+          data_cessazione: dipendente.data_cessazione || null,
+            orario_giornaliero: dipendente.orario_giornaliero,
+              attivo: dipendente.attivo,
+                  updated_at: new Date().toISOString(),
+                    })
+                  .eq('id', dipendente.id);
 
       if (error) throw error;
 
@@ -204,16 +195,10 @@ setQualifiche(qualificheData ?? []);
                       <th className="p-2 text-left">Cod. dip.</th>
                         <th className="p-2 text-left">Cod. sogg. paghe</th>
                         <th className="p-2 text-left">Num. rapp.</th>
-                        <th className="p-2 text-left">Matricola</th>
-                        <th className="p-2 text-left">Cod. fiscale</th>
+                        
                       <th className="p-2 text-left">Ore giorno</th>
-                      <th className="p-2 text-left">Ore sett.</th>
-                      <th className="p-2 text-left">Giorni sett.</th>
-                      <th className="p-2 text-left">% PT</th>
-                      <th className="p-2 text-left">Qualifica</th>
-                      <th className="p-2 text-left">Livello</th>
-                      <th className="p-2 text-left">Contratto</th>
-                      <th className="p-2 text-left">Centro costo</th>
+
+                      <th className="p-2 text-left">Data cessazione</th>
                       <th className="p-2 text-center">Attivo</th>
                       <th className="p-2 text-right">Azioni</th>
                     </tr>
@@ -265,64 +250,28 @@ setQualifiche(qualificheData ?? []);
   />
 </td>
 
-                        <td className="p-2">
-                          <Input value={dip.matricola_paghe ?? ''} onChange={(e) => updateField(dip.id, 'matricola_paghe', e.target.value)} />
-                        </td>
-
-                        <td className="p-2">
-                          <Input value={dip.codice_fiscale ?? ''} onChange={(e) => updateField(dip.id, 'codice_fiscale', e.target.value)} />
-                        </td>
-
+                      
                         <td className="p-2">
                           <Input type="number" step="0.25" value={dip.orario_giornaliero ?? 8} onChange={(e) => updateField(dip.id, 'orario_giornaliero', Number(e.target.value))} />
                         </td>
 
                         <td className="p-2">
-                          <Input type="number" step="0.25" value={dip.ore_settimanali ?? ''} onChange={(e) => updateField(dip.id, 'ore_settimanali', e.target.value ? Number(e.target.value) : null)} />
-                        </td>
-
-                        <td className="p-2">
-                          <Input type="number" value={dip.giorni_lavorativi_settimana ?? 5} onChange={(e) => updateField(dip.id, 'giorni_lavorativi_settimana', Number(e.target.value))} />
-                        </td>
-
-                        <td className="p-2">
-                          <Input type="number" step="0.01" value={dip.percentuale_part_time ?? 100} onChange={(e) => updateField(dip.id, 'percentuale_part_time', Number(e.target.value))} />
-                        </td>
-
-                       <td className="p-2">
-  <select
-    value={dip.qualifica_id ?? ''}
-    onChange={(e) => updateField(dip.id, 'qualifica_id', e.target.value || null)}
-    className="h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
-  >
-    <option value="">-</option>
-    {qualifiche.map((qualifica) => (
-      <option key={qualifica.id} value={qualifica.id}>
-        {qualifica.codice} - {qualifica.descrizione}
-      </option>
-    ))}
-  </select>
-</td>
-
-                        <td className="p-2">
-                          <Input value={dip.livello ?? ''} onChange={(e) => updateField(dip.id, 'livello', e.target.value)} />
-                        </td>
-
-                        <td className="p-2">
-                          <Input value={dip.tipo_contratto ?? ''} onChange={(e) => updateField(dip.id, 'tipo_contratto', e.target.value)} />
-                        </td>
-
-                        <td className="p-2">
-                          <Input value={dip.centro_costo ?? ''} onChange={(e) => updateField(dip.id, 'centro_costo', e.target.value)} />
+                        <Input
+                        type="date"
+                        value={dip.data_cessazione ?? ''}
+                          onChange={(e) =>
+                            updateField(dip.id, 'data_cessazione', e.target.value || null)
+                          }
+                          />
                         </td>
 
                         <td className="p-2 text-center">
                         <input
-  type="checkbox"
-  checked={Boolean(dip.attivo)}
-  onChange={(e) => updateField(dip.id, 'attivo', e.target.checked)}
-  className="h-4 w-4"
-/>
+                          type="checkbox"
+                          checked={Boolean(dip.attivo)}
+                            onChange={(e) => updateField(dip.id, 'attivo', e.target.checked)}
+                          className="h-4 w-4"
+                        />
                         </td>
 
                         <td className="p-2 text-right">
