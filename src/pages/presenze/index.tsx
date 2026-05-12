@@ -37,24 +37,15 @@ type Dipendente = {
   id: string;
   studio_id: string;
   utente_id: string;
- codice_ditta: string | null;
-codice_dipendente: string | null;
-codice_soggetto_paghe: string | null;
-numero_rapporto_paghe: string | null;
-matricola_paghe: string | null;
+  codice_ditta: string | null;
+  codice_dipendente: string | null;
+  codice_soggetto_paghe: string | null;
+  numero_rapporto_paghe: string | null;
   nome: string | null;
   cognome: string | null;
   email: string | null;
-  codice_fiscale: string | null;
   orario_giornaliero: number | null;
-  ore_settimanali: number | null;
-  giorni_lavorativi_settimana: number | null;
-  percentuale_part_time: number | null;
-  qualifica: string | null;
-  livello: string | null;
-  tipo_contratto: string | null;
-  sede_lavoro: string | null;
-  centro_costo: string | null;
+  data_cessazione: string | null;
   attivo: boolean | null;
 };
 
@@ -213,29 +204,6 @@ function summarize(codes: string[]): RowSummary {
       permessi104Ore: 0,
     },
   );
-}
-
-function downloadCsv(filename: string, rows: string[][]) {
-  const csv = rows
-    .map((row) =>
-      row
-        .map((value) => {
-          const safeValue = String(value ?? '');
-          return `"${safeValue.replace(/"/g, '""')}"`;
-        })
-        .join(';'),
-    )
-    .join('\n');
-
-  const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
 }
 
 function escapeXml(value: string | number | null | undefined) {
@@ -445,30 +413,21 @@ const requiredOrder = [
      const dipendentiQuery = typedUser.responsabile_paghe
   ? supabase
       .from('tbdipendenti')
-      .select(`
-        id,
-        studio_id,
-        utente_id,
-        codice_ditta,
-      codice_dipendente,
-      codice_soggetto_paghe,
-      numero_rapporto_paghe,
-      matricola_paghe,
-        nome,
-        cognome,
-        email,
-        codice_fiscale,
-        orario_giornaliero,
-        ore_settimanali,
-        giorni_lavorativi_settimana,
-        percentuale_part_time,
-        qualifica,
-        livello,
-        tipo_contratto,
-        sede_lavoro,
-        centro_costo,
-        attivo
-      `)
+     .select(`
+  id,
+  studio_id,
+  utente_id,
+  codice_ditta,
+  codice_dipendente,
+  codice_soggetto_paghe,
+  numero_rapporto_paghe,
+  nome,
+  cognome,
+  email,
+  orario_giornaliero,
+  data_cessazione,
+  attivo
+`)
       .eq('studio_id', typedUser.studio_id)
       .eq('attivo', true)
       .order('cognome', { ascending: true })
@@ -476,27 +435,20 @@ const requiredOrder = [
 : supabase
     .from('tbdipendenti')
     .select(`
-      id,
-      studio_id,
-      utente_id,
-      codice_ditta,
-      codice_dipendente,
-      matricola_paghe,
-      nome,
-      cognome,
-      email,
-      codice_fiscale,
-      orario_giornaliero,
-      ore_settimanali,
-      giorni_lavorativi_settimana,
-      percentuale_part_time,
-      qualifica,
-      livello,
-      tipo_contratto,
-      sede_lavoro,
-      centro_costo,
-      attivo
-    `)
+  id,
+  studio_id,
+  utente_id,
+  codice_ditta,
+  codice_dipendente,
+  codice_soggetto_paghe,
+  numero_rapporto_paghe,
+  nome,
+  cognome,
+  email,
+  orario_giornaliero,
+  data_cessazione,
+  attivo
+`)
     .eq('studio_id', typedUser.studio_id)
     .eq('utente_id', typedUser.id)
     .eq('attivo', true);
@@ -675,67 +627,6 @@ const rows = editableDipendenti.flatMap((dipendente) =>
     }
   };
 
- const exportCsv = () => {
-  const header = [
-    'MESE',
-    MONTHS[monthIndex],
-  ];
-
-  const secondHeader = [
-    'ANNO',
-    String(year),
-  ];
-
-  const columnsHeader = [
-    'Codice dipendente',
-  'Matricola paghe',
-  'Codice fiscale',
-  'Orario giornaliero',
-    'Dipendente',
-    'Email',
-    ...days.map((day) => `${day.day}`),
-    'Giorni Pp',
-    'Giorni Ps',
-    'Ferie',
-    'Malattia',
-    'Festivi',
-    'Permessi ore',
-    'Permessi L.104 ore',
-  ];
-
-  const rows = dipendenti.map((dipendente) => {
-    const summary = getSummaryForEmployee(dipendente.utente_id);
-    
-   return [
-  dipendente.codice_dipendente ?? '',
-  dipendente.matricola_paghe ?? '',
-  dipendente.codice_fiscale ?? '',
-  String(dipendente.orario_giornaliero ?? 8),
-  getEmployeeName(dipendente),
-  dipendente.email ?? '',
-  ...days.map((day) => getCode(dipendente.utente_id, day)),
-  String(summary.pp),
-  String(summary.ps),
-  String(summary.ferie),
-  String(summary.malattia),
-  String(summary.festivi),
-  String(summary.permessiOre),
-  String(summary.permessi104Ore),
-];
-  });
-
-  downloadCsv(
-    `presenze_${year}_${pad2(monthIndex + 1)}.csv`,
-    [
-      header,
-      secondHeader,
-      [],
-      columnsHeader,
-      ...rows,
-    ],
-  );
-};
-
 const exportZucchettiXml = () => {
   const dipendentiConMovimenti = dipendenti
     .map((dipendente) => {
@@ -829,9 +720,7 @@ ${dipendentiConMovimenti}
             <Button variant="outline" onClick={loadData} disabled={loading || saving}>
               Aggiorna
             </Button>
-            <Button variant="outline" onClick={exportCsv} disabled={loading || dipendenti.length === 0}>
-              Export CSV
-            </Button>
+           
 <Button
   variant="outline"
   onClick={exportZucchettiXml}
