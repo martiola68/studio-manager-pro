@@ -269,6 +269,11 @@ function splitHoursToOreMinuti(hours: number) {
   };
 }
 
+function formatHoursMinutes(hours: number) {
+  const { ore, minuti } = splitHoursToOreMinuti(hours);
+  return `${ore}:${pad2(minuti)}h`;
+}
+
 function createXmlMovimento(date: string, giustificativo: string, hours: number) {
   const { ore, minuti, centesimi } = splitHoursToOreMinuti(hours);
 
@@ -655,7 +660,7 @@ const days = useMemo<DayInfo[]>(() => {
         throw new Error(
           `Limite permessi L.104 superato per ${getEmployeeName(
             overLimitEmployee,
-          )}: ${summary.permessi104Ore.toFixed(2)}h su massimo 24h mensili.`,
+         )}: ${formatHoursMinutes(summary.permessi104Ore)} su massimo 24:00h mensili.`,
         );
       }
 
@@ -1059,14 +1064,14 @@ ${dipendentiXml}
                           <TableCell className="text-center font-medium">{summary.malattia}</TableCell>
                           <TableCell className="text-center font-medium">{summary.festivi}</TableCell>
                           <TableCell className="text-center font-medium">
-                            {summary.permessiOre.toFixed(2)}h
+                          {formatHoursMinutes(summary.permessiOre)}
                           </TableCell>
                           <TableCell
                             className={`text-center font-medium ${
                               summary.permessi104Ore > 24 ? 'text-red-700' : ''
                             }`}
                           >
-                            {summary.permessi104Ore.toFixed(2)}h
+                            {formatHoursMinutes(summary.permessi104Ore)}
                           </TableCell>
                         </TableRow>
                       );
