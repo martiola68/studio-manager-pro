@@ -410,10 +410,10 @@ Cordiali saluti`;
   utenteEmail: string;
   societa: string;
 }) => {
-  const righe = params.messaggio
-    .split("\n")
-    .map((riga) => riga.trim())
-    .filter(Boolean)
+const righe = formData.messaggio
+  .split("\n")
+  .map((riga) => riga.trim())
+  .filter(Boolean);
     .filter((riga) => riga.toLowerCase() !== "cordiali saluti");
 
   return `
