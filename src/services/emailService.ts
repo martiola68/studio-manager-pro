@@ -983,20 +983,20 @@ const htmlContent = isHtmlMessage
 <head>
   <meta charset="UTF-8" />
 </head>
-<body style="margin:0; padding:0; background:#ffffff; font-family:Arial, Helvetica, sans-serif; color:#111827;">
+<body style="margin:0; padding:0; background:#ffffff; font-family:Aptos, Arial, sans-serif; font-size:11pt; color:#111827;">
   <div style="max-width:700px; margin:0 auto; padding:18px 20px;">
-    <div style="font-size:14px; line-height:1.45;">
+    <div style="font-family:Aptos, Arial, sans-serif; font-size:11pt; line-height:1.45;">
       ${data.messaggio
         .split("\n")
         .map((riga) => riga.trim())
         .filter(Boolean)
-        .map((riga) => `<p style="margin:0 0 8px 0;">${riga}</p>`)
+        .map((riga) => `<p style="margin:0 0 8px 0; font-family:Aptos, Arial, sans-serif; font-size:11pt;">${riga}</p>`)
         .join("")}
     </div>
 
     ${
       data.allegati && Array.isArray(data.allegati) && data.allegati.length > 0
-        ? `<p style="margin:14px 0 0 0; font-size:12px; color:#6b7280;">Allegati: ${data.allegati.length}</p>`
+        ? `<p style="margin:14px 0 0 0; font-family:Aptos, Arial, sans-serif; font-size:11pt; color:#6b7280;">Allegati: ${data.allegati.length}</p>`
         : ""
     }
   </div>
