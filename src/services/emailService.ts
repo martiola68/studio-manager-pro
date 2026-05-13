@@ -830,26 +830,36 @@ export async function sendComunicazioneEmail(
 
     let recipients: { email: string; nome: string }[] = [];
 
-    if (data.tipo === "singola" && data.destinatarioId) {
-      const { data: cliente, error } = await supabase
-        .from("tbclienti")
-        .select("email, ragione_sociale")
-        .eq("id", data.destinatarioId)
-        .eq("attivo", true)
-        .single();
+ if (data.tipo === "singola") {
+  if (data.destinatarioEmail?.trim()) {
+    recipients.push({
+      email: data.destinatarioEmail.trim(),
+      nome: data.destinatarioEmail.trim(),
+    });
+  } else if (data.destinatarioId) {
+    const { data: cliente, error } = await supabase
+      .from("tbclienti")
+      .select("email, ragione_sociale")
+      .eq("id", data.destinatarioId)
+      .eq("attivo", true)
+      .single();
 
-      if (error || !cliente?.email) {
-        return {
-          success: false,
-          sent: 0,
-          failed: 0,
-          skipped: 0,
-          error: "Cliente non trovato o senza email",
-        };
-      }
+    if (error || !cliente?.email) {
+      return {
+        success: false,
+        sent: 0,
+        failed: 0,
+        skipped: 0,
+        error: "Cliente non trovato o senza email",
+      };
+    }
 
-      recipients.push({ email: cliente.email, nome: cliente.ragione_sociale });
-    } else if (data.tipo === "newsletter") {
+    recipients.push({
+      email: cliente.email,
+      nome: cliente.ragione_sociale,
+    });
+  }
+} else if (data.tipo === "newsletter") {
       const { data: clienti, error } = await supabase
         .from("tbclienti")
         .select("email, ragione_sociale")
