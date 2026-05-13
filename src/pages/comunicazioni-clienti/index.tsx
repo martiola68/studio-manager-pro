@@ -357,6 +357,40 @@ Cordiali saluti`;
     }));
   };
 
+  const buildEmailClienteHtml = (params: {
+  cliente: string;
+  messaggio: string;
+}) => {
+  const righe = params.messaggio
+    .split("\n")
+    .map((riga) => riga.trim())
+    .filter(Boolean);
+
+  return `
+<div style="margin:0; padding:0; background:#ffffff; font-family:Arial, Helvetica, sans-serif; color:#111827;">
+  <div style="max-width:720px; margin:0 auto; padding:24px 20px;">
+    <div style="border-bottom:1px solid #e5e7eb; padding-bottom:14px; margin-bottom:22px;">
+      <div style="font-size:18px; font-weight:700; color:#111827;">
+        Comunicazione Studio
+      </div>
+      <div style="font-size:13px; color:#6b7280; margin-top:4px;">
+        ${params.cliente || "Cliente"}
+      </div>
+    </div>
+
+    <div style="font-size:15px; line-height:1.7;">
+      ${righe
+        .map(
+          (riga) =>
+            `<p style="margin:0 0 14px 0;">${riga}</p>`
+        )
+        .join("")}
+    </div>
+  </div>
+</div>
+`.trim();
+};
+
   const handleSubmit = async () => {
     try {
       if (!formData.destinatario_email || !formData.oggetto || !formData.messaggio) {
@@ -387,14 +421,19 @@ Cordiali saluti`;
         data_invio: new Date().toISOString(),
       });
 
-      await emailService.sendComunicazioneEmail({
-        tipo: "singola",
-        destinatarioId: formData.destinatario_id,
-        destinatarioEmail: formData.destinatario_email,
-        oggetto: formData.oggetto,
-        messaggio: formData.messaggio,
-        allegati,
-      });
+    const messaggioHtml = buildEmailClienteHtml({
+  cliente: formData.destinatario_cliente,
+  messaggio: formData.messaggio,
+});
+
+await emailService.sendComunicazioneEmail({
+  tipo: "singola",
+  destinatarioId: formData.destinatario_id,
+  destinatarioEmail: formData.destinatario_email,
+  oggetto: formData.oggetto,
+  messaggio: messaggioHtml,
+  allegati,
+});
 
       toast({
         title: "Comunicazione inviata",
