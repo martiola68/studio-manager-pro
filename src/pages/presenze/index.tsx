@@ -105,7 +105,6 @@ function getBrowserSupabaseClient() {
   return getSupabaseClient() as unknown as LooseSupabaseClient;
 }
 
-const DEFAULT_WORKDAY_CODE = 'Pp';
 const DEFAULT_NON_WORKDAY_CODE = 'N';
 
 const MIN_YEAR = 2026;
@@ -136,11 +135,6 @@ const PRESENCE_COLORS: Record<string, string> = {
   Ps: 'bg-violet-100 text-violet-800 border-violet-200',
 };
 
-function getHolidayCellClass(code: string) {
-  if (code === 'N') return 'bg-lime-300 text-lime-950 border-lime-500 font-semibold';
-  return getCellClass(code);
-}
-
 function pad2(value: number) {
   return String(value).padStart(2, '0');
 }
@@ -158,14 +152,42 @@ function getEmployeeName(user: Utente | Dipendente) {
   return fullName || user.email || 'Dipendente';
 }
 
+function isPermessoCode(code: string) {
+  return /^P\d+(\.\d+)?$/.test(code);
+}
+
+function isPermesso104Code(code: string) {
+  return /^P\d+(\.\d+)?\.104$/.test(code);
+}
+
+function getPermessoHours(code: string) {
+  return Number(code.replace('P', '').replace('.104', ''));
+}
+
+function formatHours(value: number) {
+  return Number.isInteger(value) ? String(value) : String(value);
+}
+
+function buildQuarterHourCodes(suffix = '') {
+  const codes: string[] = [];
+
+  for (let minutes = 15; minutes <= 8 * 60; minutes += 15) {
+    const hours = minutes / 60;
+    codes.push(`P${formatHours(hours)}${suffix}`);
+  }
+
+  return codes;
+}
+
 function getCellClass(code: string) {
-  if (/^P[1-8]\.104$/.test(code)) return 'bg-pink-100 text-pink-800 border-pink-200';
-  if (/^P[1-8]$/.test(code)) return 'bg-orange-100 text-orange-800 border-orange-200';
+  if (isPermesso104Code(code)) return 'bg-pink-100 text-pink-800 border-pink-200';
+  if (isPermessoCode(code)) return 'bg-orange-100 text-orange-800 border-orange-200';
   return PRESENCE_COLORS[code] ?? 'bg-white text-gray-800 border-gray-200';
 }
 
-function getDefaultCode(day: DayInfo) {
-  return day.isWeekend || day.isHoliday ? DEFAULT_NON_WORKDAY_CODE : DEFAULT_WORKDAY_CODE;
+function getHolidayCellClass(code: string) {
+  if (code === 'N') return 'bg-lime-300 text-lime-950 border-lime-500 font-semibold';
+  return getCellClass(code);
 }
 
 function getTodayKey() {
@@ -174,10 +196,7 @@ function getTodayKey() {
 }
 
 function isBeforeEnabledPeriod(year: number, monthIndex: number) {
-  return (
-    year < MIN_YEAR ||
-    (year === MIN_YEAR && monthIndex < MIN_MONTH_INDEX)
-  );
+  return year < MIN_YEAR || (year === MIN_YEAR && monthIndex < MIN_MONTH_INDEX);
 }
 
 function summarize(codes: string[]): RowSummary {
@@ -188,10 +207,9 @@ function summarize(codes: string[]): RowSummary {
       if (code === 'F') acc.ferie += 1;
       if (code === 'M') acc.malattia += 1;
       if (code === 'N') acc.festivi += 1;
-      if (/^P[1-8]$/.test(code)) acc.permessiOre += Number(code.replace('P', ''));
-      if (/^P[1-8]\.104$/.test(code)) {
-        acc.permessi104Ore += Number(code.replace('P', '').replace('.104', ''));
-      }
+      if (isPermessoCode(code)) acc.permessiOre += getPermessoHours(code);
+      if (isPermesso104Code(code)) acc.permessi104Ore += getPermessoHours(code);
+
       return acc;
     },
     {
@@ -220,12 +238,8 @@ function getPresenceHours(code: string, dailyHours: number) {
     return dailyHours;
   }
 
-  if (/^P[1-8]$/.test(code)) {
-    return Number(code.replace('P', ''));
-  }
-
-  if (/^P[1-8]\.104$/.test(code)) {
-    return Number(code.replace('P', '').replace('.104', ''));
+  if (isPermessoCode(code) || isPermesso104Code(code)) {
+    return getPermessoHours(code);
   }
 
   return 0;
@@ -235,16 +249,17 @@ function getXmlGiustificativo(code: string) {
   if (code === 'Pp' || code === 'Ps') return '01';
   if (code === 'F') return 'FE';
   if (code === 'M') return 'MA';
-  if (/^P[1-8]$/.test(code)) return 'RL';
-  if (/^P[1-8]\.104$/.test(code)) return 'PG';
+  if (isPermessoCode(code)) return 'RL';
+  if (isPermesso104Code(code)) return 'PG';
 
   return null;
 }
 
 function splitHoursToOreMinuti(hours: number) {
   const safeHours = Math.max(0, hours || 0);
-  const ore = Math.floor(safeHours);
-  const minuti = Math.round((safeHours - ore) * 60);
+  const totalMinutes = Math.round(safeHours * 60);
+  const ore = Math.floor(totalMinutes / 60);
+  const minuti = totalMinutes % 60;
   const centesimi = Math.round((minuti / 60) * 100);
 
   return {
@@ -269,7 +284,6 @@ function createXmlMovimento(date: string, giustificativo: string, hours: number)
       </Movimento>`;
 }
 
-
 function downloadXml(filename: string, content: string) {
   const blob = new Blob([content], { type: 'application/xml;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
@@ -291,7 +305,7 @@ export default function PresenzePage() {
   const [currentUser, setCurrentUser] = useState<Utente | null>(null);
   const [codici, setCodici] = useState<CodicePresenza[]>([]);
   const [festivita, setFestivita] = useState<Festivita[]>([]);
- const [dipendenti, setDipendenti] = useState<Dipendente[]>([]);
+  const [dipendenti, setDipendenti] = useState<Dipendente[]>([]);
   const [values, setValues] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -300,6 +314,7 @@ export default function PresenzePage() {
   const [accessDenied, setAccessDenied] = useState(false);
 
   const startDate = useMemo(() => toDateKey(year, monthIndex, 1), [year, monthIndex]);
+
   const endDate = useMemo(
     () => toDateKey(year, monthIndex, getDaysInMonth(year, monthIndex)),
     [year, monthIndex],
@@ -311,13 +326,15 @@ export default function PresenzePage() {
     return map;
   }, [festivita]);
 
-  const days = useMemo<DayInfo[]>(() => {
+  const days = useMemo<DayInfo[]>((() => {
     const totalDays = getDaysInMonth(year, monthIndex);
+
     return Array.from({ length: totalDays }, (_, index) => {
       const day = index + 1;
       const date = toDateKey(year, monthIndex, day);
       const weekday = new Date(year, monthIndex, day).getDay();
       const holiday = holidaysByDate.get(date);
+
       return {
         date,
         day,
@@ -331,39 +348,53 @@ export default function PresenzePage() {
 
   const allowedCodes = useMemo(() => {
     const withoutOldP = codici.filter((item) => item.codice !== 'P');
-const requiredOrder = [
-  'Pp',
-  'Ps',
-  'F',
-  'M',
-  'N',
-  'P1',
-  'P2',
-  'P3',
-  'P4',
-  'P5',
-  'P6',
-  'P7',
-  'P8',
-  'P1.104',
-  'P2.104',
-  'P3.104',
-  'P4.104',
-  'P5.104',
-  'P6.104',
-  'P7.104',
-  'P8.104',
-];
-    return [...withoutOldP].sort((a, b) => {
+
+    const quarterHourPermessi = buildQuarterHourCodes();
+    const quarterHourPermessi104 = buildQuarterHourCodes('.104');
+
+    const requiredOrder = [
+      'Pp',
+      'Ps',
+      'F',
+      'M',
+      'N',
+      ...quarterHourPermessi,
+      ...quarterHourPermessi104,
+    ];
+
+    const generatedCodes: CodicePresenza[] = requiredOrder.map((codice, index) => ({
+      codice,
+      descrizione: null,
+      tipo:
+        codice.includes('.104')
+          ? 'permesso_104'
+          : codice.startsWith('P') && codice !== 'Pp' && codice !== 'Ps'
+            ? 'permesso'
+            : null,
+      ordine: index,
+      attivo: true,
+    }));
+
+    const mergedCodes = [
+      ...generatedCodes,
+      ...withoutOldP.filter(
+        (item) => !generatedCodes.some((generated) => generated.codice === item.codice),
+      ),
+    ];
+
+    return mergedCodes.sort((a, b) => {
       const ai = requiredOrder.indexOf(a.codice);
       const bi = requiredOrder.indexOf(b.codice);
-      if (ai !== -1 || bi !== -1) return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+
+      if (ai !== -1 || bi !== -1) {
+        return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+      }
+
       return (a.ordine ?? 999) - (b.ordine ?? 999) || a.codice.localeCompare(b.codice);
     });
   }, [codici]);
 
   const isResponsabilePaghe = Boolean(currentUser?.responsabile_paghe);
-
   const isLockedPeriod = isBeforeEnabledPeriod(year, monthIndex);
 
   const loadData = useCallback(async () => {
@@ -398,19 +429,19 @@ const requiredOrder = [
       if (!user) throw new Error('Utente non trovato in tbutenti.');
 
       const typedUser = user;
-       const canAccessPresenze =
-          typedUser.tipo_rapporto === 'Dipendente' ||
-          typedUser.responsabile_paghe === true;
 
-          if (!canAccessPresenze) {
-            setAccessDenied(true);
-            setDipendenti([]);
-            setValues({});
-            return;
-          }
+      const canAccessPresenze =
+        typedUser.tipo_rapporto === 'Dipendente' || typedUser.responsabile_paghe === true;
+
+      if (!canAccessPresenze) {
+        setAccessDenied(true);
+        setCurrentUser(typedUser);
+        setDipendenti([]);
+        setValues({});
+        return;
+      }
 
       setAccessDenied(false);
-
       setCurrentUser(typedUser);
 
       const codiciQuery = supabase
@@ -426,49 +457,49 @@ const requiredOrder = [
         .lte('data_festivita', endDate)
         .in('tipo', ['nazionale', 'aziendale']);
 
-     const dipendentiQuery = typedUser.responsabile_paghe
-  ? supabase
-      .from('tbdipendenti')
-     .select(`
-  id,
-  studio_id,
-  utente_id,
-  codice_ditta,
-  codice_dipendente,
-  codice_soggetto_paghe,
-  numero_rapporto_paghe,
-  nome,
-  cognome,
-  email,
-  orario_giornaliero,
-  data_cessazione,
-  attivo
-`)
-      .eq('studio_id', typedUser.studio_id)
-      .eq('attivo', true)
-      .order('cognome', { ascending: true })
-      .order('nome', { ascending: true })
-: supabase
-    .from('tbdipendenti')
-    .select(`
-  id,
-  studio_id,
-  utente_id,
-  codice_ditta,
-  codice_dipendente,
-  codice_soggetto_paghe,
-  numero_rapporto_paghe,
-  nome,
-  cognome,
-  email,
-  orario_giornaliero,
-  data_cessazione,
-  attivo
-`)
-    .eq('studio_id', typedUser.studio_id)
-    .eq('utente_id', typedUser.id)
-    .eq('attivo', true);
-      
+      const dipendentiQuery = typedUser.responsabile_paghe
+        ? supabase
+            .from('tbdipendenti')
+            .select(`
+              id,
+              studio_id,
+              utente_id,
+              codice_ditta,
+              codice_dipendente,
+              codice_soggetto_paghe,
+              numero_rapporto_paghe,
+              nome,
+              cognome,
+              email,
+              orario_giornaliero,
+              data_cessazione,
+              attivo
+            `)
+            .eq('studio_id', typedUser.studio_id)
+            .eq('attivo', true)
+            .order('cognome', { ascending: true })
+            .order('nome', { ascending: true })
+        : supabase
+            .from('tbdipendenti')
+            .select(`
+              id,
+              studio_id,
+              utente_id,
+              codice_ditta,
+              codice_dipendente,
+              codice_soggetto_paghe,
+              numero_rapporto_paghe,
+              nome,
+              cognome,
+              email,
+              orario_giornaliero,
+              data_cessazione,
+              attivo
+            `)
+            .eq('studio_id', typedUser.studio_id)
+            .eq('utente_id', typedUser.id)
+            .eq('attivo', true);
+
       const [codiciResult, festivitaResult, dipendentiResult] = (await Promise.all([
         codiciQuery,
         festivitaQuery,
@@ -484,15 +515,14 @@ const requiredOrder = [
       if (dipendentiResult.error) throw dipendentiResult.error;
 
       const loadedDipendenti = (dipendentiResult.data ?? []) as Dipendente[];
+      const loadedFestivita = (festivitaResult.data ?? []) as Festivita[];
+
       setCodici((codiciResult.data ?? []) as CodicePresenza[]);
-      setFestivita((festivitaResult.data ?? []) as Festivita[]);
+      setFestivita(loadedFestivita);
       setDipendenti(loadedDipendenti);
 
-      console.log('PRESENZE typedUser', typedUser);
-      console.log('PRESENZE dipendentiResult', dipendentiResult);
-      console.log('PRESENZE loadedDipendenti', loadedDipendenti);
-
       const employeeIds = loadedDipendenti.map((item) => item.utente_id);
+
       if (employeeIds.length === 0) {
         setValues({});
         return;
@@ -509,11 +539,12 @@ const requiredOrder = [
       if (presenzeError) throw presenzeError;
 
       const loadedValues: Record<string, string> = {};
+
       (presenzeData ?? []).forEach((presence: Presenza) => {
-        loadedValues[`${presence.utente_id}|${presence.data_presenza}`] = presence.codice_presenza;
+        loadedValues[`${presence.utente_id}|${presence.data_presenza}`] =
+          presence.codice_presenza;
       });
 
-      const loadedFestivita = (festivitaResult.data ?? []) as Festivita[];
       const loadedHolidaysByDate = new Map<string, Festivita>();
       loadedFestivita.forEach((item) => loadedHolidaysByDate.set(item.data_festivita, item));
 
@@ -540,17 +571,16 @@ const requiredOrder = [
         monthDaysForDefaults.forEach((day) => {
           const key = `${dipendente.utente_id}|${day.date}`;
 
-          // Default automatico solo per i giorni già maturati fino a oggi.
-          // Se esiste già una presenza salvata/modificata, quella prevale sempre.
-       if (!loadedValues[key] && day.date <= todayKey && (day.isWeekend || day.isHoliday)) {
-          loadedValues[key] = DEFAULT_NON_WORKDAY_CODE;
+          if (!loadedValues[key] && day.date <= todayKey && (day.isWeekend || day.isHoliday)) {
+            loadedValues[key] = DEFAULT_NON_WORKDAY_CODE;
           }
         });
       });
 
       setValues(loadedValues);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Errore durante il caricamento delle presenze.';
+      const message =
+        err instanceof Error ? err.message : 'Errore durante il caricamento delle presenze.';
       setError(message);
     } finally {
       setLoading(false);
@@ -561,47 +591,47 @@ const requiredOrder = [
     loadData();
   }, [loadData]);
 
-const handleChange = (utenteId: string, date: string, code: string) => {
-  if (!canEditEmployee(utenteId)) return;
+  const canEditEmployee = (utenteId: string) => {
+    return currentUser?.id === utenteId;
+  };
 
-  setSuccess(null);
-  setValues((prev) => ({ ...prev, [`${utenteId}|${date}`]: code }));
-};
+  const handleChange = (utenteId: string, date: string, code: string) => {
+    if (!canEditEmployee(utenteId)) return;
 
-const getCode = (utenteId: string, day: DayInfo) => {
-  return values[`${utenteId}|${day.date}`] ?? '';
-};
+    setSuccess(null);
+    setValues((prev) => ({ ...prev, [`${utenteId}|${date}`]: code }));
+  };
+
+  const getCode = (utenteId: string, day: DayInfo) => {
+    return values[`${utenteId}|${day.date}`] ?? '';
+  };
 
   const getSummaryForEmployee = (utenteId: string) => {
     return summarize(days.map((day) => getCode(utenteId, day)));
   };
 
-  const canEditEmployee = (utenteId: string) => {
-  return currentUser?.id === utenteId;
-  };
-
   const validateRequiredWorkdays = () => {
-  const editableDipendenti = dipendenti.filter((dipendente) =>
-    canEditEmployee(dipendente.utente_id),
-  );
+    const editableDipendenti = dipendenti.filter((dipendente) =>
+      canEditEmployee(dipendente.utente_id),
+    );
 
-  for (const dipendente of editableDipendenti) {
-    const missingDays = days.filter((day) => {
-      if (day.isWeekend || day.isHoliday) return false;
+    for (const dipendente of editableDipendenti) {
+      const missingDays = days.filter((day) => {
+        if (day.isWeekend || day.isHoliday) return false;
 
-      const code = getCode(dipendente.utente_id, day);
-      return !code;
-    });
+        const code = getCode(dipendente.utente_id, day);
+        return !code;
+      });
 
-    if (missingDays.length > 0) {
-      throw new Error(
-        `Compila tutti i giorni lavorativi per ${getEmployeeName(dipendente)}. Giorni mancanti: ${missingDays
-          .map((day) => day.day)
-          .join(', ')}.`,
-      );
+      if (missingDays.length > 0) {
+        throw new Error(
+          `Compila tutti i giorni lavorativi per ${getEmployeeName(
+            dipendente,
+          )}. Giorni mancanti: ${missingDays.map((day) => day.day).join(', ')}.`,
+        );
+      }
     }
-  }
-};
+  };
 
   const saveMonth = async () => {
     if (!currentUser) return;
@@ -614,22 +644,26 @@ const getCode = (utenteId: string, day: DayInfo) => {
 
     try {
       validateRequiredWorkdays();
+
       const overLimitEmployee = dipendenti.find((dipendente) => {
-  const summary = getSummaryForEmployee(dipendente.utente_id);
-  return summary.permessi104Ore > 24;
-});
+        const summary = getSummaryForEmployee(dipendente.utente_id);
+        return summary.permessi104Ore > 24;
+      });
 
-if (overLimitEmployee) {
-  const summary = getSummaryForEmployee(overLimitEmployee.utente_id);
-  throw new Error(
-    `Limite permessi L.104 superato per ${getEmployeeName(overLimitEmployee)}: ${summary.permessi104Ore}h su massimo 24h mensili.`,
-  );
-}
+      if (overLimitEmployee) {
+        const summary = getSummaryForEmployee(overLimitEmployee.utente_id);
+        throw new Error(
+          `Limite permessi L.104 superato per ${getEmployeeName(
+            overLimitEmployee,
+          )}: ${summary.permessi104Ore.toFixed(2)}h su massimo 24h mensili.`,
+        );
+      }
+
       const editableDipendenti = dipendenti.filter((dipendente) =>
-  canEditEmployee(dipendente.utente_id)
-);
+        canEditEmployee(dipendente.utente_id),
+      );
 
-const rows = editableDipendenti.flatMap((dipendente) =>
+      const rows = editableDipendenti.flatMap((dipendente) =>
         days
           .map((day) => {
             const codicePresenza = getCode(dipendente.utente_id, day);
@@ -660,122 +694,113 @@ const rows = editableDipendenti.flatMap((dipendente) =>
 
       setSuccess('Presenze del mese salvate correttamente.');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Errore durante il salvataggio delle presenze.';
+      const message =
+        err instanceof Error ? err.message : 'Errore durante il salvataggio delle presenze.';
       setError(message);
     } finally {
       setSaving(false);
     }
   };
 
-const exportZucchettiXml = () => {
-  if (!isResponsabilePaghe) {
-    setError('Export XML Paghe disponibile solo per i responsabili paghe.');
-    return;
-  }
+  const exportZucchettiXml = () => {
+    if (!isResponsabilePaghe) {
+      setError('Export XML Paghe disponibile solo per i responsabili paghe.');
+      return;
+    }
 
-  const dipendentiConCodici = dipendenti.filter((dipendente) => {
-    const codiceDitta = dipendente.codice_ditta?.trim();
-    const codiceDipendente =
-      dipendente.codice_soggetto_paghe?.trim() ||
-      dipendente.codice_dipendente?.trim();
+    const dipendentiConCodici = dipendenti.filter((dipendente) => {
+      const codiceDitta = dipendente.codice_ditta?.trim();
+      const codiceDipendente =
+        dipendente.codice_soggetto_paghe?.trim() || dipendente.codice_dipendente?.trim();
 
-    return Boolean(codiceDitta && codiceDipendente);
-  });
+      return Boolean(codiceDitta && codiceDipendente);
+    });
 
-  if (dipendentiConCodici.length === 0) {
-    setError(
-      'Nessun dipendente esportabile. Verifica codice ditta e codice dipendente/soggetto paghe.',
+    if (dipendentiConCodici.length === 0) {
+      setError(
+        'Nessun dipendente esportabile. Verifica codice ditta e codice dipendente/soggetto paghe.',
+      );
+      return;
+    }
+
+    const dipendentiPerAzienda = dipendentiConCodici.reduce<Record<string, Dipendente[]>>(
+      (acc, dipendente) => {
+        const codiceDitta = dipendente.codice_ditta?.trim() || '';
+        if (!acc[codiceDitta]) acc[codiceDitta] = [];
+        acc[codiceDitta].push(dipendente);
+        return acc;
+      },
+      {},
     );
-    return;
-  }
 
-  const dipendentiPerAzienda = dipendentiConCodici.reduce<Record<string, Dipendente[]>>(
-    (acc, dipendente) => {
-      const codiceDitta = dipendente.codice_ditta?.trim() || '';
-      if (!acc[codiceDitta]) acc[codiceDitta] = [];
-      acc[codiceDitta].push(dipendente);
-      return acc;
-    },
-    {},
-  );
+    Object.entries(dipendentiPerAzienda).forEach(([codiceDitta, dipendentiAzienda]) => {
+      const dipendentiXml = dipendentiAzienda
+        .map((dipendente) => {
+          const codiceDipendente =
+            dipendente.codice_soggetto_paghe?.trim() ||
+            dipendente.codice_dipendente?.trim() ||
+            '';
 
-  Object.entries(dipendentiPerAzienda).forEach(([codiceDitta, dipendentiAzienda]) => {
-    const dipendentiXml = dipendentiAzienda
-      .map((dipendente) => {
-        const codiceDipendente =
-          dipendente.codice_soggetto_paghe?.trim() ||
-          dipendente.codice_dipendente?.trim() ||
-          '';
+          const dailyHours = Number(dipendente.orario_giornaliero ?? 8);
 
-        const dailyHours = Number(dipendente.orario_giornaliero ?? 8);
+          const movimenti = days
+            .flatMap((day) => {
+              let code = getCode(dipendente.utente_id, day);
 
-        const movimenti = days
-          .flatMap((day) => {
-            const savedCode = getCode(dipendente.utente_id, day);
-
-            let code = savedCode;
-
-            if (!code && (day.isWeekend || day.isHoliday)) {
-              code = DEFAULT_NON_WORKDAY_CODE;
-            }
-
-            if (!code) return [];
-
-            const movements: string[] = [];
-
-            const isPermesso = /^P[1-8]$/.test(code);
-            const isPermesso104 = /^P[1-8]\.104$/.test(code);
-
-            if (isPermesso || isPermesso104) {
-              const orePermesso = getPresenceHours(code, dailyHours);
-              const oreLavorate = Math.max(0, dailyHours - orePermesso);
-
-              if (oreLavorate > 0) {
-                movements.push(createXmlMovimento(day.date, '01', oreLavorate));
+              if (!code && (day.isWeekend || day.isHoliday)) {
+                code = DEFAULT_NON_WORKDAY_CODE;
               }
 
-              movements.push(
-                createXmlMovimento(
-                  day.date,
-                  isPermesso104 ? 'PG' : 'RL',
-                  orePermesso,
-                ),
-              );
+              if (!code) return [];
+
+              const movements: string[] = [];
+              const isPermesso = isPermessoCode(code);
+              const isPermesso104 = isPermesso104Code(code);
+
+              if (isPermesso || isPermesso104) {
+                const orePermesso = getPresenceHours(code, dailyHours);
+                const oreLavorate = Math.max(0, dailyHours - orePermesso);
+
+                if (oreLavorate > 0) {
+                  movements.push(createXmlMovimento(day.date, '01', oreLavorate));
+                }
+
+                movements.push(
+                  createXmlMovimento(day.date, isPermesso104 ? 'PG' : 'RL', orePermesso),
+                );
+
+                return movements;
+              }
+
+              const giustificativo = getXmlGiustificativo(code);
+              if (!giustificativo) return [];
+
+              const hours = getPresenceHours(code, dailyHours);
+              movements.push(createXmlMovimento(day.date, giustificativo, hours));
 
               return movements;
-            }
+            })
+            .join('\n');
 
-            const giustificativo = getXmlGiustificativo(code);
-            if (!giustificativo) return [];
-
-            const hours = getPresenceHours(code, dailyHours);
-            movements.push(createXmlMovimento(day.date, giustificativo, hours));
-
-            return movements;
-          })
-          .join('\n');
-
-        return `  <Dipendente CodAziendaUfficiale="${escapeXml(codiceDitta)}" CodDipendenteUfficiale="${escapeXml(codiceDipendente)}">
+          return `  <Dipendente CodAziendaUfficiale="${escapeXml(
+            codiceDitta,
+          )}" CodDipendenteUfficiale="${escapeXml(codiceDipendente)}">
     <Movimenti GenerazioneAutomaticaDaTeorico="N">
 ${movimenti}
     </Movimenti>
   </Dipendente>`;
-      })
-      .join('\n');
+        })
+        .join('\n');
 
-    const xml = `<Fornitura>
+      const xml = `<Fornitura>
 ${dipendentiXml}
 </Fornitura>
 `;
 
-    downloadXml(
-      `presenze_paghe_${codiceDitta}_${year}_${pad2(monthIndex + 1)}.xml`,
-      xml,
-    );
-  });
-};
+      downloadXml(`presenze_paghe_${codiceDitta}_${year}_${pad2(monthIndex + 1)}.xml`, xml);
+    });
+  };
 
-  
   return (
     <>
       <Head>
@@ -790,43 +815,45 @@ ${dipendentiXml}
               Riepilogo operativo mensile per payroll, senza gestione saldi ferie o permessi.
             </p>
           </div>
-          
+
           <div className="flex flex-wrap items-center gap-2">
             {isResponsabilePaghe ? (
               <Badge variant="secondary">Responsabile paghe</Badge>
             ) : (
               <Badge variant="outline">Vista dipendente</Badge>
             )}
+
             <Button variant="outline" onClick={loadData} disabled={loading || saving}>
               Aggiorna
             </Button>
-           
-<Button
-  variant="outline"
-  onClick={exportZucchettiXml}
-  disabled={loading || dipendenti.length === 0 || !isResponsabilePaghe}
->
-  Export XML Paghe
-</Button>
-           <Button
-  onClick={saveMonth}
-  disabled={
-    loading ||
-    saving ||
-    isLockedPeriod ||
-    !dipendenti.some((dipendente) => canEditEmployee(dipendente.utente_id))
-  }
->
+
+            <Button
+              variant="outline"
+              onClick={exportZucchettiXml}
+              disabled={loading || dipendenti.length === 0 || !isResponsabilePaghe}
+            >
+              Export XML Paghe
+            </Button>
+
+            <Button
+              onClick={saveMonth}
+              disabled={
+                loading ||
+                saving ||
+                isLockedPeriod ||
+                !dipendenti.some((dipendente) => canEditEmployee(dipendente.utente_id))
+              }
+            >
               {saving ? 'Salvataggio...' : 'Salva mese'}
             </Button>
           </div>
         </div>
 
         {isLockedPeriod && (
-  <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-    La gestione presenze è attiva solo a partire da Aprile 2026.
-  </div>
-)}
+          <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            La gestione presenze è attiva solo a partire da Aprile 2026.
+          </div>
+        )}
 
         <Card>
           <CardHeader className="pb-3">
@@ -835,7 +862,9 @@ ${dipendentiXml}
           <CardContent>
             <div className="flex flex-wrap items-end gap-3">
               <div className="min-w-[180px]">
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Mese</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                  Mese
+                </label>
                 <Select value={String(monthIndex)} onValueChange={(value) => setMonthIndex(Number(value))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Seleziona mese" />
@@ -851,31 +880,47 @@ ${dipendentiXml}
               </div>
 
               <div className="w-[120px]">
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Anno</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                  Anno
+                </label>
                 <Select value={String(year)} onValueChange={(value) => setYear(Number(value))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Anno" />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: 7 }, (_, index) => now.getFullYear() - 3 + index).map((item) => (
-                      <SelectItem key={item} value={String(item)}>
-                        {item}
-                      </SelectItem>
-                    ))}
+                    {Array.from({ length: 7 }, (_, index) => now.getFullYear() - 3 + index).map(
+                      (item) => (
+                        <SelectItem key={item} value={String(item)}>
+                          {item}
+                        </SelectItem>
+                      ),
+                    )}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                <Badge className="border bg-green-100 text-green-800 hover:bg-green-100">Pp ufficio</Badge>
-                <Badge className="border bg-violet-100 text-violet-800 hover:bg-violet-100">Ps smart</Badge>
-                <Badge className="border bg-sky-100 text-sky-800 hover:bg-sky-100">F ferie</Badge>
-                <Badge className="border bg-red-100 text-red-800 hover:bg-red-100">M malattia</Badge>
-                <Badge className="border bg-gray-100 text-gray-700 hover:bg-gray-100">N non lavorativo</Badge>
-                <Badge className="border bg-orange-100 text-orange-800 hover:bg-orange-100">P1-P8 permessi</Badge>
+                <Badge className="border bg-green-100 text-green-800 hover:bg-green-100">
+                  Pp ufficio
+                </Badge>
+                <Badge className="border bg-violet-100 text-violet-800 hover:bg-violet-100">
+                  Ps smart
+                </Badge>
+                <Badge className="border bg-sky-100 text-sky-800 hover:bg-sky-100">
+                  F ferie
+                </Badge>
+                <Badge className="border bg-red-100 text-red-800 hover:bg-red-100">
+                  M malattia
+                </Badge>
+                <Badge className="border bg-gray-100 text-gray-700 hover:bg-gray-100">
+                  N non lavorativo
+                </Badge>
+                <Badge className="border bg-orange-100 text-orange-800 hover:bg-orange-100">
+                  P0.25-P8 permessi
+                </Badge>
                 <Badge className="border bg-pink-100 text-pink-800 hover:bg-pink-100">
-                  P1.104-P8.104 L.104
-                  </Badge>
+                  P0.25.104-P8.104 L.104
+                </Badge>
               </div>
             </div>
           </CardContent>
@@ -901,13 +946,17 @@ ${dipendentiXml}
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="py-8 text-center text-sm text-muted-foreground">Caricamento presenze...</div>
+              <div className="py-8 text-center text-sm text-muted-foreground">
+                Caricamento presenze...
+              </div>
             ) : accessDenied ? (
               <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-6 text-center text-sm text-amber-900">
                 Accesso non consentito: il modulo presenze è disponibile solo per utenti con rapporto Dipendente.
               </div>
             ) : dipendenti.length === 0 ? (
-              <div className="py-8 text-center text-sm text-muted-foreground">Nessun dipendente trovato.</div>
+              <div className="py-8 text-center text-sm text-muted-foreground">
+                Nessun dipendente trovato.
+              </div>
             ) : (
               <div className="w-full overflow-x-auto rounded-md border">
                 <Table className="min-w-max text-xs">
@@ -916,6 +965,7 @@ ${dipendentiXml}
                       <TableHead className="sticky left-0 z-20 w-[220px] bg-background shadow-sm">
                         Dipendente
                       </TableHead>
+
                       {days.map((day) => (
                         <TableHead
                           key={day.date}
@@ -929,12 +979,15 @@ ${dipendentiXml}
                           }`}
                         >
                           <div className="flex flex-col items-center leading-tight">
-                            <span className="text-[11px] uppercase">{WEEKDAYS_SHORT[day.weekday]}</span>
+                            <span className="text-[11px] uppercase">
+                              {WEEKDAYS_SHORT[day.weekday]}
+                            </span>
                             <span className="text-sm font-semibold">{day.day}</span>
                             {day.isHoliday && <span className="text-[10px]">fest.</span>}
                           </div>
                         </TableHead>
                       ))}
+
                       <TableHead className="w-[60px] text-center">Pp</TableHead>
                       <TableHead className="w-[60px] text-center">Ps</TableHead>
                       <TableHead className="w-[60px] text-center">F</TableHead>
@@ -962,12 +1015,22 @@ ${dipendentiXml}
 
                           {days.map((day) => {
                             const code = getCode(dipendente.utente_id, day);
+
                             return (
-                              <TableCell key={`${dipendente.utente_id}-${day.date}`} className="p-1 text-center">
-                               <select
+                              <TableCell
+                                key={`${dipendente.utente_id}-${day.date}`}
+                                className="p-1 text-center"
+                              >
+                                <select
                                   disabled={isLockedPeriod || !canEditEmployee(dipendente.utente_id)}
                                   value={code}
-                                  onChange={(event) => handleChange(dipendente.utente_id, day.date, event.target.value)}
+                                  onChange={(event) =>
+                                    handleChange(
+                                      dipendente.utente_id,
+                                      day.date,
+                                      event.target.value,
+                                    )
+                                  }
                                   title={day.holidayDescription}
                                   className={`h-8 w-[82px] rounded-md border px-2 text-xs outline-none ${
                                     code
@@ -995,13 +1058,15 @@ ${dipendentiXml}
                           <TableCell className="text-center font-medium">{summary.ferie}</TableCell>
                           <TableCell className="text-center font-medium">{summary.malattia}</TableCell>
                           <TableCell className="text-center font-medium">{summary.festivi}</TableCell>
-                          <TableCell className="text-center font-medium">{summary.permessiOre}h</TableCell>
+                          <TableCell className="text-center font-medium">
+                            {summary.permessiOre.toFixed(2)}h
+                          </TableCell>
                           <TableCell
                             className={`text-center font-medium ${
                               summary.permessi104Ore > 24 ? 'text-red-700' : ''
                             }`}
                           >
-                        {summary.permessi104Ore}h
+                            {summary.permessi104Ore.toFixed(2)}h
                           </TableCell>
                         </TableRow>
                       );
