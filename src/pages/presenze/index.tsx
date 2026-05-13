@@ -651,31 +651,30 @@ const exportZucchettiXml = () => {
           const hours = getPresenceHours(code, dailyHours);
           const { ore, minuti, centesimi } = splitHoursToOreMinuti(hours);
 
-          return `
-      <Movimento>
-        <CodGiustificativoRilPres>${escapeXml(giustificativo)}</CodGiustificativoRilPres>
-        <CodGiustificativoUfficiale>${escapeXml(giustificativo)}</CodGiustificativoUfficiale>
-        <Data>${escapeXml(day.date)}</Data>
-        <NumOre>${ore}</NumOre>
-        <NumMinuti>${minuti}</NumMinuti>
-        <NumMinutiInCentesimi>${centesimi}</NumMinutiInCentesimi>
-        <GiornoDiRiposo>N</GiornoDiRiposo>
-        <GiornoChiusuraStraordinari>N</GiornoChiusuraStraordinari>
-      </Movimento>`;
+          return `    <Movimento>
+      <CodGiustificativoRilPres>${escapeXml(giustificativo)}</CodGiustificativoRilPres>
+      <CodGiustificativoUfficiale>${escapeXml(giustificativo)}</CodGiustificativoUfficiale>
+      <Data>${escapeXml(day.date)}</Data>
+      <NumOre>${ore}</NumOre>
+      <NumMinuti>${pad2(minuti)}</NumMinuti>
+      <NumMinutiInCentesimi>${pad2(centesimi)}</NumMinutiInCentesimi>
+      <GiornoDiRiposo>N</GiornoDiRiposo>
+      <GiornoChiusuraStraordinari>N</GiornoChiusuraStraordinari>
+    </Movimento>`;
         })
         .filter(Boolean)
-        .join('');
+        .join('\n');
 
       if (!movimenti) return null;
 
-      return `
-  <Dipendente CodAziendaUfficiale="${escapeXml(codiceDitta)}" CodDipendenteUfficiale="${escapeXml(codiceDipendente)}">
-    <Movimenti GenerazioneAutomaticaDaTeorico="N">${movimenti}
+      return `  <Dipendente CodAziendaUfficiale="${escapeXml(codiceDitta)}" CodDipendenteUfficiale="${escapeXml(codiceDipendente)}">
+    <Movimenti GenerazioneAutomaticaDaTeorico="N">
+${movimenti}
     </Movimenti>
   </Dipendente>`;
     })
     .filter(Boolean)
-    .join('');
+    .join('\n');
 
   if (!dipendentiConMovimenti) {
     setError(
@@ -684,8 +683,9 @@ const exportZucchettiXml = () => {
     return;
   }
 
-const xml = `<?xml version="1.0" encoding="UTF-8"?>
+ const xml = `<Fornitura>
 ${dipendentiConMovimenti}
+</Fornitura>
 `;
 
   downloadXml(
