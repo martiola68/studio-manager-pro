@@ -492,6 +492,17 @@ await emailService.sendComunicazioneEmail({
   allegati,
 });
 
+      console.log("RISULTATO INVIO EMAIL CLIENTE", emailResult);
+
+if (!emailResult?.success) {
+  toast({
+    title: "Email non inviata",
+    description: emailResult?.error || "Errore sconosciuto durante l'invio",
+    variant: "destructive",
+  });
+  return;
+}
+
       toast({
         title: "Comunicazione inviata",
       });
