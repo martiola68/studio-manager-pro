@@ -615,28 +615,31 @@ const days = useMemo<DayInfo[]>(() => {
     return summarize(days.map((day) => getCode(utenteId, day)));
   };
 
-  const validateRequiredWorkdays = () => {
-    const editableDipendenti = dipendenti.filter((dipendente) =>
-      canEditEmployee(dipendente.utente_id),
-    );
+const validateRequiredWorkdays = () => {
+  const todayKey = getTodayKey();
 
-    for (const dipendente of editableDipendenti) {
-      const missingDays = days.filter((day) => {
-        if (day.isWeekend || day.isHoliday) return false;
+  const editableDipendenti = dipendenti.filter((dipendente) =>
+    canEditEmployee(dipendente.utente_id),
+  );
 
-        const code = getCode(dipendente.utente_id, day);
-        return !code;
-      });
+  for (const dipendente of editableDipendenti) {
+    const missingDays = days.filter((day) => {
+      if (day.date > todayKey) return false;
+      if (day.isWeekend || day.isHoliday) return false;
 
-      if (missingDays.length > 0) {
-        throw new Error(
-          `Compila tutti i giorni lavorativi per ${getEmployeeName(
-            dipendente,
-          )}. Giorni mancanti: ${missingDays.map((day) => day.day).join(', ')}.`,
-        );
-      }
+      const code = getCode(dipendente.utente_id, day);
+      return !code;
+    });
+
+    if (missingDays.length > 0) {
+      throw new Error(
+        `Compila tutti i giorni lavorativi fino a oggi per ${getEmployeeName(
+          dipendente,
+        )}. Giorni mancanti: ${missingDays.map((day) => day.day).join(', ')}.`,
+      );
     }
-  };
+  }
+};
 
   const saveMonth = async () => {
     if (!currentUser) return;
