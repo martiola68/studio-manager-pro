@@ -254,6 +254,22 @@ function splitHoursToOreMinuti(hours: number) {
   };
 }
 
+function createXmlMovimento(date: string, giustificativo: string, hours: number) {
+  const { ore, minuti, centesimi } = splitHoursToOreMinuti(hours);
+
+  return `      <Movimento>
+        <CodGiustificativoRilPres>${escapeXml(giustificativo)}</CodGiustificativoRilPres>
+        <CodGiustificativoUfficiale>${escapeXml(giustificativo)}</CodGiustificativoUfficiale>
+        <Data>${escapeXml(date)}</Data>
+        <NumOre>${ore}</NumOre>
+        <NumMinuti>${pad2(minuti)}</NumMinuti>
+        <NumMinutiInCentesimi>${pad2(centesimi)}</NumMinutiInCentesimi>
+        <GiornoDiRiposo>N</GiornoDiRiposo>
+        <GiornoChiusuraStraordinari>N</GiornoChiusuraStraordinari>
+      </Movimento>`;
+}
+
+
 function downloadXml(filename: string, content: string) {
   const blob = new Blob([content], { type: 'application/xml;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
@@ -526,8 +542,8 @@ const requiredOrder = [
 
           // Default automatico solo per i giorni già maturati fino a oggi.
           // Se esiste già una presenza salvata/modificata, quella prevale sempre.
-          if (!loadedValues[key] && day.date <= todayKey) {
-            loadedValues[key] = getDefaultCode(day);
+       if (!loadedValues[key] && day.date <= todayKey && (day.isWeekend || day.isHoliday)) {
+          loadedValues[key] = DEFAULT_NON_WORKDAY_CODE;
           }
         });
       });
@@ -564,6 +580,29 @@ const getCode = (utenteId: string, day: DayInfo) => {
   return currentUser?.id === utenteId;
   };
 
+  const validateRequiredWorkdays = () => {
+  const editableDipendenti = dipendenti.filter((dipendente) =>
+    canEditEmployee(dipendente.utente_id),
+  );
+
+  for (const dipendente of editableDipendenti) {
+    const missingDays = days.filter((day) => {
+      if (day.isWeekend || day.isHoliday) return false;
+
+      const code = getCode(dipendente.utente_id, day);
+      return !code;
+    });
+
+    if (missingDays.length > 0) {
+      throw new Error(
+        `Compila tutti i giorni lavorativi per ${getEmployeeName(dipendente)}. Giorni mancanti: ${missingDays
+          .map((day) => day.day)
+          .join(', ')}.`,
+      );
+    }
+  }
+};
+
   const saveMonth = async () => {
     if (!currentUser) return;
 
@@ -574,6 +613,7 @@ const getCode = (utenteId: string, day: DayInfo) => {
     setSuccess(null);
 
     try {
+      validateRequiredWorkdays();
       const overLimitEmployee = dipendenti.find((dipendente) => {
   const summary = getSummaryForEmployee(dipendente.utente_id);
   return summary.permessi104Ore > 24;
@@ -628,6 +668,11 @@ const rows = editableDipendenti.flatMap((dipendente) =>
   };
 
 const exportZucchettiXml = () => {
+  if (!isResponsabilePaghe) {
+    setError('Export XML Paghe disponibile solo per i responsabili paghe.');
+    return;
+  }
+
   const dipendentiConCodici = dipendenti.filter((dipendente) => {
     const codiceDitta = dipendente.codice_ditta?.trim();
     const codiceDipendente =
@@ -644,60 +689,92 @@ const exportZucchettiXml = () => {
     return;
   }
 
-  const dipendentiConMovimenti = dipendentiConCodici
-    .map((dipendente) => {
+  const dipendentiPerAzienda = dipendentiConCodici.reduce<Record<string, Dipendente[]>>(
+    (acc, dipendente) => {
       const codiceDitta = dipendente.codice_ditta?.trim() || '';
-      const codiceDipendente =
-        dipendente.codice_soggetto_paghe?.trim() ||
-        dipendente.codice_dipendente?.trim() ||
-        '';
+      if (!acc[codiceDitta]) acc[codiceDitta] = [];
+      acc[codiceDitta].push(dipendente);
+      return acc;
+    },
+    {},
+  );
 
-      const dailyHours = Number(dipendente.orario_giornaliero ?? 8);
+  Object.entries(dipendentiPerAzienda).forEach(([codiceDitta, dipendentiAzienda]) => {
+    const dipendentiXml = dipendentiAzienda
+      .map((dipendente) => {
+        const codiceDipendente =
+          dipendente.codice_soggetto_paghe?.trim() ||
+          dipendente.codice_dipendente?.trim() ||
+          '';
 
-      const movimenti = days
-        .map((day) => {
-          const savedCode = getCode(dipendente.utente_id, day);
-          const code = savedCode || getDefaultCode(day);
+        const dailyHours = Number(dipendente.orario_giornaliero ?? 8);
 
-          const giustificativo = getXmlGiustificativo(code);
+        const movimenti = days
+          .flatMap((day) => {
+            const savedCode = getCode(dipendente.utente_id, day);
 
-          if (!giustificativo) return null;
+            let code = savedCode;
 
-          const hours = getPresenceHours(code, dailyHours);
-          const { ore, minuti, centesimi } = splitHoursToOreMinuti(hours);
+            if (!code && (day.isWeekend || day.isHoliday)) {
+              code = DEFAULT_NON_WORKDAY_CODE;
+            }
 
-          return `      <Movimento>
-        <CodGiustificativoRilPres>${escapeXml(giustificativo)}</CodGiustificativoRilPres>
-        <CodGiustificativoUfficiale>${escapeXml(giustificativo)}</CodGiustificativoUfficiale>
-        <Data>${escapeXml(day.date)}</Data>
-        <NumOre>${ore}</NumOre>
-        <NumMinuti>${pad2(minuti)}</NumMinuti>
-        <NumMinutiInCentesimi>${pad2(centesimi)}</NumMinutiInCentesimi>
-        <GiornoDiRiposo>N</GiornoDiRiposo>
-        <GiornoChiusuraStraordinari>N</GiornoChiusuraStraordinari>
-      </Movimento>`;
-        })
-        .filter(Boolean)
-        .join('\n');
+            if (!code) return [];
 
-      return `  <Dipendente CodAziendaUfficiale="${escapeXml(codiceDitta)}" CodDipendenteUfficiale="${escapeXml(codiceDipendente)}">
+            const movements: string[] = [];
+
+            const isPermesso = /^P[1-8]$/.test(code);
+            const isPermesso104 = /^P[1-8]\.104$/.test(code);
+
+            if (isPermesso || isPermesso104) {
+              const orePermesso = getPresenceHours(code, dailyHours);
+              const oreLavorate = Math.max(0, dailyHours - orePermesso);
+
+              if (oreLavorate > 0) {
+                movements.push(createXmlMovimento(day.date, '01', oreLavorate));
+              }
+
+              movements.push(
+                createXmlMovimento(
+                  day.date,
+                  isPermesso104 ? 'PG' : 'RL',
+                  orePermesso,
+                ),
+              );
+
+              return movements;
+            }
+
+            const giustificativo = getXmlGiustificativo(code);
+            if (!giustificativo) return [];
+
+            const hours = getPresenceHours(code, dailyHours);
+            movements.push(createXmlMovimento(day.date, giustificativo, hours));
+
+            return movements;
+          })
+          .join('\n');
+
+        return `  <Dipendente CodAziendaUfficiale="${escapeXml(codiceDitta)}" CodDipendenteUfficiale="${escapeXml(codiceDipendente)}">
     <Movimenti GenerazioneAutomaticaDaTeorico="N">
 ${movimenti}
     </Movimenti>
   </Dipendente>`;
-    })
-    .join('\n');
+      })
+      .join('\n');
 
-  const xml = `<Fornitura>
-${dipendentiConMovimenti}
+    const xml = `<Fornitura>
+${dipendentiXml}
 </Fornitura>
 `;
 
-  downloadXml(
-    `presenze_paghe_${year}_${pad2(monthIndex + 1)}.xml`,
-    xml,
-  );
+    downloadXml(
+      `presenze_paghe_${codiceDitta}_${year}_${pad2(monthIndex + 1)}.xml`,
+      xml,
+    );
+  });
 };
+
   
   return (
     <>
@@ -713,7 +790,7 @@ ${dipendentiConMovimenti}
               Riepilogo operativo mensile per payroll, senza gestione saldi ferie o permessi.
             </p>
           </div>
-
+          
           <div className="flex flex-wrap items-center gap-2">
             {isResponsabilePaghe ? (
               <Badge variant="secondary">Responsabile paghe</Badge>
@@ -727,7 +804,7 @@ ${dipendentiConMovimenti}
 <Button
   variant="outline"
   onClick={exportZucchettiXml}
-  disabled={loading || dipendenti.length === 0}
+  disabled={loading || dipendenti.length === 0 || !isResponsabilePaghe}
 >
   Export XML Paghe
 </Button>
