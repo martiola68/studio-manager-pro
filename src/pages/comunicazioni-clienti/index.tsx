@@ -413,7 +413,7 @@ Cordiali saluti`;
 const righe = formData.messaggio
   .split("\n")
   .map((riga) => riga.trim())
-  .filter(Boolean);
+  .filter(Boolean)
     .filter((riga) => riga.toLowerCase() !== "cordiali saluti");
 
   return `
