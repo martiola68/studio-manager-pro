@@ -973,118 +973,32 @@ export async function sendComunicazioneEmail(
       };
     }
 
-    const htmlContent = `
+const isHtmlMessage = data.messaggio.trim().startsWith("<");
+
+const htmlContent = isHtmlMessage
+  ? data.messaggio
+  : `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <style>
-    body {
-      font-family: Arial, Helvetica, sans-serif;
-      line-height: 1.6;
-      color: #1f2937;
-      margin: 0;
-      padding: 24px 0;
-      background-color: #f3f4f6;
-    }
-
-    .container {
-      max-width: 700px;
-      margin: 0 auto;
-      background: #ffffff;
-      border: 1px solid #dbe3ef;
-      border-radius: 10px;
-      overflow: hidden;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
-    }
-
-    .content {
-      padding: 30px 24px 20px 24px;
-    }
-
-    .badge {
-      background: #1d4ed8;
-      color: #ffffff;
-      padding: 16px 20px;
-      text-align: center;
-      font-size: 28px;
-      font-weight: 700;
-      margin-bottom: 25px;
-    }
-
-    .subject {
-      font-size: 15px;
-      color: #111827;
-      margin-bottom: 25px;
-    }
-
-    .message-row {
-      font-size: 15px;
-      color: #1f2937;
-      margin-bottom: 20px;
-    }
-
-    .attachment-box {
-      margin-top: 22px;
-      padding: 14px 16px;
-      background: #eff6ff;
-      border: 1px solid #bfdbfe;
-      border-radius: 8px;
-      color: #1d4ed8;
-      font-size: 14px;
-      font-weight: 600;
-      text-align: center;
-    }
-
-    .footer {
-      background: #f9fafb;
-      padding: 18px 24px;
-      text-align: center;
-      font-size: 12px;
-      color: #6b7280;
-      border-top: 1px solid #e5e7eb;
-    }
-
-    .footer p {
-      margin: 4px 0;
-    }
-  </style>
 </head>
-<body>
-  <div class="container">
-    <div class="content">
-      <div class="badge">
-        COMUNICAZIONE INTERNA
-      </div>
-
-      <p class="subject">
-        <strong>Oggetto:</strong> ${data.oggetto}
-      </p>
-
-      <p class="message-row">
-        <strong>Messaggio:</strong> ${data.messaggio.replace(/\n/g, "<br>")}
-      </p>
-
-      ${
-        data.allegati && Array.isArray(data.allegati) && data.allegati.length > 0
-          ? `<div class="attachment-box">Questa comunicazione contiene ${data.allegati.length} allegato/i</div>`
-          : ""
-      }
-
-      <div style="height: 70px;"></div>
+<body style="margin:0; padding:0; background:#ffffff; font-family:Arial, Helvetica, sans-serif; color:#111827;">
+  <div style="max-width:700px; margin:0 auto; padding:18px 20px;">
+    <div style="font-size:14px; line-height:1.45;">
+      ${data.messaggio
+        .split("\n")
+        .map((riga) => riga.trim())
+        .filter(Boolean)
+        .map((riga) => `<p style="margin:0 0 8px 0;">${riga}</p>`)
+        .join("")}
     </div>
 
-    <div class="footer">
-      ${
-        data.allegati && Array.isArray(data.allegati) && data.allegati.length > 0
-          ? `<p>Questa comunicazione contiene ${data.allegati.length} allegato/i</p>`
-          : ""
-      }
-      <p><strong>Studio Manager Pro</strong> - Sistema Gestionale Integrato</p>
-      <p>Powered by ProWork Studio M</p>
-      <p>Questa è una email automatica, non rispondere a questo messaggio</p>
-    </div>
+    ${
+      data.allegati && Array.isArray(data.allegati) && data.allegati.length > 0
+        ? `<p style="margin:14px 0 0 0; font-size:12px; color:#6b7280;">Allegati: ${data.allegati.length}</p>`
+        : ""
+    }
   </div>
 </body>
 </html>
