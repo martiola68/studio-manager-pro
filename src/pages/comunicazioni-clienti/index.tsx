@@ -403,17 +403,17 @@ Cordiali saluti`;
     }));
   };
 
- const buildEmailClienteHtml = (params: {
+  const buildEmailClienteHtml = (params: {
   cliente: string;
   messaggio: string;
   utenteNome: string;
   utenteEmail: string;
   societa: string;
 }) => {
-const righe = formData.messaggio
-  .split("\n")
-  .map((riga) => riga.trim())
-  .filter(Boolean)
+  const righe = params.messaggio
+    .split("\n")
+    .map((riga) => riga.trim())
+    .filter(Boolean)
     .filter((riga) => riga.toLowerCase() !== "cordiali saluti");
 
   return `
@@ -438,14 +438,6 @@ const righe = formData.messaggio
         Mail: ${params.utenteEmail || "-"}<br/>
         Site: https://revisionicommerciali.it/
       </p>
-
-      <div style="margin-top:12px;">
-        <img
-          src="https://revisionicommerciali.it/logo-elma.png"
-          alt="Revisioni Commerciali"
-          style="max-width:320px; height:auto; display:block;"
-        />
-      </div>
     </div>
   </div>
 </div>
