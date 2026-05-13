@@ -96,6 +96,12 @@ export default function ComunicazioniClientiPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
 
+const [utenteInvio, setUtenteInvio] = useState({
+  nomeCompleto: "",
+  email: "",
+  societa: "",
+});
+
   const [comunicazioni, setComunicazioni] = useState<Comunicazione[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
@@ -127,6 +133,46 @@ export default function ComunicazioniClientiPage() {
   const loadData = async () => {
     try {
       setLoading(true);
+
+      const supabase = getSupabaseClient();
+
+const {
+  data: { user },
+} = await supabase.auth.getUser();
+
+if (user?.id) {
+  const { data: utente } = await supabase
+    .from("tbutenti")
+    .select("nome, cognome, email, studio_id, microsoft_connection_id")
+    .eq("id", user.id)
+    .maybeSingle();
+
+let societa = "";
+
+if (utente?.studio_id) {
+  const { data: studio } = await supabase
+    .from("tbstudio")
+    .select("ragione_sociale, ragione_sociale_tenant2, microsoft_connection_id_tenant2")
+    .eq("id", utente.studio_id)
+    .maybeSingle();
+
+  const isTenant2 =
+    !!(utente as any)?.microsoft_connection_id &&
+    !!(studio as any)?.microsoft_connection_id_tenant2 &&
+    (utente as any).microsoft_connection_id ===
+      (studio as any).microsoft_connection_id_tenant2;
+
+  societa = isTenant2
+    ? (studio as any)?.ragione_sociale_tenant2 || ""
+    : (studio as any)?.ragione_sociale || "";
+}
+
+  setUtenteInvio({
+    nomeCompleto: `${utente?.nome || ""} ${utente?.cognome || ""}`.trim(),
+    email: utente?.email || user.email || "",
+    societa,
+  });
+}
 
       const comunicazioniData = await comunicazioneService.getComunicazioni();
 
@@ -357,10 +403,55 @@ Cordiali saluti`;
     }));
   };
 
-  const buildEmailClienteHtml = (params: {
+ const buildEmailClienteHtml = (params: {
   cliente: string;
   messaggio: string;
+  utenteNome: string;
+  utenteEmail: string;
+  societa: string;
 }) => {
+  const righe = params.messaggio
+    .split("\n")
+    .map((riga) => riga.trim())
+    .filter(Boolean)
+    .filter((riga) => riga.toLowerCase() !== "cordiali saluti");
+
+  return `
+<div style="margin:0; padding:0; background:#ffffff; font-family:Arial, Helvetica, sans-serif; color:#111827;">
+  <div style="max-width:720px; margin:0 auto; padding:24px 20px;">
+    <div style="font-size:15px; line-height:1.7;">
+      ${righe.map((riga) => `<p style="margin:0 0 14px 0;">${riga}</p>`).join("")}
+    </div>
+
+    <div style="margin-top:30px; font-size:14px; line-height:1.6; color:#111827;">
+      <p style="margin:0 0 14px 0;">Cordiali Saluti</p>
+
+      <p style="margin:0 0 14px 0;">
+        <strong>${params.utenteNome || "-"}</strong><br/>
+        Area contabilità - fiscale
+      </p>
+
+      <p style="margin:0 0 14px 0;">
+        <strong>${params.societa || "-"}</strong><br/>
+        Via Giuseppe Gioachino Belli n. 86 - 00193 Roma<br/>
+        Tel. 06.7726471 | Fax. 06.772647230<br/>
+        Mail: ${params.utenteEmail || "-"}<br/>
+        Site: https://revisionicommerciali.it/
+      </p>
+
+      <div style="margin-top:12px;">
+        <img
+          src="https://revisionicommerciali.it/logo-elma.png"
+          alt="Revisioni Commerciali"
+          style="max-width:320px; height:auto; display:block;"
+        />
+      </div>
+    </div>
+  </div>
+</div>
+`.trim();
+};
+  
   const righe = params.messaggio
     .split("\n")
     .map((riga) => riga.trim())
@@ -421,9 +512,12 @@ Cordiali saluti`;
         data_invio: new Date().toISOString(),
       });
 
-    const messaggioHtml = buildEmailClienteHtml({
+ const messaggioHtml = buildEmailClienteHtml({
   cliente: formData.destinatario_cliente,
   messaggio: formData.messaggio,
+  utenteNome: utenteInvio.nomeCompleto,
+  utenteEmail: utenteInvio.email,
+  societa: utenteInvio.societa,
 });
 
 await emailService.sendComunicazioneEmail({
