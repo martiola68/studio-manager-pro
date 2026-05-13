@@ -970,7 +970,7 @@ ${dipendentiXml}
                 Nessun dipendente trovato.
               </div>
             ) : (
-             <div className="max-h-[340px] w-full overflow-auto rounded-md border">
+           <div className="max-h-[360px] w-full overflow-auto rounded-md border">
                 <Table className="min-w-max text-xs">
                   <TableHeader>
                     <TableRow>
