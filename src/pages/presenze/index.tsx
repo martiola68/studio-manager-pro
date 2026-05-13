@@ -628,22 +628,37 @@ const rows = editableDipendenti.flatMap((dipendente) =>
   };
 
 const exportZucchettiXml = () => {
-  const dipendentiConMovimenti = dipendenti
+  const dipendentiConCodici = dipendenti.filter((dipendente) => {
+    const codiceDitta = dipendente.codice_ditta?.trim();
+    const codiceDipendente =
+      dipendente.codice_soggetto_paghe?.trim() ||
+      dipendente.codice_dipendente?.trim();
+
+    return Boolean(codiceDitta && codiceDipendente);
+  });
+
+  if (dipendentiConCodici.length === 0) {
+    setError(
+      'Nessun dipendente esportabile. Verifica codice ditta e codice dipendente/soggetto paghe.',
+    );
+    return;
+  }
+
+  const dipendentiConMovimenti = dipendentiConCodici
     .map((dipendente) => {
-      const codiceDitta = dipendente.codice_ditta?.trim();
+      const codiceDitta = dipendente.codice_ditta?.trim() || '';
       const codiceDipendente =
         dipendente.codice_soggetto_paghe?.trim() ||
-        dipendente.codice_dipendente?.trim();
+        dipendente.codice_dipendente?.trim() ||
+        '';
 
       const dailyHours = Number(dipendente.orario_giornaliero ?? 8);
 
-      if (!codiceDitta || !codiceDipendente) {
-        return null;
-      }
-
       const movimenti = days
         .map((day) => {
-          const code = getCode(dipendente.utente_id, day);
+          const savedCode = getCode(dipendente.utente_id, day);
+          const code = savedCode || getDefaultCode(day);
+
           const giustificativo = getXmlGiustificativo(code);
 
           if (!giustificativo) return null;
@@ -651,21 +666,19 @@ const exportZucchettiXml = () => {
           const hours = getPresenceHours(code, dailyHours);
           const { ore, minuti, centesimi } = splitHoursToOreMinuti(hours);
 
-          return `    <Movimento>
-      <CodGiustificativoRilPres>${escapeXml(giustificativo)}</CodGiustificativoRilPres>
-      <CodGiustificativoUfficiale>${escapeXml(giustificativo)}</CodGiustificativoUfficiale>
-      <Data>${escapeXml(day.date)}</Data>
-      <NumOre>${ore}</NumOre>
-      <NumMinuti>${pad2(minuti)}</NumMinuti>
-      <NumMinutiInCentesimi>${pad2(centesimi)}</NumMinutiInCentesimi>
-      <GiornoDiRiposo>N</GiornoDiRiposo>
-      <GiornoChiusuraStraordinari>N</GiornoChiusuraStraordinari>
-    </Movimento>`;
+          return `      <Movimento>
+        <CodGiustificativoRilPres>${escapeXml(giustificativo)}</CodGiustificativoRilPres>
+        <CodGiustificativoUfficiale>${escapeXml(giustificativo)}</CodGiustificativoUfficiale>
+        <Data>${escapeXml(day.date)}</Data>
+        <NumOre>${ore}</NumOre>
+        <NumMinuti>${pad2(minuti)}</NumMinuti>
+        <NumMinutiInCentesimi>${pad2(centesimi)}</NumMinutiInCentesimi>
+        <GiornoDiRiposo>N</GiornoDiRiposo>
+        <GiornoChiusuraStraordinari>N</GiornoChiusuraStraordinari>
+      </Movimento>`;
         })
         .filter(Boolean)
         .join('\n');
-
-      if (!movimenti) return null;
 
       return `  <Dipendente CodAziendaUfficiale="${escapeXml(codiceDitta)}" CodDipendenteUfficiale="${escapeXml(codiceDipendente)}">
     <Movimenti GenerazioneAutomaticaDaTeorico="N">
@@ -673,17 +686,9 @@ ${movimenti}
     </Movimenti>
   </Dipendente>`;
     })
-    .filter(Boolean)
     .join('\n');
 
-  if (!dipendentiConMovimenti) {
-    setError(
-      'Nessun dato esportabile per XML Paghe. Verifica codice ditta, codice dipendente/soggetto paghe e presenze.',
-    );
-    return;
-  }
-
- const xml = `<Fornitura>
+  const xml = `<Fornitura>
 ${dipendentiConMovimenti}
 </Fornitura>
 `;
