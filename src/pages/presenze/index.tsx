@@ -326,25 +326,25 @@ export default function PresenzePage() {
     return map;
   }, [festivita]);
 
-  const days = useMemo<DayInfo[]>((() => {
-    const totalDays = getDaysInMonth(year, monthIndex);
+const days = useMemo<DayInfo[]>(() => {
+  const totalDays = getDaysInMonth(year, monthIndex);
 
-    return Array.from({ length: totalDays }, (_, index) => {
-      const day = index + 1;
-      const date = toDateKey(year, monthIndex, day);
-      const weekday = new Date(year, monthIndex, day).getDay();
-      const holiday = holidaysByDate.get(date);
+  return Array.from({ length: totalDays }, (_, index) => {
+    const day = index + 1;
+    const date = toDateKey(year, monthIndex, day);
+    const weekday = new Date(year, monthIndex, day).getDay();
+    const holiday = holidaysByDate.get(date);
 
-      return {
-        date,
-        day,
-        weekday,
-        isWeekend: weekday === 0 || weekday === 6,
-        isHoliday: Boolean(holiday),
-        holidayDescription: holiday?.descrizione ?? undefined,
-      };
-    });
-  }, [year, monthIndex, holidaysByDate]);
+    return {
+      date,
+      day,
+      weekday,
+      isWeekend: weekday === 0 || weekday === 6,
+      isHoliday: Boolean(holiday),
+      holidayDescription: holiday?.descrizione ?? undefined,
+    };
+  });
+}, [year, monthIndex, holidaysByDate]);
 
   const allowedCodes = useMemo(() => {
     const withoutOldP = codici.filter((item) => item.codice !== 'P');
