@@ -483,7 +483,7 @@ const buildEmailClienteHtml = (params: {
   societa: utenteInvio.societa,
 });
 
-await emailService.sendComunicazioneEmail({
+const emailResult = await emailService.sendComunicazioneEmail({
   tipo: "singola",
   destinatarioId: formData.destinatario_id,
   destinatarioEmail: formData.destinatario_email,
@@ -492,7 +492,7 @@ await emailService.sendComunicazioneEmail({
   allegati,
 });
 
-      console.log("RISULTATO INVIO EMAIL CLIENTE", emailResult);
+console.log("RISULTATO INVIO EMAIL CLIENTE", emailResult);
 
 if (!emailResult?.success) {
   toast({
