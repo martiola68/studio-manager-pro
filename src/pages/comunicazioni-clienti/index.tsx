@@ -403,7 +403,7 @@ Cordiali saluti`;
     }));
   };
 
-  const buildEmailClienteHtml = (params: {
+const buildEmailClienteHtml = (params: {
   cliente: string;
   messaggio: string;
   utenteNome: string;
