@@ -929,6 +929,10 @@ ${dipendentiXml}
                 <Badge className="border bg-pink-100 text-pink-800 hover:bg-pink-100">
                   P0.25.104-P8.104 L.104
                 </Badge>
+                <div className="mt-3 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900">
+  Per i permessi orari è sufficiente inserire il codice del permesso (es. P2, P4, P1.104).
+  Il sistema calcola automaticamente sia le ore di permesso sia le ore lavorate residue ai fini dell’elaborazione payroll ed export paghe.
+</div>
               </div>
             </div>
           </CardContent>
@@ -966,7 +970,7 @@ ${dipendentiXml}
                 Nessun dipendente trovato.
               </div>
             ) : (
-              <div className="max-h-[560px] w-full overflow-auto rounded-md border">
+             <div className="max-h-[340px] w-full overflow-auto rounded-md border">
                 <Table className="min-w-max text-xs">
                   <TableHeader>
                     <TableRow>
