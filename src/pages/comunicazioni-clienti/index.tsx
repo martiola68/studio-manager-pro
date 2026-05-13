@@ -452,10 +452,11 @@ const righe = formData.messaggio
 `.trim();
 };
   
-  const righe = params.messaggio
-    .split("\n")
-    .map((riga) => riga.trim())
-    .filter(Boolean);
+const righe = params.messaggio
+  .split("\n")
+  .map((riga) => riga.trim())
+  .filter(Boolean)
+  .filter((riga) => riga.toLowerCase() !== "cordiali saluti");
 
   return `
 <div style="margin:0; padding:0; background:#ffffff; font-family:Arial, Helvetica, sans-serif; color:#111827;">
