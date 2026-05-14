@@ -175,10 +175,42 @@ export async function POST(
 })
       .eq('id', id);
 
-    if (updateError) throw updateError;
+ if (updateError) throw updateError;
 
-    const statoLabel = azione === 'approvata' ? 'approvata' : 'rifiutata';
+if (azione === 'approvata') {
+  const codicePresenza =
+    richiesta.tipo_richiesta === 'ferie'
+      ? 'F'
+      : `P${Number(richiesta.ore)}`;
 
+  const datePresenze: string[] = [];
+
+  const start = new Date(`${richiesta.data_inizio}T00:00:00`);
+  const end = new Date(`${richiesta.data_fine || richiesta.data_inizio}T00:00:00`);
+
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    datePresenze.push(d.toISOString().slice(0, 10));
+  }
+
+  const rows = datePresenze.map((dataPresenza) => ({
+    studio_id: richiesta.studio_id,
+    utente_id: richiesta.utente_id,
+    data_presenza: dataPresenza,
+    codice_presenza: codicePresenza,
+    note: richiesta.motivazione || null,
+    inserito_da: gestore.id,
+  }));
+
+  const { error: presenzeError } = await (supabaseAdmin as any)
+    .from('tbpresenze_dipendenti')
+    .upsert(rows, {
+      onConflict: 'utente_id,data_presenza',
+    });
+
+  if (presenzeError) throw presenzeError;
+}
+
+const statoLabel = azione === 'approvata' ? 'approvata' : 'rifiutata';
     const gestoreNome =
       `${gestore.nome ?? ''} ${gestore.cognome ?? ''}`.trim() ||
       gestore.email ||
