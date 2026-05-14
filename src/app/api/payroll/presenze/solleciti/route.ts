@@ -50,7 +50,7 @@ function buildHtml(nome: string, missingDays: string[]) {
   <p style="margin:0 0 12px 0;">Gentile ${nome},</p>
 
   <p style="margin:0 0 12px 0;">
-    risultano ancora da compilare le presenze per i seguenti giorni lavorativi:
+   risultano ancora da compilare le presenze per i seguenti giorni lavorativi della settimana:
   </p>
 
   <ul style="margin:0 0 12px 20px; padding:0;">
@@ -71,7 +71,7 @@ function buildText(nome: string, missingDays: string[]) {
   return `
 Gentile ${nome},
 
-risultano ancora da compilare le presenze per i seguenti giorni lavorativi:
+risultano ancora da compilare le presenze per i seguenti giorni lavorativi della settimana:
 
 ${missingDays.map((day) => `- ${formatItalianDate(day)}`).join('\n')}
 
@@ -135,15 +135,25 @@ async function sendReminderEmail(params: {
 
 async function runSolleciti() {
   const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(today.getDate() - 1);
 
-  const year = yesterday.getFullYear();
-  const monthIndex = yesterday.getMonth();
+  // Invio solo il venerdì
+  if (today.getDay() !== 5) {
+    return {
+      success: true,
+      sent: 0,
+      skipped: 0,
+      failed: 0,
+      message: 'Sollecito non eseguito: oggi non è venerdì.',
+    };
+  }
 
-  const start = new Date(year, monthIndex, 1);
-  const startDate = toDateKey(start);
-  const endDate = toDateKey(yesterday);
+  const weekStart = new Date(today);
+  weekStart.setDate(today.getDate() - 4); // lunedì della settimana corrente
+
+  const weekEnd = new Date(today); // venerdì corrente
+
+  const startDate = toDateKey(weekStart);
+  const endDate = toDateKey(weekEnd);
   const reminderDate = toDateKey(today);
 
   const { data: dipendenti, error: dipError } = await supabaseAdmin
@@ -177,7 +187,7 @@ async function runSolleciti() {
     (presenze ?? []).map((p) => `${p.utente_id}|${p.data_presenza}`),
   );
 
-  const workingDays = getWorkingDays(start, yesterday, holidays);
+  const workingDays = getWorkingDays(weekStart, weekEnd, holidays);
 
   let sent = 0;
   let skipped = 0;
@@ -213,7 +223,7 @@ async function runSolleciti() {
       await sendReminderEmail({
         studioId: String(dipendente.studio_id),
         to: String(dipendente.email),
-        subject: 'Promemoria compilazione presenze',
+        subject: 'Promemoria settimanale compilazione presenze',
         html: buildHtml(nome, missingDays),
       });
 
