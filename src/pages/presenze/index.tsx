@@ -608,16 +608,41 @@ const days = useMemo<DayInfo[]>(() => {
   };
 
 const validateRequiredWorkdays = () => {
+  const today = new Date();
   const todayKey = getTodayKey();
 
   const editableDipendenti = dipendenti.filter((dipendente) =>
     canEditEmployee(dipendente.utente_id),
   );
 
+  const getFridayOfWeek = (date: Date) => {
+    const d = new Date(date);
+    const weekday = d.getDay(); // Dom 0, Lun 1, ..., Ven 5
+    const diffToFriday = 5 - weekday;
+    d.setDate(d.getDate() + diffToFriday);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+
+  const currentWeekFriday = getFridayOfWeek(today);
+
   for (const dipendente of editableDipendenti) {
     const missingDays = days.filter((day) => {
+      const dayDate = new Date(day.date);
+      dayDate.setHours(0, 0, 0, 0);
+
       if (day.date > todayKey) return false;
       if (day.isWeekend || day.isHoliday) return false;
+
+      const fridayOfDayWeek = getFridayOfWeek(dayDate);
+
+      // La settimana diventa obbligatoria solo dal venerdì della stessa settimana
+      if (currentWeekFriday < fridayOfDayWeek) return false;
+
+      // Se oggi non è ancora venerdì, non controllo la settimana corrente
+      if (today.getDay() < 5 && fridayOfDayWeek.getTime() === currentWeekFriday.getTime()) {
+        return false;
+      }
 
       const code = getCode(dipendente.utente_id, day);
       return !code;
@@ -625,7 +650,7 @@ const validateRequiredWorkdays = () => {
 
     if (missingDays.length > 0) {
       throw new Error(
-        `Compila tutti i giorni lavorativi fino a oggi per ${getEmployeeName(
+        `Compila le presenze settimanali obbligatorie per ${getEmployeeName(
           dipendente,
         )}. Giorni mancanti: ${missingDays.map((day) => day.day).join(', ')}.`,
       );
