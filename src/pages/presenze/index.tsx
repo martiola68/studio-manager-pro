@@ -6,6 +6,7 @@ import { getSupabaseClient } from '@/lib/supabaseClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import dynamic from "next/dynamic";
 import {
   Select,
   SelectContent,
@@ -296,7 +297,7 @@ function downloadXml(filename: string, content: string) {
   URL.revokeObjectURL(url);
 }
 
-export default function PresenzePage() {
+function PresenzePage() {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [monthIndex, setMonthIndex] = useState(now.getMonth());
@@ -1117,8 +1118,6 @@ ${dipendentiXml}
   );
 }
 
-export async function getServerSideProps() {
-  return {
-    props: {},
-  };
-}
+export default dynamic(() => Promise.resolve(PresenzePage), {
+  ssr: false,
+});
