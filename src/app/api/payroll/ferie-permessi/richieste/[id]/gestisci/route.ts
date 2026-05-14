@@ -186,7 +186,12 @@ export async function POST(
 
     const html = `
       <div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#111827;">
-        <p>La tua richiesta ${escapeHtml(richiesta.tipo_richiesta)} è stata <strong>${statoLabel}</strong>.</p>
+        <p>
+  La tua richiesta ${escapeHtml(richiesta.tipo_richiesta)} è stata
+  <strong style="color:${azione === 'approvata' ? '#16a34a' : '#dc2626'};">
+    ${statoLabel}
+  </strong>.
+</p>
         <p><strong>Gestita da:</strong> ${escapeHtml(gestoreNome)}</p>
         <p><strong>Data inizio:</strong> ${escapeHtml(formatDateIT(richiesta.data_inizio))}</p>
         ${
