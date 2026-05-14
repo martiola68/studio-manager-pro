@@ -46,19 +46,19 @@ const { data: tokenOwner, error: tokenError } = await supabaseAdmin
 if (tokenError || !tokenOwner?.user_id || !tokenOwner?.microsoft_connection_id) {
   throw new Error('Token Microsoft non trovato per l’utente richiedente.');
 }
-  await microsoftGraphService.sendEmail(
+ await microsoftGraphService.sendEmail(
   String(tokenOwner.user_id),
   String(tokenOwner.microsoft_connection_id),
   {
-    subject,
+    subject: params.subject,
     body: {
       contentType: 'HTML',
-      content: html,
+      content: params.html,
     },
     toRecipients: [
       {
         emailAddress: {
-          address: studio.mail_alert_ferie_permessi,
+          address: params.toEmail,
         },
       },
     ],
