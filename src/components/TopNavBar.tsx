@@ -387,6 +387,7 @@ return pathname === normalizedHref || pathname.startsWith(`${normalizedHref}/`);
   };
 
   const isActive = (item: MenuItem) => {
+     if (!pathname) return false;
     const anagraficheOverrides = ["/antiriciclaggio/rappresentanti"];
 
     if (item.label === "Antiriciclaggio") {
