@@ -1,9 +1,9 @@
 'use client';
-import { useRouter } from 'next/router';
+
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import { getSupabaseClient } from '@/lib/supabaseClient';
-import dynamic from "next/dynamic";
+
 
 type Utente = {
   id: string;
@@ -117,8 +117,6 @@ const PRESENCE_COLORS: Record<string, string> = {
   Pp: 'bg-green-100 text-green-800 border-green-200',
   Ps: 'bg-violet-100 text-violet-800 border-violet-200',
 };
-
-const router = useRouter();
 
 function Button({
   children,
@@ -342,9 +340,7 @@ function downloadXml(filename: string, content: string) {
 }
 
 export default function PresenzePage() {
-  if (typeof window === "undefined") {
-    return null;
-  }
+  
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [monthIndex, setMonthIndex] = useState(now.getMonth());
@@ -898,14 +894,7 @@ ${dipendentiXml}
               <Badge variant="outline">Vista dipendente</Badge>
             )}
 
-            <Button
-            variant="outline"
-              onClick={() => router.push('/presenze/richiesta-ferie-permessi')}
-                >
-                  Richiesta ferie/permessi
-              </Button>
-
-            <Button variant="outline" onClick={loadData} disabled={loading || saving}>
+                       <Button variant="outline" onClick={loadData} disabled={loading || saving}>
               Aggiorna
             </Button>
 
