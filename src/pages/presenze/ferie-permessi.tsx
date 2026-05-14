@@ -171,10 +171,7 @@ export default function FeriePermessiPage() {
             Torna a presenze
           </Button>
 
-          <Button onClick={() => router.push('/presenze/richiesta-ferie-permessi')}>
-            Nuova richiesta
-          </Button>
-        </div>
+         </div>
       </div>
 
       {loading ? (
