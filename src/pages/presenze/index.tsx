@@ -7,13 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import dynamic from "next/dynamic";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
 type Utente = {
   id: string;
@@ -903,38 +896,34 @@ ${dipendentiXml}
                 <label className="mb-1 block text-xs font-medium text-muted-foreground">
                   Mese
                 </label>
-                <Select value={String(monthIndex)} onValueChange={(value) => setMonthIndex(Number(value))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleziona mese" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MONTHS.map((month, index) => (
-                      <SelectItem key={month} value={String(index)}>
-                        {month}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <select
+  value={String(monthIndex)}
+  onChange={(e) => setMonthIndex(Number(e.target.value))}
+  className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+>
+  {MONTHS.map((month, index) => (
+    <option key={month} value={String(index)}>
+      {month}
+    </option>
+  ))}
+</select>
               </div>
 
               <div className="w-[120px]">
                 <label className="mb-1 block text-xs font-medium text-muted-foreground">
                   Anno
                 </label>
-                <Select value={String(year)} onValueChange={(value) => setYear(Number(value))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Anno" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: 7 }, (_, index) => now.getFullYear() - 3 + index).map(
-                      (item) => (
-                        <SelectItem key={item} value={String(item)}>
-                          {item}
-                        </SelectItem>
-                      ),
-                    )}
-                  </SelectContent>
-                </Select>
+               <select
+  value={String(year)}
+  onChange={(e) => setYear(Number(e.target.value))}
+  className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+>
+  {Array.from({ length: 7 }, (_, index) => now.getFullYear() - 3 + index).map((item) => (
+    <option key={item} value={String(item)}>
+      {item}
+    </option>
+  ))}
+</select>
               </div>
 
               <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
