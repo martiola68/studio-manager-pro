@@ -13,14 +13,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 
 type Utente = {
   id: string;
@@ -864,10 +856,10 @@ ${dipendentiXml}
         )}
 
         <Card>
-          <CardHeader className="pb-3">
+         <CardHeader className="pb-1">
             <CardTitle className="text-base">Periodo</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             <div className="flex flex-wrap items-end gap-3">
               <div className="min-w-[180px]">
                 <label className="mb-1 block text-xs font-medium text-muted-foreground">
@@ -971,20 +963,23 @@ ${dipendentiXml}
               </div>
             ) : (
 
-<div className="max-h-[300px] w-full overflow-auto rounded-md border">
-  <Table className="min-w-max border-separate border-spacing-0 text-xs">
-   
-    <thead className="sticky top-0 z-50 bg-background">
-  <tr>
-    <th className="sticky left-0 top-0 z-50 h-12 w-[220px] bg-background px-2 text-left align-middle font-medium text-muted-foreground shadow-sm">
+<div className="max-h-[320px] w-full overflow-auto rounded-md border">
+  <div
+    className="min-w-max text-xs"
+    style={{
+      display: 'grid',
+      gridTemplateColumns: `220px repeat(${days.length}, 88px) 60px 60px 60px 60px 60px 80px 90px`,
+    }}
+  >
+    <div className="sticky left-0 top-0 z-50 border-b bg-background px-2 py-2 font-medium text-muted-foreground">
       Dipendente
-    </th>
+    </div>
 
     {days.map((day) => (
-      <th
+      <div
         key={day.date}
         title={day.holidayDescription}
-        className={`sticky top-0 z-40 h-12 w-[88px] px-2 text-center align-middle font-medium ${
+        className={`sticky top-0 z-40 border-b px-2 py-2 text-center font-medium ${
           day.isHoliday
             ? 'bg-lime-200 text-lime-950'
             : day.isWeekend
@@ -993,100 +988,91 @@ ${dipendentiXml}
         }`}
       >
         <div className="flex flex-col items-center leading-tight">
-          <span className="text-[11px] uppercase">
-            {WEEKDAYS_SHORT[day.weekday]}
-          </span>
+          <span className="text-[11px] uppercase">{WEEKDAYS_SHORT[day.weekday]}</span>
           <span className="text-sm font-semibold">{day.day}</span>
           {day.isHoliday && <span className="text-[10px]">fest.</span>}
         </div>
-      </th>
+      </div>
     ))}
 
-    <th className="sticky top-0 z-40 h-12 w-[60px] bg-background px-2 text-center font-medium">Pp</th>
-    <th className="sticky top-0 z-40 h-12 w-[60px] bg-background px-2 text-center font-medium">Ps</th>
-    <th className="sticky top-0 z-40 h-12 w-[60px] bg-background px-2 text-center font-medium">F</th>
-    <th className="sticky top-0 z-40 h-12 w-[60px] bg-background px-2 text-center font-medium">M</th>
-    <th className="sticky top-0 z-40 h-12 w-[60px] bg-background px-2 text-center font-medium">N</th>
-    <th className="sticky top-0 z-40 h-12 w-[80px] bg-background px-2 text-center font-medium">Perm.</th>
-    <th className="sticky top-0 z-40 h-12 w-[90px] bg-background px-2 text-center font-medium">L.104</th>
-  </tr>
-</thead>
-    
-    <TableBody>
-      {dipendenti.map((dipendente) => {
-        const summary = getSummaryForEmployee(dipendente.utente_id);
+    {['Pp', 'Ps', 'F', 'M', 'N', 'Perm.', 'L.104'].map((label) => (
+      <div
+        key={label}
+        className="sticky top-0 z-40 border-b bg-background px-2 py-2 text-center font-medium"
+      >
+        {label}
+      </div>
+    ))}
 
-        return (
-          <TableRow key={dipendente.utente_id}>
-            <TableCell className="sticky left-0 z-30 w-[220px] bg-background font-medium shadow-sm">
-              <div className="flex flex-col">
-                <span>{getEmployeeName(dipendente)}</span>
-                <span className="text-[11px] font-normal text-muted-foreground">
-                  {dipendente.email}
-                </span>
-              </div>
-            </TableCell>
+    {dipendenti.map((dipendente) => {
+      const summary = getSummaryForEmployee(dipendente.utente_id);
 
-            {days.map((day) => {
-              const code = getCode(dipendente.utente_id, day);
+      return (
+        <div key={dipendente.utente_id} className="contents">
+          <div className="sticky left-0 z-30 border-b bg-background px-2 py-2 font-medium shadow-sm">
+            <div className="flex flex-col">
+              <span>{getEmployeeName(dipendente)}</span>
+              <span className="text-[11px] font-normal text-muted-foreground">
+                {dipendente.email}
+              </span>
+            </div>
+          </div>
 
-              return (
-                <TableCell
-                  key={`${dipendente.utente_id}-${day.date}`}
-                  className="w-[88px] p-1 text-center"
+          {days.map((day) => {
+            const code = getCode(dipendente.utente_id, day);
+
+            return (
+              <div
+                key={`${dipendente.utente_id}-${day.date}`}
+                className="border-b p-1 text-center"
+              >
+                <select
+                  disabled={isLockedPeriod || !canEditEmployee(dipendente.utente_id)}
+                  value={code}
+                  onChange={(event) =>
+                    handleChange(dipendente.utente_id, day.date, event.target.value)
+                  }
+                  title={day.holidayDescription}
+                  className={`h-8 w-[82px] rounded-md border px-2 text-xs outline-none ${
+                    code
+                      ? day.isHoliday
+                        ? getHolidayCellClass(code)
+                        : getCellClass(code)
+                      : day.date <= getTodayKey()
+                        ? 'bg-yellow-50 text-gray-700 border-yellow-300'
+                        : 'bg-white text-gray-400 border-gray-200'
+                  }`}
                 >
-                  <select
-                    disabled={isLockedPeriod || !canEditEmployee(dipendente.utente_id)}
-                    value={code}
-                    onChange={(event) =>
-                      handleChange(
-                        dipendente.utente_id,
-                        day.date,
-                        event.target.value,
-                      )
-                    }
-                    title={day.holidayDescription}
-                    className={`h-8 w-[82px] rounded-md border px-2 text-xs outline-none ${
-                      code
-                        ? day.isHoliday
-                          ? getHolidayCellClass(code)
-                          : getCellClass(code)
-                        : day.date <= getTodayKey()
-                          ? 'bg-yellow-50 text-gray-700 border-yellow-300'
-                          : 'bg-white text-gray-400 border-gray-200'
-                    }`}
-                  >
-                    <option value="">-</option>
-                    {allowedCodes.map((item) => (
-                      <option key={item.codice} value={item.codice}>
-                        {item.codice}
-                      </option>
-                    ))}
-                  </select>
-                </TableCell>
-              );
-            })}
+                  <option value="">-</option>
+                  {allowedCodes.map((item) => (
+                    <option key={item.codice} value={item.codice}>
+                      {item.codice}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            );
+          })}
 
-            <TableCell className="w-[60px] text-center font-medium">{summary.pp}</TableCell>
-            <TableCell className="w-[60px] text-center font-medium">{summary.ps}</TableCell>
-            <TableCell className="w-[60px] text-center font-medium">{summary.ferie}</TableCell>
-            <TableCell className="w-[60px] text-center font-medium">{summary.malattia}</TableCell>
-            <TableCell className="w-[60px] text-center font-medium">{summary.festivi}</TableCell>
-            <TableCell className="w-[80px] text-center font-medium">
-              {formatHoursMinutes(summary.permessiOre)}
-            </TableCell>
-            <TableCell
-              className={`w-[90px] text-center font-medium ${
-                summary.permessi104Ore > 24 ? 'text-red-700' : ''
-              }`}
-            >
-              {formatHoursMinutes(summary.permessi104Ore)}
-            </TableCell>
-          </TableRow>
-        );
-      })}
-    </TableBody>
-  </Table>
+          <div className="border-b px-2 py-2 text-center font-medium">{summary.pp}</div>
+          <div className="border-b px-2 py-2 text-center font-medium">{summary.ps}</div>
+          <div className="border-b px-2 py-2 text-center font-medium">{summary.ferie}</div>
+          <div className="border-b px-2 py-2 text-center font-medium">{summary.malattia}</div>
+          <div className="border-b px-2 py-2 text-center font-medium">{summary.festivi}</div>
+          <div className="border-b px-2 py-2 text-center font-medium">
+            {formatHoursMinutes(summary.permessiOre)}
+          </div>
+          <div
+            className={`border-b px-2 py-2 text-center font-medium ${
+              summary.permessi104Ore > 24 ? 'text-red-700' : ''
+            }`}
+          >
+            {formatHoursMinutes(summary.permessi104Ore)}
+          </div>
+        </div>
+      );
+    })}
+  </div>
 </div>
       
             )}
