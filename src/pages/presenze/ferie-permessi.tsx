@@ -48,7 +48,7 @@ export default function FeriePermessiPage() {
       data: { session },
     } = await supabase.auth.getSession();
 
-    const email = session?.user?.email;
+    const email = session?.user?.email?.trim().toLowerCase();
 
     if (!email) {
       router.push('/login');
@@ -57,15 +57,27 @@ export default function FeriePermessiPage() {
 
     const { data: userRow, error: userError } = await (supabase as any)
       .from('tbutenti')
-      .select('id, studio_id, responsabile_paghe')
+      .select('id, studio_id, email, responsabile_paghe')
       .eq('email', email)
       .single();
 
     if (userError || !userRow) throw userError;
 
+    const { data: studioRow, error: studioError } = await (supabase as any)
+      .from('tbstudio')
+      .select('mail_alert_ferie_permessi')
+      .eq('id', userRow.studio_id)
+      .single();
+
+    if (studioError || !studioRow) throw studioError;
+
+    const isGestoreFeriePermessi =
+      Boolean(userRow.responsabile_paghe) ||
+      String(studioRow.mail_alert_ferie_permessi || '').trim().toLowerCase() === email;
+
     setCurrentUserId(userRow.id);
     setStudioId(userRow.studio_id as string);
-    setIsResponsabilePaghe(Boolean(userRow.responsabile_paghe));
+    setIsResponsabilePaghe(isGestoreFeriePermessi);
 
     let query = (supabase as any)
       .from('tbferie_permessi_richieste')
@@ -73,7 +85,7 @@ export default function FeriePermessiPage() {
       .eq('studio_id', userRow.studio_id as string)
       .order('created_at', { ascending: false });
 
-    if (!Boolean(userRow.responsabile_paghe)) {
+    if (!isGestoreFeriePermessi) {
       query = query.eq('utente_id', userRow.id);
     }
 
@@ -87,6 +99,7 @@ export default function FeriePermessiPage() {
     (data || []).forEach((r: Richiesta) => {
       initialNotes[r.id] = r.note_responsabile || '';
     });
+
     setNote(initialNotes);
   } catch (error: any) {
     console.error(error);
