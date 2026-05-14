@@ -57,23 +57,24 @@ export default function DatiStudioPage() {
   const [showResetConfirmPassword, setShowResetConfirmPassword] = useState(false);
   const [resettingPassword, setResettingPassword] = useState(false);
 
- const [formData, setFormData] = useState({
-    ragione_sociale: "",
-    ragione_sociale_tenant2: "",
-    denominazione_breve: "",
-    partita_iva: "",
-    codice_fiscale: "",
-    indirizzo: "",
-    cap: "",
-    citta: "",
-    provincia: "",
-    telefono: "",
-    email: "",
-    email_tenant2: "",
-    pec: "",
-    sito_web: "",
-    note: ""
-  });
+const [formData, setFormData] = useState({
+  ragione_sociale: "",
+  ragione_sociale_tenant2: "",
+  denominazione_breve: "",
+  partita_iva: "",
+  codice_fiscale: "",
+  indirizzo: "",
+  cap: "",
+  citta: "",
+  provincia: "",
+  telefono: "",
+  email: "",
+  email_tenant2: "",
+  mail_alert_paghe: "",
+  pec: "",
+  sito_web: "",
+  note: ""
+});
 
   useEffect(() => {
     checkAuthAndLoad();
@@ -127,6 +128,7 @@ export default function DatiStudioPage() {
           email: studioData.email || "",
           email_tenant2: studioData.email_tenant2 || "",
           pec: studioData.pec || "",
+          mail_alert_paghe: studioData.mail_alert_paghe || "",
           sito_web: studioData.sito_web || "",
           note: studioData.note || ""
         });
@@ -718,7 +720,7 @@ export default function DatiStudioPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
+                  <Label htmlFor="email">Email alert fiscale *</Label>
                   <Input
                     id="email"
                     type="email"
@@ -729,7 +731,7 @@ export default function DatiStudioPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email_tenant2">Email Tenant 2</Label>
+                  <Label htmlFor="email_tenant2">Email alert consulenza</Label>
                   <Input
                     id="email_tenant2"
                     type="email"
@@ -737,6 +739,17 @@ export default function DatiStudioPage() {
                     onChange={(e) => setFormData({ ...formData, email_tenant2: e.target.value })}
                   />
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="mail_alert_paghe">Email alert paghe</Label>
+                    <Input
+                        id="mail_alert_paghe"
+                      type="email"
+                      value={formData.mail_alert_paghe}
+                          onChange={(e) => setFormData({ ...formData, mail_alert_paghe: e.target.value })}
+                          placeholder="paghe@studio.it"
+                        />
+                  </div>
               </div>
 
               <div className="space-y-2">
@@ -783,70 +796,48 @@ export default function DatiStudioPage() {
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle>Contatti</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="telefono">Telefono *</Label>
-                  <Input
-                    id="telefono"
-                    type="tel"
-                    value={formData.telefono}
-                    onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
+  <CardHeader>
+    <CardTitle>Recapiti e note</CardTitle>
+  </CardHeader>
+  <CardContent className="space-y-4">
+    <div className="grid grid-cols-2 gap-4">
+      <div className="space-y-2">
+        <Label htmlFor="pec">PEC *</Label>
+        <Input
+          id="pec"
+          type="email"
+          value={formData.pec}
+          onChange={(e) => setFormData({ ...formData, pec: e.target.value })}
+          required
+        />
+      </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="pec">PEC *</Label>
-                  <Input
-                    id="pec"
-                    type="email"
-                    value={formData.pec}
-                    onChange={(e) => setFormData({ ...formData, pec: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="sito_web">Sito Web</Label>
-                  <Input
-                    id="sito_web"
-                    type="url"
-                    value={formData.sito_web}
-                    onChange={(e) => setFormData({ ...formData, sito_web: e.target.value })}
-                    placeholder="https://..."
-                  />
-                </div>
-              </div>
+      <div className="space-y-2">
+        <Label htmlFor="sito_web">Sito Web</Label>
+        <Input
+          id="sito_web"
+          type="url"
+          value={formData.sito_web}
+          onChange={(e) => setFormData({ ...formData, sito_web: e.target.value })}
+          placeholder="https://..."
+        />
+      </div>
+    </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="note">Note</Label>
-                <Textarea
-                  id="note"
-                  value={formData.note}
-                  onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-                  rows={4}
-                  placeholder="Note aggiuntive..."
-                />
-              </div>
-            </CardContent>
-          </Card>
+    <div className="space-y-2">
+      <Label htmlFor="note">Note</Label>
+      <Textarea
+        id="note"
+        value={formData.note}
+        onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+        rows={4}
+        placeholder="Note aggiuntive..."
+      />
+    </div>
+  </CardContent>
+</Card>
 
-          <Card>
+         <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5" />
