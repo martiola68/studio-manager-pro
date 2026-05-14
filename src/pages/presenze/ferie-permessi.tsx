@@ -41,64 +41,64 @@ export default function FeriePermessiPage() {
   }, []);
 
   async function loadData() {
-    try {
-      setLoading(true);
+  try {
+    setLoading(true);
 
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
-      const email = session?.user?.email;
+    const email = session?.user?.email;
 
-      if (!email) {
-        router.push('/login');
-        return;
-      }
-
-      const { data: userRow, error: userError } = await (supabase as any)
-  .from('tbutenti')
-  .select('id, studio_id, responsabile_paghe')
-  .eq('email', email)
-  .single();
-
-      if (userError || !userRow) throw userError;
-
-      setCurrentUserId(userRow.id);
-      setStudioId(userRow.studio_id as string);
-      setIsResponsabilePaghe(Boolean(userRow.responsabile_paghe));
-
-      let query = (supabase as any)
-  .from('tbferie_permessi_richieste')
-  .select('*')
-  .eq('studio_id', userRow.studio_id as string)
-  .order('created_at', { ascending: false });
-
-      if (!userRow.responsabile_paghe) {
-        query = query.eq('utente_id', userRow.id);
-      }
-
-     const { data, error } = await (query as any);
-
-      if (error) throw error;
-
-      setRichieste(data || []);
-
-      const initialNotes: Record<string, string> = {};
-      (data || []).forEach((r: Richiesta) => {
-        initialNotes[r.id] = r.note_responsabile || '';
-      });
-      setNote(initialNotes);
-    } catch (error: any) {
-      console.error(error);
-      toast({
-        title: 'Errore',
-        description: error?.message || 'Impossibile caricare le richieste.',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
+    if (!email) {
+      router.push('/login');
+      return;
     }
+
+    const { data: userRow, error: userError } = await (supabase as any)
+      .from('tbutenti')
+      .select('id, studio_id, responsabile_paghe')
+      .eq('email', email)
+      .single();
+
+    if (userError || !userRow) throw userError;
+
+    setCurrentUserId(userRow.id);
+    setStudioId(userRow.studio_id as string);
+    setIsResponsabilePaghe(Boolean(userRow.responsabile_paghe));
+
+    let query = (supabase as any)
+      .from('tbferie_permessi_richieste')
+      .select('*')
+      .eq('studio_id', userRow.studio_id as string)
+      .order('created_at', { ascending: false });
+
+    if (!Boolean(userRow.responsabile_paghe)) {
+      query = query.eq('utente_id', userRow.id);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    setRichieste(data || []);
+
+    const initialNotes: Record<string, string> = {};
+    (data || []).forEach((r: Richiesta) => {
+      initialNotes[r.id] = r.note_responsabile || '';
+    });
+    setNote(initialNotes);
+  } catch (error: any) {
+    console.error(error);
+    toast({
+      title: 'Errore',
+      description: error?.message || 'Impossibile caricare le richieste.',
+      variant: 'destructive',
+    });
+  } finally {
+    setLoading(false);
   }
+}
 
   async function gestisciRichiesta(id: string, azione: 'approvata' | 'rifiutata') {
     try {
