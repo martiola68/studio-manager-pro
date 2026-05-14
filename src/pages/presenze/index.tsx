@@ -973,44 +973,45 @@ ${dipendentiXml}
 
 <div className="max-h-[300px] w-full overflow-auto rounded-md border">
   <Table className="min-w-max border-separate border-spacing-0 text-xs">
-    <TableHeader>
-      <TableRow>
-        <TableHead className="sticky left-0 top-0 z-50 w-[220px] bg-background shadow-sm">
-          Dipendente
-        </TableHead>
+   
+    <thead className="sticky top-0 z-50 bg-background">
+  <tr>
+    <th className="sticky left-0 top-0 z-50 h-12 w-[220px] bg-background px-2 text-left align-middle font-medium text-muted-foreground shadow-sm">
+      Dipendente
+    </th>
 
-        {days.map((day) => (
-          <TableHead
-            key={day.date}
-            title={day.holidayDescription}
-            className={`sticky top-0 z-40 w-[88px] text-center ${
-              day.isHoliday
-                ? 'bg-lime-200 text-lime-950 font-semibold'
-                : day.isWeekend
-                  ? 'bg-gray-50 text-gray-500'
-                  : 'bg-background'
-            }`}
-          >
-            <div className="flex flex-col items-center leading-tight">
-              <span className="text-[11px] uppercase">
-                {WEEKDAYS_SHORT[day.weekday]}
-              </span>
-              <span className="text-sm font-semibold">{day.day}</span>
-              {day.isHoliday && <span className="text-[10px]">fest.</span>}
-            </div>
-          </TableHead>
-        ))}
+    {days.map((day) => (
+      <th
+        key={day.date}
+        title={day.holidayDescription}
+        className={`sticky top-0 z-40 h-12 w-[88px] px-2 text-center align-middle font-medium ${
+          day.isHoliday
+            ? 'bg-lime-200 text-lime-950'
+            : day.isWeekend
+              ? 'bg-gray-50 text-gray-500'
+              : 'bg-background'
+        }`}
+      >
+        <div className="flex flex-col items-center leading-tight">
+          <span className="text-[11px] uppercase">
+            {WEEKDAYS_SHORT[day.weekday]}
+          </span>
+          <span className="text-sm font-semibold">{day.day}</span>
+          {day.isHoliday && <span className="text-[10px]">fest.</span>}
+        </div>
+      </th>
+    ))}
 
-        <TableHead className="sticky top-0 z-40 w-[60px] bg-background text-center">Pp</TableHead>
-        <TableHead className="sticky top-0 z-40 w-[60px] bg-background text-center">Ps</TableHead>
-        <TableHead className="sticky top-0 z-40 w-[60px] bg-background text-center">F</TableHead>
-        <TableHead className="sticky top-0 z-40 w-[60px] bg-background text-center">M</TableHead>
-        <TableHead className="sticky top-0 z-40 w-[60px] bg-background text-center">N</TableHead>
-        <TableHead className="sticky top-0 z-40 w-[80px] bg-background text-center">Perm.</TableHead>
-        <TableHead className="sticky top-0 z-40 w-[90px] bg-background text-center">L.104</TableHead>
-      </TableRow>
-    </TableHeader>
-
+    <th className="sticky top-0 z-40 h-12 w-[60px] bg-background px-2 text-center font-medium">Pp</th>
+    <th className="sticky top-0 z-40 h-12 w-[60px] bg-background px-2 text-center font-medium">Ps</th>
+    <th className="sticky top-0 z-40 h-12 w-[60px] bg-background px-2 text-center font-medium">F</th>
+    <th className="sticky top-0 z-40 h-12 w-[60px] bg-background px-2 text-center font-medium">M</th>
+    <th className="sticky top-0 z-40 h-12 w-[60px] bg-background px-2 text-center font-medium">N</th>
+    <th className="sticky top-0 z-40 h-12 w-[80px] bg-background px-2 text-center font-medium">Perm.</th>
+    <th className="sticky top-0 z-40 h-12 w-[90px] bg-background px-2 text-center font-medium">L.104</th>
+  </tr>
+</thead>
+    
     <TableBody>
       {dipendenti.map((dipendente) => {
         const summary = getSummaryForEmployee(dipendente.utente_id);
