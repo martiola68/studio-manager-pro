@@ -380,8 +380,10 @@ export function TopNavBar() {
   const isPathActive = (href?: string) => {
     if (!href) return false;
 
-    const normalizedHref = href.split("?")[0];
-    return pathname === normalizedHref || pathname.startsWith(`${normalizedHref}/`);
+    if (!pathname) return false;
+
+const normalizedHref = href.split("?")[0];
+return pathname === normalizedHref || pathname.startsWith(`${normalizedHref}/`);
   };
 
   const isActive = (item: MenuItem) => {
