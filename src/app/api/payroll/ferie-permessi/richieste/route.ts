@@ -35,8 +35,8 @@ async function sendEmailFromStudio(params: {
 const { data: tokenOwner, error: tokenError } = await supabaseAdmin
   .from('tbmicrosoft365_user_tokens')
   .select('user_id, microsoft_connection_id')
-  .eq('studio_id', payload.studio_id)
-  .eq('user_id', payload.utente_id)
+.eq('studio_id', params.studioId)
+.eq('user_id', params.senderUserId)
   .is('revoked_at', null)
   .order('updated_at', { ascending: false })
   .limit(1)
