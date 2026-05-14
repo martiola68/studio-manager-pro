@@ -15,8 +15,9 @@ function escapeHtml(value: string) {
     .replace(/"/g, '&quot;');
 }
 
-async function sendEmailFromStudio(params: {
+async function sendEmail(params: {
   studioId: string;
+  senderUserId: string;
   fromEmail: string;
   toEmail: string;
   subject: string;
@@ -175,13 +176,14 @@ export async function POST(request: Request) {
       </div>
     `;
 
-    await sendEmailFromStudio({
-      studioId: String(utente.studio_id),
-      fromEmail,
-      toEmail: emailResponsabile,
-      subject: `Nuova richiesta ${tipoRichiesta === 'ferie' ? 'ferie' : 'permesso'} - ${richiedente}`,
-      html,
-    });
+  await sendEmail({
+  studioId: String(userRow.studio_id),
+  senderUserId: String(userRow.id),
+  fromEmail: String(userRow.email),
+  toEmail: String(studioRow.mail_alert_ferie_permessi),
+  subject,
+  html,
+});
 
     return NextResponse.json({
       success: true,
