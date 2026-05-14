@@ -71,6 +71,7 @@ const [formData, setFormData] = useState({
   email: "",
   email_tenant2: "",
   mail_alert_paghe: "",
+  mail_alert_ferie_permessi: "",
   pec: "",
   sito_web: "",
   note: ""
@@ -129,6 +130,7 @@ const [formData, setFormData] = useState({
           email_tenant2: studioData.email_tenant2 || "",
           pec: studioData.pec || "",
           mail_alert_paghe: studioData.mail_alert_paghe || "",
+          mail_alert_ferie_permessi: studioData.mail_alert_ferie_permessi || "",
           sito_web: studioData.sito_web || "",
           note: studioData.note || ""
         });
@@ -750,6 +752,26 @@ const [formData, setFormData] = useState({
                           placeholder="paghe@studio.it"
                         />
                   </div>
+
+                <div className="space-y-2">
+  <Label htmlFor="mail_alert_ferie_permessi">
+    Email alert ferie/permessi
+  </Label>
+
+  <Input
+    id="mail_alert_ferie_permessi"
+    type="email"
+    value={formData.mail_alert_ferie_permessi}
+    onChange={(e) =>
+      setFormData({
+        ...formData,
+        mail_alert_ferie_permessi: e.target.value,
+      })
+    }
+    placeholder="feriepermessi@studio.it"
+  />
+</div>
+                
               </div>
 
               <div className="space-y-2">
