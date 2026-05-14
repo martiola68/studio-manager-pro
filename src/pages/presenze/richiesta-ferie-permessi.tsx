@@ -123,25 +123,31 @@ const { data: studioRow, error: studioError } = await supabase
     try {
       setSaving(true);
 
-      const payload = {
-        studio_id: utente.studio_id as string,
-        utente_id: utente.id,
-        tipo_richiesta: form.tipo_richiesta,
-        data_inizio: form.data_inizio,
-        data_fine: form.tipo_richiesta === "ferie" ? form.data_fine || form.data_inizio : null,
-        giorni: form.tipo_richiesta === "ferie" ? Number(form.giorni) : null,
-        ore: form.tipo_richiesta === "permesso" ? Number(form.ore) : null,
-        motivazione: form.motivazione || null,
-        stato: "inviata",
-        email_responsabile: studio.mail_alert_ferie_permessi,
-        email_richiedente: utente.email,
-      };
+     const {
+  data: { session },
+} = await supabase.auth.getSession();
 
-     const { error } = await (supabase as any)
-  .from("tbferie_permessi_richieste")
-  .insert(payload);
+const response = await fetch("/api/payroll/ferie-permessi/richieste", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${session?.access_token}`,
+  },
+  body: JSON.stringify({
+    tipo_richiesta: form.tipo_richiesta,
+    data_inizio: form.data_inizio,
+    data_fine: form.data_fine,
+    giorni: form.giorni,
+    ore: form.ore,
+    motivazione: form.motivazione,
+  }),
+});
 
-      if (error) throw error;
+const result = await response.json();
+
+if (!response.ok || !result.success) {
+  throw new Error(result.error || "Errore invio richiesta.");
+}
 
       toast({
         title: "Richiesta inviata",
