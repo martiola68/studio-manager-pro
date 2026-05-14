@@ -755,7 +755,7 @@ const [formData, setFormData] = useState({
 
                 <div className="space-y-2">
   <Label htmlFor="mail_alert_ferie_permessi">
-    Email alert ferie/permessi
+    Email richiesta ferie/permessi
   </Label>
 
   <Input
