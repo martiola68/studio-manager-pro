@@ -848,6 +848,13 @@ ${dipendentiXml}
               <Badge variant="outline">Vista dipendente</Badge>
             )}
 
+            <Button
+            variant="outline"
+              onClick={() => router.push('/presenze/richiesta-ferie-permessi')}
+                >
+                  Richiesta ferie/permessi
+              </Button>
+
             <Button variant="outline" onClick={loadData} disabled={loading || saving}>
               Aggiorna
             </Button>
