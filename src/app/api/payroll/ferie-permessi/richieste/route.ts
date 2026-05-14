@@ -34,38 +34,36 @@ async function sendEmailFromStudio(params: {
 
 const { data: tokenOwner, error: tokenError } = await supabaseAdmin
   .from('tbmicrosoft365_user_tokens')
-  .select('user_id')
-  .eq('studio_id', params.studioId)
-  .eq('microsoft_connection_id', studio.microsoft_connection_id)
+  .select('user_id, microsoft_connection_id')
+  .eq('studio_id', payload.studio_id)
+  .eq('user_id', payload.utente_id)
   .is('revoked_at', null)
   .order('updated_at', { ascending: false })
   .limit(1)
   .maybeSingle();
 
-if (tokenError || !tokenOwner?.user_id) {
-  throw new Error('Token Microsoft non trovato per la connessione dello studio.');
+if (tokenError || !tokenOwner?.user_id || !tokenOwner?.microsoft_connection_id) {
+  throw new Error('Token Microsoft non trovato per l’utente richiedente.');
 }
-
   await microsoftGraphService.sendEmail(
-    String(tokenOwner.user_id),
-    String(studio.microsoft_connection_id),
-    {
-      subject: params.subject,
-      body: {
-        contentType: 'HTML',
-        content: params.html,
-      },
-      toRecipients: [
-        {
-          emailAddress: {
-            address: params.toEmail,
-          },
-        },
-      ],
+  String(tokenOwner.user_id),
+  String(tokenOwner.microsoft_connection_id),
+  {
+    subject,
+    body: {
+      contentType: 'HTML',
+      content: html,
     },
-  );
+    toRecipients: [
+      {
+        emailAddress: {
+          address: studio.mail_alert_ferie_permessi,
+        },
+      },
+    ],
+  },
+);
 }
-
 export async function POST(request: Request) {
   try {
     const authHeader = request.headers.get('authorization') || '';
