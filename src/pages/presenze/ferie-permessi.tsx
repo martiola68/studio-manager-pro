@@ -55,11 +55,11 @@ export default function FeriePermessiPage() {
         return;
       }
 
-      const { data: userRow, error: userError } = await supabase
-        .from('tbutenti')
-        .select('id, studio_id, responsabile_paghe')
-        .eq('email', email)
-        .single();
+      const { data: userRow, error: userError } = await (supabase as any)
+  .from('tbutenti')
+  .select('id, studio_id, responsabile_paghe')
+  .eq('email', email)
+  .single();
 
       if (userError || !userRow) throw userError;
 
