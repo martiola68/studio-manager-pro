@@ -14,6 +14,69 @@ function escapeHtml(value: string) {
     .replace(/"/g, '&quot;');
 }
 
+async function sendEmailFromLoggedUser(params: {
+  request: Request;
+  token: string;
+  studioId: string;
+  senderUserId: string;
+  toEmail: string;
+  subject: string;
+  html: string;
+}) {
+  const { data: tokenRow, error: tokenError } = await supabaseAdmin
+    .from('tbmicrosoft365_user_tokens')
+    .select('microsoft_connection_id')
+    .eq('studio_id', params.studioId)
+    .eq('user_id', params.senderUserId)
+    .is('revoked_at', null)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (tokenError || !tokenRow?.microsoft_connection_id) {
+    throw new Error('Token Microsoft non trovato per l’utente richiedente.');
+  }
+
+  const origin = new URL(params.request.url).origin;
+
+  const res = await fetch(`${origin}/api/microsoft365/graph`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${params.token}`,
+    },
+    body: JSON.stringify({
+      userId: params.senderUserId,
+      endpoint: '/me/sendMail',
+      method: 'POST',
+      microsoftConnectionId: tokenRow.microsoft_connection_id,
+      body: JSON.stringify({
+        message: {
+          subject: params.subject,
+          body: {
+            contentType: 'HTML',
+            content: params.html,
+          },
+          toRecipients: [
+            {
+              emailAddress: {
+                address: params.toEmail,
+              },
+            },
+          ],
+        },
+        saveToSentItems: true,
+      }),
+    }),
+  });
+
+  const text = await res.text().catch(() => '');
+
+  if (!res.ok) {
+    throw new Error(text || `Errore invio email Microsoft Graph (${res.status}).`);
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const authHeader = request.headers.get('authorization') || '';
@@ -101,6 +164,31 @@ export async function POST(request: Request) {
 
     if (insertError) throw insertError;
 
+    const html = `
+  <div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#111827;">
+    <p>Nuova richiesta ${tipoRichiesta === 'ferie' ? 'ferie' : 'permesso'}.</p>
+    <p><strong>Richiedente:</strong> ${escapeHtml(richiedente)}</p>
+    <p><strong>Data inizio:</strong> ${escapeHtml(dataInizio)}</p>
+    ${
+      tipoRichiesta === 'ferie'
+        ? `<p><strong>Data fine:</strong> ${escapeHtml(dataFine)}</p><p><strong>Giorni:</strong> ${giorni}</p>`
+        : `<p><strong>Ore:</strong> ${ore}</p>`
+    }
+    ${motivazione ? `<p><strong>Note:</strong><br/>${escapeHtml(motivazione)}</p>` : ''}
+    <p>Accedi al gestionale per approvare o rifiutare la richiesta.</p>
+  </div>
+`;
+
+await sendEmailFromLoggedUser({
+  request,
+  token,
+  studioId: String(utente.studio_id),
+  senderUserId: String(utente.id),
+  toEmail: emailResponsabile,
+  subject: `Nuova richiesta ${tipoRichiesta === 'ferie' ? 'ferie' : 'permesso'} - ${richiedente}`,
+  html,
+});
+    
     return NextResponse.json({
       success: true,
       id: richiesta.id,
