@@ -32,17 +32,15 @@ async function sendEmail(params: {
     throw new Error('Connessione Microsoft non trovata.');
   }
 
-  const { data: tokenOwner, error: tokenError } = await supabaseAdmin
-    .from('tbmicrosoft365_user_tokens')
-    .select('user_id')
-    .eq('microsoft_connection_id', studio.microsoft_connection_id)
-    .eq('email', params.fromEmail)
-    .maybeSingle();
+const { data: tokenOwner, error: tokenError } = await supabaseAdmin
+  .from('tbmicrosoft365_user_tokens')
+  .select('user_id')
+  .eq('microsoft_connection_id', studio.microsoft_connection_id)
+  .maybeSingle();
 
-  if (tokenError || !tokenOwner?.user_id) {
-    throw new Error(`Token Microsoft non trovato per ${params.fromEmail}.`);
-  }
-
+if (tokenError || !tokenOwner?.user_id) {
+  throw new Error('Token Microsoft non trovato per la connessione dello studio.');
+}
   await microsoftGraphService.sendEmail(
     String(tokenOwner.user_id),
     String(studio.microsoft_connection_id),
