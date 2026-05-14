@@ -1,5 +1,5 @@
 'use client';
-
+import { useRouter } from 'next/router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import { getSupabaseClient } from '@/lib/supabaseClient';
@@ -126,6 +126,8 @@ const PRESENCE_COLORS: Record<string, string> = {
   Pp: 'bg-green-100 text-green-800 border-green-200',
   Ps: 'bg-violet-100 text-violet-800 border-violet-200',
 };
+
+const router = useRouter();
 
 function pad2(value: number) {
   return String(value).padStart(2, '0');
