@@ -68,16 +68,16 @@ export default function FeriePermessiPage() {
       setIsResponsabilePaghe(Boolean(userRow.responsabile_paghe));
 
       let query = (supabase as any)
-        .from('tbferie_permessi_richieste')
-        .select('*')
-        .eq('studio_id', userRow.studio_id)
-        .order('created_at', { ascending: false });
+  .from('tbferie_permessi_richieste')
+  .select('*')
+  .eq('studio_id', userRow.studio_id as string)
+  .order('created_at', { ascending: false });
 
       if (!userRow.responsabile_paghe) {
         query = query.eq('utente_id', userRow.id);
       }
 
-      const { data, error } = await query;
+     const { data, error } = await (query as any);
 
       if (error) throw error;
 
