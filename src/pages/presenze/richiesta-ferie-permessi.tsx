@@ -128,7 +128,7 @@ const { data: studioRow, error: studioError } = await supabase
       setSaving(true);
 
       const payload = {
-        studio_id: studioId,
+        studio_id: utente.studio_id as string,
         utente_id: utente.id,
         tipo_richiesta: form.tipo_richiesta,
         data_inizio: form.data_inizio,
