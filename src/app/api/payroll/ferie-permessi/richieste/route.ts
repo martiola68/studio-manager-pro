@@ -14,38 +14,6 @@ function escapeHtml(value: string) {
     .replace(/"/g, '&quot;');
 }
 
-const { data: tokenOwner, error: tokenError } = await supabaseAdmin
-  .from('tbmicrosoft365_user_tokens')
-  .select('user_id, microsoft_connection_id')
-.eq('studio_id', params.studioId)
-.eq('user_id', params.senderUserId)
-  .is('revoked_at', null)
-  .order('updated_at', { ascending: false })
-  .limit(1)
-  .maybeSingle();
-
-if (tokenError || !tokenOwner?.user_id || !tokenOwner?.microsoft_connection_id) {
-  throw new Error('Token Microsoft non trovato per l’utente richiedente.');
-}
- await microsoftGraphService.sendEmail(
-  String(tokenOwner.user_id),
-  String(tokenOwner.microsoft_connection_id),
-  {
-    subject: params.subject,
-    body: {
-      contentType: 'HTML',
-      content: params.html,
-    },
-    toRecipients: [
-      {
-        emailAddress: {
-          address: params.toEmail,
-        },
-      },
-    ],
-  },
-);
-}
 export async function POST(request: Request) {
   try {
     const authHeader = request.headers.get('authorization') || '';
@@ -96,7 +64,7 @@ export async function POST(request: Request) {
 
     const { data: studio, error: studioError } = await supabaseAdmin
       .from('tbstudio')
-      .select('id, email, mail_alert_paghe, mail_alert_ferie_permessi')
+      .select('id, mail_alert_ferie_permessi')
       .eq('id', utente.studio_id)
       .single();
 
@@ -106,15 +74,6 @@ export async function POST(request: Request) {
 
     if (!emailResponsabile) {
       throw new Error('Email alert ferie/permessi non configurata nello studio.');
-    }
-
-    const fromEmail =
-      studio.mail_alert_ferie_permessi?.trim() ||
-      studio.mail_alert_paghe?.trim() ||
-      studio.email?.trim();
-
-    if (!fromEmail) {
-      throw new Error('Email mittente non configurata.');
     }
 
     const richiedente =
@@ -141,21 +100,6 @@ export async function POST(request: Request) {
       .single();
 
     if (insertError) throw insertError;
-
-    const html = `
-      <div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#111827;">
-        <p>Nuova richiesta ${tipoRichiesta === 'ferie' ? 'ferie' : 'permesso'}.</p>
-        <p><strong>Richiedente:</strong> ${escapeHtml(richiedente)}</p>
-        <p><strong>Data inizio:</strong> ${escapeHtml(dataInizio)}</p>
-        ${
-          tipoRichiesta === 'ferie'
-            ? `<p><strong>Data fine:</strong> ${escapeHtml(dataFine)}</p><p><strong>Giorni:</strong> ${giorni}</p>`
-            : `<p><strong>Ore:</strong> ${ore}</p>`
-        }
-        ${motivazione ? `<p><strong>Note:</strong><br/>${escapeHtml(motivazione)}</p>` : ''}
-        <p>Accedi al gestionale per approvare o rifiutare la richiesta.</p>
-      </div>
-    `;
 
     return NextResponse.json({
       success: true,
