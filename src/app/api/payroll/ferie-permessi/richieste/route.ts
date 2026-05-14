@@ -176,12 +176,12 @@ export async function POST(request: Request) {
       </div>
     `;
 
-  await sendEmail({
-  studioId: String(userRow.studio_id),
-  senderUserId: String(userRow.id),
-  fromEmail: String(userRow.email),
-  toEmail: String(studioRow.mail_alert_ferie_permessi),
-  subject,
+ await sendEmail({
+  studioId: String(utente.studio_id),
+  senderUserId: String(utente.id),
+  fromEmail: String(utente.email),
+  toEmail: String(studio.mail_alert_ferie_permessi),
+  subject: `Nuova richiesta ${tipoRichiesta === 'ferie' ? 'ferie' : 'permesso'} - ${richiedente}`,
   html,
 });
 
