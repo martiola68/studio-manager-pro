@@ -297,7 +297,10 @@ function downloadXml(filename: string, content: string) {
   URL.revokeObjectURL(url);
 }
 
-function PresenzePage() {
+export default function PresenzePage() {
+  if (typeof window === "undefined") {
+    return null;
+  }
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [monthIndex, setMonthIndex] = useState(now.getMonth());
@@ -1117,7 +1120,3 @@ ${dipendentiXml}
     </>
   );
 }
-
-export default dynamic(() => Promise.resolve(PresenzePage), {
-  ssr: false,
-});
