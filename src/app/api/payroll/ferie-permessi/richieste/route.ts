@@ -32,10 +32,14 @@ async function sendEmailFromStudio(params: {
     throw new Error('Connessione Microsoft non trovata per lo studio.');
   }
 
- const { data: tokenOwner, error: tokenError } = await supabaseAdmin
+const { data: tokenOwner, error: tokenError } = await supabaseAdmin
   .from('tbmicrosoft365_user_tokens')
   .select('user_id')
+  .eq('studio_id', params.studioId || params.studio_id || studio.id)
   .eq('microsoft_connection_id', studio.microsoft_connection_id)
+  .is('revoked_at', null)
+  .order('updated_at', { ascending: false })
+  .limit(1)
   .maybeSingle();
 
 if (tokenError || !tokenOwner?.user_id) {
