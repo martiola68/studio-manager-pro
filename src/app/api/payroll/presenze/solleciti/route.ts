@@ -85,7 +85,7 @@ Ufficio Paghe
 async function getStudioMailContext(studioId: string) {
   const { data: studio, error: studioError } = await supabaseAdmin
     .from('tbstudio')
-    .select('email, microsoft_connection_id')
+    .select('email, microsoft_connection_id, mail_alert_paghe')
     .eq('id', studioId)
     .single();
 
@@ -93,19 +93,31 @@ async function getStudioMailContext(studioId: string) {
     throw new Error(`Connessione Microsoft studio non trovata per studio ${studioId}`);
   }
 
+  const senderEmail =
+    studio.mail_alert_paghe?.trim().toLowerCase() ||
+    studio.email?.trim().toLowerCase();
+
+  if (!senderEmail) {
+    throw new Error(`Email mittente paghe non configurata per studio ${studioId}`);
+  }
+
   const { data: tokenOwner, error: tokenError } = await supabaseAdmin
     .from('tbmicrosoft365_user_tokens')
-    .select('user_id')
+    .select('user_id, email')
     .eq('microsoft_connection_id', studio.microsoft_connection_id)
+    .eq('email', senderEmail)
     .maybeSingle();
 
   if (tokenError || !tokenOwner?.user_id) {
-    throw new Error(`Token owner Microsoft non trovato per studio ${studioId}`);
+    throw new Error(
+      `Token Microsoft non trovato per il mittente paghe ${senderEmail} dello studio ${studioId}`,
+    );
   }
 
   return {
     senderUserId: String(tokenOwner.user_id),
     microsoftConnectionId: String(studio.microsoft_connection_id),
+    senderEmail,
   };
 }
 
