@@ -169,13 +169,10 @@ export async function POST(
 
     const { error: updateError } = await (supabaseAdmin as any)
       .from('tbferie_permessi_richieste')
-      .update({
-        stato: azione,
-        note_responsabile: noteResponsabile,
-        gestito_da: gestore.id,
-        gestito_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
+     .update({
+  stato: azione,
+  note_responsabile: noteResponsabile,
+})
       .eq('id', id);
 
     if (updateError) throw updateError;
@@ -212,15 +209,14 @@ export async function POST(
     });
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+} catch (error) {
     console.error('Errore gestione richiesta:', error);
 
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Errore gestione richiesta.',
+        error: error instanceof Error ? error.message : String(error),
       },
       { status: 500 },
     );
   }
-}
