@@ -63,17 +63,15 @@ export default function FeriePermessiPage() {
 
     if (userError || !userRow) throw userError;
 
-    const { data: studioRow, error: studioError } = await (supabase as any)
-      .from('tbstudio')
-      .select('mail_alert_ferie_permessi')
-      .eq('id', userRow.studio_id)
-      .single();
+   const { data: studioRow, error: studioError } = await (supabase as any)
+  .from('tbstudio')
+  .select('mail_alert_ferie_permessi')
+  .eq('id', userRow.studio_id)
+  .single();
 
-    if (studioError || !studioRow) throw studioError;
-
-    const isGestoreFeriePermessi =
-      Boolean(userRow.responsabile_paghe) ||
-      String(studioRow.mail_alert_ferie_permessi || '').trim().toLowerCase() === email;
+const isGestoreFeriePermessi =
+  Boolean(userRow.responsabile_paghe) ||
+  String(studioRow.mail_alert_ferie_permessi || '').trim().toLowerCase() === email;
 
     setCurrentUserId(userRow.id);
     setStudioId(userRow.studio_id as string);
