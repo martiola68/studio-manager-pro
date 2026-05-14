@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { microsoftGraphService } from '@/services/microsoftGraphService';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,24 +13,6 @@ function escapeHtml(value: string) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 }
-
-async function sendEmail(params: {
-  studioId: string;
-  senderUserId: string;
-  fromEmail: string;
-  toEmail: string;
-  subject: string;
-  html: string;
-}) {
-  const { data: studio, error: studioError } = await supabaseAdmin
-    .from('tbstudio')
-    .select('microsoft_connection_id')
-    .eq('id', params.studioId)
-    .single();
-
-  if (studioError || !studio?.microsoft_connection_id) {
-    throw new Error('Connessione Microsoft non trovata per lo studio.');
-  }
 
 const { data: tokenOwner, error: tokenError } = await supabaseAdmin
   .from('tbmicrosoft365_user_tokens')
@@ -175,15 +156,6 @@ export async function POST(request: Request) {
         <p>Accedi al gestionale per approvare o rifiutare la richiesta.</p>
       </div>
     `;
-
- await sendEmail({
-  studioId: String(utente.studio_id),
-  senderUserId: String(utente.id),
-  fromEmail: String(utente.email),
-  toEmail: String(studio.mail_alert_ferie_permessi),
-  subject: `Nuova richiesta ${tipoRichiesta === 'ferie' ? 'ferie' : 'permesso'} - ${richiedente}`,
-  html,
-});
 
     return NextResponse.json({
       success: true,
