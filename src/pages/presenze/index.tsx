@@ -908,6 +908,15 @@ ${dipendentiXml}
             </Button>
 
             <Button
+  variant="outline"
+  onClick={() => {
+    window.location.href = '/presenze/ferie-permessi';
+  }}
+>
+  Ferie/permessi
+</Button>
+
+            <Button
               variant="outline"
               onClick={exportZucchettiXml}
               disabled={loading || dipendenti.length === 0 || !isResponsabilePaghe}
