@@ -971,12 +971,20 @@ ${dipendentiXml}
               </div>
             ) : (
            <div className="max-h-[360px] w-full overflow-auto rounded-md border">
-               <Table className="min-w-max text-xs">
-                <TableHeader className="sticky top-0 z-30 bg-background">
+               <Table className="min-w-max border-separate border-spacing-0 text-xs">
+                <TableHeader>
                   <TableRow>
-                        <TableHead className="sticky left-0 top-0 z-40 w-[220px] bg-background shadow-sm">
-                        Dipendente
-                      </TableHead>
+                        <TableHead
+  key={day.date}
+  title={day.holidayDescription}
+  className={`sticky top-0 z-40 w-[88px] text-center ${
+    day.isHoliday
+      ? 'bg-lime-200 text-lime-950 font-semibold'
+      : day.isWeekend
+        ? 'bg-gray-50 text-gray-500'
+        : 'bg-background'
+  }`}
+>
 
                       {days.map((day) => (
                         <TableHead
@@ -1000,13 +1008,13 @@ ${dipendentiXml}
                         </TableHead>
                       ))}
 
-                    <TableHead className="sticky top-0 z-30 w-[60px] bg-background text-center">Pp</TableHead>
-                    <TableHead className="sticky top-0 z-30 w-[60px] bg-background text-center">Ps</TableHead>
-                    <TableHead className="sticky top-0 z-30 w-[60px] bg-background text-center">F</TableHead>
-                      <TableHead className="sticky top-0 z-30 w-[60px] bg-background text-center">M</TableHead>
-                      <TableHead className="sticky top-0 z-30 w-[60px] bg-background text-center">N</TableHead>
-                      <TableHead className="sticky top-0 z-30 w-[80px] bg-background text-center">Perm.</TableHead>
-                      <TableHead className="sticky top-0 z-30 w-[90px] bg-background text-center">L.104</TableHead>
+                 <TableHead className="sticky top-0 z-40 w-[60px] bg-background text-center">Pp</TableHead>
+<TableHead className="sticky top-0 z-40 w-[60px] bg-background text-center">Ps</TableHead>
+<TableHead className="sticky top-0 z-40 w-[60px] bg-background text-center">F</TableHead>
+<TableHead className="sticky top-0 z-40 w-[60px] bg-background text-center">M</TableHead>
+<TableHead className="sticky top-0 z-40 w-[60px] bg-background text-center">N</TableHead>
+<TableHead className="sticky top-0 z-40 w-[80px] bg-background text-center">Perm.</TableHead>
+<TableHead className="sticky top-0 z-40 w-[90px] bg-background text-center">L.104</TableHead>
                     </TableRow>
                   </TableHeader>
 
