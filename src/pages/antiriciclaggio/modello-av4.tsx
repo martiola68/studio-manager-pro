@@ -1659,7 +1659,9 @@ ${nomeOperatore}
 
       av4_caricato_manualmente: !!form.av4_caricato_manualmente,
       compilato_da_cliente: !!form.av4_caricato_manualmente || !!form.allegato_pdf_cliente,
-      Av4InviatoCL: form.av4_caricato_manualmente ? null : form.stato === "completato",
+      Av4InviatoCL: form.av4_caricato_manualmente
+  ? false
+  : Boolean(form.stato === "completato"),
 
       stato: form.av4_caricato_manualmente ? "completato" : form.stato,
       versione: form.versione,
