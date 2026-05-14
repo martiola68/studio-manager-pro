@@ -1000,13 +1000,13 @@ ${dipendentiXml}
                         </TableHead>
                       ))}
 
-                      <TableHead className="w-[60px] text-center">Pp</TableHead>
-                      <TableHead className="w-[60px] text-center">Ps</TableHead>
-                      <TableHead className="w-[60px] text-center">F</TableHead>
-                      <TableHead className="w-[60px] text-center">M</TableHead>
-                      <TableHead className="w-[60px] text-center">N</TableHead>
-                      <TableHead className="w-[80px] text-center">Perm.</TableHead>
-                      <TableHead className="w-[90px] text-center">L.104</TableHead>
+                    <TableHead className="sticky top-0 z-30 w-[60px] bg-background text-center">Pp</TableHead>
+                    <TableHead className="sticky top-0 z-30 w-[60px] bg-background text-center">Ps</TableHead>
+                    <TableHead className="sticky top-0 z-30 w-[60px] bg-background text-center">F</TableHead>
+                      <TableHead className="sticky top-0 z-30 w-[60px] bg-background text-center">M</TableHead>
+                      <TableHead className="sticky top-0 z-30 w-[60px] bg-background text-center">N</TableHead>
+                      <TableHead className="sticky top-0 z-30 w-[80px] bg-background text-center">Perm.</TableHead>
+                      <TableHead className="sticky top-0 z-30 w-[90px] bg-background text-center">L.104</TableHead>
                     </TableRow>
                   </TableHeader>
 
