@@ -971,25 +971,25 @@ ${dipendentiXml}
               </div>
             ) : (
            <div className="max-h-[360px] w-full overflow-auto rounded-md border">
-                <Table className="min-w-max text-xs">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="sticky left-0 z-20 w-[220px] bg-background shadow-sm">
+               <Table className="min-w-max text-xs">
+                <TableHeader className="sticky top-0 z-30 bg-background">
+                  <TableRow>
+                        <TableHead className="sticky left-0 top-0 z-40 w-[220px] bg-background shadow-sm">
                         Dipendente
                       </TableHead>
 
                       {days.map((day) => (
                         <TableHead
-                          key={day.date}
-                          title={day.holidayDescription}
-                          className={`w-[88px] text-center ${
-                            day.isHoliday
-                              ? 'bg-lime-200 text-lime-950 font-semibold'
-                              : day.isWeekend
-                                ? 'bg-gray-50 text-gray-500'
-                                : ''
-                          }`}
-                        >
+                        key={day.date}
+                        title={day.holidayDescription}
+                          className={`sticky top-0 z-30 w-[88px] text-center ${
+                          day.isHoliday
+                            ? 'bg-lime-200 text-lime-950 font-semibold'
+                          : day.isWeekend
+                          ? 'bg-gray-50 text-gray-500'
+                          : 'bg-background'
+                            }`}
+                            >
                           <div className="flex flex-col items-center leading-tight">
                             <span className="text-[11px] uppercase">
                               {WEEKDAYS_SHORT[day.weekday]}
