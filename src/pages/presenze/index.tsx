@@ -3,9 +3,6 @@ import { useRouter } from 'next/router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import { getSupabaseClient } from '@/lib/supabaseClient';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import dynamic from "next/dynamic";
 
 type Utente = {
@@ -122,6 +119,60 @@ const PRESENCE_COLORS: Record<string, string> = {
 };
 
 const router = useRouter();
+
+function Button({
+  children,
+  className = '',
+  variant,
+  disabled,
+  ...props
+}: any) {
+  return (
+    <button
+      className={`rounded-md border px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 ${
+        variant === 'outline'
+          ? 'bg-white hover:bg-gray-50'
+          : 'bg-blue-600 text-white hover:bg-blue-700'
+      } ${className}`}
+      disabled={disabled}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Badge({ children, className = '', variant }: any) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
+        variant === 'outline' ? 'bg-white' : 'bg-gray-100'
+      } ${className}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+function Card({ children, className = '' }: any) {
+  return (
+    <div className={`rounded-lg border bg-white shadow-sm ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+function CardHeader({ children, className = '' }: any) {
+  return <div className={`p-6 ${className}`}>{children}</div>;
+}
+
+function CardTitle({ children, className = '' }: any) {
+  return <h3 className={`font-semibold ${className}`}>{children}</h3>;
+}
+
+function CardContent({ children, className = '' }: any) {
+  return <div className={`p-6 pt-0 ${className}`}>{children}</div>;
+}
 
 function pad2(value: number) {
   return String(value).padStart(2, '0');
