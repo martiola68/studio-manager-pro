@@ -56,11 +56,17 @@ export default function RichiestaFeriePermessiPage() {
 
       setUtente(userRow);
 
-      const { data: studioRow, error: studioError } = await supabase
-        .from("tbstudio")
-        .select("id, mail_alert_ferie_permessi")
-        .eq("id", userRow.studio_id)
-        .single();
+     if (!userRow.studio_id) {
+  throw new Error("Studio non associato all'utente.");
+}
+
+const studioId = userRow.studio_id as string;
+
+const { data: studioRow, error: studioError } = await supabase
+  .from("tbstudio")
+  .select("id, mail_alert_ferie_permessi")
+  .eq("id", studioId)
+  .single();
 
       if (studioError || !studioRow) throw studioError;
 
@@ -122,7 +128,7 @@ export default function RichiestaFeriePermessiPage() {
       setSaving(true);
 
       const payload = {
-        studio_id: utente.studio_id,
+        studio_id: studioId,
         utente_id: utente.id,
         tipo_richiesta: form.tipo_richiesta,
         data_inizio: form.data_inizio,
