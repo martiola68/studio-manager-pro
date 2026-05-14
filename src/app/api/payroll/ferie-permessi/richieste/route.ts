@@ -164,14 +164,17 @@ export async function POST(request: Request) {
 
     if (insertError) throw insertError;
 
+    function formatDateIT(date: string) {
+  return new Date(date).toLocaleDateString('it-IT');
+}
     const html = `
   <div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#111827;">
     <p>Nuova richiesta ${tipoRichiesta === 'ferie' ? 'ferie' : 'permesso'}.</p>
     <p><strong>Richiedente:</strong> ${escapeHtml(richiedente)}</p>
-    <p><strong>Data inizio:</strong> ${escapeHtml(dataInizio)}</p>
+    <p><strong>Data inizio:</strong> ${escapeHtml(formatDateIT(dataInizio))}</p>
     ${
       tipoRichiesta === 'ferie'
-        ? `<p><strong>Data fine:</strong> ${escapeHtml(dataFine)}</p><p><strong>Giorni:</strong> ${giorni}</p>`
+        ? `<p><strong>Data fine:</strong> ${escapeHtml(formatDateIT(dataFine))}</p><p><strong>Giorni:</strong> ${giorni}</p>`
         : `<p><strong>Ore:</strong> ${ore}</p>`
     }
     ${motivazione ? `<p><strong>Note:</strong><br/>${escapeHtml(motivazione)}</p>` : ''}
