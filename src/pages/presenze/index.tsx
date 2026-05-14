@@ -970,122 +970,128 @@ ${dipendentiXml}
                 Nessun dipendente trovato.
               </div>
             ) : (
- <div className="max-h-[260px] w-full overflow-auto rounded-md border">
-  <Table className="min-w-max text-xs">
-  <TableHeader>
-    <TableRow>
-     <TableHead className="w-[220px] bg-background">
-  Dipendente
-</TableHead>
+<div className="w-full rounded-md border">
+  <div className="overflow-x-auto">
+    <Table className="min-w-max text-xs">
+      <TableHeader>
+        <TableRow>
+          <TableHead className="w-[220px] bg-background">
+            Dipendente
+          </TableHead>
 
-      {days.map((day) => (
-      <TableHead
-  key={day.date}
-  title={day.holidayDescription}
-  className={`w-[88px] text-center ${
-    day.isHoliday
-      ? 'bg-lime-200 text-lime-950 font-semibold'
-      : day.isWeekend
-        ? 'bg-gray-50 text-gray-500'
-        : ''
-  }`}
->
-          <div className="flex flex-col items-center leading-tight">
-            <span className="text-[11px] uppercase">
-              {WEEKDAYS_SHORT[day.weekday]}
-            </span>
-            <span className="text-sm font-semibold">{day.day}</span>
-            {day.isHoliday && <span className="text-[10px]">fest.</span>}
-          </div>
-        </TableHead>
-      ))}
-
-      <TableHead className="w-[60px] text-center">Pp</TableHead>
-<TableHead className="w-[60px] text-center">Ps</TableHead>
-<TableHead className="w-[60px] text-center">F</TableHead>
-<TableHead className="w-[60px] text-center">M</TableHead>
-<TableHead className="w-[60px] text-center">N</TableHead>
-<TableHead className="w-[80px] text-center">Perm.</TableHead>
-<TableHead className="w-[90px] text-center">L.104</TableHead>
-    </TableRow>
-  </TableHeader>
-
-                  <TableBody>
-                    {dipendenti.map((dipendente) => {
-                      const summary = getSummaryForEmployee(dipendente.utente_id);
-
-                      return (
-                        <TableRow key={dipendente.utente_id}>
-                          <TableCell className="sticky left-0 z-10 bg-background font-medium shadow-sm">
-                            <div className="flex flex-col">
-                              <span>{getEmployeeName(dipendente)}</span>
-                              <span className="text-[11px] font-normal text-muted-foreground">
-                                {dipendente.email}
-                              </span>
-                            </div>
-                          </TableCell>
-
-                          {days.map((day) => {
-                            const code = getCode(dipendente.utente_id, day);
-
-                            return (
-                              <TableCell
-                                key={`${dipendente.utente_id}-${day.date}`}
-                                className="p-1 text-center"
-                              >
-                                <select
-                                  disabled={isLockedPeriod || !canEditEmployee(dipendente.utente_id)}
-                                  value={code}
-                                  onChange={(event) =>
-                                    handleChange(
-                                      dipendente.utente_id,
-                                      day.date,
-                                      event.target.value,
-                                    )
-                                  }
-                                  title={day.holidayDescription}
-                                  className={`h-8 w-[82px] rounded-md border px-2 text-xs outline-none ${
-                                    code
-                                      ? day.isHoliday
-                                        ? getHolidayCellClass(code)
-                                        : getCellClass(code)
-                                      : day.date <= getTodayKey()
-                                        ? 'bg-yellow-50 text-gray-700 border-yellow-300'
-                                        : 'bg-white text-gray-400 border-gray-200'
-                                  }`}
-                                >
-                                  <option value="">-</option>
-                                  {allowedCodes.map((item) => (
-                                    <option key={item.codice} value={item.codice}>
-                                      {item.codice}
-                                    </option>
-                                  ))}
-                                </select>
-                              </TableCell>
-                            );
-                          })}
-
-                          <TableCell className="text-center font-medium">{summary.pp}</TableCell>
-                          <TableCell className="text-center font-medium">{summary.ps}</TableCell>
-                          <TableCell className="text-center font-medium">{summary.ferie}</TableCell>
-                          <TableCell className="text-center font-medium">{summary.malattia}</TableCell>
-                          <TableCell className="text-center font-medium">{summary.festivi}</TableCell>
-                          <TableCell className="text-center font-medium">
-                          {formatHoursMinutes(summary.permessiOre)}
-                          </TableCell>
-                          <TableCell
-                            className={`text-center font-medium ${
-                              summary.permessi104Ore > 24 ? 'text-red-700' : ''
-                            }`}
-                          >
-                            {formatHoursMinutes(summary.permessi104Ore)}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+          {days.map((day) => (
+            <TableHead
+              key={day.date}
+              title={day.holidayDescription}
+              className={`w-[88px] text-center ${
+                day.isHoliday
+                  ? 'bg-lime-200 text-lime-950 font-semibold'
+                  : day.isWeekend
+                    ? 'bg-gray-50 text-gray-500'
+                    : ''
+              }`}
+            >
+              <div className="flex flex-col items-center leading-tight">
+                <span className="text-[11px] uppercase">
+                  {WEEKDAYS_SHORT[day.weekday]}
+                </span>
+                <span className="text-sm font-semibold">{day.day}</span>
+                {day.isHoliday && <span className="text-[10px]">fest.</span>}
               </div>
+            </TableHead>
+          ))}
+
+          <TableHead className="w-[60px] text-center">Pp</TableHead>
+          <TableHead className="w-[60px] text-center">Ps</TableHead>
+          <TableHead className="w-[60px] text-center">F</TableHead>
+          <TableHead className="w-[60px] text-center">M</TableHead>
+          <TableHead className="w-[60px] text-center">N</TableHead>
+          <TableHead className="w-[80px] text-center">Perm.</TableHead>
+          <TableHead className="w-[90px] text-center">L.104</TableHead>
+        </TableRow>
+      </TableHeader>
+    </Table>
+  </div>
+
+  <div className="max-h-[260px] overflow-auto">
+    <Table className="min-w-max text-xs">
+      <TableBody>
+        {dipendenti.map((dipendente) => {
+          const summary = getSummaryForEmployee(dipendente.utente_id);
+
+          return (
+            <TableRow key={dipendente.utente_id}>
+              <TableCell className="w-[220px] bg-background font-medium">
+                <div className="flex flex-col">
+                  <span>{getEmployeeName(dipendente)}</span>
+                  <span className="text-[11px] font-normal text-muted-foreground">
+                    {dipendente.email}
+                  </span>
+                </div>
+              </TableCell>
+
+              {days.map((day) => {
+                const code = getCode(dipendente.utente_id, day);
+
+                return (
+                  <TableCell
+                    key={`${dipendente.utente_id}-${day.date}`}
+                    className="w-[88px] p-1 text-center"
+                  >
+                    <select
+                      disabled={isLockedPeriod || !canEditEmployee(dipendente.utente_id)}
+                      value={code}
+                      onChange={(event) =>
+                        handleChange(
+                          dipendente.utente_id,
+                          day.date,
+                          event.target.value,
+                        )
+                      }
+                      title={day.holidayDescription}
+                      className={`h-8 w-[82px] rounded-md border px-2 text-xs outline-none ${
+                        code
+                          ? day.isHoliday
+                            ? getHolidayCellClass(code)
+                            : getCellClass(code)
+                          : day.date <= getTodayKey()
+                            ? 'bg-yellow-50 text-gray-700 border-yellow-300'
+                            : 'bg-white text-gray-400 border-gray-200'
+                      }`}
+                    >
+                      <option value="">-</option>
+                      {allowedCodes.map((item) => (
+                        <option key={item.codice} value={item.codice}>
+                          {item.codice}
+                        </option>
+                      ))}
+                    </select>
+                  </TableCell>
+                );
+              })}
+
+              <TableCell className="w-[60px] text-center font-medium">{summary.pp}</TableCell>
+              <TableCell className="w-[60px] text-center font-medium">{summary.ps}</TableCell>
+              <TableCell className="w-[60px] text-center font-medium">{summary.ferie}</TableCell>
+              <TableCell className="w-[60px] text-center font-medium">{summary.malattia}</TableCell>
+              <TableCell className="w-[60px] text-center font-medium">{summary.festivi}</TableCell>
+              <TableCell className="w-[80px] text-center font-medium">
+                {formatHoursMinutes(summary.permessiOre)}
+              </TableCell>
+              <TableCell
+                className={`w-[90px] text-center font-medium ${
+                  summary.permessi104Ore > 24 ? 'text-red-700' : ''
+                }`}
+              >
+                {formatHoursMinutes(summary.permessi104Ore)}
+              </TableCell>
+            </TableRow>
+          );
+        })}
+      </TableBody>
+    </Table>
+  </div>
+</div>
             )}
           </CardContent>
         </Card>
