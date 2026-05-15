@@ -17,6 +17,7 @@ const utentiSelect = `
   updated_at,
   responsabile,
   responsabile_paghe,
+   responsabile_ferie_permessi,
   studio_id,
   settore,
   microsoft_connection_id,
