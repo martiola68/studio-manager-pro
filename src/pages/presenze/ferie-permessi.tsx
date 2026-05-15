@@ -7,6 +7,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 
+type StatoRichiesta = 'inviata' | 'approvata' | 'rifiutata' | 'revocata';
+
 type Richiesta = {
   id: string;
   studio_id: string;
@@ -17,7 +19,7 @@ type Richiesta = {
   giorni: number | null;
   ore: number | null;
   motivazione: string | null;
-  stato: 'inviata' | 'approvata' | 'rifiutata';
+  stato: StatoRichiesta;
   email_responsabile: string | null;
   email_richiedente: string | null;
   note_responsabile: string | null;
@@ -40,19 +42,37 @@ function formatDateIT(date: string | null) {
 }
 
 function getRichiedenteName(richiesta: Richiesta) {
-  const fullName = `${richiesta.richiedente_cognome ?? ''} ${richiesta.richiedente_nome ?? ''}`.trim();
+  const fullName = `${richiesta.richiedente_cognome ?? ''} ${
+    richiesta.richiedente_nome ?? ''
+  }`.trim();
+
   return fullName || richiesta.email_richiedente || '-';
+}
+
+function getRichiedenteFiltroName(richiesta: Richiesta) {
+  const fullName = `${richiesta.richiedente_cognome ?? ''} ${
+    richiesta.richiedente_nome ?? ''
+  }`.trim();
+
+  return fullName || richiesta.email_richiedente || 'Dipendente';
 }
 
 export default function FeriePermessiPage() {
   const router = useRouter();
   const { toast } = useToast();
 
+  const currentYear = new Date().getFullYear();
+
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [richieste, setRichieste] = useState<Richiesta[]>([]);
   const [note, setNote] = useState<Record<string, string>>({});
   const [isResponsabilePaghe, setIsResponsabilePaghe] = useState(false);
+
+  const [filtroDipendente, setFiltroDipendente] = useState<string>('tutti');
+  const [filtroMese, setFiltroMese] = useState<string>('tutti');
+  const [filtroAnno, setFiltroAnno] = useState<string>(String(currentYear));
+  const [filtroStato, setFiltroStato] = useState<string>('tutti');
 
   useEffect(() => {
     void loadData();
@@ -75,7 +95,7 @@ export default function FeriePermessiPage() {
 
       const { data: userRow, error: userError } = await (supabase as any)
         .from('tbutenti')
-        .select('id, studio_id, email, responsabile_paghe')
+        .select('id, studio_id, email, responsabile_paghe, responsabile_ferie_permessi')
         .eq('email', email)
         .single();
 
@@ -90,6 +110,7 @@ export default function FeriePermessiPage() {
       if (studioError || !studioRow) throw studioError;
 
       const isGestoreFeriePermessi =
+        Boolean(userRow.responsabile_ferie_permessi) ||
         Boolean(userRow.responsabile_paghe) ||
         String(studioRow.mail_alert_ferie_permessi || '').trim().toLowerCase() === email;
 
@@ -157,7 +178,7 @@ export default function FeriePermessiPage() {
     }
   }
 
-  async function gestisciRichiesta(id: string, azione: 'approvata' | 'rifiutata') {
+  async function gestisciRichiesta(id: string, azione: StatoRichiesta) {
     try {
       setSavingId(id);
 
@@ -169,209 +190,4 @@ export default function FeriePermessiPage() {
         throw new Error('Sessione non valida. Effettua nuovamente il login.');
       }
 
-      const response = await fetch(`/api/payroll/ferie-permessi/richieste/${id}/gestisci`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          azione,
-          note_responsabile: note[id] || '',
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Errore aggiornamento richiesta.');
-      }
-
-      toast({
-        title: 'Richiesta aggiornata',
-        description: `Richiesta ${azione === 'approvata' ? 'approvata' : 'rifiutata'} correttamente.`,
-      });
-
-      await loadData();
-    } catch (error: any) {
-      console.error(error);
-      toast({
-        title: 'Errore',
-        description: error?.message || 'Impossibile aggiornare la richiesta.',
-        variant: 'destructive',
-      });
-    } finally {
-      setSavingId(null);
-    }
-  }
-
-  function statoBadge(stato: string) {
-    if (stato === 'approvata') {
-      return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Approvata</Badge>;
-    }
-
-    if (stato === 'rifiutata') {
-      return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Rifiutata</Badge>;
-    }
-
-    return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Inviata</Badge>;
-  }
-
-  const riepilogo = useMemo(() => {
-    const pending = richieste.filter((r) => r.stato === 'inviata').length;
-    const approved = richieste.filter((r) => r.stato === 'approvata').length;
-    const rejected = richieste.filter((r) => r.stato === 'rifiutata').length;
-
-    return { pending, approved, rejected };
-  }, [richieste]);
-
-  return (
-    <div className="mx-auto max-w-[1500px] p-6">
-      <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Richieste ferie/permessi</h1>
-          <p className="text-sm text-muted-foreground">
-            Riepilogo richieste e gestione approvazioni.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
-            Inviate: {riepilogo.pending}
-          </Badge>
-          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-            Approvate: {riepilogo.approved}
-          </Badge>
-          <Badge className="bg-red-100 text-red-800 hover:bg-red-100">
-            Rifiutate: {riepilogo.rejected}
-          </Badge>
-          <Button variant="outline" onClick={() => router.push('/presenze')}>
-            Torna a presenze
-          </Button>
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="rounded-md border p-6 text-center text-sm text-muted-foreground">
-          Caricamento richieste...
-        </div>
-      ) : richieste.length === 0 ? (
-        <div className="rounded-md border p-6 text-center text-sm text-muted-foreground">
-          Nessuna richiesta trovata.
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {richieste.map((richiesta) => {
-            const isPending = richiesta.stato === 'inviata';
-
-            return (
-              <Card key={richiesta.id} className="shadow-sm">
-                <CardContent className="p-3">
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-[110px_230px_120px_120px_80px_80px_minmax(220px,1fr)_240px] md:items-start">
-                    <div className="flex flex-col gap-2">
-                      <div className="font-semibold">
-                        {richiesta.tipo_richiesta === 'ferie' ? 'Ferie' : 'Permesso'}
-                      </div>
-                      {statoBadge(richiesta.stato)}
-                    </div>
-
-                    <div className="text-sm">
-                      <div className="text-xs text-muted-foreground">Richiedente</div>
-                      <div className="font-medium">{getRichiedenteName(richiesta)}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {richiesta.richiedente_email || richiesta.email_richiedente || '-'}
-                      </div>
-                    </div>
-
-                    <div className="text-sm">
-                      <div className="text-xs text-muted-foreground">Data inizio</div>
-                      <div className="font-medium">{formatDateIT(richiesta.data_inizio)}</div>
-                    </div>
-
-                    <div className="text-sm">
-                      <div className="text-xs text-muted-foreground">Data fine</div>
-                      <div className="font-medium">{formatDateIT(richiesta.data_fine)}</div>
-                    </div>
-
-                    <div className="text-sm">
-                      <div className="text-xs text-muted-foreground">Giorni</div>
-                      <div className="font-medium">{richiesta.giorni ?? '-'}</div>
-                    </div>
-
-                    <div className="text-sm">
-                      <div className="text-xs text-muted-foreground">Ore</div>
-                      <div className="font-medium">{richiesta.ore ?? '-'}</div>
-                    </div>
-
-                    <div className="text-sm">
-                      <div className="text-xs text-muted-foreground">Motivazione</div>
-                      <div className="min-h-[38px] rounded-md bg-slate-50 p-2">
-                        {richiesta.motivazione || '-'}
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      {isResponsabilePaghe ? (
-                        <>
-                          <div className="text-xs font-medium text-muted-foreground">
-                            Note responsabile
-                          </div>
-                          <Textarea
-                            value={note[richiesta.id] || ''}
-                            onChange={(e) =>
-                              setNote((prev) => ({
-                                ...prev,
-                                [richiesta.id]: e.target.value,
-                              }))
-                            }
-                            disabled={!isPending}
-                            rows={2}
-                            className="min-h-[58px]"
-                          />
-
-                          {isPending ? (
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                variant="outline"
-                                disabled={savingId === richiesta.id}
-                                onClick={() => gestisciRichiesta(richiesta.id, 'rifiutata')}
-                              >
-                                Rifiuta
-                              </Button>
-
-                              <Button
-                                disabled={savingId === richiesta.id}
-                                onClick={() => gestisciRichiesta(richiesta.id, 'approvata')}
-                              >
-                                Approva
-                              </Button>
-                            </div>
-                          ) : (
-                            <div className="text-right text-xs text-muted-foreground">
-                              Richiesta già gestita
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <div className="text-xs text-muted-foreground">
-                          {richiesta.note_responsabile ? (
-                            <>
-                              <div className="font-medium">Note responsabile</div>
-                              <div>{richiesta.note_responsabile}</div>
-                            </>
-                          ) : (
-                            'In attesa di gestione'
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
+      const response = await
