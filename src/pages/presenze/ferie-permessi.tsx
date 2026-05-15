@@ -36,6 +36,21 @@ type UtenteLookup = {
   email: string | null;
 };
 
+const mesi = [
+  { value: '1', label: 'Gennaio' },
+  { value: '2', label: 'Febbraio' },
+  { value: '3', label: 'Marzo' },
+  { value: '4', label: 'Aprile' },
+  { value: '5', label: 'Maggio' },
+  { value: '6', label: 'Giugno' },
+  { value: '7', label: 'Luglio' },
+  { value: '8', label: 'Agosto' },
+  { value: '9', label: 'Settembre' },
+  { value: '10', label: 'Ottobre' },
+  { value: '11', label: 'Novembre' },
+  { value: '12', label: 'Dicembre' },
+];
+
 function formatDateIT(date: string | null) {
   if (!date) return '-';
   return new Date(`${date}T00:00:00`).toLocaleDateString('it-IT');
@@ -55,6 +70,22 @@ function getRichiedenteFiltroName(richiesta: Richiesta) {
   }`.trim();
 
   return fullName || richiesta.email_richiedente || 'Dipendente';
+}
+
+function statoBadge(stato: StatoRichiesta) {
+  if (stato === 'approvata') {
+    return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Approvata</Badge>;
+  }
+
+  if (stato === 'rifiutata') {
+    return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Rifiutata</Badge>;
+  }
+
+  if (stato === 'revocata') {
+    return <Badge className="bg-slate-100 text-slate-700 hover:bg-slate-100">Revocata</Badge>;
+  }
+
+  return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Inviata</Badge>;
 }
 
 export default function FeriePermessiPage() {
@@ -178,7 +209,10 @@ export default function FeriePermessiPage() {
     }
   }
 
-  async function gestisciRichiesta(id: string, azione: StatoRichiesta) {
+  async function gestisciRichiesta(
+    id: string,
+    azione: 'approvata' | 'rifiutata' | 'revocata',
+  ) {
     try {
       setSavingId(id);
 
@@ -190,4 +224,312 @@ export default function FeriePermessiPage() {
         throw new Error('Sessione non valida. Effettua nuovamente il login.');
       }
 
-      const response = await
+      const response = await fetch(`/api/payroll/ferie-permessi/richieste/${id}/gestisci`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          azione,
+          note_responsabile: note[id] || null,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result?.error || 'Impossibile gestire la richiesta.');
+      }
+
+      const description =
+        azione === 'approvata'
+          ? 'Richiesta approvata correttamente.'
+          : azione === 'rifiutata'
+            ? 'Richiesta rifiutata correttamente.'
+            : 'Richiesta revocata correttamente.';
+
+      toast({
+        title: 'Operazione completata',
+        description,
+      });
+
+      await loadData();
+    } catch (error: any) {
+      console.error(error);
+      toast({
+        title: 'Errore',
+        description: error?.message || 'Impossibile gestire la richiesta.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  const dipendentiOptions = useMemo(() => {
+    const map = new Map<string, string>();
+
+    richieste.forEach((richiesta) => {
+      map.set(richiesta.utente_id, getRichiedenteFiltroName(richiesta));
+    });
+
+    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1], 'it'));
+  }, [richieste]);
+
+  const anniOptions = useMemo(() => {
+    const anni = new Set<string>([String(currentYear)]);
+
+    richieste.forEach((richiesta) => {
+      if (richiesta.data_inizio) {
+        anni.add(String(new Date(`${richiesta.data_inizio}T00:00:00`).getFullYear()));
+      }
+    });
+
+    return Array.from(anni).sort((a, b) => Number(b) - Number(a));
+  }, [richieste, currentYear]);
+
+  const richiesteFiltrate = useMemo(() => {
+    return richieste.filter((richiesta) => {
+      const data = new Date(`${richiesta.data_inizio}T00:00:00`);
+      const mese = String(data.getMonth() + 1);
+      const anno = String(data.getFullYear());
+
+      const matchDipendente =
+        filtroDipendente === 'tutti' || richiesta.utente_id === filtroDipendente;
+
+      const matchMese = filtroMese === 'tutti' || mese === filtroMese;
+      const matchAnno = filtroAnno === 'tutti' || anno === filtroAnno;
+      const matchStato = filtroStato === 'tutti' || richiesta.stato === filtroStato;
+
+      return matchDipendente && matchMese && matchAnno && matchStato;
+    });
+  }, [richieste, filtroDipendente, filtroMese, filtroAnno, filtroStato]);
+
+  const riepilogo = useMemo(() => {
+    return {
+      inviate: richiesteFiltrate.filter((r) => r.stato === 'inviata').length,
+      approvate: richiesteFiltrate.filter((r) => r.stato === 'approvata').length,
+      rifiutate: richiesteFiltrate.filter((r) => r.stato === 'rifiutata').length,
+      revocate: richiesteFiltrate.filter((r) => r.stato === 'revocata').length,
+    };
+  }, [richiesteFiltrate]);
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <p className="text-sm text-muted-foreground">Caricamento richieste...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 p-6">
+      <div>
+        <h1 className="text-2xl font-semibold">Richieste ferie/permessi</h1>
+        <p className="text-sm text-muted-foreground">
+          Gestione richieste ferie e permessi dei dipendenti.
+        </p>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-4">
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">Inviate</p>
+            <p className="text-2xl font-semibold">{riepilogo.inviate}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">Approvate</p>
+            <p className="text-2xl font-semibold">{riepilogo.approvate}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">Rifiutate</p>
+            <p className="text-2xl font-semibold">{riepilogo.rifiutate}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">Revocate</p>
+            <p className="text-2xl font-semibold">{riepilogo.revocate}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardContent className="grid gap-4 p-4 md:grid-cols-4">
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Dipendente</label>
+            <select
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              value={filtroDipendente}
+              onChange={(event) => setFiltroDipendente(event.target.value)}
+            >
+              <option value="tutti">Tutti</option>
+              {dipendentiOptions.map(([id, label]) => (
+                <option key={id} value={id}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Mese</label>
+            <select
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              value={filtroMese}
+              onChange={(event) => setFiltroMese(event.target.value)}
+            >
+              <option value="tutti">Tutti</option>
+              {mesi.map((mese) => (
+                <option key={mese.value} value={mese.value}>
+                  {mese.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Anno</label>
+            <select
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              value={filtroAnno}
+              onChange={(event) => setFiltroAnno(event.target.value)}
+            >
+              {anniOptions.map((anno) => (
+                <option key={anno} value={anno}>
+                  {anno}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Stato</label>
+            <select
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              value={filtroStato}
+              onChange={(event) => setFiltroStato(event.target.value)}
+            >
+              <option value="tutti">Tutti</option>
+              <option value="inviata">Inviata</option>
+              <option value="approvata">Approvata</option>
+              <option value="rifiutata">Rifiutata</option>
+              <option value="revocata">Revocata</option>
+            </select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {richiesteFiltrate.length === 0 ? (
+        <Card>
+          <CardContent className="p-6">
+            <p className="text-sm text-muted-foreground">Nessuna richiesta trovata.</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {richiesteFiltrate.map((richiesta) => (
+            <Card key={richiesta.id}>
+              <CardContent className="space-y-4 p-4">
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-lg font-semibold">{getRichiedenteName(richiesta)}</h2>
+                      {statoBadge(richiesta.stato)}
+                    </div>
+
+                    <p className="text-sm text-muted-foreground">
+                      {richiesta.tipo_richiesta === 'ferie' ? 'Ferie' : 'Permesso'}
+                      {' · '}
+                      dal {formatDateIT(richiesta.data_inizio)}
+                      {richiesta.data_fine ? ` al ${formatDateIT(richiesta.data_fine)}` : ''}
+                    </p>
+
+                    <p className="text-sm text-muted-foreground">
+                      {richiesta.giorni ? `${richiesta.giorni} giorni` : null}
+                      {richiesta.giorni && richiesta.ore ? ' · ' : null}
+                      {richiesta.ore ? `${richiesta.ore} ore` : null}
+                    </p>
+                  </div>
+
+                  <div className="text-sm text-muted-foreground">
+                    Inviata il {new Date(richiesta.created_at).toLocaleDateString('it-IT')}
+                  </div>
+                </div>
+
+                {richiesta.motivazione && (
+                  <div className="rounded-md bg-muted p-3 text-sm">
+                    <p className="font-medium">Motivazione</p>
+                    <p>{richiesta.motivazione}</p>
+                  </div>
+                )}
+
+                {isResponsabilePaghe && richiesta.stato === 'inviata' && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Note responsabile</label>
+                    <Textarea
+                      value={note[richiesta.id] || ''}
+                      onChange={(event) =>
+                        setNote((prev) => ({
+                          ...prev,
+                          [richiesta.id]: event.target.value,
+                        }))
+                      }
+                      placeholder="Inserisci eventuali note..."
+                    />
+                  </div>
+                )}
+
+                {richiesta.note_responsabile && richiesta.stato !== 'inviata' && (
+                  <div className="rounded-md border p-3 text-sm">
+                    <p className="font-medium">Note responsabile</p>
+                    <p>{richiesta.note_responsabile}</p>
+                  </div>
+                )}
+
+                {isResponsabilePaghe && richiesta.stato === 'inviata' && (
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      disabled={savingId === richiesta.id}
+                      onClick={() => gestisciRichiesta(richiesta.id, 'approvata')}
+                    >
+                      Approva
+                    </Button>
+
+                    <Button
+                      variant="destructive"
+                      disabled={savingId === richiesta.id}
+                      onClick={() => gestisciRichiesta(richiesta.id, 'rifiutata')}
+                    >
+                      Rifiuta
+                    </Button>
+                  </div>
+                )}
+
+                {isResponsabilePaghe && richiesta.stato === 'approvata' && (
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      disabled={savingId === richiesta.id}
+                      onClick={() => gestisciRichiesta(richiesta.id, 'revocata')}
+                    >
+                      Revoca
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
