@@ -848,18 +848,19 @@ function buildStandardEmailTemplate(params: {
     params.variant === "internal"
       ? `
         <div style="margin-bottom:16px;">
-          <span style="
-            display:inline-block;
-            background:#dbeafe;
-            color:#1d4ed8;
-            font-size:16px;
-            font-weight:800;
-            padding:8px 16px;
-            border-radius:999px;
-            letter-spacing:0.3px;
-          ">
-            COMUNICAZIONE INTERNA
-          </span>
+       <span style="
+  display:inline-block;
+  background:#dbeafe;
+  color:#1d4ed8;
+  font-size:13px;
+  font-weight:700;
+  padding:6px 12px;
+  border-radius:999px;
+  letter-spacing:0.4px;
+  text-transform:uppercase;
+">
+  COMUNICAZIONE INTERNA
+</span>
         </div>
       `
       : "";
@@ -875,12 +876,12 @@ function buildStandardEmailTemplate(params: {
   ${badge}
 
 <h2 style="
-  margin:0 0 16px 0;
+  margin:0 0 20px 0;
   font-family:Aptos, Arial, sans-serif;
-  font-size:18pt;
-  line-height:1.25;
+  font-size:28px;
+  line-height:1.1;
   color:#111827;
-  font-weight:700;
+  font-weight:800;
 ">
   ${escapeEmailHtml(params.oggetto)}
 </h2>
