@@ -200,17 +200,20 @@ export default async function handler(
       });
     }
 
-    const {
-      email,
-      nome,
-      cognome,
-      tipo_utente,
-      ruolo_operatore_id,
-      attivo,
-      settore,
-      responsabile,
-      microsoft_connection_id,
-    } = req.body;
+   const {
+  email,
+  nome,
+  cognome,
+  tipo_utente,
+  ruolo_operatore_id,
+  attivo,
+  settore,
+  responsabile,
+  responsabile_paghe,
+  responsabile_ferie_permessi,
+  microsoft_connection_id,
+  tipo_rapporto,
+} = req.body;
 
     if (!email || !nome || !cognome) {
       return res.status(400).json({
@@ -270,20 +273,27 @@ export default async function handler(
 
     const newUserId = authData.user.id;
 
-    const payload = {
-      id: newUserId,
-      user_id: newUserId,
-      studio_id: adminRow.studio_id,
-      nome,
-      cognome,
-      email: normalizedEmail,
-      tipo_utente: tipo_utente || "User",
-      ruolo_operatore_id: ruolo_operatore_id || null,
-      attivo: typeof attivo === "boolean" ? attivo : true,
-      settore: settore || null,
-      responsabile: typeof responsabile === "boolean" ? responsabile : false,
-      microsoft_connection_id: microsoft_connection_id || null,
-    };
+   const payload = {
+  id: newUserId,
+  user_id: newUserId,
+  studio_id: adminRow.studio_id,
+  nome,
+  cognome,
+  email: normalizedEmail,
+  tipo_utente: tipo_utente || "User",
+  ruolo_operatore_id: ruolo_operatore_id || null,
+  attivo: typeof attivo === "boolean" ? attivo : true,
+  settore: settore || null,
+  responsabile: typeof responsabile === "boolean" ? responsabile : false,
+  responsabile_paghe:
+    typeof responsabile_paghe === "boolean" ? responsabile_paghe : false,
+  responsabile_ferie_permessi:
+    typeof responsabile_ferie_permessi === "boolean"
+      ? responsabile_ferie_permessi
+      : false,
+  microsoft_connection_id: microsoft_connection_id || null,
+  tipo_rapporto: tipo_rapporto || null,
+};
 
     const { error: upsertError } = await supabaseAdmin
       .from("tbutenti")
