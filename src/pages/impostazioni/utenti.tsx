@@ -210,8 +210,9 @@ export default function GestioneUtentiPage() {
   attivo: formData.attivo,
   settore: formData.settore || null,
   responsabile: formData.responsabile,
-  responsabile_paghe: formData.responsabile_paghe,         
-  microsoft_connection_id: formData.microsoft_connection_id || null,
+responsabile_paghe: formData.responsabile_paghe,
+responsabile_ferie_permessi: formData.responsabile_ferie_permessi,
+microsoft_connection_id: formData.microsoft_connection_id || null,
   tipo_rapporto: formData.tipo_rapporto || null,
 } as any);
 
@@ -486,6 +487,7 @@ const response = await fetch("/api/auth/create-user", {
       settore: "",
       responsabile: false,
       responsabile_paghe: false,
+      responsabile_ferie_permessi: false,
       microsoft_connection_id: "",
       tipo_rapporto: "",
     });
@@ -764,6 +766,26 @@ const response = await fetch("/api/auth/create-user", {
   <Label htmlFor="responsabile_paghe" className="cursor-pointer font-medium">
     Responsabile paghe (può gestire presenze dipendenti)
   </Label>
+</div>
+
+<div className="flex items-center space-x-2">
+  <Checkbox
+    id="responsabile_ferie_permessi"
+    checked={formData.responsabile_ferie_permessi}
+    onCheckedChange={(checked) =>
+      setFormData((prev) => ({
+        ...prev,
+        responsabile_ferie_permessi: !!checked,
+      }))
+    }
+  />
+
+  <label
+    htmlFor="responsabile_ferie_permessi"
+    className="text-sm font-medium"
+  >
+    Responsabile ferie/permessi
+  </label>
 </div>
 
                 <div className="flex items-center space-x-2">
