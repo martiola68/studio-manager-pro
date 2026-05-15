@@ -1032,13 +1032,8 @@ ${dipendentiXml}
                 </Badge>
                 <div className="mt-3 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900">
   Per i permessi orari è sufficiente inserire il codice del permesso (es. P2, P4, P1.104).
-  Il sistema calcola automaticamente sia le ore di permesso sia le ore lavorate residue ai fini dell’elaborazione payroll ed export paghe.
+  Il sistema calcola automaticamente sia le ore di permesso sia le ore lavorate residue ai fini dell’elaborazione payroll ed export paghe.   Sabati, domeniche e festivi vengono compilati automaticamente come non lavorativi.
 </div>
-
-                 <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-    Sabati, domeniche e festivi vengono compilati automaticamente come non lavorativi.
-  </div>
-              
               </div>
             </div>
           </CardContent>
