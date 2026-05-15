@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { UserPlus, Edit, UserX, Search, RotateCcw, Loader2, UserCheck, Filter, Trash2, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/lib/supabase/types";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 type RuoloOperatore = Database["public"]["Tables"]["tbroperatore"]["Row"];
@@ -47,6 +48,7 @@ export default function GestioneUtentiPage() {
     settore: "" as "Fiscale" | "Lavoro" | "Consulenza" | "",
     responsabile: false,
     responsabile_paghe: false,
+    responsabile_ferie_permessi: false,
     microsoft_connection_id: "",
     tipo_rapporto: "" as "Dipendente" | "Collaboratore" | "Praticante" | "Socio" | "",
   });
@@ -464,6 +466,7 @@ const response = await fetch("/api/auth/create-user", {
       settore: (utente.settore as "Fiscale" | "Lavoro" | "Consulenza") || "",
       responsabile: utente.responsabile ?? false,
       responsabile_paghe: Boolean((utente as any).responsabile_paghe),
+      responsabile_ferie_permessi: Boolean((utente as any).responsabile_ferie_permessi),
       microsoft_connection_id: utente.microsoft_connection_id || "",
      tipo_rapporto:
   ((utente as any).tipo_rapporto as
