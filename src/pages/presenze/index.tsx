@@ -734,34 +734,61 @@ const validateRequiredWorkdays = () => {
         canEditEmployee(dipendente.utente_id),
       );
 
-      const rows = editableDipendenti.flatMap((dipendente) =>
-        days
-          .map((day) => {
-            const codicePresenza = getCode(dipendente.utente_id, day);
-            if (!codicePresenza) return null;
+     const rowsToUpsert: any[] = [];
+const rowsToDelete: { utente_id: string; data_presenza: string }[] = [];
 
-            return {
-              studio_id: currentUser.studio_id,
-              utente_id: dipendente.utente_id,
-              data_presenza: day.date,
-              codice_presenza: codicePresenza,
-              inserito_da: currentUser.id,
-              updated_at: new Date().toISOString(),
-            };
-          })
-          .filter(Boolean),
-      );
+editableDipendenti.forEach((dipendente) => {
+  days.forEach((day) => {
+    const codicePresenza = getCode(dipendente.utente_id, day);
 
-      if (rows.length === 0) {
-        setSuccess('Nessuna presenza da salvare.');
-        return;
-      }
+    if (!codicePresenza || codicePresenza === '-') {
+      rowsToDelete.push({
+        utente_id: dipendente.utente_id,
+        data_presenza: day.date,
+      });
+      return;
+    }
 
-      const { error: upsertError } = await supabase
-        .from('tbpresenze_dipendenti')
-        .upsert(rows, { onConflict: 'utente_id,data_presenza' });
+    rowsToUpsert.push({
+      studio_id: currentUser.studio_id,
+      utente_id: dipendente.utente_id,
+      data_presenza: day.date,
+      codice_presenza: codicePresenza,
+      inserito_da: currentUser.id,
+      updated_at: new Date().toISOString(),
+    });
+  });
+});
 
-      if (upsertError) throw upsertError;
+if (rowsToDelete.length > 0) {
+  const orFilter = rowsToDelete
+    .map(
+      (row) =>
+        `and(utente_id.eq.${row.utente_id},data_presenza.eq.${row.data_presenza})`,
+    )
+    .join(',');
+
+  const { error: deleteError } = await supabase
+    .from('tbpresenze_dipendenti')
+    .delete()
+    .eq('studio_id', currentUser.studio_id)
+    .or(orFilter);
+
+  if (deleteError) throw deleteError;
+}
+
+if (rowsToUpsert.length > 0) {
+  const { error: upsertError } = await supabase
+    .from('tbpresenze_dipendenti')
+    .upsert(rowsToUpsert, { onConflict: 'utente_id,data_presenza' });
+
+  if (upsertError) throw upsertError;
+}
+
+if (rowsToUpsert.length === 0 && rowsToDelete.length === 0) {
+  setSuccess('Nessuna presenza da salvare.');
+  return;
+}
 
       setSuccess('Presenze del mese salvate correttamente.');
     } catch (err) {
