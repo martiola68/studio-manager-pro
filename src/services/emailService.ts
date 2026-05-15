@@ -852,9 +852,9 @@ function buildStandardEmailTemplate(params: {
             display:inline-block;
             background:#dbeafe;
             color:#1d4ed8;
-            font-size:12px;
-            font-weight:700;
-            padding:6px 12px;
+            font-size:16px;
+            font-weight:800;
+            padding:8px 16px;
             border-radius:999px;
             letter-spacing:0.3px;
           ">
@@ -872,11 +872,22 @@ function buildStandardEmailTemplate(params: {
 </head>
 <body style="margin:0; padding:0; background:#ffffff; font-family:Aptos, Arial, sans-serif; font-size:11pt; color:#111827;">
   <div style="max-width:700px; margin:0 auto; padding:18px 20px;">
-    ${badge}
+  ${badge}
 
-    <div style="font-family:Aptos, Arial, sans-serif; font-size:11pt; line-height:1.45;">
-      ${formatMessageParagraphs(params.messaggio)}
-    </div>
+<h2 style="
+  margin:0 0 16px 0;
+  font-family:Aptos, Arial, sans-serif;
+  font-size:18pt;
+  line-height:1.25;
+  color:#111827;
+  font-weight:700;
+">
+  ${escapeEmailHtml(params.oggetto)}
+</h2>
+
+<div style="font-family:Aptos, Arial, sans-serif; font-size:11pt; line-height:1.45;">
+  ${formatMessageParagraphs(params.messaggio)}
+</div>
 
     ${
       params.allegatiCount && params.allegatiCount > 0
