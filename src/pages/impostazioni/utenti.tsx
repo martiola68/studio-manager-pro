@@ -103,24 +103,19 @@ export default function GestioneUtentiPage() {
       
       const utentiData = (utentiDataRaw ?? []) as Utente[];
 
-      const sortedData = [...utentiData].sort((a, b) => {
-        const settoreOrder: Record<string, number> = {
-          Fiscale: 1,
-          Lavoro: 2,
-          "Fiscale & lavoro": 3,
-          Consulenza: 4,
-        };
+     const sortedData = [...utentiData].sort((a, b) => {
+  const cognomeCompare = String(a.cognome || "").localeCompare(
+    String(b.cognome || ""),
+    "it",
+    { sensitivity: "base" }
+  );
 
-        const settoreA = a.settore ? (settoreOrder[a.settore] || 999) : 999;
-        const settoreB = b.settore ? (settoreOrder[b.settore] || 999) : 999;
+  if (cognomeCompare !== 0) return cognomeCompare;
 
-        if (settoreA !== settoreB) {
-          return settoreA - settoreB;
-        }
-
-        return (a.cognome || "").localeCompare(b.cognome || "");
-      });
-
+  return String(a.nome || "").localeCompare(String(b.nome || ""), "it", {
+    sensitivity: "base",
+  });
+});
       setUtenti(sortedData);
       setRuoli(ruoliData);
 
@@ -271,6 +266,7 @@ const response = await fetch("/api/auth/create-user", {
     settore: formData.settore || null,
     responsabile: formData.responsabile,
     responsabile_paghe: formData.responsabile_paghe,
+    responsabile_ferie_permessi: formData.responsabile_ferie_permessi,
     microsoft_connection_id: formData.microsoft_connection_id || null,
     tipo_rapporto: formData.tipo_rapporto || null,
   }),
@@ -291,6 +287,7 @@ const response = await fetch("/api/auth/create-user", {
             settore: formData.settore || null,
             responsabile: formData.responsabile,
             responsabile_paghe: formData.responsabile_paghe,
+            responsabile_ferie_permessi: formData.responsabile_ferie_permessi,
             microsoft_connection_id: formData.microsoft_connection_id || null,
             tipo_rapporto: formData.tipo_rapporto || null,
           })
@@ -528,7 +525,7 @@ const response = await fetch("/api/auth/create-user", {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-8">
+   <div className="mx-auto w-full max-w-[1800px] p-4 md:p-8">
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Gestione Utenti</h1>
@@ -554,7 +551,7 @@ const response = await fetch("/api/auth/create-user", {
             </Button>
           </DialogTrigger>
 
-          <DialogContent className="max-w-2xl">
+    <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>{editingUtente ? "Modifica Utente" : "Crea Nuovo Utente"}</DialogTitle>
               <DialogDescription>
@@ -777,6 +774,23 @@ const response = await fetch("/api/auth/create-user", {
   </Label>
 </div>
 
+                <div className="flex items-center space-x-2">
+  <Checkbox
+    id="responsabile_ferie_permessi"
+    checked={formData.responsabile_ferie_permessi}
+    onCheckedChange={(checked) =>
+      setFormData((prev) => ({
+        ...prev,
+        responsabile_ferie_permessi: !!checked,
+      }))
+    }
+  />
+
+  <Label htmlFor="responsabile_ferie_permessi" className="cursor-pointer font-medium">
+    Responsabile ferie/permessi
+  </Label>
+</div>
+
 <div className="flex items-center space-x-2">
   <Checkbox
     id="attivo"
@@ -903,18 +917,19 @@ const response = await fetch("/api/auth/create-user", {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="p-0">
-          <Table>
+     <Card className="w-full">
+  <CardContent className="p-0">
+    <div className="w-full overflow-x-auto">
+      <Table className="min-w-[1500px]">
             <TableHeader>
               <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Cognome</TableHead>
-                <TableHead>Email</TableHead>
+                <TableHead className="w-[160px]">Nome</TableHead>
+                <TableHead className="w-[180px]">Cognome</TableHead>
+                <TableHead className="w-[320px]">Email</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Settore</TableHead>
                 <TableHead>Microsoft 365</TableHead>
-                <TableHead>Ruolo</TableHead>
+                 <TableHead className="w-[260px]">Ruolo</TableHead>
                 <TableHead>Stato</TableHead>
                 <TableHead className="text-right">Azioni</TableHead>
               </TableRow>
@@ -934,9 +949,9 @@ const response = await fetch("/api/auth/create-user", {
 
                   return (
                     <TableRow key={utente.id} className={!isActive ? "opacity-60 bg-gray-50" : ""}>
-                      <TableCell className="font-medium">{utente.nome}</TableCell>
-                      <TableCell>{utente.cognome}</TableCell>
-                      <TableCell>{utente.email}</TableCell>
+                     <TableCell className="w-[160px] font-medium">{utente.nome}</TableCell>
+                      <TableCell className="w-[180px]">{utente.cognome}</TableCell>
+                      <TableCell className="w-[320px] whitespace-nowrap">{utente.email}</TableCell>
                       <TableCell>
                         <Badge variant={utente.tipo_utente === "Admin" ? "default" : "secondary"}>
                           {utente.tipo_utente === "Admin" ? "Amministratore" : "Utente"}
@@ -957,7 +972,9 @@ const response = await fetch("/api/auth/create-user", {
                           <Badge variant="secondary">Non collegato</Badge>
                         )}
                       </TableCell>
-                      <TableCell>{ruolo ? ruolo.ruolo : "-"}</TableCell>
+                     <TableCell className="w-[260px] whitespace-nowrap">
+                      {ruolo ? ruolo.ruolo : "-"}
+                        </TableCell>
                       <TableCell>
                         <Badge variant={isActive ? "default" : "secondary"}>
                           {isActive ? "✓ Attivo" : "○ Disattivato"}
@@ -1020,9 +1037,10 @@ const response = await fetch("/api/auth/create-user", {
                 })
               )}
             </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+           </Table>
+    </div>
+  </CardContent>
+</Card>
 
       <Card className="mt-6">
         <CardContent className="py-4">
