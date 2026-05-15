@@ -816,6 +816,79 @@ export async function triggerEventReminders(): Promise<{
   }
 }
 
+function escapeEmailHtml(value: string) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function formatMessageParagraphs(message: string) {
+  return message
+    .split("\n")
+    .map((riga) => riga.trim())
+    .filter(Boolean)
+    .map(
+      (riga) =>
+        `<p style="margin:0 0 8px 0; font-family:Aptos, Arial, sans-serif; font-size:11pt;">${escapeEmailHtml(
+          riga,
+        )}</p>`,
+    )
+    .join("");
+}
+
+function buildStandardEmailTemplate(params: {
+  variant: "internal" | "client" | "system";
+  oggetto: string;
+  messaggio: string;
+  allegatiCount?: number;
+}) {
+  const badge =
+    params.variant === "internal"
+      ? `
+        <div style="margin-bottom:16px;">
+          <span style="
+            display:inline-block;
+            background:#dbeafe;
+            color:#1d4ed8;
+            font-size:12px;
+            font-weight:700;
+            padding:6px 12px;
+            border-radius:999px;
+            letter-spacing:0.3px;
+          ">
+            COMUNICAZIONE INTERNA
+          </span>
+        </div>
+      `
+      : "";
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+</head>
+<body style="margin:0; padding:0; background:#ffffff; font-family:Aptos, Arial, sans-serif; font-size:11pt; color:#111827;">
+  <div style="max-width:700px; margin:0 auto; padding:18px 20px;">
+    ${badge}
+
+    <div style="font-family:Aptos, Arial, sans-serif; font-size:11pt; line-height:1.45;">
+      ${formatMessageParagraphs(params.messaggio)}
+    </div>
+
+    ${
+      params.allegatiCount && params.allegatiCount > 0
+        ? `<p style="margin:14px 0 0 0; font-family:Aptos, Arial, sans-serif; font-size:11pt; color:#6b7280;">Allegati: ${params.allegatiCount}</p>`
+        : ""
+    }
+  </div>
+</body>
+</html>
+`.trim();
+}
+
 export async function sendComunicazioneEmail(
   data: ComunicazioneEmailData
 ): Promise<{
@@ -975,35 +1048,17 @@ export async function sendComunicazioneEmail(
 
 const isHtmlMessage = data.messaggio.trim().startsWith("<");
 
+const emailVariant =
+  data.tipo === "interna" ? "internal" : "client";
+
 const htmlContent = isHtmlMessage
   ? data.messaggio
-  : `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8" />
-</head>
-<body style="margin:0; padding:0; background:#ffffff; font-family:Aptos, Arial, sans-serif; font-size:11pt; color:#111827;">
-  <div style="max-width:700px; margin:0 auto; padding:18px 20px;">
-    <div style="font-family:Aptos, Arial, sans-serif; font-size:11pt; line-height:1.45;">
-      ${data.messaggio
-        .split("\n")
-        .map((riga) => riga.trim())
-        .filter(Boolean)
-        .map((riga) => `<p style="margin:0 0 8px 0; font-family:Aptos, Arial, sans-serif; font-size:11pt;">${riga}</p>`)
-        .join("")}
-    </div>
-
-    ${
-      data.allegati && Array.isArray(data.allegati) && data.allegati.length > 0
-        ? `<p style="margin:14px 0 0 0; font-family:Aptos, Arial, sans-serif; font-size:11pt; color:#6b7280;">Allegati: ${data.allegati.length}</p>`
-        : ""
-    }
-  </div>
-</body>
-</html>
-`.trim();
-
+  : buildStandardEmailTemplate({
+      variant: emailVariant,
+      oggetto: data.oggetto,
+      messaggio: data.messaggio,
+      allegatiCount: Array.isArray(data.allegati) ? data.allegati.length : 0,
+    });
     const textContent = `
 ${data.oggetto}
 
