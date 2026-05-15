@@ -81,10 +81,9 @@ async function inviaEmailEsito(params: {
 
 export async function POST(
   request: NextRequest,
-  context: { params: { id: string } },
+  context: { params: Promise<{ id: string }> },
 ) {
-  try {
-    const id = context.params.id;
+  const { id } = await context.params;
 
     const authorization = request.headers.get('authorization');
     const token = authorization?.replace('Bearer ', '');
