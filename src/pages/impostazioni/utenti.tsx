@@ -743,29 +743,35 @@ const response = await fetch("/api/auth/create-user", {
 </div>
 
               <div className="flex flex-col gap-3 pt-2">
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="responsabile"
-                    checked={formData.responsabile}
-                    onChange={(e) => setFormData({ ...formData, responsabile: e.target.checked })}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <Label htmlFor="responsabile" className="cursor-pointer font-medium">
-                    Responsabile (può vedere promemoria del gruppo)
-                  </Label>
-                </div>
+<div className="flex items-center space-x-2">
+  <Checkbox
+    id="responsabile"
+    checked={formData.responsabile}
+    onCheckedChange={(checked) =>
+      setFormData((prev) => ({
+        ...prev,
+        responsabile: !!checked,
+      }))
+    }
+  />
 
-                <div className="flex items-center space-x-2">
-  <input
-    type="checkbox"
+  <Label htmlFor="responsabile" className="cursor-pointer font-medium">
+    Responsabile (può vedere promemoria del gruppo)
+  </Label>
+</div>
+
+<div className="flex items-center space-x-2">
+  <Checkbox
     id="responsabile_paghe"
     checked={formData.responsabile_paghe}
-    onChange={(e) =>
-      setFormData({ ...formData, responsabile_paghe: e.target.checked })
+    onCheckedChange={(checked) =>
+      setFormData((prev) => ({
+        ...prev,
+        responsabile_paghe: !!checked,
+      }))
     }
-    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
   />
+
   <Label htmlFor="responsabile_paghe" className="cursor-pointer font-medium">
     Responsabile paghe (può gestire presenze dipendenti)
   </Label>
@@ -773,36 +779,20 @@ const response = await fetch("/api/auth/create-user", {
 
 <div className="flex items-center space-x-2">
   <Checkbox
-    id="responsabile_ferie_permessi"
-    checked={formData.responsabile_ferie_permessi}
+    id="attivo"
+    checked={formData.attivo}
     onCheckedChange={(checked) =>
       setFormData((prev) => ({
         ...prev,
-        responsabile_ferie_permessi: !!checked,
+        attivo: !!checked,
       }))
     }
   />
 
-  <label
-    htmlFor="responsabile_ferie_permessi"
-    className="text-sm font-medium"
-  >
-    Responsabile ferie/permessi
-  </label>
+  <Label htmlFor="attivo" className="cursor-pointer font-medium">
+    Utente attivo
+  </Label>
 </div>
-
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="attivo"
-                    checked={formData.attivo}
-                    onChange={(e) => setFormData({ ...formData, attivo: e.target.checked })}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <Label htmlFor="attivo" className="cursor-pointer">
-                    Utente attivo
-                  </Label>
-                </div>
               </div>
 
               <div className="flex gap-3 pt-4">
