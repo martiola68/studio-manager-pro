@@ -1,194 +1,183 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-type StatoRichiesta = 'approvata' | 'rifiutata' | 'revocata';
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+);
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+function escapeHtml(value: string) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
 
-const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+function formatDateIT(date: string | null) {
+  if (!date) return '-';
+  return new Date(`${date}T00:00:00`).toLocaleDateString('it-IT');
+}
 
-async function inviaEmailEsito(params: {
-  to: string;
-  nome?: string | null;
-  azione: StatoRichiesta;
-  tipoRichiesta: string;
-  dataInizio: string;
-  dataFine?: string | null;
-  note?: string | null;
+async function sendEmailFromLoggedUser(params: {
+  request: Request;
+  token: string;
+  studioId: string;
+  senderUserId: string;
+  toEmail: string;
+  subject: string;
+  html: string;
 }) {
-  const colore =
-    params.azione === 'approvata'
-      ? '#16a34a'
-      : params.azione === 'rifiutata'
-        ? '#dc2626'
-        : '#475569';
+  const { data: tokenRow, error: tokenError } = await supabaseAdmin
+    .from('tbmicrosoft365_user_tokens')
+    .select('microsoft_connection_id')
+    .eq('studio_id', params.studioId)
+    .eq('user_id', params.senderUserId)
+    .is('revoked_at', null)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-  const esito =
-    params.azione === 'approvata'
-      ? 'approvata'
-      : params.azione === 'rifiutata'
-        ? 'rifiutata'
-        : 'revocata';
-
-  const subject = `Richiesta ${params.tipoRichiesta} ${esito}`;
-
-  const html = `
-    <div style="font-family: Arial, sans-serif; color: #111827;">
-      <h2 style="color: ${colore};">Richiesta ${esito}</h2>
-
-      <p>
-        Ciao ${params.nome || ''},
-        la tua richiesta di <strong>${params.tipoRichiesta}</strong> è stata
-        <strong style="color: ${colore};">${esito}</strong>.
-      </p>
-
-      <p>
-        <strong>Periodo:</strong>
-        ${params.dataInizio}${params.dataFine ? ` - ${params.dataFine}` : ''}
-      </p>
-
-      ${
-        params.note
-          ? `<p><strong>Note responsabile:</strong><br />${params.note}</p>`
-          : ''
-      }
-    </div>
-  `;
-
-  const resendApiKey = process.env.RESEND_API_KEY;
-  const fromEmail = process.env.RESEND_FROM_EMAIL;
-
-  if (!resendApiKey || !fromEmail) {
-    console.warn('RESEND_API_KEY o RESEND_FROM_EMAIL non configurati. Email non inviata.');
-    return;
+  if (tokenError || !tokenRow?.microsoft_connection_id) {
+    throw new Error('Token Microsoft non trovato per l’utente gestore.');
   }
 
-  await fetch('https://api.resend.com/emails', {
+  const origin = new URL(params.request.url).origin;
+
+  const res = await fetch(`${origin}/api/microsoft365/graph`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${resendApiKey}`,
       'Content-Type': 'application/json',
+      Authorization: `Bearer ${params.token}`,
     },
     body: JSON.stringify({
-      from: fromEmail,
-      to: params.to,
-      subject,
-      html,
+      userId: params.senderUserId,
+      endpoint: '/me/sendMail',
+      method: 'POST',
+      microsoftConnectionId: tokenRow.microsoft_connection_id,
+      body: JSON.stringify({
+        message: {
+          subject: params.subject,
+          body: {
+            contentType: 'HTML',
+            content: params.html,
+          },
+          toRecipients: [
+            {
+              emailAddress: {
+                address: params.toEmail,
+              },
+            },
+          ],
+        },
+        saveToSentItems: true,
+      }),
     }),
   });
+
+  const text = await res.text().catch(() => '');
+
+  if (!res.ok) {
+    throw new Error(text || `Errore invio email Microsoft Graph (${res.status}).`);
+  }
 }
 
 export async function POST(
-  request: NextRequest,
+  request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  const { id } = await context.params;
+  try {
+    const { id } = await context.params;
 
-    const authorization = request.headers.get('authorization');
-    const token = authorization?.replace('Bearer ', '');
+    const authHeader = request.headers.get('authorization') || '';
+    const token = authHeader.replace('Bearer ', '').trim();
 
     if (!token) {
-      return NextResponse.json(
-        { error: 'Token mancante.' },
-        { status: 401 },
-      );
+      return NextResponse.json({ success: false, error: 'Token mancante.' }, { status: 401 });
     }
 
-    const supabaseUser = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    });
+    const { data: authData, error: authError } = await supabaseAdmin.auth.getUser(token);
 
-    const {
-      data: { user },
-      error: userAuthError,
-    } = await supabaseUser.auth.getUser();
-
-    if (userAuthError || !user?.email) {
+    if (authError || !authData.user?.email) {
       return NextResponse.json(
-        { error: 'Utente non autenticato.' },
+        { success: false, error: 'Utente non autenticato.' },
         { status: 401 },
       );
     }
 
     const body = await request.json();
-    const azione = body?.azione as StatoRichiesta;
-    const noteResponsabile = body?.note_responsabile || null;
+    const azione = body.azione as 'approvata' | 'rifiutata' | 'revocata';
+    const noteResponsabile = body.note_responsabile || null;
 
     if (!['approvata', 'rifiutata', 'revocata'].includes(azione)) {
+      return NextResponse.json({ success: false, error: 'Azione non valida.' }, { status: 400 });
+    }
+
+    const { data: gestore, error: gestoreError } = await supabaseAdmin
+      .from('tbutenti')
+      .select('id, studio_id, nome, cognome, email, responsabile_paghe, responsabile_ferie_permessi')
+      .eq('email', authData.user.email)
+      .single();
+
+    if (gestoreError || !gestore) {
+      throw new Error('Utente gestore non trovato.');
+    }
+
+    const { data: studio, error: studioError } = await supabaseAdmin
+      .from('tbstudio')
+      .select('id, mail_alert_ferie_permessi')
+      .eq('id', gestore.studio_id)
+      .single();
+
+    if (studioError || !studio) {
+      throw new Error('Studio non trovato.');
+    }
+
+    const gestoreEmail = String(gestore.email || '').trim().toLowerCase();
+    const emailGestoreFerie = String(studio.mail_alert_ferie_permessi || '').trim().toLowerCase();
+
+    const isGestoreFeriePermessi =
+      Boolean(gestore.responsabile_ferie_permessi) ||
+      Boolean(gestore.responsabile_paghe) ||
+      gestoreEmail === emailGestoreFerie;
+
+    if (!isGestoreFeriePermessi) {
       return NextResponse.json(
-        { error: 'Azione non valida.' },
-        { status: 400 },
+        { success: false, error: 'Operazione consentita solo al responsabile ferie/permessi.' },
+        { status: 403 },
       );
     }
 
-    const { data: richiesta, error: richiestaError } = await supabaseAdmin
+    const { data: richiesta, error: richiestaError } = await (supabaseAdmin as any)
       .from('tbferie_permessi_richieste')
       .select('*')
       .eq('id', id)
       .single();
 
     if (richiestaError || !richiesta) {
-      return NextResponse.json(
-        { error: 'Richiesta non trovata.' },
-        { status: 404 },
-      );
+      throw new Error('Richiesta non trovata.');
     }
 
-    const email = user.email.trim().toLowerCase();
-
-    const { data: gestore, error: gestoreError } = await supabaseAdmin
-      .from('tbutenti')
-      .select('id, studio_id, email, responsabile_paghe, responsabile_ferie_permessi')
-      .eq('studio_id', richiesta.studio_id)
-      .eq('email', email)
-      .single();
-
-    if (gestoreError || !gestore) {
+    if (String(richiesta.studio_id) !== String(gestore.studio_id)) {
       return NextResponse.json(
-        { error: 'Utente non autorizzato.' },
+        { success: false, error: 'Richiesta non appartenente allo studio del gestore.' },
         { status: 403 },
       );
     }
 
-    const { data: studio, error: studioError } = await supabaseAdmin
-      .from('tbstudio')
-      .select('mail_alert_ferie_permessi')
-      .eq('id', richiesta.studio_id)
-      .single();
-
-    if (studioError || !studio) {
+    if (azione === 'revocata' && richiesta.stato !== 'approvata') {
       return NextResponse.json(
-        { error: 'Studio non trovato.' },
-        { status: 404 },
+        { success: false, error: 'Puoi revocare solo richieste approvate.' },
+        { status: 400 },
       );
     }
 
-    const isGestoreFeriePermessi =
-      Boolean(gestore.responsabile_ferie_permessi) ||
-      Boolean(gestore.responsabile_paghe) ||
-      String(studio.mail_alert_ferie_permessi || '').trim().toLowerCase() === email;
-
-    if (!isGestoreFeriePermessi) {
-      return NextResponse.json(
-        { error: 'Non sei autorizzato a gestire questa richiesta.' },
-        { status: 403 },
-      );
+    if (!richiesta.email_richiedente) {
+      throw new Error('Email richiedente mancante sulla richiesta.');
     }
 
     if (azione === 'revocata') {
-      if (richiesta.stato !== 'approvata') {
-        return NextResponse.json(
-          { error: 'Puoi revocare solo richieste approvate.' },
-          { status: 400 },
-        );
-      }
-
-      const { error: deletePresenzeError } = await supabaseAdmin
+      const { error: deletePresenzeError } = await (supabaseAdmin as any)
         .from('tbpresenze_dipendenti')
         .delete()
         .eq('studio_id', richiesta.studio_id)
@@ -196,60 +185,111 @@ export async function POST(
         .eq('richiesta_ferie_permessi_id', richiesta.id)
         .eq('generata_da_richiesta_ferie_permessi', true);
 
-      if (deletePresenzeError) {
-        return NextResponse.json(
-          { error: deletePresenzeError.message },
-          { status: 500 },
-        );
-      }
+      if (deletePresenzeError) throw deletePresenzeError;
     }
 
-    const { error: updateError } = await supabaseAdmin
+    const { error: updateError } = await (supabaseAdmin as any)
       .from('tbferie_permessi_richieste')
       .update({
         stato: azione,
         note_responsabile: noteResponsabile,
-        gestita_da: gestore.id,
-        gestita_at: new Date().toISOString(),
       })
-      .eq('id', richiesta.id);
+      .eq('id', id);
 
-    if (updateError) {
-      return NextResponse.json(
-        { error: updateError.message },
-        { status: 500 },
-      );
+    if (updateError) throw updateError;
+
+    if (azione === 'approvata') {
+      const codicePresenza =
+        richiesta.tipo_richiesta === 'ferie'
+          ? 'F'
+          : `P${Number(richiesta.ore)}`;
+
+      const datePresenze: string[] = [];
+
+      const start = new Date(`${richiesta.data_inizio}T00:00:00`);
+      const end = new Date(`${richiesta.data_fine || richiesta.data_inizio}T00:00:00`);
+
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        datePresenze.push(d.toISOString().slice(0, 10));
+      }
+
+      const rows = datePresenze.map((dataPresenza) => ({
+        studio_id: richiesta.studio_id,
+        utente_id: richiesta.utente_id,
+        data_presenza: dataPresenza,
+        codice_presenza: codicePresenza,
+        note: richiesta.motivazione || null,
+        inserito_da: gestore.id,
+        richiesta_ferie_permessi_id: richiesta.id,
+        generata_da_richiesta_ferie_permessi: true,
+      }));
+
+      const { error: presenzeError } = await (supabaseAdmin as any)
+        .from('tbpresenze_dipendenti')
+        .upsert(rows, {
+          onConflict: 'utente_id,data_presenza',
+        });
+
+      if (presenzeError) throw presenzeError;
     }
 
-    const { data: richiedente } = await supabaseAdmin
-      .from('tbutenti')
-      .select('nome, cognome, email')
-      .eq('id', richiesta.utente_id)
-      .single();
+    const statoLabel =
+      azione === 'approvata'
+        ? 'approvata'
+        : azione === 'rifiutata'
+          ? 'rifiutata'
+          : 'revocata';
 
-    const emailRichiedente = richiesta.email_richiedente || richiedente?.email;
+    const coloreEsito =
+      azione === 'approvata'
+        ? '#16a34a'
+        : azione === 'rifiutata'
+          ? '#dc2626'
+          : '#475569';
 
-    if (emailRichiedente) {
-      await inviaEmailEsito({
-        to: emailRichiedente,
-        nome: richiedente?.nome || null,
-        azione,
-        tipoRichiesta: richiesta.tipo_richiesta,
-        dataInizio: richiesta.data_inizio,
-        dataFine: richiesta.data_fine,
-        note: noteResponsabile,
-      });
-    }
+    const gestoreNome =
+      `${gestore.nome ?? ''} ${gestore.cognome ?? ''}`.trim() ||
+      gestore.email ||
+      'Responsabile';
 
-    return NextResponse.json({
-      ok: true,
-      stato: azione,
+    const html = `
+      <div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#111827;">
+        <p>
+          La tua richiesta ${escapeHtml(richiesta.tipo_richiesta)} è stata
+          <strong style="color:${coloreEsito};">
+            ${statoLabel}
+          </strong>.
+        </p>
+        <p><strong>Gestita da:</strong> ${escapeHtml(gestoreNome)}</p>
+        <p><strong>Data inizio:</strong> ${escapeHtml(formatDateIT(richiesta.data_inizio))}</p>
+        ${
+          richiesta.tipo_richiesta === 'ferie'
+            ? `<p><strong>Data fine:</strong> ${escapeHtml(formatDateIT(richiesta.data_fine || richiesta.data_inizio))}</p><p><strong>Giorni:</strong> ${richiesta.giorni}</p>`
+            : `<p><strong>Ore:</strong> ${richiesta.ore}</p>`
+        }
+        ${noteResponsabile ? `<p><strong>Note responsabile:</strong><br/>${escapeHtml(noteResponsabile)}</p>` : ''}
+      </div>
+    `;
+
+    await sendEmailFromLoggedUser({
+      request,
+      token,
+      studioId: String(gestore.studio_id),
+      senderUserId: String(gestore.id),
+      toEmail: String(richiesta.email_richiedente),
+      subject: `Richiesta ${richiesta.tipo_richiesta} ${statoLabel}`,
+      html,
     });
-  } catch (error: any) {
-    console.error(error);
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Errore gestione richiesta:', error);
 
     return NextResponse.json(
-      { error: error?.message || 'Errore interno del server.' },
+      {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 },
     );
   }
