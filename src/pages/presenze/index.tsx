@@ -761,20 +761,17 @@ editableDipendenti.forEach((dipendente) => {
 });
 
 if (rowsToDelete.length > 0) {
-  const orFilter = rowsToDelete
-    .map(
-      (row) =>
-        `and(utente_id.eq.${row.utente_id},data_presenza.eq.${row.data_presenza})`,
-    )
-    .join(',');
+  for (const row of rowsToDelete) {
+    const { error: deleteError } = await supabase
+      .from('tbpresenze_dipendenti')
+      .delete()
+      .eq('studio_id', currentUser.studio_id)
+      .eq('utente_id', row.utente_id)
+      .eq('data_presenza', row.data_presenza)
+      .eq('generata_da_richiesta_ferie_permessi', false);
 
-  const { error: deleteError } = await supabase
-    .from('tbpresenze_dipendenti')
-    .delete()
-    .eq('studio_id', currentUser.studio_id)
-    .or(orFilter);
-
-  if (deleteError) throw deleteError;
+    if (deleteError) throw deleteError;
+  }
 }
 
 if (rowsToUpsert.length > 0) {
