@@ -15,7 +15,6 @@ export async function POST(req: Request) {
     const body = await req.json();
 
     const {
-      studio_id,
       cliente_id,
       tipo_pratica_id,
       titolo,
