@@ -325,12 +325,21 @@ export default function FeriePermessiPage() {
 
   return (
     <div className="space-y-6 p-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Richieste ferie/permessi</h1>
-        <p className="text-sm text-muted-foreground">
-          Gestione richieste ferie e permessi dei dipendenti.
-        </p>
-      </div>
+     <div className="flex items-center justify-between gap-4">
+  <div>
+    <h1 className="text-2xl font-semibold">Richieste ferie/permessi</h1>
+    <p className="text-sm text-muted-foreground">
+      Gestione richieste ferie e permessi dei dipendenti.
+    </p>
+  </div>
+
+  <Button
+    variant="outline"
+    onClick={() => router.push('/payroll/presenze')}
+  >
+    Torna alle presenze
+  </Button>
+</div>
 
       <div className="grid gap-3 md:grid-cols-4">
         <Card>
@@ -440,7 +449,7 @@ export default function FeriePermessiPage() {
 
 <Card key={richiesta.id} className="rounded-md">
   <CardContent className="p-2">
-    <div className="grid grid-cols-[180px_80px_170px_60px_minmax(420px,1fr)_220px_130px_170px] items-center gap-2 text-[14px]">
+    <div className="grid grid-cols-[250px_80px_170px_60px_1fr_300px_130px_140px] items-center gap-2 text-[14px]">
       <div className="flex items-center gap-2 font-semibold">
         <span className="truncate">{getRichiedenteName(richiesta)}</span>
         {statoBadge(richiesta.stato)}
