@@ -435,12 +435,12 @@ export default function FeriePermessiPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
+            <div className="space-y-0.5">
           {richiesteFiltrate.map((richiesta) => (
 
 <Card key={richiesta.id} className="rounded-md">
   <CardContent className="p-2">
-    <div className="grid grid-cols-[190px_90px_230px_70px_1fr_220px_110px] items-center gap-3 text-[13px]">
+    <div className="grid grid-cols-[190px_90px_190px_70px_420px_170px_220px] items-center gap-2 text-[14px]">
       <div className="flex items-center gap-2 font-semibold">
         <span className="truncate">{getRichiedenteName(richiesta)}</span>
         {statoBadge(richiesta.stato)}
@@ -460,15 +460,31 @@ export default function FeriePermessiPage() {
         {richiesta.ore ? `${richiesta.ore} ore` : ''}
       </div>
 
-      <div className="truncate rounded bg-muted px-2 py-1">
-        {richiesta.motivazione ? (
-          <>
-            <strong>Motivo:</strong> {richiesta.motivazione}
-          </>
-        ) : (
-          <span className="text-muted-foreground">-</span>
-        )}
-      </div>
+    <div className="flex items-center gap-2">
+  <div className="flex-1 truncate rounded bg-muted px-2 py-1">
+    {richiesta.motivazione ? (
+      <>
+        <strong>Motivo:</strong> {richiesta.motivazione}
+      </>
+    ) : (
+      <span className="text-muted-foreground">-</span>
+    )}
+  </div>
+
+  {isResponsabilePaghe && richiesta.stato === 'inviata' && (
+    <Textarea
+      className="h-8 min-h-0 w-[140px] resize-none py-1 text-xs"
+      value={note[richiesta.id] || ''}
+      onChange={(event) =>
+        setNote((prev) => ({
+          ...prev,
+          [richiesta.id]: event.target.value,
+        }))
+      }
+      placeholder="Note..."
+    />
+  )}
+</div>
 
       <div className="text-xs text-muted-foreground">
         Inviata il {new Date(richiesta.created_at).toLocaleDateString('it-IT')}
