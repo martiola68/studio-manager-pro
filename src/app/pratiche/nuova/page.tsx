@@ -54,158 +54,252 @@ export default function NuovaPraticaPage() {
     }
   }
 
-  return (
-    <main className="min-h-screen bg-slate-100 px-6 py-8">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">Nuova pratica</h1>
-            <p className="mt-1 text-sm text-slate-500">
-              Crea una pratica guidata con workflow automatico, step, checklist e scadenze.
-            </p>
-          </div>
+  const labelStyle: React.CSSProperties = {
+  display: "block",
+  fontSize: 13,
+  fontWeight: 500,
+  marginBottom: 6,
+  color: "#374151",
+};
 
-          <a
-            href="/pratiche"
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  border: "1px solid #9ca3af",
+  borderRadius: 7,
+  padding: "8px 10px",
+  fontSize: 14,
+  background: "#fff",
+  outline: "none",
+  boxSizing: "border-box",
+};
+
+ return (
+  <main style={{ padding: 28, background: "#f8fafc", minHeight: "100vh" }}>
+    <div style={{ maxWidth: 1280, margin: "0 auto" }}>
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0 }}>
+          Nuova pratica
+        </h1>
+        <p style={{ color: "#64748b", marginTop: 6 }}>
+          Crea una pratica guidata con workflow automatico, step, checklist e scadenze.
+        </p>
+      </div>
+
+      <form onSubmit={creaPratica}>
+        <div
+          style={{
+            background: "#fff",
+            border: "1px solid #d1d5db",
+            borderRadius: 10,
+            padding: 24,
+            marginBottom: 16,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 22,
+            }}
           >
-            Torna alle pratiche
-          </a>
-        </div>
-
-        <form onSubmit={creaPratica} className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <section className="lg:col-span-2 rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-200 px-6 py-4">
-              <h2 className="text-lg font-semibold text-slate-900">Dati pratica</h2>
-              <p className="text-sm text-slate-500">
+            <div>
+              <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>
+                Dati pratica
+              </h2>
+              <p style={{ color: "#64748b", marginTop: 4, fontSize: 14 }}>
                 Seleziona cliente, tipo pratica e informazioni principali.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 gap-5 p-6 md:grid-cols-2">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">
-                  Studio ID
-                </label>
-                <input
-                  value={form.studio_id}
-                  onChange={(e) => aggiornaCampo("studio_id", e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  required
-                />
-              </div>
+            <a
+              href="/pratiche"
+              style={{
+                border: "1px solid #d1d5db",
+                borderRadius: 8,
+                padding: "9px 16px",
+                background: "#fff",
+                color: "#111827",
+                fontSize: 14,
+                textDecoration: "none",
+              }}
+            >
+              Torna alle pratiche
+            </a>
+          </div>
 
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">
-                  Cliente ID
-                </label>
-                <input
-                  value={form.cliente_id}
-                  onChange={(e) => aggiornaCampo("cliente_id", e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">
-                  Tipo pratica ID
-                </label>
-                <input
-                  value={form.tipo_pratica_id}
-                  onChange={(e) => aggiornaCampo("tipo_pratica_id", e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">
-                  Priorità
-                </label>
-                <select
-                  value={form.priorita}
-                  onChange={(e) => aggiornaCampo("priorita", e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                >
-                  <option value="bassa">Bassa</option>
-                  <option value="normale">Normale</option>
-                  <option value="alta">Alta</option>
-                  <option value="urgente">Urgente</option>
-                </select>
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="mb-1 block text-sm font-medium text-slate-700">
-                  Titolo pratica
-                </label>
-                <input
-                  value={form.titolo}
-                  onChange={(e) => aggiornaCampo("titolo", e.target.value)}
-                  placeholder="Es. Messa in liquidazione Rossi SRL"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">
-                  Assegnato a ID
-                </label>
-                <input
-                  value={form.assegnato_a}
-                  onChange={(e) => aggiornaCampo("assegnato_a", e.target.value)}
-                  placeholder="Opzionale"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="mb-1 block text-sm font-medium text-slate-700">
-                  Note interne
-                </label>
-                <textarea
-                  rows={4}
-                  value={form.note}
-                  onChange={(e) => aggiornaCampo("note", e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-            </div>
-          </section>
-
-          <aside className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-200 px-6 py-4">
-              <h2 className="text-lg font-semibold text-slate-900">Workflow automatico</h2>
-              <p className="text-sm text-slate-500">Alla creazione verranno generati:</p>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+              gap: 12,
+              marginBottom: 16,
+            }}
+          >
+            <div>
+              <label style={labelStyle}>Studio ID</label>
+              <input
+                style={inputStyle}
+                value={form.studio_id}
+                onChange={(e) => aggiornaCampo("studio_id", e.target.value)}
+                required
+              />
             </div>
 
-            <div className="space-y-3 p-6 text-sm text-slate-700">
-              <div className="rounded-lg bg-slate-50 p-3">Step operativi da template</div>
-              <div className="rounded-lg bg-slate-50 p-3">Checklist pratica</div>
-              <div className="rounded-lg bg-slate-50 p-3">Scadenze automatiche</div>
-              <div className="rounded-lg bg-slate-50 p-3">Log iniziale</div>
-              <div className="rounded-lg bg-slate-50 p-3">Documenti modello collegati</div>
+            <div>
+              <label style={labelStyle}>Cliente ID</label>
+              <input
+                style={inputStyle}
+                value={form.cliente_id}
+                onChange={(e) => aggiornaCampo("cliente_id", e.target.value)}
+                required
+              />
             </div>
 
-            <div className="border-t border-slate-200 p-6">
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+            <div>
+              <label style={labelStyle}>Tipo pratica ID</label>
+              <input
+                style={inputStyle}
+                value={form.tipo_pratica_id}
+                onChange={(e) => aggiornaCampo("tipo_pratica_id", e.target.value)}
+                required
+              />
+            </div>
+
+            <div>
+              <label style={labelStyle}>Priorità</label>
+              <select
+                style={inputStyle}
+                value={form.priorita}
+                onChange={(e) => aggiornaCampo("priorita", e.target.value)}
               >
-                {loading ? "Creazione in corso..." : "Crea pratica"}
-              </button>
-
-              {messaggio && (
-                <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
-                  {messaggio}
-                </div>
-              )}
+                <option value="bassa">Bassa</option>
+                <option value="normale">Normale</option>
+                <option value="alta">Alta</option>
+                <option value="urgente">Urgente</option>
+              </select>
             </div>
-          </aside>
-        </form>
-      </div>
-    </main>
-  );
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "2fr 1fr",
+              gap: 12,
+              marginBottom: 16,
+            }}
+          >
+            <div>
+              <label style={labelStyle}>Titolo pratica</label>
+              <input
+                style={inputStyle}
+                value={form.titolo}
+                onChange={(e) => aggiornaCampo("titolo", e.target.value)}
+                placeholder="Es. Messa in liquidazione Rossi SRL"
+                required
+              />
+            </div>
+
+            <div>
+              <label style={labelStyle}>Assegnato a ID</label>
+              <input
+                style={inputStyle}
+                value={form.assegnato_a}
+                onChange={(e) => aggiornaCampo("assegnato_a", e.target.value)}
+                placeholder="Opzionale"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label style={labelStyle}>Note interne</label>
+            <textarea
+              style={{ ...inputStyle, minHeight: 90, resize: "vertical" }}
+              value={form.note}
+              onChange={(e) => aggiornaCampo("note", e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div
+          style={{
+            background: "#fff",
+            border: "1px solid #d1d5db",
+            borderRadius: 10,
+            padding: 24,
+          }}
+        >
+          <h2 style={{ fontSize: 18, fontWeight: 700, marginTop: 0 }}>
+            Workflow automatico
+          </h2>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+              gap: 10,
+              marginTop: 14,
+              marginBottom: 20,
+            }}
+          >
+            {[
+              "Step operativi da template",
+              "Checklist pratica",
+              "Scadenze automatiche",
+              "Log iniziale",
+              "Documenti modello collegati",
+            ].map((item) => (
+              <div
+                key={item}
+                style={{
+                  border: "1px solid #d1d5db",
+                  borderRadius: 8,
+                  padding: "10px 12px",
+                  fontSize: 13,
+                  background: "#f9fafb",
+                }}
+              >
+                {item}
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                border: 0,
+                borderRadius: 8,
+                padding: "10px 18px",
+                background: "#2563eb",
+                color: "#fff",
+                fontWeight: 600,
+                cursor: loading ? "not-allowed" : "pointer",
+                opacity: loading ? 0.6 : 1,
+              }}
+            >
+              {loading ? "Creazione in corso..." : "Crea pratica"}
+            </button>
+          </div>
+
+          {messaggio && (
+            <div
+              style={{
+                marginTop: 16,
+                border: "1px solid #d1d5db",
+                borderRadius: 8,
+                background: "#f9fafb",
+                padding: 12,
+                fontSize: 14,
+              }}
+            >
+              {messaggio}
+            </div>
+          )}
+        </div>
+      </form>
+    </div>
+  </main>
+);
 }
