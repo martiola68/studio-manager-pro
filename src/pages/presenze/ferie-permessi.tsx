@@ -100,6 +100,10 @@ export default function FeriePermessiPage() {
   const [note, setNote] = useState<Record<string, string>>({});
   const [isResponsabilePaghe, setIsResponsabilePaghe] = useState(false);
 
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+const [revocaFormId, setRevocaFormId] = useState<string | null>(null);
+const [motivoRevoca, setMotivoRevoca] = useState<Record<string, string>>({});
+
   const [filtroDipendente, setFiltroDipendente] = useState<string>('tutti');
   const [filtroMese, setFiltroMese] = useState<string>('tutti');
   const [filtroAnno, setFiltroAnno] = useState<string>(String(currentYear));
@@ -131,6 +135,8 @@ export default function FeriePermessiPage() {
         .single();
 
       if (userError || !userRow) throw userError;
+
+      setCurrentUserId(userRow.id);
 
       const { data: studioRow, error: studioError } = await (supabase as any)
         .from('tbstudio')
@@ -266,6 +272,59 @@ export default function FeriePermessiPage() {
       setSavingId(null);
     }
   }
+
+  async function richiediRevoca(id: string) {
+  try {
+    setSavingId(id);
+
+    const motivo = motivoRevoca[id]?.trim();
+
+    if (!motivo) {
+      throw new Error('Inserisci il motivo della richiesta di revoca.');
+    }
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      throw new Error('Sessione non valida. Effettua nuovamente il login.');
+    }
+
+    const response = await fetch(`/api/payroll/ferie-permessi/richieste/${id}/richiedi-revoca`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        motivo_revoca: motivo,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result?.error || 'Impossibile inviare la richiesta di revoca.');
+    }
+
+    toast({
+      title: 'Richiesta inviata',
+      description: 'La richiesta di revoca è stata inviata al responsabile.',
+    });
+
+    setRevocaFormId(null);
+    setMotivoRevoca((prev) => ({ ...prev, [id]: '' }));
+  } catch (error: any) {
+    toast({
+      title: 'Errore',
+      description: error?.message || 'Impossibile inviare la richiesta di revoca.',
+      variant: 'destructive',
+    });
+  } finally {
+    setSavingId(null);
+  }
+}
 
   const dipendentiOptions = useMemo(() => {
     const map = new Map<string, string>();
@@ -535,9 +594,56 @@ export default function FeriePermessiPage() {
       Revoca
     </Button>
   )}
+
+       {!isResponsabilePaghe &&
+  richiesta.stato === 'approvata' &&
+  richiesta.utente_id === currentUserId && (
+    <Button
+      size="sm"
+      className="h-8 bg-orange-500 px-3 text-white hover:bg-orange-600"
+      disabled={savingId === richiesta.id}
+      onClick={() => setRevocaFormId(richiesta.id)}
+    >
+      Richiedi revoca
+    </Button>
+  )}
 </div>
     </div>
   </CardContent>
+  {revocaFormId === richiesta.id && (
+  <div className="mt-2 flex items-center gap-2 border-t pt-2">
+    <input
+      className="h-9 flex-1 rounded-md border px-3 text-sm"
+      value={motivoRevoca[richiesta.id] || ''}
+      onChange={(event) =>
+        setMotivoRevoca((prev) => ({
+          ...prev,
+          [richiesta.id]: event.target.value,
+        }))
+      }
+      placeholder="Motivo richiesta revoca..."
+    />
+
+    <Button
+      size="sm"
+      className="h-9 bg-orange-500 px-3 text-white hover:bg-orange-600"
+      disabled={savingId === richiesta.id}
+      onClick={() => richiediRevoca(richiesta.id)}
+    >
+      Invia richiesta
+    </Button>
+
+    <Button
+      size="sm"
+      variant="outline"
+      className="h-9 px-3"
+      disabled={savingId === richiesta.id}
+      onClick={() => setRevocaFormId(null)}
+    >
+      Annulla
+    </Button>
+  </div>
+)}
 </Card>
           
           ))}
