@@ -440,7 +440,7 @@ export default function FeriePermessiPage() {
 
 <Card key={richiesta.id} className="rounded-md">
   <CardContent className="p-2">
-    <div className="grid grid-cols-[190px_90px_190px_70px_420px_170px_220px] items-center gap-2 text-[14px]">
+    <div className="grid grid-cols-[180px_80px_170px_60px_minmax(420px,1fr)_220px_130px_170px] items-center gap-2 text-[14px]">
       <div className="flex items-center gap-2 font-semibold">
         <span className="truncate">{getRichiedenteName(richiesta)}</span>
         {statoBadge(richiesta.stato)}
@@ -460,72 +460,73 @@ export default function FeriePermessiPage() {
         {richiesta.ore ? `${richiesta.ore} ore` : ''}
       </div>
 
-    <div className="flex items-center gap-2">
-  <div className="flex-1 truncate rounded bg-muted px-2 py-1">
-    {richiesta.motivazione ? (
-      <>
-        <strong>Motivo:</strong> {richiesta.motivazione}
-      </>
-    ) : (
-      <span className="text-muted-foreground">-</span>
-    )}
-  </div>
-
-  {isResponsabilePaghe && richiesta.stato === 'inviata' && (
-    <Textarea
-      className="h-8 min-h-0 w-[140px] resize-none py-1 text-xs"
-      value={note[richiesta.id] || ''}
-      onChange={(event) =>
-        setNote((prev) => ({
-          ...prev,
-          [richiesta.id]: event.target.value,
-        }))
-      }
-      placeholder="Note..."
-    />
+<div className="truncate rounded bg-muted px-2 py-1">
+  {richiesta.motivazione ? (
+    <>
+      <strong>Motivo:</strong> {richiesta.motivazione}
+    </>
+  ) : (
+    <span className="text-muted-foreground">-</span>
   )}
 </div>
+
+{isResponsabilePaghe && richiesta.stato === 'inviata' ? (
+  <Textarea
+    className="h-8 min-h-0 w-full resize-none py-1 text-xs"
+    value={note[richiesta.id] || ''}
+    onChange={(event) =>
+      setNote((prev) => ({
+        ...prev,
+        [richiesta.id]: event.target.value,
+      }))
+    }
+    placeholder="Note responsabile..."
+  />
+) : (
+  <div className="truncate text-xs text-muted-foreground">
+    {richiesta.note_responsabile || '-'}
+  </div>
+)}
 
       <div className="text-xs text-muted-foreground">
         Inviata il {new Date(richiesta.created_at).toLocaleDateString('it-IT')}
       </div>
 
-      <div className="flex justify-end gap-2">
-        {isResponsabilePaghe && richiesta.stato === 'inviata' && (
-          <>
-            <Button
-              size="sm"
-              className="h-8 px-3"
-              disabled={savingId === richiesta.id}
-              onClick={() => gestisciRichiesta(richiesta.id, 'approvata')}
-            >
-              Approva
-            </Button>
+     <div className="flex justify-end gap-2">
+  {isResponsabilePaghe && richiesta.stato === 'inviata' && (
+    <>
+      <Button
+        size="sm"
+        className="h-8 bg-green-600 px-3 text-white hover:bg-green-700"
+        disabled={savingId === richiesta.id}
+        onClick={() => gestisciRichiesta(richiesta.id, 'approvata')}
+      >
+        Approva
+      </Button>
 
-            <Button
-              size="sm"
-              variant="destructive"
-              className="h-8 px-3"
-              disabled={savingId === richiesta.id}
-              onClick={() => gestisciRichiesta(richiesta.id, 'rifiutata')}
-            >
-              Rifiuta
-            </Button>
-          </>
-        )}
+      <Button
+        size="sm"
+        variant="destructive"
+        className="h-8 px-3"
+        disabled={savingId === richiesta.id}
+        onClick={() => gestisciRichiesta(richiesta.id, 'rifiutata')}
+      >
+        Rifiuta
+      </Button>
+    </>
+  )}
 
-        {isResponsabilePaghe && richiesta.stato === 'approvata' && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8 px-3"
-            disabled={savingId === richiesta.id}
-            onClick={() => gestisciRichiesta(richiesta.id, 'revocata')}
-          >
-            Revoca
-          </Button>
-        )}
-      </div>
+  {isResponsabilePaghe && richiesta.stato === 'approvata' && (
+    <Button
+      size="sm"
+      className="h-8 bg-orange-500 px-3 text-white hover:bg-orange-600"
+      disabled={savingId === richiesta.id}
+      onClick={() => gestisciRichiesta(richiesta.id, 'revocata')}
+    >
+      Revoca
+    </Button>
+  )}
+</div>
     </div>
   </CardContent>
 </Card>
