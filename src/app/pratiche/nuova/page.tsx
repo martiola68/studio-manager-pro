@@ -1,353 +1,320 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
-type Cliente = {
+type Pratica = {
   id: string;
-  nome: string;
+  numero_pratica?: string | null;
+  titolo?: string | null;
+  cliente_nome?: string | null;
+  tipo_nome?: string | null;
+  stato?: string | null;
+  priorita?: string | null;
+  assegnatario_nome?: string | null;
+  avanzamento?: number | null;
+  prossima_scadenza?: string | null;
+  created_at?: string | null;
 };
 
-type TipoPratica = {
-  id: number;
-  ente: string;
-  nome: string;
-  codice: string;
-};
+const stati = ["Tutti", "aperta", "in_corso", "sospesa", "completata", "archiviata"];
+const priorita = ["Tutte", "bassa", "media", "alta", "urgente"];
 
-type Utente = {
-  id: string;
-  nome: string;
-};
+function statoLabel(stato?: string | null) {
+  return (stato || "aperta").replaceAll("_", " ");
+}
 
-export default function NuovaPraticaPage() {
-  const [loading, setLoading] = useState(false);
-  const [messaggio, setMessaggio] = useState("");
+function badgeStato(stato?: string | null) {
+  const value = stato || "aperta";
 
-  const [clienti, setClienti] = useState<Cliente[]>([]);
-  const [tipiPratica, setTipiPratica] = useState<TipoPratica[]>([]);
-  const [utenti, setUtenti] = useState<Utente[]>([]);
-
-  const [form, setForm] = useState({
-    cliente_id: "",
-    tipo_pratica_id: "",
-    titolo: "",
-    priorita: "normale",
-    assegnato_a: "",
-    note: "",
-  });
-
-  const labelStyle: React.CSSProperties = {
-    display: "block",
-    fontSize: 13,
-    fontWeight: 500,
-    marginBottom: 6,
-    color: "#374151",
+  const cls: Record<string, string> = {
+    aperta: "bg-blue-50 text-blue-700 ring-blue-200",
+    in_corso: "bg-amber-50 text-amber-700 ring-amber-200",
+    sospesa: "bg-zinc-100 text-zinc-700 ring-zinc-200",
+    completata: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+    archiviata: "bg-slate-100 text-slate-600 ring-slate-200",
   };
 
-  const inputStyle: React.CSSProperties = {
-    width: "100%",
-    border: "1px solid #9ca3af",
-    borderRadius: 7,
-    padding: "8px 10px",
-    fontSize: 14,
-    background: "#fff",
-    outline: "none",
-    boxSizing: "border-box",
+  return cls[value] || "bg-slate-100 text-slate-700 ring-slate-200";
+}
+
+function badgePriorita(priorita?: string | null) {
+  const value = priorita || "media";
+
+  const cls: Record<string, string> = {
+    bassa: "bg-slate-50 text-slate-600 ring-slate-200",
+    media: "bg-blue-50 text-blue-700 ring-blue-200",
+    alta: "bg-orange-50 text-orange-700 ring-orange-200",
+    urgente: "bg-red-50 text-red-700 ring-red-200",
   };
+
+  return cls[value] || "bg-slate-50 text-slate-600 ring-slate-200";
+}
+
+function formatDate(date?: string | null) {
+  if (!date) return "—";
+  return new Intl.DateTimeFormat("it-IT", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(new Date(date));
+}
+
+export default function PratichePage() {
+  const router = useRouter();
+
+  const [pratiche, setPratiche] = useState<Pratica[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errore, setErrore] = useState<string | null>(null);
+
+  const [ricerca, setRicerca] = useState("");
+  const [filtroStato, setFiltroStato] = useState("Tutti");
+  const [filtroPriorita, setFiltroPriorita] = useState("Tutte");
 
   useEffect(() => {
-    async function caricaDati() {
-      const [clientiRes, tipiRes, utentiRes] = await Promise.all([
-        fetch("/api/clienti"),
-        fetch("/api/pratiche/tipi"),
-        fetch("/api/utenti"),
-      ]);
+    async function loadPratiche() {
+      try {
+        setLoading(true);
+        setErrore(null);
 
-      setClienti(await clientiRes.json());
-      setTipiPratica(await tipiRes.json());
-      setUtenti(await utentiRes.json());
+        const res = await fetch("/api/pratiche", {
+          cache: "no-store",
+        });
+
+        if (!res.ok) {
+          throw new Error("Errore nel caricamento delle pratiche");
+        }
+
+        const data = await res.json();
+        setPratiche(Array.isArray(data) ? data : data.pratiche || []);
+      } catch (error) {
+        console.error(error);
+        setErrore("Impossibile caricare le pratiche.");
+      } finally {
+        setLoading(false);
+      }
     }
 
-    caricaDati();
+    loadPratiche();
   }, []);
 
-  function aggiornaCampo(campo: string, valore: string) {
-    setForm((prev) => ({ ...prev, [campo]: valore }));
-  }
+  const praticheFiltrate = useMemo(() => {
+    const q = ricerca.trim().toLowerCase();
 
-  async function creaPratica(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setMessaggio("");
+    return pratiche.filter((p) => {
+      const matchRicerca =
+        !q ||
+        [
+          p.numero_pratica,
+          p.titolo,
+          p.cliente_nome,
+          p.tipo_nome,
+          p.assegnatario_nome,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+          .includes(q);
 
-    try {
-     const payload = {
-  cliente_id: form.cliente_id,
-  tipo_pratica_id: Number(form.tipo_pratica_id),
-  titolo: form.titolo,
-  priorita: form.priorita,
-  assegnato_a: form.assegnato_a || null,
-  note: form.note || null,
-};
+      const matchStato =
+        filtroStato === "Tutti" || (p.stato || "aperta") === filtroStato;
 
-      const res = await fetch("/api/pratiche", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+      const matchPriorita =
+        filtroPriorita === "Tutte" || (p.priorita || "media") === filtroPriorita;
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Errore creazione pratica");
-      }
-
-      setMessaggio(`Pratica creata correttamente: ${data.pratica.numero_pratica}`);
-    } catch (error: any) {
-      setMessaggio(error.message || "Errore imprevisto");
-    } finally {
-      setLoading(false);
-    }
-  }
+      return matchRicerca && matchStato && matchPriorita;
+    });
+  }, [pratiche, ricerca, filtroStato, filtroPriorita]);
 
   return (
-    <main style={{ padding: 28, background: "#f8fafc", minHeight: "100vh" }}>
-      <div style={{ maxWidth: 1280, margin: "0 auto" }}>
-        <div style={{ marginBottom: 24 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0 }}>
+    <main className="min-h-screen bg-slate-50 px-6 py-6">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+              Pratiche
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Gestione pratiche, workflow, assegnazioni e scadenze operative.
+            </p>
+          </div>
+
+          <button
+            onClick={() => router.push("/pratiche/nuova")}
+            className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800"
+          >
             Nuova pratica
-          </h1>
-          <p style={{ color: "#64748b", marginTop: 6 }}>
-            Crea una pratica guidata con workflow automatico, step, checklist e scadenze.
-          </p>
+          </button>
         </div>
 
-        <form onSubmit={creaPratica}>
-          <div
-            style={{
-              background: "#fff",
-              border: "1px solid #d1d5db",
-              borderRadius: 10,
-              padding: 24,
-              marginBottom: 16,
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 22,
-              }}
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="grid gap-3 md:grid-cols-[1fr_180px_180px]">
+            <input
+              value={ricerca}
+              onChange={(e) => setRicerca(e.target.value)}
+              placeholder="Cerca per numero, cliente, titolo, tipo o assegnatario..."
+              className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+            />
+
+            <select
+              value={filtroStato}
+              onChange={(e) => setFiltroStato(e.target.value)}
+              className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
             >
-              <div>
-                <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>
-                  Dati pratica
-                </h2>
-                <p style={{ color: "#64748b", marginTop: 4, fontSize: 14 }}>
-                  Seleziona cliente, tipo pratica e informazioni principali.
-                </p>
-              </div>
-
-              <a
-                href="/pratiche"
-                style={{
-                  border: "1px solid #d1d5db",
-                  borderRadius: 8,
-                  padding: "9px 16px",
-                  background: "#fff",
-                  color: "#111827",
-                  fontSize: 14,
-                  textDecoration: "none",
-                }}
-              >
-                Torna alle pratiche
-              </a>
-            </div>
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "2fr 2fr 1fr",
-                gap: 12,
-                marginBottom: 16,
-              }}
-            >
-              <div>
-                <label style={labelStyle}>Cliente</label>
-                <select
-                  style={inputStyle}
-                  value={form.cliente_id}
-                  onChange={(e) => aggiornaCampo("cliente_id", e.target.value)}
-                  required
-                >
-                  <option value="">Seleziona cliente</option>
-                  {clienti.map((cliente) => (
-                    <option key={cliente.id} value={cliente.id}>
-                      {cliente.nome}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label style={labelStyle}>Tipo pratica</label>
-                <select
-                  style={inputStyle}
-                  value={form.tipo_pratica_id}
-                  onChange={(e) => aggiornaCampo("tipo_pratica_id", e.target.value)}
-                  required
-                >
-                  <option value="">Seleziona pratica</option>
-                  {tipiPratica.map((tipo) => (
-                    <option key={tipo.id} value={tipo.id}>
-                      {tipo.ente} - {tipo.nome}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label style={labelStyle}>Priorità</label>
-                <select
-                  style={inputStyle}
-                  value={form.priorita}
-                  onChange={(e) => aggiornaCampo("priorita", e.target.value)}
-                >
-                  <option value="bassa">Bassa</option>
-                  <option value="normale">Normale</option>
-                  <option value="alta">Alta</option>
-                  <option value="urgente">Urgente</option>
-                </select>
-              </div>
-            </div>
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "2fr 1fr",
-                gap: 12,
-                marginBottom: 16,
-              }}
-            >
-              <div>
-                <label style={labelStyle}>Titolo pratica</label>
-                <input
-                  style={inputStyle}
-                  value={form.titolo}
-                  onChange={(e) => aggiornaCampo("titolo", e.target.value)}
-                  placeholder="Es. Messa in liquidazione Rossi SRL"
-                  required
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle}>Assegnata a</label>
-                <select
-                  style={inputStyle}
-                  value={form.assegnato_a}
-                  onChange={(e) => aggiornaCampo("assegnato_a", e.target.value)}
-                >
-                  <option value="">Non assegnata</option>
-                  {utenti.map((utente) => (
-                    <option key={utente.id} value={utente.id}>
-                      {utente.nome}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label style={labelStyle}>Note interne</label>
-              <textarea
-                style={{ ...inputStyle, minHeight: 90, resize: "vertical" }}
-                value={form.note}
-                onChange={(e) => aggiornaCampo("note", e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div
-            style={{
-              background: "#fff",
-              border: "1px solid #d1d5db",
-              borderRadius: 10,
-              padding: 24,
-            }}
-          >
-            <h2 style={{ fontSize: 18, fontWeight: 700, marginTop: 0 }}>
-              Workflow automatico
-            </h2>
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
-                gap: 10,
-                marginTop: 14,
-                marginBottom: 20,
-              }}
-            >
-              {[
-                "Step operativi da template",
-                "Checklist pratica",
-                "Scadenze automatiche",
-                "Log iniziale",
-                "Documenti modello collegati",
-              ].map((item) => (
-                <div
-                  key={item}
-                  style={{
-                    border: "1px solid #d1d5db",
-                    borderRadius: 8,
-                    padding: "10px 12px",
-                    fontSize: 13,
-                    background: "#f9fafb",
-                  }}
-                >
-                  {item}
-                </div>
+              {stati.map((s) => (
+                <option key={s} value={s}>
+                  {s === "Tutti" ? "Tutti gli stati" : statoLabel(s)}
+                </option>
               ))}
-            </div>
+            </select>
 
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <button
-                type="submit"
-                disabled={loading}
-                style={{
-                  border: 0,
-                  borderRadius: 8,
-                  padding: "10px 18px",
-                  background: "#2563eb",
-                  color: "#fff",
-                  fontWeight: 600,
-                  cursor: loading ? "not-allowed" : "pointer",
-                  opacity: loading ? 0.6 : 1,
-                }}
-              >
-                {loading ? "Creazione in corso..." : "Crea pratica"}
-              </button>
-            </div>
-
-            {messaggio && (
-              <div
-                style={{
-                  marginTop: 16,
-                  border: "1px solid #d1d5db",
-                  borderRadius: 8,
-                  background: "#f9fafb",
-                  padding: 12,
-                  fontSize: 14,
-                }}
-              >
-                {messaggio}
-              </div>
-            )}
+            <select
+              value={filtroPriorita}
+              onChange={(e) => setFiltroPriorita(e.target.value)}
+              className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+            >
+              {priorita.map((p) => (
+                <option key={p} value={p}>
+                  {p === "Tutte" ? "Tutte le priorità" : p}
+                </option>
+              ))}
+            </select>
           </div>
-        </form>
+        </section>
+
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900">
+                Elenco pratiche
+              </h2>
+              <p className="text-xs text-slate-500">
+                {praticheFiltrate.length} pratiche trovate
+              </p>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="px-5 py-12 text-center text-sm text-slate-500">
+              Caricamento pratiche...
+            </div>
+          ) : errore ? (
+            <div className="px-5 py-12 text-center text-sm text-red-600">
+              {errore}
+            </div>
+          ) : praticheFiltrate.length === 0 ? (
+            <div className="px-5 py-12 text-center">
+              <p className="text-sm font-medium text-slate-700">
+                Nessuna pratica trovata
+              </p>
+              <p className="mt-1 text-sm text-slate-500">
+                Modifica i filtri oppure crea una nuova pratica.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Pratica
+                    </th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Cliente
+                    </th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Stato
+                    </th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Priorità
+                    </th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Assegnatario
+                    </th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Avanzamento
+                    </th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Prossima scadenza
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  {praticheFiltrate.map((p) => {
+                    const progress = Math.max(
+                      0,
+                      Math.min(100, Number(p.avanzamento || 0))
+                    );
+
+                    return (
+                      <tr
+                        key={p.id}
+                        onClick={() => router.push(`/pratiche/${p.id}`)}
+                        className="cursor-pointer transition hover:bg-slate-50"
+                      >
+                        <td className="px-5 py-4">
+                          <div className="font-medium text-slate-900">
+                            {p.numero_pratica || "—"}
+                          </div>
+                          <div className="mt-0.5 text-sm text-slate-500">
+                            {p.titolo || p.tipo_nome || "Pratica senza titolo"}
+                          </div>
+                        </td>
+
+                        <td className="px-5 py-4 text-sm text-slate-700">
+                          {p.cliente_nome || "—"}
+                        </td>
+
+                        <td className="px-5 py-4">
+                          <span
+                            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium capitalize ring-1 ring-inset ${badgeStato(
+                              p.stato
+                            )}`}
+                          >
+                            {statoLabel(p.stato)}
+                          </span>
+                        </td>
+
+                        <td className="px-5 py-4">
+                          <span
+                            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium capitalize ring-1 ring-inset ${badgePriorita(
+                              p.priorita
+                            )}`}
+                          >
+                            {p.priorita || "media"}
+                          </span>
+                        </td>
+
+                        <td className="px-5 py-4 text-sm text-slate-700">
+                          {p.assegnatario_nome || "Non assegnata"}
+                        </td>
+
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="h-2 w-24 overflow-hidden rounded-full bg-slate-100">
+                              <div
+                                className="h-full rounded-full bg-slate-900"
+                                style={{ width: `${progress}%` }}
+                              />
+                            </div>
+                            <span className="text-xs font-medium text-slate-600">
+                              {progress}%
+                            </span>
+                          </div>
+                        </td>
+
+                        <td className="px-5 py-4 text-sm text-slate-700">
+                          {formatDate(p.prossima_scadenza)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
       </div>
     </main>
   );
