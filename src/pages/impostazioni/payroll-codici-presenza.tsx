@@ -89,7 +89,7 @@ export default function PayrollCodiciPresenzaPage() {
   const [success, setSuccess] = useState<string | null>(null);
 
   async function loadData() {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as any;
 
     setLoading(true);
     setError(null);
