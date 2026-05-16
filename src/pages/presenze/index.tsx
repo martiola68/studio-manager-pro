@@ -1161,12 +1161,9 @@ ${dipendentiXml}
           {days.map((day) => {
             const code = getCode(dipendente.utente_id, day);
 
-          const today = new Date();
-today.setHours(0, 0, 0, 0);
+const todayKey = getTodayKey();
 
-const currentDay = new Date(`${day.date}T00:00:00`);
-
-const isFutureDay = currentDay > today;
+const isFutureDay = day.date > todayKey;
 
           const isLockedByRequest =
           lockedCells[`${dipendente.utente_id}|${day.date}`];
