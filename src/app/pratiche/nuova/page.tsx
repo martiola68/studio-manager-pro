@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 type Cliente = {
-  id: number;
+  id: string;
   nome: string;
 };
 
@@ -15,7 +15,7 @@ type TipoPratica = {
 };
 
 type Utente = {
-  id: number;
+  id: string;
   nome: string;
 };
 
@@ -81,15 +81,14 @@ export default function NuovaPraticaPage() {
     setMessaggio("");
 
     try {
-      const payload = {
-        studio_id: 1,
-        cliente_id: Number(form.cliente_id),
-        tipo_pratica_id: Number(form.tipo_pratica_id),
-        titolo: form.titolo,
-        priorita: form.priorita,
-        assegnato_a: form.assegnato_a ? Number(form.assegnato_a) : null,
-        note: form.note || null,
-      };
+     const payload = {
+  cliente_id: form.cliente_id,
+  tipo_pratica_id: Number(form.tipo_pratica_id),
+  titolo: form.titolo,
+  priorita: form.priorita,
+  assegnato_a: form.assegnato_a || null,
+  note: form.note || null,
+};
 
       const res = await fetch("/api/pratiche", {
         method: "POST",
