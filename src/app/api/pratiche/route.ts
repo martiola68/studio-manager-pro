@@ -28,6 +28,8 @@ export async function POST(req: Request) {
       );
     }
 
+    const supabaseAdmin = getSupabaseAdmin();
+
     const { data: cliente, error: clienteError } = await supabaseAdmin
       .from("tbclienti")
       .select("studio_id")
