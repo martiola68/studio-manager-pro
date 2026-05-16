@@ -54,6 +54,9 @@ type Presenza = {
   codice_presenza: string;
   note?: string | null;
   inserito_da?: string | null;
+
+  richiesta_ferie_permessi_id?: string | null;
+  generata_da_richiesta_ferie_permessi?: boolean | null;
 };
 
 type DayInfo = {
@@ -350,6 +353,7 @@ export default function PresenzePage() {
   const [festivita, setFestivita] = useState<Festivita[]>([]);
   const [dipendenti, setDipendenti] = useState<Dipendente[]>([]);
   const [values, setValues] = useState<Record<string, string>>({});
+  const [lockedCells, setLockedCells] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -573,7 +577,17 @@ const days = useMemo<DayInfo[]>(() => {
 
       const { data: presenzeData, error: presenzeError } = await supabase
         .from('tbpresenze_dipendenti')
-        .select('id, studio_id, utente_id, data_presenza, codice_presenza, note, inserito_da')
+        .select(`
+  id,
+  studio_id,
+  utente_id,
+  data_presenza,
+  codice_presenza,
+  note,
+  inserito_da,
+  richiesta_ferie_permessi_id,
+  generata_da_richiesta_ferie_permessi
+`)
         .eq('studio_id', typedUser.studio_id)
         .gte('data_presenza', startDate)
         .lte('data_presenza', endDate)
@@ -583,11 +597,20 @@ const days = useMemo<DayInfo[]>(() => {
 
       const loadedValues: Record<string, string> = {};
 
-      (presenzeData ?? []).forEach((presence: Presenza) => {
-        loadedValues[`${presence.utente_id}|${presence.data_presenza}`] =
-          presence.codice_presenza;
-      });
+     const loadedLockedCells: Record<string, boolean> = {};
 
+(presenzeData ?? []).forEach((presence: Presenza) => {
+  const key = `${presence.utente_id}|${presence.data_presenza}`;
+
+  loadedValues[key] = presence.codice_presenza;
+
+  loadedLockedCells[key] = Boolean(
+    presence.generata_da_richiesta_ferie_permessi ||
+      presence.richiesta_ferie_permessi_id,
+  );
+});
+
+setLockedCells(loadedLockedCells);
       const loadedHolidaysByDate = new Map<string, Festivita>();
       loadedFestivita.forEach((item) => loadedHolidaysByDate.set(item.data_festivita, item));
 
@@ -1130,19 +1153,32 @@ ${dipendentiXml}
           {days.map((day) => {
             const code = getCode(dipendente.utente_id, day);
 
+          const isLockedByRequest =
+          lockedCells[`${dipendente.utente_id}|${day.date}`];
+
             return (
               <div
                 key={`${dipendente.utente_id}-${day.date}`}
                 className="border-b p-1 text-center"
               >
                 <select
-                  disabled={isLockedPeriod || !canEditEmployee(dipendente.utente_id)}
+                disabled={
+  isLockedPeriod ||
+  !canEditEmployee(dipendente.utente_id) ||
+  isLockedByRequest
+}
                   value={code}
                   onChange={(event) =>
                     handleChange(dipendente.utente_id, day.date, event.target.value)
                   }
-                  title={day.holidayDescription}
-                  className={`h-8 w-[82px] rounded-md border px-2 text-xs outline-none ${
+                  title={
+  isLockedByRequest
+    ? 'Presenza generata da richiesta ferie/permessi approvata. Usa Revoca.'
+    : day.holidayDescription
+}
+                 className={`h-8 w-[82px] rounded-md border px-2 text-xs outline-none ${
+  isLockedByRequest ? 'cursor-not-allowed opacity-60' : ''
+} ${
                     code
                       ? day.isHoliday
                         ? getHolidayCellClass(code)
