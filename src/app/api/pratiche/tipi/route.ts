@@ -1,20 +1,23 @@
 import { NextResponse } from "next/server";
-import { pool } from "@/lib/postgres";
+import { createClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
+
+const supabase = createClient<Database>(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function GET() {
-  try {
-    const result = await pool.query(`
-      SELECT id, ente, nome, codice
-      FROM public.tbpratiche_tipi
-      WHERE attiva = TRUE
-      ORDER BY ente ASC, nome ASC
-    `);
+  const { data, error } = await supabase
+    .from("tbpratiche_tipi")
+    .select("id, ente, nome, codice")
+    .eq("attiva", true)
+    .order("ente", { ascending: true })
+    .order("nome", { ascending: true });
 
-    return NextResponse.json(result.rows);
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  return NextResponse.json(data || []);
 }
