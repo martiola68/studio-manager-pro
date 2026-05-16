@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function GET() {
-  const { data, error } = await getSupabaseAdmin 
+  const supabaseAdmin = getSupabaseAdmin();
+
+  const { data, error } = await supabaseAdmin
     .from("tbclienti")
     .select("id, ragione_sociale")
     .eq("attivo", true)
