@@ -113,17 +113,38 @@ export default function NuovaPraticaPage() {
   }
 
   return (
-    <main style={{ padding: 28, background: "#f8fafc", minHeight: "100vh" }}>
+    <main
+  className="font-sans"
+  style={{ padding: 28, background: "#f8fafc", minHeight: "100vh" }}
+>
       <div style={{ maxWidth: 1280, margin: "0 auto" }}>
-        <div style={{ marginBottom: 24 }}>
-         <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-  Nuova pratica
-</h1>
-         <p className="mt-2 text-sm text-slate-500">
-  Crea una pratica guidata con workflow automatico, step, checklist e scadenze.
-</p>
-        </div>
+    <div style={{ marginBottom: 24 }}>
+  <h1
+    style={{
+      fontSize: 34,
+      fontWeight: 700,
+      color: "#0f172a",
+      margin: 0,
+      lineHeight: 1.1,
+      fontFamily:
+        'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    }}
+  >
+    Nuova pratica
+  </h1>
 
+  <p
+    style={{
+      marginTop: 8,
+      fontSize: 15,
+      color: "#64748b",
+      fontFamily:
+        'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    }}
+  >
+    Crea una pratica guidata con workflow automatico, step, checklist e scadenze.
+  </p>
+</div>
         <form onSubmit={creaPratica}>
           <div
             style={{
@@ -143,10 +164,19 @@ export default function NuovaPraticaPage() {
               }}
             >
               <div>
-             <h2 className="text-lg font-semibold text-slate-900">
+            <h2
+  style={{
+    fontSize: 22,
+    fontWeight: 700,
+    color: "#0f172a",
+    margin: 0,
+    fontFamily:
+      'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  }}
+>
   Dati pratica
 </h2>
-                <p style={{ color: "#64748b", marginTop: 4, fontSize: 14 }}>
+               <p className="mt-1 text-sm text-slate-500">
                   Seleziona cliente, tipo pratica e informazioni principali.
                 </p>
               </div>
@@ -278,10 +308,19 @@ export default function NuovaPraticaPage() {
               padding: 24,
             }}
           >
-            <h2 style={{ fontSize: 18, fontWeight: 700, marginTop: 0 }}>
-              Workflow automatico
-            </h2>
-
+         <h2
+  style={{
+    fontSize: 22,
+    fontWeight: 700,
+    color: "#0f172a",
+    marginTop: 0,
+    marginBottom: 0,
+    fontFamily:
+      'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  }}
+>
+  Workflow automatico
+</h2>
             <div
               style={{
                 display: "grid",
