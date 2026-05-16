@@ -11,16 +11,26 @@ async function callInternal(
     process.env.NEXT_PUBLIC_SITE_URL ||
     "https://studio-manager-pro.vercel.app";
 
-  const res = await fetch(`${baseUrl}${path}`, { method });
-  const text = await res.text();
+  try {
+    const res = await fetch(`${baseUrl}${path}`, { method });
+    const text = await res.text();
 
-  return {
-    path,
-    method,
-    ok: res.ok,
-    status: res.status,
-    body: text,
-  };
+    return {
+      path,
+      method,
+      ok: res.ok,
+      status: res.status,
+      body: text,
+    };
+  } catch (error) {
+    return {
+      path,
+      method,
+      ok: false,
+      status: 500,
+      body: error instanceof Error ? error.message : String(error),
+    };
+  }
 }
 
 export default async function handler(
