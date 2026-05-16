@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { pool } from "@/lib/postgres";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
-    export async function GET() {
+export async function GET() {
   return NextResponse.json({
     ok: true,
     message: "API pratiche attiva",
@@ -9,8 +9,6 @@ import { pool } from "@/lib/postgres";
 }
 
 export async function POST(req: Request) {
-  const client = await pool.connect();
-
   try {
     const body = await req.json();
 
@@ -23,205 +21,147 @@ export async function POST(req: Request) {
       note = null,
     } = body;
 
- if (!cliente_id || !tipo_pratica_id || !titolo) {
-  return NextResponse.json(
-    { error: "Dati obbligatori mancanti" },
-    { status: 400 }
-  );
-}
+    if (!cliente_id || !tipo_pratica_id || !titolo) {
+      return NextResponse.json(
+        { error: "Dati obbligatori mancanti" },
+        { status: 400 }
+      );
+    }
 
-      const studioResult = await client.query(
-  `
-  SELECT studio_id
-  FROM tbclienti
-  WHERE id = $1
-  LIMIT 1
-  `,
-  [cliente_id]
-);
+    const { data: cliente, error: clienteError } = await supabaseAdmin
+      .from("tbclienti")
+      .select("studio_id")
+      .eq("id", cliente_id)
+      .single();
 
-if (studioResult.rowCount === 0) {
-  return NextResponse.json(
-    { error: "Cliente non trovato" },
-    { status: 404 }
-  );
-}
+    if (clienteError || !cliente) {
+      return NextResponse.json(
+        { error: "Cliente non trovato" },
+        { status: 404 }
+      );
+    }
 
-const studio_id = studioResult.rows[0].studio_id;
+    const studio_id = cliente.studio_id;
 
-    await client.query("BEGIN");
+    const { count } = await supabaseAdmin
+      .from("tbpratiche")
+      .select("id", { count: "exact", head: true })
+      .eq("studio_id", studio_id);
 
-    const numeroResult = await client.query(
-      `
-      SELECT COUNT(*)::int + 1 AS progressivo
-      FROM tbpratiche
-      WHERE studio_id = $1
-      `,
-      [studio_id]
-    );
+    const progressivo = (count || 0) + 1;
+    const numero_pratica = `PR-${new Date().getFullYear()}-${String(
+      progressivo
+    ).padStart(5, "0")}`;
 
-    const progressivo = numeroResult.rows[0].progressivo;
-    const numero_pratica = `PR-${new Date().getFullYear()}-${String(progressivo).padStart(5, "0")}`;
-
-    const praticaResult = await client.query(
-      `
-      INSERT INTO tbpratiche
-      (
+    const { data: pratica, error: praticaError } = await supabaseAdmin
+      .from("tbpratiche")
+      .insert({
         studio_id,
         cliente_id,
         tipo_pratica_id,
         numero_pratica,
         titolo,
-        stato,
+        stato: "aperta",
         priorita,
-        data_apertura,
-        assegnato_a,
-        note
-      )
-      VALUES
-      ($1, $2, $3, $4, $5, 'aperta', $6, CURRENT_DATE, $7, $8)
-      RETURNING *
-      `,
-      [
-        studio_id,
-        cliente_id,
-        tipo_pratica_id,
-        numero_pratica,
-        titolo,
-        priorita,
+        data_apertura: new Date().toISOString().slice(0, 10),
         assegnato_a,
         note,
-      ]
-    );
+      })
+      .select()
+      .single();
 
-    const pratica = praticaResult.rows[0];
+    if (praticaError || !pratica) {
+      return NextResponse.json(
+        { error: praticaError?.message || "Errore creazione pratica" },
+        { status: 500 }
+      );
+    }
 
-    await client.query(
-      `
-      INSERT INTO tbpratiche_step
-      (
-        pratica_id,
-        template_step_id,
-        ordine,
-        ente,
-        titolo,
-        descrizione,
-        stato,
-        obbligatorio,
-        data_scadenza,
-        responsabile_id
-      )
-      SELECT
-        $1,
-        id,
-        ordine,
-        ente,
-        titolo,
-        descrizione,
-        'da_fare',
-        obbligatorio,
-        CASE
-          WHEN giorni_scadenza IS NOT NULL
-          THEN CURRENT_DATE + giorni_scadenza
-          ELSE NULL
-        END,
-        $2
-      FROM tbpratiche_step_template
-      WHERE tipo_pratica_id = $3
-      ORDER BY ordine
-      `,
-      [pratica.id, assegnato_a, tipo_pratica_id]
-    );
+    const { data: templates, error: templateError } = await supabaseAdmin
+      .from("tbpratiche_step_template")
+      .select("*")
+      .eq("tipo_pratica_id", tipo_pratica_id)
+      .order("ordine", { ascending: true });
 
-    await client.query(
-      `
-      INSERT INTO tbpratiche_checklist
-      (
-        pratica_id,
-        checklist_template_id,
-        titolo,
-        descrizione,
-        obbligatorio
-      )
-      SELECT
-        $1,
-        id,
-        titolo,
-        descrizione,
-        obbligatorio
-      FROM tbpratiche_checklist_template
-      WHERE tipo_pratica_id = $2
-      ORDER BY ordine
-      `,
-      [pratica.id, tipo_pratica_id]
-    );
+    if (templateError) {
+      return NextResponse.json(
+        { error: templateError.message },
+        { status: 500 }
+      );
+    }
 
-    await client.query(
-      `
-      INSERT INTO tbpratiche_scadenze
-      (
-        studio_id,
-        cliente_id,
-        pratica_id,
-        step_id,
-        titolo,
-        descrizione,
-        data_scadenza,
-        stato,
-        priorita,
-        assegnato_a
-      )
-      SELECT
-        $1,
-        $2,
-        $3,
-        s.id,
-        s.titolo,
-        s.descrizione,
-        s.data_scadenza,
-        'da_fare',
-        $4,
-        $5
-      FROM tbpratiche_step s
-      WHERE s.pratica_id = $3
-        AND s.data_scadenza IS NOT NULL
-      `,
-      [studio_id, cliente_id, pratica.id, priorita, assegnato_a]
-    );
+    const stepDaInserire = (templates || []).map((step) => {
+      const dataScadenza = step.giorni_scadenza
+        ? new Date(Date.now() + step.giorni_scadenza * 86400000)
+            .toISOString()
+            .slice(0, 10)
+        : null;
 
-    await client.query(
-      `
-      INSERT INTO tbpratiche_log
-      (
-        studio_id,
-        cliente_id,
-        pratica_id,
-        tipo_evento,
-        descrizione,
-        utente_id
-      )
-      VALUES
-      ($1, $2, $3, 'PRATICA_CREATA', 'Pratica creata automaticamente con workflow, checklist e scadenze', $4)
-      `,
-      [studio_id, cliente_id, pratica.id, assegnato_a]
-    );
+      return {
+        pratica_id: pratica.id,
+        template_step_id: step.id,
+        ordine: step.ordine,
+        ente: step.ente,
+        titolo: step.titolo,
+        descrizione: step.descrizione,
+        stato: "da_fare",
+        obbligatorio: step.obbligatorio,
+        data_scadenza: dataScadenza,
+        responsabile_id: assegnato_a,
+      };
+    });
 
-    await client.query("COMMIT");
+    if (stepDaInserire.length > 0) {
+      const { error: stepError } = await supabaseAdmin
+        .from("tbpratiche_step")
+        .insert(stepDaInserire);
+
+      if (stepError) {
+        return NextResponse.json(
+          { error: stepError.message },
+          { status: 500 }
+        );
+      }
+    }
+
+    const { data: checklistTemplate } = await supabaseAdmin
+      .from("tbpratiche_checklist_template")
+      .select("*")
+      .eq("tipo_pratica_id", tipo_pratica_id)
+      .order("ordine", { ascending: true });
+
+    const checklistDaInserire = (checklistTemplate || []).map((item) => ({
+      pratica_id: pratica.id,
+      checklist_template_id: item.id,
+      titolo: item.titolo,
+      descrizione: item.descrizione,
+      obbligatorio: item.obbligatorio,
+    }));
+
+    if (checklistDaInserire.length > 0) {
+      await supabaseAdmin
+        .from("tbpratiche_checklist")
+        .insert(checklistDaInserire);
+    }
+
+    await supabaseAdmin.from("tbpratiche_log").insert({
+      studio_id,
+      cliente_id,
+      pratica_id: pratica.id,
+      tipo_evento: "PRATICA_CREATA",
+      descrizione:
+        "Pratica creata automaticamente con workflow, checklist e scadenze",
+      utente_id: assegnato_a,
+    });
 
     return NextResponse.json({
       success: true,
       pratica,
     });
-  } catch (error) {
-    await client.query("ROLLBACK");
-
-    console.error("Errore creazione pratica:", error);
-
+  } catch (error: any) {
     return NextResponse.json(
-      { error: "Errore durante la creazione della pratica" },
+      { error: error.message || "Errore durante la creazione della pratica" },
       { status: 500 }
     );
-  } finally {
-    client.release();
   }
 }
