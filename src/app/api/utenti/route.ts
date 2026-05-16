@@ -1,14 +1,8 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/integrations/supabase/types";
-
-const supabase = createClient<Database>(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function GET() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("tbutenti")
     .select("id, nome, cognome")
     .eq("attivo", true)
@@ -18,10 +12,10 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const utenti = (data || []).map((utente) => ({
-    id: utente.id,
-    nome: `${utente.nome} ${utente.cognome}`,
-  }));
-
-  return NextResponse.json(utenti);
+  return NextResponse.json(
+    (data || []).map((utente) => ({
+      id: utente.id,
+      nome: `${utente.nome} ${utente.cognome}`,
+    }))
+  );
 }
