@@ -439,7 +439,7 @@ export default function FeriePermessiPage() {
           {richiesteFiltrate.map((richiesta) => (
             <Card key={richiesta.id}>
            
-<CardContent className="p-3">
+<CardContent className="px-2 py-1.5">
   <div className="flex flex-col gap-2">
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
       <div className="flex items-center gap-2 font-semibold">
@@ -470,57 +470,62 @@ export default function FeriePermessiPage() {
       </div>
     )}
 
-    {isResponsabilePaghe && richiesta.stato === 'inviata' && (
-      <div className="flex items-center gap-2">
-        <Textarea
-          className="min-h-[34px] flex-1 resize-none py-2 text-xs"
-          value={note[richiesta.id] || ''}
-          onChange={(event) =>
-            setNote((prev) => ({
-              ...prev,
-              [richiesta.id]: event.target.value,
-            }))
-          }
-          placeholder="Note responsabile..."
-        />
+   {isResponsabilePaghe && richiesta.stato === 'inviata' && (
+  <div className="flex items-center gap-2">
+    <Textarea
+      className="h-8 min-h-0 w-[220px] resize-none py-1 text-xs"
+      value={note[richiesta.id] || ''}
+      onChange={(event) =>
+        setNote((prev) => ({
+          ...prev,
+          [richiesta.id]: event.target.value,
+        }))
+      }
+      placeholder="Note..."
+    />
 
-        <Button
-          size="sm"
-          disabled={savingId === richiesta.id}
-          onClick={() => gestisciRichiesta(richiesta.id, 'approvata')}
-        >
-          Approva
-        </Button>
+    <Button
+      size="sm"
+      className="h-8 px-3"
+      disabled={savingId === richiesta.id}
+      onClick={() => gestisciRichiesta(richiesta.id, 'approvata')}
+    >
+      Approva
+    </Button>
 
-        <Button
-          size="sm"
-          variant="destructive"
-          disabled={savingId === richiesta.id}
-          onClick={() => gestisciRichiesta(richiesta.id, 'rifiutata')}
-        >
-          Rifiuta
-        </Button>
-      </div>
-    )}
+    <Button
+      size="sm"
+      variant="destructive"
+      className="h-8 px-3"
+      disabled={savingId === richiesta.id}
+      onClick={() => gestisciRichiesta(richiesta.id, 'rifiutata')}
+    >
+      Rifiuta
+    </Button>
+  </div>
+)}
 
-    {richiesta.note_responsabile && richiesta.stato !== 'inviata' && (
-      <div className="truncate rounded border px-2 py-1 text-xs">
-        <strong>Note:</strong> {richiesta.note_responsabile}
-      </div>
-    )}
+{isResponsabilePaghe && richiesta.stato === 'approvata' && (
+  <div className="flex items-center gap-2">
+    <div className="flex-1">
+      {richiesta.note_responsabile && (
+        <div className="truncate text-xs text-muted-foreground">
+          <strong>Note:</strong> {richiesta.note_responsabile}
+        </div>
+      )}
+    </div>
 
-    {isResponsabilePaghe && richiesta.stato === 'approvata' && (
-      <div className="flex justify-end">
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={savingId === richiesta.id}
-          onClick={() => gestisciRichiesta(richiesta.id, 'revocata')}
-        >
-          Revoca
-        </Button>
-      </div>
-    )}
+    <Button
+      size="sm"
+      variant="outline"
+      className="h-8 px-3"
+      disabled={savingId === richiesta.id}
+      onClick={() => gestisciRichiesta(richiesta.id, 'revocata')}
+    >
+      Revoca
+    </Button>
+  </div>
+)}
   </div>
 </CardContent>
               
