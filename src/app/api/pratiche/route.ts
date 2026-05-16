@@ -5,60 +5,71 @@ export async function GET() {
   try {
     const supabaseAdmin = getSupabaseAdmin();
 
-    const { data, error } = await supabaseAdmin
+    const { data: pratiche, error: praticheError } = await supabaseAdmin
       .from("tbpratiche")
-      .select(`
-        id,
-        numero_pratica,
-        titolo,
-        stato,
-        priorita,
-        data_apertura,
-        created_at,
-        cliente_id,
-        tipo_pratica_id,
-        assegnato_a,
-        tbclienti (
-          nome
-        ),
-        tbpratiche_tipi (
-          nome,
-          ente
-        ),
-        tbutenti (
-          nome,
-          cognome
-        )
-      `)
+      .select("*")
       .order("created_at", { ascending: false });
 
-    if (error) {
+    if (praticheError) {
       return NextResponse.json(
-        { error: error.message },
+        { error: praticheError.message },
         { status: 500 }
       );
     }
 
-    const pratiche = (data || []).map((p: any) => ({
-      id: p.id,
-      numero_pratica: p.numero_pratica,
-      titolo: p.titolo,
-      stato: p.stato,
-      priorita: p.priorita,
-      data_apertura: p.data_apertura,
-      created_at: p.created_at,
-      cliente_nome: p.tbclienti?.nome || "—",
-      tipo_nome: p.tbpratiche_tipi
-        ? `${p.tbpratiche_tipi.ente} - ${p.tbpratiche_tipi.nome}`
-        : "—",
-      assegnatario_nome: p.tbutenti
-        ? `${p.tbutenti.nome || ""} ${p.tbutenti.cognome || ""}`.trim()
-        : "Non assegnata",
-      avanzamento: 0,
-      prossima_scadenza: null,
-    }));
+    const clienteIds = [...new Set((pratiche || []).map((p) => p.cliente_id).filter(Boolean))];
+    const tipoIds = [...new Set((pratiche || []).map((p) => p.tipo_pratica_id).filter(Boolean))];
+    const utenteIds = [...new Set((pratiche || []).map((p) => p.assegnato_a).filter(Boolean))];
 
-    return NextResponse.json(pratiche);
+    const { data: clienti } = clienteIds.length
+      ? await supabaseAdmin
+          .from("tbclienti")
+          .select("id, nome")
+          .in("id", clienteIds)
+      : { data: [] };
+
+    const { data: tipi } = tipoIds.length
+      ? await supabaseAdmin
+          .from("tbpratiche_tipi")
+          .select("id, ente, nome")
+          .in("id", tipoIds)
+      : { data: [] };
+
+    const { data: utenti } = utenteIds.length
+      ? await supabaseAdmin
+          .from("tbutenti")
+          .select("id, nome, cognome")
+          .in("id", utenteIds)
+      : { data: [] };
+
+    const clientiMap = new Map((clienti || []).map((c: any) => [c.id, c]));
+    const tipiMap = new Map((tipi || []).map((t: any) => [t.id, t]));
+    const utentiMap = new Map((utenti || []).map((u: any) => [u.id, u]));
+
+    const risultato = (pratiche || []).map((p: any) => {
+      const cliente = clientiMap.get(p.cliente_id);
+      const tipo = tipiMap.get(p.tipo_pratica_id);
+      const utente = utentiMap.get(p.assegnato_a);
+
+      return {
+        id: p.id,
+        numero_pratica: p.numero_pratica,
+        titolo: p.titolo,
+        stato: p.stato,
+        priorita: p.priorita,
+        data_apertura: p.data_apertura,
+        created_at: p.created_at,
+        cliente_nome: cliente?.nome || "—",
+        tipo_nome: tipo ? `${tipo.ente} - ${tipo.nome}` : "—",
+        assegnatario_nome: utente
+          ? `${utente.nome || ""} ${utente.cognome || ""}`.trim()
+          : "Non assegnata",
+        avanzamento: 0,
+        prossima_scadenza: null,
+      };
+    });
+
+    return NextResponse.json(risultato);
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || "Errore caricamento pratiche" },
