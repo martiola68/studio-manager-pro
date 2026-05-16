@@ -335,7 +335,7 @@ export default function FeriePermessiPage() {
 
   <Button
     variant="outline"
-    onClick={() => router.push('/payroll/presenze')}
+    onClick={() => router.push('/presenze')}
   >
     Torna alle presenze
   </Button>
