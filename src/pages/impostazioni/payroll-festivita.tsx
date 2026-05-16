@@ -102,7 +102,7 @@ export default function PayrollFestivitaPage() {
   }, []);
 
   async function loadData() {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as any;
 
     setLoading(true);
     setError(null);
