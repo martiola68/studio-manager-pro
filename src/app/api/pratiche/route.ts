@@ -24,12 +24,31 @@ export async function POST(req: Request) {
       note = null,
     } = body;
 
-    if (!studio_id || !cliente_id || !tipo_pratica_id || !titolo) {
-      return NextResponse.json(
-        { error: "Dati obbligatori mancanti" },
-        { status: 400 }
-      );
-    }
+ if (!cliente_id || !tipo_pratica_id || !titolo) {
+  return NextResponse.json(
+    { error: "Dati obbligatori mancanti" },
+    { status: 400 }
+  );
+}
+
+      const studioResult = await client.query(
+  `
+  SELECT studio_id
+  FROM tbclienti
+  WHERE id = $1
+  LIMIT 1
+  `,
+  [cliente_id]
+);
+
+if (studioResult.rowCount === 0) {
+  return NextResponse.json(
+    { error: "Cliente non trovato" },
+    { status: 404 }
+  );
+}
+
+const studio_id = studioResult.rows[0].studio_id;
 
     await client.query("BEGIN");
 
