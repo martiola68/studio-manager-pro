@@ -139,7 +139,7 @@ export default function PayrollCodiciPresenzaPage() {
   async function saveItem(event: React.FormEvent) {
     event.preventDefault();
 
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as any;
 
     setSaving(true);
     setError(null);
@@ -203,7 +203,7 @@ export default function PayrollCodiciPresenzaPage() {
 
     if (!confirmed) return;
 
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as any;
 
     setSaving(true);
     setError(null);
@@ -236,7 +236,7 @@ export default function PayrollCodiciPresenzaPage() {
   }
 
   async function toggleAttivo(item: CodicePresenza) {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as any;
 
     setSaving(true);
     setError(null);
