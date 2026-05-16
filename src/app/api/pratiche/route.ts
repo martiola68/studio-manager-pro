@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import { pool } from "@/lib/postgres";
 
+    export async function GET() {
+  return NextResponse.json({
+    ok: true,
+    message: "API pratiche attiva",
+  });
+}
+
 export async function POST(req: Request) {
   const client = await pool.connect();
 
@@ -23,13 +30,6 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-
-    export async function GET() {
-  return NextResponse.json({
-    ok: true,
-    message: "API pratiche attiva",
-  });
-}
 
     await client.query("BEGIN");
 
