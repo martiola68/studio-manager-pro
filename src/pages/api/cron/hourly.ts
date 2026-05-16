@@ -60,6 +60,10 @@ export default async function handler(
     );
 
     results.push(
+    await callInternal(`/api/presenze/sollecito-settimanale?secret=${SECRET}`)
+    );
+
+    results.push(
       await callInternal(`/api/scadenze/processa-scadenzari?secret=${SECRET}`)
     );
 
