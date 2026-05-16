@@ -437,99 +437,83 @@ export default function FeriePermessiPage() {
       ) : (
         <div className="space-y-4">
           {richiesteFiltrate.map((richiesta) => (
-            <Card key={richiesta.id}>
-           
-<CardContent className="px-2 py-1.5">
-  <div className="flex flex-col gap-2">
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+
+<Card key={richiesta.id} className="rounded-md">
+  <CardContent className="p-2">
+    <div className="grid grid-cols-[190px_90px_230px_70px_1fr_220px_110px] items-center gap-3 text-[13px]">
       <div className="flex items-center gap-2 font-semibold">
-        <span>{getRichiedenteName(richiesta)}</span>
+        <span className="truncate">{getRichiedenteName(richiesta)}</span>
         {statoBadge(richiesta.stato)}
       </div>
 
-      <span className="text-muted-foreground">
-        {richiesta.tipo_richiesta === 'ferie' ? 'Ferie' : 'Permesso'} ·{' '}
+      <div className="text-muted-foreground">
+        {richiesta.tipo_richiesta === 'ferie' ? 'Ferie' : 'Permesso'}
+      </div>
+
+      <div className="truncate text-muted-foreground">
         {formatDateIT(richiesta.data_inizio)}
         {richiesta.data_fine ? ` - ${formatDateIT(richiesta.data_fine)}` : ''}
-      </span>
-
-      <span className="text-muted-foreground">
-        {richiesta.giorni ? `${richiesta.giorni} gg` : ''}
-        {richiesta.giorni && richiesta.ore ? ' · ' : ''}
-        {richiesta.ore ? `${richiesta.ore} ore` : ''}
-      </span>
-
-      <span className="ml-auto text-xs text-muted-foreground">
-        Inviata il {new Date(richiesta.created_at).toLocaleDateString('it-IT')}
-      </span>
-    </div>
-
-    {richiesta.motivazione && (
-      <div className="truncate rounded bg-muted px-2 py-1 text-xs">
-        <strong>Motivo:</strong> {richiesta.motivazione}
       </div>
-    )}
 
-   {isResponsabilePaghe && richiesta.stato === 'inviata' && (
-  <div className="flex items-center gap-2">
-    <Textarea
-      className="h-8 min-h-0 w-[220px] resize-none py-1 text-xs"
-      value={note[richiesta.id] || ''}
-      onChange={(event) =>
-        setNote((prev) => ({
-          ...prev,
-          [richiesta.id]: event.target.value,
-        }))
-      }
-      placeholder="Note..."
-    />
+      <div className="text-muted-foreground">
+        {richiesta.giorni ? `${richiesta.giorni} gg` : ''}
+        {richiesta.ore ? `${richiesta.ore} ore` : ''}
+      </div>
 
-    <Button
-      size="sm"
-      className="h-8 px-3"
-      disabled={savingId === richiesta.id}
-      onClick={() => gestisciRichiesta(richiesta.id, 'approvata')}
-    >
-      Approva
-    </Button>
+      <div className="truncate rounded bg-muted px-2 py-1">
+        {richiesta.motivazione ? (
+          <>
+            <strong>Motivo:</strong> {richiesta.motivazione}
+          </>
+        ) : (
+          <span className="text-muted-foreground">-</span>
+        )}
+      </div>
 
-    <Button
-      size="sm"
-      variant="destructive"
-      className="h-8 px-3"
-      disabled={savingId === richiesta.id}
-      onClick={() => gestisciRichiesta(richiesta.id, 'rifiutata')}
-    >
-      Rifiuta
-    </Button>
-  </div>
-)}
+      <div className="text-xs text-muted-foreground">
+        Inviata il {new Date(richiesta.created_at).toLocaleDateString('it-IT')}
+      </div>
 
-{isResponsabilePaghe && richiesta.stato === 'approvata' && (
-  <div className="flex items-center gap-2">
-    <div className="flex-1">
-      {richiesta.note_responsabile && (
-        <div className="truncate text-xs text-muted-foreground">
-          <strong>Note:</strong> {richiesta.note_responsabile}
-        </div>
-      )}
+      <div className="flex justify-end gap-2">
+        {isResponsabilePaghe && richiesta.stato === 'inviata' && (
+          <>
+            <Button
+              size="sm"
+              className="h-8 px-3"
+              disabled={savingId === richiesta.id}
+              onClick={() => gestisciRichiesta(richiesta.id, 'approvata')}
+            >
+              Approva
+            </Button>
+
+            <Button
+              size="sm"
+              variant="destructive"
+              className="h-8 px-3"
+              disabled={savingId === richiesta.id}
+              onClick={() => gestisciRichiesta(richiesta.id, 'rifiutata')}
+            >
+              Rifiuta
+            </Button>
+          </>
+        )}
+
+        {isResponsabilePaghe && richiesta.stato === 'approvata' && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 px-3"
+            disabled={savingId === richiesta.id}
+            onClick={() => gestisciRichiesta(richiesta.id, 'revocata')}
+          >
+            Revoca
+          </Button>
+        )}
+      </div>
     </div>
-
-    <Button
-      size="sm"
-      variant="outline"
-      className="h-8 px-3"
-      disabled={savingId === richiesta.id}
-      onClick={() => gestisciRichiesta(richiesta.id, 'revocata')}
-    >
-      Revoca
-    </Button>
-  </div>
-)}
-  </div>
-</CardContent>
-              
-            </Card>
+  </CardContent>
+</Card>
+          
           ))}
         </div>
       )}
