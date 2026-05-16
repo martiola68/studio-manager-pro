@@ -116,12 +116,12 @@ export default function NuovaPraticaPage() {
     <main style={{ padding: 28, background: "#f8fafc", minHeight: "100vh" }}>
       <div style={{ maxWidth: 1280, margin: "0 auto" }}>
         <div style={{ marginBottom: 24 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0 }}>
-            Nuova pratica
-          </h1>
-          <p style={{ color: "#64748b", marginTop: 6 }}>
-            Crea una pratica guidata con workflow automatico, step, checklist e scadenze.
-          </p>
+         <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+  Nuova pratica
+</h1>
+         <p className="mt-2 text-sm text-slate-500">
+  Crea una pratica guidata con workflow automatico, step, checklist e scadenze.
+</p>
         </div>
 
         <form onSubmit={creaPratica}>
@@ -143,9 +143,9 @@ export default function NuovaPraticaPage() {
               }}
             >
               <div>
-                <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>
-                  Dati pratica
-                </h2>
+             <h2 className="text-lg font-semibold text-slate-900">
+  Dati pratica
+</h2>
                 <p style={{ color: "#64748b", marginTop: 4, fontSize: 14 }}>
                   Seleziona cliente, tipo pratica e informazioni principali.
                 </p>
