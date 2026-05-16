@@ -2,10 +2,69 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function GET() {
-  return NextResponse.json({
-    ok: true,
-    message: "API pratiche attiva",
-  });
+  try {
+    const supabaseAdmin = getSupabaseAdmin();
+
+    const { data, error } = await supabaseAdmin
+      .from("tbpratiche")
+      .select(`
+        id,
+        numero_pratica,
+        titolo,
+        stato,
+        priorita,
+        data_apertura,
+        created_at,
+        cliente_id,
+        tipo_pratica_id,
+        assegnato_a,
+        tbclienti (
+          nome
+        ),
+        tbpratiche_tipi (
+          nome,
+          ente
+        ),
+        tbutenti (
+          nome,
+          cognome
+        )
+      `)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
+
+    const pratiche = (data || []).map((p: any) => ({
+      id: p.id,
+      numero_pratica: p.numero_pratica,
+      titolo: p.titolo,
+      stato: p.stato,
+      priorita: p.priorita,
+      data_apertura: p.data_apertura,
+      created_at: p.created_at,
+      cliente_nome: p.tbclienti?.nome || "—",
+      tipo_nome: p.tbpratiche_tipi
+        ? `${p.tbpratiche_tipi.ente} - ${p.tbpratiche_tipi.nome}`
+        : "—",
+      assegnatario_nome: p.tbutenti
+        ? `${p.tbutenti.nome || ""} ${p.tbutenti.cognome || ""}`.trim()
+        : "Non assegnata",
+      avanzamento: 0,
+      prossima_scadenza: null,
+    }));
+
+    return NextResponse.json(pratiche);
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.message || "Errore caricamento pratiche" },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(req: Request) {
