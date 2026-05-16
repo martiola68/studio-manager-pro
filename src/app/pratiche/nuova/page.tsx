@@ -37,23 +37,27 @@ export default function NuovaPraticaPage() {
   });
 
   const labelStyle: React.CSSProperties = {
-    display: "block",
-    fontSize: 13,
-    fontWeight: 500,
-    marginBottom: 6,
-    color: "#374151",
-  };
+  display: "block",
+  fontSize: 13,
+  fontWeight: 500,
+  marginBottom: 6,
+  color: "#374151",
+  fontFamily:
+    'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+};
 
-  const inputStyle: React.CSSProperties = {
-    width: "100%",
-    border: "1px solid #9ca3af",
-    borderRadius: 7,
-    padding: "8px 10px",
-    fontSize: 14,
-    background: "#fff",
-    outline: "none",
-    boxSizing: "border-box",
-  };
+ const inputStyle: React.CSSProperties = {
+  width: "100%",
+  border: "1px solid #9ca3af",
+  borderRadius: 7,
+  padding: "8px 10px",
+  fontSize: 14,
+  background: "#fff",
+  outline: "none",
+  boxSizing: "border-box",
+  fontFamily:
+    'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+};
 
   useEffect(() => {
     async function caricaDati() {
@@ -156,12 +160,15 @@ export default function NuovaPraticaPage() {
             }}
           >
             <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 22,
-              }}
+             style={{
+  background: "#fff",
+  border: "1px solid #d1d5db",
+  borderRadius: 10,
+  padding: 24,
+  marginBottom: 16,
+  fontFamily:
+    'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+}}
             >
               <div>
             <h2
@@ -302,11 +309,14 @@ export default function NuovaPraticaPage() {
 
           <div
             style={{
-              background: "#fff",
-              border: "1px solid #d1d5db",
-              borderRadius: 10,
-              padding: 24,
-            }}
+  background: "#fff",
+  border: "1px solid #d1d5db",
+  borderRadius: 10,
+  padding: 24,
+  marginBottom: 16,
+  fontFamily:
+    'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+}}
           >
          <h2
   style={{
