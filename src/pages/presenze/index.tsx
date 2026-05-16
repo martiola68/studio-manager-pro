@@ -1161,6 +1161,13 @@ ${dipendentiXml}
           {days.map((day) => {
             const code = getCode(dipendente.utente_id, day);
 
+          const today = new Date();
+today.setHours(0, 0, 0, 0);
+
+const currentDay = new Date(`${day.date}T00:00:00`);
+
+const isFutureDay = currentDay > today;
+
           const isLockedByRequest =
           lockedCells[`${dipendente.utente_id}|${day.date}`];
 
@@ -1170,24 +1177,28 @@ ${dipendentiXml}
                 className="border-b p-1 text-center"
               >
                 <select
-                disabled={
+               disabled={
   isLockedPeriod ||
   !canEditEmployee(dipendente.utente_id) ||
-  isLockedByRequest
+  isLockedByRequest ||
+  isFutureDay
 }
                   value={code}
                   onChange={(event) =>
                     handleChange(dipendente.utente_id, day.date, event.target.value)
                   }
                   title={
-  isLockedByRequest
-    ? 'Presenza generata da richiesta ferie/permessi approvata. Usa Revoca.'
-    : day.holidayDescription
+  isFutureDay
+    ? 'Non è possibile compilare giorni successivi alla data odierna.'
+    : isLockedByRequest
+      ? 'Presenza generata da richiesta ferie/permessi approvata. Usa Revoca.'
+      : day.holidayDescription
 }
-                 className={`h-8 w-[82px] rounded-md border px-2 text-xs outline-none ${
-  isLockedByRequest ? 'cursor-not-allowed opacity-60' : ''
-} ${
-                    code
+  className={`h-8 w-[82px] rounded-md border px-2 text-xs outline-none ${
+  isLockedByRequest || isFutureDay
+    ? 'cursor-not-allowed opacity-60'
+    : ''
+} ${                    code
                       ? day.isHoliday
                         ? getHolidayCellClass(code)
                         : getCellClass(code)
