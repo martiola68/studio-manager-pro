@@ -161,7 +161,7 @@ export default function PayrollFestivitaPage() {
   async function saveItem(event: React.FormEvent) {
     event.preventDefault();
 
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as any;
 
     setSaving(true);
     setError(null);
@@ -218,7 +218,7 @@ export default function PayrollFestivitaPage() {
 
     if (!confirmed) return;
 
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as any;
 
     setSaving(true);
     setError(null);
