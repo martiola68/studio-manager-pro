@@ -87,6 +87,11 @@ export default function DettaglioPraticaPage() {
   const [motiviLiquidazione, setMotiviLiquidazione] = useState<MotivoLiquidazione[]>([]);
   const [diciture, setDiciture] = useState<Dicitura[]>([]);
 
+  const [documenti, setDocumenti] = useState<any[]>([]);
+const [uploadingDocumento, setUploadingDocumento] = useState(false);
+const [tipoDocumento, setTipoDocumento] = useState("altro");
+const [fileDocumento, setFileDocumento] = useState<File | null>(null);
+
   const [form, setForm] = useState({
     societa_denominazione: "",
     societa_sede: "",
@@ -181,12 +186,70 @@ export default function DettaglioPraticaPage() {
       }
     }
 
-    if (praticaId) caricaPratica();
+   if (praticaId) {
+  caricaPratica();
+  caricaDocumenti();
+}
   }, [praticaId]);
 
   function aggiornaCampo(campo: string, valore: string) {
     setForm((prev) => ({ ...prev, [campo]: valore }));
   }
+
+  async function caricaDocumenti() {
+  try {
+    const res = await fetch(
+      `/api/pratiche/${praticaId}/documenti`,
+      {
+        cache: "no-store",
+      }
+    );
+
+    const data = await res.json();
+
+    if (res.ok) {
+      setDocumenti(data.documenti || []);
+    }
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+async function uploadDocumento() {
+  if (!fileDocumento) return;
+
+  try {
+    setUploadingDocumento(true);
+
+    const formData = new FormData();
+
+    formData.append("file", fileDocumento);
+    formData.append("tipo_documento", tipoDocumento);
+
+    const res = await fetch(
+      `/api/pratiche/${praticaId}/documenti`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(
+        data.error || "Errore upload documento"
+      );
+    }
+
+    setFileDocumento(null);
+    await caricaDocumenti();
+  } catch (error: any) {
+    alert(error.message);
+  } finally {
+    setUploadingDocumento(false);
+  }
+}
 
   async function salvaDatiDocumento(e: React.FormEvent) {
     e.preventDefault();
@@ -582,8 +645,208 @@ export default function DettaglioPraticaPage() {
               {saving ? "Salvataggio..." : "Salva dati documento"}
             </button>
           </div>
+          <div
+  style={{
+    background: "#fff",
+    border: "1px solid #d1d5db",
+    borderRadius: 10,
+    padding: 24,
+    marginTop: 16,
+  }}
+>
+  <h2
+    style={{
+      fontSize: 20,
+      fontWeight: 700,
+      margin: 0,
+      color: "#0f172a",
+    }}
+  >
+    Documenti pratica
+  </h2>
+
+  <p
+    style={{
+      marginTop: 6,
+      fontSize: 14,
+      color: "#64748b",
+    }}
+  >
+    Carica verbali, ricevute di deposito,
+    visure e documenti collegati alla pratica.
+  </p>
+
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr 1fr auto",
+      gap: 12,
+      marginTop: 18,
+      alignItems: "end",
+    }}
+  >
+    <div>
+      <label style={labelStyle}>
+        Tipo documento
+      </label>
+
+      <select
+        style={inputStyle}
+        value={tipoDocumento}
+        onChange={(e) =>
+          setTipoDocumento(e.target.value)
+        }
+      >
+        <option value="verbale_assemblea">
+          Verbale assemblea
+        </option>
+
+        <option value="nomina_liquidatore">
+          Nomina liquidatore
+        </option>
+
+        <option value="accettazione_liquidatore">
+          Accettazione liquidatore
+        </option>
+
+        <option value="dichiarazione_conformita">
+          Dichiarazione conformità
+        </option>
+
+        <option value="ricevuta_deposito">
+          Ricevuta deposito
+        </option>
+
+        <option value="visura_evasione">
+          Visura evasione
+        </option>
+
+        <option value="altro">
+          Altro
+        </option>
+      </select>
+    </div>
+
+    <div style={{ gridColumn: "span 2" }}>
+      <label style={labelStyle}>
+        File
+      </label>
+
+      <input
+        type="file"
+        onChange={(e) =>
+          setFileDocumento(
+            e.target.files?.[0] || null
+          )
+        }
+      />
+    </div>
+
+    <button
+      type="button"
+      onClick={uploadDocumento}
+      disabled={
+        uploadingDocumento || !fileDocumento
+      }
+      style={{
+        border: 0,
+        borderRadius: 8,
+        background: "#2563eb",
+        color: "#fff",
+        padding: "10px 18px",
+        fontSize: 14,
+        fontWeight: 600,
+        cursor: "pointer",
+        opacity:
+          uploadingDocumento || !fileDocumento
+            ? 0.6
+            : 1,
+        fontFamily: font,
+      }}
+    >
+      {uploadingDocumento
+        ? "Upload..."
+        : "Carica"}
+    </button>
+  </div>
+
+  <div style={{ marginTop: 24 }}>
+    {documenti.length === 0 ? (
+      <div
+        style={{
+          fontSize: 14,
+          color: "#64748b",
+        }}
+      >
+        Nessun documento caricato.
+      </div>
+    ) : (
+      <table
+        style={{
+          width: "100%",
+          borderCollapse: "collapse",
+        }}
+      >
+        <thead>
+          <tr
+            style={{
+              borderBottom:
+                "1px solid #e5e7eb",
+            }}
+          >
+            <th style={thStyle}>Documento</th>
+            <th style={thStyle}>Tipo</th>
+            <th style={thStyle}>Data</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {documenti.map((doc) => (
+            <tr
+              key={doc.id}
+              style={{
+                borderBottom:
+                  "1px solid #f1f5f9",
+              }}
+            >
+              <td style={tdStyle}>
+                {doc.nome_file}
+              </td>
+
+              <td style={tdStyle}>
+                {doc.tipo_documento}
+              </td>
+
+              <td style={tdStyle}>
+                {new Date(
+                  doc.created_at
+                ).toLocaleString("it-IT")}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    )}
+  </div>
+</div>
         </form>
       </div>
     </main>
   );
 }
+const thStyle: React.CSSProperties = {
+  textAlign: "left",
+  padding: "12px 16px",
+  fontSize: 12,
+  fontWeight: 700,
+  color: "#475569",
+  textTransform: "uppercase",
+  borderBottom: "1px solid #e5e7eb",
+};
+
+const tdStyle: React.CSSProperties = {
+  padding: 16,
+  fontSize: 14,
+  color: "#334155",
+  verticalAlign: "top",
+};
