@@ -665,6 +665,48 @@ async function uploadDocumento() {
     Documenti pratica
   </h2>
 
+            <button
+  type="button"
+  onClick={async () => {
+    try {
+      const res = await fetch(`/api/pratiche/${praticaId}/genera-documento`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          codice_modello: "VERBALE_ASSEMBLEA_LIQUIDAZIONE",
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Errore generazione documento");
+      }
+
+      await caricaDocumenti();
+      alert("Verbale generato correttamente.");
+    } catch (error: any) {
+      alert(error.message || "Errore generazione verbale");
+    }
+  }}
+  style={{
+    marginTop: 12,
+    border: 0,
+    borderRadius: 8,
+    background: "#16a34a",
+    color: "#fff",
+    padding: "10px 18px",
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: "pointer",
+    fontFamily: font,
+  }}
+>
+  Genera verbale
+</button>
+
   <p
     style={{
       marginTop: 6,
