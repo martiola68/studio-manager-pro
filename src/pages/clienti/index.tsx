@@ -715,7 +715,10 @@ if (!formData.utente_operatore_id && !formData.utente_payroll_id) {
 
         setErrors({});
 
-        const base: Partial<ClienteInsert> = {
+        const base: Partial<ClienteInsert> & {
+  professionista_incaricato?: boolean;
+  numero_rea?: string | null;
+} = {
           cod_cliente:
             formData.cod_cliente || `CL-${Date.now().toString().slice(-6)}`,
           tipo_cliente: formData.tipo_cliente,
