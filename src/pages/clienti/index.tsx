@@ -581,12 +581,11 @@ const handleEdit = async (cliente: ClienteRow) => {
     cod_cliente: clienteData.cod_cliente || "",
     tipo_cliente: clienteData.tipo_cliente || "Persona fisica",
     tipologia_cliente:
-      (clienteData.tipologia_cliente as "Interno" | "Esterno") || "Interno",
-    professionista_incaricato:
-    clienteData.professionista_incaricato ?? false,
-
-    numero_rea:
-    clienteData.numero_rea || "",
+  (clienteData.tipologia_cliente as "Interno" | "Esterno") || "Interno",
+professionista_incaricato:
+  Boolean(clienteData.professionista_incaricato),
+numero_rea:
+  String(clienteData.numero_rea || ""),
     settore_fiscale: clienteData.settore_fiscale ?? true,
     settore_lavoro: clienteData.settore_lavoro ?? false,
     settore_consulenza: clienteData.settore_consulenza ?? false,
