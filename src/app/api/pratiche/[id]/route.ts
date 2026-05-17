@@ -62,9 +62,9 @@ export async function GET(req: Request, { params }: Params) {
       .eq("pratica_id", praticaId)
       .maybeSingle();
 
-    const { data: professionisti } = await supabaseAdmin
+  const { data: professionisti } = await supabaseAdmin
   .from("tbclienti")
-  .select("id, ragione_sociale")
+  .select("id, ragione_sociale, codice_fiscale")
   .eq("professionista_incaricato", true)
   .order("ragione_sociale");
 
