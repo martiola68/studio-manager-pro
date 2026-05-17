@@ -866,7 +866,7 @@ async function uploadDocumento() {
                 ).toLocaleString("it-IT")}
               </td>
 
-              <td style={tdStyle}>
+<td style={tdStyle}>
   <a
     href={`/api/pratiche/${praticaId}/documenti/${doc.id}/download`}
     target="_blank"
@@ -879,6 +879,40 @@ async function uploadDocumento() {
     Scarica
   </a>
 </td>
+
+              <button
+  type="button"
+  onClick={async () => {
+    if (!confirm("Eliminare questo documento?")) return;
+
+    const res = await fetch(
+      `/api/pratiche/${praticaId}/documenti/${doc.id}`,
+      {
+        method: "DELETE",
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.error || "Errore eliminazione documento");
+      return;
+    }
+
+    await caricaDocumenti();
+  }}
+  style={{
+    marginLeft: 14,
+    border: 0,
+    background: "transparent",
+    color: "#dc2626",
+    fontWeight: 600,
+    cursor: "pointer",
+    fontFamily: font,
+  }}
+>
+  Elimina
+</button>
             </tr>
           ))}
         </tbody>
