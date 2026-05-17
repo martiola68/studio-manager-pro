@@ -117,6 +117,9 @@ type ClienteFormData = {
   attivo: boolean;
   cassetto_fiscale_id: string;
 
+  professionista_incaricato: boolean;
+  numero_rea: string;
+
   matricola_inps: string;
   pat_inail: string;
   codice_ditta_ce: string;
@@ -145,6 +148,8 @@ const initialFormData: ClienteFormData = {
   cod_cliente: "",
   tipo_cliente: "Persona fisica",
   tipologia_cliente: "Interno",
+  professionista_incaricato: false,
+  numero_rea: "",
   settore_fiscale: true,
   settore_lavoro: false,
   settore_consulenza: false,
@@ -577,6 +582,11 @@ const handleEdit = async (cliente: ClienteRow) => {
     tipo_cliente: clienteData.tipo_cliente || "Persona fisica",
     tipologia_cliente:
       (clienteData.tipologia_cliente as "Interno" | "Esterno") || "Interno",
+    professionista_incaricato:
+    clienteData.professionista_incaricato ?? false,
+
+    numero_rea:
+    clienteData.numero_rea || "",
     settore_fiscale: clienteData.settore_fiscale ?? true,
     settore_lavoro: clienteData.settore_lavoro ?? false,
     settore_consulenza: clienteData.settore_consulenza ?? false,
@@ -711,6 +721,11 @@ if (!formData.utente_operatore_id && !formData.utente_payroll_id) {
             formData.cod_cliente || `CL-${Date.now().toString().slice(-6)}`,
           tipo_cliente: formData.tipo_cliente,
           tipologia_cliente: formData.tipologia_cliente,
+          professionista_incaricato:
+          formData.professionista_incaricato,
+
+          numero_rea:
+          formData.numero_rea || null
           settore_fiscale: formData.settore_fiscale,
           settore_lavoro: formData.settore_lavoro,
           settore_consulenza: formData.settore_consulenza,
@@ -2006,6 +2021,25 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
             </div>
 
             {/* Cliente Attivo */}
+            {/* Professionista incaricato */}
+            <div className="flex items-end justify-start">
+            <div className="flex items-center space-x-2">
+            <Switch
+            id="professionista_incaricato"
+            checked={formData.professionista_incaricato}
+            onCheckedChange={(checked) =>
+            setFormData((prev) => ({
+              ...prev,
+              professionista_incaricato: checked,
+            }))
+            }
+            />
+
+    <Label htmlFor="professionista_incaricato">
+      Professionista incaricato
+    </Label>
+  </div>
+</div>
             <div className="flex items-end justify-start md:justify-end">
               <div className="flex items-center space-x-2">
                 <Switch
@@ -2103,51 +2137,65 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
             />
           </div>
 
-          <div>
-            <Label htmlFor="partita_iva">P.IVA</Label>
-            <div className="relative">
-              <Input
-                id="partita_iva"
-                value={formData.partita_iva}
-                onChange={(e) =>
-                  setFormData({ ...formData, partita_iva: e.target.value })
-                }
-                placeholder="01234567890"
-              />
-              {encryptionEnabled && encryptionLocked && formData.partita_iva && (
-                <div className="absolute inset-0 bg-muted/50 backdrop-blur-sm flex items-center justify-center rounded-md">
-                  <Lock className="h-4 w-4 text-muted-foreground" />
-                </div>
-              )}
-            </div>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:col-span-2">
 
-          <div>
-           <Label htmlFor="codice_fiscale">
-  Codice Fiscale <span className="text-red-500">*</span>
-</Label>
-            <div className="relative">
-             <Input
-  id="codice_fiscale"
-  className={errors.codice_fiscale ? "border-red-500" : ""}
-  value={formData.codice_fiscale}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    codice_fiscale: e.target.value,
-                  })
-                }
-                placeholder="RSSMRA80A01H501U"
-              />
-              {encryptionEnabled &&
-                encryptionLocked &&
-                formData.codice_fiscale && (
-                  <div className="absolute inset-0 bg-muted/50 backdrop-blur-sm flex items-center justify-center rounded-md">
-                    <Lock className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                )}
-            </div>
-          </div>
+  <div>
+    <Label htmlFor="partita_iva">P.IVA</Label>
+
+    <div className="relative">
+      <Input
+        id="partita_iva"
+        value={formData.partita_iva}
+        onChange={(e) =>
+          setFormData({
+            ...formData,
+            partita_iva: e.target.value,
+          })
+        }
+        placeholder="01234567890"
+      />
+    </div>
+  </div>
+
+  <div>
+    <Label htmlFor="codice_fiscale">
+      Codice Fiscale
+    </Label>
+
+    <div className="relative">
+      <Input
+        id="codice_fiscale"
+        value={formData.codice_fiscale}
+        onChange={(e) =>
+          setFormData({
+            ...formData,
+            codice_fiscale: e.target.value,
+          })
+        }
+        placeholder="RSSMRA80A01H501U"
+      />
+    </div>
+  </div>
+
+  <div>
+    <Label htmlFor="numero_rea">
+      Numero REA
+    </Label>
+
+    <Input
+      id="numero_rea"
+      value={formData.numero_rea}
+      onChange={(e) =>
+        setFormData({
+          ...formData,
+          numero_rea: e.target.value,
+        })
+      }
+      placeholder="RM-1234567"
+    />
+  </div>
+
+</div>
 
           <div className="md:col-span-2">
             <Label htmlFor="indirizzo">Indirizzo</Label>
