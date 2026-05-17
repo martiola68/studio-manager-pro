@@ -37,16 +37,25 @@ export async function GET(req: Request, { params }: Params) {
   cap,
   citta,
   provincia,
-  numero_rea
+  numero_rea,
+  rapp_legale_id
 `)
       .eq("id", pratica.cliente_id)
       .single();
 
-    const { data: tipo } = await supabaseAdmin
-      .from("tbpratiche_tipi")
-      .select("id, nome, ente")
-      .eq("id", pratica.tipo_pratica_id)
-      .single();
+ const { data: rappresentanteLegale } = cliente?.rapp_legale_id
+  ? await supabaseAdmin
+      .from("rapp_legali" as any)
+      .select("id, nome_cognome, codice_fiscale")
+      .eq("id", cliente.rapp_legale_id)
+      .single()
+  : { data: null };
+
+const { data: tipo } = await supabaseAdmin
+  .from("tbpratiche_tipi")
+  .select("id, nome, ente")
+  .eq("id", pratica.tipo_pratica_id)
+  .single();
 
     const { data: assegnatario } = pratica.assegnato_a
       ? await supabaseAdmin
@@ -80,12 +89,13 @@ const { data: diciture } = await supabaseAdmin
   .eq("attiva", true)
   .order("titolo");
 
-    return NextResponse.json({
+ return NextResponse.json({
   pratica: {
     ...pratica,
     cliente,
     tipo,
     assegnatario,
+    rappresentante_legale: rappresentanteLegale,
     dati_documento: datiDocumento,
   },
 
@@ -133,9 +143,25 @@ export async function PUT(req: Request, { params }: Params) {
         body.professionista_codice_fiscale || null,
       professionista_qualifica:
         body.professionista_qualifica || null,
-      dicitura_presentazione:
-        body.dicitura_presentazione || null,
-      updated_at: new Date().toISOString(),
+dicitura_presentazione:
+  body.dicitura_presentazione || null,
+
+rappresentante_legale_nome:
+  body.rappresentante_legale_nome || null,
+
+rappresentante_legale_codice_fiscale:
+  body.rappresentante_legale_codice_fiscale || null,
+
+liquidatore_nome:
+  body.liquidatore_nome || null,
+
+liquidatore_codice_fiscale:
+  body.liquidatore_codice_fiscale || null,
+
+percentuale_soci_presenti:
+  body.percentuale_soci_presenti || 100,
+
+updated_at: new Date().toISOString(),
     };
 
     const { data: existing } = await supabaseAdmin
