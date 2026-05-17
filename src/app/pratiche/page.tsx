@@ -108,20 +108,22 @@ export default function PratichePage() {
             </p>
           </div>
 
-          <Link
-            href="/pratiche/nuova"
-            style={{
-              background: "#2563eb",
-              color: "#fff",
-              padding: "10px 16px",
-              borderRadius: 8,
-              textDecoration: "none",
-              fontSize: 14,
-              fontWeight: 600,
-            }}
-          >
-            Nuova pratica
-          </Link>
+         <Link
+  href="/pratiche/nuova"
+  style={{
+    background: "#2563eb",
+    color: "#fff",
+    padding: "10px 16px",
+    borderRadius: 8,
+    textDecoration: "none",
+    fontSize: 14,
+    fontWeight: 600,
+    fontFamily:
+      'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  }}
+>
+  Nuova pratica
+</Link>
         </div>
 
         <div
