@@ -459,9 +459,19 @@ export default function DettaglioPraticaPage() {
 
                     aggiornaCampo("professionista_nome", e.target.value);
 
-                    if (selected?.codice_fiscale) {
-                      aggiornaCampo("professionista_codice_fiscale", selected.codice_fiscale);
-                    }
+                   if (selected?.codice_fiscale) {
+  aggiornaCampo("professionista_codice_fiscale", selected.codice_fiscale);
+}
+
+setForm((prev) => ({
+  ...prev,
+  professionista_nome: e.target.value,
+  professionista_codice_fiscale: selected?.codice_fiscale || "",
+  dicitura_presentazione: prev.dicitura_presentazione
+    .replaceAll("{{professionista_nome}}", e.target.value)
+    .replaceAll("[professionista_nome]", e.target.value)
+    .replaceAll("[PROFESSIONISTA_NOME]", e.target.value),
+}));
                   }}
                 >
                   <option value="">Seleziona professionista</option>
