@@ -725,7 +725,7 @@ if (!formData.utente_operatore_id && !formData.utente_payroll_id) {
           formData.professionista_incaricato,
 
           numero_rea:
-          formData.numero_rea || null
+          formData.numero_rea || null,
           settore_fiscale: formData.settore_fiscale,
           settore_lavoro: formData.settore_lavoro,
           settore_consulenza: formData.settore_consulenza,
