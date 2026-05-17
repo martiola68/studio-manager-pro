@@ -442,131 +442,110 @@ export default function DettaglioPraticaPage() {
               </div>
             </div>
 
-            <h3 style={{ marginTop: 28, fontSize: 16, fontWeight: 700 }}>
-              Professionista / presentazione
-            </h3>
+<h3 style={{ marginTop: 28, fontSize: 16, fontWeight: 700 }}>
+  Professionista / presentazione
+</h3>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-              <div>
-                <label style={labelStyle}>Nome professionista</label>
-                <select
-                  style={inputStyle}
-                  value={form.professionista_nome}
-                  onChange={(e) => {
-                    const selected = professionisti.find(
-                      (p) => p.ragione_sociale === e.target.value
-                    );
+<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+  <div>
+    <label style={labelStyle}>Nome professionista</label>
 
-                    aggiornaCampo("professionista_nome", e.target.value);
+    <select
+      style={inputStyle}
+      value={form.professionista_nome}
+      onChange={(e) => {
+        const nomeProfessionista = e.target.value;
 
-                   if (selected?.codice_fiscale) {
-  aggiornaCampo("professionista_codice_fiscale", selected.codice_fiscale);
-}
+        const selected = professionisti.find(
+          (p) => p.ragione_sociale === nomeProfessionista
+        );
 
-setForm((prev) => ({
-  ...prev,
-  professionista_nome: e.target.value,
-  professionista_codice_fiscale: selected?.codice_fiscale || "",
-  dicitura_presentazione: prev.dicitura_presentazione
-    .replaceAll("{{professionista_nome}}", e.target.value)
-    .replaceAll("[professionista_nome]", e.target.value)
-    .replaceAll("[PROFESSIONISTA_NOME]", e.target.value),
-}));
-                  }}
-                >
-                  <option value="">Seleziona professionista</option>
+        setForm((prev) => ({
+          ...prev,
+          professionista_nome: nomeProfessionista,
+          professionista_codice_fiscale: selected?.codice_fiscale || "",
+          dicitura_presentazione: prev.dicitura_presentazione
+            .replaceAll("{{professionista_nome}}", nomeProfessionista)
+            .replaceAll("[professionista_nome]", nomeProfessionista)
+            .replaceAll("[PROFESSIONISTA_NOME]", nomeProfessionista),
+        }));
+      }}
+    >
+      <option value="">Seleziona professionista</option>
 
-                  {professionisti.map((p) => (
-                    <option key={p.id} value={p.ragione_sociale}>
-                      {p.ragione_sociale}
-                    </option>
-                  ))}
-                </select>
-              </div>
+      {professionisti.map((p) => (
+        <option key={p.id} value={p.ragione_sociale}>
+          {p.ragione_sociale}
+        </option>
+      ))}
+    </select>
+  </div>
 
-              <div>
-                <label style={labelStyle}>Codice fiscale professionista</label>
-                <input style={inputStyle} value={form.professionista_codice_fiscale} onChange={(e) => aggiornaCampo("professionista_codice_fiscale", e.target.value)} />
-              </div>
+  <div>
+    <label style={labelStyle}>Codice fiscale professionista</label>
+    <input
+      style={inputStyle}
+      value={form.professionista_codice_fiscale}
+      onChange={(e) =>
+        aggiornaCampo("professionista_codice_fiscale", e.target.value)
+      }
+    />
+  </div>
 
-              <div>
-              <label style={labelStyle}>Qualifica</label>
+  <div>
+    <label style={labelStyle}>Qualifica</label>
 
-<select
-  style={inputStyle}
-  value={form.professionista_qualifica}
-  onChange={(e) =>
-    aggiornaCampo(
-      "professionista_qualifica",
-      e.target.value
-    )
-  }
->
-  <option value="">
-    Seleziona qualifica
-  </option>
+    <select
+      style={inputStyle}
+      value={form.professionista_qualifica}
+      onChange={(e) =>
+        aggiornaCampo("professionista_qualifica", e.target.value)
+      }
+    >
+      <option value="">Seleziona qualifica</option>
+      <option value="Dottore Commercialista">Dottore Commercialista</option>
+      <option value="Ragioniere Commercialista">Ragioniere Commercialista</option>
+    </select>
+  </div>
+</div>
 
-  <option value="Dottore Commercialista">
-    Dottore Commercialista
-  </option>
+<div style={{ marginTop: 14 }}>
+  <label style={labelStyle}>Dicitura presentazione pratica</label>
 
-  <option value="Ragioniere Commercialista">
-    Ragioniere Commercialista
-  </option>
-</select>
-            </div>
+  <select
+    style={{ ...inputStyle, marginBottom: 10 }}
+    onChange={(e) => {
+      const selected = diciture.find((d) => d.testo === e.target.value);
 
-            <div style={{ marginTop: 14 }}>
-              <label style={labelStyle}>Dicitura presentazione pratica</label>
+      if (selected) {
+        aggiornaCampo(
+          "dicitura_presentazione",
+          selected.testo
+            .replaceAll("{{professionista_nome}}", form.professionista_nome)
+            .replaceAll("[professionista_nome]", form.professionista_nome)
+            .replaceAll("[PROFESSIONISTA_NOME]", form.professionista_nome)
+        );
+      }
+    }}
+  >
+    <option value="">Seleziona dicitura predefinita</option>
 
-            <select
-  style={{ ...inputStyle, marginBottom: 10 }}
-  onChange={(e) => {
-    const selected = diciture.find(
-      (d) => d.testo === e.target.value
-    );
+    {diciture.map((d) => (
+      <option key={d.id} value={d.testo}>
+        {d.titolo}
+      </option>
+    ))}
+  </select>
 
-    if (selected) {
-      const nomeProfessionista =
-        form.professionista_nome || "";
-
-      aggiornaCampo(
-        "dicitura_presentazione",
-        selected.testo
-          .replaceAll(
-            "{{professionista_nome}}",
-            nomeProfessionista
-          )
-          .replaceAll(
-            "[professionista_nome]",
-            nomeProfessionista
-          )
-          .replaceAll(
-            "[PROFESSIONISTA_NOME]",
-            nomeProfessionista
-          )
-      );
+  <textarea
+    style={{ ...inputStyle, minHeight: 90, resize: "vertical" }}
+    value={form.dicitura_presentazione}
+    onChange={(e) =>
+      aggiornaCampo("dicitura_presentazione", e.target.value)
     }
-  }}
->
-  <option value="">
-    Seleziona dicitura predefinita
-  </option>
-
-  {diciture.map((d) => (
-    <option key={d.id} value={d.testo}>
-      {d.titolo}
-    </option>
-  ))}
-</select>
-
-              <textarea
-                style={{ ...inputStyle, minHeight: 90, resize: "vertical" }}
-                value={form.dicitura_presentazione}
-                onChange={(e) => aggiornaCampo("dicitura_presentazione", e.target.value)}
-                placeholder="Inserire la dicitura da integrare nei documenti per la presentazione."
-              />
-            </div>
+    placeholder="Inserire la dicitura da integrare nei documenti per la presentazione."
+  />
+</div>
           </div>
 
           <div
