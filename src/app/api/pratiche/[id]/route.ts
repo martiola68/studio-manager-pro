@@ -62,16 +62,38 @@ export async function GET(req: Request, { params }: Params) {
       .eq("pratica_id", praticaId)
       .maybeSingle();
 
+    const { data: professionisti } = await supabaseAdmin
+  .from("tbclienti")
+  .select("id, ragione_sociale")
+  .eq("professionista_incaricato", true)
+  .order("ragione_sociale");
+
+const { data: motiviLiquidazione } = await supabaseAdmin
+  .from("tbpratiche_motivi_liquidazione")
+  .select("*")
+  .eq("attivo", true)
+  .order("ordine");
+
+const { data: diciture } = await supabaseAdmin
+  .from("tbpratiche_dicitura_documenti")
+  .select("*")
+  .eq("attiva", true)
+  .order("titolo");
+
     return NextResponse.json({
-      pratica: {
-        ...pratica,
-        cliente,
-        tipo,
-        assegnatario,
-        dati_documento: datiDocumento,
-      },
-    });
-  } catch (error: any) {
+  pratica: {
+    ...pratica,
+    cliente,
+    tipo,
+    assegnatario,
+    dati_documento: datiDocumento,
+  },
+
+  professionisti,
+  motivi_liquidazione: motiviLiquidazione,
+  diciture,
+});
+   } catch (error: any) {
     return NextResponse.json(
       {
         error:
