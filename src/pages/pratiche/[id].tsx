@@ -29,7 +29,11 @@ type PraticaDettaglio = {
     nome?: string;
     cognome?: string;
   };
-  dati_documento?: any;
+dati_documento?: any;
+rappresentante_legale?: {
+  nome_cognome?: string;
+  codice_fiscale?: string;
+};
 };
 
 type Professionista = {
@@ -110,6 +114,11 @@ const [fileDocumento, setFileDocumento] = useState<File | null>(null);
     professionista_codice_fiscale: "",
     professionista_qualifica: "",
     dicitura_presentazione: "",
+rappresentante_legale_nome: "",
+rappresentante_legale_codice_fiscale: "",
+liquidatore_nome: "",
+liquidatore_codice_fiscale: "",
+percentuale_soci_presenti: "100",
   });
 
   useEffect(() => {
@@ -176,8 +185,27 @@ const [fileDocumento, setFileDocumento] = useState<File | null>(null);
             p.dati_documento?.professionista_codice_fiscale || "",
           professionista_qualifica:
             p.dati_documento?.professionista_qualifica || "",
-          dicitura_presentazione:
-            p.dati_documento?.dicitura_presentazione || "",
+         dicitura_presentazione:
+  p.dati_documento?.dicitura_presentazione || "",
+
+rappresentante_legale_nome:
+  p.dati_documento?.rappresentante_legale_nome ||
+  p.rappresentante_legale?.nome_cognome ||
+  "",
+
+rappresentante_legale_codice_fiscale:
+  p.dati_documento?.rappresentante_legale_codice_fiscale ||
+  p.rappresentante_legale?.codice_fiscale ||
+  "",
+
+liquidatore_nome:
+  p.dati_documento?.liquidatore_nome || "",
+
+liquidatore_codice_fiscale:
+  p.dati_documento?.liquidatore_codice_fiscale || "",
+
+percentuale_soci_presenti:
+  String(p.dati_documento?.percentuale_soci_presenti || 100),
         });
       } catch (error: any) {
         setMessaggio(error.message || "Errore caricamento pratica");
@@ -455,11 +483,73 @@ async function uploadDocumento() {
               </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginTop: 14 }}>
-              <div>
-                <label style={labelStyle}>Presidente</label>
-                <input style={inputStyle} value={form.presidente} onChange={(e) => aggiornaCampo("presidente", e.target.value)} />
-              </div>
+           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginTop: 14 }}>
+  <div>
+    <label style={labelStyle}>Rappresentante legale</label>
+    <input
+      style={inputStyle}
+      value={form.rappresentante_legale_nome}
+      onChange={(e) =>
+        aggiornaCampo("rappresentante_legale_nome", e.target.value)
+      }
+    />
+  </div>
+
+  <div>
+    <label style={labelStyle}>CF rappresentante legale</label>
+    <input
+      style={inputStyle}
+      value={form.rappresentante_legale_codice_fiscale}
+      onChange={(e) =>
+        aggiornaCampo("rappresentante_legale_codice_fiscale", e.target.value)
+      }
+    />
+  </div>
+
+  <div>
+    <label style={labelStyle}>% soci presenti</label>
+    <input
+      type="number"
+      min="0"
+      max="100"
+      style={inputStyle}
+      value={form.percentuale_soci_presenti}
+      onChange={(e) =>
+        aggiornaCampo("percentuale_soci_presenti", e.target.value)
+      }
+    />
+  </div>
+</div>
+
+<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 14 }}>
+  <div>
+    <label style={labelStyle}>Liquidatore</label>
+    <input
+      style={inputStyle}
+      value={form.liquidatore_nome}
+      onChange={(e) =>
+        aggiornaCampo("liquidatore_nome", e.target.value)
+      }
+    />
+  </div>
+
+  <div>
+    <label style={labelStyle}>CF liquidatore</label>
+    <input
+      style={inputStyle}
+      value={form.liquidatore_codice_fiscale}
+      onChange={(e) =>
+        aggiornaCampo("liquidatore_codice_fiscale", e.target.value)
+      }
+    />
+  </div>
+</div>
+
+<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginTop: 14 }}>
+  <div>
+    <label style={labelStyle}>Presidente</label>
+    <input style={inputStyle} value={form.presidente} onChange={(e) => aggiornaCampo("presidente", e.target.value)} />
+  </div>
 
               <div>
                 <label style={labelStyle}>Segretario</label>
