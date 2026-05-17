@@ -2,16 +2,16 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 type Params = {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 };
 
 export async function GET(req: Request, { params }: Params) {
   try {
     const supabaseAdmin = getSupabaseAdmin();
 
-    const praticaId = params.id;
+   const { id: praticaId } = await params;
 
     const { data: pratica, error: praticaError } = await supabaseAdmin
       .from("tbpratiche")
@@ -87,7 +87,7 @@ export async function PUT(req: Request, { params }: Params) {
 
     const supabaseAdmin = getSupabaseAdmin();
 
-    const praticaId = params.id;
+    const { id: praticaId } = await params;
 
     const payload = {
       pratica_id: praticaId,
