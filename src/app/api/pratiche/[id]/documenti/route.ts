@@ -7,38 +7,33 @@ type Params = {
   }>;
 };
 
-export async function GET(
-  req: Request,
-  { params }: Params
-) {
+export async function GET(req: Request, { params }: Params) {
   try {
     const { id } = await params;
-
     const supabaseAdmin = getSupabaseAdmin();
 
     const { data, error } = await supabaseAdmin
       .from("tbpratiche_documenti")
       .select("*")
       .eq("pratica_id", id)
-      .order("created_at", {
-        ascending: false,
-      });
+      .order("created_at", { ascending: false });
 
     if (error) {
-      return NextResponse.json(
-        {
-          error: error.message,
-        },
-        {
-          status: 500,
-        }
-      );
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    export async function POST(
-  req: Request,
-  { params }: Params
-) {
+    return NextResponse.json({
+      documenti: data || [],
+    });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.message || "Errore caricamento documenti" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(req: Request, { params }: Params) {
   try {
     const { id } = await params;
     const supabaseAdmin = getSupabaseAdmin();
@@ -50,10 +45,7 @@ export async function GET(
     const note = String(formData.get("note") || "");
 
     if (!file) {
-      return NextResponse.json(
-        { error: "File mancante" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "File mancante" }, { status: 400 });
     }
 
     const timestamp = Date.now();
@@ -91,10 +83,7 @@ export async function GET(
       .single();
 
     if (dbError) {
-      return NextResponse.json(
-        { error: dbError.message },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: dbError.message }, { status: 500 });
     }
 
     return NextResponse.json({
@@ -103,29 +92,8 @@ export async function GET(
     });
   } catch (error: any) {
     return NextResponse.json(
-      {
-        error:
-          error.message ||
-          "Errore caricamento documento",
-      },
+      { error: error.message || "Errore caricamento documento" },
       { status: 500 }
-    );
-  }
-}
-
-    return NextResponse.json({
-      documenti: data || [],
-    });
-  } catch (error: any) {
-    return NextResponse.json(
-      {
-        error:
-          error.message ||
-          "Errore caricamento documenti",
-      },
-      {
-        status: 500,
-      }
     );
   }
 }
