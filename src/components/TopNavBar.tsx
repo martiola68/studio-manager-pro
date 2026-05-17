@@ -298,6 +298,32 @@ export function TopNavBar() {
       ],
     },
     {
+  label: "Pratiche",
+  icon: <FolderKanban className="h-4 w-4" />,
+  children: [
+    {
+      label: "Dashboard pratiche",
+      href: "/pratiche",
+      icon: <FolderKanban className="h-4 w-4" />,
+    },
+    {
+      label: "Nuova pratica",
+      href: "/pratiche/nuova",
+      icon: <FileText className="h-4 w-4" />,
+    },
+    {
+      label: "Modelli documenti",
+      href: "/pratiche/modelli",
+      icon: <FileText className="h-4 w-4" />,
+    },
+    {
+      label: "Diciture documenti",
+      href: "/pratiche/diciture",
+      icon: <FileText className="h-4 w-4" />,
+    },
+  ],
+},
+    {
       label: "Contenzioso",
       icon: <Scale className="h-4 w-4" />,
       children: [
