@@ -19,7 +19,7 @@ type PraticaDettaglio = {
     cap?: string;
     citta?: string;
     provincia?: string;
-     numero_rea?: string;
+    numero_rea?: string;
   };
   tipo?: {
     ente?: string;
@@ -30,6 +30,24 @@ type PraticaDettaglio = {
     cognome?: string;
   };
   dati_documento?: any;
+};
+
+type Professionista = {
+  id: string;
+  ragione_sociale: string;
+  codice_fiscale?: string | null;
+};
+
+type MotivoLiquidazione = {
+  id: string;
+  titolo: string;
+  testo_verbale: string;
+};
+
+type Dicitura = {
+  id: string;
+  titolo: string;
+  testo: string;
 };
 
 const font =
@@ -64,6 +82,10 @@ export default function DettaglioPraticaPage() {
   const [saving, setSaving] = useState(false);
   const [messaggio, setMessaggio] = useState("");
   const [pratica, setPratica] = useState<PraticaDettaglio | null>(null);
+
+  const [professionisti, setProfessionisti] = useState<Professionista[]>([]);
+  const [motiviLiquidazione, setMotiviLiquidazione] = useState<MotivoLiquidazione[]>([]);
+  const [diciture, setDiciture] = useState<Dicitura[]>([]);
 
   const [form, setForm] = useState({
     societa_denominazione: "",
@@ -101,6 +123,10 @@ export default function DettaglioPraticaPage() {
         const p = data.pratica;
         setPratica(p);
 
+        setProfessionisti(data.professionisti || []);
+        setMotiviLiquidazione(data.motivi_liquidazione || []);
+        setDiciture(data.diciture || []);
+
         const sede = [
           p.cliente?.indirizzo,
           p.cliente?.cap,
@@ -125,10 +151,10 @@ export default function DettaglioPraticaPage() {
             p.dati_documento?.societa_partita_iva ||
             p.cliente?.partita_iva ||
             "",
-         societa_rea:
-  p.dati_documento?.societa_rea ||
-  p.cliente?.numero_rea ||
-  "",
+          societa_rea:
+            p.dati_documento?.societa_rea ||
+            p.cliente?.numero_rea ||
+            "",
           data_atto: p.dati_documento?.data_atto || "",
           ora_inizio: p.dati_documento?.ora_inizio || "",
           luogo_assemblea: p.dati_documento?.luogo_assemblea || "",
@@ -396,22 +422,12 @@ export default function DettaglioPraticaPage() {
                   onChange={(e) => aggiornaCampo("motivo_liquidazione", e.target.value)}
                 >
                   <option value="">Seleziona motivo</option>
-                  <option value="Impossibilità di conseguire l’oggetto sociale">
-                    Impossibilità di conseguire l’oggetto sociale
-                  </option>
-                  <option value="Volontà di non ricostituire il capitale sociale">
-                    Volontà di non ricostituire il capitale sociale
-                  </option>
-                  <option value="Riduzione del capitale al di sotto del minimo legale">
-                    Riduzione del capitale al di sotto del minimo legale
-                  </option>
-                  <option value="Decorso del termine di durata">
-                    Decorso del termine di durata
-                  </option>
-                  <option value="Delibera volontaria dei soci">
-                    Delibera volontaria dei soci
-                  </option>
-                  <option value="Altro">Altro</option>
+
+                  {motiviLiquidazione.map((m) => (
+                    <option key={m.id} value={m.testo_verbale}>
+                      {m.titolo}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -421,7 +437,7 @@ export default function DettaglioPraticaPage() {
                   style={inputStyle}
                   value={form.motivo_liquidazione_altro}
                   onChange={(e) => aggiornaCampo("motivo_liquidazione_altro", e.target.value)}
-                  placeholder="Compilare solo se selezionato Altro"
+                  placeholder="Compilare solo se necessario"
                 />
               </div>
             </div>
@@ -433,7 +449,29 @@ export default function DettaglioPraticaPage() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
               <div>
                 <label style={labelStyle}>Nome professionista</label>
-                <input style={inputStyle} value={form.professionista_nome} onChange={(e) => aggiornaCampo("professionista_nome", e.target.value)} />
+                <select
+                  style={inputStyle}
+                  value={form.professionista_nome}
+                  onChange={(e) => {
+                    const selected = professionisti.find(
+                      (p) => p.ragione_sociale === e.target.value
+                    );
+
+                    aggiornaCampo("professionista_nome", e.target.value);
+
+                    if (selected?.codice_fiscale) {
+                      aggiornaCampo("professionista_codice_fiscale", selected.codice_fiscale);
+                    }
+                  }}
+                >
+                  <option value="">Seleziona professionista</option>
+
+                  {professionisti.map((p) => (
+                    <option key={p.id} value={p.ragione_sociale}>
+                      {p.ragione_sociale}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -449,6 +487,28 @@ export default function DettaglioPraticaPage() {
 
             <div style={{ marginTop: 14 }}>
               <label style={labelStyle}>Dicitura presentazione pratica</label>
+
+              <select
+                style={{ ...inputStyle, marginBottom: 10 }}
+                onChange={(e) => {
+                  const selected = diciture.find(
+                    (d) => d.testo === e.target.value
+                  );
+
+                  if (selected) {
+                    aggiornaCampo("dicitura_presentazione", selected.testo);
+                  }
+                }}
+              >
+                <option value="">Seleziona dicitura predefinita</option>
+
+                {diciture.map((d) => (
+                  <option key={d.id} value={d.testo}>
+                    {d.titolo}
+                  </option>
+                ))}
+              </select>
+
               <textarea
                 style={{ ...inputStyle, minHeight: 90, resize: "vertical" }}
                 value={form.dicitura_presentazione}
