@@ -19,6 +19,7 @@ type PraticaDettaglio = {
     cap?: string;
     citta?: string;
     provincia?: string;
+     numero_rea?: string;
   };
   tipo?: {
     ente?: string;
@@ -124,7 +125,10 @@ export default function DettaglioPraticaPage() {
             p.dati_documento?.societa_partita_iva ||
             p.cliente?.partita_iva ||
             "",
-          societa_rea: p.dati_documento?.societa_rea || "",
+         societa_rea:
+  p.dati_documento?.societa_rea ||
+  p.cliente?.numero_rea ||
+  "",
           data_atto: p.dati_documento?.data_atto || "",
           ora_inizio: p.dati_documento?.ora_inizio || "",
           luogo_assemblea: p.dati_documento?.luogo_assemblea || "",
