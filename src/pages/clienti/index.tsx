@@ -1999,66 +1999,80 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
             </Select>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2">
-            {/* Tipologia Cliente */}
-            <div>
-              <Label htmlFor="tipologia_cliente">Tipologia Cliente</Label>
-              <Select
-                value={formData.tipologia_cliente || ""}
-                onValueChange={(value) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    tipologia_cliente: value as "Interno" | "Esterno",
-                  }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleziona tipologia" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Interno">Interno</SelectItem>
-                  <SelectItem value="Esterno">Esterno</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:col-span-2">
 
-            {/* Cliente Attivo */}
-            {/* Professionista incaricato */}
-            <div className="flex items-end justify-start">
-            <div className="flex items-center space-x-2">
-            <Switch
-            id="professionista_incaricato"
-            checked={formData.professionista_incaricato}
-            onCheckedChange={(checked) =>
-            setFormData((prev) => ({
-              ...prev,
-              professionista_incaricato: checked,
-            }))
-            }
-            />
-
-    <Label htmlFor="professionista_incaricato">
-      Professionista incaricato
+  {/* Tipologia Cliente */}
+  <div>
+    <Label htmlFor="tipologia_cliente">
+      Tipologia Cliente
     </Label>
-  </div>
-</div>
-            <div className="flex items-end justify-start md:justify-end">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="attivo"
-                  checked={formData.attivo}
-                  onCheckedChange={(checked) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      attivo: checked,
-                    }))
-                  }
-                />
-                <Label htmlFor="attivo">Cliente Attivo</Label>
-              </div>
-            </div>
-          </div>
 
+    <Select
+      value={formData.tipologia_cliente || ""}
+      onValueChange={(value) =>
+        setFormData((prev) => ({
+          ...prev,
+          tipologia_cliente: value as "Interno" | "Esterno",
+        }))
+      }
+    >
+      <SelectTrigger>
+        <SelectValue placeholder="Seleziona tipologia" />
+      </SelectTrigger>
+
+      <SelectContent>
+        <SelectItem value="Interno">
+          Interno
+        </SelectItem>
+
+        <SelectItem value="Esterno">
+          Esterno
+        </SelectItem>
+      </SelectContent>
+    </Select>
+  </div>
+
+  {/* Professionista incaricato */}
+  <div className="flex items-end">
+    <div className="flex items-center space-x-2 pb-2">
+      <Switch
+        id="professionista_incaricato"
+        checked={formData.professionista_incaricato}
+        onCheckedChange={(checked) =>
+          setFormData((prev) => ({
+            ...prev,
+            professionista_incaricato: checked,
+          }))
+        }
+      />
+
+      <Label htmlFor="professionista_incaricato">
+        Professionista incaricato
+      </Label>
+    </div>
+  </div>
+
+  {/* Cliente Attivo */}
+  <div className="flex items-end">
+    <div className="flex items-center space-x-2 pb-2">
+      <Switch
+        id="attivo"
+        checked={formData.attivo}
+        onCheckedChange={(checked) =>
+          setFormData((prev) => ({
+            ...prev,
+            attivo: checked,
+          }))
+        }
+      />
+
+      <Label htmlFor="attivo">
+        Cliente Attivo
+      </Label>
+    </div>
+  </div>
+
+</div>
           <div className="md:col-span-2 space-y-2">
             <Label>Settori *</Label>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border rounded-md p-4 bg-muted/20">
