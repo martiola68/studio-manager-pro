@@ -76,6 +76,8 @@
     "stripe": "^17.6.0",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
+    "docxtemplater": "^3.46.0",
+    "pizzip": "^3.1.6",
     "vaul": "^1.1.2",
     "vercel": "^50.32.0",
     "zod": "^3.24.1"
