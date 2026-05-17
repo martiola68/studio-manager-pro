@@ -28,16 +28,17 @@ export async function GET(req: Request, { params }: Params) {
 
     const { data: cliente } = await supabaseAdmin
       .from("tbclienti")
-      .select(`
-        id,
-        ragione_sociale,
-        codice_fiscale,
-        partita_iva,
-        indirizzo,
-        cap,
-        citta,
-        provincia
-      `)
+     .select(`
+  id,
+  ragione_sociale,
+  codice_fiscale,
+  partita_iva,
+  indirizzo,
+  cap,
+  citta,
+  provincia,
+  numero_rea
+`)
       .eq("id", pratica.cliente_id)
       .single();
 
