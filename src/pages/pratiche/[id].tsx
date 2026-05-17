@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useRouter } from "next/router";
 
 type PraticaDettaglio = {
   id: string;
@@ -75,8 +75,8 @@ const labelStyle: React.CSSProperties = {
 };
 
 export default function DettaglioPraticaPage() {
-  const params = useParams();
-  const praticaId = params?.id as string;
+  const router = useRouter();
+const praticaId = router.query.id as string;
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
