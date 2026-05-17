@@ -490,34 +490,75 @@ setForm((prev) => ({
               </div>
 
               <div>
-                <label style={labelStyle}>Qualifica</label>
-                <input style={inputStyle} value={form.professionista_qualifica} onChange={(e) => aggiornaCampo("professionista_qualifica", e.target.value)} placeholder="Es. Dottore Commercialista" />
-              </div>
+              <label style={labelStyle}>Qualifica</label>
+
+<select
+  style={inputStyle}
+  value={form.professionista_qualifica}
+  onChange={(e) =>
+    aggiornaCampo(
+      "professionista_qualifica",
+      e.target.value
+    )
+  }
+>
+  <option value="">
+    Seleziona qualifica
+  </option>
+
+  <option value="Dottore Commercialista">
+    Dottore Commercialista
+  </option>
+
+  <option value="Ragioniere Commercialista">
+    Ragioniere Commercialista
+  </option>
+</select>
             </div>
 
             <div style={{ marginTop: 14 }}>
               <label style={labelStyle}>Dicitura presentazione pratica</label>
 
-              <select
-                style={{ ...inputStyle, marginBottom: 10 }}
-                onChange={(e) => {
-                  const selected = diciture.find(
-                    (d) => d.testo === e.target.value
-                  );
+            <select
+  style={{ ...inputStyle, marginBottom: 10 }}
+  onChange={(e) => {
+    const selected = diciture.find(
+      (d) => d.testo === e.target.value
+    );
 
-                  if (selected) {
-                    aggiornaCampo("dicitura_presentazione", selected.testo);
-                  }
-                }}
-              >
-                <option value="">Seleziona dicitura predefinita</option>
+    if (selected) {
+      const nomeProfessionista =
+        form.professionista_nome || "";
 
-                {diciture.map((d) => (
-                  <option key={d.id} value={d.testo}>
-                    {d.titolo}
-                  </option>
-                ))}
-              </select>
+      aggiornaCampo(
+        "dicitura_presentazione",
+        selected.testo
+          .replaceAll(
+            "{{professionista_nome}}",
+            nomeProfessionista
+          )
+          .replaceAll(
+            "[professionista_nome]",
+            nomeProfessionista
+          )
+          .replaceAll(
+            "[PROFESSIONISTA_NOME]",
+            nomeProfessionista
+          )
+      );
+    }
+  }}
+>
+  <option value="">
+    Seleziona dicitura predefinita
+  </option>
+
+  {diciture.map((d) => (
+    <option key={d.id} value={d.testo}>
+      {d.titolo}
+    </option>
+  ))}
+</select>
 
               <textarea
                 style={{ ...inputStyle, minHeight: 90, resize: "vertical" }}
