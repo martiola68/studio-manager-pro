@@ -67,7 +67,7 @@ export default function DiciturePratichePage() {
     if (error) {
       setMessaggio(error.message);
     } else {
-      setDiciture((data || []) as Dicitura[]);
+     setDiciture((data || []) as unknown as Dicitura[]);
     }
 
     setLoading(false);
