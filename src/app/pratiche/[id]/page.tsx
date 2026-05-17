@@ -57,7 +57,7 @@ const labelStyle: React.CSSProperties = {
 
 export default function DettaglioPraticaPage() {
   const params = useParams();
-  const praticaId = params.id as string;
+  const praticaId = params?.id as string;
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
