@@ -59,7 +59,7 @@ export default function DiciturePratichePage() {
     const supabase = getSupabaseClient();
 
     const { data, error } = await supabase
-      .from("tbpratiche_dicitura_documenti")
+      .from("tbpratiche_dicitura_documenti" as any)
       .select("*")
       .order("categoria")
       .order("titolo");
@@ -126,11 +126,11 @@ export default function DiciturePratichePage() {
 
     const result = editingId
       ? await supabase
-          .from("tbpratiche_dicitura_documenti")
+          .from("tbpratiche_dicitura_documenti" as any)
           .update(payload)
           .eq("id", editingId)
       : await supabase
-          .from("tbpratiche_dicitura_documenti")
+          .from("tbpratiche_dicitura_documenti" as any)
           .insert(payload);
 
     if (result.error) {
@@ -150,7 +150,7 @@ export default function DiciturePratichePage() {
     const supabase = getSupabaseClient();
 
     const { error } = await supabase
-      .from("tbpratiche_dicitura_documenti")
+      .from("tbpratiche_dicitura_documenti" as any)
       .delete()
       .eq("id", id);
 
