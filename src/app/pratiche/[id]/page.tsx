@@ -797,6 +797,7 @@ async function uploadDocumento() {
             <th style={thStyle}>Documento</th>
             <th style={thStyle}>Tipo</th>
             <th style={thStyle}>Data</th>
+            <th style={thStyle}>Azioni</th>
           </tr>
         </thead>
 
@@ -822,6 +823,20 @@ async function uploadDocumento() {
                   doc.created_at
                 ).toLocaleString("it-IT")}
               </td>
+
+              <td style={tdStyle}>
+  <a
+    href={`/api/pratiche/${praticaId}/documenti/${doc.id}/download`}
+    target="_blank"
+    style={{
+      color: "#2563eb",
+      fontWeight: 600,
+      textDecoration: "none",
+    }}
+  >
+    Scarica
+  </a>
+</td>
             </tr>
           ))}
         </tbody>
