@@ -91,6 +91,14 @@ const praticaId = router.query.id as string;
   const [motiviLiquidazione, setMotiviLiquidazione] = useState<MotivoLiquidazione[]>([]);
   const [diciture, setDiciture] = useState<Dicitura[]>([]);
 
+  const [diciture, setDiciture] = useState<Dicitura[]>([]);
+const [rappresentantiLegali, setRappresentantiLegali] = useState<any[]>([]);
+const [mostraNuovoLiquidatore, setMostraNuovoLiquidatore] = useState(false);
+const [nuovoLiquidatore, setNuovoLiquidatore] = useState({
+  nome_cognome: "",
+  codice_fiscale: "",
+});
+
   const [documenti, setDocumenti] = useState<any[]>([]);
 const [uploadingDocumento, setUploadingDocumento] = useState(false);
 const [tipoDocumento, setTipoDocumento] = useState("altro");
@@ -140,6 +148,7 @@ percentuale_soci_presenti: "100",
         setProfessionisti(data.professionisti || []);
         setMotiviLiquidazione(data.motivi_liquidazione || []);
         setDiciture(data.diciture || []);
+        setRappresentantiLegali(data.rappresentanti_legali || []);
 
         const sede = [
           p.cliente?.indirizzo,
@@ -523,15 +532,45 @@ async function uploadDocumento() {
 
 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 14 }}>
   <div>
-    <label style={labelStyle}>Liquidatore</label>
-    <input
-      style={inputStyle}
-      value={form.liquidatore_nome}
-      onChange={(e) =>
-        aggiornaCampo("liquidatore_nome", e.target.value)
+  <label style={labelStyle}>
+    Liquidatore / Amministratore / Legale rappresentante
+  </label>
+
+  <select
+    style={inputStyle}
+    value={form.liquidatore_nome}
+    onChange={(e) => {
+      const value = e.target.value;
+
+      if (value === "__nuovo__") {
+        setMostraNuovoLiquidatore(true);
+        return;
       }
-    />
-  </div>
+
+      const selected = rappresentantiLegali.find(
+        (r) => r.nome_cognome === value
+      );
+
+      setForm((prev) => ({
+        ...prev,
+        liquidatore_nome: value,
+        liquidatore_codice_fiscale: selected?.codice_fiscale || "",
+      }));
+    }}
+  >
+    <option value="">Seleziona soggetto</option>
+
+    {rappresentantiLegali.map((r) => (
+      <option key={r.id} value={r.nome_cognome}>
+        {r.nome_cognome}
+      </option>
+    ))}
+
+    <option value="__nuovo__">
+      + Inserisci nuovo soggetto
+    </option>
+  </select>
+</div>
 
   <div>
     <label style={labelStyle}>CF liquidatore</label>
@@ -544,6 +583,111 @@ async function uploadDocumento() {
     />
   </div>
 </div>
+
+            {mostraNuovoLiquidatore && (
+  <div
+    style={{
+      gridColumn: "1 / -1",
+      border: "1px solid #d1d5db",
+      borderRadius: 10,
+      padding: 16,
+      background: "#f8fafc",
+      marginTop: 4,
+    }}
+  >
+    <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>
+      Nuovo soggetto
+    </h4>
+
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr auto",
+        gap: 12,
+        marginTop: 12,
+        alignItems: "end",
+      }}
+    >
+      <div>
+        <label style={labelStyle}>Nome e cognome</label>
+        <input
+          style={inputStyle}
+          value={nuovoLiquidatore.nome_cognome}
+          onChange={(e) =>
+            setNuovoLiquidatore((prev) => ({
+              ...prev,
+              nome_cognome: e.target.value,
+            }))
+          }
+        />
+      </div>
+
+      <div>
+        <label style={labelStyle}>Codice fiscale</label>
+        <input
+          style={inputStyle}
+          value={nuovoLiquidatore.codice_fiscale}
+          onChange={(e) =>
+            setNuovoLiquidatore((prev) => ({
+              ...prev,
+              codice_fiscale: e.target.value,
+            }))
+          }
+        />
+      </div>
+
+      <button
+        type="button"
+        onClick={async () => {
+          const res = await fetch("/api/rapp-legali", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(nuovoLiquidatore),
+          });
+
+          const data = await res.json();
+
+          if (!res.ok) {
+            alert(data.error || "Errore creazione soggetto");
+            return;
+          }
+
+          const nuovo = data.rappresentante;
+
+          setRappresentantiLegali((prev) => [...prev, nuovo]);
+
+          setForm((prev) => ({
+            ...prev,
+            liquidatore_nome: nuovo.nome_cognome,
+            liquidatore_codice_fiscale: nuovo.codice_fiscale || "",
+          }));
+
+          setNuovoLiquidatore({
+            nome_cognome: "",
+            codice_fiscale: "",
+          });
+
+          setMostraNuovoLiquidatore(false);
+        }}
+        style={{
+          border: 0,
+          borderRadius: 8,
+          background: "#2563eb",
+          color: "#fff",
+          padding: "10px 16px",
+          fontSize: 14,
+          fontWeight: 600,
+          cursor: "pointer",
+          fontFamily: font,
+        }}
+      >
+        Salva
+      </button>
+    </div>
+  </div>
+)}
 
 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginTop: 14 }}>
   <div>
