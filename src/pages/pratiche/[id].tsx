@@ -89,9 +89,8 @@ const praticaId = router.query.id as string;
 
   const [professionisti, setProfessionisti] = useState<Professionista[]>([]);
   const [motiviLiquidazione, setMotiviLiquidazione] = useState<MotivoLiquidazione[]>([]);
-  const [diciture, setDiciture] = useState<Dicitura[]>([]);
-
-  const [diciture, setDiciture] = useState<Dicitura[]>([]);
+  
+const [diciture, setDiciture] = useState<Dicitura[]>([]);
 const [rappresentantiLegali, setRappresentantiLegali] = useState<any[]>([]);
 const [mostraNuovoLiquidatore, setMostraNuovoLiquidatore] = useState(false);
 const [nuovoLiquidatore, setNuovoLiquidatore] = useState({
