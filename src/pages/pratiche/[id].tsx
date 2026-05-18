@@ -104,6 +104,13 @@ const [uploadingDocumento, setUploadingDocumento] = useState(false);
 const [tipoDocumento, setTipoDocumento] = useState("altro");
 const [fileDocumento, setFileDocumento] = useState<File | null>(null);
 
+  const [nuovoSoggetto, setNuovoSoggetto] = useState({
+  tipo_soggetto: "amministratore",
+  nome_cognome: "",
+  codice_fiscale: "",
+  carica: "",
+});
+
   const [form, setForm] = useState({
     societa_denominazione: "",
     societa_sede: "",
