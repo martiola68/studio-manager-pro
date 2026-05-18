@@ -98,7 +98,8 @@ const [nuovoLiquidatore, setNuovoLiquidatore] = useState({
   codice_fiscale: "",
 });
 
-  const [documenti, setDocumenti] = useState<any[]>([]);
+const [documenti, setDocumenti] = useState<any[]>([]);
+const [soggetti, setSoggetti] = useState<any[]>([]);
 const [uploadingDocumento, setUploadingDocumento] = useState(false);
 const [tipoDocumento, setTipoDocumento] = useState("altro");
 const [fileDocumento, setFileDocumento] = useState<File | null>(null);
@@ -222,15 +223,35 @@ percentuale_soci_presenti:
       }
     }
 
-   if (praticaId) {
+ if (praticaId) {
   caricaPratica();
   caricaDocumenti();
+  caricaSoggetti();
 }
   }, [praticaId]);
 
   function aggiornaCampo(campo: string, valore: string) {
     setForm((prev) => ({ ...prev, [campo]: valore }));
   }
+
+  async function caricaSoggetti() {
+  try {
+    const res = await fetch(
+      `/api/pratiche/${praticaId}/soggetti`,
+      {
+        cache: "no-store",
+      }
+    );
+
+    const data = await res.json();
+
+    if (res.ok) {
+      setSoggetti(data.soggetti || []);
+    }
+  } catch (error) {
+    console.error(error);
+  }
+}
 
   async function caricaDocumenti() {
   try {
@@ -878,7 +899,279 @@ async function uploadDocumento() {
               {saving ? "Salvataggio..." : "Salva dati documento"}
             </button>
           </div>
-          <div
+        <div
+  style={{
+    background: "#fff",
+    border: "1px solid #d1d5db",
+    borderRadius: 10,
+    padding: 24,
+    marginTop: 16,
+  }}
+>
+  <h2
+    style={{
+      fontSize: 20,
+      fontWeight: 700,
+      margin: 0,
+      color: "#0f172a",
+    }}
+  >
+    Organi / Cariche
+  </h2>
+
+  <p
+    style={{
+      marginTop: 6,
+      fontSize: 14,
+      color: "#64748b",
+    }}
+  >
+    Amministratori, consiglieri, sindaci,
+    liquidatori e altri soggetti collegati.
+  </p>
+
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr 1fr 1fr auto",
+      gap: 12,
+      marginTop: 18,
+      alignItems: "end",
+    }}
+  >
+    <div>
+      <label style={labelStyle}>Tipo soggetto</label>
+
+      <select
+        style={inputStyle}
+        value={nuovoSoggetto.tipo_soggetto}
+        onChange={(e) =>
+          setNuovoSoggetto((prev) => ({
+            ...prev,
+            tipo_soggetto: e.target.value,
+          }))
+        }
+      >
+        <option value="amministratore">
+          Amministratore
+        </option>
+
+        <option value="presidente_cda">
+          Presidente CDA
+        </option>
+
+        <option value="consigliere">
+          Consigliere
+        </option>
+
+        <option value="amministratore_delegato">
+          Amministratore Delegato
+        </option>
+
+        <option value="liquidatore">
+          Liquidatore
+        </option>
+
+        <option value="presidente_collegio_sindacale">
+          Presidente Collegio Sindacale
+        </option>
+
+        <option value="sindaco_effettivo">
+          Sindaco Effettivo
+        </option>
+
+        <option value="sindaco_supplente">
+          Sindaco Supplente
+        </option>
+      </select>
+    </div>
+
+    <div>
+      <label style={labelStyle}>Nome e cognome</label>
+
+      <input
+        style={inputStyle}
+        value={nuovoSoggetto.nome_cognome}
+        onChange={(e) =>
+          setNuovoSoggetto((prev) => ({
+            ...prev,
+            nome_cognome: e.target.value,
+          }))
+        }
+      />
+    </div>
+
+    <div>
+      <label style={labelStyle}>Codice fiscale</label>
+
+      <input
+        style={inputStyle}
+        value={nuovoSoggetto.codice_fiscale}
+        onChange={(e) =>
+          setNuovoSoggetto((prev) => ({
+            ...prev,
+            codice_fiscale: e.target.value,
+          }))
+        }
+      />
+    </div>
+
+    <div>
+      <label style={labelStyle}>Carica</label>
+
+      <input
+        style={inputStyle}
+        value={nuovoSoggetto.carica}
+        onChange={(e) =>
+          setNuovoSoggetto((prev) => ({
+            ...prev,
+            carica: e.target.value,
+          }))
+        }
+      />
+    </div>
+
+    <button
+      type="button"
+      onClick={async () => {
+        const res = await fetch(
+          `/api/pratiche/${praticaId}/soggetti`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(nuovoSoggetto),
+          }
+        );
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          alert(data.error || "Errore inserimento");
+          return;
+        }
+
+        setNuovoSoggetto({
+          tipo_soggetto: "amministratore",
+          nome_cognome: "",
+          codice_fiscale: "",
+          carica: "",
+        });
+
+        await caricaSoggetti();
+      }}
+      style={{
+        border: 0,
+        borderRadius: 8,
+        background: "#2563eb",
+        color: "#fff",
+        padding: "10px 18px",
+        fontSize: 14,
+        fontWeight: 600,
+        cursor: "pointer",
+        fontFamily: font,
+      }}
+    >
+      Aggiungi
+    </button>
+  </div>
+
+  <div style={{ marginTop: 24 }}>
+    {soggetti.length === 0 ? (
+      <div
+        style={{
+          fontSize: 14,
+          color: "#64748b",
+        }}
+      >
+        Nessun soggetto inserito.
+      </div>
+    ) : (
+      <table
+        style={{
+          width: "100%",
+          borderCollapse: "collapse",
+        }}
+      >
+        <thead>
+          <tr>
+            <th style={thStyle}>Tipo</th>
+            <th style={thStyle}>Nome</th>
+            <th style={thStyle}>Codice fiscale</th>
+            <th style={thStyle}>Carica</th>
+            <th style={thStyle}>Azioni</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {soggetti.map((s) => (
+            <tr
+              key={s.id}
+              style={{
+                borderBottom:
+                  "1px solid #f1f5f9",
+              }}
+            >
+              <td style={tdStyle}>
+                {s.tipo_soggetto}
+              </td>
+
+              <td style={tdStyle}>
+                {s.nome_cognome}
+              </td>
+
+              <td style={tdStyle}>
+                {s.codice_fiscale}
+              </td>
+
+              <td style={tdStyle}>
+                {s.carica}
+              </td>
+
+              <td style={tdStyle}>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (
+                      !confirm(
+                        "Eliminare il soggetto?"
+                      )
+                    )
+                      return;
+
+                    const res = await fetch(
+                      `/api/pratiche/${praticaId}/soggetti/${s.id}`,
+                      {
+                        method: "DELETE",
+                      }
+                    );
+
+                    if (res.ok) {
+                      await caricaSoggetti();
+                    }
+                  }}
+                  style={{
+                    border: 0,
+                    background: "transparent",
+                    color: "#dc2626",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    fontFamily: font,
+                  }}
+                >
+                  Elimina
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    )}
+  </div>
+</div>
+
+<div
   style={{
     background: "#fff",
     border: "1px solid #d1d5db",
