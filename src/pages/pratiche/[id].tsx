@@ -1,5 +1,5 @@
 "use client";
-
+import { Trash2, Download } from "lucide-react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -2069,17 +2069,48 @@ const percentualeSuperata =
       alignItems: "center",
     }}
   >
-    <a
-      href={`/api/pratiche/${praticaId}/documenti/${doc.id}/download`}
-      target="_blank"
-      style={{
-        color: "#2563eb",
-        fontWeight: 600,
-        textDecoration: "none",
-      }}
-    >
-      Scarica
-    </a>
+   <div
+  style={{
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+  }}
+>
+  <a
+    href={doc.url}
+    target="_blank"
+    rel="noreferrer"
+    title="Scarica documento"
+    style={{
+      color: "#2563eb",
+      display: "flex",
+      alignItems: "center",
+    }}
+  >
+    <Download size={18} />
+  </a>
+
+  <button
+    type="button"
+    title="Elimina documento"
+    onClick={async () => {
+      if (!confirm("Eliminare il documento?")) return;
+
+      await eliminaDocumento(doc.id);
+    }}
+    style={{
+      border: 0,
+      background: "transparent",
+      color: "#dc2626",
+      cursor: "pointer",
+      display: "flex",
+      alignItems: "center",
+      padding: 0,
+    }}
+  >
+    <Trash2 size={18} />
+  </button>
+</div>
 
     <button
       type="button"
