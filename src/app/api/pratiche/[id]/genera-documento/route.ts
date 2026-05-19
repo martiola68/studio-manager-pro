@@ -79,6 +79,24 @@ export async function POST(req: Request, { params }: Params) {
       );
     }
 
+    const { data: documentoEsistente } = await supabaseAdmin
+  .from("tbpratiche_documenti")
+  .select("id, nome_file")
+  .eq("pratica_id", id)
+  .eq("origine", "automatica")
+  .eq("note", `Generato da modello ${codiceModello}`)
+  .maybeSingle();
+
+if (documentoEsistente) {
+  return NextResponse.json(
+    {
+      error:
+        "Esiste già un documento generato con questo modello. Elimina prima quello presente e poi rigenera.",
+    },
+    { status: 409 }
+  );
+}
+
     const { data: modello, error: modelloError } = await supabaseAdmin
       .from("tbpratiche_modelli_utilita")
       .select("*")
