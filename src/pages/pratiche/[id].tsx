@@ -234,7 +234,7 @@ percentuale_soci_presenti:
       }
     }
 
- iif (praticaId) {
+ if (praticaId) {
   caricaPratica();
   caricaDocumenti();
   caricaSoggetti();
