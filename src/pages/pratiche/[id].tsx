@@ -461,11 +461,21 @@ const mostraOrganiCariche =
     .toLowerCase()
     .includes("distribuzione utili");
 
-  const percentualeSociPresentiCalcolata = soci.reduce(
+const percentualeSociPresentiCalcolata = soci.reduce(
   (totale, socio) =>
     totale + Number(socio.percentuale_partecipazione || 0),
   0
 );
+
+const nuovaPercentuale = Number(
+  nuovoSocio.percentuale_partecipazione || 0
+);
+
+const percentualeTotaleConNuovo =
+  percentualeSociPresentiCalcolata + nuovaPercentuale;
+
+const percentualeSuperata =
+  percentualeTotaleConNuovo > 100;
 
   return (
     <main style={{ padding: 28, background: "#f8fafc", minHeight: "100vh", fontFamily: font }}>
@@ -678,80 +688,160 @@ const mostraOrganiCariche =
     Soci presenti / Distribuzione utili
   </h2>
 
-  <div
-    style={{
-      display: "grid",
-      gridTemplateColumns: "1.5fr 1fr 0.8fr 1fr 0.8fr 1fr 1fr auto",
-      gap: 12,
-      marginTop: 18,
-      alignItems: "end",
-    }}
-  >
-<select
-  style={inputStyle}
-  value={nuovoSocio.nominativo_id}
-  onChange={(e) => {
-    const value = e.target.value;
-
-    if (value === "__nuovo__") {
-      setNuovoSocio({
-        ...nuovoSocio,
-        nominativo_id: "__nuovo__",
-        nome_cognome: "",
-        codice_fiscale: "",
-      });
-      return;
-    }
-
-    const selected = nominativi.find((n) => n.id === value);
-
-    setNuovoSocio({
-      ...nuovoSocio,
-      nominativo_id: selected?.id || "",
-      nome_cognome: selected?.nome_cognome || "",
-      codice_fiscale: selected?.codice_fiscale || "",
-    });
+ <div
+  style={{
+    display: "grid",
+    gridTemplateColumns: "1.5fr 1fr 0.8fr 1fr 0.8fr 1fr 1fr auto",
+    gap: 12,
+    marginTop: 18,
+    alignItems: "end",
   }}
 >
-  <option value="">Seleziona nominativo</option>
+  <div>
+    <label style={labelStyle}>
+      Cognome e nome
+    </label>
 
-  {nominativi.map((n) => (
-    <option key={n.id} value={n.id}>
-      {n.nome_cognome}
+<div>
+  <label style={labelStyle}>
+    Cognome e nome
+  </label>
+
+  <select
+    style={inputStyle}
+    value={nuovoSocio.nominativo_id}
+    onChange={(e) => {
+      const value = e.target.value;
+
+      if (value === "__nuovo__") {
+        setNuovoSocio({
+          ...nuovoSocio,
+          nominativo_id: "__nuovo__",
+          nome_cognome: "",
+          codice_fiscale: "",
+        });
+        return;
+      }
+
+      const selected = nominativi.find(
+        (n) => n.id === value
+      );
+
+      setNuovoSocio({
+        ...nuovoSocio,
+        nominativo_id: selected?.id || "",
+        nome_cognome: selected?.nome_cognome || "",
+        codice_fiscale:
+          selected?.codice_fiscale || "",
+      });
+    }}
+  >
+    <option value="">
+      Seleziona nominativo
     </option>
-  ))}
 
-  <option value="__nuovo__">+ Inserisci nuovo nominativo</option>
-</select>
+    {nominativi.map((n) => (
+      <option key={n.id} value={n.id}>
+        {n.nome_cognome}
+      </option>
+    ))}
 
+    <option value="__nuovo__">
+      + Inserisci nuovo nominativo
+    </option>
+  </select>
+</div>
+    
 {nuovoSocio.nominativo_id === "__nuovo__" && (
+  <div>
+    <label style={labelStyle}>
+      Nuovo nominativo
+    </label>
+
+    <input
+      style={inputStyle}
+      placeholder="Nuovo nominativo"
+      value={nuovoSocio.nome_cognome}
+      onChange={(e) =>
+        setNuovoSocio({
+          ...nuovoSocio,
+          nome_cognome: e.target.value,
+        })
+      }
+    />
+  </div>
+)}
+    
+ <div>
+  <label style={labelStyle}>
+    Cod. fisc.
+  </label>
+
   <input
-    style={{ ...inputStyle, marginTop: 8 }}
-    placeholder="Nuovo nominativo"
-    value={nuovoSocio.nome_cognome}
+    style={inputStyle}
+    placeholder="Codice fiscale"
+    value={nuovoSocio.codice_fiscale}
     onChange={(e) =>
       setNuovoSocio({
         ...nuovoSocio,
-        nome_cognome: e.target.value,
+        codice_fiscale: e.target.value,
       })
     }
   />
-)}
-    
-    <input style={inputStyle} placeholder="Codice fiscale" value={nuovoSocio.codice_fiscale} onChange={(e) => setNuovoSocio({ ...nuovoSocio, codice_fiscale: e.target.value })} />
-    <input style={inputStyle} placeholder="% quota" value={nuovoSocio.percentuale_partecipazione} onChange={(e) => setNuovoSocio({ ...nuovoSocio, percentuale_partecipazione: e.target.value })} />
-   <input
-  style={inputStyle}
-  placeholder="Lordo"
-  disabled={!isDistribuzioneUtili}
-  value={nuovoSocio.importo_utile}
-  onChange={(e) =>
-    setNuovoSocio({
-      ...nuovoSocio,
-      importo_utile: e.target.value,
-    })
-  }
-/>
+</div>
+
+<div>
+  <label
+    style={{
+      ...labelStyle,
+      color: percentualeSuperata
+        ? "#dc2626"
+        : "#374151",
+    }}
+  >
+    % Partec.
+  </label>
+
+  <input
+    style={{
+      ...inputStyle,
+      borderColor: percentualeSuperata
+        ? "#dc2626"
+        : "#9ca3af",
+      color: percentualeSuperata
+        ? "#dc2626"
+        : undefined,
+    }}
+    placeholder="% quota"
+    value={nuovoSocio.percentuale_partecipazione}
+    onChange={(e) =>
+      setNuovoSocio({
+        ...nuovoSocio,
+        percentuale_partecipazione:
+          e.target.value,
+      })
+    }
+  />
+</div>
+
+<div>
+  <label style={labelStyle}>
+    Importo lordo
+  </label>
+
+  <input
+    style={inputStyle}
+    placeholder="Lordo"
+    disabled={!isDistribuzioneUtili}
+    value={nuovoSocio.importo_utile}
+    onChange={(e) =>
+      setNuovoSocio({
+        ...nuovoSocio,
+        importo_utile: e.target.value,
+      })
+    }
+  />
+</div>
 
 <input
   style={inputStyle}
