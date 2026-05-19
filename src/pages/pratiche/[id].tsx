@@ -2096,7 +2096,11 @@ const percentualeSuperata =
     onClick={async () => {
       if (!confirm("Eliminare il documento?")) return;
 
-      await eliminaDocumento(doc.id);
+    await fetch(`/api/pratiche/documenti/${doc.id}`, {
+  method: "DELETE",
+});
+
+await caricaDocumenti();
     }}
     style={{
       border: 0,
