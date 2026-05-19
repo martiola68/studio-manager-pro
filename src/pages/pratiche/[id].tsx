@@ -108,11 +108,13 @@ const [uploadingDocumento, setUploadingDocumento] = useState(false);
 const [tipoDocumento, setTipoDocumento] = useState("altro");
 const [fileDocumento, setFileDocumento] = useState<File | null>(null);
 
-  const [nuovoSoggetto, setNuovoSoggetto] = useState({
+ const [nuovoSoggetto, setNuovoSoggetto] = useState({
   tipo_soggetto: "amministratore",
   nome_cognome: "",
   codice_fiscale: "",
-  carica: "",
+  indirizzo: "",
+  citta: "",
+  carica: "Amministratore",
 });
 
   const [form, setForm] = useState({
@@ -385,6 +387,26 @@ async function uploadDocumento() {
       </main>
     );
   }
+
+  const modelloCorrente = modelli.find(
+  (m) => m.codice === modelloSelezionato
+);
+
+const mostraOrganiCariche =
+  soggetti.length > 0 ||
+  [
+    "cda",
+    "consiglio",
+    "collegio",
+    "sindacale",
+    "amministratore",
+    "legale_rappresentante",
+    "cariche",
+  ].some((chiave) =>
+    String(modelloCorrente?.nome || modelloCorrente?.categoria || "")
+      .toLowerCase()
+      .includes(chiave)
+  );
 
   return (
     <main style={{ padding: 28, background: "#f8fafc", minHeight: "100vh", fontFamily: font }}>
@@ -933,278 +955,389 @@ async function uploadDocumento() {
               {saving ? "Salvataggio..." : "Salva dati documento"}
             </button>
           </div>
-        <div
-  style={{
-    background: "#fff",
-    border: "1px solid #d1d5db",
-    borderRadius: 10,
-    padding: 24,
-    marginTop: 16,
-  }}
->
-  <h2
-    style={{
-      fontSize: 20,
-      fontWeight: 700,
-      margin: 0,
-      color: "#0f172a",
-    }}
-  >
-    Organi / Cariche
-  </h2>
-
-  <p
-    style={{
-      marginTop: 6,
-      fontSize: 14,
-      color: "#64748b",
-    }}
-  >
-    Amministratori, consiglieri, sindaci,
-    liquidatori e altri soggetti collegati.
-  </p>
-
+          
+   {mostraOrganiCariche && (
   <div
     style={{
-      display: "grid",
-      gridTemplateColumns: "1fr 1fr 1fr 1fr auto",
-      gap: 12,
-      marginTop: 18,
-      alignItems: "end",
+      background: "#fff",
+      border: "1px solid #d1d5db",
+      borderRadius: 10,
+      padding: 24,
+      marginTop: 16,
     }}
   >
-    <div>
-      <label style={labelStyle}>Tipo soggetto</label>
-
-      <select
-        style={inputStyle}
-        value={nuovoSoggetto.tipo_soggetto}
-        onChange={(e) =>
-          setNuovoSoggetto((prev) => ({
-            ...prev,
-            tipo_soggetto: e.target.value,
-          }))
-        }
-      >
-        <option value="amministratore">
-          Amministratore
-        </option>
-
-        <option value="presidente_cda">
-          Presidente CDA
-        </option>
-
-        <option value="consigliere">
-          Consigliere
-        </option>
-
-        <option value="amministratore_delegato">
-          Amministratore Delegato
-        </option>
-
-        <option value="liquidatore">
-          Liquidatore
-        </option>
-
-        <option value="presidente_collegio_sindacale">
-          Presidente Collegio Sindacale
-        </option>
-
-        <option value="sindaco_effettivo">
-          Sindaco Effettivo
-        </option>
-
-        <option value="sindaco_supplente">
-          Sindaco Supplente
-        </option>
-      </select>
-    </div>
-
-    <div>
-      <label style={labelStyle}>Nome e cognome</label>
-
-      <input
-        style={inputStyle}
-        value={nuovoSoggetto.nome_cognome}
-        onChange={(e) =>
-          setNuovoSoggetto((prev) => ({
-            ...prev,
-            nome_cognome: e.target.value,
-          }))
-        }
-      />
-    </div>
-
-    <div>
-      <label style={labelStyle}>Codice fiscale</label>
-
-      <input
-        style={inputStyle}
-        value={nuovoSoggetto.codice_fiscale}
-        onChange={(e) =>
-          setNuovoSoggetto((prev) => ({
-            ...prev,
-            codice_fiscale: e.target.value,
-          }))
-        }
-      />
-    </div>
-
-    <div>
-      <label style={labelStyle}>Carica</label>
-
-      <input
-        style={inputStyle}
-        value={nuovoSoggetto.carica}
-        onChange={(e) =>
-          setNuovoSoggetto((prev) => ({
-            ...prev,
-            carica: e.target.value,
-          }))
-        }
-      />
-    </div>
-
-    <button
-      type="button"
-      onClick={async () => {
-        const res = await fetch(
-          `/api/pratiche/${praticaId}/soggetti`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(nuovoSoggetto),
-          }
-        );
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          alert(data.error || "Errore inserimento");
-          return;
-        }
-
-        setNuovoSoggetto({
-          tipo_soggetto: "amministratore",
-          nome_cognome: "",
-          codice_fiscale: "",
-          carica: "",
-        });
-
-        await caricaSoggetti();
-      }}
+    <h2
       style={{
-        border: 0,
-        borderRadius: 8,
-        background: "#2563eb",
-        color: "#fff",
-        padding: "10px 18px",
-        fontSize: 14,
-        fontWeight: 600,
-        cursor: "pointer",
-        fontFamily: font,
+        fontSize: 20,
+        fontWeight: 700,
+        margin: 0,
+        color: "#0f172a",
       }}
     >
-      Aggiungi
-    </button>
-  </div>
+      Organi / Cariche
+    </h2>
 
-  <div style={{ marginTop: 24 }}>
-    {soggetti.length === 0 ? (
-      <div
-        style={{
-          fontSize: 14,
-          color: "#64748b",
-        }}
-      >
-        Nessun soggetto inserito.
+    <p
+      style={{
+        marginTop: 6,
+        fontSize: 14,
+        color: "#64748b",
+      }}
+    >
+      Amministratori, consiglieri, sindaci,
+      liquidatori e altri soggetti collegati.
+    </p>
+
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns:
+          "1fr 1fr 1fr 1fr 1fr 1fr auto",
+        gap: 12,
+        marginTop: 18,
+        alignItems: "end",
+      }}
+    >
+      <div>
+        <label style={labelStyle}>
+          Tipo soggetto
+        </label>
+
+        <select
+          style={inputStyle}
+          value={nuovoSoggetto.tipo_soggetto}
+          onChange={(e) =>
+            setNuovoSoggetto((prev) => ({
+              ...prev,
+              tipo_soggetto: e.target.value,
+            }))
+          }
+        >
+          <option value="amministratore">
+            Amministratore
+          </option>
+
+          <option value="presidente_cda">
+            Presidente CDA
+          </option>
+
+          <option value="consigliere">
+            Consigliere
+          </option>
+
+          <option value="amministratore_delegato">
+            Amministratore Delegato
+          </option>
+
+          <option value="liquidatore">
+            Liquidatore
+          </option>
+
+          <option value="presidente_collegio_sindacale">
+            Presidente Collegio Sindacale
+          </option>
+
+          <option value="sindaco_effettivo">
+            Sindaco Effettivo
+          </option>
+
+          <option value="sindaco_supplente">
+            Sindaco Supplente
+          </option>
+        </select>
       </div>
-    ) : (
-      <table
+
+      <div>
+        <label style={labelStyle}>
+          Nome e cognome
+        </label>
+
+        <input
+          style={inputStyle}
+          value={nuovoSoggetto.nome_cognome}
+          onChange={(e) =>
+            setNuovoSoggetto((prev) => ({
+              ...prev,
+              nome_cognome: e.target.value,
+            }))
+          }
+        />
+      </div>
+
+      <div>
+        <label style={labelStyle}>
+          Codice fiscale
+        </label>
+
+        <input
+          style={inputStyle}
+          value={nuovoSoggetto.codice_fiscale}
+          onChange={(e) =>
+            setNuovoSoggetto((prev) => ({
+              ...prev,
+              codice_fiscale: e.target.value,
+            }))
+          }
+        />
+      </div>
+
+      <div>
+        <label style={labelStyle}>
+          Indirizzo
+        </label>
+
+        <input
+          style={inputStyle}
+          value={nuovoSoggetto.indirizzo}
+          onChange={(e) =>
+            setNuovoSoggetto((prev) => ({
+              ...prev,
+              indirizzo: e.target.value,
+            }))
+          }
+        />
+      </div>
+
+      <div>
+        <label style={labelStyle}>
+          Città
+        </label>
+
+        <input
+          style={inputStyle}
+          value={nuovoSoggetto.citta}
+          onChange={(e) =>
+            setNuovoSoggetto((prev) => ({
+              ...prev,
+              citta: e.target.value,
+            }))
+          }
+        />
+      </div>
+
+      <div>
+        <label style={labelStyle}>
+          Carica
+        </label>
+
+        <select
+          style={inputStyle}
+          value={nuovoSoggetto.carica}
+          onChange={(e) =>
+            setNuovoSoggetto((prev) => ({
+              ...prev,
+              carica: e.target.value,
+            }))
+          }
+        >
+          <option value="Amministratore">
+            Amministratore
+          </option>
+
+          <option value="Amministratore Delegato">
+            Amministratore Delegato
+          </option>
+
+          <option value="Amministratore Unico">
+            Amministratore Unico
+          </option>
+
+          <option value="Consigliere">
+            Consigliere
+          </option>
+
+          <option value="Liquidatore">
+            Liquidatore
+          </option>
+
+          <option value="Presidente CDA">
+            Presidente CDA
+          </option>
+
+          <option value="Presidente Collegio Sindacale">
+            Presidente Collegio Sindacale
+          </option>
+
+          <option value="Revisore Legale">
+            Revisore Legale
+          </option>
+
+          <option value="Sindaco Effettivo">
+            Sindaco Effettivo
+          </option>
+
+          <option value="Sindaco Supplente">
+            Sindaco Supplente
+          </option>
+
+          <option value="Sindaco Unico">
+            Sindaco Unico
+          </option>
+        </select>
+      </div>
+
+      <button
+        type="button"
+        onClick={async () => {
+          const res = await fetch(
+            `/api/pratiche/${praticaId}/soggetti`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+              body: JSON.stringify(
+                nuovoSoggetto
+              ),
+            }
+          );
+
+          const data = await res.json();
+
+          if (!res.ok) {
+            alert(
+              data.error ||
+                "Errore inserimento"
+            );
+            return;
+          }
+
+          setNuovoSoggetto({
+            tipo_soggetto:
+              "amministratore",
+            nome_cognome: "",
+            codice_fiscale: "",
+            indirizzo: "",
+            citta: "",
+            carica: "Amministratore",
+          });
+
+          await caricaSoggetti();
+        }}
         style={{
-          width: "100%",
-          borderCollapse: "collapse",
+          border: 0,
+          borderRadius: 8,
+          background: "#2563eb",
+          color: "#fff",
+          padding: "10px 18px",
+          fontSize: 14,
+          fontWeight: 600,
+          cursor: "pointer",
+          fontFamily: font,
         }}
       >
-        <thead>
-          <tr>
-            <th style={thStyle}>Tipo</th>
-            <th style={thStyle}>Nome</th>
-            <th style={thStyle}>Codice fiscale</th>
-            <th style={thStyle}>Carica</th>
-            <th style={thStyle}>Azioni</th>
-          </tr>
-        </thead>
+        Aggiungi
+      </button>
+    </div>
 
-        <tbody>
-          {soggetti.map((s) => (
-            <tr
-              key={s.id}
-              style={{
-                borderBottom:
-                  "1px solid #f1f5f9",
-              }}
-            >
-              <td style={tdStyle}>
-                {s.tipo_soggetto}
-              </td>
-
-              <td style={tdStyle}>
-                {s.nome_cognome}
-              </td>
-
-              <td style={tdStyle}>
-                {s.codice_fiscale}
-              </td>
-
-              <td style={tdStyle}>
-                {s.carica}
-              </td>
-
-              <td style={tdStyle}>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    if (
-                      !confirm(
-                        "Eliminare il soggetto?"
-                      )
-                    )
-                      return;
-
-                    const res = await fetch(
-                      `/api/pratiche/${praticaId}/soggetti/${s.id}`,
-                      {
-                        method: "DELETE",
-                      }
-                    );
-
-                    if (res.ok) {
-                      await caricaSoggetti();
-                    }
-                  }}
-                  style={{
-                    border: 0,
-                    background: "transparent",
-                    color: "#dc2626",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    fontFamily: font,
-                  }}
-                >
-                  Elimina
-                </button>
-              </td>
+    <div style={{ marginTop: 24 }}>
+      {soggetti.length === 0 ? (
+        <div
+          style={{
+            fontSize: 14,
+            color: "#64748b",
+          }}
+        >
+          Nessun soggetto inserito.
+        </div>
+      ) : (
+        <table
+          style={{
+            width: "100%",
+            borderCollapse: "collapse",
+          }}
+        >
+          <thead>
+            <tr>
+              <th style={thStyle}>Tipo</th>
+              <th style={thStyle}>Nome</th>
+              <th style={thStyle}>CF</th>
+              <th style={thStyle}>Indirizzo</th>
+              <th style={thStyle}>Città</th>
+              <th style={thStyle}>Carica</th>
+              <th style={thStyle}>Azioni</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    )}
-  </div>
-</div>
+          </thead>
 
+          <tbody>
+            {soggetti.map((s) => (
+              <tr
+                key={s.id}
+                style={{
+                  borderBottom:
+                    "1px solid #f1f5f9",
+                }}
+              >
+                <td style={tdStyle}>
+                  {s.tipo_soggetto}
+                </td>
+
+                <td style={tdStyle}>
+                  {s.nome_cognome}
+                </td>
+
+                <td style={tdStyle}>
+                  {s.codice_fiscale}
+                </td>
+
+                <td style={tdStyle}>
+                  {s.indirizzo}
+                </td>
+
+                <td style={tdStyle}>
+                  {s.citta}
+                </td>
+
+                <td style={tdStyle}>
+                  {s.carica}
+                </td>
+
+                <td style={tdStyle}>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (
+                        !confirm(
+                          "Eliminare il soggetto?"
+                        )
+                      )
+                        return;
+
+                      const res =
+                        await fetch(
+                          `/api/pratiche/${praticaId}/soggetti/${s.id}`,
+                          {
+                            method:
+                              "DELETE",
+                          }
+                        );
+
+                      if (res.ok) {
+                        await caricaSoggetti();
+                      }
+                    }}
+                    style={{
+                      border: 0,
+                      background:
+                        "transparent",
+                      color: "#dc2626",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      fontFamily: font,
+                    }}
+                  >
+                    Elimina
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  </div>
+)}
 <div
   style={{
     background: "#fff",
