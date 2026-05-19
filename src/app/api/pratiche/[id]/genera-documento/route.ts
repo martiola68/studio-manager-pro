@@ -168,23 +168,25 @@ if (documentoEsistente) {
 
     const dataAtto = datiDocumento.data_atto || pratica.data_apertura;
 
-const sociPlaceholders: Record<string, any> = {};
+    function formatOra(value?: string | null) {
+  if (!value) return "";
+  return String(value).slice(0, 5);
+}
 
-(soci || []).forEach((socio: any, index: number) => {
-  const n = index + 1;
+const sociElenco = (soci || []).map((socio: any) => ({
+  SOCIO_NOME: socio.nome_cognome || "",
+  SOCIO_CF: socio.codice_fiscale || "",
+  SOCIO_QUOTA: socio.percentuale_partecipazione
+    ? `${socio.percentuale_partecipazione}%`
+    : "",
+  SOCIO_PRESENZA: "Presente",
+}));
 
-  sociPlaceholders[`SOCIO_${n}_NOME`] =
-    socio.nome_cognome || "";
-
-  sociPlaceholders[`SOCIO_${n}_QUOTA`] =
-    `${socio.percentuale_partecipazione || 0}%`;
-
-  sociPlaceholders[`SOCIO_${n}_PRESENZA`] =
-    "Presente";
-
-  sociPlaceholders[`SOCIO_${n}_CF`] =
-    socio.codice_fiscale || "";
-});
+const percentualeCapitale = sociElenco.reduce(
+  (totale: number, socio: any) =>
+    totale + Number(String(socio.SOCIO_QUOTA).replace("%", "") || 0),
+  0
+);
     
     const valori = {
       ANNO: anno(dataAtto),
@@ -200,8 +202,8 @@ const sociPlaceholders: Record<string, any> = {};
 
       ORA: datiDocumento.ora_inizio || "",
       Ora: datiDocumento.ora_inizio || "",
-      ORA_INIZIO: datiDocumento.ora_inizio || "",
-      ORA_CHIUSURA: datiDocumento.ora_chiusura || "",
+      ORA_INIZIO: formatOra(datiDocumento.ora_inizio),
+      ORA_CHIUSURA: formatOra(datiDocumento.ora_chiusura),
 
       DENOMINAZIONE:
         datiDocumento.societa_denominazione ||
@@ -259,13 +261,14 @@ const sociPlaceholders: Record<string, any> = {};
       TITOLO_PRATICA:
         pratica.titolo || "",
 
-      NUMERO_PRATICA:
-        pratica.numero_pratica || "",
-    };
+   NUMERO_PRATICA:
+  pratica.numero_pratica || "",
 
-    PERCENTUALE_CAPITALE:
-  datiDocumento.percentuale_soci_presenti ||
-  "",
+PERCENTUALE_CAPITALE:
+  percentualeCapitale,
+
+SOCI:
+  sociElenco,
 
 LIQUIDATORE_NOME:
   datiDocumento.liquidatore_nome ||
@@ -283,8 +286,7 @@ LIQUIDATORE_RESIDENZA:
 
 SEDE_LIQUIDAZIONE:
   sede,
-
-...sociPlaceholders,
+};
 
     doc.render(valori);
 
