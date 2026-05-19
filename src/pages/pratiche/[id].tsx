@@ -285,7 +285,8 @@ async function caricaSoggetti() {
     console.error(error);
   }
 }
-
+}
+  
   async function caricaDocumenti() {
   try {
     const res = await fetch(
