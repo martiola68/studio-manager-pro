@@ -79,6 +79,25 @@ export async function POST(req: Request, { params }: Params) {
       );
     }
 
+const { data: soci } = await supabaseAdmin
+  .from("tbpratiche_distribuzione_utili")
+  .select("*")
+  .eq("pratica_id", id)
+  .order("created_at");
+
+const { data: soggetti } = await supabaseAdmin
+  .from("tbpratiche_soggetti")
+  .select("*")
+  .eq("pratica_id", id);
+
+const liquidatore =
+  soggetti?.find(
+    (s: any) =>
+      String(s.carica || "")
+        .toLowerCase()
+        .includes("liquidatore")
+  ) || null;
+    
     const { data: documentoEsistente } = await supabaseAdmin
   .from("tbpratiche_documenti")
   .select("id, nome_file")
@@ -149,6 +168,24 @@ if (documentoEsistente) {
 
     const dataAtto = datiDocumento.data_atto || pratica.data_apertura;
 
+const sociPlaceholders: Record<string, any> = {};
+
+(soci || []).forEach((socio: any, index: number) => {
+  const n = index + 1;
+
+  sociPlaceholders[`SOCIO_${n}_NOME`] =
+    socio.nome_cognome || "";
+
+  sociPlaceholders[`SOCIO_${n}_QUOTA`] =
+    `${socio.percentuale_partecipazione || 0}%`;
+
+  sociPlaceholders[`SOCIO_${n}_PRESENZA`] =
+    "Presente";
+
+  sociPlaceholders[`SOCIO_${n}_CF`] =
+    socio.codice_fiscale || "";
+});
+    
     const valori = {
       ANNO: anno(dataAtto),
       Anno: anno(dataAtto),
@@ -225,6 +262,29 @@ if (documentoEsistente) {
       NUMERO_PRATICA:
         pratica.numero_pratica || "",
     };
+
+    PERCENTUALE_CAPITALE:
+  datiDocumento.percentuale_soci_presenti ||
+  "",
+
+LIQUIDATORE_NOME:
+  datiDocumento.liquidatore_nome ||
+  liquidatore?.nome_cognome ||
+  "",
+
+LIQUIDATORE_CF:
+  datiDocumento.liquidatore_codice_fiscale ||
+  liquidatore?.codice_fiscale ||
+  "",
+
+LIQUIDATORE_RESIDENZA:
+  liquidatore?.indirizzo ||
+  "",
+
+SEDE_LIQUIDAZIONE:
+  sede,
+
+...sociPlaceholders,
 
     doc.render(valori);
 
