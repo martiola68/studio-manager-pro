@@ -100,6 +100,7 @@ const [nuovoLiquidatore, setNuovoLiquidatore] = useState({
 
 const [documenti, setDocumenti] = useState<any[]>([]);
 const [soggetti, setSoggetti] = useState<any[]>([]);
+  const [soci, setSoci] = useState<any[]>([]);
 const [modelli, setModelli] = useState<any[]>([]);
 const [modelloSelezionato, setModelloSelezionato] =
   useState("");
@@ -115,6 +116,16 @@ const [fileDocumento, setFileDocumento] = useState<File | null>(null);
   indirizzo: "",
   citta: "",
   carica: "Amministratore",
+});
+
+  const [nuovoSocio, setNuovoSocio] = useState({
+  nome_cognome: "",
+  codice_fiscale: "",
+  percentuale_partecipazione: "",
+  importo_utile: "",
+  percentuale_ritenuta: "26",
+  importo_netto: "",
+  tipo_pagamento: "",
 });
 
   const [form, setForm] = useState({
@@ -240,7 +251,8 @@ percentuale_soci_presenti:
   caricaPratica();
   caricaDocumenti();
   caricaSoggetti();
-  caricaModelli();
+caricaSoci();
+caricaModelli();
 }
   }, [praticaId]);
 
@@ -267,8 +279,22 @@ percentuale_soci_presenti:
   }
 }
 
-async function caricaSoggetti() {
+async function caricaSoci() {
+  try {
+    const res = await fetch(`/api/pratiche/${praticaId}/soci`, {
+      cache: "no-store",
+    });
 
+    const data = await res.json();
+
+    if (res.ok) {
+      setSoci(data.soci || []);
+    }
+  } catch (error) {
+    console.error(error);
+  }
+}
+  
   async function caricaSoggetti() {
   try {
     const res = await fetch(
@@ -1338,6 +1364,142 @@ const mostraOrganiCariche =
     </div>
   </div>
 )}
+
+<div
+  style={{
+    background: "#fff",
+    border: "1px solid #d1d5db",
+    borderRadius: 10,
+    padding: 24,
+    marginTop: 16,
+  }}
+>
+  <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: "#0f172a" }}>
+    Soci presenti / Distribuzione utili
+  </h2>
+
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "1.5fr 1fr 0.8fr 1fr 0.8fr 1fr 1fr auto",
+      gap: 12,
+      marginTop: 18,
+      alignItems: "end",
+    }}
+  >
+    <input style={inputStyle} placeholder="Nominativo" value={nuovoSocio.nome_cognome} onChange={(e) => setNuovoSocio({ ...nuovoSocio, nome_cognome: e.target.value })} />
+    <input style={inputStyle} placeholder="Codice fiscale" value={nuovoSocio.codice_fiscale} onChange={(e) => setNuovoSocio({ ...nuovoSocio, codice_fiscale: e.target.value })} />
+    <input style={inputStyle} placeholder="% quota" value={nuovoSocio.percentuale_partecipazione} onChange={(e) => setNuovoSocio({ ...nuovoSocio, percentuale_partecipazione: e.target.value })} />
+    <input style={inputStyle} placeholder="Lordo" value={nuovoSocio.importo_utile} onChange={(e) => setNuovoSocio({ ...nuovoSocio, importo_utile: e.target.value })} />
+    <input style={inputStyle} placeholder="% rit." value={nuovoSocio.percentuale_ritenuta} onChange={(e) => setNuovoSocio({ ...nuovoSocio, percentuale_ritenuta: e.target.value })} />
+    <input style={inputStyle} placeholder="Netto" value={nuovoSocio.importo_netto} onChange={(e) => setNuovoSocio({ ...nuovoSocio, importo_netto: e.target.value })} />
+    <input style={inputStyle} placeholder="Pagamento" value={nuovoSocio.tipo_pagamento} onChange={(e) => setNuovoSocio({ ...nuovoSocio, tipo_pagamento: e.target.value })} />
+
+    <button
+      type="button"
+      onClick={async () => {
+        const res = await fetch(`/api/pratiche/${praticaId}/soci`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(nuovoSocio),
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          alert(data.error || "Errore inserimento socio");
+          return;
+        }
+
+        setNuovoSocio({
+          nome_cognome: "",
+          codice_fiscale: "",
+          percentuale_partecipazione: "",
+          importo_utile: "",
+          percentuale_ritenuta: "26",
+          importo_netto: "",
+          tipo_pagamento: "",
+        });
+
+        await caricaSoci();
+      }}
+      style={{
+        border: 0,
+        borderRadius: 8,
+        background: "#2563eb",
+        color: "#fff",
+        padding: "10px 18px",
+        fontSize: 14,
+        fontWeight: 600,
+        cursor: "pointer",
+        fontFamily: font,
+      }}
+    >
+      Aggiungi
+    </button>
+  </div>
+
+  <div style={{ marginTop: 24 }}>
+    {soci.length === 0 ? (
+      <div style={{ fontSize: 14, color: "#64748b" }}>
+        Nessun socio inserito.
+      </div>
+    ) : (
+      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <thead>
+          <tr>
+            <th style={thStyle}>Socio</th>
+            <th style={thStyle}>CF</th>
+            <th style={thStyle}>%</th>
+            <th style={thStyle}>Lordo</th>
+            <th style={thStyle}>Ritenuta</th>
+            <th style={thStyle}>Netto</th>
+            <th style={thStyle}>Pagamento</th>
+            <th style={thStyle}>Azioni</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {soci.map((s) => (
+            <tr key={s.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+              <td style={tdStyle}>{s.nome_cognome}</td>
+              <td style={tdStyle}>{s.codice_fiscale}</td>
+              <td style={tdStyle}>{s.percentuale_partecipazione}%</td>
+              <td style={tdStyle}>{s.importo_utile}</td>
+              <td style={tdStyle}>{s.importo_ritenuta}</td>
+              <td style={tdStyle}>{s.importo_netto}</td>
+              <td style={tdStyle}>{s.tipo_pagamento}</td>
+              <td style={tdStyle}>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!confirm("Eliminare il socio?")) return;
+
+                    await fetch(`/api/pratiche/${praticaId}/soci/${s.id}`, {
+                      method: "DELETE",
+                    });
+
+                    await caricaSoci();
+                  }}
+                  style={{
+                    border: 0,
+                    background: "transparent",
+                    color: "#dc2626",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    fontFamily: font,
+                  }}
+                >
+                  Elimina
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    )}
+  </div>
+</div>
+          
 <div
   style={{
     background: "#fff",
