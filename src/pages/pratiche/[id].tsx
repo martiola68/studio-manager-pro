@@ -843,44 +843,62 @@ const percentualeSuperata =
   />
 </div>
 
-<input
-  style={inputStyle}
-  placeholder="% rit."
-  disabled={!isDistribuzioneUtili}
-  value={nuovoSocio.percentuale_ritenuta}
-  onChange={(e) =>
-    setNuovoSocio({
-      ...nuovoSocio,
-      percentuale_ritenuta: e.target.value,
-    })
-  }
-/>
+<div>
+  <label style={labelStyle}>
+    % ritenuta
+  </label>
 
-<input
-  style={inputStyle}
-  placeholder="Netto"
-  disabled={!isDistribuzioneUtili}
-  value={nuovoSocio.importo_netto}
-  onChange={(e) =>
-    setNuovoSocio({
-      ...nuovoSocio,
-      importo_netto: e.target.value,
-    })
-  }
-/>
+  <input
+    style={inputStyle}
+    placeholder="% rit."
+    disabled={!isDistribuzioneUtili}
+    value={nuovoSocio.percentuale_ritenuta}
+    onChange={(e) =>
+      setNuovoSocio({
+        ...nuovoSocio,
+        percentuale_ritenuta: e.target.value,
+      })
+    }
+  />
+</div>
 
-<input
-  style={inputStyle}
-  placeholder="Pagamento"
-  disabled={!isDistribuzioneUtili}
-  value={nuovoSocio.tipo_pagamento}
-  onChange={(e) =>
-    setNuovoSocio({
-      ...nuovoSocio,
-      tipo_pagamento: e.target.value,
-    })
-  }
-/>
+<div>
+  <label style={labelStyle}>
+    Importo netto
+  </label>
+
+  <input
+    style={inputStyle}
+    placeholder="Netto"
+    disabled={!isDistribuzioneUtili}
+    value={nuovoSocio.importo_netto}
+    onChange={(e) =>
+      setNuovoSocio({
+        ...nuovoSocio,
+        importo_netto: e.target.value,
+      })
+    }
+  />
+</div>
+
+<div>
+  <label style={labelStyle}>
+    Mod. pagamento
+  </label>
+
+  <input
+    style={inputStyle}
+    placeholder="Pagamento"
+    disabled={!isDistribuzioneUtili}
+    value={nuovoSocio.tipo_pagamento}
+    onChange={(e) =>
+      setNuovoSocio({
+        ...nuovoSocio,
+        tipo_pagamento: e.target.value,
+      })
+    }
+  />
+</div>
     <button
       type="button"
      onClick={async () => {
