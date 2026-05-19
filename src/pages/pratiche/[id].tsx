@@ -1449,18 +1449,33 @@ const mostraOrganiCariche =
   <option value="__nuovo__">+ Inserisci nuovo nominativo</option>
 </select>
 
- {nuovoSocio.nominativo_id === "__nuovo__" && (
-  <input
-    style={{ ...inputStyle, marginTop: 8 }}
-    placeholder="Nuovo nominativo"
-    value={nuovoSocio.nome_cognome}
-    onChange={(e) =>
-      setNuovoSocio({
-        ...nuovoSocio,
-        nome_cognome: e.target.value,
-      })
-    }
-  />
+{nuovoSocio.nominativo_id === "__nuovo__" && (
+  <>
+    <input
+      style={{ ...inputStyle, marginTop: 8 }}
+      placeholder="Nuovo nominativo"
+      value={nuovoSocio.nome_cognome}
+      onChange={(e) =>
+        setNuovoSocio({
+          ...nuovoSocio,
+          nome_cognome: e.target.value,
+        })
+      }
+    />
+
+   <input
+  style={inputStyle}
+  placeholder="Codice fiscale"
+  value={nuovoSocio.codice_fiscale}
+  disabled={nuovoSocio.nominativo_id !== "__nuovo__"}
+  onChange={(e) =>
+    setNuovoSocio({
+      ...nuovoSocio,
+      codice_fiscale: e.target.value,
+    })
+  }
+/>
+  </>
 )}
     
     <input style={inputStyle} placeholder="Codice fiscale" value={nuovoSocio.codice_fiscale} onChange={(e) => setNuovoSocio({ ...nuovoSocio, codice_fiscale: e.target.value })} />
@@ -1472,32 +1487,42 @@ const mostraOrganiCariche =
 
     <button
       type="button"
-      onClick={async () => {
-        const res = await fetch(`/api/pratiche/${praticaId}/soci`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(nuovoSocio),
-        });
+     onClick={async () => {
+  if (!nuovoSocio.nome_cognome.trim()) {
+    alert("Il nominativo è obbligatorio.");
+    return;
+  }
 
-        if (!res.ok) {
-          const data = await res.json();
-          alert(data.error || "Errore inserimento socio");
-          return;
-        }
+  if (!nuovoSocio.codice_fiscale.trim()) {
+    alert("Il codice fiscale è obbligatorio.");
+    return;
+  }
 
-       setNuovoSocio({
-  nominativo_id: "",
-  nome_cognome: "",
-  codice_fiscale: "",
-  percentuale_partecipazione: "",
-  importo_utile: "",
-  percentuale_ritenuta: "26",
-  importo_netto: "",
-  tipo_pagamento: "",
-});
+  const res = await fetch(`/api/pratiche/${praticaId}/soci`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(nuovoSocio),
+  });
 
-        await caricaSoci();
-      }}
+  if (!res.ok) {
+    const data = await res.json();
+    alert(data.error || "Errore inserimento socio");
+    return;
+  }
+
+  setNuovoSocio({
+    nominativo_id: "",
+    nome_cognome: "",
+    codice_fiscale: "",
+    percentuale_partecipazione: "",
+    importo_utile: "",
+    percentuale_ritenuta: "26",
+    importo_netto: "",
+    tipo_pagamento: "",
+  });
+
+  await caricaSoci();
+}}
       style={{
         border: 0,
         borderRadius: 8,
