@@ -110,3 +110,4 @@ return NextResponse.json({
   success: true,
   nominativo: data,
 });
+  }
