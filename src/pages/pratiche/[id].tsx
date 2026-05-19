@@ -697,11 +697,7 @@ const percentualeSuperata =
     alignItems: "end",
   }}
 >
-  <div>
-    <label style={labelStyle}>
-      Cognome e nome
-    </label>
-
+ 
 <div>
   <label style={labelStyle}>
     Cognome e nome
