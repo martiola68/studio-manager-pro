@@ -313,7 +313,6 @@ async function caricaSoci() {
     console.error(error);
   }
 }
-}
   
   async function caricaDocumenti() {
   try {
@@ -1759,52 +1758,62 @@ const mostraOrganiCariche =
               </td>
 
 <td style={tdStyle}>
-  <a
-    href={`/api/pratiche/${praticaId}/documenti/${doc.id}/download`}
-    target="_blank"
+  <div
     style={{
-      color: "#2563eb",
-      fontWeight: 600,
-      textDecoration: "none",
+      display: "flex",
+      gap: 12,
+      alignItems: "center",
     }}
   >
-    Scarica
-  </a>
+    <a
+      href={`/api/pratiche/${praticaId}/documenti/${doc.id}/download`}
+      target="_blank"
+      style={{
+        color: "#2563eb",
+        fontWeight: 600,
+        textDecoration: "none",
+      }}
+    >
+      Scarica
+    </a>
+
+    <button
+      type="button"
+      onClick={async () => {
+        if (!confirm("Eliminare questo documento?")) return;
+
+        const res = await fetch(
+          `/api/pratiche/${praticaId}/documenti/${doc.id}`,
+          {
+            method: "DELETE",
+          }
+        );
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          alert(
+            data.error ||
+              "Errore eliminazione documento"
+          );
+          return;
+        }
+
+        await caricaDocumenti();
+      }}
+      style={{
+        border: 0,
+        background: "transparent",
+        color: "#dc2626",
+        fontWeight: 600,
+        cursor: "pointer",
+        fontFamily: font,
+      }}
+    >
+      Elimina
+    </button>
+  </div>
 </td>
-
-              <button
-  type="button"
-  onClick={async () => {
-    if (!confirm("Eliminare questo documento?")) return;
-
-    const res = await fetch(
-      `/api/pratiche/${praticaId}/documenti/${doc.id}`,
-      {
-        method: "DELETE",
-      }
-    );
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      alert(data.error || "Errore eliminazione documento");
-      return;
-    }
-
-    await caricaDocumenti();
-  }}
-  style={{
-    marginLeft: 14,
-    border: 0,
-    background: "transparent",
-    color: "#dc2626",
-    fontWeight: 600,
-    cursor: "pointer",
-    fontFamily: font,
-  }}
->
-  Elimina
-</button>
             </tr>
           ))}
         </tbody>
