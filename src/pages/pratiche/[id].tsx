@@ -452,6 +452,15 @@ const mostraOrganiCariche =
       .includes(chiave)
   );
 
+  const isDistribuzioneUtili =
+  String(
+    modelloCorrente?.nome ||
+    modelloCorrente?.codice ||
+    ""
+  )
+    .toLowerCase()
+    .includes("distribuzione utili");
+
   return (
     <main style={{ padding: 28, background: "#f8fafc", minHeight: "100vh", fontFamily: font }}>
       <div style={{ maxWidth: 1280, margin: "0 auto" }}>
@@ -742,11 +751,57 @@ const mostraOrganiCariche =
     
     <input style={inputStyle} placeholder="Codice fiscale" value={nuovoSocio.codice_fiscale} onChange={(e) => setNuovoSocio({ ...nuovoSocio, codice_fiscale: e.target.value })} />
     <input style={inputStyle} placeholder="% quota" value={nuovoSocio.percentuale_partecipazione} onChange={(e) => setNuovoSocio({ ...nuovoSocio, percentuale_partecipazione: e.target.value })} />
-    <input style={inputStyle} placeholder="Lordo" value={nuovoSocio.importo_utile} onChange={(e) => setNuovoSocio({ ...nuovoSocio, importo_utile: e.target.value })} />
-    <input style={inputStyle} placeholder="% rit." value={nuovoSocio.percentuale_ritenuta} onChange={(e) => setNuovoSocio({ ...nuovoSocio, percentuale_ritenuta: e.target.value })} />
-    <input style={inputStyle} placeholder="Netto" value={nuovoSocio.importo_netto} onChange={(e) => setNuovoSocio({ ...nuovoSocio, importo_netto: e.target.value })} />
-    <input style={inputStyle} placeholder="Pagamento" value={nuovoSocio.tipo_pagamento} onChange={(e) => setNuovoSocio({ ...nuovoSocio, tipo_pagamento: e.target.value })} />
+   <input
+  style={inputStyle}
+  placeholder="Lordo"
+  disabled={!isDistribuzioneUtili}
+  value={nuovoSocio.importo_utile}
+  onChange={(e) =>
+    setNuovoSocio({
+      ...nuovoSocio,
+      importo_utile: e.target.value,
+    })
+  }
+/>
 
+<input
+  style={inputStyle}
+  placeholder="% rit."
+  disabled={!isDistribuzioneUtili}
+  value={nuovoSocio.percentuale_ritenuta}
+  onChange={(e) =>
+    setNuovoSocio({
+      ...nuovoSocio,
+      percentuale_ritenuta: e.target.value,
+    })
+  }
+/>
+
+<input
+  style={inputStyle}
+  placeholder="Netto"
+  disabled={!isDistribuzioneUtili}
+  value={nuovoSocio.importo_netto}
+  onChange={(e) =>
+    setNuovoSocio({
+      ...nuovoSocio,
+      importo_netto: e.target.value,
+    })
+  }
+/>
+
+<input
+  style={inputStyle}
+  placeholder="Pagamento"
+  disabled={!isDistribuzioneUtili}
+  value={nuovoSocio.tipo_pagamento}
+  onChange={(e) =>
+    setNuovoSocio({
+      ...nuovoSocio,
+      tipo_pagamento: e.target.value,
+    })
+  }
+/>
     <button
       type="button"
      onClick={async () => {
