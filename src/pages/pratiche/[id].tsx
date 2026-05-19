@@ -101,6 +101,7 @@ const [nuovoLiquidatore, setNuovoLiquidatore] = useState({
 const [documenti, setDocumenti] = useState<any[]>([]);
 const [soggetti, setSoggetti] = useState<any[]>([]);
   const [soci, setSoci] = useState<any[]>([]);
+  const [nominativi, setNominativi] = useState<any[]>([]);
 const [modelli, setModelli] = useState<any[]>([]);
 const [modelloSelezionato, setModelloSelezionato] =
   useState("");
@@ -118,7 +119,8 @@ const [fileDocumento, setFileDocumento] = useState<File | null>(null);
   carica: "Amministratore",
 });
 
-  const [nuovoSocio, setNuovoSocio] = useState({
+ const [nuovoSocio, setNuovoSocio] = useState({
+  nominativo_id: "",
   nome_cognome: "",
   codice_fiscale: "",
   percentuale_partecipazione: "",
@@ -247,12 +249,13 @@ percentuale_soci_presenti:
       }
     }
 
- if (praticaId) {
+if (praticaId) {
   caricaPratica();
   caricaDocumenti();
   caricaSoggetti();
-caricaSoci();
-caricaModelli();
+  caricaSoci();
+  caricaModelli();
+  caricaNominativi();
 }
   }, [praticaId]);
 
@@ -289,6 +292,22 @@ async function caricaSoci() {
 
     if (res.ok) {
       setSoci(data.soci || []);
+    }
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+  async function caricaNominativi() {
+  try {
+    const res = await fetch("/api/pratiche/nominativi", {
+      cache: "no-store",
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      setNominativi(data.nominativi || []);
     }
   } catch (error) {
     console.error(error);
@@ -1386,7 +1405,30 @@ const mostraOrganiCariche =
       alignItems: "end",
     }}
   >
-    <input style={inputStyle} placeholder="Nominativo" value={nuovoSocio.nome_cognome} onChange={(e) => setNuovoSocio({ ...nuovoSocio, nome_cognome: e.target.value })} />
+  <select
+  style={inputStyle}
+  value={nuovoSocio.nominativo_id}
+  onChange={(e) => {
+    const selected = nominativi.find(
+      (n) => n.id === e.target.value
+    );
+
+    setNuovoSocio({
+      ...nuovoSocio,
+      nominativo_id: selected?.id || "",
+      nome_cognome: selected?.nome_cognome || "",
+      codice_fiscale: selected?.codice_fiscale || "",
+    });
+  }}
+>
+  <option value="">Seleziona nominativo</option>
+
+  {nominativi.map((n) => (
+    <option key={n.id} value={n.id}>
+      {n.nome_cognome}
+    </option>
+  ))}
+</select>
     <input style={inputStyle} placeholder="Codice fiscale" value={nuovoSocio.codice_fiscale} onChange={(e) => setNuovoSocio({ ...nuovoSocio, codice_fiscale: e.target.value })} />
     <input style={inputStyle} placeholder="% quota" value={nuovoSocio.percentuale_partecipazione} onChange={(e) => setNuovoSocio({ ...nuovoSocio, percentuale_partecipazione: e.target.value })} />
     <input style={inputStyle} placeholder="Lordo" value={nuovoSocio.importo_utile} onChange={(e) => setNuovoSocio({ ...nuovoSocio, importo_utile: e.target.value })} />
@@ -1409,15 +1451,16 @@ const mostraOrganiCariche =
           return;
         }
 
-        setNuovoSocio({
-          nome_cognome: "",
-          codice_fiscale: "",
-          percentuale_partecipazione: "",
-          importo_utile: "",
-          percentuale_ritenuta: "26",
-          importo_netto: "",
-          tipo_pagamento: "",
-        });
+       setNuovoSocio({
+  nominativo_id: "",
+  nome_cognome: "",
+  codice_fiscale: "",
+  percentuale_partecipazione: "",
+  importo_utile: "",
+  percentuale_ritenuta: "26",
+  importo_netto: "",
+  tipo_pagamento: "",
+});
 
         await caricaSoci();
       }}
