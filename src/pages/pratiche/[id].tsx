@@ -100,6 +100,10 @@ const [nuovoLiquidatore, setNuovoLiquidatore] = useState({
 
 const [documenti, setDocumenti] = useState<any[]>([]);
 const [soggetti, setSoggetti] = useState<any[]>([]);
+const [modelli, setModelli] = useState<any[]>([]);
+const [modelloSelezionato, setModelloSelezionato] =
+  useState("");
+  
 const [uploadingDocumento, setUploadingDocumento] = useState(false);
 const [tipoDocumento, setTipoDocumento] = useState("altro");
 const [fileDocumento, setFileDocumento] = useState<File | null>(null);
@@ -230,16 +234,38 @@ percentuale_soci_presenti:
       }
     }
 
- if (praticaId) {
+ iif (praticaId) {
   caricaPratica();
   caricaDocumenti();
   caricaSoggetti();
+  caricaModelli();
 }
   }, [praticaId]);
 
   function aggiornaCampo(campo: string, valore: string) {
     setForm((prev) => ({ ...prev, [campo]: valore }));
   }
+
+  async function caricaModelli() {
+  try {
+    const res = await fetch(
+      `/api/pratiche/${praticaId}/modelli`,
+      {
+        cache: "no-store",
+      }
+    );
+
+    const data = await res.json();
+
+    if (res.ok) {
+      setModelli(data.modelli || []);
+    }
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+async function caricaSoggetti() {
 
   async function caricaSoggetti() {
   try {
@@ -1198,58 +1224,95 @@ async function uploadDocumento() {
     Documenti pratica
   </h2>
 
-            <button
-  type="button"
-  onClick={async () => {
-    try {
-      const res = await fetch(`/api/pratiche/${praticaId}/genera-documento`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          codice_modello: "VERBALE_ASSEMBLEA_LIQUIDAZIONE",
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Errore generazione documento");
-      }
-
-      await caricaDocumenti();
-      alert("Verbale generato correttamente.");
-    } catch (error: any) {
-      alert(error.message || "Errore generazione verbale");
-    }
-  }}
+<div
   style={{
+    display: "flex",
+    gap: 12,
+    alignItems: "end",
     marginTop: 12,
-    border: 0,
-    borderRadius: 8,
-    background: "#16a34a",
-    color: "#fff",
-    padding: "10px 18px",
-    fontSize: 14,
-    fontWeight: 600,
-    cursor: "pointer",
-    fontFamily: font,
   }}
 >
-  Genera verbale
-</button>
+  <div style={{ minWidth: 320 }}>
+    <label style={labelStyle}>
+      Modello da generare
+    </label>
 
-  <p
+    <select
+      style={inputStyle}
+      value={modelloSelezionato}
+      onChange={(e) =>
+        setModelloSelezionato(e.target.value)
+      }
+    >
+      <option value="">
+        Seleziona modello
+      </option>
+
+      {modelli.map((m) => (
+        <option key={m.id} value={m.codice}>
+          {m.nome}
+        </option>
+      ))}
+    </select>
+  </div>
+
+  <button
+    type="button"
+    onClick={async () => {
+      try {
+        if (!modelloSelezionato) {
+          alert("Seleziona un modello");
+          return;
+        }
+
+        const res = await fetch(
+          `/api/pratiche/${praticaId}/genera-documento`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              codice_modello:
+                modelloSelezionato,
+            }),
+          }
+        );
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(
+            data.error ||
+              "Errore generazione documento"
+          );
+        }
+
+        await caricaDocumenti();
+
+        alert("Documento generato");
+      } catch (error: any) {
+        alert(
+          error.message ||
+            "Errore generazione documento"
+        );
+      }
+    }}
     style={{
-      marginTop: 6,
+      border: 0,
+      borderRadius: 8,
+      background: "#16a34a",
+      color: "#fff",
+      padding: "10px 18px",
       fontSize: 14,
-      color: "#64748b",
+      fontWeight: 600,
+      cursor: "pointer",
+      fontFamily: font,
     }}
   >
-    Carica verbali, ricevute di deposito,
-    visure e documenti collegati alla pratica.
-  </p>
+    Genera documento
+  </button>
+</div>
 
   <div
     style={{
