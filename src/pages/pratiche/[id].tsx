@@ -461,6 +461,12 @@ const mostraOrganiCariche =
     .toLowerCase()
     .includes("distribuzione utili");
 
+  const percentualeSociPresentiCalcolata = soci.reduce(
+  (totale, socio) =>
+    totale + Number(socio.percentuale_partecipazione || 0),
+  0
+);
+
   return (
     <main style={{ padding: 28, background: "#f8fafc", minHeight: "100vh", fontFamily: font }}>
       <div style={{ maxWidth: 1280, margin: "0 auto" }}>
@@ -646,16 +652,14 @@ const mostraOrganiCariche =
 
   <div>
     <label style={labelStyle}>% soci presenti</label>
-    <input
-      type="number"
-      min="0"
-      max="100"
-      style={inputStyle}
-      value={form.percentuale_soci_presenti}
-      onChange={(e) =>
-        aggiornaCampo("percentuale_soci_presenti", e.target.value)
-      }
-    />
+   <input
+  type="number"
+  min="0"
+  max="100"
+  style={inputStyle}
+  value={percentualeSociPresentiCalcolata}
+  disabled
+/>
   </div>
 </div>
 
@@ -721,32 +725,17 @@ const mostraOrganiCariche =
 </select>
 
 {nuovoSocio.nominativo_id === "__nuovo__" && (
-  <>
-    <input
-      style={{ ...inputStyle, marginTop: 8 }}
-      placeholder="Nuovo nominativo"
-      value={nuovoSocio.nome_cognome}
-      onChange={(e) =>
-        setNuovoSocio({
-          ...nuovoSocio,
-          nome_cognome: e.target.value,
-        })
-      }
-    />
-
-   <input
-  style={inputStyle}
-  placeholder="Codice fiscale"
-  value={nuovoSocio.codice_fiscale}
-  disabled={nuovoSocio.nominativo_id !== "__nuovo__"}
-  onChange={(e) =>
-    setNuovoSocio({
-      ...nuovoSocio,
-      codice_fiscale: e.target.value,
-    })
-  }
-/>
-  </>
+  <input
+    style={{ ...inputStyle, marginTop: 8 }}
+    placeholder="Nuovo nominativo"
+    value={nuovoSocio.nome_cognome}
+    onChange={(e) =>
+      setNuovoSocio({
+        ...nuovoSocio,
+        nome_cognome: e.target.value,
+      })
+    }
+  />
 )}
     
     <input style={inputStyle} placeholder="Codice fiscale" value={nuovoSocio.codice_fiscale} onChange={(e) => setNuovoSocio({ ...nuovoSocio, codice_fiscale: e.target.value })} />
