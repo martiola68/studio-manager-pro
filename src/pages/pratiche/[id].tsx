@@ -2062,6 +2062,67 @@ const percentualeSuperata =
               </td>
 
 <td style={tdStyle}>
+  <div
+    style={{
+      display: "flex",
+      gap: 12,
+      alignItems: "center",
+    }}
+  >
+    <a
+      href={`/api/pratiche/${praticaId}/documenti/${doc.id}/download`}
+      target="_blank"
+      rel="noreferrer"
+      title="Scarica documento"
+      style={{
+        color: "#2563eb",
+        display: "flex",
+        alignItems: "center",
+      }}
+    >
+      <Download size={18} />
+    </a>
+
+    <button
+      type="button"
+      title="Elimina documento"
+      onClick={async () => {
+        if (!confirm("Eliminare questo documento?"))
+          return;
+
+        const res = await fetch(
+          `/api/pratiche/${praticaId}/documenti/${doc.id}`,
+          {
+            method: "DELETE",
+          }
+        );
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          alert(
+            data.error ||
+              "Errore eliminazione documento"
+          );
+          return;
+        }
+
+        await caricaDocumenti();
+      }}
+      style={{
+        border: 0,
+        background: "transparent",
+        color: "#dc2626",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        padding: 0,
+      }}
+    >
+      <Trash2 size={18} />
+    </button>
+  </div>
+</td>
             </tr>
           ))}
         </tbody>
