@@ -1498,6 +1498,37 @@ const mostraOrganiCariche =
     return;
   }
 
+       if (nuovoSocio.nominativo_id === "__nuovo__") {
+  const saveNomRes = await fetch(
+    "/api/pratiche/nominativi",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        nome_cognome: nuovoSocio.nome_cognome,
+        codice_fiscale: nuovoSocio.codice_fiscale,
+      }),
+    }
+  );
+
+  const saveNomData = await saveNomRes.json();
+
+  if (!saveNomRes.ok) {
+    alert(
+      saveNomData.error ||
+        "Errore salvataggio nominativo"
+    );
+    return;
+  }
+
+  await caricaNominativi();
+
+  nuovoSocio.nominativo_id =
+    saveNomData.nominativo.id;
+}
+
   const res = await fetch(`/api/pratiche/${praticaId}/soci`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
