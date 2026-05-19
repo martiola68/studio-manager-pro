@@ -30,14 +30,16 @@ export async function POST(req: Request, { params }: Params) {
   const { data, error } = await supabaseAdmin
     .from("tbpratiche_soggetti")
     .insert({
-      pratica_id: id,
-      tipo_soggetto: body.tipo_soggetto,
-      nome_cognome: body.nome_cognome,
-      codice_fiscale: body.codice_fiscale || null,
-      carica: body.carica || null,
-      note: body.note || null,
-      ordine: body.ordine || 0,
-    })
+  pratica_id: id,
+  tipo_soggetto: body.tipo_soggetto,
+  nome_cognome: body.nome_cognome,
+  codice_fiscale: body.codice_fiscale || null,
+  indirizzo: body.indirizzo || null,
+  citta: body.citta || null,
+  carica: body.carica || null,
+  note: body.note || null,
+  ordine: body.ordine || 0,
+})
     .select()
     .single();
 
