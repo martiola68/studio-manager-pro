@@ -6,7 +6,7 @@ export async function GET() {
 
   const { data, error } = await supabaseAdmin
     .from("tbpratiche_nominativi" as any)
-    .select("id, nome_cognome, codice_fiscale")
+    .select("id, nome_cognome, codice_fiscale, indirizzo, citta, provincia, cap")
     .order("nome_cognome");
 
   if (error) {
@@ -23,6 +23,10 @@ export async function POST(req: Request) {
 
   const nome_cognome = String(body.nome_cognome || "").trim();
   const codice_fiscale = String(body.codice_fiscale || "").trim();
+  const indirizzo = String(body.indirizzo || "").trim();
+  const citta = String(body.citta || "").trim();
+  const provincia = String(body.provincia || "").trim();
+  const cap = String(body.cap || "").trim();
 
   if (!nome_cognome) {
     return NextResponse.json(
@@ -62,6 +66,10 @@ export async function POST(req: Request) {
     .insert({
       nome_cognome,
       codice_fiscale,
+       indirizzo: indirizzo || null,
+      citta: citta || null,
+      provincia: provincia || null,
+      cap: cap || null,
     })
     .select("id, nome_cognome, codice_fiscale")
     .single();
