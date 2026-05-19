@@ -662,11 +662,32 @@ const percentualeSuperata =
 
   <div>
     <label style={labelStyle}>% soci presenti</label>
-   <input
+  <input
   type="number"
   min="0"
   max="100"
-  style={inputStyle}
+  style={{
+    ...inputStyle,
+    background:
+      percentualeSociPresentiCalcolata > 100
+        ? "#dc2626"
+        : "#fff",
+
+    color:
+      percentualeSociPresentiCalcolata > 100
+        ? "#fff"
+        : "#111827",
+
+    borderColor:
+      percentualeSociPresentiCalcolata > 100
+        ? "#dc2626"
+        : "#9ca3af",
+
+    fontWeight:
+      percentualeSociPresentiCalcolata > 100
+        ? 700
+        : 500,
+  }}
   value={percentualeSociPresentiCalcolata}
   disabled
 />
