@@ -16,6 +16,12 @@ export async function GET() {
     );
   }
 
+  const isDistribuzioneUtili = String(
+  modelloCorrente?.nome || modelloCorrente?.codice || ""
+)
+  .toLowerCase()
+  .includes("distribuzione utili");
+
   return NextResponse.json({
     nominativi: data || [],
   });
@@ -34,31 +40,73 @@ export async function POST(req: Request) {
     );
   }
 
+  if (!codice_fiscale) {
+    return NextResponse.json(
+      { error: "Codice fiscale obbligatorio" },
+      { status: 400 }
+    );
+  }
+
   const supabaseAdmin = getSupabaseAdmin();
 
-  const { data, error } = await supabaseAdmin
+  const { data: esistente, error: searchError } = await supabaseAdmin
     .from("tbpratiche_nominativi" as any)
-    .upsert(
-      {
-        nome_cognome,
-        codice_fiscale: codice_fiscale || null,
-      },
-      {
-        onConflict: "codice_fiscale",
-      }
-    )
     .select("id, nome_cognome, codice_fiscale")
-    .single();
+    .eq("codice_fiscale", codice_fiscale)
+    .maybeSingle();
 
-  if (error) {
+  if (searchError) {
     return NextResponse.json(
-      { error: error.message },
+      { error: searchError.message },
       { status: 500 }
     );
   }
 
+  if (esistente) {
+    return NextResponse.json({
+      success: true,
+      nominativo: esistente,
+    });
+  }
+
+ const { data: esistente, error: searchError } =
+  await supabaseAdmin
+    .from("tbpratiche_nominativi" as any)
+    .select("id, nome_cognome, codice_fiscale")
+    .eq("codice_fiscale", codice_fiscale)
+    .maybeSingle();
+
+if (searchError) {
+  return NextResponse.json(
+    { error: searchError.message },
+    { status: 500 }
+  );
+}
+
+if (esistente) {
   return NextResponse.json({
     success: true,
-    nominativo: data,
+    nominativo: esistente,
   });
 }
+
+const { data, error } = await supabaseAdmin
+  .from("tbpratiche_nominativi" as any)
+  .insert({
+    nome_cognome,
+    codice_fiscale,
+  })
+  .select("id, nome_cognome, codice_fiscale")
+  .single();
+
+if (error) {
+  return NextResponse.json(
+    { error: error.message },
+    { status: 500 }
+  );
+}
+
+return NextResponse.json({
+  success: true,
+  nominativo: data,
+});
