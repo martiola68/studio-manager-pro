@@ -10,17 +10,8 @@ export async function GET() {
     .order("nome_cognome");
 
   if (error) {
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
-
-  const isDistribuzioneUtili = String(
-  modelloCorrente?.nome || modelloCorrente?.codice || ""
-)
-  .toLowerCase()
-  .includes("distribuzione utili");
 
   return NextResponse.json({
     nominativi: data || [],
@@ -56,10 +47,7 @@ export async function POST(req: Request) {
     .maybeSingle();
 
   if (searchError) {
-    return NextResponse.json(
-      { error: searchError.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: searchError.message }, { status: 500 });
   }
 
   if (esistente) {
@@ -69,45 +57,21 @@ export async function POST(req: Request) {
     });
   }
 
- const { data: esistente, error: searchError } =
-  await supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from("tbpratiche_nominativi" as any)
+    .insert({
+      nome_cognome,
+      codice_fiscale,
+    })
     .select("id, nome_cognome, codice_fiscale")
-    .eq("codice_fiscale", codice_fiscale)
-    .maybeSingle();
+    .single();
 
-if (searchError) {
-  return NextResponse.json(
-    { error: searchError.message },
-    { status: 500 }
-  );
-}
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 
-if (esistente) {
   return NextResponse.json({
     success: true,
-    nominativo: esistente,
+    nominativo: data,
   });
 }
-
-const { data, error } = await supabaseAdmin
-  .from("tbpratiche_nominativi" as any)
-  .insert({
-    nome_cognome,
-    codice_fiscale,
-  })
-  .select("id, nome_cognome, codice_fiscale")
-  .single();
-
-if (error) {
-  return NextResponse.json(
-    { error: error.message },
-    { status: 500 }
-  );
-}
-
-return NextResponse.json({
-  success: true,
-  nominativo: data,
-});
-  }
