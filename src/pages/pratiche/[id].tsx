@@ -759,6 +759,13 @@ const mostraOrganiCariche =
       <button
         type="button"
         onClick={async () => {
+           if (
+    !nuovoSocio.nome_cognome.trim() &&
+    !nuovoSocio.codice_fiscale.trim()
+  ) {
+    alert("Inserire almeno nominativo o codice fiscale.");
+    return;
+  }
           const res = await fetch("/api/rapp-legali", {
             method: "POST",
             headers: {
@@ -1405,13 +1412,23 @@ const mostraOrganiCariche =
       alignItems: "end",
     }}
   >
-  <select
+<select
   style={inputStyle}
   value={nuovoSocio.nominativo_id}
   onChange={(e) => {
-    const selected = nominativi.find(
-      (n) => n.id === e.target.value
-    );
+    const value = e.target.value;
+
+    if (value === "__nuovo__") {
+      setNuovoSocio({
+        ...nuovoSocio,
+        nominativo_id: "__nuovo__",
+        nome_cognome: "",
+        codice_fiscale: "",
+      });
+      return;
+    }
+
+    const selected = nominativi.find((n) => n.id === value);
 
     setNuovoSocio({
       ...nuovoSocio,
@@ -1428,7 +1445,24 @@ const mostraOrganiCariche =
       {n.nome_cognome}
     </option>
   ))}
+
+  <option value="__nuovo__">+ Inserisci nuovo nominativo</option>
 </select>
+
+ {nuovoSocio.nominativo_id === "__nuovo__" && (
+  <input
+    style={{ ...inputStyle, marginTop: 8 }}
+    placeholder="Nuovo nominativo"
+    value={nuovoSocio.nome_cognome}
+    onChange={(e) =>
+      setNuovoSocio({
+        ...nuovoSocio,
+        nome_cognome: e.target.value,
+      })
+    }
+  />
+)}
+    
     <input style={inputStyle} placeholder="Codice fiscale" value={nuovoSocio.codice_fiscale} onChange={(e) => setNuovoSocio({ ...nuovoSocio, codice_fiscale: e.target.value })} />
     <input style={inputStyle} placeholder="% quota" value={nuovoSocio.percentuale_partecipazione} onChange={(e) => setNuovoSocio({ ...nuovoSocio, percentuale_partecipazione: e.target.value })} />
     <input style={inputStyle} placeholder="Lordo" value={nuovoSocio.importo_utile} onChange={(e) => setNuovoSocio({ ...nuovoSocio, importo_utile: e.target.value })} />
