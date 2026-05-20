@@ -408,11 +408,11 @@ alert("Scheda AV2 salvata correttamente.");
       const praticaQuery =
         form.pratica_id || (typeof pratica_id === "string" ? pratica_id : "");
 
-      await router.replace(
-        praticaQuery
-          ? `/antiriciclaggio/modello-av2?id=${savedId}&av1_id=${form.av1_id || ""}&pratica_id=${praticaQuery}`
-          : `/antiriciclaggio/modello-av2?id=${savedId}&av1_id=${form.av1_id || ""}`
-      );
+ //     await router.replace(
+ //       praticaQuery
+ //         ? `/antiriciclaggio/modello-av2?id=${savedId}&av1_id=${form.av1_id || ""}&pratica_id=${praticaQuery}`
+ //         : `/antiriciclaggio/modello-av2?id=${savedId}&av1_id=${form.av1_id || ""}`
+ //     );
       
     } catch (err: any) {
       console.error("Errore salvataggio AV2:", err);
