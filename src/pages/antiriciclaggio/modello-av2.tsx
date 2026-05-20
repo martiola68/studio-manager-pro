@@ -380,16 +380,31 @@ const { data: praticaRow, error: praticaError } = await supabase
   }
 }
       
-       setForm((prev) => ({
-        ...prev,
-        id: savedId,
-        pratica_id:
-          prev.pratica_id ||
-          (typeof pratica_id === "string" ? pratica_id : "") ||
-          "",
-      }));
-      alert("Scheda AV2 salvata correttamente.");
+     const { data: savedRow, error: reloadError } = await supabase
+  .from("tbAV2")
+  .select("*")
+  .eq("id", savedId)
+  .single();
 
+if (reloadError) {
+  console.error("Errore ricaricamento AV2 salvato:", reloadError);
+} else if (savedRow) {
+  setForm({
+    ...buildInitialForm(savedRow.studio_id || studioId),
+    ...savedRow,
+    id: String(savedRow.id),
+    pratica_id: savedRow.pratica_id || "",
+    studio_id: savedRow.studio_id || studioId,
+    cliente_id: savedRow.cliente_id || "",
+    av1_id: savedRow.av1_id ? String(savedRow.av1_id) : form.av1_id || "",
+    av4_id: savedRow.av4_id ? String(savedRow.av4_id) : form.av4_id || "",
+    data_check: normalizeDateValue(savedRow.data_check),
+    firma_check: savedRow.firma_check || "",
+    allegato_av2_firmato: savedRow.allegato_av2_firmato || "",
+  });
+}
+
+alert("Scheda AV2 salvata correttamente.");
       const praticaQuery =
         form.pratica_id || (typeof pratica_id === "string" ? pratica_id : "");
 
