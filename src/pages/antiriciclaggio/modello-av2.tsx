@@ -310,10 +310,18 @@ const { data: praticaRow, error: praticaError } = await supabase
   firma_check: form.firma_check || null,
   allegato_av2_firmato: form.allegato_av2_firmato || null,
 };
-      for (let i = 1; i <= 23; i++) {
-        payload[`spunta${i}`] = !!form[`spunta${i}`];
-        payload[`annotazioni${i}`] = String(form[`annotazioni${i}`] || "");
-      }
+    for (let i = 1; i <= 23; i++) {
+  payload[`spunta${i}`] =
+    form[`spunta${i}`] === true ||
+    form[`spunta${i}`] === "true";
+
+  payload[`annotazioni${i}`] = String(
+    form[`annotazioni${i}`] || ""
+  );
+}
+
+      console.log("FORM AV2", form);
+      console.log("PAYLOAD AV2", payload);
 
       let savedId = form.id || "";
 
