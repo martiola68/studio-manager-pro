@@ -10,9 +10,19 @@ interface DisconnectResponse {
 
 function getBearerToken(req: NextApiRequest): string | null {
   const h = req.headers.authorization;
+
   if (!h) return null;
-  const m = h.match(/^Bearer\s+(.+)$/i);
-  return m?.[1] ?? null;
+
+  const parts = h.split(" ");
+
+  if (
+    parts.length === 2 &&
+    parts[0].toLowerCase() === "bearer"
+  ) {
+    return parts[1];
+  }
+
+  return null;
 }
 
 export default async function handler(
