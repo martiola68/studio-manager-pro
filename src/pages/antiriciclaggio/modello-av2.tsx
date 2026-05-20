@@ -130,7 +130,7 @@ const { data: av1Row, error: av1Error } = await supabase
 
 const { data: praticaRow, error: praticaError } = await supabase
   .from("tbPraticheAML")
-  .select("id, studio_id, cliente_id, data_apertura, av1_id, av1_corrente_id, av4_id, av4_corrente_id")
+  .select("id, studio_id, cliente_id, data_apertura, av1_id, av1_corrente_id, av4_id, av4_corrente_id, av2_id, av2_corrente_id")
   .eq("id", praticaIdValue)
   .single();
       
@@ -142,6 +142,38 @@ const { data: praticaRow, error: praticaError } = await supabase
 
       if (!praticaRow) return;
 
+const currentAv2Id =
+  praticaRow.av2_corrente_id
+    ? String(praticaRow.av2_corrente_id)
+    : praticaRow.av2_id
+    ? String(praticaRow.av2_id)
+    : "";
+
+if (currentAv2Id) {
+  const { data: av2Row, error: av2Error } = await supabase
+    .from("tbAV2")
+    .select("*")
+    .eq("id", currentAv2Id)
+    .single();
+
+  if (!av2Error && av2Row) {
+    setForm({
+      ...buildInitialForm(av2Row.studio_id || studioIdValue),
+      ...av2Row,
+      id: String(av2Row.id),
+      pratica_id: av2Row.pratica_id || String(praticaRow.id),
+      studio_id: av2Row.studio_id || studioIdValue,
+      cliente_id: av2Row.cliente_id || praticaRow.cliente_id || "",
+      av1_id: av2Row.av1_id ? String(av2Row.av1_id) : "",
+      av4_id: av2Row.av4_id ? String(av2Row.av4_id) : "",
+      data_check: normalizeDateValue(av2Row.data_check),
+      firma_check: av2Row.firma_check || "",
+      allegato_av2_firmato: av2Row.allegato_av2_firmato || "",
+    });
+    return;
+  }
+}
+      
       const resolvedStudioId =
         praticaRow.studio_id ||
         studioIdValue ||
@@ -408,11 +440,11 @@ alert("Scheda AV2 salvata correttamente.");
       const praticaQuery =
         form.pratica_id || (typeof pratica_id === "string" ? pratica_id : "");
 
- //     await router.replace(
- //       praticaQuery
- //         ? `/antiriciclaggio/modello-av2?id=${savedId}&av1_id=${form.av1_id || ""}&pratica_id=${praticaQuery}`
- //         : `/antiriciclaggio/modello-av2?id=${savedId}&av1_id=${form.av1_id || ""}`
- //     );
+     await router.replace(
+      praticaQuery
+      ? `/antiriciclaggio/modello-av2?id=${savedId}&av1_id=${form.av1_id || ""}&pratica_id=${praticaQuery}`
+       : `/antiriciclaggio/modello-av2?id=${savedId}&av1_id=${form.av1_id || ""}`
+    );
       
     } catch (err: any) {
       console.error("Errore salvataggio AV2:", err);
