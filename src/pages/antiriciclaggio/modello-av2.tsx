@@ -271,12 +271,14 @@ const { data: praticaRow, error: praticaError } = await supabase
     }));
   };
 
-  const handleCheckboxChange = (index: number, checked: boolean) => {
-    setForm((prev) => ({
-      ...prev,
-      [`spunta${index}`]: checked,
-    }));
-  };
+ const handleCheckboxChange = (index: number, checked: boolean) => {
+  console.log("CHECKBOX AV2", { index, checked });
+
+  setForm((prev) => ({
+    ...prev,
+    [`spunta${index}`]: checked,
+  }));
+};
 
   const handleSave = async () => {
     try {
