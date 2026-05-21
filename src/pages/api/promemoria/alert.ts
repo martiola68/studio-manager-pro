@@ -52,7 +52,7 @@ console.log("Risultato promemoria alert:", result);
       results.push({
         studio_id: studioId,
         sender_id: senderId,
-        result,
+        result: result ?? null,
       });
     }
 
