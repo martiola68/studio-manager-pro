@@ -1712,16 +1712,17 @@ setNuovoSocio({
             return;
           }
 
-          setNuovoSoggetto({
-            tipo_soggetto:
-              "amministratore",
-            nome_cognome: "",
-            codice_fiscale: "",
-            indirizzo: "",
-            citta: "",
-            carica: "Amministratore",
-          });
-
+       setNuovoSoggetto({
+  tipo_soggetto: "amministratore",
+  nominativo_id: "",
+  nome_cognome: "",
+  codice_fiscale: "",
+  indirizzo: "",
+  cap: "",
+  citta: "",
+  provincia: "",
+  carica: "Amministratore",
+});
           await caricaSoggetti();
         }}
         style={{
