@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Search, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -247,8 +247,16 @@ export default function ScadenzeLipePage() {
     }
   };
 
-const handleDeleteRecord = async (recordId: string) => {
-  if (!confirm("Eliminare questo record LIPE?")) return;
+const handleDeleteRecord = async (
+  recordId: string,
+  nominativo: string
+) => {
+  if (
+    !confirm(
+      `Eliminare il record LIPE di "${nominativo}"?`
+    )
+  )
+    return;
 
   try {
     const { error } = await supabase
@@ -683,13 +691,19 @@ className={
 </td>
 
 <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[100px] border-r-0`}>
-  <button
-    type="button"
-    onClick={() => handleDeleteRecord(scadenza.id)}
-    className="px-3 py-1 rounded bg-red-600 text-white text-xs font-semibold hover:bg-red-700"
-  >
-    Elimina
-  </button>
+ <button
+  type="button"
+  onClick={() =>
+    handleDeleteRecord(
+      scadenza.id,
+      scadenza.nominativo
+    )
+  }
+  className="text-red-600 hover:text-red-800 transition-colors"
+  title={`Elimina ${scadenza.nominativo}`}
+>
+  <Trash2 className="h-4 w-4" />
+</button>
 </td>
 
 </tr>
