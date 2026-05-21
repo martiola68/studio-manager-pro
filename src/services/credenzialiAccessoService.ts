@@ -6,14 +6,17 @@ type CredenzialeAccessoInsert = Database["public"]["Tables"]["tbcredenziali_acce
 type CredenzialeAccessoUpdate = Database["public"]["Tables"]["tbcredenziali_accesso"]["Update"];
 
 export const credenzialiAccessoService = {
- async getAll(studioId: string): Promise<CredenzialeAccesso[]> {
-  if (!studioId) return [];
-
-  const { data, error } = await supabase
+ async getAll(studioId?: string | null): Promise<CredenzialeAccesso[]> {
+  let query = supabase
     .from("tbcredenziali_accesso")
     .select("*")
-    .eq("studio_id", studioId)
     .order("portale", { ascending: true });
+
+  if (studioId) {
+    query = query.eq("studio_id", studioId);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw error;
   return data || [];
