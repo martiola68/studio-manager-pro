@@ -1174,7 +1174,6 @@ setNuovoSocio({
     </button>
 </div>
 </div>
-</div>
 
   <div style={{ marginTop: 24 }}>
     {soci.length === 0 ? (
