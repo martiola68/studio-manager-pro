@@ -807,6 +807,23 @@ const importoNettoNuovoSocio =
     </div>
 
     <div>
+      <label style={labelStyle}>
+        Cod. fisc.
+      </label>
+
+      <input
+        style={inputStyle}
+        placeholder="Codice fiscale"
+        value={nuovoSocio.codice_fiscale}
+        onChange={(e) =>
+          setNuovoSocio({
+            ...nuovoSocio,
+            codice_fiscale: e.target.value,
+          })
+        }
+      />
+    </div>
+    <div>
       <label style={labelStyle}>Indirizzo</label>
       <input
         style={inputStyle}
@@ -868,24 +885,6 @@ const importoNettoNuovoSocio =
   </>
 )}
     
- <div>
-  <label style={labelStyle}>
-    Cod. fisc.
-  </label>
-
-  <input
-    style={inputStyle}
-    placeholder="Codice fiscale"
-    value={nuovoSocio.codice_fiscale}
-    onChange={(e) =>
-      setNuovoSocio({
-        ...nuovoSocio,
-        codice_fiscale: e.target.value,
-      })
-    }
-  />
-</div>
-
 <div>
   <label
     style={{
