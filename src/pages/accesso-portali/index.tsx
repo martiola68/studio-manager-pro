@@ -86,11 +86,11 @@ export default function AccessoPortaliPage() {
   });
 
   const masterPasswordGate = useMasterPasswordGate({
-    studioId,
-    onUnlocked: async () => {
-      await fetchCredenziali();
-    },
-  });
+  studioId: studioId || "",
+  onUnlocked: async () => {
+    await fetchCredenziali();
+  },
+});
 
   useEffect(() => {
     void checkAuth();
@@ -233,6 +233,7 @@ export default function AccessoPortaliPage() {
             await credenzialiAccessoService.update(
               editingCredenziale.id,
               formData
+              
             );
             toast({
               title: "Successo",
@@ -241,7 +242,7 @@ export default function AccessoPortaliPage() {
           } else {
             await credenzialiAccessoService.create({
   ...formData,
-  studio_id: studioId,
+ studio_id: studioId || null,
 });
             toast({
               title: "Successo",
