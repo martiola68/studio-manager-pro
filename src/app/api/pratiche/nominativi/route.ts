@@ -71,8 +71,8 @@ export async function POST(req: Request) {
       provincia: provincia || null,
       cap: cap || null,
     })
-    .select("id, nome_cognome, codice_fiscale")
-    .single();
+    .select("id, nome_cognome, codice_fiscale, indirizzo, citta, provincia, cap")
+.single();
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
