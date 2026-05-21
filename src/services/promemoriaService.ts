@@ -148,7 +148,7 @@ async getPromemoria(
     const oggiIso = oggi.toISOString().split("T")[0];
     const setteGiorniIso = traSetteGiorni.toISOString().split("T")[0];
 
-   const { data: promemoria, error } = await supabase
+  const { data: promemoria, error } = await supabase
   .from("tbpromemoria")
   .select(`
     *,
@@ -157,6 +157,7 @@ async getPromemoria(
     )
   `)
   .eq("studio_id", studioId)
+  .neq("working_progress", "Completato")
   .in("data_scadenza", [oggiIso, setteGiorniIso]);
 
     console.log("Date cercate:", {
