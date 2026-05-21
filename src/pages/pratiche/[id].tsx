@@ -1130,17 +1130,26 @@ setNuovoSocio({
     onClick={() => {
       const valore = nuovoSocio.nome_cognome.trim().toLowerCase();
 
-      const cliente = clientiImport.find((c) => {
-        const nomeCliente = String(
-          c.nome ||
-          c.ragione_sociale ||
-          c.denominazione ||
-          c.nome_cognome ||
-          ""
-        ).toLowerCase();
+     const normalizza = (v: any) =>
+  String(v || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
 
-        return nomeCliente.includes(valore);
-      });
+const valore = normalizza(
+  nuovoSocio.nome_cognome
+);
+
+const cliente = clientiImport.find((c) => {
+  const ragioneSociale = normalizza(
+    c.ragione_sociale
+  );
+
+  return (
+    ragioneSociale === valore ||
+    ragioneSociale.includes(valore)
+  );
+});
 
       if (!cliente) {
         alert("Nominativo non trovato in Anagrafica Clienti.");
@@ -1149,7 +1158,7 @@ setNuovoSocio({
 
       setNuovoSocio({
         ...nuovoSocio,
-        nome_cognome: cliente.nome || cliente.ragione_sociale || cliente.denominazione || "",
+       nome_cognome: cliente.ragione_sociale || "",
         codice_fiscale: cliente.codice_fiscale || "",
         indirizzo: cliente.indirizzo || "",
         cap: cliente.cap || "",
