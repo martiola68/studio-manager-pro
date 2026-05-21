@@ -88,9 +88,6 @@ const groupCellQ3 = "bg-amber-50";
 const groupHeaderQ4 = "bg-violet-100";
 const groupCellQ4 = "bg-violet-50";
 
-const groupHeaderQ4 = "bg-violet-100";
-const groupCellQ4 = "bg-violet-50";
-
 const isInvioMancante = (
   lipe: boolean | null | undefined,
   dataInvio: string | null | undefined
