@@ -1128,20 +1128,27 @@ setNuovoSocio({
 <button
     type="button"
   onClick={() => {
-  const normalizza = (v: any) =>
-    String(v || "")
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, " ");
+const normalizza = (v: any) =>
+  String(v || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
 
-  const valore = normalizza(nuovoSocio.nome_cognome);
+const valore = normalizza(nuovoSocio.nome_cognome);
 
- const cliente = clientiImport.find((c) => {
-  const ragioneSociale = normalizza(c.ragione_sociale);
+const cliente = clientiImport.find((c) => {
+  const campi = [
+    c.ragione_sociale,
+    c.nome,
+    c.denominazione,
+    c.nome_cognome,
+  ].map(normalizza);
 
-  return (
-    ragioneSociale === valore ||
-    ragioneSociale.includes(valore)
+  return campi.some(
+    (campo) =>
+      campo === valore ||
+      campo.includes(valore) ||
+      valore.includes(campo)
   );
 });
 
