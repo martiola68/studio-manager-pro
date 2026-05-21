@@ -43,9 +43,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     for (const [studioId, senderId] of studiMap.entries()) {
       const result = await promemoriaService.controllaEInviaNotificheScadenza(
-        senderId,
-        studioId,
-      );
+  senderId,
+  studioId
+);
+
+console.log("Risultato promemoria alert:", result);
 
       results.push({
         studio_id: studioId,
