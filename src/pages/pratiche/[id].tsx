@@ -267,6 +267,9 @@ if (praticaId) {
   caricaNominativi();
   caricaClientiImport();
 }
+
+
+    
   }, [praticaId]);
 
   function aggiornaCampo(campo: string, valore: string) {
@@ -332,9 +335,9 @@ const res = await fetch("/api/clienti/import-nominativi", {
 
     const data = await res.json();
 
-    if (res.ok) {
-      setClientiImport(data || []);
-    }
+if (res.ok) {
+  setClientiImport(Array.isArray(data) ? data : data.clienti || []);
+}
   } catch (error) {
     console.error(error);
   }
@@ -1023,10 +1026,10 @@ const importoNettoNuovoSocio =
   <option value="Assegno circolare">Assegno circolare</option>
   <option value="Altra modalità">Altra modalità</option>
 </select>
-</div>
-    <button
-      type="button"
-     onClick={async () => {
+<div style={{ display: "flex", gap: 8 }}>
+  <button
+    type="button"
+    onClick={async () => {
   if (!nuovoSocio.nome_cognome.trim()) {
     alert("Il nominativo è obbligatorio.");
     return;
@@ -1122,80 +1125,53 @@ setNuovoSocio({
     </button>
 
 <button
-  type="button"
-  onClick={() => {
-    const valore =
-      nuovoSocio.nome_cognome
-        .trim()
-        .toLowerCase();
+    type="button"
+    onClick={() => {
+      const valore = nuovoSocio.nome_cognome.trim().toLowerCase();
 
-    if (!valore) {
-      alert(
-        "Scrivi prima il nominativo da cercare."
-      );
-      return;
-    }
+      const cliente = clientiImport.find((c) => {
+        const nomeCliente = String(
+          c.nome ||
+          c.ragione_sociale ||
+          c.denominazione ||
+          c.nome_cognome ||
+          ""
+        ).toLowerCase();
 
-    const cliente = clientiImport.find((c) => {
-      const nomeCliente = String(
-        c.nome ||
-        c.ragione_sociale ||
-        c.denominazione ||
-        c.nome_cognome ||
-        ""
-      ).toLowerCase();
+        return nomeCliente.includes(valore);
+      });
 
-      return (
-        nomeCliente === valore ||
-        nomeCliente.includes(valore) ||
-        valore.includes(nomeCliente)
-      );
-    });
+      if (!cliente) {
+        alert("Nominativo non trovato in Anagrafica Clienti.");
+        return;
+      }
 
-    if (!cliente) {
-      alert(
-        "Nominativo non trovato in Anagrafica Clienti."
-      );
-      return;
-    }
-
-    setNuovoSocio({
-      ...nuovoSocio,
-      nome_cognome:
-        cliente.nome ||
-        cliente.ragione_sociale ||
-        cliente.denominazione ||
-        cliente.nome_cognome ||
-        nuovoSocio.nome_cognome,
-      codice_fiscale:
-        cliente.codice_fiscale || "",
-      indirizzo:
-        cliente.indirizzo || "",
-      cap:
-        cliente.cap || "",
-      citta:
-        cliente.citta || "",
-      provincia:
-        cliente.provincia || "",
-    });
-  }}
-  style={{
-    border: "1px solid #d1d5db",
-    borderRadius: 8,
-    background: "#f3f4f6",
-    color: "#111827",
-    padding: "10px 18px",
-    fontSize: 14,
-    fontWeight: 600,
-    cursor: "pointer",
-    fontFamily: font,
-    marginLeft: 8,
-  }}
->
-  Importa da clienti
-</button>
-   
-  </div>
+      setNuovoSocio({
+        ...nuovoSocio,
+        nome_cognome: cliente.nome || cliente.ragione_sociale || cliente.denominazione || "",
+        codice_fiscale: cliente.codice_fiscale || "",
+        indirizzo: cliente.indirizzo || "",
+        cap: cliente.cap || "",
+        citta: cliente.citta || "",
+        provincia: cliente.provincia || "",
+      });
+    }}
+    style={{
+      border: "1px solid #d1d5db",
+      borderRadius: 8,
+      background: "#f3f4f6",
+      color: "#111827",
+      padding: "10px 14px",
+      fontSize: 14,
+      fontWeight: 600,
+      cursor: "pointer",
+      fontFamily: font,
+      whiteSpace: "nowrap",
+    }}
+  >
+    Importa
+  </button>
+</div>
 
   <div style={{ marginTop: 24 }}>
     {soci.length === 0 ? (
