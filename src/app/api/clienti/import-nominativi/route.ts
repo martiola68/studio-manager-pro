@@ -1,14 +1,7 @@
-import type { NextApiRequest, NextApiResponse } from "next";
+import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method !== "GET") {
-    return res.status(405).json({ error: "Metodo non consentito" });
-  }
-
+export async function GET() {
   const supabaseAdmin = getSupabaseAdmin();
 
   const { data, error } = await supabaseAdmin
@@ -26,8 +19,11 @@ export default async function handler(
     .order("ragione_sociale", { ascending: true });
 
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return NextResponse.json(
+      { error: error.message },
+      { status: 500 }
+    );
   }
 
-  return res.status(200).json(data || []);
+  return NextResponse.json(data || []);
 }
