@@ -178,15 +178,23 @@ console.log(
   }))
 );
 
-    if (error) {
-      console.error("Errore recupero promemoria per notifiche:", error);
-      return;
-    }
+ if (error) {
+  console.error("Errore recupero promemoria per notifiche:", error);
 
-    if (!promemoria || promemoria.length === 0) {
-      console.log("Nessun promemoria da notificare");
-      return;
-    }
+  return {
+    success: false,
+    error: error.message,
+  };
+}
+
+if (!promemoria || promemoria.length === 0) {
+  console.log("Nessun promemoria da notificare");
+
+  return {
+    success: true,
+    promemoria_trovati: 0,
+  };
+}
 
     console.log(`Trovati ${promemoria.length} promemoria da notificare`);
 
