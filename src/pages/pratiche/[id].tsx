@@ -750,7 +750,7 @@ const importoNettoNuovoSocio =
  <div
   style={{
     display: "grid",
-   gridTemplateColumns: "1.5fr 1fr 1fr 0.8fr 0.8fr 1fr 0.8fr 1fr 1fr 1fr auto",
+  gridTemplateColumns: "1.5fr 1.5fr 1fr 1fr 1fr 1fr",
     gap: 12,
     marginTop: 18,
     alignItems: "end",
@@ -1009,82 +1009,194 @@ const importoNettoNuovoSocio =
     Mod. pagamento
   </label>
 
- <select
-  style={inputStyle}
-  
-  value={nuovoSocio.tipo_pagamento}
-  onChange={(e) =>
-    setNuovoSocio({
-      ...nuovoSocio,
-      tipo_pagamento: e.target.value,
-    })
-  }
+  <select
+    style={inputStyle}
+    value={nuovoSocio.tipo_pagamento}
+    onChange={(e) =>
+      setNuovoSocio({
+        ...nuovoSocio,
+        tipo_pagamento: e.target.value,
+      })
+    }
+  >
+    <option value="">Seleziona</option>
+    <option value="Bonifico">Bonifico</option>
+    <option value="Assegno bancario">Assegno bancario</option>
+    <option value="Assegno circolare">Assegno circolare</option>
+    <option value="Altra modalità">Altra modalità</option>
+  </select>
+</div>
+
+<div
+  style={{
+    display: "flex",
+    gap: 8,
+    alignItems: "end",
+  }}
 >
-  <option value="">Seleziona</option>
-  <option value="Bonifico">Bonifico</option>
-  <option value="Assegno bancario">Assegno bancario</option>
-  <option value="Assegno circolare">Assegno circolare</option>
-  <option value="Altra modalità">Altra modalità</option>
-</select>
-<div style={{ display: "flex", gap: 8 }}>
- 
   <button
     type="button"
     onClick={async () => {
-  if (!nuovoSocio.nome_cognome.trim()) {
-    alert("Il nominativo è obbligatorio.");
-    return;
-  }
+      if (!nuovoSocio.nome_cognome.trim()) {
+        alert("Il nominativo è obbligatorio.");
+        return;
+      }
 
-  if (!nuovoSocio.codice_fiscale.trim()) {
-    alert("Il codice fiscale è obbligatorio.");
-    return;
-  }
+      if (!nuovoSocio.codice_fiscale.trim()) {
+        alert("Il codice fiscale è obbligatorio.");
+        return;
+      }
 
-       if (nuovoSocio.nominativo_id === "__nuovo__") {
-  const saveNomRes = await fetch(
-    "/api/pratiche/nominativi",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-     body: JSON.stringify({
-  nome_cognome: nuovoSocio.nome_cognome,
-  codice_fiscale: nuovoSocio.codice_fiscale,
-  indirizzo: nuovoSocio.indirizzo,
-  cap: nuovoSocio.cap,
-  citta: nuovoSocio.citta,
-  provincia: nuovoSocio.provincia,
-}),
-    }
-  );
+      if (nuovoSocio.nominativo_id === "__nuovo__") {
+        const saveNomRes = await fetch(
+          "/api/pratiche/nominativi",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              nome_cognome: nuovoSocio.nome_cognome,
+              codice_fiscale: nuovoSocio.codice_fiscale,
+              indirizzo: nuovoSocio.indirizzo,
+              cap: nuovoSocio.cap,
+              citta: nuovoSocio.citta,
+              provincia: nuovoSocio.provincia,
+            }),
+          }
+        );
 
-  const saveNomData = await saveNomRes.json();
+        const saveNomData = await saveNomRes.json();
 
-  if (!saveNomRes.ok) {
-    alert(
-      saveNomData.error ||
-        "Errore salvataggio nominativo"
-    );
-    return;
-  }
+        if (!saveNomRes.ok) {
+          alert(
+            saveNomData.error ||
+              "Errore salvataggio nominativo"
+          );
+          return;
+        }
 
-  await caricaNominativi();
+        await caricaNominativi();
 
-  nuovoSocio.nominativo_id =
-    saveNomData.nominativo.id;
-}
+        nuovoSocio.nominativo_id =
+          saveNomData.nominativo.id;
+      }
 
-  const res = await fetch(`/api/pratiche/${praticaId}/soci`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-  ...nuovoSocio,
-  importo_ritenuta: importoRitenutaNuovoSocio,
-  importo_netto: importoNettoNuovoSocio,
-}),
-  });
+      const res = await fetch(
+        `/api/pratiche/${praticaId}/soci`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            ...nuovoSocio,
+            importo_ritenuta:
+              importoRitenutaNuovoSocio,
+            importo_netto:
+              importoNettoNuovoSocio,
+          }),
+        }
+      );
+
+      if (!res.ok) {
+        const data = await res.json();
+
+        alert(
+          data.error ||
+            "Errore inserimento socio"
+        );
+
+        return;
+      }
+
+      setNuovoSocio({
+        nominativo_id: "",
+        nome_cognome: "",
+        codice_fiscale: "",
+        indirizzo: "",
+        cap: "",
+        citta: "",
+        provincia: "",
+        percentuale_partecipazione: "",
+        importo_utile: "",
+        percentuale_ritenuta: "26",
+        importo_ritenuta: "",
+        importo_netto: "",
+        tipo_pagamento: "",
+      });
+
+      await caricaSoci();
+    }}
+    style={{
+      border: 0,
+      borderRadius: 8,
+      background: "#2563eb",
+      color: "#fff",
+      padding: "10px 18px",
+      fontSize: 14,
+      fontWeight: 600,
+      cursor: "pointer",
+      fontFamily: font,
+    }}
+  >
+    Aggiungi
+  </button>
+
+  <button
+    type="button"
+    onClick={() => {
+      const normalizza = (v: any) =>
+        String(v || "")
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, " ");
+
+      const valore = normalizza(
+        nuovoSocio.nome_cognome
+      );
+
+      const cliente = clientiImport.find((c) => {
+        return (
+          normalizza(c.ragione_sociale) === valore
+        );
+      });
+
+      if (!cliente) {
+        alert(
+          "Nominativo non trovato in Anagrafica Clienti."
+        );
+        return;
+      }
+
+      setNuovoSocio({
+        ...nuovoSocio,
+        nome_cognome:
+          cliente.ragione_sociale || "",
+        codice_fiscale:
+          cliente.codice_fiscale || "",
+        indirizzo: cliente.indirizzo || "",
+        cap: cliente.cap || "",
+        citta: cliente.citta || "",
+        provincia: cliente.provincia || "",
+      });
+    }}
+    style={{
+      border: "1px solid #d1d5db",
+      borderRadius: 8,
+      background: "#f3f4f6",
+      color: "#111827",
+      padding: "10px 14px",
+      fontSize: 14,
+      fontWeight: 600,
+      cursor: "pointer",
+      fontFamily: font,
+      whiteSpace: "nowrap",
+    }}
+  >
+    Importa
+  </button>
+</div>
 
   if (!res.ok) {
     const data = await res.json();
