@@ -240,10 +240,10 @@ if (!promemoria || promemoria.length === 0) {
         console.error("Errore verifica notifiche esistenti:", checkError);
       }
 
-      if (notificheEsistenti && notificheEsistenti.length > 0) {
-        console.log(`Notifica già inviata per promemoria: ${p.titolo} (${tipoNotifica})`);
-        continue;
-      }
+    if (notificheEsistenti && notificheEsistenti.length > 0) {
+  console.log(`Notifica già inviata per promemoria: ${p.titolo} (${tipoNotifica})`);
+  continue;
+}
 
       const messaggioTesto = `${markerMessaggio}
 ${urgenza}
