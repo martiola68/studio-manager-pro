@@ -68,7 +68,7 @@ export default function AccessoPortaliPage() {
   const [editingCredenziale, setEditingCredenziale] =
     useState<CredenzialeAccesso | null>(null);
   const [loading, setLoading] = useState(true);
- const { studioId } = useStudio();
+const [studioId, setStudioId] = useState<string>("");
 
   const [showPassword, setShowPassword] = useState<{ [key: string]: boolean }>(
     {}
@@ -91,6 +91,12 @@ export default function AccessoPortaliPage() {
     await fetchCredenziali();
   },
 });
+
+  useEffect(() => {
+  if (typeof window !== "undefined") {
+    setStudioId(localStorage.getItem("studio_id") || "");
+  }
+}, []);
 
   useEffect(() => {
     void checkAuth();
