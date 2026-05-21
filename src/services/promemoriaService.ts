@@ -328,6 +328,13 @@ const { data: studio } = await (supabase as any)
   .eq("id", p.studio_id)
   .maybeSingle();
 
+          console.log("Studio email promemoria:", {
+  promemoria: p.titolo,
+  studio_id: p.studio_id,
+  microsoft_connection_id: studio?.microsoft_connection_id,
+  destinatario_email: p.destinatario?.email,
+});
+
 if (!studio?.microsoft_connection_id) {
   console.error(`Connessione Microsoft studio mancante per promemoria ${p.titolo}`);
   continue;
