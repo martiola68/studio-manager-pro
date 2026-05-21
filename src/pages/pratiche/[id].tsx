@@ -811,30 +811,78 @@ const importoNettoNuovoSocio =
   <>
     <div>
       <label style={labelStyle}>Nuovo nominativo</label>
-     <input
+   <input
   style={inputStyle}
   placeholder="Nome e cognome"
   value={nuovoSocio.nome_cognome}
-  onChange={(e) => {
-    const valore = e.target.value;
+  onChange={(e) =>
+    setNuovoSocio({
+      ...nuovoSocio,
+      nome_cognome: e.target.value,
+    })
+  }
+/>
+      <button
+  type="button"
+  onClick={() => {
+    const valore = nuovoSocio.nome_cognome.trim().toLowerCase();
 
-    const cliente = clientiImport.find((c) =>
-      String(c.nome || c.ragione_sociale || "")
-        .toLowerCase()
-        .includes(valore.toLowerCase())
-    );
+    if (!valore) {
+      alert("Scrivi prima il nominativo da cercare.");
+      return;
+    }
+
+    const cliente = clientiImport.find((c) => {
+      const nomeCliente = String(
+        c.nome ||
+          c.ragione_sociale ||
+          c.denominazione ||
+          c.nome_cognome ||
+          ""
+      ).toLowerCase();
+
+      return (
+        nomeCliente === valore ||
+        nomeCliente.includes(valore) ||
+        valore.includes(nomeCliente)
+      );
+    });
+
+    if (!cliente) {
+      alert("Nominativo non trovato in Anagrafica Clienti.");
+      return;
+    }
 
     setNuovoSocio({
       ...nuovoSocio,
-      nome_cognome: valore,
-      codice_fiscale: cliente?.codice_fiscale || nuovoSocio.codice_fiscale,
-      indirizzo: cliente?.indirizzo || nuovoSocio.indirizzo,
-      cap: cliente?.cap || nuovoSocio.cap,
-      citta: cliente?.citta || nuovoSocio.citta,
-      provincia: cliente?.provincia || nuovoSocio.provincia,
+      nome_cognome:
+        cliente.nome ||
+        cliente.ragione_sociale ||
+        cliente.denominazione ||
+        cliente.nome_cognome ||
+        nuovoSocio.nome_cognome,
+      codice_fiscale: cliente.codice_fiscale || "",
+      indirizzo: cliente.indirizzo || "",
+      cap: cliente.cap || "",
+      citta: cliente.citta || "",
+      provincia: cliente.provincia || "",
     });
   }}
-/>
+  style={{
+    marginTop: 6,
+    border: 0,
+    borderRadius: 6,
+    background: "#111827",
+    color: "#fff",
+    padding: "7px 10px",
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: "pointer",
+    fontFamily: font,
+  }}
+>
+  Importa da clienti
+</button>
     </div>
 
     <div>
