@@ -178,7 +178,7 @@ console.log(
   }))
 );
 
- if (error) {
+if (error) {
   console.error("Errore recupero promemoria per notifiche:", error);
 
   return {
@@ -193,6 +193,8 @@ if (!promemoria || promemoria.length === 0) {
   return {
     success: true,
     promemoria_trovati: 0,
+    email_inviate: 0,
+    motivo: "Nessun promemoria trovato per oggi o +7 giorni",
   };
 }
 
