@@ -148,16 +148,34 @@ async getPromemoria(
     const oggiIso = oggi.toISOString().split("T")[0];
     const setteGiorniIso = traSetteGiorni.toISOString().split("T")[0];
 
-    const { data: promemoria, error } = await supabase
-      .from("tbpromemoria")
-      .select(`
-        *,
-        destinatario:tbutenti!destinatario_id (
-          id, nome, cognome, email
-        )
-      `)
-      .in("working_progress", ["Aperto", "In lavorazione"])
-      .in("data_scadenza", [oggiIso, setteGiorniIso]);
+   const { data: promemoria, error } = await supabase
+  .from("tbpromemoria")
+  .select(`
+    *,
+    destinatario:tbutenti!destinatario_id (
+      id, nome, cognome, email
+    )
+  `)
+  .eq("studio_id", studioId)
+  .in("data_scadenza", [oggiIso, setteGiorniIso]);
+
+    console.log("Date cercate:", {
+  oggiIso,
+  setteGiorniIso,
+  studioId,
+});
+
+console.log(
+  "Promemoria trovati:",
+  promemoria?.map((p) => ({
+    id: p.id,
+    titolo: p.titolo,
+    stato: p.working_progress,
+    data_scadenza: p.data_scadenza,
+    destinatario_id: p.destinatario_id,
+    destinatario_email: p.destinatario?.email,
+  }))
+);
 
     if (error) {
       console.error("Errore recupero promemoria per notifiche:", error);
