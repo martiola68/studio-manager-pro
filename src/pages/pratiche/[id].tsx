@@ -1149,7 +1149,6 @@ setNuovoSocio({
     ragioneSociale === valore ||
     ragioneSociale.includes(valore)
   );
-});
 
       if (!cliente) {
         alert("Nominativo non trovato in Anagrafica Clienti.");
