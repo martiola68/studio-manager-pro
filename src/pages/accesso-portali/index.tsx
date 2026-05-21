@@ -45,6 +45,7 @@ import {
   Unlock,
 } from "lucide-react";
 import { credenzialiAccessoService } from "@/services/credenzialiAccessoService";
+import { useStudio } from "@/contexts/StudioContext";
 import type { Database } from "@/integrations/supabase/types";
 
 type CredenzialeAccesso =
@@ -67,7 +68,7 @@ export default function AccessoPortaliPage() {
   const [editingCredenziale, setEditingCredenziale] =
     useState<CredenzialeAccesso | null>(null);
   const [loading, setLoading] = useState(true);
-  const [studioId, setStudioId] = useState<string>("");
+ const { studioId } = useStudio();
 
   const [showPassword, setShowPassword] = useState<{ [key: string]: boolean }>(
     {}
@@ -94,12 +95,6 @@ export default function AccessoPortaliPage() {
   useEffect(() => {
     void checkAuth();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setStudioId(localStorage.getItem("studio_id") || "");
-    }
   }, []);
 
   useEffect(() => {
@@ -244,7 +239,10 @@ export default function AccessoPortaliPage() {
               description: "Credenziale aggiornata con successo",
             });
           } else {
-            await credenzialiAccessoService.create(formData);
+            await credenzialiAccessoService.create({
+  ...formData,
+  studio_id: studioId,
+});
             toast({
               title: "Successo",
               description: "Credenziale creata con successo",
