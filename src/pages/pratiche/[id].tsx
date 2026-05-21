@@ -1027,6 +1027,7 @@ const importoNettoNuovoSocio =
   <option value="Altra modalità">Altra modalità</option>
 </select>
 <div style={{ display: "flex", gap: 8 }}>
+ 
   <button
     type="button"
     onClick={async () => {
@@ -1122,7 +1123,7 @@ setNuovoSocio({
       }}
     >
       Aggiungi
-    </button>
+</button>
 
 <button
     type="button"
@@ -1171,7 +1172,7 @@ setNuovoSocio({
   >
     Importa
   </button>
-</div>
+// </div>
 
   <div style={{ marginTop: 24 }}>
     {soci.length === 0 ? (
