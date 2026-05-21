@@ -690,8 +690,9 @@ className={
   >
     Elimina
   </button>
+</td>
 
-                    </tr>
+</tr>
                   ))
                 )}
               </tbody>
