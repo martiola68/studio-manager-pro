@@ -379,9 +379,14 @@ const emailResult = await sendEmailServer({
   success: true,
   promemoria_trovati: promemoria?.length || 0,
 };
-  } catch (error) {
-    console.error("Errore controllo notifiche scadenza promemoria:", error);
-  }
+  } catch (error: any) {
+  console.error("Errore controllo notifiche scadenza promemoria:", error);
+
+  return {
+    success: false,
+    error: error?.message || String(error),
+  };
+}
 },
 
   async createPromemoria(nuovoPromemoria: {
