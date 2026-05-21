@@ -664,7 +664,8 @@ className={
                           }
                         />
                       </td>
-                     <td className={`${baseCellClass} ${groupCellQ4} min-w-[140px]`}>
+  
+<td className={`${baseCellClass} ${groupCellQ4} min-w-[140px]`}>
   <Input
     type="date"
     value={scadenza.lipe4t_invio || ""}
@@ -689,17 +690,7 @@ className={
   >
     Elimina
   </button>
-</td>
-                          
-className={
-  isInvioMancante(scadenza.lipe4t, scadenza.lipe4t_invio)
-    ? "h-8 text-xs bg-red-600 text-white"
-    : scadenza.lipe4t_invio
-    ? "h-8 text-xs bg-green-500 text-black"
-    : "h-8 text-xs bg-white"
-}
-                        />
-                      </td>
+
                     </tr>
                   ))
                 )}
