@@ -1136,19 +1136,14 @@ setNuovoSocio({
 
   const valore = normalizza(nuovoSocio.nome_cognome);
 
-  const cliente = clientiImport.find((c) => {
-    const ragioneSociale = normalizza(c.ragione_sociale);
+ const cliente = clientiImport.find((c) => {
+  const ragioneSociale = normalizza(c.ragione_sociale);
 
-    return (
-      ragioneSociale === valore ||
-      ragioneSociale.includes(valore)
-    );
-  });
-    
   return (
     ragioneSociale === valore ||
     ragioneSociale.includes(valore)
   );
+});
 
       if (!cliente) {
         alert("Nominativo non trovato in Anagrafica Clienti.");
