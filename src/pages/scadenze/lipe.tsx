@@ -463,16 +463,13 @@ const filteredScadenze = scadenze.filter((s) => {
                           onChange={(e) =>
                             handleUpdateValue(scadenza.id, "lipe1t_invio", e.target.value)
                           }
-                         className={`h-8 text-xs ${
-  isInvioMancante(
-    scadenza.lipe1t,
-    scadenza.lipe1t_invio
-  )
-    ? "bg-red-600 text-white"
+className={
+  isInvioMancante(scadenza.lipe1t, scadenza.lipe1t_invio)
+    ? "h-8 text-xs bg-red-600 text-white"
     : scadenza.lipe1t_invio
-    ? "bg-green-500 text-black"
-    : "bg-white"
-}`}
+    ? "h-8 text-xs bg-green-500 text-black"
+    : "h-8 text-xs bg-white"
+}
                         />
                       </td>
 
@@ -518,16 +515,13 @@ const filteredScadenze = scadenze.filter((s) => {
                           onChange={(e) =>
                             handleUpdateValue(scadenza.id, "lipe2t_invio", e.target.value)
                           }
-                         className={`h-8 text-xs ${
-  isInvioMancante(
-    scadenza.lipe2t,
-    scadenza.lipe2t_invio
-  )
-    ? "bg-red-600 text-white"
+ className={
+  isInvioMancante(scadenza.lipe2t, scadenza.lipe2t_invio)
+    ? "h-8 text-xs bg-red-600 text-white"
     : scadenza.lipe2t_invio
-    ? "bg-green-500 text-black"
-    : "bg-white"
-}`}
+    ? "h-8 text-xs bg-green-500 text-black"
+    : "h-8 text-xs bg-white"
+}
                         />
                       </td>
 
@@ -572,17 +566,13 @@ const filteredScadenze = scadenze.filter((s) => {
                           value={scadenza.lipe3t_invio || ""}
                           onChange={(e) =>
                             handleUpdateValue(scadenza.id, "lipe3t_invio", e.target.value)
-                          }
-                          className={`h-8 text-xs ${
-  isInvioMancante(
-    scadenza.lipe3t,
-    scadenza.lipe3t_invio
-  )
-    ? "bg-red-600 text-white"
+className={
+  isInvioMancante(scadenza.lipe3t, scadenza.lipe3t_invio)
+    ? "h-8 text-xs bg-red-600 text-white"
     : scadenza.lipe3t_invio
-    ? "bg-green-500 text-black"
-    : "bg-white"
-}`}
+    ? "h-8 text-xs bg-green-500 text-black"
+    : "h-8 text-xs bg-white"
+}
                         />
                       </td>
 
@@ -653,16 +643,13 @@ const filteredScadenze = scadenze.filter((s) => {
                           onChange={(e) =>
                             handleUpdateValue(scadenza.id, "lipe4t_invio", e.target.value)
                           }
-                         className={`h-8 text-xs ${
-  isInvioMancante(
-    scadenza.lipe4t,
-    scadenza.lipe4t_invio
-  )
-    ? "bg-red-600 text-white"
+className={
+  isInvioMancante(scadenza.lipe4t, scadenza.lipe4t_invio)
+    ? "h-8 text-xs bg-red-600 text-white"
     : scadenza.lipe4t_invio
-    ? "bg-green-500 text-black"
-    : "bg-white"
-}`}
+    ? "h-8 text-xs bg-green-500 text-black"
+    : "h-8 text-xs bg-white"
+}
                         />
                       </td>
                     </tr>
