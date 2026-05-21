@@ -729,7 +729,7 @@ const importoNettoNuovoSocio =
  <div
   style={{
     display: "grid",
-   gridTemplateColumns: "1.5fr 1fr 0.8fr 1fr 0.8fr 1fr 1fr 1fr auto",
+   gridTemplateColumns: "1.5fr 1fr 1fr 0.8fr 0.8fr 1fr 0.8fr 1fr 1fr 1fr auto",
     gap: 12,
     marginTop: 18,
     alignItems: "end",
@@ -790,23 +790,82 @@ const importoNettoNuovoSocio =
 </div>
     
 {nuovoSocio.nominativo_id === "__nuovo__" && (
-  <div>
-    <label style={labelStyle}>
-      Nuovo nominativo
-    </label>
+  <>
+    <div>
+      <label style={labelStyle}>Nuovo nominativo</label>
+      <input
+        style={inputStyle}
+        placeholder="Nome e cognome"
+        value={nuovoSocio.nome_cognome}
+        onChange={(e) =>
+          setNuovoSocio({
+            ...nuovoSocio,
+            nome_cognome: e.target.value,
+          })
+        }
+      />
+    </div>
 
-    <input
-      style={inputStyle}
-      placeholder="Nuovo nominativo"
-      value={nuovoSocio.nome_cognome}
-      onChange={(e) =>
-        setNuovoSocio({
-          ...nuovoSocio,
-          nome_cognome: e.target.value,
-        })
-      }
-    />
-  </div>
+    <div>
+      <label style={labelStyle}>Indirizzo</label>
+      <input
+        style={inputStyle}
+        placeholder="Indirizzo"
+        value={nuovoSocio.indirizzo}
+        onChange={(e) =>
+          setNuovoSocio({
+            ...nuovoSocio,
+            indirizzo: e.target.value,
+          })
+        }
+      />
+    </div>
+
+    <div>
+      <label style={labelStyle}>CAP</label>
+      <input
+        style={inputStyle}
+        placeholder="CAP"
+        value={nuovoSocio.cap}
+        onChange={(e) =>
+          setNuovoSocio({
+            ...nuovoSocio,
+            cap: e.target.value,
+          })
+        }
+      />
+    </div>
+
+    <div>
+      <label style={labelStyle}>Città</label>
+      <input
+        style={inputStyle}
+        placeholder="Città"
+        value={nuovoSocio.citta}
+        onChange={(e) =>
+          setNuovoSocio({
+            ...nuovoSocio,
+            citta: e.target.value,
+          })
+        }
+      />
+    </div>
+
+    <div>
+      <label style={labelStyle}>Provincia</label>
+      <input
+        style={inputStyle}
+        placeholder="Provincia"
+        value={nuovoSocio.provincia}
+        onChange={(e) =>
+          setNuovoSocio({
+            ...nuovoSocio,
+            provincia: e.target.value,
+          })
+        }
+      />
+    </div>
+  </>
 )}
     
  <div>
@@ -869,7 +928,7 @@ const importoNettoNuovoSocio =
   <input
     style={inputStyle}
     placeholder="Lordo"
-    disabled={!isDistribuzioneUtili}
+   
     value={nuovoSocio.importo_utile}
     onChange={(e) =>
       setNuovoSocio({
@@ -888,7 +947,7 @@ const importoNettoNuovoSocio =
   <input
     style={inputStyle}
     placeholder="% rit."
-    disabled={!isDistribuzioneUtili}
+    
     value={nuovoSocio.percentuale_ritenuta}
     onChange={(e) =>
       setNuovoSocio({
@@ -932,7 +991,7 @@ const importoNettoNuovoSocio =
 
  <select
   style={inputStyle}
-  disabled={!isDistribuzioneUtili}
+  
   value={nuovoSocio.tipo_pagamento}
   onChange={(e) =>
     setNuovoSocio({
