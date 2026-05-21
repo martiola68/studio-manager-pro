@@ -247,6 +247,33 @@ export default function ScadenzeLipePage() {
     }
   };
 
+const handleDeleteRecord = async (recordId: string) => {
+  if (!confirm("Eliminare questo record LIPE?")) return;
+
+  try {
+    const { error } = await supabase
+      .from("tbscadlipe")
+      .delete()
+      .eq("id", recordId);
+
+    if (error) throw error;
+
+    setScadenze((prev) => prev.filter((r) => r.id !== recordId));
+
+    toast({
+      title: "Eliminato",
+      description: "Record eliminato correttamente",
+    });
+  } catch (error) {
+    console.error("Errore eliminazione record:", error);
+    toast({
+      title: "Errore",
+      description: "Impossibile eliminare il record",
+      variant: "destructive",
+    });
+  }
+};
+  
 const filteredScadenze = scadenze.filter((s) => {
   const matchSearch = (s.nominativo || "")
     .toLowerCase()
@@ -373,6 +400,9 @@ const filteredScadenze = scadenze.filter((s) => {
                   <th className={`${baseHeaderClass} ${groupHeaderQ4} min-w-[120px]`}>Acconto</th>
                   <th className={`${baseHeaderClass} ${groupHeaderQ4} min-w-[100px]`}>Acconto Com</th>
                   <th className={`${baseHeaderClass} ${groupHeaderQ4} min-w-[80px]`}>LIPE 4T</th>
+                  <th className={`${baseHeaderClass} ${groupHeaderQ4} min-w-[100px] border-r-0`}>
+                    Azioni
+                    </th>
                   <th className={`${baseHeaderClass} ${groupHeaderQ4} min-w-[140px] border-r-0`}>
                     Data Invio 4T
                   </th>
@@ -382,7 +412,7 @@ const filteredScadenze = scadenze.filter((s) => {
               <tbody>
                 {filteredScadenze.length === 0 ? (
                   <tr className="border-b border-gray-300">
-                   <td colSpan={25} className="p-4 text-center text-gray-500">
+                   <td colSpan={26} className="p-4 text-center text-gray-500">
                       Nessun record trovato
                     </td>
                   </tr>
@@ -634,13 +664,23 @@ className={
                           }
                         />
                       </td>
-                      <td className={`${baseCellClass} ${groupCellQ4} min-w-[140px] border-r-0`}>
+                      <td className={`${baseCellClass} ${groupCellQ4} min-w-[140px]}>
                         <Input
                           type="date"
                           value={scadenza.lipe4t_invio || ""}
                           onChange={(e) =>
                             handleUpdateValue(scadenza.id, "lipe4t_invio", e.target.value)
                           }
+                          <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[100px] border-r-0`}>
+                            <button
+                              type="button"
+                                onClick={() => handleDeleteRecord(scadenza.id)}
+                              className="px-3 py-1 rounded bg-red-600 text-white text-xs font-semibold hover:bg-red-700"
+                                >
+                                Elimina
+                                </button>
+                                  </td>
+                          
 className={
   isInvioMancante(scadenza.lipe4t, scadenza.lipe4t_invio)
     ? "h-8 text-xs bg-red-600 text-white"
