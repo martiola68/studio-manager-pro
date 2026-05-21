@@ -110,12 +110,15 @@ const [uploadingDocumento, setUploadingDocumento] = useState(false);
 const [tipoDocumento, setTipoDocumento] = useState("altro");
 const [fileDocumento, setFileDocumento] = useState<File | null>(null);
 
- const [nuovoSoggetto, setNuovoSoggetto] = useState({
+const [nuovoSoggetto, setNuovoSoggetto] = useState({
   tipo_soggetto: "amministratore",
+  nominativo_id: "",
   nome_cognome: "",
   codice_fiscale: "",
   indirizzo: "",
+  cap: "",
   citta: "",
+  provincia: "",
   carica: "Amministratore",
 });
 
@@ -123,6 +126,10 @@ const [nuovoSocio, setNuovoSocio] = useState({
   nominativo_id: "",
   nome_cognome: "",
   codice_fiscale: "",
+  indirizzo: "",
+  cap: "",
+  citta: "",
+  provincia: "",
   percentuale_partecipazione: "",
   importo_utile: "",
   percentuale_ritenuta: "26",
@@ -754,13 +761,16 @@ const importoNettoNuovoSocio =
         (n) => n.id === value
       );
 
-      setNuovoSocio({
-        ...nuovoSocio,
-        nominativo_id: selected?.id || "",
-        nome_cognome: selected?.nome_cognome || "",
-        codice_fiscale:
-          selected?.codice_fiscale || "",
-      });
+     setNuovoSocio({
+  ...nuovoSocio,
+  nominativo_id: selected?.id || "",
+  nome_cognome: selected?.nome_cognome || "",
+  codice_fiscale: selected?.codice_fiscale || "",
+  indirizzo: selected?.indirizzo || "",
+  cap: selected?.cap || "",
+  citta: selected?.citta || "",
+  provincia: selected?.provincia || "",
+});
     }}
   >
     <option value="">
@@ -959,10 +969,14 @@ const importoNettoNuovoSocio =
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        nome_cognome: nuovoSocio.nome_cognome,
-        codice_fiscale: nuovoSocio.codice_fiscale,
-      }),
+     body: JSON.stringify({
+  nome_cognome: nuovoSocio.nome_cognome,
+  codice_fiscale: nuovoSocio.codice_fiscale,
+  indirizzo: nuovoSocio.indirizzo,
+  cap: nuovoSocio.cap,
+  citta: nuovoSocio.citta,
+  provincia: nuovoSocio.provincia,
+}),
     }
   );
 
@@ -998,10 +1012,14 @@ const importoNettoNuovoSocio =
     return;
   }
 
- setNuovoSocio({
+setNuovoSocio({
   nominativo_id: "",
   nome_cognome: "",
   codice_fiscale: "",
+  indirizzo: "",
+  cap: "",
+  citta: "",
+  provincia: "",
   percentuale_partecipazione: "",
   importo_utile: "",
   percentuale_ritenuta: "26",
