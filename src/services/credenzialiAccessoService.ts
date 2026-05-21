@@ -6,6 +6,7 @@ type CredenzialeAccessoInsert = Database["public"]["Tables"]["tbcredenziali_acce
 type CredenzialeAccessoUpdate = Database["public"]["Tables"]["tbcredenziali_accesso"]["Update"];
 
 export const credenzialiAccessoService = {
+ 
  async getAll(studioId?: string | null): Promise<CredenzialeAccesso[]> {
   let query = supabase
     .from("tbcredenziali_accesso")
