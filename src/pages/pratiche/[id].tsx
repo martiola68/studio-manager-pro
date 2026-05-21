@@ -119,13 +119,14 @@ const [fileDocumento, setFileDocumento] = useState<File | null>(null);
   carica: "Amministratore",
 });
 
- const [nuovoSocio, setNuovoSocio] = useState({
+const [nuovoSocio, setNuovoSocio] = useState({
   nominativo_id: "",
   nome_cognome: "",
   codice_fiscale: "",
   percentuale_partecipazione: "",
   importo_utile: "",
   percentuale_ritenuta: "26",
+  importo_ritenuta: "",
   importo_netto: "",
   tipo_pagamento: "",
 });
@@ -206,7 +207,7 @@ percentuale_soci_presenti: "100",
             "",
           data_atto: p.dati_documento?.data_atto || "",
           ora_inizio: p.dati_documento?.ora_inizio || "",
-          luogo_assemblea: p.dati_documento?.luogo_assemblea || "",
+          luogo_assemblea: p.dati_documento?.luogo_assemblea || sede || "",
           presidente: p.dati_documento?.presidente || "",
           segretario: p.dati_documento?.segretario || "",
           motivo_liquidazione:
@@ -477,6 +478,15 @@ const percentualeTotaleConNuovo =
 const percentualeSuperata =
   percentualeTotaleConNuovo > 100;
 
+  const importoLordoNuovoSocio = Number(nuovoSocio.importo_utile || 0);
+const percentualeRitenutaNuovoSocio = Number(nuovoSocio.percentuale_ritenuta || 0);
+
+const importoRitenutaNuovoSocio =
+  importoLordoNuovoSocio * percentualeRitenutaNuovoSocio / 100;
+
+const importoNettoNuovoSocio =
+  importoLordoNuovoSocio - importoRitenutaNuovoSocio;
+
   return (
     <main style={{ padding: 28, background: "#f8fafc", minHeight: "100vh", fontFamily: font }}>
       <div style={{ maxWidth: 1280, margin: "0 auto" }}>
@@ -712,7 +722,7 @@ const percentualeSuperata =
  <div
   style={{
     display: "grid",
-    gridTemplateColumns: "1.5fr 1fr 0.8fr 1fr 0.8fr 1fr 1fr auto",
+   gridTemplateColumns: "1.5fr 1fr 0.8fr 1fr 0.8fr 1fr 1fr 1fr auto",
     gap: 12,
     marginTop: 18,
     alignItems: "end",
@@ -879,23 +889,30 @@ const percentualeSuperata =
   />
 </div>
 
+   <div>
+  <label style={labelStyle}>
+    Importo ritenuta
+  </label>
+
+  <input
+    style={inputStyle}
+    placeholder="Ritenuta"
+    disabled
+    value={importoRitenutaNuovoSocio.toFixed(2)}
+  />
+</div>
+
 <div>
   <label style={labelStyle}>
     Importo netto
   </label>
 
   <input
-    style={inputStyle}
-    placeholder="Netto"
-    disabled={!isDistribuzioneUtili}
-    value={nuovoSocio.importo_netto}
-    onChange={(e) =>
-      setNuovoSocio({
-        ...nuovoSocio,
-        importo_netto: e.target.value,
-      })
-    }
-  />
+  style={inputStyle}
+  placeholder="Netto"
+  disabled
+  value={importoNettoNuovoSocio.toFixed(2)}
+/>
 </div>
 
 <div>
@@ -903,18 +920,23 @@ const percentualeSuperata =
     Mod. pagamento
   </label>
 
-  <input
-    style={inputStyle}
-    placeholder="Pagamento"
-    disabled={!isDistribuzioneUtili}
-    value={nuovoSocio.tipo_pagamento}
-    onChange={(e) =>
-      setNuovoSocio({
-        ...nuovoSocio,
-        tipo_pagamento: e.target.value,
-      })
-    }
-  />
+ <select
+  style={inputStyle}
+  disabled={!isDistribuzioneUtili}
+  value={nuovoSocio.tipo_pagamento}
+  onChange={(e) =>
+    setNuovoSocio({
+      ...nuovoSocio,
+      tipo_pagamento: e.target.value,
+    })
+  }
+>
+  <option value="">Seleziona</option>
+  <option value="Bonifico">Bonifico</option>
+  <option value="Assegno bancario">Assegno bancario</option>
+  <option value="Assegno circolare">Assegno circolare</option>
+  <option value="Altra modalità">Altra modalità</option>
+</select>
 </div>
     <button
       type="button"
@@ -963,7 +985,11 @@ const percentualeSuperata =
   const res = await fetch(`/api/pratiche/${praticaId}/soci`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(nuovoSocio),
+    body: JSON.stringify({
+  ...nuovoSocio,
+  importo_ritenuta: importoRitenutaNuovoSocio,
+  importo_netto: importoNettoNuovoSocio,
+}),
   });
 
   if (!res.ok) {
@@ -972,16 +998,17 @@ const percentualeSuperata =
     return;
   }
 
-  setNuovoSocio({
-    nominativo_id: "",
-    nome_cognome: "",
-    codice_fiscale: "",
-    percentuale_partecipazione: "",
-    importo_utile: "",
-    percentuale_ritenuta: "26",
-    importo_netto: "",
-    tipo_pagamento: "",
-  });
+ setNuovoSocio({
+  nominativo_id: "",
+  nome_cognome: "",
+  codice_fiscale: "",
+  percentuale_partecipazione: "",
+  importo_utile: "",
+  percentuale_ritenuta: "26",
+  importo_ritenuta: "",
+  importo_netto: "",
+  tipo_pagamento: "",
+});
 
   await caricaSoci();
 }}
