@@ -5,7 +5,7 @@ import { promemoriaService } from "@/services/promemoriaService";
 const SECRET = process.env.CRON_SECRET || "x9KfP2LmQ8zYtA71vBnR";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== "POST") {
+ if (req.method !== "GET" && req.method !== "POST") {
     return res.status(405).json({
       success: false,
       error: "Metodo non consentito",
