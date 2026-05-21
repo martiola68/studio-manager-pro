@@ -102,6 +102,7 @@ const [documenti, setDocumenti] = useState<any[]>([]);
 const [soggetti, setSoggetti] = useState<any[]>([]);
   const [soci, setSoci] = useState<any[]>([]);
   const [nominativi, setNominativi] = useState<any[]>([]);
+  const [clientiImport, setClientiImport] = useState<any[]>([]);
 const [modelli, setModelli] = useState<any[]>([]);
 const [modelloSelezionato, setModelloSelezionato] =
   useState("");
@@ -264,6 +265,7 @@ if (praticaId) {
   caricaSoci();
   caricaModelli();
   caricaNominativi();
+  caricaClientiImport();
 }
   }, [praticaId]);
 
@@ -316,6 +318,22 @@ async function caricaSoci() {
 
     if (res.ok) {
       setNominativi(data.nominativi || []);
+    }
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+  async function caricaClientiImport() {
+  try {
+    const res = await fetch("/api/clienti", {
+      cache: "no-store",
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      setClientiImport(data || []);
     }
   } catch (error) {
     console.error(error);
@@ -793,17 +811,30 @@ const importoNettoNuovoSocio =
   <>
     <div>
       <label style={labelStyle}>Nuovo nominativo</label>
-      <input
-        style={inputStyle}
-        placeholder="Nome e cognome"
-        value={nuovoSocio.nome_cognome}
-        onChange={(e) =>
-          setNuovoSocio({
-            ...nuovoSocio,
-            nome_cognome: e.target.value,
-          })
-        }
-      />
+     <input
+  style={inputStyle}
+  placeholder="Nome e cognome"
+  value={nuovoSocio.nome_cognome}
+  onChange={(e) => {
+    const valore = e.target.value;
+
+    const cliente = clientiImport.find((c) =>
+      String(c.nome || c.ragione_sociale || "")
+        .toLowerCase()
+        .includes(valore.toLowerCase())
+    );
+
+    setNuovoSocio({
+      ...nuovoSocio,
+      nome_cognome: valore,
+      codice_fiscale: cliente?.codice_fiscale || nuovoSocio.codice_fiscale,
+      indirizzo: cliente?.indirizzo || nuovoSocio.indirizzo,
+      cap: cliente?.cap || nuovoSocio.cap,
+      citta: cliente?.citta || nuovoSocio.citta,
+      provincia: cliente?.provincia || nuovoSocio.provincia,
+    });
+  }}
+/>
     </div>
 
     <div>
