@@ -408,12 +408,13 @@ const filteredScadenze = scadenze.filter((s) => {
                   <th className={`${baseHeaderClass} ${groupHeaderQ4} min-w-[120px]`}>Acconto</th>
                   <th className={`${baseHeaderClass} ${groupHeaderQ4} min-w-[100px]`}>Acconto Com</th>
                   <th className={`${baseHeaderClass} ${groupHeaderQ4} min-w-[80px]`}>LIPE 4T</th>
-                  <th className={`${baseHeaderClass} ${groupHeaderQ4} min-w-[100px] border-r-0`}>
-                    Azioni
-                    </th>
-                  <th className={`${baseHeaderClass} ${groupHeaderQ4} min-w-[140px] border-r-0`}>
+                  <th className={`${baseHeaderClass} ${groupHeaderQ4} min-w-[140px]`}>
                     Data Invio 4T
-                  </th>
+                    </th>
+
+                    <th className={`${baseHeaderClass} ${groupHeaderQ4} min-w-[100px] border-r-0`}>
+                        Azioni
+                    </th>
                 </tr>
               </thead>
 
