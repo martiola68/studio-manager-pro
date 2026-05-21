@@ -561,19 +561,20 @@ className={
                         />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ3} min-w-[140px]`}>
-                        <Input
-                          type="date"
-                          value={scadenza.lipe3t_invio || ""}
-                          onChange={(e) =>
-                            handleUpdateValue(scadenza.id, "lipe3t_invio", e.target.value)
-className={
-  isInvioMancante(scadenza.lipe3t, scadenza.lipe3t_invio)
-    ? "h-8 text-xs bg-red-600 text-white"
-    : scadenza.lipe3t_invio
-    ? "h-8 text-xs bg-green-500 text-black"
-    : "h-8 text-xs bg-white"
-}
-                        />
+ <Input
+  type="date"
+  value={scadenza.lipe3t_invio || ""}
+  onChange={(e) =>
+    handleUpdateValue(scadenza.id, "lipe3t_invio", e.target.value)
+  }
+  className={
+    isInvioMancante(scadenza.lipe3t, scadenza.lipe3t_invio)
+      ? "h-8 text-xs bg-red-600 text-white"
+      : scadenza.lipe3t_invio
+      ? "h-8 text-xs bg-green-500 text-black"
+      : "h-8 text-xs bg-white"
+  }
+/>
                       </td>
 
                       <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[60px]`}>
