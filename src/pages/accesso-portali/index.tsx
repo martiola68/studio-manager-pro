@@ -142,11 +142,17 @@ export default function AccessoPortaliPage() {
   };
 
   const fetchCredenziali = async () => {
-    try {
-      setLoading(true);
-      const data = await credenzialiAccessoService.getAll(studioId);
-      setCredenziali(data);
-    } catch (error) {
+   try {
+  setLoading(true);
+
+  if (!studioId) {
+    setCredenziali([]);
+    return;
+  }
+
+  const data = await credenzialiAccessoService.getAll(studioId);
+  setCredenziali(data);
+} catch (error) {
       console.error("Errore nel caricamento delle credenziali:", error);
       toast({
         title: "Errore",
