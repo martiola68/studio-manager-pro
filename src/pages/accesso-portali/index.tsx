@@ -103,13 +103,11 @@ const [studioId, setStudioId] = useState<string>("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    if (studioId) {
-      void refreshEncryptionEnabled();
-      void fetchCredenziali();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [studioId]);
+ useEffect(() => {
+  void refreshEncryptionEnabled();
+  void fetchCredenziali();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [studioId]);
 
   useEffect(() => {
     filterCredenziali();
