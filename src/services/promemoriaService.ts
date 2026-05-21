@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase/client";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import type { Database } from "@/lib/supabase/types";
 import { messaggioService } from "./messaggioService";
 import { teamsNotificationService } from "./teamsNotificationService";
@@ -137,6 +137,7 @@ async getPromemoria(
 
  async controllaEInviaNotificheScadenza(currentUserId: string, studioId: string) {
   try {
+    const supabase = getSupabaseAdmin();
     console.log("Controllo promemoria in scadenza...");
 
     const oggi = new Date();
