@@ -326,7 +326,7 @@ async function caricaSoci() {
 
   async function caricaClientiImport() {
   try {
-    const res = await fetch("/api/clienti", {
+const res = await fetch("/api/clienti/import-nominativi", {
       cache: "no-store",
     });
 
@@ -822,67 +822,6 @@ const importoNettoNuovoSocio =
     })
   }
 />
-      <button
-  type="button"
-  onClick={() => {
-    const valore = nuovoSocio.nome_cognome.trim().toLowerCase();
-
-    if (!valore) {
-      alert("Scrivi prima il nominativo da cercare.");
-      return;
-    }
-
-    const cliente = clientiImport.find((c) => {
-      const nomeCliente = String(
-        c.nome ||
-          c.ragione_sociale ||
-          c.denominazione ||
-          c.nome_cognome ||
-          ""
-      ).toLowerCase();
-
-      return (
-        nomeCliente === valore ||
-        nomeCliente.includes(valore) ||
-        valore.includes(nomeCliente)
-      );
-    });
-
-    if (!cliente) {
-      alert("Nominativo non trovato in Anagrafica Clienti.");
-      return;
-    }
-
-    setNuovoSocio({
-      ...nuovoSocio,
-      nome_cognome:
-        cliente.nome ||
-        cliente.ragione_sociale ||
-        cliente.denominazione ||
-        cliente.nome_cognome ||
-        nuovoSocio.nome_cognome,
-      codice_fiscale: cliente.codice_fiscale || "",
-      indirizzo: cliente.indirizzo || "",
-      cap: cliente.cap || "",
-      citta: cliente.citta || "",
-      provincia: cliente.provincia || "",
-    });
-  }}
-  style={{
-    marginTop: 6,
-    border: 0,
-    borderRadius: 6,
-    background: "#111827",
-    color: "#fff",
-    padding: "7px 10px",
-    fontSize: 12,
-    fontWeight: 600,
-    cursor: "pointer",
-    fontFamily: font,
-  }}
->
-  Importa da clienti
-</button>
     </div>
 
     <div>
@@ -1181,6 +1120,81 @@ setNuovoSocio({
     >
       Aggiungi
     </button>
+
+<button
+  type="button"
+  onClick={() => {
+    const valore =
+      nuovoSocio.nome_cognome
+        .trim()
+        .toLowerCase();
+
+    if (!valore) {
+      alert(
+        "Scrivi prima il nominativo da cercare."
+      );
+      return;
+    }
+
+    const cliente = clientiImport.find((c) => {
+      const nomeCliente = String(
+        c.nome ||
+        c.ragione_sociale ||
+        c.denominazione ||
+        c.nome_cognome ||
+        ""
+      ).toLowerCase();
+
+      return (
+        nomeCliente === valore ||
+        nomeCliente.includes(valore) ||
+        valore.includes(nomeCliente)
+      );
+    });
+
+    if (!cliente) {
+      alert(
+        "Nominativo non trovato in Anagrafica Clienti."
+      );
+      return;
+    }
+
+    setNuovoSocio({
+      ...nuovoSocio,
+      nome_cognome:
+        cliente.nome ||
+        cliente.ragione_sociale ||
+        cliente.denominazione ||
+        cliente.nome_cognome ||
+        nuovoSocio.nome_cognome,
+      codice_fiscale:
+        cliente.codice_fiscale || "",
+      indirizzo:
+        cliente.indirizzo || "",
+      cap:
+        cliente.cap || "",
+      citta:
+        cliente.citta || "",
+      provincia:
+        cliente.provincia || "",
+    });
+  }}
+  style={{
+    border: "1px solid #d1d5db",
+    borderRadius: 8,
+    background: "#f3f4f6",
+    color: "#111827",
+    padding: "10px 18px",
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: "pointer",
+    fontFamily: font,
+    marginLeft: 8,
+  }}
+>
+  Importa da clienti
+</button>
+   
   </div>
 
   <div style={{ marginTop: 24 }}>
