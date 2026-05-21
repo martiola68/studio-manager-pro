@@ -81,10 +81,12 @@ export default async function handler(
       await callInternal(`/api/contenzioso/alert?secret=${SECRET}`, "POST")
     );
 
-    results.push(
-      await callInternal(`/api/promemoria/alert?secret=${SECRET}`, "POST")
-    );
-  }
+  results.push(
+  await callInternal(
+    `/api/promemoria/controlla-scadenze?secret=${SECRET}`,
+    "POST"
+  )
+);
 
   return res.status(200).json({
     ok: true,
