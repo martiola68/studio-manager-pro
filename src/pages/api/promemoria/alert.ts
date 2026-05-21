@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { supabase } from "@/lib/supabase/client";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { promemoriaService } from "@/services/promemoriaService";
 
 const SECRET = process.env.CRON_SECRET || "x9KfP2LmQ8zYtA71vBnR";
@@ -22,6 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+     const supabase = getSupabaseAdmin();
     const { data: senders, error } = await supabase
       .from("tbutenti")
       .select("id, studio_id")
