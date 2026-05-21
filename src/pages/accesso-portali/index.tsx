@@ -147,25 +147,24 @@ const [studioId, setStudioId] = useState<string>("");
     }
   };
 
-  const fetchCredenziali = async () => {
-   try {
-  setLoading(true);
+const fetchCredenziali = async () => {
+  try {
+    setLoading(true);
 
- const data = await credenzialiAccessoService.getAll(studioId || null);
-     
-  setCredenziali(data);
-} catch (error) {
-      console.error("Errore nel caricamento delle credenziali:", error);
-      toast({
-        title: "Errore",
-        description: "Impossibile caricare le credenziali di accesso",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
+    const data = await credenzialiAccessoService.getAll(studioId || null);
+    setCredenziali(data);
+  } catch (error) {
+    console.error("Errore nel caricamento delle credenziali:", error);
+    toast({
+      title: "Errore",
+      description: "Impossibile caricare le credenziali di accesso",
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+  
   const filterCredenziali = () => {
     if (!searchTerm.trim()) {
       setFilteredCredenziali(credenziali);
@@ -248,9 +247,9 @@ const [studioId, setStudioId] = useState<string>("");
               description: "Credenziale aggiornata con successo",
             });
           } else {
-            await credenzialiAccessoService.create({
+ await credenzialiAccessoService.create({
   ...formData,
- studio_id: studioId || null,
+  studio_id: studioId || null,
 });
             toast({
               title: "Successo",
