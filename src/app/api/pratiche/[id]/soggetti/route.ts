@@ -11,7 +11,18 @@ export async function GET(req: Request, { params }: Params) {
 
   const { data: soggetti, error } = await supabaseAdmin
     .from("tbpratiche_soggetti")
-    .select("*")
+  .select(`
+  *,
+  nominativo:tbpratiche_nominativi (
+    id,
+    nome_cognome,
+    codice_fiscale,
+    indirizzo,
+    citta,
+    provincia,
+    cap
+  )
+`)
     .eq("pratica_id", id)
     .order("ordine");
 
