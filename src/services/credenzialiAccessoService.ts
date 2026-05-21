@@ -6,15 +6,18 @@ type CredenzialeAccessoInsert = Database["public"]["Tables"]["tbcredenziali_acce
 type CredenzialeAccessoUpdate = Database["public"]["Tables"]["tbcredenziali_accesso"]["Update"];
 
 export const credenzialiAccessoService = {
-  async getAll(): Promise<CredenzialeAccesso[]> {
-    const { data, error } = await supabase
-      .from("tbcredenziali_accesso")
-      .select("*")
-      .order("portale", { ascending: true });
+ async getAll(studioId: string): Promise<CredenzialeAccesso[]> {
+  if (!studioId) return [];
 
-    if (error) throw error;
-    return data || [];
-  },
+  const { data, error } = await supabase
+    .from("tbcredenziali_accesso")
+    .select("*")
+    .eq("studio_id", studioId)
+    .order("portale", { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+},
 
   async getById(id: string): Promise<CredenzialeAccesso | null> {
     const { data, error } = await supabase
@@ -59,14 +62,17 @@ export const credenzialiAccessoService = {
     if (error) throw error;
   },
 
-  async search(searchTerm: string): Promise<CredenzialeAccesso[]> {
-    const { data, error } = await supabase
-      .from("tbcredenziali_accesso")
-      .select("*")
-      .or(`portale.ilike.%${searchTerm}%,indirizzo_url.ilike.%${searchTerm}%,login_utente.ilike.%${searchTerm}%`)
-      .order("portale", { ascending: true });
+ async search(studioId: string, searchTerm: string): Promise<CredenzialeAccesso[]> {
+  if (!studioId) return [];
 
-    if (error) throw error;
-    return data || [];
-  },
+  const { data, error } = await supabase
+    .from("tbcredenziali_accesso")
+    .select("*")
+    .eq("studio_id", studioId)
+    .or(`portale.ilike.%${searchTerm}%,indirizzo_url.ilike.%${searchTerm}%,login_utente.ilike.%${searchTerm}%`)
+    .order("portale", { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+},
 };
