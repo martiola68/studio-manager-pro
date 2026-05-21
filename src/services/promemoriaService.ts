@@ -364,6 +364,10 @@ const emailResult = await sendEmailServer({
     }
 
     console.log("Controllo notifiche promemoria completato");
+    return {
+  success: true,
+  promemoria_trovati: promemoria?.length || 0,
+};
   } catch (error) {
     console.error("Errore controllo notifiche scadenza promemoria:", error);
   }
