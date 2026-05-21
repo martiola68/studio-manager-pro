@@ -1137,19 +1137,7 @@ const normalizza = (v: any) =>
 const valore = normalizza(nuovoSocio.nome_cognome);
 
 const cliente = clientiImport.find((c) => {
-  const campi = [
-    c.ragione_sociale,
-    c.nome,
-    c.denominazione,
-    c.nome_cognome,
-  ].map(normalizza);
-
-  return campi.some(
-    (campo) =>
-      campo === valore ||
-      campo.includes(valore) ||
-      valore.includes(campo)
-  );
+  return normalizza(c.ragione_sociale) === valore;
 });
 
       if (!cliente) {
@@ -1157,15 +1145,15 @@ const cliente = clientiImport.find((c) => {
         return;
       }
 
-      setNuovoSocio({
-        ...nuovoSocio,
-       nome_cognome: cliente.ragione_sociale || "",
-        codice_fiscale: cliente.codice_fiscale || "",
-        indirizzo: cliente.indirizzo || "",
-        cap: cliente.cap || "",
-        citta: cliente.citta || "",
-        provincia: cliente.provincia || "",
-      });
+     setNuovoSocio({
+  ...nuovoSocio,
+  nome_cognome: cliente.ragione_sociale || "",
+  codice_fiscale: cliente.codice_fiscale || "",
+  indirizzo: cliente.indirizzo || "",
+  cap: cliente.cap || "",
+  citta: cliente.citta || "",
+  provincia: cliente.provincia || "",
+});
     }}
     style={{
       border: "1px solid #d1d5db",
