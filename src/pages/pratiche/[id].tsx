@@ -103,6 +103,9 @@ const [soggetti, setSoggetti] = useState<any[]>([]);
   const [soci, setSoci] = useState<any[]>([]);
   const [nominativi, setNominativi] = useState<any[]>([]);
   const [clientiImport, setClientiImport] = useState<any[]>([]);
+  const [clientiTrovatiImport, setClientiTrovatiImport] = useState<any[]>([]);
+const [clienteImportSelezionato, setClienteImportSelezionato] = useState<any | null>(null);
+const [mostraClientiImport, setMostraClientiImport] = useState(false);
 const [modelli, setModelli] = useState<any[]>([]);
 const [modelloSelezionato, setModelloSelezionato] =
   useState("");
@@ -1116,63 +1119,155 @@ const importoNettoNuovoSocio =
     Aggiungi
   </button>
 
-  <button
-    type="button"
-    onClick={async () => {
-  const normalizza = (v: any) =>
-    String(v || "")
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, " ");
+<button
+  type="button"
+  onClick={async () => {
+    const normalizza = (v: any) =>
+      String(v || "")
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, " ");
 
-  const valore = normalizza(nuovoSocio.nome_cognome);
+    const valore = normalizza(nuovoSocio.nome_cognome);
 
-  if (!valore) {
-    alert("Scrivi prima il nominativo da importare.");
-    return;
-  }
+    if (!valore) {
+      alert("Inserisci almeno il cognome da cercare.");
+      return;
+    }
 
-  const res = await fetch("/api/clienti/import-nominativi", {
-    cache: "no-store",
-  });
+    const res = await fetch("/api/clienti/import-nominativi", {
+      cache: "no-store",
+    });
 
-  const data = await res.json();
-  const clienti = Array.isArray(data) ? data : data.clienti || [];
+    const data = await res.json();
+    const clienti = Array.isArray(data) ? data : data.clienti || [];
 
-  const cliente = clienti.find(
-    (c: any) => normalizza(c.ragione_sociale) === valore
-  );
+    const trovati = clienti.filter((c: any) =>
+      normalizza(c.ragione_sociale).startsWith(valore)
+    );
 
-  if (!cliente) {
-    alert("Nominativo non trovato in Anagrafica Clienti.");
-    return;
-  }
+    if (trovati.length === 0) {
+      alert("Nessun cliente trovato con questo cognome.");
+      return;
+    }
 
-  setNuovoSocio({
-    ...nuovoSocio,
-    nome_cognome: cliente.ragione_sociale || "",
-    codice_fiscale: cliente.codice_fiscale || "",
-    indirizzo: cliente.indirizzo || "",
-    cap: cliente.cap || "",
-    citta: cliente.citta || "",
-    provincia: cliente.provincia || "",
-  });
-}}
+    setClientiTrovatiImport(trovati);
+    setClienteImportSelezionato(null);
+    setMostraClientiImport(true);
+  }}
+  style={{
+    border: "1px solid #2563eb",
+    borderRadius: 8,
+    background: "#fff",
+    color: "#2563eb",
+    padding: "10px 14px",
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: "pointer",
+    fontFamily: font,
+    whiteSpace: "nowrap",
+  }}
+>
+  Importa
+</button>
+
+  {mostraClientiImport && (
+  <div
     style={{
+      gridColumn: "1 / -1",
       border: "1px solid #d1d5db",
-      borderRadius: 8,
-      background: "#f3f4f6",
-      color: "#111827",
-      padding: "10px 14px",
-      fontSize: 14,
-      fontWeight: 600,
-      cursor: "pointer",
-      fontFamily: font,
-      whiteSpace: "nowrap",
+      borderRadius: 10,
+      padding: 14,
+      background: "#f8fafc",
+      marginTop: 10,
     }}
   >
-    Importa
-  </button>
+    <div style={{ fontWeight: 700, marginBottom: 10 }}>
+      Seleziona nominativo da importare
+    </div>
+
+    {clientiTrovatiImport.map((cliente) => (
+      <label
+        key={cliente.id}
+        style={{
+          display: "flex",
+          gap: 10,
+          alignItems: "center",
+          padding: "8px 0",
+          borderBottom: "1px solid #e5e7eb",
+          cursor: "pointer",
+        }}
+      >
+        <input
+          type="radio"
+          name="cliente_import"
+          checked={clienteImportSelezionato?.id === cliente.id}
+          onChange={() => setClienteImportSelezionato(cliente)}
+        />
+
+        <span>
+          <strong>{cliente.ragione_sociale}</strong>
+          {" — "}
+          {cliente.codice_fiscale || "CF assente"}
+          {" — "}
+          {[cliente.indirizzo, cliente.cap, cliente.citta, cliente.provincia]
+            .filter(Boolean)
+            .join(" ")}
+        </span>
+      </label>
+    ))}
+
+    <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+      <button
+        type="button"
+        onClick={() => {
+          if (!clienteImportSelezionato) {
+            alert("Seleziona un nominativo.");
+            return;
+          }
+
+          setNuovoSocio({
+            ...nuovoSocio,
+            nome_cognome: clienteImportSelezionato.ragione_sociale || "",
+            codice_fiscale: clienteImportSelezionato.codice_fiscale || "",
+            indirizzo: clienteImportSelezionato.indirizzo || "",
+            cap: clienteImportSelezionato.cap || "",
+            citta: clienteImportSelezionato.citta || "",
+            provincia: clienteImportSelezionato.provincia || "",
+          });
+
+          setMostraClientiImport(false);
+        }}
+        style={{
+          border: 0,
+          borderRadius: 8,
+          background: "#2563eb",
+          color: "#fff",
+          padding: "9px 14px",
+          fontWeight: 600,
+          cursor: "pointer",
+        }}
+      >
+        Importa selezionato
+      </button>
+
+      <button
+        type="button"
+        onClick={() => setMostraClientiImport(false)}
+        style={{
+          border: "1px solid #d1d5db",
+          borderRadius: 8,
+          background: "#fff",
+          padding: "9px 14px",
+          fontWeight: 600,
+          cursor: "pointer",
+        }}
+      >
+        Annulla
+      </button>
+    </div>
+  </div>
+)}
 </div>
 </div>
 
