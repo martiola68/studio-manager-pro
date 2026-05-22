@@ -1280,7 +1280,6 @@ const cliente = clientiImport.find((c) => {
       </table>
     )}
   </div>
-</div>
 
 <h3 style={{ marginTop: 28, fontSize: 16, fontWeight: 700 }}>
               Motivo messa in liquidazione
