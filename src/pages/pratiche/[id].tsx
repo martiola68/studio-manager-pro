@@ -1171,45 +1171,6 @@ const importoNettoNuovoSocio =
   </button>
 </div>
 
-  if (!res.ok) {
-    const data = await res.json();
-    alert(data.error || "Errore inserimento socio");
-    return;
-  }
-
-setNuovoSocio({
-  nominativo_id: "",
-  nome_cognome: "",
-  codice_fiscale: "",
-  indirizzo: "",
-  cap: "",
-  citta: "",
-  provincia: "",
-  percentuale_partecipazione: "",
-  importo_utile: "",
-  percentuale_ritenuta: "26",
-  importo_ritenuta: "",
-  importo_netto: "",
-  tipo_pagamento: "",
-});
-
-  await caricaSoci();
-}}
-      style={{
-        border: 0,
-        borderRadius: 8,
-        background: "#2563eb",
-        color: "#fff",
-        padding: "10px 18px",
-        fontSize: 14,
-        fontWeight: 600,
-        cursor: "pointer",
-        fontFamily: font,
-      }}
-    >
-      Aggiungi
-</button>
-
 <button
     type="button"
   onClick={() => {
