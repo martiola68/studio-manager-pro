@@ -25,15 +25,12 @@ export async function GET(req: Request, { params }: Params) {
       );
     }
 
-    const { data: modelli, error: modelliError } = await supabaseAdmin
-      .from("tbpratiche_modelli_utilita" as any)
-      .select("id, nome, codice, categoria, tipo_pratica_id, attivo")
-      .eq("attivo", true)
-      .or(
-        `tipo_pratica_id.eq.${pratica.tipo_pratica_id},tipo_pratica_id.is.null`
-      )
-      .order("categoria")
-      .order("nome");
+   const { data: modelli, error: modelliError } = await supabaseAdmin
+  .from("tbpratiche_modelli_utilita" as any)
+  .select("id, nome, codice, categoria, tipo_pratica_id, attivo")
+  .eq("attivo", true)
+  .order("categoria")
+  .order("nome");
 
     if (modelliError) {
       return NextResponse.json(
