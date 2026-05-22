@@ -1170,54 +1170,6 @@ const importoNettoNuovoSocio =
     Importa
   </button>
 </div>
-
-<button
-    type="button"
-  onClick={() => {
-const normalizza = (v: any) =>
-  String(v || "")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, " ");
-
-const valore = normalizza(nuovoSocio.nome_cognome);
-
-const cliente = clientiImport.find((c) => {
-  return normalizza(c.ragione_sociale) === valore;
-});
-
-      if (!cliente) {
-        alert("Nominativo non trovato in Anagrafica Clienti.");
-        return;
-      }
-
-     setNuovoSocio({
-  ...nuovoSocio,
-  nome_cognome: cliente.ragione_sociale || "",
-  codice_fiscale: cliente.codice_fiscale || "",
-  indirizzo: cliente.indirizzo || "",
-  cap: cliente.cap || "",
-  citta: cliente.citta || "",
-  provincia: cliente.provincia || "",
-});
-    }}
-    style={{
-      border: "1px solid #d1d5db",
-      borderRadius: 8,
-      background: "#f3f4f6",
-      color: "#111827",
-      padding: "10px 14px",
-      fontSize: 14,
-      fontWeight: 600,
-      cursor: "pointer",
-      fontFamily: font,
-      whiteSpace: "nowrap",
-    }}
-  >
-    Importa
-    </button>
-</div>
-</div>
 </div>
 
   <div style={{ marginTop: 24 }}>
@@ -1279,6 +1231,7 @@ const cliente = clientiImport.find((c) => {
         </tbody>
       </table>
     )}
+  </div>
   </div>
 
 <h3 style={{ marginTop: 28, fontSize: 16, fontWeight: 700 }}>
