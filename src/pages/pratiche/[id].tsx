@@ -1098,34 +1098,7 @@ const importoNettoNuovoSocio =
           }),
         }
       );
-
-      if (!res.ok) {
-        const data = await res.json();
-
-        alert(
-          data.error ||
-            "Errore inserimento socio"
-        );
-
-        return;
-      }
-
-      setNuovoSocio({
-        nominativo_id: "",
-        nome_cognome: "",
-        codice_fiscale: "",
-        indirizzo: "",
-        cap: "",
-        citta: "",
-        provincia: "",
-        percentuale_partecipazione: "",
-        importo_utile: "",
-        percentuale_ritenuta: "26",
-        importo_ritenuta: "",
-        importo_netto: "",
-        tipo_pagamento: "",
-      });
-
+    
       await caricaSoci();
     }}
     style={{
