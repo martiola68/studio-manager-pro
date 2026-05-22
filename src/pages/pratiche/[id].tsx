@@ -709,12 +709,25 @@ const importoNettoNuovoSocio =
     step="0.01"
     style={inputStyle}
     value={nuovoSocio.importo_dividendo_totale}
-    onChange={(e) =>
-      setNuovoSocio({
-        ...nuovoSocio,
-        importo_dividendo_totale: e.target.value,
-      })
-    }
+    onChange={(e) => {
+  const valore = e.target.value;
+  const percentuale = Number(nuovoSocio.percentuale_partecipazione || 0);
+  const lordo = (Number(valore || 0) * percentuale) / 100;
+
+  setNuovoSocio({
+    ...nuovoSocio,
+    importo_dividendo_totale: valore,
+    importo_utile: lordo.toFixed(2),
+  });
+}}
+onBlur={() => {
+  setNuovoSocio({
+    ...nuovoSocio,
+    importo_dividendo_totale: Number(
+      nuovoSocio.importo_dividendo_totale || 0
+    ).toFixed(2),
+  });
+}}
   />
 </div>
 
@@ -950,13 +963,17 @@ const importoNettoNuovoSocio =
     }}
     placeholder="% quota"
     value={nuovoSocio.percentuale_partecipazione}
-    onChange={(e) =>
-      setNuovoSocio({
-        ...nuovoSocio,
-        percentuale_partecipazione:
-          e.target.value,
-      })
-    }
+   onChange={(e) => {
+  const percentuale = e.target.value;
+  const dividendoTotale = Number(nuovoSocio.importo_dividendo_totale || 0);
+  const lordo = (dividendoTotale * Number(percentuale || 0)) / 100;
+
+  setNuovoSocio({
+    ...nuovoSocio,
+    percentuale_partecipazione: percentuale,
+    importo_utile: lordo.toFixed(2),
+  });
+}}
   />
 </div>
 
@@ -965,18 +982,16 @@ const importoNettoNuovoSocio =
     Importo lordo
   </label>
 
-  <input
-    style={inputStyle}
-    placeholder="Lordo"
-   
-    value={nuovoSocio.importo_utile}
-    onChange={(e) =>
-      setNuovoSocio({
-        ...nuovoSocio,
-        importo_utile: e.target.value,
-      })
-    }
-  />
+ <input
+  style={{
+    ...inputStyle,
+    background: "#f3f4f6",
+    cursor: "not-allowed",
+  }}
+  placeholder="Lordo"
+  value={Number(nuovoSocio.importo_utile || 0).toFixed(2)}
+  disabled
+/>
 </div>
 
 <div>
@@ -1066,6 +1081,14 @@ const importoNettoNuovoSocio =
         alert("Il codice fiscale è obbligatorio.");
         return;
       }
+
+      if (
+  nuovoSocio.percentuale_partecipazione === "" ||
+  Number(nuovoSocio.percentuale_partecipazione) <= 0
+) {
+  alert("La percentuale di partecipazione è obbligatoria.");
+  return;
+}
 
       if (nuovoSocio.nominativo_id === "__nuovo__") {
         const saveNomRes = await fetch(
@@ -1352,7 +1375,7 @@ const importoNettoNuovoSocio =
   </div>
   </div>
 
-            {!isDistribuzioneUtili && (
+{false && (
   <>
 
 <h3 style={{ marginTop: 28, fontSize: 16, fontWeight: 700 }}>
