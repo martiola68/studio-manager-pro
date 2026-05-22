@@ -134,6 +134,7 @@ const [nuovoSocio, setNuovoSocio] = useState({
   cap: "",
   citta: "",
   provincia: "",
+  importo_dividendo_totale: "",
   percentuale_partecipazione: "",
   importo_utile: "",
   percentuale_ritenuta: "26",
@@ -678,7 +679,7 @@ const importoNettoNuovoSocio =
               </div>
             </div>
 
-           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginTop: 14 }}>
+           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, marginTop: 14 }}>
   <div>
     <label style={labelStyle}>Rappresentante legale</label>
     <input
@@ -701,8 +702,24 @@ const importoNettoNuovoSocio =
     />
   </div>
 
+             <div>
+  <label style={labelStyle}>Dividendo totale</label>
+  <input
+    type="number"
+    step="0.01"
+    style={inputStyle}
+    value={nuovoSocio.importo_dividendo_totale}
+    onChange={(e) =>
+      setNuovoSocio({
+        ...nuovoSocio,
+        importo_dividendo_totale: e.target.value,
+      })
+    }
+  />
+</div>
+
   <div>
-    <label style={labelStyle}>% soci presenti</label>
+    <label style={labelStyle}>% quote/azioni</label>
   <input
   type="number"
   min="0"
@@ -729,7 +746,7 @@ const importoNettoNuovoSocio =
         ? 700
         : 500,
   }}
-  value={percentualeSociPresentiCalcolata}
+  value={percentualeSociPresentiCalcolata.toFixed(2)}
   disabled
 />
   </div>
@@ -1296,10 +1313,12 @@ const importoNettoNuovoSocio =
             <tr key={s.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
               <td style={tdStyle}>{s.nome_cognome}</td>
               <td style={tdStyle}>{s.codice_fiscale}</td>
-              <td style={tdStyle}>{s.percentuale_partecipazione}%</td>
-              <td style={tdStyle}>{s.importo_utile}</td>
-              <td style={tdStyle}>{s.importo_ritenuta}</td>
-              <td style={tdStyle}>{s.importo_netto}</td>
+             <td style={tdStyle}>
+  {Number(s.percentuale_partecipazione || 0).toFixed(2)}%
+</td>
+             <td style={tdStyle}>{Number(s.importo_utile || 0).toFixed(2)}</td>
+             <td style={tdStyle}>{Number(s.importo_ritenuta || 0).toFixed(2)}</td>
+             <td style={tdStyle}>{Number(s.importo_netto || 0).toFixed(2)}</td>
               <td style={tdStyle}>{s.tipo_pagamento}</td>
               <td style={tdStyle}>
                 <button
@@ -1332,6 +1351,9 @@ const importoNettoNuovoSocio =
     )}
   </div>
   </div>
+
+            {!isDistribuzioneUtili && (
+  <>
 
 <h3 style={{ marginTop: 28, fontSize: 16, fontWeight: 700 }}>
               Motivo messa in liquidazione
@@ -1530,6 +1552,9 @@ const importoNettoNuovoSocio =
       </button>
     </div>
   </div>
+)}
+
+      </>
 )}
 
 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginTop: 14 }}>
