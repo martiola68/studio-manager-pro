@@ -174,12 +174,49 @@ if (documentoEsistente) {
 }
 
 const sociElenco = (soci || []).map((socio: any) => ({
-  SOCIO_NOME: socio.nome_cognome || "",
-  SOCIO_CF: socio.codice_fiscale || "",
-  SOCIO_QUOTA: socio.percentuale_partecipazione
-    ? `${socio.percentuale_partecipazione}%`
-    : "",
-  SOCIO_PRESENZA: "Presente",
+  SOCIO_NOME_COGNOME:
+    socio.nome_cognome || "",
+
+  SOCIO_CODICE_FISCALE:
+    socio.codice_fiscale || "",
+
+  SOCIO_PERCENTUALE_PARTECIPAZIONE:
+    socio.percentuale_partecipazione
+      ? Number(
+          socio.percentuale_partecipazione
+        ).toFixed(2)
+      : "0.00",
+
+  SOCIO_IMPORTO_UTILE:
+    socio.importo_utile
+      ? Number(
+          socio.importo_utile
+        ).toFixed(2)
+      : "0.00",
+
+  SOCIO_PERCENTUALE_RITENUTA:
+    socio.percentuale_ritenuta
+      ? Number(
+          socio.percentuale_ritenuta
+        ).toFixed(2)
+      : "0.00",
+
+  SOCIO_IMPORTO_RITENUTA:
+    socio.importo_ritenuta
+      ? Number(
+          socio.importo_ritenuta
+        ).toFixed(2)
+      : "0.00",
+
+  SOCIO_IMPORTO_NETTO:
+    socio.importo_netto
+      ? Number(
+          socio.importo_netto
+        ).toFixed(2)
+      : "0.00",
+
+  SOCIO_TIPO_PAGAMENTO:
+    socio.tipo_pagamento || "",
 }));
 
 const percentualeCapitale = sociElenco.reduce(
@@ -264,9 +301,45 @@ const percentualeCapitale = sociElenco.reduce(
    NUMERO_PRATICA:
   pratica.numero_pratica || "",
 
-PERCENTUALE_CAPITALE:
-  percentualeCapitale,
+PERCENTUALE_SOCI_PRESENTI:
+  Number(percentualeCapitale).toFixed(2),
 
+      SOCIETA_DENOMINAZIONE:
+  datiDocumento.societa_denominazione ||
+  cliente?.ragione_sociale ||
+  "",
+
+SOCIETA_SEDE:
+  sede,
+
+SOCIETA_CODICE_FISCALE:
+  datiDocumento.societa_codice_fiscale ||
+  cliente?.codice_fiscale ||
+  "",
+
+SOCIETA_PARTITA_IVA:
+  datiDocumento.societa_partita_iva ||
+  cliente?.partita_iva ||
+  "",
+
+SOCIETA_REA:
+  datiDocumento.societa_rea ||
+  cliente?.numero_rea ||
+  "",
+
+RAPPRESENTANTE_LEGALE_NOME:
+  datiDocumento.rappresentante_legale ||
+  "",
+
+RAPPRESENTANTE_LEGALE_CODICE_FISCALE:
+  datiDocumento.cf_rappresentante_legale ||
+  "",
+
+IMPORTO_DIVIDENDO_TOTALE:
+  Number(
+    datiDocumento.importo_dividendo_totale || 0
+  ).toFixed(2),
+      
 SOCI:
   sociElenco,
 
