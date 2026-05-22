@@ -127,14 +127,14 @@ const [nuovoSoggetto, setNuovoSoggetto] = useState({
 });
 
 const [nuovoSocio, setNuovoSocio] = useState({
-  nominativo_id: "",
+    nominativo_id: "",
   nome_cognome: "",
   codice_fiscale: "",
   indirizzo: "",
   cap: "",
   citta: "",
   provincia: "",
-  importo_dividendo_totale: "",
+  importo_dividendo_totale: nuovoSocio.importo_dividendo_totale,
   percentuale_partecipazione: "",
   importo_utile: "",
   percentuale_ritenuta: "26",
