@@ -1118,42 +1118,46 @@ const importoNettoNuovoSocio =
 
   <button
     type="button"
-    onClick={() => {
-      const normalizza = (v: any) =>
-        String(v || "")
-          .trim()
-          .toLowerCase()
-          .replace(/\s+/g, " ");
+    onClick={async () => {
+  const normalizza = (v: any) =>
+    String(v || "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, " ");
 
-      const valore = normalizza(
-        nuovoSocio.nome_cognome
-      );
+  const valore = normalizza(nuovoSocio.nome_cognome);
 
-      const cliente = clientiImport.find((c) => {
-        return (
-          normalizza(c.ragione_sociale) === valore
-        );
-      });
+  if (!valore) {
+    alert("Scrivi prima il nominativo da importare.");
+    return;
+  }
 
-      if (!cliente) {
-        alert(
-          "Nominativo non trovato in Anagrafica Clienti."
-        );
-        return;
-      }
+  const res = await fetch("/api/clienti/import-nominativi", {
+    cache: "no-store",
+  });
 
-      setNuovoSocio({
-        ...nuovoSocio,
-        nome_cognome:
-          cliente.ragione_sociale || "",
-        codice_fiscale:
-          cliente.codice_fiscale || "",
-        indirizzo: cliente.indirizzo || "",
-        cap: cliente.cap || "",
-        citta: cliente.citta || "",
-        provincia: cliente.provincia || "",
-      });
-    }}
+  const data = await res.json();
+  const clienti = Array.isArray(data) ? data : data.clienti || [];
+
+  const cliente = clienti.find(
+    (c: any) => normalizza(c.ragione_sociale) === valore
+  );
+
+  if (!cliente) {
+    alert("Nominativo non trovato in Anagrafica Clienti.");
+    return;
+  }
+
+  setNuovoSocio({
+    ...nuovoSocio,
+    nome_cognome: cliente.ragione_sociale || "",
+    codice_fiscale: cliente.codice_fiscale || "",
+    indirizzo: cliente.indirizzo || "",
+    cap: cliente.cap || "",
+    citta: cliente.citta || "",
+    provincia: cliente.provincia || "",
+  });
+}}
     style={{
       border: "1px solid #d1d5db",
       borderRadius: 8,
