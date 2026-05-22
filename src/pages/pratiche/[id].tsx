@@ -127,14 +127,14 @@ const [nuovoSoggetto, setNuovoSoggetto] = useState({
 });
 
 const [nuovoSocio, setNuovoSocio] = useState({
-    nominativo_id: "",
+  nominativo_id: "",
   nome_cognome: "",
   codice_fiscale: "",
   indirizzo: "",
   cap: "",
   citta: "",
   provincia: "",
-  importo_dividendo_totale: nuovoSocio.importo_dividendo_totale,
+  importo_dividendo_totale: "",
   percentuale_partecipazione: "",
   importo_utile: "",
   percentuale_ritenuta: "26",
@@ -1125,24 +1125,48 @@ onBlur={() => {
           saveNomData.nominativo.id;
       }
 
-      const res = await fetch(
-        `/api/pratiche/${praticaId}/soci`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            ...nuovoSocio,
-            importo_ritenuta:
-              importoRitenutaNuovoSocio,
-            importo_netto:
-              importoNettoNuovoSocio,
-          }),
-        }
-      );
-    
-      await caricaSoci();
+     const res = await fetch(
+  `/api/pratiche/${praticaId}/soci`,
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      ...nuovoSocio,
+      importo_ritenuta:
+        importoRitenutaNuovoSocio,
+      importo_netto:
+        importoNettoNuovoSocio,
+    }),
+  }
+);
+
+if (!res.ok) {
+  const data = await res.json();
+  alert(data.error || "Errore inserimento socio");
+  return;
+}
+
+setNuovoSocio({
+  nominativo_id: "",
+  nome_cognome: "",
+  codice_fiscale: "",
+  indirizzo: "",
+  cap: "",
+  citta: "",
+  provincia: "",
+  importo_dividendo_totale:
+    nuovoSocio.importo_dividendo_totale,
+  percentuale_partecipazione: "",
+  importo_utile: "",
+  percentuale_ritenuta: "26",
+  importo_ritenuta: "",
+  importo_netto: "",
+  tipo_pagamento: "",
+});
+
+await caricaSoci();
     }}
     style={{
       border: 0,
