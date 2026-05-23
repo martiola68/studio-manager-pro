@@ -18,6 +18,7 @@ type Modello = {
 const categorie = [
   { label: "Distribuzione utili", value: "distribuzione_utili", codice: "VERBALE_UTILI" },
   { label: "Determina AU / CDA", value: "determina_au_cda", codice: "DETERMINA_AU_CDA" },
+  {label: "Messa in liquidazione", value: "messa_liquidazione", codice: "VERBALE_LIQUIDAZIONE"},
   { label: "Modifica/Nomina amministratore/i", value: "nomina_amministratori", codice: "NOMINA_AMMINISTRATORI" },
   { label: "Modifica/Nomina Revisore unico", value: "nomina_revisore_unico", codice: "NOMINA_REVISORE_UNICO" },
   { label: "Modifica/Nomina Collegio sindacale", value: "nomina_collegio_sindacale", codice: "NOMINA_COLLEGIO_SINDACALE" },
