@@ -165,10 +165,16 @@ liquidatore_codice_fiscale:
   body.liquidatore_codice_fiscale || null,
 
 percentuale_soci_presenti:
-  body.percentuale_soci_presenti || 100,
+  body.percentuale_soci_presenti
+    ? Number(body.percentuale_soci_presenti)
+    : 100,
+
+importo_dividendo_totale:
+  body.importo_dividendo_totale
+    ? Number(body.importo_dividendo_totale)
+    : null,
 
 updated_at: new Date().toISOString(),
-    };
 
     const { data: existing } = await supabaseAdmin
       .from("tbpratiche_dati_documenti")
