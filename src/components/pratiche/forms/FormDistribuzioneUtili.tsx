@@ -797,7 +797,10 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
       </tbody>
     </table>
   )}
-</div>
+  </div>
+    </main>
+  );
+}
 
 const cardStyle: React.CSSProperties = {
   background: "#fff",
