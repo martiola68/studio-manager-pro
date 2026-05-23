@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Trash2 } from "lucide-react";
 import Link from "next/link";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
@@ -47,7 +48,7 @@ export default function ModelliUtilitaPage() {
   const [nome, setNome] = useState("");
   const [codice, setCodice] = useState("VERBALE_ASSEMBLEA_LIQUIDAZIONE");
   const [categoria, setCategoria] = useState("verbale_assemblea");
-  const [tipoPraticaId, setTipoPraticaId] = useState("2");
+
   const [file, setFile] = useState<File | null>(null);
   const [messaggio, setMessaggio] = useState("");
 
@@ -108,7 +109,7 @@ export default function ModelliUtilitaPage() {
         nome: nome.trim(),
         codice: codice.trim(),
         categoria,
-        tipo_pratica_id: tipoPraticaId ? Number(tipoPraticaId) : null,
+       tipo_pratica_id: null,
         file_path: filePath,
         attivo: true,
         updated_at: new Date().toISOString(),
@@ -135,23 +136,35 @@ export default function ModelliUtilitaPage() {
     }
   }
 
-  async function eliminaModello(id: string) {
-    if (!confirm("Eliminare questo modello?")) return;
+async function eliminaModello(id: string) {
+  const supabase = getSupabaseClient();
 
-    const supabase = getSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-    const { error } = await supabase
-      .from("tbpratiche_modelli_utilita" as any)
-      .delete()
-      .eq("id", id);
-
-    if (error) {
-      setMessaggio(error.message);
-      return;
-    }
-
-    await caricaModelli();
+  if (
+    user?.email?.toLowerCase() !==
+    "m.artiola@revisionicommerciali.it"
+  ) {
+    alert("Non autorizzato.");
+    return;
   }
+
+  if (!confirm("Eliminare questo modello?")) return;
+
+  const { error } = await supabase
+    .from("tbpratiche_modelli_utilita" as any)
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    setMessaggio(error.message);
+    return;
+  }
+
+  await caricaModelli();
+}
 
   return (
     <main
@@ -259,16 +272,7 @@ export default function ModelliUtilitaPage() {
               </select>
             </div>
 
-            <div style={{ marginTop: 14 }}>
-              <label style={labelStyle}>Tipo pratica ID</label>
-              <input
-                style={inputStyle}
-                value={tipoPraticaId}
-                onChange={(e) => setTipoPraticaId(e.target.value)}
-                placeholder="Es. 2"
-              />
-            </div>
-
+          
             <div style={{ marginTop: 14 }}>
               <label style={labelStyle}>File DOCX</label>
               <input
@@ -379,21 +383,23 @@ export default function ModelliUtilitaPage() {
                       </td>
 
                       <td style={{ ...tdStyle, textAlign: "right" }}>
-                        <button
-                          type="button"
-                          onClick={() => eliminaModello(m.id)}
-                          style={{
-                            border: 0,
-                            background: "transparent",
-                            color: "#dc2626",
-                            fontSize: 13,
-                            fontWeight: 600,
-                            cursor: "pointer",
-                            fontFamily: font,
-                          }}
-                        >
-                          Elimina
-                        </button>
+                       <button
+  type="button"
+  title="Elimina modello"
+  onClick={() => eliminaModello(m.id)}
+  style={{
+    border: 0,
+    background: "transparent",
+    color: "#dc2626",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    width: "100%",
+  }}
+>
+  <Trash2 size={18} />
+</button>
                       </td>
                     </tr>
                   ))}
