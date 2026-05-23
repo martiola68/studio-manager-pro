@@ -1,8 +1,8 @@
 "use client";
-
+import { Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Trash2 } from "lucide-react";
+
 import { getSupabaseClient } from "@/lib/supabase/client";
 
 type Modello = {
@@ -185,7 +185,7 @@ export default function ModelliUtilitaPage() {
           </p>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1.2fr", gap: 16, alignItems: "start" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "0.8fr 1.6fr", gap: 16, alignItems: "start" }}>
           <form onSubmit={salvaModello} style={cardStyle}>
             <h2 style={titleStyle}>Carica modello</h2>
 
@@ -227,7 +227,7 @@ export default function ModelliUtilitaPage() {
             )}
           </form>
 
-          <div style={{ background: "#fff", border: "1px solid #d1d5db", borderRadius: 10, overflow: "hidden" }}>
+          <div style={{ background: "#fff", border: "1px solid #d1d5db", borderRadius: 10, overflowX: "auto" }}>
             <div style={{ padding: 20, borderBottom: "1px solid #e5e7eb" }}>
               <h2 style={titleStyle}>Modelli caricati</h2>
               <p style={{ marginTop: 6, fontSize: 14, color: "#64748b" }}>
@@ -240,7 +240,7 @@ export default function ModelliUtilitaPage() {
             ) : modelli.length === 0 ? (
               <div style={{ padding: 24, color: "#64748b" }}>Nessun modello caricato.</div>
             ) : (
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <table style={{ width: "100%", minWidth: 720, borderCollapse: "collapse" }}>
                 <thead style={{ background: "#f8fafc" }}>
                   <tr>
                     <th style={thStyle}>Nome</th>
