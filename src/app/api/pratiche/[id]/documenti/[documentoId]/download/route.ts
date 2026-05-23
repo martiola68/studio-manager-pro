@@ -27,18 +27,27 @@ export async function GET(req: Request, { params }: Params) {
       );
     }
 
-    const { data, error: signedError } = await supabaseAdmin.storage
-      .from("pratiche-documenti")
-      .createSignedUrl(documento.file_path, 60);
+   const { data: fileData, error: downloadError } = await supabaseAdmin.storage
+  .from("pratiche-documenti")
+  .download(documento.file_path);
 
-    if (signedError || !data?.signedUrl) {
-      return NextResponse.json(
-        { error: signedError?.message || "Errore generazione link download" },
-        { status: 500 }
-      );
-    }
+if (downloadError || !fileData) {
+  return NextResponse.json(
+    { error: downloadError?.message || "Errore download file" },
+    { status: 500 }
+  );
+}
 
-    return NextResponse.redirect(data.signedUrl);
+const arrayBuffer = await fileData.arrayBuffer();
+
+return new NextResponse(arrayBuffer, {
+  headers: {
+    "Content-Type":
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "Content-Disposition": `attachment; filename="${documento.nome_file || "documento.docx"}"`,
+  },
+});
+    
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || "Errore download documento" },
