@@ -940,6 +940,10 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
           Totale lordo soci: <strong>{totaleLordoSoci.toFixed(2)}</strong>
         </div>
 
+        <div style={{ marginTop: 10, color: "red" }}>
+  documenti: {documenti.length}
+</div>
+
         {documenti.length > 0 && (
           <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 18 }}>
             <thead>
