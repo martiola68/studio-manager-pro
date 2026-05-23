@@ -246,10 +246,7 @@ export default function ModelliUtilitaPage() {
                     <th style={thStyle}>Nome</th>
                     <th style={thStyle}>Categoria</th>
                     <th style={thStyle}>Codice</th>
-                    <th style={{ ...thStyle, textAlign: "right" }}>
-                    Azioni
-                    </th>
-                    <th style={{ ...thStyle, textAlign: "right" }}>Azioni</th>
+                   <th style={{ ...thStyle, textAlign: "right" }}>Azioni</th>
                   </tr>
                 </thead>
 
@@ -266,25 +263,6 @@ export default function ModelliUtilitaPage() {
                       <td style={tdStyle}>
                         <span style={{ fontFamily: "monospace", fontSize: 12 }}>{m.codice}</span>
                       </td>
-
-                      <td style={{ ...tdStyle, textAlign: "right" }}>
-  <button
-    type="button"
-    title="Elimina modello"
-    onClick={() => eliminaModello(m.id)}
-    style={{
-      border: 0,
-      background: "transparent",
-      color: "#dc2626",
-      cursor: "pointer",
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "flex-end",
-    }}
-  >
-    <Trash2 size={18} />
-  </button>
-</td>
 
                       <td style={{ ...tdStyle, textAlign: "right" }}>
                         <button
