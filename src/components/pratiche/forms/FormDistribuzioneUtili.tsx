@@ -41,7 +41,6 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
   const [modelli, setModelli] = useState<any[]>([]);
   const [documenti, setDocumenti] = useState<any[]>([]);
 
-  const [dividendoTotale, setDividendoTotale] = useState("");
   const [mostraNuovoNominativo, setMostraNuovoNominativo] = useState(false);
 
   const sede = [
@@ -75,9 +74,16 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
     oggetto_assemblea:
       pratica.dati_documento?.oggetto_assemblea ||
       "Approvazione bilancio e distribuzione utili",
-    presidente: pratica.dati_documento?.presidente || "",
+    presidente:
+      pratica.dati_documento?.presidente ||
+      pratica.dati_documento?.rappresentante_legale_nome ||
+      "",
     segretario: pratica.dati_documento?.segretario || "",
     ora_chiusura: pratica.dati_documento?.ora_chiusura || "",
+    importo_dividendo_totale:
+      pratica.dati_documento?.importo_dividendo_totale || "",
+    percentuale_soci_presenti:
+      String(pratica.dati_documento?.percentuale_soci_presenti || "100"),
   });
 
   const [nuovoSocio, setNuovoSocio] = useState({
@@ -88,7 +94,8 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
     cap: "",
     citta: "",
     provincia: "",
-    importo_dividendo_totale: "",
+    importo_dividendo_totale:
+      pratica.dati_documento?.importo_dividendo_totale || "",
     percentuale_partecipazione: "",
     importo_utile: "",
     percentuale_ritenuta: "26",
@@ -164,8 +171,9 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
     if (res.ok) setDocumenti(data.documenti || []);
   }
 
-  async function salvaDatiDocumento(e: React.FormEvent) {
-    e.preventDefault();
+  async function salvaDatiDocumento(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+
     setSaving(true);
     setMessaggio("");
 
@@ -183,8 +191,10 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
       }
 
       setMessaggio("Dati verbale salvati correttamente.");
+      return true;
     } catch (error: any) {
       setMessaggio(error.message || "Errore imprevisto");
+      return false;
     } finally {
       setSaving(false);
     }
@@ -290,9 +300,7 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
 
   const modelloDistribuzione =
     modelli.find((m) =>
-      String(m.nome || m.codice || "")
-        .toLowerCase()
-        .includes("distribuzione")
+      String(m.nome || m.codice || "").toLowerCase().includes("distribuzione")
     ) || modelli[0];
 
   async function generaDocumento() {
@@ -301,15 +309,26 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
       return;
     }
 
-    if (Number(dividendoTotale || 0).toFixed(2) !== totaleLordoSoci.toFixed(2)) {
+    if (
+      Number(form.importo_dividendo_totale || 0).toFixed(2) !==
+      totaleLordoSoci.toFixed(2)
+    ) {
       alert("Il dividendo totale deve corrispondere al totale lordo dei soci.");
       return;
     }
 
-    if (percentualeSociPresentiCalcolata > 100) {
-      alert("Le percentuali non possono superare il 100%.");
+    if (Number(form.percentuale_soci_presenti || 0) > 100) {
+      alert("La percentuale capitale presente non può superare il 100%.");
       return;
     }
+
+    if (percentualeSociPresentiCalcolata > 100) {
+      alert("Le percentuali dei soci non possono superare il 100%.");
+      return;
+    }
+
+    const salvato = await salvaDatiDocumento();
+    if (!salvato) return;
 
     const res = await fetch(`/api/pratiche/${praticaId}/genera-documento`, {
       method: "POST",
@@ -331,14 +350,7 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
   }
 
   return (
-    <main
-      style={{
-        padding: 28,
-        background: "#f8fafc",
-        minHeight: "100vh",
-        fontFamily: font,
-      }}
-    >
+    <main style={{ padding: 28, background: "#f8fafc", minHeight: "100vh", fontFamily: font }}>
       <h1 style={{ fontSize: 38, fontWeight: 800, margin: 0, color: "#0f172a" }}>
         {pratica.numero_pratica}
       </h1>
@@ -351,17 +363,9 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
         <div style={cardStyle}>
           <h2 style={titleStyle}>Dati società</h2>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "2fr 1fr 1fr",
-              gap: 12,
-              marginTop: 18,
-            }}
-          >
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 12, marginTop: 18 }}>
             <div>
               <label style={labelStyle}>Denominazione società</label>
-
               <select
                 style={inputStyle}
                 value={form.societa_denominazione}
@@ -427,14 +431,7 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
             </div>
           </div>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "2fr 1fr",
-              gap: 12,
-              marginTop: 14,
-            }}
-          >
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 12, marginTop: 14 }}>
             <div>
               <label style={labelStyle}>Sede società</label>
               <input
@@ -458,14 +455,7 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
         <div style={cardStyle}>
           <h2 style={titleStyle}>Dati verbale distribuzione utili</h2>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr 2fr",
-              gap: 12,
-              marginTop: 18,
-            }}
-          >
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 2fr", gap: 12, marginTop: 18 }}>
             <div>
               <label style={labelStyle}>Data assemblea</label>
               <input
@@ -498,25 +488,40 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
             </div>
           </div>
 
-          <div style={{ marginTop: 14 }}>
-            <label style={labelStyle}>Oggetto assemblea</label>
-            <input
-              style={inputStyle}
-              value={form.oggetto_assemblea}
-              onChange={(e) =>
-                aggiornaCampo("oggetto_assemblea", e.target.value)
-              }
-            />
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 12, marginTop: 14 }}>
+            <div>
+              <label style={labelStyle}>Oggetto assemblea</label>
+              <input
+                style={inputStyle}
+                value={form.oggetto_assemblea}
+                onChange={(e) =>
+                  aggiornaCampo("oggetto_assemblea", e.target.value)
+                }
+              />
+            </div>
+
+            <div>
+              <label style={labelStyle}>% capitale presente</label>
+              <input
+                type="number"
+                step="0.01"
+                max="100"
+                style={{
+                  ...inputStyle,
+                  borderColor:
+                    Number(form.percentuale_soci_presenti || 0) > 100
+                      ? "#dc2626"
+                      : "#9ca3af",
+                }}
+                value={form.percentuale_soci_presenti}
+                onChange={(e) =>
+                  aggiornaCampo("percentuale_soci_presenti", e.target.value)
+                }
+              />
+            </div>
           </div>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr 1fr",
-              gap: 12,
-              marginTop: 14,
-            }}
-          >
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginTop: 14 }}>
             <div>
               <label style={labelStyle}>Presidente</label>
               <input
@@ -546,20 +551,8 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
             </div>
           </div>
 
-          <div
-            style={{
-              marginTop: 18,
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <div
-              style={{
-                fontSize: 14,
-                color: messaggio.includes("Errore") ? "#dc2626" : "#64748b",
-              }}
-            >
+          <div style={{ marginTop: 18, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ fontSize: 14, color: messaggio.includes("Errore") ? "#dc2626" : "#64748b" }}>
               {messaggio}
             </div>
 
@@ -573,15 +566,7 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
       <div style={cardStyle}>
         <h2 style={titleStyle}>Soci presenti / Distribuzione utili</h2>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1.6fr auto 1fr 1fr 1fr 1fr 1fr auto",
-            gap: 12,
-            marginTop: 18,
-            alignItems: "end",
-          }}
-        >
+        <div style={{ display: "grid", gridTemplateColumns: "1.6fr auto 1fr 1fr 1fr 1fr 1fr auto", gap: 12, marginTop: 18, alignItems: "end" }}>
           <div>
             <label style={labelStyle}>Socio</label>
             <select
@@ -754,14 +739,7 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
               Aggiungi nuovo nominativo
             </h3>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr 1fr",
-                gap: 12,
-                marginTop: 14,
-              }}
-            >
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginTop: 14 }}>
               <div>
                 <label style={labelStyle}>Nome e cognome</label>
                 <input
@@ -847,16 +825,9 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
               </div>
             </div>
 
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginTop: 16,
-              }}
-            >
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 16 }}>
               <div style={{ fontSize: 13, color: "#64748b" }}>
-                Codice fiscale obbligatorio. Se già esiste, viene selezionato
-                senza duplicarlo.
+                Codice fiscale obbligatorio. Se già esiste, viene selezionato senza duplicarlo.
               </div>
 
               <button type="button" style={blueButton} onClick={aggiungiNominativo}>
@@ -892,9 +863,7 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
                   {Number(s.percentuale_partecipazione || 0).toFixed(2)}%
                 </td>
                 <td style={tdStyle}>{Number(s.importo_utile || 0).toFixed(2)}</td>
-                <td style={tdStyle}>
-                  {Number(s.importo_ritenuta || 0).toFixed(2)}
-                </td>
+                <td style={tdStyle}>{Number(s.importo_ritenuta || 0).toFixed(2)}</td>
                 <td style={tdStyle}>{Number(s.importo_netto || 0).toFixed(2)}</td>
                 <td style={tdStyle}>
                   <button
@@ -928,15 +897,7 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
       <div style={cardStyle}>
         <h2 style={titleStyle}>Documenti</h2>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 2fr auto",
-            gap: 12,
-            marginTop: 18,
-            alignItems: "end",
-          }}
-        >
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr auto", gap: 12, marginTop: 18, alignItems: "end" }}>
           <div>
             <label style={labelStyle}>Dividendo totale deliberato</label>
             <input
@@ -945,13 +906,19 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
               style={{
                 ...inputStyle,
                 borderColor:
-                  Number(dividendoTotale || 0).toFixed(2) !==
+                  Number(form.importo_dividendo_totale || 0).toFixed(2) !==
                   totaleLordoSoci.toFixed(2)
                     ? "#dc2626"
                     : "#9ca3af",
               }}
-              value={dividendoTotale}
-              onChange={(e) => setDividendoTotale(e.target.value)}
+              value={form.importo_dividendo_totale}
+              onChange={(e) => {
+                aggiornaCampo("importo_dividendo_totale", e.target.value);
+                setNuovoSocio((prev) => ({
+                  ...prev,
+                  importo_dividendo_totale: e.target.value,
+                }));
+              }}
             />
           </div>
 
@@ -974,13 +941,7 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
         </div>
 
         {documenti.length > 0 && (
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              marginTop: 18,
-            }}
-          >
+          <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 18 }}>
             <thead>
               <tr>
                 <th style={thStyle}>Documento</th>
@@ -1007,8 +968,7 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
                     <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                       <a
                         href={`/api/pratiche/${praticaId}/documenti/${doc.id}/download`}
-                        target="_blank"
-                        rel="noreferrer"
+                        download
                         title="Scarica documento"
                         style={{
                           color: "#2563eb",
@@ -1027,9 +987,7 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
 
                           const res = await fetch(
                             `/api/pratiche/${praticaId}/documenti/${doc.id}`,
-                            {
-                              method: "DELETE",
-                            }
+                            { method: "DELETE" }
                           );
 
                           if (!res.ok) {
