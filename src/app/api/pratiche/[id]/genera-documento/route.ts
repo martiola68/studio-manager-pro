@@ -419,14 +419,14 @@ SEDE_LIQUIDAZIONE:
       success: true,
       documento,
     });
-  } catch (error: any) {
-    return NextResponse.json(
-      {
-        error:
-          error.message ||
-          "Errore durante la generazione del documento",
-      },
-      { status: 500 }
-    );
-  }
+} catch (error: any) {
+  console.error("ERRORE GENERAZIONE DOCUMENTO:", JSON.stringify(error, null, 2));
+
+  return NextResponse.json(
+    {
+      error: error.message || "Errore durante la generazione del documento",
+      details: error.properties?.errors || error.properties || error,
+    },
+    { status: 500 }
+  );
 }
