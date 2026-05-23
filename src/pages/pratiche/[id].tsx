@@ -29,16 +29,17 @@ type PraticaDettaglio = {
   tipo?: {
     ente?: string;
     nome?: string;
+    classe_form?: string;
   };
   assegnatario?: {
     nome?: string;
     cognome?: string;
   };
-dati_documento?: any;
-rappresentante_legale?: {
-  nome_cognome?: string;
-  codice_fiscale?: string;
-};
+  dati_documento?: any;
+  rappresentante_legale?: {
+    nome_cognome?: string;
+    codice_fiscale?: string;
+  };
 };
 
 type Professionista = {
