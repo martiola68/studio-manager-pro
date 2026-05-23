@@ -4,6 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 
+import FormDistribuzioneUtili from "@/components/pratiche/forms/FormDistribuzioneUtili";
+import FormMessaLiquidazione from "@/components/pratiche/forms/FormMessaLiquidazione";
+import FormNominaAmministratore from "@/components/pratiche/forms/FormNominaAmministratore";
+import FormCambioAmministratore from "@/components/pratiche/forms/FormCambioAmministratore";
+
 type PraticaDettaglio = {
   id: string;
   numero_pratica: string;
