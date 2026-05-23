@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
+import { Download, Trash2 } from "lucide-react";
 
 const font =
   'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
@@ -38,12 +39,9 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
   const [soci, setSoci] = useState<any[]>([]);
   const [nominativi, setNominativi] = useState<any[]>([]);
   const [modelli, setModelli] = useState<any[]>([]);
-  const [modelloSelezionato, setModelloSelezionato] = useState("");
-  const [tipoDocumento, setTipoDocumento] = useState("verbale_assemblea");
-
   const [documenti, setDocumenti] = useState<any[]>([]);
-  const [dividendoTotale, setDividendoTotale] = useState("");
 
+  const [dividendoTotale, setDividendoTotale] = useState("");
   const [mostraNuovoNominativo, setMostraNuovoNominativo] = useState(false);
 
   const sede = [
@@ -159,12 +157,12 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
   }
 
   async function caricaDocumenti() {
-  const res = await fetch(`/api/pratiche/${praticaId}/documenti`, {
-    cache: "no-store",
-  });
-  const data = await res.json();
-  if (res.ok) setDocumenti(data.documenti || []);
-}
+    const res = await fetch(`/api/pratiche/${praticaId}/documenti`, {
+      cache: "no-store",
+    });
+    const data = await res.json();
+    if (res.ok) setDocumenti(data.documenti || []);
+  }
 
   async function salvaDatiDocumento(e: React.FormEvent) {
     e.preventDefault();
@@ -269,27 +267,10 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
     setMostraNuovoNominativo(false);
   }
 
-  async function generaDocumento() {
-    if (!modelloSelezionato) {
-      alert("Seleziona un modello documento.");
-      return;
-    }
-
-    const res = await fetch(`/api/pratiche/${praticaId}/genera-documento`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ codice_modello: modelloSelezionato, tipo_documento: tipoDocumento }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      alert(data.error || "Errore generazione documento");
-      return;
-    }
-
-    alert("Documento generato.");
-  }
+  const totaleLordoSoci = soci.reduce(
+    (totale, socio) => totale + Number(socio.importo_utile || 0),
+    0
+  );
 
   const percentualeSociPresentiCalcolata = soci.reduce(
     (totale, socio) => totale + Number(socio.percentuale_partecipazione || 0),
@@ -300,16 +281,68 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
   const percentualeRitenutaNuovoSocio = Number(
     nuovoSocio.percentuale_ritenuta || 0
   );
+
   const importoRitenutaNuovoSocio =
     (importoLordoNuovoSocio * percentualeRitenutaNuovoSocio) / 100;
+
   const importoNettoNuovoSocio =
     importoLordoNuovoSocio - importoRitenutaNuovoSocio;
 
+  const modelloDistribuzione =
+    modelli.find((m) =>
+      String(m.nome || m.codice || "")
+        .toLowerCase()
+        .includes("distribuzione")
+    ) || modelli[0];
+
+  async function generaDocumento() {
+    if (!modelloDistribuzione?.codice) {
+      alert("Modello Distribuzione utili non trovato.");
+      return;
+    }
+
+    if (Number(dividendoTotale || 0).toFixed(2) !== totaleLordoSoci.toFixed(2)) {
+      alert("Il dividendo totale deve corrispondere al totale lordo dei soci.");
+      return;
+    }
+
+    if (percentualeSociPresentiCalcolata > 100) {
+      alert("Le percentuali non possono superare il 100%.");
+      return;
+    }
+
+    const res = await fetch(`/api/pratiche/${praticaId}/genera-documento`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        codice_modello: modelloDistribuzione.codice,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.error || "Errore generazione documento");
+      return;
+    }
+
+    await caricaDocumenti();
+    alert("Documento generato.");
+  }
+
   return (
-    <main style={{ padding: 28, background: "#f8fafc", minHeight: "100vh", fontFamily: font }}>
+    <main
+      style={{
+        padding: 28,
+        background: "#f8fafc",
+        minHeight: "100vh",
+        fontFamily: font,
+      }}
+    >
       <h1 style={{ fontSize: 38, fontWeight: 800, margin: 0, color: "#0f172a" }}>
         {pratica.numero_pratica}
       </h1>
+
       <p style={{ fontSize: 18, marginTop: 6, color: "#475569" }}>
         {pratica.titolo}
       </p>
@@ -318,9 +351,17 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
         <div style={cardStyle}>
           <h2 style={titleStyle}>Dati società</h2>
 
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 12, marginTop: 18 }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "2fr 1fr 1fr",
+              gap: 12,
+              marginTop: 18,
+            }}
+          >
             <div>
               <label style={labelStyle}>Denominazione società</label>
+
               <select
                 style={inputStyle}
                 value={form.societa_denominazione}
@@ -329,24 +370,25 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
                     (c) => c.ragione_sociale === e.target.value
                   );
 
+                  const nuovaSede = [
+                    selected?.indirizzo,
+                    selected?.cap,
+                    selected?.citta,
+                    selected?.provincia,
+                  ]
+                    .filter(Boolean)
+                    .join(" ");
+
                   setForm((prev) => ({
                     ...prev,
-                    societa_denominazione: selected?.ragione_sociale || e.target.value,
+                    societa_denominazione:
+                      selected?.ragione_sociale || e.target.value,
                     societa_codice_fiscale: selected?.codice_fiscale || "",
-                    societa_partita_iva: selected?.partita_iva || selected?.codice_fiscale || "",
-                    societa_sede: [
-                      selected?.indirizzo,
-                      selected?.cap,
-                      selected?.citta,
-                      selected?.provincia,
-                    ].filter(Boolean).join(" "),
+                    societa_partita_iva:
+                      selected?.partita_iva || selected?.codice_fiscale || "",
+                    societa_sede: nuovaSede,
                     societa_rea: selected?.numero_rea || "",
-                    luogo_assemblea: [
-                      selected?.indirizzo,
-                      selected?.cap,
-                      selected?.citta,
-                      selected?.provincia,
-                    ].filter(Boolean).join(" "),
+                    luogo_assemblea: nuovaSede,
                   }));
                 }}
               >
@@ -364,24 +406,51 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
 
             <div>
               <label style={labelStyle}>Codice fiscale</label>
-              <input style={inputStyle} value={form.societa_codice_fiscale} onChange={(e) => aggiornaCampo("societa_codice_fiscale", e.target.value)} />
+              <input
+                style={inputStyle}
+                value={form.societa_codice_fiscale}
+                onChange={(e) =>
+                  aggiornaCampo("societa_codice_fiscale", e.target.value)
+                }
+              />
             </div>
 
             <div>
               <label style={labelStyle}>Partita IVA</label>
-              <input style={inputStyle} value={form.societa_partita_iva} onChange={(e) => aggiornaCampo("societa_partita_iva", e.target.value)} />
+              <input
+                style={inputStyle}
+                value={form.societa_partita_iva}
+                onChange={(e) =>
+                  aggiornaCampo("societa_partita_iva", e.target.value)
+                }
+              />
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 12, marginTop: 14 }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "2fr 1fr",
+              gap: 12,
+              marginTop: 14,
+            }}
+          >
             <div>
               <label style={labelStyle}>Sede società</label>
-              <input style={inputStyle} value={form.societa_sede} onChange={(e) => aggiornaCampo("societa_sede", e.target.value)} />
+              <input
+                style={inputStyle}
+                value={form.societa_sede}
+                onChange={(e) => aggiornaCampo("societa_sede", e.target.value)}
+              />
             </div>
 
             <div>
               <label style={labelStyle}>REA</label>
-              <input style={inputStyle} value={form.societa_rea} onChange={(e) => aggiornaCampo("societa_rea", e.target.value)} />
+              <input
+                style={inputStyle}
+                value={form.societa_rea}
+                onChange={(e) => aggiornaCampo("societa_rea", e.target.value)}
+              />
             </div>
           </div>
         </div>
@@ -389,47 +458,108 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
         <div style={cardStyle}>
           <h2 style={titleStyle}>Dati verbale distribuzione utili</h2>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 2fr", gap: 12, marginTop: 18 }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr 2fr",
+              gap: 12,
+              marginTop: 18,
+            }}
+          >
             <div>
               <label style={labelStyle}>Data assemblea</label>
-              <input type="date" style={inputStyle} value={form.data_atto} onChange={(e) => aggiornaCampo("data_atto", e.target.value)} />
+              <input
+                type="date"
+                style={inputStyle}
+                value={form.data_atto}
+                onChange={(e) => aggiornaCampo("data_atto", e.target.value)}
+              />
             </div>
 
             <div>
               <label style={labelStyle}>Ora inizio</label>
-              <input type="time" style={inputStyle} value={form.ora_inizio} onChange={(e) => aggiornaCampo("ora_inizio", e.target.value)} />
+              <input
+                type="time"
+                style={inputStyle}
+                value={form.ora_inizio}
+                onChange={(e) => aggiornaCampo("ora_inizio", e.target.value)}
+              />
             </div>
 
             <div>
               <label style={labelStyle}>Luogo assemblea</label>
-              <input style={inputStyle} value={form.luogo_assemblea} onChange={(e) => aggiornaCampo("luogo_assemblea", e.target.value)} />
+              <input
+                style={inputStyle}
+                value={form.luogo_assemblea}
+                onChange={(e) =>
+                  aggiornaCampo("luogo_assemblea", e.target.value)
+                }
+              />
             </div>
           </div>
 
           <div style={{ marginTop: 14 }}>
             <label style={labelStyle}>Oggetto assemblea</label>
-            <input style={inputStyle} value={form.oggetto_assemblea} onChange={(e) => aggiornaCampo("oggetto_assemblea", e.target.value)} />
+            <input
+              style={inputStyle}
+              value={form.oggetto_assemblea}
+              onChange={(e) =>
+                aggiornaCampo("oggetto_assemblea", e.target.value)
+              }
+            />
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginTop: 14 }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr 1fr",
+              gap: 12,
+              marginTop: 14,
+            }}
+          >
             <div>
               <label style={labelStyle}>Presidente</label>
-              <input style={inputStyle} value={form.presidente} onChange={(e) => aggiornaCampo("presidente", e.target.value)} />
+              <input
+                style={inputStyle}
+                value={form.presidente}
+                onChange={(e) => aggiornaCampo("presidente", e.target.value)}
+              />
             </div>
 
             <div>
               <label style={labelStyle}>Segretario</label>
-              <input style={inputStyle} value={form.segretario} onChange={(e) => aggiornaCampo("segretario", e.target.value)} />
+              <input
+                style={inputStyle}
+                value={form.segretario}
+                onChange={(e) => aggiornaCampo("segretario", e.target.value)}
+              />
             </div>
 
             <div>
               <label style={labelStyle}>Ora chiusura</label>
-              <input type="time" style={inputStyle} value={form.ora_chiusura} onChange={(e) => aggiornaCampo("ora_chiusura", e.target.value)} />
+              <input
+                type="time"
+                style={inputStyle}
+                value={form.ora_chiusura}
+                onChange={(e) => aggiornaCampo("ora_chiusura", e.target.value)}
+              />
             </div>
           </div>
 
-          <div style={{ marginTop: 18, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ fontSize: 14, color: messaggio.includes("Errore") ? "#dc2626" : "#64748b" }}>
+          <div
+            style={{
+              marginTop: 18,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 14,
+                color: messaggio.includes("Errore") ? "#dc2626" : "#64748b",
+              }}
+            >
               {messaggio}
             </div>
 
@@ -443,7 +573,15 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
       <div style={cardStyle}>
         <h2 style={titleStyle}>Soci presenti / Distribuzione utili</h2>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1.6fr auto 1fr 1fr 1fr 1fr 1fr auto", gap: 12, marginTop: 18, alignItems: "end" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1.6fr auto 1fr 1fr 1fr 1fr 1fr auto",
+            gap: 12,
+            marginTop: 18,
+            alignItems: "end",
+          }}
+        >
           <div>
             <label style={labelStyle}>Socio</label>
             <select
@@ -451,6 +589,7 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
               value={nuovoSocio.nominativo_id}
               onChange={(e) => {
                 const selected = nominativi.find((n) => n.id === e.target.value);
+
                 setNuovoSocio({
                   ...nuovoSocio,
                   nominativo_id: selected?.id || "",
@@ -464,6 +603,7 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
               }}
             >
               <option value="">Seleziona nominativo</option>
+
               {nominativi.map((n) => (
                 <option key={n.id} value={n.id}>
                   {n.nome_cognome}
@@ -472,7 +612,11 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
             </select>
           </div>
 
-          <button type="button" style={secondaryButton} onClick={() => setMostraNuovoNominativo(!mostraNuovoNominativo)}>
+          <button
+            type="button"
+            style={secondaryButton}
+            onClick={() => setMostraNuovoNominativo(!mostraNuovoNominativo)}
+          >
             + Nuovo
           </button>
 
@@ -485,9 +629,16 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
               value={nuovoSocio.importo_dividendo_totale}
               onChange={(e) => {
                 const valore = e.target.value;
-                const percentuale = Number(nuovoSocio.percentuale_partecipazione || 0);
+                const percentuale = Number(
+                  nuovoSocio.percentuale_partecipazione || 0
+                );
                 const lordo = (Number(valore || 0) * percentuale) / 100;
-                setNuovoSocio({ ...nuovoSocio, importo_dividendo_totale: valore, importo_utile: lordo.toFixed(2) });
+
+                setNuovoSocio({
+                  ...nuovoSocio,
+                  importo_dividendo_totale: valore,
+                  importo_utile: lordo.toFixed(2),
+                });
               }}
             />
           </div>
@@ -501,33 +652,60 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
               value={nuovoSocio.percentuale_partecipazione}
               onChange={(e) => {
                 const percentuale = e.target.value;
-                const dividendoTotale = Number(nuovoSocio.importo_dividendo_totale || 0);
-                const lordo = (dividendoTotale * Number(percentuale || 0)) / 100;
-                setNuovoSocio({ ...nuovoSocio, percentuale_partecipazione: percentuale, importo_utile: lordo.toFixed(2) });
+                const dividendo = Number(nuovoSocio.importo_dividendo_totale || 0);
+                const lordo = (dividendo * Number(percentuale || 0)) / 100;
+
+                setNuovoSocio({
+                  ...nuovoSocio,
+                  percentuale_partecipazione: percentuale,
+                  importo_utile: lordo.toFixed(2),
+                });
               }}
             />
           </div>
 
           <div>
             <label style={labelStyle}>Importo lordo</label>
-            <input style={{ ...inputStyle, background: "#f3f4f6" }} value={Number(nuovoSocio.importo_utile || 0).toFixed(2)} disabled />
+            <input
+              style={{ ...inputStyle, background: "#f3f4f6" }}
+              value={Number(nuovoSocio.importo_utile || 0).toFixed(2)}
+              disabled
+            />
           </div>
 
           <div>
             <label style={labelStyle}>Ritenuta</label>
-            <input style={{ ...inputStyle, background: "#f3f4f6" }} value={importoRitenutaNuovoSocio.toFixed(2)} disabled />
+            <input
+              style={{ ...inputStyle, background: "#f3f4f6" }}
+              value={importoRitenutaNuovoSocio.toFixed(2)}
+              disabled
+            />
           </div>
 
           <div>
             <label style={labelStyle}>Netto</label>
-            <input style={{ ...inputStyle, background: "#f3f4f6" }} value={importoNettoNuovoSocio.toFixed(2)} disabled />
+            <input
+              style={{ ...inputStyle, background: "#f3f4f6" }}
+              value={importoNettoNuovoSocio.toFixed(2)}
+              disabled
+            />
           </div>
 
           <button
             type="button"
+            style={blueButton}
             onClick={async () => {
+              const nuovaPercentuale = Number(
+                nuovoSocio.percentuale_partecipazione || 0
+              );
+
               if (!nuovoSocio.nome_cognome) {
                 alert("Seleziona un socio.");
+                return;
+              }
+
+              if (percentualeSociPresentiCalcolata + nuovaPercentuale > 100) {
+                alert("Le percentuali non possono superare il 100%.");
                 return;
               }
 
@@ -565,7 +743,6 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
 
               await caricaSoci();
             }}
-            style={blueButton}
           >
             Aggiungi
           </button>
@@ -573,43 +750,113 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
 
         {mostraNuovoNominativo && (
           <div style={{ ...cardStyle, marginTop: 18, background: "#f8fafc" }}>
-            <h3 style={{ margin: 0, fontSize: 16 }}>Aggiungi nuovo nominativo</h3>
+            <h3 style={{ margin: 0, fontSize: 16 }}>
+              Aggiungi nuovo nominativo
+            </h3>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginTop: 14 }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr 1fr",
+                gap: 12,
+                marginTop: 14,
+              }}
+            >
               <div>
                 <label style={labelStyle}>Nome e cognome</label>
-                <input style={inputStyle} value={nuovoNominativo.nome_cognome} onChange={(e) => setNuovoNominativo({ ...nuovoNominativo, nome_cognome: e.target.value })} />
+                <input
+                  style={inputStyle}
+                  value={nuovoNominativo.nome_cognome}
+                  onChange={(e) =>
+                    setNuovoNominativo({
+                      ...nuovoNominativo,
+                      nome_cognome: e.target.value,
+                    })
+                  }
+                />
               </div>
 
               <div>
                 <label style={labelStyle}>Codice fiscale *</label>
-                <input style={inputStyle} value={nuovoNominativo.codice_fiscale} onChange={(e) => setNuovoNominativo({ ...nuovoNominativo, codice_fiscale: e.target.value.toUpperCase() })} />
+                <input
+                  style={inputStyle}
+                  value={nuovoNominativo.codice_fiscale}
+                  onChange={(e) =>
+                    setNuovoNominativo({
+                      ...nuovoNominativo,
+                      codice_fiscale: e.target.value.toUpperCase(),
+                    })
+                  }
+                />
               </div>
 
               <div>
                 <label style={labelStyle}>Indirizzo</label>
-                <input style={inputStyle} value={nuovoNominativo.indirizzo} onChange={(e) => setNuovoNominativo({ ...nuovoNominativo, indirizzo: e.target.value })} />
+                <input
+                  style={inputStyle}
+                  value={nuovoNominativo.indirizzo}
+                  onChange={(e) =>
+                    setNuovoNominativo({
+                      ...nuovoNominativo,
+                      indirizzo: e.target.value,
+                    })
+                  }
+                />
               </div>
 
               <div>
                 <label style={labelStyle}>CAP</label>
-                <input style={inputStyle} value={nuovoNominativo.cap} onChange={(e) => setNuovoNominativo({ ...nuovoNominativo, cap: e.target.value })} />
+                <input
+                  style={inputStyle}
+                  value={nuovoNominativo.cap}
+                  onChange={(e) =>
+                    setNuovoNominativo({
+                      ...nuovoNominativo,
+                      cap: e.target.value,
+                    })
+                  }
+                />
               </div>
 
               <div>
                 <label style={labelStyle}>Città</label>
-                <input style={inputStyle} value={nuovoNominativo.citta} onChange={(e) => setNuovoNominativo({ ...nuovoNominativo, citta: e.target.value })} />
+                <input
+                  style={inputStyle}
+                  value={nuovoNominativo.citta}
+                  onChange={(e) =>
+                    setNuovoNominativo({
+                      ...nuovoNominativo,
+                      citta: e.target.value,
+                    })
+                  }
+                />
               </div>
 
               <div>
                 <label style={labelStyle}>Provincia</label>
-                <input style={inputStyle} value={nuovoNominativo.provincia} onChange={(e) => setNuovoNominativo({ ...nuovoNominativo, provincia: e.target.value })} />
+                <input
+                  style={inputStyle}
+                  value={nuovoNominativo.provincia}
+                  onChange={(e) =>
+                    setNuovoNominativo({
+                      ...nuovoNominativo,
+                      provincia: e.target.value,
+                    })
+                  }
+                />
               </div>
             </div>
 
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 16 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginTop: 16,
+              }}
+            >
               <div style={{ fontSize: 13, color: "#64748b" }}>
-                Codice fiscale obbligatorio. Se già esiste, viene selezionato senza duplicarlo.
+                Codice fiscale obbligatorio. Se già esiste, viene selezionato
+                senza duplicarlo.
               </div>
 
               <button type="button" style={blueButton} onClick={aggiungiNominativo}>
@@ -641,19 +888,33 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
               <tr key={s.id}>
                 <td style={tdStyle}>{s.nome_cognome}</td>
                 <td style={tdStyle}>{s.codice_fiscale}</td>
-                <td style={tdStyle}>{Number(s.percentuale_partecipazione || 0).toFixed(2)}%</td>
+                <td style={tdStyle}>
+                  {Number(s.percentuale_partecipazione || 0).toFixed(2)}%
+                </td>
                 <td style={tdStyle}>{Number(s.importo_utile || 0).toFixed(2)}</td>
-                <td style={tdStyle}>{Number(s.importo_ritenuta || 0).toFixed(2)}</td>
+                <td style={tdStyle}>
+                  {Number(s.importo_ritenuta || 0).toFixed(2)}
+                </td>
                 <td style={tdStyle}>{Number(s.importo_netto || 0).toFixed(2)}</td>
                 <td style={tdStyle}>
                   <button
                     type="button"
                     onClick={async () => {
                       if (!confirm("Eliminare il socio?")) return;
-                      await fetch(`/api/pratiche/${praticaId}/soci/${s.id}`, { method: "DELETE" });
+
+                      await fetch(`/api/pratiche/${praticaId}/soci/${s.id}`, {
+                        method: "DELETE",
+                      });
+
                       await caricaSoci();
                     }}
-                    style={{ border: 0, background: "transparent", color: "#dc2626", cursor: "pointer", fontWeight: 600 }}
+                    style={{
+                      border: 0,
+                      background: "transparent",
+                      color: "#dc2626",
+                      cursor: "pointer",
+                      fontWeight: 600,
+                    }}
                   >
                     Elimina
                   </button>
@@ -665,154 +926,139 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
       </div>
 
       <div style={cardStyle}>
-  <h2 style={titleStyle}>Documenti</h2>
+        <h2 style={titleStyle}>Documenti</h2>
 
-  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 2fr auto", gap: 12, marginTop: 18, alignItems: "end" }}>
-    <div>
-      <label style={labelStyle}>Dividendo totale deliberato</label>
-      <input
-        type="number"
-        step="0.01"
-        style={{
-          ...inputStyle,
-          borderColor:
-            Number(dividendoTotale || 0) !==
-            soci.reduce((t, s) => t + Number(s.importo_utile || 0), 0)
-              ? "#dc2626"
-              : "#9ca3af",
-        }}
-        value={dividendoTotale}
-        onChange={(e) => setDividendoTotale(e.target.value)}
-      />
-    </div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 2fr auto",
+            gap: 12,
+            marginTop: 18,
+            alignItems: "end",
+          }}
+        >
+          <div>
+            <label style={labelStyle}>Dividendo totale deliberato</label>
+            <input
+              type="number"
+              step="0.01"
+              style={{
+                ...inputStyle,
+                borderColor:
+                  Number(dividendoTotale || 0).toFixed(2) !==
+                  totaleLordoSoci.toFixed(2)
+                    ? "#dc2626"
+                    : "#9ca3af",
+              }}
+              value={dividendoTotale}
+              onChange={(e) => setDividendoTotale(e.target.value)}
+            />
+          </div>
 
-    <div>
-      <label style={labelStyle}>Tipo documento</label>
-      <select style={inputStyle} value={tipoDocumento} onChange={(e) => setTipoDocumento(e.target.value)}>
-        <option value="verbale_assemblea">Verbale assemblea</option>
-        <option value="distribuzione_utili">Distribuzione utili</option>
-        <option value="dichiarazione_conformita">Dichiarazione conformità</option>
-        <option value="altro">Altro</option>
-      </select>
-    </div>
+          <div>
+            <label style={labelStyle}>Modello documento</label>
+            <input
+              style={{ ...inputStyle, background: "#f3f4f6" }}
+              value="Distribuzione utili"
+              disabled
+            />
+          </div>
 
-    <div>
-      <label style={labelStyle}>Modello documento</label>
-      <select style={inputStyle} value={modelloSelezionato} onChange={(e) => setModelloSelezionato(e.target.value)}>
-        <option value="">Seleziona modello</option>
-        {modelli.map((m) => (
-          <option key={m.id} value={m.codice}>
-            {m.nome}
-          </option>
-        ))}
-      </select>
-    </div>
+          <button type="button" style={blueButton} onClick={generaDocumento}>
+            Genera documento
+          </button>
+        </div>
 
-    <button
-      type="button"
-      style={blueButton}
-      onClick={async () => {
-        const totaleLordo = soci.reduce(
-          (t, s) => t + Number(s.importo_utile || 0),
-          0
-        );
+        <div style={{ marginTop: 12, fontSize: 13 }}>
+          Totale lordo soci: <strong>{totaleLordoSoci.toFixed(2)}</strong>
+        </div>
 
-        if (Number(dividendoTotale || 0).toFixed(2) !== totaleLordo.toFixed(2)) {
-          alert("Il dividendo totale deve corrispondere al totale lordo dei soci.");
-          return;
-        }
+        {documenti.length > 0 && (
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              marginTop: 18,
+            }}
+          >
+            <thead>
+              <tr>
+                <th style={thStyle}>Documento</th>
+                <th style={thStyle}>Tipo</th>
+                <th style={thStyle}>Data</th>
+                <th style={thStyle}>Azioni</th>
+              </tr>
+            </thead>
 
-        if (percentualeSociPresentiCalcolata > 100) {
-          alert("Le percentuali non possono superare il 100%.");
-          return;
-        }
+            <tbody>
+              {documenti.map((doc) => (
+                <tr key={doc.id}>
+                  <td style={tdStyle}>{doc.nome_file}</td>
 
-        await generaDocumento();
-        await caricaDocumenti();
-      }}
-    >
-      Genera documento
-    </button>
-  </div>
+                  <td style={tdStyle}>{doc.tipo_documento}</td>
 
-  <div style={{ marginTop: 12, fontSize: 13 }}>
-    Totale lordo soci:{" "}
-    <strong>
-      {soci.reduce((t, s) => t + Number(s.importo_utile || 0), 0).toFixed(2)}
-    </strong>
-  </div>
+                  <td style={tdStyle}>
+                    {doc.created_at
+                      ? new Date(doc.created_at).toLocaleString("it-IT")
+                      : "—"}
+                  </td>
 
-  {documenti.length > 0 && (
-    <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 18 }}>
-      <thead>
-        <tr>
-          <th style={thStyle}>Documento</th>
-          <th style={thStyle}>Tipo</th>
-          <th style={thStyle}>Data</th>
-          <th style={thStyle}>Azioni</th>
-        </tr>
-      </thead>
+                  <td style={tdStyle}>
+                    <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                      <a
+                        href={`/api/pratiche/${praticaId}/documenti/${doc.id}/download`}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Scarica documento"
+                        style={{
+                          color: "#2563eb",
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Download size={18} />
+                      </a>
 
-      <tbody>
-        {documenti.map((doc) => (
-          <tr key={doc.id}>
-            <td style={tdStyle}>{doc.nome_file}</td>
-            <td style={tdStyle}>{doc.tipo_documento}</td>
-            <td style={tdStyle}>
-              {doc.created_at
-                ? new Date(doc.created_at).toLocaleString("it-IT")
-                : "—"}
-            </td>
-           <td style={tdStyle}>
-  <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-    <a
-      href={doc.url_file || doc.file_url || doc.path_file}
-      target="_blank"
-      rel="noopener noreferrer"
-      style={{
-        color: "#2563eb",
-        textDecoration: "none",
-        fontWeight: 600,
-      }}
-    >
-      Scarica
-    </a>
+                      <button
+                        type="button"
+                        title="Elimina documento"
+                        onClick={async () => {
+                          if (!confirm("Eliminare questo documento?")) return;
 
-    <button
-      type="button"
-      onClick={async () => {
-        if (!confirm("Eliminare questo documento?")) return;
+                          const res = await fetch(
+                            `/api/pratiche/${praticaId}/documenti/${doc.id}`,
+                            {
+                              method: "DELETE",
+                            }
+                          );
 
-        const res = await fetch(
-          `/api/pratiche/${praticaId}/documenti/${doc.id}`,
-          { method: "DELETE" }
-        );
+                          if (!res.ok) {
+                            alert("Errore eliminazione documento");
+                            return;
+                          }
 
-        if (!res.ok) {
-          alert("Errore eliminazione documento");
-          return;
-        }
-
-        await caricaDocumenti();
-      }}
-      style={{
-        border: 0,
-        background: "transparent",
-        color: "#dc2626",
-        cursor: "pointer",
-        fontWeight: 600,
-      }}
-    >
-      Elimina
-    </button>
-  </div>
-</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  )}
-  </div>
+                          await caricaDocumenti();
+                        }}
+                        style={{
+                          border: 0,
+                          background: "transparent",
+                          color: "#dc2626",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          padding: 0,
+                        }}
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
     </main>
   );
 }
