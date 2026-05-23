@@ -53,7 +53,7 @@ export default function ModelliUtilitaPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const [categoria, setCategoria] = useState("distribuzione_utili");
+  const [categoria, setCategoria] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [messaggio, setMessaggio] = useState("");
 
@@ -192,6 +192,7 @@ export default function ModelliUtilitaPage() {
             <div style={{ marginTop: 18 }}>
               <label style={labelStyle}>Categoria modello</label>
               <select style={inputStyle} value={categoria} onChange={(e) => setCategoria(e.target.value)}>
+                <option value="">Scelta modello</option>
                 {categorie.map((c) => (
                   <option key={c.value} value={c.value}>
                     {c.label}
@@ -200,13 +201,14 @@ export default function ModelliUtilitaPage() {
               </select>
             </div>
 
-            <div style={{ marginTop: 14, fontSize: 13, color: "#64748b" }}>
-              Codice automatico:{" "}
-              <strong>
-                {categorie.find((c) => c.value === categoria)?.codice}
-              </strong>
-            </div>
-
+           {categoria && (
+              <div style={{ marginTop: 14, fontSize: 13, color: "#64748b" }}>
+                Codice automatico:{" "}
+                    <strong>
+                        {categorie.find((c) => c.value === categoria)?.codice}
+                    </strong>
+                  </div>
+                  )}
             <div style={{ marginTop: 18 }}>
               <label style={labelStyle}>File DOCX</label>
               <input
