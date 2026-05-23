@@ -41,6 +41,9 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
   const [modelloSelezionato, setModelloSelezionato] = useState("");
   const [tipoDocumento, setTipoDocumento] = useState("verbale_assemblea");
 
+  const [documenti, setDocumenti] = useState<any[]>([]);
+  const [dividendoTotale, setDividendoTotale] = useState("");
+
   const [mostraNuovoNominativo, setMostraNuovoNominativo] = useState(false);
 
   const sede = [
@@ -111,6 +114,7 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
       caricaSoci();
       caricaNominativi();
       caricaModelli();
+      caricaDocumenti();
     }
   }, [praticaId]);
 
@@ -153,6 +157,14 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
     const data = await res.json();
     if (res.ok) setModelli(data.modelli || []);
   }
+
+  async function caricaDocumenti() {
+  const res = await fetch(`/api/pratiche/${praticaId}/documenti`, {
+    cache: "no-store",
+  });
+  const data = await res.json();
+  if (res.ok) setDocumenti(data.documenti || []);
+}
 
   async function salvaDatiDocumento(e: React.FormEvent) {
     e.preventDefault();
@@ -653,39 +665,139 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
       </div>
 
       <div style={cardStyle}>
-        <h2 style={titleStyle}>Documenti</h2>
+  <h2 style={titleStyle}>Documenti</h2>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr auto", gap: 12, marginTop: 18, alignItems: "end" }}>
-          <div>
-            <label style={labelStyle}>Tipo documento</label>
-            <select style={inputStyle} value={tipoDocumento} onChange={(e) => setTipoDocumento(e.target.value)}>
-              <option value="verbale_assemblea">Verbale assemblea</option>
-              <option value="distribuzione_utili">Distribuzione utili</option>
-              <option value="dichiarazione_conformita">Dichiarazione conformità</option>
-              <option value="altro">Altro</option>
-            </select>
-          </div>
+  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 2fr auto", gap: 12, marginTop: 18, alignItems: "end" }}>
+    <div>
+      <label style={labelStyle}>Dividendo totale deliberato</label>
+      <input
+        type="number"
+        step="0.01"
+        style={{
+          ...inputStyle,
+          borderColor:
+            Number(dividendoTotale || 0) !==
+            soci.reduce((t, s) => t + Number(s.importo_utile || 0), 0)
+              ? "#dc2626"
+              : "#9ca3af",
+        }}
+        value={dividendoTotale}
+        onChange={(e) => setDividendoTotale(e.target.value)}
+      />
+    </div>
 
-          <div>
-            <label style={labelStyle}>Modello documento</label>
-            <select style={inputStyle} value={modelloSelezionato} onChange={(e) => setModelloSelezionato(e.target.value)}>
-              <option value="">Seleziona modello</option>
-              {modelli.map((m) => (
-                <option key={m.id} value={m.codice}>
-                  {m.nome}
-                </option>
-              ))}
-            </select>
-          </div>
+    <div>
+      <label style={labelStyle}>Tipo documento</label>
+      <select style={inputStyle} value={tipoDocumento} onChange={(e) => setTipoDocumento(e.target.value)}>
+        <option value="verbale_assemblea">Verbale assemblea</option>
+        <option value="distribuzione_utili">Distribuzione utili</option>
+        <option value="dichiarazione_conformita">Dichiarazione conformità</option>
+        <option value="altro">Altro</option>
+      </select>
+    </div>
 
-          <button type="button" style={blueButton} onClick={generaDocumento}>
-            Genera documento
-          </button>
-        </div>
-      </div>
-    </main>
-  );
-}
+    <div>
+      <label style={labelStyle}>Modello documento</label>
+      <select style={inputStyle} value={modelloSelezionato} onChange={(e) => setModelloSelezionato(e.target.value)}>
+        <option value="">Seleziona modello</option>
+        {modelli.map((m) => (
+          <option key={m.id} value={m.codice}>
+            {m.nome}
+          </option>
+        ))}
+      </select>
+    </div>
+
+    <button
+      type="button"
+      style={blueButton}
+      onClick={async () => {
+        const totaleLordo = soci.reduce(
+          (t, s) => t + Number(s.importo_utile || 0),
+          0
+        );
+
+        if (Number(dividendoTotale || 0).toFixed(2) !== totaleLordo.toFixed(2)) {
+          alert("Il dividendo totale deve corrispondere al totale lordo dei soci.");
+          return;
+        }
+
+        if (percentualeSociPresentiCalcolata > 100) {
+          alert("Le percentuali non possono superare il 100%.");
+          return;
+        }
+
+        await generaDocumento();
+        await caricaDocumenti();
+      }}
+    >
+      Genera documento
+    </button>
+  </div>
+
+  <div style={{ marginTop: 12, fontSize: 13 }}>
+    Totale lordo soci:{" "}
+    <strong>
+      {soci.reduce((t, s) => t + Number(s.importo_utile || 0), 0).toFixed(2)}
+    </strong>
+  </div>
+
+  {documenti.length > 0 && (
+    <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 18 }}>
+      <thead>
+        <tr>
+          <th style={thStyle}>Documento</th>
+          <th style={thStyle}>Tipo</th>
+          <th style={thStyle}>Data</th>
+          <th style={thStyle}>Azioni</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {documenti.map((doc) => (
+          <tr key={doc.id}>
+            <td style={tdStyle}>{doc.nome_file}</td>
+            <td style={tdStyle}>{doc.tipo_documento}</td>
+            <td style={tdStyle}>
+              {doc.created_at
+                ? new Date(doc.created_at).toLocaleString("it-IT")
+                : "—"}
+            </td>
+            <td style={tdStyle}>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!confirm("Eliminare questo documento?")) return;
+
+                  const res = await fetch(
+                    `/api/pratiche/${praticaId}/documenti/${doc.id}`,
+                    { method: "DELETE" }
+                  );
+
+                  if (!res.ok) {
+                    alert("Errore eliminazione documento");
+                    return;
+                  }
+
+                  await caricaDocumenti();
+                }}
+                style={{
+                  border: 0,
+                  background: "transparent",
+                  color: "#dc2626",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                }}
+              >
+                Elimina
+              </button>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )}
+</div>
 
 const cardStyle: React.CSSProperties = {
   background: "#fff",
