@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 
 const font =
@@ -34,8 +34,14 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
   const [saving, setSaving] = useState(false);
   const [messaggio, setMessaggio] = useState("");
 
+  const [clienti, setClienti] = useState<any[]>([]);
   const [soci, setSoci] = useState<any[]>([]);
   const [nominativi, setNominativi] = useState<any[]>([]);
+  const [modelli, setModelli] = useState<any[]>([]);
+  const [modelloSelezionato, setModelloSelezionato] = useState("");
+  const [tipoDocumento, setTipoDocumento] = useState("verbale_assemblea");
+
+  const [mostraNuovoNominativo, setMostraNuovoNominativo] = useState(false);
 
   const sede = [
     pratica.cliente?.indirizzo,
@@ -51,8 +57,7 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
       pratica.dati_documento?.societa_denominazione ||
       pratica.cliente?.ragione_sociale ||
       "",
-    societa_sede:
-      pratica.dati_documento?.societa_sede || sede || "",
+    societa_sede: pratica.dati_documento?.societa_sede || sede || "",
     societa_codice_fiscale:
       pratica.dati_documento?.societa_codice_fiscale ||
       pratica.cliente?.codice_fiscale ||
@@ -62,13 +67,13 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
       pratica.cliente?.partita_iva ||
       "",
     societa_rea:
-      pratica.dati_documento?.societa_rea ||
-      pratica.cliente?.numero_rea ||
-      "",
+      pratica.dati_documento?.societa_rea || pratica.cliente?.numero_rea || "",
     data_atto: pratica.dati_documento?.data_atto || "",
     ora_inizio: pratica.dati_documento?.ora_inizio || "",
-    luogo_assemblea:
-      pratica.dati_documento?.luogo_assemblea || sede || "",
+    luogo_assemblea: pratica.dati_documento?.luogo_assemblea || sede || "",
+    oggetto_assemblea:
+      pratica.dati_documento?.oggetto_assemblea ||
+      "Approvazione bilancio e distribuzione utili",
     presidente: pratica.dati_documento?.presidente || "",
     segretario: pratica.dati_documento?.segretario || "",
     ora_chiusura: pratica.dati_documento?.ora_chiusura || "",
@@ -91,15 +96,38 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
     tipo_pagamento: "",
   });
 
+  const [nuovoNominativo, setNuovoNominativo] = useState({
+    nome_cognome: "",
+    codice_fiscale: "",
+    indirizzo: "",
+    cap: "",
+    citta: "",
+    provincia: "",
+  });
+
   useEffect(() => {
     if (praticaId) {
+      caricaClienti();
       caricaSoci();
       caricaNominativi();
+      caricaModelli();
     }
   }, [praticaId]);
 
   function aggiornaCampo(campo: string, valore: string) {
     setForm((prev) => ({ ...prev, [campo]: valore }));
+  }
+
+  function normalizzaCF(cf: string) {
+    return String(cf || "").trim().toUpperCase();
+  }
+
+  async function caricaClienti() {
+    const res = await fetch("/api/clienti/import-nominativi", {
+      cache: "no-store",
+    });
+    const data = await res.json();
+    setClienti(Array.isArray(data) ? data : data.clienti || []);
   }
 
   async function caricaSoci() {
@@ -118,6 +146,14 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
     if (res.ok) setNominativi(data.nominativi || []);
   }
 
+  async function caricaModelli() {
+    const res = await fetch(`/api/pratiche/${praticaId}/modelli`, {
+      cache: "no-store",
+    });
+    const data = await res.json();
+    if (res.ok) setModelli(data.modelli || []);
+  }
+
   async function salvaDatiDocumento(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -126,9 +162,7 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
     try {
       const res = await fetch(`/api/pratiche/${praticaId}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
 
@@ -146,9 +180,107 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
     }
   }
 
+  async function aggiungiNominativo() {
+    const cf = normalizzaCF(nuovoNominativo.codice_fiscale);
+
+    if (!nuovoNominativo.nome_cognome.trim()) {
+      alert("Nome e cognome obbligatori.");
+      return;
+    }
+
+    if (!cf) {
+      alert("Codice fiscale obbligatorio.");
+      return;
+    }
+
+    const esistente = nominativi.find(
+      (n) => normalizzaCF(n.codice_fiscale) === cf
+    );
+
+    if (esistente) {
+      setNuovoSocio({
+        ...nuovoSocio,
+        nominativo_id: esistente.id,
+        nome_cognome: esistente.nome_cognome || "",
+        codice_fiscale: esistente.codice_fiscale || "",
+        indirizzo: esistente.indirizzo || "",
+        cap: esistente.cap || "",
+        citta: esistente.citta || "",
+        provincia: esistente.provincia || "",
+      });
+
+      alert("Nominativo già esistente: selezionato automaticamente.");
+      setMostraNuovoNominativo(false);
+      return;
+    }
+
+    const res = await fetch("/api/pratiche/nominativi", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...nuovoNominativo,
+        codice_fiscale: cf,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.error || "Errore creazione nominativo");
+      return;
+    }
+
+    await caricaNominativi();
+
+    const nuovo = data.nominativo;
+
+    setNuovoSocio({
+      ...nuovoSocio,
+      nominativo_id: nuovo.id,
+      nome_cognome: nuovo.nome_cognome || "",
+      codice_fiscale: nuovo.codice_fiscale || "",
+      indirizzo: nuovo.indirizzo || "",
+      cap: nuovo.cap || "",
+      citta: nuovo.citta || "",
+      provincia: nuovo.provincia || "",
+    });
+
+    setNuovoNominativo({
+      nome_cognome: "",
+      codice_fiscale: "",
+      indirizzo: "",
+      cap: "",
+      citta: "",
+      provincia: "",
+    });
+
+    setMostraNuovoNominativo(false);
+  }
+
+  async function generaDocumento() {
+    if (!modelloSelezionato) {
+      alert("Seleziona un modello documento.");
+      return;
+    }
+
+    const res = await fetch(`/api/pratiche/${praticaId}/genera-documento`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ codice_modello: modelloSelezionato, tipo_documento: tipoDocumento }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.error || "Errore generazione documento");
+      return;
+    }
+
+    alert("Documento generato.");
+  }
+
   const percentualeSociPresentiCalcolata = soci.reduce(
-    (totale, socio) =>
-      totale + Number(socio.percentuale_partecipazione || 0),
+    (totale, socio) => totale + Number(socio.percentuale_partecipazione || 0),
     0
   );
 
@@ -156,24 +288,19 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
   const percentualeRitenutaNuovoSocio = Number(
     nuovoSocio.percentuale_ritenuta || 0
   );
-
   const importoRitenutaNuovoSocio =
     (importoLordoNuovoSocio * percentualeRitenutaNuovoSocio) / 100;
-
   const importoNettoNuovoSocio =
     importoLordoNuovoSocio - importoRitenutaNuovoSocio;
 
   return (
-    <main
-      style={{
-        padding: 28,
-        background: "#f8fafc",
-        minHeight: "100vh",
-        fontFamily: font,
-      }}
-    >
-      <h1>{pratica.numero_pratica}</h1>
-      <p>{pratica.titolo}</p>
+    <main style={{ padding: 28, background: "#f8fafc", minHeight: "100vh", fontFamily: font }}>
+      <h1 style={{ fontSize: 38, fontWeight: 800, margin: 0, color: "#0f172a" }}>
+        {pratica.numero_pratica}
+      </h1>
+      <p style={{ fontSize: 18, marginTop: 6, color: "#475569" }}>
+        {pratica.titolo}
+      </p>
 
       <form onSubmit={salvaDatiDocumento}>
         <div style={cardStyle}>
@@ -182,7 +309,45 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 12, marginTop: 18 }}>
             <div>
               <label style={labelStyle}>Denominazione società</label>
-              <input style={inputStyle} value={form.societa_denominazione} onChange={(e) => aggiornaCampo("societa_denominazione", e.target.value)} />
+              <select
+                style={inputStyle}
+                value={form.societa_denominazione}
+                onChange={(e) => {
+                  const selected = clienti.find(
+                    (c) => c.ragione_sociale === e.target.value
+                  );
+
+                  setForm((prev) => ({
+                    ...prev,
+                    societa_denominazione: selected?.ragione_sociale || e.target.value,
+                    societa_codice_fiscale: selected?.codice_fiscale || "",
+                    societa_partita_iva: selected?.partita_iva || selected?.codice_fiscale || "",
+                    societa_sede: [
+                      selected?.indirizzo,
+                      selected?.cap,
+                      selected?.citta,
+                      selected?.provincia,
+                    ].filter(Boolean).join(" "),
+                    societa_rea: selected?.numero_rea || "",
+                    luogo_assemblea: [
+                      selected?.indirizzo,
+                      selected?.cap,
+                      selected?.citta,
+                      selected?.provincia,
+                    ].filter(Boolean).join(" "),
+                  }));
+                }}
+              >
+                <option value={form.societa_denominazione}>
+                  {form.societa_denominazione || "Seleziona società"}
+                </option>
+
+                {clienti.map((c) => (
+                  <option key={c.id} value={c.ragione_sociale}>
+                    {c.ragione_sociale}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
@@ -229,6 +394,11 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
             </div>
           </div>
 
+          <div style={{ marginTop: 14 }}>
+            <label style={labelStyle}>Oggetto assemblea</label>
+            <input style={inputStyle} value={form.oggetto_assemblea} onChange={(e) => aggiornaCampo("oggetto_assemblea", e.target.value)} />
+          </div>
+
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginTop: 14 }}>
             <div>
               <label style={labelStyle}>Presidente</label>
@@ -261,7 +431,7 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
       <div style={cardStyle}>
         <h2 style={titleStyle}>Soci presenti / Distribuzione utili</h2>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr 1fr 1fr 1fr auto", gap: 12, marginTop: 18, alignItems: "end" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1.6fr auto 1fr 1fr 1fr 1fr 1fr auto", gap: 12, marginTop: 18, alignItems: "end" }}>
           <div>
             <label style={labelStyle}>Socio</label>
             <select
@@ -290,6 +460,10 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
             </select>
           </div>
 
+          <button type="button" style={secondaryButton} onClick={() => setMostraNuovoNominativo(!mostraNuovoNominativo)}>
+            + Nuovo
+          </button>
+
           <div>
             <label style={labelStyle}>Dividendo totale</label>
             <input
@@ -301,12 +475,7 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
                 const valore = e.target.value;
                 const percentuale = Number(nuovoSocio.percentuale_partecipazione || 0);
                 const lordo = (Number(valore || 0) * percentuale) / 100;
-
-                setNuovoSocio({
-                  ...nuovoSocio,
-                  importo_dividendo_totale: valore,
-                  importo_utile: lordo.toFixed(2),
-                });
+                setNuovoSocio({ ...nuovoSocio, importo_dividendo_totale: valore, importo_utile: lordo.toFixed(2) });
               }}
             />
           </div>
@@ -322,12 +491,7 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
                 const percentuale = e.target.value;
                 const dividendoTotale = Number(nuovoSocio.importo_dividendo_totale || 0);
                 const lordo = (dividendoTotale * Number(percentuale || 0)) / 100;
-
-                setNuovoSocio({
-                  ...nuovoSocio,
-                  percentuale_partecipazione: percentuale,
-                  importo_utile: lordo.toFixed(2),
-                });
+                setNuovoSocio({ ...nuovoSocio, percentuale_partecipazione: percentuale, importo_utile: lordo.toFixed(2) });
               }}
             />
           </div>
@@ -357,9 +521,7 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
 
               const res = await fetch(`/api/pratiche/${praticaId}/soci`, {
                 method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   ...nuovoSocio,
                   importo_ritenuta: importoRitenutaNuovoSocio,
@@ -397,6 +559,54 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
           </button>
         </div>
 
+        {mostraNuovoNominativo && (
+          <div style={{ ...cardStyle, marginTop: 18, background: "#f8fafc" }}>
+            <h3 style={{ margin: 0, fontSize: 16 }}>Aggiungi nuovo nominativo</h3>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginTop: 14 }}>
+              <div>
+                <label style={labelStyle}>Nome e cognome</label>
+                <input style={inputStyle} value={nuovoNominativo.nome_cognome} onChange={(e) => setNuovoNominativo({ ...nuovoNominativo, nome_cognome: e.target.value })} />
+              </div>
+
+              <div>
+                <label style={labelStyle}>Codice fiscale *</label>
+                <input style={inputStyle} value={nuovoNominativo.codice_fiscale} onChange={(e) => setNuovoNominativo({ ...nuovoNominativo, codice_fiscale: e.target.value.toUpperCase() })} />
+              </div>
+
+              <div>
+                <label style={labelStyle}>Indirizzo</label>
+                <input style={inputStyle} value={nuovoNominativo.indirizzo} onChange={(e) => setNuovoNominativo({ ...nuovoNominativo, indirizzo: e.target.value })} />
+              </div>
+
+              <div>
+                <label style={labelStyle}>CAP</label>
+                <input style={inputStyle} value={nuovoNominativo.cap} onChange={(e) => setNuovoNominativo({ ...nuovoNominativo, cap: e.target.value })} />
+              </div>
+
+              <div>
+                <label style={labelStyle}>Città</label>
+                <input style={inputStyle} value={nuovoNominativo.citta} onChange={(e) => setNuovoNominativo({ ...nuovoNominativo, citta: e.target.value })} />
+              </div>
+
+              <div>
+                <label style={labelStyle}>Provincia</label>
+                <input style={inputStyle} value={nuovoNominativo.provincia} onChange={(e) => setNuovoNominativo({ ...nuovoNominativo, provincia: e.target.value })} />
+              </div>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 16 }}>
+              <div style={{ fontSize: 13, color: "#64748b" }}>
+                Codice fiscale obbligatorio. Se già esiste, viene selezionato senza duplicarlo.
+              </div>
+
+              <button type="button" style={blueButton} onClick={aggiungiNominativo}>
+                Aggiungi nominativo
+              </button>
+            </div>
+          </div>
+        )}
+
         <div style={{ marginTop: 16, fontSize: 14, fontWeight: 700 }}>
           Totale quote inserite: {percentualeSociPresentiCalcolata.toFixed(2)}%
         </div>
@@ -428,20 +638,10 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
                     type="button"
                     onClick={async () => {
                       if (!confirm("Eliminare il socio?")) return;
-
-                      await fetch(`/api/pratiche/${praticaId}/soci/${s.id}`, {
-                        method: "DELETE",
-                      });
-
+                      await fetch(`/api/pratiche/${praticaId}/soci/${s.id}`, { method: "DELETE" });
                       await caricaSoci();
                     }}
-                    style={{
-                      border: 0,
-                      background: "transparent",
-                      color: "#dc2626",
-                      cursor: "pointer",
-                      fontWeight: 600,
-                    }}
+                    style={{ border: 0, background: "transparent", color: "#dc2626", cursor: "pointer", fontWeight: 600 }}
                   >
                     Elimina
                   </button>
@@ -450,6 +650,38 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div style={cardStyle}>
+        <h2 style={titleStyle}>Documenti</h2>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr auto", gap: 12, marginTop: 18, alignItems: "end" }}>
+          <div>
+            <label style={labelStyle}>Tipo documento</label>
+            <select style={inputStyle} value={tipoDocumento} onChange={(e) => setTipoDocumento(e.target.value)}>
+              <option value="verbale_assemblea">Verbale assemblea</option>
+              <option value="distribuzione_utili">Distribuzione utili</option>
+              <option value="dichiarazione_conformita">Dichiarazione conformità</option>
+              <option value="altro">Altro</option>
+            </select>
+          </div>
+
+          <div>
+            <label style={labelStyle}>Modello documento</label>
+            <select style={inputStyle} value={modelloSelezionato} onChange={(e) => setModelloSelezionato(e.target.value)}>
+              <option value="">Seleziona modello</option>
+              {modelli.map((m) => (
+                <option key={m.id} value={m.codice}>
+                  {m.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button type="button" style={blueButton} onClick={generaDocumento}>
+            Genera documento
+          </button>
+        </div>
       </div>
     </main>
   );
@@ -480,6 +712,20 @@ const blueButton: React.CSSProperties = {
   fontWeight: 600,
   cursor: "pointer",
   fontFamily: font,
+  whiteSpace: "nowrap",
+};
+
+const secondaryButton: React.CSSProperties = {
+  border: "1px solid #2563eb",
+  borderRadius: 8,
+  background: "#fff",
+  color: "#2563eb",
+  padding: "10px 12px",
+  fontSize: 14,
+  fontWeight: 600,
+  cursor: "pointer",
+  fontFamily: font,
+  whiteSpace: "nowrap",
 };
 
 const thStyle: React.CSSProperties = {
