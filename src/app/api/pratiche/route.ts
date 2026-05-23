@@ -35,8 +35,14 @@ export async function GET() {
           .in("id", tipoIds)
       : { data: [] };
 
-    const { data: utenti } = utenteIds.length
-      const praticaIds = (pratiche || []).map((p) => p.id);
+  const { data: utenti } = utenteIds.length
+  ? await supabaseAdmin
+      .from("tbutenti")
+      .select("id, nome, cognome")
+      .in("id", utenteIds)
+  : { data: [] };
+
+const praticaIds = (pratiche || []).map((p) => p.id);
 
 const { data: documenti } = praticaIds.length
   ? await supabaseAdmin
@@ -44,11 +50,6 @@ const { data: documenti } = praticaIds.length
       .select("id, pratica_id")
       .in("pratica_id", praticaIds)
   : { data: [] };
-      ? await supabaseAdmin
-          .from("tbutenti")
-          .select("id, nome, cognome")
-          .in("id", utenteIds)
-      : { data: [] };
 
     const clientiMap = new Map((clienti || []).map((c: any) => [c.id, c]));
     const tipiMap = new Map((tipi || []).map((t: any) => [t.id, t]));
