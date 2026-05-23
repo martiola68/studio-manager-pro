@@ -176,6 +176,8 @@ importo_dividendo_totale:
 
 updated_at: new Date().toISOString(),
 
+      };
+
     const { data: existing } = await supabaseAdmin
       .from("tbpratiche_dati_documenti")
       .select("id")
