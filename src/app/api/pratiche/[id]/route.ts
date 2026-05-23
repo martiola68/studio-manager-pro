@@ -53,7 +53,7 @@ export async function GET(req: Request, { params }: Params) {
 
 const { data: tipo } = await supabaseAdmin
   .from("tbpratiche_tipi")
-  .select("id, nome, ente")
+  .select("id, nome, ente, classe_form")
   .eq("id", pratica.tipo_pratica_id)
   .single();
 
