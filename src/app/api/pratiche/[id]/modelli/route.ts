@@ -27,7 +27,7 @@ export async function GET(req: Request, { params }: Params) {
 
    const { data: modelli, error: modelliError } = await supabaseAdmin
   .from("tbpratiche_modelli_utilita" as any)
-  .select("id, nome, codice, categoria, tipo_pratica_id, attivo")
+  .select("id, nome, codice, categoria, attivo")
   .eq("attivo", true)
   .order("categoria")
   .order("nome");
