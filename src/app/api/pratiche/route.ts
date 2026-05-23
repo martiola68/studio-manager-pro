@@ -36,6 +36,14 @@ export async function GET() {
       : { data: [] };
 
     const { data: utenti } = utenteIds.length
+      const praticaIds = (pratiche || []).map((p) => p.id);
+
+const { data: documenti } = praticaIds.length
+  ? await supabaseAdmin
+      .from("tbpratiche_documenti")
+      .select("id, pratica_id")
+      .in("pratica_id", praticaIds)
+  : { data: [] };
       ? await supabaseAdmin
           .from("tbutenti")
           .select("id, nome, cognome")
@@ -46,10 +54,22 @@ export async function GET() {
     const tipiMap = new Map((tipi || []).map((t: any) => [t.id, t]));
     const utentiMap = new Map((utenti || []).map((u: any) => [u.id, u]));
 
+    const documentiMap = new Map<string, number>();
+
+(documenti || []).forEach((d: any) => {
+  documentiMap.set(
+    d.pratica_id,
+    (documentiMap.get(d.pratica_id) || 0) + 1
+  );
+});
+
     const risultato = (pratiche || []).map((p: any) => {
       const cliente = clientiMap.get(p.cliente_id);
       const tipo = tipiMap.get(p.tipo_pratica_id);
       const utente = utentiMap.get(p.assegnato_a);
+
+      const avanzamento =
+  (documentiMap.get(p.id) || 0) > 0 ? 100 : 0;
 
       return {
         id: p.id,
@@ -64,7 +84,7 @@ export async function GET() {
         assegnatario_nome: utente
           ? `${utente.nome || ""} ${utente.cognome || ""}`.trim()
           : "Non assegnata",
-        avanzamento: 0,
+       avanzamento,
         prossima_scadenza: null,
       };
     });
