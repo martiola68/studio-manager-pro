@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Trash2 } from "lucide-react";
 import Link from "next/link";
+import { Trash2 } from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
 type Modello = {
@@ -10,7 +10,6 @@ type Modello = {
   nome: string;
   codice: string;
   categoria: string;
-  tipo_pratica_id: number | null;
   file_path: string;
   attivo: boolean;
   created_at: string;
@@ -46,9 +45,8 @@ export default function ModelliUtilitaPage() {
   const [saving, setSaving] = useState(false);
 
   const [nome, setNome] = useState("");
-  const [codice, setCodice] = useState("VERBALE_ASSEMBLEA_LIQUIDAZIONE");
+  const [codice, setCodice] = useState("VERBALE_UTILI");
   const [categoria, setCategoria] = useState("verbale_assemblea");
-
   const [file, setFile] = useState<File | null>(null);
   const [messaggio, setMessaggio] = useState("");
 
@@ -88,7 +86,8 @@ export default function ModelliUtilitaPage() {
       const supabase = getSupabaseClient();
 
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const filePath = `${codice}/${Date.now()}-${safeName}`;
+      const codicePulito = codice.trim().toUpperCase();
+      const filePath = `${codicePulito}/${Date.now()}-${safeName}`;
 
       const arrayBuffer = await file.arrayBuffer();
 
@@ -101,15 +100,13 @@ export default function ModelliUtilitaPage() {
           upsert: true,
         });
 
-      if (uploadError) {
-        throw new Error(uploadError.message);
-      }
+      if (uploadError) throw new Error(uploadError.message);
 
       const payload = {
         nome: nome.trim(),
-        codice: codice.trim(),
+        codice: codicePulito,
         categoria,
-       tipo_pratica_id: null,
+        tipo_pratica_id: null,
         file_path: filePath,
         attivo: true,
         updated_at: new Date().toISOString(),
@@ -117,16 +114,13 @@ export default function ModelliUtilitaPage() {
 
       const { error: dbError } = await supabase
         .from("tbpratiche_modelli_utilita" as any)
-        .upsert(payload, {
-          onConflict: "codice",
-        });
+        .upsert(payload, { onConflict: "codice" });
 
-      if (dbError) {
-        throw new Error(dbError.message);
-      }
+      if (dbError) throw new Error(dbError.message);
 
       setMessaggio("Modello caricato correttamente.");
       setNome("");
+      setCodice("VERBALE_UTILI");
       setFile(null);
       await caricaModelli();
     } catch (error: any) {
@@ -136,68 +130,44 @@ export default function ModelliUtilitaPage() {
     }
   }
 
-async function eliminaModello(id: string) {
-  const supabase = getSupabaseClient();
+  async function eliminaModello(id: string) {
+    const supabase = getSupabaseClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  if (
-    user?.email?.toLowerCase() !==
-    "m.artiola@revisionicommerciali.it"
-  ) {
-    alert("Non autorizzato.");
-    return;
+    if (
+      user?.email?.toLowerCase() !== "m.artiola@revisionicommerciali.it"
+    ) {
+      alert("Non autorizzato.");
+      return;
+    }
+
+    if (!confirm("Eliminare questo modello?")) return;
+
+    const { error } = await supabase
+      .from("tbpratiche_modelli_utilita" as any)
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      setMessaggio(error.message);
+      return;
+    }
+
+    await caricaModelli();
   }
-
-  if (!confirm("Eliminare questo modello?")) return;
-
-  const { error } = await supabase
-    .from("tbpratiche_modelli_utilita" as any)
-    .delete()
-    .eq("id", id);
-
-  if (error) {
-    setMessaggio(error.message);
-    return;
-  }
-
-  await caricaModelli();
-}
 
   return (
-    <main
-      style={{
-        padding: 28,
-        background: "#f8fafc",
-        minHeight: "100vh",
-        fontFamily: font,
-      }}
-    >
+    <main style={{ padding: 28, background: "#f8fafc", minHeight: "100vh", fontFamily: font }}>
       <div style={{ maxWidth: 1280, margin: "0 auto" }}>
         <div style={{ marginBottom: 24 }}>
-          <Link
-            href="/pratiche"
-            style={{
-              color: "#2563eb",
-              textDecoration: "none",
-              fontSize: 14,
-              fontWeight: 600,
-            }}
-          >
+          <Link href="/pratiche" style={{ color: "#2563eb", textDecoration: "none", fontSize: 14, fontWeight: 600 }}>
             ← Torna alle pratiche
           </Link>
 
-          <h1
-            style={{
-              fontSize: 34,
-              fontWeight: 700,
-              color: "#0f172a",
-              margin: "14px 0 0",
-              lineHeight: 1.1,
-            }}
-          >
+          <h1 style={{ fontSize: 34, fontWeight: 700, color: "#0f172a", margin: "14px 0 0", lineHeight: 1.1 }}>
             Modelli di utilità
           </h1>
 
@@ -206,31 +176,9 @@ async function eliminaModello(id: string) {
           </p>
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1.2fr",
-            gap: 16,
-            alignItems: "start",
-          }}
-        >
-          <form
-            onSubmit={salvaModello}
-            style={{
-              background: "#fff",
-              border: "1px solid #d1d5db",
-              borderRadius: 10,
-              padding: 24,
-            }}
-          >
-            <h2
-              style={{
-                fontSize: 20,
-                fontWeight: 700,
-                color: "#0f172a",
-                margin: 0,
-              }}
-            >
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1.2fr", gap: 16, alignItems: "start" }}>
+          <form onSubmit={salvaModello} style={{ background: "#fff", border: "1px solid #d1d5db", borderRadius: 10, padding: 24 }}>
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: "#0f172a", margin: 0 }}>
               Carica modello
             </h2>
 
@@ -240,7 +188,7 @@ async function eliminaModello(id: string) {
                 style={inputStyle}
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
-                placeholder="Es. Verbale assemblea straordinaria liquidazione"
+                placeholder="Es. Distribuzione utili"
               />
             </div>
 
@@ -249,30 +197,22 @@ async function eliminaModello(id: string) {
               <input
                 style={inputStyle}
                 value={codice}
-                onChange={(e) => setCodice(e.target.value)}
-                placeholder="VERBALE_ASSEMBLEA_LIQUIDAZIONE"
+                onChange={(e) => setCodice(e.target.value.toUpperCase())}
+                placeholder="VERBALE_UTILI"
               />
             </div>
 
             <div style={{ marginTop: 14 }}>
               <label style={labelStyle}>Categoria</label>
-              <select
-                style={inputStyle}
-                value={categoria}
-                onChange={(e) => setCategoria(e.target.value)}
-              >
+              <select style={inputStyle} value={categoria} onChange={(e) => setCategoria(e.target.value)}>
                 <option value="verbale_assemblea">Verbale assemblea</option>
+                <option value="distribuzione_utili">Distribuzione utili</option>
                 <option value="nomina_liquidatore">Nomina liquidatore</option>
-                <option value="accettazione_liquidatore">
-                  Accettazione liquidatore
-                </option>
-                <option value="dichiarazione_conformita">
-                  Dichiarazione conformità
-                </option>
+                <option value="accettazione_liquidatore">Accettazione liquidatore</option>
+                <option value="dichiarazione_conformita">Dichiarazione conformità</option>
               </select>
             </div>
 
-          
             <div style={{ marginTop: 14 }}>
               <label style={labelStyle}>File DOCX</label>
               <input
@@ -282,61 +222,20 @@ async function eliminaModello(id: string) {
               />
             </div>
 
-            <button
-              type="submit"
-              disabled={saving}
-              style={{
-                marginTop: 20,
-                border: 0,
-                borderRadius: 8,
-                background: "#2563eb",
-                color: "#fff",
-                padding: "10px 18px",
-                fontSize: 14,
-                fontWeight: 600,
-                cursor: saving ? "not-allowed" : "pointer",
-                opacity: saving ? 0.6 : 1,
-                fontFamily: font,
-              }}
-            >
+            <button type="submit" disabled={saving} style={buttonStyle}>
               {saving ? "Caricamento..." : "Carica modello"}
             </button>
 
             {messaggio && (
-              <div
-                style={{
-                  marginTop: 16,
-                  fontSize: 14,
-                  color: messaggio.includes("Errore") ? "#dc2626" : "#64748b",
-                }}
-              >
+              <div style={{ marginTop: 16, fontSize: 14, color: messaggio.includes("Errore") ? "#dc2626" : "#64748b" }}>
                 {messaggio}
               </div>
             )}
           </form>
 
-          <div
-            style={{
-              background: "#fff",
-              border: "1px solid #d1d5db",
-              borderRadius: 10,
-              overflow: "hidden",
-            }}
-          >
-            <div
-              style={{
-                padding: 20,
-                borderBottom: "1px solid #e5e7eb",
-              }}
-            >
-              <h2
-                style={{
-                  fontSize: 20,
-                  fontWeight: 700,
-                  color: "#0f172a",
-                  margin: 0,
-                }}
-              >
+          <div style={{ background: "#fff", border: "1px solid #d1d5db", borderRadius: 10, overflow: "hidden" }}>
+            <div style={{ padding: 20, borderBottom: "1px solid #e5e7eb" }}>
+              <h2 style={{ fontSize: 20, fontWeight: 700, color: "#0f172a", margin: 0 }}>
                 Modelli caricati
               </h2>
 
@@ -348,9 +247,7 @@ async function eliminaModello(id: string) {
             {loading ? (
               <div style={{ padding: 24, color: "#64748b" }}>Caricamento...</div>
             ) : modelli.length === 0 ? (
-              <div style={{ padding: 24, color: "#64748b" }}>
-                Nessun modello caricato.
-              </div>
+              <div style={{ padding: 24, color: "#64748b" }}>Nessun modello caricato.</div>
             ) : (
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead style={{ background: "#f8fafc" }}>
@@ -366,40 +263,34 @@ async function eliminaModello(id: string) {
                   {modelli.map((m) => (
                     <tr key={m.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
                       <td style={tdStyle}>
-                        <div style={{ fontWeight: 700, color: "#0f172a" }}>
-                          {m.nome}
-                        </div>
-                        <div style={{ marginTop: 4, fontSize: 12, color: "#64748b" }}>
-                          {m.file_path}
-                        </div>
+                        <div style={{ fontWeight: 700, color: "#0f172a" }}>{m.nome}</div>
+                        <div style={{ marginTop: 4, fontSize: 12, color: "#64748b" }}>{m.file_path}</div>
                       </td>
 
                       <td style={tdStyle}>{m.categoria}</td>
 
                       <td style={tdStyle}>
-                        <span style={{ fontFamily: "monospace", fontSize: 12 }}>
-                          {m.codice}
-                        </span>
+                        <span style={{ fontFamily: "monospace", fontSize: 12 }}>{m.codice}</span>
                       </td>
 
                       <td style={{ ...tdStyle, textAlign: "right" }}>
-                       <button
-  type="button"
-  title="Elimina modello"
-  onClick={() => eliminaModello(m.id)}
-  style={{
-    border: 0,
-    background: "transparent",
-    color: "#dc2626",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    width: "100%",
-  }}
->
-  <Trash2 size={18} />
-</button>
+                        <button
+                          type="button"
+                          title="Elimina modello"
+                          onClick={() => eliminaModello(m.id)}
+                          style={{
+                            border: 0,
+                            background: "transparent",
+                            color: "#dc2626",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "flex-end",
+                            width: "100%",
+                          }}
+                        >
+                          <Trash2 size={18} />
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -412,6 +303,19 @@ async function eliminaModello(id: string) {
     </main>
   );
 }
+
+const buttonStyle: React.CSSProperties = {
+  marginTop: 20,
+  border: 0,
+  borderRadius: 8,
+  background: "#2563eb",
+  color: "#fff",
+  padding: "10px 18px",
+  fontSize: 14,
+  fontWeight: 600,
+  cursor: "pointer",
+  fontFamily: font,
+};
 
 const thStyle: React.CSSProperties = {
   textAlign: "left",
