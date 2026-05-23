@@ -221,7 +221,7 @@ const sociElenco = (soci || []).map((socio: any) => ({
 
 const percentualeCapitale = sociElenco.reduce(
   (totale: number, socio: any) =>
-    totale + Number(String(socio.SOCIO_QUOTA).replace("%", "") || 0),
+    totale + Number(socio.SOCIO_PERCENTUALE_PARTECIPAZIONE || 0),
   0
 );
     
@@ -302,7 +302,9 @@ const percentualeCapitale = sociElenco.reduce(
   pratica.numero_pratica || "",
 
 PERCENTUALE_SOCI_PRESENTI:
-  Number(percentualeCapitale).toFixed(2),
+  datiDocumento.percentuale_soci_presenti
+    ? Number(datiDocumento.percentuale_soci_presenti).toFixed(2)
+    : Number(percentualeCapitale).toFixed(2),
 
       SOCIETA_DENOMINAZIONE:
   datiDocumento.societa_denominazione ||
@@ -328,11 +330,12 @@ SOCIETA_REA:
   "",
 
 RAPPRESENTANTE_LEGALE_NOME:
-  datiDocumento.rappresentante_legale ||
+  datiDocumento.rappresentante_legale_nome ||
+  datiDocumento.presidente ||
   "",
 
 RAPPRESENTANTE_LEGALE_CODICE_FISCALE:
-  datiDocumento.cf_rappresentante_legale ||
+  datiDocumento.rappresentante_legale_codice_fiscale ||
   "",
 
 IMPORTO_DIVIDENDO_TOTALE:
@@ -372,7 +375,7 @@ SEDE_LIQUIDAZIONE:
       valori.DENOMINAZIONE || "societa"
     ).replace(/[^a-zA-Z0-9._-]/g, "_");
 
-    const nomeFile = `Verbale_assemblea_${safeDenominazione}_${Date.now()}.docx`;
+   const nomeFile = `Distribuzione_utili_${safeDenominazione}_${Date.now()}.docx`;
 
     const filePath = `${id}/generati/${nomeFile}`;
 
@@ -395,7 +398,7 @@ SEDE_LIQUIDAZIONE:
       .from("tbpratiche_documenti")
       .insert({
         pratica_id: id,
-        tipo_documento: "verbale_assemblea",
+        tipo_documento: "distribuzione_utili",
         nome_file: nomeFile,
         file_path: filePath,
         stato: "generato",
