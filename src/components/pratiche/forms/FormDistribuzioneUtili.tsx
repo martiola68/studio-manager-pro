@@ -763,35 +763,50 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
                 ? new Date(doc.created_at).toLocaleString("it-IT")
                 : "—"}
             </td>
-            <td style={tdStyle}>
-              <button
-                type="button"
-                onClick={async () => {
-                  if (!confirm("Eliminare questo documento?")) return;
+           <td style={tdStyle}>
+  <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+    <a
+      href={doc.url_file || doc.file_url || doc.path_file}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        color: "#2563eb",
+        textDecoration: "none",
+        fontWeight: 600,
+      }}
+    >
+      Scarica
+    </a>
 
-                  const res = await fetch(
-                    `/api/pratiche/${praticaId}/documenti/${doc.id}`,
-                    { method: "DELETE" }
-                  );
+    <button
+      type="button"
+      onClick={async () => {
+        if (!confirm("Eliminare questo documento?")) return;
 
-                  if (!res.ok) {
-                    alert("Errore eliminazione documento");
-                    return;
-                  }
+        const res = await fetch(
+          `/api/pratiche/${praticaId}/documenti/${doc.id}`,
+          { method: "DELETE" }
+        );
 
-                  await caricaDocumenti();
-                }}
-                style={{
-                  border: 0,
-                  background: "transparent",
-                  color: "#dc2626",
-                  cursor: "pointer",
-                  fontWeight: 600,
-                }}
-              >
-                Elimina
-              </button>
-            </td>
+        if (!res.ok) {
+          alert("Errore eliminazione documento");
+          return;
+        }
+
+        await caricaDocumenti();
+      }}
+      style={{
+        border: 0,
+        background: "transparent",
+        color: "#dc2626",
+        cursor: "pointer",
+        fontWeight: 600,
+      }}
+    >
+      Elimina
+    </button>
+  </div>
+</td>
           </tr>
         ))}
       </tbody>
