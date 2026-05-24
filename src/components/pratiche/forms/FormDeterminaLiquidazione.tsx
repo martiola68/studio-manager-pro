@@ -258,13 +258,39 @@ nuovo_rappresentante: false,
   <div>
     <label style={labelStyle}>Amministratore / Rappresentante legale</label>
 
-   <select
+  <select
   style={inputStyle}
   value={form.rappresentante_legale_id || ""}
- onChange={(e) => {
-  const selected = motivi.find(
-    (m) => m.codice === e.target.value
-  );
+  onChange={(e) => {
+    const selected =
+      pratica.rappresentanti_legali?.find(
+        (r: any) => r.id === e.target.value
+      );
+
+    setForm((prev) => ({
+      ...prev,
+
+      rappresentante_legale_id:
+        selected?.id || "",
+
+      rappresentante_legale_nome:
+        selected?.nome_cognome || "",
+
+      rappresentante_legale_codice_fiscale:
+        selected?.codice_fiscale || "",
+
+      rappresentante_legale_indirizzo:
+        selected?.indirizzo_residenza ||
+        selected?.indirizzo ||
+        "",
+
+      rappresentante_legale_citta:
+        selected?.citta_residenza ||
+        selected?.citta ||
+        "",
+    }));
+  }}
+>
 
   setForm((prev) => ({
     ...prev,
