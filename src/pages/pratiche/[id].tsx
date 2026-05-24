@@ -8,6 +8,7 @@ import FormDistribuzioneUtili from "@/components/pratiche/forms/FormDistribuzion
 import FormMessaLiquidazione from "@/components/pratiche/forms/FormMessaLiquidazione";
 import FormNominaAmministratore from "@/components/pratiche/forms/FormNominaAmministratore";
 import FormCambioAmministratore from "@/components/pratiche/forms/FormCambioAmministratore";
+import FormDeterminaLiquidazione from "@/components/pratiche/forms/FormDeterminaLiquidazione";
 
 type PraticaDettaglio = {
   id: string;
@@ -527,6 +528,10 @@ const importoNettoNuovoSocio =
 
   if (pratica?.tipo?.classe_form === "distribuzione_utili") {
   return <FormDistribuzioneUtili pratica={pratica} />;
+}
+
+  if (pratica?.tipo?.classe_form === "determina_liquidazione") {
+  return <FormDeterminaLiquidazione pratica={pratica} />;
 }
 
 if (pratica?.tipo?.classe_form === "messa_liquidazione") {
