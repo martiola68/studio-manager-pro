@@ -222,3 +222,69 @@ updated_at: new Date().toISOString(),
     );
   }
 }
+export async function DELETE(
+  req: Request,
+  { params }: Params
+) {
+  try {
+    const supabaseAdmin = getSupabaseAdmin();
+
+    const { id: praticaId } = await params;
+
+    // documenti pratica
+    const { data: documenti } = await supabaseAdmin
+      .from("tbpratiche_documenti")
+      .select("id, file_path")
+      .eq("pratica_id", praticaId);
+
+    // elimina file storage
+    for (const doc of documenti || []) {
+      if (doc.file_path) {
+        await supabaseAdmin.storage
+          .from("pratiche-documenti")
+          .remove([doc.file_path]);
+      }
+    }
+
+    // elimina record collegati
+    await supabaseAdmin
+      .from("tbpratiche_documenti")
+      .delete()
+      .eq("pratica_id", praticaId);
+
+    await supabaseAdmin
+      .from("tbpratiche_soci")
+      .delete()
+      .eq("pratica_id", praticaId);
+
+    await supabaseAdmin
+      .from("tbpratiche_dati_documenti")
+      .delete()
+      .eq("pratica_id", praticaId);
+
+    // elimina pratica
+    const { error } = await supabaseAdmin
+      .from("tbpratiche")
+      .delete()
+      .eq("id", praticaId);
+
+    if (error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+    });
+  } catch (error: any) {
+    return NextResponse.json(
+      {
+        error:
+          error.message || "Errore eliminazione pratica",
+      },
+      { status: 500 }
+    );
+  }
+}
