@@ -296,9 +296,6 @@ const percentualeCapitale = sociElenco.reduce(
 LUOGO_CONVOCAZIONE:
   datiDocumento.luogo_convocazione || "",
 
-PROFESSIONISTA_NOME:
-  datiDocumento.professionista_nome || "",
-
       PROFESSIONISTA_NOME:
         datiDocumento.professionista_nome || "",
 
