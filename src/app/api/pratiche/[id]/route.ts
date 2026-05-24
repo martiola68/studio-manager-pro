@@ -46,7 +46,7 @@ export async function GET(req: Request, { params }: Params) {
  const { data: rappresentanteLegale } = cliente?.rapp_legale_id
   ? await supabaseAdmin
       .from("rapp_legali" as any)
-      .select("id, nome_cognome, codice_fiscale")
+      .select("id, nome_cognome, codice_fiscale, indirizzo, citta, provincia, cap")
       .eq("id", cliente.rapp_legale_id)
       .single()
   : { data: null };
