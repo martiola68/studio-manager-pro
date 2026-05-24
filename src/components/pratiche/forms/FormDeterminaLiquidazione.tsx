@@ -157,6 +157,12 @@ export default function FormDeterminaLiquidazione({
       pratica?.dati_documento
         ?.rappresentante_legale_citta || "",
 
+    rappresentante_legale_provincia:
+  pratica?.dati_documento?.rappresentante_legale_provincia || "",
+
+rappresentante_legale_cap:
+  pratica?.dati_documento?.rappresentante_legale_cap || "",
+
     motivo_liquidazione:
       pratica?.dati_documento?.motivo_liquidazione ||
       "",
@@ -684,6 +690,12 @@ export default function FormDeterminaLiquidazione({
                       selected?.citta_residenza ||
                       selected?.citta ||
                       "",
+
+                    rappresentante_legale_provincia:
+                    selected?.provincia || "",
+
+                    rappresentante_legale_cap:
+                      selected?.cap || "",
                   }));
                 }}
               >
