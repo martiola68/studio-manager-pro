@@ -224,6 +224,13 @@ const percentualeCapitale = sociElenco.reduce(
     totale + Number(socio.SOCIO_PERCENTUALE_PARTECIPAZIONE || 0),
   0
 );
+    const { data: motivoLiquidazione } = datiDocumento.motivo_liquidazione
+  ? await supabaseAdmin
+      .from("tbpratiche_motivi_liquidazione")
+      .select("numero_art_2484")
+      .eq("codice", datiDocumento.motivo_liquidazione)
+      .maybeSingle()
+  : { data: null };
     
     const valori = {
       ANNO: anno(dataAtto),
