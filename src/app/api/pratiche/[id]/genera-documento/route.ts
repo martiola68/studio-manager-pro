@@ -280,6 +280,25 @@ const percentualeCapitale = sociElenco.reduce(
         datiDocumento.motivo_liquidazione_altro ||
         "",
 
+      MOTIVO_LIQUIDAZIONE_TESTO:
+      datiDocumento.motivo_liquidazione_testo || "",
+
+      GIORNO_ORA_CONVOCAZIONE:
+      datiDocumento.data_convocazione &&
+      datiDocumento.ora_convocazione
+        ? `${formatDataIt(
+        datiDocumento.data_convocazione
+      )} alle ore ${formatOra(
+        datiDocumento.ora_convocazione
+      )}`
+    : "",
+
+LUOGO_CONVOCAZIONE:
+  datiDocumento.luogo_convocazione || "",
+
+PROFESSIONISTA_NOME:
+  datiDocumento.professionista_nome || "",
+
       PROFESSIONISTA_NOME:
         datiDocumento.professionista_nome || "",
 
