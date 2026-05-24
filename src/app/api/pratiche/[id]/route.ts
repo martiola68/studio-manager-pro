@@ -93,13 +93,15 @@ const { data: rappresentantiLegali } = cliente?.id
   ? await supabaseAdmin
       .from("rapp_legali" as any)
       .select(`
-        id,
-        nome_cognome,
-        codice_fiscale,
-        indirizzo,
-        citta,
-        provincia,
-        cap
+       id,
+  nome_cognome,
+  codice_fiscale,
+  indirizzo_residenza,
+  citta_residenza,
+  indirizzo,
+  citta,
+  provincia,
+  cap
       `)
      .eq("studio_id", pratica.studio_id)
       .order("nome_cognome")
