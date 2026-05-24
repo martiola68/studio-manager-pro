@@ -78,6 +78,7 @@ export default function FormDeterminaLiquidazione({ pratica }: any) {
     ora_inizio: pratica.dati_documento?.ora_inizio || "",
     luogo_assemblea:
       pratica.dati_documento?.luogo_assemblea || sede || "",
+    rappresentante_legale_id: "",
     rappresentante_legale_nome:
       pratica.dati_documento?.rappresentante_legale_nome ||
       pratica.rappresentante_legale?.nome_cognome ||
@@ -428,13 +429,14 @@ nuovo_rappresentante: false,
             <select
               style={inputStyle}
               value={form.motivo_liquidazione}
-              onChange={(e) => {
+  onChange={(e) => {
   const selected = pratica.rappresentanti_legali?.find(
     (r: any) => r.id === e.target.value
   );
 
   setForm((prev) => ({
     ...prev,
+    rappresentante_legale_id: selected?.id || "",
     rappresentante_legale_nome: selected?.nome_cognome || "",
     rappresentante_legale_codice_fiscale: selected?.codice_fiscale || "",
     rappresentante_legale_indirizzo:
