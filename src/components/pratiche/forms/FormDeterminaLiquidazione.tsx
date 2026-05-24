@@ -296,6 +296,49 @@ export default function FormDeterminaLiquidazione({ pratica }: any) {
             <button type="submit" disabled={saving} style={blueButton}>
               {saving ? "Salvataggio..." : "Salva dati determina"}
             </button>
+
+             <button
+    type="button"
+    onClick={async () => {
+      try {
+        const res = await fetch(
+          `/api/pratiche/${pratica.id}/crea-pratica-liquidazione`,
+          {
+            method: "POST",
+          }
+        );
+
+        const json = await res.json();
+
+        if (!res.ok) {
+          alert(json.error || "Errore");
+          return;
+        }
+
+        alert(
+          "Pratica messa in liquidazione creata"
+        );
+
+        window.location.href =
+          `/pratiche/${json.pratica.id}`;
+      } catch (err) {
+        alert("Errore creazione pratica");
+      }
+    }}
+    style={{
+      padding: "10px 16px",
+      background: "#2563eb",
+      color: "#fff",
+      border: "none",
+      borderRadius: 8,
+      cursor: "pointer",
+      fontWeight: 600,
+    }}
+  >
+    Crea pratica verbale messa in liquidazione
+  </button>
+</div>
+          
           </div>
         </div>
       </form>
