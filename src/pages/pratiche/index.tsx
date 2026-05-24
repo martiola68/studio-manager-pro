@@ -1,5 +1,5 @@
 "use client";
-
+import { Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
@@ -241,6 +241,7 @@ export default function PratichePage() {
                     "Priorità",
                     "Assegnatario",
                     "Avanzamento",
+                   "Azioni",
                   ].map((h) => (
                     <th
                       key={h}
@@ -327,30 +328,68 @@ export default function PratichePage() {
                       {p.assegnatario_nome}
                     </td>
 
-                    <td style={{ padding: 16 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <div
-                          style={{
-                            width: 90,
-                            height: 8,
-                            background: "#e5e7eb",
-                            borderRadius: 999,
-                            overflow: "hidden",
-                          }}
-                        >
-                          <div
-                            style={{
-                              width: `${p.avanzamento || 0}%`,
-                              height: "100%",
-                              background: "#2563eb",
-                            }}
-                          />
-                        </div>
-                        <span style={{ fontSize: 13, color: "#475569" }}>
-                          {p.avanzamento || 0}%
-                        </span>
-                      </div>
-                    </td>
+                   <td style={{ padding: 16 }}>
+  <div
+    style={{
+      width: 100,
+      height: 8,
+      background: "#e5e7eb",
+      borderRadius: 999,
+      overflow: "hidden",
+    }}
+  >
+    <div
+      style={{
+        width: `${p.avanzamento || 0}%`,
+        height: "100%",
+        background: "#2563eb",
+      }}
+    />
+  </div>
+
+  <div
+    style={{
+      fontSize: 12,
+      marginTop: 4,
+      color: "#374151",
+    }}
+  >
+    {p.avanzamento || 0}%
+  </div>
+</td>
+
+<td style={{ padding: 16, textAlign: "right" }}>
+  <button
+    type="button"
+    title="Elimina pratica"
+    onClick={async () => {
+      if (!confirm("Eliminare definitivamente questa pratica?")) {
+        return;
+      }
+
+      const res = await fetch(`/api/pratiche/${p.id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        alert("Errore eliminazione pratica");
+        return;
+      }
+
+      setPratiche((prev) =>
+        prev.filter((x) => x.id !== p.id)
+      );
+    }}
+    style={{
+      border: 0,
+      background: "transparent",
+      color: "#dc2626",
+      cursor: "pointer",
+    }}
+  >
+    <Trash2 size={18} />
+  </button>
+</td>
                   </tr>
                 ))}
               </tbody>
