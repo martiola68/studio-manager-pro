@@ -75,6 +75,15 @@ export default function FormDeterminaLiquidazione({ pratica }: any) {
       pratica.dati_documento?.rappresentante_legale_codice_fiscale ||
       pratica.rappresentante_legale?.codice_fiscale ||
       "",
+
+    rappresentante_legale_indirizzo:
+  pratica.dati_documento?.rappresentante_legale_indirizzo || "",
+
+rappresentante_legale_citta:
+  pratica.dati_documento?.rappresentante_legale_citta || "",
+
+nuovo_rappresentante: false,
+    
     motivo_liquidazione: pratica.dati_documento?.motivo_liquidazione || "",
     motivo_liquidazione_testo:
       pratica.dati_documento?.motivo_liquidazione_testo || "",
@@ -225,12 +234,133 @@ export default function FormDeterminaLiquidazione({ pratica }: any) {
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 14 }}>
-            <div>
-              <label style={labelStyle}>Amministratore unico</label>
-              <input style={inputStyle} value={form.rappresentante_legale_nome} onChange={(e) => aggiornaCampo("rappresentante_legale_nome", e.target.value)} />
-            </div>
+       <div
+  style={{
+    display: "grid",
+    gridTemplateColumns: "2fr auto",
+    gap: 12,
+    marginTop: 14,
+    alignItems: "end",
+  }}
+>
+  <div>
+    <label style={labelStyle}>Amministratore / Rappresentante legale</label>
 
+    <select
+      style={inputStyle}
+      value={form.rappresentante_legale_nome}
+      onChange={(e) => {
+        const selected = pratica.rappresentanti_legali?.find(
+          (r: any) => r.nome_cognome === e.target.value
+        );
+
+        setForm((prev) => ({
+          ...prev,
+          rappresentante_legale_nome:
+            selected?.nome_cognome || "",
+
+          rappresentante_legale_codice_fiscale:
+            selected?.codice_fiscale || "",
+
+          rappresentante_legale_indirizzo:
+            selected?.indirizzo || "",
+
+          rappresentante_legale_citta:
+            selected?.citta || "",
+        }));
+      }}
+    >
+      <option value="">
+        Seleziona rappresentante legale
+      </option>
+
+      {pratica.rappresentanti_legali?.map((r: any) => (
+        <option key={r.id} value={r.nome_cognome}>
+          {r.nome_cognome}
+        </option>
+      ))}
+    </select>
+  </div>
+
+  <button
+    type="button"
+    onClick={() =>
+      setForm((prev) => ({
+        ...prev,
+        nuovo_rappresentante: !prev.nuovo_rappresentante,
+      }))
+    }
+    style={{
+      ...blueButton,
+      background: "#0f172a",
+      height: 42,
+    }}
+  >
+    + Nuovo
+  </button>
+</div>
+
+<div
+  style={{
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 12,
+    marginTop: 14,
+  }}
+>
+  <div>
+    <label style={labelStyle}>
+      CF amministratore unico
+    </label>
+
+    <input
+      style={inputStyle}
+      value={
+        form.rappresentante_legale_codice_fiscale
+      }
+      onChange={(e) =>
+        aggiornaCampo(
+          "rappresentante_legale_codice_fiscale",
+          e.target.value.toUpperCase()
+        )
+      }
+    />
+  </div>
+
+  <div>
+    <label style={labelStyle}>Città</label>
+
+    <input
+      style={inputStyle}
+      value={
+        form.rappresentante_legale_citta || ""
+      }
+      onChange={(e) =>
+        aggiornaCampo(
+          "rappresentante_legale_citta",
+          e.target.value
+        )
+      }
+    />
+  </div>
+</div>
+
+<div style={{ marginTop: 14 }}>
+  <label style={labelStyle}>Indirizzo</label>
+
+  <input
+    style={inputStyle}
+    value={
+      form.rappresentante_legale_indirizzo || ""
+    }
+    onChange={(e) =>
+      aggiornaCampo(
+        "rappresentante_legale_indirizzo",
+        e.target.value
+      )
+    }
+  />
+</div>
             <div>
               <label style={labelStyle}>CF amministratore unico</label>
               <input style={inputStyle} value={form.rappresentante_legale_codice_fiscale} onChange={(e) => aggiornaCampo("rappresentante_legale_codice_fiscale", e.target.value)} />
