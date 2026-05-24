@@ -361,12 +361,7 @@ nuovo_rappresentante: false,
     }
   />
 </div>
-            <div>
-              <label style={labelStyle}>CF amministratore unico</label>
-              <input style={inputStyle} value={form.rappresentante_legale_codice_fiscale} onChange={(e) => aggiornaCampo("rappresentante_legale_codice_fiscale", e.target.value)} />
-            </div>
-          </div>
-
+           
           <div style={{ marginTop: 14 }}>
             <label style={labelStyle}>Causa di scioglimento</label>
             <select
