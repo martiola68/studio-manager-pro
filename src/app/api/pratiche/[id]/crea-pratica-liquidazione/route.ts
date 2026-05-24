@@ -57,6 +57,7 @@ export async function POST(
       await supabaseAdmin
         .from("tbpratiche")
         .insert({
+            studio_id: pratica.studio_id,
           titolo:
             "Verbale messa in liquidazione",
 
