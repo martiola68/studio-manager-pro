@@ -101,7 +101,7 @@ const { data: rappresentantiLegali } = cliente?.id
         provincia,
         cap
       `)
-      .eq("cliente_id", cliente.id)
+     .eq("studio_id", pratica.studio_id)
       .order("nome_cognome")
   : { data: [] };
 
