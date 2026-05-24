@@ -143,6 +143,19 @@ export async function PUT(req: Request, { params }: Params) {
       motivo_liquidazione: body.motivo_liquidazione || null,
       motivo_liquidazione_altro:
         body.motivo_liquidazione_altro || null,
+
+      motivo_liquidazione_testo:
+  body.motivo_liquidazione_testo || null,
+
+data_convocazione:
+  body.data_convocazione || null,
+
+ora_convocazione:
+  body.ora_convocazione || null,
+
+luogo_convocazione:
+  body.luogo_convocazione || null,
+      
       ora_chiusura: body.ora_chiusura || null,
       professionista_nome: body.professionista_nome || null,
       professionista_codice_fiscale:
