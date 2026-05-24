@@ -36,12 +36,12 @@ export async function POST(
         .eq("pratica_id", id)
         .maybeSingle();
 
-    const { data: tipoLiquidazione } =
-      await supabaseAdmin
-        .from("tbpratiche_tipi")
-        .select("id")
-        .eq("classe_form", "messa_liquidazione")
-        .maybeSingle();
+  const { data: tipoLiquidazione } =
+  await supabaseAdmin
+    .from("tbpratiche_tipi")
+    .select("id")
+    .eq("nome", "Messa in liquidazione")
+    .single();
 
     if (!tipoLiquidazione) {
       return NextResponse.json(
