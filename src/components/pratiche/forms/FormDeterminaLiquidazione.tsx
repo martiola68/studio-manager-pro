@@ -361,6 +361,61 @@ nuovo_rappresentante: false,
     }
   />
 </div>
+
+          {form.nuovo_rappresentante && (
+  <div
+    style={{
+      marginTop: 14,
+      padding: 16,
+      border: "1px solid #d1d5db",
+      borderRadius: 8,
+      background: "#f8fafc",
+    }}
+  >
+    <strong>Nuovo rappresentante legale</strong>
+
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: 12,
+        marginTop: 14,
+      }}
+    >
+      <div>
+        <label style={labelStyle}>Nominativo</label>
+
+        <input
+          style={inputStyle}
+          value={form.rappresentante_legale_nome}
+          onChange={(e) =>
+            aggiornaCampo(
+              "rappresentante_legale_nome",
+              e.target.value
+            )
+          }
+        />
+      </div>
+
+      <div>
+        <label style={labelStyle}>Codice fiscale</label>
+
+        <input
+          style={inputStyle}
+          value={
+            form.rappresentante_legale_codice_fiscale
+          }
+          onChange={(e) =>
+            aggiornaCampo(
+              "rappresentante_legale_codice_fiscale",
+              e.target.value.toUpperCase()
+            )
+          }
+        />
+      </div>
+    </div>
+  </div>
+)}
            
           <div style={{ marginTop: 14 }}>
             <label style={labelStyle}>Causa di scioglimento</label>
