@@ -257,40 +257,29 @@ nuovo_rappresentante: false,
   <div>
     <label style={labelStyle}>Amministratore / Rappresentante legale</label>
 
-    <select
-      style={inputStyle}
-      value={form.rappresentante_legale_nome}
-      onChange={(e) => {
-        const selected = pratica.rappresentanti_legali?.find(
-          (r: any) => r.nome_cognome === e.target.value
-        );
+   <select
+  style={inputStyle}
+  value={form.rappresentante_legale_id || ""}
+ onChange={(e) => {
+  const selected = motivi.find(
+    (m) => m.codice === e.target.value
+  );
 
-        setForm((prev) => ({
-          ...prev,
-          rappresentante_legale_nome:
-            selected?.nome_cognome || "",
+  setForm((prev) => ({
+    ...prev,
+    motivo_liquidazione: selected?.codice || "",
+    motivo_liquidazione_testo: selected?.testo_verbale || "",
+  }));
+}}
+>
+  <option value="">Seleziona rappresentante legale</option>
 
-          rappresentante_legale_codice_fiscale:
-            selected?.codice_fiscale || "",
-
-          rappresentante_legale_indirizzo:
-            selected?.indirizzo || "",
-
-          rappresentante_legale_citta:
-            selected?.citta || "",
-        }));
-      }}
-    >
-      <option value="">
-        Seleziona rappresentante legale
-      </option>
-
-    {pratica.rappresentanti_legali?.map((r: any) => (
-  <option key={r.id} value={r.id}>
-    {r.nome_cognome}
-  </option>
-))}
-    </select>
+  {pratica.rappresentanti_legali?.map((r: any) => (
+    <option key={r.id} value={r.id}>
+      {r.nome_cognome}
+    </option>
+  ))}
+</select>
   </div>
 
   <button
