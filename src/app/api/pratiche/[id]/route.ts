@@ -89,10 +89,21 @@ const { data: diciture } = await supabaseAdmin
   .eq("attiva", true)
   .order("titolo");
 
-const { data: rappresentantiLegali } = await supabaseAdmin
-  .from("rapp_legali" as any)
-  .select("id, nome_cognome, codice_fiscale")
-  .order("nome_cognome");
+const { data: rappresentantiLegali } = cliente?.id
+  ? await supabaseAdmin
+      .from("rapp_legali" as any)
+      .select(`
+        id,
+        nome_cognome,
+        codice_fiscale,
+        indirizzo,
+        citta,
+        provincia,
+        cap
+      `)
+      .eq("cliente_id", cliente.id)
+      .order("nome_cognome")
+  : { data: [] };
 
  return NextResponse.json({
   pratica: {
