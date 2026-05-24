@@ -288,24 +288,30 @@ export default function FormDeterminaLiquidazione({ pratica }: any) {
             </div>
           </div>
 
-          <div style={{ marginTop: 18, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ fontSize: 14, color: messaggio.includes("Errore") ? "#dc2626" : "#64748b" }}>
-              {messaggio}
-            </div>
+      <div
+  style={{
+    marginTop: 18,
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+  }}
+>
+  <div style={{ fontSize: 14, color: messaggio.includes("Errore") ? "#dc2626" : "#64748b" }}>
+    {messaggio}
+  </div>
 
-            <button type="submit" disabled={saving} style={blueButton}>
-              {saving ? "Salvataggio..." : "Salva dati determina"}
-            </button>
+  <div style={{ display: "flex", gap: 12 }}>
+    <button type="submit" disabled={saving} style={blueButton}>
+      {saving ? "Salvataggio..." : "Salva dati determina"}
+    </button>
 
-             <button
-    type="button"
-    onClick={async () => {
-      try {
+    <button
+      type="button"
+      onClick={async () => {
         const res = await fetch(
           `/api/pratiche/${pratica.id}/crea-pratica-liquidazione`,
-          {
-            method: "POST",
-          }
+          { method: "POST" }
         );
 
         const json = await res.json();
@@ -315,31 +321,17 @@ export default function FormDeterminaLiquidazione({ pratica }: any) {
           return;
         }
 
-        alert(
-          "Pratica messa in liquidazione creata"
-        );
-
-        window.location.href =
-          `/pratiche/${json.pratica.id}`;
-      } catch (err) {
-        alert("Errore creazione pratica");
-      }
-    }}
-    style={{
-      padding: "10px 16px",
-      background: "#2563eb",
-      color: "#fff",
-      border: "none",
-      borderRadius: 8,
-      cursor: "pointer",
-      fontWeight: 600,
-    }}
-  >
-    Crea pratica verbale messa in liquidazione
-  </button>
+        window.location.href = `/pratiche/${json.pratica.id}`;
+      }}
+      style={{
+        ...blueButton,
+        background: "#16a34a",
+      }}
+    >
+      Crea pratica verbale messa in liquidazione
+    </button>
+  </div>
 </div>
-          
-          </div>
         </div>
       </form>
 
