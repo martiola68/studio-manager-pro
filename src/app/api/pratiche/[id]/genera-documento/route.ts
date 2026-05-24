@@ -283,6 +283,9 @@ const percentualeCapitale = sociElenco.reduce(
       MOTIVO_LIQUIDAZIONE_TESTO:
       datiDocumento.motivo_liquidazione_testo || "",
 
+      NUMERO_CAUSA_SCIOGLIMENTO:
+      motivoLiquidazione?.numero_art_2484 || "",
+
       GIORNO_ORA_CONVOCAZIONE:
       datiDocumento.data_convocazione &&
       datiDocumento.ora_convocazione
