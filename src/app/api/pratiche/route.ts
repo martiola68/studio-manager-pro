@@ -21,12 +21,12 @@ export async function GET() {
     const tipoIds = [...new Set((pratiche || []).map((p) => p.tipo_pratica_id).filter(Boolean))];
     const utenteIds = [...new Set((pratiche || []).map((p) => p.assegnato_a).filter(Boolean))];
 
-    const { data: clienti } = clienteIds.length
-      ? await supabaseAdmin
-          .from("tbclienti")
-          .select("id, nome")
-          .in("id", clienteIds)
-      : { data: [] };
+ const { data: clienti } = clienteIds.length
+  ? await supabaseAdmin
+      .from("tbclienti")
+      .select("id, ragione_sociale")
+      .in("id", clienteIds)
+  : { data: [] };
 
     const { data: tipi } = tipoIds.length
       ? await supabaseAdmin
@@ -80,7 +80,8 @@ const { data: documenti } = praticaIds.length
         priorita: p.priorita,
         data_apertura: p.data_apertura,
         created_at: p.created_at,
-        cliente_nome: cliente?.nome || "—",
+        cliente_nome:
+  cliente?.ragione_sociale || "—",
         tipo_nome: tipo ? `${tipo.ente} - ${tipo.nome}` : "—",
         assegnatario_nome: utente
           ? `${utente.nome || ""} ${utente.cognome || ""}`.trim()
