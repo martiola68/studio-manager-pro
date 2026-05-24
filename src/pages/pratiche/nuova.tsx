@@ -188,20 +188,29 @@ export default function NuovaPraticaPage() {
                 </p>
               </div>
 
-              <a
-                href="/pratiche"
-                style={{
-                  border: "1px solid #d1d5db",
-                  borderRadius: 8,
-                  padding: "9px 16px",
-                  background: "#fff",
-                  color: "#111827",
-                  fontSize: 14,
-                  textDecoration: "none",
-                }}
-              >
-                Torna alle pratiche
-              </a>
+          <div
+  style={{
+    display: "flex",
+    justifyContent: "flex-end",
+    width: "100%",
+  }}
+>
+  <a
+    href="/pratiche"
+    style={{
+      border: "1px solid #d1d5db",
+      borderRadius: 8,
+      padding: "9px 16px",
+      background: "#fff",
+      color: "#111827",
+      fontSize: 14,
+      fontWeight: 700,
+      textDecoration: "none",
+    }}
+  >
+    Torna alle pratiche
+  </a>
+</div>
             </div>
 
             <div
