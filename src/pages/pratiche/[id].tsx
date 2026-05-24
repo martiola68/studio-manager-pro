@@ -546,9 +546,6 @@ if (pratica?.tipo?.classe_form === "cambio_amministratore") {
   return <FormCambioAmministratore pratica={pratica} />;
 }
 
-return <div>Classe form non gestita</div>;
-}
-
 const thStyle: React.CSSProperties = {
   textAlign: "left",
   padding: "12px 16px",
