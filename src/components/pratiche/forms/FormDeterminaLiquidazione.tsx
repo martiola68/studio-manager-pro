@@ -452,25 +452,21 @@ nuovo_rappresentante: false,
            
           <div style={{ marginTop: 14 }}>
             <label style={labelStyle}>Causa di scioglimento</label>
-            <select
-              style={inputStyle}
-              value={form.motivo_liquidazione}
+           <select
+  style={inputStyle}
+  value={form.motivo_liquidazione}
   onChange={(e) => {
-  const selected = pratica.rappresentanti_legali?.find(
-    (r: any) => r.id === e.target.value
-  );
+    const selected = motivi.find(
+      (m) => m.codice === e.target.value
+    );
 
-  setForm((prev) => ({
-    ...prev,
-    rappresentante_legale_id: selected?.id || "",
-    rappresentante_legale_nome: selected?.nome_cognome || "",
-    rappresentante_legale_codice_fiscale: selected?.codice_fiscale || "",
-    rappresentante_legale_indirizzo:
-      selected?.indirizzo_residenza || selected?.indirizzo || "",
-    rappresentante_legale_citta:
-      selected?.citta_residenza || selected?.citta || "",
-  }));
-}}
+    setForm((prev) => ({
+      ...prev,
+      motivo_liquidazione: selected?.codice || "",
+      motivo_liquidazione_testo: selected?.testo_verbale || "",
+    }));
+  }}
+>
             >
               <option value="">Seleziona causa</option>
 
