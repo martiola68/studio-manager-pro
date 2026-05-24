@@ -106,14 +106,15 @@ const { data: rappresentantiLegali } = cliente?.id
   : { data: [] };
 
  return NextResponse.json({
-  pratica: {
-    ...pratica,
-    cliente,
-    tipo,
-    assegnatario,
-    rappresentante_legale: rappresentanteLegale,
-    dati_documento: datiDocumento,
-  },
+pratica: {
+  ...pratica,
+  cliente,
+  tipo,
+  assegnatario,
+  rappresentante_legale: rappresentanteLegale,
+  rappresentanti_legali: rappresentantiLegali || [],
+  dati_documento: datiDocumento,
+},
 
   professionisti,
   motivi_liquidazione: motiviLiquidazione,
