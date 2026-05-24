@@ -36,6 +36,17 @@ export default function FormDeterminaLiquidazione({ pratica }: any) {
   const [saving, setSaving] = useState(false);
   const [messaggio, setMessaggio] = useState("");
 
+  const [nuovoRappLegale, setNuovoRappLegale] = useState({
+  nome_cognome: "",
+  codice_fiscale: "",
+  luogo_nascita: "",
+  data_nascita: "",
+  citta_residenza: "",
+  indirizzo_residenza: "",
+  cap: "",
+  provincia: "",
+});
+
   const sede = [
     pratica.cliente?.indirizzo,
     pratica.cliente?.cap,
@@ -274,27 +285,33 @@ nuovo_rappresentante: false,
         Seleziona rappresentante legale
       </option>
 
-      {pratica.rappresentanti_legali?.map((r: any) => (
-        <option key={r.id} value={r.nome_cognome}>
-          {r.nome_cognome}
-        </option>
-      ))}
+    {pratica.rappresentanti_legali?.map((r: any) => (
+  <option key={r.id} value={r.id}>
+    {r.nome_cognome}
+  </option>
+))}
     </select>
   </div>
 
   <button
     type="button"
-    onClick={() =>
-      setForm((prev) => ({
-        ...prev,
-        nuovo_rappresentante: !prev.nuovo_rappresentante,
-      }))
-    }
-    style={{
-      ...blueButton,
-      background: "#0f172a",
-      height: 42,
-    }}
+   onClick={() => {
+  setNuovoRappLegale({
+    nome_cognome: "",
+    codice_fiscale: "",
+    luogo_nascita: "",
+    data_nascita: "",
+    citta_residenza: "",
+    indirizzo_residenza: "",
+    cap: "",
+    provincia: "",
+  });
+
+  setForm((prev) => ({
+    ...prev,
+    nuovo_rappresentante: true,
+  }));
+}}
   >
     + Nuovo
   </button>
@@ -423,14 +440,20 @@ nuovo_rappresentante: false,
               style={inputStyle}
               value={form.motivo_liquidazione}
               onChange={(e) => {
-                const selected = motivi.find((m) => m.codice === e.target.value);
+  const selected = pratica.rappresentanti_legali?.find(
+    (r: any) => r.id === e.target.value
+  );
 
-                setForm((prev) => ({
-                  ...prev,
-                  motivo_liquidazione: selected?.codice || "",
-                  motivo_liquidazione_testo: selected?.testo_verbale || "",
-                }));
-              }}
+  setForm((prev) => ({
+    ...prev,
+    rappresentante_legale_nome: selected?.nome_cognome || "",
+    rappresentante_legale_codice_fiscale: selected?.codice_fiscale || "",
+    rappresentante_legale_indirizzo:
+      selected?.indirizzo_residenza || selected?.indirizzo || "",
+    rappresentante_legale_citta:
+      selected?.citta_residenza || selected?.citta || "",
+  }));
+}}
             >
               <option value="">Seleziona causa</option>
 
