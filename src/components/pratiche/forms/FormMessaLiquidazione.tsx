@@ -89,6 +89,9 @@ export default function FormMessaLiquidazione({ pratica }: any) {
   const praticaId = router.query.id as string;
 
   const [documenti, setDocumenti] = useState<any[]>([]);
+  const [rappresentantiLegali, setRappresentantiLegali] = useState<any[]>(
+  pratica?.rappresentanti_legali || []
+);
   const [soci, setSoci] = useState<any[]>([]);
 const [nominativi, setNominativi] = useState<any[]>([]);
 const [mostraNuovoNominativo, setMostraNuovoNominativo] = useState(false);
@@ -167,14 +170,28 @@ const [nuovoNominativo, setNuovoNominativo] = useState({
     motivo_liquidazione_testo:
       pratica?.dati_documento?.motivo_liquidazione_testo || "",
 
-    liquidatore_nome:
-      pratica?.dati_documento?.liquidatore_nome || "",
+  liquidatore_id: "",
 
-    liquidatore_cf:
-      pratica?.dati_documento?.liquidatore_cf || "",
+liquidatore_nome:
+  pratica?.dati_documento?.liquidatore_nome || "",
 
-    liquidatore_residenza:
-      pratica?.dati_documento?.liquidatore_residenza || "",
+liquidatore_codice_fiscale:
+  pratica?.dati_documento?.liquidatore_codice_fiscale || "",
+
+liquidatore_indirizzo:
+  pratica?.dati_documento?.liquidatore_indirizzo || "",
+
+liquidatore_citta:
+  pratica?.dati_documento?.liquidatore_citta || "",
+
+liquidatore_provincia:
+  pratica?.dati_documento?.liquidatore_provincia || "",
+
+liquidatore_cap:
+  pratica?.dati_documento?.liquidatore_cap || "",
+
+liquidatore_residenza:
+  pratica?.dati_documento?.liquidatore_residenza || "",
 
     dicitura_presentazione:
       pratica?.dati_documento?.dicitura_presentazione || "",
@@ -754,26 +771,153 @@ function normalizzaCF(cf: string) {
   </table>
 </div>
 
-        <div style={cardStyle}>
-          <h2 style={titleStyle}>Liquidatore</h2>
+      <div style={cardStyle}>
+  <h2 style={titleStyle}>Liquidatore</h2>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 18 }}>
-            <div>
-              <label style={labelStyle}>Nome liquidatore</label>
-              <input style={inputStyle} value={form.liquidatore_nome} onChange={(e) => aggiornaCampo("liquidatore_nome", e.target.value)} />
-            </div>
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "2fr auto",
+      gap: 12,
+      marginTop: 18,
+      alignItems: "end",
+    }}
+  >
+    <div>
+      <label style={labelStyle}>Seleziona liquidatore</label>
 
-            <div>
-              <label style={labelStyle}>Codice fiscale liquidatore</label>
-              <input style={inputStyle} value={form.liquidatore_cf} onChange={(e) => aggiornaCampo("liquidatore_cf", e.target.value.toUpperCase())} />
-            </div>
-          </div>
+      <select
+        style={inputStyle}
+        value={form.liquidatore_id}
+        onChange={(e) => {
+          const selected = pratica?.rappresentanti_legali?.find(
+            (r: any) => r.id === e.target.value
+          );
 
-          <div style={{ marginTop: 14 }}>
-            <label style={labelStyle}>Residenza liquidatore</label>
-            <input style={inputStyle} value={form.liquidatore_residenza} onChange={(e) => aggiornaCampo("liquidatore_residenza", e.target.value)} />
-          </div>
-        </div>
+          setForm((prev) => ({
+            ...prev,
+            liquidatore_id: selected?.id || "",
+            liquidatore_nome: selected?.nome_cognome || "",
+            liquidatore_codice_fiscale: selected?.codice_fiscale || "",
+            liquidatore_indirizzo:
+              selected?.indirizzo_residenza || selected?.indirizzo || "",
+            liquidatore_citta:
+              selected?.citta_residenza || selected?.citta || "",
+            liquidatore_provincia: selected?.provincia || "",
+            liquidatore_cap: selected?.cap || "",
+            liquidatore_residenza: [
+              selected?.indirizzo_residenza || selected?.indirizzo,
+              selected?.cap,
+              selected?.citta_residenza || selected?.citta,
+              selected?.provincia,
+            ]
+              .filter(Boolean)
+              .join(" "),
+          }));
+        }}
+      >
+        <option value="">Seleziona</option>
+
+        {pratica?.rappresentanti_legali?.map((r: any) => (
+          <option key={r.id} value={r.id}>
+            {r.nome_cognome}
+          </option>
+        ))}
+      </select>
+    </div>
+
+    <button type="button" style={secondaryButton}>
+      + Nuovo
+    </button>
+  </div>
+
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr",
+      gap: 12,
+      marginTop: 14,
+    }}
+  >
+    <div>
+      <label style={labelStyle}>Nome liquidatore</label>
+      <input
+        style={inputStyle}
+        value={form.liquidatore_nome}
+        onChange={(e) =>
+          aggiornaCampo("liquidatore_nome", e.target.value)
+        }
+      />
+    </div>
+
+    <div>
+      <label style={labelStyle}>Codice fiscale</label>
+      <input
+        style={inputStyle}
+        value={form.liquidatore_codice_fiscale}
+        onChange={(e) =>
+          aggiornaCampo(
+            "liquidatore_codice_fiscale",
+            e.target.value.toUpperCase()
+          )
+        }
+      />
+    </div>
+  </div>
+
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "2fr 1fr 1fr 1fr",
+      gap: 12,
+      marginTop: 14,
+    }}
+  >
+    <div>
+      <label style={labelStyle}>Indirizzo</label>
+      <input
+        style={inputStyle}
+        value={form.liquidatore_indirizzo}
+        onChange={(e) =>
+          aggiornaCampo("liquidatore_indirizzo", e.target.value)
+        }
+      />
+    </div>
+
+    <div>
+      <label style={labelStyle}>Città</label>
+      <input
+        style={inputStyle}
+        value={form.liquidatore_citta}
+        onChange={(e) =>
+          aggiornaCampo("liquidatore_citta", e.target.value)
+        }
+      />
+    </div>
+
+    <div>
+      <label style={labelStyle}>Provincia</label>
+      <input
+        style={inputStyle}
+        value={form.liquidatore_provincia}
+        onChange={(e) =>
+          aggiornaCampo("liquidatore_provincia", e.target.value.toUpperCase())
+        }
+      />
+    </div>
+
+    <div>
+      <label style={labelStyle}>CAP</label>
+      <input
+        style={inputStyle}
+        value={form.liquidatore_cap}
+        onChange={(e) =>
+          aggiornaCampo("liquidatore_cap", e.target.value)
+        }
+      />
+    </div>
+  </div>
+</div>
 
         <div style={cardStyle}>
           <h2 style={titleStyle}>Dichiarazione di conformità</h2>
