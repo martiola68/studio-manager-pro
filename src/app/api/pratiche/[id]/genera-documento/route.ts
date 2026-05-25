@@ -217,6 +217,11 @@ const sociElenco = (soci || []).map((socio: any) => ({
 
   SOCIO_TIPO_PAGAMENTO:
     socio.tipo_pagamento || "",
+
+  SOCIO_PRESENZA:
+    socio.presenza ||
+    socio.tipo_pagamento ||
+    "Presente",
 }));
 
 const percentualeCapitale = sociElenco.reduce(
