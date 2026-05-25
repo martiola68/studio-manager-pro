@@ -36,6 +36,29 @@ export async function POST(
         .eq("pratica_id", id)
         .maybeSingle();
 
+    const datiEreditati = {
+  data_atto: datiDocumento?.data_convocazione || "",
+  ora_inizio: datiDocumento?.ora_convocazione || "",
+  luogo_assemblea: datiDocumento?.luogo_convocazione || "",
+
+  presidente: datiDocumento?.rappresentante_legale_nome || "",
+  segretario: datiDocumento?.segretario || "",
+
+  liquidatore_nome: datiDocumento?.rappresentante_legale_nome || "",
+  liquidatore_cf: datiDocumento?.rappresentante_legale_codice_fiscale || "",
+  liquidatore_residenza: [
+    datiDocumento?.rappresentante_legale_indirizzo,
+    datiDocumento?.rappresentante_legale_cap,
+    datiDocumento?.rappresentante_legale_citta,
+    datiDocumento?.rappresentante_legale_provincia,
+  ].filter(Boolean).join(" "),
+
+  motivo_liquidazione: datiDocumento?.motivo_liquidazione || "",
+  motivo_liquidazione_testo: datiDocumento?.motivo_liquidazione_testo || "",
+
+  pratica_determina_id: id,
+};
+
   const { data: tipoLiquidazione } =
   await supabaseAdmin
     .from("tbpratiche_tipi")
@@ -102,4 +125,17 @@ export async function POST(
       { status: 500 }
     );
   }
+}
+const { error: datiInsertError } = await supabaseAdmin
+  .from("tbpratiche_dati_documenti")
+  .insert({
+    pratica_id: nuovaPratica.id,
+    ...datiEreditati,
+  });
+
+if (datiInsertError) {
+  return NextResponse.json(
+    { error: datiInsertError.message },
+    { status: 500 }
+  );
 }
