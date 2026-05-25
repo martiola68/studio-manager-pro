@@ -28,7 +28,7 @@ export async function POST(
         { status: 404 }
       );
     }
-
+    
     const { data: datiDocumento } =
       await supabaseAdmin
         .from("tbpratiche_dati_documenti")
@@ -75,6 +75,21 @@ export async function POST(
         { status: 400 }
       );
     }
+
+        const { data: praticaGiaCollegata } = await supabaseAdmin
+  .from("tbpratiche")
+  .select("id, numero_pratica")
+  .eq("pratica_collegata_id", pratica.id)
+  .eq("tipo_pratica_id", tipoLiquidazione.id)
+  .maybeSingle();
+
+if (praticaGiaCollegata) {
+  return NextResponse.json({
+    success: true,
+    pratica: praticaGiaCollegata,
+    alreadyExists: true,
+  });
+}
 
     const { data: nuovaPratica, error } =
       await supabaseAdmin
