@@ -54,6 +54,19 @@ const blueButton: React.CSSProperties = {
   fontFamily: font,
 };
 
+const secondaryButton: React.CSSProperties = {
+  border: "1px solid #2563eb",
+  borderRadius: 8,
+  background: "#fff",
+  color: "#2563eb",
+  padding: "10px 12px",
+  fontSize: 14,
+  fontWeight: 600,
+  cursor: "pointer",
+  fontFamily: font,
+  whiteSpace: "nowrap",
+};
+
 const thStyle: React.CSSProperties = {
   textAlign: "left",
   padding: "12px 16px",
