@@ -185,6 +185,18 @@ rappresentante_legale_nome:
 rappresentante_legale_codice_fiscale:
   body.rappresentante_legale_codice_fiscale || null,
 
+      rappresentante_legale_indirizzo:
+  body.rappresentante_legale_indirizzo || null,
+
+rappresentante_legale_citta:
+  body.rappresentante_legale_citta || null,
+
+rappresentante_legale_provincia:
+  body.rappresentante_legale_provincia || null,
+
+rappresentante_legale_cap:
+  body.rappresentante_legale_cap || null,
+
 liquidatore_nome:
   body.liquidatore_nome || null,
 
