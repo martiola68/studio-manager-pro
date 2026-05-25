@@ -396,12 +396,6 @@ rappresentante_legale_cap:
           data.rappresentante
             .citta_residenza || "",
 
-        rappresentante_legale_provincia:
-          selected?.provincia || "",
-
-          rappresentante_legale_cap:
-            selected?.cap || "",
-
         nuovo_rappresentante: false,
       }));
 
@@ -673,36 +667,34 @@ rappresentante_legale_cap:
                         e.target.value
                     );
 
-                  setForm((prev) => ({
-                    ...prev,
+                 setForm((prev) => ({
+  ...prev,
 
-                    rappresentante_legale_id:
-                      selected?.id || "",
+  rappresentante_legale_id:
+    selected?.id || "",
 
-                    rappresentante_legale_nome:
-                      selected?.nome_cognome ||
-                      "",
+  rappresentante_legale_nome:
+    selected?.nome_cognome || "",
 
-                    rappresentante_legale_codice_fiscale:
-                      selected?.codice_fiscale ||
-                      "",
+  rappresentante_legale_codice_fiscale:
+    selected?.codice_fiscale || "",
 
-                    rappresentante_legale_indirizzo:
-                      selected?.indirizzo_residenza ||
-                      selected?.indirizzo ||
-                      "",
+  rappresentante_legale_indirizzo:
+    selected?.indirizzo_residenza ||
+    selected?.indirizzo ||
+    "",
 
-                    rappresentante_legale_citta:
-                      selected?.citta_residenza ||
-                      selected?.citta ||
-                      "",
+  rappresentante_legale_citta:
+    selected?.citta_residenza ||
+    selected?.citta ||
+    "",
 
-                    rappresentante_legale_provincia:
-                    selected?.provincia || "",
+  rappresentante_legale_provincia:
+    selected?.provincia || "",
 
-                    rappresentante_legale_cap:
-                      selected?.cap || "",
-                  }));
+  rappresentante_legale_cap:
+    selected?.cap || "",
+}));
                 }}
               >
                 <option value="">
