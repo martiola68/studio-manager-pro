@@ -405,7 +405,42 @@ function normalizzaCF(cf: string) {
 
             <div>
               <label style={labelStyle}>Percentuale capitale presente</label>
-              <input style={inputStyle} value={form.percentuale_capitale} onChange={(e) => aggiornaCampo("percentuale_capitale", e.target.value)} />
+              <input
+  style={{
+    ...inputStyle,
+    background: "#f1f5f9",
+    fontWeight: 700,
+  }}
+  value={soci.reduce(
+    (totale: number, socio: any) =>
+      totale +
+      Number(
+        socio.percentuale_partecipazione || 0
+      ),
+    0
+  ).toFixed(2)}
+  disabled
+/>
+
+              {soci.reduce(
+  (totale: number, socio: any) =>
+    totale +
+    Number(
+      socio.percentuale_partecipazione || 0
+    ),
+  0
+) > 100 && (
+  <div
+    style={{
+      color: "#dc2626",
+      fontSize: 12,
+      marginTop: 4,
+      fontWeight: 600,
+    }}
+  >
+    La percentuale totale non può superare 100%
+  </div>
+)}
             </div>
           </div>
         </div>
