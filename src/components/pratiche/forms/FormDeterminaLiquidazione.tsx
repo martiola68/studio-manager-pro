@@ -85,6 +85,11 @@ export default function FormDeterminaLiquidazione({
   pratica,
 }: any) {
   const router = useRouter();
+
+  function tornaElenco() {
+  router.push("/pratiche");
+}
+  
   const praticaId = router.query.id as string;
 
   const [motivi, setMotivi] = useState<any[]>([]);
@@ -421,6 +426,25 @@ rappresentante_legale_cap:
         fontFamily: font,
       }}
     >
+       <div style={{ marginBottom: 18 }}>
+    <button
+      type="button"
+      onClick={tornaElenco}
+      style={{
+        border: "1px solid #cbd5e1",
+        background: "#fff",
+        color: "#334155",
+        borderRadius: 8,
+        padding: "9px 16px",
+        fontWeight: 600,
+        cursor: "pointer",
+        fontFamily: font,
+      }}
+    >
+      ← Torna a elenco pratiche
+    </button>
+  </div>
+      
       <h1
         style={{
           fontSize: 36,
@@ -429,6 +453,8 @@ rappresentante_legale_cap:
         }}
       >
         {pratica?.numero_pratica}
+
+        
       </h1>
 
       <p
