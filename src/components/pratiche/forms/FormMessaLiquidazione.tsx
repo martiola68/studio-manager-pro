@@ -301,7 +301,7 @@ function normalizzaCF(cf: string) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        codice_modello: "VERBALE_MESSA_LIQUIDAZIONE",
+        codice_modello: "VERBALE_LIQUIDAZIONE",
       }),
     });
 
@@ -1001,7 +1001,7 @@ function normalizzaCF(cf: string) {
         <div style={{ display: "grid", gridTemplateColumns: "2fr auto", gap: 12, marginTop: 18, alignItems: "end" }}>
           <div>
             <label style={labelStyle}>Modello documento</label>
-            <input style={{ ...inputStyle, background: "#f1f5f9" }} value="VERBALE_MESSA_LIQUIDAZIONE" disabled />
+            <input style={{ ...inputStyle, background: "#f1f5f9" }} value="VERBALE_LIQUIDAZIONE" disabled />
           </div>
 
           <button type="button" style={blueButton} onClick={generaDocumento}>
