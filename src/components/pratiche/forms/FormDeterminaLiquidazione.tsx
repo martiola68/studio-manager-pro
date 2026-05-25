@@ -490,7 +490,11 @@ rappresentante_legale_cap:
               </label>
 
               <input
-                style={inputStyle}
+                style={{
+  ...inputStyle,
+  fontSize: 19,
+  fontWeight: 700,
+}}
                 value={
                   form.societa_denominazione
                 }
@@ -816,7 +820,7 @@ rappresentante_legale_cap:
           <div
   style={{
     display: "grid",
-    gridTemplateColumns: "2fr 1fr",
+    gridTemplateColumns: "2fr 1fr 1fr 1fr",
     gap: 12,
     marginTop: 14,
   }}
@@ -850,6 +854,33 @@ rappresentante_legale_cap:
       }
     />
   </div>
+            <div>
+  <label style={labelStyle}>Provincia</label>
+  <input
+    style={inputStyle}
+    value={form.rappresentante_legale_provincia}
+    onChange={(e) =>
+      aggiornaCampo(
+        "rappresentante_legale_provincia",
+        e.target.value.toUpperCase()
+      )
+    }
+  />
+</div>
+
+<div>
+  <label style={labelStyle}>CAP</label>
+  <input
+    style={inputStyle}
+    value={form.rappresentante_legale_cap}
+    onChange={(e) =>
+      aggiornaCampo(
+        "rappresentante_legale_cap",
+        e.target.value
+      )
+    }
+  />
+</div>
 </div>
 
           {form.nuovo_rappresentante && (
