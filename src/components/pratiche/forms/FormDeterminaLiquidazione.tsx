@@ -426,24 +426,30 @@ rappresentante_legale_cap:
         fontFamily: font,
       }}
     >
-       <div style={{ marginBottom: 18 }}>
-    <button
-      type="button"
-      onClick={tornaElenco}
-      style={{
-        border: "1px solid #cbd5e1",
-        background: "#fff",
-        color: "#334155",
-        borderRadius: 8,
-        padding: "9px 16px",
-        fontWeight: 600,
-        cursor: "pointer",
-        fontFamily: font,
-      }}
-    >
-      ← Torna a elenco pratiche
-    </button>
-  </div>
+   <div
+  style={{
+    marginBottom: 18,
+    display: "flex",
+    justifyContent: "flex-end",
+  }}
+>
+  <button
+    type="button"
+    onClick={tornaElenco}
+    style={{
+      border: "1px solid #cbd5e1",
+      background: "#fff",
+      color: "#334155",
+      borderRadius: 8,
+      padding: "9px 16px",
+      fontWeight: 600,
+      cursor: "pointer",
+      fontFamily: font,
+    }}
+  >
+    ← Torna a elenco pratiche
+  </button>
+</div>
       
       <h1
         style={{
