@@ -215,8 +215,15 @@ liquidatore_provincia:
 liquidatore_cap:
   body.liquidatore_cap || null,
 
-liquidatore_residenza:
-  body.liquidatore_residenza || null,
+liquidatore_residenza: [
+  body.liquidatore_indirizzo,
+  body.liquidatore_cap,
+  body.liquidatore_citta,
+  body.liquidatore_provincia,
+]
+  .filter(Boolean)
+  .join(" "),
+      
 percentuale_soci_presenti:
   body.percentuale_soci_presenti
     ? Number(body.percentuale_soci_presenti)
