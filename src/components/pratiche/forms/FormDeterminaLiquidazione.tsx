@@ -379,6 +379,23 @@ rappresentante_legale_cap:
 
       const data = await res.json();
 
+      if (nuovoRappLegale.amministratore_principale) {
+  await fetch("/api/clienti-organi", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      cliente_id: pratica.cliente_id,
+      rapp_legale_id: data.rappresentante.id,
+      ruolo: "amministratore",
+      carica: "Amministratore",
+      principale: true,
+      attivo: true,
+    }),
+  });
+}
+
       if (!res.ok) {
         throw new Error(
           data.error ||
