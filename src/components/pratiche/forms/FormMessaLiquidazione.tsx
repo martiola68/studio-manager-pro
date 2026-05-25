@@ -76,6 +76,30 @@ export default function FormMessaLiquidazione({ pratica }: any) {
   const praticaId = router.query.id as string;
 
   const [documenti, setDocumenti] = useState<any[]>([]);
+  const [soci, setSoci] = useState<any[]>([]);
+const [nominativi, setNominativi] = useState<any[]>([]);
+const [mostraNuovoNominativo, setMostraNuovoNominativo] = useState(false);
+
+const [nuovoSocio, setNuovoSocio] = useState({
+  nominativo_id: "",
+  nome_cognome: "",
+  codice_fiscale: "",
+  indirizzo: "",
+  cap: "",
+  citta: "",
+  provincia: "",
+  percentuale_partecipazione: "",
+  presenza: "Presente",
+});
+
+const [nuovoNominativo, setNuovoNominativo] = useState({
+  nome_cognome: "",
+  codice_fiscale: "",
+  indirizzo: "",
+  cap: "",
+  citta: "",
+  provincia: "",
+});
   const [saving, setSaving] = useState(false);
   const [messaggio, setMessaggio] = useState("");
 
@@ -152,10 +176,11 @@ export default function FormMessaLiquidazione({ pratica }: any) {
       pratica?.dati_documento?.professionista_cf || "",
   });
 
-  useEffect(() => {
-    if (praticaId) {
-      caricaDocumenti();
-    }
+  if (praticaId) {
+  caricaDocumenti();
+  caricaSoci();
+  caricaNominativi();
+}
   }, [praticaId]);
 
   function aggiornaCampo(campo: string, valore: string) {
@@ -176,7 +201,33 @@ export default function FormMessaLiquidazione({ pratica }: any) {
       setDocumenti(data.documenti || []);
     }
   }
+async function caricaSoci() {
+  const res = await fetch(`/api/pratiche/${praticaId}/soci`, {
+    cache: "no-store",
+  });
 
+  const data = await res.json();
+
+  if (res.ok) {
+    setSoci(data.soci || []);
+  }
+}
+
+async function caricaNominativi() {
+  const res = await fetch("/api/pratiche/nominativi", {
+    cache: "no-store",
+  });
+
+  const data = await res.json();
+
+  if (res.ok) {
+    setNominativi(data.nominativi || []);
+  }
+}
+
+function normalizzaCF(cf: string) {
+  return String(cf || "").trim().toUpperCase();
+}
   async function salvaDatiDocumento(e?: React.FormEvent) {
     if (e) e.preventDefault();
 
@@ -340,6 +391,354 @@ export default function FormMessaLiquidazione({ pratica }: any) {
             />
           </div>
         </div>
+
+        <div style={cardStyle}>
+  <h2 style={titleStyle}>Soci presenti</h2>
+
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "2fr auto 1fr 1fr auto",
+      gap: 12,
+      marginTop: 18,
+      alignItems: "end",
+    }}
+  >
+    <div>
+      <label style={labelStyle}>Socio</label>
+      <select
+        style={inputStyle}
+        value={nuovoSocio.nominativo_id}
+        onChange={(e) => {
+          const selected = nominativi.find(
+            (n) => n.id === e.target.value
+          );
+
+          setNuovoSocio({
+            ...nuovoSocio,
+            nominativo_id: selected?.id || "",
+            nome_cognome: selected?.nome_cognome || "",
+            codice_fiscale: selected?.codice_fiscale || "",
+            indirizzo: selected?.indirizzo || "",
+            cap: selected?.cap || "",
+            citta: selected?.citta || "",
+            provincia: selected?.provincia || "",
+          });
+        }}
+      >
+        <option value="">Seleziona nominativo</option>
+
+        {nominativi.map((n) => (
+          <option key={n.id} value={n.id}>
+            {n.nome_cognome}
+          </option>
+        ))}
+      </select>
+    </div>
+
+    <button
+      type="button"
+      style={secondaryButton}
+      onClick={() =>
+        setMostraNuovoNominativo(!mostraNuovoNominativo)
+      }
+    >
+      + Nuovo
+    </button>
+
+    <div>
+      <label style={labelStyle}>% partecipazione</label>
+      <input
+        type="number"
+        step="0.01"
+        style={inputStyle}
+        value={nuovoSocio.percentuale_partecipazione}
+        onChange={(e) =>
+          setNuovoSocio({
+            ...nuovoSocio,
+            percentuale_partecipazione: e.target.value,
+          })
+        }
+      />
+    </div>
+
+    <div>
+      <label style={labelStyle}>Presenza / delega</label>
+      <input
+        style={inputStyle}
+        value={nuovoSocio.presenza}
+        onChange={(e) =>
+          setNuovoSocio({
+            ...nuovoSocio,
+            presenza: e.target.value,
+          })
+        }
+      />
+    </div>
+
+    <button
+      type="button"
+      style={blueButton}
+      onClick={async () => {
+        if (!nuovoSocio.nome_cognome) {
+          alert("Seleziona un socio.");
+          return;
+        }
+
+        const res = await fetch(`/api/pratiche/${praticaId}/soci`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(nuovoSocio),
+        });
+
+        if (!res.ok) {
+          alert("Errore inserimento socio");
+          return;
+        }
+
+        setNuovoSocio({
+          nominativo_id: "",
+          nome_cognome: "",
+          codice_fiscale: "",
+          indirizzo: "",
+          cap: "",
+          citta: "",
+          provincia: "",
+          percentuale_partecipazione: "",
+          presenza: "Presente",
+        });
+
+        await caricaSoci();
+      }}
+    >
+      Aggiungi
+    </button>
+  </div>
+
+  {mostraNuovoNominativo && (
+    <div
+      style={{
+        ...cardStyle,
+        marginTop: 18,
+        background: "#f8fafc",
+      }}
+    >
+      <h3 style={{ margin: 0, fontSize: 16 }}>
+        Aggiungi nuovo nominativo
+      </h3>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr 1fr",
+          gap: 12,
+          marginTop: 14,
+        }}
+      >
+        <div>
+          <label style={labelStyle}>Nome e cognome</label>
+          <input
+            style={inputStyle}
+            value={nuovoNominativo.nome_cognome}
+            onChange={(e) =>
+              setNuovoNominativo({
+                ...nuovoNominativo,
+                nome_cognome: e.target.value,
+              })
+            }
+          />
+        </div>
+
+        <div>
+          <label style={labelStyle}>Codice fiscale</label>
+          <input
+            style={inputStyle}
+            value={nuovoNominativo.codice_fiscale}
+            onChange={(e) =>
+              setNuovoNominativo({
+                ...nuovoNominativo,
+                codice_fiscale: e.target.value.toUpperCase(),
+              })
+            }
+          />
+        </div>
+
+        <div>
+          <label style={labelStyle}>Indirizzo</label>
+          <input
+            style={inputStyle}
+            value={nuovoNominativo.indirizzo}
+            onChange={(e) =>
+              setNuovoNominativo({
+                ...nuovoNominativo,
+                indirizzo: e.target.value,
+              })
+            }
+          />
+        </div>
+
+        <div>
+          <label style={labelStyle}>CAP</label>
+          <input
+            style={inputStyle}
+            value={nuovoNominativo.cap}
+            onChange={(e) =>
+              setNuovoNominativo({
+                ...nuovoNominativo,
+                cap: e.target.value,
+              })
+            }
+          />
+        </div>
+
+        <div>
+          <label style={labelStyle}>Città</label>
+          <input
+            style={inputStyle}
+            value={nuovoNominativo.citta}
+            onChange={(e) =>
+              setNuovoNominativo({
+                ...nuovoNominativo,
+                citta: e.target.value,
+              })
+            }
+          />
+        </div>
+
+        <div>
+          <label style={labelStyle}>Provincia</label>
+          <input
+            style={inputStyle}
+            value={nuovoNominativo.provincia}
+            onChange={(e) =>
+              setNuovoNominativo({
+                ...nuovoNominativo,
+                provincia: e.target.value.toUpperCase(),
+              })
+            }
+          />
+        </div>
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          marginTop: 16,
+        }}
+      >
+        <button
+          type="button"
+          style={blueButton}
+          onClick={async () => {
+            const cf = normalizzaCF(nuovoNominativo.codice_fiscale);
+
+            if (!nuovoNominativo.nome_cognome.trim()) {
+              alert("Nome e cognome obbligatori.");
+              return;
+            }
+
+            if (!cf) {
+              alert("Codice fiscale obbligatorio.");
+              return;
+            }
+
+            const res = await fetch("/api/pratiche/nominativi", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                ...nuovoNominativo,
+                codice_fiscale: cf,
+              }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+              alert(data.error || "Errore creazione nominativo");
+              return;
+            }
+
+            await caricaNominativi();
+
+            const nuovo = data.nominativo;
+
+            setNuovoSocio({
+              ...nuovoSocio,
+              nominativo_id: nuovo.id,
+              nome_cognome: nuovo.nome_cognome || "",
+              codice_fiscale: nuovo.codice_fiscale || "",
+              indirizzo: nuovo.indirizzo || "",
+              cap: nuovo.cap || "",
+              citta: nuovo.citta || "",
+              provincia: nuovo.provincia || "",
+            });
+
+            setMostraNuovoNominativo(false);
+          }}
+        >
+          Aggiungi nominativo
+        </button>
+      </div>
+    </div>
+  )}
+
+  <table
+    style={{
+      width: "100%",
+      borderCollapse: "collapse",
+      marginTop: 18,
+    }}
+  >
+    <thead>
+      <tr>
+        <th style={thStyle}>Socio</th>
+        <th style={thStyle}>CF</th>
+        <th style={thStyle}>Quota</th>
+        <th style={thStyle}>Presenza / delega</th>
+        <th style={thStyle}>Azioni</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {soci.map((s) => (
+        <tr key={s.id}>
+          <td style={tdStyle}>{s.nome_cognome}</td>
+          <td style={tdStyle}>{s.codice_fiscale}</td>
+          <td style={tdStyle}>
+            {Number(s.percentuale_partecipazione || 0).toFixed(2)}%
+          </td>
+          <td style={tdStyle}>
+            {s.presenza || s.tipo_pagamento || "Presente"}
+          </td>
+          <td style={tdStyle}>
+            <button
+              type="button"
+              onClick={async () => {
+                if (!confirm("Eliminare il socio?")) return;
+
+                await fetch(`/api/pratiche/${praticaId}/soci/${s.id}`, {
+                  method: "DELETE",
+                });
+
+                await caricaSoci();
+              }}
+              style={{
+                border: 0,
+                background: "transparent",
+                color: "#dc2626",
+                cursor: "pointer",
+                fontWeight: 600,
+              }}
+            >
+              Elimina
+            </button>
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
 
         <div style={cardStyle}>
           <h2 style={titleStyle}>Liquidatore</h2>
