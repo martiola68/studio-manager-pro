@@ -111,6 +111,20 @@ export async function POST(
       );
     }
 
+    const { error: datiInsertError } = await supabaseAdmin
+      .from("tbpratiche_dati_documenti")
+      .insert({
+        pratica_id: nuovaPratica.id,
+        ...datiEreditati,
+      });
+
+    if (datiInsertError) {
+      return NextResponse.json(
+        { error: datiInsertError.message },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
       pratica: nuovaPratica,
@@ -125,17 +139,4 @@ export async function POST(
       { status: 500 }
     );
   }
-}
-const { error: datiInsertError } = await supabaseAdmin
-  .from("tbpratiche_dati_documenti")
-  .insert({
-    pratica_id: nuovaPratica.id,
-    ...datiEreditati,
-  });
-
-if (datiInsertError) {
-  return NextResponse.json(
-    { error: datiInsertError.message },
-    { status: 500 }
-  );
 }
