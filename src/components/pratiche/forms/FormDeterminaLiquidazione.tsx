@@ -396,6 +396,12 @@ rappresentante_legale_cap:
           data.rappresentante
             .citta_residenza || "",
 
+        rappresentante_legale_provincia:
+          selected?.provincia || "",
+
+          rappresentante_legale_cap:
+            selected?.cap || "",
+
         nuovo_rappresentante: false,
       }));
 
