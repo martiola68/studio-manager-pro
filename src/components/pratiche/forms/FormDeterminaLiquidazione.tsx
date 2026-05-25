@@ -796,52 +796,43 @@ rappresentante_legale_cap:
           </div>
 
           <div
-            style={{
-              display: "grid",
-              gridTemplateColumns:
-                "2fr 1fr",
-              gap: 12,
-              marginTop: 14,
-            }}
-          >
-            <div>
-              <label style={labelStyle}>
-                Indirizzo
-              </label>
+  style={{
+    display: "grid",
+    gridTemplateColumns: "2fr 1fr",
+    gap: 12,
+    marginTop: 14,
+  }}
+>
+  <div>
+    <label style={labelStyle}>Indirizzo</label>
 
-              <input
-                style={inputStyle}
-                value={
-                  form.rappresentante_legale_indirizzo
-                }
-                onChange={(e) =>
-                  aggiornaCampo(
-                    "rappresentante_legale_indirizzo",
-                    e.target.value
-                  )
-                }
-              />
-            </div>
+    <input
+      style={inputStyle}
+      value={form.rappresentante_legale_indirizzo}
+      onChange={(e) =>
+        aggiornaCampo(
+          "rappresentante_legale_indirizzo",
+          e.target.value
+        )
+      }
+    />
+  </div>
 
-            <div>
-              <label style={labelStyle}>
-                Città
-              </label>
+  <div>
+    <label style={labelStyle}>Città</label>
 
-              <input
-                style={inputStyle}
-                value={
-                  form.rappresentante_legale_citta
-                }
-                onChange={(e) =>
-                  aggiornaCampo(
-                    "rappresentante_legale_citta",
-                    e.target.value
-                  )
-                }
-              />
-            </div>
-          </div>
+    <input
+      style={inputStyle}
+      value={form.rappresentante_legale_citta}
+      onChange={(e) =>
+        aggiornaCampo(
+          "rappresentante_legale_citta",
+          e.target.value
+        )
+      }
+    />
+  </div>
+</div>
 
           {form.nuovo_rappresentante && (
             <div
