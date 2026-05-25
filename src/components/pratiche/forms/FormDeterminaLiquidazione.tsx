@@ -759,15 +759,16 @@ rappresentante_legale_cap:
               style={secondaryButton}
               onClick={() => {
                 setNuovoRappLegale({
-                  nome_cognome: "",
-                  codice_fiscale: "",
-                  luogo_nascita: "",
-                  data_nascita: "",
-                  citta_residenza: "",
-                  indirizzo_residenza: "",
-                  provincia: "",
-                  cap: "",
-                });
+  nome_cognome: "",
+  codice_fiscale: "",
+  amministratore_principale: false,
+  luogo_nascita: "",
+  data_nascita: "",
+  citta_residenza: "",
+  indirizzo_residenza: "",
+  provincia: "",
+  cap: "",
+});
 
                 setForm((prev) => ({
                   ...prev,
