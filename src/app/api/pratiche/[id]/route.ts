@@ -203,6 +203,20 @@ liquidatore_nome:
 liquidatore_codice_fiscale:
   body.liquidatore_codice_fiscale || null,
 
+liquidatore_indirizzo:
+  body.liquidatore_indirizzo || null,
+
+liquidatore_citta:
+  body.liquidatore_citta || null,
+
+liquidatore_provincia:
+  body.liquidatore_provincia || null,
+
+liquidatore_cap:
+  body.liquidatore_cap || null,
+
+liquidatore_residenza:
+  body.liquidatore_residenza || null,
 percentuale_soci_presenti:
   body.percentuale_soci_presenti
     ? Number(body.percentuale_soci_presenti)
