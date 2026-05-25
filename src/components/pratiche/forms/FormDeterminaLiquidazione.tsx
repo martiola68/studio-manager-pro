@@ -197,6 +197,7 @@ rappresentante_legale_cap:
     useState({
       nome_cognome: "",
       codice_fiscale: "",
+      amministratore_principale: false,
       luogo_nascita: "",
       data_nascita: "",
       citta_residenza: "",
@@ -367,7 +368,10 @@ rappresentante_legale_cap:
           },
           body: JSON.stringify({
             studio_id: pratica.studio_id,
+            cliente_id: pratica.cliente_id,
             ...nuovoRappLegale,
+             amministratore_principale:
+              nuovoRappLegale.amministratore_principale,
             rappresentante_legale: true,
           }),
         }
@@ -1153,6 +1157,34 @@ rappresentante_legale_cap:
                   }
                 />
               </div>
+
+              <div style={{ marginTop: 12 }}>
+  <label
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      fontSize: 14,
+      fontWeight: 500,
+    }}
+  >
+    <input
+      type="checkbox"
+      checked={
+        nuovoRappLegale.amministratore_principale
+      }
+      onChange={(e) =>
+        setNuovoRappLegale((prev) => ({
+          ...prev,
+          amministratore_principale:
+            e.target.checked,
+        }))
+      }
+    />
+
+    Imposta come amministratore principale
+  </label>
+</div>
 
               <div
                 style={{
