@@ -591,6 +591,20 @@ function normalizzaCF(cf: string) {
           return;
         }
 
+        await fetch("/api/clienti-organi", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    cliente_id: pratica.cliente_id,
+    rapp_legale_id: nuovoSocio.nominativo_id,
+    ruolo: "socio",
+    percentuale_partecipazione:
+      nuovoSocio.percentuale_partecipazione || null,
+    presenza: nuovoSocio.presenza || "Presente",
+    attivo: true,
+  }),
+});
+
         setNuovoSocio({
           nominativo_id: "",
           nome_cognome: "",
