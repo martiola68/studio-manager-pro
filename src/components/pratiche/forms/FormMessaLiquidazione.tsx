@@ -176,12 +176,13 @@ const [nuovoNominativo, setNuovoNominativo] = useState({
       pratica?.dati_documento?.professionista_cf || "",
   });
 
+useEffect(() => {
   if (praticaId) {
-  caricaDocumenti();
-  caricaSoci();
-  caricaNominativi();
-}
-  }, [praticaId]);
+    caricaDocumenti();
+    caricaSoci();
+    caricaNominativi();
+  }
+}, [praticaId]);
 
   function aggiornaCampo(campo: string, valore: string) {
     setForm((prev) => ({
