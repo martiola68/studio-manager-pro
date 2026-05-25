@@ -36,16 +36,33 @@ export async function POST(
         .eq("pratica_id", id)
         .maybeSingle();
 
-    const datiEreditati = {
-  data_atto: datiDocumento?.data_convocazione || "",
-  ora_inizio: datiDocumento?.ora_convocazione || "",
-  luogo_assemblea: datiDocumento?.luogo_convocazione || "",
+const datiEreditati = {
+  societa_denominazione:
+    datiDocumento?.societa_denominazione || "",
+  societa_sede:
+    datiDocumento?.societa_sede || "",
+  societa_codice_fiscale:
+    datiDocumento?.societa_codice_fiscale || "",
+  societa_partita_iva:
+    datiDocumento?.societa_partita_iva || "",
+  societa_rea:
+    datiDocumento?.societa_rea || "",
 
-  presidente: datiDocumento?.rappresentante_legale_nome || "",
-  segretario: datiDocumento?.segretario || "",
+  data_atto:
+    datiDocumento?.data_convocazione || "",
+  ora_inizio:
+    datiDocumento?.ora_convocazione || "",
+  luogo_assemblea:
+    datiDocumento?.luogo_convocazione || "",
 
-  liquidatore_nome: datiDocumento?.rappresentante_legale_nome || "",
-  liquidatore_cf: datiDocumento?.rappresentante_legale_codice_fiscale || "",
+  presidente:
+    datiDocumento?.rappresentante_legale_nome || "",
+  segretario: "",
+
+  liquidatore_nome:
+    datiDocumento?.rappresentante_legale_nome || "",
+  liquidatore_codice_fiscale:
+    datiDocumento?.rappresentante_legale_codice_fiscale || "",
   liquidatore_residenza: [
     datiDocumento?.rappresentante_legale_indirizzo,
     datiDocumento?.rappresentante_legale_cap,
@@ -53,10 +70,10 @@ export async function POST(
     datiDocumento?.rappresentante_legale_provincia,
   ].filter(Boolean).join(" "),
 
-  motivo_liquidazione: datiDocumento?.motivo_liquidazione || "",
-  motivo_liquidazione_testo: datiDocumento?.motivo_liquidazione_testo || "",
-
-  pratica_determina_id: id,
+  motivo_liquidazione:
+    datiDocumento?.motivo_liquidazione || "",
+  motivo_liquidazione_testo:
+    datiDocumento?.motivo_liquidazione_testo || "",
 };
 
   const { data: tipoLiquidazione } =
@@ -95,7 +112,7 @@ if (praticaGiaCollegata) {
       await supabaseAdmin
         .from("tbpratiche")
         .insert({
-          numero_pratica: `LIQ-${new Date().getFullYear()}-${Date.now()}`,
+          numero_pratica: `${pratica.numero_pratica} - Liq`,
             studio_id: pratica.studio_id,
           titolo:
             "Verbale messa in liquidazione",
