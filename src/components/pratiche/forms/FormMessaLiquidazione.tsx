@@ -88,6 +88,10 @@ export default function FormMessaLiquidazione({ pratica }: any) {
   const router = useRouter();
   const praticaId = router.query.id as string;
 
+  function tornaElenco() {
+  router.push("/pratiche");
+}
+
   const [documenti, setDocumenti] = useState<any[]>([]);
   const [rappresentantiLegali, setRappresentantiLegali] = useState<any[]>(
   pratica?.rappresentanti_legali || []
@@ -325,6 +329,31 @@ function normalizzaCF(cf: string) {
         fontFamily: font,
       }}
     >
+
+      <div
+  style={{
+    marginBottom: 18,
+    display: "flex",
+    justifyContent: "flex-end",
+  }}
+>
+  <button
+    type="button"
+    onClick={tornaElenco}
+    style={{
+      border: "1px solid #cbd5e1",
+      background: "#fff",
+      color: "#334155",
+      borderRadius: 8,
+      padding: "9px 16px",
+      fontWeight: 600,
+      cursor: "pointer",
+      fontFamily: font,
+    }}
+  >
+    ← Torna a elenco pratiche
+  </button>
+</div>
       <h1 style={{ fontSize: 36, fontWeight: 800, margin: 0 }}>
         {pratica?.numero_pratica}
       </h1>
