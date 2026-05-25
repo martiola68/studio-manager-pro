@@ -387,9 +387,14 @@ LIQUIDATORE_CF:
   liquidatore?.codice_fiscale ||
   "",
 
-LIQUIDATORE_RESIDENZA:
-  liquidatore?.indirizzo ||
-  "",
+LIQUIDATORE_RESIDENZA: [
+  datiDocumento?.liquidatore_indirizzo,
+  datiDocumento?.liquidatore_cap,
+  datiDocumento?.liquidatore_citta,
+  datiDocumento?.liquidatore_provincia,
+]
+  .filter(Boolean)
+  .join(" "),
 
 SEDE_LIQUIDAZIONE:
   sede,
