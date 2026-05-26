@@ -28,7 +28,7 @@ export default async function handler(
     const oggi = new Date();
 
     const { data: tipi, error } = await supabase
-      .from("tbtipiscadenze")
+      .from("tbtipi_scadenze")
       .select("*")
       .eq("attivo", true)
       .eq("ricorrente", true);
@@ -66,7 +66,7 @@ export default async function handler(
           );
 
           await supabase
-            .from("tbtipiscadenze")
+            .from("tbtipi_scadenze")
             .update({
               alert_7gg_inviato: true,
             })
@@ -83,7 +83,7 @@ export default async function handler(
           );
 
           await supabase
-            .from("tbtipiscadenze")
+            .from("tbtipi_scadenze")
             .update({
               alert_oggi_inviato: true,
             })
@@ -94,35 +94,12 @@ export default async function handler(
         if (giorni < 0) {
           const nuovaData = new Date(dataScadenza);
 
-          switch (tipo.frequenza) {
-            case "mensile":
-              nuovaData.setMonth(
-                nuovaData.getMonth() + 1
-              );
-              break;
-
-            case "trimestrale":
-              nuovaData.setMonth(
-                nuovaData.getMonth() + 3
-              );
-              break;
-
-            case "semestrale":
-              nuovaData.setMonth(
-                nuovaData.getMonth() + 6
-              );
-              break;
-
-            case "annuale":
-            default:
-              nuovaData.setFullYear(
-                nuovaData.getFullYear() + 1
-              );
-              break;
-          }
-
+         nuovaData.setFullYear(
+  nuovaData.getFullYear() + 1
+);
+          
           await supabase
-            .from("tbtipiscadenze")
+            .from("tbtipi_scadenze")
             .update({
               data_scadenza: nuovaData
                 .toISOString()
