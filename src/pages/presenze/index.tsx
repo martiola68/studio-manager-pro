@@ -1180,7 +1180,7 @@ ${dipendentiXml}
 ].map((item) => (
   <div
     key={item.bottom}
-    className="sticky top-0 z-40 border-b bg-background h-[58px] min-w-[86px] max-w-[86px] flex flex-col items-center justify-center text-center"
+    className="sticky top-0 z-40 border-b bg-background h-[64px] flex flex-col items-center justify-center text-center"
   >
     <div className="text-[10px] uppercase tracking-wide text-muted-foreground leading-none">
       {item.top}
