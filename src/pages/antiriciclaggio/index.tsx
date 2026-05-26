@@ -249,13 +249,14 @@ if (status === "warning") return "font-semibold text-yellow-600";
       };
     }
 
-    if (!row.AV2Generato) {
-      return {
-        dotClass: "bg-red-500",
-        text: "AV2 da generare",
-        className: "font-semibold text-red-700",
-      };
-    }
+  if (!row.AV2Confermato) {
+  return {
+    dotClass: "bg-red-500",
+    text: "AV2 da confermare",
+    className: "font-semibold text-red-700",
+  };
+}
+   
 const av4Info = getAV4Info(row);
 
 const av4Ok =
@@ -1511,7 +1512,7 @@ const handleEliminaCompleto = async (row: AV1Row) => {
   <th className="w-[80px] p-2 text-center leading-tight">
     AV2
     <br />
-    generato
+    confermato
   </th>
 
   <th className="w-[80px] p-2 text-center leading-tight">
@@ -1569,7 +1570,7 @@ const handleEliminaCompleto = async (row: AV1Row) => {
   <th className="w-[80px] p-2 text-center leading-tight">
     AV2
     <br />
-    generato
+    confermato
   </th>
 
   <th className="w-[80px] p-2 text-center leading-tight">
