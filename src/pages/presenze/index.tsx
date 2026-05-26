@@ -963,6 +963,40 @@ ${dipendentiXml}
   Gestione Ferie/permessi
 </Button>
 
+            {isResponsabilePaghe && (
+  <Button
+    variant="outline"
+    onClick={async () => {
+      try {
+        const res = await fetch(
+          "/api/presenze/sollecita-compilazione",
+          {
+            method: "POST",
+          }
+        );
+
+        const data = await res.json();
+
+        if (!res.ok || !data?.ok) {
+          throw new Error(
+            data?.error || "Errore invio solleciti"
+          );
+        }
+
+        setSuccess(
+          `Solleciti inviati: ${data.inviati || 0}`
+        );
+      } catch (err: any) {
+        setError(
+          err?.message || "Errore invio solleciti"
+        );
+      }
+    }}
+  >
+    Sollecita compilazione
+  </Button>
+)}
+            
             <Button
               variant="outline"
               onClick={exportZucchettiXml}
