@@ -1249,35 +1249,35 @@ const isFutureDay = day.date > todayKey;
             );
           })}
 
-         <div className="border-b bg-green-100 px-2 py-2 text-center font-bold text-green-900">
+     <div className="border-b bg-green-100 h-8 flex items-center justify-center px-2 text-center font-bold text-green-900">
   {summary.pp}
 </div>
 
-<div className="border-b bg-violet-100 px-2 py-2 text-center font-bold text-violet-900">
+<div className="border-b bg-violet-100 h-8 flex items-center justify-center px-2 text-center font-bold text-violet-900">
   {summary.ps}
 </div>
 
-<div className="border-b bg-sky-100 px-2 py-2 text-center font-bold text-sky-900">
+<div className="border-b bg-sky-100 h-8 flex items-center justify-center px-2 text-center font-bold text-sky-900">
   {summary.ferie}
 </div>
 
-<div className="border-b bg-red-100 px-2 py-2 text-center font-bold text-red-900">
+<div className="border-b bg-red-100 h-8 flex items-center justify-center px-2 text-center font-bold text-red-900">
   {summary.malattia}
 </div>
 
-<div className="border-b bg-gray-100 px-2 py-2 text-center font-bold text-gray-800">
+<div className="border-b bg-gray-100 h-8 flex items-center justify-center px-2 text-center font-bold text-gray-800">
   {summary.festivi}
 </div>
 
-<div className="border-b bg-orange-100 px-2 py-2 text-center font-bold text-orange-900">
+<div className="border-b bg-orange-100 h-8 flex items-center justify-center px-2 text-center font-bold text-orange-900">
   {formatHoursMinutes(summary.permessiOre)}
 </div>
 
 <div
-  className={`border-b bg-pink-100 px-2 py-2 text-center font-bold ${
+  className={`border-b bg-pink-100 h-8 flex items-center justify-center px-2 text-center font-bold ${
     summary.permessi104Ore > 24
-      ? 'text-red-700'
-      : 'text-pink-900'
+      ? "text-red-700"
+      : "text-pink-900"
   }`}
 >
   {formatHoursMinutes(summary.permessi104Ore)}
