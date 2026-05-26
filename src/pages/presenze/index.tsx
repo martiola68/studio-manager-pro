@@ -1142,7 +1142,7 @@ ${dipendentiXml}
     className="min-w-max text-xs"
     style={{
       display: 'grid',
-      gridTemplateColumns: `220px repeat(${days.length}, 88px) 60px 60px 60px 60px 60px 80px 90px`,
+      gridTemplateColumns: `220px repeat(${days.length + 7}, 88px)`,
     }}
   >
     <div className="sticky left-0 top-0 z-50 border-b bg-background px-2 py-2 font-medium text-muted-foreground">
