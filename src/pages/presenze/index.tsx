@@ -1170,19 +1170,25 @@ ${dipendentiXml}
     ))}
 
 {[
-  'Tot. Pp',
-  'Tot. Ps',
-  'Tot. F',
-  'Tot. M',
-  'Tot. N',
-  'Tot.Perm.',
-  'Tot.L.104',
-].map((label) => (
+  { top: 'Tot.', bottom: 'Pp' },
+  { top: 'Tot.', bottom: 'Ps' },
+  { top: 'Tot.', bottom: 'F' },
+  { top: 'Tot.', bottom: 'M' },
+  { top: 'Tot.', bottom: 'N' },
+  { top: 'Tot.', bottom: 'Perm.' },
+  { top: 'Tot.', bottom: 'L.104' },
+].map((item) => (
   <div
-    key={label}
-    className="sticky top-0 z-40 border-b bg-background h-8 w-[72px] flex items-center justify-center text-center font-semibold"
+    key={item.bottom}
+    className="sticky top-0 z-40 border-b bg-background h-[58px] w-[72px] flex flex-col items-center justify-center text-center"
   >
-    {label}
+    <div className="text-[10px] uppercase tracking-wide text-muted-foreground leading-none">
+      {item.top}
+    </div>
+
+    <div className="mt-1 text-xs font-semibold leading-none">
+      {item.bottom}
+    </div>
   </div>
 ))}
     
