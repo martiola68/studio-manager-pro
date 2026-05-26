@@ -246,7 +246,6 @@ principale:
           <div>
             <label style={labelStyle}>Cliente / società</label>
             <select
-             <select
   style={{
     ...inputStyle,
     background:
