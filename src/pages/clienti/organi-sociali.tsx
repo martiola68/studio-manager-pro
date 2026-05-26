@@ -76,10 +76,14 @@ export default function OrganiSocialiPage() {
     attivo: true,
   });
 
-  useEffect(() => {
-    caricaClienti();
-    caricaNominativi();
-  }, []);
+ useEffect(() => {
+  if (
+    router.isReady &&
+    typeof router.query.cliente_id === "string"
+  ) {
+    setClienteId(router.query.cliente_id);
+  }
+}, [router.isReady, router.query.cliente_id]);
 
   useEffect(() => {
     if (clienteId) caricaOrgani();
