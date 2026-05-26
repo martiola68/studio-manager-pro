@@ -93,8 +93,9 @@ export default async function handler(
             subject:
               "Sollecito compilazione foglio presenze",
             html: `
-              <p>Gentile collega,</p>
-
+             <p>
+              Gentile ${dipendente.cognome} ${dipendente.nome},
+              </p>
               <p>
                 risulta che il foglio presenze non sia aggiornato.
               </p>
