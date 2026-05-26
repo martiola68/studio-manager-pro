@@ -132,28 +132,28 @@ export default function AssenzeSettimanaliPage() {
     try {
       const [{ data: utentiData, error: utentiError }, { data: presenzeData, error: presenzeError }] =
         await Promise.all([
-          supabase
-            .from("tbutenti")
-            .select("id, nome, cognome, email, settore, tipo_rapporto")
-              .eq("studio_id", currentStudioId)
-              .eq("attivo", true)
-                .eq("tipo_rapporto", "Dipendente")
-              .order("cognome", { ascending: true })
+  supabase
+    .from("tbutenti")
+    .select("id, nome, cognome, email, settore, tipo_rapporto")
+    .eq("studio_id", currentStudioId)
+    .eq("attivo", true)
+    .eq("tipo_rapporto", "Dipendente")
+    .order("cognome", { ascending: true }),
 
-          supabase
-            .from("tbpresenze_dipendenti")
-            .select(`
-              id,
-              utente_id,
-              data_presenza,
-              codice_presenza,
-              note,
-              tbpresenze_codici (
-                codice,
-                descrizione,
-                tipo
-              )
-            `)
+  supabase
+    .from("tbpresenze_dipendenti")
+    .select(`
+      id,
+      utente_id,
+      data_presenza,
+      codice_presenza,
+      note,
+      tbpresenze_codici (
+        codice,
+        descrizione,
+        tipo
+      )
+    `)
             .eq("studio_id", currentStudioId)
             .gte("data_presenza", startStr)
             .lte("data_presenza", endStr),
