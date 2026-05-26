@@ -1306,8 +1306,9 @@ const isFutureDay = day.date > todayKey;
     }`}
   >
     {formatHoursMinutes(summary.permessi104Ore)}
-  </div>
-</div>
+            </div>
+          </div>
+        </div>
       );
     })}
   </div>
