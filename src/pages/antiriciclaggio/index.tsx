@@ -68,9 +68,11 @@ type PraticaAMLRow = {
   data_apertura?: string | null;
   stato?: string | null;
   stato_ciclo?: string | null;
-  av1_id?: string | null;
-  av4_id?: string | null;
-  av4_corrente_id?: string | null;
+ av1_id?: string | null;
+av2_id?: string | null;
+av2_corrente_id?: string | null;
+av4_id?: string | null;
+av4_corrente_id?: string | null;
   tbclienti?: Cliente | Cliente[] | null;
   av4_info?: AV4Info | AV4Info[] | null;
 };
@@ -524,13 +526,18 @@ const loadRowsBySocieta = async (societaId: string) => {
     const { data: praticheData, error: praticheError } = await supabaseAny
       .from("tbPraticheAML")
       .select(`
-        id,
-        studio_id,
-        cliente_id,
-        societa_id,
-        data_apertura,
-        stato,
-        stato_ciclo,
+  id,
+  studio_id,
+  cliente_id,
+  societa_id,
+  data_apertura,
+  stato,
+  stato_ciclo,
+  av1_id,
+  av2_id,
+  av2_corrente_id,
+  av4_id,
+  av4_corrente_id,
         tbclienti (
           id,
           cod_cliente,
@@ -577,12 +584,17 @@ const loadRowsBySocieta = async (societaId: string) => {
               .eq("pratica_id", pratica.id)
               .maybeSingle(),
 
-            supabaseAny
-             .from("tbAV2")
-            .select("id, confermato")
-            .eq("pratica_id", pratica.id)
-            .maybeSingle(),
-
+           pratica.av2_corrente_id || pratica.av2_id
+  ? supabaseAny
+      .from("tbAV2")
+      .select("id, confermato")
+      .eq("id", pratica.av2_corrente_id || pratica.av2_id)
+      .maybeSingle()
+  : supabaseAny
+      .from("tbAV2")
+      .select("id, confermato")
+      .eq("pratica_id", pratica.id)
+      .maybeSingle(),
             supabaseAny
               .from("tbAV4")
            .select(`
