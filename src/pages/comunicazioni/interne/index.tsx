@@ -131,14 +131,19 @@ export default function ComunicazioniInternePage() {
     setSelectedDestinatari([]);
   };
 
-  const handleSelectBySettore = (settore: string) => {
+ const handleSelectBySettore = (settore: string) => {
   const ids = utenti
-    .filter((u) => String((u as any).settore || "").toLowerCase() === settore)
+    .filter(
+      (u) =>
+        String((u as any).settore || "").toLowerCase() === settore
+    )
     .map((u) => u.id);
 
-  setSelectedDestinatari(ids);
+  setSelectedDestinatari((prev) => [
+    ...new Set([...prev, ...ids]),
+  ]);
 };
-
+  
   const handleSubmit = async () => {
     try {
       if (!formData.oggetto || !formData.messaggio) {
