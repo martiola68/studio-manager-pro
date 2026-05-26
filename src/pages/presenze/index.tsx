@@ -1180,7 +1180,7 @@ ${dipendentiXml}
 ].map((item) => (
   <div
     key={item.bottom}
-    className="sticky top-0 z-40 border-b bg-background h-[58px] w-[72px] flex flex-col items-center justify-center text-center"
+    className="sticky top-0 z-40 border-b bg-background h-[58px] min-w-[86px] max-w-[86px] flex flex-col items-center justify-center text-center"
   >
     <div className="text-[10px] uppercase tracking-wide text-muted-foreground leading-none">
       {item.top}
@@ -1263,32 +1263,32 @@ const isFutureDay = day.date > todayKey;
             );
           })}
 
-<div className="border-b bg-green-100 h-8 w-[72px] flex items-center justify-center text-center font-bold text-green-900">
+<div className="border-b bg-green-100 h-8 min-w-[86px] max-w-[86px] flex items-center justify-center text-center font-bold text-green-900">
   {summary.pp}
 </div>
 
-<div className="border-b bg-violet-100 h-8 w-[72px] flex items-center justify-center text-center font-bold text-violet-900">
+<div className="border-b bg-violet-100 h-8 min-w-[86px] max-w-[86px] flex items-center justify-center text-center font-bold text-violet-900">
   {summary.ps}
 </div>
 
-<div className="border-b bg-sky-100 h-8 w-[72px] flex items-center justify-center text-center font-bold text-sky-900">
+<div className="border-b bg-sky-100 h-8 min-w-[86px] max-w-[86px] flex items-center justify-center text-center font-bold text-sky-900">
   {summary.ferie}
 </div>
 
-<div className="border-b bg-red-100 h-8 w-[72px] flex items-center justify-center text-center font-bold text-red-900">
+<div className="border-b bg-red-100 h-8 min-w-[86px] max-w-[86px] flex items-center justify-center text-center font-bold text-red-900">
   {summary.malattia}
 </div>
 
-<div className="border-b bg-gray-100 h-8 w-[72px] flex items-center justify-center text-center font-bold text-gray-800">
+<div className="border-b bg-gray-100 h-8 min-w-[86px] max-w-[86px] flex items-center justify-center text-center font-bold text-gray-800">
   {summary.festivi}
 </div>
 
-<div className="border-b bg-orange-100 h-8 w-[72px] flex items-center justify-center text-center font-bold text-orange-900">
+<div className="border-b bg-orange-100 h-8 min-w-[86px] max-w-[86px] flex items-center justify-center text-center font-bold text-orange-900">
   {formatHoursMinutes(summary.permessiOre)}
 </div>
 
 <div
-  className={`border-b bg-pink-100 h-8 w-[72px] flex items-center justify-center text-center font-bold ${
+  className={`border-b bg-pink-100 h-8 min-w-[86px] max-w-[86px] flex items-center justify-center text-center font-bold ${
     summary.permessi104Ore > 24
       ? "text-red-700"
       : "text-pink-900"
