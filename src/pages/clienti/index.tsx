@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/router";
+
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { mapVisuraText } from "@/utils/visuraMapper";
 import type { Database } from "@/integrations/supabase/types";
@@ -221,6 +223,7 @@ function safeString(v: unknown): string {
 }
 
 export default function ClientiPage() {
+  const router = useRouter();
   const { toast } = useToast();
   const { studioId } = useStudio();
 
@@ -1791,14 +1794,25 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
                   </TableCell>
 
                   <TableCell className="sticky right-0 bg-background z-10 w-[120px] text-right">
-                    <div className="flex justify-end gap-3">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEdit(cliente)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
+                   <div className="flex justify-end gap-3">
+  <Button
+    variant="ghost"
+    size="icon"
+    title="Organi sociali"
+    onClick={() =>
+      router.push(`/clienti/organi-sociali?cliente_id=${cliente.id}`)
+    }
+  >
+    <Users className="h-4 w-4" />
+  </Button>
+
+  <Button
+    variant="ghost"
+    size="icon"
+    onClick={() => handleEdit(cliente)}
+  >
+    <Edit className="h-4 w-4" />
+  </Button>
                       <Button
                         variant="ghost"
                         size="icon"
