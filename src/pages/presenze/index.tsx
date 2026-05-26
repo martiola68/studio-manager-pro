@@ -1169,22 +1169,15 @@ ${dipendentiXml}
       </div>
     ))}
 
-   {[
-  { label: 'Pp', className: 'bg-green-100 text-green-800 border-green-200' },
-  { label: 'Ps', className: 'bg-violet-100 text-violet-800 border-violet-200' },
-  { label: 'F', className: 'bg-sky-100 text-sky-800 border-sky-200' },
-  { label: 'M', className: 'bg-red-100 text-red-800 border-red-200' },
-  { label: 'N', className: 'bg-gray-100 text-gray-700 border-gray-200' },
-  { label: 'Perm.', className: 'bg-orange-100 text-orange-800 border-orange-200' },
-  { label: 'L.104', className: 'bg-pink-100 text-pink-800 border-pink-200' },
-].map((item) => (
+ {['Pp', 'Ps', 'F', 'M', 'N', 'Perm.', 'L.104'].map((label) => (
   <div
-    key={item.label}
-    className={`sticky top-0 z-40 border-b px-2 py-2 text-center font-medium ${item.className}`}
+    key={label}
+    className="sticky top-0 z-40 border-b bg-background px-2 py-2 text-center font-medium"
   >
-    {item.label}
+    {label}
   </div>
 ))}
+    
     {dipendenti.map((dipendente) => {
       const summary = getSummaryForEmployee(dipendente.utente_id);
 
