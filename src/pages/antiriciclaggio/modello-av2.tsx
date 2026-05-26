@@ -24,6 +24,8 @@ type AV2FormState = {
   data_check: string;
   firma_check: string;
   allegato_av2_firmato?: string;
+  confermato?: boolean;
+  confermato_at?: string;
   [key: string]: string | boolean | undefined;
 };
 
@@ -39,7 +41,9 @@ const buildInitialForm = (studioId: string): AV2FormState => {
   av4_id: "",
   data_check: "",
   firma_check: "",
-   allegato_av2_firmato: "",
+  allegato_av2_firmato: "",
+  confermato: false,
+  confermato_at: "",
 };
 
   for (let i = 1; i <= 23; i++) {
@@ -343,6 +347,12 @@ if (currentAv2Id) {
   data_check: form.data_check || null,
   firma_check: form.firma_check || null,
   allegato_av2_firmato: form.allegato_av2_firmato || null,
+
+confermato: !!form.confermato,
+
+confermato_at: form.confermato
+  ? new Date().toISOString()
+  : null,
 };
     for (let i = 1; i <= 23; i++) {
   payload[`spunta${i}`] =
@@ -523,6 +533,8 @@ const handleRemoveFirmato = async () => {
   setForm((prev) => ({
     ...prev,
     allegato_av2_firmato: "",
+    confermato: !!av2Row.confermato,
+confermato_at: av2Row.confermato_at || "",
   }));
 };
 
@@ -736,6 +748,7 @@ const handleRemoveFirmato = async () => {
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div>
                     <label className="mb-1 block text-sm font-medium">Firma check</label>
+
                     <input
                       type="text"
                       className="w-full rounded-md border px-3 py-2"
@@ -749,6 +762,29 @@ const handleRemoveFirmato = async () => {
                       placeholder="Firma professionista"
                     />
                   </div>
+                  
+ <div className="flex items-center gap-3 rounded-md border p-3">
+  <input
+    type="checkbox"
+    checked={!!form.confermato}
+    onChange={(e) =>
+      setForm((prev) => ({
+        ...prev,
+        confermato: e.target.checked,
+      }))
+    }
+  />
+
+  <div>
+    <div className="font-medium">
+      Conferma AV2
+    </div>
+
+    <div className="text-xs text-gray-500">
+      Conferma finale check-list AV2
+    </div>
+  </div>
+</div>
 
                   <div className="md:col-span-2">
                     <div className="rounded-md border bg-slate-50 px-4 py-3 text-sm text-slate-700">
