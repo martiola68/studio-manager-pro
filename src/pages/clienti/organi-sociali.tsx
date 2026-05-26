@@ -9,10 +9,49 @@ const ruoli = [
   "socio",
   "amministratore",
   "liquidatore",
-  "sindaco",
+  "amministratore_delegato",
+  "presidente_cda",
+  "consigliere",
+  "sindaco_effettivo",
+  "presidente_collegio_sindacale",
+  "sindaco_unico",
+  "sindaco_supplente",
   "revisore",
   "rappresentante_legale",
 ];
+
+const ruoliLabel: Record<string, string> = {
+  tutti: "Tutti",
+  socio: "Socio",
+  amministratore: "Amministratore",
+  liquidatore: "Liquidatore",
+  amministratore_delegato: "Amministratore delegato",
+  presidente_cda: "Presidente del CDA",
+  consigliere: "Consigliere",
+  sindaco_effettivo: "Sindaco effettivo",
+  presidente_collegio_sindacale: "Presidente del collegio sindacale",
+  sindaco_unico: "Sindaco unico",
+  sindaco_supplente: "Sindaco supplente",
+  revisore: "Revisore",
+  rappresentante_legale: "Rappresentante legale",
+};
+
+const ruoliConPrincipale = [
+  "amministratore",
+  "amministratore_delegato",
+  "presidente_cda",
+  "consigliere",
+  "liquidatore",
+  "rappresentante_legale",
+];
+
+function richiedeQuota(ruolo: string) {
+  return ruolo === "socio";
+}
+
+function consentePrincipale(ruolo: string) {
+  return ruoliConPrincipale.includes(ruolo);
+}
 
 export default function OrganiSocialiPage() {
   const router = useRouter();
@@ -109,7 +148,15 @@ const { data } = await supabase
       },
       body: JSON.stringify({
         cliente_id: clienteId,
-        ...form,
+       ...form,
+carica: ruoliLabel[form.ruolo] || form.ruolo,
+percentuale_partecipazione:
+  form.ruolo === "socio"
+    ? form.percentuale_partecipazione || null
+    : null,
+presenza: null,
+principale:
+  consentePrincipale(form.ruolo) && form.principale,
         percentuale_partecipazione:
           form.percentuale_partecipazione || null,
       }),
@@ -199,10 +246,16 @@ const { data } = await supabase
           <div>
             <label style={labelStyle}>Cliente / società</label>
             <select
-              style={inputStyle}
-              value={clienteId}
-              onChange={(e) => setClienteId(e.target.value)}
-            >
+             <select
+  style={{
+    ...inputStyle,
+    background:
+      router.query.cliente_id ? "#f1f5f9" : "#fff",
+  }}
+  value={clienteId}
+  disabled={!!router.query.cliente_id}
+  onChange={(e) => setClienteId(e.target.value)}
+>
               <option value="">Seleziona società</option>
 
               {clienti.map((c) => (
@@ -222,7 +275,7 @@ const { data } = await supabase
             >
               {ruoli.map((r) => (
                 <option key={r} value={r}>
-                  {r === "tutti" ? "Tutti" : r}
+                 {ruoliLabel[r] || r}
                 </option>
               ))}
             </select>
@@ -272,7 +325,15 @@ const { data } = await supabase
               onChange={(e) =>
                 setForm((prev) => ({
                   ...prev,
-                  ruolo: e.target.value,
+                 ruolo: e.target.value,
+carica: ruoliLabel[e.target.value] || "",
+percentuale_partecipazione:
+  e.target.value === "socio"
+    ? prev.percentuale_partecipazione
+    : "",
+principale: consentePrincipale(e.target.value)
+  ? prev.principale
+  : false,
                 }))
               }
             >
@@ -287,10 +348,15 @@ const { data } = await supabase
           </div>
 
           <div>
-            <label style={labelStyle}>Carica</label>
-            <input
-              style={inputStyle}
-              value={form.carica}
+          <label style={labelStyle}>Carica</label>
+<input
+  style={{
+    ...inputStyle,
+    background: "#f1f5f9",
+  }}
+  value={ruoliLabel[form.ruolo] || form.ruolo}
+  disabled
+/>
               onChange={(e) =>
                 setForm((prev) => ({
                   ...prev,
@@ -303,11 +369,21 @@ const { data } = await supabase
 
           <div>
             <label style={labelStyle}>Quota %</label>
-            <input
-              type="number"
-              step="0.01"
-              style={inputStyle}
-              value={form.percentuale_partecipazione}
+          <input
+  type="number"
+  step="0.01"
+  disabled={!richiedeQuota(form.ruolo)}
+  style={{
+    ...inputStyle,
+    background: richiedeQuota(form.ruolo)
+      ? "#fff"
+      : "#f1f5f9",
+  }}
+  value={
+    richiedeQuota(form.ruolo)
+      ? form.percentuale_partecipazione
+      : ""
+  }
               onChange={(e) =>
                 setForm((prev) => ({
                   ...prev,
@@ -321,30 +397,22 @@ const { data } = await supabase
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr auto auto",
+           gridTemplateColumns: "1fr auto",
             gap: 12,
             marginTop: 14,
             alignItems: "center",
           }}
         >
-          <div>
-            <label style={labelStyle}>Presenza / delega</label>
-            <input
-              style={inputStyle}
-              value={form.presenza}
-              onChange={(e) =>
-                setForm((prev) => ({
-                  ...prev,
-                  presenza: e.target.value,
-                }))
-              }
-            />
-          </div>
-
+         
           <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <input
-              type="checkbox"
-              checked={form.principale}
+           <input
+  type="checkbox"
+  disabled={!consentePrincipale(form.ruolo)}
+  checked={
+    consentePrincipale(form.ruolo)
+      ? form.principale
+      : false
+  }
               onChange={(e) =>
                 setForm((prev) => ({
                   ...prev,
