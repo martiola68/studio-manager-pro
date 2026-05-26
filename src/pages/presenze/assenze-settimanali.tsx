@@ -25,7 +25,10 @@ type Presenza = {
 };
 
 function toDateInput(date: Date) {
-  return date.toISOString().split("T")[0];
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 function getMonday(date: Date) {
@@ -132,9 +135,10 @@ export default function AssenzeSettimanaliPage() {
           supabase
             .from("tbutenti")
             .select("id, nome, cognome, email, settore, tipo_rapporto")
-            .eq("studio_id", currentStudioId)
-            .eq("attivo", true)
-            .order("cognome", { ascending: true }),
+              .eq("studio_id", currentStudioId)
+              .eq("attivo", true)
+                .eq("tipo_rapporto", "Dipendente")
+              .order("cognome", { ascending: true })
 
           supabase
             .from("tbpresenze_dipendenti")
