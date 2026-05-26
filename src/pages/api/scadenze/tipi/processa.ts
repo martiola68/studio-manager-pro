@@ -110,12 +110,14 @@ export default async function handler(
         const giorni = diffDaysFromToday(tipo.data_scadenza);
         const annoInvio = new Date(tipo.data_scadenza).getFullYear();
 
-        const preavvisi = [
-          Number(tipo.giorni_preavviso_1 || 15),
-          Number(tipo.giorni_preavviso_2 || 7),
-          0,
-        ];
+       const preavviso1 = Number(tipo.giorni_preavviso_1 || 15);
+const preavviso2 = Number(tipo.giorni_preavviso_2 || 7);
 
+const preavvisi = [
+  preavviso1,
+  preavviso2,
+  0,
+];
         const alertDaInviare = preavvisi.filter(
           (giorniPreavviso, index, self) =>
             giorni === giorniPreavviso &&
