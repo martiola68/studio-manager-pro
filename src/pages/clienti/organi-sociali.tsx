@@ -157,9 +157,7 @@ percentuale_partecipazione:
 presenza: null,
 principale:
   consentePrincipale(form.ruolo) && form.principale,
-        percentuale_partecipazione:
-          form.percentuale_partecipazione || null,
-      }),
+        }),
     });
 
     const data = await res.json();
