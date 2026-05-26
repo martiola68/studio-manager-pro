@@ -1169,10 +1169,18 @@ ${dipendentiXml}
       </div>
     ))}
 
- {['Pp', 'Ps', 'F', 'M', 'N', 'Perm.', 'L.104'].map((label) => (
+{[
+  'Tot. Pp',
+  'Tot. Ps',
+  'Tot. F',
+  'Tot. M',
+  'Tot. N',
+  'Tot.Perm.',
+  'Tot.L.104',
+].map((label) => (
   <div
     key={label}
-    className="sticky top-0 z-40 border-b bg-background px-2 py-2 text-center font-medium"
+    className="sticky top-0 z-40 border-b bg-background h-8 w-[72px] flex items-center justify-center text-center font-semibold"
   >
     {label}
   </div>
