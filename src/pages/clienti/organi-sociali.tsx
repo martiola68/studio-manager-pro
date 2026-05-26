@@ -347,26 +347,6 @@ principale: consentePrincipale(e.target.value)
           </div>
 
           <div>
-          <label style={labelStyle}>Carica</label>
-<input
-  style={{
-    ...inputStyle,
-    background: "#f1f5f9",
-  }}
-  value={ruoliLabel[form.ruolo] || form.ruolo}
-  disabled
-/>
-              onChange={(e) =>
-                setForm((prev) => ({
-                  ...prev,
-                  carica: e.target.value,
-                }))
-              }
-              placeholder="Es. Amministratore unico"
-            />
-          </div>
-
-          <div>
             <label style={labelStyle}>Quota %</label>
           <input
   type="number"
