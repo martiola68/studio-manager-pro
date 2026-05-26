@@ -16,7 +16,7 @@ const ruoli = [
 
 export default function OrganiSocialiPage() {
   const router = useRouter();
-  const supabase = getSupabaseClient() as any;
+  
 
   const [clienti, setClienti] = useState<any[]>([]);
   const [nominativi, setNominativi] = useState<any[]>([]);
@@ -52,8 +52,10 @@ export default function OrganiSocialiPage() {
   }, [organi, filtroRuolo]);
 
   async function caricaClienti() {
+   const supabase = getSupabaseClient() as any;
+
     const { data } = await supabase
-      .from("tbclienti")
+  .from("tbclienti")
       .select("id, ragione_sociale, codice_fiscale")
       .order("ragione_sociale");
 
@@ -61,8 +63,10 @@ export default function OrganiSocialiPage() {
   }
 
   async function caricaNominativi() {
-    const { data } = await supabase
-      .from("rapp_legali")
+   const supabase = getSupabaseClient() as any;
+
+const { data } = await supabase
+  .from("rapp_legali")
       .select("id, nome_cognome, codice_fiscale")
       .order("nome_cognome");
 
