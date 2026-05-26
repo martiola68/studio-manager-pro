@@ -387,3 +387,118 @@ export default function OrganiSocialiPage() {
               {organiFiltrati.map((o) => (
                 <tr key={o.id}>
                   <td style={tdStyle}>{o.rapp_legali?.nome_cognome || "—"}</td>
+                  <td style={tdStyle}>{o.rapp_legali?.codice_fiscale || "—"}</td>
+                  <td style={tdStyle}>{o.ruolo}</td>
+                  <td style={tdStyle}>{o.carica || "—"}</td>
+                  <td style={tdStyle}>
+                    {o.percentuale_partecipazione
+                      ? `${Number(o.percentuale_partecipazione).toFixed(2)}%`
+                      : "—"}
+                  </td>
+                  <td style={tdStyle}>{o.principale ? "Sì" : "No"}</td>
+                  <td style={tdStyle}>{o.attivo ? "Sì" : "No"}</td>
+                  <td style={tdStyle}>
+                    {o.attivo && (
+                      <button
+                        type="button"
+                        onClick={() => disattivaOrgano(o)}
+                        style={dangerButton}
+                      >
+                        Disattiva
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+
+              {organiFiltrati.length === 0 && (
+                <tr>
+                  <td style={tdStyle} colSpan={8}>
+                    Nessun organo collegato.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </main>
+  );
+}
+
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  border: "1px solid #d1d5db",
+  borderRadius: 8,
+  padding: "10px 12px",
+  fontSize: 14,
+  background: "#fff",
+};
+
+const labelStyle: React.CSSProperties = {
+  display: "block",
+  fontSize: 13,
+  fontWeight: 600,
+  color: "#374151",
+  marginBottom: 6,
+};
+
+const cardStyle: React.CSSProperties = {
+  background: "#fff",
+  border: "1px solid #e5e7eb",
+  borderRadius: 12,
+  padding: 24,
+  marginTop: 18,
+};
+
+const titleStyle: React.CSSProperties = {
+  margin: 0,
+  fontSize: 20,
+  fontWeight: 700,
+  color: "#111827",
+};
+
+const blueButton: React.CSSProperties = {
+  border: 0,
+  borderRadius: 8,
+  background: "#2563eb",
+  color: "#fff",
+  padding: "10px 18px",
+  fontWeight: 600,
+  cursor: "pointer",
+};
+
+const secondaryButton: React.CSSProperties = {
+  border: "1px solid #cbd5e1",
+  borderRadius: 8,
+  background: "#fff",
+  color: "#334155",
+  padding: "9px 16px",
+  fontWeight: 600,
+  cursor: "pointer",
+};
+
+const dangerButton: React.CSSProperties = {
+  border: 0,
+  background: "transparent",
+  color: "#dc2626",
+  cursor: "pointer",
+  fontWeight: 600,
+};
+
+const thStyle: React.CSSProperties = {
+  textAlign: "left",
+  padding: "12px 14px",
+  fontSize: 12,
+  fontWeight: 700,
+  color: "#475569",
+  textTransform: "uppercase",
+  borderBottom: "1px solid #e5e7eb",
+};
+
+const tdStyle: React.CSSProperties = {
+  padding: 14,
+  fontSize: 14,
+  color: "#334155",
+  borderBottom: "1px solid #f1f5f9",
+};
