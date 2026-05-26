@@ -47,6 +47,7 @@ type AV1Row = {
   ScadenzaVerifica?: string | null;
   AV1Conferma?: boolean | null;
   AV2Generato?: boolean | null;
+  AV2Confermato?: boolean | null;
   AV4Generato?: boolean | null;
   tbclienti?: Cliente | Cliente[] | null;
   av4_info?: AV4Info | AV4Info[] | null;
@@ -576,10 +577,10 @@ const loadRowsBySocieta = async (societaId: string) => {
               .maybeSingle(),
 
             supabaseAny
-              .from("tbAV2")
-              .select("id")
-              .eq("pratica_id", pratica.id)
-              .maybeSingle(),
+             .from("tbAV2")
+            .select("id, confermato")
+            .eq("pratica_id", pratica.id)
+            .maybeSingle(),
 
             supabaseAny
               .from("tbAV4")
@@ -608,7 +609,8 @@ const loadRowsBySocieta = async (societaId: string) => {
           DataVerifica: av1?.DataVerifica || pratica.data_apertura || null,
           ScadenzaVerifica: av1?.ScadenzaVerifica || null,
           AV1Conferma: !!av1?.AV1Conferma,
-          AV2Generato: !!av2?.id,
+          AV2Generato: !!av2?.confermato,
+          AV2Confermato: !!av2?.confermato,
           AV4Generato: !!av4?.id,
           tbclienti: pratica.tbclienti || null,
           av4_info: av4 || null,
@@ -1424,7 +1426,7 @@ const handleEliminaCompleto = async (row: AV1Row) => {
   <th className="w-[80px] p-2 text-center leading-tight">
     AV2
     <br />
-    generato
+    confermato
   </th>
 
   <th className="w-[80px] p-2 text-center leading-tight">
