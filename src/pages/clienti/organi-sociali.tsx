@@ -76,14 +76,15 @@ export default function OrganiSocialiPage() {
     attivo: true,
   });
 
- useEffect(() => {
-  if (
-    router.isReady &&
-    typeof router.query.cliente_id === "string"
-  ) {
-    setClienteId(router.query.cliente_id);
+useEffect(() => {
+  if (!router.isReady) return;
+
+  const id = router.query.cliente_id;
+
+  if (typeof id === "string" && id.trim()) {
+    setClienteId(id);
   }
-}, [router.isReady, router.query.cliente_id]);
+}, [router.isReady, router.query]);
 
   useEffect(() => {
     if (clienteId) caricaOrgani();
