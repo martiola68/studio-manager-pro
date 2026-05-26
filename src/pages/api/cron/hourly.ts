@@ -68,6 +68,10 @@ if (hourUtc === 8) {
       await callInternal(`/api/scadenze/processa-scadenzari?secret=${SECRET}`)
     );
 
+   results.push(
+      await callInternal(`/api/scadenze/tipi/processa?secret=${SECRET}`)
+    );
+
     results.push(
       await callInternal(`/api/scadenze/affitti/processa?secret=${SECRET}`)
     );
