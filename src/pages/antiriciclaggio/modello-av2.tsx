@@ -531,11 +531,9 @@ const handleOpenFirmato = async () => {
 
 const handleRemoveFirmato = async () => {
   setForm((prev) => ({
-    ...prev,
-    allegato_av2_firmato: "",
-    confermato: !!av2Row.confermato,
-confermato_at: av2Row.confermato_at || "",
-  }));
+  ...prev,
+  allegato_av2_firmato: "",
+}));
 };
 
   return (
