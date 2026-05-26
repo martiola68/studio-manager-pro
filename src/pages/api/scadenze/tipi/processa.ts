@@ -125,11 +125,13 @@ export default async function handler(
         const alerts: string[] = [];
 
         for (const giorniPreavviso of alertDaInviare) {
-          const tipoAlert =
-            giorniPreavviso === 0
-              ? "giorno_0"
-              : `preavviso_${giorniPreavviso}`;
-
+         const tipoAlert =
+  giorniPreavviso === 0
+    ? "giorno_0"
+    : giorniPreavviso === preavviso1
+      ? "preavviso_1"
+      : "preavviso_2";
+          
           const giaInviato = await alertGiaInviato(
             tipo.id,
             annoInvio,
