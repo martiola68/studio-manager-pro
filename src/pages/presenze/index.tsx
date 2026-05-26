@@ -1263,40 +1263,51 @@ const isFutureDay = day.date > todayKey;
             );
           })}
 
-<div className="border-b bg-green-100 h-8 min-w-[86px] max-w-[86px] flex items-center justify-center text-center font-bold text-green-900">
-  {summary.pp}
+<div className="border-b p-1 text-center">
+  <div className="flex h-8 items-center justify-center rounded-md bg-green-100 font-bold text-green-900">
+    {summary.pp}
+  </div>
 </div>
 
-<div className="border-b bg-violet-100 h-8 min-w-[86px] max-w-[86px] flex items-center justify-center text-center font-bold text-violet-900">
-  {summary.ps}
+<div className="border-b p-1 text-center">
+  <div className="flex h-8 items-center justify-center rounded-md bg-violet-100 font-bold text-violet-900">
+    {summary.ps}
+  </div>
 </div>
 
-<div className="border-b bg-sky-100 h-8 min-w-[86px] max-w-[86px] flex items-center justify-center text-center font-bold text-sky-900">
-  {summary.ferie}
+<div className="border-b p-1 text-center">
+  <div className="flex h-8 items-center justify-center rounded-md bg-sky-100 font-bold text-sky-900">
+    {summary.ferie}
+  </div>
 </div>
 
-<div className="border-b bg-red-100 h-8 min-w-[86px] max-w-[86px] flex items-center justify-center text-center font-bold text-red-900">
-  {summary.malattia}
+<div className="border-b p-1 text-center">
+  <div className="flex h-8 items-center justify-center rounded-md bg-red-100 font-bold text-red-900">
+    {summary.malattia}
+  </div>
 </div>
 
-<div className="border-b bg-gray-100 h-8 min-w-[86px] max-w-[86px] flex items-center justify-center text-center font-bold text-gray-800">
-  {summary.festivi}
+<div className="border-b p-1 text-center">
+  <div className="flex h-8 items-center justify-center rounded-md bg-gray-100 font-bold text-gray-800">
+    {summary.festivi}
+  </div>
 </div>
 
-<div className="border-b bg-orange-100 h-8 min-w-[86px] max-w-[86px] flex items-center justify-center text-center font-bold text-orange-900">
-  {formatHoursMinutes(summary.permessiOre)}
+<div className="border-b p-1 text-center">
+  <div className="flex h-8 items-center justify-center rounded-md bg-orange-100 font-bold text-orange-900">
+    {formatHoursMinutes(summary.permessiOre)}
+  </div>
 </div>
 
-<div
-  className={`border-b bg-pink-100 h-8 min-w-[86px] max-w-[86px] flex items-center justify-center text-center font-bold ${
-    summary.permessi104Ore > 24
-      ? "text-red-700"
-      : "text-pink-900"
-  }`}
->
-  {formatHoursMinutes(summary.permessi104Ore)}
+<div className="border-b p-1 text-center">
+  <div
+    className={`flex h-8 items-center justify-center rounded-md bg-pink-100 font-bold ${
+      summary.permessi104Ore > 24 ? "text-red-700" : "text-pink-900"
+    }`}
+  >
+    {formatHoursMinutes(summary.permessi104Ore)}
+  </div>
 </div>
-        </div>
       );
     })}
   </div>
