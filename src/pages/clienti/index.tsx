@@ -1720,7 +1720,7 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
                   Cod. Cliente
                 </TableHead>
 
-                <TableHead className="sticky top-0 left-[120px] bg-background z-30 w-[150px] border-r pr-2">
+               <TableHead className="sticky top-0 left-[120px] bg-background z-30 w-[280px] max-w-[280px] border-r pr-2">
                   Ragione Sociale
                 </TableHead>
 
@@ -1738,9 +1738,9 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
                   Scadenzari
                 </TableHead>
 
-                <TableHead className="sticky right-0 bg-background z-20 w-[120px] text-right">
-                  Azioni
-                </TableHead>
+              <TableHead className="sticky right-0 bg-background z-20 w-[170px] text-right">
+  Azioni
+</TableHead>
               </TableRow>
             </TableHeader>
 
@@ -1755,8 +1755,8 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
                       cliente.id.substring(0, 8).toUpperCase()}
                   </TableCell>
 
-                  <TableCell
-                    className="sticky left-[120px] bg-background z-20 font-medium w-[150px] truncate border-r pr-2"
+                 <TableCell
+                  className="sticky left-[120px] bg-background z-20 font-medium w-[280px] max-w-[280px] truncate border-r pr-2"
                     title={cliente.ragione_sociale || ""}
                   >
                     {cliente.ragione_sociale}
@@ -1793,7 +1793,7 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
                     </Button>
                   </TableCell>
 
-                  <TableCell className="sticky right-0 bg-background z-10 w-[120px] text-right">
+              <TableCell className="sticky right-0 bg-background z-10 w-[170px] text-right">
                    <div className="flex justify-end gap-3">
   <Button
     variant="ghost"
