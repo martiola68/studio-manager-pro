@@ -2,7 +2,11 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { Download, Trash2 } from "lucide-react";
+import {
+  Download,
+  Trash2,
+  Upload,
+} from "lucide-react";
 
 const font =
   'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
@@ -1550,6 +1554,60 @@ rappresentante_legale_cap:
                           />
                         </a>
 
+<label
+  style={{
+    color: "#16a34a",
+    display: "flex",
+    alignItems: "center",
+    cursor: "pointer",
+  }}
+>
+  <Upload size={18} />
+
+  <input
+    type="file"
+    accept=".docx"
+    style={{ display: "none" }}
+    onChange={async (e) => {
+      const file = e.target.files?.[0];
+
+      if (!file) return;
+
+      const formData = new FormData();
+
+      formData.append("file", file);
+      formData.append(
+        "documento_id",
+        doc.id
+      );
+
+      const res = await fetch(
+        `/api/pratiche/${praticaId}/documento-modificato`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(
+          data.error ||
+            "Errore upload documento"
+        );
+        return;
+      }
+
+      alert(
+        "Documento aggiornato correttamente"
+      );
+
+      await caricaDocumenti();
+    }}
+  />
+</label>
+                        
                         <button
                           type="button"
                           style={{
