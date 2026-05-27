@@ -411,7 +411,19 @@ SEDE_LIQUIDAZIONE:
       valori.DENOMINAZIONE || "societa"
     ).replace(/[^a-zA-Z0-9._-]/g, "_");
 
-   const nomeFile = `Distribuzione_utili_${safeDenominazione}_${Date.now()}.docx`;
+  const safeDenominazione = String(
+  valori.DENOMINAZIONE || "societa"
+)
+  .replace(/[^a-zA-Z0-9]+/g, "_")
+  .replace(/^_+|_+$/g, "");
+
+const safeTipoVerbale = String(
+  modello?.descrizione || modello?.nome || codiceModello || "documento"
+)
+  .replace(/[^a-zA-Z0-9]+/g, "_")
+  .replace(/^_+|_+$/g, "");
+
+const nomeFile = `${safeTipoVerbale}_${safeDenominazione}.docx`;
 
     const filePath = `${id}/generati/${nomeFile}`;
 
@@ -434,7 +446,7 @@ SEDE_LIQUIDAZIONE:
       .from("tbpratiche_documenti")
       .insert({
         pratica_id: id,
-        tipo_documento: "distribuzione_utili",
+        tipo_documento: modello?.codice || codiceModello,
         nome_file: nomeFile,
         file_path: filePath,
         stato: "generato",
