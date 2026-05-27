@@ -79,7 +79,7 @@ export async function POST(req: Request, { params }: Params) {
         nome_file: nomeFile,
         stato: "modificato",
         origine: "modificata",
-        updated_at: new Date().toISOString(),
+      
       })
       .eq("id", documentoId)
       .select()
