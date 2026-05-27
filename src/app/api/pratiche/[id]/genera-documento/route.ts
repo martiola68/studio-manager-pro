@@ -407,10 +407,6 @@ SEDE_LIQUIDAZIONE:
       compression: "DEFLATE",
     });
 
-    const safeDenominazione = String(
-      valori.DENOMINAZIONE || "societa"
-    ).replace(/[^a-zA-Z0-9._-]/g, "_");
-
   const safeDenominazione = String(
   valori.DENOMINAZIONE || "societa"
 )
