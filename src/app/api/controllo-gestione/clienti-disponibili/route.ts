@@ -7,7 +7,7 @@ export async function GET() {
   const { data, error } = await supabaseAdmin
     .from("tbclienti")
     .select("*")
-    .eq("tipo_prestazione", "Controllo di gestione")
+    .eq("tipo_prestazione_id", "Controllo di gestione")
     .order("ragione_sociale", { ascending: true });
 
   if (error) {
