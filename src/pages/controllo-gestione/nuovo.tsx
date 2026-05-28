@@ -252,13 +252,23 @@ export default function NuovoControlloGestione() {
       </div>
     ))}
 </div>
-      <button
-        onClick={salva}
-        disabled={saving}
-        className="bg-black text-white px-4 py-2 rounded disabled:opacity-50"
-      >
-        {saving ? "Salvataggio..." : "Salva controllo"}
-      </button>
+      <div className="flex gap-2">
+  <button
+    type="button"
+    onClick={() => router.push("/controllo-gestione")}
+    className="border px-4 py-2 rounded"
+  >
+    Annulla
+  </button>
+
+  <button
+    onClick={salva}
+    disabled={saving}
+    className="bg-black text-white px-4 py-2 rounded disabled:opacity-50"
+  >
+    {saving ? "Salvataggio..." : "Salva record"}
+  </button>
+</div>
     </div>
   );
 }
