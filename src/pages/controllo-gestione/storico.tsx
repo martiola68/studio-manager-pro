@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Trash2 } from "lucide-react";
 import Link from "next/link";
 
 function formatDateIT(value?: string | null) {
@@ -33,15 +34,27 @@ export default function StoricoControlliGestione() {
     setRecords(await res.json());
   }
 
-  async function elimina(id: string) {
-    if (!confirm("Eliminare definitivamente questo controllo?")) return;
-
-    await fetch(`/api/controllo-gestione/${id}`, {
-      method: "DELETE",
-    });
-
-    load();
+async function elimina(id: string) {
+  if (
+    !confirm(
+      "Eliminare definitivamente questo record storico?\n\nVerrà eliminato SOLO questo controllo storico, non l'intero cliente."
+    )
+  ) {
+    return;
   }
+
+  const res = await fetch(`/api/controllo-gestione/${id}`, {
+    method: "DELETE",
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    alert(data?.error || "Errore durante l'eliminazione dello storico");
+    return;
+  }
+
+  await load();
+}
 
   async function download(allegatoId: string) {
     const res = await fetch(`/api/controllo-gestione/x/allegati/${allegatoId}`);
@@ -112,9 +125,13 @@ export default function StoricoControlliGestione() {
                 ))}
               </td>
               <td className="p-2">
-                <button onClick={() => elimina(r.id)} className="border px-2 py-1 rounded">
-                  Elimina
-                </button>
+                <button
+  onClick={() => elimina(r.id)}
+  className="inline-flex items-center justify-center rounded-md p-2 text-red-600 hover:bg-red-50"
+  title="Elimina storico"
+>
+  <Trash2 size={18} />
+</button>
               </td>
             </tr>
           ))}
