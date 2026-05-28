@@ -153,7 +153,27 @@ export default function NuovoControlloGestione() {
 
 return (
   <div className="p-6 space-y-6">
-    <h1 className="text-2xl font-bold">Nuovo controllo di gestione</h1>
+    <div className="flex items-center justify-between">
+  <h1 className="text-2xl font-bold">Nuovo controllo di gestione</h1>
+
+  <div className="flex gap-2">
+    <button
+      type="button"
+      onClick={() => router.push("/controllo-gestione")}
+      className="border px-4 py-2 rounded"
+    >
+      Annulla
+    </button>
+
+    <button
+      onClick={salva}
+      disabled={saving}
+      className="bg-black text-white px-4 py-2 rounded disabled:opacity-50"
+    >
+      {saving ? "Salvataggio..." : "Salva record"}
+    </button>
+  </div>
+</div>
 
     <div className="grid grid-cols-1 xl:grid-cols-[420px_1fr] gap-6 items-start">
       <div className="space-y-4">
@@ -268,26 +288,7 @@ return (
             ))}
         </div>
 
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => router.push("/controllo-gestione")}
-            className="border px-4 py-2 rounded"
-          >
-            Annulla
-          </button>
-
-          <button
-            onClick={salva}
-            disabled={saving}
-            className="bg-black text-white px-4 py-2 rounded disabled:opacity-50"
-          >
-            {saving ? "Salvataggio..." : "Salva record"}
-          </button>
-        </div>
-      </div>
-
-      <div className="border rounded-lg bg-white p-4 space-y-4">
+            <div className="border rounded-lg bg-white p-4 space-y-4">
         <h2 className="font-semibold text-lg">
           Checklist controllo di gestione
         </h2>
