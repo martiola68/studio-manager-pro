@@ -360,7 +360,7 @@ export default function PratichePage() {
 
 <td style={{ padding: 16, textAlign: "right" }}>
 
-  <button
+ <button
   type="button"
   onClick={async () => {
     const ok = confirm("Chiudere questa pratica?");
@@ -378,7 +378,8 @@ export default function PratichePage() {
     }
 
     alert("Pratica chiusa correttamente");
-    router.replace(router.asPath);
+
+    window.location.reload();
   }}
 >
   Chiudi
