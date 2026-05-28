@@ -69,20 +69,20 @@ if (esistente) {
   );
 }
 
-  const { data: controllo, error } = await supabaseAdmin
-    .from("tbcontrollo_gestione")
-    .insert({
-      studio_id,
-      cliente_id,
-      cadenza_controllo,
-      data_esecuzione,
-      prossima_scadenza,
-      note,
-      link,
-      archiviato: false,
-    })
-    .select("*")
-    .single();
+ const { data: controllo, error } = await supabaseAdmin
+  .from("tbcontrollo_gestione")
+  .insert({
+    studio_id: cliente.studio_id,
+    cliente_id,
+    cadenza_controllo,
+    data_esecuzione: new Date().toISOString().slice(0, 10),
+    data_storico: null,
+    note,
+    link,
+    archiviato: false,
+  })
+  .select("*")
+  .single();
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
