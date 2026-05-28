@@ -52,9 +52,18 @@ export default function ControlloGestioneIndex() {
               <td className="p-2">{r.prossima_scadenza}</td>
               <td className="p-2 flex gap-2">
                 {r.link && (
-                  <a href={r.link} target="_blank" className="underline">
-                    Link
-                  </a>
+                 <a
+  href={
+    r.link?.startsWith("http://") || r.link?.startsWith("https://")
+      ? r.link
+      : `https://${r.link}`
+  }
+  target="_blank"
+  rel="noopener noreferrer"
+  className="underline"
+>
+  Link
+</a>
                 )}
                 <button onClick={() => rinnova(r.id)} className="border px-2 py-1 rounded">
                   Rinnova
