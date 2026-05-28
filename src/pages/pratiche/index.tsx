@@ -359,6 +359,31 @@ export default function PratichePage() {
 </td>
 
 <td style={{ padding: 16, textAlign: "right" }}>
+
+  <button
+  type="button"
+  onClick={async () => {
+    const ok = confirm("Chiudere questa pratica?");
+    if (!ok) return;
+
+    const res = await fetch(`/api/pratiche/${p.id}/chiudi`, {
+      method: "POST",
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.error || "Errore chiusura pratica");
+      return;
+    }
+
+    alert("Pratica chiusa correttamente");
+    await caricaPratiche();
+  }}
+>
+  Chiudi
+</button>
+  
   <button
     type="button"
     title="Elimina pratica"
