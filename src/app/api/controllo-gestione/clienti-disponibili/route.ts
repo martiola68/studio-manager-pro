@@ -7,7 +7,7 @@ export async function GET() {
   const { data: prestazione, error: prestazioneError } = await supabaseAdmin
     .from("tbprestazioni")
     .select("id")
-    .ilike("nome", "Controllo di gestione")
+    .ilike("descrizione", "Controllo di gestione")
     .maybeSingle();
 
   if (prestazioneError) {
