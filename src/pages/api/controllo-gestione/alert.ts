@@ -168,10 +168,14 @@ export default async function handler(
       continue;
     }
 
-    const societa =
-      controllo.cliente?.ragione_sociale ||
-      controllo.cliente?.nome ||
-      controllo.cliente_id;
+    const cliente = Array.isArray(controllo.cliente)
+  ? controllo.cliente[0]
+  : controllo.cliente;
+
+const societa =
+  cliente?.ragione_sociale ||
+  cliente?.nome ||
+  controllo.cliente_id;
 
     const emails =
       controllo.utenti
