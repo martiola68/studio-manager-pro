@@ -24,6 +24,7 @@ export default function ControlloGestioneIndex() {
   const [records, setRecords] = useState<any[]>([]);
   const [rinnovoId, setRinnovoId] = useState<string | null>(null);
   const [dataRinnovo, setDataRinnovo] = useState(new Date().toISOString().slice(0, 10));
+  const [noteRinnovo, setNoteRinnovo] = useState("");
   const [editRecord, setEditRecord] = useState<any | null>(null);
 
   async function load() {
@@ -37,7 +38,10 @@ export default function ControlloGestioneIndex() {
     const res = await fetch(`/api/controllo-gestione/${rinnovoId}/rinnova`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data_esecuzione: dataRinnovo }),
+      body: JSON.stringify({
+  data_esecuzione: dataRinnovo,
+  note: noteRinnovo,
+}),
     });
 
     if (!res.ok) {
@@ -177,30 +181,60 @@ export default function ControlloGestioneIndex() {
         </tbody>
       </table>
 
-      {rinnovoId && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center">
-          <div className="bg-white rounded p-6 space-y-4 w-96">
-            <div className="flex justify-between items-center">
-              <h2 className="font-bold">Rinnova controllo</h2>
-              <button onClick={() => setRinnovoId(null)}>
-                <X className="h-4 w-4" />
-              </button>
-            </div>
+   {rinnovoId && (
+  <div className="fixed inset-0 bg-black/30 flex items-center justify-center">
+    <div className="bg-white rounded p-6 space-y-4 w-96">
+      <div className="flex justify-between items-center">
+        <h2 className="font-bold">Rinnova controllo</h2>
+        <button
+          onClick={() => {
+            setRinnovoId(null);
+            setNoteRinnovo("");
+          }}
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
 
-            <label className="block text-sm">Data esecuzione</label>
-            <input
-              type="date"
-              className="border p-2 rounded w-full"
-              value={dataRinnovo}
-              onChange={(e) => setDataRinnovo(e.target.value)}
-            />
+      <label className="block text-sm">Data esecuzione</label>
+      <input
+        type="date"
+        className="border p-2 rounded w-full"
+        value={dataRinnovo}
+        onChange={(e) => setDataRinnovo(e.target.value)}
+      />
 
-            <button onClick={confermaRinnovo} className="bg-black text-white px-4 py-2 rounded">
-              Conferma rinnovo
-            </button>
-          </div>
-        </div>
-      )}
+      <label className="block text-sm">Note</label>
+      <textarea
+        className="border p-2 rounded w-full"
+        rows={4}
+        placeholder="Note del nuovo controllo"
+        value={noteRinnovo}
+        onChange={(e) => setNoteRinnovo(e.target.value)}
+      />
+
+      <div className="flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            setRinnovoId(null);
+            setNoteRinnovo("");
+          }}
+          className="border px-4 py-2 rounded"
+        >
+          Annulla
+        </button>
+
+        <button
+          onClick={confermaRinnovo}
+          className="bg-black text-white px-4 py-2 rounded"
+        >
+          Conferma rinnovo
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
       {editRecord && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center">
