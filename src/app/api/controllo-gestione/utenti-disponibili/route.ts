@@ -8,6 +8,7 @@ export async function GET() {
     .from("tbutenti")
     .select("id, nome, cognome, email, settore, attivo")
     .eq("attivo", true)
+    .in("settore", ["Fiscale", "Consulenza"])
     .order("nome", { ascending: true });
 
   if (error) {
