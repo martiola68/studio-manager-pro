@@ -20,24 +20,15 @@ export async function GET(req: NextRequest) {
         cliente:tbclienti(*)
       `);
 
-  if (clienteId) {
-    query = query.eq("cliente_id", clienteId);
-  }
+  if (clienteId) query = query.eq("cliente_id", clienteId);
 
   query = storico
-    ? query.order("data_storico", {
-        ascending: false,
-        nullsFirst: false,
-      })
-    : query.order("data_esecuzione", {
-        ascending: false,
-      });
+    ? query.order("data_storico", { ascending: false, nullsFirst: false })
+    : query.order("data_esecuzione", { ascending: false });
 
   const { data, error } = await query;
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json(data || []);
 }
@@ -46,6 +37,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
 
   const {
+    studio_id,
     cliente_id,
     cadenza_controllo,
     note,
@@ -53,46 +45,17 @@ export async function POST(req: NextRequest) {
     utenti = [],
   } = body;
 
-  if (!cliente_id) {
+  if (!studio_id) {
     return NextResponse.json(
-      { error: "Cliente obbligatorio" },
+      { error: "studio_id mancante: impossibile salvare il controllo" },
       { status: 400 }
     );
   }
 
-  const authHeader = req.headers.get("authorization");
-
-  if (!authHeader) {
+  if (!cliente_id) {
     return NextResponse.json(
-      { error: "Token utente mancante" },
-      { status: 401 }
-    );
-  }
-
-  const token = authHeader.replace("Bearer ", "");
-
-  const {
-    data: { user },
-    error: userError,
-  } = await supabaseAdmin.auth.getUser(token);
-
-  if (userError || !user?.email) {
-    return NextResponse.json(
-      { error: "Utente non autenticato" },
-      { status: 401 }
-    );
-  }
-
-  const { data: utenteStudio, error: utenteError } = await supabaseAdmin
-    .from("tbutenti")
-    .select("studio_id")
-    .eq("email", user.email)
-    .single();
-
-  if (utenteError || !utenteStudio?.studio_id) {
-    return NextResponse.json(
-      { error: "Studio utente non trovato" },
-      { status: 500 }
+      { error: "Cliente obbligatorio" },
+      { status: 400 }
     );
   }
 
@@ -104,17 +67,14 @@ export async function POST(req: NextRequest) {
     .maybeSingle();
 
   if (esistenteError) {
-    return NextResponse.json(
-      { error: esistenteError.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: esistenteError.message }, { status: 500 });
   }
 
   if (esistente) {
     return NextResponse.json(
       {
         error:
-          "Esiste già un controllo attivo per questo cliente. Usa la funzione Rinnova controllo.",
+          "Esiste già un controllo attivo per questo cliente. Usa Rinnova controllo.",
         controllo_id: esistente.id,
       },
       { status: 409 }
@@ -124,7 +84,7 @@ export async function POST(req: NextRequest) {
   const { data: controllo, error } = await supabaseAdmin
     .from("tbcontrollo_gestione")
     .insert({
-      studio_id: utenteStudio.studio_id,
+      studio_id,
       cliente_id,
       cadenza_controllo,
       data_esecuzione: new Date().toISOString().slice(0, 10),
@@ -136,9 +96,7 @@ export async function POST(req: NextRequest) {
     .select("*")
     .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   if (Array.isArray(utenti) && utenti.length > 0) {
     const rows = utenti.map((utente_id: string) => ({
@@ -151,10 +109,7 @@ export async function POST(req: NextRequest) {
       .insert(rows);
 
     if (utentiError) {
-      return NextResponse.json(
-        { error: utentiError.message },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: utentiError.message }, { status: 500 });
     }
   }
 
