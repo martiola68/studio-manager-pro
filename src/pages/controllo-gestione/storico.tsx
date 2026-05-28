@@ -1,0 +1,108 @@
+import { useEffect, useState } from "react";
+import Link from "next/link";
+
+export default function StoricoControlliGestione() {
+  const [records, setRecords] = useState<any[]>([]);
+  const [clienteId, setClienteId] = useState("");
+  const [clienti, setClienti] = useState<any[]>([]);
+
+  async function load() {
+    const url = clienteId
+      ? `/api/controllo-gestione?storico=true&cliente_id=${clienteId}`
+      : "/api/controllo-gestione?storico=true";
+
+    const res = await fetch(url);
+    setRecords(await res.json());
+  }
+
+  async function elimina(id: string) {
+    if (!confirm("Eliminare definitivamente questo controllo?")) return;
+
+    await fetch(`/api/controllo-gestione/${id}`, {
+      method: "DELETE",
+    });
+
+    load();
+  }
+
+  async function download(allegatoId: string) {
+    const res = await fetch(`/api/controllo-gestione/x/allegati/${allegatoId}`);
+    const data = await res.json();
+    window.open(data.url, "_blank");
+  }
+
+  useEffect(() => {
+    fetch("/api/clienti").then((r) => r.json()).then(setClienti);
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [clienteId]);
+
+  return (
+    <div className="p-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Storico controlli</h1>
+        <Link href="/controllo-gestione" className="border px-4 py-2 rounded">
+          Elenco generale
+        </Link>
+      </div>
+
+      <select
+        className="border p-2 rounded"
+        value={clienteId}
+        onChange={(e) => setClienteId(e.target.value)}
+      >
+        <option value="">Tutte le società</option>
+        {clienti.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.ragione_sociale || c.nome}
+          </option>
+        ))}
+      </select>
+
+      <table className="w-full border text-sm">
+        <thead className="bg-gray-100">
+          <tr>
+            <th className="p-2 text-left">Società</th>
+            <th className="p-2 text-left">Cadenza</th>
+            <th className="p-2 text-left">Data</th>
+            <th className="p-2 text-left">Archiviato</th>
+            <th className="p-2 text-left">Utenti</th>
+            <th className="p-2 text-left">Allegati</th>
+            <th className="p-2 text-left">Azioni</th>
+          </tr>
+        </thead>
+        <tbody>
+          {records.map((r) => (
+            <tr key={r.id} className="border-t align-top">
+              <td className="p-2">{r.cliente?.ragione_sociale || r.cliente_id}</td>
+              <td className="p-2">{r.cadenza_controllo}</td>
+              <td className="p-2">{r.data_esecuzione}</td>
+              <td className="p-2">{r.archiviato ? "Sì" : "No"}</td>
+              <td className="p-2">
+                {r.utenti?.map((u: any) => u.utente?.nome || u.utente?.email).join(", ")}
+              </td>
+              <td className="p-2 space-y-1">
+                {r.allegati?.map((a: any) => (
+                  <button
+                    key={a.id}
+                    onClick={() => download(a.id)}
+                    className="block underline"
+                  >
+                    {a.nome_file}
+                  </button>
+                ))}
+              </td>
+              <td className="p-2">
+                <button onClick={() => elimina(r.id)} className="border px-2 py-1 rounded">
+                  Elimina
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
