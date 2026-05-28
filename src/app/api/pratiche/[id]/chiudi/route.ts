@@ -36,10 +36,9 @@ export async function POST(req: Request, { params }: Params) {
     const { data: pratica, error } = await supabaseAdmin
       .from("tbpratiche")
       .update({
-        stato: "chiusa",
-        avanzamento: 100,
-        data_chiusura: new Date().toISOString(),
-      })
+  stato: "chiusa",
+  data_chiusura: new Date().toISOString(),
+})
       .eq("id", id)
       .select()
       .single();
