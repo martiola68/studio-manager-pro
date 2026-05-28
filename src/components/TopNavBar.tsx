@@ -324,6 +324,28 @@ export function TopNavBar() {
   ],
 },
     {
+  label: "Controllo di gestione",
+  icon: <BriefcaseBusiness className="h-4 w-4" />,
+  children: [
+    {
+      label: "Elenco generale",
+      href: "/controllo-gestione",
+      icon: <FileText className="h-4 w-4" />,
+    },
+    {
+      label: "Nuovo",
+      href: "/controllo-gestione/nuovo",
+      icon: <FileText className="h-4 w-4" />,
+    },
+    {
+      label: "Storico controlli",
+      href: "/controllo-gestione/storico",
+      icon: <Clock className="h-4 w-4" />,
+    },
+  ],
+},
+    
+    {
       label: "Contenzioso",
       icon: <Scale className="h-4 w-4" />,
       children: [
