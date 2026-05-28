@@ -43,7 +43,15 @@ function formatDateIT(value?: string | null) {
 
 function getPeriodoAlert() {
   const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+  const start = new Date(now.getFullYear(), 0, 1);
+  const days = Math.floor(
+    (now.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)
+  );
+
+  const week = Math.ceil((days + start.getDay() + 1) / 7);
+
+  return `${now.getFullYear()}-W${String(week).padStart(2, "0")}`;
 }
 
 function isInRitardo(dataEsecuzione?: string | null, cadenza?: string | null) {
@@ -163,7 +171,7 @@ export default async function handler(
         controllo_id: controllo.id,
         ok: true,
         skipped: true,
-        reason: "Alert già inviato nel periodo",
+        reason: "Alert già inviato questa settimana",
       });
       continue;
     }
