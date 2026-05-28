@@ -1,18 +1,23 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 const supabaseAdmin = getSupabaseAdmin();
-
 const BUCKET = "controllo-gestione-allegati";
 
+type Params = Promise<{
+  id: string;
+}>;
+
 export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
+  req: NextRequest,
+  context: { params: Params }
 ) {
+  const { id } = await context.params;
+
   const { data, error } = await supabaseAdmin
     .from("tbcontrollo_gestione_allegati")
     .select("*")
-    .eq("controllo_id", params.id)
+    .eq("controllo_id", id)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -23,9 +28,11 @@ export async function GET(
 }
 
 export async function POST(
-  req: Request,
-  { params }: { params: { id: string } }
+  req: NextRequest,
+  context: { params: Params }
 ) {
+  const { id } = await context.params;
+
   const formData = await req.formData();
   const files = formData.getAll("files") as File[];
 
@@ -35,7 +42,7 @@ export async function POST(
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    const filePath = `${params.id}/${crypto.randomUUID()}-${file.name}`;
+    const filePath = `${id}/${crypto.randomUUID()}-${file.name}`;
 
     const { error: uploadError } = await supabaseAdmin.storage
       .from(BUCKET)
@@ -51,7 +58,7 @@ export async function POST(
     const { data, error } = await supabaseAdmin
       .from("tbcontrollo_gestione_allegati")
       .insert({
-        controllo_id: params.id,
+        controllo_id: id,
         nome_file: file.name,
         file_path: filePath,
         mime_type: file.type,
