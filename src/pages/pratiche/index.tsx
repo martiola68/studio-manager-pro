@@ -378,7 +378,7 @@ export default function PratichePage() {
     }
 
     alert("Pratica chiusa correttamente");
-    await caricaPratiche();
+    router.replace(router.asPath);
   }}
 >
   Chiudi
