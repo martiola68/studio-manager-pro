@@ -242,8 +242,6 @@ export default function NuovoControlloGestione() {
       </div>
     ))}
 </div>
-      </div>
-
       <button
         onClick={salva}
         disabled={saving}
