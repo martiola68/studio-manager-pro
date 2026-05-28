@@ -327,8 +327,8 @@ function rimuoviUtenteEdit(id: string) {
 )}
 
  {editRecord && (
-  <div className="fixed inset-0 bg-black/30 flex items-start justify-center pt-20">
-    <div className="bg-white rounded w-[900px] h-[85vh] flex flex-col overflow-hidden">
+ <div className="fixed inset-0 bg-black/30 flex items-start justify-center pt-32 pb-10">
+  <div className="bg-white rounded w-[900px] h-[calc(100vh-180px)] flex flex-col overflow-hidden shadow-2xl">
       <div className="flex justify-between items-center border-b px-6 py-4 bg-white">
         <h2 className="font-bold">Modifica controllo</h2>
 
