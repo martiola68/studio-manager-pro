@@ -1,12 +1,18 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 const supabaseAdmin = getSupabaseAdmin();
 
+type Params = Promise<{
+  id: string;
+}>;
+
 export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
+  req: NextRequest,
+  context: { params: Params }
 ) {
+  const { id } = await context.params;
+
   const { data, error } = await supabaseAdmin
     .from("tbcontrollo_gestione")
     .select(`
@@ -15,7 +21,7 @@ export async function GET(
       utenti:tbcontrollo_gestione_utenti(*, utente:tbutenti(*)),
       allegati:tbcontrollo_gestione_allegati(*)
     `)
-    .eq("id", params.id)
+    .eq("id", id)
     .single();
 
   if (error) {
@@ -26,16 +32,18 @@ export async function GET(
 }
 
 export async function PUT(
-  req: Request,
-  { params }: { params: { id: string } }
+  req: NextRequest,
+  context: { params: Params }
 ) {
+  const { id } = await context.params;
   const body = await req.json();
+
   const { utenti, ...payload } = body;
 
   const { data, error } = await supabaseAdmin
     .from("tbcontrollo_gestione")
     .update(payload)
-    .eq("id", params.id)
+    .eq("id", id)
     .select("*")
     .single();
 
@@ -44,14 +52,21 @@ export async function PUT(
   }
 
   if (Array.isArray(utenti)) {
-    await supabaseAdmin
+    const { error: deleteUtentiError } = await supabaseAdmin
       .from("tbcontrollo_gestione_utenti")
       .delete()
-      .eq("controllo_id", params.id);
+      .eq("controllo_id", id);
+
+    if (deleteUtentiError) {
+      return NextResponse.json(
+        { error: deleteUtentiError.message },
+        { status: 500 }
+      );
+    }
 
     if (utenti.length > 0) {
       const rows = utenti.map((utente_id: string) => ({
-        controllo_id: params.id,
+        controllo_id: id,
         utente_id,
       }));
 
@@ -60,7 +75,10 @@ export async function PUT(
         .insert(rows);
 
       if (utentiError) {
-        return NextResponse.json({ error: utentiError.message }, { status: 500 });
+        return NextResponse.json(
+          { error: utentiError.message },
+          { status: 500 }
+        );
       }
     }
   }
@@ -69,13 +87,15 @@ export async function PUT(
 }
 
 export async function DELETE(
-  req: Request,
-  { params }: { params: { id: string } }
+  req: NextRequest,
+  context: { params: Params }
 ) {
+  const { id } = await context.params;
+
   const { error } = await supabaseAdmin
     .from("tbcontrollo_gestione")
     .delete()
-    .eq("id", params.id);
+    .eq("id", id);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
