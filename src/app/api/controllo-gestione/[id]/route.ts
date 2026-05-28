@@ -105,16 +105,65 @@ export async function DELETE(
       return NextResponse.json({ error: getError.message }, { status: 500 });
     }
 
-    const { error } = await supabaseAdmin
+    const { data: controlliCliente, error: listaError } = await supabaseAdmin
       .from("tbcontrollo_gestione")
-      .delete()
+      .select("id")
       .eq("cliente_id", controllo.cliente_id);
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (listaError) {
+      return NextResponse.json({ error: listaError.message }, { status: 500 });
+    }
+
+    const ids = (controlliCliente || []).map((r) => r.id);
+
+    if (ids.length > 0) {
+      const { error: allegatiError } = await supabaseAdmin
+        .from("tbcontrollo_gestione_allegati")
+        .delete()
+        .in("controllo_id", ids);
+
+      if (allegatiError) {
+        return NextResponse.json({ error: allegatiError.message }, { status: 500 });
+      }
+
+      const { error: utentiError } = await supabaseAdmin
+        .from("tbcontrollo_gestione_utenti")
+        .delete()
+        .in("controllo_id", ids);
+
+      if (utentiError) {
+        return NextResponse.json({ error: utentiError.message }, { status: 500 });
+      }
+
+      const { error: deleteError } = await supabaseAdmin
+        .from("tbcontrollo_gestione")
+        .delete()
+        .in("id", ids);
+
+      if (deleteError) {
+        return NextResponse.json({ error: deleteError.message }, { status: 500 });
+      }
     }
 
     return NextResponse.json({ ok: true });
+  }
+
+  const { error: allegatiError } = await supabaseAdmin
+    .from("tbcontrollo_gestione_allegati")
+    .delete()
+    .eq("controllo_id", id);
+
+  if (allegatiError) {
+    return NextResponse.json({ error: allegatiError.message }, { status: 500 });
+  }
+
+  const { error: utentiError } = await supabaseAdmin
+    .from("tbcontrollo_gestione_utenti")
+    .delete()
+    .eq("controllo_id", id);
+
+  if (utentiError) {
+    return NextResponse.json({ error: utentiError.message }, { status: 500 });
   }
 
   const { error } = await supabaseAdmin
