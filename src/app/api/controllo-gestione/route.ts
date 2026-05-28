@@ -16,9 +16,10 @@ export async function GET(req: NextRequest) {
         allegati:tbcontrollo_gestione_allegati(*)
       `)
     : supabaseAdmin.from("vw_controllo_gestione_corrente").select(`
-        *,
-        cliente:tbclienti(*)
-      `);
+    *,
+    cliente:tbclienti(*),
+    utenti:tbcontrollo_gestione_utenti(*, utente:tbutenti(*))
+  `);
 
   if (clienteId) query = query.eq("cliente_id", clienteId);
 
