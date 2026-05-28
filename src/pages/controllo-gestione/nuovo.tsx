@@ -151,133 +151,215 @@ export default function NuovoControlloGestione() {
     }
   }
 
-  return (
-    <div className="p-6 max-w-3xl space-y-6">
-      <h1 className="text-2xl font-bold">Nuovo controllo di gestione</h1>
+return (
+  <div className="p-6 space-y-6">
+    <h1 className="text-2xl font-bold">Nuovo controllo di gestione</h1>
 
-      <div className="grid grid-cols-2 gap-4">
-        <select
-          className="border p-2 rounded"
-          value={form.cliente_id}
-          onChange={(e) => setForm({ ...form, cliente_id: e.target.value })}
-        >
-          <option value="">Seleziona società</option>
-          {clienti.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.ragione_sociale || c.nome || c.denominazione}
-            </option>
-          ))}
-        </select>
+    <div className="grid grid-cols-1 xl:grid-cols-[420px_1fr] gap-6 items-start">
+      <div className="space-y-4">
+        <div className="border rounded-lg bg-white p-4 space-y-4">
+          <h2 className="font-semibold">Dati controllo</h2>
 
-        <select
-          className="border p-2 rounded"
-          value={form.cadenza_controllo}
-          onChange={(e) =>
-            setForm({ ...form, cadenza_controllo: e.target.value })
-          }
-        >
-          <option value="mensile">Mensile</option>
-          <option value="trimestrale">Trimestrale</option>
-          <option value="quadrimestrale">Quadrimestrale</option>
-          <option value="semestrale">Semestrale</option>
-        </select>
+          <select
+            className="border p-2 rounded w-full"
+            value={form.cliente_id}
+            onChange={(e) => setForm({ ...form, cliente_id: e.target.value })}
+          >
+            <option value="">Seleziona società</option>
+            {clienti.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.ragione_sociale || c.nome || c.denominazione}
+              </option>
+            ))}
+          </select>
 
-<input
-  type="date"
-  className="border p-2 rounded col-span-2"
-  value={form.data_esecuzione}
-  onChange={(e) =>
-    setForm({ ...form, data_esecuzione: e.target.value })
-  }
-/>
+          <select
+            className="border p-2 rounded w-full"
+            value={form.cadenza_controllo}
+            onChange={(e) =>
+              setForm({ ...form, cadenza_controllo: e.target.value })
+            }
+          >
+            <option value="mensile">Mensile</option>
+            <option value="trimestrale">Trimestrale</option>
+            <option value="quadrimestrale">Quadrimestrale</option>
+            <option value="semestrale">Semestrale</option>
+          </select>
 
-        <input
-          className="border p-2 rounded col-span-2"
-          placeholder="Link"
-          value={form.link}
-          onChange={(e) => setForm({ ...form, link: e.target.value })}
-        />
+          <input
+            type="date"
+            className="border p-2 rounded w-full"
+            value={form.data_esecuzione}
+            onChange={(e) =>
+              setForm({ ...form, data_esecuzione: e.target.value })
+            }
+          />
 
-        <textarea
-          className="border p-2 rounded col-span-2"
-          placeholder="Note"
-          rows={4}
-          value={form.note}
-          onChange={(e) => setForm({ ...form, note: e.target.value })}
-        />
+          <input
+            className="border p-2 rounded w-full"
+            placeholder="Link"
+            value={form.link}
+            onChange={(e) => setForm({ ...form, link: e.target.value })}
+          />
 
-        <input
-          type="file"
-          multiple
-          className="border p-2 rounded col-span-2"
-          onChange={(e) => setFiles(e.target.files)}
-        />
+          <textarea
+            className="border p-2 rounded w-full"
+            placeholder="Note generali"
+            rows={4}
+            value={form.note}
+            onChange={(e) => setForm({ ...form, note: e.target.value })}
+          />
+
+          <input
+            type="file"
+            multiple
+            className="border p-2 rounded w-full"
+            onChange={(e) => setFiles(e.target.files)}
+          />
+        </div>
+
+        <div className="border rounded-lg bg-white p-4 space-y-3">
+          <h2 className="font-semibold">Utenti assegnati</h2>
+
+          <div className="flex gap-2">
+            <select
+              className="border p-2 rounded flex-1"
+              value={utenteSelezionato}
+              onChange={(e) => setUtenteSelezionato(e.target.value)}
+            >
+              <option value="">Seleziona utente</option>
+              {utentiDisponibili
+                .filter((u) => !form.utenti.includes(u.id))
+                .map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {[u.nome, u.cognome].filter(Boolean).join(" ") || u.email}
+                  </option>
+                ))}
+            </select>
+
+            <button
+              type="button"
+              onClick={aggiungiUtente}
+              className="border px-4 py-2 rounded bg-gray-100"
+            >
+              Aggiungi
+            </button>
+          </div>
+
+          {utentiDisponibili
+            .filter((u) => form.utenti.includes(u.id))
+            .map((u) => (
+              <div
+                key={u.id}
+                className="flex justify-between items-center border rounded px-3 py-2 bg-white"
+              >
+                <span>
+                  {[u.nome, u.cognome].filter(Boolean).join(" ") || u.email}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => rimuoviUtente(u.id)}
+                  className="text-red-600 text-sm"
+                >
+                  Rimuovi
+                </button>
+              </div>
+            ))}
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => router.push("/controllo-gestione")}
+            className="border px-4 py-2 rounded"
+          >
+            Annulla
+          </button>
+
+          <button
+            onClick={salva}
+            disabled={saving}
+            className="bg-black text-white px-4 py-2 rounded disabled:opacity-50"
+          >
+            {saving ? "Salvataggio..." : "Salva record"}
+          </button>
+        </div>
       </div>
 
-      <div className="border rounded p-4 space-y-4 col-span-2">
-  <h2 className="font-semibold">Checklist controllo di gestione</h2>
+      <div className="border rounded-lg bg-white p-4 space-y-4">
+        <h2 className="font-semibold text-lg">
+          Checklist controllo di gestione
+        </h2>
 
-  {[
-    {
-      n: 1,
-      titolo: "Rilevamento dei Dati (Consuntivo)",
-      testo:
-        "Raccolta dei dati contabili ed extracontabili e aggiornamento della contabilità analitica.",
-    },
-    {
-      n: 2,
-      titolo: "Confronto e Analisi degli Scostamenti",
-      testo:
-        "Confronto Budget vs. Consuntivo e analisi delle cause degli scostamenti.",
-    },
-    {
-      n: 3,
-      titolo: "Redazione del Report (Reporting)",
-      testo:
-        "Creazione del report con KPI principali e condivisione con management o direzione.",
-    },
-    {
-      n: 4,
-      titolo: "Definizione delle Azioni Correttive",
-      testo:
-        "Pianificazione degli interventi e aggiornamento delle previsioni future.",
-    },
-  ].map((step) => (
-    <div key={step.n} className="border rounded p-3 space-y-2 bg-white">
-      <label className="flex items-start gap-2 font-medium">
-        <input
-          type="checkbox"
-          checked={(form as any)[`step_${step.n}_completato`]}
-          onChange={(e) =>
-            setForm({
-              ...form,
-              [`step_${step.n}_completato`]: e.target.checked,
-            } as any)
-          }
-        />
-        <span>
-          {step.n}. {step.titolo}
-        </span>
-      </label>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {[
+            {
+              n: 1,
+              titolo: "Rilevamento Dati",
+              testo:
+                "Raccolta dati contabili ed extracontabili e aggiornamento della contabilità analitica.",
+            },
+            {
+              n: 2,
+              titolo: "Analisi Scostamenti",
+              testo:
+                "Confronto Budget vs. Consuntivo e analisi delle cause degli scostamenti.",
+            },
+            {
+              n: 3,
+              titolo: "Reporting",
+              testo:
+                "Creazione report con KPI principali e condivisione con management o direzione.",
+            },
+            {
+              n: 4,
+              titolo: "Azioni Correttive",
+              testo:
+                "Pianificazione interventi e aggiornamento delle previsioni future.",
+            },
+          ].map((step) => (
+            <div
+              key={step.n}
+              className="border rounded-lg bg-gray-50 p-3 space-y-2"
+            >
+              <label className="flex items-center gap-2 font-medium">
+                <input
+                  type="checkbox"
+                  checked={(form as any)[`step_${step.n}_completato`]}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      [`step_${step.n}_completato`]: e.target.checked,
+                    } as any)
+                  }
+                />
+                <span>
+                  Step {step.n} — {step.titolo}
+                </span>
+              </label>
 
-      <p className="text-sm text-gray-600">{step.testo}</p>
+              <p className="text-sm text-gray-600">{step.testo}</p>
 
-      <textarea
-        className="border p-2 rounded w-full"
-        rows={2}
-        placeholder="Note step"
-        value={(form as any)[`step_${step.n}_note`]}
-        onChange={(e) =>
-          setForm({
-            ...form,
-            [`step_${step.n}_note`]: e.target.value,
-          } as any)
-        }
-      />
+              <textarea
+                className="border p-2 rounded w-full text-sm bg-white"
+                rows={3}
+                placeholder="Note operative step..."
+                value={(form as any)[`step_${step.n}_note`]}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    [`step_${step.n}_note`]: e.target.value,
+                  } as any)
+                }
+              />
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
-  ))}
-</div>
-
+  </div>
+);
     <div className="border rounded p-4 space-y-3">
   <h2 className="font-semibold">Utenti assegnati</h2>
 
