@@ -4,10 +4,9 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 const supabaseAdmin = getSupabaseAdmin();
 
 export async function GET() {
-  const { data, error } = await supabaseAdmin
+  const { data: clienti, error } = await supabaseAdmin
     .from("tbclienti")
     .select("*")
-    .eq("tipo_prestazione_id", "Controllo di gestione")
     .order("ragione_sociale", { ascending: true });
 
   if (error) {
@@ -27,7 +26,7 @@ export async function GET() {
     (controlliAttivi || []).map((c) => c.cliente_id)
   );
 
-  const disponibili = (data || []).filter(
+  const disponibili = (clienti || []).filter(
     (cliente) => !clientiGiaAttivi.has(cliente.id)
   );
 
