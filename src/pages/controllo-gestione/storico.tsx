@@ -64,11 +64,11 @@ export default function StoricoControlliGestione() {
       <table className="w-full border text-sm">
         <thead className="bg-gray-100">
           <tr>
-            <th className="p-2 text-left">Società</th>
+           <th className="p-2 text-left">Società</th>
             <th className="p-2 text-left">Cadenza</th>
-            <th className="p-2 text-left">Data</th>
-            <th className="p-2 text-left">Archiviato</th>
+            <th className="p-2 text-left">Data storico</th>
             <th className="p-2 text-left">Utenti</th>
+            <th className="p-2 text-left">Note</th>
             <th className="p-2 text-left">Allegati</th>
             <th className="p-2 text-left">Azioni</th>
           </tr>
@@ -78,11 +78,10 @@ export default function StoricoControlliGestione() {
             <tr key={r.id} className="border-t align-top">
               <td className="p-2">{r.cliente?.ragione_sociale || r.cliente_id}</td>
               <td className="p-2">{r.cadenza_controllo}</td>
-              <td className="p-2">{r.data_esecuzione}</td>
-              <td className="p-2">{r.archiviato ? "Sì" : "No"}</td>
-              <td className="p-2">
-                {r.utenti?.map((u: any) => u.utente?.nome || u.utente?.email).join(", ")}
-              </td>
+              <td className="p-2">{formatDateIT(r.data_storico)}</td>
+              <td className="p-2">{utentiLabel(r)}</td>
+              <td className="p-2 whitespace-pre-wrap">{r.note}</td>
+           
               <td className="p-2 space-y-1">
                 {r.allegati?.map((a: any) => (
                   <button
