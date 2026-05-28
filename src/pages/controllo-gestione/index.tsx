@@ -92,6 +92,14 @@ const [utenteEditSelezionato, setUtenteEditSelezionato] = useState("");
   data_esecuzione: editRecord.data_esecuzione,
   note: editRecord.note,
   link: editRecord.link,
+        step_1_completato: editRecord.step_1_completato,
+step_1_note: editRecord.step_1_note,
+step_2_completato: editRecord.step_2_completato,
+step_2_note: editRecord.step_2_note,
+step_3_completato: editRecord.step_3_completato,
+step_3_note: editRecord.step_3_note,
+step_4_completato: editRecord.step_4_completato,
+step_4_note: editRecord.step_4_note,
   utenti: (editRecord.utenti || [])
     .map((u: any) => u.utente?.id || u.utente_id)
     .filter(Boolean),
@@ -357,6 +365,70 @@ function rimuoviUtenteEdit(id: string) {
               value={editRecord.note || ""}
               onChange={(e) => setEditRecord({ ...editRecord, note: e.target.value })}
             />
+
+            <div className="border rounded p-4 space-y-4">
+  <h3 className="font-semibold">Checklist controllo di gestione</h3>
+
+  {[
+    {
+      n: 1,
+      titolo: "Rilevamento dei Dati (Consuntivo)",
+      testo:
+        "Raccolta dei dati contabili ed extracontabili e aggiornamento della contabilità analitica.",
+    },
+    {
+      n: 2,
+      titolo: "Confronto e Analisi degli Scostamenti",
+      testo:
+        "Confronto Budget vs. Consuntivo e analisi delle cause degli scostamenti.",
+    },
+    {
+      n: 3,
+      titolo: "Redazione del Report (Reporting)",
+      testo:
+        "Creazione del report con KPI principali e condivisione con management o direzione.",
+    },
+    {
+      n: 4,
+      titolo: "Definizione delle Azioni Correttive",
+      testo:
+        "Pianificazione degli interventi e aggiornamento delle previsioni future.",
+    },
+  ].map((step) => (
+    <div key={step.n} className="border rounded p-3 space-y-2 bg-white">
+      <label className="flex items-start gap-2 font-medium">
+        <input
+          type="checkbox"
+          checked={!!editRecord[`step_${step.n}_completato`]}
+          onChange={(e) =>
+            setEditRecord({
+              ...editRecord,
+              [`step_${step.n}_completato`]: e.target.checked,
+            })
+          }
+        />
+        <span>
+          {step.n}. {step.titolo}
+        </span>
+      </label>
+
+      <p className="text-sm text-gray-600">{step.testo}</p>
+
+      <textarea
+        className="border p-2 rounded w-full"
+        rows={2}
+        placeholder="Note step"
+        value={editRecord[`step_${step.n}_note`] || ""}
+        onChange={(e) =>
+          setEditRecord({
+            ...editRecord,
+            [`step_${step.n}_note`]: e.target.value,
+          })
+        }
+      />
+    </div>
+  ))}
+</div>
 
             <div className="border rounded p-3 space-y-3">
   <h3 className="font-semibold">Utenti assegnati</h3>
