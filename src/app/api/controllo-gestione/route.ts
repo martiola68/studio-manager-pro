@@ -22,7 +22,14 @@ export async function GET(req: Request) {
 
   if (clienteId) query = query.eq("cliente_id", clienteId);
 
-  query = query.order("data_esecuzione", { ascending: false });
+query = storico
+  ? query.order("data_storico", {
+      ascending: false,
+      nullsFirst: false,
+    })
+  : query.order("data_esecuzione", {
+      ascending: false,
+    });
 
   const { data, error } = await query;
 
