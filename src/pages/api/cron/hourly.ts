@@ -89,6 +89,14 @@ if (hourUtc === 8) {
     results.push(
       await callInternal(`/api/promemoria/alert?secret=${SECRET}`, "POST")
     );
+
+  results.push(
+  await callInternal(
+    `/api/controllo-gestione/alert?secret=${SECRET}`,
+    "POST"
+  )
+);
+  
   }
 
   return res.status(200).json({
