@@ -8,6 +8,31 @@ function formatDateIT(value?: string | null) {
   return `${d}/${m}/${y}`;
 }
 
+function isControlloInRitardo(dataEsecuzione?: string | null, cadenza?: string | null) {
+  if (!dataEsecuzione || !cadenza) return false;
+
+  const [y, m, d] = dataEsecuzione.split("-").map(Number);
+  const ultimaData = new Date(y, m - 1, d);
+  const oggi = new Date();
+
+  const scadenza = new Date(ultimaData);
+
+  if (cadenza === "mensile") {
+    scadenza.setMonth(scadenza.getMonth() + 1);
+  } else if (cadenza === "trimestrale") {
+    scadenza.setMonth(scadenza.getMonth() + 3);
+  } else if (cadenza === "quadrimestrale") {
+    scadenza.setMonth(scadenza.getMonth() + 4);
+  } else if (cadenza === "semestrale") {
+    scadenza.setMonth(scadenza.getMonth() + 6);
+  }
+
+  oggi.setHours(0, 0, 0, 0);
+  scadenza.setHours(0, 0, 0, 0);
+
+  return oggi > scadenza;
+}
+
 function utentiLabel(record: any) {
   return (
     record.utenti
@@ -127,7 +152,18 @@ export default function ControlloGestioneIndex() {
         <tbody>
           {records.map((r) => (
             <tr key={r.id} className="border-t align-top">
-              <td className="p-2">{r.cliente?.ragione_sociale || r.cliente_id}</td>
+              <td className="p-2">
+  <div className="flex items-center gap-2">
+    {isControlloInRitardo(r.data_esecuzione, r.cadenza_controllo) && (
+      <span
+        className="h-3 w-3 rounded-full bg-red-600 inline-block"
+        title="Controllo di gestione in ritardo"
+      />
+    )}
+
+    <span>{r.cliente?.ragione_sociale || r.cliente_id}</span>
+  </div>
+</td>
               <td className="p-2">{r.cadenza_controllo}</td>
               <td className="p-2">{formatDateIT(r.data_esecuzione)}</td>
               <td className="p-2">{utentiLabel(r)}</td>
