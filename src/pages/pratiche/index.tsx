@@ -1,5 +1,5 @@
 "use client";
-import { Trash2 } from "lucide-react";
+import { Trash2, Lock } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
@@ -360,8 +360,9 @@ export default function PratichePage() {
 
 <td style={{ padding: 16, textAlign: "right" }}>
 
- <button
+<button
   type="button"
+  title="Chiudi pratica"
   onClick={async () => {
     const ok = confirm("Chiudere questa pratica?");
     if (!ok) return;
@@ -378,11 +379,17 @@ export default function PratichePage() {
     }
 
     alert("Pratica chiusa correttamente");
-
     window.location.reload();
   }}
+  style={{
+    border: 0,
+    background: "transparent",
+    color: "#334155",
+    cursor: "pointer",
+    marginRight: 8,
+  }}
 >
-  Chiudi
+  <Lock size={18} />
 </button>
   
   <button
