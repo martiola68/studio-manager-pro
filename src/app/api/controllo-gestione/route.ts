@@ -23,6 +23,10 @@ export async function GET(req: NextRequest) {
 
   if (clienteId) query = query.eq("cliente_id", clienteId);
 
+  if (storico) {
+  query = query.eq("archiviato", true);
+}
+
   query = storico
     ? query.order("data_storico", { ascending: false, nullsFirst: false })
     : query.order("data_esecuzione", { ascending: false });
