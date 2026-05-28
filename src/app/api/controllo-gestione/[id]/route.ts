@@ -91,6 +91,31 @@ export async function DELETE(
   context: { params: Params }
 ) {
   const { id } = await context.params;
+  const { searchParams } = new URL(req.url);
+  const scope = searchParams.get("scope");
+
+  if (scope === "cliente") {
+    const { data: controllo, error: getError } = await supabaseAdmin
+      .from("tbcontrollo_gestione")
+      .select("cliente_id")
+      .eq("id", id)
+      .single();
+
+    if (getError) {
+      return NextResponse.json({ error: getError.message }, { status: 500 });
+    }
+
+    const { error } = await supabaseAdmin
+      .from("tbcontrollo_gestione")
+      .delete()
+      .eq("cliente_id", controllo.cliente_id);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true });
+  }
 
   const { error } = await supabaseAdmin
     .from("tbcontrollo_gestione")
