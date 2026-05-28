@@ -358,6 +358,64 @@ function rimuoviUtenteEdit(id: string) {
               onChange={(e) => setEditRecord({ ...editRecord, note: e.target.value })}
             />
 
+            <div className="border rounded p-3 space-y-3">
+  <h3 className="font-semibold">Utenti assegnati</h3>
+
+  <div className="flex gap-2">
+    <select
+      className="border p-2 rounded flex-1"
+      value={utenteEditSelezionato}
+      onChange={(e) => setUtenteEditSelezionato(e.target.value)}
+    >
+      <option value="">Seleziona utente</option>
+      {utentiDisponibili
+        .filter(
+          (u) =>
+            !(editRecord.utenti || []).some(
+              (eu: any) => eu.utente?.id === u.id || eu.utente_id === u.id
+            )
+        )
+        .map((u) => (
+          <option key={u.id} value={u.id}>
+            {[u.nome, u.cognome].filter(Boolean).join(" ") || u.email}
+          </option>
+        ))}
+    </select>
+
+    <button
+      type="button"
+      onClick={aggiungiUtenteEdit}
+      className="border px-3 py-2 rounded bg-gray-100"
+    >
+      Aggiungi
+    </button>
+  </div>
+
+  {(editRecord.utenti || []).map((u: any) => {
+    const utente = u.utente || u;
+
+    return (
+      <div
+        key={utente.id || u.utente_id}
+        className="flex justify-between items-center border rounded px-3 py-2 bg-white"
+      >
+        <span>
+          {[utente.nome, utente.cognome].filter(Boolean).join(" ") ||
+            utente.email}
+        </span>
+
+        <button
+          type="button"
+          onClick={() => rimuoviUtenteEdit(utente.id || u.utente_id)}
+          className="text-red-600 text-sm"
+        >
+          Rimuovi
+        </button>
+      </div>
+    );
+  })}
+</div>
+
             <button onClick={salvaModifica} className="bg-black text-white px-4 py-2 rounded">
               Salva modifiche
             </button>
