@@ -1,6 +1,24 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
+function formatDateIT(value?: string | null) {
+  if (!value) return "";
+  const [y, m, d] = value.split("-");
+  return `${d}/${m}/${y}`;
+}
+
+function utentiLabel(record: any) {
+  return (
+    record.utenti
+      ?.map((u: any) =>
+        [u.utente?.nome, u.utente?.cognome].filter(Boolean).join(" ") ||
+        u.utente?.email
+      )
+      .filter(Boolean)
+      .join(", ") || ""
+  );
+}
+
 export default function StoricoControlliGestione() {
   const [records, setRecords] = useState<any[]>([]);
   const [clienteId, setClienteId] = useState("");
