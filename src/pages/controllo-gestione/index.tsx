@@ -51,6 +51,8 @@ export default function ControlloGestioneIndex() {
   const [dataRinnovo, setDataRinnovo] = useState(new Date().toISOString().slice(0, 10));
   const [noteRinnovo, setNoteRinnovo] = useState("");
   const [editRecord, setEditRecord] = useState<any | null>(null);
+  const [utentiDisponibili, setUtentiDisponibili] = useState<any[]>([]);
+const [utenteEditSelezionato, setUtenteEditSelezionato] = useState("");
 
   async function load() {
     const res = await fetch("/api/controllo-gestione");
@@ -86,11 +88,14 @@ export default function ControlloGestioneIndex() {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        cadenza_controllo: editRecord.cadenza_controllo,
-        data_esecuzione: editRecord.data_esecuzione,
-        note: editRecord.note,
-        link: editRecord.link,
-      }),
+  cadenza_controllo: editRecord.cadenza_controllo,
+  data_esecuzione: editRecord.data_esecuzione,
+  note: editRecord.note,
+  link: editRecord.link,
+  utenti: (editRecord.utenti || [])
+    .map((u: any) => u.utente?.id || u.utente_id)
+    .filter(Boolean),
+}),
     });
 
     if (!res.ok) {
@@ -117,9 +122,47 @@ export default function ControlloGestioneIndex() {
     load();
   }
 
-  useEffect(() => {
-    load();
-  }, []);
+ useEffect(() => {
+  load();
+
+  fetch("/api/controllo-gestione/utenti-disponibili")
+    .then((r) => r.json())
+    .then((data) => setUtentiDisponibili(Array.isArray(data) ? data : []));
+}, []);
+
+  function aggiungiUtenteEdit() {
+  if (!editRecord || !utenteEditSelezionato) return;
+
+  const nuovoUtente = utentiDisponibili.find(
+    (u) => u.id === utenteEditSelezionato
+  );
+
+  if (!nuovoUtente) return;
+
+  setEditRecord({
+    ...editRecord,
+    utenti: [
+      ...(editRecord.utenti || []),
+      {
+        utente_id: nuovoUtente.id,
+        utente: nuovoUtente,
+      },
+    ],
+  });
+
+  setUtenteEditSelezionato("");
+}
+
+function rimuoviUtenteEdit(id: string) {
+  if (!editRecord) return;
+
+  setEditRecord({
+    ...editRecord,
+    utenti: (editRecord.utenti || []).filter(
+      (u: any) => u.utente?.id !== id && u.utente_id !== id
+    ),
+  });
+}
 
   return (
     <div className="p-6 space-y-6">
