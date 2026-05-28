@@ -36,6 +36,10 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
   const router = useRouter();
   const praticaId = router.query.id as string;
 
+  function tornaElenco() {
+  router.push("/pratiche");
+}
+
   const [saving, setSaving] = useState(false);
   const [messaggio, setMessaggio] = useState("");
 
@@ -355,6 +359,31 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
 
   return (
     <main style={{ padding: 28, background: "#f8fafc", minHeight: "100vh", fontFamily: font }}>
+    
+      <div
+  style={{
+    marginBottom: 18,
+    display: "flex",
+    justifyContent: "flex-end",
+  }}
+>
+  <button
+    type="button"
+    onClick={tornaElenco}
+    style={{
+      border: "1px solid #cbd5e1",
+      background: "#fff",
+      color: "#334155",
+      borderRadius: 8,
+      padding: "9px 16px",
+      fontWeight: 600,
+      cursor: "pointer",
+      fontFamily: font,
+    }}
+  >
+    ← Torna a elenco pratiche
+  </button>
+</div>
       <h1 style={{ fontSize: 38, fontWeight: 800, margin: 0, color: "#0f172a" }}>
         {pratica.numero_pratica}
       </h1>
