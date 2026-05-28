@@ -20,7 +20,9 @@ export default function NuovoControlloGestione() {
   });
 
   useEffect(() => {
-    fetch("/api/clienti").then((r) => r.json()).then(setClienti);
+   fetch("/api/controllo-gestione/clienti-disponibili")
+  .then((r) => r.json())
+  .then(setClienti);
     fetch("/api/utenti").then((r) => r.json()).then(setUtenti);
   }, []);
 
