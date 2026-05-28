@@ -170,6 +170,12 @@ export default function NuovoControlloGestione() {
           <option value="semestrale">Semestrale</option>
         </select>
 
+          type="date"
+  className="border p-2 rounded col-span-2 bg-gray-100"
+  value={new Date().toISOString().slice(0, 10)}
+  disabled
+/>
+
         <input
           className="border p-2 rounded col-span-2"
           placeholder="Link"
