@@ -15,6 +15,7 @@ export default function NuovoControlloGestione() {
   const [form, setForm] = useState({
     cliente_id: "",
     cadenza_controllo: "mensile",
+    data_esecuzione: new Date().toISOString().slice(0, 10),
     note: "",
     link: "",
     utenti: [] as string[],
@@ -170,11 +171,13 @@ export default function NuovoControlloGestione() {
           <option value="semestrale">Semestrale</option>
         </select>
 
- <input
+<input
   type="date"
-  className="border p-2 rounded col-span-2 bg-gray-100"
-  value={new Date().toISOString().slice(0, 10)}
-  disabled
+  className="border p-2 rounded col-span-2"
+  value={form.data_esecuzione}
+  onChange={(e) =>
+    setForm({ ...form, data_esecuzione: e.target.value })
+  }
 />
 
         <input
