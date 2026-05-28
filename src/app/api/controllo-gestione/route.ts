@@ -47,6 +47,28 @@ export async function POST(req: Request) {
     utenti = [],
   } = body;
 
+  const { data: esistente, error: esistenteError } = await supabaseAdmin
+  .from("tbcontrollo_gestione")
+  .select("id")
+  .eq("cliente_id", cliente_id)
+  .eq("archiviato", false)
+  .maybeSingle();
+
+if (esistenteError) {
+  return NextResponse.json({ error: esistenteError.message }, { status: 500 });
+}
+
+if (esistente) {
+  return NextResponse.json(
+    {
+      error:
+        "Esiste già un controllo attivo per questo cliente. Usa la funzione Rinnova controllo.",
+      controllo_id: esistente.id,
+    },
+    { status: 409 }
+  );
+}
+
   const { data: controllo, error } = await supabaseAdmin
     .from("tbcontrollo_gestione")
     .insert({
