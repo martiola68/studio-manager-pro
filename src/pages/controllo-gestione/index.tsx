@@ -268,11 +268,12 @@ function rimuoviUtenteEdit(id: string) {
         </tbody>
       </table>
 
-   {rinnovoId && (
+{rinnovoId && (
   <div className="fixed inset-0 bg-black/30 flex items-center justify-center">
-    <div className="bg-white rounded p-6 space-y-4 w-96">
+    <div className="bg-white rounded p-6 space-y-4 w-[500px]">
       <div className="flex justify-between items-center">
         <h2 className="font-bold">Rinnova controllo</h2>
+
         <button
           onClick={() => {
             setRinnovoId(null);
@@ -284,6 +285,7 @@ function rimuoviUtenteEdit(id: string) {
       </div>
 
       <label className="block text-sm">Data esecuzione</label>
+
       <input
         type="date"
         className="border p-2 rounded w-full"
@@ -292,6 +294,7 @@ function rimuoviUtenteEdit(id: string) {
       />
 
       <label className="block text-sm">Note</label>
+
       <textarea
         className="border p-2 rounded w-full"
         rows={4}
@@ -323,179 +326,183 @@ function rimuoviUtenteEdit(id: string) {
   </div>
 )}
 
-      {editRecord && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center">
-          <div className="bg-white rounded p-6 space-y-4 w-[900px] max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center">
-              <h2 className="font-bold">Modifica controllo</h2>
-              <button onClick={() => setEditRecord(null)}>
-                <X className="h-4 w-4" />
-              </button>
-            </div>
+ {editRecord && (
+  <div className="fixed inset-0 bg-black/30 flex items-start justify-center pt-20">
+    <div className="bg-white rounded w-[900px] max-h-[calc(100vh-110px)] flex flex-col overflow-hidden">
+      <div className="flex justify-between items-center border-b px-6 py-4 bg-white">
+        <h2 className="font-bold">Modifica controllo</h2>
 
-            <input
-              type="date"
-              className="border p-2 rounded w-full"
-              value={editRecord.data_esecuzione || ""}
-              onChange={(e) => setEditRecord({ ...editRecord, data_esecuzione: e.target.value })}
-            />
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setEditRecord(null)}
+            className="border px-4 py-2 rounded"
+          >
+            Annulla
+          </button>
 
-            <select
-              className="border p-2 rounded w-full"
-              value={editRecord.cadenza_controllo || "mensile"}
-              onChange={(e) => setEditRecord({ ...editRecord, cadenza_controllo: e.target.value })}
-            >
-              <option value="mensile">Mensile</option>
-              <option value="trimestrale">Trimestrale</option>
-              <option value="quadrimestrale">Quadrimestrale</option>
-              <option value="semestrale">Semestrale</option>
-            </select>
+          <button
+            type="button"
+            onClick={salvaModifica}
+            className="bg-black text-white px-4 py-2 rounded"
+          >
+            Salva modifiche
+          </button>
 
-            <input
-              className="border p-2 rounded w-full"
-              placeholder="Link"
-              value={editRecord.link || ""}
-              onChange={(e) => setEditRecord({ ...editRecord, link: e.target.value })}
-            />
+          <button onClick={() => setEditRecord(null)} className="p-2">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
 
-            <textarea
-              className="border p-2 rounded w-full"
-              rows={4}
-              placeholder="Note"
-              value={editRecord.note || ""}
-              onChange={(e) => setEditRecord({ ...editRecord, note: e.target.value })}
-            />
-
-  <div className="border rounded p-4 space-y-4 bg-gray-50">
-  <h3 className="font-semibold text-lg">
-    Checklist controllo di gestione
-  </h3>
-
-  {[
-    {
-      n: 1,
-      titolo: "Rilevamento Dati",
-    },
-    {
-      n: 2,
-      titolo: "Analisi Scostamenti",
-    },
-    {
-      n: 3,
-      titolo: "Reporting",
-    },
-    {
-      n: 4,
-      titolo: "Azioni Correttive",
-    },
-  ].map((step) => (
-    <div
-      key={step.n}
-      className="border rounded-lg bg-white p-3 space-y-2"
-    >
-      <label className="flex items-center gap-3">
+      <div className="p-6 space-y-4 overflow-y-auto">
         <input
-          type="checkbox"
-          checked={!!editRecord[`step_${step.n}_completato`]}
+          type="date"
+          className="border p-2 rounded w-full"
+          value={editRecord.data_esecuzione || ""}
           onChange={(e) =>
-            setEditRecord({
-              ...editRecord,
-              [`step_${step.n}_completato`]: e.target.checked,
-            })
+            setEditRecord({ ...editRecord, data_esecuzione: e.target.value })
           }
         />
 
-        <span className="font-medium">
-          Step {step.n} — {step.titolo}
-        </span>
-
-        {editRecord[`step_${step.n}_completato`] && (
-          <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
-            Completato
-          </span>
-        )}
-      </label>
-
-      <textarea
-        className="border p-2 rounded w-full text-sm"
-        rows={2}
-        placeholder="Note operative step..."
-        value={editRecord[`step_${step.n}_note`] || ""}
-        onChange={(e) =>
-          setEditRecord({
-            ...editRecord,
-            [`step_${step.n}_note`]: e.target.value,
-          })
-        }
-      />
-    </div>
-  ))}
-</div>
-
-            <div className="border rounded p-3 space-y-3">
-  <h3 className="font-semibold">Utenti assegnati</h3>
-
-  <div className="flex gap-2">
-    <select
-      className="border p-2 rounded flex-1"
-      value={utenteEditSelezionato}
-      onChange={(e) => setUtenteEditSelezionato(e.target.value)}
-    >
-      <option value="">Seleziona utente</option>
-      {utentiDisponibili
-        .filter(
-          (u) =>
-            !(editRecord.utenti || []).some(
-              (eu: any) => eu.utente?.id === u.id || eu.utente_id === u.id
-            )
-        )
-        .map((u) => (
-          <option key={u.id} value={u.id}>
-            {[u.nome, u.cognome].filter(Boolean).join(" ") || u.email}
-          </option>
-        ))}
-    </select>
-
-    <button
-      type="button"
-      onClick={aggiungiUtenteEdit}
-      className="border px-3 py-2 rounded bg-gray-100"
-    >
-      Aggiungi
-    </button>
-  </div>
-
-  {(editRecord.utenti || []).map((u: any) => {
-    const utente = u.utente || u;
-
-    return (
-      <div
-        key={utente.id || u.utente_id}
-        className="flex justify-between items-center border rounded px-3 py-2 bg-white"
-      >
-        <span>
-          {[utente.nome, utente.cognome].filter(Boolean).join(" ") ||
-            utente.email}
-        </span>
-
-        <button
-          type="button"
-          onClick={() => rimuoviUtenteEdit(utente.id || u.utente_id)}
-          className="text-red-600 text-sm"
+        <select
+          className="border p-2 rounded w-full"
+          value={editRecord.cadenza_controllo || "mensile"}
+          onChange={(e) =>
+            setEditRecord({ ...editRecord, cadenza_controllo: e.target.value })
+          }
         >
-          Rimuovi
-        </button>
-      </div>
-    );
-  })}
-</div>
+          <option value="mensile">Mensile</option>
+          <option value="trimestrale">Trimestrale</option>
+          <option value="quadrimestrale">Quadrimestrale</option>
+          <option value="semestrale">Semestrale</option>
+        </select>
 
-            <button onClick={salvaModifica} className="bg-black text-white px-4 py-2 rounded">
-              Salva modifiche
+        <input
+          className="border p-2 rounded w-full"
+          placeholder="Link"
+          value={editRecord.link || ""}
+          onChange={(e) => setEditRecord({ ...editRecord, link: e.target.value })}
+        />
+
+        <textarea
+          className="border p-2 rounded w-full"
+          rows={4}
+          placeholder="Note"
+          value={editRecord.note || ""}
+          onChange={(e) => setEditRecord({ ...editRecord, note: e.target.value })}
+        />
+
+        <div className="border rounded p-4 space-y-4 bg-gray-50">
+          <h3 className="font-semibold text-lg">
+            Checklist controllo di gestione
+          </h3>
+
+          {[
+            { n: 1, titolo: "Rilevamento Dati" },
+            { n: 2, titolo: "Analisi Scostamenti" },
+            { n: 3, titolo: "Reporting" },
+            { n: 4, titolo: "Azioni Correttive" },
+          ].map((step) => (
+            <div key={step.n} className="border rounded-lg bg-white p-3 space-y-2">
+              <label className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={!!editRecord[`step_${step.n}_completato`]}
+                  onChange={(e) =>
+                    setEditRecord({
+                      ...editRecord,
+                      [`step_${step.n}_completato`]: e.target.checked,
+                    })
+                  }
+                />
+
+                <span className="font-medium">
+                  Step {step.n} — {step.titolo}
+                </span>
+
+                {editRecord[`step_${step.n}_completato`] && (
+                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                    Completato
+                  </span>
+                )}
+              </label>
+
+              <textarea
+                className="border p-2 rounded w-full text-sm"
+                rows={2}
+                placeholder="Note operative step..."
+                value={editRecord[`step_${step.n}_note`] || ""}
+                onChange={(e) =>
+                  setEditRecord({
+                    ...editRecord,
+                    [`step_${step.n}_note`]: e.target.value,
+                  })
+                }
+              />
+            </div>
+          ))}
+        </div>
+
+        <div className="border rounded p-3 space-y-3">
+          <h3 className="font-semibold">Utenti assegnati</h3>
+
+          <div className="flex gap-2">
+            <select
+              className="border p-2 rounded flex-1"
+              value={utenteEditSelezionato}
+              onChange={(e) => setUtenteEditSelezionato(e.target.value)}
+            >
+              <option value="">Seleziona utente</option>
+              {utentiDisponibili
+                .filter(
+                  (u) =>
+                    !(editRecord.utenti || []).some(
+                      (eu: any) =>
+                        eu.utente?.id === u.id || eu.utente_id === u.id
+                    )
+                )
+                .map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {[u.nome, u.cognome].filter(Boolean).join(" ") || u.email}
+                  </option>
+                ))}
+            </select>
+
+            <button
+              type="button"
+              onClick={aggiungiUtenteEdit}
+              className="border px-3 py-2 rounded bg-gray-100"
+            >
+              Aggiungi
             </button>
           </div>
+
+          {(editRecord.utenti || []).map((u: any) => {
+            const utente = u.utente || u;
+
+            return (
+              <div
+                key={utente.id || u.utente_id}
+                className="flex justify-between items-center border rounded px-3 py-2 bg-white"
+              >
+                <span>
+                  {[utente.nome, utente.cognome].filter(Boolean).join(" ") ||
+                    utente.email}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => rimuoviUtenteEdit(utente.id || u.utente_id)}
+                  className="text-red-600 text-sm"
+                >
+                  Rimuovi
+                </button>
+              </div>
+            );
+          })}
         </div>
-      )}
+      </div>
     </div>
-  );
-}
+  </div>
+)}
