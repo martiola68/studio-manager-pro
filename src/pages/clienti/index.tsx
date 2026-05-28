@@ -886,27 +886,7 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
       });
       return;
     }
-
-    let operatoreNome: string | null = null;
-    let professionistaNome: string | null = null;
-
-    if (cliente.flag_imu) {
-      if (cliente.utente_operatore_id) {
-        const { data: operatore, error: opErr } = await supabase
-          .from("tbutenti")
-          .select("nome, cognome")
-          .eq("id", cliente.utente_operatore_id)
-          .maybeSingle();
-
-        if (opErr) throw opErr;
-
-        if (operatore) {
-          operatoreNome = `${safeString(operatore.nome)} ${safeString(
-            operatore.cognome
-          )}`.trim();
-        }
-      }
-
+  
       if (cliente.utente_professionista_id) {
         const { data: professionista, error: prErr } = await supabase
           .from("tbutenti")
@@ -1207,33 +1187,38 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
           break;
         }
 
-        case "IMU": {
-          const exists = await esisteRecord("tbscadimu");
-          if (exists) {
-            giaPresenti++;
-            break;
-          }
+       case "IMU": {
+  const exists = await esisteRecord("tbscadimu");
 
-          await eseguiInsert(
-            "tbscadimu",
-            {
-              id: nuovoId(),
-              cliente_id: cliente.id,
-              anno_riferimento: annoRiferimento,
-              archiviato: false,
-              studio_id: studioIdEffettivo,
-              nominativo: cliente.ragione_sociale,
-              operatore: operatoreNome,
-              professionista: professionistaNome,
-              conferma_riga: false,
-              alert_1_inviato: false,
-              alert_2_inviato: false,
-            },
-            "IMU"
-          );
-          inseriti++;
-          break;
-        }
+  if (exists) {
+    giaPresenti++;
+    break;
+  }
+
+  await eseguiInsert(
+    "tbscadimu",
+    {
+      id: nuovoId(),
+      cliente_id: cliente.id,
+      anno_riferimento: annoRiferimento,
+      archiviato: false,
+      studio_id: studioIdEffettivo,
+      nominativo: cliente.ragione_sociale,
+
+      // SOLO OPERATORE
+      utente_operatore_id:
+        cliente.utente_operatore_id ?? null,
+
+      conferma_riga: false,
+      alert_1_inviato: false,
+      alert_2_inviato: false,
+    },
+    "IMU"
+  );
+
+  inseriti++;
+  break;
+}
       }
     }
 
