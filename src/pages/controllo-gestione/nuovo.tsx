@@ -150,30 +150,32 @@ export default function NuovoControlloGestione() {
       setSaving(false);
     }
   }
-
+const [stepAperto, setStepAperto] = useState<number | null>(1);
+  
+  
 return (
   <div className="p-6 space-y-6">
     <div className="flex items-center justify-between">
-  <h1 className="text-2xl font-bold">Nuovo controllo di gestione</h1>
+      <h1 className="text-2xl font-bold">Nuovo controllo di gestione</h1>
 
-  <div className="flex gap-2">
-    <button
-      type="button"
-      onClick={() => router.push("/controllo-gestione")}
-      className="border px-4 py-2 rounded"
-    >
-      Annulla
-    </button>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => router.push("/controllo-gestione")}
+          className="border px-4 py-2 rounded"
+        >
+          Annulla
+        </button>
 
-    <button
-      onClick={salva}
-      disabled={saving}
-      className="bg-black text-white px-4 py-2 rounded disabled:opacity-50"
-    >
-      {saving ? "Salvataggio..." : "Salva record"}
-    </button>
-  </div>
-</div>
+        <button
+          onClick={salva}
+          disabled={saving}
+          className="bg-black text-white px-4 py-2 rounded disabled:opacity-50"
+        >
+          {saving ? "Salvataggio..." : "Salva record"}
+        </button>
+      </div>
+    </div>
 
     <div className="grid grid-cols-1 xl:grid-cols-[420px_1fr] gap-6 items-start">
       <div className="space-y-4">
@@ -225,7 +227,7 @@ return (
           <textarea
             className="border p-2 rounded w-full"
             placeholder="Note generali"
-            rows={4}
+            rows={3}
             value={form.note}
             onChange={(e) => setForm({ ...form, note: e.target.value })}
           />
@@ -287,44 +289,20 @@ return (
               </div>
             ))}
         </div>
+      </div>
 
-            <div className="border rounded-lg bg-white p-4 space-y-4">
-        <h2 className="font-semibold text-lg">
-          Checklist controllo di gestione
-        </h2>
+      <div className="border rounded-lg bg-white p-4 space-y-3">
+        <h2 className="font-semibold text-lg">Checklist controllo di gestione</h2>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {[
-            {
-              n: 1,
-              titolo: "Rilevamento Dati",
-              testo:
-                "Raccolta dati contabili ed extracontabili e aggiornamento della contabilità analitica.",
-            },
-            {
-              n: 2,
-              titolo: "Analisi Scostamenti",
-              testo:
-                "Confronto Budget vs. Consuntivo e analisi delle cause degli scostamenti.",
-            },
-            {
-              n: 3,
-              titolo: "Reporting",
-              testo:
-                "Creazione report con KPI principali e condivisione con management o direzione.",
-            },
-            {
-              n: 4,
-              titolo: "Azioni Correttive",
-              testo:
-                "Pianificazione interventi e aggiornamento delle previsioni future.",
-            },
-          ].map((step) => (
-            <div
-              key={step.n}
-              className="border rounded-lg bg-gray-50 p-3 space-y-2"
-            >
-              <label className="flex items-center gap-2 font-medium">
+        {[
+          { n: 1, titolo: "Rilevamento Dati" },
+          { n: 2, titolo: "Analisi Scostamenti" },
+          { n: 3, titolo: "Reporting" },
+          { n: 4, titolo: "Azioni Correttive" },
+        ].map((step) => (
+          <div key={step.n} className="border rounded-lg">
+            <div className="flex items-center justify-between p-3 bg-gray-50">
+              <label className="flex items-center gap-3 font-medium">
                 <input
                   type="checkbox"
                   checked={(form as any)[`step_${step.n}_completato`]}
@@ -335,28 +313,41 @@ return (
                     } as any)
                   }
                 />
+
                 <span>
                   Step {step.n} — {step.titolo}
                 </span>
               </label>
 
-              <p className="text-sm text-gray-600">{step.testo}</p>
-
-              <textarea
-                className="border p-2 rounded w-full text-sm bg-white"
-                rows={3}
-                placeholder="Note operative step..."
-                value={(form as any)[`step_${step.n}_note`]}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    [`step_${step.n}_note`]: e.target.value,
-                  } as any)
+              <button
+                type="button"
+                onClick={() =>
+                  setStepAperto(stepAperto === step.n ? null : step.n)
                 }
-              />
+                className="text-sm underline"
+              >
+                {stepAperto === step.n ? "Chiudi note" : "Apri note"}
+              </button>
             </div>
-          ))}
-        </div>
+
+            {stepAperto === step.n && (
+              <div className="p-3">
+                <textarea
+                  className="border p-2 rounded w-full text-sm"
+                  rows={4}
+                  placeholder="Note operative step..."
+                  value={(form as any)[`step_${step.n}_note`]}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      [`step_${step.n}_note`]: e.target.value,
+                    } as any)
+                  }
+                />
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   </div>
