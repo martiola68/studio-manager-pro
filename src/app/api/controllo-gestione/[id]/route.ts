@@ -117,44 +117,96 @@ export async function DELETE(
     const ids = (controlliCliente || []).map((r) => r.id);
 
     if (ids.length > 0) {
-    const { error: precedenteError } = await supabaseAdmin
-  .from("tbcontrollo_gestione")
-  .update({ controllo_precedente_id: null })
-  .eq("controllo_precedente_id", id);
+      const { error: precedenteError } = await supabaseAdmin
+        .from("tbcontrollo_gestione")
+        .update({ controllo_precedente_id: null })
+        .in("controllo_precedente_id", ids);
 
-if (precedenteError) {
-  return NextResponse.json(
-    { error: precedenteError.message },
-    { status: 500 }
-  );
-}
-
-const { error: allegatiError } = await supabaseAdmin
-  .from("tbcontrollo_gestione_allegati")
-  .delete()
-  .eq("controllo_id", id);
-
-if (allegatiError) {
-  return NextResponse.json({ error: allegatiError.message }, { status: 500 });
-}
-
-const { error: utentiError } = await supabaseAdmin
-  .from("tbcontrollo_gestione_utenti")
-  .delete()
-  .eq("controllo_id", id);
-
-if (utentiError) {
-  return NextResponse.json({ error: utentiError.message }, { status: 500 });
-}
-
-const { error } = await supabaseAdmin
-  .from("tbcontrollo_gestione")
-  .delete()
-  .eq("id", id);
-
-if (error) {
-  return NextResponse.json({ error: error.message }, { status: 500 });
-}
-
-return NextResponse.json({ ok: true });
+      if (precedenteError) {
+        return NextResponse.json(
+          { error: precedenteError.message },
+          { status: 500 }
+        );
       }
+
+      const { error: allegatiError } = await supabaseAdmin
+        .from("tbcontrollo_gestione_allegati")
+        .delete()
+        .in("controllo_id", ids);
+
+      if (allegatiError) {
+        return NextResponse.json(
+          { error: allegatiError.message },
+          { status: 500 }
+        );
+      }
+
+      const { error: utentiError } = await supabaseAdmin
+        .from("tbcontrollo_gestione_utenti")
+        .delete()
+        .in("controllo_id", ids);
+
+      if (utentiError) {
+        return NextResponse.json(
+          { error: utentiError.message },
+          { status: 500 }
+        );
+      }
+
+      const { error: deleteError } = await supabaseAdmin
+        .from("tbcontrollo_gestione")
+        .delete()
+        .in("id", ids);
+
+      if (deleteError) {
+        return NextResponse.json(
+          { error: deleteError.message },
+          { status: 500 }
+        );
+      }
+    }
+
+    return NextResponse.json({ ok: true });
+  }
+
+  const { error: precedenteError } = await supabaseAdmin
+    .from("tbcontrollo_gestione")
+    .update({ controllo_precedente_id: null })
+    .eq("controllo_precedente_id", id);
+
+  if (precedenteError) {
+    return NextResponse.json(
+      { error: precedenteError.message },
+      { status: 500 }
+    );
+  }
+
+  const { error: allegatiError } = await supabaseAdmin
+    .from("tbcontrollo_gestione_allegati")
+    .delete()
+    .eq("controllo_id", id);
+
+  if (allegatiError) {
+    return NextResponse.json({ error: allegatiError.message }, { status: 500 });
+  }
+
+  const { error: utentiError } = await supabaseAdmin
+    .from("tbcontrollo_gestione_utenti")
+    .delete()
+    .eq("controllo_id", id);
+
+  if (utentiError) {
+    return NextResponse.json({ error: utentiError.message }, { status: 500 });
+  }
+
+  const { error } = await supabaseAdmin
+    .from("tbcontrollo_gestione")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true });
+}
