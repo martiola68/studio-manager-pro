@@ -242,7 +242,6 @@ export default function NuovoControlloGestione() {
       </div>
     ))}
 </div>
-        )}
       </div>
 
       <button
