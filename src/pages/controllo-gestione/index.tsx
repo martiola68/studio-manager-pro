@@ -328,7 +328,7 @@ function rimuoviUtenteEdit(id: string) {
 
  {editRecord && (
   <div className="fixed inset-0 bg-black/30 flex items-start justify-center pt-20">
-    <div className="bg-white rounded w-[900px] max-h-[calc(100vh-110px)] flex flex-col overflow-hidden">
+    <div className="bg-white rounded w-[900px] h-[85vh] flex flex-col overflow-hidden">
       <div className="flex justify-between items-center border-b px-6 py-4 bg-white">
         <h2 className="font-bold">Modifica controllo</h2>
 
@@ -355,7 +355,7 @@ function rimuoviUtenteEdit(id: string) {
         </div>
       </div>
 
-      <div className="p-6 space-y-4 overflow-y-auto">
+   <div className="flex-1 p-6 space-y-4 overflow-y-auto">
         <input
           type="date"
           className="border p-2 rounded w-full"
