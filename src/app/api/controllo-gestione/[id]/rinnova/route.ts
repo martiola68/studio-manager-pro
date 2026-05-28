@@ -1,16 +1,22 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 const supabaseAdmin = getSupabaseAdmin();
 
+type Params = Promise<{
+  id: string;
+}>;
+
 export async function POST(
-  req: Request,
-  { params }: { params: { id: string } }
+  req: NextRequest,
+  context: { params: Params }
 ) {
+  const { id } = await context.params;
+
   const { data, error } = await supabaseAdmin.rpc(
     "rinnova_controllo_gestione",
     {
-      p_controllo_id: params.id,
+      p_controllo_id: id,
     }
   );
 
