@@ -6,7 +6,7 @@ import { useRouter } from "next/router";
 
 import FormDistribuzioneUtili from "@/components/pratiche/forms/FormDistribuzioneUtili";
 import FormMessaLiquidazione from "@/components/pratiche/forms/FormMessaLiquidazione";
-import FormNominaAmministratore from "@/components/pratiche/forms/FormNominaAmministratore";
+
 import FormCambioAmministratore from "@/components/pratiche/forms/FormCambioAmministratore";
 import FormDeterminaLiquidazione from "@/components/pratiche/forms/FormDeterminaLiquidazione";
 
@@ -536,10 +536,6 @@ const importoNettoNuovoSocio =
 
 if (pratica?.tipo?.classe_form === "messa_liquidazione") {
   return <FormMessaLiquidazione pratica={pratica} />;
-}
-
-if (pratica?.tipo?.classe_form === "nomina_amministratore") {
-  return <FormNominaAmministratore pratica={pratica} />;
 }
 
 if (pratica?.tipo?.classe_form === "cambio_amministratore") {
