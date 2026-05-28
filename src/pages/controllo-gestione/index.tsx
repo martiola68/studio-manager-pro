@@ -325,7 +325,7 @@ function rimuoviUtenteEdit(id: string) {
 
       {editRecord && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center">
-          <div className="bg-white rounded p-6 space-y-4 w-[500px]">
+          <div className="bg-white rounded p-6 space-y-4 w-[900px] max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center">
               <h2 className="font-bold">Modifica controllo</h2>
               <button onClick={() => setEditRecord(null)}>
@@ -366,37 +366,34 @@ function rimuoviUtenteEdit(id: string) {
               onChange={(e) => setEditRecord({ ...editRecord, note: e.target.value })}
             />
 
-            <div className="border rounded p-4 space-y-4">
-  <h3 className="font-semibold">Checklist controllo di gestione</h3>
+  <div className="border rounded p-4 space-y-4 bg-gray-50">
+  <h3 className="font-semibold text-lg">
+    Checklist controllo di gestione
+  </h3>
 
   {[
     {
       n: 1,
-      titolo: "Rilevamento dei Dati (Consuntivo)",
-      testo:
-        "Raccolta dei dati contabili ed extracontabili e aggiornamento della contabilità analitica.",
+      titolo: "Rilevamento Dati",
     },
     {
       n: 2,
-      titolo: "Confronto e Analisi degli Scostamenti",
-      testo:
-        "Confronto Budget vs. Consuntivo e analisi delle cause degli scostamenti.",
+      titolo: "Analisi Scostamenti",
     },
     {
       n: 3,
-      titolo: "Redazione del Report (Reporting)",
-      testo:
-        "Creazione del report con KPI principali e condivisione con management o direzione.",
+      titolo: "Reporting",
     },
     {
       n: 4,
-      titolo: "Definizione delle Azioni Correttive",
-      testo:
-        "Pianificazione degli interventi e aggiornamento delle previsioni future.",
+      titolo: "Azioni Correttive",
     },
   ].map((step) => (
-    <div key={step.n} className="border rounded p-3 space-y-2 bg-white">
-      <label className="flex items-start gap-2 font-medium">
+    <div
+      key={step.n}
+      className="border rounded-lg bg-white p-3 space-y-2"
+    >
+      <label className="flex items-center gap-3">
         <input
           type="checkbox"
           checked={!!editRecord[`step_${step.n}_completato`]}
@@ -407,17 +404,22 @@ function rimuoviUtenteEdit(id: string) {
             })
           }
         />
-        <span>
-          {step.n}. {step.titolo}
+
+        <span className="font-medium">
+          Step {step.n} — {step.titolo}
         </span>
+
+        {editRecord[`step_${step.n}_completato`] && (
+          <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+            Completato
+          </span>
+        )}
       </label>
 
-      <p className="text-sm text-gray-600">{step.testo}</p>
-
       <textarea
-        className="border p-2 rounded w-full"
+        className="border p-2 rounded w-full text-sm"
         rows={2}
-        placeholder="Note step"
+        placeholder="Note operative step..."
         value={editRecord[`step_${step.n}_note`] || ""}
         onChange={(e) =>
           setEditRecord({
