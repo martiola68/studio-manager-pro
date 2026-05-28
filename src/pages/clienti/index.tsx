@@ -887,24 +887,7 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
       return;
     }
   
-      if (cliente.utente_professionista_id) {
-        const { data: professionista, error: prErr } = await supabase
-          .from("tbutenti")
-          .select("nome, cognome")
-          .eq("id", cliente.utente_professionista_id)
-          .maybeSingle();
-
-        if (prErr) throw prErr;
-
-        if (professionista) {
-          professionistaNome = `${safeString(professionista.nome)} ${safeString(
-            professionista.cognome
-          )}`.trim();
-        }
-      }
-    }
-
-    const esisteRecord = async (tabella: string) => {
+     const esisteRecord = async (tabella: string) => {
       const { data, error } = await supabase
         .from(tabella as any)
         .select("id")
