@@ -75,30 +75,7 @@ function giornoLabel(n: number) {
   return giorni.find((g) => g.value === n)?.label || "";
 }
 
-async function eliminaMese() {
-  if (!gruppoSelezionato) return;
 
-  if (!confirm("Eliminare la generazione del mese selezionato?")) return;
-
-  const res = await fetch("/api/presenze/smart/elimina-mese", {
-    method: "DELETE",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      gruppo_id: gruppoSelezionato,
-      anno,
-      mese,
-    }),
-  });
-
-  const data = await res.json();
-
-  if (!res.ok) {
-    alert(data.error || "Errore eliminazione mese");
-    return;
-  }
-
-  await loadCalendario();
-}
 
 export default function SmartWorkingPresenze() {
   const now = new Date();
@@ -294,6 +271,31 @@ export default function SmartWorkingPresenze() {
       setLoading(false);
     }
   }
+
+  async function eliminaMese() {
+  if (!gruppoSelezionato) return;
+
+  if (!confirm("Eliminare la generazione del mese selezionato?")) return;
+
+  const res = await fetch("/api/presenze/smart/elimina-mese", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      gruppo_id: gruppoSelezionato,
+      anno,
+      mese,
+    }),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    alert(data.error || "Errore eliminazione mese");
+    return;
+  }
+
+  await loadCalendario();
+}
 
   return (
     <div className="p-6 space-y-6">
