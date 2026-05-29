@@ -385,6 +385,12 @@ export function TopNavBar() {
       children: [
     { label: "Presenze", href: "/presenze", icon: <Clock className="h-4 w-4" /> },
 
+        {
+  label: "Smart working",
+  href: "/presenze/smart",
+  icon: <Calendar className="h-4 w-4" />,
+},
+
 {
   label: "Assenze settimanali",
   href: "/presenze/assenze-settimanali",
