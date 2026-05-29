@@ -3,8 +3,6 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 const supabaseAdmin = getSupabaseAdmin();
 
-
-
 function pad(n: number) {
   return String(n).padStart(2, "0");
 }
@@ -17,30 +15,6 @@ function weekdayIT(d: Date) {
   const js = d.getDay();
   if (js === 0 || js === 6) return null;
   return js; // 1 lun - 5 ven
-}
-
-async function loadFestivita(anno: number, mese: number) {
-  const start = `${anno}-${pad(mese)}-01`;
-  const endDate = new Date(anno, mese, 0);
-  const end = `${anno}-${pad(mese)}-${pad(endDate.getDate())}`;
-
-  const { data, error } = await supabaseAdmin
-    .from("tbfestivita")
-    .select("data_festivita, descrizione")
-    .gte("data_festivita", start)
-    .lte("data_festivita", end);
-
-  if (error) {
-    throw error;
-  }
-
-  const map = new Map<string, string>();
-
-  (data || []).forEach((f) => {
-    map.set(f.data_festivita, f.descrizione);
-  });
-
-  return map;
 }
 
 function getWeeks(anno: number, mese: number) {
@@ -63,29 +37,62 @@ function getWeeks(anno: number, mese: number) {
     d.setDate(d.getDate() + 1);
   }
 
-  if (currentWeek.length > 0) weeks.push(currentWeek);
+  if (currentWeek.length > 0) {
+    weeks.push(currentWeek);
+  }
 
   return weeks;
 }
 
-function scegliGiornoExtra(
-  week: Date[],
-  giornoFisso: number,
+async function loadFestivita(anno: number, mese: number) {
+  const start = `${anno}-${pad(mese)}-01`;
+  const endDate = new Date(anno, mese, 0);
+  const end = `${anno}-${pad(mese)}-${pad(endDate.getDate())}`;
+
+  const { data, error } = await supabaseAdmin
+    .from("tbfestivita")
+    .select("data_festivita, descrizione")
+    .gte("data_festivita", start)
+    .lte("data_festivita", end);
+
+  if (error) throw error;
+
+  const map = new Map<string, string>();
+
+  (data || []).forEach((f) => {
+    map.set(f.data_festivita, f.descrizione);
+  });
+
+  return map;
+}
+
+function getExtraDayFromJuneLogic(
   weekIndex: number,
-  utenteIndex: number,
-  festivitaMap: Map<string, string>
+  userIndex: number,
+  availableDays: number[]
 ) {
-  const pattern = [1, 3, 4, 5]; // lun, mer, gio, ven
-  const candidati = pattern
-    .map((wd) => week.find((d) => weekdayIT(d) === wd))
-    .filter((d): d is Date => !!d)
-    .filter((d) => weekdayIT(d) !== giornoFisso)
-    .filter((d) => !festivitaMap.has(isoDate(d)));
+  /*
+    Logica derivata da giugno:
+    - martedì è giorno fisso per tutti, se non festivo
+    - ogni persona ha 1 solo giorno extra nella settimana
+    - rotazione fra lunedì, mercoledì, giovedì, venerdì
+    - non assegna mai più di 2 presenze totali/settimana
+  */
 
-  if (candidati.length === 0) return null;
+  const preferredRotation = [
+    [1, 4, 5, 3], // ED
+    [5, 1, 3, 4], // DD
+    [1, 5, 4, 3], // RD
+    [3, 1, 5, 4], // MF
+  ];
 
-  const index = (weekIndex + utenteIndex) % candidati.length;
-  return candidati[index];
+  const base = preferredRotation[userIndex % preferredRotation.length];
+  const shifted = [
+    ...base.slice(weekIndex % base.length),
+    ...base.slice(0, weekIndex % base.length),
+  ];
+
+  return shifted.find((d) => availableDays.includes(d)) || null;
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -122,42 +129,52 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: utentiError.message });
   }
 
+  const festivitaMap = await loadFestivita(Number(anno), Number(mese));
   const weeks = getWeeks(Number(anno), Number(mese));
   const rows: any[] = [];
-
-  const festivitaMap = await loadFestivita(Number(anno), Number(mese));
 
   for (let weekIndex = 0; weekIndex < weeks.length; weekIndex++) {
     const week = weeks[weekIndex];
 
-    for (let utenteIndex = 0; utenteIndex < (utenti || []).length; utenteIndex++) {
-      const utente = utenti![utenteIndex];
+    const availableDays = week
+      .filter((d) => !festivitaMap.has(isoDate(d)))
+      .map((d) => weekdayIT(d))
+      .filter((d): d is number => !!d);
 
+    for (let userIndex = 0; userIndex < (utenti || []).length; userIndex++) {
+      const utente = utenti![userIndex];
       const presenzeScelte = new Set<string>();
 
-    const giornoFisso = week.find(
-  (d) =>
-    weekdayIT(d) === gruppo.giorno_fisso &&
-    !festivitaMap.has(isoDate(d))
-);
+      const totaleRichiesto = Number(gruppo.presenze_settimanali || 2);
+      const giornoFissoNumero = Number(gruppo.giorno_fisso || 2);
 
-      if (giornoFisso) {
+      const giornoFisso = week.find(
+        (d) =>
+          weekdayIT(d) === giornoFissoNumero &&
+          !festivitaMap.has(isoDate(d))
+      );
+
+      if (giornoFisso && presenzeScelte.size < totaleRichiesto) {
         presenzeScelte.add(isoDate(giornoFisso));
       }
 
-      const totaleRichiesto = Number(gruppo.presenze_settimanali || 2);
-      const mancanti = Math.max(0, totaleRichiesto - presenzeScelte.size);
+      if (presenzeScelte.size < totaleRichiesto) {
+        const extraDayNumber = getExtraDayFromJuneLogic(
+          weekIndex,
+          userIndex,
+          availableDays.filter((d) => d !== giornoFissoNumero)
+        );
 
-      if (mancanti > 0) {
-       const extra = scegliGiornoExtra(
-  week,
-  gruppo.giorno_fisso,
-  weekIndex,
-  utenteIndex,
-  festivitaMap
-);
-        if (extra) {
-          presenzeScelte.add(isoDate(extra));
+        if (extraDayNumber) {
+          const extraDate = week.find(
+            (d) =>
+              weekdayIT(d) === extraDayNumber &&
+              !festivitaMap.has(isoDate(d))
+          );
+
+          if (extraDate && presenzeScelte.size < totaleRichiesto) {
+            presenzeScelte.add(isoDate(extraDate));
+          }
         }
       }
 
@@ -165,16 +182,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const wd = weekdayIT(day);
         if (!wd) continue;
 
-       const festivoNome = festivitaMap.get(isoDate(day)) || null;
+        const key = isoDate(day);
+        const festivoNome = festivitaMap.get(key) || null;
 
         rows.push({
           gruppo_id,
           utente_id: utente.utente_id,
-          data: isoDate(day),
+          data: key,
           anno: Number(anno),
           mese: Number(mese),
           giorno_settimana: wd,
-          presenza: !festivoNome && presenzeScelte.has(isoDate(day)),
+          presenza: !festivoNome && presenzeScelte.has(key),
           festivo: !!festivoNome,
           nota: festivoNome,
           generato_auto: true,
