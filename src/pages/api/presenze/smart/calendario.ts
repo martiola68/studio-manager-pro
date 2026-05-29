@@ -23,11 +23,11 @@ export default async function handler(
   }
 
   const { data, error } = await supabaseAdmin
-    .from("tbpayroll_smart_calendario")
+    .from("tbpresenze_smart_calendario")
     .select(`
       *,
       utente:tbutenti(id, nome, cognome, email, settore, tipo_rapporto),
-      gruppo:tbpayroll_smart_gruppi(*)
+      gruppo:tbpresenze_smart_gruppi(*)
     `)
     .eq("gruppo_id", gruppo_id)
     .eq("anno", anno)
