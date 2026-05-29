@@ -78,7 +78,7 @@ export default async function handler(
   }
 
   const { data: gruppo, error: gruppoError } = await supabaseAdmin
-    .from("tbpayroll_smart_gruppi")
+    .from("tbpresenze_smart_gruppi")
     .select("*")
     .eq("id", gruppo_id)
     .single();
@@ -90,7 +90,7 @@ export default async function handler(
   }
 
   const { data: utenti, error: utentiError } = await supabaseAdmin
-    .from("tbpayroll_smart_gruppi_utenti")
+    .from("tbpresenze_smart_gruppi_utenti")
     .select("utente_id, ordine")
     .eq("gruppo_id", gruppo_id)
     .eq("attivo", true)
@@ -144,14 +144,14 @@ export default async function handler(
   }
 
   await supabaseAdmin
-    .from("tbpayroll_smart_calendario")
+    .from("tbpresenze_smart_calendario")
     .delete()
     .eq("gruppo_id", gruppo_id)
     .eq("anno", Number(anno))
     .eq("mese", Number(mese));
 
   const { error: insertError } = await supabaseAdmin
-    .from("tbpayroll_smart_calendario")
+    .from("tbpresenze_smart_calendario")
     .insert(rows);
 
   if (insertError) {
