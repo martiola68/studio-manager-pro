@@ -3,18 +3,7 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 const supabaseAdmin = getSupabaseAdmin();
 
-const festivitaFisse: Record<string, string> = {
-  "01-01": "Capodanno",
-  "01-06": "Epifania",
-  "04-25": "Festa della Liberazione",
-  "05-01": "Festa del Lavoro",
-  "06-02": "Festa della Repubblica",
-  "08-15": "Ferragosto",
-  "11-01": "Ognissanti",
-  "12-08": "Immacolata Concezione",
-  "12-25": "Natale",
-  "12-26": "Santo Stefano",
-};
+
 
 function pad(n: number) {
   return String(n).padStart(2, "0");
@@ -26,47 +15,82 @@ function isoDate(d: Date) {
 
 function weekdayIT(d: Date) {
   const js = d.getDay();
-
   if (js === 0 || js === 6) return null;
-
-  return js; // 1 lunedì - 5 venerdì
+  return js; // 1 lun - 5 ven
 }
 
-function isFestivo(d: Date) {
-  const key = `${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  return festivitaFisse[key] || null;
+async function loadFestivita(anno: number, mese: number) {
+  const start = `${anno}-${pad(mese)}-01`;
+  const endDate = new Date(anno, mese, 0);
+  const end = `${anno}-${pad(mese)}-${pad(endDate.getDate())}`;
+
+  const { data, error } = await supabaseAdmin
+    .from("tbfestivita")
+    .select("data_festivita, descrizione")
+    .gte("data_festivita", start)
+    .lte("data_festivita", end);
+
+  if (error) {
+    throw error;
+  }
+
+  const map = new Map<string, string>();
+
+  (data || []).forEach((f) => {
+    map.set(f.data_festivita, f.descrizione);
+  });
+
+  return map;
 }
 
-function getWorkingDays(anno: number, mese: number) {
-  const days: Date[] = [];
+function getWeeks(anno: number, mese: number) {
+  const weeks: Date[][] = [];
+  let currentWeek: Date[] = [];
   const d = new Date(anno, mese - 1, 1);
 
   while (d.getMonth() === mese - 1) {
     const wd = weekdayIT(d);
 
     if (wd) {
-      days.push(new Date(d));
+      if (wd === 1 && currentWeek.length > 0) {
+        weeks.push(currentWeek);
+        currentWeek = [];
+      }
+
+      currentWeek.push(new Date(d));
     }
 
     d.setDate(d.getDate() + 1);
   }
 
-  return days;
+  if (currentWeek.length > 0) weeks.push(currentWeek);
+
+  return weeks;
 }
 
-function getSecondoGiorno(settimanaIndex: number, utenteIndex: number) {
-  const pattern = [1, 3, 4, 5]; // lunedì, mercoledì, giovedì, venerdì
-  return pattern[(settimanaIndex + utenteIndex) % pattern.length];
-}
-
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
+function scegliGiornoExtra(
+  week: Date[],
+  giornoFisso: number,
+  weekIndex: number,
+  utenteIndex: number,
+  festivitaMap: Map<string, string>
 ) {
+  const pattern = [1, 3, 4, 5]; // lun, mer, gio, ven
+  const candidati = pattern
+    .map((wd) => week.find((d) => weekdayIT(d) === wd))
+    .filter((d): d is Date => !!d)
+    .filter((d) => weekdayIT(d) !== giornoFisso)
+    .filter((d) => !festivitaMap.has(isoDate(d)));
+
+  if (candidati.length === 0) return null;
+
+  const index = (weekIndex + utenteIndex) % candidati.length;
+  return candidati[index];
+}
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
-    return res.status(405).json({
-      error: "Metodo non consentito",
-    });
+    return res.status(405).json({ error: "Metodo non consentito" });
   }
 
   const { gruppo_id, anno, mese } = req.body;
@@ -84,9 +108,7 @@ export default async function handler(
     .single();
 
   if (gruppoError) {
-    return res.status(500).json({
-      error: gruppoError.message,
-    });
+    return res.status(500).json({ error: gruppoError.message });
   }
 
   const { data: utenti, error: utentiError } = await supabaseAdmin
@@ -97,49 +119,67 @@ export default async function handler(
     .order("ordine", { ascending: true });
 
   if (utentiError) {
-    return res.status(500).json({
-      error: utentiError.message,
-    });
+    return res.status(500).json({ error: utentiError.message });
   }
 
-  const workingDays = getWorkingDays(Number(anno), Number(mese));
+  const weeks = getWeeks(Number(anno), Number(mese));
   const rows: any[] = [];
 
-  for (const day of workingDays) {
-    const wd = weekdayIT(day);
-    if (!wd) continue;
+  const festivitaMap = await loadFestivita(Number(anno), Number(mese));
 
-    const festivoNome = isFestivo(day);
-    const weekIndex = Math.floor((day.getDate() - 1) / 7);
+  for (let weekIndex = 0; weekIndex < weeks.length; weekIndex++) {
+    const week = weeks[weekIndex];
 
-    for (let i = 0; i < (utenti || []).length; i++) {
-      const utente = utenti![i];
+    for (let utenteIndex = 0; utenteIndex < (utenti || []).length; utenteIndex++) {
+      const utente = utenti![utenteIndex];
 
-      let presenza = false;
-      let nota = null;
+      const presenzeScelte = new Set<string>();
 
-      if (festivoNome) {
-        presenza = false;
-        nota = festivoNome;
-      } else if (wd === gruppo.giorno_fisso) {
-        presenza = true;
-      } else {
-        const secondoGiorno = getSecondoGiorno(weekIndex, i);
-        presenza = wd === secondoGiorno;
+    const giornoFisso = week.find(
+  (d) =>
+    weekdayIT(d) === gruppo.giorno_fisso &&
+    !festivitaMap.has(isoDate(d))
+);
+
+      if (giornoFisso) {
+        presenzeScelte.add(isoDate(giornoFisso));
       }
 
-      rows.push({
-        gruppo_id,
-        utente_id: utente.utente_id,
-        data: isoDate(day),
-        anno: Number(anno),
-        mese: Number(mese),
-        giorno_settimana: wd,
-        presenza,
-        festivo: !!festivoNome,
-        nota,
-        generato_auto: true,
-      });
+      const totaleRichiesto = Number(gruppo.presenze_settimanali || 2);
+      const mancanti = Math.max(0, totaleRichiesto - presenzeScelte.size);
+
+      if (mancanti > 0) {
+       const extra = scegliGiornoExtra(
+  week,
+  gruppo.giorno_fisso,
+  weekIndex,
+  utenteIndex,
+  festivitaMap
+);
+        if (extra) {
+          presenzeScelte.add(isoDate(extra));
+        }
+      }
+
+      for (const day of week) {
+        const wd = weekdayIT(day);
+        if (!wd) continue;
+
+       const festivoNome = festivitaMap.get(isoDate(day)) || null;
+
+        rows.push({
+          gruppo_id,
+          utente_id: utente.utente_id,
+          data: isoDate(day),
+          anno: Number(anno),
+          mese: Number(mese),
+          giorno_settimana: wd,
+          presenza: !festivoNome && presenzeScelte.has(isoDate(day)),
+          festivo: !!festivoNome,
+          nota: festivoNome,
+          generato_auto: true,
+        });
+      }
     }
   }
 
@@ -155,16 +195,11 @@ export default async function handler(
     .insert(rows);
 
   if (insertError) {
-    return res.status(500).json({
-      error: insertError.message,
-    });
+    return res.status(500).json({ error: insertError.message });
   }
 
   return res.status(200).json({
     ok: true,
-    gruppo_id,
-    anno: Number(anno),
-    mese: Number(mese),
     righe: rows.length,
   });
 }
