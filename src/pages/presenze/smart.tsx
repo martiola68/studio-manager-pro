@@ -75,6 +75,31 @@ function giornoLabel(n: number) {
   return giorni.find((g) => g.value === n)?.label || "";
 }
 
+async function eliminaMese() {
+  if (!gruppoSelezionato) return;
+
+  if (!confirm("Eliminare la generazione del mese selezionato?")) return;
+
+  const res = await fetch("/api/presenze/smart/elimina-mese", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      gruppo_id: gruppoSelezionato,
+      anno,
+      mese,
+    }),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    alert(data.error || "Errore eliminazione mese");
+    return;
+  }
+
+  await loadCalendario();
+}
+
 export default function SmartWorkingPresenze() {
   const now = new Date();
 
@@ -461,6 +486,15 @@ export default function SmartWorkingPresenze() {
               >
                 Genera mese
               </button>
+
+              <button
+  type="button"
+  onClick={eliminaMese}
+  disabled={!gruppoSelezionato}
+  className="border border-red-600 text-red-600 px-4 py-2 rounded disabled:opacity-50"
+>
+  Elimina mese
+</button>
             </div>
 
             {gruppoCorrente && (
