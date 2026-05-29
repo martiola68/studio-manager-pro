@@ -9,10 +9,10 @@ export default async function handler(
 ) {
   if (req.method === "GET") {
     const { data, error } = await supabaseAdmin
-      .from("tbpayroll_smart_gruppi")
+      .from("tbpresenze_smart_gruppi")
       .select(`
         *,
-        utenti:tbpayroll_smart_gruppi_utenti(
+        utenti:tbpresenze_smart_gruppi_utenti(
           id,
           utente_id,
           ordine,
@@ -48,7 +48,7 @@ export default async function handler(
     }
 
     const { data: gruppo, error: gruppoError } = await supabaseAdmin
-      .from("tbpayroll_smart_gruppi")
+      .from("tbpresenze_smart_gruppi")
       .insert({
         settore,
         tipo_rapporto: tipo_rapporto || null,
@@ -73,7 +73,7 @@ export default async function handler(
       }));
 
       const { error: utentiError } = await supabaseAdmin
-        .from("tbpayroll_smart_gruppi_utenti")
+        .from("tbpresenze_smart_gruppi_utenti")
         .insert(rows);
 
       if (utentiError) {
