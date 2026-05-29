@@ -583,7 +583,7 @@ export default function SmartWorkingPresenze() {
                   const first = righe[0];
 
                   return (
-                    <tr key={data}>
+                   <tr key={data} className={first.festivo ? "bg-gray-100" : ""}>
                       <td className="border p-2 font-medium">
                         {formatDateIT(data)}
                       </td>
@@ -600,17 +600,19 @@ export default function SmartWorkingPresenze() {
                         const r = righe.find((x) => x.utente_id === u.id);
 
                         return (
-                          <td
-                            key={u.id}
-                            className={
-                              "border p-2 text-center " +
-                              (r?.presenza
-                                ? "bg-green-50 font-semibold"
-                                : "text-gray-400")
-                            }
-                          >
-                            {r?.presenza ? "Presenza" : ""}
-                          </td>
+                         <td
+  key={u.id}
+  className={
+    "border p-2 text-center " +
+    (first.festivo
+      ? "bg-gray-200 text-gray-500"
+      : r?.presenza
+      ? "bg-green-50 font-semibold"
+      : "text-gray-400")
+  }
+>
+  {first.festivo ? "" : r?.presenza ? "Presenza" : ""}
+</td>
                         );
                       })}
                     </tr>
