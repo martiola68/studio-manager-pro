@@ -3,9 +3,14 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 const supabaseAdmin = getSupabaseAdmin();
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "Metodo non consentito" });
+    return res.status(405).json({
+      error: "Metodo non consentito",
+    });
   }
 
   const {
@@ -30,94 +35,106 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (richiedente_id === sostituto_id) {
     return res.status(400).json({
-      error: "Il dipendente richiedente e il sostituto devono essere diversi",
+      error:
+        "Il richiedente e il sostituto devono essere diversi",
     });
   }
 
-  const { data: righe, error: readError } = await supabaseAdmin
-    .from("tbpresenze_smart_calendario")
-    .select("*")
-    .eq("gruppo_id", gruppo_id)
-    .in("utente_id", [richiedente_id, sostituto_id])
-    .in("data", [data_richiedente, data_sostituto]);
+  const { data: righe, error: readError } =
+    await supabaseAdmin
+      .from("tbpresenze_smart_calendario")
+      .select("*")
+      .eq("gruppo_id", gruppo_id)
+      .in("utente_id", [
+        richiedente_id,
+        sostituto_id,
+      ])
+      .in("data", [
+        data_richiedente,
+        data_sostituto,
+      ]);
 
   if (readError) {
-    return res.status(500).json({ error: readError.message });
+    return res.status(500).json({
+      error: readError.message,
+    });
   }
 
-  const rRichiedente = righe?.find(
+  const presenzaRichiedente = righe?.find(
     (r) =>
       r.utente_id === richiedente_id &&
       r.data === data_richiedente &&
       r.presenza === true
   );
 
-  const rSostituto = righe?.find(
+  const presenzaSostituto = righe?.find(
     (r) =>
       r.utente_id === sostituto_id &&
       r.data === data_sostituto &&
       r.presenza === true
   );
 
-  if (!rRichiedente) {
+  if (!presenzaRichiedente) {
     return res.status(400).json({
-      error: "Il richiedente non risulta presente nel giorno selezionato",
+      error:
+        "Il richiedente non risulta presente nel giorno selezionato",
     });
   }
 
-  if (!rSostituto) {
+  if (!presenzaSostituto) {
     return res.status(400).json({
-      error: "Il sostituto non risulta presente nel giorno selezionato",
+      error:
+        "Il sostituto non risulta presente nel giorno selezionato",
     });
   }
 
-  const updates = [
+  const operazioni = [
     {
-      gruppo_id,
       utente_id: richiedente_id,
       data: data_richiedente,
       presenza: false,
       nota: "Cambio turno ceduto",
     },
     {
-      gruppo_id,
       utente_id: sostituto_id,
       data: data_richiedente,
       presenza: true,
-      nota: `Cambio turno da ${data_sostituto}`,
+      nota: "Cambio turno ricevuto",
     },
     {
-      gruppo_id,
       utente_id: sostituto_id,
       data: data_sostituto,
       presenza: false,
       nota: "Cambio turno ceduto",
     },
     {
-      gruppo_id,
       utente_id: richiedente_id,
       data: data_sostituto,
       presenza: true,
-      nota: `Cambio turno da ${data_richiedente}`,
+      nota: "Cambio turno ricevuto",
     },
   ];
 
-  for (const u of updates) {
+  for (const op of operazioni) {
     const { error } = await supabaseAdmin
       .from("tbpresenze_smart_calendario")
       .update({
-        presenza: u.presenza,
-        nota: u.nota,
+        presenza: op.presenza,
+        nota: op.nota,
         generato_auto: false,
       })
-      .eq("gruppo_id", u.gruppo_id)
-      .eq("utente_id", u.utente_id)
-      .eq("data", u.data);
+      .eq("gruppo_id", gruppo_id)
+      .eq("utente_id", op.utente_id)
+      .eq("data", op.data);
 
     if (error) {
-      return res.status(500).json({ error: error.message });
+      return res.status(500).json({
+        error: error.message,
+      });
     }
   }
 
-  return res.status(200).json({ ok: true });
+  return res.status(200).json({
+    ok: true,
+  });
 }
