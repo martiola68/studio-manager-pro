@@ -297,6 +297,37 @@ export default function SmartWorkingPresenze() {
   await loadCalendario();
 }
 
+  async function eliminaGruppo() {
+  if (!gruppoSelezionato) return;
+
+  if (
+    !confirm(
+      "Eliminare definitivamente questo gruppo smart working?\n\nVerranno eliminati anche calendario generato e utenti collegati al gruppo."
+    )
+  ) {
+    return;
+  }
+
+  const res = await fetch("/api/presenze/smart/elimina-gruppo", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      gruppo_id: gruppoSelezionato,
+    }),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    alert(data.error || "Errore eliminazione gruppo");
+    return;
+  }
+
+  setGruppoSelezionato("");
+  setCalendario([]);
+  await loadGruppi();
+}
+
   return (
     <div className="p-6 space-y-6">
       <div>
@@ -391,6 +422,15 @@ export default function SmartWorkingPresenze() {
                     </option>
                   ))}
                 </select>
+
+                <button
+  type="button"
+  onClick={eliminaGruppo}
+  disabled={!gruppoSelezionato}
+  className="bg-red-600 text-white px-4 py-2 rounded disabled:opacity-50"
+>
+  Elimina gruppo
+</button>
 
                 <button
                   type="button"
