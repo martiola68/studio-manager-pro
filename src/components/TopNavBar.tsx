@@ -404,6 +404,11 @@ export function TopNavBar() {
 },
 
 { label: "Dipendenti", href: "/payroll/dipendenti", icon: <Users className="h-4 w-4" /> },
+        {
+  label: "Creazione gruppi smart",
+  href: "/presenze/smart-gruppi",
+  icon: <Users className="h-4 w-4" />,
+},
         { label: "Qualifiche", href: "/payroll/qualifiche", icon: <FileText className="h-4 w-4" /> },
       ],
     },
