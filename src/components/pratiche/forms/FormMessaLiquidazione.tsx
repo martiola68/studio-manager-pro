@@ -908,9 +908,24 @@ function normalizzaCF(cf: string) {
       </select>
     </div>
 
-    <button type="button" style={secondaryButton}>
-      + Nuovo
-    </button>
+   <button
+  type="button"
+  style={secondaryButton}
+  onClick={() => {
+    setNuovoNominativo({
+      nome_cognome: "",
+      codice_fiscale: "",
+      indirizzo: "",
+      cap: "",
+      citta: "",
+      provincia: "",
+    });
+
+    setMostraNuovoNominativo(true);
+  }}
+>
+  + Nuovo
+</button>
   </div>
 
   <div
