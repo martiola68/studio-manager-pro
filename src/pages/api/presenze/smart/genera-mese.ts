@@ -14,30 +14,33 @@ function isoDate(d: Date) {
 function weekdayIT(d: Date) {
   const js = d.getDay();
   if (js === 0 || js === 6) return null;
-  return js;
+  return js; // 1 lun, 2 mar, 3 mer, 4 gio, 5 ven
 }
 
-function getWeeks(anno: number, mese: number) {
-  const weeks: Date[][] = [];
-  let week: Date[] = [];
+function mondayOfWeek(d: Date) {
+  const copy = new Date(d);
+  const day = copy.getDay() || 7;
+  copy.setDate(copy.getDate() - day + 1);
+  copy.setHours(0, 0, 0, 0);
+  return copy;
+}
+
+function weekIndexFromBase(d: Date) {
+  const base = new Date(2025, 11, 1); // 01/12/2025 lunedì, base file Excel
+  const monday = mondayOfWeek(d);
+  return Math.floor((monday.getTime() - base.getTime()) / (7 * 24 * 60 * 60 * 1000));
+}
+
+function getWorkingDays(anno: number, mese: number) {
+  const days: Date[] = [];
   const d = new Date(anno, mese - 1, 1);
 
   while (d.getMonth() === mese - 1) {
-    const wd = weekdayIT(d);
-
-    if (wd) {
-      if (wd === 1 && week.length > 0) {
-        weeks.push(week);
-        week = [];
-      }
-      week.push(new Date(d));
-    }
-
+    if (weekdayIT(d)) days.push(new Date(d));
     d.setDate(d.getDate() + 1);
   }
 
-  if (week.length > 0) weeks.push(week);
-  return weeks;
+  return days;
 }
 
 async function loadFestivita(anno: number, mese: number) {
@@ -54,79 +57,37 @@ async function loadFestivita(anno: number, mese: number) {
   if (error) throw error;
 
   const map = new Map<string, string>();
-  (data || []).forEach((f) => map.set(f.data_festivita, f.descrizione));
-  return map;
-}
 
-async function loadUltimiExtra(
-  gruppoId: string,
-  utentiIds: string[],
-  anno: number,
-  mese: number,
-  giornoFisso: number
-) {
-  const start = `${anno}-${pad(mese)}-01`;
-
-  const { data } = await supabaseAdmin
-    .from("tbpresenze_smart_calendario")
-    .select("utente_id, giorno_settimana, data")
-    .eq("gruppo_id", gruppoId)
-    .in("utente_id", utentiIds)
-    .eq("presenza", true)
-    .eq("festivo", false)
-    .neq("giorno_settimana", giornoFisso)
-    .lt("data", start)
-    .order("data", { ascending: false });
-
-  const map = new Map<string, number | null>();
-  utentiIds.forEach((id) => map.set(id, null));
-
-  (data || []).forEach((r) => {
-    if (!map.get(r.utente_id)) {
-      map.set(r.utente_id, Number(r.giorno_settimana));
-    }
+  (data || []).forEach((f) => {
+    map.set(f.data_festivita, f.descrizione);
   });
 
   return map;
 }
 
-function assegnaExtraPerGiorno(params: {
-  utenti: { utente_id: string; ordine: number }[];
-  giorniExtraDisponibili: number[];
-  weekIndex: number;
-  ultimoExtra: Map<string, number | null>;
-}) {
-  const { utenti, giorniExtraDisponibili, weekIndex, ultimoExtra } = params;
+function extraUserIndexForDay(weekIndex: number, weekday: number) {
+  /*
+    Pattern Excel:
+    Settimana 0: ED lun, DD mer, RD gio, MF ven
+    Settimana 1: DD lun, RD mer, MF gio, ED ven
+    Settimana 2: RD lun, MF mer, ED gio, DD ven
+    Settimana 3: MF lun, ED mer, DD gio, RD ven
 
-  const assegnazioni = new Map<string, number>();
-  const utentiOrdinati = [...utenti].sort((a, b) => a.ordine - b.ordine);
+    Così chi fa venerdì NON fa lunedì successivo.
+  */
 
-  const utentiRuotati = [
-    ...utentiOrdinati.slice(weekIndex % utentiOrdinati.length),
-    ...utentiOrdinati.slice(0, weekIndex % utentiOrdinati.length),
-  ];
+  const dayPosition: Record<number, number> = {
+    1: 0, // lunedì
+    3: 1, // mercoledì
+    4: 2, // giovedì
+    5: 3, // venerdì
+  };
 
-  const utentiGiaAssegnati = new Set<string>();
+  const pos = dayPosition[weekday];
 
-  for (const giorno of giorniExtraDisponibili) {
-    const candidato = utentiRuotati.find((u) => {
-      if (utentiGiaAssegnati.has(u.utente_id)) return false;
+  if (pos === undefined) return null;
 
-      const precedente = ultimoExtra.get(u.utente_id) || null;
-
-      if (precedente === 5 && giorno === 1) return false;
-
-      return true;
-    });
-
-    if (!candidato) continue;
-
-    assegnazioni.set(candidato.utente_id, giorno);
-    utentiGiaAssegnati.add(candidato.utente_id);
-    ultimoExtra.set(candidato.utente_id, giorno);
-  }
-
-  return assegnazioni;
+  return (weekIndex + pos) % 4;
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -165,88 +126,44 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const utentiAttivi = utenti || [];
   const giornoFisso = Number(gruppo.giorno_fisso || 2);
-  const presenzeSettimanali = Number(gruppo.presenze_settimanali || 2);
 
   const festivitaMap = await loadFestivita(Number(anno), Number(mese));
-  const weeks = getWeeks(Number(anno), Number(mese));
-
-  const ultimoExtra = await loadUltimiExtra(
-    gruppo_id,
-    utentiAttivi.map((u) => u.utente_id),
-    Number(anno),
-    Number(mese),
-    giornoFisso
-  );
+  const days = getWorkingDays(Number(anno), Number(mese));
 
   const rows: any[] = [];
 
-  for (let weekIndex = 0; weekIndex < weeks.length; weekIndex++) {
-    const week = weeks[weekIndex];
+  for (const day of days) {
+    const wd = weekdayIT(day);
+    if (!wd) continue;
 
-    const giorniExtraDisponibili = week
-      .filter((d) => !festivitaMap.has(isoDate(d)))
-      .map((d) => weekdayIT(d))
-      .filter((d): d is number => !!d)
-      .filter((d) => d !== giornoFisso)
-      .sort((a, b) => a - b);
+    const key = isoDate(day);
+    const festivoNome = festivitaMap.get(key) || null;
+    const weekIndex = weekIndexFromBase(day);
 
-    const extraPerUtente =
-      presenzeSettimanali > 1
-        ? assegnaExtraPerGiorno({
-            utenti: utentiAttivi,
-            giorniExtraDisponibili,
-            weekIndex,
-            ultimoExtra,
-          })
-        : new Map<string, number>();
+    for (let userIndex = 0; userIndex < utentiAttivi.length; userIndex++) {
+      const utente = utentiAttivi[userIndex];
 
-    for (const utente of utentiAttivi) {
-      const presenzeScelte = new Set<string>();
+      let presenza = false;
 
-      const giornoFissoData = week.find(
-        (d) =>
-          weekdayIT(d) === giornoFisso &&
-          !festivitaMap.has(isoDate(d))
-      );
-
-      if (giornoFissoData) {
-        presenzeScelte.add(isoDate(giornoFissoData));
+      if (wd === giornoFisso) {
+        presenza = true;
+      } else {
+        const extraIndex = extraUserIndexForDay(weekIndex, wd);
+        presenza = extraIndex === userIndex;
       }
 
-      const extraGiorno = extraPerUtente.get(utente.utente_id);
-
-      if (extraGiorno) {
-        const extraData = week.find(
-          (d) =>
-            weekdayIT(d) === extraGiorno &&
-            !festivitaMap.has(isoDate(d))
-        );
-
-        if (extraData) {
-          presenzeScelte.add(isoDate(extraData));
-        }
-      }
-
-      for (const day of week) {
-        const wd = weekdayIT(day);
-        if (!wd) continue;
-
-        const key = isoDate(day);
-        const festivoNome = festivitaMap.get(key) || null;
-
-        rows.push({
-          gruppo_id,
-          utente_id: utente.utente_id,
-          data: key,
-          anno: Number(anno),
-          mese: Number(mese),
-          giorno_settimana: wd,
-          presenza: !festivoNome && presenzeScelte.has(key),
-          festivo: !!festivoNome,
-          nota: festivoNome,
-          generato_auto: true,
-        });
-      }
+      rows.push({
+        gruppo_id,
+        utente_id: utente.utente_id,
+        data: key,
+        anno: Number(anno),
+        mese: Number(mese),
+        giorno_settimana: wd,
+        presenza,
+        festivo: !!festivoNome,
+        nota: festivoNome,
+        generato_auto: true,
+      });
     }
   }
 
