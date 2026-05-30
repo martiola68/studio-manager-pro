@@ -270,13 +270,6 @@ async function caricaNominativi() {
   }
 }
 
-  const data = await res.json();
-
-  if (res.ok) {
-    setUtenteLoggato(data.utente || data.user || data);
-  }
-}
-
 function normalizzaCF(cf: string) {
   return String(cf || "").trim().toUpperCase();
 }
