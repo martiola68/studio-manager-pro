@@ -315,6 +315,10 @@ export default function SmartWorkingPresenze() {
     return calcolaDataSostitutoProposta();
   }, [calcolaDataSostitutoProposta]);
 
+  const puoRichiedereCambio = Boolean(
+    !richiestaAperta && utenteLoggato && utenteLoggatoNelGruppo
+  );
+
   const confermaAbilitata = Boolean(
     richiestaAperta &&
       utenteLoggato &&
@@ -486,7 +490,7 @@ export default function SmartWorkingPresenze() {
             <div>
               <label className="block text-sm font-medium mb-1">Dipendente richiedente</label>
               <select
-                className="border p-2 rounded w-full"
+                className="border p-2 rounded w-full disabled:bg-gray-100 disabled:text-gray-500"
                 value={cambio.richiedente_id}
                 onChange={(e) =>
                   setCambio({
@@ -494,6 +498,7 @@ export default function SmartWorkingPresenze() {
                     data_richiedente: "",
                   })
                 }
+                disabled={!puoRichiedereCambio}
               >
                 <option value="">Seleziona</option>
                 {utentiCalendario.map((u) => (
@@ -507,10 +512,10 @@ export default function SmartWorkingPresenze() {
             <div>
               <label className="block text-sm font-medium mb-1">Giorno da cambiare</label>
               <select
-                className="border p-2 rounded w-full"
+                className="border p-2 rounded w-full disabled:bg-gray-100 disabled:text-gray-500"
                 value={cambio.data_richiedente}
                 onChange={(e) => setCambio({ ...cambio, data_richiedente: e.target.value })}
-                disabled={!cambio.richiedente_id}
+                disabled={!puoRichiedereCambio || !cambio.richiedente_id}
               >
                 <option value="">Seleziona</option>
                 {presenzeRichiedente.map((r) => (
@@ -525,11 +530,17 @@ export default function SmartWorkingPresenze() {
             <button
               type="button"
               onClick={richiediCambioTurno}
-              disabled={loading || !gruppoSelezionato || !cambio.richiedente_id || !cambio.data_richiedente}
+              disabled={loading || !puoRichiedereCambio || !gruppoSelezionato || !cambio.richiedente_id || !cambio.data_richiedente}
               className="bg-black text-white px-4 py-2 rounded disabled:opacity-50"
             >
               Richiedi cambio
             </button>
+          </div>
+        )}
+
+        {!richiestaAperta && utenteLoggato && !utenteLoggatoNelGruppo && (
+          <div className="text-sm text-gray-600">
+            Non fai parte del gruppo selezionato: puoi consultare il calendario, ma non puoi richiedere cambi turno.
           </div>
         )}
 
