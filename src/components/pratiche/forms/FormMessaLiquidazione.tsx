@@ -234,6 +234,18 @@ useEffect(() => {
      }
 }, [praticaId]);
 
+  async function caricaSoci() {
+  const res = await fetch(`/api/pratiche/${praticaId}/soci`, {
+    cache: "no-store",
+  });
+
+  const data = await res.json();
+
+  if (res.ok) {
+    setSoci(data.soci || []);
+  }
+}
+
   function aggiornaCampo(campo: string, valore: string) {
     setForm((prev) => ({
       ...prev,
