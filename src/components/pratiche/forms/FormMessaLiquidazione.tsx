@@ -535,16 +535,24 @@ function normalizzaCF(cf: string) {
       </select>
     </div>
 
-    <button
-      type="button"
-      style={secondaryButton}
-      onClick={() =>
-        setMostraNuovoNominativo(!mostraNuovoNominativo)
-      }
-    >
-      + Nuovo
-    </button>
+   <button
+  type="button"
+  style={secondaryButton}
+  onClick={() => {
+    setNuovoNominativo({
+      nome_cognome: "",
+      codice_fiscale: "",
+      indirizzo: "",
+      cap: "",
+      citta: "",
+      provincia: "",
+    });
 
+    setMostraNuovoNominativo(true);
+  }}
+>
+  + Nuovo
+</button>
     <div>
       <label style={labelStyle}>% partecipazione</label>
       <input
@@ -921,7 +929,7 @@ function normalizzaCF(cf: string) {
       provincia: "",
     });
 
-    setMostraNuovoNominativo(true);
+    setMostraNuovoNominativo(false);
   }}
 >
   + Nuovo
