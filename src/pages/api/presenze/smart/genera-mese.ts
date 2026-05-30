@@ -37,9 +37,7 @@ function getWeeks(anno: number, mese: number) {
     d.setDate(d.getDate() + 1);
   }
 
-  if (currentWeek.length > 0) {
-    weeks.push(currentWeek);
-  }
+  if (currentWeek.length > 0) weeks.push(currentWeek);
 
   return weeks;
 }
@@ -66,33 +64,38 @@ async function loadFestivita(anno: number, mese: number) {
   return map;
 }
 
-function getExtraDayFromJuneLogic(
-  weekIndex: number,
-  userIndex: number,
-  availableDays: number[]
-) {
-  /*
-    Logica derivata da giugno:
-    - martedì è giorno fisso per tutti, se non festivo
-    - ogni persona ha 1 solo giorno extra nella settimana
-    - rotazione fra lunedì, mercoledì, giovedì, venerdì
-    - non assegna mai più di 2 presenze totali/settimana
-  */
+function scegliExtra(params: {
+  availableDays: number[];
+  userIndex: number;
+  weekIndex: number;
+  ultimoExtraPrecedente?: number | null;
+}) {
+  const { availableDays, userIndex, weekIndex, ultimoExtraPrecedente } = params;
 
-  const preferredRotation = [
-    [1, 4, 5, 3], // ED
-    [5, 1, 3, 4], // DD
+  const rotazioni = [
+    [4, 3, 5, 1], // ED
+    [5, 4, 3, 1], // DD
     [1, 5, 4, 3], // RD
     [3, 1, 5, 4], // MF
   ];
 
-  const base = preferredRotation[userIndex % preferredRotation.length];
+  const base = rotazioni[userIndex % rotazioni.length];
   const shifted = [
     ...base.slice(weekIndex % base.length),
     ...base.slice(0, weekIndex % base.length),
   ];
 
-  return shifted.find((d) => availableDays.includes(d)) || null;
+  for (const giorno of shifted) {
+    if (!availableDays.includes(giorno)) continue;
+
+    // Se la settimana precedente ha fatto venerdì,
+    // questa settimana non può fare lunedì.
+    if (ultimoExtraPrecedente === 5 && giorno === 1) continue;
+
+    return giorno;
+  }
+
+  return null;
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -133,8 +136,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const weeks = getWeeks(Number(anno), Number(mese));
   const rows: any[] = [];
 
+  const ultimoExtraPerUtente = new Map<string, number | null>();
+
   for (let weekIndex = 0; weekIndex < weeks.length; weekIndex++) {
     const week = weeks[weekIndex];
+
+    const giornoFissoNumero = Number(gruppo.giorno_fisso || 2);
+    const totaleRichiesto = Number(gruppo.presenze_settimanali || 2);
 
     const availableDays = week
       .filter((d) => !festivitaMap.has(isoDate(d)))
@@ -144,9 +152,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     for (let userIndex = 0; userIndex < (utenti || []).length; userIndex++) {
       const utente = utenti![userIndex];
       const presenzeScelte = new Set<string>();
-
-      const totaleRichiesto = Number(gruppo.presenze_settimanali || 2);
-      const giornoFissoNumero = Number(gruppo.giorno_fisso || 2);
 
       const giornoFisso = week.find(
         (d) =>
@@ -159,11 +164,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       if (presenzeScelte.size < totaleRichiesto) {
-        const extraDayNumber = getExtraDayFromJuneLogic(
-          weekIndex,
+        const ultimoExtraPrecedente =
+          ultimoExtraPerUtente.get(utente.utente_id) || null;
+
+        const extraDayNumber = scegliExtra({
+          availableDays: availableDays.filter((d) => d !== giornoFissoNumero),
           userIndex,
-          availableDays.filter((d) => d !== giornoFissoNumero)
-        );
+          weekIndex,
+          ultimoExtraPrecedente,
+        });
 
         if (extraDayNumber) {
           const extraDate = week.find(
@@ -174,7 +183,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
           if (extraDate && presenzeScelte.size < totaleRichiesto) {
             presenzeScelte.add(isoDate(extraDate));
+            ultimoExtraPerUtente.set(utente.utente_id, extraDayNumber);
           }
+        } else {
+          ultimoExtraPerUtente.set(utente.utente_id, null);
         }
       }
 
