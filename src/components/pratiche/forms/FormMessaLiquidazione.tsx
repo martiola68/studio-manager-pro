@@ -104,8 +104,6 @@ export default function FormMessaLiquidazione({ pratica }: any) {
 const [nominativi, setNominativi] = useState<any[]>([]);
 const [mostraNuovoNominativo, setMostraNuovoNominativo] = useState(false);
 
-  const [utenteLoggato, setUtenteLoggato] = useState<any>(null);
-
 const [nuovoSocio, setNuovoSocio] = useState({
   nominativo_id: "",
   nome_cognome: "",
@@ -248,12 +246,6 @@ useEffect(() => {
       cache: "no-store",
     });
 
-    const data = await res.json();
-
-    if (res.ok) {
-      setDocumenti(data.documenti || []);
-    }
-  }
 async function caricaSoci() {
   const res = await fetch(`/api/pratiche/${praticaId}/soci`, {
     cache: "no-store",
