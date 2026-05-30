@@ -231,32 +231,20 @@ useEffect(() => {
     caricaDocumenti();
     caricaSoci();
     caricaNominativi();
-     }
+  }
 }, [praticaId]);
 
-  async function caricaSoci() {
-  const res = await fetch(`/api/pratiche/${praticaId}/soci`, {
+async function caricaDocumenti() {
+  const res = await fetch(`/api/pratiche/${praticaId}/documenti`, {
     cache: "no-store",
   });
 
   const data = await res.json();
 
   if (res.ok) {
-    setSoci(data.soci || []);
+    setDocumenti(data.documenti || []);
   }
 }
-
-  function aggiornaCampo(campo: string, valore: string) {
-    setForm((prev) => ({
-      ...prev,
-      [campo]: valore,
-    }));
-  }
-
-  async function caricaDocumenti() {
-    const res = await fetch(`/api/pratiche/${praticaId}/documenti`, {
-      cache: "no-store",
-    });
 
 async function caricaSoci() {
   const res = await fetch(`/api/pratiche/${praticaId}/soci`, {
