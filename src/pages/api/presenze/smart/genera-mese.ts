@@ -14,7 +14,7 @@ function isoDate(d: Date) {
 function weekdayIT(d: Date) {
   const js = d.getDay();
   if (js === 0 || js === 6) return null;
-  return js; // 1 lun, 2 mar, 3 mer, 4 gio, 5 ven
+  return js;
 }
 
 function getWeeks(anno: number, mese: number) {
@@ -30,7 +30,6 @@ function getWeeks(anno: number, mese: number) {
         weeks.push(week);
         week = [];
       }
-
       week.push(new Date(d));
     }
 
@@ -38,7 +37,6 @@ function getWeeks(anno: number, mese: number) {
   }
 
   if (week.length > 0) weeks.push(week);
-
   return weeks;
 }
 
@@ -56,15 +54,11 @@ async function loadFestivita(anno: number, mese: number) {
   if (error) throw error;
 
   const map = new Map<string, string>();
-
-  (data || []).forEach((f) => {
-    map.set(f.data_festivita, f.descrizione);
-  });
-
+  (data || []).forEach((f) => map.set(f.data_festivita, f.descrizione));
   return map;
 }
 
-async function loadUltimiExtraPrecedenti(
+async function loadUltimiExtra(
   gruppoId: string,
   utentiIds: string[],
   anno: number,
@@ -75,17 +69,16 @@ async function loadUltimiExtraPrecedenti(
 
   const { data } = await supabaseAdmin
     .from("tbpresenze_smart_calendario")
-    .select("utente_id, data, giorno_settimana")
+    .select("utente_id, giorno_settimana, data")
     .eq("gruppo_id", gruppoId)
     .in("utente_id", utentiIds)
     .eq("presenza", true)
     .eq("festivo", false)
-    .lt("data", start)
     .neq("giorno_settimana", giornoFisso)
+    .lt("data", start)
     .order("data", { ascending: false });
 
   const map = new Map<string, number | null>();
-
   utentiIds.forEach((id) => map.set(id, null));
 
   (data || []).forEach((r) => {
@@ -97,58 +90,40 @@ async function loadUltimiExtraPrecedenti(
   return map;
 }
 
-function assegnaExtraSettimana(params: {
+function assegnaExtraPerGiorno(params: {
   utenti: { utente_id: string; ordine: number }[];
-  giorniDisponibili: number[];
-  ultimoExtra: Map<string, number | null>;
+  giorniExtraDisponibili: number[];
   weekIndex: number;
+  ultimoExtra: Map<string, number | null>;
 }) {
-  const { utenti, giorniDisponibili, ultimoExtra, weekIndex } = params;
+  const { utenti, giorniExtraDisponibili, weekIndex, ultimoExtra } = params;
 
-  const giorniBase = [1, 3, 4, 5]; // lun, mer, gio, ven
-  const giorni = giorniBase.filter((g) => giorniDisponibili.includes(g));
-
-  const assegnazioni = new Map<string, number | null>();
-  const usati = new Set<number>();
-
+  const assegnazioni = new Map<string, number>();
   const utentiOrdinati = [...utenti].sort((a, b) => a.ordine - b.ordine);
 
-  for (let i = 0; i < utentiOrdinati.length; i++) {
-    const utente = utentiOrdinati[i];
+  const utentiRuotati = [
+    ...utentiOrdinati.slice(weekIndex % utentiOrdinati.length),
+    ...utentiOrdinati.slice(0, weekIndex % utentiOrdinati.length),
+  ];
 
-    const rotazione = [
-      ...giorniBase.slice((weekIndex + i) % giorniBase.length),
-      ...giorniBase.slice(0, (weekIndex + i) % giorniBase.length),
-    ].filter((g) => giorni.includes(g));
+  const utentiGiaAssegnati = new Set<string>();
 
-    let scelto =
-      rotazione.find((g) => {
-        if (usati.has(g)) return false;
+  for (const giorno of giorniExtraDisponibili) {
+    const candidato = utentiRuotati.find((u) => {
+      if (utentiGiaAssegnati.has(u.utente_id)) return false;
 
-        const precedente = ultimoExtra.get(utente.utente_id) || null;
+      const precedente = ultimoExtra.get(u.utente_id) || null;
 
-        if (precedente === 5 && g === 1) return false;
+      if (precedente === 5 && giorno === 1) return false;
 
-        return true;
-      }) || null;
+      return true;
+    });
 
-    if (!scelto) {
-      scelto =
-        rotazione.find((g) => {
-          const precedente = ultimoExtra.get(utente.utente_id) || null;
-          if (precedente === 5 && g === 1) return false;
-          return true;
-        }) || null;
-    }
+    if (!candidato) continue;
 
-    assegnazioni.set(utente.utente_id, scelto);
-
-    if (scelto) {
-      usati.add(scelto);
-      ultimoExtra.set(utente.utente_id, scelto);
-    } else {
-      ultimoExtra.set(utente.utente_id, null);
-    }
+    assegnazioni.set(candidato.utente_id, giorno);
+    utentiGiaAssegnati.add(candidato.utente_id);
+    ultimoExtra.set(candidato.utente_id, giorno);
   }
 
   return assegnazioni;
@@ -195,7 +170,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const festivitaMap = await loadFestivita(Number(anno), Number(mese));
   const weeks = getWeeks(Number(anno), Number(mese));
 
-  const ultimoExtra = await loadUltimiExtraPrecedenti(
+  const ultimoExtra = await loadUltimiExtra(
     gruppo_id,
     utentiAttivi.map((u) => u.utente_id),
     Number(anno),
@@ -208,35 +183,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   for (let weekIndex = 0; weekIndex < weeks.length; weekIndex++) {
     const week = weeks[weekIndex];
 
-    const giorniDisponibiliExtra = week
+    const giorniExtraDisponibili = week
       .filter((d) => !festivitaMap.has(isoDate(d)))
       .map((d) => weekdayIT(d))
       .filter((d): d is number => !!d)
-      .filter((d) => d !== giornoFisso);
+      .filter((d) => d !== giornoFisso)
+      .sort((a, b) => a - b);
 
-    const extraPerUtente = assegnaExtraSettimana({
-      utenti: utentiAttivi,
-      giorniDisponibili: giorniDisponibiliExtra,
-      ultimoExtra,
-      weekIndex,
-    });
+    const extraPerUtente =
+      presenzeSettimanali > 1
+        ? assegnaExtraPerGiorno({
+            utenti: utentiAttivi,
+            giorniExtraDisponibili,
+            weekIndex,
+            ultimoExtra,
+          })
+        : new Map<string, number>();
 
     for (const utente of utentiAttivi) {
       const presenzeScelte = new Set<string>();
 
-      const martedi = week.find(
-        (d) => weekdayIT(d) === giornoFisso && !festivitaMap.has(isoDate(d))
+      const giornoFissoData = week.find(
+        (d) =>
+          weekdayIT(d) === giornoFisso &&
+          !festivitaMap.has(isoDate(d))
       );
 
-      if (martedi && presenzeScelte.size < presenzeSettimanali) {
-        presenzeScelte.add(isoDate(martedi));
+      if (giornoFissoData) {
+        presenzeScelte.add(isoDate(giornoFissoData));
       }
 
       const extraGiorno = extraPerUtente.get(utente.utente_id);
 
-      if (extraGiorno && presenzeScelte.size < presenzeSettimanali) {
+      if (extraGiorno) {
         const extraData = week.find(
-          (d) => weekdayIT(d) === extraGiorno && !festivitaMap.has(isoDate(d))
+          (d) =>
+            weekdayIT(d) === extraGiorno &&
+            !festivitaMap.has(isoDate(d))
         );
 
         if (extraData) {
