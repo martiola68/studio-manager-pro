@@ -124,6 +124,18 @@ const [nuovoNominativo, setNuovoNominativo] = useState({
   citta: "",
   provincia: "",
 });
+
+const [mostraNuovoLiquidatore, setMostraNuovoLiquidatore] = useState(false);
+
+const [nuovoLiquidatore, setNuovoLiquidatore] = useState({
+  nome_cognome: "",
+  codice_fiscale: "",
+  indirizzo: "",
+  cap: "",
+  citta: "",
+  provincia: "",
+});
+  
   const [saving, setSaving] = useState(false);
   const [messaggio, setMessaggio] = useState("");
 
@@ -916,11 +928,11 @@ function normalizzaCF(cf: string) {
       </select>
     </div>
 
-   <button
+ <button
   type="button"
   style={secondaryButton}
   onClick={() => {
-    setNuovoNominativo({
+    setNuovoLiquidatore({
       nome_cognome: "",
       codice_fiscale: "",
       indirizzo: "",
@@ -929,12 +941,201 @@ function normalizzaCF(cf: string) {
       provincia: "",
     });
 
-    setMostraNuovoNominativo(false);
+    setMostraNuovoLiquidatore(true);
   }}
 >
   + Nuovo
 </button>
+    
   </div>
+
+        {mostraNuovoLiquidatore && (
+  <div
+    style={{
+      ...cardStyle,
+      marginTop: 18,
+      background: "#f8fafc",
+    }}
+  >
+    <h3 style={{ margin: 0, fontSize: 16 }}>
+      Aggiungi nuovo liquidatore
+    </h3>
+
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr 1fr",
+        gap: 12,
+        marginTop: 14,
+      }}
+    >
+      <div>
+        <label style={labelStyle}>Nome e cognome</label>
+        <input
+          style={inputStyle}
+          value={nuovoLiquidatore.nome_cognome}
+          onChange={(e) =>
+            setNuovoLiquidatore({
+              ...nuovoLiquidatore,
+              nome_cognome: e.target.value,
+            })
+          }
+        />
+      </div>
+
+      <div>
+        <label style={labelStyle}>Codice fiscale</label>
+        <input
+          style={inputStyle}
+          value={nuovoLiquidatore.codice_fiscale}
+          onChange={(e) =>
+            setNuovoLiquidatore({
+              ...nuovoLiquidatore,
+              codice_fiscale: e.target.value.toUpperCase(),
+            })
+          }
+        />
+      </div>
+
+      <div>
+        <label style={labelStyle}>Indirizzo</label>
+        <input
+          style={inputStyle}
+          value={nuovoLiquidatore.indirizzo}
+          onChange={(e) =>
+            setNuovoLiquidatore({
+              ...nuovoLiquidatore,
+              indirizzo: e.target.value,
+            })
+          }
+        />
+      </div>
+
+      <div>
+        <label style={labelStyle}>CAP</label>
+        <input
+          style={inputStyle}
+          value={nuovoLiquidatore.cap}
+          onChange={(e) =>
+            setNuovoLiquidatore({
+              ...nuovoLiquidatore,
+              cap: e.target.value,
+            })
+          }
+        />
+      </div>
+
+      <div>
+        <label style={labelStyle}>Città</label>
+        <input
+          style={inputStyle}
+          value={nuovoLiquidatore.citta}
+          onChange={(e) =>
+            setNuovoLiquidatore({
+              ...nuovoLiquidatore,
+              citta: e.target.value,
+            })
+          }
+        />
+      </div>
+
+      <div>
+        <label style={labelStyle}>Provincia</label>
+        <input
+          style={inputStyle}
+          value={nuovoLiquidatore.provincia}
+          onChange={(e) =>
+            setNuovoLiquidatore({
+              ...nuovoLiquidatore,
+              provincia: e.target.value.toUpperCase(),
+            })
+          }
+        />
+      </div>
+    </div>
+
+    <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
+      <button
+        type="button"
+        style={blueButton}
+        onClick={async () => {
+          const cf = normalizzaCF(nuovoLiquidatore.codice_fiscale);
+
+          if (!nuovoLiquidatore.nome_cognome.trim()) {
+            alert("Nome liquidatore obbligatorio.");
+            return;
+          }
+
+          if (!cf) {
+            alert("Codice fiscale obbligatorio.");
+            return;
+          }
+
+          const res = await fetch("/api/rapp-legali", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              nome_cognome: nuovoLiquidatore.nome_cognome,
+              codice_fiscale: cf,
+              indirizzo: nuovoLiquidatore.indirizzo,
+              cap: nuovoLiquidatore.cap,
+              citta: nuovoLiquidatore.citta,
+              provincia: nuovoLiquidatore.provincia,
+              indirizzo_residenza: nuovoLiquidatore.indirizzo,
+              citta_residenza: nuovoLiquidatore.citta,
+              rappresentante_legale: false,
+            }),
+          });
+
+          const data = await res.json();
+
+          if (!res.ok) {
+            alert(data.error || "Errore creazione liquidatore");
+            return;
+          }
+
+          const nuovo = data.rapp_legale;
+
+          setRappresentantiLegali((prev) => [nuovo, ...prev]);
+
+          setForm((prev) => ({
+            ...prev,
+            liquidatore_id: nuovo.id,
+            liquidatore_nome: nuovo.nome_cognome || "",
+            liquidatore_codice_fiscale: nuovo.codice_fiscale || "",
+            liquidatore_indirizzo:
+              nuovo.indirizzo_residenza || nuovo.indirizzo || "",
+            liquidatore_citta:
+              nuovo.citta_residenza || nuovo.citta || "",
+            liquidatore_provincia: nuovo.provincia || "",
+            liquidatore_cap: nuovo.cap || nuovo.CAP || "",
+            liquidatore_residenza: [
+              nuovo.indirizzo_residenza || nuovo.indirizzo,
+              nuovo.cap || nuovo.CAP,
+              nuovo.citta_residenza || nuovo.citta,
+              nuovo.provincia,
+            ]
+              .filter(Boolean)
+              .join(" "),
+          }));
+
+          setNuovoLiquidatore({
+            nome_cognome: "",
+            codice_fiscale: "",
+            indirizzo: "",
+            cap: "",
+            citta: "",
+            provincia: "",
+          });
+
+          setMostraNuovoLiquidatore(false);
+        }}
+      >
+        Aggiungi liquidatore
+      </button>
+    </div>
+  </div>
+)}
 
   <div
     style={{
