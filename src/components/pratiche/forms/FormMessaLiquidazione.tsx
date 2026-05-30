@@ -1086,17 +1086,12 @@ function normalizzaCF(cf: string) {
             return;
           }
 
-          if (!utenteLoggato?.studio_id) {
-  alert("Studio utente loggato non trovato.");
-  return;
-}
 
           const res = await fetch("/api/rapp-legali", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
            body: JSON.stringify({
-  studio_id: utenteLoggato?.studio_id,
-  nome_cognome: nuovoLiquidatore.nome_cognome,
+   nome_cognome: nuovoLiquidatore.nome_cognome,
   codice_fiscale: cf,
   indirizzo: nuovoLiquidatore.indirizzo,
   cap: nuovoLiquidatore.cap,
