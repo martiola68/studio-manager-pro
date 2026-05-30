@@ -233,8 +233,7 @@ useEffect(() => {
     caricaDocumenti();
     caricaSoci();
     caricaNominativi();
-    caricaUtenteLoggato();
-  }
+     }
 }, [praticaId]);
 
   function aggiornaCampo(campo: string, valore: string) {
@@ -278,11 +277,6 @@ async function caricaNominativi() {
     setNominativi(data.nominativi || []);
   }
 }
-
-  async function caricaUtenteLoggato() {
-  const res = await fetch("/api/auth/me", {
-    cache: "no-store",
-  });
 
   const data = await res.json();
 
