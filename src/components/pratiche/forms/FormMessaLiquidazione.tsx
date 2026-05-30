@@ -104,6 +104,8 @@ export default function FormMessaLiquidazione({ pratica }: any) {
 const [nominativi, setNominativi] = useState<any[]>([]);
 const [mostraNuovoNominativo, setMostraNuovoNominativo] = useState(false);
 
+  const [utenteLoggato, setUtenteLoggato] = useState<any>(null);
+
 const [nuovoSocio, setNuovoSocio] = useState({
   nominativo_id: "",
   nome_cognome: "",
@@ -231,6 +233,7 @@ useEffect(() => {
     caricaDocumenti();
     caricaSoci();
     caricaNominativi();
+    caricaUtenteLoggato();
   }
 }, [praticaId]);
 
@@ -273,6 +276,18 @@ async function caricaNominativi() {
 
   if (res.ok) {
     setNominativi(data.nominativi || []);
+  }
+}
+
+  async function caricaUtenteLoggato() {
+  const res = await fetch("/api/auth/me", {
+    cache: "no-store",
+  });
+
+  const data = await res.json();
+
+  if (res.ok) {
+    setUtenteLoggato(data.utente || data.user || data);
   }
 }
 
@@ -1071,20 +1086,26 @@ function normalizzaCF(cf: string) {
             return;
           }
 
+          if (!utenteLoggato?.studio_id) {
+  alert("Studio utente loggato non trovato.");
+  return;
+}
+
           const res = await fetch("/api/rapp-legali", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              nome_cognome: nuovoLiquidatore.nome_cognome,
-              codice_fiscale: cf,
-              indirizzo: nuovoLiquidatore.indirizzo,
-              cap: nuovoLiquidatore.cap,
-              citta: nuovoLiquidatore.citta,
-              provincia: nuovoLiquidatore.provincia,
-              indirizzo_residenza: nuovoLiquidatore.indirizzo,
-              citta_residenza: nuovoLiquidatore.citta,
-              rappresentante_legale: false,
-            }),
+           body: JSON.stringify({
+  studio_id: utenteLoggato?.studio_id,
+  nome_cognome: nuovoLiquidatore.nome_cognome,
+  codice_fiscale: cf,
+  indirizzo: nuovoLiquidatore.indirizzo,
+  cap: nuovoLiquidatore.cap,
+  citta: nuovoLiquidatore.citta,
+  provincia: nuovoLiquidatore.provincia,
+  indirizzo_residenza: nuovoLiquidatore.indirizzo,
+  citta_residenza: nuovoLiquidatore.citta,
+  rappresentante_legale: false,
+}),
           });
 
           const data = await res.json();
