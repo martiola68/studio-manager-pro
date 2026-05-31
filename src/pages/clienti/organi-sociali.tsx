@@ -66,16 +66,18 @@ export default function OrganiSocialiPage() {
   const [loading, setLoading] = useState(false);
   const [messaggio, setMessaggio] = useState("");
 
-  const [form, setForm] = useState({
-    rapp_legale_id: "",
-    ruolo: "socio",
-    carica: "",
-    percentuale_partecipazione: "",
-    presenza: "Presente",
-    principale: false,
-    attivo: true,
-  });
-
+ const [form, setForm] = useState({
+  rapp_legale_id: "",
+  ruolo: "socio",
+  carica: "",
+  percentuale_partecipazione: "",
+  presenza: "Presente",
+  principale: false,
+  attivo: true,
+  data_nomina: "",
+  data_cessazione: "",
+});
+  
 useEffect(() => {
   if (!router.isReady) return;
 
@@ -184,15 +186,17 @@ principale:
 
     setMessaggio("Organo salvato correttamente.");
 
-    setForm({
-      rapp_legale_id: "",
-      ruolo: "socio",
-      carica: "",
-      percentuale_partecipazione: "",
-      presenza: "Presente",
-      principale: false,
-      attivo: true,
-    });
+   setForm({
+  rapp_legale_id: "",
+  ruolo: "socio",
+  carica: "",
+  percentuale_partecipazione: "",
+  presenza: "Presente",
+  principale: false,
+  attivo: true,
+  data_nomina: "",
+  data_cessazione: "",
+});
 
     await caricaOrgani();
   }
@@ -388,6 +392,39 @@ principale: consentePrincipale(e.target.value)
               }
             />
           </div>
+
+          <div>
+  <label style={labelStyle}>Data nomina</label>
+
+  <input
+    type="date"
+    style={inputStyle}
+    value={form.data_nomina}
+    onChange={(e) =>
+      setForm((prev) => ({
+        ...prev,
+        data_nomina: e.target.value,
+      }))
+    }
+  />
+</div>
+
+<div>
+  <label style={labelStyle}>Data cessazione</label>
+
+  <input
+    type="date"
+    style={inputStyle}
+    value={form.data_cessazione}
+    onChange={(e) =>
+      setForm((prev) => ({
+        ...prev,
+        data_cessazione: e.target.value,
+        attivo: !e.target.value,
+      }))
+    }
+  />
+</div>
         </div>
 
         <div
