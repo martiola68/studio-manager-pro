@@ -1274,29 +1274,22 @@ const res = await fetch(
 
     <select
       style={inputStyle}
-      value={form.professionista_nome}
-      onChange={(e) => {
-        const prof = professionisti.find(
-          (p) => p.nome_cognome === e.target.value
-        );
+   value={form.professionista_nome}
+onChange={(e) => {
+  const prof = professionisti.find(
+    (p) => p.id === e.target.value
+  );
 
-        aggiornaCampo(
-          "professionista_nome",
-          prof?.nome_cognome || ""
-        );
-
-        aggiornaCampo(
-          "professionista_cf",
-          prof?.codice_fiscale || ""
-        );
-      }}
-    >
+  aggiornaCampo("professionista_nome", prof?.ragione_sociale || "");
+}}
+      >
       <option value="">Seleziona professionista</option>
 
-      {professionisti.map((p) => (
-        <option key={p.id} value={p.nome_cognome}>
-          {p.nome_cognome}
-        </option>
+   {professionisti.map((p) => (
+  <option key={p.id} value={p.id}>
+    {p.ragione_sociale}
+  </option>
+))}
       ))}
     </select>
   </div>
