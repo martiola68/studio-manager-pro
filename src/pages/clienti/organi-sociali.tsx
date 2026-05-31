@@ -583,10 +583,6 @@ principale: consentePrincipale(e.target.value)
     </tr>
   ))}
  
-                  </td>
-                </tr>
-              ))}
-
               {organiFiltrati.length === 0 && (
                 <tr>
                   <td style={tdStyle} colSpan={8}>
