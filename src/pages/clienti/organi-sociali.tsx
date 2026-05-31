@@ -201,31 +201,34 @@ principale:
     await caricaOrgani();
   }
 
-  async function disattivaOrgano(organo: any) {
-    const ok = confirm("Disattivare questo organo?");
-    if (!ok) return;
+ async function disattivaOrgano(organo: any) {
+  const dataCessazione = prompt(
+    "Inserisci data cessazione nel formato AAAA-MM-GG",
+    new Date().toISOString().slice(0, 10)
+  );
 
-    const res = await fetch("/api/clienti-organi", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        id: organo.id,
-        attivo: false,
-        principale: false,
-        data_cessazione: new Date().toISOString().slice(0, 10),
-      }),
-    });
+  if (!dataCessazione) return;
 
-    if (!res.ok) {
-      alert("Errore disattivazione");
-      return;
-    }
+  const res = await fetch("/api/clienti-organi", {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      id: organo.id,
+      attivo: false,
+      principale: false,
+      data_cessazione: dataCessazione,
+    }),
+  });
 
-    await caricaOrgani();
+  if (!res.ok) {
+    alert("Errore disattivazione");
+    return;
   }
 
+  await caricaOrgani();
+}
   return (
     <main style={{ padding: 28, background: "#f8fafc", minHeight: "100vh" }}>
       <div style={{ display: "flex", justifyContent: "space-between" }}>
@@ -409,22 +412,6 @@ principale: consentePrincipale(e.target.value)
   />
 </div>
 
-<div>
-  <label style={labelStyle}>Data cessazione</label>
-
-  <input
-    type="date"
-    style={inputStyle}
-    value={form.data_cessazione}
-    onChange={(e) =>
-      setForm((prev) => ({
-        ...prev,
-        data_cessazione: e.target.value,
-        attivo: !e.target.value,
-      }))
-    }
-  />
-</div>
         </div>
 
         <div
@@ -476,41 +463,124 @@ principale: consentePrincipale(e.target.value)
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 18 }}>
             <thead>
-              <tr>
-                <th style={thStyle}>Nominativo</th>
-                <th style={thStyle}>Codice fiscale</th>
-                <th style={thStyle}>Ruolo</th>
-                <th style={thStyle}>Carica</th>
-                <th style={thStyle}>Quota</th>
-                <th style={thStyle}>Principale</th>
-                <th style={thStyle}>Attivo</th>
-                <th style={thStyle}>Azioni</th>
-              </tr>
-            </thead>
+  <tr>
+    <th style={thStyle}>Nominativo</th>
+    <th style={thStyle}>Codice fiscale</th>
+    <th style={thStyle}>Ruolo</th>
+    <th style={thStyle}>Carica</th>
+    <th style={thStyle}>Quota</th>
+    <th style={thStyle}>Data nomina</th>
+    <th style={thStyle}>Principale</th>
+    <th style={thStyle}>Attivo</th>
+    <th style={thStyle}>Data cessazione</th>
+    <th style={thStyle}>Azioni</th>
+  </tr>
+</thead>
 
-            <tbody>
-              {organiFiltrati.map((o) => (
-                <tr key={o.id}>
-                  <td style={tdStyle}>{o.rapp_legali?.nome_cognome || "—"}</td>
-                  <td style={tdStyle}>{o.rapp_legali?.codice_fiscale || "—"}</td>
-                  <td style={tdStyle}>{o.ruolo}</td>
-                  <td style={tdStyle}>{o.carica || "—"}</td>
-                  <td style={tdStyle}>
-                    {o.percentuale_partecipazione
-                      ? `${Number(o.percentuale_partecipazione).toFixed(2)}%`
-                      : "—"}
-                  </td>
-                  <td style={tdStyle}>{o.principale ? "Sì" : "No"}</td>
-                  <td style={tdStyle}>{o.attivo ? "Sì" : "No"}</td>
-                  <td style={tdStyle}>
-                    {o.attivo && (
-                      <button
-                        type="button"
-                        onClick={() => disattivaOrgano(o)}
-                        style={dangerButton}
-                      >
-                        Disattiva
-                      </button>
+           <tbody>
+  {organiFiltrati.map((o) => (
+    <tr key={o.id}>
+      <td style={tdStyle}>
+        {o.rapp_legali?.nome_cognome || "—"}
+      </td>
+
+      <td style={tdStyle}>
+        {o.rapp_legali?.codice_fiscale || "—"}
+      </td>
+
+      <td style={tdStyle}>
+        {o.ruolo}
+      </td>
+
+      <td style={tdStyle}>
+        {o.carica || "—"}
+      </td>
+
+      <td style={tdStyle}>
+        {o.percentuale_partecipazione
+          ? `${Number(o.percentuale_partecipazione).toFixed(2)}%`
+          : "—"}
+      </td>
+
+      <td style={tdStyle}>
+        {o.data_nomina
+          ? new Date(o.data_nomina).toLocaleDateString("it-IT")
+          : "—"}
+      </td>
+
+      <td style={tdStyle}>
+        {o.principale ? "Sì" : "No"}
+      </td>
+
+      <td style={tdStyle}>
+        {o.attivo ? "Sì" : "No"}
+      </td>
+
+      <td style={tdStyle}>
+        {o.data_cessazione
+          ? new Date(o.data_cessazione).toLocaleDateString("it-IT")
+          : "—"}
+      </td>
+
+      <td style={tdStyle}>
+        <div
+          style={{
+            display: "flex",
+            gap: 10,
+            alignItems: "center",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => caricaInModifica(o)}
+            style={secondaryButton}
+          >
+            Modifica
+          </button>
+
+          {o.attivo && (
+            <button
+              type="button"
+              onClick={() => disattivaOrgano(o)}
+              style={dangerButton}
+            >
+              Disattiva
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => eliminaOrgano(o)}
+            style={dangerButton}
+          >
+            Elimina
+          </button>
+        </div>
+      </td>
+    </tr>
+  ))}
+
+                  async function eliminaOrgano(organo: any) {
+  const ok = confirm("Eliminare definitivamente questo organo?");
+  if (!ok) return;
+
+  const res = await fetch("/api/clienti-organi", {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      id: organo.id,
+    }),
+  });
+
+  if (!res.ok) {
+    alert("Errore eliminazione");
+    return;
+  }
+
+  await caricaOrgani();
+}
                     )}
                   </td>
                 </tr>
