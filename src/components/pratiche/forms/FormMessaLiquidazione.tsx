@@ -1086,7 +1086,7 @@ function aggiornaCampo(campo: string, valore: string) {
   provincia: nuovoLiquidatore.provincia,
   indirizzo_residenza: nuovoLiquidatore.indirizzo,
   citta_residenza: nuovoLiquidatore.citta,
-  rappresentante_legale: false,
+  rappresentante_legale: true,
 }),
           });
 
