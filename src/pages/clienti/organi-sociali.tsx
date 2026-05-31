@@ -229,6 +229,29 @@ principale:
 
   await caricaOrgani();
 }
+
+async function eliminaOrgano(organo: any) {
+  const ok = confirm("Eliminare definitivamente questo organo?");
+  if (!ok) return;
+
+  const res = await fetch("/api/clienti-organi", {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      id: organo.id,
+    }),
+  });
+
+  if (!res.ok) {
+    alert("Errore eliminazione");
+    return;
+  }
+
+  await caricaOrgani();
+}
+  
   return (
     <main style={{ padding: 28, background: "#f8fafc", minHeight: "100vh" }}>
       <div style={{ display: "flex", justifyContent: "space-between" }}>
@@ -559,28 +582,6 @@ principale: consentePrincipale(e.target.value)
       </td>
     </tr>
   ))}
-
-                  async function eliminaOrgano(organo: any) {
-  const ok = confirm("Eliminare definitivamente questo organo?");
-  if (!ok) return;
-
-  const res = await fetch("/api/clienti-organi", {
-    method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      id: organo.id,
-    }),
-  });
-
-  if (!res.ok) {
-    alert("Errore eliminazione");
-    return;
-  }
-
-  await caricaOrgani();
-}
                     )}
                   </td>
                 </tr>
