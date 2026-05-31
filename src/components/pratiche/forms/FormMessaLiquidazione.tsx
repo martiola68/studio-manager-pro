@@ -1290,7 +1290,6 @@ onChange={(e) => {
     {p.ragione_sociale}
   </option>
 ))}
-      ))}
     </select>
   </div>
 
