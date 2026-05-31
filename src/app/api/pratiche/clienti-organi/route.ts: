@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     }
 
     const { data, error } = await supabase
-      .from("tbclienti_organi_sociali")
+      .from("tbclienti_organi")
       .select(`
         *,
         rapp_legali (
@@ -54,24 +54,19 @@ export async function POST(req: NextRequest) {
     const payload = await req.json();
 
     const { data, error } = await supabase
-      .from("tbclienti_organi_sociali")
-      .insert({
-        cliente_id: payload.cliente_id,
-        rapp_legale_id: payload.rapp_legale_id,
-        ruolo: payload.ruolo,
-        carica: payload.carica,
-        percentuale_partecipazione:
-          payload.percentuale_partecipazione,
-        presenza: payload.presenza,
-        principale: payload.principale,
-        attivo: payload.attivo ?? true,
-        data_attivazione:
-          payload.data_attivazione || null,
-        nominativo_cessato:
-          payload.nominativo_cessato ?? false,
-        data_cessato:
-          payload.data_cessato || null,
-      })
+      .from("tbclienti_organi")
+     .insert({
+  cliente_id: payload.cliente_id,
+  rapp_legale_id: payload.rapp_legale_id,
+  ruolo: payload.ruolo,
+  carica: payload.carica,
+  percentuale_partecipazione: payload.percentuale_partecipazione,
+  presenza: payload.presenza,
+  principale: payload.principale,
+  attivo: payload.attivo ?? true,
+  data_nomina: payload.data_nomina || null,
+  data_cessazione: payload.data_cessazione || null,
+})
       .select()
       .single();
 
@@ -100,7 +95,7 @@ export async function PUT(req: NextRequest) {
     const payload = await req.json();
 
     const { data, error } = await supabase
-      .from("tbclienti_organi_sociali")
+      .from("tbclienti_organi")
       .update({
         ruolo: payload.ruolo,
         carica: payload.carica,
