@@ -63,8 +63,6 @@ export default function OrganiSocialiPage() {
 
   const [organoInModificaId, setOrganoInModificaId] = useState("");
 
-  const [organoInModificaId, setOrganoInModificaId] = useState("");
-
   const [clienteId, setClienteId] = useState("");
   const [filtroRuolo, setFiltroRuolo] = useState("tutti");
   const [loading, setLoading] = useState(false);
@@ -206,6 +204,8 @@ principale:
 setOrganoInModificaId("");
 
 await caricaOrgani();
+
+    }
 
  async function disattivaOrgano(organo: any) {
   const dataCessazione = prompt(
