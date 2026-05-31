@@ -32,7 +32,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (!nome_cognome || !String(nome_cognome).trim()) {
-    return res.status(400).json({ ok: false, error: "Nome liquidatore obbligatorio" });
+    return res.status(400).json({ ok: false, error: "Nome e cognome obbligatorio" });
   }
 
   if (!codice_fiscale || !String(codice_fiscale).trim()) {
