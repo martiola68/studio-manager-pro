@@ -24,23 +24,29 @@ export default async function handler(
   }
 
   try {
-    const {
-      studio_id,
-      nome_cognome,
-      codice_fiscale,
-      luogo_nascita,
-      data_nascita,
-      citta_residenza,
-      indirizzo_residenza,
-      CAP,
-      nazionalita,
-      email,
-      tipo_doc,
-      num_doc,
-      scadenza_doc,
-      allegato_doc,
-      rappresentante_legale,
-      } = req.body ?? {};
+ const body = req.body ?? {};
+
+const studio_id = body.studio_id;
+const nome_cognome = body.nome_cognome;
+const codice_fiscale = body.codice_fiscale;
+const luogo_nascita = body.luogo_nascita;
+const data_nascita = body.data_nascita;
+const citta_residenza = body.citta_residenza;
+const indirizzo_residenza = body.indirizzo_residenza;
+const CAP = body.CAP;
+const nazionalita = body.nazionalita;
+const email = body.email;
+const tipo_doc = body.tipo_doc;
+const num_doc = body.num_doc;
+const scadenza_doc = body.scadenza_doc;
+const allegato_doc = body.allegato_doc;
+const rappresentante_legale = body.rappresentante_legale;
+
+const studioIdPulito = String(studio_id || "").trim();
+
+if (!studioIdPulito) {
+  return res.status(400).json({ ok: false, error: "studio_id obbligatorio" });
+}
 
   const studioIdPulito = String(studio_id || "").trim();
 
