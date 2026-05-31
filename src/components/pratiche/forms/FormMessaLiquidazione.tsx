@@ -104,6 +104,9 @@ export default function FormMessaLiquidazione({ pratica }: any) {
 const [nominativi, setNominativi] = useState<any[]>([]);
 const [mostraNuovoNominativo, setMostraNuovoNominativo] = useState(false);
 
+  const [professionisti, setProfessionisti] = useState<any[]>([]);
+const [diciture, setDiciture] = useState<any[]>([]);
+
 const [nuovoSocio, setNuovoSocio] = useState({
   nominativo_id: "",
   nome_cognome: "",
@@ -231,6 +234,8 @@ useEffect(() => {
     caricaDocumenti();
     caricaSoci();
     caricaNominativi();
+    caricaProfessionisti();
+caricaDiciture();
   }
 }, [praticaId]);
 
@@ -255,6 +260,30 @@ async function caricaSoci() {
 
   if (res.ok) {
     setSoci(data.soci || []);
+  }
+}
+
+  async function caricaProfessionisti() {
+  const res = await fetch("/api/pratiche/professionisti", {
+    cache: "no-store",
+  });
+
+  const data = await res.json();
+
+  if (res.ok) {
+    setProfessionisti(data.professionisti || []);
+  }
+}
+
+async function caricaDiciture() {
+  const res = await fetch("/api/pratiche/diciture-documenti", {
+    cache: "no-store",
+  });
+
+  const data = await res.json();
+
+  if (res.ok) {
+    setDiciture(data.diciture || []);
   }
 }
 
