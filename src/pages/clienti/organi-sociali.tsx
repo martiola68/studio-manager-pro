@@ -608,10 +608,10 @@ principale: consentePrincipale(e.target.value)
         </div>
       </td>
     </tr>
-  ))
+    ))}
               {organiFiltrati.length === 0 && (
                 <tr>
-                  <td style={tdStyle} colSpan={8}>
+                  <td style={tdStyle} colSpan={10}>
                     Nessun organo collegato.
                   </td>
                 </tr>
