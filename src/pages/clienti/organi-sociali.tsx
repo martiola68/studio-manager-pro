@@ -61,6 +61,8 @@ export default function OrganiSocialiPage() {
   const [nominativi, setNominativi] = useState<any[]>([]);
   const [organi, setOrgani] = useState<any[]>([]);
 
+  const [organoInModificaId, setOrganoInModificaId] = useState("");
+
   const [clienteId, setClienteId] = useState("");
   const [filtroRuolo, setFiltroRuolo] = useState("tutti");
   const [loading, setLoading] = useState(false);
@@ -250,6 +252,27 @@ async function eliminaOrgano(organo: any) {
   }
 
   await caricaOrgani();
+}
+
+  function caricaInModifica(organo: any) {
+  setOrganoInModificaId(organo.id);
+
+  setForm({
+    rapp_legale_id: organo.rapp_legale_id || "",
+    ruolo: organo.ruolo || "socio",
+    carica: organo.carica || "",
+    percentuale_partecipazione:
+      organo.percentuale_partecipazione
+        ? String(organo.percentuale_partecipazione)
+        : "",
+    presenza: organo.presenza || "Presente",
+    principale: organo.principale || false,
+    attivo: organo.attivo ?? true,
+    data_nomina: organo.data_nomina || "",
+    data_cessazione: organo.data_cessazione || "",
+  });
+
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
   
   return (
