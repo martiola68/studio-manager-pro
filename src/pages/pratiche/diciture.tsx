@@ -115,15 +115,14 @@ export default function DiciturePratichePage() {
 
     const supabase = getSupabaseClient();
 
-    const payload = {
-      codice: form.codice.trim(),
-      titolo: form.titolo.trim(),
-      categoria: form.categoria.trim() || "verbale",
-      testo: form.testo,
-      attiva: form.attiva,
-      updated_at: new Date().toISOString(),
-    };
-
+  const payload = {
+  codice: form.codice.trim(),
+  titolo: form.codice.trim(),
+  categoria: "verbale",
+  testo: form.testo,
+  attiva: true,
+  updated_at: new Date().toISOString(),
+};
     const result = editingId
       ? await supabase
           .from("tbpratiche_dicitura_documenti" as any)
