@@ -58,7 +58,7 @@ if (!studioIdPulito) {
     }
 
     const payload = {
-      studio_id,
+       studio_id: studioIdPulito,
       nome_cognome: String(nome_cognome).trim(),
       codice_fiscale: codice_fiscale
         ? String(codice_fiscale).trim().toUpperCase()
