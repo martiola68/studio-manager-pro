@@ -1076,9 +1076,9 @@ function aggiornaCampo(campo: string, valore: string) {
 
           const res = await fetch("/api/rapp-legali", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-           body: JSON.stringify({
-   nome_cognome: nuovoLiquidatore.nome_cognome,
+  body: JSON.stringify({
+  studio_id: pratica?.studio_id || pratica?.cliente?.studio_id,
+  nome_cognome: nuovoLiquidatore.nome_cognome,
   codice_fiscale: cf,
   indirizzo: nuovoLiquidatore.indirizzo,
   cap: nuovoLiquidatore.cap,
@@ -1086,6 +1086,7 @@ function aggiornaCampo(campo: string, valore: string) {
   provincia: nuovoLiquidatore.provincia,
   indirizzo_residenza: nuovoLiquidatore.indirizzo,
   citta_residenza: nuovoLiquidatore.citta,
+  CAP: nuovoLiquidatore.cap,
   rappresentante_legale: true,
 }),
           });
@@ -1097,7 +1098,7 @@ function aggiornaCampo(campo: string, valore: string) {
             return;
           }
 
-          const nuovo = data.rapp_legale;
+        const nuovo = data.data;
 
           setRappresentantiLegali((prev) => [nuovo, ...prev]);
 
