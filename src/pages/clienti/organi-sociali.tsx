@@ -63,6 +63,8 @@ export default function OrganiSocialiPage() {
 
   const [organoInModificaId, setOrganoInModificaId] = useState("");
 
+  const [organoInModificaId, setOrganoInModificaId] = useState("");
+
   const [clienteId, setClienteId] = useState("");
   const [filtroRuolo, setFiltroRuolo] = useState("tutti");
   const [loading, setLoading] = useState(false);
@@ -160,14 +162,15 @@ const { data } = await supabase
       return;
     }
 
-    const res = await fetch("/api/clienti-organi", {
-      method: "POST",
+   const res = await fetch("/api/clienti-organi", {
+  method: organoInModificaId ? "PUT" : "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        cliente_id: clienteId,
-       ...form,
+  id: organoInModificaId || undefined,
+  cliente_id: clienteId,
+  ...form,
 carica: ruoliLabel[form.ruolo] || form.ruolo,
 percentuale_partecipazione:
   form.ruolo === "socio"
@@ -188,7 +191,7 @@ principale:
 
     setMessaggio("Organo salvato correttamente.");
 
-   setForm({
+ setForm({
   rapp_legale_id: "",
   ruolo: "socio",
   carica: "",
@@ -200,8 +203,9 @@ principale:
   data_cessazione: "",
 });
 
-    await caricaOrgani();
-  }
+setOrganoInModificaId("");
+
+await caricaOrgani();
 
  async function disattivaOrgano(organo: any) {
   const dataCessazione = prompt(
