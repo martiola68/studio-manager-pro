@@ -1076,14 +1076,10 @@ function aggiornaCampo(campo: string, valore: string) {
 
           const res = await fetch("/api/rapp-legali", {
             method: "POST",
-  body: JSON.stringify({
+ body: JSON.stringify({
   studio_id: pratica?.studio_id || pratica?.cliente?.studio_id,
   nome_cognome: nuovoLiquidatore.nome_cognome,
   codice_fiscale: cf,
-  indirizzo: nuovoLiquidatore.indirizzo,
-  cap: nuovoLiquidatore.cap,
-  citta: nuovoLiquidatore.citta,
-  provincia: nuovoLiquidatore.provincia,
   indirizzo_residenza: nuovoLiquidatore.indirizzo,
   citta_residenza: nuovoLiquidatore.citta,
   CAP: nuovoLiquidatore.cap,
