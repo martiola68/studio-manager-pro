@@ -1074,17 +1074,27 @@ function aggiornaCampo(campo: string, valore: string) {
           }
 
 
- const res = await fetch(`/api/rapp-legali/${praticaId}/nuovo-rapp-pratiche`, {
-            method: "POST",
-body: JSON.stringify({
-  nome_cognome: nuovoLiquidatore.nome_cognome,
+const payload = {
+  nome_cognome: nuovoLiquidatore.nome_cognome?.trim(),
   codice_fiscale: cf,
-  indirizzo: nuovoLiquidatore.indirizzo,
-  cap: nuovoLiquidatore.cap,
-  citta: nuovoLiquidatore.citta,
-  provincia: nuovoLiquidatore.provincia,
-}),
-          });
+  indirizzo: nuovoLiquidatore.indirizzo?.trim(),
+  cap: nuovoLiquidatore.cap?.trim(),
+  citta: nuovoLiquidatore.citta?.trim(),
+  provincia: nuovoLiquidatore.provincia?.trim(),
+};
+
+console.log("PAYLOAD NUOVO LIQUIDATORE", payload);
+
+const res = await fetch(
+  `/api/rapp-legali/${praticaId}/nuovo-rapp-pratiche`,
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  }
+);
 
           const data = await res.json();
 
