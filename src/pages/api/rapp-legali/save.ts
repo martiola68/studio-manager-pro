@@ -48,17 +48,6 @@ if (!studioIdPulito) {
   return res.status(400).json({ ok: false, error: "studio_id obbligatorio" });
 }
 
-  const studioIdPulito = String(studio_id || "").trim();
-
-if (!studioIdPulito) {
-  console.log("BODY RICEVUTO RAPP LEGALI SAVE:", req.body);
-
-  return res.status(400).json({
-    ok: false,
-    error: "studio_id obbligatorio",
-  });
-}
-
     if (!nome_cognome || !String(nome_cognome).trim()) {
       return res.status(400).json({ ok: false, error: "nome_cognome obbligatorio" });
     }
