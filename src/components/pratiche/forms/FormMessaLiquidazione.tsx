@@ -222,12 +222,7 @@ liquidatore_residenza:
     professionista_nome:
       pratica?.dati_documento?.professionista_nome || "",
 
-    qualifica_professionista:
-      pratica?.dati_documento?.qualifica_professionista || "",
-
-    professionista_cf:
-      pratica?.dati_documento?.professionista_cf || "",
-  });
+    });
 
 useEffect(() => {
   if (praticaId) {
@@ -1266,31 +1261,101 @@ const res = await fetch(
         <div style={cardStyle}>
           <h2 style={titleStyle}>Dichiarazione di conformità</h2>
 
-          <div style={{ marginTop: 18 }}>
-            <label style={labelStyle}>Dicitura presentazione</label>
-            <textarea
-              style={{ ...inputStyle, minHeight: 90, resize: "vertical" }}
-              value={form.dicitura_presentazione}
-              onChange={(e) => aggiornaCampo("dicitura_presentazione", e.target.value)}
-            />
-          </div>
+     <div
+  style={{
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 12,
+    marginTop: 18,
+  }}
+>
+  <div>
+    <label style={labelStyle}>Professionista incaricato</label>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginTop: 14 }}>
-            <div>
-              <label style={labelStyle}>Professionista</label>
-              <input style={inputStyle} value={form.professionista_nome} onChange={(e) => aggiornaCampo("professionista_nome", e.target.value)} />
-            </div>
+    <select
+      style={inputStyle}
+      value={form.professionista_nome}
+      onChange={(e) => {
+        const prof = professionisti.find(
+          (p) => p.nome_cognome === e.target.value
+        );
 
-            <div>
-              <label style={labelStyle}>Qualifica</label>
-              <input style={inputStyle} value={form.qualifica_professionista} onChange={(e) => aggiornaCampo("qualifica_professionista", e.target.value)} />
-            </div>
+        aggiornaCampo(
+          "professionista_nome",
+          prof?.nome_cognome || ""
+        );
 
-            <div>
-              <label style={labelStyle}>Codice fiscale professionista</label>
-              <input style={inputStyle} value={form.professionista_cf} onChange={(e) => aggiornaCampo("professionista_cf", e.target.value.toUpperCase())} />
-            </div>
-          </div>
+        aggiornaCampo(
+          "professionista_cf",
+          prof?.codice_fiscale || ""
+        );
+      }}
+    >
+      <option value="">Seleziona professionista</option>
+
+      {professionisti.map((p) => (
+        <option key={p.id} value={p.nome_cognome}>
+          {p.nome_cognome}
+        </option>
+      ))}
+    </select>
+  </div>
+
+  <div>
+    <label style={labelStyle}>Tipo dicitura</label>
+
+    <select
+      style={inputStyle}
+      onChange={(e) => {
+        const dicitura = diciture.find(
+          (d) => d.id === e.target.value
+        );
+
+        if (!dicitura) return;
+
+        const testoFinale = String(
+          dicitura.testo || ""
+        ).replaceAll(
+          "[PROFESSIONISTA_NOME]",
+          form.professionista_nome || ""
+        );
+
+        aggiornaCampo(
+          "dicitura_presentazione",
+          testoFinale
+        );
+      }}
+    >
+      <option value="">Seleziona dicitura</option>
+
+      {diciture.map((d) => (
+        <option key={d.id} value={d.id}>
+          {d.titolo}
+        </option>
+      ))}
+    </select>
+  </div>
+</div>
+
+<div style={{ marginTop: 14 }}>
+  <label style={labelStyle}>Dicitura presentazione</label>
+
+  <textarea
+    style={{
+      ...inputStyle,
+      minHeight: 120,
+      resize: "vertical",
+      background: "#f8fafc",
+    }}
+    value={form.dicitura_presentazione}
+    onChange={(e) =>
+      aggiornaCampo(
+        "dicitura_presentazione",
+        e.target.value
+      )
+    }
+  />
+</div>
 
           <div style={{ marginTop: 22, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ fontSize: 14, color: messaggio.includes("Errore") ? "#dc2626" : "#64748b" }}>
