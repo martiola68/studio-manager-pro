@@ -84,11 +84,21 @@ useEffect(() => {
   if (typeof id === "string" && id.trim()) {
     setClienteId(id);
   }
-}, [router.isReady, router.query]);
-
+}, [router.isReady, router.query.cliente_id]);
+  
   useEffect(() => {
-    if (clienteId) caricaOrgani();
-  }, [clienteId]);
+  caricaClienti();
+  caricaNominativi();
+}, []);
+
+useEffect(() => {
+  if (!clienteId) {
+    setOrgani([]);
+    return;
+  }
+
+  caricaOrgani();
+}, [clienteId]);
 
   const organiFiltrati = useMemo(() => {
     if (filtroRuolo === "tutti") return organi;
@@ -248,7 +258,7 @@ principale:
         >
           <div>
             <label style={labelStyle}>Cliente / società</label>
-            <select
+  <select
   style={{
     ...inputStyle,
     background:
@@ -256,7 +266,11 @@ principale:
   }}
   value={clienteId}
   disabled={!!router.query.cliente_id}
-  onChange={(e) => setClienteId(e.target.value)}
+  onChange={(e) => {
+    setClienteId(e.target.value);
+    setOrgani([]);
+    setMessaggio("");
+  }}
 >
               <option value="">Seleziona società</option>
 
@@ -276,9 +290,9 @@ principale:
               onChange={(e) => setFiltroRuolo(e.target.value)}
             >
               {ruoli.map((r) => (
-                <option key={r} value={r}>
-                 {ruoliLabel[r] || r}
-                </option>
+               <option key={r} value={r}>
+  {ruoliLabel[r] || r}
+</option>
               ))}
             </select>
           </div>
