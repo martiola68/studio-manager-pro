@@ -1074,7 +1074,7 @@ function aggiornaCampo(campo: string, valore: string) {
           }
 
 
-          const res = await fetch("/api/rapp-legali", {
+ const res = await fetch("/api/rapp-legali/save", {
             method: "POST",
  body: JSON.stringify({
   studio_id: pratica?.studio_id || pratica?.cliente?.studio_id,
