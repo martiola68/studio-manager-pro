@@ -582,7 +582,7 @@ principale: consentePrincipale(e.target.value)
       </td>
     </tr>
   ))}
-                    )}
+ 
                   </td>
                 </tr>
               ))}
