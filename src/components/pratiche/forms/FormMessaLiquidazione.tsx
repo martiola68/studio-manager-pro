@@ -273,6 +273,14 @@ async function caricaNominativi() {
 function normalizzaCF(cf: string) {
   return String(cf || "").trim().toUpperCase();
 }
+
+  
+function aggiornaCampo(campo: string, valore: string) {
+  setForm((prev) => ({
+    ...prev,
+    [campo]: valore,
+  }));
+}
   async function salvaDatiDocumento(e?: React.FormEvent) {
     if (e) e.preventDefault();
 
