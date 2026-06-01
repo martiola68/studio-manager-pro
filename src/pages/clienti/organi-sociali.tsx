@@ -177,8 +177,6 @@ const { data } = await supabase
       ? form.percentuale_partecipazione || null
       : null,
   presenza: null,
-  durata_carica: form.durata_carica || null,
-  data_scadenza: form.data_scadenza || null,
   principale: consentePrincipale(form.ruolo) && form.principale,
 }),
     });
