@@ -59,6 +59,13 @@ export async function POST(req: NextRequest) {
 
     const payload = await req.json();
 
+    if (!payload.id) {
+  return NextResponse.json(
+    { error: "id mancante" },
+    { status: 400 }
+  );
+}
+
     const { data, error } = await supabase
       .from("tbclienti_organi")
      .insert({
@@ -96,28 +103,25 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
-  const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
 
     const payload = await req.json();
 
     const { data, error } = await supabase
       .from("tbclienti_organi")
       .update({
+        rapp_legale_id: payload.rapp_legale_id,
         ruolo: payload.ruolo,
         carica: payload.carica,
-        percentuale_partecipazione:
-          payload.percentuale_partecipazione,
+        percentuale_partecipazione: payload.percentuale_partecipazione,
+        presenza: payload.presenza,
         principale: payload.principale,
         attivo: payload.attivo,
-        data_attivazione:
-          payload.data_attivazione || null,
-        nominativo_cessato:
-          payload.nominativo_cessato ?? false,
-        data_cessato:
-          payload.data_cessato || null,
+        data_nomina: payload.data_nomina || null,
+        data_cessazione: payload.data_cessazione || null,
       })
       .eq("id", payload.id)
       .select()
@@ -130,9 +134,43 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({
-      organo: data,
-    });
+    return NextResponse.json({ organo: data });
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: err.message || "Errore server" },
+      { status: 500 }
+    );
+  }
+}
+export async function DELETE(req: NextRequest) {
+  try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const payload = await req.json();
+
+    if (!payload.id) {
+      return NextResponse.json(
+        { error: "id mancante" },
+        { status: 400 }
+      );
+    }
+
+    const { error } = await supabase
+      .from("tbclienti_organi")
+      .delete()
+      .eq("id", payload.id);
+
+    if (error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
   } catch (err: any) {
     return NextResponse.json(
       { error: err.message || "Errore server" },
