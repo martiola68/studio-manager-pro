@@ -190,7 +190,7 @@ const { data } = await supabase
 
     setMessaggio("Organo salvato correttamente.");
 
- setForm({
+setForm({
   rapp_legale_id: "",
   ruolo: "socio",
   carica: "",
@@ -199,9 +199,11 @@ const { data } = await supabase
   principale: false,
   attivo: true,
   data_nomina: "",
+  durata_carica: "Fino a revoca",
+  data_scadenza: "",
   data_cessazione: "",
 });
-
+    
 setOrganoInModificaId("");
 
 await caricaOrgani();
@@ -273,8 +275,10 @@ async function eliminaOrgano(organo: any) {
     presenza: organo.presenza || "Presente",
     principale: organo.principale || false,
     attivo: organo.attivo ?? true,
-    data_nomina: organo.data_nomina || "",
-    data_cessazione: organo.data_cessazione || "",
+   data_nomina: organo.data_nomina || "",
+durata_carica: organo.durata_carica || "Fino a revoca",
+data_scadenza: organo.data_scadenza || "",
+data_cessazione: organo.data_cessazione || "",
   });
 
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -592,33 +596,35 @@ principale: consentePrincipale(e.target.value)
           : "—"}
       </td>
 
-      <td style={tdStyle}>
-        {o.data_nomina
-          ? new Date(o.data_nomina).toLocaleDateString("it-IT")
-          : "—"}
-      </td>
+    <td style={tdStyle}>
+  {o.data_nomina
+    ? new Date(o.data_nomina).toLocaleDateString("it-IT")
+    : "—"}
+</td>
 
-      <td style={tdStyle}>{o.durata_carica || "—"}</td>
+<td style={tdStyle}>
+  {o.principale ? "Sì" : "No"}
+</td>
+
+<td style={tdStyle}>
+  {o.attivo ? "Sì" : "No"}
+</td>
+
+<td style={tdStyle}>
+  {o.data_cessazione
+    ? new Date(o.data_cessazione).toLocaleDateString("it-IT")
+    : "—"}
+</td>
+
+<td style={tdStyle}>
+  {o.durata_carica || "—"}
+</td>
 
 <td style={tdStyle}>
   {o.data_scadenza
     ? new Date(o.data_scadenza).toLocaleDateString("it-IT")
     : "—"}
 </td>
-
-      <td style={tdStyle}>
-        {o.principale ? "Sì" : "No"}
-      </td>
-
-      <td style={tdStyle}>
-        {o.attivo ? "Sì" : "No"}
-      </td>
-
-      <td style={tdStyle}>
-        {o.data_cessazione
-          ? new Date(o.data_cessazione).toLocaleDateString("it-IT")
-          : "—"}
-      </td>
 
       <td style={tdStyle}>
         <div
