@@ -167,21 +167,20 @@ const { data } = await supabase
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
+ body: JSON.stringify({
   id: organoInModificaId || undefined,
   cliente_id: clienteId,
   ...form,
-carica: ruoliLabel[form.ruolo] || form.ruolo,
-percentuale_partecipazione:
-  form.ruolo === "socio"
-    ? form.percentuale_partecipazione || null
-    : null,
-presenza: null,
-        durata_carica: payload.durata_carica || null,
-data_scadenza: payload.data_scadenza || null,
-principale:
-  consentePrincipale(form.ruolo) && form.principale,
-        }),
+  carica: ruoliLabel[form.ruolo] || form.ruolo,
+  percentuale_partecipazione:
+    form.ruolo === "socio"
+      ? form.percentuale_partecipazione || null
+      : null,
+  presenza: null,
+  durata_carica: form.durata_carica || null,
+  data_scadenza: form.data_scadenza || null,
+  principale: consentePrincipale(form.ruolo) && form.principale,
+}),
     });
 
     const data = await res.json();
