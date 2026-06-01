@@ -267,6 +267,35 @@ rappresentante_legale_cap:
     }
   }
 
+  async function caricaAmministratori() {
+  if (!pratica?.cliente_id) return;
+
+  const res = await fetch(
+    `/api/clienti-organi?cliente_id=${pratica.cliente_id}`,
+    {
+      cache: "no-store",
+    }
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) return;
+
+  setAmministratori(
+    (data.organi || []).filter(
+      (o: any) =>
+        o.attivo &&
+        [
+          "amministratore",
+          "amministratore_delegato",
+          "presidente_cda",
+        ].includes(
+          String(o.ruolo || "").toLowerCase()
+        )
+    )
+  );
+}
+
   async function salvaDatiDocumento(
     e?: React.FormEvent
   ) {
@@ -724,20 +753,34 @@ rappresentante_legale_cap:
                 }
                 onChange={(e) => {
                   const selected =
-                    pratica?.rappresentanti_legali?.find(
-                      (r: any) =>
-                        r.id ===
-                        e.target.value
-                    );
+  amministratori.find(
+    (r: any) =>
+      r.rapp_legale_id === e.target.value
+  );
 
                  setForm((prev) => ({
   ...prev,
 
-  rappresentante_legale_id:
-    selected?.id || "",
+ rappresentante_legale_id:
+  selected?.rapp_legale_id || "",
 
-  rappresentante_legale_nome:
-    selected?.nome_cognome || "",
+rappresentante_legale_nome:
+  selected?.rapp_legali?.nome_cognome || "",
+
+rappresentante_legale_codice_fiscale:
+  selected?.rapp_legali?.codice_fiscale || "",
+
+rappresentante_legale_indirizzo:
+  selected?.rapp_legali?.indirizzo || "",
+
+rappresentante_legale_citta:
+  selected?.rapp_legali?.citta || "",
+
+rappresentante_legale_provincia:
+  selected?.rapp_legali?.provincia || "",
+
+rappresentante_legale_cap:
+  selected?.rapp_legali?.cap || "",
 
   rappresentante_legale_codice_fiscale:
     selected?.codice_fiscale || "",
@@ -764,14 +807,15 @@ rappresentante_legale_cap:
                   Seleziona
                 </option>
 
-                {pratica?.rappresentanti_legali?.map(
-                  (r: any) => (
-                    <option
-                      key={r.id}
-                      value={r.id}
-                    >
-                      {r.nome_cognome}
-                    </option>
+               {amministratori.map(
+  (r: any) => (
+                   <option
+  key={r.rapp_legale_id}
+  value={r.rapp_legale_id}
+>
+  {r.rapp_legali?.nome_cognome}
+  {r.principale ? " — principale" : ""}
+</option>
                   )
                 )}
               </select>
