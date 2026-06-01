@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
         { status: 400 }
       );
     }
-
+    
     const { data, error } = await supabase
       .from("tbclienti_organi")
       .select(`
