@@ -77,6 +77,8 @@ export default function OrganiSocialiPage() {
   principale: false,
   attivo: true,
   data_nomina: "",
+  durata_carica: "Fino a revoca",
+  data_scadenza: "",
   data_cessazione: "",
 });
   
@@ -175,6 +177,8 @@ percentuale_partecipazione:
     ? form.percentuale_partecipazione || null
     : null,
 presenza: null,
+        durata_carica: payload.durata_carica || null,
+data_scadenza: payload.data_scadenza || null,
 principale:
   consentePrincipale(form.ruolo) && form.principale,
         }),
@@ -462,6 +466,43 @@ principale: consentePrincipale(e.target.value)
   />
 </div>
 
+          <div>
+  <label style={labelStyle}>Durata carica</label>
+  <select
+    style={inputStyle}
+    value={form.durata_carica}
+    onChange={(e) =>
+      setForm((prev) => ({
+        ...prev,
+        durata_carica: e.target.value,
+      }))
+    }
+  >
+    <option value="Fino a revoca">Fino a revoca</option>
+    <option value="Anni: 1">Anni: 1</option>
+    <option value="Anni: 2">Anni: 2</option>
+    <option value="Anni: 3">Anni: 3</option>
+    <option value="Anni: 4">Anni: 4</option>
+    <option value="Anni: 5">Anni: 5</option>
+    <option value="Fino al bilancio">Fino al bilancio</option>
+  </select>
+</div>
+
+<div>
+  <label style={labelStyle}>Data scadenza</label>
+  <input
+    type="date"
+    style={inputStyle}
+    value={form.data_scadenza}
+    onChange={(e) =>
+      setForm((prev) => ({
+        ...prev,
+        data_scadenza: e.target.value,
+      }))
+    }
+  />
+</div>
+
         </div>
 
         <div
@@ -523,6 +564,8 @@ principale: consentePrincipale(e.target.value)
     <th style={thStyle}>Principale</th>
     <th style={thStyle}>Attivo</th>
     <th style={thStyle}>Data cessazione</th>
+    <th style={thStyle}>Durata carica</th>
+    <th style={thStyle}>Data scadenza</th>
     <th style={thStyle}>Azioni</th>
   </tr>
 </thead>
@@ -557,6 +600,14 @@ principale: consentePrincipale(e.target.value)
           ? new Date(o.data_nomina).toLocaleDateString("it-IT")
           : "—"}
       </td>
+
+      <td style={tdStyle}>{o.durata_carica || "—"}</td>
+
+<td style={tdStyle}>
+  {o.data_scadenza
+    ? new Date(o.data_scadenza).toLocaleDateString("it-IT")
+    : "—"}
+</td>
 
       <td style={tdStyle}>
         {o.principale ? "Sì" : "No"}
@@ -611,7 +662,7 @@ principale: consentePrincipale(e.target.value)
     ))}
               {organiFiltrati.length === 0 && (
                 <tr>
-                  <td style={tdStyle} colSpan={10}>
+                  <td style={tdStyle} colSpan={12}>
                     Nessun organo collegato.
                   </td>
                 </tr>
