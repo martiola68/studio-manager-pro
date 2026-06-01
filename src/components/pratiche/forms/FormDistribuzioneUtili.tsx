@@ -225,20 +225,7 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
     }
   }
 
-  async function aggiungiNominativo() {
-    const cf = normalizzaCF(nuovoNominativo.codice_fiscale);
-
-    if (!nuovoNominativo.nome_cognome.trim()) {
-      alert("Nome e cognome obbligatori.");
-      return;
-    }
-
-    if (!cf) {
-      alert("Codice fiscale obbligatorio.");
-      return;
-    }
-
-    const esistente = nominativi.find(
+  const esistente = nominativi.find(
       (n) => normalizzaCF(n.codice_fiscale) === cf
     );
 
@@ -668,15 +655,7 @@ provincia:
             </select>
           </div>
 
-          <button
-            type="button"
-            style={secondaryButton}
-            onClick={() => setMostraNuovoNominativo(!mostraNuovoNominativo)}
-          >
-            + Nuovo
-          </button>
-
-          <div>
+           <div>
             <label style={labelStyle}>Dividendo totale</label>
             <input
               type="number"
@@ -804,25 +783,6 @@ provincia:
           </button>
         </div>
 
-        {mostraNuovoNominativo && (
-          <div style={{ ...cardStyle, marginTop: 18, background: "#f8fafc" }}>
-            <h3 style={{ margin: 0, fontSize: 16 }}>
-              Aggiungi nuovo nominativo
-            </h3>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginTop: 14 }}>
-              <div>
-                <label style={labelStyle}>Nome e cognome</label>
-                <input
-                  style={inputStyle}
-                  value={nuovoNominativo.nome_cognome}
-                  onChange={(e) =>
-                    setNuovoNominativo({
-                      ...nuovoNominativo,
-                      nome_cognome: e.target.value,
-                    })
-                  }
-                />
               </div>
 
               <div>
