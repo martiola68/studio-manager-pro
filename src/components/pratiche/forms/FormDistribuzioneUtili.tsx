@@ -2,11 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import {
-  Download,
-  Trash2,
-  Upload,
-} from "lucide-react";
+import { Download, Trash2, Upload } from "lucide-react";
 
 const font =
   'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
@@ -37,15 +33,15 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
   const praticaId = router.query.id as string;
 
   function tornaElenco() {
-  router.push("/pratiche");
-}
+    router.push("/pratiche");
+  }
 
   const [saving, setSaving] = useState(false);
   const [messaggio, setMessaggio] = useState("");
 
   const [clienti, setClienti] = useState<any[]>([]);
   const [soci, setSoci] = useState<any[]>([]);
- const [organiSocieta, setOrganiSocieta] = useState<any[]>([]);
+  const [organiSocieta, setOrganiSocieta] = useState<any[]>([]);
   const [modelli, setModelli] = useState<any[]>([]);
   const [documenti, setDocumenti] = useState<any[]>([]);
 
@@ -73,7 +69,9 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
       pratica.cliente?.partita_iva ||
       "",
     societa_rea:
-      pratica.dati_documento?.societa_rea || pratica.cliente?.numero_rea || "",
+      pratica.dati_documento?.societa_rea ||
+      pratica.cliente?.numero_rea ||
+      "",
     data_atto: pratica.dati_documento?.data_atto || "",
     ora_inizio: pratica.dati_documento?.ora_inizio || "",
     luogo_assemblea: pratica.dati_documento?.luogo_assemblea || sede || "",
@@ -88,8 +86,9 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
     ora_chiusura: pratica.dati_documento?.ora_chiusura || "",
     importo_dividendo_totale:
       pratica.dati_documento?.importo_dividendo_totale || "",
-    percentuale_soci_presenti:
-      String(pratica.dati_documento?.percentuale_soci_presenti || "100"),
+    percentuale_soci_presenti: String(
+      pratica.dati_documento?.percentuale_soci_presenti || "100"
+    ),
   });
 
   const [nuovoSocio, setNuovoSocio] = useState({
@@ -110,7 +109,7 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
     tipo_pagamento: "",
   });
 
-   useEffect(() => {
+  useEffect(() => {
     if (praticaId) {
       caricaClienti();
       caricaSoci();
@@ -124,14 +123,11 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
     setForm((prev) => ({ ...prev, [campo]: valore }));
   }
 
-  function normalizzaCF(cf: string) {
-    return String(cf || "").trim().toUpperCase();
-  }
-
   async function caricaClienti() {
     const res = await fetch("/api/clienti/import-nominativi", {
       cache: "no-store",
     });
+
     const data = await res.json();
     setClienti(Array.isArray(data) ? data : data.clienti || []);
   }
@@ -140,49 +136,59 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
     const res = await fetch(`/api/pratiche/${praticaId}/soci`, {
       cache: "no-store",
     });
+
     const data = await res.json();
-    if (res.ok) setSoci(data.soci || []);
+
+    if (res.ok) {
+      setSoci(data.soci || []);
+    }
   }
 
- async function caricaOrganiSocieta() {
-  if (!pratica?.cliente_id) return;
+  async function caricaOrganiSocieta() {
+    if (!pratica?.cliente_id) return;
 
-  const res = await fetch(
-    `/api/clienti-organi?cliente_id=${pratica.cliente_id}`,
-    {
-      cache: "no-store",
-    }
-  );
+    const res = await fetch(
+      `/api/clienti-organi?cliente_id=${pratica.cliente_id}`,
+      { cache: "no-store" }
+    );
 
-  const data = await res.json();
+    const data = await res.json();
 
-  if (!res.ok) return;
+    if (!res.ok) return;
 
-  setOrganiSocieta(
-    (data.organi || []).filter(
-      (o: any) =>
-        o.attivo &&
-        ["socio", "amministratore"].includes(
-          String(o.ruolo || "").toLowerCase()
-        )
-    )
-  );
-}
+    setOrganiSocieta(
+      (data.organi || []).filter(
+        (o: any) =>
+          o.attivo &&
+          ["socio", "amministratore"].includes(
+            String(o.ruolo || "").toLowerCase()
+          )
+      )
+    );
+  }
 
   async function caricaModelli() {
     const res = await fetch(`/api/pratiche/${praticaId}/modelli`, {
       cache: "no-store",
     });
+
     const data = await res.json();
-    if (res.ok) setModelli(data.modelli || []);
+
+    if (res.ok) {
+      setModelli(data.modelli || []);
+    }
   }
 
   async function caricaDocumenti() {
     const res = await fetch(`/api/pratiche/${praticaId}/documenti`, {
       cache: "no-store",
     });
+
     const data = await res.json();
-    if (res.ok) setDocumenti(data.documenti || []);
+
+    if (res.ok) {
+      setDocumenti(data.documenti || []);
+    }
   }
 
   async function salvaDatiDocumento(e?: React.FormEvent) {
@@ -214,49 +220,6 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
     }
   }
 
-    const res = await fetch("/api/pratiche/nominativi", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...nuovoNominativo,
-        codice_fiscale: cf,
-      }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      alert(data.error || "Errore creazione nominativo");
-      return;
-    }
-
-    await caricaNominativi();
-
-    const nuovo = data.nominativo;
-
-    setNuovoSocio({
-      ...nuovoSocio,
-      nominativo_id: nuovo.id,
-      nome_cognome: nuovo.nome_cognome || "",
-      codice_fiscale: nuovo.codice_fiscale || "",
-      indirizzo: nuovo.indirizzo || "",
-      cap: nuovo.cap || "",
-      citta: nuovo.citta || "",
-      provincia: nuovo.provincia || "",
-    });
-
-    setNuovoNominativo({
-      nome_cognome: "",
-      codice_fiscale: "",
-      indirizzo: "",
-      cap: "",
-      citta: "",
-      provincia: "",
-    });
-
-    setMostraNuovoNominativo(false);
-  }
-
   const totaleLordoSoci = soci.reduce(
     (totale, socio) => totale + Number(socio.importo_utile || 0),
     0
@@ -268,6 +231,7 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
   );
 
   const importoLordoNuovoSocio = Number(nuovoSocio.importo_utile || 0);
+
   const percentualeRitenutaNuovoSocio = Number(
     nuovoSocio.percentuale_ritenuta || 0
   );
@@ -330,33 +294,47 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
   }
 
   return (
-    <main style={{ padding: 28, background: "#f8fafc", minHeight: "100vh", fontFamily: font }}>
-    
+    <main
+      style={{
+        padding: 28,
+        background: "#f8fafc",
+        minHeight: "100vh",
+        fontFamily: font,
+      }}
+    >
       <div
-  style={{
-    marginBottom: 18,
-    display: "flex",
-    justifyContent: "flex-end",
-  }}
->
-  <button
-    type="button"
-    onClick={tornaElenco}
-    style={{
-      border: "1px solid #cbd5e1",
-      background: "#fff",
-      color: "#334155",
-      borderRadius: 8,
-      padding: "9px 16px",
-      fontWeight: 600,
-      cursor: "pointer",
-      fontFamily: font,
-    }}
-  >
-    ← Torna a elenco pratiche
-  </button>
-</div>
-      <h1 style={{ fontSize: 38, fontWeight: 800, margin: 0, color: "#0f172a" }}>
+        style={{
+          marginBottom: 18,
+          display: "flex",
+          justifyContent: "flex-end",
+        }}
+      >
+        <button
+          type="button"
+          onClick={tornaElenco}
+          style={{
+            border: "1px solid #cbd5e1",
+            background: "#fff",
+            color: "#334155",
+            borderRadius: 8,
+            padding: "9px 16px",
+            fontWeight: 600,
+            cursor: "pointer",
+            fontFamily: font,
+          }}
+        >
+          ← Torna a elenco pratiche
+        </button>
+      </div>
+
+      <h1
+        style={{
+          fontSize: 38,
+          fontWeight: 800,
+          margin: 0,
+          color: "#0f172a",
+        }}
+      >
         {pratica.numero_pratica}
       </h1>
 
@@ -368,9 +346,17 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
         <div style={cardStyle}>
           <h2 style={titleStyle}>Dati società</h2>
 
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 12, marginTop: 18 }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "2fr 1fr 1fr",
+              gap: 12,
+              marginTop: 18,
+            }}
+          >
             <div>
               <label style={labelStyle}>Denominazione società</label>
+
               <select
                 style={inputStyle}
                 value={form.societa_denominazione}
@@ -436,7 +422,14 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 12, marginTop: 14 }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "2fr 1fr",
+              gap: 12,
+              marginTop: 14,
+            }}
+          >
             <div>
               <label style={labelStyle}>Sede società</label>
               <input
@@ -460,7 +453,14 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
         <div style={cardStyle}>
           <h2 style={titleStyle}>Dati verbale distribuzione utili</h2>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 2fr", gap: 12, marginTop: 18 }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr 2fr",
+              gap: 12,
+              marginTop: 18,
+            }}
+          >
             <div>
               <label style={labelStyle}>Data assemblea</label>
               <input
@@ -493,7 +493,14 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 12, marginTop: 14 }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "2fr 1fr",
+              gap: 12,
+              marginTop: 14,
+            }}
+          >
             <div>
               <label style={labelStyle}>Oggetto assemblea</label>
               <input
@@ -526,7 +533,14 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginTop: 14 }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr 1fr",
+              gap: 12,
+              marginTop: 14,
+            }}
+          >
             <div>
               <label style={labelStyle}>Presidente</label>
               <input
@@ -556,8 +570,20 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
             </div>
           </div>
 
-          <div style={{ marginTop: 18, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ fontSize: 14, color: messaggio.includes("Errore") ? "#dc2626" : "#64748b" }}>
+          <div
+            style={{
+              marginTop: 18,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 14,
+                color: messaggio.includes("Errore") ? "#dc2626" : "#64748b",
+              }}
+            >
               {messaggio}
             </div>
 
@@ -571,50 +597,64 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
       <div style={cardStyle}>
         <h2 style={titleStyle}>Soci presenti / Distribuzione utili</h2>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1.6fr auto 1fr 1fr 1fr 1fr 1fr auto", gap: 12, marginTop: 18, alignItems: "end" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1.6fr 1fr 1fr 1fr 1fr 1fr auto",
+            gap: 12,
+            marginTop: 18,
+            alignItems: "end",
+          }}
+        >
           <div>
             <label style={labelStyle}>Socio</label>
+
             <select
               style={inputStyle}
               value={nuovoSocio.nominativo_id}
               onChange={(e) => {
                 const selected = organiSocieta.find(
-  (o) => o.rapp_legale_id === e.target.value
-);
+                  (o) => o.rapp_legale_id === e.target.value
+                );
 
-setNuovoSocio({
-  ...nuovoSocio,
-  nominativo_id: selected?.rapp_legale_id || "",
-  nome_cognome: selected?.rapp_legali?.nome_cognome || "",
-  codice_fiscale: selected?.rapp_legali?.codice_fiscale || "",
-  indirizzo: selected?.rapp_legali?.indirizzo || "",
-  cap: selected?.rapp_legali?.cap || "",
-  citta: selected?.rapp_legali?.citta || "",
-  provincia: selected?.rapp_legali?.provincia || "",
-  percentuale_partecipazione:
-    selected?.percentuale_partecipazione
-      ? String(selected.percentuale_partecipazione)
-      : nuovoSocio.percentuale_partecipazione,
-});
+                const percentuale =
+                  selected?.percentuale_partecipazione !== null &&
+                  selected?.percentuale_partecipazione !== undefined
+                    ? String(selected.percentuale_partecipazione)
+                    : nuovoSocio.percentuale_partecipazione;
+
+                const dividendo = Number(
+                  nuovoSocio.importo_dividendo_totale || 0
+                );
+
+                const lordo =
+                  (dividendo * Number(percentuale || 0)) / 100;
+
+                setNuovoSocio({
+                  ...nuovoSocio,
+                  nominativo_id: selected?.rapp_legale_id || "",
+                  nome_cognome: selected?.rapp_legali?.nome_cognome || "",
+                  codice_fiscale: selected?.rapp_legali?.codice_fiscale || "",
+                  indirizzo: selected?.rapp_legali?.indirizzo || "",
+                  cap: selected?.rapp_legali?.cap || "",
+                  citta: selected?.rapp_legali?.citta || "",
+                  provincia: selected?.rapp_legali?.provincia || "",
+                  percentuale_partecipazione: percentuale,
+                  importo_utile: lordo.toFixed(2),
                 });
               }}
             >
-              <option value="">Seleziona nominativo</option>
+              <option value="">Seleziona socio</option>
 
-             {organiSocieta.map((o) => (
-  <option
-    key={o.rapp_legale_id}
-    value={o.rapp_legale_id}
-  >
-    {o.rapp_legali?.nome_cognome}
-    {" — "}
-    {o.ruolo}
-  </option>
-))}
+              {organiSocieta.map((o) => (
+                <option key={o.rapp_legale_id} value={o.rapp_legale_id}>
+                  {o.rapp_legali?.nome_cognome} — {o.ruolo}
+                </option>
+              ))}
             </select>
           </div>
 
-           <div>
+          <div>
             <label style={labelStyle}>Dividendo totale</label>
             <input
               type="number"
@@ -626,6 +666,7 @@ setNuovoSocio({
                 const percentuale = Number(
                   nuovoSocio.percentuale_partecipazione || 0
                 );
+
                 const lordo = (Number(valore || 0) * percentuale) / 100;
 
                 setNuovoSocio({
@@ -646,8 +687,12 @@ setNuovoSocio({
               value={nuovoSocio.percentuale_partecipazione}
               onChange={(e) => {
                 const percentuale = e.target.value;
-                const dividendo = Number(nuovoSocio.importo_dividendo_totale || 0);
-                const lordo = (dividendo * Number(percentuale || 0)) / 100;
+                const dividendo = Number(
+                  nuovoSocio.importo_dividendo_totale || 0
+                );
+
+                const lordo =
+                  (dividendo * Number(percentuale || 0)) / 100;
 
                 setNuovoSocio({
                   ...nuovoSocio,
@@ -742,15 +787,18 @@ setNuovoSocio({
           </button>
         </div>
 
-              </div>
-
-              <div>
-  
         <div style={{ marginTop: 16, fontSize: 14, fontWeight: 700 }}>
-          Totale quote inserite: {percentualeSociPresentiCalcolata.toFixed(2)}%
+          Totale quote inserite:{" "}
+          {percentualeSociPresentiCalcolata.toFixed(2)}%
         </div>
 
-        <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 18 }}>
+        <table
+          style={{
+            width: "100%",
+            borderCollapse: "collapse",
+            marginTop: 18,
+          }}
+        >
           <thead>
             <tr>
               <th style={thStyle}>Socio</th>
@@ -771,9 +819,15 @@ setNuovoSocio({
                 <td style={tdStyle}>
                   {Number(s.percentuale_partecipazione || 0).toFixed(2)}%
                 </td>
-                <td style={tdStyle}>{Number(s.importo_utile || 0).toFixed(2)}</td>
-                <td style={tdStyle}>{Number(s.importo_ritenuta || 0).toFixed(2)}</td>
-                <td style={tdStyle}>{Number(s.importo_netto || 0).toFixed(2)}</td>
+                <td style={tdStyle}>
+                  {Number(s.importo_utile || 0).toFixed(2)}
+                </td>
+                <td style={tdStyle}>
+                  {Number(s.importo_ritenuta || 0).toFixed(2)}
+                </td>
+                <td style={tdStyle}>
+                  {Number(s.importo_netto || 0).toFixed(2)}
+                </td>
                 <td style={tdStyle}>
                   <button
                     type="button"
@@ -806,7 +860,15 @@ setNuovoSocio({
       <div style={cardStyle}>
         <h2 style={titleStyle}>Documenti</h2>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr auto", gap: 12, marginTop: 18, alignItems: "end" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 2fr auto",
+            gap: 12,
+            marginTop: 18,
+            alignItems: "end",
+          }}
+        >
           <div>
             <label style={labelStyle}>Dividendo totale deliberato</label>
             <input
@@ -823,6 +885,7 @@ setNuovoSocio({
               value={form.importo_dividendo_totale}
               onChange={(e) => {
                 aggiornaCampo("importo_dividendo_totale", e.target.value);
+
                 setNuovoSocio((prev) => ({
                   ...prev,
                   importo_dividendo_totale: e.target.value,
@@ -850,7 +913,13 @@ setNuovoSocio({
         </div>
 
         {documenti.length > 0 && (
-          <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 18 }}>
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              marginTop: 18,
+            }}
+          >
             <thead>
               <tr>
                 <th style={thStyle}>Documento</th>
@@ -864,17 +933,20 @@ setNuovoSocio({
               {documenti.map((doc) => (
                 <tr key={doc.id}>
                   <td style={tdStyle}>{doc.nome_file}</td>
-
                   <td style={tdStyle}>{doc.tipo_documento}</td>
-
                   <td style={tdStyle}>
                     {doc.created_at
                       ? new Date(doc.created_at).toLocaleString("it-IT")
                       : "—"}
                   </td>
-
                   <td style={tdStyle}>
-                    <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 12,
+                        alignItems: "center",
+                      }}
+                    >
                       <a
                         href={`/api/pratiche/${praticaId}/documenti/${doc.id}/download`}
                         download
@@ -889,48 +961,48 @@ setNuovoSocio({
                       </a>
 
                       <label
-  title="Carica documento modificato"
-  style={{
-    color: "#16a34a",
-    display: "flex",
-    alignItems: "center",
-    cursor: "pointer",
-  }}
->
-  <Upload size={18} />
+                        title="Carica documento modificato"
+                        style={{
+                          color: "#16a34a",
+                          display: "flex",
+                          alignItems: "center",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <Upload size={18} />
 
-  <input
-    type="file"
-    accept=".docx"
-    style={{ display: "none" }}
-    onChange={async (e) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
+                        <input
+                          type="file"
+                          accept=".docx"
+                          style={{ display: "none" }}
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
 
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("documento_id", doc.id);
+                            const formData = new FormData();
+                            formData.append("file", file);
+                            formData.append("documento_id", doc.id);
 
-      const res = await fetch(
-        `/api/pratiche/${praticaId}/documento-modificato`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
+                            const res = await fetch(
+                              `/api/pratiche/${praticaId}/documento-modificato`,
+                              {
+                                method: "POST",
+                                body: formData,
+                              }
+                            );
 
-      const data = await res.json();
+                            const data = await res.json();
 
-      if (!res.ok) {
-        alert(data.error || "Errore upload documento");
-        return;
-      }
+                            if (!res.ok) {
+                              alert(data.error || "Errore upload documento");
+                              return;
+                            }
 
-      alert("Documento aggiornato correttamente");
-      await caricaDocumenti();
-    }}
-  />
-</label>
+                            alert("Documento aggiornato correttamente");
+                            await caricaDocumenti();
+                          }}
+                        />
+                      </label>
 
                       <button
                         type="button"
