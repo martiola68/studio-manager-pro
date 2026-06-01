@@ -543,34 +543,38 @@ function aggiornaCampo(campo: string, valore: string) {
   >
     <div>
       <label style={labelStyle}>Socio</label>
-      <select
-        style={inputStyle}
-        value={nuovoSocio.nominativo_id}
-        onChange={(e) => {
-          const selected = nominativi.find(
-            (n) => n.id === e.target.value
-          );
+   <select
+  style={inputStyle}
+  value={nuovoSocio.nominativo_id}
+  onChange={(e) => {
+    const selected = organiSocieta.find(
+      (o) => o.rapp_legale_id === e.target.value
+    );
 
-          setNuovoSocio({
-            ...nuovoSocio,
-            nominativo_id: selected?.id || "",
-            nome_cognome: selected?.nome_cognome || "",
-            codice_fiscale: selected?.codice_fiscale || "",
-            indirizzo: selected?.indirizzo || "",
-            cap: selected?.cap || "",
-            citta: selected?.citta || "",
-            provincia: selected?.provincia || "",
-          });
-        }}
-      >
-        <option value="">Seleziona nominativo</option>
+    setNuovoSocio({
+      ...nuovoSocio,
+      nominativo_id: selected?.rapp_legale_id || "",
+      nome_cognome: selected?.rapp_legali?.nome_cognome || "",
+      codice_fiscale: selected?.rapp_legali?.codice_fiscale || "",
+      indirizzo: selected?.rapp_legali?.indirizzo || "",
+      cap: selected?.rapp_legali?.cap || "",
+      citta: selected?.rapp_legali?.citta || "",
+      provincia: selected?.rapp_legali?.provincia || "",
+      percentuale_partecipazione:
+        selected?.percentuale_partecipazione
+          ? String(selected.percentuale_partecipazione)
+          : "",
+    });
+  }}
+>
+  <option value="">Seleziona socio</option>
 
-        {nominativi.map((n) => (
-          <option key={n.id} value={n.id}>
-            {n.nome_cognome}
-          </option>
-        ))}
-      </select>
+  {organiSocieta.map((o) => (
+    <option key={o.rapp_legale_id} value={o.rapp_legale_id}>
+      {o.rapp_legali?.nome_cognome}
+    </option>
+  ))}
+</select>
     </div>
 
 
