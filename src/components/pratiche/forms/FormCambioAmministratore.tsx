@@ -164,7 +164,9 @@ export default function FormCambioAmministratore({ pratica }: any) {
   const [messaggio, setMessaggio] = useState("");
 
   const [clienti, setClienti] = useState<any[]>([]);
-  const [nominativi, setNominativi] = useState<any[]>([]);
+
+  const [organiSocieta, setOrganiSocieta] = useState<any[]>([]);
+  
   const [modelli, setModelli] = useState<any[]>([]);
   const [documenti, setDocumenti] = useState<any[]>([]);
 
@@ -179,16 +181,6 @@ export default function FormCambioAmministratore({ pratica }: any) {
     useState<Amministratore>(nuovoAmministratoreVuoto());
   const [nuovoNuovo, setNuovoNuovo] =
     useState<Amministratore>(nuovoAmministratoreVuoto());
-
-  const [mostraNuovoNominativo, setMostraNuovoNominativo] = useState(false);
-  const [nuovoNominativo, setNuovoNominativo] = useState({
-    nome_cognome: "",
-    codice_fiscale: "",
-    indirizzo: "",
-    cap: "",
-    citta: "",
-    provincia: "",
-  });
 
   const sede = [
     pratica?.cliente?.indirizzo,
@@ -255,7 +247,7 @@ export default function FormCambioAmministratore({ pratica }: any) {
   useEffect(() => {
     if (praticaId) {
       caricaClienti();
-      caricaNominativi();
+     caricaOrganiSocieta();
       caricaModelli();
       caricaDocumenti();
 
@@ -281,17 +273,19 @@ export default function FormCambioAmministratore({ pratica }: any) {
     amministratore: Amministratore,
     nominativoId: string
   ) {
-    const selected = nominativi.find((n) => n.id === nominativoId);
+    const selected = organiSocieta.find(
+  (o) => o.rapp_legale_id === nominativoId
+);
 
     return {
       ...amministratore,
-      nominativo_id: selected?.id || "",
-      nome_cognome: selected?.nome_cognome || "",
-      codice_fiscale: selected?.codice_fiscale || "",
-      indirizzo: selected?.indirizzo || "",
-      cap: selected?.cap || "",
-      citta: selected?.citta || "",
-      provincia: selected?.provincia || "",
+     nominativo_id: selected?.rapp_legale_id || "",
+nome_cognome: selected?.rapp_legali?.nome_cognome || "",
+codice_fiscale: selected?.rapp_legali?.codice_fiscale || "",
+indirizzo: selected?.rapp_legali?.indirizzo || "",
+cap: selected?.rapp_legali?.cap || "",
+citta: selected?.rapp_legali?.citta || "",
+provincia: selected?.rapp_legali?.provincia || "",
     };
   }
 
@@ -302,6 +296,36 @@ export default function FormCambioAmministratore({ pratica }: any) {
     const data = await res.json();
     setClienti(Array.isArray(data) ? data : data.clienti || []);
   }
+
+  async function caricaOrganiSocieta() {
+  if (!pratica?.cliente_id) return;
+
+  const res = await fetch(
+    `/api/clienti-organi?cliente_id=${pratica.cliente_id}`,
+    {
+      cache: "no-store",
+    }
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) return;
+
+  setOrganiSocieta(
+    (data.organi || []).filter(
+      (o: any) =>
+        o.attivo &&
+        [
+          "amministratore",
+          "amministratore_delegato",
+          "presidente_cda",
+          "liquidatore",
+        ].includes(
+          String(o.ruolo || "").toLowerCase()
+        )
+    )
+  );
+}
 
   async function caricaNominativi() {
     const res = await fetch("/api/pratiche/nominativi", {
@@ -362,20 +386,7 @@ export default function FormCambioAmministratore({ pratica }: any) {
     }
   }
 
-  async function aggiungiNominativo() {
-    const cf = normalizzaCF(nuovoNominativo.codice_fiscale);
-
-    if (!nuovoNominativo.nome_cognome.trim()) {
-      alert("Nome e cognome obbligatori.");
-      return;
-    }
-
-    if (!cf) {
-      alert("Codice fiscale obbligatorio.");
-      return;
-    }
-
-    const esistente = nominativi.find(
+     const esistente = nominativi.find(
       (n) => normalizzaCF(n.codice_fiscale) === cf
     );
 
@@ -782,7 +793,7 @@ export default function FormCambioAmministratore({ pratica }: any) {
                 }
               >
                 <option value="">Seleziona nominativo</option>
-                {nominativi.map((n) => (
+                {organiSocieta.map((n) => (
                   <option key={n.id} value={n.id}>
                     {n.nome_cognome}
                   </option>
@@ -790,15 +801,7 @@ export default function FormCambioAmministratore({ pratica }: any) {
               </select>
             </div>
 
-            <button
-              type="button"
-              style={secondaryButton}
-              onClick={() => setMostraNuovoNominativo(!mostraNuovoNominativo)}
-            >
-              + Nuovo
-            </button>
-
-            <div>
+             <div>
               <label style={labelStyle}>Carica attuale</label>
               <select
                 style={inputStyle}
@@ -887,21 +890,16 @@ export default function FormCambioAmministratore({ pratica }: any) {
                 }
               >
                 <option value="">Seleziona nominativo</option>
-                {nominativi.map((n) => (
-                  <option key={n.id} value={n.id}>
-                    {n.nome_cognome}
-                  </option>
+                {organiSocieta.map((n) => (
+                 <option
+  key={n.rapp_legale_id}
+  value={n.rapp_legale_id}
+>
+  {n.rapp_legali?.nome_cognome}
+</option>
                 ))}
               </select>
             </div>
-
-            <button
-              type="button"
-              style={secondaryButton}
-              onClick={() => setMostraNuovoNominativo(!mostraNuovoNominativo)}
-            >
-              + Nuovo
-            </button>
 
             <div>
               <label style={labelStyle}>Tipo carica</label>
@@ -1112,122 +1110,7 @@ export default function FormCambioAmministratore({ pratica }: any) {
           </table>
         </div>
 
-        {mostraNuovoNominativo && (
-          <div style={{ ...cardStyle, background: "#f8fafc" }}>
-            <h2 style={titleStyle}>Aggiungi nuovo nominativo</h2>
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr 1fr",
-                gap: 12,
-                marginTop: 14,
-              }}
-            >
-              <div>
-                <label style={labelStyle}>Nome e cognome</label>
-                <input
-                  style={inputStyle}
-                  value={nuovoNominativo.nome_cognome}
-                  onChange={(e) =>
-                    setNuovoNominativo({
-                      ...nuovoNominativo,
-                      nome_cognome: e.target.value,
-                    })
-                  }
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle}>Codice fiscale *</label>
-                <input
-                  style={inputStyle}
-                  value={nuovoNominativo.codice_fiscale}
-                  onChange={(e) =>
-                    setNuovoNominativo({
-                      ...nuovoNominativo,
-                      codice_fiscale: e.target.value.toUpperCase(),
-                    })
-                  }
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle}>Indirizzo</label>
-                <input
-                  style={inputStyle}
-                  value={nuovoNominativo.indirizzo}
-                  onChange={(e) =>
-                    setNuovoNominativo({
-                      ...nuovoNominativo,
-                      indirizzo: e.target.value,
-                    })
-                  }
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle}>CAP</label>
-                <input
-                  style={inputStyle}
-                  value={nuovoNominativo.cap}
-                  onChange={(e) =>
-                    setNuovoNominativo({
-                      ...nuovoNominativo,
-                      cap: e.target.value,
-                    })
-                  }
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle}>Città</label>
-                <input
-                  style={inputStyle}
-                  value={nuovoNominativo.citta}
-                  onChange={(e) =>
-                    setNuovoNominativo({
-                      ...nuovoNominativo,
-                      citta: e.target.value,
-                    })
-                  }
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle}>Provincia</label>
-                <input
-                  style={inputStyle}
-                  value={nuovoNominativo.provincia}
-                  onChange={(e) =>
-                    setNuovoNominativo({
-                      ...nuovoNominativo,
-                      provincia: e.target.value.toUpperCase(),
-                    })
-                  }
-                />
-              </div>
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginTop: 16,
-              }}
-            >
-              <div style={{ fontSize: 13, color: "#64748b" }}>
-                Codice fiscale obbligatorio. Se già esiste, viene selezionato senza duplicarlo.
-              </div>
-
-              <button type="button" style={blueButton} onClick={aggiungiNominativo}>
-                Aggiungi nominativo
-              </button>
-            </div>
-          </div>
-        )}
-
-        <div style={cardStyle}>
+              <div style={cardStyle}>
           <div
             style={{
               marginTop: 4,
