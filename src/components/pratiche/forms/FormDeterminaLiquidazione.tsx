@@ -751,44 +751,27 @@ rappresentante_legale_cap:
                 value={
                   form.rappresentante_legale_id
                 }
-                onChange={(e) => {
-                  const selected =
-  amministratori.find(
-    (r: any) =>
-      r.rapp_legale_id === e.target.value
+onChange={(e) => {
+  const selected = amministratori.find(
+    (r: any) => r.rapp_legale_id === e.target.value
   );
 
- setForm((prev) => ({
-  ...prev,
-  rappresentante_legale_id: selected?.rapp_legale_id || "",
-  rappresentante_legale_nome: selected?.rapp_legali?.nome_cognome || "",
-  rappresentante_legale_codice_fiscale: selected?.rapp_legali?.codice_fiscale || "",
-  rappresentante_legale_indirizzo: selected?.rapp_legali?.indirizzo || "",
-  rappresentante_legale_citta: selected?.rapp_legali?.citta || "",
-  rappresentante_legale_provincia: selected?.rapp_legali?.provincia || "",
-  rappresentante_legale_cap: selected?.rapp_legali?.cap || "",
-}));
-
-  rappresentante_legale_codice_fiscale:
-    selected?.codice_fiscale || "",
-
-  rappresentante_legale_indirizzo:
-    selected?.indirizzo_residenza ||
-    selected?.indirizzo ||
-    "",
-
-  rappresentante_legale_citta:
-    selected?.citta_residenza ||
-    selected?.citta ||
-    "",
-
-  rappresentante_legale_provincia:
-    selected?.provincia || "",
-
-  rappresentante_legale_cap:
-    selected?.cap || "",
-}));
-                }}
+  setForm((prev) => ({
+    ...prev,
+    rappresentante_legale_id: selected?.rapp_legale_id || "",
+    rappresentante_legale_nome: selected?.rapp_legali?.nome_cognome || "",
+    rappresentante_legale_codice_fiscale:
+      selected?.rapp_legali?.codice_fiscale || "",
+    rappresentante_legale_indirizzo:
+      selected?.rapp_legali?.indirizzo || "",
+    rappresentante_legale_citta:
+      selected?.rapp_legali?.citta || "",
+    rappresentante_legale_provincia:
+      selected?.rapp_legali?.provincia || "",
+    rappresentante_legale_cap:
+      selected?.rapp_legali?.cap || "",
+  }));
+}}
               >
                 <option value="">
                   Seleziona
