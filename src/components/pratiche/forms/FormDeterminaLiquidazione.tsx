@@ -96,8 +96,9 @@ export default function FormDeterminaLiquidazione({
   
   const praticaId = router.query.id as string;
 
-  const [motivi, setMotivi] = useState<any[]>([]);
-  const [documenti, setDocumenti] = useState<any[]>([]);
+ const [motivi, setMotivi] = useState<any[]>([]);
+const [documenti, setDocumenti] = useState<any[]>([]);
+const [amministratori, setAmministratori] = useState<any[]>([]);
 
   const [saving, setSaving] = useState(false);
   const [messaggio, setMessaggio] = useState("");
@@ -211,10 +212,11 @@ rappresentante_legale_cap:
     });
 
   useEffect(() => {
-    if (praticaId) {
-      caricaMotivi();
-      caricaDocumenti();
-    }
+   if (praticaId) {
+  caricaMotivi();
+  caricaDocumenti();
+  caricaAmministratori();
+}
   }, [praticaId]);
 
   function aggiornaCampo(
