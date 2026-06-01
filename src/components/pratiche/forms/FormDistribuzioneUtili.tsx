@@ -49,8 +49,6 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
   const [modelli, setModelli] = useState<any[]>([]);
   const [documenti, setDocumenti] = useState<any[]>([]);
 
-  const [mostraNuovoNominativo, setMostraNuovoNominativo] = useState(false);
-
   const sede = [
     pratica.cliente?.indirizzo,
     pratica.cliente?.cap,
@@ -112,16 +110,7 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
     tipo_pagamento: "",
   });
 
-  const [nuovoNominativo, setNuovoNominativo] = useState({
-    nome_cognome: "",
-    codice_fiscale: "",
-    indirizzo: "",
-    cap: "",
-    citta: "",
-    provincia: "",
-  });
-
-  useEffect(() => {
+   useEffect(() => {
     if (praticaId) {
       caricaClienti();
       caricaSoci();
@@ -224,27 +213,6 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
       setSaving(false);
     }
   }
-
-  const esistente = nominativi.find(
-      (n) => normalizzaCF(n.codice_fiscale) === cf
-    );
-
-    if (esistente) {
-      setNuovoSocio({
-        ...nuovoSocio,
-        nominativo_id: esistente.id,
-        nome_cognome: esistente.nome_cognome || "",
-        codice_fiscale: esistente.codice_fiscale || "",
-        indirizzo: esistente.indirizzo || "",
-        cap: esistente.cap || "",
-        citta: esistente.citta || "",
-        provincia: esistente.provincia || "",
-      });
-
-      alert("Nominativo già esistente: selezionato automaticamente.");
-      setMostraNuovoNominativo(false);
-      return;
-    }
 
     const res = await fetch("/api/pratiche/nominativi", {
       method: "POST",
@@ -614,29 +582,20 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
   (o) => o.rapp_legale_id === e.target.value
 );
 
-                setNuovoSocio({
-                  ...nuovoSocio,
-                  nominativo_id: selected?.id || "",
-                  nome_cognome:
-  selected?.rapp_legali?.nome_cognome || "",
-
-codice_fiscale:
-  selected?.rapp_legali?.codice_fiscale || "",
-
-indirizzo:
-  selected?.rapp_legali?.indirizzo || "",
-
-cap:
-  selected?.rapp_legali?.cap || "",
-
-citta:
-  selected?.rapp_legali?.citta || "",
-
-provincia:
-  selected?.rapp_legali?.provincia || "",
-                  cap: selected?.cap || "",
-                  citta: selected?.citta || "",
-                  provincia: selected?.provincia || "",
+setNuovoSocio({
+  ...nuovoSocio,
+  nominativo_id: selected?.rapp_legale_id || "",
+  nome_cognome: selected?.rapp_legali?.nome_cognome || "",
+  codice_fiscale: selected?.rapp_legali?.codice_fiscale || "",
+  indirizzo: selected?.rapp_legali?.indirizzo || "",
+  cap: selected?.rapp_legali?.cap || "",
+  citta: selected?.rapp_legali?.citta || "",
+  provincia: selected?.rapp_legali?.provincia || "",
+  percentuale_partecipazione:
+    selected?.percentuale_partecipazione
+      ? String(selected.percentuale_partecipazione)
+      : nuovoSocio.percentuale_partecipazione,
+});
                 });
               }}
             >
@@ -786,88 +745,7 @@ provincia:
               </div>
 
               <div>
-                <label style={labelStyle}>Codice fiscale *</label>
-                <input
-                  style={inputStyle}
-                  value={nuovoNominativo.codice_fiscale}
-                  onChange={(e) =>
-                    setNuovoNominativo({
-                      ...nuovoNominativo,
-                      codice_fiscale: e.target.value.toUpperCase(),
-                    })
-                  }
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle}>Indirizzo</label>
-                <input
-                  style={inputStyle}
-                  value={nuovoNominativo.indirizzo}
-                  onChange={(e) =>
-                    setNuovoNominativo({
-                      ...nuovoNominativo,
-                      indirizzo: e.target.value,
-                    })
-                  }
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle}>CAP</label>
-                <input
-                  style={inputStyle}
-                  value={nuovoNominativo.cap}
-                  onChange={(e) =>
-                    setNuovoNominativo({
-                      ...nuovoNominativo,
-                      cap: e.target.value,
-                    })
-                  }
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle}>Città</label>
-                <input
-                  style={inputStyle}
-                  value={nuovoNominativo.citta}
-                  onChange={(e) =>
-                    setNuovoNominativo({
-                      ...nuovoNominativo,
-                      citta: e.target.value,
-                    })
-                  }
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle}>Provincia</label>
-                <input
-                  style={inputStyle}
-                  value={nuovoNominativo.provincia}
-                  onChange={(e) =>
-                    setNuovoNominativo({
-                      ...nuovoNominativo,
-                      provincia: e.target.value,
-                    })
-                  }
-                />
-              </div>
-            </div>
-
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 16 }}>
-              <div style={{ fontSize: 13, color: "#64748b" }}>
-                Codice fiscale obbligatorio. Se già esiste, viene selezionato senza duplicarlo.
-              </div>
-
-              <button type="button" style={blueButton} onClick={aggiungiNominativo}>
-                Aggiungi nominativo
-              </button>
-            </div>
-          </div>
-        )}
-
+  
         <div style={{ marginTop: 16, fontSize: 14, fontWeight: 700 }}>
           Totale quote inserite: {percentualeSociPresentiCalcolata.toFixed(2)}%
         </div>
