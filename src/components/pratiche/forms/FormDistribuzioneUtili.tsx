@@ -45,7 +45,7 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
 
   const [clienti, setClienti] = useState<any[]>([]);
   const [soci, setSoci] = useState<any[]>([]);
-  const [nominativi, setNominativi] = useState<any[]>([]);
+ const [organiSocieta, setOrganiSocieta] = useState<any[]>([]);
   const [modelli, setModelli] = useState<any[]>([]);
   const [documenti, setDocumenti] = useState<any[]>([]);
 
@@ -125,7 +125,7 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
     if (praticaId) {
       caricaClienti();
       caricaSoci();
-      caricaNominativi();
+      caricaOrganiSocieta();
       caricaModelli();
       caricaDocumenti();
     }
@@ -155,13 +155,30 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
     if (res.ok) setSoci(data.soci || []);
   }
 
-  async function caricaNominativi() {
-    const res = await fetch("/api/pratiche/nominativi", {
+ async function caricaOrganiSocieta() {
+  if (!pratica?.cliente_id) return;
+
+  const res = await fetch(
+    `/api/clienti-organi?cliente_id=${pratica.cliente_id}`,
+    {
       cache: "no-store",
-    });
-    const data = await res.json();
-    if (res.ok) setNominativi(data.nominativi || []);
-  }
+    }
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) return;
+
+  setOrganiSocieta(
+    (data.organi || []).filter(
+      (o: any) =>
+        o.attivo &&
+        ["socio", "amministratore"].includes(
+          String(o.ruolo || "").toLowerCase()
+        )
+    )
+  );
+}
 
   async function caricaModelli() {
     const res = await fetch(`/api/pratiche/${praticaId}/modelli`, {
@@ -606,14 +623,30 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
               style={inputStyle}
               value={nuovoSocio.nominativo_id}
               onChange={(e) => {
-                const selected = nominativi.find((n) => n.id === e.target.value);
+                const selected = organiSocieta.find(
+  (o) => o.rapp_legale_id === e.target.value
+);
 
                 setNuovoSocio({
                   ...nuovoSocio,
                   nominativo_id: selected?.id || "",
-                  nome_cognome: selected?.nome_cognome || "",
-                  codice_fiscale: selected?.codice_fiscale || "",
-                  indirizzo: selected?.indirizzo || "",
+                  nome_cognome:
+  selected?.rapp_legali?.nome_cognome || "",
+
+codice_fiscale:
+  selected?.rapp_legali?.codice_fiscale || "",
+
+indirizzo:
+  selected?.rapp_legali?.indirizzo || "",
+
+cap:
+  selected?.rapp_legali?.cap || "",
+
+citta:
+  selected?.rapp_legali?.citta || "",
+
+provincia:
+  selected?.rapp_legali?.provincia || "",
                   cap: selected?.cap || "",
                   citta: selected?.citta || "",
                   provincia: selected?.provincia || "",
@@ -622,11 +655,16 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
             >
               <option value="">Seleziona nominativo</option>
 
-              {nominativi.map((n) => (
-                <option key={n.id} value={n.id}>
-                  {n.nome_cognome}
-                </option>
-              ))}
+             {organiSocieta.map((o) => (
+  <option
+    key={o.rapp_legale_id}
+    value={o.rapp_legale_id}
+  >
+    {o.rapp_legali?.nome_cognome}
+    {" — "}
+    {o.ruolo}
+  </option>
+))}
             </select>
           </div>
 
