@@ -327,14 +327,6 @@ provincia: selected?.rapp_legali?.provincia || "",
   );
 }
 
-  async function caricaNominativi() {
-    const res = await fetch("/api/pratiche/nominativi", {
-      cache: "no-store",
-    });
-    const data = await res.json();
-    if (res.ok) setNominativi(data.nominativi || []);
-  }
-
   async function caricaModelli() {
     const res = await fetch(`/api/pratiche/${praticaId}/modelli`, {
       cache: "no-store",
@@ -386,61 +378,7 @@ provincia: selected?.rapp_legali?.provincia || "",
     }
   }
 
-     const esistente = nominativi.find(
-      (n) => normalizzaCF(n.codice_fiscale) === cf
-    );
-
-    if (esistente) {
-      setNuovoNuovo(applicaNominativo(nuovoNuovo, esistente.id));
-      alert("Nominativo già esistente: selezionato automaticamente.");
-      setMostraNuovoNominativo(false);
-      return;
-    }
-
-    const res = await fetch("/api/pratiche/nominativi", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...nuovoNominativo,
-        codice_fiscale: cf,
-      }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      alert(data.error || "Errore creazione nominativo");
-      return;
-    }
-
-    await caricaNominativi();
-
-    const nuovo = data.nominativo;
-
-    setNuovoNuovo({
-      ...nuovoNuovo,
-      nominativo_id: nuovo.id,
-      nome_cognome: nuovo.nome_cognome || "",
-      codice_fiscale: nuovo.codice_fiscale || "",
-      indirizzo: nuovo.indirizzo || "",
-      cap: nuovo.cap || "",
-      citta: nuovo.citta || "",
-      provincia: nuovo.provincia || "",
-    });
-
-    setNuovoNominativo({
-      nome_cognome: "",
-      codice_fiscale: "",
-      indirizzo: "",
-      cap: "",
-      citta: "",
-      provincia: "",
-    });
-
-    setMostraNuovoNominativo(false);
-  }
-
-  function aggiungiVecchioAmministratore() {
+     function aggiungiVecchioAmministratore() {
     if (!nuovoVecchio.nome_cognome) {
       alert("Seleziona o inserisci il vecchio amministratore.");
       return;
