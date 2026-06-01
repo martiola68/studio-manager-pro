@@ -78,7 +78,9 @@ export async function POST(req: NextRequest) {
   principale: payload.principale,
   attivo: payload.attivo ?? true,
   data_nomina: payload.data_nomina || null,
-  data_cessazione: payload.data_cessazione || null,
+durata_carica: payload.durata_carica || null,
+data_scadenza: payload.data_scadenza || null,
+data_cessazione: payload.data_cessazione || null,
 })
       .select()
       .single();
@@ -120,7 +122,9 @@ export async function PUT(req: NextRequest) {
         presenza: payload.presenza,
         principale: payload.principale,
         attivo: payload.attivo,
-        data_nomina: payload.data_nomina || null,
+       data_nomina: payload.data_nomina || null,
+      durata_carica: payload.durata_carica || null,
+      data_scadenza: payload.data_scadenza || null,
         data_cessazione: payload.data_cessazione || null,
       })
       .eq("id", payload.id)
