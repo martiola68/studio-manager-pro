@@ -758,29 +758,16 @@ rappresentante_legale_cap:
       r.rapp_legale_id === e.target.value
   );
 
-                 setForm((prev) => ({
+ setForm((prev) => ({
   ...prev,
-
- rappresentante_legale_id:
-  selected?.rapp_legale_id || "",
-
-rappresentante_legale_nome:
-  selected?.rapp_legali?.nome_cognome || "",
-
-rappresentante_legale_codice_fiscale:
-  selected?.rapp_legali?.codice_fiscale || "",
-
-rappresentante_legale_indirizzo:
-  selected?.rapp_legali?.indirizzo || "",
-
-rappresentante_legale_citta:
-  selected?.rapp_legali?.citta || "",
-
-rappresentante_legale_provincia:
-  selected?.rapp_legali?.provincia || "",
-
-rappresentante_legale_cap:
-  selected?.rapp_legali?.cap || "",
+  rappresentante_legale_id: selected?.rapp_legale_id || "",
+  rappresentante_legale_nome: selected?.rapp_legali?.nome_cognome || "",
+  rappresentante_legale_codice_fiscale: selected?.rapp_legali?.codice_fiscale || "",
+  rappresentante_legale_indirizzo: selected?.rapp_legali?.indirizzo || "",
+  rappresentante_legale_citta: selected?.rapp_legali?.citta || "",
+  rappresentante_legale_provincia: selected?.rapp_legali?.provincia || "",
+  rappresentante_legale_cap: selected?.rapp_legali?.cap || "",
+}));
 
   rappresentante_legale_codice_fiscale:
     selected?.codice_fiscale || "",
