@@ -790,6 +790,26 @@ function getScadenzarioConfigKey(tipo: TipoScadenzaOperativa): string | null {
     return "fiscale:ires_saldo_acconto";
   }
 
+   if (tipoScadenza === "iva") {
+    return "iva";
+  }
+
+  if (tipoScadenza === "ccgg") {
+    return "ccgg";
+  }
+
+  if (tipoScadenza === "cu") {
+    return "cu";
+  }
+
+  if (tipoScadenza === "770") {
+    return "770";
+  }
+
+  if (tipoScadenza === "bilancio") {
+    return "bilancio";
+  }
+
   return null;
 }
 
