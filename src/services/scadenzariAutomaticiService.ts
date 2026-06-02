@@ -839,18 +839,20 @@ async function processScadenzariDaTipi(oggi: string): Promise<{
     const config = (SCADENZARI_CONFIG as any)[configKey];
     if (!config?.table || !config?.flag) continue;
 
-    const { data: righe, error: righeError } = await supabase
-      .from(config.table as any)
-      .select(`
-        id,
-        nominativo,
-        utente_operatore_id,
-        utente_professionista_id,
-        ${config.flag}
-      `)
-      .eq(config.flag, false)
-      .eq("archiviato", false)
-      .eq("anno_riferimento", annoCorrente);
+  const query = (supabase as any)
+  .from(config.table)
+  .select(`
+    id,
+    nominativo,
+    utente_operatore_id,
+    utente_professionista_id,
+    ${config.flag}
+  `)
+  .eq(config.flag, false)
+  .eq("archiviato", false)
+  .eq("anno_riferimento", annoCorrente);
+
+const { data: righe, error: righeError } = await query;
 
     if (righeError) throw righeError;
 
