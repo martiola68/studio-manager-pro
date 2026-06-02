@@ -42,7 +42,13 @@ import { supabase } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/types";
 import { useToast } from "@/hooks/use-toast";
 
-type TipoScadenza = Database["public"]["Tables"]["tbtipi_scadenze"]["Row"];
+type TipoScadenza =
+  Database["public"]["Tables"]["tbtipi_scadenze"]["Row"] & {
+    ha_scadenzario?: boolean | null;
+    nome_tabella?: string | null;
+    campo_completamento?: string | null;
+    campo_nominativo?: string | null;
+  };
 
 const TIPI_SCADENZA_OPTIONS = [
   { value: "iva", label: "IVA" },
