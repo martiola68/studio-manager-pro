@@ -73,4 +73,29 @@ export const SCADENZARI_CONFIG = {
     table: "tbscadfiscali",
     flag: "conferma_irap_invio_dichiarazione",
   },
+
+   "iva": {
+    table: "tbscadiva",
+    flag: "conferma_riga",
+  },
+
+  "ccgg": {
+    table: "tbscadccgg",
+    flag: "conferma_riga",
+  },
+
+  "cu": {
+    table: "tbscadcu",
+    flag: "conferma_riga",
+  },
+
+  "770": {
+    table: "tbscad770",
+    flag: "conferma_riga",
+  },
+
+  "bilancio": {
+    table: "tbscadbilanci",
+    flag: "conferma_riga",
+  },
 };
