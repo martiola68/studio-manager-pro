@@ -45,10 +45,7 @@ import { useToast } from "@/hooks/use-toast";
 type TipoScadenza =
   Database["public"]["Tables"]["tbtipi_scadenze"]["Row"] & {
     ha_scadenzario?: boolean | null;
-    nome_tabella?: string | null;
-    campo_completamento?: string | null;
-    campo_nominativo?: string | null;
-  };
+     };
 
 const TIPI_SCADENZA_OPTIONS = [
   { value: "iva", label: "IVA" },
@@ -91,10 +88,7 @@ export default function TipiScadenzePage() {
     settore_lavoro: false,
     settore_consulenza: false,
      ha_scadenzario: false,
-    nome_tabella: "",
-    campo_completamento: "",
-    campo_nominativo: "nominativo",
-  });
+     });
 
   useEffect(() => {
     checkAuth();
@@ -277,9 +271,7 @@ export default function TipiScadenzePage() {
         settore_lavoro: tipo.settore_lavoro || false,
         settore_consulenza: tipo.settore_consulenza || false,
         ha_scadenzario: tipo.ha_scadenzario || false,
-        nome_tabella: tipo.nome_tabella || "",
-        campo_completamento: tipo.campo_completamento || "",
-        campo_nominativo: tipo.campo_nominativo || "nominativo",
+        
       });
     } else {
       setEditingTipo(null);
@@ -296,9 +288,7 @@ export default function TipiScadenzePage() {
         settore_lavoro: false,
         settore_consulenza: false,
         ha_scadenzario: false,
-        nome_tabella: "",
-        campo_completamento: "",
-        campo_nominativo: "nominativo",
+        
       });
     }
     setIsDialogOpen(true);
@@ -326,13 +316,7 @@ export default function TipiScadenzePage() {
         settore_lavoro: formData.settore_lavoro,
        settore_consulenza: formData.settore_consulenza,
         ha_scadenzario: formData.ha_scadenzario,
-        nome_tabella: formData.ha_scadenzario ? formData.nome_tabella : null,
-        campo_completamento: formData.ha_scadenzario
-        ? formData.campo_completamento
-        : null,
-        campo_nominativo: formData.ha_scadenzario
-        ? formData.campo_nominativo || "nominativo"
-        : null,
+       
           };
 
       if (editingTipo) {
@@ -747,53 +731,7 @@ export default function TipiScadenzePage() {
   </Label>
 </div>
 
-              {formData.ha_scadenzario && (
-  <div className="grid grid-cols-3 gap-4">
-    <div className="grid gap-2">
-      <Label htmlFor="nome_tabella">Tabella scadenzario</Label>
-      <Input
-        id="nome_tabella"
-        value={formData.nome_tabella}
-        onChange={(e) =>
-          setFormData({ ...formData, nome_tabella: e.target.value })
-        }
-        placeholder="es. tbscadimu"
-      />
-    </div>
-
-    <div className="grid gap-2">
-      <Label htmlFor="campo_completamento">Campo completamento</Label>
-      <Input
-        id="campo_completamento"
-        value={formData.campo_completamento}
-        onChange={(e) =>
-          setFormData({
-            ...formData,
-            campo_completamento: e.target.value,
-          })
-        }
-        placeholder="es. data_com_acconto"
-      />
-    </div>
-
-    <div className="grid gap-2">
-      <Label htmlFor="campo_nominativo">Campo nominativo</Label>
-      <Input
-        id="campo_nominativo"
-        value={formData.campo_nominativo}
-        onChange={(e) =>
-          setFormData({
-            ...formData,
-            campo_nominativo: e.target.value,
-          })
-        }
-        placeholder="nominativo"
-      />
-    </div>
-  </div>
-)}
-
-              <div className="grid gap-2">
+               <div className="grid gap-2">
                 <Label htmlFor="data_scadenza">Data Scadenza *</Label>
                 <Input
                   id="data_scadenza"
