@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { sendEmailServer } from "@/services/sendEmailServer";
+import { SCADENZARI_CONFIG } from "@/lib/scadenzari-config";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -95,6 +96,23 @@ type ProcessResult = {
   processedRows: number;
   emailsSent: number;
   errors: string[];
+};
+
+type TipoScadenzaOperativa = {
+  id: string;
+  nome: string;
+  tipo_scadenza: string;
+  data_scadenza: string;
+  giorni_preavviso_1: number | null;
+  giorni_preavviso_2: number | null;
+  ha_scadenzario: boolean | null;
+};
+
+type RigaScadenzarioOperativo = {
+  id: string;
+  nominativo: string;
+  utente_operatore_id: string | null;
+  utente_professionista_id: string | null;
 };
 
 function startOfDay(date: Date): Date {
@@ -708,6 +726,177 @@ async function processAffittiAutomatici(oggi: string): Promise<{
   };
 }
 
+function getScadenzarioConfigKey(tipo: TipoScadenzaOperativa): string | null {
+  const nome = String(tipo.nome || "").toLowerCase();
+  const tipoScadenza = String(tipo.tipo_scadenza || "").toLowerCase();
+
+  if (tipoScadenza === "imu" && nome.includes("acconto")) {
+    return "imu:acconto";
+  }
+
+  if (tipoScadenza === "imu" && nome.includes("saldo")) {
+    return "imu:saldo";
+  }
+
+  if (tipoScadenza === "imu" && nome.includes("dichiar")) {
+    return "imu:dichiarazione";
+  }
+
+  if (tipoScadenza === "lipe" && nome.includes("1")) {
+    return "lipe:1_trimestre";
+  }
+
+  if (tipoScadenza === "lipe" && nome.includes("2")) {
+    return "lipe:2_trimestre";
+  }
+
+  if (tipoScadenza === "lipe" && nome.includes("3")) {
+    return "lipe:3_trimestre";
+  }
+
+  if (tipoScadenza === "lipe" && nome.includes("4")) {
+    return "lipe:4_trimestre";
+  }
+
+  if (tipoScadenza === "iva" && nome.includes("acconto")) {
+    return "iva:acconto";
+  }
+
+  if (tipoScadenza === "fiscale" && nome.includes("cciaa")) {
+    return "fiscale:cciaa";
+  }
+
+  if (tipoScadenza === "fiscale" && nome.includes("ires") && nome.includes("secondo")) {
+    return "fiscale:ires_secondo_acconto";
+  }
+
+  if (tipoScadenza === "fiscale" && nome.includes("irap") && nome.includes("secondo")) {
+    return "fiscale:irap_secondo_acconto";
+  }
+
+  if (tipoScadenza === "fiscale" && nome.includes("irap") && nome.includes("invio")) {
+    return "fiscale:irap_invio_dichiarazione";
+  }
+
+  if (tipoScadenza === "fiscale" && nome.includes("irap")) {
+    return "fiscale:irap_saldo_acconto";
+  }
+
+  if (tipoScadenza === "fiscale" && nome.includes("invio")) {
+    return "fiscale:invio_dichiarazione";
+  }
+
+  if (tipoScadenza === "fiscale" && nome.includes("ires")) {
+    return "fiscale:ires_saldo_acconto";
+  }
+
+  return null;
+}
+
+async function processScadenzariDaTipi(oggi: string): Promise<{
+  emailsSent: number;
+  processedRows: number;
+}> {
+  const annoCorrente = new Date().getFullYear();
+
+  const { data: tipi, error } = await supabase
+    .from("tbtipi_scadenze" as any)
+    .select(`
+      id,
+      nome,
+      tipo_scadenza,
+      data_scadenza,
+      giorni_preavviso_1,
+      giorni_preavviso_2,
+      ha_scadenzario
+    `)
+    .eq("attivo", true)
+    .eq("ha_scadenzario", true);
+
+  if (error) throw error;
+
+  let emailsSent = 0;
+  let processedRows = 0;
+
+  for (const tipo of ((tipi || []) as TipoScadenzaOperativa[])) {
+    const giorniMancanti = diffDaysFromToday(tipo.data_scadenza);
+
+    let alertNumero: 1 | 2 | 3 | null = null;
+
+    if (giorniMancanti === Number(tipo.giorni_preavviso_1 || 15)) {
+      alertNumero = 1;
+    } else if (giorniMancanti === Number(tipo.giorni_preavviso_2 || 7)) {
+      alertNumero = 2;
+    } else if (giorniMancanti === 0) {
+      alertNumero = 3;
+    }
+
+    if (!alertNumero) continue;
+
+    const configKey = getScadenzarioConfigKey(tipo);
+    if (!configKey) continue;
+
+    const config = (SCADENZARI_CONFIG as any)[configKey];
+    if (!config?.table || !config?.flag) continue;
+
+    const { data: righe, error: righeError } = await supabase
+      .from(config.table as any)
+      .select(`
+        id,
+        nominativo,
+        utente_operatore_id,
+        utente_professionista_id,
+        ${config.flag}
+      `)
+      .eq(config.flag, false)
+      .eq("archiviato", false)
+      .eq("anno_riferimento", annoCorrente);
+
+    if (righeError) throw righeError;
+
+    const openRows = ((righe || []) as unknown) as RigaScadenzarioOperativo[];
+    const grouped = groupByUserId(openRows);
+
+    for (const [userId, userRows] of grouped.entries()) {
+      const { data: giaInviato } = await supabase
+        .from("tbscadenze_alert_log" as any)
+        .select("id")
+        .eq("tipo_scadenza_id", tipo.id)
+        .eq("utente_id", userId)
+        .eq("alert_numero", alertNumero)
+        .eq("anno_riferimento", annoCorrente)
+        .maybeSingle();
+
+      if (giaInviato?.id) continue;
+
+      const destinatario = await loadDestinatarioByUserId(userId);
+      if (!destinatario) continue;
+
+      const { oggetto, messaggio } = buildEmailMessage(
+        tipo.nome,
+        userRows as any,
+        alertNumero === 3 ? 2 : alertNumero
+      );
+
+      const sentCount = await sendEmails([destinatario], oggetto, messaggio);
+
+      if (sentCount > 0) {
+        await supabase.from("tbscadenze_alert_log" as any).insert({
+          tipo_scadenza_id: tipo.id,
+          utente_id: userId,
+          alert_numero: alertNumero,
+          anno_riferimento: annoCorrente,
+        });
+
+        emailsSent += sentCount;
+        processedRows += userRows.length;
+      }
+    }
+  }
+
+  return { emailsSent, processedRows };
+}
+
 async function processTable(params: {
   tableName: string;
   titolo: string;
@@ -802,6 +991,22 @@ export const scadenzariAutomaticiService = {
     };
 
     const oggi = isoDate(startOfDay(new Date()));
+
+    try {
+  result.processedTables += 1;
+
+  const tipiResult = await processScadenzariDaTipi(oggi);
+
+  result.emailsSent += tipiResult.emailsSent;
+  result.processedRows += tipiResult.processedRows;
+} catch (error: any) {
+  result.errors.push(
+    `Errore su tipi scadenze operative: ${
+      error?.message || "errore sconosciuto"
+    }`
+  );
+}
+
 
     const configs = [
       {
