@@ -744,44 +744,6 @@ export default function TipiScadenzePage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
-  <div className="grid gap-2">
-    <Label htmlFor="nome_tabella">Tabella scadenzario</Label>
-    <Input
-      id="nome_tabella"
-      value={formData.nome_tabella}
-      onChange={(e) =>
-        setFormData({ ...formData, nome_tabella: e.target.value })
-      }
-      placeholder="es. tbscadimu"
-    />
-  </div>
-
-  <div className="grid gap-2">
-    <Label htmlFor="campo_completamento">Campo completamento</Label>
-    <Input
-      id="campo_completamento"
-      value={formData.campo_completamento}
-      onChange={(e) =>
-        setFormData({ ...formData, campo_completamento: e.target.value })
-      }
-      placeholder="es. data_com_acconto"
-    />
-  </div>
-
-  <div className="grid gap-2">
-    <Label htmlFor="campo_nominativo">Campo nominativo</Label>
-    <Input
-      id="campo_nominativo"
-      value={formData.campo_nominativo}
-      onChange={(e) =>
-        setFormData({ ...formData, campo_nominativo: e.target.value })
-      }
-      placeholder="nominativo"
-    />
-  </div>
-</div>
-
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="giorni_preavviso_1">Primo Preavviso (giorni)</Label>
