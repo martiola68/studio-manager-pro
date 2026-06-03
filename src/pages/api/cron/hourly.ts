@@ -83,7 +83,7 @@ if (hourUtc === 8) {
     );
 
   results.push(
-      await callInternal(`/api/contenzioso/alert?secret=${SECRET}`, "POST")
+     await callInternal(`/api/contenzioso/invia-alert?secret=${SECRET}`, "POST")
     );
 
     results.push(
