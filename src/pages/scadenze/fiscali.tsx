@@ -796,19 +796,20 @@ export default function ScadenzeFiscaliPage() {
   />
 </td>
 
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[160px]">
-                      <Checkbox
-                          checked={scadenza.conferma_ires_saldo_acconto || false}
-                              onCheckedChange={() =>
-                                handleToggleField(
-                                  scadenza.id,
-                                  "conferma_ires_saldo_acconto",
-                                  scadenza.conferma_ires_saldo_acconto
-                                  )
-                                }
-                              />
+                    <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[160px]">
+  <Checkbox
+    checked={scadenza.conferma_ires_saldo_acconto || false}
+    onCheckedChange={() =>
+      handleToggleField(
+        scadenza.id,
+        "conferma_ires_saldo_acconto",
+        scadenza.conferma_ires_saldo_acconto
+      )
+    }
+  />
+</td>
 
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[130px]">
+<td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[130px]">
                         <Input
                           type="date"
                           value={scadenza.data_com1 || ""}
@@ -829,7 +830,7 @@ export default function ScadenzeFiscaliPage() {
 
                       <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[110px]">
                         <Checkbox
-                          checked={scadenza.acc2 || false}
+                          checked={scadenza.conferma_ires_secondo_acconto || false}
                           onCheckedChange={() =>
                             handleToggleField(scadenza.id, "conferma_ires_secondo_acconto", scadenza.conferma_ires_secondo_acconto)
                           }
