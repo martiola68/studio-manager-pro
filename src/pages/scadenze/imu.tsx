@@ -25,9 +25,9 @@ type ScadenzaImu = ScadenzaImuBase & {
   data_archiviazione: string | null;
   utente_operatore_id: string | null;
 
-  conferma_acconto_imu?: boolean | null;
-  conferma_saldo_imu?: boolean | null;
-  conferma_dichiarazione_imu?: boolean | null;
+ conferma_acconto_imu: boolean | null;
+conferma_saldo_imu: boolean | null;
+conferma_dichiarazione_imu: boolean | null;
 };
 
 type UtenteLight = {
@@ -675,13 +675,13 @@ export default function ImuPage() {
  <Input
   type="date"
   value={scadenza.data_com_acconto || ""}
-  onChange={(e) =>
-    handleDateChange(
-      scadenza.id,
-      "data_com_acconto",
-      e.target.value
-    )
-  }
+ onChange={(e) =>
+  handleUpdateField(
+    scadenza.id,
+    "data_com_acconto",
+    e.target.value
+  )
+}
   className={
     scadenza.conferma_acconto_imu
       ? "h-8 text-xs bg-green-500 text-black"
@@ -733,13 +733,13 @@ export default function ImuPage() {
  <Input
   type="date"
   value={scadenza.data_com_saldo || ""}
-  onChange={(e) =>
-    handleDateChange(
-      scadenza.id,
-      "data_com_saldo",
-      e.target.value
-    )
-  }
+ onChange={(e) =>
+  handleUpdateField(
+    scadenza.id,
+    "data_com_saldo",
+    e.target.value
+  )
+}
   className={
     scadenza.conferma_saldo_imu
       ? "h-8 text-xs bg-green-500 text-black"
@@ -766,12 +766,12 @@ export default function ImuPage() {
   type="date"
   value={scadenza.data_scad_dichiarazione || ""}
   onChange={(e) =>
-    handleDateChange(
-      scadenza.id,
-      "data_scad_dichiarazione",
-      e.target.value
-    )
-  }
+  handleUpdateField(
+    scadenza.id,
+    "data_scad_dichiarazione",
+    e.target.value
+  )
+}
   className={
     scadenza.conferma_dichiarazione_imu
       ? "h-8 text-xs bg-green-500 text-black"
