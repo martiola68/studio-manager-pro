@@ -54,8 +54,8 @@ export default async function handler(
   const minuteUtc = now.getUTCMinutes();
 
   // JOB GIORNALIERI: una volta al giorno alle 08:00 UTC
-// if (hourUtc === 8) {
-   if (true) {
+ if (hourUtc === 8) {
+//   if (true) {
     results.push(
       await callInternal(`/api/scadenze/processa?secret=${SECRET}`)
     );
