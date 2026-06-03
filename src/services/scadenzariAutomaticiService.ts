@@ -919,6 +919,110 @@ const { data: righe, error: righeError } = await query;
   return { emailsSent, processedRows };
 }
 
+async function processAlertGenericiDaTipi(oggi: string): Promise<{
+  emailsSent: number;
+  processedRows: number;
+}> {
+  const annoCorrente = new Date().getFullYear();
+
+  const { data: tipi, error } = await supabase
+    .from("tbtipi_scadenze" as any)
+    .select(`
+      id,
+      nome,
+      tipo_scadenza,
+      data_scadenza,
+      giorni_preavviso_1,
+      giorni_preavviso_2,
+      ha_scadenzario
+    `)
+    .eq("attivo", true)
+    .eq("ha_scadenzario", false);
+
+  if (error) throw error;
+
+  let emailsSent = 0;
+  let processedRows = 0;
+
+  for (const tipo of ((tipi || []) as TipoScadenzaOperativa[])) {
+    const giorniMancanti = diffDaysFromToday(tipo.data_scadenza);
+
+    let alertNumero: 1 | 2 | 3 | null = null;
+
+    if (giorniMancanti === Number(tipo.giorni_preavviso_1 || 15)) {
+      alertNumero = 1;
+    } else if (giorniMancanti === Number(tipo.giorni_preavviso_2 || 7)) {
+      alertNumero = 2;
+    } else if (giorniMancanti === 0) {
+      alertNumero = 3;
+    }
+
+    if (!alertNumero) continue;
+
+    const markerUnivoco = `tipo_scadenza_generica:${tipo.id}:${alertNumero}:${annoCorrente}`;
+
+    const { data: giaInviato } = await supabase
+      .from("tbalert_log" as any)
+      .select("id")
+      .eq("marker_univoco", markerUnivoco)
+      .maybeSingle();
+
+    if (giaInviato?.id) continue;
+
+    const { data: utenti, error: utentiError } = await supabase
+      .from("tbutenti")
+      .select("id, nome, cognome, email")
+      .eq("attivo", true)
+      .not("email", "is", null);
+
+    if (utentiError) throw utentiError;
+
+    const destinatari = ((utenti || []) as any[])
+      .filter((u) => !!u.email)
+      .map((u) => ({
+        id: u.id,
+        email: u.email,
+        nome: [u.cognome, u.nome].filter(Boolean).join(" ").trim(),
+      }));
+
+    if (destinatari.length === 0) continue;
+
+    const oggetto = `Promemoria scadenza: ${tipo.nome}`;
+
+    const messaggio = [
+      `Ti segnalo una scadenza imminente.`,
+      "",
+      `Scadenza: ${tipo.nome}`,
+      `Tipo: ${tipo.tipo_scadenza || "-"}`,
+      `Data scadenza: ${formatDateIT(tipo.data_scadenza)}`,
+      `Giorni mancanti: ${giorniMancanti}`,
+      `Numero avviso: ${alertNumero}`,
+    ].join("\n");
+
+    const sentCount = await sendEmails(destinatari, oggetto, messaggio);
+
+    if (sentCount > 0) {
+      await supabase.from("tbalert_log" as any).insert({
+        modulo: "scadenza_generica",
+        riferimento_tabella: "tbtipi_scadenze",
+        riferimento_id: tipo.id,
+        tipo_alert: String(alertNumero),
+        data_scadenza: tipo.data_scadenza,
+        giorni_preavviso: giorniMancanti,
+        email_inviata: true,
+        messaggio_interno_creato: false,
+        marker_univoco: markerUnivoco,
+        inviato_at: new Date().toISOString(),
+      });
+
+      emailsSent += sentCount;
+      processedRows += 1;
+    }
+  }
+
+  return { emailsSent, processedRows };
+}
+
 async function processTable(params: {
   tableName: string;
   titolo: string;
@@ -1021,6 +1125,12 @@ export const scadenzariAutomaticiService = {
 
   result.emailsSent += tipiResult.emailsSent;
   result.processedRows += tipiResult.processedRows;
+
+      const genericiResult = await processAlertGenericiDaTipi(oggi);
+
+result.emailsSent += genericiResult.emailsSent;
+result.processedRows += genericiResult.processedRows;
+      
 } catch (error: any) {
   result.errors.push(
     `Errore su tipi scadenze operative: ${
