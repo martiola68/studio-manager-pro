@@ -129,7 +129,7 @@ export default async function handler(
       cadenza_controllo,
       data_esecuzione,
       note,
-      cliente:tbclienti(ragione_sociale, nome),
+      cliente:tbclienti(id, ragione_sociale),
       utenti:tbcontrollo_gestione_utenti(
         utente:tbutenti(id, nome, cognome, email)
       )
@@ -182,7 +182,6 @@ export default async function handler(
 
 const societa =
   cliente?.ragione_sociale ||
-  cliente?.nome ||
   controllo.cliente_id;
 
     const emails =
