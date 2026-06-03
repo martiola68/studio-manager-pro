@@ -672,14 +672,20 @@ export default function ImuPage() {
           </td>
 
           <td className={`${baseCellClass} min-w-[160px] print-hide`}>
-            <Input
+ <Input
   type="date"
   value={scadenza.data_com_acconto || ""}
-  ...
+  onChange={(e) =>
+    handleDateChange(
+      scadenza.id,
+      "data_com_acconto",
+      e.target.value
+    )
+  }
   className={
     scadenza.conferma_acconto_imu
-      ? "bg-green-500 text-black"
-      : dateInputClass(scadenza.data_com_acconto)
+      ? "h-8 text-xs bg-green-500 text-black"
+      : "h-8 text-xs"
   }
 />
           </td>
@@ -724,14 +730,20 @@ export default function ImuPage() {
           </td>
 
           <td className={`${baseCellClass} min-w-[160px] print-hide`}>
-           <Input
+ <Input
   type="date"
   value={scadenza.data_com_saldo || ""}
-  ...
+  onChange={(e) =>
+    handleDateChange(
+      scadenza.id,
+      "data_com_saldo",
+      e.target.value
+    )
+  }
   className={
     scadenza.conferma_saldo_imu
-      ? "bg-green-500 text-black"
-      : dateInputClass(scadenza.data_com_saldo)
+      ? "h-8 text-xs bg-green-500 text-black"
+      : "h-8 text-xs"
   }
 />
           </td>
@@ -750,14 +762,20 @@ export default function ImuPage() {
           </td>
 
           <td className={`${baseCellClass} min-w-[170px] print-hide`}>
-           <Input
+  <Input
   type="date"
   value={scadenza.data_scad_dichiarazione || ""}
-  ...
+  onChange={(e) =>
+    handleDateChange(
+      scadenza.id,
+      "data_scad_dichiarazione",
+      e.target.value
+    )
+  }
   className={
     scadenza.conferma_dichiarazione_imu
-      ? "bg-green-500 text-black"
-      : dateInputClass(scadenza.data_scad_dichiarazione)
+      ? "h-8 text-xs bg-green-500 text-black"
+      : "h-8 text-xs"
   }
 />
           </td>
