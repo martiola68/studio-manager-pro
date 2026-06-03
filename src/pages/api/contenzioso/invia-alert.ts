@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
-import { sendEmail } from "@/services/emailService";
 
 const SECRET = process.env.CRON_SECRET || "x9KfP2LmQ8zYtA71vBnR";
 
@@ -25,36 +24,45 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    await (supabase as any).rpc("genera_alert_contenzioso_base");
+    const oggi = new Date();
+    oggi.setHours(0, 0, 0, 0);
 
-    const { data: alert, error: alertError } = await (supabase as any)
-      .from("tbcontenzioso_alert_email")
+    const oggiIso = oggi.toISOString().split("T")[0];
+
+    const traSetteGiorni = new Date(oggi);
+    traSetteGiorni.setDate(traSetteGiorni.getDate() + 7);
+    const setteGiorniIso = traSetteGiorni.toISOString().split("T")[0];
+
+    const { data: scadenze, error } = await supabase
+      .from("tbcontenzioso_scadenze_generate")
       .select("*")
-      .eq("inviato", false)
-      .is("errore", null)
-      .order("created_at", { ascending: true })
-      .limit(20);
+      .neq("stato", "Completata")
+      .in("data_scadenza", [oggiIso, setteGiorniIso])
+      .order("data_scadenza", { ascending: true })
+      .limit(100);
 
-    if (alertError) {
-      return res.status(500).json({
-        success: false,
-        error: alertError.message,
-      });
-    }
+    if (error) throw error;
 
     let processati = 0;
-    let inviati = 0;
-    let falliti = 0;
-    let giaInviati = 0;
     let logCreati = 0;
+    let giaInviati = 0;
+    let saltati = 0;
 
-    for (const item of alert || []) {
+    for (const item of scadenze || []) {
       processati++;
 
-      const tipoAlert = `${item.giorni_preavviso || 0}gg`;
-      const markerUnivoco = `contenzioso:${item.pratica_id}:${tipoAlert}:${item.data_scadenza}:${item.email_destinatario}`;
+      const dataScadenza = new Date(item.data_scadenza);
+      dataScadenza.setHours(0, 0, 0, 0);
 
-      const { data: logEsistente } = await (supabase as any)
+      const giorniPreavviso = Math.round(
+        (dataScadenza.getTime() - oggi.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      const tipoAlert = giorniPreavviso === 7 ? "7gg" : "oggi";
+
+      const markerUnivoco = `contenzioso:${item.id}:${tipoAlert}:${item.data_scadenza}`;
+
+      const { data: logEsistente } = await supabase
         .from("tbalert_log")
         .select("id")
         .eq("marker_univoco", markerUnivoco)
@@ -62,122 +70,49 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       if (logEsistente) {
         giaInviati++;
-
-        await (supabase as any)
-          .from("tbcontenzioso_alert_email")
-          .update({
-            inviato: true,
-            inviato_at: new Date().toISOString(),
-            errore: null,
-          })
-          .eq("id", item.id);
-
         continue;
       }
 
-      try {
-        const { data: operatore, error: operatoreError } = await (supabase as any)
-          .from("tbutenti")
-          .select("id, email, microsoft_connection_id, studio_id")
-          .eq("id", item.operatore_responsabile_id)
-          .maybeSingle();
+      const { error: insertError } = await supabase.from("tbalert_log").insert({
+        studio_id: null,
+        modulo: "contenzioso",
+        riferimento_tabella: "tbcontenzioso_scadenze_generate",
+        riferimento_id: item.id,
+        tipo_alert: tipoAlert,
+        data_scadenza: item.data_scadenza,
+        giorni_preavviso: giorniPreavviso,
+        destinatario_utente_id: null,
+        destinatario_email: null,
+        messaggio_interno_creato: false,
+        email_inviata: false,
+        marker_univoco: markerUnivoco,
+        errore: null,
+        inviato_at: new Date().toISOString(),
+      });
 
-        if (operatoreError || !operatore?.id || !operatore?.microsoft_connection_id) {
-          throw new Error("Operatore senza connessione Microsoft valida");
-        }
-
-        const result = await sendEmail({
-          to: item.email_destinatario,
-          subject: item.oggetto,
-          html: `
-            <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-              <h2 style="color:#dc2626;">Promemoria scadenza contenzioso</h2>
-              <p>${item.corpo}</p>
-              <hr />
-              <p style="font-size:12px;color:#666;">
-                Studio Manager Pro - Email automatica
-              </p>
-            </div>
-          `,
-          text: item.corpo,
-          senderUserId: operatore.id,
-          microsoftConnectionId: operatore.microsoft_connection_id,
-          sendMode: "user",
-        });
-
-        await (supabase as any).from("tbalert_log").insert({
-          studio_id: operatore.studio_id || null,
-          modulo: "contenzioso",
-          riferimento_tabella: "tbcontenzioso_alert_email",
-          riferimento_id: item.id,
-          tipo_alert: tipoAlert,
-          data_scadenza: item.data_scadenza,
-          giorni_preavviso: item.giorni_preavviso,
-          destinatario_utente_id: item.operatore_responsabile_id,
-          destinatario_email: item.email_destinatario,
-          messaggio_interno_creato: false,
-          email_inviata: !!result.success,
-          marker_univoco: markerUnivoco,
-          errore: result.success ? null : String(result.error || "Errore invio email"),
-          inviato_at: new Date().toISOString(),
-        });
-
-        logCreati++;
-
-        if (!result.success) {
-          throw new Error(result.error || "Invio email non riuscito");
-        }
-
-        await (supabase as any)
-          .from("tbcontenzioso_alert_email")
-          .update({
-            inviato: true,
-            inviato_at: new Date().toISOString(),
-            errore: null,
-          })
-          .eq("id", item.id);
-
-        inviati++;
-      } catch (error: any) {
-        falliti++;
-
-        await (supabase as any)
-          .from("tbcontenzioso_alert_email")
-          .update({
-            errore: error?.message || "Errore invio email",
-          })
-          .eq("id", item.id);
-
-        await (supabase as any).from("tbalert_log").insert({
-          studio_id: null,
-          modulo: "contenzioso",
-          riferimento_tabella: "tbcontenzioso_alert_email",
-          riferimento_id: item.id,
-          tipo_alert: tipoAlert,
-          data_scadenza: item.data_scadenza,
-          giorni_preavviso: item.giorni_preavviso,
-          destinatario_utente_id: item.operatore_responsabile_id,
-          destinatario_email: item.email_destinatario,
-          messaggio_interno_creato: false,
-          email_inviata: false,
-          marker_univoco: `${markerUnivoco}:errore:${Date.now()}`,
-          errore: error?.message || "Errore invio email",
-          inviato_at: new Date().toISOString(),
-        });
-
-        logCreati++;
+      if (insertError) {
+        saltati++;
+        console.error("Errore inserimento tbalert_log contenzioso:", insertError);
+        continue;
       }
+
+      logCreati++;
     }
 
     return res.status(200).json({
       success: true,
+      oggiIso,
+      setteGiorniIso,
       processati,
-      inviati,
-      falliti,
-      gia_inviati: giaInviati,
       log_creati: logCreati,
+      gia_inviati: giaInviati,
+      saltati,
+      email_inviate: 0,
+      note: "Contenzioso migrato su tbalert_log. Invio email non attivo finché non vengono definiti destinatari/responsabili sulle scadenze generate.",
     });
   } catch (error: any) {
+    console.error("Errore alert contenzioso:", error);
+
     return res.status(500).json({
       success: false,
       error: error?.message || "Errore invio alert contenzioso",
