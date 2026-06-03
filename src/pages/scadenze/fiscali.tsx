@@ -24,6 +24,14 @@ type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 type ScadenzaFiscali = ScadenzaFiscaliRow & {
   anno_riferimento?: number | null;
   archiviato?: boolean | null;
+
+  conferma_ires_saldo_acconto?: boolean | null;
+  conferma_cciaa?: boolean | null;
+  conferma_ires_secondo_acconto?: boolean | null;
+  conferma_invio_dichiarazione?: boolean | null;
+  conferma_irap_saldo_acconto?: boolean | null;
+  conferma_irap_secondo_acconto?: boolean | null;
+  conferma_irap_invio_dichiarazione?: boolean | null;
 };
 
 export default function ScadenzeFiscaliPage() {
@@ -789,17 +797,16 @@ export default function ScadenzeFiscaliPage() {
 </td>
 
                       <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[160px]">
-                        <Checkbox
-                          checked={scadenza.saldo_acc_cciaa || false}
-                          onCheckedChange={() =>
-                            handleToggleField(
-                              scadenza.id,
-                              "saldo_acc_cciaa",
-                              scadenza.saldo_acc_cciaa
-                            )
-                          }
-                        />
-                      </td>
+                      <Checkbox
+                          checked={scadenza.conferma_ires_saldo_acconto || false}
+                              onCheckedChange={() =>
+                                handleToggleField(
+                                  scadenza.id,
+                                  "conferma_ires_saldo_acconto",
+                                  scadenza.conferma_ires_saldo_acconto
+                                  )
+                                }
+                              />
 
                       <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[130px]">
                         <Input
@@ -812,7 +819,11 @@ export default function ScadenzeFiscaliPage() {
                               e.target.value
                             )
                           }
-                          className="w-full"
+                          className={
+                            scadenza.conferma_ires_saldo_acconto
+                          ? "w-full bg-green-500 text-black"
+                          : "w-full"
+                                  }
                         />
                       </td>
 
@@ -820,7 +831,7 @@ export default function ScadenzeFiscaliPage() {
                         <Checkbox
                           checked={scadenza.acc2 || false}
                           onCheckedChange={() =>
-                            handleToggleField(scadenza.id, "acc2", scadenza.acc2)
+                            handleToggleField(scadenza.id, "conferma_ires_secondo_acconto", scadenza.conferma_ires_secondo_acconto)
                           }
                         />
                       </td>
@@ -836,7 +847,11 @@ export default function ScadenzeFiscaliPage() {
                               e.target.value
                             )
                           }
-                          className="w-full"
+                         className={
+  scadenza.conferma_ires_secondo_acconto
+    ? "w-full bg-green-500 text-black"
+    : "w-full"
+}
                         />
                       </td>
 
@@ -846,8 +861,8 @@ export default function ScadenzeFiscaliPage() {
                           onCheckedChange={() =>
                             handleToggleField(
                               scadenza.id,
-                              "mod_r_inviato",
-                              scadenza.mod_r_inviato
+                             "conferma_invio_dichiarazione",
+                              scadenza.conferma_invio_dichiarazione
                             )
                           }
                         />
@@ -864,7 +879,11 @@ export default function ScadenzeFiscaliPage() {
                               e.target.value
                             )
                           }
-                          className="w-full"
+                          className={
+  scadenza.conferma_invio_dichiarazione
+    ? "w-full bg-green-500 text-black"
+    : "w-full"
+}
                         />
                       </td>
 
@@ -887,8 +906,8 @@ export default function ScadenzeFiscaliPage() {
                           onCheckedChange={() =>
                             handleToggleField(
                               scadenza.id,
-                              "mod_i_compilato",
-                              scadenza.mod_i_compilato
+                             "conferma_irap_saldo_acconto",
+                              scadenza.conferma_irap_saldo_acconto
                             )
                           }
                         />
@@ -900,8 +919,8 @@ export default function ScadenzeFiscaliPage() {
                           onCheckedChange={() =>
                             handleToggleField(
                               scadenza.id,
-                              "mod_i_definitivo",
-                              scadenza.mod_i_definitivo
+                             "conferma_irap_secondo_acconto",
+                                scadenza.conferma_irap_secondo_acconto
                             )
                           }
                         />
@@ -913,8 +932,8 @@ export default function ScadenzeFiscaliPage() {
                           onCheckedChange={() =>
                             handleToggleField(
                               scadenza.id,
-                              "mod_i_inviato",
-                              scadenza.mod_i_inviato
+                              "conferma_irap_invio_dichiarazione",
+                                scadenza.conferma_irap_invio_dichiarazione
                             )
                           }
                         />
@@ -931,7 +950,11 @@ export default function ScadenzeFiscaliPage() {
                               e.target.value
                             )
                           }
-                          className="w-full"
+                          className={
+                          scadenza.conferma_irap_invio_dichiarazione
+                          ? "w-full bg-green-500 text-black"
+                          : "w-full"
+                              }
                         />
                       </td>
 
