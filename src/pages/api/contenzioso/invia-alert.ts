@@ -10,7 +10,7 @@ const supabase = createClient(
 );
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== "POST") {
+  if (req.method !== "POST" && req.method !== "GET") {
     return res.status(405).json({ success: false, error: "Metodo non consentito" });
   }
 
@@ -42,14 +42,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
+    let processati = 0;
     let inviati = 0;
     let falliti = 0;
+    let giaInviati = 0;
+    let logCreati = 0;
 
     for (const item of alert || []) {
+      processati++;
+
+      const tipoAlert = `${item.giorni_preavviso || 0}gg`;
+      const markerUnivoco = `contenzioso:${item.pratica_id}:${tipoAlert}:${item.data_scadenza}:${item.email_destinatario}`;
+
+      const { data: logEsistente } = await (supabase as any)
+        .from("tbalert_log")
+        .select("id")
+        .eq("marker_univoco", markerUnivoco)
+        .maybeSingle();
+
+      if (logEsistente) {
+        giaInviati++;
+
+        await (supabase as any)
+          .from("tbcontenzioso_alert_email")
+          .update({
+            inviato: true,
+            inviato_at: new Date().toISOString(),
+            errore: null,
+          })
+          .eq("id", item.id);
+
+        continue;
+      }
+
       try {
         const { data: operatore, error: operatoreError } = await (supabase as any)
           .from("tbutenti")
-          .select("id, email, microsoft_connection_id")
+          .select("id, email, microsoft_connection_id, studio_id")
           .eq("id", item.operatore_responsabile_id)
           .maybeSingle();
 
@@ -76,6 +105,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           sendMode: "user",
         });
 
+        await (supabase as any).from("tbalert_log").insert({
+          studio_id: operatore.studio_id || null,
+          modulo: "contenzioso",
+          riferimento_tabella: "tbcontenzioso_alert_email",
+          riferimento_id: item.id,
+          tipo_alert: tipoAlert,
+          data_scadenza: item.data_scadenza,
+          giorni_preavviso: item.giorni_preavviso,
+          destinatario_utente_id: item.operatore_responsabile_id,
+          destinatario_email: item.email_destinatario,
+          messaggio_interno_creato: false,
+          email_inviata: !!result.success,
+          marker_univoco: markerUnivoco,
+          errore: result.success ? null : String(result.error || "Errore invio email"),
+          inviato_at: new Date().toISOString(),
+        });
+
+        logCreati++;
+
         if (!result.success) {
           throw new Error(result.error || "Invio email non riuscito");
         }
@@ -99,14 +147,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             errore: error?.message || "Errore invio email",
           })
           .eq("id", item.id);
+
+        await (supabase as any).from("tbalert_log").insert({
+          studio_id: null,
+          modulo: "contenzioso",
+          riferimento_tabella: "tbcontenzioso_alert_email",
+          riferimento_id: item.id,
+          tipo_alert: tipoAlert,
+          data_scadenza: item.data_scadenza,
+          giorni_preavviso: item.giorni_preavviso,
+          destinatario_utente_id: item.operatore_responsabile_id,
+          destinatario_email: item.email_destinatario,
+          messaggio_interno_creato: false,
+          email_inviata: false,
+          marker_univoco: `${markerUnivoco}:errore:${Date.now()}`,
+          errore: error?.message || "Errore invio email",
+          inviato_at: new Date().toISOString(),
+        });
+
+        logCreati++;
       }
     }
 
     return res.status(200).json({
       success: true,
-      processati: alert?.length || 0,
+      processati,
       inviati,
       falliti,
+      gia_inviati: giaInviati,
+      log_creati: logCreati,
     });
   } catch (error: any) {
     return res.status(500).json({
