@@ -17,24 +17,61 @@ async function callInternal(
     process.env.NEXT_PUBLIC_SITE_URL ||
     "https://studio-manager-pro.vercel.app";
 
+  const startedAt = Date.now();
+
   try {
-    const res = await fetch(`${baseUrl}${path}`, { method });
-    const text = await res.text();
+    const response = await fetch(`${baseUrl}${path}`, { method });
+    const text = await response.text();
+    const durataMs = Date.now() - startedAt;
+
+    const { error: logError } = await supabase.from("tbcron_log").insert({
+      nome_cron: "hourly",
+      endpoint: path,
+      metodo: method,
+      ok: response.ok,
+      status: response.status,
+      body: { raw: text.slice(0, 5000) },
+      errore: null,
+      durata_ms: durataMs,
+      executed_at: new Date().toISOString(),
+    });
+
+    if (logError) {
+      console.error("Errore tbcron_log:", logError);
+    }
 
     return {
       path,
       method,
-      ok: res.ok,
-      status: res.status,
+      ok: response.ok,
+      status: response.status,
+      durata_ms: durataMs,
       body: text,
     };
-  } catch (error) {
+  } catch (error: any) {
+    const durataMs = Date.now() - startedAt;
+
+    const errore = error?.message || String(error);
+
+    await supabase.from("tbcron_log").insert({
+      nome_cron: "hourly",
+      endpoint: path,
+      metodo: method,
+      ok: false,
+      status: 500,
+      body: null,
+      errore,
+      durata_ms: durataMs,
+      executed_at: new Date().toISOString(),
+    });
+
     return {
       path,
       method,
       ok: false,
       status: 500,
-      body: error instanceof Error ? error.message : String(error),
+      durata_ms: durataMs,
+      body: errore,
     };
   }
 }
