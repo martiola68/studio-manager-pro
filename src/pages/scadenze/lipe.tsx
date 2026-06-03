@@ -47,6 +47,12 @@ type LipeRecord = LipeRow & {
   lipe4t_invio?: string | null;
   acconto?: string | null;
   acconto_com?: boolean | null;
+
+conferma_1_trimestre?: boolean | null;
+conferma_2_trimestre?: boolean | null;
+conferma_3_trimestre?: boolean | null;
+conferma_4_trimestre?: boolean | null;
+conferma_acconto_iva?: boolean | null;
   professionista?: string;
   operatore?: string;
 };
@@ -485,12 +491,16 @@ const filteredScadenze = scadenze.filter((s) => {
                         />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ1} text-center min-w-[80px]`}>
-                        <Checkbox
-                          checked={scadenza.lipe1t || false}
-                          onCheckedChange={() =>
-                            handleToggleField(scadenza.id, "lipe1t", scadenza.lipe1t || false)
-                          }
-                        />
+                       <Checkbox
+  checked={scadenza.conferma_1_trimestre || false}
+  onCheckedChange={() =>
+    handleToggleField(
+      scadenza.id,
+      "conferma_1_trimestre",
+      scadenza.conferma_1_trimestre || false
+    )
+  }
+/>
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ1} min-w-[140px]`}>
                         <Input
@@ -502,8 +512,8 @@ const filteredScadenze = scadenze.filter((s) => {
 className={
   isInvioMancante(scadenza.lipe1t, scadenza.lipe1t_invio)
     ? "h-8 text-xs bg-red-600 text-white"
-    : scadenza.lipe1t_invio
-    ? "h-8 text-xs bg-green-500 text-black"
+  : scadenza.conferma_1_trimestre
+? "h-8 text-xs bg-green-500 text-black"
     : "h-8 text-xs bg-white"
 }
                         />
@@ -538,11 +548,15 @@ className={
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ2} text-center min-w-[80px]`}>
                         <Checkbox
-                          checked={scadenza.lipe2t || false}
-                          onCheckedChange={() =>
-                            handleToggleField(scadenza.id, "lipe2t", scadenza.lipe2t || false)
-                          }
-                        />
+  checked={scadenza.conferma_2_trimestre || false}
+  onCheckedChange={() =>
+    handleToggleField(
+      scadenza.id,
+      "conferma_2_trimestre",
+      scadenza.conferma_2_trimestre || false
+    )
+  }
+/>
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ2} min-w-[140px]`}>
                         <Input
@@ -554,8 +568,8 @@ className={
  className={
   isInvioMancante(scadenza.lipe2t, scadenza.lipe2t_invio)
     ? "h-8 text-xs bg-red-600 text-white"
-    : scadenza.lipe2t_invio
-    ? "h-8 text-xs bg-green-500 text-black"
+   : scadenza.conferma_2_trimestre
+? "h-8 text-xs bg-green-500 text-black"
     : "h-8 text-xs bg-white"
 }
                         />
@@ -589,12 +603,16 @@ className={
                         />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ3} text-center min-w-[80px]`}>
-                        <Checkbox
-                          checked={scadenza.lipe3t || false}
-                          onCheckedChange={() =>
-                            handleToggleField(scadenza.id, "lipe3t", scadenza.lipe3t || false)
-                          }
-                        />
+                       <Checkbox
+  checked={scadenza.conferma_3_trimestre || false}
+  onCheckedChange={() =>
+    handleToggleField(
+      scadenza.id,
+      "conferma_3_trimestre",
+      scadenza.conferma_3_trimestre || false
+    )
+  }
+/>
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ3} min-w-[140px]`}>
  <Input
@@ -606,8 +624,8 @@ className={
   className={
     isInvioMancante(scadenza.lipe3t, scadenza.lipe3t_invio)
       ? "h-8 text-xs bg-red-600 text-white"
-      : scadenza.lipe3t_invio
-      ? "h-8 text-xs bg-green-500 text-black"
+    : scadenza.conferma_3_trimestre
+? "h-8 text-xs bg-green-500 text-black"
       : "h-8 text-xs bg-white"
   }
 />
@@ -654,24 +672,28 @@ className={
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[100px]`}>
                         <Checkbox
-                          checked={scadenza.acconto_com || false}
-                          onCheckedChange={() =>
-                            handleToggleField(
-                              scadenza.id,
-                              "acconto_com",
-                              scadenza.acconto_com || false
-                            )
-                          }
-                        />
+  checked={scadenza.conferma_acconto_iva || false}
+  onCheckedChange={() =>
+    handleToggleField(
+      scadenza.id,
+      "conferma_acconto_iva",
+      scadenza.conferma_acconto_iva || false
+    )
+  }
+/>
                       </td>
 
                       <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[80px]`}>
                         <Checkbox
-                          checked={scadenza.lipe4t || false}
-                          onCheckedChange={() =>
-                            handleToggleField(scadenza.id, "lipe4t", scadenza.lipe4t || false)
-                          }
-                        />
+  checked={scadenza.conferma_4_trimestre || false}
+  onCheckedChange={() =>
+    handleToggleField(
+      scadenza.id,
+      "conferma_4_trimestre",
+      scadenza.conferma_4_trimestre || false
+    )
+  }
+/>
                       </td>
   
 <td className={`${baseCellClass} ${groupCellQ4} min-w-[140px]`}>
@@ -684,8 +706,8 @@ className={
     className={
       isInvioMancante(scadenza.lipe4t, scadenza.lipe4t_invio)
         ? "h-8 text-xs bg-red-600 text-white"
-        : scadenza.lipe4t_invio
-        ? "h-8 text-xs bg-green-500 text-black"
+       : scadenza.conferma_4_trimestre
+? "h-8 text-xs bg-green-500 text-black"
         : "h-8 text-xs bg-white"
     }
   />
