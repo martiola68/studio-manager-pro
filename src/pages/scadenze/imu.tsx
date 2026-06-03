@@ -24,6 +24,10 @@ type ScadenzaImu = ScadenzaImuBase & {
   archiviato: boolean | null;
   data_archiviazione: string | null;
   utente_operatore_id: string | null;
+
+  conferma_acconto_imu?: boolean | null;
+  conferma_saldo_imu?: boolean | null;
+  conferma_dichiarazione_imu?: boolean | null;
 };
 
 type UtenteLight = {
@@ -656,30 +660,28 @@ export default function ImuPage() {
 
           <td className={`${baseCellClass} text-center min-w-[120px]`}>
             <Checkbox
-              checked={scadenza.acconto_comunicato || false}
-              onCheckedChange={() =>
-                handleToggleField(
-                  scadenza.id,
-                  "acconto_comunicato",
-                  scadenza.acconto_comunicato
-                )
-              }
-            />
+  checked={scadenza.conferma_acconto_imu || false}
+  onCheckedChange={() =>
+    handleToggleField(
+      scadenza.id,
+      "conferma_acconto_imu",
+      scadenza.conferma_acconto_imu
+    )
+  }
+/>
           </td>
 
           <td className={`${baseCellClass} min-w-[160px] print-hide`}>
             <Input
-              type="date"
-              value={scadenza.data_com_acconto || ""}
-              onChange={(e) =>
-                handleUpdateField(
-                  scadenza.id,
-                  "data_com_acconto",
-                  e.target.value
-                )
-              }
-              className={dateInputClass(scadenza.data_com_acconto)}
-            />
+  type="date"
+  value={scadenza.data_com_acconto || ""}
+  ...
+  className={
+    scadenza.conferma_acconto_imu
+      ? "bg-green-500 text-black"
+      : dateInputClass(scadenza.data_com_acconto)
+  }
+/>
           </td>
 
           <td className={`${baseCellClass} text-center min-w-[120px]`}>
@@ -709,31 +711,29 @@ export default function ImuPage() {
           </td>
 
           <td className={`${baseCellClass} text-center min-w-[120px]`}>
-            <Checkbox
-              checked={scadenza.saldo_comunicato || false}
-              onCheckedChange={() =>
-                handleToggleField(
-                  scadenza.id,
-                  "saldo_comunicato",
-                  scadenza.saldo_comunicato
-                )
-              }
-            />
+           <Checkbox
+  checked={scadenza.conferma_saldo_imu || false}
+  onCheckedChange={() =>
+    handleToggleField(
+      scadenza.id,
+      "conferma_saldo_imu",
+      scadenza.conferma_saldo_imu
+    )
+  }
+/>
           </td>
 
           <td className={`${baseCellClass} min-w-[160px] print-hide`}>
-            <Input
-              type="date"
-              value={scadenza.data_com_saldo || ""}
-              onChange={(e) =>
-                handleUpdateField(
-                  scadenza.id,
-                  "data_com_saldo",
-                  e.target.value
-                )
-              }
-              className={dateInputClass(scadenza.data_com_saldo)}
-            />
+           <Input
+  type="date"
+  value={scadenza.data_com_saldo || ""}
+  ...
+  className={
+    scadenza.conferma_saldo_imu
+      ? "bg-green-500 text-black"
+      : dateInputClass(scadenza.data_com_saldo)
+  }
+/>
           </td>
 
           <td className={`${baseCellClass} text-center min-w-[140px] print-hide`}>
@@ -750,33 +750,29 @@ export default function ImuPage() {
           </td>
 
           <td className={`${baseCellClass} min-w-[170px] print-hide`}>
-            <Input
-              type="date"
-              value={scadenza.data_scad_dichiarazione || ""}
-              onChange={(e) =>
-                handleUpdateField(
-                  scadenza.id,
-                  "data_scad_dichiarazione",
-                  e.target.value
-                )
-              }
-              className={dateInputClass(
-                scadenza.data_scad_dichiarazione
-              )}
-            />
+           <Input
+  type="date"
+  value={scadenza.data_scad_dichiarazione || ""}
+  ...
+  className={
+    scadenza.conferma_dichiarazione_imu
+      ? "bg-green-500 text-black"
+      : dateInputClass(scadenza.data_scad_dichiarazione)
+  }
+/>
           </td>
 
           <td className={`${baseCellClass} text-center min-w-[140px] print-hide`}>
             <Checkbox
-              checked={scadenza.dichiarazione_presentata || false}
-              onCheckedChange={() =>
-                handleToggleField(
-                  scadenza.id,
-                  "dichiarazione_presentata",
-                  scadenza.dichiarazione_presentata
-                )
-              }
-            />
+  checked={scadenza.conferma_dichiarazione_imu || false}
+  onCheckedChange={() =>
+    handleToggleField(
+      scadenza.id,
+      "conferma_dichiarazione_imu",
+      scadenza.conferma_dichiarazione_imu
+    )
+  }
+/>
           </td>
 
           <td className={`${baseCellClass} min-w-[300px] print-hide`}>
