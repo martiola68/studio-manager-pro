@@ -697,8 +697,18 @@ return pathname === normalizedHref || pathname.startsWith(`${normalizedHref}/`);
     <nav className="w-full bg-white border-b border-gray-200 shadow-sm sticky top-[140px] z-40">
       <div className="overflow-x-auto">
         <div className="flex items-center gap-1 px-4 py-2 min-w-max">
-          {menuItems.map((item) => renderMenuItem(item))}
-        </div>
+  {menuItems.map((item) => renderMenuItem(item))}
+
+  <Button
+    variant="ghost"
+    onClick={() => window.location.reload()}
+    className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+    title="Aggiorna applicazione"
+  >
+    <RefreshCcw className="h-4 w-4" />
+    <span>Aggiorna</span>
+  </Button>
+</div>
       </div>
      </nav>
   </>
