@@ -22,13 +22,14 @@ async getPromemoria(
     isResponsabile?: boolean,
     userSettore?: string | null
   ) {
-    let query = supabase
-      .from("tbpromemoria")
-      .select(`
-        *,
-        operatore:tbutenti!tbpromemoria_operatore_id_fkey(id, nome, cognome, settore, responsabile),
-        destinatario:tbutenti!tbpromemoria_destinatario_id_fkey(id, nome, cognome, settore, responsabile)
-      `);
+  let query = supabase
+  .from("tbpromemoria")
+  .select(`
+    *,
+    operatore:tbutenti!tbpromemoria_operatore_id_fkey(id, nome, cognome, settore, responsabile),
+    destinatario:tbutenti!tbpromemoria_destinatario_id_fkey(id, nome, cognome, settore, responsabile)
+  `)
+  .or("eliminato.is.null,eliminato.eq.false");
 
     if (studioId) {
       query = query.eq("studio_id", studioId);
@@ -490,17 +491,26 @@ if (typeof window !== "undefined") {
 return data;
   },
 
-  async deletePromemoria(id: string): Promise<void> {
-    const { error } = await supabase
-      .from("tbpromemoria")
-      .delete()
-      .eq("id", id);
+ async deletePromemoria(
+  id: string,
+  currentUserId: string
+): Promise<void> {
 
-    if (error) {
-      console.error("Errore eliminazione promemoria:", error);
-      throw error;
-    }
-  },
+  const { error } = await supabase
+    .from("tbpromemoria")
+    .update({
+      eliminato: true,
+      eliminato_at: new Date().toISOString(),
+      eliminato_da: currentUserId,
+    })
+    .eq("id", id)
+    .eq("operatore_id", currentUserId);
+
+  if (error) {
+    console.error("Errore eliminazione promemoria:", error);
+    throw error;
+  }
+},
 
   calcolaDataScadenza(dataInizio: string, giorniScadenza: number): string {
     const data = new Date(dataInizio);
@@ -509,10 +519,11 @@ return data;
   },
 
   async getStatistiche(utenteId: string) {
-    const { data, error } = await supabase
-      .from("tbpromemoria")
-      .select("working_progress, da_fatturare, fatturato")
-      .eq("operatore_id", utenteId);
+   const { data, error } = await supabase
+  .from("tbpromemoria")
+  .select("working_progress, da_fatturare, fatturato")
+  .eq("operatore_id", utenteId)
+  .or("eliminato.is.null,eliminato.eq.false");
 
     if (error) {
       console.error("Errore caricamento statistiche:", error);
