@@ -135,7 +135,14 @@ type ClienteFormData = {
   referente_esterno: string;
 
   tipo_prestazione_id: string;
-  tipo_redditi?: "USC" | "USP" | "ENC" | "UPF NO PI" | "UPF ORD." | "UPF FOR." | "730";
+  tipo_redditi?:
+  | "USC"
+  | "USP"
+  | "ENC"
+  | "UPF BASE"
+  | "UPF ORD."
+  | "UPF FORF."
+  | "730";
 
   note: string;
 
@@ -617,9 +624,17 @@ numero_rea:
     referente_esterno: clienteData.referente_esterno || "",
 
     tipo_prestazione_id: clienteData.tipo_prestazione_id || "",
-    tipo_redditi:
-   (clienteData.tipo_redditi as "USC" | "USP" | "ENC" | "UPF NO PI" | "UPF ORD." | "UPF FOR." | "730") ||
-      undefined,
+   tipo_redditi:
+(
+  clienteData.tipo_redditi as
+    | "USC"
+    | "USP"
+    | "ENC"
+    | "UPF BASE"
+    | "UPF ORD."
+    | "UPF FORF."
+    | "730"
+) || undefined,
 
     note: clienteData.note || "",
 
@@ -2541,24 +2556,31 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
 </Label>
   <Select
     value={formData.tipo_redditi || undefined}
-    onValueChange={(value: string) =>
-      setFormData({
-        ...formData,
-        tipo_redditi: value as "USC" | "USP" | "ENC" | "UPF NO PI" | "UPF ORD." | "UPF FOR." | "730",
-      })
-    }
+  onValueChange={(value: string) =>
+  setFormData({
+    ...formData,
+    tipo_redditi: value as
+      | "USC"
+      | "USP"
+      | "ENC"
+      | "UPF BASE"
+      | "UPF ORD."
+      | "UPF FORF."
+      | "730",
+  })
+}
   >
     <SelectTrigger className={errors.tipo_redditi ? "border-red-500" : ""}>
       <SelectValue placeholder="Seleziona tipo" />
     </SelectTrigger>
     <SelectContent>
-      <SelectItem value="USC">USC</SelectItem>
-      <SelectItem value="USP">USP</SelectItem>
-      <SelectItem value="ENC">ENC</SelectItem>
-     <SelectItem value="UPF NO PI">UPF NO IVA</SelectItem>
-      <SelectItem value="UPF ORD.">UPF ORD.</SelectItem>
-      <SelectItem value="UPF FOR.">UPF FOR.</SelectItem>
-      <SelectItem value="730">730</SelectItem>
+     <SelectItem value="USC">USC</SelectItem>
+<SelectItem value="USP">USP</SelectItem>
+<SelectItem value="ENC">ENC</SelectItem>
+<SelectItem value="UPF BASE">UPF BASE</SelectItem>
+<SelectItem value="UPF ORD.">UPF ORD.</SelectItem>
+<SelectItem value="UPF FORF.">UPF FORF.</SelectItem>
+<SelectItem value="730">730</SelectItem>
     </SelectContent>
   </Select>
 </div>
