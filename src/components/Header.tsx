@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { studioService } from "@/services/studioService";
-import { User, LogOut, Menu, RefreshCcw } from "lucide-react";
+import { User, LogOut, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { hardLogout } from "@/services/logoutService";
 import type { Database } from "@/lib/supabase/types";
@@ -134,10 +134,6 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
     await hardLogout("/login");
   };
 
-  const handleRefreshApp = () => {
-  window.location.reload();
-};
-
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
       <div className="px-4 md:px-6 py-3 md:py-4">
@@ -158,26 +154,13 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
               className="h-10 md:h-12 w-auto object-contain shrink-0"
             />
 
-            <div className="min-w-0 hidden sm:block">
+<div className="min-w-0 hidden sm:block">
   <h1 className="text-lg md:text-xl font-bold text-gray-900 leading-tight">
     {title || "Studio Manager Pro"}
   </h1>
-
   <p className="text-xs md:text-sm text-gray-500">
     Sistema Gestionale Integrato
   </p>
-
-  <Button
-    type="button"
-    variant="outline"
-    size="sm"
-    onClick={handleRefreshApp}
-    className="mt-2 h-8 px-3 text-xs font-medium text-blue-700 border-blue-200 hover:bg-blue-50"
-    title="Aggiorna applicazione"
-  >
-    <RefreshCcw className="h-3.5 w-3.5 mr-2" />
-    Aggiorna applicazione
-  </Button>
 </div>
           </div>
 
@@ -211,24 +194,11 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
         </div>
 
         <div className="mt-2 text-center">
-         <div className="sm:hidden">
+ <div className="sm:hidden">
   <h1 className="text-lg font-bold text-gray-900 leading-tight">
     {title || "Studio Manager Pro"}
   </h1>
-
   <p className="text-xs text-gray-500">Sistema Gestionale Integrato</p>
-
-  <Button
-    type="button"
-    variant="outline"
-    size="sm"
-    onClick={handleRefreshApp}
-    className="mt-2 h-8 px-3 text-xs font-medium text-blue-700 border-blue-200 hover:bg-blue-50"
-    title="Aggiorna applicazione"
-  >
-    <RefreshCcw className="h-3.5 w-3.5 mr-2" />
-    Aggiorna applicazione
-  </Button>
 </div>
 
           {currentUser && (
