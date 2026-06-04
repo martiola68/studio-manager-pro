@@ -17,37 +17,43 @@ function toDateKey(date: Date) {
   return date.toISOString().slice(0, 10);
 }
 
-function getPreviousWeekRange(referenceDate = new Date()) {
-  const current = new Date(referenceDate);
-  current.setHours(0, 0, 0, 0);
+function isWeekend(date: Date) {
+  const day = date.getDay();
+  return day === 0 || day === 6;
+}
 
-  const day = current.getDay(); // dom 0, lun 1
-  const diffToCurrentMonday = day === 0 ? -6 : 1 - day;
+function addDays(date: Date, days: number) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
 
-  const currentMonday = new Date(current);
-  currentMonday.setDate(current.getDate() + diffToCurrentMonday);
+function subtractWorkingDays(date: Date, workingDays: number) {
+  const d = new Date(date);
+  let count = 0;
 
-  const previousMonday = new Date(currentMonday);
-  previousMonday.setDate(currentMonday.getDate() - 7);
+  while (count < workingDays) {
+    d.setDate(d.getDate() - 1);
+    if (!isWeekend(d)) count++;
+  }
 
-  const previousFriday = new Date(previousMonday);
-  previousFriday.setDate(previousMonday.getDate() + 4);
+  return d;
+}
 
+function getMonthRange(year: number, monthIndex: number) {
   return {
-    start: previousMonday,
-    end: previousFriday,
-    startKey: toDateKey(previousMonday),
-    endKey: toDateKey(previousFriday),
+    start: new Date(year, monthIndex, 1),
+    end: new Date(year, monthIndex + 1, 0),
+    startKey: toDateKey(new Date(year, monthIndex, 1)),
+    endKey: toDateKey(new Date(year, monthIndex + 1, 0)),
   };
 }
 
 function getWeekdays(start: Date, end: Date) {
   const days: string[] = [];
 
-  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    const weekday = d.getDay();
-
-    if (weekday >= 1 && weekday <= 5) {
+  for (let d = new Date(start); d <= end; d = addDays(d, 1)) {
+    if (!isWeekend(d)) {
       days.push(toDateKey(d));
     }
   }
@@ -94,8 +100,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    const week = getPreviousWeekRange(today);
-    const workingDays = getWeekdays(week.start, week.end);
+   today.setHours(0, 0, 0, 0);
+
+const currentYear = today.getFullYear();
+const currentMonthIndex = today.getMonth();
+
+const meseCorrente = getMonthRange(currentYear, currentMonthIndex);
+const mesePrecedente = getMonthRange(currentYear, currentMonthIndex - 1);
+
+const limiteMeseCorrente = subtractWorkingDays(today, 5);
+
+const workingDaysMesePrecedente = getWeekdays(
+  mesePrecedente.start,
+  mesePrecedente.end
+);
+
+const workingDaysMeseCorrente = getWeekdays(
+  meseCorrente.start,
+  limiteMeseCorrente
+);
 
     const { data: dipendenti, error: dipendentiError } = await supabaseAdmin
       .from("tbdipendenti")
@@ -110,22 +133,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     for (const dipendente of dipendenti || []) {
       const { data: presenze, error: presenzeError } = await supabaseAdmin
-        .from("tbpresenze_dipendenti")
-        .select("data_presenza, codice_presenza")
-        .eq("studio_id", dipendente.studio_id)
-        .eq("utente_id", dipendente.utente_id)
-        .gte("data_presenza", week.startKey)
-        .lte("data_presenza", week.endKey);
+  .from("tbpresenze_dipendenti")
+  .select("data_presenza, codice_presenza")
+  .eq("studio_id", dipendente.studio_id)
+  .eq("utente_id", dipendente.utente_id)
+  .gte("data_presenza", mesePrecedente.startKey)
+  .lte("data_presenza", toDateKey(limiteMeseCorrente));
 
-      if (presenzeError) throw presenzeError;
+if (presenzeError) throw presenzeError;
 
-      const giorniCompilati = new Set(
-        (presenze || [])
-          .filter((p) => p.codice_presenza && p.codice_presenza !== "-")
-          .map((p) => p.data_presenza)
-      );
+const giorniCompilati = new Set(
+  (presenze || [])
+    .filter((p) => p.codice_presenza && p.codice_presenza !== "-")
+    .map((p) => p.data_presenza)
+);
 
-      const giorniMancanti = workingDays.filter((day) => !giorniCompilati.has(day));
+const mancantiMesePrecedente = workingDaysMesePrecedente.filter(
+  (day) => !giorniCompilati.has(day)
+);
+
+const mancantiMeseCorrente = workingDaysMeseCorrente.filter(
+  (day) => !giorniCompilati.has(day)
+);
+
+const giorniMancanti =
+  mancantiMesePrecedente.length > 0
+    ? mancantiMesePrecedente
+    : mancantiMeseCorrente;
 
       if (giorniMancanti.length === 0) {
         results.push({
@@ -148,8 +182,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           <p>Ciao ${nomeDipendente},</p>
 
           <p>
-            risultano ancora da compilare alcune presenze della settimana
-            <strong>${formatDateIT(week.start)} - ${formatDateIT(week.end)}</strong>.
+           risultano ancora da compilare alcune presenze obbligatorie.
           </p>
 
           <p><strong>Giorni mancanti:</strong> ${giorniMancanti
@@ -195,8 +228,10 @@ Accedi a Studio Manager Pro e completa la compilazione delle presenze.
 
     return res.status(200).json({
       success: true,
-      week_start: week.startKey,
-      week_end: week.endKey,
+      mese_precedente_start: mesePrecedente.startKey,
+      mese_precedente_end: mesePrecedente.endKey,
+      mese_corrente_start: meseCorrente.startKey,
+      limite_mese_corrente: toDateKey(limiteMeseCorrente),
       checked: results.length,
       sent: results.filter((r) => r.sent).length,
       results,
