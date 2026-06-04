@@ -219,14 +219,14 @@ const handleRefreshApp = () => {
     {currentUser.tipo_utente === "Admin" ? "Amministratore" : "Utente"}
   </p>
 
-  <div
-    onClick={handleRefreshApp}
-    className={
-      nuovaVersioneDisponibile
-        ? "mt-1 cursor-pointer text-red-600 font-bold text-sm animate-pulse"
-        : "mt-1 text-green-600 text-xs font-semibold"
-    }
-  >
+<div
+  onClick={handleRefreshApp}
+  className={
+    nuovaVersioneDisponibile
+      ? "mt-4 cursor-pointer text-red-600 font-bold text-sm animate-pulse"
+      : "mt-4 text-green-600 text-xs font-semibold"
+  }
+>
     {nuovaVersioneDisponibile
       ? "🚨 NUOVA VERSIONE DISPONIBILE"
       : "✓ Applicazione aggiornata"}
