@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
-import { sendEmailServer } from "@/services/sendEmailServer";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -37,15 +36,13 @@ export default async function handler(
 
     const { data: dipendenti, error } = await supabase
       .from("tbutenti")
-      .select("*")
+      .select("id, nome, cognome, email")
       .eq("attivo", true)
       .eq("tipo_rapporto", "Dipendente");
 
-    if (error) {
-      throw error;
-    }
+    if (error) throw error;
 
-    let inviati = 0;
+    const daSollecitare = [];
 
     for (const dipendente of dipendenti || []) {
       let nonCompilato = false;
@@ -55,9 +52,7 @@ export default async function handler(
         d <= limite;
         d.setDate(d.getDate() + 1)
       ) {
-        if (isWeekend(d)) {
-          continue;
-        }
+        if (isWeekend(d)) continue;
 
         const data = toDate(d);
 
@@ -74,53 +69,22 @@ export default async function handler(
         }
       }
 
-      if (!nonCompilato) {
-        continue;
-      }
+      if (!nonCompilato) continue;
+      if (!dipendente.email) continue;
 
-      if (!dipendente.email) {
-        continue;
-      }
-
-const { data: mittente, error: mittenteError } = await supabase
-  .from("tbutenti")
-  .select("id, microsoft_connection_id")
-  .eq("attivo", true)
-  .not("microsoft_connection_id", "is", null)
-  .limit(1)
-  .maybeSingle();
-
-if (mittenteError) {
-  throw mittenteError;
-}
-
-if (!mittente?.id || !mittente?.microsoft_connection_id) {
-  throw new Error("Nessun mittente Microsoft configurato per invio email");
-}
-
-const emailResult = await sendEmailServer({
-  senderUserId: mittente.id,
-  microsoftConnectionId: mittente.microsoft_connection_id,
-  to: dipendente.email,
-  subject: "Sollecito compilazione foglio presenze",
-  html: `
-    <p>Gentile ${dipendente.cognome} ${dipendente.nome},</p>
-    <p>risulta che il foglio presenze non sia aggiornato da oltre 5 giorni lavorativi.</p>
-    <p>Ti chiediamo cortesemente di completare la compilazione delle presenze mancanti.</p>
-    <p>Grazie per la collaborazione.</p>
-  `,
-});
-
-if (!emailResult.success) {
-  throw new Error(emailResult.error || "Errore invio email");
-}
-         inviati++;
+      daSollecitare.push({
+        id: dipendente.id,
+        nome: dipendente.nome,
+        cognome: dipendente.cognome,
+        email: dipendente.email,
+      });
     }
 
     return res.status(200).json({
       ok: true,
-      inviati,
       dataLimite,
+      count: daSollecitare.length,
+      dipendenti: daSollecitare,
     });
   } catch (error: any) {
     console.error(error);
