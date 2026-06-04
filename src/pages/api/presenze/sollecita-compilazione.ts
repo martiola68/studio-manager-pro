@@ -93,24 +93,15 @@ const emailResult = await sendEmail({
   to: dipendente.email,
   subject: "Sollecito compilazione foglio presenze",
   html: `
-    <p>
-      Gentile ${dipendente.cognome} ${dipendente.nome},
-    </p>
-    <p>
-      risulta che il foglio presenze non sia aggiornato.
-    </p>
-    <p>
-      Ti chiediamo cortesemente di completare
-      la compilazione delle presenze mancanti.
-    </p>
-    <p>
-      Grazie per la collaborazione.
-    </p>
+    <p>Gentile ${dipendente.cognome} ${dipendente.nome},</p>
+    <p>risulta che il foglio presenze non sia aggiornato da oltre 5 giorni lavorativi.</p>
+    <p>Ti chiediamo cortesemente di completare la compilazione delle presenze mancanti.</p>
+    <p>Grazie per la collaborazione.</p>
   `,
   text: `
 Gentile ${dipendente.cognome} ${dipendente.nome},
 
-risulta che il foglio presenze non sia aggiornato.
+risulta che il foglio presenze non sia aggiornato da oltre 5 giorni lavorativi.
 
 Ti chiediamo cortesemente di completare la compilazione delle presenze mancanti.
 
