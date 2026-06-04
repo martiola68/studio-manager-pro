@@ -161,6 +161,18 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
   <p className="text-xs md:text-sm text-gray-500">
     Sistema Gestionale Integrato
   </p>
+
+  <Button
+  variant="outline"
+  size="sm"
+  className="mt-2"
+  onClick={() => {
+    window.location.reload();
+  }}
+>
+  🔄 Aggiorna applicazione
+</Button>
+  
 </div>
           </div>
 
