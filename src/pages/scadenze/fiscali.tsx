@@ -755,19 +755,30 @@ export default function ScadenzeFiscaliPage() {
                         {getUtenteNome(scadenza.utente_operatore_id)}
                       </td>
 
-                     <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[120px]">
-  <Input
-    type="text"
+ <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[120px]">
+  <Select
     value={scadenza.tipo_redditi || ""}
-    onChange={(e) =>
+    onValueChange={(value) =>
       handleUpdateField(
         scadenza.id,
         "tipo_redditi",
-        e.target.value
+        value
       )
     }
-    className="w-full"
-  />
+  >
+    <SelectTrigger className="w-full">
+      <SelectValue placeholder="Tipo" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="USC">USC</SelectItem>
+      <SelectItem value="USP">USP</SelectItem>
+      <SelectItem value="ENC">ENC</SelectItem>
+      <SelectItem value="UPF FORF.">UPF FORF.</SelectItem>
+      <SelectItem value="UPF ORD.">UPF ORD.</SelectItem>
+      <SelectItem value="UPF BASE">UPF BASE</SelectItem>
+      <SelectItem value="730">730</SelectItem>
+    </SelectContent>
+  </Select>
 </td>
 
 <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[80px]">
