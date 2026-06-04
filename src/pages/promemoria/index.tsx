@@ -468,6 +468,7 @@ Operatore: ${currentUser?.nome || ""} ${currentUser?.cognome || ""}
       setIsUploading(true);
       
    // Se invio multiplo, crea un promemoria per ogni destinatario
+// Se invio multiplo, crea un promemoria per ogni destinatario
 if (invioMultiplo && formData.destinatari_multipli.length > 0) {
   const gruppoPromemoriaId = crypto.randomUUID();
 
@@ -487,11 +488,9 @@ if (invioMultiplo && formData.destinatari_multipli.length > 0) {
       settore: destinatario?.settore || "",
       tipo_promemoria_id: formData.tipo_promemoria_id || null,
       studio_id: currentUser?.studio_id,
-
       gruppo_promemoria_id: gruppoPromemoriaId,
     });
 
-    // Upload allegati per ogni promemoria creato
     if (filesToUpload.length > 0 && newPromemoria) {
       for (const file of filesToUpload) {
         try {
@@ -502,12 +501,10 @@ if (invioMultiplo && formData.destinatari_multipli.length > 0) {
       }
     }
 
-    // Email automatica al destinatario
     if (destinatario?.email) {
       await sendPromemoriaCreationEmail(destinatario);
     }
 
-    // Notifica Teams
     if (formData.invia_teams && newPromemoria && currentUser) {
       try {
         const { teamsService } = await import("@/services/teamsService");
@@ -537,37 +534,6 @@ if (invioMultiplo && formData.destinatari_multipli.length > 0) {
     title: "Successo",
     description: `${formData.destinatari_multipli.length} promemoria creati con successo`,
   });
-}
-
-          // Notifica Teams
-          if (formData.invia_teams && newPromemoria && currentUser) {
-            try {
-              const { teamsService } = await import("@/services/teamsService");
-              if (destinatario?.email) {
-                await teamsService.sendDirectMessage(
-                  currentUser.id,
-                  destinatario.email,
-                  {
-                    content: `📝 <strong>Nuovo Promemoria</strong><br><br>
-                      <strong>${formData.titolo}</strong><br>
-                      ${formData.descrizione}<br><br>
-                      📅 Scadenza: ${format(formData.data_scadenza, "dd/MM/yyyy")}<br>
-                      🚨 Priorità: ${formData.priorita}`,
-                    contentType: "html",
-                    importance: formData.priorita === "Alta" ? "high" : "normal"
-                  }
-                );
-              }
-            } catch (err) {
-              console.error("Errore notifica Teams:", err);
-            }
-          }
-        }
-        
-        toast({ 
-          title: "Successo", 
-          description: `${formData.destinatari_multipli.length} promemoria creati con successo` 
-        });
       } else {
         // Invio singolo (come prima)
         const newPromemoria = await promemoriaService.createPromemoria({
