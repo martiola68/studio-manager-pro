@@ -261,13 +261,21 @@ const getPrioritaOrder = (priorita?: string | null) => {
   const handleBulkDeleteConfirm = async () => {
     try {
       setLoading(true);
-      
-      for (const id of selectedIds) {
-       await promemoriaService.deletePromemoria(
-  id,
-  currentUser.id
-);
-      }
+  if (!currentUser?.id) {
+  toast({
+    title: "Errore",
+    description: "Utente non identificato",
+    variant: "destructive",
+  });
+  return;
+}
+
+for (const id of selectedIds) {
+  await promemoriaService.deletePromemoria(
+    id,
+    currentUser.id
+  );
+}
       
       toast({
         title: "Successo",
