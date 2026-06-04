@@ -211,12 +211,12 @@ const handleRefreshApp = () => {
   className={
     nuovaVersioneDisponibile
       ? "absolute left-0 top-full mt-1 h-auto px-0 py-0 text-red-600 hover:text-red-700 font-bold text-base animate-pulse"
-      : "absolute left-0 top-full mt-1 h-6 px-2 text-[11px] text-gray-600"
+     : "absolute left-0 top-full mt-1 h-6 px-2 text-[11px] text-green-600 font-semibold"
   }
 >
 {nuovaVersioneDisponibile
-  ? "🚨 CLICCA QUI PER AGGIORNARE"
-  : "↻ Aggiorna applicazione"}
+  ? "🚨 NUOVA VERSIONE DISPONIBILE"
+  : "✓ Applicazione aggiornata"}
 </Button>
   
 </div>
