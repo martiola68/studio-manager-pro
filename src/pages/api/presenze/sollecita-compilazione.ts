@@ -118,3 +118,20 @@ if (!emailRes.ok) {
   const errorText = await emailRes.text();
   throw new Error(`Errore invio email: ${errorText}`);
 }
+         inviati++;
+    }
+
+    return res.status(200).json({
+      ok: true,
+      inviati,
+      dataLimite,
+    });
+  } catch (error: any) {
+    console.error(error);
+
+    return res.status(500).json({
+      ok: false,
+      error: error.message,
+    });
+  }
+}
