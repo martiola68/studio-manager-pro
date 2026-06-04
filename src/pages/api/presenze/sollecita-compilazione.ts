@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
-import { sendEmail } from "@/services/emailService";
+import { sendEmailServer } from "@/services/sendEmailServer";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -82,14 +82,25 @@ export default async function handler(
         continue;
       }
 
-  const baseUrl =
-  process.env.NEXT_PUBLIC_APP_URL ||
-  process.env.NEXT_PUBLIC_SITE_URL ||
-  (process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : "https://studio-manager-pro.vercel.app");
+const { data: studio, error: studioError } = await supabase
+  .from("tbstudio")
+  .select("microsoft_connection_id")
+  .eq("id", dipendente.studio_id)
+  .maybeSingle();
 
-const emailResult = await sendEmail({
+if (studioError) {
+  throw studioError;
+}
+
+if (!studio?.microsoft_connection_id) {
+  throw new Error(
+    `Connessione Microsoft mancante per lo studio del dipendente ${dipendente.email}`
+  );
+}
+
+const emailResult = await sendEmailServer({
+  senderUserId: dipendente.id,
+  microsoftConnectionId: studio.microsoft_connection_id,
   to: dipendente.email,
   subject: "Sollecito compilazione foglio presenze",
   html: `
@@ -98,16 +109,6 @@ const emailResult = await sendEmail({
     <p>Ti chiediamo cortesemente di completare la compilazione delle presenze mancanti.</p>
     <p>Grazie per la collaborazione.</p>
   `,
-  text: `
-Gentile ${dipendente.cognome} ${dipendente.nome},
-
-risulta che il foglio presenze non sia aggiornato da oltre 5 giorni lavorativi.
-
-Ti chiediamo cortesemente di completare la compilazione delle presenze mancanti.
-
-Grazie per la collaborazione.
-  `.trim(),
-  sendMode: "studio",
 });
 
 if (!emailResult.success) {
