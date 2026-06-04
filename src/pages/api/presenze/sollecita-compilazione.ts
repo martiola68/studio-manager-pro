@@ -81,52 +81,40 @@ export default async function handler(
         continue;
       }
 
-      await fetch(
-        `${process.env.NEXT_PUBLIC_APP_URL}/api/email/send`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            to: dipendente.email,
-            subject:
-              "Sollecito compilazione foglio presenze",
-            html: `
-             <p>
-              Gentile ${dipendente.cognome} ${dipendente.nome},
-              </p>
-              <p>
-                risulta che il foglio presenze non sia aggiornato.
-              </p>
+  const baseUrl =
+  process.env.NEXT_PUBLIC_APP_URL ||
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  (process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : "https://studio-manager-pro.vercel.app");
 
-              <p>
-                Ti chiediamo cortesemente di completare
-                la compilazione delle presenze mancanti.
-              </p>
+const emailRes = await fetch(`${baseUrl}/api/email/send`, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    to: dipendente.email,
+    subject: "Sollecito compilazione foglio presenze",
+    html: `
+      <p>
+        Gentile ${dipendente.cognome} ${dipendente.nome},
+      </p>
+      <p>
+        risulta che il foglio presenze non sia aggiornato.
+      </p>
+      <p>
+        Ti chiediamo cortesemente di completare
+        la compilazione delle presenze mancanti.
+      </p>
+      <p>
+        Grazie per la collaborazione.
+      </p>
+    `,
+  }),
+});
 
-              <p>
-                Grazie per la collaborazione.
-              </p>
-            `,
-          }),
-        }
-      );
-
-      inviati++;
-    }
-
-    return res.status(200).json({
-      ok: true,
-      inviati,
-      dataLimite,
-    });
-  } catch (error: any) {
-    console.error(error);
-
-    return res.status(500).json({
-      ok: false,
-      error: error.message,
-    });
-  }
+if (!emailRes.ok) {
+  const errorText = await emailRes.text();
+  throw new Error(`Errore invio email: ${errorText}`);
 }
