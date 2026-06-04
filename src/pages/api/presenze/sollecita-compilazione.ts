@@ -107,6 +107,15 @@ const emailResult = await sendEmail({
       Grazie per la collaborazione.
     </p>
   `,
+  text: `
+Gentile ${dipendente.cognome} ${dipendente.nome},
+
+risulta che il foglio presenze non sia aggiornato.
+
+Ti chiediamo cortesemente di completare la compilazione delle presenze mancanti.
+
+Grazie per la collaborazione.
+  `.trim(),
   sendMode: "studio",
 });
 
