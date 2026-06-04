@@ -206,18 +206,17 @@ const handleRefreshApp = () => {
   </p>
 
  <Button
-  variant={nuovaVersioneDisponibile ? "default" : "outline"}
-  size="sm"
+  variant="ghost"
+  onClick={handleRefreshApp}
   className={
     nuovaVersioneDisponibile
-      ? "absolute left-0 top-full mt-1 h-6 px-2 text-[11px] bg-orange-600 hover:bg-orange-700 text-white"
-      : "absolute left-0 top-full mt-1 h-6 px-2 text-[11px] bg-white"
+      ? "absolute left-0 top-full mt-1 h-auto px-0 py-0 text-red-600 hover:text-red-700 font-bold text-base animate-pulse"
+      : "absolute left-0 top-full mt-1 h-6 px-2 text-[11px] text-gray-600"
   }
-  onClick={handleRefreshApp}
 >
-  {nuovaVersioneDisponibile
-    ? "🚀 Nuova versione disponibile"
-    : "↻ Aggiorna applicazione"}
+{nuovaVersioneDisponibile
+  ? "🚨 CLICCA QUI PER AGGIORNARE"
+  : "↻ Aggiorna applicazione"}
 </Button>
   
 </div>
