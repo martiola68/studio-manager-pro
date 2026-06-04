@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -57,9 +57,10 @@ interface MenuItem {
   children?: MenuItem[];
 }
 
-export function TopNavBar() {
+  export function TopNavBar() {
   const [currentUser, setCurrentUser] = useState<TopNavUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const versioneCorrenteRef = useRef<string | null>(null);
+  const [nuovaVersioneDisponibile, setNuovaVersioneDisponibile] = useState(false);
 
   const [messaggiNonLetti, setMessaggiNonLetti] = useState(0);
   const [promemoriaRicevuti, setPromemoriaRicevuti] = useState(0);
@@ -209,9 +210,46 @@ export function TopNavBar() {
     setPromemoriaRicevuti(0);
   };
 
+    const controllaVersioneApplicazione = async () => {
+  try {
+    const response = await fetch(`/api/version?t=${Date.now()}`, {
+      cache: "no-store",
+    });
+
+    if (!response.ok) return;
+
+    const data = await response.json();
+
+    if (!versioneCorrenteRef.current) {
+      versioneCorrenteRef.current = data.version;
+      return;
+    }
+
+    if (versioneCorrenteRef.current !== data.version) {
+      setNuovaVersioneDisponibile(true);
+    }
+  } catch (error) {
+    console.warn("Errore controllo versione:", error);
+  }
+};
+
+const aggiornaApplicazione = () => {
+  window.location.reload();
+};
+
   useEffect(() => {
     void loadCurrentUser();
   }, []);
+
+    useEffect(() => {
+  void controllaVersioneApplicazione();
+
+  const interval = setInterval(() => {
+    void controllaVersioneApplicazione();
+  }, 60000);
+
+  return () => clearInterval(interval);
+}, []);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -632,17 +670,34 @@ return pathname === normalizedHref || pathname.startsWith(`${normalizedHref}/`);
           <div className="h-8 w-24 bg-gray-200 rounded animate-pulse" />
           <div className="h-8 w-24 bg-gray-200 rounded animate-pulse" />
         </div>
-      </nav>
-    );
-  }
+   </nav>
+  );
+}
 
-  return (
+ return (
+  <>
+    {nuovaVersioneDisponibile && (
+      <div className="w-full bg-amber-100 border-b border-amber-300 px-4 py-2 flex items-center justify-center gap-3 text-sm">
+        <span>
+          🚀 È disponibile una nuova versione di Studio Manager Pro
+        </span>
+
+        <Button
+          size="sm"
+          onClick={aggiornaApplicazione}
+        >
+          Aggiorna ora
+        </Button>
+      </div>
+    )}
+
     <nav className="w-full bg-white border-b border-gray-200 shadow-sm sticky top-[140px] z-40">
       <div className="overflow-x-auto">
         <div className="flex items-center gap-1 px-4 py-2 min-w-max">
           {menuItems.map((item) => renderMenuItem(item))}
         </div>
       </div>
-    </nav>
+     </nav>
+  </>
   );
 }
