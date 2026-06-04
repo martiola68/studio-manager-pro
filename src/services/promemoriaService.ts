@@ -393,20 +393,21 @@ const emailResult = await sendEmailServer({
 }
 },
 
-  async createPromemoria(nuovoPromemoria: {
-    titolo: string;
-    descrizione?: string;
-    data_inserimento: string;
-    giorni_scadenza: number;
-    data_scadenza: string;
-    priorita: string;
-    working_progress: string;
-    operatore_id: string;
-    destinatario_id?: string | null;
-    settore?: string;
-    tipo_promemoria_id?: string | null;
-    studio_id?: string | null;
-  }) {
+async createPromemoria(nuovoPromemoria: {
+  titolo: string;
+  descrizione?: string;
+  data_inserimento: string;
+  giorni_scadenza: number;
+  data_scadenza: string;
+  priorita: string;
+  working_progress: string;
+  operatore_id: string;
+  destinatario_id?: string | null;
+  settore?: string;
+  tipo_promemoria_id?: string | null;
+  studio_id?: string | null;
+  gruppo_promemoria_id?: string | null;
+}) {
     const { data, error } = await supabase
       .from("tbpromemoria")
       .insert([{
@@ -422,6 +423,7 @@ const emailResult = await sendEmailServer({
         settore: nuovoPromemoria.settore || null,
         tipo_promemoria_id: nuovoPromemoria.tipo_promemoria_id || null,
         studio_id: nuovoPromemoria.studio_id || null
+        gruppo_promemoria_id: nuovoPromemoria.gruppo_promemoria_id || null
       }])
       .select()
       .single();
