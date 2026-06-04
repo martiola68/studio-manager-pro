@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import { getSupabaseClient } from '@/lib/supabaseClient';
+import { sendEmail } from '@/services/emailService';
 
 
 type Utente = {
@@ -964,37 +965,62 @@ ${dipendentiXml}
 </Button>
 
             {isResponsabilePaghe && (
-  <Button
-    variant="outline"
-    onClick={async () => {
-      try {
-        const res = await fetch(
-          "/api/presenze/sollecita-compilazione",
-          {
-            method: "POST",
-          }
-        );
+ <Button
+  variant="outline"
+  onClick={async () => {
+    try {
+      setError(null);
+      setSuccess(null);
 
-        const data = await res.json();
+      const res = await fetch("/api/presenze/sollecita-compilazione", {
+        method: "POST",
+      });
 
-        if (!res.ok || !data?.ok) {
-          throw new Error(
-            data?.error || "Errore invio solleciti"
-          );
+      const data = await res.json();
+
+      if (!res.ok || !data?.ok) {
+        throw new Error(data?.error || "Errore recupero dipendenti da sollecitare");
+      }
+
+      let inviati = 0;
+
+      for (const dipendente of data.dipendenti || []) {
+        const result = await sendEmail({
+          to: dipendente.email,
+          subject: "Sollecito compilazione foglio presenze",
+          html: `
+            <p>Gentile ${dipendente.cognome || ""} ${dipendente.nome || ""},</p>
+            <p>risulta che il foglio presenze non sia aggiornato da oltre 5 giorni lavorativi.</p>
+            <p>Ti chiediamo cortesemente di completare la compilazione delle presenze mancanti.</p>
+            <p>Grazie per la collaborazione.</p>
+          `,
+          text: `
+Gentile ${dipendente.cognome || ""} ${dipendente.nome || ""},
+
+risulta che il foglio presenze non sia aggiornato da oltre 5 giorni lavorativi.
+
+Ti chiediamo cortesemente di completare la compilazione delle presenze mancanti.
+
+Grazie per la collaborazione.
+          `.trim(),
+          sendMode: "studio",
+        });
+
+        if (!result.success) {
+          throw new Error(result.error || `Errore invio email a ${dipendente.email}`);
         }
 
-        setSuccess(
-          `Solleciti inviati: ${data.inviati || 0}`
-        );
-      } catch (err: any) {
-        setError(
-          err?.message || "Errore invio solleciti"
-        );
+        inviati++;
       }
-    }}
-  >
-    Sollecita compilazione
-  </Button>
+
+      setSuccess(`Solleciti inviati: ${inviati}`);
+    } catch (err: any) {
+      setError(err?.message || "Errore invio solleciti");
+    }
+  }}
+>
+  Sollecita compilazione
+</Button>
 )}
             
             <Button
