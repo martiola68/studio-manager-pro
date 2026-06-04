@@ -195,20 +195,17 @@ const giorniMancanti =
         </div>
       `;
 
-      const text = `
+    const text = `
 Ciao ${nomeDipendente},
 
-risultano ancora da compilare alcune presenze della settimana ${formatDateIT(
-        week.start
-      )} - ${formatDateIT(week.end)}.
+risultano ancora da compilare alcune presenze obbligatorie.
 
 Giorni mancanti: ${giorniMancanti
-        .map((day) => new Date(`${day}T00:00:00`).toLocaleDateString("it-IT"))
-        .join(", ")}
+  .map((day) => new Date(`${day}T00:00:00`).toLocaleDateString("it-IT"))
+  .join(", ")}
 
 Accedi a Studio Manager Pro e completa la compilazione delle presenze.
-      `.trim();
-
+`.trim();
       const emailResult = await sendEmail({
         to: dipendente.email,
         subject,
