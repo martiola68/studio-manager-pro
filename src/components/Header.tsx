@@ -223,8 +223,8 @@ const handleRefreshApp = () => {
   onClick={handleRefreshApp}
   className={
     nuovaVersioneDisponibile
-      ? "mt-4 cursor-pointer text-red-600 font-bold text-sm animate-pulse"
-      : "mt-4 text-green-600 text-xs font-semibold"
+      ? "mt-2 cursor-pointer text-red-600 font-bold text-sm animate-pulse"
+      : "mt-2 text-green-600 text-xs font-semibold"
   }
 >
     {nuovaVersioneDisponibile
