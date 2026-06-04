@@ -263,7 +263,10 @@ const getPrioritaOrder = (priorita?: string | null) => {
       setLoading(true);
       
       for (const id of selectedIds) {
-        await promemoriaService.deletePromemoria(id);
+       await promemoriaService.deletePromemoria(
+  id,
+  currentUser.id
+);
       }
       
       toast({
