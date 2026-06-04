@@ -422,7 +422,7 @@ async createPromemoria(nuovoPromemoria: {
         destinatario_id: nuovoPromemoria.destinatario_id || null,
         settore: nuovoPromemoria.settore || null,
         tipo_promemoria_id: nuovoPromemoria.tipo_promemoria_id || null,
-        studio_id: nuovoPromemoria.studio_id || null
+        studio_id: nuovoPromemoria.studio_id || null,
         gruppo_promemoria_id: nuovoPromemoria.gruppo_promemoria_id || null
       }])
       .select()
