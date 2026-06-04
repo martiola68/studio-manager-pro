@@ -496,15 +496,15 @@ return data;
   currentUserId: string
 ): Promise<void> {
 
-  const { error } = await supabase
-    .from("tbpromemoria")
-    .update({
-      eliminato: true,
-      eliminato_at: new Date().toISOString(),
-      eliminato_da: currentUserId,
-    })
-    .eq("id", id)
-    .eq("operatore_id", currentUserId);
+ const { error } = await supabase
+  .from("tbpromemoria")
+  .update({
+    eliminato: true,
+    eliminato_at: new Date().toISOString(),
+    eliminato_da: currentUserId,
+  } as any)
+  .eq("id", id)
+  .eq("operatore_id", currentUserId);
 
   if (error) {
     console.error("Errore eliminazione promemoria:", error);
