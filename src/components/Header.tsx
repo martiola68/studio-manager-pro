@@ -154,7 +154,7 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
               className="h-10 md:h-12 w-auto object-contain shrink-0"
             />
 
-<div className="min-w-0 hidden sm:block">
+<div className="min-w-0 hidden sm:block relative">
   <h1 className="text-lg md:text-xl font-bold text-gray-900 leading-tight">
     {title || "Studio Manager Pro"}
   </h1>
@@ -165,7 +165,7 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
   <Button
   variant="outline"
   size="sm"
-  className="mt-2"
+  className="absolute left-0 top-full mt-1 h-6 px-2 text-[11px] bg-white"
   onClick={() => {
     window.location.reload();
   }}
