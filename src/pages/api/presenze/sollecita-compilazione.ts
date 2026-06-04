@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
+import { sendEmail } from "@/services/emailService";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -88,35 +89,29 @@ export default async function handler(
     ? `https://${process.env.VERCEL_URL}`
     : "https://studio-manager-pro.vercel.app");
 
-const emailRes = await fetch(`${baseUrl}/api/email/send`, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    to: dipendente.email,
-    subject: "Sollecito compilazione foglio presenze",
-    html: `
-      <p>
-        Gentile ${dipendente.cognome} ${dipendente.nome},
-      </p>
-      <p>
-        risulta che il foglio presenze non sia aggiornato.
-      </p>
-      <p>
-        Ti chiediamo cortesemente di completare
-        la compilazione delle presenze mancanti.
-      </p>
-      <p>
-        Grazie per la collaborazione.
-      </p>
-    `,
-  }),
+const emailResult = await sendEmail({
+  to: dipendente.email,
+  subject: "Sollecito compilazione foglio presenze",
+  html: `
+    <p>
+      Gentile ${dipendente.cognome} ${dipendente.nome},
+    </p>
+    <p>
+      risulta che il foglio presenze non sia aggiornato.
+    </p>
+    <p>
+      Ti chiediamo cortesemente di completare
+      la compilazione delle presenze mancanti.
+    </p>
+    <p>
+      Grazie per la collaborazione.
+    </p>
+  `,
+  sendMode: "studio",
 });
 
-if (!emailRes.ok) {
-  const errorText = await emailRes.text();
-  throw new Error(`Errore invio email: ${errorText}`);
+if (!emailResult.success) {
+  throw new Error(emailResult.error || "Errore invio email");
 }
          inviati++;
     }
