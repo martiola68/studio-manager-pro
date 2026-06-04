@@ -205,33 +205,33 @@ const handleRefreshApp = () => {
     Sistema Gestionale Integrato
   </p>
 
- <Button
-  variant="ghost"
-  onClick={handleRefreshApp}
-  className={
-    nuovaVersioneDisponibile
-      ? "absolute left-0 top-full mt-1 h-auto px-0 py-0 text-red-600 hover:text-red-700 font-bold text-base animate-pulse"
-     : "absolute left-0 top-full mt-1 h-6 px-2 text-[11px] text-green-600 font-semibold"
-  }
->
-{nuovaVersioneDisponibile
-  ? "🚨 NUOVA VERSIONE DISPONIBILE"
-  : "✓ Applicazione aggiornata"}
-</Button>
-  
 </div>
           </div>
 
           {currentUser && (
             <div className="flex items-center gap-2 md:gap-4 shrink-0">
-              <div className="text-right">
-                <p className="text-sm font-semibold text-gray-900 leading-tight">
-                  {currentUser.nome} {currentUser.cognome}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {currentUser.tipo_utente === "Admin" ? "Amministratore" : "Utente"}
-                </p>
-              </div>
+             <div className="text-right">
+  <p className="text-sm font-semibold text-gray-900 leading-tight">
+    {currentUser.nome} {currentUser.cognome}
+  </p>
+
+  <p className="text-xs text-gray-500">
+    {currentUser.tipo_utente === "Admin" ? "Amministratore" : "Utente"}
+  </p>
+
+  <div
+    onClick={handleRefreshApp}
+    className={
+      nuovaVersioneDisponibile
+        ? "mt-1 cursor-pointer text-red-600 font-bold text-sm animate-pulse"
+        : "mt-1 text-green-600 text-xs font-semibold"
+    }
+  >
+    {nuovaVersioneDisponibile
+      ? "🚨 NUOVA VERSIONE DISPONIBILE"
+      : "✓ Applicazione aggiornata"}
+  </div>
+</div>
 
               <div className="h-9 w-9 md:h-10 md:w-10 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
                 <User className="h-5 w-5 text-blue-600" />
