@@ -82,25 +82,25 @@ export default async function handler(
         continue;
       }
 
-const { data: studio, error: studioError } = await supabase
-  .from("tbstudio")
-  .select("microsoft_connection_id")
-  .eq("id", dipendente.studio_id)
+const { data: mittente, error: mittenteError } = await supabase
+  .from("tbutenti")
+  .select("id, microsoft_connection_id")
+  .eq("attivo", true)
+  .not("microsoft_connection_id", "is", null)
+  .limit(1)
   .maybeSingle();
 
-if (studioError) {
-  throw studioError;
+if (mittenteError) {
+  throw mittenteError;
 }
 
-if (!studio?.microsoft_connection_id) {
-  throw new Error(
-    `Connessione Microsoft mancante per lo studio del dipendente ${dipendente.email}`
-  );
+if (!mittente?.id || !mittente?.microsoft_connection_id) {
+  throw new Error("Nessun mittente Microsoft configurato per invio email");
 }
 
 const emailResult = await sendEmailServer({
-  senderUserId: dipendente.id,
-  microsoftConnectionId: studio.microsoft_connection_id,
+  senderUserId: mittente.id,
+  microsoftConnectionId: mittente.microsoft_connection_id,
   to: dipendente.email,
   subject: "Sollecito compilazione foglio presenze",
   html: `
