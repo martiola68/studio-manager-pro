@@ -59,6 +59,9 @@ interface MenuItem {
 
   export function TopNavBar() {
   const [currentUser, setCurrentUser] = useState<TopNavUser | null>(null);
+
+    const [loading, setLoading] = useState(true);
+    
   const versioneCorrenteRef = useRef<string | null>(null);
   const [nuovaVersioneDisponibile, setNuovaVersioneDisponibile] = useState(false);
 
