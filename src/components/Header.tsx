@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { studioService } from "@/services/studioService";
 import { User, LogOut, Menu } from "lucide-react";
@@ -38,6 +38,9 @@ interface HeaderProps {
 export default function Header({ onMenuToggle, title }: HeaderProps) {
   const [currentUser, setCurrentUser] = useState<HeaderUser | null>(null);
   const [studio, setStudio] = useState<Studio | null>(null);
+
+  const versioneCorrenteRef = useRef<string | null>(null);
+const [nuovaVersioneDisponibile, setNuovaVersioneDisponibile] = useState(false);
 
   const getStudioLabelForUser = (
     utente: HeaderUser | null,
@@ -109,6 +112,16 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
   };
 
   useEffect(() => {
+  void controllaVersioneApplicazione();
+
+  const interval = setInterval(() => {
+    void controllaVersioneApplicazione();
+  }, 60000);
+
+  return () => clearInterval(interval);
+}, []);
+
+  useEffect(() => {
     const supabase = getSupabaseClient();
 
     loadUserAndStudio();
@@ -133,6 +146,36 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
   const handleLogout = async () => {
     await hardLogout("/login");
   };
+
+  const controllaVersioneApplicazione = async () => {
+  try {
+    const response = await fetch(`/api/version?t=${Date.now()}`, {
+      cache: "no-store",
+    });
+
+    if (!response.ok) return;
+
+    const data = await response.json();
+    const versioneOnline = data?.version;
+
+    if (!versioneOnline) return;
+
+    if (!versioneCorrenteRef.current) {
+      versioneCorrenteRef.current = versioneOnline;
+      return;
+    }
+
+    if (versioneCorrenteRef.current !== versioneOnline) {
+      setNuovaVersioneDisponibile(true);
+    }
+  } catch (error) {
+    console.warn("Controllo versione applicazione non riuscito:", error);
+  }
+};
+
+const handleRefreshApp = () => {
+  window.location.reload();
+};
 
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
@@ -162,15 +205,19 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
     Sistema Gestionale Integrato
   </p>
 
-  <Button
-  variant="outline"
+ <Button
+  variant={nuovaVersioneDisponibile ? "default" : "outline"}
   size="sm"
-  className="absolute left-0 top-full mt-1 h-6 px-2 text-[11px] bg-white"
-  onClick={() => {
-    window.location.reload();
-  }}
+  className={
+    nuovaVersioneDisponibile
+      ? "absolute left-0 top-full mt-1 h-6 px-2 text-[11px] bg-orange-600 hover:bg-orange-700 text-white"
+      : "absolute left-0 top-full mt-1 h-6 px-2 text-[11px] bg-white"
+  }
+  onClick={handleRefreshApp}
 >
-  🔄 Aggiorna applicazione
+  {nuovaVersioneDisponibile
+    ? "🚀 Nuova versione disponibile"
+    : "↻ Aggiorna applicazione"}
 </Button>
   
 </div>
