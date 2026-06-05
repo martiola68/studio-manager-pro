@@ -268,7 +268,7 @@ const handleRefreshApp = () => {
         </div>
       </div>
 
-      <div className="border-t border-gray-100 px-4 md:px-6 py-2 text-[10px] md:text-xs text-gray-500 text-center">
+      <div className="border-t border-gray-100 px-4 md:px-6 py-1 text-[10px] md:text-xs text-gray-500 text-center">
         © {new Date().getFullYear()} Studio Manager Pro. Creato da Artiola Mario.
         Tutti i diritti riservati. Opera tutelata ai sensi della Legge 22 aprile
         1941, n. 633, e successive modificazioni.
