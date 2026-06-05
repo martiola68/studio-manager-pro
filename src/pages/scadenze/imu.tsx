@@ -1037,8 +1037,7 @@ const inviaComunicazioneScadenza = async () => {
           </CardContent>
         </Card>
       </div>
-    </>
-    {invioEmailModal.open && invioEmailModal.scadenza && (
+        {invioEmailModal.open && invioEmailModal.scadenza && (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 no-print">
     <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
       <h2 className="text-xl font-bold mb-2">
@@ -1115,6 +1114,7 @@ const inviaComunicazioneScadenza = async () => {
       </div>
     </div>
   </div>
+    </>
 )}
   );
 }
