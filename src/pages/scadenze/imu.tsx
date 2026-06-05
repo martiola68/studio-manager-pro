@@ -64,6 +64,19 @@ export default function ImuPage() {
   tipo: null,
 });
 
+  const [emailDestinatario, setEmailDestinatario] = useState("");
+
+const [emailContatti, setEmailContatti] = useState<
+  {
+    id: string;
+    nome: string | null;
+    cognome: string | null;
+    email: string | null;
+  }[]
+>([]);
+
+const [sendingEmail, setSendingEmail] = useState(false);
+
   const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
   const [noteTimers, setNoteTimers] = useState<Record<string, NodeJS.Timeout>>(
     {}
@@ -353,7 +366,7 @@ export default function ImuPage() {
     );
   }
 
-  const apriInvioEmail = (
+ const apriInvioEmail = async (
   scadenza: ScadenzaImu,
   tipo: "acconto" | "saldo"
 ) => {
@@ -362,6 +375,97 @@ export default function ImuPage() {
     scadenza,
     tipo,
   });
+
+  setEmailDestinatario("");
+  setEmailContatti([]);
+
+  if (!scadenza.cliente_id) return;
+
+  try {
+    const { data, error } = await supabase
+      .from("tbcontatti")
+      .select("id, nome, cognome, email")
+      .eq("cliente_id", scadenza.cliente_id)
+      .not("email", "is", null)
+      .order("cognome", { ascending: true });
+
+    if (error) throw error;
+
+    setEmailContatti(data || []);
+
+    if (data?.length === 1) {
+      setEmailDestinatario(data[0].email || "");
+    }
+  } catch (error) {
+    console.error(error);
+
+    toast({
+      title: "Errore",
+      description: "Impossibile caricare i contatti email",
+      variant: "destructive",
+    });
+  }
+};
+
+  const chiudiInvioEmail = () => {
+  setInvioEmailModal({
+    open: false,
+    scadenza: null,
+    tipo: null,
+  });
+
+  setEmailDestinatario("");
+  setEmailContatti([]);
+};
+
+const inviaComunicazioneScadenza = async () => {
+  try {
+    if (!invioEmailModal.scadenza || !invioEmailModal.tipo || !emailDestinatario) {
+      toast({
+        title: "Errore",
+        description: "Seleziona un indirizzo email",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSendingEmail(true);
+
+    const response = await fetch("/api/scadenze/comunicazioni/invia", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        modulo: "imu",
+        scadenza_id: invioEmailModal.scadenza.id,
+        tipo: invioEmailModal.tipo,
+        email: emailDestinatario,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || "Errore invio email");
+    }
+
+    toast({
+      title: "Email inviata",
+      description: "Comunicazione IMU inviata correttamente",
+    });
+
+    chiudiInvioEmail();
+    await loadScadenze();
+  } catch (error: any) {
+    toast({
+      title: "Errore invio email",
+      description: error.message,
+      variant: "destructive",
+    });
+  } finally {
+    setSendingEmail(false);
+  }
 };
   
   const dateInputClass = (value?: string | null) =>
@@ -934,5 +1038,83 @@ export default function ImuPage() {
         </Card>
       </div>
     </>
+    {invioEmailModal.open && invioEmailModal.scadenza && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 no-print">
+    <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
+      <h2 className="text-xl font-bold mb-2">
+        Invia F24 IMU{" "}
+        {invioEmailModal.tipo === "acconto" ? "Acconto" : "Saldo"}
+      </h2>
+
+      <p className="text-sm text-gray-500 mb-4">
+        {invioEmailModal.scadenza.nominativo}
+      </p>
+
+      <div className="space-y-4">
+        <div>
+          <label className="text-sm font-medium mb-2 block">
+            Email destinatario
+          </label>
+
+          <Select value={emailDestinatario} onValueChange={setEmailDestinatario}>
+            <SelectTrigger>
+              <SelectValue placeholder="Seleziona email" />
+            </SelectTrigger>
+
+            <SelectContent>
+              {emailContatti.map((contatto) => (
+                <SelectItem key={contatto.id} value={contatto.email || ""}>
+                  {`${contatto.cognome || ""} ${contatto.nome || ""}`.trim() ||
+                    contatto.email}{" "}
+                  - {contatto.email}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <label className="text-sm font-medium mb-2 block">
+            Oppure inserisci email manualmente
+          </label>
+
+          <Input
+            type="email"
+            value={emailDestinatario}
+            onChange={(e) => setEmailDestinatario(e.target.value)}
+            placeholder="email@cliente.it"
+          />
+        </div>
+
+        <div className="rounded-md border bg-gray-50 p-3 text-sm text-gray-600">
+          Template usato:{" "}
+          <strong>
+            {invioEmailModal.tipo === "acconto" ? "IMU_ACCONTO" : "IMU_SALDO"}
+          </strong>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={chiudiInvioEmail}
+            disabled={sendingEmail}
+          >
+            Annulla
+          </Button>
+
+          <Button
+            type="button"
+            onClick={inviaComunicazioneScadenza}
+            disabled={sendingEmail || !emailDestinatario}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            {sendingEmail ? "Invio..." : "Invia email"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
   );
 }
