@@ -20,14 +20,15 @@ import {
 type ScadenzaImuBase = Database["public"]["Tables"]["tbscadimu"]["Row"];
 
 type ScadenzaImu = ScadenzaImuBase & {
+  cliente_id: string | null;
   anno_riferimento: number | null;
   archiviato: boolean | null;
   data_archiviazione: string | null;
   utente_operatore_id: string | null;
 
- conferma_acconto_imu: boolean | null;
-conferma_saldo_imu: boolean | null;
-conferma_dichiarazione_imu: boolean | null;
+  conferma_acconto_imu: boolean | null;
+  conferma_saldo_imu: boolean | null;
+  conferma_dichiarazione_imu: boolean | null;
 };
 
 type UtenteLight = {
