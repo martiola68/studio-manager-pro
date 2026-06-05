@@ -380,24 +380,58 @@ const [sendingEmail, setSendingEmail] = useState(false);
   setEmailDestinatario("");
   setEmailContatti([]);
 
-  if (!scadenza.cliente_id) return;
+try {
+  const nominativo = scadenza.nominativo || "";
 
-  try {
-    const { data, error } = await supabase
-      .from("tbcontatti")
-      .select("id, nome, cognome, email")
-      .eq("cliente_id", scadenza.cliente_id)
-      .not("email", "is", null)
-      .order("cognome", { ascending: true });
+  const { data, error } = await supabase
+    .from("tbcontatti")
+    .select("id, nome, cognome, email, pec, email_secondaria, email_altro")
+    .or(
+      `nome.ilike.%${nominativo}%,cognome.ilike.%${nominativo}%,email.ilike.%${nominativo}%`
+    )
+    .limit(30);
 
-    if (error) throw error;
+  if (error) throw error;
 
-    setEmailContatti(data || []);
+  const options =
+    (data || []).flatMap((c: any) => [
+      c.email && {
+        id: `${c.id}-email`,
+        nome: c.nome,
+        cognome: c.cognome,
+        email: c.email,
+      },
+      c.pec && {
+        id: `${c.id}-pec`,
+        nome: c.nome,
+        cognome: c.cognome,
+        email: c.pec,
+      },
+      c.email_secondaria && {
+        id: `${c.id}-email-secondaria`,
+        nome: c.nome,
+        cognome: c.cognome,
+        email: c.email_secondaria,
+      },
+      c.email_altro && {
+        id: `${c.id}-email-altro`,
+        nome: c.nome,
+        cognome: c.cognome,
+        email: c.email_altro,
+      },
+    ].filter(Boolean)) as {
+      id: string;
+      nome: string | null;
+      cognome: string | null;
+      email: string | null;
+    }[];
 
-    if (data?.length === 1) {
-      setEmailDestinatario(data[0].email || "");
-    }
-  } catch (error) {
+  setEmailContatti(options);
+
+  if (options.length === 1) {
+    setEmailDestinatario(options[0].email || "");
+  }
+} catch (error) {
     console.error(error);
 
     toast({
