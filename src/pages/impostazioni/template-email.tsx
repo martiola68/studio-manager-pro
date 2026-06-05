@@ -44,11 +44,11 @@ export default function TemplateEmailPage() {
     try {
       setLoading(true);
 
-      const { data, error } = await supabase
-        .from("tbemail_template")
-        .select("*")
-        .order("categoria", { ascending: true })
-        .order("titolo", { ascending: true });
+     const { data, error } = await (supabase as any)
+  .from("tbemail_template")
+  .select("*")
+  .order("categoria", { ascending: true })
+  .order("titolo", { ascending: true });
 
       if (error) throw error;
 
@@ -98,16 +98,16 @@ export default function TemplateEmailPage() {
       };
 
       if (selected.id) {
-        const { error } = await supabase
-          .from("tbemail_template")
-          .update(payload)
-          .eq("id", selected.id);
+      const { error } = await (supabase as any)
+  .from("tbemail_template")
+  .update(payload)
+  .eq("id", selected.id);
 
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from("tbemail_template")
-          .insert(payload);
+       const { error } = await (supabase as any)
+  .from("tbemail_template")
+  .insert(payload);
 
         if (error) throw error;
       }
@@ -131,10 +131,10 @@ export default function TemplateEmailPage() {
     if (!confirm("Eliminare definitivamente questo template email?")) return;
 
     try {
-      const { error } = await supabase
-        .from("tbemail_template")
-        .delete()
-        .eq("id", id);
+      const { error } = await (supabase as any)
+  .from("tbemail_template")
+  .delete()
+  .eq("id", id);
 
       if (error) throw error;
 
