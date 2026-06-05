@@ -40,7 +40,8 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
   const [studio, setStudio] = useState<Studio | null>(null);
 
   const versioneCorrenteRef = useRef<string | null>(null);
-const [nuovaVersioneDisponibile, setNuovaVersioneDisponibile] = useState(false);
+  const [nuovaVersioneDisponibile, setNuovaVersioneDisponibile] =
+    useState(false);
 
   const getStudioLabelForUser = (
     utente: HeaderUser | null,
@@ -54,10 +55,15 @@ const [nuovaVersioneDisponibile, setNuovaVersioneDisponibile] = useState(false);
 
     const isTenantSecondario =
       !!studioData.microsoft_connection_id_tenant2 &&
-      utente.microsoft_connection_id === studioData.microsoft_connection_id_tenant2;
+      utente.microsoft_connection_id ===
+        studioData.microsoft_connection_id_tenant2;
 
     if (isTenantSecondario) {
-      return studioData.ragione_sociale_tenant2 || studioData.ragione_sociale || "";
+      return (
+        studioData.ragione_sociale_tenant2 ||
+        studioData.ragione_sociale ||
+        ""
+      );
     }
 
     return studioData.ragione_sociale || "";
@@ -74,14 +80,7 @@ const [nuovaVersioneDisponibile, setNuovaVersioneDisponibile] = useState(false);
       const { data } = await supabase.auth.getSession();
       const session = data.session;
 
-      if (!session) {
-        setCurrentUser(null);
-        setStudio(null);
-        return;
-      }
-
-      const email = session.user.email ?? null;
-      if (!email) {
+      if (!session?.user?.email) {
         setCurrentUser(null);
         setStudio(null);
         return;
@@ -92,7 +91,7 @@ const [nuovaVersioneDisponibile, setNuovaVersioneDisponibile] = useState(false);
         .select(
           "id, nome, cognome, email, tipo_utente, studio_id, settore, ruolo_operatore_id, attivo, microsoft_connection_id"
         )
-        .eq("email", email)
+        .eq("email", session.user.email)
         .maybeSingle();
 
       if (utenteError) {
@@ -111,20 +110,46 @@ const [nuovaVersioneDisponibile, setNuovaVersioneDisponibile] = useState(false);
     }
   };
 
+  const controllaVersioneApplicazione = async () => {
+    try {
+      const response = await fetch(`/api/version?t=${Date.now()}`, {
+        cache: "no-store",
+      });
+
+      if (!response.ok) return;
+
+      const data = await response.json();
+      const versioneOnline = data?.version;
+
+      if (!versioneOnline) return;
+
+      if (!versioneCorrenteRef.current) {
+        versioneCorrenteRef.current = versioneOnline;
+        return;
+      }
+
+      if (versioneCorrenteRef.current !== versioneOnline) {
+        setNuovaVersioneDisponibile(true);
+      }
+    } catch (error) {
+      console.warn("Controllo versione applicazione non riuscito:", error);
+    }
+  };
+
   useEffect(() => {
-  void controllaVersioneApplicazione();
-
-  const interval = setInterval(() => {
     void controllaVersioneApplicazione();
-  }, 60000);
 
-  return () => clearInterval(interval);
-}, []);
+    const interval = setInterval(() => {
+      void controllaVersioneApplicazione();
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const supabase = getSupabaseClient();
 
-    loadUserAndStudio();
+    void loadUserAndStudio();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -132,7 +157,7 @@ const [nuovaVersioneDisponibile, setNuovaVersioneDisponibile] = useState(false);
           setCurrentUser(null);
           setStudio(null);
         } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-          loadUserAndStudio();
+          void loadUserAndStudio();
         }
       }
     );
@@ -147,41 +172,15 @@ const [nuovaVersioneDisponibile, setNuovaVersioneDisponibile] = useState(false);
     await hardLogout("/login");
   };
 
-  const controllaVersioneApplicazione = async () => {
-  try {
-    const response = await fetch(`/api/version?t=${Date.now()}`, {
-      cache: "no-store",
-    });
-
-    if (!response.ok) return;
-
-    const data = await response.json();
-    const versioneOnline = data?.version;
-
-    if (!versioneOnline) return;
-
-    if (!versioneCorrenteRef.current) {
-      versioneCorrenteRef.current = versioneOnline;
-      return;
-    }
-
-    if (versioneCorrenteRef.current !== versioneOnline) {
-      setNuovaVersioneDisponibile(true);
-    }
-  } catch (error) {
-    console.warn("Controllo versione applicazione non riuscito:", error);
-  }
-};
-
-const handleRefreshApp = () => {
-  window.location.reload();
-};
+  const handleRefreshApp = () => {
+    window.location.reload();
+  };
 
   return (
-  <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
-      <div className="px-4 md:px-6 py-3 md:py-4">
-        <div className="flex items-center justify-between gap-3 md:gap-4">
-          <div className="flex items-center gap-3 md:gap-4 min-w-0">
+    <header className="bg-white border-b border-gray-200 shadow-sm">
+      <div className="px-4 md:px-6 py-2">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <Button
               variant="ghost"
               size="icon"
@@ -194,46 +193,47 @@ const handleRefreshApp = () => {
             <img
               src="/logo-elma.png"
               alt="Studio Manager Pro"
-              className="h-10 md:h-12 w-auto object-contain shrink-0"
+              className="h-10 w-auto object-contain shrink-0"
             />
 
-<div className="min-w-0 hidden sm:block relative">
-  <h1 className="text-lg md:text-xl font-bold text-gray-900 leading-tight">
-    {title || "Studio Manager Pro"}
-  </h1>
-  <p className="text-xs md:text-sm text-gray-500">
-    Sistema Gestionale Integrato
-  </p>
-
-</div>
+            <div className="min-w-0 hidden sm:block">
+              <h1 className="text-lg font-bold text-gray-900 leading-tight">
+                {title || "Studio Manager Pro"}
+              </h1>
+              <p className="text-xs text-gray-500">
+                Sistema Gestionale Integrato
+              </p>
+            </div>
           </div>
 
           {currentUser && (
-            <div className="flex items-center gap-2 md:gap-4 shrink-0">
-             <div className="text-right">
-  <p className="text-sm font-semibold text-gray-900 leading-tight">
-    {currentUser.nome} {currentUser.cognome}
-  </p>
+            <div className="flex items-center gap-3 shrink-0">
+              <div className="text-right">
+                <p className="text-sm font-semibold text-gray-900 leading-tight">
+                  {currentUser.nome} {currentUser.cognome}
+                </p>
 
-  <p className="text-xs text-gray-500">
-    {currentUser.tipo_utente === "Admin" ? "Amministratore" : "Utente"}
-  </p>
+                <p className="text-xs text-gray-500">
+                  {currentUser.tipo_utente === "Admin"
+                    ? "Amministratore"
+                    : "Utente"}
+                </p>
 
-<div
-  onClick={handleRefreshApp}
-  className={
-    nuovaVersioneDisponibile
-      ? "mt-2 cursor-pointer text-red-600 font-bold text-sm animate-pulse"
-      : "mt-2 text-green-600 text-xs font-semibold"
-  }
->
-    {nuovaVersioneDisponibile
-      ? "🚨 NUOVA VERSIONE DISPONIBILE"
-      : "✓ Applicazione aggiornata"}
-  </div>
-</div>
+                <div
+                  onClick={handleRefreshApp}
+                  className={
+                    nuovaVersioneDisponibile
+                      ? "mt-1 cursor-pointer text-red-600 font-bold text-xs animate-pulse"
+                      : "mt-1 text-green-600 text-xs font-semibold"
+                  }
+                >
+                  {nuovaVersioneDisponibile
+                    ? "🚨 NUOVA VERSIONE DISPONIBILE"
+                    : "✓ Applicazione aggiornata"}
+                </div>
+              </div>
 
-              <div className="h-9 w-9 md:h-10 md:w-10 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
+              <div className="h-9 w-9 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
                 <User className="h-5 w-5 text-blue-600" />
               </div>
 
@@ -251,27 +251,18 @@ const handleRefreshApp = () => {
           )}
         </div>
 
-        <div className="mt-2 text-center">
- <div className="sm:hidden">
-  <h1 className="text-lg font-bold text-gray-900 leading-tight">
-    {title || "Studio Manager Pro"}
-  </h1>
-  <p className="text-xs text-gray-500">Sistema Gestionale Integrato</p>
-</div>
-
-          {currentUser && (
-            <div className="text-xs md:text-sm text-gray-700 font-medium mt-1 break-words">
-              Utente: {currentUser.nome} {currentUser.cognome}
-              {displayedStudioName ? ` - ${displayedStudioName}` : ""}
-            </div>
-          )}
-        </div>
+        {currentUser && (
+          <div className="text-xs md:text-sm text-gray-700 font-medium mt-1 text-center break-words">
+            Utente: {currentUser.nome} {currentUser.cognome}
+            {displayedStudioName ? ` - ${displayedStudioName}` : ""}
+          </div>
+        )}
       </div>
 
-      <div className="border-t border-gray-100 px-4 md:px-6 py-3 text-[10px] md:text-xs text-gray-500 text-center">
-        © {new Date().getFullYear()} Studio Manager Pro. Creato da Artiola Mario.
-        Tutti i diritti riservati. Opera tutelata ai sensi della Legge 22 aprile
-        1941, n. 633, e successive modificazioni.
+      <div className="border-t border-gray-100 px-4 md:px-6 py-2 text-[10px] md:text-xs text-gray-500 text-center">
+        © {new Date().getFullYear()} Studio Manager Pro. Creato da Artiola
+        Mario. Tutti i diritti riservati. Opera tutelata ai sensi della Legge
+        22 aprile 1941, n. 633, e successive modificazioni.
       </div>
     </header>
   );
