@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Trash2, Printer } from "lucide-react";
+import { Search, Trash2, Printer, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -53,6 +53,16 @@ export default function ImuPage() {
   const [filterAnno, setFilterAnno] = useState(String(currentYear));
   const [filterOperatore, setFilterOperatore] = useState("__all__");
   const [operatoriMap, setOperatoriMap] = useState<Record<string, string>>({});
+
+  const [invioEmailModal, setInvioEmailModal] = useState<{
+  open: boolean;
+  scadenza: ScadenzaImu | null;
+  tipo: "acconto" | "saldo" | null;
+}>({
+  open: false,
+  scadenza: null,
+  tipo: null,
+});
 
   const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
   const [noteTimers, setNoteTimers] = useState<Record<string, NodeJS.Timeout>>(
@@ -343,6 +353,17 @@ export default function ImuPage() {
     );
   }
 
+  const apriInvioEmail = (
+  scadenza: ScadenzaImu,
+  tipo: "acconto" | "saldo"
+) => {
+  setInvioEmailModal({
+    open: true,
+    scadenza,
+    tipo,
+  });
+};
+  
   const dateInputClass = (value?: string | null) =>
     [
       "w-full",
@@ -588,6 +609,10 @@ export default function ImuPage() {
     <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[300px] border-r border-gray-300 bg-white print-hide">
       Note
     </th>
+<th className={`${baseHeaderClass} min-w-[180px] print-hide`}>
+  Email F24
+</th>
+    
     <th className={`${baseHeaderClass} min-w-[140px]`}>Conferma dati</th>
     <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[100px] border-r-0 bg-white print-hide">
       Azioni
@@ -599,7 +624,7 @@ export default function ImuPage() {
   {filteredScadenze.length === 0 ? (
     <tr className="border-b border-gray-300">
       <td
-        colSpan={16}
+        colSpan={17}
         className="p-4 text-center text-gray-500"
       >
         Nessun record trovato
@@ -816,6 +841,42 @@ export default function ImuPage() {
               }
             />
           </td>
+
+          <td className={`${baseCellClass} text-center min-w-[180px] print-hide`}>
+  <div className="flex items-center justify-center gap-2">
+    {scadenza.acconto_dovuto && !scadenza.conferma_acconto_imu && (
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className="h-8 text-xs"
+        onClick={() => apriInvioEmail(scadenza, "acconto")}
+      >
+        <Mail className="h-3.5 w-3.5 mr-1" />
+        Acconto
+      </Button>
+    )}
+
+    {scadenza.saldo_dovuto && !scadenza.conferma_saldo_imu && (
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className="h-8 text-xs"
+        onClick={() => apriInvioEmail(scadenza, "saldo")}
+      >
+        <Mail className="h-3.5 w-3.5 mr-1" />
+        Saldo
+      </Button>
+    )}
+
+    {scadenza.conferma_acconto_imu && scadenza.conferma_saldo_imu && (
+      <span className="text-xs text-green-600 font-semibold">
+        Comunicati
+      </span>
+    )}
+  </div>
+</td>
 
           <td className="p-2 align-middle text-center min-w-[100px] border-r-0 print-hide">
             <Button
