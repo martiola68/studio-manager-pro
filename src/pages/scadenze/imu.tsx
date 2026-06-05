@@ -829,20 +829,7 @@ export default function ImuPage() {
             />
           </td>
 
-          <td className={`${baseCellClass} text-center min-w-[140px]`}>
-            <Checkbox
-              checked={scadenza.conferma_riga || false}
-              onCheckedChange={() =>
-                handleToggleField(
-                  scadenza.id,
-                  "conferma_riga",
-                  scadenza.conferma_riga
-                )
-              }
-            />
-          </td>
-
-          <td className={`${baseCellClass} text-center min-w-[180px] print-hide`}>
+        <td className={`${baseCellClass} text-center min-w-[180px] print-hide`}>
   <div className="flex items-center justify-center gap-2">
     {scadenza.acconto_dovuto && !scadenza.conferma_acconto_imu && (
       <Button
@@ -853,7 +840,7 @@ export default function ImuPage() {
         onClick={() => apriInvioEmail(scadenza, "acconto")}
       >
         <Mail className="h-3.5 w-3.5 mr-1" />
-        Acconto
+        Invia Acconto
       </Button>
     )}
 
@@ -866,7 +853,7 @@ export default function ImuPage() {
         onClick={() => apriInvioEmail(scadenza, "saldo")}
       >
         <Mail className="h-3.5 w-3.5 mr-1" />
-        Saldo
+        Invia Saldo
       </Button>
     )}
 
@@ -876,6 +863,19 @@ export default function ImuPage() {
       </span>
     )}
   </div>
+</td>
+
+<td className={`${baseCellClass} text-center min-w-[140px]`}>
+  <Checkbox
+    checked={scadenza.conferma_riga || false}
+    onCheckedChange={() =>
+      handleToggleField(
+        scadenza.id,
+        "conferma_riga",
+        scadenza.conferma_riga
+      )
+    }
+  />
 </td>
 
           <td className="p-2 align-middle text-center min-w-[100px] border-r-0 print-hide">
