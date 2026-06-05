@@ -1114,7 +1114,7 @@ const inviaComunicazioneScadenza = async () => {
       </div>
     </div>
   </div>
+      )}
     </>
-)}
   );
 }
