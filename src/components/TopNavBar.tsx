@@ -676,31 +676,13 @@ return pathname === normalizedHref || pathname.startsWith(`${normalizedHref}/`);
    </nav>
   );
 }
-
- return (
-  <>
-    {nuovaVersioneDisponibile && (
-      <div className="w-full bg-amber-100 border-b border-amber-300 px-4 py-2 flex items-center justify-center gap-3 text-sm">
-        <span>
-          🚀 È disponibile una nuova versione di Studio Manager Pro
-        </span>
-
-        <Button
-          size="sm"
-          onClick={aggiornaApplicazione}
-        >
-          Aggiorna ora
-        </Button>
+return (
+  <nav className="w-full bg-white border-b border-gray-200 shadow-sm sticky top-[112px] z-40">
+    <div className="overflow-x-auto">
+      <div className="flex items-center gap-1 px-4 py-2 min-w-max">
+        {menuItems.map((item) => renderMenuItem(item))}
       </div>
-    )}
-
-    <nav className="w-full bg-white border-b border-gray-200 shadow-sm sticky top-[160px] z-40">
-      <div className="overflow-x-auto">
-  <div className="flex items-center gap-1 px-4 py-2 min-w-max">
-  {menuItems.map((item) => renderMenuItem(item))}
-</div>
-      </div>
-     </nav>
-  </>
-  );
+    </div>
+  </nav>
+);
 }
