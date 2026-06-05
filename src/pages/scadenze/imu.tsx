@@ -65,7 +65,8 @@ export default function ImuPage() {
   tipo: null,
 });
 
-  const [emailDestinatario, setEmailDestinatario] = useState("");
+const [emailDestinatario, setEmailDestinatario] = useState("");
+const [searchContatti, setSearchContatti] = useState("");
 
 const [emailContatti, setEmailContatti] = useState<
   {
@@ -367,7 +368,40 @@ const [sendingEmail, setSendingEmail] = useState(false);
     );
   }
 
- const apriInvioEmail = async (
+const loadContattiDestinatari = async (term: string) => {
+  let query = supabase
+    .from("tbcontatti")
+    .select("id, nome, cognome, email")
+    .not("email", "is", null)
+    .limit(30);
+
+  if (term.trim()) {
+    query = query.or(
+      `nome.ilike.%${term}%,cognome.ilike.%${term}%,email.ilike.%${term}%`
+    );
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error(error);
+    setEmailContatti([]);
+    return;
+  }
+
+  setEmailContatti((data || []) as any[]);
+};
+
+const getContattoLabel = (contatto: {
+  nome: string | null;
+  cognome: string | null;
+  email: string | null;
+}) => {
+  const fullName = `${contatto.cognome || ""} ${contatto.nome || ""}`.trim();
+  return fullName || contatto.email || "Contatto";
+};
+
+const apriInvioEmail = (
   scadenza: ScadenzaImu,
   tipo: "acconto" | "saldo"
 ) => {
@@ -378,71 +412,11 @@ const [sendingEmail, setSendingEmail] = useState(false);
   });
 
   setEmailDestinatario("");
+  setSearchContatti("");
   setEmailContatti([]);
-
-try {
-  const nominativo = scadenza.nominativo || "";
-
-  const { data, error } = await supabase
-    .from("tbcontatti")
-    .select("id, nome, cognome, email, pec, email_secondaria, email_altro")
-    .or(
-      `nome.ilike.%${nominativo}%,cognome.ilike.%${nominativo}%,email.ilike.%${nominativo}%`
-    )
-    .limit(30);
-
-  if (error) throw error;
-
-  const options =
-    (data || []).flatMap((c: any) => [
-      c.email && {
-        id: `${c.id}-email`,
-        nome: c.nome,
-        cognome: c.cognome,
-        email: c.email,
-      },
-      c.pec && {
-        id: `${c.id}-pec`,
-        nome: c.nome,
-        cognome: c.cognome,
-        email: c.pec,
-      },
-      c.email_secondaria && {
-        id: `${c.id}-email-secondaria`,
-        nome: c.nome,
-        cognome: c.cognome,
-        email: c.email_secondaria,
-      },
-      c.email_altro && {
-        id: `${c.id}-email-altro`,
-        nome: c.nome,
-        cognome: c.cognome,
-        email: c.email_altro,
-      },
-    ].filter(Boolean)) as {
-      id: string;
-      nome: string | null;
-      cognome: string | null;
-      email: string | null;
-    }[];
-
-  setEmailContatti(options);
-
-  if (options.length === 1) {
-    setEmailDestinatario(options[0].email || "");
-  }
-} catch (error) {
-    console.error(error);
-
-    toast({
-      title: "Errore",
-      description: "Impossibile caricare i contatti email",
-      variant: "destructive",
-    });
-  }
 };
 
-  const chiudiInvioEmail = () => {
+const chiudiInvioEmail = () => {
   setInvioEmailModal({
     open: false,
     scadenza: null,
@@ -450,6 +424,7 @@ try {
   });
 
   setEmailDestinatario("");
+  setSearchContatti("");
   setEmailContatti([]);
 };
 
@@ -1085,27 +1060,51 @@ const inviaComunicazioneScadenza = async () => {
       </p>
 
       <div className="space-y-4">
-        <div>
-          <label className="text-sm font-medium mb-2 block">
-            Email destinatario
-          </label>
+       <div>
+  <label className="text-sm font-medium mb-2 block">
+    Contatto Email
+  </label>
 
-          <Select value={emailDestinatario} onValueChange={setEmailDestinatario}>
-            <SelectTrigger>
-              <SelectValue placeholder="Seleziona email" />
-            </SelectTrigger>
+  <div className="flex gap-2">
+    <Input
+      value={searchContatti}
+      onChange={(e) => setSearchContatti(e.target.value)}
+      placeholder="Cerca contatto..."
+    />
 
-            <SelectContent>
-              {emailContatti.map((contatto) => (
-                <SelectItem key={contatto.id} value={contatto.email || ""}>
-                  {`${contatto.cognome || ""} ${contatto.nome || ""}`.trim() ||
-                    contatto.email}{" "}
-                  - {contatto.email}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+    <Button
+      type="button"
+      variant="outline"
+      onClick={() => loadContattiDestinatari(searchContatti)}
+    >
+      Cerca
+    </Button>
+  </div>
+
+  {emailContatti.length > 0 && (
+    <div className="max-h-[140px] overflow-y-auto rounded-md border bg-white">
+      {emailContatti.map((contatto) => (
+        <button
+          key={contatto.id}
+          type="button"
+          className="flex w-full items-center justify-between border-b px-3 py-2 text-left text-sm hover:bg-gray-50"
+          onClick={() => {
+            setEmailDestinatario(contatto.email || "");
+            setSearchContatti(contatto.email || "");
+            setEmailContatti([]);
+          }}
+        >
+          <span>
+            {getContattoLabel(contatto)}
+            <span className="ml-2 text-gray-500">
+              {contatto.email}
+            </span>
+          </span>
+        </button>
+      ))}
+    </div>
+  )}
+</div>
 
         <div>
           <label className="text-sm font-medium mb-2 block">
