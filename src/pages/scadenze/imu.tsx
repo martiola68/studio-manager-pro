@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/lib/supabase/client";
+import { emailService } from "@/services/emailService";
 import type { Database } from "@/integrations/supabase/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -418,22 +419,13 @@ const apriInvioEmail = (
   setEmailContatti([]);
 };
 
-const chiudiInvioEmail = () => {
-  setInvioEmailModal({
-    open: false,
-    scadenza: null,
-    tipo: null,
-  });
-
-  setEmailDestinatario("");
-  setSearchContatti("");
-  setEmailContatti([]);
-  setF24File(null);
-};
-
 const inviaComunicazioneScadenza = async () => {
   try {
-    if (!invioEmailModal.scadenza || !invioEmailModal.tipo || !emailDestinatario) {
+    if (
+      !invioEmailModal.scadenza ||
+      !invioEmailModal.tipo ||
+      !emailDestinatario
+    ) {
       toast({
         title: "Errore",
         description: "Seleziona un indirizzo email",
@@ -443,28 +435,28 @@ const inviaComunicazioneScadenza = async () => {
     }
 
     if (!f24File) {
-  toast({
-    title: "Errore",
-    description: "Allega il modello F24 prima di inviare",
-    variant: "destructive",
-  });
-  return;
-}
+      toast({
+        title: "Errore",
+        description: "Allega il modello F24 prima di inviare",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setSendingEmail(true);
 
-   const formData = new FormData();
+    const formData = new FormData();
 
-formData.append("modulo", "imu");
-formData.append("scadenza_id", invioEmailModal.scadenza.id);
-formData.append("tipo", invioEmailModal.tipo);
-formData.append("email", emailDestinatario);
-formData.append("f24", f24File);
+    formData.append("modulo", "imu");
+    formData.append("scadenza_id", invioEmailModal.scadenza.id);
+    formData.append("tipo", invioEmailModal.tipo);
+    formData.append("email", emailDestinatario);
+    formData.append("f24", f24File);
 
-const response = await fetch("/api/scadenze/comunicazioni/invia", {
-  method: "POST",
-  body: formData,
-});
+    const response = await fetch("/api/scadenze/comunicazioni/invia", {
+      method: "POST",
+      body: formData,
+    });
 
     const result = await response.json();
 
