@@ -217,13 +217,14 @@ const allegati = [
   },
 ];
 
-  const { data: studio, error: studioError } = await supabaseAdmin
+ const { data: studi, error: studioError } = await supabaseAdmin
   .from("tbstudio")
   .select("email, microsoft_connection_id")
-  .limit(1)
-  .maybeSingle();
+  .limit(1);
 
 if (studioError) throw studioError;
+
+const studio = studi?.[0];
 
 if (!studio?.microsoft_connection_id) {
   return res.status(500).json({
