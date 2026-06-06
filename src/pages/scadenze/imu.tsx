@@ -79,6 +79,8 @@ const [emailContatti, setEmailContatti] = useState<
 
 const [sendingEmail, setSendingEmail] = useState(false);
 
+  const [f24File, setF24File] = useState<File | null>(null);
+
   const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
   const [noteTimers, setNoteTimers] = useState<Record<string, NodeJS.Timeout>>(
     {}
@@ -426,6 +428,7 @@ const chiudiInvioEmail = () => {
   setEmailDestinatario("");
   setSearchContatti("");
   setEmailContatti([]);
+  setF24File(null);
 };
 
 const inviaComunicazioneScadenza = async () => {
@@ -438,6 +441,15 @@ const inviaComunicazioneScadenza = async () => {
       });
       return;
     }
+
+    if (!f24File) {
+  toast({
+    title: "Errore",
+    description: "Allega il modello F24 prima di inviare",
+    variant: "destructive",
+  });
+  return;
+}
 
     setSendingEmail(true);
 
@@ -1118,6 +1130,24 @@ const inviaComunicazioneScadenza = async () => {
             placeholder="email@cliente.it"
           />
         </div>
+
+        <div>
+  <label className="text-sm font-medium mb-2 block">
+    Allegato F24 *
+  </label>
+
+  <Input
+    type="file"
+    accept=".pdf"
+    onChange={(e) => setF24File(e.target.files?.[0] || null)}
+  />
+
+  {f24File && (
+    <p className="mt-1 text-xs text-gray-500">
+      File selezionato: {f24File.name}
+    </p>
+  )}
+</div>
 
         <div className="rounded-md border bg-gray-50 p-3 text-sm text-gray-600">
           Template usato:{" "}
