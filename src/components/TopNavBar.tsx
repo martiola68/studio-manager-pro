@@ -677,7 +677,7 @@ return pathname === normalizedHref || pathname.startsWith(`${normalizedHref}/`);
   );
 }
 return (
-  <nav className="w-full bg-white border-b border-gray-200 shadow-sm sticky top-[90px] z-40">
+  <nav className="w-full bg-white border-b border-gray-200 shadow-sm sticky top-[98px] z-40">
     <div className="overflow-x-auto">
       <div className="flex items-center gap-1 px-4 py-2 min-w-max">
         {menuItems.map((item) => renderMenuItem(item))}
