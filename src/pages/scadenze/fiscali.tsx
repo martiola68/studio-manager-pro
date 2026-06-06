@@ -932,9 +932,7 @@ const possibiliEmail = [
                   <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[130px]">
                     Data invio
                   </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">
-                    Email Redditi
-                  </th>
+                 
 
                   <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[100px]">
                     IRAP
@@ -951,9 +949,7 @@ const possibiliEmail = [
                   <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[130px]">
                     Data invio
                   </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">
-                    Email IRAP
-                  </th>
+                 
 
                   <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[150px]">
                     2° Acconto
@@ -984,7 +980,7 @@ const possibiliEmail = [
                 {filteredScadenze.length === 0 ? (
                   <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                     <td
-                      colSpan={25}
+                      colSpan={23}
                       className="p-2 align-middle text-center text-gray-500"
                     >
                       Nessun record trovato
@@ -1053,10 +1049,10 @@ const possibiliEmail = [
                       </td>
 
                       <td className="p-2 align-middle min-w-[120px]">
-                        {renderSiNoSelect(
-                          scadenza,
-                          "conferma_ires_saldo_acconto"
-                        )}
+                        {renderCheck(
+  scadenza,
+  "conferma_ires_saldo_acconto"
+)}
                       </td>
 
                       <td className="p-2 align-middle min-w-[150px]">
@@ -1079,20 +1075,24 @@ const possibiliEmail = [
                       </td>
 
                       <td className="p-2 align-middle text-center min-w-[120px]">
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={() =>
-                            apriInvioEmail(
-                              scadenza,
-                              "saldo_primo_acconto_cciaa"
-                            )
-                          }
-                          className="bg-blue-600 text-white hover:bg-blue-700"
-                        >
-                          <Mail className="h-4 w-4 mr-1" />
-                          Invia
-                        </Button>
+                       {scadenza.saldi_primo_acconti_cciaa_dovuti ? (
+  <Button
+    type="button"
+    size="sm"
+    onClick={() =>
+      apriInvioEmail(
+        scadenza,
+        "saldo_primo_acconto_cciaa"
+      )
+    }
+    className="bg-blue-600 text-white hover:bg-blue-700"
+  >
+    <Mail className="h-4 w-4 mr-1" />
+    Invia
+  </Button>
+) : (
+  <span className="text-xs text-gray-400">Non dovuto</span>
+)}
                       </td>
 
                       <td className="p-2 align-middle text-center min-w-[140px]">
@@ -1116,20 +1116,6 @@ const possibiliEmail = [
                               : "w-full"
                           }
                         />
-                      </td>
-
-                      <td className="p-2 align-middle text-center min-w-[120px]">
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={() =>
-                            apriInvioEmail(scadenza, "dichiarazione_redditi")
-                          }
-                          className="bg-blue-600 text-white hover:bg-blue-700"
-                        >
-                          <Mail className="h-4 w-4 mr-1" />
-                          Invia
-                        </Button>
                       </td>
 
                       <td className="p-2 align-middle text-center min-w-[100px]">
@@ -1170,29 +1156,15 @@ const possibiliEmail = [
                         />
                       </td>
 
-                      <td className="p-2 align-middle text-center min-w-[120px]">
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={() =>
-                            apriInvioEmail(scadenza, "dichiarazione_irap")
-                          }
-                          className="bg-blue-600 text-white hover:bg-blue-700"
-                        >
-                          <Mail className="h-4 w-4 mr-1" />
-                          Invia
-                        </Button>
-                      </td>
-
                       <td className="p-2 align-middle min-w-[150px]">
                         {renderSiNoSelect(scadenza, "secondo_acconti_dovuti")}
                       </td>
 
                       <td className="p-2 align-middle min-w-[120px]">
-                        {renderSiNoSelect(
-                          scadenza,
-                          "conferma_ires_secondo_acconto"
-                        )}
+                        {renderCheck(
+  scadenza,
+  "conferma_ires_secondo_acconto"
+)}
                       </td>
 
                       <td className="p-2 align-middle min-w-[150px]">
@@ -1215,17 +1187,21 @@ const possibiliEmail = [
                       </td>
 
                       <td className="p-2 align-middle text-center min-w-[120px]">
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={() =>
-                            apriInvioEmail(scadenza, "secondo_acconto")
-                          }
-                          className="bg-blue-600 text-white hover:bg-blue-700"
-                        >
-                          <Mail className="h-4 w-4 mr-1" />
-                          Invia
-                        </Button>
+                        {scadenza.secondo_acconti_dovuti ? (
+  <Button
+    type="button"
+    size="sm"
+    onClick={() =>
+      apriInvioEmail(scadenza, "secondo_acconto")
+    }
+    className="bg-blue-600 text-white hover:bg-blue-700"
+  >
+    <Mail className="h-4 w-4 mr-1" />
+    Invia
+  </Button>
+) : (
+  <span className="text-xs text-gray-400">Non dovuto</span>
+)}
                       </td>
 
                       <td className="p-2 align-middle min-w-[200px]">
