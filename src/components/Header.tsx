@@ -224,9 +224,9 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
     type="button"
     size="sm"
     onClick={handleRefreshApp}
-    className="mt-1 bg-red-600 hover:bg-red-700 animate-pulse"
+    className="mt-3 bg-red-600 hover:bg-red-700 animate-pulse"
   >
-    🚨 AGGIORNA VER.
+    AGGIORNA VERSIONE
   </Button>
 )}
               </div>
