@@ -247,7 +247,12 @@ if (!tokenOwner?.user_id) {
   });
 }
 
-const attachments = [
+const attachments: {
+  "@odata.type": "#microsoft.graph.fileAttachment";
+  name: string;
+  contentType: string;
+  contentBytes: string;
+}[] = [
   {
     "@odata.type": "#microsoft.graph.fileAttachment",
     name: f24.originalFilename || "F24_IMU.pdf",
