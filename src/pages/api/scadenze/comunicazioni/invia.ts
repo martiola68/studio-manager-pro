@@ -265,6 +265,28 @@ if (payload.modulo === "imu") {
       if (error) throw error;
     }
 
+    if (payload.modulo === "fiscali") {
+  const today = new Date().toISOString().slice(0, 10);
+
+  const updatePayload =
+    payload.tipo === "saldo_primo_acconto_cciaa"
+      ? {
+          conferma_ires_saldo_acconto: true,
+          data_com1: today,
+        }
+      : {
+          conferma_ires_secondo_acconto: true,
+          data_com2: today,
+        };
+
+  const { error } = await supabaseAdmin
+    .from("tbscadfiscali")
+    .update(updatePayload)
+    .eq("id", payload.scadenza_id);
+
+  if (error) throw error;
+}
+
     return res.status(200).json({
       success: true,
       oggetto,
