@@ -32,9 +32,6 @@ type ScadenzaFiscali = ScadenzaFiscaliRow & {
   conferma_irap_saldo_acconto?: boolean | null;
   conferma_irap_secondo_acconto?: boolean | null;
   conferma_irap_invio_dichiarazione?: boolean | null;
-
-  saldi_primo_acconti_cciaa_dovuti?: boolean | null;
-secondo_acconti_dovuti?: boolean | null;
   
   saldi_primo_acconti_cciaa_dovuti?: boolean | null;
 secondo_acconti_dovuti?: boolean | null;
