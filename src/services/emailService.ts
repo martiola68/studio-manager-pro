@@ -1077,11 +1077,11 @@ if (currentUser?.id) {
   let studioFirma: any = null;
 
   if (utenteFirma?.studio_id) {
-    const { data: studioData } = await supabase
-      .from("tbstudio")
-      .select("nome, indirizzo, telefono, sito")
-      .eq("id", utenteFirma.studio_id)
-      .maybeSingle();
+   const { data: studioData } = await supabase
+  .from("tbstudio")
+  .select("ragione_sociale, indirizzo, cap, citta, provincia, telefono, sito_web")
+  .eq("id", utenteFirma.studio_id)
+  .maybeSingle();
 
     studioFirma = studioData;
   }
@@ -1098,10 +1098,20 @@ if (currentUser?.id) {
       .replaceAll("[UTENTE_NOME]", utenteFirma?.nome || "")
       .replaceAll("[UTENTE_COGNOME]", utenteFirma?.cognome || "")
       .replaceAll("[UTENTE_EMAIL]", utenteFirma?.email || currentUser.email || "")
-      .replaceAll("[STUDIO_NOME]", studioFirma?.nome || "")
-      .replaceAll("[STUDIO_INDIRIZZO]", studioFirma?.indirizzo || "")
-      .replaceAll("[STUDIO_TELEFONO]", studioFirma?.telefono || "")
-      .replaceAll("[STUDIO_SITO]", studioFirma?.sito || "");
+     .replaceAll("[STUDIO_NOME]", studioFirma?.ragione_sociale || "")
+.replaceAll(
+  "[STUDIO_INDIRIZZO]",
+  [
+    studioFirma?.indirizzo,
+    studioFirma?.cap,
+    studioFirma?.citta,
+    studioFirma?.provincia,
+  ]
+    .filter(Boolean)
+    .join(" - ")
+)
+.replaceAll("[STUDIO_TELEFONO]", studioFirma?.telefono || "")
+.replaceAll("[STUDIO_SITO]", studioFirma?.sito_web || "");
   }
 }
 
