@@ -32,6 +32,12 @@ type ScadenzaFiscali = ScadenzaFiscaliRow & {
   conferma_irap_saldo_acconto?: boolean | null;
   conferma_irap_secondo_acconto?: boolean | null;
   conferma_irap_invio_dichiarazione?: boolean | null;
+
+  saldi_primo_acconti_cciaa_dovuti?: boolean | null;
+secondo_acconti_dovuti?: boolean | null;
+  
+  saldi_primo_acconti_cciaa_dovuti?: boolean | null;
+secondo_acconti_dovuti?: boolean | null;
 };
 
 export default function ScadenzeFiscaliPage() {
@@ -671,18 +677,29 @@ export default function ScadenzeFiscaliPage() {
 <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[80px]">
   Def.
 </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[160px]">
-                    Saldo/1° Acc./cciaa
-                  </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[130px]">
-                    Comunicato il
-                  </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[110px]">
-                    2° Acconto
-                  </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[130px]">
-                    Comunicato il
-                  </th>
+                 <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[180px]">
+  Saldi/1° acconti/CCIAA dovuti
+</th>
+
+<th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[160px]">
+  Saldo/1° Acc./CCIAA
+</th>
+
+<th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[130px]">
+  Comunicato il
+</th>
+
+<th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[160px]">
+  2° acconti dovuti
+</th>
+
+<th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[110px]">
+  2° Acconto
+</th>
+
+<th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[130px]">
+  Comunicato il
+</th>
                   <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[140px]">
                     Invio Redditi
                   </th>
@@ -720,7 +737,7 @@ export default function ScadenzeFiscaliPage() {
                 {filteredScadenze.length === 0 ? (
                   <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                     <td
-                      colSpan={19}
+                      colSpan={21}
                       className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center text-gray-500"
                     >
                       Nessun record trovato
@@ -807,7 +824,20 @@ export default function ScadenzeFiscaliPage() {
   />
 </td>
 
-                    <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[160px]">
+<td className="p-2 align-middle text-center min-w-[180px]">
+  <Checkbox
+    checked={scadenza.saldi_primo_acconti_cciaa_dovuti || false}
+    onCheckedChange={() =>
+      handleToggleField(
+        scadenza.id,
+        "saldi_primo_acconti_cciaa_dovuti",
+        scadenza.saldi_primo_acconti_cciaa_dovuti
+      )
+    }
+  />
+</td>
+
+<td className="p-2 align-middle text-center min-w-[160px]">
   <Checkbox
     checked={scadenza.conferma_ires_saldo_acconto || false}
     onCheckedChange={() =>
@@ -820,52 +850,69 @@ export default function ScadenzeFiscaliPage() {
   />
 </td>
 
-<td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[130px]">
-                        <Input
-                          type="date"
-                          value={scadenza.data_com1 || ""}
-                          onChange={(e) =>
-                            handleUpdateField(
-                              scadenza.id,
-                              "data_com1",
-                              e.target.value
-                            )
-                          }
-                          className={
-                            scadenza.conferma_ires_saldo_acconto
-                          ? "w-full bg-green-500 text-black"
-                          : "w-full"
-                                  }
-                        />
-                      </td>
+<td className="p-2 align-middle min-w-[130px]">
+  <Input
+    type="date"
+    value={scadenza.data_com1 || ""}
+    onChange={(e) =>
+      handleUpdateField(
+        scadenza.id,
+        "data_com1",
+        e.target.value
+      )
+    }
+    className={
+      scadenza.conferma_ires_saldo_acconto
+        ? "w-full bg-green-500 text-black"
+        : "w-full"
+    }
+  />
+</td>
 
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[110px]">
-                        <Checkbox
-                          checked={scadenza.conferma_ires_secondo_acconto || false}
-                          onCheckedChange={() =>
-                            handleToggleField(scadenza.id, "conferma_ires_secondo_acconto", scadenza.conferma_ires_secondo_acconto)
-                          }
-                        />
-                      </td>
+<td className="p-2 align-middle text-center min-w-[160px]">
+  <Checkbox
+    checked={scadenza.secondo_acconti_dovuti || false}
+    onCheckedChange={() =>
+      handleToggleField(
+        scadenza.id,
+        "secondo_acconti_dovuti",
+        scadenza.secondo_acconti_dovuti
+      )
+    }
+  />
+</td>
 
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[130px]">
-                        <Input
-                          type="date"
-                          value={scadenza.data_com2 || ""}
-                          onChange={(e) =>
-                            handleUpdateField(
-                              scadenza.id,
-                              "data_com2",
-                              e.target.value
-                            )
-                          }
-                         className={
-  scadenza.conferma_ires_secondo_acconto
-    ? "w-full bg-green-500 text-black"
-    : "w-full"
-}
-                        />
-                      </td>
+<td className="p-2 align-middle text-center min-w-[110px]">
+  <Checkbox
+    checked={scadenza.conferma_ires_secondo_acconto || false}
+    onCheckedChange={() =>
+      handleToggleField(
+        scadenza.id,
+        "conferma_ires_secondo_acconto",
+        scadenza.conferma_ires_secondo_acconto
+      )
+    }
+  />
+</td>
+
+<td className="p-2 align-middle min-w-[130px]">
+  <Input
+    type="date"
+    value={scadenza.data_com2 || ""}
+    onChange={(e) =>
+      handleUpdateField(
+        scadenza.id,
+        "data_com2",
+        e.target.value
+      )
+    }
+    className={
+      scadenza.conferma_ires_secondo_acconto
+        ? "w-full bg-green-500 text-black"
+        : "w-full"
+    }
+  />
+</td>
 
                       <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[140px]">
                        <Checkbox
