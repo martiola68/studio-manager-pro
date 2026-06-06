@@ -30,9 +30,7 @@ type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
 type TipoEmailFiscali =
   | "saldo_primo_acconto_cciaa"
-  | "secondo_acconto"
-  | "dichiarazione_redditi"
-  | "dichiarazione_irap";
+  | "secondo_acconto";
 
 type ScadenzaFiscali = ScadenzaFiscaliRow & {
   cliente_id?: string | null;
@@ -53,14 +51,9 @@ type ScadenzaFiscali = ScadenzaFiscaliRow & {
 
 type EmailModalState = {
   open: boolean;
-  loading: boolean;
   sending: boolean;
   scadenza: ScadenzaFiscali | null;
   tipo: TipoEmailFiscali | null;
-  emails: string[];
-  selectedEmail: string;
-  subject: string;
-  body: string;
 };
 
 export default function ScadenzeFiscaliPage() {
@@ -82,17 +75,24 @@ export default function ScadenzeFiscaliPage() {
     Record<string, ReturnType<typeof setTimeout>>
   >({});
 
-  const [emailModal, setEmailModal] = useState<EmailModalState>({
-    open: false,
-    loading: false,
-    sending: false,
-    scadenza: null,
-    tipo: null,
-    emails: [],
-    selectedEmail: "",
-    subject: "",
-    body: "",
-  });
+ const [emailModal, setEmailModal] = useState<EmailModalState>({
+  open: false,
+  sending: false,
+  scadenza: null,
+  tipo: null,
+});
+
+const [emailDestinatario, setEmailDestinatario] = useState("");
+const [searchContatti, setSearchContatti] = useState("");
+const [emailContatti, setEmailContatti] = useState<
+  {
+    id: string;
+    nome: string | null;
+    cognome: string | null;
+    email: string | null;
+  }[]
+>([]);
+const [f24File, setF24File] = useState<File | null>(null);
 
   const [stats, setStats] = useState({
     totale: 0,
@@ -338,151 +338,132 @@ export default function ScadenzeFiscaliPage() {
     }
   };
 
-  const apriInvioEmail = async (
-    scadenza: ScadenzaFiscali,
-    tipo: TipoEmailFiscali
-  ) => {
-    const label = getTipoEmailLabel(tipo);
+ const apriInvioEmail = (
+  scadenza: ScadenzaFiscali,
+  tipo: TipoEmailFiscali
+) => {
+  setEmailModal({
+    open: true,
+    sending: false,
+    scadenza,
+    tipo,
+  });
 
-    setEmailModal({
-      open: true,
-      loading: true,
-      sending: false,
-      scadenza,
-      tipo,
-      emails: [],
-      selectedEmail: "",
-      subject: `${label} - ${scadenza.nominativo} - ${scadenza.anno_riferimento}`,
-      body: `Gentile Cliente,
+  setEmailDestinatario("");
+  setSearchContatti("");
+  setEmailContatti([]);
+  setF24File(null);
+};
 
-con la presente trasmettiamo comunicazione relativa a: ${label}.
+  const loadContattiDestinatari = async (term: string) => {
+  let query = supabase
+    .from("tbcontatti" as any)
+    .select("id, nome, cognome, email")
+    .not("email", "is", null)
+    .limit(30);
 
-Anno di riferimento: ${scadenza.anno_riferimento}
-Tipo redditi: ${scadenza.tipo_redditi || "-"}
+  if (term.trim()) {
+    query = query.or(
+      `nome.ilike.%${term}%,cognome.ilike.%${term}%,email.ilike.%${term}%`
+    );
+  }
 
-Cordiali saluti.`,
-    });
+  const { data, error } = await query;
 
-    try {
+  if (error) {
+    console.error(error);
+    setEmailContatti([]);
+    return;
+  }
 
-      if (!scadenza.cliente_id) {
-  throw new Error("Cliente non collegato alla scadenza fiscale.");
-}
-      const { data: clienteRaw, error } = await supabase
-  .from("tbclienti" as any)
-  .select("*")
-  .eq("id", scadenza.cliente_id)
-  .maybeSingle();
+  setEmailContatti((data || []) as any[]);
+};
 
-if (error) throw error;
+const getContattoLabel = (contatto: {
+  nome: string | null;
+  cognome: string | null;
+  email: string | null;
+}) => {
+  const fullName = `${contatto.cognome || ""} ${contatto.nome || ""}`.trim();
+  return fullName || contatto.email || "Contatto";
+};
 
-const cliente = clienteRaw as any;
+const chiudiInvioEmail = () => {
+  setEmailModal({
+    open: false,
+    sending: false,
+    scadenza: null,
+    tipo: null,
+  });
 
-const possibiliEmail = [
-  cliente?.email,
-  cliente?.pec,
-  cliente?.email_pec,
-  cliente?.email_amministrativa,
-  cliente?.email_contabilita,
-  cliente?.email_1,
-  cliente?.email_2,
-]
-        .filter(Boolean)
-        .map((e: string) => e.trim())
-        .filter((e: string, index: number, arr: string[]) => arr.indexOf(e) === index);
+  setEmailDestinatario("");
+  setSearchContatti("");
+  setEmailContatti([]);
+  setF24File(null);
+};
 
-      setEmailModal((prev) => ({
-        ...prev,
-        loading: false,
-        emails: possibiliEmail,
-        selectedEmail: possibiliEmail[0] || "",
-      }));
-    } catch (error: any) {
-      console.error("Errore caricamento email cliente:", error);
-      setEmailModal((prev) => ({
-        ...prev,
-        loading: false,
-      }));
+ const inviaEmailFiscali = async () => {
+  try {
+    if (!emailModal.scadenza || !emailModal.tipo || !emailDestinatario) {
       toast({
-        title: "Attenzione",
-        description:
-          "Non sono riuscito a recuperare automaticamente gli indirizzi email del cliente.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const chiudiInvioEmail = () => {
-    setEmailModal({
-      open: false,
-      loading: false,
-      sending: false,
-      scadenza: null,
-      tipo: null,
-      emails: [],
-      selectedEmail: "",
-      subject: "",
-      body: "",
-    });
-  };
-
-  const inviaEmailFiscali = async () => {
-    if (!emailModal.scadenza || !emailModal.tipo) return;
-
-    if (!emailModal.selectedEmail) {
-      toast({
-        title: "Email mancante",
-        description: "Seleziona o inserisci un indirizzo email.",
+        title: "Errore",
+        description: "Seleziona un indirizzo email",
         variant: "destructive",
       });
       return;
     }
 
-    try {
-      setEmailModal((prev) => ({ ...prev, sending: true }));
-
-      const response = await fetch(
-        `/api/scadenze/fiscali/${emailModal.scadenza.id}/invia-comunicazione`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            tipo: emailModal.tipo,
-            email: emailModal.selectedEmail,
-            subject: emailModal.subject,
-            body: emailModal.body,
-          }),
-        }
-      );
-
-      const result = await response.json().catch(() => null);
-
-      if (!response.ok) {
-        throw new Error(
-          result?.message ||
-            result?.error ||
-            "Errore durante l'invio della comunicazione"
-        );
-      }
-
+    if (!f24File) {
       toast({
-        title: "Email inviata",
-        description: "Comunicazione fiscale inviata correttamente.",
-      });
-
-      chiudiInvioEmail();
-      await loadData();
-    } catch (error: any) {
-      toast({
-        title: "Errore invio email",
-        description: error.message,
+        title: "Errore",
+        description: "Allega il modello F24 prima di inviare",
         variant: "destructive",
       });
-      setEmailModal((prev) => ({ ...prev, sending: false }));
+      return;
     }
-  };
+
+    setEmailModal((prev) => ({ ...prev, sending: true }));
+
+    const formData = new FormData();
+
+    formData.append("modulo", "fiscali");
+    formData.append("scadenza_id", emailModal.scadenza.id);
+    formData.append("tipo", emailModal.tipo);
+    formData.append("email", emailDestinatario);
+    formData.append("f24", f24File);
+
+    const response = await fetch("/api/scadenze/comunicazioni/invia", {
+      method: "POST",
+      body: formData,
+    });
+
+    const result = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      throw new Error(
+        result?.error ||
+          result?.message ||
+          "Errore durante l'invio della comunicazione"
+      );
+    }
+
+    toast({
+      title: "Email inviata",
+      description: "Comunicazione fiscale inviata correttamente",
+    });
+
+    chiudiInvioEmail();
+    await loadData();
+  } catch (error: any) {
+    toast({
+      title: "Errore invio email",
+      description: error.message,
+      variant: "destructive",
+    });
+
+    setEmailModal((prev) => ({ ...prev, sending: false }));
+  }
+};
 
   const filteredScadenze = scadenze.filter((s) => {
     const matchSearch = (s.nominativo || "")
@@ -1237,134 +1218,128 @@ const possibiliEmail = [
         </CardContent>
       </Card>
 
-      {emailModal.open && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl">
-            <div className="flex items-center justify-between border-b px-5 py-4">
-              <div>
-                <h2 className="text-lg font-semibold">
-                  Invia comunicazione fiscale
-                </h2>
-                <p className="text-sm text-gray-500">
-                  {emailModal.scadenza?.nominativo} -{" "}
-                  {emailModal.tipo ? getTipoEmailLabel(emailModal.tipo) : ""}
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={chiudiInvioEmail}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+     {emailModal.open && emailModal.scadenza && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
+      <h2 className="text-xl font-bold mb-2">
+        Invia F24 Fiscali{" "}
+        {emailModal.tipo === "saldo_primo_acconto_cciaa"
+          ? "Saldo / 1° acconto / CCIAA"
+          : "2° acconto"}
+      </h2>
 
-            <div className="space-y-4 px-5 py-4">
-              {emailModal.loading ? (
-                <div className="text-sm text-gray-500">
-                  Caricamento indirizzi email...
-                </div>
-              ) : (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Email destinatario
-                    </label>
+      <p className="text-sm text-gray-500 mb-4">
+        {emailModal.scadenza.nominativo}
+      </p>
 
-                    {emailModal.emails.length > 0 ? (
-                      <Select
-                        value={emailModal.selectedEmail}
-                        onValueChange={(value) =>
-                          setEmailModal((prev) => ({
-                            ...prev,
-                            selectedEmail: value,
-                          }))
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleziona email" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {emailModal.emails.map((email) => (
-                            <SelectItem key={email} value={email}>
-                              {email}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <Input
-                        type="email"
-                        value={emailModal.selectedEmail}
-                        onChange={(e) =>
-                          setEmailModal((prev) => ({
-                            ...prev,
-                            selectedEmail: e.target.value,
-                          }))
-                        }
-                        placeholder="Inserisci email cliente"
-                      />
-                    )}
-                  </div>
+      <div className="space-y-4">
+        <div>
+          <label className="text-sm font-medium mb-2 block">
+            Contatto Email
+          </label>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Oggetto
-                    </label>
-                    <Input
-                      value={emailModal.subject}
-                      onChange={(e) =>
-                        setEmailModal((prev) => ({
-                          ...prev,
-                          subject: e.target.value,
-                        }))
-                      }
-                    />
-                  </div>
+          <div className="flex gap-2">
+            <Input
+              value={searchContatti}
+              onChange={(e) => setSearchContatti(e.target.value)}
+              placeholder="Cerca contatto..."
+            />
 
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Corpo messaggio
-                    </label>
-                    <Textarea
-                      value={emailModal.body}
-                      onChange={(e) =>
-                        setEmailModal((prev) => ({
-                          ...prev,
-                          body: e.target.value,
-                        }))
-                      }
-                      className="min-h-[180px]"
-                    />
-                  </div>
-                </>
-              )}
-            </div>
-
-            <div className="flex justify-end gap-2 border-t px-5 py-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={chiudiInvioEmail}
-                disabled={emailModal.sending}
-              >
-                Annulla
-              </Button>
-
-              <Button
-                type="button"
-                onClick={inviaEmailFiscali}
-                disabled={emailModal.loading || emailModal.sending}
-                className="bg-blue-600 text-white hover:bg-blue-700"
-              >
-                <Mail className="h-4 w-4 mr-2" />
-                {emailModal.sending ? "Invio..." : "Invia email"}
-              </Button>
-            </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => loadContattiDestinatari(searchContatti)}
+            >
+              Cerca
+            </Button>
           </div>
+
+          {emailContatti.length > 0 && (
+            <div className="max-h-[140px] overflow-y-auto rounded-md border bg-white">
+              {emailContatti.map((contatto) => (
+                <button
+                  key={contatto.id}
+                  type="button"
+                  className="flex w-full items-center justify-between border-b px-3 py-2 text-left text-sm hover:bg-gray-50"
+                  onClick={() => {
+                    setEmailDestinatario(contatto.email || "");
+                    setSearchContatti(contatto.email || "");
+                    setEmailContatti([]);
+                  }}
+                >
+                  <span>
+                    {getContattoLabel(contatto)}
+                    <span className="ml-2 text-gray-500">
+                      {contatto.email}
+                    </span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
-      )}
+
+        <div>
+          <label className="text-sm font-medium mb-2 block">
+            Oppure inserisci email manualmente
+          </label>
+
+          <Input
+            type="email"
+            value={emailDestinatario}
+            onChange={(e) => setEmailDestinatario(e.target.value)}
+            placeholder="email@cliente.it"
+          />
+        </div>
+
+        <div>
+          <label className="text-sm font-medium mb-2 block">
+            Allegato F24 *
+          </label>
+
+          <Input
+            type="file"
+            accept=".pdf"
+            onChange={(e) => setF24File(e.target.files?.[0] || null)}
+          />
+
+          {f24File && (
+            <p className="mt-1 text-xs text-gray-500">
+              File selezionato: {f24File.name}
+            </p>
+          )}
+        </div>
+
+        <div className="rounded-md border bg-gray-50 p-3 text-sm text-gray-600">
+          Template usato:{" "}
+          <strong>
+            {emailModal.tipo === "saldo_primo_acconto_cciaa"
+              ? "FISCALI_SALDO_PRIMO_ACCONTO_CCIAA"
+              : "FISCALI_SECONDO_ACCONTO"}
+          </strong>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={chiudiInvioEmail}
+            disabled={emailModal.sending}
+          >
+            Annulla
+          </Button>
+
+          <Button
+            type="button"
+            onClick={inviaEmailFiscali}
+            disabled={emailModal.sending || !emailDestinatario}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            {emailModal.sending ? "Invio..." : "Invia email"}
+          </Button>
+        </div>
+      </div>
     </div>
-  );
-}
+  </div>
+)}
+
