@@ -206,27 +206,32 @@ return (
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col items-center justify-center">
-          {currentUser && (
-            <>
-              <div className="text-xs md:text-sm text-gray-700 font-medium text-center">
-                Utente: {currentUser.nome} {currentUser.cognome}
-                {displayedStudioName ? ` - ${displayedStudioName}` : ""}
-              </div>
+   <div className="flex-1 flex flex-col items-center justify-center">
+  {currentUser && (
+    <>
+      <div className="text-xs md:text-sm text-gray-700 font-medium text-center">
+        Utente: {currentUser.nome} {currentUser.cognome}
+        {displayedStudioName ? ` - ${displayedStudioName}` : ""}
+      </div>
 
-              {nuovaVersioneDisponibile && (
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={handleRefreshApp}
-                  className="mt-2 bg-red-600 hover:bg-red-700 animate-pulse"
-                >
-                  AGGIORNA VERSIONE
-                </Button>
-              )}
-            </>
-          )}
-        </div>
+      <Button
+        type="button"
+        size="sm"
+        onClick={nuovaVersioneDisponibile ? handleRefreshApp : undefined}
+        disabled={!nuovaVersioneDisponibile}
+        className={
+          nuovaVersioneDisponibile
+            ? "mt-2 bg-red-600 hover:bg-red-700 animate-pulse text-white"
+            : "mt-2 bg-gray-100 text-gray-400 border border-gray-200 cursor-default hover:bg-gray-100"
+        }
+      >
+        {nuovaVersioneDisponibile
+          ? "AGGIORNA VERSIONE"
+          : "VERSIONE AGGIORNATA"}
+      </Button>
+    </>
+  )}
+</div>
 
         {currentUser && (
           <div className="flex items-center gap-3 shrink-0">
