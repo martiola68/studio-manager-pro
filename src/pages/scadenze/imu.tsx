@@ -419,6 +419,19 @@ const apriInvioEmail = (
   setEmailContatti([]);
 };
 
+  const chiudiInvioEmail = () => {
+  setInvioEmailModal({
+    open: false,
+    scadenza: null,
+    tipo: null,
+  });
+
+  setEmailDestinatario("");
+  setSearchContatti("");
+  setEmailContatti([]);
+  setF24File(null);
+};
+
 const inviaComunicazioneScadenza = async () => {
   try {
     if (
