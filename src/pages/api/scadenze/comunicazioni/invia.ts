@@ -215,114 +215,22 @@ const allegati = [
   },
 ];
 
- const { data: studi, error: studioError } = await supabaseAdmin
-  .from("tbstudio")
-  .select("email, microsoft_connection_id")
-  .limit(1);
+const { emailService } = await import("@/services/emailService");
 
-if (studioError) throw studioError;
+const emailResult = await emailService.sendComunicazioneEmail({
+  tipo: "singola",
+  destinatarioId: scadenza.cliente_id || "",
+  destinatarioEmail: payload.email,
+  oggetto,
+  messaggio,
+  allegati,
+});
 
-const studio = studi?.[0];
-
-if (!studio?.microsoft_connection_id) {
-  return res.status(500).json({
-    success: false,
-    error: "Connessione Microsoft dello studio non configurata",
-  });
+if (!emailResult?.success) {
+  throw new Error(emailResult?.error || "Errore invio email");
 }
 
-const { data: tokenOwners, error: tokenOwnerError } = await supabaseAdmin
-  .from("tbmicrosoft365_user_tokens")
-  .select("*")
-  .eq("microsoft_connection_id", studio.microsoft_connection_id)
-  .limit(1);
-
-if (tokenOwnerError) throw tokenOwnerError;
-
-const tokenOwner = tokenOwners?.[0];
-
-if (!tokenOwner?.user_id) {
-  return res.status(500).json({
-    success: false,
-    error: "Utente proprietario token Microsoft non trovato",
-  });
-}
-
-const attachments: {
-  "@odata.type": "#microsoft.graph.fileAttachment";
-  name: string;
-  contentType: string;
-  contentBytes: string;
-}[] = [
-  {
-    "@odata.type": "#microsoft.graph.fileAttachment",
-    name: f24.originalFilename || "F24_IMU.pdf",
-    contentType: f24.mimetype || "application/pdf",
-    contentBytes: fileBuffer.toString("base64"),
-  },
-];
-
-const html = `
-  <div style="font-family:Aptos, Arial, sans-serif; font-size:11pt; color:#111827;">
-    ${messaggio
-      .split("\n")
-      .map((riga) => riga.trim())
-      .filter(Boolean)
-      .map((riga) => `<p style="margin:0 0 8px 0;">${riga}</p>`)
-      .join("")}
-  </div>
-`;
-
-const accessToken =
-  tokenOwner?.access_token ||
-  tokenOwner?.accessToken ||
-  tokenOwner?.token ||
-  tokenOwner?.access_token_encrypted;
-
-if (!accessToken) {
-  return res.status(500).json({
-    success: false,
-    error: "Token Microsoft non trovato nella tabella tbmicrosoft365_user_tokens",
-  });
-}
-
-const graphResponse = await fetch(
-  `https://graph.microsoft.com/v1.0/users/${tokenOwner.user_id}/sendMail`,
-  {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${tokenOwner.access_token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      message: {
-        subject: oggetto,
-        body: {
-          contentType: "HTML",
-          content: html,
-        },
-        toRecipients: [
-          {
-            emailAddress: {
-              address: payload.email,
-            },
-          },
-        ],
-        attachments,
-      },
-      saveToSentItems: true,
-    }),
-  }
-);
-
-if (!graphResponse.ok) {
-  const graphError = await graphResponse.text();
-
-  throw new Error(
-    `Errore invio Microsoft Graph: ${graphResponse.status} ${graphError}`
-  );
-}
-    if (payload.modulo === "imu") {
+if (payload.modulo === "imu") {
       const updatePayload =
         payload.tipo === "acconto"
           ? {
