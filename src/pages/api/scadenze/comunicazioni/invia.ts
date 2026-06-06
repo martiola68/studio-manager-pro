@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 import formidable from "formidable";
-import fs from "fs";
+
 import { emailService } from "@/services/emailService";
 
 export const config = {
@@ -187,15 +187,35 @@ export default async function handler(
     const oggetto = replaceVars(template.oggetto, vars);
     const messaggio = replaceVars(template.corpo, vars);
 
-    const fileBuffer = fs.readFileSync(f24.filepath);
+   const fileBuffer = await import("fs/promises").then((fs) =>
+  fs.readFile(f24.filepath)
+);
 
-    const allegati = [
-      {
-        nome: f24.originalFilename || "F24_IMU.pdf",
-        tipo: f24.mimetype || "application/pdf",
-        contenuto: fileBuffer.toString("base64"),
-      },
-    ];
+const safeName = (f24.originalFilename || "F24_IMU.pdf").replace(
+  /[^\w.\-]+/g,
+  "_"
+);
+
+const filePath = `scadenze/imu/${payload.scadenza_id}/${Date.now()}_${safeName}`;
+
+const { error: uploadError } = await supabaseAdmin.storage
+  .from("messaggi-allegati")
+  .upload(filePath, fileBuffer, {
+    contentType: f24.mimetype || "application/pdf",
+    upsert: false,
+  });
+
+if (uploadError) throw uploadError;
+
+const allegati = [
+  {
+    nome: f24.originalFilename || "F24_IMU.pdf",
+    tipo: f24.mimetype || "application/pdf",
+    dimensione: f24.size,
+    bucket: "messaggi-allegati",
+    path: filePath,
+  },
+];
 
     const emailResult = await emailService.sendComunicazioneEmail({
       tipo: "scadenze",
