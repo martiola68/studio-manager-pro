@@ -868,16 +868,16 @@ export default function ScadenzeFiscaliPage() {
                       </td>
 
                       <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[140px]">
-                        <Checkbox
-                          checked={scadenza.mod_r_inviato || false}
-                          onCheckedChange={() =>
-                            handleToggleField(
-                              scadenza.id,
-                             "conferma_invio_dichiarazione",
-                              scadenza.conferma_invio_dichiarazione
-                            )
-                          }
-                        />
+                       <Checkbox
+  checked={scadenza.conferma_invio_dichiarazione || false}
+  onCheckedChange={() =>
+    handleToggleField(
+      scadenza.id,
+      "conferma_invio_dichiarazione",
+      scadenza.conferma_invio_dichiarazione
+    )
+  }
+/>
                       </td>
 
                       <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[130px]">
@@ -913,42 +913,42 @@ export default function ScadenzeFiscaliPage() {
                       </td>
 
                       <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[140px]">
-                        <Checkbox
-                          checked={scadenza.mod_i_compilato || false}
-                          onCheckedChange={() =>
-                            handleToggleField(
-                              scadenza.id,
-                             "conferma_irap_saldo_acconto",
-                              scadenza.conferma_irap_saldo_acconto
-                            )
-                          }
-                        />
+                       <Checkbox
+  checked={scadenza.conferma_irap_saldo_acconto || false}
+  onCheckedChange={() =>
+    handleToggleField(
+      scadenza.id,
+      "conferma_irap_saldo_acconto",
+      scadenza.conferma_irap_saldo_acconto
+    )
+  }
+/>
+                      </td>
+
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[140px]">
+                       <Checkbox
+  checked={scadenza.conferma_irap_secondo_acconto || false}
+  onCheckedChange={() =>
+    handleToggleField(
+      scadenza.id,
+      "conferma_irap_secondo_acconto",
+      scadenza.conferma_irap_secondo_acconto
+    )
+  }
+/>
                       </td>
 
                       <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[140px]">
                         <Checkbox
-                          checked={scadenza.mod_i_definitivo || false}
-                          onCheckedChange={() =>
-                            handleToggleField(
-                              scadenza.id,
-                             "conferma_irap_secondo_acconto",
-                                scadenza.conferma_irap_secondo_acconto
-                            )
-                          }
-                        />
-                      </td>
-
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[140px]">
-                        <Checkbox
-                          checked={scadenza.mod_i_inviato || false}
-                          onCheckedChange={() =>
-                            handleToggleField(
-                              scadenza.id,
-                              "conferma_irap_invio_dichiarazione",
-                                scadenza.conferma_irap_invio_dichiarazione
-                            )
-                          }
-                        />
+  checked={scadenza.conferma_irap_invio_dichiarazione || false}
+  onCheckedChange={() =>
+    handleToggleField(
+      scadenza.id,
+      "conferma_irap_invio_dichiarazione",
+      scadenza.conferma_irap_invio_dichiarazione
+    )
+  }
+/>
                       </td>
 
                       <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[130px]">
