@@ -1,11 +1,40 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
+import formidable from "formidable";
+import fs from "fs";
 import { emailService } from "@/services/emailService";
+
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
+
+const parseForm = async (
+  req: NextApiRequest
+): Promise<{ fields: formidable.Fields; files: formidable.Files }> => {
+  const form = formidable({
+    multiples: false,
+    keepExtensions: true,
+  });
+
+  return await new Promise((resolve, reject) => {
+    form.parse(req, (err, fields, files) => {
+      if (err) reject(err);
+      else resolve({ fields, files });
+    });
+  });
+};
+
+const getField = (value: string | string[] | undefined) => {
+  if (Array.isArray(value)) return value[0] || "";
+  return value || "";
+};
 
 const replaceVars = (text: string, vars: Record<string, string>) => {
   let output = text || "";
@@ -29,6 +58,11 @@ const getTemplateCode = (modulo: string, tipo: string) => {
   return null;
 };
 
+const getUploadedFile = (file: formidable.File | formidable.File[] | undefined) => {
+  if (Array.isArray(file)) return file[0];
+  return file;
+};
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -41,12 +75,28 @@ export default async function handler(
       });
     }
 
-    const payload = req.body;
+    const { fields, files } = await parseForm(req);
+
+    const payload = {
+      modulo: getField(fields.modulo as any),
+      scadenza_id: getField(fields.scadenza_id as any),
+      tipo: getField(fields.tipo as any),
+      email: getField(fields.email as any),
+    };
+
+    const f24 = getUploadedFile(files.f24 as any);
 
     if (!payload.modulo || !payload.scadenza_id || !payload.tipo || !payload.email) {
       return res.status(400).json({
         success: false,
         error: "Payload incompleto",
+      });
+    }
+
+    if (!f24) {
+      return res.status(400).json({
+        success: false,
+        error: "Allegato F24 mancante",
       });
     }
 
@@ -137,13 +187,23 @@ export default async function handler(
     const oggetto = replaceVars(template.oggetto, vars);
     const messaggio = replaceVars(template.corpo, vars);
 
+    const fileBuffer = fs.readFileSync(f24.filepath);
+
+    const allegati = [
+      {
+        nome: f24.originalFilename || "F24_IMU.pdf",
+        tipo: f24.mimetype || "application/pdf",
+        contenuto: fileBuffer.toString("base64"),
+      },
+    ];
+
     const emailResult = await emailService.sendComunicazioneEmail({
       tipo: "scadenze",
       destinatarioId: scadenza.cliente_id || "",
       destinatarioEmail: payload.email,
       oggetto,
       messaggio,
-      allegati: payload.allegati || [],
+      allegati,
     });
 
     if (!emailResult?.success) {
