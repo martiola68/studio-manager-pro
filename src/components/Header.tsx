@@ -178,7 +178,7 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
 
   return (
    <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
-      <div className="px-4 md:px-6 py-2">
+      <div className="px-4 md:px-6 py-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <Button
@@ -219,18 +219,16 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
                     : "Utente"}
                 </p>
 
-                <div
-                  onClick={handleRefreshApp}
-                  className={
-                    nuovaVersioneDisponibile
-                      ? "mt-1 cursor-pointer text-red-600 font-bold text-xs animate-pulse"
-                      : "mt-1 text-green-600 text-xs font-semibold"
-                  }
-                >
-                  {nuovaVersioneDisponibile
-                    ? "🚨 NUOVA VERSIONE DISPONIBILE"
-                    : "✓ Applicazione aggiornata"}
-                </div>
+               {nuovaVersioneDisponibile && (
+  <Button
+    type="button"
+    size="sm"
+    onClick={handleRefreshApp}
+    className="mt-1 bg-red-600 hover:bg-red-700 animate-pulse"
+  >
+    🚨 AGGIORNA VER.
+  </Button>
+)}
               </div>
 
               <div className="h-9 w-9 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
