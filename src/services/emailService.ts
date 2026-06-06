@@ -1086,12 +1086,12 @@ if (currentUser?.id) {
     studioFirma = studioData;
   }
 
-  const { data: firmaTemplate } = await supabase
-    .from("tbemail_template")
-    .select("corpo")
-    .eq("codice", "FIRMA_STANDARD")
-    .eq("attivo", true)
-    .maybeSingle();
+ const { data: firmaTemplate } = await (supabase as any)
+  .from("tbemail_template")
+  .select("corpo")
+  .eq("codice", "FIRMA_STANDARD")
+  .eq("attivo", true)
+  .maybeSingle();
 
   if (firmaTemplate?.corpo) {
     firmaHtml = firmaTemplate.corpo
