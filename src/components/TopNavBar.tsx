@@ -481,9 +481,12 @@ const aggiornaApplicazione = () => {
 
       { label: "Payroll Festività", href: "/impostazioni/payroll-festivita", icon: <Calendar className="h-4 w-4" /> },
 
-{ label: "Payroll Codici Presenza", href: "/impostazioni/payroll-codici-presenza", icon: <Clock className="h-4 w-4" /> },
+      { label: "Payroll Codici Presenza", href: "/impostazioni/payroll-codici-presenza", icon: <Clock className="h-4 w-4" /> },
 
-{ label: "Scadenzari", href: "/impostazioni/scadenzari", icon: <Settings className="h-4 w-4" /> },
+      { label: "Scadenzari", href: "/impostazioni/scadenzari", icon: <Settings className="h-4 w-4" /> },
+
+        { label: "Template Email", href: "/impostazioni/template-email", icon: <Mail className="h-4 w-4" /> },
+        
         { label: "Tipi Scadenze", href: "/impostazioni/tipi-scadenze", icon: <Settings className="h-4 w-4" /> },
         { label: "Tipo Promemoria", href: "/impostazioni/tipo-promemoria", icon: <Settings className="h-4 w-4" /> },
       ],
