@@ -1063,14 +1063,57 @@ const isHtmlMessage = data.messaggio.trim().startsWith("<");
 const emailVariant =
   data.tipo === "interna" ? "internal" : "client";
 
-const htmlContent = isHtmlMessage
-  ? data.messaggio
-  : buildStandardEmailTemplate({
-      variant: emailVariant,
-      oggetto: data.oggetto,
-      messaggio: data.messaggio,
-      allegatiCount: Array.isArray(data.allegati) ? data.allegati.length : 0,
-    });
+let firmaHtml = "";
+
+const currentUser = await getCurrentUserContext();
+
+if (currentUser?.id) {
+  const { data: utenteFirma } = await supabase
+    .from("tbutenti")
+    .select("nome, cognome, email, studio_id")
+    .eq("id", currentUser.id)
+    .maybeSingle();
+
+  let studioFirma: any = null;
+
+  if (utenteFirma?.studio_id) {
+    const { data: studioData } = await supabase
+      .from("tbstudio")
+      .select("nome, indirizzo, telefono, sito")
+      .eq("id", utenteFirma.studio_id)
+      .maybeSingle();
+
+    studioFirma = studioData;
+  }
+
+  const { data: firmaTemplate } = await supabase
+    .from("tbemail_template")
+    .select("corpo")
+    .eq("codice", "FIRMA_STANDARD")
+    .eq("attivo", true)
+    .maybeSingle();
+
+  if (firmaTemplate?.corpo) {
+    firmaHtml = firmaTemplate.corpo
+      .replaceAll("[UTENTE_NOME]", utenteFirma?.nome || "")
+      .replaceAll("[UTENTE_COGNOME]", utenteFirma?.cognome || "")
+      .replaceAll("[UTENTE_EMAIL]", utenteFirma?.email || currentUser.email || "")
+      .replaceAll("[STUDIO_NOME]", studioFirma?.nome || "")
+      .replaceAll("[STUDIO_INDIRIZZO]", studioFirma?.indirizzo || "")
+      .replaceAll("[STUDIO_TELEFONO]", studioFirma?.telefono || "")
+      .replaceAll("[STUDIO_SITO]", studioFirma?.sito || "");
+  }
+}
+
+const htmlContent =
+  (isHtmlMessage
+    ? data.messaggio
+    : buildStandardEmailTemplate({
+        variant: emailVariant,
+        oggetto: data.oggetto,
+        messaggio: data.messaggio,
+        allegatiCount: Array.isArray(data.allegati) ? data.allegati.length : 0,
+      })) + (firmaHtml ? `<br><br>${firmaHtml}` : "");
     const textContent = `
 ${data.oggetto}
 
