@@ -48,14 +48,34 @@ const getTemplateCode = (modulo: string, tipo: string) => {
   if (modulo === "imu" && tipo === "acconto") return "IMU_ACCONTO";
   if (modulo === "imu" && tipo === "saldo") return "IMU_SALDO";
 
-  if (modulo === "fiscali" && tipo === "f24") return "FISCALE_F24";
-  if (modulo === "fiscali" && tipo === "iva") return "FISCALE_IVA";
-  if (modulo === "fiscali" && tipo === "ritenute") return "FISCALE_RITENUTE";
-  if (modulo === "fiscali" && tipo === "imposte") return "FISCALE_IMPOSTE";
+  if (
+    modulo === "fiscali" &&
+    tipo === "saldo_primo_acconto_cciaa"
+  ) {
+    return "FISCALI_SALDO_PRIMO_ACCONTO_CCIAA";
+  }
+
+  if (
+    modulo === "fiscali" &&
+    tipo === "secondo_acconto"
+  ) {
+    return "FISCALI_SECONDO_ACCONTO";
+  }
+
+  if (modulo === "fiscali" && tipo === "f24")
+    return "FISCALE_F24";
+
+  if (modulo === "fiscali" && tipo === "iva")
+    return "FISCALE_IVA";
+
+  if (modulo === "fiscali" && tipo === "ritenute")
+    return "FISCALE_RITENUTE";
+
+  if (modulo === "fiscali" && tipo === "imposte")
+    return "FISCALE_IMPOSTE";
 
   return null;
 };
-
 const getUploadedFile = (file: formidable.File | formidable.File[] | undefined) => {
   if (Array.isArray(file)) return file[0];
   return file;
