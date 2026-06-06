@@ -13,13 +13,26 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Trash2, Printer, FileSpreadsheet } from "lucide-react";
+import {
+  Search,
+  Trash2,
+  Printer,
+  FileSpreadsheet,
+  Mail,
+  X,
+} from "lucide-react";
 import ExcelJS from "exceljs";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
 type ScadenzaFiscaliRow = Database["public"]["Tables"]["tbscadfiscali"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
+
+type TipoEmailFiscali =
+  | "saldo_primo_acconto_cciaa"
+  | "secondo_acconto"
+  | "dichiarazione_redditi"
+  | "dichiarazione_irap";
 
 type ScadenzaFiscali = ScadenzaFiscaliRow & {
   anno_riferimento?: number | null;
@@ -32,9 +45,21 @@ type ScadenzaFiscali = ScadenzaFiscaliRow & {
   conferma_irap_saldo_acconto?: boolean | null;
   conferma_irap_secondo_acconto?: boolean | null;
   conferma_irap_invio_dichiarazione?: boolean | null;
-  
+
   saldi_primo_acconti_cciaa_dovuti?: boolean | null;
-secondo_acconti_dovuti?: boolean | null;
+  secondo_acconti_dovuti?: boolean | null;
+};
+
+type EmailModalState = {
+  open: boolean;
+  loading: boolean;
+  sending: boolean;
+  scadenza: ScadenzaFiscali | null;
+  tipo: TipoEmailFiscali | null;
+  emails: string[];
+  selectedEmail: string;
+  subject: string;
+  body: string;
 };
 
 export default function ScadenzeFiscaliPage() {
@@ -55,6 +80,18 @@ export default function ScadenzeFiscaliPage() {
   const [noteTimers, setNoteTimers] = useState<
     Record<string, ReturnType<typeof setTimeout>>
   >({});
+
+  const [emailModal, setEmailModal] = useState<EmailModalState>({
+    open: false,
+    loading: false,
+    sending: false,
+    scadenza: null,
+    tipo: null,
+    emails: [],
+    selectedEmail: "",
+    subject: "",
+    body: "",
+  });
 
   const [stats, setStats] = useState({
     totale: 0,
@@ -209,7 +246,7 @@ export default function ScadenzeFiscaliPage() {
     try {
       const { error } = await supabase
         .from("tbscadfiscali" as any)
-        .update({ [field]: value || null } as any)
+        .update({ [field]: value === "" ? null : value } as any)
         .eq("id", scadenzaId);
 
       if (error) throw error;
@@ -285,6 +322,161 @@ export default function ScadenzeFiscaliPage() {
     }
   };
 
+  const getTipoEmailLabel = (tipo: TipoEmailFiscali) => {
+    switch (tipo) {
+      case "saldo_primo_acconto_cciaa":
+        return "Saldo / 1° acconto / CCIAA";
+      case "secondo_acconto":
+        return "2° acconto";
+      case "dichiarazione_redditi":
+        return "Dichiarazione redditi";
+      case "dichiarazione_irap":
+        return "Dichiarazione IRAP";
+      default:
+        return "Comunicazione fiscale";
+    }
+  };
+
+  const apriInvioEmail = async (
+    scadenza: ScadenzaFiscali,
+    tipo: TipoEmailFiscali
+  ) => {
+    const label = getTipoEmailLabel(tipo);
+
+    setEmailModal({
+      open: true,
+      loading: true,
+      sending: false,
+      scadenza,
+      tipo,
+      emails: [],
+      selectedEmail: "",
+      subject: `${label} - ${scadenza.nominativo} - ${scadenza.anno_riferimento}`,
+      body: `Gentile Cliente,
+
+con la presente trasmettiamo comunicazione relativa a: ${label}.
+
+Anno di riferimento: ${scadenza.anno_riferimento}
+Tipo redditi: ${scadenza.tipo_redditi || "-"}
+
+Cordiali saluti.`,
+    });
+
+    try {
+      const { data: cliente, error } = await supabase
+        .from("tbclienti" as any)
+        .select("*")
+        .eq("id", scadenza.cliente_id)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      const possibiliEmail = [
+        cliente?.email,
+        cliente?.pec,
+        cliente?.email_pec,
+        cliente?.email_amministrativa,
+        cliente?.email_contabilita,
+        cliente?.email_1,
+        cliente?.email_2,
+      ]
+        .filter(Boolean)
+        .map((e: string) => e.trim())
+        .filter((e: string, index: number, arr: string[]) => arr.indexOf(e) === index);
+
+      setEmailModal((prev) => ({
+        ...prev,
+        loading: false,
+        emails: possibiliEmail,
+        selectedEmail: possibiliEmail[0] || "",
+      }));
+    } catch (error: any) {
+      console.error("Errore caricamento email cliente:", error);
+      setEmailModal((prev) => ({
+        ...prev,
+        loading: false,
+      }));
+      toast({
+        title: "Attenzione",
+        description:
+          "Non sono riuscito a recuperare automaticamente gli indirizzi email del cliente.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const chiudiInvioEmail = () => {
+    setEmailModal({
+      open: false,
+      loading: false,
+      sending: false,
+      scadenza: null,
+      tipo: null,
+      emails: [],
+      selectedEmail: "",
+      subject: "",
+      body: "",
+    });
+  };
+
+  const inviaEmailFiscali = async () => {
+    if (!emailModal.scadenza || !emailModal.tipo) return;
+
+    if (!emailModal.selectedEmail) {
+      toast({
+        title: "Email mancante",
+        description: "Seleziona o inserisci un indirizzo email.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setEmailModal((prev) => ({ ...prev, sending: true }));
+
+      const response = await fetch(
+        `/api/scadenze/fiscali/${emailModal.scadenza.id}/invia-comunicazione`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            tipo: emailModal.tipo,
+            email: emailModal.selectedEmail,
+            subject: emailModal.subject,
+            body: emailModal.body,
+          }),
+        }
+      );
+
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          result?.message ||
+            result?.error ||
+            "Errore durante l'invio della comunicazione"
+        );
+      }
+
+      toast({
+        title: "Email inviata",
+        description: "Comunicazione fiscale inviata correttamente.",
+      });
+
+      chiudiInvioEmail();
+      await loadData();
+    } catch (error: any) {
+      toast({
+        title: "Errore invio email",
+        description: error.message,
+        variant: "destructive",
+      });
+      setEmailModal((prev) => ({ ...prev, sending: false }));
+    }
+  };
+
   const filteredScadenze = scadenze.filter((s) => {
     const matchSearch = (s.nominativo || "")
       .toLowerCase()
@@ -319,13 +511,20 @@ export default function ScadenzeFiscaliPage() {
             }</td>
             <td>${scadenza.tipo_redditi ?? ""}</td>
             <td style="text-align:center;">${
-              scadenza.mod_r_compilato ? "✓" : ""
+              scadenza.mod_r_compilato ? "SI" : "NO"
             }</td>
             <td style="text-align:center;">${
-              scadenza.mod_r_definitivo ? "✓" : ""
+              scadenza.mod_r_definitivo ? "SI" : "NO"
             }</td>
             <td style="text-align:center;">${
-              scadenza.mod_r_inviato ? "✓" : ""
+              scadenza.saldi_primo_acconti_cciaa_dovuti ? "SI" : "NO"
+            }</td>
+            <td style="text-align:center;">${
+              scadenza.conferma_ires_saldo_acconto ? "SI" : "NO"
+            }</td>
+            <td>${scadenza.data_com1 ?? ""}</td>
+            <td style="text-align:center;">${
+              scadenza.conferma_invio_dichiarazione ? "SI" : "NO"
             }</td>
             <td>${scadenza.data_r_invio ?? ""}</td>
           </tr>
@@ -341,65 +540,17 @@ export default function ScadenzeFiscaliPage() {
         <head>
           <title>Stampa Scadenzario Fiscali</title>
           <style>
-            body {
-              font-family: Arial, sans-serif;
-              padding: 18px;
-              color: #111;
-              font-size: 11px;
-            }
-            h1 {
-              font-size: 18px;
-              margin-bottom: 4px;
-            }
-            .meta {
-              margin-bottom: 12px;
-              color: #444;
-              font-size: 12px;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              font-size: 11px;
-              table-layout: fixed;
-            }
-            th, td {
-              border: 1px solid #999;
-              padding: 6px;
-              text-align: left;
-              vertical-align: top;
-              word-wrap: break-word;
-            }
-            th {
-              background: #f3f4f6;
-            }
-            .count {
-              margin-bottom: 10px;
-              font-weight: bold;
-              font-size: 12px;
-            }
-            .col-num {
-              width: 40px;
-              text-align: center;
-            }
-            .col-nominativo {
-              width: 42%;
-            }
-            .col-conferma {
-              width: 70px;
-              text-align: center;
-            }
-            .col-small {
-              width: 90px;
-              text-align: center;
-            }
-            .col-data {
-              width: 120px;
-            }
-            @media print {
-              body {
-                padding: 0;
-              }
-            }
+            body { font-family: Arial, sans-serif; padding: 18px; color: #111; font-size: 11px; }
+            h1 { font-size: 18px; margin-bottom: 4px; }
+            .meta { margin-bottom: 12px; color: #444; font-size: 12px; }
+            table { width: 100%; border-collapse: collapse; font-size: 11px; table-layout: fixed; }
+            th, td { border: 1px solid #999; padding: 6px; text-align: left; vertical-align: top; word-wrap: break-word; }
+            th { background: #f3f4f6; }
+            .count { margin-bottom: 10px; font-weight: bold; font-size: 12px; }
+            .col-num { width: 40px; text-align: center; }
+            .col-nominativo { width: 30%; }
+            .col-small { width: 90px; text-align: center; }
+            .col-data { width: 120px; }
           </style>
         </head>
         <body>
@@ -407,25 +558,24 @@ export default function ScadenzeFiscaliPage() {
           <div class="meta">Anno consultazione: ${annoConsultazione}</div>
           <div class="meta">Operatore: ${operatoreNome}</div>
           <div class="count">Totale record stampati: ${filteredScadenze.length}</div>
-
           <table>
             <thead>
               <tr>
                 <th class="col-num">#</th>
                 <th class="col-nominativo">Nominativo</th>
-                <th class="col-conferma">Conf.</th>
+                <th class="col-small">Conf.</th>
                 <th>Tipo Redditi</th>
-               <th class="col-small">Comp.</th>
+                <th class="col-small">Comp.</th>
                 <th class="col-small">Def.</th>
-                <th class="col-small">Inviato</th>
-                <th class="col-data">Data invio</th>
+                <th class="col-small">Saldo/1°/CCIAA</th>
+                <th class="col-small">Comunicato</th>
+                <th class="col-data">Data</th>
+                <th class="col-small">Invio Redditi</th>
+                <th class="col-data">Data</th>
               </tr>
             </thead>
             <tbody>
-              ${
-                righeHtml ||
-                `<tr><td colspan="8">Nessun record trovato</td></tr>`
-              }
+              ${righeHtml || `<tr><td colspan="11">Nessun record trovato</td></tr>`}
             </tbody>
           </table>
         </body>
@@ -439,88 +589,169 @@ export default function ScadenzeFiscaliPage() {
   };
 
   const handleExportExcelOperatore = async () => {
-  if (filterOperatore === "__all__") return;
+    if (filterOperatore === "__all__") return;
 
-  const operatoreNome = getUtenteNome(filterOperatore);
+    const operatoreNome = getUtenteNome(filterOperatore);
 
-  const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet("Fiscali");
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Fiscali");
 
-  worksheet.columns = [
-    { header: "#", key: "num", width: 6 },
-    { header: "Nominativo", key: "nominativo", width: 45 },
-    { header: "Operatore", key: "operatore", width: 25 },
-    { header: "Confermato", key: "confermato", width: 14 },
-    { header: "Tipo Redditi", key: "tipo_redditi", width: 18 },
-    { header: "Redditi compilato", key: "mod_r_compilato", width: 18 },
-    { header: "Redditi definitivo", key: "mod_r_definitivo", width: 18 },
-    { header: "Saldo/1° Acc./CCIAA", key: "saldo_acc_cciaa", width: 22 },
-    { header: "Comunicato 1", key: "data_com1", width: 16 },
-    { header: "2° Acconto", key: "acc2", width: 14 },
-    { header: "Comunicato 2", key: "data_com2", width: 16 },
-    { header: "Invio Redditi", key: "mod_r_inviato", width: 16 },
-    { header: "Data invio Redditi", key: "data_r_invio", width: 18 },
-    { header: "IRAP", key: "con_irap", width: 10 },
-    { header: "IRAP compilato", key: "mod_i_compilato", width: 18 },
-    { header: "IRAP definitivo", key: "mod_i_definitivo", width: 18 },
-    { header: "Invio IRAP", key: "mod_i_inviato", width: 16 },
-    { header: "Data invio IRAP", key: "data_i_invio", width: 18 },
-    { header: "Note", key: "note", width: 50 },
-  ];
+    worksheet.columns = [
+      { header: "#", key: "num", width: 6 },
+      { header: "Nominativo", key: "nominativo", width: 45 },
+      { header: "Operatore", key: "operatore", width: 25 },
+      { header: "Confermato", key: "confermato", width: 14 },
+      { header: "Tipo Redditi", key: "tipo_redditi", width: 18 },
+      { header: "Redditi compilato", key: "mod_r_compilato", width: 18 },
+      { header: "Redditi definitivo", key: "mod_r_definitivo", width: 18 },
+      {
+        header: "Saldo/1° Acc./CCIAA",
+        key: "saldi_primo_acconti_cciaa_dovuti",
+        width: 24,
+      },
+      {
+        header: "Comunicato Saldo/1° Acc./CCIAA",
+        key: "conferma_ires_saldo_acconto",
+        width: 28,
+      },
+      { header: "Data comunicazione", key: "data_com1", width: 18 },
+      {
+        header: "Invio Redditi",
+        key: "conferma_invio_dichiarazione",
+        width: 18,
+      },
+      { header: "Data invio Redditi", key: "data_r_invio", width: 18 },
+      { header: "IRAP", key: "con_irap", width: 10 },
+      {
+        header: "IRAP saldo/acconto",
+        key: "conferma_irap_saldo_acconto",
+        width: 20,
+      },
+      {
+        header: "IRAP secondo acconto",
+        key: "conferma_irap_secondo_acconto",
+        width: 22,
+      },
+      {
+        header: "Invio IRAP",
+        key: "conferma_irap_invio_dichiarazione",
+        width: 18,
+      },
+      { header: "Data invio IRAP", key: "data_i_invio", width: 18 },
+      {
+        header: "2° Acconto",
+        key: "secondo_acconti_dovuti",
+        width: 18,
+      },
+      {
+        header: "Comunicato 2° Acconto",
+        key: "conferma_ires_secondo_acconto",
+        width: 24,
+      },
+      { header: "Data comunicazione 2°", key: "data_com2", width: 22 },
+      { header: "Note", key: "note", width: 50 },
+    ];
 
-  filteredScadenze.forEach((s, index) => {
-    worksheet.addRow({
-      num: index + 1,
-      nominativo: s.nominativo || "",
-      operatore: operatoreNome,
-      confermato: s.conferma_riga ? "SI" : "NO",
-      tipo_redditi: s.tipo_redditi || "",
-      mod_r_compilato: s.mod_r_compilato ? "SI" : "NO",
-      mod_r_definitivo: s.mod_r_definitivo ? "SI" : "NO",
-      saldo_acc_cciaa: s.saldo_acc_cciaa ? "SI" : "NO",
-      data_com1: s.data_com1 || "",
-      acc2: s.acc2 ? "SI" : "NO",
-      data_com2: s.data_com2 || "",
-      mod_r_inviato: s.mod_r_inviato ? "SI" : "NO",
-      data_r_invio: s.data_r_invio || "",
-      con_irap: s.con_irap ? "SI" : "NO",
-      mod_i_compilato: s.mod_i_compilato ? "SI" : "NO",
-      mod_i_definitivo: s.mod_i_definitivo ? "SI" : "NO",
-      mod_i_inviato: s.mod_i_inviato ? "SI" : "NO",
-      data_i_invio: s.data_i_invio || "",
-      note: s.note || "",
+    filteredScadenze.forEach((s, index) => {
+      worksheet.addRow({
+        num: index + 1,
+        nominativo: s.nominativo || "",
+        operatore: operatoreNome,
+        confermato: s.conferma_riga ? "SI" : "NO",
+        tipo_redditi: s.tipo_redditi || "",
+        mod_r_compilato: s.mod_r_compilato ? "SI" : "NO",
+        mod_r_definitivo: s.mod_r_definitivo ? "SI" : "NO",
+        saldi_primo_acconti_cciaa_dovuti:
+          s.saldi_primo_acconti_cciaa_dovuti ? "SI" : "NO",
+        conferma_ires_saldo_acconto: s.conferma_ires_saldo_acconto
+          ? "SI"
+          : "NO",
+        data_com1: s.data_com1 || "",
+        conferma_invio_dichiarazione: s.conferma_invio_dichiarazione
+          ? "SI"
+          : "NO",
+        data_r_invio: s.data_r_invio || "",
+        con_irap: s.con_irap ? "SI" : "NO",
+        conferma_irap_saldo_acconto: s.conferma_irap_saldo_acconto
+          ? "SI"
+          : "NO",
+        conferma_irap_secondo_acconto: s.conferma_irap_secondo_acconto
+          ? "SI"
+          : "NO",
+        conferma_irap_invio_dichiarazione:
+          s.conferma_irap_invio_dichiarazione ? "SI" : "NO",
+        data_i_invio: s.data_i_invio || "",
+        secondo_acconti_dovuti: s.secondo_acconti_dovuti ? "SI" : "NO",
+        conferma_ires_secondo_acconto: s.conferma_ires_secondo_acconto
+          ? "SI"
+          : "NO",
+        data_com2: s.data_com2 || "",
+        note: s.note || "",
+      });
     });
-  });
 
-  worksheet.getRow(1).font = { bold: true };
-  worksheet.getRow(1).alignment = { vertical: "middle", horizontal: "center" };
+    worksheet.getRow(1).font = { bold: true };
+    worksheet.getRow(1).alignment = { vertical: "middle", horizontal: "center" };
 
-  worksheet.eachRow((row) => {
-    row.eachCell((cell) => {
-      cell.border = {
-        top: { style: "thin" },
-        left: { style: "thin" },
-        bottom: { style: "thin" },
-        right: { style: "thin" },
-      };
-      cell.alignment = { vertical: "top", wrapText: true };
+    worksheet.eachRow((row) => {
+      row.eachCell((cell) => {
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+        cell.alignment = { vertical: "top", wrapText: true };
+      });
     });
-  });
 
-  const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], {
-    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  });
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
 
-  const url = window.URL.createObjectURL(blob);
-  const link = document.createElement("a");
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
 
-  link.href = url;
-  link.download = `scadenzario_fiscali_${operatoreNome.replace(/\s+/g, "_")}_${annoConsultazione}.xlsx`;
-  link.click();
+    link.href = url;
+    link.download = `scadenzario_fiscali_${operatoreNome.replace(
+      /\s+/g,
+      "_"
+    )}_${annoConsultazione}.xlsx`;
+    link.click();
 
-  window.URL.revokeObjectURL(url);
-};
+    window.URL.revokeObjectURL(url);
+  };
+
+  const renderSiNoSelect = (
+    scadenza: ScadenzaFiscali,
+    field: keyof ScadenzaFiscali
+  ) => (
+    <Select
+      value={scadenza[field] ? "SI" : "NO"}
+      onValueChange={(value) =>
+        handleUpdateField(scadenza.id, field, value === "SI")
+      }
+    >
+      <SelectTrigger className="w-full">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="SI">SI</SelectItem>
+        <SelectItem value="NO">NO</SelectItem>
+      </SelectContent>
+    </Select>
+  );
+
+  const renderCheck = (
+    scadenza: ScadenzaFiscali,
+    field: keyof ScadenzaFiscali
+  ) => (
+    <Checkbox
+      checked={Boolean(scadenza[field])}
+      onCheckedChange={() => handleToggleField(scadenza.id, field, scadenza[field])}
+    />
+  );
 
   if (loading) {
     return (
@@ -537,38 +768,38 @@ export default function ScadenzeFiscaliPage() {
 
   return (
     <div className="space-y-6">
-    <div className="flex items-center justify-between gap-4 flex-wrap">
-  <div>
-    <h1 className="text-3xl font-bold text-gray-900">
-      Scadenzario Fiscali
-    </h1>
-    <p className="text-gray-500 mt-1">
-      Gestione dichiarazioni fiscali e versamenti
-    </p>
-  </div>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Scadenzario Fiscali
+          </h1>
+          <p className="text-gray-500 mt-1">
+            Gestione dichiarazioni fiscali e versamenti
+          </p>
+        </div>
 
-  {filterOperatore !== "__all__" && (
-    <div className="flex gap-2">
-      <Button
-        type="button"
-        onClick={handleExportExcelOperatore}
-        className="bg-green-600 text-white hover:bg-green-700"
-      >
-        <FileSpreadsheet className="h-4 w-4 mr-2" />
-        Esporta Excel
-      </Button>
+        {filterOperatore !== "__all__" && (
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              onClick={handleExportExcelOperatore}
+              className="bg-green-600 text-white hover:bg-green-700"
+            >
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Esporta Excel
+            </Button>
 
-      <Button
-        type="button"
-        onClick={handlePrintOperatore}
-        className="bg-black text-white hover:bg-zinc-800"
-      >
-        <Printer className="h-4 w-4 mr-2" />
-        Stampa elenco operatore
-      </Button>
-    </div>
-  )}
-</div>
+            <Button
+              type="button"
+              onClick={handlePrintOperatore}
+              className="bg-black text-white hover:bg-zinc-800"
+            >
+              <Printer className="h-4 w-4 mr-2" />
+              Stampa elenco operatore
+            </Button>
+          </div>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
@@ -659,72 +890,84 @@ export default function ScadenzeFiscaliPage() {
             <table className="w-full caption-bottom text-sm">
               <thead className="[&_tr]:border-b sticky top-0 z-30 bg-white shadow-sm">
                 <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                  <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 sticky-col-header border-r min-w-[300px]">
+                  <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground sticky-col-header border-r min-w-[300px]">
                     Nominativo
                   </th>
-                  <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[180px]">
+                  <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">
                     Operatore
                   </th>
-                 <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[120px]">
-  Tipo Redditi
-</th>
-<th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[80px]">
-  Comp.
-</th>
-<th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[80px]">
-  Def.
-</th>
-                 <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[180px]">
-  Saldi/1° acconti/CCIAA dovuti
-</th>
+                  <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground min-w-[120px]">
+                    Tipo Redditi
+                  </th>
+                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[80px]">
+                    Comp.
+                  </th>
+                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[80px]">
+                    Def.
+                  </th>
 
-<th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[160px]">
-  Saldo/1° Acc./CCIAA
-</th>
+                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[170px]">
+                    Saldo/1° Acc./CCIAA
+                  </th>
+                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">
+                    Comunicato
+                  </th>
+                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[150px]">
+                    Data comunicazione
+                  </th>
+                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">
+                    Email F24
+                  </th>
 
-<th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[130px]">
-  Comunicato il
-</th>
-
-<th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[160px]">
-  2° acconti dovuti
-</th>
-
-<th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[110px]">
-  2° Acconto
-</th>
-
-<th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[130px]">
-  Comunicato il
-</th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[140px]">
+                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[140px]">
                     Invio Redditi
                   </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[130px]">
-                    Inviato il
+                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[130px]">
+                    Data invio
                   </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[100px]">
+                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">
+                    Email Redditi
+                  </th>
+
+                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[100px]">
                     IRAP
                   </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[140px]">
+                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[140px]">
                     Compilato
                   </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[140px]">
+                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[140px]">
                     Definitivo
                   </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[140px]">
+                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[140px]">
                     Invio IRAP
                   </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[130px]">
-                    Inviato il
+                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[130px]">
+                    Data invio
                   </th>
-                  <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[200px]">
+                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">
+                    Email IRAP
+                  </th>
+
+                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[150px]">
+                    2° Acconto
+                  </th>
+                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">
+                    Comunicato
+                  </th>
+                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[150px]">
+                    Data comunicazione
+                  </th>
+                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">
+                    Email F24
+                  </th>
+
+                  <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground min-w-[200px]">
                     Note
                   </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[120px]">
+                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">
                     Conferma Riga
                   </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 min-w-[100px]">
+                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[100px]">
                     Azioni
                   </th>
                 </tr>
@@ -734,8 +977,8 @@ export default function ScadenzeFiscaliPage() {
                 {filteredScadenze.length === 0 ? (
                   <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                     <td
-                      colSpan={21}
-                      className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center text-gray-500"
+                      colSpan={25}
+                      className="p-2 align-middle text-center text-gray-500"
                     >
                       Nessun record trovato
                     </td>
@@ -756,175 +999,100 @@ export default function ScadenzeFiscaliPage() {
                             ? "#dcfce7"
                             : "#ffffff",
                         }}
-                        className={`p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-cell border-r font-medium min-w-[300px] ${
-                          scadenza.conferma_riga
-                            ? "hover:bg-green-200"
-                            : "hover:bg-green-50"
-                        }`}
+                        className="p-2 align-middle sticky-col-cell border-r font-medium min-w-[300px]"
                       >
                         {scadenza.nominativo}
                       </td>
 
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[180px]">
+                      <td className="p-2 align-middle min-w-[180px]">
                         {getUtenteNome(scadenza.utente_operatore_id)}
                       </td>
 
- <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[120px]">
-  <Select
-    value={scadenza.tipo_redditi || ""}
-    onValueChange={(value) =>
-      handleUpdateField(
-        scadenza.id,
-        "tipo_redditi",
-        value
-      )
-    }
-  >
-    <SelectTrigger className="w-full">
-      <SelectValue placeholder="Tipo" />
-    </SelectTrigger>
-    <SelectContent>
-      <SelectItem value="USC">USC</SelectItem>
-      <SelectItem value="USP">USP</SelectItem>
-      <SelectItem value="ENC">ENC</SelectItem>
-      <SelectItem value="UPF FORF.">UPF FORF.</SelectItem>
-      <SelectItem value="UPF ORD.">UPF ORD.</SelectItem>
-      <SelectItem value="UPF BASE">UPF BASE</SelectItem>
-      <SelectItem value="730">730</SelectItem>
-    </SelectContent>
-  </Select>
-</td>
-
-<td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[80px]">
-  <Checkbox
-    checked={scadenza.mod_r_compilato || false}
-    onCheckedChange={() =>
-      handleToggleField(
-        scadenza.id,
-        "mod_r_compilato",
-        scadenza.mod_r_compilato
-      )
-    }
-  />
-</td>
-
-<td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[80px]">
-  <Checkbox
-    checked={scadenza.mod_r_definitivo || false}
-    onCheckedChange={() =>
-      handleToggleField(
-        scadenza.id,
-        "mod_r_definitivo",
-        scadenza.mod_r_definitivo
-      )
-    }
-  />
-</td>
-
-<td className="p-2 align-middle text-center min-w-[180px]">
-  <Checkbox
-    checked={scadenza.saldi_primo_acconti_cciaa_dovuti || false}
-    onCheckedChange={() =>
-      handleToggleField(
-        scadenza.id,
-        "saldi_primo_acconti_cciaa_dovuti",
-        scadenza.saldi_primo_acconti_cciaa_dovuti
-      )
-    }
-  />
-</td>
-
-<td className="p-2 align-middle text-center min-w-[160px]">
-  <Checkbox
-    checked={scadenza.conferma_ires_saldo_acconto || false}
-    onCheckedChange={() =>
-      handleToggleField(
-        scadenza.id,
-        "conferma_ires_saldo_acconto",
-        scadenza.conferma_ires_saldo_acconto
-      )
-    }
-  />
-</td>
-
-<td className="p-2 align-middle min-w-[130px]">
-  <Input
-    type="date"
-    value={scadenza.data_com1 || ""}
-    onChange={(e) =>
-      handleUpdateField(
-        scadenza.id,
-        "data_com1",
-        e.target.value
-      )
-    }
-    className={
-      scadenza.conferma_ires_saldo_acconto
-        ? "w-full bg-green-500 text-black"
-        : "w-full"
-    }
-  />
-</td>
-
-<td className="p-2 align-middle text-center min-w-[160px]">
-  <Checkbox
-    checked={scadenza.secondo_acconti_dovuti || false}
-    onCheckedChange={() =>
-      handleToggleField(
-        scadenza.id,
-        "secondo_acconti_dovuti",
-        scadenza.secondo_acconti_dovuti
-      )
-    }
-  />
-</td>
-
-<td className="p-2 align-middle text-center min-w-[110px]">
-  <Checkbox
-    checked={scadenza.conferma_ires_secondo_acconto || false}
-    onCheckedChange={() =>
-      handleToggleField(
-        scadenza.id,
-        "conferma_ires_secondo_acconto",
-        scadenza.conferma_ires_secondo_acconto
-      )
-    }
-  />
-</td>
-
-<td className="p-2 align-middle min-w-[130px]">
-  <Input
-    type="date"
-    value={scadenza.data_com2 || ""}
-    onChange={(e) =>
-      handleUpdateField(
-        scadenza.id,
-        "data_com2",
-        e.target.value
-      )
-    }
-    className={
-      scadenza.conferma_ires_secondo_acconto
-        ? "w-full bg-green-500 text-black"
-        : "w-full"
-    }
-  />
-</td>
-
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[140px]">
-                       <Checkbox
-  checked={scadenza.conferma_invio_dichiarazione || false}
-  onCheckedChange={() =>
-    handleToggleField(
-      scadenza.id,
-      "conferma_invio_dichiarazione",
-      scadenza.conferma_invio_dichiarazione
-    )
-  }
-/>
+                      <td className="p-2 align-middle min-w-[120px]">
+                        <Select
+                          value={scadenza.tipo_redditi || ""}
+                          onValueChange={(value) =>
+                            handleUpdateField(scadenza.id, "tipo_redditi", value)
+                          }
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Tipo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="USC">USC</SelectItem>
+                            <SelectItem value="USP">USP</SelectItem>
+                            <SelectItem value="ENC">ENC</SelectItem>
+                            <SelectItem value="UPF FORF.">UPF FORF.</SelectItem>
+                            <SelectItem value="UPF ORD.">UPF ORD.</SelectItem>
+                            <SelectItem value="UPF BASE">UPF BASE</SelectItem>
+                            <SelectItem value="730">730</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </td>
 
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[130px]">
+                      <td className="p-2 align-middle text-center min-w-[80px]">
+                        {renderCheck(scadenza, "mod_r_compilato")}
+                      </td>
+
+                      <td className="p-2 align-middle text-center min-w-[80px]">
+                        {renderCheck(scadenza, "mod_r_definitivo")}
+                      </td>
+
+                      <td className="p-2 align-middle min-w-[170px]">
+                        {renderSiNoSelect(
+                          scadenza,
+                          "saldi_primo_acconti_cciaa_dovuti"
+                        )}
+                      </td>
+
+                      <td className="p-2 align-middle min-w-[120px]">
+                        {renderSiNoSelect(
+                          scadenza,
+                          "conferma_ires_saldo_acconto"
+                        )}
+                      </td>
+
+                      <td className="p-2 align-middle min-w-[150px]">
+                        <Input
+                          type="date"
+                          value={scadenza.data_com1 || ""}
+                          onChange={(e) =>
+                            handleUpdateField(
+                              scadenza.id,
+                              "data_com1",
+                              e.target.value
+                            )
+                          }
+                          className={
+                            scadenza.conferma_ires_saldo_acconto
+                              ? "w-full bg-green-500 text-black"
+                              : "w-full"
+                          }
+                        />
+                      </td>
+
+                      <td className="p-2 align-middle text-center min-w-[120px]">
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() =>
+                            apriInvioEmail(
+                              scadenza,
+                              "saldo_primo_acconto_cciaa"
+                            )
+                          }
+                          className="bg-blue-600 text-white hover:bg-blue-700"
+                        >
+                          <Mail className="h-4 w-4 mr-1" />
+                          Invia
+                        </Button>
+                      </td>
+
+                      <td className="p-2 align-middle text-center min-w-[140px]">
+                        {renderCheck(scadenza, "conferma_invio_dichiarazione")}
+                      </td>
+
+                      <td className="p-2 align-middle min-w-[130px]">
                         <Input
                           type="date"
                           value={scadenza.data_r_invio || ""}
@@ -936,66 +1104,47 @@ export default function ScadenzeFiscaliPage() {
                             )
                           }
                           className={
-  scadenza.conferma_invio_dichiarazione
-    ? "w-full bg-green-500 text-black"
-    : "w-full"
-}
-                        />
-                      </td>
-
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[100px]">
-                        <Checkbox
-                          checked={scadenza.con_irap || false}
-                          onCheckedChange={() =>
-                            handleToggleField(
-                              scadenza.id,
-                              "con_irap",
-                              scadenza.con_irap
-                            )
+                            scadenza.conferma_invio_dichiarazione
+                              ? "w-full bg-green-500 text-black"
+                              : "w-full"
                           }
                         />
                       </td>
 
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[140px]">
-                       <Checkbox
-  checked={scadenza.conferma_irap_saldo_acconto || false}
-  onCheckedChange={() =>
-    handleToggleField(
-      scadenza.id,
-      "conferma_irap_saldo_acconto",
-      scadenza.conferma_irap_saldo_acconto
-    )
-  }
-/>
+                      <td className="p-2 align-middle text-center min-w-[120px]">
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() =>
+                            apriInvioEmail(scadenza, "dichiarazione_redditi")
+                          }
+                          className="bg-blue-600 text-white hover:bg-blue-700"
+                        >
+                          <Mail className="h-4 w-4 mr-1" />
+                          Invia
+                        </Button>
                       </td>
 
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[140px]">
-                       <Checkbox
-  checked={scadenza.conferma_irap_secondo_acconto || false}
-  onCheckedChange={() =>
-    handleToggleField(
-      scadenza.id,
-      "conferma_irap_secondo_acconto",
-      scadenza.conferma_irap_secondo_acconto
-    )
-  }
-/>
+                      <td className="p-2 align-middle text-center min-w-[100px]">
+                        {renderCheck(scadenza, "con_irap")}
                       </td>
 
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[140px]">
-                        <Checkbox
-  checked={scadenza.conferma_irap_invio_dichiarazione || false}
-  onCheckedChange={() =>
-    handleToggleField(
-      scadenza.id,
-      "conferma_irap_invio_dichiarazione",
-      scadenza.conferma_irap_invio_dichiarazione
-    )
-  }
-/>
+                      <td className="p-2 align-middle text-center min-w-[140px]">
+                        {renderCheck(scadenza, "conferma_irap_saldo_acconto")}
                       </td>
 
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[130px]">
+                      <td className="p-2 align-middle text-center min-w-[140px]">
+                        {renderCheck(scadenza, "conferma_irap_secondo_acconto")}
+                      </td>
+
+                      <td className="p-2 align-middle text-center min-w-[140px]">
+                        {renderCheck(
+                          scadenza,
+                          "conferma_irap_invio_dichiarazione"
+                        )}
+                      </td>
+
+                      <td className="p-2 align-middle min-w-[130px]">
                         <Input
                           type="date"
                           value={scadenza.data_i_invio || ""}
@@ -1007,14 +1156,72 @@ export default function ScadenzeFiscaliPage() {
                             )
                           }
                           className={
-                          scadenza.conferma_irap_invio_dichiarazione
-                          ? "w-full bg-green-500 text-black"
-                          : "w-full"
-                              }
+                            scadenza.conferma_irap_invio_dichiarazione
+                              ? "w-full bg-green-500 text-black"
+                              : "w-full"
+                          }
                         />
                       </td>
 
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[200px]">
+                      <td className="p-2 align-middle text-center min-w-[120px]">
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() =>
+                            apriInvioEmail(scadenza, "dichiarazione_irap")
+                          }
+                          className="bg-blue-600 text-white hover:bg-blue-700"
+                        >
+                          <Mail className="h-4 w-4 mr-1" />
+                          Invia
+                        </Button>
+                      </td>
+
+                      <td className="p-2 align-middle min-w-[150px]">
+                        {renderSiNoSelect(scadenza, "secondo_acconti_dovuti")}
+                      </td>
+
+                      <td className="p-2 align-middle min-w-[120px]">
+                        {renderSiNoSelect(
+                          scadenza,
+                          "conferma_ires_secondo_acconto"
+                        )}
+                      </td>
+
+                      <td className="p-2 align-middle min-w-[150px]">
+                        <Input
+                          type="date"
+                          value={scadenza.data_com2 || ""}
+                          onChange={(e) =>
+                            handleUpdateField(
+                              scadenza.id,
+                              "data_com2",
+                              e.target.value
+                            )
+                          }
+                          className={
+                            scadenza.conferma_ires_secondo_acconto
+                              ? "w-full bg-green-500 text-black"
+                              : "w-full"
+                          }
+                        />
+                      </td>
+
+                      <td className="p-2 align-middle text-center min-w-[120px]">
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() =>
+                            apriInvioEmail(scadenza, "secondo_acconto")
+                          }
+                          className="bg-blue-600 text-white hover:bg-blue-700"
+                        >
+                          <Mail className="h-4 w-4 mr-1" />
+                          Invia
+                        </Button>
+                      </td>
+
+                      <td className="p-2 align-middle min-w-[200px]">
                         <Textarea
                           value={localNotes[scadenza.id] ?? scadenza.note ?? ""}
                           onChange={(e) =>
@@ -1025,20 +1232,11 @@ export default function ScadenzeFiscaliPage() {
                         />
                       </td>
 
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
-                        <Checkbox
-                          checked={scadenza.conferma_riga || false}
-                          onCheckedChange={() =>
-                            handleToggleField(
-                              scadenza.id,
-                              "conferma_riga",
-                              scadenza.conferma_riga
-                            )
-                          }
-                        />
+                      <td className="p-2 align-middle text-center min-w-[120px]">
+                        {renderCheck(scadenza, "conferma_riga")}
                       </td>
 
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[100px]">
+                      <td className="p-2 align-middle text-center min-w-[100px]">
                         <Button
                           variant="destructive"
                           size="sm"
@@ -1055,6 +1253,135 @@ export default function ScadenzeFiscaliPage() {
           </div>
         </CardContent>
       </Card>
+
+      {emailModal.open && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl">
+            <div className="flex items-center justify-between border-b px-5 py-4">
+              <div>
+                <h2 className="text-lg font-semibold">
+                  Invia comunicazione fiscale
+                </h2>
+                <p className="text-sm text-gray-500">
+                  {emailModal.scadenza?.nominativo} -{" "}
+                  {emailModal.tipo ? getTipoEmailLabel(emailModal.tipo) : ""}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={chiudiInvioEmail}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="space-y-4 px-5 py-4">
+              {emailModal.loading ? (
+                <div className="text-sm text-gray-500">
+                  Caricamento indirizzi email...
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Email destinatario
+                    </label>
+
+                    {emailModal.emails.length > 0 ? (
+                      <Select
+                        value={emailModal.selectedEmail}
+                        onValueChange={(value) =>
+                          setEmailModal((prev) => ({
+                            ...prev,
+                            selectedEmail: value,
+                          }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleziona email" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {emailModal.emails.map((email) => (
+                            <SelectItem key={email} value={email}>
+                              {email}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input
+                        type="email"
+                        value={emailModal.selectedEmail}
+                        onChange={(e) =>
+                          setEmailModal((prev) => ({
+                            ...prev,
+                            selectedEmail: e.target.value,
+                          }))
+                        }
+                        placeholder="Inserisci email cliente"
+                      />
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Oggetto
+                    </label>
+                    <Input
+                      value={emailModal.subject}
+                      onChange={(e) =>
+                        setEmailModal((prev) => ({
+                          ...prev,
+                          subject: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Corpo messaggio
+                    </label>
+                    <Textarea
+                      value={emailModal.body}
+                      onChange={(e) =>
+                        setEmailModal((prev) => ({
+                          ...prev,
+                          body: e.target.value,
+                        }))
+                      }
+                      className="min-h-[180px]"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 border-t px-5 py-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={chiudiInvioEmail}
+                disabled={emailModal.sending}
+              >
+                Annulla
+              </Button>
+
+              <Button
+                type="button"
+                onClick={inviaEmailFiscali}
+                disabled={emailModal.loading || emailModal.sending}
+                className="bg-blue-600 text-white hover:bg-blue-700"
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                {emailModal.sending ? "Invio..." : "Invia email"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
