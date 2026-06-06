@@ -233,13 +233,15 @@ if (!studio?.microsoft_connection_id) {
   });
 }
 
-const { data: tokenOwner, error: tokenOwnerError } = await supabaseAdmin
+const { data: tokenOwners, error: tokenOwnerError } = await supabaseAdmin
   .from("tbmicrosoft365_user_tokens")
   .select("user_id")
   .eq("microsoft_connection_id", studio.microsoft_connection_id)
-  .maybeSingle();
+  .limit(1);
 
 if (tokenOwnerError) throw tokenOwnerError;
+
+const tokenOwner = tokenOwners?.[0];
 
 if (!tokenOwner?.user_id) {
   return res.status(500).json({
