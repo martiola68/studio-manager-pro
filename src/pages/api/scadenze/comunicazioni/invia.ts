@@ -235,20 +235,13 @@ const allegati = [
   },
 ];
 
-const { emailService } = await import("@/services/emailService");
-
-const emailResult = await emailService.sendComunicazioneEmail({
-  tipo: "singola",
+console.log("EMAIL DA INVIARE", {
   destinatarioId: scadenza.cliente_id || "",
   destinatarioEmail: payload.email,
   oggetto,
   messaggio,
   allegati,
 });
-
-if (!emailResult?.success) {
-  throw new Error(emailResult?.error || "Errore invio email");
-}
 
 if (payload.modulo === "imu") {
       const updatePayload =
