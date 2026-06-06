@@ -35,6 +35,7 @@ type TipoEmailFiscali =
   | "dichiarazione_irap";
 
 type ScadenzaFiscali = ScadenzaFiscaliRow & {
+  cliente_id?: string | null;
   anno_riferimento?: number | null;
   archiviato?: boolean | null;
 
@@ -363,10 +364,14 @@ Cordiali saluti.`,
     });
 
     try {
+
+      if (!scadenza.cliente_id) {
+  throw new Error("Cliente non collegato alla scadenza fiscale.");
+}
       const { data: cliente, error } = await supabase
         .from("tbclienti" as any)
         .select("*")
-        .eq("id", scadenza.cliente_id)
+       .eq("id", scadenza.cliente_id || "")
         .maybeSingle();
 
       if (error) throw error;
