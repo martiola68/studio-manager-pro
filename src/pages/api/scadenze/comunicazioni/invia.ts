@@ -2,8 +2,6 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 import formidable from "formidable";
 
-import { microsoftGraphService } from "@/services/microsoftGraphService";
-
 export const config = {
   api: {
     bodyParser: false,
@@ -235,7 +233,7 @@ if (!studio?.microsoft_connection_id) {
 
 const { data: tokenOwners, error: tokenOwnerError } = await supabaseAdmin
   .from("tbmicrosoft365_user_tokens")
-  .select("user_id")
+  .select("user_id, access_token")
   .eq("microsoft_connection_id", studio.microsoft_connection_id)
   .limit(1);
 
@@ -275,25 +273,49 @@ const html = `
   </div>
 `;
 
-await microsoftGraphService.sendEmail(
-  tokenOwner.user_id,
-  studio.microsoft_connection_id,
+if (!tokenOwner?.access_token) {
+  return res.status(500).json({
+    success: false,
+    error: "Access token Microsoft non trovato",
+  });
+}
+
+const graphResponse = await fetch(
+  `https://graph.microsoft.com/v1.0/users/${tokenOwner.user_id}/sendMail`,
   {
-    subject: oggetto,
-    body: {
-      contentType: "HTML",
-      content: html,
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${tokenOwner.access_token}`,
+      "Content-Type": "application/json",
     },
-    toRecipients: [
-      {
-        emailAddress: {
-          address: payload.email,
+    body: JSON.stringify({
+      message: {
+        subject: oggetto,
+        body: {
+          contentType: "HTML",
+          content: html,
         },
+        toRecipients: [
+          {
+            emailAddress: {
+              address: payload.email,
+            },
+          },
+        ],
+        attachments,
       },
-    ],
-    attachments,
+      saveToSentItems: true,
+    }),
   }
 );
+
+if (!graphResponse.ok) {
+  const graphError = await graphResponse.text();
+
+  throw new Error(
+    `Errore invio Microsoft Graph: ${graphResponse.status} ${graphError}`
+  );
+}
     if (payload.modulo === "imu") {
       const updatePayload =
         payload.tipo === "acconto"
