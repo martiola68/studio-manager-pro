@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 import formidable from "formidable";
 
-import { emailService } from "@/services/emailService";
+import { microsoftGraphService } from "@/services/microsoftGraphService";
 
 export const config = {
   api: {
@@ -217,22 +217,75 @@ const allegati = [
   },
 ];
 
-    const emailResult = await emailService.sendComunicazioneEmail({
-      tipo: "scadenze",
-      destinatarioId: scadenza.cliente_id || "",
-      destinatarioEmail: payload.email,
-      oggetto,
-      messaggio,
-      allegati,
-    });
+  const { data: studio, error: studioError } = await supabaseAdmin
+  .from("tbstudio")
+  .select("email, microsoft_connection_id")
+  .limit(1)
+  .maybeSingle();
 
-    if (!emailResult?.success) {
-      return res.status(500).json({
-        success: false,
-        error: emailResult?.error || "Errore invio email",
-      });
-    }
+if (studioError) throw studioError;
 
+if (!studio?.microsoft_connection_id) {
+  return res.status(500).json({
+    success: false,
+    error: "Connessione Microsoft dello studio non configurata",
+  });
+}
+
+const { data: tokenOwner, error: tokenOwnerError } = await supabaseAdmin
+  .from("tbmicrosoft365_user_tokens")
+  .select("user_id")
+  .eq("microsoft_connection_id", studio.microsoft_connection_id)
+  .maybeSingle();
+
+if (tokenOwnerError) throw tokenOwnerError;
+
+if (!tokenOwner?.user_id) {
+  return res.status(500).json({
+    success: false,
+    error: "Utente proprietario token Microsoft non trovato",
+  });
+}
+
+const attachments = [
+  {
+    "@odata.type": "#microsoft.graph.fileAttachment",
+    name: f24.originalFilename || "F24_IMU.pdf",
+    contentType: f24.mimetype || "application/pdf",
+    contentBytes: fileBuffer.toString("base64"),
+  },
+];
+
+const html = `
+  <div style="font-family:Aptos, Arial, sans-serif; font-size:11pt; color:#111827;">
+    ${messaggio
+      .split("\n")
+      .map((riga) => riga.trim())
+      .filter(Boolean)
+      .map((riga) => `<p style="margin:0 0 8px 0;">${riga}</p>`)
+      .join("")}
+  </div>
+`;
+
+await microsoftGraphService.sendEmail(
+  tokenOwner.user_id,
+  studio.microsoft_connection_id,
+  {
+    subject: oggetto,
+    body: {
+      contentType: "HTML",
+      content: html,
+    },
+    toRecipients: [
+      {
+        emailAddress: {
+          address: payload.email,
+        },
+      },
+    ],
+    attachments,
+  }
+);
     if (payload.modulo === "imu") {
       const updatePayload =
         payload.tipo === "acconto"
