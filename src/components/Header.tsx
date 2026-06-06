@@ -206,6 +206,28 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
             </div>
           </div>
 
+         <div className="flex-1 flex flex-col items-center justify-center">
+            {currentUser && (
+              <>
+                <div className="text-xs md:text-sm text-gray-700 font-medium text-center">
+                  Utente: {currentUser.nome} {currentUser.cognome}
+                  {displayedStudioName ? ` - ${displayedStudioName}` : ""}
+                </div>
+
+                {nuovaVersioneDisponibile && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleRefreshApp}
+                    className="mt-2 bg-red-600 hover:bg-red-700 animate-pulse"
+                  >
+                    AGGIORNA VERSIONE
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
+
           {currentUser && (
             <div className="flex items-center gap-3 shrink-0">
               <div className="text-right">
@@ -218,17 +240,6 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
                     ? "Amministratore"
                     : "Utente"}
                 </p>
-
-               {nuovaVersioneDisponibile && (
-  <Button
-    type="button"
-    size="sm"
-    onClick={handleRefreshApp}
-    className="mt-2 bg-red-600 hover:bg-red-700 animate-pulse"
-  >
-    AGGIORNA VERSIONE
-  </Button>
-)}
               </div>
 
               <div className="h-9 w-9 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
@@ -249,15 +260,7 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
           )}
         </div>
 
-        {currentUser && (
-          <div className="text-xs md:text-sm text-gray-700 font-medium mt-1 text-center break-words">
-            Utente: {currentUser.nome} {currentUser.cognome}
-            {displayedStudioName ? ` - ${displayedStudioName}` : ""}
-          </div>
-        )}
-      </div>
-
-    <div className="border-t border-gray-100 px-4 md:px-6 py-1 text-[10px] md:text-xs text-gray-500 text-center">
+      <div className="border-t border-gray-100 px-4 md:px-6 py-1 text-[10px] md:text-xs text-gray-500 text-center">
         © {new Date().getFullYear()} Studio Manager Pro. Creato da Artiola
         Mario. Tutti i diritti riservati. Opera tutelata ai sensi della Legge
         22 aprile 1941, n. 633, e successive modificazioni.
