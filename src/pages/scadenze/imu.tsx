@@ -434,11 +434,7 @@ const apriInvioEmail = (
 
 const inviaComunicazioneScadenza = async () => {
   try {
-    if (
-      !invioEmailModal.scadenza ||
-      !invioEmailModal.tipo ||
-      !emailDestinatario
-    ) {
+    if (!invioEmailModal.scadenza || !invioEmailModal.tipo || !emailDestinatario) {
       toast({
         title: "Errore",
         description: "Seleziona un indirizzo email",
@@ -458,24 +454,94 @@ const inviaComunicazioneScadenza = async () => {
 
     setSendingEmail(true);
 
-    const formData = new FormData();
+    const templateCode =
+      invioEmailModal.tipo === "acconto" ? "IMU_ACCONTO" : "IMU_SALDO";
 
-    formData.append("modulo", "imu");
-    formData.append("scadenza_id", invioEmailModal.scadenza.id);
-    formData.append("tipo", invioEmailModal.tipo);
-    formData.append("email", emailDestinatario);
-    formData.append("f24", f24File);
+    const { data: template, error: templateError } = await (supabase as any)
+      .from("tbemail_template")
+      .select("oggetto, corpo")
+      .eq("codice", templateCode)
+      .eq("attivo", true)
+      .maybeSingle();
 
-    const response = await fetch("/api/scadenze/comunicazioni/invia", {
-      method: "POST",
-      body: formData,
+    if (templateError) throw templateError;
+    if (!template) throw new Error(`Template ${templateCode} non trovato`);
+
+    const scadenza = invioEmailModal.scadenza;
+
+    const vars: Record<string, string> = {
+      CLIENTE: scadenza.nominativo || "Cliente",
+      ANNO: String(scadenza.anno_riferimento || new Date().getFullYear()),
+      DATA_SCADENZA:
+        scadenza.data_scadenza ||
+        scadenza.data_scadenza_versamento ||
+        "",
+      TIPO_IMU: invioEmailModal.tipo === "acconto" ? "Acconto" : "Saldo",
+    };
+
+    const replaceVars = (text: string) => {
+      let output = text || "";
+      Object.entries(vars).forEach(([key, value]) => {
+        output = output.replaceAll(`[${key}]`, value || "");
+      });
+      return output;
+    };
+
+    const oggetto = replaceVars(template.oggetto);
+    const messaggio = replaceVars(template.corpo);
+
+    const safeName = f24File.name.replace(/[^\w.\-]+/g, "_");
+    const fileName = `${Date.now()}_${safeName}`;
+    const filePath = `comunicazioni/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("messaggi-allegati")
+      .upload(filePath, f24File);
+
+    if (uploadError) throw uploadError;
+
+    const allegati = [
+      {
+        nome: f24File.name,
+        tipo: f24File.type || "application/pdf",
+        dimensione: f24File.size,
+        bucket: "messaggi-allegati",
+        path: filePath,
+      },
+    ];
+
+    const emailResult = await emailService.sendComunicazioneEmail({
+      tipo: "singola",
+      destinatarioId: scadenza.cliente_id || "",
+      destinatarioEmail: emailDestinatario,
+      oggetto,
+      messaggio,
+      allegati,
     });
 
-    const result = await response.json();
-
-    if (!response.ok || !result.success) {
-      throw new Error(result.error || "Errore invio email");
+    if (!emailResult?.success) {
+      throw new Error(emailResult?.error || "Errore invio email");
     }
+
+    const updatePayload =
+      invioEmailModal.tipo === "acconto"
+        ? {
+            conferma_acconto_imu: true,
+            acconto_comunicato: true,
+            data_com_acconto: new Date().toISOString().slice(0, 10),
+          }
+        : {
+            conferma_saldo_imu: true,
+            saldo_comunicato: true,
+            data_com_saldo: new Date().toISOString().slice(0, 10),
+          };
+
+    const { error: updateError } = await supabase
+      .from("tbscadimu")
+      .update(updatePayload)
+      .eq("id", scadenza.id);
+
+    if (updateError) throw updateError;
 
     toast({
       title: "Email inviata",
