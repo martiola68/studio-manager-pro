@@ -323,20 +323,16 @@ const [f24File, setF24File] = useState<File | null>(null);
     }
   };
 
-  const getTipoEmailLabel = (tipo: TipoEmailFiscali) => {
-    switch (tipo) {
-      case "saldo_primo_acconto_cciaa":
-        return "Saldo / 1° acconto / CCIAA";
-      case "secondo_acconto":
-        return "2° acconto";
-      case "dichiarazione_redditi":
-        return "Dichiarazione redditi";
-      case "dichiarazione_irap":
-        return "Dichiarazione IRAP";
-      default:
-        return "Comunicazione fiscale";
-    }
-  };
+ const getTipoEmailLabel = (tipo: TipoEmailFiscali) => {
+  switch (tipo) {
+    case "saldo_primo_acconto_cciaa":
+      return "Saldo / 1° acconto / CCIAA";
+    case "secondo_acconto":
+      return "2° acconto";
+    default:
+      return "Comunicazione fiscale";
+  }
+};
 
  const apriInvioEmail = (
   scadenza: ScadenzaFiscali,
