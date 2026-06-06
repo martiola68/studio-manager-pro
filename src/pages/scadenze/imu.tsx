@@ -102,26 +102,26 @@ const [sendingEmail, setSendingEmail] = useState(false);
     };
   }, [noteTimers]);
 
-  const checkAuthAndLoad = async () => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+ const checkAuthAndLoad = async () => {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
-    if (!session) {
-      router.push("/login");
-      return;
-    }
-
-    await loadScadenze();
-  };
+  if (!session) {
+    router.push("/login");
+    return;
+  }
 
   const { data: utenteData } = await supabase
-  .from("tbutenti")
-  .select("nome, cognome")
-  .eq("id", session.user.id)
-  .maybeSingle();
+    .from("tbutenti")
+    .select("nome, cognome")
+    .eq("id", session.user.id)
+    .maybeSingle();
 
-setUtenteLoggato(utenteData || null);
+  setUtenteLoggato(utenteData || null);
+
+  await loadScadenze();
+};
 
   const loadScadenze = async () => {
     try {
