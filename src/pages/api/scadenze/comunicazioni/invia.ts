@@ -192,15 +192,51 @@ export default async function handler(
       scadenza.nominativo ||
       "Cliente";
 
-    const vars = {
-      CLIENTE: clienteNome,
-      ANNO: String(scadenza.anno_riferimento || new Date().getFullYear()),
-      DATA_SCADENZA:
-        scadenza.data_scadenza ||
-        scadenza.data_scadenza_versamento ||
-        "",
-      TIPO_IMU: payload.tipo === "acconto" ? "Acconto" : "Saldo",
-    };
+   let dataScadenza = "";
+let tipoImu = "";
+let tipoFiscale = "";
+
+if (payload.modulo === "imu") {
+  tipoImu = payload.tipo === "acconto" ? "Acconto" : "Saldo";
+
+  const { data: tipoScadenzaImu } = await supabaseAdmin
+    .from("tbtipi_scadenze")
+    .select("data_scadenza")
+    .eq("tipo_scadenza", "imu")
+    .eq("attivo", true)
+    .ilike("nome", payload.tipo === "acconto" ? "%acconto%" : "%saldo%")
+    .maybeSingle();
+
+  dataScadenza = tipoScadenzaImu?.data_scadenza
+    ? new Date(tipoScadenzaImu.data_scadenza).toLocaleDateString("it-IT")
+    : "";
+}
+
+if (payload.modulo === "fiscali") {
+  tipoFiscale =
+    payload.tipo === "saldo_primo_acconto_cciaa"
+      ? "Saldo / 1° acconto / CCIAA"
+      : "2° acconto";
+
+  const { data: tipoScadenzaFiscale } = await supabaseAdmin
+    .from("tbtipi_scadenze")
+    .select("data_scadenza")
+    .eq("tipo_scadenza", "fiscale")
+    .eq("attivo", true)
+    .maybeSingle();
+
+  dataScadenza = tipoScadenzaFiscale?.data_scadenza
+    ? new Date(tipoScadenzaFiscale.data_scadenza).toLocaleDateString("it-IT")
+    : "";
+}
+
+const vars = {
+  CLIENTE: clienteNome,
+  ANNO: String(scadenza.anno_riferimento || new Date().getFullYear()),
+  DATA_SCADENZA: dataScadenza,
+  TIPO_IMU: tipoImu,
+  TIPO_FISCALE: tipoFiscale,
+};
 
     const oggetto = replaceVars(template.oggetto, vars);
     const messaggio = replaceVars(template.corpo, vars);
@@ -209,13 +245,16 @@ export default async function handler(
   fs.readFile(f24.filepath)
 );
 
-const safeName = (f24.originalFilename || "F24_IMU.pdf").replace(
+const defaultFileName =
+  payload.modulo === "imu" ? "F24_IMU.pdf" : "F24_FISCALI.pdf";
+
+const safeName = (f24.originalFilename || defaultFileName).replace(
   /[^\w.\-]+/g,
   "_"
 );
 
-const filePath = `scadenze/imu/${payload.scadenza_id}/${Date.now()}_${safeName}`;
-
+const filePath = `scadenze/${payload.modulo}/${payload.scadenza_id}/${Date.now()}_${safeName}`;
+    
 const { error: uploadError } = await supabaseAdmin.storage
   .from("messaggi-allegati")
   .upload(filePath, fileBuffer, {
@@ -235,13 +274,20 @@ const allegati = [
   },
 ];
 
-console.log("EMAIL DA INVIARE", {
+const { emailService } = await import("@/services/emailService");
+
+const emailResult = await emailService.sendComunicazioneEmail({
+  tipo: "singola",
   destinatarioId: scadenza.cliente_id || "",
   destinatarioEmail: payload.email,
   oggetto,
   messaggio,
   allegati,
 });
+
+if (!emailResult?.success) {
+  throw new Error(emailResult?.error || "Errore invio email");
+}
 
 if (payload.modulo === "imu") {
       const updatePayload =
