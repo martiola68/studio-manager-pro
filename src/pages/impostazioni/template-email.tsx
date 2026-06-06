@@ -44,11 +44,13 @@ export default function TemplateEmailPage() {
     try {
       setLoading(true);
 
-     const { data, error } = await (supabase as any)
+ const { data, error } = await (supabase as any)
   .from("tbemail_template")
-  .select("*")
+  .select("id, codice, titolo, categoria, oggetto, corpo, attivo")
   .order("categoria", { ascending: true })
   .order("titolo", { ascending: true });
+
+console.log("TEMPLATE EMAIL", data, error);
 
       if (error) throw error;
 
