@@ -469,15 +469,17 @@ const inviaComunicazioneScadenza = async () => {
 
     const scadenza = invioEmailModal.scadenza;
 
-    const vars: Record<string, string> = {
-      CLIENTE: scadenza.nominativo || "Cliente",
-      ANNO: String(scadenza.anno_riferimento || new Date().getFullYear()),
-      DATA_SCADENZA:
-        scadenza.data_scadenza ||
-        scadenza.data_scadenza_versamento ||
-        "",
-      TIPO_IMU: invioEmailModal.tipo === "acconto" ? "Acconto" : "Saldo",
-    };
+   const scadenzaAny = scadenza as any;
+
+const vars: Record<string, string> = {
+  CLIENTE: scadenza.nominativo || "Cliente",
+  ANNO: String(scadenza.anno_riferimento || new Date().getFullYear()),
+  DATA_SCADENZA:
+    scadenzaAny.data_scadenza ||
+    scadenzaAny.data_scadenza_versamento ||
+    "",
+  TIPO_IMU: invioEmailModal.tipo === "acconto" ? "Acconto" : "Saldo",
+};
 
     const replaceVars = (text: string) => {
       let output = text || "";
