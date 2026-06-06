@@ -233,7 +233,7 @@ if (!studio?.microsoft_connection_id) {
 
 const { data: tokenOwners, error: tokenOwnerError } = await supabaseAdmin
   .from("tbmicrosoft365_user_tokens")
-  .select("user_id, access_token")
+  .select("*")
   .eq("microsoft_connection_id", studio.microsoft_connection_id)
   .limit(1);
 
@@ -273,10 +273,16 @@ const html = `
   </div>
 `;
 
-if (!tokenOwner?.access_token) {
+const accessToken =
+  tokenOwner?.access_token ||
+  tokenOwner?.accessToken ||
+  tokenOwner?.token ||
+  tokenOwner?.access_token_encrypted;
+
+if (!accessToken) {
   return res.status(500).json({
     success: false,
-    error: "Access token Microsoft non trovato",
+    error: "Token Microsoft non trovato nella tabella tbmicrosoft365_user_tokens",
   });
 }
 
