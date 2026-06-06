@@ -1218,128 +1218,130 @@ const chiudiInvioEmail = () => {
         </CardContent>
       </Card>
 
-     {emailModal.open && emailModal.scadenza && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-    <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
-      <h2 className="text-xl font-bold mb-2">
-        Invia F24 Fiscali{" "}
-        {emailModal.tipo === "saldo_primo_acconto_cciaa"
-          ? "Saldo / 1° acconto / CCIAA"
-          : "2° acconto"}
-      </h2>
+      {emailModal.open && emailModal.scadenza && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
+            <h2 className="text-xl font-bold mb-2">
+              Invia F24 Fiscali{" "}
+              {emailModal.tipo === "saldo_primo_acconto_cciaa"
+                ? "Saldo / 1° acconto / CCIAA"
+                : "2° acconto"}
+            </h2>
 
-      <p className="text-sm text-gray-500 mb-4">
-        {emailModal.scadenza.nominativo}
-      </p>
-
-      <div className="space-y-4">
-        <div>
-          <label className="text-sm font-medium mb-2 block">
-            Contatto Email
-          </label>
-
-          <div className="flex gap-2">
-            <Input
-              value={searchContatti}
-              onChange={(e) => setSearchContatti(e.target.value)}
-              placeholder="Cerca contatto..."
-            />
-
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => loadContattiDestinatari(searchContatti)}
-            >
-              Cerca
-            </Button>
-          </div>
-
-          {emailContatti.length > 0 && (
-            <div className="max-h-[140px] overflow-y-auto rounded-md border bg-white">
-              {emailContatti.map((contatto) => (
-                <button
-                  key={contatto.id}
-                  type="button"
-                  className="flex w-full items-center justify-between border-b px-3 py-2 text-left text-sm hover:bg-gray-50"
-                  onClick={() => {
-                    setEmailDestinatario(contatto.email || "");
-                    setSearchContatti(contatto.email || "");
-                    setEmailContatti([]);
-                  }}
-                >
-                  <span>
-                    {getContattoLabel(contatto)}
-                    <span className="ml-2 text-gray-500">
-                      {contatto.email}
-                    </span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div>
-          <label className="text-sm font-medium mb-2 block">
-            Oppure inserisci email manualmente
-          </label>
-
-          <Input
-            type="email"
-            value={emailDestinatario}
-            onChange={(e) => setEmailDestinatario(e.target.value)}
-            placeholder="email@cliente.it"
-          />
-        </div>
-
-        <div>
-          <label className="text-sm font-medium mb-2 block">
-            Allegato F24 *
-          </label>
-
-          <Input
-            type="file"
-            accept=".pdf"
-            onChange={(e) => setF24File(e.target.files?.[0] || null)}
-          />
-
-          {f24File && (
-            <p className="mt-1 text-xs text-gray-500">
-              File selezionato: {f24File.name}
+            <p className="text-sm text-gray-500 mb-4">
+              {emailModal.scadenza.nominativo}
             </p>
-          )}
-        </div>
 
-        <div className="rounded-md border bg-gray-50 p-3 text-sm text-gray-600">
-          Template usato:{" "}
-          <strong>
-            {emailModal.tipo === "saldo_primo_acconto_cciaa"
-              ? "FISCALI_SALDO_PRIMO_ACCONTO_CCIAA"
-              : "FISCALI_SECONDO_ACCONTO"}
-          </strong>
-        </div>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Contatto Email
+                </label>
 
-        <div className="flex justify-end gap-2 pt-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={chiudiInvioEmail}
-            disabled={emailModal.sending}
-          >
-            Annulla
-          </Button>
+                <div className="flex gap-2">
+                  <Input
+                    value={searchContatti}
+                    onChange={(e) => setSearchContatti(e.target.value)}
+                    placeholder="Cerca contatto..."
+                  />
 
-          <Button
-            type="button"
-            onClick={inviaEmailFiscali}
-            disabled={emailModal.sending || !emailDestinatario}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            {emailModal.sending ? "Invio..." : "Invia email"}
-          </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => loadContattiDestinatari(searchContatti)}
+                  >
+                    Cerca
+                  </Button>
+                </div>
+
+                {emailContatti.length > 0 && (
+                  <div className="max-h-[140px] overflow-y-auto rounded-md border bg-white">
+                    {emailContatti.map((contatto) => (
+                      <button
+                        key={contatto.id}
+                        type="button"
+                        className="flex w-full items-center justify-between border-b px-3 py-2 text-left text-sm hover:bg-gray-50"
+                        onClick={() => {
+                          setEmailDestinatario(contatto.email || "");
+                          setSearchContatti(contatto.email || "");
+                          setEmailContatti([]);
+                        }}
+                      >
+                        <span>
+                          {getContattoLabel(contatto)}
+                          <span className="ml-2 text-gray-500">
+                            {contatto.email}
+                          </span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Oppure inserisci email manualmente
+                </label>
+
+                <Input
+                  type="email"
+                  value={emailDestinatario}
+                  onChange={(e) => setEmailDestinatario(e.target.value)}
+                  placeholder="email@cliente.it"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Allegato F24 *
+                </label>
+
+                <Input
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => setF24File(e.target.files?.[0] || null)}
+                />
+
+                {f24File && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    File selezionato: {f24File.name}
+                  </p>
+                )}
+              </div>
+
+              <div className="rounded-md border bg-gray-50 p-3 text-sm text-gray-600">
+                Template usato:{" "}
+                <strong>
+                  {emailModal.tipo === "saldo_primo_acconto_cciaa"
+                    ? "FISCALI_SALDO_PRIMO_ACCONTO_CCIAA"
+                    : "FISCALI_SECONDO_ACCONTO"}
+                </strong>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={chiudiInvioEmail}
+                  disabled={emailModal.sending}
+                >
+                  Annulla
+                </Button>
+
+                <Button
+                  type="button"
+                  onClick={inviaEmailFiscali}
+                  disabled={emailModal.sending || !emailDestinatario}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {emailModal.sending ? "Invio..." : "Invia email"}
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
-  </div>
-)}
-
+  );
+}
