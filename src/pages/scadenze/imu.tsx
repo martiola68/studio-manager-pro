@@ -56,6 +56,11 @@ export default function ImuPage() {
   const [filterOperatore, setFilterOperatore] = useState("__all__");
   const [operatoriMap, setOperatoriMap] = useState<Record<string, string>>({});
 
+  const [utenteLoggato, setUtenteLoggato] = useState<{
+  nome: string | null;
+  cognome: string | null;
+    } | null>(null);
+
   const [invioEmailModal, setInvioEmailModal] = useState<{
   open: boolean;
   scadenza: ScadenzaImu | null;
@@ -109,6 +114,14 @@ const [sendingEmail, setSendingEmail] = useState(false);
 
     await loadScadenze();
   };
+
+  const { data: utenteData } = await supabase
+  .from("tbutenti")
+  .select("nome, cognome")
+  .eq("id", session.user.id)
+  .maybeSingle();
+
+setUtenteLoggato(utenteData || null);
 
   const loadScadenze = async () => {
     try {
@@ -469,16 +482,29 @@ const inviaComunicazioneScadenza = async () => {
 
     const scadenza = invioEmailModal.scadenza;
 
-   const scadenzaAny = scadenza as any;
+const { data: tipoScadenza } = await supabase
+  .from("tbtipi_scadenze")
+  .select("data_scadenza")
+  .eq("tipo_scadenza", "imu")
+  .eq("attivo", true)
+  .ilike(
+    "nome",
+    invioEmailModal.tipo === "acconto" ? "%acconto%" : "%saldo%"
+  )
+  .maybeSingle();
+
+const firmaUtente = `${utenteLoggato?.nome || ""} ${
+  utenteLoggato?.cognome || ""
+}`.trim();
 
 const vars: Record<string, string> = {
   CLIENTE: scadenza.nominativo || "Cliente",
   ANNO: String(scadenza.anno_riferimento || new Date().getFullYear()),
-  DATA_SCADENZA:
-    scadenzaAny.data_scadenza ||
-    scadenzaAny.data_scadenza_versamento ||
-    "",
+  DATA_SCADENZA: tipoScadenza?.data_scadenza
+    ? new Date(tipoScadenza.data_scadenza).toLocaleDateString("it-IT")
+    : "",
   TIPO_IMU: invioEmailModal.tipo === "acconto" ? "Acconto" : "Saldo",
+  FIRMA_UTENTE: firmaUtente,
 };
 
     const replaceVars = (text: string) => {
