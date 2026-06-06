@@ -453,18 +453,18 @@ const inviaComunicazioneScadenza = async () => {
 
     setSendingEmail(true);
 
-    const response = await fetch("/api/scadenze/comunicazioni/invia", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        modulo: "imu",
-        scadenza_id: invioEmailModal.scadenza.id,
-        tipo: invioEmailModal.tipo,
-        email: emailDestinatario,
-      }),
-    });
+   const formData = new FormData();
+
+formData.append("modulo", "imu");
+formData.append("scadenza_id", invioEmailModal.scadenza.id);
+formData.append("tipo", invioEmailModal.tipo);
+formData.append("email", emailDestinatario);
+formData.append("f24", f24File);
+
+const response = await fetch("/api/scadenze/comunicazioni/invia", {
+  method: "POST",
+  body: formData,
+});
 
     const result = await response.json();
 
