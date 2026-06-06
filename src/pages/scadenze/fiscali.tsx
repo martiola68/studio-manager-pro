@@ -368,23 +368,25 @@ Cordiali saluti.`,
       if (!scadenza.cliente_id) {
   throw new Error("Cliente non collegato alla scadenza fiscale.");
 }
-      const { data: cliente, error } = await supabase
-        .from("tbclienti" as any)
-        .select("*")
-       .eq("id", scadenza.cliente_id || "")
-        .maybeSingle();
+      const { data: clienteRaw, error } = await supabase
+  .from("tbclienti" as any)
+  .select("*")
+  .eq("id", scadenza.cliente_id)
+  .maybeSingle();
 
-      if (error) throw error;
+if (error) throw error;
 
-      const possibiliEmail = [
-        cliente?.email,
-        cliente?.pec,
-        cliente?.email_pec,
-        cliente?.email_amministrativa,
-        cliente?.email_contabilita,
-        cliente?.email_1,
-        cliente?.email_2,
-      ]
+const cliente = clienteRaw as any;
+
+const possibiliEmail = [
+  cliente?.email,
+  cliente?.pec,
+  cliente?.email_pec,
+  cliente?.email_amministrativa,
+  cliente?.email_contabilita,
+  cliente?.email_1,
+  cliente?.email_2,
+]
         .filter(Boolean)
         .map((e: string) => e.trim())
         .filter((e: string, index: number, arr: string[]) => arr.indexOf(e) === index);
