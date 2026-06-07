@@ -231,6 +231,7 @@ return rows.map((r) => ({
   ...r,
   soggetto_isa: r.cliente_id ? isaMap.get(r.cliente_id) ?? false : false,
 }));
+    };
 
   const loadUtenti = async (): Promise<Utente[]> => {
     const { data, error } = await supabase
