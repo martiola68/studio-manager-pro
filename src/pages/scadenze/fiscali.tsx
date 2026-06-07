@@ -71,6 +71,11 @@ export default function ScadenzeFiscaliPage() {
   const [annoConsultazione, setAnnoConsultazione] = useState(currentYear);
   const [anniDisponibili, setAnniDisponibili] = useState<number[]>([]);
 
+  const [utenteLoggato, setUtenteLoggato] = useState<{
+  nome: string | null;
+  cognome: string | null;
+} | null>(null);
+
   const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
   const [noteTimers, setNoteTimers] = useState<
     Record<string, ReturnType<typeof setTimeout>>
@@ -111,12 +116,21 @@ const [f24File, setF24File] = useState<File | null>(null);
         data: { session },
       } = await supabase.auth.getSession();
 
-      if (!session) {
-        router.push("/login");
-        return;
-      }
+    if (!session) {
+  router.push("/login");
+  return;
+}
 
-      await loadData();
+const { data: utenteData } = await supabase
+  .from("tbutenti")
+  .select("nome, cognome")
+  .eq("id", session.user.id)
+  .maybeSingle();
+
+setUtenteLoggato(utenteData || null);
+
+await loadData();
+      
     } catch (error) {
       console.error("Errore:", error);
       router.push("/login");
@@ -449,17 +463,22 @@ const tipoScadenza = tipoScadenzaRaw as {
   data_scadenza?: string | null;
 } | null;
 
+const firmaUtente = `${utenteLoggato?.nome || ""} ${
+  utenteLoggato?.cognome || ""
+}`.trim();
+
 const vars: Record<string, string> = {
   CLIENTE: scadenza.nominativo || "Cliente",
   ANNO: String(scadenza.anno_riferimento || new Date().getFullYear()),
   DATA_SCADENZA: tipoScadenza?.data_scadenza
     ? new Date(tipoScadenza.data_scadenza).toLocaleDateString("it-IT")
     : "",
-      TIPO_FISCALE:
-        emailModal.tipo === "saldo_primo_acconto_cciaa"
-          ? "Saldo / 1° acconto / CCIAA"
-          : "2° acconto",
-    };
+  TIPO_FISCALE:
+    emailModal.tipo === "saldo_primo_acconto_cciaa"
+      ? "Saldo / 1° acconto / CCIAA"
+      : "2° acconto",
+  FIRMA_UTENTE: firmaUtente,
+};
 
     const replaceVars = (text: string) => {
       let output = text || "";
