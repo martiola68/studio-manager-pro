@@ -1345,35 +1345,53 @@ await loadContatti();
       </h3>
     </div>
 
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-      <select
-        value={clienteDaCollegare}
-        onChange={(e) => setClienteDaCollegare(e.target.value)}
-        className="h-10 rounded-md border border-gray-300 bg-white px-3 text-sm"
-      >
-        <option value="">Seleziona cliente</option>
-        {clienti.map((cliente) => (
-          <option key={cliente.id} value={cliente.id}>
-            {cliente.ragione_sociale || "Cliente senza nome"}
-          </option>
-        ))}
-      </select>
+   <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+  <select
+    value={clienteDaCollegare}
+    onChange={(e) => setClienteDaCollegare(e.target.value)}
+    className="h-10 rounded-md border border-gray-300 bg-white px-3 text-sm"
+  >
+    <option value="">Seleziona cliente</option>
+    {clienti.map((cliente) => (
+      <option key={cliente.id} value={cliente.id}>
+        {cliente.ragione_sociale || "Cliente senza nome"}
+      </option>
+    ))}
+  </select>
 
-      <Input
-        value={ruoloCliente}
-        onChange={(e) => setRuoloCliente(e.target.value)}
-        placeholder="Ruolo per questo cliente"
-      />
+  <Input
+    value={ruoloCliente}
+    onChange={(e) => setRuoloCliente(e.target.value)}
+    placeholder="Ruolo per questo cliente"
+  />
 
-      <Button
-        type="button"
-        onClick={() => void handleCollegaCliente()}
-        className="bg-blue-600 hover:bg-blue-700"
-      >
-        <Link2 className="mr-2 h-4 w-4" />
-        Collega
-      </Button>
-    </div>
+  <Input
+    value={emailSocieta}
+    onChange={(e) => setEmailSocieta(e.target.value)}
+    placeholder="Email società / ufficio"
+  />
+
+  <Input
+    value={telefonoSocieta}
+    onChange={(e) => setTelefonoSocieta(e.target.value)}
+    placeholder="Telefono società / ufficio"
+  />
+
+  <Input
+    value={pecSocieta}
+    onChange={(e) => setPecSocieta(e.target.value)}
+    placeholder="PEC società"
+  />
+
+  <Button
+    type="button"
+    onClick={() => void handleCollegaCliente()}
+    className="bg-blue-600 hover:bg-blue-700"
+  >
+    <Link2 className="mr-2 h-4 w-4" />
+    Collega
+  </Button>
+</div>
 
     <div className="mt-4 space-y-2">
       {clientiCollegatiCorrenti.length === 0 ? (
@@ -1390,11 +1408,23 @@ await loadContatti();
               <div className="font-semibold text-gray-900">
                 {rel.cliente?.ragione_sociale || "Cliente"}
               </div>
-              {rel.ruolo && (
-                <div className="text-xs text-gray-500">
-                  Ruolo: {rel.ruolo}
-                </div>
-              )}
+            {rel.email_societa && (
+  <div className="text-xs text-gray-500">
+    Email ufficio: {rel.email_societa}
+  </div>
+)}
+
+{rel.telefono_societa && (
+  <div className="text-xs text-gray-500">
+    Tel. ufficio: {rel.telefono_societa}
+  </div>
+)}
+
+{rel.pec_societa && (
+  <div className="text-xs text-gray-500">
+    PEC società: {rel.pec_societa}
+  </div>
+)}
             </div>
 
             <Button
