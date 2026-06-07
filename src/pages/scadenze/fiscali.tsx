@@ -438,19 +438,23 @@ const inviaEmailFiscali = async () => {
     if (templateError) throw templateError;
     if (!template) throw new Error(`Template ${templateCode} non trovato`);
 
-    const { data: tipoScadenza } = await supabase
-      .from("tbtipi_scadenze" as any)
-      .select("data_scadenza")
-      .eq("tipo_scadenza", "fiscale")
-      .eq("attivo", true)
-      .maybeSingle();
+   const { data: tipoScadenzaRaw } = await (supabase as any)
+  .from("tbtipi_scadenze")
+  .select("data_scadenza")
+  .eq("tipo_scadenza", "fiscale")
+  .eq("attivo", true)
+  .maybeSingle();
 
-    const vars: Record<string, string> = {
-      CLIENTE: scadenza.nominativo || "Cliente",
-      ANNO: String(scadenza.anno_riferimento || new Date().getFullYear()),
-      DATA_SCADENZA: tipoScadenza?.data_scadenza
-        ? new Date(tipoScadenza.data_scadenza).toLocaleDateString("it-IT")
-        : "",
+const tipoScadenza = tipoScadenzaRaw as {
+  data_scadenza?: string | null;
+} | null;
+
+const vars: Record<string, string> = {
+  CLIENTE: scadenza.nominativo || "Cliente",
+  ANNO: String(scadenza.anno_riferimento || new Date().getFullYear()),
+  DATA_SCADENZA: tipoScadenza?.data_scadenza
+    ? new Date(tipoScadenza.data_scadenza).toLocaleDateString("it-IT")
+    : "",
       TIPO_FISCALE:
         emailModal.tipo === "saldo_primo_acconto_cciaa"
           ? "Saldo / 1° acconto / CCIAA"
@@ -1131,20 +1135,21 @@ const inviaEmailFiscali = async () => {
 
                       <td className="p-2 align-middle text-center min-w-[120px]">
                        {scadenza.saldi_primo_acconti_cciaa_dovuti ? (
-  <Button
-    type="button"
-    size="sm"
-    onClick={() =>
-      apriInvioEmail(
-        scadenza,
-        "saldo_primo_acconto_cciaa"
-      )
-    }
-    className="bg-blue-600 text-white hover:bg-blue-700"
-  >
-    <Mail className="h-4 w-4 mr-1" />
-    Invia
-  </Button>
+<Button
+  type="button"
+  size="sm"
+  variant="outline"
+  className="h-8 text-xs"
+  onClick={() =>
+    apriInvioEmail(
+      scadenza,
+      "saldo_primo_acconto_cciaa"
+    )
+  }
+>
+  <Mail className="h-3.5 w-3.5 mr-1" />
+  Invia Acconto
+</Button>
 ) : (
   <span className="text-xs text-gray-400">Non dovuto</span>
 )}
@@ -1243,17 +1248,18 @@ const inviaEmailFiscali = async () => {
 
                       <td className="p-2 align-middle text-center min-w-[120px]">
                         {scadenza.secondo_acconti_dovuti ? (
-  <Button
-    type="button"
-    size="sm"
-    onClick={() =>
-      apriInvioEmail(scadenza, "secondo_acconto")
-    }
-    className="bg-blue-600 text-white hover:bg-blue-700"
-  >
-    <Mail className="h-4 w-4 mr-1" />
-    Invia
-  </Button>
+ <Button
+  type="button"
+  size="sm"
+  variant="outline"
+  className="h-8 text-xs"
+  onClick={() =>
+    apriInvioEmail(scadenza, "secondo_acconto")
+  }
+>
+  <Mail className="h-3.5 w-3.5 mr-1" />
+  Invia 2° Acconto
+</Button>
 ) : (
   <span className="text-xs text-gray-400">Non dovuto</span>
 )}
