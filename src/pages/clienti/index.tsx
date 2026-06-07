@@ -2359,18 +2359,7 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
     />
   </div>
 </div>
-<div>
-  <Label htmlFor="note">Note</Label>
-            <Textarea
-              id="note"
-              value={formData.note}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, note: e.target.value }))
-              }
-              placeholder="Note aggiuntive..."
-              rows={4}
-            />
-          </div>
+
         </div>
       </TabsContent>
 
@@ -2673,6 +2662,19 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
       ))}
     </SelectContent>
   </Select>
+
+  <div>
+  <Label htmlFor="note">Note</Label>
+            <Textarea
+              id="note"
+              value={formData.note}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, note: e.target.value }))
+              }
+              placeholder="Note aggiuntive..."
+              rows={4}
+            />
+          </div>
 </div>
 </div>
 </TabsContent>
