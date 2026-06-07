@@ -253,7 +253,8 @@ const visibleLetters = letterFilter
       setEncryptionEnabled(enabled);
       setEncryptionLockedState(isEncryptionLocked());
 
-      const data = await contattoService.getContatti();
+     const data = await contattoService.getContattiConClienti(sid);
+      
       const hydrated = await hydrateContatti(data, enabled);
       setContatti(hydrated);
     } catch (error) {
