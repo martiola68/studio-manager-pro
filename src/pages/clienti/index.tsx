@@ -69,25 +69,21 @@ import {
 /** =========
  *  Supabase DB Types
  *  ========= */
-type ClienteRow =
-Database["public"]["Tables"]["tbclienti"]["Row"] & {
+type ClienteRow = Database["public"]["Tables"]["tbclienti"]["Row"] & {
   telefono?: string | null;
   pec?: string | null;
-};
   rapp_legale_id?: string | null;
 };
 
-type ClienteInsert = Database["public"]["Tables"]["tbclienti"]["Row"] & {
+type ClienteInsert = Database["public"]["Tables"]["tbclienti"]["Insert"] & {
   telefono?: string | null;
   pec?: string | null;
-};
   rapp_legale_id?: string | null;
 };
 
-type ClienteUpdate = Database["public"]["Tables"]["tbclienti"]["Row"] & {
+type ClienteUpdate = Database["public"]["Tables"]["tbclienti"]["Update"] & {
   telefono?: string | null;
   pec?: string | null;
-};
   rapp_legale_id?: string | null;
 };
 
