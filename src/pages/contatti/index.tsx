@@ -160,11 +160,12 @@ const [pecSocieta, setPecSocieta] = useState("");
 
   const loadClienti = async (sid?: string) => {
   const supabase = getSupabaseClient();
+const db = supabase as any;
 
-  let query = supabase
-    .from("tbclienti")
-    .select("id, ragione_sociale, email, telefono, pec")
-    .order("ragione_sociale", { ascending: true });
+let query = db
+  .from("tbclienti")
+  .select("id, ragione_sociale, email, telefono, pec")
+  .order("ragione_sociale", { ascending: true });
 
   if (sid) {
     query = query.eq("studio_id", sid);
@@ -174,7 +175,7 @@ const [pecSocieta, setPecSocieta] = useState("");
 
   if (error) throw error;
 
-  setClienti(data || []);
+ setClienti((data || []) as ClienteRubrica[]);
 };
 
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
