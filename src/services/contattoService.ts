@@ -380,8 +380,7 @@ export const contattoService = {
       referente_payroll: input.referente_payroll ?? false,
       referente_consulenza: input.referente_consulenza ?? false,
       referente_amministrativo: input.referente_amministrativo ?? false,
-      note: input.note || null,
-    };
+      };
 
     const { data, error } = await db
       .from("tbcontatti_clienti")
