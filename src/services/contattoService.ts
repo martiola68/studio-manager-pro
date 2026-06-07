@@ -27,10 +27,15 @@ export type ContattoCliente = {
   referente_payroll: boolean | null;
   referente_consulenza: boolean | null;
   referente_amministrativo: boolean | null;
-  note: string | null;
-  created_at: string | null;
-  updated_at: string | null;
-  cliente?: ClienteMinimo | null;
+ note: string | null;
+email_societa: string | null;
+email_secondaria_societa: string | null;
+pec_societa: string | null;
+telefono_societa: string | null;
+cellulare_societa: string | null;
+note_collegamento: string | null;
+created_at: string | null;
+updated_at: string | null;
 };
 
 export type ContattoConClienti = Contatto & {
@@ -49,7 +54,13 @@ export type CollegamentoClienteInput = {
   referente_payroll?: boolean;
   referente_consulenza?: boolean;
   referente_amministrativo?: boolean;
-  note?: string | null;
+ note?: string | null;
+email_societa?: string | null;
+email_secondaria_societa?: string | null;
+pec_societa?: string | null;
+telefono_societa?: string | null;
+cellulare_societa?: string | null;
+note_collegamento?: string | null;
 };
 
 const caricaClientiById = async (
@@ -368,19 +379,26 @@ export const contattoService = {
   },
 
   async collegaCliente(input: CollegamentoClienteInput): Promise<ContattoCliente> {
-    const payload = {
-      studio_id: input.studio_id || null,
-      contatto_id: input.contatto_id,
-      cliente_id: input.cliente_id,
-      ruolo: input.ruolo || null,
-      principale: input.principale ?? false,
-      riceve_comunicazioni: input.riceve_comunicazioni ?? true,
-      riceve_scadenze: input.riceve_scadenze ?? true,
-      referente_fiscale: input.referente_fiscale ?? false,
-      referente_payroll: input.referente_payroll ?? false,
-      referente_consulenza: input.referente_consulenza ?? false,
-      referente_amministrativo: input.referente_amministrativo ?? false,
-      };
+  const payload = {
+  studio_id: input.studio_id || null,
+  contatto_id: input.contatto_id,
+  cliente_id: input.cliente_id,
+  ruolo: input.ruolo || null,
+  principale: input.principale ?? false,
+  riceve_comunicazioni: input.riceve_comunicazioni ?? true,
+  riceve_scadenze: input.riceve_scadenze ?? true,
+  referente_fiscale: input.referente_fiscale ?? false,
+  referente_payroll: input.referente_payroll ?? false,
+  referente_consulenza: input.referente_consulenza ?? false,
+  referente_amministrativo: input.referente_amministrativo ?? false,
+  note: input.note || null,
+  email_societa: input.email_societa || null,
+  email_secondaria_societa: input.email_secondaria_societa || null,
+  pec_societa: input.pec_societa || null,
+  telefono_societa: input.telefono_societa || null,
+  cellulare_societa: input.cellulare_societa || null,
+  note_collegamento: input.note_collegamento || null,
+};
 
     const { data, error } = await db
       .from("tbcontatti_clienti")
