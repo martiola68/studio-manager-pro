@@ -602,16 +602,36 @@ const firmaUtente = `${utenteLoggato?.nome || ""} ${
   utenteLoggato?.cognome || ""
 }`.trim();
 
+const dataScadenza = tipoScadenza?.data_scadenza
+  ? new Date(tipoScadenza.data_scadenza)
+  : null;
+
+const dataScadenzaMaggiorata =
+  emailModal.tipo === "saldo_primo_acconto_cciaa" && dataScadenza
+    ? new Date(
+        dataScadenza.getFullYear(),
+        dataScadenza.getMonth(),
+        dataScadenza.getDate() + 30
+      )
+    : null;
+
 const vars: Record<string, string> = {
   CLIENTE: scadenza.nominativo || "Cliente",
   ANNO: String(scadenza.anno_riferimento || new Date().getFullYear()),
-  DATA_SCADENZA: tipoScadenza?.data_scadenza
-    ? new Date(tipoScadenza.data_scadenza).toLocaleDateString("it-IT")
+
+  DATA_SCADENZA: dataScadenza
+    ? dataScadenza.toLocaleDateString("it-IT")
     : "",
+
+  DATA_SCADENZA_MAGGIORATA: dataScadenzaMaggiorata
+    ? dataScadenzaMaggiorata.toLocaleDateString("it-IT")
+    : "",
+
   TIPO_FISCALE:
     emailModal.tipo === "saldo_primo_acconto_cciaa"
       ? "Saldo / 1° acconto / CCIAA"
       : "2° acconto",
+
   FIRMA_UTENTE: firmaUtente,
 };
 
