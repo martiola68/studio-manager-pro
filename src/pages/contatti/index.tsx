@@ -530,7 +530,8 @@ const handleEdit = async (contatto: Contatto) => {
 
     const run = async () => {
       try {
-  let dataToSave: any = {
+let dataToSave: any = {
+  studio_id: studioId || null,
   cognome: formData.cognome,
   nome: formData.nome || "",
   cell: formData.cell || null,
