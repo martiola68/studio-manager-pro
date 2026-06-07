@@ -85,8 +85,9 @@ type FormDataState = {
 type ClienteRubrica = {
   id: string;
   ragione_sociale: string | null;
-  codice_fiscale?: string | null;
-  partita_iva?: string | null;
+  email?: string | null;
+  telefono?: string | null;
+  pec?: string | null;
 };
 
 const initialFormData: FormDataState = {
@@ -162,7 +163,7 @@ const [pecSocieta, setPecSocieta] = useState("");
 
   let query = supabase
     .from("tbclienti")
-    .select("id, ragione_sociale, codice_fiscale, partita_iva")
+    .select("id, ragione_sociale, email, telefono, pec")
     .order("ragione_sociale", { ascending: true });
 
   if (sid) {
@@ -1348,7 +1349,16 @@ await loadContatti();
    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
   <select
     value={clienteDaCollegare}
-    onChange={(e) => setClienteDaCollegare(e.target.value)}
+   onChange={(e) => {
+  const clienteId = e.target.value;
+  setClienteDaCollegare(clienteId);
+
+  const cliente = clienti.find((c) => c.id === clienteId);
+
+  setEmailSocieta(cliente?.email || "");
+  setTelefonoSocieta(cliente?.telefono || "");
+  setPecSocieta(cliente?.pec || "");
+}}
     className="h-10 rounded-md border border-gray-300 bg-white px-3 text-sm"
   >
     <option value="">Seleziona cliente</option>
