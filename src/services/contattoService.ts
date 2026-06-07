@@ -36,6 +36,7 @@ cellulare_societa: string | null;
 note_collegamento: string | null;
 created_at: string | null;
 updated_at: string | null;
+  cliente?: ClienteMinimo | null;
 };
 
 export type ContattoConClienti = Contatto & {
