@@ -65,50 +65,73 @@ export const contattoService = {
     return data || [];
   },
 
-  async getContattiConClienti(
-    studioId?: string | null
-  ): Promise<ContattoConClienti[]> {
-    let query = supabase
-      .from("tbcontatti")
-      .select(
-        `
-        *,
-        clienti_collegati:tbcontatti_clienti(
-          id,
-          studio_id,
-          contatto_id,
-          cliente_id,
-          ruolo,
-          principale,
-          riceve_comunicazioni,
-          riceve_scadenze,
-          referente_fiscale,
-          referente_payroll,
-          referente_consulenza,
-          referente_amministrativo,
-          note,
-          created_at,
-          updated_at,
-          cliente:tbclienti(
-            id,
-            ragione_sociale,
-            codice_fiscale,
-            partita_iva
-          )
-        )
-      `
-      )
-      .order("cognome", { ascending: true });
+ async getContattiConClienti(
+  studioId?: string | null
+): Promise<ContattoConClienti[]> {
+  let contattiQuery = supabase
+    .from("tbcontatti")
+    .select("*")
+    .order("cognome", { ascending: true });
 
-    if (studioId) {
-      query = query.eq("studio_id", studioId);
+  if (studioId) {
+    contattiQuery = contattiQuery.eq("studio_id", studioId);
+  }
+
+  const { data: contatti, error: contattiError } = await contattiQuery;
+
+  if (contattiError) throw contattiError;
+
+  let relazioniQuery = supabase
+    .from("tbcontatti_clienti")
+    .select("*");
+
+  if (studioId) {
+    relazioniQuery = relazioniQuery.eq("studio_id", studioId);
+  }
+
+  const { data: relazioni, error: relazioniError } = await relazioniQuery;
+
+  if (relazioniError) throw relazioniError;
+
+  const clienteIds = Array.from(
+    new Set((relazioni || []).map((r: any) => r.cliente_id).filter(Boolean))
+  );
+
+  let clientiById: Record<string, any> = {};
+
+  if (clienteIds.length > 0) {
+    const { data: clienti, error: clientiError } = await supabase
+      .from("tbclienti")
+      .select("id, ragione_sociale, codice_fiscale, partita_iva")
+      .in("id", clienteIds);
+
+    if (clientiError) throw clientiError;
+
+    clientiById = Object.fromEntries(
+      (clienti || []).map((cliente: any) => [cliente.id, cliente])
+    );
+  }
+
+  const relazioniByContatto: Record<string, ContattoCliente[]> = {};
+
+  (relazioni || []).forEach((relazione: any) => {
+    const item = {
+      ...relazione,
+      cliente: clientiById[relazione.cliente_id] || null,
+    } as ContattoCliente;
+
+    if (!relazioniByContatto[relazione.contatto_id]) {
+      relazioniByContatto[relazione.contatto_id] = [];
     }
 
-    const { data, error } = await query;
+    relazioniByContatto[relazione.contatto_id].push(item);
+  });
 
-    if (error) throw error;
-    return (data || []) as ContattoConClienti[];
-  },
+  return (contatti || []).map((contatto: any) => ({
+    ...contatto,
+    clienti_collegati: relazioniByContatto[contatto.id] || [],
+  })) as ContattoConClienti[];
+},
 
   async getContattoById(id: string): Promise<Contatto> {
     const { data, error } = await supabase
@@ -156,7 +179,7 @@ export const contattoService = {
       .single();
 
     if (error) throw error;
-    return data as ContattoConClienti;
+   return data as unknown as ContattoConClienti;
   },
 
   async createContatto(contatto: ContattoInsert): Promise<Contatto> {
