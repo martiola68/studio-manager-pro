@@ -1588,6 +1588,22 @@ const handleEdit = async (contatto: Contatto) => {
                   </Badge>
                 )}
 
+                {contatto.clienti_collegati && contatto.clienti_collegati.length > 0 && (
+  <div className="mt-2 flex flex-wrap gap-2">
+    {contatto.clienti_collegati.map((rel) => (
+      <Badge
+        key={rel.id}
+        variant="secondary"
+        className="bg-green-100 text-green-800"
+      >
+        <Building2 className="mr-1 h-3 w-3" />
+        {rel.cliente?.ragione_sociale || "Cliente collegato"}
+        {rel.ruolo ? ` - ${rel.ruolo}` : ""}
+      </Badge>
+    ))}
+  </div>
+)}
+
                 {contatto.note && (
                   <p className="mt-2 line-clamp-2 text-sm text-gray-500">
                     <span className="font-semibold">Note:</span> {contatto.note}
