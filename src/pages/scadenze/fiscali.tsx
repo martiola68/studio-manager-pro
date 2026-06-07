@@ -306,6 +306,44 @@ return rows.map((r) => ({
     }
   };
 
+  const handleToggleSoggettoIsa = async (scadenza: ScadenzaFiscali) => {
+  if (!scadenza.cliente_id) {
+    toast({
+      title: "Errore",
+      description: "Cliente non collegato alla scadenza fiscale.",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  const newValue = !scadenza.soggetto_isa;
+
+  try {
+    setScadenze((prev) =>
+      prev.map((s) =>
+        s.id === scadenza.id
+          ? { ...s, soggetto_isa: newValue }
+          : s
+      )
+    );
+
+    const { error } = await (supabase as any)
+      .from("tbclienti")
+      .update({ soggetto_isa: newValue })
+      .eq("id", scadenza.cliente_id);
+
+    if (error) throw error;
+  } catch (error: any) {
+    toast({
+      title: "Errore aggiornamento ISA",
+      description: error.message,
+      variant: "destructive",
+    });
+
+    await loadData();
+  }
+};
+
   const handleNoteChange = (scadenzaId: string, value: string) => {
     setLocalNotes((prev) => ({ ...prev, [scadenzaId]: value }));
 
@@ -1135,7 +1173,7 @@ const vars: Record<string, string> = {
 <td className="p-2 align-middle text-center min-w-[120px]">
   <Checkbox
     checked={Boolean(scadenza.soggetto_isa)}
-    disabled
+    onCheckedChange={() => handleToggleSoggettoIsa(scadenza)}
   />
 </td>
 
