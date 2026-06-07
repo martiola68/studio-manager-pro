@@ -344,14 +344,14 @@ return rows.map((r) => {
 
     const { error: clienteError } = await (supabase as any)
       .from("tbclienti")
-      .update({ tipo_redditi: value })
+      .update({ tipo_redditi: value || null })
       .eq("id", scadenza.cliente_id);
 
     if (clienteError) throw clienteError;
 
     const { error: scadenzaError } = await (supabase as any)
       .from("tbscadfiscali")
-      .update({ tipo_redditi: value })
+      .update({ tipo_redditi: value || null })
       .eq("id", scadenza.id);
 
     if (scadenzaError) throw scadenzaError;
@@ -577,17 +577,27 @@ const inviaEmailFiscali = async () => {
     if (templateError) throw templateError;
     if (!template) throw new Error(`Template ${templateCode} non trovato`);
 
-   const { data: tipoScadenzaRaw } = await (supabase as any)
+const nomeScadenzaFiscale =
+  emailModal.tipo === "saldo_primo_acconto_cciaa"
+    ? scadenza.soggetto_isa
+      ? "IMPOSTE ISA"
+      : "IMPOSTE NO ISE"
+    : scadenza.soggetto_isa
+      ? "2° ACCONTO ISA"
+      : "2° ACCONTO NO ISA";
+
+const { data: tipoScadenzaRaw } = await (supabase as any)
   .from("tbtipi_scadenze")
   .select("data_scadenza")
   .eq("tipo_scadenza", "fiscale")
   .eq("attivo", true)
+  .eq("nome", nomeScadenzaFiscale)
   .maybeSingle();
 
 const tipoScadenza = tipoScadenzaRaw as {
   data_scadenza?: string | null;
 } | null;
-
+    
 const firmaUtente = `${utenteLoggato?.nome || ""} ${
   utenteLoggato?.cognome || ""
 }`.trim();
@@ -1219,24 +1229,28 @@ const vars: Record<string, string> = {
                         {getUtenteNome(scadenza.utente_operatore_id)}
                       </td>
 
-                     <td className="p-2 align-middle min-w-[120px]">
-<td className="p-2 align-middle min-w-[120px]">
+<td className="p-2 align-middle min-w-[140px]">
   <Select
-    value={scadenza.tipo_redditi || undefined}
+    value={scadenza.tipo_redditi || "__none__"}
     onValueChange={(value) =>
-      handleUpdateTipoRedditiCliente(scadenza, value)
+      handleUpdateTipoRedditiCliente(
+        scadenza,
+        value === "__none__" ? "" : value
+      )
     }
   >
     <SelectTrigger className="w-full">
-      <SelectValue placeholder="Tipo" />
+      <SelectValue placeholder="Tipo Redditi" />
     </SelectTrigger>
+
     <SelectContent>
+      <SelectItem value="__none__">Nessuno</SelectItem>
       <SelectItem value="USC">USC</SelectItem>
       <SelectItem value="USP">USP</SelectItem>
       <SelectItem value="ENC">ENC</SelectItem>
-      <SelectItem value="UPF FORF.">UPF FORF.</SelectItem>
-      <SelectItem value="UPF ORD.">UPF ORD.</SelectItem>
       <SelectItem value="UPF BASE">UPF BASE</SelectItem>
+      <SelectItem value="UPF ORD.">UPF ORD.</SelectItem>
+      <SelectItem value="UPF FORF.">UPF FORF.</SelectItem>
       <SelectItem value="730">730</SelectItem>
     </SelectContent>
   </Select>
