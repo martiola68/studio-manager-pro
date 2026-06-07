@@ -216,21 +216,35 @@ if (clienteIds.length === 0) {
 
 const { data: clientiIsa, error: clientiIsaError } = await (supabase as any)
   .from("tbclienti")
-  .select("id, soggetto_isa")
+  .select("id, soggetto_isa, tipo_redditi")
   .in("id", clienteIds);
 
 if (clientiIsaError) throw clientiIsaError;
 
-const isaMap = new Map<string, boolean>();
+const clienteMap = new Map<
+  string,
+  {
+    soggetto_isa: boolean;
+    tipo_redditi: string | null;
+  }
+>();
 
 ((clientiIsa ?? []) as any[]).forEach((c) => {
-  isaMap.set(c.id, Boolean(c.soggetto_isa));
+  clienteMap.set(c.id, {
+    soggetto_isa: Boolean(c.soggetto_isa),
+    tipo_redditi: c.tipo_redditi ?? null,
+  });
 });
 
-return rows.map((r) => ({
-  ...r,
-  soggetto_isa: r.cliente_id ? isaMap.get(r.cliente_id) ?? false : false,
-}));
+return rows.map((r) => {
+  const cliente = r.cliente_id ? clienteMap.get(r.cliente_id) : null;
+
+  return {
+    ...r,
+    soggetto_isa: cliente?.soggetto_isa ?? false,
+    tipo_redditi: cliente?.tipo_redditi ?? r.tipo_redditi ?? null,
+  };
+});
     };
 
   const loadUtenti = async (): Promise<Utente[]> => {
@@ -305,6 +319,52 @@ return rows.map((r) => ({
       });
     }
   };
+
+  const handleUpdateTipoRedditiCliente = async (
+  scadenza: ScadenzaFiscali,
+  value: string
+) => {
+  if (!scadenza.cliente_id) {
+    toast({
+      title: "Errore",
+      description: "Cliente non collegato alla scadenza fiscale.",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  try {
+    setScadenze((prev) =>
+      prev.map((s) =>
+        s.id === scadenza.id
+          ? { ...s, tipo_redditi: value as any }
+          : s
+      )
+    );
+
+    const { error: clienteError } = await (supabase as any)
+      .from("tbclienti")
+      .update({ tipo_redditi: value })
+      .eq("id", scadenza.cliente_id);
+
+    if (clienteError) throw clienteError;
+
+    const { error: scadenzaError } = await (supabase as any)
+      .from("tbscadfiscali")
+      .update({ tipo_redditi: value })
+      .eq("id", scadenza.id);
+
+    if (scadenzaError) throw scadenzaError;
+  } catch (error: any) {
+    toast({
+      title: "Errore aggiornamento tipo redditi",
+      description: error.message,
+      variant: "destructive",
+    });
+
+    await loadData();
+  }
+};
 
   const handleToggleSoggettoIsa = async (scadenza: ScadenzaFiscali) => {
   if (!scadenza.cliente_id) {
@@ -1051,7 +1111,7 @@ const vars: Record<string, string> = {
 </th>
 
 <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">
-  Soggetto ISA
+  Soggetto ISA/Equiparati
 </th>
 
 <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[80px]">
@@ -1160,12 +1220,12 @@ const vars: Record<string, string> = {
                       </td>
 
                      <td className="p-2 align-middle min-w-[120px]">
-  <Select
-    value={scadenza.tipo_redditi || ""}
-    onValueChange={(value) =>
-      handleUpdateField(scadenza.id, "tipo_redditi", value)
-    }
-  >
+ <Select
+  value={scadenza.tipo_redditi || undefined}
+  onValueChange={(value) =>
+    handleUpdateTipoRedditiCliente(scadenza, value)
+  }
+>
     ...
   </Select>
 </td>
