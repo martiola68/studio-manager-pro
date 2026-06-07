@@ -37,6 +37,7 @@ type ScadenzaFiscali = ScadenzaFiscaliRow & {
   cliente_id?: string | null;
   anno_riferimento?: number | null;
   archiviato?: boolean | null;
+  soggetto_isa?: boolean | null;
 
   conferma_ires_saldo_acconto?: boolean | null;
   conferma_cciaa?: boolean | null;
@@ -195,16 +196,41 @@ await loadData();
       setAnnoConsultazione(annoDaUsare);
     }
 
-    const { data, error } = await supabase
-      .from("tbscadfiscali" as any)
-      .select("*")
-      .eq("anno_riferimento", annoDaUsare)
-      .order("nominativo", { ascending: true });
+  const { data, error } = await supabase
+  .from("tbscadfiscali" as any)
+  .select("*")
+  .eq("anno_riferimento", annoDaUsare)
+  .order("nominativo", { ascending: true });
 
-    if (error) throw error;
+if (error) throw error;
 
-    return ((data ?? []) as unknown) as ScadenzaFiscali[];
-  };
+const rows = ((data ?? []) as unknown) as ScadenzaFiscali[];
+
+const clienteIds = Array.from(
+  new Set(rows.map((r) => r.cliente_id).filter(Boolean))
+) as string[];
+
+if (clienteIds.length === 0) {
+  return rows;
+}
+
+const { data: clientiIsa, error: clientiIsaError } = await (supabase as any)
+  .from("tbclienti")
+  .select("id, soggetto_isa")
+  .in("id", clienteIds);
+
+if (clientiIsaError) throw clientiIsaError;
+
+const isaMap = new Map<string, boolean>();
+
+((clientiIsa ?? []) as any[]).forEach((c) => {
+  isaMap.set(c.id, Boolean(c.soggetto_isa));
+});
+
+return rows.map((r) => ({
+  ...r,
+  soggetto_isa: r.cliente_id ? isaMap.get(r.cliente_id) ?? false : false,
+}));
 
   const loadUtenti = async (): Promise<Utente[]> => {
     const { data, error } = await supabase
@@ -982,11 +1008,16 @@ const vars: Record<string, string> = {
                     Operatore
                   </th>
                   <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground min-w-[120px]">
-                    Tipo Redditi
-                  </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[80px]">
-                    Comp.
-                  </th>
+  Tipo Redditi
+</th>
+
+<th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">
+  Soggetto ISA
+</th>
+
+<th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[80px]">
+  Comp.
+</th>
                   <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[80px]">
                     Def.
                   </th>
@@ -1058,7 +1089,7 @@ const vars: Record<string, string> = {
                 {filteredScadenze.length === 0 ? (
                   <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                     <td
-                      colSpan={23}
+                      colSpan={24}
                       className="p-2 align-middle text-center text-gray-500"
                     >
                       Nessun record trovato
@@ -1089,31 +1120,27 @@ const vars: Record<string, string> = {
                         {getUtenteNome(scadenza.utente_operatore_id)}
                       </td>
 
-                      <td className="p-2 align-middle min-w-[120px]">
-                        <Select
-                          value={scadenza.tipo_redditi || ""}
-                          onValueChange={(value) =>
-                            handleUpdateField(scadenza.id, "tipo_redditi", value)
-                          }
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Tipo" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="USC">USC</SelectItem>
-                            <SelectItem value="USP">USP</SelectItem>
-                            <SelectItem value="ENC">ENC</SelectItem>
-                            <SelectItem value="UPF FORF.">UPF FORF.</SelectItem>
-                            <SelectItem value="UPF ORD.">UPF ORD.</SelectItem>
-                            <SelectItem value="UPF BASE">UPF BASE</SelectItem>
-                            <SelectItem value="730">730</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </td>
+                     <td className="p-2 align-middle min-w-[120px]">
+  <Select
+    value={scadenza.tipo_redditi || ""}
+    onValueChange={(value) =>
+      handleUpdateField(scadenza.id, "tipo_redditi", value)
+    }
+  >
+    ...
+  </Select>
+</td>
 
-                      <td className="p-2 align-middle text-center min-w-[80px]">
-                        {renderCheck(scadenza, "mod_r_compilato")}
-                      </td>
+<td className="p-2 align-middle text-center min-w-[120px]">
+  <Checkbox
+    checked={Boolean(scadenza.soggetto_isa)}
+    disabled
+  />
+</td>
+
+<td className="p-2 align-middle text-center min-w-[80px]">
+  {renderCheck(scadenza, "mod_r_compilato")}
+</td>
 
                       <td className="p-2 align-middle text-center min-w-[80px]">
                         {renderCheck(scadenza, "mod_r_definitivo")}
