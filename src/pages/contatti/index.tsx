@@ -978,6 +978,7 @@ const clienti = (c.clienti_collegati || [])
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                   
                     <div className="space-y-2">
                       <Label htmlFor="cognome">Cognome/Denominazione *</Label>
                       <Input
@@ -990,6 +991,7 @@ const clienti = (c.clienti_collegati || [])
                         placeholder="Es. Rossi o Nome Azienda"
                       />
                     </div>
+                    
                     <div className="space-y-2">
                       <Label htmlFor="nome">Nome (facoltativo)</Label>
                       <Input
@@ -1001,7 +1003,59 @@ const clienti = (c.clienti_collegati || [])
                         placeholder="Es. Mario"
                       />
                     </div>
+                    
                   </div>
+
+ <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+  <div className="space-y-2">
+    <Label htmlFor="ragione_sociale">Ragione sociale collegata</Label>
+    <Input
+      id="ragione_sociale"
+      value={formData.ragione_sociale}
+      onChange={(e) =>
+        setFormData({ ...formData, ragione_sociale: e.target.value })
+      }
+      placeholder="Es. Alfa Srl"
+    />
+  </div>
+
+  <div className="space-y-2">
+    <Label htmlFor="ruolo">Ruolo</Label>
+    <Input
+      id="ruolo"
+      value={formData.ruolo}
+      onChange={(e) =>
+        setFormData({ ...formData, ruolo: e.target.value })
+      }
+      placeholder="Es. Amministratore, referente fiscale..."
+    />
+  </div>
+</div>
+
+<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+  <div className="space-y-2">
+    <Label htmlFor="qualifica">Qualifica</Label>
+    <Input
+      id="qualifica"
+      value={formData.qualifica}
+      onChange={(e) =>
+        setFormData({ ...formData, qualifica: e.target.value })
+      }
+      placeholder="Es. Presidente CDA, Socio, HR..."
+    />
+  </div>
+
+  <div className="space-y-2">
+    <Label htmlFor="nazione">Nazione</Label>
+    <Input
+      id="nazione"
+      value={formData.nazione}
+      onChange={(e) =>
+        setFormData({ ...formData, nazione: e.target.value })
+      }
+    />
+  </div>
+</div>
 
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div className="space-y-2">
@@ -1114,6 +1168,46 @@ const clienti = (c.clienti_collegati || [])
                     </div>
                   </div>
 
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+  <div className="space-y-2">
+    <Label htmlFor="via">Via</Label>
+    <Input
+      id="via"
+      value={formData.via}
+      onChange={(e) => setFormData({ ...formData, via: e.target.value })}
+    />
+  </div>
+
+  <div className="space-y-2">
+    <Label htmlFor="cap">CAP</Label>
+    <Input
+      id="cap"
+      value={formData.cap}
+      onChange={(e) => setFormData({ ...formData, cap: e.target.value })}
+    />
+  </div>
+
+  <div className="space-y-2">
+    <Label htmlFor="citta">Città</Label>
+    <Input
+      id="citta"
+      value={formData.citta}
+      onChange={(e) => setFormData({ ...formData, citta: e.target.value })}
+    />
+  </div>
+
+  <div className="space-y-2">
+    <Label htmlFor="provincia">Provincia</Label>
+    <Input
+      id="provincia"
+      value={formData.provincia}
+      onChange={(e) =>
+        setFormData({ ...formData, provincia: e.target.value })
+      }
+    />
+  </div>
+</div>
+
                   <div className="space-y-2">
                     <Label htmlFor="note">Note</Label>
                     <Textarea
@@ -1125,6 +1219,39 @@ const clienti = (c.clienti_collegati || [])
                       rows={3}
                     />
                   </div>
+
+                  <div className="rounded-lg border bg-gray-50 p-4">
+  <h3 className="mb-3 text-sm font-semibold text-gray-800">
+    Flag operativi
+  </h3>
+
+  <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+    {[
+      ["riceve_comunicazioni", "Riceve comunicazioni"],
+      ["riceve_scadenze", "Riceve scadenze"],
+      ["riceve_newsletter", "Riceve newsletter"],
+      ["referente_fiscale", "Referente fiscale"],
+      ["referente_payroll", "Referente payroll"],
+      ["referente_consulenza", "Referente consulenza"],
+      ["referente_amministrativo", "Referente amministrativo"],
+      ["attivo", "Contatto attivo"],
+    ].map(([key, label]) => (
+      <label key={key} className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={(formData as any)[key]}
+          onChange={(e) =>
+            setFormData({
+              ...formData,
+              [key]: e.target.checked,
+            } as FormDataState)
+          }
+        />
+        {label}
+      </label>
+    ))}
+  </div>
+</div>
 
                   <div className="mt-4 flex flex-col gap-3 border-t pt-4 sm:flex-row">
                     <Button
