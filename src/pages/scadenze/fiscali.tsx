@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/lib/supabase/client";
+import { emailService } from "@/services/emailService";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -398,7 +399,7 @@ const chiudiInvioEmail = () => {
   setF24File(null);
 };
 
- const inviaEmailFiscali = async () => {
+const inviaEmailFiscali = async () => {
   try {
     if (!emailModal.scadenza || !emailModal.tipo || !emailDestinatario) {
       toast({
@@ -420,28 +421,105 @@ const chiudiInvioEmail = () => {
 
     setEmailModal((prev) => ({ ...prev, sending: true }));
 
-    const formData = new FormData();
+    const scadenza = emailModal.scadenza;
 
-    formData.append("modulo", "fiscali");
-    formData.append("scadenza_id", emailModal.scadenza.id);
-    formData.append("tipo", emailModal.tipo);
-    formData.append("email", emailDestinatario);
-    formData.append("f24", f24File);
+    const templateCode =
+      emailModal.tipo === "saldo_primo_acconto_cciaa"
+        ? "FISCALI_SALDO_PRIMO_ACCONTO_CCIAA"
+        : "FISCALI_SECONDO_ACCONTO";
 
-    const response = await fetch("/api/scadenze/comunicazioni/invia", {
-      method: "POST",
-      body: formData,
+    const { data: template, error: templateError } = await (supabase as any)
+      .from("tbemail_template")
+      .select("oggetto, corpo")
+      .eq("codice", templateCode)
+      .eq("attivo", true)
+      .maybeSingle();
+
+    if (templateError) throw templateError;
+    if (!template) throw new Error(`Template ${templateCode} non trovato`);
+
+    const { data: tipoScadenza } = await supabase
+      .from("tbtipi_scadenze" as any)
+      .select("data_scadenza")
+      .eq("tipo_scadenza", "fiscale")
+      .eq("attivo", true)
+      .maybeSingle();
+
+    const vars: Record<string, string> = {
+      CLIENTE: scadenza.nominativo || "Cliente",
+      ANNO: String(scadenza.anno_riferimento || new Date().getFullYear()),
+      DATA_SCADENZA: tipoScadenza?.data_scadenza
+        ? new Date(tipoScadenza.data_scadenza).toLocaleDateString("it-IT")
+        : "",
+      TIPO_FISCALE:
+        emailModal.tipo === "saldo_primo_acconto_cciaa"
+          ? "Saldo / 1° acconto / CCIAA"
+          : "2° acconto",
+    };
+
+    const replaceVars = (text: string) => {
+      let output = text || "";
+      Object.entries(vars).forEach(([key, value]) => {
+        output = output.replaceAll(`[${key}]`, value || "");
+      });
+      return output;
+    };
+
+    const oggetto = replaceVars(template.oggetto);
+    const messaggio = replaceVars(template.corpo);
+
+    const safeName = f24File.name.replace(/[^\w.\-]+/g, "_");
+    const fileName = `${Date.now()}_${safeName}`;
+    const filePath = `comunicazioni/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("messaggi-allegati")
+      .upload(filePath, f24File);
+
+    if (uploadError) throw uploadError;
+
+    const allegati = [
+      {
+        nome: f24File.name,
+        tipo: f24File.type || "application/pdf",
+        dimensione: f24File.size,
+        bucket: "messaggi-allegati",
+        path: filePath,
+      },
+    ];
+
+    const emailResult = await emailService.sendComunicazioneEmail({
+      tipo: "singola",
+      destinatarioId: scadenza.cliente_id || "",
+      destinatarioEmail: emailDestinatario,
+      oggetto,
+      messaggio,
+      allegati,
     });
 
-    const result = await response.json().catch(() => null);
-
-    if (!response.ok) {
-      throw new Error(
-        result?.error ||
-          result?.message ||
-          "Errore durante l'invio della comunicazione"
-      );
+    if (!emailResult?.success) {
+      throw new Error(emailResult?.error || "Errore invio email");
     }
+
+    const today = new Date().toISOString().slice(0, 10);
+
+    const updatePayload =
+      emailModal.tipo === "saldo_primo_acconto_cciaa"
+        ? {
+            conferma_ires_saldo_acconto: true,
+            data_com1: today,
+          }
+        : {
+            conferma_ires_secondo_acconto: true,
+            data_com2: today,
+          };
+
+    const { error: updateError } = await supabase
+      .from("tbscadfiscali" as any)
+      .update(updatePayload)
+      .eq("id", scadenza.id);
+
+    if (updateError) throw updateError;
 
     toast({
       title: "Email inviata",
@@ -456,7 +534,7 @@ const chiudiInvioEmail = () => {
       description: error.message,
       variant: "destructive",
     });
-
+  } finally {
     setEmailModal((prev) => ({ ...prev, sending: false }));
   }
 };
