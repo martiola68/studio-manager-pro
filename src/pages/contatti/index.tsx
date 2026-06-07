@@ -420,7 +420,7 @@ const clienti = (c.clienti_collegati || [])
     setDialogOpen(true);
   };
 
-  const handleEdit = async (contatto: Contatto) => {
+const handleEdit = async (contatto: Contatto) => {
     if (encryptionEnabled && isEncryptionLocked()) {
       masterPasswordGate.requireUnlock(async () => {
         await loadContatti();
@@ -438,6 +438,92 @@ const clienti = (c.clienti_collegati || [])
 
     openEditDialog(contatto);
   };
+
+  const handleCollegaCliente = async () => {
+    if (!editingContatto?.id) {
+      toast({
+        title: "Attenzione",
+        description: "Salva prima il contatto, poi collega i clienti.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!clienteDaCollegare) {
+      toast({
+        title: "Attenzione",
+        description: "Seleziona un cliente da collegare.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await contattoService.collegaCliente({
+        studio_id: studioId,
+        contatto_id: editingContatto.id,
+        cliente_id: clienteDaCollegare,
+        ruolo: ruoloCliente || null,
+        principale: false,
+        riceve_comunicazioni: true,
+        riceve_scadenze: true,
+      });
+
+      toast({
+        title: "Successo",
+        description: "Cliente collegato al contatto.",
+      });
+
+      setClienteDaCollegare("");
+      setRuoloCliente("");
+
+      const aggiornato = await contattoService.getContattoConClientiById(
+        editingContatto.id
+      );
+
+      setEditingContatto(aggiornato);
+      openEditDialog(aggiornato);
+      await loadContatti();
+    } catch (error) {
+      console.error("Errore collegamento cliente:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile collegare il cliente.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEliminaCollegamentoCliente = async (relazioneId: string) => {
+    if (!editingContatto?.id) return;
+
+    try {
+      await contattoService.eliminaCollegamentoCliente(relazioneId);
+
+      toast({
+        title: "Successo",
+        description: "Collegamento eliminato.",
+      });
+
+      const aggiornato = await contattoService.getContattoConClientiById(
+        editingContatto.id
+      );
+
+      setEditingContatto(aggiornato);
+      openEditDialog(aggiornato);
+      await loadContatti();
+    } catch (error) {
+      console.error("Errore eliminazione collegamento:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile eliminare il collegamento.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const clientiCollegatiCorrenti =
+    editingContatto?.clienti_collegati || [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
