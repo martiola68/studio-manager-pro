@@ -1,9 +1,18 @@
 import { supabase } from "@/lib/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 
+const db = supabase as any;
+
 export type Contatto = Database["public"]["Tables"]["tbcontatti"]["Row"];
 export type ContattoInsert = Database["public"]["Tables"]["tbcontatti"]["Insert"];
 export type ContattoUpdate = Database["public"]["Tables"]["tbcontatti"]["Update"];
+
+export type ClienteMinimo = {
+  id: string;
+  ragione_sociale: string | null;
+  codice_fiscale?: string | null;
+  partita_iva?: string | null;
+};
 
 export type ContattoCliente = {
   id: string;
@@ -21,12 +30,7 @@ export type ContattoCliente = {
   note: string | null;
   created_at: string | null;
   updated_at: string | null;
-  cliente?: {
-    id: string;
-    ragione_sociale: string | null;
-    codice_fiscale?: string | null;
-    partita_iva?: string | null;
-  } | null;
+  cliente?: ClienteMinimo | null;
 };
 
 export type ContattoConClienti = Contatto & {
@@ -48,6 +52,44 @@ export type CollegamentoClienteInput = {
   note?: string | null;
 };
 
+const caricaClientiById = async (
+  clienteIds: string[]
+): Promise<Record<string, ClienteMinimo>> => {
+  const ids = Array.from(new Set(clienteIds.filter(Boolean)));
+
+  if (ids.length === 0) return {};
+
+  const { data, error } = await supabase
+    .from("tbclienti")
+    .select("id, ragione_sociale, codice_fiscale, partita_iva")
+    .in("id", ids);
+
+  if (error) throw error;
+
+  return Object.fromEntries(
+    (data || []).map((cliente: any) => [cliente.id, cliente])
+  );
+};
+
+const caricaContattiById = async (
+  contattoIds: string[]
+): Promise<Record<string, Contatto>> => {
+  const ids = Array.from(new Set(contattoIds.filter(Boolean)));
+
+  if (ids.length === 0) return {};
+
+  const { data, error } = await supabase
+    .from("tbcontatti")
+    .select("*")
+    .in("id", ids);
+
+  if (error) throw error;
+
+  return Object.fromEntries(
+    (data || []).map((contatto: any) => [contatto.id, contatto])
+  );
+};
+
 export const contattoService = {
   async getContatti(studioId?: string | null): Promise<Contatto[]> {
     let query = supabase
@@ -65,73 +107,56 @@ export const contattoService = {
     return data || [];
   },
 
- async getContattiConClienti(
-  studioId?: string | null
-): Promise<ContattoConClienti[]> {
-  let contattiQuery = supabase
-    .from("tbcontatti")
-    .select("*")
-    .order("cognome", { ascending: true });
+  async getContattiConClienti(
+    studioId?: string | null
+  ): Promise<ContattoConClienti[]> {
+    let contattiQuery = supabase
+      .from("tbcontatti")
+      .select("*")
+      .order("cognome", { ascending: true });
 
-  if (studioId) {
-    contattiQuery = contattiQuery.eq("studio_id", studioId);
-  }
-
-  const { data: contatti, error: contattiError } = await contattiQuery;
-
-  if (contattiError) throw contattiError;
-
-  let relazioniQuery = supabase
-    .from("tbcontatti_clienti")
-    .select("*");
-
-  if (studioId) {
-    relazioniQuery = relazioniQuery.eq("studio_id", studioId);
-  }
-
-  const { data: relazioni, error: relazioniError } = await relazioniQuery;
-
-  if (relazioniError) throw relazioniError;
-
-  const clienteIds = Array.from(
-    new Set((relazioni || []).map((r: any) => r.cliente_id).filter(Boolean))
-  );
-
-  let clientiById: Record<string, any> = {};
-
-  if (clienteIds.length > 0) {
-    const { data: clienti, error: clientiError } = await supabase
-      .from("tbclienti")
-      .select("id, ragione_sociale, codice_fiscale, partita_iva")
-      .in("id", clienteIds);
-
-    if (clientiError) throw clientiError;
-
-    clientiById = Object.fromEntries(
-      (clienti || []).map((cliente: any) => [cliente.id, cliente])
-    );
-  }
-
-  const relazioniByContatto: Record<string, ContattoCliente[]> = {};
-
-  (relazioni || []).forEach((relazione: any) => {
-    const item = {
-      ...relazione,
-      cliente: clientiById[relazione.cliente_id] || null,
-    } as ContattoCliente;
-
-    if (!relazioniByContatto[relazione.contatto_id]) {
-      relazioniByContatto[relazione.contatto_id] = [];
+    if (studioId) {
+      contattiQuery = contattiQuery.eq("studio_id", studioId);
     }
 
-    relazioniByContatto[relazione.contatto_id].push(item);
-  });
+    const { data: contatti, error: contattiError } = await contattiQuery;
 
-  return (contatti || []).map((contatto: any) => ({
-    ...contatto,
-    clienti_collegati: relazioniByContatto[contatto.id] || [],
-  })) as ContattoConClienti[];
-},
+    if (contattiError) throw contattiError;
+
+    let relazioniQuery = db.from("tbcontatti_clienti").select("*");
+
+    if (studioId) {
+      relazioniQuery = relazioniQuery.eq("studio_id", studioId);
+    }
+
+    const { data: relazioni, error: relazioniError } = await relazioniQuery;
+
+    if (relazioniError) throw relazioniError;
+
+    const clientiById = await caricaClientiById(
+      (relazioni || []).map((r: any) => r.cliente_id)
+    );
+
+    const relazioniByContatto: Record<string, ContattoCliente[]> = {};
+
+    (relazioni || []).forEach((relazione: any) => {
+      const item: ContattoCliente = {
+        ...relazione,
+        cliente: clientiById[relazione.cliente_id] || null,
+      };
+
+      if (!relazioniByContatto[relazione.contatto_id]) {
+        relazioniByContatto[relazione.contatto_id] = [];
+      }
+
+      relazioniByContatto[relazione.contatto_id].push(item);
+    });
+
+    return (contatti || []).map((contatto: any) => ({
+      ...contatto,
+      clienti_collegati: relazioniByContatto[contatto.id] || [],
+    }));
+  },
 
   async getContattoById(id: string): Promise<Contatto> {
     const { data, error } = await supabase
@@ -145,41 +170,13 @@ export const contattoService = {
   },
 
   async getContattoConClientiById(id: string): Promise<ContattoConClienti> {
-    const { data, error } = await supabase
-      .from("tbcontatti")
-      .select(
-        `
-        *,
-        clienti_collegati:tbcontatti_clienti(
-          id,
-          studio_id,
-          contatto_id,
-          cliente_id,
-          ruolo,
-          principale,
-          riceve_comunicazioni,
-          riceve_scadenze,
-          referente_fiscale,
-          referente_payroll,
-          referente_consulenza,
-          referente_amministrativo,
-          note,
-          created_at,
-          updated_at,
-          cliente:tbclienti(
-            id,
-            ragione_sociale,
-            codice_fiscale,
-            partita_iva
-          )
-        )
-      `
-      )
-      .eq("id", id)
-      .single();
+    const contatto = await this.getContattoById(id);
+    const clienti_collegati = await this.getClientiCollegati(id);
 
-    if (error) throw error;
-   return data as unknown as ContattoConClienti;
+    return {
+      ...contatto,
+      clienti_collegati,
+    };
   },
 
   async createContatto(contatto: ContattoInsert): Promise<Contatto> {
@@ -192,7 +189,7 @@ export const contattoService = {
     const { data, error } = await supabase
       .from("tbcontatti")
       .insert(validContatto)
-      .select()
+      .select("*")
       .single();
 
     if (error) throw error;
@@ -217,10 +214,7 @@ export const contattoService = {
   },
 
   async deleteContatto(id: string): Promise<void> {
-    const { error } = await supabase
-      .from("tbcontatti")
-      .delete()
-      .eq("id", id);
+    const { error } = await supabase.from("tbcontatti").delete().eq("id", id);
 
     if (error) throw error;
   },
@@ -250,24 +244,22 @@ export const contattoService = {
   },
 
   async getClientiCollegati(contattoId: string): Promise<ContattoCliente[]> {
-    const { data, error } = await supabase
+    const { data: relazioni, error } = await db
       .from("tbcontatti_clienti")
-      .select(
-        `
-        *,
-        cliente:tbclienti(
-          id,
-          ragione_sociale,
-          codice_fiscale,
-          partita_iva
-        )
-      `
-      )
+      .select("*")
       .eq("contatto_id", contattoId)
       .order("principale", { ascending: false });
 
     if (error) throw error;
-    return (data || []) as ContattoCliente[];
+
+    const clientiById = await caricaClientiById(
+      (relazioni || []).map((r: any) => r.cliente_id)
+    );
+
+    return (relazioni || []).map((relazione: any) => ({
+      ...relazione,
+      cliente: clientiById[relazione.cliente_id] || null,
+    }));
   },
 
   async getContattiByCliente(
@@ -279,57 +271,66 @@ export const contattoService = {
       soloReferentiAmministrativi?: boolean;
     }
   ): Promise<ContattoConClienti[]> {
-    let relQuery = supabase
+    let query = db
       .from("tbcontatti_clienti")
-      .select(
-        `
-        *,
-        contatto:tbcontatti(*)
-      `
-      )
+      .select("*")
       .eq("cliente_id", clienteId);
 
     if (options?.soloComunicazioni) {
-      relQuery = relQuery.eq("riceve_comunicazioni", true);
+      query = query.eq("riceve_comunicazioni", true);
     }
 
     if (options?.soloScadenze) {
-      relQuery = relQuery.eq("riceve_scadenze", true);
+      query = query.eq("riceve_scadenze", true);
     }
 
     if (options?.soloReferentiFiscali) {
-      relQuery = relQuery.eq("referente_fiscale", true);
+      query = query.eq("referente_fiscale", true);
     }
 
     if (options?.soloReferentiAmministrativi) {
-      relQuery = relQuery.eq("referente_amministrativo", true);
+      query = query.eq("referente_amministrativo", true);
     }
 
-    const { data, error } = await relQuery.order("principale", {
+    const { data: relazioni, error } = await query.order("principale", {
       ascending: false,
     });
 
     if (error) throw error;
 
-    return (data || [])
-      .map((row: any) => ({
-        ...(row.contatto || {}),
-        clienti_collegati: [row],
-      }))
-      .filter((c: any) => c?.id) as ContattoConClienti[];
+    const contattiById = await caricaContattiById(
+      (relazioni || []).map((r: any) => r.contatto_id)
+    );
+
+    const clientiById = await caricaClientiById(
+      (relazioni || []).map((r: any) => r.cliente_id)
+    );
+
+    return (relazioni || [])
+      .map((relazione: any) => {
+        const contatto = contattiById[relazione.contatto_id];
+
+        if (!contatto) return null;
+
+        return {
+          ...contatto,
+          clienti_collegati: [
+            {
+              ...relazione,
+              cliente: clientiById[relazione.cliente_id] || null,
+            },
+          ],
+        };
+      })
+      .filter(Boolean) as ContattoConClienti[];
   },
 
   async getDestinatariScadenzeCliente(
     clienteId: string
   ): Promise<ContattoConClienti[]> {
-    const { data, error } = await supabase
+    const { data: relazioni, error } = await db
       .from("tbcontatti_clienti")
-      .select(
-        `
-        *,
-        contatto:tbcontatti(*)
-      `
-      )
+      .select("*")
       .eq("cliente_id", clienteId)
       .eq("riceve_scadenze", true)
       .or("referente_fiscale.eq.true,referente_amministrativo.eq.true")
@@ -339,12 +340,31 @@ export const contattoService = {
 
     if (error) throw error;
 
-    return (data || [])
-      .map((row: any) => ({
-        ...(row.contatto || {}),
-        clienti_collegati: [row],
-      }))
-      .filter((c: any) => c?.id) as ContattoConClienti[];
+    const contattiById = await caricaContattiById(
+      (relazioni || []).map((r: any) => r.contatto_id)
+    );
+
+    const clientiById = await caricaClientiById(
+      (relazioni || []).map((r: any) => r.cliente_id)
+    );
+
+    return (relazioni || [])
+      .map((relazione: any) => {
+        const contatto = contattiById[relazione.contatto_id];
+
+        if (!contatto) return null;
+
+        return {
+          ...contatto,
+          clienti_collegati: [
+            {
+              ...relazione,
+              cliente: clientiById[relazione.cliente_id] || null,
+            },
+          ],
+        };
+      })
+      .filter(Boolean) as ContattoConClienti[];
   },
 
   async collegaCliente(input: CollegamentoClienteInput): Promise<ContattoCliente> {
@@ -363,24 +383,20 @@ export const contattoService = {
       note: input.note || null,
     };
 
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from("tbcontatti_clienti")
       .insert(payload)
-      .select(
-        `
-        *,
-        cliente:tbclienti(
-          id,
-          ragione_sociale,
-          codice_fiscale,
-          partita_iva
-        )
-      `
-      )
+      .select("*")
       .single();
 
     if (error) throw error;
-    return data as ContattoCliente;
+
+    const clientiById = await caricaClientiById([data.cliente_id]);
+
+    return {
+      ...data,
+      cliente: clientiById[data.cliente_id] || null,
+    };
   },
 
   async aggiornaCollegamentoCliente(
@@ -392,29 +408,25 @@ export const contattoService = {
     delete payload.id;
     delete payload.contatto_id;
 
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from("tbcontatti_clienti")
       .update(payload)
       .eq("id", id)
-      .select(
-        `
-        *,
-        cliente:tbclienti(
-          id,
-          ragione_sociale,
-          codice_fiscale,
-          partita_iva
-        )
-      `
-      )
+      .select("*")
       .single();
 
     if (error) throw error;
-    return data as ContattoCliente;
+
+    const clientiById = await caricaClientiById([data.cliente_id]);
+
+    return {
+      ...data,
+      cliente: clientiById[data.cliente_id] || null,
+    };
   },
 
   async eliminaCollegamentoCliente(id: string): Promise<void> {
-    const { error } = await supabase
+    const { error } = await db
       .from("tbcontatti_clienti")
       .delete()
       .eq("id", id);
@@ -426,7 +438,11 @@ export const contattoService = {
     queryText: string,
     studioId?: string | null
   ): Promise<Contatto[]> {
-    const query = `%${queryText.trim()}%`;
+    const q = queryText.trim();
+
+    if (!q) return this.getContatti(studioId);
+
+    const query = `%${q}%`;
 
     let request = supabase
       .from("tbcontatti")
@@ -435,7 +451,6 @@ export const contattoService = {
         [
           `nome.ilike.${query}`,
           `cognome.ilike.${query}`,
-          `ragione_sociale.ilike.${query}`,
           `email.ilike.${query}`,
           `email_secondaria.ilike.${query}`,
           `pec.ilike.${query}`,
