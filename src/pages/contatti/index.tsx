@@ -45,11 +45,16 @@ import {
 import { useMasterPasswordGate } from "@/hooks/useMasterPasswordGate";
 import { MasterPasswordDialog } from "@/components/security/MasterPasswordDialog";
 
-type Contatto = Database["public"]["Tables"]["tbcontatti"]["Row"];
+import type { ContattoConClienti } from "@/services/contattoService";
+
+type Contatto = ContattoConClienti;
 
 type FormDataState = {
   cognome: string;
   nome: string;
+  ragione_sociale: string;
+  ruolo: string;
+  qualifica: string;
   cell: string;
   tel: string;
   altro_telefono: string;
@@ -58,12 +63,28 @@ type FormDataState = {
   email_secondaria: string;
   email_altro: string;
   contatto_principale: string;
+  via: string;
+  cap: string;
+  citta: string;
+  provincia: string;
+  nazione: string;
+  riceve_comunicazioni: boolean;
+  riceve_scadenze: boolean;
+  riceve_newsletter: boolean;
+  referente_fiscale: boolean;
+  referente_payroll: boolean;
+  referente_consulenza: boolean;
+  referente_amministrativo: boolean;
+  attivo: boolean;
   note: string;
 };
 
 const initialFormData: FormDataState = {
   cognome: "",
   nome: "",
+  ragione_sociale: "",
+  ruolo: "",
+  qualifica: "",
   cell: "",
   tel: "",
   altro_telefono: "",
@@ -72,6 +93,19 @@ const initialFormData: FormDataState = {
   email_secondaria: "",
   email_altro: "",
   contatto_principale: "",
+  via: "",
+  cap: "",
+  citta: "",
+  provincia: "",
+  nazione: "Italia",
+  riceve_comunicazioni: true,
+  riceve_scadenze: true,
+  riceve_newsletter: false,
+  referente_fiscale: false,
+  referente_payroll: false,
+  referente_consulenza: false,
+  referente_amministrativo: false,
+  attivo: true,
   note: "",
 };
 
@@ -280,12 +314,22 @@ const visibleLetters = letterFilter
         const email = (c.email || "").toLowerCase();
         const cell = (c.cell || "").toLowerCase();
 
-        return (
-          cognome.includes(query) ||
-          nome.includes(query) ||
-          email.includes(query) ||
-          cell.includes(query)
-        );
+        const ragioneSociale = ((c as any).ragione_sociale || "").toLowerCase();
+const ruolo = ((c as any).ruolo || "").toLowerCase();
+const clienti = (c.clienti_collegati || [])
+  .map((rel) => rel.cliente?.ragione_sociale || "")
+  .join(" ")
+  .toLowerCase();
+
+       return (
+  cognome.includes(query) ||
+  nome.includes(query) ||
+  ragioneSociale.includes(query) ||
+  ruolo.includes(query) ||
+  email.includes(query) ||
+  cell.includes(query) ||
+  clienti.includes(query)
+);
       });
     }
 
@@ -310,19 +354,35 @@ const visibleLetters = letterFilter
 
   const openEditDialog = (contatto: Contatto) => {
     setEditingContatto(contatto);
-    setFormData({
-      cognome: contatto.cognome || "",
-      nome: contatto.nome || "",
-      cell: contatto.cell || "",
-      tel: contatto.tel || "",
-      altro_telefono: contatto.altro_telefono || "",
-      email: contatto.email || "",
-      pec: contatto.pec || "",
-      email_secondaria: contatto.email_secondaria || "",
-      email_altro: contatto.email_altro || "",
-      contatto_principale: contatto.contatto_principale || "",
-      note: contatto.note || "",
-    });
+   setFormData({
+  cognome: contatto.cognome || "",
+  nome: contatto.nome || "",
+  ragione_sociale: (contatto as any).ragione_sociale || "",
+  ruolo: (contatto as any).ruolo || "",
+  qualifica: (contatto as any).qualifica || "",
+  cell: contatto.cell || "",
+  tel: contatto.tel || "",
+  altro_telefono: contatto.altro_telefono || "",
+  email: contatto.email || "",
+  pec: contatto.pec || "",
+  email_secondaria: contatto.email_secondaria || "",
+  email_altro: contatto.email_altro || "",
+  contatto_principale: contatto.contatto_principale || "",
+  via: (contatto as any).via || "",
+  cap: (contatto as any).cap || "",
+  citta: (contatto as any).citta || "",
+  provincia: (contatto as any).provincia || "",
+  nazione: (contatto as any).nazione || "Italia",
+  riceve_comunicazioni: (contatto as any).riceve_comunicazioni ?? true,
+  riceve_scadenze: (contatto as any).riceve_scadenze ?? true,
+  riceve_newsletter: (contatto as any).riceve_newsletter ?? false,
+  referente_fiscale: (contatto as any).referente_fiscale ?? false,
+  referente_payroll: (contatto as any).referente_payroll ?? false,
+  referente_consulenza: (contatto as any).referente_consulenza ?? false,
+  referente_amministrativo: (contatto as any).referente_amministrativo ?? false,
+  attivo: (contatto as any).attivo ?? true,
+  note: contatto.note || "",
+});
     setDialogOpen(true);
   };
 
@@ -350,19 +410,35 @@ const visibleLetters = letterFilter
 
     const run = async () => {
       try {
-        let dataToSave: any = {
-          cognome: formData.cognome,
-          nome: formData.nome || "",
-          cell: formData.cell || null,
-          tel: formData.tel || null,
-          altro_telefono: formData.altro_telefono || null,
-          email: formData.email || null,
-          pec: formData.pec || null,
-          email_secondaria: formData.email_secondaria || null,
-          email_altro: formData.email_altro || null,
-          contatto_principale: formData.contatto_principale || null,
-          note: formData.note || null,
-        };
+       let dataToSave: any = {
+  cognome: formData.cognome,
+  nome: formData.nome || "",
+  ragione_sociale: formData.ragione_sociale || null,
+  ruolo: formData.ruolo || null,
+  qualifica: formData.qualifica || null,
+  cell: formData.cell || null,
+  tel: formData.tel || null,
+  altro_telefono: formData.altro_telefono || null,
+  email: formData.email || null,
+  pec: formData.pec || null,
+  email_secondaria: formData.email_secondaria || null,
+  email_altro: formData.email_altro || null,
+  contatto_principale: formData.contatto_principale || null,
+  via: formData.via || null,
+  cap: formData.cap || null,
+  citta: formData.citta || null,
+  provincia: formData.provincia || null,
+  nazione: formData.nazione || "Italia",
+  riceve_comunicazioni: formData.riceve_comunicazioni,
+  riceve_scadenze: formData.riceve_scadenze,
+  riceve_newsletter: formData.riceve_newsletter,
+  referente_fiscale: formData.referente_fiscale,
+  referente_payroll: formData.referente_payroll,
+  referente_consulenza: formData.referente_consulenza,
+  referente_amministrativo: formData.referente_amministrativo,
+  attivo: formData.attivo,
+  note: formData.note || null,
+};
 
         if (encryptionEnabled) {
           const encrypted = await encryptContattoSensitiveData({
