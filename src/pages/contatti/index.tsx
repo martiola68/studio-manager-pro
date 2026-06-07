@@ -1542,11 +1542,11 @@ await loadContatti();
     </Card>
   ) : (
     visibleLetters.map((letter) => (
-      <Card key={letter} className="overflow-hidden border-2 border-green-100 shadow-sm">
-        <CardHeader className="bg-green-600 py-3 text-white">
+      <Card key={letter} className="overflow-hidden border-2 border-blue-100 shadow-sm">
+       <CardHeader className="bg-blue-600 py-3 text-white">
           <CardTitle className="flex items-center justify-between text-xl">
             <span>Lettera {letter}</span>
-            <span className="rounded-full bg-white/20 px-3 py-1 text-sm">
+          <span className="rounded-full bg-blue-500 px-3 py-1 text-sm font-semibold text-white">
               {(groupedContatti[letter] || []).length} contatti
             </span>
           </CardTitle>
@@ -1556,17 +1556,17 @@ await loadContatti();
           {(groupedContatti[letter] || []).map((contatto) => (
             <div
               key={contatto.id}
-              className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-green-50"
+             className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-blue-50"
             >
               <div className="min-w-0 flex-1">
-                <div className="text-base font-bold text-gray-900">
+                <div className="text-xl font-bold text-gray-900">
                   {contatto.cognome} {contatto.nome}
                 </div>
 
-                <div className="mt-1 grid grid-cols-1 gap-2 text-sm text-gray-600 md:grid-cols-3">
+              <div className="mt-2 grid grid-cols-1 gap-3 text-base text-gray-700 md:grid-cols-3">
                   {contatto.email && (
                     <a href={`mailto:${contatto.email}`} className="flex items-center gap-2 truncate hover:text-blue-600">
-                      <Mail className="h-4 w-4 text-gray-400" />
+                     <Mail className="h-5 w-5 text-blue-600" />
                       <span className="truncate">{contatto.email}</span>
                     </a>
                   )}
@@ -1580,7 +1580,7 @@ await loadContatti();
 
                   {contatto.cell && (
                     <a href={`tel:${contatto.cell}`} className="flex items-center gap-2 hover:text-green-600">
-                      <Smartphone className="h-4 w-4 text-gray-400" />
+                      <Smartphone className="h-5 w-5 text-blue-600" />
                       <span>{contatto.cell}</span>
                     </a>
                   )}
@@ -1598,9 +1598,9 @@ await loadContatti();
     {contatto.clienti_collegati.map((rel) => (
 <div
   key={rel.id}
-  className="flex flex-wrap items-center gap-4 rounded-md bg-blue-50 px-4 py-3 text-base text-blue-900 border border-blue-200"
+ className="flex flex-wrap items-center gap-5 rounded-md border border-blue-300 bg-blue-50 px-4 py-3 text-lg text-blue-900"
 >
-        <span className="flex items-center font-semibold text-base text-blue-900">
+        <span className="flex items-center font-bold text-lg text-blue-900">
           <Building2 className="mr-1 h-3 w-3" />
           {rel.cliente?.ragione_sociale || "Cliente collegato"}
           {rel.ruolo ? ` - ${rel.ruolo}` : ""}
