@@ -611,7 +611,7 @@ const dataScadenzaMaggiorata =
     ? new Date(
         dataScadenza.getFullYear(),
         dataScadenza.getMonth(),
-        dataScadenza.getDate() + 30
+        dataScadenza.getDate() + 31
       )
     : null;
 
