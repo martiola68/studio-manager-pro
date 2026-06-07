@@ -584,17 +584,27 @@ const handleEdit = async (contatto: Contatto) => {
             title: "Successo",
             description: "Contatto aggiornato con successo",
           });
-        } else {
-          await contattoService.createContatto(dataToSave);
-          toast({
-            title: "Successo",
-            description: "Contatto creato con successo",
-          });
-        }
+       } else {
+  const nuovoContatto = await contattoService.createContatto(dataToSave);
 
-        setDialogOpen(false);
-        resetForm();
-        await loadContatti();
+  toast({
+    title: "Successo",
+    description: "Contatto creato con successo. Ora puoi collegare i clienti.",
+  });
+
+  const nuovoCompleto = await contattoService.getContattoConClientiById(
+    nuovoContatto.id
+  );
+
+  setEditingContatto(nuovoCompleto);
+  openEditDialog(nuovoCompleto);
+  await loadContatti();
+  return;
+}
+
+setDialogOpen(false);
+resetForm();
+await loadContatti();
       } catch (error) {
         console.error("Errore salvataggio:", error);
         toast({
