@@ -1372,6 +1372,83 @@ const handleEdit = async (contatto: Contatto) => {
     ))}
   </div>
 </div>
+                  {editingContatto && (
+  <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+    <div className="mb-3 flex items-center gap-2">
+      <Building2 className="h-5 w-5 text-blue-700" />
+      <h3 className="text-sm font-semibold text-blue-900">
+        Clienti collegati
+      </h3>
+    </div>
+
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+      <select
+        value={clienteDaCollegare}
+        onChange={(e) => setClienteDaCollegare(e.target.value)}
+        className="h-10 rounded-md border border-gray-300 bg-white px-3 text-sm"
+      >
+        <option value="">Seleziona cliente</option>
+        {clienti.map((cliente) => (
+          <option key={cliente.id} value={cliente.id}>
+            {cliente.ragione_sociale || "Cliente senza nome"}
+          </option>
+        ))}
+      </select>
+
+      <Input
+        value={ruoloCliente}
+        onChange={(e) => setRuoloCliente(e.target.value)}
+        placeholder="Ruolo per questo cliente"
+      />
+
+      <Button
+        type="button"
+        onClick={() => void handleCollegaCliente()}
+        className="bg-blue-600 hover:bg-blue-700"
+      >
+        <Link2 className="mr-2 h-4 w-4" />
+        Collega
+      </Button>
+    </div>
+
+    <div className="mt-4 space-y-2">
+      {clientiCollegatiCorrenti.length === 0 ? (
+        <p className="text-sm text-blue-800">
+          Nessun cliente collegato a questo contatto.
+        </p>
+      ) : (
+        clientiCollegatiCorrenti.map((rel) => (
+          <div
+            key={rel.id}
+            className="flex items-center justify-between rounded-md bg-white px-3 py-2 text-sm shadow-sm"
+          >
+            <div>
+              <div className="font-semibold text-gray-900">
+                {rel.cliente?.ragione_sociale || "Cliente"}
+              </div>
+              {rel.ruolo && (
+                <div className="text-xs text-gray-500">
+                  Ruolo: {rel.ruolo}
+                </div>
+              )}
+            </div>
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => void handleEliminaCollegamentoCliente(rel.id)}
+              className="text-red-600 hover:bg-red-50 hover:text-red-700"
+              title="Rimuovi collegamento"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        ))
+      )}
+    </div>
+  </div>
+)}
 
                   <div className="mt-4 flex flex-col gap-3 border-t pt-4 sm:flex-row">
                     <Button
