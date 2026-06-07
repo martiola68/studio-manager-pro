@@ -1220,13 +1220,25 @@ const vars: Record<string, string> = {
                       </td>
 
                      <td className="p-2 align-middle min-w-[120px]">
- <Select
-  value={scadenza.tipo_redditi || undefined}
-  onValueChange={(value) =>
-    handleUpdateTipoRedditiCliente(scadenza, value)
-  }
->
-    ...
+<td className="p-2 align-middle min-w-[120px]">
+  <Select
+    value={scadenza.tipo_redditi || undefined}
+    onValueChange={(value) =>
+      handleUpdateTipoRedditiCliente(scadenza, value)
+    }
+  >
+    <SelectTrigger className="w-full">
+      <SelectValue placeholder="Tipo" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="USC">USC</SelectItem>
+      <SelectItem value="USP">USP</SelectItem>
+      <SelectItem value="ENC">ENC</SelectItem>
+      <SelectItem value="UPF FORF.">UPF FORF.</SelectItem>
+      <SelectItem value="UPF ORD.">UPF ORD.</SelectItem>
+      <SelectItem value="UPF BASE">UPF BASE</SelectItem>
+      <SelectItem value="730">730</SelectItem>
+    </SelectContent>
   </Select>
 </td>
 
