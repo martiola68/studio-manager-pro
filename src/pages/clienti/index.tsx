@@ -69,15 +69,25 @@ import {
 /** =========
  *  Supabase DB Types
  *  ========= */
-type ClienteRow = Database["public"]["Tables"]["tbclienti"]["Row"] & {
+type ClienteRow =
+Database["public"]["Tables"]["tbclienti"]["Row"] & {
+  telefono?: string | null;
+  pec?: string | null;
+};
   rapp_legale_id?: string | null;
 };
 
-type ClienteInsert = Database["public"]["Tables"]["tbclienti"]["Insert"] & {
+type ClienteInsert = Database["public"]["Tables"]["tbclienti"]["Row"] & {
+  telefono?: string | null;
+  pec?: string | null;
+};
   rapp_legale_id?: string | null;
 };
 
-type ClienteUpdate = Database["public"]["Tables"]["tbclienti"]["Update"] & {
+type ClienteUpdate = Database["public"]["Tables"]["tbclienti"]["Row"] & {
+  telefono?: string | null;
+  pec?: string | null;
+};
   rapp_legale_id?: string | null;
 };
 
@@ -115,8 +125,10 @@ type ClienteFormData = {
   citta: string;
   provincia: string;
   rapp_legale_id: string;
-  email: string;
-  attivo: boolean;
+ email: string;
+telefono: string;
+pec: string;
+attivo: boolean;
   cassetto_fiscale_id: string;
 
   professionista_incaricato: boolean;
@@ -173,8 +185,10 @@ const initialFormData: ClienteFormData = {
   citta: "",
   provincia: "",
   rapp_legale_id: "",
-  email: "",
-  attivo: true,
+ email: "",
+telefono: "",
+pec: "",
+attivo: true,
   cassetto_fiscale_id: "",
 
   matricola_inps: "",
@@ -610,8 +624,10 @@ numero_rea:
     citta: clienteData.citta || "",
     provincia: clienteData.provincia || "",
     rapp_legale_id: clienteData.rapp_legale_id ?? "",
-    email: clienteData.email || "",
-    attivo: clienteData.attivo ?? true,
+   email: clienteData.email || "",
+telefono: (clienteData as any).telefono || "",
+pec: (clienteData as any).pec || "",
+attivo: clienteData.attivo ?? true,
     cassetto_fiscale_id: clienteData.cassetto_fiscale_id || "",
 
     matricola_inps: clienteData.matricola_inps || "",
@@ -764,7 +780,9 @@ if (!formData.utente_operatore_id && !formData.utente_payroll_id) {
           provincia: formData.provincia || null,
           rapp_legale_id: formData.rapp_legale_id || null,
           email: formData.email || null,
-          attivo: formData.attivo,
+        telefono: formData.telefono || null,
+        pec: formData.pec || null,
+        attivo: formData.attivo,
           cassetto_fiscale_id: formData.cassetto_fiscale_id || null,
           matricola_inps: formData.matricola_inps || null,
           pat_inail: formData.pat_inail || null,
@@ -1656,25 +1674,32 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
     </div>
 
     <div className="flex flex-wrap gap-2">
-      <Button
-        variant={selectedLetter === "Tutti" ? "default" : "outline"}
-        size="sm"
-        onClick={() => setSelectedLetter("Tutti")}
-        className="px-4"
-      >
-        Tutti
-      </Button>
+  <Button
+  variant="outline"
+  size="sm"
+  onClick={() => setSelectedLetter("Tutti")}
+  className={
+    selectedLetter === "Tutti"
+      ? "px-4 bg-red-600 hover:bg-red-700 text-white border-red-600"
+      : "px-4"
+  }
+>
+  Tutti
+</Button>
 
       {alphabet.map((letter) => (
-        <Button
-          key={letter}
-          variant={selectedLetter === letter ? "default" : "outline"}
-          size="sm"
-          onClick={() => setSelectedLetter(letter)}
-          className="w-10 h-10 p-0"
-        >
-          {letter}
-        </Button>
+       <Button
+  variant="outline"
+  size="sm"
+  onClick={() => setSelectedLetter(letter)}
+  className={
+    selectedLetter === letter
+      ? "w-10 h-10 p-0 bg-red-600 hover:bg-red-700 text-white border-red-600"
+      : "w-10 h-10 p-0"
+  }
+>
+  {letter}
+</Button>
       ))}
     </div>
   </CardContent>
@@ -2300,23 +2325,50 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
     </Select>
   </div>
 
-  <div className="col-span-12 md:col-span-6">
-    <Label htmlFor="email">Email</Label>
-    <Input
-      id="email"
-      name="email"
-      type="email"
-      value={formData.email || ""}
-      onChange={(e) =>
-        setFormData((prev) => ({ ...prev, email: e.target.value }))
-      }
-    />
-  </div>
+  <div>
+  <Label htmlFor="email">Email</Label>
+  <Input
+    id="email"
+    value={formData.email}
+    onChange={(e) =>
+      setFormData({
+        ...formData,
+        email: e.target.value,
+      })
+    }
+  />
 </div>
 
-          {/* Note */}
-          <div className="md:col-span-2 mt-4">
-            <Label htmlFor="note">Note</Label>
+<div>
+  <Label htmlFor="telefono">Telefono</Label>
+  <Input
+    id="telefono"
+    value={formData.telefono}
+    onChange={(e) =>
+      setFormData({
+        ...formData,
+        telefono: e.target.value,
+      })
+    }
+  />
+</div>
+
+<div>
+  <Label htmlFor="pec">PEC</Label>
+  <Input
+    id="pec"
+    value={formData.pec}
+    onChange={(e) =>
+      setFormData({
+        ...formData,
+        pec: e.target.value,
+      })
+    }
+  />
+</div>
+
+<div>
+  <Label htmlFor="note">Note</Label>
             <Textarea
               id="note"
               value={formData.note}
