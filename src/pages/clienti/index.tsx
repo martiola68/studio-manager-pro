@@ -2522,9 +2522,9 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
 </div>
 
 <div>
-<Label htmlFor="tipo_prestazione_id">
-  Tipo Prestazione
-</Label>
+  <Label htmlFor="tipo_prestazione_id">
+    Tipo Prestazione
+  </Label>
   <Select
     value={formData.tipo_prestazione_id || "none"}
     onValueChange={(value) =>
@@ -2550,41 +2550,55 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
   </Select>
 </div>
 
-<div>
- <Label htmlFor="tipo_redditi">
-  Tipo Redditi
-</Label>
-  <Select
-    value={formData.tipo_redditi || undefined}
-  onValueChange={(value: string) =>
-  setFormData({
-    ...formData,
-    tipo_redditi: value as
-      | "USC"
-      | "USP"
-      | "ENC"
-      | "UPF BASE"
-      | "UPF ORD."
-      | "UPF FORF."
-      | "730",
-  })
-}
-  >
-    <SelectTrigger className={errors.tipo_redditi ? "border-red-500" : ""}>
-      <SelectValue placeholder="Seleziona tipo" />
-    </SelectTrigger>
-    <SelectContent>
-     <SelectItem value="USC">USC</SelectItem>
-<SelectItem value="USP">USP</SelectItem>
-<SelectItem value="ENC">ENC</SelectItem>
-<SelectItem value="UPF BASE">UPF BASE</SelectItem>
-<SelectItem value="UPF ORD.">UPF ORD.</SelectItem>
-<SelectItem value="UPF FORF.">UPF FORF.</SelectItem>
-<SelectItem value="730">730</SelectItem>
-    </SelectContent>
-  </Select>
-</div>
+<div className="grid grid-cols-[1fr_150px] gap-3 items-end">
+  <div>
+    <Label htmlFor="tipo_redditi">
+      Tipo Redditi
+    </Label>
+    <Select
+      value={formData.tipo_redditi || undefined}
+      onValueChange={(value: string) =>
+        setFormData({
+          ...formData,
+          tipo_redditi: value as
+            | "USC"
+            | "USP"
+            | "ENC"
+            | "UPF BASE"
+            | "UPF ORD."
+            | "UPF FORF."
+            | "730",
+        })
+      }
+    >
+      <SelectTrigger className={errors.tipo_redditi ? "border-red-500" : ""}>
+        <SelectValue placeholder="Seleziona tipo" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="USC">USC</SelectItem>
+        <SelectItem value="USP">USP</SelectItem>
+        <SelectItem value="ENC">ENC</SelectItem>
+        <SelectItem value="UPF BASE">UPF BASE</SelectItem>
+        <SelectItem value="UPF ORD.">UPF ORD.</SelectItem>
+        <SelectItem value="UPF FORF.">UPF FORF.</SelectItem>
+        <SelectItem value="730">730</SelectItem>
+      </SelectContent>
+    </Select>
+  </div>
 
+  <div className="flex items-center gap-2 h-10">
+    <Checkbox
+      checked={formData.soggetto_isa || false}
+      onCheckedChange={(checked) =>
+        setFormData({
+          ...formData,
+          soggetto_isa: checked === true,
+        })
+      }
+    />
+    <Label>Soggetto ISA</Label>
+  </div>
+</div>
 <div className="md:col-span-2">
   <Label htmlFor="cassetto_fiscale_id">Referente Cassetto fiscale</Label>
   <Select
