@@ -131,6 +131,10 @@ export default function ContattiPage() {
   const [clienteDaCollegare, setClienteDaCollegare] = useState("");
   const [ruoloCliente, setRuoloCliente] = useState("");
 
+  const [emailSocieta, setEmailSocieta] = useState("");
+const [telefonoSocieta, setTelefonoSocieta] = useState("");
+const [pecSocieta, setPecSocieta] = useState("");
+
   const [loading, setLoading] = useState(true);
   const [contatti, setContatti] = useState<Contatto[]>([]);
   const [filteredContatti, setFilteredContatti] = useState<Contatto[]>([]);
@@ -467,6 +471,9 @@ const handleEdit = async (contatto: Contatto) => {
         principale: false,
         riceve_comunicazioni: true,
         riceve_scadenze: true,
+        email_societa: emailSocieta || null,
+        telefono_societa: telefonoSocieta || null,
+        pec_societa: pecSocieta || null,
       });
 
       toast({
@@ -476,6 +483,9 @@ const handleEdit = async (contatto: Contatto) => {
 
       setClienteDaCollegare("");
       setRuoloCliente("");
+      setEmailSocieta("");
+      setTelefonoSocieta("");
+      setPecSocieta("");
 
       const aggiornato = await contattoService.getContattoConClientiById(
         editingContatto.id
