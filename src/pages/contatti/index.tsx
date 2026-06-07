@@ -1596,30 +1596,30 @@ await loadContatti();
  {contatto.clienti_collegati && contatto.clienti_collegati.length > 0 && (
   <div className="mt-2 space-y-1">
     {contatto.clienti_collegati.map((rel) => (
-      <div
-        key={rel.id}
-        className="flex flex-wrap items-center gap-2 rounded-md bg-green-50 px-2 py-1 text-xs text-green-900"
-      >
-        <span className="flex items-center font-semibold">
+<div
+  key={rel.id}
+  className="flex flex-wrap items-center gap-4 rounded-md bg-blue-50 px-4 py-3 text-base text-blue-900 border border-blue-200"
+>
+        <span className="flex items-center font-semibold text-base text-blue-900">
           <Building2 className="mr-1 h-3 w-3" />
           {rel.cliente?.ragione_sociale || "Cliente collegato"}
           {rel.ruolo ? ` - ${rel.ruolo}` : ""}
         </span>
 
         {rel.email_societa && (
-          <span className="text-green-800">
+         <span className="text-blue-800 text-base">
             Email: {rel.email_societa}
           </span>
         )}
 
         {rel.telefono_societa && (
-          <span className="text-green-800">
+         <span className="text-blue-800 text-base">
             Tel: {rel.telefono_societa}
           </span>
         )}
 
         {rel.pec_societa && (
-          <span className="text-green-800">
+         <span className="text-blue-800 text-base">
             PEC: {rel.pec_societa}
           </span>
         )}
