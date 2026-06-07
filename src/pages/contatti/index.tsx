@@ -530,12 +530,9 @@ const handleEdit = async (contatto: Contatto) => {
 
     const run = async () => {
       try {
-       let dataToSave: any = {
+  let dataToSave: any = {
   cognome: formData.cognome,
   nome: formData.nome || "",
-  ragione_sociale: formData.ragione_sociale || null,
-  ruolo: formData.ruolo || null,
-  qualifica: formData.qualifica || null,
   cell: formData.cell || null,
   tel: formData.tel || null,
   altro_telefono: formData.altro_telefono || null,
@@ -549,13 +546,7 @@ const handleEdit = async (contatto: Contatto) => {
   citta: formData.citta || null,
   provincia: formData.provincia || null,
   nazione: formData.nazione || "Italia",
-  riceve_comunicazioni: formData.riceve_comunicazioni,
-  riceve_scadenze: formData.riceve_scadenze,
   riceve_newsletter: formData.riceve_newsletter,
-  referente_fiscale: formData.referente_fiscale,
-  referente_payroll: formData.referente_payroll,
-  referente_consulenza: formData.referente_consulenza,
-  referente_amministrativo: formData.referente_amministrativo,
   attivo: formData.attivo,
   note: formData.note || null,
 };
@@ -577,14 +568,23 @@ const handleEdit = async (contatto: Contatto) => {
             ...encrypted,
           };
         }
+if (editingContatto) {
+  const aggiornato = await contattoService.updateContatto(
+    editingContatto.id,
+    dataToSave
+  );
 
-        if (editingContatto) {
-          await contattoService.updateContatto(editingContatto.id, dataToSave);
-          toast({
-            title: "Successo",
-            description: "Contatto aggiornato con successo",
-          });
-       } else {
+  toast({
+    title: "Successo",
+    description: "Contatto aggiornato con successo",
+  });
+
+  const completo = await contattoService.getContattoConClientiById(
+    aggiornato.id
+  );
+
+  setEditingContatto(completo);
+} else {
   const nuovoContatto = await contattoService.createContatto(dataToSave);
 
   toast({
@@ -1136,57 +1136,6 @@ await loadContatti();
                     
                   </div>
 
- <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-  <div className="space-y-2">
-    <Label htmlFor="ragione_sociale">Ragione sociale collegata</Label>
-    <Input
-      id="ragione_sociale"
-      value={formData.ragione_sociale}
-      onChange={(e) =>
-        setFormData({ ...formData, ragione_sociale: e.target.value })
-      }
-      placeholder="Es. Alfa Srl"
-    />
-  </div>
-
-  <div className="space-y-2">
-    <Label htmlFor="ruolo">Ruolo</Label>
-    <Input
-      id="ruolo"
-      value={formData.ruolo}
-      onChange={(e) =>
-        setFormData({ ...formData, ruolo: e.target.value })
-      }
-      placeholder="Es. Amministratore, referente fiscale..."
-    />
-  </div>
-</div>
-
-<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-  <div className="space-y-2">
-    <Label htmlFor="qualifica">Qualifica</Label>
-    <Input
-      id="qualifica"
-      value={formData.qualifica}
-      onChange={(e) =>
-        setFormData({ ...formData, qualifica: e.target.value })
-      }
-      placeholder="Es. Presidente CDA, Socio, HR..."
-    />
-  </div>
-
-  <div className="space-y-2">
-    <Label htmlFor="nazione">Nazione</Label>
-    <Input
-      id="nazione"
-      value={formData.nazione}
-      onChange={(e) =>
-        setFormData({ ...formData, nazione: e.target.value })
-      }
-    />
-  </div>
-</div>
-
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="cell">Cellulare</Label>
@@ -1357,15 +1306,9 @@ await loadContatti();
 
   <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
     {[
-      ["riceve_comunicazioni", "Riceve comunicazioni"],
-      ["riceve_scadenze", "Riceve scadenze"],
-      ["riceve_newsletter", "Riceve newsletter"],
-      ["referente_fiscale", "Referente fiscale"],
-      ["referente_payroll", "Referente payroll"],
-      ["referente_consulenza", "Referente consulenza"],
-      ["referente_amministrativo", "Referente amministrativo"],
-      ["attivo", "Contatto attivo"],
-    ].map(([key, label]) => (
+  ["riceve_newsletter", "Riceve newsletter"],
+  ["attivo", "Contatto attivo"],
+].map(([key, label]) => (
       <label key={key} className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
