@@ -144,6 +144,9 @@ type ClienteFormData = {
   | "UPF FORF."
   | "730";
 
+  
+soggetto_isa?: boolean;
+
   note: string;
 
   flag_mail_attivo: boolean;
@@ -188,7 +191,7 @@ const initialFormData: ClienteFormData = {
 
   tipo_prestazione_id: "",
   tipo_redditi: undefined,
-
+  soggetto_isa: false,
   note: "",
 
   flag_mail_attivo: false,
@@ -771,6 +774,7 @@ if (!formData.utente_operatore_id && !formData.utente_payroll_id) {
           referente_esterno: formData.referente_esterno || null,
           tipo_prestazione_id: formData.tipo_prestazione_id || null,
           tipo_redditi: formData.tipo_redditi || null,
+          soggetto_isa: formData.soggetto_isa || false,
           note: formData.note || null,
           flag_mail_attivo: formData.flag_mail_attivo,
           flag_mail_scadenze: formData.flag_mail_scadenze,
