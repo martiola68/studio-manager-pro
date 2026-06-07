@@ -980,7 +980,7 @@ await loadContatti();
            <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">
   Rubrica Contatti
   {letterFilter && (
-    <span className="ml-3 rounded-full bg-green-600 px-3 py-1 text-base text-white">
+   <span className="ml-3 rounded-full bg-red-600 px-3 py-1 text-base text-white">
       Lettera {letterFilter}
     </span>
   )}
@@ -1501,9 +1501,9 @@ await loadContatti();
   size="sm"
   onClick={() => setLetterFilter("")}
   className={
-    letterFilter === ""
-      ? "min-w-[44px] border-green-600 bg-green-600 text-white hover:bg-green-700"
-      : "min-w-[44px]"
+   letterFilter === ""
+  ? "min-w-[44px] border-red-600 bg-red-600 text-white hover:bg-red-700"
+  : "min-w-[44px]"
   }
 >
   Tutti
@@ -1515,9 +1515,9 @@ await loadContatti();
   size="sm"
   onClick={() => setLetterFilter(letter)}
   className={
-    letterFilter === letter
-      ? "h-10 w-10 border-green-600 bg-green-600 text-white hover:bg-green-700"
-      : "h-10 w-10"
+   letterFilter === letter
+  ? "h-10 w-10 border-red-600 bg-red-600 text-white hover:bg-red-700"
+  : "h-10 w-10"
   }
 >
   {letter}
@@ -1546,7 +1546,7 @@ await loadContatti();
        <CardHeader className="bg-blue-600 py-3 text-white">
           <CardTitle className="flex items-center justify-between text-xl">
             <span>Lettera {letter}</span>
-          <span className="rounded-full bg-blue-500 px-3 py-1 text-sm font-semibold text-white">
+          <span className="rounded-full bg-blue-700 px-3 py-1 text-sm font-semibold text-white">
               {(groupedContatti[letter] || []).length} contatti
             </span>
           </CardTitle>
