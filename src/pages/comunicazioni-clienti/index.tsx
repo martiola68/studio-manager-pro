@@ -412,8 +412,7 @@ const buildEmailClienteHtml = (params: {
   const righe = params.messaggio
     .split("\n")
     .map((riga) => riga.trim())
-    .filter(Boolean)
-    .filter((riga) => riga.toLowerCase() !== "cordiali saluti");
+    .filter(Boolean);
 
   return `
 <div style="margin:0; padding:0; background:#ffffff; font-family:Arial, Helvetica, sans-serif; color:#111827;">
@@ -422,23 +421,6 @@ const buildEmailClienteHtml = (params: {
       ${righe
         .map((riga) => `<p style="margin:0 0 14px 0;">${riga}</p>`)
         .join("")}
-    </div>
-
-    <div style="margin-top:30px; font-size:14px; line-height:1.6; color:#111827;">
-      <p style="margin:0 0 14px 0;">Cordiali Saluti</p>
-
-      <p style="margin:0 0 14px 0;">
-        <strong>${params.utenteNome || "-"}</strong><br/>
-        Area contabilità - fiscale
-      </p>
-
-      <p style="margin:0 0 14px 0;">
-        <strong>${params.societa || "-"}</strong><br/>
-        Via Giuseppe Gioachino Belli n. 86 - 00193 Roma<br/>
-        Tel. 06.7726471 | Fax. 06.772647230<br/>
-        Mail: ${params.utenteEmail || "-"}<br/>
-        Site: https://revisionicommerciali.it/
-      </p>
     </div>
   </div>
 </div>
