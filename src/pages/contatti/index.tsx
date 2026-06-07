@@ -30,6 +30,9 @@ import {
   User,
   Lock,
   Unlock,
+  Building2,
+  Link2,
+  X,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
@@ -79,6 +82,13 @@ type FormDataState = {
   note: string;
 };
 
+type ClienteRubrica = {
+  id: string;
+  ragione_sociale: string | null;
+  codice_fiscale?: string | null;
+  partita_iva?: string | null;
+};
+
 const initialFormData: FormDataState = {
   cognome: "",
   nome: "",
@@ -117,6 +127,10 @@ export default function ContattiPage() {
   const [encryptionEnabled, setEncryptionEnabled] = useState(false);
   const [encryptionLockedState, setEncryptionLockedState] = useState(true);
 
+  const [clienti, setClienti] = useState<ClienteRubrica[]>([]);
+  const [clienteDaCollegare, setClienteDaCollegare] = useState("");
+  const [ruoloCliente, setRuoloCliente] = useState("");
+
   const [loading, setLoading] = useState(true);
   const [contatti, setContatti] = useState<Contatto[]>([]);
   const [filteredContatti, setFilteredContatti] = useState<Contatto[]>([]);
@@ -139,9 +153,28 @@ export default function ContattiPage() {
     },
   });
 
+  const loadClienti = async (sid?: string) => {
+  const supabase = getSupabaseClient();
+
+  let query = supabase
+    .from("tbclienti")
+    .select("id, ragione_sociale, codice_fiscale, partita_iva")
+    .order("ragione_sociale", { ascending: true });
+
+  if (sid) {
+    query = query.eq("studio_id", sid);
+  }
+
+  const { data, error } = await query;
+
+  if (error) throw error;
+
+  setClienti(data || []);
+};
+
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
-const getContattoLetter = (contatto: Contatto) => {
+  const getContattoLetter = (contatto: Contatto) => {
   const value = (contatto.cognome || contatto.nome || "#").trim();
   const first = value.charAt(0).toUpperCase();
 
@@ -263,6 +296,7 @@ const visibleLetters = letterFilter
       setEncryptionLockedState(isEncryptionLocked());
 
       await loadContatti(sid, enabled);
+      await loadClienti(sid);
     } catch (error) {
       console.error("Errore:", error);
       router.push("/login");
