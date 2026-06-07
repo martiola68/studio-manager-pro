@@ -2292,7 +2292,7 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
             </div>
           </div>
 
-       {/* Riga rappresentante legale + email */}
+{/* Riga rappresentante legale + recapiti società */}
 <div className="md:col-span-2 mt-4 grid grid-cols-12 gap-4">
   <div className="col-span-12 md:col-span-6">
     <Label htmlFor="rapp_legale_id">Rappresentante legale</Label>
@@ -2321,48 +2321,44 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
     </Select>
   </div>
 
-  <div>
-  <Label htmlFor="email">Email</Label>
-  <Input
-    id="email"
-    value={formData.email}
-    onChange={(e) =>
-      setFormData({
-        ...formData,
-        email: e.target.value,
-      })
-    }
-  />
-</div>
+  <div className="col-span-12 md:col-span-6">
+    <Label htmlFor="email">Email</Label>
+    <Input
+      id="email"
+      name="email"
+      type="email"
+      value={formData.email || ""}
+      onChange={(e) =>
+        setFormData((prev) => ({ ...prev, email: e.target.value }))
+      }
+    />
+  </div>
 
-<div>
-  <Label htmlFor="telefono">Telefono</Label>
-  <Input
-    id="telefono"
-    value={formData.telefono}
-    onChange={(e) =>
-      setFormData({
-        ...formData,
-        telefono: e.target.value,
-      })
-    }
-  />
-</div>
+  <div className="col-span-12 md:col-span-6">
+    <Label htmlFor="telefono">Telefono</Label>
+    <Input
+      id="telefono"
+      name="telefono"
+      value={formData.telefono || ""}
+      onChange={(e) =>
+        setFormData((prev) => ({ ...prev, telefono: e.target.value }))
+      }
+    />
+  </div>
 
-<div>
-  <Label htmlFor="pec">PEC</Label>
-  <Input
-    id="pec"
-    value={formData.pec}
-    onChange={(e) =>
-      setFormData({
-        ...formData,
-        pec: e.target.value,
-      })
-    }
-  />
+  <div className="col-span-12 md:col-span-6">
+    <Label htmlFor="pec">PEC</Label>
+    <Input
+      id="pec"
+      name="pec"
+      type="email"
+      value={formData.pec || ""}
+      onChange={(e) =>
+        setFormData((prev) => ({ ...prev, pec: e.target.value }))
+      }
+    />
+  </div>
 </div>
-
 <div>
   <Label htmlFor="note">Note</Label>
             <Textarea
