@@ -639,6 +639,8 @@ numero_rea:
     | "730"
 ) || undefined,
 
+    soggetto_isa: Boolean(clienteData.soggetto_isa),
+
     note: clienteData.note || "",
 
     flag_mail_attivo: clienteData.flag_mail_attivo ?? false,
