@@ -581,10 +581,8 @@ const nomeScadenzaFiscale =
   emailModal.tipo === "saldo_primo_acconto_cciaa"
     ? scadenza.soggetto_isa
       ? "IMPOSTE ISA"
-      : "IMPOSTE NO ISE"
-    : scadenza.soggetto_isa
-      ? "2° ACCONTO ISA"
-      : "2° ACCONTO NO ISA";
+      : "IMPOSTE NO ISA"
+    : "2° ACCONTO";
 
 const { data: tipoScadenzaRaw } = await (supabase as any)
   .from("tbtipi_scadenze")
