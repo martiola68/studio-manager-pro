@@ -10,8 +10,9 @@ export type ContattoUpdate = Database["public"]["Tables"]["tbcontatti"]["Update"
 export type ClienteMinimo = {
   id: string;
   ragione_sociale: string | null;
-  codice_fiscale?: string | null;
-  partita_iva?: string | null;
+  email?: string | null;
+  telefono?: string | null;
+  pec?: string | null;
 };
 
 export type ContattoCliente = {
@@ -73,7 +74,7 @@ const caricaClientiById = async (
 
   const { data, error } = await supabase
     .from("tbclienti")
-    .select("id, ragione_sociale, codice_fiscale, partita_iva")
+    .select("id, ragione_sociale, email, telefono, pec")
     .in("id", ids);
 
   if (error) throw error;
