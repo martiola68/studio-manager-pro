@@ -114,6 +114,8 @@ type ClienteFormData = {
   settore_lavoro: boolean;
   settore_consulenza: boolean;
   ragione_sociale: string;
+  cognome: string;
+  nome: string;
   partita_iva: string;
   codice_fiscale: string;
   indirizzo: string;
@@ -174,6 +176,8 @@ const initialFormData: ClienteFormData = {
   settore_lavoro: false,
   settore_consulenza: false,
   ragione_sociale: "",
+  cognome: "",
+  nome: "",
   partita_iva: "",
   codice_fiscale: "",
   indirizzo: "",
@@ -613,6 +617,8 @@ numero_rea:
     settore_lavoro: clienteData.settore_lavoro ?? false,
     settore_consulenza: clienteData.settore_consulenza ?? false,
     ragione_sociale: clienteData.ragione_sociale || "",
+    cognome: (clienteData as any).cognome || "",
+    nome: (clienteData as any).nome || "",
     partita_iva: clienteData.partita_iva || "",
     codice_fiscale: clienteData.codice_fiscale || "",
     indirizzo: clienteData.indirizzo || "",
@@ -680,17 +686,27 @@ attivo: clienteData.attivo ?? true,
 ) => {
   const supabase = getSupabaseClient();
 
-  const payloadContatto: any = {
-    studio_id: studioId,
-    cliente_id: clienteId,
-    tipo_contatto: "societa",
-    cognome: clienteData.ragione_sociale || "",
-    nome: "",
-    email: clienteData.email || null,
-    tel: (clienteData as any).telefono || null,
-    pec: (clienteData as any).pec || null,
-    memo: "Sincronizzato automaticamente da tbclienti",
-  };
+ const isPersonaFisica = clienteData.tipo_cliente === "Persona fisica";
+
+const cognomeContatto = isPersonaFisica
+  ? String((clienteData as any).cognome || "").trim()
+  : String(clienteData.ragione_sociale || "").trim();
+
+const nomeContatto = isPersonaFisica
+  ? String((clienteData as any).nome || "").trim()
+  : "";
+
+const payloadContatto: any = {
+  studio_id: studioId,
+  cliente_id: clienteId,
+  tipo_contatto: isPersonaFisica ? "cliente_persona" : "cliente_societa",
+  cognome: cognomeContatto,
+  nome: nomeContatto,
+  email: clienteData.email || null,
+  tel: (clienteData as any).telefono || null,
+  pec: (clienteData as any).pec || null,
+  memo: "Sincronizzato automaticamente da tbclienti",
+};
 
   const { data: existing, error: existingError } = await supabase
     .from("tbcontatti")
@@ -754,7 +770,17 @@ const handleSave = async () => {
         const newErrors: Record<string, boolean> = {};
         const missingFields: string[] = [];
 
-    if (!formData.ragione_sociale.trim()) {
+ if (formData.tipo_cliente === "Persona fisica") {
+  if (!formData.cognome.trim()) {
+    newErrors.cognome = true;
+    missingFields.push("Cognome");
+  }
+
+  if (!formData.nome.trim()) {
+    newErrors.nome = true;
+    missingFields.push("Nome");
+  }
+} else if (!formData.ragione_sociale.trim()) {
   newErrors.ragione_sociale = true;
   missingFields.push("Ragione Sociale");
 }
@@ -810,7 +836,18 @@ if (!formData.utente_operatore_id && !formData.utente_payroll_id) {
           settore_fiscale: formData.settore_fiscale,
           settore_lavoro: formData.settore_lavoro,
           settore_consulenza: formData.settore_consulenza,
-          ragione_sociale: formData.ragione_sociale,
+          ragione_sociale:
+          formData.tipo_cliente === "Persona fisica"
+          ? `${formData.cognome} ${formData.nome}`.trim()
+          : formData.ragione_sociale,
+          cognome:
+          formData.tipo_cliente === "Persona fisica"
+          ? formData.cognome || null
+          : null,
+          nome:
+          formData.tipo_cliente === "Persona fisica"
+          ? formData.nome || null
+          : null,
           partita_iva: formData.partita_iva || null,
           codice_fiscale: formData.codice_fiscale || null,
           indirizzo: formData.indirizzo || null,
@@ -2213,23 +2250,63 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
             </div>
           </div>
 
-          <div className="md:col-span-2">
-            <Label htmlFor="ragione_sociale">
-              Ragione Sociale <span className="text-red-500">*</span>
-            </Label>
-            <Input
- id="ragione_sociale"
-  className={errors.ragione_sociale ? "border-red-500" : ""}
-  value={formData.ragione_sociale}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  ragione_sociale: e.target.value,
-                })
-              }
-              placeholder="Ragione sociale..."
-            />
-          </div>
+        {formData.tipo_cliente === "Persona fisica" ? (
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2">
+    <div>
+      <Label htmlFor="cognome">
+        Cognome <span className="text-red-500">*</span>
+      </Label>
+      <Input
+        id="cognome"
+        value={formData.cognome}
+        onChange={(e) =>
+          setFormData({
+            ...formData,
+            cognome: e.target.value,
+            ragione_sociale: `${e.target.value} ${formData.nome}`.trim(),
+          })
+        }
+        placeholder="Cognome..."
+      />
+    </div>
+
+    <div>
+      <Label htmlFor="nome">
+        Nome <span className="text-red-500">*</span>
+      </Label>
+      <Input
+        id="nome"
+        value={formData.nome}
+        onChange={(e) =>
+          setFormData({
+            ...formData,
+            nome: e.target.value,
+            ragione_sociale: `${formData.cognome} ${e.target.value}`.trim(),
+          })
+        }
+        placeholder="Nome..."
+      />
+    </div>
+  </div>
+) : (
+  <div className="md:col-span-2">
+    <Label htmlFor="ragione_sociale">
+      Ragione Sociale <span className="text-red-500">*</span>
+    </Label>
+    <Input
+      id="ragione_sociale"
+      className={errors.ragione_sociale ? "border-red-500" : ""}
+      value={formData.ragione_sociale}
+      onChange={(e) =>
+        setFormData({
+          ...formData,
+          ragione_sociale: e.target.value,
+        })
+      }
+      placeholder="Ragione sociale..."
+    />
+  </div>
+)}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:col-span-2">
 
