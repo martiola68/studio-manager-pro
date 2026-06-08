@@ -961,6 +961,51 @@ await loadContatti();
     return `${n.charAt(0)}${c.charAt(0)}`.toUpperCase();
   };
 
+  const societaRaggruppate = (() => {
+  const query = searchQuery.trim().toLowerCase();
+
+  if (!query) return [];
+
+  const map = new Map<string, any>();
+
+  contatti.forEach((contatto) => {
+    (contatto.clienti_collegati || []).forEach((rel) => {
+      const nomeSocieta = rel.cliente?.ragione_sociale || "";
+
+      const matchSocieta =
+        nomeSocieta.toLowerCase().includes(query) ||
+        (rel.email_societa || "").toLowerCase().includes(query) ||
+        (rel.telefono_societa || "").toLowerCase().includes(query) ||
+        (rel.pec_societa || "").toLowerCase().includes(query);
+
+      if (!matchSocieta) return;
+
+      const key = rel.cliente_id;
+
+      if (!map.has(key)) {
+        map.set(key, {
+          cliente_id: rel.cliente_id,
+          ragione_sociale: nomeSocieta,
+          email: rel.email_societa || "",
+          telefono: rel.telefono_societa || "",
+          pec: rel.pec_societa || "",
+          referenti: [],
+        });
+      }
+
+      map.get(key).referenti.push({
+        contatto,
+        relazione: rel,
+      });
+    });
+  });
+
+  return Array.from(map.values());
+})();
+
+const mostraVistaSocieta =
+  searchQuery.trim().length >= 2 && societaRaggruppate.length > 0;
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
@@ -1528,7 +1573,64 @@ await loadContatti();
       </Card>
 
 <div className="space-y-6">
-  {filteredContatti.length === 0 ? (
+  {mostraVistaSocieta ? (
+    societaRaggruppate.map((societa) => (
+      <Card
+        key={societa.cliente_id}
+        className="overflow-hidden border-2 border-blue-100 shadow-sm"
+      >
+        <CardHeader className="bg-blue-600 py-3 text-white">
+          <CardTitle className="flex items-center justify-between text-xl">
+            <span>{societa.ragione_sociale || "Società collegata"}</span>
+            <span className="rounded-full bg-blue-700 px-3 py-1 text-sm font-semibold text-white">
+              {societa.referenti.length} referenti
+            </span>
+          </CardTitle>
+        </CardHeader>
+
+        <CardContent className="space-y-4 p-5">
+          <div className="flex flex-wrap gap-5 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-base text-blue-900">
+            {societa.email && <span>Email: {societa.email}</span>}
+            {societa.telefono && <span>Tel: {societa.telefono}</span>}
+            {societa.pec && <span>PEC: {societa.pec}</span>}
+          </div>
+
+          {societa.referenti.map(({ contatto, relazione }: any) => (
+            <div
+              key={`${societa.cliente_id}-${contatto.id}`}
+              className="rounded-md border bg-white p-4 shadow-sm"
+            >
+              <div className="text-xl font-bold text-gray-900">
+                {contatto.cognome} {contatto.nome}
+              </div>
+
+              <div className="mt-2 grid grid-cols-1 gap-3 text-base text-gray-700 md:grid-cols-3">
+                {contatto.email && (
+                  <span className="flex items-center gap-2">
+                    <Mail className="h-5 w-5 text-blue-600" />
+                    {contatto.email}
+                  </span>
+                )}
+
+                {contatto.cell && (
+                  <span className="flex items-center gap-2">
+                    <Smartphone className="h-5 w-5 text-blue-600" />
+                    {contatto.cell}
+                  </span>
+                )}
+
+                {relazione.ruolo && (
+                  <span className="font-semibold text-blue-800">
+                    Ruolo: {relazione.ruolo}
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    ))
+  ) : filteredContatti.length === 0 ? (
     <Card>
       <CardContent className="py-12 text-center">
         <UserCircle className="mx-auto mb-4 h-16 w-16 text-gray-300" />
