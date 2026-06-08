@@ -931,7 +931,11 @@ tipo_cliente: formData.tipo_cliente,
 
 await syncClienteToContatto(editingCliente.id, {
   ...updateData,
-  studio_id: updateData.studio_id || editingCliente.studio_id || studioId,
+  studio_id:
+    updateData.studio_id ||
+    editingCliente.studio_id ||
+    studioId ||
+    undefined,
 });
 
   toast({
@@ -949,9 +953,9 @@ await syncClienteToContatto(editingCliente.id, {
 
   if (error) throw error;
 
- await syncClienteToContatto(nuovoCliente.id, {
+await syncClienteToContatto(nuovoCliente.id, {
   ...insertData,
-  studio_id: insertData.studio_id || studioId,
+  studio_id: insertData.studio_id || studioId || undefined,
 });
 
   toast({
