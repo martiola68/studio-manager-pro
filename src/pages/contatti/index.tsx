@@ -986,9 +986,9 @@ await loadContatti();
         map.set(key, {
           cliente_id: rel.cliente_id,
           ragione_sociale: nomeSocieta,
-          email: rel.email_societa || "",
-          telefono: rel.telefono_societa || "",
-          pec: rel.pec_societa || "",
+          email: rel.email_societa || rel.cliente?.email || "",
+          telefono: rel.telefono_societa || rel.cliente?.telefono || "",
+          pec: rel.pec_societa || rel.cliente?.pec || "",
           referenti: [],
         });
       }
