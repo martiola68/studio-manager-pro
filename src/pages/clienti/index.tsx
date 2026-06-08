@@ -708,7 +708,7 @@ const nomeContatto = isPersonaFisica
   : "";
 
 const payloadContatto: any = {
- studio_id: studioId,
+  studio_id: studioIdEffettivo,
   cliente_id: clienteId,
   tipo_contatto: isPersonaFisica ? "cliente_persona" : "cliente_societa",
   cognome: cognomeContatto,
