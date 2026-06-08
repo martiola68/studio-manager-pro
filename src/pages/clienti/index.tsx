@@ -673,6 +673,49 @@ attivo: clienteData.attivo ?? true,
     imu: clienteData.flag_imu ?? false,
   });
 };
+
+  const syncClienteToContatto = async (
+  clienteId: string,
+  clienteData: Partial<ClienteInsert | ClienteUpdate>
+) => {
+  const supabase = getSupabaseClient();
+
+  const payloadContatto: any = {
+    studio_id: studioId,
+    cliente_id: clienteId,
+    tipo_contatto: "societa",
+    cognome: clienteData.ragione_sociale || "",
+    nome: "",
+    email: clienteData.email || null,
+    tel: (clienteData as any).telefono || null,
+    pec: (clienteData as any).pec || null,
+    memo: "Sincronizzato automaticamente da tbclienti",
+  };
+
+  const { data: existing, error: existingError } = await supabase
+    .from("tbcontatti")
+    .select("id")
+    .eq("cliente_id", clienteId)
+    .maybeSingle();
+
+  if (existingError) throw existingError;
+
+  if (existing?.id) {
+    const { error } = await supabase
+      .from("tbcontatti")
+      .update(payloadContatto)
+      .eq("id", existing.id);
+
+    if (error) throw error;
+    return;
+  }
+
+  const { error } = await supabase
+    .from("tbcontatti")
+    .insert(payloadContatto);
+
+  if (error) throw error;
+};
   
 const handleSave = async () => {
   const supabase = getSupabaseClient();
@@ -823,29 +866,39 @@ if (!formData.utente_operatore_id && !formData.utente_payroll_id) {
         }
 
         if (editingCliente) {
-          const updateData: ClienteUpdate = dataToSave as ClienteUpdate;
-          const { error } = await supabase
-            .from("tbclienti")
-            .update(updateData)
-            .eq("id", editingCliente.id);
+  const updateData: ClienteUpdate = dataToSave as ClienteUpdate;
 
-          if (error) throw error;
+  const { error } = await supabase
+    .from("tbclienti")
+    .update(updateData)
+    .eq("id", editingCliente.id);
 
-          toast({
-            title: "Successo",
-            description: "Cliente aggiornato con successo",
-          });
-        } else {
-          const insertData: ClienteInsert = dataToSave as ClienteInsert;
-          const { error } = await supabase.from("tbclienti").insert(insertData);
+  if (error) throw error;
 
-          if (error) throw error;
+  await syncClienteToContatto(editingCliente.id, updateData);
 
-          toast({
-            title: "Successo",
-            description: "Cliente creato con successo",
-          });
-        }
+  toast({
+    title: "Successo",
+    description: "Cliente aggiornato con successo",
+  });
+} else {
+  const insertData: ClienteInsert = dataToSave as ClienteInsert;
+
+  const { data: nuovoCliente, error } = await supabase
+    .from("tbclienti")
+    .insert(insertData)
+    .select("id")
+    .single();
+
+  if (error) throw error;
+
+  await syncClienteToContatto(nuovoCliente.id, insertData);
+
+  toast({
+    title: "Successo",
+    description: "Cliente creato con successo",
+  });
+}
 
         setIsDialogOpen(false);
         resetForm();
