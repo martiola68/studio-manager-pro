@@ -680,11 +680,22 @@ attivo: clienteData.attivo ?? true,
   });
 };
 
-  const syncClienteToContatto = async (
+const syncClienteToContatto = async (
   clienteId: string,
   clienteData: Partial<ClienteInsert | ClienteUpdate>
 ) => {
   const supabase = getSupabaseClient();
+
+  const studioIdEffettivo =
+    (clienteData as any).studio_id ||
+    editingCliente?.studio_id ||
+    studioId;
+
+  if (!studioIdEffettivo) {
+    throw new Error(
+      "studio_id mancante: impossibile sincronizzare tbcontatti"
+    );
+  }
 
  const isPersonaFisica = clienteData.tipo_cliente === "Persona fisica";
 
@@ -695,15 +706,6 @@ const cognomeContatto = isPersonaFisica
 const nomeContatto = isPersonaFisica
   ? String((clienteData as any).nome || "").trim()
   : "";
-
-const studioIdEffettivo =
-  (clienteData as any).studio_id ||
-  editingCliente?.studio_id ||
-  studioId;
-
-if (!studioIdEffettivo) {
-  throw new Error("studio_id mancante: impossibile sincronizzare il contatto");
-}
 
 const payloadContatto: any = {
   studio_id: studioIdEffettivo,
@@ -838,10 +840,10 @@ const base: Partial<ClienteInsert> & {
   pec?: string | null;
   studio_id?: string;
 } = {
-  studio_id: studioId || editingCliente?.studio_id,
-  cod_cliente:
-    formData.cod_cliente || `CL-${Date.now().toString().slice(-6)}`
-          tipo_cliente: formData.tipo_cliente,
+ studio_id: studioId || editingCliente?.studio_id,
+cod_cliente:
+  formData.cod_cliente || `CL-${Date.now().toString().slice(-6)}`,
+tipo_cliente: formData.tipo_cliente,
           tipologia_cliente: formData.tipologia_cliente,
           professionista_incaricato:
           formData.professionista_incaricato,
@@ -927,7 +929,10 @@ const base: Partial<ClienteInsert> & {
 
   if (error) throw error;
 
-  await syncClienteToContatto(editingCliente.id, updateData);
+await syncClienteToContatto(editingCliente.id, {
+  ...updateData,
+  studio_id: updateData.studio_id || editingCliente.studio_id || studioId,
+});
 
   toast({
     title: "Successo",
@@ -944,7 +949,10 @@ const base: Partial<ClienteInsert> & {
 
   if (error) throw error;
 
-  await syncClienteToContatto(nuovoCliente.id, insertData);
+ await syncClienteToContatto(nuovoCliente.id, {
+  ...insertData,
+  studio_id: insertData.studio_id || studioId,
+});
 
   toast({
     title: "Successo",
@@ -1495,7 +1503,7 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
                 row["Tipologia Cliente"] ||
                 "Interno") as ClienteInsert["tipologia_cliente"],
             // Studio: usiamo contesto
-            studio_id: studioId,
+           studio_id: studioIdEffettivo,
           };
 
           const { error } = await supabase.from("tbclienti").insert(insertData);
