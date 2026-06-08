@@ -1507,7 +1507,7 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
                 row["Tipologia Cliente"] ||
                 "Interno") as ClienteInsert["tipologia_cliente"],
             // Studio: usiamo contesto
-           studio_id: studioIdEffettivo,
+           studio_id: studioId,
           };
 
           const { error } = await supabase.from("tbclienti").insert(insertData);
