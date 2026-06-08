@@ -696,8 +696,17 @@ const nomeContatto = isPersonaFisica
   ? String((clienteData as any).nome || "").trim()
   : "";
 
+const studioIdEffettivo =
+  (clienteData as any).studio_id ||
+  editingCliente?.studio_id ||
+  studioId;
+
+if (!studioIdEffettivo) {
+  throw new Error("studio_id mancante: impossibile sincronizzare il contatto");
+}
+
 const payloadContatto: any = {
-  studio_id: studioId,
+  studio_id: studioIdEffettivo,
   cliente_id: clienteId,
   tipo_contatto: isPersonaFisica ? "cliente_persona" : "cliente_societa",
   cognome: cognomeContatto,
@@ -827,9 +836,11 @@ const base: Partial<ClienteInsert> & {
   nome?: string | null;
   telefono?: string | null;
   pec?: string | null;
+  studio_id?: string;
 } = {
-          cod_cliente:
-            formData.cod_cliente || `CL-${Date.now().toString().slice(-6)}`,
+  studio_id: studioId || editingCliente?.studio_id,
+  cod_cliente:
+    formData.cod_cliente || `CL-${Date.now().toString().slice(-6)}`
           tipo_cliente: formData.tipo_cliente,
           tipologia_cliente: formData.tipologia_cliente,
           professionista_incaricato:
