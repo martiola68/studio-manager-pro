@@ -1659,11 +1659,11 @@ const mostraVistaSocieta =
           {(groupedContatti[letter] || []).map((contatto) => (
           <div
   key={contatto.id}
-  className={`flex items-center justify-between gap-4 px-5 py-4 hover:bg-blue-50 ${
-    !contatto.cliente_id
-      ? "bg-red-100 border-l-4 border-red-600"
-      : ""
-  }`}
+ className={`flex items-center justify-between gap-4 px-5 py-4 hover:bg-blue-50 ${
+  !(contatto as any).cliente_id
+    ? "bg-red-100 border-l-4 border-red-600"
+    : ""
+}`}
 >
               <div className="min-w-0 flex-1">
                <div className="flex items-center gap-2">
@@ -1671,11 +1671,11 @@ const mostraVistaSocieta =
     {contatto.cognome} {contatto.nome}
   </div>
 
-  {!contatto.cliente_id && (
-    <span className="rounded bg-red-600 px-2 py-1 text-xs font-bold text-white">
-      NO CLIENTE_ID
-    </span>
-  )}
+ {!(contatto as any).cliente_id && (
+  <span className="rounded bg-red-600 px-2 py-1 text-xs font-bold text-white">
+    NO CLIENTE_ID
+  </span>
+)}
 </div>
 
               <div className="mt-2 grid grid-cols-1 gap-3 text-base text-gray-700 md:grid-cols-3">
