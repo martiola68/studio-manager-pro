@@ -641,19 +641,27 @@ const loadRelazioniContatti = async (contattoId: string) => {
 
   const { data, error } = await (supabase as any)
     .from("tbcontatti_relazioni")
-    .select(`
-      id,
-      contatto_id,
-      contatto_collegato_id,
-      contatto_collegato:tbcontatti!tbcontatti_relazioni_contatto_collegato_id_fkey (
-        id,
-        cognome,
-        nome,
-        email,
-        cell,
-        pec
-      )
-    `)
+   .select(`
+  id,
+  contatto_id,
+  contatto_collegato_id,
+  contatto_principale:tbcontatti!tbcontatti_relazioni_contatto_id_fkey (
+    id,
+    cognome,
+    nome,
+    email,
+    cell,
+    pec
+  ),
+  contatto_collegato:tbcontatti!tbcontatti_relazioni_contatto_collegato_id_fkey (
+    id,
+    cognome,
+    nome,
+    email,
+    cell,
+    pec
+  )
+`)
     .eq("contatto_id", contattoId);
 
   if (error) throw error;
@@ -684,10 +692,21 @@ const loadRelazioniContatti = async (contattoId: string) => {
 
   const map: Record<string, any[]> = {};
 
-  (data || []).forEach((rel: any) => {
-    if (!map[rel.contatto_id]) map[rel.contatto_id] = [];
-    map[rel.contatto_id].push(rel);
+(data || []).forEach((rel: any) => {
+  if (!map[rel.contatto_id]) map[rel.contatto_id] = [];
+  map[rel.contatto_id].push({
+    ...rel,
+    direzione: "uscente",
+    collegato: rel.contatto_collegato,
   });
+
+  if (!map[rel.contatto_collegato_id]) map[rel.contatto_collegato_id] = [];
+  map[rel.contatto_collegato_id].push({
+    ...rel,
+    direzione: "entrante",
+    collegato: rel.contatto_principale,
+  });
+});
 
   setRelazioniContattiMap(map);
 };
@@ -1688,7 +1707,7 @@ const mostraVistaSocieta =
   >
     <div>
       <div className="font-semibold text-gray-900">
-        {rel.contatto_collegato?.cognome} {rel.contatto_collegato?.nome}
+       {rel.collegato?.cognome} {rel.collegato?.nome}
       </div>
 
             {rel.contatto_collegato?.email && (
@@ -1969,7 +1988,7 @@ const mostraVistaSocieta =
   </div>
 )}
 
-                {relazioniContattiMap[contatto.id]?.length > 0 && (
+ {relazioniContattiMap[contatto.id]?.length > 0 && (
   <div className="mt-2 space-y-1">
     {relazioniContattiMap[contatto.id].map((rel) => (
       <div
@@ -1978,22 +1997,22 @@ const mostraVistaSocieta =
       >
         <span className="flex items-center font-bold text-lg text-blue-900">
           <User className="mr-1 h-3 w-3" />
-          {rel.contatto_collegato?.cognome} {rel.contatto_collegato?.nome}
+          {rel.collegato?.cognome} {rel.collegato?.nome}
         </span>
 
-        {rel.contatto_collegato?.email && (
+        {rel.collegato?.email && (
           <span className="text-blue-800 text-base">
             Email: {rel.contatto_collegato.email}
           </span>
         )}
 
-        {rel.contatto_collegato?.cell && (
+        {rel.collegato?.cell && (
           <span className="text-blue-800 text-base">
             Cell: {rel.contatto_collegato.cell}
           </span>
         )}
 
-        {rel.contatto_collegato?.pec && (
+        {rel.collegato?.pec && (
           <span className="text-blue-800 text-base">
             PEC: {rel.contatto_collegato.pec}
           </span>
