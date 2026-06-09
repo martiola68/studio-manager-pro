@@ -521,7 +521,6 @@ if (tipo === "contatto") {
     .insert({
       contatto_id: editingContatto.id,
       contatto_collegato_id: idCollegato,
-      ruolo: ruoloCliente || null,
     });
 
   if (error) throw error;
@@ -1456,11 +1455,17 @@ const mostraVistaSocieta =
       setEmailSocieta(cliente?.email || "");
       setTelefonoSocieta(cliente?.telefono || "");
       setPecSocieta(cliente?.pec || "");
-    } else {
-      setEmailSocieta("");
-      setTelefonoSocieta("");
-      setPecSocieta("");
-    }
+   } else if (tipo === "contatto") {
+  const contatto = contattiRubrica.find((c) => c.id === id);
+
+  setEmailSocieta(contatto?.email || "");
+  setTelefonoSocieta(contatto?.cell || "");
+  setPecSocieta("");
+} else {
+  setEmailSocieta("");
+  setTelefonoSocieta("");
+  setPecSocieta("");
+}
   }}
   className="h-10 rounded-md border border-gray-300 bg-white px-3 text-sm"
 >
@@ -1494,19 +1499,19 @@ const mostraVistaSocieta =
   <Input
     value={emailSocieta}
     onChange={(e) => setEmailSocieta(e.target.value)}
-    placeholder="Email società / ufficio"
+    placeholder="Email collegamento"
   />
 
   <Input
     value={telefonoSocieta}
     onChange={(e) => setTelefonoSocieta(e.target.value)}
-    placeholder="Telefono società / ufficio"
+    placeholder="Telefono collegamento"
   />
 
   <Input
     value={pecSocieta}
     onChange={(e) => setPecSocieta(e.target.value)}
-    placeholder="PEC società"
+    placeholder="PEC collegamento"
   />
 
   <Button
