@@ -167,7 +167,7 @@ const { data } = await supabase
       headers: {
         "Content-Type": "application/json",
       },
- body: JSON.stringify({
+body: JSON.stringify({
   id: organoInModificaId || undefined,
   cliente_id: clienteId,
   ...form,
@@ -176,6 +176,12 @@ const { data } = await supabase
     form.ruolo === "socio"
       ? form.percentuale_partecipazione || null
       : null,
+  durata_carica:
+    form.ruolo === "socio"
+      ? null
+      : form.durata_carica || null,
+  data_scadenza:
+    form.data_scadenza || null,
   presenza: null,
   principale: consentePrincipale(form.ruolo) && form.principale,
 }),
@@ -400,20 +406,24 @@ data_cessazione: organo.data_cessazione || "",
             <select
               style={inputStyle}
               value={form.ruolo}
-              onChange={(e) =>
-                setForm((prev) => ({
-                  ...prev,
-                 ruolo: e.target.value,
-carica: ruoliLabel[e.target.value] || "",
-percentuale_partecipazione:
-  e.target.value === "socio"
-    ? prev.percentuale_partecipazione
-    : "",
-principale: consentePrincipale(e.target.value)
-  ? prev.principale
-  : false,
-                }))
-              }
+            onChange={(e) =>
+  setForm((prev) => ({
+    ...prev,
+    ruolo: e.target.value,
+    carica: ruoliLabel[e.target.value] || "",
+    percentuale_partecipazione:
+      e.target.value === "socio"
+        ? prev.percentuale_partecipazione
+        : "",
+    durata_carica:
+      e.target.value === "socio"
+        ? ""
+        : prev.durata_carica || "Fino a revoca",
+    principale: consentePrincipale(e.target.value)
+      ? prev.principale
+      : false,
+  }))
+}
             >
               {ruoli
                 .filter((r) => r !== "tutti")
