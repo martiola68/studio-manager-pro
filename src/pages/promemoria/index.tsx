@@ -236,19 +236,15 @@ const getPrioritaOrder = (priorita?: string | null) => {
 };
 
   // HANDLERS SELEZIONE MULTIPLA
- const handleSelectAll = () => {
-  if (selectAll) {
-    setSelectedIds([]);
-    setSelectAll(false);
-    return;
-  }
+const handleSelectAll = () => {
+  setSelectedIds([]);
+  setSelectAll(false);
 
-  const idsEliminabili = promemoriaFiltrati
-    .filter(canDeletePromemoria)
-    .map((p) => p.id);
-
-  setSelectedIds(idsEliminabili);
-  setSelectAll(idsEliminabili.length > 0);
+  toast({
+    title: "Selezione multipla disabilitata",
+    description: "Per sicurezza puoi eliminare un solo promemoria alla volta.",
+    variant: "destructive",
+  });
 };
 
   const handleToggleSelect = (id: string) => {
@@ -263,24 +259,13 @@ const getPrioritaOrder = (priorita?: string | null) => {
     return;
   }
 
-  setSelectedIds((prev) => {
-    const newSelection = prev.includes(id)
-      ? prev.filter((selectedId) => selectedId !== id)
-      : [...prev, id];
+ setSelectedIds((prev) => {
+  const newSelection = prev.includes(id) ? [] : [id];
 
-    const idsEliminabili = promemoriaFiltrati
-      .filter(canDeletePromemoria)
-      .map((p) => p.id);
+  setSelectAll(false);
 
-    setSelectAll(
-      idsEliminabili.length > 0 &&
-      idsEliminabili.every((eliminabileId) =>
-        newSelection.includes(eliminabileId)
-      )
-    );
-
-    return newSelection;
-  });
+  return newSelection;
+});
 };
 
   const handleBulkDelete = () => {
@@ -288,56 +273,62 @@ const getPrioritaOrder = (priorita?: string | null) => {
     setIsDeleteDialogOpen(true);
   };
 
-  const handleBulkDeleteConfirm = async () => {
-    try {
-      setLoading(true);
-  if (!currentUser?.id) {
-  toast({
-    title: "Errore",
-    description: "Utente non identificato",
-    variant: "destructive",
-  });
-  return;
-}
+const handleBulkDeleteConfirm = async () => {
+  try {
+    setLoading(true);
 
-const idsAutorizzati = selectedIds.filter((id) => {
-  const item = promemoria.find((p) => p.id === id);
-  return item && canDeletePromemoria(item);
-});
-
-if (idsAutorizzati.length === 0) {
-  toast({
-    title: "Operazione non consentita",
-    description: "Nessun promemoria eliminabile selezionato.",
-    variant: "destructive",
-  });
-  return;
-}
-
-for (const id of idsAutorizzati) {
-  await promemoriaService.deletePromemoria(id, currentUser.id);
-}
-      
-      toast({
-        title: "Successo",
-       description: `${idsAutorizzati.length} promemoria eliminati correttamente`
-      });
-      
-      setSelectedIds([]);
-      setSelectAll(false);
-      setIsDeleteDialogOpen(false);
-      checkUserAndLoad();
-    } catch (error) {
-      console.error(error);
+    if (!currentUser?.id) {
       toast({
         title: "Errore",
-        description: "Impossibile eliminare i promemoria selezionati",
-        variant: "destructive"
+        description: "Utente non identificato",
+        variant: "destructive",
       });
-    } finally {
-      setLoading(false);
+      return;
     }
-  };
+
+    if (selectedIds.length !== 1) {
+      toast({
+        title: "Operazione bloccata",
+        description: "Puoi eliminare un solo promemoria alla volta.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const id = selectedIds[0];
+    const item = promemoria.find((p) => p.id === id);
+
+    if (!item || !canDeletePromemoria(item)) {
+      toast({
+        title: "Operazione non consentita",
+        description: "Puoi eliminare solo i promemoria creati da te.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    await promemoriaService.deletePromemoria(id, currentUser.id);
+
+    toast({
+      title: "Successo",
+      description: "Promemoria eliminato correttamente",
+    });
+
+    setSelectedIds([]);
+    setSelectAll(false);
+    setIsDeleteDialogOpen(false);
+    checkUserAndLoad();
+  } catch (error) {
+    console.error(error);
+    toast({
+      title: "Errore",
+      description: "Impossibile eliminare il promemoria selezionato",
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleViewAllegati = (p: Promemoria) => {
     setViewAllegatiPromemoria(p);
