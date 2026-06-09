@@ -362,7 +362,7 @@ data_cessazione: organo.data_cessazione || "",
       </div>
 
       <div style={cardStyle}>
-        <h2 style={titleStyle}>Aggiungi organo</h2>
+        <h2 style={titleStyle}>Aggiungi socio / organo</h2>
 
         <div
           style={{
@@ -452,7 +452,7 @@ principale: consentePrincipale(e.target.value)
           </div>
 
           <div>
-  <label style={labelStyle}>Data nomina</label>
+  <label style={labelStyle}>Data nomina / dal</label>
 
   <input
     type="date"
@@ -469,16 +469,20 @@ principale: consentePrincipale(e.target.value)
 
           <div>
   <label style={labelStyle}>Durata carica</label>
-  <select
-    style={inputStyle}
-    value={form.durata_carica}
-    onChange={(e) =>
-      setForm((prev) => ({
-        ...prev,
-        durata_carica: e.target.value,
-      }))
-    }
-  >
+ <select
+  style={{
+    ...inputStyle,
+    background: form.ruolo === "socio" ? "#f1f5f9" : "#fff",
+  }}
+  disabled={form.ruolo === "socio"}
+  value={form.ruolo === "socio" ? "" : form.durata_carica}
+  onChange={(e) =>
+    setForm((prev) => ({
+      ...prev,
+      durata_carica: e.target.value,
+    }))
+  }
+>
     <option value="Fino a revoca">Fino a revoca</option>
     <option value="Anni: 1">Anni: 1</option>
     <option value="Anni: 2">Anni: 2</option>
@@ -490,7 +494,7 @@ principale: consentePrincipale(e.target.value)
 </div>
 
 <div>
-  <label style={labelStyle}>Data scadenza</label>
+ <label style={labelStyle}>Data scadenza / Fino a</label>
   <input
     type="date"
     style={inputStyle}
@@ -536,7 +540,7 @@ principale: consentePrincipale(e.target.value)
           </label>
 
           <button type="button" style={blueButton} onClick={salvaOrgano}>
-            Salva organo
+            Aggiungi nominativo
           </button>
         </div>
 
@@ -548,7 +552,7 @@ principale: consentePrincipale(e.target.value)
       </div>
 
       <div style={cardStyle}>
-        <h2 style={titleStyle}>Organi collegati</h2>
+      <h2 style={titleStyle}>Soci / Organi collegati</h2>
 
         {loading ? (
           <p>Caricamento...</p>
