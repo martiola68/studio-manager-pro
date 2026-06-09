@@ -598,10 +598,12 @@ const { error } = await (supabase as any)
     }
   };
 
-  const handleEliminaRelazioneContatto = async (relazioneId: string) => {
+const handleEliminaRelazioneContatto = async (relazioneId: string) => {
   if (!editingContatto?.id) return;
 
   try {
+    const supabase = getSupabaseClient();
+
     const { error } = await (supabase as any)
       .from("tbcontatti_relazioni")
       .delete()
