@@ -1442,28 +1442,28 @@ const mostraVistaSocieta =
     </div>
 
    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-  <select
-    value={clienteDaCollegare}
-   onChange={(e) => {
-const value = e.target.value;
-setClienteDaCollegare(value);
+<select
+  value={clienteDaCollegare}
+  onChange={(e) => {
+    const value = e.target.value;
+    setClienteDaCollegare(value);
 
-const [tipo, id] = value.split(":");
+    const [tipo, id] = value.split(":");
 
-if (tipo === "cliente") {
-  const cliente = clienti.find((c) => c.id === id);
+    if (tipo === "cliente") {
+      const cliente = clienti.find((c) => c.id === id);
 
-  setEmailSocieta(cliente?.email || "");
-  setTelefonoSocieta(cliente?.telefono || "");
-  setPecSocieta(cliente?.pec || "");
-} else {
-  setEmailSocieta("");
-  setTelefonoSocieta("");
-  setPecSocieta("");
-
-}}
-    className="h-10 rounded-md border border-gray-300 bg-white px-3 text-sm"
-  >
+      setEmailSocieta(cliente?.email || "");
+      setTelefonoSocieta(cliente?.telefono || "");
+      setPecSocieta(cliente?.pec || "");
+    } else {
+      setEmailSocieta("");
+      setTelefonoSocieta("");
+      setPecSocieta("");
+    }
+  }}
+  className="h-10 rounded-md border border-gray-300 bg-white px-3 text-sm"
+>
   <option value="">Seleziona cliente o contatto</option>
 
 <optgroup label="CLIENTI">
