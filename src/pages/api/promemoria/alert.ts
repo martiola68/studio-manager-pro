@@ -19,11 +19,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const oggi = new Date();
   oggi.setHours(0, 0, 0, 0);
 
-  const traSetteGiorni = new Date(oggi);
-  traSetteGiorni.setDate(traSetteGiorni.getDate() + 7);
+const traSetteGiorni = new Date(oggi);
+traSetteGiorni.setDate(traSetteGiorni.getDate() + 7);
 
-  const oggiIso = oggi.toISOString().split("T")[0];
-  const setteGiorniIso = traSetteGiorni.toISOString().split("T")[0];
+const traTreGiorni = new Date(oggi);
+traTreGiorni.setDate(traTreGiorni.getDate() + 3);
+
+const oggiIso = oggi.toISOString().split("T")[0];
+const setteGiorniIso = traSetteGiorni.toISOString().split("T")[0];
+const treGiorniIso = traTreGiorni.toISOString().split("T")[0];
 
   try {
     const { data: promemoria, error } = await supabase
@@ -35,7 +39,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         )
       `)
       .neq("working_progress", "Completato")
-      .in("data_scadenza", [oggiIso, setteGiorniIso]);
+    .in("data_scadenza", [oggiIso, treGiorniIso, setteGiorniIso]);
 
     if (error) throw error;
 
@@ -53,12 +57,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         (scadenza.getTime() - oggi.getTime()) / (1000 * 60 * 60 * 24)
       );
 
-      const tipoAlert = giorniRimasti === 7 ? "7gg" : "oggi";
+      const tipoAlert =
+  giorniRimasti === 7 ? "7gg" :
+  giorniRimasti === 3 ? "3gg" :
+  "oggi";
 
-      if (
-        (tipoAlert === "7gg" && p.alert_7gg_inviato) ||
-        (tipoAlert === "oggi" && p.alert_oggi_inviato)
-      ) {
+     if (
+  (tipoAlert === "7gg" && p.alert_7gg_inviato) ||
+  (tipoAlert === "3gg" && p.alert_3gg_inviato) ||
+  (tipoAlert === "oggi" && p.alert_oggi_inviato)
+) {
         giaInviati++;
         continue;
       }
@@ -93,17 +101,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       const subject =
-        tipoAlert === "7gg"
-          ? `Promemoria in scadenza tra 7 giorni: ${p.titolo}`
-          : `Promemoria in scadenza oggi: ${p.titolo}`;
+  tipoAlert === "7gg"
+    ? `Promemoria in scadenza tra 7 giorni: ${p.titolo}`
+    : tipoAlert === "3gg"
+    ? `Promemoria in scadenza tra 3 giorni: ${p.titolo}`
+    : `Promemoria in scadenza oggi: ${p.titolo}`;
 
       const html = `
         <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
           <p>Gentile ${p.destinatario.nome || "utente"},</p>
           <p>${
             tipoAlert === "7gg"
-              ? "ti ricordiamo che il seguente promemoria andrà in scadenza tra 7 giorni."
-              : "ti ricordiamo che il seguente promemoria scade oggi."
+  ? "ti ricordiamo che il seguente promemoria andrà in scadenza tra 7 giorni."
+  : tipoAlert === "3gg"
+  ? "ti ricordiamo che il seguente promemoria andrà in scadenza tra 3 giorni."
+  : "ti ricordiamo che il seguente promemoria scade oggi."
           }</p>
           <ul>
             <li><strong>Titolo:</strong> ${p.titolo}</li>
@@ -130,7 +142,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         riferimento_id: p.id,
         tipo_alert: tipoAlert,
         data_scadenza: p.data_scadenza,
-        giorni_preavviso: tipoAlert === "7gg" ? 7 : 0,
+       giorni_preavviso:
+  tipoAlert === "7gg" ? 7 :
+  tipoAlert === "3gg" ? 3 :
+  0,
         destinatario_utente_id: p.destinatario?.id || p.destinatario_id,
         destinatario_email: p.destinatario.email,
         messaggio_interno_creato: false,
@@ -147,17 +162,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         await supabase
           .from("tbpromemoria")
-          .update(
-            tipoAlert === "7gg"
-              ? {
-                  alert_7gg_inviato: true,
-                  alert_7gg_inviato_at: new Date().toISOString(),
-                }
-              : {
-                  alert_oggi_inviato: true,
-                  alert_oggi_inviato_at: new Date().toISOString(),
-                }
-          )
+         .update(
+  tipoAlert === "7gg"
+    ? {
+        alert_7gg_inviato: true,
+        alert_7gg_inviato_at: new Date().toISOString(),
+      }
+    : tipoAlert === "3gg"
+    ? {
+        alert_3gg_inviato: true,
+        alert_3gg_inviato_at: new Date().toISOString(),
+      }
+    : {
+        alert_oggi_inviato: true,
+        alert_oggi_inviato_at: new Date().toISOString(),
+      }
+)
           .eq("id", p.id);
       } else {
         emailFallite++;
@@ -167,7 +187,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     return res.status(200).json({
       success: true,
-      date: { oggiIso, setteGiorniIso },
+      date: { oggiIso, treGiorniIso, setteGiorniIso },
       promemoria_trovati: promemoria?.length || 0,
       email_inviate: emailInviate,
       email_fallite: emailFallite,
