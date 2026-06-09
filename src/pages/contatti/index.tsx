@@ -669,6 +669,8 @@ const loadRelazioniContatti = async (contattoId: string) => {
   setRelazioniContatti(data || []);
 };
 
+  console.log("RELAZIONI", data);
+
   const loadRelazioniContattiGlobali = async () => {
   const supabase = getSupabaseClient();
 
