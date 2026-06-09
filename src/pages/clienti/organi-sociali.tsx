@@ -139,14 +139,20 @@ useEffect(() => {
 async function caricaNominativi() {
   const supabase = getSupabaseClient() as any;
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("rapp_legali")
     .select("id, nome_cognome, codice_fiscale")
     .order("nome_cognome");
 
+  if (error) {
+    console.error("Errore caricaNominativi:", error);
+    setNominativi([]);
+    return;
+  }
+
   setNominativi(data || []);
 }
-
+  
 async function salvaNuovoNominativo() {
   if (!nuovoNominativo.nome_cognome.trim()) {
     alert("Nome e cognome obbligatori.");
@@ -208,9 +214,10 @@ async function salvaNuovoNominativo() {
   });
 }
 
-  async function caricaOrgani() {
-    setLoading(true);
+ async function caricaOrgani() {
+  setLoading(true);
 
+  try {
     const res = await fetch(`/api/clienti-organi?cliente_id=${clienteId}`, {
       cache: "no-store",
     });
@@ -220,12 +227,19 @@ async function salvaNuovoNominativo() {
     if (res.ok) {
       setOrgani(data.organi || []);
     } else {
+      console.error("Errore caricaOrgani:", data);
       setMessaggio(data.error || "Errore caricamento organi");
+      setOrgani([]);
     }
-
+  } catch (err) {
+    console.error("Errore fetch caricaOrgani:", err);
+    setMessaggio("Errore caricamento organi");
+    setOrgani([]);
+  } finally {
     setLoading(false);
   }
-
+}
+  
   async function salvaOrgano() {
     if (!clienteId) {
       alert("Seleziona prima un cliente.");
