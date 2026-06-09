@@ -464,7 +464,7 @@ setRappLegali(rappLegaliData);
         | "flag_fiscali"
         | "flag_esterometro"
         | "flag_ccgg",
-    //    | "flag_proforma",
+        | "flag_proforma",
       nextValue: boolean
     ) => {
       setClienti((prev) =>
@@ -1975,7 +1975,6 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
 <TableHead className="text-center w-[70px] min-w-[70px]">Fisc.</TableHead>
 <TableHead className="text-center w-[70px] min-w-[70px]">Est.</TableHead>
 <TableHead className="text-center w-[70px] min-w-[70px]">CCGG</TableHead>
-// <TableHead className="text-center w-[70px] min-w-[70px]">Prof.</TableHead>
 <TableHead className="text-center w-[70px] min-w-[70px]">PROFORMA</TableHead>
               </TableRow>
             </TableHeader>
@@ -2012,6 +2011,15 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
                     />
                   </TableCell>
 
+                     <TableCell className="text-center">
+                    <Checkbox
+                      checked={!!cliente.flag_cu}
+                      onCheckedChange={(v) =>
+                        toggleClienteFlag(cliente.id, "flag_cu", v === true)
+                      }
+                    />
+                  </TableCell>
+
                   <TableCell className="text-center">
                     <Checkbox
                       checked={!!cliente.flag_bilancio}
@@ -2035,15 +2043,6 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
                       checked={!!cliente.flag_imu}
                       onCheckedChange={(v) =>
                         toggleClienteFlag(cliente.id, "flag_imu", v === true)
-                      }
-                    />
-                  </TableCell>
-
-                  <TableCell className="text-center">
-                    <Checkbox
-                      checked={!!cliente.flag_cu}
-                      onCheckedChange={(v) =>
-                        toggleClienteFlag(cliente.id, "flag_cu", v === true)
                       }
                     />
                   </TableCell>
