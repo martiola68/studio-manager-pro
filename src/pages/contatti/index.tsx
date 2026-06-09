@@ -1460,11 +1460,7 @@ if (tipo === "cliente") {
   setEmailSocieta("");
   setTelefonoSocieta("");
   setPecSocieta("");
-}
 
-  setEmailSocieta(cliente?.email || "");
-  setTelefonoSocieta(cliente?.telefono || "");
-  setPecSocieta(cliente?.pec || "");
 }}
     className="h-10 rounded-md border border-gray-300 bg-white px-3 text-sm"
   >
