@@ -1840,7 +1840,7 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
         </Button>
       </div>
     ) : (
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto max-h-[75vh]">
         {vistaClienti === "clienti" ? (
           <Table>
             <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
@@ -1960,10 +1960,10 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
           <Table>
             <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
               <TableRow>
-               <TableHead className="sticky left-0 bg-background z-20 w-[300px]">
+<TableHead className="sticky left-0 bg-background z-20 w-[190px] max-w-[190px]">
   Cliente
 </TableHead>
-<TableHead className="min-w-[180px] text-left">
+<TableHead className="min-w-[150px] w-[150px] text-left">
   Utente Fiscale
 </TableHead>
 <TableHead className="text-center w-[54px] min-w-[54px]">IVA</TableHead>
@@ -1971,27 +1971,27 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
 <TableHead className="text-center w-[54px] min-w-[54px]">CU</TableHead>
 <TableHead className="text-center w-[54px] min-w-[54px]">770</TableHead>
 <TableHead className="text-center w-[54px] min-w-[54px]">IMU</TableHead>
-<TableHead className="text-center w-[70px] min-w-[70px]">Bil.</TableHead>
-<TableHead className="text-center w-[70px] min-w-[70px]">Fisc.</TableHead>
-<TableHead className="text-center w-[70px] min-w-[70px]">Est.</TableHead>
-<TableHead className="text-center w-[70px] min-w-[70px]">CCGG</TableHead>
-<TableHead className="text-center w-[70px] min-w-[70px]">PROFORMA</TableHead>
+<TableHead className="text-center w-[58px] min-w-[58px]">Bil.</TableHead>
+<TableHead className="text-center w-[58px] min-w-[58px]">Fisc.</TableHead>
+<TableHead className="text-center w-[58px] min-w-[58px]">Est.</TableHead>
+<TableHead className="text-center w-[58px] min-w-[58px]">CCGG</TableHead>
+<TableHead className="text-center w-[58px] min-w-[58px]">Prof.</TableHead>
               </TableRow>
             </TableHeader>
 
             <TableBody>
               {filteredClienti.map((cliente) => (
                 <TableRow key={cliente.id}>
-                  <TableCell
-                    className="sticky left-0 bg-background z-20 font-medium w-[350px] truncate border-r pr-4"
-                    title={cliente.ragione_sociale || ""}
-                  >
-                    {cliente.ragione_sociale}
-                  </TableCell>
+               <TableCell
+  className="sticky left-0 bg-background z-20 font-medium w-[190px] max-w-[190px] truncate border-r pr-2"
+  title={cliente.ragione_sociale || ""}
+>
+  {cliente.ragione_sociale}
+</TableCell>
 
-                  <TableCell className="min-w-[220px] text-left">
-                    {getUtenteNome(cliente.utente_operatore_id)}
-                  </TableCell>
+<TableCell className="min-w-[150px] w-[150px] max-w-[150px] truncate text-left">
+  {getUtenteNome(cliente.utente_operatore_id)}
+</TableCell>
 
                   <TableCell className="text-center">
                     <Checkbox
