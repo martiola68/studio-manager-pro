@@ -1992,96 +1992,92 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
   {getUtenteNome(cliente.utente_operatore_id)}
 </TableCell>
 
-                  <TableCell className="text-center">
-                    <Checkbox
-                      checked={!!cliente.flag_iva}
-                      onCheckedChange={(v) =>
-                        toggleClienteFlag(cliente.id, "flag_iva", v === true)
-                      }
-                    />
-                  </TableCell>
+               <TableCell className="text-center">
+  <Checkbox
+    checked={!!cliente.flag_iva}
+    onCheckedChange={(v) =>
+      toggleClienteFlag(cliente.id, "flag_iva", v === true)
+    }
+  />
+</TableCell>
 
-                  <TableCell className="text-center">
-                    <Checkbox
-                      checked={!!cliente.flag_lipe}
-                      onCheckedChange={(v) =>
-                        toggleClienteFlag(cliente.id, "flag_lipe", v === true)
-                      }
-                    />
-                  </TableCell>
+<TableCell className="text-center">
+  <Checkbox
+    checked={!!cliente.flag_lipe}
+    onCheckedChange={(v) =>
+      toggleClienteFlag(cliente.id, "flag_lipe", v === true)
+    }
+  />
+</TableCell>
 
-                     <TableCell className="text-center">
-                    <Checkbox
-                      checked={!!cliente.flag_cu}
-                      onCheckedChange={(v) =>
-                        toggleClienteFlag(cliente.id, "flag_cu", v === true)
-                      }
-                    />
-                  </TableCell>
+<TableCell className="text-center">
+  <Checkbox
+    checked={!!cliente.flag_cu}
+    onCheckedChange={(v) =>
+      toggleClienteFlag(cliente.id, "flag_cu", v === true)
+    }
+  />
+</TableCell>
 
-                  <TableCell className="text-center">
-                    <Checkbox
-                      checked={!!cliente.flag_bilancio}
-                      onCheckedChange={(v) =>
-                        toggleClienteFlag(cliente.id, "flag_bilancio", v === true)
-                      }
-                    />
-                  </TableCell>
+<TableCell className="text-center">
+  <Checkbox
+    checked={!!cliente.flag_770}
+    onCheckedChange={(v) =>
+      toggleClienteFlag(cliente.id, "flag_770", v === true)
+    }
+  />
+</TableCell>
 
-                  <TableCell className="text-center">
-                    <Checkbox
-                      checked={!!cliente.flag_770}
-                      onCheckedChange={(v) =>
-                        toggleClienteFlag(cliente.id, "flag_770", v === true)
-                      }
-                    />
-                  </TableCell>
+<TableCell className="text-center">
+  <Checkbox
+    checked={!!cliente.flag_imu}
+    onCheckedChange={(v) =>
+      toggleClienteFlag(cliente.id, "flag_imu", v === true)
+    }
+  />
+</TableCell>
 
-                  <TableCell className="text-center">
-                    <Checkbox
-                      checked={!!cliente.flag_imu}
-                      onCheckedChange={(v) =>
-                        toggleClienteFlag(cliente.id, "flag_imu", v === true)
-                      }
-                    />
-                  </TableCell>
+<TableCell className="text-center">
+  <Checkbox
+    checked={!!cliente.flag_bilancio}
+    onCheckedChange={(v) =>
+      toggleClienteFlag(cliente.id, "flag_bilancio", v === true)
+    }
+  />
+</TableCell>
 
-                  <TableCell className="text-center">
-                    <Checkbox
-                      checked={!!cliente.flag_fiscali}
-                      onCheckedChange={(v) =>
-                        toggleClienteFlag(cliente.id, "flag_fiscali", v === true)
-                      }
-                    />
-                  </TableCell>
+<TableCell className="text-center">
+  <Checkbox
+    checked={!!cliente.flag_fiscali}
+    onCheckedChange={(v) =>
+      toggleClienteFlag(cliente.id, "flag_fiscali", v === true)
+    }
+  />
+</TableCell>
 
-                  <TableCell className="text-center">
-                    <Checkbox
-                      checked={!!cliente.flag_esterometro}
-                      onCheckedChange={(v) =>
-                        toggleClienteFlag(cliente.id, "flag_esterometro", v === true)
-                      }
-                    />
-                  </TableCell>
+<TableCell className="text-center">
+  <Checkbox
+    checked={!!cliente.flag_esterometro}
+    onCheckedChange={(v) =>
+      toggleClienteFlag(cliente.id, "flag_esterometro", v === true)
+    }
+  />
+</TableCell>
 
-                  <TableCell className="text-center">
-                    <Checkbox
-                      checked={!!cliente.flag_ccgg}
-                      onCheckedChange={(v) =>
-                        toggleClienteFlag(cliente.id, "flag_ccgg", v === true)
-                      }
-                    />
-                  </TableCell>
+<TableCell className="text-center">
+  <Checkbox
+    checked={!!cliente.flag_ccgg}
+    onCheckedChange={(v) =>
+      toggleClienteFlag(cliente.id, "flag_ccgg", v === true)
+    }
+  />
+</TableCell>
 
-                  <TableCell className="text-center w-[70px] min-w-[70px]">
+<TableCell className="text-center w-[70px] min-w-[70px]">
   <Checkbox
     checked={!!cliente.flag_proforma}
     onCheckedChange={(v) =>
-      toggleClienteFlag(
-        cliente.id,
-        "flag_proforma",
-        v === true
-      )
+      toggleClienteFlag(cliente.id, "flag_proforma", v === true)
     }
   />
 </TableCell>
