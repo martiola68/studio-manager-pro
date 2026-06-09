@@ -1,6 +1,67 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
+export async function GET(req: NextRequest) {
+  try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { searchParams } = new URL(req.url);
+    const cliente_id = searchParams.get("cliente_id");
+
+    if (!cliente_id) {
+      return NextResponse.json(
+        { error: "cliente_id mancante" },
+        { status: 400 }
+      );
+    }
+
+    const { data, error } = await supabase
+      .from("tbclienti_organi")
+      .select(`
+        id,
+        cliente_id,
+        rapp_legale_id,
+        ruolo,
+        percentuale_partecipazione,
+        presenza,
+        carica,
+        principale,
+        attivo,
+        data_nomina,
+        data_cessazione,
+        durata_carica,
+        data_scadenza,
+        rapp_legali:rapp_legale_id (
+          id,
+          nome_cognome,
+          codice_fiscale,
+          email
+        )
+      `)
+      .eq("cliente_id", cliente_id)
+      .order("ruolo", { ascending: true });
+
+    if (error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      organi: data || [],
+    });
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: err.message || "Errore server" },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const supabase = createClient(
