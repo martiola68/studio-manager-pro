@@ -81,7 +81,7 @@
     "vaul": "^1.1.2",
     "vercel": "^52.2.0",
     "zod": "^3.24.1",
-    "pdfkit": "^0.17.1"
+    "pdf-lib": "^1.17.1"
   },
   "devDependencies": {
     "@softgenai/element-tagger": "^0.0.2",
@@ -95,8 +95,7 @@
     "tailwindcss": "^3.4.1",
     "@types/pg": "^8.11.10",
     "typescript": "^5",
-    "@types/pdfkit": "^0.17.2"
-  },
+     },
   "overrides": {
     "undici": "6.24.0",
     "basic-ftp": "^5.2.1",
