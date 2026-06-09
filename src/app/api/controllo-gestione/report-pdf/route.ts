@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import PDFDocument from "pdfkit";
+import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
@@ -24,8 +24,12 @@ function utentiLabel(record: any) {
   );
 }
 
-function completatoLabel(value: any) {
+function yesNo(value: any) {
   return value ? "SI" : "NO";
+}
+
+function cleanText(value: any) {
+  return String(value || "—").replace(/\r?\n/g, " ");
 }
 
 export async function GET(req: NextRequest) {
@@ -68,80 +72,110 @@ export async function GET(req: NextRequest) {
       records[0]?.cliente?.denominazione ||
       "Società";
 
-    const doc = new PDFDocument({
-      size: "A4",
-      margin: 40,
-    });
+    const pdfDoc = await PDFDocument.create();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-    const chunks: Buffer[] = [];
+    let page = pdfDoc.addPage([595.28, 841.89]);
+    const { width, height } = page.getSize();
 
-    doc.on("data", (chunk) => chunks.push(chunk));
+    let y = height - 50;
 
-    const pdfBufferPromise = new Promise<Buffer>((resolve) => {
-      doc.on("end", () => resolve(Buffer.concat(chunks)));
-    });
+    function addPageIfNeeded(extra = 40) {
+      if (y < extra) {
+        page = pdfDoc.addPage([595.28, 841.89]);
+        y = height - 50;
+      }
+    }
 
-    doc.fontSize(18).text("REPORT CONTROLLO DI GESTIONE", { align: "center" });
-    doc.moveDown();
+    function text(
+      value: string,
+      x = 50,
+      size = 10,
+      bold = false,
+      color = rgb(0, 0, 0)
+    ) {
+      addPageIfNeeded(40);
+      page.drawText(value.slice(0, 110), {
+        x,
+        y,
+        size,
+        font: bold ? boldFont : font,
+        color,
+      });
+      y -= size + 7;
+    }
 
-    doc.fontSize(11);
-    doc.text(`Società: ${societa}`);
-    doc.text(`Anno: ${anno}`);
-    doc.text(`Data stampa: ${formatDateIT(new Date().toISOString().slice(0, 10))}`);
-    doc.moveDown();
+    function line() {
+      addPageIfNeeded(30);
+      page.drawLine({
+        start: { x: 50, y },
+        end: { x: width - 50, y },
+        thickness: 0.5,
+        color: rgb(0.75, 0.75, 0.75),
+      });
+      y -= 14;
+    }
 
-    doc.fontSize(13).text("Riepilogo controlli", { underline: true });
-    doc.moveDown(0.5);
+    text("REPORT CONTROLLO DI GESTIONE", 50, 18, true);
+    line();
+
+    text(`Società: ${societa}`, 50, 11, true);
+    text(`Anno: ${anno}`, 50, 11);
+    text(`Data stampa: ${formatDateIT(new Date().toISOString().slice(0, 10))}`, 50, 11);
+    y -= 10;
+
+    text("RIEPILOGO CONTROLLI", 50, 13, true);
+    line();
+
+    text(`Controlli presenti: ${records.length}`, 50, 10, true);
+    y -= 8;
 
     if (records.length === 0) {
-      doc.fontSize(11).text("Nessun controllo presente per l'anno selezionato.");
+      text("Nessun controllo presente per l'anno selezionato.", 50, 11);
     }
 
     records.forEach((r: any, index: number) => {
       const dataControllo = r.data_storico || r.data_esecuzione;
 
-      doc.fontSize(12).text(
-        `${index + 1}. Controllo del ${formatDateIT(dataControllo)}`,
-        { underline: true }
-      );
+      addPageIfNeeded(160);
 
-      doc.fontSize(10);
-      doc.text(`Cadenza: ${r.cadenza_controllo || "—"}`);
-      doc.text(`Utenti assegnati: ${utentiLabel(r)}`);
-      doc.text(`Note: ${r.note || "—"}`);
-      doc.text(`Link: ${r.link || "—"}`);
-      doc.moveDown(0.5);
+      text(`${index + 1}. Controllo del ${formatDateIT(dataControllo)}`, 50, 12, true);
+      text(`Cadenza: ${cleanText(r.cadenza_controllo)}`);
+      text(`Utenti assegnati: ${cleanText(utentiLabel(r))}`);
+      text(`Note: ${cleanText(r.note)}`);
+      text(`Link: ${cleanText(r.link)}`);
 
-      doc.text("Checklist:");
-      doc.text(`- Rilevamento dati: ${completatoLabel(r.step_1_completato)}`);
-      if (r.step_1_note) doc.text(`  Note: ${r.step_1_note}`);
+      y -= 4;
+      text("Checklist", 50, 11, true);
 
-      doc.text(`- Analisi scostamenti: ${completatoLabel(r.step_2_completato)}`);
-      if (r.step_2_note) doc.text(`  Note: ${r.step_2_note}`);
+      text(`- Rilevamento dati: ${yesNo(r.step_1_completato)}`);
+      if (r.step_1_note) text(`  Note: ${cleanText(r.step_1_note)}`, 65);
 
-      doc.text(`- Reporting: ${completatoLabel(r.step_3_completato)}`);
-      if (r.step_3_note) doc.text(`  Note: ${r.step_3_note}`);
+      text(`- Analisi scostamenti: ${yesNo(r.step_2_completato)}`);
+      if (r.step_2_note) text(`  Note: ${cleanText(r.step_2_note)}`, 65);
 
-      doc.text(`- Azioni correttive: ${completatoLabel(r.step_4_completato)}`);
-      if (r.step_4_note) doc.text(`  Note: ${r.step_4_note}`);
+      text(`- Reporting: ${yesNo(r.step_3_completato)}`);
+      if (r.step_3_note) text(`  Note: ${cleanText(r.step_3_note)}`, 65);
 
-      doc.moveDown();
+      text(`- Azioni correttive: ${yesNo(r.step_4_completato)}`);
+      if (r.step_4_note) text(`  Note: ${cleanText(r.step_4_note)}`, 65);
 
-      if (doc.y > 720) {
-        doc.addPage();
-      }
+      line();
     });
 
-    doc.moveDown();
-    doc.fontSize(9).text("Report generato da Studio Manager Pro", {
-      align: "center",
+    y = Math.max(y, 60);
+    page.drawText("Report generato da Studio Manager Pro", {
+      x: 50,
+      y: 35,
+      size: 9,
+      font,
+      color: rgb(0.35, 0.35, 0.35),
     });
 
-    doc.end();
+    const pdfBytes = await pdfDoc.save();
 
-    const pdfBuffer = await pdfBufferPromise;
-
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(Buffer.from(pdfBytes), {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
