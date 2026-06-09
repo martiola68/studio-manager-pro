@@ -66,9 +66,22 @@ export default function OrganiSocialiPage() {
   const [clienteId, setClienteId] = useState("");
   const [filtroRuolo, setFiltroRuolo] = useState("tutti");
   const [loading, setLoading] = useState(false);
-  const [messaggio, setMessaggio] = useState("");
+const [messaggio, setMessaggio] = useState("");
 
- const [form, setForm] = useState({
+const [showNuovoNominativo, setShowNuovoNominativo] = useState(false);
+
+const [nuovoNominativo, setNuovoNominativo] = useState({
+  nome_cognome: "",
+  codice_fiscale: "",
+  email: "",
+  luogo_nascita: "",
+  data_nascita: "",
+  indirizzo: "",
+  citta: "",
+  cap: "",
+});
+
+const [form, setForm] = useState({
   rapp_legale_id: "",
   ruolo: "socio",
   carica: "",
@@ -440,27 +453,44 @@ data_cessazione: organo.data_cessazione || "",
             alignItems: "end",
           }}
         >
-          <div>
-            <label style={labelStyle}>Nominativo</label>
-            <select
-              style={inputStyle}
-              value={form.rapp_legale_id}
-              onChange={(e) =>
-                setForm((prev) => ({
-                  ...prev,
-                  rapp_legale_id: e.target.value,
-                }))
-              }
-            >
-              <option value="">Seleziona nominativo</option>
+        <div>
+  <label style={labelStyle}>Nominativo</label>
 
-              {nominativi.map((n) => (
-                <option key={n.id} value={n.id}>
-                  {n.nome_cognome} — {n.codice_fiscale}
-                </option>
-              ))}
-            </select>
-          </div>
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "1fr auto",
+      gap: 8,
+    }}
+  >
+    <select
+      style={inputStyle}
+      value={form.rapp_legale_id}
+      onChange={(e) =>
+        setForm((prev) => ({
+          ...prev,
+          rapp_legale_id: e.target.value,
+        }))
+      }
+    >
+      <option value="">Seleziona nominativo</option>
+
+      {nominativi.map((n) => (
+        <option key={n.id} value={n.id}>
+          {n.nome_cognome} — {n.codice_fiscale}
+        </option>
+      ))}
+    </select>
+
+    <button
+      type="button"
+      style={secondaryButton}
+      onClick={() => setShowNuovoNominativo(true)}
+    >
+      + Nuovo
+    </button>
+  </div>
+</div>
 
           <div>
             <label style={labelStyle}>Ruolo</label>
@@ -749,6 +779,161 @@ data_cessazione: organo.data_cessazione || "",
           </table>
         )}
       </div>
+  {showNuovoNominativo && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,.45)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 9999,
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              padding: 24,
+              borderRadius: 12,
+              width: 700,
+              maxWidth: "95%",
+            }}
+          >
+            <h2 style={titleStyle}>Nuovo nominativo</h2>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 10,
+                marginTop: 15,
+              }}
+            >
+              <input
+                style={inputStyle}
+                placeholder="Nome e cognome"
+                value={nuovoNominativo.nome_cognome}
+                onChange={(e) =>
+                  setNuovoNominativo((p) => ({
+                    ...p,
+                    nome_cognome: e.target.value,
+                  }))
+                }
+              />
+
+              <input
+                style={inputStyle}
+                placeholder="Codice fiscale"
+                value={nuovoNominativo.codice_fiscale}
+                onChange={(e) =>
+                  setNuovoNominativo((p) => ({
+                    ...p,
+                    codice_fiscale: e.target.value.toUpperCase(),
+                  }))
+                }
+              />
+
+              <input
+                style={inputStyle}
+                placeholder="Email"
+                value={nuovoNominativo.email}
+                onChange={(e) =>
+                  setNuovoNominativo((p) => ({
+                    ...p,
+                    email: e.target.value,
+                  }))
+                }
+              />
+
+              <input
+                style={inputStyle}
+                placeholder="Luogo nascita"
+                value={nuovoNominativo.luogo_nascita}
+                onChange={(e) =>
+                  setNuovoNominativo((p) => ({
+                    ...p,
+                    luogo_nascita: e.target.value,
+                  }))
+                }
+              />
+
+              <input
+                type="date"
+                style={inputStyle}
+                value={nuovoNominativo.data_nascita}
+                onChange={(e) =>
+                  setNuovoNominativo((p) => ({
+                    ...p,
+                    data_nascita: e.target.value,
+                  }))
+                }
+              />
+
+              <input
+                style={inputStyle}
+                placeholder="Indirizzo"
+                value={nuovoNominativo.indirizzo}
+                onChange={(e) =>
+                  setNuovoNominativo((p) => ({
+                    ...p,
+                    indirizzo: e.target.value,
+                  }))
+                }
+              />
+
+              <input
+                style={inputStyle}
+                placeholder="Città"
+                value={nuovoNominativo.citta}
+                onChange={(e) =>
+                  setNuovoNominativo((p) => ({
+                    ...p,
+                    citta: e.target.value,
+                  }))
+                }
+              />
+
+              <input
+                style={inputStyle}
+                placeholder="CAP"
+                value={nuovoNominativo.cap}
+                onChange={(e) =>
+                  setNuovoNominativo((p) => ({
+                    ...p,
+                    cap: e.target.value,
+                  }))
+                }
+              />
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 10,
+                marginTop: 20,
+              }}
+            >
+              <button
+                type="button"
+                style={secondaryButton}
+                onClick={() => setShowNuovoNominativo(false)}
+              >
+                Annulla
+              </button>
+
+              <button
+                type="button"
+                style={blueButton}
+                onClick={salvaNuovoNominativo}
+              >
+                Salva nominativo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
