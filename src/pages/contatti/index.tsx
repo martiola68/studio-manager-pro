@@ -331,9 +331,10 @@ const visibleLetters = letterFilter
       setEncryptionEnabled(enabled);
       setEncryptionLockedState(isEncryptionLocked());
 
-     await loadContatti(sid, enabled);
+await loadContatti(sid, enabled);
 await loadClienti(sid);
 await loadContattiRubrica(sid);
+await loadRelazioniContattiGlobali();
     } catch (error) {
       console.error("Errore:", error);
       router.push("/login");
@@ -462,6 +463,7 @@ const handleEdit = async (contatto: Contatto) => {
     if (encryptionEnabled && isEncryptionLocked()) {
       masterPasswordGate.requireUnlock(async () => {
         await loadContatti();
+        await loadRelazioniContattiGlobali();
         const fresh = await contattoService.getContatti();
         const enabled = studioId ? await isEncryptionEnabled(studioId) : false;
         const hydrated = await hydrateContatti(fresh, enabled);
@@ -632,6 +634,7 @@ const handleEliminaRelazioneContatto = async (relazioneId: string) => {
   editingContatto?.clienti_collegati || [];
 
 const [relazioniContatti, setRelazioniContatti] = useState<any[]>([]);
+const [relazioniContattiMap, setRelazioniContattiMap] = useState<Record<string, any[]>>({});
 
 const loadRelazioniContatti = async (contattoId: string) => {
   const supabase = getSupabaseClient();
@@ -656,6 +659,37 @@ const loadRelazioniContatti = async (contattoId: string) => {
   if (error) throw error;
 
   setRelazioniContatti(data || []);
+};
+
+  const loadRelazioniContattiGlobali = async () => {
+  const supabase = getSupabaseClient();
+
+  const { data, error } = await (supabase as any)
+    .from("tbcontatti_relazioni")
+    .select(`
+      id,
+      contatto_id,
+      contatto_collegato_id,
+      contatto_collegato:tbcontatti!tbcontatti_relazioni_contatto_collegato_id_fkey (
+        id,
+        cognome,
+        nome,
+        email,
+        cell,
+        pec
+      )
+    `);
+
+  if (error) throw error;
+
+  const map: Record<string, any[]> = {};
+
+  (data || []).forEach((rel: any) => {
+    if (!map[rel.contatto_id]) map[rel.contatto_id] = [];
+    map[rel.contatto_id].push(rel);
+  });
+
+  setRelazioniContattiMap(map);
 };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1928,6 +1962,40 @@ const mostraVistaSocieta =
         {rel.pec_societa && (
          <span className="text-blue-800 text-base">
             PEC: {rel.pec_societa}
+          </span>
+        )}
+      </div>
+    ))}
+  </div>
+)}
+
+                {relazioniContattiMap[contatto.id]?.length > 0 && (
+  <div className="mt-2 space-y-1">
+    {relazioniContattiMap[contatto.id].map((rel) => (
+      <div
+        key={rel.id}
+        className="flex flex-wrap items-center gap-5 rounded-md border border-blue-300 bg-blue-50 px-4 py-3 text-lg text-blue-900"
+      >
+        <span className="flex items-center font-bold text-lg text-blue-900">
+          <User className="mr-1 h-3 w-3" />
+          {rel.contatto_collegato?.cognome} {rel.contatto_collegato?.nome}
+        </span>
+
+        {rel.contatto_collegato?.email && (
+          <span className="text-blue-800 text-base">
+            Email: {rel.contatto_collegato.email}
+          </span>
+        )}
+
+        {rel.contatto_collegato?.cell && (
+          <span className="text-blue-800 text-base">
+            Cell: {rel.contatto_collegato.cell}
+          </span>
+        )}
+
+        {rel.contatto_collegato?.pec && (
+          <span className="text-blue-800 text-base">
+            PEC: {rel.contatto_collegato.pec}
           </span>
         )}
       </div>
