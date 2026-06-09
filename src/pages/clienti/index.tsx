@@ -8,7 +8,6 @@ import type { Database } from "@/integrations/supabase/types";
 import { useMasterPasswordGate } from "@/hooks/useMasterPasswordGate";
 import { MasterPasswordDialog } from "@/components/security/MasterPasswordDialog";
 import { runProtectedSubmit } from "@/lib/security/masterPasswordActions";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
