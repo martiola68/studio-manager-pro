@@ -464,7 +464,7 @@ setRappLegali(rappLegaliData);
         | "flag_fiscali"
         | "flag_esterometro"
         | "flag_ccgg",
-        | "flag_proforma",
+    //    | "flag_proforma",
       nextValue: boolean
     ) => {
       setClienti((prev) =>
