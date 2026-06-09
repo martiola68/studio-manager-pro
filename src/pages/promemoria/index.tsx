@@ -231,27 +231,57 @@ const getPrioritaOrder = (priorita?: string | null) => {
     }
   }, [formData.data_inserimento, formData.giorni_scadenza]);
 
+  const canDeletePromemoria = (p: Promemoria) => {
+  return !!currentUser?.id && p.operatore_id === currentUser.id;
+};
+
   // HANDLERS SELEZIONE MULTIPLA
-  const handleSelectAll = () => {
-    if (selectAll) {
-      setSelectedIds([]);
-      setSelectAll(false);
-    } else {
-      setSelectedIds(promemoria.map(p => p.id));
-      setSelectAll(true);
-    }
-  };
+ const handleSelectAll = () => {
+  if (selectAll) {
+    setSelectedIds([]);
+    setSelectAll(false);
+    return;
+  }
+
+  const idsEliminabili = promemoriaFiltrati
+    .filter(canDeletePromemoria)
+    .map((p) => p.id);
+
+  setSelectedIds(idsEliminabili);
+  setSelectAll(idsEliminabili.length > 0);
+};
 
   const handleToggleSelect = (id: string) => {
-    setSelectedIds(prev => {
-      const newSelection = prev.includes(id)
-        ? prev.filter(selectedId => selectedId !== id)
-        : [...prev, id];
-      
-      setSelectAll(newSelection.length === promemoria.length);
-      return newSelection;
+  const item = promemoria.find((p) => p.id === id);
+
+  if (!item || !canDeletePromemoria(item)) {
+    toast({
+      title: "Operazione non consentita",
+      description: "Puoi eliminare solo i promemoria creati da te.",
+      variant: "destructive",
     });
-  };
+    return;
+  }
+
+  setSelectedIds((prev) => {
+    const newSelection = prev.includes(id)
+      ? prev.filter((selectedId) => selectedId !== id)
+      : [...prev, id];
+
+    const idsEliminabili = promemoriaFiltrati
+      .filter(canDeletePromemoria)
+      .map((p) => p.id);
+
+    setSelectAll(
+      idsEliminabili.length > 0 &&
+      idsEliminabili.every((eliminabileId) =>
+        newSelection.includes(eliminabileId)
+      )
+    );
+
+    return newSelection;
+  });
+};
 
   const handleBulkDelete = () => {
     if (selectedIds.length === 0) return;
@@ -270,16 +300,27 @@ const getPrioritaOrder = (priorita?: string | null) => {
   return;
 }
 
-for (const id of selectedIds) {
-  await promemoriaService.deletePromemoria(
-    id,
-    currentUser.id
-  );
+const idsAutorizzati = selectedIds.filter((id) => {
+  const item = promemoria.find((p) => p.id === id);
+  return item && canDeletePromemoria(item);
+});
+
+if (idsAutorizzati.length === 0) {
+  toast({
+    title: "Operazione non consentita",
+    description: "Nessun promemoria eliminabile selezionato.",
+    variant: "destructive",
+  });
+  return;
+}
+
+for (const id of idsAutorizzati) {
+  await promemoriaService.deletePromemoria(id, currentUser.id);
 }
       
       toast({
         title: "Successo",
-        description: `${selectedIds.length} promemoria eliminati correttamente`
+       description: `${idsAutorizzati.length} promemoria eliminati correttamente`
       });
       
       setSelectedIds([]);
@@ -996,10 +1037,11 @@ if (destinatario?.email) {
                   }
                 >
                   <TableCell>
-                    <Checkbox
-                      checked={selectedIds.includes(p.id)}
-                      onCheckedChange={() => handleToggleSelect(p.id)}
-                    />
+                   <Checkbox
+  checked={selectedIds.includes(p.id)}
+  disabled={!canDeletePromemoria(p)}
+  onCheckedChange={() => handleToggleSelect(p.id)}
+/>
                   </TableCell>
 
                   <TableCell>
