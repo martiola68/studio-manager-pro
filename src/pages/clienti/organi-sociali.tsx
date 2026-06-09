@@ -1,6 +1,11 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import {
+  Pencil,
+  Power,
+  Trash2,
+} from "lucide-react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 
@@ -681,7 +686,7 @@ data_cessazione: organo.data_cessazione || "",
   <tr>
     <th style={thStyle}>Nominativo</th>
     <th style={thStyle}>Codice fiscale</th>
-    <th style={thStyle}>Ruolo</th>
+   
     <th style={thStyle}>Carica</th>
     <th style={thStyle}>Quota</th>
     <th style={thStyle}>Data nomina</th>
@@ -705,12 +710,8 @@ data_cessazione: organo.data_cessazione || "",
         {o.rapp_legali?.codice_fiscale || "—"}
       </td>
 
-      <td style={tdStyle}>
-        {o.ruolo}
-      </td>
-
-      <td style={tdStyle}>
-        {o.carica || "—"}
+         <td style={tdStyle}>
+      {o.carica || ruoliLabel[o.ruolo] || "—"}
       </td>
 
       <td style={tdStyle}>
@@ -757,31 +758,34 @@ data_cessazione: organo.data_cessazione || "",
             alignItems: "center",
           }}
         >
-          <button
-            type="button"
-            onClick={() => caricaInModifica(o)}
-            style={secondaryButton}
-          >
-            Modifica
-          </button>
+         <button
+  type="button"
+  onClick={() => caricaInModifica(o)}
+  title="Modifica"
+  style={iconButton}
+>
+  <Pencil size={16} />
+</button>
 
           {o.attivo && (
-            <button
-              type="button"
-              onClick={() => disattivaOrgano(o)}
-              style={dangerButton}
-            >
-              Disattiva
-            </button>
+           <button
+  type="button"
+  onClick={() => disattivaOrgano(o)}
+  title="Disattiva"
+  style={iconButton}
+>
+  <Power size={16} />
+</button>
           )}
 
-          <button
-            type="button"
-            onClick={() => eliminaOrgano(o)}
-            style={dangerButton}
-          >
-            Elimina
-          </button>
+         <button
+  type="button"
+  onClick={() => eliminaOrgano(o)}
+  title="Elimina"
+  style={iconDangerButton}
+>
+  <Trash2 size={16} />
+</button>
         </div>
       </td>
     </tr>
@@ -1014,6 +1018,32 @@ const dangerButton: React.CSSProperties = {
   color: "#dc2626",
   cursor: "pointer",
   fontWeight: 600,
+};
+
+const iconButton: React.CSSProperties = {
+  border: "1px solid #cbd5e1",
+  background: "#fff",
+  borderRadius: 8,
+  width: 36,
+  height: 36,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  cursor: "pointer",
+  color: "#334155",
+};
+
+const iconDangerButton: React.CSSProperties = {
+  border: "1px solid #fecaca",
+  background: "#fff",
+  borderRadius: 8,
+  width: 36,
+  height: 36,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  cursor: "pointer",
+  color: "#dc2626",
 };
 
 const thStyle: React.CSSProperties = {
