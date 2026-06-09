@@ -1175,7 +1175,14 @@ if (destinatario?.email) {
                 <Input 
                   type="date"
                   value={format(formData.data_inserimento, "yyyy-MM-dd")}
-                  onChange={e => setFormData(prev => ({...prev, data_inserimento: new Date(e.target.value)}))}
+                  onChange={(e) => {
+  if (!e.target.value) return;
+
+  setFormData((prev) => ({
+    ...prev,
+    data_inserimento: new Date(`${e.target.value}T00:00:00`),
+  }));
+}}
                 />
               </div>
               <div>
@@ -1400,7 +1407,11 @@ if (destinatario?.email) {
                 <Label>Data Inserimento</Label>
                 <Input 
                   type="date"
-                  value={format(formData.data_inserimento, "yyyy-MM-dd")}
+                  value={
+  formData.data_inserimento
+    ? format(formData.data_inserimento, "yyyy-MM-dd")
+    : ""
+}
                   onChange={e => setFormData(prev => ({...prev, data_inserimento: new Date(e.target.value)}))}
                   disabled={!!(currentUser && selectedPromemoria && currentUser.id === selectedPromemoria.destinatario_id && currentUser.id !== selectedPromemoria.operatore_id)}
                 />
@@ -1421,7 +1432,11 @@ if (destinatario?.email) {
               <Label>Data Scadenza (calcolata automaticamente)</Label>
               <Input 
                 type="date"
-                value={format(formData.data_scadenza, "yyyy-MM-dd")}
+               value={
+  formData.data_scadenza
+    ? format(formData.data_scadenza, "yyyy-MM-dd")
+    : ""
+}
                 disabled
                 className="bg-gray-100"
               />
