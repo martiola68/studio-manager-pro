@@ -91,6 +91,14 @@ type ClienteRubrica = {
   pec?: string | null;
 };
 
+type ContattoRubrica = {
+  id: string;
+  cognome: string | null;
+  nome: string | null;
+  email?: string | null;
+  cell?: string | null;
+};
+
 const initialFormData: FormDataState = {
   cognome: "",
   nome: "",
@@ -130,7 +138,9 @@ export default function ContattiPage() {
   const [encryptionLockedState, setEncryptionLockedState] = useState(true);
 
   const [clienti, setClienti] = useState<ClienteRubrica[]>([]);
-  const [clienteDaCollegare, setClienteDaCollegare] = useState("");
+const [contattiRubrica, setContattiRubrica] = useState<ContattoRubrica[]>([]);
+const [clienteDaCollegare, setClienteDaCollegare] = useState("");
+  
   const [ruoloCliente, setRuoloCliente] = useState("");
 
   const [emailSocieta, setEmailSocieta] = useState("");
@@ -177,6 +187,26 @@ let query = db
   if (error) throw error;
 
  setClienti((data || []) as ClienteRubrica[]);
+};
+
+  const loadContattiRubrica = async (sid?: string) => {
+  const supabase = getSupabaseClient();
+  const db = supabase as any;
+
+  let query = db
+    .from("tbcontatti")
+    .select("id, cognome, nome, email, cell")
+    .order("cognome", { ascending: true });
+
+  if (sid) {
+    query = query.eq("studio_id", sid);
+  }
+
+  const { data, error } = await query;
+
+  if (error) throw error;
+
+  setContattiRubrica((data || []) as ContattoRubrica[]);
 };
 
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
@@ -302,8 +332,9 @@ const visibleLetters = letterFilter
       setEncryptionEnabled(enabled);
       setEncryptionLockedState(isEncryptionLocked());
 
-      await loadContatti(sid, enabled);
-      await loadClienti(sid);
+     await loadContatti(sid, enabled);
+await loadClienti(sid);
+await loadContattiRubrica(sid);
     } catch (error) {
       console.error("Errore:", error);
       router.push("/login");
@@ -466,18 +497,36 @@ const handleEdit = async (contatto: Contatto) => {
     }
 
     try {
-      await contattoService.collegaCliente({
-        studio_id: studioId,
-        contatto_id: editingContatto.id,
-        cliente_id: clienteDaCollegare,
-        ruolo: ruoloCliente || null,
-        principale: false,
-        riceve_comunicazioni: true,
-        riceve_scadenze: true,
-        email_societa: emailSocieta || null,
-        telefono_societa: telefonoSocieta || null,
-        pec_societa: pecSocieta || null,
-      });
+     const [tipo, idCollegato] = clienteDaCollegare.split(":");
+
+if (tipo === "cliente") {
+  await contattoService.collegaCliente({
+    studio_id: studioId,
+    contatto_id: editingContatto.id,
+    cliente_id: idCollegato,
+    ruolo: ruoloCliente || null,
+    principale: false,
+    riceve_comunicazioni: true,
+    riceve_scadenze: true,
+    email_societa: emailSocieta || null,
+    telefono_societa: telefonoSocieta || null,
+    pec_societa: pecSocieta || null,
+  });
+}
+
+if (tipo === "contatto") {
+  const supabase = getSupabaseClient();
+
+  const { error } = await (supabase as any)
+    .from("tbcontatti_relazioni")
+    .insert({
+      contatto_id: editingContatto.id,
+      contatto_collegato_id: idCollegato,
+      ruolo: ruoloCliente || null,
+    });
+
+  if (error) throw error;
+}
 
       toast({
         title: "Successo",
@@ -1397,10 +1446,22 @@ const mostraVistaSocieta =
   <select
     value={clienteDaCollegare}
    onChange={(e) => {
-  const clienteId = e.target.value;
-  setClienteDaCollegare(clienteId);
+const value = e.target.value;
+setClienteDaCollegare(value);
 
-  const cliente = clienti.find((c) => c.id === clienteId);
+const [tipo, id] = value.split(":");
+
+if (tipo === "cliente") {
+  const cliente = clienti.find((c) => c.id === id);
+
+  setEmailSocieta(cliente?.email || "");
+  setTelefonoSocieta(cliente?.telefono || "");
+  setPecSocieta(cliente?.pec || "");
+} else {
+  setEmailSocieta("");
+  setTelefonoSocieta("");
+  setPecSocieta("");
+}
 
   setEmailSocieta(cliente?.email || "");
   setTelefonoSocieta(cliente?.telefono || "");
@@ -1408,12 +1469,25 @@ const mostraVistaSocieta =
 }}
     className="h-10 rounded-md border border-gray-300 bg-white px-3 text-sm"
   >
-    <option value="">Seleziona cliente</option>
-    {clienti.map((cliente) => (
-      <option key={cliente.id} value={cliente.id}>
-        {cliente.ragione_sociale || "Cliente senza nome"}
+  <option value="">Seleziona cliente o contatto</option>
+
+<optgroup label="CLIENTI">
+  {clienti.map((cliente) => (
+    <option key={`cliente-${cliente.id}`} value={`cliente:${cliente.id}`}>
+      {cliente.ragione_sociale || "Cliente senza nome"}
+    </option>
+  ))}
+</optgroup>
+
+<optgroup label="CONTATTI RUBRICA">
+  {contattiRubrica
+    .filter((c) => c.id !== editingContatto?.id)
+    .map((contatto) => (
+      <option key={`contatto-${contatto.id}`} value={`contatto:${contatto.id}`}>
+        {`${contatto.cognome || ""} ${contatto.nome || ""}`.trim()}
       </option>
     ))}
+</optgroup>
   </select>
 
   <Input
@@ -1761,15 +1835,36 @@ const mostraVistaSocieta =
                   <Edit className="h-4 w-4 text-blue-600" />
                 </Button>
 
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => void handleDelete(contatto.id)}
-                  className="h-9 w-9 text-red-600 hover:bg-red-50 hover:text-red-700"
-                  title="Elimina"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+               <Button
+  variant="ghost"
+  size="icon"
+  onClick={() => {
+    if ((contatto as any).cliente_id) {
+      toast({
+        title: "Operazione non consentita",
+        description:
+          "Questo contatto è collegato all'anagrafica clienti e può essere eliminato solo eliminando il cliente dall'anagrafica.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    void handleDelete(contatto.id);
+  }}
+  disabled={!!(contatto as any).cliente_id}
+  className={`h-9 w-9 ${
+    (contatto as any).cliente_id
+      ? "cursor-not-allowed text-gray-300"
+      : "text-red-600 hover:bg-red-50 hover:text-red-700"
+  }`}
+  title={
+    (contatto as any).cliente_id
+      ? "Contatto collegato ad anagrafica: eliminabile solo da Anagrafica Clienti"
+      : "Elimina"
+  }
+>
+  <Trash2 className="h-4 w-4" />
+</Button>
               </div>
             </div>
           ))}
