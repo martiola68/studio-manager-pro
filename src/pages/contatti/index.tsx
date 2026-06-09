@@ -194,7 +194,7 @@ let query = db
 
   let query = db
     .from("tbcontatti")
-    .select("id, cognome, nome, email, cell")
+    .select("id, cognome, nome, email, cell, pec, cliente_id")
     .order("cognome", { ascending: true });
 
   if (sid) {
@@ -1484,8 +1484,9 @@ const mostraVistaSocieta =
     .filter((c) => c.id !== editingContatto?.id)
     .map((contatto) => (
       <option key={`contatto-${contatto.id}`} value={`contatto:${contatto.id}`}>
-        {`${contatto.cognome || ""} ${contatto.nome || ""}`.trim()}
-      </option>
+  {`${contatto.cognome || ""} ${contatto.nome || ""}`.trim()}
+  {(contatto as any).cliente_id ? " (da anagrafica)" : " (rubrica)"}
+</option>
     ))}
 </optgroup>
   </select>
