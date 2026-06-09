@@ -1975,7 +1975,7 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
 <TableHead className="text-center w-[70px] min-w-[70px]">Fisc.</TableHead>
 <TableHead className="text-center w-[70px] min-w-[70px]">Est.</TableHead>
 <TableHead className="text-center w-[70px] min-w-[70px]">CCGG</TableHead>
-<TableHead className="text-center w-[70px] min-w-[70px]">Prof.</TableHead>
+// <TableHead className="text-center w-[70px] min-w-[70px]">Prof.</TableHead>
 <TableHead className="text-center w-[70px] min-w-[70px]">PROFORMA</TableHead>
               </TableRow>
             </TableHeader>
