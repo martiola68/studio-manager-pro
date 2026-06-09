@@ -54,6 +54,10 @@ export default function ControlloGestioneIndex() {
   const [utentiDisponibili, setUtentiDisponibili] = useState<any[]>([]);
 const [utenteEditSelezionato, setUtenteEditSelezionato] = useState("");
 
+const [showReportModal, setShowReportModal] = useState(false);
+const [reportAnno, setReportAnno] = useState(String(new Date().getFullYear()));
+const [reportClienteId, setReportClienteId] = useState("");
+
   async function load() {
     const res = await fetch("/api/controllo-gestione");
     setRecords(await res.json());
@@ -172,19 +176,45 @@ function rimuoviUtenteEdit(id: string) {
   });
 }
 
+  function generaReportPdf() {
+  if (!reportClienteId) {
+    alert("Seleziona una società.");
+    return;
+  }
+
+  if (!reportAnno) {
+    alert("Inserisci l'anno.");
+    return;
+  }
+
+  window.open(
+    `/api/controllo-gestione/report-pdf?cliente_id=${reportClienteId}&anno=${reportAnno}`,
+    "_blank"
+  );
+}
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Controllo di gestione</h1>
 
         <div className="flex gap-2">
-          <Link href="/controllo-gestione/storico" className="border px-4 py-2 rounded">
-            Storico controlli
-          </Link>
-          <Link href="/controllo-gestione/nuovo" className="bg-black text-white px-4 py-2 rounded">
-            Nuovo
-          </Link>
-        </div>
+  <Link href="/controllo-gestione/storico" className="border px-4 py-2 rounded">
+    Storico controlli
+  </Link>
+
+  <button
+    type="button"
+    onClick={() => setShowReportModal(true)}
+    className="border px-4 py-2 rounded"
+  >
+    Report PDF
+  </button>
+
+  <Link href="/controllo-gestione/nuovo" className="bg-black text-white px-4 py-2 rounded">
+    Nuovo
+  </Link>
+</div>
       </div>
 
       <table className="w-full border text-sm">
@@ -506,6 +536,72 @@ function rimuoviUtenteEdit(id: string) {
     </div>
   </div>
 )}
+
+      {showReportModal && (
+  <div className="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center">
+    <div className="bg-white rounded-lg w-[520px] shadow-2xl">
+      <div className="flex justify-between items-center border-b px-6 py-4">
+        <h2 className="font-bold">Report PDF controllo di gestione</h2>
+
+        <button
+          type="button"
+          onClick={() => setShowReportModal(false)}
+          className="p-2"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className="p-6 space-y-4">
+        <div>
+          <label className="block text-sm font-medium mb-1">Società</label>
+          <select
+            className="border p-2 rounded w-full"
+            value={reportClienteId}
+            onChange={(e) => setReportClienteId(e.target.value)}
+          >
+            <option value="">Seleziona società</option>
+
+            {records.map((r) => (
+              <option key={r.cliente_id} value={r.cliente_id}>
+                {r.cliente?.ragione_sociale || r.cliente_id}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Anno</label>
+          <input
+            type="number"
+            className="border p-2 rounded w-full"
+            value={reportAnno}
+            onChange={(e) => setReportAnno(e.target.value)}
+          />
+        </div>
+
+        <div className="flex justify-end gap-2 pt-4">
+          <button
+            type="button"
+            onClick={() => setShowReportModal(false)}
+            className="border px-4 py-2 rounded"
+          >
+            Annulla
+          </button>
+
+          <button
+            type="button"
+            onClick={generaReportPdf}
+            className="bg-black text-white px-4 py-2 rounded"
+          >
+            Genera PDF
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+      
        </div>
   );
 }
