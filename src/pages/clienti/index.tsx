@@ -1959,29 +1959,23 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
           <Table>
             <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
               <TableRow>
-                <TableHead className="sticky left-0 bg-background z-20 w-[350px]">
-                  Cliente
-                </TableHead>
-                <TableHead className="min-w-[220px] text-left">
-                  Utente Fiscale
-                </TableHead>
-                <TableHead className="text-center min-w-[90px]">IVA</TableHead>
-                <TableHead className="text-center min-w-[90px]">LIPE</TableHead>
-                <TableHead className="text-center min-w-[100px]">
-                  Bilancio
-                </TableHead>
-                <TableHead className="text-center min-w-[90px]">770</TableHead>
-                <TableHead className="text-center min-w-[90px]">IMU</TableHead>
-                <TableHead className="text-center min-w-[90px]">CU</TableHead>
-                <TableHead className="text-center min-w-[110px]">
-                  Fiscali
-                </TableHead>
-                <TableHead className="text-center min-w-[130px]">
-                  Esterometro
-                </TableHead>
-                <TableHead className="text-center min-w-[100px]">
-                  CCGG
-                </TableHead>
+               <TableHead className="sticky left-0 bg-background z-20 w-[300px]">
+  Cliente
+</TableHead>
+<TableHead className="min-w-[180px] text-left">
+  Utente Fiscale
+</TableHead>
+<TableHead className="text-center w-[54px] min-w-[54px]">IVA</TableHead>
+               <TableHead className="text-center w-[54px] min-w-[54px]">LIPE</TableHead>
+<TableHead className="text-center w-[54px] min-w-[54px]">CU</TableHead>
+<TableHead className="text-center w-[54px] min-w-[54px]">770</TableHead>
+<TableHead className="text-center w-[54px] min-w-[54px]">IMU</TableHead>
+<TableHead className="text-center w-[70px] min-w-[70px]">Bil.</TableHead>
+<TableHead className="text-center w-[70px] min-w-[70px]">Fisc.</TableHead>
+<TableHead className="text-center w-[70px] min-w-[70px]">Est.</TableHead>
+<TableHead className="text-center w-[70px] min-w-[70px]">CCGG</TableHead>
+<TableHead className="text-center w-[70px] min-w-[70px]">Prof.</TableHead>
+<TableHead className="text-center w-[70px] min-w-[70px]">PROFORMA</TableHead>
               </TableRow>
             </TableHeader>
 
@@ -2079,6 +2073,19 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
                       }
                     />
                   </TableCell>
+
+                  <TableCell className="text-center w-[70px] min-w-[70px]">
+  <Checkbox
+    checked={!!cliente.flag_proforma}
+    onCheckedChange={(v) =>
+      toggleClienteFlag(
+        cliente.id,
+        "flag_proforma",
+        v === true
+      )
+    }
+  />
+</TableCell>
                 </TableRow>
               ))}
             </TableBody>
