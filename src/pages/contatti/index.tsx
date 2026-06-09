@@ -454,6 +454,7 @@ const clienti = (c.clienti_collegati || [])
   attivo: (contatto as any).attivo ?? true,
   note: contatto.note || "",
 });
+    void loadRelazioniContatti(contatto.id);
     setDialogOpen(true);
   };
 
@@ -524,6 +525,8 @@ if (tipo === "contatto") {
     });
 
   if (error) throw error;
+
+  await loadRelazioniContatti(editingContatto.id);
 }
 
       toast({
@@ -583,7 +586,34 @@ if (tipo === "contatto") {
   };
 
   const clientiCollegatiCorrenti =
-    editingContatto?.clienti_collegati || [];
+  editingContatto?.clienti_collegati || [];
+
+const [relazioniContatti, setRelazioniContatti] = useState<any[]>([]);
+
+const loadRelazioniContatti = async (contattoId: string) => {
+  const supabase = getSupabaseClient();
+
+  const { data, error } = await (supabase as any)
+    .from("tbcontatti_relazioni")
+    .select(`
+      id,
+      contatto_id,
+      contatto_collegato_id,
+      contatto_collegato:tbcontatti!tbcontatti_relazioni_contatto_collegato_id_fkey (
+        id,
+        cognome,
+        nome,
+        email,
+        cell,
+        pec
+      )
+    `)
+    .eq("contatto_id", contattoId);
+
+  if (error) throw error;
+
+  setRelazioniContatti(data || []);
+};
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1525,54 +1555,88 @@ const mostraVistaSocieta =
   </Button>
 </div>
 
-    <div className="mt-4 space-y-2">
-      {clientiCollegatiCorrenti.length === 0 ? (
-        <p className="text-sm text-blue-800">
-          Nessun cliente collegato a questo contatto.
-        </p>
-      ) : (
-        clientiCollegatiCorrenti.map((rel) => (
-          <div
-            key={rel.id}
-            className="flex items-center justify-between rounded-md bg-white px-3 py-2 text-sm shadow-sm"
-          >
-            <div>
-              <div className="font-semibold text-gray-900">
-                {rel.cliente?.ragione_sociale || "Cliente"}
-              </div>
-            {rel.email_societa && (
-  <div className="text-xs text-gray-500">
-    Email ufficio: {rel.email_societa}
-  </div>
-)}
-
-{rel.telefono_societa && (
-  <div className="text-xs text-gray-500">
-    Tel. ufficio: {rel.telefono_societa}
-  </div>
-)}
-
-{rel.pec_societa && (
-  <div className="text-xs text-gray-500">
-    PEC società: {rel.pec_societa}
-  </div>
-)}
+  <div className="mt-4 space-y-2">
+  {clientiCollegatiCorrenti.length === 0 && relazioniContatti.length === 0 ? (
+    <p className="text-sm text-blue-800">
+      Nessun collegamento presente.
+    </p>
+  ) : (
+    <>
+      {clientiCollegatiCorrenti.map((rel) => (
+        <div
+          key={rel.id}
+          className="flex items-center justify-between rounded-md bg-white px-3 py-2 text-sm shadow-sm"
+        >
+          <div>
+            <div className="font-semibold text-gray-900">
+              {rel.cliente?.ragione_sociale || "Cliente"}
             </div>
 
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => void handleEliminaCollegamentoCliente(rel.id)}
-              className="text-red-600 hover:bg-red-50 hover:text-red-700"
-              title="Rimuovi collegamento"
-            >
-              <X className="h-4 w-4" />
-            </Button>
+            {rel.email_societa && (
+              <div className="text-xs text-gray-500">
+                Email: {rel.email_societa}
+              </div>
+            )}
+
+            {rel.telefono_societa && (
+              <div className="text-xs text-gray-500">
+                Tel: {rel.telefono_societa}
+              </div>
+            )}
+
+            {rel.pec_societa && (
+              <div className="text-xs text-gray-500">
+                PEC: {rel.pec_societa}
+              </div>
+            )}
           </div>
-        ))
-      )}
-    </div>
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => void handleEliminaCollegamentoCliente(rel.id)}
+            className="text-red-600 hover:bg-red-50 hover:text-red-700"
+            title="Rimuovi collegamento"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      ))}
+
+      {relazioniContatti.map((rel) => (
+        <div
+          key={rel.id}
+          className="flex items-center justify-between rounded-md bg-white px-3 py-2 text-sm shadow-sm"
+        >
+          <div>
+            <div className="font-semibold text-gray-900">
+              {rel.contatto_collegato?.cognome} {rel.contatto_collegato?.nome}
+            </div>
+
+            {rel.contatto_collegato?.email && (
+              <div className="text-xs text-gray-500">
+                Email: {rel.contatto_collegato.email}
+              </div>
+            )}
+
+            {rel.contatto_collegato?.cell && (
+              <div className="text-xs text-gray-500">
+                Cell: {rel.contatto_collegato.cell}
+              </div>
+            )}
+
+            {rel.contatto_collegato?.pec && (
+              <div className="text-xs text-gray-500">
+                PEC: {rel.contatto_collegato.pec}
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+    </>
+  )}
+</div>
   </div>
 )}
 
