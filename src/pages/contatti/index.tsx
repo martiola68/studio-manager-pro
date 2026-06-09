@@ -517,12 +517,25 @@ if (tipo === "cliente") {
 if (tipo === "contatto") {
   const supabase = getSupabaseClient();
 
-  const { error } = await (supabase as any)
-    .from("tbcontatti_relazioni")
-    .insert({
-      contatto_id: editingContatto.id,
-      contatto_collegato_id: idCollegato,
-    });
+ const giaCollegato = relazioniContatti.some(
+  (rel) => rel.contatto_collegato_id === idCollegato
+);
+
+if (giaCollegato) {
+  toast({
+    title: "Associazione già presente",
+    description: "Questo contatto è già collegato.",
+    variant: "destructive",
+  });
+  return;
+}
+
+const { error } = await (supabase as any)
+  .from("tbcontatti_relazioni")
+  .insert({
+    contatto_id: editingContatto.id,
+    contatto_collegato_id: idCollegato,
+  });
 
   if (error) throw error;
 
@@ -584,6 +597,34 @@ if (tipo === "contatto") {
       });
     }
   };
+
+  const handleEliminaRelazioneContatto = async (relazioneId: string) => {
+  if (!editingContatto?.id) return;
+
+  try {
+    const { error } = await (supabase as any)
+      .from("tbcontatti_relazioni")
+      .delete()
+      .eq("id", relazioneId);
+
+    if (error) throw error;
+
+    toast({
+      title: "Successo",
+      description: "Associazione eliminata.",
+    });
+
+    await loadRelazioniContatti(editingContatto.id);
+    await loadContatti();
+  } catch (error) {
+    console.error("Errore eliminazione associazione:", error);
+    toast({
+      title: "Errore",
+      description: "Impossibile eliminare l'associazione.",
+      variant: "destructive",
+    });
+  }
+};
 
   const clientiCollegatiCorrenti =
   editingContatto?.clienti_collegati || [];
@@ -1604,15 +1645,15 @@ const mostraVistaSocieta =
         </div>
       ))}
 
-      {relazioniContatti.map((rel) => (
-        <div
-          key={rel.id}
-          className="flex items-center justify-between rounded-md bg-white px-3 py-2 text-sm shadow-sm"
-        >
-          <div>
-            <div className="font-semibold text-gray-900">
-              {rel.contatto_collegato?.cognome} {rel.contatto_collegato?.nome}
-            </div>
+     {relazioniContatti.map((rel) => (
+  <div
+    key={rel.id}
+    className="flex items-center justify-between rounded-md bg-white px-3 py-2 text-sm shadow-sm"
+  >
+    <div>
+      <div className="font-semibold text-gray-900">
+        {rel.contatto_collegato?.cognome} {rel.contatto_collegato?.nome}
+      </div>
 
             {rel.contatto_collegato?.email && (
               <div className="text-xs text-gray-500">
@@ -1632,6 +1673,16 @@ const mostraVistaSocieta =
               </div>
             )}
           </div>
+    <Button
+  type="button"
+  variant="ghost"
+  size="icon"
+  onClick={() => void handleEliminaRelazioneContatto(rel.id)}
+  className="text-red-600 hover:bg-red-50 hover:text-red-700"
+  title="Rimuovi associazione"
+>
+  <X className="h-4 w-4" />
+</Button>
         </div>
       ))}
     </>
