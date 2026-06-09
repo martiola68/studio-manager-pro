@@ -463,7 +463,7 @@ setRappLegali(rappLegaliData);
         | "flag_cu"
         | "flag_fiscali"
         | "flag_esterometro"
-        | "flag_ccgg",
+        | "flag_ccgg"
         | "flag_proforma",
       nextValue: boolean
     ) => {
