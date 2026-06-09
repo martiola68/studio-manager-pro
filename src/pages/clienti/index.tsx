@@ -1579,7 +1579,7 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-7xl">
+   <div className="w-full mx-auto py-8 px-6 max-w-[1800px]">
      {/* HEADER */}
 <div className="mb-8">
   <div className="flex justify-between items-center mb-2">
