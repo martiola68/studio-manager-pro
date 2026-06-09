@@ -116,22 +116,83 @@ useEffect(() => {
 
     const { data } = await supabase
   .from("tbclienti")
-      .select("id, ragione_sociale, codice_fiscale")
+     .select("id, ragione_sociale, codice_fiscale, studio_id")
       .order("ragione_sociale");
 
     setClienti(data || []);
   }
 
-  async function caricaNominativi() {
-   const supabase = getSupabaseClient() as any;
+async function caricaNominativi() {
+  const supabase = getSupabaseClient() as any;
 
-const { data } = await supabase
-  .from("rapp_legali")
-      .select("id, nome_cognome, codice_fiscale")
-      .order("nome_cognome");
+  const { data } = await supabase
+    .from("rapp_legali")
+    .select("id, nome_cognome, codice_fiscale")
+    .order("nome_cognome");
 
-    setNominativi(data || []);
+  setNominativi(data || []);
+}
+
+async function salvaNuovoNominativo() {
+  if (!nuovoNominativo.nome_cognome.trim()) {
+    alert("Nome e cognome obbligatori.");
+    return;
   }
+
+  if (!nuovoNominativo.codice_fiscale.trim()) {
+    alert("Codice fiscale obbligatorio.");
+    return;
+  }
+
+  const clienteSelezionato = clienti.find((c) => c.id === clienteId);
+
+  const res = await fetch("/api/rapp-legali/save", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      studio_id: clienteSelezionato?.studio_id || null,
+      nome_cognome: nuovoNominativo.nome_cognome,
+      codice_fiscale: nuovoNominativo.codice_fiscale,
+      email: nuovoNominativo.email,
+      luogo_nascita: nuovoNominativo.luogo_nascita,
+      data_nascita: nuovoNominativo.data_nascita || null,
+      indirizzo_residenza: nuovoNominativo.indirizzo,
+      citta_residenza: nuovoNominativo.citta,
+      CAP: nuovoNominativo.cap,
+      rappresentante_legale: false,
+    }),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok || !data.ok) {
+    alert(data.error || "Errore salvataggio nominativo.");
+    return;
+  }
+
+  await caricaNominativi();
+
+  setForm((prev) => ({
+    ...prev,
+    rapp_legale_id: data.data.id,
+  }));
+
+  setShowNuovoNominativo(false);
+
+  setNuovoNominativo({
+    nome_cognome: "",
+    codice_fiscale: "",
+    email: "",
+    luogo_nascita: "",
+    data_nascita: "",
+    indirizzo: "",
+    citta: "",
+    provincia: "",
+    cap: "",
+  });
+}
 
   async function caricaOrgani() {
     setLoading(true);
