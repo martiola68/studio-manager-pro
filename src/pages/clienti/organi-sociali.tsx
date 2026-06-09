@@ -78,6 +78,7 @@ const [nuovoNominativo, setNuovoNominativo] = useState({
   data_nascita: "",
   indirizzo: "",
   citta: "",
+  provincia: "",
   cap: "",
 });
 
