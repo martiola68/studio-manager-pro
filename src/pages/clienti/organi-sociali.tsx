@@ -8,6 +8,7 @@ const ruoli = [
   "tutti",
   "socio",
   "amministratore",
+  "amministratore_unico",
   "liquidatore",
   "amministratore_delegato",
   "presidente_cda",
@@ -24,6 +25,7 @@ const ruoliLabel: Record<string, string> = {
   tutti: "Tutti",
   socio: "Socio",
   amministratore: "Amministratore",
+  amministratore_unico: "Amministratore unico",
   liquidatore: "Liquidatore",
   amministratore_delegato: "Amministratore delegato",
   presidente_cda: "Presidente del CDA",
@@ -38,6 +40,7 @@ const ruoliLabel: Record<string, string> = {
 
 const ruoliConPrincipale = [
   "amministratore",
+  "amministratore_unico",
   "amministratore_delegato",
   "presidente_cda",
   "consigliere",
