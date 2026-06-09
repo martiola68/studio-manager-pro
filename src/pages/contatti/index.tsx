@@ -669,26 +669,32 @@ const loadRelazioniContatti = async (contattoId: string) => {
   setRelazioniContatti(data || []);
 };
 
-  console.log("RELAZIONI", data);
-
   const loadRelazioniContattiGlobali = async () => {
   const supabase = getSupabaseClient();
 
   const { data, error } = await (supabase as any)
     .from("tbcontatti_relazioni")
     .select(`
-      id,
-      contatto_id,
-      contatto_collegato_id,
-      contatto_collegato:tbcontatti!tbcontatti_relazioni_contatto_collegato_id_fkey (
-        id,
-        cognome,
-        nome,
-        email,
-        cell,
-        pec
-      )
-    `);
+  id,
+  contatto_id,
+  contatto_collegato_id,
+  contatto_principale:tbcontatti!tbcontatti_relazioni_contatto_id_fkey (
+    id,
+    cognome,
+    nome,
+    email,
+    cell,
+    pec
+  ),
+  contatto_collegato:tbcontatti!tbcontatti_relazioni_contatto_collegato_id_fkey (
+    id,
+    cognome,
+    nome,
+    email,
+    cell,
+    pec
+  )
+`);
 
   if (error) throw error;
 
@@ -2003,22 +2009,22 @@ const mostraVistaSocieta =
         </span>
 
         {rel.collegato?.email && (
-          <span className="text-blue-800 text-base">
-            Email: {rel.contatto_collegato.email}
-          </span>
-        )}
+  <span className="text-blue-800 text-base">
+    Email: {rel.collegato.email}
+  </span>
+)}
 
-        {rel.collegato?.cell && (
-          <span className="text-blue-800 text-base">
-            Cell: {rel.contatto_collegato.cell}
-          </span>
-        )}
+{rel.collegato?.cell && (
+  <span className="text-blue-800 text-base">
+    Cell: {rel.collegato.cell}
+  </span>
+)}
 
-        {rel.collegato?.pec && (
-          <span className="text-blue-800 text-base">
-            PEC: {rel.contatto_collegato.pec}
-          </span>
-        )}
+{rel.collegato?.pec && (
+  <span className="text-blue-800 text-base">
+    PEC: {rel.collegato.pec}
+  </span>
+)}
       </div>
     ))}
   </div>
