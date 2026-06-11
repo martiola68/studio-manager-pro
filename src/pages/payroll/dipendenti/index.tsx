@@ -84,9 +84,8 @@ if (!puoAccedere) {
   return;
 }
 
-    const [{ data, error }, { data: qualificheData, error: qualificheError }] =
-  await Promise.all([
-    const oggi = new Date();
+const oggi = new Date();
+
 const primoGiornoMese = new Date(
   oggi.getFullYear(),
   oggi.getMonth(),
@@ -95,7 +94,24 @@ const primoGiornoMese = new Date(
   .toISOString()
   .slice(0, 10);
 
-supabase
+const [{ data, error }, { data: qualificheData, error: qualificheError }] =
+  await Promise.all([
+    supabase
+      .from('tbdipendenti')
+      .select('*')
+      .eq('studio_id', user.studio_id)
+      .eq('tipo_rapporto', 'Dipendente')
+      .or(`data_cessazione.is.null,data_cessazione.gte.${primoGiornoMese}`)
+      .order('cognome', { ascending: true })
+      .order('nome', { ascending: true }),
+
+    supabase
+      .from('tbpayroll_qualifiche')
+      .select('id, codice, descrizione, attivo')
+      .eq('studio_id', user.studio_id)
+      .eq('attivo', true)
+      .order('codice', { ascending: true }),
+  ]);
   .from('tbdipendenti')
   .select('*')
   .eq('studio_id', user.studio_id)
