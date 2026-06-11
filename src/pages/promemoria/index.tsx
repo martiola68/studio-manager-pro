@@ -1302,9 +1302,9 @@ if (destinatario?.email) {
                 <Select value={formData.priorita} onValueChange={v => setFormData(prev => ({...prev, priorita: v}))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Bassa">Bassa</SelectItem>
-                    <SelectItem value="Media">Media</SelectItem>
-                    <SelectItem value="Alta">Alta</SelectItem>
+                    <SelectItem value="Bassa">Bassa - promemoria a 6/3/0 giorni</SelectItem>
+                      <SelectItem value="Media">Media - promemoria a 10/8/6/4/2/0 giorni</SelectItem>
+                        <SelectItem value="Alta">Alta - promemoria giornaliero</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
