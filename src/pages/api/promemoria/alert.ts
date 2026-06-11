@@ -19,27 +19,41 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const oggi = new Date();
   oggi.setHours(0, 0, 0, 0);
 
-const traSetteGiorni = new Date(oggi);
-traSetteGiorni.setDate(traSetteGiorni.getDate() + 7);
-
-const traTreGiorni = new Date(oggi);
-traTreGiorni.setDate(traTreGiorni.getDate() + 3);
-
 const oggiIso = oggi.toISOString().split("T")[0];
-const setteGiorniIso = traSetteGiorni.toISOString().split("T")[0];
-const treGiorniIso = traTreGiorni.toISOString().split("T")[0];
+
+const alertOffsetsByPriorita: Record<string, number[]> = {
+  alta: [], // gestita separatamente: ogni giorno dal giorno dopo la creazione
+  media: [10, 8, 6, 4, 2, 0],
+  bassa: [6, 3, 0],
+};
+
+const allOffsets = Array.from(
+  new Set([...alertOffsetsByPriorita.media, ...alertOffsetsByPriorita.bassa])
+);
+
+const dateAlertIso = allOffsets.map((offset) => {
+  const d = new Date(oggi);
+  d.setDate(d.getDate() + offset);
+  return d.toISOString().split("T")[0];
+});
 
   try {
-    const { data: promemoria, error } = await supabase
-      .from("tbpromemoria")
-      .select(`
-        *,
-        destinatario:tbutenti!destinatario_id (
-          id, nome, cognome, email
-        )
-      `)
-      .neq("working_progress", "Completato")
-    .in("data_scadenza", [oggiIso, treGiorniIso, setteGiorniIso]);
+   const { data: promemoria, error } = await supabase
+  .from("tbpromemoria")
+  .select(`
+    *,
+    destinatario:tbutenti!destinatario_id (
+      id, nome, cognome, email
+    )
+  `)
+  .neq("working_progress", "Completato")
+  .or(
+    [
+      `data_scadenza.in.(${dateAlertIso.join(",")})`,
+      `priorita.eq.Alta`,
+      `priorita.eq.alta`,
+    ].join(",")
+  );
 
     if (error) throw error;
 
@@ -57,19 +71,52 @@ const treGiorniIso = traTreGiorni.toISOString().split("T")[0];
         (scadenza.getTime() - oggi.getTime()) / (1000 * 60 * 60 * 24)
       );
 
-      const tipoAlert =
-  giorniRimasti === 7 ? "7gg" :
-  giorniRimasti === 3 ? "3gg" :
-  "oggi";
+  const priorita = String(p.priorita || "").toLowerCase();
 
-     if (
-  (tipoAlert === "7gg" && p.alert_7gg_inviato) ||
-  (tipoAlert === "3gg" && p.alert_3gg_inviato) ||
-  (tipoAlert === "oggi" && p.alert_oggi_inviato)
+let deveInviare = false;
+let tipoAlert = "";
+
+if (priorita === "alta") {
+  const createdAt = p.created_at ? new Date(p.created_at) : null;
+
+  if (createdAt) {
+    createdAt.setHours(0, 0, 0, 0);
+  }
+
+  const giornoDopoCreazione = createdAt
+    ? new Date(createdAt)
+    : null;
+
+  if (giornoDopoCreazione) {
+    giornoDopoCreazione.setDate(giornoDopoCreazione.getDate() + 1);
+  }
+
+  deveInviare =
+    !!giornoDopoCreazione &&
+    oggi >= giornoDopoCreazione &&
+    giorniRimasti >= 0;
+
+  tipoAlert = `alta_${oggiIso}`;
+} else if (priorita === "media") {
+  deveInviare = [10, 8, 6, 4, 2, 0].includes(giorniRimasti);
+  tipoAlert = giorniRimasti === 0 ? "oggi" : `${giorniRimasti}gg`;
+} else {
+  deveInviare = [6, 3, 0].includes(giorniRimasti);
+  tipoAlert = giorniRimasti === 0 ? "oggi" : `${giorniRimasti}gg`;
+}
+
+if (!deveInviare) {
+  saltati++;
+  continue;
+}
+
+if (
+  tipoAlert === "oggi" &&
+  p.alert_oggi_inviato
 ) {
-        giaInviati++;
-        continue;
-      }
+  giaInviati++;
+  continue;
+}
 
       if (!p.studio_id || !p.destinatario?.email) {
         saltati++;
@@ -100,22 +147,22 @@ const treGiorniIso = traTreGiorni.toISOString().split("T")[0];
         continue;
       }
 
-      const subject =
-  tipoAlert === "7gg"
-    ? `Promemoria in scadenza tra 7 giorni: ${p.titolo}`
-    : tipoAlert === "3gg"
-    ? `Promemoria in scadenza tra 3 giorni: ${p.titolo}`
-    : `Promemoria in scadenza oggi: ${p.titolo}`;
+   const subject =
+  tipoAlert === "oggi"
+    ? `Promemoria in scadenza oggi: ${p.titolo}`
+    : priorita === "alta"
+    ? `Promemoria urgente: ${p.titolo}`
+    : `Promemoria in scadenza tra ${giorniRimasti} giorni: ${p.titolo}`;
 
       const html = `
         <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
           <p>Gentile ${p.destinatario.nome || "utente"},</p>
           <p>${
-            tipoAlert === "7gg"
-  ? "ti ricordiamo che il seguente promemoria andrà in scadenza tra 7 giorni."
-  : tipoAlert === "3gg"
-  ? "ti ricordiamo che il seguente promemoria andrà in scadenza tra 3 giorni."
-  : "ti ricordiamo che il seguente promemoria scade oggi."
+ tipoAlert === "oggi"
+  ? "ti ricordiamo che il seguente promemoria scade oggi."
+  : priorita === "alta"
+  ? "ti ricordiamo che il seguente promemoria urgente è ancora aperto."
+  : `ti ricordiamo che il seguente promemoria andrà in scadenza tra ${giorniRimasti} giorni.`
           }</p>
           <ul>
             <li><strong>Titolo:</strong> ${p.titolo}</li>
@@ -142,10 +189,8 @@ const treGiorniIso = traTreGiorni.toISOString().split("T")[0];
         riferimento_id: p.id,
         tipo_alert: tipoAlert,
         data_scadenza: p.data_scadenza,
-       giorni_preavviso:
-  tipoAlert === "7gg" ? 7 :
-  tipoAlert === "3gg" ? 3 :
-  0,
+ giorni_preavviso:
+  priorita === "alta" ? giorniRimasti : giorniRimasti,
         destinatario_utente_id: p.destinatario?.id || p.destinatario_id,
         destinatario_email: p.destinatario.email,
         messaggio_interno_creato: false,
@@ -157,29 +202,20 @@ const treGiorniIso = traTreGiorni.toISOString().split("T")[0];
 
       logCreati++;
 
-      if (result.success) {
-        emailInviate++;
+    if (result.success) {
+  emailInviate++;
 
-        await supabase
-          .from("tbpromemoria")
-         .update(
-  tipoAlert === "7gg"
-    ? {
-        alert_7gg_inviato: true,
-        alert_7gg_inviato_at: new Date().toISOString(),
-      }
-    : tipoAlert === "3gg"
-    ? {
-        alert_3gg_inviato: true,
-        alert_3gg_inviato_at: new Date().toISOString(),
-      }
-    : {
+  if (tipoAlert === "oggi") {
+    await supabase
+      .from("tbpromemoria")
+      .update({
         alert_oggi_inviato: true,
         alert_oggi_inviato_at: new Date().toISOString(),
-      }
-)
-          .eq("id", p.id);
-      } else {
+      })
+      .eq("id", p.id);
+  }
+} else {
+        
         emailFallite++;
         console.error("Errore email promemoria:", result.error);
       }
@@ -187,7 +223,7 @@ const treGiorniIso = traTreGiorni.toISOString().split("T")[0];
 
     return res.status(200).json({
       success: true,
-      date: { oggiIso, treGiorniIso, setteGiorniIso },
+      date: { oggiIso, dateAlertIso },
       promemoria_trovati: promemoria?.length || 0,
       email_inviate: emailInviate,
       email_fallite: emailFallite,
