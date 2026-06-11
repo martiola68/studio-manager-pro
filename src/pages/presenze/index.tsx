@@ -942,27 +942,31 @@ ${dipendentiXml}
               <Badge variant="outline">Vista dipendente</Badge>
             )}
 
-            <Button
-              variant="outline"
-                  onClick={() => {
-                  window.location.href = '/presenze/richiesta-ferie-permessi';
-                    }}
-                  >
-                Richiesta ferie/permessi
-                  </Button>
+           {currentUser?.tipo_rapporto === "Dipendente" && (
+  <Button
+    variant="outline"
+    onClick={() => {
+      window.location.href = '/presenze/richiesta-ferie-permessi';
+    }}
+  >
+    Richiesta ferie/permessi
+  </Button>
+)}
             
            <Button variant="outline" onClick={loadData} disabled={loading || saving}>
               Aggiorna
             </Button>
 
-            <Button
-  variant="outline"
-  onClick={() => {
-    window.location.href = '/presenze/ferie-permessi';
-  }}
->
-  Gestione Ferie/permessi
-</Button>
+{isResponsabilePaghe && (
+  <Button
+    variant="outline"
+    onClick={() => {
+      window.location.href = '/presenze/ferie-permessi';
+    }}
+  >
+    Gestione Ferie/permessi
+  </Button>
+)}
 
             {isResponsabilePaghe && (
  <Button
