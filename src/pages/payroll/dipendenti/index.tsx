@@ -94,16 +94,6 @@ const primoGiornoMese = new Date(
   .toISOString()
   .slice(0, 10);
 
-const oggi = new Date();
-
-const primoGiornoMese = new Date(
-  oggi.getFullYear(),
-  oggi.getMonth(),
-  1
-)
-  .toISOString()
-  .slice(0, 10);
-
 const [{ data, error }, { data: qualificheData, error: qualificheError }] =
   await Promise.all([
     supabase
