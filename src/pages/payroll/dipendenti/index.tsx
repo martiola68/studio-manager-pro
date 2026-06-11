@@ -25,9 +25,10 @@ type Dipendente = {
 
   orario_giornaliero: number | null;
 
-  data_cessazione: string | null;
+data_cessazione: string | null;
+tipo_rapporto: string | null;
 
-  attivo: boolean | null;
+attivo: boolean | null;
 };
 
 type Qualifica = {
@@ -58,26 +59,50 @@ const [qualifiche, setQualifiche] = useState<Qualifica[]>([]);
 
       const { data: user, error: userError } = await supabase
         .from('tbutenti')
-        .select('studio_id, responsabile_paghe')
+        .select(`
+  studio_id,
+  responsabile_paghe,
+  responsabile_ferie_permessi,
+  tipo_rapporto
+`)
         .eq('email', email)
         .single();
 
       if (userError) throw userError;
 
-      if (!user?.responsabile_paghe) {
-        setDipendenti([]);
-        return;
-      }
+    const puoAccedere =
+  user?.tipo_rapporto === "Dipendente" ||
+  user?.responsabile_paghe === true ||
+  user?.responsabile_ferie_permessi === true;
+
+if (!puoAccedere) {
+  alert(
+    "Accesso consentito solo ai dipendenti o ai responsabili autorizzati."
+  );
+
+  setDipendenti([]);
+  return;
+}
 
     const [{ data, error }, { data: qualificheData, error: qualificheError }] =
   await Promise.all([
-    supabase
-      .from('tbdipendenti')
-      .select('*')
-      .eq('studio_id', user.studio_id)
-      .order('cognome', { ascending: true })
-      .order('nome', { ascending: true }),
+    const oggi = new Date();
+const primoGiornoMese = new Date(
+  oggi.getFullYear(),
+  oggi.getMonth(),
+  1
+)
+  .toISOString()
+  .slice(0, 10);
 
+supabase
+  .from('tbdipendenti')
+  .select('*')
+  .eq('studio_id', user.studio_id)
+  .eq('tipo_rapporto', 'Dipendente')
+  .or(`data_cessazione.is.null,data_cessazione.gte.${primoGiornoMese}`)
+  .order('cognome', { ascending: true })
+  .order('nome', { ascending: true }),
     supabase
       .from('tbpayroll_qualifiche')
       .select('id, codice, descrizione, attivo')
