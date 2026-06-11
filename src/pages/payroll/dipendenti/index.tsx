@@ -44,6 +44,10 @@ const [qualifiche, setQualifiche] = useState<Qualifica[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
 
+  const [isDipendente, setIsDipendente] = useState(false);
+const [isResponsabile, setIsResponsabile] = useState(false);
+const [isResponsabilePaghe, setIsResponsabilePaghe] = useState(false);
+
   const loadData = async () => {
     setLoading(true);
 
@@ -57,23 +61,32 @@ const [qualifiche, setQualifiche] = useState<Qualifica[]>([]);
       const email = session?.user?.email;
       if (!email) throw new Error('Sessione non trovata.');
 
-      const { data: user, error: userError } = await supabase
-        .from('tbutenti')
-        .select(`
-  studio_id,
-  responsabile_paghe,
-  responsabile_ferie_permessi,
-  tipo_rapporto
-`)
-        .eq('email', email)
-        .single();
+     const { data: user, error: userError } = await supabase
+  .from('tbutenti')
+  .select(`
+    studio_id,
+    responsabile_paghe,
+    responsabile_ferie_permessi,
+    tipo_rapporto
+  `)
+  .eq('email', email)
+  .single();
 
-      if (userError) throw userError;
+if (userError) throw userError;
 
-    const puoAccedere =
-  user?.tipo_rapporto === "Dipendente" ||
+const dipendenteLoggato = user?.tipo_rapporto === 'Dipendente';
+
+const responsabileLoggato =
   user?.responsabile_paghe === true ||
   user?.responsabile_ferie_permessi === true;
+
+const responsabilePagheLoggato = user?.responsabile_paghe === true;
+
+setIsDipendente(dipendenteLoggato);
+setIsResponsabile(responsabileLoggato);
+setIsResponsabilePaghe(responsabilePagheLoggato);
+
+const puoAccedere = dipendenteLoggato || responsabileLoggato;
 
 if (!puoAccedere) {
   alert(
@@ -235,12 +248,13 @@ setQualifiche(qualificheData ?? []);
                         <td className="p-2">{dip.email}</td>
 
                      <td className="p-2">
-  <Input
-    value={dip.codice_ditta ?? ''}
-    onChange={(e) =>
-      updateField(dip.id, 'codice_ditta', e.target.value)
-    }
-  />
+ <Input
+  value={dip.codice_ditta ?? ''}
+  disabled={!isResponsabilePaghe}
+  onChange={(e) =>
+    updateField(dip.id, 'codice_ditta', e.target.value)
+  }
+/>
 </td>
 
 <td className="p-2">
