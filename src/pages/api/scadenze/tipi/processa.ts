@@ -12,20 +12,21 @@ function toDateOnly(date: Date) {
   return date.toISOString().split("T")[0];
 }
 
+function parseDateOnly(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
 function diffDaysFromToday(dateValue: string) {
   const today = new Date();
+
   const todayOnly = new Date(
     today.getFullYear(),
     today.getMonth(),
     today.getDate()
   );
 
-  const target = new Date(dateValue);
-  const targetOnly = new Date(
-    target.getFullYear(),
-    target.getMonth(),
-    target.getDate()
-  );
+  const targetOnly = parseDateOnly(dateValue);
 
   return Math.round(
     (targetOnly.getTime() - todayOnly.getTime()) / (1000 * 60 * 60 * 24)
