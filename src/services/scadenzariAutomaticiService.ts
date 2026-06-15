@@ -291,9 +291,14 @@ function groupByUserId<
 function buildEmailMessage(
   titolo: string,
   rows: RigaScadenzarioBase[],
-  alertNumero: 1 | 2
+  alertNumero: 1 | 2,
+  dataScadenzaFallback?: string | null
 ): { oggetto: string; messaggio: string } {
-  const dataScadenza = rows[0]?.data_scadenza_adempimento || "";
+  const dataScadenza =
+    rows[0]?.data_scadenza_adempimento ||
+    dataScadenzaFallback ||
+    "";
+  
   const giorniMancanti = dataScadenza ? diffDaysFromToday(dataScadenza) : 0;
   const nominativi = rows
     .map((r, index) => `${index + 1}. ${r.nominativo}`)
@@ -901,6 +906,42 @@ if (config.table === "tbscadimu") {
 
 } else {
 
+ let query;
+
+if (config.table === "tbscadimu") {
+  const nomeScadenza = String(tipo.nome || "").toLowerCase();
+
+  query = (supabase as any)
+    .from("tbscadimu")
+    .select(`
+      id,
+      nominativo,
+      utente_operatore_id,
+      utente_professionista_id,
+      acconto_comunicato,
+      data_com_acconto,
+      saldo_comunicato,
+      data_com_saldo,
+      dichiarazione_imu,
+      conferma_dichiarazione_imu
+    `)
+    .eq("archiviato", false)
+    .eq("anno_riferimento", annoCorrente);
+
+  if (nomeScadenza.includes("acconto")) {
+    query = query
+      .eq("acconto_dovuto", true)
+      .or("acconto_comunicato.is.false,acconto_comunicato.is.null,data_com_acconto.is.null");
+  } else if (nomeScadenza.includes("saldo")) {
+    query = query
+      .eq("saldo_dovuto", true)
+      .or("saldo_comunicato.is.false,saldo_comunicato.is.null,data_com_saldo.is.null");
+  } else if (nomeScadenza.includes("dichiar")) {
+    query = query
+      .eq("dichiarazione_imu", true)
+      .or("conferma_dichiarazione_imu.is.false,conferma_dichiarazione_imu.is.null");
+  }
+} else {
   query = (supabase as any)
     .from(config.table)
     .select(`
@@ -913,7 +954,6 @@ if (config.table === "tbscadimu") {
     .eq(config.flag, false)
     .eq("archiviato", false)
     .eq("anno_riferimento", annoCorrente);
-
 }
 
 const { data: righe, error: righeError } = await query;
@@ -939,10 +979,11 @@ const { data: righe, error: righeError } = await query;
       if (!destinatario) continue;
 
       const { oggetto, messaggio } = buildEmailMessage(
-        tipo.nome,
-        userRows as any,
-        alertNumero === 3 ? 2 : alertNumero
-      );
+  tipo.nome,
+  userRows as any,
+  alertNumero === 3 ? 2 : alertNumero,
+  tipo.data_scadenza
+);
 
       const sentCount = await sendEmails([destinatario], oggetto, messaggio);
 
