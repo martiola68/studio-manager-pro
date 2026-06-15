@@ -137,6 +137,30 @@ function diffDaysFromToday(targetDate: string): number {
   );
 }
 
+function parseDateOnly(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function isTodayInRange(monthStart: string, monthEnd: string): boolean {
+  const today = startOfDay(new Date());
+  const start = parseDateOnly(monthStart);
+  const end = parseDateOnly(monthEnd);
+
+  return today >= start && today <= end;
+}
+
+function isEvery7DaysFrom(startDate: string): boolean {
+  const today = startOfDay(new Date());
+  const start = parseDateOnly(startDate);
+
+  const diff = Math.floor(
+    (today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  return diff >= 0 && diff % 7 === 0;
+}
+
 function buildHtmlEmail(oggetto: string, messaggio: string): string {
   const messaggioHtml = messaggio
     .replace(/&/g, "&amp;")
@@ -865,6 +889,114 @@ async function processScadenzariDaTipi(oggi: string): Promise<{
     if (!config?.table || !config?.flag) continue;
 
     let query;
+
+    if (config.table === "tbscadbilanci") {
+  const oggiAnno = new Date().getFullYear();
+  const startBilanci = `${oggiAnno}-04-30`;
+  const endBilanci = `${oggiAnno}-07-31`;
+
+  let queryBilanci;
+
+  const avvisiDeposito = [10, 8, 6, 4, 2, 0];
+
+  const deveFareAlertPeriodico =
+    isTodayInRange(startBilanci, endBilanci) &&
+    isEvery7DaysFrom(startBilanci);
+
+  queryBilanci = (supabase as any)
+    .from("tbscadbilanci")
+    .select(`
+      id,
+      nominativo,
+      utente_operatore_id,
+      utente_professionista_id,
+      conferma_riga,
+      data_approvazione,
+      data_scad_pres,
+      invio_bil
+    `)
+    .eq("archiviato", false)
+    .eq("anno_riferimento", annoCorrente);
+
+  if (deveFareAlertPeriodico) {
+    queryBilanci = queryBilanci.or(
+      "conferma_riga.is.false,conferma_riga.is.null"
+    );
+  } else {
+    queryBilanci = queryBilanci
+      .not("data_approvazione", "is", null)
+      .not("data_scad_pres", "is", null)
+      .or("invio_bil.is.false,invio_bil.is.null");
+  }
+
+  const { data: bilanciData, error: bilanciError } = await queryBilanci;
+
+  if (bilanciError) throw bilanciError;
+
+  const bilanciRows = ((bilanciData || []) as any[]).filter((r) => {
+    if (deveFareAlertPeriodico) return true;
+
+    const giorniDeposito = r.data_scad_pres
+      ? diffDaysFromToday(r.data_scad_pres)
+      : null;
+
+    return giorniDeposito !== null && avvisiDeposito.includes(giorniDeposito);
+  });
+
+  const grouped = groupByUserId(bilanciRows);
+
+  for (const [userId, userRows] of grouped.entries()) {
+    const tipoAlertBilancio = deveFareAlertPeriodico
+      ? `periodico_${oggiAnno}_${new Date().toISOString().slice(0, 10)}`
+      : `deposito_${oggiAnno}_${(userRows[0] as any).data_scad_pres}`;
+
+    const { data: giaInviato } = await supabase
+      .from("tbscadenze_alert_log" as any)
+      .select("id")
+      .eq("tipo_scadenza_id", tipo.id)
+      .eq("utente_id", userId)
+      .eq("tipo_alert", tipoAlertBilancio)
+      .eq("anno_riferimento", annoCorrente)
+      .maybeSingle();
+
+    if (giaInviato?.id) continue;
+
+    const destinatario = await loadDestinatarioByUserId(userId);
+    if (!destinatario) continue;
+
+    const titolo = deveFareAlertPeriodico
+      ? "Bilanci - controllo pratiche non confermate"
+      : "Bilanci - deposito da inviare";
+
+    const dataScadenzaMail = deveFareAlertPeriodico
+      ? endBilanci
+      : (userRows[0] as any).data_scad_pres;
+
+    const { oggetto, messaggio } = buildEmailMessage(
+      titolo,
+      userRows as any,
+      1,
+      dataScadenzaMail
+    );
+
+    const sentCount = await sendEmails([destinatario], oggetto, messaggio);
+
+    if (sentCount > 0) {
+      await supabase.from("tbscadenze_alert_log" as any).insert({
+        tipo_scadenza_id: tipo.id,
+        utente_id: userId,
+        alert_numero: deveFareAlertPeriodico ? 1 : 2,
+        tipo_alert: tipoAlertBilancio,
+        anno_riferimento: annoCorrente,
+      });
+
+      emailsSent += sentCount;
+      processedRows += userRows.length;
+    }
+  }
+
+  continue;
+}
 
     if (config.table === "tbscadimu") {
       const nomeScadenza = String(tipo.nome || "").toLowerCase();
