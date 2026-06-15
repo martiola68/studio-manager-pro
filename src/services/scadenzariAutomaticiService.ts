@@ -864,99 +864,65 @@ async function processScadenzariDaTipi(oggi: string): Promise<{
     const config = (SCADENZARI_CONFIG as any)[configKey];
     if (!config?.table || !config?.flag) continue;
 
-let query;
+    let query;
 
-if (config.table === "tbscadimu") {
+    if (config.table === "tbscadimu") {
+      const nomeScadenza = String(tipo.nome || "").toLowerCase();
 
-  const nomeScadenza = tipo.nome.toLowerCase();
+      query = (supabase as any)
+        .from("tbscadimu")
+        .select(`
+          id,
+          nominativo,
+          utente_operatore_id,
+          utente_professionista_id,
+          acconto_dovuto,
+          acconto_comunicato,
+          data_com_acconto,
+          saldo_dovuto,
+          saldo_comunicato,
+          data_com_saldo,
+          dichiarazione_imu,
+          conferma_dichiarazione_imu
+        `)
+        .eq("archiviato", false)
+        .eq("anno_riferimento", annoCorrente);
 
-  query = (supabase as any)
-    .from("tbscadimu")
-    .select(`
-      id,
-      nominativo,
-      utente_operatore_id,
-      utente_professionista_id,
-      acconto_comunicato,
-      data_com_acconto,
-      saldo_comunicato,
-      data_com_saldo
-    `)
-    .eq("anno_riferimento", annoCorrente);
+      if (nomeScadenza.includes("acconto")) {
+        query = query
+          .eq("acconto_dovuto", true)
+          .or(
+            "acconto_comunicato.is.false,acconto_comunicato.is.null,data_com_acconto.is.null"
+          );
+      } else if (nomeScadenza.includes("saldo")) {
+        query = query
+          .eq("saldo_dovuto", true)
+          .or(
+            "saldo_comunicato.is.false,saldo_comunicato.is.null,data_com_saldo.is.null"
+          );
+      } else if (nomeScadenza.includes("dichiar")) {
+        query = query
+          .eq("dichiarazione_imu", true)
+          .or(
+            "conferma_dichiarazione_imu.is.false,conferma_dichiarazione_imu.is.null"
+          );
+      }
+    } else {
+      query = (supabase as any)
+        .from(config.table)
+        .select(`
+          id,
+          nominativo,
+          utente_operatore_id,
+          utente_professionista_id,
+          ${config.flag}
+        `)
+        .eq(config.flag, false)
+        .eq("archiviato", false)
+        .eq("anno_riferimento", annoCorrente);
+    }
 
-  if (nomeScadenza.includes("acconto")) {
-
-    query = query.or(
-      "acconto_comunicato.is.false,data_com_acconto.is.null"
-    );
-
-  } else if (nomeScadenza.includes("saldo")) {
-
-    query = query.or(
-      "saldo_comunicato.is.false,data_com_saldo.is.null"
-    );
-
-  } else if (nomeScadenza.includes("dichiar")) {
-
-    query = query.or(
-      "acconto_comunicato.is.false,data_com_acconto.is.null"
-    );
-
-  }
-
-} else {
-
- let query;
-
-if (config.table === "tbscadimu") {
-  const nomeScadenza = String(tipo.nome || "").toLowerCase();
-
-  query = (supabase as any)
-    .from("tbscadimu")
-    .select(`
-      id,
-      nominativo,
-      utente_operatore_id,
-      utente_professionista_id,
-      acconto_comunicato,
-      data_com_acconto,
-      saldo_comunicato,
-      data_com_saldo,
-      dichiarazione_imu,
-      conferma_dichiarazione_imu
-    `)
-    .eq("archiviato", false)
-    .eq("anno_riferimento", annoCorrente);
-
-  if (nomeScadenza.includes("acconto")) {
-    query = query
-      .eq("acconto_dovuto", true)
-      .or("acconto_comunicato.is.false,acconto_comunicato.is.null,data_com_acconto.is.null");
-  } else if (nomeScadenza.includes("saldo")) {
-    query = query
-      .eq("saldo_dovuto", true)
-      .or("saldo_comunicato.is.false,saldo_comunicato.is.null,data_com_saldo.is.null");
-  } else if (nomeScadenza.includes("dichiar")) {
-    query = query
-      .eq("dichiarazione_imu", true)
-      .or("conferma_dichiarazione_imu.is.false,conferma_dichiarazione_imu.is.null");
-  }
-} else {
-  query = (supabase as any)
-    .from(config.table)
-    .select(`
-      id,
-      nominativo,
-      utente_operatore_id,
-      utente_professionista_id,
-      ${config.flag}
-    `)
-    .eq(config.flag, false)
-    .eq("archiviato", false)
-    .eq("anno_riferimento", annoCorrente);
-}
-
-const { data: righe, error: righeError } = await query;
+    const { data: righe, error: righeError } = await query;
 
     if (righeError) throw righeError;
 
@@ -979,11 +945,11 @@ const { data: righe, error: righeError } = await query;
       if (!destinatario) continue;
 
       const { oggetto, messaggio } = buildEmailMessage(
-  tipo.nome,
-  userRows as any,
-  alertNumero === 3 ? 2 : alertNumero,
-  tipo.data_scadenza
-);
+        tipo.nome,
+        userRows as any,
+        alertNumero === 3 ? 2 : alertNumero,
+        tipo.data_scadenza
+      );
 
       const sentCount = await sendEmails([destinatario], oggetto, messaggio);
 
