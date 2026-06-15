@@ -859,18 +859,62 @@ async function processScadenzariDaTipi(oggi: string): Promise<{
     const config = (SCADENZARI_CONFIG as any)[configKey];
     if (!config?.table || !config?.flag) continue;
 
-  const query = (supabase as any)
-  .from(config.table)
-  .select(`
-    id,
-    nominativo,
-    utente_operatore_id,
-    utente_professionista_id,
-    ${config.flag}
-  `)
-  .eq(config.flag, false)
-  .eq("archiviato", false)
-  .eq("anno_riferimento", annoCorrente);
+let query;
+
+if (config.table === "tbscadimu") {
+
+  const nomeScadenza = tipo.nome.toLowerCase();
+
+  query = (supabase as any)
+    .from("tbscadimu")
+    .select(`
+      id,
+      nominativo,
+      utente_operatore_id,
+      utente_professionista_id,
+      acconto_comunicato,
+      data_com_acconto,
+      saldo_comunicato,
+      data_com_saldo
+    `)
+    .eq("anno_riferimento", annoCorrente);
+
+  if (nomeScadenza.includes("acconto")) {
+
+    query = query.or(
+      "acconto_comunicato.is.false,data_com_acconto.is.null"
+    );
+
+  } else if (nomeScadenza.includes("saldo")) {
+
+    query = query.or(
+      "saldo_comunicato.is.false,data_com_saldo.is.null"
+    );
+
+  } else if (nomeScadenza.includes("dichiar")) {
+
+    query = query.or(
+      "acconto_comunicato.is.false,data_com_acconto.is.null"
+    );
+
+  }
+
+} else {
+
+  query = (supabase as any)
+    .from(config.table)
+    .select(`
+      id,
+      nominativo,
+      utente_operatore_id,
+      utente_professionista_id,
+      ${config.flag}
+    `)
+    .eq(config.flag, false)
+    .eq("archiviato", false)
+    .eq("anno_riferimento", annoCorrente);
+
+}
 
 const { data: righe, error: righeError } = await query;
 
