@@ -103,17 +103,14 @@ const { data: clientiData } = await supabase
     if (!utente) return;
 
    const cliente = clienti.find((c) => c.id === form.cliente_id);
-
 const payload = {
   ...form,
   studio_id: utente.studio_id,
   utente_id: utente.id,
   assegnato_a: utente.id,
-
   titolo: form.tipo_variazione,
   descrizione: form.note || form.tipo_variazione,
 };
-
     const response = await fetch("/api/pratiche/variazioni", {
       method: editingId ? "PUT" : "POST",
       headers: {
@@ -145,8 +142,6 @@ const payload = {
 
     setForm({
       cliente_id: "",
-      titolo: "",
-      descrizione: "",
       tipo_variazione: "",
       ente_principale: "CCIAA",
       priorita: "normale",
@@ -166,8 +161,6 @@ const payload = {
     setForm({
       cliente_id: record.cliente_id || "",
       titolo: record.titolo || "",
-      descrizione: record.descrizione || "",
-      tipo_variazione: record.tipo_variazione || "",
       ente_principale: record.ente_principale || "CCIAA",
       priorita: record.priorita || "normale",
       data_atto: record.data_atto || "",
