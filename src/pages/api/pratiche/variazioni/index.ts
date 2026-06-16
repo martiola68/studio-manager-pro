@@ -94,6 +94,120 @@ function buildPayload(body: any) {
   };
 }
 
+async function creaOAggiornaPromemoria(
+  supabase: any,
+  params: {
+    id?: string | null;
+    studio_id: string;
+    cliente_id: string;
+    assegnato_a: string | null;
+    titolo: string;
+    descrizione: string;
+    data_scadenza: string;
+    priorita: string;
+    origine: string;
+    origine_id: string;
+  }
+) {
+  const payload = {
+    studio_id: params.studio_id,
+    cliente_id: params.cliente_id,
+    assegnato_a: params.assegnato_a,
+    titolo: params.titolo,
+    descrizione: params.descrizione,
+    data_scadenza: params.data_scadenza,
+    priorita: params.priorita || "normale",
+    stato: "aperto",
+    origine: params.origine,
+    origine_id: params.origine_id,
+  };
+
+  if (params.id) {
+    const { data, error } = await supabase
+      .from("tbpromemoria")
+      .update(payload)
+      .eq("id", params.id)
+      .select("id")
+      .single();
+
+    if (error) throw error;
+    return data?.id || params.id;
+  }
+
+  const { data: existing } = await supabase
+    .from("tbpromemoria")
+    .select("id")
+    .eq("origine", params.origine)
+    .eq("origine_id", params.origine_id)
+    .maybeSingle();
+
+  if (existing?.id) {
+    const { data, error } = await supabase
+      .from("tbpromemoria")
+      .update(payload)
+      .eq("id", existing.id)
+      .select("id")
+      .single();
+
+    if (error) throw error;
+    return data?.id || existing.id;
+  }
+
+  const { data, error } = await supabase
+    .from("tbpromemoria")
+    .insert(payload)
+    .select("id")
+    .single();
+
+  if (error) throw error;
+  return data.id;
+}
+
+async function sincronizzaPromemoriaVariazione(supabase: any, variazione: any) {
+  const updatePayload: any = {};
+
+  if (variazione.data_scadenza_cciaa) {
+    const promemoriaCciaaId = await creaOAggiornaPromemoria(supabase, {
+      id: variazione.promemoria_cciaa_id,
+      studio_id: variazione.studio_id,
+      cliente_id: variazione.cliente_id,
+      assegnato_a: variazione.assegnato_a,
+      titolo: `Scadenza CCIAA - ${variazione.tipo_variazione}`,
+      descrizione: `Variazione CCIAA: ${variazione.tipo_variazione}`,
+      data_scadenza: variazione.data_scadenza_cciaa,
+      priorita: variazione.priorita,
+      origine: "variazione_cciaa",
+      origine_id: variazione.id,
+    });
+
+    updatePayload.promemoria_cciaa_id = promemoriaCciaaId;
+  }
+
+  if (variazione.obbligo_ade && variazione.data_scadenza_ade) {
+    const promemoriaAdeId = await creaOAggiornaPromemoria(supabase, {
+      id: variazione.promemoria_ade_id,
+      studio_id: variazione.studio_id,
+      cliente_id: variazione.cliente_id,
+      assegnato_a: variazione.assegnato_a,
+      titolo: `Scadenza Agenzia Entrate - ${variazione.tipo_variazione}`,
+      descrizione: `Comunicazione Agenzia Entrate: ${variazione.tipo_variazione}`,
+      data_scadenza: variazione.data_scadenza_ade,
+      priorita: variazione.priorita,
+      origine: "variazione_ade",
+      origine_id: variazione.id,
+    });
+
+    updatePayload.promemoria_ade_id = promemoriaAdeId;
+  }
+
+  if (Object.keys(updatePayload).length > 0) {
+    await supabase
+      .from("tbpratiche_variazioni")
+      .update(updatePayload)
+      .eq("id", variazione.id);
+  }
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse>
@@ -208,6 +322,8 @@ export default async function handler(
 
       if (error) throw error;
 
+      await sincronizzaPromemoriaVariazione(supabase, data);
+
       return res.status(201).json({
         success: true,
         data,
@@ -242,6 +358,8 @@ export default async function handler(
         .single();
 
       if (error) throw error;
+
+      await sincronizzaPromemoriaVariazione(supabase, data);
 
       return res.status(200).json({
         success: true,
