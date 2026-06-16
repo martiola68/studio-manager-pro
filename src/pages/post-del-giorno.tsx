@@ -251,10 +251,10 @@ const colorePriorita = (p?: string | null) => {
               >
                 <div className="flex justify-between gap-2">
                   <div>
-                   <div className="text-xs uppercase font-bold opacity-90">
+<div className="text-xs uppercase opacity-90">
   {post.priorita || "Media"}
 </div>
-                    <h3 className="font-bold text-lg mt-1">{post.titolo}</h3>
+                    <h3 className="text-lg mt-1">{post.titolo}</h3>
                   </div>
 
                   <button
@@ -268,12 +268,12 @@ const colorePriorita = (p?: string | null) => {
                 </div>
 
                 {post.descrizione && (
-                 <p className="text-sm font-medium mt-3 whitespace-pre-wrap">
+                <p className="text-sm mt-3 whitespace-pre-wrap">
   {post.descrizione}
 </p>
                 )}
 
-                <div className="text-xs font-semibold mt-4 opacity-90">
+               <div className="text-xs mt-4 opacity-90">
                   Data:{" "}
                   {post.data_scadenza
                     ? new Date(post.data_scadenza).toLocaleDateString("it-IT")
@@ -283,7 +283,7 @@ const colorePriorita = (p?: string | null) => {
     <button
   type="button"
   onClick={() => completaPost(post.id)}
-  className="mt-4 w-full rounded bg-slate-200 hover:bg-slate-300 border border-slate-400 text-slate-900 px-3 py-2 flex items-center justify-center gap-2 font-semibold"
+  className="mt-4 w-full rounded bg-slate-200 hover:bg-slate-300 border border-slate-400 text-slate-900 px-3 py-2 flex items-center justify-center gap-2"
 >
   <Check className="h-4 w-4" />
   Completato
