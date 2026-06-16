@@ -84,7 +84,7 @@ export default function PostDelGiornoPage() {
         descrizione: descrizione.trim() || null,
         priorita,
         data_scadenza: dataRiferimento,
-        working_progress: "Da fare",
+        working_progress: "Aperto",
         destinatario_id: userId,
         operatore_id: userId,
       });
