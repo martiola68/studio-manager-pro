@@ -18,9 +18,10 @@ type PostGiorno = {
 export default function PostDelGiornoPage() {
   const [posts, setPosts] = useState<PostGiorno[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+ const [saving, setSaving] = useState(false);
+const [showFuturi, setShowFuturi] = useState(false);
 
-  const [userId, setUserId] = useState<string | null>(null);
+const [userId, setUserId] = useState<string | null>(null);
 
   const [titolo, setTitolo] = useState("");
   const [descrizione, setDescrizione] = useState("");
@@ -50,7 +51,8 @@ export default function PostDelGiornoPage() {
        .eq("tipo", "POST_GIORNO")
 .eq("destinatario_id", session.user.id)
 .neq("working_progress", "Completato")
-.eq("data_scadenza", new Date().toISOString().slice(0, 10))
+.gte("data_scadenza", new Date().toISOString().slice(0, 10))
+.order("data_scadenza", { ascending: true })
 .order("priorita", { ascending: true })
 
       if (error) throw error;
@@ -164,6 +166,16 @@ const colorePriorita = (p?: string | null) => {
   return "border-yellow-700 bg-yellow-300 text-black";
 };
 
+  const oggiIso = new Date().toISOString().slice(0, 10);
+
+const postFuturi = posts.filter(
+  (post) => post.data_scadenza && post.data_scadenza > oggiIso
+);
+
+  const postOggi = posts.filter(
+  (post) => post.data_scadenza === oggiIso
+);
+
   return (
     <>
       <Head>
@@ -181,14 +193,24 @@ const colorePriorita = (p?: string | null) => {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={loadPosts}
-            className="border rounded px-4 py-2 flex items-center gap-2"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Aggiorna
-          </button>
+          <div className="flex items-center gap-2">
+  <button
+    type="button"
+    onClick={() => setShowFuturi(true)}
+    className="border rounded px-4 py-2 flex items-center gap-2 bg-yellow-100 hover:bg-yellow-200"
+  >
+    Post futuri ({postFuturi.length})
+  </button>
+
+  <button
+    type="button"
+    onClick={loadPosts}
+    className="border rounded px-4 py-2 flex items-center gap-2"
+  >
+    <RefreshCw className="h-4 w-4" />
+    Aggiorna
+  </button>
+</div>
         </div>
 
         <div className="rounded-lg border bg-white p-4 shadow-sm">
@@ -244,13 +266,13 @@ const colorePriorita = (p?: string | null) => {
 
         {loading ? (
           <div className="text-center py-10 text-gray-500">Caricamento...</div>
-        ) : posts.length === 0 ? (
+      ) : postOggi.length === 0 ? (
           <div className="rounded-lg border bg-white p-10 text-center text-gray-500">
             Nessun post attivo per oggi.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-4">
-            {posts.map((post) => (
+            {postOggi.map((post) => (
               <div
                 key={post.id}
                 className={`rounded-lg border-l-4 p-4 shadow-sm ${colorePriorita(
@@ -301,6 +323,59 @@ const colorePriorita = (p?: string | null) => {
           </div>
         )}
       </div>
+      {showFuturi && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div className="w-full max-w-4xl max-h-[80vh] overflow-auto rounded-lg bg-white p-6 shadow-xl">
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-xl font-semibold">Post futuri</h2>
+
+        <button
+          type="button"
+          onClick={() => setShowFuturi(false)}
+          className="rounded border px-4 py-2"
+        >
+          Chiudi
+        </button>
+      </div>
+
+      {postFuturi.length === 0 ? (
+        <div className="rounded border p-6 text-center text-gray-500">
+          Nessun post futuro programmato.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {postFuturi.map((post) => (
+            <div
+              key={post.id}
+              className={`rounded-lg border-l-4 p-4 shadow-sm ${colorePriorita(
+                post.priorita
+              )}`}
+            >
+              <div className="text-xs uppercase opacity-90">
+                {post.priorita || "Media"}
+              </div>
+
+              <h3 className="text-lg mt-1">{post.titolo}</h3>
+
+              {post.descrizione && (
+                <p className="text-sm mt-3 whitespace-pre-wrap">
+                  {post.descrizione}
+                </p>
+              )}
+
+              <div className="text-xs mt-4 opacity-90">
+                Data:{" "}
+                {post.data_scadenza
+                  ? new Date(post.data_scadenza).toLocaleDateString("it-IT")
+                  : "-"}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+)}
     </>
   );
 }
