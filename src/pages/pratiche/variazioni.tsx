@@ -9,6 +9,17 @@ import {
   RefreshCw,
 } from "lucide-react";
 
+const TIPI_VARIAZIONE = [
+  "Scioglimento e liquidazione",
+  "Cancellazione",
+  "Modifica/nomina organo amministrativo",
+  "Modifica/nomina organo di controllo",
+  "Comunicazione PEC",
+  "Cambio sede legale",
+  "Modifica codice attività",
+  "Nuova/Modifica/Elimina unità locale",
+];
+
 export default function PraticheVariazioniPage() {
   const [loading, setLoading] = useState(true);
   const [variazioni, setVariazioni] = useState<any[]>([]);
@@ -18,19 +29,27 @@ export default function PraticheVariazioniPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const [form, setForm] = useState({
-    cliente_id: "",
-    titolo: "",
-    descrizione: "",
-    tipo_variazione: "",
-    ente_principale: "CCIAA",
-    priorita: "normale",
-    data_atto: "",
-    obbligo_ade: false,
-    genera_verbale: false,
-    richiede_pratica: false,
-    note: "",
-  });
+ const [form, setForm] = useState({
+  cliente_id: "",
+  tipo_variazione: "",
+  ente_principale: "CCIAA",
+  priorita: "normale",
+
+  data_atto: "",
+  giorni_scadenza_cciaa: 30,
+  data_scadenza_cciaa: "",
+  data_evasione_cciaa: "",
+
+  obbligo_ade: false,
+  giorni_scadenza_ade: 30,
+  data_scadenza_ade: "",
+  data_comunicazione_ade: "",
+  ricevuta_telematica_ade: "",
+  conferma_record: false,
+
+  genera_verbale: false,
+  note: "",
+});
 
   async function loadData() {
     try {
@@ -83,10 +102,17 @@ const { data: clientiData } = await supabase
   async function salva() {
     if (!utente) return;
 
-    const payload = {
-      ...form,
-      studio_id: utente.studio_id,
-    };
+   const cliente = clienti.find((c) => c.id === form.cliente_id);
+
+const payload = {
+  ...form,
+  studio_id: utente.studio_id,
+  utente_id: utente.id,
+  assegnato_a: utente.id,
+
+  titolo: form.tipo_variazione,
+  descrizione: form.note || form.tipo_variazione,
+};
 
     const response = await fetch("/api/pratiche/variazioni", {
       method: editingId ? "PUT" : "POST",
@@ -248,29 +274,39 @@ const { data: clientiData } = await supabase
                 ))}
               </select>
 
-              <input
-                className="border p-2 rounded"
-                placeholder="Tipo variazione"
-                value={form.tipo_variazione}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    tipo_variazione: e.target.value,
-                  })
-                }
-              />
+              <select
+  className="border p-2 rounded"
+  value={form.tipo_variazione}
+  onChange={(e) =>
+    setForm({
+      ...form,
+      tipo_variazione: e.target.value,
+    })
+  }
+>
+  <option value="">Seleziona tipo variazione</option>
 
-              <input
-                className="border p-2 rounded col-span-2"
-                placeholder="Titolo"
-                value={form.titolo}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    titolo: e.target.value,
-                  })
-                }
-              />
+  {TIPI_VARIAZIONE.map((tipo) => (
+    <option
+      key={tipo}
+      value={tipo}
+    >
+      {tipo}
+    </option>
+  ))}
+</select>
+
+             <input
+  className="border p-2 rounded"
+  placeholder="Titolo variazione"
+  value={form.titolo}
+  onChange={(e) =>
+    setForm({
+      ...form,
+      titolo: e.target.value,
+    })
+  }
+/>
 
               <textarea
                 className="border p-2 rounded col-span-2"
@@ -284,17 +320,58 @@ const { data: clientiData } = await supabase
                 }
               />
 
-              <input
-                type="date"
-                className="border p-2 rounded"
-                value={form.data_atto}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    data_atto: e.target.value,
-                  })
-                }
-              />
+             <div className="grid grid-cols-4 gap-3">
+
+  <input
+    type="date"
+    className="border p-2 rounded"
+    value={form.data_atto}
+    onChange={(e) =>
+      setForm({
+        ...form,
+        data_atto: e.target.value,
+      })
+    }
+  />
+
+  <input
+    type="number"
+    className="border p-2 rounded"
+    placeholder="Giorni lavorazione"
+    value={form.giorni_scadenza_cciaa}
+    onChange={(e) =>
+      setForm({
+        ...form,
+        giorni_scadenza_cciaa: Number(e.target.value),
+      })
+    }
+  />
+
+  <input
+    type="date"
+    className="border p-2 rounded"
+    value={form.data_scadenza_cciaa}
+    onChange={(e) =>
+      setForm({
+        ...form,
+        data_scadenza_cciaa: e.target.value,
+      })
+    }
+  />
+
+  <input
+    type="date"
+    className="border p-2 rounded"
+    value={form.data_evasione_cciaa}
+    onChange={(e) =>
+      setForm({
+        ...form,
+        data_evasione_cciaa: e.target.value,
+      })
+    }
+  />
+
+</div>
 
               <select
                 className="border p-2 rounded"
@@ -325,6 +402,79 @@ const { data: clientiData } = await supabase
                 />
                 {" "}Obbligo AdE
               </label>
+              {form.obbligo_ade && (
+  <div className="grid grid-cols-4 gap-3 mt-3">
+
+    <input
+      type="number"
+      className="border p-2 rounded"
+      placeholder="Giorni lavorazione AdE"
+      value={form.giorni_scadenza_ade}
+      onChange={(e) =>
+        setForm({
+          ...form,
+          giorni_scadenza_ade: Number(e.target.value),
+        })
+      }
+    />
+
+    <input
+      type="date"
+      className="border p-2 rounded"
+      value={form.data_scadenza_ade}
+      onChange={(e) =>
+        setForm({
+          ...form,
+          data_scadenza_ade: e.target.value,
+        })
+      }
+    />
+
+    <input
+      type="date"
+      className="border p-2 rounded"
+      value={form.data_comunicazione_ade}
+      onChange={(e) =>
+        setForm({
+          ...form,
+          data_comunicazione_ade: e.target.value,
+        })
+      }
+    />
+
+    <input
+      className="border p-2 rounded"
+      placeholder="Ricevuta telematica AdE"
+      value={form.ricevuta_telematica_ade}
+      onChange={(e) =>
+        setForm({
+          ...form,
+          ricevuta_telematica_ade: e.target.value,
+        })
+      }
+    />
+
+  </div>
+)}
+
+              {form.obbligo_ade && (
+  <label className="flex items-center gap-2 mt-3">
+
+    <input
+      type="checkbox"
+      checked={form.conferma_record}
+      onChange={(e) =>
+        setForm({
+          ...form,
+          conferma_record: e.target.checked,
+        })
+      }
+    />
+
+    Conferma record AdE
+
+  </label>
+)}
 
               <label>
                 <input
@@ -340,20 +490,7 @@ const { data: clientiData } = await supabase
                 {" "}Genera verbale
               </label>
 
-              <label>
-                <input
-                  type="checkbox"
-                  checked={form.richiede_pratica}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      richiede_pratica: e.target.checked,
-                    })
-                  }
-                />
-                {" "}Richiede pratica
-              </label>
-            </div>
+                     </div>
 
             <div className="flex justify-end gap-2 mt-4">
               <button
