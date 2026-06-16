@@ -22,7 +22,8 @@ import {
   ShieldCheck,
   BriefcaseBusiness,
   FolderKanban,
-  Scale,
+ Scale,
+  StickyNote,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -298,11 +299,16 @@ const aggiornaApplicazione = () => {
       icon: <Calendar className="h-4 w-4" />,
       href: "/agenda",
     },
-    {
-      label: "Promemoria",
-      icon: <FileText className="h-4 w-4" />,
-      href: "/promemoria",
-    },
+  {
+  label: "Promemoria",
+  icon: <FileText className="h-4 w-4" />,
+  href: "/promemoria",
+},
+{
+  label: "Post del giorno",
+  icon: <StickyNote className="h-4 w-4" />,
+  href: "/post-del-giorno",
+},
    {
   label: "Strumenti",
   icon: <BriefcaseBusiness className="h-4 w-4" />,
