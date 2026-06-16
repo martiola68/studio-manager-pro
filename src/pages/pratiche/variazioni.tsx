@@ -293,122 +293,162 @@ export default function PraticheVariazioniPage() {
         {showForm && (
           <div className="border rounded p-4 mb-4 bg-white space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <select
-                value={form.cliente_id}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    cliente_id: e.target.value,
-                  })
-                }
-                className="border p-2 rounded md:col-span-2"
-              >
-                <option value="">Seleziona cliente</option>
-                {clienti.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.ragione_sociale}
-                  </option>
-                ))}
-              </select>
+              <div className="space-y-1 md:col-span-2">
+                <label className="text-sm font-medium">Cliente</label>
 
-              <select
-                className="border p-2 rounded md:col-span-2"
-                value={form.tipo_variazione}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    tipo_variazione: e.target.value,
-                  })
-                }
-              >
-                <option value="">Seleziona tipo variazione</option>
-                {TIPI_VARIAZIONE.map((tipo) => (
-                  <option key={tipo} value={tipo}>
-                    {tipo}
-                  </option>
-                ))}
-              </select>
+                <select
+                  value={form.cliente_id}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      cliente_id: e.target.value,
+                    })
+                  }
+                  className="border p-2 rounded w-full"
+                >
+                  <option value="">Seleziona cliente</option>
+                  {clienti.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.ragione_sociale}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-              <select
-                className="border p-2 rounded"
-                value={form.ente_principale}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    ente_principale: e.target.value,
-                  })
-                }
-              >
-                <option value="CCIAA">Camera di Commercio</option>
-                <option value="AGENZIA_ENTRATE">Agenzia Entrate</option>
-              </select>
+              <div className="space-y-1 md:col-span-2">
+                <label className="text-sm font-medium">Tipo variazione</label>
 
-              <select
-                className="border p-2 rounded"
-                value={form.priorita}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    priorita: e.target.value,
-                  })
-                }
-              >
-                <option value="normale">Normale</option>
-                <option value="alta">Alta</option>
-                <option value="urgente">Urgente</option>
-                <option value="bassa">Bassa</option>
-              </select>
+                <select
+                  className="border p-2 rounded w-full"
+                  value={form.tipo_variazione}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      tipo_variazione: e.target.value,
+                    })
+                  }
+                >
+                  <option value="">Seleziona tipo variazione</option>
+                  {TIPI_VARIAZIONE.map((tipo) => (
+                    <option key={tipo} value={tipo}>
+                      {tipo}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-              <input
-                type="text"
-                className="border p-2 rounded"
-                value={
-                  utente
-                    ? [utente.nome, utente.cognome].filter(Boolean).join(" ")
-                    : ""
-                }
-                disabled
-                placeholder="Utente"
-              />
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Ente principale</label>
 
-              <input
-                type="date"
-                className="border p-2 rounded"
-                value={form.data_atto}
-                onChange={(e) => aggiornaDataAtto(e.target.value)}
-                title="Data pratica / data atto"
-              />
+                <select
+                  className="border p-2 rounded w-full"
+                  value={form.ente_principale}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      ente_principale: e.target.value,
+                    })
+                  }
+                >
+                  <option value="CCIAA">Camera di Commercio</option>
+                  <option value="AGENZIA_ENTRATE">Agenzia Entrate</option>
+                </select>
+              </div>
 
-              <input
-                type="number"
-                className="border p-2 rounded"
-                placeholder="Giorni lavorazione CCIAA"
-                value={form.giorni_scadenza_cciaa}
-                onChange={(e) =>
-                  aggiornaGiorniCciaa(Number(e.target.value))
-                }
-              />
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Priorità</label>
 
-              <input
-                type="date"
-                className="border p-2 rounded"
-                value={form.data_scadenza_cciaa}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    data_scadenza_cciaa: e.target.value,
-                  })
-                }
-                title="Data scadenza CCIAA"
-              />
+                <select
+                  className="border p-2 rounded w-full"
+                  value={form.priorita}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      priorita: e.target.value,
+                    })
+                  }
+                >
+                  <option value="normale">Normale</option>
+                  <option value="alta">Alta</option>
+                  <option value="urgente">Urgente</option>
+                  <option value="bassa">Bassa</option>
+                </select>
+              </div>
 
-              <input
-                type="date"
-                className="border p-2 rounded"
-                value={form.data_evasione_cciaa}
-                onChange={(e) => aggiornaDataEvasioneCciaa(e.target.value)}
-                title="Data evasione CCIAA"
-              />
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Utente assegnato</label>
+
+                <input
+                  type="text"
+                  className="border p-2 rounded w-full bg-gray-100"
+                  value={
+                    utente
+                      ? [utente.nome, utente.cognome].filter(Boolean).join(" ")
+                      : ""
+                  }
+                  disabled
+                  placeholder="Utente"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium">
+                  Data atto / Data pratica
+                </label>
+
+                <input
+                  type="date"
+                  className="border p-2 rounded w-full"
+                  value={form.data_atto}
+                  onChange={(e) => aggiornaDataAtto(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium">
+                  Giorni lavorazione CCIAA
+                </label>
+
+                <input
+                  type="number"
+                  className="border p-2 rounded w-full"
+                  value={form.giorni_scadenza_cciaa}
+                  onChange={(e) =>
+                    aggiornaGiorniCciaa(Number(e.target.value))
+                  }
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium">
+                  Data scadenza CCIAA
+                </label>
+
+                <input
+                  type="date"
+                  className="border p-2 rounded w-full"
+                  value={form.data_scadenza_cciaa}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      data_scadenza_cciaa: e.target.value,
+                    })
+                  }
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium">
+                  Data protocollazione / evasione CCIAA
+                </label>
+
+                <input
+                  type="date"
+                  className="border p-2 rounded w-full"
+                  value={form.data_evasione_cciaa}
+                  onChange={(e) => aggiornaDataEvasioneCciaa(e.target.value)}
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
@@ -429,7 +469,7 @@ export default function PraticheVariazioniPage() {
                     })
                   }
                 />
-                Obbligo AdE
+                Obbligo comunicazione Agenzia Entrate
               </label>
 
               <label className="flex items-center gap-2">
@@ -443,64 +483,87 @@ export default function PraticheVariazioniPage() {
                     })
                   }
                 />
-                Genera verbale
+                Genera pratica / verbale
               </label>
             </div>
 
             {form.obbligo_ade && (
               <div className="border rounded p-3 bg-gray-50">
-                <div className="font-semibold mb-3">Dati Agenzia Entrate</div>
+                <div className="font-semibold text-lg mb-3">
+                  DATI AGENZIA DELLE ENTRATE
+                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-                  <input
-                    type="number"
-                    className="border p-2 rounded"
-                    placeholder="Giorni AdE"
-                    value={form.giorni_scadenza_ade}
-                    onChange={(e) =>
-                      aggiornaGiorniAde(Number(e.target.value))
-                    }
-                  />
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">
+                      Giorni lavorazione AdE
+                    </label>
 
-                  <input
-                    type="date"
-                    className="border p-2 rounded"
-                    value={form.data_scadenza_ade}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        data_scadenza_ade: e.target.value,
-                      })
-                    }
-                    title="Data scadenza AdE"
-                  />
+                    <input
+                      type="number"
+                      className="border p-2 rounded w-full"
+                      value={form.giorni_scadenza_ade}
+                      onChange={(e) =>
+                        aggiornaGiorniAde(Number(e.target.value))
+                      }
+                    />
+                  </div>
 
-                  <input
-                    type="date"
-                    className="border p-2 rounded"
-                    value={form.data_comunicazione_ade}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        data_comunicazione_ade: e.target.value,
-                      })
-                    }
-                    title="Data invio AdE"
-                  />
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">
+                      Data scadenza AdE
+                    </label>
 
-                  <input
-                    className="border p-2 rounded"
-                    placeholder="Ricevuta telematica"
-                    value={form.ricevuta_telematica_ade}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        ricevuta_telematica_ade: e.target.value,
-                      })
-                    }
-                  />
+                    <input
+                      type="date"
+                      className="border p-2 rounded w-full"
+                      value={form.data_scadenza_ade}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          data_scadenza_ade: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
 
-                  <label className="flex items-center gap-2">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">
+                      Data invio AdE
+                    </label>
+
+                    <input
+                      type="date"
+                      className="border p-2 rounded w-full"
+                      value={form.data_comunicazione_ade}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          data_comunicazione_ade: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">
+                      Ricevuta telematica
+                    </label>
+
+                    <input
+                      className="border p-2 rounded w-full"
+                      placeholder="Numero / riferimento ricevuta"
+                      value={form.ricevuta_telematica_ade}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          ricevuta_telematica_ade: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <label className="flex items-center gap-2 mt-6">
                     <input
                       type="checkbox"
                       checked={form.conferma_record}
@@ -511,23 +574,27 @@ export default function PraticheVariazioniPage() {
                         })
                       }
                     />
-                    Conferma record
+                    Conferma record AdE
                   </label>
                 </div>
               </div>
             )}
 
-            <textarea
-              className="border p-2 rounded w-full"
-              placeholder="Note"
-              value={form.note}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  note: e.target.value,
-                })
-              }
-            />
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Note operative</label>
+
+              <textarea
+                className="border p-2 rounded w-full"
+                placeholder="Annotazioni interne"
+                value={form.note}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    note: e.target.value,
+                  })
+                }
+              />
+            </div>
 
             <div className="flex justify-end gap-2 mt-4">
               <button onClick={resetForm} className="border px-4 py-2 rounded">
@@ -549,13 +616,14 @@ export default function PraticheVariazioniPage() {
             <thead className="bg-gray-100">
               <tr>
                 <th className="p-2 text-left">Cliente</th>
-                <th className="p-2 text-left">Tipo</th>
+                <th className="p-2 text-left">Tipo variazione</th>
                 <th className="p-2 text-left">Data atto</th>
-                <th className="p-2 text-left">Scad. CCIAA</th>
-                <th className="p-2 text-left">Evasione</th>
+                <th className="p-2 text-left">Scadenza CCIAA</th>
+                <th className="p-2 text-left">Evasione CCIAA</th>
+                <th className="p-2 text-left">Scadenza AdE</th>
+                <th className="p-2 text-left">Invio AdE</th>
+                <th className="p-2 text-center">Pratica collegata</th>
                 <th className="p-2 text-left">Stato</th>
-                <th className="p-2 text-center">AdE</th>
-                <th className="p-2 text-center">Pratica</th>
                 <th className="p-2 text-right">Azioni</th>
               </tr>
             </thead>
@@ -563,38 +631,37 @@ export default function PraticheVariazioniPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="p-6 text-center text-gray-500">
+                  <td colSpan={10} className="p-6 text-center text-gray-500">
                     Caricamento...
                   </td>
                 </tr>
               ) : variazioni.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="p-6 text-center text-gray-500">
+                  <td colSpan={10} className="p-6 text-center text-gray-500">
                     Nessuna variazione presente.
                   </td>
                 </tr>
               ) : (
                 variazioni.map((v) => (
                   <tr key={v.id} className="border-t">
-                    <td className="p-2">{v.cliente?.ragione_sociale}</td>
-                    <td className="p-2">{v.tipo_variazione}</td>
+                    <td className="p-2">{v.cliente?.ragione_sociale || "-"}</td>
+                    <td className="p-2">{v.tipo_variazione || "-"}</td>
                     <td className="p-2">{v.data_atto || "-"}</td>
                     <td className="p-2">{v.data_scadenza_cciaa || "-"}</td>
                     <td className="p-2">{v.data_evasione_cciaa || "-"}</td>
-                    <td className="p-2">{v.stato}</td>
-                    <td className="p-2 text-center">
-                      {v.obbligo_ade ? "SI" : "NO"}
-                    </td>
+                    <td className="p-2">{v.data_scadenza_ade || "-"}</td>
+                    <td className="p-2">{v.data_comunicazione_ade || "-"}</td>
                     <td className="p-2 text-center">
                       {v.pratica_id ? "✓" : "-"}
                     </td>
+                    <td className="p-2">{v.stato || "-"}</td>
                     <td className="p-2">
                       <div className="flex justify-end gap-2">
-                        <button onClick={() => modifica(v)}>
+                        <button onClick={() => modifica(v)} title="Modifica">
                           <Pencil className="h-4 w-4" />
                         </button>
 
-                        <button onClick={() => elimina(v.id)}>
+                        <button onClick={() => elimina(v.id)} title="Elimina">
                           <Trash2 className="h-4 w-4 text-red-600" />
                         </button>
 
