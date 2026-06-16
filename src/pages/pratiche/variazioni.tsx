@@ -29,11 +29,11 @@ export default function PraticheVariazioniPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
- const [form, setForm] = useState({
+ setForm({
   cliente_id: "",
   tipo_variazione: "",
   ente_principale: "CCIAA",
-  priorita: "normale",
+  priorita: "Media",
 
   data_atto: "",
   giorni_scadenza_cciaa: 30,
@@ -41,13 +41,8 @@ export default function PraticheVariazioniPage() {
   data_evasione_cciaa: "",
 
   obbligo_ade: false,
-  giorni_scadenza_ade: 30,
-  data_scadenza_ade: "",
-  data_comunicazione_ade: "",
-  ricevuta_telematica_ade: "",
-  conferma_record: false,
-
   genera_verbale: false,
+
   note: "",
 });
 
@@ -148,7 +143,7 @@ const payload = {
       data_atto: "",
       obbligo_ade: false,
       genera_verbale: false,
-      richiede_pratica: false,
+      
       note: "",
     });
 
@@ -166,7 +161,7 @@ const payload = {
       data_atto: record.data_atto || "",
       obbligo_ade: record.obbligo_ade || false,
       genera_verbale: record.genera_verbale || false,
-      richiede_pratica: record.richiede_pratica || false,
+     
       note: record.note || "",
     });
 
