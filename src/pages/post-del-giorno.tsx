@@ -47,11 +47,11 @@ export default function PostDelGiornoPage() {
       const { data, error } = await supabase
         .from("tbpromemoria")
         .select("*")
-        .eq("tipo", "POST_GIORNO")
-        .eq("destinatario_id", session.user.id)
-        .neq("working_progress", "Completato")
-        .order("data_scadenza", { ascending: true })
-        .order("priorita", { ascending: true });
+       .eq("tipo", "POST_GIORNO")
+.eq("destinatario_id", session.user.id)
+.neq("working_progress", "Completato")
+.eq("data_scadenza", new Date().toISOString().slice(0, 10))
+.order("priorita", { ascending: true })
 
       if (error) throw error;
 
@@ -144,11 +144,11 @@ export default function PostDelGiornoPage() {
     await loadPosts();
   }
 
-  const colorePriorita = (p?: string | null) => {
-    if (p === "Alta") return "border-red-400 bg-red-50";
-    if (p === "Bassa") return "border-green-400 bg-green-50";
-    return "border-yellow-400 bg-yellow-50";
-  };
+ const colorePriorita = (p?: string | null) => {
+  if (p === "Alta") return "border-red-700 bg-red-400";
+  if (p === "Bassa") return "border-green-700 bg-green-400";
+  return "border-yellow-700 bg-yellow-300";
+};
 
   return (
     <>
