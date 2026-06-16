@@ -50,21 +50,23 @@ export default function PraticheVariazioniPage() {
         .eq("email", session.user.email)
         .single();
 
-      if (!user) return;
+      if (!user?.studio_id) return;
 
-      setUtente(user);
+setUtente(user);
 
-      const { data: clientiData } = await supabase
-        .from("tbclienti")
-        .select("id, ragione_sociale")
-        .eq("studio_id", user.studio_id)
-        .order("ragione_sociale");
+const studioId = String(user.studio_id);
+
+const { data: clientiData } = await supabase
+  .from("tbclienti")
+  .select("id, ragione_sociale")
+  .eq("studio_id", studioId)
+  .order("ragione_sociale");
 
       setClienti(clientiData || []);
 
-      const response = await fetch(
-        `/api/pratiche/variazioni?studio_id=${user.studio_id}`
-      );
+    const response = await fetch(
+  `/api/pratiche/variazioni?studio_id=${studioId}`
+);
 
       const result = await response.json();
 
