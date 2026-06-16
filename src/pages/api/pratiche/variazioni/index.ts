@@ -367,30 +367,52 @@ export default async function handler(
       });
     }
 
-    if (req.method === "DELETE") {
-      const id =
-        typeof req.query.id === "string" ? req.query.id : req.body?.id;
+  if (req.method === "DELETE") {
+  const id =
+    typeof req.query.id === "string"
+      ? req.query.id
+      : req.body?.id;
 
-      if (!id) {
-        return res.status(400).json({
-          success: false,
-          error: "id obbligatorio",
-        });
-      }
+  if (!id) {
+    return res.status(400).json({
+      success: false,
+      error: "id obbligatorio",
+    });
+  }
 
-      const { error } = await supabase
-        .from("tbpratiche_variazioni")
-        .delete()
-        .eq("id", id);
+  const { data: variazione } = await supabase
+    .from("tbpratiche_variazioni")
+    .select(`
+      promemoria_cciaa_id,
+      promemoria_ade_id
+    `)
+    .eq("id", id)
+    .single();
 
-      if (error) throw error;
+  const idsPromemoria = [
+    variazione?.promemoria_cciaa_id,
+    variazione?.promemoria_ade_id,
+  ].filter(Boolean);
 
-      return res.status(200).json({
-        success: true,
-        data: { id },
-      });
-    }
+  if (idsPromemoria.length > 0) {
+    await supabase
+      .from("tbpromemoria")
+      .delete()
+      .in("id", idsPromemoria);
+  }
 
+  const { error } = await supabase
+    .from("tbpratiche_variazioni")
+    .delete()
+    .eq("id", id);
+
+  if (error) throw error;
+
+  return res.status(200).json({
+    success: true,
+    data: { id },
+  });
+}
     return res.status(405).json({
       success: false,
       error: "Metodo non consentito",
