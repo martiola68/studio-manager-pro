@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Users,
   UserCircle,
+  StickyNote,
   Calendar,
   FileText,
   Mail,
@@ -68,8 +69,10 @@ interface MenuItem {
 
   const [messaggiNonLetti, setMessaggiNonLetti] = useState(0);
   const [promemoriaRicevuti, setPromemoriaRicevuti] = useState(0);
-  const [promemoriaAttivi, setPromemoriaAttivi] = useState(0);
-  const [eventiImminenti, setEventiImminenti] = useState(0);
+    
+const [promemoriaAttivi, setPromemoriaAttivi] = useState(0);
+const [postGiornoAttivi, setPostGiornoAttivi] = useState(0);
+const [eventiImminenti, setEventiImminenti] = useState(0);
 
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -157,6 +160,31 @@ interface MenuItem {
       setPromemoriaAttivi(0);
     }
   };
+
+    const loadPostGiornoAttivi = async () => {
+  if (!currentUser) {
+    setPostGiornoAttivi(0);
+    return;
+  }
+
+  try {
+    const supabase = getSupabaseClient();
+
+    const { count, error } = await supabase
+      .from("tbpromemoria")
+      .select("*", { count: "exact", head: true })
+      .eq("tipo", "POST_GIORNO")
+      .eq("destinatario_id", currentUser.id)
+      .neq("working_progress", "Completato");
+
+    if (error) throw error;
+
+    setPostGiornoAttivi(count ?? 0);
+  } catch (error) {
+    console.error("Errore caricamento post del giorno:", error);
+    setPostGiornoAttivi(0);
+  }
+};
 
   const loadPromemoriaRicevuti = async () => {
     if (!currentUser) return;
@@ -259,15 +287,17 @@ const aggiornaApplicazione = () => {
     if (!currentUser) return;
 
     void loadMessaggiNonLetti();
-    void loadPromemoriaAttivi();
-    void loadPromemoriaRicevuti();
-    void loadEventiImminenti();
+void loadPromemoriaAttivi();
+void loadPostGiornoAttivi();
+void loadPromemoriaRicevuti();
+void loadEventiImminenti();
 
     const interval = setInterval(() => {
-      void loadMessaggiNonLetti();
-      void loadPromemoriaAttivi();
-      void loadPromemoriaRicevuti();
-      void loadEventiImminenti();
+    void loadMessaggiNonLetti();
+void loadPromemoriaAttivi();
+void loadPostGiornoAttivi();
+void loadPromemoriaRicevuti();
+void loadEventiImminenti();
     }, 60000);
 
     return () => clearInterval(interval);
@@ -548,10 +578,13 @@ return pathname === normalizedHref || pathname.startsWith(`${normalizedHref}/`);
     const hasChildren = !!(item.children && item.children.length > 0);
     const itemActive = isActive(item);
 
-    const showMessaggiBadge = item.label === "Messaggi" && messaggiNonLetti > 0;
-    const showPromemoriaRicevutiBadge = item.label === "Promemoria" && promemoriaRicevuti > 0;
-    const showPromemoriaAlert = item.label === "Promemoria" && promemoriaAttivi > 0;
-    const showAgendaBadge = item.label === "Agenda" && eventiImminenti > 0;
+   const showMessaggiBadge = item.label === "Messaggi" && messaggiNonLetti > 0;
+const showPromemoriaRicevutiBadge = item.label === "Promemoria" && promemoriaRicevuti > 0;
+const showPromemoriaAlert = item.label === "Promemoria" && promemoriaAttivi > 0;
+const showAgendaBadge = item.label === "Agenda" && eventiImminenti > 0;
+
+const showPostGiornoBadge =
+  item.label === "Post del giorno" && postGiornoAttivi > 0;
 
     if (hasChildren) {
       return (
@@ -670,6 +703,27 @@ return pathname === normalizedHref || pathname.startsWith(`${normalizedHref}/`);
             {eventiImminenti > 99 ? "99+" : eventiImminenti}
           </Badge>
         )}
+{showPostGiornoBadge && (
+  <span
+    className="
+      ml-1
+      flex
+      items-center
+      justify-center
+      rounded-full
+      bg-yellow-400
+      text-black
+      text-[11px]
+      font-bold
+      min-w-[18px]
+      h-[18px]
+      px-1
+    "
+  >
+    {postGiornoAttivi > 99 ? "99+" : postGiornoAttivi}
+  </span>
+)}
+        
       </Link>
     );
   };
