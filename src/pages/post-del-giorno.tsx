@@ -345,17 +345,32 @@ const postFuturi = posts.filter(
       ) : (
         <div className="space-y-3">
           {postFuturi.map((post) => (
-            <div
-              key={post.id}
-              className={`rounded-lg border-l-4 p-4 shadow-sm ${colorePriorita(
-                post.priorita
-              )}`}
-            >
-              <div className="text-xs uppercase opacity-90">
-                {post.priorita || "Media"}
-              </div>
+  <div
+    key={post.id}
+    className={`rounded-lg border-l-4 p-4 shadow-sm ${colorePriorita(
+      post.priorita
+    )}`}
+  >
+    <div className="flex justify-between items-start gap-2">
+      <div>
+        <div className="text-xs uppercase opacity-90">
+          {post.priorita || "Media"}
+        </div>
 
-              <h3 className="text-lg mt-1">{post.titolo}</h3>
+        <h3 className="text-lg mt-1">
+          {post.titolo}
+        </h3>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => eliminaPost(post.id)}
+        className="bg-white/90 text-red-600 hover:text-red-800 rounded p-2"
+        title="Elimina"
+      >
+        <Trash2 className="h-4 w-4" />
+      </button>
+    </div>
 
               {post.descrizione && (
                 <p className="text-sm mt-3 whitespace-pre-wrap">
