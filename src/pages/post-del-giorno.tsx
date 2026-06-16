@@ -55,7 +55,7 @@ export default function PostDelGiornoPage() {
 
       if (error) throw error;
 
-      setPosts((data || []) as PostGiorno[]);
+      setPosts(((data || []) as unknown) as PostGiorno[]);
     } catch (error: any) {
       alert(error.message || "Errore caricamento post");
     } finally {
