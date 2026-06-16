@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   Users,
   UserCircle,
-  StickyNote,
   Calendar,
   FileText,
   Mail,
