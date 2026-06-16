@@ -144,10 +144,16 @@ export default function PostDelGiornoPage() {
     await loadPosts();
   }
 
- const colorePriorita = (p?: string | null) => {
-  if (p === "Alta") return "border-red-700 bg-red-400";
-  if (p === "Bassa") return "border-green-700 bg-green-400";
-  return "border-yellow-700 bg-yellow-300";
+const colorePriorita = (p?: string | null) => {
+  if (p === "Alta") {
+    return "border-red-700 bg-red-500 text-white";
+  }
+
+  if (p === "Bassa") {
+    return "border-green-700 bg-green-500 text-black";
+  }
+
+  return "border-yellow-700 bg-yellow-300 text-black";
 };
 
   return (
@@ -245,16 +251,16 @@ export default function PostDelGiornoPage() {
               >
                 <div className="flex justify-between gap-2">
                   <div>
-                    <div className="text-xs uppercase font-semibold text-gray-500">
-                      {post.priorita || "Media"}
-                    </div>
+                   <div className="text-xs uppercase font-bold opacity-90">
+  {post.priorita || "Media"}
+</div>
                     <h3 className="font-bold text-lg mt-1">{post.titolo}</h3>
                   </div>
 
                   <button
                     type="button"
                     onClick={() => eliminaPost(post.id)}
-                    className="text-red-600 hover:text-red-800"
+                    className="bg-white/90 text-red-600 hover:text-red-800 rounded p-2"
                     title="Elimina"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -262,12 +268,12 @@ export default function PostDelGiornoPage() {
                 </div>
 
                 {post.descrizione && (
-                  <p className="text-sm text-gray-700 mt-3 whitespace-pre-wrap">
-                    {post.descrizione}
-                  </p>
+                 <p className="text-sm font-medium mt-3 whitespace-pre-wrap">
+  {post.descrizione}
+</p>
                 )}
 
-                <div className="text-xs text-gray-500 mt-4">
+                <div className="text-xs font-semibold mt-4 opacity-90">
                   Data:{" "}
                   {post.data_scadenza
                     ? new Date(post.data_scadenza).toLocaleDateString("it-IT")
