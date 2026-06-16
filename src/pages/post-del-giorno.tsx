@@ -104,25 +104,33 @@ export default function PostDelGiornoPage() {
     }
   }
 
-  async function completaPost(id: string) {
-    if (!userId) return;
+ async function completaPost(id: string) {
+  if (!userId) return;
 
-    const { error } = await supabase
-      .from("tbpromemoria")
-      .update({
-        working_progress: "Completato",
-      })
-      .eq("id", id)
-      .eq("destinatario_id", userId)
-      .eq("tipo", "POST_GIORNO");
+  const response = await fetch("/api/post-del-giorno/completa", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      post_id: id,
+      user_id: userId,
+    }),
+  });
 
-    if (error) {
-      alert(error.message);
-      return;
-    }
+  const result = await response.json();
 
-    await loadPosts();
+  if (!response.ok || !result.ok) {
+    alert(result.error || "Errore completamento post");
+    return;
   }
+
+  if (result.email_inviata === false) {
+    alert("Post completato, ma email non inviata.");
+  }
+
+  await loadPosts();
+}
 
   async function eliminaPost(id: string) {
     if (!userId) return;
