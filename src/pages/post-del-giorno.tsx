@@ -280,10 +280,10 @@ const colorePriorita = (p?: string | null) => {
                     : "-"}
                 </div>
 
-              <button
+    <button
   type="button"
   onClick={() => completaPost(post.id)}
-  className="mt-4 w-full rounded bg-gray-200 hover:bg-gray-300 border border-gray-400 text-black px-3 py-2 flex items-center justify-center gap-2 font-semibold"
+  className="mt-4 w-full rounded bg-slate-200 hover:bg-slate-300 border border-slate-400 text-slate-900 px-3 py-2 flex items-center justify-center gap-2 font-semibold"
 >
   <Check className="h-4 w-4" />
   Completato
