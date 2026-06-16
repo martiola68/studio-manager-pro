@@ -76,21 +76,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    const nowIso = new Date().toISOString();
-
-    const { error: updateError } = await supabase
-      .from("tbpromemoria")
-      .update({
-        working_progress: "Completato",
-        updated_at: nowIso,
-      })
-      .eq("id", post_id)
-      .eq("destinatario_id", user_id)
-      .eq("tipo", "POST_GIORNO");
-
-    if (updateError) throw updateError;
-
-    const nomeUtente = [utente.nome, utente.cognome].filter(Boolean).join(" ");
+      const nomeUtente = [utente.nome, utente.cognome].filter(Boolean).join(" ");
 
     const html = `
       <div style="font-family: Arial, sans-serif; font-size: 14px; color: #111827; line-height: 1.6;">
@@ -124,24 +110,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       html,
     });
 
-    if (!result.success) {
-      return res.status(200).json({
-        ok: true,
-        email_inviata: false,
-        warning: result.error || "Post completato, ma email non inviata",
-      });
-    }
+  if (!result.success) {
+  return res.status(200).json({
+    ok: true,
+    email_inviata: false,
+    eliminato: false,
+    warning: result.error || "Email non inviata. Il post non è stato eliminato.",
+  });
+}
 
-    return res.status(200).json({
-      ok: true,
-      email_inviata: true,
-    });
-  } catch (error: any) {
-    console.error("Errore completamento post del giorno:", error);
+const { error: deleteError } = await supabase
+  .from("tbpromemoria")
+  .delete()
+  .eq("id", post_id)
+  .eq("destinatario_id", user_id)
+  .eq("tipo", "POST_GIORNO");
 
-    return res.status(500).json({
-      ok: false,
-      error: error?.message || "Errore interno",
-    });
+if (deleteError) throw deleteError;
+
+return res.status(200).json({
+  ok: true,
+  email_inviata: true,
+  eliminato: true,
+});
   }
 }
