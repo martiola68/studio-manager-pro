@@ -76,7 +76,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-      const nomeUtente = [utente.nome, utente.cognome].filter(Boolean).join(" ");
+    const nomeUtente = [utente.nome, utente.cognome].filter(Boolean).join(" ");
 
     const html = `
       <div style="font-family: Arial, sans-serif; font-size: 14px; color: #111827; line-height: 1.6;">
@@ -110,28 +110,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       html,
     });
 
-  if (!result.success) {
-  return res.status(200).json({
-    ok: true,
-    email_inviata: false,
-    eliminato: false,
-    warning: result.error || "Email non inviata. Il post non è stato eliminato.",
-  });
-}
+    if (!result.success) {
+      return res.status(200).json({
+        ok: true,
+        email_inviata: false,
+        eliminato: false,
+        warning: result.error || "Email non inviata. Il post non è stato eliminato.",
+      });
+    }
 
-const { error: deleteError } = await supabase
-  .from("tbpromemoria")
-  .delete()
-  .eq("id", post_id)
-  .eq("destinatario_id", user_id)
-  .eq("tipo", "POST_GIORNO");
+    const { error: deleteError } = await supabase
+      .from("tbpromemoria")
+      .delete()
+      .eq("id", post_id)
+      .eq("destinatario_id", user_id)
+      .eq("tipo", "POST_GIORNO");
 
-if (deleteError) throw deleteError;
+    if (deleteError) throw deleteError;
 
-return res.status(200).json({
-  ok: true,
-  email_inviata: true,
-  eliminato: true,
-});
+    return res.status(200).json({
+      ok: true,
+      email_inviata: true,
+      eliminato: true,
+    });
+  } catch (error: any) {
+    console.error("Errore completamento post del giorno:", error);
+
+    return res.status(500).json({
+      ok: false,
+      error: error?.message || "Errore interno",
+    });
   }
 }
