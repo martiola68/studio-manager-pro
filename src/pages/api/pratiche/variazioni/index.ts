@@ -96,20 +96,24 @@ function buildPayload(body: any) {
 
 async function creaOAggiornaPromemoria(
   supabase: any,
-  params: {
-    id?: string | null;
-    studio_id: string;
-    cliente_id: string;
-    assegnato_a: string | null;
-    titolo: string;
-    descrizione: string;
-    data_scadenza: string;
-    priorita: string;
-    origine: string;
-    origine_id: string;
-  }
+params: {
+  id?: string | null;
+  studio_id: string;
+  cliente_id: string;
+  assegnato_a: string | null;
+  titolo: string;
+  descrizione: string;
+  data_scadenza: string;
+  priorita: string;
+  origine: string;
+  origine_id: string;
+
+  tipo: string;
+  settore: string | null;
+}
+  
 ) {
- const payload = {
+const payload = {
   studio_id: params.studio_id,
   destinatario_id: params.assegnato_a,
   operatore_id: params.assegnato_a,
@@ -127,7 +131,11 @@ async function creaOAggiornaPromemoria(
   working_progress: "Aperto",
   origine: params.origine,
   origine_id: params.origine_id,
+
+  tipo: params.tipo,
+  settore: params.settore,
 };
+  
   if (params.id) {
     const { data, error } = await supabase
       .from("tbpromemoria")
@@ -170,6 +178,17 @@ async function creaOAggiornaPromemoria(
 }
 
 async function sincronizzaPromemoriaVariazione(supabase: any, variazione: any) {
+  const { data: cliente } = await supabase
+  .from("tbclienti")
+  .select("ragione_sociale")
+  .eq("id", variazione.cliente_id)
+  .single();
+
+const { data: utente } = await supabase
+  .from("tbutenti")
+  .select("settore")
+  .eq("id", variazione.assegnato_a)
+  .single();
   const updatePayload: any = {};
 
   if (variazione.data_scadenza_cciaa) {
@@ -178,8 +197,8 @@ async function sincronizzaPromemoriaVariazione(supabase: any, variazione: any) {
       studio_id: variazione.studio_id,
       cliente_id: variazione.cliente_id,
       assegnato_a: variazione.assegnato_a,
-      titolo: `Scadenza CCIAA - ${variazione.tipo_variazione}`,
-      descrizione: `Variazione CCIAA: ${variazione.tipo_variazione}`,
+      titolo: cliente?.ragione_sociale || variazione.tipo_variazione,
+      descrizione: Variazione CCIAA: ${variazione.tipo_variazione}`,
       data_scadenza: variazione.data_scadenza_cciaa,
       priorita: variazione.priorita,
       origine: "variazione_cciaa",
@@ -195,7 +214,7 @@ async function sincronizzaPromemoriaVariazione(supabase: any, variazione: any) {
       studio_id: variazione.studio_id,
       cliente_id: variazione.cliente_id,
       assegnato_a: variazione.assegnato_a,
-      titolo: `Scadenza Agenzia Entrate - ${variazione.tipo_variazione}`,
+      titolo: cliente?.ragione_sociale || variazione.tipo_variazione,
       descrizione: `Comunicazione Agenzia Entrate: ${variazione.tipo_variazione}`,
       data_scadenza: variazione.data_scadenza_ade,
       priorita: variazione.priorita,
