@@ -267,33 +267,44 @@ rappresentante_legale_cap:
     }
   }
 
-  async function caricaAmministratori() {
+async function caricaAmministratori() {
   if (!pratica?.cliente_id) return;
 
-  const res = await fetch(
-    `/api/clienti-organi?cliente_id=${pratica.cliente_id}`,
-    {
-      cache: "no-store",
-    }
-  );
+  try {
+    const res = await fetch(
+      `/api/clienti-organi?cliente_id=${pratica.cliente_id}`,
+      {
+        cache: "no-store",
+      }
+    );
 
-  const data = await res.json();
+    const data = await res.json();
 
-  if (!res.ok) return;
+    if (!res.ok) return;
 
-  setAmministratori(
-    (data.organi || []).filter(
-      (o: any) =>
-        o.attivo &&
-        [
-          "amministratore",
-          "amministratore_delegato",
-          "presidente_cda",
-        ].includes(
-          String(o.ruolo || "").toLowerCase()
-        )
-    )
-  );
+    const records = data.data || data.organi || [];
+
+    setAmministratori(
+      records.filter((o: any) => {
+        const ruolo = String(o.ruolo || "").toLowerCase();
+        const carica = String(o.carica || "").toLowerCase();
+
+        return (
+          o.attivo !== false &&
+          (
+            ruolo.includes("amministratore") ||
+            ruolo.includes("presidente") ||
+            ruolo.includes("legale") ||
+            carica.includes("amministratore") ||
+            carica.includes("presidente") ||
+            carica.includes("legale")
+          )
+        );
+      })
+    );
+  } catch (error) {
+    console.error("Errore caricamento amministratori:", error);
+  }
 }
 
   async function salvaDatiDocumento(
@@ -752,24 +763,28 @@ rappresentante_legale_cap:
                   form.rappresentante_legale_id
                 }
 onChange={(e) => {
-  const selected = amministratori.find(
-    (r: any) => r.rapp_legale_id === e.target.value
-  );
+ const selected = amministratori.find((r: any) => {
+  const rapp = r.rapp_legali || r.rapp_legale || r.rappresentante || {};
+  return String(r.rapp_legale_id || rapp.id) === String(e.target.value);
+});
+
+const rapp =
+  selected?.rapp_legali ||
+  selected?.rapp_legale ||
+  selected?.rappresentante ||
+  {};
 
   setForm((prev) => ({
     ...prev,
-    rappresentante_legale_id: selected?.rapp_legale_id || "",
-    rappresentante_legale_nome: selected?.rapp_legali?.nome_cognome || "",
-    rappresentante_legale_codice_fiscale:
-      selected?.rapp_legali?.codice_fiscale || "",
-    rappresentante_legale_indirizzo:
-      selected?.rapp_legali?.indirizzo || "",
-    rappresentante_legale_citta:
-      selected?.rapp_legali?.citta || "",
-    rappresentante_legale_provincia:
-      selected?.rapp_legali?.provincia || "",
-    rappresentante_legale_cap:
-      selected?.rapp_legali?.cap || "",
+   rappresentante_legale_id: selected?.rapp_legale_id || rapp.id || "",
+rappresentante_legale_nome: rapp.nome_cognome || "",
+rappresentante_legale_codice_fiscale: rapp.codice_fiscale || "",
+rappresentante_legale_indirizzo:
+  rapp.indirizzo_residenza || rapp.indirizzo || "",
+rappresentante_legale_citta:
+  rapp.citta_residenza || rapp.citta || "",
+rappresentante_legale_provincia: rapp.provincia || "",
+rappresentante_legale_cap: rapp.cap || "",
   }));
 }}
               >
@@ -777,17 +792,19 @@ onChange={(e) => {
                   Seleziona
                 </option>
 
-               {amministratori.map(
-  (r: any) => (
-                   <option
-  key={r.rapp_legale_id}
-  value={r.rapp_legale_id}
->
-  {r.rapp_legali?.nome_cognome}
-  {r.principale ? " — principale" : ""}
-</option>
-                  )
-                )}
+{amministratori.map((r: any) => {
+  const rapp = r.rapp_legali || r.rapp_legale || r.rappresentante || {};
+
+  return (
+    <option
+      key={r.rapp_legale_id || rapp.id}
+      value={r.rapp_legale_id || rapp.id}
+    >
+      {rapp.nome_cognome || r.nome_cognome || "Nominativo senza nome"}
+      {r.principale ? " — principale" : ""}
+    </option>
+  );
+})}
               </select>
             </div>
 
