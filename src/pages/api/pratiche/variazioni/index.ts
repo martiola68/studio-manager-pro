@@ -111,8 +111,8 @@ async function creaOAggiornaPromemoria(
 ) {
   const payload = {
     studio_id: params.studio_id,
-    cliente_id: params.cliente_id,
-    assegnato_a: params.assegnato_a,
+    destinatario_id: params.cliente_id,
+    operatore_id: params.assegnato_a,
     titolo: params.titolo,
     descrizione: params.descrizione,
     data_scadenza: params.data_scadenza,
