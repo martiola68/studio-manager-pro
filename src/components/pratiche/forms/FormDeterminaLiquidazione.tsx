@@ -410,9 +410,6 @@ setRappresentantiLegali(data.data || []);
 
       const data = await res.json();
 
-    
- const data = await res.json();
-
 if (!res.ok) {
   throw new Error(
     data.error ||
@@ -442,14 +439,7 @@ await fetch("/api/clienti-organi", {
   }),
 });
 
-      if (!res.ok) {
-        throw new Error(
-          data.error ||
-            "Errore salvataggio rappresentante"
-        );
-      }
-
-   setForm((prev) => ({
+      setForm((prev) => ({
   ...prev,
   rappresentante_legale_id: rappresentante.id,
   rappresentante_legale_nome: rappresentante.nome_cognome || "",
