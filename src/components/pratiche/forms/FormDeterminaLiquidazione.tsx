@@ -98,7 +98,7 @@ export default function FormDeterminaLiquidazione({
 
  const [motivi, setMotivi] = useState<any[]>([]);
 const [documenti, setDocumenti] = useState<any[]>([]);
-const [amministratori, setAmministratori] = useState<any[]>([]);
+const [rappresentantiLegali, setRappresentantiLegali] = useState<any[]>([]);
 
   const [saving, setSaving] = useState(false);
   const [messaggio, setMessaggio] = useState("");
@@ -274,34 +274,21 @@ async function caricaAmministratori() {
   }
 
   try {
-    const res = await fetch(
-      `/api/clienti-organi?cliente_id=${pratica.cliente_id}`,
-      {
-        cache: "no-store",
-      }
-    );
+   const res = await fetch(
+  `/api/rapp-legali?studio_id=${pratica.studio_id}`,
+  {
+    cache: "no-store",
+  }
+);
 
-    const text = await res.text();
+  const data = await res.json();
 
-    console.log("RISPOSTA GREZZA clienti-organi:", text);
+if (!res.ok) {
+  return;
+}
 
-    let data: any = null;
-
-    try {
-      data = JSON.parse(text);
-    } catch {
-         return;
-    }
-
-    console.log("RISPOSTA JSON clienti-organi:", data);
-
-    if (!res.ok) {
-      return;
-    }
-
-    const records = data.data || data.organi || data || [];
-
-    setAmministratori(Array.isArray(records) ? records : []);
+setRappresentantiLegali(data.data || []);
+    
   } catch (error: any) {
     console.error("Errore caricamento amministratori:", error);
     alert(error.message || "Errore caricamento amministratori");
