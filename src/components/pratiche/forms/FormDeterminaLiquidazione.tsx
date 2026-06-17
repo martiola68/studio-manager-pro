@@ -778,19 +778,12 @@ rappresentante_legale_cap: rapp.cap || "",
                   Seleziona
                 </option>
 
-{amministratori.map((r: any) => {
-  const rapp = r.rapp_legali || r.rapp_legale || r.rappresentante || {};
-
-  return (
-    <option
-      key={r.rapp_legale_id || rapp.id}
-      value={r.rapp_legale_id || rapp.id}
-    >
-      {rapp.nome_cognome || r.nome_cognome || "Nominativo senza nome"}
-      {r.principale ? " — principale" : ""}
-    </option>
-  );
-})}
+{rappresentantiLegali.map((r: any) => (
+  <option key={r.id} value={r.id}>
+    {r.nome_cognome} - {r.codice_fiscale}
+    {r.amministratore_principale ? " — principale" : ""}
+  </option>
+))}
               </select>
           </div>
 
