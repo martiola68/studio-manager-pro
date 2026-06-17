@@ -394,8 +394,8 @@ rappresentante_legale_cap:
 
   async function salvaNuovoRappresentante() {
     try {
-      const res = await fetch(
-        `/api/rapp-legali`,
+     const res = await fetch(
+  `/api/rapp-legali/${pratica.id}/nuovo-rapp-pratiche`,
         {
           method: "POST",
           headers: {
