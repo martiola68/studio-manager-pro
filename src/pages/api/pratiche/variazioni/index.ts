@@ -192,19 +192,20 @@ const { data: utente } = await supabase
   const updatePayload: any = {};
 
   if (variazione.data_scadenza_cciaa) {
-    const promemoriaCciaaId = await creaOAggiornaPromemoria(supabase, {
-      id: variazione.promemoria_cciaa_id,
-      studio_id: variazione.studio_id,
-      cliente_id: variazione.cliente_id,
-      assegnato_a: variazione.assegnato_a,
-      titolo: cliente?.ragione_sociale || variazione.tipo_variazione,
-      descrizione: `Variazione CCIAA: ${variazione.tipo_variazione}`,
-      data_scadenza: variazione.data_scadenza_cciaa,
-      priorita: variazione.priorita,
-      origine: "variazione_cciaa",
-      origine_id: variazione.id,
-    });
-
+   const promemoriaCciaaId = await creaOAggiornaPromemoria(supabase, {
+  id: variazione.promemoria_cciaa_id,
+  studio_id: variazione.studio_id,
+  cliente_id: variazione.cliente_id,
+  assegnato_a: variazione.assegnato_a,
+  titolo: cliente?.ragione_sociale || variazione.tipo_variazione,
+  descrizione: `Variazione CCIAA: ${variazione.tipo_variazione}`,
+  data_scadenza: variazione.data_scadenza_cciaa,
+  priorita: variazione.priorita,
+  origine: "variazione_cciaa",
+  origine_id: variazione.id,
+  tipo: "CCIAA",
+  settore: utente?.settore || null,
+});
     updatePayload.promemoria_cciaa_id = promemoriaCciaaId;
   }
 
