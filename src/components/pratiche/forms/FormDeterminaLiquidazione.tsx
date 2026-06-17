@@ -258,8 +258,6 @@ rappresentante_legale_cap:
         }
       );
 
-      const data = await res.json();
-
       if (res.ok) {
         setDocumenti(data.documenti || []);
       }
