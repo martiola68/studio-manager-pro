@@ -219,9 +219,12 @@ const { data: utente } = await supabase
       descrizione: `Comunicazione Agenzia Entrate: ${variazione.tipo_variazione}`,
       data_scadenza: variazione.data_scadenza_ade,
       priorita: variazione.priorita,
-      origine: "variazione_ade",
-      origine_id: variazione.id,
-    });
+        origine: "variazione_ade",
+    origine_id: variazione.id,
+
+    tipo: "Agenzia delle Entrate",
+    settore: utente?.settore || null,
+  });
 
     updatePayload.promemoria_ade_id = promemoriaAdeId;
   }
