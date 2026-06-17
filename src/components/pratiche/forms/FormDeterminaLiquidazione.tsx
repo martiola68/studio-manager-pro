@@ -413,20 +413,36 @@ setRappresentantiLegali(data.data || []);
       const data = await res.json();
 
     
-  await fetch("/api/clienti-organi", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      cliente_id: pratica.cliente_id,
-      rapp_legale_id: data.rappresentante.id,
-      ruolo: "amministratore",
-      carica: "Amministratore",
-      principale: true,
-      attivo: true,
-    }),
-  });
+ const data = await res.json();
+
+if (!res.ok) {
+  throw new Error(
+    data.error ||
+      data.ok === false && data.error ||
+      "Errore salvataggio rappresentante"
+  );
+}
+
+const rappresentante = data.rappresentante || data.data;
+
+if (!rappresentante?.id) {
+  throw new Error("Rappresentante salvato ma ID non restituito dall'API");
+}
+
+await fetch("/api/clienti-organi", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    cliente_id: pratica.cliente_id,
+    rapp_legale_id: rappresentante.id,
+    ruolo: "amministratore",
+    carica: "Amministratore",
+    principale: nuovoRappLegale.amministratore_principale,
+    attivo: true,
+  }),
+});
 
       if (!res.ok) {
         throw new Error(
@@ -435,27 +451,19 @@ setRappresentantiLegali(data.data || []);
         );
       }
 
-      setForm((prev) => ({
-        ...prev,
-        rappresentante_legale_id:
-          data.rappresentante.id,
-
-        rappresentante_legale_nome:
-          data.rappresentante.nome_cognome,
-
-        rappresentante_legale_codice_fiscale:
-          data.rappresentante.codice_fiscale,
-
-        rappresentante_legale_indirizzo:
-          data.rappresentante
-            .indirizzo_residenza || "",
-
-        rappresentante_legale_citta:
-          data.rappresentante
-            .citta_residenza || "",
-
-        nuovo_rappresentante: false,
-      }));
+   setForm((prev) => ({
+  ...prev,
+  rappresentante_legale_id: rappresentante.id,
+  rappresentante_legale_nome: rappresentante.nome_cognome || "",
+  rappresentante_legale_codice_fiscale: rappresentante.codice_fiscale || "",
+  rappresentante_legale_indirizzo:
+    rappresentante.indirizzo_residenza || rappresentante.indirizzo || "",
+  rappresentante_legale_citta:
+    rappresentante.citta_residenza || rappresentante.citta || "",
+  rappresentante_legale_provincia: rappresentante.provincia || "",
+  rappresentante_legale_cap: rappresentante.cap || rappresentante.CAP || "",
+  nuovo_rappresentante: false,
+}));
 
       alert(
         "Rappresentante legale salvato."
