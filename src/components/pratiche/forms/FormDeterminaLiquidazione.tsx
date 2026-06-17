@@ -271,7 +271,10 @@ console.log("RISPOSTA clienti-organi", data);
   }
 
 async function caricaAmministratori() {
-  if (!pratica?.cliente_id) return;
+  if (!pratica?.cliente_id) {
+    alert("cliente_id mancante nella pratica");
+    return;
+  }
 
   try {
     const res = await fetch(
@@ -281,23 +284,36 @@ async function caricaAmministratori() {
       }
     );
 
-    const data = await res.json();
+    const text = await res.text();
 
-    console.log("pratica.cliente_id", pratica?.cliente_id);
-    console.log("RISPOSTA clienti-organi", data);
+    console.log("RISPOSTA GREZZA clienti-organi:", text);
 
-    if (!res.ok) return;
+    let data: any = null;
 
-    const records = data.data || data.organi || [];
+    try {
+      data = JSON.parse(text);
+    } catch {
+      alert("API clienti-organi non restituisce JSON");
+      return;
+    }
 
-    console.log("RECORD ORGANI", records);
+    console.log("RISPOSTA JSON clienti-organi:", data);
 
-    setAmministratori(records);
-  } catch (error) {
+    if (!res.ok) {
+      alert(data.error || "Errore caricamento organi");
+      return;
+    }
+
+    const records = data.data || data.organi || data || [];
+
+    alert(`Organi trovati: ${records.length}`);
+
+    setAmministratori(Array.isArray(records) ? records : []);
+  } catch (error: any) {
     console.error("Errore caricamento amministratori:", error);
+    alert(error.message || "Errore caricamento amministratori");
   }
 }
-
   async function salvaDatiDocumento(
     e?: React.FormEvent
   ) {
@@ -797,6 +813,11 @@ rappresentante_legale_cap: rapp.cap || "",
   );
 })}
               </select>
+
+              <div style={{ marginTop: 8, fontSize: 12, color: "#64748b" }}>
+  Amministratori caricati: {amministratori.length}
+</div>
+              
             </div>
 
             <button
