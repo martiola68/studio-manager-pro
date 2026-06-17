@@ -249,22 +249,24 @@ rappresentante_legale_cap:
     }
   }
 
-  async function caricaDocumenti() {
-    try {
-      const res = await fetch(
-        `/api/pratiche/${praticaId}/documenti`,
-        {
-          cache: "no-store",
-        }
-      );
-
-      if (res.ok) {
-        setDocumenti(data.documenti || []);
+async function caricaDocumenti() {
+  try {
+    const res = await fetch(
+      `/api/pratiche/${praticaId}/documenti`,
+      {
+        cache: "no-store",
       }
-    } catch (error) {
-      console.error(error);
+    );
+
+    const data = await res.json();
+
+    if (res.ok) {
+      setDocumenti(data.documenti || []);
     }
+  } catch (error) {
+    console.error(error);
   }
+}
 
 async function caricaAmministratori() {
   if (!pratica?.cliente_id) {
