@@ -748,29 +748,24 @@ setRappresentantiLegali(data.data || []);
                 value={
                   form.rappresentante_legale_id
                 }
-onChange={(e) => {
- const selected = amministratori.find((r: any) => {
-  const rapp = r.rapp_legali || r.rapp_legale || r.rappresentante || {};
-  return String(r.rapp_legale_id || rapp.id) === String(e.target.value);
-});
+onChange={async (e) => {
+  const selected = rappresentantiLegali.find(
+    (r: any) => String(r.id) === String(e.target.value)
+  );
 
-const rapp =
-  selected?.rapp_legali ||
-  selected?.rapp_legale ||
-  selected?.rappresentante ||
-  {};
+  if (!selected) return;
 
   setForm((prev) => ({
     ...prev,
-   rappresentante_legale_id: selected?.rapp_legale_id || rapp.id || "",
-rappresentante_legale_nome: rapp.nome_cognome || "",
-rappresentante_legale_codice_fiscale: rapp.codice_fiscale || "",
-rappresentante_legale_indirizzo:
-  rapp.indirizzo_residenza || rapp.indirizzo || "",
-rappresentante_legale_citta:
-  rapp.citta_residenza || rapp.citta || "",
-rappresentante_legale_provincia: rapp.provincia || "",
-rappresentante_legale_cap: rapp.cap || "",
+    rappresentante_legale_id: selected.id,
+    rappresentante_legale_nome: selected.nome_cognome || "",
+    rappresentante_legale_codice_fiscale: selected.codice_fiscale || "",
+    rappresentante_legale_indirizzo:
+      selected.indirizzo_residenza || selected.indirizzo || "",
+    rappresentante_legale_citta:
+      selected.citta_residenza || selected.citta || "",
+    rappresentante_legale_provincia: selected.provincia || "",
+    rappresentante_legale_cap: selected.cap || selected.CAP || "",
   }));
 }}
               >
