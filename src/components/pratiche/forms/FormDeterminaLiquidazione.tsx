@@ -240,8 +240,6 @@ rappresentante_legale_cap:
 
       const data = await res.json();
 
-      console.log("pratica.cliente_id", pratica?.cliente_id);
-console.log("RISPOSTA clienti-organi", data);
 
       if (res.ok) {
         setMotivi(data.motivi_liquidazione || []);
@@ -272,7 +270,6 @@ console.log("RISPOSTA clienti-organi", data);
 
 async function caricaAmministratori() {
   if (!pratica?.cliente_id) {
-    alert("cliente_id mancante nella pratica");
     return;
   }
 
@@ -293,20 +290,16 @@ async function caricaAmministratori() {
     try {
       data = JSON.parse(text);
     } catch {
-      alert("API clienti-organi non restituisce JSON");
-      return;
+         return;
     }
 
     console.log("RISPOSTA JSON clienti-organi:", data);
 
     if (!res.ok) {
-      alert(data.error || "Errore caricamento organi");
       return;
     }
 
     const records = data.data || data.organi || data || [];
-
-    alert(`Organi trovati: ${records.length}`);
 
     setAmministratori(Array.isArray(records) ? records : []);
   } catch (error: any) {
@@ -432,7 +425,7 @@ async function caricaAmministratori() {
 
       const data = await res.json();
 
-      if (nuovoRappLegale.amministratore_principale) {
+    
   await fetch("/api/clienti-organi", {
     method: "POST",
     headers: {
@@ -447,7 +440,6 @@ async function caricaAmministratori() {
       attivo: true,
     }),
   });
-}
 
       if (!res.ok) {
         throw new Error(
@@ -813,12 +805,7 @@ rappresentante_legale_cap: rapp.cap || "",
   );
 })}
               </select>
-
-              <div style={{ marginTop: 8, fontSize: 12, color: "#64748b" }}>
-  Amministratori caricati: {amministratori.length}
-</div>
-              
-            </div>
+          </div>
 
             <button
               type="button"
