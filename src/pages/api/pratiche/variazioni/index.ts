@@ -237,7 +237,7 @@ export default async function handler(
         .select(`
           *,
           cliente:tbclienti(id, ragione_sociale, codice_fiscale, partita_iva),
-          assegnato:tbutenti(id, nome, cognome, email),
+          assegnato:tbutenti!tbpratiche_variazioni_assegnato_a_fkey(id, nome, cognome, email)
           pratica:tbpratiche(id, numero_pratica, titolo, stato)
         `)
         .eq("studio_id", studio_id)
@@ -315,7 +315,7 @@ export default async function handler(
         .select(`
           *,
           cliente:tbclienti(id, ragione_sociale, codice_fiscale, partita_iva),
-          assegnato:tbutenti(id, nome, cognome, email),
+          assegnato:tbutenti!tbpratiche_variazioni_assegnato_a_fkey(id, nome, cognome, email)
           pratica:tbpratiche(id, numero_pratica, titolo, stato)
         `)
         .single();
@@ -352,7 +352,7 @@ export default async function handler(
         .select(`
           *,
           cliente:tbclienti(id, ragione_sociale, codice_fiscale, partita_iva),
-          assegnato:tbutenti(id, nome, cognome, email),
+          assegnato:tbutenti!tbpratiche_variazioni_assegnato_a_fkey(id, nome, cognome, email)
           pratica:tbpratiche(id, numero_pratica, titolo, stato)
         `)
         .single();
