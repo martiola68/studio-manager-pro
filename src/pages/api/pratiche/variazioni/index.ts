@@ -109,19 +109,25 @@ async function creaOAggiornaPromemoria(
     origine_id: string;
   }
 ) {
-  const payload = {
-    studio_id: params.studio_id,
-    destinatario_id: params.cliente_id,
-    operatore_id: params.assegnato_a,
-    titolo: params.titolo,
-    descrizione: params.descrizione,
-    data_scadenza: params.data_scadenza,
-    priorita: params.priorita || "normale",
-    stato: "aperto",
-    origine: params.origine,
-    origine_id: params.origine_id,
-  };
-
+ const payload = {
+  studio_id: params.studio_id,
+  destinatario_id: params.assegnato_a,
+  operatore_id: params.assegnato_a,
+  titolo: params.titolo,
+  descrizione: params.descrizione,
+  data_scadenza: params.data_scadenza,
+  priorita:
+    params.priorita === "urgente"
+      ? "Alta"
+      : params.priorita === "alta"
+      ? "Alta"
+      : params.priorita === "bassa"
+      ? "Bassa"
+      : "Media",
+  working_progress: "Aperto",
+  origine: params.origine,
+  origine_id: params.origine_id,
+};
   if (params.id) {
     const { data, error } = await supabase
       .from("tbpromemoria")
