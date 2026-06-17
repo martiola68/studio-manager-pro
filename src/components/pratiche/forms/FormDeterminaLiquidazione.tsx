@@ -240,6 +240,9 @@ rappresentante_legale_cap:
 
       const data = await res.json();
 
+      console.log("pratica.cliente_id", pratica?.cliente_id);
+console.log("RISPOSTA clienti-organi", data);
+
       if (res.ok) {
         setMotivi(data.motivi_liquidazione || []);
       }
@@ -280,28 +283,16 @@ async function caricaAmministratori() {
 
     const data = await res.json();
 
+    console.log("pratica.cliente_id", pratica?.cliente_id);
+    console.log("RISPOSTA clienti-organi", data);
+
     if (!res.ok) return;
 
     const records = data.data || data.organi || [];
 
-    setAmministratori(
-      records.filter((o: any) => {
-        const ruolo = String(o.ruolo || "").toLowerCase();
-        const carica = String(o.carica || "").toLowerCase();
+    console.log("RECORD ORGANI", records);
 
-        return (
-          o.attivo !== false &&
-          (
-            ruolo.includes("amministratore") ||
-            ruolo.includes("presidente") ||
-            ruolo.includes("legale") ||
-            carica.includes("amministratore") ||
-            carica.includes("presidente") ||
-            carica.includes("legale")
-          )
-        );
-      })
-    );
+    setAmministratori(records);
   } catch (error) {
     console.error("Errore caricamento amministratori:", error);
   }
