@@ -198,7 +198,7 @@ const { data: utente } = await supabase
       cliente_id: variazione.cliente_id,
       assegnato_a: variazione.assegnato_a,
       titolo: cliente?.ragione_sociale || variazione.tipo_variazione,
-      descrizione: Variazione CCIAA: ${variazione.tipo_variazione}`,
+      descrizione: `Variazione CCIAA: ${variazione.tipo_variazione}`,
       data_scadenza: variazione.data_scadenza_cciaa,
       priorita: variazione.priorita,
       origine: "variazione_cciaa",
