@@ -269,6 +269,8 @@ setNuovoNominativo({
   cap: "",
   tipologia_cliente: "Persona fisica",
 });
+}
+  
  async function caricaOrgani() {
   setLoading(true);
 
@@ -1195,4 +1197,3 @@ const tdStyle: React.CSSProperties = {
   color: "#334155",
   borderBottom: "1px solid #f1f5f9",
 };
-}
