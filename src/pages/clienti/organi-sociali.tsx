@@ -181,7 +181,18 @@ async function caricaNominativi() {
 
   const { data, error } = await supabase
     .from("rapp_legali")
-    .select("id, nome_cognome, codice_fiscale")
+    .select(`
+  id,
+  nome_cognome,
+  codice_fiscale,
+  indirizzo_residenza,
+  citta_residenza,
+  provincia,
+  cap,
+  CAP,
+  indirizzo,
+  citta
+`)
     .order("nome_cognome");
 
   if (error) {
@@ -530,12 +541,39 @@ data_cessazione: organo.data_cessazione || "",
     <select
       style={inputStyle}
       value={form.rapp_legale_id}
-      onChange={(e) =>
-        setForm((prev) => ({
-          ...prev,
-          rapp_legale_id: e.target.value,
-        }))
-      }
+     onChange={(e) => {
+  const id = e.target.value;
+
+  const nominativo = nominativi.find(
+    (n) => String(n.id) === String(id)
+  );
+
+  setForm((prev) => ({
+    ...prev,
+    rapp_legale_id: id,
+  }));
+
+  if (!nominativo) return;
+
+  setNuovoNominativo((prev) => ({
+    ...prev,
+    nome_cognome: nominativo.nome_cognome || "",
+    codice_fiscale: nominativo.codice_fiscale || "",
+    indirizzo:
+      nominativo.indirizzo_residenza ||
+      nominativo.indirizzo ||
+      "",
+    citta:
+      nominativo.citta_residenza ||
+      nominativo.citta ||
+      "",
+    provincia: nominativo.provincia || "",
+    cap:
+      nominativo.cap ||
+      nominativo.CAP ||
+      "",
+  }));
+}}
     >
       <option value="">Seleziona nominativo</option>
 
