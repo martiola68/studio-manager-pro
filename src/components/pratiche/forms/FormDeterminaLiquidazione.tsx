@@ -455,11 +455,9 @@ await fetch("/api/clienti-organi", {
   nuovo_rappresentante: false,
 }));
 
-      alert(
-        "Rappresentante legale salvato."
-      );
+     alert("Rappresentante legale salvato.");
 
-      router.reload();
+await caricaAmministratori();
     } catch (error: any) {
       alert(
         error.message ||
@@ -758,12 +756,14 @@ onChange={async (e) => {
     rappresentante_legale_id: selected.id,
     rappresentante_legale_nome: selected.nome_cognome || "",
     rappresentante_legale_codice_fiscale: selected.codice_fiscale || "",
-    rappresentante_legale_indirizzo:
-      selected.indirizzo_residenza || selected.indirizzo || "",
-    rappresentante_legale_citta:
-      selected.citta_residenza || selected.citta || "",
-    rappresentante_legale_provincia: selected.provincia || "",
-    rappresentante_legale_cap: selected.cap || selected.CAP || "",
+   rappresentante_legale_indirizzo:
+  selected.indirizzo_residenza || selected.indirizzo || "",
+rappresentante_legale_citta:
+  selected.citta_residenza || selected.citta || "",
+rappresentante_legale_provincia:
+  selected.provincia || "",
+rappresentante_legale_cap:
+  selected.cap || selected.CAP || "",
   }));
 }}
               >
@@ -952,7 +952,7 @@ onChange={async (e) => {
                   <label
                     style={labelStyle}
                   >
-                    Nome e cognome
+                    Cognome e nome
                   </label>
 
                   <input
