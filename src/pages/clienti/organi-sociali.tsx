@@ -320,7 +320,13 @@ setTimeout(() => {
 body: JSON.stringify({
   id: organoInModificaId || undefined,
   cliente_id: clienteId,
-  ...form,
+
+  rapp_legale_id: null,
+  soggetto_cliente_id: form.rapp_legale_id,
+  tipo_soggetto: "persona_fisica",
+  rappresentante_legale: form.ruolo === "rappresentante_legale",
+
+  ruolo: form.ruolo,
   carica: ruoliLabel[form.ruolo] || form.ruolo,
   percentuale_partecipazione:
     form.ruolo === "socio"
