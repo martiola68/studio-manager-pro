@@ -59,6 +59,10 @@ citta: body.citta || null,
 provincia: body.provincia || null,
 cap: body.cap || null,
 tipo_cliente: body.tipo_cliente || "Persona fisica",
+tipologia_cliente:
+  body.tipologia_cliente ||
+  body.tipo_cliente ||
+  "Persona fisica",
 cliente: false,
 attivo: true,
       })
