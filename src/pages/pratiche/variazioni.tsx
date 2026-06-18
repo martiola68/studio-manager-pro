@@ -193,23 +193,16 @@ export default function PraticheVariazioniPage() {
     await loadData();
   }
 
-  async function creaPraticaDaVariazione(variazioneId: string) {
-    const tipoPraticaId = prompt(
-      "Inserisci ID tipo pratica da creare. Questo passaggio sarà poi sostituito con una select."
-    );
-
-    if (!tipoPraticaId) return;
-
-    const response = await fetch("/api/pratiche/variazioni/crea-pratica", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        variazione_id: variazioneId,
-        tipo_pratica_id: Number(tipoPraticaId),
-      }),
-    });
+ async function creaPraticaDaVariazione(variazioneId: string) {
+  const response = await fetch("/api/pratiche/variazioni/crea-pratica", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      variazione_id: variazioneId,
+    }),
+  });
 
     const result = await response.json();
 
