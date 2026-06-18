@@ -33,15 +33,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (error) throw error;
 
-    if (!promemoria?.operatore?.email) {
+    const operatore = Array.isArray(promemoria.operatore)
+  ? promemoria.operatore[0]
+  : promemoria.operatore;
+
+const destinatario = Array.isArray(promemoria.destinatario)
+  ? promemoria.destinatario[0]
+  : promemoria.destinatario;
+
+    if (!operatore?.email) {
       return res.status(200).json({ success: true, skipped: "Operatore senza email" });
     }
 
-    if (!promemoria?.destinatario?.id) {
+    if (!destinatario?.id) {
       return res.status(200).json({ success: true, skipped: "Destinatario mancante" });
     }
 
-    if (promemoria.operatore.id === promemoria.destinatario.id) {
+    if (operatore.id === destinatario.id) {
       return res.status(200).json({ success: true, skipped: "Stesso utente" });
     }
 
@@ -58,11 +66,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    const mittenteNome = [promemoria.destinatario.nome, promemoria.destinatario.cognome]
+   const mittenteNome = [destinatario.nome, destinatario.cognome]
       .filter(Boolean)
       .join(" ");
 
-    const destinatarioNome = promemoria.operatore.nome || "utente";
+ const destinatarioNome = operatore.nome || "utente";
 
     const dataScadenza = promemoria.data_scadenza
       ? new Date(promemoria.data_scadenza).toLocaleDateString("it-IT")
@@ -92,9 +100,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     `.trim();
 
     const emailResult = await sendEmailServer({
-      senderUserId: promemoria.destinatario.id,
+     senderUserId: destinatario.id,
       microsoftConnectionId: studio.microsoft_connection_id,
-      to: promemoria.operatore.email,
+     to: operatore.email,
       subject,
       html,
     });
