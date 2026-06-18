@@ -880,6 +880,7 @@ if (!formData.utente_operatore_id && !formData.utente_payroll_id) {
         setErrors({});
 
 const base: Partial<ClienteInsert> & {
+  cliente?: boolean;
   professionista_incaricato?: boolean;
   numero_rea?: string | null;
   soggetto_isa?: boolean;
