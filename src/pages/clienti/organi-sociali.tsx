@@ -617,13 +617,27 @@ data_cessazione: organo.data_cessazione || "",
 ))}
     </select>
 
-    <button
-      type="button"
-      style={secondaryButton}
-      onClick={() => setShowNuovoNominativo(true)}
-    >
-      + Nuovo
-    </button>
+   <button
+  type="button"
+  style={secondaryButton}
+  onClick={() => {
+    setNuovoNominativo({
+      nome_cognome: "",
+      codice_fiscale: "",
+      email: "",
+      luogo_nascita: "",
+      data_nascita: "",
+      indirizzo: "",
+      citta: "",
+      provincia: "",
+      cap: "",
+    });
+
+    setShowNuovoNominativo(true);
+  }}
+>
+  + Nuovo
+</button>
   </div>
 </div>
 
