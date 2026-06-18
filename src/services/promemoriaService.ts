@@ -465,33 +465,77 @@ async createPromemoria(nuovoPromemoria: {
     return data;
   },
 
-  async updatePromemoria(id: string, promemoria: {
-    titolo?: string;
-    descrizione?: string;
-    data_inserimento?: string;
-    giorni_scadenza?: number;
-    data_scadenza?: string;
-    priorita?: string;
-    working_progress?: string;
-    destinatario_id?: string | null;
-    settore?: string;
-    tipo_promemoria_id?: string | null;
-  }) {
-   const { data, error } = await supabase
-  .from("tbpromemoria")
-  .update(promemoria)
-  .eq("id", id)
-  .select()
-  .single();
+ async updatePromemoria(id: string, promemoria: {
+  titolo?: string;
+  descrizione?: string;
+  data_inserimento?: string;
+  giorni_scadenza?: number;
+  data_scadenza?: string;
+  priorita?: string;
+  working_progress?: string;
+  destinatario_id?: string | null;
+  settore?: string;
+  tipo_promemoria_id?: string | null;
+}) {
+  const { data: prima } = await supabase
+    .from("tbpromemoria")
+    .select(`
+      id,
+      titolo,
+      descrizione,
+      working_progress,
+      operatore_id,
+      destinatario_id
+    `)
+    .eq("id", id)
+    .single();
 
-if (error) throw error;
+  const { data, error } = await supabase
+    .from("tbpromemoria")
+    .update({
+      ...promemoria,
+      stato_aggiornato_da: promemoria.working_progress ? prima?.destinatario_id : undefined,
+      stato_aggiornato_at: promemoria.working_progress ? new Date().toISOString() : undefined,
+    } as any)
+    .eq("id", id)
+    .select()
+    .single();
 
-if (typeof window !== "undefined") {
-  window.dispatchEvent(new Event("promemoria-updated"));
-}
+  if (error) throw error;
 
-return data;
-  },
+  const statoCambiato =
+    !!promemoria.working_progress &&
+    prima?.working_progress &&
+    prima.working_progress !== promemoria.working_progress;
+
+  const promemoriaTraUtentiDiversi =
+    prima?.operatore_id &&
+    prima?.destinatario_id &&
+    prima.operatore_id !== prima.destinatario_id;
+
+  if (statoCambiato && promemoriaTraUtentiDiversi) {
+    try {
+      await fetch("/api/promemoria/stato-aggiornato-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          promemoria_id: id,
+          nuovo_stato: promemoria.working_progress,
+        }),
+      });
+    } catch (emailError) {
+      console.error("Errore invio email cambio stato promemoria:", emailError);
+    }
+  }
+
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("promemoria-updated"));
+  }
+
+  return data;
+},
 
  async deletePromemoria(
   id: string,
