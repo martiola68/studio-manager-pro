@@ -528,7 +528,46 @@ data_cessazione: organo.data_cessazione || "",
             alignItems: "end",
           }}
         >
-        <div>
+<div>
+  <label style={labelStyle}>Ruolo</label>
+
+  <select
+    style={inputStyle}
+    value={form.ruolo}
+    onChange={(e) =>
+      setForm((prev) => ({
+        ...prev,
+        ruolo: e.target.value,
+        carica: ruoliLabel[e.target.value] || "",
+        rapp_legale_id: "",
+
+        percentuale_partecipazione:
+          e.target.value === "socio"
+            ? prev.percentuale_partecipazione
+            : "",
+
+        durata_carica:
+          e.target.value === "socio"
+            ? ""
+            : prev.durata_carica || "Fino a revoca",
+
+        principale: consentePrincipale(e.target.value)
+          ? prev.principale
+          : false,
+      }))
+    }
+  >
+    {ruoli
+      .filter((r) => r !== "tutti")
+      .map((r) => (
+        <option key={r} value={r}>
+          {r}
+        </option>
+      ))}
+  </select>
+</div>
+
+<div>
   <label style={labelStyle}>Nominativo</label>
 
   <div
@@ -541,39 +580,39 @@ data_cessazione: organo.data_cessazione || "",
     <select
       style={inputStyle}
       value={form.rapp_legale_id}
-     onChange={(e) => {
-  const id = e.target.value;
+      onChange={(e) => {
+        const id = e.target.value;
 
-  const nominativo = nominativi.find(
-    (n) => String(n.id) === String(id)
-  );
+        const nominativo = nominativi.find(
+          (n) => String(n.id) === String(id)
+        );
 
-  setForm((prev) => ({
-    ...prev,
-    rapp_legale_id: id,
-  }));
+        setForm((prev) => ({
+          ...prev,
+          rapp_legale_id: id,
+        }));
 
-  if (!nominativo) return;
+        if (!nominativo) return;
 
-  setNuovoNominativo((prev) => ({
-    ...prev,
-    nome_cognome: nominativo.nome_cognome || "",
-    codice_fiscale: nominativo.codice_fiscale || "",
-    indirizzo:
-      nominativo.indirizzo_residenza ||
-      nominativo.indirizzo ||
-      "",
-    citta:
-      nominativo.citta_residenza ||
-      nominativo.citta ||
-      "",
-    provincia: nominativo.provincia || "",
-    cap:
-      nominativo.cap ||
-      nominativo.CAP ||
-      "",
-  }));
-}}
+        setNuovoNominativo((prev) => ({
+          ...prev,
+          nome_cognome: nominativo.nome_cognome || "",
+          codice_fiscale: nominativo.codice_fiscale || "",
+          indirizzo:
+            nominativo.indirizzo_residenza ||
+            nominativo.indirizzo ||
+            "",
+          citta:
+            nominativo.citta_residenza ||
+            nominativo.citta ||
+            "",
+          provincia: nominativo.provincia || "",
+          cap:
+            nominativo.cap ||
+            nominativo.CAP ||
+            "",
+        }));
+      }}
     >
       <option value="">Seleziona nominativo</option>
 
@@ -593,40 +632,6 @@ data_cessazione: organo.data_cessazione || "",
     </button>
   </div>
 </div>
-
-          <div>
-            <label style={labelStyle}>Ruolo</label>
-            <select
-              style={inputStyle}
-              value={form.ruolo}
-            onChange={(e) =>
-  setForm((prev) => ({
-    ...prev,
-    ruolo: e.target.value,
-    carica: ruoliLabel[e.target.value] || "",
-    percentuale_partecipazione:
-      e.target.value === "socio"
-        ? prev.percentuale_partecipazione
-        : "",
-    durata_carica:
-      e.target.value === "socio"
-        ? ""
-        : prev.durata_carica || "Fino a revoca",
-    principale: consentePrincipale(e.target.value)
-      ? prev.principale
-      : false,
-  }))
-}
-            >
-              {ruoli
-                .filter((r) => r !== "tutti")
-                .map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-            </select>
-          </div>
 
           <div>
             <label style={labelStyle}>Quota %</label>
