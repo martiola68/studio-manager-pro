@@ -2,6 +2,13 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  normalizeCF,
+  isValidCF,
+  extractDataNascitaFromCF,
+} from "@/utils/codiceFiscale";
+
+import { getComuneFromCF } from "@/utils/comuniCatastali";
+import {
   Pencil,
   Power,
   Trash2,
@@ -61,6 +68,31 @@ function consentePrincipale(ruolo: string) {
   return ruoliConPrincipale.includes(ruolo);
 }
 
+async function leggiDatiDaCF(
+  cf: string,
+  setNuovoNominativo: any
+) {
+  const codice = normalizeCF(cf);
+
+  if (codice.length !== 16) return;
+  if (!isValidCF(codice)) return;
+
+  try {
+    const comune = await getComuneFromCF(codice);
+    const dataNascita = extractDataNascitaFromCF(codice);
+
+    setNuovoNominativo((prev: any) => ({
+      ...prev,
+      codice_fiscale: codice,
+      luogo_nascita:
+        prev.luogo_nascita || comune?.comune || "",
+      data_nascita:
+        prev.data_nascita || dataNascita || "",
+    }));
+  } catch (err) {
+    console.error(err);
+  }
+}
 export default function OrganiSocialiPage() {
   const router = useRouter();
   
@@ -206,6 +238,15 @@ async function salvaNuovoNominativo() {
     ...prev,
     rapp_legale_id: data.data.id,
   }));
+
+  await caricaNominativi();
+
+setTimeout(() => {
+  setForm((prev) => ({
+    ...prev,
+    rapp_legale_id: data.data.id,
+  }));
+}, 200);
 
   setShowNuovoNominativo(false);
 
@@ -834,7 +875,7 @@ data_cessazione: organo.data_cessazione || "",
             >
               <input
                 style={inputStyle}
-                placeholder="Nome e cognome"
+                placeholder="Cognome e nome"
                 value={nuovoNominativo.nome_cognome}
                 onChange={(e) =>
                   setNuovoNominativo((p) => ({
@@ -844,17 +885,38 @@ data_cessazione: organo.data_cessazione || "",
                 }
               />
 
-              <input
-                style={inputStyle}
-                placeholder="Codice fiscale"
-                value={nuovoNominativo.codice_fiscale}
-                onChange={(e) =>
-                  setNuovoNominativo((p) => ({
-                    ...p,
-                    codice_fiscale: e.target.value.toUpperCase(),
-                  }))
-                }
-              />
+             <input
+  style={inputStyle}
+  placeholder="Codice fiscale"
+  maxLength={16}
+  value={nuovoNominativo.codice_fiscale}
+  onChange={async (e) => {
+    const cf = normalizeCF(e.target.value);
+
+    setNuovoNominativo((p) => ({
+      ...p,
+      codice_fiscale: cf,
+    }));
+
+    if (cf.length === 16) {
+      await leggiDatiDaCF(cf, setNuovoNominativo);
+    }
+  }}
+/>
+
+              {nuovoNominativo.codice_fiscale.length === 16 &&
+ !isValidCF(
+   normalizeCF(nuovoNominativo.codice_fiscale)
+ ) && (
+  <div
+    style={{
+      color: "#dc2626",
+      fontSize: 12,
+    }}
+  >
+    Codice fiscale non valido
+  </div>
+)}
 
               <input
                 style={inputStyle}
