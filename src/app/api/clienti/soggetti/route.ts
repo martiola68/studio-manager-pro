@@ -48,19 +48,19 @@ export async function POST(req: NextRequest) {
     const { data, error } = await supabase
       .from("tbclienti")
       .insert({
-        studio_id: body.studio_id,
-        ragione_sociale: String(body.ragione_sociale).trim(),
-        codice_fiscale: codiceFiscale,
-        email: body.email || null,
-        luogo_nascita: body.luogo_nascita || null,
-        data_nascita: body.data_nascita || null,
-        indirizzo: body.indirizzo || null,
-        citta: body.citta || null,
-        provincia: body.provincia || null,
-        cap: body.cap || null,
-        tipo_cliente: body.tipo_cliente || "Persona fisica",
-        cliente: false,
-        attivo: true,
+       studio_id: body.studio_id,
+ragione_sociale: String(body.ragione_sociale).trim(),
+codice_fiscale: codiceFiscale,
+email: body.email || null,
+luogo_nascita: body.luogo_nascita || null,
+data_nascita: body.data_nascita || null,
+indirizzo: body.indirizzo || null,
+citta: body.citta || null,
+provincia: body.provincia || null,
+cap: body.cap || null,
+tipo_cliente: body.tipo_cliente || "Persona fisica",
+cliente: false,
+attivo: true,
       })
       .select("id, ragione_sociale, codice_fiscale")
       .single();
