@@ -120,6 +120,7 @@ const [nuovoNominativo, setNuovoNominativo] = useState({
   citta: "",
   provincia: "",
   cap: "",
+  tipologia_cliente: "Persona fisica",
 });
 
 const [form, setForm] = useState({
@@ -234,7 +235,8 @@ async function salvaNuovoNominativo() {
       citta: nuovoNominativo.citta,
       provincia: nuovoNominativo.provincia,
       cap: nuovoNominativo.cap,
-      tipo_cliente: "Persona fisica",
+      tipo_cliente: nuovoNominativo.tipologia_cliente,
+      tipologia_cliente: nuovoNominativo.tipologia_cliente,
       cliente: false,
     }),
   });
@@ -940,6 +942,20 @@ data_cessazione: organo.data_cessazione || "",
                   }))
                 }
               />
+
+              <select
+  style={inputStyle}
+  value={nuovoNominativo.tipologia_cliente}
+  onChange={(e) =>
+    setNuovoNominativo((p) => ({
+      ...p,
+      tipologia_cliente: e.target.value,
+    }))
+  }
+>
+  <option value="Persona fisica">Persona fisica</option>
+  <option value="Altro">Altro</option>
+</select>
 
              <input
   style={inputStyle}
