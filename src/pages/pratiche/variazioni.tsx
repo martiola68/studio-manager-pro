@@ -3,17 +3,6 @@ import Head from "next/head";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { Plus, Pencil, Trash2, FileText, RefreshCw } from "lucide-react";
 
-const TIPI_VARIAZIONE = [
-  "Scioglimento e liquidazione",
-  "Cancellazione",
-  "Modifica/nomina organo amministrativo",
-  "Modifica/nomina organo di controllo",
-  "Comunicazione PEC",
-  "Cambio sede legale",
-  "Modifica codice attività",
-  "Nuova/Modifica/Elimina unità locale",
-];
-
 const FORM_INIZIALE = {
   cliente_id: "",
   tipo_variazione: "",
@@ -46,8 +35,9 @@ function aggiungiGiorni(data: string, giorni: number) {
 export default function PraticheVariazioniPage() {
   const [loading, setLoading] = useState(true);
   const [variazioni, setVariazioni] = useState<any[]>([]);
-  const [clienti, setClienti] = useState<any[]>([]);
-  const [utente, setUtente] = useState<any>(null);
+ const [clienti, setClienti] = useState<any[]>([]);
+const [tipiVariazione, setTipiVariazione] = useState<any[]>([]);
+const [utente, setUtente] = useState<any>(null);
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -84,6 +74,14 @@ export default function PraticheVariazioniPage() {
         .order("ragione_sociale");
 
       setClienti(clientiData || []);
+
+      const { data: tipiData } = await supabase
+  .from("tbpratiche_variazioni_tipi")
+  .select("*")
+  .eq("attivo", true)
+  .order("ordine", { ascending: true });
+
+setTipiVariazione(tipiData || []);
 
       const response = await fetch(
         `/api/pratiche/variazioni?studio_id=${studioId}`
@@ -322,11 +320,11 @@ export default function PraticheVariazioniPage() {
                   }
                 >
                   <option value="">Seleziona tipo variazione</option>
-                  {TIPI_VARIAZIONE.map((tipo) => (
-                    <option key={tipo} value={tipo}>
-                      {tipo}
-                    </option>
-                  ))}
+                  {tipiVariazione.map((tipo) => (
+  <option key={tipo.id} value={tipo.descrizione_variazione}>
+    {tipo.descrizione_variazione}
+  </option>
+))}
                 </select>
               </div>
 
