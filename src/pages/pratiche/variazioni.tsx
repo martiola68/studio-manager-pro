@@ -75,7 +75,7 @@ const [utente, setUtente] = useState<any>(null);
 
       setClienti(clientiData || []);
 
-      const { data: tipiData } = await supabase
+  const { data: tipiData } = await (supabase as any)
   .from("tbpratiche_variazioni_tipi")
   .select("*")
   .eq("attivo", true)
