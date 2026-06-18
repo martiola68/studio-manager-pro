@@ -18,14 +18,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const praticaId = req.query.id as string;
 
-  const {
-    nome_cognome,
-    codice_fiscale,
-    indirizzo,
-    cap,
-    citta,
-    provincia,
-  } = req.body ?? {};
+ const {
+  nome_cognome,
+  codice_fiscale,
+  luogo_nascita,
+  data_nascita,
+  indirizzo,
+  indirizzo_residenza,
+  cap,
+  citta,
+  citta_residenza,
+  provincia,
+  amministratore_principale,
+} = req.body ?? {};
 
   if (!praticaId) {
     return res.status(400).json({ ok: false, error: "pratica_id mancante" });
@@ -52,18 +57,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   }
 
-  const payload = {
-    studio_id: pratica.studio_id,
-    nome_cognome: String(nome_cognome).trim(),
-    codice_fiscale: String(codice_fiscale).trim().toUpperCase(),
-    indirizzo: indirizzo ? String(indirizzo).trim() : null,
-    cap: cap ? String(cap).trim() : null,
-    citta: citta ? String(citta).trim() : null,
-    provincia: provincia ? String(provincia).trim().toUpperCase() : null,
-    indirizzo_residenza: indirizzo ? String(indirizzo).trim() : null,
-    citta_residenza: citta ? String(citta).trim() : null,
-    rappresentante_legale: true,
-  };
+const indirizzoFinale =
+  indirizzo_residenza || indirizzo || null;
+
+const cittaFinale =
+  citta_residenza || citta || null;
+
+const payload = {
+  studio_id: pratica.studio_id,
+  nome_cognome: String(nome_cognome).trim(),
+  codice_fiscale: String(codice_fiscale).trim().toUpperCase(),
+
+  luogo_nascita: luogo_nascita ? String(luogo_nascita).trim() : null,
+  data_nascita: data_nascita || null,
+
+  indirizzo: indirizzoFinale ? String(indirizzoFinale).trim() : null,
+  indirizzo_residenza: indirizzoFinale ? String(indirizzoFinale).trim() : null,
+
+  citta: cittaFinale ? String(cittaFinale).trim() : null,
+  citta_residenza: cittaFinale ? String(cittaFinale).trim() : null,
+
+  provincia: provincia ? String(provincia).trim().toUpperCase() : null,
+  cap: cap ? String(cap).trim() : null,
+
+  rappresentante_legale: true,
+  amministratore_principale: amministratore_principale === true,
+};
 
   const { data, error } = await supabaseAdmin
     .from("rapp_legali")
