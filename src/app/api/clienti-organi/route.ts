@@ -20,11 +20,14 @@ export async function GET(req: NextRequest) {
 
     const { data, error } = await supabase
       .from("tbclienti_organi")
-      .select(`
-        id,
-        cliente_id,
-        rapp_legale_id,
-        ruolo,
+     .select(`
+  id,
+  cliente_id,
+  rapp_legale_id,
+  soggetto_cliente_id,
+  tipo_soggetto,
+  rappresentante_legale,
+  ruolo,
         percentuale_partecipazione,
         presenza,
         carica,
@@ -34,12 +37,19 @@ export async function GET(req: NextRequest) {
         data_cessazione,
         durata_carica,
         data_scadenza,
-        rapp_legali:rapp_legale_id (
-          id,
-          nome_cognome,
-          codice_fiscale,
-          email
-        )
+       rapp_legali:rapp_legale_id (
+  id,
+  nome_cognome,
+  codice_fiscale,
+  email
+),
+soggetto_cliente:tbclienti!tbclienti_organi_soggetto_cliente_id_fkey (
+  id,
+  ragione_sociale,
+  codice_fiscale,
+  partita_iva,
+  tipo_cliente
+)
       `)
       .eq("cliente_id", cliente_id)
       .order("ruolo", { ascending: true });
@@ -78,12 +88,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!payload.rapp_legale_id) {
-      return NextResponse.json(
-        { error: "rapp_legale_id mancante" },
-        { status: 400 }
-      );
-    }
+  if (!payload.rapp_legale_id && !payload.soggetto_cliente_id) {
+  return NextResponse.json(
+    { error: "Selezionare un nominativo" },
+    { status: 400 }
+  );
+}
 
     if (!payload.ruolo) {
       return NextResponse.json(
@@ -94,10 +104,13 @@ export async function POST(req: NextRequest) {
 
     const { data, error } = await supabase
       .from("tbclienti_organi")
-      .insert({
-        cliente_id: payload.cliente_id,
-        rapp_legale_id: payload.rapp_legale_id,
-        ruolo: payload.ruolo,
+     .insert({
+  cliente_id: payload.cliente_id,
+  rapp_legale_id: payload.rapp_legale_id || null,
+  soggetto_cliente_id: payload.soggetto_cliente_id || null,
+  tipo_soggetto: payload.tipo_soggetto || "rapp_legale",
+  rappresentante_legale: payload.rappresentante_legale ?? false,
+  ruolo: payload.ruolo,
         carica: payload.carica,
         percentuale_partecipazione: payload.percentuale_partecipazione,
         presenza: payload.presenza,
@@ -147,9 +160,12 @@ export async function PUT(req: NextRequest) {
 
     const { data, error } = await supabase
       .from("tbclienti_organi")
-      .update({
-        rapp_legale_id: payload.rapp_legale_id,
-        ruolo: payload.ruolo,
+     .update({
+  rapp_legale_id: payload.rapp_legale_id || null,
+  soggetto_cliente_id: payload.soggetto_cliente_id || null,
+  tipo_soggetto: payload.tipo_soggetto || "rapp_legale",
+  rappresentante_legale: payload.rappresentante_legale ?? false,
+  ruolo: payload.ruolo,
         carica: payload.carica,
         percentuale_partecipazione: payload.percentuale_partecipazione,
         presenza: payload.presenza,
