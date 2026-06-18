@@ -179,21 +179,22 @@ useEffect(() => {
 async function caricaNominativi() {
   const supabase = getSupabaseClient() as any;
 
-  const { data, error } = await supabase
-    .from("rapp_legali")
-    .select(`
-  id,
-  nome_cognome,
-  codice_fiscale,
-  indirizzo_residenza,
-  citta_residenza,
-  provincia,
-  cap,
-  CAP,
-  indirizzo,
-  citta
-`)
-    .order("nome_cognome");
+const { data, error } = await supabase
+  .from("tbclienti")
+  .select(`
+    id,
+    ragione_sociale,
+    tipo_cliente,
+    codice_fiscale,
+    partita_iva,
+    email,
+    indirizzo,
+    citta,
+    provincia,
+    cap,
+    cliente
+  `)
+  .order("ragione_sociale");
 
   if (error) {
     console.error("Errore caricaNominativi:", error);
@@ -596,31 +597,23 @@ data_cessazione: organo.data_cessazione || "",
 
         setNuovoNominativo((prev) => ({
           ...prev,
-          nome_cognome: nominativo.nome_cognome || "",
+          nome_cognome: nominativo.ragione_sociale || "",
           codice_fiscale: nominativo.codice_fiscale || "",
-          indirizzo:
-            nominativo.indirizzo_residenza ||
-            nominativo.indirizzo ||
-            "",
-          citta:
-            nominativo.citta_residenza ||
-            nominativo.citta ||
-            "",
+          indirizzo: nominativo.indirizzo || "",
+          citta: nominativo.citta || "",
           provincia: nominativo.provincia || "",
-          cap:
-            nominativo.cap ||
-            nominativo.CAP ||
-            "",
+          cap: nominativo.cap || "",
         }));
       }}
     >
       <option value="">Seleziona nominativo</option>
 
-      {nominativi.map((n) => (
-        <option key={n.id} value={n.id}>
-          {n.nome_cognome} — {n.codice_fiscale}
-        </option>
-      ))}
+     {nominativi.map((n) => (
+  <option key={n.id} value={n.id}>
+    {n.ragione_sociale}
+    {n.codice_fiscale ? ` — ${n.codice_fiscale}` : ""}
+  </option>
+))}
     </select>
 
     <button
