@@ -23,7 +23,7 @@ export default async function handler(
   }
 
   try {
-    const { variazione_id, tipo_pratica_id } = req.body || {};
+    const { variazione_id } = req.body || {};
 
     if (!variazione_id) {
       return res.status(400).json({
@@ -32,12 +32,6 @@ export default async function handler(
       });
     }
 
-    if (!tipo_pratica_id) {
-      return res.status(400).json({
-        success: false,
-        error: "tipo_pratica_id obbligatorio",
-      });
-    }
 
     const supabase = getSupabaseAdmin();
 
@@ -62,6 +56,35 @@ export default async function handler(
         error: "La variazione è già collegata a una pratica",
       });
     }
+
+    const { data: configurazione, error: configurazioneError } = await supabase
+  .from("tbpratiche_variazioni_tipi")
+  .select(`
+    id,
+    descrizione_variazione,
+    tipo_pratica_id,
+    genera_pratica,
+    genera_verbale
+  `)
+  .eq("descrizione_variazione", variazione.tipo_variazione)
+  .eq("attivo", true)
+  .maybeSingle();
+
+if (configurazioneError) throw configurazioneError;
+
+if (!configurazione) {
+  return res.status(400).json({
+    success: false,
+    error: `Nessuna configurazione trovata per la variazione: ${variazione.tipo_variazione}`,
+  });
+}
+
+if (!configurazione.genera_pratica || !configurazione.tipo_pratica_id) {
+  return res.status(400).json({
+    success: false,
+    error: "Questa variazione non è configurata per generare una pratica.",
+  });
+}
 
     const numeroPratica = buildNumeroPratica();
 
@@ -94,7 +117,7 @@ export default async function handler(
       .insert({
         studio_id: variazione.studio_id,
         cliente_id: variazione.cliente_id,
-        tipo_pratica_id: Number(tipo_pratica_id),
+       tipo_pratica_id: configurazione.tipo_pratica_id,
         numero_pratica: numeroPratica,
         titolo: titoloPratica,
         stato: "aperta",
@@ -116,13 +139,13 @@ export default async function handler(
         pratica_id: pratica.id,
         stato: "convertita",
         richiede_pratica: true,
-        genera_verbale: true,
+        genera_verbale: configurazione.genera_verbale,
       })
       .eq("id", variazione.id)
       .select(`
         *,
         cliente:tbclienti(id, ragione_sociale, codice_fiscale, partita_iva),
-        assegnato:tbutenti(id, nome, cognome, email),
+        assegnato:tbutenti!tbpratiche_variazioni_assegnato_a_fkey(id, nome, cognome, email),
         pratica:tbpratiche(id, numero_pratica, titolo, stato)
       `)
       .single();
