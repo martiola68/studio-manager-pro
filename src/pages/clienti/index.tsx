@@ -1,6 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 
+import {
+  normalizeCF,
+  isValidCF,
+} from "@/utils/codiceFiscale";
+
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { mapVisuraText } from "@/utils/visuraMapper";
 import type { Database } from "@/integrations/supabase/types";
@@ -756,6 +761,29 @@ const handleSave = async () => {
       requireUnlock: masterPasswordGate.requireUnlock,
       action: async () => {
         const codiceFiscalePulito = String(formData.codice_fiscale || "").trim();
+
+        const cf = normalizeCF(formData.codice_fiscale || "");
+
+if (formData.tipo_cliente === "Persona fisica") {
+  if (cf.length !== 16) {
+    toast({
+      title: "Errore",
+      description:
+        "Il codice fiscale di una persona fisica deve contenere 16 caratteri",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  if (!isValidCF(cf)) {
+    toast({
+      title: "Errore",
+      description: "Codice fiscale non valido",
+      variant: "destructive",
+    });
+    return;
+  }
+}
 
         // 1) PRIMO CONTROLLO: duplicato per codice fiscale
         if (codiceFiscalePulito) {
@@ -2405,14 +2433,18 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
     </Label>
 
     <div className="relative">
-      <Input
+ <Input
   id="codice_fiscale"
   value={formData.codice_fiscale}
-  maxLength={formData.tipo_cliente === "Persona fisica" ? 16 : 11}
+  maxLength={
+    formData.tipo_cliente === "Persona fisica"
+      ? 16
+      : 11
+  }
   onChange={(e) =>
     setFormData({
       ...formData,
-      codice_fiscale: e.target.value.toUpperCase(),
+      codice_fiscale: normalizeCF(e.target.value),
     })
   }
   placeholder={
@@ -2421,6 +2453,19 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
       : "01234567890"
   }
 />
+      {formData.tipo_cliente === "Persona fisica" &&
+ formData.codice_fiscale.length === 16 &&
+ !isValidCF(normalizeCF(formData.codice_fiscale)) && (
+  <div
+    style={{
+      color: "#dc2626",
+      fontSize: 12,
+      marginTop: 4,
+    }}
+  >
+    Codice fiscale non valido
+  </div>
+)}
     </div>
   </div>
 
