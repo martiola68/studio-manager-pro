@@ -625,17 +625,18 @@ data_cessazione: organo.data_cessazione || "",
   type="button"
   style={secondaryButton}
   onClick={() => {
-    setNuovoNominativo({
-      nome_cognome: "",
-      codice_fiscale: "",
-      email: "",
-      luogo_nascita: "",
-      data_nascita: "",
-      indirizzo: "",
-      citta: "",
-      provincia: "",
-      cap: "",
-    });
+   setNuovoNominativo({
+  nome_cognome: "",
+  codice_fiscale: "",
+  email: "",
+  luogo_nascita: "",
+  data_nascita: "",
+  indirizzo: "",
+  citta: "",
+  provincia: "",
+  cap: "",
+  tipologia_cliente: "Persona fisica",
+});
 
     setShowNuovoNominativo(true);
   }}
