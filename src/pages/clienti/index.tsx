@@ -125,6 +125,7 @@ type ClienteFormData = {
  email: string;
 telefono: string;
 pec: string;
+cliente: boolean;
 attivo: boolean;
   cassetto_fiscale_id: string;
 
@@ -187,6 +188,7 @@ const initialFormData: ClienteFormData = {
  email: "",
 telefono: "",
 pec: "",
+cliente: true,
 attivo: true,
   cassetto_fiscale_id: "",
 
@@ -629,6 +631,7 @@ numero_rea:
    email: clienteData.email || "",
 telefono: (clienteData as any).telefono || "",
 pec: (clienteData as any).pec || "",
+cliente: (clienteData as any).cliente ?? true,
 attivo: clienteData.attivo ?? true,
     cassetto_fiscale_id: clienteData.cassetto_fiscale_id || "",
 
@@ -801,6 +804,24 @@ const handleSave = async () => {
 //   missingFields.push("Codice Fiscale");
 // }
 
+        const codiceFiscaleUpper = formData.codice_fiscale.trim().toUpperCase();
+
+if (codiceFiscaleUpper) {
+  const cfValido =
+    formData.tipo_cliente === "Persona fisica"
+      ? /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$/.test(codiceFiscaleUpper)
+      : /^[0-9]{11}$/.test(codiceFiscaleUpper);
+
+  if (!cfValido) {
+    newErrors.codice_fiscale = true;
+    missingFields.push(
+      formData.tipo_cliente === "Persona fisica"
+        ? "Codice Fiscale non valido: deve essere di 16 caratteri"
+        : "Codice Fiscale/P.IVA non valido: deve essere di 11 numeri"
+    );
+  }
+}
+
 if (
   !formData.settore_fiscale &&
   !formData.settore_lavoro &&
@@ -844,7 +865,8 @@ const base: Partial<ClienteInsert> & {
 cod_cliente:
   formData.cod_cliente || `CL-${Date.now().toString().slice(-6)}`,
 tipo_cliente: formData.tipo_cliente,
-          tipologia_cliente: formData.tipologia_cliente,
+cliente: formData.cliente,
+tipologia_cliente: formData.tipologia_cliente,
           professionista_incaricato:
           formData.professionista_incaricato,
 
@@ -2196,6 +2218,26 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
     </div>
   </div>
 
+          {/* Cliente */}
+<div className="flex items-end">
+  <div className="flex items-center space-x-2 pb-2">
+    <Switch
+      id="cliente"
+      checked={formData.cliente}
+      onCheckedChange={(checked) =>
+        setFormData((prev) => ({
+          ...prev,
+          cliente: checked,
+        }))
+      }
+    />
+
+    <Label htmlFor="cliente">
+      Cliente
+    </Label>
+  </div>
+</div>
+
   {/* Cliente Attivo */}
   <div className="flex items-end">
     <div className="flex items-center space-x-2 pb-2">
@@ -2364,16 +2406,21 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
 
     <div className="relative">
       <Input
-        id="codice_fiscale"
-        value={formData.codice_fiscale}
-        onChange={(e) =>
-          setFormData({
-            ...formData,
-            codice_fiscale: e.target.value,
-          })
-        }
-        placeholder="RSSMRA80A01H501U"
-      />
+  id="codice_fiscale"
+  value={formData.codice_fiscale}
+  maxLength={formData.tipo_cliente === "Persona fisica" ? 16 : 11}
+  onChange={(e) =>
+    setFormData({
+      ...formData,
+      codice_fiscale: e.target.value.toUpperCase(),
+    })
+  }
+  placeholder={
+    formData.tipo_cliente === "Persona fisica"
+      ? "RSSMRA80A01H501U"
+      : "01234567890"
+  }
+/>
     </div>
   </div>
 
