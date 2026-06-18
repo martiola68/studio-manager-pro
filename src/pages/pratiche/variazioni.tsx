@@ -224,6 +224,14 @@ setTipiVariazione(tipiData || []);
     });
   }
 
+  function formatDateIT(data?: string | null) {
+  if (!data) return "-";
+
+  const d = new Date(data);
+
+  return d.toLocaleDateString("it-IT");
+}
+
   function aggiornaGiorniCciaa(value: number) {
     setForm({
       ...form,
@@ -637,11 +645,11 @@ setTipiVariazione(tipiData || []);
                   <tr key={v.id} className="border-t">
                     <td className="p-2">{v.cliente?.ragione_sociale || "-"}</td>
                     <td className="p-2">{v.tipo_variazione || "-"}</td>
-                    <td className="p-2">{v.data_atto || "-"}</td>
-                    <td className="p-2">{v.data_scadenza_cciaa || "-"}</td>
-                    <td className="p-2">{v.data_evasione_cciaa || "-"}</td>
-                    <td className="p-2">{v.data_scadenza_ade || "-"}</td>
-                    <td className="p-2">{v.data_comunicazione_ade || "-"}</td>
+                   <td className="p-2">{formatDateIT(v.data_atto)}</td>
+                    <td className="p-2">{formatDateIT(v.data_scadenza_cciaa)}</td>
+                      <td className="p-2">{formatDateIT(v.data_evasione_cciaa)}</td>
+                      <td className="p-2">{formatDateIT(v.data_scadenza_ade)}</td>
+                      <td className="p-2">{formatDateIT(v.data_comunicazione_ade)}</td>
                     <td className="p-2 text-center">
                       {v.pratica_id ? "✓" : "-"}
                     </td>
