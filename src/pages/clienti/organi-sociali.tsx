@@ -207,7 +207,7 @@ const { data, error } = await supabase
   
 async function salvaNuovoNominativo() {
   if (!nuovoNominativo.nome_cognome.trim()) {
-    alert("Nome e cognome obbligatori.");
+    alert("Cognome e nome obbligatori.");
     return;
   }
 
@@ -218,28 +218,30 @@ async function salvaNuovoNominativo() {
 
   const clienteSelezionato = clienti.find((c) => c.id === clienteId);
 
-  const res = await fetch("/api/rapp-legali/save", {
+  const res = await fetch("/api/clienti/soggetti", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
       studio_id: clienteSelezionato?.studio_id || null,
-      nome_cognome: nuovoNominativo.nome_cognome,
+      ragione_sociale: nuovoNominativo.nome_cognome,
       codice_fiscale: nuovoNominativo.codice_fiscale,
       email: nuovoNominativo.email,
       luogo_nascita: nuovoNominativo.luogo_nascita,
       data_nascita: nuovoNominativo.data_nascita || null,
-      indirizzo_residenza: nuovoNominativo.indirizzo,
-      citta_residenza: nuovoNominativo.citta,
-      CAP: nuovoNominativo.cap,
-      rappresentante_legale: false,
+      indirizzo: nuovoNominativo.indirizzo,
+      citta: nuovoNominativo.citta,
+      provincia: nuovoNominativo.provincia,
+      cap: nuovoNominativo.cap,
+      tipo_cliente: "Persona fisica",
+      cliente: false,
     }),
   });
 
   const data = await res.json();
 
-  if (!res.ok || !data.ok) {
+  if (!res.ok || !data.success) {
     alert(data.error || "Errore salvataggio nominativo.");
     return;
   }
@@ -250,15 +252,6 @@ async function salvaNuovoNominativo() {
     ...prev,
     rapp_legale_id: data.data.id,
   }));
-
-  await caricaNominativi();
-
-setTimeout(() => {
-  setForm((prev) => ({
-    ...prev,
-    rapp_legale_id: data.data.id,
-  }));
-}, 200);
 
   setShowNuovoNominativo(false);
 
@@ -274,7 +267,6 @@ setTimeout(() => {
     cap: "",
   });
 }
-
  async function caricaOrgani() {
   setLoading(true);
 
