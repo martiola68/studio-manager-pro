@@ -1195,3 +1195,4 @@ const tdStyle: React.CSSProperties = {
   color: "#334155",
   borderBottom: "1px solid #f1f5f9",
 };
+}
