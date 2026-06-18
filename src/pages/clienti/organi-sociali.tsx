@@ -1092,7 +1092,6 @@ data_cessazione: organo.data_cessazione || "",
       )}
     </main>
   );
-}
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
