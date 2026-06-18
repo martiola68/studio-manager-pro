@@ -427,7 +427,10 @@ async function eliminaOrgano(organo: any) {
   setOrganoInModificaId(organo.id);
 
   setForm({
-    rapp_legale_id: organo.rapp_legale_id || "",
+rapp_legale_id:
+  organo.soggetto_cliente_id ||
+  organo.rapp_legale_id ||
+  "",
     ruolo: organo.ruolo || "socio",
     carica: organo.carica || "",
     percentuale_partecipazione:
@@ -785,13 +788,18 @@ data_cessazione: organo.data_cessazione || "",
            <tbody>
   {organiFiltrati.map((o) => (
     <tr key={o.id}>
-      <td style={tdStyle}>
-        {o.rapp_legali?.nome_cognome || "—"}
-      </td>
+   <td style={tdStyle}>
+  {o.soggetto_cliente?.ragione_sociale ||
+    o.rapp_legali?.nome_cognome ||
+    "—"}
+</td>
 
-      <td style={tdStyle}>
-        {o.rapp_legali?.codice_fiscale || "—"}
-      </td>
+    <td style={tdStyle}>
+  {o.soggetto_cliente?.codice_fiscale ||
+    o.soggetto_cliente?.partita_iva ||
+    o.rapp_legali?.codice_fiscale ||
+    "—"}
+</td>
 
          <td style={tdStyle}>
       {o.carica || ruoliLabel[o.ruolo] || "—"}
