@@ -282,9 +282,9 @@ const [filtroStampa, setFiltroStampa] = useState({
   utente_professionista_id: "tutti",
   tipo_prestazione_id: "tutti",
   tipo_redditi: "tutti",
-  settore_fiscale: "tutti",
-  settore_lavoro: "tutti",
-  settore_consulenza: "tutti",
+ settore_fiscale: "true",
+settore_lavoro: "false",
+settore_consulenza: "false",
 });
 
   const [utentiFiscali, setUtentiFiscali] = useState([]);
@@ -1735,17 +1735,18 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
         </DialogContent>
       </Dialog>
 
+      <Button
+  onClick={() => setShowStampaModal(true)}
+  className="bg-red-600 hover:bg-red-700 text-white"
+>
+  Stampa Lista Clienti
+</Button>
+
       <Button onClick={handleAddNew} className="gap-2">
         <Plus className="h-4 w-4" />
         Nuovo Cliente
       </Button>
 
-      <Button
-  variant="outline"
-  onClick={() => setShowStampaModal(true)}
->
-  Stampa Lista Clienti
-</Button>
     </div>
   </div>
 </div>
@@ -3352,7 +3353,7 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="tutti">Tutti</SelectItem>
+           
             <SelectItem value="true">SI</SelectItem>
             <SelectItem value="false">NO</SelectItem>
           </SelectContent>
@@ -3374,7 +3375,7 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="tutti">Tutti</SelectItem>
+           
             <SelectItem value="true">SI</SelectItem>
             <SelectItem value="false">NO</SelectItem>
           </SelectContent>
@@ -3396,7 +3397,7 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="tutti">Tutti</SelectItem>
+           
             <SelectItem value="true">SI</SelectItem>
             <SelectItem value="false">NO</SelectItem>
           </SelectContent>
