@@ -351,9 +351,10 @@ export default function PresenzePage() {
   const [monthIndex, setMonthIndex] = useState(now.getMonth());
 
   const [modalSollecitiOpen, setModalSollecitiOpen] = useState(false);
-const [solleciti, setSolleciti] = useState<any[]>([]);
-const [sendingSolleciti, setSendingSolleciti] = useState(false);
+  const [solleciti, setSolleciti] = useState<any[]>([]);
+  const [sendingSolleciti, setSendingSolleciti] = useState(false);
 
+  const [loadingSolleciti, setLoadingSolleciti] = useState(false);
 
   const [currentUser, setCurrentUser] = useState<Utente | null>(null);
   const [codici, setCodici] = useState<CodicePresenza[]>([]);
@@ -966,10 +967,11 @@ ${dipendentiXml}
 {isResponsabilePaghe && (
   <Button
     variant="outline"
-    onClick={async () => {
-      try {
-        setError(null);
-        setSuccess(null);
+   onClick={async () => {
+  try {
+    setError(null);
+    setSuccess(null);
+    setLoadingSolleciti(true);
 
         const res = await fetch("/api/presenze/sollecita-compilazione", {
           method: "POST",
@@ -990,10 +992,12 @@ ${dipendentiXml}
         );
 
         setModalSollecitiOpen(true);
-      } catch (err: any) {
-        setError(err?.message || "Errore recupero solleciti");
-      }
-    }}
+    } catch (err: any) {
+    setError(err?.message || "Errore recupero solleciti");
+  } finally {
+    setLoadingSolleciti(false);
+  }
+}}
   >
     Sollecita compilazione
   </Button>
@@ -1320,12 +1324,41 @@ const isFutureDay = day.date > todayKey;
           </CardContent>
         </Card>
       </div>
+
+      {loadingSolleciti && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+    <div className="w-[360px] rounded-lg bg-white p-6 shadow-lg">
+      <div className="mb-3 text-base font-semibold">
+        Elaborazione in corso...
+      </div>
+
+      <div className="h-3 w-full overflow-hidden rounded-full bg-gray-200">
+        <div className="h-full w-2/3 animate-pulse rounded-full bg-blue-600" />
+      </div>
+
+      <div className="mt-3 text-sm text-gray-500">
+        Verifica presenze dipendenti in corso.
+      </div>
+    </div>
+  </div>
+)}
+      
       {modalSollecitiOpen && (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
     <div className="w-full max-w-4xl rounded-lg bg-white p-6 shadow-lg">
       <h2 className="mb-4 text-xl font-semibold">
         Dipendenti con presenze incomplete
       </h2>
+
+      <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
+  Totale giornate non compilate:
+  <strong className="ml-1">
+    {solleciti.reduce(
+      (tot, s) => tot + Number(s.mancanti || 0),
+      0
+    )}
+  </strong>
+</div>
 
       {solleciti.length === 0 ? (
         <p className="text-sm text-muted-foreground">
