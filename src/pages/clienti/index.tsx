@@ -378,6 +378,8 @@ const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCliente, setEditingCliente] = useState<ClienteRow | null>(null);
 
+  const [studioIdUtente, setStudioIdUtente] = useState<string | null>(null);
+
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
 
@@ -410,6 +412,20 @@ const [searchTerm, setSearchTerm] = useState("");
 
   const loadData = useCallback(async () => {
     const supabase = getSupabaseClient();
+
+    const {
+  data: { user },
+} = await supabase.auth.getUser();
+
+if (user?.id) {
+  const { data: utenteLoggato } = await supabase
+    .from("tbutenti")
+    .select("studio_id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  setStudioIdUtente(utenteLoggato?.studio_id ?? null);
+}
 
     try {
       setLoading(true);
@@ -1650,12 +1666,15 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
   const params = new URLSearchParams();
 
   params.set("format", format);
-if (!studioId) {
+const studioIdEffettivo = studioId || studioIdUtente;
+
+if (!studioIdEffettivo) {
   alert("studio_id non disponibile");
   return "";
 }
 
-params.set("studio_id", studioId);
+params.set("studio_id", studioIdEffettivo);
+    
   params.set("utente_operatore_id", filtroStampa.utente_operatore_id);
   params.set("utente_professionista_id", filtroStampa.utente_professionista_id);
   params.set("tipo_prestazione_id", filtroStampa.tipo_prestazione_id);
