@@ -3452,11 +3452,23 @@ const esportaListaClientiPdf = () => {
         Annulla
       </Button>
 
-     <Button onClick={esportaListaClientiExcel}>
+<Button
+  type="button"
+  onClick={() => {
+    alert("CLICK EXCEL");
+    esportaListaClientiExcel();
+  }}
+>
   Excel
 </Button>
 
-<Button onClick={esportaListaClientiPdf}>
+<Button
+  type="button"
+  onClick={() => {
+    alert("CLICK PDF");
+    esportaListaClientiPdf();
+  }}
+>
   PDF
 </Button>
     </div>
