@@ -52,103 +52,58 @@ export default async function handler(
   }
 
   try {
-    const oggi = new Date();
-    oggi.setHours(0, 0, 0, 0);
+   const oggi = new Date();
+oggi.setHours(0, 0, 0, 0);
 
-    const isMonday = oggi.getDay() === 1;
+const currentYear = oggi.getFullYear();
+const currentMonthIndex = oggi.getMonth();
 
-    const currentYear = oggi.getFullYear();
-    const currentMonthIndex = oggi.getMonth();
+const inizioMese = toDate(new Date(currentYear, currentMonthIndex, 1));
+const fineMese = toDate(new Date(currentYear, currentMonthIndex + 1, 0));
 
-    const meseCorrente = getMonthRange(currentYear, currentMonthIndex);
-    const mesePrecedente = getMonthRange(currentYear, currentMonthIndex - 1);
+const { data: dipendenti, error } = await supabase
+  .from("tbutenti")
+  .select("id, nome, cognome, email")
+  .eq("attivo", true)
+  .eq("tipo_rapporto", "Dipendente");
 
-    const limiteMeseCorrente = subtractWorkingDays(oggi, 5);
+if (error) throw error;
 
-    const { data: dipendenti, error } = await supabase
-      .from("tbutenti")
-      .select("id, nome, cognome, email")
-      .eq("attivo", true)
-      .eq("tipo_rapporto", "Dipendente");
+const daSollecitare: any[] = [];
 
-    if (error) throw error;
+for (const dipendente of dipendenti || []) {
+  if (!dipendente.email) continue;
 
-    const daSollecitare: any[] = [];
+  const { count, error: countError } = await supabase
+    .from("tbpresenze_dipendenti")
+    .select("id", { count: "exact", head: true })
+    .eq("utente_id", dipendente.id)
+    .gte("data_presenza", inizioMese)
+    .lte("data_presenza", fineMese);
 
-    for (const dipendente of dipendenti || []) {
-      if (!dipendente.email) continue;
+  if (countError) throw countError;
 
-      const giorniMancanti: string[] = [];
+  if ((count || 0) >= 4) continue;
 
-      // 1) MESE PRECEDENTE: basta anche un solo giorno lavorativo mancante
-      for (
-        let d = new Date(mesePrecedente.start);
-        d <= mesePrecedente.end;
-        d = addDays(d, 1)
-      ) {
-        if (isWeekend(d)) continue;
+  daSollecitare.push({
+    id: dipendente.id,
+    nome: dipendente.nome,
+    cognome: dipendente.cognome,
+    email: dipendente.email,
+    presenze_compilate: count || 0,
+  });
+}
 
-        const data = toDate(d);
-
-        const { data: presenza } = await supabase
-          .from("tbpresenze_dipendenti")
-          .select("id")
-          .eq("utente_id", dipendente.id)
-          .eq("data_presenza", data)
-          .maybeSingle();
-
-        if (!presenza) {
-          giorniMancanti.push(data);
-          break;
-        }
-      }
-
-      // 2) MESE CORRENTE: solo il lunedì e solo oltre 5 giorni lavorativi
-      if (giorniMancanti.length === 0 && isMonday) {
-        for (
-          let d = new Date(meseCorrente.start);
-          d <= limiteMeseCorrente && d <= oggi;
-          d = addDays(d, 1)
-        ) {
-          if (isWeekend(d)) continue;
-
-          const data = toDate(d);
-
-          const { data: presenza } = await supabase
-            .from("tbpresenze_dipendenti")
-            .select("id")
-            .eq("utente_id", dipendente.id)
-            .eq("data_presenza", data)
-            .maybeSingle();
-
-          if (!presenza) {
-            giorniMancanti.push(data);
-            break;
-          }
-        }
-      }
-
-      if (giorniMancanti.length === 0) continue;
-
-      daSollecitare.push({
-        id: dipendente.id,
-        nome: dipendente.nome,
-        cognome: dipendente.cognome,
-        email: dipendente.email,
-        giorni_mancanti: giorniMancanti,
-      });
-    }
-
-    return res.status(200).json({
-      ok: true,
-      count: daSollecitare.length,
-      dipendenti: daSollecitare,
-      oggi: toDate(oggi),
-      isMonday,
-      limite_mese_corrente: toDate(limiteMeseCorrente),
-      note:
-        "Mese corrente: controllo solo lunedì e oltre 5 giorni lavorativi. Mese precedente: basta un giorno lavorativo mancante.",
-    });
+  return res.status(200).json({
+  ok: true,
+  count: daSollecitare.length,
+  dipendenti: daSollecitare,
+  oggi: toDate(oggi),
+  isMonday,
+  limite_mese_corrente: toDate(limiteMeseCorrente),
+  note:
+    "Mese corrente: controllo solo lunedì e oltre 5 giorni lavorativi. Mese precedente: basta un giorno lavorativo mancante.",
+});
   } catch (error: any) {
     console.error(error);
 
