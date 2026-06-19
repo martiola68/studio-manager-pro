@@ -1650,9 +1650,11 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
   const params = new URLSearchParams();
 
   params.set("format", format);
- if (!studioId) {
-  throw new Error("studio_id non disponibile");
+if (!studioId) {
+  alert("studio_id non disponibile");
+  return "";
 }
+
 params.set("studio_id", studioId);
   params.set("utente_operatore_id", filtroStampa.utente_operatore_id);
   params.set("utente_professionista_id", filtroStampa.utente_professionista_id);
@@ -1667,25 +1669,23 @@ params.set("studio_id", studioId);
 
   
   const esportaListaClientiExcel = () => {
-  const query = buildQueryStampaClienti("excel");
+ const query = buildQueryStampaClienti("excel");
 
-  console.log(
-    `/api/clienti/stampa-lista?${query}`
-  );
+if (!query) return;
 
-  window.open(
-    `/api/clienti/stampa-lista?${query}`,
-    "_blank"
-  );
+window.open(
+  `/api/clienti/stampa-lista?${query}`,
+  "_blank"
+);
 };
 
 const esportaListaClientiPdf = () => {
  
   const query = buildQueryStampaClienti("pdf");
 
-  console.log(query);
+if (!query) return;
 
-  window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
+window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
 };
   
   return (
