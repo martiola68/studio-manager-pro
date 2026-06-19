@@ -645,7 +645,7 @@ if (error) throw error;
   disabled={savingId === richiesta.id}
   onClick={() => setDeleteId(richiesta.id)}
 >
-  Trash2 className="h-4 w-4" />
+  <Trash2 className="h-4 w-4" />
 </Button>
 )}
 
