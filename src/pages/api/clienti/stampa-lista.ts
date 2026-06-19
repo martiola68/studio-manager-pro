@@ -102,7 +102,23 @@ if (settore_fiscale) {
       return res.status(500).json({ error: error.message });
     }
 
-    const clienti = data ?? [];
+  const clienti = data ?? [];
+
+let titoloReport = "Lista Clienti";
+
+if (
+  utente_operatore_id &&
+  utente_operatore_id !== "tutti" &&
+  clienti.length > 0
+) {
+  const nomeUtente = nomeCompleto(
+    (clienti[0] as any).utente_fiscale
+  );
+
+  if (nomeUtente) {
+    titoloReport = `Lista Clienti di ${nomeUtente}`;
+  }
+}
 
     if (format === "excel") {
       const workbook = new ExcelJS.Workbook();
@@ -172,7 +188,9 @@ if (settore_fiscale) {
 
       doc.fontSize(16).text("STUDIO MANAGER PRO", { align: "center" });
       doc.moveDown(0.5);
-      doc.fontSize(13).text("Lista Clienti", { align: "center" });
+    doc.fontSize(13).text(titoloReport, {
+  align: "center",
+});
       doc.moveDown(0.5);
       doc
         .fontSize(9)
