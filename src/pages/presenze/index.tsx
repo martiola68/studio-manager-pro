@@ -122,9 +122,6 @@ const PRESENCE_COLORS: Record<string, string> = {
   Ps: 'bg-violet-100 text-violet-800 border-violet-200',
 };
 
-const [modalSollecitiOpen, setModalSollecitiOpen] = useState(false);
-const [solleciti, setSolleciti] = useState<any[]>([]);
-const [sendingSolleciti, setSendingSolleciti] = useState(false);
 
 function Button({
   children,
@@ -352,6 +349,11 @@ export default function PresenzePage() {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [monthIndex, setMonthIndex] = useState(now.getMonth());
+
+  const [modalSollecitiOpen, setModalSollecitiOpen] = useState(false);
+const [solleciti, setSolleciti] = useState<any[]>([]);
+const [sendingSolleciti, setSendingSolleciti] = useState(false);
+
 
   const [currentUser, setCurrentUser] = useState<Utente | null>(null);
   const [codici, setCodici] = useState<CodicePresenza[]>([]);
