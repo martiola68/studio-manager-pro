@@ -122,6 +122,10 @@ const PRESENCE_COLORS: Record<string, string> = {
   Ps: 'bg-violet-100 text-violet-800 border-violet-200',
 };
 
+const [modalSollecitiOpen, setModalSollecitiOpen] = useState(false);
+const [solleciti, setSolleciti] = useState<any[]>([]);
+const [sendingSolleciti, setSendingSolleciti] = useState(false);
+
 function Button({
   children,
   className = '',
@@ -960,71 +964,37 @@ ${dipendentiXml}
 {isResponsabilePaghe && (
   <Button
     variant="outline"
-    onClick={() => {
-      window.location.href = '/presenze/ferie-permessi';
-    }}
-  >
-    Gestione Ferie/permessi
-  </Button>
-)}
+    onClick={async () => {
+      try {
+        setError(null);
+        setSuccess(null);
 
-            {isResponsabilePaghe && (
- <Button
-  variant="outline"
-  onClick={async () => {
-    try {
-      setError(null);
-      setSuccess(null);
-
-      const res = await fetch("/api/presenze/sollecita-compilazione", {
-        method: "POST",
-      });
-
-      const data = await res.json();
-
-      if (!res.ok || !data?.ok) {
-        throw new Error(data?.error || "Errore recupero dipendenti da sollecitare");
-      }
-
-      let inviati = 0;
-
-      for (const dipendente of data.dipendenti || []) {
-        const result = await sendEmail({
-          to: dipendente.email,
-          subject: "Sollecito compilazione foglio presenze",
-          html: `
-            <p>Gentile ${dipendente.cognome || ""} ${dipendente.nome || ""},</p>
-            <p>risulta che il foglio presenze non sia aggiornato da oltre 5 giorni lavorativi.</p>
-            <p>Ti chiediamo cortesemente di completare la compilazione delle presenze mancanti.</p>
-            <p>Grazie per la collaborazione.</p>
-          `,
-          text: `
-Gentile ${dipendente.cognome || ""} ${dipendente.nome || ""},
-
-risulta che il foglio presenze non sia aggiornato da oltre 5 giorni lavorativi.
-
-Ti chiediamo cortesemente di completare la compilazione delle presenze mancanti.
-
-Grazie per la collaborazione.
-          `.trim(),
-          sendMode: "studio",
+        const res = await fetch("/api/presenze/sollecita-compilazione", {
+          method: "POST",
         });
 
-        if (!result.success) {
-          throw new Error(result.error || `Errore invio email a ${dipendente.email}`);
+        const data = await res.json();
+
+        if (!res.ok || !data?.ok) {
+          throw new Error(data?.error || "Errore recupero dipendenti da sollecitare");
         }
 
-        inviati++;
-      }
+        setSolleciti(
+          (data.dipendenti || []).map((d: any) => ({
+            ...d,
+            selezionato: true,
+            livello: d.livello || (d.mancanti >= 3 ? "urgente" : "normale"),
+          }))
+        );
 
-      setSuccess(`Solleciti inviati: ${inviati}`);
-    } catch (err: any) {
-      setError(err?.message || "Errore invio solleciti");
-    }
-  }}
->
-  Sollecita compilazione
-</Button>
+        setModalSollecitiOpen(true);
+      } catch (err: any) {
+        setError(err?.message || "Errore recupero solleciti");
+      }
+    }}
+  >
+    Sollecita compilazione
+  </Button>
 )}
             
             <Button
@@ -1348,6 +1318,162 @@ const isFutureDay = day.date > todayKey;
           </CardContent>
         </Card>
       </div>
+      {modalSollecitiOpen && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div className="w-full max-w-4xl rounded-lg bg-white p-6 shadow-lg">
+      <h2 className="mb-4 text-xl font-semibold">
+        Dipendenti con presenze incomplete
+      </h2>
+
+      {solleciti.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          Nessun dipendente da sollecitare.
+        </p>
+      ) : (
+        <div className="max-h-[60vh] overflow-auto rounded-md border">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="p-2 text-center">Invia</th>
+                <th className="p-2 text-left">Dipendente</th>
+                <th className="p-2 text-left">Email</th>
+                <th className="p-2 text-center">Compilate</th>
+                <th className="p-2 text-center">Mancanti</th>
+                <th className="p-2 text-center">Priorità</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {solleciti.map((s, index) => (
+                <tr key={s.utente_id || s.id || index} className="border-t">
+                  <td className="p-2 text-center">
+                    <input
+                      type="checkbox"
+                      checked={!!s.selezionato}
+                      onChange={(e) =>
+                        setSolleciti((prev) =>
+                          prev.map((x, i) =>
+                            i === index
+                              ? { ...x, selezionato: e.target.checked }
+                              : x
+                          )
+                        )
+                      }
+                    />
+                  </td>
+
+                  <td className="p-2">
+                    {s.cognome || ""} {s.nome || ""}
+                  </td>
+
+                  <td className="p-2">{s.email}</td>
+
+                  <td className="p-2 text-center">
+                    {s.presenze_compilate}
+                  </td>
+
+                  <td className="p-2 text-center font-semibold text-red-600">
+                    {s.mancanti}
+                  </td>
+
+                  <td className="p-2 text-center">
+                    <select
+                      className="rounded border px-2 py-1"
+                      value={s.livello}
+                      onChange={(e) =>
+                        setSolleciti((prev) =>
+                          prev.map((x, i) =>
+                            i === index
+                              ? { ...x, livello: e.target.value }
+                              : x
+                          )
+                        )
+                      }
+                    >
+                      <option value="normale">Normale</option>
+                      <option value="urgente">Urgente</option>
+                    </select>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div className="mt-5 flex justify-end gap-2">
+        <Button
+          variant="outline"
+          onClick={() => setModalSollecitiOpen(false)}
+          disabled={sendingSolleciti}
+        >
+          Annulla
+        </Button>
+
+        <Button
+          disabled={sendingSolleciti || solleciti.filter((s) => s.selezionato).length === 0}
+          onClick={async () => {
+            try {
+              setSendingSolleciti(true);
+              setError(null);
+              setSuccess(null);
+
+              let inviati = 0;
+
+              for (const dipendente of solleciti.filter((s) => s.selezionato)) {
+                const urgente = dipendente.livello === "urgente";
+
+                const result = await sendEmail({
+                  to: dipendente.email,
+                  subject: urgente
+                    ? "URGENTE - Sollecito compilazione foglio presenze"
+                    : "Sollecito compilazione foglio presenze",
+                  html: `
+                    <p>Gentile ${dipendente.cognome || ""} ${dipendente.nome || ""},</p>
+                    <p>risultano compilate <strong>${dipendente.presenze_compilate}</strong> presenze nel mese corrente.</p>
+                    <p>Il minimo richiesto è di <strong>4</strong> presenze.</p>
+                    <p>Mancano ancora <strong>${dipendente.mancanti}</strong> giornate.</p>
+                    ${urgente ? "<p><strong>La richiesta è urgente.</strong></p>" : ""}
+                    <p>Ti chiediamo cortesemente di completare la compilazione in Studio Manager Pro.</p>
+                    <p>Grazie per la collaborazione.</p>
+                  `,
+                  text: `
+Gentile ${dipendente.cognome || ""} ${dipendente.nome || ""},
+
+risultano compilate ${dipendente.presenze_compilate} presenze nel mese corrente.
+Il minimo richiesto è di 4 presenze.
+Mancano ancora ${dipendente.mancanti} giornate.
+
+${urgente ? "La richiesta è urgente.\n" : ""}
+Ti chiediamo cortesemente di completare la compilazione in Studio Manager Pro.
+
+Grazie per la collaborazione.
+                  `.trim(),
+                  sendMode: "studio",
+                });
+
+                if (!result.success) {
+                  throw new Error(result.error || `Errore invio email a ${dipendente.email}`);
+                }
+
+                inviati++;
+              }
+
+              setSuccess(`Solleciti inviati: ${inviati}`);
+              setModalSollecitiOpen(false);
+            } catch (err: any) {
+              setError(err?.message || "Errore invio solleciti");
+            } finally {
+              setSendingSolleciti(false);
+            }
+          }}
+        >
+          {sendingSolleciti ? "Invio..." : "Invia email selezionati"}
+        </Button>
+      </div>
+    </div>
+  </div>
+)}
     </>
   );
 }
