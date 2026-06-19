@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
-import { sendEmail } from "@/services/emailService";
+import { sendEmailServer } from "@/services/sendEmailServer";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -112,13 +112,12 @@ Mancano ancora ${mancanti} giornat${mancanti === 1 ? "a" : "e"}.
 Accedi a Studio Manager Pro e completa la compilazione delle presenze.
 `.trim();
 
-      const emailResult = await sendEmail({
-        to: dipendente.email,
-        subject,
-        html,
-        text,
-        sendMode: "studio",
-      });
+    const emailResult = await sendEmailServer({
+  to: dipendente.email,
+  subject,
+  html,
+  text,
+});
 
       risultati.push({
         id: dipendente.id,
