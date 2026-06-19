@@ -275,6 +275,22 @@ const fileInputRef = useRef<HTMLInputElement | null>(null);
   selected: boolean;
 };
 
+  const [showStampaModal, setShowStampaModal] = useState(false);
+
+const [filtroStampa, setFiltroStampa] = useState({
+  utente_operatore_id: "tutti",
+  utente_professionista_id: "tutti",
+  tipo_prestazione_id: "tutti",
+  tipo_redditi: "tutti",
+  settore_fiscale: "tutti",
+  settore_lavoro: "tutti",
+  settore_consulenza: "tutti",
+});
+
+  const [utentiFiscali, setUtentiFiscali] = useState([]);
+const [professionisti, setProfessionisti] = useState([]);
+const [prestazioni, setPrestazioni] = useState([]);
+
 const [visuraPreviewOpen, setVisuraPreviewOpen] = useState(false);
 const [visuraClienteFields, setVisuraClienteFields] = useState<VisuraClienteField[]>([]);
 
@@ -1722,6 +1738,13 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
         <Plus className="h-4 w-4" />
         Nuovo Cliente
       </Button>
+
+      <Button
+  variant="outline"
+  onClick={() => setShowStampaModal(true)}
+>
+  Stampa Lista Clienti
+</Button>
     </div>
   </div>
 </div>
@@ -3187,6 +3210,53 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
   onUnlock={masterPasswordGate.handleUnlock}
   loading={masterPasswordGate.unlocking}
 />
+
+<Dialog
+  open={showStampaModal}
+  onOpenChange={setShowStampaModal}
+>
+  <DialogContent className="max-w-2xl">
+    <DialogHeader>
+      <DialogTitle>
+        Stampa Lista Clienti
+      </DialogTitle>
+    </DialogHeader>
+
+    <div className="grid grid-cols-2 gap-4">
+
+      <div>
+        <Label>Cliente</Label>
+        <Input value="SI" disabled />
+      </div>
+
+      <div>
+        <Label>Attivo</Label>
+        <Input value="SI" disabled />
+      </div>
+
+    </div>
+
+    <div className="flex justify-end gap-2 mt-6">
+
+      <Button
+        variant="outline"
+        onClick={() => setShowStampaModal(false)}
+      >
+        Annulla
+      </Button>
+
+      <Button>
+        Excel
+      </Button>
+
+      <Button>
+        PDF
+      </Button>
+
+    </div>
+  </DialogContent>
+</Dialog>
+
 </div>
 );
 }
