@@ -1650,7 +1650,10 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
   const params = new URLSearchParams();
 
   params.set("format", format);
-  params.set("studio_id", studioId);
+ if (!studioId) {
+  throw new Error("studio_id non disponibile");
+}
+params.set("studio_id", studioId);
   params.set("utente_operatore_id", filtroStampa.utente_operatore_id);
   params.set("utente_professionista_id", filtroStampa.utente_professionista_id);
   params.set("tipo_prestazione_id", filtroStampa.tipo_prestazione_id);
