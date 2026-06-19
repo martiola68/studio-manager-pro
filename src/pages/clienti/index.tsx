@@ -1646,6 +1646,32 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
     );
   }
 
+  const buildQueryStampaClienti = (format: "excel" | "pdf") => {
+  const params = new URLSearchParams();
+
+  params.set("format", format);
+  params.set("studio_id", studioId);
+  params.set("utente_operatore_id", filtroStampa.utente_operatore_id);
+  params.set("utente_professionista_id", filtroStampa.utente_professionista_id);
+  params.set("tipo_prestazione_id", filtroStampa.tipo_prestazione_id);
+  params.set("tipo_redditi", filtroStampa.tipo_redditi);
+  params.set("settore_fiscale", filtroStampa.settore_fiscale);
+  params.set("settore_lavoro", filtroStampa.settore_lavoro);
+  params.set("settore_consulenza", filtroStampa.settore_consulenza);
+
+  return params.toString();
+};
+
+const esportaListaClientiExcel = () => {
+  const query = buildQueryStampaClienti("excel");
+  window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
+};
+
+const esportaListaClientiPdf = () => {
+  const query = buildQueryStampaClienti("pdf");
+  window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
+};
+
   return (
    <div className="w-full mx-auto py-8 px-6 max-w-[1800px]">
      {/* HEADER */}
@@ -3413,13 +3439,13 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
         Annulla
       </Button>
 
-      <Button>
-        Excel
-      </Button>
+     <Button onClick={esportaListaClientiExcel}>
+  Excel
+</Button>
 
-      <Button>
-        PDF
-      </Button>
+<Button onClick={esportaListaClientiPdf}>
+  PDF
+</Button>
     </div>
   </DialogContent>
 </Dialog>
