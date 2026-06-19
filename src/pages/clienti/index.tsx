@@ -1665,19 +1665,22 @@ params.set("studio_id", studioId);
   return params.toString();
 };
 
-const esportaListaClientiExcel = () => {
-  console.log("EXCEL CLICK");
-
+  
+  const esportaListaClientiExcel = () => {
   const query = buildQueryStampaClienti("excel");
 
-  console.log(query);
+  console.log(
+    `/api/clienti/stampa-lista?${query}`
+  );
 
-  window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
+  window.open(
+    `/api/clienti/stampa-lista?${query}`,
+    "_blank"
+  );
 };
 
 const esportaListaClientiPdf = () => {
-  console.log("PDF CLICK");
-
+ 
   const query = buildQueryStampaClienti("pdf");
 
   console.log(query);
