@@ -282,9 +282,10 @@ const [filtroStampa, setFiltroStampa] = useState({
   utente_professionista_id: "tutti",
   tipo_prestazione_id: "tutti",
   tipo_redditi: "tutti",
- settore_fiscale: "true",
-settore_lavoro: "false",
-settore_consulenza: "false",
+  tipo_cliente: "tutti",
+  settore_fiscale: "true",
+  settore_lavoro: "false",
+  settore_consulenza: "false",
 });
 
   const [utentiFiscali, setUtentiFiscali] = useState([]);
