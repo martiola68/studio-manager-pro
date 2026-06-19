@@ -960,9 +960,20 @@ ${dipendentiXml}
   </Button>
 )}
             
-           <Button variant="outline" onClick={loadData} disabled={loading || saving}>
-              Aggiorna
-            </Button>
+   <Button variant="outline" onClick={loadData} disabled={loading || saving}>
+  Aggiorna
+</Button>
+
+{isResponsabilePaghe && (
+  <Button
+    variant="outline"
+    onClick={() => {
+      window.location.href = "/presenze/ferie-permessi";
+    }}
+  >
+    Gestione Ferie/permessi
+  </Button>
+)}
 
 {isResponsabilePaghe && (
   <Button
