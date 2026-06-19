@@ -113,7 +113,7 @@ const [{ data, error }, { data: qualificheData, error: qualificheError }] =
   .from('tbdipendenti')
   .select('*')
   .eq('studio_id', user.studio_id)
-  .or(`data_cessazione.is.null,data_cessazione.gte.${primoGiornoMese}`)
+  .order('attivo', { ascending: false })
   .order('cognome', { ascending: true })
   .order('nome', { ascending: true }),
 
