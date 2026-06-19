@@ -348,30 +348,29 @@ try {
 }
 }
 
-  async function eliminaRichiesta(id: string) {
-
-
+async function eliminaRichiesta(id: string) {
   try {
     setSavingId(id);
 
-    const { error } = await (supabase as any)
+    const { data, error } = await (supabase as any)
       .from('tbferie_permessi_richieste')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .select('id')
+      .single();
 
     if (error) throw error;
+
+    setRichieste((prev) => prev.filter((r) => r.id !== id));
 
     toast({
       title: 'Richiesta eliminata',
       description: 'Record eliminato correttamente.',
     });
-
-    await loadData();
   } catch (error: any) {
     toast({
-      title: 'Errore',
-      description:
-        error?.message || 'Impossibile eliminare la richiesta.',
+      title: 'Errore eliminazione',
+      description: error?.message || 'Impossibile eliminare la richiesta.',
       variant: 'destructive',
     });
   } finally {
@@ -625,15 +624,14 @@ try {
         Approva
       </Button>
 
-      <Button
-        size="sm"
-        variant="destructive"
-        className="h-8 px-3"
-        disabled={savingId === richiesta.id}
-        onClick={() => gestisciRichiesta(richiesta.id, 'rifiutata')}
-      >
-        Rifiuta
-      </Button>
+     <Button
+  size="sm"
+  className="h-8 bg-black px-3 text-white hover:bg-zinc-800"
+  disabled={savingId === richiesta.id}
+  onClick={() => gestisciRichiesta(richiesta.id, 'rifiutata')}
+>
+  Rifiuta
+</Button>
     </>
   )}
 
