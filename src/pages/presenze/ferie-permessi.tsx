@@ -393,12 +393,6 @@ async function eliminaRichiesta(id: string) {
     setSavingId(null);
   }
 }
-  } catch (error: any) {
-  alert(error?.message || 'Impossibile eliminare la richiesta');
-  } finally {
-    setSavingId(null);
-  }
-}
 
   const dipendentiOptions = useMemo(() => {
     const map = new Map<string, string>();
