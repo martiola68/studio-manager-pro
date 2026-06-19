@@ -5,7 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
+import {
+  Check,
+  X,
+  Trash2,
+  Undo2,
+} from 'lucide-react';
 
 type StatoRichiesta = 'inviata' | 'approvata' | 'rifiutata' | 'revocata';
 
@@ -352,15 +357,13 @@ async function eliminaRichiesta(id: string) {
   try {
     setSavingId(id);
 
-    const { data, error } = await (supabase as any)
-      .from('tbferie_permessi_richieste')
-      .delete()
-      .eq('id', id)
-      .select('id')
-      .single();
+  const { error } = await (supabase as any)
+  .from('tbferie_permessi_richieste')
+  .delete()
+  .eq('id', id);
 
-    if (error) throw error;
-
+if (error) throw error;
+    
     setRichieste((prev) => prev.filter((r) => r.id !== id));
 
     toast({
@@ -615,45 +618,37 @@ async function eliminaRichiesta(id: string) {
      <div className="flex justify-end gap-2">
   {isResponsabilePaghe && richiesta.stato === 'inviata' && (
     <>
-      <Button
-        size="sm"
-        className="h-8 bg-green-600 px-3 text-white hover:bg-green-700"
-        disabled={savingId === richiesta.id}
-        onClick={() => gestisciRichiesta(richiesta.id, 'approvata')}
-      >
-        Approva
-      </Button>
-
      <Button
-  size="sm"
-  className="h-8 bg-black px-3 text-white hover:bg-zinc-800"
-  disabled={savingId === richiesta.id}
-  onClick={() => gestisciRichiesta(richiesta.id, 'rifiutata')}
+  size="icon"
+  className="h-8 w-8 bg-green-600 text-white hover:bg-green-700"
 >
-  Rifiuta
+  <Check className="h-4 w-4" />
+</Button>
+
+ <Button
+  size="icon"
+  className="h-8 w-8 bg-black text-white hover:bg-zinc-800"
+>
+  <X className="h-4 w-4" />
 </Button>
     </>
   )}
 
   {isResponsabilePaghe && richiesta.stato === 'approvata' && (
-    <Button
-      size="sm"
-      className="h-8 bg-orange-500 px-3 text-white hover:bg-orange-600"
-      disabled={savingId === richiesta.id}
-      onClick={() => gestisciRichiesta(richiesta.id, 'revocata')}
-    >
-      Revoca
-    </Button>
+  <Button
+  size="icon"
+  className="h-8 w-8 bg-orange-500 text-white hover:bg-orange-600"
+>
+  <Undo2 className="h-4 w-4" />
+</Button>
   )}
        {isResponsabilePaghe && (
- <Button
-  size="sm"
+<Button
+  size="icon"
   variant="destructive"
-  className="h-8 px-3"
-  disabled={savingId === richiesta.id}
-  onClick={() => setDeleteId(richiesta.id)}
+  className="h-8 w-8"
 >
-  Elimina
+  <Trash2 className="h-4 w-4" />
 </Button>
 )}
 
