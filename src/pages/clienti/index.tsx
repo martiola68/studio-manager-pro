@@ -2715,68 +2715,7 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
          </div>
 
 <div>
-  <Label>Tipo Prestazione</Label>
 
-  <Select
-    value={filtroStampa.tipo_prestazione_id}
-    onValueChange={(v) =>
-      setFiltroStampa((prev) => ({
-        ...prev,
-        tipo_prestazione_id: v,
-      }))
-    }
-  >
-    <SelectTrigger>
-      <SelectValue />
-    </SelectTrigger>
-
-    <SelectContent>
-      <SelectItem value="tutti">
-        Tutti
-      </SelectItem>
-
-      {prestazioni.map((p) => (
-        <SelectItem
-          key={p.id}
-          value={p.id}
-        >
-          {safeString(p.descrizione)}
-        </SelectItem>
-      ))}
-    </SelectContent>
-  </Select>
-</div>
-
-<div>
-  <Label>Tipo Redditi</Label>
-
-  <Select
-    value={filtroStampa.tipo_redditi}
-    onValueChange={(v) =>
-      setFiltroStampa((prev) => ({
-        ...prev,
-        tipo_redditi: v,
-      }))
-    }
-  >
-    <SelectTrigger>
-      <SelectValue />
-    </SelectTrigger>
-
-    <SelectContent>
-      <SelectItem value="tutti">Tutti</SelectItem>
-      <SelectItem value="USC">USC</SelectItem>
-      <SelectItem value="USP">USP</SelectItem>
-      <SelectItem value="ENC">ENC</SelectItem>
-      <SelectItem value="UPF BASE">UPF BASE</SelectItem>
-      <SelectItem value="UPF ORD.">UPF ORD.</SelectItem>
-      <SelectItem value="UPF FORF.">UPF FORF.</SelectItem>
-      <SelectItem value="730">730</SelectItem>
-    </SelectContent>
-  </Select>
-</div>
-
-</div>
            
 <Label htmlFor="utente_payroll_id">
   Utente Payroll <span className="text-red-500">*</span>
@@ -3349,6 +3288,72 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
   </div>
 
 </div>
+
+</div>
+
+<div>
+  <Label>Tipo Prestazione</Label>
+
+  <Select
+    value={filtroStampa.tipo_prestazione_id}
+    onValueChange={(v) =>
+      setFiltroStampa((prev) => ({
+        ...prev,
+        tipo_prestazione_id: v,
+      }))
+    }
+  >
+    <SelectTrigger>
+      <SelectValue />
+    </SelectTrigger>
+
+    <SelectContent>
+      <SelectItem value="tutti">
+        Tutti
+      </SelectItem>
+
+      {prestazioni.map((p) => (
+        <SelectItem
+          key={p.id}
+          value={p.id}
+        >
+          {safeString(p.descrizione)}
+        </SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+</div>
+
+<div>
+  <Label>Tipo Redditi</Label>
+
+  <Select
+    value={filtroStampa.tipo_redditi}
+    onValueChange={(v) =>
+      setFiltroStampa((prev) => ({
+        ...prev,
+        tipo_redditi: v,
+      }))
+    }
+  >
+    <SelectTrigger>
+      <SelectValue />
+    </SelectTrigger>
+
+    <SelectContent>
+      <SelectItem value="tutti">Tutti</SelectItem>
+      <SelectItem value="USC">USC</SelectItem>
+      <SelectItem value="USP">USP</SelectItem>
+      <SelectItem value="ENC">ENC</SelectItem>
+      <SelectItem value="UPF BASE">UPF BASE</SelectItem>
+      <SelectItem value="UPF ORD.">UPF ORD.</SelectItem>
+      <SelectItem value="UPF FORF.">UPF FORF.</SelectItem>
+      <SelectItem value="730">730</SelectItem>
+    </SelectContent>
+  </Select>
+</div>
+
+</div>    
 
     <div className="flex justify-end gap-2 mt-6">
 
