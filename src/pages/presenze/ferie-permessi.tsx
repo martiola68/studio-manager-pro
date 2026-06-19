@@ -355,6 +355,45 @@ try {
 }
 }
 
+  async function eliminaRichiesta(id: string) {
+  try {
+    setSavingId(id);
+
+    const response = await fetch(
+      `/api/payroll/ferie-permessi/richieste/${id}/elimina`,
+      {
+        method: "DELETE",
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result?.error || "Impossibile eliminare la richiesta.");
+    }
+
+    setRichieste((prev) => prev.filter((r) => r.id !== id));
+    setDeleteId(null);
+
+    toast({
+      title: "Richiesta eliminata",
+      description: "La richiesta è stata eliminata definitivamente.",
+    });
+
+    await loadData();
+  } catch (error: any) {
+    console.error("Errore eliminazione richiesta:", error);
+
+    toast({
+      title: "Errore",
+      description: error?.message || "Errore durante l'eliminazione.",
+      variant: "destructive",
+    });
+  } finally {
+    setSavingId(null);
+  }
+}
+
   const dipendentiOptions = useMemo(() => {
     const map = new Map<string, string>();
 
