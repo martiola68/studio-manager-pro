@@ -1666,15 +1666,25 @@ params.set("studio_id", studioId);
 };
 
 const esportaListaClientiExcel = () => {
+  console.log("EXCEL CLICK");
+
   const query = buildQueryStampaClienti("excel");
+
+  console.log(query);
+
   window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
 };
 
 const esportaListaClientiPdf = () => {
+  console.log("PDF CLICK");
+
   const query = buildQueryStampaClienti("pdf");
+
+  console.log(query);
+
   window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
 };
-
+  
   return (
    <div className="w-full mx-auto py-8 px-6 max-w-[1800px]">
      {/* HEADER */}
