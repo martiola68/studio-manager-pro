@@ -3225,138 +3225,121 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
       </DialogTitle>
     </DialogHeader>
 
- <div className="grid grid-cols-2 gap-4">
+    <div className="grid grid-cols-2 gap-4">
+      <div>
+        <Label>Cliente</Label>
+        <Input value="SI" disabled />
+      </div>
 
-  <div>
-    <Label>Cliente</Label>
-    <Input value="SI" disabled />
-  </div>
+      <div>
+        <Label>Attivo</Label>
+        <Input value="SI" disabled />
+      </div>
 
-  <div>
-    <Label>Attivo</Label>
-    <Input value="SI" disabled />
-  </div>
-
-  <div>
-    <Label>Utente Fiscale</Label>
-    <Select
-      value={filtroStampa.utente_operatore_id}
-      onValueChange={(v) =>
-        setFiltroStampa((prev) => ({
-          ...prev,
-          utente_operatore_id: v,
-        }))
-      }
-    >
-      <SelectTrigger>
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="tutti">Tutti</SelectItem>
-        {utenti.map((u) => (
-          <SelectItem key={u.id} value={u.id}>
-            {safeString(u.nome)} {safeString(u.cognome)}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  </div>
-
-  <div>
-    <Label>Professionista Fiscale</Label>
-    <Select
-      value={filtroStampa.utente_professionista_id}
-      onValueChange={(v) =>
-        setFiltroStampa((prev) => ({
-          ...prev,
-          utente_professionista_id: v,
-        }))
-      }
-    >
-      <SelectTrigger>
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="tutti">Tutti</SelectItem>
-        {utenti.map((u) => (
-          <SelectItem key={u.id} value={u.id}>
-            {safeString(u.nome)} {safeString(u.cognome)}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  </div>
-
-</div>
-
-</div>
-
-<div>
-  <Label>Tipo Prestazione</Label>
-
-  <Select
-    value={filtroStampa.tipo_prestazione_id}
-    onValueChange={(v) =>
-      setFiltroStampa((prev) => ({
-        ...prev,
-        tipo_prestazione_id: v,
-      }))
-    }
-  >
-    <SelectTrigger>
-      <SelectValue />
-    </SelectTrigger>
-
-    <SelectContent>
-      <SelectItem value="tutti">
-        Tutti
-      </SelectItem>
-
-      {prestazioni.map((p) => (
-        <SelectItem
-          key={p.id}
-          value={p.id}
+      <div>
+        <Label>Utente Fiscale</Label>
+        <Select
+          value={filtroStampa.utente_operatore_id}
+          onValueChange={(v) =>
+            setFiltroStampa((prev) => ({
+              ...prev,
+              utente_operatore_id: v,
+            }))
+          }
         >
-          {safeString(p.descrizione)}
-        </SelectItem>
-      ))}
-    </SelectContent>
-  </Select>
-</div>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="tutti">Tutti</SelectItem>
+            {utenti.map((u) => (
+              <SelectItem key={u.id} value={u.id}>
+                {safeString(u.nome)} {safeString(u.cognome)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-<div>
-  <Label>Tipo Redditi</Label>
+      <div>
+        <Label>Professionista Fiscale</Label>
+        <Select
+          value={filtroStampa.utente_professionista_id}
+          onValueChange={(v) =>
+            setFiltroStampa((prev) => ({
+              ...prev,
+              utente_professionista_id: v,
+            }))
+          }
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="tutti">Tutti</SelectItem>
+            {utenti.map((u) => (
+              <SelectItem key={u.id} value={u.id}>
+                {safeString(u.nome)} {safeString(u.cognome)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-  <Select
-    value={filtroStampa.tipo_redditi}
-    onValueChange={(v) =>
-      setFiltroStampa((prev) => ({
-        ...prev,
-        tipo_redditi: v,
-      }))
-    }
-  >
-    <SelectTrigger>
-      <SelectValue />
-    </SelectTrigger>
+      <div>
+        <Label>Tipo Prestazione</Label>
+        <Select
+          value={filtroStampa.tipo_prestazione_id}
+          onValueChange={(v) =>
+            setFiltroStampa((prev) => ({
+              ...prev,
+              tipo_prestazione_id: v,
+            }))
+          }
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="tutti">Tutti</SelectItem>
+            {prestazioni.map((p) => (
+              <SelectItem key={p.id} value={p.id}>
+                {safeString(p.descrizione)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-    <SelectContent>
-      <SelectItem value="tutti">Tutti</SelectItem>
-      <SelectItem value="USC">USC</SelectItem>
-      <SelectItem value="USP">USP</SelectItem>
-      <SelectItem value="ENC">ENC</SelectItem>
-      <SelectItem value="UPF BASE">UPF BASE</SelectItem>
-      <SelectItem value="UPF ORD.">UPF ORD.</SelectItem>
-      <SelectItem value="UPF FORF.">UPF FORF.</SelectItem>
-      <SelectItem value="730">730</SelectItem>
-    </SelectContent>
-  </Select>
-</div>
-
-</div>    
+      <div>
+        <Label>Tipo Redditi</Label>
+        <Select
+          value={filtroStampa.tipo_redditi}
+          onValueChange={(v) =>
+            setFiltroStampa((prev) => ({
+              ...prev,
+              tipo_redditi: v,
+            }))
+          }
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="tutti">Tutti</SelectItem>
+            <SelectItem value="USC">USC</SelectItem>
+            <SelectItem value="USP">USP</SelectItem>
+            <SelectItem value="ENC">ENC</SelectItem>
+            <SelectItem value="UPF BASE">UPF BASE</SelectItem>
+            <SelectItem value="UPF ORD.">UPF ORD.</SelectItem>
+            <SelectItem value="UPF FORF.">UPF FORF.</SelectItem>
+            <SelectItem value="730">730</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
 
     <div className="flex justify-end gap-2 mt-6">
-
       <Button
         variant="outline"
         onClick={() => setShowStampaModal(false)}
@@ -3371,7 +3354,6 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
       <Button>
         PDF
       </Button>
-
     </div>
   </DialogContent>
 </Dialog>
