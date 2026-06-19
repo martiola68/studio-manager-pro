@@ -95,7 +95,7 @@ function statoBadge(stato: StatoRichiesta) {
 
 export default function FeriePermessiPage() {
   const router = useRouter();
-  const { toast } = useToast();
+ 
 
   const currentYear = new Date().getFullYear();
 
@@ -366,16 +366,9 @@ if (error) throw error;
     
     setRichieste((prev) => prev.filter((r) => r.id !== id));
 
-    toast({
-      title: 'Richiesta eliminata',
-      description: 'Record eliminato correttamente.',
-    });
+  alert('Richiesta eliminata correttamente');
   } catch (error: any) {
-    toast({
-      title: 'Errore eliminazione',
-      description: error?.message || 'Impossibile eliminare la richiesta.',
-      variant: 'destructive',
-    });
+  alert(error?.message || 'Impossibile eliminare la richiesta');
   } finally {
     setSavingId(null);
   }
