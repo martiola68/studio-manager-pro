@@ -289,7 +289,7 @@ const [filtroStampa, setFiltroStampa] = useState({
 
   const [utentiFiscali, setUtentiFiscali] = useState([]);
 const [professionisti, setProfessionisti] = useState([]);
-const [prestazioni, setPrestazioni] = useState([]);
+const [prestazioni, setPrestazioni] = useState<PrestazioneRow[]>([]);
 
 const [visuraPreviewOpen, setVisuraPreviewOpen] = useState(false);
 const [visuraClienteFields, setVisuraClienteFields] = useState<VisuraClienteField[]>([]);
