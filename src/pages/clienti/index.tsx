@@ -1678,8 +1678,9 @@ params.set("studio_id", studioIdEffettivo);
   params.set("utente_operatore_id", filtroStampa.utente_operatore_id);
   params.set("utente_professionista_id", filtroStampa.utente_professionista_id);
   params.set("tipo_prestazione_id", filtroStampa.tipo_prestazione_id);
-  params.set("tipo_redditi", filtroStampa.tipo_redditi);
-  params.set("settore_fiscale", filtroStampa.settore_fiscale);
+ params.set("tipo_redditi", filtroStampa.tipo_redditi);
+params.set("tipo_cliente", filtroStampa.tipo_cliente);
+params.set("settore_fiscale", filtroStampa.settore_fiscale);
   params.set("settore_lavoro", filtroStampa.settore_lavoro);
   params.set("settore_consulenza", filtroStampa.settore_consulenza);
 
@@ -2966,6 +2967,8 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
     </Select>
   </div>
 
+  
+
   <div className="flex items-center gap-2 h-10">
     <Checkbox
       checked={formData.soggetto_isa || false}
@@ -3399,6 +3402,27 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
           </SelectContent>
         </Select>
       </div>
+      <div>
+  <Label>Tipologia Cliente</Label>
+  <Select
+    value={filtroStampa.tipo_cliente}
+    onValueChange={(v) =>
+      setFiltroStampa((prev) => ({
+        ...prev,
+        tipo_cliente: v,
+      }))
+    }
+  >
+    <SelectTrigger>
+      <SelectValue />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="tutti">Tutti</SelectItem>
+      <SelectItem value="Persona fisica">Persona fisica</SelectItem>
+      <SelectItem value="Altro">Altro</SelectItem>
+    </SelectContent>
+  </Select>
+</div>
    <div>
         <Label>Settore Fiscale</Label>
         <Select
