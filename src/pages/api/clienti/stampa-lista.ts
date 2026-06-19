@@ -8,16 +8,20 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+function nomeCompleto(u: any) {
+  return `${u?.nome || ""} ${u?.cognome || ""}`.trim();
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     if (req.method !== "GET") {
       return res.status(405).json({ error: "Metodo non consentito" });
     }
 
-   const {
-  format,
-  studio_id,
-  utente_operatore_id,
+    const {
+      format,
+      studio_id,
+      utente_operatore_id,
       utente_professionista_id,
       tipo_prestazione_id,
       tipo_redditi,
@@ -59,7 +63,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (utente_professionista_id && utente_professionista_id !== "tutti") {
-      query = query.eq("utente_professionista_id", String(utente_professionista_id));
+      query = query.eq(
+        "utente_professionista_id",
+        String(utente_professionista_id)
+      );
     }
 
     if (tipo_prestazione_id && tipo_prestazione_id !== "tutti") {
@@ -85,153 +92,151 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data, error } = await query;
 
     if (error) {
-  console.error("Errore stampa lista clienti:", error);
-  return res.status(500).json({ error: error.message });
-}
-
-if (format === "excel") {
-  const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet("Clienti");
-
-  worksheet.columns = [
-    { header: "Codice Cliente", key: "cod_cliente", width: 18 },
-    { header: "Ragione Sociale", key: "ragione_sociale", width: 35 },
-    { header: "P.IVA", key: "partita_iva", width: 16 },
-    { header: "Codice Fiscale", key: "codice_fiscale", width: 18 },
-    { header: "Utente Fiscale", key: "utente_fiscale", width: 24 },
-    { header: "Professionista", key: "professionista", width: 24 },
-    { header: "Prestazione", key: "prestazione", width: 28 },
-    { header: "Tipo Redditi", key: "tipo_redditi", width: 14 },
-    { header: "Settore Fiscale", key: "settore_fiscale", width: 16 },
-    { header: "Settore Lavoro", key: "settore_lavoro", width: 16 },
-    { header: "Settore Consulenza", key: "settore_consulenza", width: 20 },
-  ];
-
-  (data ?? []).forEach((c: any) => {
-    worksheet.addRow({
-      cod_cliente: c.cod_cliente || "",
-      ragione_sociale: c.ragione_sociale || "",
-      partita_iva: c.partita_iva || "",
-      codice_fiscale: c.codice_fiscale || "",
-      utente_fiscale: `${c.utente_fiscale?.nome || ""} ${c.utente_fiscale?.cognome || ""}`.trim(),
-      professionista: `${c.professionista?.nome || ""} ${c.professionista?.cognome || ""}`.trim(),
-      prestazione: c.prestazione?.descrizione || "",
-      tipo_redditi: c.tipo_redditi || "",
-      settore_fiscale: c.settore_fiscale ? "SI" : "NO",
-      settore_lavoro: c.settore_lavoro ? "SI" : "NO",
-      settore_consulenza: c.settore_consulenza ? "SI" : "NO",
-    });
-  });
-
-  if (format === "pdf") {
-  const doc = new PDFDocument({
-    size: "A4",
-    layout: "landscape",
-    margin: 30,
-  });
-
-  res.setHeader("Content-Type", "application/pdf");
-  res.setHeader(
-    "Content-Disposition",
-    'attachment; filename="lista_clienti.pdf"'
-  );
-
-  doc.pipe(res);
-
-  doc.fontSize(16).text("STUDIO MANAGER PRO", { align: "center" });
-  doc.moveDown(0.5);
-  doc.fontSize(13).text("Lista Clienti", { align: "center" });
-  doc.moveDown(0.5);
-  doc.fontSize(9).text(`Data stampa: ${new Date().toLocaleDateString("it-IT")}`);
-  doc.moveDown();
-
-  const startX = 30;
-  let y = doc.y;
-
-  const columns = [
-    { label: "Cod.", x: startX, width: 60 },
-    { label: "Ragione Sociale", x: startX + 65, width: 180 },
-    { label: "Utente Fiscale", x: startX + 250, width: 110 },
-    { label: "Professionista", x: startX + 365, width: 110 },
-    { label: "Tipo Redditi", x: startX + 480, width: 70 },
-    { label: "Prestazione", x: startX + 555, width: 150 },
-  ];
-
-  doc.fontSize(8).font("Helvetica-Bold");
-
-  columns.forEach((col) => {
-    doc.text(col.label, col.x, y, {
-      width: col.width,
-      continued: false,
-    });
-  });
-
-  y += 16;
-  doc.moveTo(startX, y).lineTo(810, y).stroke();
-  y += 6;
-
-  doc.font("Helvetica").fontSize(7);
-
-  (data ?? []).forEach((c: any) => {
-    if (y > 540) {
-      doc.addPage();
-      y = 40;
+      console.error("Errore stampa lista clienti:", error);
+      return res.status(500).json({ error: error.message });
     }
 
-    const utenteFiscale = `${c.utente_fiscale?.nome || ""} ${
-      c.utente_fiscale?.cognome || ""
-    }`.trim();
+    const clienti = data ?? [];
 
-    const professionista = `${c.professionista?.nome || ""} ${
-      c.professionista?.cognome || ""
-    }`.trim();
+    if (format === "excel") {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Clienti");
 
-    const row = [
-      c.cod_cliente || "",
-      c.ragione_sociale || "",
-      utenteFiscale,
-      professionista,
-      c.tipo_redditi || "",
-      c.prestazione?.descrizione || "",
-    ];
+      worksheet.columns = [
+        { header: "Codice Cliente", key: "cod_cliente", width: 18 },
+        { header: "Ragione Sociale", key: "ragione_sociale", width: 35 },
+        { header: "P.IVA", key: "partita_iva", width: 16 },
+        { header: "Codice Fiscale", key: "codice_fiscale", width: 18 },
+        { header: "Utente Fiscale", key: "utente_fiscale", width: 24 },
+        { header: "Professionista", key: "professionista", width: 24 },
+        { header: "Prestazione", key: "prestazione", width: 28 },
+        { header: "Tipo Redditi", key: "tipo_redditi", width: 14 },
+        { header: "Settore Fiscale", key: "settore_fiscale", width: 16 },
+        { header: "Settore Lavoro", key: "settore_lavoro", width: 16 },
+        { header: "Settore Consulenza", key: "settore_consulenza", width: 20 },
+      ];
 
-    columns.forEach((col, index) => {
-      doc.text(row[index], col.x, y, {
-        width: col.width,
-        height: 20,
-        ellipsis: true,
+      clienti.forEach((c: any) => {
+        worksheet.addRow({
+          cod_cliente: c.cod_cliente || "",
+          ragione_sociale: c.ragione_sociale || "",
+          partita_iva: c.partita_iva || "",
+          codice_fiscale: c.codice_fiscale || "",
+          utente_fiscale: nomeCompleto(c.utente_fiscale),
+          professionista: nomeCompleto(c.professionista),
+          prestazione: c.prestazione?.descrizione || "",
+          tipo_redditi: c.tipo_redditi || "",
+          settore_fiscale: c.settore_fiscale ? "SI" : "NO",
+          settore_lavoro: c.settore_lavoro ? "SI" : "NO",
+          settore_consulenza: c.settore_consulenza ? "SI" : "NO",
+        });
       });
-    });
 
-    y += 18;
-  });
+      worksheet.getRow(1).font = { bold: true };
+      worksheet.views = [{ state: "frozen", ySplit: 1 }];
 
-  doc.end();
-  return;
-}
+      const buffer = await workbook.xlsx.writeBuffer();
 
-  worksheet.getRow(1).font = { bold: true };
-  worksheet.views = [{ state: "frozen", ySplit: 1 }];
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      );
+      res.setHeader(
+        "Content-Disposition",
+        'attachment; filename="lista_clienti.xlsx"'
+      );
 
-  const buffer = await workbook.xlsx.writeBuffer();
+      return res.status(200).send(Buffer.from(buffer));
+    }
 
-  res.setHeader(
-    "Content-Type",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-  );
+    if (format === "pdf") {
+      const doc = new PDFDocument({
+        size: "A4",
+        layout: "landscape",
+        margin: 30,
+      });
 
-  res.setHeader(
-    "Content-Disposition",
-    'attachment; filename="lista_clienti.xlsx"'
-  );
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        'attachment; filename="lista_clienti.pdf"'
+      );
 
-  return res.status(200).send(Buffer.from(buffer));
-}
-    
-      return res.status(200).json({
+      doc.pipe(res);
+
+      doc.fontSize(16).text("STUDIO MANAGER PRO", { align: "center" });
+      doc.moveDown(0.5);
+      doc.fontSize(13).text("Lista Clienti", { align: "center" });
+      doc.moveDown(0.5);
+      doc
+        .fontSize(9)
+        .text(`Data stampa: ${new Date().toLocaleDateString("it-IT")}`);
+      doc.moveDown();
+
+      const startX = 30;
+      let y = doc.y;
+
+      const columns = [
+        { label: "Cod.", x: startX, width: 60 },
+        { label: "Ragione Sociale", x: startX + 65, width: 180 },
+        { label: "Utente Fiscale", x: startX + 250, width: 110 },
+        { label: "Professionista", x: startX + 365, width: 110 },
+        { label: "Tipo Redditi", x: startX + 480, width: 70 },
+        { label: "Prestazione", x: startX + 555, width: 150 },
+      ];
+
+      const drawHeader = () => {
+        doc.fontSize(8).font("Helvetica-Bold");
+
+        columns.forEach((col) => {
+          doc.text(col.label, col.x, y, {
+            width: col.width,
+          });
+        });
+
+        y += 16;
+        doc.moveTo(startX, y).lineTo(810, y).stroke();
+        y += 6;
+        doc.font("Helvetica").fontSize(7);
+      };
+
+      drawHeader();
+
+      clienti.forEach((c: any) => {
+        if (y > 540) {
+          doc.addPage();
+          y = 40;
+          drawHeader();
+        }
+
+        const row = [
+          c.cod_cliente || "",
+          c.ragione_sociale || "",
+          nomeCompleto(c.utente_fiscale),
+          nomeCompleto(c.professionista),
+          c.tipo_redditi || "",
+          c.prestazione?.descrizione || "",
+        ];
+
+        columns.forEach((col, index) => {
+          doc.text(row[index], col.x, y, {
+            width: col.width,
+            height: 20,
+            ellipsis: true,
+          });
+        });
+
+        y += 18;
+      });
+
+      doc.end();
+      return;
+    }
+
+    return res.status(200).json({
       success: true,
-      count: data?.length ?? 0,
-      clienti: data ?? [],
+      count: clienti.length,
+      clienti,
     });
   } catch (error: any) {
     console.error("Errore API stampa lista clienti:", error);
