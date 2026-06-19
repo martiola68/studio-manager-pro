@@ -109,6 +109,9 @@ const [motivoRevoca, setMotivoRevoca] = useState<Record<string, string>>({});
   const [filtroAnno, setFiltroAnno] = useState<string>(String(currentYear));
   const [filtroStato, setFiltroStato] = useState<string>('tutti');
 
+      const [azioniInCorso, setAzioniInCorso] = useState<Set<string>>(new Set());
+
+
   useEffect(() => {
     void loadData();
   }, []);
@@ -219,9 +222,12 @@ const [motivoRevoca, setMotivoRevoca] = useState<Record<string, string>>({});
     id: string,
     azione: 'approvata' | 'rifiutata' | 'revocata',
   ) {
-    try {
-      setSavingId(id);
+  if (azioniInCorso.has(id)) return;
 
+setAzioniInCorso(prev => new Set(prev).add(id));
+
+try {
+  setSavingId(id);
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -269,13 +275,23 @@ const [motivoRevoca, setMotivoRevoca] = useState<Record<string, string>>({});
         variant: 'destructive',
       });
     } finally {
-      setSavingId(null);
-    }
+  setSavingId(null);
+
+  setAzioniInCorso(prev => {
+    const next = new Set(prev);
+    next.delete(id);
+    return next;
+  });
+}
   }
 
   async function richiediRevoca(id: string) {
-  try {
-    setSavingId(id);
+ if (azioniInCorso.has(id)) return;
+
+setAzioniInCorso(prev => new Set(prev).add(id));
+
+try {
+  setSavingId(id);
 
     const motivo = motivoRevoca[id]?.trim();
 
@@ -322,8 +338,15 @@ const [motivoRevoca, setMotivoRevoca] = useState<Record<string, string>>({});
       variant: 'destructive',
     });
   } finally {
-    setSavingId(null);
-  }
+  finally {
+  setSavingId(null);
+
+  setAzioniInCorso(prev => {
+    const next = new Set(prev);
+    next.delete(id);
+    return next;
+  });
+}
 }
 
   const dipendentiOptions = useMemo(() => {
