@@ -112,11 +112,12 @@ Mancano ancora ${mancanti} giornat${mancanti === 1 ? "a" : "e"}.
 Accedi a Studio Manager Pro e completa la compilazione delle presenze.
 `.trim();
 
-    const emailResult = await sendEmailServer({
+const emailResult = await sendEmailServer({
+  senderUserId: dipendente.id,
+  microsoftConnectionId: "",
   to: dipendente.email,
   subject,
   html,
-  text,
 });
 
       risultati.push({
