@@ -18,17 +18,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(405).json({ error: "Metodo non consentito" });
     }
 
-    const {
-      format,
-      studio_id,
-      utente_operatore_id,
-      utente_professionista_id,
-      tipo_prestazione_id,
-      tipo_redditi,
-      settore_fiscale,
-      settore_lavoro,
-      settore_consulenza,
-    } = req.query;
+  const {
+  format,
+  studio_id,
+  utente_operatore_id,
+  utente_professionista_id,
+  tipo_prestazione_id,
+  tipo_redditi,
+  tipo_cliente,
+  settore_fiscale,
+  settore_lavoro,
+  settore_consulenza,
+} = req.query;
 
     if (!studio_id || typeof studio_id !== "string") {
       return res.status(400).json({ error: "studio_id mancante" });
@@ -37,13 +38,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let query = supabase
       .from("tbclienti")
       .select(`
-        id,
-        cod_cliente,
-        ragione_sociale,
-        partita_iva,
-        codice_fiscale,
-        tipo_redditi,
-        settore_fiscale,
+      id,
+cod_cliente,
+ragione_sociale,
+partita_iva,
+codice_fiscale,
+tipo_cliente,
+tipo_redditi,
+settore_fiscale,
         settore_lavoro,
         settore_consulenza,
         utente_operatore_id,
@@ -73,11 +75,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       query = query.eq("tipo_prestazione_id", String(tipo_prestazione_id));
     }
 
-    if (tipo_redditi && tipo_redditi !== "tutti") {
-      query = query.eq("tipo_redditi", String(tipo_redditi));
-    }
+   if (tipo_redditi && tipo_redditi !== "tutti") {
+  query = query.eq("tipo_redditi", String(tipo_redditi));
+}
 
-    if (settore_fiscale) {
+if (tipo_cliente && tipo_cliente !== "tutti") {
+  query = query.eq("tipo_cliente", String(tipo_cliente));
+}
+
+if (settore_fiscale) {
       query = query.eq("settore_fiscale", settore_fiscale === "true");
     }
 
