@@ -337,8 +337,7 @@ try {
       description: error?.message || 'Impossibile inviare la richiesta di revoca.',
       variant: 'destructive',
     });
-  } finally {
-  finally {
+  }  finally {
   setSavingId(null);
 
   setAzioniInCorso(prev => {
@@ -347,6 +346,41 @@ try {
     return next;
   });
 }
+}
+
+  async function eliminaRichiesta(id: string) {
+  const conferma = confirm(
+    'Eliminare definitivamente questa richiesta?'
+  );
+
+  if (!conferma) return;
+
+  try {
+    setSavingId(id);
+
+    const { error } = await (supabase as any)
+      .from('tbferie_permessi_richieste')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+
+    toast({
+      title: 'Richiesta eliminata',
+      description: 'Record eliminato correttamente.',
+    });
+
+    await loadData();
+  } catch (error: any) {
+    toast({
+      title: 'Errore',
+      description:
+        error?.message || 'Impossibile eliminare la richiesta.',
+      variant: 'destructive',
+    });
+  } finally {
+    setSavingId(null);
+  }
 }
 
   const dipendentiOptions = useMemo(() => {
@@ -617,6 +651,17 @@ try {
       Revoca
     </Button>
   )}
+       {isResponsabilePaghe && (
+  <Button
+    size="sm"
+    variant="destructive"
+    className="h-8 px-3"
+    disabled={savingId === richiesta.id}
+    onClick={() => eliminaRichiesta(richiesta.id)}
+  >
+    Elimina
+  </Button>
+)}
 
        {!isResponsabilePaghe &&
   richiesta.stato === 'approvata' &&
