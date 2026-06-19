@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
 import {
   Check,
   X,
@@ -95,7 +96,8 @@ function statoBadge(stato: StatoRichiesta) {
 
 export default function FeriePermessiPage() {
   const router = useRouter();
- 
+
+  const { toast } = useToast();
 
   const currentYear = new Date().getFullYear();
 
