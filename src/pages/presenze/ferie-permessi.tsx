@@ -110,7 +110,7 @@ const [motivoRevoca, setMotivoRevoca] = useState<Record<string, string>>({});
   const [filtroStato, setFiltroStato] = useState<string>('tutti');
 
       const [azioniInCorso, setAzioniInCorso] = useState<Set<string>>(new Set());
-
+const [deleteId, setDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     void loadData();
@@ -349,11 +349,7 @@ try {
 }
 
   async function eliminaRichiesta(id: string) {
-  const conferma = confirm(
-    'Eliminare definitivamente questa richiesta?'
-  );
 
-  if (!conferma) return;
 
   try {
     setSavingId(id);
@@ -652,15 +648,15 @@ try {
     </Button>
   )}
        {isResponsabilePaghe && (
-  <Button
-    size="sm"
-    variant="destructive"
-    className="h-8 px-3"
-    disabled={savingId === richiesta.id}
-    onClick={() => eliminaRichiesta(richiesta.id)}
-  >
-    Elimina
-  </Button>
+ <Button
+  size="sm"
+  variant="destructive"
+  className="h-8 px-3"
+  disabled={savingId === richiesta.id}
+  onClick={() => setDeleteId(richiesta.id)}
+>
+  Elimina
+</Button>
 )}
 
        {!isResponsabilePaghe &&
@@ -717,6 +713,43 @@ try {
           ))}
         </div>
       )}
+      {deleteId && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div className="w-[500px] rounded-lg bg-white p-6 shadow-xl">
+      <h3 className="mb-4 text-lg font-semibold text-red-600">
+        Eliminazione richiesta
+      </h3>
+
+      <p className="mb-4 text-sm">
+        Stai per eliminare definitivamente una richiesta di ferie/permesso.
+      </p>
+
+      <p className="mb-6 text-sm font-medium text-red-600">
+        L'operazione NON è reversibile.
+      </p>
+
+      <div className="flex justify-end gap-2">
+        <Button
+          variant="outline"
+          onClick={() => setDeleteId(null)}
+        >
+          Annulla
+        </Button>
+
+        <Button
+          variant="destructive"
+          disabled={savingId === deleteId}
+          onClick={async () => {
+            await eliminaRichiesta(deleteId);
+            setDeleteId(null);
+          }}
+        >
+          Elimina definitivamente
+        </Button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }
