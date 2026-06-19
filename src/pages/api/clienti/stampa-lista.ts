@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
+import ExcelJS from "exceljs";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -12,9 +13,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(405).json({ error: "Metodo non consentito" });
     }
 
-    const {
-      studio_id,
-      utente_operatore_id,
+   const {
+  format,
+  studio_id,
+  utente_operatore_id,
       utente_professionista_id,
       tipo_prestazione_id,
       tipo_redditi,
@@ -85,11 +87,69 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data, error } = await query;
 
     if (error) {
-      console.error("Errore stampa lista clienti:", error);
-      return res.status(500).json({ error: error.message });
-    }
+  console.error("Errore stampa lista clienti:", error);
+  return res.status(500).json({ error: error.message });
+}
 
-    return res.status(200).json({
+if (format === "excel") {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Clienti");
+
+  worksheet.columns = [
+    { header: "Codice Cliente", key: "cod_cliente", width: 18 },
+    { header: "Ragione Sociale", key: "ragione_sociale", width: 35 },
+    { header: "P.IVA", key: "partita_iva", width: 16 },
+    { header: "Codice Fiscale", key: "codice_fiscale", width: 18 },
+    { header: "Email", key: "email", width: 28 },
+    { header: "PEC", key: "pec", width: 28 },
+    { header: "Telefono", key: "telefono", width: 16 },
+    { header: "Utente Fiscale", key: "utente_fiscale", width: 24 },
+    { header: "Professionista", key: "professionista", width: 24 },
+    { header: "Prestazione", key: "prestazione", width: 28 },
+    { header: "Tipo Redditi", key: "tipo_redditi", width: 14 },
+    { header: "Settore Fiscale", key: "settore_fiscale", width: 16 },
+    { header: "Settore Lavoro", key: "settore_lavoro", width: 16 },
+    { header: "Settore Consulenza", key: "settore_consulenza", width: 20 },
+  ];
+
+  (data ?? []).forEach((c: any) => {
+    worksheet.addRow({
+      cod_cliente: c.cod_cliente || "",
+      ragione_sociale: c.ragione_sociale || "",
+      partita_iva: c.partita_iva || "",
+      codice_fiscale: c.codice_fiscale || "",
+      email: c.email || "",
+      pec: c.pec || "",
+      telefono: c.telefono || "",
+      utente_fiscale: `${c.utente_fiscale?.nome || ""} ${c.utente_fiscale?.cognome || ""}`.trim(),
+      professionista: `${c.professionista?.nome || ""} ${c.professionista?.cognome || ""}`.trim(),
+      prestazione: c.prestazione?.descrizione || "",
+      tipo_redditi: c.tipo_redditi || "",
+      settore_fiscale: c.settore_fiscale ? "SI" : "NO",
+      settore_lavoro: c.settore_lavoro ? "SI" : "NO",
+      settore_consulenza: c.settore_consulenza ? "SI" : "NO",
+    });
+  });
+
+  worksheet.getRow(1).font = { bold: true };
+  worksheet.views = [{ state: "frozen", ySplit: 1 }];
+
+  const buffer = await workbook.xlsx.writeBuffer();
+
+  res.setHeader(
+    "Content-Type",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  );
+
+  res.setHeader(
+    "Content-Disposition",
+    'attachment; filename="lista_clienti.xlsx"'
+  );
+
+  return res.status(200).send(Buffer.from(buffer));
+}
+    
+      return res.status(200).json({
       success: true,
       count: data?.length ?? 0,
       clienti: data ?? [],
