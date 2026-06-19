@@ -51,6 +51,7 @@ const oggiKey = toDate(oggi);
 const { count: giorniLavorativiTrascorsi, error: giorniError } = await supabase
   .from("tbpresenze_dipendenti")
   .select("data_presenza", { count: "exact", head: true })
+  .eq("utente_id", dipendente.id)
   .gte("data_presenza", inizioMese)
   .lte("data_presenza", oggiKey);
 
