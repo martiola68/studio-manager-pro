@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 import ExcelJS from "exceljs";
+import PDFDocument from "pdfkit";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -37,9 +38,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ragione_sociale,
         partita_iva,
         codice_fiscale,
-        email,
-        pec,
-        telefono,
         tipo_redditi,
         settore_fiscale,
         settore_lavoro,
@@ -100,9 +98,6 @@ if (format === "excel") {
     { header: "Ragione Sociale", key: "ragione_sociale", width: 35 },
     { header: "P.IVA", key: "partita_iva", width: 16 },
     { header: "Codice Fiscale", key: "codice_fiscale", width: 18 },
-    { header: "Email", key: "email", width: 28 },
-    { header: "PEC", key: "pec", width: 28 },
-    { header: "Telefono", key: "telefono", width: 16 },
     { header: "Utente Fiscale", key: "utente_fiscale", width: 24 },
     { header: "Professionista", key: "professionista", width: 24 },
     { header: "Prestazione", key: "prestazione", width: 28 },
@@ -118,9 +113,6 @@ if (format === "excel") {
       ragione_sociale: c.ragione_sociale || "",
       partita_iva: c.partita_iva || "",
       codice_fiscale: c.codice_fiscale || "",
-      email: c.email || "",
-      pec: c.pec || "",
-      telefono: c.telefono || "",
       utente_fiscale: `${c.utente_fiscale?.nome || ""} ${c.utente_fiscale?.cognome || ""}`.trim(),
       professionista: `${c.professionista?.nome || ""} ${c.professionista?.cognome || ""}`.trim(),
       prestazione: c.prestazione?.descrizione || "",
@@ -130,6 +122,93 @@ if (format === "excel") {
       settore_consulenza: c.settore_consulenza ? "SI" : "NO",
     });
   });
+
+  if (format === "pdf") {
+  const doc = new PDFDocument({
+    size: "A4",
+    layout: "landscape",
+    margin: 30,
+  });
+
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader(
+    "Content-Disposition",
+    'attachment; filename="lista_clienti.pdf"'
+  );
+
+  doc.pipe(res);
+
+  doc.fontSize(16).text("STUDIO MANAGER PRO", { align: "center" });
+  doc.moveDown(0.5);
+  doc.fontSize(13).text("Lista Clienti", { align: "center" });
+  doc.moveDown(0.5);
+  doc.fontSize(9).text(`Data stampa: ${new Date().toLocaleDateString("it-IT")}`);
+  doc.moveDown();
+
+  const startX = 30;
+  let y = doc.y;
+
+  const columns = [
+    { label: "Cod.", x: startX, width: 60 },
+    { label: "Ragione Sociale", x: startX + 65, width: 180 },
+    { label: "Utente Fiscale", x: startX + 250, width: 110 },
+    { label: "Professionista", x: startX + 365, width: 110 },
+    { label: "Tipo Redditi", x: startX + 480, width: 70 },
+    { label: "Prestazione", x: startX + 555, width: 150 },
+  ];
+
+  doc.fontSize(8).font("Helvetica-Bold");
+
+  columns.forEach((col) => {
+    doc.text(col.label, col.x, y, {
+      width: col.width,
+      continued: false,
+    });
+  });
+
+  y += 16;
+  doc.moveTo(startX, y).lineTo(810, y).stroke();
+  y += 6;
+
+  doc.font("Helvetica").fontSize(7);
+
+  (data ?? []).forEach((c: any) => {
+    if (y > 540) {
+      doc.addPage();
+      y = 40;
+    }
+
+    const utenteFiscale = `${c.utente_fiscale?.nome || ""} ${
+      c.utente_fiscale?.cognome || ""
+    }`.trim();
+
+    const professionista = `${c.professionista?.nome || ""} ${
+      c.professionista?.cognome || ""
+    }`.trim();
+
+    const row = [
+      c.cod_cliente || "",
+      c.ragione_sociale || "",
+      utenteFiscale,
+      professionista,
+      c.tipo_redditi || "",
+      c.prestazione?.descrizione || "",
+    ];
+
+    columns.forEach((col, index) => {
+      doc.text(row[index], col.x, y, {
+        width: col.width,
+        height: 20,
+        ellipsis: true,
+      });
+    });
+
+    y += 18;
+  });
+
+  doc.end();
+  return;
+}
 
   worksheet.getRow(1).font = { bold: true };
   worksheet.views = [{ state: "frozen", ySplit: 1 }];
