@@ -359,16 +359,40 @@ async function eliminaRichiesta(id: string) {
   try {
     setSavingId(id);
 
-  const { error } = await (supabase as any)
-  .from('tbferie_permessi_richieste')
-  .delete()
-  .eq('id', id);
+    const supabase = getSupabaseClient();
 
-if (error) throw error;
-    
+    const { data, error } = await supabase
+      .from("tbferie_permessi_richieste")
+      .delete()
+      .eq("id", id)
+      .select("id");
+
+    if (error) {
+      console.error("Errore eliminazione richiesta:", error);
+      alert(error.message || "Impossibile eliminare la richiesta.");
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      alert(
+        "Nessuna richiesta eliminata. Probabile blocco RLS o record non autorizzato."
+      );
+      return;
+    }
+
     setRichieste((prev) => prev.filter((r) => r.id !== id));
+    setDeleteId(null);
 
-  alert('Richiesta eliminata correttamente');
+    alert("Richiesta eliminata correttamente");
+
+    await loadData();
+  } catch (error: any) {
+    console.error("Errore eliminazione richiesta:", error);
+    alert(error?.message || "Errore durante l'eliminazione.");
+  } finally {
+    setSavingId(null);
+  }
+}
   } catch (error: any) {
   alert(error?.message || 'Impossibile eliminare la richiesta');
   } finally {
