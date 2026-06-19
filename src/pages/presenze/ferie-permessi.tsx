@@ -359,9 +359,7 @@ async function eliminaRichiesta(id: string) {
   try {
     setSavingId(id);
 
-    const supabase = getSupabaseClient();
-
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("tbferie_permessi_richieste")
       .delete()
       .eq("id", id)
