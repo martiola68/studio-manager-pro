@@ -353,7 +353,8 @@ setVisuraPreviewOpen(true);
   const [cassettiFiscali, setCassettiFiscali] = useState<CassettoFiscaleRow[]>(
     []
   );
-  const [prestazioni, setPrestazioni] = useState<PrestazioneRow[]>([]);
+
+  //const [prestazioni, setPrestazioni] = useState<PrestazioneRow[]>([]);
 const [loading, setLoading] = useState(true);
 
   const [errors, setErrors] = useState<Record<string, boolean>>({});
