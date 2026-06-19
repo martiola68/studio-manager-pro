@@ -3337,6 +3337,71 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
           </SelectContent>
         </Select>
       </div>
+   <div>
+        <Label>Settore Fiscale</Label>
+        <Select
+          value={filtroStampa.settore_fiscale}
+          onValueChange={(v) =>
+            setFiltroStampa((prev) => ({
+              ...prev,
+              settore_fiscale: v,
+            }))
+          }
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="tutti">Tutti</SelectItem>
+            <SelectItem value="true">SI</SelectItem>
+            <SelectItem value="false">NO</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <Label>Settore Lavoro</Label>
+        <Select
+          value={filtroStampa.settore_lavoro}
+          onValueChange={(v) =>
+            setFiltroStampa((prev) => ({
+              ...prev,
+              settore_lavoro: v,
+            }))
+          }
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="tutti">Tutti</SelectItem>
+            <SelectItem value="true">SI</SelectItem>
+            <SelectItem value="false">NO</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <Label>Settore Consulenza</Label>
+        <Select
+          value={filtroStampa.settore_consulenza}
+          onValueChange={(v) =>
+            setFiltroStampa((prev) => ({
+              ...prev,
+              settore_consulenza: v,
+            }))
+          }
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="tutti">Tutti</SelectItem>
+            <SelectItem value="true">SI</SelectItem>
+            <SelectItem value="false">NO</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
     </div>
 
     <div className="flex justify-end gap-2 mt-6">
