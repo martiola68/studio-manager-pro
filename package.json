@@ -65,7 +65,8 @@
     "papaparse": "^5.5.3",
     "pg": "^8.13.1",
     "pdf-parse": "^2.4.5",
-    "pdfjs-dist": "^4.0.379",
+"pdfjs-dist": "^4.0.379",
+"pdfkit": "^0.17.2",
     "react": "^18.3.1",
     "react-day-picker": "^8.10.1",
     "react-dom": "^18.3.1",
@@ -101,6 +102,7 @@
     "basic-ftp": "^5.2.1",
     "flatted": "^3.3.4",
     "minimatch": "^10.2.3",
+    "@types/pdfkit": "^0.17.3",
     "path-to-regexp": "^8.3.2"
   }
 }
