@@ -43,10 +43,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       if (countError) throw countError;
 
-      const presenzeCompilate = count || 0;
-      if (presenzeCompilate >= 4) continue;
+     const presenzeCompilate = count || 0;
+if (presenzeCompilate >= 4) continue;
 
-      const mancanti = 4 - presenzeCompilate;
+const oggiKey = toDate(oggi);
+
+const { count: giorniLavorativiTrascorsi, error: giorniError } = await supabase
+  .from("tbpresenze_dipendenti")
+  .select("data_presenza", { count: "exact", head: true })
+  .gte("data_presenza", inizioMese)
+  .lte("data_presenza", oggiKey);
+
+if (giorniError) throw giorniError;
+
+const mancanti = Math.max(
+  Number(giorniLavorativiTrascorsi || 0) - presenzeCompilate,
+  4 - presenzeCompilate
+);
 
       incompleti.push({
         utente_id: dipendente.id,
