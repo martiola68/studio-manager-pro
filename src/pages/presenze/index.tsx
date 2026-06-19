@@ -1351,7 +1351,7 @@ const isFutureDay = day.date > todayKey;
       </h2>
 
       <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
-  Totale giornate non compilate:
+  Totale completamenti minimi richiesti:
   <strong className="ml-1">
     {solleciti.reduce(
       (tot, s) => tot + Number(s.mancanti || 0),
@@ -1372,8 +1372,8 @@ const isFutureDay = day.date > todayKey;
                 <th className="p-2 text-center">Invia</th>
                 <th className="p-2 text-left">Dipendente</th>
                 <th className="p-2 text-left">Email</th>
-                <th className="p-2 text-center">Compilate</th>
-                <th className="p-2 text-center">Mancanti</th>
+               <th className="p-2 text-center">Compilate</th>
+              <th className="p-2 text-center">Da completare per soglia</th>
                 <th className="p-2 text-center">Priorità</th>
               </tr>
             </thead>
