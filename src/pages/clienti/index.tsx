@@ -3223,19 +3223,69 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
       </DialogTitle>
     </DialogHeader>
 
-    <div className="grid grid-cols-2 gap-4">
+ <div className="grid grid-cols-2 gap-4">
 
-      <div>
-        <Label>Cliente</Label>
-        <Input value="SI" disabled />
-      </div>
+  <div>
+    <Label>Cliente</Label>
+    <Input value="SI" disabled />
+  </div>
 
-      <div>
-        <Label>Attivo</Label>
-        <Input value="SI" disabled />
-      </div>
+  <div>
+    <Label>Attivo</Label>
+    <Input value="SI" disabled />
+  </div>
 
-    </div>
+  <div>
+    <Label>Utente Fiscale</Label>
+    <Select
+      value={filtroStampa.utente_operatore_id}
+      onValueChange={(v) =>
+        setFiltroStampa((prev) => ({
+          ...prev,
+          utente_operatore_id: v,
+        }))
+      }
+    >
+      <SelectTrigger>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="tutti">Tutti</SelectItem>
+        {utenti.map((u) => (
+          <SelectItem key={u.id} value={u.id}>
+            {safeString(u.nome)} {safeString(u.cognome)}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  </div>
+
+  <div>
+    <Label>Professionista Fiscale</Label>
+    <Select
+      value={filtroStampa.utente_professionista_id}
+      onValueChange={(v) =>
+        setFiltroStampa((prev) => ({
+          ...prev,
+          utente_professionista_id: v,
+        }))
+      }
+    >
+      <SelectTrigger>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="tutti">Tutti</SelectItem>
+        {utenti.map((u) => (
+          <SelectItem key={u.id} value={u.id}>
+            {safeString(u.nome)} {safeString(u.cognome)}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  </div>
+
+</div>
 
     <div className="flex justify-end gap-2 mt-6">
 
