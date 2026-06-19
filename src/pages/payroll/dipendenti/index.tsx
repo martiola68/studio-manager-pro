@@ -109,14 +109,13 @@ const primoGiornoMese = new Date(
 
 const [{ data, error }, { data: qualificheData, error: qualificheError }] =
   await Promise.all([
-    supabase
-      .from('tbdipendenti')
-      .select('*')
-      .eq('studio_id', user.studio_id)
-      .eq('tipo_rapporto', 'Dipendente')
-      .or(`data_cessazione.is.null,data_cessazione.gte.${primoGiornoMese}`)
-      .order('cognome', { ascending: true })
-      .order('nome', { ascending: true }),
+   supabase
+  .from('tbdipendenti')
+  .select('*')
+  .eq('studio_id', user.studio_id)
+  .or(`data_cessazione.is.null,data_cessazione.gte.${primoGiornoMese}`)
+  .order('cognome', { ascending: true })
+  .order('nome', { ascending: true })
 
     supabase
       .from('tbpayroll_qualifiche')
