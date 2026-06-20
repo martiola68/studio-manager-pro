@@ -280,6 +280,9 @@ function getPresenceHours(code: string, dailyHours: number) {
     return dailyHours;
   }
 
+  if (code === 'AL1') return 1;
+  if (code === 'AL2') return 2;
+
   if (isPermessoCode(code) || isPermesso104Code(code)) {
     return getPermessoHours(code);
   }
@@ -291,6 +294,9 @@ function getXmlGiustificativo(code: string) {
   if (code === 'Pp' || code === 'Ps') return '01';
   if (code === 'F') return 'FE';
   if (code === 'M') return 'MA';
+
+  if (code === 'AL1' || code === 'AL2') return 'AL';
+
   if (isPermessoCode(code)) return 'RL';
   if (isPermesso104Code(code)) return 'PG';
 
@@ -880,10 +886,11 @@ if (rowsToUpsert.length === 0 && rowsToDelete.length === 0) {
               if (!code) return [];
 
               const movements: string[] = [];
-              const isPermesso = isPermessoCode(code);
-              const isPermesso104 = isPermesso104Code(code);
+             const isPermesso = isPermessoCode(code);
+const isPermesso104 = isPermesso104Code(code);
+const isAllattamento = code === 'AL1' || code === 'AL2';
 
-              if (isPermesso || isPermesso104) {
+if (isPermesso || isPermesso104 || isAllattamento) {
                 const orePermesso = getPresenceHours(code, dailyHours);
                 const oreLavorate = Math.max(0, dailyHours - orePermesso);
 
@@ -892,7 +899,11 @@ if (rowsToUpsert.length === 0 && rowsToDelete.length === 0) {
                 }
 
                 movements.push(
-                  createXmlMovimento(day.date, isPermesso104 ? 'PG' : 'RL', orePermesso),
+                 createXmlMovimento(
+  day.date,
+  isAllattamento ? 'AL' : isPermesso104 ? 'PG' : 'RL',
+  orePermesso,
+),
                 );
 
                 return movements;
