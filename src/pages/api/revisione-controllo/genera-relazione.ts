@@ -81,11 +81,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq("id", controllo.cliente_id)
       .single();
 
-    const { data: soggetti } = await supabaseAdmin
-      .from("tbrevisione_soggetti")
-      .select("*")
-      .eq("incarico_id", controllo.incarico_id)
-      .eq("attivo", true);
+   const { data: checklist } = await supabaseAdmin
+  .from("tbrevisione_checklist")
+  .select("*")
+  .eq("controllo_id", controllo_id)
+  .order("ordine", { ascending: true });
 
     const revisori = (soggetti || [])
       .filter((s: any) => s.ruolo === "REVISORE" || s.ruolo === "SOCIETA_REVISIONE")
@@ -112,14 +112,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .map((s: any) => s.nome)
       .join(", ");
 
-    const sede = [
-      cliente?.indirizzo,
-      cliente?.cap,
-      cliente?.citta,
-      cliente?.provincia,
-    ]
-      .filter(Boolean)
-      .join(" ");
+   const checklistRiepilogo = (checklist || [])
+  .map(
+    (c: any) =>
+      `• ${c.domanda}: ${c.risposta || "NON COMPILATO"}`
+  )
+  .join("\n");
+
+const checklistCriticita = (checklist || [])
+  .filter((c: any) => c.risposta === "NO")
+  .map((c: any) => `• ${c.domanda}`)
+  .join("\n");
+
+const checklistNote = (checklist || [])
+  .filter((c: any) => c.note)
+  .map(
+    (c: any) =>
+      `• ${c.domanda}: ${c.note}`
+  )
+  .join("\n");
 
     const vars: Record<string, string> = {
       CLIENTE: cliente?.ragione_sociale || controllo.ragione_sociale || "",
@@ -133,12 +144,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       DATA_CONTROLLO: formatDateIT(controllo.data_controllo),
       ESITO_CONTROLLO: controllo.esito || "",
       NOTE_CONTROLLO: controllo.note || "",
-      REVISORE: revisori,
-      SINDACO_UNICO: sindacoUnico,
-      PRESIDENTE_COLLEGIO: presidenteCollegio,
-      SINDACI_EFFETTIVI: sindaciEffettivi,
-      SINDACI_SUPPLENTI: sindaciSupplenti,
-    };
+    REVISORE: revisori,
+SINDACO_UNICO: sindacoUnico,
+PRESIDENTE_COLLEGIO: presidenteCollegio,
+SINDACI_EFFETTIVI: sindaciEffettivi,
+SINDACI_SUPPLENTI: sindaciSupplenti,
+
+CHECKLIST_RIEPILOGO: checklistRiepilogo,
+CHECKLIST_CRITICITA: checklistCriticita,
+CHECKLIST_NOTE: checklistNote,
+};
 
     const testoGenerato = replaceAllVars(modello.testo, vars);
 
