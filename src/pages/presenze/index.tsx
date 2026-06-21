@@ -76,6 +76,7 @@ type RowSummary = {
   malattia: number;
   festivi: number;
   permessiOre: number;
+  allattamentoOre: number;
   permessi104Ore: number;
 };
 
@@ -120,6 +121,8 @@ const PRESENCE_COLORS: Record<string, string> = {
   M: 'bg-red-100 text-red-800 border-red-200',
   Pp: 'bg-green-100 text-green-800 border-green-200',
   Ps: 'bg-violet-100 text-violet-800 border-violet-200',
+  AL1: 'bg-teal-100 text-teal-800 border-teal-200',
+  AL2: 'bg-teal-100 text-teal-800 border-teal-200',
 };
 
 
@@ -251,6 +254,15 @@ function summarize(codes: string[]): RowSummary {
       if (code === 'N') acc.festivi += 1;
       if (isPermessoCode(code)) acc.permessiOre += getPermessoHours(code);
       if (isPermesso104Code(code)) acc.permessi104Ore += getPermessoHours(code);
+      if (code === 'AL1') {
+  acc.allattamentoOre += 1;
+  acc.permessiOre += 1;
+}
+
+if (code === 'AL2') {
+  acc.allattamentoOre += 2;
+  acc.permessiOre += 2;
+}
 
       return acc;
     },
@@ -262,6 +274,7 @@ function summarize(codes: string[]): RowSummary {
       festivi: 0,
       permessiOre: 0,
       permessi104Ore: 0,
+      allattamentoOre: 0,
     },
   );
 }
@@ -1170,7 +1183,7 @@ ${dipendentiXml}
     className="min-w-max text-xs"
     style={{
       display: 'grid',
-      gridTemplateColumns: `220px repeat(${days.length + 7}, 88px)`,
+      gridTemplateColumns: `220px repeat(${days.length + 8}, 88px)`,
     }}
   >
     <div className="sticky left-0 top-0 z-50 border-b bg-background px-2 py-2 font-medium text-muted-foreground">
@@ -1203,8 +1216,9 @@ ${dipendentiXml}
   { top: 'Tot.', bottom: 'F' },
   { top: 'Tot.', bottom: 'M' },
   { top: 'Tot.', bottom: 'N' },
-  { top: 'Tot.', bottom: 'Perm.' },
-  { top: 'Tot.', bottom: 'L.104' },
+   { top: 'Tot.', bottom: 'Perm.' },
+  { top: 'Tot.', bottom: 'AL' },
+  { top: 'Tot.', bottom: 'L.104' },  
 ].map((item) => (
   <div
     key={item.bottom}
@@ -1324,6 +1338,12 @@ const isFutureDay = day.date > todayKey;
 <div className="border-b p-1 text-center">
   <div className="flex h-8 items-center justify-center rounded-md bg-orange-100 font-bold text-orange-900">
     {formatHoursMinutes(summary.permessiOre)}
+  </div>
+</div>
+
+          <div className="border-b p-1 text-center">
+  <div className="flex h-8 items-center justify-center rounded-md bg-teal-100 font-bold text-teal-900">
+    {formatHoursMinutes(summary.allattamentoOre)}
   </div>
 </div>
 
