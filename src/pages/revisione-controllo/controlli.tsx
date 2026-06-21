@@ -95,13 +95,17 @@ export default function RevisioneControlliPage() {
       setError("");
       setSuccess("");
 
-      const user =
-        studioId && currentUserId
-          ? { studio_id: studioId, id: currentUserId }
-          : await loadCurrentUser();
+     const user =
+  studioId && currentUserId
+    ? { studio_id: studioId, id: currentUserId }
+    : await loadCurrentUser();
 
-      const params = new URLSearchParams();
-      params.set("studio_id", user.studio_id);
+if (!user.studio_id) {
+  throw new Error("Studio utente non trovato.");
+}
+
+const params = new URLSearchParams();
+params.set("studio_id", String(user.studio_id));
 
       if (anno) params.set("anno", anno);
       if (trimestre) params.set("trimestre", trimestre);
