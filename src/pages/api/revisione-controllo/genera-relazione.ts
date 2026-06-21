@@ -138,6 +138,15 @@ const checklistNote = (checklist || [])
   )
   .join("\n");
 
+    const sede = [
+  cliente?.indirizzo,
+  cliente?.cap,
+  cliente?.citta,
+  cliente?.provincia,
+]
+  .filter(Boolean)
+  .join(" ");
+
     const vars: Record<string, string> = {
       CLIENTE: cliente?.ragione_sociale || controllo.ragione_sociale || "",
       CODICE_FISCALE: cliente?.codice_fiscale || "",
