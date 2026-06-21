@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { ClipboardCheck, useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -424,6 +424,12 @@ void loadEventiImminenti();
       href: "/revisione-controllo/controlli",
       icon: <Calendar className="h-4 w-4" />,
     },
+
+    {
+  label: "Checklist controlli",
+  href: "/revisione-controllo/checklist",
+  icon: <ClipboardCheck className="h-4 w-4" />,
+},
     {
   label: "Relazioni / Verbali",
   href: "/revisione-controllo/relazioni",
