@@ -24,6 +24,7 @@ import {
   FolderKanban,
  Scale,
   StickyNote,
+  ClipboardCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
