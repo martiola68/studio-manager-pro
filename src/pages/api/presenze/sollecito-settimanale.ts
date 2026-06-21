@@ -201,27 +201,29 @@ if (!livelloSollecito) {
   });
   continue;
 }
-      const nomeDipendente =
+     const nomeDipendente =
         `${dipendente.nome ?? ""} ${dipendente.cognome ?? ""}`.trim() ||
         dipendente.email;
 
       const subject = livelloSollecito.subject;
 
+      const giorniMancantiFormattati = giorniMancanti
+        .map((day) => new Date(`${day}T00:00:00`).toLocaleDateString("it-IT"))
+        .join(", ");
+
       const html = `
         <div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#111827;">
           <p>Ciao ${nomeDipendente},</p>
 
-        <p style="font-weight:bold;color:${livelloSollecito.colore}">
-  ${livelloSollecito.livello}
-</p>
+          <p style="font-weight:bold;color:${livelloSollecito.colore};">
+            ${livelloSollecito.livello}
+          </p>
 
-<p>
-  ${livelloSollecito.messaggio}
-</p>
+          <p>
+            ${livelloSollecito.messaggio}
+          </p>
 
-          <p><strong>Giorni mancanti:</strong> ${giorniMancanti
-            .map((day) => new Date(`${day}T00:00:00`).toLocaleDateString("it-IT"))
-            .join(", ")}</p>
+          <p><strong>Giorni mancanti:</strong> ${giorniMancantiFormattati}</p>
 
           <p>
             Accedi a Studio Manager Pro e completa la compilazione delle presenze.
@@ -229,19 +231,18 @@ if (!livelloSollecito) {
         </div>
       `;
 
-    const text = `
+      const text = `
 Ciao ${nomeDipendente},
 
 ${livelloSollecito.livello}
 
 ${livelloSollecito.messaggio}
 
-Giorni mancanti: ${giorniMancanti
-  .map((day) => new Date(`${day}T00:00:00`).toLocaleDateString("it-IT"))
-  .join(", ")}
+Giorni mancanti: ${giorniMancantiFormattati}
 
 Accedi a Studio Manager Pro e completa la compilazione delle presenze.
 `.trim();
+
       const emailResult = await sendEmail({
         to: dipendente.email,
         subject,
@@ -250,16 +251,16 @@ Accedi a Studio Manager Pro e completa la compilazione delle presenze.
         sendMode: "studio",
       });
 
-    results.push({
-  utente_id: dipendente.utente_id,
-  email: dipendente.email,
-  sent: emailResult.success,
-  livello: livelloSollecito.livello,
-  missing_days_count: giorniMancanti.length,
-  missing_days: giorniMancanti,
-  error: emailResult.success ? null : emailResult.error,
-});
-
+      results.push({
+        utente_id: dipendente.utente_id,
+        email: dipendente.email,
+        sent: emailResult.success,
+        livello: livelloSollecito.livello,
+        missing_days_count: giorniMancanti.length,
+        missing_days: giorniMancanti,
+        error: emailResult.success ? null : emailResult.error,
+      });
+       }
     return res.status(200).json({
       success: true,
       mese_precedente_start: mesePrecedente.startKey,
