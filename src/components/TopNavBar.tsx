@@ -405,22 +405,17 @@ void loadEventiImminenti();
   ],
 },
 
-    {
-  label: "Revisione e controllo",
-  items: [
-    {
-      label: "Archivio incarichi",
-      href: "/revisione-controllo",
-    },
-    {
-      label: "Nuovo incarico",
-      href: "/revisione-controllo/nuovo",
-    },
-    {
-      label: "Controlli trimestrali",
-      href: "/revisione-controllo/controlli",
-    },
-  ],
+  {
+  label: "Archivio incarichi revisione",
+  href: "/revisione-controllo",
+},
+{
+  label: "Nuovo incarico revisione",
+  href: "/revisione-controllo/nuovo",
+},
+{
+  label: "Controlli trimestrali revisione",
+  href: "/revisione-controllo/controlli",
 },
     
     {
