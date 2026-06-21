@@ -149,3 +149,9 @@ export default async function handler(
     results,
   });
 }
+results.push(
+  await callInternal(
+    `/api/revisione-controllo/alert?secret=${SECRET}`,
+    "POST"
+  )
+);
