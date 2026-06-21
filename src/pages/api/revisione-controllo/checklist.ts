@@ -5,7 +5,7 @@ const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
-
+  
 const DEFAULT_CHECKLIST = [
   {
     area: "Area amministrativa",
@@ -167,9 +167,21 @@ const rows = checklist
     studio_id: controllo.studio_id,
     area: item.area,
     domanda: item.domanda,
-    risposta: item.risposta || null,
-    note: item.note || null,
-    ordine: Number(item.ordine ?? (index + 1) * 10),
+   risposta: item.risposta || null,
+
+esito: item.esito || null,
+
+gravita: item.gravita || null,
+
+follow_up: item.follow_up === true,
+
+data_follow_up: item.data_follow_up || null,
+
+raccomandazione: item.raccomandazione || null,
+
+note: item.note || null,
+
+ordine: Number(item.ordine ?? (index + 1) * 10),
     updated_at: new Date().toISOString(),
   }));
 
