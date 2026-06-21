@@ -1125,17 +1125,25 @@ ${dipendentiXml}
                 <Badge className="border bg-orange-100 text-orange-800 hover:bg-orange-100">
                   P0.25-P8 permessi
                 </Badge>
+                <Badge className="border bg-teal-100 text-teal-800 hover:bg-teal-100">
+                AL1/AL2 allattamento
+                </Badge>
                 <Badge className="border bg-pink-100 text-pink-800 hover:bg-pink-100">
                   P0.25.104-P8.104 L.104
                 </Badge>
 <div className="mt-3 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
-  <p>
-    Per i permessi orari è sufficiente inserire il codice del permesso
-    (es. <strong>P2</strong>, <strong>P4</strong>, <strong>P1.104</strong>).
-    Il sistema calcola automaticamente sia le ore di permesso sia le ore lavorate residue
-    ai fini dell’elaborazione payroll ed export paghe.
-  </p>
+ <p>
+  Per i permessi orari è sufficiente inserire il codice del permesso
+  (es. <strong>P2</strong>, <strong>P4</strong>, <strong>P1.104</strong>,
+  <strong> AL1</strong>, <strong>AL2</strong>).
+  Il sistema calcola automaticamente sia le ore di permesso sia le ore lavorate residue
+  ai fini dell’elaborazione payroll ed export paghe.
+</p>
 
+<p className="mt-2">
+  <strong>AL1</strong> = allattamento 1 ora. <strong>AL2</strong> = allattamento 2 ore,
+  consentito solo se l’orario giornaliero del dipendente è almeno 8 ore.
+</p>
   <p className="mt-2 text-[15px] font-bold text-blue-950">
     Sabati, domeniche e festivi vengono compilati automaticamente come non lavorativi.
   </p>
