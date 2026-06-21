@@ -61,6 +61,42 @@ function getWeekdays(start: Date, end: Date) {
   return days;
 }
 
+function getLivelloSollecito(giorniMancanti: string[]) {
+  const count = giorniMancanti.length;
+
+  if (count > 10) {
+    return {
+      livello: "URGENTISSIMO",
+      subject: "URGENTISSIMO - Presenze non compilate",
+      colore: "#991b1b",
+      messaggio:
+        "risultano ancora da compilare oltre 10 giornate di presenza. La situazione richiede un aggiornamento immediato.",
+    };
+  }
+
+  if (count > 7) {
+    return {
+      livello: "URGENTE",
+      subject: "URGENTE - Presenze non compilate",
+      colore: "#b45309",
+      messaggio:
+        "risultano ancora da compilare oltre 7 giornate di presenza.",
+    };
+  }
+
+  if (count > 4) {
+    return {
+      livello: "NORMALE",
+      subject: "Promemoria compilazione presenze",
+      colore: "#2563eb",
+      messaggio:
+        "risultano ancora da compilare più di 4 giornate di presenza.",
+    };
+  }
+
+  return null;
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET" && req.method !== "POST") {
     return res.status(405).json({
@@ -90,15 +126,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Esecuzione ordinaria solo lunedì.
     // Con ?force=true puoi testarla manualmente.
-    const force = req.query.force === "true";
-
-    if (today.getDay() !== 1 && !force) {
-      return res.status(200).json({
-        success: true,
-        skipped: true,
-        message: "Il sollecito presenze viene eseguito solo il lunedì.",
-      });
-    }
+   
 
    today.setHours(0, 0, 0, 0);
 
@@ -161,29 +189,35 @@ const giorniMancanti =
     ? mancantiMesePrecedente
     : mancantiMeseCorrente;
 
-      if (giorniMancanti.length === 0) {
-        results.push({
-          utente_id: dipendente.utente_id,
-          email: dipendente.email,
-          sent: false,
-          reason: "settimana completa",
-        });
-        continue;
-      }
+    const livelloSollecito = getLivelloSollecito(giorniMancanti);
 
+if (!livelloSollecito) {
+  results.push({
+    utente_id: dipendente.utente_id,
+    email: dipendente.email,
+    sent: false,
+    reason: "entro soglia",
+    missing_days_count: giorniMancanti.length,
+  });
+  continue;
+}
       const nomeDipendente =
         `${dipendente.nome ?? ""} ${dipendente.cognome ?? ""}`.trim() ||
         dipendente.email;
 
-      const subject = "Promemoria compilazione presenze settimanali";
+      const subject = livelloSollecito.subject;
 
       const html = `
         <div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#111827;">
           <p>Ciao ${nomeDipendente},</p>
 
-          <p>
-           risultano ancora da compilare alcune presenze obbligatorie.
-          </p>
+        <p style="font-weight:bold;color:${livelloSollecito.colore}">
+  ${livelloSollecito.livello}
+</p>
+
+<p>
+  ${livelloSollecito.messaggio}
+</p>
 
           <p><strong>Giorni mancanti:</strong> ${giorniMancanti
             .map((day) => new Date(`${day}T00:00:00`).toLocaleDateString("it-IT"))
@@ -198,7 +232,9 @@ const giorniMancanti =
     const text = `
 Ciao ${nomeDipendente},
 
-risultano ancora da compilare alcune presenze obbligatorie.
+${livelloSollecito.livello}
+
+${livelloSollecito.messaggio}
 
 Giorni mancanti: ${giorniMancanti
   .map((day) => new Date(`${day}T00:00:00`).toLocaleDateString("it-IT"))
@@ -214,14 +250,15 @@ Accedi a Studio Manager Pro e completa la compilazione delle presenze.
         sendMode: "studio",
       });
 
-      results.push({
-        utente_id: dipendente.utente_id,
-        email: dipendente.email,
-        sent: emailResult.success,
-        missing_days: giorniMancanti,
-        error: emailResult.success ? null : emailResult.error,
-      });
-    }
+    results.push({
+  utente_id: dipendente.utente_id,
+  email: dipendente.email,
+  sent: emailResult.success,
+  livello: livelloSollecito.livello,
+  missing_days_count: giorniMancanti.length,
+  missing_days: giorniMancanti,
+  error: emailResult.success ? null : emailResult.error,
+});
 
     return res.status(200).json({
       success: true,
