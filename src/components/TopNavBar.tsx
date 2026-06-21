@@ -405,17 +405,26 @@ void loadEventiImminenti();
   ],
 },
 
-  {
-  label: "Archivio incarichi revisione",
-  href: "/revisione-controllo",
-},
-{
-  label: "Nuovo incarico revisione",
-  href: "/revisione-controllo/nuovo",
-},
-{
-  label: "Controlli trimestrali revisione",
-  href: "/revisione-controllo/controlli",
+ {
+  label: "Revisione e controllo",
+  icon: <ShieldCheck className="h-4 w-4" />,
+  children: [
+    {
+      label: "Archivio incarichi",
+      href: "/revisione-controllo",
+      icon: <FileText className="h-4 w-4" />,
+    },
+    {
+      label: "Nuovo incarico",
+      href: "/revisione-controllo/nuovo",
+      icon: <FileText className="h-4 w-4" />,
+    },
+    {
+      label: "Controlli trimestrali",
+      href: "/revisione-controllo/controlli",
+      icon: <Calendar className="h-4 w-4" />,
+    },
+  ],
 },
     
     {
