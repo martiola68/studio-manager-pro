@@ -125,6 +125,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   )
   .join("\n");
 
+    const checklistFollowUp = (checklist || [])
+  .filter((c: any) => c.follow_up === true)
+  .map(
+    (c: any) =>
+      `• ${c.domanda}
+Gravità: ${c.gravita || "-"}
+Raccomandazione: ${c.raccomandazione || "-"}`
+  )
+  .join("\n\n");
+
 const checklistCriticita = (checklist || [])
   .filter((c: any) => c.risposta === "NO")
   .map((c: any) => `• ${c.domanda}`)
@@ -168,6 +178,7 @@ SINDACI_SUPPLENTI: sindaciSupplenti,
 CHECKLIST_RIEPILOGO: checklistRiepilogo,
 CHECKLIST_CRITICITA: checklistCriticita,
 CHECKLIST_NOTE: checklistNote,
+CHECKLIST_FOLLOWUP: checklistFollowUp,
 };
 
     const testoGenerato = replaceAllVars(modello.testo, vars);
