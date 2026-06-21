@@ -421,7 +421,7 @@ void loadEventiImminenti();
       href: "/revisione-controllo/controlli",
     },
   ],
-}
+},
     
     {
   label: "Controllo di gestione",
