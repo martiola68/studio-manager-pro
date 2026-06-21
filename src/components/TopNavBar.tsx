@@ -404,6 +404,25 @@ void loadEventiImminenti();
     },
   ],
 },
+
+    {
+  label: "Revisione e controllo",
+  items: [
+    {
+      label: "Archivio incarichi",
+      href: "/revisione-controllo",
+    },
+    {
+      label: "Nuovo incarico",
+      href: "/revisione-controllo/nuovo",
+    },
+    {
+      label: "Controlli trimestrali",
+      href: "/revisione-controllo/controlli",
+    },
+  ],
+}
+    
     {
   label: "Controllo di gestione",
   icon: <BriefcaseBusiness className="h-4 w-4" />,
