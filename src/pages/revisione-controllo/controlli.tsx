@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import Head from "next/head";
-import { CheckCircle, FileText, RefreshCw, Trash2 } from "lucide-react";
+import { CheckCircle, FileText, RefreshCw, Trash2, ClipboardCheck } from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
 type Controllo = {
@@ -351,6 +351,16 @@ params.set("studio_id", String(user.studio_id));
                           >
                             <CheckCircle size={16} />
                           </button>
+
+                          <button
+                            title="Checklist"
+                              onClick={() => {
+                              window.location.href = `/revisione-controllo/checklist?controllo_id=${item.id}`;
+                              }}
+                              className="rounded-md border bg-white p-2 text-purple-700 hover:bg-purple-50"
+                              >
+                              <ClipboardCheck size={16} />
+                            </button>
 
                           <button
                             title="Relazione"
