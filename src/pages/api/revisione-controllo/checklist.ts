@@ -99,20 +99,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       if (error) throw error;
 
-      if ((!data || data.length === 0) && crea_default === "true") {
-        const rows = DEFAULT_CHECKLIST.map((item) => ({
-          controllo_id,
-          area: item.area,
-          domanda: item.domanda,
-          risposta: null,
-          note: null,
-          ordine: item.ordine,
-        }));
+if ((!data || data.length === 0) && crea_default === "true") {
+  const { data: controllo, error: controlloError } = await supabaseAdmin
+    .from("vw_revisione_controlli")
+    .select("studio_id")
+    .eq("id", controllo_id)
+    .single();
 
-        const { data: inserted, error: insertError } = await supabaseAdmin
-          .from("tbrevisione_checklist")
-          .insert(rows)
-          .select("*");
+  if (controlloError) throw controlloError;
+
+  const rows = DEFAULT_CHECKLIST.map((item) => ({
+    controllo_id,
+    studio_id: controllo.studio_id,
+    area: item.area,
+    domanda: item.domanda,
+    risposta: null,
+    note: null,
+    ordine: item.ordine,
+  }));
+
+  const { data: inserted, error: insertError } = await supabaseAdmin
+    .from("tbrevisione_checklist")
+    .insert(rows)
+    .select("*");
 
         if (insertError) throw insertError;
 
@@ -142,18 +151,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
       }
 
-      const rows = checklist
-        .filter((item: any) => item.area && item.domanda)
-        .map((item: any, index: number) => ({
-          id: item.id || undefined,
-          controllo_id,
-          area: item.area,
-          domanda: item.domanda,
-          risposta: item.risposta || null,
-          note: item.note || null,
-          ordine: Number(item.ordine ?? (index + 1) * 10),
-          updated_at: new Date().toISOString(),
-        }));
+     const { data: controllo, error: controlloError } = await supabaseAdmin
+  .from("vw_revisione_controlli")
+  .select("studio_id")
+  .eq("id", controllo_id)
+  .single();
+
+if (controlloError) throw controlloError;
+
+const rows = checklist
+  .filter((item: any) => item.area && item.domanda)
+  .map((item: any, index: number) => ({
+    id: item.id || undefined,
+    controllo_id,
+    studio_id: controllo.studio_id,
+    area: item.area,
+    domanda: item.domanda,
+    risposta: item.risposta || null,
+    note: item.note || null,
+    ordine: Number(item.ordine ?? (index + 1) * 10),
+    updated_at: new Date().toISOString(),
+  }));
 
       if (rows.length === 0) {
         return res.status(400).json({
