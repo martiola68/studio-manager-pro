@@ -81,6 +81,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq("id", controllo.cliente_id)
       .single();
 
+    const { data: soggetti } = await supabaseAdmin
+  .from("tbrevisione_soggetti")
+  .select("*")
+  .eq("incarico_id", controllo.incarico_id)
+  .eq("attivo", true);
+
    const { data: checklist } = await supabaseAdmin
   .from("tbrevisione_checklist")
   .select("*")
