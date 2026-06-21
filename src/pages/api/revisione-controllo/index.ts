@@ -26,13 +26,44 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const { data, error } = await query;
 
-      if (error) throw error;
+     if (error) throw error;
 
-      return res.status(200).json({
-        success: true,
-        data: data || [],
-      });
-    }
+const annoInizio = data_inizio
+  ? new Date(`${data_inizio}T00:00:00`).getFullYear()
+  : new Date().getFullYear();
+
+const rowsControlli = [1, 2, 3, 4].map((trimestre) => {
+  const dataScadenza =
+    trimestre === 1
+      ? `${annoInizio}-04-30`
+      : trimestre === 2
+        ? `${annoInizio}-07-31`
+        : trimestre === 3
+          ? `${annoInizio}-10-31`
+          : `${annoInizio + 1}-01-31`;
+
+  return {
+    incarico_id: data.id,
+    anno: annoInizio,
+    trimestre,
+    data_scadenza: dataScadenza,
+    stato: "DA_FARE",
+  };
+});
+
+const { error: controlliError } = await supabaseAdmin
+  .from("tbrevisione_controlli")
+  .upsert(rowsControlli, {
+    onConflict: "incarico_id,anno,trimestre",
+    ignoreDuplicates: true,
+  });
+
+if (controlliError) throw controlliError;
+
+return res.status(201).json({
+  success: true,
+  data,
+});
 
     if (req.method === "POST") {
       const {
