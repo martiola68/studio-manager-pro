@@ -424,6 +424,16 @@ void loadEventiImminenti();
       href: "/revisione-controllo/controlli",
       icon: <Calendar className="h-4 w-4" />,
     },
+    {
+  label: "Relazioni / Verbali",
+  href: "/revisione-controllo/relazioni",
+  icon: <FileText className="h-4 w-4" />,
+},
+{
+  label: "Modelli relazioni",
+  href: "/revisione-controllo/modelli",
+  icon: <FileText className="h-4 w-4" />,
+},
   ],
 },
     
