@@ -133,15 +133,20 @@ export default async function handler(
       await callInternal(`/api/promemoria/alert?secret=${SECRET}`, "POST")
     );
 
-  results.push(
+results.push(
   await callInternal(
     `/api/controllo-gestione/alert?secret=${SECRET}`,
     "POST"
   )
 );
-  
-  }
 
+results.push(
+  await callInternal(
+    `/api/revisione-controllo/alert?secret=${SECRET}`,
+    "POST"
+  )
+);
+    
   return res.status(200).json({
     ok: true,
     hourUtc,
@@ -149,9 +154,3 @@ export default async function handler(
     results,
   });
 }
-results.push(
-  await callInternal(
-    `/api/revisione-controllo/alert?secret=${SECRET}`,
-    "POST"
-  )
-);
