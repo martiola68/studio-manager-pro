@@ -25,6 +25,8 @@ export default function ChecklistRevisionePage() {
       ? router.query.controllo_id
       : "";
 
+  const mancaControlloId = router.isReady && !controlloId;
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -38,7 +40,10 @@ export default function ChecklistRevisionePage() {
       setLoading(true);
       setError("");
 
-      if (!controlloId) return;
+   if (!controlloId) {
+  setLoading(false);
+  return;
+}
 
       const res = await fetch(
         `/api/revisione-controllo/checklist?controllo_id=${controlloId}&crea_default=true`
@@ -166,11 +171,15 @@ export default function ChecklistRevisionePage() {
           </div>
         )}
 
-        {loading ? (
-          <div className="rounded border bg-white p-8 text-center">
-            Caricamento checklist...
-          </div>
-        ) : (
+      {mancaControlloId ? (
+  <div className="rounded border border-amber-300 bg-amber-50 p-8 text-center text-amber-900">
+    Seleziona un controllo trimestrale dalla pagina “Controlli trimestrali” e apri la checklist dall’icona dedicata.
+  </div>
+) : loading ? (
+  <div className="rounded border bg-white p-8 text-center">
+    Caricamento checklist...
+  </div>
+) : (
           <div className="space-y-6">
             {Object.entries(grouped).map(([area, items]) => (
               <div
