@@ -22,9 +22,10 @@ import {
   ShieldCheck,
   BriefcaseBusiness,
   FolderKanban,
- Scale,
+  Scale,
   StickyNote,
   ClipboardCheck,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -410,6 +411,11 @@ void loadEventiImminenti();
   label: "Revisione e controllo",
   icon: <ShieldCheck className="h-4 w-4" />,
   children: [
+    {
+  label: "Dashboard",
+  href: "/revisione-controllo/dashboard",
+  icon: BarChart3,
+},
     {
       label: "Archivio incarichi",
       href: "/revisione-controllo",
