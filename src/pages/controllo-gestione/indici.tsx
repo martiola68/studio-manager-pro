@@ -410,12 +410,30 @@ capitale_investito: totaleAttivo - debitiTotali,
             )}
           </section>
 
-          <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <Box title="Dati generali">
-              <Input label="Società" value={form.societa} onChange={(v) => updateField('societa', v)} />
-              <Input label="Codice fiscale" value={form.codice_fiscale} onChange={(v) => updateField('codice_fiscale', v)} />
-              <Input label="Anno" value={form.anno} onChange={(v) => updateField('anno', v)} />
-            </Box>
+         <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+  <Box title="Dati generali">
+    <div className="space-y-4">
+
+      <Input
+        label="Società"
+        value={form.societa}
+        onChange={(v) => updateField('societa', v)}
+      />
+
+      <Input
+        label="Codice fiscale"
+        value={form.codice_fiscale}
+        onChange={(v) => updateField('codice_fiscale', v)}
+      />
+
+      <Input
+        label="Anno"
+        value={form.anno}
+        onChange={(v) => updateField('anno', v)}
+      />
+
+    </div>
+  </Box>
 
             <Box title="Conto economico">
               <Money label="Ricavi" value={form.ricavi} onChange={(v) => updateField('ricavi', v)} />
@@ -436,14 +454,20 @@ capitale_investito: totaleAttivo - debitiTotali,
               <Money label="Passivo corrente" value={form.passivo_corrente} onChange={(v) => updateField('passivo_corrente', v)} />
             </Box>
 
-            <Box title="Dati finanziari manuali">
-              <Money
-  label="Cash flow operativo"
-  value={form.cash_flow_operativo}
-  onChange={(v) => updateField("cash_flow_operativo", v)}
-  manuale={true}
-/>
+  <div>
+  <Money
+    label="Cash flow operativo"
+    value={form.cash_flow_operativo}
+    onChange={(v) => updateField("cash_flow_operativo", v)}
+    manuale={true}
+  />
 
+  <p className="mt-1 text-xs text-slate-500">
+    Cassa generata dall'attività operativa. Se non disponibile,
+    può essere stimata come: Utile netto + Ammortamenti + Accantonamenti.
+  </p>
+</div>
+           
 <Money
   label="Rate finanziarie annue"
   value={form.rate_finanziarie_annue}
