@@ -176,7 +176,8 @@ export default function DashboardRevisione() {
   >
     <RefreshCw className="h-4 w-4" />
     Aggiorna
-  </button>
+ </button>
+</div>
 </div>
 
       {errore && (
