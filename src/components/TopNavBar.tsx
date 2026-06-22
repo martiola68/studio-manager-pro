@@ -477,6 +477,11 @@ void loadEventiImminenti();
       href: "/controllo-gestione/storico",
       icon: <Clock className="h-4 w-4" />,
     },
+    {
+  label: "Calcolo indici",
+  href: "/controllo-gestione/indici",
+  icon: <BarChart3 className="h-4 w-4" />,
+},
   ],
 },
     
