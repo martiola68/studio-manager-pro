@@ -234,8 +234,14 @@ export default function CalcoloIndiciPage() {
 
       const totaleAttivo = getTagValue(xml, ['TotaleAttivo']);
       const patrimonioNetto = getTagValue(xml, ['TotalePatrimonioNetto']);
-      const debitiTotali = getTagValue(xml, ['TotaleDebiti']);
-      const attivoCorrente = getTagValue(xml, ['TotaleAttivoCircolante']);
+     const debitiTotali = getTagValue(xml, ['TotaleDebiti']);
+const attivoCorrente = getTagValue(xml, ['TotaleAttivoCircolante']);
+
+const passivoCorrente = getTagValue(xml, [
+  'DebitiEsigibiliEntroEsercizioSuccessivo',
+  'TotaleDebitiEsigibiliEntroEsercizioSuccessivo',
+  'DebitiTotaleDebitiEntroEsercizioSuccessivo',
+]);
 
       setForm((prev) => ({
         ...prev,
@@ -252,8 +258,9 @@ export default function CalcoloIndiciPage() {
         totale_attivo: totaleAttivo,
         patrimonio_netto: patrimonioNetto,
         debiti_totali: debitiTotali,
-        attivo_corrente: attivoCorrente,
-        capitale_investito: totaleAttivo - debitiTotali,
+       attivo_corrente: attivoCorrente,
+passivo_corrente: passivoCorrente,
+capitale_investito: totaleAttivo - debitiTotali,
       }));
     } catch (err: any) {
       setErrore(err?.message || 'Errore importazione XBRL.');
