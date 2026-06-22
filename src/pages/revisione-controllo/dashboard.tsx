@@ -91,6 +91,57 @@ export default function DashboardRevisione() {
     }
   }
 
+  async function generaTrimestri() {
+  try {
+    setLoading(true);
+    setErrore("");
+
+    const studioId = await getCurrentStudioId();
+
+    if (!studioId) {
+      setErrore("Studio non trovato");
+      return;
+    }
+
+    const anno = new Date().getFullYear();
+
+    const res = await fetch(
+      "/api/revisione-controllo/genera-trimestri",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          studio_id: studioId,
+          anno,
+        }),
+      }
+    );
+
+    const json = await res.json();
+
+    if (!res.ok || !json.success) {
+      throw new Error(
+        json.error || "Errore generazione trimestri"
+      );
+    }
+
+    alert(
+      `Generazione completata.\nCreati: ${json.creati || 0}\nSaltati: ${json.saltati || 0}`
+    );
+
+    await loadDashboard();
+  } catch (error: any) {
+    console.error(error);
+    setErrore(
+      error?.message || "Errore generazione trimestri"
+    );
+  } finally {
+    setLoading(false);
+  }
+}
+
   useEffect(() => {
     loadDashboard();
   }, []);
@@ -109,15 +160,24 @@ export default function DashboardRevisione() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={loadDashboard}
-          className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-        >
-          <RefreshCw className="h-4 w-4" />
-          Aggiorna
-        </button>
-      </div>
+      <div className="flex gap-2">
+  <button
+    type="button"
+    onClick={generaTrimestri}
+    className="inline-flex items-center gap-2 rounded-lg border border-blue-300 bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+  >
+    Genera trimestri anno
+  </button>
+
+  <button
+    type="button"
+    onClick={loadDashboard}
+    className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+  >
+    <RefreshCw className="h-4 w-4" />
+    Aggiorna
+  </button>
+</div>
 
       {errore && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
