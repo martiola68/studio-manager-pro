@@ -408,7 +408,7 @@ void loadEventiImminenti();
 },
 {
   label: "Revisione e Controllo",
-  icon: ClipboardCheck,
+  icon: <ClipboardCheck className="h-4 w-4" />,
   children: [
     {
       label: "Dashboard",
