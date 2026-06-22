@@ -83,17 +83,17 @@ if (tipo_cliente && tipo_cliente !== "tutti") {
   query = query.eq("tipo_cliente", String(tipo_cliente));
 }
 
-if (settore_fiscale) {
-      query = query.eq("settore_fiscale", settore_fiscale === "true");
-    }
+if (settore_fiscale && settore_fiscale !== "tutti") {
+  query = query.eq("settore_fiscale", settore_fiscale === "true");
+}
 
-    if (settore_lavoro) {
-      query = query.eq("settore_lavoro", settore_lavoro === "true");
-    }
+if (settore_lavoro && settore_lavoro !== "tutti") {
+  query = query.eq("settore_lavoro", settore_lavoro === "true");
+}
 
-    if (settore_consulenza) {
-      query = query.eq("settore_consulenza", settore_consulenza === "true");
-    }
+if (settore_consulenza && settore_consulenza !== "tutti") {
+  query = query.eq("settore_consulenza", settore_consulenza === "true");
+}
 
     const { data, error } = await query;
 
