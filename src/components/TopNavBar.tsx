@@ -406,16 +406,15 @@ void loadEventiImminenti();
     },
   ],
 },
-
- {
-  label: "Revisione e controllo",
-  icon: <ShieldCheck className="h-4 w-4" />,
+{
+  label: "Revisione e Controllo",
+  icon: ClipboardCheck,
   children: [
     {
-  label: "Dashboard",
-  href: "/revisione-controllo/dashboard",
-  icon: BarChart3,
-},
+      label: "Dashboard",
+      href: "/revisione-controllo/dashboard",
+      icon: <BarChart3 className="h-4 w-4" />,
+    },
     {
       label: "Archivio incarichi",
       href: "/revisione-controllo",
@@ -431,7 +430,6 @@ void loadEventiImminenti();
       href: "/revisione-controllo/controlli",
       icon: <Calendar className="h-4 w-4" />,
     },
-
     {
   label: "Checklist controlli",
   href: "/revisione-controllo/checklist",
