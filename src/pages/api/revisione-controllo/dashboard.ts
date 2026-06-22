@@ -59,11 +59,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       followupApertiLista,
       followupScadutiLista,
     ] = await Promise.all([
-      supabaseAdmin
-        .from("tbrevisione_incarichi")
-        .select("id", { count: "exact", head: true })
-        .eq("studio_id", studio_id)
-        .eq("stato", "attivo"),
+   supabaseAdmin
+  .from("tbrevisione_incarichi")
+  .select("id", { count: "exact", head: true })
+  .eq("studio_id", studio_id),
 
       supabaseAdmin
         .from("tbrevisione_controlli")
