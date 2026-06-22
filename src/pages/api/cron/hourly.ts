@@ -130,6 +130,13 @@ export default async function handler(
     );
 
     results.push(
+  await callInternal(
+    `/api/revisione-controllo/followup-alert?secret=${SECRET}`,
+    "POST"
+  )
+);
+
+    results.push(
       await callInternal(`/api/promemoria/alert?secret=${SECRET}`, "POST")
     );
 
