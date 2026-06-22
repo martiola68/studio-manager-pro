@@ -122,14 +122,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     y = addTableRow(doc, "Imposte", euro(form?.imposte), y);
     y = addTableRow(doc, "Utile netto", euro(form?.utile_netto), y);
 
-    doc.y = y + 10;
+    doc.moveDown(1);
 
-    doc
-      .fontSize(13)
-      .fillColor("#0f172a")
-      .text("Stato patrimoniale", { underline: true });
+doc
+  .fontSize(13)
+  .fillColor("#0f172a")
+  .text("Stato patrimoniale", 50, doc.y, {
+    underline: true,
+  });
 
-    y = doc.y + 10;
+y = doc.y + 10;
 
     y = addTableRow(doc, "Totale attivo", euro(form?.totale_attivo), y);
     y = addTableRow(doc, "Capitale investito", euro(form?.capitale_investito), y);
