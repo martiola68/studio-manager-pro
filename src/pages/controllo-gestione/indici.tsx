@@ -176,6 +176,10 @@ export default function CalcoloIndiciPage() {
         throw new Error('File XML/XBRL non leggibile.');
       }
 
+      const societa = getStringTagValue(xml, [
+  'DatiAnagraficiDenominazione',
+]);
+
       const codiceFiscale =
         xml.querySelector('identifier')?.textContent?.trim() || '';
 
@@ -193,12 +197,13 @@ export default function CalcoloIndiciPage() {
         getTagValue(xml, ['TotaleCostiProduzione'])
       );
 
-      const ammortamenti = Math.abs(
-        getTagValue(xml, [
-          'TotaleAmmortamentiSvalutazioni',
-          'AmmortamentiSvalutazioni',
-        ])
-      );
+     const ammortamenti = Math.abs(
+  getTagValue(xml, [
+    'CostiProduzioneAmmortamentiSvalutazioniTotaleAmmortamentiSvalutazioni',
+    'TotaleAmmortamentiSvalutazioni',
+    'AmmortamentiSvalutazioni',
+  ])
+);
 
       const accantonamenti = Math.abs(
         getTagValue(xml, [
@@ -214,12 +219,13 @@ export default function CalcoloIndiciPage() {
         ])
       );
 
-      const imposte = Math.abs(
-        getTagValue(xml, [
-          'ImposteRedditoEsercizioCorrentiDifferiteAnticipate',
-          'TotaleImposteRedditoEsercizioCorrentiDifferiteAnticipate',
-        ])
-      );
+     const imposte = Math.abs(
+  getTagValue(xml, [
+    'ImposteRedditoEsercizioCorrentiDifferiteAnticipateTotaleImposteRedditoEsercizioCorrentiDifferiteAnticipate',
+    'ImposteRedditoEsercizioCorrentiDifferiteAnticipate',
+    'TotaleImposteRedditoEsercizioCorrentiDifferiteAnticipate',
+  ])
+);
 
       const utileNetto = getTagValue(xml, [
         'UtilePerditaEsercizio',
@@ -233,6 +239,7 @@ export default function CalcoloIndiciPage() {
 
       setForm((prev) => ({
         ...prev,
+        societa,
         codice_fiscale: codiceFiscale,
         anno,
         ricavi,
@@ -467,12 +474,29 @@ function Money({ label, value, onChange }: MoneyProps) {
   return (
     <label className="block text-sm">
       <span className="mb-1 block font-medium text-slate-600">{label}</span>
-      <input
-        type="number"
-        value={value ?? 0}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border px-3 py-2 text-right"
-      />
+     <input
+  type="text"
+  value={Number(value || 0).toLocaleString('it-IT')}
+  onChange={(e) =>
+    onChange(
+      e.target.value
+        .replace(/\./g, '')
+        .replace(',', '.')
+    )
+  }
+  className="
+    w-full
+    rounded-lg
+    border-2
+    border-red-300
+    bg-red-50
+    text-red-700
+    font-semibold
+    px-3
+    py-2
+    text-right
+  "
+/>
     </label>
   );
 }
