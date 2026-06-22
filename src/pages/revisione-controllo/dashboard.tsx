@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase/client";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -31,22 +32,25 @@ function formatDateIT(value?: string | null) {
   return d.toLocaleDateString("it-IT");
 }
 
-function getStudioId() {
-  if (typeof window === "undefined") return "";
+async function getCurrentStudioId() {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const raw =
-    localStorage.getItem("utente") ||
-    localStorage.getItem("user") ||
-    localStorage.getItem("currentUser");
+  if (!user) return null;
 
-  if (!raw) return "";
+  const { data: utente, error } = await supabase
+    .from("tbutenti")
+    .select("studio_id")
+    .eq("id", user.id)
+    .single();
 
-  try {
-    const parsed = JSON.parse(raw);
-    return parsed?.studio_id || parsed?.studioId || "";
-  } catch {
-    return "";
+  if (error || !utente?.studio_id) {
+    console.error("Errore recupero studio_id:", error);
+    return null;
   }
+
+  return utente.studio_id;
 }
 
 export default function DashboardRevisione() {
@@ -59,7 +63,7 @@ export default function DashboardRevisione() {
       setLoading(true);
       setErrore("");
 
-      const studioId = getStudioId();
+    const studioId = await getCurrentStudioId();
 
       if (!studioId) {
         setErrore("Studio non trovato. Effettua nuovamente l'accesso.");
