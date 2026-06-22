@@ -34,10 +34,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const annoRif = Number(anno || new Date().getFullYear());
 
     let incarichiQuery = supabaseAdmin
-      .from("tbrevisione_incarichi")
-      .select("*")
-      .eq("studio_id", studio_id)
-      .eq("stato", "attivo");
+  .from("tbrevisione_incarichi")
+  .select("*")
+  .eq("studio_id", studio_id);
 
     if (incarico_id) {
       incarichiQuery = incarichiQuery.eq("id", incarico_id);
