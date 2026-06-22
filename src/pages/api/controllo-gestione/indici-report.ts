@@ -196,10 +196,28 @@ y = doc.y + 10;
         .fillColor("#111827")
         .text(item.valore, 160, y, { width: 80, align: "right" });
 
-      doc
-        .fontSize(10)
-        .fillColor("#111827")
-        .text(item.stato?.label || "-", 260, y, { width: 90 });
+    const stato = item.stato?.label || "-";
+
+let color = "#ef4444"; // rosso
+
+if (stato === "Buono") {
+  color = "#22c55e";
+}
+
+if (stato === "Attenzione") {
+  color = "#f59e0b";
+}
+
+doc
+  .circle(270, y + 6, 4)
+  .fill(color);
+
+doc
+  .fillColor("#111827")
+  .fontSize(10)
+  .text(stato, 282, y, {
+    width: 90,
+  });
 
       doc
         .fontSize(9)
