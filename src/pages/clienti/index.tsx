@@ -3438,11 +3438,11 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
-          <SelectContent>
-           
-            <SelectItem value="true">SI</SelectItem>
-            <SelectItem value="false">NO</SelectItem>
-          </SelectContent>
+         <SelectContent>
+  <SelectItem value="tutti">Tutti</SelectItem>
+  <SelectItem value="true">SI</SelectItem>
+  <SelectItem value="false">NO</SelectItem>
+</SelectContent>
         </Select>
       </div>
 
@@ -3460,11 +3460,11 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
-          <SelectContent>
-           
-            <SelectItem value="true">SI</SelectItem>
-            <SelectItem value="false">NO</SelectItem>
-          </SelectContent>
+         <SelectContent>
+  <SelectItem value="tutti">Tutti</SelectItem>
+  <SelectItem value="true">SI</SelectItem>
+  <SelectItem value="false">NO</SelectItem>
+</SelectContent>
         </Select>
       </div>
 
@@ -3482,11 +3482,11 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
-          <SelectContent>
-           
-            <SelectItem value="true">SI</SelectItem>
-            <SelectItem value="false">NO</SelectItem>
-          </SelectContent>
+         <SelectContent>
+  <SelectItem value="tutti">Tutti</SelectItem>
+  <SelectItem value="true">SI</SelectItem>
+  <SelectItem value="false">NO</SelectItem>
+</SelectContent>
         </Select>
       </div>
     </div>
