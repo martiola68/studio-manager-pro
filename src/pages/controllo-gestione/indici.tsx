@@ -529,11 +529,10 @@ function Box({ title, children }: BoxProps) {
   return (
     <section className="rounded-xl border bg-white p-5 shadow-sm">
       <h2 className="mb-4 text-lg font-semibold">{title}</h2>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">{children}</div>
+      <div className="space-y-3">{children}</div>
     </section>
   );
 }
-
 type InputProps = {
   label: string;
   value: string;
