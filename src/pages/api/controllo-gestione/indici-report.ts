@@ -30,6 +30,21 @@ function euro(value: number) {
   }).format(Number(value || 0));
 }
 
+function addSectionTitle(
+  doc: PDFKit.PDFDocument,
+  title: string,
+  size = 13
+) {
+  doc
+    .fontSize(size)
+    .fillColor("#0f172a")
+    .text(title, 50, doc.y, {
+      underline: true,
+    });
+
+  return doc.y + 10;
+}
+
 function addTableRow(
   doc: PDFKit.PDFDocument,
   label: string,
@@ -106,13 +121,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .text(`Data elaborazione: ${new Date().toLocaleDateString("it-IT")}`);
 
     doc.moveDown(1);
+doc
+  .fontSize(13)
+  .fillColor("#0f172a")
+  .text("Conto economico", 50, doc.y, {
+    underline: true,
+  });
 
-    doc
-      .fontSize(13)
-      .fillColor("#0f172a")
-      .text("Conto economico", { underline: true });
-
-    let y = doc.y + 10;
+let y = doc.y + 10;
 
     y = addTableRow(doc, "Ricavi", euro(form?.ricavi), y);
     y = addTableRow(doc, "Costi operativi", euro(form?.costi_operativi), y);
@@ -144,26 +160,30 @@ y = doc.y + 10;
 
     doc.addPage();
 
-    doc
-      .fontSize(15)
-      .fillColor("#0f172a")
-      .text("Risultati sintetici", { underline: true });
+   doc
+  .fontSize(15)
+  .fillColor("#0f172a")
+  .text("Risultati sintetici", 50, doc.y, {
+    underline: true,
+  });
 
-    y = doc.y + 10;
+y = doc.y + 10;
 
     y = addTableRow(doc, "MOL / EBITDA", euro(risultati?.ebitda), y);
     y = addTableRow(doc, "EBIT", euro(risultati?.ebit), y);
     y = addTableRow(doc, "EBT", euro(risultati?.ebt), y);
     y = addTableRow(doc, "Utile netto calcolato", euro(risultati?.utileNetto), y);
 
-    doc.y = y + 15;
+  doc.moveDown(1);
 
-    doc
-      .fontSize(15)
-      .fillColor("#0f172a")
-      .text("Indicatori", { underline: true });
+doc
+  .fontSize(15)
+  .fillColor("#0f172a")
+  .text("Indicatori", 50, doc.y, {
+    underline: true,
+  });
 
-    y = doc.y + 10;
+y = doc.y + 10;
 
     (indicatori || []).forEach((item) => {
       doc
