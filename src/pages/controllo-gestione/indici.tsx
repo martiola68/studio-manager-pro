@@ -424,8 +424,12 @@ export default function CalcoloIndiciPage() {
     </>
   );
 }
+type BoxProps = {
+  title: string;
+  children: React.ReactNode;
+};
 
-function Box({ title, children }: any) {
+function Box({ title, children }: BoxProps) {
   return (
     <section className="rounded-xl border bg-white p-5 shadow-sm">
       <h2 className="mb-4 text-lg font-semibold">{title}</h2>
@@ -434,12 +438,18 @@ function Box({ title, children }: any) {
   );
 }
 
-function Input({ label, value, onChange }: any) {
+type InputProps = {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+};
+
+function Input({ label, value, onChange }: InputProps) {
   return (
     <label className="block text-sm">
       <span className="mb-1 block font-medium text-slate-600">{label}</span>
       <input
-        value={value ?? ''}
+        value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-lg border px-3 py-2"
       />
@@ -447,7 +457,13 @@ function Input({ label, value, onChange }: any) {
   );
 }
 
-function Money({ label, value, onChange }: any) {
+type MoneyProps = {
+  label: string;
+  value: number;
+  onChange: (value: string) => void;
+};
+
+function Money({ label, value, onChange }: MoneyProps) {
   return (
     <label className="block text-sm">
       <span className="mb-1 block font-medium text-slate-600">{label}</span>
@@ -461,7 +477,12 @@ function Money({ label, value, onChange }: any) {
   );
 }
 
-function Kpi({ title, value }: any) {
+type KpiProps = {
+  title: string;
+  value: string;
+};
+
+function Kpi({ title, value }: KpiProps) {
   return (
     <div className="rounded-xl border bg-white p-5 shadow-sm">
       <p className="text-sm font-medium text-slate-500">{title}</p>
