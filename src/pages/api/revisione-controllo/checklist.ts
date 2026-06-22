@@ -108,15 +108,20 @@ if ((!data || data.length === 0) && crea_default === "true") {
 
   if (controlloError) throw controlloError;
 
-  const rows = DEFAULT_CHECKLIST.map((item) => ({
-    controllo_id,
-    studio_id: controllo.studio_id,
-    area: item.area,
-    domanda: item.domanda,
-    risposta: null,
-    note: null,
-    ordine: item.ordine,
-  }));
+ const rows = DEFAULT_CHECKLIST.map((item) => ({
+  controllo_id,
+  studio_id: controllo.studio_id,
+  area: item.area,
+  domanda: item.domanda,
+  risposta: null,
+  esito: null,
+  gravita: null,
+  follow_up: false,
+  data_follow_up: null,
+  raccomandazione: null,
+  note: null,
+  ordine: item.ordine,
+}));
 
   const { data: inserted, error: insertError } = await supabaseAdmin
     .from("tbrevisione_checklist")
