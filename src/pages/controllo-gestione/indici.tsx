@@ -454,6 +454,7 @@ capitale_investito: totaleAttivo - debitiTotali,
               <Money label="Passivo corrente" value={form.passivo_corrente} onChange={(v) => updateField('passivo_corrente', v)} />
             </Box>
 
+           <Box title="Dati finanziari manuali">
   <div>
   <Money
     label="Cash flow operativo"
