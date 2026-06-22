@@ -100,13 +100,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (error) throw error;
 
 if ((!data || data.length === 0) && crea_default === "true") {
-  const { data: controllo, error: controlloError } = await supabaseAdmin
-    .from("vw_revisione_controlli")
-    .select("studio_id")
-    .eq("id", controllo_id)
-    .single();
+const { data: controllo, error: controlloError } = await supabaseAdmin
+  .from("vw_revisione_controlli")
+  .select("studio_id, cliente_id")
+  .eq("id", controllo_id)
+  .single();
 
-  if (controlloError) throw controlloError;
+if (controlloError) throw controlloError;
 
  const rows = DEFAULT_CHECKLIST.map((item) => ({
   controllo_id,
@@ -197,20 +197,82 @@ ordine: Number(item.ordine ?? (index + 1) * 10),
         });
       }
 
-      const { data, error } = await supabaseAdmin
-        .from("tbrevisione_checklist")
-        .upsert(rows, {
-          onConflict: "id",
+  const { data, error } = await supabaseAdmin
+  .from("tbrevisione_checklist")
+  .upsert(rows, {
+    onConflict: "id",
+  })
+  .select("*");
+
+if (error) throw error;
+
+/**
+ * Creazione / aggiornamento follow-up automatici
+ */
+for (const item of data || []) {
+  if (item.follow_up === true) {
+    const descrizione =
+      item.raccomandazione ||
+      item.domanda ||
+      "Follow-up revisione";
+
+    const { data: existingFollowup, error: existingError } =
+      await supabaseAdmin
+        .from("tbrevisione_followup")
+        .select("id")
+        .eq("checklist_id", item.id)
+        .maybeSingle();
+
+    if (existingError) throw existingError;
+
+    if (existingFollowup?.id) {
+      const { error: updateFollowupError } = await supabaseAdmin
+        .from("tbrevisione_followup")
+        .update({
+          studio_id: item.studio_id,
+          controllo_id: item.controllo_id,
+          checklist_id: item.id,
+          cliente_id: controllo.cliente_id,
+          descrizione,
+          gravita: item.gravita || null,
+          data_scadenza: item.data_follow_up || null,
+          note: item.note || null,
         })
-        .select("*");
+        .eq("id", existingFollowup.id);
 
-      if (error) throw error;
+      if (updateFollowupError) throw updateFollowupError;
+    } else {
+      const { error: insertFollowupError } = await supabaseAdmin
+        .from("tbrevisione_followup")
+        .insert({
+          studio_id: item.studio_id,
+          controllo_id: item.controllo_id,
+          checklist_id: item.id,
+          cliente_id: controllo.cliente_id,
+          descrizione,
+          gravita: item.gravita || null,
+          data_scadenza: item.data_follow_up || null,
+          completato: false,
+          note: item.note || null,
+        });
 
-      return res.status(200).json({
-        success: true,
-        data: data || [],
-      });
+      if (insertFollowupError) throw insertFollowupError;
     }
+  } else if (item.id) {
+    const { error: deleteFollowupError } = await supabaseAdmin
+      .from("tbrevisione_followup")
+      .delete()
+      .eq("checklist_id", item.id)
+      .eq("completato", false);
+
+    if (deleteFollowupError) throw deleteFollowupError;
+  }
+}
+
+return res.status(200).json({
+  success: true,
+  data: data || [],
+});
 
     if (req.method === "DELETE") {
       const { id } = req.query;
