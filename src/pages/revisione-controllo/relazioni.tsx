@@ -151,8 +151,30 @@ export default function RelazioniRevisionePage() {
         throw new Error(json.error || "Errore generazione relazione.");
       }
 
-      setTestoGenerato(json.testo_generato || "");
-      setSuccess("Relazione generata e salvata correttamente.");
+    const testo = json.testo_generato || "";
+setTestoGenerato(testo);
+
+const docRes = await fetch("/api/revisione-controllo/documenti", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    studio_id: studioId,
+    controllo_id: controlloId,
+    relazione_id: json.data?.id || null,
+    nome_file: `verbale_revisione_${controllo?.ragione_sociale || "cliente"}_${controllo?.anno || ""}_${controllo?.trimestre || ""}.txt`,
+    tipo_file: "TXT",
+    testo_documento: testo,
+    generato_da: currentUserId || null,
+  }),
+});
+
+const docJson = await docRes.json();
+
+if (!docRes.ok || !docJson.success) {
+  throw new Error(docJson.error || "Relazione generata, ma errore archiviazione documento.");
+}
+
+setSuccess("Relazione generata e archiviata correttamente.");
     } catch (err: any) {
       setError(err?.message || "Errore generazione relazione.");
     } finally {
