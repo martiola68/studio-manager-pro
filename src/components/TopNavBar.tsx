@@ -432,6 +432,11 @@ void loadEventiImminenti();
   icon: <ClipboardCheck className="h-4 w-4" />,
 },
     {
+  label: "Documenti revisione",
+  href: "/revisione-controllo/documenti",
+  icon: <FileText className="h-4 w-4" />,
+},
+    {
   label: "Relazioni / Verbali",
   href: "/revisione-controllo/relazioni",
   icon: <FileText className="h-4 w-4" />,
