@@ -631,16 +631,20 @@ try {
      <div className="flex justify-end gap-2">
   {isResponsabilePaghe && richiesta.stato === 'inviata' && (
     <>
-     <Button
+ <Button
   size="icon"
   className="h-8 w-8 bg-green-600 text-white hover:bg-green-700"
+  disabled={savingId === richiesta.id || azioniInCorso.has(richiesta.id)}
+  onClick={() => gestisciRichiesta(richiesta.id, 'approvata')}
 >
   <Check className="h-4 w-4" />
 </Button>
 
- <Button
+<Button
   size="icon"
   className="h-8 w-8 bg-black text-white hover:bg-zinc-800"
+  disabled={savingId === richiesta.id || azioniInCorso.has(richiesta.id)}
+  onClick={() => gestisciRichiesta(richiesta.id, 'rifiutata')}
 >
   <X className="h-4 w-4" />
 </Button>
@@ -648,9 +652,11 @@ try {
   )}
 
   {isResponsabilePaghe && richiesta.stato === 'approvata' && (
-  <Button
+<Button
   size="icon"
   className="h-8 w-8 bg-orange-500 text-white hover:bg-orange-600"
+  disabled={savingId === richiesta.id || azioniInCorso.has(richiesta.id)}
+  onClick={() => gestisciRichiesta(richiesta.id, 'revocata')}
 >
   <Undo2 className="h-4 w-4" />
 </Button>
