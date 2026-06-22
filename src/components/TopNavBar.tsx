@@ -446,6 +446,11 @@ void loadEventiImminenti();
   href: "/revisione-controllo/modelli",
   icon: <FileText className="h-4 w-4" />,
 },
+    {
+  label: "Follow-up",
+  href: "/revisione-controllo/followup",
+  icon: <Clock className="h-4 w-4" />,
+},
   ],
 },
     
