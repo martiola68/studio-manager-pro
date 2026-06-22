@@ -6,42 +6,47 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-function todayISO() {
+function oggiISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function addDaysISO(days: number) {
+function aggiungiGiorniISO(giorni: number) {
   const d = new Date();
-  d.setDate(d.getDate() + days);
+  d.setDate(d.getDate() + giorni);
   return d.toISOString().slice(0, 10);
 }
 
+function giorniRitardo(data: string | null) {
+  if (!data) return 0;
+
+  const oggi = new Date(oggiISO());
+  const scadenza = new Date(data);
+  const diff = oggi.getTime() - scadenza.getTime();
+
+  return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== "GET") {
-    return res.status(405).json({ error: "Metodo non consentito" });
-  }
-
   try {
-    const userEmail = req.headers["x-user-email"] as string;
-
-    if (!userEmail) {
-      return res.status(401).json({ error: "Utente non identificato" });
+    if (req.method !== "GET") {
+      return res.status(405).json({
+        success: false,
+        error: "Metodo non consentito",
+      });
     }
 
-    const { data: utente, error: utenteError } = await supabaseAdmin
-      .from("tbutenti")
-      .select("id, studio_id")
-      .eq("email", userEmail)
-      .single();
+    const { studio_id } = req.query;
 
-    if (utenteError || !utente?.studio_id) {
-      return res.status(401).json({ error: "Studio non trovato per l'utente" });
+    if (typeof studio_id !== "string" || !studio_id) {
+      return res.status(400).json({
+        success: false,
+        error: "studio_id obbligatorio",
+      });
     }
 
-    const studioId = utente.studio_id;
-    const oggi = todayISO();
-    const tra30 = addDaysISO(30);
-    const anno = new Date().getFullYear();
+    const oggi = oggiISO();
+    const tra30 = aggiungiGiorniISO(30);
+    const annoCorrente = new Date().getFullYear();
 
     const [
       incarichiAttivi,
@@ -57,56 +62,56 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       supabaseAdmin
         .from("tbrevisione_incarichi")
         .select("id", { count: "exact", head: true })
-        .eq("studio_id", studioId)
+        .eq("studio_id", studio_id)
         .eq("stato", "attivo"),
 
       supabaseAdmin
         .from("tbrevisione_controlli")
         .select("id", { count: "exact", head: true })
-        .eq("studio_id", studioId)
+        .eq("studio_id", studio_id)
         .gte("data_scadenza", oggi)
-        .neq("stato", "completato"),
+        .neq("stato", "COMPLETATO"),
 
       supabaseAdmin
         .from("tbrevisione_controlli")
         .select("id", { count: "exact", head: true })
-        .eq("studio_id", studioId)
+        .eq("studio_id", studio_id)
         .lt("data_scadenza", oggi)
-        .neq("stato", "completato"),
+        .neq("stato", "COMPLETATO"),
 
       supabaseAdmin
         .from("tbrevisione_followup")
         .select("id", { count: "exact", head: true })
-        .eq("studio_id", studioId)
+        .eq("studio_id", studio_id)
         .eq("stato", "aperto"),
 
       supabaseAdmin
         .from("tbrevisione_followup")
         .select("id", { count: "exact", head: true })
-        .eq("studio_id", studioId)
+        .eq("studio_id", studio_id)
         .eq("stato", "aperto")
-        .in("gravita", ["alta", "critica"]),
+        .in("gravita", ["alta", "critica", "ALTA", "CRITICA"]),
 
       supabaseAdmin
         .from("tbrevisione_relazioni")
         .select("id", { count: "exact", head: true })
-        .eq("studio_id", studioId)
-        .eq("anno", anno),
+        .eq("studio_id", studio_id)
+        .eq("anno", annoCorrente),
 
       supabaseAdmin
         .from("vw_revisione_controlli")
         .select("*")
-        .eq("studio_id", studioId)
+        .eq("studio_id", studio_id)
         .gte("data_scadenza", oggi)
         .lte("data_scadenza", tra30)
-        .neq("stato", "completato")
+        .neq("stato", "COMPLETATO")
         .order("data_scadenza", { ascending: true })
         .limit(10),
 
       supabaseAdmin
         .from("tbrevisione_followup")
         .select("*")
-        .eq("studio_id", studioId)
+        .eq("studio_id", studio_id)
         .eq("stato", "aperto")
         .order("data_follow_up", { ascending: true })
         .limit(10),
@@ -114,30 +119,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       supabaseAdmin
         .from("tbrevisione_followup")
         .select("*")
-        .eq("studio_id", studioId)
+        .eq("studio_id", studio_id)
         .eq("stato", "aperto")
         .lt("data_follow_up", oggi)
         .order("data_follow_up", { ascending: true })
         .limit(10),
     ]);
 
+    const followupScadutiConRitardo = (followupScadutiLista.data || []).map(
+      (item: any) => ({
+        ...item,
+        giorni_ritardo: giorniRitardo(item.data_follow_up),
+      })
+    );
+
     return res.status(200).json({
-      kpi: {
-        incarichiAttivi: incarichiAttivi.count || 0,
-        controlliDaEseguire: controlliDaEseguire.count || 0,
-        controlliScaduti: controlliScaduti.count || 0,
-        followupAperti: followupAperti.count || 0,
-        followupCritici: followupCritici.count || 0,
-        relazioniAnno: relazioniAnno.count || 0,
+      success: true,
+      data: {
+        kpi: {
+          incarichi_attivi: incarichiAttivi.count || 0,
+          controlli_da_eseguire: controlliDaEseguire.count || 0,
+          controlli_scaduti: controlliScaduti.count || 0,
+          followup_aperti: followupAperti.count || 0,
+          followup_critici: followupCritici.count || 0,
+          relazioni_generate_anno: relazioniAnno.count || 0,
+        },
+        controlli_prossimi: controlliProssimi.data || [],
+        followup_aperti: followupApertiLista.data || [],
+        followup_scaduti: followupScadutiConRitardo,
       },
-      controlliProssimi: controlliProssimi.data || [],
-      followupAperti: followupApertiLista.data || [],
-      followupScaduti: followupScadutiLista.data || [],
     });
   } catch (error: any) {
-    console.error("Errore dashboard revisione:", error);
+    console.error("Errore API revisione-controllo/dashboard:", error);
+
     return res.status(500).json({
-      error: error.message || "Errore interno dashboard revisione",
+      success: false,
+      error: error?.message || "Errore interno server",
     });
   }
 }
