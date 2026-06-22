@@ -314,6 +314,40 @@ export default function CalcoloIndiciPage() {
     },
   ];
 
+  async function generaPdf() {
+  try {
+    const res = await fetch("/api/controllo-gestione/indici-report", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        form,
+        risultati,
+        indicatori,
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error("Errore generazione PDF");
+    }
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `analisi_indici_${form.anno || "report"}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    window.URL.revokeObjectURL(url);
+  } catch (err: any) {
+    setErrore(err?.message || "Errore generazione PDF");
+  }
+}
+  
   return (
     <>
       <Head>
@@ -329,6 +363,13 @@ export default function CalcoloIndiciPage() {
             <p className="mt-1 text-sm text-slate-500">
               Importa un XBRL per precompilare i dati oppure inserisci i valori manualmente.
             </p>
+            <button
+  type="button"
+  onClick={generaPdf}
+  className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+>
+  Genera report PDF
+</button>
           </div>
 
           {errore && (
@@ -393,8 +434,8 @@ export default function CalcoloIndiciPage() {
 
 <Money
   label="Rate finanziarie annue"
-  value={form.rate_finanziarie}
-  onChange={(v) => updateField("rate_finanziarie", v)}
+  value={form.rate_finanziarie_annue}
+  onChange={(v) => updateField("rate_finanziarie_annue", v)}
   manuale={true}
 />
             </Box>
