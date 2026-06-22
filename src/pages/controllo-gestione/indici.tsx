@@ -414,23 +414,25 @@ capitale_investito: totaleAttivo - debitiTotali,
   <Box title="Dati generali">
     <div className="space-y-4">
 
-      <Input
-        label="Società"
-        value={form.societa}
-        onChange={(v) => updateField('societa', v)}
-      />
+    <div className="md:col-span-2">
+  <Input
+    label="Società"
+    value={form.societa}
+    onChange={(v) => updateField('societa', v)}
+  />
+</div>
 
-      <Input
-        label="Codice fiscale"
-        value={form.codice_fiscale}
-        onChange={(v) => updateField('codice_fiscale', v)}
-      />
+<Input
+  label="Codice fiscale"
+  value={form.codice_fiscale}
+  onChange={(v) => updateField('codice_fiscale', v)}
+/>
 
-      <Input
-        label="Anno"
-        value={form.anno}
-        onChange={(v) => updateField('anno', v)}
-      />
+<Input
+  label="Anno"
+  value={form.anno}
+  onChange={(v) => updateField('anno', v)}
+/>
 
     </div>
   </Box>
@@ -529,10 +531,11 @@ function Box({ title, children }: BoxProps) {
   return (
     <section className="rounded-xl border bg-white p-5 shadow-sm">
       <h2 className="mb-4 text-lg font-semibold">{title}</h2>
-      <div className="space-y-3">{children}</div>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">{children}</div>
     </section>
   );
 }
+
 type InputProps = {
   label: string;
   value: string;
