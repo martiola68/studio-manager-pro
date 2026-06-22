@@ -338,9 +338,11 @@ capitale_investito: totaleAttivo - debitiTotali,
       }),
     });
 
-    if (!res.ok) {
-      throw new Error("Errore generazione PDF");
-    }
+  if (!res.ok) {
+  const text = await res.text();
+  console.error("Errore PDF API:", text);
+  throw new Error(text || "Errore generazione PDF");
+}
 
     const blob = await res.blob();
     const url = window.URL.createObjectURL(blob);
