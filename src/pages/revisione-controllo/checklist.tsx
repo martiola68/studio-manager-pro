@@ -8,6 +8,11 @@ type ChecklistItem = {
   area: string;
   domanda: string;
   risposta: string | null;
+  esito: string | null;
+  gravita: string | null;
+  follow_up: boolean;
+  data_follow_up: string | null;
+  raccomandazione: string | null;
   note: string | null;
   ordine: number;
 };
@@ -184,13 +189,13 @@ export default function ChecklistRevisionePage() {
                           Verifica
                         </th>
 
-                        <th className="p-3 text-center">
-                          Esito
-                        </th>
-
-                        <th className="p-3 text-left">
-                          Note
-                        </th>
+                       <th className="p-3 text-center">Risposta</th>
+<th className="p-3 text-center">Esito</th>
+<th className="p-3 text-center">Gravità</th>
+<th className="p-3 text-center">Follow-up</th>
+<th className="p-3 text-center">Data follow-up</th>
+<th className="p-3 text-left">Raccomandazione</th>
+<th className="p-3 text-left">Note</th>
                       </tr>
                     </thead>
 
@@ -235,6 +240,57 @@ export default function ChecklistRevisionePage() {
                                 </option>
                               </select>
                             </td>
+
+                            <td className="p-3 text-center">
+  <select
+    value={item.esito || ""}
+    onChange={(e) => updateItem(index, "esito", e.target.value || null)}
+    className="rounded border px-2 py-1"
+  >
+    <option value="">--</option>
+    <option value="REGOLARE">Regolare</option>
+    <option value="DA_MONITORARE">Da monitorare</option>
+    <option value="IRREGOLARE">Irregolare</option>
+  </select>
+</td>
+
+<td className="p-3 text-center">
+  <select
+    value={item.gravita || ""}
+    onChange={(e) => updateItem(index, "gravita", e.target.value || null)}
+    className="rounded border px-2 py-1"
+  >
+    <option value="">--</option>
+    <option value="BASSA">Bassa</option>
+    <option value="MEDIA">Media</option>
+    <option value="ALTA">Alta</option>
+  </select>
+</td>
+
+<td className="p-3 text-center">
+  <input
+    type="checkbox"
+    checked={item.follow_up === true}
+    onChange={(e) => updateItem(index, "follow_up", e.target.checked)}
+  />
+</td>
+
+<td className="p-3 text-center">
+  <input
+    type="date"
+    value={item.data_follow_up || ""}
+    onChange={(e) => updateItem(index, "data_follow_up", e.target.value || null)}
+    className="rounded border px-2 py-1"
+  />
+</td>
+
+<td className="p-3">
+  <input
+    value={item.raccomandazione || ""}
+    onChange={(e) => updateItem(index, "raccomandazione", e.target.value)}
+    className="w-full rounded border px-2 py-1"
+  />
+</td>
 
                             <td className="p-3">
                               <input
