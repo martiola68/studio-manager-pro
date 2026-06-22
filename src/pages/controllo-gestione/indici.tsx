@@ -384,8 +384,19 @@ export default function CalcoloIndiciPage() {
             </Box>
 
             <Box title="Dati finanziari manuali">
-              <Money label="Cash flow operativo" value={form.cash_flow_operativo} onChange={(v) => updateField('cash_flow_operativo', v)} />
-              <Money label="Rate finanziarie annue" value={form.rate_finanziarie_annue} onChange={(v) => updateField('rate_finanziarie_annue', v)} />
+              <Money
+  label="Cash flow operativo"
+  value={form.cash_flow_operativo}
+  onChange={(v) => updateField("cash_flow_operativo", v)}
+  manuale={true}
+/>
+
+<Money
+  label="Rate finanziarie annue"
+  value={form.rate_finanziarie}
+  onChange={(v) => updateField("rate_finanziarie", v)}
+  manuale={true}
+/>
             </Box>
           </section>
 
@@ -455,35 +466,9 @@ function Input({ label, value, onChange }: InputProps) {
   return (
     <label className="block text-sm">
       <span className="mb-1 block font-medium text-slate-600">{label}</span>
-      <input
-        value={value ?? ""}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border px-3 py-2"
-      />
-    </label>
-  );
-}
-
-type MoneyProps = {
-  label: string;
-  value: number;
-  onChange: (value: string) => void;
-};
-
-function Money({ label, value, onChange }: MoneyProps) {
-  return (
-    <label className="block text-sm">
-      <span className="mb-1 block font-medium text-slate-600">{label}</span>
      <input
-  type="text"
-  value={Number(value || 0).toLocaleString('it-IT')}
-  onChange={(e) =>
-    onChange(
-      e.target.value
-        .replace(/\./g, '')
-        .replace(',', '.')
-    )
-  }
+  value={value ?? ""}
+  onChange={(e) => onChange(e.target.value)}
   className="
     w-full
     rounded-lg
@@ -494,9 +479,55 @@ function Money({ label, value, onChange }: MoneyProps) {
     font-semibold
     px-3
     py-2
-    text-right
   "
 />
+    </label>
+  );
+}
+
+type MoneyProps = {
+  label: string;
+  value: number;
+  onChange: (value: string) => void;
+};
+
+function Money({
+  label,
+  value,
+  onChange,
+  manuale = false,
+}: MoneyProps & { manuale?: boolean }) {
+  return (
+    <label className="block text-sm">
+      <span className="mb-1 block font-medium text-slate-600">
+        {label}
+      </span>
+
+      <input
+        type="text"
+        value={Number(value || 0).toLocaleString("it-IT")}
+        onChange={(e) =>
+          onChange(
+            e.target.value
+              .replace(/\./g, "")
+              .replace(",", ".")
+          )
+        }
+        className={`
+          w-full
+          rounded-lg
+          border-2
+          font-semibold
+          px-3
+          py-2
+          text-right
+          ${
+            manuale
+              ? "border-sky-400 bg-sky-50 text-sky-900"
+              : "border-red-300 bg-red-50 text-red-700"
+          }
+        `}
+      />
     </label>
   );
 }
