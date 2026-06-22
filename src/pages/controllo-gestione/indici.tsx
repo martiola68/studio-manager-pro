@@ -234,14 +234,17 @@ export default function CalcoloIndiciPage() {
 
       const totaleAttivo = getTagValue(xml, ['TotaleAttivo']);
       const patrimonioNetto = getTagValue(xml, ['TotalePatrimonioNetto']);
-     const debitiTotali = getTagValue(xml, ['TotaleDebiti']);
+const debitiTotali = getTagValue(xml, ['TotaleDebiti']);
 const attivoCorrente = getTagValue(xml, ['TotaleAttivoCircolante']);
 
-const passivoCorrente = getTagValue(xml, [
-  'DebitiEsigibiliEntroEsercizioSuccessivo',
-  'TotaleDebitiEsigibiliEntroEsercizioSuccessivo',
-  'DebitiTotaleDebitiEntroEsercizioSuccessivo',
-]);
+const passivoCorrente =
+  getTagValue(xml, ['DebitiDebitiVersoBancheEsigibiliEntroEsercizioSuccessivo']) +
+  getTagValue(xml, ['DebitiDebitiVersoAltriFinanziatoriEsigibiliEntroEsercizioSuccessivo']) +
+  getTagValue(xml, ['DebitiAccontiEsigibiliEntroEsercizioSuccessivo']) +
+  getTagValue(xml, ['DebitiDebitiVersoFornitoriEsigibiliEntroEsercizioSuccessivo']) +
+  getTagValue(xml, ['DebitiDebitiTributariEsigibiliEntroEsercizioSuccessivo']) +
+  getTagValue(xml, ['DebitiDebitiVersoIstitutiPrevidenzaSicurezzaSocialeEsigibiliEntroEsercizioSuccessivo']) +
+  getTagValue(xml, ['DebitiAltriDebitiEsigibiliEntroEsercizioSuccessivo']);
 
       setForm((prev) => ({
         ...prev,
