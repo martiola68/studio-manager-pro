@@ -116,12 +116,12 @@ if (documentoEsistente) {
   );
 }
 
-    const { data: modello, error: modelloError } = await supabaseAdmin
-      .from("tbpratiche_modelli_utilita")
-      .select("*")
-      .eq("codice", codiceModello)
-      .eq("attivo", true)
-      .single();
+   const { data: modello, error: modelloError } = await supabaseAdmin
+  .from("tbpratiche_modelli")
+  .select("*")
+  .eq("codice", codiceModello)
+  .eq("attivo", true)
+  .single();
 
     if (modelloError || !modello) {
       return NextResponse.json(
@@ -414,7 +414,7 @@ SEDE_LIQUIDAZIONE:
   .replace(/^_+|_+$/g, "");
 
 const safeTipoVerbale = String(
-  modello?.descrizione || modello?.nome || codiceModello || "documento"
+  modello?.titolo || modello?.codice || codiceModello || "documento"
 )
   .replace(/[^a-zA-Z0-9]+/g, "_")
   .replace(/^_+|_+$/g, "");
