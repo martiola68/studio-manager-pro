@@ -898,7 +898,7 @@ if (destinatario?.email) {
   }
 
   return (
-  <div className="w-full max-w-[98vw] mx-auto py-8 px-4">
+  <div className="container mx-auto py-8 px-4">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Promemoria</h1>
         <div className="flex gap-2">
@@ -1000,26 +1000,26 @@ if (destinatario?.email) {
       </div>
       
            <Table>
-       <TableHeader>
+   <TableHeader>
   <TableRow>
-    <TableHead className="w-10">
+    <TableHead className="w-12">
       <Checkbox
         checked={selectAll}
         onCheckedChange={handleSelectAll}
       />
     </TableHead>
-    <TableHead className="min-w-[130px]">Tipo</TableHead>
-    <TableHead className="min-w-[90px]">Priorità</TableHead>
-    <TableHead className="min-w-[190px]">Titolo</TableHead>
-    <TableHead className="min-w-[320px]">Descrizione</TableHead>
-    <TableHead className="min-w-[120px]">Data Scadenza</TableHead>
-    <TableHead className="min-w-[100px]">Operatore</TableHead>
-    <TableHead className="min-w-[110px]">Destinatario</TableHead>
-    <TableHead className="min-w-[130px]">Stato</TableHead>
-    <TableHead className="min-w-[130px]">Data completato</TableHead>
-    <TableHead className="min-w-[90px]">Settore</TableHead>
-    <TableHead className="min-w-[80px]">Allegati</TableHead>
-    <TableHead className="min-w-[130px] text-right">Azioni</TableHead>
+    <TableHead>Tipo</TableHead>
+    <TableHead>Priorità</TableHead>
+    <TableHead>Titolo</TableHead>
+    <TableHead>Descrizione</TableHead>
+    <TableHead>Data Scadenza</TableHead>
+    <TableHead>Operatore</TableHead>
+    <TableHead>Destinatario</TableHead>
+    <TableHead>Stato</TableHead>
+    <TableHead>Data completato</TableHead>
+    <TableHead>Settore</TableHead>
+    <TableHead>Allegati</TableHead>
+    <TableHead className="text-right">Azioni</TableHead>
   </TableRow>
 </TableHeader>
 
@@ -1181,17 +1181,16 @@ if (destinatario?.email) {
                     )}
                   </TableCell>
 
- <TableCell className="text-right">
-  <div className="flex items-center justify-end gap-3">
-    <label className="flex items-center gap-2 text-xs text-gray-700">
-      <Checkbox
-        checked={p.working_progress === "Completato"}
-        onCheckedChange={(checked) =>
-          handleToggleCompletato(p, checked === true)
-        }
-      />
-      Completato
-    </label>
+<TableCell className="text-right">
+  <div className="flex items-center justify-end gap-2">
+    <Checkbox
+      checked={p.working_progress === "Completato"}
+      onCheckedChange={(checked) =>
+        handleToggleCompletato(p, checked === true)
+      }
+      aria-label="Completato"
+      title="Completato"
+    />
 
     <Button variant="ghost" size="icon" onClick={() => handleEdit(p)}>
       <Pencil className="h-4 w-4" />
