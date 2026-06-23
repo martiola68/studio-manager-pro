@@ -135,17 +135,18 @@ if (!payload.rapp_legale_id && !payload.soggetto_cliente_id) {
 
     const { data, error } = await supabase
       .from("tbclienti_organi")
-     .insert({
+.insert({
   cliente_id: payload.cliente_id,
- rapp_legale_id: payload.rapp_legale_id || null,
-soggetto_cliente_id: payload.soggetto_cliente_id || null,
-tipo_soggetto:
-  payload.tipo_soggetto === "societa"
-    ? "societa"
-    : "persona_fisica",
-rappresentante_legale: payload.rappresentante_legale ?? false,
+  rapp_legale_id: null,
+  soggetto_cliente_id: payload.soggetto_cliente_id || null,
+  tipo_soggetto:
+    payload.tipo_soggetto === "societa"
+      ? "societa"
+      : "persona_fisica",
+  rappresentante_legale: payload.rappresentante_legale ?? false,
   ruolo: payload.ruolo,
-        carica: payload.carica,
+
+          carica: payload.carica,
         percentuale_partecipazione: payload.percentuale_partecipazione,
         presenza: payload.presenza,
         principale: payload.principale,
@@ -194,11 +195,16 @@ export async function PUT(req: NextRequest) {
 
     const { data, error } = await supabase
       .from("tbclienti_organi")
-     .update({
-rapp_legale_id: payload.rapp_legale_id || null,
-soggetto_cliente_id: payload.soggetto_cliente_id || null,
-tipo_soggetto: payload.tipo_soggetto || "persona_fisica",
-rappresentante_legale: payload.rappresentante_legale ?? false,
+.update({
+  rapp_legale_id: null,
+  soggetto_cliente_id: payload.soggetto_cliente_id || null,
+
+  tipo_soggetto:
+    payload.tipo_soggetto === "societa"
+      ? "societa"
+      : "persona_fisica",
+
+  rappresentante_legale: payload.rappresentante_legale ?? false,
   ruolo: payload.ruolo,
         carica: payload.carica,
         percentuale_partecipazione: payload.percentuale_partecipazione,
