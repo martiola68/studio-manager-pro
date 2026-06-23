@@ -359,7 +359,9 @@ capitale_investito: totaleAttivo - debitiTotali,
     setErrore(err?.message || "Errore generazione PDF");
   }
 }
-  
+  const canPrint =
+  !!form.societa?.trim() &&
+  !!form.codice_fiscale?.trim();
   return (
     <>
       <Head>
@@ -375,10 +377,16 @@ capitale_investito: totaleAttivo - debitiTotali,
             <p className="mt-1 text-sm text-slate-500">
               Importa un XBRL per precompilare i dati oppure inserisci i valori manualmente.
             </p>
-            <button
+         <button
   type="button"
   onClick={generaPdf}
-  className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+  disabled={!canPrint}
+  title={!canPrint ? "Importare prima un file XBRL" : ""}
+  className={`mt-4 rounded-lg px-4 py-2 text-sm font-semibold text-white ${
+    canPrint
+      ? "bg-blue-600 hover:bg-blue-700"
+      : "cursor-not-allowed bg-slate-400"
+  }`}
 >
   Genera report PDF
 </button>
