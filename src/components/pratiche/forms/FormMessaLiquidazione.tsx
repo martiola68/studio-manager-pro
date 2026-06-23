@@ -546,61 +546,42 @@ function aggiornaCampo(campo: string, valore: string) {
   >
     <div>
       <label style={labelStyle}>Socio</label>
- <select
+<select
   style={inputStyle}
   value={nuovoSocio.nominativo_id}
   onChange={(e) => {
     const selected = organiSocieta.find(
-      (o) => String(o.rapp_legale_id || o.id) === String(e.target.value)
+      (o) => String(o.soggetto_cliente_id) === String(e.target.value)
     );
 
     setNuovoSocio({
       ...nuovoSocio,
-      nominativo_id: selected?.rapp_legale_id || selected?.id || "",
-      nome_cognome:
-        selected?.rapp_legali?.nome_cognome ||
-        selected?.nome_cognome ||
-        selected?.nominativo ||
-        "",
+      nominativo_id: selected?.soggetto_cliente_id || "",
+      nome_cognome: selected?.soggetto_cliente?.ragione_sociale || "",
       codice_fiscale:
-        selected?.rapp_legali?.codice_fiscale ||
-        selected?.codice_fiscale ||
+        selected?.soggetto_cliente?.codice_fiscale ||
+        selected?.soggetto_cliente?.partita_iva ||
         "",
-      indirizzo:
-        selected?.rapp_legali?.indirizzo ||
-        selected?.indirizzo ||
-        "",
-      cap:
-        selected?.rapp_legali?.cap ||
-        selected?.cap ||
-        "",
-      citta:
-        selected?.rapp_legali?.citta ||
-        selected?.citta ||
-        "",
-      provincia:
-        selected?.rapp_legali?.provincia ||
-        selected?.provincia ||
-        "",
+      indirizzo: selected?.soggetto_cliente?.indirizzo || "",
+      cap: selected?.soggetto_cliente?.cap || "",
+      citta: selected?.soggetto_cliente?.citta || "",
+      provincia: selected?.soggetto_cliente?.provincia || "",
       percentuale_partecipazione:
         selected?.percentuale_partecipazione
           ? String(selected.percentuale_partecipazione)
           : "",
+      presenza: nuovoSocio.presenza || "Presente",
     });
   }}
 >
   <option value="">Seleziona socio</option>
 
   {organiSocieta.map((o) => {
-    const id = o.rapp_legale_id || o.id;
-    const nome =
-      o.rapp_legali?.nome_cognome ||
-      o.nome_cognome ||
-      o.nominativo ||
-      "-";
+    const id = o.soggetto_cliente_id;
+    const nome = o.soggetto_cliente?.ragione_sociale || "-";
 
     return (
-      <option key={id} value={id}>
+      <option key={o.id} value={id || ""}>
         {nome}
       </option>
     );
