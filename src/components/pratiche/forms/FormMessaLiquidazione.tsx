@@ -7,6 +7,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
+import { generaDocumentoPratica } from "@/lib/pratiche/generaDocumentoPratica";
 
 const font =
   'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
@@ -339,31 +340,39 @@ function aggiornaCampo(campo: string, valore: string) {
     }
   }
 
-  async function generaDocumento() {
-    const salvato = await salvaDatiDocumento();
+ async function generaDocumento() {
+  const salvato = await salvaDatiDocumento();
+  if (!salvato) return;
 
-    if (!salvato) return;
-
-    const res = await fetch(`/api/pratiche/${praticaId}/genera-documento`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        codice_modello: "VERBALE_LIQUIDAZIONE",
-      }),
+  try {
+    await generaDocumentoPratica({
+      praticaId,
+      codiceModello: "VERBALE_LIQUIDAZIONE",
+      onSuccess: caricaDocumenti,
     });
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      alert(data.error || "Errore generazione documento");
-      return;
-    }
-
-    await caricaDocumenti();
     alert("Documento generato.");
+  } catch (error: any) {
+    alert(error.message || "Errore generazione documento");
   }
+}
+
+  async function generaAccettazioneCarica() {
+  const salvato = await salvaDatiDocumento();
+  if (!salvato) return;
+
+  try {
+    await generaDocumentoPratica({
+      praticaId,
+      codiceModello: "ACCETTAZIONE_CARICHE",
+      onSuccess: caricaDocumenti,
+    });
+
+    alert("Accettazione carica generata.");
+  } catch (error: any) {
+    alert(error.message || "Errore generazione accettazione carica");
+  }
+}
 
   return (
     <main
@@ -1223,6 +1232,14 @@ onChange={(e) => {
           <button type="button" style={blueButton} onClick={generaDocumento}>
             Genera documento
           </button>
+
+          <button
+  type="button"
+  onClick={generaAccettazioneCarica}
+  style={secondaryButton}
+>
+  Genera accettazione carica
+</button>
         </div>
 
         {documenti.length > 0 && (
