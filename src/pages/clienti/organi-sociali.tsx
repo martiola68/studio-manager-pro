@@ -805,10 +805,8 @@ function caricaInModifica(organo: any) {
            <tbody>
   {organiFiltrati.map((o) => (
     <tr key={o.id}>
-   <td style={tdStyle}>
+ <td style={tdStyle}>
   {o.soggetto_cliente?.ragione_sociale || "—"}
-    o.rapp_legali?.nome_cognome ||
-    "—"}
 </td>
 
     <td style={tdStyle}>
