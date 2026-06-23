@@ -424,7 +424,6 @@ async function eliminaOrgano(organo: any) {
 
 soggetto_cliente_id:
   organo.soggetto_cliente_id || "",
-  "",
     ruolo: organo.ruolo || "socio",
     carica: organo.carica || "",
     percentuale_partecipazione:
