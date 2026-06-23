@@ -487,6 +487,21 @@ capitale_investito: totaleAttivo - debitiTotali,
   }
 }
 
+  function azzeraDati() {
+  if (
+    !confirm(
+      "Azzerare tutti i dati caricati e riportare il form ai valori iniziali?"
+    )
+  ) {
+    return;
+  }
+
+  setForm(initialData);
+  setFileName("");
+  setErrore("");
+  setMessaggio("");
+}
+
 const canPrint =
   !!form.societa?.trim() &&
   !!form.codice_fiscale?.trim();
@@ -510,6 +525,7 @@ const canSave =
               Importa un XBRL per precompilare i dati oppure inserisci i valori manualmente.
             </p>
     <div className="mt-4 flex flex-wrap gap-2">
+<div className="mt-4 flex flex-wrap gap-2">
   <button
     type="button"
     onClick={generaPdf}
@@ -541,6 +557,15 @@ const canSave =
   >
     {salvando ? 'Salvataggio...' : 'Salva analisi'}
   </button>
+
+  <button
+    type="button"
+    onClick={azzeraDati}
+    className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+  >
+    Azzera dati
+  </button>
+</div>
 </div>
           </div>
 
