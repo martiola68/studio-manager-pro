@@ -106,7 +106,10 @@ if (error || utente?.tipo_utente !== "Admin") {
   setIsAdmin(true);
 }
 
-  async function caricaModelli() {
+setCheckingAdmin(false);
+}
+
+async function caricaModelli() {
     setLoading(true);
     setMessaggio("");
 
