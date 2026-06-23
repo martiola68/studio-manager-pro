@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { getSupabaseClient } from '@/lib/supabaseClient';
 import Head from 'next/head';
 
 type FormData = {
@@ -25,6 +26,16 @@ type FormData = {
 
   cash_flow_operativo: number;
   rate_finanziarie_annue: number;
+};
+
+
+type ClienteControllo = {
+  id: string;
+  cliente_id: string;
+  controllo_gestione_id?: string | null;
+  ragione_sociale?: string | null;
+  societa?: string | null;
+  cliente?: string | null;
 };
 
 const initialData: FormData = {
@@ -137,11 +148,73 @@ function statoIndicatore(tipo: string, valore: number) {
 }
 
 export default function CalcoloIndiciPage() {
-  const [form, setForm] = useState<FormData>(initialData);
-  const [fileName, setFileName] = useState('');
-  const [errore, setErrore] = useState('');
+ const [form, setForm] = useState<FormData>(initialData);
+const [fileName, setFileName] = useState('');
+const [errore, setErrore] = useState('');
+const [messaggio, setMessaggio] = useState('');
 
-  const risultati = useMemo(() => {
+const [clientiControllo, setClientiControllo] = useState<ClienteControllo[]>([]);
+const [clienteSelezionato, setClienteSelezionato] = useState('');
+const [loadingClienti, setLoadingClienti] = useState(false);
+const [salvando, setSalvando] = useState(false);
+
+  async function getCurrentStudioId() {
+  const supabase = getSupabaseClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return null;
+
+  const { data: utente, error } = await supabase
+    .from('tbutenti')
+    .select('studio_id')
+    .eq('id', user.id)
+    .single();
+
+  if (error || !utente?.studio_id) {
+    console.error('Errore recupero studio_id:', error);
+    return null;
+  }
+
+  return utente.studio_id;
+}
+
+useEffect(() => {
+  async function loadClientiControllo() {
+    try {
+      setLoadingClienti(true);
+
+      const studioId = await getCurrentStudioId();
+
+      if (!studioId) return;
+
+      const res = await fetch(
+        `/api/controllo-gestione/indici?studio_id=${studioId}`
+      );
+
+      const json = await res.json();
+
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Errore caricamento clienti');
+      }
+
+      setClientiControllo(json.data || []);
+    } catch (error: any) {
+      console.error(error);
+      setErrore(
+        error?.message || 'Errore caricamento clienti controllo gestione'
+      );
+    } finally {
+      setLoadingClienti(false);
+    }
+  }
+
+  loadClientiControllo();
+}, []);
+
+const risultati = useMemo(() => {
     const ebitda = form.ricavi - form.costi_operativi;
     const ebit = ebitda - form.ammortamenti - form.accantonamenti;
     const ebt = ebit - form.oneri_finanziari;
@@ -359,9 +432,68 @@ capitale_investito: totaleAttivo - debitiTotali,
     setErrore(err?.message || "Errore generazione PDF");
   }
 }
-  const canPrint =
+ async function salvaAnalisi() {
+  try {
+    setErrore('');
+    setMessaggio('');
+    setSalvando(true);
+
+    if (!clienteSelezionato) {
+      setErrore('Seleziona un cliente con controllo di gestione per salvare.');
+      return;
+    }
+
+    const studioId = await getCurrentStudioId();
+
+    if (!studioId) {
+      throw new Error('Studio non trovato');
+    }
+
+    const cliente = clientiControllo.find(
+      (c) =>
+        c.cliente_id === clienteSelezionato ||
+        c.id === clienteSelezionato
+    );
+
+    const res = await fetch('/api/controllo-gestione/indici', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        studio_id: studioId,
+        cliente_id: clienteSelezionato,
+        controllo_gestione_id:
+          cliente?.controllo_gestione_id ||
+          cliente?.id ||
+          null,
+        form,
+        risultati,
+        origine: fileName ? 'xbrl' : 'manuale',
+      }),
+    });
+
+    const json = await res.json();
+
+    if (!res.ok || !json.success) {
+      throw new Error(json.error || 'Errore salvataggio');
+    }
+
+    setMessaggio('Analisi salvata correttamente.');
+  } catch (error: any) {
+    setErrore(error?.message || 'Errore salvataggio analisi');
+  } finally {
+    setSalvando(false);
+  }
+}
+
+const canPrint =
   !!form.societa?.trim() &&
   !!form.codice_fiscale?.trim();
+
+const canSave =
+  canPrint &&
+  !!clienteSelezionato;
   return (
     <>
       <Head>
@@ -377,47 +509,109 @@ capitale_investito: totaleAttivo - debitiTotali,
             <p className="mt-1 text-sm text-slate-500">
               Importa un XBRL per precompilare i dati oppure inserisci i valori manualmente.
             </p>
-         <button
-  type="button"
-  onClick={generaPdf}
-  disabled={!canPrint}
-  title={!canPrint ? "Importare prima un file XBRL" : ""}
-  className={`mt-4 rounded-lg px-4 py-2 text-sm font-semibold text-white ${
-    canPrint
-      ? "bg-blue-600 hover:bg-blue-700"
-      : "cursor-not-allowed bg-slate-400"
-  }`}
->
-  Genera report PDF
-</button>
+    <div className="mt-4 flex flex-wrap gap-2">
+  <button
+    type="button"
+    onClick={generaPdf}
+    disabled={!canPrint}
+    title={!canPrint ? 'Importare prima un file XBRL' : ''}
+    className={`rounded-lg px-4 py-2 text-sm font-semibold text-white ${
+      canPrint
+        ? 'bg-blue-600 hover:bg-blue-700'
+        : 'cursor-not-allowed bg-slate-400'
+    }`}
+  >
+    Genera report PDF
+  </button>
+
+  <button
+    type="button"
+    onClick={salvaAnalisi}
+    disabled={!canSave || salvando}
+    title={
+      !canSave
+        ? 'Selezionare un cliente con Controllo di Gestione attivo'
+        : ''
+    }
+    className={`rounded-lg px-4 py-2 text-sm font-semibold text-white ${
+      canSave && !salvando
+        ? 'bg-green-600 hover:bg-green-700'
+        : 'cursor-not-allowed bg-slate-400'
+    }`}
+  >
+    {salvando ? 'Salvataggio...' : 'Salva analisi'}
+  </button>
+</div>
           </div>
 
-          {errore && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {errore}
-            </div>
-          )}
+        {errore && (
+  <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+    {errore}
+  </div>
+)}
 
-          <section className="rounded-xl border bg-white p-5 shadow-sm">
-            <h2 className="mb-4 text-lg font-semibold">Import XBRL</h2>
+{messaggio && (
+  <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+    {messaggio}
+  </div>
+)}
 
-            <input
-              type="file"
-              accept=".xml,.xbrl"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) importaXbrl(file);
-              }}
-              className="block w-full rounded-lg border p-2 text-sm"
-            />
+         <section className="rounded-xl border bg-white p-5 shadow-sm">
+  <h2 className="mb-4 text-lg font-semibold">
+    Cliente collegato al Controllo di Gestione
+  </h2>
 
-            {fileName && (
-              <p className="mt-2 text-sm text-slate-500">
-                File importato: <strong>{fileName}</strong>
-              </p>
-            )}
-          </section>
+  <select
+    value={clienteSelezionato}
+    onChange={(e) => setClienteSelezionato(e.target.value)}
+    disabled={loadingClienti}
+    className="w-full rounded-lg border px-3 py-2 text-sm"
+  >
+    <option value="">
+      Nessun cliente selezionato - calcolo libero senza salvataggio
+    </option>
 
+    {clientiControllo.map((cliente) => {
+      const nome =
+        cliente.ragione_sociale ||
+        cliente.societa ||
+        cliente.cliente ||
+        'Cliente senza nome';
+
+      const value = cliente.cliente_id || cliente.id;
+
+      return (
+        <option key={value} value={value}>
+          {nome}
+        </option>
+      );
+    })}
+  </select>
+
+  <p className="mt-2 text-xs text-slate-500">
+    Il calcolo e la stampa funzionano anche senza cliente. Il salvataggio è disponibile solo se selezioni un cliente con Controllo di Gestione attivo.
+  </p>
+</section>
+
+<section className="rounded-xl border bg-white p-5 shadow-sm">
+  <h2 className="mb-4 text-lg font-semibold">Import XBRL</h2>
+
+  <input
+    type="file"
+    accept=".xml,.xbrl"
+    onChange={(e) => {
+      const file = e.target.files?.[0];
+      if (file) importaXbrl(file);
+    }}
+    className="block w-full rounded-lg border p-2 text-sm"
+  />
+
+  {fileName && (
+    <p className="mt-2 text-sm text-slate-500">
+      File importato: <strong>{fileName}</strong>
+    </p>
+  )}
+</section>
          <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
   <Box title="Dati generali">
     <div className="space-y-4">
