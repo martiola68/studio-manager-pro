@@ -229,6 +229,24 @@ const percentualeCapitale = sociElenco.reduce(
     totale + Number(socio.SOCIO_PERCENTUALE_PARTECIPAZIONE || 0),
   0
 );
+    const cariche = [];
+
+if (codiceModello === "ACCETTAZIONE_CARICHE") {
+  if (datiDocumento.liquidatore_nome) {
+    cariche.push({
+      NOME_COGNOME: datiDocumento.liquidatore_nome || "",
+      CODICE_FISCALE: datiDocumento.liquidatore_codice_fiscale || "",
+      LUOGO_NASCITA: datiDocumento.liquidatore_luogo_nascita || "",
+      DATA_NASCITA: formatDataIt(datiDocumento.liquidatore_data_nascita),
+      INDIRIZZO_RESIDENZA: datiDocumento.liquidatore_indirizzo || "",
+      CAP_RESIDENZA: datiDocumento.liquidatore_cap || "",
+      CITTA_RESIDENZA: datiDocumento.liquidatore_citta || "",
+      PROVINCIA_RESIDENZA: datiDocumento.liquidatore_provincia || "",
+      CARICA: "Liquidatore",
+      DATA_SCADENZA_CARICA: "fino alla chiusura della liquidazione",
+    });
+  }
+}
     const { data: motivoLiquidazione } = datiDocumento.motivo_liquidazione
   ? await supabaseAdmin
       .from("tbpratiche_motivi_liquidazione")
@@ -368,6 +386,22 @@ RAPPRESENTANTE_LEGALE_NOME:
 RAPPRESENTANTE_LEGALE_CODICE_FISCALE:
   datiDocumento.rappresentante_legale_codice_fiscale ||
   "",
+
+      OGGETTO:
+  codiceModello === "ACCETTAZIONE_CARICHE"
+    ? "Accettazione carica Liquidatore"
+    : pratica.titolo || "",
+
+TIPO_NOMINA:
+  codiceModello === "ACCETTAZIONE_CARICHE"
+    ? "Liquidatore"
+    : "",
+
+DATA_ASSEMBLEA:
+  formatDataIt(dataAtto),
+
+CARICHE:
+  cariche,
 
 IMPORTO_DIVIDENDO_TOTALE:
   Number(
