@@ -18,11 +18,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
       }
 
-      const { data, error } = await supabaseAdmin
-        .from("vw_controllo_gestione_corrente")
-        .select("*")
-        .eq("studio_id", studio_id)
-        .order("ragione_sociale", { ascending: true });
+     const { data, error } = await supabaseAdmin
+  .from("vw_controllo_gestione_corrente")
+  .select("*")
+  .eq("studio_id", studio_id)
+  .order("data_esecuzione", { ascending: false });
 
       if (error) throw error;
 
