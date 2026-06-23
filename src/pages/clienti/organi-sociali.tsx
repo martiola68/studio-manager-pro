@@ -124,7 +124,7 @@ const [nuovoNominativo, setNuovoNominativo] = useState({
 });
 
 const [form, setForm] = useState({
-  rapp_legale_id: "",
+  soggetto_cliente_id: "",
   ruolo: "socio",
   carica: "",
   percentuale_partecipazione: "",
@@ -250,10 +250,10 @@ async function salvaNuovoNominativo() {
 
   await caricaNominativi();
 
-  setForm((prev) => ({
-    ...prev,
-    rapp_legale_id: data.data.id,
-  }));
+ setForm((prev) => ({
+  ...prev,
+  soggetto_cliente_id: data.data.id,
+}));
 
   setShowNuovoNominativo(false);
 
@@ -303,10 +303,10 @@ setNuovoNominativo({
       return;
     }
 
-    if (!form.rapp_legale_id) {
-      alert("Seleziona un nominativo.");
-      return;
-    }
+    if (!form.soggetto_cliente_id) {
+  alert("Seleziona un nominativo.");
+  return;
+}
 
    const res = await fetch("/api/clienti-organi", {
   method: organoInModificaId ? "PUT" : "POST",
@@ -317,9 +317,9 @@ body: JSON.stringify({
   id: organoInModificaId || undefined,
   cliente_id: clienteId,
 
-  rapp_legale_id: null,
-  soggetto_cliente_id: form.rapp_legale_id,
-  tipo_soggetto: "persona_fisica",
+ rapp_legale_id: null,
+soggetto_cliente_id: form.soggetto_cliente_id,
+tipo_soggetto: "cliente",
   rappresentante_legale: form.ruolo === "rappresentante_legale",
 
   ruolo: form.ruolo,
@@ -349,7 +349,7 @@ body: JSON.stringify({
     setMessaggio("Organo salvato correttamente.");
 
 setForm({
-  rapp_legale_id: "",
+  soggetto_cliente_id: "",
   ruolo: "socio",
   carica: "",
   percentuale_partecipazione: "",
@@ -422,10 +422,8 @@ async function eliminaOrgano(organo: any) {
   function caricaInModifica(organo: any) {
   setOrganoInModificaId(organo.id);
 
-  setForm({
-rapp_legale_id:
-  organo.soggetto_cliente_id ||
-  organo.rapp_legale_id ||
+soggetto_cliente_id:
+  organo.soggetto_cliente_id || "",
   "",
     ruolo: organo.ruolo || "socio",
     carica: organo.carica || "",
@@ -545,7 +543,7 @@ data_cessazione: organo.data_cessazione || "",
         ...prev,
         ruolo: e.target.value,
         carica: ruoliLabel[e.target.value] || "",
-        rapp_legale_id: "",
+       soggetto_cliente_id: "",
 
         percentuale_partecipazione:
           e.target.value === "socio"
@@ -583,9 +581,9 @@ data_cessazione: organo.data_cessazione || "",
       gap: 8,
     }}
   >
-    <select
-      style={inputStyle}
-      value={form.rapp_legale_id}
+  <select
+  style={inputStyle}
+  value={form.soggetto_cliente_id}
       onChange={(e) => {
         const id = e.target.value;
 
@@ -594,9 +592,9 @@ data_cessazione: organo.data_cessazione || "",
         );
 
         setForm((prev) => ({
-          ...prev,
-          rapp_legale_id: id,
-        }));
+  ...prev,
+  soggetto_cliente_id: id,
+}));
 
         if (!nominativo) return;
 
