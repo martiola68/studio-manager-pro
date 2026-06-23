@@ -92,19 +92,18 @@ async function verificaAdmin() {
     return;
   }
 
-  const { data, error } = await supabase
-    .from("tbutenti" as any)
-    .select("tipo_utente")
-    .eq("email", user.email)
-    .maybeSingle();
+ const { data, error } = await supabase
+  .from("tbutenti" as any)
+  .select("tipo_utente")
+  .eq("email", user.email)
+  .maybeSingle();
 
-  if (error || data?.tipo_utente !== "Admin") {
-    setIsAdmin(false);
-  } else {
-    setIsAdmin(true);
-  }
+const utente = data as unknown as { tipo_utente?: string } | null;
 
-  setCheckingAdmin(false);
+if (error || utente?.tipo_utente !== "Admin") {
+  setIsAdmin(false);
+} else {
+  setIsAdmin(true);
 }
 
   async function caricaModelli() {
