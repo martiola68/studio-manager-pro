@@ -76,6 +76,37 @@ export default function ModelliPratichePage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [messaggio, setMessaggio] = useState("");
 
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [checkingAdmin, setCheckingAdmin] = useState(true);
+
+async function verificaAdmin() {
+  const supabase = getSupabaseClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user?.email) {
+    setIsAdmin(false);
+    setCheckingAdmin(false);
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from("tbutenti" as any)
+    .select("tipo_utente")
+    .eq("email", user.email)
+    .maybeSingle();
+
+  if (error || data?.tipo_utente !== "Admin") {
+    setIsAdmin(false);
+  } else {
+    setIsAdmin(true);
+  }
+
+  setCheckingAdmin(false);
+}
+
   async function caricaModelli() {
     setLoading(true);
     setMessaggio("");
@@ -96,9 +127,10 @@ export default function ModelliPratichePage() {
     setLoading(false);
   }
 
-  useEffect(() => {
-    caricaModelli();
-  }, []);
+ useEffect(() => {
+  verificaAdmin();
+  caricaModelli();
+}, []);
 
   function aggiornaTipoPratica(value: string) {
     const tipo = tipiPratica.find((t) => t.value === value);
@@ -113,6 +145,11 @@ export default function ModelliPratichePage() {
 
   async function salvaModello(e: React.FormEvent) {
     e.preventDefault();
+
+    if (!isAdmin) {
+  setMessaggio("Non autorizzato. Solo gli amministratori possono modificare i modelli.");
+  return;
+}
 
     if (!form.codice.trim()) {
       setMessaggio("Il codice modello è obbligatorio.");
@@ -201,6 +238,10 @@ export default function ModelliPratichePage() {
   }
 
   function modificaModello(m: Modello) {
+    if (!isAdmin) {
+  setMessaggio("Non autorizzato. Solo gli amministratori possono modificare i modelli.");
+  return;
+}
     setEditingId(m.id);
     setFile(null);
     setForm({
@@ -226,10 +267,10 @@ export default function ModelliPratichePage() {
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (user?.email?.toLowerCase() !== "m.artiola@revisionicommerciali.it") {
-      alert("Non autorizzato.");
-      return;
-    }
+if (!isAdmin) {
+  alert("Non autorizzato. Solo gli amministratori possono eliminare i modelli.");
+  return;
+}
 
     if (!confirm("Eliminare questo modello pratiche?")) return;
 
@@ -271,7 +312,8 @@ export default function ModelliPratichePage() {
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "0.9fr 1.9fr", gap: 18, alignItems: "start" }}>
-          <form onSubmit={salvaModello} style={cardStyle}>
+         {isAdmin ? (
+  <form onSubmit={salvaModello} style={cardStyle}>
             <h2 style={titleStyle}>{editingId ? "Modifica modello" : "Nuovo modello"}</h2>
 
             <div style={{ marginTop: 18 }}>
@@ -352,7 +394,15 @@ export default function ModelliPratichePage() {
                 {messaggio}
               </div>
             )}
-          </form>
+            </form>
+) : (
+  <div style={cardStyle}>
+    <h2 style={titleStyle}>Accesso riservato</h2>
+    <p style={{ marginTop: 10, color: "#64748b", fontSize: 14 }}>
+      Solo gli amministratori possono creare o modificare i modelli pratiche.
+    </p>
+  </div>
+)}
 
           <div style={{ display: "grid", gap: 18 }}>
             <div style={cardStyle}>
@@ -420,13 +470,17 @@ export default function ModelliPratichePage() {
                         </td>
 
                         <td style={{ ...tdStyle, textAlign: "right" }}>
-                          <button type="button" title="Modifica" onClick={() => modificaModello(m)} style={iconButtonStyle}>
-                            <Edit size={17} />
-                          </button>
+                         {isAdmin && (
+  <>
+    <button type="button" title="Modifica" onClick={() => modificaModello(m)} style={iconButtonStyle}>
+      <Edit size={17} />
+    </button>
 
-                          <button type="button" title="Elimina" onClick={() => eliminaModello(m.id)} style={{ ...iconButtonStyle, color: "#dc2626" }}>
-                            <Trash2 size={17} />
-                          </button>
+    <button type="button" title="Elimina" onClick={() => eliminaModello(m.id)} style={{ ...iconButtonStyle, color: "#dc2626" }}>
+      <Trash2 size={17} />
+    </button>
+  </>
+)}
                         </td>
                       </tr>
                     ))}
