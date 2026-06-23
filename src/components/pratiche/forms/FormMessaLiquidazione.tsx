@@ -548,56 +548,63 @@ function aggiornaCampo(campo: string, valore: string) {
       <label style={labelStyle}>Socio</label>
  <select
   style={inputStyle}
-  value={form.liquidatore_id}
+  value={nuovoSocio.nominativo_id}
   onChange={(e) => {
-    const selected = rappresentantiLegali.find(
-      (r) => String(r.id) === String(e.target.value)
+    const selected = organiSocieta.find(
+      (o) => String(o.rapp_legale_id || o.id) === String(e.target.value)
     );
 
-    if (!selected) {
-      setForm((prev) => ({
-        ...prev,
-        liquidatore_id: "",
-        liquidatore_nome: "",
-        liquidatore_codice_fiscale: "",
-        liquidatore_indirizzo: "",
-        liquidatore_citta: "",
-        liquidatore_provincia: "",
-        liquidatore_cap: "",
-        liquidatore_residenza: "",
-      }));
-      return;
-    }
-
-    setForm((prev) => ({
-      ...prev,
-      liquidatore_id: selected.id,
-      liquidatore_nome: selected.nome_cognome || "",
-      liquidatore_codice_fiscale: selected.codice_fiscale || "",
-      liquidatore_indirizzo:
-        selected.indirizzo_residenza || selected.indirizzo || "",
-      liquidatore_citta:
-        selected.citta_residenza || selected.citta || "",
-      liquidatore_provincia: selected.provincia || "",
-      liquidatore_cap: selected.cap || selected.CAP || "",
-      liquidatore_residenza: [
-        selected.indirizzo_residenza || selected.indirizzo,
-        selected.cap || selected.CAP,
-        selected.citta_residenza || selected.citta,
-        selected.provincia,
-      ]
-        .filter(Boolean)
-        .join(" "),
-    }));
+    setNuovoSocio({
+      ...nuovoSocio,
+      nominativo_id: selected?.rapp_legale_id || selected?.id || "",
+      nome_cognome:
+        selected?.rapp_legali?.nome_cognome ||
+        selected?.nome_cognome ||
+        selected?.nominativo ||
+        "",
+      codice_fiscale:
+        selected?.rapp_legali?.codice_fiscale ||
+        selected?.codice_fiscale ||
+        "",
+      indirizzo:
+        selected?.rapp_legali?.indirizzo ||
+        selected?.indirizzo ||
+        "",
+      cap:
+        selected?.rapp_legali?.cap ||
+        selected?.cap ||
+        "",
+      citta:
+        selected?.rapp_legali?.citta ||
+        selected?.citta ||
+        "",
+      provincia:
+        selected?.rapp_legali?.provincia ||
+        selected?.provincia ||
+        "",
+      percentuale_partecipazione:
+        selected?.percentuale_partecipazione
+          ? String(selected.percentuale_partecipazione)
+          : "",
+    });
   }}
 >
-  <option value="">Seleziona liquidatore</option>
+  <option value="">Seleziona socio</option>
 
-  {rappresentantiLegali.map((r) => (
-    <option key={r.id} value={r.id}>
-      {r.nome_cognome}
-    </option>
-  ))}
+  {organiSocieta.map((o) => {
+    const id = o.rapp_legale_id || o.id;
+    const nome =
+      o.rapp_legali?.nome_cognome ||
+      o.nome_cognome ||
+      o.nominativo ||
+      "-";
+
+    return (
+      <option key={id} value={id}>
+        {nome}
+      </option>
+    );
+  })}
 </select>
     </div>
 
@@ -757,66 +764,58 @@ function aggiornaCampo(campo: string, valore: string) {
     <div>
       <label style={labelStyle}>Seleziona liquidatore</label>
 
-   <select
+ <select
   style={inputStyle}
-  value={nuovoSocio.nominativo_id}
+  value={form.liquidatore_id}
   onChange={(e) => {
-    const selected = organiSocieta.find(
-      (o) =>
-        String(o.rapp_legale_id || o.id) === String(e.target.value)
+    const selected = rappresentantiLegali.find(
+      (r) => String(r.id) === String(e.target.value)
     );
 
-    setNuovoSocio({
-      ...nuovoSocio,
-      nominativo_id: selected?.rapp_legale_id || selected?.id || "",
-      nome_cognome:
-        selected?.rapp_legali?.nome_cognome ||
-        selected?.nome_cognome ||
-        selected?.nominativo ||
-        "",
-      codice_fiscale:
-        selected?.rapp_legali?.codice_fiscale ||
-        selected?.codice_fiscale ||
-        "",
-      indirizzo:
-        selected?.rapp_legali?.indirizzo ||
-        selected?.indirizzo ||
-        "",
-      cap:
-        selected?.rapp_legali?.cap ||
-        selected?.cap ||
-        "",
-      citta:
-        selected?.rapp_legali?.citta ||
-        selected?.citta ||
-        "",
-      provincia:
-        selected?.rapp_legali?.provincia ||
-        selected?.provincia ||
-        "",
-      percentuale_partecipazione:
-        selected?.percentuale_partecipazione
-          ? String(selected.percentuale_partecipazione)
-          : "",
-    });
+    if (!selected) {
+      setForm((prev) => ({
+        ...prev,
+        liquidatore_id: "",
+        liquidatore_nome: "",
+        liquidatore_codice_fiscale: "",
+        liquidatore_indirizzo: "",
+        liquidatore_citta: "",
+        liquidatore_provincia: "",
+        liquidatore_cap: "",
+        liquidatore_residenza: "",
+      }));
+      return;
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      liquidatore_id: selected.id,
+      liquidatore_nome: selected.nome_cognome || "",
+      liquidatore_codice_fiscale: selected.codice_fiscale || "",
+      liquidatore_indirizzo:
+        selected.indirizzo_residenza || selected.indirizzo || "",
+      liquidatore_citta:
+        selected.citta_residenza || selected.citta || "",
+      liquidatore_provincia: selected.provincia || "",
+      liquidatore_cap: selected.cap || selected.CAP || "",
+      liquidatore_residenza: [
+        selected.indirizzo_residenza || selected.indirizzo,
+        selected.cap || selected.CAP,
+        selected.citta_residenza || selected.citta,
+        selected.provincia,
+      ]
+        .filter(Boolean)
+        .join(" "),
+    }));
   }}
 >
-  <option value="">Seleziona socio</option>
+  <option value="">Seleziona liquidatore</option>
 
-  {organiSocieta.map((o) => {
-    const id = o.rapp_legale_id || o.id;
-    const nome =
-      o.rapp_legali?.nome_cognome ||
-      o.nome_cognome ||
-      o.nominativo ||
-      "-";
-
-    return (
-      <option key={id} value={id}>
-        {nome}
-      </option>
-    );
-  })}
+  {rappresentantiLegali.map((r) => (
+    <option key={r.id} value={r.id}>
+      {r.nome_cognome}
+    </option>
+  ))}
 </select>
     </div>
 
