@@ -308,6 +308,15 @@ setNuovoNominativo({
   return;
 }
 
+    const nominativoSelezionato = nominativi.find(
+  (n) => String(n.id) === String(form.soggetto_cliente_id)
+);
+
+const tipoSoggetto =
+  String(nominativoSelezionato?.tipo_cliente || "").toLowerCase().includes("soc")
+    ? "societa"
+    : "persona_fisica";
+    
    const res = await fetch("/api/clienti-organi", {
   method: organoInModificaId ? "PUT" : "POST",
       headers: {
@@ -317,10 +326,10 @@ body: JSON.stringify({
   id: organoInModificaId || undefined,
   cliente_id: clienteId,
 
- rapp_legale_id: null,
+rapp_legale_id: null,
 soggetto_cliente_id: form.soggetto_cliente_id,
-tipo_soggetto: "cliente",
-  rappresentante_legale: form.ruolo === "rappresentante_legale",
+tipo_soggetto: tipoSoggetto,
+rappresentante_legale: form.ruolo === "rappresentante_legale",
 
   ruolo: form.ruolo,
   carica: ruoliLabel[form.ruolo] || form.ruolo,
