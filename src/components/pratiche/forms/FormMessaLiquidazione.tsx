@@ -1120,7 +1120,11 @@ const res = await fetch(
 
     <select
       style={inputStyle}
-   value={form.professionista_nome}
+  value={
+  professionisti.find(
+    (p) => p.ragione_sociale === form.professionista_nome
+  )?.id || ""
+}
 onChange={(e) => {
   const prof = professionisti.find(
     (p) => p.id === e.target.value
