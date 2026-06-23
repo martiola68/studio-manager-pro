@@ -554,24 +554,24 @@ function aggiornaCampo(campo: string, valore: string) {
       (o) => String(o.soggetto_cliente_id) === String(e.target.value)
     );
 
-    setNuovoSocio({
-      ...nuovoSocio,
-      nominativo_id: selected?.soggetto_cliente_id || "",
-      nome_cognome: selected?.soggetto_cliente?.ragione_sociale || "",
-      codice_fiscale:
-        selected?.soggetto_cliente?.codice_fiscale ||
-        selected?.soggetto_cliente?.partita_iva ||
-        "",
-      indirizzo: selected?.soggetto_cliente?.indirizzo || "",
-      cap: selected?.soggetto_cliente?.cap || "",
-      citta: selected?.soggetto_cliente?.citta || "",
-      provincia: selected?.soggetto_cliente?.provincia || "",
-      percentuale_partecipazione:
-        selected?.percentuale_partecipazione
-          ? String(selected.percentuale_partecipazione)
-          : "",
-      presenza: nuovoSocio.presenza || "Presente",
-    });
+ setNuovoSocio({
+  ...nuovoSocio,
+nominativo_id: selected?.soggetto_cliente_id || "",
+nome_cognome: selected?.soggetto_cliente?.ragione_sociale || "",
+codice_fiscale:
+  selected?.soggetto_cliente?.codice_fiscale ||
+  selected?.soggetto_cliente?.partita_iva ||
+  "",
+indirizzo: selected?.soggetto_cliente?.indirizzo || "",
+cap: selected?.soggetto_cliente?.cap || "",
+citta: selected?.soggetto_cliente?.citta || "",
+provincia: selected?.soggetto_cliente?.provincia || "",
+  percentuale_partecipazione:
+    selected?.percentuale_partecipazione
+      ? String(selected.percentuale_partecipazione)
+      : "",
+  presenza: nuovoSocio.presenza || "Presente",
+});
   }}
 >
   <option value="">Seleziona socio</option>
