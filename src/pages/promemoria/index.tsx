@@ -1017,9 +1017,10 @@ if (destinatario?.email) {
     <TableHead>Destinatario</TableHead>
     <TableHead>Stato</TableHead>
     <TableHead>Data completato</TableHead>
-    <TableHead>Settore</TableHead>
-    <TableHead>Allegati</TableHead>
-    <TableHead className="text-right">Azioni</TableHead>
+   <TableHead>Settore</TableHead>
+<TableHead>Allegati</TableHead>
+<TableHead className="text-center">Completato</TableHead>
+<TableHead className="text-center">Modifica</TableHead>
   </TableRow>
 </TableHeader>
 
@@ -1157,45 +1158,29 @@ if (destinatario?.email) {
                     : "-"}
                   </TableCell>
 
-                  <TableCell>{p.settore}</TableCell>
+               <TableCell>{p.settore}</TableCell>
 
-                  <TableCell>
-                    {p.allegati && Array.isArray(p.allegati) && p.allegati.length > 0 ? (
-                      <div className="flex items-center gap-2">
-                        <span className="flex items-center gap-1 text-gray-600">
-                          <Paperclip className="h-4 w-4" />
-                          {p.allegati.length}
-                        </span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleViewAllegati(p)}
-                          className="h-8 w-8 p-0"
-                          title="Visualizza allegati"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <span className="text-gray-400">-</span>
-                    )}
-                  </TableCell>
+<TableCell>
+  {p.allegati?.length || "-"}
+</TableCell>
 
-<TableCell className="text-right">
-  <div className="flex items-center justify-end gap-2">
-    <Checkbox
-      checked={p.working_progress === "Completato"}
-      onCheckedChange={(checked) =>
-        handleToggleCompletato(p, checked === true)
-      }
-      aria-label="Completato"
-      title="Completato"
-    />
+<TableCell className="text-center">
+  <Checkbox
+    checked={p.working_progress === "Completato"}
+    onCheckedChange={(checked) =>
+      handleToggleCompletato(p, checked === true)
+    }
+  />
+</TableCell>
 
-    <Button variant="ghost" size="icon" onClick={() => handleEdit(p)}>
-      <Pencil className="h-4 w-4" />
-    </Button>
-  </div>
+<TableCell className="text-center">
+  <Button
+    variant="ghost"
+    size="icon"
+    onClick={() => handleEdit(p)}
+  >
+    <Pencil className="h-4 w-4" />
+  </Button>
 </TableCell>
                 </TableRow>
               );
