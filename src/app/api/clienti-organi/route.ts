@@ -139,7 +139,10 @@ if (!payload.rapp_legale_id && !payload.soggetto_cliente_id) {
   cliente_id: payload.cliente_id,
  rapp_legale_id: payload.rapp_legale_id || null,
 soggetto_cliente_id: payload.soggetto_cliente_id || null,
-tipo_soggetto: payload.tipo_soggetto || "persona_fisica",
+tipo_soggetto:
+  payload.tipo_soggetto === "societa"
+    ? "societa"
+    : "persona_fisica",
 rappresentante_legale: payload.rappresentante_legale ?? false,
   ruolo: payload.ruolo,
         carica: payload.carica,
