@@ -806,6 +806,7 @@ const showPostGiornoBadge =
    </nav>
   );
 }
+    
 return (
   <nav className="w-full bg-white border-b border-gray-200 shadow-sm sticky top-[119px] z-40">
     {/* MOBILE */}
@@ -818,20 +819,6 @@ return (
         <Menu className="h-5 w-5" />
         Menu
       </button>
-
-      <div className="flex items-center gap-2">
-        {postGiornoAttivi > 0 && (
-          <Badge variant="destructive">
-            Post {postGiornoAttivi > 99 ? "99+" : postGiornoAttivi}
-          </Badge>
-        )}
-
-        {promemoriaAttivi > 0 && (
-          <Badge variant="destructive">
-            Prom. {promemoriaAttivi > 99 ? "99+" : promemoriaAttivi}
-          </Badge>
-        )}
-      </div>
     </div>
 
     {mobileMenuOpen && (
@@ -850,68 +837,27 @@ return (
           </div>
 
           <div className="space-y-1 p-3">
-          {[
-  {
-    label: "Agenda",
-    href: "/agenda",
-    icon: <Calendar className="h-5 w-5" />,
-  },
-  {
-    label: "Agenda condivisa",
-    href: "/agenda/condivisa",
-    icon: <Calendar className="h-5 w-5" />,
-  },
-  {
-    label: "Rubrica",
-    href: "/contatti",
-    icon: <UserCircle className="h-5 w-5" />,
-  },
-  {
-    label: "Presenze",
-    href: "/presenze",
-    icon: <Clock className="h-5 w-5" />,
-  },
-].map((item) => (
-  <Link
-    key={item.label}
-    href={item.href}
-    onClick={() => setMobileMenuOpen(false)}
-    className={cn(
-      "flex min-h-12 items-center gap-3 rounded-lg px-4 py-3 text-base font-semibold",
-      isPathActive(item.href)
-        ? "bg-blue-600 text-white"
-        : "bg-gray-50 text-gray-800"
-    )}
-  >
-    {item.icon}
-    <span>{item.label}</span>
-  </Link>
-))}
-                    </div>
-                  </div>
-                );
-              }
-
-              return (
-                <Link
-                  key={item.label}
-                  href={item.href || "#"}
-                  onClick={() => {
-                    if (item.label === "Promemoria") handlePromemoriaClick();
-                    setMobileMenuOpen(false);
-                  }}
-                  className={cn(
-                    "flex min-h-12 items-center gap-2 rounded-lg px-3 py-2 text-[15px] font-medium",
-                    isActive(item)
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-50 text-gray-800"
-                  )}
-                >
-                  {item.icon}
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
+            {[
+              { label: "Agenda", href: "/agenda", icon: <Calendar className="h-5 w-5" /> },
+              { label: "Agenda condivisa", href: "/agenda/condivisa", icon: <Calendar className="h-5 w-5" /> },
+              { label: "Rubrica", href: "/contatti", icon: <UserCircle className="h-5 w-5" /> },
+              { label: "Presenze", href: "/presenze", icon: <Clock className="h-5 w-5" /> },
+            ].map((item) => (
+              <Link
+                key={item.label}
+                href={item.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className={cn(
+                  "flex min-h-12 items-center gap-3 rounded-lg px-4 py-3 text-base font-semibold",
+                  isPathActive(item.href)
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-50 text-gray-800"
+                )}
+              >
+                {item.icon}
+                <span>{item.label}</span>
+              </Link>
+            ))}
           </div>
         </div>
       </div>
@@ -925,4 +871,4 @@ return (
     </div>
   </nav>
 );
-    }
+}
