@@ -23,7 +23,6 @@ export async function GET(req: NextRequest) {
      .select(`
   id,
   cliente_id,
-  rapp_legale_id,
   soggetto_cliente_id,
   tipo_soggetto,
   rappresentante_legale,
@@ -37,12 +36,7 @@ export async function GET(req: NextRequest) {
         data_cessazione,
         durata_carica,
         data_scadenza,
-       rapp_legali:rapp_legale_id (
-  id,
-  nome_cognome,
-  codice_fiscale,
-  email
-),
+    
 soggetto_cliente:tbclienti!tbclienti_organi_soggetto_cliente_id_fkey (
   id,
   ragione_sociale,
@@ -119,7 +113,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-if (!payload.rapp_legale_id && !payload.soggetto_cliente_id) {
+if (!payload.soggetto_cliente_id) {
   return NextResponse.json(
     { error: "nominativo mancante" },
     { status: 400 }
@@ -137,8 +131,7 @@ if (!payload.rapp_legale_id && !payload.soggetto_cliente_id) {
       .from("tbclienti_organi")
 .insert({
   cliente_id: payload.cliente_id,
-  rapp_legale_id: null,
-  soggetto_cliente_id: payload.soggetto_cliente_id || null,
+  soggetto_cliente_id: payload.soggetto_cliente_id,
   tipo_soggetto:
     payload.tipo_soggetto === "societa"
       ? "societa"
@@ -196,7 +189,6 @@ export async function PUT(req: NextRequest) {
     const { data, error } = await supabase
       .from("tbclienti_organi")
 .update({
-  rapp_legale_id: null,
   soggetto_cliente_id: payload.soggetto_cliente_id || null,
 
   tipo_soggetto:
