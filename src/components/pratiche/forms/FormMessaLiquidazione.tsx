@@ -285,13 +285,16 @@ async function caricaOrganiSocieta() {
 
   if (!res.ok) return;
 
-  setOrganiSocieta(
-    (data.organi || []).filter(
-      (o: any) =>
-        o.attivo &&
-        String(o.ruolo || "").toLowerCase() === "socio"
-    )
-  );
+setOrganiSocieta(
+  (data.organi || []).filter((o: any) => {
+    const ruolo = String(o.ruolo || o.carica || "").toLowerCase();
+
+    return (
+      o.attivo !== false &&
+      ruolo === "socio"
+    );
+  })
+);
 }
 
 function normalizzaCF(cf: string) {
@@ -543,35 +546,56 @@ function aggiornaCampo(campo: string, valore: string) {
   >
     <div>
       <label style={labelStyle}>Socio</label>
-   <select
+  <select
   style={inputStyle}
-  value={nuovoSocio.nominativo_id}
+  value={form.liquidatore_id}
   onChange={(e) => {
-    const selected = organiSocieta.find(
-      (o) => o.rapp_legale_id === e.target.value
+    const selected = rappresentantiLegali.find(
+      (r) => r.id === e.target.value
     );
 
-    setNuovoSocio({
-      ...nuovoSocio,
-      nominativo_id: selected?.rapp_legale_id || "",
-      nome_cognome: selected?.rapp_legali?.nome_cognome || "",
-      codice_fiscale: selected?.rapp_legali?.codice_fiscale || "",
-      indirizzo: selected?.rapp_legali?.indirizzo || "",
-      cap: selected?.rapp_legali?.cap || "",
-      citta: selected?.rapp_legali?.citta || "",
-      provincia: selected?.rapp_legali?.provincia || "",
-      percentuale_partecipazione:
-        selected?.percentuale_partecipazione
-          ? String(selected.percentuale_partecipazione)
-          : "",
-    });
+    if (!selected) {
+      setForm((prev) => ({
+        ...prev,
+        liquidatore_id: "",
+        liquidatore_nome: "",
+        liquidatore_codice_fiscale: "",
+        liquidatore_indirizzo: "",
+        liquidatore_citta: "",
+        liquidatore_provincia: "",
+        liquidatore_cap: "",
+        liquidatore_residenza: "",
+      }));
+      return;
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      liquidatore_id: selected.id,
+      liquidatore_nome: selected.nome_cognome || "",
+      liquidatore_codice_fiscale: selected.codice_fiscale || "",
+      liquidatore_indirizzo:
+        selected.indirizzo_residenza || selected.indirizzo || "",
+      liquidatore_citta:
+        selected.citta_residenza || selected.citta || "",
+      liquidatore_provincia: selected.provincia || "",
+      liquidatore_cap: selected.cap || selected.CAP || "",
+      liquidatore_residenza: [
+        selected.indirizzo_residenza || selected.indirizzo,
+        selected.cap || selected.CAP,
+        selected.citta_residenza || selected.citta,
+        selected.provincia,
+      ]
+        .filter(Boolean)
+        .join(" "),
+    }));
   }}
 >
-  <option value="">Seleziona socio</option>
+  <option value="">Seleziona liquidatore</option>
 
-  {organiSocieta.map((o) => (
-    <option key={o.rapp_legale_id} value={o.rapp_legale_id}>
-      {o.rapp_legali?.nome_cognome}
+  {rappresentantiLegali.map((r) => (
+    <option key={r.id} value={r.id}>
+      {r.nome_cognome}
     </option>
   ))}
 </select>
