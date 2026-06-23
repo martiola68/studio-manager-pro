@@ -26,6 +26,8 @@ import {
   StickyNote,
   ClipboardCheck,
   BarChart3,
+  Menu,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -74,6 +76,8 @@ interface MenuItem {
 const [promemoriaAttivi, setPromemoriaAttivi] = useState(0);
 const [postGiornoAttivi, setPostGiornoAttivi] = useState(0);
 const [eventiImminenti, setEventiImminenti] = useState(0);
+
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -804,11 +808,113 @@ const showPostGiornoBadge =
 }
 return (
   <nav className="w-full bg-white border-b border-gray-200 shadow-sm sticky top-[119px] z-40">
-    <div className="overflow-x-auto">
-      <div className="flex items-center gap-1 px-4 py-2 min-w-max">
+    {/* MOBILE */}
+    <div className="flex items-center justify-between px-3 py-2 lg:hidden">
+      <button
+        type="button"
+        onClick={() => setMobileMenuOpen(true)}
+        className="flex h-11 items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-800"
+      >
+        <Menu className="h-5 w-5" />
+        Menu
+      </button>
+
+      <div className="flex items-center gap-2">
+        {postGiornoAttivi > 0 && (
+          <Badge variant="destructive">
+            Post {postGiornoAttivi > 99 ? "99+" : postGiornoAttivi}
+          </Badge>
+        )}
+
+        {promemoriaAttivi > 0 && (
+          <Badge variant="destructive">
+            Prom. {promemoriaAttivi > 99 ? "99+" : promemoriaAttivi}
+          </Badge>
+        )}
+      </div>
+    </div>
+
+    {mobileMenuOpen && (
+      <div className="fixed inset-0 z-[9999] bg-black/40 lg:hidden">
+        <div className="h-full w-[86vw] max-w-sm overflow-y-auto bg-white shadow-xl">
+          <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-white px-4 py-3">
+            <div className="font-bold text-gray-900">Studio Manager Pro</div>
+
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(false)}
+              className="rounded-lg border p-2"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="space-y-1 p-3">
+            {menuItems.map((item) => {
+              if (item.adminOnly && currentUser?.tipo_utente !== "Admin") {
+                return null;
+              }
+
+              if (item.children?.length) {
+                return (
+                  <div key={item.label} className="rounded-lg border bg-gray-50 p-2">
+                    <div className="mb-2 flex items-center gap-2 px-2 py-1 text-sm font-bold text-gray-800">
+                      {item.icon}
+                      {item.label}
+                    </div>
+
+                    <div className="space-y-1">
+                      {item.children.map((child) => (
+                        <Link
+                          key={child.label}
+                          href={child.href || "#"}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className={cn(
+                            "flex min-h-11 items-center gap-2 rounded-md px-3 py-2 text-[15px]",
+                            isActive(child)
+                              ? "bg-blue-600 text-white"
+                              : "bg-white text-gray-700"
+                          )}
+                        >
+                          {child.icon}
+                          <span>{child.label}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <Link
+                  key={item.label}
+                  href={item.href || "#"}
+                  onClick={() => {
+                    if (item.label === "Promemoria") handlePromemoriaClick();
+                    setMobileMenuOpen(false);
+                  }}
+                  className={cn(
+                    "flex min-h-12 items-center gap-2 rounded-lg px-3 py-2 text-[15px] font-medium",
+                    isActive(item)
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-50 text-gray-800"
+                  )}
+                >
+                  {item.icon}
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* DESKTOP */}
+    <div className="hidden overflow-x-auto lg:block">
+      <div className="flex min-w-max items-center gap-1 px-4 py-2">
         {menuItems.map((item) => renderMenuItem(item))}
       </div>
     </div>
   </nav>
 );
-}
