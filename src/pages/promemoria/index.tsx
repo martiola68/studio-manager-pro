@@ -235,6 +235,47 @@ const getPrioritaOrder = (priorita?: string | null) => {
   return !!currentUser?.id && p.operatore_id === currentUser.id;
 };
 
+  const handleToggleCompletato = async (p: Promemoria, checked: boolean) => {
+  try {
+    setLoading(true);
+
+    const updateData = checked
+      ? {
+          working_progress: "Completato",
+          data_completamento: format(new Date(), "yyyy-MM-dd"),
+        }
+      : {
+          working_progress: "In lavorazione",
+          data_completamento: null,
+        };
+
+    const { error } = await supabase
+      .from("tbpromemoria")
+      .update(updateData)
+      .eq("id", p.id);
+
+    if (error) throw error;
+
+    toast({
+      title: "Successo",
+      description: checked
+        ? "Promemoria completato"
+        : "Promemoria riaperto in lavorazione",
+    });
+
+    checkUserAndLoad();
+  } catch (error) {
+    console.error(error);
+    toast({
+      title: "Errore",
+      description: "Impossibile aggiornare lo stato del promemoria",
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+
   // HANDLERS SELEZIONE MULTIPLA
 const handleSelectAll = () => {
   setSelectedIds([]);
@@ -975,6 +1016,7 @@ if (destinatario?.email) {
             <TableHead>Operatore</TableHead>
             <TableHead>Destinatario</TableHead>
             <TableHead>Stato</TableHead>
+            <TableHead>Completato</TableHead>
             <TableHead>Settore</TableHead>
             <TableHead>Allegati</TableHead>
             <TableHead className="text-right">Azioni</TableHead>
@@ -1056,6 +1098,12 @@ if (destinatario?.email) {
                     </Badge>
                   </TableCell>
 
+                  <TableCell>
+                  {(p as any).data_completamento
+                  ? format(new Date((p as any).data_completamento), "dd/MM/yyyy")
+                    : "-"}
+                  </TableCell>
+
                   <TableCell className="font-medium">{p.titolo}</TableCell>
                   <TableCell>{p.descrizione}</TableCell>
                   <TableCell>
@@ -1127,11 +1175,21 @@ if (destinatario?.email) {
                     )}
                   </TableCell>
 
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => handleEdit(p)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
+                 <TableCell className="text-right">
+  <div className="flex items-center justify-end gap-2">
+    <Checkbox
+      checked={p.working_progress === "Completato"}
+      onCheckedChange={(checked) =>
+        handleToggleCompletato(p, checked === true)
+      }
+      title="Segna come completato"
+    />
+
+    <Button variant="ghost" size="icon" onClick={() => handleEdit(p)}>
+      <Pencil className="h-4 w-4" />
+    </Button>
+  </div>
+</TableCell>
                 </TableRow>
               );
             })}
