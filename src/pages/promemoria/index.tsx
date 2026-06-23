@@ -1000,7 +1000,7 @@ if (destinatario?.email) {
       </div>
       
            <Table>
-   <TableHeader>
+ <TableHeader>
   <TableRow>
     <TableHead className="w-12">
       <Checkbox
@@ -1017,10 +1017,10 @@ if (destinatario?.email) {
     <TableHead>Destinatario</TableHead>
     <TableHead>Stato</TableHead>
     <TableHead>Data completato</TableHead>
-   <TableHead>Settore</TableHead>
-<TableHead>Allegati</TableHead>
-<TableHead className="text-center">Completato</TableHead>
-<TableHead className="text-center">Modifica</TableHead>
+    <TableHead>Settore</TableHead>
+    <TableHead>Allegati</TableHead>
+    <TableHead className="text-center">Completato</TableHead>
+    <TableHead className="text-center">Modifica</TableHead>
   </TableRow>
 </TableHeader>
 
@@ -1078,90 +1078,111 @@ if (destinatario?.email) {
 />
                   </TableCell>
 
-                  <TableCell>
-                    {tipiPromemoria.find((t) => t.id === p.tipo_promemoria_id)?.nome || "-"}
-                  </TableCell>
-
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={
-                        p.priorita === "Alta"
-                          ? "border-red-500 text-red-700 bg-red-50"
-                          : p.priorita === "Media"
-                          ? "border-yellow-500 text-yellow-700 bg-yellow-50"
-                          : p.priorita === "Bassa"
-                          ? "border-green-500 text-green-700 bg-green-50"
-                          : ""
-                      }
-                    >
-                      {p.priorita || "-"}
-                    </Badge>
-                  </TableCell>
-
-                  <TableCell>
-                  {(p as any).data_completamento
-                  ? format(new Date((p as any).data_completamento), "dd/MM/yyyy")
-                    : "-"}
-                  </TableCell>
-
-                  <TableCell className="font-medium">{p.titolo}</TableCell>
-                  <TableCell>{p.descrizione}</TableCell>
-                  <TableCell>
-                    {p.data_scadenza
-                      ? format(new Date(p.data_scadenza), "dd/MM/yyyy")
-                      : "-"}
-                  </TableCell>
-                  <TableCell>{utenti.find((u) => u.id === p.operatore_id)?.nome || "-"}</TableCell>
-                  <TableCell>{utenti.find((u) => u.id === p.destinatario_id)?.nome || "-"}</TableCell>
-
-                  <TableCell>
-                    <Badge
-                      variant={
-                        p.working_progress === "Completato"
-                          ? "default"
-                          : p.working_progress === "In lavorazione"
-                          ? "secondary"
-                          : p.working_progress === "Aperto"
-                          ? "outline"
-                          : p.working_progress === "Presa visione"
-                          ? "outline"
-                          : p.working_progress === "Richiesta confronto"
-                          ? "secondary"
-                          : p.working_progress === "Annullata"
-                          ? "destructive"
-                          : "outline"
-                      }
-                      className={
-                        p.working_progress === "Aperto"
-                          ? "border-blue-500 text-blue-700"
-                          : p.working_progress === "In lavorazione"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : p.working_progress === "Completato"
-                          ? "bg-green-100 text-green-800"
-                          : p.working_progress === "Presa visione"
-                          ? "border-cyan-500 text-cyan-700 bg-cyan-50"
-                          : p.working_progress === "Richiesta confronto"
-                          ? "bg-purple-100 text-purple-800"
-                          : p.working_progress === "Annullata"
-                          ? "bg-red-100 text-red-800"
-                          : ""
-                      }
-                    >
-                      {p.working_progress}
-                    </Badge>
-                  </TableCell>
-
-                  <TableCell>
-                  {(p as any).data_completamento
-                  ? format(new Date((p as any).data_completamento), "dd/MM/yyyy")
-                    : "-"}
-                  </TableCell>
-
-               <TableCell>{p.settore}</TableCell>
+               <TableCell>
+  {tipiPromemoria.find((t) => t.id === p.tipo_promemoria_id)?.nome || "-"}
+</TableCell>
 
 <TableCell>
-  {p.allegati?.length || "-"}
+  <Badge
+    variant="outline"
+    className={
+      p.priorita === "Alta"
+        ? "border-red-500 text-red-700 bg-red-50"
+        : p.priorita === "Media"
+        ? "border-yellow-500 text-yellow-700 bg-yellow-50"
+        : p.priorita === "Bassa"
+        ? "border-green-500 text-green-700 bg-green-50"
+        : ""
+    }
+  >
+    {p.priorita || "-"}
+  </Badge>
+</TableCell>
+
+<TableCell className="font-medium">{p.titolo}</TableCell>
+
+<TableCell>{p.descrizione}</TableCell>
+
+<TableCell>
+  {p.data_scadenza
+    ? format(new Date(p.data_scadenza), "dd/MM/yyyy")
+    : "-"}
+</TableCell>
+
+<TableCell>
+  {utenti.find((u) => u.id === p.operatore_id)?.nome || "-"}
+</TableCell>
+
+<TableCell>
+  {utenti.find((u) => u.id === p.destinatario_id)?.nome || "-"}
+</TableCell>
+
+<TableCell>
+  <Badge
+    variant={
+      p.working_progress === "Completato"
+        ? "default"
+        : p.working_progress === "In lavorazione"
+        ? "secondary"
+        : p.working_progress === "Aperto"
+        ? "outline"
+        : p.working_progress === "Presa visione"
+        ? "outline"
+        : p.working_progress === "Richiesta confronto"
+        ? "secondary"
+        : p.working_progress === "Annullata"
+        ? "destructive"
+        : "outline"
+    }
+    className={
+      p.working_progress === "Aperto"
+        ? "border-blue-500 text-blue-700"
+        : p.working_progress === "In lavorazione"
+        ? "bg-yellow-100 text-yellow-800"
+        : p.working_progress === "Completato"
+        ? "bg-green-100 text-green-800"
+        : p.working_progress === "Presa visione"
+        ? "border-cyan-500 text-cyan-700 bg-cyan-50"
+        : p.working_progress === "Richiesta confronto"
+        ? "bg-purple-100 text-purple-800"
+        : p.working_progress === "Annullata"
+        ? "bg-red-100 text-red-800"
+        : ""
+    }
+  >
+    {p.working_progress}
+  </Badge>
+</TableCell>
+
+<TableCell>
+  {(p as any).data_completamento
+    ? format(new Date((p as any).data_completamento), "dd/MM/yyyy")
+    : "-"}
+</TableCell>
+
+<TableCell>{p.settore || "-"}</TableCell>
+
+<TableCell>
+  {Array.isArray(p.allegati) && p.allegati.length > 0 ? (
+    <div className="flex items-center gap-2">
+      <span className="flex items-center gap-1 text-gray-600">
+        <Paperclip className="h-4 w-4" />
+        {p.allegati.length}
+      </span>
+
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => handleViewAllegati(p)}
+        className="h-8 w-8 p-0"
+        title="Visualizza allegati"
+      >
+        <Eye className="h-4 w-4" />
+      </Button>
+    </div>
+  ) : (
+    <span className="text-gray-400">-</span>
+  )}
 </TableCell>
 
 <TableCell className="text-center">
@@ -1170,6 +1191,7 @@ if (destinatario?.email) {
     onCheckedChange={(checked) =>
       handleToggleCompletato(p, checked === true)
     }
+    title="Completato"
   />
 </TableCell>
 
@@ -1178,6 +1200,7 @@ if (destinatario?.email) {
     variant="ghost"
     size="icon"
     onClick={() => handleEdit(p)}
+    title="Modifica"
   >
     <Pencil className="h-4 w-4" />
   </Button>
@@ -1188,7 +1211,7 @@ if (destinatario?.email) {
 
  {promemoriaFiltrati.length === 0 && (
             <TableRow>
-              <TableCell colSpan={13} className="text-center py-8 text-gray-500">
+             <TableCell colSpan={14} className="text-center py-8 text-gray-500">
                 Nessun promemoria trovato
               </TableCell>
             </TableRow>
