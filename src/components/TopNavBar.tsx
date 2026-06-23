@@ -838,8 +838,11 @@ return (
 
           <div className="space-y-1 p-3">
             {[
-              { label: "Agenda", href: "/agenda", icon: <Calendar className="h-5 w-5" /> },
-              { label: "Agenda condivisa", href: "/agenda/condivisa", icon: <Calendar className="h-5 w-5" /> },
+              {
+    label: "Agenda",
+    href: "/agenda",
+    icon: <Calendar className="h-5 w-5" />,
+  },
               { label: "Rubrica", href: "/contatti", icon: <UserCircle className="h-5 w-5" /> },
               { label: "Presenze", href: "/presenze", icon: <Clock className="h-5 w-5" /> },
             ].map((item) => (
