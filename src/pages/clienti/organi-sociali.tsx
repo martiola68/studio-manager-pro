@@ -419,11 +419,11 @@ async function eliminaOrgano(organo: any) {
   await caricaOrgani();
 }
 
-  function caricaInModifica(organo: any) {
+function caricaInModifica(organo: any) {
   setOrganoInModificaId(organo.id);
 
-soggetto_cliente_id:
-  organo.soggetto_cliente_id || "",
+  setForm({
+    soggetto_cliente_id: organo.soggetto_cliente_id || "",
     ruolo: organo.ruolo || "socio",
     carica: organo.carica || "",
     percentuale_partecipazione:
@@ -433,10 +433,10 @@ soggetto_cliente_id:
     presenza: organo.presenza || "Presente",
     principale: organo.principale || false,
     attivo: organo.attivo ?? true,
-   data_nomina: organo.data_nomina || "",
-durata_carica: organo.durata_carica || "Fino a revoca",
-data_scadenza: organo.data_scadenza || "",
-data_cessazione: organo.data_cessazione || "",
+    data_nomina: organo.data_nomina || "",
+    durata_carica: organo.durata_carica || "Fino a revoca",
+    data_scadenza: organo.data_scadenza || "",
+    data_cessazione: organo.data_cessazione || "",
   });
 
   window.scrollTo({ top: 0, behavior: "smooth" });
