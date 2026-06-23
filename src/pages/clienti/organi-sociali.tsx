@@ -326,7 +326,6 @@ body: JSON.stringify({
   id: organoInModificaId || undefined,
   cliente_id: clienteId,
 
-rapp_legale_id: null,
 soggetto_cliente_id: form.soggetto_cliente_id,
 tipo_soggetto: tipoSoggetto,
 rappresentante_legale: form.ruolo === "rappresentante_legale",
