@@ -90,7 +90,7 @@ export default function ModelliPratichePage() {
     if (error) {
       setMessaggio(error.message);
     } else {
-      setModelli((data || []) as Modello[]);
+      setModelli((data || []) as unknown as Modello[]);
     }
 
     setLoading(false);
