@@ -850,36 +850,43 @@ return (
           </div>
 
           <div className="space-y-1 p-3">
-            {menuItems.map((item) => {
-              if (item.adminOnly && currentUser?.tipo_utente !== "Admin") {
-                return null;
-              }
-
-              if (item.children?.length) {
-                return (
-                  <div key={item.label} className="rounded-lg border bg-gray-50 p-2">
-                    <div className="mb-2 flex items-center gap-2 px-2 py-1 text-sm font-bold text-gray-800">
-                      {item.icon}
-                      {item.label}
-                    </div>
-
-                    <div className="space-y-1">
-                      {item.children.map((child) => (
-                        <Link
-                          key={child.label}
-                          href={child.href || "#"}
-                          onClick={() => setMobileMenuOpen(false)}
-                          className={cn(
-                            "flex min-h-11 items-center gap-2 rounded-md px-3 py-2 text-[15px]",
-                            isActive(child)
-                              ? "bg-blue-600 text-white"
-                              : "bg-white text-gray-700"
-                          )}
-                        >
-                          {child.icon}
-                          <span>{child.label}</span>
-                        </Link>
-                      ))}
+          {[
+  {
+    label: "Agenda",
+    href: "/agenda",
+    icon: <Calendar className="h-5 w-5" />,
+  },
+  {
+    label: "Agenda condivisa",
+    href: "/agenda/condivisa",
+    icon: <Calendar className="h-5 w-5" />,
+  },
+  {
+    label: "Rubrica",
+    href: "/contatti",
+    icon: <UserCircle className="h-5 w-5" />,
+  },
+  {
+    label: "Presenze",
+    href: "/presenze",
+    icon: <Clock className="h-5 w-5" />,
+  },
+].map((item) => (
+  <Link
+    key={item.label}
+    href={item.href}
+    onClick={() => setMobileMenuOpen(false)}
+    className={cn(
+      "flex min-h-12 items-center gap-3 rounded-lg px-4 py-3 text-base font-semibold",
+      isPathActive(item.href)
+        ? "bg-blue-600 text-white"
+        : "bg-gray-50 text-gray-800"
+    )}
+  >
+    {item.icon}
+    <span>{item.label}</span>
+  </Link>
+))}
                     </div>
                   </div>
                 );
