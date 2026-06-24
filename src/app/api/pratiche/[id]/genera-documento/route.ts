@@ -45,16 +45,6 @@ function mese(dateValue?: string | null) {
   }).format(new Date(dateValue));
 }
 
-function sostituisciVariabiliTesto(testo: string, valori: Record<string, any>) {
-  let output = testo || "";
-
-  Object.entries(valori).forEach(([chiave, valore]) => {
-    output = output.replaceAll(`[${chiave}]`, String(valore ?? ""));
-  });
-
-  return output;
-}
-
 function sostituisciVariabiliTesto(
   testo: string,
   valori: Record<string, any>
