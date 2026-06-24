@@ -44,18 +44,6 @@ function mese(dateValue?: string | null) {
   }).format(new Date(dateValue));
 }
 
-  const documento = new Document({
-    sections: [
-      {
-        children: paragrafi,
-      },
-    ],
-  });
-
-  const buffer = await Packer.toBuffer(documento);
-  return buffer;
-}
-
 export async function POST(req: Request, { params }: Params) {
   try {
     const { id } = await params;
