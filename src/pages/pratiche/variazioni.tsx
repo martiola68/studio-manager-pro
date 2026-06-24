@@ -84,7 +84,7 @@ const { data: clientiData } = await supabase
 
 setClienti(clientiData || []);
 
-      console.log("TIPI:", JSON.stringify(tipiData, null, 2));
+    
       const response = await fetch(
         `/api/pratiche/variazioni?studio_id=${studioId}`
       );
