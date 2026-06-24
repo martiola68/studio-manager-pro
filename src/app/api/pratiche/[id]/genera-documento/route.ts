@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
+import { Document, Packer, Paragraph, TextRun } from "docx";
 
 type Params = {
   params: Promise<{
@@ -42,6 +43,40 @@ function mese(dateValue?: string | null) {
   return new Intl.DateTimeFormat("it-IT", {
     month: "long",
   }).format(new Date(dateValue));
+}
+
+function sostituisciVariabiliTesto(testo: string, valori: Record<string, any>) {
+  let output = testo || "";
+
+  Object.entries(valori).forEach(([chiave, valore]) => {
+    const regex = new RegExp(`\\[${chiave}\\]`, "g");
+    output = output.replace(regex, String(valore ?? ""));
+  });
+
+  return output;
+}
+
+function generaDocxDaTesto(testo: string) {
+  const paragrafi = testo.split(/\n+/).map(
+    (riga) =>
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: riga,
+          }),
+        ],
+      })
+  );
+
+  const documento = new Document({
+    sections: [
+      {
+        children: paragrafi,
+      },
+    ],
+  });
+
+  return Packer.toBuffer(documento);
 }
 
 export async function POST(req: Request, { params }: Params) {
@@ -139,30 +174,63 @@ if (documentoEsistente) {
       );
     }
 
-    const { data: modelloFile, error: downloadError } =
-      await supabaseAdmin.storage
-        .from("pratiche-modelli")
-        .download(modello.file_path);
-
-    if (downloadError || !modelloFile) {
+     if (downloadError || !modelloFile) {
       return NextResponse.json(
         { error: downloadError?.message || "Errore lettura modello DOCX." },
         { status: 500 }
       );
     }
 
-    const modelloBuffer = await modelloFile.arrayBuffer();
+   let outputBuffer: Buffer;
 
-    const zip = new PizZip(modelloBuffer);
+if (modello.file_path) {
+  const { data: modelloFile, error: downloadError } =
+    await supabaseAdmin.storage
+      .from("pratiche-modelli")
+      .download(modello.file_path);
 
-    const doc = new Docxtemplater(zip, {
-      paragraphLoop: true,
-      linebreaks: true,
-      delimiters: {
-        start: "[",
-        end: "]",
-      },
-    });
+  if (downloadError || !modelloFile) {
+    return NextResponse.json(
+      { error: downloadError?.message || "Errore lettura modello DOCX." },
+      { status: 500 }
+    );
+  }
+
+  const modelloBuffer = await modelloFile.arrayBuffer();
+
+  const zip = new PizZip(modelloBuffer);
+
+  const doc = new Docxtemplater(zip, {
+    paragraphLoop: true,
+    linebreaks: true,
+    delimiters: {
+      start: "[",
+      end: "]",
+    },
+  });
+
+  doc.render(valori);
+
+  outputBuffer = doc.getZip().generate({
+    type: "nodebuffer",
+    compression: "DEFLATE",
+  });
+} else if (modello.testo_modello) {
+  const testoCompilato = sostituisciVariabiliTesto(
+    modello.testo_modello,
+    valori
+  );
+
+  outputBuffer = await generaDocxDaTesto(testoCompilato);
+} else {
+  return NextResponse.json(
+    {
+      error:
+        "Il modello non contiene né un file DOCX né un testo modello configurato.",
+    },
+    { status: 400 }
+  );
+}
 
     const sede =
       datiDocumento.societa_sede ||
