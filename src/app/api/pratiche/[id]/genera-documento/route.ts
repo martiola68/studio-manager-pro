@@ -3,7 +3,6 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
 import { Document, Packer, Paragraph, TextRun } from "docx";
-import { Document, Packer, Paragraph, TextRun } from "docx";
 
 type Params = {
   params: Promise<{
@@ -56,30 +55,10 @@ function sostituisciVariabiliTesto(testo: string, valori: Record<string, any>) {
   return output;
 }
 
-async function generaDocxDaTesto(testo: string) {
-  const righe = String(testo || "").split("\n");
-
-  const documento = new Document({
-    sections: [
-      {
-        children: righe.map(
-          (riga) =>
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: riga,
-                }),
-              ],
-            })
-        ),
-      },
-    ],
-  });
-
-  return await Packer.toBuffer(documento);
-}
-
-function sostituisciVariabiliTesto(testo: string, valori: Record<string, any>) {
+function sostituisciVariabiliTesto(
+  testo: string,
+  valori: Record<string, any>
+) {
   let output = testo || "";
 
   Object.entries(valori).forEach(([chiave, valore]) => {
@@ -90,7 +69,28 @@ function sostituisciVariabiliTesto(testo: string, valori: Record<string, any>) {
   return output;
 }
 
-function generaDocxDaTesto(testo: string) {
+async function generaDocxDaTesto(testo: string) {
+  const paragrafi = testo.split(/\n+/).map(
+    (riga) =>
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: riga,
+          }),
+        ],
+      })
+  );
+
+  const documento = new Document({
+    sections: [
+      {
+        children: paragrafi,
+      },
+    ],
+  });
+
+  return await Packer.toBuffer(documento);
+}
   const paragrafi = testo.split(/\n+/).map(
     (riga) =>
       new Paragraph({
@@ -208,41 +208,7 @@ if (documentoEsistente) {
       );
     }
 
-     if (downloadError || !modelloFile) {
-      return NextResponse.json(
-        { error: downloadError?.message || "Errore lettura modello DOCX." },
-        { status: 500 }
-      );
-    }
-
-   let outputBuffer: Buffer;
-
-if (modello.file_path) {
- 
-  doc.render(valori);
-
-  outputBuffer = doc.getZip().generate({
-    type: "nodebuffer",
-    compression: "DEFLATE",
-  });
-} else if (modello.testo_modello) {
-  const testoCompilato = sostituisciVariabiliTesto(
-    modello.testo_modello,
-    valori
-  );
-
-  outputBuffer = await generaDocxDaTesto(testoCompilato);
-} else {
-  return NextResponse.json(
-    {
-      error:
-        "Il modello non contiene né un file DOCX né un testo modello configurato.",
-    },
-    { status: 400 }
-  );
-}
-
-    const sede =
+      const sede =
       datiDocumento.societa_sede ||
       [
         cliente?.indirizzo,
