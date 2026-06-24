@@ -69,8 +69,7 @@ const [utente, setUtente] = useState<any>(null);
 
 setTipiVariazione(tipiData || []);
 
-      alert(JSON.stringify(tipiData?.[0] || {}, null, 2));
-
+ 
 if (!user?.studio_id) return;
 
 setUtente(user);
@@ -330,7 +329,7 @@ setClienti(clientiData || []);
                     })
                   }
                 >
-                 <option value="">Seleziona tipo variazione</option>
+               
 
 <option value="">Seleziona tipo variazione</option>
 
