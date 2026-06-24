@@ -206,8 +206,9 @@ const payload: any = {
     });
 
   if (uploadError) {
-    throw new Error(uploadError.message);
-  }
+  console.error("ERRORE UPLOAD DOCX:", uploadError);
+  throw new Error(`Errore upload DOCX: ${uploadError.message}`);
+}
 
   payload.file_name = fileDocx.name;
   payload.file_path = filePath;
@@ -231,8 +232,10 @@ const payload: any = {
         dbError = error;
       }
 
-      if (dbError) throw new Error(dbError.message);
-
+    if (dbError) {
+  console.error("ERRORE UPDATE MODELLO:", dbError);
+  throw new Error(`Errore salvataggio modello: ${dbError.message}`);
+}
       setMessaggio("Modello salvato correttamente.");
      setForm(emptyForm);
 setFileDocx(null);
