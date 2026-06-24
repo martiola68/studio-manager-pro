@@ -357,21 +357,35 @@ function aggiornaCampo(campo: string, valore: string) {
   }
 }
 
-  async function generaAccettazioneCarica() {
-  const salvato = await salvaDatiDocumento();
-  if (!salvato) return;
+async function generaAccettazioneCarica() {
+  const ok = confirm(
+    "Generare il documento di accettazione carica?"
+  );
 
-  try {
-    await generaDocumentoPratica({
-      praticaId,
-      codiceModello: "ACCETTAZIONE_CARICHE",
-      onSuccess: caricaDocumenti,
-    });
+  if (!ok) return;
 
-    alert("Accettazione carica generata.");
-  } catch (error: any) {
-    alert(error.message || "Errore generazione accettazione carica");
+  const res = await fetch(
+    `/api/pratiche/${praticaId}/genera-documento`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        codice_modello: "ACCETTAZIONE_CARICHE",
+      }),
+    }
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    alert(data.error || "Errore generazione accettazione carica");
+    return;
   }
+
+  alert("Accettazione carica generata correttamente");
+  await caricaDocumenti();
 }
 
   return (
@@ -745,7 +759,7 @@ provincia: selected?.soggetto_cliente?.provincia || "",
   <div
     style={{
       display: "grid",
-      gridTemplateColumns: "2fr auto",
+      gridTemplateColumns: "2fr auto auto",
       gap: 12,
       marginTop: 18,
       alignItems: "end",
