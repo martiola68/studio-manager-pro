@@ -77,7 +77,7 @@ const [utente, setUtente] = useState<any>(null);
 
 const { data: tipiData } = await (supabase as any)
   .from("tbpratiche_variazioni_tipi")
-  .select("id, descrizione_variazione, ente_principale, tipo_pratica_id, genera_pratica, genera_verbale, attivo, ordine")
+  .select("*")
   .eq("attivo", true)
   .order("ordine", { ascending: true });
 
@@ -328,14 +328,13 @@ setTipiVariazione(tipiData || []);
                     })
                   }
                 >
-                  <option value="">Seleziona tipo variazione</option>
-                 {tipiVariazione.map((tipo) => {
-  const label =
-    tipo.descrizione_variazione ||
-    tipo.nome ||
-    tipo.descrizione ||
-    tipo.codice ||
-    "";
+                 <option value="">Seleziona tipo variazione</option>
+
+{tipiVariazione.map((tipo) => (
+  <option key={tipo.id} value={tipo.descrizione_variazione}>
+    {tipo.descrizione_variazione}
+  </option>
+))}
 
   return (
     <option key={tipo.id} value={label}>
