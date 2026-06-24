@@ -1235,135 +1235,153 @@ onChange={(e) => {
       </form>
 
       <div style={cardStyle}>
-        <h2 style={titleStyle}>Documenti</h2>
+  <h2 style={titleStyle}>Documenti</h2>
 
-        <div style={{ display: "grid", gridTemplateColumns: "2fr auto", gap: 12, marginTop: 18, alignItems: "end" }}>
-          <div>
-            <label style={labelStyle}>Modello documento</label>
-            <input style={{ ...inputStyle, background: "#f1f5f9" }} value="VERBALE_LIQUIDAZIONE" disabled />
-          </div>
-
-          <button type="button" style={blueButton} onClick={generaDocumento}>
-            Genera documento
-          </button>
-
-          <button
-  type="button"
-  onClick={generaAccettazioneCarica}
-  style={secondaryButton}
->
-  Genera accettazione carica
-</button>
-        </div>
-
-        {documenti.length > 0 && (
-          <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 20 }}>
-            <thead>
-              <tr>
-                <th style={thStyle}>Documento</th>
-                <th style={thStyle}>Tipo</th>
-                <th style={thStyle}>Data</th>
-                <th style={thStyle}>Azioni</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {documenti.map((doc: any) => (
-                <tr key={doc.id}>
-                  <td style={tdStyle}>{doc.nome_file}</td>
-                  <td style={tdStyle}>{doc.tipo_documento}</td>
-                  <td style={tdStyle}>
-                    {doc.created_at ? new Date(doc.created_at).toLocaleString("it-IT") : "—"}
-                  </td>
-                  <td style={tdStyle}>
-                    <div style={{ display: "flex", gap: 14 }}>
-                      <a
-                        href={`/api/pratiche/${praticaId}/documenti/${doc.id}/download`}
-                        download
-                        style={{ color: "#2563eb", display: "flex", alignItems: "center" }}
-                      >
-                        <Download size={18} />
-                      </a>
-
-                      <label
-  style={{
-    color: "#16a34a",
-    display: "flex",
-    alignItems: "center",
-    cursor: "pointer",
-  }}
->
-  <Upload size={18} />
-
-  <input
-    type="file"
-    accept=".docx"
-    style={{ display: "none" }}
-    onChange={async (e) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("documento_id", doc.id);
-
-      const res = await fetch(
-        `/api/pratiche/${praticaId}/documento-modificato`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        alert(data.error || "Errore upload documento");
-        return;
-      }
-
-      alert("Documento aggiornato correttamente");
-      await caricaDocumenti();
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "1fr",
+      gap: 12,
+      marginTop: 18,
     }}
-  />
-</label>
+  >
+    <div>
+      <label style={labelStyle}>Modello documento</label>
+      <input
+        style={{ ...inputStyle, background: "#f1f5f9" }}
+        value="VERBALE_LIQUIDAZIONE"
+        disabled
+      />
+    </div>
 
-                      <button
-                        type="button"
-                        style={{
-                          border: 0,
-                          background: "transparent",
-                          color: "#dc2626",
-                          cursor: "pointer",
-                          padding: 0,
-                          display: "flex",
-                          alignItems: "center",
-                        }}
-                        onClick={async () => {
-                          if (!confirm("Eliminare documento?")) return;
+    <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+      <button type="button" style={blueButton} onClick={generaDocumento}>
+        Genera documento
+      </button>
 
-                          const res = await fetch(`/api/pratiche/${praticaId}/documenti/${doc.id}`, {
-                            method: "DELETE",
-                          });
+      <button
+        type="button"
+        style={blueButton}
+        onClick={generaAccettazioneCarica}
+      >
+        Genera accettazione carica
+      </button>
+    </div>
+  </div>
 
-                          if (!res.ok) {
-                            alert("Errore eliminazione documento");
-                            return;
-                          }
+  {documenti.length > 0 && (
+    <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 20 }}>
+      <thead>
+        <tr>
+          <th style={thStyle}>Documento</th>
+          <th style={thStyle}>Tipo</th>
+          <th style={thStyle}>Data</th>
+          <th style={thStyle}>Azioni</th>
+        </tr>
+      </thead>
 
-                          await caricaDocumenti();
-                        }}
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      <tbody>
+        {documenti.map((doc: any) => (
+          <tr key={doc.id}>
+            <td style={tdStyle}>{doc.nome_file}</td>
+            <td style={tdStyle}>{doc.tipo_documento}</td>
+            <td style={tdStyle}>
+              {doc.created_at
+                ? new Date(doc.created_at).toLocaleString("it-IT")
+                : "—"}
+            </td>
+            <td style={tdStyle}>
+              <div style={{ display: "flex", gap: 14 }}>
+                <a
+                  href={`/api/pratiche/${praticaId}/documenti/${doc.id}/download`}
+                  download
+                  style={{ color: "#2563eb", display: "flex", alignItems: "center" }}
+                >
+                  <Download size={18} />
+                </a>
+
+                <label
+                  style={{
+                    color: "#16a34a",
+                    display: "flex",
+                    alignItems: "center",
+                    cursor: "pointer",
+                  }}
+                >
+                  <Upload size={18} />
+
+                  <input
+                    type="file"
+                    accept=".docx"
+                    style={{ display: "none" }}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+
+                      const formData = new FormData();
+                      formData.append("file", file);
+                      formData.append("documento_id", doc.id);
+
+                      const res = await fetch(
+                        `/api/pratiche/${praticaId}/documento-modificato`,
+                        {
+                          method: "POST",
+                          body: formData,
+                        }
+                      );
+
+                      const data = await res.json();
+
+                      if (!res.ok) {
+                        alert(data.error || "Errore upload documento");
+                        return;
+                      }
+
+                      alert("Documento aggiornato correttamente");
+                      await caricaDocumenti();
+                    }}
+                  />
+                </label>
+
+                <button
+                  type="button"
+                  style={{
+                    border: 0,
+                    background: "transparent",
+                    color: "#dc2626",
+                    cursor: "pointer",
+                    padding: 0,
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                  onClick={async () => {
+                    if (!confirm("Eliminare documento?")) return;
+
+                    const res = await fetch(
+                      `/api/pratiche/${praticaId}/documenti/${doc.id}`,
+                      {
+                        method: "DELETE",
+                      }
+                    );
+
+                    if (!res.ok) {
+                      alert("Errore eliminazione documento");
+                      return;
+                    }
+
+                    await caricaDocumenti();
+                  }}
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )}
+</div>
     </main>
   );
 }
