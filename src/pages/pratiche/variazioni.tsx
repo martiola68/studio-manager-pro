@@ -328,9 +328,9 @@ setTipiVariazione(tipiData || []);
                 >
                   <option value="">Seleziona tipo variazione</option>
                   {tipiVariazione.map((tipo) => (
-  <option key={tipo.id} value={tipo.descrizione_variazione}>
-    {tipo.descrizione_variazione}
-  </option>
+<option key={tipo.id} value={tipo.nome}>
+  {tipo.nome}
+</option>
 ))}
                 </select>
               </div>
