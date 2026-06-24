@@ -18,6 +18,15 @@ function formatDataIt(dateValue?: string | null) {
   }).format(new Date(dateValue));
 }
 
+function formatDataBreveIt(dateValue?: string | null) {
+  if (!dateValue) return "";
+  return new Intl.DateTimeFormat("it-IT", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(new Date(dateValue));
+}
+
 function anno(dateValue?: string | null) {
   if (!dateValue) return "";
   return String(new Date(dateValue).getFullYear());
@@ -229,23 +238,89 @@ const percentualeCapitale = sociElenco.reduce(
     totale + Number(socio.SOCIO_PERCENTUALE_PARTECIPAZIONE || 0),
   0
 );
-    const cariche = [];
+const caricaDocumento =
+  datiDocumento.carica ||
+  datiDocumento.tipo_carica ||
+  datiDocumento.liquidatore_carica ||
+  datiDocumento.amministratore_carica ||
+  (codiceModello === "ACCETTAZIONE_CARICHE" && datiDocumento.liquidatore_nome
+    ? "Liquidatore"
+    : "");
 
-if (codiceModello === "ACCETTAZIONE_CARICHE") {
-  if (datiDocumento.liquidatore_nome) {
-    cariche.push({
-      NOME_COGNOME: datiDocumento.liquidatore_nome || "",
-      CODICE_FISCALE: datiDocumento.liquidatore_codice_fiscale || "",
-      LUOGO_NASCITA: datiDocumento.liquidatore_luogo_nascita || "",
-      DATA_NASCITA: formatDataIt(datiDocumento.liquidatore_data_nascita),
-      INDIRIZZO_RESIDENZA: datiDocumento.liquidatore_indirizzo || "",
-      CAP_RESIDENZA: datiDocumento.liquidatore_cap || "",
-      CITTA_RESIDENZA: datiDocumento.liquidatore_citta || "",
-      PROVINCIA_RESIDENZA: datiDocumento.liquidatore_provincia || "",
-      CARICA: "Liquidatore",
-      DATA_SCADENZA_CARICA: "fino alla chiusura della liquidazione",
-    });
-  }
+const nominatoNome =
+  datiDocumento.nominato_nome ||
+  datiDocumento.amministratore_nome ||
+  datiDocumento.liquidatore_nome ||
+  "";
+
+const nominatoCf =
+  datiDocumento.nominato_codice_fiscale ||
+  datiDocumento.amministratore_codice_fiscale ||
+  datiDocumento.amministratore_cf ||
+  datiDocumento.liquidatore_codice_fiscale ||
+  datiDocumento.liquidatore_cf ||
+  "";
+
+const nominatoLuogoNascita =
+  datiDocumento.nominato_citta_nascita ||
+  datiDocumento.amministratore_citta_nascita ||
+  datiDocumento.liquidatore_luogo_nascita ||
+  datiDocumento.liquidatore_citta_nascita ||
+  "";
+
+const nominatoDataNascita =
+  datiDocumento.nominato_data_nascita ||
+  datiDocumento.amministratore_data_nascita ||
+  datiDocumento.liquidatore_data_nascita ||
+  "";
+
+const nominatoIndirizzo =
+  datiDocumento.nominato_indirizzo ||
+  datiDocumento.amministratore_indirizzo ||
+  datiDocumento.liquidatore_indirizzo ||
+  "";
+
+const nominatoCap =
+  datiDocumento.nominato_cap ||
+  datiDocumento.amministratore_cap ||
+  datiDocumento.liquidatore_cap ||
+  "";
+
+const nominatoCitta =
+  datiDocumento.nominato_citta ||
+  datiDocumento.amministratore_citta ||
+  datiDocumento.liquidatore_citta ||
+  "";
+
+const nominatoProvincia =
+  datiDocumento.nominato_provincia ||
+  datiDocumento.amministratore_provincia ||
+  datiDocumento.liquidatore_provincia ||
+  "";
+
+const dataScadenzaCarica =
+  datiDocumento.data_scadenza_carica ||
+  datiDocumento.data_scadenza ||
+  datiDocumento.durata_carica ||
+  (caricaDocumento.toLowerCase().includes("liquidatore")
+    ? "fino alla chiusura della liquidazione"
+    : "");
+
+const cariche = [];
+
+if (codiceModello === "ACCETTAZIONE_CARICHE" && nominatoNome) {
+  cariche.push({
+    NOME_COGNOME: nominatoNome,
+    CODICE_FISCALE: nominatoCf,
+    LUOGO_NASCITA: nominatoLuogoNascita,
+    DATA_NASCITA: formatDataIt(nominatoDataNascita),
+    INDIRIZZO_RESIDENZA: nominatoIndirizzo,
+    CAP_RESIDENZA: nominatoCap,
+    CITTA_RESIDENZA: nominatoCitta,
+    PROVINCIA_RESIDENZA: nominatoProvincia,
+    CARICA: caricaDocumento,
+    DATA_SCADENZA_CARICA: dataScadenzaCarica,
+  });
 }
     const { data: motivoLiquidazione } = datiDocumento.motivo_liquidazione
   ? await supabaseAdmin
@@ -387,18 +462,53 @@ RAPPRESENTANTE_LEGALE_CODICE_FISCALE:
   datiDocumento.rappresentante_legale_codice_fiscale ||
   "",
 
-      OGGETTO:
+OGGETTO:
   codiceModello === "ACCETTAZIONE_CARICHE"
-    ? "Accettazione carica Liquidatore"
+    ? `Accettazione carica ${caricaDocumento || ""}`.trim()
     : pratica.titolo || "",
 
 TIPO_NOMINA:
   codiceModello === "ACCETTAZIONE_CARICHE"
-    ? "Liquidatore"
+    ? caricaDocumento
     : "",
 
 DATA_ASSEMBLEA:
   formatDataIt(dataAtto),
+
+      CARICA:
+  caricaDocumento,
+
+NOMINATO_NOME:
+  nominatoNome,
+
+NOMINATO_CF:
+  nominatoCf,
+
+NOMINATO_CITTA_NASCITA:
+  nominatoLuogoNascita,
+
+NOMINATO_DATA_NASCITA:
+  formatDataBreveIt(nominatoDataNascita),
+
+NOMINATO_INDIRIZZO:
+  nominatoIndirizzo,
+
+NOMINATO_CAP:
+  nominatoCap,
+
+NOMINATO_CITTA:
+  nominatoCitta,
+
+NOMINATO_PROVINCIA:
+  nominatoProvincia,
+
+DATA_SCADENZA_CARICA:
+  dataScadenzaCarica,
+
+SOCIETA_CF:
+  datiDocumento.societa_codice_fiscale ||
+  cliente?.codice_fiscale ||
+  "",
 
 CARICHE:
   cariche,
