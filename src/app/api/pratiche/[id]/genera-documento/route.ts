@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
 import { Document, Packer, Paragraph, TextRun } from "docx";
+import { Document, Packer, Paragraph, TextRun } from "docx";
 
 type Params = {
   params: Promise<{
@@ -43,6 +44,39 @@ function mese(dateValue?: string | null) {
   return new Intl.DateTimeFormat("it-IT", {
     month: "long",
   }).format(new Date(dateValue));
+}
+
+function sostituisciVariabiliTesto(testo: string, valori: Record<string, any>) {
+  let output = testo || "";
+
+  Object.entries(valori).forEach(([chiave, valore]) => {
+    output = output.replaceAll(`[${chiave}]`, String(valore ?? ""));
+  });
+
+  return output;
+}
+
+async function generaDocxDaTesto(testo: string) {
+  const righe = String(testo || "").split("\n");
+
+  const documento = new Document({
+    sections: [
+      {
+        children: righe.map(
+          (riga) =>
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: riga,
+                }),
+              ],
+            })
+        ),
+      },
+    ],
+  });
+
+  return await Packer.toBuffer(documento);
 }
 
 function sostituisciVariabiliTesto(testo: string, valori: Record<string, any>) {
@@ -184,31 +218,7 @@ if (documentoEsistente) {
    let outputBuffer: Buffer;
 
 if (modello.file_path) {
-  const { data: modelloFile, error: downloadError } =
-    await supabaseAdmin.storage
-      .from("pratiche-modelli")
-      .download(modello.file_path);
-
-  if (downloadError || !modelloFile) {
-    return NextResponse.json(
-      { error: downloadError?.message || "Errore lettura modello DOCX." },
-      { status: 500 }
-    );
-  }
-
-  const modelloBuffer = await modelloFile.arrayBuffer();
-
-  const zip = new PizZip(modelloBuffer);
-
-  const doc = new Docxtemplater(zip, {
-    paragraphLoop: true,
-    linebreaks: true,
-    delimiters: {
-      start: "[",
-      end: "]",
-    },
-  });
-
+ 
   doc.render(valori);
 
   outputBuffer = doc.getZip().generate({
@@ -612,13 +622,56 @@ SEDE_LIQUIDAZIONE:
   sede,
 };
 
-    doc.render(valori);
+   let outputBuffer: Buffer;
 
-    const outputBuffer = doc.getZip().generate({
-      type: "nodebuffer",
-      compression: "DEFLATE",
-    });
+if (modello.testo_modello) {
+  const testoCompilato = sostituisciVariabiliTesto(
+    modello.testo_modello,
+    valori as any
+  );
 
+  outputBuffer = await generaDocxDaTesto(testoCompilato);
+} else if (modello.file_path) {
+  const { data: modelloFile, error: downloadError } =
+    await supabaseAdmin.storage
+      .from("pratiche-modelli")
+      .download(modello.file_path);
+
+  if (downloadError || !modelloFile) {
+    return NextResponse.json(
+      { error: downloadError?.message || "Errore lettura modello DOCX." },
+      { status: 500 }
+    );
+  }
+
+  const modelloBuffer = await modelloFile.arrayBuffer();
+
+  const zip = new PizZip(modelloBuffer);
+
+  const doc = new Docxtemplater(zip, {
+    paragraphLoop: true,
+    linebreaks: true,
+    delimiters: {
+      start: "[",
+      end: "]",
+    },
+  });
+
+  doc.render(valori);
+
+  outputBuffer = doc.getZip().generate({
+    type: "nodebuffer",
+    compression: "DEFLATE",
+  });
+} else {
+  return NextResponse.json(
+    {
+      error:
+        "Il modello non contiene né testo modello né file DOCX.",
+    },
+    { status: 400 }
+  );
+}
   const safeDenominazione = String(
   valori.DENOMINAZIONE || "societa"
 )
