@@ -59,17 +59,18 @@ function sostituisciVariabiliTesto(
   return output;
 }
 
-async function generaDocxDaTesto(testo: string) {
-  const paragrafi = testo.split(/\n+/).map(
-    (riga) =>
-      new Paragraph({
+async function generaDocxDaTesto(testo: string): Promise<Buffer> {
+  const paragrafi = String(testo || "")
+    .split(/\n+/)
+    .map((riga) => {
+      return new Paragraph({
         children: [
           new TextRun({
             text: riga,
           }),
         ],
-      })
-  );
+      });
+    });
 
   const documento = new Document({
     sections: [
@@ -79,28 +80,8 @@ async function generaDocxDaTesto(testo: string) {
     ],
   });
 
-  return await Packer.toBuffer(documento);
-}
-  const paragrafi = testo.split(/\n+/).map(
-    (riga) =>
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: riga,
-          }),
-        ],
-      })
-  );
-
-  const documento = new Document({
-    sections: [
-      {
-        children: paragrafi,
-      },
-    ],
-  });
-
-  return Packer.toBuffer(documento);
+  const buffer = await Packer.toBuffer(documento);
+  return buffer;
 }
 
 export async function POST(req: Request, { params }: Params) {
