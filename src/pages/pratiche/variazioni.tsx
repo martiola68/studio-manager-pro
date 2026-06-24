@@ -61,27 +61,27 @@ const [utente, setUtente] = useState<any>(null);
         .eq("email", session.user.email)
         .single();
 
-      if (!user?.studio_id) return;
-
-      setUtente(user);
-
-      const studioId = String(user.studio_id);
-
-      const { data: clientiData } = await supabase
-        .from("tbclienti")
-        .select("id, ragione_sociale")
-        .eq("studio_id", studioId)
-        .order("ragione_sociale");
-
-      setClienti(clientiData || []);
-
-const { data: tipiData } = await (supabase as any)
+    const { data: tipiData } = await (supabase as any)
   .from("tbpratiche_variazioni_tipi")
   .select("*")
   .eq("attivo", true)
   .order("ordine", { ascending: true });
 
 setTipiVariazione(tipiData || []);
+
+if (!user?.studio_id) return;
+
+setUtente(user);
+
+const studioId = String(user.studio_id);
+
+const { data: clientiData } = await supabase
+  .from("tbclienti")
+  .select("id, ragione_sociale")
+  .eq("studio_id", studioId)
+  .order("ragione_sociale");
+
+setClienti(clientiData || []);
 
       console.log("TIPI:", JSON.stringify(tipiData, null, 2));
       const response = await fetch(
