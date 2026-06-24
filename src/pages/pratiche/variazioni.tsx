@@ -76,13 +76,14 @@ const [utente, setUtente] = useState<any>(null);
       setClienti(clientiData || []);
 
 const { data: tipiData } = await (supabase as any)
-  .from("tbpratiche_tipi")
-  .select("id, codice, nome, descrizione, attiva, ente")
-  .eq("attiva", true)
-  .order("nome", { ascending: true });
+  .from("tbpratiche_variazioni_tipi")
+  .select("id, descrizione_variazione, ente_principale, tipo_pratica_id, genera_pratica, genera_verbale, attivo, ordine")
+  .eq("attivo", true)
+  .order("ordine", { ascending: true });
 
 setTipiVariazione(tipiData || []);
 
+      console.log("TIPI:", JSON.stringify(tipiData, null, 2));
       const response = await fetch(
         `/api/pratiche/variazioni?studio_id=${studioId}`
       );
