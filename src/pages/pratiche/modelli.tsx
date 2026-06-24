@@ -1,6 +1,6 @@
 "use client";
 
-import { Edit, RefreshCw, Trash2, Save } from "lucide-react";
+import { Edit, RefreshCw, Trash2, Save, Upload } from "lucide-react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
@@ -75,7 +75,8 @@ export default function ModelliPratichePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const [form, setForm] = useState(emptyForm);
+ const [form, setForm] = useState(emptyForm);
+const [fileDocx, setFileDocx] = useState<File | null>(null);
   
   const [editingId, setEditingId] = useState<string | null>(null);
   const [messaggio, setMessaggio] = useState("");
@@ -167,10 +168,6 @@ async function caricaModelli() {
       return;
     }
 
-  if (!form.testo_modello.trim()) {
-  setMessaggio("Il testo modello è obbligatorio.");
-  return;
-}
     setSaving(true);
     setMessaggio("");
 
@@ -178,15 +175,45 @@ async function caricaModelli() {
       const supabase = getSupabaseClient();
 
      
-    const payload: any = {
+const payload: any = {
   codice: form.codice.trim().toUpperCase(),
   titolo: form.titolo.trim(),
   tipo_pratica: form.tipo_pratica || null,
   attivo: form.attivo,
-  testo_modello: form.testo_modello || null,
+  testo_modello: null,
   descrizione: form.descrizione || null,
   updated_at: new Date().toISOString(),
 };
+
+      if (fileDocx) {
+  const estensioneOk = fileDocx.name.toLowerCase().endsWith(".docx");
+
+  if (!estensioneOk) {
+    setMessaggio("Puoi allegare solo file DOCX.");
+    setSaving(false);
+    return;
+  }
+
+  const codicePulito = form.codice.trim().toUpperCase();
+  const filePath = `${codicePulito}/${Date.now()}_${fileDocx.name}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("pratiche-modelli")
+    .upload(filePath, fileDocx, {
+      contentType:
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      upsert: true,
+    });
+
+  if (uploadError) {
+    throw new Error(uploadError.message);
+  }
+
+  payload.file_name = fileDocx.name;
+  payload.file_path = filePath;
+  payload.storage_bucket = "pratiche-modelli";
+}
+      
       let dbError;
 
       if (editingId) {
@@ -207,9 +234,9 @@ async function caricaModelli() {
       if (dbError) throw new Error(dbError.message);
 
       setMessaggio("Modello salvato correttamente.");
-      setForm(emptyForm);
-      
-      setEditingId(null);
+     setForm(emptyForm);
+setFileDocx(null);
+setEditingId(null);
       await caricaModelli();
     } catch (error: any) {
       setMessaggio(error.message || "Errore salvataggio modello.");
@@ -229,15 +256,18 @@ setForm({
   titolo: m.titolo || "",
   tipo_pratica: m.tipo_pratica || "",
   attivo: Boolean(m.attivo),
-  testo_modello: m.testo_modello || "",
+  testo_modello: "",
   descrizione: m.descrizione || "",
 });
+
+setFileDocx(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function resetForm() {
     setEditingId(null);
 setForm(emptyForm);
+setFileDocx(null);
 setMessaggio("");
   }
 
@@ -343,19 +373,26 @@ if (!isAdmin) {
               </label>
             </div>
 
-         <div style={{ marginTop: 16 }}>
-  <label style={labelStyle}>Testo modello</label>
-  <textarea
-    style={{ ...inputStyle, minHeight: 320, resize: "vertical" }}
-    value={form.testo_modello}
-    onChange={(e) =>
-      setForm((prev) => ({
-        ...prev,
-        testo_modello: e.target.value,
-      }))
-    }
-    placeholder="Inserisci il testo con variabili, ad esempio [SOCIETA_DENOMINAZIONE], [DATA_ASSEMBLEA], [PROFESSIONISTA_NOME]..."
+  <div style={{ marginTop: 16 }}>
+  <label style={labelStyle}>File modello DOCX</label>
+  <input
+    type="file"
+    accept=".docx"
+    style={inputStyle}
+    onChange={(e) => setFileDocx(e.target.files?.[0] || null)}
   />
+
+  {fileDocx && (
+    <div style={{ marginTop: 8, fontSize: 13, color: "#475569" }}>
+      File selezionato: {fileDocx.name}
+    </div>
+  )}
+
+  {editingId && (
+    <div style={{ marginTop: 8, fontSize: 13, color: "#64748b" }}>
+      Se non selezioni un nuovo file, resta valido quello già allegato.
+    </div>
+  )}
 </div>
 
             <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
@@ -415,7 +452,7 @@ if (!isAdmin) {
                       <th style={thStyle}>Codice</th>
                       <th style={thStyle}>Titolo</th>
                       <th style={thStyle}>Tipo pratica</th>
-                      <th style={thStyle}>Testo</th>
+                      <th style={thStyle}>File DOCX</th>
                       <th style={thStyle}>Attivo</th>
                       <th style={{ ...thStyle, textAlign: "right" }}>Azioni</th>
                     </tr>
@@ -436,9 +473,9 @@ if (!isAdmin) {
                           {tipiPratica.find((t) => t.value === m.tipo_pratica)?.label || "Tutti"}
                         </td>
 
-                       <td style={tdStyle}>
+  <td style={tdStyle}>
   <div style={{ fontSize: 12, color: "#64748b" }}>
-    {m.testo_modello ? "Testo configurato" : "—"}
+    {m.file_name || "—"}
   </div>
 </td>
 
