@@ -76,9 +76,10 @@ const [utente, setUtente] = useState<any>(null);
       setClienti(clientiData || []);
 
 const { data: tipiData } = await (supabase as any)
-  .from("tbpratiche_variazioni_tipi")
-  .select("*")
-  .order("ordine", { ascending: true });
+  .from("tbpratiche_tipi")
+  .select("id, codice, nome, descrizione, attiva, ente")
+  .eq("attiva", true)
+  .order("nome", { ascending: true });
 
 setTipiVariazione(tipiData || []);
 
