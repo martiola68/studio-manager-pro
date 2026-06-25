@@ -183,6 +183,11 @@ if (
 return NextResponse.json({
   organo: data,
 });
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: err.message || "Errore server" },
+      { status: 500 }
+    );
   }
 }
 
