@@ -268,14 +268,8 @@ async function caricaDocumenti() {
   }
 }
 
-async function caricaAmministratori() {
-  if (!pratica?.cliente_id) {
-    return;
-  }
-
-  try {
-   const res = await fetch(
-  `/api/rapp-legali?studio_id=${pratica.studio_id}`,
+const res = await fetch(
+  `/api/clienti-organi?cliente_id=${pratica.cliente_id}`,
   {
     cache: "no-store",
   }
@@ -287,7 +281,18 @@ if (!res.ok) {
   return;
 }
 
-setRappresentantiLegali(data.data || []);
+setRappresentantiLegali(
+  (data.organi || []).filter(
+    (o: any) =>
+      o.attivo &&
+      (
+        o.ruolo === "amministratore_unico" ||
+        o.ruolo === "amministratore_delegato" ||
+        o.ruolo === "presidente_cda" ||
+        o.ruolo === "liquidatore"
+      )
+  )
+);
     
   } catch (error: any) {
     console.error("Errore caricamento amministratori:", error);
@@ -773,8 +778,8 @@ rappresentante_legale_cap:
 
 {rappresentantiLegali.map((r: any) => (
   <option key={r.id} value={r.id}>
-    {r.nome_cognome} - {r.codice_fiscale}
-    {r.amministratore_principale ? " — principale" : ""}
+    {r.nominativo_nome} - {r.nominativo_codice_fiscale}
+    {r.principale ? " — principale" : ""}
   </option>
 ))}
               </select>
