@@ -48,12 +48,12 @@ const datiEreditati = {
   societa_rea:
     datiDocumento?.societa_rea || "",
 
-  data_atto:
-    datiDocumento?.data_convocazione || "",
-  ora_inizio:
-    datiDocumento?.ora_convocazione || "",
-  luogo_assemblea:
-    datiDocumento?.luogo_convocazione || "",
+data_atto:
+  datiDocumento?.data_atto || "",
+ora_inizio:
+  datiDocumento?.ora_inizio || "",
+luogo_assemblea:
+  datiDocumento?.luogo_assemblea || "",
 
   presidente:
     datiDocumento?.rappresentante_legale_nome || "",
@@ -123,9 +123,9 @@ if (praticaGiaCollegata) {
 
           pratica_collegata_id: pratica.id,
 
-          data_apertura:
-            datiDocumento?.data_convocazione ||
-            new Date().toISOString(),
+         data_apertura:
+  datiDocumento?.data_atto ||
+  new Date().toISOString(),
 
           stato: "aperta",
 
