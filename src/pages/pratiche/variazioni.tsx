@@ -114,14 +114,23 @@ setClienti(clientiData || []);
       return;
     }
 
-    const payload = {
-      ...form,
-      studio_id: utente.studio_id,
-      utente_id: utente.id,
-      assegnato_a: utente.id,
-      titolo: form.tipo_variazione,
-      descrizione: form.note || form.tipo_variazione,
-    };
+    const tipoSelezionato = tipiVariazione.find(
+  (tipo) => tipo.descrizione_variazione === form.tipo_variazione
+);
+
+const payload = {
+  ...form,
+  studio_id: utente.studio_id,
+  utente_id: utente.id,
+  assegnato_a: utente.id,
+  titolo: form.tipo_variazione,
+  descrizione: form.note || form.tipo_variazione,
+
+  tipo_variazione_id: tipoSelezionato?.id || null,
+  tipo_pratica_id: tipoSelezionato?.tipo_pratica_id || null,
+  genera_pratica: tipoSelezionato?.genera_pratica ?? true,
+  genera_verbale: tipoSelezionato?.genera_verbale ?? false,
+};
 
     const response = await fetch("/api/pratiche/variazioni", {
       method: editingId ? "PUT" : "POST",
