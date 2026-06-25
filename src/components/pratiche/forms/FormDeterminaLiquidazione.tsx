@@ -294,14 +294,9 @@ async function caricaAmministratori() {
     }
 
 setRappresentantiLegali(
-  (data.organi || []).filter((o: any) => {
-    if (o.attivo === false) return false;
-
-    const ruolo = String(o.ruolo || "").toLowerCase();
-
-    return ruolo !== "socio";
-  })
+  (data.organi || []).filter((o: any) => o.attivo !== false)
 );
+    
   } catch (error: any) {
     console.error("Errore caricamento amministratori:", error);
     alert(error.message || "Errore caricamento amministratori");
