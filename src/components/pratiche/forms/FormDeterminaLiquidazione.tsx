@@ -268,37 +268,45 @@ async function caricaDocumenti() {
   }
 }
 
-const res = await fetch(
-  `/api/clienti-organi?cliente_id=${pratica.cliente_id}`,
-  {
-    cache: "no-store",
+async function caricaAmministratori() {
+  if (!pratica?.cliente_id) {
+    return;
   }
-);
 
-  const data = await res.json();
+  try {
+    const res = await fetch(
+      `/api/clienti-organi?cliente_id=${pratica.cliente_id}`,
+      {
+        cache: "no-store",
+      }
+    );
 
-if (!res.ok) {
-  return;
-}
+    const data = await res.json();
 
-setRappresentantiLegali(
-  (data.organi || []).filter(
-    (o: any) =>
-      o.attivo &&
-      (
-        o.ruolo === "amministratore_unico" ||
-        o.ruolo === "amministratore_delegato" ||
-        o.ruolo === "presidente_cda" ||
-        o.ruolo === "liquidatore"
+    if (!res.ok) {
+      return;
+    }
+
+    setRappresentantiLegali(
+      (data.organi || []).filter(
+        (o: any) =>
+          o.attivo &&
+          (
+            o.ruolo === "amministratore" ||
+            o.ruolo === "amministratore_unico" ||
+            o.ruolo === "amministratore_delegato" ||
+            o.ruolo === "presidente_cda" ||
+            o.ruolo === "liquidatore" ||
+            o.ruolo === "rappresentante_legale"
+          )
       )
-  )
-);
-    
+    );
   } catch (error: any) {
     console.error("Errore caricamento amministratori:", error);
     alert(error.message || "Errore caricamento amministratori");
   }
 }
+  
   async function salvaDatiDocumento(
     e?: React.FormEvent
   ) {
@@ -446,18 +454,19 @@ await fetch("/api/clienti-organi", {
   }),
 });
 
-      setForm((prev) => ({
+setForm((prev) => ({
   ...prev,
-  rappresentante_legale_id: rappresentante.id,
-  rappresentante_legale_nome: rappresentante.nome_cognome || "",
-  rappresentante_legale_codice_fiscale: rappresentante.codice_fiscale || "",
+  rappresentante_legale_id: selected.soggetto_cliente_id || selected.id,
+  rappresentante_legale_nome: selected.nominativo_nome || "",
+  rappresentante_legale_codice_fiscale: selected.nominativo_codice_fiscale || "",
   rappresentante_legale_indirizzo:
-    rappresentante.indirizzo_residenza || rappresentante.indirizzo || "",
+    selected.soggetto_cliente?.indirizzo || "",
   rappresentante_legale_citta:
-    rappresentante.citta_residenza || rappresentante.citta || "",
-  rappresentante_legale_provincia: rappresentante.provincia || "",
-  rappresentante_legale_cap: rappresentante.cap || rappresentante.CAP || "",
-  nuovo_rappresentante: false,
+    selected.soggetto_cliente?.citta || "",
+  rappresentante_legale_provincia:
+    selected.soggetto_cliente?.provincia || "",
+  rappresentante_legale_cap:
+    selected.soggetto_cliente?.cap || "",
 }));
 
      alert("Rappresentante legale salvato.");
