@@ -760,7 +760,7 @@ onChange={(e) => {
 
   setForm((prev) => ({
     ...prev,
-    rappresentante_legale_id: selected.soggetto_cliente_id || selected.id,
+   rappresentante_legale_id: selected.id,
 
     rappresentante_legale_nome:
       soggetto?.ragione_sociale ||
