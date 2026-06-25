@@ -287,7 +287,7 @@ async function caricaAmministratori() {
       return;
     }
 
-   setRappresentantiLegali(
+  setRappresentantiLegali(
   (data.organi || []).filter((o: any) => {
     if (!o.attivo) return false;
 
@@ -295,15 +295,18 @@ async function caricaAmministratori() {
     const carica = String(o.carica || "").toLowerCase();
 
     return (
-      o.rappresentante_legale === true ||
-      ruolo.includes("amministratore") ||
-      ruolo.includes("presidente") ||
-      ruolo.includes("liquidatore") ||
-      ruolo.includes("rappresentante") ||
-      carica.includes("amministratore") ||
-      carica.includes("presidente") ||
-      carica.includes("liquidatore") ||
-      carica.includes("rappresentante")
+      o.soggetto_cliente_id &&
+      (
+        o.rappresentante_legale === true ||
+        ruolo.includes("amministratore") ||
+        ruolo.includes("liquidatore") ||
+        ruolo.includes("presidente") ||
+        ruolo.includes("rappresentante") ||
+        carica.includes("amministratore") ||
+        carica.includes("liquidatore") ||
+        carica.includes("presidente") ||
+        carica.includes("rappresentante")
+      )
     );
   })
 );
@@ -760,7 +763,8 @@ onChange={(e) => {
 
   setForm((prev) => ({
     ...prev,
-   rappresentante_legale_id: selected.id,
+
+    rappresentante_legale_id: selected.id,
 
     rappresentante_legale_nome:
       soggetto?.ragione_sociale ||
@@ -809,7 +813,7 @@ onChange={(e) => {
     <option key={r.id} value={r.id}>
       {nome}
       {cf ? ` - ${cf}` : ""}
-      {r.principale ? " — principale" : ""}
+      {r.carica ? ` — ${r.carica}` : ""}
     </option>
   );
 })}
