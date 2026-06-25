@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
-type ApiResponse =
+type A<fvpiResponse =
   | { success: true; data: any }
   | { success: false; error: string };
 
@@ -351,6 +351,66 @@ export default async function handler(
 
       if (error) throw error;
 
+      // ==============================
+// CREA PRATICA PADRE
+// ==============================
+
+if (req.body.genera_pratica && !data.pratica_id) {
+
+  const { data: praticaCreata, error: praticaError } = await supabase
+    .from("tbpratiche")
+    .insert({
+
+      studio_id: data.studio_id,
+
+      cliente_id: data.cliente_id,
+
+      tipo_pratica_id: req.body.tipo_pratica_id,
+
+      numero_pratica: null,
+
+      titolo: data.titolo,
+
+      stato: "Aperta",
+
+      priorita: data.priorita,
+
+      data_apertura: new Date(),
+
+      assegnato_a: data.assegnato_a,
+
+      pratica_padre_id: null,
+
+      pratica_origine_id: null,
+
+      variazione_id: data.id,
+
+      codice_workflow: data.tipo_variazione,
+
+      codice_step: "ROOT",
+
+      ordine_step: 1,
+
+      stato_step: "aperta"
+
+    })
+    .select("id")
+    .single();
+
+  if (praticaError) throw praticaError;
+
+  await supabase
+    .from("tbpratiche_variazioni")
+    .update({
+      pratica_id: praticaCreata.id,
+      stato: "convertita"
+    })
+    .eq("id", data.id);
+
+  data.pratica_id = praticaCreata.id;
+  data.stato = "convertita";
+}
+      
       await sincronizzaPromemoriaVariazione(supabase, data);
 
       return res.status(201).json({
