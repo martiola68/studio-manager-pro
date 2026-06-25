@@ -326,9 +326,11 @@ body: JSON.stringify({
   id: organoInModificaId || undefined,
   cliente_id: clienteId,
 
-soggetto_cliente_id: form.soggetto_cliente_id,
-tipo_soggetto: tipoSoggetto,
-rappresentante_legale: form.ruolo === "rappresentante_legale",
+  soggetto_cliente_id: form.soggetto_cliente_id,
+  tipo_soggetto: tipoSoggetto,
+  rappresentante_legale: form.ruolo === "rappresentante_legale",
+
+  tipo_ruolo: getTipoRuolo(form.ruolo),
 
   ruolo: form.ruolo,
   carica: ruoliLabel[form.ruolo] || form.ruolo,
@@ -448,6 +450,26 @@ function caricaInModifica(organo: any) {
   });
 
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+function getTipoRuolo(ruolo: string) {
+  if (
+    [
+      "amministratore",
+      "amministratore_unico",
+      "amministratore_delegato",
+      "presidente_cda",
+      "liquidatore",
+      "rappresentante_legale",
+    ].includes(ruolo)
+  ) {
+    return "R";
+  }
+
+  if (ruolo === "socio") {
+    return "S";
+  }
+
+  return "C";
 }
   
   return (
