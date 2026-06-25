@@ -388,12 +388,7 @@ void loadEventiImminenti();
       href: "/pratiche",
       icon: <FolderKanban className="h-4 w-4" />,
     },
-    {
-  label: "Nuova pratica",
-  href: "/pratiche/nuova",
-  icon: <FileText className="h-4 w-4" />,
-},
-{
+   {
   label: "Variazioni CCIAA / AdE",
   href: "/pratiche/variazioni",
   icon: <FileText className="h-4 w-4" />,
