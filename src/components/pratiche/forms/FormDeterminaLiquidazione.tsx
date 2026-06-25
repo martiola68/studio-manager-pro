@@ -385,24 +385,6 @@ async function caricaAmministratori() {
     alert("Documento generato.");
   }
 
-  async function creaPraticaLiquidazione() {
-    const res = await fetch(
-      `/api/pratiche/${pratica.id}/crea-pratica-liquidazione`,
-      {
-        method: "POST",
-      }
-    );
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      alert(data.error || "Errore");
-      return;
-    }
-
-    window.location.href = `/pratiche/${data.pratica.id}`;
-  }
-
   async function salvaNuovoRappresentante() {
     try {
      const res = await fetch(
@@ -1444,17 +1426,7 @@ onChange={(e) => {
                   : "Salva dati"}
               </button>
 
-              <button
-                type="button"
-                style={greenButton}
-                onClick={
-                  creaPraticaLiquidazione
-                }
-              >
-                Crea pratica messa in
-                liquidazione
-              </button>
-            </div>
+               </div>
           </div>
         </div>
       </form>
