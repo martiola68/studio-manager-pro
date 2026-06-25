@@ -367,7 +367,7 @@ if (req.body.genera_pratica && !data.pratica_id) {
 
       tipo_pratica_id: req.body.tipo_pratica_id,
 
-      numero_pratica: null,
+      numero_pratica: `VAR-${new Date().getFullYear()}-${String(Date.now()).slice(-5)}`,
 
       titolo: data.titolo,
 
