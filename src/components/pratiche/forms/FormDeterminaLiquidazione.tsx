@@ -293,20 +293,13 @@ async function caricaAmministratori() {
       return;
     }
 
-const ruoliRappresentante = [
-  "amministratore",
-  "amministratore_unico",
-  "amministratore_delegato",
-  "presidente_cda",
-  "liquidatore",
-  "rappresentante_legale",
-];
-
 setRappresentantiLegali(
   (data.organi || []).filter((o: any) => {
     if (o.attivo === false) return false;
 
-    return ruoliRappresentante.includes(String(o.ruolo || ""));
+    const ruolo = String(o.ruolo || "").toLowerCase();
+
+    return ruolo !== "socio";
   })
 );
   } catch (error: any) {
