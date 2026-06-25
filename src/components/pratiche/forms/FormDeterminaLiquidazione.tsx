@@ -288,28 +288,20 @@ async function caricaAmministratori() {
       return;
     }
 
-  setRappresentantiLegali(
+const ruoliRappresentante = [
+  "amministratore",
+  "amministratore_unico",
+  "amministratore_delegato",
+  "presidente_cda",
+  "liquidatore",
+  "rappresentante_legale",
+];
+
+setRappresentantiLegali(
   (data.organi || []).filter((o: any) => {
-    if (!o.attivo) return false;
+    if (o.attivo === false) return false;
 
-    const ruolo = String(o.ruolo || "").toLowerCase();
-    const carica = String(o.carica || "").toLowerCase();
-
- return (
-  o.rappresentante_legale === true ||
-  ruolo.includes("amministratore") ||
-  ruolo.includes("amministratore_unico") ||
-  ruolo.includes("amministratore_delegato") ||
-  ruolo.includes("liquidatore") ||
-  ruolo.includes("presidente") ||
-  ruolo.includes("rappresentante") ||
-  carica.includes("amministratore") ||
-  carica.includes("amministratore unico") ||
-  carica.includes("amministratore delegato") ||
-  carica.includes("liquidatore") ||
-  carica.includes("presidente") ||
-  carica.includes("rappresentante")
-    );
+    return ruoliRappresentante.includes(String(o.ruolo || ""));
   })
 );
   } catch (error: any) {
