@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
-type A<fvpiResponse =
+type ApiResponse =
   | { success: true; data: any }
   | { success: false; error: string };
 
