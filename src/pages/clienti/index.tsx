@@ -2062,6 +2062,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
 
               <TableCell className="sticky right-0 bg-background z-10 w-[170px] text-right">
                    <div className="flex justify-end gap-3">
+{cliente.tipo_cliente?.toLowerCase() !== "persona fisica" && (
   <Button
     variant="ghost"
     size="icon"
@@ -2072,6 +2073,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
   >
     <Users className="h-4 w-4" />
   </Button>
+)}
 
   <Button
     variant="ghost"
