@@ -287,20 +287,26 @@ async function caricaAmministratori() {
       return;
     }
 
-    setRappresentantiLegali(
-      (data.organi || []).filter(
-        (o: any) =>
-          o.attivo &&
-          (
-            o.ruolo === "amministratore" ||
-            o.ruolo === "amministratore_unico" ||
-            o.ruolo === "amministratore_delegato" ||
-            o.ruolo === "presidente_cda" ||
-            o.ruolo === "liquidatore" ||
-            o.ruolo === "rappresentante_legale"
-          )
-      )
+   setRappresentantiLegali(
+  (data.organi || []).filter((o: any) => {
+    if (!o.attivo) return false;
+
+    const ruolo = String(o.ruolo || "").toLowerCase();
+    const carica = String(o.carica || "").toLowerCase();
+
+    return (
+      o.rappresentante_legale === true ||
+      ruolo.includes("amministratore") ||
+      ruolo.includes("presidente") ||
+      ruolo.includes("liquidatore") ||
+      ruolo.includes("rappresentante") ||
+      carica.includes("amministratore") ||
+      carica.includes("presidente") ||
+      carica.includes("liquidatore") ||
+      carica.includes("rappresentante")
     );
+  })
+);
   } catch (error: any) {
     console.error("Errore caricamento amministratori:", error);
     alert(error.message || "Errore caricamento amministratori");
