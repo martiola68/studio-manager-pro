@@ -267,7 +267,7 @@ export default async function handler(
           *,
           cliente:tbclienti(id, ragione_sociale, codice_fiscale, partita_iva),
           assegnato:tbutenti!tbpratiche_variazioni_assegnato_a_fkey(id, nome, cognome, email),
-          pratica:tbpratiche(id, numero_pratica, titolo, stato)
+          pratica:tbpratiche!tbpratiche_variazioni_pratica_id_fkey(id, numero_pratica, titolo, stato)
         `)
         .eq("studio_id", studio_id)
         .order("data_atto", { ascending: false, nullsFirst: false })
@@ -345,7 +345,7 @@ export default async function handler(
           *,
           cliente:tbclienti(id, ragione_sociale, codice_fiscale, partita_iva),
           assegnato:tbutenti!tbpratiche_variazioni_assegnato_a_fkey(id, nome, cognome, email),
-          pratica:tbpratiche(id, numero_pratica, titolo, stato)
+          pratica:tbpratiche!tbpratiche_variazioni_pratica_id_fkey(id, numero_pratica, titolo, stato)
         `)
         .single();
 
@@ -442,7 +442,7 @@ if (req.body.genera_pratica && !data.pratica_id) {
           *,
           cliente:tbclienti(id, ragione_sociale, codice_fiscale, partita_iva),
           assegnato:tbutenti!tbpratiche_variazioni_assegnato_a_fkey(id, nome, cognome, email),
-          pratica:tbpratiche(id, numero_pratica, titolo, stato)
+          pratica:tbpratiche!tbpratiche_variazioni_pratica_id_fkey(id, numero_pratica, titolo, stato)
         `)
         .single();
 
