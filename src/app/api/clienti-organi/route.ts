@@ -38,7 +38,7 @@ percentuale_partecipazione,
         durata_carica,
         data_scadenza,
     
-oggetto_cliente:tbclienti!tbclienti_organi_soggetto_cliente_id_fkey (
+soggetto_cliente:tbclienti!tbclienti_organi_soggetto_cliente_id_fkey (
   id,
   ragione_sociale,
   cognome,
@@ -51,8 +51,7 @@ oggetto_cliente:tbclienti!tbclienti_organi_soggetto_cliente_id_fkey (
   provincia,
   cap,
   email,
-  pec,
-  tel
+  pec
 )
       `)
       .eq("cliente_id", cliente_id)
