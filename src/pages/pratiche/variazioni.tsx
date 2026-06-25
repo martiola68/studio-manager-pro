@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import Head from "next/head";
 import { getSupabaseClient } from "@/lib/supabaseClient";
-import { Plus, Pencil, Trash2, FileText, RefreshCw } from "lucide-react";
+import { Plus, Pencil, Trash2, RefreshCw } from "lucide-react";
 
 const FORM_INIZIALE = {
   cliente_id: "",
@@ -190,28 +190,6 @@ setClienti(clientiData || []);
       method: "DELETE",
     });
 
-    await loadData();
-  }
-
- async function creaPraticaDaVariazione(variazioneId: string) {
-  const response = await fetch("/api/pratiche/variazioni/crea-pratica", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      variazione_id: variazioneId,
-    }),
-  });
-
-    const result = await response.json();
-
-    if (!result.success) {
-      alert(result.error || "Errore creazione pratica");
-      return;
-    }
-
-    alert("Pratica creata e collegata alla variazione.");
     await loadData();
   }
 
@@ -669,17 +647,6 @@ setClienti(clientiData || []);
                           <Trash2 className="h-4 w-4 text-red-600" />
                         </button>
 
-                        <button
-                          title="Crea pratica"
-                          onClick={() => creaPraticaDaVariazione(v.id)}
-                          disabled={!!v.pratica_id}
-                        >
-                          <FileText
-                            className={`h-4 w-4 ${
-                              v.pratica_id ? "text-gray-400" : "text-blue-600"
-                            }`}
-                          />
-                        </button>
                       </div>
                     </td>
                   </tr>
