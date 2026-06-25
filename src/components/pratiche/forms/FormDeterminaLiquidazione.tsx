@@ -750,20 +750,34 @@ onChange={(e) => {
 
   if (!selected) return;
 
+  const soggetto = selected.soggetto_cliente;
+
   setForm((prev) => ({
     ...prev,
     rappresentante_legale_id: selected.soggetto_cliente_id || selected.id,
-    rappresentante_legale_nome: selected.nominativo_nome || "",
+
+    rappresentante_legale_nome:
+      soggetto?.ragione_sociale ||
+      [soggetto?.cognome, soggetto?.nome].filter(Boolean).join(" ") ||
+      selected.nominativo_nome ||
+      "",
+
     rappresentante_legale_codice_fiscale:
-      selected.nominativo_codice_fiscale || "",
+      soggetto?.codice_fiscale ||
+      selected.nominativo_codice_fiscale ||
+      "",
+
     rappresentante_legale_indirizzo:
-      selected.soggetto_cliente?.indirizzo || "",
+      soggetto?.indirizzo || "",
+
     rappresentante_legale_citta:
-      selected.soggetto_cliente?.citta || "",
+      soggetto?.citta || "",
+
     rappresentante_legale_provincia:
-      selected.soggetto_cliente?.provincia || "",
+      soggetto?.provincia || "",
+
     rappresentante_legale_cap:
-      selected.soggetto_cliente?.cap || "",
+      soggetto?.cap || "",
   }));
 }}
               >
@@ -771,12 +785,28 @@ onChange={(e) => {
                   Seleziona
                 </option>
 
-{rappresentantiLegali.map((r: any) => (
-  <option key={r.id} value={r.id}>
-    {r.nominativo_nome} - {r.nominativo_codice_fiscale}
-    {r.principale ? " — principale" : ""}
-  </option>
-))}
+{rappresentantiLegali.map((r: any) => {
+  const soggetto = r.soggetto_cliente;
+
+  const nome =
+    soggetto?.ragione_sociale ||
+    [soggetto?.cognome, soggetto?.nome].filter(Boolean).join(" ") ||
+    r.nominativo_nome ||
+    "Nominativo senza nome";
+
+  const cf =
+    soggetto?.codice_fiscale ||
+    r.nominativo_codice_fiscale ||
+    "";
+
+  return (
+    <option key={r.id} value={r.id}>
+      {nome}
+      {cf ? ` - ${cf}` : ""}
+      {r.principale ? " — principale" : ""}
+    </option>
+  );
+})}
               </select>
           </div>
 
