@@ -2636,15 +2636,11 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
 <div className="md:col-span-2 mt-4 grid grid-cols-12 gap-4">
   <div className="col-span-12 md:col-span-6">
     <Label htmlFor="rapp_legale_id">Rappresentante legale</Label>
+  
     <Select
-      value={formData.rapp_legale_id || "none"}
-      onValueChange={(value) =>
-        setFormData((prev) => ({
-          ...prev,
-          rapp_legale_id: value === "none" ? "" : value,
-        }))
-      }
-    >
+  value={formData.rapp_legale_id || "none"}
+  disabled
+>
       <SelectTrigger id="rapp_legale_id">
         <SelectValue placeholder="Seleziona rappresentante legale" />
       </SelectTrigger>
@@ -2659,6 +2655,16 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
         ))}
       </SelectContent>
     </Select>
+    <p
+  style={{
+    fontSize: 12,
+    color: "#6b7280",
+    marginTop: 4,
+  }}
+>
+  Il rappresentante legale viene aggiornato automaticamente dal modulo
+  "Organi sociali".
+</p>
   </div>
 
   <div className="col-span-12 md:col-span-6">
