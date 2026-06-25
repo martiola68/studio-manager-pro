@@ -37,12 +37,21 @@ export async function GET(req: NextRequest) {
         durata_carica,
         data_scadenza,
     
-soggetto_cliente:tbclienti!tbclienti_organi_soggetto_cliente_id_fkey (
+oggetto_cliente:tbclienti!tbclienti_organi_soggetto_cliente_id_fkey (
   id,
   ragione_sociale,
+  cognome,
+  nome,
   codice_fiscale,
   partita_iva,
-  tipo_cliente
+  tipo_cliente,
+  indirizzo,
+  citta,
+  provincia,
+  cap,
+  email,
+  pec,
+  tel
 )
       `)
       .eq("cliente_id", cliente_id)
@@ -67,10 +76,13 @@ soggetto_cliente:tbclienti!tbclienti_organi_soggetto_cliente_id_fkey (
       o.rapp_legale_id ||
       null,
 
-    nominativo_nome:
-      soggettoCliente?.ragione_sociale ||
-      rappLegale?.nome_cognome ||
-      "",
+  nominativo_nome:
+  soggettoCliente?.ragione_sociale ||
+  [soggettoCliente?.cognome, soggettoCliente?.nome]
+    .filter(Boolean)
+    .join(" ") ||
+  rappLegale?.nome_cognome ||
+  "",
 
     nominativo_codice_fiscale:
       soggettoCliente?.codice_fiscale ||
