@@ -741,76 +741,42 @@ await caricaAmministratori();
                 Seleziona rappresentante
               </label>
 
-              <select
-                style={inputStyle}
-                value={
-                  form.rappresentante_legale_id
-                }
-onChange={(e) => {
-  const selected = rappresentantiLegali.find(
-    (r: any) => String(r.id) === String(e.target.value)
-  );
+<select
+  style={inputStyle}
+  value={form.rappresentante_legale_id}
+  onChange={(e) => {
+    const selected = rappresentantiLegali.find(
+      (r: any) => String(r.id) === String(e.target.value)
+    );
 
-  if (!selected) return;
+    if (!selected) return;
 
-  const soggetto = selected.soggetto_cliente;
+    setForm((prev) => ({
+      ...prev,
+     rappresentante_legale_id: selected.id,
+      rappresentante_legale_nome: selected.nominativo_nome || "",
+      rappresentante_legale_codice_fiscale:
+        selected.nominativo_codice_fiscale || "",
+      rappresentante_legale_indirizzo:
+        selected.soggetto_cliente?.indirizzo || "",
+      rappresentante_legale_citta:
+        selected.soggetto_cliente?.citta || "",
+      rappresentante_legale_provincia:
+        selected.soggetto_cliente?.provincia || "",
+      rappresentante_legale_cap:
+        selected.soggetto_cliente?.cap || "",
+    }));
+  }}
+>
+  <option value="">Seleziona</option>
 
-  setForm((prev) => ({
-    ...prev,
-    rappresentante_legale_id: e.target.value,
-
-    rappresentante_legale_nome:
-      soggetto?.ragione_sociale ||
-      [soggetto?.cognome, soggetto?.nome].filter(Boolean).join(" ") ||
-      selected.nominativo_nome ||
-      "",
-
-    rappresentante_legale_codice_fiscale:
-      soggetto?.codice_fiscale ||
-      selected.nominativo_codice_fiscale ||
-      "",
-
-    rappresentante_legale_indirizzo:
-      soggetto?.indirizzo || "",
-
-    rappresentante_legale_citta:
-      soggetto?.citta || "",
-
-    rappresentante_legale_provincia:
-      soggetto?.provincia || "",
-
-    rappresentante_legale_cap:
-      soggetto?.cap || "",
-  }));
-}}
-              >
-                <option value="">
-                  Seleziona
-                </option>
-
-{rappresentantiLegali.map((r: any) => {
-  const soggetto = r.soggetto_cliente;
-
-  const nome =
-    soggetto?.ragione_sociale ||
-    [soggetto?.cognome, soggetto?.nome].filter(Boolean).join(" ") ||
-    r.nominativo_nome ||
-    "Nominativo senza nome";
-
-  const cf =
-    soggetto?.codice_fiscale ||
-    r.nominativo_codice_fiscale ||
-    "";
-
-  return (
-   <option key={r.id} value={r.id}>
-  {nome}
-  {cf ? ` - ${cf}` : ""}
-  {r.carica ? ` — ${r.carica}` : ""}
-</option>
-  );
-})}
-              </select>
+  {rappresentantiLegali.map((r: any) => (
+    <option key={r.id} value={r.id}>
+      {r.nominativo_nome} - {r.nominativo_codice_fiscale}
+      {r.principale ? " — principale" : ""}
+    </option>
+  ))}
+</select>
           </div>
 
             <button
