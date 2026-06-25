@@ -758,7 +758,7 @@ await caricaAmministratori();
                 value={
                   form.rappresentante_legale_id
                 }
-onChange={async (e) => {
+onChange={(e) => {
   const selected = rappresentantiLegali.find(
     (r: any) => String(r.id) === String(e.target.value)
   );
@@ -767,17 +767,18 @@ onChange={async (e) => {
 
   setForm((prev) => ({
     ...prev,
-    rappresentante_legale_id: selected.id,
-    rappresentante_legale_nome: selected.nome_cognome || "",
-    rappresentante_legale_codice_fiscale: selected.codice_fiscale || "",
-   rappresentante_legale_indirizzo:
-  selected.indirizzo_residenza || selected.indirizzo || "",
-rappresentante_legale_citta:
-  selected.citta_residenza || selected.citta || "",
-rappresentante_legale_provincia:
-  selected.provincia || "",
-rappresentante_legale_cap:
-  selected.cap || selected.CAP || "",
+    rappresentante_legale_id: selected.soggetto_cliente_id || selected.id,
+    rappresentante_legale_nome: selected.nominativo_nome || "",
+    rappresentante_legale_codice_fiscale:
+      selected.nominativo_codice_fiscale || "",
+    rappresentante_legale_indirizzo:
+      selected.soggetto_cliente?.indirizzo || "",
+    rappresentante_legale_citta:
+      selected.soggetto_cliente?.citta || "",
+    rappresentante_legale_provincia:
+      selected.soggetto_cliente?.provincia || "",
+    rappresentante_legale_cap:
+      selected.soggetto_cliente?.cap || "",
   }));
 }}
               >
