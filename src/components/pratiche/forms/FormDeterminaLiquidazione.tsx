@@ -294,7 +294,9 @@ async function caricaAmministratori() {
     }
 
 setRappresentantiLegali(
-  (data.organi || []).filter((o: any) => o.attivo !== false)
+  (data.organi || []).filter(
+    (o: any) => o.attivo !== false && o.tipo_ruolo === "R"
+  )
 );
     
   } catch (error: any) {
@@ -744,31 +746,38 @@ await caricaAmministratori();
 
     if (!selected) return;
 
+    const soggetto = selected.soggetto_cliente;
+
     setForm((prev) => ({
       ...prev,
-     rappresentante_legale_id: selected.id,
-      rappresentante_legale_nome: selected.nominativo_nome || "",
+      rappresentante_legale_id: selected.id,
+      rappresentante_legale_nome: soggetto?.ragione_sociale || "",
       rappresentante_legale_codice_fiscale:
-        selected.nominativo_codice_fiscale || "",
+        soggetto?.codice_fiscale || soggetto?.partita_iva || "",
       rappresentante_legale_indirizzo:
-        selected.soggetto_cliente?.indirizzo || "",
+        soggetto?.indirizzo || "",
       rappresentante_legale_citta:
-        selected.soggetto_cliente?.citta || "",
+        soggetto?.citta || "",
       rappresentante_legale_provincia:
-        selected.soggetto_cliente?.provincia || "",
+        soggetto?.provincia || "",
       rappresentante_legale_cap:
-        selected.soggetto_cliente?.cap || "",
+        soggetto?.cap || "",
     }));
   }}
 >
   <option value="">Seleziona</option>
 
-  {rappresentantiLegali.map((r: any) => (
-    <option key={r.id} value={r.id}>
-      {r.nominativo_nome} - {r.nominativo_codice_fiscale}
-      {r.principale ? " — principale" : ""}
-    </option>
-  ))}
+  {rappresentantiLegali.map((r: any) => {
+    const soggetto = r.soggetto_cliente;
+
+    return (
+      <option key={r.id} value={r.id}>
+        {soggetto?.ragione_sociale || "Nominativo senza nome"}
+        {soggetto?.codice_fiscale ? ` - ${soggetto.codice_fiscale}` : ""}
+        {r.principale ? " — principale" : ""}
+      </option>
+    );
+  })}
 </select>
           </div>
 
