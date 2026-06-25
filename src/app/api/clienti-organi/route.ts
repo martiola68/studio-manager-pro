@@ -97,6 +97,16 @@ return NextResponse.json({
   }
 }
 
+function ruoloAggiornaRappLegale(ruolo?: string | null) {
+  return [
+    "amministratore_unico",
+    "amministratore_delegato",
+    "presidente_cda",
+    "rappresentante_legale",
+    "liquidatore",
+  ].includes(String(ruolo || ""));
+}
+
 export async function POST(req: NextRequest) {
   try {
     const supabase = createClient(
@@ -151,22 +161,28 @@ if (!payload.soggetto_cliente_id) {
       })
       .select()
       .single();
+if (error) {
+  return NextResponse.json(
+    { error: error.message },
+    { status: 500 }
+  );
+}
 
-    if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      );
-    }
+if (
+  payload.principale === true &&
+  ruoloAggiornaRappLegale(payload.ruolo)
+) {
+  await supabase
+    .from("tbclienti")
+    .update({
+      rapp_legale_id: payload.soggetto_cliente_id,
+    })
+    .eq("id", payload.cliente_id);
+}
 
-    return NextResponse.json({
-      organo: data,
-    });
-  } catch (err: any) {
-    return NextResponse.json(
-      { error: err.message || "Errore server" },
-      { status: 500 }
-    );
+return NextResponse.json({
+  organo: data,
+});
   }
 }
 
@@ -212,14 +228,28 @@ export async function PUT(req: NextRequest) {
       .select()
       .single();
 
-    if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      );
-    }
+ if (error) {
+  return NextResponse.json(
+    { error: error.message },
+    { status: 500 }
+  );
+}
 
-    return NextResponse.json({ organo: data });
+if (
+  data?.cliente_id &&
+  data?.soggetto_cliente_id &&
+  data?.principale === true &&
+  ruoloAggiornaRappLegale(data?.ruolo)
+) {
+  await supabase
+    .from("tbclienti")
+    .update({
+      rapp_legale_id: data.soggetto_cliente_id,
+    })
+    .eq("id", data.cliente_id);
+}
+
+return NextResponse.json({ organo: data });
   } catch (err: any) {
     return NextResponse.json(
       { error: err.message || "Errore server" },
