@@ -212,13 +212,18 @@ rappresentante_legale_cap:
       cap: "",
     });
 
-  useEffect(() => {
-   if (praticaId) {
-  caricaMotivi();
-  caricaDocumenti();
-  caricaAmministratori();
-}
-  }, [praticaId]);
+ useEffect(() => {
+  if (praticaId) {
+    caricaMotivi();
+    caricaDocumenti();
+  }
+}, [praticaId]);
+
+useEffect(() => {
+  if (praticaId && pratica?.cliente_id) {
+    caricaAmministratori();
+  }
+}, [praticaId, pratica?.cliente_id]);
 
   function aggiornaCampo(
     campo: string,
