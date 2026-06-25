@@ -251,6 +251,11 @@ function aggiornaGiorniAde(value: number) {
       : "",
   });
 }
+
+  const variazioniVisibili = editingId
+  ? variazioni.filter((v) => v.id === editingId)
+  : variazioni;
+  
   return (
     <>
       <Head>
@@ -260,6 +265,7 @@ function aggiornaGiorniAde(value: number) {
       <div className="max-w-[1800px] mx-auto p-4">
         <div className="flex justify-between mb-4">
           <h1 className="text-2xl font-bold">
+
             Variazioni CCIAA / Agenzia Entrate
           </h1>
 
@@ -630,14 +636,14 @@ function aggiornaGiorniAde(value: number) {
                     Caricamento...
                   </td>
                 </tr>
-              ) : variazioni.length === 0 ? (
+              ) : variazioniVisibili.length === 0 ? (
                 <tr>
                   <td colSpan={10} className="p-6 text-center text-gray-500">
                     Nessuna variazione presente.
                   </td>
                 </tr>
               ) : (
-                variazioni.map((v) => (
+                variazioniVisibili.map((v) => (
                   <tr key={v.id} className="border-t">
                     <td className="p-2">{v.cliente?.ragione_sociale || "-"}</td>
                     <td className="p-2">{v.tipo_variazione || "-"}</td>
