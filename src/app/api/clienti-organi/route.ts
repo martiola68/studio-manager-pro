@@ -25,9 +25,10 @@ export async function GET(req: NextRequest) {
   cliente_id,
   soggetto_cliente_id,
   tipo_soggetto,
-  rappresentante_legale,
-  ruolo,
-        percentuale_partecipazione,
+ rappresentante_legale,
+tipo_ruolo,
+ruolo,
+percentuale_partecipazione,
         presenza,
         carica,
         principale,
@@ -159,6 +160,7 @@ if (!payload.soggetto_cliente_id) {
       ? "societa"
       : "persona_fisica",
   rappresentante_legale: payload.rappresentante_legale ?? false,
+  tipo_ruolo: payload.tipo_ruolo,
   ruolo: payload.ruolo,
 
           carica: payload.carica,
@@ -230,6 +232,7 @@ export async function PUT(req: NextRequest) {
       : "persona_fisica",
 
   rappresentante_legale: payload.rappresentante_legale ?? false,
+  tipo_ruolo: payload.tipo_ruolo,
   ruolo: payload.ruolo,
         carica: payload.carica,
         percentuale_partecipazione: payload.percentuale_partecipazione,
