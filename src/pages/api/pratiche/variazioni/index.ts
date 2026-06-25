@@ -385,12 +385,14 @@ if (req.body.genera_pratica && !data.pratica_id) {
 
       variazione_id: data.id,
 
-      codice_workflow: data.tipo_variazione,
-
+     codice_workflow: data.tipo_variazione,
+    
       codice_step: "ROOT",
-
+      
+      nome_step: data.tipo_variazione,
+      
       ordine_step: 1,
-
+      
       stato_step: "aperta"
 
     })
