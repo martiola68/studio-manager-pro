@@ -570,17 +570,36 @@ const importoNettoNuovoSocio =
         </span>
 
         {step.corrente && (
-          <button
-            style={{
-              padding: "6px 12px",
-              borderRadius: 6,
-              border: "1px solid #2563eb",
-              background: "#2563eb",
-              color: "#fff",
-            }}
-          >
-            Crea pratica
-          </button>
+         <button
+  type="button"
+  style={{
+    padding: "6px 12px",
+    borderRadius: 6,
+    border: "1px solid #2563eb",
+    background: "#2563eb",
+    color: "#fff",
+    cursor: "pointer",
+  }}
+  onClick={async () => {
+    const res = await fetch(
+      `/api/pratiche/${pratica.id}/crea-pratica-liquidazione`,
+      {
+        method: "POST",
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.error || "Errore creazione pratica");
+      return;
+    }
+
+    window.location.href = `/pratiche/${data.pratica.id}`;
+  }}
+>
+  Crea pratica
+</button>
         )}
       </div>
     ))}
