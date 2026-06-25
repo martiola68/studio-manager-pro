@@ -456,17 +456,20 @@ await fetch("/api/clienti-organi", {
 
 setForm((prev) => ({
   ...prev,
-  rappresentante_legale_id: selected.soggetto_cliente_id || selected.id,
-  rappresentante_legale_nome: selected.nominativo_nome || "",
-  rappresentante_legale_codice_fiscale: selected.nominativo_codice_fiscale || "",
+  rappresentante_legale_id: rappresentante.id,
+  rappresentante_legale_nome:
+    rappresentante.nome_cognome || nuovoRappLegale.nome_cognome || "",
+  rappresentante_legale_codice_fiscale:
+    rappresentante.codice_fiscale || nuovoRappLegale.codice_fiscale || "",
   rappresentante_legale_indirizzo:
-    selected.soggetto_cliente?.indirizzo || "",
+    rappresentante.indirizzo_residenza || nuovoRappLegale.indirizzo_residenza || "",
   rappresentante_legale_citta:
-    selected.soggetto_cliente?.citta || "",
+    rappresentante.citta_residenza || nuovoRappLegale.citta_residenza || "",
   rappresentante_legale_provincia:
-    selected.soggetto_cliente?.provincia || "",
+    rappresentante.provincia || nuovoRappLegale.provincia || "",
   rappresentante_legale_cap:
-    selected.soggetto_cliente?.cap || "",
+    rappresentante.cap || nuovoRappLegale.cap || "",
+  nuovo_rappresentante: false,
 }));
 
      alert("Rappresentante legale salvato.");
