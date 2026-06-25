@@ -150,6 +150,8 @@ const [nuovoSocio, setNuovoSocio] = useState({
   tipo_pagamento: "",
 });
 
+  const [workflow, setWorkflow] = useState<any[]>([]);
+
   const [form, setForm] = useState({
     societa_denominazione: "",
     societa_sede: "",
@@ -190,6 +192,16 @@ percentuale_soci_presenti: "100",
 
         const p = data.pratica;
         setPratica(p);
+
+        setWorkflow(
+  p.workflow || [
+    {
+      nome: p.nome_step || p.titolo,
+      completato: false,
+      corrente: true,
+    },
+  ]
+);
 
         setProfessionisti(data.professionisti || []);
         setMotiviLiquidazione(data.motivi_liquidazione || []);
@@ -526,12 +538,66 @@ const importoRitenutaNuovoSocio =
 const importoNettoNuovoSocio =
   importoLordoNuovoSocio - importoRitenutaNuovoSocio;
 
+  const workflowCard = (
+  <div
+    style={{
+      marginBottom: 24,
+      padding: 20,
+      border: "1px solid #d1d5db",
+      borderRadius: 10,
+      background: "#ffffff",
+    }}
+  >
+    <h3 style={{ marginBottom: 16 }}>
+      Workflow pratica
+    </h3>
+
+    {workflow.map((step, i) => (
+      <div
+        key={i}
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          padding: "8px 0",
+          borderBottom:
+            i < workflow.length - 1
+              ? "1px solid #eee"
+              : "none",
+        }}
+      >
+        <span>
+          {step.completato ? "✅" : "⬜"} {step.nome}
+        </span>
+
+        {step.corrente && (
+          <button
+            style={{
+              padding: "6px 12px",
+              borderRadius: 6,
+              border: "1px solid #2563eb",
+              background: "#2563eb",
+              color: "#fff",
+            }}
+          >
+            Crea pratica
+          </button>
+        )}
+      </div>
+    ))}
+  </div>
+);
+
   if (pratica?.tipo?.classe_form === "distribuzione_utili") {
   return <FormDistribuzioneUtili pratica={pratica} />;
 }
 
   if (pratica?.tipo?.classe_form === "determina_liquidazione") {
-  return <FormDeterminaLiquidazione pratica={pratica} />;
+ return (
+  <>
+    {workflowCard}
+    <FormDeterminaLiquidazione pratica={pratica} />
+  </>
+);
 }
 
 if (pratica?.tipo?.classe_form === "messa_liquidazione") {
