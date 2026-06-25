@@ -149,7 +149,8 @@ const [rappresentantiLegali, setRappresentantiLegali] = useState<any[]>([]);
       sedeSocieta ||
       "",
 
-    rappresentante_legale_id: "",
+   rappresentante_legale_id:
+  pratica?.dati_documento?.rappresentante_legale_id || "",
 
     rappresentante_legale_nome:
       pratica?.dati_documento
@@ -294,19 +295,20 @@ async function caricaAmministratori() {
     const ruolo = String(o.ruolo || "").toLowerCase();
     const carica = String(o.carica || "").toLowerCase();
 
-    return (
-      o.soggetto_cliente_id &&
-      (
-        o.rappresentante_legale === true ||
-        ruolo.includes("amministratore") ||
-        ruolo.includes("liquidatore") ||
-        ruolo.includes("presidente") ||
-        ruolo.includes("rappresentante") ||
-        carica.includes("amministratore") ||
-        carica.includes("liquidatore") ||
-        carica.includes("presidente") ||
-        carica.includes("rappresentante")
-      )
+ return (
+  o.rappresentante_legale === true ||
+  ruolo.includes("amministratore") ||
+  ruolo.includes("amministratore_unico") ||
+  ruolo.includes("amministratore_delegato") ||
+  ruolo.includes("liquidatore") ||
+  ruolo.includes("presidente") ||
+  ruolo.includes("rappresentante") ||
+  carica.includes("amministratore") ||
+  carica.includes("amministratore unico") ||
+  carica.includes("amministratore delegato") ||
+  carica.includes("liquidatore") ||
+  carica.includes("presidente") ||
+  carica.includes("rappresentante")
     );
   })
 );
@@ -763,8 +765,7 @@ onChange={(e) => {
 
   setForm((prev) => ({
     ...prev,
-
-    rappresentante_legale_id: selected.id,
+    rappresentante_legale_id: e.target.value,
 
     rappresentante_legale_nome:
       soggetto?.ragione_sociale ||
@@ -810,11 +811,11 @@ onChange={(e) => {
     "";
 
   return (
-    <option key={r.id} value={r.id}>
-      {nome}
-      {cf ? ` - ${cf}` : ""}
-      {r.carica ? ` — ${r.carica}` : ""}
-    </option>
+   <option key={r.id} value={r.id}>
+  {nome}
+  {cf ? ` - ${cf}` : ""}
+  {r.carica ? ` — ${r.carica}` : ""}
+</option>
   );
 })}
               </select>
