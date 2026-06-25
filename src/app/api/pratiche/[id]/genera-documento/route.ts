@@ -555,6 +555,10 @@ const zip = new PizZip(modelloBuffer);
 const doc = new Docxtemplater(zip, {
   paragraphLoop: true,
   linebreaks: true,
+  delimiters: {
+    start: "[",
+    end: "]",
+  },
 });
 
 doc.render(valori);
