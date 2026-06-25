@@ -202,16 +202,19 @@ const payload = {
     await loadData();
   }
 
-  function aggiornaDataAtto(value: string) {
-    setForm({
-      ...form,
-      data_atto: value,
-      data_scadenza_cciaa: aggiungiGiorni(
-        value,
-        form.giorni_scadenza_cciaa
-      ),
-    });
-  }
+ function aggiornaDataAtto(value: string) {
+  setForm({
+    ...form,
+    data_atto: value,
+    data_scadenza_cciaa: aggiungiGiorni(
+      value,
+      form.giorni_scadenza_cciaa
+    ),
+    data_scadenza_ade: form.obbligo_ade
+      ? aggiungiGiorni(value, form.giorni_scadenza_ade)
+      : "",
+  });
+}
 
   function formatDateIT(data?: string | null) {
   if (!data) return "-";
@@ -239,14 +242,15 @@ const payload = {
     });
   }
 
-  function aggiornaGiorniAde(value: number) {
-    setForm({
-      ...form,
-      giorni_scadenza_ade: value,
-      data_scadenza_ade: aggiungiGiorni(form.data_evasione_cciaa, value),
-    });
-  }
-
+function aggiornaGiorniAde(value: number) {
+  setForm({
+    ...form,
+    giorni_scadenza_ade: value,
+    data_scadenza_ade: form.data_atto
+      ? aggiungiGiorni(form.data_atto, value)
+      : "",
+  });
+}
   return (
     <>
       <Head>
