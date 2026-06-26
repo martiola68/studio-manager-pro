@@ -286,18 +286,18 @@ async function caricaOrganiSocieta() {
 
   if (!res.ok) return;
 
-setOrganiSocieta(
-  (data.organi || []).filter((o: any) => {
-    const ruolo = String(o.ruolo || o.carica || "").toLowerCase();
-
-    return (
-      o.attivo !== false &&
-      ruolo === "socio"
-    );
-  })
+const organiAttivi = (data.organi || []).filter(
+  (o: any) => o.attivo !== false
 );
-}
 
+setOrganiSocieta(
+  organiAttivi.filter((o: any) => o.tipo_ruolo === "S")
+);
+
+setRappresentantiLegali(
+  organiAttivi.filter((o: any) => o.tipo_ruolo === "R")
+);
+  
 function normalizzaCF(cf: string) {
   return String(cf || "").trim().toUpperCase();
 }
@@ -663,13 +663,15 @@ provincia: selected?.soggetto_cliente?.provincia || "",
           return;
         }
 
-        await fetch("/api/clienti-organi", {
+await fetch("/api/clienti-organi", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
     cliente_id: pratica.cliente_id,
-    rapp_legale_id: nuovoSocio.nominativo_id,
+    soggetto_cliente_id: nuovoSocio.nominativo_id,
+    tipo_ruolo: "S",
     ruolo: "socio",
+    carica: "Socio",
     percentuale_partecipazione:
       nuovoSocio.percentuale_partecipazione || null,
     presenza: nuovoSocio.presenza || "Presente",
@@ -768,12 +770,12 @@ provincia: selected?.soggetto_cliente?.provincia || "",
     <div>
       <label style={labelStyle}>Seleziona liquidatore</label>
 
- <select
+<select
   style={inputStyle}
   value={form.liquidatore_id}
   onChange={(e) => {
     const selected = rappresentantiLegali.find(
-      (r) => String(r.id) === String(e.target.value)
+      (r: any) => String(r.id) === String(e.target.value)
     );
 
     if (!selected) {
@@ -791,22 +793,23 @@ provincia: selected?.soggetto_cliente?.provincia || "",
       return;
     }
 
+    const soggetto = selected.soggetto_cliente;
+
     setForm((prev) => ({
       ...prev,
       liquidatore_id: selected.id,
-      liquidatore_nome: selected.nome_cognome || "",
-      liquidatore_codice_fiscale: selected.codice_fiscale || "",
-      liquidatore_indirizzo:
-        selected.indirizzo_residenza || selected.indirizzo || "",
-      liquidatore_citta:
-        selected.citta_residenza || selected.citta || "",
-      liquidatore_provincia: selected.provincia || "",
-      liquidatore_cap: selected.cap || selected.CAP || "",
+      liquidatore_nome: soggetto?.ragione_sociale || "",
+      liquidatore_codice_fiscale:
+        soggetto?.codice_fiscale || soggetto?.partita_iva || "",
+      liquidatore_indirizzo: soggetto?.indirizzo || "",
+      liquidatore_citta: soggetto?.citta || "",
+      liquidatore_provincia: soggetto?.provincia || "",
+      liquidatore_cap: soggetto?.cap || "",
       liquidatore_residenza: [
-        selected.indirizzo_residenza || selected.indirizzo,
-        selected.cap || selected.CAP,
-        selected.citta_residenza || selected.citta,
-        selected.provincia,
+        soggetto?.indirizzo,
+        soggetto?.cap,
+        soggetto?.citta,
+        soggetto?.provincia,
       ]
         .filter(Boolean)
         .join(" "),
@@ -815,11 +818,17 @@ provincia: selected?.soggetto_cliente?.provincia || "",
 >
   <option value="">Seleziona liquidatore</option>
 
-  {rappresentantiLegali.map((r) => (
-    <option key={r.id} value={r.id}>
-      {r.nome_cognome}
-    </option>
-  ))}
+  {rappresentantiLegali.map((r: any) => {
+    const soggetto = r.soggetto_cliente;
+
+    return (
+      <option key={r.id} value={r.id}>
+        {soggetto?.ragione_sociale || "Nominativo senza nome"}
+        {soggetto?.codice_fiscale ? ` - ${soggetto.codice_fiscale}` : ""}
+        {r.principale ? " — principale" : ""}
+      </option>
+    );
+  })}
 </select>
     </div>
 
