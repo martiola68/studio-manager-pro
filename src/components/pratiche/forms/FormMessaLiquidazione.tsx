@@ -297,6 +297,7 @@ setOrganiSocieta(
 setRappresentantiLegali(
   organiAttivi.filter((o: any) => o.tipo_ruolo === "R")
 );
+  }
   
 function normalizzaCF(cf: string) {
   return String(cf || "").trim().toUpperCase();
