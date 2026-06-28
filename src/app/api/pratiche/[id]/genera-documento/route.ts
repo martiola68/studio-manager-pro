@@ -507,7 +507,6 @@ LIQUIDATORE_CF:
   "",
 
 LIQUIDATORE_RESIDENZA: [
-  
   datiDocumento?.liquidatore_indirizzo,
   datiDocumento?.liquidatore_cap,
   datiDocumento?.liquidatore_citta,
@@ -515,6 +514,12 @@ LIQUIDATORE_RESIDENZA: [
 ]
   .filter(Boolean)
   .join(" "),
+
+TIPO_SCADENZA_CARICA:
+  datiDocumento.liquidatore_tipo_scadenza || "",
+
+DATA_SCADENZA_CARICA:
+  formatDataIt(datiDocumento.liquidatore_data_scadenza),
 
 SEDE_LIQUIDAZIONE:
   sede,
