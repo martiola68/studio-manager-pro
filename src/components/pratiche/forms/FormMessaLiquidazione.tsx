@@ -208,6 +208,11 @@ liquidatore_cap:
 liquidatore_residenza:
   pratica?.dati_documento?.liquidatore_residenza || "",
 
+liquidatore_tipo_scadenza:
+  pratica?.dati_documento?.liquidatore_tipo_scadenza || "Fino a revoca",
+
+liquidatore_data_scadenza:
+  pratica?.dati_documento?.liquidatore_data_scadenza || "",
     dicitura_presentazione:
       pratica?.dati_documento?.dicitura_presentazione || "",
 
@@ -220,9 +225,10 @@ useEffect(() => {
   if (praticaId) {
     caricaDocumenti();
     caricaSoci();
-   caricaOrganiSocieta();
+    caricaOrganiSocieta();
     caricaProfessionisti();
-caricaDiciture();
+    caricaDiciture();
+    caricaLiquidatoriDisponibili();
   }
 }, [praticaId]);
 
@@ -271,6 +277,18 @@ async function caricaDiciture() {
 
   if (res.ok) {
     setDiciture(data.diciture || []);
+  }
+}
+
+  async function caricaLiquidatoriDisponibili() {
+  const res = await fetch("/api/clienti/soggetti?tipo_cliente=Persona fisica", {
+    cache: "no-store",
+  });
+
+  const data = await res.json();
+
+  if (res.ok) {
+    setLiquidatoriDisponibili(data.clienti || data.soggetti || data.data || []);
   }
 }
 
@@ -775,10 +793,10 @@ await fetch("/api/clienti-organi", {
   style={inputStyle}
   value={form.liquidatore_id}
   onChange={(e) => {
-    const selected = rappresentantiLegali.find(
-      (r: any) => String(r.id) === String(e.target.value)
-    );
-
+   const selected = liquidatoriDisponibili.find(
+  (r: any) => String(r.id) === String(e.target.value)
+);
+    
     if (!selected) {
       setForm((prev) => ({
         ...prev,
@@ -794,42 +812,36 @@ await fetch("/api/clienti-organi", {
       return;
     }
 
-    const soggetto = selected.soggetto_cliente;
-
-    setForm((prev) => ({
-      ...prev,
-      liquidatore_id: selected.id,
-      liquidatore_nome: soggetto?.ragione_sociale || "",
-      liquidatore_codice_fiscale:
-        soggetto?.codice_fiscale || soggetto?.partita_iva || "",
-      liquidatore_indirizzo: soggetto?.indirizzo || "",
-      liquidatore_citta: soggetto?.citta || "",
-      liquidatore_provincia: soggetto?.provincia || "",
-      liquidatore_cap: soggetto?.cap || "",
-      liquidatore_residenza: [
-        soggetto?.indirizzo,
-        soggetto?.cap,
-        soggetto?.citta,
-        soggetto?.provincia,
-      ]
-        .filter(Boolean)
-        .join(" "),
+   setForm((prev) => ({
+  ...prev,
+  liquidatore_id: selected.id,
+  liquidatore_nome: selected.ragione_sociale || "",
+  liquidatore_codice_fiscale:
+    selected.codice_fiscale || selected.partita_iva || "",
+  liquidatore_indirizzo: selected.indirizzo || "",
+  liquidatore_citta: selected.citta || "",
+  liquidatore_provincia: selected.provincia || "",
+  liquidatore_cap: selected.cap || "",
+  liquidatore_residenza: [
+  selected.indirizzo,
+  selected.cap,
+  selected.citta,
+  selected.provincia,
+]
+  .filter(Boolean)
+  .join(" "),
     }));
   }}
 >
   <option value="">Seleziona liquidatore</option>
 
-  {rappresentantiLegali.map((r: any) => {
-    const soggetto = r.soggetto_cliente;
-
-    return (
-      <option key={r.id} value={r.id}>
-        {soggetto?.ragione_sociale || "Nominativo senza nome"}
-        {soggetto?.codice_fiscale ? ` - ${soggetto.codice_fiscale}` : ""}
-        {r.principale ? " — principale" : ""}
-      </option>
-    );
-  })}
+{liquidatoriDisponibili.map((l: any) => (
+  <option key={l.id} value={l.id}>
+    {l.ragione_sociale}
+    {l.codice_fiscale ? ` - ${l.codice_fiscale}` : ""}
+  </option>
+))}
+  
 </select>
     </div>
 
@@ -1134,6 +1146,51 @@ const res = await fetch(
         }
       />
     </div>
+  </div>
+        <div
+  style={{
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 12,
+    marginTop: 14,
+  }}
+>
+  <div>
+    <label style={labelStyle}>Tipo scadenza carica</label>
+
+    <select
+      style={inputStyle}
+      value={form.liquidatore_tipo_scadenza}
+      onChange={(e) =>
+        aggiornaCampo(
+          "liquidatore_tipo_scadenza",
+          e.target.value
+        )
+      }
+    >
+      <option value="Fino a revoca">Fino a revoca</option>
+      <option value="Fino al bilancio">Fino al bilancio</option>
+      <option value="Data specifica">Data specifica</option>
+    </select>
+  </div>
+
+  <div>
+    <label style={labelStyle}>Data scadenza</label>
+
+    <input
+      type="date"
+      style={inputStyle}
+      value={form.liquidatore_data_scadenza}
+      disabled={
+        form.liquidatore_tipo_scadenza !== "Data specifica"
+      }
+      onChange={(e) =>
+        aggiornaCampo(
+          "liquidatore_data_scadenza",
+          e.target.value
+        )
+      }
+    />
   </div>
 </div>
 
