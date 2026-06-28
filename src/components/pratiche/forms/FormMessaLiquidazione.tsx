@@ -1193,6 +1193,7 @@ const res = await fetch(
     />
   </div>
 </div>
+        </div>
 
         <div style={cardStyle}>
           <h2 style={titleStyle}>Dichiarazione di conformità</h2>
