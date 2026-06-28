@@ -8,6 +8,7 @@ import {
   Upload,
 } from "lucide-react";
 import { generaDocumentoPratica } from "@/lib/pratiche/generaDocumentoPratica";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 
 const font =
   'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
@@ -283,16 +284,33 @@ async function caricaDiciture() {
   }
 }
 
-  async function caricaLiquidatoriDisponibili() {
-  const res = await fetch("/api/clienti/soggetti?tipo_cliente=Persona fisica", {
-    cache: "no-store",
-  });
+ async function caricaLiquidatoriDisponibili() {
+  const supabase = getSupabaseClient() as any;
 
-  const data = await res.json();
+  const { data, error } = await supabase
+    .from("tbclienti")
+    .select(`
+      id,
+      ragione_sociale,
+      codice_fiscale,
+      partita_iva,
+      indirizzo,
+      citta,
+      provincia,
+      cap,
+      tipo_cliente,
+      cliente
+    `)
+    .eq("tipo_cliente", "Persona fisica")
+    .order("ragione_sociale", { ascending: true });
 
-  if (res.ok) {
-    setLiquidatoriDisponibili(data.clienti || data.soggetti || data.data || []);
+  if (error) {
+    console.error("Errore caricaLiquidatoriDisponibili:", error);
+    setLiquidatoriDisponibili([]);
+    return;
   }
+
+  setLiquidatoriDisponibili(data || []);
 }
 
 async function caricaOrganiSocieta() {
