@@ -484,8 +484,13 @@ NOMINATO_CITTA:
 NOMINATO_PROVINCIA:
   nominatoProvincia,
 
+TIPO_SCADENZA_CARICA:
+  datiDocumento.liquidatore_tipo_scadenza || "",
+
 DATA_SCADENZA_CARICA:
-  dataScadenzaCarica,
+  datiDocumento.liquidatore_data_scadenza
+    ? formatDataIt(datiDocumento.liquidatore_data_scadenza)
+    : "",
 
 SOCIETA_CF:
   datiDocumento.societa_codice_fiscale ||
@@ -521,9 +526,6 @@ LIQUIDATORE_RESIDENZA: [
 ]
   .filter(Boolean)
   .join(" "),
-
-TIPO_SCADENZA_CARICA:
-  datiDocumento.liquidatore_tipo_scadenza || "",
 
 SEDE_LIQUIDAZIONE:
   sede,
