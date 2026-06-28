@@ -294,7 +294,11 @@ if (codiceModello === "ACCETTAZIONE_CARICHE" && nominatoNome) {
     CITTA_RESIDENZA: nominatoCitta,
     PROVINCIA_RESIDENZA: nominatoProvincia,
     CARICA: caricaDocumento,
- DATA_SCADENZA_CARICA:
+
+    TIPO_SCADENZA_CARICA:
+  datiDocumento.liquidatore_tipo_scadenza || "",
+
+    DATA_SCADENZA_CARICA:
   datiDocumento.liquidatore_data_scadenza
     ? formatDataIt(datiDocumento.liquidatore_data_scadenza)
     : dataScadenzaCarica,
