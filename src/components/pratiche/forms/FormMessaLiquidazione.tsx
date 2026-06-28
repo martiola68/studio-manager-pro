@@ -98,9 +98,12 @@ export default function FormMessaLiquidazione({ pratica }: any) {
 }
 
   const [documenti, setDocumenti] = useState<any[]>([]);
-  const [rappresentantiLegali, setRappresentantiLegali] = useState<any[]>(
+ const [rappresentantiLegali, setRappresentantiLegali] = useState<any[]>(
   pratica?.rappresentanti_legali || []
 );
+
+const [liquidatoriDisponibili, setLiquidatoriDisponibili] = useState<any[]>([]);
+  
   const [soci, setSoci] = useState<any[]>([]);
 
   const [professionisti, setProfessionisti] = useState<any[]>([]);
