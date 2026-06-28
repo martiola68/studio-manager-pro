@@ -294,7 +294,10 @@ if (codiceModello === "ACCETTAZIONE_CARICHE" && nominatoNome) {
     CITTA_RESIDENZA: nominatoCitta,
     PROVINCIA_RESIDENZA: nominatoProvincia,
     CARICA: caricaDocumento,
-    DATA_SCADENZA_CARICA: dataScadenzaCarica,
+ DATA_SCADENZA_CARICA:
+  datiDocumento.liquidatore_data_scadenza
+    ? formatDataIt(datiDocumento.liquidatore_data_scadenza)
+    : dataScadenzaCarica,
   });
 }
     const { data: motivoLiquidazione } = datiDocumento.motivo_liquidazione
@@ -517,9 +520,6 @@ LIQUIDATORE_RESIDENZA: [
 
 TIPO_SCADENZA_CARICA:
   datiDocumento.liquidatore_tipo_scadenza || "",
-
-DATA_SCADENZA_CARICA:
-  formatDataIt(datiDocumento.liquidatore_data_scadenza),
 
 SEDE_LIQUIDAZIONE:
   sede,
