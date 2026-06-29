@@ -33,7 +33,7 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
   const praticaId = router.query.id as string;
 
   function tornaElenco() {
-    router.push("/pratiche");
+    router.push("/pratiche/variazioni");
   }
 
   const [saving, setSaving] = useState(false);
