@@ -480,32 +480,7 @@ alert("Documento generato.");
         fontFamily: font,
       }}
     >
-      <div
-        style={{
-          marginBottom: 18,
-          display: "flex",
-          justifyContent: "flex-end",
-        }}
-      >
-      <button
-      type="button"
-        onClick={() => router.push("/pratiche/variazioni")}
-          style={{
-            border: "1px solid #cbd5e1",
-            background: "#fff",
-            color: "#334155",
-            borderRadius: 8,
-            padding: "9px 16px",
-            fontWeight: 600,
-            cursor: "pointer",
-            fontFamily: font,
-          }}
-        >
-          ← Torna a elenco pratiche
-        </button>
-      </div>
-
-      <h1 style={{ fontSize: 38, fontWeight: 800, margin: 0, color: "#0f172a" }}>
+           <h1 style={{ fontSize: 38, fontWeight: 800, margin: 0, color: "#0f172a" }}>
         {pratica?.numero_pratica}
       </h1>
 
