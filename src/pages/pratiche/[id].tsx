@@ -610,13 +610,8 @@ const importoNettoNuovoSocio =
   return <FormDistribuzioneUtili pratica={pratica} />;
 }
 
-  if (pratica?.tipo?.classe_form === "determina_liquidazione") {
- return (
-  <>
-    {workflowCard}
-    <FormDeterminaLiquidazione pratica={pratica} />
-  </>
-);
+if (pratica?.tipo?.classe_form === "determina_liquidazione") {
+  return <FormDeterminaLiquidazione pratica={pratica} />;
 }
 
 if (pratica?.tipo?.classe_form === "messa_liquidazione") {
