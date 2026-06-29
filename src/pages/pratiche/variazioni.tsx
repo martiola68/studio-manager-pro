@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useRouter } from "next/router";
 import Head from "next/head";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { Plus, Pencil, Trash2, RefreshCw } from "lucide-react";
@@ -33,6 +34,8 @@ function aggiungiGiorni(data: string, giorni: number) {
 }
 
 export default function PraticheVariazioniPage() {
+  const router = useRouter();
+
   const [loading, setLoading] = useState(true);
   const [variazioni, setVariazioni] = useState<any[]>([]);
  const [clienti, setClienti] = useState<any[]>([]);
@@ -660,8 +663,24 @@ function aggiornaGiorniAde(value: number) {
 <td className="p-2">
   {v.tipo_variazione === "Scioglimento e liquidazione" ? (
     <div className="space-y-1 text-xs">
-      <div>Determina: {v.step_determina_stato || "da_fare"}</div>
-      <div>Liquidazione: {v.step_liquidazione_stato || "da_fare"}</div>
+      <button
+        type="button"
+        className="block text-blue-700 underline"
+        disabled={!v.pratica_determina_id}
+        onClick={() => router.push(`/pratiche/${v.pratica_determina_id}`)}
+      >
+        Determina: {v.step_determina_stato || "da_fare"}
+      </button>
+
+      <button
+        type="button"
+        className="block text-blue-700 underline"
+        disabled={!v.pratica_liquidazione_id}
+        onClick={() => router.push(`/pratiche/${v.pratica_liquidazione_id}`)}
+      >
+        Liquidazione: {v.step_liquidazione_stato || "da_fare"}
+      </button>
+
       <div>Accettazione: {v.step_accettazione_carica_stato || "da_fare"}</div>
       <div>CCIAA: {v.step_cciaa_stato || "da_fare"}</div>
       <div>AdE: {v.step_ade_stato || "da_fare"}</div>
