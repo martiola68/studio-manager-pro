@@ -32,11 +32,7 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
   const router = useRouter();
   const praticaId = router.query.id as string;
 
-  function tornaElenco() {
-    router.push("/pratiche/variazioni");
-  }
-
-  const [saving, setSaving] = useState(false);
+   const [saving, setSaving] = useState(false);
   const [messaggio, setMessaggio] = useState("");
 
   const [clienti, setClienti] = useState<any[]>([]);
@@ -302,32 +298,7 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
         fontFamily: font,
       }}
     >
-      <div
-        style={{
-          marginBottom: 18,
-          display: "flex",
-          justifyContent: "flex-end",
-        }}
-      >
-        <button
-          type="button"
-          onClick={tornaElenco}
-          style={{
-            border: "1px solid #cbd5e1",
-            background: "#fff",
-            color: "#334155",
-            borderRadius: 8,
-            padding: "9px 16px",
-            fontWeight: 600,
-            cursor: "pointer",
-            fontFamily: font,
-          }}
-        >
-          ← Torna a elenco pratiche
-        </button>
-      </div>
-
-      <h1
+          <h1
         style={{
           fontSize: 38,
           fontWeight: 800,
