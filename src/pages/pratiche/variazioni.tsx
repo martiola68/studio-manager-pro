@@ -624,21 +624,22 @@ function aggiornaGiorniAde(value: number) {
                 <th className="p-2 text-left">Scadenza AdE</th>
                 <th className="p-2 text-left">Invio AdE</th>
                 <th className="p-2 text-center">Pratica collegata</th>
-                <th className="p-2 text-left">Stato</th>
-                <th className="p-2 text-right">Azioni</th>
+              <th className="p-2 text-left">Iter</th>
+              <th className="p-2 text-left">Stato</th>
+              <th className="p-2 text-right">Azioni</th>
               </tr>
             </thead>
 
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={10} className="p-6 text-center text-gray-500">
+                  <td colSpan={11} className="p-6 text-center text-gray-500">
                     Caricamento...
                   </td>
                 </tr>
               ) : variazioniVisibili.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="p-6 text-center text-gray-500">
+                  <td colSpan={11} className="p-6 text-center text-gray-500">
                     Nessuna variazione presente.
                   </td>
                 </tr>
@@ -652,10 +653,25 @@ function aggiornaGiorniAde(value: number) {
                       <td className="p-2">{formatDateIT(v.data_evasione_cciaa)}</td>
                       <td className="p-2">{formatDateIT(v.data_scadenza_ade)}</td>
                       <td className="p-2">{formatDateIT(v.data_comunicazione_ade)}</td>
-                    <td className="p-2 text-center">
-                      {v.pratica_id ? "✓" : "-"}
-                    </td>
-                    <td className="p-2">{v.stato || "-"}</td>
+                  <td className="p-2 text-center">
+  {v.pratica_id ? "✓" : "-"}
+</td>
+
+<td className="p-2">
+  {v.tipo_variazione === "Scioglimento e liquidazione" ? (
+    <div className="space-y-1 text-xs">
+      <div>Determina: {v.step_determina_stato || "da_fare"}</div>
+      <div>Liquidazione: {v.step_liquidazione_stato || "da_fare"}</div>
+      <div>Accettazione: {v.step_accettazione_carica_stato || "da_fare"}</div>
+      <div>CCIAA: {v.step_cciaa_stato || "da_fare"}</div>
+      <div>AdE: {v.step_ade_stato || "da_fare"}</div>
+    </div>
+  ) : (
+    "-"
+  )}
+</td>
+
+<td className="p-2">{v.stato || "-"}</td>
                     <td className="p-2">
                       <div className="flex justify-end gap-2">
                         <button onClick={() => modifica(v)} title="Modifica">
