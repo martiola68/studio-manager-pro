@@ -475,9 +475,9 @@ provincia: selected?.rapp_legali?.provincia || "",
           justifyContent: "flex-end",
         }}
       >
-        <button
-          type="button"
-          onClick={() => router.push("/pratiche")}
+      <button
+      type="button"
+        onClick={() => router.push("/pratiche/variazioni")}
           style={{
             border: "1px solid #cbd5e1",
             background: "#fff",
