@@ -91,7 +91,7 @@ export default function FormDeterminaLiquidazione({
   const router = useRouter();
 
   function tornaElenco() {
-  router.push("/pratiche");
+  router.push("/pratiche/variazioni");
 }
   
   const praticaId = router.query.id as string;
