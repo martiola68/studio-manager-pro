@@ -403,10 +403,12 @@ if (req.body.genera_pratica && !data.pratica_id) {
 
   await supabase
     .from("tbpratiche_variazioni")
-    .update({
-      pratica_id: praticaCreata.id,
-      stato: "convertita"
-    })
+   .update({
+  pratica_id: praticaCreata.id,
+  pratica_determina_id: praticaCreata.id,
+  step_determina_stato: "in_lavorazione",
+  stato: "convertita",
+})
     .eq("id", data.id);
 
   data.pratica_id = praticaCreata.id;
