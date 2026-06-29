@@ -95,7 +95,7 @@ export default function FormMessaLiquidazione({ pratica }: any) {
   const praticaId = router.query.id as string;
 
   function tornaElenco() {
-  router.push("/pratiche");
+  router.push("/pratiche/variazioni");
 }
 
   const [documenti, setDocumenti] = useState<any[]>([]);
