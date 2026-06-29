@@ -455,8 +455,20 @@ provincia: selected?.rapp_legali?.provincia || "",
       return;
     }
 
-    await caricaDocumenti();
-    alert("Documento generato.");
+ await caricaDocumenti();
+
+await fetch("/api/pratiche-variazioni/aggiorna-step", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    pratica_id: praticaId,
+    step: "CAMBIO_AMMINISTRATORE",
+  }),
+});
+
+alert("Documento generato.");
   }
 
   return (
