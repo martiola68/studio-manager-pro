@@ -409,10 +409,9 @@ await supabase
     pratica_determina_id: praticaCreata.id,
     stato: "convertita",
   })
-  .eq("id", variazione.id);
+ .eq("id", id);
 
-await aggiornaStatiVariazione(supabase, variazione.id);
-
+await aggiornaStatiVariazione(supabase, id);
   data.pratica_id = praticaCreata.id;
   data.stato = "convertita";
 }
