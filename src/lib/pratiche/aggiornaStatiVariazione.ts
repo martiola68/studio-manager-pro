@@ -31,7 +31,7 @@ export async function aggiornaStatiVariazione(
       .from("tbpratiche_documenti")
       .select("id")
       .eq("pratica_id", praticaDeterminaId)
-      .in("codice_modello", ["DETERMINA_LIQUIDAZIONE", "DETERMINA_CAUSA_SCIOGLIMENTO"])
+      .in("tipo_documento", ["DETERMINA_AU_CDA", "DETERMINA_LIQUIDAZIONE", "DETERMINA_CAUSA_SCIOGLIMENTO"])
       .limit(1);
 
     if (docDetermina && docDetermina.length > 0) {
@@ -46,7 +46,7 @@ export async function aggiornaStatiVariazione(
       .from("tbpratiche_documenti")
       .select("id")
       .eq("pratica_id", praticaLiquidazioneId)
-      .in("codice_modello", ["VERBALE_LIQUIDAZIONE", "MESSA_LIQUIDAZIONE"])
+      .in("tipo_documento", ["VERBALE_LIQUIDAZIONE", "MESSA_LIQUIDAZIONE", "VERBALE_ASSEMBLEA_LIQUIDAZIONE"])
       .limit(1);
 
     if (docLiquidazione && docLiquidazione.length > 0) {
@@ -57,7 +57,7 @@ export async function aggiornaStatiVariazione(
       .from("tbpratiche_documenti")
       .select("id")
       .eq("pratica_id", praticaLiquidazioneId)
-      .eq("codice_modello", "ACCETTAZIONE_CARICHE")
+      .eq("tipo_documento", "ACCETTAZIONE_CARICHE")
       .limit(1);
 
     if (docAccettazione && docAccettazione.length > 0) {
