@@ -171,9 +171,7 @@ luogo_convocazione:
   body.luogo_convocazione || null,
       
       ora_chiusura: body.ora_chiusura || null,
-      professionista_nome: body.professionista_nome || null,
-professionista_qualifica:
-  body.professionista_qualifica || null,
+
 dicitura_presentazione:
   body.dicitura_presentazione || null,
 
