@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
+import { aggiornaStatiVariazione } from "@/lib/pratiche/aggiornaStatiVariazione";
 
 type Params = {
   params: Promise<{
@@ -609,31 +610,45 @@ const nomeFile = `${safeTipoVerbale}_${safeDenominazione}.docx`;
       );
     }
 
-    const { data: documento, error: documentoError } = await supabaseAdmin
-      .from("tbpratiche_documenti")
-      .insert({
-        pratica_id: id,
-        tipo_documento: modello?.codice || codiceModello,
-        nome_file: nomeFile,
-        file_path: filePath,
-        stato: "generato",
-        origine: "automatica",
-        note: `Generato da modello ${modello.codice}`,
-      })
-      .select()
-      .single();
+   const { data: documento, error: documentoError } = await supabaseAdmin
+  .from("tbpratiche_documenti")
+  .insert({
+    pratica_id: id,
+    tipo_documento: modello?.codice || codiceModello,
+    nome_file: nomeFile,
+    file_path: filePath,
+    stato: "generato",
+    origine: "automatica",
+    note: `Generato da modello ${modello.codice}`,
+  })
+  .select()
+  .single();
 
-    if (documentoError) {
-      return NextResponse.json(
-        { error: documentoError.message },
-        { status: 500 }
-      );
-    }
+if (documentoError) {
+  return NextResponse.json(
+    { error: documentoError.message },
+    { status: 500 }
+  );
+}
 
-    return NextResponse.json({
-      success: true,
-      documento,
-    });
+// ===== AGGIUNGI QUESTO =====
+
+const { data: variazione } = await supabaseAdmin
+  .from("tbpratiche_variazioni")
+  .select("id")
+  .or(`pratica_determina_id.eq.${id},pratica_liquidazione_id.eq.${id}`)
+  .maybeSingle();
+
+if (variazione?.id) {
+  await aggiornaStatiVariazione(supabaseAdmin, variazione.id);
+}
+
+// ==========================
+
+return NextResponse.json({
+  success: true,
+  documento,
+});
 } catch (error: any) {
   console.error("ERRORE GENERAZIONE DOCUMENTO:", JSON.stringify(error, null, 2));
 
