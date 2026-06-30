@@ -172,10 +172,8 @@ luogo_convocazione:
       
       ora_chiusura: body.ora_chiusura || null,
       professionista_nome: body.professionista_nome || null,
-      professionista_codice_fiscale:
-        body.professionista_codice_fiscale || null,
-      professionista_qualifica:
-        body.professionista_qualifica || null,
+professionista_qualifica:
+  body.professionista_qualifica || null,
 dicitura_presentazione:
   body.dicitura_presentazione || null,
 
