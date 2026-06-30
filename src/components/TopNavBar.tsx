@@ -383,12 +383,7 @@ void loadEventiImminenti();
   label: "Pratiche",
   icon: <FolderKanban className="h-4 w-4" />,
   children: [
-    {
-      label: "Dashboard pratiche",
-      href: "/pratiche",
-      icon: <FolderKanban className="h-4 w-4" />,
-    },
-   {
+      {
   label: "Variazioni CCIAA / AdE",
   href: "/pratiche/variazioni",
   icon: <FileText className="h-4 w-4" />,
