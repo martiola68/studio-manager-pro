@@ -468,6 +468,16 @@ await caricaAmministratori();
         fontFamily: font,
       }}
     >
+
+      <div style={{ marginBottom: 18 }}>
+  <button
+    type="button"
+    style={secondaryButton}
+    onClick={() => router.push("/pratiche/variazioni")}
+  >
+    ← Torna a Variazioni
+  </button>
+</div>
      
       <h1
         style={{
