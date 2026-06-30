@@ -683,8 +683,8 @@ function aggiornaGiorniAde(value: number) {
       </button>
 
       <div>Accettazione: {v.step_accettazione_carica_stato || "da_fare"}</div>
-      <div>CCIAA: {v.step_cciaa_stato || "da_fare"}</div>
-      <div>AdE: {v.step_ade_stato || "da_fare"}</div>
+      <div>Deposito pratica CCIAA: {v.step_cciaa_stato || "da_fare"}</div>
+        <div>Comunicazione AdE: {v.step_ade_stato || "da_fare"}</div>
     </div>
   ) : (
     "-"
