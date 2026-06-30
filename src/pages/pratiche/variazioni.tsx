@@ -258,6 +258,20 @@ function aggiornaGiorniAde(value: number) {
   const variazioniVisibili = editingId
   ? variazioni.filter((v) => v.id === editingId)
   : variazioni;
+
+  function calcolaAvanzamento(v: any) {
+  const steps = [
+    v.step_determina_stato,
+    v.step_liquidazione_stato,
+    v.step_accettazione_carica_stato,
+    v.step_cciaa_stato,
+    v.step_ade_stato,
+  ];
+
+  const completati = steps.filter((s) => s === "completato").length;
+
+  return Math.round((completati / steps.length) * 100);
+}
   
   return (
     <>
@@ -629,6 +643,7 @@ function aggiornaGiorniAde(value: number) {
                 <th className="p-2 text-left">Invio AdE</th>
                 <th className="p-2 text-center">Pratica collegata</th>
               <th className="p-2 text-left">Iter</th>
+                <th className="p-2 text-left">Avanzamento</th>
               <th className="p-2 text-left">Stato</th>
               <th className="p-2 text-right">Azioni</th>
               </tr>
@@ -637,13 +652,13 @@ function aggiornaGiorniAde(value: number) {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={11} className="p-6 text-center text-gray-500">
+                  <td colSpan={12} className="p-6 text-center text-gray-500">
                     Caricamento...
                   </td>
                 </tr>
               ) : variazioniVisibili.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="p-6 text-center text-gray-500">
+                  <td colSpan={12} className="p-6 text-center text-gray-500">
                     Nessuna variazione presente.
                   </td>
                 </tr>
@@ -689,6 +704,20 @@ function aggiornaGiorniAde(value: number) {
   ) : (
     "-"
   )}
+</td>
+
+<td className="p-2">
+  <div className="w-28">
+    <div className="h-2 rounded bg-gray-200">
+      <div
+        className="h-2 rounded bg-blue-600"
+        style={{ width: `${calcolaAvanzamento(v)}%` }}
+      />
+    </div>
+    <div className="mt-1 text-xs text-gray-600">
+      {calcolaAvanzamento(v)}%
+    </div>
+  </div>
 </td>
 
 <td className="p-2">{v.stato || "-"}</td>
