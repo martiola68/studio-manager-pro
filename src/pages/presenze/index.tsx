@@ -1108,10 +1108,10 @@ ${dipendentiXml}
 
               <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                 <Badge className="border bg-green-100 text-green-800 hover:bg-green-100">
-                  Pp ufficio
+                  P ufficio
                 </Badge>
                 <Badge className="border bg-violet-100 text-violet-800 hover:bg-violet-100">
-                  Ps smart
+                  SW smart working
                 </Badge>
                 <Badge className="border bg-sky-100 text-sky-800 hover:bg-sky-100">
                   F ferie
@@ -1219,8 +1219,8 @@ ${dipendentiXml}
     ))}
 
 {[
-  { top: 'Tot.', bottom: 'Pp' },
-  { top: 'Tot.', bottom: 'Ps' },
+  { top: 'Tot.', bottom: 'P' },
+  { top: 'Tot.', bottom: 'SW' },
   { top: 'Tot.', bottom: 'F' },
   { top: 'Tot.', bottom: 'M' },
   { top: 'Tot.', bottom: 'N' },
@@ -1304,9 +1304,13 @@ const isFutureDay = day.date > todayKey;
                 >
                   <option value="">-</option>
                   {allowedCodes.map((item) => (
-                    <option key={item.codice} value={item.codice}>
-                      {item.codice}
-                    </option>
+                   <option key={item.codice} value={item.codice}>
+                  {item.codice === "Pp"
+                  ? "P"
+                  : item.codice === "Ps"
+                      ? "SW"
+                    : item.codice}
+                  </option>
                   ))}
                 </select>
               </div>
