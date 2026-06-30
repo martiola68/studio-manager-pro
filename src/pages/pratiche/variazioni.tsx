@@ -615,8 +615,9 @@ function aggiornaGiorniAde(value: number) {
           </div>
         )}
 
-        <div className="border rounded overflow-hidden bg-white">
-          <table className="w-full text-sm">
+       {!showForm && (
+  <div className="border rounded overflow-hidden bg-white">
+    <table className="w-full text-sm">
             <thead className="bg-gray-100">
               <tr>
                 <th className="p-2 text-left">Cliente</th>
@@ -709,6 +710,7 @@ function aggiornaGiorniAde(value: number) {
             </tbody>
           </table>
         </div>
+        )}
       </div>
     </>
   );
