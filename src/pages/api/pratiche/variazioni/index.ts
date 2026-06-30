@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { aggiornaStatiVariazione } from "@/lib/pratiche/aggiornaStatiVariazione";
 
 type ApiResponse =
   | { success: true; data: any }
@@ -401,15 +402,16 @@ if (req.body.genera_pratica && !data.pratica_id) {
 
   if (praticaError) throw praticaError;
 
-  await supabase
-    .from("tbpratiche_variazioni")
-   .update({
-  pratica_id: praticaCreata.id,
-  pratica_determina_id: praticaCreata.id,
-  step_determina_stato: "in_lavorazione",
-  stato: "convertita",
-})
-    .eq("id", data.id);
+await supabase
+  .from("tbpratiche_variazioni")
+  .update({
+    pratica_id: praticaCreata.id,
+    pratica_determina_id: praticaCreata.id,
+    stato: "convertita",
+  })
+  .eq("id", variazione.id);
+
+await aggiornaStatiVariazione(supabase, variazione.id);
 
   data.pratica_id = praticaCreata.id;
   data.stato = "convertita";
