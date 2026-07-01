@@ -469,17 +469,33 @@ await caricaAmministratori();
       }}
     >
 
-      <div style={{ marginBottom: 18 }}>
+ <div
+  style={{
+    display: "flex",
+    justifyContent: "flex-end",
+    marginBottom: 24,
+  }}
+>
   <button
     type="button"
-    style={secondaryButton}
+    style={{
+      background: "#ffffff",
+      color: "#1e3a8a",
+      border: "1px solid #cbd5e1",
+      borderRadius: 8,
+      padding: "10px 18px",
+      fontSize: 14,
+      fontWeight: 600,
+      cursor: "pointer",
+      fontFamily: font,
+    }}
     onClick={() => router.push("/pratiche/variazioni")}
   >
     ← Torna a Variazioni
   </button>
 </div>
-     
-      <h1
+
+<h1
         style={{
           fontSize: 36,
           fontWeight: 800,
