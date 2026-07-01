@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { aggiornaStatiVariazione } from "@/lib/pratiche/aggiornaStatiVariazione";
 
 type Params = {
   params: Promise<{
@@ -29,12 +30,51 @@ export async function POST(
       );
     }
     
-    const { data: datiDocumento } =
-      await supabaseAdmin
-        .from("tbpratiche_dati_documenti")
-        .select("*")
-        .eq("pratica_id", id)
-        .maybeSingle();
+  const { data: datiDocumento } =
+  await supabaseAdmin
+    .from("tbpratiche_dati_documenti")
+    .select("*")
+    .eq("pratica_id", id)
+    .maybeSingle();
+
+const { data: variazione } = await supabaseAdmin
+  .from("tbpratiche_variazioni")
+  .select("id, data_evasione_cciaa")
+  .eq("pratica_determina_id", id)
+  .maybeSingle();
+
+if (!variazione?.data_evasione_cciaa) {
+  return NextResponse.json(
+    {
+      error:
+        "Prima di creare la pratica di messa in liquidazione devi valorizzare la data di evasione dello scioglimento.",
+    },
+    { status: 400 }
+  );
+}
+
+if (!datiDocumento?.data_atto) {
+  return NextResponse.json(
+    {
+      error:
+        "Inserisci la data del verbale di messa in liquidazione.",
+    },
+    { status: 400 }
+  );
+}
+
+if (
+  new Date(datiDocumento.data_atto) <=
+  new Date(variazione.data_evasione_cciaa)
+) {
+  return NextResponse.json(
+    {
+      error:
+        "La data del verbale di messa in liquidazione deve essere successiva alla data di evasione dello scioglimento.",
+    },
+    { status: 400 }
+  );
+}
 
 const datiEreditati = {
   societa_denominazione:
@@ -144,13 +184,22 @@ if (praticaGiaCollegata) {
     }
 
     const { error: datiInsertError } = await supabaseAdmin
-      .from("tbpratiche_dati_documenti")
-      .insert({
-        pratica_id: nuovaPratica.id,
-        ...datiEreditati,
-      });
+  .from("tbpratiche_dati_documenti")
+  .insert({
+    pratica_id: nuovaPratica.id,
+    ...datiEreditati,
+  });
 
-    if (datiInsertError) {
+await supabaseAdmin
+  .from("tbpratiche_variazioni")
+  .update({
+    pratica_liquidazione_id: nuovaPratica.id,
+  })
+  .eq("id", variazione.id);
+
+await aggiornaStatiVariazione(supabaseAdmin, variazione.id);
+
+if (datiInsertError) {
       return NextResponse.json(
         { error: datiInsertError.message },
         { status: 500 }
