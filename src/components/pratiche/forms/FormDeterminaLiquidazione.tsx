@@ -379,6 +379,36 @@ setRappresentantiLegali(
     alert("Documento generato.");
   }
 
+ async function creaPraticaLiquidazione() {
+  const salvato = await salvaDatiDocumento();
+
+  if (!salvato) return;
+
+  const res = await fetch(
+    `/api/pratiche/${praticaId}/crea-pratica-liquidazione`,
+    {
+      method: "POST",
+    }
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    alert(data.error || "Errore creazione pratica di messa in liquidazione");
+    return;
+  }
+
+  alert(
+    data.alreadyExists
+      ? "Pratica di messa in liquidazione già esistente."
+      : "Pratica di messa in liquidazione creata correttamente."
+  );
+
+  if (data.pratica?.id) {
+    router.push(`/pratiche/${data.pratica.id}`);
+  }
+}
+
   async function salvaNuovoRappresentante() {
     try {
      const res = await fetch(
@@ -458,6 +488,10 @@ await caricaAmministratori();
       );
     }
   }
+
+  const determinaGenerata = documenti.some(
+  (doc: any) => doc.tipo_documento === "DETERMINA_AU_CDA"
+);
 
   return (
     <main
@@ -1468,6 +1502,17 @@ await caricaAmministratori();
           >
             Genera documento
           </button>
+
+          {determinaGenerata && (
+  <button
+    type="button"
+    style={greenButton}
+    onClick={creaPraticaLiquidazione}
+  >
+    Crea pratica di liquidazione
+  </button>
+)}
+          
         </div>
 
         {documenti.length > 0 && (
