@@ -12,6 +12,30 @@ const supabaseAdmin = createClient(
   }
 );
 
+function generaPasswordTemporanea() {
+  const maiuscole = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const minuscole = "abcdefghijkmnopqrstuvwxyz";
+  const numeri = "23456789";
+  const speciali = "!@$%";
+
+  const all = maiuscole + minuscole + numeri + speciali;
+
+  let password =
+    maiuscole[Math.floor(Math.random() * maiuscole.length)] +
+    minuscole[Math.floor(Math.random() * minuscole.length)] +
+    numeri[Math.floor(Math.random() * numeri.length)] +
+    speciali[Math.floor(Math.random() * speciali.length)];
+
+  while (password.length < 12) {
+    password += all[Math.floor(Math.random() * all.length)];
+  }
+
+  return password
+    .split("")
+    .sort(() => Math.random() - 0.5)
+    .join("");
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -57,28 +81,46 @@ export default async function handler(
     }
 
     // 🔥 URL corretto (QUI ERA IL TUO PROBLEMA)
-    const appBaseUrl =
-      process.env.NEXT_PUBLIC_APP_URL ||
-      "https://studio-manager-pro.vercel.app";
+   const { data: targetUser, error: listError } =
+  await supabaseAdmin.auth.admin.listUsers();
 
-    // 📧 Invio email reset
-    const { error: resetError } =
-      await supabaseAdmin.auth.resetPasswordForEmail(email, {
-        redirectTo: `${appBaseUrl}/auth/callback`,
-      });
+if (listError) {
+  return res.status(400).json({
+    error: "Errore ricerca utente",
+    details: listError.message,
+  });
+}
 
-    if (resetError) {
-      console.error("Errore reset password:", resetError);
-      return res.status(400).json({
-        error: "Errore durante l'invio dell'email di reset",
-        details: resetError.message,
-      });
-    }
+const userToReset = targetUser.users.find(
+  (u) => u.email?.toLowerCase() === String(email).toLowerCase()
+);
 
-    return res.status(200).json({
-      success: true,
-      message: "Email di reset password inviata con successo",
-    });
+if (!userToReset) {
+  return res.status(404).json({
+    error: "Utente non trovato in Supabase Auth",
+  });
+}
+
+const temporaryPassword = generaPasswordTemporanea();
+
+const { error: updateError } =
+  await supabaseAdmin.auth.admin.updateUserById(userToReset.id, {
+    password: temporaryPassword,
+  });
+
+if (updateError) {
+  return res.status(400).json({
+    error: "Errore aggiornamento password",
+    details: updateError.message,
+  });
+}
+
+return res.status(200).json({
+  success: true,
+  message: "Password temporanea generata correttamente",
+  temporaryPassword,
+  warning: "Mostrare questa password solo una volta e comunicarla in modo sicuro all'utente.",
+});
   } catch (error) {
     console.error("Errore API reset-password:", error);
     return res.status(500).json({
