@@ -126,7 +126,7 @@ export default function Microsoft365Settings() {
       setStudioId(user.studio_id);
 
       // ✅ config studio (maybeSingle -> oggetto o null)
-     const { data: rawData, error: cfgErr } = await supabase
+   const { data: rawData, error: cfgErr } = await (supabase as any)
   .from("microsoft365_connections")
   .select("client_id, tenant_id, enabled")
   .eq("id", user.microsoft_connection_id)
