@@ -49,9 +49,15 @@ export async function aggiornaStatiVariazione(
       .in("tipo_documento", ["VERBALE_LIQUIDAZIONE", "MESSA_LIQUIDAZIONE", "VERBALE_ASSEMBLEA_LIQUIDAZIONE"])
       .limit(1);
 
-    if (docLiquidazione && docLiquidazione.length > 0) {
-      step_liquidazione_stato = "completato";
-    }
+   const { data: datiLiquidazione } = await supabase
+  .from("tbpratiche_dati_documenti")
+  .select("verbale_definitivo")
+  .eq("pratica_id", praticaLiquidazioneId)
+  .maybeSingle();
+
+if (datiLiquidazione?.verbale_definitivo === true) {
+  step_liquidazione_stato = "completato";
+}
 
     const { data: docAccettazione } = await supabase
       .from("tbpratiche_documenti")
@@ -60,12 +66,11 @@ export async function aggiornaStatiVariazione(
       .eq("tipo_documento", "ACCETTAZIONE_CARICHE")
       .limit(1);
 
-    if (docAccettazione && docAccettazione.length > 0) {
-      step_accettazione_carica_stato = "completato";
-    } else {
-      step_accettazione_carica_stato =
-        step_liquidazione_stato === "completato" ? "in_lavorazione" : "da_fare";
-    }
+   if (docAccettazione && docAccettazione.length > 0) {
+  step_accettazione_carica_stato = "completato";
+} else {
+  step_accettazione_carica_stato = "da_fare";
+}
   }
 
   if (variazione.data_evasione_cciaa) {
