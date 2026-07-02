@@ -238,6 +238,94 @@ const { data: utente } = await supabase
   }
 }
 
+function getStepVariazione(tipoVariazione: string, obbligoAde: boolean) {
+  const tipo = String(tipoVariazione || "").toLowerCase();
+
+  if (tipo.includes("scioglimento") || tipo.includes("liquidazione")) {
+    return [
+      { ordine: 1, codice_step: "DETERMINA", titolo: "Determina", ente: "CCIAA" },
+      { ordine: 2, codice_step: "LIQUIDAZIONE", titolo: "Liquidazione", ente: "CCIAA" },
+      { ordine: 3, codice_step: "ACCETTAZIONE_CARICA", titolo: "Accettazione carica", ente: "CCIAA" },
+      { ordine: 4, codice_step: "DEPOSITO_CCIAA", titolo: "Deposito pratica CCIAA", ente: "CCIAA" },
+      ...(obbligoAde
+        ? [{ ordine: 5, codice_step: "COMUNICAZIONE_ADE", titolo: "Comunicazione Agenzia Entrate", ente: "AGENZIA_ENTRATE" }]
+        : []),
+    ];
+  }
+
+  if (
+    tipo.includes("amministratore") ||
+    tipo.includes("nomina") ||
+    tipo.includes("cambio")
+  ) {
+    return [
+      { ordine: 1, codice_step: "VERBALE", titolo: "Verbale", ente: "CCIAA" },
+      { ordine: 2, codice_step: "ACCETTAZIONE_CARICA", titolo: "Accettazione carica", ente: "CCIAA" },
+      { ordine: 3, codice_step: "DEPOSITO_CCIAA", titolo: "Deposito pratica CCIAA", ente: "CCIAA" },
+    ];
+  }
+
+  if (tipo.includes("apertura") && tipo.includes("unit")) {
+    return [
+      { ordine: 1, codice_step: "DEPOSITO_CCIAA", titolo: "Deposito pratica CCIAA", ente: "CCIAA" },
+      { ordine: 2, codice_step: "SCIA", titolo: "SCIA", ente: "SUAP" },
+    ];
+  }
+
+  if (tipo.includes("chiusura") && tipo.includes("unit")) {
+    return [
+      { ordine: 1, codice_step: "DEPOSITO_CCIAA", titolo: "Deposito pratica CCIAA", ente: "CCIAA" },
+    ];
+  }
+
+  return [
+    { ordine: 1, codice_step: "DEPOSITO_CCIAA", titolo: "Deposito pratica CCIAA", ente: "CCIAA" },
+  ];
+}
+
+async function creaStepVariazione(supabase: any, variazione: any) {
+  if (!variazione?.id) return;
+
+  const { data: esistenti } = await supabase
+    .from("tbpratiche_step")
+    .select("id")
+    .eq("variazione_id", variazione.id)
+    .limit(1);
+
+  if (esistenti && esistenti.length > 0) return;
+
+  const steps = getStepVariazione(
+    variazione.tipo_variazione,
+    variazione.obbligo_ade === true
+  );
+
+  const rows = steps.map((step) => ({
+    variazione_id: variazione.id,
+    pratica_uuid: null,
+    documento_id: null,
+    codice_step: step.codice_step,
+    ordine: step.ordine,
+    ente: step.ente,
+    titolo: step.titolo,
+    descrizione: step.titolo,
+    stato: "da_fare",
+    obbligatorio: true,
+    completato: false,
+    data_scadenza: null,
+    data_evasione: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }));
+
+  const { error } = await supabase
+    .from("tbpratiche_step")
+    .insert(rows);
+
+  if (error) {
+    console.error("Errore creazione step variazione:", error);
+  }
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse>
@@ -352,6 +440,8 @@ export default async function handler(
 
       if (error) throw error;
 
+      await creaStepVariazione(supabase, data);
+
       // ==============================
 // CREA PRATICA PADRE
 // ==============================
@@ -452,9 +542,11 @@ await aggiornaStatiVariazione(supabase, data.id);
         `)
         .single();
 
-      if (error) throw error;
+     if (error) throw error;
 
-      await sincronizzaPromemoriaVariazione(supabase, data);
+await creaStepVariazione(supabase, data);
+
+await sincronizzaPromemoriaVariazione(supabase, data);
 
       return res.status(200).json({
         success: true,
