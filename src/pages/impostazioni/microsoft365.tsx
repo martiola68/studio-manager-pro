@@ -112,7 +112,7 @@ export default function Microsoft365Settings() {
       // studio_id dell'utente
       const { data: user, error: userErr } = await supabase
         .from("tbutenti")
-        .select("studio_id")
+        .select("studio_id, microsoft_connection_id")
         .eq("id", currentUserId)
         .single();
 
@@ -126,11 +126,13 @@ export default function Microsoft365Settings() {
       setStudioId(user.studio_id);
 
       // ✅ config studio (maybeSingle -> oggetto o null)
-      const { data: rawData, error: cfgErr } = await supabase
-        .from("microsoft365_config")
-        .select("client_id, tenant_id, enabled")
-        .eq("studio_id", user.studio_id)
-        .maybeSingle();
+     const { data: rawData, error: cfgErr } = await supabase
+  .from("microsoft365_connections")
+  .select("client_id, tenant_id, enabled")
+  .eq("id", user.microsoft_connection_id)
+  .eq("studio_id", user.studio_id)
+  .eq("enabled", true)
+  .maybeSingle();
 
       if (cfgErr) throw cfgErr;
 
