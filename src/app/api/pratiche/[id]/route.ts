@@ -230,6 +230,9 @@ importo_dividendo_totale:
     ? Number(body.importo_dividendo_totale)
     : null,
 
+      verbale_definitivo:
+  body.verbale_definitivo ?? false,
+
 updated_at: new Date().toISOString(),
 
       };
