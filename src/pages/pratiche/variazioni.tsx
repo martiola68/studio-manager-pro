@@ -641,7 +641,7 @@ function aggiornaGiorniAde(value: number) {
                 <th className="p-2 text-left">Evasione CCIAA</th>
                 <th className="p-2 text-left">Scadenza AdE</th>
                 <th className="p-2 text-left">Invio AdE</th>
-                <th className="p-2 text-center">Pratica collegata</th>
+             
               <th className="p-2 text-left">Iter</th>
                 <th className="p-2 text-left">Avanzamento</th>
               <th className="p-2 text-left">Stato</th>
@@ -652,13 +652,13 @@ function aggiornaGiorniAde(value: number) {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={12} className="p-6 text-center text-gray-500">
+                  <td colSpan={11} className="p-6 text-center text-gray-500">
                     Caricamento...
                   </td>
                 </tr>
               ) : variazioniVisibili.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="p-6 text-center text-gray-500">
+                  <td colSpan={11} className="p-6 text-center text-gray-500">
                     Nessuna variazione presente.
                   </td>
                 </tr>
@@ -672,10 +672,7 @@ function aggiornaGiorniAde(value: number) {
                       <td className="p-2">{formatDateIT(v.data_evasione_cciaa)}</td>
                       <td className="p-2">{formatDateIT(v.data_scadenza_ade)}</td>
                       <td className="p-2">{formatDateIT(v.data_comunicazione_ade)}</td>
-                  <td className="p-2 text-center">
-  {v.pratica_id ? "✓" : "-"}
-</td>
-
+  
 <td className="p-2">
   {v.tipo_variazione === "Scioglimento e liquidazione" ? (
     <div className="space-y-1 text-xs">
