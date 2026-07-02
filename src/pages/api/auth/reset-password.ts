@@ -81,23 +81,41 @@ export default async function handler(
     }
 
     // 🔥 URL corretto (QUI ERA IL TUO PROBLEMA)
-   const { data: targetUser, error: listError } =
-  await supabaseAdmin.auth.admin.listUsers();
+  let userToReset: any = null;
+let page = 1;
 
-if (listError) {
-  return res.status(400).json({
-    error: "Errore ricerca utente",
-    details: listError.message,
-  });
+while (!userToReset) {
+  const { data: targetUser, error: listError } =
+    await supabaseAdmin.auth.admin.listUsers({
+      page,
+      perPage: 1000,
+    });
+
+  if (listError) {
+    return res.status(400).json({
+      error: "Errore ricerca utente",
+      details: listError.message,
+    });
+  }
+
+  userToReset = targetUser.users.find(
+    (u) =>
+      String(u.email || "").toLowerCase().trim() ===
+      String(email || "").toLowerCase().trim()
+  );
+
+  if (userToReset || targetUser.users.length < 1000) {
+    break;
+  }
+
+  page += 1;
 }
-
-const userToReset = targetUser.users.find(
-  (u) => u.email?.toLowerCase() === String(email).toLowerCase()
-);
 
 if (!userToReset) {
   return res.status(404).json({
+    success: false,
     error: "Utente non trovato in Supabase Auth",
+    details: `Nessun utente Auth trovato con email ${email}`,
   });
 }
 
