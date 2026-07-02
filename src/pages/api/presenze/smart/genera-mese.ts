@@ -17,20 +17,6 @@ function weekdayIT(d: Date) {
   return js; // 1 lun, 2 mar, 3 mer, 4 gio, 5 ven
 }
 
-function mondayOfWeek(d: Date) {
-  const copy = new Date(d);
-  const day = copy.getDay() || 7;
-  copy.setDate(copy.getDate() - day + 1);
-  copy.setHours(0, 0, 0, 0);
-  return copy;
-}
-
-function weekIndexFromBase(d: Date) {
-  const base = new Date(2025, 11, 1); // 01/12/2025 lunedì, base file Excel
-  const monday = mondayOfWeek(d);
-  return Math.floor((monday.getTime() - base.getTime()) / (7 * 24 * 60 * 60 * 1000));
-}
-
 function getWorkingDays(anno: number, mese: number) {
   const days: Date[] = [];
   const d = new Date(anno, mese - 1, 1);
@@ -65,29 +51,22 @@ async function loadFestivita(anno: number, mese: number) {
   return map;
 }
 
-function extraUserIndexForDay(weekIndex: number, weekday: number) {
-  /*
-    Pattern Excel:
-    Settimana 0: ED lun, DD mer, RD gio, MF ven
-    Settimana 1: DD lun, RD mer, MF gio, ED ven
-    Settimana 2: RD lun, MF mer, ED gio, DD ven
-    Settimana 3: MF lun, ED mer, DD gio, RD ven
+async function loadUltimePresenzeExtra(gruppoId: string, anno: number, mese: number) {
+  const start = `${anno}-${pad(mese)}-01`;
 
-    Così chi fa venerdì NON fa lunedì successivo.
-  */
+  const { data, error } = await supabaseAdmin
+    .from("tbpresenze_smart_calendario")
+    .select("utente_id, data, giorno_settimana")
+    .eq("gruppo_id", gruppoId)
+    .eq("presenza", true)
+    .lt("data", start)
+    .neq("giorno_settimana", 2)
+    .order("data", { ascending: false })
+    .limit(20);
 
-  const dayPosition: Record<number, number> = {
-    1: 0, // lunedì
-    3: 1, // mercoledì
-    4: 2, // giovedì
-    5: 3, // venerdì
-  };
+  if (error) throw error;
 
-  const pos = dayPosition[weekday];
-
-  if (pos === undefined) return null;
-
-  return (weekIndex + pos) % 4;
+  return data || [];
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -109,9 +88,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .eq("id", gruppo_id)
     .single();
 
-  if (gruppoError) {
-    return res.status(500).json({ error: gruppoError.message });
-  }
+ if (gruppoError) {
+  return res.status(500).json({ error: gruppoError.message });
+}
+
+if (!gruppo?.studio_id) {
+  return res.status(400).json({
+    error: "Gruppo smart working senza studio_id",
+  });
+}
 
   const { data: utenti, error: utentiError } = await supabaseAdmin
     .from("tbpresenze_smart_gruppi_utenti")
@@ -132,39 +117,88 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const rows: any[] = [];
 
+  const presenzeSettimana = new Map<string, number>();
+
+  const ultimeExtra = await loadUltimePresenzeExtra(
+  gruppo_id,
+  Number(anno),
+  Number(mese)
+);
+
+const ultimiUtentiExtra = ultimeExtra.map((r) => r.utente_id);
+
+let rotazioneIndex = 0;
+
+for (let i = 0; i < utentiAttivi.length; i++) {
+  const candidato = utentiAttivi[i];
+
+  if (!ultimiUtentiExtra.includes(candidato.utente_id)) {
+    rotazioneIndex = i;
+    break;
+  }
+}
+
   for (const day of days) {
     const wd = weekdayIT(day);
     if (!wd) continue;
 
     const key = isoDate(day);
     const festivoNome = festivitaMap.get(key) || null;
-    const weekIndex = weekIndexFromBase(day);
+ const monday = new Date(day);
+monday.setDate(day.getDate() - ((day.getDay() || 7) - 1));
+const settimanaKey = isoDate(monday);
 
-    for (let userIndex = 0; userIndex < utentiAttivi.length; userIndex++) {
-      const utente = utentiAttivi[userIndex];
+let extraUtenteId: string | null = null;
 
-      let presenza = false;
+if (!festivoNome && wd !== giornoFisso) {
+  const giorniExtraConsentiti = [1, 3, 4, 5];
 
-      if (wd === giornoFisso) {
-        presenza = true;
-      } else {
-        const extraIndex = extraUserIndexForDay(weekIndex, wd);
-        presenza = extraIndex === userIndex;
+  if (giorniExtraConsentiti.includes(wd) && utentiAttivi.length > 0) {
+    for (let tentativi = 0; tentativi < utentiAttivi.length; tentativi++) {
+      const candidato = utentiAttivi[rotazioneIndex];
+      const keySettimanaUtente = `${settimanaKey}_${candidato.utente_id}`;
+      const presenzeGiaAssegnate = presenzeSettimana.get(keySettimanaUtente) || 0;
+
+      rotazioneIndex = (rotazioneIndex + 1) % utentiAttivi.length;
+
+      if (presenzeGiaAssegnate < 1) {
+        extraUtenteId = candidato.utente_id;
+        break;
       }
-
-      rows.push({
-        gruppo_id,
-        utente_id: utente.utente_id,
-        data: key,
-        anno: Number(anno),
-        mese: Number(mese),
-        giorno_settimana: wd,
-        presenza,
-        festivo: !!festivoNome,
-        nota: festivoNome,
-        generato_auto: true,
-      });
     }
+  }
+}
+for (let userIndex = 0; userIndex < utentiAttivi.length; userIndex++) {
+  const utente = utentiAttivi[userIndex];
+
+  let presenza = false;
+
+  if (!festivoNome) {
+    presenza = wd === giornoFisso || utente.utente_id === extraUtenteId;
+  }
+
+  if (presenza) {
+  const keySettimanaUtente = `${settimanaKey}_${utente.utente_id}`;
+  presenzeSettimana.set(
+    keySettimanaUtente,
+    (presenzeSettimana.get(keySettimanaUtente) || 0) + 1
+  );
+}
+
+  rows.push({
+    studio_id: gruppo.studio_id,
+    gruppo_id,
+    utente_id: utente.utente_id,
+    data: key,
+    anno: Number(anno),
+    mese: Number(mese),
+    giorno_settimana: wd,
+    presenza,
+    festivo: !!festivoNome,
+    nota: festivoNome,
+    generato_auto: true,
+  });
+}
   }
 
   await supabaseAdmin
