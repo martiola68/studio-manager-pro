@@ -57,28 +57,28 @@ export default async function handler(
     }
 
     // 🔥 URL corretto (QUI ERA IL TUO PROBLEMA)
-    const appBaseUrl =
-      process.env.NEXT_PUBLIC_APP_URL ||
-      "https://studio-manager-pro.vercel.app";
+   const appBaseUrl =
+  process.env.NEXT_PUBLIC_APP_URL ||
+  "https://studio-manager-pro.vercel.app";
 
-    // 📧 Invio email reset
-    const { error: resetError } =
-      await supabaseAdmin.auth.resetPasswordForEmail(email, {
-        redirectTo: `${appBaseUrl}/auth/callback`,
-      });
+// 📧 Invio email reset
+const { error: resetError } =
+  await supabaseAdmin.auth.resetPasswordForEmail(email, {
+    redirectTo: `${appBaseUrl}/auth/callback`,
+  });
 
-    if (resetError) {
-      console.error("Errore reset password:", resetError);
-      return res.status(400).json({
-        error: "Errore durante l'invio dell'email di reset",
-        details: resetError.message,
-      });
-    }
+if (resetError) {
+  console.error("Errore reset password:", resetError);
+  return res.status(400).json({
+    error: "Errore durante l'invio dell'email di reset",
+    details: resetError.message,
+  });
+}
 
-    return res.status(200).json({
-      success: true,
-      message: "Email di reset password inviata con successo",
-    });
+return res.status(200).json({
+  success: true,
+  message: "Email di reset password inviata con successo",
+});
   } catch (error) {
     console.error("Errore API reset-password:", error);
     return res.status(500).json({
