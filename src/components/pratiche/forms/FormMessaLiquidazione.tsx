@@ -220,8 +220,11 @@ liquidatore_data_scadenza:
     dicitura_presentazione:
       pratica?.dati_documento?.dicitura_presentazione || "",
 
-    professionista_nome:
-      pratica?.dati_documento?.professionista_nome || "",
+  professionista_nome:
+  pratica?.dati_documento?.professionista_nome || "",
+
+verbale_definitivo:
+  pratica?.dati_documento?.verbale_definitivo || false,
 
     });
 
@@ -1342,6 +1345,79 @@ onChange={(e) => {
         disabled
       />
     </div>
+
+    <div
+  style={{
+    display: "flex",
+    gap: 28,
+    marginTop: 18,
+    marginBottom: 18,
+    alignItems: "center",
+    flexWrap: "wrap",
+  }}
+>
+
+<label
+  style={{
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    fontWeight: 600,
+  }}
+>
+  <input
+    type="checkbox"
+    checked={form.verbale_definitivo}
+    onChange={(e) =>
+      setForm((prev) => ({
+        ...prev,
+        verbale_definitivo: e.target.checked,
+      }))
+    }
+  />
+
+  Verbale definitivo
+</label>
+
+<label
+  style={{
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    color: "#475569",
+  }}
+>
+  <input
+    type="checkbox"
+    disabled
+    checked={documenti.some(
+      d => d.tipo_documento === "VERBALE_LIQUIDAZIONE"
+    )}
+  />
+
+  Verbale generato
+</label>
+
+<label
+  style={{
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    color: "#475569",
+  }}
+>
+  <input
+    type="checkbox"
+    disabled
+    checked={documenti.some(
+      d => d.tipo_documento === "ACCETTAZIONE_CARICHE"
+    )}
+  />
+
+  Accettazione carica generata
+</label>
+
+</div>
 
     <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
       <button type="button" style={blueButton} onClick={generaDocumento}>
