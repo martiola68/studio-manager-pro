@@ -330,9 +330,10 @@ const rows = steps.map((step) => ({
     .from("tbpratiche_step")
     .insert(rows);
 
-  if (error) {
-    console.error("Errore creazione step variazione:", error);
-  }
+ if (error) {
+  console.error("Errore creazione step variazione:", error);
+  throw error;
+}
 }
 
 export default async function handler(
