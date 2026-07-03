@@ -299,13 +299,29 @@ async function creaStepVariazione(supabase: any, variazione: any) {
     variazione.obbligo_ade === true
   );
 
-const praticaId =
+const praticaUuid =
   variazione.pratica_determina_id || variazione.pratica_id;
 
-if (!praticaId) {
+if (!praticaUuid) {
   console.warn("Pratica non ancora creata:", variazione.id);
   return;
 }
+
+const { data: praticaCollegata, error: praticaCollegataError } = await supabase
+  .from("tbpratiche")
+  .select("id, uuid")
+  .or(`uuid.eq.${praticaUuid},id.eq.${praticaUuid}`)
+  .limit(1)
+  .maybeSingle();
+
+if (praticaCollegataError) throw praticaCollegataError;
+
+if (!praticaCollegata?.id) {
+  console.warn("Pratica collegata non trovata:", praticaUuid);
+  return;
+}
+
+const praticaId = praticaCollegata.id;
 
 const rows = steps.map((step) => ({
   variazione_id: variazione.id,
