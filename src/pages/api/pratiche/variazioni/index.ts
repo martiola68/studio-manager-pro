@@ -306,26 +306,10 @@ if (!praticaUuid) {
   console.warn("Pratica non ancora creata:", variazione.id);
   return;
 }
-
-const { data: praticaCollegata, error: praticaCollegataError } = await supabase
-  .from("tbpratiche")
-  .select("id")
-  .eq("id", praticaUuid)
-  .maybeSingle();
-
-if (praticaCollegataError) throw praticaCollegataError;
-
-if (!praticaCollegata?.id) {
-  console.warn("Pratica collegata non trovata:", praticaUuid);
-  return;
-}
-
-const praticaId = praticaCollegata.id;
-
 const rows = steps.map((step) => ({
   variazione_id: variazione.id,
-  pratica_id: praticaId,
-  pratica_uuid: null,
+  pratica_id: null,
+  pratica_uuid: praticaUuid,
   documento_id: null,
     codice_step: step.codice_step,
     ordine: step.ordine,
