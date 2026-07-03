@@ -29,12 +29,38 @@ function getWorkingDays(anno: number, mese: number) {
   return days;
 }
 
-function mondayOfWeek(d: Date) {
+function mondayOfWeekDate(d: Date) {
   const copy = new Date(d);
   const day = copy.getDay() || 7;
   copy.setDate(copy.getDate() - day + 1);
   copy.setHours(0, 0, 0, 0);
-  return isoDate(copy);
+  return copy;
+}
+
+function weekIndexFromExcelBase(d: Date) {
+  const base = new Date(2025, 11, 1); // 01/12/2025 lunedì, base Excel
+  const monday = mondayOfWeekDate(d);
+
+  return Math.floor(
+    (monday.getTime() - base.getTime()) / (7 * 24 * 60 * 60 * 1000)
+  );
+}
+
+function extraUserIndexForDay(weekIndex: number, weekday: number, utentiCount: number) {
+  if (utentiCount === 0) return null;
+
+  const posizioneGiorno: Record<number, number> = {
+    1: 0, // lunedì
+    3: 1, // mercoledì
+    4: 2, // giovedì
+    5: 3, // venerdì
+  };
+
+  const pos = posizioneGiorno[weekday];
+
+  if (pos === undefined) return null;
+
+  return (weekIndex + pos) % utentiCount;
 }
 
 async function loadFestivita(anno: number, mese: number) {
@@ -58,23 +84,7 @@ async function loadFestivita(anno: number, mese: number) {
   return map;
 }
 
-async function loadUltimoExtra(gruppoId: string, anno: number, mese: number) {
-  const start = `${anno}-${pad(mese)}-01`;
 
-  const { data, error } = await supabaseAdmin
-    .from("tbpresenze_smart_calendario")
-    .select("utente_id, data, giorno_settimana")
-    .eq("gruppo_id", gruppoId)
-    .eq("presenza", true)
-    .lt("data", start)
-    .neq("giorno_settimana", 2)
-    .order("data", { ascending: false })
-    .limit(1);
-
-  if (error) throw error;
-
-  return data?.[0] || null;
-}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
@@ -126,91 +136,44 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const festivitaMap = await loadFestivita(Number(anno), Number(mese));
   const days = getWorkingDays(Number(anno), Number(mese));
 
-  const ultimoExtra = await loadUltimoExtra(gruppo_id, Number(anno), Number(mese));
+const rows: any[] = [];
 
-  let rotazioneIndex = 0;
+for (const day of days) {
+  const wd = weekdayIT(day);
+  if (!wd) continue;
 
-  if (ultimoExtra?.utente_id) {
-    const lastIndex = utentiAttivi.findIndex(
-      (u) => u.utente_id === ultimoExtra.utente_id
-    );
+  const dataKey = isoDate(day);
+  const festivoNome = festivitaMap.get(dataKey) || null;
 
-    if (lastIndex >= 0) {
-      rotazioneIndex = (lastIndex + 1) % utentiAttivi.length;
-    }
+  const weekIndex = weekIndexFromExcelBase(day);
+  const extraIndex = extraUserIndexForDay(
+    weekIndex,
+    wd,
+    utentiAttivi.length
+  );
+
+  for (let userIndex = 0; userIndex < utentiAttivi.length; userIndex++) {
+    const utente = utentiAttivi[userIndex];
+
+    const presenza =
+      !festivoNome &&
+      (wd === giornoFisso || userIndex === extraIndex);
+
+    rows.push({
+      studio_id: gruppo.studio_id,
+      gruppo_id,
+      utente_id: utente.utente_id,
+      data: dataKey,
+      anno: Number(anno),
+      mese: Number(mese),
+      giorno_settimana: wd,
+      presenza,
+      festivo: !!festivoNome,
+      nota: festivoNome,
+      generato_auto: true,
+    });
   }
-
-  const rows: any[] = [];
-  const extraAssegnatiSettimana = new Map<string, Set<string>>();
-  let ultimoExtraDelMese: { utente_id: string; data: string; giorno_settimana: number } | null =
-    ultimoExtra;
-
-  for (const day of days) {
-    const wd = weekdayIT(day);
-    if (!wd) continue;
-
-    const dataKey = isoDate(day);
-    const settimanaKey = mondayOfWeek(day);
-    const festivoNome = festivitaMap.get(dataKey) || null;
-
-    if (!extraAssegnatiSettimana.has(settimanaKey)) {
-      extraAssegnatiSettimana.set(settimanaKey, new Set<string>());
-    }
-
-    const utentiExtraSettimana = extraAssegnatiSettimana.get(settimanaKey)!;
-
-    let extraUtenteId: string | null = null;
-
-    if (!festivoNome && wd !== giornoFisso) {
-      for (let tentativi = 0; tentativi < utentiAttivi.length; tentativi++) {
-        const candidato = utentiAttivi[rotazioneIndex];
-
-        rotazioneIndex = (rotazioneIndex + 1) % utentiAttivi.length;
-
-        if (utentiExtraSettimana.has(candidato.utente_id)) {
-          continue;
-        }
-
-        const evitaVenLunMar =
-          wd === 1 &&
-          ultimoExtraDelMese?.utente_id === candidato.utente_id &&
-          ultimoExtraDelMese?.giorno_settimana === 5;
-
-        if (evitaVenLunMar) {
-          continue;
-        }
-
-        extraUtenteId = candidato.utente_id;
-        utentiExtraSettimana.add(candidato.utente_id);
-        ultimoExtraDelMese = {
-          utente_id: candidato.utente_id,
-          data: dataKey,
-          giorno_settimana: wd,
-        };
-        break;
-      }
-    }
-
-    for (const utente of utentiAttivi) {
-      const presenza =
-        !festivoNome &&
-        (wd === giornoFisso || utente.utente_id === extraUtenteId);
-
-      rows.push({
-        studio_id: gruppo.studio_id,
-        gruppo_id,
-        utente_id: utente.utente_id,
-        data: dataKey,
-        anno: Number(anno),
-        mese: Number(mese),
-        giorno_settimana: wd,
-        presenza,
-        festivo: !!festivoNome,
-        nota: festivoNome,
-        generato_auto: true,
-      });
-    }
-  }
+}
 
   await supabaseAdmin
     .from("tbpresenze_smart_calendario")
