@@ -426,22 +426,22 @@ const dataArricchita = (data || []).map((v: any) => {
   return {
     ...v,
 
-    step_determina_stato:
-      stepMap.DETERMINA?.stato || v.step_determina_stato || "da_fare",
+  step_determina_stato:
+  v.step_determina_stato || stepMap.DETERMINA?.stato || "da_fare",
 
-    step_liquidazione_stato:
-      stepMap.LIQUIDAZIONE?.stato || v.step_liquidazione_stato || "da_fare",
+step_liquidazione_stato:
+  v.step_liquidazione_stato || stepMap.LIQUIDAZIONE?.stato || "da_fare",
 
-    step_accettazione_carica_stato:
-      stepMap.ACCETTAZIONE_CARICA?.stato ||
-      v.step_accettazione_carica_stato ||
-      "da_fare",
+step_accettazione_carica_stato:
+  v.step_accettazione_carica_stato ||
+  stepMap.ACCETTAZIONE_CARICA?.stato ||
+  "da_fare",
 
-    step_cciaa_stato:
-      stepMap.DEPOSITO_CCIAA?.stato || v.step_cciaa_stato || "da_fare",
+step_cciaa_stato:
+  v.step_cciaa_stato || stepMap.DEPOSITO_CCIAA?.stato || "da_fare",
 
-    step_ade_stato:
-      stepMap.COMUNICAZIONE_ADE?.stato || v.step_ade_stato || "da_fare",
+step_ade_stato:
+  v.step_ade_stato || stepMap.COMUNICAZIONE_ADE?.stato || "da_fare",
 
     data_evasione_cciaa:
       stepMap.DEPOSITO_CCIAA?.data_evasione || v.data_evasione_cciaa,
