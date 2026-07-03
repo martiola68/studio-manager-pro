@@ -62,7 +62,9 @@ export default function SmartGruppi() {
 
   const [checkingAdmin, setCheckingAdmin] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-
+const [senderUserId, setSenderUserId] = useState("");
+const [microsoftConnectionId, setMicrosoftConnectionId] = useState("");
+  
   const [gruppi, setGruppi] = useState<Gruppo[]>([]);
   const [utenti, setUtenti] = useState<Utente[]>([]);
   const [utentiSelezionati, setUtentiSelezionati] = useState<string[]>([]);
@@ -97,11 +99,13 @@ export default function SmartGruppi() {
 
       const { data } = await supabase
         .from("tbutenti")
-        .select("tipo_utente")
+        .select("id, tipo_utente, microsoft_connection_id")
         .eq("email", session.user.email)
         .single();
 
       setIsAdmin(data?.tipo_utente === "Admin");
+      setSenderUserId(data?.id || "");
+      setMicrosoftConnectionId(data?.microsoft_connection_id || "");
       setCheckingAdmin(false);
     }
 
@@ -313,6 +317,55 @@ export default function SmartGruppi() {
     `/api/presenze/smart/report-mese?gruppo_id=${gruppoSelezionato}&anno=${anno}&mese=${mese}`,
     "_blank"
   );
+}
+
+  async function inviaReportMese() {
+  if (!gruppoSelezionato) {
+    alert("Seleziona un gruppo");
+    return;
+  }
+
+  if (!senderUserId || !microsoftConnectionId) {
+    alert("Connessione Microsoft 365 non trovata per l'utente corrente");
+    return;
+  }
+
+  if (
+    !confirm(
+      "Inviare il riepilogo Smart Working in PDF a tutti i dipendenti del gruppo?"
+    )
+  ) {
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const res = await fetch("/api/presenze/smart/invia-report-mese", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        gruppo_id: gruppoSelezionato,
+        anno,
+        mese,
+        senderUserId,
+        microsoftConnectionId,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.error || "Errore invio riepilogo");
+      return;
+    }
+
+    alert(
+      `Invio completato.\nEmail inviate: ${data.inviati}\nErrori: ${data.errori}`
+    );
+  } finally {
+    setLoading(false);
+  }
 }
 
 
@@ -528,6 +581,15 @@ export default function SmartGruppi() {
   className="border border-blue-600 text-blue-600 px-4 py-2 rounded disabled:opacity-50"
 >
   Stampa riepilogo
+</button>
+
+              <button
+  type="button"
+  onClick={inviaReportMese}
+  disabled={loading || !gruppoSelezionato}
+  className="border border-green-600 text-green-700 px-4 py-2 rounded disabled:opacity-50"
+>
+  Invia PDF
 </button>
 
 <button
