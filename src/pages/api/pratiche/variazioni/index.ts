@@ -566,6 +566,10 @@ if (req.body.genera_pratica) {
       delete (payload as any).studio_id;
       delete (payload as any).cliente_id;
 
+      if (!body.stato) {
+  delete (payload as any).stato;
+}
+
       const { data, error } = await supabase
         .from("tbpratiche_variazioni")
         .update(payload)
