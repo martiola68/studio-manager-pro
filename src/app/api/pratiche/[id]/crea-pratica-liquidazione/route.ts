@@ -43,6 +43,15 @@ const { data: variazione } = await supabaseAdmin
   .eq("pratica_determina_id", id)
   .maybeSingle();
 
+    if (!variazione?.id) {
+  return NextResponse.json(
+    {
+      error: "Variazione collegata alla determina non trovata.",
+    },
+    { status: 400 }
+  );
+}
+
 const { data: stepDeposito } = await supabaseAdmin
   .from("tbpratiche_step")
   .select("data_evasione")
