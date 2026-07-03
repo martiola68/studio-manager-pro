@@ -8,7 +8,7 @@ type ApiResponse =
 
 const allowedEnti = ["CCIAA", "AGENZIA_ENTRATE"];
 const allowedPriorita = ["bassa", "normale", "alta", "urgente"];
-const allowedStati = ["memo", "da_convertire", "convertita", "archiviata"];
+const allowedStati = ["aperta", "in_lavorazione", "completata"];
 const allowedEsiti = ["Accettata", "Respinta", "Protocollata", "Evasa"];
 
 function cleanString(value: any) {
@@ -45,7 +45,7 @@ function buildPayload(body: any) {
   const priorita =
     validateEnum(body.priorita, allowedPriorita, "normale") || "normale";
 
-  const stato = validateEnum(body.stato, allowedStati, "memo") || "memo";
+  const stato = validateEnum(body.stato, allowedStati, "aperta") || "aperta";
 
   const esitoCciaa = validateEnum(body.esito_cciaa, allowedEsiti, null);
   const esitoAde = validateEnum(body.esito_ade, allowedEsiti, null);
@@ -497,14 +497,14 @@ await supabase
   .update({
     pratica_id: praticaCreata.id,
     pratica_determina_id: praticaCreata.id,
-    stato: "convertita",
+    stato: "in_lavorazione",
   })
   .eq("id", data.id);
 
 await aggiornaStatiVariazione(supabase, data.id);
   
   data.pratica_id = praticaCreata.id;
-  data.stato = "convertita";
+  data.stato = "in_lavorazione";
 }
       
       await sincronizzaPromemoriaVariazione(supabase, data);
