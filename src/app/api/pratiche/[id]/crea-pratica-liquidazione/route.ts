@@ -39,11 +39,20 @@ export async function POST(
 
 const { data: variazione } = await supabaseAdmin
   .from("tbpratiche_variazioni")
-  .select("id, data_evasione_cciaa")
+  .select("id")
   .eq("pratica_determina_id", id)
   .maybeSingle();
 
-if (!variazione?.data_evasione_cciaa) {
+const { data: stepDeposito } = await supabaseAdmin
+  .from("tbpratiche_step")
+  .select("data_evasione")
+  .eq("variazione_id", variazione?.id)
+  .eq("codice_step", "DEPOSITO_CCIAA")
+  .maybeSingle();
+
+const dataEvasioneScioglimento = stepDeposito?.data_evasione;
+
+if (!dataEvasioneScioglimento) {
   return NextResponse.json(
     {
       error:
@@ -65,7 +74,7 @@ if (!datiDocumento?.data_atto) {
 
 if (
   new Date(datiDocumento.data_atto) <=
-  new Date(variazione.data_evasione_cciaa)
+  new Date(dataEvasioneScioglimento)
 ) {
   return NextResponse.json(
     {
