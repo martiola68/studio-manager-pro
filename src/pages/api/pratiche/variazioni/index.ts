@@ -395,14 +395,66 @@ export default async function handler(
         query = query.eq("pratica_id", pratica_id);
       }
 
-      const { data, error } = await query;
+     const { data, error } = await query;
 
-      if (error) throw error;
+if (error) throw error;
 
-      return res.status(200).json({
-        success: true,
-        data: data || [],
-      });
+const variazioniIds = (data || []).map((v: any) => v.id);
+
+let steps: any[] = [];
+
+if (variazioniIds.length > 0) {
+  const { data: stepsData, error: stepsError } = await supabase
+    .from("tbpratiche_step")
+    .select("variazione_id, codice_step, stato, data_evasione")
+    .in("variazione_id", variazioniIds);
+
+  if (stepsError) throw stepsError;
+
+  steps = stepsData || [];
+}
+
+const stepsByVariazione = steps.reduce((acc: any, step: any) => {
+  if (!acc[step.variazione_id]) acc[step.variazione_id] = {};
+  acc[step.variazione_id][step.codice_step] = step;
+  return acc;
+}, {});
+
+const dataArricchita = (data || []).map((v: any) => {
+  const stepMap = stepsByVariazione[v.id] || {};
+
+  return {
+    ...v,
+
+    step_determina_stato:
+      stepMap.DETERMINA?.stato || v.step_determina_stato || "da_fare",
+
+    step_liquidazione_stato:
+      stepMap.LIQUIDAZIONE?.stato || v.step_liquidazione_stato || "da_fare",
+
+    step_accettazione_carica_stato:
+      stepMap.ACCETTAZIONE_CARICA?.stato ||
+      v.step_accettazione_carica_stato ||
+      "da_fare",
+
+    step_cciaa_stato:
+      stepMap.DEPOSITO_CCIAA?.stato || v.step_cciaa_stato || "da_fare",
+
+    step_ade_stato:
+      stepMap.COMUNICAZIONE_ADE?.stato || v.step_ade_stato || "da_fare",
+
+    data_evasione_cciaa:
+      stepMap.DEPOSITO_CCIAA?.data_evasione || v.data_evasione_cciaa,
+
+    data_comunicazione_ade:
+      stepMap.COMUNICAZIONE_ADE?.data_evasione || v.data_comunicazione_ade,
+  };
+});
+
+return res.status(200).json({
+  success: true,
+  data: dataArricchita,
+});
     }
 
     if (req.method === "POST") {
