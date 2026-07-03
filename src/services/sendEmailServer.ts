@@ -4,6 +4,11 @@ export async function sendEmailServer(params: {
   to: string;
   subject: string;
   html: string;
+  attachments?: {
+    filename: string;
+    contentType: string;
+    contentBytes: string;
+  }[];
 }): Promise<{ success: boolean; error?: string }> {
   try {
     const baseUrl =
@@ -22,21 +27,32 @@ export async function sendEmailServer(params: {
         endpoint: "/me/sendMail",
         method: "POST",
         microsoftConnectionId: params.microsoftConnectionId,
-        body: {
-          message: {
-            subject: params.subject,
-            body: {
-              contentType: "HTML",
-              content: params.html,
-            },
-            toRecipients: [
-              {
-                emailAddress: {
-                  address: params.to,
-                },
-              },
-            ],
-          },
+       message: {
+  subject: params.subject,
+  body: {
+    contentType: "HTML",
+    content: params.html,
+  },
+
+  ...(params.attachments?.length
+    ? {
+        attachments: params.attachments.map((a) => ({
+          "@odata.type": "#microsoft.graph.fileAttachment",
+          name: a.filename,
+          contentType: a.contentType,
+          contentBytes: a.contentBytes,
+        })),
+      }
+    : {}),
+
+  toRecipients: [
+    {
+      emailAddress: {
+        address: params.to,
+      },
+    },
+  ],
+},
           saveToSentItems: true,
         },
       }),
