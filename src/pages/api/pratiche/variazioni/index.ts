@@ -446,6 +446,26 @@ if (variazioneEsistente?.id) {
   });
 }
 
+      const { data: variazioneEsistente, error: existingError } = await supabase
+  .from("tbpratiche_variazioni")
+  .select("id, pratica_id, pratica_determina_id, stato")
+  .eq("studio_id", payload.studio_id)
+  .eq("cliente_id", payload.cliente_id)
+  .eq("tipo_variazione", payload.tipo_variazione)
+  .eq("titolo", payload.titolo)
+  .in("stato", ["aperta", "in_lavorazione"])
+  .order("created_at", { ascending: false })
+  .limit(1);
+
+if (existingError) throw existingError;
+
+if (variazioneEsistente && variazioneEsistente.length > 0) {
+  return res.status(200).json({
+    success: true,
+    data: variazioneEsistente[0],
+  });
+}
+
       const { data, error } = await supabase
         .from("tbpratiche_variazioni")
         .insert(payload)
