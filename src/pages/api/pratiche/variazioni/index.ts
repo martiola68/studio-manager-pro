@@ -427,6 +427,25 @@ export default async function handler(
         });
       }
 
+      const { data: variazioneEsistente, error: existingError } = await supabase
+  .from("tbpratiche_variazioni")
+  .select("id, pratica_id, pratica_determina_id, stato")
+  .eq("studio_id", payload.studio_id)
+  .eq("cliente_id", payload.cliente_id)
+  .eq("tipo_variazione", payload.tipo_variazione)
+  .eq("titolo", payload.titolo)
+  .in("stato", ["aperta", "in_lavorazione"])
+  .maybeSingle();
+
+if (existingError) throw existingError;
+
+if (variazioneEsistente?.id) {
+  return res.status(200).json({
+    success: true,
+    data: variazioneEsistente,
+  });
+}
+
       const { data, error } = await supabase
         .from("tbpratiche_variazioni")
         .insert(payload)
