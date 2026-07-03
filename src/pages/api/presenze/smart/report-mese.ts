@@ -53,12 +53,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(404).json({ error: "Gruppo non trovato" });
   }
 
-  const { data: utenti, error: utentiError } = await supabaseAdmin
-    .from("tbpresenze_smart_gruppi_utenti")
-    .select("utente_id, ordine, tbutenti:nome")
-    .eq("gruppo_id", gruppo_id)
-    .eq("attivo", true)
-    .order("ordine", { ascending: true });
+  const { data: utentiGruppo, error: utentiError } = await supabaseAdmin
+  .from("tbpresenze_smart_gruppi_utenti")
+  .select("utente_id, ordine")
+  .eq("gruppo_id", gruppo_id)
+  .eq("attivo", true)
+  .order("ordine", { ascending: true });
+
+if (utentiError) {
+  return res.status(500).json({ error: utentiError.message });
+}
+
+const utentiIds = (utentiGruppo || []).map((u) => u.utente_id);
+
+const { data: utentiAnagrafica, error: utentiAnagraficaError } = await supabaseAdmin
+  .from("tbutenti")
+  .select("id, nome, cognome, email")
+  .in("id", utentiIds);
+
+if (utentiAnagraficaError) {
+  return res.status(500).json({ error: utentiAnagraficaError.message });
+}
+
+const utenti = (utentiGruppo || []).map((ug) => {
+  const anagrafica = (utentiAnagrafica || []).find((u) => u.id === ug.utente_id);
+
+  return {
+    ...ug,
+    nome:
+      [anagrafica?.nome, anagrafica?.cognome].filter(Boolean).join(" ") ||
+      anagrafica?.email ||
+      ug.utente_id,
+  };
+});
 
   if (utentiError) {
     return res.status(500).json({ error: utentiError.message });
@@ -89,13 +116,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   doc.fontSize(16).text(`Riepilogo smart working - ${meseNome(mese)} ${anno}`);
   doc.moveDown(0.5);
 
-  doc.fontSize(10).text(`Gruppo: ${gruppo.nome}`);
+  doc.fontSize(10).text(`Gruppo: ${gruppo.nome_gruppo || gruppo.nome || "-"}`);
   doc.text(`Settore: ${gruppo.settore || "-"}`);
   doc.text(`Giorno fisso: ${giornoNome(Number(gruppo.giorno_fisso || 2))}`);
   doc.text(`Presenze settimanali: ${gruppo.presenze_settimanali || "-"}`);
   doc.moveDown();
 
-  const utentiAttivi = utenti || [];
+  const utentiAttivi = utenti;
   const righePerData = new Map<string, any[]>();
 
   (presenze || []).forEach((r) => {
@@ -115,7 +142,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   utentiAttivi.forEach((u, index) => {
     doc.text(
-      u.tbutenti?.nome || u.utente_id,
+      u.nome || u.utente_id,
       startX + colData + colGiorno + index * colUtente,
       y,
       { width: colUtente }
