@@ -309,9 +309,8 @@ if (!praticaUuid) {
 
 const { data: praticaCollegata, error: praticaCollegataError } = await supabase
   .from("tbpratiche")
-  .select("id, uuid")
-  .or(`uuid.eq.${praticaUuid},id.eq.${praticaUuid}`)
-  .limit(1)
+  .select("id")
+  .eq("id", praticaUuid)
   .maybeSingle();
 
 if (praticaCollegataError) throw praticaCollegataError;
