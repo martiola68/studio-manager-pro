@@ -479,7 +479,20 @@ if (variazioneEsistente && variazioneEsistente.length > 0) {
 
       if (error) throw error;
 
-      await creaStepVariazione(supabase, data);
+ //  await creaStepVariazione(supabase, data);
+
+      try {
+  await creaStepVariazione(supabase, data);
+
+  const { data: stepCreati } = await supabase
+    .from("tbpratiche_step")
+    .select("id, codice_step")
+    .eq("variazione_id", data.id);
+
+  console.log("STEP CREATI:", stepCreati);
+} catch (err) {
+  console.error("ERRORE CREAZIONE STEP:", err);
+}
 
       // ==============================
 // CREA PRATICA PADRE
