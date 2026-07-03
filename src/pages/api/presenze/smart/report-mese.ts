@@ -87,10 +87,6 @@ const utenti = (utentiGruppo || []).map((ug) => {
   };
 });
 
-  if (utentiError) {
-    return res.status(500).json({ error: utentiError.message });
-  }
-
   const { data: presenze, error: presenzeError } = await supabaseAdmin
     .from("tbpresenze_smart_calendario")
     .select("data, giorno_settimana, utente_id, presenza, festivo, nota")
