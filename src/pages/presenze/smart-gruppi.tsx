@@ -547,6 +547,7 @@ export default function SmartGruppi() {
 >
   Elimina gruppo
 </button>
+              </div>
 
             {gruppoCorrente && (
               <div className="text-sm text-gray-600">
