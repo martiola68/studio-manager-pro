@@ -628,6 +628,20 @@ if (req.body.genera_pratica) {
 
 await creaStepVariazione(supabase, data);
 
+      if (body.data_evasione_cciaa) {
+  await supabase
+    .from("tbpratiche_step")
+    .update({
+      data_evasione: body.data_evasione_cciaa,
+      stato: "completato",
+      completato: true,
+      data_completamento: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("variazione_id", id)
+    .eq("codice_step", "DEPOSITO_CCIAA");
+}
+
 await sincronizzaPromemoriaVariazione(supabase, data);
 
       return res.status(200).json({
