@@ -465,65 +465,62 @@ if (variazioneEsistente?.id) {
 // CREA PRATICA PADRE
 // ==============================
 
-if (req.body.genera_pratica && !data.pratica_id) {
+if (req.body.genera_pratica) {
+  const { data: variazioneCorrente, error: variazioneCorrenteError } =
+    await supabase
+      .from("tbpratiche_variazioni")
+      .select("id, pratica_id, pratica_determina_id")
+      .eq("id", data.id)
+      .single();
 
-  const { data: praticaCreata, error: praticaError } = await supabase
-    .from("tbpratiche")
-    .insert({
+  if (variazioneCorrenteError) throw variazioneCorrenteError;
 
-      studio_id: data.studio_id,
+  if (variazioneCorrente?.pratica_id) {
+    data.pratica_id = variazioneCorrente.pratica_id;
+    data.pratica_determina_id = variazioneCorrente.pratica_determina_id;
+    data.stato = "in_lavorazione";
+  } else {
+    const { data: praticaCreata, error: praticaError } = await supabase
+      .from("tbpratiche")
+      .insert({
+        studio_id: data.studio_id,
+        cliente_id: data.cliente_id,
+        tipo_pratica_id: req.body.tipo_pratica_id,
+        numero_pratica: `VAR-${new Date().getFullYear()}-${String(Date.now()).slice(-5)}`,
+        titolo: data.titolo,
+        stato: "Aperta",
+        priorita: data.priorita,
+        data_apertura: new Date(),
+        assegnato_a: data.assegnato_a,
+        pratica_padre_id: null,
+        pratica_origine_id: null,
+        variazione_id: data.id,
+        codice_workflow: data.tipo_variazione,
+        codice_step: "ROOT",
+        nome_step: data.tipo_variazione,
+        ordine_step: 1,
+        stato_step: "aperta",
+      })
+      .select("id")
+      .single();
 
-      cliente_id: data.cliente_id,
+    if (praticaError) throw praticaError;
 
-      tipo_pratica_id: req.body.tipo_pratica_id,
+    await supabase
+      .from("tbpratiche_variazioni")
+      .update({
+        pratica_id: praticaCreata.id,
+        pratica_determina_id: praticaCreata.id,
+        stato: "in_lavorazione",
+      })
+      .eq("id", data.id);
 
-      numero_pratica: `VAR-${new Date().getFullYear()}-${String(Date.now()).slice(-5)}`,
+    await aggiornaStatiVariazione(supabase, data.id);
 
-      titolo: data.titolo,
-
-      stato: "Aperta",
-
-      priorita: data.priorita,
-
-      data_apertura: new Date(),
-
-      assegnato_a: data.assegnato_a,
-
-      pratica_padre_id: null,
-
-      pratica_origine_id: null,
-
-      variazione_id: data.id,
-
-     codice_workflow: data.tipo_variazione,
-    
-      codice_step: "ROOT",
-      
-      nome_step: data.tipo_variazione,
-      
-      ordine_step: 1,
-      
-      stato_step: "aperta"
-
-    })
-    .select("id")
-    .single();
-
-  if (praticaError) throw praticaError;
-
-await supabase
-  .from("tbpratiche_variazioni")
-  .update({
-    pratica_id: praticaCreata.id,
-    pratica_determina_id: praticaCreata.id,
-    stato: "in_lavorazione",
-  })
-  .eq("id", data.id);
-
-await aggiornaStatiVariazione(supabase, data.id);
-  
-  data.pratica_id = praticaCreata.id;
-  data.stato = "in_lavorazione";
+    data.pratica_id = praticaCreata.id;
+    data.pratica_determina_id = praticaCreata.id;
+    data.stato = "in_lavorazione";
+  }
 }
       
       await sincronizzaPromemoriaVariazione(supabase, data);
