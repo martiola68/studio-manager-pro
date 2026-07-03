@@ -303,6 +303,19 @@ export default function SmartGruppi() {
     alert("Gruppo eliminato correttamente");
   }
 
+  function stampaRiepilogo() {
+  if (!gruppoSelezionato) {
+    alert("Seleziona un gruppo");
+    return;
+  }
+
+  window.open(
+    `/api/presenze/smart/report-mese?gruppo_id=${gruppoSelezionato}&anno=${anno}&mese=${mese}`,
+    "_blank"
+  );
+}
+
+
   if (checkingAdmin) {
     return <div className="p-6">Verifica permessi...</div>;
   }
@@ -497,33 +510,43 @@ export default function SmartGruppi() {
                 />
               </div>
 
-              <button
-                type="button"
-                onClick={generaMese}
-                disabled={loading || !gruppoSelezionato}
-                className="bg-black text-white px-4 py-2 rounded disabled:opacity-50"
-              >
-                Genera mese
-              </button>
+            <button
+  type="button"
+  onClick={generaMese}
+  disabled={loading || !gruppoSelezionato}
+  className="bg-black text-white px-4 py-2 rounded disabled:opacity-50"
+>
+  Genera mese
+</button>
 
-              <button
-                type="button"
-                onClick={eliminaMese}
-                disabled={loading || !gruppoSelezionato}
-                className="border border-red-600 text-red-600 px-4 py-2 rounded disabled:opacity-50"
-              >
-                Elimina mese
-              </button>
+{/* INSERISCI QUI IL NUOVO PULSANTE */}
 
-              <button
-                type="button"
-                onClick={eliminaGruppo}
-                disabled={loading || !gruppoSelezionato}
-                className="bg-red-600 text-white px-4 py-2 rounded disabled:opacity-50"
-              >
-                Elimina gruppo
-              </button>
-            </div>
+<button
+  type="button"
+  onClick={stampaRiepilogo}
+  disabled={loading || !gruppoSelezionato}
+  className="border border-blue-600 text-blue-600 px-4 py-2 rounded disabled:opacity-50"
+>
+  Stampa riepilogo
+</button>
+
+<button
+  type="button"
+  onClick={eliminaMese}
+  disabled={loading || !gruppoSelezionato}
+  className="border border-red-600 text-red-600 px-4 py-2 rounded disabled:opacity-50"
+>
+  Elimina mese
+</button>
+
+<button
+  type="button"
+  onClick={eliminaGruppo}
+  disabled={loading || !gruppoSelezionato}
+  className="bg-red-600 text-white px-4 py-2 rounded disabled:opacity-50"
+>
+  Elimina gruppo
+</button>
 
             {gruppoCorrente && (
               <div className="text-sm text-gray-600">
