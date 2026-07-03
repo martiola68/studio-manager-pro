@@ -299,10 +299,19 @@ async function creaStepVariazione(supabase: any, variazione: any) {
     variazione.obbligo_ade === true
   );
 
-  const rows = steps.map((step) => ({
-    variazione_id: variazione.id,
-    pratica_uuid: null,
-    documento_id: null,
+const praticaId =
+  variazione.pratica_determina_id || variazione.pratica_id;
+
+if (!praticaId) {
+  console.warn("Pratica non ancora creata:", variazione.id);
+  return;
+}
+
+const rows = steps.map((step) => ({
+  variazione_id: variazione.id,
+  pratica_id: praticaId,
+  pratica_uuid: null,
+  documento_id: null,
     codice_step: step.codice_step,
     ordine: step.ordine,
     ente: step.ente,
@@ -479,21 +488,6 @@ if (variazioneEsistente && variazioneEsistente.length > 0) {
 
       if (error) throw error;
 
- //  await creaStepVariazione(supabase, data);
-
-      try {
-  await creaStepVariazione(supabase, data);
-
-  const { data: stepCreati } = await supabase
-    .from("tbpratiche_step")
-    .select("id, codice_step")
-    .eq("variazione_id", data.id);
-
-  console.log("STEP CREATI:", stepCreati);
-} catch (err) {
-  console.error("ERRORE CREAZIONE STEP:", err);
-}
-
       // ==============================
 // CREA PRATICA PADRE
 // ==============================
@@ -555,6 +549,8 @@ if (req.body.genera_pratica) {
     data.stato = "in_lavorazione";
   }
 }
+
+      await creaStepVariazione(supabase, data);
       
       await sincronizzaPromemoriaVariazione(supabase, data);
 
