@@ -4,12 +4,41 @@ export async function sendEmailServer(params: {
   to: string;
   subject: string;
   html: string;
+  attachments?: {
+    filename: string;
+    contentType: string;
+    contentBytes: string;
+  }[];
 }): Promise<{ success: boolean; error?: string }> {
   try {
     const baseUrl =
       process.env.NEXT_PUBLIC_APP_URL ||
       process.env.NEXT_PUBLIC_SITE_URL ||
       "https://studio-manager-pro.vercel.app";
+
+    const message: any = {
+      subject: params.subject,
+      body: {
+        contentType: "HTML",
+        content: params.html,
+      },
+      toRecipients: [
+        {
+          emailAddress: {
+            address: params.to,
+          },
+        },
+      ],
+    };
+
+    if (params.attachments?.length) {
+      message.attachments = params.attachments.map((a) => ({
+        "@odata.type": "#microsoft.graph.fileAttachment",
+        name: a.filename,
+        contentType: a.contentType,
+        contentBytes: a.contentBytes,
+      }));
+    }
 
     const response = await fetch(`${baseUrl}/api/microsoft365/graph-cron`, {
       method: "POST",
@@ -22,20 +51,8 @@ export async function sendEmailServer(params: {
         endpoint: "/me/sendMail",
         method: "POST",
         microsoftConnectionId: params.microsoftConnectionId,
-  message: {
-  subject: params.subject,
-  body: {
-    contentType: "HTML",
-    content: params.html,
-  },
-  toRecipients: [
-    {
-      emailAddress: {
-        address: params.to,
-      },
-    },
-  ],
-},
+        body: {
+          message,
           saveToSentItems: true,
         },
       }),
