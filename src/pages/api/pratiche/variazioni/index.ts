@@ -559,7 +559,7 @@ if (variazioneEsistente && variazioneEsistente.length > 0) {
 // CREA PRATICA PADRE
 // ==============================
 
-if (req.body.genera_pratica) {
+if (req.body.genera_pratica || req.body.genera_verbale) {
   const { data: variazioneCorrente, error: variazioneCorrenteError } =
     await supabase
       .from("tbpratiche_variazioni")
@@ -600,20 +600,35 @@ if (req.body.genera_pratica) {
 
     if (praticaError) throw praticaError;
 
-    await supabase
-      .from("tbpratiche_variazioni")
-      .update({
-        pratica_id: praticaCreata.id,
-        pratica_determina_id: praticaCreata.id,
-        stato: "in_lavorazione",
-      })
-      .eq("id", data.id);
+   const updatePratica: any = {
+  pratica_id: praticaCreata.id,
+  stato: "in_lavorazione",
+};
+
+if (
+  String(data.tipo_variazione).toLowerCase().includes("scioglimento") ||
+  String(data.tipo_variazione).toLowerCase().includes("liquidazione")
+) {
+  updatePratica.pratica_determina_id = praticaCreata.id;
+}
+
+await supabase
+  .from("tbpratiche_variazioni")
+  .update(updatePratica)
+  .eq("id", data.id);
 
     await aggiornaStatiVariazione(supabase, data.id);
 
-    data.pratica_id = praticaCreata.id;
-    data.pratica_determina_id = praticaCreata.id;
-    data.stato = "in_lavorazione";
+   data.pratica_id = praticaCreata.id;
+
+if (
+  String(data.tipo_variazione).toLowerCase().includes("scioglimento") ||
+  String(data.tipo_variazione).toLowerCase().includes("liquidazione")
+) {
+  data.pratica_determina_id = praticaCreata.id;
+}
+
+data.stato = "in_lavorazione";
   }
 }
 
