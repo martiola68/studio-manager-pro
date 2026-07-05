@@ -682,9 +682,13 @@ await sincronizzaPromemoriaVariazione(supabase, data);
   const { data: variazione } = await supabase
     .from("tbpratiche_variazioni")
     .select(`
-      promemoria_cciaa_id,
-      promemoria_ade_id
-    `)
+  id,
+  promemoria_cciaa_id,
+  promemoria_ade_id,
+  pratica_id,
+  pratica_determina_id,
+  pratica_liquidazione_id
+`)
     .eq("id", id)
     .single();
 
@@ -699,6 +703,39 @@ await sincronizzaPromemoriaVariazione(supabase, data);
       .delete()
       .in("id", idsPromemoria);
   }
+
+    await supabase
+  .from("tbpratiche_step")
+  .delete()
+  .eq("variazione_id", id);
+
+const praticaIds = [
+  variazione?.pratica_id,
+  variazione?.pratica_determina_id,
+  variazione?.pratica_liquidazione_id,
+].filter(Boolean);
+
+if (praticaIds.length > 0) {
+  await supabase
+    .from("tbpratiche_documenti")
+    .delete()
+    .in("pratica_id", praticaIds);
+
+  await supabase
+    .from("tbpratiche_dati_documenti")
+    .delete()
+    .in("pratica_id", praticaIds);
+
+  await supabase
+    .from("tbpratiche_soci")
+    .delete()
+    .in("pratica_id", praticaIds);
+
+  await supabase
+    .from("tbpratiche")
+    .delete()
+    .in("id", praticaIds);
+}
 
   const { error } = await supabase
     .from("tbpratiche_variazioni")
