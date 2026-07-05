@@ -781,7 +781,7 @@ onClick={() => {
 <td className="p-2">{v.stato || "-"}</td>
                     <td className="p-2">
                       <div className="flex justify-end gap-2">
-                      <button
+                  <button
   onClick={() => {
     const praticaDaAprire =
       v.pratica_id ||
