@@ -781,14 +781,19 @@ onClick={() => {
 <td className="p-2">{v.stato || "-"}</td>
                     <td className="p-2">
                       <div className="flex justify-end gap-2">
-                        <button
+                      <button
   onClick={() => {
-    if (v.pratica_id) {
-      router.push(`/pratiche/${v.pratica_id}`);
+    const praticaDaAprire =
+      v.pratica_id ||
+      v.pratica_determina_id ||
+      v.pratica_liquidazione_id;
+
+    if (!praticaDaAprire) {
+      alert("Nessuna pratica collegata trovata.");
       return;
     }
 
-    modifica(v);
+    router.push(`/pratiche/${praticaDaAprire}`);
   }}
   title="Apri pratica"
 >
