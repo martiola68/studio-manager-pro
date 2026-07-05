@@ -82,7 +82,7 @@ if (!datiDocumento?.data_atto) {
 }
 
 if (
-  new Date(datiDocumento.data_atto) <=
+  new Date(dataVerbaleLiquidazione) <=
   new Date(dataEvasioneScioglimento)
 ) {
   return NextResponse.json(
