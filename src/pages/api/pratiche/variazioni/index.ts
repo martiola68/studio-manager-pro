@@ -628,7 +628,7 @@ if (req.body.genera_pratica) {
 
 await creaStepVariazione(supabase, data);
 
-      if (body.data_evasione_cciaa) {
+   if (body.data_evasione_cciaa) {
   await supabase
     .from("tbpratiche_step")
     .update({
@@ -641,6 +641,22 @@ await creaStepVariazione(supabase, data);
     .eq("variazione_id", id)
     .eq("codice_step", "DEPOSITO_CCIAA");
 }
+
+if (body.data_comunicazione_ade) {
+  await supabase
+    .from("tbpratiche_step")
+    .update({
+      data_evasione: body.data_comunicazione_ade,
+      stato: "completato",
+      completato: true,
+      data_completamento: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("variazione_id", id)
+    .eq("codice_step", "COMUNICAZIONE_ADE");
+}
+
+await aggiornaStatiVariazione(supabase, id);
 
 await sincronizzaPromemoriaVariazione(supabase, data);
 
