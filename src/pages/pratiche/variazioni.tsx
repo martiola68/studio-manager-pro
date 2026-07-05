@@ -261,7 +261,7 @@ function aggiornaGiorniAde(value: number) {
   : variazioni;
 
   function calcolaAvanzamento(v: any) {
- const steps = [
+const steps = [
   v.step_determina_stato,
   v.step_verbale_stato,
   v.step_liquidazione_stato,
