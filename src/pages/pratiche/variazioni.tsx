@@ -688,18 +688,81 @@ const steps = [
                       <td className="p-2">{formatDateIT(v.data_comunicazione_ade)}</td>
   
 <td className="p-2">
-{v.tipo_variazione === "Distribuzione utili" && (
-  <button
-    type="button"
-    className="block underline text-left"
-    onClick={() => router.push(`/pratiche/${v.pratica_id}`)}
-  >
-    Verbale distribuzione utili:
-    <span className={`ml-1 ${coloreStep(v.step_verbale_stato)}`}>
-      {(v.step_verbale_stato || "da_fare").replaceAll("_", " ")}
-    </span>
-  </button>
-)}
+
+  {v.tipo_variazione === "Scioglimento e liquidazione" && (
+    <div className="space-y-1 text-xs">
+      <button
+        type="button"
+        className="block underline"
+        disabled={
+          !(
+            v.pratica_determina_id ||
+            v.pratica_liquidazione_id ||
+            v.pratica_id
+          )
+        }
+        onClick={() => {
+          const praticaDaAprire =
+            v.pratica_determina_id ||
+            v.pratica_liquidazione_id ||
+            v.pratica_id;
+
+          router.push(`/pratiche/${praticaDaAprire}`);
+        }}
+      >
+        Determina:
+        <span className={`ml-1 ${coloreStep(v.step_determina_stato)}`}>
+          {(v.step_determina_stato || "da_fare").replaceAll("_", " ")}
+        </span>
+      </button>
+
+      <button
+        type="button"
+        className="block underline"
+        disabled={!v.pratica_liquidazione_id}
+        onClick={() => router.push(`/pratiche/${v.pratica_liquidazione_id}`)}
+      >
+        Liquidazione:
+        <span className={`ml-1 ${coloreStep(v.step_liquidazione_stato)}`}>
+          {(v.step_liquidazione_stato || "da_fare").replaceAll("_", " ")}
+        </span>
+      </button>
+
+      <div>
+        Accettazione:
+        <span className={`ml-1 ${coloreStep(v.step_accettazione_carica_stato)}`}>
+          {(v.step_accettazione_carica_stato || "da_fare").replaceAll("_", " ")}
+        </span>
+      </div>
+
+      <div>
+        Deposito pratica CCIAA:
+        <span className={`ml-1 ${coloreStep(v.step_cciaa_stato)}`}>
+          {(v.step_cciaa_stato || "da_fare").replaceAll("_", " ")}
+        </span>
+      </div>
+
+      <div>
+        Comunicazione AdE:
+        <span className={`ml-1 ${coloreStep(v.step_ade_stato)}`}>
+          {(v.step_ade_stato || "da_fare").replaceAll("_", " ")}
+        </span>
+      </div>
+    </div>
+  )}
+
+  {v.tipo_variazione === "Distribuzione utili" && (
+    <button
+      type="button"
+      className="block underline text-left"
+      onClick={() => router.push(`/pratiche/${v.pratica_id}`)}
+    >
+      Verbale distribuzione utili:
+      <span className={`ml-1 ${coloreStep(v.step_verbale_stato)}`}>
+        {(v.step_verbale_stato || "da_fare").replaceAll("_", " ")}
+      </span>
+    </button>
+  )}
 
   {v.tipo_variazione === "Cambio amministratore" && (
     <div className="space-y-1 text-xs">
@@ -729,6 +792,7 @@ const steps = [
       </div>
     </div>
   )}
+
 </td>
 
 <td className="p-2">
