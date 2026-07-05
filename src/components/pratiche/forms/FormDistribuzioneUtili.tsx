@@ -32,6 +32,10 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
   const router = useRouter();
   const praticaId = router.query.id as string;
 
+  function tornaElenco() {
+  router.push("/pratiche/variazioni");
+}
+
    const [saving, setSaving] = useState(false);
   const [messaggio, setMessaggio] = useState("");
 
@@ -152,15 +156,13 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
 
     if (!res.ok) return;
 
-    setOrganiSocieta(
-      (data.organi || []).filter(
-        (o: any) =>
-          o.attivo &&
-          ["socio", "amministratore"].includes(
-            String(o.ruolo || "").toLowerCase()
-          )
-      )
-    );
+  const organiAttivi = (data.organi || []).filter(
+  (o: any) => o.attivo !== false
+);
+
+setOrganiSocieta(
+  organiAttivi.filter((o: any) => o.tipo_ruolo === "S")
+);
   }
 
   async function caricaModelli() {
@@ -290,15 +292,21 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
   }
 
   return (
-    <main
-      style={{
-        padding: 28,
-        background: "#f8fafc",
-        minHeight: "100vh",
-        fontFamily: font,
-      }}
-    >
-          <h1
+   <main
+  style={{
+    padding: 28,
+    background: "#f8fafc",
+    minHeight: "100vh",
+    fontFamily: font,
+  }}
+>
+  <div style={{ marginBottom: 18, display: "flex", justifyContent: "flex-end" }}>
+    <button type="button" onClick={tornaElenco} style={secondaryButton}>
+      ← Torna a Variazioni
+    </button>
+  </div>
+
+  <h1
         style={{
           fontSize: 38,
           fontWeight: 800,
@@ -585,8 +593,8 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
               value={nuovoSocio.nominativo_id}
               onChange={(e) => {
                 const selected = organiSocieta.find(
-                  (o) => o.rapp_legale_id === e.target.value
-                );
+  (o) => String(o.soggetto_cliente_id) === String(e.target.value)
+);
 
                 const percentuale =
                   selected?.percentuale_partecipazione !== null &&
@@ -603,13 +611,16 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
 
                 setNuovoSocio({
                   ...nuovoSocio,
-                  nominativo_id: selected?.rapp_legale_id || "",
-                  nome_cognome: selected?.rapp_legali?.nome_cognome || "",
-                  codice_fiscale: selected?.rapp_legali?.codice_fiscale || "",
-                  indirizzo: selected?.rapp_legali?.indirizzo || "",
-                  cap: selected?.rapp_legali?.cap || "",
-                  citta: selected?.rapp_legali?.citta || "",
-                  provincia: selected?.rapp_legali?.provincia || "",
+                 nominativo_id: selected?.soggetto_cliente_id || "",
+nome_cognome: selected?.soggetto_cliente?.ragione_sociale || "",
+codice_fiscale:
+  selected?.soggetto_cliente?.codice_fiscale ||
+  selected?.soggetto_cliente?.partita_iva ||
+  "",
+indirizzo: selected?.soggetto_cliente?.indirizzo || "",
+cap: selected?.soggetto_cliente?.cap || "",
+citta: selected?.soggetto_cliente?.citta || "",
+provincia: selected?.soggetto_cliente?.provincia || "",
                   percentuale_partecipazione: percentuale,
                   importo_utile: lordo.toFixed(2),
                 });
@@ -617,11 +628,16 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
             >
               <option value="">Seleziona socio</option>
 
-              {organiSocieta.map((o) => (
-                <option key={o.rapp_legale_id} value={o.rapp_legale_id}>
-                  {o.rapp_legali?.nome_cognome} — {o.ruolo}
-                </option>
-              ))}
+            {organiSocieta.map((o) => {
+  const id = o.soggetto_cliente_id;
+  const nome = o.soggetto_cliente?.ragione_sociale || "-";
+
+  return (
+    <option key={o.id} value={id || ""}>
+      {nome}
+    </option>
+  );
+})}
             </select>
           </div>
 
