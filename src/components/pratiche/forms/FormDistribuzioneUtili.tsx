@@ -182,6 +182,8 @@ setForm((prev) => ({
   ...prev,
   presidente: prev.presidente || presidenteDefault,
 }));
+}
+  
   async function caricaModelli() {
     const res = await fetch(`/api/pratiche/${praticaId}/modelli`, {
       cache: "no-store",
