@@ -260,13 +260,14 @@ function aggiornaGiorniAde(value: number) {
   : variazioni;
 
   function calcolaAvanzamento(v: any) {
-  const steps = [
-    v.step_determina_stato,
-    v.step_liquidazione_stato,
-    v.step_accettazione_carica_stato,
-    v.step_cciaa_stato,
-    v.step_ade_stato,
-  ];
+ const steps = [
+  v.step_determina_stato,
+  v.step_verbale_stato,
+  v.step_liquidazione_stato,
+  v.step_accettazione_carica_stato,
+  v.step_cciaa_stato,
+  v.step_ade_stato,
+].filter(Boolean);
 
   const completati = steps.filter((s) => s === "completato").length;
 
