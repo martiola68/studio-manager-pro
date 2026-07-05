@@ -53,14 +53,15 @@ let step_ade_stato = "da_fare";
     .from("tbpratiche_documenti")
     .select("id")
     .eq("pratica_id", praticaVerbaleId)
-    .in("tipo_documento", [
-      "VERBALE_UTILI",
-      "VERBALE_DISTRIBUZIONE_UTILI",
-      "NOMINA_AMMINISTRATORI",
-      "CAMBIO_AMMINISTRATORE",
-      "VERBALE_NOMINA_AMMINISTRATORE",
-      "VERBALE_CAMBIO_AMMINISTRATORE",
-    ])
+   .in("tipo_documento", [
+  "VERBALE_UTILI",
+  "VERBALE_DISTRIBUZIONE_UTILI",
+  "DISTRIBUZIONE_UTILI",
+  "NOMINA_AMMINISTRATORI",
+  "CAMBIO_AMMINISTRATORE",
+  "VERBALE_NOMINA_AMMINISTRATORE",
+  "VERBALE_CAMBIO_AMMINISTRATORE",
+])
     .limit(1);
 
   if (docVerbale && docVerbale.length > 0) {
