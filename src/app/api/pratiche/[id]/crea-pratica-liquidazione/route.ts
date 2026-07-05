@@ -71,7 +71,12 @@ if (!dataEvasioneScioglimento) {
   );
 }
 
-if (!datiDocumento?.data_atto) {
+const dataVerbaleLiquidazione =
+  datiDocumento?.data_convocazione ||
+  datiDocumento?.data_assemblea ||
+  datiDocumento?.data_atto;
+
+if (!dataVerbaleLiquidazione) {
   return NextResponse.json(
     {
       error:
