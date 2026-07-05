@@ -15,14 +15,21 @@ export async function aggiornaStatiVariazione(
     return;
   }
 
-  let step_determina_stato = "da_fare";
-  let step_liquidazione_stato = "da_fare";
-  let step_accettazione_carica_stato = "da_fare";
-  let step_cciaa_stato = "da_fare";
-  let step_ade_stato = "da_fare";
+ let step_determina_stato = "da_fare";
+let step_verbale_stato = "da_fare";
+let step_liquidazione_stato = "da_fare";
+let step_accettazione_carica_stato = "da_fare";
+let step_cciaa_stato = "da_fare";
+let step_ade_stato = "da_fare";
 
   const praticaDeterminaId = variazione.pratica_determina_id;
   const praticaLiquidazioneId = variazione.pratica_liquidazione_id;
+
+  const praticaVerbaleId =
+  variazione.pratica_verbale_id ||
+  variazione.pratica_distribuzione_id ||
+  variazione.pratica_cambio_amministratore_id ||
+  variazione.pratica_id;
 
   if (praticaDeterminaId) {
     step_determina_stato = "in_lavorazione";
@@ -38,6 +45,28 @@ export async function aggiornaStatiVariazione(
       step_determina_stato = "completato";
     }
   }
+
+  if (praticaVerbaleId) {
+  step_verbale_stato = "in_lavorazione";
+
+  const { data: docVerbale } = await supabase
+    .from("tbpratiche_documenti")
+    .select("id")
+    .eq("pratica_id", praticaVerbaleId)
+    .in("tipo_documento", [
+      "VERBALE_UTILI",
+      "VERBALE_DISTRIBUZIONE_UTILI",
+      "NOMINA_AMMINISTRATORI",
+      "CAMBIO_AMMINISTRATORE",
+      "VERBALE_NOMINA_AMMINISTRATORE",
+      "VERBALE_CAMBIO_AMMINISTRATORE",
+    ])
+    .limit(1);
+
+  if (docVerbale && docVerbale.length > 0) {
+    step_verbale_stato = "completato";
+  }
+}
 
   if (praticaLiquidazioneId) {
     step_liquidazione_stato = "in_lavorazione";
@@ -88,13 +117,14 @@ if (datiLiquidazione?.verbale_definitivo === true) {
   const { error: updateError } = await supabase
     .from("tbpratiche_variazioni")
     .update({
-      step_determina_stato,
-      step_liquidazione_stato,
-      step_accettazione_carica_stato,
-      step_cciaa_stato,
-      step_ade_stato,
-      updated_at: new Date().toISOString(),
-    })
+  step_determina_stato,
+  step_verbale_stato,
+  step_liquidazione_stato,
+  step_accettazione_carica_stato,
+  step_cciaa_stato,
+  step_ade_stato,
+  updated_at: new Date().toISOString(),
+})
     .eq("id", variazioneId);
 
   if (updateError) {
