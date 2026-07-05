@@ -4,7 +4,8 @@ import Head from "next/head";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { Plus, Pencil, Trash2, RefreshCw } from "lucide-react";
 
-const FORM_INIZIALE = {
+const FORM_INIZIA
+  LE = {
   cliente_id: "",
   tipo_variazione: "",
   ente_principale: "CCIAA",
@@ -694,8 +695,26 @@ function aggiornaGiorniAde(value: number) {
     <button
   type="button"
   className="block underline"
-  disabled={!v.pratica_determina_id}
-  onClick={() => router.push(`/pratiche/${v.pratica_determina_id}`)}
+ disabled={
+  !(
+    v.pratica_determina_id ||
+    v.pratica_liquidazione_id ||
+    v.pratica_id
+  )
+}
+onClick={() => {
+  const praticaDaAprire =
+    v.pratica_determina_id ||
+    v.pratica_liquidazione_id ||
+    v.pratica_id;
+
+  if (!praticaDaAprire) {
+    alert("Nessuna pratica collegata trovata.");
+    return;
+  }
+
+  router.push(`/pratiche/${praticaDaAprire}`);
+}}
 >
   Determina:
   <span className={`ml-1 ${coloreStep(v.step_determina_stato)}`}>
