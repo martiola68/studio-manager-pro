@@ -707,9 +707,13 @@ function aggiornaGiorniAde(value: number) {
   <div className="w-28">
     <div className="h-2 rounded bg-gray-200">
       <div
-        className="h-2 rounded bg-blue-600"
-        style={{ width: `${calcolaAvanzamento(v)}%` }}
-      />
+  className={`h-2 rounded ${
+    calcolaAvanzamento(v) === 100
+      ? "bg-green-600"
+      : "bg-red-600"
+  }`}
+  style={{ width: `${calcolaAvanzamento(v)}%` }}
+/>
     </div>
     <div className="mt-1 text-xs text-gray-600">
       {calcolaAvanzamento(v)}%
