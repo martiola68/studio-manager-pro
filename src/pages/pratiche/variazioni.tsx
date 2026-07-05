@@ -272,6 +272,19 @@ function aggiornaGiorniAde(value: number) {
 
   return Math.round((completati / steps.length) * 100);
 }
+
+  function coloreStep(stato?: string) {
+  switch (stato) {
+    case "completato":
+      return "text-green-600 font-semibold";
+
+    case "in_lavorazione":
+      return "text-orange-600 font-semibold";
+
+    default:
+      return "text-red-600 font-semibold";
+  }
+}
   
   return (
     <>
@@ -676,27 +689,52 @@ function aggiornaGiorniAde(value: number) {
 <td className="p-2">
   {v.tipo_variazione === "Scioglimento e liquidazione" ? (
     <div className="space-y-1 text-xs">
-      <button
-        type="button"
-        className="block text-blue-700 underline"
-        disabled={!v.pratica_determina_id}
-        onClick={() => router.push(`/pratiche/${v.pratica_determina_id}`)}
-      >
-        Determina: {v.step_determina_stato || "da_fare"}
-      </button>
+    
+    <button
+  type="button"
+  className="block underline"
+  disabled={!v.pratica_determina_id}
+  onClick={() => router.push(`/pratiche/${v.pratica_determina_id}`)}
+>
+  Determina:
+  <span className={`ml-1 ${coloreStep(v.step_determina_stato)}`}>
+    {(v.step_determina_stato || "da_fare").replaceAll("_", " ")}
+  </span>
+</button>
 
-      <button
-        type="button"
-        className="block text-blue-700 underline"
-        disabled={!v.pratica_liquidazione_id}
-        onClick={() => router.push(`/pratiche/${v.pratica_liquidazione_id}`)}
-      >
-        Liquidazione: {v.step_liquidazione_stato || "da_fare"}
-      </button>
+<button
+  type="button"
+  className="block underline"
+  disabled={!v.pratica_liquidazione_id}
+  onClick={() => router.push(`/pratiche/${v.pratica_liquidazione_id}`)}
+>
+  Liquidazione:
+  <span className={`ml-1 ${coloreStep(v.step_liquidazione_stato)}`}>
+    {(v.step_liquidazione_stato || "da_fare").replaceAll("_", " ")}
+  </span>
+</button>
 
-      <div>Accettazione: {v.step_accettazione_carica_stato || "da_fare"}</div>
-      <div>Deposito pratica CCIAA: {v.step_cciaa_stato || "da_fare"}</div>
-        <div>Comunicazione AdE: {v.step_ade_stato || "da_fare"}</div>
+<div>
+  Accettazione:
+  <span className={`ml-1 ${coloreStep(v.step_accettazione_carica_stato)}`}>
+    {(v.step_accettazione_carica_stato || "da_fare").replaceAll("_", " ")}
+  </span>
+</div>
+
+<div>
+  Deposito pratica CCIAA:
+  <span className={`ml-1 ${coloreStep(v.step_cciaa_stato)}`}>
+    {(v.step_cciaa_stato || "da_fare").replaceAll("_", " ")}
+  </span>
+</div>
+
+<div>
+  Comunicazione AdE:
+  <span className={`ml-1 ${coloreStep(v.step_ade_stato)}`}>
+    {(v.step_ade_stato || "da_fare").replaceAll("_", " ")}
+  </span>
+</div>
+      
     </div>
   ) : (
     "-"
