@@ -25,11 +25,7 @@ let step_ade_stato = "da_fare";
   const praticaDeterminaId = variazione.pratica_determina_id;
   const praticaLiquidazioneId = variazione.pratica_liquidazione_id;
 
-  const praticaVerbaleId =
-  variazione.pratica_verbale_id ||
-  variazione.pratica_distribuzione_id ||
-  variazione.pratica_cambio_amministratore_id ||
-  variazione.pratica_id;
+const praticaVerbaleId = variazione.pratica_id;
 
   if (praticaDeterminaId) {
     step_determina_stato = "in_lavorazione";
