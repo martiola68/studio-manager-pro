@@ -253,6 +253,40 @@ function getStepVariazione(tipoVariazione: string, obbligoAde: boolean) {
     ];
   }
 
+  if (tipo.includes("amministratore")) {
+  return [
+    {
+      ordine: 1,
+      codice_step: "VERBALE",
+      titolo: "Verbale",
+      ente: "Interno",
+    },
+    {
+      ordine: 2,
+      codice_step: "ACCETTAZIONE_CARICA",
+      titolo: "Accettazione carica",
+      ente: "CCIAA",
+    },
+    {
+      ordine: 3,
+      codice_step: "DEPOSITO_CCIAA",
+      titolo: "Deposito pratica CCIAA",
+      ente: "CCIAA",
+    },
+  ];
+}
+
+if (tipo.includes("distribuzione")) {
+  return [
+    {
+      ordine: 1,
+      codice_step: "VERBALE",
+      titolo: "Verbale distribuzione utili",
+      ente: "Interno",
+    },
+  ];
+}
+
   if (
     tipo.includes("amministratore") ||
     tipo.includes("nomina") ||
