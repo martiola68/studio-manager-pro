@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { aggiornaStatiVariazione } from "@/lib/pratiche/aggiornaStatiVariazione";
 
 type Params = {
   params: Promise<{
@@ -260,17 +261,38 @@ updated_at: new Date().toISOString(),
         .single();
     }
 
-    if (result.error) {
-      return NextResponse.json(
-        { error: result.error.message },
-        { status: 500 }
-      );
-    }
+  if (result.error) {
+  return NextResponse.json(
+    { error: result.error.message },
+    { status: 500 }
+  );
+}
 
-    return NextResponse.json({
-      success: true,
-      dati_documento: result.data,
-    });
+const { data: variazione } = await supabaseAdmin
+  .from("tbpratiche_variazioni")
+  .select("id")
+  .eq("pratica_liquidazione_id", praticaId)
+  .maybeSingle();
+
+if (variazione?.id && body.verbale_definitivo === true) {
+  await supabaseAdmin
+    .from("tbpratiche_step")
+    .update({
+      stato: "completato",
+      completato: true,
+      data_completamento: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("variazione_id", variazione.id)
+    .eq("codice_step", "LIQUIDAZIONE");
+
+  await aggiornaStatiVariazione(supabaseAdmin, variazione.id);
+}
+
+return NextResponse.json({
+  success: true,
+  dati_documento: result.data,
+});
   } catch (error: any) {
     return NextResponse.json(
       {
