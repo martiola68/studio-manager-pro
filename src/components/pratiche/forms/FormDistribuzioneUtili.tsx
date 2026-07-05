@@ -72,7 +72,11 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
       pratica.dati_documento?.societa_rea ||
       pratica.cliente?.numero_rea ||
       "",
-    data_atto: pratica.dati_documento?.data_atto || "",
+   data_atto:
+  pratica.dati_documento?.data_atto ||
+  pratica.data_atto ||
+  pratica.data_pratica ||
+  "",
     ora_inizio: pratica.dati_documento?.ora_inizio || "",
     luogo_assemblea: pratica.dati_documento?.luogo_assemblea || sede || "",
     oggetto_assemblea:
@@ -156,15 +160,28 @@ export default function FormDistribuzioneUtili({ pratica }: any) {
 
     if (!res.ok) return;
 
-  const organiAttivi = (data.organi || []).filter(
+ const organiAttivi = (data.organi || []).filter(
   (o: any) => o.attivo !== false
 );
 
 setOrganiSocieta(
   organiAttivi.filter((o: any) => o.tipo_ruolo === "S")
 );
-  }
 
+const rappresentantiAttivi = organiAttivi.filter(
+  (o: any) => o.tipo_ruolo === "R"
+);
+
+const presidenteDefault =
+  rappresentantiAttivi.find((o: any) => o.principale)?.soggetto_cliente
+    ?.ragione_sociale ||
+  rappresentantiAttivi[0]?.soggetto_cliente?.ragione_sociale ||
+  "";
+
+setForm((prev) => ({
+  ...prev,
+  presidente: prev.presidente || presidenteDefault,
+}));
   async function caricaModelli() {
     const res = await fetch(`/api/pratiche/${praticaId}/modelli`, {
       cache: "no-store",
