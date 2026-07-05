@@ -762,9 +762,19 @@ function aggiornaGiorniAde(value: number) {
 <td className="p-2">{v.stato || "-"}</td>
                     <td className="p-2">
                       <div className="flex justify-end gap-2">
-                        <button onClick={() => modifica(v)} title="Modifica">
-                          <Pencil className="h-4 w-4" />
-                        </button>
+                        <button
+  onClick={() => {
+    if (v.pratica_id) {
+      router.push(`/pratiche/${v.pratica_id}`);
+      return;
+    }
+
+    modifica(v);
+  }}
+  title="Apri pratica"
+>
+  <Pencil className="h-4 w-4" />
+</button>
 
                         <button onClick={() => elimina(v.id)} title="Elimina">
                           <Trash2 className="h-4 w-4 text-red-600" />
