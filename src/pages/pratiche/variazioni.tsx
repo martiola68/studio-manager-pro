@@ -4,8 +4,7 @@ import Head from "next/head";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { Plus, Pencil, Trash2, RefreshCw } from "lucide-react";
 
-const FORM_INIZIA
-  LE = {
+const FORM_INIZIALE = {
   cliente_id: "",
   tipo_variazione: "",
   ente_principale: "CCIAA",
