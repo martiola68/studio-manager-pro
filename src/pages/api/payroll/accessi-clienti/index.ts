@@ -9,11 +9,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const supabase = getSupabaseAdmin();
 
-    const { data: clienti, error: clientiError } = await supabase
-      .from("tbclienti")
-      .select("id, studio_id, ragione_sociale, email, pec, utente_payroll_id, attivo")
-      .eq("attivo", true)
-      .order("ragione_sociale", { ascending: true });
+   const { data: clienti, error: clientiError } = await supabase
+  .from("tbclienti")
+  .select(`
+    id,
+    studio_id,
+    ragione_sociale,
+    email,
+    pec,
+    utente_payroll_id,
+    attivo,
+    settore_lavoro
+  `)
+  .eq("attivo", true)
+  .eq("settore_lavoro", true)
+  .order("ragione_sociale", { ascending: true });
 
     if (clientiError) {
       return res.status(500).json({ error: clientiError.message });
