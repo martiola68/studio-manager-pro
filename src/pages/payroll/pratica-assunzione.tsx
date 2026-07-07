@@ -229,8 +229,7 @@ async function toggleAccesso(accesso: Accesso) {
           <strong>Password appena generata:</strong>{" "}
           <span className="font-mono text-base">{passwordGenerata}</span>
           <div className="mt-1">
-            La password non viene salvata in chiaro. Dopo aver cambiato pagina
-            non sarà più visibile.
+            La password è salvata in forma cifrata e potrà essere recuperata solo dalle funzioni interne autorizzate.
           </div>
         </div>
       )}
