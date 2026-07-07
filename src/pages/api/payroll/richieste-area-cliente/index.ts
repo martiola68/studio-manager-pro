@@ -58,21 +58,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         )
       `);
 
-    if (richiestaId) {
-      const { data, error } = await query.eq("id", richiestaId).single();
+  if (richiestaId) {
+  const { data, error } = await query.eq("id", richiestaId).single();
 
-      if (error) {
-        return res.status(404).json({
-          success: false,
-          error: "Richiesta non trovata",
-        });
-      }
+  if (error) {
+    return res.status(404).json({
+      success: false,
+      error: "Richiesta non trovata",
+    });
+  }
 
-      return res.status(200).json({
-        success: true,
-        richiesta: data,
-      });
-    }
+  const { data: allegati, error: allegatiError } = await supabase
+    .from("tbassunzioni_allegati")
+    .select(`
+      id,
+      tipo_documento,
+      file_name,
+      file_path,
+      storage_bucket,
+      uploaded_at
+    `)
+    .eq("richiesta_id", richiestaId)
+    .order("uploaded_at", { ascending: true });
+
+  if (allegatiError) {
+    return res.status(500).json({
+      success: false,
+      error: allegatiError.message,
+    });
+  }
+
+  return res.status(200).json({
+    success: true,
+    richiesta: data,
+    allegati: allegati || [],
+  });
+}
 
     const { data, error } = await query.order("submitted_at", {
       ascending: false,
