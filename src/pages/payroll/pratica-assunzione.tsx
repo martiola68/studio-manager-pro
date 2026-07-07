@@ -126,6 +126,87 @@ export default function PraticaAssunzionePage() {
     }
   }
 
+  async function reimpostaPassword(accesso: Accesso) {
+  const conferma = window.confirm(
+    "Vuoi reimpostare la password di accesso per questo cliente?"
+  );
+
+  if (!conferma) return;
+
+  setAzioneId(accesso.cliente_id);
+  setPasswordGenerata(null);
+
+  try {
+    const res = await fetch("/api/payroll/accessi-clienti/reimposta-password", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        accesso_id: accesso.id,
+      }),
+    });
+
+    const json = await res.json();
+
+    if (!res.ok) {
+      throw new Error(json.error || "Errore reimpostazione password");
+    }
+
+    setPasswordGenerata(json.password_generata || null);
+    await caricaDati();
+
+    alert(
+      `Password reimpostata.\n\nNuova password: ${
+        json.password_generata || "non disponibile"
+      }\n\nConservala solo per invio credenziali.`
+    );
+  } catch (error: any) {
+    alert(error.message || "Errore reimpostazione password");
+  } finally {
+    setAzioneId(null);
+  }
+}
+
+async function toggleAccesso(accesso: Accesso) {
+  const nuovoStato = !accesso.attivo;
+
+  const conferma = window.confirm(
+    nuovoStato
+      ? "Vuoi riattivare l'accesso cliente?"
+      : "Vuoi disattivare l'accesso cliente?"
+  );
+
+  if (!conferma) return;
+
+  setAzioneId(accesso.cliente_id);
+
+  try {
+    const res = await fetch("/api/payroll/accessi-clienti/toggle", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        accesso_id: accesso.id,
+        attivo: nuovoStato,
+      }),
+    });
+
+    const json = await res.json();
+
+    if (!res.ok) {
+      throw new Error(json.error || "Errore aggiornamento accesso");
+    }
+
+    await caricaDati();
+  } catch (error: any) {
+    alert(error.message || "Errore aggiornamento accesso");
+  } finally {
+    setAzioneId(null);
+  }
+}
+
   return (
     <div className="mx-auto max-w-7xl px-6 py-8">
       <div className="mb-6 rounded-xl border bg-white p-6 shadow-sm">
@@ -267,24 +348,47 @@ export default function PraticaAssunzionePage() {
                         ) : (
                           <>
                             <button
-                              type="button"
-                              disabled
-                              className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs text-gray-400"
-                              title="Prossimo step"
-                            >
-                              <RefreshCw className="h-4 w-4" />
-                              Reimposta
-                            </button>
+  type="button"
+  disabled={busy}
+  onClick={() => reimpostaPassword(accesso)}
+  className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs hover:bg-gray-50 disabled:opacity-50"
+>
+  <RefreshCw className="h-4 w-4" />
+  Reimposta
+</button>
 
-                            <button
-                              type="button"
-                              disabled
-                              className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs text-gray-400"
-                              title="Prossimo step"
-                            >
-                              <Send className="h-4 w-4" />
-                              Invia credenziali
-                            </button>
+<button
+  type="button"
+  disabled={busy}
+  onClick={() => toggleAccesso(accesso)}
+  className={
+    accesso.attivo
+      ? "inline-flex items-center gap-2 rounded-md border border-red-300 px-3 py-2 text-xs text-red-700 hover:bg-red-50 disabled:opacity-50"
+      : "inline-flex items-center gap-2 rounded-md border border-green-300 px-3 py-2 text-xs text-green-700 hover:bg-green-50 disabled:opacity-50"
+  }
+>
+  {accesso.attivo ? (
+    <>
+      <ShieldOff className="h-4 w-4" />
+      Disattiva
+    </>
+  ) : (
+    <>
+      <ShieldCheck className="h-4 w-4" />
+      Riattiva
+    </>
+  )}
+</button>
+
+<button
+  type="button"
+  disabled
+  className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs text-gray-400"
+  title="Prossimo step"
+>
+  <Send className="h-4 w-4" />
+  Invia credenziali
+</button>
                           </>
                         )}
                       </div>
