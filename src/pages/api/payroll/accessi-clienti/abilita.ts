@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { criptaPassword } from "@/lib/accessiClientiCrypto";
 
 function generaPassword() {
   return crypto.randomBytes(6).toString("base64").replace(/[^a-zA-Z0-9]/g, "").slice(0, 10);
@@ -37,6 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const password = generaPassword();
     const password_hash = await bcrypt.hash(password, 10);
+const password_criptata = criptaPassword(password);
 
     const { data, error } = await supabase
       .from("tbclienti_accessi_pubblici")
@@ -46,6 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           cliente_id,
           email_accesso,
           password_hash,
+           password_criptata,
           attivo: true,
           data_attivazione: new Date().toISOString(),
           updated_at: new Date().toISOString(),
