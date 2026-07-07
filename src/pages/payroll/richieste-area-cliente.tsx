@@ -61,6 +61,32 @@ export default function RichiesteAreaClientePage() {
     return new Date(value).toLocaleDateString("it-IT");
   }
 
+  async function apriDocumento(allegato: any) {
+  try {
+    const res = await fetch("/api/payroll/richieste-area-cliente", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        azione: "signed_url",
+        file_path: allegato.file_path,
+        storage_bucket: allegato.storage_bucket,
+      }),
+    });
+
+    const json = await res.json();
+
+    if (!res.ok || !json.success) {
+      throw new Error(json.error || "Errore apertura documento");
+    }
+
+    window.open(json.signedUrl, "_blank");
+  } catch (error: any) {
+    alert(error.message || "Errore apertura documento");
+  }
+}
+
   return (
     <div style={{ padding: 28 }}>
       <h1 style={{ marginTop: 0 }}>Richieste Area Cliente</h1>
@@ -148,10 +174,11 @@ export default function RichiesteAreaClientePage() {
             </Section>
 
             <Section title="Documenti allegati">
-  <DocumentoRow
-    label="Documento identità - fronte"
-    allegato={trovaAllegato(selected, "documento_fronte")}
-  />
+<DocumentoRow
+  label="Documento identità - fronte"
+  allegato={trovaAllegato(selected, "documento_fronte")}
+  onApri={apriDocumento}
+/>
   <DocumentoRow
     label="Documento identità - retro"
     allegato={trovaAllegato(selected, "documento_retro")}
@@ -223,10 +250,12 @@ function DocumentoRow({
   label,
   allegato,
   nonRichiesto,
+  onApri,
 }: {
   label: string;
   allegato?: any;
   nonRichiesto?: boolean;
+  onApri?: (allegato: any) => void;
 }) {
   return (
     <div>
@@ -237,13 +266,27 @@ function DocumentoRow({
       {nonRichiesto ? (
         <div style={{ fontWeight: 700, color: "#6b7280" }}>Non richiesto</div>
       ) : allegato ? (
-        <div style={{ fontWeight: 700, color: "#16a34a" }}>
-          ✅ {allegato.file_name}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontWeight: 700, color: "#16a34a" }}>
+            ✅ {allegato.file_name}
+          </span>
+          <button
+            type="button"
+            onClick={() => onApri?.(allegato)}
+            style={{
+              border: "1px solid #d1d5db",
+              background: "#fff",
+              borderRadius: 8,
+              padding: "5px 9px",
+              cursor: "pointer",
+              fontWeight: 700,
+            }}
+          >
+            Apri
+          </button>
         </div>
       ) : (
-        <div style={{ fontWeight: 700, color: "#dc2626" }}>
-          Mancante
-        </div>
+        <div style={{ fontWeight: 700, color: "#dc2626" }}>Mancante</div>
       )}
     </div>
   );
