@@ -532,9 +532,15 @@ void loadEventiImminenti();
 },
 
 {
-  label: "Pratica assunzione",
+  label: "Pratiche Assunzioni",
   href: "/payroll/pratica-assunzione",
   icon: <FileText className="h-4 w-4" />,
+},
+
+{
+  label: "Richieste Area Cliente",
+  href: "/payroll/richieste-area-cliente",
+  icon: <Inbox className="h-4 w-4" />,
 },
 
 { label: "Dipendenti", href: "/payroll/dipendenti", icon: <Users className="h-4 w-4" /> },
