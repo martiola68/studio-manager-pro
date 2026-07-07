@@ -20,15 +20,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data: accesso, error } = await supabase
       .from("tbclienti_accessi_pubblici")
       .select(`
-        id,
-        cliente_id,
-        email_accesso,
-        password_criptata,
-        attivo,
-        tbclienti (
-          ragione_sociale
-        )
-      `)
+  id,
+  studio_id,
+  cliente_id,
+  email_accesso,
+  password_criptata,
+  attivo,
+  tbclienti (
+    ragione_sociale,
+    studio_id,
+    utente_payroll_id
+  )
+`)
       .eq("id", accesso_id)
       .single();
 
@@ -119,23 +122,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       </div>
     `;
 
-    const senderUserId = process.env.MICROSOFT_SENDER_USER_ID;
-    const microsoftConnectionId = process.env.MICROSOFT_CONNECTION_ID;
+ const studioId = accesso.studio_id || cliente?.studio_id;
+const senderUserId = cliente?.utente_payroll_id;
 
-    if (!senderUserId || !microsoftConnectionId) {
-      return res.status(500).json({
-        error:
-          "Configurazione invio email mancante: MICROSOFT_SENDER_USER_ID o MICROSOFT_CONNECTION_ID",
-      });
-    }
+if (!studioId) {
+  return res.status(400).json({
+    error: "Studio non associato al cliente.",
+  });
+}
 
-    const result = await sendEmailServer({
-      senderUserId,
-      microsoftConnectionId,
-      to: accesso.email_accesso,
-      subject,
-      html,
-    });
+if (!senderUserId) {
+  return res.status(400).json({
+    error: "Operatore payroll non associato al cliente.",
+  });
+}
+
+const { data: studio, error: studioError } = await supabase
+  .from("tbstudio")
+  .select("microsoft_connection_id")
+  .eq("id", studioId)
+  .maybeSingle();
+
+if (studioError || !studio?.microsoft_connection_id) {
+  return res.status(400).json({
+    error: "Connessione Microsoft dello studio non configurata.",
+  });
+}
+
+const result = await sendEmailServer({
+  senderUserId,
+  microsoftConnectionId: studio.microsoft_connection_id,
+  to: accesso.email_accesso,
+  subject,
+  html,
+});
 
     if (!result.success) {
       return res.status(500).json({
