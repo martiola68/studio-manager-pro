@@ -256,7 +256,7 @@ async function toggleAccesso(accesso: Accesso) {
 }
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-8">
+   <div className="mx-auto max-w-[1600px] px-6 py-8">
       <div className="mb-6 rounded-xl border bg-white p-6 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="rounded-lg bg-blue-100 p-3 text-blue-700">
