@@ -91,11 +91,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   }
 
-  return res.status(200).json({
-    success: true,
-    richieste: data || [],
-  });
-}
+ return res.status(200).json({
+  success: true,
+  cliente: {
+    id: sessione.cliente_id,
+    ragione_sociale: sessione.ragione_sociale || null,
+  },
+  richieste: data || [],
+});
 
     const body = req.body || {};
 
