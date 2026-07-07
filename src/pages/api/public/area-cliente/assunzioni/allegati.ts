@@ -18,6 +18,22 @@ function sanitizeFileName(fileName: string) {
     .toLowerCase();
 }
 
+function nomeDocumentoStandard(tipo: string, originalName: string) {
+  const ext = originalName.includes(".")
+    ? originalName.substring(originalName.lastIndexOf(".")).toLowerCase()
+    : "";
+
+  const nomi: Record<string, string> = {
+    documento_fronte: "CI_FRONTE",
+    documento_retro: "CI_RETRO",
+    codice_fiscale: "CF_TESSERA_SANITARIA",
+    permesso_soggiorno: "PERMESSO_SOGGIORNO",
+    curriculum: "CURRICULUM",
+  };
+
+  return `${nomi[tipo] || "DOCUMENTO"}${ext}`;
+}
+
 function verificaToken(token: string) {
   const secret = process.env.ACCESSI_CLIENTI_SECRET;
   if (!secret) throw new Error("ACCESSI_CLIENTI_SECRET mancante");
@@ -195,7 +211,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
       }
 
-      const safeFileName = sanitizeFileName(file_name);
+      const safeFileName = sanitizeFileName(
+  nomeDocumentoStandard(tipo_documento, file_name)
+);
       const filePath = `${sessione.studio_id}/${sessione.cliente_id}/${richiesta_id}/${tipo_documento}-${Date.now()}-${safeFileName}`;
 
       const { data, error } = await supabase.storage
@@ -222,7 +240,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const {
         richiesta_id,
         tipo_documento,
-        file_name,
+       file_name: nomeDocumentoStandard(tipo_documento, file_name),
         file_path,
         mime_type,
         size_bytes,
