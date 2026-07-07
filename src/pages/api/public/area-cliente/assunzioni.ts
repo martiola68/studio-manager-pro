@@ -5,7 +5,7 @@ import { sendEmailServer } from "@/services/sendEmailServer";
 
 function setCors(res: NextApiResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 }
 
@@ -47,13 +47,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).end();
   }
 
-  if (req.method !== "POST") {
-    return res.status(405).json({
-      success: false,
-      error: "Metodo non consentito",
-    });
-  }
-
+ if (req.method !== "GET" && req.method !== "POST") {
+  return res.status(405).json({
+    success: false,
+    error: "Metodo non consentito",
+  });
+}
+  
   try {
     const auth = req.headers.authorization || "";
     const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
@@ -67,6 +67,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const sessione = verificaToken(token);
     const supabase = getSupabaseAdmin();
+
+    if (req.method === "GET") {
+  const { data, error } = await supabase
+    .from("tbassunzioni_richieste")
+    .select(`
+      id,
+      submitted_at,
+      created_at,
+      cognome_nome,
+      codice_fiscale,
+      decorrenza_assunzione,
+      tipologia_contratto,
+      stato
+    `)
+    .eq("cliente_id", sessione.cliente_id)
+    .order("submitted_at", { ascending: false });
+
+  if (error) {
+    return res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+
+  return res.status(200).json({
+    success: true,
+    richieste: data || [],
+  });
+}
 
     const body = req.body || {};
 
