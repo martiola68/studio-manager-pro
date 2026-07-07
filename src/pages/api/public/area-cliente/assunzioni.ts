@@ -73,6 +73,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .from("tbassunzioni_richieste")
     .select(`
       id,
+      numero_richiesta,
       submitted_at,
       created_at,
       cognome_nome,
@@ -91,7 +92,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   }
 
- return res.status(200).json({
+return res.status(200).json({
   success: true,
   cliente: {
     id: sessione.cliente_id,
@@ -99,14 +100,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   },
   richieste: data || [],
 });
+}
 
-    const body = req.body || {};
+const body = req.body || {};
+
+      const anno = new Date().getFullYear();
+
+const { count, error: countError } = await supabase
+  .from("tbassunzioni_richieste")
+  .select("id", { count: "exact", head: true })
+  .gte("submitted_at", `${anno}-01-01`)
+  .lt("submitted_at", `${anno + 1}-01-01`);
+
+if (countError) {
+  return res.status(500).json({
+    success: false,
+    error: countError.message,
+  });
+}
+
+const numeroRichiesta = `ASS-${anno}-${String((count || 0) + 1).padStart(5, "0")}`;
 
     const insertPayload = {
       studio_id: sessione.studio_id,
       cliente_id: sessione.cliente_id,
       stato: "inviata",
-
+      numero_richiesta: numeroRichiesta,
       azienda: sessione.ragione_sociale || body.azienda || null,
       cognome_nome: body.cognome_nome,
       luogo_nascita: body.luogo_nascita,
@@ -143,7 +162,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data, error } = await supabase
       .from("tbassunzioni_richieste")
       .insert(insertPayload)
-      .select("id")
+      .select("id, numero_richiesta")
       .single();
 
     if (error) {
@@ -172,10 +191,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         senderUserId: operatore.id,
         microsoftConnectionId: operatore.microsoft_connection_id,
         to: operatore.email,
-        subject: "Nuova richiesta assunzione",
+        subject: `Nuova richiesta assunzione ${data.numero_richiesta}`,
         html: `
           <div style="font-family: Arial, sans-serif; font-size: 14px; color: #111827;">
             <h2>Nuova richiesta assunzione</h2>
+
+            <p><strong>Numero richiesta:</strong> ${data.numero_richiesta || "-"}</p>
 
             <p>È stata inviata una nuova richiesta di assunzione dall'area cliente.</p>
 
@@ -204,10 +225,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   console.error("Errore invio email nuova richiesta assunzione:", emailError);
 }
 
-    return res.status(200).json({
-      success: true,
-      richiesta_id: data.id,
-    });
+  return res.status(200).json({
+  success: true,
+  richiesta_id: data.id,
+  numero_richiesta: data.numero_richiesta,
+});
   } catch (error: any) {
     return res.status(500).json({
       success: false,
