@@ -540,7 +540,7 @@ void loadEventiImminenti();
 {
   label: "Richieste Area Cliente",
   href: "/payroll/richieste-area-cliente",
-  icon: <Inbox className="h-4 w-4" />,
+  icon: <FileText className="h-4 w-4" />,
 },
 
 { label: "Dipendenti", href: "/payroll/dipendenti", icon: <Users className="h-4 w-4" /> },
