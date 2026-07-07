@@ -38,6 +38,9 @@ export default function PraticaAssunzionePage() {
   const [search, setSearch] = useState("");
   const [passwordGenerata, setPasswordGenerata] = useState<string | null>(null);
 
+  const [clienteDaAbilitare, setClienteDaAbilitare] = useState<Cliente | null>(null);
+const [emailAccessoModal, setEmailAccessoModal] = useState("");
+
   async function caricaDati() {
     setLoading(true);
     try {
@@ -81,50 +84,61 @@ export default function PraticaAssunzionePage() {
     });
   }, [clienti, search]);
 
-  async function abilitaAccesso(cliente: Cliente) {
-    const emailDefault = cliente.email || cliente.pec || "";
-    const emailAccesso = window.prompt(
-      "Email accesso cliente:",
-      emailDefault
-    );
+function apriModaleAbilita(cliente: Cliente) {
+  setClienteDaAbilitare(cliente);
+  setEmailAccessoModal(cliente.email || cliente.pec || "");
+  setPasswordGenerata(null);
+}
 
-    if (!emailAccesso) return;
+function chiudiModaleAbilita() {
+  setClienteDaAbilitare(null);
+  setEmailAccessoModal("");
+}
 
-    setAzioneId(cliente.id);
-    setPasswordGenerata(null);
+async function confermaAbilitaAccesso() {
+  if (!clienteDaAbilitare) return;
 
-    try {
-      const res = await fetch("/api/payroll/accessi-clienti/abilita", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          cliente_id: cliente.id,
-          email_accesso: emailAccesso,
-        }),
-      });
-
-      const json = await res.json();
-
-      if (!res.ok) {
-        throw new Error(json.error || "Errore abilitazione accesso");
-      }
-
-      setPasswordGenerata(json.password_generata || null);
-      await caricaDati();
-
-      alert(
-        `Accesso abilitato.\n\nPassword generata: ${
-          json.password_generata || "non disponibile"
-        }\n\nConservala solo per invio credenziali.`
-      );
-    } catch (error: any) {
-      alert(error.message || "Errore abilitazione accesso");
-    } finally {
-      setAzioneId(null);
-    }
+  if (!emailAccessoModal.trim()) {
+    alert("Inserire email di accesso.");
+    return;
   }
+
+  setAzioneId(clienteDaAbilitare.id);
+  setPasswordGenerata(null);
+
+  try {
+    const res = await fetch("/api/payroll/accessi-clienti/abilita", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        cliente_id: clienteDaAbilitare.id,
+        email_accesso: emailAccessoModal.trim(),
+      }),
+    });
+
+    const json = await res.json();
+
+    if (!res.ok) {
+      throw new Error(json.error || "Errore abilitazione accesso");
+    }
+
+    setPasswordGenerata(json.password_generata || null);
+    await caricaDati();
+    chiudiModaleAbilita();
+
+    alert(
+      `Accesso abilitato.\n\nPassword generata: ${
+        json.password_generata || "non disponibile"
+      }`
+    );
+  } catch (error: any) {
+    alert(error.message || "Errore abilitazione accesso");
+  } finally {
+    setAzioneId(null);
+  }
+}
 
   async function reimpostaPassword(accesso: Accesso) {
   const conferma = window.confirm(
@@ -372,7 +386,7 @@ async function toggleAccesso(accesso: Accesso) {
                           <button
                             type="button"
                             disabled={busy}
-                            onClick={() => abilitaAccesso(cliente)}
+                            onClick={() => apriModaleAbilita(cliente)}
                             className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-3 py-2 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
                           >
                             <KeyRound className="h-4 w-4" />
@@ -433,6 +447,67 @@ async function toggleAccesso(accesso: Accesso) {
           </tbody>
         </table>
       </div>
+      {clienteDaAbilitare && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+    <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
+      <h2 className="mb-2 text-xl font-bold">
+        Abilita accesso area richieste
+      </h2>
+
+      <p className="mb-6 text-sm text-gray-600">
+        Imposta l’email che il cliente userà per accedere alla pagina pubblica
+        delle richieste di assunzione.
+      </p>
+
+      <div className="mb-4">
+        <label className="mb-1 block text-sm font-semibold">Cliente</label>
+        <div className="rounded-md border bg-gray-50 px-3 py-2 text-sm">
+          {clienteDaAbilitare.ragione_sociale || "-"}
+        </div>
+      </div>
+
+      <div className="mb-6">
+        <label className="mb-1 block text-sm font-semibold">
+          Email accesso
+        </label>
+        <input
+          type="email"
+          value={emailAccessoModal}
+          onChange={(e) => setEmailAccessoModal(e.target.value)}
+          placeholder="email@cliente.it"
+          className="w-full rounded-md border px-3 py-2 text-sm"
+        />
+        <p className="mt-1 text-xs text-gray-500">
+          Puoi usare un indirizzo diverso da quello presente in anagrafica.
+        </p>
+      </div>
+
+      <div className="mb-6 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+        La password verrà generata automaticamente e potrà essere inviata al
+        cliente tramite il pulsante “Invia credenziali”.
+      </div>
+
+      <div className="flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={chiudiModaleAbilita}
+          className="rounded-md border px-4 py-2 text-sm hover:bg-gray-50"
+        >
+          Annulla
+        </button>
+
+        <button
+          type="button"
+          disabled={azioneId === clienteDaAbilitare.id}
+          onClick={confermaAbilitaAccesso}
+          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+        >
+          Abilita accesso
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }
