@@ -27,6 +27,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const supabase = getSupabaseAdmin();
 
     const password = generaPassword();
+    const password_hash = await bcrypt.hash(password, 10);
     const password_criptata = criptaPassword(password);
 
     const { data, error } = await supabase
