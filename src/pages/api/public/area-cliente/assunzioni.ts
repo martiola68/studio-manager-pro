@@ -68,22 +68,70 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const sessione = verificaToken(token);
     const supabase = getSupabaseAdmin();
 
-    if (req.method === "GET") {
-  const { data, error } = await supabase
+  if (req.method === "GET") {
+  const richiestaId =
+    typeof req.query.id === "string" ? req.query.id : null;
+
+  let query = supabase
     .from("tbassunzioni_richieste")
     .select(`
       id,
       numero_richiesta,
       submitted_at,
       created_at,
+      azienda,
       cognome_nome,
+      luogo_nascita,
+      data_nascita,
+      cittadinanza,
+      extra_ue,
       codice_fiscale,
+      indirizzo_residenza,
+      indirizzo_domicilio,
+      telefono,
+      email,
+      stato_civile,
+      iban,
+      percettore_naspi,
+      data_iscrizione_naspi,
       decorrenza_assunzione,
+      sede_lavoro,
       tipologia_contratto,
+      durata,
+      mansione,
+      livello,
+      orario_lavoro,
+      distribuzione_oraria,
+      retribuzione,
+      centro_costo,
+      note_cliente,
       stato
     `)
-    .eq("cliente_id", sessione.cliente_id)
-    .order("submitted_at", { ascending: false });
+    .eq("cliente_id", sessione.cliente_id);
+
+  if (richiestaId) {
+    const { data, error } = await query.eq("id", richiestaId).single();
+
+    if (error) {
+      return res.status(404).json({
+        success: false,
+        error: "Richiesta non trovata",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      cliente: {
+        id: sessione.cliente_id,
+        ragione_sociale: sessione.ragione_sociale || null,
+      },
+      richiesta: data,
+    });
+  }
+
+  const { data, error } = await query.order("submitted_at", {
+    ascending: false,
+  });
 
   if (error) {
     return res.status(500).json({
@@ -92,14 +140,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   }
 
-return res.status(200).json({
-  success: true,
-  cliente: {
-    id: sessione.cliente_id,
-    ragione_sociale: sessione.ragione_sociale || null,
-  },
-  richieste: data || [],
-});
+  return res.status(200).json({
+    success: true,
+    cliente: {
+      id: sessione.cliente_id,
+      ragione_sociale: sessione.ragione_sociale || null,
+    },
+    richieste: data || [],
+  });
 }
 
 const body = req.body || {};
