@@ -240,11 +240,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const {
         richiesta_id,
         tipo_documento,
-       file_name: nomeDocumentoStandard(tipo_documento, file_name),
+       file_name,
         file_path,
         mime_type,
         size_bytes,
       } = req.body || {};
+      
+      const fileNameStandard = nomeDocumentoStandard(
+  tipo_documento,
+  file_name
+);
 
       if (!richiesta_id || !tipo_documento || !file_name || !file_path) {
         return res.status(400).json({
@@ -275,18 +280,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const { error: insertError } = await supabase
         .from("tbassunzioni_allegati")
-        .insert({
-          richiesta_id,
-          studio_id: sessione.studio_id,
-          cliente_id: sessione.cliente_id,
-          tipo_documento,
-          file_name,
-          file_path,
-          storage_bucket: BUCKET,
-          mime_type: mime_type || null,
-          size_bytes: size_bytes || null,
-        });
-
+       .insert({
+  richiesta_id,
+  studio_id: sessione.studio_id,
+  cliente_id: sessione.cliente_id,
+  tipo_documento,
+  file_name: fileNameStandard,
+  file_path,
+  storage_bucket: BUCKET,
+  mime_type: mime_type || null,
+  size_bytes: size_bytes || null,
+});
       if (insertError) {
         return res.status(500).json({
           success: false,
