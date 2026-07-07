@@ -1,7 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import crypto from "crypto";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { sendEmailServer } from "@/services/sendEmailServer";
 
 function setCors(res: NextApiResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -172,7 +171,7 @@ const numeroRichiesta = `ASS-${anno}-${String((count || 0) + 1).padStart(5, "0")
     const insertPayload = {
       studio_id: sessione.studio_id,
       cliente_id: sessione.cliente_id,
-      stato: "inviata",
+      stato: "bozza_documenti",
       numero_richiesta: numeroRichiesta,
       azienda: sessione.ragione_sociale || body.azienda || null,
       cognome_nome: body.cognome_nome,
@@ -219,59 +218,6 @@ const numeroRichiesta = `ASS-${anno}-${String((count || 0) + 1).padStart(5, "0")
         error: error.message,
       });
     }
-
-    try {
-  const { data: cliente } = await supabase
-    .from("tbclienti")
-    .select("id, ragione_sociale, utente_payroll_id")
-    .eq("id", sessione.cliente_id)
-    .single();
-
-  if (cliente?.utente_payroll_id) {
-    const { data: operatore } = await supabase
-      .from("tbutenti")
-      .select("id, nome, cognome, email, microsoft_connection_id")
-      .eq("id", cliente.utente_payroll_id)
-      .single();
-
-    if (operatore?.email && operatore?.microsoft_connection_id) {
-      await sendEmailServer({
-        senderUserId: operatore.id,
-        microsoftConnectionId: operatore.microsoft_connection_id,
-        to: operatore.email,
-        subject: `Nuova richiesta assunzione ${data.numero_richiesta}`,
-        html: `
-          <div style="font-family: Arial, sans-serif; font-size: 14px; color: #111827;">
-            <h2>Nuova richiesta assunzione</h2>
-
-            <p><strong>Numero richiesta:</strong> ${data.numero_richiesta || "-"}</p>
-
-            <p>È stata inviata una nuova richiesta di assunzione dall'area cliente.</p>
-
-            <p><strong>Cliente:</strong> ${cliente.ragione_sociale || "-"}</p>
-            <p><strong>Lavoratore:</strong> ${body.cognome_nome || "-"}</p>
-            <p><strong>Codice fiscale:</strong> ${body.codice_fiscale || "-"}</p>
-            <p><strong>Decorrenza:</strong> ${body.decorrenza_assunzione || "-"}</p>
-            <p><strong>Tipologia contratto:</strong> ${body.tipologia_contratto || "-"}</p>
-            <p><strong>Mansione:</strong> ${body.mansione || "-"}</p>
-
-            <hr />
-
-            <p>
-              Accedi a Studio Manager Pro per visualizzare e prendere in carico la richiesta.
-            </p>
-          </div>
-        `,
-      });
-    } else {
-      console.warn("Email operatore Payroll non inviata: email o microsoft_connection_id mancanti");
-    }
-  } else {
-    console.warn("Email operatore Payroll non inviata: utente_payroll_id mancante sul cliente");
-  }
-} catch (emailError) {
-  console.error("Errore invio email nuova richiesta assunzione:", emailError);
-}
 
   return res.status(200).json({
   success: true,
