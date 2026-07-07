@@ -207,6 +207,40 @@ async function toggleAccesso(accesso: Accesso) {
   }
 }
 
+  async function inviaCredenziali(accesso: Accesso) {
+  const conferma = window.confirm(
+    `Vuoi inviare le credenziali a ${accesso.email_accesso}?`
+  );
+
+  if (!conferma) return;
+
+  setAzioneId(accesso.cliente_id);
+
+  try {
+    const res = await fetch("/api/payroll/accessi-clienti/invia-credenziali", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        accesso_id: accesso.id,
+      }),
+    });
+
+    const json = await res.json();
+
+    if (!res.ok) {
+      throw new Error(json.error || "Errore invio credenziali");
+    }
+
+    alert("Credenziali inviate correttamente.");
+  } catch (error: any) {
+    alert(error.message || "Errore invio credenziali");
+  } finally {
+    setAzioneId(null);
+  }
+}
+
   return (
     <div className="mx-auto max-w-7xl px-6 py-8">
       <div className="mb-6 rounded-xl border bg-white p-6 shadow-sm">
@@ -381,9 +415,9 @@ async function toggleAccesso(accesso: Accesso) {
 
 <button
   type="button"
-  disabled
-  className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs text-gray-400"
-  title="Prossimo step"
+  disabled={busy || !accesso.attivo}
+  onClick={() => inviaCredenziali(accesso)}
+  className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs hover:bg-gray-50 disabled:opacity-50"
 >
   <Send className="h-4 w-4" />
   Invia credenziali
