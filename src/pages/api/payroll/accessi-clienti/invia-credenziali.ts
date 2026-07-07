@@ -62,7 +62,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       process.env.NEXT_PUBLIC_SITE_URL ||
       "https://studio-manager-pro.vercel.app";
 
-    const linkAccesso = `${baseUrl}/public/richieste-cliente/login`;
+    const linkAccesso = "https://studio-manager-public.vercel.app/area-cliente/login";
 
     const cliente: any = Array.isArray(accesso.tbclienti)
       ? accesso.tbclienti[0]
