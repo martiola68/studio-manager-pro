@@ -1,15 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import crypto from "crypto";
-import formidable from "formidable";
-import fs from "fs";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendEmailServer } from "@/services/sendEmailServer";
-
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
 
 const BUCKET = "assunzioni-allegati";
 
@@ -17,6 +9,13 @@ function setCors(res: NextApiResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+}
+
+function sanitizeFileName(fileName: string) {
+  return fileName
+    .replace(/\s+/g, "_")
+    .replace(/[^a-zA-Z0-9._-]/g, "")
+    .toLowerCase();
 }
 
 function verificaToken(token: string) {
@@ -34,30 +33,19 @@ function verificaToken(token: string) {
   if (signature !== expected) throw new Error("Token non valido");
 
   const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8"));
-  if (!payload.exp || Date.now() > payload.exp) throw new Error("Sessione scaduta");
+  if (!payload.exp || Date.now() > payload.exp) {
+    throw new Error("Sessione scaduta");
+  }
 
   return payload;
-}
-
-function parseForm(req: NextApiRequest): Promise<{ fields: formidable.Fields; files: formidable.Files }> {
-  const form = formidable({ multiples: false, keepExtensions: true });
-
-  return new Promise((resolve, reject) => {
-    form.parse(req, (err, fields, files) => {
-      if (err) reject(err);
-      else resolve({ fields, files });
-    });
-  });
-}
-
-function fieldValue(value: any) {
-  return Array.isArray(value) ? value[0] : value;
 }
 
 function richiestiPer(richiesta: any) {
   const richiesti = ["documento_fronte", "documento_retro", "codice_fiscale"];
 
-  if (richiesta.extra_ue) richiesti.push("permesso_soggiorno");
+  if (richiesta.extra_ue) {
+    richiesti.push("permesso_soggiorno");
+  }
 
   if (
     richiesta.tipologia_contratto === "stage" ||
@@ -108,10 +96,15 @@ async function inviaEmailOperatore(supabase: any, richiesta: any) {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   setCors(res);
 
-  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
 
   if (req.method !== "GET" && req.method !== "POST") {
-    return res.status(405).json({ success: false, error: "Metodo non consentito" });
+    return res.status(405).json({
+      success: false,
+      error: "Metodo non consentito",
+    });
   }
 
   try {
@@ -119,14 +112,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
 
     if (!token) {
-      return res.status(401).json({ success: false, error: "Sessione cliente mancante" });
+      return res.status(401).json({
+        success: false,
+        error: "Sessione cliente mancante",
+      });
     }
 
     const sessione = verificaToken(token);
     const supabase = getSupabaseAdmin();
 
     if (req.method === "GET") {
-      const richiestaId = typeof req.query.richiesta_id === "string" ? req.query.richiesta_id : "";
+      const richiestaId =
+        typeof req.query.richiesta_id === "string"
+          ? req.query.richiesta_id
+          : "";
 
       const { data: richiesta, error: richiestaError } = await supabase
         .from("tbassunzioni_richieste")
@@ -136,7 +135,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .single();
 
       if (richiestaError || !richiesta) {
-        return res.status(404).json({ success: false, error: "Richiesta non trovata" });
+        return res.status(404).json({
+          success: false,
+          error: "Richiesta non trovata",
+        });
       }
 
       const { data: allegati, error } = await supabase
@@ -146,7 +148,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .order("uploaded_at", { ascending: false });
 
       if (error) {
-        return res.status(500).json({ success: false, error: error.message });
+        return res.status(500).json({
+          success: false,
+          error: error.message,
+        });
       }
 
       const richiesti = richiestiPer(richiesta);
@@ -163,98 +168,157 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    const { fields, files } = await parseForm(req);
+    const { azione } = req.body || {};
 
-    const richiestaId = fieldValue(fields.richiesta_id);
-    const tipoDocumento = fieldValue(fields.tipo_documento);
-    const file = fieldValue(files.file) as formidable.File | undefined;
+    if (azione === "prepare_upload") {
+      const { richiesta_id, tipo_documento, file_name, content_type } =
+        req.body || {};
 
-    if (!richiestaId || !tipoDocumento || !file) {
-      return res.status(400).json({
-        success: false,
-        error: "Richiesta, tipo documento e file sono obbligatori",
-      });
-    }
-
-    const { data: richiesta, error: richiestaError } = await supabase
-      .from("tbassunzioni_richieste")
-      .select("*")
-      .eq("id", richiestaId)
-      .eq("cliente_id", sessione.cliente_id)
-      .single();
-
-    if (richiestaError || !richiesta) {
-      return res.status(404).json({ success: false, error: "Richiesta non trovata" });
-    }
-
-    const buffer = fs.readFileSync(file.filepath);
-    const safeName = file.originalFilename || "documento";
-    const filePath = `${sessione.studio_id}/${sessione.cliente_id}/${richiestaId}/${tipoDocumento}-${Date.now()}-${safeName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from(BUCKET)
-      .upload(filePath, buffer, {
-        contentType: file.mimetype || "application/octet-stream",
-        upsert: true,
-      });
-
-    if (uploadError) {
-      return res.status(500).json({ success: false, error: uploadError.message });
-    }
-
-    await supabase
-      .from("tbassunzioni_allegati")
-      .delete()
-      .eq("richiesta_id", richiestaId)
-      .eq("tipo_documento", tipoDocumento);
-
-    const { error: insertError } = await supabase.from("tbassunzioni_allegati").insert({
-      richiesta_id: richiestaId,
-      studio_id: sessione.studio_id,
-      cliente_id: sessione.cliente_id,
-      tipo_documento: tipoDocumento,
-      file_name: safeName,
-      file_path: filePath,
-      storage_bucket: BUCKET,
-      mime_type: file.mimetype || null,
-      size_bytes: file.size || null,
-    });
-
-    if (insertError) {
-      return res.status(500).json({ success: false, error: insertError.message });
-    }
-
-    const { data: allegati } = await supabase
-      .from("tbassunzioni_allegati")
-      .select("tipo_documento")
-      .eq("richiesta_id", richiestaId);
-
-    const richiesti = richiestiPer(richiesta);
-    const caricati = (allegati || []).map((a: any) => a.tipo_documento);
-    const mancanti = richiesti.filter((tipo) => !caricati.includes(tipo));
-    const completa = mancanti.length === 0;
-
-    if (completa && richiesta.stato === "bozza_documenti") {
-      await supabase
-        .from("tbassunzioni_richieste")
-        .update({
-          stato: "inviata",
-          submitted_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", richiestaId);
-
-      try {
-        await inviaEmailOperatore(supabase, richiesta);
-      } catch (emailError) {
-        console.error("Errore invio email operatore:", emailError);
+      if (!richiesta_id || !tipo_documento || !file_name) {
+        return res.status(400).json({
+          success: false,
+          error: "Richiesta, tipo documento e nome file sono obbligatori",
+        });
       }
+
+      const { data: richiesta, error: richiestaError } = await supabase
+        .from("tbassunzioni_richieste")
+        .select("*")
+        .eq("id", richiesta_id)
+        .eq("cliente_id", sessione.cliente_id)
+        .single();
+
+      if (richiestaError || !richiesta) {
+        return res.status(404).json({
+          success: false,
+          error: "Richiesta non trovata",
+        });
+      }
+
+      const safeFileName = sanitizeFileName(file_name);
+      const filePath = `${sessione.studio_id}/${sessione.cliente_id}/${richiesta_id}/${tipo_documento}-${Date.now()}-${safeFileName}`;
+
+      const { data, error } = await supabase.storage
+        .from(BUCKET)
+        .createSignedUploadUrl(filePath);
+
+      if (error || !data?.signedUrl) {
+        return res.status(500).json({
+          success: false,
+          error: error?.message || "Impossibile generare URL upload",
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        path: filePath,
+        signedUrl: data.signedUrl,
+        token: data.token,
+        contentType: content_type || "application/octet-stream",
+      });
     }
 
-    return res.status(200).json({
-      success: true,
-      completa,
-      mancanti,
+    if (azione === "confirm_upload") {
+      const {
+        richiesta_id,
+        tipo_documento,
+        file_name,
+        file_path,
+        mime_type,
+        size_bytes,
+      } = req.body || {};
+
+      if (!richiesta_id || !tipo_documento || !file_name || !file_path) {
+        return res.status(400).json({
+          success: false,
+          error: "Dati allegato incompleti",
+        });
+      }
+
+      const { data: richiesta, error: richiestaError } = await supabase
+        .from("tbassunzioni_richieste")
+        .select("*")
+        .eq("id", richiesta_id)
+        .eq("cliente_id", sessione.cliente_id)
+        .single();
+
+      if (richiestaError || !richiesta) {
+        return res.status(404).json({
+          success: false,
+          error: "Richiesta non trovata",
+        });
+      }
+
+      await supabase
+        .from("tbassunzioni_allegati")
+        .delete()
+        .eq("richiesta_id", richiesta_id)
+        .eq("tipo_documento", tipo_documento);
+
+      const { error: insertError } = await supabase
+        .from("tbassunzioni_allegati")
+        .insert({
+          richiesta_id,
+          studio_id: sessione.studio_id,
+          cliente_id: sessione.cliente_id,
+          tipo_documento,
+          file_name,
+          file_path,
+          storage_bucket: BUCKET,
+          mime_type: mime_type || null,
+          size_bytes: size_bytes || null,
+        });
+
+      if (insertError) {
+        return res.status(500).json({
+          success: false,
+          error: insertError.message,
+        });
+      }
+
+      const { data: allegati } = await supabase
+        .from("tbassunzioni_allegati")
+        .select("tipo_documento")
+        .eq("richiesta_id", richiesta_id);
+
+      const richiesti = richiestiPer(richiesta);
+      const caricati = (allegati || []).map((a: any) => a.tipo_documento);
+      const mancanti = richiesti.filter((tipo) => !caricati.includes(tipo));
+      const completa = mancanti.length === 0;
+
+      if (completa && richiesta.stato === "bozza_documenti") {
+        const now = new Date().toISOString();
+
+        await supabase
+          .from("tbassunzioni_richieste")
+          .update({
+            stato: "inviata",
+            submitted_at: now,
+            updated_at: now,
+          })
+          .eq("id", richiesta_id);
+
+        try {
+          await inviaEmailOperatore(supabase, {
+            ...richiesta,
+            stato: "inviata",
+            submitted_at: now,
+          });
+        } catch (emailError) {
+          console.error("Errore invio email operatore:", emailError);
+        }
+      }
+
+      return res.status(200).json({
+        success: true,
+        completa,
+        mancanti,
+      });
+    }
+
+    return res.status(400).json({
+      success: false,
+      error: "Azione non valida",
     });
   } catch (error: any) {
     return res.status(500).json({
