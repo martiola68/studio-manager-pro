@@ -42,18 +42,20 @@ export default function RichiesteAreaClientePage() {
     }
   }
 
-  async function apriDettaglio(id: string) {
-    const res = await fetch(`/api/payroll/richieste-area-cliente?id=${id}`);
-    const json = await res.json();
+ async function apriDettaglio(id: string) {
+  const res = await fetch(`/api/payroll/richieste-area-cliente?id=${id}`);
+  const json = await res.json();
 
-    if (!res.ok || !json.success) {
-      alert(json.error || "Errore apertura dettaglio");
-      return;
-    }
-
-    setSelected(json.richiesta);
+  if (!res.ok || !json.success) {
+    alert(json.error || "Errore apertura dettaglio");
+    return;
   }
 
+  setSelected({
+    ...json.richiesta,
+    allegati: json.allegati || [],
+  });
+}
   function formatDate(value?: string | null) {
     if (!value) return "-";
     return new Date(value).toLocaleDateString("it-IT");
@@ -145,6 +147,39 @@ export default function RichiesteAreaClientePage() {
               <Row label="Note cliente" value={selected.note_cliente} />
             </Section>
 
+            <Section title="Documenti allegati">
+  <DocumentoRow
+    label="Documento identità - fronte"
+    allegato={trovaAllegato(selected, "documento_fronte")}
+  />
+  <DocumentoRow
+    label="Documento identità - retro"
+    allegato={trovaAllegato(selected, "documento_retro")}
+  />
+  <DocumentoRow
+    label="Codice fiscale / tessera sanitaria"
+    allegato={trovaAllegato(selected, "codice_fiscale")}
+  />
+  <DocumentoRow
+    label="Permesso di soggiorno"
+    allegato={selected.extra_ue ? trovaAllegato(selected, "permesso_soggiorno") : null}
+    nonRichiesto={!selected.extra_ue}
+  />
+  <DocumentoRow
+    label="Curriculum vitae"
+    allegato={
+      selected.tipologia_contratto === "stage" ||
+      selected.tipologia_contratto === "apprendistato"
+        ? trovaAllegato(selected, "curriculum")
+        : null
+    }
+    nonRichiesto={
+      selected.tipologia_contratto !== "stage" &&
+      selected.tipologia_contratto !== "apprendistato"
+    }
+  />
+</Section>
+
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20 }}>
               <button>Prendi in carico</button>
               <button>Richiedi documenti</button>
@@ -174,6 +209,42 @@ function Row({ label, value }: any) {
     <div>
       <div style={{ fontSize: 12, color: "#6b7280", fontWeight: 700 }}>{label}</div>
       <div style={{ fontWeight: 700 }}>{value || "-"}</div>
+    </div>
+  );
+}
+
+function trovaAllegato(richiesta: any, tipo: string) {
+  return (richiesta.allegati || []).find(
+    (a: any) => a.tipo_documento === tipo
+  );
+}
+
+function DocumentoRow({
+  label,
+  allegato,
+  nonRichiesto,
+}: {
+  label: string;
+  allegato?: any;
+  nonRichiesto?: boolean;
+}) {
+  return (
+    <div>
+      <div style={{ fontSize: 12, color: "#6b7280", fontWeight: 700 }}>
+        {label}
+      </div>
+
+      {nonRichiesto ? (
+        <div style={{ fontWeight: 700, color: "#6b7280" }}>Non richiesto</div>
+      ) : allegato ? (
+        <div style={{ fontWeight: 700, color: "#16a34a" }}>
+          ✅ {allegato.file_name}
+        </div>
+      ) : (
+        <div style={{ fontWeight: 700, color: "#dc2626" }}>
+          Mancante
+        </div>
+      )}
     </div>
   );
 }
