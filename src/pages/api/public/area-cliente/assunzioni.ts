@@ -168,10 +168,10 @@ if (countError) {
 
 const numeroRichiesta = `ASS-${anno}-${String((count || 0) + 1).padStart(5, "0")}`;
 
-    const insertPayload = {
+   const insertPayload = {
       studio_id: sessione.studio_id,
       cliente_id: sessione.cliente_id,
-      stato: "bozza_documenti",
+      stato: "bozza",
       numero_richiesta: numeroRichiesta,
       azienda: sessione.ragione_sociale || body.azienda || null,
       cognome_nome: body.cognome_nome,
