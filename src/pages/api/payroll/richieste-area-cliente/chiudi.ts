@@ -268,11 +268,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { error: updateError } = await supabase
       .from("tbassunzioni_richieste")
-      .update({
-        stato: "conclusa",
-        closed_at: now,
-        updated_at: now,
-      })
+.update({
+  stato: "conclusa",
+  updated_at: now,
+})
       .eq("id", richiesta.id);
 
     if (updateError) {
