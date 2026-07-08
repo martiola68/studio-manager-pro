@@ -144,28 +144,7 @@ async function confermaAbilitaAccesso() {
       throw new Error(json.error || "Errore abilitazione accesso");
     }
 
-    const accessoId = json.accesso?.id;
-
-if (accessoId) {
-  const invioRes = await fetch("/api/payroll/accessi-clienti/invia-credenziali", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      accesso_id: accessoId,
-    }),
-  });
-
-  const invioJson = await invioRes.json();
-
-  if (!invioRes.ok) {
-    throw new Error(invioJson.error || "Accesso creato ma invio email non riuscito");
-  }
-}
-
-    setPasswordGenerata(json.password_generata || null);
-    await caricaDati();
+        await caricaDati();
     chiudiModaleAbilita();
 
    alert("Credenziali generate e inviate correttamente al cliente.");
@@ -203,14 +182,12 @@ if (accessoId) {
       throw new Error(json.error || "Errore reimpostazione password");
     }
 
-    setPasswordGenerata(json.password_generata || null);
+ 
     await caricaDati();
 
-    alert(
-      `Password reimpostata.\n\nNuova password: ${
-        json.password_generata || "non disponibile"
-      }\n\nConservala solo per invio credenziali.`
-    );
+  alert(
+  "Password rigenerata e nuove credenziali inviate al cliente."
+);
   } catch (error: any) {
     alert(error.message || "Errore reimpostazione password");
   } finally {
@@ -530,8 +507,7 @@ async function toggleAccesso(accesso: Accesso) {
       </div>
 
       <div className="mb-6 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
-        La password verrà generata automaticamente e potrà essere inviata al
-        cliente tramite il pulsante “Invia credenziali”.
+        La password verrà generata automaticamente e le credenziali saranno inviate immediatamente al cliente via email.
       </div>
 
       <div className="flex justify-end gap-2">
