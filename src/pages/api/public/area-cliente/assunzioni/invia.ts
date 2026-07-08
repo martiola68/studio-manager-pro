@@ -42,20 +42,45 @@ function verificaToken(token: string) {
 }
 
 function richiestiPer(richiesta: any) {
-  const richiesti = ["documento_fronte", "documento_retro", "codice_fiscale"];
+  const tutti = [
+    {
+      tipo: "documento_fronte",
+      confermato: richiesta.doc_fronte_confermato,
+    },
+    {
+      tipo: "documento_retro",
+      confermato: richiesta.doc_retro_confermato,
+    },
+    {
+      tipo: "codice_fiscale",
+      confermato: richiesta.doc_codice_fiscale_confermato,
+    },
+  ];
 
   if (richiesta.extra_ue) {
-    richiesti.push("permesso_soggiorno");
+    tutti.push({
+      tipo: "permesso_soggiorno",
+      confermato: richiesta.doc_permesso_soggiorno_confermato,
+    });
   }
 
   if (
     richiesta.tipologia_contratto === "stage" ||
     richiesta.tipologia_contratto === "apprendistato"
   ) {
-    richiesti.push("curriculum");
+    tutti.push({
+      tipo: "curriculum",
+      confermato: richiesta.doc_curriculum_confermato,
+    });
   }
 
-  return richiesti;
+  if (richiesta.stato === "integrazione_documenti") {
+    return tutti
+      .filter((doc) => !doc.confermato)
+      .map((doc) => doc.tipo);
+  }
+
+  return tutti.map((doc) => doc.tipo);
 }
 
 function labelDocumento(tipo: string) {
@@ -311,13 +336,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       sessione.cliente_id
     );
 
-    if (richiesta.stato !== "bozza") {
-      return res.status(400).json({
-        success: false,
-        error: "La richiesta è già stata inviata allo Studio",
-      });
-    }
-
+   if (
+  richiesta.stato !== "bozza" &&
+  richiesta.stato !== "integrazione_documenti"
+) {
+  return res.status(400).json({
+    success: false,
+    error: "La richiesta non può essere inviata in questo stato",
+  });
+}
   const richiesti = richiestiPer(richiesta);
 const attachments = buildAttachments(files, richiesti);
 
