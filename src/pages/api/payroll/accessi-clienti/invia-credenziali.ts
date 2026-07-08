@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { decriptaPassword } from "@/lib/accessiClientiCrypto";
+import { criptaPassword } from "@/lib/accessiClientiCrypto";
 import { sendEmailServer } from "@/services/sendEmailServer";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -49,18 +49,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: "Email accesso mancante" });
     }
 
-    if (!accesso.password_criptata) {
-      return res.status(400).json({
-        error: "Password non recuperabile. Reimpostare la password.",
-      });
-    }
+  function generaPasswordTemporanea() {
+  const chars =
+    "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  let password = "";
 
-    const password = decriptaPassword(accesso.password_criptata);
+  for (let i = 0; i < 10; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
 
-    const baseUrl =
-      process.env.NEXT_PUBLIC_APP_URL ||
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      "https://studio-manager-pro.vercel.app";
+  return password;
+}
+
+const password = generaPasswordTemporanea();
+const passwordCriptata = criptaPassword(password);
+
+const { error: updatePasswordError } = await supabase
+  .from("tbclienti_accessi_pubblici")
+  .update({
+    password_criptata: passwordCriptata,
+    updated_at: new Date().toISOString(),
+  })
+  .eq("id", accesso.id);
+
+if (updatePasswordError) {
+  return res.status(500).json({
+    error: "Errore durante aggiornamento password accesso.",
+  });
+}
 
     const linkAccesso = "https://studio-manager-public.vercel.app/area-cliente/login";
 
