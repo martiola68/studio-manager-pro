@@ -159,14 +159,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    const emailCliente = cliente.email || cliente.pec;
+  const { data: accessoCliente, error: accessoError } = await supabase
+  .from("tbclienti_accessi_pubblici")
+  .select("email_accesso")
+  .eq("cliente_id", richiesta.cliente_id)
+  .eq("attivo", true)
+  .maybeSingle();
 
-    if (!emailCliente) {
-      return res.status(400).json({
-        success: false,
-        error: "Cliente senza email o PEC",
-      });
-    }
+if (accessoError || !accessoCliente?.email_accesso) {
+  return res.status(400).json({
+    success: false,
+    error: "Email accesso Area Cliente non trovata.",
+  });
+}
+
+const emailCliente = accessoCliente.email_accesso;
 
     if (!cliente.utente_payroll_id) {
       return res.status(400).json({
