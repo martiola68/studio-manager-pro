@@ -27,6 +27,8 @@ const [closing, setClosing] = useState(false);
 const [testoIntegrazione, setTestoIntegrazione] = useState("");
 const [sendingIntegrazione, setSendingIntegrazione] = useState(false);
 
+  const [allegatiIntegrazione, setAllegatiIntegrazione] = useState<File[]>([]);
+
   useEffect(() => {
     caricaRichieste();
   }, []);
@@ -259,18 +261,20 @@ function stampaPdf() {
   try {
     setSendingIntegrazione(true);
 
-    const res = await fetch("/api/payroll/richieste-area-cliente", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        richiesta_id: selected.id,
-        stato: "integrazione_documenti",
-        note_integrazione: testoIntegrazione.trim(),
-      }),
-    });
+   const formData = new FormData();
+formData.append("richiesta_id", selected.id);
+formData.append("stato", "integrazione_documenti");
+formData.append("note_integrazione", testoIntegrazione.trim());
 
+allegatiIntegrazione.forEach((file) => {
+  formData.append("allegati", file);
+});
+
+const res = await fetch("/api/payroll/richieste-area-cliente/integrazione", {
+  method: "POST",
+  body: formData,
+});
+   
     const json = await res.json();
 
     if (!res.ok || !json.success) {
@@ -282,6 +286,7 @@ function stampaPdf() {
     setIntegrazioneOpen(false);
     setTestoIntegrazione("");
     setSelected(null);
+    setAllegatiIntegrazione([]);
 
     await caricaRichieste();
   } catch (error: any) {
@@ -575,6 +580,61 @@ function stampaPdf() {
           resize: "vertical",
         }}
       />
+
+      <div
+  style={{
+    border: "1px solid #e5e7eb",
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 16,
+  }}
+>
+  <strong>Allegati aggiuntivi per il cliente</strong>
+
+  <p style={{ marginTop: 6, color: "#6b7280", fontSize: 13 }}>
+    Puoi allegare uno o più file utili alla richiesta di integrazione.
+  </p>
+
+  <input
+    type="file"
+    multiple
+    disabled={sendingIntegrazione}
+    onChange={(e) => {
+      const selectedFiles = Array.from(e.target.files || []);
+      setAllegatiIntegrazione(selectedFiles);
+    }}
+  />
+
+  {allegatiIntegrazione.length > 0 && (
+    <div style={{ marginTop: 10 }}>
+      {allegatiIntegrazione.map((file, index) => (
+        <div key={`${file.name}-${index}`} style={{ color: "#15803d", fontWeight: 700 }}>
+          {file.name}
+        </div>
+      ))}
+    </div>
+  )}
+
+  {allegatiIntegrazione.length > 0 && (
+    <button
+      type="button"
+      disabled={sendingIntegrazione}
+      onClick={() => setAllegatiIntegrazione([])}
+      style={{
+        marginTop: 10,
+        border: "1px solid #fecaca",
+        background: "#fff",
+        color: "#dc2626",
+        borderRadius: 8,
+        padding: "7px 10px",
+        fontWeight: 700,
+        cursor: "pointer",
+      }}
+    >
+      Azzera allegati
+    </button>
+  )}
+</div>
 
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20 }}>
         <button
