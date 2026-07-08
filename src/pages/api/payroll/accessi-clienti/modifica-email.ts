@@ -44,16 +44,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const password_hash = await bcrypt.hash(password, 10);
     const password_criptata = criptaPassword(password);
 
-    const { error } = await supabase
-      .from("tbclienti_accessi_pubblici")
-      .update({
-        email_accesso: emailPulita,
-        password_hash,
-        password_criptata,
-        attivo: true,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", accesso_id);
+  const { data, error } = await supabase
+  .from("tbclienti_accessi_pubblici")
+  .update({
+    email_accesso: emailPulita,
+    password_hash,
+    password_criptata,
+    attivo: true,
+    updated_at: new Date().toISOString(),
+  })
+  .eq("id", accesso_id)
+  .select()
+  .single();
 
     if (error) {
       return res.status(500).json({
@@ -62,11 +64,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    return res.status(200).json({
-      success: true,
-      email_accesso: emailPulita,
-      password_generata: password,
-    });
+   return res.status(200).json({
+  success: true,
+  accesso: data,
+  email_accesso: emailPulita,
+  password_generata: password,
+});
+    
   } catch (error: any) {
     return res.status(500).json({
       success: false,
