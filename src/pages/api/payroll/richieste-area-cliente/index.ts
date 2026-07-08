@@ -51,6 +51,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         centro_costo,
         note_cliente,
         stato,
+        doc_fronte_confermato,
+        doc_retro_confermato,
+        doc_codice_fiscale_confermato,
+        doc_permesso_soggiorno_confermato,
+        doc_curriculum_confermato,
+        documenti_confermati_at,
+        documenti_confermati_da,
         tbclienti:cliente_id (
           id,
           ragione_sociale,
