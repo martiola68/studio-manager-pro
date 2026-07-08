@@ -115,7 +115,7 @@ async function confermaAbilitaAccesso() {
   try {
     const accessoEsistente = accessiByCliente.get(clienteDaAbilitare.id);
 
-const res = await fetch(
+    const res = await fetch(
   accessoEsistente
     ? "/api/payroll/accessi-clienti/modifica-email"
     : "/api/payroll/accessi-clienti/abilita",
@@ -137,15 +137,6 @@ const res = await fetch(
     ),
   }
 );
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        cliente_id: clienteDaAbilitare.id,
-        email_accesso: emailAccessoModal.trim(),
-      }),
-    });
 
     const json = await res.json();
 
