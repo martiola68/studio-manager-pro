@@ -12,6 +12,50 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const supabase = getSupabaseAdmin();
 
+    if (req.method === "POST") {
+  const {
+    richiesta_id,
+    doc_fronte_confermato,
+    doc_retro_confermato,
+    doc_codice_fiscale_confermato,
+    doc_permesso_soggiorno_confermato,
+    doc_curriculum_confermato,
+  } = req.body || {};
+
+  if (!richiesta_id) {
+    return res.status(400).json({
+      success: false,
+      error: "ID richiesta mancante",
+    });
+  }
+
+  const now = new Date().toISOString();
+
+  const { error } = await supabase
+    .from("tbassunzioni_richieste")
+    .update({
+      doc_fronte_confermato: !!doc_fronte_confermato,
+      doc_retro_confermato: !!doc_retro_confermato,
+      doc_codice_fiscale_confermato: !!doc_codice_fiscale_confermato,
+      doc_permesso_soggiorno_confermato: !!doc_permesso_soggiorno_confermato,
+      doc_curriculum_confermato: !!doc_curriculum_confermato,
+      documenti_confermati_at: now,
+      updated_at: now,
+    })
+    .eq("id", richiesta_id);
+
+  if (error) {
+    return res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+
+  return res.status(200).json({
+    success: true,
+  });
+}
+
       const richiestaId =
       typeof req.query.id === "string" ? req.query.id : null;
 
