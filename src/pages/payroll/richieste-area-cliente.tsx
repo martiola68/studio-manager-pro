@@ -18,6 +18,9 @@ type Richiesta = {
 export default function RichiesteAreaClientePage() {
   const [richieste, setRichieste] = useState<Richiesta[]>([]);
   const [selected, setSelected] = useState<any>(null);
+  const [chiusuraOpen, setChiusuraOpen] = useState(false);
+const [ricevutaFile, setRicevutaFile] = useState<File | null>(null);
+const [closing, setClosing] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -201,6 +204,10 @@ function stampaPdf() {
   window.open(`/api/payroll/richieste-area-cliente/pdf?id=${selected.id}`, "_blank");
 }
 
+  async function chiudiPratica() {
+  alert("La collegheremo alla nuova API di chiusura.");
+}
+
   return (
     <div style={{ padding: 28 }}>
       <h1 style={{ marginTop: 0 }}>Richieste Area Cliente</h1>
@@ -247,6 +254,8 @@ function stampaPdf() {
       )}
 
       {selected && (
+
+      
         <div style={modalOverlay}>
           <div style={modal}>
             <button style={closeBtn} onClick={() => setSelected(null)}>
@@ -341,8 +350,8 @@ function stampaPdf() {
   Richiedi documenti
 </button>
 
-<button onClick={() => aggiornaStatoPratica("conclusa")}>
-  Concludi pratica
+<button onClick={() => setChiusuraOpen(true)}>
+  Chiudi pratica
 </button>
 
 <button onClick={stampaPdf}>
@@ -352,6 +361,86 @@ function stampaPdf() {
           </div>
         </div>
       )}
+      {chiusuraOpen && (
+  <div style={modalOverlay}>
+    <div style={{ ...modal, maxWidth: 700 }}>
+      <button
+        style={closeBtn}
+        onClick={() => {
+          setChiusuraOpen(false);
+          setRicevutaFile(null);
+        }}
+      >
+        ×
+      </button>
+
+      <h2>Chiudi pratica</h2>
+
+      <p>
+        Per concludere la pratica è necessario allegare la ricevuta o il
+        documento finale che verrà inviato al cliente.
+      </p>
+
+      <div
+        style={{
+          border: "1px solid #e5e7eb",
+          borderRadius: 12,
+          padding: 16,
+          marginTop: 20,
+        }}
+      >
+        <strong>Ricevuta / Documento finale</strong>
+
+        <div style={{ marginTop: 10 }}>
+          <input
+            type="file"
+            disabled={closing}
+            onChange={(e) =>
+              setRicevutaFile(e.target.files?.[0] || null)
+            }
+          />
+        </div>
+
+        {ricevutaFile && (
+          <div
+            style={{
+              marginTop: 10,
+              color: "#15803d",
+              fontWeight: 700,
+            }}
+          >
+            {ricevutaFile.name}
+          </div>
+        )}
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          gap: 10,
+          marginTop: 24,
+        }}
+      >
+        <button
+          onClick={() => {
+            setChiusuraOpen(false);
+            setRicevutaFile(null);
+          }}
+        >
+          Annulla
+        </button>
+
+        <button
+          disabled={!ricevutaFile || closing}
+          onClick={chiudiPratica}
+        >
+          {closing ? "Invio..." : "Invia al cliente e chiudi pratica"}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }
