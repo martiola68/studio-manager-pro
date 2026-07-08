@@ -60,6 +60,46 @@ export default function RichiesteAreaClientePage() {
     return new Date(value).toLocaleDateString("it-IT");
   }
 
+  function statoLabel(stato?: string) {
+  const labels: Record<string, string> = {
+    bozza: "Bozza",
+    da_prendere_in_carico: "Arrivata",
+    in_lavorazione: "Presa in carico",
+    integrazione_documenti: "In attesa documenti",
+    conclusa: "Completa",
+  };
+
+  return labels[stato || ""] || stato || "-";
+}
+
+function statoStyle(stato?: string): React.CSSProperties {
+  const base: React.CSSProperties = {
+    display: "inline-block",
+    borderRadius: 999,
+    padding: "5px 10px",
+    fontWeight: 700,
+    fontSize: 12,
+  };
+
+  if (stato === "da_prendere_in_carico") {
+    return { ...base, background: "#dbeafe", color: "#1d4ed8" };
+  }
+
+  if (stato === "in_lavorazione") {
+    return { ...base, background: "#fef3c7", color: "#92400e" };
+  }
+
+  if (stato === "integrazione_documenti") {
+    return { ...base, background: "#fee2e2", color: "#b91c1c" };
+  }
+
+  if (stato === "conclusa") {
+    return { ...base, background: "#dcfce7", color: "#166534" };
+  }
+
+  return { ...base, background: "#f3f4f6", color: "#374151" };
+}
+
   async function salvaVerificaDocumenti() {
   if (!selected?.id) return;
 
@@ -191,7 +231,9 @@ function stampaPdf() {
                 <td style={td}>{r.cognome_nome}</td>
                 <td style={td}>{formatDate(r.decorrenza_assunzione)}</td>
                 <td style={td}>
-                  <strong>{r.stato || "inviata"}</strong>
+                  <span style={statoStyle(r.stato)}>
+                  {statoLabel(r.stato)}
+                  </span>
                 </td>
                 <td style={td}>
                   <button onClick={() => apriDettaglio(r.id)}>
