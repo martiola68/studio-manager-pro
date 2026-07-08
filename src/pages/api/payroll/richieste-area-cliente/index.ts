@@ -14,7 +14,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const supabase = getSupabaseAdmin();
 
 if (req.method === "PUT") {
-  const { richiesta_id, stato } = req.body || {};
+ const { richiesta_id, stato, note_integrazione } = req.body || {};
 
   const statiValidi = [
     "bozza",
@@ -136,6 +136,16 @@ if (req.method === "PUT") {
           <p>
             La invitiamo ad accedere all'Area Cliente e utilizzare il pulsante
             <strong>Rinvia documenti</strong> presente sulla pratica.
+            ${
+  note_integrazione
+    ? `
+      <div style="margin: 16px 0; padding: 12px; border-left: 4px solid #f97316; background: #fff7ed;">
+        <strong>Documentazione richiesta / Note dello Studio:</strong><br />
+        ${String(note_integrazione).replace(/\n/g, "<br />")}
+      </div>
+    `
+    : ""
+}
           </p>
 
           <p>
