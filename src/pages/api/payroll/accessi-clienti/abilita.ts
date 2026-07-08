@@ -1,11 +1,20 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import bcrypt from "bcryptjs";
-import crypto from "crypto";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { criptaPassword } from "@/lib/accessiClientiCrypto";
+import { sendEmailServer } from "@/services/sendEmailServer";
 
 function generaPassword() {
-  return crypto.randomBytes(6).toString("base64").replace(/[^a-zA-Z0-9]/g, "").slice(0, 10);
+  const chars =
+    "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+
+  let password = "";
+
+  for (let i = 0; i < 10; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+
+  return password;
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -28,7 +37,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { data: cliente, error: clienteError } = await supabase
       .from("tbclienti")
-      .select("id, studio_id, ragione_sociale")
+      .select("id, studio_id, ragione_sociale, utente_payroll_id")
       .eq("id", cliente_id)
       .single();
 
@@ -62,10 +71,83 @@ const password_criptata = criptaPassword(password);
       return res.status(500).json({ error: error.message });
     }
 
-    return res.status(200).json({
-      accesso: data,
-      password_generata: password,
-    });
+    const senderUserId = cliente.utente_payroll_id;
+
+if (!senderUserId) {
+  return res.status(400).json({
+    error: "Operatore payroll non associato al cliente.",
+  });
+}
+const { data: studio, error: studioError } = await supabase
+  .from("tbstudio")
+  .select("microsoft_connection_id")
+  .eq("id", cliente.studio_id)
+  .maybeSingle();
+
+if (studioError || !studio?.microsoft_connection_id) {
+  return res.status(400).json({
+    error: "Connessione Microsoft dello studio non configurata.",
+  });
+}
+
+const linkAccesso =
+  "https://studio-manager-public.vercel.app/area-cliente/login";
+
+const subject = "Accesso area richieste assunzioni";
+
+const html = `
+  <div style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #111827;">
+    <p>Gentile Cliente,</p>
+
+    <p>
+      la informiamo che è stato attivato l'accesso all'area online per le richieste di assunzione.
+    </p>
+
+    <table style="border-collapse: collapse; margin: 16px 0;">
+      <tr>
+        <td style="padding: 6px 12px; font-weight: bold;">Azienda</td>
+        <td style="padding: 6px 12px;">${cliente.ragione_sociale || "Cliente"}</td>
+      </tr>
+      <tr>
+        <td style="padding: 6px 12px; font-weight: bold;">Link accesso</td>
+        <td style="padding: 6px 12px;">
+          <a href="${linkAccesso}">${linkAccesso}</a>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding: 6px 12px; font-weight: bold;">Utente</td>
+        <td style="padding: 6px 12px;">${email_accesso}</td>
+      </tr>
+      <tr>
+        <td style="padding: 6px 12px; font-weight: bold;">Password</td>
+        <td style="padding: 6px 12px;">${password}</td>
+      </tr>
+    </table>
+
+    <p>Cordiali saluti</p>
+  </div>
+`;
+
+const result = await sendEmailServer({
+  senderUserId,
+  microsoftConnectionId: studio.microsoft_connection_id,
+  to: email_accesso,
+  subject,
+  html,
+});
+
+if (!result.success) {
+  return res.status(500).json({
+    error: result.error || "Accesso attivato, ma invio credenziali fallito.",
+  });
+}
+
+return res.status(200).json({
+  success: true,
+  accesso: data,
+  message: "Accesso attivato e credenziali inviate correttamente.",
+});
+    
   } catch (error: any) {
     return res.status(500).json({
       error: error?.message || "Errore durante abilitazione accesso",
