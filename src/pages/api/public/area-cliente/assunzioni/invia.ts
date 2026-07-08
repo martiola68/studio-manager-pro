@@ -102,10 +102,13 @@ function buildAttachments(files: formidable.Files, richiesti: string[]) {
       throw new Error(`Documento obbligatorio mancante: ${labelDocumento(tipo)}`);
     }
 
+    const buffer = fs.readFileSync(file.filepath);
+
     attachments.push({
-      filename: file.originalFilename || `${tipo}.pdf`,
+      "@odata.type": "#microsoft.graph.fileAttachment",
+      name: file.originalFilename || `${tipo}.pdf`,
       contentType: file.mimetype || "application/octet-stream",
-      content: fs.readFileSync(file.filepath),
+      contentBytes: buffer.toString("base64"),
     });
   }
 
