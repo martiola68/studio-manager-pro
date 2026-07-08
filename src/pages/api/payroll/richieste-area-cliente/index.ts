@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { sendEmailServer } from "@/services/sendEmailServer";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET" && req.method !== "POST" && req.method !== "PUT") {
@@ -38,6 +39,128 @@ if (req.method === "PUT") {
   }
 
   const now = new Date().toISOString();
+
+  if (stato === "integrazione_documenti") {
+    const { data: richiesta, error: richiestaError } = await supabase
+      .from("tbassunzioni_richieste")
+      .select(`
+        id,
+        numero_richiesta,
+        cliente_id,
+        cognome_nome,
+        decorrenza_assunzione
+      `)
+      .eq("id", richiesta_id)
+      .single();
+
+    if (richiestaError || !richiesta) {
+      return res.status(404).json({
+        success: false,
+        error: "Richiesta non trovata",
+      });
+    }
+
+    const { data: cliente, error: clienteError } = await supabase
+      .from("tbclienti")
+      .select("id, ragione_sociale, utente_payroll_id")
+      .eq("id", richiesta.cliente_id)
+      .single();
+
+    if (clienteError || !cliente) {
+      return res.status(404).json({
+        success: false,
+        error: "Cliente non trovato",
+      });
+    }
+
+    const { data: accessoCliente, error: accessoError } = await supabase
+      .from("tbclienti_accessi_pubblici")
+      .select("email_accesso")
+      .eq("cliente_id", richiesta.cliente_id)
+      .eq("attivo", true)
+      .maybeSingle();
+
+    if (accessoError || !accessoCliente?.email_accesso) {
+      return res.status(400).json({
+        success: false,
+        error: "Email accesso Area Cliente non trovata.",
+      });
+    }
+
+    if (!cliente.utente_payroll_id) {
+      return res.status(400).json({
+        success: false,
+        error: "Operatore payroll non associato al cliente.",
+      });
+    }
+
+    const { data: operatore, error: operatoreError } = await supabase
+      .from("tbutenti")
+      .select("id, nome, cognome, microsoft_connection_id")
+      .eq("id", cliente.utente_payroll_id)
+      .single();
+
+    if (operatoreError || !operatore) {
+      return res.status(404).json({
+        success: false,
+        error: "Operatore payroll non trovato.",
+      });
+    }
+
+    if (!operatore.microsoft_connection_id) {
+      return res.status(400).json({
+        success: false,
+        error: "Connessione Microsoft operatore non configurata.",
+      });
+    }
+
+    const firma = [operatore.nome, operatore.cognome]
+      .filter(Boolean)
+      .join(" ");
+
+    const emailResult = await sendEmailServer({
+      senderUserId: operatore.id,
+      microsoftConnectionId: operatore.microsoft_connection_id,
+      to: accessoCliente.email_accesso,
+      subject: `Integrazione documenti richiesta ${richiesta.numero_richiesta || ""}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #111827;">
+          <p>Gentile Cliente,</p>
+
+          <p>
+            per completare la pratica di assunzione relativa a
+            <strong>${richiesta.cognome_nome || "-"}</strong>
+            è necessario integrare o reinviare la documentazione.
+          </p>
+
+          <p>
+            La invitiamo ad accedere all'Area Cliente e utilizzare il pulsante
+            <strong>Rinvia documenti</strong> presente sulla pratica.
+          </p>
+
+          <p>
+            <strong>Numero richiesta:</strong> ${richiesta.numero_richiesta || "-"}<br />
+            <strong>Lavoratore:</strong> ${richiesta.cognome_nome || "-"}<br />
+            <strong>Decorrenza:</strong> ${
+              richiesta.decorrenza_assunzione
+                ? new Date(richiesta.decorrenza_assunzione).toLocaleDateString("it-IT")
+                : "-"
+            }
+          </p>
+
+          <p>Cordiali saluti</p>
+          ${firma ? `<p>${firma}</p>` : ""}
+        </div>
+      `,
+    });
+
+    if (!emailResult.success) {
+      return res.status(500).json({
+        success: false,
+        error: emailResult.error || "Invio email richiesta integrazione non riuscito.",
+      });
+    }
+  }
 
   const { error } = await supabase
     .from("tbassunzioni_richieste")
