@@ -248,27 +248,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       richiesta.cliente_id
     );
 
-    await sendEmailServer({
-      senderUserId: operatore.id,
-      microsoftConnectionId: operatore.microsoft_connection_id,
-      to: operatore.email,
-      subject: `Nuova richiesta assunzione ${richiesta.numero_richiesta}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; font-size: 14px;">
-          <h2>Nuova richiesta assunzione</h2>
+   const emailResult = await sendEmailServer({
+  senderUserId: operatore.id,
+  microsoftConnectionId: operatore.microsoft_connection_id,
+  to: operatore.email,
+  subject: `Nuova richiesta assunzione ${richiesta.numero_richiesta}`,
+  html: `
+    <div style="font-family: Arial, sans-serif; font-size: 14px;">
+      <h2>Nuova richiesta assunzione</h2>
 
-          <p><strong>Numero richiesta:</strong> ${richiesta.numero_richiesta || "-"}</p>
-          <p><strong>Cliente:</strong> ${cliente.ragione_sociale || "-"}</p>
-          <p><strong>Lavoratore:</strong> ${richiesta.cognome_nome || "-"}</p>
-          <p><strong>Codice fiscale:</strong> ${richiesta.codice_fiscale || "-"}</p>
-          <p><strong>Decorrenza:</strong> ${richiesta.decorrenza_assunzione || "-"}</p>
+      <p><strong>Numero richiesta:</strong> ${richiesta.numero_richiesta || "-"}</p>
+      <p><strong>Cliente:</strong> ${cliente.ragione_sociale || "-"}</p>
+      <p><strong>Lavoratore:</strong> ${richiesta.cognome_nome || "-"}</p>
+      <p><strong>Codice fiscale:</strong> ${richiesta.codice_fiscale || "-"}</p>
+      <p><strong>Decorrenza:</strong> ${richiesta.decorrenza_assunzione || "-"}</p>
 
-          <p>In allegato trovi i documenti caricati dal cliente.</p>
-          <p>Accedi a Studio Manager Pro per prendere in carico la pratica.</p>
-        </div>
-      `,
-      attachments,
-    } as any);
+      <p>In allegato trovi i documenti caricati dal cliente.</p>
+      <p>Accedi a Studio Manager Pro per prendere in carico la pratica.</p>
+    </div>
+  `,
+  attachments,
+} as any);
+
+if (!emailResult?.success) {
+  throw new Error(emailResult?.error || "Invio email non riuscito");
+}
 
     const now = new Date().toISOString();
 
