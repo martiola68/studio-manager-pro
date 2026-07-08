@@ -90,6 +90,12 @@ function apriModaleAbilita(cliente: Cliente) {
   setPasswordGenerata(null);
 }
 
+  function apriModaleModificaEmail(cliente: Cliente, accesso: Accesso) {
+  setClienteDaAbilitare(cliente);
+  setEmailAccessoModal(accesso.email_accesso || "");
+  setPasswordGenerata(null);
+}
+
 function chiudiModaleAbilita() {
   setClienteDaAbilitare(null);
   setEmailAccessoModal("");
@@ -107,7 +113,30 @@ async function confermaAbilitaAccesso() {
   setPasswordGenerata(null);
 
   try {
-    const res = await fetch("/api/payroll/accessi-clienti/abilita", {
+    const accessoEsistente = accessiByCliente.get(clienteDaAbilitare.id);
+
+const res = await fetch(
+  accessoEsistente
+    ? "/api/payroll/accessi-clienti/modifica-email"
+    : "/api/payroll/accessi-clienti/abilita",
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(
+      accessoEsistente
+        ? {
+            accesso_id: accessoEsistente.id,
+            email_accesso: emailAccessoModal.trim(),
+          }
+        : {
+            cliente_id: clienteDaAbilitare.id,
+            email_accesso: emailAccessoModal.trim(),
+          }
+    ),
+  }
+);
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -264,9 +293,11 @@ async function toggleAccesso(accesso: Accesso) {
           </div>
 
           <div>
-            <h1 className="text-2xl font-bold">Pratica assunzione</h1>
+          <h1 className="text-2xl font-bold">
+          Attivazione credenziali pratiche Payroll
+          </h1>
             <p className="text-sm text-gray-600">
-              Gestione accessi clienti per richieste assunzione online.
+              Gestione credenziali di accesso all'Area Cliente per le pratiche Payroll.
             </p>
           </div>
         </div>
@@ -425,6 +456,15 @@ async function toggleAccesso(accesso: Accesso) {
       Riattiva
     </>
   )}
+</button>
+
+ <button
+  type="button"
+  disabled={busy}
+  onClick={() => apriModaleModificaEmail(cliente, accesso)}
+  className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs hover:bg-gray-50 disabled:opacity-50"
+>
+  Modifica email
 </button>
 
 <button
