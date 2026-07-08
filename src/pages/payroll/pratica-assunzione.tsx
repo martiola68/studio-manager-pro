@@ -144,15 +144,31 @@ async function confermaAbilitaAccesso() {
       throw new Error(json.error || "Errore abilitazione accesso");
     }
 
+    const accessoId = json.accesso?.id;
+
+if (accessoId) {
+  const invioRes = await fetch("/api/payroll/accessi-clienti/invia-credenziali", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      accesso_id: accessoId,
+    }),
+  });
+
+  const invioJson = await invioRes.json();
+
+  if (!invioRes.ok) {
+    throw new Error(invioJson.error || "Accesso creato ma invio email non riuscito");
+  }
+}
+
     setPasswordGenerata(json.password_generata || null);
     await caricaDati();
     chiudiModaleAbilita();
 
-    alert(
-      `Accesso abilitato.\n\nPassword generata: ${
-        json.password_generata || "non disponibile"
-      }`
-    );
+   alert("Credenziali generate e inviate correttamente al cliente.");
   } catch (error: any) {
     alert(error.message || "Errore abilitazione accesso");
   } finally {
