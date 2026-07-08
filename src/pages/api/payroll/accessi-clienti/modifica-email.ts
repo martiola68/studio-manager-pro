@@ -1,5 +1,16 @@
 import type { NextApiRequest, NextApiResponse } from "next";
+import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { criptaPassword } from "@/lib/accessiClientiCrypto";
+
+function generaPassword() {
+  return crypto
+    .randomBytes(6)
+    .toString("base64")
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .slice(0, 10);
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
@@ -29,10 +40,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const emailPulita = String(email_accesso).trim().toLowerCase();
 
+    const password = generaPassword();
+    const password_hash = await bcrypt.hash(password, 10);
+    const password_criptata = criptaPassword(password);
+
     const { error } = await supabase
-     .from("tbclienti_accessi_pubblici")
+      .from("tbclienti_accessi_pubblici")
       .update({
         email_accesso: emailPulita,
+        password_hash,
+        password_criptata,
+        attivo: true,
         updated_at: new Date().toISOString(),
       })
       .eq("id", accesso_id);
@@ -47,6 +65,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({
       success: true,
       email_accesso: emailPulita,
+      password_generata: password,
     });
   } catch (error: any) {
     return res.status(500).json({
