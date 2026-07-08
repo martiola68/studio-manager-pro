@@ -92,6 +92,75 @@ export default function RichiesteAreaClientePage() {
   }
 }
 
+  async function richiediDocumenti() {
+  if (!selected?.id) return;
+
+  try {
+    const res = await fetch("/api/payroll/richieste-area-cliente", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        richiesta_id: selected.id,
+        stato: "integrazione_documenti",
+      }),
+    });
+
+    const json = await res.json();
+
+    if (!res.ok || !json.success) {
+      throw new Error(json.error || "Errore aggiornamento pratica");
+    }
+
+    alert("Richiesta di integrazione inviata.");
+
+    await caricaRichieste();
+    setSelected(null);
+  } catch (error: any) {
+    alert(error.message || "Errore aggiornamento pratica");
+  }
+}
+
+  async function aggiornaStatoPratica(nuovoStato: string) {
+  if (!selected?.id) return;
+
+  try {
+    const res = await fetch("/api/payroll/richieste-area-cliente", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        richiesta_id: selected.id,
+        stato: nuovoStato,
+      }),
+    });
+
+    const json = await res.json();
+
+    if (!res.ok || !json.success) {
+      throw new Error(json.error || "Errore aggiornamento stato pratica");
+    }
+
+    alert("Stato pratica aggiornato.");
+
+    await caricaRichieste();
+
+    setSelected({
+      ...selected,
+      stato: nuovoStato,
+    });
+  } catch (error: any) {
+    alert(error.message || "Errore aggiornamento stato pratica");
+  }
+}
+
+function stampaPdf() {
+  if (!selected?.id) return;
+  window.open(`/api/payroll/richieste-area-cliente/pdf?id=${selected.id}`, "_blank");
+}
+
   return (
     <div style={{ padding: 28 }}>
       <h1 style={{ marginTop: 0 }}>Richieste Area Cliente</h1>
@@ -222,10 +291,21 @@ export default function RichiesteAreaClientePage() {
 </Section>
 
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20 }}>
-              <button>Prendi in carico</button>
-              <button>Richiedi documenti</button>
-              <button>Concludi pratica</button>
-              <button>Stampa PDF</button>
+            <button onClick={() => aggiornaStatoPratica("in_lavorazione")}>
+  Prendi in carico
+</button>
+
+<button onClick={() => aggiornaStatoPratica("integrazione_documenti")}>
+  Richiedi documenti
+</button>
+
+<button onClick={() => aggiornaStatoPratica("conclusa")}>
+  Concludi pratica
+</button>
+
+<button onClick={stampaPdf}>
+  Stampa PDF
+</button>
             </div>
           </div>
         </div>
