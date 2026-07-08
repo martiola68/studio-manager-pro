@@ -410,8 +410,7 @@ function stampaPdf() {
     ✅ Chiudi pratica
   </button>
 </div>
-            </div>
-          </div>
+             </div>
         </div>
       )}
       {chiusuraOpen && (
