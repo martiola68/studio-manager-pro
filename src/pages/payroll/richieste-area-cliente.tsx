@@ -606,10 +606,10 @@ const workflowActions: React.CSSProperties = {
 const workflowButtonBase: React.CSSProperties = {
   border: "none",
   borderRadius: 10,
-  padding: "11px 16px",
-  fontWeight: 800,
-  cursor: "pointer",
+  padding: "12px 18px",
+  fontWeight: 500,
   fontSize: 14,
+  cursor: "pointer",
 };
 
 const btnBlue: React.CSSProperties = {
