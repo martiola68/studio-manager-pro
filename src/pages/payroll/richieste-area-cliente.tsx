@@ -377,22 +377,39 @@ function stampaPdf() {
   </div>
 </Section>
 
-            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20 }}>
-            <button onClick={() => aggiornaStatoPratica("in_lavorazione")}>
-  Prendi in carico
-</button>
+   <div style={workflowActions}>
+  <button
+    type="button"
+    onClick={() => aggiornaStatoPratica("in_lavorazione")}
+    style={btnBlue}
+  >
+    📌 Prendi in carico
+  </button>
 
-<button onClick={() => aggiornaStatoPratica("integrazione_documenti")}>
-  Richiedi documenti
-</button>
+  <button
+    type="button"
+    onClick={() => aggiornaStatoPratica("integrazione_documenti")}
+    style={btnOrange}
+  >
+    📩 Richiedi documenti
+  </button>
 
-<button onClick={() => setChiusuraOpen(true)}>
-  Chiudi pratica
-</button>
+  <button
+    type="button"
+    onClick={stampaPdf}
+    style={btnGray}
+  >
+    📄 Stampa PDF
+  </button>
 
-<button onClick={stampaPdf}>
-  Stampa PDF
-</button>
+  <button
+    type="button"
+    onClick={() => setChiusuraOpen(true)}
+    style={btnGreen}
+  >
+    ✅ Chiudi pratica
+  </button>
+</div>
             </div>
           </div>
         </div>
@@ -575,4 +592,47 @@ const closeBtn: React.CSSProperties = {
   background: "transparent",
   fontSize: 28,
   cursor: "pointer",
+};
+
+const workflowActions: React.CSSProperties = {
+  display: "flex",
+  flexWrap: "wrap",
+  gap: 10,
+  justifyContent: "flex-end",
+  marginTop: 24,
+  borderTop: "1px solid #e5e7eb",
+  paddingTop: 18,
+};
+
+const workflowButtonBase: React.CSSProperties = {
+  border: "none",
+  borderRadius: 10,
+  padding: "11px 16px",
+  fontWeight: 800,
+  cursor: "pointer",
+  fontSize: 14,
+};
+
+const btnBlue: React.CSSProperties = {
+  ...workflowButtonBase,
+  background: "#2563eb",
+  color: "#fff",
+};
+
+const btnOrange: React.CSSProperties = {
+  ...workflowButtonBase,
+  background: "#f97316",
+  color: "#fff",
+};
+
+const btnGreen: React.CSSProperties = {
+  ...workflowButtonBase,
+  background: "#16a34a",
+  color: "#fff",
+};
+
+const btnGray: React.CSSProperties = {
+  ...workflowButtonBase,
+  background: "#374151",
+  color: "#fff",
 };
