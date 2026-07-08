@@ -104,12 +104,11 @@ function buildAttachments(files: formidable.Files, richiesti: string[]) {
 
     const buffer = fs.readFileSync(file.filepath);
 
-    attachments.push({
-      "@odata.type": "#microsoft.graph.fileAttachment",
-      name: file.originalFilename || `${tipo}.pdf`,
-      contentType: file.mimetype || "application/octet-stream",
-      contentBytes: buffer.toString("base64"),
-    });
+  attachments.push({
+  filename: file.originalFilename || `${tipo}.pdf`,
+  contentType: file.mimetype || "application/octet-stream",
+  contentBytes: buffer.toString("base64"),
+});
   }
 
   return attachments;
