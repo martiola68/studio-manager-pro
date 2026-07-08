@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import crypto from "crypto";
+import PDFDocument from "pdfkit";
 import formidable, { File } from "formidable";
 import fs from "fs";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
@@ -89,6 +90,61 @@ function parseForm(req: NextApiRequest): Promise<{
       if (err) reject(err);
       else resolve({ fields, files });
     });
+  });
+}
+
+function formatDate(value?: string | null) {
+  if (!value) return "-";
+  return new Date(value).toLocaleDateString("it-IT");
+}
+
+function generaPdfRichiestaAssunzione(richiesta: any, cliente: any): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ margin: 40, size: "A4" });
+    const chunks: Buffer[] = [];
+
+    doc.on("data", (chunk) => chunks.push(chunk));
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("error", reject);
+
+    doc.fontSize(18).text("Richiesta di assunzione", { align: "center" });
+    doc.moveDown();
+
+    doc.fontSize(11);
+    doc.text(`Numero richiesta: ${richiesta.numero_richiesta || "-"}`);
+    doc.text(`Cliente: ${cliente?.ragione_sociale || "-"}`);
+    doc.text(`Data richiesta: ${formatDate(richiesta.created_at)}`);
+    doc.moveDown();
+
+    doc.fontSize(14).text("Dati lavoratore");
+    doc.moveDown(0.5);
+
+    doc.fontSize(11);
+    doc.text(`Lavoratore: ${richiesta.cognome_nome || "-"}`);
+    doc.text(`Codice fiscale: ${richiesta.codice_fiscale || "-"}`);
+    doc.text(`Data nascita: ${formatDate(richiesta.data_nascita)}`);
+    doc.text(`Luogo nascita: ${richiesta.luogo_nascita || "-"}`);
+    doc.text(`Residenza: ${richiesta.indirizzo_residenza || "-"}`);
+    doc.moveDown();
+
+    doc.fontSize(14).text("Dati assunzione");
+    doc.moveDown(0.5);
+
+    doc.fontSize(11);
+    doc.text(`Decorrenza: ${formatDate(richiesta.decorrenza_assunzione)}`);
+    doc.text(`Tipologia contratto: ${richiesta.tipologia_contratto || "-"}`);
+    doc.text(`Mansione: ${richiesta.mansione || "-"}`);
+    doc.text(`Qualifica: ${richiesta.qualifica || "-"}`);
+    doc.text(`Livello: ${richiesta.livello || "-"}`);
+    doc.text(`Orario settimanale: ${richiesta.orario_settimanale || "-"}`);
+    doc.text(`Sede lavoro: ${richiesta.sede_lavoro || "-"}`);
+    doc.moveDown();
+
+    doc.fontSize(14).text("Note");
+    doc.moveDown(0.5);
+    doc.fontSize(11).text(richiesta.note || "-");
+
+    doc.end();
   });
 }
 
@@ -242,14 +298,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    const richiesti = richiestiPer(richiesta);
-    const attachments = buildAttachments(files, richiesti);
+  const richiesti = richiestiPer(richiesta);
+const attachments = buildAttachments(files, richiesti);
 
-    const { cliente, operatore } = await trovaOperatorePayroll(
-      supabase,
-      richiesta.cliente_id
-    );
+const { cliente, operatore } = await trovaOperatorePayroll(
+  supabase,
+  richiesta.cliente_id
+);
 
+const pdfBuffer = await generaPdfRichiestaAssunzione(richiesta, cliente);
+
+attachments.unshift({
+  filename: `richiesta-assunzione-${richiesta.numero_richiesta || richiesta.id}.pdf`,
+  contentType: "application/pdf",
+  contentBytes: pdfBuffer.toString("base64"),
+});
+    
    const emailResult = await sendEmailServer({
   senderUserId: operatore.id,
   microsoftConnectionId: operatore.microsoft_connection_id,
