@@ -204,8 +204,44 @@ function stampaPdf() {
   window.open(`/api/payroll/richieste-area-cliente/pdf?id=${selected.id}`, "_blank");
 }
 
-  async function chiudiPratica() {
-  alert("La collegheremo alla nuova API di chiusura.");
+ async function chiudiPratica() {
+  if (!selected?.id) return;
+
+  if (!ricevutaFile) {
+    alert("Allegare la ricevuta o il documento finale.");
+    return;
+  }
+
+  try {
+    setClosing(true);
+
+    const formData = new FormData();
+    formData.append("richiesta_id", selected.id);
+    formData.append("ricevuta", ricevutaFile);
+
+    const res = await fetch("/api/payroll/richieste-area-cliente/chiudi", {
+      method: "POST",
+      body: formData,
+    });
+
+    const json = await res.json();
+
+    if (!res.ok || !json.success) {
+      throw new Error(json.error || "Errore chiusura pratica");
+    }
+
+    alert("Pratica chiusa e documentazione inviata al cliente.");
+
+    setChiusuraOpen(false);
+    setRicevutaFile(null);
+    setSelected(null);
+
+    await caricaRichieste();
+  } catch (error: any) {
+    alert(error.message || "Errore chiusura pratica");
+  } finally {
+    setClosing(false);
+  }
 }
 
   return (
