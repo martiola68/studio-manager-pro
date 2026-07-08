@@ -86,57 +86,49 @@ if (updatePasswordError) {
 
     const ragioneSociale = cliente?.ragione_sociale || "Cliente";
 
-    const subject = "Accesso area richieste assunzioni";
+   const subject = "Invio credenziali area richieste assunzioni";
 
-    const html = `
-      <div style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #111827;">
-        <p>Gentile Cliente,</p>
+const html = `
+  <div style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #111827;">
+    <p>Gentile Cliente,</p>
 
-        <p>
-          la informiamo che da oggi le richieste relative a nuove assunzioni
-          dovranno essere trasmesse esclusivamente tramite l'apposita area online
-          messa a disposizione dallo Studio.
-        </p>
+    <p>
+      come richiesto, le inviamo nuovamente le credenziali per accedere
+      all'area online dedicata alle richieste di assunzione.
+    </p>
 
-        <p>
-          Di seguito trova le credenziali di accesso:
-        </p>
+    <p>
+      Di seguito trova le credenziali aggiornate:
+    </p>
 
-        <table style="border-collapse: collapse; margin: 16px 0;">
-          <tr>
-            <td style="padding: 6px 12px; font-weight: bold;">Azienda</td>
-            <td style="padding: 6px 12px;">${ragioneSociale}</td>
-          </tr>
-          <tr>
-            <td style="padding: 6px 12px; font-weight: bold;">Link accesso</td>
-            <td style="padding: 6px 12px;">
-              <a href="${linkAccesso}">${linkAccesso}</a>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 6px 12px; font-weight: bold;">Utente</td>
-            <td style="padding: 6px 12px;">${accesso.email_accesso}</td>
-          </tr>
-          <tr>
-            <td style="padding: 6px 12px; font-weight: bold;">Password</td>
-            <td style="padding: 6px 12px;">${password}</td>
-          </tr>
-        </table>
+    <table style="border-collapse: collapse; margin: 16px 0;">
+      <tr>
+        <td style="padding: 6px 12px; font-weight: bold;">Azienda</td>
+        <td style="padding: 6px 12px;">${ragioneSociale}</td>
+      </tr>
+      <tr>
+        <td style="padding: 6px 12px; font-weight: bold;">Link accesso</td>
+        <td style="padding: 6px 12px;">
+          <a href="${linkAccesso}">${linkAccesso}</a>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding: 6px 12px; font-weight: bold;">Utente</td>
+        <td style="padding: 6px 12px;">${accesso.email_accesso}</td>
+      </tr>
+      <tr>
+        <td style="padding: 6px 12px; font-weight: bold;">Password</td>
+        <td style="padding: 6px 12px;">${password}</td>
+      </tr>
+    </table>
 
-        <p>
-          Le credenziali resteranno valide fino a nuova comunicazione da parte dello Studio.
-          In caso di smarrimento sarà sufficiente contattarci per riceverne di nuove.
-        </p>
+    <p>
+      La precedente password non è più valida.
+    </p>
 
-        <p>
-          Per procedere con una nuova richiesta di assunzione sarà sufficiente accedere
-          alla pagina indicata, selezionare “Nuova richiesta assunzione” e compilare
-          il modulo online.
-        </p>
-
-        <p>Cordiali saluti</p>
-      </div>
-    `;
+    <p>Cordiali saluti</p>
+  </div>
+`;
 
  const studioId = accesso.studio_id || cliente?.studio_id;
 const senderUserId = cliente?.utente_payroll_id;
