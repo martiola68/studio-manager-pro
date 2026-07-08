@@ -23,6 +23,10 @@ const [ricevutaFile, setRicevutaFile] = useState<File | null>(null);
 const [closing, setClosing] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  const [integrazioneOpen, setIntegrazioneOpen] = useState(false);
+const [testoIntegrazione, setTestoIntegrazione] = useState("");
+const [sendingIntegrazione, setSendingIntegrazione] = useState(false);
+
   useEffect(() => {
     caricaRichieste();
   }, []);
@@ -244,6 +248,49 @@ function stampaPdf() {
   }
 }
 
+  async function inviaRichiestaIntegrazione() {
+  if (!selected?.id) return;
+
+  if (!testoIntegrazione.trim()) {
+    alert("Inserire la documentazione richiesta o le note per il cliente.");
+    return;
+  }
+
+  try {
+    setSendingIntegrazione(true);
+
+    const res = await fetch("/api/payroll/richieste-area-cliente", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        richiesta_id: selected.id,
+        stato: "integrazione_documenti",
+        note_integrazione: testoIntegrazione.trim(),
+      }),
+    });
+
+    const json = await res.json();
+
+    if (!res.ok || !json.success) {
+      throw new Error(json.error || "Errore richiesta integrazione");
+    }
+
+    alert("Richiesta integrazione inviata al cliente.");
+
+    setIntegrazioneOpen(false);
+    setTestoIntegrazione("");
+    setSelected(null);
+
+    await caricaRichieste();
+  } catch (error: any) {
+    alert(error.message || "Errore richiesta integrazione");
+  } finally {
+    setSendingIntegrazione(false);
+  }
+}
+
   return (
     <div style={{ padding: 28 }}>
       <h1 style={{ marginTop: 0 }}>Richieste Area Cliente</h1>
@@ -386,13 +433,13 @@ function stampaPdf() {
     📌 Prendi in carico
   </button>
 
-  <button
-    type="button"
-    onClick={() => aggiornaStatoPratica("integrazione_documenti")}
-    style={btnOrange}
-  >
-    📩 Richiedi documenti
-  </button>
+<button
+  type="button"
+  onClick={() => setIntegrazioneOpen(true)}
+  style={btnOrange}
+>
+  📩 Richiedi documenti
+</button>
 
   <button
     type="button"
@@ -413,6 +460,7 @@ function stampaPdf() {
              </div>
         </div>
       )}
+      
       {chiusuraOpen && (
   <div style={modalOverlay}>
     <div style={{ ...modal, maxWidth: 700 }}>
@@ -493,6 +541,64 @@ function stampaPdf() {
     </div>
   </div>
 )}
+      {integrazioneOpen && (
+  <div style={modalOverlay}>
+    <div style={{ ...modal, maxWidth: 700 }}>
+      <button
+        style={closeBtn}
+        onClick={() => {
+          setIntegrazioneOpen(false);
+          setTestoIntegrazione("");
+        }}
+      >
+        ×
+      </button>
+
+      <h2>Richiedi integrazione documenti</h2>
+
+      <p>
+        Indica al cliente quali documenti deve integrare o reinviare.
+      </p>
+
+      <textarea
+        value={testoIntegrazione}
+        onChange={(e) => setTestoIntegrazione(e.target.value)}
+        disabled={sendingIntegrazione}
+        placeholder="Esempio: Il documento di identità fronte non è leggibile. Si richiede il reinvio..."
+        style={{
+          width: "100%",
+          minHeight: 150,
+          border: "1px solid #d1d5db",
+          borderRadius: 10,
+          padding: 12,
+          fontSize: 14,
+          resize: "vertical",
+        }}
+      />
+
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20 }}>
+        <button
+          type="button"
+          onClick={() => {
+            setIntegrazioneOpen(false);
+            setTestoIntegrazione("");
+          }}
+        >
+          Annulla
+        </button>
+
+        <button
+          type="button"
+          disabled={sendingIntegrazione || !testoIntegrazione.trim()}
+          onClick={inviaRichiestaIntegrazione}
+        >
+          {sendingIntegrazione ? "Invio..." : "Invia richiesta al cliente"}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+      
     </div>
   );
 }
