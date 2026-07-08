@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== "GET" && req.method !== "POST") {
+  if (req.method !== "GET" && req.method !== "POST" && req.method !== "PUT") {
   return res.status(405).json({
     success: false,
     error: "Metodo non consentito",
@@ -12,6 +12,54 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const supabase = getSupabaseAdmin();
 
+if (req.method === "PUT") {
+  const { richiesta_id, stato } = req.body || {};
+
+  const statiValidi = [
+    "bozza",
+    "da_prendere_in_carico",
+    "in_lavorazione",
+    "integrazione_documenti",
+    "conclusa",
+  ];
+
+  if (!richiesta_id) {
+    return res.status(400).json({
+      success: false,
+      error: "ID richiesta mancante",
+    });
+  }
+
+  if (!stato || !statiValidi.includes(stato)) {
+    return res.status(400).json({
+      success: false,
+      error: "Stato pratica non valido",
+    });
+  }
+
+  const now = new Date().toISOString();
+
+  const { error } = await supabase
+    .from("tbassunzioni_richieste")
+    .update({
+      stato,
+      updated_at: now,
+    })
+    .eq("id", richiesta_id);
+
+  if (error) {
+    return res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+
+  return res.status(200).json({
+    success: true,
+    stato,
+  });
+}
+    
     if (req.method === "POST") {
   const {
     richiesta_id,
