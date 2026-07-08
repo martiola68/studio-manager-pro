@@ -151,20 +151,40 @@ function generaPdfRichiestaAssunzione(richiesta: any, cliente: any): Promise<Buf
 function buildAttachments(files: formidable.Files, richiesti: string[]) {
   const attachments: any[] = [];
 
+  // Allegati obbligatori
   for (const tipo of richiesti) {
     const file = toSingleFile(files[tipo] as File | File[] | undefined);
 
     if (!file) {
-      throw new Error(`Documento obbligatorio mancante: ${labelDocumento(tipo)}`);
+      throw new Error(
+        `Documento obbligatorio mancante: ${labelDocumento(tipo)}`
+      );
     }
 
     const buffer = fs.readFileSync(file.filepath);
 
-  attachments.push({
-  filename: file.originalFilename || `${tipo}.pdf`,
-  contentType: file.mimetype || "application/octet-stream",
-  contentBytes: buffer.toString("base64"),
-});
+    attachments.push({
+      filename: file.originalFilename || `${tipo}.pdf`,
+      contentType: file.mimetype || "application/octet-stream",
+      contentBytes: buffer.toString("base64"),
+    });
+  }
+
+  // Allegati aggiuntivi (0, 1 o molti)
+  const extra = files.allegati_extra;
+
+  if (extra) {
+    const lista = Array.isArray(extra) ? extra : [extra];
+
+    for (const file of lista) {
+      const buffer = fs.readFileSync(file.filepath);
+
+      attachments.push({
+        filename: file.originalFilename || "allegato",
+        contentType: file.mimetype || "application/octet-stream",
+        contentBytes: buffer.toString("base64"),
+      });
+    }
   }
 
   return attachments;
