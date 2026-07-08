@@ -30,7 +30,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const emailPulita = String(email_accesso).trim().toLowerCase();
 
     const { error } = await supabase
-      .from("tbaccessi_clienti")
+     .from("tbclienti_accessi_pubblici")
       .update({
         email_accesso: emailPulita,
         updated_at: new Date().toISOString(),
