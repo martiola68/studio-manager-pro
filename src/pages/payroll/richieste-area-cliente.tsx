@@ -53,15 +53,16 @@ export default function RichiesteAreaClientePage() {
 
   setSelected({
     ...json.richiesta,
-    allegati: json.allegati || [],
-  });
+    });
 }
   function formatDate(value?: string | null) {
     if (!value) return "-";
     return new Date(value).toLocaleDateString("it-IT");
   }
 
-  async function apriDocumento(allegato: any) {
+  async function salvaVerificaDocumenti() {
+  if (!selected?.id) return;
+
   try {
     const res = await fetch("/api/payroll/richieste-area-cliente", {
       method: "POST",
@@ -69,21 +70,25 @@ export default function RichiesteAreaClientePage() {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        azione: "signed_url",
-        file_path: allegato.file_path,
-        storage_bucket: allegato.storage_bucket,
+        richiesta_id: selected.id,
+        doc_fronte_confermato: !!selected.doc_fronte_confermato,
+        doc_retro_confermato: !!selected.doc_retro_confermato,
+        doc_codice_fiscale_confermato: !!selected.doc_codice_fiscale_confermato,
+        doc_permesso_soggiorno_confermato: !!selected.doc_permesso_soggiorno_confermato,
+        doc_curriculum_confermato: !!selected.doc_curriculum_confermato,
       }),
     });
 
     const json = await res.json();
 
     if (!res.ok || !json.success) {
-      throw new Error(json.error || "Errore apertura documento");
+      throw new Error(json.error || "Errore salvataggio verifica documenti");
     }
 
-    window.open(json.signedUrl, "_blank");
+    alert("Verifica documenti salvata.");
+    await caricaRichieste();
   } catch (error: any) {
-    alert(error.message || "Errore apertura documento");
+    alert(error.message || "Errore salvataggio verifica documenti");
   }
 }
 
@@ -173,38 +178,47 @@ export default function RichiesteAreaClientePage() {
               <Row label="Note cliente" value={selected.note_cliente} />
             </Section>
 
-            <Section title="Documenti allegati">
-<DocumentoRow
-  label="Documento identità - fronte"
-  allegato={trovaAllegato(selected, "documento_fronte")}
-  onApri={apriDocumento}
-/>
-  <DocumentoRow
+<Section title="Verifica documentazione ricevuta via email">
+  <DocumentoCheck
+    label="Documento identità - fronte"
+    checked={!!selected.doc_fronte_confermato}
+    onChange={(v) => setSelected({ ...selected, doc_fronte_confermato: v })}
+  />
+
+  <DocumentoCheck
     label="Documento identità - retro"
-    allegato={trovaAllegato(selected, "documento_retro")}
+    checked={!!selected.doc_retro_confermato}
+    onChange={(v) => setSelected({ ...selected, doc_retro_confermato: v })}
   />
-  <DocumentoRow
+
+  <DocumentoCheck
     label="Codice fiscale / tessera sanitaria"
-    allegato={trovaAllegato(selected, "codice_fiscale")}
+    checked={!!selected.doc_codice_fiscale_confermato}
+    onChange={(v) => setSelected({ ...selected, doc_codice_fiscale_confermato: v })}
   />
-  <DocumentoRow
-    label="Permesso di soggiorno"
-    allegato={selected.extra_ue ? trovaAllegato(selected, "permesso_soggiorno") : null}
-    nonRichiesto={!selected.extra_ue}
-  />
-  <DocumentoRow
-    label="Curriculum vitae"
-    allegato={
-      selected.tipologia_contratto === "stage" ||
-      selected.tipologia_contratto === "apprendistato"
-        ? trovaAllegato(selected, "curriculum")
-        : null
-    }
-    nonRichiesto={
-      selected.tipologia_contratto !== "stage" &&
-      selected.tipologia_contratto !== "apprendistato"
-    }
-  />
+
+  {selected.extra_ue && (
+    <DocumentoCheck
+      label="Permesso di soggiorno"
+      checked={!!selected.doc_permesso_soggiorno_confermato}
+      onChange={(v) => setSelected({ ...selected, doc_permesso_soggiorno_confermato: v })}
+    />
+  )}
+
+  {(selected.tipologia_contratto === "stage" ||
+    selected.tipologia_contratto === "apprendistato") && (
+    <DocumentoCheck
+      label="Curriculum vitae"
+      checked={!!selected.doc_curriculum_confermato}
+      onChange={(v) => setSelected({ ...selected, doc_curriculum_confermato: v })}
+    />
+  )}
+
+  <div style={{ gridColumn: "1 / -1", marginTop: 10 }}>
+    <button type="button" onClick={salvaVerificaDocumenti}>
+      Salva verifica documenti
+    </button>
+  </div>
 </Section>
 
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20 }}>
@@ -240,55 +254,31 @@ function Row({ label, value }: any) {
   );
 }
 
-function trovaAllegato(richiesta: any, tipo: string) {
-  return (richiesta.allegati || []).find(
-    (a: any) => a.tipo_documento === tipo
-  );
-}
-
-function DocumentoRow({
+function DocumentoCheck({
   label,
-  allegato,
-  nonRichiesto,
-  onApri,
+  checked,
+  onChange,
 }: {
   label: string;
-  allegato?: any;
-  nonRichiesto?: boolean;
-  onApri?: (allegato: any) => void;
+  checked: boolean;
+  onChange: (value: boolean) => void;
 }) {
   return (
-    <div>
-      <div style={{ fontSize: 12, color: "#6b7280", fontWeight: 700 }}>
-        {label}
-      </div>
-
-      {nonRichiesto ? (
-        <div style={{ fontWeight: 700, color: "#6b7280" }}>Non richiesto</div>
-      ) : allegato ? (
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontWeight: 700, color: "#16a34a" }}>
-            ✅ {allegato.file_name}
-          </span>
-          <button
-            type="button"
-            onClick={() => onApri?.(allegato)}
-            style={{
-              border: "1px solid #d1d5db",
-              background: "#fff",
-              borderRadius: 8,
-              padding: "5px 9px",
-              cursor: "pointer",
-              fontWeight: 700,
-            }}
-          >
-            Apri
-          </button>
-        </div>
-      ) : (
-        <div style={{ fontWeight: 700, color: "#dc2626" }}>Mancante</div>
-      )}
-    </div>
+    <label
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        fontWeight: 700,
+      }}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+      />
+      {label}
+    </label>
   );
 }
 
