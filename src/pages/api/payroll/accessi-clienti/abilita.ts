@@ -100,7 +100,13 @@ const html = `
     <p>Gentile Cliente,</p>
 
     <p>
-      la informiamo che è stato attivato l'accesso all'area online per le richieste di assunzione.
+      la informiamo che da oggi le richieste relative a nuove assunzioni
+      dovranno essere trasmesse esclusivamente tramite l'apposita area online
+      messa a disposizione dallo Studio.
+    </p>
+
+    <p>
+      Di seguito trova le credenziali di accesso:
     </p>
 
     <table style="border-collapse: collapse; margin: 16px 0;">
@@ -123,6 +129,17 @@ const html = `
         <td style="padding: 6px 12px;">${password}</td>
       </tr>
     </table>
+
+    <p>
+      Le credenziali resteranno valide fino a nuova comunicazione da parte dello Studio.
+      In caso di smarrimento sarà sufficiente contattarci per riceverne di nuove.
+    </p>
+
+    <p>
+      Per procedere con una nuova richiesta di assunzione sarà sufficiente accedere
+      alla pagina indicata, selezionare “Nuova richiesta assunzione” e compilare
+      il modulo online.
+    </p>
 
     <p>Cordiali saluti</p>
   </div>
