@@ -104,7 +104,12 @@ const html = `
     <p>Gentile Cliente,</p>
 
     <p>
-      sono state generate nuove credenziali per accedere all'area richieste assunzioni.
+      la password per accedere all'area online dedicata alle richieste di assunzione
+      è stata rigenerata.
+    </p>
+
+    <p>
+      Di seguito trova le nuove credenziali di accesso:
     </p>
 
     <table style="border-collapse: collapse; margin: 16px 0;">
@@ -127,6 +132,10 @@ const html = `
         <td style="padding: 6px 12px;">${password}</td>
       </tr>
     </table>
+
+    <p>
+      La precedente password non è più valida.
+    </p>
 
     <p>Cordiali saluti</p>
   </div>
