@@ -2173,10 +2173,11 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
   onClick={() =>
     router.push(`/clienti/organi-sociali?cliente_id=${cliente.id}`)
   }
-  className={cn(
-    organiSocialiMancanti(cliente) &&
-      "rounded-full border-2 border-red-500 text-red-600"
-  )}
+ className={
+  organiSocialiMancanti(cliente)
+    ? "rounded-full border-2 border-red-500 text-red-600"
+    : ""
+}
 >
   <Users className="h-4 w-4" />
 </Button>
