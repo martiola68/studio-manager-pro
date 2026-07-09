@@ -455,12 +455,8 @@ const menuItems: MenuItem[] = [
           { label: "Sospensioni termini", href: "/contenzioso/sospensioni", icon: <Clock className="h-4 w-4" /> },
           { label: "Tipi atto", href: "/contenzioso/tipi-atto", icon: <FileText className="h-4 w-4" /> },
         ],
-      },
-     
-      ],
-  },
-
-   {
+          },
+       {
         label: "AML",
         icon: <ShieldCheck className="h-4 w-4" />,
         children: [
@@ -472,7 +468,7 @@ const menuItems: MenuItem[] = [
           { label: "Comunicazioni inviate", href: "/antiriciclaggio/comunicazioni", icon: <Mail className="h-4 w-4" /> },
         ],
       },
-
+ 
     {
     label: "Configurazione",
     icon: <Settings className="h-4 w-4" />,
