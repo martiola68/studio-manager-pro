@@ -2161,8 +2161,13 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
 
               <TableCell className="sticky right-0 bg-background z-10 w-[170px] text-right">
                    <div className="flex justify-end gap-3">
-{cliente.tipo_cliente?.toLowerCase() !== "persona fisica" && (
-<Button
+{cliente.tipo_cliente?.toLowerCase() !== "persona fisica" &&
+  !(
+    cliente.settore_lavoro === true &&
+    cliente.settore_fiscale !== true &&
+    cliente.settore_consulenza !== true
+  ) && (
+  <Button
   variant="ghost"
   size="icon"
   title={
