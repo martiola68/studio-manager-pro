@@ -468,6 +468,24 @@ const menuItems: MenuItem[] = [
     ],
   },
   {
+  label: "Anagrafiche",
+  icon: <Users className="h-4 w-4" />,
+  children: [
+    {
+      label: "Anagrafiche",
+      icon: <Users className="h-4 w-4" />,
+      children: [
+        { label: "Clienti", href: "/clienti", icon: <Users className="h-4 w-4" /> },
+        {
+          label: "Rappresentanti legali",
+          href: "/antiriciclaggio/rappresentanti",
+          icon: <UserCircle className="h-4 w-4" />,
+        },
+      ],
+    },
+  ],
+},
+  {
     label: "Configurazione",
     icon: <Settings className="h-4 w-4" />,
     children: [
