@@ -3323,7 +3323,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
         Annulla
       </Button>
 
-     <Button
+   <Button
   onClick={() => {
     setFormData((prev) => {
       const next = { ...prev };
@@ -3350,6 +3350,9 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
       description: "Dati selezionati importati nel form.",
     });
   }}
+>
+  Importa selezionati
+</Button>
     </div>
   </DialogContent>
 </Dialog>
