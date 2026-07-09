@@ -339,54 +339,27 @@ const menuItems: MenuItem[] = [
     icon: <FileText className="h-4 w-4" />,
     href: "/promemoria",
   },
-
   {
     label: "Studio",
     icon: <BriefcaseBusiness className="h-4 w-4" />,
     children: [
       {
-        label: "Post del giorno",
-        icon: <StickyNote className="h-4 w-4" />,
-        href: "/post-del-giorno",
-      },
-      {
         label: "Strumenti",
         icon: <BriefcaseBusiness className="h-4 w-4" />,
         children: [
-          { label: "Messaggi", icon: <MessageSquare className="h-4 w-4" />, href: "/messaggi" },
+          { label: "Post del giorno", href: "/post-del-giorno", icon: <StickyNote className="h-4 w-4" /> },
+          { label: "Messaggi", href: "/messaggi", icon: <MessageSquare className="h-4 w-4" /> },
           { label: "Rubrica", href: "/contatti", icon: <UserCircle className="h-4 w-4" /> },
           { label: "Newsletter", href: "/newsletter", icon: <Mail className="h-4 w-4" /> },
           { label: "E-mail interne", href: "/comunicazioni/interne", icon: <MessageSquare className="h-4 w-4" /> },
           { label: "E-mail clienti", href: "/comunicazioni-clienti", icon: <Mail className="h-4 w-4" /> },
-          { label: "Accesso Portali", icon: <Key className="h-4 w-4" />, href: "/accesso-portali" },
-          { label: "Cassetti Fiscali", icon: <FileText className="h-4 w-4" />, href: "/cassetti-fiscali" },
+          { label: "Accesso Portali", href: "/accesso-portali", icon: <Key className="h-4 w-4" /> },
+          { label: "Cassetti Fiscali", href: "/cassetti-fiscali", icon: <FileText className="h-4 w-4" /> },
         ],
       },
-      {
-        label: "Payroll",
-        icon: <Clock className="h-4 w-4" />,
-        children: [
-          { label: "Presenze", href: "/presenze", icon: <Clock className="h-4 w-4" /> },
-          { label: "Smart working", href: "/presenze/smart", icon: <Calendar className="h-4 w-4" /> },
-          { label: "Assenze settimanali", href: "/presenze/assenze-settimanali", icon: <Calendar className="h-4 w-4" /> },
-          { label: "Pratiche Assunzioni", href: "/payroll/pratica-assunzione", icon: <FileText className="h-4 w-4" /> },
-          { label: "Richieste Area Cliente", href: "/payroll/richieste-area-cliente", icon: <FileText className="h-4 w-4" /> },
-          { label: "Dipendenti", href: "/payroll/dipendenti", icon: <Users className="h-4 w-4" /> },
-          { label: "Creazione gruppi smart", href: "/presenze/smart-gruppi", icon: <Users className="h-4 w-4" /> },
-          { label: "Qualifiche", href: "/payroll/qualifiche", icon: <FileText className="h-4 w-4" /> },
-        ],
-      },
-{
-    label: "Anagrafiche",
-    icon: <Users className="h-4 w-4" />,
-    children: [
-      { label: "Clienti", href: "/clienti", icon: <Users className="h-4 w-4" /> },
-      { label: "Rappresentanti legali", href: "/antiriciclaggio/rappresentanti", icon: <UserCircle className="h-4 w-4" /> },
     ],
   },
-  ],  
-     },
-   {
+  {
     label: "Operatività",
     icon: <FolderKanban className="h-4 w-4" />,
     children: [
@@ -444,7 +417,7 @@ const menuItems: MenuItem[] = [
           { label: "Calcolo indici", href: "/controllo-gestione/indici", icon: <BarChart3 className="h-4 w-4" /> },
         ],
       },
-        {
+      {
         label: "Contenzioso",
         icon: <Scale className="h-4 w-4" />,
         children: [
@@ -456,20 +429,44 @@ const menuItems: MenuItem[] = [
       },
     ],
   },
-
   {
     label: "AML",
     icon: <ShieldCheck className="h-4 w-4" />,
     children: [
-      { label: "Elenco Antiriciclaggio", href: "/antiriciclaggio", icon: <ShieldCheck className="h-4 w-4" /> },
-      { label: "Rappresentanti legali", href: "/antiriciclaggio/rappresentanti", icon: <UserCircle className="h-4 w-4" /> },
-      { label: "Prestazioni AR", href: "/impostazioni/elenco-prestazioni-ar", icon: <FileText className="h-4 w-4" /> },
-      { label: "Professionisti", href: "/antiriciclaggio/responsabili-av", icon: <Users className="h-4 w-4" /> },
-      { label: "Soggetti responsabili", href: "/antiriciclaggio/responsabili-av-societa", icon: <Users className="h-4 w-4" /> },
-      { label: "Comunicazioni inviate", href: "/antiriciclaggio/comunicazioni", icon: <Mail className="h-4 w-4" /> },
+      {
+        label: "Antiriciclaggio",
+        icon: <ShieldCheck className="h-4 w-4" />,
+        children: [
+          { label: "Elenco Antiriciclaggio", href: "/antiriciclaggio", icon: <ShieldCheck className="h-4 w-4" /> },
+          { label: "Rappresentanti legali", href: "/antiriciclaggio/rappresentanti", icon: <UserCircle className="h-4 w-4" /> },
+          { label: "Prestazioni AR", href: "/impostazioni/elenco-prestazioni-ar", icon: <FileText className="h-4 w-4" /> },
+          { label: "Professionisti", href: "/antiriciclaggio/responsabili-av", icon: <Users className="h-4 w-4" /> },
+          { label: "Soggetti responsabili", href: "/antiriciclaggio/responsabili-av-societa", icon: <Users className="h-4 w-4" /> },
+          { label: "Comunicazioni inviate", href: "/antiriciclaggio/comunicazioni", icon: <Mail className="h-4 w-4" /> },
+        ],
+      },
     ],
   },
-
+  {
+    label: "Payroll",
+    icon: <Clock className="h-4 w-4" />,
+    children: [
+      {
+        label: "Payroll",
+        icon: <Clock className="h-4 w-4" />,
+        children: [
+          { label: "Presenze", href: "/presenze", icon: <Clock className="h-4 w-4" /> },
+          { label: "Smart working", href: "/presenze/smart", icon: <Calendar className="h-4 w-4" /> },
+          { label: "Assenze settimanali", href: "/presenze/assenze-settimanali", icon: <Calendar className="h-4 w-4" /> },
+          { label: "Pratiche Assunzioni", href: "/payroll/pratica-assunzione", icon: <FileText className="h-4 w-4" /> },
+          { label: "Richieste Area Cliente", href: "/payroll/richieste-area-cliente", icon: <FileText className="h-4 w-4" /> },
+          { label: "Dipendenti", href: "/payroll/dipendenti", icon: <Users className="h-4 w-4" /> },
+          { label: "Creazione gruppi smart", href: "/presenze/smart-gruppi", icon: <Users className="h-4 w-4" /> },
+          { label: "Qualifiche", href: "/payroll/qualifiche", icon: <FileText className="h-4 w-4" /> },
+        ],
+      },
+    ],
+  },
   {
     label: "Configurazione",
     icon: <Settings className="h-4 w-4" />,
