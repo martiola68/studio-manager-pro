@@ -408,6 +408,7 @@ setVisuraPreviewOpen(true);
 
   
   const [clienti, setClienti] = useState<ClienteRow[]>([]);
+  const [organiCountByCliente, setOrganiCountByCliente] = useState<Record<string, number>>({});
   const [contatti, setContatti] = useState<ContattoRow[]>([]);
   const [utenti, setUtenti] = useState<UtenteRow[]>([]);
   const [cassettiFiscali, setCassettiFiscali] = useState<CassettoFiscaleRow[]>(
@@ -490,21 +491,23 @@ if (user?.id) {
     try {
       setLoading(true);
 
-      const [
-        clientiRes,
-        contattiRes,
-        utentiRes,
-        cassettiRes,
-        prestazioniRes,
-        rappLegaliRes,
-      ] = await Promise.all([
-        supabase.from("tbclienti").select("*").order("ragione_sociale"),
-        supabase.from("tbcontatti").select("*").order("cognome"),
-        supabase.from("tbutenti").select("*").order("cognome"),
-        supabase.from("tbcassetti_fiscali").select("*").order("nominativo"),
-        supabase.from("tbprestazioni").select("*").order("descrizione"),
-        supabase.from("rapp_legali" as any).select("id, nome_cognome").order("nome_cognome"),
-      ]);
+     const [
+  clientiRes,
+  contattiRes,
+  utentiRes,
+  cassettiRes,
+  prestazioniRes,
+  rappLegaliRes,
+  organiRes,
+] = await Promise.all([
+  supabase.from("tbclienti").select("*").order("ragione_sociale"),
+  supabase.from("tbcontatti").select("*").order("cognome"),
+  supabase.from("tbutenti").select("*").order("cognome"),
+  supabase.from("tbcassetti_fiscali").select("*").order("nominativo"),
+  supabase.from("tbprestazioni").select("*").order("descrizione"),
+  supabase.from("rapp_legali" as any).select("id, nome_cognome").order("nome_cognome"),
+  supabase.from("tbclienti_organi" as any).select("cliente_id"),
+]);
       
       if (clientiRes.error) throw clientiRes.error;
       if (contattiRes.error) throw contattiRes.error;
@@ -512,12 +515,22 @@ if (user?.id) {
       if (cassettiRes.error) throw cassettiRes.error;
       if (prestazioniRes.error) throw prestazioniRes.error;
    if ((rappLegaliRes as any).error) throw (rappLegaliRes as any).error;
+      if ((organiRes as any).error) throw (organiRes as any).error;
 
 setClienti(clientiRes.data ?? []);
 setContatti(contattiRes.data ?? []);
 setUtenti(utentiRes.data ?? []);
 setCassettiFiscali(cassettiRes.data ?? []);
 setPrestazioni(prestazioniRes.data ?? []);
+
+      const organiMap: Record<string, number> = {};
+
+(((organiRes as any).data ?? []) as any[]).forEach((row) => {
+  if (!row.cliente_id) return;
+  organiMap[row.cliente_id] = (organiMap[row.cliente_id] || 0) + 1;
+});
+
+setOrganiCountByCliente(organiMap);
 
 const rappLegaliData = ((rappLegaliRes as any).data ?? []) as {
   id: string;
@@ -661,6 +674,19 @@ setRappLegali(rappLegaliData);
     setScadenzari(initialScadenzari);
   };
 
+const organiSocialiMancanti = (cliente: ClienteRow) => {
+  const isSocieta =
+    cliente.cliente === true &&
+    cliente.tipo_cliente?.toLowerCase() !== "persona fisica";
+
+  const settoreDaControllare =
+    cliente.settore_fiscale === true || cliente.settore_consulenza === true;
+
+  const organiInseriti = organiCountByCliente[cliente.id] || 0;
+
+  return isSocieta && settoreDaControllare && organiInseriti === 0;
+};
+  
   const handleAddNew = () => {
     resetForm();
     setIsDialogOpen(true);
@@ -2136,16 +2162,24 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
               <TableCell className="sticky right-0 bg-background z-10 w-[170px] text-right">
                    <div className="flex justify-end gap-3">
 {cliente.tipo_cliente?.toLowerCase() !== "persona fisica" && (
-  <Button
-    variant="ghost"
-    size="icon"
-    title="Soci e Organi sociali"
-    onClick={() =>
-      router.push(`/clienti/organi-sociali?cliente_id=${cliente.id}`)
-    }
-  >
-    <Users className="h-4 w-4" />
-  </Button>
+<Button
+  variant="ghost"
+  size="icon"
+  title={
+    organiSocialiMancanti(cliente)
+      ? "Soci e organi sociali mancanti"
+      : "Soci e organi sociali"
+  }
+  onClick={() =>
+    router.push(`/clienti/organi-sociali?cliente_id=${cliente.id}`)
+  }
+  className={cn(
+    organiSocialiMancanti(cliente) &&
+      "rounded-full border-2 border-red-500 text-red-600"
+  )}
+>
+  <Users className="h-4 w-4" />
+</Button>
 )}
 
   <Button
