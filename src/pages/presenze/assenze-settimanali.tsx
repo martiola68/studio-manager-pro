@@ -165,14 +165,15 @@ export default function AssenzeSettimanaliPage() {
       setUtenti(utentiData || []);
       setPresenze(presenzeData || []);
     } catch (error: any) {
-      console.error("Errore caricamento assenze settimanali:", error);
-      alert(error?.message || "Errore caricamento assenze settimanali.");
+      console.error("Errore caricamento presenze settimanali:", error);
+      alert(error?.message || "Errore caricamento presenze settimanali.");
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
+  
     const init = async () => {
       const id = await getStudioId();
 
@@ -194,19 +195,28 @@ export default function AssenzeSettimanaliPage() {
     void loadData(studioId, weekStart);
   }, [weekStart, studioId]);
 
-  function getCellClass(tipo?: string) {
-    if (tipo === "assenza") return "bg-red-100 text-red-800 border-red-200";
-    if (tipo === "permesso") return "bg-yellow-100 text-yellow-800 border-yellow-200";
-    if (tipo === "festivo") return "bg-slate-100 text-slate-600 border-slate-200";
-    if (tipo === "presenza") return "bg-green-50 text-green-700 border-green-200";
-    return "bg-white text-slate-400 border-slate-200";
-  }
+  function formatCodicePresenza(codice?: string | null) {
+  if (!codice || codice === "-") return "-";
+  if (codice === "Pp") return "P";
+  if (codice === "Ps") return "SW";
+  return codice;
+}
+
+ function getCellClass(tipo?: string, codice?: string) {
+  if (codice === "Pp") return "bg-green-100 text-green-800 border-green-300";
+  if (codice === "Ps") return "bg-blue-100 text-blue-800 border-blue-300";
+  if (tipo === "assenza") return "bg-red-100 text-red-800 border-red-200";
+  if (tipo === "permesso") return "bg-yellow-100 text-yellow-800 border-yellow-200";
+  if (tipo === "festivo") return "bg-slate-100 text-slate-600 border-slate-200";
+  if (tipo === "presenza") return "bg-green-50 text-green-700 border-green-200";
+  return "bg-white text-slate-400 border-slate-200";
+}
 
   return (
     <div className="p-6">
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Assenze settimanali</h1>
+          <h1 className="text-2xl font-bold">Presenze settimanali</h1>
           <p className="text-sm text-slate-500">
             Ferie, permessi e assenze dal{" "}
             <strong>{weekStart.toLocaleDateString("it-IT")}</strong> al{" "}
@@ -262,6 +272,24 @@ export default function AssenzeSettimanaliPage() {
           <div className="text-2xl font-bold text-yellow-700">{riepilogoOggi.permessi}</div>
         </div>
       </div>
+
+      <div className="mb-4 flex flex-wrap gap-2 text-xs">
+  <span className="rounded-full bg-green-100 px-3 py-1 font-semibold text-green-800">
+    P = Presente in ufficio
+  </span>
+  <span className="rounded-full bg-blue-100 px-3 py-1 font-semibold text-blue-800">
+    SW = Smart working
+  </span>
+  <span className="rounded-full bg-yellow-100 px-3 py-1 font-semibold text-yellow-800">
+    Permessi
+  </span>
+  <span className="rounded-full bg-red-100 px-3 py-1 font-semibold text-red-800">
+    Assenze
+  </span>
+  <span className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700">
+    Festivi / non lavorativi
+  </span>
+</div>
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <select
@@ -334,12 +362,10 @@ export default function AssenzeSettimanaliPage() {
                     return (
                       <td key={dateStr} className="p-2 text-center">
                         <div
-                          className={`rounded border px-2 py-2 text-xs font-semibold ${getCellClass(
-                            tipo
-                          )}`}
+                          className={`rounded border px-2 py-2 text-xs font-semibold ${getCellClass(tipo, codice)}
                           title={presenza?.note || descrizione}
                         >
-                          <div>{codice}</div>
+                          <div>{formatCodicePresenza(codice)}</div>
                           <div className="mt-1 truncate font-normal">
                             {descrizione}
                           </div>
