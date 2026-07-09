@@ -571,7 +571,7 @@ const showPostGiornoBadge =
   align="start"
   className="w-[980px] max-w-[calc(100vw-40px)] p-4"
 >
-  <div className="grid grid-cols-4 gap-4">
+  <div className="grid grid-cols-5 gap-4 items-start">
     {item.children?.map((child) => {
       if (child.adminOnly && currentUser?.tipo_utente !== "Admin") return null;
 
@@ -596,9 +596,10 @@ const showPostGiornoBadge =
                 const subActive = isActive(sub);
 
                 return (
-                  <Link
-                    key={sub.label}
-                    href={sub.href || "#"}
+                <Link
+  key={sub.label}
+  href={sub.href || "#"}
+  onClick={() => setOpenMenu(null)}
                     className={cn(
                       "flex min-h-[44px] flex-col items-center justify-center gap-1 rounded-lg border px-2 py-2 text-center text-xs font-medium transition-colors",
                       subActive
