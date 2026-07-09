@@ -252,6 +252,28 @@ function safeString(v: unknown): string {
   return typeof v === "string" ? v : "";
 }
 
+function inferTipoClienteDaCf(cfValue: string) {
+  const cf = String(cfValue || "").trim().toUpperCase();
+
+  if (/^\d{11}$/.test(cf)) {
+    return "Altro";
+  }
+
+  if (/^[A-Z0-9]{16}$/.test(cf)) {
+    return "Persona fisica";
+  }
+
+  return "";
+}
+
+function estraiNumeroReaDaTesto(text: string) {
+  const match = text.match(
+    /(?:N\.?\s*REA|NUMERO\s+REA|REA)\s*[:\-]?\s*([A-Z]{2}\s*[-/]?\s*\d{3,10}|\d{3,10})/i
+  );
+
+  return match?.[1]?.replace(/\s+/g, " ").trim() || "";
+}
+
 export default function ClientiPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -334,7 +356,44 @@ text = data.text || "";
 
 const { cliente } = mapVisuraText(text);
 
-const fields = cliente.filter((field: any) => field.value);
+const mappedFields = [...cliente];
+
+const numeroRea = estraiNumeroReaDaTesto(text);
+
+if (numeroRea && !mappedFields.some((field: any) => field.key === "numero_rea")) {
+  mappedFields.push({
+    key: "numero_rea",
+    label: "Numero REA",
+    value: numeroRea,
+    selected: true,
+  });
+}
+
+const codiceFiscaleImportato =
+  String(
+    mappedFields.find((field: any) => field.key === "codice_fiscale")?.value ||
+      ""
+  ).trim();
+
+const tipoClienteAuto = inferTipoClienteDaCf(codiceFiscaleImportato);
+
+if (tipoClienteAuto) {
+  const existingTipo = mappedFields.find((field: any) => field.key === "tipo_cliente");
+
+  if (existingTipo) {
+    existingTipo.value = tipoClienteAuto;
+    existingTipo.selected = true;
+  } else {
+    mappedFields.push({
+      key: "tipo_cliente",
+      label: "Tipo cliente",
+      value: tipoClienteAuto,
+      selected: true,
+    });
+  }
+}
+
+const fields = mappedFields.filter((field: any) => field.value);
 
 setVisuraClienteFields(fields as VisuraClienteField[]);
 setVisuraPreviewOpen(true);
@@ -794,11 +853,25 @@ const handleSave = async () => {
       encryptionEnabled,
       requireUnlock: masterPasswordGate.requireUnlock,
       action: async () => {
-        const codiceFiscalePulito = String(formData.codice_fiscale || "").trim();
+       const codiceFiscalePulito = String(formData.codice_fiscale || "").trim();
+const tipoClienteEffettivo =
+  inferTipoClienteDaCf(codiceFiscalePulito) || formData.tipo_cliente;
 
-        const cf = normalizeCF(formData.codice_fiscale || "");
+const studioIdEffettivo =
+  studioId || studioIdUtente || editingCliente?.studio_id || "";
 
-if (formData.tipo_cliente === "Persona fisica") {
+if (!studioIdEffettivo) {
+  toast({
+    title: "Errore",
+    description: "Studio ID non disponibile. Impossibile salvare il cliente.",
+    variant: "destructive",
+  });
+  return;
+}
+
+const cf = normalizeCF(formData.codice_fiscale || "");
+
+if (tipoClienteEffettivo === "Persona fisica") {
   if (cf.length !== 16) {
     toast({
       title: "Errore",
@@ -924,10 +997,10 @@ const base: Partial<ClienteInsert> & {
   pec?: string | null;
   studio_id?: string;
 } = {
- studio_id: studioId || editingCliente?.studio_id,
+studio_id: studioIdEffettivo,
 cod_cliente:
   formData.cod_cliente || `CL-${Date.now().toString().slice(-6)}`,
-tipo_cliente: formData.tipo_cliente,
+tipo_cliente: tipoClienteEffettivo,
 cliente: formData.cliente,
 tipologia_cliente: formData.tipologia_cliente,
           professionista_incaricato:
@@ -3250,30 +3323,33 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
         Annulla
       </Button>
 
-      <Button
-        onClick={() => {
-          setFormData((prev) => {
-            const next = { ...prev };
+     <Button
+  onClick={() => {
+    setFormData((prev) => {
+      const next = { ...prev };
 
-            visuraClienteFields
-              .filter((field) => field.selected)
-              .forEach((field) => {
-                (next as any)[field.key] = field.value;
-              });
+      visuraClienteFields
+        .filter((field) => field.selected)
+        .forEach((field) => {
+          (next as any)[field.key] = field.value;
+        });
 
-            return next;
-          });
+      const tipoClienteAuto = inferTipoClienteDaCf(next.codice_fiscale || "");
 
-          setVisuraPreviewOpen(false);
+      if (tipoClienteAuto) {
+        next.tipo_cliente = tipoClienteAuto;
+      }
 
-          toast({
-            title: "Import visura",
-            description: "Dati selezionati importati nel form.",
-          });
-        }}
-      >
-        Importa selezionati
-      </Button>
+      return next;
+    });
+
+    setVisuraPreviewOpen(false);
+
+    toast({
+      title: "Import visura",
+      description: "Dati selezionati importati nel form.",
+    });
+  }}
     </div>
   </DialogContent>
 </Dialog>
