@@ -2139,7 +2139,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
   <Button
     variant="ghost"
     size="icon"
-    title="Organi sociali"
+    title="Soci e Organi sociali"
     onClick={() =>
       router.push(`/clienti/organi-sociali?cliente_id=${cliente.id}`)
     }
