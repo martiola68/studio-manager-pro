@@ -675,9 +675,9 @@ setRappLegali(rappLegaliData);
   };
 
 const organiSocialiMancanti = (cliente: ClienteRow) => {
-  const isSocieta =
-    cliente.cliente === true &&
-    cliente.tipo_cliente?.toLowerCase() !== "persona fisica";
+ const isSocieta =
+  (cliente as any).cliente === true &&
+  cliente.tipo_cliente?.toLowerCase() !== "persona fisica";
 
   const settoreDaControllare =
     cliente.settore_fiscale === true || cliente.settore_consulenza === true;
