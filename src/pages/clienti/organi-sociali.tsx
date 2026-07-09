@@ -477,7 +477,7 @@ function getTipoRuolo(ruolo: string) {
       <div style={{ display: "flex", justifyContent: "space-between" }}>
         <div>
           <h1 style={{ fontSize: 34, fontWeight: 800, margin: 0 }}>
-            Organi sociali
+            Soci e Organi sociali
           </h1>
 
           <p style={{ color: "#64748b", marginTop: 6 }}>
