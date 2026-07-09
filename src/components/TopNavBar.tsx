@@ -618,25 +618,6 @@ const showPostGiornoBadge =
           </div>
         );
       }
-
-   return (
-  <DropdownMenuItem key={sub.label} asChild>
-    <Link
-      href={sub.href || "#"}
-      className={cn(
-        "flex min-h-[44px] flex-col items-center justify-center gap-1 rounded-lg border px-2 py-2 text-center text-xs font-medium transition-colors",
-        subActive
-          ? "border-blue-600 bg-blue-50 text-blue-700"
-          : "border-gray-200 bg-gray-50 text-gray-700 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
-      )}
-    >
-      <span className="text-blue-600 flex items-center justify-center [&>svg]:h-4 [&>svg]:w-4">
-        {sub.icon}
-      </span>
-      <span>{sub.label}</span>
-    </Link>
-  </DropdownMenuItem>
-);
     })}
   </div>
 </DropdownMenuContent>
