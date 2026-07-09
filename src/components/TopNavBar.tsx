@@ -389,7 +389,6 @@ const menuItems: MenuItem[] = [
           { label: "Proforma", href: "/scadenze/proforma", icon: <FileText className="h-4 w-4" /> },
         ],
       },
-
       {
         label: "Pratiche",
         icon: <FolderKanban className="h-4 w-4" />,
@@ -399,7 +398,6 @@ const menuItems: MenuItem[] = [
           { label: "Diciture documenti", href: "/pratiche/diciture", icon: <FileText className="h-4 w-4" /> },
         ],
       },
-
       {
         label: "Revisione e Controllo",
         icon: <ClipboardCheck className="h-4 w-4" />,
@@ -415,7 +413,6 @@ const menuItems: MenuItem[] = [
           { label: "Follow-up", href: "/revisione-controllo/followup", icon: <Clock className="h-4 w-4" /> },
         ],
       },
-
       {
         label: "Controllo di gestione",
         icon: <BriefcaseBusiness className="h-4 w-4" />,
@@ -426,7 +423,6 @@ const menuItems: MenuItem[] = [
           { label: "Calcolo indici", href: "/controllo-gestione/indici", icon: <BarChart3 className="h-4 w-4" /> },
         ],
       },
-
       {
         label: "Contenzioso",
         icon: <Scale className="h-4 w-4" />,
@@ -437,7 +433,6 @@ const menuItems: MenuItem[] = [
           { label: "Tipi atto", href: "/contenzioso/tipi-atto", icon: <FileText className="h-4 w-4" /> },
         ],
       },
-
       {
         label: "AML",
         icon: <ShieldCheck className="h-4 w-4" />,
@@ -450,16 +445,6 @@ const menuItems: MenuItem[] = [
           { label: "Comunicazioni inviate", href: "/antiriciclaggio/comunicazioni", icon: <Mail className="h-4 w-4" /> },
         ],
       },
-
-      {
-        label: "Anagrafiche",
-        icon: <Users className="h-4 w-4" />,
-        children: [
-          { label: "Clienti", href: "/clienti", icon: <Users className="h-4 w-4" /> },
-          { label: "Rappresentanti legali", href: "/antiriciclaggio/rappresentanti", icon: <UserCircle className="h-4 w-4" /> },
-        ],
-      },
-
       {
         label: "Payroll",
         icon: <Clock className="h-4 w-4" />,
@@ -474,6 +459,15 @@ const menuItems: MenuItem[] = [
           { label: "Qualifiche", href: "/payroll/qualifiche", icon: <FileText className="h-4 w-4" /> },
         ],
       },
+    ],
+  },
+
+  {
+    label: "Anagrafiche",
+    icon: <Users className="h-4 w-4" />,
+    children: [
+      { label: "Clienti", href: "/clienti", icon: <Users className="h-4 w-4" /> },
+      { label: "Rappresentanti legali", href: "/antiriciclaggio/rappresentanti", icon: <UserCircle className="h-4 w-4" /> },
     ],
   },
 
