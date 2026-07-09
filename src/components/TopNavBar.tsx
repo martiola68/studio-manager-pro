@@ -362,6 +362,29 @@ const menuItems: MenuItem[] = [
           { label: "Cassetti Fiscali", icon: <FileText className="h-4 w-4" />, href: "/cassetti-fiscali" },
         ],
       },
+      {
+        label: "Payroll",
+        icon: <Clock className="h-4 w-4" />,
+        children: [
+          { label: "Presenze", href: "/presenze", icon: <Clock className="h-4 w-4" /> },
+          { label: "Smart working", href: "/presenze/smart", icon: <Calendar className="h-4 w-4" /> },
+          { label: "Assenze settimanali", href: "/presenze/assenze-settimanali", icon: <Calendar className="h-4 w-4" /> },
+          { label: "Pratiche Assunzioni", href: "/payroll/pratica-assunzione", icon: <FileText className="h-4 w-4" /> },
+          { label: "Richieste Area Cliente", href: "/payroll/richieste-area-cliente", icon: <FileText className="h-4 w-4" /> },
+          { label: "Dipendenti", href: "/payroll/dipendenti", icon: <Users className="h-4 w-4" /> },
+          { label: "Creazione gruppi smart", href: "/presenze/smart-gruppi", icon: <Users className="h-4 w-4" /> },
+          { label: "Qualifiche", href: "/payroll/qualifiche", icon: <FileText className="h-4 w-4" /> },
+        ],
+      },
+{
+    label: "Anagrafiche",
+    icon: <Users className="h-4 w-4" />,
+    children: [
+      { label: "Clienti", href: "/clienti", icon: <Users className="h-4 w-4" /> },
+      { label: "Rappresentanti legali", href: "/antiriciclaggio/rappresentanti", icon: <UserCircle className="h-4 w-4" /> },
+    ],
+  },
+      
     ],
   },
 
@@ -433,7 +456,11 @@ const menuItems: MenuItem[] = [
           { label: "Tipi atto", href: "/contenzioso/tipi-atto", icon: <FileText className="h-4 w-4" /> },
         ],
       },
-      {
+     
+      ],
+  },
+
+   {
         label: "AML",
         icon: <ShieldCheck className="h-4 w-4" />,
         children: [
@@ -445,33 +472,8 @@ const menuItems: MenuItem[] = [
           { label: "Comunicazioni inviate", href: "/antiriciclaggio/comunicazioni", icon: <Mail className="h-4 w-4" /> },
         ],
       },
-      {
-        label: "Payroll",
-        icon: <Clock className="h-4 w-4" />,
-        children: [
-          { label: "Presenze", href: "/presenze", icon: <Clock className="h-4 w-4" /> },
-          { label: "Smart working", href: "/presenze/smart", icon: <Calendar className="h-4 w-4" /> },
-          { label: "Assenze settimanali", href: "/presenze/assenze-settimanali", icon: <Calendar className="h-4 w-4" /> },
-          { label: "Pratiche Assunzioni", href: "/payroll/pratica-assunzione", icon: <FileText className="h-4 w-4" /> },
-          { label: "Richieste Area Cliente", href: "/payroll/richieste-area-cliente", icon: <FileText className="h-4 w-4" /> },
-          { label: "Dipendenti", href: "/payroll/dipendenti", icon: <Users className="h-4 w-4" /> },
-          { label: "Creazione gruppi smart", href: "/presenze/smart-gruppi", icon: <Users className="h-4 w-4" /> },
-          { label: "Qualifiche", href: "/payroll/qualifiche", icon: <FileText className="h-4 w-4" /> },
-        ],
-      },
-    ],
-  },
 
-  {
-    label: "Anagrafiche",
-    icon: <Users className="h-4 w-4" />,
-    children: [
-      { label: "Clienti", href: "/clienti", icon: <Users className="h-4 w-4" /> },
-      { label: "Rappresentanti legali", href: "/antiriciclaggio/rappresentanti", icon: <UserCircle className="h-4 w-4" /> },
-    ],
-  },
-
-  {
+    {
     label: "Configurazione",
     icon: <Settings className="h-4 w-4" />,
     children: [
@@ -579,7 +581,9 @@ const showPostGiornoBadge =
         return (
           <div key={child.label} className="rounded-xl border bg-white p-3">
             <div className="mb-3 flex items-center gap-2 text-sm font-bold text-gray-900">
-              <span className="text-blue-600">{child.icon}</span>
+              <span className="text-blue-600 flex items-center justify-center [&>svg]:h-4 [&>svg]:w-4">
+  {child.icon}
+</span>
               <span>{child.label}</span>
             </div>
 
@@ -596,13 +600,15 @@ const showPostGiornoBadge =
                     key={sub.label}
                     href={sub.href || "#"}
                     className={cn(
-                      "flex min-h-[54px] flex-col items-center justify-center gap-1 rounded-lg border px-2 py-2 text-center text-xs font-medium transition-colors",
+                      "flex min-h-[44px] flex-col items-center justify-center gap-1 rounded-lg border px-2 py-2 text-center text-xs font-medium transition-colors",
                       subActive
                         ? "border-blue-600 bg-blue-50 text-blue-700"
                         : "border-gray-200 bg-gray-50 text-gray-700 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
                     )}
                   >
-                    <span className="text-blue-600">{sub.icon}</span>
+                   <span className="text-blue-600 flex items-center justify-center [&>svg]:h-4 [&>svg]:w-4">
+  {sub.icon}
+</span>
                     <span>{sub.label}</span>
                   </Link>
                 );
@@ -617,13 +623,15 @@ const showPostGiornoBadge =
           key={child.label}
           href={child.href || "#"}
           className={cn(
-            "flex min-h-[70px] flex-col items-center justify-center gap-2 rounded-xl border p-3 text-center text-sm font-semibold transition-colors",
+            "flex min-h-[56px] flex-col items-center justify-center gap-2 rounded-xl border p-3 text-center text-sm font-semibold transition-colors",
             childActive
               ? "border-blue-600 bg-blue-50 text-blue-700"
               : "border-gray-200 bg-gray-50 text-gray-700 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
           )}
         >
-          <span className="text-blue-600">{child.icon}</span>
+          <span className="text-blue-600 flex items-center justify-center [&>svg]:h-4 [&>svg]:w-4">
+  {child.icon}
+</span>
           <span>{child.label}</span>
         </Link>
       );
