@@ -353,11 +353,11 @@ const menuItems: MenuItem[] = [
         label: "Strumenti",
         icon: <BriefcaseBusiness className="h-4 w-4" />,
         children: [
-          { label: "Messaggistica", icon: <MessageSquare className="h-4 w-4" />, href: "/messaggi" },
+          { label: "Messaggi", icon: <MessageSquare className="h-4 w-4" />, href: "/messaggi" },
           { label: "Rubrica", href: "/contatti", icon: <UserCircle className="h-4 w-4" /> },
           { label: "Newsletter", href: "/newsletter", icon: <Mail className="h-4 w-4" /> },
-          { label: "Comunicazioni interne", href: "/comunicazioni/interne", icon: <MessageSquare className="h-4 w-4" /> },
-          { label: "Comunicazioni clienti", href: "/comunicazioni-clienti", icon: <Mail className="h-4 w-4" /> },
+          { label: "E-mail interne", href: "/comunicazioni/interne", icon: <MessageSquare className="h-4 w-4" /> },
+          { label: "E-mail clienti", href: "/comunicazioni-clienti", icon: <Mail className="h-4 w-4" /> },
           { label: "Accesso Portali", icon: <Key className="h-4 w-4" />, href: "/accesso-portali" },
           { label: "Cassetti Fiscali", icon: <FileText className="h-4 w-4" />, href: "/cassetti-fiscali" },
         ],
@@ -384,11 +384,9 @@ const menuItems: MenuItem[] = [
       { label: "Rappresentanti legali", href: "/antiriciclaggio/rappresentanti", icon: <UserCircle className="h-4 w-4" /> },
     ],
   },
-      
-    ],
-  },
-
-  {
+  ],  
+     },
+   {
     label: "Operatività",
     icon: <FolderKanban className="h-4 w-4" />,
     children: [
@@ -456,7 +454,7 @@ const menuItems: MenuItem[] = [
           { label: "Tipi atto", href: "/contenzioso/tipi-atto", icon: <FileText className="h-4 w-4" /> },
         ],
           },
-       {
+        {
         label: "AML",
         icon: <ShieldCheck className="h-4 w-4" />,
         children: [
@@ -468,8 +466,10 @@ const menuItems: MenuItem[] = [
           { label: "Comunicazioni inviate", href: "/antiriciclaggio/comunicazioni", icon: <Mail className="h-4 w-4" /> },
         ],
       },
- 
-    {
+    ],
+  },
+
+  {
     label: "Configurazione",
     icon: <Settings className="h-4 w-4" />,
     children: [
