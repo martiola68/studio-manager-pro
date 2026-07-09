@@ -565,61 +565,70 @@ const showPostGiornoBadge =
             </Button>
           </DropdownMenuTrigger>
 
-          <DropdownMenuContent align="start" className="w-[320px] max-h-[75vh] overflow-y-auto">
-  {item.children?.map((child) => {
-    if (child.adminOnly && currentUser?.tipo_utente !== "Admin") return null;
+<DropdownMenuContent
+  align="start"
+  className="w-[980px] max-w-[calc(100vw-40px)] p-4"
+>
+  <div className="grid grid-cols-4 gap-4">
+    {item.children?.map((child) => {
+      if (child.adminOnly && currentUser?.tipo_utente !== "Admin") return null;
 
-    const childActive = isActive(child);
+      const childActive = isActive(child);
 
-    if (child.children?.length) {
-      return (
-        <div key={child.label} className="py-2">
-         <div className="flex items-center gap-2 px-3 py-2 text-sm font-bold text-gray-900">
-  <span className="text-blue-600">{child.icon}</span>
-  <span>{child.label}</span>
-</div>
+      if (child.children?.length) {
+        return (
+          <div key={child.label} className="rounded-xl border bg-white p-3">
+            <div className="mb-3 flex items-center gap-2 text-sm font-bold text-gray-900">
+              <span className="text-blue-600">{child.icon}</span>
+              <span>{child.label}</span>
+            </div>
 
-          <div className="space-y-1">
-            {child.children.map((sub) => {
-              if (sub.adminOnly && currentUser?.tipo_utente !== "Admin") return null;
+            <div className="grid grid-cols-2 gap-2">
+              {child.children.map((sub) => {
+                if (sub.adminOnly && currentUser?.tipo_utente !== "Admin") {
+                  return null;
+                }
 
-              const subActive = isActive(sub);
+                const subActive = isActive(sub);
 
-              return (
-                <DropdownMenuItem key={sub.label} asChild>
+                return (
                   <Link
+                    key={sub.label}
                     href={sub.href || "#"}
                     className={cn(
-                      "flex items-center gap-2 px-6 py-2 cursor-pointer",
-                      subActive && "bg-blue-50 text-blue-600 font-semibold"
+                      "flex min-h-[54px] flex-col items-center justify-center gap-1 rounded-lg border px-2 py-2 text-center text-xs font-medium transition-colors",
+                      subActive
+                        ? "border-blue-600 bg-blue-50 text-blue-700"
+                        : "border-gray-200 bg-gray-50 text-gray-700 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
                     )}
                   >
-                    {sub.icon}
+                    <span className="text-blue-600">{sub.icon}</span>
                     <span>{sub.label}</span>
                   </Link>
-                </DropdownMenuItem>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
-      );
-    }
+        );
+      }
 
-    return (
-      <DropdownMenuItem key={child.label} asChild>
+      return (
         <Link
+          key={child.label}
           href={child.href || "#"}
           className={cn(
-            "flex items-center gap-2 px-2 py-2 cursor-pointer",
-            childActive && "bg-blue-50 text-blue-600 font-semibold"
+            "flex min-h-[70px] flex-col items-center justify-center gap-2 rounded-xl border p-3 text-center text-sm font-semibold transition-colors",
+            childActive
+              ? "border-blue-600 bg-blue-50 text-blue-700"
+              : "border-gray-200 bg-gray-50 text-gray-700 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
           )}
         >
-          {child.icon}
+          <span className="text-blue-600">{child.icon}</span>
           <span>{child.label}</span>
         </Link>
-      </DropdownMenuItem>
-    );
-  })}
+      );
+    })}
+  </div>
 </DropdownMenuContent>
         </DropdownMenu>
       );
