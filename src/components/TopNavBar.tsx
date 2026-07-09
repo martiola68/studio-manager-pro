@@ -444,7 +444,7 @@ const menuItems: MenuItem[] = [
           { label: "Calcolo indici", href: "/controllo-gestione/indici", icon: <BarChart3 className="h-4 w-4" /> },
         ],
       },
-      {
+        {
         label: "Contenzioso",
         icon: <Scale className="h-4 w-4" />,
         children: [
@@ -453,19 +453,20 @@ const menuItems: MenuItem[] = [
           { label: "Sospensioni termini", href: "/contenzioso/sospensioni", icon: <Clock className="h-4 w-4" /> },
           { label: "Tipi atto", href: "/contenzioso/tipi-atto", icon: <FileText className="h-4 w-4" /> },
         ],
-          },
-        {
-        label: "AML",
-        icon: <ShieldCheck className="h-4 w-4" />,
-        children: [
-          { label: "Elenco Antiriciclaggio", href: "/antiriciclaggio", icon: <ShieldCheck className="h-4 w-4" /> },
-          { label: "Rappresentanti legali", href: "/antiriciclaggio/rappresentanti", icon: <UserCircle className="h-4 w-4" /> },
-          { label: "Prestazioni AR", href: "/impostazioni/elenco-prestazioni-ar", icon: <FileText className="h-4 w-4" /> },
-          { label: "Professionisti", href: "/antiriciclaggio/responsabili-av", icon: <Users className="h-4 w-4" /> },
-          { label: "Soggetti responsabili", href: "/antiriciclaggio/responsabili-av-societa", icon: <Users className="h-4 w-4" /> },
-          { label: "Comunicazioni inviate", href: "/antiriciclaggio/comunicazioni", icon: <Mail className="h-4 w-4" /> },
-        ],
       },
+    ],
+  },
+
+  {
+    label: "AML",
+    icon: <ShieldCheck className="h-4 w-4" />,
+    children: [
+      { label: "Elenco Antiriciclaggio", href: "/antiriciclaggio", icon: <ShieldCheck className="h-4 w-4" /> },
+      { label: "Rappresentanti legali", href: "/antiriciclaggio/rappresentanti", icon: <UserCircle className="h-4 w-4" /> },
+      { label: "Prestazioni AR", href: "/impostazioni/elenco-prestazioni-ar", icon: <FileText className="h-4 w-4" /> },
+      { label: "Professionisti", href: "/antiriciclaggio/responsabili-av", icon: <Users className="h-4 w-4" /> },
+      { label: "Soggetti responsabili", href: "/antiriciclaggio/responsabili-av-societa", icon: <Users className="h-4 w-4" /> },
+      { label: "Comunicazioni inviate", href: "/antiriciclaggio/comunicazioni", icon: <Mail className="h-4 w-4" /> },
     ],
   },
 
