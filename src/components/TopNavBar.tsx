@@ -574,10 +574,10 @@ const showPostGiornoBadge =
     if (child.children?.length) {
       return (
         <div key={child.label} className="py-2">
-          <div className="flex items-center gap-2 px-3 py-2 text-xs font-bold uppercase text-gray-500">
-            {child.icon}
-            <span>{child.label}</span>
-          </div>
+         <div className="flex items-center gap-2 px-3 py-2 text-sm font-bold text-gray-900">
+  <span className="text-blue-600">{child.icon}</span>
+  <span>{child.label}</span>
+</div>
 
           <div className="space-y-1">
             {child.children.map((sub) => {
