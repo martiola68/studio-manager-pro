@@ -457,7 +457,7 @@ const menuItems: MenuItem[] = [
         children: [
           { label: "Presenze", href: "/presenze", icon: <Clock className="h-4 w-4" /> },
           { label: "Smart working", href: "/presenze/smart", icon: <Calendar className="h-4 w-4" /> },
-          { label: "Assenze settimanali", href: "/presenze/assenze-settimanali", icon: <Calendar className="h-4 w-4" /> },
+          { label: "Presenze settimanali", href: "/presenze/assenze-settimanali", icon: <Calendar className="h-4 w-4" /> },
           { label: "Pratiche Assunzioni", href: "/payroll/pratica-assunzione", icon: <FileText className="h-4 w-4" /> },
           { label: "Richieste Area Cliente", href: "/payroll/richieste-area-cliente", icon: <FileText className="h-4 w-4" /> },
           { label: "Dipendenti", href: "/payroll/dipendenti", icon: <Users className="h-4 w-4" /> },
