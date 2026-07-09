@@ -323,274 +323,52 @@ void loadEventiImminenti();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
 
-  const menuItems: MenuItem[] = [
-    {
-      label: "Dashboard",
-      icon: <LayoutDashboard className="h-4 w-4" />,
-      href: "/dashboard",
-    },
-    {
-      label: "Agenda",
-      icon: <Calendar className="h-4 w-4" />,
-      href: "/agenda",
-    },
+const menuItems: MenuItem[] = [
   {
-  label: "Promemoria",
-  icon: <FileText className="h-4 w-4" />,
-  href: "/promemoria",
-},
-{
-  label: "Post del giorno",
-  icon: <StickyNote className="h-4 w-4" />,
-  href: "/post-del-giorno",
-},
-   {
-  label: "Strumenti",
-  icon: <BriefcaseBusiness className="h-4 w-4" />,
-  children: [
-    { label: "Messaggistica", icon: <MessageSquare className="h-4 w-4" />, href: "/messaggi" },
-    { label: "Rubrica", href: "/contatti", icon: <UserCircle className="h-4 w-4" /> },
-
-    { label: "Newsletter", href: "/newsletter", icon: <Mail className="h-4 w-4" /> },
-    { label: "Comunicazioni interne", href: "/comunicazioni/interne", icon: <MessageSquare className="h-4 w-4" /> },
-    { label: "Comunicazioni clienti", href: "/comunicazioni-clienti", icon: <Mail className="h-4 w-4" /> },
-
-    { label: "Accesso Portali", icon: <Key className="h-4 w-4" />, href: "/accesso-portali" },
-    { label: "Cassetti Fiscali", icon: <FileText className="h-4 w-4" />, href: "/cassetti-fiscali" },
-  ],
+    label: "Dashboard",
+    icon: <LayoutDashboard className="h-4 w-4" />,
+    href: "/dashboard",
   },
-    {
-      label: "Scadenzario",
-      icon: <Calendar className="h-4 w-4" />,
-      children: [
-        { label: "Elenco Generale", href: "/scadenze/elenco-generale", icon: <FileText className="h-4 w-4" /> },
-        { label: "Calendario", href: "/scadenze/calendario", icon: <Calendar className="h-4 w-4" /> },
-        { label: "Riepilogo", href: "/scadenze/riepilogo", icon: <FileText className="h-4 w-4" /> },
-        { label: "IVA", href: "/scadenze/iva", icon: <FileText className="h-4 w-4" /> },
-        { label: "CCGG", href: "/scadenze/ccgg", icon: <FileText className="h-4 w-4" /> },
-        { label: "CU", href: "/scadenze/cu", icon: <FileText className="h-4 w-4" /> },
-        { label: "IMU", href: "/scadenze/imu", icon: <FileText className="h-4 w-4" /> },
-        { label: "Fiscali", href: "/scadenze/fiscali", icon: <FileText className="h-4 w-4" /> },
-        { label: "Bilanci", href: "/scadenze/bilanci", icon: <FileText className="h-4 w-4" /> },
-        { label: "770", href: "/scadenze/modello-770", icon: <FileText className="h-4 w-4" /> },
-        { label: "Liquidazioni IVA - LIPE", href: "/scadenze/lipe", icon: <FileText className="h-4 w-4" /> },
-        { label: "Esterometro", href: "/scadenze/esterometro", icon: <FileText className="h-4 w-4" /> },
-        { label: "Affitti", href: "/scadenze/affitti", icon: <FileText className="h-4 w-4" /> },
-        { label: "Proforma", href: "/scadenze/proforma", icon: <FileText className="h-4 w-4" /> },
-      ],
-    },
-    {
-  label: "Pratiche",
-  icon: <FolderKanban className="h-4 w-4" />,
-  children: [
-      {
-  label: "Variazioni CCIAA / AdE",
-  href: "/pratiche/variazioni",
-  icon: <FileText className="h-4 w-4" />,
-},
-{
-  label: "Modelli documenti",
-  href: "/pratiche/modelli",
-  icon: <FileText className="h-4 w-4" />,
-},
-    {
-      label: "Diciture documenti",
-      href: "/pratiche/diciture",
-      icon: <FileText className="h-4 w-4" />,
-    },
-  ],
-},
-{
-  label: "Revisione e Controllo",
-  icon: <ClipboardCheck className="h-4 w-4" />,
-  children: [
-    {
-      label: "Dashboard",
-      href: "/revisione-controllo/dashboard",
-      icon: <BarChart3 className="h-4 w-4" />,
-    },
-    {
-      label: "Archivio incarichi",
-      href: "/revisione-controllo",
-      icon: <FileText className="h-4 w-4" />,
-    },
-    {
-      label: "Nuovo incarico",
-      href: "/revisione-controllo/nuovo",
-      icon: <FileText className="h-4 w-4" />,
-    },
-    {
-      label: "Controlli trimestrali",
-      href: "/revisione-controllo/controlli",
-      icon: <Calendar className="h-4 w-4" />,
-    },
-    {
-  label: "Checklist controlli",
-  href: "/revisione-controllo/checklist",
-  icon: <ClipboardCheck className="h-4 w-4" />,
-},
-    {
-  label: "Documenti revisione",
-  href: "/revisione-controllo/documenti",
-  icon: <FileText className="h-4 w-4" />,
-},
-    {
-  label: "Relazioni / Verbali",
-  href: "/revisione-controllo/relazioni",
-  icon: <FileText className="h-4 w-4" />,
-},
-{
-  label: "Modelli relazioni",
-  href: "/revisione-controllo/modelli",
-  icon: <FileText className="h-4 w-4" />,
-},
-    {
-  label: "Follow-up",
-  href: "/revisione-controllo/followup",
-  icon: <Clock className="h-4 w-4" />,
-},
-  ],
-},
-    
-    {
-  label: "Controllo di gestione",
-  icon: <BriefcaseBusiness className="h-4 w-4" />,
-  children: [
-    {
-      label: "Elenco generale",
-      href: "/controllo-gestione",
-      icon: <FileText className="h-4 w-4" />,
-    },
-    {
-      label: "Nuovo",
-      href: "/controllo-gestione/nuovo",
-      icon: <FileText className="h-4 w-4" />,
-    },
-    {
-      label: "Storico controlli",
-      href: "/controllo-gestione/storico",
-      icon: <Clock className="h-4 w-4" />,
-    },
-    {
-  label: "Calcolo indici",
-  href: "/controllo-gestione/indici",
-  icon: <BarChart3 className="h-4 w-4" />,
-},
-  ],
-},
-    
-    {
-      label: "Contenzioso",
-      icon: <Scale className="h-4 w-4" />,
-      children: [
-        { label: "Pratiche contenzioso", href: "/contenzioso", icon: <FolderKanban className="h-4 w-4" /> },
-        { label: "Regole scadenze", href: "/contenzioso/regole-scadenze", icon: <Settings className="h-4 w-4" /> },
-        { label: "Sospensioni termini", href: "/contenzioso/sospensioni", icon: <Clock className="h-4 w-4" /> },
-        { label: "Tipi atto", href: "/contenzioso/tipi-atto", icon: <FileText className="h-4 w-4" /> },
-      ],
-    },
-    {
-      label: "AML",
-      icon: <ShieldCheck className="h-4 w-4" />,
-      children: [
-        { label: "Elenco Antiriciclaggio", href: "/antiriciclaggio", icon: <ShieldCheck className="h-4 w-4" /> },
-        { label: "Rappresentanti legali", href: "/antiriciclaggio/rappresentanti", icon: <UserCircle className="h-4 w-4" /> },
-        { label: "Prestazioni AR", href: "/impostazioni/elenco-prestazioni-ar", icon: <FileText className="h-4 w-4" /> },
-        { label: "Professionisti", href: "/antiriciclaggio/responsabili-av", icon: <Users className="h-4 w-4" /> },
-        { label: "Soggetti responsabili", href: "/antiriciclaggio/responsabili-av-societa", icon: <Users className="h-4 w-4" /> },
-        { label: "Comunicazioni inviate", href: "/antiriciclaggio/comunicazioni", icon: <Mail className="h-4 w-4" /> },
-      ],
-    },
-    {
-      label: "Anagrafiche",
-      icon: <Users className="h-4 w-4" />,
-      children: [
-        { label: "Clienti", href: "/clienti", icon: <Users className="h-4 w-4" /> },
-        {
-          label: "Rappresentanti legali",
-          href: "/antiriciclaggio/rappresentanti",
-          icon: <UserCircle className="h-4 w-4" />,
-        },
-      ],
-    },
-    {
-      label: "Payroll",
-      icon: <Clock className="h-4 w-4" />,
-      children: [
-    { label: "Presenze", href: "/presenze", icon: <Clock className="h-4 w-4" /> },
+  {
+    label: "Agenda",
+    icon: <Calendar className="h-4 w-4" />,
+    href: "/agenda",
+  },
+  {
+    label: "Promemoria",
+    icon: <FileText className="h-4 w-4" />,
+    href: "/promemoria",
+  },
+  {
+    label: "Menu",
+    icon: <Menu className="h-4 w-4" />,
+    children: [
+      { label: "Post del giorno", icon: <StickyNote className="h-4 w-4" />, href: "/post-del-giorno" },
 
-        {
-  label: "Smart working",
-  href: "/presenze/smart",
-  icon: <Calendar className="h-4 w-4" />,
-},
+      { label: "Clienti", href: "/clienti", icon: <Users className="h-4 w-4" /> },
+      { label: "Rubrica", href: "/contatti", icon: <UserCircle className="h-4 w-4" /> },
 
-{
-  label: "Assenze settimanali",
-  href: "/presenze/assenze-settimanali",
-  icon: <Calendar className="h-4 w-4" />,
-},
+      { label: "Payroll", href: "/presenze", icon: <Clock className="h-4 w-4" /> },
+      { label: "Pratiche Assunzioni", href: "/payroll/pratica-assunzione", icon: <FileText className="h-4 w-4" /> },
+      { label: "Richieste Area Cliente", href: "/payroll/richieste-area-cliente", icon: <FileText className="h-4 w-4" /> },
 
-{
-  label: "Pratiche Assunzioni",
-  href: "/payroll/pratica-assunzione",
-  icon: <FileText className="h-4 w-4" />,
-},
+      { label: "Scadenzario", href: "/scadenze/elenco-generale", icon: <Calendar className="h-4 w-4" /> },
+      { label: "Pratiche", href: "/pratiche/variazioni", icon: <FolderKanban className="h-4 w-4" /> },
+      { label: "Revisione e Controllo", href: "/revisione-controllo/dashboard", icon: <ClipboardCheck className="h-4 w-4" /> },
+      { label: "Controllo di gestione", href: "/controllo-gestione", icon: <BriefcaseBusiness className="h-4 w-4" /> },
+      { label: "Contenzioso", href: "/contenzioso", icon: <Scale className="h-4 w-4" /> },
+      { label: "AML", href: "/antiriciclaggio", icon: <ShieldCheck className="h-4 w-4" /> },
 
-{
-  label: "Richieste Area Cliente",
-  href: "/payroll/richieste-area-cliente",
-  icon: <FileText className="h-4 w-4" />,
-},
+      { label: "Messaggistica", href: "/messaggi", icon: <MessageSquare className="h-4 w-4" /> },
+      { label: "Comunicazioni clienti", href: "/comunicazioni-clienti", icon: <Mail className="h-4 w-4" /> },
 
-{ label: "Dipendenti", href: "/payroll/dipendenti", icon: <Users className="h-4 w-4" /> },
-        {
-  label: "Creazione gruppi smart",
-  href: "/presenze/smart-gruppi",
-  icon: <Users className="h-4 w-4" />,
-},
-        { label: "Qualifiche", href: "/payroll/qualifiche", icon: <FileText className="h-4 w-4" /> },
-      ],
-    },
-    {
-      label: "Connessioni",
-      icon: <Cloud className="h-4 w-4" />,
-      children: [
-        {
-          label: "Microsoft 365 - Connessioni",
-          href: "/microsoft365?tab=connessioni",
-          icon: <Link2 className="h-4 w-4" />,
-        },
-        {
-          label: "Microsoft 365 - Sync",
-          href: "/microsoft365?tab=sync",
-          icon: <RefreshCcw className="h-4 w-4" />,
-        },
-      ],
-    },
-    {
-      label: "Impostazioni",
-      icon: <Settings className="h-4 w-4" />,
-      adminOnly: true,
-      children: [
-        { label: "Utenti", href: "/impostazioni/utenti", icon: <Users className="h-4 w-4" /> },
-        { label: "Dati Studio", href: "/impostazioni/studio", icon: <Building2 className="h-4 w-4" /> },
-        { label: "Ruoli", href: "/impostazioni/ruoli", icon: <Settings className="h-4 w-4" /> },
-       { label: "Prestazioni", href: "/impostazioni/prestazioni", icon: <Settings className="h-4 w-4" /> },
-
-      { label: "Payroll Festività", href: "/impostazioni/payroll-festivita", icon: <Calendar className="h-4 w-4" /> },
-
-      { label: "Payroll Codici Presenza", href: "/impostazioni/payroll-codici-presenza", icon: <Clock className="h-4 w-4" /> },
-
-      { label: "Scadenzari", href: "/impostazioni/scadenzari", icon: <Settings className="h-4 w-4" /> },
-
-        { label: "Template Email", href: "/impostazioni/template-email", icon: <Mail className="h-4 w-4" /> },
-        
-        { label: "Tipi Scadenze", href: "/impostazioni/tipi-scadenze", icon: <Settings className="h-4 w-4" /> },
-        { label: "Tipo Promemoria", href: "/impostazioni/tipo-promemoria", icon: <Settings className="h-4 w-4" /> },
-      ],
-    },
-  ];
+      { label: "Accesso Portali", href: "/accesso-portali", icon: <Key className="h-4 w-4" /> },
+      { label: "Cassetti Fiscali", href: "/cassetti-fiscali", icon: <FileText className="h-4 w-4" /> },
+      { label: "Connessioni Microsoft", href: "/microsoft365?tab=connessioni", icon: <Cloud className="h-4 w-4" /> },
+      { label: "Impostazioni", href: "/impostazioni/utenti", icon: <Settings className="h-4 w-4" />, adminOnly: true },
+    ],
+  },
+];
 
   const isExactRoute = (href?: string) => {
     if (!href) return false;
