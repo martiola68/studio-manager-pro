@@ -361,10 +361,13 @@ export default function AssenzeSettimanaliPage() {
 
                     return (
                       <td key={dateStr} className="p-2 text-center">
-                        <div
-                          className={`rounded border px-2 py-2 text-xs font-semibold ${getCellClass(tipo, codice)}
-                          title={presenza?.note || descrizione}
-                        >
+                      <div
+  className={`rounded border px-2 py-2 text-xs font-semibold ${getCellClass(
+    tipo,
+    codice
+  )}`}
+  title={presenza?.note || descrizione}
+>
                           <div>{formatCodicePresenza(codice)}</div>
                           <div className="mt-1 truncate font-normal">
                             {descrizione}
