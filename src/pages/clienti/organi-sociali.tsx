@@ -160,13 +160,28 @@ useEffect(() => {
 }, []);
 
 useEffect(() => {
-  if (!clienteId) {
-    setOrgani([]);
+  const cliente = clienti.find((c) => c.id === clienteId);
+
+  if (!cliente) {
+    setAssettoSocietario({
+      numero_soci_attesi: "",
+      numero_rappresentanti_attesi: 1,
+      numero_sindaci_attesi: 0,
+      numero_revisori_attesi: 0,
+    });
     return;
   }
 
-  caricaOrgani();
-}, [clienteId]);
+  setAssettoSocietario({
+    numero_soci_attesi: cliente.numero_soci_attesi ?? "",
+    numero_rappresentanti_attesi:
+      cliente.numero_rappresentanti_attesi ?? 1,
+    numero_sindaci_attesi:
+      cliente.numero_sindaci_attesi ?? 0,
+    numero_revisori_attesi:
+      cliente.numero_revisori_attesi ?? 0,
+  });
+}, [clienteId, clienti]);
 
   const organiFiltrati = useMemo(() => {
     if (filtroRuolo === "tutti") return organi;
@@ -311,6 +326,43 @@ setNuovoNominativo({
   } finally {
     setLoading(false);
   }
+}
+
+  async function salvaAssettoSocietario(
+  campo:
+    | "numero_soci_attesi"
+    | "numero_rappresentanti_attesi"
+    | "numero_sindaci_attesi"
+    | "numero_revisori_attesi",
+  valore: number
+) {
+  if (!clienteId) return;
+
+  const supabase = getSupabaseClient();
+
+  const { error } = await supabase
+    .from("tbclienti")
+    .update({
+      [campo]: valore,
+    })
+    .eq("id", clienteId);
+
+  if (error) {
+    console.error(error);
+    alert("Errore salvataggio");
+    return;
+  }
+
+  setClienti((prev) =>
+    prev.map((c) =>
+      c.id === clienteId
+        ? {
+            ...c,
+            [campo]: valore,
+          }
+        : c
+    )
+  );
 }
   
   async function salvaOrgano() {
