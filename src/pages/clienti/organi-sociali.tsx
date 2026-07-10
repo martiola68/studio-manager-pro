@@ -626,18 +626,24 @@ function getTipoRuolo(ruolo: string) {
         >
           <div>
             <label style={labelStyle}>N. soci</label>
-            <input
-              type="number"
-              min="0"
-              style={inputStyle}
-              value={assettoSocietario.numero_soci_attesi}
-              onChange={(e) =>
-                setAssettoSocietario((prev) => ({
-                  ...prev,
-                  numero_soci_attesi: e.target.value,
-                }))
-              }
-            />
+          <input
+  type="number"
+  min="0"
+  style={inputStyle}
+  value={assettoSocietario.numero_soci_attesi}
+  onChange={(e) =>
+    setAssettoSocietario((prev) => ({
+      ...prev,
+      numero_soci_attesi: e.target.value,
+    }))
+  }
+  onBlur={(e) =>
+    salvaAssettoSocietario(
+      "numero_soci_attesi",
+      Number(e.target.value || 0)
+    )
+  }
+/>
           </div>
 
           <div>
@@ -654,6 +660,12 @@ function getTipoRuolo(ruolo: string) {
                     e.target.value === "" ? 0 : Number(e.target.value),
                 }))
               }
+              onBlur={(e) =>
+  salvaAssettoSocietario(
+    "numero_rappresentanti_attesi",
+    Number(e.target.value || 0)
+  )
+}
             />
           </div>
 
@@ -671,6 +683,12 @@ function getTipoRuolo(ruolo: string) {
                     e.target.value === "" ? 0 : Number(e.target.value),
                 }))
               }
+              onBlur={(e) =>
+  salvaAssettoSocietario(
+    "numero_sindaci_attesi",
+    Number(e.target.value || 0)
+  )
+}
             />
           </div>
 
@@ -688,6 +706,12 @@ function getTipoRuolo(ruolo: string) {
                     e.target.value === "" ? 0 : Number(e.target.value),
                 }))
               }
+              onBlur={(e) =>
+  salvaAssettoSocietario(
+    "numero_revisori_attesi",
+    Number(e.target.value || 0)
+  )
+}
             />
           </div>
         </div>
