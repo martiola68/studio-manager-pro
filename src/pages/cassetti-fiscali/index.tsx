@@ -334,7 +334,7 @@ const copyToClipboard = (text: string | null | undefined, label: string) => {
           dataToSave = { ...values, ...encrypted };
         }
 
-      if (editingCassetto) {
+ if (editingCassetto) {
   const idDaAggiornare =
     viewMode === "societa"
       ? String((editingCassetto as any).cassetto_fiscale_id || "")
@@ -344,14 +344,7 @@ const copyToClipboard = (text: string | null | undefined, label: string) => {
     throw new Error("ID del cassetto fiscale collegato non disponibile");
   }
 
-  const updateData = { ...dataToSave };
-
-  if (viewMode === "societa") {
-    delete updateData.nominativo;
-    delete updateData.pw_iniziale;
-  }
-
-  await cassettiFiscaliService.update(idDaAggiornare, updateData);
+  await cassettiFiscaliService.update(idDaAggiornare, dataToSave);
 
   toast({
     title: "Successo",
@@ -703,7 +696,6 @@ const copyToClipboard = (text: string | null | undefined, label: string) => {
 >
   <Edit className="h-4 w-4" />
 </Button>
-
     <Button
       variant="ghost"
       size="icon"
