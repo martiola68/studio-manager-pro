@@ -175,11 +175,20 @@ useEffect(() => {
 
   async function caricaClienti() {
    const supabase = getSupabaseClient() as any;
-
-    const { data } = await supabase
+    
+const { data } = await supabase
   .from("tbclienti")
-     .select("id, ragione_sociale, codice_fiscale, studio_id")
-      .order("ragione_sociale");
+  .select(`
+    id,
+    ragione_sociale,
+    codice_fiscale,
+    studio_id,
+    numero_soci_attesi,
+    numero_rappresentanti_attesi,
+    numero_sindaci_attesi,
+    numero_revisori_attesi
+  `)
+  .order("ragione_sociale");
 
     setClienti(data || []);
   }
