@@ -674,15 +674,33 @@ const copyToClipboard = (text: string | null | undefined, label: string) => {
 <TableCell className="text-right">
   <div className="flex justify-end gap-2">
     <Button
-      variant="ghost"
-      size="icon"
-      onClick={() => {
-        setEditingCassetto(cassetto);
-        setDialogOpen(true);
-      }}
-    >
-      <Edit className="h-4 w-4" />
-    </Button>
+  variant="ghost"
+  size="icon"
+  onClick={() => {
+    const cassettoIdEffettivo =
+      viewMode === "societa"
+        ? String((cassetto as any).cassetto_fiscale_id || "")
+        : cassetto.id;
+
+    if (!cassettoIdEffettivo) {
+      toast({
+        variant: "destructive",
+        title: "Errore",
+        description: "ID del cassetto fiscale collegato non disponibile",
+      });
+      return;
+    }
+
+    setEditingCassetto({
+      ...cassetto,
+      id: cassettoIdEffettivo,
+    });
+
+    setDialogOpen(true);
+  }}
+>
+  <Edit className="h-4 w-4" />
+</Button>
 
     <Button
       variant="ghost"
