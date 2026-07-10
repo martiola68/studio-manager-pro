@@ -539,7 +539,7 @@ function getTipoRuolo(ruolo: string) {
             </select>
           </div>
 
-          <div>
+                  <div>
             <label style={labelStyle}>Filtro ruolo</label>
             <select
               style={inputStyle}
@@ -547,11 +547,87 @@ function getTipoRuolo(ruolo: string) {
               onChange={(e) => setFiltroRuolo(e.target.value)}
             >
               {ruoli.map((r) => (
-               <option key={r} value={r}>
-  {ruoliLabel[r] || r}
-</option>
+                <option key={r} value={r}>
+                  {ruoliLabel[r] || r}
+                </option>
               ))}
             </select>
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4, 1fr)",
+            gap: 12,
+            marginTop: 18,
+          }}
+        >
+          <div>
+            <label style={labelStyle}>N. soci</label>
+            <input
+              type="number"
+              min="0"
+              style={inputStyle}
+              value={assettoSocietario.numero_soci_attesi}
+              onChange={(e) =>
+                setAssettoSocietario((prev) => ({
+                  ...prev,
+                  numero_soci_attesi: e.target.value,
+                }))
+              }
+            />
+          </div>
+
+          <div>
+            <label style={labelStyle}>N. rappresentanti</label>
+            <input
+              type="number"
+              min="0"
+              style={inputStyle}
+              value={assettoSocietario.numero_rappresentanti_attesi}
+              onChange={(e) =>
+                setAssettoSocietario((prev) => ({
+                  ...prev,
+                  numero_rappresentanti_attesi:
+                    e.target.value === "" ? 0 : Number(e.target.value),
+                }))
+              }
+            />
+          </div>
+
+          <div>
+            <label style={labelStyle}>N. sindaci</label>
+            <input
+              type="number"
+              min="0"
+              style={inputStyle}
+              value={assettoSocietario.numero_sindaci_attesi}
+              onChange={(e) =>
+                setAssettoSocietario((prev) => ({
+                  ...prev,
+                  numero_sindaci_attesi:
+                    e.target.value === "" ? 0 : Number(e.target.value),
+                }))
+              }
+            />
+          </div>
+
+          <div>
+            <label style={labelStyle}>N. revisori</label>
+            <input
+              type="number"
+              min="0"
+              style={inputStyle}
+              value={assettoSocietario.numero_revisori_attesi}
+              onChange={(e) =>
+                setAssettoSocietario((prev) => ({
+                  ...prev,
+                  numero_revisori_attesi:
+                    e.target.value === "" ? 0 : Number(e.target.value),
+                }))
+              }
+            />
           </div>
         </div>
       </div>
