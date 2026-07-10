@@ -334,10 +334,30 @@ const copyToClipboard = (text: string | null | undefined, label: string) => {
           dataToSave = { ...values, ...encrypted };
         }
 
-        if (editingCassetto) {
-          await cassettiFiscaliService.update(editingCassetto.id, dataToSave);
-          toast({ title: "Successo", description: "Cassetto fiscale aggiornato" });
-        } else {
+      if (editingCassetto) {
+  const idDaAggiornare =
+    viewMode === "societa"
+      ? String((editingCassetto as any).cassetto_fiscale_id || "")
+      : editingCassetto.id;
+
+  if (!idDaAggiornare) {
+    throw new Error("ID del cassetto fiscale collegato non disponibile");
+  }
+
+  const updateData = { ...dataToSave };
+
+  if (viewMode === "societa") {
+    delete updateData.nominativo;
+    delete updateData.pw_iniziale;
+  }
+
+  await cassettiFiscaliService.update(idDaAggiornare, updateData);
+
+  toast({
+    title: "Successo",
+    description: "Cassetto fiscale aggiornato",
+  });
+} else {
           await cassettiFiscaliService.create(dataToSave);
           toast({ title: "Successo", description: "Nuovo cassetto fiscale creato" });
         }
@@ -673,29 +693,11 @@ const copyToClipboard = (text: string | null | undefined, label: string) => {
 
 <TableCell className="text-right">
   <div className="flex justify-end gap-2">
-    <Button
+   <Button
   variant="ghost"
   size="icon"
   onClick={() => {
-    const cassettoIdEffettivo =
-      viewMode === "societa"
-        ? String((cassetto as any).cassetto_fiscale_id || "")
-        : cassetto.id;
-
-    if (!cassettoIdEffettivo) {
-      toast({
-        variant: "destructive",
-        title: "Errore",
-        description: "ID del cassetto fiscale collegato non disponibile",
-      });
-      return;
-    }
-
-    setEditingCassetto({
-      ...cassetto,
-      id: cassettoIdEffettivo,
-    });
-
+    setEditingCassetto(cassetto);
     setDialogOpen(true);
   }}
 >
