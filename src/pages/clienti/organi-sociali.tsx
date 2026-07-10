@@ -159,6 +159,15 @@ useEffect(() => {
   caricaNominativi();
 }, []);
 
+  useEffect(() => {
+  if (!clienteId) {
+    setOrgani([]);
+    return;
+  }
+
+  caricaOrgani();
+}, [clienteId]);
+
 useEffect(() => {
   const cliente = clienti.find((c) => c.id === clienteId);
 
