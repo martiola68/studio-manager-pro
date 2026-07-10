@@ -408,7 +408,16 @@ setVisuraPreviewOpen(true);
 
   
   const [clienti, setClienti] = useState<ClienteRow[]>([]);
-  const [organiCountByCliente, setOrganiCountByCliente] = useState<Record<string, number>>({});
+ type ConteggiOrgani = {
+  soci: number;
+  rappresentanti: number;
+  sindaci: number;
+  revisori: number;
+};
+
+const [organiCountByCliente, setOrganiCountByCliente] = useState<
+  Record<string, ConteggiOrgani>
+>({});
   const [contatti, setContatti] = useState<ContattoRow[]>([]);
   const [utenti, setUtenti] = useState<UtenteRow[]>([]);
   const [cassettiFiscali, setCassettiFiscali] = useState<CassettoFiscaleRow[]>(
@@ -506,7 +515,9 @@ if (user?.id) {
   supabase.from("tbcassetti_fiscali").select("*").order("nominativo"),
   supabase.from("tbprestazioni").select("*").order("descrizione"),
   supabase.from("rapp_legali" as any).select("id, nome_cognome").order("nome_cognome"),
-  supabase.from("tbclienti_organi" as any).select("cliente_id"),
+ supabase
+  .from("tbclienti_organi" as any)
+  .select("cliente_id, ruolo, attivo"),
 ]);
       
       if (clientiRes.error) throw clientiRes.error;
@@ -523,15 +534,64 @@ setUtenti(utentiRes.data ?? []);
 setCassettiFiscali(cassettiRes.data ?? []);
 setPrestazioni(prestazioniRes.data ?? []);
 
-      const organiMap: Record<string, number> = {};
+ const organiMap: Record<string, ConteggiOrgani> = {};
 
 (((organiRes as any).data ?? []) as any[]).forEach((row) => {
   if (!row.cliente_id) return;
-  organiMap[row.cliente_id] = (organiMap[row.cliente_id] || 0) + 1;
+
+  // Per la completezza consideriamo soltanto gli organi attivi.
+  if (row.attivo === false) return;
+
+  if (!organiMap[row.cliente_id]) {
+    organiMap[row.cliente_id] = {
+      soci: 0,
+      rappresentanti: 0,
+      sindaci: 0,
+      revisori: 0,
+    };
+  }
+
+  const ruolo = String(row.ruolo || "").toLowerCase();
+  const conteggi = organiMap[row.cliente_id];
+
+  if (ruolo === "socio") {
+    conteggi.soci += 1;
+    return;
+  }
+
+  if (
+    [
+      "amministratore",
+      "amministratore_unico",
+      "amministratore_delegato",
+      "presidente_cda",
+      "consigliere",
+      "liquidatore",
+      "rappresentante_legale",
+    ].includes(ruolo)
+  ) {
+    conteggi.rappresentanti += 1;
+    return;
+  }
+
+  if (
+    [
+      "sindaco_effettivo",
+      "presidente_collegio_sindacale",
+      "sindaco_unico",
+      "sindaco_supplente",
+    ].includes(ruolo)
+  ) {
+    conteggi.sindaci += 1;
+    return;
+  }
+
+  if (ruolo === "revisore") {
+    conteggi.revisori += 1;
+  }
 });
 
 setOrganiCountByCliente(organiMap);
-
 const rappLegaliData = ((rappLegaliRes as any).data ?? []) as {
   id: string;
   nome_cognome: string;
@@ -675,16 +735,48 @@ setRappLegali(rappLegaliData);
   };
 
 const organiSocialiMancanti = (cliente: ClienteRow) => {
- const isSocieta =
-  (cliente as any).cliente === true &&
-  cliente.tipo_cliente?.toLowerCase() !== "persona fisica";
+  const isSocieta =
+    (cliente as any).cliente === true &&
+    cliente.tipo_cliente?.toLowerCase() !== "persona fisica";
 
   const settoreDaControllare =
-    cliente.settore_fiscale === true || cliente.settore_consulenza === true;
+    cliente.settore_fiscale === true ||
+    cliente.settore_consulenza === true;
 
-  const organiInseriti = organiCountByCliente[cliente.id] || 0;
+  if (!isSocieta || !settoreDaControllare) {
+    return false;
+  }
 
-  return isSocieta && settoreDaControllare && organiInseriti === 0;
+  const conteggiReali = organiCountByCliente[cliente.id] || {
+    soci: 0,
+    rappresentanti: 0,
+    sindaci: 0,
+    revisori: 0,
+  };
+
+  const sociAttesi = Number(
+    (cliente as any).numero_soci_attesi ?? 0
+  );
+
+  const rappresentantiAttesi = Number(
+    (cliente as any).numero_rappresentanti_attesi ?? 0
+  );
+
+  const sindaciAttesi = Number(
+    (cliente as any).numero_sindaci_attesi ?? 0
+  );
+
+  const revisoriAttesi = Number(
+    (cliente as any).numero_revisori_attesi ?? 0
+  );
+
+  const completo =
+    conteggiReali.soci === sociAttesi &&
+    conteggiReali.rappresentanti === rappresentantiAttesi &&
+    conteggiReali.sindaci === sindaciAttesi &&
+    conteggiReali.revisori === revisoriAttesi;
+
+  return !completo;
 };
   
   const handleAddNew = () => {
