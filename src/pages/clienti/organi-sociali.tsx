@@ -136,6 +136,13 @@ const [form, setForm] = useState({
   data_scadenza: "",
   data_cessazione: "",
 });
+
+const [assettoSocietario, setAssettoSocietario] = useState({
+  numero_soci_attesi: "",
+  numero_rappresentanti_attesi: 1,
+  numero_sindaci_attesi: 0,
+  numero_revisori_attesi: 0,
+});
   
 useEffect(() => {
   if (!router.isReady) return;
