@@ -515,9 +515,10 @@ if (user?.id) {
   supabase.from("tbcassetti_fiscali").select("*").order("nominativo"),
   supabase.from("tbprestazioni").select("*").order("descrizione"),
   supabase.from("rapp_legali" as any).select("id, nome_cognome").order("nome_cognome"),
- supabase
-  .from("tbclienti_organi" as any)
-  .select("cliente_id, ruolo, attivo"),
+
+       fetch("/api/clienti-organi?modalita=conteggi", {
+  cache: "no-store",
+}),
 ]);
       
       if (clientiRes.error) throw clientiRes.error;
@@ -526,7 +527,13 @@ if (user?.id) {
       if (cassettiRes.error) throw cassettiRes.error;
       if (prestazioniRes.error) throw prestazioniRes.error;
    if ((rappLegaliRes as any).error) throw (rappLegaliRes as any).error;
-      if ((organiRes as any).error) throw (organiRes as any).error;
+     if (!(organiRes as Response).ok) {
+  const erroreOrgani = await (organiRes as Response).json();
+
+  throw new Error(
+    erroreOrgani?.error || "Errore caricamento organi sociali"
+  );
+}
 
 setClienti(clientiRes.data ?? []);
 setContatti(contattiRes.data ?? []);
@@ -534,9 +541,12 @@ setUtenti(utentiRes.data ?? []);
 setCassettiFiscali(cassettiRes.data ?? []);
 setPrestazioni(prestazioniRes.data ?? []);
 
+      const organiJson = await (organiRes as Response).json();
+const righeOrgani = (organiJson.organi || []) as any[];
+
  const organiMap: Record<string, ConteggiOrgani> = {};
 
-(((organiRes as any).data ?? []) as any[]).forEach((row) => {
+righeOrgani.forEach((row) => {
   if (!row.cliente_id) return;
 
   // Per la completezza consideriamo soltanto gli organi attivi.
