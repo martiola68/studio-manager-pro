@@ -786,17 +786,6 @@ const organiSocialiMancanti = (cliente: ClienteRow) => {
     conteggiReali.sindaci === sindaciAttesi &&
     conteggiReali.revisori === revisoriAttesi;
 
-  if (cliente.ragione_sociale === "ACEASA S.R.L.") {
-  console.log("CONTROLLO ACEASA", {
-    conteggiReali,
-    sociAttesi,
-    rappresentantiAttesi,
-    sindaciAttesi,
-    revisoriAttesi,
-    completo,
-  });
-}
-
   return !completo;
 };
   
