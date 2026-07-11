@@ -53,10 +53,14 @@ if (!cliente_id) {
 tipo_ruolo,
 ruolo,
 percentuale_partecipazione,
-        presenza,
-        carica,
-        principale,
-        attivo,
+titolo_possesso,
+percentuale_diritti_voto,
+percentuale_diritti_utili,
+note_titolo_possesso,
+presenza,
+carica,
+principale,
+attivo,
         data_nomina,
         data_cessazione,
         durata_carica,
@@ -186,10 +190,39 @@ if (!payload.soggetto_cliente_id) {
   tipo_ruolo: payload.tipo_ruolo,
   ruolo: payload.ruolo,
 
-          carica: payload.carica,
-        percentuale_partecipazione: payload.percentuale_partecipazione,
-        presenza: payload.presenza,
-        principale: payload.principale,
+        carica: payload.carica,
+
+percentuale_partecipazione:
+  payload.ruolo === "socio"
+    ? payload.percentuale_partecipazione || null
+    : null,
+
+titolo_possesso:
+  payload.ruolo === "socio"
+    ? payload.titolo_possesso || "piena_proprieta"
+    : "piena_proprieta",
+
+percentuale_diritti_voto:
+  payload.ruolo === "socio" &&
+  payload.percentuale_diritti_voto !== "" &&
+  payload.percentuale_diritti_voto !== undefined
+    ? payload.percentuale_diritti_voto
+    : null,
+
+percentuale_diritti_utili:
+  payload.ruolo === "socio" &&
+  payload.percentuale_diritti_utili !== "" &&
+  payload.percentuale_diritti_utili !== undefined
+    ? payload.percentuale_diritti_utili
+    : null,
+
+note_titolo_possesso:
+  payload.ruolo === "socio"
+    ? payload.note_titolo_possesso || null
+    : null,
+
+presenza: payload.presenza,
+principale: payload.principale,
         attivo: payload.attivo ?? true,
         data_nomina: payload.data_nomina || null,
         durata_carica: payload.durata_carica || null,
@@ -257,10 +290,39 @@ export async function PUT(req: NextRequest) {
   rappresentante_legale: payload.rappresentante_legale ?? false,
   tipo_ruolo: payload.tipo_ruolo,
   ruolo: payload.ruolo,
-        carica: payload.carica,
-        percentuale_partecipazione: payload.percentuale_partecipazione,
-        presenza: payload.presenza,
-        principale: payload.principale,
+       carica: payload.carica,
+
+percentuale_partecipazione:
+  payload.ruolo === "socio"
+    ? payload.percentuale_partecipazione || null
+    : null,
+
+titolo_possesso:
+  payload.ruolo === "socio"
+    ? payload.titolo_possesso || "piena_proprieta"
+    : "piena_proprieta",
+
+percentuale_diritti_voto:
+  payload.ruolo === "socio" &&
+  payload.percentuale_diritti_voto !== "" &&
+  payload.percentuale_diritti_voto !== undefined
+    ? payload.percentuale_diritti_voto
+    : null,
+
+percentuale_diritti_utili:
+  payload.ruolo === "socio" &&
+  payload.percentuale_diritti_utili !== "" &&
+  payload.percentuale_diritti_utili !== undefined
+    ? payload.percentuale_diritti_utili
+    : null,
+
+note_titolo_possesso:
+  payload.ruolo === "socio"
+    ? payload.note_titolo_possesso || null
+    : null,
+
+presenza: payload.presenza,
+principale: payload.principale,
         attivo: payload.attivo,
        data_nomina: payload.data_nomina || null,
       durata_carica: payload.durata_carica || null,
