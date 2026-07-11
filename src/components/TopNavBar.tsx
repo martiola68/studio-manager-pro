@@ -472,16 +472,24 @@ const menuItems: MenuItem[] = [
   icon: <Users className="h-4 w-4" />,
   children: [
     {
-      label: "Anagrafiche",
+      label: "Clienti",
+      href: "/clienti",
       icon: <Users className="h-4 w-4" />,
-      children: [
-        { label: "Clienti", href: "/clienti", icon: <Users className="h-4 w-4" /> },
-        {
-          label: "Rappresentanti legali",
-          href: "/antiriciclaggio/rappresentanti",
-          icon: <UserCircle className="h-4 w-4" />,
-        },
-      ],
+    },
+    {
+      label: "Soci e organi sociali",
+      href: "/anagrafiche/clienti-organi",
+      icon: <UserCircle className="h-4 w-4" />,
+    },
+    {
+      label: "Gruppi societari",
+      href: "/anagrafiche/gruppi-societari",
+      icon: <Network className="h-4 w-4" />,
+    },
+    {
+      label: "Rappresentanti legali",
+      href: "/antiriciclaggio/rappresentanti",
+      icon: <UserCircle className="h-4 w-4" />,
     },
   ],
 },
