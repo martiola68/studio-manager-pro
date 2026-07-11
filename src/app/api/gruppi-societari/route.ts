@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
+import {
+  PartecipazioneDiretta,
+  costruisciGruppiSocietari,
+  calcolaTitolariEffettivi,
+} from "@/lib/gruppiSocietari";
+
 type ClienteAnagrafica = {
   id: string;
   ragione_sociale: string | null;
@@ -156,36 +162,65 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json({
-      partecipazioni: relazioni,
+    const partecipazioniNormalizzate =
+  relazioni as PartecipazioneDiretta[];
 
-      riepilogo: {
-        totale_partecipazioni: relazioni.length,
+const gruppi = costruisciGruppiSocietari(
+  partecipazioniNormalizzate
+);
 
-        controllate: relazioni.filter(
-          (row) => row.classificazione === "controllata"
-        ).length,
+const titolariEffettivi = calcolaTitolariEffettivi(
+  partecipazioniNormalizzate
+);
+    
+return NextResponse.json({
+  partecipazioni: relazioni,
 
-        collegate: relazioni.filter(
-          (row) => row.classificazione === "collegata"
-        ).length,
+  gruppi,
 
-        altre_partecipazioni: relazioni.filter(
-          (row) =>
-            row.classificazione === "altra_partecipazione"
-        ).length,
+  titolari_effettivi: titolariEffettivi,
 
-        partecipazioni_persone_fisiche: relazioni.filter(
-          (row) =>
-            row.partecipante_tipo === "persona_fisica"
-        ).length,
+  candidati_titolari_effettivi:
+    titolariEffettivi.filter(
+      (titolare) =>
+        titolare.candidato_titolare_effettivo
+    ),
 
-        titolari_effettivi_diretti: relazioni.filter(
-          (row) =>
-            row.candidato_titolare_effettivo_diretto
-        ).length,
-      },
-    });
+  riepilogo: {
+    totale_partecipazioni: relazioni.length,
+
+    controllate: relazioni.filter(
+      (row) =>
+        row.classificazione === "controllata"
+    ).length,
+
+    collegate: relazioni.filter(
+      (row) =>
+        row.classificazione === "collegata"
+    ).length,
+
+    altre_partecipazioni: relazioni.filter(
+      (row) =>
+        row.classificazione ===
+        "altra_partecipazione"
+    ).length,
+
+    partecipazioni_persone_fisiche:
+      relazioni.filter(
+        (row) =>
+          row.partecipante_tipo ===
+          "persona_fisica"
+      ).length,
+
+    gruppi_individuati: gruppi.length,
+
+    candidati_titolari_effettivi:
+      titolariEffettivi.filter(
+        (titolare) =>
+          titolare.candidato_titolare_effettivo
+      ).length,
+  },
+});
   } catch (error: any) {
     console.error("Errore gruppi societari:", error);
 
