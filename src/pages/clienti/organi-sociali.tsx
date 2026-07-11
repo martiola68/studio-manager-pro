@@ -127,8 +127,26 @@ const [form, setForm] = useState({
   soggetto_cliente_id: "",
   ruolo: "socio",
   carica: "",
+
   percentuale_partecipazione: "",
+
+  titolo_possesso: "piena_proprieta",
+
+  percentuale_diritti_voto: "",
+
+  percentuale_diritti_utili: "",
+
+  note_titolo_possesso: "",
+
   presenza: "Presente",
+
+  principale: false,
+  attivo: true,
+  data_nomina: "",
+  durata_carica: "Fino a revoca",
+  data_scadenza: "",
+  data_cessazione: "",
+});
   principale: false,
   attivo: true,
   data_nomina: "",
@@ -447,6 +465,10 @@ setForm({
   durata_carica: "Fino a revoca",
   data_scadenza: "",
   data_cessazione: "",
+  titolo_possesso: "piena_proprieta",
+  percentuale_diritti_voto: "",
+  percentuale_diritti_utili: "",
+  note_titolo_possesso: "",
 });
     
 setOrganoInModificaId("");
@@ -524,6 +546,21 @@ function caricaInModifica(organo: any) {
     durata_carica: organo.durata_carica || "Fino a revoca",
     data_scadenza: organo.data_scadenza || "",
     data_cessazione: organo.data_cessazione || "",
+    titolo_possesso:
+  organo.titolo_possesso || "piena_proprieta",
+
+percentuale_diritti_voto:
+  organo.percentuale_diritti_voto
+    ? String(organo.percentuale_diritti_voto)
+    : "",
+
+percentuale_diritti_utili:
+  organo.percentuale_diritti_utili
+    ? String(organo.percentuale_diritti_utili)
+    : "",
+
+note_titolo_possesso:
+  organo.note_titolo_possesso || "",
   });
 
   window.scrollTo({ top: 0, behavior: "smooth" });
