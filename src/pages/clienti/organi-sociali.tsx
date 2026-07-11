@@ -127,26 +127,18 @@ const [form, setForm] = useState({
   soggetto_cliente_id: "",
   ruolo: "socio",
   carica: "",
-
   percentuale_partecipazione: "",
-
   titolo_possesso: "piena_proprieta",
-
   percentuale_diritti_voto: "",
-
   percentuale_diritti_utili: "",
-
   note_titolo_possesso: "",
-
   presenza: "Presente",
-
   principale: false,
   attivo: true,
   data_nomina: "",
   durata_carica: "Fino a revoca",
   data_scadenza: "",
   data_cessazione: "",
-});
   principale: false,
   attivo: true,
   data_nomina: "",
