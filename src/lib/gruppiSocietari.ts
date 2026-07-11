@@ -356,14 +356,16 @@ export function trovaPercorsiPartecipazione(
     );
   });
 
-  const titolare = partecipazioni.find(
-    (relazione) =>
-      relazione.partecipante_id === titolareId
-  );
+ const titolareTrovato = partecipazioni.find(
+  (relazione) =>
+    relazione.partecipante_id === titolareId
+);
 
-  if (!titolare) {
-    return [];
-  }
+if (!titolareTrovato) {
+  return [];
+}
+
+const titolare: PartecipazioneDiretta = titolareTrovato;
 
   const risultati: PercorsoPartecipazione[] = [];
 
