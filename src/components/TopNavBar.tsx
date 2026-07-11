@@ -25,6 +25,7 @@ import {
   Scale,
   StickyNote,
   ClipboardCheck,
+   Network,
   BarChart3,
   Menu,
   X,
