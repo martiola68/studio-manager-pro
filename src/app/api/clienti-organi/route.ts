@@ -8,15 +8,39 @@ export async function GET(req: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    const { searchParams } = new URL(req.url);
-    const cliente_id = searchParams.get("cliente_id");
+   const { searchParams } = new URL(req.url);
 
-    if (!cliente_id) {
-      return NextResponse.json(
-        { error: "cliente_id mancante" },
-        { status: 400 }
-      );
-    }
+const cliente_id = searchParams.get("cliente_id");
+const modalita = searchParams.get("modalita");
+
+    if (modalita === "conteggi") {
+  const { data, error } = await supabase
+    .from("tbclienti_organi")
+    .select(`
+      cliente_id,
+      ruolo,
+      attivo
+    `)
+    .eq("attivo", true);
+
+  if (error) {
+    return NextResponse.json(
+      { error: error.message },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({
+    organi: data || [],
+  });
+}
+
+if (!cliente_id) {
+  return NextResponse.json(
+    { error: "cliente_id mancante" },
+    { status: 400 }
+  );
+}
 
     const { data, error } = await supabase
       .from("tbclienti_organi")
