@@ -2273,7 +2273,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
  className={
   organiSocialiMancanti(cliente)
     ? "rounded-full border-2 border-red-500 text-red-600"
-    : ""
+    : "rounded-full border-2 border-green-500 text-green-600"
 }
 >
   <Users className="h-4 w-4" />
