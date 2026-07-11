@@ -7,6 +7,10 @@ import {
   calcolaTitolariEffettivi,
 } from "@/lib/gruppiSocietari";
 
+import {
+  costruisciVistaGruppiSocietari,
+} from "@/lib/gruppiSocietariView";
+
 type ClienteAnagrafica = {
   id: string;
   ragione_sociale: string | null;
@@ -172,11 +176,20 @@ const gruppi = costruisciGruppiSocietari(
 const titolariEffettivi = calcolaTitolariEffettivi(
   partecipazioniNormalizzate
 );
+
+    const gruppiDettaglio =
+  costruisciVistaGruppiSocietari(
+    partecipazioniNormalizzate,
+    gruppi,
+    titolariEffettivi
+  );
     
 return NextResponse.json({
   partecipazioni: relazioni,
 
   gruppi,
+
+  gruppi_dettaglio: gruppiDettaglio,
 
   titolari_effettivi: titolariEffettivi,
 
