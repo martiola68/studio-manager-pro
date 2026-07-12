@@ -421,6 +421,26 @@ body: JSON.stringify({
     form.ruolo === "socio"
       ? form.percentuale_partecipazione || null
       : null,
+  titolo_possesso:
+  form.ruolo === "socio"
+    ? form.titolo_possesso
+    : "piena_proprieta",
+
+percentuale_diritti_voto:
+  form.ruolo === "socio"
+    ? form.percentuale_diritti_voto || null
+    : null,
+
+percentuale_diritti_utili:
+  form.ruolo === "socio"
+    ? form.percentuale_diritti_utili || null
+    : null,
+
+note_titolo_possesso:
+  form.ruolo === "socio"
+    ? form.note_titolo_possesso || null
+    : null,
+  
   durata_carica:
     form.ruolo === "socio"
       ? null
@@ -892,12 +912,24 @@ function getTipoRuolo(ruolo: string) {
       ? form.percentuale_partecipazione
       : ""
   }
-              onChange={(e) =>
-                setForm((prev) => ({
-                  ...prev,
-                  percentuale_partecipazione: e.target.value,
-                }))
-              }
+              onChange={(e) => {
+  const valore = e.target.value;
+
+  setForm((prev) => ({
+    ...prev,
+    percentuale_partecipazione: valore,
+
+    percentuale_diritti_voto:
+      prev.titolo_possesso === "piena_proprieta"
+        ? valore
+        : prev.percentuale_diritti_voto,
+
+    percentuale_diritti_utili:
+      prev.titolo_possesso === "piena_proprieta"
+        ? valore
+        : prev.percentuale_diritti_utili,
+  }));
+}}
             />
           </div>
 
@@ -960,6 +992,124 @@ function getTipoRuolo(ruolo: string) {
 
         </div>
 
+        {form.ruolo === "socio" && (
+  <div
+    style={{
+      marginTop: 16,
+      padding: 16,
+      border: "1px solid #dbeafe",
+      borderRadius: 10,
+      background: "#f8fbff",
+    }}
+  >
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1.2fr 1fr 1fr",
+        gap: 12,
+        alignItems: "end",
+      }}
+    >
+      <div>
+        <label style={labelStyle}>Titolo di possesso</label>
+
+        <select
+          style={inputStyle}
+          value={form.titolo_possesso}
+          onChange={(e) =>
+            setForm((prev) => ({
+              ...prev,
+              titolo_possesso: e.target.value,
+            }))
+          }
+        >
+          <option value="piena_proprieta">
+            Piena proprietà
+          </option>
+          <option value="nuda_proprieta">
+            Nuda proprietà
+          </option>
+          <option value="usufrutto">
+            Usufrutto
+          </option>
+          <option value="pegno">
+            Pegno
+          </option>
+          <option value="sequestro">
+            Sequestro
+          </option>
+          <option value="intestazione_fiduciaria">
+            Intestazione fiduciaria
+          </option>
+          <option value="altro">
+            Altro
+          </option>
+        </select>
+      </div>
+
+      <div>
+        <label style={labelStyle}>Diritti di voto %</label>
+
+        <input
+          type="number"
+          min="0"
+          max="100"
+          step="0.01"
+          style={inputStyle}
+          value={form.percentuale_diritti_voto}
+          onChange={(e) =>
+            setForm((prev) => ({
+              ...prev,
+              percentuale_diritti_voto: e.target.value,
+            }))
+          }
+        />
+      </div>
+
+      <div>
+        <label style={labelStyle}>Diritti agli utili %</label>
+
+        <input
+          type="number"
+          min="0"
+          max="100"
+          step="0.01"
+          style={inputStyle}
+          value={form.percentuale_diritti_utili}
+          onChange={(e) =>
+            setForm((prev) => ({
+              ...prev,
+              percentuale_diritti_utili: e.target.value,
+            }))
+          }
+        />
+      </div>
+    </div>
+
+    {form.titolo_possesso !== "piena_proprieta" && (
+      <div style={{ marginTop: 12 }}>
+        <label style={labelStyle}>Note sul titolo di possesso</label>
+
+        <textarea
+          style={{
+            ...inputStyle,
+            minHeight: 80,
+            resize: "vertical",
+          }}
+          value={form.note_titolo_possesso}
+          onChange={(e) =>
+            setForm((prev) => ({
+              ...prev,
+              note_titolo_possesso: e.target.value,
+            }))
+          }
+          placeholder="Indicare eventuali accordi particolari su voto, utili o durata del diritto"
+        />
+      </div>
+    )}
+  </div>
+)}
+        
         <div
           style={{
             display: "grid",
