@@ -328,6 +328,77 @@ const societaSingolaSelezionata = useMemo(() => {
   societaSingolaSelezionataId,
 ]);
 
+  const societaCollegateGruppo = useMemo(() => {
+  if (!gruppoSelezionato) {
+    return [];
+  }
+
+  const societaInterneIds = new Set(
+    gruppoSelezionato.societa.map(
+      (societa) => String(societa.id)
+    )
+  );
+
+  const collegateMap = new Map<
+    string,
+    {
+      societa_id: string;
+      societa_nome: string;
+      quota: number;
+      classificazione: string;
+      collegata_da_id: string;
+      collegata_da_nome: string;
+    }
+  >();
+
+  gruppoSelezionato.societa.forEach(
+    (societaInterna) => {
+      societaInterna.societa_collegate.forEach(
+        (collegata) => {
+          const collegataId = String(
+            collegata.societa_id
+          );
+
+          /*
+           * Esclude:
+           * - la stessa società;
+           * - società già appartenenti materialmente al gruppo;
+           * - duplicati.
+           */
+          if (
+            collegataId === String(societaInterna.id) ||
+            societaInterneIds.has(collegataId)
+          ) {
+            return;
+          }
+
+          const chiave = `${societaInterna.id}-${collegataId}`;
+
+          if (!collegateMap.has(chiave)) {
+            collegateMap.set(chiave, {
+              societa_id: collegata.societa_id,
+              societa_nome: collegata.societa_nome,
+              quota: collegata.quota,
+              classificazione:
+                collegata.classificazione,
+              collegata_da_id: societaInterna.id,
+              collegata_da_nome: societaInterna.nome,
+            });
+          }
+        }
+      );
+    }
+  );
+
+  return Array.from(collegateMap.values()).sort(
+    (a, b) =>
+      a.societa_nome.localeCompare(
+        b.societa_nome,
+        "it"
+      )
+  );
+}, [gruppoSelezionato]);
+
 function selezionaGruppo(gruppo: GruppoSocietario) {
   setSocietaSingolaSelezionataId("");
   setGruppoSelezionatoId(gruppo.id);
@@ -585,7 +656,102 @@ function selezionaGruppo(gruppo: GruppoSocietario) {
                                   )}
                                 </button>
                               );
-                            })}
+                                                      })}
+
+                          {gruppo.id ===
+                            gruppoSelezionatoId &&
+                            societaCollegateGruppo.length >
+                              0 && (
+                              <div
+                                style={{
+                                  marginTop: 8,
+                                  paddingTop: 8,
+                                  borderTop:
+                                    "1px solid #e2e8f0",
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 7,
+                                    padding:
+                                      "5px 10px 7px",
+                                    color: "#92400e",
+                                    fontSize: 12,
+                                    fontWeight: 800,
+                                    textTransform:
+                                      "uppercase",
+                                  }}
+                                >
+                                  <Network size={14} />
+                                  Società collegate
+                                </div>
+
+                                {societaCollegateGruppo.map(
+                                  (collegata) => (
+                                    <div
+                                      key={`${collegata.collegata_da_id}-${collegata.societa_id}`}
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 8,
+                                        minHeight: 36,
+                                        padding:
+                                          "7px 9px 7px 34px",
+                                        borderRadius: 8,
+                                        color: "#92400e",
+                                      }}
+                                    >
+                                      <span
+                                        style={{
+                                          ...puntoAlberoStyle,
+                                          background:
+                                            "#f59e0b",
+                                        }}
+                                      />
+
+                                      <div
+                                        style={{
+                                          flex: 1,
+                                          minWidth: 0,
+                                        }}
+                                      >
+                                        <div>
+                                          {
+                                            collegata.societa_nome
+                                          }
+                                        </div>
+
+                                        <div
+                                          style={{
+                                            marginTop: 2,
+                                            color:
+                                              "#64748b",
+                                            fontSize: 10,
+                                          }}
+                                        >
+                                          Collegata a{" "}
+                                          {
+                                            collegata.collegata_da_nome
+                                          }
+                                        </div>
+                                      </div>
+
+                                      <span
+                                        style={
+                                          quotaCompattaStyle
+                                        }
+                                      >
+                                        {formattaPercentuale(
+                                          collegata.quota
+                                        )}
+                                      </span>
+                                    </div>
+                                  )
+                                )}
+                              </div>
+                            )}
                         </div>
                       )}
                     </div>
@@ -696,14 +862,10 @@ function selezionaGruppo(gruppo: GruppoSocietario) {
                             .numero_controllate_indirette
                         }
                       />
-
-                      <DatoCompatto
-                        etichetta="Collegate"
-                        valore={
-                          gruppoSelezionato.riepilogo
-                            .numero_collegate
-                        }
-                      />
+<DatoCompatto
+  etichetta="Collegate"
+  valore={societaCollegateGruppo.length}
+/>
 
                       <DatoCompatto
                         etichetta="Livelli"
@@ -960,16 +1122,23 @@ function selezionaGruppo(gruppo: GruppoSocietario) {
                             Società collegate
                           </div>
 
-                          {societaSelezionata
-                            .societa_collegate.length ===
-                          0 ? (
+                         {societaSelezionata.societa_collegate.filter(
+                          (collegata) =>
+                            String(collegata.societa_id) !==
+                            String(societaSelezionata.id)
+                            ).length === 0 ? (
                             <div style={testoVuotoStyle}>
                               Nessuna società collegata.
                             </div>
                           ) : (
                             <div style={listaStyle}>
-                              {societaSelezionata.societa_collegate.map(
-                                (collegata) => (
+                              {societaSelezionata.societa_collegate
+  .filter(
+    (collegata) =>
+      String(collegata.societa_id) !==
+      String(societaSelezionata.id)
+  )
+  .map((collegata) => (
                                   <div
                                     key={
                                       collegata.societa_id
