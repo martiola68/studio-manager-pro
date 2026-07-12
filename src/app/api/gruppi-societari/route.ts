@@ -171,29 +171,57 @@ const titolariEffettivi = calcolaTitolariEffettivi(
     gruppi,
     titolariEffettivi
   );
-
-    const societaNeiGruppiIds = new Set<string>();
+const societaNeiGruppiIds = new Set<string>();
 
 gruppiDettaglio.forEach((gruppo: any) => {
-  if (gruppo.capogruppo_id) {
-    societaNeiGruppiIds.add(String(gruppo.capogruppo_id));
+  if (gruppo.capogruppo?.id) {
+    societaNeiGruppiIds.add(
+      String(gruppo.capogruppo.id)
+    );
   }
 
   (gruppo.societa || []).forEach((societa: any) => {
     if (societa.id) {
-      societaNeiGruppiIds.add(String(societa.id));
+      societaNeiGruppiIds.add(
+        String(societa.id)
+      );
     }
 
     if (societa.societa_id) {
-      societaNeiGruppiIds.add(String(societa.societa_id));
+      societaNeiGruppiIds.add(
+        String(societa.societa_id)
+      );
     }
   });
 });
 
-const societaConPartecipazioniIds = new Set(
-  partecipazioni.map((row) => String(row.cliente_id))
-);
+const societaPartecipateDaGruppiIds =
+  new Set<string>();
 
+relazioni.forEach((relazione) => {
+  const partecipanteId = String(
+    relazione.partecipante_id
+  );
+
+  const partecipataId = String(
+    relazione.partecipata_id
+  );
+
+  if (
+    relazione.partecipante_tipo === "societa" &&
+    societaNeiGruppiIds.has(partecipanteId)
+  ) {
+    societaPartecipateDaGruppiIds.add(
+      partecipataId
+    );
+  }
+});
+
+const societaConPartecipazioniIds = new Set(
+  partecipazioni.map((row) =>
+    String(row.cliente_id)
+  )
+);
 const societaSingole = clienti
   .filter((cliente) => {
     const tipoCliente = String(
