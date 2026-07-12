@@ -159,6 +159,7 @@ const [form, setForm] = useState({
   percentuale_diritti_voto: "",
   percentuale_diritti_utili: "",
   note_titolo_possesso: "",
+  partecipazione_collegata_id: "",
 
   presenza: "Presente",
   principale: false,
@@ -638,6 +639,117 @@ const tipoSoggetto =
   String(nominativoSelezionato?.tipo_cliente || "").toLowerCase().includes("soc")
     ? "societa"
     : "persona_fisica";
+
+    const titoloDaCollegare = [
+  "nuda_proprieta",
+  "pegno",
+  "sequestro",
+  "intestazione_fiduciaria",
+  "altro",
+].includes(form.titolo_possesso);
+
+if (form.ruolo === "socio" && titoloDaCollegare) {
+  if (!form.partecipazione_collegata_id) {
+    alert("Seleziona la partecipazione alla quale collegare il diritto.");
+    return;
+  }
+
+  const percentualeQuota = Number(
+    form.percentuale_partecipazione || 0
+  );
+
+  if (
+    !Number.isFinite(percentualeQuota) ||
+    percentualeQuota <= 0
+  ) {
+    alert("Inserisci la percentuale del diritto collegato.");
+    return;
+  }
+
+  const resDiritto = await fetch(
+    "/api/clienti-organi-diritti",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        organo_id:
+          form.partecipazione_collegata_id,
+
+        soggetto_cliente_id:
+          form.soggetto_cliente_id,
+
+        tipo_diritto:
+          form.titolo_possesso,
+
+        percentuale_quota:
+          percentualeQuota,
+
+        percentuale_diritti_voto:
+          form.percentuale_diritti_voto !== ""
+            ? Number(form.percentuale_diritti_voto)
+            : 0,
+
+        percentuale_diritti_utili:
+          form.percentuale_diritti_utili !== ""
+            ? Number(form.percentuale_diritti_utili)
+            : 0,
+
+        diritto_voto:
+          Number(form.percentuale_diritti_voto || 0) > 0,
+
+        diritto_utili:
+          Number(form.percentuale_diritti_utili || 0) > 0,
+
+        data_inizio:
+          form.data_nomina || null,
+
+        data_fine:
+          form.data_scadenza || null,
+
+        note:
+          form.note_titolo_possesso || null,
+
+        attivo: true,
+      }),
+    }
+  );
+
+  const dataDiritto = await resDiritto.json();
+
+  if (!resDiritto.ok) {
+    alert(
+      dataDiritto.error ||
+        "Errore salvataggio diritto collegato."
+    );
+    return;
+  }
+
+  setMessaggio("Diritto collegato correttamente.");
+
+  setForm({
+    soggetto_cliente_id: "",
+    ruolo: "socio",
+    carica: "",
+    percentuale_partecipazione: "",
+    titolo_possesso: "piena_proprieta",
+    percentuale_diritti_voto: "",
+    percentuale_diritti_utili: "",
+    note_titolo_possesso: "",
+    partecipazione_collegata_id: "",
+    presenza: "Presente",
+    principale: false,
+    attivo: true,
+    data_nomina: "",
+    durata_carica: "Fino a revoca",
+    data_scadenza: "",
+    data_cessazione: "",
+  });
+
+  await caricaOrgani();
+  return;
+}
   
    const res = await fetch("/api/clienti-organi", {
   method: organoInModificaId ? "PUT" : "POST",
@@ -716,6 +828,7 @@ setForm({
   percentuale_diritti_voto: "",
   percentuale_diritti_utili: "",
   note_titolo_possesso: "",
+  partecipazione_collegata_id: "",
   
 });
     
@@ -1676,7 +1789,137 @@ onChange={(e) => {
               </div>
             ))}
           </div>
-        )}
+            )}
+  </div>
+)}
+
+{form.ruolo === "socio" &&
+  ["nuda_proprieta", "pegno", "sequestro", "intestazione_fiduciaria", "altro"].includes(
+    form.titolo_possesso
+  ) && (
+    <div
+      style={{
+        marginTop: 16,
+        padding: 18,
+        border: "2px solid #fca5a5",
+        borderRadius: 10,
+        background: "#fff7f7",
+      }}
+    >
+      <h3
+        style={{
+          margin: 0,
+          marginBottom: 6,
+          color: "#b91c1c",
+          fontSize: 17,
+          fontWeight: 800,
+        }}
+      >
+        COLLEGAMENTO ALLA PARTECIPAZIONE
+      </h3>
+
+      <p
+        style={{
+          marginTop: 0,
+          marginBottom: 16,
+          color: "#64748b",
+          fontSize: 13,
+        }}
+      >
+        Questo titolo non costituisce una nuova quota autonoma.
+        Seleziona la partecipazione principale alla quale deve essere collegato.
+      </p>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "2fr 1fr",
+          gap: 12,
+          alignItems: "end",
+        }}
+      >
+        <div>
+          <label style={labelStyle}>
+            Partecipazione / usufruttuario da collegare
+          </label>
+
+          <select
+            style={{
+              ...inputStyle,
+              borderColor: form.partecipazione_collegata_id
+                ? "#d1d5db"
+                : "#dc2626",
+              background: form.partecipazione_collegata_id
+                ? "#ffffff"
+                : "#fef2f2",
+            }}
+            value={form.partecipazione_collegata_id}
+            onChange={(e) => {
+              const organoCollegato = organi.find(
+                (organo) => String(organo.id) === String(e.target.value)
+              );
+
+              setForm((prev) => ({
+                ...prev,
+                partecipazione_collegata_id: e.target.value,
+
+                percentuale_partecipazione:
+                  organoCollegato?.percentuale_partecipazione != null
+                    ? String(organoCollegato.percentuale_partecipazione)
+                    : prev.percentuale_partecipazione,
+              }));
+            }}
+          >
+            <option value="">
+              Seleziona la partecipazione
+            </option>
+
+            {organi
+              .filter(
+                (organo) =>
+                  organo.ruolo === "socio" &&
+                  organo.attivo === true &&
+                  ["usufrutto", "piena_proprieta"].includes(
+                    String(organo.titolo_possesso || "piena_proprieta")
+                  )
+              )
+              .map((organo) => (
+                <option key={organo.id} value={organo.id}>
+                  {organo.soggetto_cliente?.ragione_sociale || "Nominativo"}
+                  {" — "}
+                  {titoliPossessoLabel[
+                    String(organo.titolo_possesso || "piena_proprieta")
+                  ] || "Piena proprietà"}
+                  {" — "}
+                  {Number(
+                    organo.percentuale_partecipazione || 0
+                  ).toFixed(2)}
+                  %
+                </option>
+              ))}
+          </select>
+        </div>
+
+        <div>
+          <label style={labelStyle}>
+            Quota del diritto collegato %
+          </label>
+
+          <input
+            type="number"
+            min="0"
+            max="100"
+            step="0.01"
+            style={inputStyle}
+            value={form.percentuale_partecipazione}
+            onChange={(e) =>
+              setForm((prev) => ({
+                ...prev,
+                percentuale_partecipazione: e.target.value,
+              }))
+            }
+          />
+        </div>
       </div>
     </div>
   )}
