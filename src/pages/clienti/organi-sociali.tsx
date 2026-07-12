@@ -1789,8 +1789,10 @@ onChange={(e) => {
               </div>
             ))}
           </div>
-            )}
-  </div>
+           )}
+          </div>
+        </div>
+      )}
 
 {form.ruolo === "socio" &&
   ["nuda_proprieta", "pegno", "sequestro", "intestazione_fiduciaria", "altro"].includes(
