@@ -118,7 +118,7 @@ const [erroreDiritti, setErroreDiritti] = useState("");
 
   const [nuovoDiritto, setNuovoDiritto] = useState({
   soggetto_cliente_id: "",
-  tipo_diritto: "usufrutto",
+  tipo_diritto: "nuda_proprieta",
   percentuale_quota: "",
   percentuale_diritti_voto: "",
   percentuale_diritti_utili: "",
@@ -159,7 +159,6 @@ const [form, setForm] = useState({
   percentuale_diritti_voto: "",
   percentuale_diritti_utili: "",
   note_titolo_possesso: "",
-  partecipazione_collegata_id: "",
 
   presenza: "Presente",
   principale: false,
@@ -479,7 +478,7 @@ async function salvaDirittoCollegato() {
 
   setNuovoDiritto({
     soggetto_cliente_id: "",
-    tipo_diritto: "usufrutto",
+   tipo_diritto: "nuda_proprieta",
     percentuale_quota:
       form.percentuale_partecipazione || "",
     percentuale_diritti_voto: "",
@@ -580,50 +579,7 @@ const tipoSoggetto =
   String(nominativoSelezionato?.tipo_cliente || "").toLowerCase().includes("soc")
     ? "societa"
     : "persona_fisica";
-
-    if (form.titolo_possesso === "nuda_proprieta") {
-  if (!form.partecipazione_collegata_id) {
-    alert("Seleziona la quota in usufrutto da collegare.");
-    return;
-  }
-
-  const res = await fetch("/api/clienti-organi-diritti", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      organo_id: form.partecipazione_collegata_id,
-
-      soggetto_cliente_id: form.soggetto_cliente_id,
-
-      tipo_diritto: "nuda_proprieta",
-
-      quota_interessata:
-        Number(form.percentuale_partecipazione),
-
-      diritti_voto:
-        Number(form.percentuale_diritti_voto || 0),
-
-      diritti_utili:
-        Number(form.percentuale_diritti_utili || 0),
-
-      note: form.note_titolo_possesso || "",
-    }),
-  });
-
-  const data = await res.json();
-
-  if (!res.ok) {
-    alert(data.error || "Errore salvataggio");
-    return;
-  }
-
-  await caricaOrgani();
-
-  return;
-}
-    
+  
    const res = await fetch("/api/clienti-organi", {
   method: organoInModificaId ? "PUT" : "POST",
       headers: {
@@ -701,7 +657,7 @@ setForm({
   percentuale_diritti_voto: "",
   percentuale_diritti_utili: "",
   note_titolo_possesso: "",
-  partecipazione_collegata_id: "",
+  
 });
     
 setOrganoInModificaId("");
@@ -769,7 +725,7 @@ async function caricaInModifica(organo: any) {
 
   setNuovoDiritto({
   soggetto_cliente_id: "",
-  tipo_diritto: "usufrutto",
+ tipo_diritto: "nuda_proprieta",
 
   percentuale_quota:
     organo.percentuale_partecipazione != null
@@ -824,7 +780,6 @@ percentuale_diritti_utili:
 
 note_titolo_possesso:
   organo.note_titolo_possesso || "",
-    partecipazione_collegata_id: "",
   });
 
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1272,79 +1227,42 @@ onChange={(e) => {
       <div>
         <label style={labelStyle}>Titolo di possesso</label>
 
-        <select
-          style={inputStyle}
-          value={form.titolo_possesso}
-          onChange={(e) =>
-            setForm((prev) => ({
-              ...prev,
-              titolo_possesso: e.target.value,
-            }))
-          }
-        >
-          <option value="piena_proprieta">
-            Piena proprietà
-          </option>
-          <option value="nuda_proprieta">
-            Nuda proprietà
-          </option>
-          <option value="usufrutto">
-            Usufrutto
-          </option>
-          <option value="pegno">
-            Pegno
-          </option>
-          <option value="sequestro">
-            Sequestro
-          </option>
-          <option value="intestazione_fiduciaria">
-            Intestazione fiduciaria
-          </option>
-          <option value="altro">
-            Altro
-          </option>
-        </select>
+      <select
+  style={inputStyle}
+  value={form.titolo_possesso}
+  onChange={(e) => {
+    const titolo = e.target.value;
 
-        {form.titolo_possesso === "nuda_proprieta" && (
-  <div style={{ marginTop: 12 }}>
-    <label style={labelStyle}>
-      Quota in usufrutto da collegare
-    </label>
+    setForm((prev) => ({
+      ...prev,
+      titolo_possesso: titolo,
 
-    <select
-      style={inputStyle}
-      value={form.partecipazione_collegata_id}
-      onChange={(e) =>
-        setForm((prev) => ({
-          ...prev,
-          partecipazione_collegata_id: e.target.value,
-        }))
-      }
-    >
-      <option value="">
-        Seleziona la quota in usufrutto
-      </option>
+      percentuale_diritti_voto:
+        titolo === "piena_proprieta"
+          ? prev.percentuale_partecipazione
+          : prev.percentuale_diritti_voto,
 
-      {organi
-        .filter(
-          (o) =>
-            o.ruolo === "socio" &&
-            o.attivo === true &&
-            o.titolo_possesso === "usufrutto"
-        )
-        .map((o) => (
-          <option key={o.id} value={o.id}>
-            {o.soggetto_cliente?.ragione_sociale || "Nominativo"}
-            {" — "}
-            {Number(
-              o.percentuale_partecipazione || 0
-            ).toFixed(2)}
-            %
-          </option>
-        ))}
-    </select>
-  </div>
-)}
+      percentuale_diritti_utili:
+        titolo === "piena_proprieta"
+          ? prev.percentuale_partecipazione
+          : prev.percentuale_diritti_utili,
+
+      note_titolo_possesso:
+        titolo === "piena_proprieta"
+          ? ""
+          : prev.note_titolo_possesso,
+    }));
+  }}
+>
+  <option value="piena_proprieta">
+    Piena proprietà
+  </option>
+
+  <option value="usufrutto">
+    Usufrutto
+  </option>
+</select>
+
       </div>
 
       <div>
