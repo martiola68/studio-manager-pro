@@ -440,25 +440,6 @@ note_titolo_possesso:
   form.ruolo === "socio"
     ? form.note_titolo_possesso || null
     : null,
-  titolo_possesso:
-  form.ruolo === "socio"
-    ? form.titolo_possesso
-    : "piena_proprieta",
-
-percentuale_diritti_voto:
-  form.ruolo === "socio"
-    ? form.percentuale_diritti_voto || null
-    : null,
-
-percentuale_diritti_utili:
-  form.ruolo === "socio"
-    ? form.percentuale_diritti_utili || null
-    : null,
-
-note_titolo_possesso:
-  form.ruolo === "socio"
-    ? form.note_titolo_possesso || null
-    : null,
   
   durata_carica:
     form.ruolo === "socio"
@@ -478,12 +459,7 @@ note_titolo_possesso:
       return;
     }
 
-    setMessaggio("Organo salvato correttamente.");
-
-    titolo_possesso: "piena_proprieta",
-percentuale_diritti_voto: "",
-percentuale_diritti_utili: "",
-note_titolo_possesso: "",
+ setMessaggio("Organo salvato correttamente.");
 
 setForm({
   soggetto_cliente_id: "",
