@@ -203,11 +203,20 @@ const societaSingole = clienti
     const isPersonaFisica =
       tipoCliente.includes("persona fisica");
 
+    const clienteId = String(cliente.id);
+
     return (
       cliente.cliente === true &&
       !isPersonaFisica &&
-      societaConPartecipazioniIds.has(String(cliente.id)) &&
-      !societaNeiGruppiIds.has(String(cliente.id))
+
+      // Deve avere soci registrati
+      societaConPartecipazioniIds.has(clienteId) &&
+
+      // Non deve appartenere direttamente a un gruppo
+      !societaNeiGruppiIds.has(clienteId) &&
+
+      // Non deve essere partecipata da una società del gruppo
+      !societaPartecipateDaGruppiIds.has(clienteId)
     );
   })
   .map((societa) => {
