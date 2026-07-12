@@ -300,12 +300,23 @@ export default function GruppiSocietariPage() {
     societaSelezionataId,
   ]);
 
-  const societaSelezionata = useMemo(() => {
-    if (!gruppoSelezionato) {
-      return null;
-    }
+const societaSelezionata = useMemo(() => {
+  if (!gruppoSelezionato) {
+    return null;
+  }
 
-    const societaSingolaSelezionata = useMemo(() => {
+  return (
+    gruppoSelezionato.societa.find(
+      (societa) =>
+        societa.id === societaSelezionataId
+    ) || null
+  );
+}, [
+  gruppoSelezionato,
+  societaSelezionataId,
+]);
+
+const societaSingolaSelezionata = useMemo(() => {
   return (
     societaSingole.find(
       (societa) =>
@@ -317,18 +328,7 @@ export default function GruppiSocietariPage() {
   societaSingolaSelezionataId,
 ]);
 
-    return (
-      gruppoSelezionato.societa.find(
-        (societa) =>
-          societa.id === societaSelezionataId
-      ) || null
-    );
-  }, [
-    gruppoSelezionato,
-    societaSelezionataId,
-  ]);
-
- function selezionaGruppo(gruppo: GruppoSocietario) {
+function selezionaGruppo(gruppo: GruppoSocietario) {
   setSocietaSingolaSelezionataId("");
   setGruppoSelezionatoId(gruppo.id);
   setSocietaSelezionataId(gruppo.capogruppo.id);
