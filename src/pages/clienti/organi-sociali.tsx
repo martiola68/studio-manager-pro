@@ -229,6 +229,26 @@ useEffect(() => {
     return organi.filter((o) => o.ruolo === filtroRuolo);
   }, [organi, filtroRuolo]);
 
+  const totaleQuote = useMemo(() => {
+  return organi
+    .filter(
+      (organo) =>
+        organo.ruolo === "socio" &&
+        organo.attivo === true
+    )
+    .reduce(
+      (totale, organo) =>
+        totale +
+        Number(organo.percentuale_partecipazione || 0),
+      0
+    );
+}, [organi]);
+
+const totaleQuoteCorretto =
+  Math.abs(totaleQuote - 100) < 0.005;
+
+const differenzaQuote = totaleQuote - 100;
+
   async function caricaClienti() {
    const supabase = getSupabaseClient() as any;
     
@@ -353,9 +373,46 @@ setNuovoNominativo({
 
     const data = await res.json();
 
-    if (res.ok) {
-      setOrgani(data.organi || []);
-    } else {
+   if (res.ok) {
+  const organiBase = data.organi || [];
+
+  const organiConDiritti = await Promise.all(
+    organiBase.map(async (organo: any) => {
+      if (organo.ruolo !== "socio") {
+        return {
+          ...organo,
+          diritti_collegati: [],
+        };
+      }
+
+      try {
+        const rispostaDiritti = await fetch(
+          `/api/clienti-organi-diritti?organo_id=${organo.id}`,
+          {
+            cache: "no-store",
+          }
+        );
+
+        const datiDiritti = await rispostaDiritti.json();
+
+        return {
+          ...organo,
+          diritti_collegati:
+            rispostaDiritti.ok
+              ? datiDiritti.diritti || []
+              : [],
+        };
+      } catch {
+        return {
+          ...organo,
+          diritti_collegati: [],
+        };
+      }
+    })
+  );
+
+  setOrgani(organiConDiritti);
+} else {
       console.error("Errore caricaOrgani:", data);
       setMessaggio(data.error || "Errore caricamento organi");
       setOrgani([]);
@@ -490,7 +547,8 @@ async function salvaDirittoCollegato() {
     note: "",
   });
 
-  await caricaDirittiCollegati(organoInModificaId);
+await caricaDirittiCollegati(organoInModificaId);
+await caricaOrgani();
 }
 
   async function eliminaDirittoCollegato(diritto: any) {
@@ -520,6 +578,7 @@ async function salvaDirittoCollegato() {
   }
 
   await caricaDirittiCollegati(organoInModificaId);
+await caricaOrgani();
 }
   
   
@@ -1324,14 +1383,288 @@ onChange={(e) => {
           placeholder="Indicare eventuali accordi particolari su voto, utili o durata del diritto"
         />
       </div>
-    )}
+       )}
   </div>
 )}
-       
-        <div
+
+{form.ruolo === "socio" &&
+  organoInModificaId &&
+  form.titolo_possesso === "usufrutto" && (
+    <div
+      style={{
+        marginTop: 16,
+        padding: 18,
+        border: "2px solid #fecaca",
+        borderRadius: 10,
+        background: "#fff7f7",
+      }}
+    >
+      <h3
+        style={{
+          margin: 0,
+          color: "#dc2626",
+          fontSize: 17,
+          fontWeight: 800,
+        }}
+      >
+        NUDO PROPRIETARIO COLLEGATO
+      </h3>
+
+      <p
+        style={{
+          marginTop: 6,
+          marginBottom: 16,
+          color: "#64748b",
+          fontSize: 13,
+        }}
+      >
+        Il soggetto inserito sarà collegato alla quota in
+        usufrutto selezionata e non costituirà una nuova
+        partecipazione autonoma.
+      </p>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "2fr 1fr 1fr 1fr",
+          gap: 12,
+          alignItems: "end",
+        }}
+      >
+        <div>
+          <label style={labelStyle}>
+            Nudo proprietario
+          </label>
+
+          <select
+            style={inputStyle}
+            value={nuovoDiritto.soggetto_cliente_id}
+            onChange={(e) =>
+              setNuovoDiritto((prev) => ({
+                ...prev,
+                soggetto_cliente_id: e.target.value,
+                tipo_diritto: "nuda_proprieta",
+              }))
+            }
+          >
+            <option value="">
+              Seleziona nominativo
+            </option>
+
+            {nominativi.map((nominativo) => (
+              <option
+                key={nominativo.id}
+                value={nominativo.id}
+              >
+                {nominativo.ragione_sociale}
+                {nominativo.codice_fiscale
+                  ? ` — ${nominativo.codice_fiscale}`
+                  : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label style={labelStyle}>
+            Quota interessata %
+          </label>
+
+          <input
+            type="number"
+            min="0"
+            max={Number(
+              form.percentuale_partecipazione || 100
+            )}
+            step="0.01"
+            style={inputStyle}
+            value={nuovoDiritto.percentuale_quota}
+            onChange={(e) =>
+              setNuovoDiritto((prev) => ({
+                ...prev,
+                percentuale_quota: e.target.value,
+              }))
+            }
+          />
+        </div>
+
+        <div>
+          <label style={labelStyle}>
+            Diritti di voto %
+          </label>
+
+          <input
+            type="number"
+            min="0"
+            max="100"
+            step="0.01"
+            style={inputStyle}
+            value={
+              nuovoDiritto.percentuale_diritti_voto
+            }
+            onChange={(e) =>
+              setNuovoDiritto((prev) => ({
+                ...prev,
+                percentuale_diritti_voto:
+                  e.target.value,
+              }))
+            }
+          />
+        </div>
+
+        <div>
+          <label style={labelStyle}>
+            Diritti agli utili %
+          </label>
+
+          <input
+            type="number"
+            min="0"
+            max="100"
+            step="0.01"
+            style={inputStyle}
+            value={
+              nuovoDiritto.percentuale_diritti_utili
+            }
+            onChange={(e) =>
+              setNuovoDiritto((prev) => ({
+                ...prev,
+                percentuale_diritti_utili:
+                  e.target.value,
+              }))
+            }
+          />
+        </div>
+      </div>
+
+      <div style={{ marginTop: 12 }}>
+        <label style={labelStyle}>Note</label>
+
+        <textarea
           style={{
-            display: "grid",
-           gridTemplateColumns: "1fr auto",
+            ...inputStyle,
+            minHeight: 70,
+            resize: "vertical",
+          }}
+          value={nuovoDiritto.note}
+          onChange={(e) =>
+            setNuovoDiritto((prev) => ({
+              ...prev,
+              note: e.target.value,
+            }))
+          }
+        />
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          marginTop: 14,
+        }}
+      >
+        <button
+          type="button"
+          style={blueButton}
+          onClick={salvaDirittoCollegato}
+        >
+          Collega nudo proprietario
+        </button>
+      </div>
+
+      <div style={{ marginTop: 18 }}>
+        <strong>Proprietari già collegati</strong>
+
+        {loadingDiritti ? (
+          <div style={{ marginTop: 10 }}>
+            Caricamento...
+          </div>
+        ) : erroreDiritti ? (
+          <div
+            style={{
+              marginTop: 10,
+              color: "#dc2626",
+            }}
+          >
+            {erroreDiritti}
+          </div>
+        ) : dirittiCollegati.length === 0 ? (
+          <div
+            style={{
+              marginTop: 10,
+              padding: 12,
+              background: "#ffffff",
+              borderRadius: 8,
+              color: "#64748b",
+            }}
+          >
+            Nessun nudo proprietario collegato.
+          </div>
+        ) : (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+              marginTop: 10,
+            }}
+          >
+            {dirittiCollegati.map((diritto) => (
+              <div
+                key={diritto.id}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: 12,
+                  border: "1px solid #fecaca",
+                  borderRadius: 8,
+                  background: "#ffffff",
+                }}
+              >
+                <div>
+                  <strong style={{ color: "#dc2626" }}>
+                    NUDO PROPRIETARIO:{" "}
+                    {diritto.nominativo_nome}
+                  </strong>
+
+                  <div
+                    style={{
+                      marginTop: 3,
+                      fontSize: 12,
+                      color: "#64748b",
+                    }}
+                  >
+                    Quota{" "}
+                    {Number(
+                      diritto.percentuale_quota || 0
+                    ).toFixed(2)}
+                    %
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  style={iconDangerButton}
+                  onClick={() =>
+                    eliminaDirittoCollegato(diritto)
+                  }
+                  title="Elimina collegamento"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )}
+
+<div
+  style={{
+    display: "grid",
+    gridTemplateColumns: "1fr auto",
             gap: 12,
             marginTop: 14,
             alignItems: "center",
@@ -1369,10 +1702,58 @@ onChange={(e) => {
         )}
       </div>
 
-      <div style={cardStyle}>
-      <h2 style={titleStyle}>Soci / Organi collegati</h2>
+      <div
+  style={{
+    ...cardStyle,
+    border: totaleQuoteCorretto
+      ? "2px solid #86efac"
+      : "2px solid #fca5a5",
+  }}
+>
+  <h2 style={titleStyle}>Soci / Organi collegati</h2>
 
-        {loading ? (
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: 14,
+      marginTop: 16,
+      padding: "14px 16px",
+      borderRadius: 10,
+      background: totaleQuoteCorretto
+        ? "#dcfce7"
+        : "#fee2e2",
+      color: totaleQuoteCorretto
+        ? "#166534"
+        : "#991b1b",
+      fontWeight: 800,
+    }}
+  >
+    <span>Totale quote societarie</span>
+
+    <span style={{ fontSize: 20 }}>
+      {totaleQuote.toLocaleString("it-IT", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}
+      %
+    </span>
+
+    {!totaleQuoteCorretto && (
+      <span>
+        Differenza:{" "}
+        {differenzaQuote > 0 ? "+" : ""}
+        {differenzaQuote.toLocaleString("it-IT", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}
+        %
+      </span>
+    )}
+  </div>
+
+  {loading ? (
           <p>Caricamento...</p>
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 18 }}>
@@ -1398,8 +1779,9 @@ onChange={(e) => {
 </thead>
 
            <tbody>
-  {organiFiltrati.map((o) => (
-    <tr key={o.id}>
+ {organiFiltrati.map((o) => (
+  <React.Fragment key={o.id}>
+    <tr>
  <td style={tdStyle}>
   {o.soggetto_cliente?.ragione_sociale || "—"}
 </td>
@@ -1508,8 +1890,108 @@ onChange={(e) => {
 </button>
         </div>
       </td>
-    </tr>
-    ))}
+       </tr>
+
+    {(o.diritti_collegati || []).map(
+      (diritto: any) => (
+        <tr
+          key={diritto.id}
+          style={{
+            background: "#fff7f7",
+          }}
+        >
+          <td
+            style={{
+              ...tdStyle,
+              paddingLeft: 34,
+              color: "#dc2626",
+              fontWeight: 800,
+            }}
+          >
+            ↳ NUDO PROPRIETARIO:{" "}
+            {diritto.nominativo_nome || "—"}
+          </td>
+
+          <td
+            style={{
+              ...tdStyle,
+              color: "#dc2626",
+            }}
+          >
+            {diritto.nominativo_codice_fiscale || "—"}
+          </td>
+
+          <td
+            style={{
+              ...tdStyle,
+              color: "#dc2626",
+              fontWeight: 700,
+            }}
+          >
+            Nudo proprietario
+          </td>
+
+          <td style={tdStyle}>
+            {Number(
+              diritto.percentuale_quota || 0
+            ).toFixed(2)}
+            %
+          </td>
+
+          <td
+            style={{
+              ...tdStyle,
+              color: "#dc2626",
+            }}
+          >
+            Collegato a{" "}
+            {`Q-${String(o.id)
+              .slice(0, 6)
+              .toUpperCase()}`}
+          </td>
+
+          <td style={tdStyle}>
+            {diritto.percentuale_diritti_voto != null
+              ? `${Number(
+                  diritto.percentuale_diritti_voto
+                ).toFixed(2)}%`
+              : "—"}
+          </td>
+
+          <td style={tdStyle}>
+            {diritto.percentuale_diritti_utili != null
+              ? `${Number(
+                  diritto.percentuale_diritti_utili
+                ).toFixed(2)}%`
+              : "—"}
+          </td>
+
+          <td style={tdStyle}>—</td>
+          <td style={tdStyle}>—</td>
+          <td style={tdStyle}>
+            {diritto.attivo ? "Sì" : "No"}
+          </td>
+          <td style={tdStyle}>—</td>
+          <td style={tdStyle}>—</td>
+          <td style={tdStyle}>—</td>
+
+          <td style={tdStyle}>
+            <button
+              type="button"
+              style={iconDangerButton}
+              title="Elimina collegamento"
+              onClick={() =>
+                eliminaDirittoCollegato(diritto)
+              }
+            >
+              <Trash2 size={16} />
+            </button>
+          </td>
+        </tr>
+      )
+    )}
+  </React.Fragment>
+))}
               {organiFiltrati.length === 0 && (
                 <tr>
                   <td style={tdStyle} colSpan={15}>
