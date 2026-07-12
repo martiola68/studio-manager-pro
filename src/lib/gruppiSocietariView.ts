@@ -406,25 +406,51 @@ export function costruisciVistaGruppiSocietari(
     };
   });
 
-        const altrePartecipazioni =
-          relazioniInUscita
-            .filter(
-              (relazione) =>
-                relazione.classificazione ===
-                "altra_partecipazione"
-            )
-            .map((relazione) => ({
-              societa_id:
-                relazione.partecipata_id,
+       const altrePartecipazioni =
+  relazioniInUscita
+    .filter(
+      (relazione) =>
+        relazione.classificazione ===
+        "altra_partecipazione"
+    )
+    .map((relazione) => {
+      const sociDirettiAltraPartecipazione =
+        partecipazioni
+          .filter(
+            (p) =>
+              p.partecipata_id ===
+              relazione.partecipata_id
+          )
+          .map((p) => ({
+            id: p.partecipante_id,
+            nome: p.partecipante_nome,
+            tipo: p.partecipante_tipo,
+            quota_diretta: p.quota_diretta,
+            classificazione: p.classificazione,
+          }));
 
-              societa_nome:
-                relazione.partecipata_nome,
+      return {
+        societa_id:
+          relazione.partecipata_id,
 
-              quota: relazione.quota_diretta,
+        societa_nome:
+          relazione.partecipata_nome,
 
-              classificazione:
-                "altra_partecipazione" as const,
-            }));
+        quota: relazione.quota_diretta,
+
+        classificazione:
+          "altra_partecipazione" as const,
+
+        soci_diretti:
+          sociDirettiAltraPartecipazione,
+
+        titolari_effettivi:
+          costruisciTitolariEffettiviSocieta(
+            relazione.partecipata_id,
+            titolariEffettivi
+          ),
+      };
+    });
 
         const sorelle = tutteLeSocieta
           .filter(
