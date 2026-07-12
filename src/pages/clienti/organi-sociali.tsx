@@ -952,6 +952,8 @@ percentuale_diritti_utili:
 
 note_titolo_possesso:
   organo.note_titolo_possesso || "",
+
+    partecipazione_collegata_id: "",
   });
 
   window.scrollTo({ top: 0, behavior: "smooth" });
