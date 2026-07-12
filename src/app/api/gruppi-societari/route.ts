@@ -84,28 +84,16 @@ export async function GET() {
       )
     );
 
-    if (idsCoinvolti.length === 0) {
-      return NextResponse.json({
-        partecipazioni: [],
-        riepilogo: {
-          totale_partecipazioni: 0,
-          controllate: 0,
-          collegate: 0,
-          altre_partecipazioni: 0,
-        },
-      });
-    }
-
+  
     const { data: clientiData, error: clientiError } = await supabase
-      .from("tbclienti")
-      .select(`
-        id,
-        ragione_sociale,
-        tipo_cliente,
-        cliente,
-        codice_fiscale
-      `)
-      .in("id", idsCoinvolti);
+  .from("tbclienti")
+  .select(`
+    id,
+    ragione_sociale,
+    tipo_cliente,
+    cliente,
+    codice_fiscale
+  `);
 
     if (clientiError) {
       return NextResponse.json(
@@ -183,7 +171,85 @@ const titolariEffettivi = calcolaTitolariEffettivi(
     gruppi,
     titolariEffettivi
   );
-    
+
+    const societaNeiGruppiIds = new Set<string>();
+
+gruppiDettaglio.forEach((gruppo: any) => {
+  if (gruppo.capogruppo_id) {
+    societaNeiGruppiIds.add(String(gruppo.capogruppo_id));
+  }
+
+  (gruppo.societa || []).forEach((societa: any) => {
+    if (societa.id) {
+      societaNeiGruppiIds.add(String(societa.id));
+    }
+
+    if (societa.societa_id) {
+      societaNeiGruppiIds.add(String(societa.societa_id));
+    }
+  });
+});
+
+const societaConPartecipazioniIds = new Set(
+  partecipazioni.map((row) => String(row.cliente_id))
+);
+
+const societaSingole = clienti
+  .filter((cliente) => {
+    const tipoCliente = String(
+      cliente.tipo_cliente || ""
+    ).toLowerCase();
+
+    const isPersonaFisica =
+      tipoCliente.includes("persona fisica");
+
+    return (
+      cliente.cliente === true &&
+      !isPersonaFisica &&
+      societaConPartecipazioniIds.has(String(cliente.id)) &&
+      !societaNeiGruppiIds.has(String(cliente.id))
+    );
+  })
+  .map((societa) => {
+    const sociDiretti = relazioni.filter(
+      (relazione) =>
+        String(relazione.partecipata_id) ===
+        String(societa.id)
+    );
+
+    const titolariSocieta = titolariEffettivi.filter(
+      (titolare: any) =>
+        String(titolare.societa_id) ===
+        String(societa.id) ||
+        String(titolare.partecipata_id) ===
+        String(societa.id)
+    );
+
+    return {
+      id: societa.id,
+      ragione_sociale:
+        societa.ragione_sociale || "Società senza denominazione",
+      codice_fiscale: societa.codice_fiscale || null,
+
+      soci_diretti: sociDiretti,
+
+      titolari_effettivi: titolariSocieta,
+
+      numero_soci_diretti: sociDiretti.length,
+
+      numero_titolari_effettivi:
+        titolariSocieta.filter(
+          (titolare: any) =>
+            titolare.candidato_titolare_effettivo === true
+        ).length,
+    };
+  })
+  .sort((a, b) =>
+    a.ragione_sociale.localeCompare(
+      b.ragione_sociale,
+      "it"
+    )
+  );
 return NextResponse.json({
   partecipazioni: relazioni,
 
@@ -191,8 +257,10 @@ return NextResponse.json({
 
   gruppi_dettaglio: gruppiDettaglio,
 
-  titolari_effettivi: titolariEffettivi,
+  societa_singole: societaSingole,
 
+  titolari_effettivi: titolariEffettivi,
+  
   candidati_titolari_effettivi:
     titolariEffettivi.filter(
       (titolare) =>
@@ -225,13 +293,16 @@ return NextResponse.json({
           "persona_fisica"
       ).length,
 
-    gruppi_individuati: gruppi.length,
+   gruppi_individuati: gruppi.length,
 
-    candidati_titolari_effettivi:
-      titolariEffettivi.filter(
-        (titolare) =>
-          titolare.candidato_titolare_effettivo
-      ).length,
+societa_singole: societaSingole.length,
+
+candidati_titolari_effettivi:
+  titolariEffettivi.filter(
+    (titolare) =>
+      titolare.candidato_titolare_effettivo
+  ).length,
+    
   },
 });
   } catch (error: any) {
