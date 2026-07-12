@@ -192,6 +192,11 @@ export default function GruppiSocietariPage() {
   const [societaSelezionataId, setSocietaSelezionataId] =
     useState("");
 
+  const [
+  societaSingolaSelezionataId,
+  setSocietaSingolaSelezionataId,
+] = useState("");
+
   const [gruppiAperti, setGruppiAperti] = useState<
     Record<string, boolean>
   >({});
@@ -300,6 +305,18 @@ export default function GruppiSocietariPage() {
       return null;
     }
 
+    const societaSingolaSelezionata = useMemo(() => {
+  return (
+    societaSingole.find(
+      (societa) =>
+        societa.id === societaSingolaSelezionataId
+    ) || null
+  );
+}, [
+  societaSingole,
+  societaSingolaSelezionataId,
+]);
+
     return (
       gruppoSelezionato.societa.find(
         (societa) =>
@@ -311,10 +328,13 @@ export default function GruppiSocietariPage() {
     societaSelezionataId,
   ]);
 
-  function selezionaGruppo(gruppo: GruppoSocietario) {
-    setGruppoSelezionatoId(gruppo.id);
-    setSocietaSelezionataId(gruppo.capogruppo.id);
-  }
+ function selezionaGruppo(gruppo: GruppoSocietario) {
+  setSocietaSingolaSelezionataId("");
+  setGruppoSelezionatoId(gruppo.id);
+  setSocietaSelezionataId(gruppo.capogruppo.id);
+}
+
+  
 
   function toggleGruppo(gruppoId: string) {
     setGruppiAperti((precedente) => ({
@@ -508,15 +528,17 @@ export default function GruppiSocietariPage() {
                                 <button
                                   type="button"
                                   key={societa.id}
-                                  onClick={() => {
-                                    setGruppoSelezionatoId(
-                                      gruppo.id
-                                    );
+                                 onClick={() => {
+  setSocietaSingolaSelezionataId("");
 
-                                    setSocietaSelezionataId(
-                                      societa.id
-                                    );
-                                  }}
+  setGruppoSelezionatoId(
+    gruppo.id
+  );
+
+  setSocietaSelezionataId(
+    societa.id
+  );
+}}
                                   style={{
                                     ...rigaSocietaAlberoStyle,
                                     paddingLeft:
@@ -589,13 +611,22 @@ export default function GruppiSocietariPage() {
                       <button
                         key={societa.id}
                         type="button"
-                        style={{
-                          ...rigaSocietaAlberoStyle,
-                          paddingLeft: 14,
-                        }}
-                        onClick={() => {
-                          console.log(societa);
-                        }}
+                       style={{
+  ...rigaSocietaAlberoStyle,
+  paddingLeft: 14,
+
+  ...(societa.id ===
+  societaSingolaSelezionataId
+    ? rigaSocietaAttivaStyle
+    : {}),
+}}
+                       onClick={() => {
+  setGruppoSelezionatoId("");
+  setSocietaSelezionataId("");
+  setSocietaSingolaSelezionataId(
+    societa.id
+  );
+}}
                       >
                         <span
                           style={{
@@ -620,7 +651,7 @@ export default function GruppiSocietariPage() {
             </aside>
 
             <section style={contenutoStyle}>
-              {gruppoSelezionato && (
+  {gruppoSelezionato ? (
                 <>
                   <div style={testataGruppoStyle}>
                     <div>
@@ -1090,8 +1121,206 @@ export default function GruppiSocietariPage() {
                       </div>
                     </>
                   )}
+                              </>
+              ) : societaSingolaSelezionata ? (
+                <>
+                  <div style={testataGruppoStyle}>
+                    <div>
+                      <div style={eyebrowStyle}>
+                        Società singola
+                      </div>
+
+                      <h2 style={titoloGruppoStyle}>
+                        {
+                          societaSingolaSelezionata
+                            .ragione_sociale
+                        }
+                      </h2>
+
+                      <div style={badgeCapogruppoStyle}>
+                        <Building2 size={15} />
+                        Società autonoma
+                      </div>
+                    </div>
+
+                    <div style={riepilogoGruppoStyle}>
+                      <DatoCompatto
+                        etichetta="Soci diretti"
+                        valore={
+                          societaSingolaSelezionata
+                            .soci_diretti.length
+                        }
+                      />
+
+                      <DatoCompatto
+                        etichetta="Titolari effettivi"
+                        valore={
+                          societaSingolaSelezionata
+                            .titolari_effettivi.length
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div style={cardPrincipaleStyle}>
+                    <div style={intestazioneCardStyle}>
+                      <div>
+                        <div style={eyebrowStyle}>
+                          Società selezionata
+                        </div>
+
+                        <h3 style={titoloCardStyle}>
+                          {
+                            societaSingolaSelezionata
+                              .ragione_sociale
+                          }
+                        </h3>
+                      </div>
+
+                      <span style={badgeRuoloSocietaStyle}>
+                        Società singola
+                      </span>
+                    </div>
+
+                    <div style={grigliaDatiSocietaStyle}>
+                      <DatoSocieta
+                        etichetta="Codice fiscale"
+                        valore={
+                          societaSingolaSelezionata
+                            .codice_fiscale || "—"
+                        }
+                      />
+
+                      <DatoSocieta
+                        etichetta="Appartenenza"
+                        valore="Nessun gruppo societario"
+                      />
+
+                      <DatoSocieta
+                        etichetta="Soci diretti"
+                        valore={String(
+                          societaSingolaSelezionata
+                            .soci_diretti.length
+                        )}
+                      />
+
+                      <DatoSocieta
+                        etichetta="Titolari effettivi"
+                        valore={String(
+                          societaSingolaSelezionata
+                            .titolari_effettivi.length
+                        )}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={dueColonneStyle}>
+                    <div style={cardStyle}>
+                      <div style={titoloPannelloStyle}>
+                        <Users size={19} />
+                        Soci diretti
+                      </div>
+
+                      {societaSingolaSelezionata
+                        .soci_diretti.length === 0 ? (
+                        <div style={testoVuotoStyle}>
+                          Nessun socio rilevato.
+                        </div>
+                      ) : (
+                        <div style={listaStyle}>
+                          {societaSingolaSelezionata.soci_diretti.map(
+                            (socio) => (
+                              <div
+                                key={`${societaSingolaSelezionata.id}-${socio.id}`}
+                                style={rigaListaStyle}
+                              >
+                                <div>
+                                  <strong>
+                                    {socio.nome}
+                                  </strong>
+
+                                  <div
+                                    style={
+                                      dettaglioListaStyle
+                                    }
+                                  >
+                                    {socio.tipo ===
+                                    "societa"
+                                      ? "Società"
+                                      : "Persona fisica"}
+                                  </div>
+                                </div>
+
+                                <span
+                                  style={quotaBadgeStyle}
+                                >
+                                  {formattaPercentuale(
+                                    socio.quota_diretta
+                                  )}
+                                </span>
+                              </div>
+                            )
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={cardStyle}>
+                      <div style={titoloPannelloStyle}>
+                        <ShieldCheck size={19} />
+                        Titolari effettivi
+                      </div>
+
+                      {societaSingolaSelezionata
+                        .titolari_effettivi.length ===
+                      0 ? (
+                        <div style={testoVuotoStyle}>
+                          Nessun titolare effettivo
+                          individuato tramite le
+                          partecipazioni.
+                        </div>
+                      ) : (
+                        <div style={listaStyle}>
+                          {societaSingolaSelezionata.titolari_effettivi.map(
+                            (titolare) => (
+                              <div
+                                key={`${societaSingolaSelezionata.id}-${titolare.persona_id}`}
+                                style={rigaListaStyle}
+                              >
+                                <div>
+                                  <strong>
+                                    {
+                                      titolare.persona_nome
+                                    }
+                                  </strong>
+
+                                  <div
+                                    style={
+                                      dettaglioListaStyle
+                                    }
+                                  >
+                                    {getEtichettaTitolarita(
+                                      titolare.tipo_titolarita
+                                    )}
+                                  </div>
+                                </div>
+
+                                <span
+                                  style={titolareBadgeStyle}
+                                >
+                                  {formattaPercentuale(
+                                    titolare.quota_complessiva
+                                  )}
+                                </span>
+                              </div>
+                            )
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </>
-              )}
+              ) : null}
             </section>
           </div>
         </>
