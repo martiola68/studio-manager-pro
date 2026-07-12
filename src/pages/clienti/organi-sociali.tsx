@@ -50,6 +50,16 @@ const ruoliLabel: Record<string, string> = {
   rappresentante_legale: "Rappresentante legale",
 };
 
+const titoliPossessoLabel: Record<string, string> = {
+  piena_proprieta: "Piena proprietà",
+  nuda_proprieta: "Nuda proprietà",
+  usufrutto: "Usufrutto",
+  pegno: "Pegno",
+  sequestro: "Sequestro",
+  intestazione_fiduciaria: "Intestazione fiduciaria",
+  altro: "Altro",
+};
+
 const ruoliConPrincipale = [
   "amministratore",
   "amministratore_unico",
@@ -1202,17 +1212,11 @@ function getTipoRuolo(ruolo: string) {
           : "—"}
       </td>
 
-      <td style={tdStyle}>
+ <td style={tdStyle}>
   {o.ruolo === "socio"
-    ? {
-        piena_proprieta: "Piena proprietà",
-        nuda_proprieta: "Nuda proprietà",
-        usufrutto: "Usufrutto",
-        pegno: "Pegno",
-        sequestro: "Sequestro",
-        intestazione_fiduciaria: "Intestazione fiduciaria",
-        altro: "Altro",
-      }[o.titolo_possesso || "piena_proprieta"]
+    ? titoliPossessoLabel[
+        String(o.titolo_possesso || "piena_proprieta")
+      ] || "Piena proprietà"
     : "—"}
 </td>
 
