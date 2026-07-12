@@ -122,8 +122,21 @@ type GruppoSocietario = {
   titolari_effettivi_gruppo: TitolareEffettivoGruppo[];
 };
 
+type SocietaSingola = {
+  id: string;
+  ragione_sociale: string;
+  codice_fiscale: string | null;
+
+  soci_diretti: SocietaGruppo["soci_diretti"];
+  titolari_effettivi: SocietaGruppo["titolari_effettivi"];
+
+  numero_soci_diretti: number;
+  numero_titolari_effettivi: number;
+};
+
 type ApiResponse = {
   gruppi_dettaglio?: GruppoSocietario[];
+  societa_singole?: SocietaSingola[];
   error?: string;
 };
 
@@ -172,6 +185,10 @@ export default function GruppiSocietariPage() {
   const [gruppoSelezionatoId, setGruppoSelezionatoId] =
     useState("");
 
+  const [societaSingole, setSocietaSingole] = useState<
+  SocietaSingola[]
+>([]);
+
   const [societaSelezionataId, setSocietaSelezionataId] =
     useState("");
 
@@ -203,6 +220,8 @@ export default function GruppiSocietariPage() {
       const nuoviGruppi = data.gruppi_dettaglio || [];
 
       setGruppi(nuoviGruppi);
+
+      setSocietaSingole(data.societa_singole || []);
 
       if (nuoviGruppi.length > 0) {
         setGruppoSelezionatoId((precedente) => {
@@ -392,6 +411,12 @@ export default function GruppiSocietariPage() {
             />
 
             <RiepilogoCard
+  icona={<Building2 size={22} />}
+  etichetta="Società singole"
+  valore={societaSingole.length}
+/>
+
+            <RiepilogoCard
               icona={<ShieldCheck size={22} />}
               etichetta="Titolari effettivi"
               valore={gruppi.reduce(
@@ -543,8 +568,55 @@ export default function GruppiSocietariPage() {
                       )}
                     </div>
                   );
-                })}
+               })}
               </div>
+
+              {societaSingole.length > 0 && (
+                <>
+                  <div
+                    style={{
+                      marginTop: 20,
+                      marginBottom: 10,
+                      fontWeight: 800,
+                      color: "#475569",
+                    }}
+                  >
+                    Società singole
+                  </div>
+
+                  <div style={gruppoSidebarStyle}>
+                    {societaSingole.map((societa) => (
+                      <button
+                        key={societa.id}
+                        type="button"
+                        style={{
+                          ...rigaSocietaAlberoStyle,
+                          paddingLeft: 14,
+                        }}
+                        onClick={() => {
+                          console.log(societa);
+                        }}
+                      >
+                        <span
+                          style={{
+                            ...puntoAlberoStyle,
+                            background: "#0ea5e9",
+                          }}
+                        />
+
+                        <span
+                          style={{
+                            flex: 1,
+                            textAlign: "left",
+                          }}
+                        >
+                          {societa.ragione_sociale}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </aside>
 
             <section style={contenutoStyle}>
