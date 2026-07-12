@@ -112,6 +112,9 @@ export default function OrganiSocialiPage() {
   const [organi, setOrgani] = useState<any[]>([]);
 
   const [organoInModificaId, setOrganoInModificaId] = useState("");
+  const [dirittiCollegati, setDirittiCollegati] = useState<any[]>([]);
+const [loadingDiritti, setLoadingDiritti] = useState(false);
+const [erroreDiritti, setErroreDiritti] = useState("");
 
   const [clienteId, setClienteId] = useState("");
   const [filtroRuolo, setFiltroRuolo] = useState("tutti");
@@ -353,6 +356,45 @@ setNuovoNominativo({
   }
 }
 
+  async function caricaDirittiCollegati(organoId: string) {
+  if (!organoId) {
+    setDirittiCollegati([]);
+    setErroreDiritti("");
+    return;
+  }
+
+  setLoadingDiritti(true);
+  setErroreDiritti("");
+
+  try {
+    const response = await fetch(
+      `/api/clienti-organi-diritti?organo_id=${organoId}`,
+      {
+        cache: "no-store",
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.error || "Errore caricamento diritti collegati"
+      );
+    }
+
+    setDirittiCollegati(data.diritti || []);
+  } catch (error: any) {
+    console.error("Errore caricaDirittiCollegati:", error);
+
+    setDirittiCollegati([]);
+    setErroreDiritti(
+      error?.message || "Errore caricamento diritti collegati"
+    );
+  } finally {
+    setLoadingDiritti(false);
+  }
+}
+  
   async function salvaAssettoSocietario(
   campo:
     | "numero_soci_attesi"
@@ -491,6 +533,9 @@ setForm({
     
 setOrganoInModificaId("");
 
+    setDirittiCollegati([]);
+setErroreDiritti("");
+
 await caricaOrgani();
 
     }
@@ -546,8 +591,15 @@ async function eliminaOrgano(organo: any) {
   await caricaOrgani();
 }
 
-function caricaInModifica(organo: any) {
+async function caricaInModifica(organo: any) {
   setOrganoInModificaId(organo.id);
+
+  if (organo.ruolo === "socio") {
+  await caricaDirittiCollegati(organo.id);
+} else {
+  setDirittiCollegati([]);
+  setErroreDiritti("");
+}
 
   setForm({
     soggetto_cliente_id: organo.soggetto_cliente_id || "",
@@ -648,11 +700,14 @@ function getTipoRuolo(ruolo: string) {
   }}
   value={clienteId}
   disabled={!!router.query.cliente_id}
-  onChange={(e) => {
-    setClienteId(e.target.value);
-    setOrgani([]);
-    setMessaggio("");
-  }}
+onChange={(e) => {
+  setClienteId(e.target.value);
+  setOrgani([]);
+  setDirittiCollegati([]);
+  setOrganoInModificaId("");
+  setErroreDiritti("");
+  setMessaggio("");
+}}
 >
               <option value="">Seleziona società</option>
 
