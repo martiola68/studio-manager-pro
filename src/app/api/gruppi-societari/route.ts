@@ -217,13 +217,16 @@ const societaSingole = clienti
         String(societa.id)
     );
 
-    const titolariSocieta = titolariEffettivi.filter(
-      (titolare: any) =>
-        String(titolare.societa_id) ===
+   const titolariSocieta = titolariEffettivi.filter(
+  (titolare: any) =>
+    (
+      String(titolare.societa_id) ===
         String(societa.id) ||
-        String(titolare.partecipata_id) ===
+      String(titolare.partecipata_id) ===
         String(societa.id)
-    );
+    ) &&
+    titolare.candidato_titolare_effettivo === true
+);
 
     return {
       id: societa.id,
@@ -237,11 +240,8 @@ const societaSingole = clienti
 
       numero_soci_diretti: sociDiretti.length,
 
-      numero_titolari_effettivi:
-        titolariSocieta.filter(
-          (titolare: any) =>
-            titolare.candidato_titolare_effettivo === true
-        ).length,
+     numero_titolari_effettivi:
+  titolariSocieta.length,
     };
   })
   .sort((a, b) =>
