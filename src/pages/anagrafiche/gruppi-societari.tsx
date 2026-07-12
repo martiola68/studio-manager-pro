@@ -427,6 +427,19 @@ const societaSingolaSelezionata = useMemo(() => {
   );
 }, [gruppoSelezionato]);
 
+const societaCollegataSelezionata = useMemo(() => {
+  return (
+    societaCollegateGruppo.find(
+      (societa) =>
+        String(societa.societa_id) ===
+        String(societaCollegataSelezionataId)
+    ) || null
+  );
+}, [
+  societaCollegateGruppo,
+  societaCollegataSelezionataId,
+]);
+
 const titolariSocietaCollegata = useMemo(() => {
   if (!societaCollegataSelezionata) {
     return [];
