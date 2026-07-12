@@ -77,6 +77,15 @@ function richiedeQuota(ruolo: string) {
 function consentePrincipale(ruolo: string) {
   return ruoliConPrincipale.includes(ruolo);
 }
+function isTitoloCollegato(titolo: string) {
+  return [
+    "nuda_proprieta",
+    "pegno",
+    "sequestro",
+    "intestazione_fiduciaria",
+    "altro",
+  ].includes(titolo);
+}
 
 function getCodicePartecipazione(organoId: string) {
   return `PAR-${String(organoId)
@@ -693,21 +702,11 @@ if (form.ruolo === "socio" && titoloDaCollegare) {
         percentuale_quota:
           percentualeQuota,
 
-        percentuale_diritti_voto:
-          form.percentuale_diritti_voto !== ""
-            ? Number(form.percentuale_diritti_voto)
-            : 0,
+      percentuale_diritti_voto: 0,
+percentuale_diritti_utili: 0,
 
-        percentuale_diritti_utili:
-          form.percentuale_diritti_utili !== ""
-            ? Number(form.percentuale_diritti_utili)
-            : 0,
-
-        diritto_voto:
-          Number(form.percentuale_diritti_voto || 0) > 0,
-
-        diritto_utili:
-          Number(form.percentuale_diritti_utili || 0) > 0,
+diritto_voto: false,
+diritto_utili: false,
 
         data_inizio:
           form.data_nomina || null,
@@ -1411,29 +1410,39 @@ onChange={(e) => {
       <select
   style={inputStyle}
   value={form.titolo_possesso}
-  onChange={(e) => {
-    const titolo = e.target.value;
+ onChange={(e) => {
+  const titolo = e.target.value;
+  const titoloCollegato = isTitoloCollegato(titolo);
 
-    setForm((prev) => ({
-      ...prev,
-      titolo_possesso: titolo,
+  setForm((prev) => ({
+    ...prev,
+    titolo_possesso: titolo,
 
-      percentuale_diritti_voto:
-        titolo === "piena_proprieta"
-          ? prev.percentuale_partecipazione
-          : prev.percentuale_diritti_voto,
+    percentuale_diritti_voto:
+      titoloCollegato
+        ? "0"
+        : titolo === "piena_proprieta"
+        ? prev.percentuale_partecipazione
+        : prev.percentuale_diritti_voto,
 
-      percentuale_diritti_utili:
-        titolo === "piena_proprieta"
-          ? prev.percentuale_partecipazione
-          : prev.percentuale_diritti_utili,
+    percentuale_diritti_utili:
+      titoloCollegato
+        ? "0"
+        : titolo === "piena_proprieta"
+        ? prev.percentuale_partecipazione
+        : prev.percentuale_diritti_utili,
 
-      note_titolo_possesso:
-        titolo === "piena_proprieta"
-          ? ""
-          : prev.note_titolo_possesso,
-    }));
-  }}
+    note_titolo_possesso:
+      titolo === "piena_proprieta"
+        ? ""
+        : prev.note_titolo_possesso,
+
+    partecipazione_collegata_id:
+      titoloCollegato
+        ? prev.partecipazione_collegata_id
+        : "",
+  }));
+}}
 >
  <option value="piena_proprieta">
   Piena proprietà
@@ -1470,38 +1479,44 @@ onChange={(e) => {
         <label style={labelStyle}>Diritti di voto %</label>
 
         <input
-          type="number"
-          min="0"
-          max="100"
-          step="0.01"
-          style={inputStyle}
-          value={form.percentuale_diritti_voto}
-          onChange={(e) =>
-            setForm((prev) => ({
-              ...prev,
-              percentuale_diritti_voto: e.target.value,
-            }))
-          }
-        />
+  type="number"
+  disabled={isTitoloCollegato(form.titolo_possesso)}
+  value={form.percentuale_diritti_voto}
+  style={{
+    ...inputStyle,
+    background: isTitoloCollegato(form.titolo_possesso)
+      ? "#f1f5f9"
+      : "#ffffff",
+  }}
+  onChange={(e)=>
+    setForm((prev)=>({
+      ...prev,
+      percentuale_diritti_voto:e.target.value,
+    }))
+  }
+/>
       </div>
 
       <div>
         <label style={labelStyle}>Diritti agli utili %</label>
 
-        <input
-          type="number"
-          min="0"
-          max="100"
-          step="0.01"
-          style={inputStyle}
-          value={form.percentuale_diritti_utili}
-          onChange={(e) =>
-            setForm((prev) => ({
-              ...prev,
-              percentuale_diritti_utili: e.target.value,
-            }))
-          }
-        />
+       <input
+  type="number"
+  disabled={isTitoloCollegato(form.titolo_possesso)}
+  value={form.percentuale_diritti_utili}
+  style={{
+    ...inputStyle,
+    background: isTitoloCollegato(form.titolo_possesso)
+      ? "#f1f5f9"
+      : "#ffffff",
+  }}
+  onChange={(e)=>
+    setForm((prev)=>({
+      ...prev,
+      percentuale_diritti_utili:e.target.value,
+    }))
+  }
+/>
       </div>
     </div>
 
@@ -1877,13 +1892,11 @@ onChange={(e) => {
 
             {organi
               .filter(
-                (organo) =>
-                  organo.ruolo === "socio" &&
-                  organo.attivo === true &&
-                  ["usufrutto", "piena_proprieta"].includes(
-                    String(organo.titolo_possesso || "piena_proprieta")
-                  )
-              )
+  (organo) =>
+    organo.ruolo === "socio" &&
+    organo.attivo === true &&
+    String(organo.titolo_possesso) === "usufrutto"
+)
               .map((organo) => (
                 <option key={organo.id} value={organo.id}>
                   {organo.soggetto_cliente?.ragione_sociale || "Nominativo"}
@@ -2077,11 +2090,12 @@ onChange={(e) => {
 
       {o.titolo_possesso === "usufrutto" && (
         <div
-          style={{
-            marginTop: 4,
-            fontSize: 11,
-            fontWeight: 800,
-            color: "#2563eb",
+         style={{
+  marginTop: 4,
+  fontSize: 11,
+  fontWeight: 400,
+  color: "#2563eb",
+}}
           }}
         >
           {getCodicePartecipazione(o.id)}
@@ -2183,17 +2197,30 @@ onChange={(e) => {
             background: "#fff7f7",
           }}
         >
-          <td
-            style={{
-              ...tdStyle,
-              paddingLeft: 34,
-              color: "#dc2626",
-              fontWeight: 800,
-            }}
-          >
-            ↳ NUDO PROPRIETARIO:{" "}
-            {diritto.nominativo_nome || "—"}
-          </td>
+         <td
+  style={{
+    ...tdStyle,
+    paddingLeft: 34,
+    color: "#dc2626",
+  }}
+>
+  <div style={{ fontWeight: 800 }}>
+    ↳ NUDO PROPRIETARIO:{" "}
+    {diritto.nominativo_nome || "—"}
+  </div>
+
+  <div
+    style={{
+      marginTop: 5,
+      fontSize: 12,
+      fontWeight: 400,
+      color: "#64748b",
+    }}
+  >
+    Collegato a:{" "}
+    {o.soggetto_cliente?.ragione_sociale || "—"}
+  </div>
+</td>
 
           <td
             style={{
@@ -2204,15 +2231,9 @@ onChange={(e) => {
             {diritto.nominativo_codice_fiscale || "—"}
           </td>
 
-          <td
-            style={{
-              ...tdStyle,
-              color: "#dc2626",
-              fontWeight: 700,
-            }}
-          >
-            Nudo proprietario
-          </td>
+          <td style={tdStyle}>
+  Socio
+</td>
 
           <td style={tdStyle}>
             {Number(
@@ -2221,27 +2242,21 @@ onChange={(e) => {
             %
           </td>
 
-         <td
+<td
   style={{
     ...tdStyle,
-    color: "#dc2626",
-    fontWeight: 700,
+    color:"#dc2626",
   }}
 >
   <div>
-    Collegato a:
-  </div>
-
-  <div style={{ marginTop: 3 }}>
-    {o.soggetto_cliente?.ragione_sociale || "Partecipazione principale"}
+    Nudo proprietario
   </div>
 
   <div
     style={{
-      marginTop: 4,
-      fontSize: 11,
-      fontWeight: 800,
-      color: "#2563eb",
+      marginTop:4,
+      fontSize:11,
+      color:"#2563eb",
     }}
   >
     {getCodicePartecipazione(o.id)}
