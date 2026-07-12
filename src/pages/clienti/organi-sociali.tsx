@@ -440,6 +440,25 @@ note_titolo_possesso:
   form.ruolo === "socio"
     ? form.note_titolo_possesso || null
     : null,
+  titolo_possesso:
+  form.ruolo === "socio"
+    ? form.titolo_possesso
+    : "piena_proprieta",
+
+percentuale_diritti_voto:
+  form.ruolo === "socio"
+    ? form.percentuale_diritti_voto || null
+    : null,
+
+percentuale_diritti_utili:
+  form.ruolo === "socio"
+    ? form.percentuale_diritti_utili || null
+    : null,
+
+note_titolo_possesso:
+  form.ruolo === "socio"
+    ? form.note_titolo_possesso || null
+    : null,
   
   durata_carica:
     form.ruolo === "socio"
@@ -460,6 +479,11 @@ note_titolo_possesso:
     }
 
     setMessaggio("Organo salvato correttamente.");
+
+    titolo_possesso: "piena_proprieta",
+percentuale_diritti_voto: "",
+percentuale_diritti_utili: "",
+note_titolo_possesso: "",
 
 setForm({
   soggetto_cliente_id: "",
@@ -1165,6 +1189,9 @@ function getTipoRuolo(ruolo: string) {
    
     <th style={thStyle}>Carica</th>
     <th style={thStyle}>Quota</th>
+     <th style={thStyle}>Titolo</th>
+<th style={thStyle}>Voto</th>
+<th style={thStyle}>Utili</th>
     <th style={thStyle}>Data nomina</th>
     <th style={thStyle}>Principale</th>
     <th style={thStyle}>Attivo</th>
@@ -1172,6 +1199,7 @@ function getTipoRuolo(ruolo: string) {
     <th style={thStyle}>Durata carica</th>
     <th style={thStyle}>Data scadenza</th>
     <th style={thStyle}>Azioni</th>
+   
   </tr>
 </thead>
 
@@ -1197,6 +1225,32 @@ function getTipoRuolo(ruolo: string) {
           ? `${Number(o.percentuale_partecipazione).toFixed(2)}%`
           : "—"}
       </td>
+
+      <td style={tdStyle}>
+  {o.ruolo === "socio"
+    ? {
+        piena_proprieta: "Piena proprietà",
+        nuda_proprieta: "Nuda proprietà",
+        usufrutto: "Usufrutto",
+        pegno: "Pegno",
+        sequestro: "Sequestro",
+        intestazione_fiduciaria: "Intestazione fiduciaria",
+        altro: "Altro",
+      }[o.titolo_possesso || "piena_proprieta"]
+    : "—"}
+</td>
+
+<td style={tdStyle}>
+  {o.ruolo === "socio" && o.percentuale_diritti_voto != null
+    ? `${Number(o.percentuale_diritti_voto).toFixed(2)}%`
+    : "—"}
+</td>
+
+<td style={tdStyle}>
+  {o.ruolo === "socio" && o.percentuale_diritti_utili != null
+    ? `${Number(o.percentuale_diritti_utili).toFixed(2)}%`
+    : "—"}
+</td>
 
     <td style={tdStyle}>
   {o.data_nomina
@@ -1270,7 +1324,7 @@ function getTipoRuolo(ruolo: string) {
     ))}
               {organiFiltrati.length === 0 && (
                 <tr>
-                  <td style={tdStyle} colSpan={12}>
+                  <td style={tdStyle} colSpan={15}>
                     Nessun organo collegato.
                   </td>
                 </tr>
