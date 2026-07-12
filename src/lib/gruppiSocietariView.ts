@@ -17,10 +17,15 @@ export type RelazioneSocietariaView = {
   societa_id: string;
   societa_nome: string;
   quota: number;
+
   classificazione:
     | "controllata"
     | "collegata"
     | "altra_partecipazione";
+
+  soci_diretti: SoggettoPartecipanteView[];
+
+  titolari_effettivi: TitolareEffettivoView[];
 };
 
 export type TitolareEffettivoView = {
@@ -357,22 +362,49 @@ export function costruisciVistaGruppiSocietari(
             quota: relazione.quota_diretta,
           }));
 
-        const collegate = relazioniInUscita
-          .filter(
-            (relazione) =>
-              relazione.classificazione ===
-              "collegata"
-          )
-          .map((relazione) => ({
-            societa_id: relazione.partecipata_id,
-            societa_nome:
-              relazione.partecipata_nome,
+       const collegate = relazioniInUscita
+  .filter(
+    (relazione) =>
+      relazione.classificazione ===
+      "collegata"
+  )
+  .map((relazione) => {
+    const sociDirettiCollegata =
+      partecipazioni
+        .filter(
+          (p) =>
+            p.partecipata_id ===
+            relazione.partecipata_id
+        )
+        .map((p) => ({
+          id: p.partecipante_id,
+          nome: p.partecipante_nome,
+          tipo: p.partecipante_tipo,
+          quota_diretta: p.quota_diretta,
+          classificazione: p.classificazione,
+        }));
 
-            quota: relazione.quota_diretta,
+    return {
+      societa_id: relazione.partecipata_id,
 
-            classificazione:
-              "collegata" as const,
-          }));
+      societa_nome:
+        relazione.partecipata_nome,
+
+      quota: relazione.quota_diretta,
+
+      classificazione:
+        "collegata" as const,
+
+      soci_diretti:
+        sociDirettiCollegata,
+
+      titolari_effettivi:
+        costruisciTitolariEffettiviSocieta(
+          relazione.partecipata_id,
+          titolariEffettivi
+        ),
+    };
+  });
 
         const altrePartecipazioni =
           relazioniInUscita
