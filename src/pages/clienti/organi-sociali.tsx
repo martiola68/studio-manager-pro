@@ -580,6 +580,49 @@ const tipoSoggetto =
   String(nominativoSelezionato?.tipo_cliente || "").toLowerCase().includes("soc")
     ? "societa"
     : "persona_fisica";
+
+    if (form.titolo_possesso === "nuda_proprieta") {
+  if (!form.partecipazione_collegata_id) {
+    alert("Seleziona la quota in usufrutto da collegare.");
+    return;
+  }
+
+  const res = await fetch("/api/clienti-organi-diritti", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      organo_id: form.partecipazione_collegata_id,
+
+      soggetto_cliente_id: form.soggetto_cliente_id,
+
+      tipo_diritto: "nuda_proprieta",
+
+      quota_interessata:
+        Number(form.percentuale_partecipazione),
+
+      diritti_voto:
+        Number(form.percentuale_diritti_voto || 0),
+
+      diritti_utili:
+        Number(form.percentuale_diritti_utili || 0),
+
+      note: form.note_titolo_possesso || "",
+    }),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    alert(data.error || "Errore salvataggio");
+    return;
+  }
+
+  await caricaOrgani();
+
+  return;
+}
     
    const res = await fetch("/api/clienti-organi", {
   method: organoInModificaId ? "PUT" : "POST",
