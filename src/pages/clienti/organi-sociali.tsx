@@ -116,6 +116,19 @@ export default function OrganiSocialiPage() {
 const [loadingDiritti, setLoadingDiritti] = useState(false);
 const [erroreDiritti, setErroreDiritti] = useState("");
 
+  const [nuovoDiritto, setNuovoDiritto] = useState({
+  soggetto_cliente_id: "",
+  tipo_diritto: "usufrutto",
+  percentuale_quota: "",
+  percentuale_diritti_voto: "",
+  percentuale_diritti_utili: "",
+  diritto_voto: true,
+  diritto_utili: true,
+  data_inizio: "",
+  data_fine: "",
+  note: "",
+});
+
   const [clienteId, setClienteId] = useState("");
   const [filtroRuolo, setFiltroRuolo] = useState("tutti");
   const [loading, setLoading] = useState(false);
@@ -394,6 +407,121 @@ setNuovoNominativo({
     setLoadingDiritti(false);
   }
 }
+
+async function salvaDirittoCollegato() {
+  if (!organoInModificaId) {
+    alert("Seleziona prima una partecipazione tramite il pulsante Modifica.");
+    return;
+  }
+
+  if (!nuovoDiritto.soggetto_cliente_id) {
+    alert("Seleziona il soggetto titolare del diritto.");
+    return;
+  }
+
+  if (
+    !nuovoDiritto.percentuale_quota ||
+    Number(nuovoDiritto.percentuale_quota) <= 0
+  ) {
+    alert("Inserisci la percentuale della quota interessata.");
+    return;
+  }
+
+  const response = await fetch("/api/clienti-organi-diritti", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      organo_id: organoInModificaId,
+
+      soggetto_cliente_id:
+        nuovoDiritto.soggetto_cliente_id,
+
+      tipo_diritto:
+        nuovoDiritto.tipo_diritto,
+
+      percentuale_quota:
+        nuovoDiritto.percentuale_quota,
+
+      percentuale_diritti_voto:
+        nuovoDiritto.percentuale_diritti_voto || null,
+
+      percentuale_diritti_utili:
+        nuovoDiritto.percentuale_diritti_utili || null,
+
+      diritto_voto:
+        nuovoDiritto.diritto_voto,
+
+      diritto_utili:
+        nuovoDiritto.diritto_utili,
+
+      data_inizio:
+        nuovoDiritto.data_inizio || null,
+
+      data_fine:
+        nuovoDiritto.data_fine || null,
+
+      note:
+        nuovoDiritto.note || null,
+
+      attivo: true,
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    alert(data.error || "Errore salvataggio diritto collegato.");
+    return;
+  }
+
+  setNuovoDiritto({
+    soggetto_cliente_id: "",
+    tipo_diritto: "usufrutto",
+    percentuale_quota:
+      form.percentuale_partecipazione || "",
+    percentuale_diritti_voto: "",
+    percentuale_diritti_utili: "",
+    diritto_voto: true,
+    diritto_utili: true,
+    data_inizio: "",
+    data_fine: "",
+    note: "",
+  });
+
+  await caricaDirittiCollegati(organoInModificaId);
+}
+
+  async function eliminaDirittoCollegato(diritto: any) {
+  const conferma = confirm(
+    `Eliminare il diritto collegato di ${
+      diritto.nominativo_nome || "questo soggetto"
+    }?`
+  );
+
+  if (!conferma) return;
+
+  const response = await fetch("/api/clienti-organi-diritti", {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      id: diritto.id,
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    alert(data.error || "Errore eliminazione diritto collegato.");
+    return;
+  }
+
+  await caricaDirittiCollegati(organoInModificaId);
+}
+  
   
   async function salvaAssettoSocietario(
   campo:
@@ -593,6 +721,26 @@ async function eliminaOrgano(organo: any) {
 
 async function caricaInModifica(organo: any) {
   setOrganoInModificaId(organo.id);
+
+  setNuovoDiritto({
+  soggetto_cliente_id: "",
+  tipo_diritto: "usufrutto",
+
+  percentuale_quota:
+    organo.percentuale_partecipazione != null
+      ? String(organo.percentuale_partecipazione)
+      : "",
+
+  percentuale_diritti_voto: "",
+  percentuale_diritti_utili: "",
+
+  diritto_voto: true,
+  diritto_utili: true,
+
+  data_inizio: "",
+  data_fine: "",
+  note: "",
+});
 
   if (organo.ruolo === "socio") {
   await caricaDirittiCollegati(organo.id);
@@ -1172,6 +1320,373 @@ onChange={(e) => {
         />
       </div>
     )}
+  </div>
+)}
+
+        {form.ruolo === "socio" && organoInModificaId && (
+  <div
+    style={{
+      marginTop: 16,
+      padding: 18,
+      border: "1px solid #cbd5e1",
+      borderRadius: 10,
+      background: "#ffffff",
+    }}
+  >
+    <h3
+      style={{
+        margin: 0,
+        marginBottom: 6,
+        fontSize: 17,
+        fontWeight: 700,
+      }}
+    >
+      Diritti collegati alla partecipazione
+    </h3>
+
+    <p
+      style={{
+        marginTop: 0,
+        marginBottom: 16,
+        color: "#64748b",
+        fontSize: 13,
+      }}
+    >
+      Associa alla stessa quota eventuali nudi proprietari,
+      usufruttuari, creditori pignoratizi o altri titolari di diritti.
+    </p>
+
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "2fr 1fr 1fr",
+        gap: 12,
+        alignItems: "end",
+      }}
+    >
+      <div>
+        <label style={labelStyle}>Soggetto titolare del diritto</label>
+
+        <select
+          style={inputStyle}
+          value={nuovoDiritto.soggetto_cliente_id}
+          onChange={(e) =>
+            setNuovoDiritto((prev) => ({
+              ...prev,
+              soggetto_cliente_id: e.target.value,
+            }))
+          }
+        >
+          <option value="">Seleziona nominativo</option>
+
+          {nominativi.map((n) => (
+            <option key={n.id} value={n.id}>
+              {n.ragione_sociale}
+              {n.codice_fiscale
+                ? ` — ${n.codice_fiscale}`
+                : ""}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label style={labelStyle}>Tipo di diritto</label>
+
+        <select
+          style={inputStyle}
+          value={nuovoDiritto.tipo_diritto}
+          onChange={(e) =>
+            setNuovoDiritto((prev) => ({
+              ...prev,
+              tipo_diritto: e.target.value,
+            }))
+          }
+        >
+          <option value="nuda_proprieta">
+            Nuda proprietà
+          </option>
+          <option value="usufrutto">
+            Usufrutto
+          </option>
+          <option value="pegno">
+            Pegno
+          </option>
+          <option value="sequestro">
+            Sequestro
+          </option>
+          <option value="intestazione_fiduciaria">
+            Intestazione fiduciaria
+          </option>
+          <option value="altro">
+            Altro
+          </option>
+        </select>
+      </div>
+
+      <div>
+        <label style={labelStyle}>Quota interessata %</label>
+
+        <input
+          type="number"
+          min="0"
+          max="100"
+          step="0.01"
+          style={inputStyle}
+          value={nuovoDiritto.percentuale_quota}
+          onChange={(e) =>
+            setNuovoDiritto((prev) => ({
+              ...prev,
+              percentuale_quota: e.target.value,
+            }))
+          }
+        />
+      </div>
+
+      <div>
+        <label style={labelStyle}>Diritti di voto %</label>
+
+        <input
+          type="number"
+          min="0"
+          max="100"
+          step="0.01"
+          style={inputStyle}
+          value={nuovoDiritto.percentuale_diritti_voto}
+          onChange={(e) =>
+            setNuovoDiritto((prev) => ({
+              ...prev,
+              percentuale_diritti_voto: e.target.value,
+            }))
+          }
+        />
+      </div>
+
+      <div>
+        <label style={labelStyle}>Diritti agli utili %</label>
+
+        <input
+          type="number"
+          min="0"
+          max="100"
+          step="0.01"
+          style={inputStyle}
+          value={nuovoDiritto.percentuale_diritti_utili}
+          onChange={(e) =>
+            setNuovoDiritto((prev) => ({
+              ...prev,
+              percentuale_diritti_utili: e.target.value,
+            }))
+          }
+        />
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          gap: 18,
+          alignItems: "center",
+          minHeight: 42,
+        }}
+      >
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 7,
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={nuovoDiritto.diritto_voto}
+            onChange={(e) =>
+              setNuovoDiritto((prev) => ({
+                ...prev,
+                diritto_voto: e.target.checked,
+              }))
+            }
+          />
+          Diritto di voto
+        </label>
+
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 7,
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={nuovoDiritto.diritto_utili}
+            onChange={(e) =>
+              setNuovoDiritto((prev) => ({
+                ...prev,
+                diritto_utili: e.target.checked,
+              }))
+            }
+          />
+          Diritto agli utili
+        </label>
+      </div>
+
+      <div>
+        <label style={labelStyle}>Data inizio</label>
+
+        <input
+          type="date"
+          style={inputStyle}
+          value={nuovoDiritto.data_inizio}
+          onChange={(e) =>
+            setNuovoDiritto((prev) => ({
+              ...prev,
+              data_inizio: e.target.value,
+            }))
+          }
+        />
+      </div>
+
+      <div>
+        <label style={labelStyle}>Data fine</label>
+
+        <input
+          type="date"
+          style={inputStyle}
+          value={nuovoDiritto.data_fine}
+          onChange={(e) =>
+            setNuovoDiritto((prev) => ({
+              ...prev,
+              data_fine: e.target.value,
+            }))
+          }
+        />
+      </div>
+    </div>
+
+    <div style={{ marginTop: 12 }}>
+      <label style={labelStyle}>Note</label>
+
+      <textarea
+        style={{
+          ...inputStyle,
+          minHeight: 70,
+          resize: "vertical",
+        }}
+        value={nuovoDiritto.note}
+        onChange={(e) =>
+          setNuovoDiritto((prev) => ({
+            ...prev,
+            note: e.target.value,
+          }))
+        }
+      />
+    </div>
+
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "flex-end",
+        marginTop: 14,
+      }}
+    >
+      <button
+        type="button"
+        style={blueButton}
+        onClick={salvaDirittoCollegato}
+      >
+        Aggiungi diritto collegato
+      </button>
+    </div>
+
+    <div style={{ marginTop: 20 }}>
+      <h4
+        style={{
+          margin: 0,
+          marginBottom: 10,
+          fontSize: 15,
+        }}
+      >
+        Diritti già collegati
+      </h4>
+
+      {loadingDiritti ? (
+        <div>Caricamento...</div>
+      ) : erroreDiritti ? (
+        <div style={{ color: "#dc2626" }}>
+          {erroreDiritti}
+        </div>
+      ) : dirittiCollegati.length === 0 ? (
+        <div
+          style={{
+            padding: 14,
+            background: "#f8fafc",
+            borderRadius: 8,
+            color: "#64748b",
+          }}
+        >
+          Nessun diritto collegato.
+        </div>
+      ) : (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+          }}
+        >
+          {dirittiCollegati.map((diritto) => (
+            <div
+              key={diritto.id}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 12,
+                padding: 12,
+                border: "1px solid #e2e8f0",
+                borderRadius: 8,
+                background: "#f8fafc",
+              }}
+            >
+              <div>
+                <strong>
+                  {diritto.nominativo_nome || "Nominativo"}
+                </strong>
+
+                <div
+                  style={{
+                    marginTop: 3,
+                    fontSize: 12,
+                    color: "#64748b",
+                  }}
+                >
+                  {titoliPossessoLabel[
+                    String(diritto.tipo_diritto || "")
+                  ] || diritto.tipo_diritto}
+                  {" — "}
+                  quota interessata{" "}
+                  {Number(
+                    diritto.percentuale_quota || 0
+                  ).toFixed(2)}
+                  %
+                </div>
+              </div>
+
+              <button
+                type="button"
+                style={iconDangerButton}
+                title="Elimina diritto collegato"
+                onClick={() =>
+                  eliminaDirittoCollegato(diritto)
+                }
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   </div>
 )}
         
