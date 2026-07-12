@@ -197,6 +197,11 @@ export default function GruppiSocietariPage() {
   setSocietaSingolaSelezionataId,
 ] = useState("");
 
+  const [
+  societaCollegataSelezionataId,
+  setSocietaCollegataSelezionataId,
+] = useState("");
+
   const [gruppiAperti, setGruppiAperti] = useState<
     Record<string, boolean>
   >({});
@@ -399,7 +404,21 @@ const societaSingolaSelezionata = useMemo(() => {
   );
 }, [gruppoSelezionato]);
 
+  const societaCollegataSelezionata = useMemo(() => {
+  return (
+    societaCollegateGruppo.find(
+      (societa) =>
+        String(societa.societa_id) ===
+        String(societaCollegataSelezionataId)
+    ) || null
+  );
+}, [
+  societaCollegateGruppo,
+  societaCollegataSelezionataId,
+]);
+
 function selezionaGruppo(gruppo: GruppoSocietario) {
+  setSocietaCollegataSelezionataId("");
   setSocietaSingolaSelezionataId("");
   setGruppoSelezionatoId(gruppo.id);
   setSocietaSelezionataId(gruppo.capogruppo.id);
@@ -599,7 +618,8 @@ function selezionaGruppo(gruppo: GruppoSocietario) {
                                 <button
                                   type="button"
                                   key={societa.id}
-                                 onClick={() => {
+ onClick={() => {
+  setSocietaCollegataSelezionataId("");
   setSocietaSingolaSelezionataId("");
 
   setGruppoSelezionatoId(
@@ -688,21 +708,41 @@ function selezionaGruppo(gruppo: GruppoSocietario) {
                                   Società collegate
                                 </div>
 
-                                {societaCollegateGruppo.map(
-                                  (collegata) => (
-                                    <div
-                                      key={`${collegata.collegata_da_id}-${collegata.societa_id}`}
-                                      style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 8,
-                                        minHeight: 36,
-                                        padding:
-                                          "7px 9px 7px 34px",
-                                        borderRadius: 8,
-                                        color: "#92400e",
-                                      }}
-                                    >
+                               {societaCollegateGruppo.map(
+  (collegata) => {
+    const attiva =
+      String(collegata.societa_id) ===
+      String(societaCollegataSelezionataId);
+
+    return (
+      <button
+        type="button"
+        key={`${collegata.collegata_da_id}-${collegata.societa_id}`}
+        onClick={() => {
+          setSocietaSingolaSelezionataId("");
+          setSocietaSelezionataId("");
+          setSocietaCollegataSelezionataId(
+            String(collegata.societa_id)
+          );
+        }}
+        style={{
+          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          minHeight: 36,
+          padding: "7px 9px 7px 34px",
+          border: 0,
+          borderRadius: 8,
+          background: attiva
+            ? "#fef3c7"
+            : "transparent",
+          color: "#92400e",
+          cursor: "pointer",
+          textAlign: "left",
+          fontFamily: "inherit",
+        }}
+      >
                                       <span
                                         style={{
                                           ...puntoAlberoStyle,
@@ -747,9 +787,10 @@ function selezionaGruppo(gruppo: GruppoSocietario) {
                                           collegata.quota
                                         )}
                                       </span>
-                                    </div>
-                                  )
-                                )}
+                                    </button>
+    );
+  }
+)}
                               </div>
                             )}
                         </div>
@@ -786,9 +827,11 @@ function selezionaGruppo(gruppo: GruppoSocietario) {
     ? rigaSocietaAttivaStyle
     : {}),
 }}
-                       onClick={() => {
+ onClick={() => {
+  setSocietaCollegataSelezionataId("");
   setGruppoSelezionatoId("");
   setSocietaSelezionataId("");
+
   setSocietaSingolaSelezionataId(
     societa.id
   );
@@ -816,8 +859,116 @@ function selezionaGruppo(gruppo: GruppoSocietario) {
               )}
             </aside>
 
-            <section style={contenutoStyle}>
-  {gruppoSelezionato ? (
+        <section style={contenutoStyle}>
+  {societaCollegataSelezionata ? (
+    <>
+      <div style={testataGruppoStyle}>
+        <div>
+          <div style={eyebrowStyle}>
+            Società collegata
+          </div>
+
+          <h2 style={titoloGruppoStyle}>
+            {
+              societaCollegataSelezionata
+                .societa_nome
+            }
+          </h2>
+
+          <div
+            style={{
+              ...badgeCapogruppoStyle,
+              background: "#fef3c7",
+              color: "#92400e",
+            }}
+          >
+            <Network size={15} />
+            Società collegata
+          </div>
+        </div>
+
+        <div style={riepilogoGruppoStyle}>
+          <DatoCompatto
+            etichetta="Quota"
+            valore={
+              societaCollegataSelezionata.quota
+            }
+          />
+        </div>
+      </div>
+
+      <div style={cardPrincipaleStyle}>
+        <div style={intestazioneCardStyle}>
+          <div>
+            <div style={eyebrowStyle}>
+              Società selezionata
+            </div>
+
+            <h3 style={titoloCardStyle}>
+              {
+                societaCollegataSelezionata
+                  .societa_nome
+              }
+            </h3>
+          </div>
+
+          <span
+            style={{
+              ...badgeRuoloSocietaStyle,
+              background: "#fef3c7",
+              color: "#92400e",
+            }}
+          >
+            Collegata
+          </span>
+        </div>
+
+        <div style={grigliaDatiSocietaStyle}>
+          <DatoSocieta
+            etichetta="Collegata a"
+            valore={
+              societaCollegataSelezionata
+                .collegata_da_nome
+            }
+          />
+
+          <DatoSocieta
+            etichetta="Quota detenuta"
+            valore={formattaPercentuale(
+              societaCollegataSelezionata.quota
+            )}
+          />
+
+          <DatoSocieta
+            etichetta="Classificazione"
+            valore="Società collegata"
+          />
+
+          <DatoSocieta
+            etichetta="Gruppo di riferimento"
+            valore={
+              gruppoSelezionato?.denominazione ||
+              "—"
+            }
+          />
+        </div>
+      </div>
+
+      <div style={cardStyle}>
+        <div style={titoloPannelloStyle}>
+          <ShieldCheck size={19} />
+          Titolari effettivi
+        </div>
+
+        <div style={testoVuotoStyle}>
+          Per visualizzare soci e titolari effettivi
+          della società collegata occorre restituire
+          dall’API anche il dettaglio completo della
+          società.
+        </div>
+      </div>
+    </>
+  ) : gruppoSelezionato ? (
                 <>
                   <div style={testataGruppoStyle}>
                     <div>
