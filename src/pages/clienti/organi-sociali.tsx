@@ -78,6 +78,13 @@ function consentePrincipale(ruolo: string) {
   return ruoliConPrincipale.includes(ruolo);
 }
 
+function getCodicePartecipazione(organoId: string) {
+  return `PAR-${String(organoId)
+    .replace(/-/g, "")
+    .slice(0, 8)
+    .toUpperCase()}`;
+}
+
 async function leggiDatiDaCF(
   cf: string,
   setNuovoNominativo: any
@@ -1857,21 +1864,12 @@ onChange={(e) => {
                 : "#fef2f2",
             }}
             value={form.partecipazione_collegata_id}
-            onChange={(e) => {
-              const organoCollegato = organi.find(
-                (organo) => String(organo.id) === String(e.target.value)
-              );
-
-              setForm((prev) => ({
-                ...prev,
-                partecipazione_collegata_id: e.target.value,
-
-                percentuale_partecipazione:
-                  organoCollegato?.percentuale_partecipazione != null
-                    ? String(organoCollegato.percentuale_partecipazione)
-                    : prev.percentuale_partecipazione,
-              }));
-            }}
+           onChange={(e) => {
+  setForm((prev) => ({
+    ...prev,
+    partecipazione_collegata_id: e.target.value,
+  }));
+}}
           >
             <option value="">
               Seleziona la partecipazione
@@ -2069,11 +2067,30 @@ onChange={(e) => {
       </td>
 
  <td style={tdStyle}>
-  {o.ruolo === "socio"
-    ? titoliPossessoLabel[
-        String(o.titolo_possesso || "piena_proprieta")
-      ] || "Piena proprietà"
-    : "—"}
+  {o.ruolo === "socio" ? (
+    <div>
+      <div>
+        {titoliPossessoLabel[
+          String(o.titolo_possesso || "piena_proprieta")
+        ] || "Piena proprietà"}
+      </div>
+
+      {o.titolo_possesso === "usufrutto" && (
+        <div
+          style={{
+            marginTop: 4,
+            fontSize: 11,
+            fontWeight: 800,
+            color: "#2563eb",
+          }}
+        >
+          {getCodicePartecipazione(o.id)}
+        </div>
+      )}
+    </div>
+  ) : (
+    "—"
+  )}
 </td>
 
 <td style={tdStyle}>
@@ -2204,17 +2221,32 @@ onChange={(e) => {
             %
           </td>
 
-          <td
-            style={{
-              ...tdStyle,
-              color: "#dc2626",
-            }}
-          >
-            Collegato a{" "}
-            {`Q-${String(o.id)
-              .slice(0, 6)
-              .toUpperCase()}`}
-          </td>
+         <td
+  style={{
+    ...tdStyle,
+    color: "#dc2626",
+    fontWeight: 700,
+  }}
+>
+  <div>
+    Collegato a:
+  </div>
+
+  <div style={{ marginTop: 3 }}>
+    {o.soggetto_cliente?.ragione_sociale || "Partecipazione principale"}
+  </div>
+
+  <div
+    style={{
+      marginTop: 4,
+      fontSize: 11,
+      fontWeight: 800,
+      color: "#2563eb",
+    }}
+  >
+    {getCodicePartecipazione(o.id)}
+  </div>
+</td>
 
           <td style={tdStyle}>
             {diritto.percentuale_diritti_voto != null
