@@ -159,6 +159,7 @@ const [form, setForm] = useState({
   percentuale_diritti_voto: "",
   percentuale_diritti_utili: "",
   note_titolo_possesso: "",
+  partecipazione_collegata_id: "",
 
   presenza: "Presente",
   principale: false,
@@ -1258,6 +1259,47 @@ onChange={(e) => {
             Altro
           </option>
         </select>
+
+        {form.titolo_possesso === "nuda_proprieta" && (
+  <div style={{ marginTop: 12 }}>
+    <label style={labelStyle}>
+      Quota in usufrutto da collegare
+    </label>
+
+    <select
+      style={inputStyle}
+      value={form.partecipazione_collegata_id}
+      onChange={(e) =>
+        setForm((prev) => ({
+          ...prev,
+          partecipazione_collegata_id: e.target.value,
+        }))
+      }
+    >
+      <option value="">
+        Seleziona la quota in usufrutto
+      </option>
+
+      {organi
+        .filter(
+          (o) =>
+            o.ruolo === "socio" &&
+            o.attivo === true &&
+            o.titolo_possesso === "usufrutto"
+        )
+        .map((o) => (
+          <option key={o.id} value={o.id}>
+            {o.soggetto_cliente?.ragione_sociale || "Nominativo"}
+            {" — "}
+            {Number(
+              o.percentuale_partecipazione || 0
+            ).toFixed(2)}
+            %
+          </option>
+        ))}
+    </select>
+  </div>
+)}
       </div>
 
       <div>
