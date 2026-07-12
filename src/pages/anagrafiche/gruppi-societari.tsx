@@ -134,9 +134,25 @@ type SocietaSingola = {
   numero_titolari_effettivi: number;
 };
 
+type TitolareEffettivoApi = {
+  persona_id: string;
+  persona_nome: string;
+  societa_id?: string;
+  partecipata_id?: string;
+  quota_diretta: number;
+  quota_indiretta: number;
+  quota_complessiva: number;
+  tipo_titolarita:
+    | "diretta"
+    | "indiretta"
+    | "diretta_e_indiretta";
+  candidato_titolare_effettivo: boolean;
+};
+
 type ApiResponse = {
   gruppi_dettaglio?: GruppoSocietario[];
   societa_singole?: SocietaSingola[];
+  titolari_effettivi?: TitolareEffettivoApi[];
   error?: string;
 };
 
@@ -189,6 +205,10 @@ export default function GruppiSocietariPage() {
   SocietaSingola[]
 >([]);
 
+  const [titolariEffettivi, setTitolariEffettivi] = useState<
+  TitolareEffettivoApi[]
+>([]);
+
   const [societaSelezionataId, setSocietaSelezionataId] =
     useState("");
 
@@ -229,10 +249,13 @@ export default function GruppiSocietariPage() {
 
       const nuoviGruppi = data.gruppi_dettaglio || [];
 
-      setGruppi(nuoviGruppi);
+     setGruppi(nuoviGruppi);
 
-      setSocietaSingole(data.societa_singole || []);
+setSocietaSingole(data.societa_singole || []);
 
+setTitolariEffettivi(
+  data.titolari_effettivi || []
+);
       if (nuoviGruppi.length > 0) {
         setGruppoSelezionatoId((precedente) => {
           const ancoraPresente = nuoviGruppi.some(
@@ -404,17 +427,28 @@ const societaSingolaSelezionata = useMemo(() => {
   );
 }, [gruppoSelezionato]);
 
-  const societaCollegataSelezionata = useMemo(() => {
-  return (
-    societaCollegateGruppo.find(
-      (societa) =>
-        String(societa.societa_id) ===
-        String(societaCollegataSelezionataId)
-    ) || null
+const titolariSocietaCollegata = useMemo(() => {
+  if (!societaCollegataSelezionata) {
+    return [];
+  }
+
+  return titolariEffettivi.filter(
+    (titolare) =>
+      (
+        String(titolare.societa_id || "") ===
+          String(
+            societaCollegataSelezionata.societa_id
+          ) ||
+        String(titolare.partecipata_id || "") ===
+          String(
+            societaCollegataSelezionata.societa_id
+          )
+      ) &&
+      titolare.candidato_titolare_effettivo === true
   );
 }, [
-  societaCollegateGruppo,
-  societaCollegataSelezionataId,
+  titolariEffettivi,
+  societaCollegataSelezionata,
 ]);
 
 function selezionaGruppo(gruppo: GruppoSocietario) {
@@ -954,19 +988,48 @@ function selezionaGruppo(gruppo: GruppoSocietario) {
         </div>
       </div>
 
-      <div style={cardStyle}>
-        <div style={titoloPannelloStyle}>
-          <ShieldCheck size={19} />
-          Titolari effettivi
-        </div>
+     <div style={cardStyle}>
+  <div style={titoloPannelloStyle}>
+    <ShieldCheck size={19} />
+    Titolari effettivi
+  </div>
 
-        <div style={testoVuotoStyle}>
-          Per visualizzare soci e titolari effettivi
-          della società collegata occorre restituire
-          dall’API anche il dettaglio completo della
-          società.
-        </div>
-      </div>
+  {titolariSocietaCollegata.length === 0 ? (
+    <div style={testoVuotoStyle}>
+      Nessun titolare effettivo individuato
+      tramite le partecipazioni.
+    </div>
+  ) : (
+    <div style={listaStyle}>
+      {titolariSocietaCollegata.map(
+        (titolare) => (
+          <div
+            key={`${societaCollegataSelezionata?.societa_id}-${titolare.persona_id}`}
+            style={rigaListaStyle}
+          >
+            <div>
+              <strong>
+                {titolare.persona_nome}
+              </strong>
+
+              <div style={dettaglioListaStyle}>
+                {getEtichettaTitolarita(
+                  titolare.tipo_titolarita
+                )}
+              </div>
+            </div>
+
+            <span style={titolareBadgeStyle}>
+              {formattaPercentuale(
+                titolare.quota_complessiva
+              )}
+            </span>
+          </div>
+        )
+      )}
+    </div>
+  )}
+</div>
     </>
   ) : gruppoSelezionato ? (
                 <>
