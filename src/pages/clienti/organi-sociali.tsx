@@ -2096,7 +2096,6 @@ onChange={(e) => {
   fontWeight: 400,
   color: "#2563eb",
 }}
-          }}
         >
           {getCodicePartecipazione(o.id)}
         </div>
