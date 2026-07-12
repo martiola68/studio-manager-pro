@@ -63,12 +63,32 @@ type SocietaGruppo = {
     nome: string;
   }>;
 
-  societa_collegate: Array<{
-    societa_id: string;
-    societa_nome: string;
-    quota: number;
+societa_collegate: Array<{
+  societa_id: string;
+  societa_nome: string;
+  quota: number;
+  classificazione: string;
+
+  soci_diretti: Array<{
+    id: string;
+    nome: string;
+    tipo: "persona_fisica" | "societa";
+    quota_diretta: number;
     classificazione: string;
   }>;
+
+  titolari_effettivi: Array<{
+    persona_id: string;
+    persona_nome: string;
+    quota_diretta: number;
+    quota_indiretta: number;
+    quota_complessiva: number;
+    tipo_titolarita:
+      | "diretta"
+      | "indiretta"
+      | "diretta_e_indiretta";
+  }>;
+}>;
 
   altre_partecipazioni: Array<{
     societa_id: string;
@@ -367,17 +387,21 @@ const societaSingolaSelezionata = useMemo(() => {
     )
   );
 
-  const collegateMap = new Map<
-    string,
-    {
-      societa_id: string;
-      societa_nome: string;
-      quota: number;
-      classificazione: string;
-      collegata_da_id: string;
-      collegata_da_nome: string;
-    }
-  >();
+ const collegateMap = new Map<
+  string,
+  {
+    societa_id: string;
+    societa_nome: string;
+    quota: number;
+    classificazione: string;
+
+    soci_diretti: SocietaGruppo["soci_diretti"];
+    titolari_effettivi: SocietaGruppo["titolari_effettivi"];
+
+    collegata_da_id: string;
+    collegata_da_nome: string;
+  }
+>();
 
   gruppoSelezionato.societa.forEach(
     (societaInterna) => {
@@ -403,15 +427,22 @@ const societaSingolaSelezionata = useMemo(() => {
           const chiave = `${societaInterna.id}-${collegataId}`;
 
           if (!collegateMap.has(chiave)) {
-            collegateMap.set(chiave, {
-              societa_id: collegata.societa_id,
-              societa_nome: collegata.societa_nome,
-              quota: collegata.quota,
-              classificazione:
-                collegata.classificazione,
-              collegata_da_id: societaInterna.id,
-              collegata_da_nome: societaInterna.nome,
-            });
+           collegateMap.set(chiave, {
+  societa_id: collegata.societa_id,
+  societa_nome: collegata.societa_nome,
+  quota: collegata.quota,
+  classificazione:
+    collegata.classificazione,
+
+  soci_diretti:
+    collegata.soci_diretti || [],
+
+  titolari_effettivi:
+    collegata.titolari_effettivi || [],
+
+  collegata_da_id: societaInterna.id,
+  collegata_da_nome: societaInterna.nome,
+});
           }
         }
       );
@@ -441,28 +472,11 @@ const societaCollegataSelezionata = useMemo(() => {
 ]);
 
 const titolariSocietaCollegata = useMemo(() => {
-  if (!societaCollegataSelezionata) {
-    return [];
-  }
-
-  return titolariEffettivi.filter(
-    (titolare) =>
-      (
-        String(titolare.societa_id || "") ===
-          String(
-            societaCollegataSelezionata.societa_id
-          ) ||
-        String(titolare.partecipata_id || "") ===
-          String(
-            societaCollegataSelezionata.societa_id
-          )
-      ) &&
-      titolare.candidato_titolare_effettivo === true
+  return (
+    societaCollegataSelezionata
+      ?.titolari_effettivi || []
   );
-}, [
-  titolariEffettivi,
-  societaCollegataSelezionata,
-]);
+}, [societaCollegataSelezionata]);
 
 function selezionaGruppo(gruppo: GruppoSocietario) {
   setSocietaCollegataSelezionataId("");
