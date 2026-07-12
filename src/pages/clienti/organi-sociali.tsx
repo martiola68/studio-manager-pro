@@ -1313,13 +1313,33 @@ onChange={(e) => {
     }));
   }}
 >
-  <option value="piena_proprieta">
-    Piena proprietà
-  </option>
+ <option value="piena_proprieta">
+  Piena proprietà
+</option>
 
-  <option value="usufrutto">
-    Usufrutto
-  </option>
+<option value="usufrutto">
+  Usufrutto
+</option>
+
+<option value="nuda_proprieta">
+  Nuda proprietà
+</option>
+
+<option value="pegno">
+  Pegno
+</option>
+
+<option value="sequestro">
+  Sequestro
+</option>
+
+<option value="intestazione_fiduciaria">
+  Intestazione fiduciaria
+</option>
+
+<option value="altro">
+  Altro
+</option>
 </select>
 
       </div>
