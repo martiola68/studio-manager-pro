@@ -77,17 +77,26 @@ societa_collegate: Array<{
     classificazione: string;
   }>;
 
-  titolari_effettivi: Array<{
-    persona_id: string;
-    persona_nome: string;
-    quota_diretta: number;
-    quota_indiretta: number;
-    quota_complessiva: number;
-    tipo_titolarita:
-      | "diretta"
-      | "indiretta"
-      | "diretta_e_indiretta";
-  }>;
+titolari_effettivi: Array<{
+  persona_id: string;
+  persona_nome: string;
+  quota_diretta: number;
+  quota_indiretta: number;
+  quota_complessiva: number;
+
+  tipo_titolarita:
+    | "diretta"
+    | "indiretta"
+    | "diretta_e_indiretta"
+    | "residuale";
+
+  criterio_titolarita?:
+    | "proprieta"
+    | "residuale";
+
+  ruolo?: string | null;
+  carica?: string | null;
+  principale?: boolean;
 }>;
 
   altre_partecipazioni: Array<{
@@ -112,9 +121,18 @@ societa_collegate: Array<{
     quota_indiretta: number;
     quota_complessiva: number;
     tipo_titolarita:
-      | "diretta"
-      | "indiretta"
-      | "diretta_e_indiretta";
+  | "diretta"
+  | "indiretta"
+  | "diretta_e_indiretta"
+  | "residuale";
+
+criterio_titolarita?:
+  | "proprieta"
+  | "residuale";
+
+ruolo?: string | null;
+carica?: string | null;
+principale?: boolean;
   }>;
 };
 
@@ -202,6 +220,7 @@ function getEtichettaTitolarita(
     | "diretta"
     | "indiretta"
     | "diretta_e_indiretta"
+    | "residuale"
 ) {
   if (tipo === "diretta") {
     return "Diretta";
@@ -209,6 +228,10 @@ function getEtichettaTitolarita(
 
   if (tipo === "indiretta") {
     return "Indiretta";
+  }
+
+  if (tipo === "residuale") {
+    return "Criterio residuale";
   }
 
   return "Diretta e indiretta";
@@ -1046,11 +1069,16 @@ function selezionaGruppo(gruppo: GruppoSocietario) {
               </div>
             </div>
 
-            <span style={titolareBadgeStyle}>
-              {formattaPercentuale(
-                titolare.quota_complessiva
-              )}
-            </span>
+           <span style={titolareBadgeStyle}>
+  {titolare.tipo_titolarita ===
+  "residuale"
+    ? titolare.carica ||
+      titolare.ruolo ||
+      "Amministratore"
+    : formattaPercentuale(
+        titolare.quota_complessiva
+      )}
+</span>
           </div>
         )
       )}
