@@ -29,6 +29,16 @@ type PartecipazioneRow = {
   attivo: boolean | null;
 };
 
+type OrganoResidualRow = {
+  id: string;
+  cliente_id: string;
+  soggetto_cliente_id: string;
+  ruolo: string | null;
+  carica: string | null;
+  principale: boolean | null;
+  attivo: boolean | null;
+};
+
 function classificaPartecipazione(quota: number) {
   if (quota > 50) return "controllata";
   if (quota > 20) return "collegata";
@@ -74,6 +84,42 @@ export async function GET() {
 
     const partecipazioni =
       (partecipazioniData || []) as PartecipazioneRow[];
+
+    const ruoliResiduali = [
+  "amministratore",
+  "amministratore_unico",
+  "amministratore_delegato",
+  "presidente_cda",
+  "liquidatore",
+  "rappresentante_legale",
+];
+
+const { data: organiResidualData, error: organiResidualError } =
+  await supabase
+    .from("tbclienti_organi")
+    .select(`
+      id,
+      cliente_id,
+      soggetto_cliente_id,
+      ruolo,
+      carica,
+      principale,
+      attivo
+    `)
+    .eq("attivo", true)
+    .in("ruolo", ruoliResiduali)
+    .not("soggetto_cliente_id", "is", null)
+    .not("cliente_id", "is", null);
+
+if (organiResidualError) {
+  return NextResponse.json(
+    { error: organiResidualError.message },
+    { status: 500 }
+  );
+}
+
+const organiResidual =
+  (organiResidualData || []) as OrganoResidualRow[];
 
     const idsCoinvolti = Array.from(
       new Set(
@@ -161,16 +207,213 @@ const gruppi = costruisciGruppiSocietari(
   partecipazioniNormalizzate
 );
 
-const titolariEffettivi = calcolaTitolariEffettivi(
-  partecipazioniNormalizzate
+const titolariEffettiviProprieta =
+  calcolaTitolariEffettivi(
+    partecipazioniNormalizzate
+  );
+
+/*
+ * Società per le quali esistono partecipazioni registrate.
+ */
+const societaIdsDaAnalizzare = Array.from(
+  new Set(
+    partecipazioni.map((row) =>
+      String(row.cliente_id)
+    )
+  )
 );
 
-    const gruppiDettaglio =
+/*
+ * Titolari effettivi residuali.
+ *
+ * Vengono utilizzati soltanto quando per la società
+ * non esiste alcuna persona fisica con quota
+ * complessiva superiore al 25%.
+ */
+const titolariEffettiviResidualMap = new Map<
+  string,
+  any
+>();
+
+societaIdsDaAnalizzare.forEach((societaId) => {
+  const esisteTitolarePerProprieta =
+    titolariEffettiviProprieta.some(
+      (titolare) =>
+        String(titolare.societa_id) ===
+          String(societaId) &&
+        titolare.candidato_titolare_effettivo ===
+          true
+    );
+
+  if (esisteTitolarePerProprieta) {
+    return;
+  }
+
+  const organiDellaSocieta = organiResidual
+    .filter(
+      (organo) =>
+        String(organo.cliente_id) ===
+        String(societaId)
+    )
+    .sort((a, b) => {
+      if (a.principale === b.principale) {
+        return 0;
+      }
+
+      return a.principale ? -1 : 1;
+    });
+
+  organiDellaSocieta.forEach((organo) => {
+    const soggetto = clientiMap.get(
+      organo.soggetto_cliente_id
+    );
+
+    if (!soggetto) {
+      return;
+    }
+
+    const tipoCliente = String(
+      soggetto.tipo_cliente || ""
+    ).toLowerCase();
+
+    const personaFisica =
+      tipoCliente.includes("persona fisica");
+
+    if (!personaFisica) {
+      return;
+    }
+
+    const chiave =
+      `${societaId}:${organo.soggetto_cliente_id}`;
+
+    /*
+     * Evita che la stessa persona venga inserita due
+     * volte quando ricopre più cariche nella società.
+     */
+    if (titolariEffettiviResidualMap.has(chiave)) {
+      return;
+    }
+
+    const societa = clientiMap.get(societaId);
+
+    titolariEffettiviResidualMap.set(chiave, {
+      persona_id: organo.soggetto_cliente_id,
+
+      persona_nome:
+        soggetto.ragione_sociale ||
+        "Nominativo non trovato",
+
+      societa_id: societaId,
+
+      societa_nome:
+        societa?.ragione_sociale ||
+        "Società non trovata",
+
+      quota_diretta: 0,
+      quota_indiretta: 0,
+      quota_complessiva: 0,
+
+      candidato_titolare_effettivo: true,
+
+      criterio_titolarita: "residuale",
+
+      tipo_titolarita: "residuale",
+
+      ruolo: organo.ruolo,
+
+      carica:
+        organo.carica ||
+        organo.ruolo ||
+        "Amministratore",
+
+      principale:
+        organo.principale === true,
+
+      percorsi: [],
+    });
+  });
+});
+
+const titolariEffettiviResidual =
+  Array.from(
+    titolariEffettiviResidualMap.values()
+  );
+
+const titolariEffettivi = [
+  ...titolariEffettiviProprieta,
+  ...titolariEffettiviResidual,
+];
+
+/*
+ * La vista ordinaria viene costruita con il calcolo
+ * percentuale già esistente, senza modificarne
+ * la logica.
+ */
+const gruppiDettaglioBase =
   costruisciVistaGruppiSocietari(
     partecipazioniNormalizzate,
     gruppi,
-    titolariEffettivi
+    titolariEffettiviProprieta
   );
+
+/*
+ * Successivamente integriamo i residuali soltanto
+ * nelle società prive di titolari per proprietà.
+ */
+const gruppiDettaglio = gruppiDettaglioBase.map(
+  (gruppo: any) => ({
+    ...gruppo,
+
+    societa: (gruppo.societa || []).map(
+      (societa: any) => {
+        const residualiSocieta =
+          titolariEffettiviResidual.filter(
+            (titolare: any) =>
+              String(titolare.societa_id) ===
+              String(societa.id)
+          );
+
+        return {
+          ...societa,
+
+          titolari_effettivi:
+            societa.titolari_effettivi?.length > 0
+              ? societa.titolari_effettivi
+              : residualiSocieta,
+
+          societa_collegate:
+            (
+              societa.societa_collegate || []
+            ).map((collegata: any) => {
+              const residualiCollegata =
+                titolariEffettiviResidual.filter(
+                  (titolare: any) =>
+                    String(
+                      titolare.societa_id
+                    ) ===
+                    String(
+                      collegata.societa_id
+                    )
+                );
+
+              return {
+                ...collegata,
+
+                titolari_effettivi:
+                  collegata
+                    .titolari_effettivi
+                    ?.length > 0
+                    ? collegata
+                        .titolari_effettivi
+                    : residualiCollegata,
+              };
+            }),
+        };
+      }
+    ),
+  })
+);
+    
 const societaNeiGruppiIds = new Set<string>();
 
 gruppiDettaglio.forEach((gruppo: any) => {
