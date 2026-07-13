@@ -220,6 +220,14 @@ function decodeBirthDateFromCodiceFiscale(
 
 function cleanPersonName(name: string): string {
   return name
+    .replace(
+      /^(sindaco|sindaca)\s+/i,
+      ""
+    )
+    .replace(
+      /\b(amministratore|amministratrice)\b/gi,
+      ""
+    )
     .replace(/\b(amministratore|amministratrice)\b/gi, "")
     .replace(/\b(rappresentante dell['’]impresa)\b/gi, "")
     .replace(/\b(responsabile tecnico)\b/gi, "")
@@ -235,7 +243,9 @@ function cleanPersonName(name: string): string {
     .trim();
 }
 
-function isLikelyPersonName(value: string): boolean {
+function isLikelyPersonName(
+  value: string
+): boolean {
   const v = cleanPersonName(value);
 
   if (!v) return false;
@@ -243,10 +253,48 @@ function isLikelyPersonName(value: string): boolean {
   if (/\d{2,}/.test(v)) return false;
   if (/[|]/.test(v)) return false;
 
-  const words = v.split(" ").filter(Boolean);
-  if (words.length < 2 || words.length > 4) return false;
+  const testoNormalizzato =
+    normalizeRoleText(v);
 
-  return words.every((w) => /^[A-ZÀ-ÖØ-Ý'`.-]+$/i.test(w));
+  const valoriDaEscludere = [
+    "registro imprese",
+    "archivio ufficiale della cciaa",
+    "soggetti a deposito",
+    "soggetto a deposito",
+    "codice fiscale",
+    "documento n",
+    "estratto dal registro imprese",
+    "camera di commercio",
+    "capitale sociale",
+    "proprieta",
+  ];
+
+  if (
+    valoriDaEscludere.some(
+      (valore) =>
+        testoNormalizzato === valore ||
+        testoNormalizzato.startsWith(
+          `${valore} `
+        )
+    )
+  ) {
+    return false;
+  }
+
+  const words = v
+    .split(" ")
+    .filter(Boolean);
+
+  if (
+    words.length < 2 ||
+    words.length > 5
+  ) {
+    return false;
+  }
+
+  return words.every((word) =>
+    /^[A-ZÀ-ÖØ-Ý'`.-]+$/i.test(word)
+  );
 }
 
 function extractBirthDataStrict(_block: string): {
@@ -692,6 +740,10 @@ function parseSociProprieta(
         tipoDiritto || ""
       );
 
+    if (!tipoDiritto) {
+  continue;
+}
+
     risultati.push({
       nome_cognome: nome,
       codice_fiscale: codiceFiscale,
@@ -738,11 +790,8 @@ export function parseVisuraRappresentanti(rawText: string): VisuraRappresentante
   const lines = splitUsefulLines(text);
   const sections = getSections(lines);
 
-const soci = sections.SOCI
-  ? parseSociProprieta(
-      sections.SOCI
-    )
-  : [];
+const soci = parseSociProprieta(lines);
+  
 const amministratori =
   sections.AMMINISTRATORI
     ? parsePeopleFromSection(
