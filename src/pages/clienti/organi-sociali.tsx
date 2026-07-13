@@ -1057,85 +1057,128 @@ function getTipoRuolo(ruolo: string) {
         </button>
       </div>
 
-      <div style={cardStyle}>
-        <h2 style={titleStyle}>Selezione società</h2>
+  <div style={cardStyle}>
+  <h2 style={titleStyle}>Selezione società</h2>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "2fr 1fr",
-            gap: 12,
-            marginTop: 18,
-          }}
-        >
-          <div>
-            <label style={labelStyle}>Cliente / società</label>
-  <select
-  style={{
-    ...inputStyle,
-    background:
-      router.query.cliente_id ? "#f1f5f9" : "#fff",
-  }}
-  value={clienteId}
-  disabled={!!router.query.cliente_id}
-onChange={(e) => {
-  setClienteId(e.target.value);
-  setOrgani([]);
-  setDirittiCollegati([]);
-  setOrganoInModificaId("");
-  setErroreDiritti("");
-  setMessaggio("");
-}}
->
-              <option value="">Seleziona società</option>
-
-              {clienti.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.ragione_sociale}
-                </option>
-              ))}
-            </select>
-</div>
-
-<div
-  style={{
-    display: "flex",
-    justifyContent: "flex-end",
-    marginTop: 14,
-    gap: 10,
-  }}
->
-  <button
-    type="button"
-    style={secondaryButton}
-    disabled={!clienteId}
-    onClick={() => document.getElementById("visuraOrganiInput")?.click()}
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "2fr 1fr",
+      gap: 12,
+      marginTop: 18,
+    }}
   >
-    Importa da visura
-  </button>
+    <div>
+      <label style={labelStyle}>
+        Cliente / società
+      </label>
 
-  <input
-    id="visuraOrganiInput"
-    type="file"
-    accept=".pdf"
-    style={{ display: "none" }}
-    onChange={importaVisura}
-  />
-</div>
-            <label style={labelStyle}>Filtro ruolo</label>
-            <select
-              style={inputStyle}
-              value={filtroRuolo}
-              onChange={(e) => setFiltroRuolo(e.target.value)}
-            >
-              {ruoli.map((r) => (
-                <option key={r} value={r}>
-                  {ruoliLabel[r] || r}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+      <select
+        style={{
+          ...inputStyle,
+          background: router.query.cliente_id
+            ? "#f1f5f9"
+            : "#fff",
+        }}
+        value={clienteId}
+        disabled={!!router.query.cliente_id}
+        onChange={(e) => {
+          setClienteId(e.target.value);
+          setOrgani([]);
+          setDirittiCollegati([]);
+          setOrganoInModificaId("");
+          setErroreDiritti("");
+          setMessaggio("");
+        }}
+      >
+        <option value="">
+          Seleziona società
+        </option>
+
+        {clienti.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.ragione_sociale}
+          </option>
+        ))}
+      </select>
+    </div>
+
+    <div>
+      <label style={labelStyle}>
+        Filtro ruolo
+      </label>
+
+      <select
+        style={inputStyle}
+        value={filtroRuolo}
+        onChange={(e) =>
+          setFiltroRuolo(e.target.value)
+        }
+      >
+        {ruoli.map((r) => (
+          <option key={r} value={r}>
+            {ruoliLabel[r] || r}
+          </option>
+        ))}
+      </select>
+    </div>
+  </div>
+
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "flex-end",
+      alignItems: "center",
+      gap: 10,
+      marginTop: 14,
+    }}
+  >
+    {loadingImportazione && (
+      <span
+        style={{
+          color: "#64748b",
+          fontSize: 13,
+        }}
+      >
+        Lettura visura in corso...
+      </span>
+    )}
+
+    <button
+      type="button"
+      style={{
+        ...secondaryButton,
+        opacity:
+          !clienteId || loadingImportazione
+            ? 0.55
+            : 1,
+        cursor:
+          !clienteId || loadingImportazione
+            ? "not-allowed"
+            : "pointer",
+      }}
+      disabled={
+        !clienteId || loadingImportazione
+      }
+      onClick={() =>
+        document
+          .getElementById(
+            "visuraOrganiInput"
+          )
+          ?.click()
+      }
+    >
+      Importa da visura
+    </button>
+
+    <input
+      id="visuraOrganiInput"
+      type="file"
+      accept="application/pdf,.pdf"
+      style={{ display: "none" }}
+      onChange={importaVisura}
+    />
+  </div>
 
         <div
           style={{
