@@ -611,8 +611,12 @@ function parseSociProprieta(
   for (let i = 0; i < lines.length; i++) {
     const linea = normalizeLine(lines[i]);
 
+    /*
+     * Non richiediamo più che la riga sia composta
+     * esclusivamente dal codice fiscale.
+     */
     const cfMatch = linea.match(
-      /^Codice fiscale:\s*([A-Z0-9]{11,16})$/i
+      /Codice\s+fiscale\s*:\s*([A-Z0-9]{11,16})/i
     );
 
     if (!cfMatch) {
@@ -624,60 +628,15 @@ function parseSociProprieta(
       .trim();
 
     /*
-     * Il nome è la riga utile immediatamente
-     * precedente a "Codice fiscale:".
+     * Un soggetto è socio soltanto se, dopo il CF,
+     * troviamo "Tipo di diritto".
      */
-    let nome = "";
-
-    for (let indietro = i - 1; indietro >= 0; indietro--) {
-      const candidata = normalizeLine(
-        lines[indietro]
-      );
-
-      if (!candidata) {
-        continue;
-      }
-
-      const candidataNormalizzata =
-        normalizeRoleText(candidata);
-
-      if (
-        candidataNormalizzata ===
-          "registro imprese" ||
-        candidataNormalizzata.includes(
-          "archivio ufficiale"
-        ) ||
-        candidataNormalizzata.startsWith(
-          "documento n"
-        ) ||
-        candidataNormalizzata.startsWith(
-          "estratto dal registro imprese"
-        ) ||
-        candidataNormalizzata.includes(
-          "codice fiscale"
-        )
-      ) {
-        continue;
-      }
-
-      nome = candidata
-        .replace(/^socio\s+/i, "")
-        .replace(/^titolare\s+/i, "")
-        .trim();
-
-      break;
-    }
-
-    if (!nome) {
-      continue;
-    }
-
     let tipoDiritto: string | null = null;
     let domicilio: string | null = null;
 
     for (
       let avanti = i + 1;
-      avanti < Math.min(lines.length, i + 8);
+      avanti < Math.min(lines.length, i + 12);
       avanti++
     ) {
       const successiva = normalizeLine(
@@ -685,19 +644,17 @@ function parseSociProprieta(
       );
 
       const dirittoMatch = successiva.match(
-        /^Tipo di diritto:\s*(.+)$/i
+        /Tipo\s+di\s+diritto\s*:\s*(.+)$/i
       );
 
       if (dirittoMatch) {
-        tipoDiritto =
-          dirittoMatch[1].trim();
+        tipoDiritto = dirittoMatch[1].trim();
         continue;
       }
 
       if (
-        /^Domicilio del titolare/i.test(
-          successiva
-        ) ||
+        /^Domicilio del titolare/i.test(successiva) ||
+        /^rappresentante comune$/i.test(successiva) ||
         /^comune$/i.test(successiva)
       ) {
         continue;
@@ -706,11 +663,83 @@ function parseSociProprieta(
       if (
         tipoDiritto &&
         successiva &&
-        !/^Codice fiscale:/i.test(successiva)
+        !/Codice\s+fiscale\s*:/i.test(successiva)
       ) {
         domicilio = successiva;
         break;
       }
+    }
+
+    /*
+     * Se non troviamo "Tipo di diritto",
+     * il CF appartiene a un amministratore,
+     * sindaco o altro soggetto: lo ignoriamo.
+     */
+    if (!tipoDiritto) {
+      continue;
+    }
+
+    /*
+     * Cerchiamo il nome nelle righe precedenti al CF.
+     */
+    let nome = "";
+
+    for (
+      let indietro = i - 1;
+      indietro >= Math.max(0, i - 10);
+      indietro--
+    ) {
+      const candidata = normalizeLine(
+        lines[indietro]
+      );
+
+      if (!candidata) {
+        continue;
+      }
+
+      const normalizzata =
+        normalizeRoleText(candidata);
+
+      const rigaTecnica =
+        normalizzata === "registro imprese" ||
+        normalizzata.includes(
+          "archivio ufficiale della cciaa"
+        ) ||
+        normalizzata.startsWith("documento n") ||
+        normalizzata.startsWith(
+          "estratto dal registro imprese"
+        ) ||
+        normalizzata.includes("codice fiscale") ||
+        normalizzata.includes("capitale sociale") ||
+        normalizzata === "proprieta" ||
+        normalizzata.includes(
+          "visura ordinaria societa"
+        ) ||
+        normalizzata.includes("camera di commercio") ||
+        normalizzata.includes("soggetti a deposito") ||
+        /\b(s\.?r\.?l\.?|s\.?p\.?a\.?|s\.?a\.?s\.?)\b/i.test(
+          candidata
+        );
+
+      if (rigaTecnica) {
+        continue;
+      }
+
+      const nomePulito = cleanPersonName(candidata)
+        .replace(/^socio\s+/i, "")
+        .replace(/^titolare\s+/i, "")
+        .trim();
+
+      if (!isLikelyPersonName(nomePulito)) {
+        continue;
+      }
+
+      nome = nomePulito;
+      break;
+    }
+
+    if (!nome) {
+      continue;
     }
 
     let cittaResidenza: string | null = null;
@@ -736,13 +765,21 @@ function parseSociProprieta(
     }
 
     const titoloNormalizzato =
-      normalizeRoleText(
-        tipoDiritto || ""
-      );
+      normalizeRoleText(tipoDiritto);
 
-    if (!tipoDiritto) {
-  continue;
-}
+    const titoloPossesso:
+      | "piena_proprieta"
+      | "nuda_proprieta"
+      | "usufrutto" =
+      titoloNormalizzato.includes(
+        "nuda proprieta"
+      )
+        ? "nuda_proprieta"
+        : titoloNormalizzato.includes(
+            "usufrutto"
+          )
+        ? "usufrutto"
+        : "piena_proprieta";
 
     risultati.push({
       nome_cognome: nome,
@@ -757,32 +794,17 @@ function parseSociProprieta(
           codiceFiscale
         ),
 
-      citta_residenza:
-        cittaResidenza,
-
+      citta_residenza: cittaResidenza,
       indirizzo_residenza:
         indirizzoResidenza,
-
       CAP: cap,
-
       nazionalita: null,
 
-      titolo_possesso:
-        titoloNormalizzato.includes(
-          "nuda proprieta"
-        )
-          ? "nuda_proprieta"
-          : titoloNormalizzato.includes(
-              "usufrutto"
-            )
-          ? "usufrutto"
-          : "piena_proprieta",
-    } as VisuraRappresentante);
+      titolo_possesso: titoloPossesso,
+    });
   }
 
-  return dedupeByCodiceFiscale(
-    risultati
-  );
+  return dedupeByCodiceFiscale(risultati);
 }
 
 export function parseVisuraRappresentanti(rawText: string): VisuraRappresentante[] {
@@ -790,7 +812,9 @@ export function parseVisuraRappresentanti(rawText: string): VisuraRappresentante
   const lines = splitUsefulLines(text);
   const sections = getSections(lines);
 
-const soci = parseSociProprieta(lines);
+const soci = sections.SOCI
+  ? parseSociProprieta(sections.SOCI)
+  : [];
   
 const amministratori =
   sections.AMMINISTRATORI
