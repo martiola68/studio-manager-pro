@@ -5,6 +5,7 @@ import {
   ChevronDown,
   ChevronRight,
   Network,
+  Printer,
   RefreshCw,
   Search,
   ShieldCheck,
@@ -825,15 +826,21 @@ function selezionaGruppo(gruppo: GruppoSocietario) {
   setSocietaSelezionataId(gruppo.capogruppo.id);
 }
 
-  
+ function toggleGruppo(gruppoId: string) {
+  setGruppiAperti((precedente) => ({
+    ...precedente,
+    [gruppoId]: !precedente[gruppoId],
+  }));
+}
 
-  function toggleGruppo(gruppoId: string) {
-    setGruppiAperti((precedente) => ({
-      ...precedente,
-      [gruppoId]: !precedente[gruppoId],
-    }));
+function stampaGruppoSelezionato() {
+  if (!gruppoSelezionato) {
+    alert("Seleziona prima un gruppo societario.");
+    return;
   }
 
+  window.print();
+}
   return (
     <main style={paginaStyle}>
       <div style={headerStyle}>
@@ -849,23 +856,39 @@ function selezionaGruppo(gruppo: GruppoSocietario) {
         </div>
 
         <div style={azioniHeaderStyle}>
-          <button
-            type="button"
-            onClick={caricaGruppi}
-            disabled={loading}
-            style={bottoneSecondarioStyle}
-          >
-            <RefreshCw size={17} />
-            Aggiorna
-          </button>
+         <button
+  type="button"
+  onClick={caricaGruppi}
+  disabled={loading}
+  style={bottoneSecondarioStyle}
+>
+  <RefreshCw size={17} />
+  Aggiorna
+</button>
 
-          <button
-            type="button"
-            onClick={() => router.push("/clienti")}
-            style={bottoneSecondarioStyle}
-          >
-            ← Torna ai clienti
-          </button>
+<button
+  type="button"
+  onClick={stampaGruppoSelezionato}
+  disabled={!gruppoSelezionato}
+  style={{
+    ...bottoneSecondarioStyle,
+    opacity: gruppoSelezionato ? 1 : 0.55,
+    cursor: gruppoSelezionato
+      ? "pointer"
+      : "not-allowed",
+  }}
+>
+  <Printer size={17} />
+  Stampa gruppo
+</button>
+
+<button
+  type="button"
+  onClick={() => router.push("/clienti")}
+  style={bottoneSecondarioStyle}
+>
+  ← Torna ai clienti
+</button>
         </div>
       </div>
 
@@ -2139,9 +2162,300 @@ function selezionaGruppo(gruppo: GruppoSocietario) {
                 </>
               ) : null}
             </section>
-          </div>
+                 </div>
         </>
       )}
+
+      {gruppoSelezionato && (
+        <div
+          id="stampa-gruppo-societario"
+          className="solo-stampa-gruppo"
+        >
+          <div style={stampaIntestazioneStyle}>
+            <h1 style={stampaTitoloStyle}>
+              {gruppoSelezionato.denominazione}
+            </h1>
+
+            <div style={stampaDataStyle}>
+              Elaborazione del{" "}
+              {new Date().toLocaleDateString("it-IT")} alle{" "}
+              {new Date().toLocaleTimeString("it-IT", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </div>
+          </div>
+
+          <div style={stampaRiepilogoStyle}>
+            <div>
+              <strong>Capogruppo:</strong>{" "}
+              {gruppoSelezionato.capogruppo.nome}
+            </div>
+
+            <div>
+              <strong>Società nel gruppo:</strong>{" "}
+              {
+                gruppoSelezionato.riepilogo
+                  .numero_societa
+              }
+            </div>
+
+            <div>
+              <strong>Controllate dirette:</strong>{" "}
+              {
+                gruppoSelezionato.riepilogo
+                  .numero_controllate_dirette
+              }
+            </div>
+
+            <div>
+              <strong>Controllate indirette:</strong>{" "}
+              {
+                gruppoSelezionato.riepilogo
+                  .numero_controllate_indirette
+              }
+            </div>
+
+            <div>
+              <strong>Società collegate:</strong>{" "}
+              {societaCollegateGruppo.length}
+            </div>
+          </div>
+
+          <section style={stampaSezioneStyle}>
+            <h2 style={stampaSottotitoloStyle}>
+              Struttura del gruppo
+            </h2>
+
+            {gruppoSelezionato.societa
+              .slice()
+              .sort(
+                (a, b) =>
+                  a.livello - b.livello ||
+                  a.nome.localeCompare(b.nome, "it")
+              )
+              .map((societa) => (
+                <div
+                  key={`stampa-societa-${societa.id}`}
+                  style={{
+                    ...stampaRigaSocietaStyle,
+                    marginLeft: societa.livello * 24,
+                  }}
+                >
+                  <div>
+                    <strong>{societa.nome}</strong>
+
+                    <div style={stampaDettaglioStyle}>
+                      {getEtichettaRuolo(
+                        societa.ruolo_nel_gruppo
+                      )}
+
+                      {societa.controllante_diretta
+                        ? ` · controllata da ${
+                            societa.controllante_diretta
+                              .nome
+                          } al ${formattaPercentuale(
+                            societa.controllante_diretta
+                              .quota
+                          )}`
+                        : ""}
+                    </div>
+                  </div>
+                </div>
+              ))}
+          </section>
+
+          <section style={stampaSezioneStyle}>
+            <h2 style={stampaSottotitoloStyle}>
+              Società collegate
+            </h2>
+
+            {societaCollegateGruppo.length === 0 ? (
+              <div style={stampaTestoVuotoStyle}>
+                Nessuna società collegata.
+              </div>
+            ) : (
+              societaCollegateGruppo.map((collegata) => (
+                <div
+                  key={`stampa-collegata-${collegata.collegata_da_id}-${collegata.societa_id}`}
+                  style={stampaRigaSocietaStyle}
+                >
+                  <div>
+                    <strong>
+                      {collegata.societa_nome}
+                    </strong>
+
+                    <div style={stampaDettaglioStyle}>
+                      Collegata a{" "}
+                      {collegata.collegata_da_nome}
+                    </div>
+                  </div>
+
+                  <strong>
+                    {formattaPercentuale(
+                      collegata.quota
+                    )}
+                  </strong>
+                </div>
+              ))
+            )}
+          </section>
+
+          <section style={stampaSezioneStyle}>
+            <h2 style={stampaSottotitoloStyle}>
+              Titolari effettivi per società
+            </h2>
+
+            {gruppoSelezionato.societa.map(
+              (societa) => (
+                <div
+                  key={`stampa-titolari-${societa.id}`}
+                  style={stampaBloccoTitolariStyle}
+                >
+                  <h3 style={stampaNomeSocietaStyle}>
+                    {societa.nome}
+                  </h3>
+
+                  {societa.titolari_effettivi.length ===
+                  0 ? (
+                    <div style={stampaTestoVuotoStyle}>
+                      Nessun titolare effettivo
+                      individuato.
+                    </div>
+                  ) : (
+                    societa.titolari_effettivi.map(
+                      (titolare) => (
+                        <div
+                          key={`stampa-${societa.id}-${titolare.persona_id}`}
+                          style={stampaRigaTitolareStyle}
+                        >
+                          <div>
+                            <strong>
+                              {titolare.persona_nome}
+                            </strong>
+
+                            <div
+                              style={stampaDettaglioStyle}
+                            >
+                              {getEtichettaTitolarita(
+                                titolare.tipo_titolarita
+                              )}
+
+                              {titolare.carica
+                                ? ` · ${titolare.carica}`
+                                : ""}
+                            </div>
+                          </div>
+
+                          <strong>
+                            {titolare.tipo_titolarita ===
+                            "residuale"
+                              ? "Criterio residuale"
+                              : formattaPercentuale(
+                                  titolare.quota_complessiva
+                                )}
+                          </strong>
+                        </div>
+                      )
+                    )
+                  )}
+                </div>
+              )
+            )}
+
+            {societaCollegateGruppo.map(
+              (collegata) => (
+                <div
+                  key={`stampa-titolari-collegata-${collegata.societa_id}`}
+                  style={stampaBloccoTitolariStyle}
+                >
+                  <h3 style={stampaNomeSocietaStyle}>
+                    {collegata.societa_nome}
+                  </h3>
+
+                  {(
+                    collegata.titolari_effettivi || []
+                  ).length === 0 ? (
+                    <div style={stampaTestoVuotoStyle}>
+                      Nessun titolare effettivo
+                      individuato.
+                    </div>
+                  ) : (
+                    collegata.titolari_effettivi.map(
+                      (titolare) => (
+                        <div
+                          key={`stampa-collegata-${collegata.societa_id}-${titolare.persona_id}`}
+                          style={stampaRigaTitolareStyle}
+                        >
+                          <div>
+                            <strong>
+                              {titolare.persona_nome}
+                            </strong>
+
+                            <div
+                              style={stampaDettaglioStyle}
+                            >
+                              {getEtichettaTitolarita(
+                                titolare.tipo_titolarita
+                              )}
+
+                              {titolare.carica
+                                ? ` · ${titolare.carica}`
+                                : ""}
+                            </div>
+                          </div>
+
+                          <strong>
+                            {titolare.tipo_titolarita ===
+                            "residuale"
+                              ? "Criterio residuale"
+                              : formattaPercentuale(
+                                  titolare.quota_complessiva
+                                )}
+                          </strong>
+                        </div>
+                      )
+                    )
+                  )}
+                </div>
+              )
+            )}
+          </section>
+        </div>
+      )}
+
+      <style jsx global>{`
+        .solo-stampa-gruppo {
+          display: none;
+        }
+
+        @media print {
+          body * {
+            visibility: hidden !important;
+          }
+
+          .solo-stampa-gruppo,
+          .solo-stampa-gruppo * {
+            visibility: visible !important;
+          }
+
+          .solo-stampa-gruppo {
+            display: block !important;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            padding: 20px;
+            background: white;
+            color: black;
+          }
+
+          @page {
+            size: A4;
+            margin: 14mm;
+          }
+        }
+      `}</style>
     </main>
   );
 }
@@ -2747,4 +3061,91 @@ const cellaTabellaStyle: React.CSSProperties = {
 const cellaTabellaDestraStyle: React.CSSProperties = {
   ...cellaTabellaStyle,
   textAlign: "right",
+};
+
+const stampaIntestazioneStyle: React.CSSProperties = {
+  paddingBottom: 14,
+  marginBottom: 18,
+  borderBottom: "2px solid #0f172a",
+};
+
+const stampaTitoloStyle: React.CSSProperties = {
+  margin: 0,
+  fontSize: 25,
+  fontWeight: 800,
+};
+
+const stampaDataStyle: React.CSSProperties = {
+  marginTop: 6,
+  color: "#475569",
+  fontSize: 12,
+};
+
+const stampaRiepilogoStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(2, 1fr)",
+  gap: 8,
+  padding: 14,
+  marginBottom: 20,
+  border: "1px solid #cbd5e1",
+  borderRadius: 8,
+  fontSize: 13,
+};
+
+const stampaSezioneStyle: React.CSSProperties = {
+  marginBottom: 22,
+  breakInside: "avoid",
+};
+
+const stampaSottotitoloStyle: React.CSSProperties = {
+  margin: "0 0 10px",
+  paddingBottom: 6,
+  borderBottom: "1px solid #94a3b8",
+  fontSize: 17,
+};
+
+const stampaRigaSocietaStyle: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  gap: 12,
+  padding: "7px 9px",
+  marginBottom: 5,
+  border: "1px solid #e2e8f0",
+  borderRadius: 6,
+  fontSize: 12,
+  breakInside: "avoid",
+};
+
+const stampaDettaglioStyle: React.CSSProperties = {
+  marginTop: 3,
+  color: "#475569",
+  fontSize: 11,
+};
+
+const stampaTestoVuotoStyle: React.CSSProperties = {
+  padding: 10,
+  color: "#64748b",
+  fontSize: 12,
+  fontStyle: "italic",
+};
+
+const stampaBloccoTitolariStyle: React.CSSProperties = {
+  marginBottom: 14,
+  breakInside: "avoid",
+};
+
+const stampaNomeSocietaStyle: React.CSSProperties = {
+  margin: "0 0 6px",
+  fontSize: 14,
+};
+
+const stampaRigaTitolareStyle: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  gap: 12,
+  padding: "7px 9px",
+  marginBottom: 4,
+  background: "#f8fafc",
+  borderRadius: 6,
+  fontSize: 12,
 };
