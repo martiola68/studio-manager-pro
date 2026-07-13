@@ -296,6 +296,252 @@ export default async function handler(
     const supabase =
       getServerSupabase() as any;
 
+    const contentType =
+  req.headers["content-type"] || "";
+
+if (contentType.includes("application/json")) {
+  const chunks: Buffer[] = [];
+
+  for await (const chunk of req) {
+    chunks.push(
+      Buffer.isBuffer(chunk)
+        ? chunk
+        : Buffer.from(chunk)
+    );
+  }
+
+  const raw = Buffer.concat(chunks).toString("utf8");
+  const body = raw ? JSON.parse(raw) : null;
+
+  const clienteId = body?.clienteId;
+  const conferma = body?.conferma === true;
+  const soggetti = Array.isArray(body?.soggetti)
+    ? body.soggetti
+    : [];
+
+  if (!conferma) {
+    return res.status(400).json({
+      error: "Conferma importazione mancante.",
+    });
+  }
+
+  if (!clienteId) {
+    return res.status(400).json({
+      error: "clienteId mancante.",
+    });
+  }
+
+  if (soggetti.length === 0) {
+    return res.status(400).json({
+      error: "Nessun nominativo selezionato.",
+    });
+  }
+
+  let inseriti = 0;
+  let duplicati = 0;
+
+  for (const soggetto of soggetti) {
+    const cf = normalizeCF(
+      soggetto.codice_fiscale || ""
+    );
+
+    if (!cf || !isValidCF(cf)) {
+      continue;
+    }
+
+    let soggettoClienteId =
+      soggetto.anagrafica_cliente_id || null;
+
+    if (!soggettoClienteId) {
+      const {
+        data: clienteEsistente,
+        error: clienteEsistenteError,
+      } = await supabase
+        .from("tbclienti")
+        .select("id")
+        .eq("codice_fiscale", cf)
+        .maybeSingle();
+
+      if (clienteEsistenteError) {
+        throw clienteEsistenteError;
+      }
+
+      if (clienteEsistente?.id) {
+        soggettoClienteId = clienteEsistente.id;
+      }
+    }
+
+    if (!soggettoClienteId) {
+      const {
+        data: societaDestinataria,
+        error: societaError,
+      } = await supabase
+        .from("tbclienti")
+        .select("studio_id")
+        .eq("id", clienteId)
+        .maybeSingle();
+
+      if (societaError) {
+        throw societaError;
+      }
+
+      const datiAnagrafici =
+        soggetto.dati_anagrafici || {};
+
+      const {
+        data: nuovoSoggetto,
+        error: nuovoSoggettoError,
+      } = await supabase
+        .from("tbclienti")
+        .insert({
+          studio_id:
+            societaDestinataria?.studio_id || null,
+
+          ragione_sociale:
+            soggetto.nome || "Nominativo",
+
+          codice_fiscale: cf,
+
+          tipo_cliente:
+            cf.length === 16
+              ? "Persona fisica"
+              : "Società",
+
+          tipologia_cliente:
+            cf.length === 16
+              ? "Persona fisica"
+              : "Società",
+
+          cliente: false,
+
+          luogo_nascita:
+            datiAnagrafici.luogo_nascita || null,
+
+          data_nascita:
+            datiAnagrafici.data_nascita || null,
+
+          indirizzo:
+            datiAnagrafici.indirizzo_residenza ||
+            null,
+
+          citta:
+            datiAnagrafici.citta_residenza || null,
+
+          cap:
+            datiAnagrafici.cap || null,
+        })
+        .select("id")
+        .single();
+
+      if (nuovoSoggettoError) {
+        throw nuovoSoggettoError;
+      }
+
+      soggettoClienteId = nuovoSoggetto.id;
+    }
+
+    const {
+      data: organoEsistente,
+      error: organoEsistenteError,
+    } = await supabase
+      .from("tbclienti_organi")
+      .select("id")
+      .eq("cliente_id", clienteId)
+      .eq(
+        "soggetto_cliente_id",
+        soggettoClienteId
+      )
+      .eq("ruolo", soggetto.ruolo)
+      .eq("attivo", true)
+      .maybeSingle();
+
+    if (organoEsistenteError) {
+      throw organoEsistenteError;
+    }
+
+    if (organoEsistente?.id) {
+      duplicati++;
+      continue;
+    }
+
+    const tipoSoggetto =
+      cf.length === 16
+        ? "persona_fisica"
+        : "societa";
+
+    const tipoRuolo =
+      soggetto.ruolo === "socio"
+        ? "S"
+        : [
+            "amministratore",
+            "amministratore_unico",
+            "amministratore_delegato",
+            "presidente_cda",
+            "liquidatore",
+            "rappresentante_legale",
+          ].includes(soggetto.ruolo)
+        ? "R"
+        : "C";
+
+    const {
+      error: insertOrganoError,
+    } = await supabase
+      .from("tbclienti_organi")
+      .insert({
+        cliente_id: clienteId,
+        soggetto_cliente_id:
+          soggettoClienteId,
+
+        tipo_soggetto: tipoSoggetto,
+        rappresentante_legale:
+          soggetto.ruolo ===
+          "rappresentante_legale",
+
+        tipo_ruolo: tipoRuolo,
+        ruolo: soggetto.ruolo,
+        carica:
+          soggetto.carica ||
+          soggetto.ruolo,
+
+        percentuale_partecipazione:
+          soggetto.ruolo === "socio"
+            ? soggetto.percentuale_partecipazione
+            : null,
+
+        titolo_possesso:
+          soggetto.ruolo === "socio"
+            ? soggetto.titolo_possesso ||
+              "piena_proprieta"
+            : "piena_proprieta",
+
+        percentuale_diritti_voto:
+          soggetto.ruolo === "socio"
+            ? soggetto.percentuale_diritti_voto
+            : null,
+
+        percentuale_diritti_utili:
+          soggetto.ruolo === "socio"
+            ? soggetto.percentuale_diritti_utili
+            : null,
+
+        principale: false,
+        attivo: true,
+      });
+
+    if (insertOrganoError) {
+      throw insertOrganoError;
+    }
+
+    inseriti++;
+  }
+
+  return res.status(200).json({
+    ok: true,
+    inseriti,
+    duplicati,
+  });
+}
+
     const { fields, files } =
       await new Promise<{
         fields: formidable.Fields;
