@@ -1058,6 +1058,36 @@ function getTipoRuolo(ruolo: string) {
 
   return "C";
 }
+
+  function aggiornaRigaImportazione(
+  indice: number,
+  modifiche: Record<string, any>
+) {
+  setAnteprimaImportazione((precedente) =>
+    precedente.map((riga, rigaIndice) =>
+      rigaIndice === indice
+        ? {
+            ...riga,
+            ...modifiche,
+          }
+        : riga
+    )
+  );
+}
+
+function selezionaTutteRigheImportazione(
+  selezionato: boolean
+) {
+  setAnteprimaImportazione((precedente) =>
+    precedente.map((riga) => ({
+      ...riga,
+      selected:
+        riga.esito === "gia_presente"
+          ? false
+          : selezionato,
+    }))
+  );
+}
   
   return (
     <main style={{ padding: 28, background: "#f8fafc", minHeight: "100vh" }}>
@@ -2456,6 +2486,602 @@ function getTipoRuolo(ruolo: string) {
           </table>
         )}
       </div>
+
+      {showImportazioneVisura && (
+  <div
+    style={{
+      position: "fixed",
+      inset: 0,
+      zIndex: 10000,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 20,
+      background: "rgba(15, 23, 42, 0.55)",
+    }}
+  >
+    <div
+      style={{
+        width: "min(1500px, 98vw)",
+        maxHeight: "92vh",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        borderRadius: 14,
+        background: "#ffffff",
+        boxShadow:
+          "0 24px 70px rgba(15, 23, 42, 0.28)",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: 20,
+          padding: "20px 22px",
+          borderBottom: "1px solid #e2e8f0",
+        }}
+      >
+        <div>
+          <h2 style={{ ...titleStyle, fontSize: 22 }}>
+            Anteprima importazione visura
+          </h2>
+
+          <p
+            style={{
+              margin: "6px 0 0",
+              color: "#64748b",
+              fontSize: 13,
+            }}
+          >
+            Controlla, modifica e seleziona i
+            nominativi da importare.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          style={secondaryButton}
+          onClick={() => {
+            setShowImportazioneVisura(false);
+            setAnteprimaImportazione([]);
+          }}
+        >
+          Chiudi
+        </button>
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 16,
+          padding: "12px 22px",
+          borderBottom: "1px solid #e2e8f0",
+          background: "#f8fafc",
+        }}
+      >
+        <div style={{ fontSize: 13, color: "#475569" }}>
+          Trovati:{" "}
+          <strong>
+            {anteprimaImportazione.length}
+          </strong>
+          {" · "}
+          Selezionati:{" "}
+          <strong>
+            {
+              anteprimaImportazione.filter(
+                (riga) => riga.selected
+              ).length
+            }
+          </strong>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+          }}
+        >
+          <button
+            type="button"
+            style={secondaryButton}
+            onClick={() =>
+              selezionaTutteRigheImportazione(true)
+            }
+          >
+            Seleziona tutti
+          </button>
+
+          <button
+            type="button"
+            style={secondaryButton}
+            onClick={() =>
+              selezionaTutteRigheImportazione(false)
+            }
+          >
+            Deseleziona tutti
+          </button>
+        </div>
+      </div>
+
+      <div
+        style={{
+          flex: 1,
+          overflow: "auto",
+          padding: 18,
+        }}
+      >
+        <table
+          style={{
+            width: "100%",
+            minWidth: 1250,
+            borderCollapse: "collapse",
+          }}
+        >
+          <thead>
+            <tr>
+              <th style={thStyle}>Importa</th>
+              <th style={thStyle}>Nominativo</th>
+              <th style={thStyle}>
+                Codice fiscale
+              </th>
+              <th style={thStyle}>Ruolo</th>
+              <th style={thStyle}>Carica</th>
+              <th style={thStyle}>Quota %</th>
+              <th style={thStyle}>Titolo</th>
+              <th style={thStyle}>Voto %</th>
+              <th style={thStyle}>Utili %</th>
+              <th style={thStyle}>Esito</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {anteprimaImportazione.map(
+              (riga, indice) => {
+                const giaPresente =
+                  riga.esito === "gia_presente";
+
+                return (
+                  <tr
+                    key={`${riga.codice_fiscale}-${riga.ruolo}-${indice}`}
+                    style={{
+                      background: giaPresente
+                        ? "#f8fafc"
+                        : "#ffffff",
+                    }}
+                  >
+                    <td style={tdStyle}>
+                      <input
+                        type="checkbox"
+                        checked={
+                          riga.selected === true
+                        }
+                        disabled={giaPresente}
+                        onChange={(event) =>
+                          aggiornaRigaImportazione(
+                            indice,
+                            {
+                              selected:
+                                event.target.checked,
+                            }
+                          )
+                        }
+                      />
+                    </td>
+
+                    <td style={tdStyle}>
+                      <input
+                        style={{
+                          ...inputStyle,
+                          minWidth: 210,
+                        }}
+                        value={riga.nome || ""}
+                        onChange={(event) =>
+                          aggiornaRigaImportazione(
+                            indice,
+                            {
+                              nome:
+                                event.target.value,
+                            }
+                          )
+                        }
+                      />
+                    </td>
+
+                    <td style={tdStyle}>
+                      <input
+                        style={{
+                          ...inputStyle,
+                          minWidth: 175,
+                        }}
+                        maxLength={16}
+                        value={
+                          riga.codice_fiscale || ""
+                        }
+                        onChange={(event) =>
+                          aggiornaRigaImportazione(
+                            indice,
+                            {
+                              codice_fiscale:
+                                normalizeCF(
+                                  event.target.value
+                                ),
+                            }
+                          )
+                        }
+                      />
+                    </td>
+
+                    <td style={tdStyle}>
+                      <select
+                        style={{
+                          ...inputStyle,
+                          minWidth: 175,
+                        }}
+                        value={riga.ruolo || ""}
+                        onChange={(event) => {
+                          const ruolo =
+                            event.target.value;
+
+                          aggiornaRigaImportazione(
+                            indice,
+                            {
+                              ruolo,
+                              carica:
+                                ruoliLabel[ruolo] ||
+                                ruolo,
+                            }
+                          );
+                        }}
+                      >
+                        {ruoli
+                          .filter(
+                            (ruolo) =>
+                              ruolo !== "tutti"
+                          )
+                          .map((ruolo) => (
+                            <option
+                              key={ruolo}
+                              value={ruolo}
+                            >
+                              {ruoliLabel[ruolo] ||
+                                ruolo}
+                            </option>
+                          ))}
+                      </select>
+                    </td>
+
+                    <td style={tdStyle}>
+                      <input
+                        style={{
+                          ...inputStyle,
+                          minWidth: 190,
+                        }}
+                        value={riga.carica || ""}
+                        onChange={(event) =>
+                          aggiornaRigaImportazione(
+                            indice,
+                            {
+                              carica:
+                                event.target.value,
+                            }
+                          )
+                        }
+                      />
+                    </td>
+
+                    <td style={tdStyle}>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        disabled={
+                          riga.ruolo !== "socio"
+                        }
+                        style={{
+                          ...inputStyle,
+                          width: 95,
+                          background:
+                            riga.ruolo === "socio"
+                              ? "#ffffff"
+                              : "#f1f5f9",
+                        }}
+                        value={
+                          riga
+                            .percentuale_partecipazione ||
+                          ""
+                        }
+                        onChange={(event) => {
+                          const valore =
+                            event.target.value;
+
+                          aggiornaRigaImportazione(
+                            indice,
+                            {
+                              percentuale_partecipazione:
+                                valore,
+                              percentuale_diritti_voto:
+                                riga.titolo_possesso ===
+                                "piena_proprieta"
+                                  ? valore
+                                  : riga.percentuale_diritti_voto ||
+                                    "",
+                              percentuale_diritti_utili:
+                                riga.titolo_possesso ===
+                                "piena_proprieta"
+                                  ? valore
+                                  : riga.percentuale_diritti_utili ||
+                                    "",
+                            }
+                          );
+                        }}
+                      />
+                    </td>
+
+                    <td style={tdStyle}>
+                      <select
+                        disabled={
+                          riga.ruolo !== "socio"
+                        }
+                        style={{
+                          ...inputStyle,
+                          minWidth: 175,
+                          background:
+                            riga.ruolo === "socio"
+                              ? "#ffffff"
+                              : "#f1f5f9",
+                        }}
+                        value={
+                          riga.titolo_possesso ||
+                          "piena_proprieta"
+                        }
+                        onChange={(event) => {
+                          const titolo =
+                            event.target.value;
+
+                          aggiornaRigaImportazione(
+                            indice,
+                            {
+                              titolo_possesso:
+                                titolo,
+                              percentuale_diritti_voto:
+                                titolo ===
+                                "piena_proprieta"
+                                  ? riga.percentuale_partecipazione ||
+                                    ""
+                                  : "0",
+                              percentuale_diritti_utili:
+                                titolo ===
+                                "piena_proprieta"
+                                  ? riga.percentuale_partecipazione ||
+                                    ""
+                                  : "0",
+                            }
+                          );
+                        }}
+                      >
+                        {Object.entries(
+                          titoliPossessoLabel
+                        ).map(
+                          ([valore, etichetta]) => (
+                            <option
+                              key={valore}
+                              value={valore}
+                            >
+                              {etichetta}
+                            </option>
+                          )
+                        )}
+                      </select>
+                    </td>
+
+                    <td style={tdStyle}>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        disabled={
+                          riga.ruolo !== "socio"
+                        }
+                        style={{
+                          ...inputStyle,
+                          width: 90,
+                          background:
+                            riga.ruolo === "socio"
+                              ? "#ffffff"
+                              : "#f1f5f9",
+                        }}
+                        value={
+                          riga
+                            .percentuale_diritti_voto ||
+                          ""
+                        }
+                        onChange={(event) =>
+                          aggiornaRigaImportazione(
+                            indice,
+                            {
+                              percentuale_diritti_voto:
+                                event.target.value,
+                            }
+                          )
+                        }
+                      />
+                    </td>
+
+                    <td style={tdStyle}>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        disabled={
+                          riga.ruolo !== "socio"
+                        }
+                        style={{
+                          ...inputStyle,
+                          width: 90,
+                          background:
+                            riga.ruolo === "socio"
+                              ? "#ffffff"
+                              : "#f1f5f9",
+                        }}
+                        value={
+                          riga
+                            .percentuale_diritti_utili ||
+                          ""
+                        }
+                        onChange={(event) =>
+                          aggiornaRigaImportazione(
+                            indice,
+                            {
+                              percentuale_diritti_utili:
+                                event.target.value,
+                            }
+                          )
+                        }
+                      />
+                    </td>
+
+                    <td style={tdStyle}>
+                      <span
+                        style={{
+                          display: "inline-block",
+                          padding: "5px 9px",
+                          borderRadius: 999,
+                          whiteSpace: "nowrap",
+                          background:
+                            riga.esito ===
+                            "gia_presente"
+                              ? "#e2e8f0"
+                              : riga.esito ===
+                                "nuovo_ruolo"
+                              ? "#fef3c7"
+                              : "#dcfce7",
+                          color:
+                            riga.esito ===
+                            "gia_presente"
+                              ? "#475569"
+                              : riga.esito ===
+                                "nuovo_ruolo"
+                              ? "#92400e"
+                              : "#166534",
+                          fontSize: 11,
+                          fontWeight: 700,
+                        }}
+                      >
+                        {riga.esito ===
+                        "gia_presente"
+                          ? "Già presente"
+                          : riga.esito ===
+                            "nuovo_ruolo"
+                          ? "Nuovo ruolo"
+                          : "Nuovo soggetto"}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              }
+            )}
+
+            {anteprimaImportazione.length ===
+              0 && (
+              <tr>
+                <td
+                  style={tdStyle}
+                  colSpan={10}
+                >
+                  Nessun nominativo individuato
+                  nella visura.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 16,
+          padding: "16px 22px",
+          borderTop: "1px solid #e2e8f0",
+          background: "#f8fafc",
+        }}
+      >
+        <div
+          style={{
+            color: "#b45309",
+            fontSize: 12,
+          }}
+        >
+          Controlla attentamente i nominativi prima
+          dell’importazione.
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            gap: 10,
+          }}
+        >
+          <button
+            type="button"
+            style={secondaryButton}
+            onClick={() => {
+              setShowImportazioneVisura(false);
+              setAnteprimaImportazione([]);
+            }}
+          >
+            Annulla
+          </button>
+
+          <button
+            type="button"
+            style={{
+              ...blueButton,
+              opacity:
+                anteprimaImportazione.some(
+                  (riga) => riga.selected
+                )
+                  ? 1
+                  : 0.55,
+              cursor:
+                anteprimaImportazione.some(
+                  (riga) => riga.selected
+                )
+                  ? "pointer"
+                  : "not-allowed",
+            }}
+            disabled={
+              !anteprimaImportazione.some(
+                (riga) => riga.selected
+              )
+            }
+            onClick={() => {
+              /*
+               * Il salvataggio definitivo verrà
+               * collegato nello step successivo.
+               */
+              alert(
+                "Anteprima pronta. Nel prossimo step colleghiamo l’importazione definitiva."
+              );
+            }}
+          >
+            Importa selezionati
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+      
   {showNuovoNominativo && (
         <div
           style={{
