@@ -53,19 +53,28 @@ function isLikelySectionHeader(line: string): boolean {
   if (!l) return false;
 
   return [
-    "AMMINISTRATORI",
-    "ORGANI AMMINISTRATIVI",
-    "TITOLARI DI ALTRE CARICHE O QUALIFICHE",
-    "SOCI",
-    "ELENCO SOCI",
-    "SOCI E TITOLARI DI DIRITTI SU AZIONI E QUOTE",
-    "TRASFERIMENTI D'AZIENDA, FUSIONI, SCISSIONI, SUBENTRI",
-    "ATTIVITA",
-    "SEDI SECONDARIE",
-    "STORIA DELLE MODIFICHE",
-    "INFORMAZIONI PATRIMONIALI",
-    "CAPITALE SOCIALE",
-  ].some((h) => l.includes(h));
+  "AMMINISTRATORI",
+  "ORGANI AMMINISTRATIVI",
+  "TITOLARI DI ALTRE CARICHE O QUALIFICHE",
+
+  "SOCI",
+  "ELENCO SOCI",
+  "ELENCO DEI SOCI",
+  "ELENCO DEI SOCI E DEGLI ALTRI TITOLARI",
+  "SOCI E TITOLARI DI DIRITTI SU AZIONI E QUOTE",
+  "TITOLARI DI DIRITTI SU AZIONI O QUOTE SOCIALI",
+
+  "ORGANI DI CONTROLLO",
+  "COLLEGIO SINDACALE",
+  "REVISIONE LEGALE",
+
+  "TRASFERIMENTI D'AZIENDA, FUSIONI, SCISSIONI, SUBENTRI",
+  "ATTIVITA",
+  "SEDI SECONDARIE",
+  "STORIA DELLE MODIFICHE",
+  "INFORMAZIONI PATRIMONIALI",
+  "CAPITALE SOCIALE",
+].some((h) => l.includes(h));
 }
 
 function getSections(lines: string[]): Record<string, string[]> {
@@ -101,15 +110,33 @@ function getSections(lines: string[]): Record<string, string[]> {
       continue;
     }
 
-    if (
-      upper === "SOCI" ||
-      upper.includes("ELENCO SOCI") ||
-      upper.includes("SOCI E TITOLARI DI DIRITTI SU AZIONI E QUOTE")
-    ) {
-      currentSection = "SOCI";
-      sections[currentSection] ??= [];
-      continue;
-    }
+  if (
+  upper === "SOCI" ||
+
+  upper.includes("ELENCO SOCI") ||
+
+  upper.includes("ELENCO DEI SOCI") ||
+
+  upper.includes(
+    "ELENCO DEI SOCI E DEGLI ALTRI TITOLARI"
+  ) ||
+
+  upper.includes(
+    "SOCI E TITOLARI DI DIRITTI SU AZIONI E QUOTE"
+  ) ||
+
+  upper.includes(
+    "TITOLARI DI DIRITTI SU AZIONI O QUOTE SOCIALI"
+  ) ||
+
+  upper.includes(
+    "TITOLARI DI DIRITTI SU AZIONI E QUOTE SOCIALI"
+  )
+) {
+  currentSection = "SOCI";
+  sections[currentSection] ??= [];
+  continue;
+}
 
     if (isLikelySectionHeader(line)) {
       currentSection = "OTHER";
