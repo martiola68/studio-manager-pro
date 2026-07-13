@@ -2,7 +2,10 @@ export type VisuraRappresentante = {
   nome_cognome: string;
   codice_fiscale?: string | null;
   qualifica?: string | null;
-  tipo_soggetto: "amministratore" | "socio";
+tipo_soggetto:
+  | "amministratore"
+  | "socio"
+  | "organo_controllo";
   luogo_nascita?: string | null;
   data_nascita?: string | null;
   citta_residenza?: string | null;
@@ -78,6 +81,19 @@ function getSections(lines: string[]): Record<string, string[]> {
       sections[currentSection] ??= [];
       continue;
     }
+
+    if (
+  upper.includes("ORGANI DI CONTROLLO") ||
+  upper.includes("COLLEGIO SINDACALE") ||
+  upper === "SINDACI" ||
+  upper.includes("SINDACI, MEMBRI ORGANI DI CONTROLLO") ||
+  upper.includes("REVISIONE LEGALE") ||
+  upper.includes("REVISORI")
+) {
+  currentSection = "ORGANI_CONTROLLO";
+  sections[currentSection] ??= [];
+  continue;
+}
 
     if (upper.includes("TITOLARI DI ALTRE CARICHE O QUALIFICHE")) {
       currentSection = "ALTRE_CARICHE";
@@ -232,7 +248,7 @@ function candidateNamesFromText(text: string): string[] {
     .filter((m) => isLikelyPersonName(m));
 }
 
-function extractQualificaFromText(text: string, tipo: "amministratore" | "socio"): string | null {
+function extractQualificaFromText(text: string, tipo: "amministratore" | "socio" | "organo_controllo"): string | null {
   const normalized = normalizeRoleText(text);
 
   const rolePatterns: { label: string; regex: RegExp }[] = [
@@ -281,9 +297,29 @@ function extractQualificaFromText(text: string, tipo: "amministratore" | "socio"
       regex: /\btitolare\b/i,
     },
     {
-      label: "revisore",
-      regex: /\brevisore\b/i,
-    },
+  label: "presidente_collegio_sindacale",
+  regex:
+    /\bpresidente\s+(del\s+)?collegio\s+sindacale\b/i,
+},
+{
+  label: "sindaco_unico",
+  regex: /\bsindaco\s+unico\b/i,
+},
+{
+  label: "sindaco_effettivo",
+  regex:
+    /\bsindaco\s+(effettivo|membro effettivo)\b/i,
+},
+{
+  label: "sindaco_supplente",
+  regex:
+    /\bsindaco\s+(supplente|membro supplente)\b/i,
+},
+  {
+  label: "revisore",
+  regex:
+    /\b(revisore|revisione legale|societa di revisione)\b/i,
+},
   ];
 
   for (const pattern of rolePatterns) {
@@ -292,12 +328,23 @@ function extractQualificaFromText(text: string, tipo: "amministratore" | "socio"
     }
   }
 
-  return tipo === "socio" ? "socio" : null;
+  if (tipo === "socio") {
+  return "socio";
+}
+
+if (tipo === "organo_controllo") {
+  return "sindaco_effettivo";
+}
+
+return null;
 }
 
 function parseSubjectBlock(
   blockLines: string[],
-  tipo: "amministratore" | "socio"
+  tipo:
+  | "amministratore"
+  | "socio"
+  | "organo_controllo"
 ): VisuraRappresentante | null {
   const blockText = blockLines.join(" ").replace(/\s+/g, " ").trim();
   const codiceFiscale = extractCodiceFiscale(blockText);
@@ -344,7 +391,10 @@ function parseSubjectBlock(
 
 function parsePeopleFromSection(
   lines: string[],
-  tipo: "amministratore" | "socio"
+  tipo:
+  | "amministratore"
+  | "socio"
+  | "organo_controllo"
 ): VisuraRappresentante[] {
   const results: VisuraRappresentante[] = [];
 
@@ -476,54 +526,34 @@ export function parseVisuraRappresentanti(rawText: string): VisuraRappresentante
   const lines = splitUsefulLines(text);
   const sections = getSections(lines);
 
-  const amministratori = [
-    ...(sections.AMMINISTRATORI
-      ? parsePeopleFromSection(sections.AMMINISTRATORI, "amministratore")
-      : []),
-    ...(sections.ALTRE_CARICHE
-      ? parsePeopleFromSection(sections.ALTRE_CARICHE, "amministratore")
-      : []),
-  ];
+const soci = sections.SOCI
+  ? parsePeopleFromSection(
+      sections.SOCI,
+      "socio"
+    )
+  : [];
 
-  const soci = sections.SOCI ? parsePeopleFromSection(sections.SOCI, "socio") : [];
+const amministratori =
+  sections.AMMINISTRATORI
+    ? parsePeopleFromSection(
+        sections.AMMINISTRATORI,
+        "amministratore"
+      )
+    : [];
 
-  const merged = [...amministratori, ...soci];
-  const fallback = parseFallbackNameByCf(rawText);
+const organiControllo =
+  sections.ORGANI_CONTROLLO
+    ? parsePeopleFromSection(
+        sections.ORGANI_CONTROLLO,
+        "organo_controllo"
+      )
+    : [];
 
-  for (const fallbackItem of fallback) {
-    const cf = (fallbackItem.codice_fiscale || "").toUpperCase().trim();
-    if (!cf) continue;
-
-    const existingIndex = merged.findIndex(
-      (x) => (x.codice_fiscale || "").toUpperCase().trim() === cf
-    );
-
-    if (existingIndex === -1) {
-      merged.push(fallbackItem);
-      continue;
-    }
-
-    const existing = merged[existingIndex];
-
-    merged[existingIndex] = {
-      ...existing,
-      nome_cognome:
-        existing.nome_cognome && existing.nome_cognome.trim()
-          ? existing.nome_cognome
-          : fallbackItem.nome_cognome,
-      qualifica:
-        existing.qualifica && existing.qualifica.trim()
-          ? existing.qualifica
-          : fallbackItem.qualifica,
-      tipo_soggetto:
-        existing.tipo_soggetto === "amministratore" ||
-        fallbackItem.tipo_soggetto === "amministratore"
-          ? "amministratore"
-          : "socio",
-    };
-  }
-
-  return dedupeRappresentanti(merged);
+return dedupeRappresentanti([
+  ...soci,
+  ...amministratori,
+  ...organiControllo,
+]);
 }
 
 export type VisuraRappresentanteImportabile = VisuraRappresentante & {
