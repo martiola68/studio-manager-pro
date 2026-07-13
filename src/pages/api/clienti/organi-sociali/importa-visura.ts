@@ -189,22 +189,37 @@ function getCaricaVisualizzata(
     return qualifica;
   }
 
-  const labels: Record<
-    TipoRuoloOrgano,
-    string
-  > = {
-    socio: "Socio",
-    amministratore: "Amministratore",
-    amministratore_unico:
-      "Amministratore unico",
-    amministratore_delegato:
-      "Amministratore delegato",
-    presidente_cda: "Presidente CDA",
-    consigliere: "Consigliere",
-    liquidatore: "Liquidatore",
-    rappresentante_legale:
-      "Rappresentante legale",
-  };
+const labels: Record<
+  TipoRuoloOrgano,
+  string
+> = {
+  socio: "Socio",
+  amministratore: "Amministratore",
+  amministratore_unico:
+    "Amministratore unico",
+  amministratore_delegato:
+    "Amministratore delegato",
+  presidente_cda: "Presidente CDA",
+  consigliere: "Consigliere",
+  liquidatore: "Liquidatore",
+  rappresentante_legale:
+    "Rappresentante legale",
+
+  presidente_collegio_sindacale:
+    "Presidente del collegio sindacale",
+
+  sindaco_unico:
+    "Sindaco unico",
+
+  sindaco_effettivo:
+    "Sindaco effettivo",
+
+  sindaco_supplente:
+    "Sindaco supplente",
+
+  revisore:
+    "Revisore",
+};
 
   return labels[ruolo];
 }
