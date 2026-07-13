@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Network,
   RefreshCw,
+  Search,
   ShieldCheck,
   Users,
 } from "lucide-react";
@@ -194,6 +195,27 @@ type ApiResponse = {
   error?: string;
 };
 
+type RisultatoRicerca = {
+  chiave: string;
+
+  tipo:
+    | "societa_gruppo"
+    | "societa_collegata"
+    | "societa_singola"
+    | "persona_fisica";
+
+  nome: string;
+  descrizione: string;
+
+  gruppo_id?: string;
+  societa_id?: string;
+
+  societa_collegata_id?: string;
+  societa_singola_id?: string;
+
+  persona_id?: string;
+};
+
 function formattaPercentuale(value: number) {
   return `${Number(value || 0).toLocaleString("it-IT", {
     minimumFractionDigits: 0,
@@ -270,7 +292,9 @@ export default function GruppiSocietariPage() {
   >({});
 
   const [loading, setLoading] = useState(true);
-  const [errore, setErrore] = useState("");
+const [errore, setErrore] = useState("");
+
+const [ricerca, setRicerca] = useState("");
 
   async function caricaGruppi() {
     setLoading(true);
@@ -501,6 +525,296 @@ const titolariSocietaCollegata = useMemo(() => {
   );
 }, [societaCollegataSelezionata]);
 
+  const risultatiRicerca = useMemo<RisultatoRicerca[]>(() => {
+  const testo = ricerca.trim().toLowerCase();
+
+  if (testo.length < 2) {
+    return [];
+  }
+
+  const risultati = new Map<
+    string,
+    RisultatoRicerca
+  >();
+
+  gruppi.forEach((gruppo) => {
+    gruppo.societa.forEach((societa) => {
+      if (
+        societa.nome
+          .toLowerCase()
+          .includes(testo)
+      ) {
+        const chiave =
+          `societa-gruppo-${gruppo.id}-${societa.id}`;
+
+        risultati.set(chiave, {
+          chiave,
+          tipo: "societa_gruppo",
+          nome: societa.nome,
+          descrizione:
+            `${gruppo.denominazione} · ${getEtichettaRuolo(
+              societa.ruolo_nel_gruppo
+            )}`,
+          gruppo_id: gruppo.id,
+          societa_id: societa.id,
+        });
+      }
+
+      societa.soci_diretti.forEach((socio) => {
+        if (
+          socio.tipo === "persona_fisica" &&
+          socio.nome
+            .toLowerCase()
+            .includes(testo)
+        ) {
+          const chiave =
+            `persona-socio-${socio.id}-${societa.id}`;
+
+          risultati.set(chiave, {
+            chiave,
+            tipo: "persona_fisica",
+            nome: socio.nome,
+            descrizione:
+              `Socio di ${societa.nome} · ${formattaPercentuale(
+                socio.quota_diretta
+              )}`,
+            gruppo_id: gruppo.id,
+            societa_id: societa.id,
+            persona_id: socio.id,
+          });
+        }
+      });
+
+      societa.titolari_effettivi.forEach(
+        (titolare) => {
+          if (
+            titolare.persona_nome
+              .toLowerCase()
+              .includes(testo)
+          ) {
+            const chiave =
+              `persona-titolare-${titolare.persona_id}-${societa.id}`;
+
+            risultati.set(chiave, {
+              chiave,
+              tipo: "persona_fisica",
+              nome: titolare.persona_nome,
+              descrizione:
+                `Titolare effettivo di ${societa.nome} · ${getEtichettaTitolarita(
+                  titolare.tipo_titolarita
+                )}`,
+              gruppo_id: gruppo.id,
+              societa_id: societa.id,
+              persona_id:
+                titolare.persona_id,
+            });
+          }
+        }
+      );
+
+      societa.societa_collegate.forEach(
+        (collegata) => {
+          if (
+            String(collegata.societa_id) ===
+            String(societa.id)
+          ) {
+            return;
+          }
+
+          if (
+            collegata.societa_nome
+              .toLowerCase()
+              .includes(testo)
+          ) {
+            const chiave =
+              `societa-collegata-${gruppo.id}-${collegata.societa_id}`;
+
+            risultati.set(chiave, {
+              chiave,
+              tipo: "societa_collegata",
+              nome: collegata.societa_nome,
+              descrizione:
+                `Collegata a ${societa.nome} · ${formattaPercentuale(
+                  collegata.quota
+                )}`,
+              gruppo_id: gruppo.id,
+              societa_collegata_id:
+                collegata.societa_id,
+            });
+          }
+
+          (
+            collegata.titolari_effettivi || []
+          ).forEach((titolare) => {
+            if (
+              titolare.persona_nome
+                .toLowerCase()
+                .includes(testo)
+            ) {
+              const chiave =
+                `persona-collegata-${titolare.persona_id}-${collegata.societa_id}`;
+
+              risultati.set(chiave, {
+                chiave,
+                tipo: "persona_fisica",
+                nome: titolare.persona_nome,
+                descrizione:
+                  `Titolare effettivo di ${collegata.societa_nome} · ${getEtichettaTitolarita(
+                    titolare.tipo_titolarita
+                  )}`,
+                gruppo_id: gruppo.id,
+                societa_collegata_id:
+                  collegata.societa_id,
+                persona_id:
+                  titolare.persona_id,
+              });
+            }
+          });
+        }
+      );
+    });
+  });
+
+  societaSingole.forEach((societa) => {
+    if (
+      societa.ragione_sociale
+        .toLowerCase()
+        .includes(testo)
+    ) {
+      const chiave =
+        `societa-singola-${societa.id}`;
+
+      risultati.set(chiave, {
+        chiave,
+        tipo: "societa_singola",
+        nome: societa.ragione_sociale,
+        descrizione: "Società singola",
+        societa_singola_id: societa.id,
+      });
+    }
+
+    societa.soci_diretti.forEach((socio) => {
+      if (
+        socio.tipo === "persona_fisica" &&
+        socio.nome
+          .toLowerCase()
+          .includes(testo)
+      ) {
+        const chiave =
+          `persona-singola-socio-${socio.id}-${societa.id}`;
+
+        risultati.set(chiave, {
+          chiave,
+          tipo: "persona_fisica",
+          nome: socio.nome,
+          descrizione:
+            `Socio di ${societa.ragione_sociale} · ${formattaPercentuale(
+              socio.quota_diretta
+            )}`,
+          societa_singola_id: societa.id,
+          persona_id: socio.id,
+        });
+      }
+    });
+
+    societa.titolari_effettivi.forEach(
+      (titolare) => {
+        if (
+          titolare.persona_nome
+            .toLowerCase()
+            .includes(testo)
+        ) {
+          const chiave =
+            `persona-singola-titolare-${titolare.persona_id}-${societa.id}`;
+
+          risultati.set(chiave, {
+            chiave,
+            tipo: "persona_fisica",
+            nome: titolare.persona_nome,
+            descrizione:
+              `Titolare effettivo di ${societa.ragione_sociale} · ${getEtichettaTitolarita(
+                titolare.tipo_titolarita
+              )}`,
+            societa_singola_id: societa.id,
+            persona_id:
+              titolare.persona_id,
+          });
+        }
+      }
+    );
+  });
+
+  return Array.from(risultati.values())
+    .sort((a, b) =>
+      a.nome.localeCompare(b.nome, "it")
+    )
+    .slice(0, 30);
+}, [
+  ricerca,
+  gruppi,
+  societaSingole,
+]);
+
+  function apriRisultatoRicerca(
+  risultato: RisultatoRicerca
+) {
+  if (
+    risultato.tipo === "societa_singola" ||
+    risultato.societa_singola_id
+  ) {
+    setSocietaCollegataSelezionataId("");
+    setGruppoSelezionatoId("");
+    setSocietaSelezionataId("");
+
+    setSocietaSingolaSelezionataId(
+      risultato.societa_singola_id || ""
+    );
+
+    setRicerca("");
+    return;
+  }
+
+  if (
+    risultato.tipo === "societa_collegata" ||
+    risultato.societa_collegata_id
+  ) {
+    setSocietaSingolaSelezionataId("");
+
+    if (risultato.gruppo_id) {
+      setGruppoSelezionatoId(
+        risultato.gruppo_id
+      );
+    }
+
+    setSocietaSelezionataId("");
+
+    setSocietaCollegataSelezionataId(
+      risultato.societa_collegata_id || ""
+    );
+
+    setRicerca("");
+    return;
+  }
+
+  if (
+    risultato.gruppo_id &&
+    risultato.societa_id
+  ) {
+    setSocietaCollegataSelezionataId("");
+    setSocietaSingolaSelezionataId("");
+
+    setGruppoSelezionatoId(
+      risultato.gruppo_id
+    );
+
+    setSocietaSelezionataId(
+      risultato.societa_id
+    );
+
+    setRicerca("");
+  }
+}
+
 function selezionaGruppo(gruppo: GruppoSocietario) {
   setSocietaCollegataSelezionataId("");
   setSocietaSingolaSelezionataId("");
@@ -557,6 +871,68 @@ function selezionaGruppo(gruppo: GruppoSocietario) {
           {errore}
         </div>
       )}
+
+      <div style={ricercaWrapperStyle}>
+  <div style={ricercaInputWrapperStyle}>
+    <Search
+      size={18}
+      style={ricercaIconaStyle}
+    />
+
+    <input
+      type="text"
+      value={ricerca}
+      onChange={(event) =>
+        setRicerca(event.target.value)
+      }
+      placeholder="Cerca società o persona fisica..."
+      style={ricercaInputStyle}
+    />
+  </div>
+
+  {ricerca.trim().length >= 2 && (
+    <div style={risultatiRicercaStyle}>
+      {risultatiRicerca.length === 0 ? (
+        <div style={nessunRisultatoStyle}>
+          Nessun nominativo trovato.
+        </div>
+      ) : (
+        risultatiRicerca.map((risultato) => (
+          <button
+            type="button"
+            key={risultato.chiave}
+            onClick={() =>
+              apriRisultatoRicerca(
+                risultato
+              )
+            }
+            style={risultatoRicercaButtonStyle}
+          >
+            <div>
+              <div
+                style={
+                  risultatoRicercaNomeStyle
+                }
+              >
+                {risultato.nome}
+              </div>
+
+              <div
+                style={
+                  risultatoRicercaDescrizioneStyle
+                }
+              >
+                {risultato.descrizione}
+              </div>
+            </div>
+
+            <ChevronRight size={17} />
+          </button>
+        ))
+      )}
+    </div>
+  )}
+</div>
 
       {loading ? (
         <div style={statoVuotoStyle}>
@@ -1827,6 +2203,84 @@ function DatoSocieta({
     </div>
   );
 }
+
+const ricercaWrapperStyle: React.CSSProperties = {
+  position: "relative",
+  marginBottom: 18,
+  zIndex: 20,
+};
+
+const ricercaInputWrapperStyle: React.CSSProperties = {
+  position: "relative",
+  maxWidth: 620,
+};
+
+const ricercaIconaStyle: React.CSSProperties = {
+  position: "absolute",
+  left: 14,
+  top: "50%",
+  transform: "translateY(-50%)",
+  color: "#64748b",
+  pointerEvents: "none",
+};
+
+const ricercaInputStyle: React.CSSProperties = {
+  width: "100%",
+  minHeight: 46,
+  padding: "11px 14px 11px 43px",
+  border: "1px solid #cbd5e1",
+  borderRadius: 11,
+  background: "#ffffff",
+  color: "#0f172a",
+  fontSize: 14,
+  outline: "none",
+};
+
+const risultatiRicercaStyle: React.CSSProperties = {
+  position: "absolute",
+  top: 52,
+  left: 0,
+  width: "min(700px, 100%)",
+  maxHeight: 430,
+  overflowY: "auto",
+  padding: 7,
+  border: "1px solid #cbd5e1",
+  borderRadius: 11,
+  background: "#ffffff",
+  boxShadow:
+    "0 16px 40px rgba(15, 23, 42, 0.14)",
+};
+
+const risultatoRicercaButtonStyle: React.CSSProperties = {
+  width: "100%",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 14,
+  padding: "11px 12px",
+  border: 0,
+  borderRadius: 8,
+  background: "transparent",
+  color: "#0f172a",
+  textAlign: "left",
+  cursor: "pointer",
+};
+
+const risultatoRicercaNomeStyle: React.CSSProperties = {
+  fontWeight: 800,
+};
+
+const risultatoRicercaDescrizioneStyle: React.CSSProperties = {
+  marginTop: 3,
+  color: "#64748b",
+  fontSize: 12,
+};
+
+const nessunRisultatoStyle: React.CSSProperties = {
+  padding: 16,
+  color: "#64748b",
+  textAlign: "center",
+};
 
 const paginaStyle: React.CSSProperties = {
   minHeight: "100vh",
