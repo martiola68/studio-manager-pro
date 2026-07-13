@@ -315,188 +315,426 @@ export default function StampaGruppoSocietarioPage() {
         </button>
       </div>
 
-      <article style={reportStyle}>
-        <header style={intestazioneStyle}>
-          <div>
-            <div style={eyebrowStyle}>
-              Studio Manager Pro
+ <article style={reportStyle}>
+  <header style={intestazioneStyle}>
+    <div style={logoTitoloStyle}>
+      <img
+        src="/logo-elma.png"
+        alt="Studio Manager Pro"
+        style={logoStyle}
+      />
+
+      <div>
+        <div style={eyebrowStyle}>
+          Studio Manager Pro
+        </div>
+
+        <h1 style={titoloStyle}>
+          {gruppo.denominazione}
+        </h1>
+
+        <div style={dataStyle}>
+          Prospetto della struttura societaria e dei
+          titolari effettivi
+        </div>
+      </div>
+    </div>
+
+    <div style={dataDocumentoStyle}>
+      <strong>Data elaborazione</strong>
+
+      <span>
+        {new Date().toLocaleDateString("it-IT")}
+      </span>
+
+      <span>
+        ore{" "}
+        {new Date().toLocaleTimeString("it-IT", {
+          hour: "2-digit",
+          minute: "2-digit",
+        })}
+      </span>
+    </div>
+  </header>
+
+  <section style={capogruppoStyle}>
+    <div style={capogruppoIconaStyle}>
+      <Building2 size={25} />
+    </div>
+
+    <div>
+      <div style={capogruppoEtichettaStyle}>
+        Capogruppo
+      </div>
+
+      <div style={capogruppoNomeStyle}>
+        {gruppo.capogruppo.nome}
+      </div>
+    </div>
+  </section>
+
+  <section style={riepilogoStyle}>
+    <Dato
+      etichetta="Società nel gruppo"
+      valore={String(
+        gruppo.riepilogo.numero_societa
+      )}
+    />
+
+    <Dato
+      etichetta="Controllate dirette"
+      valore={String(
+        gruppo.riepilogo
+          .numero_controllate_dirette
+      )}
+    />
+
+    <Dato
+      etichetta="Controllate indirette"
+      valore={String(
+        gruppo.riepilogo
+          .numero_controllate_indirette
+      )}
+    />
+
+    <Dato
+      etichetta="Società collegate"
+      valore={String(societaCollegate.length)}
+    />
+
+    <Dato
+      etichetta="Livelli del gruppo"
+      valore={String(
+        gruppo.riepilogo.livelli_gruppo
+      )}
+    />
+  </section>
+
+  <section style={sezioneStyle}>
+    <div style={intestazioneSezioneStyle}>
+      <span style={numeroSezioneStyle}>01</span>
+
+      <div>
+        <h2 style={sottotitoloStyle}>
+          Struttura del gruppo
+        </h2>
+
+        <div style={descrizioneSezioneStyle}>
+          Società controllate direttamente e
+          indirettamente dalla capogruppo.
+        </div>
+      </div>
+    </div>
+
+    <div style={alberoDocumentoStyle}>
+      {gruppo.societa
+        .slice()
+        .sort(
+          (a, b) =>
+            a.livello - b.livello ||
+            a.nome.localeCompare(b.nome, "it")
+        )
+        .map((societa) => (
+          <div
+            key={societa.id}
+            style={{
+              ...rigaAlberoStyle,
+              marginLeft: societa.livello * 30,
+            }}
+          >
+            <div
+              style={{
+                ...puntoAlberoDocumentoStyle,
+                ...(societa.ruolo_nel_gruppo ===
+                "capogruppo"
+                  ? puntoCapogruppoDocumentoStyle
+                  : {}),
+              }}
+            />
+
+            <div style={contenutoRigaAlberoStyle}>
+              <div style={nomeRigaAlberoStyle}>
+                {societa.nome}
+              </div>
+
+              <div style={dettaglioStyle}>
+                {getEtichettaRuolo(
+                  societa.ruolo_nel_gruppo
+                )}
+
+                {societa.controllante_diretta
+                  ? ` · partecipazione detenuta da ${
+                      societa.controllante_diretta
+                        .nome
+                    }`
+                  : ""}
+              </div>
             </div>
 
-            <h1 style={titoloStyle}>
-              {gruppo.denominazione}
-            </h1>
-
-            <div style={dataStyle}>
-              Elaborazione del{" "}
-              {new Date().toLocaleDateString(
-                "it-IT"
-              )}{" "}
-              alle{" "}
-              {new Date().toLocaleTimeString(
-                "it-IT",
-                {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                }
-              )}
+            <div style={quotaAlberoStyle}>
+              {societa.controllante_diretta
+                ? formattaPercentuale(
+                    societa.controllante_diretta
+                      .quota
+                  )
+                : "100%"}
             </div>
           </div>
+        ))}
+    </div>
+  </section>
 
-          <Building2 size={42} />
-        </header>
+  <section style={sezioneStyle}>
+    <div style={intestazioneSezioneStyle}>
+      <span style={numeroSezioneStyle}>02</span>
 
-        <section style={riepilogoStyle}>
-          <Dato
-            etichetta="Capogruppo"
-            valore={gruppo.capogruppo.nome}
-          />
+      <div>
+        <h2 style={sottotitoloStyle}>
+          Società collegate
+        </h2>
 
-          <Dato
-            etichetta="Società nel gruppo"
-            valore={String(
-              gruppo.riepilogo.numero_societa
-            )}
-          />
+        <div style={descrizioneSezioneStyle}>
+          Partecipazioni comprese tra il 20% e il
+          50%.
+        </div>
+      </div>
+    </div>
 
-          <Dato
-            etichetta="Controllate dirette"
-            valore={String(
-              gruppo.riepilogo
-                .numero_controllate_dirette
-            )}
-          />
+    {societaCollegate.length === 0 ? (
+      <div style={testoVuotoStyle}>
+        Nessuna società collegata rilevata.
+      </div>
+    ) : (
+      <table style={tabellaStyle}>
+        <thead>
+          <tr>
+            <th style={thStyle}>
+              Società collegata
+            </th>
 
-          <Dato
-            etichetta="Controllate indirette"
-            valore={String(
-              gruppo.riepilogo
-                .numero_controllate_indirette
-            )}
-          />
+            <th style={thStyle}>
+              Partecipante
+            </th>
 
-          <Dato
-            etichetta="Società collegate"
-            valore={String(
-              societaCollegate.length
-            )}
-          />
+            <th style={thDestraStyle}>
+              Quota
+            </th>
+          </tr>
+        </thead>
 
-          <Dato
-            etichetta="Livelli del gruppo"
-            valore={String(
-              gruppo.riepilogo.livelli_gruppo
-            )}
-          />
-        </section>
+        <tbody>
+          {societaCollegate.map((collegata) => (
+            <tr
+              key={`${collegata.collegata_da_id}-${collegata.societa_id}`}
+            >
+              <td style={tdStyle}>
+                <strong>
+                  {collegata.societa_nome}
+                </strong>
+              </td>
 
-        <section style={sezioneStyle}>
-          <h2 style={sottotitoloStyle}>
-            Struttura del gruppo
-          </h2>
+              <td style={tdStyle}>
+                {collegata.collegata_da_nome}
+              </td>
 
-          {gruppo.societa
-            .slice()
-            .sort(
-              (a, b) =>
-                a.livello - b.livello ||
-                a.nome.localeCompare(b.nome, "it")
-            )
-            .map((societa) => (
-              <div
-                key={societa.id}
-                style={{
-                  ...rigaSocietaStyle,
-                  marginLeft:
-                    societa.livello * 22,
-                }}
-              >
-                <div>
+              <td style={tdDestraStyle}>
+                <span style={quotaCollegataStyle}>
+                  {formattaPercentuale(
+                    collegata.quota
+                  )}
+                </span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    )}
+  </section>
+
+  <section style={sezioneStyle}>
+    <div style={intestazioneSezioneStyle}>
+      <span style={numeroSezioneStyle}>03</span>
+
+      <div>
+        <h2 style={sottotitoloStyle}>
+          Titolari effettivi
+        </h2>
+
+        <div style={descrizioneSezioneStyle}>
+          Titolari individuati per proprietà,
+          controllo o criterio residuale.
+        </div>
+      </div>
+    </div>
+
+    <table style={tabellaStyle}>
+      <thead>
+        <tr>
+          <th style={thStyle}>Società</th>
+          <th style={thStyle}>
+            Titolare effettivo
+          </th>
+          <th style={thStyle}>Criterio</th>
+          <th style={thDestraStyle}>
+            Quota / carica
+          </th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {gruppo.societa.flatMap((societa) => {
+          if (
+            !societa.titolari_effettivi ||
+            societa.titolari_effettivi.length === 0
+          ) {
+            return [
+              <tr key={`vuoto-${societa.id}`}>
+                <td style={tdStyle}>
                   <strong>{societa.nome}</strong>
+                </td>
 
-                  <div style={dettaglioStyle}>
-                    {getEtichettaRuolo(
-                      societa.ruolo_nel_gruppo
-                    )}
+                <td
+                  style={{
+                    ...tdStyle,
+                    color: "#64748b",
+                    fontStyle: "italic",
+                  }}
+                  colSpan={3}
+                >
+                  Nessun titolare effettivo
+                  individuato.
+                </td>
+              </tr>,
+            ];
+          }
 
-                    {societa.controllante_diretta
-                      ? ` · controllata da ${
-                          societa.controllante_diretta
-                            .nome
-                        } al ${formattaPercentuale(
-                          societa.controllante_diretta
-                            .quota
-                        )}`
-                      : ""}
-                  </div>
-                </div>
-              </div>
-            ))}
-        </section>
-
-        <section style={sezioneStyle}>
-          <h2 style={sottotitoloStyle}>
-            Società collegate
-          </h2>
-
-          {societaCollegate.length === 0 ? (
-            <div style={testoVuotoStyle}>
-              Nessuna società collegata.
-            </div>
-          ) : (
-            societaCollegate.map((collegata) => (
-              <div
-                key={`${collegata.collegata_da_id}-${collegata.societa_id}`}
-                style={rigaSocietaStyle}
+          return societa.titolari_effettivi.map(
+            (titolare) => (
+              <tr
+                key={`${societa.id}-${titolare.persona_id}`}
               >
-                <div>
+                <td style={tdStyle}>
+                  <strong>{societa.nome}</strong>
+                </td>
+
+                <td style={tdStyle}>
+                  {titolare.persona_nome}
+                </td>
+
+                <td style={tdStyle}>
+                  {getEtichettaTitolarita(
+                    titolare.tipo_titolarita
+                  )}
+                </td>
+
+                <td style={tdDestraStyle}>
+                  {titolare.tipo_titolarita ===
+                  "residuale"
+                    ? titolare.carica ||
+                      titolare.ruolo ||
+                      "Amministratore"
+                    : formattaPercentuale(
+                        titolare.quota_complessiva
+                      )}
+                </td>
+              </tr>
+            )
+          );
+        })}
+
+        {societaCollegate.flatMap(
+          (collegata) => {
+            const titolari =
+              collegata.titolari_effettivi || [];
+
+            if (titolari.length === 0) {
+              return [
+                <tr
+                  key={`vuoto-collegata-${collegata.societa_id}`}
+                >
+                  <td style={tdStyle}>
+                    <strong>
+                      {collegata.societa_nome}
+                    </strong>
+
+                    <div
+                      style={badgeCollegataTestoStyle}
+                    >
+                      Collegata
+                    </div>
+                  </td>
+
+                  <td
+                    style={{
+                      ...tdStyle,
+                      color: "#64748b",
+                      fontStyle: "italic",
+                    }}
+                    colSpan={3}
+                  >
+                    Nessun titolare effettivo
+                    individuato.
+                  </td>
+                </tr>,
+              ];
+            }
+
+            return titolari.map((titolare) => (
+              <tr
+                key={`collegata-${collegata.societa_id}-${titolare.persona_id}`}
+              >
+                <td style={tdStyle}>
                   <strong>
                     {collegata.societa_nome}
                   </strong>
 
-                  <div style={dettaglioStyle}>
-                    Collegata a{" "}
-                    {collegata.collegata_da_nome}
+                  <div
+                    style={badgeCollegataTestoStyle}
+                  >
+                    Collegata
                   </div>
-                </div>
+                </td>
 
-                <strong>
-                  {formattaPercentuale(
-                    collegata.quota
+                <td style={tdStyle}>
+                  {titolare.persona_nome}
+                </td>
+
+                <td style={tdStyle}>
+                  {getEtichettaTitolarita(
+                    titolare.tipo_titolarita
                   )}
-                </strong>
-              </div>
-            ))
-          )}
-        </section>
+                </td>
 
-        <section style={sezioneStyle}>
-          <h2 style={sottotitoloStyle}>
-            Titolari effettivi
-          </h2>
+                <td style={tdDestraStyle}>
+                  {titolare.tipo_titolarita ===
+                  "residuale"
+                    ? titolare.carica ||
+                      titolare.ruolo ||
+                      "Amministratore"
+                    : formattaPercentuale(
+                        titolare.quota_complessiva
+                      )}
+                </td>
+              </tr>
+            ));
+          }
+        )}
+      </tbody>
+    </table>
+  </section>
 
-          {gruppo.societa.map((societa) => (
-            <BloccoTitolari
-              key={societa.id}
-              nomeSocieta={societa.nome}
-              titolari={
-                societa.titolari_effettivi || []
-              }
-            />
-          ))}
+  <footer style={footerDocumentoStyle}>
+    <div>
+      Documento elaborato automaticamente da
+      Studio Manager Pro.
+    </div>
 
-          {societaCollegate.map((collegata) => (
-            <BloccoTitolari
-              key={`collegata-${collegata.societa_id}`}
-              nomeSocieta={
-                collegata.societa_nome
-              }
-              titolari={
-                collegata.titolari_effettivi || []
-              }
-            />
-          ))}
-        </section>
-      </article>
+    <div>
+      Situazione risultante dai dati presenti nel
+      gestionale alla data di elaborazione.
+    </div>
+  </footer>
+</article>
 
       <style jsx global>{`
         body {
@@ -543,63 +781,6 @@ function Dato({
   );
 }
 
-function BloccoTitolari({
-  nomeSocieta,
-  titolari,
-}: {
-  nomeSocieta: string;
-  titolari: TitolareEffettivoView[];
-}) {
-  return (
-    <div style={bloccoTitolariStyle}>
-      <h3 style={nomeSocietaStyle}>
-        <ShieldCheck size={16} />
-        {nomeSocieta}
-      </h3>
-
-      {titolari.length === 0 ? (
-        <div style={testoVuotoStyle}>
-          Nessun titolare effettivo individuato.
-        </div>
-      ) : (
-        titolari.map((titolare) => (
-          <div
-            key={`${nomeSocieta}-${titolare.persona_id}`}
-            style={rigaTitolareStyle}
-          >
-            <div>
-              <strong>
-                {titolare.persona_nome}
-              </strong>
-
-              <div style={dettaglioStyle}>
-                {getEtichettaTitolarita(
-                  titolare.tipo_titolarita
-                )}
-
-                {titolare.carica
-                  ? ` · ${titolare.carica}`
-                  : ""}
-              </div>
-            </div>
-
-            <strong>
-              {titolare.tipo_titolarita ===
-              "residuale"
-                ? titolare.carica ||
-                  titolare.ruolo ||
-                  "Criterio residuale"
-                : formattaPercentuale(
-                    titolare.quota_complessiva
-                  )}
-            </strong>
-          </div>
-        ))
-      )}
-    </div>
-  );
-}
-
 const paginaStyle: React.CSSProperties = {
   minHeight: "100vh",
   padding: 24,
@@ -629,35 +810,51 @@ const bottoneStyle: React.CSSProperties = {
 };
 
 const reportStyle: React.CSSProperties = {
-  maxWidth: 1000,
+  maxWidth: 980,
   margin: "0 auto",
-  padding: 30,
+  padding: "34px 40px",
   background: "#ffffff",
   boxShadow:
-    "0 12px 35px rgba(15, 23, 42, 0.12)",
+    "0 12px 35px rgba(15, 23, 42, 0.10)",
+  borderRadius: 4,
 };
 
 const intestazioneStyle: React.CSSProperties = {
   display: "flex",
   justifyContent: "space-between",
-  gap: 20,
-  paddingBottom: 16,
-  marginBottom: 18,
-  borderBottom: "2px solid #0f172a",
+  alignItems: "flex-start",
+  gap: 30,
+  paddingBottom: 22,
+  marginBottom: 22,
+  borderBottom: "3px solid #1d4ed8",
+};
+
+const logoTitoloStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 18,
+};
+
+const logoStyle: React.CSSProperties = {
+  width: 74,
+  height: 74,
+  objectFit: "contain",
 };
 
 const eyebrowStyle: React.CSSProperties = {
   marginBottom: 5,
-  color: "#64748b",
+  color: "#1d4ed8",
   fontSize: 11,
   fontWeight: 800,
   textTransform: "uppercase",
-  letterSpacing: "0.08em",
+  letterSpacing: "0.11em",
 };
 
 const titoloStyle: React.CSSProperties = {
   margin: 0,
-  fontSize: 27,
+  color: "#0f172a",
+  fontSize: 28,
+  lineHeight: 1.15,
 };
 
 const dataStyle: React.CSSProperties = {
@@ -666,90 +863,224 @@ const dataStyle: React.CSSProperties = {
   fontSize: 12,
 };
 
+const dataDocumentoStyle: React.CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-end",
+  gap: 3,
+  color: "#475569",
+  fontSize: 11,
+  textAlign: "right",
+};
+
+const capogruppoStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 14,
+  padding: "15px 18px",
+  marginBottom: 16,
+  background: "#eff6ff",
+  borderLeft: "5px solid #2563eb",
+};
+
+const capogruppoIconaStyle: React.CSSProperties = {
+  display: "flex",
+  color: "#2563eb",
+};
+
+const capogruppoEtichettaStyle: React.CSSProperties = {
+  marginBottom: 3,
+  color: "#64748b",
+  fontSize: 10,
+  fontWeight: 800,
+  textTransform: "uppercase",
+  letterSpacing: "0.08em",
+};
+
+const capogruppoNomeStyle: React.CSSProperties = {
+  fontSize: 18,
+  fontWeight: 800,
+};
+
 const riepilogoStyle: React.CSSProperties = {
   display: "grid",
   gridTemplateColumns:
-    "repeat(3, minmax(0, 1fr))",
-  gap: 10,
-  marginBottom: 24,
+    "repeat(5, minmax(0, 1fr))",
+  gap: 8,
+  marginBottom: 30,
 };
 
 const datoStyle: React.CSSProperties = {
-  padding: 12,
-  border: "1px solid #cbd5e1",
-  borderRadius: 8,
+  padding: "10px 8px",
+  borderBottom: "2px solid #cbd5e1",
+  textAlign: "center",
 };
 
 const datoEtichettaStyle: React.CSSProperties = {
-  marginBottom: 4,
+  marginBottom: 5,
   color: "#64748b",
-  fontSize: 11,
+  fontSize: 9,
   fontWeight: 700,
+  textTransform: "uppercase",
 };
 
 const datoValoreStyle: React.CSSProperties = {
-  fontSize: 14,
+  color: "#0f172a",
+  fontSize: 18,
   fontWeight: 800,
 };
 
 const sezioneStyle: React.CSSProperties = {
-  marginBottom: 24,
+  marginBottom: 31,
+  breakInside: "auto",
+};
+
+const intestazioneSezioneStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "flex-start",
+  gap: 12,
+  marginBottom: 13,
+};
+
+const numeroSezioneStyle: React.CSSProperties = {
+  minWidth: 32,
+  color: "#2563eb",
+  fontSize: 21,
+  fontWeight: 900,
 };
 
 const sottotitoloStyle: React.CSSProperties = {
-  margin: "0 0 10px",
-  paddingBottom: 7,
-  borderBottom: "1px solid #94a3b8",
+  margin: 0,
+  color: "#0f172a",
   fontSize: 18,
 };
 
-const rigaSocietaStyle: React.CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  gap: 12,
-  padding: "8px 10px",
-  marginBottom: 5,
-  border: "1px solid #e2e8f0",
-  borderRadius: 7,
-  fontSize: 12,
-  breakInside: "avoid",
-};
-
-const dettaglioStyle: React.CSSProperties = {
+const descrizioneSezioneStyle: React.CSSProperties = {
   marginTop: 3,
   color: "#64748b",
   fontSize: 11,
 };
 
-const bloccoTitolariStyle: React.CSSProperties = {
-  marginBottom: 15,
+const alberoDocumentoStyle: React.CSSProperties = {
+  paddingLeft: 4,
+};
+
+const rigaAlberoStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  minHeight: 42,
+  padding: "7px 10px",
+  marginBottom: 4,
+  borderBottom: "1px solid #e2e8f0",
   breakInside: "avoid",
 };
 
-const nomeSocietaStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 7,
-  margin: "0 0 6px",
-  fontSize: 14,
+const puntoAlberoDocumentoStyle: React.CSSProperties = {
+  width: 8,
+  height: 8,
+  flexShrink: 0,
+  borderRadius: "50%",
+  background: "#94a3b8",
 };
 
-const rigaTitolareStyle: React.CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  gap: 12,
-  padding: "8px 10px",
-  marginBottom: 4,
-  background: "#f8fafc",
-  borderRadius: 6,
+const puntoCapogruppoDocumentoStyle: React.CSSProperties = {
+  width: 11,
+  height: 11,
+  background: "#2563eb",
+};
+
+const contenutoRigaAlberoStyle: React.CSSProperties = {
+  flex: 1,
+};
+
+const nomeRigaAlberoStyle: React.CSSProperties = {
   fontSize: 12,
+  fontWeight: 800,
+};
+
+const quotaAlberoStyle: React.CSSProperties = {
+  flexShrink: 0,
+  color: "#1d4ed8",
+  fontSize: 12,
+  fontWeight: 800,
+};
+
+const dettaglioStyle: React.CSSProperties = {
+  marginTop: 3,
+  color: "#64748b",
+  fontSize: 10,
+};
+
+const tabellaStyle: React.CSSProperties = {
+  width: "100%",
+  borderCollapse: "collapse",
+  fontSize: 11,
+};
+
+const thStyle: React.CSSProperties = {
+  padding: "9px 10px",
+  borderBottom: "2px solid #94a3b8",
+  background: "#f8fafc",
+  color: "#475569",
+  fontSize: 9,
+  fontWeight: 800,
+  textAlign: "left",
+  textTransform: "uppercase",
+};
+
+const thDestraStyle: React.CSSProperties = {
+  ...thStyle,
+  textAlign: "right",
+};
+
+const tdStyle: React.CSSProperties = {
+  padding: "9px 10px",
+  borderBottom: "1px solid #e2e8f0",
+  verticalAlign: "top",
+  breakInside: "avoid",
+};
+
+const tdDestraStyle: React.CSSProperties = {
+  ...tdStyle,
+  textAlign: "right",
+  fontWeight: 800,
+};
+
+const quotaCollegataStyle: React.CSSProperties = {
+  display: "inline-block",
+  padding: "4px 8px",
+  borderRadius: 999,
+  background: "#fef3c7",
+  color: "#92400e",
+  fontWeight: 800,
+};
+
+const badgeCollegataTestoStyle: React.CSSProperties = {
+  marginTop: 3,
+  color: "#92400e",
+  fontSize: 9,
+  fontWeight: 800,
+  textTransform: "uppercase",
 };
 
 const testoVuotoStyle: React.CSSProperties = {
-  padding: 10,
+  padding: "13px 10px",
+  borderBottom: "1px solid #e2e8f0",
   color: "#64748b",
-  fontSize: 12,
+  fontSize: 11,
   fontStyle: "italic",
+};
+
+const footerDocumentoStyle: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  gap: 25,
+  paddingTop: 14,
+  marginTop: 34,
+  borderTop: "1px solid #94a3b8",
+  color: "#64748b",
+  fontSize: 9,
 };
 
 const statoStyle: React.CSSProperties = {
