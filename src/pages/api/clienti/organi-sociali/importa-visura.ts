@@ -31,13 +31,21 @@ type TipoRuoloOrgano =
   | "presidente_cda"
   | "consigliere"
   | "liquidatore"
-  | "rappresentante_legale";
+  | "rappresentante_legale"
+  | "sindaco_effettivo"
+  | "presidente_collegio_sindacale"
+  | "sindaco_unico"
+  | "sindaco_supplente"
+  | "revisore";
 
 type SoggettoVisura = {
   nome_cognome: string;
   codice_fiscale?: string | null;
   qualifica?: string | null;
-  tipo_soggetto: "amministratore" | "socio";
+  tipo_soggetto:
+  | "amministratore"
+  | "socio"
+  | "organo_controllo";
 
   luogo_nascita?: string | null;
   data_nascita?: string | null;
