@@ -206,6 +206,7 @@ function dedupeSoggettiRuolo(
     SoggettoVisura & {
       codice_fiscale_normalizzato: string;
       ruolo_normalizzato: TipoRuoloOrgano;
+      carica_normalizzata: string;
     }
   >
 ) {
