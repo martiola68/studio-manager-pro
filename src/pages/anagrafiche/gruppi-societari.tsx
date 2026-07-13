@@ -19,11 +19,54 @@ type TitolareEffettivoGruppo = {
     societa_id: string;
     societa_nome: string;
     quota_complessiva: number;
+
     tipo_titolarita:
       | "diretta"
       | "indiretta"
-      | "diretta_e_indiretta";
+      | "diretta_e_indiretta"
+      | "residuale";
   }>;
+};
+
+type TitolareEffettivoView = {
+  persona_id: string;
+  persona_nome: string;
+
+  quota_diretta: number;
+  quota_indiretta: number;
+  quota_complessiva: number;
+
+  tipo_titolarita:
+    | "diretta"
+    | "indiretta"
+    | "diretta_e_indiretta"
+    | "residuale";
+
+  criterio_titolarita?:
+    | "proprieta"
+    | "residuale";
+
+  ruolo?: string | null;
+  carica?: string | null;
+  principale?: boolean;
+};
+
+type SocioDirettoView = {
+  id: string;
+  nome: string;
+  tipo: "persona_fisica" | "societa";
+  quota_diretta: number;
+  classificazione: string;
+};
+
+type SocietaCollegataView = {
+  societa_id: string;
+  societa_nome: string;
+  quota: number;
+  classificazione: string;
+
+  soci_diretti: SocioDirettoView[];
+  titolari_effettivi: TitolareEffettivoView[];
 };
 
 type SocietaGruppo = {
@@ -64,58 +107,23 @@ type SocietaGruppo = {
     nome: string;
   }>;
 
-societa_collegate: Array<{
-  societa_id: string;
-  societa_nome: string;
-  quota: number;
-  classificazione: string;
-
-  soci_diretti: Array<{
-    id: string;
-    nome: string;
-    tipo: "persona_fisica" | "societa";
-    quota_diretta: number;
-    classificazione: string;
-  }>;
-
-titolari_effettivi: Array<{
-  persona_id: string;
-  persona_nome: string;
-  quota_diretta: number;
-  quota_indiretta: number;
-  quota_complessiva: number;
-
-  tipo_titolarita:
-    | "diretta"
-    | "indiretta"
-    | "diretta_e_indiretta"
-    | "residuale";
-
-  criterio_titolarita?:
-    | "proprieta"
-    | "residuale";
-
-  ruolo?: string | null;
-  carica?: string | null;
-  principale?: boolean;
-}>;
+  societa_collegate: SocietaCollegataView[];
 
   altre_partecipazioni: Array<{
     societa_id: string;
     societa_nome: string;
     quota: number;
     classificazione: string;
+
+    soci_diretti?: SocioDirettoView[];
+    titolari_effettivi?: TitolareEffettivoView[];
   }>;
 
-  soci_diretti: Array<{
-    id: string;
-    nome: string;
-    tipo: "persona_fisica" | "societa";
-    quota_diretta: number;
-    classificazione: string;
-  }>;
+  soci_diretti: SocioDirettoView[];
 
- 
+  titolari_effettivi: TitolareEffettivoView[];
+};
+
 type GruppoSocietario = {
   id: string;
   denominazione: string;
@@ -137,7 +145,8 @@ type GruppoSocietario = {
 
   societa: SocietaGruppo[];
 
-  titolari_effettivi_gruppo: TitolareEffettivoGruppo[];
+  titolari_effettivi_gruppo:
+    TitolareEffettivoGruppo[];
 };
 
 type SocietaSingola = {
@@ -145,8 +154,10 @@ type SocietaSingola = {
   ragione_sociale: string;
   codice_fiscale: string | null;
 
-  soci_diretti: SocietaGruppo["soci_diretti"];
-  titolari_effettivi: SocietaGruppo["titolari_effettivi"];
+  soci_diretti: SocioDirettoView[];
+
+  titolari_effettivi:
+    TitolareEffettivoView[];
 
   numero_soci_diretti: number;
   numero_titolari_effettivi: number;
@@ -155,15 +166,28 @@ type SocietaSingola = {
 type TitolareEffettivoApi = {
   persona_id: string;
   persona_nome: string;
+
   societa_id?: string;
   partecipata_id?: string;
+
   quota_diretta: number;
   quota_indiretta: number;
   quota_complessiva: number;
+
   tipo_titolarita:
     | "diretta"
     | "indiretta"
-    | "diretta_e_indiretta";
+    | "diretta_e_indiretta"
+    | "residuale";
+
+  criterio_titolarita?:
+    | "proprieta"
+    | "residuale";
+
+  ruolo?: string | null;
+  carica?: string | null;
+  principale?: boolean;
+
   candidato_titolare_effettivo: boolean;
 };
 
