@@ -125,6 +125,36 @@ function normalizzaRuolo(
   );
 
   if (
+  qualifica.includes(
+    "presidente del collegio sindacale"
+  ) ||
+  qualifica.includes(
+    "presidente collegio sindacale"
+  )
+) {
+  return "presidente_collegio_sindacale";
+}
+
+if (qualifica.includes("sindaco unico")) {
+  return "sindaco_unico";
+}
+
+if (qualifica.includes("supplente")) {
+  return "sindaco_supplente";
+}
+
+if (qualifica.includes("sindaco")) {
+  return "sindaco_effettivo";
+}
+
+if (
+  qualifica.includes("revisore") ||
+  qualifica.includes("revisione legale")
+) {
+  return "revisore";
+}
+
+  if (
     qualifica.includes(
       "amministratore unico"
     ) ||
