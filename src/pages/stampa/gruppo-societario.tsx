@@ -814,9 +814,8 @@ const reportStyle: React.CSSProperties = {
   margin: "0 auto",
   padding: "34px 40px",
   background: "#ffffff",
-  boxShadow:
-    "0 12px 35px rgba(15, 23, 42, 0.10)",
-  borderRadius: 4,
+  boxShadow: "none",
+  borderRadius: 0,
 };
 
 const intestazioneStyle: React.CSSProperties = {
@@ -845,7 +844,7 @@ const eyebrowStyle: React.CSSProperties = {
   marginBottom: 5,
   color: "#1d4ed8",
   fontSize: 11,
-  fontWeight: 800,
+  fontWeight: 600,
   textTransform: "uppercase",
   letterSpacing: "0.11em",
 };
@@ -855,6 +854,7 @@ const titoloStyle: React.CSSProperties = {
   color: "#0f172a",
   fontSize: 28,
   lineHeight: 1.15,
+  fontWeight: 500,
 };
 
 const dataStyle: React.CSSProperties = {
@@ -899,7 +899,7 @@ const capogruppoEtichettaStyle: React.CSSProperties = {
 
 const capogruppoNomeStyle: React.CSSProperties = {
   fontSize: 18,
-  fontWeight: 800,
+  fontWeight: 500,
 };
 
 const riepilogoStyle: React.CSSProperties = {
@@ -920,14 +920,14 @@ const datoEtichettaStyle: React.CSSProperties = {
   marginBottom: 5,
   color: "#64748b",
   fontSize: 9,
-  fontWeight: 700,
+  fontWeight: 500,
   textTransform: "uppercase",
 };
 
 const datoValoreStyle: React.CSSProperties = {
   color: "#0f172a",
   fontSize: 18,
-  fontWeight: 800,
+  fontWeight: 500,
 };
 
 const sezioneStyle: React.CSSProperties = {
@@ -953,6 +953,7 @@ const sottotitoloStyle: React.CSSProperties = {
   margin: 0,
   color: "#0f172a",
   fontSize: 18,
+  fontWeight: 500,
 };
 
 const descrizioneSezioneStyle: React.CSSProperties = {
@@ -996,14 +997,14 @@ const contenutoRigaAlberoStyle: React.CSSProperties = {
 
 const nomeRigaAlberoStyle: React.CSSProperties = {
   fontSize: 12,
-  fontWeight: 800,
+  fontWeight: 500,
 };
 
 const quotaAlberoStyle: React.CSSProperties = {
   flexShrink: 0,
   color: "#1d4ed8",
   fontSize: 12,
-  fontWeight: 800,
+  fontWeight: 600,
 };
 
 const dettaglioStyle: React.CSSProperties = {
@@ -1020,11 +1021,11 @@ const tabellaStyle: React.CSSProperties = {
 
 const thStyle: React.CSSProperties = {
   padding: "9px 10px",
-  borderBottom: "2px solid #94a3b8",
-  background: "#f8fafc",
+  borderBottom: "1px solid #94a3b8",
+  background: "transparent",
   color: "#475569",
   fontSize: 9,
-  fontWeight: 800,
+  fontWeight: 600,
   textAlign: "left",
   textTransform: "uppercase",
 };
