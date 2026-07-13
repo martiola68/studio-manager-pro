@@ -127,6 +127,15 @@ export default function OrganiSocialiPage() {
   const [nominativi, setNominativi] = useState<any[]>([]);
   const [organi, setOrgani] = useState<any[]>([]);
 
+  const [anteprimaImportazione, setAnteprimaImportazione] =
+  useState<any[]>([]);
+
+const [showImportazioneVisura, setShowImportazioneVisura] =
+  useState(false);
+
+const [loadingImportazione, setLoadingImportazione] =
+  useState(false);
+
   const [organoInModificaId, setOrganoInModificaId] = useState("");
   const [dirittiCollegati, setDirittiCollegati] = useState<any[]>([]);
 const [loadingDiritti, setLoadingDiritti] = useState(false);
@@ -378,6 +387,46 @@ setNuovoNominativo({
   cap: "",
   tipologia_cliente: "Persona fisica",
 });
+}
+
+  async function importaVisura(
+  e: React.ChangeEvent<HTMLInputElement>
+) {
+  const file = e.target.files?.[0];
+
+  if (!file || !clienteId) return;
+
+  const formData = new FormData();
+
+  formData.append("cliente_id", clienteId);
+  formData.append("file", file);
+
+  setLoadingImportazione(true);
+
+  try {
+    const res = await fetch(
+      "/api/clienti-organi/importa-visura",
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.error);
+      return;
+    }
+
+    setAnteprimaImportazione(data.righe || []);
+
+    setShowImportazioneVisura(true);
+  } finally {
+    setLoadingImportazione(false);
+
+    e.target.value = "";
+  }
 }
   
  async function caricaOrgani() {
@@ -1046,9 +1095,33 @@ onChange={(e) => {
                 </option>
               ))}
             </select>
-          </div>
+</div>
 
-                  <div>
+<div
+  style={{
+    display: "flex",
+    justifyContent: "flex-end",
+    marginTop: 14,
+    gap: 10,
+  }}
+>
+  <button
+    type="button"
+    style={secondaryButton}
+    disabled={!clienteId}
+    onClick={() => document.getElementById("visuraOrganiInput")?.click()}
+  >
+    Importa da visura
+  </button>
+
+  <input
+    id="visuraOrganiInput"
+    type="file"
+    accept=".pdf"
+    style={{ display: "none" }}
+    onChange={importaVisura}
+  />
+</div>
             <label style={labelStyle}>Filtro ruolo</label>
             <select
               style={inputStyle}
