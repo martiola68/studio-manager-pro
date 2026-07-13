@@ -389,23 +389,30 @@ setNuovoNominativo({
 });
 }
 
-  async function importaVisura(
+async function importaVisura(
   e: React.ChangeEvent<HTMLInputElement>
 ) {
   const file = e.target.files?.[0];
 
-  if (!file || !clienteId) return;
+  if (!file || !clienteId) {
+    e.target.value = "";
+    return;
+  }
 
   const formData = new FormData();
 
-  formData.append("cliente_id", clienteId);
+  /*
+   * L’API usa esattamente il campo "clienteId".
+   */
+  formData.append("clienteId", clienteId);
   formData.append("file", file);
 
   setLoadingImportazione(true);
+  setMessaggio("");
 
   try {
     const res = await fetch(
-      "/api/clienti-organi/importa-visura",
+      "/api/clienti/organi-sociali/importa-visura",
       {
         method: "POST",
         body: formData,
@@ -415,16 +422,34 @@ setNuovoNominativo({
     const data = await res.json();
 
     if (!res.ok) {
-      alert(data.error);
-      return;
+      throw new Error(
+        data.error ||
+          "Errore durante la lettura della visura."
+      );
     }
 
-    setAnteprimaImportazione(data.righe || []);
+    /*
+     * L’API restituisce "soggetti", non "righe".
+     */
+    setAnteprimaImportazione(
+      Array.isArray(data.soggetti)
+        ? data.soggetti
+        : []
+    );
 
     setShowImportazioneVisura(true);
+  } catch (error: any) {
+    console.error(
+      "Errore importaVisura:",
+      error
+    );
+
+    alert(
+      error?.message ||
+        "Errore durante la lettura della visura."
+    );
   } finally {
     setLoadingImportazione(false);
-
     e.target.value = "";
   }
 }
