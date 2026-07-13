@@ -2,10 +2,17 @@ export type VisuraRappresentante = {
   nome_cognome: string;
   codice_fiscale?: string | null;
   qualifica?: string | null;
-tipo_soggetto:
-  | "amministratore"
-  | "socio"
-  | "organo_controllo";
+
+  tipo_soggetto:
+    | "amministratore"
+    | "socio"
+    | "organo_controllo";
+
+  titolo_possesso?:
+    | "piena_proprieta"
+    | "nuda_proprieta"
+    | "usufrutto"
+    | null;
   luogo_nascita?: string | null;
   data_nascita?: string | null;
   citta_residenza?: string | null;
@@ -548,18 +555,194 @@ export function dedupeByCodiceFiscale(
   return Array.from(map.values());
 }
 
+function parseSociProprieta(
+  lines: string[]
+): VisuraRappresentante[] {
+  const risultati: VisuraRappresentante[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const linea = normalizeLine(lines[i]);
+
+    const cfMatch = linea.match(
+      /^Codice fiscale:\s*([A-Z0-9]{11,16})$/i
+    );
+
+    if (!cfMatch) {
+      continue;
+    }
+
+    const codiceFiscale = cfMatch[1]
+      .toUpperCase()
+      .trim();
+
+    /*
+     * Il nome è la riga utile immediatamente
+     * precedente a "Codice fiscale:".
+     */
+    let nome = "";
+
+    for (let indietro = i - 1; indietro >= 0; indietro--) {
+      const candidata = normalizeLine(
+        lines[indietro]
+      );
+
+      if (!candidata) {
+        continue;
+      }
+
+      const candidataNormalizzata =
+        normalizeRoleText(candidata);
+
+      if (
+        candidataNormalizzata ===
+          "registro imprese" ||
+        candidataNormalizzata.includes(
+          "archivio ufficiale"
+        ) ||
+        candidataNormalizzata.startsWith(
+          "documento n"
+        ) ||
+        candidataNormalizzata.startsWith(
+          "estratto dal registro imprese"
+        ) ||
+        candidataNormalizzata.includes(
+          "codice fiscale"
+        )
+      ) {
+        continue;
+      }
+
+      nome = candidata
+        .replace(/^socio\s+/i, "")
+        .replace(/^titolare\s+/i, "")
+        .trim();
+
+      break;
+    }
+
+    if (!nome) {
+      continue;
+    }
+
+    let tipoDiritto: string | null = null;
+    let domicilio: string | null = null;
+
+    for (
+      let avanti = i + 1;
+      avanti < Math.min(lines.length, i + 8);
+      avanti++
+    ) {
+      const successiva = normalizeLine(
+        lines[avanti]
+      );
+
+      const dirittoMatch = successiva.match(
+        /^Tipo di diritto:\s*(.+)$/i
+      );
+
+      if (dirittoMatch) {
+        tipoDiritto =
+          dirittoMatch[1].trim();
+        continue;
+      }
+
+      if (
+        /^Domicilio del titolare/i.test(
+          successiva
+        ) ||
+        /^comune$/i.test(successiva)
+      ) {
+        continue;
+      }
+
+      if (
+        tipoDiritto &&
+        successiva &&
+        !/^Codice fiscale:/i.test(successiva)
+      ) {
+        domicilio = successiva;
+        break;
+      }
+    }
+
+    let cittaResidenza: string | null = null;
+    let indirizzoResidenza: string | null = null;
+    let cap: string | null = null;
+
+    if (domicilio) {
+      const domicilioMatch = domicilio.match(
+        /^(.+?)\s+\(([A-Z]{2})\)\s+(.+?)\s+CAP\s+(\d{5})$/i
+      );
+
+      if (domicilioMatch) {
+        cittaResidenza =
+          domicilioMatch[1].trim();
+
+        indirizzoResidenza =
+          domicilioMatch[3].trim();
+
+        cap = domicilioMatch[4];
+      } else {
+        indirizzoResidenza = domicilio;
+      }
+    }
+
+    const titoloNormalizzato =
+      normalizeRoleText(
+        tipoDiritto || ""
+      );
+
+    risultati.push({
+      nome_cognome: nome,
+      codice_fiscale: codiceFiscale,
+      qualifica: "socio",
+      tipo_soggetto: "socio",
+
+      luogo_nascita: null,
+
+      data_nascita:
+        decodeBirthDateFromCodiceFiscale(
+          codiceFiscale
+        ),
+
+      citta_residenza:
+        cittaResidenza,
+
+      indirizzo_residenza:
+        indirizzoResidenza,
+
+      CAP: cap,
+
+      nazionalita: null,
+
+      titolo_possesso:
+        titoloNormalizzato.includes(
+          "nuda proprieta"
+        )
+          ? "nuda_proprieta"
+          : titoloNormalizzato.includes(
+              "usufrutto"
+            )
+          ? "usufrutto"
+          : "piena_proprieta",
+    } as VisuraRappresentante);
+  }
+
+  return dedupeByCodiceFiscale(
+    risultati
+  );
+}
+
 export function parseVisuraRappresentanti(rawText: string): VisuraRappresentante[] {
   const text = normalizeTextForParsing(rawText);
   const lines = splitUsefulLines(text);
   const sections = getSections(lines);
 
 const soci = sections.SOCI
-  ? parsePeopleFromSection(
-      sections.SOCI,
-      "socio"
+  ? parseSociProprieta(
+      sections.SOCI
     )
   : [];
-
 const amministratori =
   sections.AMMINISTRATORI
     ? parsePeopleFromSection(
