@@ -115,28 +115,7 @@ titolari_effettivi: Array<{
     classificazione: string;
   }>;
 
-  titolari_effettivi: Array<{
-    persona_id: string;
-    persona_nome: string;
-    quota_diretta: number;
-    quota_indiretta: number;
-    quota_complessiva: number;
-    tipo_titolarita:
-  | "diretta"
-  | "indiretta"
-  | "diretta_e_indiretta"
-  | "residuale";
-
-criterio_titolarita?:
-  | "proprieta"
-  | "residuale";
-
-ruolo?: string | null;
-carica?: string | null;
-principale?: boolean;
-  }>;
-};
-
+ 
 type GruppoSocietario = {
   id: string;
   denominazione: string;
