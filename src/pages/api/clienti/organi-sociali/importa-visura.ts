@@ -664,6 +664,23 @@ if (contentType.includes("application/json")) {
     const text =
       await extractTextFromPdfBuffer(buffer);
 
+    const cfVisura = normalizeCF(
+  (
+    text.match(/\b\d{11}\b/) || []
+  )[0] || ""
+);
+
+const cfSocieta = normalizeCF(
+  societaDestinataria.codice_fiscale || ""
+);
+
+if (!cfVisura || cfVisura !== cfSocieta) {
+  return res.status(400).json({
+    error:
+      "La visura appartiene ad una società diversa da quella selezionata.",
+  });
+}
+
     const parsed =
       parseVisuraRappresentanti(
         text
