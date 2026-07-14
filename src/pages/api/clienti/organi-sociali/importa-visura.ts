@@ -292,6 +292,33 @@ function dedupeSoggettiRuolo(
   return Array.from(map.values());
 }
 
+function normalizzaDataDatabase(
+  valore: unknown
+): string | null {
+  const testo = String(valore || "").trim();
+
+  if (!testo) {
+    return null;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(testo)) {
+    return testo;
+  }
+
+  const matchItaliano = testo.match(
+    /^(\d{2})\/(\d{2})\/(\d{4})$/
+  );
+
+  if (!matchItaliano) {
+    return null;
+  }
+
+  const [, giorno, mese, anno] =
+    matchItaliano;
+
+  return `${anno}-${mese}-${giorno}`;
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -427,8 +454,9 @@ if (contentType.includes("application/json")) {
           luogo_nascita:
             datiAnagrafici.luogo_nascita || null,
 
-          data_nascita:
-            datiAnagrafici.data_nascita || null,
+         data_nascita: normalizzaDataDatabase(
+  datiAnagrafici.data_nascita
+),
 
           indirizzo:
             datiAnagrafici.indirizzo_residenza ||
