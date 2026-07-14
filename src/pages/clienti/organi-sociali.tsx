@@ -130,6 +130,11 @@ export default function OrganiSocialiPage() {
   const [anteprimaImportazione, setAnteprimaImportazione] =
   useState<any[]>([]);
 
+  const [
+  nominativoInModificaId,
+  setNominativoInModificaId,
+] = useState<string | null>(null);
+
 const [showImportazioneVisura, setShowImportazioneVisura] =
   useState(false);
 
@@ -335,58 +340,117 @@ async function salvaNuovoNominativo() {
     return;
   }
 
-  const clienteSelezionato = clienti.find((c) => c.id === clienteId);
+  const clienteSelezionato = clienti.find(
+    (c) => c.id === clienteId
+  );
 
-  const res = await fetch("/api/clienti/soggetti", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      studio_id: clienteSelezionato?.studio_id || null,
-      ragione_sociale: nuovoNominativo.nome_cognome,
-      codice_fiscale: nuovoNominativo.codice_fiscale,
-      email: nuovoNominativo.email,
-      luogo_nascita: nuovoNominativo.luogo_nascita,
-      data_nascita: nuovoNominativo.data_nascita || null,
-      indirizzo: nuovoNominativo.indirizzo,
-      citta: nuovoNominativo.citta,
-      provincia: nuovoNominativo.provincia,
-      cap: nuovoNominativo.cap,
-      tipo_cliente: nuovoNominativo.tipologia_cliente,
-      tipologia_cliente: nuovoNominativo.tipologia_cliente,
-      cliente: false,
-    }),
-  });
+  const payload = {
+    id: nominativoInModificaId || undefined,
+
+    studio_id:
+      clienteSelezionato?.studio_id || null,
+
+    ragione_sociale:
+      nuovoNominativo.nome_cognome.trim(),
+
+    codice_fiscale:
+      nuovoNominativo.codice_fiscale
+        .trim()
+        .toUpperCase(),
+
+    email:
+      nuovoNominativo.email.trim() || null,
+
+    luogo_nascita:
+      nuovoNominativo.luogo_nascita.trim() ||
+      null,
+
+    data_nascita:
+      nuovoNominativo.data_nascita || null,
+
+    indirizzo:
+      nuovoNominativo.indirizzo.trim() || null,
+
+    citta:
+      nuovoNominativo.citta.trim() || null,
+
+    provincia:
+      nuovoNominativo.provincia.trim() || null,
+
+    cap:
+      nuovoNominativo.cap.trim() || null,
+
+    tipo_cliente:
+      nuovoNominativo.tipologia_cliente,
+
+    tipologia_cliente:
+      nuovoNominativo.tipologia_cliente,
+
+    cliente: false,
+  };
+
+  const res = await fetch(
+    "/api/clienti/soggetti",
+    {
+      method: nominativoInModificaId
+        ? "PUT"
+        : "POST",
+
+      headers: {
+        "Content-Type": "application/json",
+      },
+
+      body: JSON.stringify(payload),
+    }
+  );
 
   const data = await res.json();
 
   if (!res.ok || !data.success) {
-    alert(data.error || "Errore salvataggio nominativo.");
+    alert(
+      data.error ||
+        (nominativoInModificaId
+          ? "Errore aggiornamento nominativo."
+          : "Errore salvataggio nominativo.")
+    );
     return;
   }
 
+  const idSalvato =
+    nominativoInModificaId ||
+    data.data?.id;
+
   await caricaNominativi();
 
- setForm((prev) => ({
-  ...prev,
-  soggetto_cliente_id: data.data.id,
-}));
+  if (idSalvato) {
+    setForm((prev) => ({
+      ...prev,
+      soggetto_cliente_id:
+        String(idSalvato),
+    }));
+  }
 
   setShowNuovoNominativo(false);
+  setNominativoInModificaId(null);
 
-setNuovoNominativo({
-  nome_cognome: "",
-  codice_fiscale: "",
-  email: "",
-  luogo_nascita: "",
-  data_nascita: "",
-  indirizzo: "",
-  citta: "",
-  provincia: "",
-  cap: "",
-  tipologia_cliente: "Persona fisica",
-});
+  setNuovoNominativo({
+    nome_cognome: "",
+    codice_fiscale: "",
+    email: "",
+    luogo_nascita: "",
+    data_nascita: "",
+    indirizzo: "",
+    citta: "",
+    provincia: "",
+    cap: "",
+    tipologia_cliente: "Persona fisica",
+  });
+
+  setMessaggio(
+    nominativoInModificaId
+      ? "Anagrafica aggiornata correttamente."
+      : "Nominativo creato correttamente."
+  );
 }
 
 async function importaVisura(
@@ -1224,6 +1288,62 @@ function selezionaTutteRigheImportazione(
   );
 }
 
+  function apriModificaNominativo() {
+  if (!form.soggetto_cliente_id) {
+    alert("Seleziona prima un nominativo.");
+    return;
+  }
+
+  const nominativo = nominativi.find(
+    (item) =>
+      String(item.id) ===
+      String(form.soggetto_cliente_id)
+  );
+
+  if (!nominativo) {
+    alert("Nominativo non trovato.");
+    return;
+  }
+
+  setNominativoInModificaId(nominativo.id);
+
+  setNuovoNominativo({
+    nome_cognome:
+      nominativo.ragione_sociale || "",
+
+    codice_fiscale:
+      nominativo.codice_fiscale || "",
+
+    email:
+      nominativo.email || "",
+
+    luogo_nascita:
+      nominativo.luogo_nascita || "",
+
+    data_nascita:
+      nominativo.data_nascita || "",
+
+    indirizzo:
+      nominativo.indirizzo || "",
+
+    citta:
+      nominativo.citta || "",
+
+    provincia:
+      nominativo.provincia || "",
+
+    cap:
+      nominativo.cap || "",
+
+    tipologia_cliente:
+      nominativo.tipo_cliente ||
+      nominativo.tipologia_cliente ||
+      "Persona fisica",
+  });
+
+  setShowNuovoNominativo(true);
+}
+
 return (
   <main
     style={{
@@ -1576,28 +1696,59 @@ return (
 ))}
     </select>
 
-   <button
-  type="button"
-  style={secondaryButton}
-  onClick={() => {
-   setNuovoNominativo({
-  nome_cognome: "",
-  codice_fiscale: "",
-  email: "",
-  luogo_nascita: "",
-  data_nascita: "",
-  indirizzo: "",
-  citta: "",
-  provincia: "",
-  cap: "",
-  tipologia_cliente: "Persona fisica",
-});
-
-    setShowNuovoNominativo(true);
+ <div
+  style={{
+    display: "flex",
+    gap: 8,
   }}
 >
-  + Nuovo
-</button>
+  <button
+    type="button"
+    style={secondaryButton}
+    onClick={() => {
+      setNominativoInModificaId(null);
+
+      setNuovoNominativo({
+        nome_cognome: "",
+        codice_fiscale: "",
+        email: "",
+        luogo_nascita: "",
+        data_nascita: "",
+        indirizzo: "",
+        citta: "",
+        provincia: "",
+        cap: "",
+        tipologia_cliente:
+          "Persona fisica",
+      });
+
+      setShowNuovoNominativo(true);
+    }}
+  >
+    + Nuovo
+  </button>
+
+  <button
+    type="button"
+    style={{
+      ...secondaryButton,
+      opacity:
+        form.soggetto_cliente_id
+          ? 1
+          : 0.5,
+      cursor:
+        form.soggetto_cliente_id
+          ? "pointer"
+          : "not-allowed",
+    }}
+    disabled={
+      !form.soggetto_cliente_id
+    }
+    onClick={apriModificaNominativo}
+  >
+    Modifica anagrafica
+  </button>
+</div>
   </div>
 </div>
 
@@ -3236,7 +3387,11 @@ return (
               maxWidth: "95%",
             }}
           >
-            <h2 style={titleStyle}>Nuovo nominativo</h2>
+           <h2>
+  {nominativoInModificaId
+    ? "Modifica nominativo"
+    : "Nuovo nominativo"}
+</h2>
 
             <div
               style={{
@@ -3399,7 +3554,9 @@ return (
                 style={blueButton}
                 onClick={salvaNuovoNominativo}
               >
-                Salva nominativo
+               {nominativoInModificaId
+  ? "Salva modifiche"
+  : "Salva nominativo"}
               </button>
             </div>
           </div>
