@@ -1446,16 +1446,15 @@ const datiNascitaMancanti =
   !nominativo.data_nascita;
 
 if (
-  codiceFiscale &&
+  codiceFiscale.length === 16 &&
+  isValidCF(codiceFiscale) &&
   datiNascitaMancanti
 ) {
-  setTimeout(() => {
-    aggiornaDatiDaCodiceFiscale(
-      codiceFiscale
-    );
-  }, 0);
+  void leggiDatiDaCF(
+    codiceFiscale,
+    setNuovoNominativo
+  );
 }
-
   setShowNuovoNominativo(true);
 }
 
