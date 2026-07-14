@@ -7,22 +7,20 @@ export type VisuraRappresentante = {
     | number
     | null;
 
-  titolo_possesso?:
-    | "piena_proprieta"
-    | "nuda_proprieta"
-    | "usufrutto"
-    | null;
+ titolo_possesso?:
+  | "piena_proprieta"
+  | "nuda_proprieta"
+  | "usufrutto"
+  | "pegno"
+  | "sequestro"
+  | "intestazione_fiduciaria"
+  | "altro";
 
   tipo_soggetto:
     | "amministratore"
     | "socio"
     | "organo_controllo";
 
-  titolo_possesso?:
-    | "piena_proprieta"
-    | "nuda_proprieta"
-    | "usufrutto"
-    | null;
   luogo_nascita?: string | null;
   data_nascita?: string | null;
   citta_residenza?: string | null;
