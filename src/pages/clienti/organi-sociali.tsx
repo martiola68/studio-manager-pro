@@ -344,11 +344,19 @@ async function salvaNuovoNominativo() {
     (c) => c.id === clienteId
   );
 
-  const payload = {
-    id: nominativoInModificaId || undefined,
+  const modalitaModifica =
+    Boolean(nominativoInModificaId);
 
-    studio_id:
-      clienteSelezionato?.studio_id || null,
+  const payload = {
+    ...(modalitaModifica
+      ? {
+          id: nominativoInModificaId,
+        }
+      : {
+          studio_id:
+            clienteSelezionato?.studio_id ||
+            null,
+        }),
 
     ragione_sociale:
       nuovoNominativo.nome_cognome.trim(),
@@ -359,26 +367,32 @@ async function salvaNuovoNominativo() {
         .toUpperCase(),
 
     email:
-      nuovoNominativo.email.trim() || null,
+      nuovoNominativo.email.trim() ||
+      null,
 
     luogo_nascita:
       nuovoNominativo.luogo_nascita.trim() ||
       null,
 
     data_nascita:
-      nuovoNominativo.data_nascita || null,
+      nuovoNominativo.data_nascita ||
+      null,
 
     indirizzo:
-      nuovoNominativo.indirizzo.trim() || null,
+      nuovoNominativo.indirizzo.trim() ||
+      null,
 
     citta:
-      nuovoNominativo.citta.trim() || null,
+      nuovoNominativo.citta.trim() ||
+      null,
 
     provincia:
-      nuovoNominativo.provincia.trim() || null,
+      nuovoNominativo.provincia.trim() ||
+      null,
 
     cap:
-      nuovoNominativo.cap.trim() || null,
+      nuovoNominativo.cap.trim() ||
+      null,
 
     tipo_cliente:
       nuovoNominativo.tipologia_cliente,
@@ -389,70 +403,141 @@ async function salvaNuovoNominativo() {
     cliente: false,
   };
 
-  const res = await fetch(
-    "/api/clienti/soggetti",
-    {
-      method: nominativoInModificaId
-        ? "PUT"
-        : "POST",
+  try {
+    let res: Response;
 
-      headers: {
-        "Content-Type": "application/json",
-      },
+    if (modalitaModifica) {
+      const supabase =
+        getSupabaseClient();
 
-      body: JSON.stringify(payload),
+      const {
+        data: sessionData,
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError) {
+        throw sessionError;
+      }
+
+      const accessToken =
+        sessionData.session?.access_token;
+
+      if (!accessToken) {
+        throw new Error(
+          "Sessione non valida. Effettua nuovamente l'accesso."
+        );
+      }
+
+      res = await fetch(
+        "/api/clienti/update",
+        {
+          method: "PUT",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+
+            Authorization:
+              `Bearer ${accessToken}`,
+          },
+
+          body: JSON.stringify(payload),
+        }
+      );
+    } else {
+      res = await fetch(
+        "/api/clienti/soggetti",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+
+          body: JSON.stringify(payload),
+        }
+      );
     }
-  );
 
-  const data = await res.json();
+    const data = await res.json();
 
-  if (!res.ok || !data.success) {
-    alert(
-      data.error ||
-        (nominativoInModificaId
-          ? "Errore aggiornamento nominativo."
-          : "Errore salvataggio nominativo.")
+    if (!res.ok) {
+      throw new Error(
+        data.error ||
+          data.details ||
+          (modalitaModifica
+            ? "Errore aggiornamento nominativo."
+            : "Errore salvataggio nominativo.")
+      );
+    }
+
+    /*
+     * L'API di creazione restituisce:
+     * { success: true, data: {...} }
+     *
+     * L'API update restituisce direttamente:
+     * { id, ragione_sociale, ... }
+     */
+    if (
+      !modalitaModifica &&
+      data.success !== true
+    ) {
+      throw new Error(
+        data.error ||
+          "Errore salvataggio nominativo."
+      );
+    }
+
+    const idSalvato =
+      modalitaModifica
+        ? nominativoInModificaId
+        : data.data?.id;
+
+    await caricaNominativi();
+
+    if (idSalvato) {
+      setForm((prev) => ({
+        ...prev,
+        soggetto_cliente_id:
+          String(idSalvato),
+      }));
+    }
+
+    setShowNuovoNominativo(false);
+    setNominativoInModificaId(null);
+
+    setNuovoNominativo({
+      nome_cognome: "",
+      codice_fiscale: "",
+      email: "",
+      luogo_nascita: "",
+      data_nascita: "",
+      indirizzo: "",
+      citta: "",
+      provincia: "",
+      cap: "",
+      tipologia_cliente:
+        "Persona fisica",
+    });
+
+    setMessaggio(
+      modalitaModifica
+        ? "Anagrafica aggiornata correttamente."
+        : "Nominativo creato correttamente."
     );
-    return;
+  } catch (error: any) {
+    console.error(
+      "Errore salvataggio nominativo:",
+      error
+    );
+
+    alert(
+      error?.message ||
+        "Errore durante il salvataggio del nominativo."
+    );
   }
-
-  const idSalvato =
-    nominativoInModificaId ||
-    data.data?.id;
-
-  await caricaNominativi();
-
-  if (idSalvato) {
-    setForm((prev) => ({
-      ...prev,
-      soggetto_cliente_id:
-        String(idSalvato),
-    }));
-  }
-
-  setShowNuovoNominativo(false);
-  setNominativoInModificaId(null);
-
-  setNuovoNominativo({
-    nome_cognome: "",
-    codice_fiscale: "",
-    email: "",
-    luogo_nascita: "",
-    data_nascita: "",
-    indirizzo: "",
-    citta: "",
-    provincia: "",
-    cap: "",
-    tipologia_cliente: "Persona fisica",
-  });
-
-  setMessaggio(
-    nominativoInModificaId
-      ? "Anagrafica aggiornata correttamente."
-      : "Nominativo creato correttamente."
-  );
 }
-
 async function importaVisura(
   e: React.ChangeEvent<HTMLInputElement>
 ) {
