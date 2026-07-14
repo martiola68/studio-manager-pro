@@ -1500,6 +1500,24 @@ function isCaricaScaduta(
   return scadenza < oggi;
 }
 
+function isCodiceFiscaleNominativoValido(): boolean {
+  const codice = normalizeCF(
+    nuovoNominativo.codice_fiscale || ""
+  );
+
+  if (
+    nuovoNominativo.tipologia_cliente ===
+    "Persona fisica"
+  ) {
+    return (
+      codice.length === 16 &&
+      isValidCF(codice)
+    );
+  }
+
+  return /^\d{11}$/.test(codice);
+}
+
 return (
   <main
     style={{
