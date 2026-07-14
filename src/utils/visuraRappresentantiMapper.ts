@@ -788,6 +788,7 @@ const titoloPossesso =
     : titoloNormalizzato.includes("altro")
     ? "altro"
     : "piena_proprieta";
+    
     risultati.push({
       nome_cognome: nome,
       codice_fiscale: codiceFiscale,
@@ -903,65 +904,111 @@ function parseSociDaTabellaRiepilogo(
       continue;
     }
 
-    let percentualePartecipazione:
-      | number
-      | null = null;
+  let percentualePartecipazione:
+  | number
+  | null = null;
 
-    let tipoDiritto = "";
+let tipoDiritto: NonNullable<
+  VisuraRappresentante["titolo_possesso"]
+> = "piena_proprieta";
 
-    /*
-     * Nelle righe vicine al nominativo/CF
-     * cerchiamo percentuale e tipo di diritto.
-     */
-    const bloccoVicino = righeTabella.slice(
-      Math.max(0, i - 3),
-      Math.min(righeTabella.length, i + 8)
+/*
+ * Nelle righe vicine al nominativo/CF
+ * cerchiamo percentuale e tipo di diritto.
+ */
+const bloccoVicino = righeTabella.slice(
+  Math.max(0, i - 3),
+  Math.min(righeTabella.length, i + 8)
+);
+
+for (const valore of bloccoVicino) {
+  const percentualeMatch = valore.match(
+    /\b(\d{1,3}(?:[.,]\d+)?)\s*%/
+  );
+
+  if (
+    percentualeMatch &&
+    percentualePartecipazione == null
+  ) {
+    percentualePartecipazione = Number(
+      percentualeMatch[1].replace(",", ".")
     );
+  }
 
-    for (const valore of bloccoVicino) {
-      const percentualeMatch = valore.match(
-        /\b(\d{1,3}(?:[.,]\d+)?)\s*%/
-      );
+  const valoreNormalizzato =
+    normalizeRoleText(valore);
 
-      if (
-        percentualeMatch &&
-        percentualePartecipazione == null
-      ) {
-        percentualePartecipazione = Number(
-          percentualeMatch[1].replace(",", ".")
-        );
-      }
+  if (
+    valoreNormalizzato === "proprieta" ||
+    valoreNormalizzato === "piena proprieta"
+  ) {
+    tipoDiritto = "piena_proprieta";
+  } else if (
+    valoreNormalizzato.includes(
+      "nuda proprieta"
+    )
+  ) {
+    tipoDiritto = "nuda_proprieta";
+  } else if (
+    valoreNormalizzato.includes("usufrutto")
+  ) {
+    tipoDiritto = "usufrutto";
+  } else if (
+    valoreNormalizzato.includes("pegno")
+  ) {
+    tipoDiritto = "pegno";
+  } else if (
+    valoreNormalizzato.includes("sequestro")
+  ) {
+    tipoDiritto = "sequestro";
+  } else if (
+    valoreNormalizzato.includes(
+      "intestazione fiduciaria"
+    )
+  ) {
+    tipoDiritto =
+      "intestazione_fiduciaria";
+  } else if (
+    valoreNormalizzato.includes("altro")
+  ) {
+    tipoDiritto = "altro";
+  }
+}
 
-      const valoreNormalizzato =
-        normalizeRoleText(valore);
+/*
+ * Senza percentuale non consideriamo la riga
+ * come socio della tabella riepilogativa.
+ */
+if (percentualePartecipazione == null) {
+  continue;
+}
 
-      if (
-        valoreNormalizzato === "proprieta" ||
-        valoreNormalizzato === "piena proprieta"
-      ) {
-        tipoDiritto = "piena_proprieta";
-      } else if (
-        valoreNormalizzato.includes(
-          "nuda proprieta"
-        )
-      ) {
-        tipoDiritto = "nuda_proprieta";
-      } else if (
-        valoreNormalizzato.includes("usufrutto")
-      ) {
-        tipoDiritto = "usufrutto";
-      }
-    }
+risultati.push({
+  nome_cognome: nome,
 
-    /*
-     * Senza percentuale non consideriamo la riga
-     * come socio della tabella riepilogativa.
-     */
-    if (
-      percentualePartecipazione == null
-    ) {
-      continue;
-    }
+  codice_fiscale:
+    codiceFiscale.toUpperCase(),
+
+  qualifica: "socio",
+  tipo_soggetto: "socio",
+
+  percentuale_partecipazione:
+    percentualePartecipazione,
+
+  titolo_possesso: tipoDiritto,
+
+  luogo_nascita: null,
+
+  data_nascita:
+    decodeBirthDateFromCodiceFiscale(
+      codiceFiscale
+    ),
+
+  citta_residenza: null,
+  indirizzo_residenza: null,
+  CAP: null,
+  nazionalita: null,
+});
 
     risultati.push({
       nome_cognome: nome,
@@ -975,7 +1022,7 @@ function parseSociDaTabellaRiepilogo(
       percentuale_partecipazione:
         percentualePartecipazione,
 
-      titolo_possesso: titoloPossesso,
+     titolo_possesso: tipoDiritto,
 
       luogo_nascita: null,
 
