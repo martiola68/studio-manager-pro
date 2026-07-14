@@ -772,45 +772,22 @@ function parseSociProprieta(
       }
     }
 
-    const titoloNormalizzato =
-      normalizeRoleText(tipoDiritto);
+ const titoloNormalizzato = normalizeRoleText(tipoDiritto);
 
-    const titoloPossesso:
-      | "piena_proprieta"
-      | "nuda_proprieta"
-      | "usufrutto" =
-      titoloNormalizzato.includes(
-        "nuda proprieta"
-      )
-        ? "nuda_proprieta"
-        : titoloNormalizzato.includes(
-            "usufrutto"
-          )
-        ? "usufrutto"
-        : "piena_proprieta";
-
-    const titoloPossesso:
-  | "piena_proprieta"
-  | "nuda_proprieta"
-  | "usufrutto"
-  | "pegno"
-  | "sequestro"
-  | "intestazione_fiduciaria"
-  | "altro" =
-  tipoDiritto === "nuda_proprieta"
+const titoloPossesso =
+  titoloNormalizzato.includes("nuda proprieta")
     ? "nuda_proprieta"
-    : tipoDiritto === "usufrutto"
+    : titoloNormalizzato.includes("usufrutto")
     ? "usufrutto"
-    : tipoDiritto === "pegno"
+    : titoloNormalizzato.includes("pegno")
     ? "pegno"
-    : tipoDiritto === "sequestro"
+    : titoloNormalizzato.includes("sequestro")
     ? "sequestro"
-    : tipoDiritto === "intestazione_fiduciaria"
+    : titoloNormalizzato.includes("intestazione fiduciaria")
     ? "intestazione_fiduciaria"
-    : tipoDiritto === "altro"
+    : titoloNormalizzato.includes("altro")
     ? "altro"
     : "piena_proprieta";
-
     risultati.push({
       nome_cognome: nome,
       codice_fiscale: codiceFiscale,
