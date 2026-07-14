@@ -2643,10 +2643,28 @@ return (
  {organiFiltrati.map((o) => (
   <React.Fragment key={o.id}>
     <tr>
- <td style={tdStyle}>
+<td
+  style={{
+    ...tdStyle,
+    color: isCaricaScaduta(
+      o.data_scadenza
+    )
+      ? "#dc2626"
+      : undefined,
+    fontWeight: isCaricaScaduta(
+      o.data_scadenza
+    )
+      ? 700
+      : undefined,
+    background: isCaricaScaduta(
+      o.data_scadenza
+    )
+      ? "#fef2f2"
+      : undefined,
+  }}
+>
   {o.soggetto_cliente?.ragione_sociale || "—"}
 </td>
-
     <td style={tdStyle}>
  {o.soggetto_cliente?.codice_fiscale ||
   o.soggetto_cliente?.partita_iva ||
@@ -2726,9 +2744,30 @@ return (
   {o.durata_carica || "—"}
 </td>
 
-<td style={tdStyle}>
+<td
+  style={{
+    ...tdStyle,
+    color: isCaricaScaduta(
+      o.data_scadenza
+    )
+      ? "#dc2626"
+      : undefined,
+    fontWeight: isCaricaScaduta(
+      o.data_scadenza
+    )
+      ? 700
+      : undefined,
+    background: isCaricaScaduta(
+      o.data_scadenza
+    )
+      ? "#fef2f2"
+      : undefined,
+  }}
+>
   {o.data_scadenza
-    ? new Date(o.data_scadenza).toLocaleDateString("it-IT")
+    ? new Date(
+        `${o.data_scadenza}T00:00:00`
+      ).toLocaleDateString("it-IT")
     : "—"}
 </td>
 
@@ -3057,7 +3096,7 @@ return (
                 const giaPresente =
                   riga.esito === "gia_presente";
 
-                function isCaricaScaduta(
+function isCaricaScaduta(
   dataScadenza: string | null | undefined
 ) {
   if (!dataScadenza) {
