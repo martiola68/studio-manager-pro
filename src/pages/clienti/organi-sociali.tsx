@@ -2566,9 +2566,9 @@ return (
             Principale
           </label>
 
-          <button
+   <button
   type="button"
-  style={primaryButton}
+  style={blueButton}
   onClick={salvaOrgano}
 >
   {organoInModificaId
