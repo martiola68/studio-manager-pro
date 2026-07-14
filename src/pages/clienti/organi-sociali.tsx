@@ -3064,15 +3064,7 @@ function selezionaTutteRigheImportazione(
                 (riga) => riga.selected
               )
             }
-            onClick={() => {
-              /*
-               * Il salvataggio definitivo verrà
-               * collegato nello step successivo.
-               */
-              alert(
-                "Anteprima pronta. Nel prossimo step colleghiamo l’importazione definitiva."
-              );
-            }}
+          onClick={importaSelezionatiDaVisura}
           >
             Importa selezionati
           </button>
