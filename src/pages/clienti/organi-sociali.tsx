@@ -1059,6 +1059,139 @@ function getTipoRuolo(ruolo: string) {
   return "C";
 }
 
+async function importaSelezionatiDaVisura() {
+  const selezionati = anteprimaImportazione.filter(
+    (riga) => riga.selected === true
+  );
+
+  if (selezionati.length === 0) {
+    alert("Seleziona almeno un nominativo da importare.");
+    return;
+  }
+
+  const sociSenzaQuota = selezionati.filter(
+    (riga) =>
+      riga.ruolo === "socio" &&
+      (
+        riga.percentuale_partecipazione === "" ||
+        riga.percentuale_partecipazione == null ||
+        Number(riga.percentuale_partecipazione) <= 0
+      )
+  );
+
+  if (sociSenzaQuota.length > 0) {
+    alert(
+      "Inserisci la quota per tutti i soci selezionati prima di procedere."
+    );
+    return;
+  }
+
+  setLoadingImportazione(true);
+
+  try {
+    const response = await fetch(
+      "/api/clienti/organi-sociali/importa-visura",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          conferma: true,
+          clienteId,
+          soggetti: selezionati.map((riga) => ({
+            nome: String(riga.nome || "").trim(),
+
+            codice_fiscale: normalizeCF(
+              riga.codice_fiscale || ""
+            ),
+
+            ruolo: riga.ruolo,
+
+            carica:
+              riga.carica ||
+              ruoliLabel[riga.ruolo] ||
+              riga.ruolo,
+
+            percentuale_partecipazione:
+              riga.ruolo === "socio"
+                ? Number(
+                    riga.percentuale_partecipazione || 0
+                  )
+                : null,
+
+            titolo_possesso:
+              riga.ruolo === "socio"
+                ? riga.titolo_possesso ||
+                  "piena_proprieta"
+                : "piena_proprieta",
+
+            percentuale_diritti_voto:
+              riga.ruolo === "socio"
+                ? Number(
+                    riga.percentuale_diritti_voto ||
+                    riga.percentuale_partecipazione ||
+                    0
+                  )
+                : null,
+
+            percentuale_diritti_utili:
+              riga.ruolo === "socio"
+                ? Number(
+                    riga.percentuale_diritti_utili ||
+                    riga.percentuale_partecipazione ||
+                    0
+                  )
+                : null,
+
+            anagrafica_cliente_id:
+              riga.anagrafica_cliente_id || null,
+
+            dati_anagrafici:
+              riga.dati_anagrafici || {},
+          })),
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.error ||
+          "Errore durante l'importazione dei nominativi."
+      );
+    }
+
+    setShowImportazioneVisura(false);
+    setAnteprimaImportazione([]);
+
+    await caricaNominativi();
+    await caricaOrgani();
+
+    setMessaggio(
+      `Importazione completata: ${
+        data.inseriti || 0
+      } nominativi inseriti, ${
+        data.duplicati || 0
+      } già presenti.`
+    );
+  } catch (error: any) {
+    console.error(
+      "Errore importaSelezionatiDaVisura:",
+      error
+    );
+
+    alert(
+      error?.message ||
+        "Errore durante l'importazione."
+    );
+  } finally {
+    setLoadingImportazione(false);
+  }
+}
+
+return (
   function aggiornaRigaImportazione(
   indice: number,
   modifiche: Record<string, any>
