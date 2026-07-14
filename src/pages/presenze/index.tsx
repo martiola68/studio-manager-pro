@@ -524,12 +524,16 @@ const days = useMemo<DayInfo[]>(() => {
         .eq('attivo', true)
         .order('ordine', { ascending: true });
 
-      const festivitaQuery = supabase
-        .from('tbfestivita')
-        .select('data_festivita, descrizione, tipo')
-        .gte('data_festivita', startDate)
-        .lte('data_festivita', endDate)
-        .in('tipo', ['nazionale', 'aziendale']);
+     const festivitaQuery = supabase
+  .from('tbfestivita')
+  .select('data_festivita, descrizione, tipo')
+  .gte('data_festivita', startDate)
+  .lte('data_festivita', endDate)
+  .in('tipo', [
+    'nazionale',
+    'locale',
+    'aziendale',
+  ]);
 
       const dipendentiQuery = typedUser.responsabile_paghe
         ? supabase
