@@ -1045,6 +1045,7 @@ function getTipoRuolo(ruolo: string) {
       "amministratore_unico",
       "amministratore_delegato",
       "presidente_cda",
+      "consigliere",
       "liquidatore",
       "rappresentante_legale",
     ].includes(ruolo)
@@ -1099,6 +1100,7 @@ async function importaSelezionatiDaVisura() {
         body: JSON.stringify({
           conferma: true,
           clienteId,
+
           soggetti: selezionati.map((riga) => ({
             nome: String(riga.nome || "").trim(),
 
@@ -1191,8 +1193,7 @@ async function importaSelezionatiDaVisura() {
   }
 }
 
-return (
-  function aggiornaRigaImportazione(
+function aggiornaRigaImportazione(
   indice: number,
   modifiche: Record<string, any>
 ) {
@@ -1214,6 +1215,7 @@ function selezionaTutteRigheImportazione(
   setAnteprimaImportazione((precedente) =>
     precedente.map((riga) => ({
       ...riga,
+
       selected:
         riga.esito === "gia_presente"
           ? false
@@ -1221,9 +1223,15 @@ function selezionaTutteRigheImportazione(
     }))
   );
 }
-  
-  return (
-    <main style={{ padding: 28, background: "#f8fafc", minHeight: "100vh" }}>
+
+return (
+  <main
+    style={{
+      padding: 28,
+      background: "#f8fafc",
+      minHeight: "100vh",
+    }}
+  >
       <div style={{ display: "flex", justifyContent: "space-between" }}>
         <div>
           <h1 style={{ fontSize: 34, fontWeight: 800, margin: 0 }}>
