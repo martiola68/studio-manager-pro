@@ -789,6 +789,28 @@ function parseSociProprieta(
         ? "usufrutto"
         : "piena_proprieta";
 
+    const titoloPossesso:
+  | "piena_proprieta"
+  | "nuda_proprieta"
+  | "usufrutto"
+  | "pegno"
+  | "sequestro"
+  | "intestazione_fiduciaria"
+  | "altro" =
+  tipoDiritto === "nuda_proprieta"
+    ? "nuda_proprieta"
+    : tipoDiritto === "usufrutto"
+    ? "usufrutto"
+    : tipoDiritto === "pegno"
+    ? "pegno"
+    : tipoDiritto === "sequestro"
+    ? "sequestro"
+    : tipoDiritto === "intestazione_fiduciaria"
+    ? "intestazione_fiduciaria"
+    : tipoDiritto === "altro"
+    ? "altro"
+    : "piena_proprieta";
+
     risultati.push({
       nome_cognome: nome,
       codice_fiscale: codiceFiscale,
@@ -976,8 +998,7 @@ function parseSociDaTabellaRiepilogo(
       percentuale_partecipazione:
         percentualePartecipazione,
 
-      titolo_possesso:
-        tipoDiritto || "piena_proprieta",
+      titolo_possesso: titoloPossesso,
 
       luogo_nascita: null,
 
