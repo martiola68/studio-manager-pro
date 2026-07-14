@@ -47,6 +47,16 @@ type SoggettoVisura = {
   | "socio"
   | "organo_controllo";
 
+  percentuale_partecipazione?:
+  | number
+  | null;
+
+titolo_possesso?:
+  | "piena_proprieta"
+  | "nuda_proprieta"
+  | "usufrutto"
+  | null;
+
   luogo_nascita?: string | null;
   data_nascita?: string | null;
   citta_residenza?: string | null;
@@ -824,6 +834,30 @@ if (contentType.includes("application/json")) {
             carica:
               soggetto
                 .carica_normalizzata,
+
+            percentuale_partecipazione:
+  soggetto.tipo_soggetto === "socio"
+    ? soggetto.percentuale_partecipazione ??
+      null
+    : null,
+
+titolo_possesso:
+  soggetto.tipo_soggetto === "socio"
+    ? soggetto.titolo_possesso ||
+      "piena_proprieta"
+    : "piena_proprieta",
+
+percentuale_diritti_voto:
+  soggetto.tipo_soggetto === "socio"
+    ? soggetto.percentuale_partecipazione ??
+      null
+    : null,
+
+percentuale_diritti_utili:
+  soggetto.tipo_soggetto === "socio"
+    ? soggetto.percentuale_partecipazione ??
+      null
+    : null,
 
             anagrafica_cliente_id:
               anagraficaEsistente?.id ||
