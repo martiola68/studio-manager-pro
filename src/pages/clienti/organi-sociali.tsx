@@ -3135,7 +3135,35 @@ function isCaricaScaduta(
   return scadenza < oggi;
 }
 
-                return (
+function isCodiceFiscaleAltroValido(
+  valore: string
+): boolean {
+  const codice = normalizeCF(valore);
+
+  return /^\d{11}$/.test(codice);
+}
+
+function isCodiceFiscaleNominativoValido(): boolean {
+  const codice = normalizeCF(
+    nuovoNominativo.codice_fiscale
+  );
+
+  if (
+    nuovoNominativo.tipologia_cliente ===
+    "Persona fisica"
+  ) {
+    return (
+      codice.length === 16 &&
+      isValidCF(codice)
+    );
+  }
+
+  return isCodiceFiscaleAltroValido(
+    codice
+  );
+}
+
+return (
                   <tr
                     key={`${riga.codice_fiscale}-${riga.ruolo}-${indice}`}
                     style={{
