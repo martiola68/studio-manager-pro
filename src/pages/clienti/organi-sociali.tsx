@@ -494,38 +494,46 @@ async function salvaNuovoNominativo() {
         ? nominativoInModificaId
         : data.data?.id;
 
-    await caricaNominativi();
+  await caricaNominativi();
 
-    if (idSalvato) {
-      setForm((prev) => ({
-        ...prev,
-        soggetto_cliente_id:
-          String(idSalvato),
-      }));
-    }
+if (idSalvato) {
+  setForm((prev) => ({
+    ...prev,
+    soggetto_cliente_id:
+      String(idSalvato),
+  }));
+}
 
-    setShowNuovoNominativo(false);
-    setNominativoInModificaId(null);
+/*
+ * Se il nominativo è già collegato alla società,
+ * ricarichiamo anche la tabella degli organi.
+ * In questo modo nome, CF e altri dati aggiornati
+ * compaiono subito senza premere "Aggiungi nominativo".
+ */
+await caricaOrgani();
 
-    setNuovoNominativo({
-      nome_cognome: "",
-      codice_fiscale: "",
-      email: "",
-      luogo_nascita: "",
-      data_nascita: "",
-      indirizzo: "",
-      citta: "",
-      provincia: "",
-      cap: "",
-      tipologia_cliente:
-        "Persona fisica",
-    });
+setShowNuovoNominativo(false);
+setNominativoInModificaId(null);
 
-    setMessaggio(
-      modalitaModifica
-        ? "Anagrafica aggiornata correttamente."
-        : "Nominativo creato correttamente."
-    );
+setNuovoNominativo({
+  nome_cognome: "",
+  codice_fiscale: "",
+  email: "",
+  luogo_nascita: "",
+  data_nascita: "",
+  indirizzo: "",
+  citta: "",
+  provincia: "",
+  cap: "",
+  tipologia_cliente:
+    "Persona fisica",
+});
+
+setMessaggio(
+  modalitaModifica
+    ? "Anagrafica aggiornata correttamente."
+    : "Nominativo creato correttamente."
+);
   } catch (error: any) {
     console.error(
       "Errore salvataggio nominativo:",
