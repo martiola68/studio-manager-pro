@@ -1501,8 +1501,6 @@ function isCaricaScaduta(
 }
 
 return (
-  
-return (
   <main
     style={{
       padding: 28,
