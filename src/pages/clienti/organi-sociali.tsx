@@ -1479,7 +1479,29 @@ const rappresentantePrincipalePresente =
         organo.ruolo
       )
   );
+function isCaricaScaduta(
+  dataScadenza: string | null | undefined
+): boolean {
+  if (!dataScadenza) {
+    return false;
+  }
 
+  const oggi = new Date();
+  oggi.setHours(0, 0, 0, 0);
+
+  const scadenza = new Date(
+    `${dataScadenza}T00:00:00`
+  );
+
+  if (Number.isNaN(scadenza.getTime())) {
+    return false;
+  }
+
+  return scadenza < oggi;
+}
+
+return (
+  
 return (
   <main
     style={{
