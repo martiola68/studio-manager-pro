@@ -1434,6 +1434,28 @@ function selezionaTutteRigheImportazione(
       "Persona fisica",
   });
 
+    const codiceFiscale =
+  String(
+    nominativo.codice_fiscale || ""
+  )
+    .trim()
+    .toUpperCase();
+
+const datiNascitaMancanti =
+  !nominativo.luogo_nascita ||
+  !nominativo.data_nascita;
+
+if (
+  codiceFiscale &&
+  datiNascitaMancanti
+) {
+  setTimeout(() => {
+    aggiornaDatiDaCodiceFiscale(
+      codiceFiscale
+    );
+  }, 0);
+}
+
   setShowNuovoNominativo(true);
 }
 
@@ -2523,9 +2545,15 @@ return (
             Principale
           </label>
 
-          <button type="button" style={blueButton} onClick={salvaOrgano}>
-            Aggiungi nominativo
-          </button>
+          <button
+  type="button"
+  style={primaryButton}
+  onClick={salvaOrgano}
+>
+  {organoInModificaId
+    ? "Aggiorna nominativo"
+    : "Aggiungi nominativo"}
+</button>
         </div>
 
         {messaggio && (
@@ -3028,6 +3056,23 @@ return (
               (riga, indice) => {
                 const giaPresente =
                   riga.esito === "gia_presente";
+
+                function isCaricaScaduta(
+  dataScadenza: string | null | undefined
+) {
+  if (!dataScadenza) {
+    return false;
+  }
+
+  const oggi = new Date();
+  oggi.setHours(0, 0, 0, 0);
+
+  const scadenza = new Date(
+    `${dataScadenza}T00:00:00`
+  );
+
+  return scadenza < oggi;
+}
 
                 return (
                   <tr
