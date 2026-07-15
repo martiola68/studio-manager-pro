@@ -2741,25 +2741,21 @@ return (
       ? "Aggiorna nominativo"
       : "Inserisci nominativo"}
   </button>
-</div> 
-        
-   <button
-  type="button"
-  style={blueButton}
-  onClick={salvaOrgano}
->
-  {organoInModificaId
-    ? "Aggiorna nominativo"
-    : "Aggiungi nominativo"}
-</button>
-        </div>
+</div>
 
-        {messaggio && (
-          <div style={{ marginTop: 12, fontSize: 14, color: "#475569" }}>
-            {messaggio}
-          </div>
-        )}
-      </div>
+{messaggio && (
+  <div
+    style={{
+      marginTop: 12,
+      fontSize: 14,
+      color: "#475569",
+    }}
+  >
+    {messaggio}
+  </div>
+)}
+
+</div>
 
       <div
   style={{
