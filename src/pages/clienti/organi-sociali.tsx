@@ -22,9 +22,10 @@ const ruoli = [
   "amministratore",
   "amministratore_unico",
   "liquidatore",
-  "amministratore_delegato",
-  "presidente_cda",
-  "consigliere",
+ "amministratore_delegato",
+"consigliere_delegato",
+"presidente_cda",
+"consigliere",
   "sindaco_effettivo",
   "presidente_collegio_sindacale",
   "sindaco_unico",
@@ -39,8 +40,14 @@ const ruoliLabel: Record<string, string> = {
   amministratore: "Amministratore",
   amministratore_unico: "Amministratore unico",
   liquidatore: "Liquidatore",
-  amministratore_delegato: "Amministratore delegato",
-  presidente_cda: "Presidente del CDA",
+ amministratore_delegato:
+  "Amministratore delegato",
+
+consigliere_delegato:
+  "Consigliere delegato",
+
+presidente_cda:
+  "Presidente del CDA",
   consigliere: "Consigliere",
   sindaco_effettivo: "Sindaco effettivo",
   presidente_collegio_sindacale: "Presidente del collegio sindacale",
@@ -1774,254 +1781,346 @@ return (
       <div style={cardStyle}>
         <h2 style={titleStyle}>Aggiungi socio / organo</h2>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "2fr 1fr 1fr 1fr",
-            gap: 12,
-            marginTop: 18,
-            alignItems: "end",
-          }}
-        >
-<div>
-  <label style={labelStyle}>Ruolo</label>
+     <div
+  style={{
+    display: "grid",
+    gridTemplateColumns:
+      "180px minmax(320px, 1fr) 95px 155px 165px 175px auto",
+    gap: 10,
+    marginTop: 18,
+    alignItems: "end",
+  }}
+>
+  {/* RUOLO */}
+  <div>
+    <label style={labelStyle}>Ruolo</label>
 
-  <select
-    style={inputStyle}
-    value={form.ruolo}
-    onChange={(e) =>
-      setForm((prev) => ({
-        ...prev,
-        ruolo: e.target.value,
-        carica: ruoliLabel[e.target.value] || "",
-       soggetto_cliente_id: "",
-
-        percentuale_partecipazione:
-          e.target.value === "socio"
-            ? prev.percentuale_partecipazione
-            : "",
-
-        durata_carica:
-          e.target.value === "socio"
-            ? ""
-            : prev.durata_carica || "Fino a revoca",
-
-        principale: consentePrincipale(e.target.value)
-          ? prev.principale
-          : false,
-      }))
-    }
-  >
-    {ruoli
-      .filter((r) => r !== "tutti")
-      .map((r) => (
-        <option key={r} value={r}>
-          {r}
-        </option>
-      ))}
-  </select>
-</div>
-
-<div>
-  <label style={labelStyle}>Nominativo</label>
-
-  <div
-    style={{
-      display: "grid",
-      gridTemplateColumns: "1fr auto",
-      gap: 8,
-    }}
-  >
-  <select
-  style={inputStyle}
-  value={form.soggetto_cliente_id}
+    <select
+      style={inputStyle}
+      value={form.ruolo}
       onChange={(e) => {
-        const id = e.target.value;
-
-        const nominativo = nominativi.find(
-          (n) => String(n.id) === String(id)
-        );
+        const nuovoRuolo = e.target.value;
 
         setForm((prev) => ({
-  ...prev,
-  soggetto_cliente_id: id,
-}));
-
-        if (!nominativo) return;
-
-        setNuovoNominativo((prev) => ({
           ...prev,
-          nome_cognome: nominativo.ragione_sociale || "",
-          codice_fiscale: nominativo.codice_fiscale || "",
-          indirizzo: nominativo.indirizzo || "",
-          citta: nominativo.citta || "",
-          provincia: nominativo.provincia || "",
-          cap: nominativo.cap || "",
+
+          ruolo: nuovoRuolo,
+
+          carica:
+            ruoliLabel[nuovoRuolo] || "",
+
+          soggetto_cliente_id: "",
+
+          percentuale_partecipazione:
+            nuovoRuolo === "socio"
+              ? prev.percentuale_partecipazione
+              : "",
+
+          durata_carica:
+            nuovoRuolo === "socio"
+              ? ""
+              : prev.durata_carica ||
+                "Fino a revoca",
+
+          principale:
+            consentePrincipale(nuovoRuolo)
+              ? prev.principale
+              : false,
         }));
       }}
     >
-      <option value="">Seleziona nominativo</option>
-
-     {nominativi.map((n) => (
-  <option key={n.id} value={n.id}>
-    {n.ragione_sociale}
-    {n.codice_fiscale ? ` — ${n.codice_fiscale}` : ""}
-  </option>
-))}
+      {ruoli
+        .filter((ruolo) => ruolo !== "tutti")
+        .map((ruolo) => (
+          <option key={ruolo} value={ruolo}>
+            {ruoliLabel[ruolo] || ruolo}
+          </option>
+        ))}
     </select>
+  </div>
 
- <div
-  style={{
-    display: "flex",
-    gap: 8,
-  }}
->
-  <button
-    type="button"
-    style={secondaryButton}
-    onClick={() => {
-      setNominativoInModificaId(null);
+  {/* NOMINATIVO */}
+  <div>
+    <label style={labelStyle}>
+      Nominativo
+    </label>
 
-      setNuovoNominativo({
-        nome_cognome: "",
-        codice_fiscale: "",
-        email: "",
-        luogo_nascita: "",
-        data_nascita: "",
-        indirizzo: "",
-        citta: "",
-        provincia: "",
-        cap: "",
-        tipologia_cliente:
-          "Persona fisica",
-      });
+    <select
+      style={inputStyle}
+      value={form.soggetto_cliente_id}
+      onChange={(e) => {
+        const id = e.target.value;
 
-      setShowNuovoNominativo(true);
-    }}
-  >
-    + Nuovo
-  </button>
+        const nominativo =
+          nominativi.find(
+            (item) =>
+              String(item.id) ===
+              String(id)
+          );
 
-  <button
-    type="button"
+        setForm((prev) => ({
+          ...prev,
+          soggetto_cliente_id: id,
+        }));
+
+        if (!nominativo) {
+          return;
+        }
+
+        setNuovoNominativo((prev) => ({
+          ...prev,
+
+          nome_cognome:
+            nominativo.ragione_sociale ||
+            "",
+
+          codice_fiscale:
+            nominativo.codice_fiscale ||
+            "",
+
+          email:
+            nominativo.email || "",
+
+          luogo_nascita:
+            nominativo.luogo_nascita ||
+            "",
+
+          data_nascita:
+            nominativo.data_nascita ||
+            "",
+
+          indirizzo:
+            nominativo.indirizzo || "",
+
+          citta:
+            nominativo.citta || "",
+
+          provincia:
+            nominativo.provincia || "",
+
+          cap:
+            nominativo.cap || "",
+
+          tipologia_cliente:
+            nominativo.tipo_cliente ||
+            nominativo.tipologia_cliente ||
+            "Persona fisica",
+        }));
+      }}
+    >
+      <option value="">
+        Seleziona nominativo
+      </option>
+
+      {nominativi.map((nominativo) => (
+        <option
+          key={nominativo.id}
+          value={nominativo.id}
+        >
+          {nominativo.ragione_sociale}
+          {nominativo.codice_fiscale
+            ? ` — ${nominativo.codice_fiscale}`
+            : ""}
+        </option>
+      ))}
+    </select>
+  </div>
+
+  {/* QUOTA */}
+  <div>
+    <label style={labelStyle}>
+      Quota %
+    </label>
+
+    <input
+      type="number"
+      min="0"
+      max="100"
+      step="0.01"
+      disabled={
+        !richiedeQuota(form.ruolo)
+      }
+      style={{
+        ...inputStyle,
+
+        background: richiedeQuota(
+          form.ruolo
+        )
+          ? "#ffffff"
+          : "#f1f5f9",
+      }}
+      value={
+        richiedeQuota(form.ruolo)
+          ? form.percentuale_partecipazione
+          : ""
+      }
+      onChange={(e) => {
+        const valore = e.target.value;
+
+        setForm((prev) => ({
+          ...prev,
+
+          percentuale_partecipazione:
+            valore,
+
+          percentuale_diritti_voto:
+            prev.titolo_possesso ===
+            "piena_proprieta"
+              ? valore
+              : prev.percentuale_diritti_voto,
+
+          percentuale_diritti_utili:
+            prev.titolo_possesso ===
+            "piena_proprieta"
+              ? valore
+              : prev.percentuale_diritti_utili,
+        }));
+      }}
+    />
+  </div>
+
+  {/* DATA NOMINA / POSSESSO DAL */}
+  <div>
+    <label style={labelStyle}>
+      {form.ruolo === "socio"
+        ? "Possesso dal"
+        : "Nomina dal"}
+    </label>
+
+    <input
+      type="date"
+      style={inputStyle}
+      value={form.data_nomina || ""}
+      onChange={(e) =>
+        setForm((prev) => ({
+          ...prev,
+          data_nomina: e.target.value,
+        }))
+      }
+    />
+  </div>
+
+  {/* DURATA */}
+  <div>
+    <label style={labelStyle}>
+      Durata
+    </label>
+
+    <select
+      style={{
+        ...inputStyle,
+
+        background:
+          form.ruolo === "socio"
+            ? "#f1f5f9"
+            : "#ffffff",
+      }}
+      disabled={form.ruolo === "socio"}
+      value={
+        form.ruolo === "socio"
+          ? ""
+          : form.durata_carica
+      }
+      onChange={(e) =>
+        setForm((prev) => ({
+          ...prev,
+          durata_carica:
+            e.target.value,
+        }))
+      }
+    >
+      <option value="Fino a revoca">
+        Fino a revoca
+      </option>
+
+      <option value="Anni: 1">
+        Anni: 1
+      </option>
+
+      <option value="Anni: 2">
+        Anni: 2
+      </option>
+
+      <option value="Anni: 3">
+        Anni: 3
+      </option>
+
+      <option value="Anni: 4">
+        Anni: 4
+      </option>
+
+      <option value="Anni: 5">
+        Anni: 5
+      </option>
+
+      <option value="Fino al bilancio">
+        Fino al bilancio
+      </option>
+    </select>
+  </div>
+
+  {/* DATA SCADENZA / POSSESSO FINO A */}
+  <div>
+    <label style={labelStyle}>
+      {form.ruolo === "socio"
+        ? "Possesso fino a"
+        : "Scadenza carica"}
+    </label>
+
+    <input
+      type="date"
+      style={inputStyle}
+      value={form.data_scadenza || ""}
+      onChange={(e) =>
+        setForm((prev) => ({
+          ...prev,
+          data_scadenza:
+            e.target.value,
+        }))
+      }
+    />
+  </div>
+
+  {/* PRINCIPALE */}
+  <div
     style={{
-      ...secondaryButton,
-      opacity:
-        form.soggetto_cliente_id
-          ? 1
-          : 0.5,
-      cursor:
-        form.soggetto_cliente_id
-          ? "pointer"
-          : "not-allowed",
+      minHeight: 38,
+      display: "flex",
+      alignItems: "center",
+      paddingBottom: 3,
     }}
-    disabled={
-      !form.soggetto_cliente_id
-    }
-    onClick={apriModificaNominativo}
   >
-    Modifica anagrafica
-  </button>
-</div>
+    <label
+      style={{
+        display: "flex",
+        gap: 7,
+        alignItems: "center",
+        whiteSpace: "nowrap",
+      }}
+    >
+      <input
+        type="checkbox"
+        disabled={
+          !consentePrincipale(form.ruolo)
+        }
+        checked={
+          consentePrincipale(form.ruolo)
+            ? form.principale
+            : false
+        }
+        onChange={(e) =>
+          setForm((prev) => ({
+            ...prev,
+            principale:
+              e.target.checked,
+          }))
+        }
+      />
+
+      Principale
+    </label>
   </div>
 </div>
-
-          <div>
-            <label style={labelStyle}>Quota %</label>
-          <input
-  type="number"
-  step="0.01"
-  disabled={!richiedeQuota(form.ruolo)}
-  style={{
-    ...inputStyle,
-    background: richiedeQuota(form.ruolo)
-      ? "#fff"
-      : "#f1f5f9",
-  }}
-  value={
-    richiedeQuota(form.ruolo)
-      ? form.percentuale_partecipazione
-      : ""
-  }
-              onChange={(e) => {
-  const valore = e.target.value;
-
-  setForm((prev) => ({
-    ...prev,
-    percentuale_partecipazione: valore,
-
-    percentuale_diritti_voto:
-      prev.titolo_possesso === "piena_proprieta"
-        ? valore
-        : prev.percentuale_diritti_voto,
-
-    percentuale_diritti_utili:
-      prev.titolo_possesso === "piena_proprieta"
-        ? valore
-        : prev.percentuale_diritti_utili,
-  }));
-}}
-            />
-          </div>
-
-          <div>
-  <label style={labelStyle}>Data nomina / dal</label>
-
-  <input
-    type="date"
-    style={inputStyle}
-    value={form.data_nomina}
-    onChange={(e) =>
-      setForm((prev) => ({
-        ...prev,
-        data_nomina: e.target.value,
-      }))
-    }
-  />
-</div>
-
-          <div>
-  <label style={labelStyle}>Durata carica</label>
- <select
-  style={{
-    ...inputStyle,
-    background: form.ruolo === "socio" ? "#f1f5f9" : "#fff",
-  }}
-  disabled={form.ruolo === "socio"}
-  value={form.ruolo === "socio" ? "" : form.durata_carica}
-  onChange={(e) =>
-    setForm((prev) => ({
-      ...prev,
-      durata_carica: e.target.value,
-    }))
-  }
->
-    <option value="Fino a revoca">Fino a revoca</option>
-    <option value="Anni: 1">Anni: 1</option>
-    <option value="Anni: 2">Anni: 2</option>
-    <option value="Anni: 3">Anni: 3</option>
-    <option value="Anni: 4">Anni: 4</option>
-    <option value="Anni: 5">Anni: 5</option>
-    <option value="Fino al bilancio">Fino al bilancio</option>
-  </select>
-</div>
-
-<div>
- <label style={labelStyle}>Data scadenza / Fino a</label>
-  <input
-    type="date"
-    style={inputStyle}
-    value={form.data_scadenza}
-    onChange={(e) =>
-      setForm((prev) => ({
-        ...prev,
-        data_scadenza: e.target.value,
-      }))
-    }
-  />
-</div>
-
-        </div>
 
         {form.ruolo === "socio" && (
   <div
@@ -2577,33 +2676,73 @@ return (
 
 <div
   style={{
-    display: "grid",
-    gridTemplateColumns: "1fr auto",
-            gap: 12,
-            marginTop: 14,
-            alignItems: "center",
-          }}
-        >
-         
-          <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
-           <input
-  type="checkbox"
-  disabled={!consentePrincipale(form.ruolo)}
-  checked={
-    consentePrincipale(form.ruolo)
-      ? form.principale
-      : false
-  }
-              onChange={(e) =>
-                setForm((prev) => ({
-                  ...prev,
-                  principale: e.target.checked,
-                }))
-              }
-            />
-            Principale
-          </label>
+    display: "flex",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 16,
+  }}
+>
+  <button
+    type="button"
+    style={secondaryButton}
+    onClick={() => {
+      setNominativoInModificaId(null);
 
+      setNuovoNominativo({
+        nome_cognome: "",
+        codice_fiscale: "",
+        email: "",
+        luogo_nascita: "",
+        data_nascita: "",
+        indirizzo: "",
+        citta: "",
+        provincia: "",
+        cap: "",
+        tipologia_cliente:
+          "Persona fisica",
+      });
+
+      setShowNuovoNominativo(true);
+    }}
+  >
+    + Nuovo
+  </button>
+
+  <button
+    type="button"
+    style={{
+      ...secondaryButton,
+
+      opacity:
+        form.soggetto_cliente_id
+          ? 1
+          : 0.5,
+
+      cursor:
+        form.soggetto_cliente_id
+          ? "pointer"
+          : "not-allowed",
+    }}
+    disabled={
+      !form.soggetto_cliente_id
+    }
+    onClick={apriModificaNominativo}
+  >
+    Modifica anagrafica
+  </button>
+
+  <button
+    type="button"
+    style={blueButton}
+    onClick={salvaOrgano}
+  >
+    {organoInModificaId
+      ? "Aggiorna nominativo"
+      : "Inserisci nominativo"}
+  </button>
+</div> 
+        
    <button
   type="button"
   style={blueButton}
