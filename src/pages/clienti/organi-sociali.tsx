@@ -4027,38 +4027,46 @@ return (
   }
 />
 
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: 10,
-                marginTop: 20,
-              }}
-            >
-              <button
-                type="button"
-                style={secondaryButton}
-                onClick={() => setShowNuovoNominativo(false)}
-              >
-                Annulla
-              </button>
+</div>
 
-              <button
-                type="button"
-                style={blueButton}
-                onClick={salvaNuovoNominativo}
-              >
-               {nominativoInModificaId
-  ? "Salva modifiche"
-  : "Salva nominativo"}
-              </button>
-            </div>
-          </div>
-        </div>
-           </div>
-      )}
-       </main>
-  );
+<div
+  style={{
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: 10,
+    marginTop: 20,
+  }}
+>
+  <button
+    type="button"
+    style={secondaryButton}
+    onClick={() => {
+      setShowNuovoNominativo(false);
+      setNominativoInModificaId(null);
+    }}
+  >
+    Annulla
+  </button>
+
+  <button
+    type="button"
+    style={blueButton}
+    onClick={salvaNuovoNominativo}
+  >
+    {nominativoInModificaId
+      ? "Salva modifiche"
+      : "Salva nominativo"}
+  </button>
+</div>
+
+  </div>
+</div>
+)}
+
+</div>
+
+</main>
+);
 }
 
 const inputStyle: React.CSSProperties = {
