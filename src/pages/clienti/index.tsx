@@ -407,9 +407,15 @@ setVisuraPreviewOpen(true);
 }
 
   
-  const [clienti, setClienti] = useState<ClienteRow[]>([]);
+ const [clienti, setClienti] = useState<ClienteRow[]>([]);
 
-  const [contatti, setContatti] = useState<ContattoRow[]>([]);
+const [
+  totaleQuoteByCliente,
+  setTotaleQuoteByCliente,
+] = useState<Record<string, number>>({});
+
+const [contatti, setContatti] = useState<ContattoRow[]>([]);
+  
   const [utenti, setUtenti] = useState<UtenteRow[]>([]);
   const [cassettiFiscali, setCassettiFiscali] = useState<CassettoFiscaleRow[]>(
     []
@@ -534,22 +540,82 @@ if (user?.id) {
       cache: "no-store",
     }),
   ]);
-      
-      if (clientiRes.error) throw clientiRes.error;
-      if (contattiRes.error) throw contattiRes.error;
-      if (utentiRes.error) throw utentiRes.error;
-      if (cassettiRes.error) throw cassettiRes.error;
-      if (prestazioniRes.error) throw prestazioniRes.error;
-   if ((rappLegaliRes as any).error) {
+    if (clientiRes.error) throw clientiRes.error;
+if (contattiRes.error) throw contattiRes.error;
+if (utentiRes.error) throw utentiRes.error;
+if (cassettiRes.error) throw cassettiRes.error;
+if (prestazioniRes.error) throw prestazioniRes.error;
+
+if ((rappLegaliRes as any).error) {
   throw (rappLegaliRes as any).error;
 }
- 
-const rappLegaliData = ((rappLegaliRes as any).data ?? []) as {
-  id: string;
-  nome_cognome: string;
-}[];
+
+/*
+ * Caricamento dati principali della pagina.
+ */
+setClienti(clientiRes.data ?? []);
+setContatti(contattiRes.data ?? []);
+setUtenti(utentiRes.data ?? []);
+setCassettiFiscali(cassettiRes.data ?? []);
+setPrestazioni(prestazioniRes.data ?? []);
+
+const rappLegaliData =
+  ((rappLegaliRes as any).data ?? []) as {
+    id: string;
+    nome_cognome: string;
+  }[];
 
 setRappLegali(rappLegaliData);
+
+/*
+ * Calcolo del totale quote dei soci attivi
+ * raggruppato per cliente.
+ */
+if ((organiRes as Response).ok) {
+  const organiJson =
+    await (organiRes as Response).json();
+
+  const righeOrgani =
+    Array.isArray(organiJson.organi)
+      ? organiJson.organi
+      : [];
+
+  const quoteMap: Record<string, number> = {};
+
+  righeOrgani.forEach((row: any) => {
+    const clienteId = String(
+      row.cliente_id || ""
+    );
+
+    if (!clienteId) {
+      return;
+    }
+
+    quoteMap[clienteId] =
+      (quoteMap[clienteId] || 0) +
+      Number(
+        row.percentuale_partecipazione || 0
+      );
+  });
+
+  setTotaleQuoteByCliente(quoteMap);
+} else {
+  const erroreOrgani =
+    await (organiRes as Response)
+      .json()
+      .catch(() => null);
+
+  console.error(
+    "Errore caricamento quote soci:",
+    erroreOrgani
+  );
+
+  /*
+   * L'errore delle quote non deve impedire
+   * la visualizzazione dei clienti.
+   */
+  setTotaleQuoteByCliente({});
+}
     } catch (error) {
       console.error("Errore caricamento dati:", error);
       toast({
@@ -686,11 +752,15 @@ setRappLegali(rappLegaliData);
     setScadenzari(initialScadenzari);
   };
 
-const organiSocialiMancanti = (cliente: ClienteRow) => {
+const organiSocialiMancanti = (
+  cliente: ClienteRow
+) => {
   const totaleQuote =
-    Number((cliente as any).totale_quote_soci || 0);
+    totaleQuoteByCliente[cliente.id] || 0;
 
-  return Math.abs(totaleQuote - 100) > 0.005;
+  return (
+    Math.abs(totaleQuote - 100) >= 0.005
+  );
 };
   
   const handleAddNew = () => {
