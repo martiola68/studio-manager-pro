@@ -490,6 +490,50 @@ if (user?.id) {
 
     try {
       setLoading(true);
+
+       const [
+    clientiRes,
+    contattiRes,
+    utentiRes,
+    cassettiRes,
+    prestazioniRes,
+    rappLegaliRes,
+    organiRes,
+  ] = await Promise.all([
+    supabase
+      .from("tbclienti")
+      .select("*")
+      .order("ragione_sociale"),
+
+    supabase
+      .from("tbcontatti")
+      .select("*")
+      .order("cognome"),
+
+    supabase
+      .from("tbutenti")
+      .select("*")
+      .order("cognome"),
+
+    supabase
+      .from("tbcassetti_fiscali")
+      .select("*")
+      .order("nominativo"),
+
+    supabase
+      .from("tbprestazioni")
+      .select("*")
+      .order("descrizione"),
+
+    supabase
+      .from("rapp_legali" as any)
+      .select("id, nome_cognome")
+      .order("nome_cognome"),
+
+    fetch("/api/clienti-organi?modalita=conteggi", {
+      cache: "no-store",
+    }),
+  ]);
       
       if (clientiRes.error) throw clientiRes.error;
       if (contattiRes.error) throw contattiRes.error;
@@ -497,6 +541,7 @@ if (user?.id) {
       if (cassettiRes.error) throw cassettiRes.error;
       if (prestazioniRes.error) throw prestazioniRes.error;
    if ((rappLegaliRes as any).error) throw (rappLegaliRes as any).error;
+       }
  
 const rappLegaliData = ((rappLegaliRes as any).data ?? []) as {
   id: string;
