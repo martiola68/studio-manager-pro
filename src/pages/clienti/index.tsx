@@ -408,16 +408,7 @@ setVisuraPreviewOpen(true);
 
   
   const [clienti, setClienti] = useState<ClienteRow[]>([]);
- type ConteggiOrgani = {
-  soci: number;
-  rappresentanti: number;
-  sindaci: number;
-  revisori: number;
-};
 
-const [organiCountByCliente, setOrganiCountByCliente] = useState<
-  Record<string, ConteggiOrgani>
->({});
   const [contatti, setContatti] = useState<ContattoRow[]>([]);
   const [utenti, setUtenti] = useState<UtenteRow[]>([]);
   const [cassettiFiscali, setCassettiFiscali] = useState<CassettoFiscaleRow[]>(
@@ -499,27 +490,6 @@ if (user?.id) {
 
     try {
       setLoading(true);
-
-     const [
-  clientiRes,
-  contattiRes,
-  utentiRes,
-  cassettiRes,
-  prestazioniRes,
-  rappLegaliRes,
-  organiRes,
-] = await Promise.all([
-  supabase.from("tbclienti").select("*").order("ragione_sociale"),
-  supabase.from("tbcontatti").select("*").order("cognome"),
-  supabase.from("tbutenti").select("*").order("cognome"),
-  supabase.from("tbcassetti_fiscali").select("*").order("nominativo"),
-  supabase.from("tbprestazioni").select("*").order("descrizione"),
-  supabase.from("rapp_legali" as any).select("id, nome_cognome").order("nome_cognome"),
-
-       fetch("/api/clienti-organi?modalita=conteggi", {
-  cache: "no-store",
-}),
-]);
       
       if (clientiRes.error) throw clientiRes.error;
       if (contattiRes.error) throw contattiRes.error;
@@ -527,81 +497,7 @@ if (user?.id) {
       if (cassettiRes.error) throw cassettiRes.error;
       if (prestazioniRes.error) throw prestazioniRes.error;
    if ((rappLegaliRes as any).error) throw (rappLegaliRes as any).error;
-     if (!(organiRes as Response).ok) {
-  const erroreOrgani = await (organiRes as Response).json();
-
-  throw new Error(
-    erroreOrgani?.error || "Errore caricamento organi sociali"
-  );
-}
-
-setClienti(clientiRes.data ?? []);
-setContatti(contattiRes.data ?? []);
-setUtenti(utentiRes.data ?? []);
-setCassettiFiscali(cassettiRes.data ?? []);
-setPrestazioni(prestazioniRes.data ?? []);
-
-      const organiJson = await (organiRes as Response).json();
-const righeOrgani = (organiJson.organi || []) as any[];
-
- const organiMap: Record<string, ConteggiOrgani> = {};
-
-righeOrgani.forEach((row) => {
-  if (!row.cliente_id) return;
-
-  // Per la completezza consideriamo soltanto gli organi attivi.
-  if (row.attivo === false) return;
-
-  if (!organiMap[row.cliente_id]) {
-    organiMap[row.cliente_id] = {
-      soci: 0,
-      rappresentanti: 0,
-      sindaci: 0,
-      revisori: 0,
-    };
-  }
-
-  const ruolo = String(row.ruolo || "").toLowerCase();
-  const conteggi = organiMap[row.cliente_id];
-
-  if (ruolo === "socio") {
-    conteggi.soci += 1;
-    return;
-  }
-
-  if (
-    [
-      "amministratore",
-      "amministratore_unico",
-      "amministratore_delegato",
-      "presidente_cda",
-      "consigliere",
-      "liquidatore",
-      "rappresentante_legale",
-    ].includes(ruolo)
-  ) {
-    conteggi.rappresentanti += 1;
-    return;
-  }
-
-  if (
-    [
-      "sindaco_effettivo",
-      "presidente_collegio_sindacale",
-      "sindaco_unico",
-      "sindaco_supplente",
-    ].includes(ruolo)
-  ) {
-    conteggi.sindaci += 1;
-    return;
-  }
-
-  if (ruolo === "revisore") {
-    conteggi.revisori += 1;
-  }
-});
-
-setOrganiCountByCliente(organiMap);
+ 
 const rappLegaliData = ((rappLegaliRes as any).data ?? []) as {
   id: string;
   nome_cognome: string;
@@ -745,48 +641,10 @@ setRappLegali(rappLegaliData);
   };
 
 const organiSocialiMancanti = (cliente: ClienteRow) => {
-  const isSocieta =
-    (cliente as any).cliente === true &&
-    cliente.tipo_cliente?.toLowerCase() !== "persona fisica";
+  const totaleQuote =
+    Number((cliente as any).totale_quote_soci || 0);
 
-  const settoreDaControllare =
-    cliente.settore_fiscale === true ||
-    cliente.settore_consulenza === true;
-
-  if (!isSocieta || !settoreDaControllare) {
-    return false;
-  }
-
-  const conteggiReali = organiCountByCliente[cliente.id] || {
-    soci: 0,
-    rappresentanti: 0,
-    sindaci: 0,
-    revisori: 0,
-  };
-
-  const sociAttesi = Number(
-    (cliente as any).numero_soci_attesi ?? 0
-  );
-
-  const rappresentantiAttesi = Number(
-    (cliente as any).numero_rappresentanti_attesi ?? 0
-  );
-
-  const sindaciAttesi = Number(
-    (cliente as any).numero_sindaci_attesi ?? 0
-  );
-
-  const revisoriAttesi = Number(
-    (cliente as any).numero_revisori_attesi ?? 0
-  );
-
-  const completo =
-    conteggiReali.soci === sociAttesi &&
-    conteggiReali.rappresentanti === rappresentantiAttesi &&
-    conteggiReali.sindaci === sindaciAttesi &&
-    conteggiReali.revisori === revisoriAttesi;
-
-  return !completo;
+  return Math.abs(totaleQuote - 100) > 0.005;
 };
   
   const handleAddNew = () => {
