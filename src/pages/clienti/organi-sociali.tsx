@@ -1621,162 +1621,7 @@ return (
     </div>
   </div>
 
-  <div
-    style={{
-      display: "flex",
-      justifyContent: "flex-end",
-      alignItems: "center",
-      gap: 10,
-      marginTop: 14,
-    }}
-  >
-    {loadingImportazione && (
-      <span
-        style={{
-          color: "#64748b",
-          fontSize: 13,
-        }}
-      >
-        Lettura visura in corso...
-      </span>
-    )}
-
-    <button
-      type="button"
-      style={{
-        ...secondaryButton,
-        opacity:
-          !clienteId || loadingImportazione
-            ? 0.55
-            : 1,
-        cursor:
-          !clienteId || loadingImportazione
-            ? "not-allowed"
-            : "pointer",
-      }}
-      disabled={
-        !clienteId || loadingImportazione
-      }
-      onClick={() =>
-        document
-          .getElementById(
-            "visuraOrganiInput"
-          )
-          ?.click()
-      }
-    >
-      Importa da visura
-    </button>
-
-    <input
-      id="visuraOrganiInput"
-      type="file"
-      accept="application/pdf,.pdf"
-      style={{ display: "none" }}
-      onChange={importaVisura}
-    />
-  </div>
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: 12,
-            marginTop: 18,
-          }}
-        >
-          <div>
-            <label style={labelStyle}>N. soci</label>
-          <input
-  type="number"
-  min="0"
-  style={inputStyle}
-  value={assettoSocietario.numero_soci_attesi}
-  onChange={(e) =>
-    setAssettoSocietario((prev) => ({
-      ...prev,
-      numero_soci_attesi: e.target.value,
-    }))
-  }
-  onBlur={(e) =>
-    salvaAssettoSocietario(
-      "numero_soci_attesi",
-      Number(e.target.value || 0)
-    )
-  }
-/>
-          </div>
-
-          <div>
-            <label style={labelStyle}>N. rappresentanti</label>
-            <input
-              type="number"
-              min="0"
-              style={inputStyle}
-              value={assettoSocietario.numero_rappresentanti_attesi}
-              onChange={(e) =>
-                setAssettoSocietario((prev) => ({
-                  ...prev,
-                  numero_rappresentanti_attesi:
-                    e.target.value === "" ? 0 : Number(e.target.value),
-                }))
-              }
-              onBlur={(e) =>
-  salvaAssettoSocietario(
-    "numero_rappresentanti_attesi",
-    Number(e.target.value || 0)
-  )
-}
-            />
-          </div>
-
-          <div>
-            <label style={labelStyle}>N. sindaci</label>
-            <input
-              type="number"
-              min="0"
-              style={inputStyle}
-              value={assettoSocietario.numero_sindaci_attesi}
-              onChange={(e) =>
-                setAssettoSocietario((prev) => ({
-                  ...prev,
-                  numero_sindaci_attesi:
-                    e.target.value === "" ? 0 : Number(e.target.value),
-                }))
-              }
-              onBlur={(e) =>
-  salvaAssettoSocietario(
-    "numero_sindaci_attesi",
-    Number(e.target.value || 0)
-  )
-}
-            />
-          </div>
-
-          <div>
-            <label style={labelStyle}>N. revisori</label>
-            <input
-              type="number"
-              min="0"
-              style={inputStyle}
-              value={assettoSocietario.numero_revisori_attesi}
-              onChange={(e) =>
-                setAssettoSocietario((prev) => ({
-                  ...prev,
-                  numero_revisori_attesi:
-                    e.target.value === "" ? 0 : Number(e.target.value),
-                }))
-              }
-              onBlur={(e) =>
-  salvaAssettoSocietario(
-    "numero_revisori_attesi",
-    Number(e.target.value || 0)
-  )
-}
-            />
-          </div>
-        </div>
-      </div>
+   
 
       <div style={cardStyle}>
         <h2 style={titleStyle}>Aggiungi socio / organo</h2>
@@ -2119,6 +1964,135 @@ return (
 
       Principale
     </label>
+  </div>
+</div>
+
+        <div
+  style={{
+    display: "grid",
+    gridTemplateColumns:
+      "repeat(4, minmax(130px, 1fr))",
+    gap: 10,
+    marginTop: 14,
+  }}
+>
+  <div>
+    <label style={labelStyle}>
+      N. soci
+    </label>
+
+    <input
+      type="number"
+      min="0"
+      style={inputStyle}
+      value={
+        assettoSocietario.numero_soci_attesi
+      }
+      onChange={(e) =>
+        setAssettoSocietario((prev) => ({
+          ...prev,
+          numero_soci_attesi:
+            e.target.value,
+        }))
+      }
+      onBlur={(e) =>
+        salvaAssettoSocietario(
+          "numero_soci_attesi",
+          Number(e.target.value || 0)
+        )
+      }
+    />
+  </div>
+
+  <div>
+    <label style={labelStyle}>
+      N. rappresentanti
+    </label>
+
+    <input
+      type="number"
+      min="0"
+      style={inputStyle}
+      value={
+        assettoSocietario
+          .numero_rappresentanti_attesi
+      }
+      onChange={(e) =>
+        setAssettoSocietario((prev) => ({
+          ...prev,
+          numero_rappresentanti_attesi:
+            e.target.value === ""
+              ? 0
+              : Number(e.target.value),
+        }))
+      }
+      onBlur={(e) =>
+        salvaAssettoSocietario(
+          "numero_rappresentanti_attesi",
+          Number(e.target.value || 0)
+        )
+      }
+    />
+  </div>
+
+  <div>
+    <label style={labelStyle}>
+      N. sindaci
+    </label>
+
+    <input
+      type="number"
+      min="0"
+      style={inputStyle}
+      value={
+        assettoSocietario.numero_sindaci_attesi
+      }
+      onChange={(e) =>
+        setAssettoSocietario((prev) => ({
+          ...prev,
+          numero_sindaci_attesi:
+            e.target.value === ""
+              ? 0
+              : Number(e.target.value),
+        }))
+      }
+      onBlur={(e) =>
+        salvaAssettoSocietario(
+          "numero_sindaci_attesi",
+          Number(e.target.value || 0)
+        )
+      }
+    />
+  </div>
+
+  <div>
+    <label style={labelStyle}>
+      N. revisori
+    </label>
+
+    <input
+      type="number"
+      min="0"
+      style={inputStyle}
+      value={
+        assettoSocietario.numero_revisori_attesi
+      }
+      onChange={(e) =>
+        setAssettoSocietario((prev) => ({
+          ...prev,
+          numero_revisori_attesi:
+            e.target.value === ""
+              ? 0
+              : Number(e.target.value),
+        }))
+      }
+      onBlur={(e) =>
+        salvaAssettoSocietario(
+          "numero_revisori_attesi",
+          Number(e.target.value || 0)
+        )
+      }
+    />
   </div>
 </div>
 
@@ -2683,6 +2657,42 @@ return (
     marginTop: 16,
   }}
 >
+  <button
+  type="button"
+  disabled={!clienteId}
+  onClick={() =>
+    document
+      .getElementById(
+        "visuraOrganiInput"
+      )
+      ?.click()
+  }
+  style={{
+    border: "1px solid #16a34a",
+    borderRadius: 8,
+    padding: "9px 14px",
+    background: clienteId
+      ? "#16a34a"
+      : "#dcfce7",
+    color: clienteId
+      ? "#ffffff"
+      : "#86a88f",
+    cursor: clienteId
+      ? "pointer"
+      : "not-allowed",
+    fontWeight: 600,
+  }}
+>
+  Importa da visura
+</button>
+
+<input
+  id="visuraOrganiInput"
+  type="file"
+  accept=".pdf"
+  style={{ display: "none" }}
+  onChange={importaVisura}
+/>
   <button
     type="button"
     style={secondaryButton}
