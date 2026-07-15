@@ -207,13 +207,7 @@ const [form, setForm] = useState({
   data_cessazione: "",
 });
 
-const [assettoSocietario, setAssettoSocietario] = useState({
-  numero_soci_attesi: "",
-  numero_rappresentanti_attesi: 1,
-  numero_sindaci_attesi: 0,
-  numero_revisori_attesi: 0,
-});
-  
+
 useEffect(() => {
   if (!router.isReady) return;
 
@@ -238,29 +232,6 @@ useEffect(() => {
   caricaOrgani();
 }, [clienteId]);
 
-useEffect(() => {
-  const cliente = clienti.find((c) => c.id === clienteId);
-
-  if (!cliente) {
-    setAssettoSocietario({
-      numero_soci_attesi: "",
-      numero_rappresentanti_attesi: 1,
-      numero_sindaci_attesi: 0,
-      numero_revisori_attesi: 0,
-    });
-    return;
-  }
-
-  setAssettoSocietario({
-    numero_soci_attesi: cliente.numero_soci_attesi ?? "",
-    numero_rappresentanti_attesi:
-      cliente.numero_rappresentanti_attesi ?? 1,
-    numero_sindaci_attesi:
-      cliente.numero_sindaci_attesi ?? 0,
-    numero_revisori_attesi:
-      cliente.numero_revisori_attesi ?? 0,
-  });
-}, [clienteId, clienti]);
 
   const organiFiltrati = useMemo(() => {
     if (filtroRuolo === "tutti") return organi;
@@ -292,16 +263,12 @@ const differenzaQuote = totaleQuote - 100;
     
 const { data } = await supabase
   .from("tbclienti")
-  .select(`
-    id,
-    ragione_sociale,
-    codice_fiscale,
-    studio_id,
-    numero_soci_attesi,
-    numero_rappresentanti_attesi,
-    numero_sindaci_attesi,
-    numero_revisori_attesi
-  `)
+ .select(`
+  id,
+  ragione_sociale,
+  codice_fiscale,
+  studio_id
+`)
   .order("ragione_sociale");
 
     setClienti(data || []);
@@ -835,45 +802,7 @@ await caricaOrgani();
   await caricaDirittiCollegati(organoInModificaId);
 await caricaOrgani();
 }
-  
-  
-  async function salvaAssettoSocietario(
-  campo:
-    | "numero_soci_attesi"
-    | "numero_rappresentanti_attesi"
-    | "numero_sindaci_attesi"
-    | "numero_revisori_attesi",
-  valore: number
-) {
-  if (!clienteId) return;
-
-  const supabase = getSupabaseClient();
-
-  const { error } = await supabase
-    .from("tbclienti")
-    .update({
-      [campo]: valore,
-    })
-    .eq("id", clienteId);
-
-  if (error) {
-    console.error(error);
-    alert("Errore salvataggio");
-    return;
-  }
-
-  setClienti((prev) =>
-    prev.map((c) =>
-      c.id === clienteId
-        ? {
-            ...c,
-            [campo]: valore,
-          }
-        : c
-    )
-  );
-}
-  
+    
   async function salvaOrgano() {
     if (!clienteId) {
       alert("Seleziona prima un cliente.");
@@ -1964,135 +1893,6 @@ return (
 
       Principale
     </label>
-  </div>
-</div>
-
-        <div
-  style={{
-    display: "grid",
-    gridTemplateColumns:
-      "repeat(4, minmax(130px, 1fr))",
-    gap: 10,
-    marginTop: 14,
-  }}
->
-  <div>
-    <label style={labelStyle}>
-      N. soci
-    </label>
-
-    <input
-      type="number"
-      min="0"
-      style={inputStyle}
-      value={
-        assettoSocietario.numero_soci_attesi
-      }
-      onChange={(e) =>
-        setAssettoSocietario((prev) => ({
-          ...prev,
-          numero_soci_attesi:
-            e.target.value,
-        }))
-      }
-      onBlur={(e) =>
-        salvaAssettoSocietario(
-          "numero_soci_attesi",
-          Number(e.target.value || 0)
-        )
-      }
-    />
-  </div>
-
-  <div>
-    <label style={labelStyle}>
-      N. rappresentanti
-    </label>
-
-    <input
-      type="number"
-      min="0"
-      style={inputStyle}
-      value={
-        assettoSocietario
-          .numero_rappresentanti_attesi
-      }
-      onChange={(e) =>
-        setAssettoSocietario((prev) => ({
-          ...prev,
-          numero_rappresentanti_attesi:
-            e.target.value === ""
-              ? 0
-              : Number(e.target.value),
-        }))
-      }
-      onBlur={(e) =>
-        salvaAssettoSocietario(
-          "numero_rappresentanti_attesi",
-          Number(e.target.value || 0)
-        )
-      }
-    />
-  </div>
-
-  <div>
-    <label style={labelStyle}>
-      N. sindaci
-    </label>
-
-    <input
-      type="number"
-      min="0"
-      style={inputStyle}
-      value={
-        assettoSocietario.numero_sindaci_attesi
-      }
-      onChange={(e) =>
-        setAssettoSocietario((prev) => ({
-          ...prev,
-          numero_sindaci_attesi:
-            e.target.value === ""
-              ? 0
-              : Number(e.target.value),
-        }))
-      }
-      onBlur={(e) =>
-        salvaAssettoSocietario(
-          "numero_sindaci_attesi",
-          Number(e.target.value || 0)
-        )
-      }
-    />
-  </div>
-
-  <div>
-    <label style={labelStyle}>
-      N. revisori
-    </label>
-
-    <input
-      type="number"
-      min="0"
-      style={inputStyle}
-      value={
-        assettoSocietario.numero_revisori_attesi
-      }
-      onChange={(e) =>
-        setAssettoSocietario((prev) => ({
-          ...prev,
-          numero_revisori_attesi:
-            e.target.value === ""
-              ? 0
-              : Number(e.target.value),
-        }))
-      }
-      onBlur={(e) =>
-        salvaAssettoSocietario(
-          "numero_revisori_attesi",
-          Number(e.target.value || 0)
-        )
-      }
-    />
   </div>
 </div>
 
