@@ -13,15 +13,17 @@ export async function GET(req: NextRequest) {
 const cliente_id = searchParams.get("cliente_id");
 const modalita = searchParams.get("modalita");
 
-    if (modalita === "conteggi") {
+  if (modalita === "conteggi") {
   const { data, error } = await supabase
     .from("tbclienti_organi")
     .select(`
       cliente_id,
       ruolo,
+      percentuale_partecipazione,
       attivo
     `)
-    .eq("attivo", true);
+    .eq("attivo", true)
+    .eq("ruolo", "socio");
 
   if (error) {
     return NextResponse.json(
@@ -34,7 +36,7 @@ const modalita = searchParams.get("modalita");
     organi: data || [],
   });
 }
-
+    
 if (!cliente_id) {
   return NextResponse.json(
     { error: "cliente_id mancante" },
