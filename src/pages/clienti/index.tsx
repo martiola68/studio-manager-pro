@@ -540,8 +540,9 @@ if (user?.id) {
       if (utentiRes.error) throw utentiRes.error;
       if (cassettiRes.error) throw cassettiRes.error;
       if (prestazioniRes.error) throw prestazioniRes.error;
-   if ((rappLegaliRes as any).error) throw (rappLegaliRes as any).error;
-       }
+   if ((rappLegaliRes as any).error) {
+  throw (rappLegaliRes as any).error;
+}
  
 const rappLegaliData = ((rappLegaliRes as any).data ?? []) as {
   id: string;
