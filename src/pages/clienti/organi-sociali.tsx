@@ -964,15 +964,26 @@ note_titolo_possesso:
   form.ruolo === "socio"
     ? form.note_titolo_possesso || null
     : null,
-  
-  durata_carica:
-    form.ruolo === "socio"
-      ? null
-      : form.durata_carica || null,
-  data_scadenza:
-    form.data_scadenza || null,
-  presenza: null,
-  principale: consentePrincipale(form.ruolo) && form.principale,
+
+data_nomina:
+  form.data_nomina || null,
+
+durata_carica:
+  form.ruolo === "socio"
+    ? null
+    : form.durata_carica || null,
+
+data_scadenza:
+  form.data_scadenza || null,
+
+presenza: null,
+
+attivo:
+  form.attivo,
+
+principale:
+  consentePrincipale(form.ruolo) &&
+  form.principale,
 }),
     });
 
@@ -2724,9 +2735,11 @@ return (
     : "—"}
 </td>
 
-    <td style={tdStyle}>
+  <td style={tdStyle}>
   {o.data_nomina
-    ? new Date(o.data_nomina).toLocaleDateString("it-IT")
+    ? new Date(
+        `${o.data_nomina}T00:00:00`
+      ).toLocaleDateString("it-IT")
     : "—"}
 </td>
 
