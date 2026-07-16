@@ -965,12 +965,9 @@ const ultimaVariazione =
 
 return NextResponse.json({
   cliente: {
-    id:
-      cliente.id,
-
+    id: cliente.id,
     ragione_sociale:
       cliente.ragione_sociale,
-
     codice_fiscale:
       cliente.codice_fiscale,
   },
@@ -978,7 +975,13 @@ return NextResponse.json({
   data_riferimento:
     dataRiferimento,
 
-   numero_titolari_effettivi:
+  criterio_utilizzato:
+    situazioneAttuale.criterio_utilizzato,
+
+  titolari_effettivi:
+    titolariNormalizzati,
+
+  numero_titolari_effettivi:
     titolariNormalizzati.length,
 
   date_potenziali_variazione:
@@ -992,19 +995,16 @@ return NextResponse.json({
 
   alert: {
     titolare_effettivo_assente:
-      titolariNormalizzati.length ===
-      0,
+      titolariNormalizzati.length === 0,
 
     variazione_rilevata:
       Boolean(ultimaVariazione),
 
     data_ultima_variazione:
-      ultimaVariazione?.data ||
-      null,
+      ultimaVariazione?.data || null,
 
     messaggio:
-      titolariNormalizzati.length ===
-      0
+      titolariNormalizzati.length === 0
         ? "Nessun Titolare Effettivo individuato alla data richiesta."
         : ultimaVariazione
         ? `Ultima variazione del Titolare Effettivo rilevata in data ${ultimaVariazione.data}.`
