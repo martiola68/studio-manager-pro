@@ -1595,7 +1595,7 @@ return (
   >
       <div style={{ display: "flex", justifyContent: "space-between" }}>
         <div>
-          <h1 style={{ fontSize: 34, fontWeight: 800, margin: 0 }}>
+          <h1 style={{ fontSize: 34, fontWeight: 400, margin: 0 }}>
             Soci e Organi sociali
           </h1>
 
