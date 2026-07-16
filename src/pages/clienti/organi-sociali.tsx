@@ -645,7 +645,121 @@ setMessaggio(
 async function importaVisura(
   e: React.ChangeEvent<HTMLInputElement>
 ) {
-  // ...
+  const file = e.target.files?.[0];
+
+  if (!file) {
+    e.target.value = "";
+    return;
+  }
+
+  if (!clienteId) {
+    alert(
+      "Seleziona prima la società per la quale importare la visura."
+    );
+
+    e.target.value = "";
+    return;
+  }
+
+  const formData = new FormData();
+
+  /*
+   * L'API di anteprima riceve il cliente
+   * e il file PDF della visura.
+   */
+  formData.append("clienteId", clienteId);
+  formData.append("file", file);
+
+  setLoadingImportazione(true);
+  setMessaggio("");
+
+  try {
+    const response = await fetch(
+      "/api/clienti/organi-sociali/importa-visura",
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.error ||
+          data.details ||
+          "Errore durante la lettura della visura."
+      );
+    }
+
+    /*
+     * L'API restituisce l'anteprima
+     * nell'array soggetti.
+     */
+    const soggettiRicevuti =
+      Array.isArray(data.soggetti)
+        ? data.soggetti
+        : [];
+
+    const righeAnteprima =
+      soggettiRicevuti.map(
+        (soggetto: any) => ({
+          ...soggetto,
+
+          selected:
+            soggetto.esito === "gia_presente"
+              ? false
+              : soggetto.selected !== false,
+
+          percentuale_partecipazione:
+            soggetto.percentuale_partecipazione ??
+            "",
+
+          titolo_possesso:
+            soggetto.titolo_possesso ||
+            "piena_proprieta",
+
+          percentuale_diritti_voto:
+            soggetto.percentuale_diritti_voto ??
+            soggetto.percentuale_partecipazione ??
+            "",
+
+          percentuale_diritti_utili:
+            soggetto.percentuale_diritti_utili ??
+            soggetto.percentuale_partecipazione ??
+            "",
+        })
+      );
+
+    setAnteprimaImportazione(
+      righeAnteprima
+    );
+
+    /*
+     * La modale deve aprirsi anche quando
+     * non vengono trovate righe, così viene
+     * mostrato il relativo messaggio.
+     */
+    setShowImportazioneVisura(true);
+  } catch (error: any) {
+    console.error(
+      "Errore importaVisura:",
+      error
+    );
+
+    alert(
+      error?.message ||
+        "Errore durante la lettura della visura."
+    );
+  } finally {
+    setLoadingImportazione(false);
+
+    /*
+     * Consente di selezionare nuovamente
+     * lo stesso file PDF.
+     */
+    e.target.value = "";
+  }
 }
 
 async function caricaTitolariEffettivi() {
