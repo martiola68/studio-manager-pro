@@ -565,9 +565,27 @@ export async function GET(
      * indiretto, mediante il motore già
      * utilizzato dai Gruppi societari.
      */
+    type TitolareEffettivoNormalizzato =
+  TitolareEffettivoTemporale & {
+    codice_fiscale: string | null;
+    chiave_soggetto: string;
+
+    ruolo?: string | null;
+    carica?: string | null;
+    principale?: boolean;
+  };
+
+type SituazioneTitolareEffettivo = {
+  criterio_utilizzato:
+    | "proprieta"
+    | "residuale";
+
+  titolari_effettivi:
+    TitolareEffettivoNormalizzato[];
+};
 function calcolaSituazioneAllaData(
   dataCalcolo: string
-) {
+): SituazioneTitolareEffettivo {
   const titolariPerProprieta =
     calcolaTitolariEffettiviAllaData(
       partecipazioniNormalizzate,
@@ -712,9 +730,10 @@ function calcolaSituazioneAllaData(
       );
   }
 
-  const titolariNormalizzati =
-    titolariEffettivi.map(
-      (titolare: any) => {
+ const titolariNormalizzati:
+  TitolareEffettivoNormalizzato[] =
+  titolariEffettivi.map(
+    (titolare: any) => {
         const persona =
           clientiMap.get(
             String(
