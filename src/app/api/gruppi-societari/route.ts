@@ -7,6 +7,10 @@ import {
   calcolaTitolariEffettivi,
 } from "@/lib/gruppiSocietari";
 
+import type {
+  PartecipazioneTemporale,
+} from "@/lib/titolariEffettiviTemporali";
+
 import {
   costruisciVistaGruppiSocietari,
 } from "@/lib/gruppiSocietariView";
@@ -23,20 +27,30 @@ type PartecipazioneRow = {
   id: string;
   cliente_id: string;
   soggetto_cliente_id: string;
-  percentuale_partecipazione: number | string | null;
+
+  percentuale_partecipazione:
+    number | string | null;
+
   tipo_soggetto: string | null;
   ruolo: string | null;
   attivo: boolean | null;
+
+  data_nomina: string | null;
+  data_scadenza: string | null;
 };
 
 type OrganoResidualRow = {
   id: string;
   cliente_id: string;
   soggetto_cliente_id: string;
+
   ruolo: string | null;
   carica: string | null;
   principale: boolean | null;
   attivo: boolean | null;
+
+  data_nomina: string | null;
+  data_scadenza: string | null;
 };
 
 function classificaPartecipazione(quota: number) {
@@ -61,15 +75,17 @@ export async function GET() {
     const { data: partecipazioniData, error: partecipazioniError } =
       await supabase
         .from("tbclienti_organi")
-        .select(`
-          id,
-          cliente_id,
-          soggetto_cliente_id,
-          percentuale_partecipazione,
-          tipo_soggetto,
-          ruolo,
-          attivo
-        `)
+       .select(`
+  id,
+  cliente_id,
+  soggetto_cliente_id,
+  percentuale_partecipazione,
+  tipo_soggetto,
+  ruolo,
+  attivo,
+  data_nomina,
+  data_scadenza
+`)
         .eq("ruolo", "socio")
         .eq("attivo", true)
         .not("soggetto_cliente_id", "is", null)
@@ -97,15 +113,17 @@ export async function GET() {
 const { data: organiResidualData, error: organiResidualError } =
   await supabase
     .from("tbclienti_organi")
-    .select(`
-      id,
-      cliente_id,
-      soggetto_cliente_id,
-      ruolo,
-      carica,
-      principale,
-      attivo
-    `)
+   .select(`
+  id,
+  cliente_id,
+  soggetto_cliente_id,
+  ruolo,
+  carica,
+  principale,
+  attivo,
+  data_nomina,
+  data_scadenza
+`)
     .eq("attivo", true)
     .in("ruolo", ruoliResiduali)
     .not("soggetto_cliente_id", "is", null)
@@ -195,13 +213,20 @@ const organiResidual =
           quota > 20 &&
           quota <= 50,
 
-        candidato_titolare_effettivo_diretto:
-          partecipantePersonaFisica && quota > 25,
+      candidato_titolare_effettivo_diretto:
+  partecipantePersonaFisica &&
+  quota > 25,
+
+valido_dal:
+  row.data_nomina || null,
+
+valido_al:
+  row.data_scadenza || null,
       };
     });
 
-    const partecipazioniNormalizzate =
-  relazioni as PartecipazioneDiretta[];
+  const partecipazioniNormalizzate =
+  relazioni as PartecipazioneTemporale[];
 
 const gruppi = costruisciGruppiSocietari(
   partecipazioniNormalizzate
