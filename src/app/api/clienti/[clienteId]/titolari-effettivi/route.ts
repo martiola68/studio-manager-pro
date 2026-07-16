@@ -591,49 +591,64 @@ export async function GET(
             return;
           }
 
-          residualiMap.set(
-            personaId,
-            {
-              persona_id:
-                personaId,
+         residualiMap.set(
+  personaId,
+  {
+    persona_id:
+      personaId,
 
-              persona_nome:
-                soggetto
-                  .ragione_sociale ||
-                "Nominativo non trovato",
+    persona_nome:
+      soggetto
+        .ragione_sociale ||
+      "Nominativo non trovato",
 
-              societa_id:
-                String(cliente.id),
+    societa_id:
+      String(cliente.id),
 
-              societa_nome:
-                cliente
-                  .ragione_sociale ||
-                "Società non trovata",
+    societa_nome:
+      cliente
+        .ragione_sociale ||
+      "Società non trovata",
 
-              quota_diretta: 0,
-              quota_indiretta: 0,
-              quota_complessiva: 0,
+    quota_diretta: 0,
+    quota_indiretta: 0,
+    quota_complessiva: 0,
 
-              candidato_titolare_effettivo:
-                true,
+    candidato_titolare_effettivo:
+      true,
 
-              criterio_titolarita:
-                "residuale",
+    criterio_titolarita:
+      "residuale",
 
-              tipo_titolarita:
-                "residuale",
+    tipo_titolarita:
+      "residuale",
 
-              valido_dal:
-                organo.valido_dal ||
-                null,
+    ruolo:
+      organo.ruolo || null,
 
-              valido_al:
-                organo.valido_al ||
-                null,
+    carica:
+      organo.carica ||
+      organo.ruolo ||
+      "Amministratore",
 
-              percorsi: [],
-            }
-          );
+    principale:
+      organo.principale === true,
+
+    valido_dal:
+      organo.valido_dal ||
+      null,
+
+    valido_al:
+      organo.valido_al ||
+      null,
+
+    percorsi: [],
+  } as TitolareEffettivoTemporale & {
+    ruolo: string | null;
+    carica: string | null;
+    principale: boolean;
+  }
+);
         }
       );
 
