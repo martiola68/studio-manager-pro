@@ -576,9 +576,8 @@ export async function GET(
   };
 
 type SituazioneTitolareEffettivo = {
-  criterio_utilizzato:
-    | "proprieta"
-    | "residuale";
+ criterio_utilizzato:
+  situazioneAttuale.criterio_utilizzato,
 
   titolari_effettivi:
     TitolareEffettivoNormalizzato[];
