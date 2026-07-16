@@ -744,13 +744,14 @@ async function caricaOrgani() {
     })
   );
 
- setOrgani(organiConDiritti);
+setOrgani(organiConDiritti);
 
-/*
- * Ogni modifica a soci, quote, date o cariche
- * può cambiare il Titolare Effettivo.
- */
-await caricaTitolariEffettivi();
+void caricaTitolariEffettivi().catch((error) => {
+  console.error(
+    "Errore aggiornamento Titolare Effettivo:",
+    error
+  );
+});
 } else {
   console.error(
     "Errore caricaOrgani:",
