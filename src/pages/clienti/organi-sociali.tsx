@@ -105,36 +105,156 @@ async function leggiDatiDaCF(
   cf: string,
   setNuovoNominativo: any
 ) {
-  const codice = normalizeCF(cf);
+  // ...
+}
 
-  if (codice.length !== 16) return;
-  if (!isValidCF(codice)) return;
+type TitolareEffettivoApi = {
+  persona_id: string;
+  persona_nome: string;
 
-  try {
-    const comune = await getComuneFromCF(codice);
-    const dataNascita = extractDataNascitaFromCF(codice);
+  codice_fiscale: string | null;
 
-    setNuovoNominativo((prev: any) => ({
-      ...prev,
-      codice_fiscale: codice,
-      luogo_nascita:
-        prev.luogo_nascita || comune?.comune || "",
-      data_nascita:
-        prev.data_nascita || dataNascita || "",
-    }));
-  } catch (err) {
-    console.error(err);
+  quota_diretta: number;
+  quota_indiretta: number;
+  quota_complessiva: number;
+
+  criterio_titolarita:
+    | "proprieta"
+    | "residuale";
+
+  tipo_titolarita:
+    | "diretta"
+    | "indiretta"
+    | "mista"
+    | "residuale";
+
+  ruolo?: string | null;
+  carica?: string | null;
+  principale?: boolean;
+
+  valido_dal: string | null;
+  valido_al: string | null;
+
+  percorsi: Array<{
+    quota_percorso?: number;
+    percorso_nomi?: string[];
+  }>;
+};
+
+type VariazioneTitolareEffettivoApi = {
+  data: string;
+
+  criterio_precedente:
+    | "proprieta"
+    | "residuale";
+
+  criterio_successivo:
+    | "proprieta"
+    | "residuale";
+
+  precedenti: Array<{
+    persona_id: string;
+    persona_nome: string;
+    codice_fiscale: string | null;
+  }>;
+
+  successivi: Array<{
+    persona_id: string;
+    persona_nome: string;
+    codice_fiscale: string | null;
+  }>;
+};
+
+type RispostaTitolariEffettiviApi = {
+  data_riferimento: string;
+
+  criterio_utilizzato:
+    | "proprieta"
+    | "residuale";
+
+  titolari_effettivi:
+    TitolareEffettivoApi[];
+
+  numero_titolari_effettivi: number;
+
+  variazioni_effettive:
+    VariazioneTitolareEffettivoApi[];
+
+  numero_variazioni_effettive: number;
+
+  alert: {
+    titolare_effettivo_assente: boolean;
+    variazione_rilevata: boolean;
+    data_ultima_variazione: string | null;
+    messaggio: string | null;
+  };
+};
+
+function formattaDataItaliana(
+  data: string | null | undefined
+): string {
+  if (!data) {
+    return "—";
+  }
+
+  const parti = data
+    .slice(0, 10)
+    .split("-");
+
+  if (parti.length !== 3) {
+    return data;
+  }
+
+  return `${parti[2]}/${parti[1]}/${parti[0]}`;
+}
+
+function formattaCriterioTitolare(
+  criterio: string | null | undefined
+): string {
+  switch (criterio) {
+    case "diretta":
+      return "Proprietà diretta";
+
+    case "indiretta":
+      return "Proprietà indiretta";
+
+    case "mista":
+      return "Proprietà diretta e indiretta";
+
+    case "residuale":
+      return "Criterio residuale";
+
+    default:
+      return "Non determinato";
   }
 }
+
 export default function OrganiSocialiPage() {
   const router = useRouter();
   
 
-  const [clienti, setClienti] = useState<any[]>([]);
-  const [nominativi, setNominativi] = useState<any[]>([]);
-  const [organi, setOrgani] = useState<any[]>([]);
+const [clienti, setClienti] = useState<any[]>([]);
+const [nominativi, setNominativi] = useState<any[]>([]);
+const [organi, setOrgani] = useState<any[]>([]);
 
-  const [anteprimaImportazione, setAnteprimaImportazione] =
+const [
+  datiTitolariEffettivi,
+  setDatiTitolariEffettivi,
+] = useState<RispostaTitolariEffettiviApi | null>(
+  null
+);
+
+const [
+  loadingTitolariEffettivi,
+  setLoadingTitolariEffettivi,
+] = useState(false);
+
+const [
+  erroreTitolariEffettivi,
+  setErroreTitolariEffettivi,
+] = useState("");
+
+const [anteprimaImportazione, setAnteprimaImportazione] =
   useState<any[]>([]);
 
   const [
@@ -223,13 +343,15 @@ useEffect(() => {
   caricaNominativi();
 }, []);
 
-  useEffect(() => {
+useEffect(() => {
   if (!clienteId) {
     setOrgani([]);
+    setDatiTitolariEffettivi(null);
+    setErroreTitolariEffettivi("");
     return;
   }
 
-  caricaOrgani();
+  void caricaOrgani();
 }, [clienteId]);
 
 
@@ -523,69 +645,58 @@ setMessaggio(
 async function importaVisura(
   e: React.ChangeEvent<HTMLInputElement>
 ) {
-  const file = e.target.files?.[0];
+  // ...
+}
 
-  if (!file || !clienteId) {
-    e.target.value = "";
+async function caricaTitolariEffettivi() {
+  if (!clienteId) {
+    setDatiTitolariEffettivi(null);
+    setErroreTitolariEffettivi("");
     return;
   }
 
-  const formData = new FormData();
-
-  /*
-   * L’API usa esattamente il campo "clienteId".
-   */
-  formData.append("clienteId", clienteId);
-  formData.append("file", file);
-
-  setLoadingImportazione(true);
-  setMessaggio("");
+  setLoadingTitolariEffettivi(true);
+  setErroreTitolariEffettivi("");
 
   try {
-    const res = await fetch(
-      "/api/clienti/organi-sociali/importa-visura",
+    const response = await fetch(
+      `/api/clienti/${clienteId}/titolari-effettivi`,
       {
-        method: "POST",
-        body: formData,
+        cache: "no-store",
       }
     );
 
-    const data = await res.json();
+    const data =
+      await response.json();
 
-    if (!res.ok) {
+    if (!response.ok) {
       throw new Error(
         data.error ||
-          "Errore durante la lettura della visura."
+          "Errore durante il calcolo del Titolare Effettivo."
       );
     }
 
-    /*
-     * L’API restituisce "soggetti", non "righe".
-     */
-    setAnteprimaImportazione(
-      Array.isArray(data.soggetti)
-        ? data.soggetti
-        : []
+    setDatiTitolariEffettivi(
+      data as RispostaTitolariEffettiviApi
     );
-
-    setShowImportazioneVisura(true);
   } catch (error: any) {
     console.error(
-      "Errore importaVisura:",
+      "Errore caricaTitolariEffettivi:",
       error
     );
 
-    alert(
+    setDatiTitolariEffettivi(null);
+
+    setErroreTitolariEffettivi(
       error?.message ||
-        "Errore durante la lettura della visura."
+        "Errore durante il calcolo del Titolare Effettivo."
     );
   } finally {
-    setLoadingImportazione(false);
-    e.target.value = "";
+    setLoadingTitolariEffettivi(false);
   }
 }
-  
- async function caricaOrgani() {
+
+async function caricaOrgani() {
   setLoading(true);
 
   try {
@@ -633,9 +744,18 @@ async function importaVisura(
     })
   );
 
-  setOrgani(organiConDiritti);
+ setOrgani(organiConDiritti);
+
+/*
+ * Ogni modifica a soci, quote, date o cariche
+ * può cambiare il Titolare Effettivo.
+ */
+await caricaTitolariEffettivi();
 } else {
-      console.error("Errore caricaOrgani:", data);
+  console.error(
+    "Errore caricaOrgani:",
+    data
+  );
       setMessaggio(data.error || "Errore caricamento organi");
       setOrgani([]);
     }
@@ -1558,13 +1678,391 @@ return (
           </option>
         ))}
       </select>
+     </div>
+</div>
+
+{clienteId && (
+  <div
+    style={{
+      ...cardStyle,
+
+      border:
+        datiTitolariEffettivi?.alert
+          .titolare_effettivo_assente
+          ? "2px solid #fca5a5"
+          : "2px solid #86efac",
+
+      background:
+        datiTitolariEffettivi?.alert
+          .titolare_effettivo_assente
+          ? "#fff7f7"
+          : "#f7fff9",
+    }}
+  >
+    <div
+      style={{
+        display: "flex",
+        alignItems: "flex-start",
+        justifyContent: "space-between",
+        gap: 16,
+      }}
+    >
+      <div>
+        <h2
+          style={{
+            ...titleStyle,
+            marginBottom: 4,
+          }}
+        >
+          Titolare Effettivo attuale
+        </h2>
+
+        <div
+          style={{
+            fontSize: 13,
+            color: "#64748b",
+          }}
+        >
+          Calcolato dalla composizione sociale,
+          dalle partecipazioni indirette e dai
+          Gruppi societari.
+        </div>
+      </div>
+
+      {datiTitolariEffettivi && (
+        <div
+          style={{
+            padding: "7px 11px",
+            borderRadius: 999,
+            background:
+              datiTitolariEffettivi
+                .criterio_utilizzato ===
+              "proprieta"
+                ? "#dbeafe"
+                : "#fef3c7",
+            color:
+              datiTitolariEffettivi
+                .criterio_utilizzato ===
+              "proprieta"
+                ? "#1d4ed8"
+                : "#92400e",
+            fontSize: 12,
+            fontWeight: 800,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {datiTitolariEffettivi
+            .criterio_utilizzato ===
+          "proprieta"
+            ? "CRITERIO DI PROPRIETÀ"
+            : "CRITERIO RESIDUALE"}
+        </div>
+      )}
     </div>
+
+    {loadingTitolariEffettivi ? (
+      <div
+        style={{
+          marginTop: 18,
+          color: "#64748b",
+        }}
+      >
+        Calcolo del Titolare Effettivo...
+      </div>
+    ) : erroreTitolariEffettivi ? (
+      <div
+        style={{
+          marginTop: 18,
+          padding: 14,
+          borderRadius: 9,
+          background: "#fee2e2",
+          color: "#991b1b",
+          fontWeight: 700,
+        }}
+      >
+        {erroreTitolariEffettivi}
+      </div>
+    ) : !datiTitolariEffettivi ||
+      datiTitolariEffettivi
+        .titolari_effettivi.length === 0 ? (
+      <div
+        style={{
+          marginTop: 18,
+          padding: 14,
+          borderRadius: 9,
+          background: "#fee2e2",
+          color: "#991b1b",
+          fontWeight: 700,
+        }}
+      >
+        Nessun Titolare Effettivo individuato
+        alla data attuale.
+      </div>
+    ) : (
+      <>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(280px, 1fr))",
+            gap: 12,
+            marginTop: 18,
+          }}
+        >
+          {datiTitolariEffettivi
+            .titolari_effettivi.map(
+              (titolare) => (
+                <div
+                  key={titolare.persona_id}
+                  style={{
+                    padding: 16,
+                    border:
+                      "1px solid #bbf7d0",
+                    borderRadius: 10,
+                    background: "#ffffff",
+                  }}
+                >
+                  <div
+                    style={{
+                      color: "#166534",
+                      fontSize: 16,
+                      fontWeight: 900,
+                    }}
+                  >
+                    {titolare.persona_nome}
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: 4,
+                      color: "#475569",
+                      fontSize: 13,
+                    }}
+                  >
+                    CF:{" "}
+                    {titolare.codice_fiscale ||
+                      "non disponibile"}
+                  </div>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns:
+                        "1fr 1fr",
+                      gap: 10,
+                      marginTop: 14,
+                    }}
+                  >
+                    <div>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: "#64748b",
+                          textTransform:
+                            "uppercase",
+                          fontWeight: 800,
+                        }}
+                      >
+                        Criterio
+                      </div>
+
+                      <div
+                        style={{
+                          marginTop: 3,
+                          fontWeight: 700,
+                        }}
+                      >
+                        {formattaCriterioTitolare(
+                          titolare
+                            .tipo_titolarita
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: "#64748b",
+                          textTransform:
+                            "uppercase",
+                          fontWeight: 800,
+                        }}
+                      >
+                        Quota complessiva
+                      </div>
+
+                      <div
+                        style={{
+                          marginTop: 3,
+                          fontWeight: 700,
+                        }}
+                      >
+                        {titolare
+                          .criterio_titolarita ===
+                        "residuale"
+                          ? "Non applicabile"
+                          : `${Number(
+                              titolare
+                                .quota_complessiva ||
+                                0
+                            ).toLocaleString(
+                              "it-IT",
+                              {
+                                minimumFractionDigits:
+                                  2,
+                                maximumFractionDigits:
+                                  2,
+                              }
+                            )}%`}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: "#64748b",
+                          textTransform:
+                            "uppercase",
+                          fontWeight: 800,
+                        }}
+                      >
+                        Valido dal
+                      </div>
+
+                      <div
+                        style={{
+                          marginTop: 3,
+                          fontWeight: 700,
+                        }}
+                      >
+                        {formattaDataItaliana(
+                          titolare.valido_dal
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: "#64748b",
+                          textTransform:
+                            "uppercase",
+                          fontWeight: 800,
+                        }}
+                      >
+                        Valido fino al
+                      </div>
+
+                      <div
+                        style={{
+                          marginTop: 3,
+                          fontWeight: 700,
+                        }}
+                      >
+                        {titolare.valido_al
+                          ? formattaDataItaliana(
+                              titolare.valido_al
+                            )
+                          : "In corso"}
+                      </div>
+                    </div>
+                  </div>
+
+                  {titolare
+                    .criterio_titolarita ===
+                    "residuale" && (
+                    <div
+                      style={{
+                        marginTop: 12,
+                        padding: 10,
+                        borderRadius: 8,
+                        background: "#fef3c7",
+                        color: "#92400e",
+                        fontSize: 13,
+                      }}
+                    >
+                      {titolare.carica ||
+                        titolare.ruolo ||
+                        "Amministratore"}
+                    </div>
+                  )}
+
+                  {titolare.percorsi?.length >
+                    0 && (
+                    <div
+                      style={{
+                        marginTop: 12,
+                        padding: 10,
+                        borderRadius: 8,
+                        background: "#eff6ff",
+                        color: "#1e3a8a",
+                        fontSize: 12,
+                      }}
+                    >
+                      {titolare.percorsi.map(
+                        (percorso, indice) => (
+                          <div
+                            key={indice}
+                            style={{
+                              marginTop:
+                                indice === 0
+                                  ? 0
+                                  : 7,
+                            }}
+                          >
+                            {(
+                              percorso
+                                .percorso_nomi ||
+                              []
+                            ).join(" → ")}
+                          </div>
+                        )
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            )}
+        </div>
+
+        {datiTitolariEffettivi.alert
+          .variazione_rilevata &&
+          datiTitolariEffettivi.alert
+            .data_ultima_variazione && (
+            <div
+              style={{
+                marginTop: 16,
+                padding: "13px 15px",
+                borderRadius: 9,
+                border:
+                  "1px solid #fbbf24",
+                background: "#fffbeb",
+                color: "#92400e",
+                fontWeight: 800,
+              }}
+            >
+              ⚠ Ultima variazione del Titolare
+              Effettivo rilevata in data{" "}
+              {formattaDataItaliana(
+                datiTitolariEffettivi
+                  .alert
+                  .data_ultima_variazione
+              )}
+              .
+            </div>
+          )}
+      </>
+    )}
   </div>
+)}
 
-   
-
-      <div style={cardStyle}>
-        <h2 style={titleStyle}>Aggiungi socio / organo</h2>
+<div style={cardStyle}>
+  <h2 style={titleStyle}>
+    Aggiungi socio / organo
+  </h2>
 
      <div
   style={{
