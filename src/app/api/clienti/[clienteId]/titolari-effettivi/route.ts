@@ -977,21 +977,7 @@ return NextResponse.json({
   data_riferimento:
     dataRiferimento,
 
-  /*
-   * Qui siamo fuori dalla funzione:
-   * usiamo situazioneAttuale.
-   */
- return {
-  criterio_utilizzato:
-    titolariPerProprieta.length > 0
-      ? "proprieta"
-      : "residuale",
-
-  titolari_effettivi:
-    titolariNormalizzati,
-};
-
-  numero_titolari_effettivi:
+   numero_titolari_effettivi:
     titolariNormalizzati.length,
 
   date_potenziali_variazione:
