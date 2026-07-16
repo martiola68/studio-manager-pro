@@ -95,6 +95,53 @@ type RispostaApi = {
   };
 };
 
+type TitolareAml = {
+  id: string;
+  chiave_soggetto: string;
+  nome_cognome: string;
+  codice_fiscale: string | null;
+  sezioni: string[];
+};
+
+type RispostaAmlApi = {
+  aml_presente: boolean;
+
+  av4: {
+    id: string;
+    pratica_id: string | null;
+    stato: string | null;
+    versione: number | null;
+    data_documento: string | null;
+    compilato_da_cliente: boolean;
+    caricato_manualmente: boolean;
+  } | null;
+
+  titolari_aml: TitolareAml[];
+  numero_titolari_aml: number;
+  messaggio: string | null;
+};
+
+type EsitoConfronto =
+  | "ok"
+  | "solo_soci"
+  | "solo_aml"
+  | "contrastante";
+
+type RigaConfronto = {
+  chiave_soggetto: string;
+
+  nome_soci: string | null;
+  nome_aml: string | null;
+
+  codice_fiscale_soci: string | null;
+  codice_fiscale_aml: string | null;
+
+  presente_soci: boolean;
+  presente_aml: boolean;
+
+  esito: EsitoConfronto;
+};
+
 function formattaData(
   valore: string | null | undefined
 ): string {
@@ -163,14 +210,31 @@ export default function VerificaTitolariEffettiviPage() {
   const [dataRiferimento, setDataRiferimento] =
     useState("");
 
-  const [dati, setDati] =
-    useState<RispostaApi | null>(null);
+const [dati, setDati] =
+  useState<RispostaApi | null>(null);
 
-  const [loading, setLoading] =
-    useState(true);
+const [datiAml, setDatiAml] =
+  useState<RispostaAmlApi | null>(null);
 
-  const [errore, setErrore] =
-    useState("");
+const [loading, setLoading] =
+  useState(true);
+
+ const [errore, setErrore] =
+  useState("");
+
+const [
+  salvataggioVerifica,
+  setSalvataggioVerifica,
+] = useState(false);
+
+const [
+  verificaConfermata,
+  setVerificaConfermata,
+] = useState<{
+  id: string;
+  data_verifica: string;
+  esito_confronto: string;
+} | null>(null);
 
   async function caricaDati(
     clienteIdDaCaricare: string,
@@ -227,11 +291,40 @@ export default function VerificaTitolariEffettiviPage() {
           "Errore durante il caricamento dei Titolari Effettivi."
       );
     } finally {
-      setLoading(false);
-    }
+    setLoading(false);
+  }
+}
+
+async function caricaDatiAml(
+  clienteIdDaCaricare: string
+) {
+  if (!clienteIdDaCaricare) {
+    setDatiAml(null);
+    return;
   }
 
-  useEffect(() => {
+  const response = await fetch(
+    `/api/clienti/${clienteIdDaCaricare}/titolari-effettivi/aml`,
+    {
+      cache: "no-store",
+    }
+  );
+
+  const json = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      json?.error ||
+        "Errore durante il caricamento del dato AML."
+    );
+  }
+
+  setDatiAml(
+    json as RispostaAmlApi
+  );
+}
+
+useEffect(() => {
     if (!router.isReady) {
       return;
     }
@@ -244,8 +337,228 @@ export default function VerificaTitolariEffettiviPage() {
       return;
     }
 
-    void caricaDati(clienteId);
-  }, [router.isReady, clienteId]);
+void Promise.all([
+  caricaDati(clienteId),
+  caricaDatiAml(clienteId),
+]).catch((error: any) => {
+  console.error(
+    "Errore caricamento verifica TE:",
+    error
+  );
+
+  setErrore(
+    error?.message ||
+      "Errore durante il caricamento della verifica."
+  );
+});
+  
+ }, [router.isReady, clienteId]);
+
+const righeConfronto =
+  useMemo<RigaConfronto[]>(() => {
+    if (!dati) {
+      return [];
+    }
+
+    const sociMap =
+      new Map<string, TitolareEffettivo>();
+
+    dati.titolari_effettivi.forEach(
+      (titolare) => {
+        sociMap.set(
+          titolare.chiave_soggetto,
+          titolare
+        );
+      }
+    );
+
+    const amlMap =
+      new Map<string, TitolareAml>();
+
+    (
+      datiAml?.titolari_aml || []
+    ).forEach((titolare) => {
+      amlMap.set(
+        titolare.chiave_soggetto,
+        titolare
+      );
+    });
+
+    const chiavi = new Set<string>([
+      ...sociMap.keys(),
+      ...amlMap.keys(),
+    ]);
+
+    return Array.from(chiavi)
+      .map((chiave) => {
+        const socio = sociMap.get(chiave);
+        const aml = amlMap.get(chiave);
+
+        const presenteSoci =
+          Boolean(socio);
+
+        const presenteAml =
+          Boolean(aml);
+
+        let esito: EsitoConfronto;
+
+        if (
+          presenteSoci &&
+          presenteAml
+        ) {
+          const nomeSoci = String(
+            socio?.persona_nome || ""
+          )
+            .trim()
+            .toUpperCase();
+
+          const nomeAml = String(
+            aml?.nome_cognome || ""
+          )
+            .trim()
+            .toUpperCase();
+
+          esito =
+            nomeSoci &&
+            nomeAml &&
+            nomeSoci !== nomeAml
+              ? "contrastante"
+              : "ok";
+        } else if (presenteSoci) {
+          esito = "solo_soci";
+        } else {
+          esito = "solo_aml";
+        }
+
+        return {
+          chiave_soggetto: chiave,
+
+          nome_soci:
+            socio?.persona_nome || null,
+
+          nome_aml:
+            aml?.nome_cognome || null,
+
+          codice_fiscale_soci:
+            socio?.codice_fiscale || null,
+
+          codice_fiscale_aml:
+            aml?.codice_fiscale || null,
+
+          presente_soci:
+            presenteSoci,
+
+          presente_aml:
+            presenteAml,
+
+          esito,
+        };
+      })
+      .sort((a, b) =>
+        String(
+          a.nome_soci ||
+            a.nome_aml ||
+            ""
+        ).localeCompare(
+          String(
+            b.nome_soci ||
+              b.nome_aml ||
+              ""
+          ),
+          "it"
+        )
+      );
+  }, [dati, datiAml]);
+
+async function confermaVerifica() {
+  if (
+    !clienteId ||
+    !dati
+  ) {
+    return;
+  }
+
+  setSalvataggioVerifica(true);
+  setErrore("");
+
+  try {
+    const response =
+      await fetch(
+        `/api/clienti/${clienteId}/titolari-effettivi/verifiche`,
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+
+          body: JSON.stringify({
+            data_riferimento:
+              dati.data_riferimento,
+
+            criterio_utilizzato:
+              dati.criterio_utilizzato,
+
+            titolari_soci:
+              dati.titolari_effettivi,
+
+            dati_aml:
+              datiAml,
+
+            righe_confronto:
+              righeConfronto,
+
+            variazione_rilevata:
+              dati.alert
+                .variazione_rilevata,
+
+            data_variazione:
+              dati.alert
+                .data_ultima_variazione,
+
+            note:
+              null,
+          }),
+        }
+      );
+
+    const json =
+      await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        json?.error ||
+          "Errore durante la conferma della verifica."
+      );
+    }
+
+    setVerificaConfermata({
+      id:
+        json.verifica.id,
+
+      data_verifica:
+        json.verifica
+          .data_verifica,
+
+      esito_confronto:
+        json.verifica
+          .esito_confronto,
+    });
+  } catch (error: any) {
+    console.error(
+      "Errore conferma verifica:",
+      error
+    );
+
+    setErrore(
+      error?.message ||
+        "Errore durante la conferma della verifica."
+    );
+  } finally {
+    setSalvataggioVerifica(false);
+  }
+}
 
   function tornaAgliOrgani() {
     if (!clienteId) {
@@ -795,25 +1108,222 @@ export default function VerificaTitolariEffettiviPage() {
             )}
           </section>
 
-          <section style={cardStyle}>
-            <div style={sectionHeaderStyle}>
-              <div>
-                <h2 style={sectionTitleStyle}>
-                  Confronto AML
-                </h2>
+         <section style={cardStyle}>
+  <div style={sectionHeaderStyle}>
+    <div>
+      <h2 style={sectionTitleStyle}>
+        Confronto Soci / AML
+      </h2>
 
-                <div style={sectionDescriptionStyle}>
-                  Il confronto con il dato
-                  registrato in AML sarà collegato
-                  nel prossimo passaggio.
+      <div style={sectionDescriptionStyle}>
+        Confronto tra il Titolare Effettivo
+        risultante dalla composizione sociale
+        e quello registrato nell’ultimo AV4.
+      </div>
+    </div>
+  </div>
+
+  {!datiAml?.aml_presente && (
+    <div
+      style={{
+        ...pendingStyle,
+        background: "#fff7ed",
+        color: "#9a3412",
+        border: "1px solid #fed7aa",
+        marginBottom: 16,
+      }}
+    >
+      Nessun modello AV4 presente per il cliente.
+    </div>
+  )}
+
+  {righeConfronto.length === 0 ? (
+    <div style={pendingStyle}>
+      Nessun Titolare Effettivo presente
+      nelle fonti confrontate.
+    </div>
+  ) : (
+    <div
+      style={{
+        overflowX: "auto",
+        marginTop: 18,
+      }}
+    >
+      <table
+        style={{
+          width: "100%",
+          borderCollapse: "collapse",
+          fontSize: 13,
+        }}
+      >
+        <thead>
+          <tr>
+            <th style={comparisonThStyle}>
+              Soggetto
+            </th>
+
+            <th style={comparisonThStyle}>
+              Composizione sociale
+            </th>
+
+            <th style={comparisonThStyle}>
+              AML
+            </th>
+
+            <th style={comparisonThStyle}>
+              Esito
+            </th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {righeConfronto.map((riga) => (
+            <tr key={riga.chiave_soggetto}>
+              <td style={comparisonTdStyle}>
+                <strong>
+                  {riga.nome_soci ||
+                    riga.nome_aml ||
+                    "Nominativo non disponibile"}
+                </strong>
+
+                <div
+                  style={{
+                    marginTop: 3,
+                    color: "#64748b",
+                  }}
+                >
+                  {riga.codice_fiscale_soci ||
+                    riga.codice_fiscale_aml ||
+                    "CF non disponibile"}
                 </div>
-              </div>
-            </div>
+              </td>
 
-            <div style={pendingStyle}>
-              Dato AML non ancora caricato.
-            </div>
-          </section>
+              <td style={comparisonTdStyle}>
+                {riga.presente_soci
+                  ? "Presente"
+                  : "Assente"}
+              </td>
+
+              <td style={comparisonTdStyle}>
+                {riga.presente_aml
+                  ? "Presente"
+                  : "Assente"}
+              </td>
+
+              <td style={comparisonTdStyle}>
+                <span
+                  style={{
+                    ...comparisonBadgeStyle,
+
+                    background:
+                      riga.esito === "ok"
+                        ? "#dcfce7"
+                        : riga.esito ===
+                            "contrastante"
+                        ? "#fee2e2"
+                        : "#fef3c7",
+
+                    color:
+                      riga.esito === "ok"
+                        ? "#166534"
+                        : riga.esito ===
+                            "contrastante"
+                        ? "#991b1b"
+                        : "#92400e",
+                  }}
+                >
+                  {riga.esito === "ok"
+                    ? "Dato verificato – OK"
+                    : riga.esito ===
+                      "solo_soci"
+                    ? "Presente solo in Soci"
+                    : riga.esito ===
+                      "solo_aml"
+                    ? "Presente solo in AML"
+                    : "Dato contrastante"}
+                </span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 14,
+      marginTop: 20,
+      paddingTop: 18,
+      borderTop: "1px solid #e2e8f0",
+      flexWrap: "wrap",
+    }}
+  >
+    <div>
+      {verificaConfermata ? (
+        <div
+          style={{
+            padding: "10px 13px",
+            borderRadius: 8,
+            background: "#dcfce7",
+            color: "#166534",
+            fontSize: 13,
+          }}
+        >
+          Verifica confermata e salvata
+          correttamente.
+        </div>
+      ) : (
+        <div
+          style={{
+            color: "#64748b",
+            fontSize: 13,
+          }}
+        >
+          La conferma salva la situazione
+          attuale e il confronto nello storico.
+        </div>
+      )}
+    </div>
+
+    <button
+      type="button"
+      onClick={confermaVerifica}
+      disabled={
+        salvataggioVerifica ||
+        Boolean(verificaConfermata)
+      }
+      style={{
+        padding: "10px 16px",
+        borderRadius: 8,
+        border: "1px solid #16a34a",
+
+        background:
+          verificaConfermata
+            ? "#94a3b8"
+            : "#16a34a",
+
+        color: "#ffffff",
+        fontWeight: 400,
+
+        cursor:
+          salvataggioVerifica ||
+          Boolean(verificaConfermata)
+            ? "not-allowed"
+            : "pointer",
+      }}
+    >
+      {salvataggioVerifica
+        ? "Salvataggio..."
+        : verificaConfermata
+        ? "Verifica confermata"
+        : "Conferma verifica"}
+    </button>
+  </div>
+</section>
         </>
       )}
     </main>
@@ -1117,4 +1627,32 @@ const loadingStyle: React.CSSProperties = {
   padding: 30,
   textAlign: "center",
   color: "#64748b",
+};
+
+const comparisonThStyle:
+  React.CSSProperties = {
+  padding: "11px 12px",
+  textAlign: "left",
+  borderBottom: "2px solid #cbd5e1",
+  background: "#f8fafc",
+  fontSize: 11,
+  textTransform: "uppercase",
+  color: "#475569",
+};
+
+const comparisonTdStyle:
+  React.CSSProperties = {
+  padding: "12px",
+  borderBottom: "1px solid #e2e8f0",
+  verticalAlign: "middle",
+};
+
+const comparisonBadgeStyle:
+  React.CSSProperties = {
+  display: "inline-block",
+  padding: "6px 9px",
+  borderRadius: 999,
+  fontSize: 11,
+  fontWeight: 700,
+  whiteSpace: "nowrap",
 };
