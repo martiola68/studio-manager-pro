@@ -1699,66 +1699,97 @@ return (
           : "#f7fff9",
     }}
   >
-    <div
+   <div
+  style={{
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 16,
+  }}
+>
+  <div>
+    <h2
       style={{
-        display: "flex",
-        alignItems: "flex-start",
-        justifyContent: "space-between",
-        gap: 16,
+        ...titleStyle,
+        marginBottom: 4,
       }}
     >
-      <div>
-        <h2
-          style={{
-            ...titleStyle,
-            marginBottom: 4,
-          }}
-        >
-          Titolare Effettivo attuale
-        </h2>
+      Titolare Effettivo attuale
+    </h2>
 
-        <div
-          style={{
-            fontSize: 13,
-            color: "#64748b",
-          }}
-        >
-          Calcolato dalla composizione sociale,
-          dalle partecipazioni indirette e dai
-          Gruppi societari.
-        </div>
-      </div>
-
-      {datiTitolariEffettivi && (
-        <div
-          style={{
-            padding: "7px 11px",
-            borderRadius: 999,
-            background:
-              datiTitolariEffettivi
-                .criterio_utilizzato ===
-              "proprieta"
-                ? "#dbeafe"
-                : "#fef3c7",
-            color:
-              datiTitolariEffettivi
-                .criterio_utilizzato ===
-              "proprieta"
-                ? "#1d4ed8"
-                : "#92400e",
-            fontSize: 12,
-            fontWeight: 800,
-            whiteSpace: "nowrap",
-          }}
-        >
-          {datiTitolariEffettivi
-            .criterio_utilizzato ===
-          "proprieta"
-            ? "CRITERIO DI PROPRIETÀ"
-            : "CRITERIO RESIDUALE"}
-        </div>
-      )}
+    <div
+      style={{
+        fontSize: 13,
+        color: "#64748b",
+      }}
+    >
+      Calcolato dalla composizione sociale,
+      dalle partecipazioni indirette e dai
+      Gruppi societari.
     </div>
+  </div>
+
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      flexWrap: "wrap",
+      justifyContent: "flex-end",
+    }}
+  >
+    {datiTitolariEffettivi && (
+      <div
+        style={{
+          padding: "7px 11px",
+          borderRadius: 999,
+          background:
+            datiTitolariEffettivi
+              .criterio_utilizzato ===
+            "proprieta"
+              ? "#dbeafe"
+              : "#fef3c7",
+          color:
+            datiTitolariEffettivi
+              .criterio_utilizzato ===
+            "proprieta"
+              ? "#1d4ed8"
+              : "#92400e",
+          fontSize: 12,
+          fontWeight: 800,
+          whiteSpace: "nowrap",
+        }}
+      >
+        {datiTitolariEffettivi
+          .criterio_utilizzato ===
+        "proprieta"
+          ? "CRITERIO DI PROPRIETÀ"
+          : "CRITERIO RESIDUALE"}
+      </div>
+    )}
+
+    <button
+      type="button"
+      onClick={() =>
+        router.push(
+          `/clienti/titolari-effettivi/verifica?cliente_id=${clienteId}`
+        )
+      }
+      style={{
+        padding: "9px 14px",
+        borderRadius: 8,
+        border: "1px solid #2563eb",
+        background: "#2563eb",
+        color: "#ffffff",
+        fontWeight: 800,
+        cursor: "pointer",
+        whiteSpace: "nowrap",
+      }}
+    >
+      Verifica Titolari Effettivi
+    </button>
+  </div>
+</div>
 
     {loadingTitolariEffettivi ? (
       <div
