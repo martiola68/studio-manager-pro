@@ -744,12 +744,15 @@ function calcolaSituazioneAllaData(
      * Qui siamo dentro la funzione:
      * titolariPerProprieta esiste.
      */
+ return {
   criterio_utilizzato:
-  situazioneAttuale.criterio_utilizzato,
+    titolariPerProprieta.length > 0
+      ? "proprieta"
+      : "residuale",
 
-    titolari_effettivi:
-      titolariNormalizzati,
-  };
+  titolari_effettivi:
+    titolariNormalizzati,
+};
 }
 
 /*
