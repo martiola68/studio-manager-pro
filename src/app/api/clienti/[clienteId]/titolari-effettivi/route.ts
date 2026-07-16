@@ -88,6 +88,62 @@ function dataOggi(): string {
     .slice(0, 10);
 }
 
+function aggiungiGiorni(
+  dataInput: string,
+  giorni: number
+): string {
+  const data = new Date(
+    `${dataInput}T12:00:00Z`
+  );
+
+  data.setUTCDate(
+    data.getUTCDate() + giorni
+  );
+
+  return data
+    .toISOString()
+    .slice(0, 10);
+}
+
+function firmaTitolari(
+  titolari: Array<{
+    chiave_soggetto?: string | null;
+    persona_id?: string | null;
+    persona_nome?: string | null;
+  }>
+): string[] {
+  return Array.from(
+    new Set(
+      titolari.map((titolare) =>
+        String(
+          titolare.chiave_soggetto ||
+            titolare.persona_id ||
+            titolare.persona_nome ||
+            ""
+        )
+          .trim()
+          .toUpperCase()
+      )
+    )
+  )
+    .filter(Boolean)
+    .sort();
+}
+
+function firmeUguali(
+  prima: string[],
+  dopo: string[]
+): boolean {
+  if (prima.length !== dopo.length) {
+    return false;
+  }
+
+  return prima.every(
+    (valore, indice) =>
+      valore === dopo[indice]
+  );
+}
+
 function isPersonaFisica(
   tipoCliente: string | null | undefined
 ): boolean {
@@ -509,192 +565,209 @@ export async function GET(
      * indiretto, mediante il motore già
      * utilizzato dai Gruppi societari.
      */
-    const titolariPerProprieta =
-      calcolaTitolariEffettiviAllaData(
-        partecipazioniNormalizzate,
-        dataRiferimento
-      ).filter(
-        (titolare) =>
-          String(
-            titolare.societa_id
-          ) === String(clienteId)
-      );
+function calcolaSituazioneAllaData(
+  dataCalcolo: string
+) {
+  const titolariPerProprieta =
+    calcolaTitolariEffettiviAllaData(
+      partecipazioniNormalizzate,
+      dataCalcolo
+    ).filter(
+      (titolare) =>
+        String(
+          titolare.societa_id
+        ) === String(clienteId)
+    );
 
-    let titolariEffettivi:
-      TitolareEffettivoTemporale[] =
-      titolariPerProprieta;
+  let titolariEffettivi:
+    TitolareEffettivoTemporale[] =
+    titolariPerProprieta;
 
-    /*
-     * Se non risultano TE per proprietà,
-     * applichiamo il criterio residuale.
-     */
-    if (
-      titolariPerProprieta.length === 0
-    ) {
-      const organiValidi =
-        filtraOrganiResidualAllaData(
-          organiResidualNormalizzati,
-          dataRiferimento
+  /*
+   * Se non esistono TE per proprietà,
+   * applichiamo il criterio residuale.
+   */
+  if (
+    titolariPerProprieta.length === 0
+  ) {
+    const organiValidi =
+      filtraOrganiResidualAllaData(
+        organiResidualNormalizzati,
+        dataCalcolo
+      )
+        .filter(
+          (organo) =>
+            String(
+              organo.cliente_id
+            ) === String(clienteId)
         )
-          .filter(
-            (organo) =>
-              String(
-                organo.cliente_id
-              ) === String(clienteId)
+        .sort((a, b) => {
+          if (
+            a.principale ===
+            b.principale
+          ) {
+            return 0;
+          }
+
+          return a.principale
+            ? -1
+            : 1;
+        });
+
+    const residualiMap =
+      new Map<string, any>();
+
+    organiValidi.forEach(
+      (organo) => {
+        const soggetto =
+          clientiMap.get(
+            String(
+              organo
+                .soggetto_cliente_id
+            )
+          );
+
+        if (
+          !soggetto ||
+          !isPersonaFisica(
+            soggetto.tipo_cliente
           )
-          .sort((a, b) => {
-            if (
-              a.principale ===
-              b.principale
-            ) {
-              return 0;
-            }
-
-            return a.principale
-              ? -1
-              : 1;
-          });
-
-      const residualiMap =
-        new Map<
-          string,
-          TitolareEffettivoTemporale
-        >();
-
-      organiValidi.forEach(
-        (organo) => {
-          const soggetto =
-            clientiMap.get(
-              String(
-                organo
-                  .soggetto_cliente_id
-              )
-            );
-
-          if (
-            !soggetto ||
-            !isPersonaFisica(
-              soggetto.tipo_cliente
-            )
-          ) {
-            return;
-          }
-
-          const personaId =
-            String(soggetto.id);
-
-          if (
-            residualiMap.has(
-              personaId
-            )
-          ) {
-            return;
-          }
-
-         residualiMap.set(
-  personaId,
-  {
-    persona_id:
-      personaId,
-
-    persona_nome:
-      soggetto
-        .ragione_sociale ||
-      "Nominativo non trovato",
-
-    societa_id:
-      String(cliente.id),
-
-    societa_nome:
-      cliente
-        .ragione_sociale ||
-      "Società non trovata",
-
-    quota_diretta: 0,
-    quota_indiretta: 0,
-    quota_complessiva: 0,
-
-    candidato_titolare_effettivo:
-      true,
-
-    criterio_titolarita:
-      "residuale",
-
-    tipo_titolarita:
-      "residuale",
-
-    ruolo:
-      organo.ruolo || null,
-
-    carica:
-      organo.carica ||
-      organo.ruolo ||
-      "Amministratore",
-
-    principale:
-      organo.principale === true,
-
-    valido_dal:
-      organo.valido_dal ||
-      null,
-
-    valido_al:
-      organo.valido_al ||
-      null,
-
-    percorsi: [],
-  } as TitolareEffettivoTemporale & {
-    ruolo: string | null;
-    carica: string | null;
-    principale: boolean;
-  }
-);
+        ) {
+          return;
         }
-      );
 
-      titolariEffettivi =
-        Array.from(
-          residualiMap.values()
-        );
-    }
+        const personaId =
+          String(soggetto.id);
 
-    const titolariNormalizzati =
-      titolariEffettivi.map(
-        (titolare) => {
-          const persona =
-            clientiMap.get(
-              String(
-                titolare.persona_id
-              )
-            );
+        if (
+          residualiMap.has(
+            personaId
+          )
+        ) {
+          return;
+        }
 
-          return {
-            ...titolare,
+        residualiMap.set(
+          personaId,
+          {
+            persona_id:
+              personaId,
 
-            codice_fiscale:
-              persona
-                ?.codice_fiscale ||
+            persona_nome:
+              soggetto
+                .ragione_sociale ||
+              "Nominativo non trovato",
+
+            societa_id:
+              String(cliente.id),
+
+            societa_nome:
+              cliente
+                .ragione_sociale ||
+              "Società non trovata",
+
+            quota_diretta: 0,
+            quota_indiretta: 0,
+            quota_complessiva: 0,
+
+            candidato_titolare_effettivo:
+              true,
+
+            criterio_titolarita:
+              "residuale",
+
+            tipo_titolarita:
+              "residuale",
+
+            ruolo:
+              organo.ruolo ||
               null,
 
-            chiave_soggetto:
-              costruisciChiaveSoggetto(
-                {
-                  personaId:
-                    titolare
-                      .persona_id,
+            carica:
+              organo.carica ||
+              organo.ruolo ||
+              "Amministratore",
 
-                  codiceFiscale:
-                    persona
-                      ?.codice_fiscale,
+            principale:
+              organo.principale ===
+              true,
 
-                  personaNome:
-                    titolare
-                      .persona_nome,
-                }
-              ),
-          };
-        }
+            valido_dal:
+              organo.valido_dal ||
+              null,
+
+            valido_al:
+              organo.valido_al ||
+              null,
+
+            percorsi: [],
+          }
+        );
+      }
+    );
+
+    titolariEffettivi =
+      Array.from(
+        residualiMap.values()
       );
+  }
+
+  const titolariNormalizzati =
+    titolariEffettivi.map(
+      (titolare: any) => {
+        const persona =
+          clientiMap.get(
+            String(
+              titolare.persona_id
+            )
+          );
+
+        return {
+          ...titolare,
+
+          codice_fiscale:
+            persona
+              ?.codice_fiscale ||
+            null,
+
+          chiave_soggetto:
+            costruisciChiaveSoggetto(
+              {
+                personaId:
+                  titolare
+                    .persona_id,
+
+                codiceFiscale:
+                  persona
+                    ?.codice_fiscale,
+
+                personaNome:
+                  titolare
+                    .persona_nome,
+              }
+            ),
+        };
+      }
+    );
+
+  return {
+   criterio_utilizzato:
+  situazioneAttuale
+    .criterio_utilizzato,
+
+    titolari_effettivi:
+      titolariNormalizzati,
+  };
+}
+
+const situazioneAttuale =
+  calcolaSituazioneAllaData(
+    dataRiferimento
+  );
+
+const titolariNormalizzati =
+  situazioneAttuale
+    .titolari_effettivi;
 
     const datePotenzialiVariazione =
       raccogliDateVariazione(
@@ -728,20 +801,35 @@ export async function GET(
       numero_titolari_effettivi:
         titolariNormalizzati.length,
 
-      date_potenziali_variazione:
-        datePotenzialiVariazione,
+     date_potenziali_variazione:
+  datePotenzialiVariazione,
 
-      alert: {
-        titolare_effettivo_assente:
-          titolariNormalizzati.length ===
-          0,
+variazioni_effettive:
+  variazioniEffettive,
 
-        messaggio:
-          titolariNormalizzati.length ===
-          0
-            ? "Nessun Titolare Effettivo individuato alla data richiesta."
-            : null,
-      },
+numero_variazioni_effettive:
+  variazioniEffettive.length,
+
+alert: {
+  titolare_effettivo_assente:
+    titolariNormalizzati.length ===
+    0,
+
+  variazione_rilevata:
+    Boolean(ultimaVariazione),
+
+  data_ultima_variazione:
+    ultimaVariazione?.data ||
+    null,
+
+  messaggio:
+    titolariNormalizzati.length ===
+    0
+      ? "Nessun Titolare Effettivo individuato alla data richiesta."
+      : ultimaVariazione
+      ? `Ultima variazione del Titolare Effettivo rilevata in data ${ultimaVariazione.data}.`
+      : null,
+},
     });
   } catch (error: any) {
     console.error(
