@@ -1781,7 +1781,7 @@ return (
         border: "1px solid #2563eb",
         background: "#2563eb",
         color: "#ffffff",
-        fontWeight: 800,
+        fontWeight: 400,
         cursor: "pointer",
         whiteSpace: "nowrap",
       }}
