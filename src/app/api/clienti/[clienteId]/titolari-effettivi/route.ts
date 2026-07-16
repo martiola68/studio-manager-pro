@@ -738,8 +738,6 @@ function calcolaSituazioneAllaData(
         };
       }
     );
-
-  return {
     /*
      * Qui siamo dentro la funzione:
      * titolariPerProprieta esiste.
