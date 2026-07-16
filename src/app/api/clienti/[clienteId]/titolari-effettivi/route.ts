@@ -452,56 +452,57 @@ export async function GET(
             Boolean(item)
         );
 
-    const organiResidualNormalizzati:
-      OrganoResidualTemporale[] =
-      organiResidual
-        .map((row) => {
-          if (
-            row.attivo === false &&
-            !row.data_scadenza &&
-            !row.data_cessazione
-          ) {
-            return null;
-          }
+  const organiResidualNormalizzati:
+  OrganoResidualTemporale[] =
+  organiResidual.flatMap((row) => {
+    /*
+     * Se l’organo è disattivato ma non ha
+     * alcuna data finale, non può essere
+     * ricostruito storicamente.
+     */
+    if (
+      row.attivo === false &&
+      !row.data_scadenza &&
+      !row.data_cessazione
+    ) {
+      return [];
+    }
 
-          return {
-            id: String(row.id),
+    const organo:
+      OrganoResidualTemporale = {
+      id: String(row.id),
 
-            cliente_id:
-              String(row.cliente_id),
+      cliente_id:
+        String(row.cliente_id),
 
-            soggetto_cliente_id:
-              String(
-                row.soggetto_cliente_id
-              ),
+      soggetto_cliente_id:
+        String(
+          row.soggetto_cliente_id
+        ),
 
-            ruolo:
-              row.ruolo,
+      ruolo:
+        row.ruolo,
 
-            carica:
-              row.carica,
+      carica:
+        row.carica,
 
-            principale:
-              row.principale,
+      principale:
+        row.principale,
 
-            valido_dal:
-              normalizzaData(
-                row.data_nomina
-              ),
+      valido_dal:
+        normalizzaData(
+          row.data_nomina
+        ),
 
-            valido_al:
-              normalizzaData(
-                row.data_scadenza ||
-                  row.data_cessazione
-              ),
-          };
-        })
-        .filter(
-          (
-            item
-          ): item is OrganoResidualTemporale =>
-            Boolean(item)
-        );
+      valido_al:
+        normalizzaData(
+          row.data_scadenza ||
+            row.data_cessazione
+        ),
+    };
+
+    return [organo];
+  });
 
     /*
      * Calcolo per proprietà, diretto e
