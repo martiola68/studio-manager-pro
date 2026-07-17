@@ -338,17 +338,18 @@ setTitolariEffettivi(
             : nuoviGruppi[0].id;
         });
 
-        setGruppiAperti((precedente) => {
-          const prossimo = { ...precedente };
+      setGruppiAperti((precedente) => {
+  const prossimo = { ...precedente };
 
-          nuoviGruppi.forEach((gruppo) => {
-            if (prossimo[gruppo.id] === undefined) {
-              prossimo[gruppo.id] = true;
-            }
-          });
+  nuoviGruppi.forEach((gruppo) => {
+    if (prossimo[gruppo.id] === undefined) {
+      prossimo[gruppo.id] = false;
+    }
+  });
 
-          return prossimo;
-        });
+  return prossimo;
+});
+        
       } else {
         setGruppoSelezionatoId("");
         setSocietaSelezionataId("");
