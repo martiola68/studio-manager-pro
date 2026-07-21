@@ -401,7 +401,7 @@ async function caricaNominativi() {
 
 const { data, error } = await supabase
   .from("tbclienti")
-  select(`
+  .select(`
   id,
   ragione_sociale,
   cognome,
