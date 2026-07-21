@@ -401,11 +401,13 @@ async function caricaNominativi() {
 
 const { data, error } = await supabase
   .from("tbclienti")
-  .select(`
-    id,
-    ragione_sociale,
-    tipo_cliente,
-    codice_fiscale,
+  select(`
+  id,
+  ragione_sociale,
+  cognome,
+  nome,
+  tipo_cliente,
+  codice_fiscale,
     partita_iva,
     email,
     indirizzo,
@@ -424,6 +426,38 @@ const { data, error } = await supabase
 
   setNominativi(data || []);
 }
+
+  function separaCognomeNome(
+  nomeCognome: string
+): {
+  cognome: string;
+  nome: string;
+} {
+  const parti = String(nomeCognome || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .split(" ")
+    .filter(Boolean);
+
+  if (parti.length === 0) {
+    return {
+      cognome: "",
+      nome: "",
+    };
+  }
+
+  if (parti.length === 1) {
+    return {
+      cognome: parti[0],
+      nome: "",
+    };
+  }
+
+  return {
+    cognome: parti.slice(0, -1).join(" "),
+    nome: parti[parti.length - 1],
+  };
+}
   
 async function salvaNuovoNominativo() {
   if (!nuovoNominativo.nome_cognome.trim()) {
@@ -440,10 +474,15 @@ async function salvaNuovoNominativo() {
     (c) => c.id === clienteId
   );
 
-  const modalitaModifica =
-    Boolean(nominativoInModificaId);
+const modalitaModifica =
+  Boolean(nominativoInModificaId);
 
-  const payload = {
+const nominativoSeparato =
+  separaCognomeNome(
+    nuovoNominativo.nome_cognome
+  );
+
+const payload = {
     ...(modalitaModifica
       ? {
           id: nominativoInModificaId,
@@ -454,13 +493,23 @@ async function salvaNuovoNominativo() {
             null,
         }),
 
-    ragione_sociale:
-      nuovoNominativo.nome_cognome.trim(),
+  ragione_sociale:
+  nuovoNominativo.nome_cognome
+    .trim()
+    .replace(/\s+/g, " "),
 
-    codice_fiscale:
-      nuovoNominativo.codice_fiscale
-        .trim()
-        .toUpperCase(),
+cognome:
+  nominativoSeparato.cognome ||
+  null,
+
+nome:
+  nominativoSeparato.nome ||
+  null,
+
+codice_fiscale:
+  nuovoNominativo.codice_fiscale
+    .trim()
+    .toUpperCase(),
 
     email:
       nuovoNominativo.email.trim() ||
@@ -490,13 +539,16 @@ async function salvaNuovoNominativo() {
       nuovoNominativo.cap.trim() ||
       null,
 
-    tipo_cliente:
-      nuovoNominativo.tipologia_cliente,
+   tipo_cliente:
+  "Persona fisica",
 
-    tipologia_cliente:
-      nuovoNominativo.tipologia_cliente,
+tipologia_cliente:
+  nuovoNominativo.tipologia_cliente ===
+  "Esterno"
+    ? "Esterno"
+    : "Interno",
 
-    cliente: false,
+cliente: false,
   };
 
   try {
