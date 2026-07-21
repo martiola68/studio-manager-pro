@@ -806,6 +806,24 @@ const handleEdit = async (cliente: ClienteRow) => {
     }
   }
 
+  const ragioneSocialePersona =
+  String(clienteData.ragione_sociale || "")
+    .trim()
+    .replace(/\s+/g, " ");
+
+const partiNominativo =
+  ragioneSocialePersona.split(" ").filter(Boolean);
+
+const nomeFallback =
+  partiNominativo.length >= 2
+    ? partiNominativo[partiNominativo.length - 1]
+    : "";
+
+const cognomeFallback =
+  partiNominativo.length >= 2
+    ? partiNominativo.slice(0, -1).join(" ")
+    : ragioneSocialePersona;
+
   setFormData({
     cod_cliente: clienteData.cod_cliente || "",
     tipo_cliente: clienteData.tipo_cliente || "Persona fisica",
@@ -819,8 +837,21 @@ numero_rea:
     settore_lavoro: clienteData.settore_lavoro ?? false,
     settore_consulenza: clienteData.settore_consulenza ?? false,
     ragione_sociale: clienteData.ragione_sociale || "",
-    cognome: (clienteData as any).cognome || "",
-    nome: (clienteData as any).nome || "",
+   cognome:
+  String((clienteData as any).cognome || "").trim() ||
+  (
+    clienteData.tipo_cliente === "Persona fisica"
+      ? cognomeFallback
+      : ""
+  ),
+
+nome:
+  String((clienteData as any).nome || "").trim() ||
+  (
+    clienteData.tipo_cliente === "Persona fisica"
+      ? nomeFallback
+      : ""
+  ),
     partita_iva: clienteData.partita_iva || "",
     codice_fiscale: clienteData.codice_fiscale || "",
     indirizzo: clienteData.indirizzo || "",
@@ -1068,10 +1099,17 @@ if (
   missingFields.push("Selezionare almeno un settore");
 }
 
-if (!formData.utente_operatore_id && !formData.utente_payroll_id) {
+if (
+  formData.cliente === true &&
+  !formData.utente_operatore_id &&
+  !formData.utente_payroll_id
+) {
   newErrors.utente_operatore_id = true;
   newErrors.utente_payroll_id = true;
-  missingFields.push("Selezionare almeno Utente Fiscale o Utente Payroll");
+
+  missingFields.push(
+    "Selezionare almeno Utente Fiscale o Utente Payroll"
+  );
 }
 
         if (missingFields.length > 0) {
