@@ -869,16 +869,25 @@ async function processScadenzariDaTipi(oggi: string): Promise<{
 
   for (const tipo of ((tipi || []) as TipoScadenzaOperativa[])) {
     const giorniMancanti = diffDaysFromToday(tipo.data_scadenza);
+let alertNumero: 1 | 2 | 3 | null = null;
 
-    let alertNumero: 1 | 2 | 3 | null = null;
-
-    if (giorniMancanti === Number(tipo.giorni_preavviso_1 || 15)) {
-      alertNumero = 1;
-    } else if (giorniMancanti === Number(tipo.giorni_preavviso_2 || 7)) {
-      alertNumero = 2;
-    } else if (giorniMancanti === 0) {
-      alertNumero = 3;
-    }
+if (options?.forceAlert1 === true) {
+  alertNumero = 1;
+} else if (options?.forceAlert2 === true) {
+  alertNumero = 2;
+} else if (
+  giorniMancanti ===
+  Number(tipo.giorni_preavviso_1 ?? 15)
+) {
+  alertNumero = 1;
+} else if (
+  giorniMancanti ===
+  Number(tipo.giorni_preavviso_2 ?? 7)
+) {
+  alertNumero = 2;
+} else if (giorniMancanti === 0) {
+  alertNumero = 3;
+}
 
     if (!alertNumero) continue;
 
@@ -1304,7 +1313,16 @@ export const scadenzariAutomaticiService = {
     try {
   result.processedTables += 1;
 
-  const tipiResult = await processScadenzariDaTipi(oggi);
+ async function processScadenzariDaTipi(
+  oggi: string,
+  options?: {
+    forceAlert1?: boolean;
+    forceAlert2?: boolean;
+  }
+): Promise<{
+  emailsSent: number;
+  processedRows: number;
+}> {
 
   result.emailsSent += tipiResult.emailsSent;
   result.processedRows += tipiResult.processedRows;
