@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
-import { sendEmail } from "@/services/emailService";
+import { sendEmailServer } from "@/services/sendEmailServer";
 
 const SECRET = process.env.CRON_SECRET || "x9KfP2LmQ8zYtA71vBnR";
 
@@ -243,13 +243,33 @@ Giorni mancanti: ${giorniMancantiFormattati}
 Accedi a Studio Manager Pro e completa la compilazione delle presenze.
 `.trim();
 
-      const emailResult = await sendEmail({
-        to: dipendente.email,
-        subject,
-        html,
-        text,
-        sendMode: "studio",
-      });
+      const { data: studio, error: studioError } = await supabaseAdmin
+  .from("tbstudio")
+  .select("microsoft_connection_id")
+  .eq("id", dipendente.studio_id)
+  .single();
+
+if (studioError || !studio?.microsoft_connection_id) {
+  throw new Error("Connessione Microsoft dello studio non trovata");
+}
+
+const { data: tokenOwner, error: tokenError } = await supabaseAdmin
+  .from("tbmicrosoft365_user_tokens")
+  .select("user_id")
+  .eq("microsoft_connection_id", studio.microsoft_connection_id)
+  .maybeSingle();
+
+if (tokenError || !tokenOwner?.user_id) {
+  throw new Error("Proprietario del token Microsoft non trovato");
+}
+
+const emailResult = await sendEmailServer({
+  senderUserId: tokenOwner.user_id,
+  microsoftConnectionId: studio.microsoft_connection_id,
+  to: dipendente.email,
+  subject,
+  html,
+});
 
       results.push({
         utente_id: dipendente.utente_id,
