@@ -842,7 +842,13 @@ function getScadenzarioConfigKey(tipo: TipoScadenzaOperativa): string | null {
   return null;
 }
 
-async function processScadenzariDaTipi(oggi: string): Promise<{
+async function processScadenzariDaTipi(
+  oggi: string,
+  options?: {
+    forceAlert1?: boolean;
+    forceAlert2?: boolean;
+  }
+): Promise<{
   emailsSent: number;
   processedRows: number;
 }> {
@@ -1297,10 +1303,12 @@ async function processTable(params: {
 }
 
 export const scadenzariAutomaticiService = {
-  async processaScadenzariAutomatici(options?: {
-    forceAlert1?: boolean;
-    forceAlert2?: boolean;
-  }): Promise<ProcessResult> {
+  async processaScadenzariAutomatici(
+    options?: {
+      forceAlert1?: boolean;
+      forceAlert2?: boolean;
+    }
+  ): Promise<ProcessResult> {
     const result: ProcessResult = {
       processedTables: 0,
       processedRows: 0,
@@ -1308,48 +1316,70 @@ export const scadenzariAutomaticiService = {
       errors: [],
     };
 
-    const oggi = isoDate(startOfDay(new Date()));
+    const oggi = isoDate(
+      startOfDay(new Date())
+    );
 
+    /*
+     * Scadenzari collegati a tbtipi_scadenze
+     * e scadenze generiche.
+     */
     try {
-  result.processedTables += 1;
-
- async function processScadenzariDaTipi(
-  oggi: string,
-  options?: {
-    forceAlert1?: boolean;
-    forceAlert2?: boolean;
-  }
-): Promise<{
-  emailsSent: number;
-  processedRows: number;
-}> {
-
-  result.emailsSent += tipiResult.emailsSent;
-  result.processedRows += tipiResult.processedRows;
-
-      const genericiResult = await processAlertGenericiDaTipi(oggi);
-
-result.emailsSent += genericiResult.emailsSent;
-result.processedRows += genericiResult.processedRows;
-      
-} catch (error: any) {
-  result.errors.push(
-    `Errore su tipi scadenze operative: ${
-      error?.message || "errore sconosciuto"
-    }`
-  );
-}
-
-      try {
       result.processedTables += 1;
 
-      const affittiResult = await processAffittiAutomatici(oggi);
+      const tipiResult =
+        await processScadenzariDaTipi(
+          oggi,
+          options
+        );
 
-      result.emailsSent += affittiResult.emailsSent;
-      result.processedRows += affittiResult.processedRows;
+      result.emailsSent +=
+        tipiResult.emailsSent;
+
+      result.processedRows +=
+        tipiResult.processedRows;
+
+      const genericiResult =
+        await processAlertGenericiDaTipi(
+          oggi
+        );
+
+      result.emailsSent +=
+        genericiResult.emailsSent;
+
+      result.processedRows +=
+        genericiResult.processedRows;
     } catch (error: any) {
       result.errors.push(
-        `Errore su Affitti: ${error?.message || "errore sconosciuto"}`
+        `Errore su tipi scadenze operative: ${
+          error?.message ||
+          "errore sconosciuto"
+        }`
+      );
+    }
+
+    /*
+     * Scadenzario affitti.
+     */
+    try {
+      result.processedTables += 1;
+
+      const affittiResult =
+        await processAffittiAutomatici(
+          oggi
+        );
+
+      result.emailsSent +=
+        affittiResult.emailsSent;
+
+      result.processedRows +=
+        affittiResult.processedRows;
+    } catch (error: any) {
+      result.errors.push(
+        `Errore su Affitti: ${
+          error?.message ||
+          "errore sconosciuto"
+        }`
       );
     }
 
