@@ -92,73 +92,81 @@ export default async function handler(
 
   const results = [];
 
-  const now = new Date();
-  const hourUtc = now.getUTCHours();
-  const minuteUtc = now.getUTCMinutes();
+ const now = new Date();
+const hourUtc = now.getUTCHours();
+const minuteUtc = now.getUTCMinutes();
 
-  // JOB GIORNALIERI: una volta al giorno alle 08:00 UTC
-  if (hourUtc === 8) {
-//  if (true) {
-    results.push(
-      await callInternal(`/api/scadenze/processa?secret=${SECRET}`)
-    );
+results.push(
+  await callInternal(`/api/scadenze/processa?secret=${SECRET}`)
+);
 
-    results.push(
-    await callInternal(`/api/presenze/sollecito-settimanale?secret=${SECRET}`)
-    );
+results.push(
+  await callInternal(`/api/presenze/sollecito-settimanale?secret=${SECRET}`)
+);
 
-    results.push(
-      await callInternal(`/api/scadenze/processa-scadenzari?secret=${SECRET}`)
-    );
+results.push(
+  await callInternal(`/api/scadenze/processa-scadenzari?secret=${SECRET}`)
+);
 
-   results.push(
-      await callInternal(`/api/scadenze/tipi/processa?secret=${SECRET}`)
-    );
+results.push(
+  await callInternal(`/api/scadenze/tipi/processa?secret=${SECRET}`)
+);
 
-    results.push(
-      await callInternal(`/api/scadenze/affitti/processa?secret=${SECRET}`)
-    );
+results.push(
+  await callInternal(`/api/scadenze/affitti/processa?secret=${SECRET}`)
+);
 
-    results.push(
-      await callInternal(
-        `/api/antiriciclaggio/scadenze-verifica/send-alerts?secret=${SECRET}`
-      )
-    );
+results.push(
+  await callInternal(
+    `/api/antiriciclaggio/scadenze-verifica/send-alerts?secret=${SECRET}`
+  )
+);
 
-  results.push(
-     await callInternal(`/api/contenzioso/invia-alert?secret=${SECRET}`, "POST")
-    );
+results.push(
+  await callInternal(
+    `/api/contenzioso/invia-alert?secret=${SECRET}`,
+    "POST"
+  )
+);
 
-    results.push(
+results.push(
   await callInternal(
     `/api/revisione-controllo/followup-alert?secret=${SECRET}`,
     "POST"
   )
 );
 
-    results.push(
-      await callInternal(`/api/promemoria/alert?secret=${SECRET}`, "POST")
-    );
+results.push(
+  await callInternal(
+    `/api/promemoria/alert?secret=${SECRET}`,
+    "POST"
+  )
+);
 
 results.push(
-      await callInternal(
-        `/api/controllo-gestione/alert?secret=${SECRET}`,
-        "POST"
-      )
-    );
+  await callInternal(
+    `/api/controllo-gestione/alert?secret=${SECRET}`,
+    "POST"
+  )
+);
 
-    results.push(
-      await callInternal(
-        `/api/revisione-controllo/alert?secret=${SECRET}`,
-        "POST"
-      )
-    );
-  }
+results.push(
+  await callInternal(
+    `/api/revisione-controllo/alert?secret=${SECRET}`,
+    "POST"
+  )
+);
 
-  return res.status(200).json({
-    ok: true,
-    hourUtc,
-    minuteUtc,
-    results,
-  });
-}
+ const errori = results.filter(
+  (result) => !result.ok
+);
+
+return res.status(errori.length > 0 ? 207 : 200).json({
+  ok: errori.length === 0,
+  hourUtc,
+  minuteUtc,
+  numero_job: results.length,
+  numero_job_ok: results.length - errori.length,
+  numero_job_errore: errori.length,
+  results,
+});
