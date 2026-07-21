@@ -1091,6 +1091,7 @@ if (codiceFiscaleUpper) {
 }
 
 if (
+  formData.cliente === true &&
   !formData.settore_fiscale &&
   !formData.settore_lavoro &&
   !formData.settore_consulenza
@@ -1098,7 +1099,6 @@ if (
   newErrors.settori = true;
   missingFields.push("Selezionare almeno un settore");
 }
-
 if (
   formData.cliente === true &&
   !formData.utente_operatore_id &&
@@ -2606,7 +2606,12 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
 
 </div>
           <div className="md:col-span-2 space-y-2">
-            <Label>Settori *</Label>
+           <Label>
+  Settori
+  {formData.cliente && (
+    <span className="text-red-500"> *</span>
+  )}
+</Label>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border rounded-md p-4 bg-muted/20">
               <div className="flex items-center space-x-2">
                 <Checkbox
