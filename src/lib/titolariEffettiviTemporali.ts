@@ -46,29 +46,39 @@ function normalizzaData(
     return null;
   }
 
-  const testo = String(valore).trim();
+  const testo = String(valore)
+    .trim()
+    .slice(0, 10);
 
-  if (!testo) {
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(testo)
+  ) {
     return null;
   }
 
-  /*
-   * Se arriva un timestamp, manteniamo
-   * soltanto la parte AAAA-MM-GG.
-   */
-  return testo.slice(0, 10);
+  const [anno, mese, giorno] =
+    testo.split("-").map(Number);
+
+  const data = new Date(
+    Date.UTC(anno, mese - 1, giorno)
+  );
+
+  if (
+    Number.isNaN(data.getTime()) ||
+    data.getUTCFullYear() !== anno ||
+    data.getUTCMonth() !== mese - 1 ||
+    data.getUTCDate() !== giorno
+  ) {
+    return null;
+  }
+
+  return testo;
 }
 
 function dataValida(
   valore?: string | null
 ): boolean {
-  const data = normalizzaData(valore);
-
-  if (!data) {
-    return false;
-  }
-
-  return /^\d{4}-\d{2}-\d{2}$/.test(data);
+  return normalizzaData(valore) !== null;
 }
 
 /**
