@@ -92,9 +92,20 @@ function aggiungiGiorni(
   dataInput: string,
   giorni: number
 ): string {
+  if (
+    !dataInput ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(dataInput)
+  ) {
+    return "";
+  }
+
   const data = new Date(
     `${dataInput}T12:00:00Z`
   );
+
+  if (Number.isNaN(data.getTime())) {
+    return "";
+  }
 
   data.setUTCDate(
     data.getUTCDate() + giorni
