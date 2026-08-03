@@ -3432,11 +3432,7 @@ return (
 </td>
 
   <td style={tdStyle}>
-  {o.data_nomina
-    ? new Date(
-        `${o.data_nomina}T00:00:00`
-      ).toLocaleDateString("it-IT")
-    : "—"}
+  {formattaDataItaliana(o.data_nomina)}
 </td>
 
 <td style={tdStyle}>
@@ -3448,9 +3444,7 @@ return (
 </td>
 
 <td style={tdStyle}>
-  {o.data_cessazione
-    ? new Date(o.data_cessazione).toLocaleDateString("it-IT")
-    : "—"}
+ {formattaDataItaliana(o.data_cessazione)}
 </td>
 
 <td style={tdStyle}>
@@ -3477,11 +3471,7 @@ return (
       : undefined,
   }}
 >
-  {o.data_scadenza
-    ? new Date(
-        `${o.data_scadenza}T00:00:00`
-      ).toLocaleDateString("it-IT")
-    : "—"}
+ {formattaDataItaliana(o.data_scadenza)}
 </td>
 
       <td style={tdStyle}>
@@ -3809,19 +3799,95 @@ return (
                 const giaPresente =
                   riga.esito === "gia_presente";
 
+function formattaDataItaliana(
+  valore: string | null | undefined
+): string {
+  if (!valore) {
+    return "—";
+  }
+
+  const valorePulito = String(valore)
+    .trim()
+    .substring(0, 10);
+
+  const parti = valorePulito.split("-");
+
+  if (parti.length !== 3) {
+    return "—";
+  }
+
+  const [anno, mese, giorno] = parti.map(Number);
+
+  if (
+    !anno ||
+    !mese ||
+    !giorno ||
+    mese < 1 ||
+    mese > 12 ||
+    giorno < 1 ||
+    giorno > 31
+  ) {
+    return "—";
+  }
+
+  const data = new Date(
+    anno,
+    mese - 1,
+    giorno
+  );
+
+  if (Number.isNaN(data.getTime())) {
+    return "—";
+  }
+
+  return data.toLocaleDateString("it-IT");
+}
+
 function isCaricaScaduta(
   dataScadenza: string | null | undefined
-) {
+): boolean {
   if (!dataScadenza) {
     return false;
   }
 
-  const oggi = new Date();
-  oggi.setHours(0, 0, 0, 0);
+  const valorePulito = String(dataScadenza)
+    .trim()
+    .substring(0, 10);
+
+  const parti = valorePulito.split("-");
+
+  if (parti.length !== 3) {
+    return false;
+  }
+
+  const [anno, mese, giorno] = parti.map(Number);
+
+  if (
+    !anno ||
+    !mese ||
+    !giorno ||
+    mese < 1 ||
+    mese > 12 ||
+    giorno < 1 ||
+    giorno > 31
+  ) {
+    return false;
+  }
 
   const scadenza = new Date(
-    `${dataScadenza}T00:00:00`
+    anno,
+    mese - 1,
+    giorno
   );
+
+  if (Number.isNaN(scadenza.getTime())) {
+    return false;
+  }
+
+  scadenza.setHours(0, 0, 0, 0);
+
+  const oggi = new Date();
+  oggi.setHours(0, 0, 0, 0);
 
   return scadenza < oggi;
 }
