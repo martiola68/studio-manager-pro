@@ -91,20 +91,29 @@ function dataOggi(): string {
 function aggiungiGiorni(
   dataInput: string,
   giorni: number
-): string {
+): string | null {
   if (
-    !dataInput ||
-    !/^\d{4}-\d{2}-\d{2}$/.test(dataInput)
+    !/^\d{4}-\d{2}-\d{2}$/.test(
+      String(dataInput || "")
+    )
   ) {
-    return "";
+    return null;
   }
 
+  const [anno, mese, giorno] =
+    dataInput.split("-").map(Number);
+
   const data = new Date(
-    `${dataInput}T12:00:00Z`
+    Date.UTC(anno, mese - 1, giorno)
   );
 
-  if (Number.isNaN(data.getTime())) {
-    return "";
+  if (
+    Number.isNaN(data.getTime()) ||
+    data.getUTCFullYear() !== anno ||
+    data.getUTCMonth() !== mese - 1 ||
+    data.getUTCDate() !== giorno
+  ) {
+    return null;
   }
 
   data.setUTCDate(
@@ -805,13 +814,18 @@ partecipazioniNormalizzate.forEach(
     }
 
     if (partecipazione.valido_al) {
-      dateCandidateSet.add(
-        aggiungiGiorni(
-          partecipazione.valido_al,
-          1
-        )
-      );
-    }
+  const giornoSuccessivo =
+    aggiungiGiorni(
+      partecipazione.valido_al,
+      1
+    );
+
+  if (giornoSuccessivo) {
+    dateCandidateSet.add(
+      giornoSuccessivo
+    );
+  }
+}
   }
 );
 
@@ -823,14 +837,19 @@ organiResidualNormalizzati.forEach(
       );
     }
 
-    if (organo.valido_al) {
-      dateCandidateSet.add(
-        aggiungiGiorni(
-          organo.valido_al,
-          1
-        )
-      );
-    }
+   if (organo.valido_al) {
+  const giornoSuccessivo =
+    aggiungiGiorni(
+      organo.valido_al,
+      1
+    );
+
+  if (giornoSuccessivo) {
+    dateCandidateSet.add(
+      giornoSuccessivo
+    );
+  }
+}
   }
 );
 
@@ -858,15 +877,19 @@ const variazioniEffettive =
   datePotenzialiVariazione.flatMap(
     (dataVariazione) => {
       const dataPrecedente =
-        aggiungiGiorni(
-          dataVariazione,
-          -1
-        );
+  aggiungiGiorni(
+    dataVariazione,
+    -1
+  );
 
-      const situazionePrima =
-        calcolaSituazioneAllaData(
-          dataPrecedente
-        );
+if (!dataPrecedente) {
+  return [];
+}
+
+const situazionePrima =
+  calcolaSituazioneAllaData(
+    dataPrecedente
+  );
 
       const situazioneDopo =
         calcolaSituazioneAllaData(
