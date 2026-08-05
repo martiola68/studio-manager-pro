@@ -20,7 +20,16 @@ async function callInternal(
   const startedAt = Date.now();
 
   try {
-    const response = await fetch(`${baseUrl}${path}`, { method });
+  const response = await fetch(
+  `${baseUrl}${path}`,
+  {
+    method,
+    headers: {
+      Authorization: `Bearer ${SECRET}`,
+      "Content-Type": "application/json",
+    },
+  }
+);
     const text = await response.text();
     const durataMs = Date.now() - startedAt;
 
@@ -96,14 +105,23 @@ export default async function handler(
 const hourUtc = now.getUTCHours();
 const minuteUtc = now.getUTCMinutes();
 
-  results.push(
+ results.push(
   await callInternal(
     `/api/scadenze-centrale/processa-alert?secret=${SECRET}`
   )
 );
 
 results.push(
-  await callInternal(`/api/presenze/sollecito-settimanale?secret=${SECRET}`)
+  await callInternal(
+    `/api/cron/aml-fascicoli-alert`,
+    "GET"
+  )
+);
+
+results.push(
+  await callInternal(
+    `/api/presenze/sollecito-settimanale?secret=${SECRET}`
+  )
 );
 
 results.push(
