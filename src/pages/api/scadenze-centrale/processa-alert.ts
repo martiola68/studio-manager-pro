@@ -561,19 +561,6 @@ if (destinatari.length === 0) {
   continue;
 }
 
-  if (destinatari.length === 0) {
-    saltati += destinatariIds.length;
-
-    dettagli.push({
-      scadenza_id: riga.id,
-      ok: false,
-      messaggio:
-        "Nessun destinatario possiede un indirizzo email valido",
-    });
-
-    continue;
-  }
-
   /*
    * 4. Recuperiamo tutti gli utenti che
    * possiedono un token Microsoft valido
