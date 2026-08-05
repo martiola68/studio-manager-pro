@@ -105,9 +105,20 @@ export default async function handler(
 const hourUtc = now.getUTCHours();
 const minuteUtc = now.getUTCMinutes();
 
- results.push(
+results.push(
   await callInternal(
     `/api/scadenze-centrale/processa-alert?secret=${SECRET}`
+  )
+);
+
+/*
+ * Non invia email.
+ * Gestisce esclusivamente avanzamento annualità
+ * e chiusura automatica dei contratti di affitto.
+ */
+results.push(
+  await callInternal(
+    `/api/scadenze/affitti/processa?secret=${SECRET}`
   )
 );
 
