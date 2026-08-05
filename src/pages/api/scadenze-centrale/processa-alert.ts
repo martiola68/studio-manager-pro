@@ -625,6 +625,14 @@ Comunicazione automatica.
       `.trim();
 
     const risultatoInvio =
+
+      console.log({
+  studio_id: alert.studio_id,
+  microsoft_connection_id: studio?.microsoft_connection_id,
+  senderUserId: operatore.id,
+  operatore: operatore.email,
+});
+      
   await sendEmailServer({
     senderUserId:
       operatore.id,
