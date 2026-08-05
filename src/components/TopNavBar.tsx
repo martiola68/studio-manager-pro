@@ -364,13 +364,30 @@ const menuItems: MenuItem[] = [
     label: "Operatività",
     icon: <FolderKanban className="h-4 w-4" />,
     children: [
-      {
-        label: "Scadenzario",
-        icon: <Calendar className="h-4 w-4" />,
-        children: [
-          { label: "Elenco Generale", href: "/scadenze/elenco-generale", icon: <FileText className="h-4 w-4" /> },
-          { label: "Calendario", href: "/scadenze/calendario", icon: <Calendar className="h-4 w-4" /> },
-          { label: "Riepilogo", href: "/scadenze/riepilogo", icon: <FileText className="h-4 w-4" /> },
+     {
+  label: "Scadenzario",
+  icon: <Calendar className="h-4 w-4" />,
+  children: [
+    {
+      label: "Scadenze unificate",
+      href: "/scadenze",
+      icon: <Calendar className="h-4 w-4" />,
+    },
+    {
+      label: "Elenco Generale",
+      href: "/scadenze/elenco-generale",
+      icon: <FileText className="h-4 w-4" />,
+    },
+    {
+      label: "Calendario",
+      href: "/scadenze/calendario",
+      icon: <Calendar className="h-4 w-4" />,
+    },
+    {
+      label: "Riepilogo",
+      href: "/scadenze/riepilogo",
+      icon: <FileText className="h-4 w-4" />,
+    },
           { label: "IVA", href: "/scadenze/iva", icon: <FileText className="h-4 w-4" /> },
           { label: "CCGG", href: "/scadenze/ccgg", icon: <FileText className="h-4 w-4" /> },
           { label: "CU", href: "/scadenze/cu", icon: <FileText className="h-4 w-4" /> },
