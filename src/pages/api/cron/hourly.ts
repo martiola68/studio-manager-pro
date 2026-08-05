@@ -122,6 +122,17 @@ results.push(
   )
 );
 
+/*
+ * Non invia email.
+ * Porta all'anno successivo le scadenze
+ * generali ricorrenti già trascorse.
+ */
+results.push(
+  await callInternal(
+    `/api/scadenze/tipi/processa?secret=${SECRET}`
+  )
+);
+
 results.push(
   await callInternal(
     `/api/cron/aml-fascicoli-alert`,
