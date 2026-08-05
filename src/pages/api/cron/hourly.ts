@@ -125,14 +125,6 @@ results.push(
 );
 
 results.push(
-  await callInternal(`/api/scadenze/tipi/processa?secret=${SECRET}`)
-);
-
-results.push(
-  await callInternal(`/api/scadenze/affitti/processa?secret=${SECRET}`)
-);
-
-results.push(
   await callInternal(
     `/api/revisione-controllo/followup-alert?secret=${SECRET}`,
     "POST"
