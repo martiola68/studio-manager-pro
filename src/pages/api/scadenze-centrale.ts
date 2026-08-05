@@ -295,6 +295,65 @@ export default async function handler(
       tutteLeScadenze || [];
 
     /*
+ * Recuperiamo i log dal più recente.
+ * Il primo log incontrato per ogni scadenza
+ * rappresenta il suo ultimo tentativo.
+ */
+const {
+  data: logAlert,
+  error: logAlertError,
+} = await supabaseAdmin
+  .from("tbscadenze_centrale_alert_log")
+  .select(`
+    scadenza_id,
+    esito,
+    created_at
+  `)
+  .eq("studio_id", studioId)
+  .order("created_at", {
+    ascending: false,
+  });
+
+if (logAlertError) {
+  throw logAlertError;
+}
+
+const ultimoEsitoPerScadenza =
+  new Map<string, string>();
+
+(logAlert || []).forEach((log) => {
+  const scadenzaId =
+    String(log.scadenza_id || "");
+
+  if (
+    scadenzaId &&
+    !ultimoEsitoPerScadenza.has(
+      scadenzaId
+    )
+  ) {
+    ultimoEsitoPerScadenza.set(
+      scadenzaId,
+      String(log.esito || "")
+    );
+  }
+});
+
+const scadenzeConErroreAperto =
+  new Set(
+    Array.from(
+      ultimoEsitoPerScadenza.entries()
+    )
+      .filter(
+        ([, esito]) =>
+          esito === "errore"
+      )
+      .map(
+        ([scadenzaId]) =>
+          scadenzaId
+      )
+  );
+
+    /*
      * 6. Card riepilogative.
      */
     const riepilogo = {
@@ -357,13 +416,8 @@ export default async function handler(
             )
         ).length,
 
-      con_errori_alert:
-        elencoCompleto.filter(
-          (item) =>
-            Number(
-              item.alert_con_errore || 0
-            ) > 0
-        ).length,
+     con_errori_alert:
+  scadenzeConErroreAperto.size,
     };
 
     /*
