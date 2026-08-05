@@ -261,70 +261,85 @@ export default async function handler(
       ?.replace("Bearer ", "")
       .trim();
 
-  if (
-    !SECRET ||
-    (
-      querySecret !== SECRET &&
-      bearerSecret !== SECRET
-    )
-  ) {
-    return res.status(401).json({
-      ok: false,
-      error: "Non autorizzato",
-    });
-  }
+if (
+  !SECRET ||
+  (
+    querySecret !== SECRET &&
+    bearerSecret !== SECRET
+  )
+) {
+  return res.status(401).json({
+    ok: false,
+    error: "Non autorizzato",
+  });
+}
 
-  try {
-    const adesso =
-      new Date().toISOString();
+const scadenzaId =
+  typeof req.query.scadenza_id === "string"
+    ? req.query.scadenza_id.trim()
+    : "";
+
+try {
+  const adesso =
+    new Date().toISOString();
 
     const oggi =
       dataIsoOggi();
 
-    const {
-      data: scadenze,
-      error: scadenzeError,
-    } = await supabaseAdmin
-      .from("tbscadenze_centrale")
-      .select(`
-        id,
-        studio_id,
-        cliente_id,
-        operatore_responsabile_id,
-        origine_modulo,
-        tipo_scadenza,
-        titolo,
-        descrizione,
-        data_scadenza,
-        stato,
-        giorni_preavviso_1,
-        giorni_preavviso_2,
-        giorni_preavviso_3,
-        prossimo_alert_at,
-        numero_alert_inviati,
-        link_dettaglio
-      `)
-      .eq("stato", "attiva")
-      .not(
-        "prossimo_alert_at",
-        "is",
-        null
-      )
-      .lte(
-        "prossimo_alert_at",
-        adesso
-      )
-      .order(
-        "prossimo_alert_at",
-        {
-          ascending: true,
-        }
-      )
-      .limit(200);
-
-    if (scadenzeError) {
-      throw scadenzeError;
+ let queryScadenze = supabaseAdmin
+  .from("tbscadenze_centrale")
+  .select(`
+    id,
+    studio_id,
+    cliente_id,
+    operatore_responsabile_id,
+    origine_modulo,
+    tipo_scadenza,
+    titolo,
+    descrizione,
+    data_scadenza,
+    stato,
+    giorni_preavviso_1,
+    giorni_preavviso_2,
+    giorni_preavviso_3,
+    prossimo_alert_at,
+    numero_alert_inviati,
+    link_dettaglio
+  `)
+  .eq("stato", "attiva")
+  .not(
+    "prossimo_alert_at",
+    "is",
+    null
+  )
+  .lte(
+    "prossimo_alert_at",
+    adesso
+  )
+  .order(
+    "prossimo_alert_at",
+    {
+      ascending: true,
     }
+  )
+  .limit(200);
+
+if (scadenzaId) {
+  queryScadenze =
+    queryScadenze.eq(
+      "id",
+      scadenzaId
+    );
+}
+
+const {
+  data: scadenze,
+  error: scadenzeError,
+} = await queryScadenze;
+
+if (scadenzeError) {
+  throw scadenzeError;
+}
 
     let inviati = 0;
     let errori = 0;
