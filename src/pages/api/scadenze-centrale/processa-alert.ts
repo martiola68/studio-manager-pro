@@ -657,12 +657,12 @@ if (destinatari.length === 0) {
   /*
    * 5. Invio separato a ogni destinatario.
    */
-  for (const destinatario of destinatari) {
-    const destinatarioId =
-      String(destinatario.id);
+ for (const destinatario of destinatari) {
+  const destinatarioId =
+    destinatario.utente_id;
 
-    const destinatarioEmail =
-      String(destinatario.email);
+  const destinatarioEmail =
+    destinatario.email;
 
     /*
      * Se il destinatario possiede un token
