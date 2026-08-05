@@ -4,7 +4,7 @@ import type {
 } from "next";
 
 import { createClient } from "@supabase/supabase-js";
-import { sendEmail } from "@/services/emailService";
+import { sendEmailServer } from "@/lib/email/sendEmailServer";
 
 const SECRET =
   process.env.CRON_SECRET ||
