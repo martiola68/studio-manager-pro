@@ -1,79 +1,130 @@
-import type { NextApiRequest, NextApiResponse } from "next";
+import type {
+  NextApiRequest,
+  NextApiResponse,
+} from "next";
+
 import { createClient } from "@supabase/supabase-js";
 
-const SECRET = process.env.CRON_SECRET || "x9KfP2LmQ8zYtA71vBnR";
+const SECRET =
+  process.env.CRON_SECRET ||
+  "x9KfP2LmQ8zYtA71vBnR";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  }
 );
 
-function toDateOnly(date: Date) {
-  return date.toISOString().split("T")[0];
+type TipoScadenzaRow = {
+  id: string;
+  studio_id: string | null;
+  nome: string;
+  data_scadenza: string;
+  ricorrente: boolean | null;
+  attivo: boolean | null;
+};
+
+function normalizzaData(
+  valore: string
+): string {
+  return String(valore)
+    .trim()
+    .slice(0, 10);
 }
 
-function parseDateOnly(value: string) {
-  const [year, month, day] = value.split("-").map(Number);
-  return new Date(year, month - 1, day);
-}
-
-function diffDaysFromToday(dateValue: string) {
-  const today = new Date();
-
-  const todayOnly = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate()
+function parseDataIso(
+  valore: string
+): Date {
+  const data = new Date(
+    `${normalizzaData(valore)}T12:00:00Z`
   );
 
-  const targetOnly = parseDateOnly(dateValue);
+  if (Number.isNaN(data.getTime())) {
+    throw new Error(
+      `Data non valida: ${valore}`
+    );
+  }
 
-  return Math.round(
-    (targetOnly.getTime() - todayOnly.getTime()) / (1000 * 60 * 60 * 24)
-  );
+  return data;
 }
 
-async function alertGiaInviato(
-  tipoScadenzaId: string,
-  annoInvio: number,
-  tipoAlert: string
-) {
-  const { data, error } = await supabase
-    .from("tbtipi_scadenze_alert")
-    .select("id")
-    .eq("tipo_scadenza_id", tipoScadenzaId)
-    .eq("anno_invio", annoInvio)
-    .eq("tipo_alert", tipoAlert)
-    .maybeSingle();
-
-  if (error) throw error;
-
-  return !!data;
+function dataIsoOggi(): string {
+  return new Date()
+    .toISOString()
+    .slice(0, 10);
 }
 
-async function registraAlert(
-  tipoScadenzaId: string,
-  annoInvio: number,
-  tipoAlert: string
-) {
-  const { error } = await supabase.from("tbtipi_scadenze_alert").insert({
-    tipo_scadenza_id: tipoScadenzaId,
-    anno_invio: annoInvio,
-    tipo_alert: tipoAlert,
-    data_invio: new Date().toISOString(),
-  });
+function portaNelFuturo(
+  dataScadenza: string,
+  oggi: string
+): string {
+  const nuovaData =
+    parseDataIso(dataScadenza);
 
-  if (error) throw error;
+  /*
+   * Manteniamo giorno e mese originali,
+   * incrementando l'anno finché la data
+   * non risulta successiva o uguale a oggi.
+   */
+  while (
+    nuovaData
+      .toISOString()
+      .slice(0, 10) < oggi
+  ) {
+    nuovaData.setUTCFullYear(
+      nuovaData.getUTCFullYear() + 1
+    );
+  }
+
+  return nuovaData
+    .toISOString()
+    .slice(0, 10);
 }
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const querySecret =
-    typeof req.query.secret === "string" ? req.query.secret : null;
+  if (
+    req.method !== "GET" &&
+    req.method !== "POST"
+  ) {
+    res.setHeader(
+      "Allow",
+      ["GET", "POST"]
+    );
 
-  if (!SECRET || querySecret !== SECRET) {
+    return res.status(405).json({
+      ok: false,
+      error: "Metodo non consentito",
+    });
+  }
+
+  const querySecret =
+    typeof req.query.secret === "string"
+      ? req.query.secret
+      : null;
+
+  const authHeader =
+    req.headers.authorization || "";
+
+  const bearerSecret =
+    authHeader.startsWith("Bearer ")
+      ? authHeader.slice(7).trim()
+      : null;
+
+  if (
+    !SECRET ||
+    (
+      querySecret !== SECRET &&
+      bearerSecret !== SECRET
+    )
+  ) {
     return res.status(401).json({
       ok: false,
       error: "Non autorizzato",
@@ -81,127 +132,162 @@ export default async function handler(
   }
 
   try {
-    const { data: tipi, error } = await supabase
+    const oggi =
+      dataIsoOggi();
+
+    const {
+      data,
+      error,
+    } = await supabase
       .from("tbtipi_scadenze")
-      .select("*")
+      .select(`
+        id,
+        studio_id,
+        nome,
+        data_scadenza,
+        ricorrente,
+        attivo
+      `)
       .eq("attivo", true)
-      .eq("ricorrente", true);
+      .eq("ricorrente", true)
+      .lt("data_scadenza", oggi);
 
     if (error) {
-      return res.status(500).json({
-        ok: false,
-        error: error.message,
-      });
+      throw error;
     }
 
-    const risultati: any[] = [];
+    const scadenze =
+      (data || []) as TipoScadenzaRow[];
 
-    for (const tipo of tipi || []) {
+    const risultati: Array<{
+      id: string;
+      nome: string;
+      vecchia_data: string;
+      nuova_data?: string;
+      ok: boolean;
+      errore?: string;
+    }> = [];
+
+    let rinnovate = 0;
+    let errori = 0;
+
+    for (const scadenza of scadenze) {
       try {
-        if (!tipo.data_scadenza) {
-          risultati.push({
-            id: tipo.id,
-            nome: tipo.nome,
-            ok: false,
-            error: "data_scadenza mancante",
-          });
-          continue;
+        if (!scadenza.studio_id) {
+          throw new Error(
+            "studio_id mancante"
+          );
         }
 
-        const giorni = diffDaysFromToday(tipo.data_scadenza);
-        const annoInvio = new Date(tipo.data_scadenza).getFullYear();
+        if (!scadenza.data_scadenza) {
+          throw new Error(
+            "data_scadenza mancante"
+          );
+        }
 
-       const preavviso1 = Number(tipo.giorni_preavviso_1 || 15);
-const preavviso2 = Number(tipo.giorni_preavviso_2 || 7);
-
-const preavvisi = [
-  preavviso1,
-  preavviso2,
-  0,
-];
-        const alertDaInviare = preavvisi.filter(
-          (giorniPreavviso, index, self) =>
-            giorni === giorniPreavviso &&
-            self.indexOf(giorniPreavviso) === index
-        );
-
-        const alerts: string[] = [];
-
-        for (const giorniPreavviso of alertDaInviare) {
-         const tipoAlert =
-  giorniPreavviso === 0
-    ? "giorno_0"
-    : giorniPreavviso === preavviso1
-      ? "preavviso_1"
-      : "preavviso_2";
-          
-          const giaInviato = await alertGiaInviato(
-            tipo.id,
-            annoInvio,
-            tipoAlert
+        const nuovaData =
+          portaNelFuturo(
+            scadenza.data_scadenza,
+            oggi
           );
 
-          if (!giaInviato) {
-            await registraAlert(tipo.id, annoInvio, tipoAlert);
-            alerts.push(tipoAlert);
+        const {
+          error: updateError,
+        } = await supabase
+          .from("tbtipi_scadenze")
+          .update({
+            data_scadenza:
+              nuovaData,
 
-            console.log(
-              `Alert ${tipoAlert} registrato per ${tipo.nome}`
-            );
-          }
+            /*
+             * Campi del vecchio sistema:
+             * li azzeriamo per coerenza,
+             * anche se l'invio passa ormai
+             * dal motore centrale.
+             */
+            alert_1_inviato:
+              false,
+
+            alert_2_inviato:
+              false,
+
+            data_invio_alert_1:
+              null,
+
+            data_invio_alert_2:
+              null,
+
+            updated_at:
+              new Date().toISOString(),
+          })
+          .eq("id", scadenza.id)
+          .eq(
+            "studio_id",
+            scadenza.studio_id
+          );
+
+        if (updateError) {
+          throw updateError;
         }
 
-        let rinnovata = false;
-        let nuovaDataStr: string | null = null;
-
-        if (giorni < 0) {
-          const nuovaData = new Date(tipo.data_scadenza);
-
-          do {
-            nuovaData.setFullYear(nuovaData.getFullYear() + 1);
-          } while (diffDaysFromToday(toDateOnly(nuovaData)) < 0);
-
-          nuovaDataStr = toDateOnly(nuovaData);
-
-          const { error: updateError } = await supabase
-            .from("tbtipi_scadenze")
-            .update({
-              data_scadenza: nuovaDataStr,
-            })
-            .eq("id", tipo.id);
-
-          if (updateError) throw updateError;
-
-          rinnovata = true;
-        }
+        /*
+         * L'UPDATE attiva automaticamente:
+         *
+         * trg_sync_tipo_scadenza_centrale
+         *
+         * che aggiorna:
+         * - tbscadenze_centrale;
+         * - prossimo_alert_at;
+         * - destinatari per settore.
+         */
+        rinnovate += 1;
 
         risultati.push({
-          id: tipo.id,
-          nome: tipo.nome,
-          giorni,
-          alerts,
-          rinnovata,
-          nuovaData: nuovaDataStr,
+          id: scadenza.id,
+          nome: scadenza.nome,
+          vecchia_data:
+            scadenza.data_scadenza,
+          nuova_data:
+            nuovaData,
           ok: true,
         });
-      } catch (err: any) {
+      } catch (error: any) {
+        errori += 1;
+
         risultati.push({
-          id: tipo.id,
-          nome: tipo.nome,
+          id: scadenza.id,
+          nome: scadenza.nome,
+          vecchia_data:
+            scadenza.data_scadenza,
           ok: false,
-          error: err?.message || String(err),
+          errore:
+            error?.message ||
+            "Errore rinnovo",
         });
       }
     }
 
-    return res.status(200).json({
-      ok: true,
+    return res.status(
+      errori > 0 ? 207 : 200
+    ).json({
+      ok: errori === 0,
+      trovate:
+        scadenze.length,
+      rinnovate,
+      errori,
       risultati,
     });
   } catch (error: any) {
+    console.error(
+      "Errore rinnovo tipi scadenze:",
+      error
+    );
+
     return res.status(500).json({
       ok: false,
-      error: error.message,
+      error:
+        error?.message ||
+        "Errore interno",
     });
   }
 }
