@@ -96,16 +96,14 @@ export default async function handler(
 const hourUtc = now.getUTCHours();
 const minuteUtc = now.getUTCMinutes();
 
-results.push(
-  await callInternal(`/api/scadenze/processa?secret=${SECRET}`)
+  results.push(
+  await callInternal(
+    `/api/scadenze-centrale/processa-alert?secret=${SECRET}`
+  )
 );
 
 results.push(
   await callInternal(`/api/presenze/sollecito-settimanale?secret=${SECRET}`)
-);
-
-results.push(
-  await callInternal(`/api/scadenze/processa-scadenzari?secret=${SECRET}`)
 );
 
 results.push(
@@ -114,19 +112,6 @@ results.push(
 
 results.push(
   await callInternal(`/api/scadenze/affitti/processa?secret=${SECRET}`)
-);
-
-results.push(
-  await callInternal(
-    `/api/antiriciclaggio/scadenze-verifica/send-alerts?secret=${SECRET}`
-  )
-);
-
-results.push(
-  await callInternal(
-    `/api/contenzioso/invia-alert?secret=${SECRET}`,
-    "POST"
-  )
 );
 
 results.push(
