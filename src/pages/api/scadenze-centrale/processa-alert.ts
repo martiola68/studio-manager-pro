@@ -670,12 +670,13 @@ if (destinatari.length === 0) {
      * Altrimenti utilizziamo un mittente valido
      * appartenente allo stesso studio.
      */
-    const senderUserId =
-      mittentiValidiSet.has(
-        destinatarioId
-      )
-        ? destinatarioId
-        : mittenteAlternativoId;
+   const senderUserId =
+  destinatarioId &&
+  mittentiValidiSet.has(
+    destinatarioId
+  )
+    ? destinatarioId
+    : mittenteAlternativoId;
 
     /*
      * Prenotiamo l'invio prima dell'email.
