@@ -624,29 +624,22 @@ Studio Manager Pro
 Comunicazione automatica.
       `.trim();
 
-      const risultatoInvio =
-        await sendEmail({
-          to: operatore.email,
+    const risultatoInvio =
+  await sendEmailServer({
+    senderUserId:
+      operatore.id,
 
-          subject:
-            alert.oggetto,
+    microsoftConnectionId:
+      studio.microsoft_connection_id,
 
-          html,
-          text,
+    to:
+      operatore.email,
 
-          senderUserId:
-            operatore.id,
+    subject:
+      alert.oggetto,
 
-          microsoftConnectionId:
-            studio.microsoft_connection_id,
-
-          fromEmail:
-            studio.email ||
-            undefined,
-
-          sendMode:
-            "user",
-        });
+    html,
+  });
 
       if (!risultatoInvio.success) {
         errori += 1;
