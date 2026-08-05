@@ -392,66 +392,92 @@ for (
    * 2. Recuperiamo gli eventuali destinatari
    * multipli configurati per la scadenza.
    */
-  const {
-    data: assegnazioni,
-    error: assegnazioniError,
-  } = await supabaseAdmin
-    .from(
-      "tbscadenze_centrale_destinatari"
-    )
-    .select(`
-      utente_id
-    `)
-    .eq("studio_id", riga.studio_id)
-    .eq("scadenza_id", riga.id)
-    .eq("attivo", true);
+ const {
+  data: assegnazioni,
+  error: assegnazioniError,
+} = await supabaseAdmin
+  .from(
+    "tbscadenze_centrale_destinatari"
+  )
+  .select(`
+    utente_id,
+    destinatario_email,
+    tipo_destinatario
+  `)
+  .eq("studio_id", riga.studio_id)
+  .eq("scadenza_id", riga.id)
+  .eq("attivo", true);
 
   if (assegnazioniError) {
     throw assegnazioniError;
   }
 
-  const destinatariIds = Array.from(
+ const destinatariInterniIds =
+  Array.from(
     new Set(
       (assegnazioni || [])
+        .filter(
+          (assegnazione) =>
+            assegnazione.tipo_destinatario ===
+              "interno" &&
+            assegnazione.utente_id
+        )
         .map((assegnazione) =>
           String(
-            assegnazione.utente_id || ""
+            assegnazione.utente_id
           )
+        )
+    )
+  );
+
+const destinatariEsterni =
+  Array.from(
+    new Set(
+      (assegnazioni || [])
+        .filter(
+          (assegnazione) =>
+            assegnazione.tipo_destinatario ===
+              "esterno" &&
+            assegnazione.destinatario_email
+        )
+        .map((assegnazione) =>
+          String(
+            assegnazione.destinatario_email
+          )
+            .trim()
+            .toLowerCase()
         )
         .filter(Boolean)
     )
   );
 
-  /*
-   * Compatibilità con le scadenze già esistenti:
-   * se non ci sono assegnazioni multiple,
-   * utilizziamo l'operatore responsabile.
-   */
-  if (
-    destinatariIds.length === 0 &&
+/*
+ * Compatibilità con le scadenze già esistenti:
+ * se non esistono assegnazioni dedicate,
+ * utilizziamo l'operatore responsabile.
+ */
+if (
+  destinatariInterniIds.length === 0 &&
+  destinatariEsterni.length === 0 &&
+  riga.operatore_responsabile_id
+) {
+  destinatariInterniIds.push(
     riga.operatore_responsabile_id
-  ) {
-    destinatariIds.push(
-      riga.operatore_responsabile_id
-    );
-  }
+  );
+}
 
-  if (destinatariIds.length === 0) {
-    saltati += 1;
+let destinatariInterni: Array<{
+  id: string;
+  nome: string | null;
+  cognome: string | null;
+  email: string | null;
+  studio_id: string;
+  attivo: boolean;
+}> = [];
 
-    dettagli.push({
-      scadenza_id: riga.id,
-      ok: false,
-      messaggio:
-        "Nessun destinatario associato alla scadenza",
-    });
-
-    continue;
-  }
-
-  /*
-   * 3. Recuperiamo i dati degli utenti destinatari.
-   */
+if (
+  destinatariInterniIds.length > 0
+) {
   const {
     data: destinatariData,
     error: destinatariError,
@@ -465,20 +491,75 @@ for (
       studio_id,
       attivo
     `)
-    .eq("studio_id", riga.studio_id)
+    .eq(
+      "studio_id",
+      riga.studio_id
+    )
     .eq("attivo", true)
-    .in("id", destinatariIds);
+    .in(
+      "id",
+      destinatariInterniIds
+    );
 
   if (destinatariError) {
     throw destinatariError;
   }
 
-  const destinatari = (
-    destinatariData || []
-  ).filter(
-    (destinatario) =>
-      Boolean(destinatario.email)
-  );
+  destinatariInterni =
+    (destinatariData || []).filter(
+      (destinatario) =>
+        Boolean(destinatario.email)
+    );
+}
+
+const destinatari = [
+  ...destinatariInterni.map(
+    (destinatario) => ({
+      tipo: "interno" as const,
+
+      utente_id:
+        String(destinatario.id),
+
+      nome:
+        destinatario.nome,
+
+      cognome:
+        destinatario.cognome,
+
+      email:
+        String(
+          destinatario.email
+        ),
+    })
+  ),
+
+  ...destinatariEsterni.map(
+    (email) => ({
+      tipo: "esterno" as const,
+
+      utente_id: null,
+
+      nome: null,
+
+      cognome: null,
+
+      email,
+    })
+  ),
+];
+
+if (destinatari.length === 0) {
+  saltati += 1;
+
+  dettagli.push({
+    scadenza_id: riga.id,
+    ok: false,
+    messaggio:
+      "Nessun destinatario valido associato alla scadenza",
+  });
+
+  continue;
+}
 
   if (destinatari.length === 0) {
     saltati += destinatariIds.length;
@@ -627,13 +708,14 @@ for (
 
         scadenza_id:
           riga.id,
-
-        operatore_responsabile_id:
-          riga.operatore_responsabile_id ||
-          destinatarioId,
-
-        destinatario_utente_id:
-          destinatarioId,
+        
+operatore_responsabile_id:
+  riga.operatore_responsabile_id ||
+  destinatarioId ||
+  mittenteAlternativoId,
+        
+     destinatario_utente_id:
+  destinatarioId,
 
         alert_numero:
           Number(
@@ -732,15 +814,17 @@ for (
       continue;
     }
 
-    const nomeDestinatario =
-      [
+const nomeDestinatario =
+  destinatario.tipo === "esterno"
+    ? "Cliente"
+    : [
         destinatario.nome,
         destinatario.cognome,
       ]
         .filter(Boolean)
         .join(" ") ||
       destinatarioEmail;
-
+    
     const html = `
       <div style="font-family:Arial,sans-serif;font-size:14px;color:#111827;line-height:1.55">
         <h2 style="margin-bottom:8px;color:#1d4ed8">
