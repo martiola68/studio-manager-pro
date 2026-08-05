@@ -624,15 +624,7 @@ Studio Manager Pro
 Comunicazione automatica.
       `.trim();
 
-    const risultatoInvio =
-
-      console.log({
-  studio_id: alert.studio_id,
-  microsoft_connection_id: studio?.microsoft_connection_id,
-  senderUserId: operatore.id,
-  operatore: operatore.email,
-});
-      
+    const risultatoInvio =    
   await sendEmailServer({
     senderUserId:
       operatore.id,
