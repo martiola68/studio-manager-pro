@@ -750,22 +750,28 @@ export default function ScadenzeCentralePage() {
             }
           />
 
-          <SummaryCard
-            titolo="Errori alert"
-            valore={
-              riepilogo
-                ?.con_errori_alert || 0
-            }
-            descrizione="Invii da verificare"
-            icona={
-              <AlertCircle size={21} />
-            }
-            evidenza={
-              (riepilogo
-                ?.con_errori_alert ||
-                0) > 0
-            }
-          />
+         <SummaryCard
+  titolo="Alert non inviati"
+  valore={
+    riepilogo
+      ?.con_errori_alert || 0
+  }
+  descrizione="Apri e verifica"
+  icona={
+    <AlertCircle size={21} />
+  }
+  evidenza={
+    (riepilogo
+      ?.con_errori_alert ||
+      0) > 0
+  }
+  onClick={() =>
+    router.push(
+      "/scadenze/alert-non-inviati"
+    )
+  }
+/>
+          
         </section>
 
         <section style={cardStyle}>
@@ -1465,17 +1471,27 @@ function SummaryCard({
   descrizione,
   icona,
   evidenza = false,
+  onClick,
 }: {
   titolo: string;
   valore: number;
   descrizione: string;
   icona: React.ReactNode;
   evidenza?: boolean;
+  onClick?: () => void;
 }) {
   return (
     <div
+       onClick={onClick}
+          role={onClick ? "button" : undefined}
+          tabIndex={onClick ? 0 : undefined}
       style={{
         ...summaryCardStyle,
+
+         cursor: onClick
+      ? "pointer"
+      : "default",
+        
         borderColor: evidenza
           ? "#fca5a5"
           : "#e2e8f0",
