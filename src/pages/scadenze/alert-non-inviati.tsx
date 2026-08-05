@@ -13,6 +13,7 @@ import {
   ExternalLink,
   Loader2,
   RefreshCcw,
+  RotateCcw,
 } from "lucide-react";
 
 import { getSupabaseClient } from "@/lib/supabaseClient";
@@ -118,10 +119,20 @@ export default function AlertNonInviatiPage() {
     setLoading,
   ] = useState(true);
 
-  const [
-    erroreCaricamento,
-    setErroreCaricamento,
-  ] = useState("");
+ const [
+  erroreCaricamento,
+  setErroreCaricamento,
+] = useState("");
+
+const [
+  retryInCorsoId,
+  setRetryInCorsoId,
+] = useState<string | null>(null);
+
+const [
+  messaggioOperazione,
+  setMessaggioOperazione,
+] = useState("");
 
   const caricaErrori =
     useCallback(async () => {
@@ -186,11 +197,102 @@ export default function AlertNonInviatiPage() {
       }
     }, []);
 
-  useEffect(() => {
-    void caricaErrori();
-  }, [caricaErrori]);
+useEffect(() => {
+  void caricaErrori();
+}, [caricaErrori]);
 
-  return (
+async function riprovaInvio(
+  scadenzaId: string
+) {
+  setRetryInCorsoId(
+    scadenzaId
+  );
+
+  setMessaggioOperazione("");
+  setErroreCaricamento("");
+
+  try {
+    const supabase =
+      getSupabaseClient();
+
+    const {
+      data: sessionData,
+      error: sessionError,
+    } =
+      await supabase.auth.getSession();
+
+    if (sessionError) {
+      throw sessionError;
+    }
+
+    const accessToken =
+      sessionData.session
+        ?.access_token;
+
+    if (!accessToken) {
+      throw new Error(
+        "Sessione non valida."
+      );
+    }
+
+    const response = await fetch(
+      "/api/scadenze-centrale/riprova-alert",
+      {
+        method: "POST",
+        headers: {
+          Authorization:
+            `Bearer ${accessToken}`,
+          "Content-Type":
+            "application/json",
+        },
+        body: JSON.stringify({
+          scadenza_id:
+            scadenzaId,
+        }),
+      }
+    );
+
+    const risultato =
+      await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        risultato.error ||
+          "Errore durante il nuovo tentativo."
+      );
+    }
+
+    const numeroInviati =
+      Number(
+        risultato?.risultato
+          ?.inviati || 0
+      );
+
+    if (numeroInviati < 1) {
+      throw new Error(
+        risultato?.risultato
+          ?.dettagli?.[0]
+          ?.messaggio ||
+          "Invio non confermato."
+      );
+    }
+
+    setMessaggioOperazione(
+      "Alert inviato correttamente."
+    );
+
+    await caricaErrori();
+  } catch (error: any) {
+    setErroreCaricamento(
+      error?.message ||
+        "Errore durante il nuovo tentativo."
+    );
+  } finally {
+    setRetryInCorsoId(null);
+  }
+}
+
+return (
     <>
       <Head>
         <title>
@@ -330,8 +432,25 @@ export default function AlertNonInviatiPage() {
           </div>
         </div>
 
-        {erroreCaricamento && (
-          <div
+        {messaggioOperazione && (
+  <div
+    style={{
+      marginTop: 18,
+      padding: 14,
+      border:
+        "1px solid #bbf7d0",
+      borderRadius: 10,
+      background: "#f0fdf4",
+      color: "#166534",
+      fontWeight: 700,
+    }}
+  >
+    {messaggioOperazione}
+  </div>
+)}
+
+{erroreCaricamento && (
+  <div
             style={{
               marginTop: 18,
               padding: 14,
@@ -532,34 +651,81 @@ export default function AlertNonInviatiPage() {
                           </div>
                         </td>
 
-                        <td
-                          style={{
-                            ...tdStyle,
-                            textAlign:
-                              "center",
-                          }}
-                        >
-                          {item.link_dettaglio ? (
-                            <button
-                              type="button"
-                              title="Apri scadenza"
-                              onClick={() =>
-                                router.push(
-                                  item.link_dettaglio!
-                                )
-                              }
-                              style={
-                                iconButtonStyle
-                              }
-                            >
-                              <ExternalLink
-                                size={16}
-                              />
-                            </button>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
+                       <td
+  style={{
+    ...tdStyle,
+    textAlign: "center",
+  }}
+>
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+    }}
+  >
+    <button
+      type="button"
+      title="Riprova invio"
+      onClick={() =>
+        void riprovaInvio(
+          item.scadenza_id
+        )
+      }
+      disabled={
+        retryInCorsoId ===
+        item.scadenza_id
+      }
+      style={{
+        ...retryButtonStyle,
+
+        opacity:
+          retryInCorsoId ===
+          item.scadenza_id
+            ? 0.6
+            : 1,
+
+        cursor:
+          retryInCorsoId ===
+          item.scadenza_id
+            ? "not-allowed"
+            : "pointer",
+      }}
+    >
+      {retryInCorsoId ===
+      item.scadenza_id ? (
+        <Loader2
+          size={16}
+          className="animate-spin"
+        />
+      ) : (
+        <RotateCcw
+          size={16}
+        />
+      )}
+    </button>
+
+    {item.link_dettaglio && (
+      <button
+        type="button"
+        title="Apri scadenza"
+        onClick={() =>
+          router.push(
+            item.link_dettaglio!
+          )
+        }
+        style={
+          iconButtonStyle
+        }
+      >
+        <ExternalLink
+          size={16}
+        />
+      </button>
+    )}
+  </div>
+</td>
                       </tr>
                     )
                   )}
@@ -622,6 +788,19 @@ const secondaryButtonStyle:
   background: "#ffffff",
   fontWeight: 700,
   cursor: "pointer",
+};
+
+const retryButtonStyle:
+  React.CSSProperties = {
+  width: 34,
+  height: 34,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  border: "1px solid #fde68a",
+  borderRadius: 8,
+  background: "#fffbeb",
+  color: "#b45309",
 };
 
 const iconButtonStyle:
