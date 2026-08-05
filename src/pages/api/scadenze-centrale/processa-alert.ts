@@ -351,398 +351,618 @@ if (scadenzeError) {
       messaggio: string;
     }> = [];
 
-    for (
-      const riga of
-        (scadenze || []) as ScadenzaRow[]
-    ) {
-      if (
-        !riga.operatore_responsabile_id
-      ) {
-        saltati += 1;
+for (
+  const riga of
+    (scadenze || []) as ScadenzaRow[]
+) {
+  /*
+   * 1. Recuperiamo lo studio e la relativa
+   * connessione Microsoft.
+   */
+  const {
+    data: studio,
+    error: studioError,
+  } = await supabaseAdmin
+    .from("tbstudio")
+    .select(`
+      id,
+      email,
+      microsoft_connection_id
+    `)
+    .eq("id", riga.studio_id)
+    .maybeSingle();
 
-        dettagli.push({
-          scadenza_id: riga.id,
-          ok: false,
-          messaggio:
-            "Operatore responsabile assente",
-        });
+  if (
+    studioError ||
+    !studio?.microsoft_connection_id
+  ) {
+    saltati += 1;
 
-        continue;
-      }
+    dettagli.push({
+      scadenza_id: riga.id,
+      ok: false,
+      messaggio:
+        "Connessione Microsoft dello studio assente",
+    });
 
-      const {
-        data: operatore,
-        error: operatoreError,
-      } = await supabaseAdmin
-        .from("tbutenti")
-        .select(`
-          id,
-          nome,
-          cognome,
-          email,
-          studio_id
-        `)
-        .eq(
-          "id",
-          riga.operatore_responsabile_id
-        )
-        .eq(
-          "studio_id",
-          riga.studio_id
-        )
-        .maybeSingle();
+    continue;
+  }
 
-      if (
-        operatoreError ||
-        !operatore?.email
-      ) {
-        saltati += 1;
+  /*
+   * 2. Recuperiamo gli eventuali destinatari
+   * multipli configurati per la scadenza.
+   */
+  const {
+    data: assegnazioni,
+    error: assegnazioniError,
+  } = await supabaseAdmin
+    .from(
+      "tbscadenze_centrale_destinatari"
+    )
+    .select(`
+      utente_id
+    `)
+    .eq("studio_id", riga.studio_id)
+    .eq("scadenza_id", riga.id)
+    .eq("attivo", true);
 
-        dettagli.push({
-          scadenza_id: riga.id,
-          ok: false,
-          messaggio:
-            "Email operatore non disponibile",
-        });
+  if (assegnazioniError) {
+    throw assegnazioniError;
+  }
 
-        continue;
-      }
-
-      const {
-        data: studio,
-        error: studioError,
-      } = await supabaseAdmin
-        .from("tbstudio")
-        .select(`
-          id,
-          email,
-          microsoft_connection_id
-        `)
-        .eq("id", riga.studio_id)
-        .maybeSingle();
-
-      if (
-        studioError ||
-        !studio
-          ?.microsoft_connection_id
-      ) {
-        saltati += 1;
-
-        dettagli.push({
-          scadenza_id: riga.id,
-          ok: false,
-          messaggio:
-            "Connessione Microsoft dello studio assente",
-        });
-
-        continue;
-      }
-
-      const alert =
-        calcolaTipoAlert(
-          riga,
-          oggi
-        );
-
-      /*
-       * Prenotiamo l’invio prima di mandare
-       * l’email. Il vincolo univoco impedisce
-       * doppioni se il cron parte due volte.
-       */
-      const {
-        data: logCreato,
-        error: prenotazioneError,
-      } = await supabaseAdmin
-        .from(
-          "tbscadenze_centrale_alert_log"
-        )
-        .insert({
-          studio_id:
-            riga.studio_id,
-
-          scadenza_id:
-            riga.id,
-
-          operatore_responsabile_id:
-            operatore.id,
-
-          alert_numero:
-            Number(
-              riga.numero_alert_inviati ||
-                0
-            ) + 1,
-
-          giorni_preavviso:
-            Math.max(
-              differenzaGiorni(
-                riga.data_scadenza,
-                oggi
-              ),
-              0
-            ),
-
-          data_programmata:
-            riga.prossimo_alert_at ||
-            adesso,
-
-          canale:
-            "email",
-
-          destinatario_email:
-            operatore.email,
-
-          esito:
-            "in_lavorazione",
-
-          tipo_alert:
-            alert.tipoAlert,
-
-          chiave_invio:
-            alert.chiaveInvio,
-        })
-        .select("id")
-        .maybeSingle();
-
-      if (prenotazioneError) {
-        /*
-         * Codice PostgreSQL 23505:
-         * alert già prenotato o inviato.
-         */
-        if (
-          prenotazioneError.code ===
-          "23505"
-        ) {
-          saltati += 1;
-
-          dettagli.push({
-            scadenza_id:
-              riga.id,
-            ok: true,
-            messaggio:
-              "Alert già processato",
-          });
-
-          continue;
-        }
-
-        throw prenotazioneError;
-      }
-
-      const nomeOperatore =
-        [
-          operatore.nome,
-          operatore.cognome,
-        ]
-          .filter(Boolean)
-          .join(" ");
-
-      const urlApplicazione =
-        process.env
-          .NEXT_PUBLIC_APP_URL ||
-        process.env
-          .NEXT_PUBLIC_SITE_URL ||
-        "https://studio-manager-pro.vercel.app";
-
-      const link =
-        riga.link_dettaglio
-          ? `${urlApplicazione}${riga.link_dettaglio}`
-          : `${urlApplicazione}/scadenze`;
-
-      const html = `
-        <div style="font-family:Arial,sans-serif;font-size:14px;color:#111827;line-height:1.55">
-          <h2 style="margin-bottom:8px;color:#1d4ed8">
-            ${alert.intestazione}
-          </h2>
-
-          <p>
-            Ciao <strong>${nomeOperatore}</strong>,
-          </p>
-
-          <p>
-            è presente una scadenza assegnata a te che richiede attenzione.
-          </p>
-
-          <table style="border-collapse:collapse;width:100%;max-width:700px">
-            <tr>
-              <td style="padding:7px;border:1px solid #d1d5db"><strong>Modulo</strong></td>
-              <td style="padding:7px;border:1px solid #d1d5db">${riga.origine_modulo}</td>
-            </tr>
-
-            <tr>
-              <td style="padding:7px;border:1px solid #d1d5db"><strong>Oggetto</strong></td>
-              <td style="padding:7px;border:1px solid #d1d5db">${riga.titolo}</td>
-            </tr>
-
-            <tr>
-              <td style="padding:7px;border:1px solid #d1d5db"><strong>Data di scadenza</strong></td>
-              <td style="padding:7px;border:1px solid #d1d5db">
-                ${formattaDataItaliana(
-                  riga.data_scadenza
-                )}
-              </td>
-            </tr>
-
-            ${
-              riga.descrizione
-                ? `
-                  <tr>
-                    <td style="padding:7px;border:1px solid #d1d5db"><strong>Descrizione</strong></td>
-                    <td style="padding:7px;border:1px solid #d1d5db">${riga.descrizione}</td>
-                  </tr>
-                `
-                : ""
-            }
-          </table>
-
-          <p style="margin-top:20px">
-            <a
-              href="${link}"
-              style="display:inline-block;padding:10px 16px;border-radius:6px;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:bold"
-            >
-              Apri la scadenza
-            </a>
-          </p>
-
-          ${
-            alert.tipoAlert ===
-            "scadenza_superata"
-              ? `
-                <p style="color:#b91c1c;font-weight:bold">
-                  Il promemoria verrà ripetuto ogni 5 giorni fino alla chiusura o all’annullamento della scadenza.
-                </p>
-              `
-              : ""
-          }
-
-          <p style="margin-top:24px;font-size:12px;color:#6b7280">
-            Comunicazione automatica di Studio Manager Pro.
-          </p>
-        </div>
-      `;
-
-      const text = `
-${alert.intestazione}
-
-Operatore: ${nomeOperatore}
-Modulo: ${riga.origine_modulo}
-Oggetto: ${riga.titolo}
-Data di scadenza: ${formattaDataItaliana(
-        riga.data_scadenza
-      )}
-
-${riga.descrizione || ""}
-
-Apri la scadenza:
-${link}
-
-Studio Manager Pro
-Comunicazione automatica.
-      `.trim();
-
-    const risultatoInvio =    
-  await sendEmailServer({
-    senderUserId:
-      operatore.id,
-
-    microsoftConnectionId:
-      studio.microsoft_connection_id,
-
-    to:
-      operatore.email,
-
-    subject:
-      alert.oggetto,
-
-    html,
-  });
-
-      if (!risultatoInvio.success) {
-        errori += 1;
-
-        await supabaseAdmin
-          .from(
-            "tbscadenze_centrale_alert_log"
+  const destinatariIds = Array.from(
+    new Set(
+      (assegnazioni || [])
+        .map((assegnazione) =>
+          String(
+            assegnazione.utente_id || ""
           )
-          .update({
-            esito: "errore",
-            errore:
-              risultatoInvio.error ||
-              "Errore invio email",
-          })
-          .eq(
-            "id",
-            logCreato!.id
-          );
+        )
+        .filter(Boolean)
+    )
+  );
+
+  /*
+   * Compatibilità con le scadenze già esistenti:
+   * se non ci sono assegnazioni multiple,
+   * utilizziamo l'operatore responsabile.
+   */
+  if (
+    destinatariIds.length === 0 &&
+    riga.operatore_responsabile_id
+  ) {
+    destinatariIds.push(
+      riga.operatore_responsabile_id
+    );
+  }
+
+  if (destinatariIds.length === 0) {
+    saltati += 1;
+
+    dettagli.push({
+      scadenza_id: riga.id,
+      ok: false,
+      messaggio:
+        "Nessun destinatario associato alla scadenza",
+    });
+
+    continue;
+  }
+
+  /*
+   * 3. Recuperiamo i dati degli utenti destinatari.
+   */
+  const {
+    data: destinatariData,
+    error: destinatariError,
+  } = await supabaseAdmin
+    .from("tbutenti")
+    .select(`
+      id,
+      nome,
+      cognome,
+      email,
+      studio_id,
+      attivo
+    `)
+    .eq("studio_id", riga.studio_id)
+    .eq("attivo", true)
+    .in("id", destinatariIds);
+
+  if (destinatariError) {
+    throw destinatariError;
+  }
+
+  const destinatari = (
+    destinatariData || []
+  ).filter(
+    (destinatario) =>
+      Boolean(destinatario.email)
+  );
+
+  if (destinatari.length === 0) {
+    saltati += destinatariIds.length;
+
+    dettagli.push({
+      scadenza_id: riga.id,
+      ok: false,
+      messaggio:
+        "Nessun destinatario possiede un indirizzo email valido",
+    });
+
+    continue;
+  }
+
+  /*
+   * 4. Recuperiamo tutti gli utenti che
+   * possiedono un token Microsoft valido
+   * per la connessione dello studio.
+   */
+  const {
+    data: tokenDisponibili,
+    error: tokenDisponibiliError,
+  } = await supabaseAdmin
+    .from(
+      "tbmicrosoft365_user_tokens"
+    )
+    .select(`
+      user_id,
+      updated_at
+    `)
+    .eq(
+      "microsoft_connection_id",
+      studio.microsoft_connection_id
+    )
+    .is("revoked_at", null)
+    .order("updated_at", {
+      ascending: false,
+    });
+
+  if (tokenDisponibiliError) {
+    throw tokenDisponibiliError;
+  }
+
+  const utentiConTokenIds = Array.from(
+    new Set(
+      (tokenDisponibili || [])
+        .map((token) =>
+          String(token.user_id || "")
+        )
+        .filter(Boolean)
+    )
+  );
+
+  let mittentiValidi: Array<{
+    id: string;
+  }> = [];
+
+  if (utentiConTokenIds.length > 0) {
+    const {
+      data: mittentiData,
+      error: mittentiError,
+    } = await supabaseAdmin
+      .from("tbutenti")
+      .select("id")
+      .eq("studio_id", riga.studio_id)
+      .eq("attivo", true)
+      .in("id", utentiConTokenIds);
+
+    if (mittentiError) {
+      throw mittentiError;
+    }
+
+    mittentiValidi =
+      mittentiData || [];
+  }
+
+  const mittentiValidiSet = new Set(
+    mittentiValidi.map((mittente) =>
+      String(mittente.id)
+    )
+  );
+
+  const mittenteAlternativoId =
+    utentiConTokenIds.find((utenteId) =>
+      mittentiValidiSet.has(utenteId)
+    ) || null;
+
+  const alert =
+    calcolaTipoAlert(
+      riga,
+      oggi
+    );
+
+  const urlApplicazione =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    "https://studio-manager-pro.vercel.app";
+
+  const link =
+    riga.link_dettaglio
+      ? `${urlApplicazione}${riga.link_dettaglio}`
+      : `${urlApplicazione}/scadenze`;
+
+  let inviatiScadenza = 0;
+  let erroriScadenza = 0;
+  let saltatiScadenza = 0;
+
+  /*
+   * 5. Invio separato a ogni destinatario.
+   */
+  for (const destinatario of destinatari) {
+    const destinatarioId =
+      String(destinatario.id);
+
+    const destinatarioEmail =
+      String(destinatario.email);
+
+    /*
+     * Se il destinatario possiede un token
+     * Microsoft può essere anche il mittente.
+     * Altrimenti utilizziamo un mittente valido
+     * appartenente allo stesso studio.
+     */
+    const senderUserId =
+      mittentiValidiSet.has(
+        destinatarioId
+      )
+        ? destinatarioId
+        : mittenteAlternativoId;
+
+    /*
+     * Prenotiamo l'invio prima dell'email.
+     * Il vincolo univoco ora distingue anche
+     * il singolo destinatario.
+     */
+    const {
+      data: logCreato,
+      error: prenotazioneError,
+    } = await supabaseAdmin
+      .from(
+        "tbscadenze_centrale_alert_log"
+      )
+      .insert({
+        studio_id:
+          riga.studio_id,
+
+        scadenza_id:
+          riga.id,
+
+        operatore_responsabile_id:
+          riga.operatore_responsabile_id ||
+          destinatarioId,
+
+        destinatario_utente_id:
+          destinatarioId,
+
+        alert_numero:
+          Number(
+            riga.numero_alert_inviati ||
+              0
+          ) +
+          inviatiScadenza +
+          1,
+
+        giorni_preavviso:
+          Math.max(
+            differenzaGiorni(
+              riga.data_scadenza,
+              oggi
+            ),
+            0
+          ),
+
+        data_programmata:
+          riga.prossimo_alert_at ||
+          adesso,
+
+        canale:
+          "email",
+
+        destinatario_email:
+          destinatarioEmail,
+
+        esito:
+          "in_lavorazione",
+
+        tipo_alert:
+          alert.tipoAlert,
+
+        chiave_invio:
+          alert.chiaveInvio,
+      })
+      .select("id")
+      .maybeSingle();
+
+    if (prenotazioneError) {
+      /*
+       * Il destinatario ha già ricevuto
+       * oppure è già stato processato
+       * per questa specifica scadenza.
+       */
+      if (
+        prenotazioneError.code ===
+        "23505"
+      ) {
+        saltati += 1;
+        saltatiScadenza += 1;
 
         dettagli.push({
           scadenza_id:
             riga.id,
-          ok: false,
+          ok: true,
           messaggio:
-            risultatoInvio.error ||
-            "Errore invio email",
+            `Alert già processato per ${destinatarioEmail}`,
         });
 
         continue;
       }
 
-      const prossimoAlert =
-        calcolaProssimoAlert(
-          riga,
-          oggi
-        );
+      throw prenotazioneError;
+    }
+
+    /*
+     * Se nessun utente dello studio possiede
+     * un token Microsoft valido, registriamo
+     * l'errore per questo destinatario.
+     */
+    if (!senderUserId) {
+      errori += 1;
+      erroriScadenza += 1;
 
       await supabaseAdmin
         .from(
           "tbscadenze_centrale_alert_log"
         )
         .update({
-          esito: "inviato",
-          inviato_at: new Date()
-            .toISOString(),
-          errore: null,
+          esito: "errore",
+          errore:
+            "Nessun utente dello studio possiede un token Microsoft valido",
         })
-        .eq(
-          "id",
-          logCreato!.id
-        );
-
-      await supabaseAdmin
-        .from(
-          "tbscadenze_centrale"
-        )
-        .update({
-          ultimo_alert_inviato_at:
-            new Date().toISOString(),
-
-          prossimo_alert_at:
-            prossimoAlert,
-
-          numero_alert_inviati:
-            Number(
-              riga.numero_alert_inviati ||
-                0
-            ) + 1,
-
-          updated_at:
-            new Date().toISOString(),
-        })
-        .eq("id", riga.id)
-        .eq(
-          "studio_id",
-          riga.studio_id
-        );
-
-      inviati += 1;
+        .eq("id", logCreato!.id);
 
       dettagli.push({
         scadenza_id:
           riga.id,
-        ok: true,
+        ok: false,
         messaggio:
-          "Alert inviato",
+          `Token Microsoft mancante per l'invio a ${destinatarioEmail}`,
       });
+
+      continue;
     }
+
+    const nomeDestinatario =
+      [
+        destinatario.nome,
+        destinatario.cognome,
+      ]
+        .filter(Boolean)
+        .join(" ") ||
+      destinatarioEmail;
+
+    const html = `
+      <div style="font-family:Arial,sans-serif;font-size:14px;color:#111827;line-height:1.55">
+        <h2 style="margin-bottom:8px;color:#1d4ed8">
+          ${alert.intestazione}
+        </h2>
+
+        <p>
+          Ciao <strong>${nomeDestinatario}</strong>,
+        </p>
+
+        <p>
+          è presente una scadenza che richiede la tua attenzione.
+        </p>
+
+        <table style="border-collapse:collapse;width:100%;max-width:700px">
+          <tr>
+            <td style="padding:7px;border:1px solid #d1d5db">
+              <strong>Modulo</strong>
+            </td>
+            <td style="padding:7px;border:1px solid #d1d5db">
+              ${riga.origine_modulo}
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:7px;border:1px solid #d1d5db">
+              <strong>Oggetto</strong>
+            </td>
+            <td style="padding:7px;border:1px solid #d1d5db">
+              ${riga.titolo}
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:7px;border:1px solid #d1d5db">
+              <strong>Data di scadenza</strong>
+            </td>
+            <td style="padding:7px;border:1px solid #d1d5db">
+              ${formattaDataItaliana(
+                riga.data_scadenza
+              )}
+            </td>
+          </tr>
+
+          ${
+            riga.descrizione
+              ? `
+                <tr>
+                  <td style="padding:7px;border:1px solid #d1d5db">
+                    <strong>Descrizione</strong>
+                  </td>
+                  <td style="padding:7px;border:1px solid #d1d5db">
+                    ${riga.descrizione}
+                  </td>
+                </tr>
+              `
+              : ""
+          }
+        </table>
+
+        <p style="margin-top:20px">
+          <a
+            href="${link}"
+            style="display:inline-block;padding:10px 16px;border-radius:6px;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:bold"
+          >
+            Apri la scadenza
+          </a>
+        </p>
+
+        ${
+          alert.tipoAlert ===
+          "scadenza_superata"
+            ? `
+              <p style="color:#b91c1c;font-weight:bold">
+                Il promemoria verrà ripetuto ogni 5 giorni fino alla chiusura o all’annullamento della scadenza.
+              </p>
+            `
+            : ""
+        }
+
+        <p style="margin-top:24px;font-size:12px;color:#6b7280">
+          Comunicazione automatica di Studio Manager Pro.
+        </p>
+      </div>
+    `;
+
+    const risultatoInvio =
+      await sendEmailServer({
+        senderUserId,
+
+        microsoftConnectionId:
+          studio.microsoft_connection_id,
+
+        to:
+          destinatarioEmail,
+
+        subject:
+          alert.oggetto,
+
+        html,
+      });
+
+    if (!risultatoInvio.success) {
+      errori += 1;
+      erroriScadenza += 1;
+
+      await supabaseAdmin
+        .from(
+          "tbscadenze_centrale_alert_log"
+        )
+        .update({
+          esito: "errore",
+          errore:
+            risultatoInvio.error ||
+            "Errore invio email",
+        })
+        .eq("id", logCreato!.id);
+
+      dettagli.push({
+        scadenza_id:
+          riga.id,
+        ok: false,
+        messaggio:
+          `${risultatoInvio.error || "Errore invio email"} - ${destinatarioEmail}`,
+      });
+
+      continue;
+    }
+
+    await supabaseAdmin
+      .from(
+        "tbscadenze_centrale_alert_log"
+      )
+      .update({
+        esito: "inviato",
+        inviato_at:
+          new Date().toISOString(),
+        errore: null,
+      })
+      .eq("id", logCreato!.id);
+
+    inviati += 1;
+    inviatiScadenza += 1;
+
+    dettagli.push({
+      scadenza_id:
+        riga.id,
+      ok: true,
+      messaggio:
+        `Alert inviato a ${destinatarioEmail}`,
+    });
+  }
+
+  /*
+   * 6. La programmazione della scadenza viene
+   * aggiornata una sola volta, dopo aver
+   * elaborato tutti i destinatari.
+   */
+  const prossimoAlert =
+    calcolaProssimoAlert(
+      riga,
+      oggi
+    );
+
+  const adessoAggiornamento =
+    new Date().toISOString();
+
+  const aggiornamentoScadenza: {
+    prossimo_alert_at: string | null;
+    updated_at: string;
+    numero_alert_inviati?: number;
+    ultimo_alert_inviato_at?: string;
+  } = {
+    prossimo_alert_at:
+      prossimoAlert,
+
+    updated_at:
+      adessoAggiornamento,
+  };
+
+  if (inviatiScadenza > 0) {
+    aggiornamentoScadenza.numero_alert_inviati =
+      Number(
+        riga.numero_alert_inviati ||
+          0
+      ) + inviatiScadenza;
+
+    aggiornamentoScadenza.ultimo_alert_inviato_at =
+      adessoAggiornamento;
+  }
+
+  const {
+    error: aggiornamentoError,
+  } = await supabaseAdmin
+    .from("tbscadenze_centrale")
+    .update(
+      aggiornamentoScadenza
+    )
+    .eq("id", riga.id)
+    .eq(
+      "studio_id",
+      riga.studio_id
+    );
+
+  if (aggiornamentoError) {
+    throw aggiornamentoError;
+  }
+
+  /*
+   * Riga riepilogativa della singola scadenza.
+   */
+  dettagli.push({
+    scadenza_id:
+      riga.id,
+
+    ok:
+      erroriScadenza === 0,
+
+    messaggio:
+      `Destinatari: ${destinatari.length}; inviati: ${inviatiScadenza}; errori: ${erroriScadenza}; già processati: ${saltatiScadenza}`,
+  });
+}
 
     return res.status(
       errori > 0 ? 207 : 200
