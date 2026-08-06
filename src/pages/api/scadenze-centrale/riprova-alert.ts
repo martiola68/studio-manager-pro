@@ -239,7 +239,7 @@ export default async function handler(
       `${baseUrl}` +
       `/api/scadenze-centrale/processa-alert` +
       `?secret=${encodeURIComponent(
-        CRON_SECRET
+        CRON_SECRET!
       )}` +
       `&scadenza_id=${encodeURIComponent(
         scadenzaId
