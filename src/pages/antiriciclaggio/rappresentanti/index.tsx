@@ -357,6 +357,18 @@ const [loadingMicrosoftConnections, setLoadingMicrosoftConnections] = useState(f
     void loadRappresentanti();
   }, [studioId, loadRappresentanti]);
 
+  useEffect(() => {
+  if (!studioId) return;
+
+  const intervalId = window.setInterval(() => {
+    void loadRappresentanti();
+  }, 15000);
+
+  return () => {
+    window.clearInterval(intervalId);
+  };
+}, [studioId, loadRappresentanti]);
+
  const filtered = useMemo(() => {
   const s = q.trim().toLowerCase();
 
