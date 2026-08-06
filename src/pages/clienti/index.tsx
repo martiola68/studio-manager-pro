@@ -297,6 +297,14 @@ const fileInputRef = useRef<HTMLInputElement | null>(null);
   selected: boolean;
 };
 
+  const [filtroClienti, setFiltroClienti] =
+  useState<
+    "attivi" |
+    "inattivi" |
+    "organi" |
+    "tutti"
+  >("attivi");
+
   const [showStampaModal, setShowStampaModal] = useState(false);
 
 const [filtroStampa, setFiltroStampa] = useState({
@@ -506,11 +514,9 @@ if (user?.id) {
     rappLegaliRes,
     organiRes,
   ] = await Promise.all([
-   supabase
+  supabase
   .from("tbclienti")
   .select("*")
-  .eq("cliente", true)
-  .eq("attivo", true)
   .order("ragione_sociale"),
 
     supabase
@@ -700,10 +706,29 @@ if ((organiRes as Response).ok) {
     [toast]
   );
 
-  const filteredClienti = useMemo(() => {
-    let filtered = [...clienti];
+const filteredClienti = useMemo(() => {
+  let filtered = [...clienti];
 
-    if (searchTerm.trim()) {
+  if (filtroClienti === "attivi") {
+    filtered = filtered.filter(
+      (cliente) =>
+        cliente.cliente === true &&
+        cliente.attivo === true
+    );
+  } else if (filtroClienti === "inattivi") {
+    filtered = filtered.filter(
+      (cliente) =>
+        cliente.cliente === true &&
+        cliente.attivo !== true
+    );
+  } else if (filtroClienti === "organi") {
+    filtered = filtered.filter(
+      (cliente) =>
+        cliente.cliente === false
+    );
+  }
+
+  if (searchTerm.trim()) {
       const s = searchTerm.toLowerCase();
       filtered = filtered.filter((c) => {
         const rag = (c.ragione_sociale ?? "").toLowerCase();
@@ -740,13 +765,14 @@ if ((organiRes as Response).ok) {
     }
 
     return filtered;
-  }, [
-    clienti,
-    searchTerm,
-    selectedLetter,
-    selectedUtenteFiscale,
-    selectedUtentePayroll,
-  ]);
+ }, [
+  clienti,
+  filtroClienti,
+  searchTerm,
+  selectedLetter,
+  selectedUtenteFiscale,
+  selectedUtentePayroll,
+]);
 
   const resetForm = () => {
     setEditingCliente(null);
@@ -2087,12 +2113,47 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-10 h-12 text-base"
         />
-      </div>
+     </div>
 
-      <Select
-        value={selectedUtenteFiscale}
-        onValueChange={setSelectedUtenteFiscale}
-      >
+<Select
+  value={filtroClienti}
+  onValueChange={(value) =>
+    setFiltroClienti(
+      value as
+        | "attivi"
+        | "inattivi"
+        | "organi"
+        | "tutti"
+    )
+  }
+>
+  <SelectTrigger className="w-full md:w-[230px] h-12">
+    <SelectValue />
+  </SelectTrigger>
+
+  <SelectContent>
+    <SelectItem value="attivi">
+      Solo clienti attivi
+    </SelectItem>
+
+    <SelectItem value="inattivi">
+      Solo clienti inattivi
+    </SelectItem>
+
+    <SelectItem value="organi">
+      Solo soci - organi sociali
+    </SelectItem>
+
+    <SelectItem value="tutti">
+      Tutti
+    </SelectItem>
+  </SelectContent>
+</Select>
+
+<Select
+  value={selectedUtenteFiscale}
+  onValueChange={setSelectedUtenteFiscale}
+>
         <SelectTrigger className="w-full md:w-[200px] h-12">
           <SelectValue placeholder="Utente Fiscale" />
         </SelectTrigger>
