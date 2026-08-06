@@ -209,10 +209,6 @@ if (giorniResidui < 0) {
       giorniDaAggiungere
   );
 
-  /*
-   * Ore 08:00 UTC:
-   * corrisponde comunque alla mattina italiana.
-   */
   data.setUTCHours(
     8,
     0,
@@ -223,47 +219,72 @@ if (giorniResidui < 0) {
   return data.toISOString();
 }
 
-const preavvisi = Array.from(
-  new Set(
-    (
-      scadenza.intervalli_alert?.length
-        ? scadenza.intervalli_alert
-        : [30, 20, 10, 5, 2, 1, 0]
-    )
-      .filter(
-        (
-          valore
-        ): valore is number =>
-          Number.isInteger(valore) &&
-          valore >= 0
+function calcolaProssimoAlert(
+  scadenza: ScadenzaRow,
+  oggi: string
+): string | null {
+  const giorniResidui =
+    differenzaGiorni(
+      scadenza.data_scadenza,
+      oggi
+    );
+
+  /*
+   * Scadenza superata:
+   * alert ogni lunedì mattina.
+   */
+  if (giorniResidui < 0) {
+    return prossimoLunediMattina(
+      oggi
+    );
+  }
+
+  const preavvisi = Array.from(
+    new Set(
+      (
+        scadenza.intervalli_alert?.length
+          ? scadenza.intervalli_alert
+          : [30, 20, 10, 5, 2, 1, 0]
       )
-      .sort((a, b) => b - a)
-  )
-);
+        .filter(
+          (
+            valore
+          ): valore is number =>
+            Number.isInteger(valore) &&
+            valore >= 0
+        )
+        .sort((a, b) => b - a)
+    )
+  );
 
   const dateProgrammate =
     preavvisi
       .map((giorni) => ({
         giorni,
+
         data: sottraiGiorni(
           scadenza.data_scadenza,
           giorni
         ),
       }))
       .filter(
-        (item) => item.data > oggi
+        (item) =>
+          item.data > oggi
       )
       .sort((a, b) =>
-        a.data.localeCompare(b.data)
+        a.data.localeCompare(
+          b.data
+        )
       );
 
-  if (dateProgrammate.length > 0) {
+  if (
+    dateProgrammate.length > 0
+  ) {
     return `${dateProgrammate[0].data}T08:00:00.000Z`;
   }
 
   /*
-   * Se non restano altri preavvisi ma
-   * la scadenza non è ancora passata,
+   * Nessun altro preavviso disponibile:
    * programmiamo il giorno della scadenza.
    */
   if (giorniResidui > 0) {
@@ -271,13 +292,13 @@ const preavvisi = Array.from(
   }
 
   /*
-   * Dopo l’avviso del giorno stesso,
-   * il primo sollecito scaduto parte
-   * cinque giorni dopo.
+   * Dopo l’alert del giorno stesso,
+   * programmiamo il lunedì successivo.
    */
-return prossimoLunediMattina(
-  scadenza.data_scadenza
-);
+  return prossimoLunediMattina(
+    scadenza.data_scadenza
+  );
+}
 
 export default async function handler(
   req: NextApiRequest,
