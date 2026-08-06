@@ -2561,13 +2561,12 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
     </DialogHeader>
 
     <Tabs defaultValue="anagrafica" className="w-full">
-      <TabsList className="grid w-full grid-cols-5 overflow-x-auto">
+      <TabsList className="grid w-full grid-cols-4 overflow-x-auto">
         <TabsTrigger value="anagrafica">Anagrafica</TabsTrigger>
         <TabsTrigger value="riferimenti">Riferimenti</TabsTrigger>
         <TabsTrigger value="comunicazioni">Comunicazioni</TabsTrigger>
         <TabsTrigger value="altri_dati">Altri Dati</TabsTrigger>
-        <TabsTrigger value="scadenzari">Scadenzari</TabsTrigger>
-      </TabsList>
+       </TabsList>
 
       {/* ANAGRAFICA */}
       <TabsContent value="anagrafica" className="space-y-4 pt-4">
@@ -3467,27 +3466,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
         </div>
       </TabsContent>
 
-      {/* SCADENZARI */}
-      <TabsContent value="scadenzari" className="space-y-4 pt-4">
-        <p className="text-sm text-muted-foreground">
-          Seleziona gli scadenzari attivi per questo cliente
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {SCADENZARI_OPTIONS.map(({ key, label }) => (
-            <div key={key} className="flex items-center space-x-2">
-              <Checkbox
-                checked={!!scadenzari[key]}
-                onCheckedChange={(checked) =>
-                  setScadenzari((s) => ({ ...s, [key]: checked === true }))
-                }
-              />
-              <Label>{label}</Label>
-            </div>
-          ))}
-        </div>
-      </TabsContent>
-    </Tabs>
+       </Tabs>
 
     <div className="flex items-center justify-between gap-3 pt-6 border-t">
       <div>
