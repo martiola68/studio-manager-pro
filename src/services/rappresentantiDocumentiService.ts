@@ -18,16 +18,17 @@ export async function sendRichiestaDocumentoRappresentante(
 ) {
   const supabase = getSupabaseClient() as any;
 
-  const {
-    recordId,
-    studioId,
-    nomeDestinatario,
-    email,
-    nomeOperatore,
-    clienteId = null,
-    av4Id = null,
-    note = "Invio richiesta documento da anagrafica rappresentante",
-  } = params;
+ const {
+  recordId,
+  studioId,
+  nomeDestinatario,
+  email,
+  nomeOperatore,
+  microsoftConnectionId,
+  clienteId = null,
+  av4Id = null,
+  note = "Invio richiesta documento da anagrafica rappresentante",
+} = params;
 
   let token = "";
   let userId: string | null = null;
