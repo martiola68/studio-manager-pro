@@ -169,27 +169,7 @@ function calcolaTipoAlert(
   };
 }
 
-function calcolaProssimoAlert(
-  scadenza: ScadenzaRow,
-  oggi: string
-): string | null {
-  const giorniResidui =
-    differenzaGiorni(
-      scadenza.data_scadenza,
-      oggi
-    );
-
-  /*
-   * Scadenza già superata:
-   * nuovo alert ogni 5 giorni.
-   */
-if (giorniResidui < 0) {
-  return prossimoLunediMattina(
-    oggi
-  );
-}
-
-  function prossimoLunediMattina(
+function prossimoLunediMattina(
   dataInput: string
 ): string {
   const data = new Date(
@@ -230,8 +210,8 @@ function calcolaProssimoAlert(
     );
 
   /*
-   * Scadenza superata:
-   * alert ogni lunedì mattina.
+   * Scadenza già superata:
+   * nuovo alert ogni lunedì mattina.
    */
   if (giorniResidui < 0) {
     return prossimoLunediMattina(
@@ -239,6 +219,10 @@ function calcolaProssimoAlert(
     );
   }
 
+  /*
+   * Intervalli uniformi:
+   * 30, 20, 10, 5, 2, 1 e 0 giorni.
+   */
   const preavvisi = Array.from(
     new Set(
       (
@@ -261,7 +245,6 @@ function calcolaProssimoAlert(
     preavvisi
       .map((giorni) => ({
         giorni,
-
         data: sottraiGiorni(
           scadenza.data_scadenza,
           giorni
@@ -284,7 +267,8 @@ function calcolaProssimoAlert(
   }
 
   /*
-   * Nessun altro preavviso disponibile:
+   * Se la scadenza deve ancora arrivare
+   * ma non rimangono altri preavvisi,
    * programmiamo il giorno della scadenza.
    */
   if (giorniResidui > 0) {
@@ -292,7 +276,7 @@ function calcolaProssimoAlert(
   }
 
   /*
-   * Dopo l’alert del giorno stesso,
+   * Dopo l’avviso del giorno stesso,
    * programmiamo il lunedì successivo.
    */
   return prossimoLunediMattina(
