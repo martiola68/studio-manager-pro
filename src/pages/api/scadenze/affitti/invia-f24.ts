@@ -131,7 +131,10 @@ function buildF24Html(body: any) {
 </html>
 `.trim();
 }
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   if (req.method !== "POST") {
     return res.status(405).json({
       success: false,
@@ -142,6 +145,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const body = req.body || {};
 
+    /*
+     * L’API può essere utilizzata soltanto
+     * da un utente autenticato.
+     */
+    const authorization =
+      req.headers.authorization || "";
+
+    const accessToken =
+      authorization.startsWith("Bearer ")
+        ? authorization.slice(7).trim()
+        : "";
+
+    if (!accessToken) {
+      return res.status(401).json({
+        success: false,
+        error: "Utente non autenticato.",
+      });
+    }
+
+    const {
+      data: authData,
+      error: authError,
+    } = await supabase.auth.getUser(
+      accessToken
+    );
+
+    if (
+      authError ||
+      !authData.user?.email
+    ) {
+      return res.status(401).json({
+        success: false,
+        error: "Sessione non valida.",
+      });
+    }
+
     if (!body.studio_id) {
       return res.status(400).json({
         success: false,
@@ -149,14 +188,51 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    if (!body.destinatario) {
-      return res.status(400).json({
-        success: false,
-        error: "Destinatario mancante.",
-      });
-    }
+if (!body.destinatario) {
+  return res.status(400).json({
+    success: false,
+    error: "Destinatario mancante.",
+  });
+}
 
-  if (!body.mittente_user_id) {
+/*
+ * Verifichiamo che l’utente collegato
+ * appartenga realmente allo studio indicato.
+ */
+const {
+  data: utenteAutenticato,
+  error: utenteAutenticatoError,
+} = await supabase
+  .from("tbutenti")
+  .select(`
+    id,
+    studio_id,
+    email,
+    attivo
+  `)
+  .eq(
+    "email",
+    authData.user.email
+  )
+  .eq(
+    "studio_id",
+    body.studio_id
+  )
+  .eq("attivo", true)
+  .maybeSingle();
+
+if (
+  utenteAutenticatoError ||
+  !utenteAutenticato?.id
+) {
+  return res.status(403).json({
+    success: false,
+    error:
+      "Utente non autorizzato per questo studio.",
+  });
+}
+
+if (!body.mittente_user_id) {
   return res.status(400).json({
     success: false,
     error: "Utente mittente mancante.",
@@ -209,15 +285,26 @@ if (senderError || !sender?.id) {
       });
     }
 
-    if (body.contratto_id) {
-      await (supabase as any)
-        .from("tbscadaffitti")
-        .update({
-          data_invio_f24: new Date().toISOString(),
-        })
-        .eq("id", body.contratto_id)
-        .eq("studio_id", body.studio_id);
-    }
+  if (body.contratto_id) {
+  const {
+    error: aggiornamentoError,
+  } = await (supabase as any)
+    .from("tbscadaffitti")
+    .update({
+      data_invio_f24:
+        new Date().toISOString(),
+    })
+    .eq("id", body.contratto_id)
+    .eq("studio_id", body.studio_id);
+
+  if (aggiornamentoError) {
+    return res.status(500).json({
+      success: false,
+      error:
+        `Email inviata, ma registrazione della data F24 non riuscita: ${aggiornamentoError.message}`,
+    });
+  }
+}
 
     return res.status(200).json({
       success: true,
