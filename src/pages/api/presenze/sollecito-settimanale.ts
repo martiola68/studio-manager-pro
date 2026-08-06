@@ -2,7 +2,8 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 import { sendEmailServer } from "@/services/sendEmailServer";
 
-const SECRET = process.env.CRON_SECRET || "x9KfP2LmQ8zYtA71vBnR";
+const SECRET =
+  process.env.CRON_SECRET;
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
