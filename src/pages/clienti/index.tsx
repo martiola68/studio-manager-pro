@@ -2330,16 +2330,21 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
                     )}
                   </TableCell>
 
-                  <TableCell className="min-w-[90px] text-center">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleInsertIntoScadenzari(cliente)}
-                      title="Inserisci negli Scadenzari"
-                    >
-                      <Calendar className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
+                 <TableCell className="min-w-[90px] text-center">
+  {cliente.cliente === true &&
+    cliente.attivo === true && (
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() =>
+          handleInsertIntoScadenzari(cliente)
+        }
+        title="Inserisci negli Scadenzari"
+      >
+        <Calendar className="h-4 w-4" />
+      </Button>
+    )}
+</TableCell>
 
               <TableCell className="sticky right-0 bg-background z-10 w-[170px] text-right">
                    <div className="flex justify-end gap-3">
