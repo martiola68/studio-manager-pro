@@ -506,10 +506,11 @@ if (user?.id) {
     rappLegaliRes,
     organiRes,
   ] = await Promise.all([
-    supabase
-      .from("tbclienti")
-      .select("*")
-      .order("ragione_sociale"),
+   supabase
+  .from("tbclienti")
+  .select("*")
+  .eq("cliente", true)
+  .order("ragione_sociale"),
 
     supabase
       .from("tbcontatti")
@@ -1173,7 +1174,9 @@ tipologia_cliente: formData.tipologia_cliente,
           email: formData.email || null,
         telefono: formData.telefono || null,
         pec: formData.pec || null,
-        attivo: formData.attivo,
+        attivo: formData.cliente
+  ? formData.attivo
+  : false,
           cassetto_fiscale_id: formData.cassetto_fiscale_id || null,
           matricola_inps: formData.matricola_inps || null,
           pat_inail: formData.pat_inail || null,
@@ -2567,16 +2570,19 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
           {/* Cliente */}
 <div className="flex items-end">
   <div className="flex items-center space-x-2 pb-2">
-    <Switch
-      id="cliente"
-      checked={formData.cliente}
-      onCheckedChange={(checked) =>
-        setFormData((prev) => ({
-          ...prev,
-          cliente: checked,
-        }))
-      }
-    />
+   <Switch
+  id="cliente"
+  checked={formData.cliente}
+  onCheckedChange={(checked) =>
+    setFormData((prev) => ({
+      ...prev,
+      cliente: checked,
+      attivo: checked
+        ? prev.attivo
+        : false,
+    }))
+  }
+/>
 
     <Label htmlFor="cliente">
       Cliente
@@ -2587,16 +2593,22 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
   {/* Cliente Attivo */}
   <div className="flex items-end">
     <div className="flex items-center space-x-2 pb-2">
-      <Switch
-        id="attivo"
-        checked={formData.attivo}
-        onCheckedChange={(checked) =>
-          setFormData((prev) => ({
-            ...prev,
-            attivo: checked,
-          }))
-        }
-      />
+     <Switch
+  id="attivo"
+  checked={
+    formData.cliente &&
+    formData.attivo
+  }
+  disabled={!formData.cliente}
+  onCheckedChange={(checked) =>
+    setFormData((prev) => ({
+      ...prev,
+      attivo: prev.cliente
+        ? checked
+        : false,
+    }))
+  }
+/>
 
       <Label htmlFor="attivo">
         Cliente Attivo
