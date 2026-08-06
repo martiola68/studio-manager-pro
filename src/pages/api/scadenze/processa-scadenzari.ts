@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { scadenzariAutomaticiService } from "@/services/scadenzariAutomaticiService";
 
-const SECRET = process.env.CRON_SECRET || "x9KfP2LmQ8zYtA71vBnR";
+const SECRET =
+  process.env.CRON_SECRET;
 
 export default async function handler(
   req: NextApiRequest,
