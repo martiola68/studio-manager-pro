@@ -162,22 +162,58 @@ ${firmaOperatore ? `Cordiali saluti,\n${firmaOperatore}` : ""}
     if (!emailResult.success) {
       throw new Error(emailResult.error || "Errore durante l'invio email.");
     }
+/*
+ * Aggiorniamo prima la nuova tabella AML.
+ * recordId continua a essere, per ora, il vecchio rapp_legali.id.
+ */
+const { data: documentoAml, error: documentoAmlError } = await supabase
+  .from("tbclienti_documenti_aml")
+  .update({
+    public_doc_token: token,
+    public_doc_enabled: true,
+    public_doc_sent_at: nowIso,
+    public_doc_opened_at: null,
+    public_doc_submitted_at: null,
+    documento_richiesto_il: nowIso,
+    microsoft_connection_id: microsoftConnectionId,
+    updated_at: nowIso,
+  })
+  .eq("legacy_rapp_legale_id", recordId)
+  .eq("studio_id", studioId)
+  .eq("attivo", true)
+  .select("id")
+  .maybeSingle();
 
-    const { error: updateError } = await supabase
-      .from("rapp_legali")
-      .update({
-        public_doc_token: token,
-        public_doc_enabled: true,
-        public_doc_sent_at: nowIso,
-        public_doc_opened_at: null,
-        public_doc_submitted_at: null,
-        doc_richiesto_il: nowIso,
-      })
-      .eq("id", recordId);
+if (documentoAmlError || !documentoAml?.id) {
+  throw new Error(
+    documentoAmlError?.message ||
+      "Email inviata, ma il documento AML collegato non è stato trovato."
+  );
+}
 
-    if (updateError) {
-      throw new Error("Email inviata ma errore aggiornamento stato richiesta documento.");
-    }
+/*
+ * Manteniamo sincronizzata anche la tabella legacy,
+ * perché il portale pubblico la utilizza ancora.
+ */
+const { error: updateLegacyError } = await supabase
+  .from("rapp_legali")
+  .update({
+    public_doc_token: token,
+    public_doc_enabled: true,
+    public_doc_sent_at: nowIso,
+    public_doc_opened_at: null,
+    public_doc_submitted_at: null,
+    doc_richiesto_il: nowIso,
+    microsoft_connection_id: microsoftConnectionId,
+  })
+  .eq("id", recordId)
+  .eq("studio_id", studioId);
+
+if (updateLegacyError) {
+  throw new Error(
+    "Email inviata, ma non è stato possibile sincronizzare la tabella legacy."
+  );
+}
 
     const { error: logError } = await supabase.from("tbAMLComunicazioni").insert({
       studio_id: studioId,
@@ -203,21 +239,44 @@ ${firmaOperatore ? `Cordiali saluti,\n${firmaOperatore}` : ""}
 
     return { ok: true, url, token };
   } catch (error: any) {
-    try {
-      await supabase
-        .from("rapp_legali")
-        .update({
-          public_doc_token: null,
-          public_doc_enabled: false,
-          public_doc_sent_at: null,
-          public_doc_opened_at: null,
-          public_doc_submitted_at: null,
-          doc_richiesto_il: null,
-        })
-        .eq("id", recordId);
-    } catch (rollbackError) {
-      console.error("Errore rollback richiesta documento:", rollbackError);
-    }
+  try {
+  const rollbackTimestamp = new Date().toISOString();
+
+  await Promise.all([
+    supabase
+      .from("tbclienti_documenti_aml")
+      .update({
+        public_doc_token: null,
+        public_doc_enabled: false,
+        public_doc_sent_at: null,
+        public_doc_opened_at: null,
+        public_doc_submitted_at: null,
+        documento_richiesto_il: null,
+        updated_at: rollbackTimestamp,
+      })
+      .eq("legacy_rapp_legale_id", recordId)
+      .eq("studio_id", studioId)
+      .eq("attivo", true),
+
+    supabase
+      .from("rapp_legali")
+      .update({
+        public_doc_token: null,
+        public_doc_enabled: false,
+        public_doc_sent_at: null,
+        public_doc_opened_at: null,
+        public_doc_submitted_at: null,
+        doc_richiesto_il: null,
+      })
+      .eq("id", recordId)
+      .eq("studio_id", studioId),
+  ]);
+} catch (rollbackError) {
+  console.error(
+    "Errore rollback richiesta documento:",
+    rollbackError
+  );
+}
 
     try {
       await supabase.from("tbAMLComunicazioni").insert({
