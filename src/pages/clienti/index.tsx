@@ -510,6 +510,7 @@ if (user?.id) {
   .from("tbclienti")
   .select("*")
   .eq("cliente", true)
+  .eq("attivo", true)
   .order("ragione_sociale"),
 
     supabase
