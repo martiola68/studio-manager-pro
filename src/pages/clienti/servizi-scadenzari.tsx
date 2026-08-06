@@ -236,24 +236,25 @@ export default function ServiziScadenzariClientePage() {
       /*
        * Recuperiamo prima il cliente.
        */
+      
       const {
-        data: clienteData,
-        error: clienteError,
-      } = await supabase
-        .from("tbclienti")
-        .select(`
-          id,
-          studio_id,
-          cod_cliente,
-          ragione_sociale,
-          codice_fiscale,
-          partita_iva,
-          cliente,
-          attivo
-        `)
-        .eq("id", clienteId)
-        .maybeSingle();
-
+  data: clienteData,
+  error: clienteError,
+} = await (supabase as any)
+  .from("tbclienti")
+  .select(`
+    id,
+    studio_id,
+    cod_cliente,
+    ragione_sociale,
+    codice_fiscale,
+    partita_iva,
+    cliente,
+    attivo
+  `)
+  .eq("id", clienteId)
+  .maybeSingle();
+      
       if (
         clienteError ||
         !clienteData
