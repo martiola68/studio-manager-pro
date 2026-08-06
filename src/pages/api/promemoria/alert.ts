@@ -7,7 +7,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ success: false, error: "Metodo non consentito" });
   }
 
-  const cronSecret = process.env.CRON_SECRET || "x9KfP2LmQ8zYtA71vBnR";
+ const cronSecret =
+  process.env.CRON_SECRET;
+  
   const querySecret = typeof req.query.secret === "string" ? req.query.secret : null;
 
   if (!cronSecret || querySecret !== cronSecret) {
