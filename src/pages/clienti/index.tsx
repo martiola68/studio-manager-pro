@@ -77,18 +77,21 @@ type ClienteRow = Database["public"]["Tables"]["tbclienti"]["Row"] & {
   telefono?: string | null;
   pec?: string | null;
   rapp_legale_id?: string | null;
+  cliente?: boolean | null;
 };
 
 type ClienteInsert = Database["public"]["Tables"]["tbclienti"]["Insert"] & {
   telefono?: string | null;
   pec?: string | null;
   rapp_legale_id?: string | null;
+  cliente?: boolean;
 };
 
 type ClienteUpdate = Database["public"]["Tables"]["tbclienti"]["Update"] & {
   telefono?: string | null;
   pec?: string | null;
   rapp_legale_id?: string | null;
+  cliente?: boolean;
 };
 
 type ContattoRow = Database["public"]["Tables"]["tbcontatti"]["Row"];
