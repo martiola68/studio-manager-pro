@@ -500,7 +500,7 @@ const menuItems: MenuItem[] = [
         },
         {
           label: "Soci e organi sociali",
-          href: "/anagrafiche/clienti-organi",
+          href: "/clienti/organi-sociali",
           icon: <UserCircle className="h-4 w-4" />,
         },
         {
