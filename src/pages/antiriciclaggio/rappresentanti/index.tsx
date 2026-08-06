@@ -335,12 +335,12 @@ const [loadingMicrosoftConnections, setLoadingMicrosoftConnections] = useState(f
 
     try {
       const { data, error } = await supabase
-        .from("rapp_legali")
-        .select(
-          "id, studio_id, nome_cognome, codice_fiscale, email, tipo_doc, scadenza_doc, allegato_doc, rappresentante_legale, doc_richiesto_il, microsoft_connection_id, created_at"
-        )
-        .eq("studio_id", studioId)
-        .order("nome_cognome", { ascending: true });
+  .from("vw_rappresentanti_aml")
+  .select(
+    "id, studio_id, nome_cognome, codice_fiscale, email, tipo_doc, scadenza_doc, allegato_doc, rappresentante_legale, doc_richiesto_il, microsoft_connection_id, created_at"
+  )
+  .eq("studio_id", studioId)
+  .order("nome_cognome", { ascending: true });
 
       if (error) throw error;
 
