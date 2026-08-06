@@ -1957,7 +1957,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
 };
   
   return (
-   <div className="w-full mx-auto py-8 px-6 max-w-[1800px]">
+  <div className="w-full mx-auto py-8 px-4 max-w-[1920px]">
      {/* HEADER */}
 <div className="mb-8">
   <div className="flex justify-between items-center mb-2">
@@ -2286,10 +2286,9 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
                 <TableHead className="min-w-[90px] text-center">
                   Scadenzari
                 </TableHead>
-
-              <TableHead className="sticky right-0 bg-background z-20 w-[170px] text-right">
-  Azioni
-</TableHead>
+                <TableHead className="sticky right-0 bg-background z-20 w-[220px] min-w-[220px] text-right">
+                Azioni
+                </TableHead>
               </TableRow>
             </TableHeader>
 
@@ -2347,7 +2346,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
     )}
 </TableCell>
 
-  <TableCell className="sticky right-0 bg-background z-10 w-[170px] text-right">
+<TableCell className="sticky right-0 bg-background z-10 w-[220px] min-w-[220px] text-right">
   <div className="flex justify-end gap-3">
 
 {cliente.tipo_cliente?.toLowerCase() !== "persona fisica" &&
