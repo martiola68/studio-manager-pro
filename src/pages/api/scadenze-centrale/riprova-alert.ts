@@ -8,6 +8,10 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 const CRON_SECRET =
   process.env.CRON_SECRET;
 
+if (!CRON_SECRET) {
+  throw new Error("CRON_SECRET mancante");
+}
+
 function leggiAccessToken(
   req: NextApiRequest
 ): string | null {
