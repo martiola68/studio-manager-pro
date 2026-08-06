@@ -28,9 +28,11 @@ type ScadenzaRow = {
   data_scadenza: string;
   stato: string;
 
-  giorni_preavviso_1: number | null;
-  giorni_preavviso_2: number | null;
-  giorni_preavviso_3: number | null;
+ giorni_preavviso_1: number | null;
+giorni_preavviso_2: number | null;
+giorni_preavviso_3: number | null;
+
+intervalli_alert: number[] | null;
 
   prossimo_alert_at: string | null;
   numero_alert_inviati: number;
@@ -181,30 +183,63 @@ function calcolaProssimoAlert(
    * Scadenza già superata:
    * nuovo alert ogni 5 giorni.
    */
-  if (giorniResidui < 0) {
-    return `${aggiungiGiorni(
-      oggi,
-      5
-    )}T08:00:00.000Z`;
-  }
-
-  const preavvisi = Array.from(
-    new Set(
-      [
-        scadenza.giorni_preavviso_1,
-        scadenza.giorni_preavviso_2,
-        scadenza.giorni_preavviso_3,
-      ]
-        .filter(
-          (
-            valore
-          ): valore is number =>
-            valore != null &&
-            valore >= 0
-        )
-        .sort((a, b) => b - a)
-    )
+if (giorniResidui < 0) {
+  return prossimoLunediMattina(
+    oggi
   );
+}
+
+  function prossimoLunediMattina(
+  dataInput: string
+): string {
+  const data = new Date(
+    `${dataInput}T12:00:00Z`
+  );
+
+  const giornoSettimana =
+    data.getUTCDay();
+
+  const giorniDaAggiungere =
+    giornoSettimana === 1
+      ? 7
+      : (8 - giornoSettimana) % 7;
+
+  data.setUTCDate(
+    data.getUTCDate() +
+      giorniDaAggiungere
+  );
+
+  /*
+   * Ore 08:00 UTC:
+   * corrisponde comunque alla mattina italiana.
+   */
+  data.setUTCHours(
+    8,
+    0,
+    0,
+    0
+  );
+
+  return data.toISOString();
+}
+
+const preavvisi = Array.from(
+  new Set(
+    (
+      scadenza.intervalli_alert?.length
+        ? scadenza.intervalli_alert
+        : [30, 20, 10, 5, 2, 1, 0]
+    )
+      .filter(
+        (
+          valore
+        ): valore is number =>
+          Number.isInteger(valore) &&
+          valore >= 0
+      )
+      .sort((a, b) => b - a)
+  )
+);
 
   const dateProgrammate =
     preavvisi
@@ -240,11 +275,9 @@ function calcolaProssimoAlert(
    * il primo sollecito scaduto parte
    * cinque giorni dopo.
    */
-  return `${aggiungiGiorni(
-    scadenza.data_scadenza,
-    5
-  )}T08:00:00.000Z`;
-}
+return prossimoLunediMattina(
+  scadenza.data_scadenza
+);
 
 export default async function handler(
   req: NextApiRequest,
@@ -298,9 +331,10 @@ try {
     descrizione,
     data_scadenza,
     stato,
-    giorni_preavviso_1,
+   giorni_preavviso_1,
     giorni_preavviso_2,
     giorni_preavviso_3,
+    intervalli_alert,
     prossimo_alert_at,
     numero_alert_inviati,
     link_dettaglio
@@ -886,7 +920,7 @@ const nomeDestinatario =
           "scadenza_superata"
             ? `
               <p style="color:#b91c1c;font-weight:bold">
-                Il promemoria verrà ripetuto ogni 5 giorni fino alla chiusura o all’annullamento della scadenza.
+                Il promemoria verrà ripetuto ogni lunedì mattina fino alla chiusura o all’annullamento della scadenza.
               </p>
             `
             : ""
