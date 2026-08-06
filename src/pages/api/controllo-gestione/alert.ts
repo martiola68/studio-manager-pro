@@ -3,7 +3,8 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 const supabaseAdmin = getSupabaseAdmin();
 
-const SECRET = process.env.CRON_SECRET || "x9KfP2LmQ8zYtA71vBnR";
+const SECRET =
+  process.env.CRON_SECRET;
 
 function addMonths(date: Date, months: number) {
   const d = new Date(date);
