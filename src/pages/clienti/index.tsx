@@ -56,6 +56,7 @@ import {
   FileSpreadsheet,
   CheckCircle2,
   Calendar,
+  CalendarCog,
   Lock,
   Unlock,
 } from "lucide-react";
@@ -2346,8 +2347,9 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
     )}
 </TableCell>
 
-              <TableCell className="sticky right-0 bg-background z-10 w-[170px] text-right">
-                   <div className="flex justify-end gap-3">
+  <TableCell className="sticky right-0 bg-background z-10 w-[170px] text-right">
+  <div className="flex justify-end gap-3">
+
 {cliente.tipo_cliente?.toLowerCase() !== "persona fisica" &&
   !(
     cliente.settore_lavoro === true &&
@@ -2355,43 +2357,61 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
     cliente.settore_consulenza !== true
   ) && (
   <Button
-  variant="ghost"
-  size="icon"
-  title={
-    organiSocialiMancanti(cliente)
-      ? "Soci e organi sociali mancanti"
-      : "Soci e organi sociali"
-  }
-  onClick={() =>
-    router.push(`/clienti/organi-sociali?cliente_id=${cliente.id}`)
-  }
- className={
-  organiSocialiMancanti(cliente)
-    ? "rounded-full border-2 border-red-500 text-red-600"
-    : "rounded-full border-2 border-green-500 text-green-600"
-}
->
-  <Users className="h-4 w-4" />
-</Button>
-)}
-
-  <Button
     variant="ghost"
     size="icon"
-    onClick={() => handleEdit(cliente)}
+    title={
+      organiSocialiMancanti(cliente)
+        ? "Soci e organi sociali mancanti"
+        : "Soci e organi sociali"
+    }
+    onClick={() =>
+      router.push(`/clienti/organi-sociali?cliente_id=${cliente.id}`)
+    }
+    className={
+      organiSocialiMancanti(cliente)
+        ? "rounded-full border-2 border-red-500 text-red-600"
+        : "rounded-full border-2 border-green-500 text-green-600"
+    }
   >
-    <Edit className="h-4 w-4" />
+    <Users className="h-4 w-4" />
   </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(cliente.id)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+)}
+
+{cliente.cliente === true &&
+  cliente.attivo === true && (
+    <Button
+      variant="ghost"
+      size="icon"
+      title="Servizi e scadenzari"
+      onClick={() =>
+       router.push(
+  `/clienti/servizi?cliente_id=${cliente.id}`
+)
+      }
+    >
+      <CalendarCog className="h-4 w-4" />
+    </Button>
+)}
+
+<Button
+  variant="ghost"
+  size="icon"
+  onClick={() => handleEdit(cliente)}
+>
+  <Edit className="h-4 w-4" />
+</Button>
+
+<Button
+  variant="ghost"
+  size="icon"
+  onClick={() => handleDelete(cliente.id)}
+  className="text-destructive hover:text-destructive"
+>
+  <Trash2 className="h-4 w-4" />
+</Button>
+
+  </div>
+</TableCell>
                 </TableRow>
               ))}
             </TableBody>
