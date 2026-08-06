@@ -859,13 +859,41 @@ if (!currentUserId) {
   try {
     setSendingF24(true);
 
-    const response = await fetch("/api/scadenze/affitti/invia-f24", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
+  const supabase =
+  getSupabaseClient();
+
+const {
+  data: sessionData,
+  error: sessionError,
+} = await supabase.auth.getSession();
+
+if (sessionError) {
+  throw sessionError;
+}
+
+const accessToken =
+  sessionData.session?.access_token;
+
+if (!accessToken) {
+  throw new Error(
+    "Sessione non valida."
+  );
+}
+
+const response = await fetch(
+  "/api/scadenze/affitti/invia-f24",
+  {
+    method: "POST",
+    headers: {
+      "Content-Type":
+        "application/json",
+
+      Authorization:
+        `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(payload),
+  }
+);
 
     const result = await response.json();
 
