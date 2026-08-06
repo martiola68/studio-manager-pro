@@ -6,8 +6,7 @@ import type {
 import { createClient } from "@supabase/supabase-js";
 
 const SECRET =
-  process.env.CRON_SECRET ||
-  "x9KfP2LmQ8zYtA71vBnR";
+  process.env.CRON_SECRET;
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
