@@ -7,8 +7,7 @@ import { createClient } from "@supabase/supabase-js";
 import { sendEmailServer } from "@/services/sendEmailServer";
 
 const SECRET =
-  process.env.CRON_SECRET ||
-  "x9KfP2LmQ8zYtA71vBnR";
+  process.env.CRON_SECRET;
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
