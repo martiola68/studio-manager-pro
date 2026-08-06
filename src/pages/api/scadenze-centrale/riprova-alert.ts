@@ -6,8 +6,7 @@ import type {
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 const CRON_SECRET =
-  process.env.CRON_SECRET ||
-  "x9KfP2LmQ8zYtA71vBnR";
+  process.env.CRON_SECRET;
 
 function leggiAccessToken(
   req: NextApiRequest
