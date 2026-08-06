@@ -866,70 +866,119 @@ async function caricaOrgani() {
   setLoading(true);
 
   try {
-    const res = await fetch(`/api/clienti-organi?cliente_id=${clienteId}`, {
-      cache: "no-store",
-    });
+    const res = await fetch(
+      `/api/clienti-organi?cliente_id=${clienteId}`,
+      {
+        cache: "no-store",
+      }
+    );
 
     const data = await res.json();
 
-   if (res.ok) {
-  const organiBase = data.organi || [];
+    if (res.ok) {
+      const organiBase =
+        data.organi || [];
 
-  const organiConDiritti = await Promise.all(
-    organiBase.map(async (organo: any) => {
-      if (organo.ruolo !== "socio") {
-        return {
-          ...organo,
-          diritti_collegati: [],
-        };
-      }
+      /*
+       * Mostriamo subito gli organi senza
+       * aspettare i diritti collegati.
+       */
+      setOrgani(
+        organiBase.map(
+          (organo: any) => ({
+            ...organo,
+            diritti_collegati: [],
+          })
+        )
+      );
 
-      try {
-        const rispostaDiritti = await fetch(
-          `/api/clienti-organi-diritti?organo_id=${organo.id}`,
-          {
-            cache: "no-store",
-          }
+      /*
+       * Il calcolo del Titolare Effettivo
+       * parte immediatamente.
+       */
+      void caricaTitolariEffettivi().catch(
+        (error) => {
+          console.error(
+            "Errore aggiornamento Titolare Effettivo:",
+            error
+          );
+        }
+      );
+
+      /*
+       * I diritti collegati vengono caricati
+       * successivamente, senza bloccare il TE.
+       */
+      const organiConDiritti =
+        await Promise.all(
+          organiBase.map(
+            async (organo: any) => {
+              if (
+                organo.ruolo !== "socio"
+              ) {
+                return {
+                  ...organo,
+                  diritti_collegati: [],
+                };
+              }
+
+              try {
+                const rispostaDiritti =
+                  await fetch(
+                    `/api/clienti-organi-diritti?organo_id=${organo.id}`,
+                    {
+                      cache: "no-store",
+                    }
+                  );
+
+                const datiDiritti =
+                  await rispostaDiritti.json();
+
+                return {
+                  ...organo,
+                  diritti_collegati:
+                    rispostaDiritti.ok
+                      ? datiDiritti.diritti ||
+                        []
+                      : [],
+                };
+              } catch {
+                return {
+                  ...organo,
+                  diritti_collegati: [],
+                };
+              }
+            }
+          )
         );
 
-        const datiDiritti = await rispostaDiritti.json();
+      setOrgani(organiConDiritti);
+    } else {
+      console.error(
+        "Errore caricaOrgani:",
+        data
+      );
 
-        return {
-          ...organo,
-          diritti_collegati:
-            rispostaDiritti.ok
-              ? datiDiritti.diritti || []
-              : [],
-        };
-      } catch {
-        return {
-          ...organo,
-          diritti_collegati: [],
-        };
-      }
-    })
-  );
+      setMessaggio(
+        data.error ||
+          "Errore caricamento organi"
+      );
 
-setOrgani(organiConDiritti);
-
-void caricaTitolariEffettivi().catch((error) => {
-  console.error(
-    "Errore aggiornamento Titolare Effettivo:",
-    error
-  );
-});
-} else {
-  console.error(
-    "Errore caricaOrgani:",
-    data
-  );
-      setMessaggio(data.error || "Errore caricamento organi");
       setOrgani([]);
+      setDatiTitolariEffettivi(null);
     }
   } catch (err) {
-    console.error("Errore fetch caricaOrgani:", err);
-    setMessaggio("Errore caricamento organi");
+    console.error(
+      "Errore fetch caricaOrgani:",
+      err
+    );
+
+    setMessaggio(
+      "Errore caricamento organi"
+    );
+
     setOrgani([]);
+    setDatiTitolariEffettivi(null);
   } finally {
     setLoading(false);
   }
