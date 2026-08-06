@@ -23,39 +23,84 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
 const oggiIso = oggi.toISOString().split("T")[0];
 
-const alertOffsetsByPriorita: Record<string, number[]> = {
-  alta: [], // gestita separatamente: ogni giorno dal giorno dopo la creazione
-  media: [10, 8, 6, 4, 2, 0],
-  bassa: [6, 3, 0],
-};
+/*
+ * Intervalli uniformi per tutti i promemoria,
+ * indipendentemente dalla priorità.
+ */
+const alertOffsets = [
+  30,
+  20,
+  10,
+  5,
+  2,
+  1,
+  0,
+];
 
-const allOffsets = Array.from(
-  new Set([...alertOffsetsByPriorita.media, ...alertOffsetsByPriorita.bassa])
-);
+const dateAlertIso =
+  alertOffsets.map((offset) => {
+    const d = new Date(oggi);
 
-const dateAlertIso = allOffsets.map((offset) => {
-  const d = new Date(oggi);
-  d.setDate(d.getDate() + offset);
-  return d.toISOString().split("T")[0];
-});
+    d.setDate(
+      d.getDate() + offset
+    );
+
+    return d
+      .toISOString()
+      .split("T")[0];
+  });
+
+/*
+ * I promemoria già scaduti vengono
+ * richiamati soltanto il lunedì.
+ */
+const oggiELunedi =
+  oggi.getDay() === 1;
 
   try {
-   const { data: promemoria, error } = await supabase
+  let queryPromemoria = supabase
   .from("tbpromemoria")
   .select(`
     *,
     destinatario:tbutenti!destinatario_id (
-      id, nome, cognome, email
+      id,
+      nome,
+      cognome,
+      email
     )
   `)
-  .neq("working_progress", "Completato")
-  .or(
-    [
-      `data_scadenza.in.(${dateAlertIso.join(",")})`,
-      `priorita.eq.Alta`,
-      `priorita.eq.alta`,
-    ].join(",")
+  .neq(
+    "working_progress",
+    "Completato"
   );
+
+/*
+ * Dal martedì alla domenica leggiamo
+ * soltanto i promemoria che coincidono
+ * con uno degli intervalli previsti.
+ *
+ * Il lunedì leggiamo anche quelli scaduti.
+ */
+if (oggiELunedi) {
+  queryPromemoria =
+    queryPromemoria.or(
+      [
+        `data_scadenza.in.(${dateAlertIso.join(",")})`,
+        `data_scadenza.lt.${oggiIso}`,
+      ].join(",")
+    );
+} else {
+  queryPromemoria =
+    queryPromemoria.in(
+      "data_scadenza",
+      dateAlertIso
+    );
+}
+
+const {
+  data: promemoria,
+  error,
+} = await queryPromemoria;
 
     if (error) throw error;
 
@@ -73,38 +118,46 @@ const dateAlertIso = allOffsets.map((offset) => {
         (scadenza.getTime() - oggi.getTime()) / (1000 * 60 * 60 * 24)
       );
 
-  const priorita = String(p.priorita || "").toLowerCase();
+const priorita =
+  String(
+    p.priorita || ""
+  ).toLowerCase();
 
 let deveInviare = false;
 let tipoAlert = "";
 
-if (priorita === "alta") {
-  const createdAt = p.created_at ? new Date(p.created_at) : null;
-
-  if (createdAt) {
-    createdAt.setHours(0, 0, 0, 0);
-  }
-
-  const giornoDopoCreazione = createdAt
-    ? new Date(createdAt)
-    : null;
-
-  if (giornoDopoCreazione) {
-    giornoDopoCreazione.setDate(giornoDopoCreazione.getDate() + 1);
-  }
-
+/*
+ * Promemoria non ancora scaduto:
+ * alert a 30, 20, 10, 5, 2, 1 e 0 giorni.
+ */
+if (giorniRimasti >= 0) {
   deveInviare =
-    !!giornoDopoCreazione &&
-    oggi >= giornoDopoCreazione &&
-    giorniRimasti >= 0;
+    alertOffsets.includes(
+      giorniRimasti
+    );
 
-  tipoAlert = `alta_${oggiIso}`;
-} else if (priorita === "media") {
-  deveInviare = [10, 8, 6, 4, 2, 0].includes(giorniRimasti);
-  tipoAlert = giorniRimasti === 0 ? "oggi" : `${giorniRimasti}gg`;
-} else {
-  deveInviare = [6, 3, 0].includes(giorniRimasti);
-  tipoAlert = giorniRimasti === 0 ? "oggi" : `${giorniRimasti}gg`;
+  tipoAlert =
+    giorniRimasti === 0
+      ? "oggi"
+      : `${giorniRimasti}gg`;
+}
+
+/*
+ * Promemoria già scaduto:
+ * alert soltanto ogni lunedì.
+ */
+if (
+  giorniRimasti < 0 &&
+  oggiELunedi
+) {
+  deveInviare = true;
+
+  /*
+   * La data rende univoco l’invio
+   * per ciascun lunedì.
+   */
+  tipoAlert =
+    `scaduto_lunedi_${oggiIso}`;
 }
 
 if (!deveInviare) {
@@ -149,23 +202,33 @@ if (
         continue;
       }
 
-   const subject =
-  tipoAlert === "oggi"
-    ? `Promemoria in scadenza oggi: ${p.titolo}`
-    : priorita === "alta"
-    ? `Promemoria urgente: ${p.titolo}`
-    : `Promemoria in scadenza tra ${giorniRimasti} giorni: ${p.titolo}`;
+ const subject =
+  giorniRimasti < 0
+    ? `Promemoria scaduto: ${p.titolo}`
+    : tipoAlert === "oggi"
+      ? `Promemoria in scadenza oggi: ${p.titolo}`
+      : `Promemoria in scadenza tra ${giorniRimasti} giorni: ${p.titolo}`;
 
       const html = `
         <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
           <p>Gentile ${p.destinatario.nome || "utente"},</p>
-          <p>${
- tipoAlert === "oggi"
-  ? "ti ricordiamo che il seguente promemoria scade oggi."
-  : priorita === "alta"
-  ? "ti ricordiamo che il seguente promemoria urgente è ancora aperto."
-  : `ti ricordiamo che il seguente promemoria andrà in scadenza tra ${giorniRimasti} giorni.`
-          }</p>
+   <p>
+  ${
+    giorniRimasti < 0
+      ? `ti ricordiamo che il seguente promemoria è scaduto da ${Math.abs(
+          giorniRimasti
+        )} ${
+          Math.abs(
+            giorniRimasti
+          ) === 1
+            ? "giorno"
+            : "giorni"
+        } ed è ancora aperto.`
+      : tipoAlert === "oggi"
+        ? "ti ricordiamo che il seguente promemoria scade oggi."
+        : `ti ricordiamo che il seguente promemoria andrà in scadenza tra ${giorniRimasti} giorni.`
+  }
+</p>
           <ul>
             <li><strong>Titolo:</strong> ${p.titolo}</li>
             <li><strong>Scadenza:</strong> ${new Date(p.data_scadenza).toLocaleDateString("it-IT")}</li>
@@ -191,8 +254,11 @@ if (
         riferimento_id: p.id,
         tipo_alert: tipoAlert,
         data_scadenza: p.data_scadenza,
- giorni_preavviso:
-  priorita === "alta" ? giorniRimasti : giorniRimasti,
+giorni_preavviso:
+  Math.max(
+    giorniRimasti,
+    0
+  ),
         destinatario_utente_id: p.destinatario?.id || p.destinatario_id,
         destinatario_email: p.destinatario.email,
         messaggio_interno_creato: false,
@@ -225,7 +291,12 @@ if (
 
     return res.status(200).json({
       success: true,
-      date: { oggiIso, dateAlertIso },
+      date: {
+  oggiIso,
+  oggiELunedi,
+  intervalli: alertOffsets,
+  dateAlertIso,
+},
       promemoria_trovati: promemoria?.length || 0,
       email_inviate: emailInviate,
       email_fallite: emailFallite,
