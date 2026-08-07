@@ -136,22 +136,23 @@ export default async function handler(
      * 2. Recuperiamo il documento AML collegato
      * tramite legacy_rapp_legale_id.
      */
-    const {
-      data: documentoAml,
-      error: documentoLookupError,
-    } = await supabaseAdmin
-      .from("tbclienti_documenti_aml")
-      .select(
-        `
-          id,
-          soggetto_cliente_id,
-          studio_id
-        `
-      )
-      .eq("legacy_rapp_legale_id", id)
-      .eq("studio_id", studioId)
-      .eq("attivo", true)
-      .maybeSingle();
+  const {
+  data: documentoAml,
+  error: documentoLookupError,
+} = await supabaseAdmin
+  .from("tbclienti_documenti_aml")
+  .select(
+    `
+      id,
+      soggetto_cliente_id,
+      studio_id,
+      scadenza_documento
+    `
+  )
+  .eq("legacy_rapp_legale_id", id)
+  .eq("studio_id", studioId)
+  .eq("attivo", true)
+  .maybeSingle();
 
     if (documentoLookupError) {
       return res.status(500).json({
@@ -308,18 +309,344 @@ export default async function handler(
       .select()
       .single();
 
-    if (documentoUpdateError) {
+ if (documentoUpdateError) {
+  return res.status(500).json({
+    ok: false,
+    error: documentoUpdateError.message,
+  });
+}
+
+/*
+ * 6. Sincronizzazione con Scadenze unificate.
+ *
+ * La scadenza appartiene al documento AML
+ * della persona, non alle società rappresentate.
+ */
+const nuovaScadenzaDocumento =
+  documentoAggiornato.scadenza_documento
+    ? String(documentoAggiornato.scadenza_documento)
+    : null;
+
+const vecchiaScadenzaDocumento =
+  documentoAml.scadenza_documento
+    ? String(documentoAml.scadenza_documento)
+    : null;
+
+const scadenzaDocumentoCambiata =
+  nuovaScadenzaDocumento !==
+  vecchiaScadenzaDocumento;
+
+/*
+ * Cerchiamo la scadenza centrale dello stesso
+ * record documentale AML.
+ */
+const {
+  data: scadenzaCentraleEsistente,
+  error: scadenzaCentraleLookupError,
+} = await supabaseAdmin
+  .from("tbscadenze_centrale")
+  .select(`
+    id,
+    data_scadenza,
+    stato,
+    numero_alert_inviati,
+    prossimo_alert_at
+  `)
+  .eq("studio_id", studioId)
+  .eq(
+    "origine_tabella",
+    "tbclienti_documenti_aml"
+  )
+  .eq(
+    "origine_record_id",
+    documentoAggiornato.id
+  )
+  .maybeSingle();
+
+if (scadenzaCentraleLookupError) {
+  return res.status(500).json({
+    ok: false,
+    error:
+      scadenzaCentraleLookupError.message,
+  });
+}
+
+/*
+ * Se non esiste più una data di scadenza,
+ * l'eventuale scadenza centrale viene annullata.
+ */
+if (!nuovaScadenzaDocumento) {
+  if (scadenzaCentraleEsistente?.id) {
+    const adesso =
+      new Date().toISOString();
+
+    const {
+      error: annullaScadenzaError,
+    } = await supabaseAdmin
+      .from("tbscadenze_centrale")
+      .update({
+        stato: "annullata",
+        prossimo_alert_at: null,
+        annullata_at: adesso,
+        updated_at: adesso,
+      })
+      .eq(
+        "id",
+        scadenzaCentraleEsistente.id
+      )
+      .eq("studio_id", studioId);
+
+    if (annullaScadenzaError) {
       return res.status(500).json({
         ok: false,
-        error: documentoUpdateError.message,
+        error:
+          annullaScadenzaError.message,
       });
     }
+  }
+} else {
+  /*
+   * Calcoliamo il primo alert a -30 giorni.
+   *
+   * Se siamo già dentro la finestra dei 30 giorni,
+   * la scadenza diventa processabile subito.
+   */
+  const dataPrimoAlert = new Date(
+    `${nuovaScadenzaDocumento}T08:00:00.000Z`
+  );
+
+  dataPrimoAlert.setUTCDate(
+    dataPrimoAlert.getUTCDate() - 30
+  );
+
+  const adesso =
+    new Date();
+
+  const prossimoAlertAt =
+    dataPrimoAlert.getTime() >
+    adesso.getTime()
+      ? dataPrimoAlert.toISOString()
+      : adesso.toISOString();
+
+  const tipoDocumento =
+    testoPulito(body.tipo_doc);
+
+  const numeroDocumento =
+    testoPulito(body.num_doc);
+
+  const descrizioneDocumento = [
+    tipoDocumento,
+    numeroDocumento
+      ? `n. ${numeroDocumento}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" - ");
+
+  /*
+   * La scadenza esiste già.
+   */
+  if (scadenzaCentraleEsistente?.id) {
+    const aggiornamentoScadenza: any = {
+      origine_modulo:
+        "Antiriciclaggio",
+
+      tipo_scadenza:
+        "documento_aml",
+
+      titolo:
+        `Documento AML - ${nomeCognome}`,
+
+      descrizione:
+        descrizioneDocumento || null,
+
+      data_scadenza:
+        nuovaScadenzaDocumento,
+
+      stato:
+        "attiva",
+
+      priorita:
+        "normale",
+
+      intervalli_alert:
+        [30, 20, 10, 5, 2, 1, 0],
+
+      link_dettaglio:
+        "/antiriciclaggio/rappresentanti",
+
+      metadati: {
+        soggetto_cliente_id:
+          soggettoClienteId,
+
+        documento_aml_id:
+          documentoAggiornato.id,
+
+        tipo_documento:
+          tipoDocumento,
+
+        numero_documento:
+          numeroDocumento,
+      },
+
+      completata_at:
+        null,
+
+      annullata_at:
+        null,
+
+      updated_at:
+        new Date().toISOString(),
+    };
 
     /*
-     * 6. Manteniamo sincronizzata la tabella
-     * legacy finché il lato pubblico e tutte
-     * le pratiche non saranno migrati.
+     * ATTENZIONE:
+     * azzeriamo il ciclo alert SOLO se è cambiata
+     * la data di scadenza.
      */
+    if (scadenzaDocumentoCambiata) {
+      aggiornamentoScadenza.prossimo_alert_at =
+        prossimoAlertAt;
+
+      aggiornamentoScadenza.numero_alert_inviati =
+        0;
+
+      aggiornamentoScadenza.ultimo_alert_inviato_at =
+        null;
+    }
+
+    const {
+      error: aggiornaScadenzaError,
+    } = await supabaseAdmin
+      .from("tbscadenze_centrale")
+      .update(
+        aggiornamentoScadenza
+      )
+      .eq(
+        "id",
+        scadenzaCentraleEsistente.id
+      )
+      .eq(
+        "studio_id",
+        studioId
+      );
+
+    if (aggiornaScadenzaError) {
+      return res.status(500).json({
+        ok: false,
+        error:
+          aggiornaScadenzaError.message,
+      });
+    }
+  } else {
+    /*
+     * Prima registrazione della scadenza
+     * di questo documento AML.
+     */
+    const {
+      error: inserisciScadenzaError,
+    } = await supabaseAdmin
+      .from("tbscadenze_centrale")
+      .insert({
+        studio_id:
+          studioId,
+
+        cliente_id:
+          null,
+
+        operatore_responsabile_id:
+          null,
+
+        origine_modulo:
+          "Antiriciclaggio",
+
+        origine_tabella:
+          "tbclienti_documenti_aml",
+
+        origine_record_id:
+          documentoAggiornato.id,
+
+        tipo_scadenza:
+          "documento_aml",
+
+        titolo:
+          `Documento AML - ${nomeCognome}`,
+
+        descrizione:
+          descrizioneDocumento || null,
+
+        data_scadenza:
+          nuovaScadenzaDocumento,
+
+        stato:
+          "attiva",
+
+        priorita:
+          "normale",
+
+        giorni_preavviso_1:
+          30,
+
+        giorni_preavviso_2:
+          10,
+
+        giorni_preavviso_3:
+          5,
+
+        intervalli_alert:
+          [30, 20, 10, 5, 2, 1, 0],
+
+        prossimo_alert_at:
+          prossimoAlertAt,
+
+        ultimo_alert_inviato_at:
+          null,
+
+        numero_alert_inviati:
+          0,
+
+        link_dettaglio:
+          "/antiriciclaggio/rappresentanti",
+
+        metadati: {
+          soggetto_cliente_id:
+            soggettoClienteId,
+
+          documento_aml_id:
+            documentoAggiornato.id,
+
+          tipo_documento:
+            tipoDocumento,
+
+          numero_documento:
+            numeroDocumento,
+        },
+
+        completata_at:
+          null,
+
+        annullata_at:
+          null,
+
+        updated_at:
+          new Date().toISOString(),
+      });
+
+    if (inserisciScadenzaError) {
+      return res.status(500).json({
+        ok: false,
+        error:
+          inserisciScadenzaError.message,
+      });
+    }
+  }
+}
+
+/*
+ * 7. Manteniamo sincronizzata la tabella
+ * legacy finché il lato pubblico e tutte
+ * le pratiche non saranno migrati.
+ */
     const payloadLegacy = {
       nome_cognome:
         nomeCognome,
