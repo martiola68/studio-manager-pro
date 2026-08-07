@@ -5,6 +5,7 @@ import type {
 
 import { createClient } from "@supabase/supabase-js";
 import { sendEmailServer } from "@/services/sendEmailServer";
+import { sendRichiestaDocumentoRappresentante } from "@/services/rappresentantiDocumentiService";
 
 const SECRET =
   process.env.CRON_SECRET;
@@ -20,9 +21,10 @@ type ScadenzaRow = {
   cliente_id: string | null;
   operatore_responsabile_id: string | null;
 
-  origine_modulo: string;
-  tipo_scadenza: string;
-  titolo: string;
+origine_modulo: string;
+origine_record_id: string;
+tipo_scadenza: string;
+titolo: string;
   descrizione: string | null;
 
   data_scadenza: string;
@@ -330,9 +332,10 @@ try {
     studio_id,
     cliente_id,
     operatore_responsabile_id,
-    origine_modulo,
-    tipo_scadenza,
-    titolo,
+  origine_modulo,
+origine_record_id,
+tipo_scadenza,
+titolo,
     descrizione,
     data_scadenza,
     stato,
@@ -667,30 +670,331 @@ if (destinatari.length === 0) {
     )
   );
 
-  const mittenteAlternativoId =
-    utentiConTokenIds.find((utenteId) =>
-      mittentiValidiSet.has(utenteId)
-    ) || null;
+ const mittenteAlternativoId =
+  utentiConTokenIds.find((utenteId) =>
+    mittentiValidiSet.has(utenteId)
+  ) || null;
 
-  const alert =
-    calcolaTipoAlert(
+const alert =
+  calcolaTipoAlert(
+    riga,
+    oggi
+  );
+
+let inviatiScadenza = 0;
+let erroriScadenza = 0;
+let saltatiScadenza = 0;
+
+/*
+ * Gestione speciale documento AML.
+ *
+ * Per questo tipo di scadenza non mandiamo
+ * la normale email interna dello scadenzario:
+ * inviamo direttamente al soggetto il link
+ * pubblico per aggiornare il documento.
+ */
+if (
+  riga.tipo_scadenza ===
+  "documento_aml"
+) {
+  const giorniResidui =
+    differenzaGiorni(
+      riga.data_scadenza,
+      oggi
+    );
+
+  const {
+    data: documentoAml,
+    error: documentoAmlError,
+  } = await supabaseAdmin
+    .from("tbclienti_documenti_aml")
+    .select(`
+      id,
+      studio_id,
+      soggetto_cliente_id,
+      legacy_rapp_legale_id,
+      public_doc_enabled,
+      public_doc_token,
+      documento_richiesto_il
+    `)
+    .eq(
+      "id",
+      riga.origine_record_id
+    )
+    .eq(
+      "studio_id",
+      riga.studio_id
+    )
+    .eq(
+      "attivo",
+      true
+    )
+    .maybeSingle();
+
+  if (
+    documentoAmlError ||
+    !documentoAml?.id
+  ) {
+    errori += 1;
+    erroriScadenza += 1;
+
+    dettagli.push({
+      scadenza_id:
+        riga.id,
+
+      ok: false,
+
+      messaggio:
+        documentoAmlError?.message ||
+        "Documento AML non trovato",
+    });
+
+    continue;
+  }
+
+  const {
+    data: soggetto,
+    error: soggettoError,
+  } = await supabaseAdmin
+    .from("tbclienti")
+    .select(`
+      id,
+      ragione_sociale,
+      email
+    `)
+    .eq(
+      "id",
+      documentoAml.soggetto_cliente_id
+    )
+    .eq(
+      "studio_id",
+      riga.studio_id
+    )
+    .maybeSingle();
+
+  if (
+    soggettoError ||
+    !soggetto?.id
+  ) {
+    errori += 1;
+    erroriScadenza += 1;
+
+    dettagli.push({
+      scadenza_id:
+        riga.id,
+
+      ok: false,
+
+      messaggio:
+        soggettoError?.message ||
+        "Anagrafica del soggetto AML non trovata",
+    });
+
+    continue;
+  }
+
+  if (!soggetto.email) {
+    errori += 1;
+    erroriScadenza += 1;
+
+    dettagli.push({
+      scadenza_id:
+        riga.id,
+
+      ok: false,
+
+      messaggio:
+        "Il soggetto non ha un indirizzo email valorizzato",
+    });
+
+    continue;
+  }
+
+  if (
+    !documentoAml
+      .legacy_rapp_legale_id
+  ) {
+    errori += 1;
+    erroriScadenza += 1;
+
+    dettagli.push({
+      scadenza_id:
+        riga.id,
+
+      ok: false,
+
+      messaggio:
+        "Riferimento legacy del rappresentante non disponibile",
+    });
+
+    continue;
+  }
+
+  /*
+   * Primo invio:
+   * generiamo il link pubblico.
+   *
+   * Se esiste già un link attivo,
+   * per ora non ne generiamo un altro.
+   */
+  if (
+    !documentoAml.public_doc_enabled ||
+    !documentoAml.public_doc_token
+  ) {
+    try {
+      await sendRichiestaDocumentoRappresentante({
+        recordId:
+          documentoAml
+            .legacy_rapp_legale_id,
+
+        studioId:
+          riga.studio_id,
+
+        nomeDestinatario:
+          String(
+            soggetto.ragione_sociale ||
+            ""
+          ),
+
+        email:
+          String(soggetto.email),
+
+        microsoftConnectionId:
+          studio.microsoft_connection_id,
+
+        clienteId:
+          null,
+
+        av4Id:
+          null,
+
+        note:
+          "Richiesta automatica rinnovo documento AML da Scadenze unificate",
+      });
+
+      inviati += 1;
+      inviatiScadenza += 1;
+
+      dettagli.push({
+        scadenza_id:
+          riga.id,
+
+        ok: true,
+
+        messaggio:
+          `Richiesta automatica documento inviata a ${soggetto.email}`,
+      });
+    } catch (erroreInvio: any) {
+      errori += 1;
+      erroriScadenza += 1;
+
+      dettagli.push({
+        scadenza_id:
+          riga.id,
+
+        ok: false,
+
+        messaggio:
+          erroreInvio?.message ||
+          "Errore invio richiesta documento AML",
+      });
+    }
+  } else {
+    /*
+     * Il link è già stato generato.
+     * Non creiamo un secondo token.
+     */
+    saltati += 1;
+    saltatiScadenza += 1;
+
+    dettagli.push({
+      scadenza_id:
+        riga.id,
+
+      ok: true,
+
+      messaggio:
+        `Link documento AML già attivo per ${soggetto.email}`,
+    });
+  }
+
+  /*
+   * Programmiamo il prossimo intervallo
+   * 30 → 20 → 10 → 5 → 2 → 1 → 0.
+   */
+  const prossimoAlert =
+    calcolaProssimoAlert(
       riga,
       oggi
     );
 
-  const urlApplicazione =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    "https://studio-manager-pro.vercel.app";
+  const adessoAggiornamento =
+    new Date().toISOString();
 
-  const link =
-    riga.link_dettaglio
-      ? `${urlApplicazione}${riga.link_dettaglio}`
-      : `${urlApplicazione}/scadenze`;
+  const aggiornamentoScadenza: {
+    prossimo_alert_at: string | null;
+    updated_at: string;
+    numero_alert_inviati?: number;
+    ultimo_alert_inviato_at?: string;
+  } = {
+    prossimo_alert_at:
+      prossimoAlert,
 
-  let inviatiScadenza = 0;
-  let erroriScadenza = 0;
-  let saltatiScadenza = 0;
+    updated_at:
+      adessoAggiornamento,
+  };
+
+  if (inviatiScadenza > 0) {
+    aggiornamentoScadenza
+      .numero_alert_inviati =
+      Number(
+        riga.numero_alert_inviati ||
+        0
+      ) + inviatiScadenza;
+
+    aggiornamentoScadenza
+      .ultimo_alert_inviato_at =
+      adessoAggiornamento;
+  }
+
+  const {
+    error: aggiornamentoAmlError,
+  } = await supabaseAdmin
+    .from("tbscadenze_centrale")
+    .update(
+      aggiornamentoScadenza
+    )
+    .eq(
+      "id",
+      riga.id
+    )
+    .eq(
+      "studio_id",
+      riga.studio_id
+    );
+
+  if (aggiornamentoAmlError) {
+    throw aggiornamentoAmlError;
+  }
+
+  /*
+   * Fondamentale:
+   * il documento AML è già stato gestito,
+   * quindi non deve entrare nella normale
+   * email delle Scadenze unificate.
+   */
+  continue;
+}
+
+const urlApplicazione =
+  process.env.NEXT_PUBLIC_APP_URL ||
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  "https://studio-manager-pro.vercel.app";
+
+const link =
+  riga.link_dettaglio
+    ? `${urlApplicazione}${riga.link_dettaglio}`
+    : `${urlApplicazione}/scadenze`;
 
   /*
    * 5. Invio separato a ogni destinatario.
