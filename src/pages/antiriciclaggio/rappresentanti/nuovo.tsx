@@ -699,16 +699,17 @@ async function handleInviaRichiestaDocumento() {
 
     setSendingPublicDoc(true);
 
-    const result = await sendRichiestaDocumentoRappresentante({
-      recordId,
-      studioId,
-      nomeDestinatario: form.nome_cognome || "Cliente",
-      email: String(form.email).trim(),
-      microsoftConnectionId: resolvedConnectionId,
-      clienteId: clienteIdFromQuery || null,
-      av4Id: av4IdFromQuery || null,
-      note: "Invio richiesta documento da anagrafica rappresentante",
-    });
+ const result = await sendRichiestaDocumentoRappresentante({
+  documentoAmlId: recordId,
+  studioId,
+  nomeDestinatario: form.nome_cognome || "Cliente",
+  email: String(form.email).trim(),
+  nomeOperatore,
+  microsoftConnectionId: resolvedMicrosoftConnectionId,
+  clienteId: null,
+  av4Id: null,
+  note: "Invio richiesta documento da anagrafica rappresentante",
+});
 
     setPublicDocUrl(result.url);
     alert(`Email inviata correttamente a ${String(form.email).trim()}.`);
