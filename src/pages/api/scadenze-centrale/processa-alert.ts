@@ -589,7 +589,10 @@ const destinatari = [
   ),
 ];
 
-if (destinatari.length === 0) {
+if (
+  destinatari.length === 0 &&
+  riga.tipo_scadenza !== "documento_aml"
+) {
   saltati += 1;
 
   dettagli.push({
