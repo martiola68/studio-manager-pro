@@ -62,73 +62,82 @@ let userId: string | null = null;
   const url = `${publicAppUrl}/documento/${token}`;
 
 /*
- * Recuperiamo un utente attivo dello studio
- * con token Microsoft valido.
+ * Per le comunicazioni automatiche utilizziamo
+ * esclusivamente l'Utente comunicazioni dello Studio.
  *
- * Il service può essere chiamato anche da cron/server,
- * quindi non utilizziamo la sessione browser.
+ * Gli invii manuali, come AV4, non passano da questa
+ * logica e continuano a utilizzare l'utente operatore.
  */
 const {
-  data: tokenDisponibili,
-  error: tokenError,
+  data: utenteComunicazioni,
+  error: utenteComunicazioniError,
 } = await supabase
-  .from("tbmicrosoft365_user_tokens")
+  .from("tbutenti")
   .select(`
-    user_id,
-    updated_at
+    id,
+    email,
+    microsoft_connection_id
   `)
-  .eq(
-    "microsoft_connection_id",
-    microsoftConnectionId
-  )
-  .is("revoked_at", null)
-  .order("updated_at", {
-    ascending: false,
-  });
+  .eq("studio_id", studioId)
+  .eq("utente_comunicazioni", true)
+  .eq("attivo", true)
+  .maybeSingle();
 
-if (tokenError) {
-  throw new Error(tokenError.message);
-}
-
-const utentiConTokenIds = Array.from(
-  new Set(
-    (tokenDisponibili || [])
-      .map((item: any) =>
-        String(item.user_id || "")
-      )
-      .filter(Boolean)
-  )
-);
-
-if (utentiConTokenIds.length === 0) {
+if (utenteComunicazioniError) {
   throw new Error(
-    "Nessun utente con token Microsoft valido disponibile per l'invio."
+    utenteComunicazioniError.message
   );
 }
 
-const {
-  data: utentiValidi,
-  error: utentiError,
-} = await supabase
-  .from("tbutenti")
-  .select("id")
-  .eq("studio_id", studioId)
-  .eq("attivo", true)
-  .in("id", utentiConTokenIds)
-  .limit(1);
-
-if (utentiError) {
-  throw new Error(utentiError.message);
+if (!utenteComunicazioni?.id) {
+  throw new Error(
+    "Utente comunicazioni di Studio non configurato."
+  );
 }
 
-userId =
-  utentiValidi?.[0]?.id
-    ? String(utentiValidi[0].id)
-    : null;
-
-if (!userId) {
+if (!utenteComunicazioni.microsoft_connection_id) {
   throw new Error(
-    "Nessun mittente Microsoft valido trovato per lo studio."
+    "L'Utente comunicazioni non ha una connessione Microsoft 365 configurata."
+  );
+}
+
+userId = String(
+  utenteComunicazioni.id
+);
+
+const microsoftConnectionIdInvio =
+  String(
+    utenteComunicazioni.microsoft_connection_id
+  );
+
+/*
+ * Verifichiamo che l'Utente comunicazioni
+ * abbia effettivamente un token Microsoft valido.
+ */
+const {
+  data: tokenComunicazioni,
+  error: tokenComunicazioniError,
+} = await supabase
+  .from("tbmicrosoft365_user_tokens")
+  .select("user_id")
+  .eq("user_id", userId)
+  .eq(
+    "microsoft_connection_id",
+    microsoftConnectionIdInvio
+  )
+  .is("revoked_at", null)
+  .limit(1)
+  .maybeSingle();
+
+if (tokenComunicazioniError) {
+  throw new Error(
+    tokenComunicazioniError.message
+  );
+}
+
+if (!tokenComunicazioni?.user_id) {
+  throw new Error(
+    "L'Utente comunicazioni non dispone di un token Microsoft 365 valido."
   );
 }
 
@@ -224,7 +233,8 @@ const emailResult =
   await sendEmailServer({
     senderUserId: userId,
 
-    microsoftConnectionId,
+    microsoftConnectionId:
+      microsoftConnectionIdInvio,
 
     to: destinatario,
 
@@ -252,7 +262,8 @@ const { data: documentoAml, error: documentoAmlError } = await supabase
     public_doc_opened_at: null,
     public_doc_submitted_at: null,
     documento_richiesto_il: nowIso,
-    microsoft_connection_id: microsoftConnectionId,
+    microsoft_connection_id:
+  microsoftConnectionIdInvio,
     updated_at: nowIso,
   })
   .eq("legacy_rapp_legale_id", recordId)
@@ -281,7 +292,8 @@ const { error: updateLegacyError } = await supabase
     public_doc_opened_at: null,
     public_doc_submitted_at: null,
     doc_richiesto_il: nowIso,
-    microsoft_connection_id: microsoftConnectionId,
+    microsoft_connection_id:
+  microsoftConnectionIdInvio,
   })
   .eq("id", recordId)
   .eq("studio_id", studioId);
