@@ -845,11 +845,13 @@ if (
     !documentoAml.public_doc_token
   ) {
     try {
-    await sendRichiestaDocumentoRappresentante({
+  await sendRichiestaDocumentoRappresentante({
   documentoAmlId:
     documentoAml.id,
 
-  studioId,
+  studioId:
+    documentoAml.studio_id,
+
   nomeDestinatario,
   email: destinatario,
   microsoftConnectionId,
