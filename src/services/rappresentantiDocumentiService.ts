@@ -348,7 +348,7 @@ if (documentoAmlError || !documentoAml?.id) {
         studio_id: studioId,
         tipo_comunicazione: "richiesta_documento",
         cliente_id: clienteId,
-        rapp_legale_id: recordId,
+        rapp_legale_id: null,
         av4_id: av4Id,
         destinatario_email: destinatario,
         oggetto: subject,
