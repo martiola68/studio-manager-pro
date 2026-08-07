@@ -280,22 +280,22 @@ if (documentoAmlError || !documentoAml?.id) {
 }
 
 
-    const { error: logError } = await supabase.from("tbAMLComunicazioni").insert({
-      studio_id: studioId,
-      tipo_comunicazione: "richiesta_documento",
-      cliente_id: clienteId,
-      rapp_legale_id: recordId,
-      av4_id: av4Id,
-      destinatario_email: destinatario,
-      oggetto: subject,
-      body_preview: bodyPreview,
-      stato_invio: "inviata",
-      data_invio: nowIso,
-      utente_id: userId,
-      public_token: token,
-      note,
-    });
-
+  const { error: logError } = await supabase.from("tbAMLComunicazioni").insert({
+  studio_id: studioId,
+  tipo_comunicazione: "richiesta_documento",
+  cliente_id: clienteId,
+  rapp_legale_id: null,
+  av4_id: av4Id,
+  destinatario_email: destinatario,
+  oggetto: subject,
+  body_preview: bodyPreview,
+  stato_invio: "inviata",
+  data_invio: nowIso,
+  utente_id: userId,
+  public_token: token,
+  note,
+});
+    
     if (logError) {
       throw new Error(
         `Email inviata correttamente a ${destinatario}, ma il log AML non è stato salvato.`
