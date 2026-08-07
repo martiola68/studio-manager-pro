@@ -699,13 +699,12 @@ async function handleInviaRichiestaDocumento() {
 
     setSendingPublicDoc(true);
 
- const result = await sendRichiestaDocumentoRappresentante({
+const result = await sendRichiestaDocumentoRappresentante({
   documentoAmlId: recordId,
   studioId,
   nomeDestinatario: form.nome_cognome || "Cliente",
   email: String(form.email).trim(),
-  nomeOperatore,
-  microsoftConnectionId: resolvedMicrosoftConnectionId,
+  microsoftConnectionId: resolvedConnectionId,
   clienteId: null,
   av4Id: null,
   note: "Invio richiesta documento da anagrafica rappresentante",
