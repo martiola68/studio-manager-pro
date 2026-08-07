@@ -156,23 +156,49 @@ ${firmaOperatore ? `Cordiali saluti,\n${firmaOperatore}` : ""}
   `.trim();
 
   try {
-   const emailResult =
-  await sendEmailServer({
-    senderUserId: userId,
+ const resendApiKey =
+  process.env.RESEND_API_KEY;
 
-    microsoftConnectionId,
-
-    to: destinatario,
-
-    subject,
-
-    html,
-  });
-
-if (!emailResult.success) {
+if (!resendApiKey) {
   throw new Error(
-    emailResult.error ||
-    "Errore durante l'invio email."
+    "RESEND_API_KEY non configurata."
+  );
+}
+
+const from =
+  process.env.RESEND_FROM ||
+  "Studio Manager Pro <noreply@studio-manager-pro.it>";
+
+const emailResponse = await fetch(
+  "https://api.resend.com/emails",
+  {
+    method: "POST",
+
+    headers: {
+      Authorization:
+        `Bearer ${resendApiKey}`,
+
+      "Content-Type":
+        "application/json",
+    },
+
+    body: JSON.stringify({
+      from,
+      to: [destinatario],
+      subject,
+      html,
+      text,
+    }),
+  }
+);
+
+const emailResponseText =
+  await emailResponse.text();
+
+if (!emailResponse.ok) {
+  throw new Error(
+    emailResponseText ||
+    `Errore Resend ${emailResponse.status}`
   );
 }
 /*
