@@ -22,16 +22,18 @@ const ruoli = [
   "amministratore",
   "amministratore_unico",
   "liquidatore",
- "amministratore_delegato",
-"consigliere_delegato",
-"presidente_cda",
-"consigliere",
+  "amministratore_delegato",
+  "consigliere_delegato",
+  "presidente_cda",
+  "vice_presidente_cda",
+  "consigliere",
   "sindaco_effettivo",
   "presidente_collegio_sindacale",
   "sindaco_unico",
   "sindaco_supplente",
   "revisore",
   "rappresentante_legale",
+  "altro",
 ];
 
 const ruoliLabel: Record<string, string> = {
@@ -48,13 +50,20 @@ consigliere_delegato:
 
 presidente_cda:
   "Presidente del CDA",
-  consigliere: "Consigliere",
+
+vice_presidente_cda:
+  "Vice presidente del CDA",
+
+consigliere:
+  "Consigliere",
   sindaco_effettivo: "Sindaco effettivo",
   presidente_collegio_sindacale: "Presidente del collegio sindacale",
   sindaco_unico: "Sindaco unico",
   sindaco_supplente: "Sindaco supplente",
   revisore: "Revisore",
   rappresentante_legale: "Rappresentante legale",
+  altro:
+  "Altro",
 };
 
 const titoliPossessoLabel: Record<string, string> = {
@@ -72,6 +81,7 @@ const ruoliConPrincipale = [
   "amministratore_unico",
   "amministratore_delegato",
   "presidente_cda",
+  "vice_presidente_cda",
   "consigliere",
   "liquidatore",
   "rappresentante_legale",
@@ -1480,15 +1490,16 @@ note_titolo_possesso:
 }
 function getTipoRuolo(ruolo: string) {
   if (
-    [
-      "amministratore",
-      "amministratore_unico",
-      "amministratore_delegato",
-      "presidente_cda",
-      "consigliere",
-      "liquidatore",
-      "rappresentante_legale",
-    ].includes(ruolo)
+   [
+  "amministratore",
+  "amministratore_unico",
+  "amministratore_delegato",
+  "presidente_cda",
+  "vice_presidente_cda",
+  "consigliere",
+  "liquidatore",
+  "rappresentante_legale",
+].includes(ruolo)
   ) {
     return "R";
   }
