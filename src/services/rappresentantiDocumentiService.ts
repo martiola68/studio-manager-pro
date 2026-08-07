@@ -1,5 +1,4 @@
 import { createClient } from "@supabase/supabase-js";
-import { sendEmailServer } from "@/services/sendEmailServer";
 
 type SendRichiestaDocumentoParams = {
   recordId: string;
@@ -39,8 +38,7 @@ export async function sendRichiestaDocumentoRappresentante(
   note = "Invio richiesta documento da anagrafica rappresentante",
 } = params;
 
-  let token = "";
-  let userId: string | null = null;
+ let token = "";
 
   if (!recordId) throw new Error("recordId mancante.");
   if (!studioId) throw new Error("studio_id non disponibile.");
@@ -62,75 +60,13 @@ export async function sendRichiestaDocumentoRappresentante(
   const url = `${publicAppUrl}/documento/${token}`;
 
  /*
- * Recuperiamo un utente attivo dello studio
- * con token Microsoft valido.
+ * Le richieste documento sono comunicazioni
+ * automatiche di sistema.
  *
- * Il service può essere chiamato anche da cron/server,
- * quindi non utilizziamo la sessione browser.
+ * L'invio avviene tramite Resend con mittente noreply,
+ * quindi non dipende da un utente Microsoft.
  */
-const {
-  data: tokenDisponibili,
-  error: tokenError,
-} = await supabase
-  .from("tbmicrosoft365_user_tokens")
-  .select(`
-    user_id,
-    updated_at
-  `)
-  .eq(
-    "microsoft_connection_id",
-    microsoftConnectionId
-  )
-  .is("revoked_at", null)
-  .order("updated_at", {
-    ascending: false,
-  });
-
-if (tokenError) {
-  throw new Error(tokenError.message);
-}
-
-const utentiConTokenIds = Array.from(
-  new Set(
-    (tokenDisponibili || [])
-      .map((item: any) =>
-        String(item.user_id || "")
-      )
-      .filter(Boolean)
-  )
-);
-
-if (utentiConTokenIds.length === 0) {
-  throw new Error(
-    "Nessun utente con token Microsoft valido disponibile per l'invio."
-  );
-}
-
-const {
-  data: utentiValidi,
-  error: utentiError,
-} = await supabase
-  .from("tbutenti")
-  .select("id")
-  .eq("studio_id", studioId)
-  .eq("attivo", true)
-  .in("id", utentiConTokenIds)
-  .limit(1);
-
-if (utentiError) {
-  throw new Error(utentiError.message);
-}
-
-userId =
-  utentiValidi?.[0]?.id
-    ? String(utentiValidi[0].id)
-    : null;
-
-if (!userId) {
-  throw new Error(
-    "Nessun mittente Microsoft valido trovato per lo studio."
-  );
-}
+const userId: string | null = null;
 
   const destinatario = String(email).trim();
   const subject = "Richiesta aggiornamento documento di riconoscimento";
