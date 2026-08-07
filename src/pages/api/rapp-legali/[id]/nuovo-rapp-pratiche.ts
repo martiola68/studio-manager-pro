@@ -255,20 +255,25 @@ export default async function handler(
      * 3. Creiamo, riattiviamo o aggiorniamo
      * il contenitore documentale AML.
      */
-    const {
-      data: documentoEsistente,
-      error: documentoLookupError,
-    } = await supabaseAdmin
-      .from("tbclienti_documenti_aml")
-      .select("id")
-      .eq("studio_id", studioId)
-      .eq("soggetto_cliente_id", soggettoClienteId)
-      .maybeSingle();
+   const {
+  data: documentiEsistenti,
+  error: documentoLookupError,
+} = await supabaseAdmin
+  .from("tbclienti_documenti_aml")
+  .select("id, attivo")
+  .eq("studio_id", studioId)
+  .eq("soggetto_cliente_id", soggettoClienteId)
+  .order("created_at", {
+    ascending: false,
+  })
+  .limit(1);
 
-    if (documentoLookupError) {
-      throw documentoLookupError;
-    }
+if (documentoLookupError) {
+  throw documentoLookupError;
+}
 
+const documentoEsistente =
+  documentiEsistenti?.[0] || null;
     let documentoAml: any;
 
     if (documentoEsistente?.id) {
