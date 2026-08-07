@@ -845,35 +845,18 @@ if (
     !documentoAml.public_doc_token
   ) {
     try {
-      await sendRichiestaDocumentoRappresentante({
-        recordId:
-          documentoAml
-            .legacy_rapp_legale_id,
+    await sendRichiestaDocumentoRappresentante({
+  documentoAmlId:
+    documentoAml.id,
 
-        studioId:
-          riga.studio_id,
-
-        nomeDestinatario:
-          String(
-            soggetto.ragione_sociale ||
-            ""
-          ),
-
-        email:
-          String(soggetto.email),
-
-        microsoftConnectionId:
-          studio.microsoft_connection_id,
-
-        clienteId:
-          null,
-
-        av4Id:
-          null,
-
-        note:
-          "Richiesta automatica rinnovo documento AML da Scadenze unificate",
-      });
+  studioId,
+  nomeDestinatario,
+  email: destinatario,
+  microsoftConnectionId,
+  clienteId: null,
+  av4Id: null,
+  note: "Richiesta automatica rinnovo documento AML da Scadenze unificate",
+});
 
       inviati += 1;
       inviatiScadenza += 1;
