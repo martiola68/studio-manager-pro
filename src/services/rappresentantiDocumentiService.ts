@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { sendEmailServer } from "@/services/sendEmailServer";
 
 type SendRichiestaDocumentoParams = {
   recordId: string;
@@ -39,6 +40,7 @@ export async function sendRichiestaDocumentoRappresentante(
 } = params;
 
  let token = "";
+let userId: string | null = null;
 
   if (!recordId) throw new Error("recordId mancante.");
   if (!studioId) throw new Error("studio_id non disponibile.");
@@ -59,14 +61,76 @@ export async function sendRichiestaDocumentoRappresentante(
 
   const url = `${publicAppUrl}/documento/${token}`;
 
- /*
- * Le richieste documento sono comunicazioni
- * automatiche di sistema.
+/*
+ * Recuperiamo un utente attivo dello studio
+ * con token Microsoft valido.
  *
- * L'invio avviene tramite Resend con mittente noreply,
- * quindi non dipende da un utente Microsoft.
+ * Il service può essere chiamato anche da cron/server,
+ * quindi non utilizziamo la sessione browser.
  */
-const userId: string | null = null;
+const {
+  data: tokenDisponibili,
+  error: tokenError,
+} = await supabase
+  .from("tbmicrosoft365_user_tokens")
+  .select(`
+    user_id,
+    updated_at
+  `)
+  .eq(
+    "microsoft_connection_id",
+    microsoftConnectionId
+  )
+  .is("revoked_at", null)
+  .order("updated_at", {
+    ascending: false,
+  });
+
+if (tokenError) {
+  throw new Error(tokenError.message);
+}
+
+const utentiConTokenIds = Array.from(
+  new Set(
+    (tokenDisponibili || [])
+      .map((item: any) =>
+        String(item.user_id || "")
+      )
+      .filter(Boolean)
+  )
+);
+
+if (utentiConTokenIds.length === 0) {
+  throw new Error(
+    "Nessun utente con token Microsoft valido disponibile per l'invio."
+  );
+}
+
+const {
+  data: utentiValidi,
+  error: utentiError,
+} = await supabase
+  .from("tbutenti")
+  .select("id")
+  .eq("studio_id", studioId)
+  .eq("attivo", true)
+  .in("id", utentiConTokenIds)
+  .limit(1);
+
+if (utentiError) {
+  throw new Error(utentiError.message);
+}
+
+userId =
+  utentiValidi?.[0]?.id
+    ? String(utentiValidi[0].id)
+    : null;
+
+if (!userId) {
+  throw new Error(
+    "Nessun mittente Microsoft valido trovato per lo studio."
+  );
+}
 
   const destinatario = String(email).trim();
   const subject = "Richiesta aggiornamento documento di riconoscimento";
@@ -156,49 +220,23 @@ ${firmaOperatore ? `Cordiali saluti,\n${firmaOperatore}` : ""}
   `.trim();
 
   try {
- const resendApiKey =
-  process.env.RESEND_API_KEY;
+const emailResult =
+  await sendEmailServer({
+    senderUserId: userId,
 
-if (!resendApiKey) {
+    microsoftConnectionId,
+
+    to: destinatario,
+
+    subject,
+
+    html,
+  });
+
+if (!emailResult.success) {
   throw new Error(
-    "RESEND_API_KEY non configurata."
-  );
-}
-
-const from =
-  process.env.RESEND_FROM ||
-  "Studio Manager Pro <noreply@studio-manager-pro.it>";
-
-const emailResponse = await fetch(
-  "https://api.resend.com/emails",
-  {
-    method: "POST",
-
-    headers: {
-      Authorization:
-        `Bearer ${resendApiKey}`,
-
-      "Content-Type":
-        "application/json",
-    },
-
-    body: JSON.stringify({
-      from,
-      to: [destinatario],
-      subject,
-      html,
-      text,
-    }),
-  }
-);
-
-const emailResponseText =
-  await emailResponse.text();
-
-if (!emailResponse.ok) {
-  throw new Error(
-    emailResponseText ||
-    `Errore Resend ${emailResponse.status}`
+    emailResult.error ||
+    "Errore durante l'invio email."
   );
 }
 /*
