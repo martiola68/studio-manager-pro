@@ -172,18 +172,49 @@ if (!payload.soggetto_cliente_id) {
   );
 }
 
-    if (!payload.ruolo) {
-      return NextResponse.json(
-        { error: "ruolo mancante" },
-        { status: 400 }
-      );
-    }
+if (!payload.ruolo) {
+  return NextResponse.json(
+    { error: "ruolo mancante" },
+    { status: 400 }
+  );
+}
 
-    const { data, error } = await supabase
-      .from("tbclienti_organi")
-.insert({
-  cliente_id: payload.cliente_id,
-  soggetto_cliente_id: payload.soggetto_cliente_id,
+/*
+ * Recuperiamo lo studio direttamente dal cliente.
+ * Non ci fidiamo di uno studio_id passato dal frontend.
+ */
+const {
+  data: cliente,
+  error: clienteError,
+} = await supabase
+  .from("tbclienti")
+  .select("id, studio_id")
+  .eq("id", payload.cliente_id)
+  .maybeSingle();
+
+if (clienteError) {
+  return NextResponse.json(
+    { error: clienteError.message },
+    { status: 500 }
+  );
+}
+
+if (!cliente?.studio_id) {
+  return NextResponse.json(
+    {
+      error:
+        "Studio del cliente non disponibile",
+    },
+    { status: 400 }
+  );
+}
+
+const { data, error } = await supabase
+  .from("tbclienti_organi")
+  .insert({
+    studio_id: cliente.studio_id,
+    cliente_id: payload.cliente_id,
+    soggetto_cliente_id: payload.soggetto_cliente_id,
   tipo_soggetto:
     payload.tipo_soggetto === "societa"
       ? "societa"
