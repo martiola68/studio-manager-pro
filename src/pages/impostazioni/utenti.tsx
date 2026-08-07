@@ -799,7 +799,7 @@ const handleEdit = (utente: Utente) => {
   </Label>
 </div>
 
-                <div className="flex items-center space-x-2">
+  <div className="flex items-center space-x-2">
   <Checkbox
     id="responsabile_ferie_permessi"
     checked={formData.responsabile_ferie_permessi}
@@ -816,19 +816,7 @@ const handleEdit = (utente: Utente) => {
   </Label>
 </div>
 
-<div className="flex items-center space-x-2">
-  <Checkbox
-    id="attivo"
-    checked={formData.attivo}
-    onCheckedChange={(checked) =>
-      setFormData((prev) => ({
-        ...prev,
-        attivo: !!checked,
-      }))
-    }
-  />
-
-  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2">
   <Checkbox
     id="utente_comunicazioni"
     checked={formData.utente_comunicazioni}
@@ -847,6 +835,18 @@ const handleEdit = (utente: Utente) => {
     Utente comunicazioni di Studio
   </Label>
 </div>
+
+<div className="flex items-center space-x-2">
+  <Checkbox
+    id="attivo"
+    checked={formData.attivo}
+    onCheckedChange={(checked) =>
+      setFormData((prev) => ({
+        ...prev,
+        attivo: !!checked,
+      }))
+    }
+  />
 
   <Label htmlFor="attivo" className="cursor-pointer font-medium">
     Utente attivo
