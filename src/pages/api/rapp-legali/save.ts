@@ -357,28 +357,31 @@ export default async function handler(
      * 4. Verifichiamo se esiste già
      * un documento AML attivo.
      */
-    const {
-      data: documentoEsistente,
-      error: documentoLookupError,
-    } = await supabaseAdmin
-      .from(
-        "tbclienti_documenti_aml"
-      )
-      .select("id")
-      .eq(
-        "studio_id",
-        studioId
-      )
-      .eq(
-        "soggetto_cliente_id",
-        soggettoClienteId
-      )
-      .eq("attivo", true)
-      .maybeSingle();
+   const {
+  data: documentiEsistenti,
+  error: documentoLookupError,
+} = await supabaseAdmin
+  .from("tbclienti_documenti_aml")
+  .select("id, attivo")
+  .eq(
+    "studio_id",
+    studioId
+  )
+  .eq(
+    "soggetto_cliente_id",
+    soggettoClienteId
+  )
+  .order("created_at", {
+    ascending: false,
+  })
+  .limit(1);
 
-    if (documentoLookupError) {
-      throw documentoLookupError;
-    }
+if (documentoLookupError) {
+  throw documentoLookupError;
+}
+
+const documentoEsistente =
+  documentiEsistenti?.[0] || null;
 
     const payloadDocumento = {
       tipo_documento:
@@ -406,43 +409,44 @@ export default async function handler(
         new Date().toISOString(),
     };
 
-    if (documentoEsistente?.id) {
-      const {
-        data: documentoAggiornato,
-        error: aggiornaDocumentoError,
-      } = await supabaseAdmin
-        .from(
-          "tbclienti_documenti_aml"
-        )
-        .update(
-          payloadDocumento
-        )
-        .eq(
-          "id",
-          documentoEsistente.id
-        )
-        .eq(
-          "studio_id",
-          studioId
-        )
-        .select()
-        .single();
+  if (documentoEsistente?.id) {
+  const {
+    data: documentoAggiornato,
+    error: aggiornaDocumentoError,
+  } = await supabaseAdmin
+    .from(
+      "tbclienti_documenti_aml"
+    )
+    .update({
+      ...payloadDocumento,
+      attivo: true,
+    })
+    .eq(
+      "id",
+      documentoEsistente.id
+    )
+    .eq(
+      "studio_id",
+      studioId
+    )
+    .select()
+    .single();
 
-      if (aggiornaDocumentoError) {
-        throw aggiornaDocumentoError;
-      }
+  if (aggiornaDocumentoError) {
+    throw aggiornaDocumentoError;
+  }
 
-      return res.status(200).json({
-        ok: true,
-        data: {
-          ...legacyData,
-          soggetto_cliente_id:
-            soggettoClienteId,
-          documento_aml:
-            documentoAggiornato,
-        },
-      });
-    }
+  return res.status(200).json({
+    ok: true,
+    data: {
+      ...legacyData,
+      soggetto_cliente_id:
+        soggettoClienteId,
+      documento_aml:
+        documentoAggiornato,
+    },
+  });
+}
 
     const {
       data: nuovoDocumento,
