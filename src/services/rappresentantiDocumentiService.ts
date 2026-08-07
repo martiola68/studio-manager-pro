@@ -263,11 +263,10 @@ const { data: documentoAml, error: documentoAmlError } = await supabase
     public_doc_opened_at: null,
     public_doc_submitted_at: null,
     documento_richiesto_il: nowIso,
-    microsoft_connection_id:
-  microsoftConnectionIdInvio,
+    microsoft_connection_id: microsoftConnectionIdInvio,
     updated_at: nowIso,
   })
-  .eq("legacy_rapp_legale_id", recordId)
+  .eq("id", documentoAmlId)
   .eq("studio_id", studioId)
   .eq("attivo", true)
   .select("id")
