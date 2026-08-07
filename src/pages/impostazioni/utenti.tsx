@@ -463,33 +463,42 @@ const response = await fetch("/api/auth/create-user", {
     }
   };
 
-  const handleEdit = (utente: Utente) => {
-    setEditingUtente(utente);
-    setFormData({
-      nome: utente.nome,
-      cognome: utente.cognome,
-      email: utente.email,
-      tipo_utente: utente.tipo_utente as "Admin" | "User",
-      ruolo_operatore_id: utente.ruolo_operatore_id || "",
-      attivo: utente.attivo ?? true,
-      settore: (utente.settore as "Fiscale" | "Lavoro" | "Consulenza") || "",
-      responsabile: utente.responsabile ?? false,
-      responsabile_paghe: Boolean((utente as any).responsabile_paghe),
-      responsabile_ferie_permessi: Boolean((utente as any).responsabile_ferie_permessi),
-      microsoft_connection_id: utente.microsoft_connection_id || "",
-     tipo_rapporto:
-  ((utente as any).tipo_rapporto as
-    | "Dipendente"
-    | "Collaboratore"
-    | "Praticante"
-    | "Socio"
-    | null) ?? "",
-    });
+const handleEdit = (utente: Utente) => {
+  setEditingUtente(utente);
+
+  setFormData({
+    nome: utente.nome,
+    cognome: utente.cognome,
+    email: utente.email,
+    tipo_utente: utente.tipo_utente as "Admin" | "User",
+    ruolo_operatore_id: utente.ruolo_operatore_id || "",
+    attivo: utente.attivo ?? true,
+    settore:
+      (utente.settore as "Fiscale" | "Lavoro" | "Consulenza") || "",
+    responsabile: utente.responsabile ?? false,
+    responsabile_paghe: Boolean(
+      (utente as any).responsabile_paghe
+    ),
+    responsabile_ferie_permessi: Boolean(
+      (utente as any).responsabile_ferie_permessi
+    ),
+    microsoft_connection_id:
+      utente.microsoft_connection_id || "",
+    tipo_rapporto:
+      ((utente as any).tipo_rapporto as
+        | "Dipendente"
+        | "Collaboratore"
+        | "Praticante"
+        | "Socio"
+        | null) ?? "",
+
     utente_comunicazioni: Boolean(
-  (utente as any).utente_comunicazioni
-),
-    setDialogOpen(true);
-  };
+      (utente as any).utente_comunicazioni
+    ),
+  });
+
+  setDialogOpen(true);
+};
 
   const resetForm = () => {
     setFormData({
