@@ -38,21 +38,27 @@ export default function GestioneUtentiPage() {
     posti_disponibili: number;
   } | null>(null);
 
-  const [formData, setFormData] = useState({
-    nome: "",
-    cognome: "",
-    email: "",
-    tipo_utente: "User" as "Admin" | "User",
-    ruolo_operatore_id: "",
-    attivo: true,
-    settore: "" as "Fiscale" | "Lavoro" | "Consulenza" | "",
-    responsabile: false,
-    responsabile_paghe: false,
-    responsabile_ferie_permessi: false,
-    microsoft_connection_id: "",
-    tipo_rapporto: "" as "Dipendente" | "Collaboratore" | "Praticante" | "Socio" | "",
-  });
-
+const [formData, setFormData] = useState({
+  nome: "",
+  cognome: "",
+  email: "",
+  tipo_utente: "User" as "Admin" | "User",
+  ruolo_operatore_id: "",
+  attivo: true,
+  settore: "" as "Fiscale" | "Lavoro" | "Consulenza" | "",
+  responsabile: false,
+  responsabile_paghe: false,
+  responsabile_ferie_permessi: false,
+  microsoft_connection_id: "",
+  tipo_rapporto: "" as
+    | "Dipendente"
+    | "Collaboratore"
+    | "Praticante"
+    | "Socio"
+    | "",
+  utente_comunicazioni: false,
+});
+  
   useEffect(() => {
     checkAuthAndLoad();
   }, []);
