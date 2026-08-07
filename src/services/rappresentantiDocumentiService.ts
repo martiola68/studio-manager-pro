@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { sendEmailServer } from "@/services/sendEmailServer";
 
 type SendRichiestaDocumentoParams = {
-  recordId: string;
+  documentoAmlId: string;
   studioId: string;
   nomeDestinatario: string;
   email: string;
@@ -27,8 +27,8 @@ export async function sendRichiestaDocumentoRappresentante(
   }
 );
 
- const {
-  recordId,
+const {
+  documentoAmlId,
   studioId,
   nomeDestinatario,
   email,
@@ -38,11 +38,12 @@ export async function sendRichiestaDocumentoRappresentante(
   av4Id = null,
   note = "Invio richiesta documento da anagrafica rappresentante",
 } = params;
-
  let token = "";
 let userId: string | null = null;
 
-  if (!recordId) throw new Error("recordId mancante.");
+  if (!documentoAmlId) {
+  throw new Error("documentoAmlId mancante.");
+}
   if (!studioId) throw new Error("studio_id non disponibile.");
   if (!email || !String(email).trim()) {
     throw new Error("Il rappresentante non ha un indirizzo email valorizzato.");
