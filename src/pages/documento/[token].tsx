@@ -58,21 +58,50 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
-function mapRowToForm(row: any): PublicDocumentoFormState {
+function mapRowToForm(
+  documento: any,
+  soggetto: any
+): PublicDocumentoFormState {
   return {
-    id: String(row?.id ?? ""),
-    nome_cognome: row?.nome_cognome ?? "",
-    citta_residenza: row?.citta_residenza ?? "",
-    indirizzo_residenza: row?.indirizzo_residenza ?? "",
-    CAP: row?.CAP ?? "",
-    tipo_doc: row?.tipo_doc ?? "",
-    num_doc: row?.num_doc ?? "",
-    scadenza_doc: normalizeDateForInput(row?.scadenza_doc),
-    allegato_doc: row?.allegato_doc ?? "",
-    public_doc_token: row?.public_doc_token ?? "",
-    public_doc_enabled: !!row?.public_doc_enabled,
-    public_doc_opened_at: row?.public_doc_opened_at ?? "",
-    public_doc_submitted_at: row?.public_doc_submitted_at ?? "",
+    id: String(documento?.id ?? ""),
+
+    nome_cognome:
+      soggetto?.ragione_sociale ?? "",
+
+    citta_residenza:
+      soggetto?.citta ?? "",
+
+    indirizzo_residenza:
+      soggetto?.indirizzo ?? "",
+
+    CAP:
+      soggetto?.cap ?? "",
+
+    tipo_doc:
+      documento?.tipo_documento ?? "",
+
+    num_doc:
+      documento?.numero_documento ?? "",
+
+    scadenza_doc:
+      normalizeDateForInput(
+        documento?.scadenza_documento
+      ),
+
+    allegato_doc:
+      documento?.allegato_documento ?? "",
+
+    public_doc_token:
+      documento?.public_doc_token ?? "",
+
+    public_doc_enabled:
+      !!documento?.public_doc_enabled,
+
+    public_doc_opened_at:
+      documento?.public_doc_opened_at ?? "",
+
+    public_doc_submitted_at:
+      documento?.public_doc_submitted_at ?? "",
   };
 }
 
@@ -129,47 +158,131 @@ export default function PublicDocumentoPage() {
       setOkMsg("");
 
       try {
-        const { data, error } = await supabase
-          .from("rapp_legali")
-          .select("*")
-          .eq("public_doc_token", token)
-          .maybeSingle();
+     const {
+  data: documento,
+  error: documentoError,
+} = await supabase
+  .from("tbclienti_documenti_aml")
+  .select(`
+    id,
+    studio_id,
+    soggetto_cliente_id,
+    tipo_documento,
+    numero_documento,
+    scadenza_documento,
+    allegato_documento,
+    public_doc_token,
+    public_doc_enabled,
+    public_doc_opened_at,
+    public_doc_submitted_at
+  `)
+  .eq("public_doc_token", token)
+  .eq("attivo", true)
+  .maybeSingle();
 
-        if (error) {
-          console.error("Errore caricamento pagina pubblica documento:", error);
-          if (!cancelled) setNotFound(true);
-          return;
-        }
+if (documentoError) {
+  console.error(
+    "Errore caricamento documento AML:",
+    documentoError
+  );
 
-        if (!data) {
-          if (!cancelled) setNotFound(true);
-          return;
-        }
+  if (!cancelled) {
+    setNotFound(true);
+  }
 
-        if (!data.public_doc_enabled) {
-          if (!cancelled) setDisabledLink(true);
-          return;
-        }
+  return;
+}
 
-        const mapped = mapRowToForm(data);
+if (!documento) {
+  if (!cancelled) {
+    setNotFound(true);
+  }
 
-        if (cancelled) return;
+  return;
+}
 
-        setForm(mapped);
+if (!documento.public_doc_enabled) {
+  if (!cancelled) {
+    setDisabledLink(true);
+  }
 
-        if (mapped.public_doc_submitted_at) {
-          setCompleted(true);
-        }
+  return;
+}
 
-        if (!mapped.public_doc_opened_at) {
-          await supabase
-            .from("rapp_legali")
-            .update({
-              public_doc_opened_at: new Date().toISOString(),
-            })
-            .eq("id", mapped.id)
-            .eq("public_doc_token", token);
-        }
+/*
+ * Recuperiamo i dati anagrafici dalla
+ * fonte unica tbclienti.
+ */
+const {
+  data: soggetto,
+  error: soggettoError,
+} = await supabase
+  .from("tbclienti")
+  .select(`
+    id,
+    ragione_sociale,
+    citta,
+    indirizzo,
+    cap
+  `)
+  .eq(
+    "id",
+    documento.soggetto_cliente_id
+  )
+  .eq(
+    "studio_id",
+    documento.studio_id
+  )
+  .maybeSingle();
+
+if (soggettoError) {
+  console.error(
+    "Errore caricamento soggetto:",
+    soggettoError
+  );
+
+  if (!cancelled) {
+    setNotFound(true);
+  }
+
+  return;
+}
+
+if (!soggetto) {
+  if (!cancelled) {
+    setNotFound(true);
+  }
+
+  return;
+}
+
+const mapped = mapRowToForm(
+  documento,
+  soggetto
+);
+
+if (cancelled) return;
+
+setForm(mapped);
+
+if (mapped.public_doc_submitted_at) {
+  setCompleted(true);
+}
+
+/*
+ * Registriamo l'apertura direttamente
+ * sul documento AML.
+ */
+if (!mapped.public_doc_opened_at) {
+  await supabase
+    .from("tbclienti_documenti_aml")
+    .update({
+      public_doc_opened_at:
+        new Date().toISOString(),
+    })
+    .eq("id", documento.id)
+    .eq("public_doc_token", token);
+}
       } catch (err) {
         console.error("Errore imprevisto pagina pubblica documento:", err);
         if (!cancelled) setNotFound(true);
