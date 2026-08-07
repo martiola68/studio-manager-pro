@@ -279,30 +279,6 @@ if (documentoAmlError || !documentoAml?.id) {
   );
 }
 
-/*
- * Manteniamo sincronizzata anche la tabella legacy,
- * perché il portale pubblico la utilizza ancora.
- */
-const { error: updateLegacyError } = await supabase
-  .from("rapp_legali")
-  .update({
-    public_doc_token: token,
-    public_doc_enabled: true,
-    public_doc_sent_at: nowIso,
-    public_doc_opened_at: null,
-    public_doc_submitted_at: null,
-    doc_richiesto_il: nowIso,
-    microsoft_connection_id:
-  microsoftConnectionIdInvio,
-  })
-  .eq("id", recordId)
-  .eq("studio_id", studioId);
-
-if (updateLegacyError) {
-  throw new Error(
-    "Email inviata, ma non è stato possibile sincronizzare la tabella legacy."
-  );
-}
 
     const { error: logError } = await supabase.from("tbAMLComunicazioni").insert({
       studio_id: studioId,
