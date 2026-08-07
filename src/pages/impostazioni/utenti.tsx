@@ -211,6 +211,8 @@ responsabile_paghe: formData.responsabile_paghe,
 responsabile_ferie_permessi: formData.responsabile_ferie_permessi,
 microsoft_connection_id: formData.microsoft_connection_id || null,
   tipo_rapporto: formData.tipo_rapporto || null,
+          utente_comunicazioni:
+    formData.utente_comunicazioni,
 } as any);
 
         toast({
@@ -269,6 +271,8 @@ const response = await fetch("/api/auth/create-user", {
     responsabile_ferie_permessi: formData.responsabile_ferie_permessi,
     microsoft_connection_id: formData.microsoft_connection_id || null,
     tipo_rapporto: formData.tipo_rapporto || null,
+    utente_comunicazioni:
+    formData.utente_comunicazioni,
   }),
 });
 
@@ -290,6 +294,8 @@ const response = await fetch("/api/auth/create-user", {
             responsabile_ferie_permessi: formData.responsabile_ferie_permessi,
             microsoft_connection_id: formData.microsoft_connection_id || null,
             tipo_rapporto: formData.tipo_rapporto || null,
+            utente_comunicazioni:
+    formData.utente_comunicazioni,
           })
           .eq("id", result.userId);
 
@@ -473,6 +479,9 @@ const response = await fetch("/api/auth/create-user", {
     | "Socio"
     | null) ?? "",
     });
+    utente_comunicazioni: Boolean(
+  (utente as any).utente_comunicazioni
+),
     setDialogOpen(true);
   };
 
@@ -490,6 +499,7 @@ const response = await fetch("/api/auth/create-user", {
       responsabile_ferie_permessi: false,
       microsoft_connection_id: "",
       tipo_rapporto: "",
+      utente_comunicazioni: false,
     });
     setEditingUtente(null);
   };
@@ -802,6 +812,26 @@ const response = await fetch("/api/auth/create-user", {
       }))
     }
   />
+
+  <div className="flex items-center space-x-2">
+  <Checkbox
+    id="utente_comunicazioni"
+    checked={formData.utente_comunicazioni}
+    onCheckedChange={(checked) =>
+      setFormData((prev) => ({
+        ...prev,
+        utente_comunicazioni: !!checked,
+      }))
+    }
+  />
+
+  <Label
+    htmlFor="utente_comunicazioni"
+    className="cursor-pointer font-medium"
+  >
+    Utente comunicazioni di Studio
+  </Label>
+</div>
 
   <Label htmlFor="attivo" className="cursor-pointer font-medium">
     Utente attivo
