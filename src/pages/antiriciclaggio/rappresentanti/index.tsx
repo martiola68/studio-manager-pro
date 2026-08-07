@@ -23,6 +23,9 @@ import {
 
 type Rapp = {
   id: string;
+  documento_aml_id: string;
+  soggetto_cliente_id: string;
+
   studio_id: string;
   nome_cognome: string | null;
   codice_fiscale: string | null;
@@ -336,9 +339,9 @@ const [loadingMicrosoftConnections, setLoadingMicrosoftConnections] = useState(f
     try {
       const { data, error } = await supabase
   .from("vw_rappresentanti_aml")
-  .select(
-    "id, studio_id, nome_cognome, codice_fiscale, email, tipo_doc, scadenza_doc, allegato_doc, rappresentante_legale, doc_richiesto_il, microsoft_connection_id, created_at"
-  )
+.select(
+  "id, documento_aml_id, soggetto_cliente_id, studio_id, nome_cognome, codice_fiscale, email, tipo_doc, scadenza_doc, allegato_doc, rappresentante_legale, doc_richiesto_il, microsoft_connection_id, created_at"
+)
   .eq("studio_id", studioId)
   .order("nome_cognome", { ascending: true });
 
@@ -603,17 +606,17 @@ if (!resolvedMassivoConnectionId) {
 
 for (const r of candidati) {
   try {
-    await sendRichiestaDocumentoRappresentante({
-      recordId: r.id,
-      studioId,
-      nomeDestinatario: r.nome_cognome || "Cliente",
-      email: String(r.email || "").trim(),
-      nomeOperatore,
-      microsoftConnectionId: resolvedMassivoConnectionId,
-      clienteId: null,
-      av4Id: null,
-      note: "Invio massivo richiesta documento da elenco rappresentanti",
-    });
+   await sendRichiestaDocumentoRappresentante({
+  documentoAmlId: r.documento_aml_id,
+  studioId,
+  nomeDestinatario: r.nome_cognome || "Cliente",
+  email: String(r.email || "").trim(),
+  nomeOperatore,
+  microsoftConnectionId: resolvedMassivoConnectionId,
+  clienteId: null,
+  av4Id: null,
+  note: "Invio massivo richiesta documento da elenco rappresentanti",
+});
 
     okCount++;
   } catch (error: any) {
