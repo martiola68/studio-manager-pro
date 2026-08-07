@@ -303,12 +303,19 @@ if (documentoAmlError || !documentoAml?.id) {
     }
 
     return { ok: true, url, token };
-  } catch (error: any) {
+} catch (error: any) {
   try {
-  const rollbackTimestamp = new Date().toISOString();
+    const rollbackTimestamp =
+      new Date().toISOString();
 
-  await Promise.all([
-    supabase
+    /*
+     * Ripristiniamo esclusivamente il record
+     * ufficiale tbclienti_documenti_aml.
+     *
+     * Non utilizziamo più rapp_legali né
+     * legacy_rapp_legale_id.
+     */
+    await supabase
       .from("tbclienti_documenti_aml")
       .update({
         public_doc_token: null,
@@ -319,48 +326,43 @@ if (documentoAmlError || !documentoAml?.id) {
         documento_richiesto_il: null,
         updated_at: rollbackTimestamp,
       })
-      .eq("legacy_rapp_legale_id", recordId)
+      .eq("id", documentoAmlId)
       .eq("studio_id", studioId)
-      .eq("attivo", true),
+      .eq("attivo", true);
+  } catch (rollbackError) {
+    console.error(
+      "Errore rollback richiesta documento:",
+      rollbackError
+    );
+  }
 
-    supabase
-      .from("rapp_legali")
-      .update({
-        public_doc_token: null,
-        public_doc_enabled: false,
-        public_doc_sent_at: null,
-        public_doc_opened_at: null,
-        public_doc_submitted_at: null,
-        doc_richiesto_il: null,
-      })
-      .eq("id", recordId)
-      .eq("studio_id", studioId),
-  ]);
-} catch (rollbackError) {
-  console.error(
-    "Errore rollback richiesta documento:",
-    rollbackError
-  );
-}
-
-    try {
-      await supabase.from("tbAMLComunicazioni").insert({
+  try {
+    await supabase
+      .from("tbAMLComunicazioni")
+      .insert({
         studio_id: studioId,
-        tipo_comunicazione: "richiesta_documento",
+        tipo_comunicazione:
+          "richiesta_documento",
         cliente_id: clienteId,
         rapp_legale_id: null,
         av4_id: av4Id,
-        destinatario_email: destinatario,
+        destinatario_email:
+          destinatario,
         oggetto: subject,
-        body_preview: `Errore invio richiesta documento a ${destinatario}.`,
+        body_preview:
+          `Errore invio richiesta documento a ${destinatario}.`,
         stato_invio: "errore",
-        data_invio: new Date().toISOString(),
+        data_invio:
+          new Date().toISOString(),
         utente_id: userId,
-        public_token: token || null,
-        note: error?.message || "Errore durante l'invio della richiesta documento.",
+        public_token:
+          token || null,
+        note:
+          error?.message ||
+          "Errore durante l'invio della richiesta documento.",
       });
-    } catch {}
+  } catch {}
 
-    throw error;
-  }
+  throw error;
+}
 }
