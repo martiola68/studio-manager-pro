@@ -279,84 +279,103 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    const { data, error } = await supabase
-      .from("tbclienti_organi")
-.update({
-  soggetto_cliente_id: payload.soggetto_cliente_id || null,
+  const { data, error } = await supabase
+  .from("tbclienti_organi")
+  .update({
+    soggetto_cliente_id: payload.soggetto_cliente_id || null,
 
-  tipo_soggetto:
-    payload.tipo_soggetto === "societa"
-      ? "societa"
-      : "persona_fisica",
+    tipo_soggetto:
+      payload.tipo_soggetto === "societa"
+        ? "societa"
+        : "persona_fisica",
 
-  rappresentante_legale: payload.rappresentante_legale ?? false,
-  tipo_ruolo: payload.tipo_ruolo,
-  ruolo: payload.ruolo,
-       carica: payload.carica,
+    rappresentante_legale:
+      payload.rappresentante_legale ?? false,
 
-percentuale_partecipazione:
-  payload.ruolo === "socio"
-    ? payload.percentuale_partecipazione || null
-    : null,
+    tipo_ruolo: payload.tipo_ruolo,
+    ruolo: payload.ruolo,
+    carica: payload.carica,
 
-titolo_possesso:
-  payload.ruolo === "socio"
-    ? payload.titolo_possesso || "piena_proprieta"
-    : "piena_proprieta",
+    percentuale_partecipazione:
+      payload.ruolo === "socio"
+        ? payload.percentuale_partecipazione || null
+        : null,
 
-percentuale_diritti_voto:
-  payload.ruolo === "socio" &&
-  payload.percentuale_diritti_voto !== "" &&
-  payload.percentuale_diritti_voto !== undefined
-    ? payload.percentuale_diritti_voto
-    : null,
+    titolo_possesso:
+      payload.ruolo === "socio"
+        ? payload.titolo_possesso || "piena_proprieta"
+        : "piena_proprieta",
 
-percentuale_diritti_utili:
-  payload.ruolo === "socio" &&
-  payload.percentuale_diritti_utili !== "" &&
-  payload.percentuale_diritti_utili !== undefined
-    ? payload.percentuale_diritti_utili
-    : null,
+    percentuale_diritti_voto:
+      payload.ruolo === "socio" &&
+      payload.percentuale_diritti_voto !== "" &&
+      payload.percentuale_diritti_voto !== undefined
+        ? payload.percentuale_diritti_voto
+        : null,
 
-note_titolo_possesso:
-  payload.ruolo === "socio"
-    ? payload.note_titolo_possesso || null
-    : null,
+    percentuale_diritti_utili:
+      payload.ruolo === "socio" &&
+      payload.percentuale_diritti_utili !== "" &&
+      payload.percentuale_diritti_utili !== undefined
+        ? payload.percentuale_diritti_utili
+        : null,
 
-presenza: payload.presenza,
-principale: payload.principale,
-        attivo: payload.attivo,
-       data_nomina: payload.data_nomina || null,
-      durata_carica: payload.durata_carica || null,
-      data_scadenza: payload.data_scadenza || null,
-        data_cessazione: payload.data_cessazione || null,
-      })
-      .eq("id", payload.id)
-      .select()
-      .single();
+    note_titolo_possesso:
+      payload.ruolo === "socio"
+        ? payload.note_titolo_possesso || null
+        : null,
 
- if (error) {
+    presenza: payload.presenza,
+    principale: payload.principale,
+    attivo: payload.attivo,
+    data_nomina: payload.data_nomina || null,
+    durata_carica: payload.durata_carica || null,
+    data_scadenza: payload.data_scadenza || null,
+    data_cessazione: payload.data_cessazione || null,
+  })
+  .eq("id", payload.id)
+  .select();
+
+if (error) {
   return NextResponse.json(
     { error: error.message },
     { status: 500 }
   );
 }
 
+if (!data || data.length === 0) {
+  return NextResponse.json(
+    {
+      error:
+        "Il record dell'organo sociale non esiste più. Ricaricare la pagina e riprovare.",
+    },
+    { status: 404 }
+  );
+}
+
+const organoAggiornato = data[0];
+
 if (
-  data?.cliente_id &&
-  data?.soggetto_cliente_id &&
-  data?.principale === true &&
-  ruoloAggiornaRappLegale(data?.ruolo)
+  organoAggiornato?.cliente_id &&
+  organoAggiornato?.soggetto_cliente_id &&
+  organoAggiornato?.principale === true &&
+  ruoloAggiornaRappLegale(organoAggiornato?.ruolo)
 ) {
   await supabase
     .from("tbclienti")
     .update({
-      rapp_legale_id: data.soggetto_cliente_id,
+      rapp_legale_id:
+        organoAggiornato.soggetto_cliente_id,
     })
-    .eq("id", data.cliente_id);
+    .eq(
+      "id",
+      organoAggiornato.cliente_id
+    );
 }
 
-return NextResponse.json({ organo: data });
+return NextResponse.json({
+  organo: organoAggiornato,
+});
   } catch (err: any) {
     return NextResponse.json(
       { error: err.message || "Errore server" },
