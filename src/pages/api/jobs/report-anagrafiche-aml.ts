@@ -33,6 +33,7 @@ type ResponseData =
   | {
       ok: true;
       test: boolean;
+      filtro_operatore?: string | null;
       gruppi: number;
       anomalie: number;
       email_inviate?: number;
@@ -194,10 +195,9 @@ function aggregaPerRappresentante(
       gruppo.anomalie
   ) {
     const soggettoId =
-      String(
-        voce.soggetto_cliente_id ||
-          ""
-      ).trim();
+      normalizzaTesto(
+        voce.soggetto_cliente_id
+      );
 
     if (!soggettoId) {
       continue;
@@ -284,10 +284,9 @@ function aggregaPerRappresentante(
     }
 
     const clienteId =
-      String(
-        voce.cliente_id ||
-          ""
-      ).trim();
+      normalizzaTesto(
+        voce.cliente_id
+      );
 
     if (clienteId) {
       const giaPresente =
@@ -886,23 +885,51 @@ export default async function handler(
   try {
     /*
      * =========================================================
-     * TEST MODE
+     * PARAMETRI
      * =========================================================
-     *
-     * ?test=1
-     *
-     * NON invia email.
      */
     const testMode =
       req.query.test === "1";
+
+    const operatoreIdFiltro =
+      typeof req.query.operatore_id ===
+      "string"
+        ? req.query.operatore_id.trim()
+        : null;
 
     /*
      * =========================================================
      * GENERAZIONE REPORT
      * =========================================================
      */
-    const report =
+    const reportCompleto =
       await generaReportQualitaAnagraficheAML();
+
+    /*
+     * Se viene passato operatore_id,
+     * lavoriamo SOLO su quell'operatore.
+     */
+    const report =
+      operatoreIdFiltro
+        ? reportCompleto.filter(
+            (gruppo) =>
+              gruppo.operatore_id ===
+              operatoreIdFiltro
+          )
+        : reportCompleto;
+
+    if (
+      operatoreIdFiltro &&
+      report.length === 0
+    ) {
+      return res
+        .status(404)
+        .json({
+          ok: false,
+          error:
+            "Nessun report trovato per l'operatore indicato.",
+        });
+    }
 
     const totaleAnomalie =
       report.reduce(
@@ -928,6 +955,9 @@ export default async function handler(
         .json({
           ok: true,
           test: true,
+
+          filtro_operatore:
+            operatoreIdFiltro,
 
           gruppi:
             report.length,
@@ -978,9 +1008,6 @@ export default async function handler(
     const oggi =
       dataOggiKey();
 
-    /*
-     * Cache mittente per Studio.
-     */
     const mittentiStudio =
       new Map<
         string,
@@ -1150,7 +1177,7 @@ export default async function handler(
             );
 
           /*
-           * Verifica token Microsoft valido.
+           * Verifica token Microsoft.
            */
           const {
             data:
@@ -1252,7 +1279,7 @@ export default async function handler(
 
         /*
          * =====================================================
-         * LOG INVIO
+         * LOG
          * =====================================================
          */
         const {
@@ -1339,7 +1366,11 @@ export default async function handler(
       .status(200)
       .json({
         ok: true,
+
         test: false,
+
+        filtro_operatore:
+          operatoreIdFiltro,
 
         gruppi:
           report.length,
