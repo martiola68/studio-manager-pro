@@ -62,34 +62,34 @@ export default async function handler(
      * Lo usiamo per trovare il documento AML
      * tramite legacy_rapp_legale_id.
      */
-    const {
-      data: documento,
-      error: documentoError,
-    } = await supabaseAdmin
-      .from("tbclienti_documenti_aml")
-      .select(
-        `
-          id,
-          studio_id,
-          soggetto_cliente_id,
-          tipo_documento,
-          numero_documento,
-          scadenza_documento,
-          allegato_documento,
-          public_doc_token,
-          public_doc_enabled,
-          public_doc_sent_at,
-          public_doc_opened_at,
-          public_doc_submitted_at,
-          documento_richiesto_il,
-          microsoft_connection_id,
-         created_at,
-          updated_at
-        `
-      )
-     .eq("soggetto_cliente_id", id)
-      .eq("attivo", true)
-      .maybeSingle();
+   const {
+  data: documento,
+  error: documentoError,
+} = await supabaseAdmin
+  .from("tbclienti_documenti_aml")
+  .select(`
+    id,
+    studio_id,
+    soggetto_cliente_id,
+    tipo_documento,
+    numero_documento,
+    scadenza_documento,
+    allegato_documento,
+    public_doc_token,
+    public_doc_enabled,
+    public_doc_sent_at,
+    public_doc_opened_at,
+    public_doc_submitted_at,
+    documento_richiesto_il,
+    microsoft_connection_id,
+    created_at,
+    updated_at
+  `)
+  .eq("soggetto_cliente_id", id)
+  .eq("attivo", true)
+  .order("updated_at", { ascending: false })
+  .limit(1)
+  .maybeSingle();
 
     if (documentoError) {
       return res.status(500).json({
