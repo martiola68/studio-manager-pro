@@ -812,7 +812,9 @@ for (const r of candidati) {
                             title="Modifica"
                             className="h-8 w-8 p-0"
                             onClick={() =>
-                              router.push(`/antiriciclaggio/rappresentanti/nuovo?id=${r.documento_aml_id}`)
+                              router.push(
+                              `/antiriciclaggio/rappresentanti/nuovo?id=${r.soggetto_cliente_id}`
+                                )
                             }
                           >
                             <Pencil className="h-4 w-4" />
