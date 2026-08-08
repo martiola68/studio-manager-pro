@@ -8,7 +8,6 @@ import { createClient } from "@supabase/supabase-js";
 import {
   generaReportQualitaAnagraficheAML,
   type ReportOperatoreAML,
-  type AnomaliaAnagraficaAML,
 } from "@/services/anagraficheQualityReport";
 
 import { sendEmailServer } from "@/services/sendEmailServer";
@@ -46,37 +45,6 @@ type ResponseData =
       error: string;
     };
 
-function formatDateEU(
-  value: string | null | undefined
-): string {
-  if (!value) return "-";
-
-  const raw =
-    value.includes("T")
-      ? value.split("T")[0]
-      : value;
-
-  const parts =
-    raw.split("-");
-
-  if (parts.length !== 3) {
-    return value;
-  }
-
-  return `${parts[2]}/${parts[1]}/${parts[0]}`;
-}
-
-function escapeHtml(
-  value: string | null | undefined
-): string {
-  return String(value || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
 type AnomaliaAggregata = {
   soggetto_cliente_id: string;
   rappresentante: string;
@@ -95,6 +63,66 @@ type AnomaliaAggregata = {
   }[];
 };
 
+function normalizzaTesto(
+  value: string | null | undefined
+): string {
+  return String(value || "").trim();
+}
+
+function escapeHtml(
+  value: string | null | undefined
+): string {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function formatDateEU(
+  value: string | null | undefined
+): string {
+  if (!value) {
+    return "-";
+  }
+
+  const raw =
+    value.includes("T")
+      ? value.split("T")[0]
+      : value;
+
+  const parts =
+    raw.split("-");
+
+  if (parts.length !== 3) {
+    return value;
+  }
+
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
+function labelAnomalia(
+  codice: string
+): string {
+  switch (codice) {
+    case "EMAIL_MANCANTE":
+      return "Email mancante";
+
+    case "EMAIL_NON_VALIDA":
+      return "Email non valida";
+
+    case "DOCUMENTO_SCADUTO":
+      return "Documento scaduto";
+
+    case "DOCUMENTO_IN_SCADENZA_60_GIORNI":
+      return "Documento in scadenza entro 60 giorni";
+
+    default:
+      return codice;
+  }
+}
+
 function aggregaPerRappresentante(
   gruppo: ReportOperatoreAML
 ): AnomaliaAggregata[] {
@@ -108,15 +136,26 @@ function aggregaPerRappresentante(
     const voce of
       gruppo.anomalie
   ) {
-    const key =
-      voce.soggetto_cliente_id;
+    const soggettoId =
+      String(
+        voce.soggetto_cliente_id ||
+          ""
+      );
 
-    if (!map.has(key)) {
+    if (!soggettoId) {
+      continue;
+    }
+
+    if (
+      !map.has(
+        soggettoId
+      )
+    ) {
       map.set(
-        key,
+        soggettoId,
         {
           soggetto_cliente_id:
-            voce.soggetto_cliente_id,
+            soggettoId,
 
           rappresentante:
             voce.rappresentante,
@@ -146,8 +185,13 @@ function aggregaPerRappresentante(
     }
 
     const aggregato =
-      map.get(key)!;
+      map.get(
+        soggettoId
+      )!;
 
+    /*
+     * Uniamo le anomalie.
+     */
     for (
       const anomalia of
         voce.anomalie
@@ -163,21 +207,62 @@ function aggregaPerRappresentante(
       }
     }
 
-    const societaGiaPresente =
-      aggregato.societa.some(
-        (s) =>
-          s.cliente_id ===
-          voce.cliente_id
+    /*
+     * Uniamo le società.
+     *
+     * Lo stesso amministratore può essere
+     * rappresentante di più società.
+     */
+    const clienteId =
+      String(
+        voce.cliente_id || ""
       );
 
-    if (!societaGiaPresente) {
-      aggregato.societa.push({
-        cliente_id:
-          voce.cliente_id,
+    if (clienteId) {
+      const giaPresente =
+        aggregato.societa.some(
+          (societa) =>
+            societa.cliente_id ===
+            clienteId
+        );
 
-        cliente:
-          voce.cliente,
-      });
+      if (!giaPresente) {
+        aggregato.societa.push({
+          cliente_id:
+            clienteId,
+
+          cliente:
+            voce.cliente,
+        });
+      }
+    }
+
+    /*
+     * Manteniamo eventuali dati documento
+     * se la prima riga aggregata non li aveva.
+     */
+    if (
+      !aggregato.documento_aml_id &&
+      voce.documento_aml_id
+    ) {
+      aggregato.documento_aml_id =
+        voce.documento_aml_id;
+    }
+
+    if (
+      !aggregato.tipo_documento &&
+      voce.tipo_documento
+    ) {
+      aggregato.tipo_documento =
+        voce.tipo_documento;
+    }
+
+    if (
+      !aggregato.scadenza_documento &&
+      voce.scadenza_documento
+    ) {
+      aggregato.scadenza_documento =
+        voce.scadenza_documento;
     }
   }
 
@@ -187,19 +272,22 @@ function aggregaPerRappresentante(
     );
 
   for (
-    const voce of
+    const rappresentante of
       result
   ) {
-    voce.societa.sort(
+    rappresentante.societa.sort(
       (a, b) =>
         a.cliente.localeCompare(
           b.cliente,
           "it",
           {
-            sensitivity: "base",
+            sensitivity:
+              "base",
           }
         )
     );
+
+    rappresentante.anomalie.sort();
   }
 
   result.sort(
@@ -208,33 +296,13 @@ function aggregaPerRappresentante(
         b.rappresentante,
         "it",
         {
-          sensitivity: "base",
+          sensitivity:
+            "base",
         }
       )
   );
 
   return result;
-}
-
-function labelAnomalia(
-  codice: string
-): string {
-  switch (codice) {
-    case "EMAIL_MANCANTE":
-      return "Email mancante";
-
-    case "EMAIL_NON_VALIDA":
-      return "Email non valida";
-
-    case "DOCUMENTO_SCADUTO":
-      return "Documento scaduto";
-
-    case "DOCUMENTO_IN_SCADENZA_60_GIORNI":
-      return "Documento in scadenza entro 60 giorni";
-
-    default:
-      return codice;
-  }
 }
 
 function buildHtml(
@@ -248,60 +316,99 @@ function buildHtml(
   const righe =
     rappresentanti
       .map(
-        (r) => {
-          const societaHtml =
-            r.societa
+        (rappresentante) => {
+          const societa =
+            rappresentante.societa
               .map(
-                (s) =>
-                  `<div>${escapeHtml(
-                    s.cliente
-                  )}</div>`
+                (societa) =>
+                  `<div style="margin-bottom:3px;">
+                    ${escapeHtml(
+                      societa.cliente
+                    )}
+                  </div>`
               )
               .join("");
 
-          const anomalieHtml =
-            r.anomalie
+          const anomalie =
+            rappresentante.anomalie
               .map(
-                (a) =>
-                  `<div>${escapeHtml(
-                    labelAnomalia(a)
-                  )}</div>`
+                (anomalia) =>
+                  `<div style="margin-bottom:3px;">
+                    ${escapeHtml(
+                      labelAnomalia(
+                        anomalia
+                      )
+                    )}
+                  </div>`
               )
               .join("");
 
           return `
             <tr>
-              <td style="border:1px solid #d1d5db;padding:8px;vertical-align:top;">
-                <strong>${escapeHtml(
-                  r.rappresentante
-                )}</strong>
+              <td
+                style="
+                  border:1px solid #d1d5db;
+                  padding:8px;
+                  vertical-align:top;
+                "
+              >
+                <strong>
+                  ${escapeHtml(
+                    rappresentante.rappresentante
+                  )}
+                </strong>
+
                 ${
-                  r.codice_fiscale
-                    ? `<div style="font-size:12px;color:#6b7280;">
-                        CF: ${escapeHtml(
-                          r.codice_fiscale
+                  rappresentante.codice_fiscale
+                    ? `
+                      <div
+                        style="
+                          margin-top:3px;
+                          color:#6b7280;
+                          font-size:12px;
+                        "
+                      >
+                        CF:
+                        ${escapeHtml(
+                          rappresentante.codice_fiscale
                         )}
-                      </div>`
+                      </div>
+                    `
                     : ""
                 }
               </td>
 
-              <td style="border:1px solid #d1d5db;padding:8px;vertical-align:top;">
-                ${societaHtml}
+              <td
+                style="
+                  border:1px solid #d1d5db;
+                  padding:8px;
+                  vertical-align:top;
+                "
+              >
+                ${societa || "-"}
               </td>
 
-              <td style="border:1px solid #d1d5db;padding:8px;vertical-align:top;">
-                ${anomalieHtml}
+              <td
+                style="
+                  border:1px solid #d1d5db;
+                  padding:8px;
+                  vertical-align:top;
+                "
+              >
+                ${anomalie || "-"}
               </td>
 
-              <td style="border:1px solid #d1d5db;padding:8px;vertical-align:top;">
-                ${
-                  r.scadenza_documento
-                    ? formatDateEU(
-                        r.scadenza_documento
-                      )
-                    : "-"
-                }
+              <td
+                style="
+                  border:1px solid #d1d5db;
+                  padding:8px;
+                  vertical-align:top;
+                  white-space:nowrap;
+                "
+              >
+                ${formatDateEU(
+                  rappresentante.scadenza_documento
+                )}
               </td>
             </tr>
           `;
@@ -310,8 +417,17 @@ function buildHtml(
       .join("");
 
   return `
-    <div style="font-family:Arial,sans-serif;font-size:14px;color:#111827;line-height:1.5;">
-      <p>Buongiorno,</p>
+    <div
+      style="
+        font-family:Arial,sans-serif;
+        font-size:14px;
+        color:#111827;
+        line-height:1.5;
+      "
+    >
+      <p>
+        Buongiorno,
+      </p>
 
       <p>
         Studio Manager Pro ha rilevato alcune anomalie
@@ -320,9 +436,10 @@ function buildHtml(
       </p>
 
       <p>
-        È necessario verificare e aggiornare i dati segnalati,
-        con particolare attenzione agli indirizzi email,
-        indispensabili per l'invio automatico delle comunicazioni AML.
+        È necessario verificare e aggiornare i dati segnalati.
+        In particolare, l'indirizzo email del rappresentante
+        è obbligatorio perché necessario per le comunicazioni
+        automatiche relative agli adempimenti antiriciclaggio.
       </p>
 
       <table
@@ -333,20 +450,48 @@ function buildHtml(
         "
       >
         <thead>
-          <tr style="background:#f3f4f6;">
-            <th style="border:1px solid #d1d5db;padding:8px;text-align:left;">
+          <tr
+            style="
+              background:#f3f4f6;
+            "
+          >
+            <th
+              style="
+                border:1px solid #d1d5db;
+                padding:8px;
+                text-align:left;
+              "
+            >
               Rappresentante
             </th>
 
-            <th style="border:1px solid #d1d5db;padding:8px;text-align:left;">
+            <th
+              style="
+                border:1px solid #d1d5db;
+                padding:8px;
+                text-align:left;
+              "
+            >
               Società collegate
             </th>
 
-            <th style="border:1px solid #d1d5db;padding:8px;text-align:left;">
+            <th
+              style="
+                border:1px solid #d1d5db;
+                padding:8px;
+                text-align:left;
+              "
+            >
               Anomalie
             </th>
 
-            <th style="border:1px solid #d1d5db;padding:8px;text-align:left;">
+            <th
+              style="
+                border:1px solid #d1d5db;
+                padding:8px;
+                text-align:left;
+              "
+            >
               Scadenza documento
             </th>
           </tr>
@@ -357,8 +502,13 @@ function buildHtml(
         </tbody>
       </table>
 
-      <p style="margin-top:18px;">
-        Si richiede l'aggiornamento delle anagrafiche
+      <p
+        style="
+          margin-top:18px;
+        "
+      >
+        Ogni operatore responsabile è tenuto
+        ad aggiornare le anagrafiche segnalate
         direttamente in Studio Manager Pro.
       </p>
 
@@ -381,43 +531,49 @@ function buildText(
   const righe =
     rappresentanti
       .map(
-        (r) => {
+        (rappresentante) => {
           const societa =
-            r.societa
+            rappresentante.societa
               .map(
-                (s) =>
-                  `- ${s.cliente}`
+                (societa) =>
+                  `- ${societa.cliente}`
               )
               .join("\n");
 
           const anomalie =
-            r.anomalie
+            rappresentante.anomalie
               .map(
-                (a) =>
+                (anomalia) =>
                   `- ${labelAnomalia(
-                    a
+                    anomalia
                   )}`
               )
               .join("\n");
 
           return `
-${r.rappresentante}
-${r.codice_fiscale ? `CF: ${r.codice_fiscale}` : ""}
+${rappresentante.rappresentante}
+${
+  rappresentante.codice_fiscale
+    ? `CF: ${rappresentante.codice_fiscale}`
+    : ""
+}
 
-Società:
-${societa}
+Società collegate:
+${societa || "-"}
 
 Anomalie:
-${anomalie}
+${anomalie || "-"}
 
 Scadenza documento:
 ${formatDateEU(
-  r.scadenza_documento
+  rappresentante.scadenza_documento
 )}
           `.trim();
         }
       )
-      .join("\n\n-----------------------------\n\n");
+      .join(
+        "\n\n----------------------------------------\n\n"
+      );
 
   return `
 Buongiorno,
@@ -426,14 +582,15 @@ Studio Manager Pro ha rilevato alcune anomalie
 nelle anagrafiche dei rappresentanti legali
 relative ai clienti assegnati.
 
-È necessario verificare e aggiornare i dati segnalati,
-con particolare attenzione agli indirizzi email,
-indispensabili per l'invio automatico delle comunicazioni AML.
+È necessario verificare e aggiornare i dati segnalati.
+
+L'indirizzo email del rappresentante è obbligatorio
+perché necessario per le comunicazioni automatiche AML.
 
 ${righe}
 
-Si richiede l'aggiornamento delle anagrafiche
-direttamente in Studio Manager Pro.
+Ogni operatore responsabile è tenuto ad aggiornare
+le anagrafiche segnalate direttamente in Studio Manager Pro.
 
 Questa comunicazione è generata automaticamente
 dal controllo qualità delle anagrafiche AML.
@@ -486,13 +643,18 @@ export default async function handler(
      * TEST MODE
      * =========================================================
      *
-     * /api/jobs/report-anagrafiche-aml?test=1
+     * ?test=1
      *
-     * Nessuna email viene inviata.
+     * NON invia email.
      */
     const testMode =
       req.query.test === "1";
 
+    /*
+     * =========================================================
+     * GENERAZIONE REPORT
+     * =========================================================
+     */
     const report =
       await generaReportQualitaAnagraficheAML();
 
@@ -507,20 +669,35 @@ export default async function handler(
         0
       );
 
+    /*
+     * =========================================================
+     * TEST
+     * =========================================================
+     */
     if (testMode) {
       return res
         .status(200)
         .json({
           ok: true,
           test: true,
+
           gruppi:
             report.length,
+
           anomalie:
             totaleAnomalie,
+
           data:
             report.map(
               (gruppo) => ({
-                ...gruppo,
+                studio_id:
+                  gruppo.studio_id,
+
+                operatore_id:
+                  gruppo.operatore_id,
+
+                email_operatore:
+                  gruppo.email_operatore,
 
                 rappresentanti:
                   aggregaPerRappresentante(
@@ -548,30 +725,51 @@ export default async function handler(
     const oggi =
       dataOggiKey();
 
+    /*
+     * Cache per non cercare l'Utente comunicazioni
+     * dello stesso Studio ad ogni operatore.
+     */
+    const mittentiStudio =
+      new Map<
+        string,
+        {
+          senderUserId: string;
+          microsoftConnectionId: string;
+        }
+      >();
+
     for (
       const gruppo of
         report
     ) {
       try {
+        const emailOperatore =
+          normalizzaTesto(
+            gruppo.email_operatore
+          );
+
+        if (!emailOperatore) {
+          throw new Error(
+            "Email operatore mancante."
+          );
+        }
+
+        /*
+         * =====================================================
+         * MARKER UNIVOCO
+         * =====================================================
+         */
+        const markerUnivoco =
+          `QUALITA_ANAGRAFICHE_AML:${gruppo.studio_id}:${gruppo.operatore_id}:${oggi}`;
+
         /*
          * =====================================================
          * ANTI-DUPLICAZIONE
          * =====================================================
-         *
-         * Usiamo tbalert_log.
-         *
-         * Una sola email:
-         *
-         * studio
-         * + operatore
-         * + giorno
-         * + tipo report
          */
-        const chiave =
-          `QUALITA_ANAGRAFICHE_AML:${gruppo.studio_id}:${gruppo.operatore_id}:${oggi}`;
-
         const {
-          data: logEsistente,
+          data:
+            logEsistente,
           error:
             logLookupError,
         } =
@@ -581,20 +779,28 @@ export default async function handler(
             )
             .select("id")
             .eq(
-              "tipo",
-              "QUALITA_ANAGRAFICHE_AML"
-            )
-            .eq(
               "studio_id",
               gruppo.studio_id
             )
             .eq(
-              "utente_id",
+              "modulo",
+              "anagrafiche_aml"
+            )
+            .eq(
+              "tipo_alert",
+              "qualita_anagrafiche_aml"
+            )
+            .eq(
+              "destinatario_utente_id",
               gruppo.operatore_id
             )
             .eq(
-              "chiave",
-              chiave
+              "marker_univoco",
+              markerUnivoco
+            )
+            .eq(
+              "email_inviata",
+              true
             )
             .limit(1)
             .maybeSingle();
@@ -616,115 +822,130 @@ export default async function handler(
 
         /*
          * =====================================================
-         * UTENTE COMUNICAZIONI DELLO STUDIO
+         * MITTENTE DELLO STUDIO
          * =====================================================
          */
-        const {
-          data:
-            utenteComunicazioni,
-          error:
-            utenteComunicazioniError,
-        } =
-          await supabaseAdmin
-            .from("tbutenti")
-            .select(`
-              id,
-              microsoft_connection_id
-            `)
-            .eq(
-              "studio_id",
-              gruppo.studio_id
-            )
-            .eq(
-              "utente_comunicazioni",
-              true
-            )
-            .eq(
-              "attivo",
-              true
-            )
-            .maybeSingle();
-
-        if (
-          utenteComunicazioniError
-        ) {
-          throw new Error(
-            utenteComunicazioniError.message
-          );
-        }
-
-        if (
-          !utenteComunicazioni?.id
-        ) {
-          throw new Error(
-            "Utente comunicazioni dello Studio non configurato."
-          );
-        }
-
-        if (
-          !utenteComunicazioni
-            .microsoft_connection_id
-        ) {
-          throw new Error(
-            "Connessione Microsoft 365 dell'Utente comunicazioni non configurata."
-          );
-        }
-
-        const senderUserId =
-          String(
-            utenteComunicazioni.id
+        let mittente =
+          mittentiStudio.get(
+            gruppo.studio_id
           );
 
-        const microsoftConnectionId =
-          String(
-            utenteComunicazioni
+        if (!mittente) {
+          const {
+            data:
+              utenteComunicazioni,
+            error:
+              utenteComunicazioniError,
+          } =
+            await supabaseAdmin
+              .from("tbutenti")
+              .select(`
+                id,
+                microsoft_connection_id
+              `)
+              .eq(
+                "studio_id",
+                gruppo.studio_id
+              )
+              .eq(
+                "utente_comunicazioni",
+                true
+              )
+              .eq(
+                "attivo",
+                true
+              )
+              .maybeSingle();
+
+          if (
+            utenteComunicazioniError
+          ) {
+            throw new Error(
+              utenteComunicazioniError.message
+            );
+          }
+
+          if (
+            !utenteComunicazioni?.id
+          ) {
+            throw new Error(
+              "Utente comunicazioni dello Studio non configurato."
+            );
+          }
+
+          if (
+            !utenteComunicazioni
               .microsoft_connection_id
-          );
+          ) {
+            throw new Error(
+              "L'Utente comunicazioni non ha una connessione Microsoft 365 configurata."
+            );
+          }
 
-        /*
-         * =====================================================
-         * CONTROLLO TOKEN MICROSOFT
-         * =====================================================
-         */
-        const {
-          data:
-            tokenMicrosoft,
-          error:
-            tokenMicrosoftError,
-        } =
-          await supabaseAdmin
-            .from(
-              "tbmicrosoft365_user_tokens"
-            )
-            .select("user_id")
-            .eq(
-              "user_id",
-              senderUserId
-            )
-            .eq(
-              "microsoft_connection_id",
-              microsoftConnectionId
-            )
-            .is(
-              "revoked_at",
-              null
-            )
-            .limit(1)
-            .maybeSingle();
+          const senderUserId =
+            String(
+              utenteComunicazioni.id
+            );
 
-        if (
-          tokenMicrosoftError
-        ) {
-          throw new Error(
-            tokenMicrosoftError.message
-          );
-        }
+          const microsoftConnectionId =
+            String(
+              utenteComunicazioni
+                .microsoft_connection_id
+            );
 
-        if (
-          !tokenMicrosoft?.user_id
-        ) {
-          throw new Error(
-            "L'Utente comunicazioni non dispone di un token Microsoft 365 valido."
+          /*
+           * Verifica token Microsoft.
+           */
+          const {
+            data:
+              tokenMicrosoft,
+            error:
+              tokenMicrosoftError,
+          } =
+            await supabaseAdmin
+              .from(
+                "tbmicrosoft365_user_tokens"
+              )
+              .select("user_id")
+              .eq(
+                "user_id",
+                senderUserId
+              )
+              .eq(
+                "microsoft_connection_id",
+                microsoftConnectionId
+              )
+              .is(
+                "revoked_at",
+                null
+              )
+              .limit(1)
+              .maybeSingle();
+
+          if (
+            tokenMicrosoftError
+          ) {
+            throw new Error(
+              tokenMicrosoftError.message
+            );
+          }
+
+          if (
+            !tokenMicrosoft?.user_id
+          ) {
+            throw new Error(
+              "L'Utente comunicazioni non dispone di un token Microsoft 365 valido."
+            );
+          }
+
+          mittente = {
+            senderUserId,
+            microsoftConnectionId,
+          };
+
+          mittentiStudio.set(
+            gruppo.studio_id,
+            mittente
           );
         }
 
@@ -748,12 +969,14 @@ export default async function handler(
 
         const emailResult =
           await sendEmailServer({
-            senderUserId,
+            senderUserId:
+              mittente.senderUserId,
 
-            microsoftConnectionId,
+            microsoftConnectionId:
+              mittente.microsoftConnectionId,
 
             to:
-              gruppo.email_operatore,
+              emailOperatore,
 
             subject,
 
@@ -767,13 +990,13 @@ export default async function handler(
         ) {
           throw new Error(
             emailResult.error ||
-              "Errore invio email"
+              "Errore durante l'invio email."
           );
         }
 
         /*
          * =====================================================
-         * LOG INVIO
+         * LOG
          * =====================================================
          */
         const {
@@ -788,21 +1011,43 @@ export default async function handler(
               studio_id:
                 gruppo.studio_id,
 
-              utente_id:
+              modulo:
+                "anagrafiche_aml",
+
+              riferimento_tabella:
+                "tbclienti_organi",
+
+              riferimento_id:
+                null,
+
+              tipo_alert:
+                "qualita_anagrafiche_aml",
+
+              data_scadenza:
+                null,
+
+              giorni_preavviso:
+                null,
+
+              destinatario_utente_id:
                 gruppo.operatore_id,
 
-              tipo:
-                "QUALITA_ANAGRAFICHE_AML",
+              destinatario_email:
+                emailOperatore,
 
-              chiave,
+              messaggio_interno_creato:
+                false,
 
-              destinatario:
-                gruppo.email_operatore,
+              email_inviata:
+                true,
 
-              oggetto:
-                subject,
+              marker_univoco:
+                markerUnivoco,
 
-              data_invio:
+              errore:
+                null,
+
+              inviato_at:
                 new Date()
                   .toISOString(),
             });
@@ -811,7 +1056,7 @@ export default async function handler(
           logInsertError
         ) {
           throw new Error(
-            `Email inviata a ${gruppo.email_operatore}, ma il log non è stato salvato: ${logInsertError.message}`
+            `Email inviata correttamente a ${emailOperatore}, ma il log non è stato salvato: ${logInsertError.message}`
           );
         }
 
@@ -869,7 +1114,7 @@ export default async function handler(
 
         error:
           error?.message ||
-          "Errore durante il report qualità anagrafiche AML",
+          "Errore durante la generazione del report qualità anagrafiche AML",
       });
   }
 }
