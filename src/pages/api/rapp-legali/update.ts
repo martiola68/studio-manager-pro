@@ -88,90 +88,55 @@ export default async function handler(
       });
     }
 
-    /*
-     * 1. Recuperiamo il rappresentante legacy.
-     * L'id ricevuto dal frontend è ancora
-     * rapp_legali.id.
-     */
-    const {
-      data: rappresentanteLegacy,
-      error: legacyLookupError,
-    } = await supabaseAdmin
-      .from("rapp_legali")
-      .select(
-        `
-          id,
-          studio_id,
-          codice_fiscale
-        `
-      )
-      .eq("id", id)
-      .maybeSingle();
-
-    if (
-      legacyLookupError ||
-      !rappresentanteLegacy?.id
-    ) {
-      return res.status(404).json({
-        ok: false,
-        error:
-          legacyLookupError?.message ||
-          "Rappresentante non trovato",
-      });
-    }
-
-    const studioId = String(
-      rappresentanteLegacy.studio_id || ""
-    );
-
-    if (!studioId) {
-      return res.status(400).json({
-        ok: false,
-        error:
-          "Studio del rappresentante non disponibile",
-      });
-    }
-
-    /*
-     * 2. Recuperiamo il documento AML collegato
-     * tramite legacy_rapp_legale_id.
-     */
-  const {
+  /*
+ * 1. L'id ricevuto dal frontend è direttamente
+ * tbclienti_documenti_aml.id.
+ */
+const {
   data: documentoAml,
   error: documentoLookupError,
 } = await supabaseAdmin
   .from("tbclienti_documenti_aml")
-  .select(
-    `
-      id,
-      soggetto_cliente_id,
-      studio_id,
-      scadenza_documento
-    `
-  )
-  .eq("legacy_rapp_legale_id", id)
-  .eq("studio_id", studioId)
+  .select(`
+    id,
+    soggetto_cliente_id,
+    studio_id,
+    scadenza_documento
+  `)
+  .eq("id", id)
   .eq("attivo", true)
   .maybeSingle();
 
-    if (documentoLookupError) {
-      return res.status(500).json({
-        ok: false,
-        error: documentoLookupError.message,
-      });
-    }
+if (documentoLookupError) {
+  return res.status(500).json({
+    ok: false,
+    error: documentoLookupError.message,
+  });
+}
 
-    if (
-      !documentoAml?.id ||
-      !documentoAml?.soggetto_cliente_id
-    ) {
-      return res.status(409).json({
-        ok: false,
-        error:
-          "Collegamento con il documento AML non trovato. Verificare la migrazione del rappresentante.",
-      });
-    }
+if (
+  !documentoAml?.id ||
+  !documentoAml?.soggetto_cliente_id
+) {
+  return res.status(404).json({
+    ok: false,
+    error:
+      "Documento AML del rappresentante non trovato",
+  });
+}
 
+const studioId = String(
+  documentoAml.studio_id || ""
+);
+
+if (!studioId) {
+  return res.status(400).json({
+    ok: false,
+    error:
+      "Studio del rappresentante non disponibile",
+  });
+}
+  
     const soggettoClienteId = String(
       documentoAml.soggetto_cliente_id
     );
@@ -642,102 +607,22 @@ if (!nuovaScadenzaDocumento) {
   }
 }
 
-/*
- * 7. Manteniamo sincronizzata la tabella
- * legacy finché il lato pubblico e tutte
- * le pratiche non saranno migrati.
- */
-    const payloadLegacy = {
-      nome_cognome:
-        nomeCognome,
+return res.status(200).json({
+  ok: true,
+  data: {
+    id: documentoAggiornato.id,
+    studio_id: studioId,
+    soggetto_cliente_id:
+      soggettoClienteId,
 
-      codice_fiscale:
-        codiceFiscale,
+    soggetto:
+      soggettoAggiornato,
 
-      luogo_nascita:
-        testoPulito(
-          body.luogo_nascita
-        ),
-
-      data_nascita:
-        body.data_nascita || null,
-
-      citta_residenza:
-        testoPulito(
-          body.citta_residenza
-        ),
-
-      indirizzo_residenza:
-        testoPulito(
-          body.indirizzo_residenza
-        ),
-
-      CAP:
-        testoPulito(body.CAP),
-
-      nazionalita:
-        testoPulito(
-          body.nazionalita
-        ),
-
-      email:
-        testoPulito(body.email),
-
-      tipo_doc:
-        testoPulito(body.tipo_doc),
-
-      num_doc:
-        testoPulito(body.num_doc),
-
-      scadenza_doc:
-        body.scadenza_doc || null,
-
-      allegato_doc:
-        testoPulito(
-          body.allegato_doc
-        ),
-
-      rappresentante_legale:
-        body.rappresentante_legale ??
-        false,
-
-      updated_at:
-        new Date().toISOString(),
-    };
-
-    const {
-      data: legacyAggiornato,
-      error: legacyUpdateError,
-    } = await supabaseAdmin
-      .from("rapp_legali")
-      .update(payloadLegacy)
-      .eq("id", id)
-      .eq("studio_id", studioId)
-      .select()
-      .single();
-
-    if (legacyUpdateError) {
-      return res.status(500).json({
-        ok: false,
-        error: legacyUpdateError.message,
-      });
-    }
-
-    return res.status(200).json({
-      ok: true,
-      data: {
-        ...legacyAggiornato,
-
-        soggetto_cliente_id:
-          soggettoClienteId,
-
-        soggetto:
-          soggettoAggiornato,
-
-        documento_aml:
-          documentoAggiornato,
-      },
-    });
+    documento_aml:
+      documentoAggiornato,
+  },
+});
+    
   } catch (error: any) {
     console.error(
       "Errore aggiornamento rappresentante:",
