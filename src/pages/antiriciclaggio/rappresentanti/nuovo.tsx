@@ -70,6 +70,10 @@ type FormState = {
 type RappLegaleRow = {
   id?: string;
   studio_id?: string;
+
+  soggetto_cliente_id?: string | null;
+  documento_aml_id?: string | null;
+
   nome_cognome?: string | null;
   codice_fiscale?: string | null;
   luogo_nascita?: string | null;
@@ -250,6 +254,10 @@ export default function NuovoRappresentantePage() {
       : "";
 
   const [studioId, setStudioId] = useState<string>("");
+
+  const [documentoAmlId, setDocumentoAmlId] =
+  useState<string>("");
+  
   const [form, setForm] = useState<FormState>(initialFormState);
   const [initialLoadedForm, setInitialLoadedForm] =
     useState<FormState>(initialFormState);
@@ -446,6 +454,12 @@ export default function NuovoRappresentantePage() {
         if (cancelled) return;
 
         const mapped = mapRowToForm(row);
+
+        setDocumentoAmlId(
+  row.documento_aml_id
+    ? String(row.documento_aml_id)
+    : ""
+);
 
         setForm((prev) => ({
           ...mapped,
@@ -663,10 +677,12 @@ async function handleUploadDoc(file: File) {
 
 async function handleInviaRichiestaDocumento() {
   try {
-    if (!recordId) {
-      alert("Salva prima il rappresentante.");
-      return;
-    }
+  if (!documentoAmlId) {
+  alert(
+    "Documento AML non disponibile. Salva prima il rappresentante."
+  );
+  return;
+}
 
     if (!studioId) {
       alert("studio_id non disponibile.");
@@ -700,8 +716,9 @@ async function handleInviaRichiestaDocumento() {
     setSendingPublicDoc(true);
 
 const result = await sendRichiestaDocumentoRappresentante({
-  documentoAmlId: recordId,
+  documentoAmlId,
   studioId,
+  
   nomeDestinatario: form.nome_cognome || "Cliente",
   email: String(form.email).trim(),
   microsoftConnectionId: resolvedConnectionId,
@@ -1175,7 +1192,7 @@ const result = await sendRichiestaDocumentoRappresentante({
                     <Button
                       type="button"
                       onClick={handleInviaRichiestaDocumento}
-                      disabled={sendingPublicDoc || !recordId}
+                      disabled={sendingPublicDoc || !documentoAmlId}
                       variant="outline"
                       className="h-10 border-red-600 bg-white px-4 text-red-600 hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
                     >
