@@ -811,10 +811,10 @@ for (const r of candidati) {
                             size="icon"
                             title="Modifica"
                             className="h-8 w-8 p-0"
-                            onClick={() =>
-                              router.push(
-                              `/antiriciclaggio/rappresentanti/nuovo?id=${r.soggetto_cliente_id}`
-                                )
+                           onClick={() =>
+                          router.push(
+                          `/antiriciclaggio/rappresentanti/nuovo?id=${r.id}`
+                            )
                             }
                           >
                             <Pencil className="h-4 w-4" />
