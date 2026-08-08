@@ -330,30 +330,31 @@ const [loadingMicrosoftConnections, setLoadingMicrosoftConnections] = useState(f
   };
 }, [studioId]);
 
-  const loadRappresentanti = useCallback(async () => {
-    if (!studioId) return;
+ const loadRappresentanti = useCallback(async () => {
+  if (!studioId) return;
 
-    const supabase = getSupabaseClient() as any;
-    setLoading(true);
+  setLoading(true);
 
-    try {
-      const { data, error } = await supabase
-  .from("vw_rappresentanti_aml")
-.select(
-  "id, documento_aml_id, soggetto_cliente_id, studio_id, nome_cognome, codice_fiscale, email, tipo_doc, scadenza_doc, allegato_doc, rappresentante_legale, doc_richiesto_il, microsoft_connection_id, created_at"
-)
-  .eq("studio_id", studioId)
-  .order("nome_cognome", { ascending: true });
+  try {
+    const response = await fetch(
+      `/api/rapp-legali?studio_id=${encodeURIComponent(studioId)}`
+    );
 
-      if (error) throw error;
+    const result = await response.json();
 
-      setRows((data || []) as Rapp[]);
-    } catch (error: any) {
-      alert(error?.message || "Errore caricamento rappresentanti");
-    } finally {
-      setLoading(false);
+    if (!response.ok || !result.ok) {
+      throw new Error(
+        result.error || "Errore caricamento rappresentanti"
+      );
     }
-  }, [studioId]);
+
+    setRows(result.data || []);
+  } catch (error: any) {
+    alert(error?.message || "Errore caricamento rappresentanti");
+  } finally {
+    setLoading(false);
+  }
+}, [studioId]);
 
   useEffect(() => {
     if (!studioId) return;
