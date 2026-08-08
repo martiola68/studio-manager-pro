@@ -83,12 +83,11 @@ export default async function handler(
           public_doc_submitted_at,
           documento_richiesto_il,
           microsoft_connection_id,
-          legacy_rapp_legale_id,
-          created_at,
+         created_at,
           updated_at
         `
       )
-      .eq("legacy_rapp_legale_id", id)
+      .eq("id", id)
       .eq("attivo", true)
       .maybeSingle();
 
@@ -168,7 +167,7 @@ export default async function handler(
      */
     const data = {
       id:
-        documento.legacy_rapp_legale_id,
+        documento.id,
 
       studio_id:
         documento.studio_id,
