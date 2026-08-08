@@ -87,7 +87,7 @@ export default async function handler(
           updated_at
         `
       )
-      .eq("id", id)
+     .eq("soggetto_cliente_id", id)
       .eq("attivo", true)
       .maybeSingle();
 
@@ -167,7 +167,7 @@ export default async function handler(
      */
     const data = {
       id:
-        documento.id,
+        soggetto.id,
 
       studio_id:
         documento.studio_id,
