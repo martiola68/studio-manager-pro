@@ -2,6 +2,7 @@ import type {
   NextApiRequest,
   NextApiResponse,
 } from "next";
+
 import { createClient } from "@supabase/supabase-js";
 
 type ResponseData =
@@ -44,7 +45,7 @@ function valoreTesto(
   value: unknown
 ): string | null {
   const risultato =
-    String(value || "").trim();
+    String(value ?? "").trim();
 
   return risultato || null;
 }
@@ -60,17 +61,18 @@ export default async function handler(
     });
   }
 
-  let legacyRappLegaleId: string | null =
-    null;
-
   try {
     const body = req.body ?? {};
 
     const studioId =
-      String(body.studio_id || "").trim();
+      String(
+        body.studio_id || ""
+      ).trim();
 
     const nomeCognome =
-      String(body.nome_cognome || "").trim();
+      String(
+        body.nome_cognome || ""
+      ).trim();
 
     const codiceFiscale =
       normalizzaCodiceFiscale(
@@ -91,11 +93,6 @@ export default async function handler(
       });
     }
 
-    /*
-     * Il codice fiscale è indispensabile
-     * per identificare univocamente il soggetto
-     * tra rapp_legali e tbclienti.
-     */
     if (!codiceFiscale) {
       return res.status(400).json({
         ok: false,
@@ -104,98 +101,30 @@ export default async function handler(
     }
 
     /*
-     * 1. Manteniamo temporaneamente la scrittura
-     * nella tabella legacy.
+     * =========================================================
+     * 1. CERCHIAMO IL SOGGETTO IN TBCLIENTI
+     * =========================================================
      *
-     * Questo evita di rompere:
-     * - link pubblici;
-     * - API ancora non migrate;
-     * - fascicoli e pratiche esistenti.
-     */
-    const payloadLegacy = {
-      studio_id: studioId,
-
-      nome_cognome:
-        nomeCognome,
-
-      codice_fiscale:
-        codiceFiscale,
-
-      luogo_nascita:
-        valoreTesto(body.luogo_nascita),
-
-      data_nascita:
-        body.data_nascita || null,
-
-      citta_residenza:
-        valoreTesto(body.citta_residenza),
-
-      indirizzo_residenza:
-        valoreTesto(
-          body.indirizzo_residenza
-        ),
-
-      CAP:
-        valoreTesto(body.CAP),
-
-      nazionalita:
-        valoreTesto(body.nazionalita),
-
-      email:
-        valoreTesto(body.email),
-
-      tipo_doc:
-        valoreTesto(body.tipo_doc),
-
-      num_doc:
-        valoreTesto(body.num_doc),
-
-      scadenza_doc:
-        body.scadenza_doc || null,
-
-      allegato_doc:
-        valoreTesto(body.allegato_doc),
-
-      rappresentante_legale:
-        body.rappresentante_legale ??
-        false,
-    };
-
-    const {
-      data: legacyData,
-      error: legacyError,
-    } = await supabaseAdmin
-      .from("rapp_legali")
-      .insert([payloadLegacy])
-      .select()
-      .single();
-
-    if (
-      legacyError ||
-      !legacyData?.id
-    ) {
-      return res.status(500).json({
-        ok: false,
-        error:
-          legacyError?.message ||
-          "Errore creazione rappresentante legacy",
-      });
-    }
-
-    legacyRappLegaleId =
-      String(legacyData.id);
-
-    /*
-     * 2. Cerchiamo la persona in tbclienti
-     * tramite studio_id + codice fiscale.
+     * Il rappresentante è identificato dall'anagrafica
+     * unica tbclienti.
+     *
+     * Non creiamo più alcun record in rapp_legali.
      */
     const {
       data: soggettiEsistenti,
       error: soggettoLookupError,
     } = await supabaseAdmin
       .from("tbclienti")
-      .select("id")
-      .eq("studio_id", studioId)
+      .select(`
+        id,
+        studio_id,
+        cliente,
+        attivo
+      `)
+      .eq(
+        "studio_id",
+        studioId
+      )
       .eq(
         "codice_fiscale",
         codiceFiscale
@@ -210,9 +139,11 @@ export default async function handler(
       (soggettiEsistenti || [])
         .length > 1
     ) {
-      throw new Error(
-        "Sono presenti più anagrafiche con lo stesso codice fiscale."
-      );
+      return res.status(409).json({
+        ok: false,
+        error:
+          "Sono presenti più anagrafiche con lo stesso codice fiscale.",
+      });
     }
 
     let soggettoClienteId =
@@ -222,9 +153,12 @@ export default async function handler(
           )
         : "";
 
+    let soggettoSalvato: any = null;
+
     /*
-     * 3. Se la persona non esiste,
-     * la creiamo come nominativo non cliente.
+     * =========================================================
+     * 2A. SOGGETTO NON ESISTENTE → CREAZIONE
+     * =========================================================
      */
     if (!soggettoClienteId) {
       const {
@@ -262,10 +196,19 @@ export default async function handler(
             ),
 
           cap:
-            valoreTesto(body.CAP),
+            valoreTesto(
+              body.CAP
+            ),
+
+          nazionalita:
+            valoreTesto(
+              body.nazionalita
+            ),
 
           email:
-            valoreTesto(body.email),
+            valoreTesto(
+              body.email
+            ),
 
           tipo_cliente:
             "Persona fisica",
@@ -273,6 +216,10 @@ export default async function handler(
           tipologia_cliente:
             "Interno",
 
+          /*
+           * Il rappresentante può essere
+           * un nominativo non cliente.
+           */
           cliente:
             false,
 
@@ -280,9 +227,16 @@ export default async function handler(
             false,
 
           updated_at:
-            new Date().toISOString(),
+            new Date()
+              .toISOString(),
         })
-        .select("id")
+        .select(`
+          id,
+          studio_id,
+          ragione_sociale,
+          codice_fiscale,
+          email
+        `)
         .single();
 
       if (
@@ -290,26 +244,38 @@ export default async function handler(
         !nuovoSoggetto?.id
       ) {
         throw new Error(
-          nuovoSoggettoError?.message ||
-            "Errore creazione anagrafica del rappresentante."
+          nuovoSoggettoError
+            ?.message ||
+          "Errore creazione anagrafica del rappresentante."
         );
       }
 
       soggettoClienteId =
-        String(nuovoSoggetto.id);
+        String(
+          nuovoSoggetto.id
+        );
+
+      soggettoSalvato =
+        nuovoSoggetto;
     } else {
       /*
-       * Se esiste già, aggiorniamo soltanto
-       * i dati disponibili senza modificare
-       * cliente e attivo.
+       * =======================================================
+       * 2B. SOGGETTO GIÀ ESISTENTE → AGGIORNAMENTO
+       * =======================================================
+       *
+       * Non cambiamo cliente e attivo.
        */
       const {
+        data: soggettoAggiornato,
         error: aggiornaSoggettoError,
       } = await supabaseAdmin
         .from("tbclienti")
         .update({
           ragione_sociale:
             nomeCognome,
+
+          codice_fiscale:
+            codiceFiscale,
 
           luogo_nascita:
             valoreTesto(
@@ -331,13 +297,23 @@ export default async function handler(
             ),
 
           cap:
-            valoreTesto(body.CAP),
+            valoreTesto(
+              body.CAP
+            ),
+
+          nazionalita:
+            valoreTesto(
+              body.nazionalita
+            ),
 
           email:
-            valoreTesto(body.email),
+            valoreTesto(
+              body.email
+            ),
 
           updated_at:
-            new Date().toISOString(),
+            new Date()
+              .toISOString(),
         })
         .eq(
           "id",
@@ -346,49 +322,91 @@ export default async function handler(
         .eq(
           "studio_id",
           studioId
-        );
+        )
+        .select(`
+          id,
+          studio_id,
+          ragione_sociale,
+          codice_fiscale,
+          email
+        `)
+        .single();
 
-      if (aggiornaSoggettoError) {
+      if (
+        aggiornaSoggettoError
+      ) {
         throw aggiornaSoggettoError;
       }
+
+      soggettoSalvato =
+        soggettoAggiornato;
     }
 
     /*
-     * 4. Verifichiamo se esiste già
-     * un documento AML attivo.
+     * =========================================================
+     * 3. CERCHIAMO IL DOCUMENTO AML DEL SOGGETTO
+     * =========================================================
      */
-   const {
-  data: documentiEsistenti,
-  error: documentoLookupError,
-} = await supabaseAdmin
-  .from("tbclienti_documenti_aml")
-  .select("id, attivo")
-  .eq(
-    "studio_id",
-    studioId
-  )
-  .eq(
-    "soggetto_cliente_id",
-    soggettoClienteId
-  )
-  .order("created_at", {
-    ascending: false,
-  })
-  .limit(1);
+    const {
+      data: documentiEsistenti,
+      error: documentoLookupError,
+    } = await supabaseAdmin
+      .from(
+        "tbclienti_documenti_aml"
+      )
+      .select(`
+        id,
+        studio_id,
+        soggetto_cliente_id,
+        attivo
+      `)
+      .eq(
+        "studio_id",
+        studioId
+      )
+      .eq(
+        "soggetto_cliente_id",
+        soggettoClienteId
+      )
+      .eq(
+        "attivo",
+        true
+      )
+      .order(
+        "updated_at",
+        {
+          ascending: false,
+        }
+      )
+      .limit(1);
 
-if (documentoLookupError) {
-  throw documentoLookupError;
-}
+    if (documentoLookupError) {
+      throw documentoLookupError;
+    }
 
-const documentoEsistente =
-  documentiEsistenti?.[0] || null;
+    const documentoEsistente =
+      documentiEsistenti?.[0] ||
+      null;
 
+    /*
+     * =========================================================
+     * 4. DATI DOCUMENTO
+     * =========================================================
+     *
+     * Non valorizziamo più:
+     *
+     * legacy_rapp_legale_id
+     */
     const payloadDocumento = {
       tipo_documento:
-        valoreTesto(body.tipo_doc),
+        valoreTesto(
+          body.tipo_doc
+        ),
 
       numero_documento:
-        valoreTesto(body.num_doc),
+        valoreTesto(
+          body.num_doc
+        ),
 
       scadenza_documento:
         body.scadenza_doc ||
@@ -399,107 +417,142 @@ const documentoEsistente =
           body.allegato_doc
         ),
 
-      legacy_rapp_legale_id:
-        legacyRappLegaleId,
+      microsoft_connection_id:
+        valoreTesto(
+          body.microsoft_connection_id
+        ),
 
       attivo:
         true,
 
       updated_at:
-        new Date().toISOString(),
+        new Date()
+          .toISOString(),
     };
 
-  if (documentoEsistente?.id) {
-  const {
-    data: documentoAggiornato,
-    error: aggiornaDocumentoError,
-  } = await supabaseAdmin
-    .from(
-      "tbclienti_documenti_aml"
-    )
-    .update({
-      ...payloadDocumento,
-      attivo: true,
-    })
-    .eq(
-      "id",
-      documentoEsistente.id
-    )
-    .eq(
-      "studio_id",
-      studioId
-    )
-    .select()
-    .single();
+    let documentoSalvato: any;
 
-  if (aggiornaDocumentoError) {
-    throw aggiornaDocumentoError;
-  }
+    /*
+     * =========================================================
+     * 5A. DOCUMENTO ESISTENTE → UPDATE
+     * =========================================================
+     */
+    if (documentoEsistente?.id) {
+      const {
+        data:
+          documentoAggiornato,
+        error:
+          aggiornaDocumentoError,
+      } = await supabaseAdmin
+        .from(
+          "tbclienti_documenti_aml"
+        )
+        .update(
+          payloadDocumento
+        )
+        .eq(
+          "id",
+          documentoEsistente.id
+        )
+        .eq(
+          "studio_id",
+          studioId
+        )
+        .select()
+        .single();
 
-  return res.status(200).json({
-    ok: true,
-    data: {
-      ...legacyData,
-      soggetto_cliente_id:
-        soggettoClienteId,
-      documento_aml:
-        documentoAggiornato,
-    },
-  });
-}
+      if (
+        aggiornaDocumentoError
+      ) {
+        throw aggiornaDocumentoError;
+      }
 
-    const {
-      data: nuovoDocumento,
-      error: nuovoDocumentoError,
-    } = await supabaseAdmin
-      .from(
-        "tbclienti_documenti_aml"
-      )
-      .insert({
+      documentoSalvato =
+        documentoAggiornato;
+    } else {
+      /*
+       * =======================================================
+       * 5B. DOCUMENTO NON ESISTENTE → CREAZIONE
+       * =======================================================
+       */
+      const {
+        data:
+          nuovoDocumento,
+        error:
+          nuovoDocumentoError,
+      } = await supabaseAdmin
+        .from(
+          "tbclienti_documenti_aml"
+        )
+        .insert({
+          studio_id:
+            studioId,
+
+          soggetto_cliente_id:
+            soggettoClienteId,
+
+          ...payloadDocumento,
+        })
+        .select()
+        .single();
+
+      if (
+        nuovoDocumentoError
+      ) {
+        throw nuovoDocumentoError;
+      }
+
+      documentoSalvato =
+        nuovoDocumento;
+    }
+
+    /*
+     * =========================================================
+     * 6. RISPOSTA
+     * =========================================================
+     *
+     * ATTENZIONE:
+     *
+     * data.id è sempre tbclienti.id.
+     *
+     * Questo è importante perché nuovo.tsx,
+     * AV4 e gli altri flussi devono identificare
+     * il rappresentante tramite l'anagrafica,
+     * non tramite il documento.
+     */
+    return res.status(200).json({
+      ok: true,
+
+      data: {
+        id:
+          soggettoClienteId,
+
         studio_id:
           studioId,
 
         soggetto_cliente_id:
           soggettoClienteId,
 
-        ...payloadDocumento,
-      })
-      .select()
-      .single();
+        documento_aml_id:
+          documentoSalvato?.id ||
+          null,
 
-    if (nuovoDocumentoError) {
-      throw nuovoDocumentoError;
-    }
+        soggetto:
+          soggettoSalvato,
 
-    return res.status(200).json({
-      ok: true,
-      data: {
-        ...legacyData,
-        soggetto_cliente_id:
-          soggettoClienteId,
         documento_aml:
-          nuovoDocumento,
+          documentoSalvato,
       },
     });
   } catch (e: any) {
-    /*
-     * Se la scrittura sulla nuova struttura
-     * fallisce dopo aver creato il record legacy,
-     * eliminiamo il record appena creato per
-     * evitare un salvataggio parziale.
-     */
-    if (legacyRappLegaleId) {
-      await supabaseAdmin
-        .from("rapp_legali")
-        .delete()
-        .eq(
-          "id",
-          legacyRappLegaleId
-        );
-    }
+    console.error(
+      "Errore salvataggio rappresentante:",
+      e
+    );
 
     return res.status(500).json({
       ok: false,
+
       error:
         e?.message ||
         "Errore salvataggio rappresentante",
