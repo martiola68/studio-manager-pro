@@ -413,39 +413,37 @@ export default function NuovoRappresentantePage() {
       try {
         let row: RappLegaleRow | null = null;
 
-        try {
-          const response = await fetch(
-            `/api/rapp-legali/get-by-id?id=${encodeURIComponent(recordId)}`
-          );
-          const contentType = response.headers.get("content-type") || "";
+       const response = await fetch(
+  `/api/rapp-legali/get-by-id?id=${encodeURIComponent(recordId)}`
+);
 
-          let result: any = null;
-          if (contentType.includes("application/json")) {
-            result = await response.json();
-          }
+const contentType =
+  response.headers.get("content-type") || "";
 
-          if (response.ok && result?.ok && result?.data) {
-            row = result.data as RappLegaleRow;
-          }
-        } catch {
-          // fallback sotto
-        }
+if (!contentType.includes("application/json")) {
+  const text = await response.text();
 
-        if (!row) {
-          const { data, error } = await supabase
-            .from("rapp_legali")
-            .select(
-              "id, studio_id, nome_cognome, codice_fiscale, luogo_nascita, data_nascita, citta_residenza, indirizzo_residenza, CAP, nazionalita, email, tipo_doc, num_doc, scadenza_doc, allegato_doc, microsoft_connection_id, rappresentante_legale"
-            )
-            .eq("id", recordId)
-            .single();
+  throw new Error(
+    `get-by-id non restituisce JSON: ${text.slice(0, 200)}`
+  );
+}
 
-          if (error) {
-            throw new Error(error.message || "Errore caricamento rappresentante");
-          }
+const result = await response.json();
 
-          row = data as RappLegaleRow;
-        }
+if (!response.ok || !result?.ok) {
+  throw new Error(
+    result?.error ||
+      "Errore caricamento rappresentante"
+  );
+}
+
+if (!result?.data) {
+  throw new Error(
+    "Documento AML del rappresentante non trovato."
+  );
+}
+
+row = result.data as RappLegaleRow;
 
         if (!row) {
           throw new Error("Record non trovato.");
