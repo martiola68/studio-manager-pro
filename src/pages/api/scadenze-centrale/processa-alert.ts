@@ -712,14 +712,13 @@ if (
   } = await supabaseAdmin
     .from("tbclienti_documenti_aml")
     .select(`
-      id,
-      studio_id,
-      soggetto_cliente_id,
-      legacy_rapp_legale_id,
-      public_doc_enabled,
-      public_doc_token,
-      documento_richiesto_il
-    `)
+  id,
+  studio_id,
+  soggetto_cliente_id,
+  public_doc_enabled,
+  public_doc_token,
+  documento_richiesto_il
+`)
     .eq(
       "id",
       riga.origine_record_id
@@ -813,27 +812,7 @@ if (
     continue;
   }
 
-  if (
-    !documentoAml
-      .legacy_rapp_legale_id
-  ) {
-    errori += 1;
-    erroriScadenza += 1;
-
-    dettagli.push({
-      scadenza_id:
-        riga.id,
-
-      ok: false,
-
-      messaggio:
-        "Riferimento legacy del rappresentante non disponibile",
-    });
-
-    continue;
-  }
-
-  /*
+   /*
    * Primo invio:
    * generiamo il link pubblico.
    *
