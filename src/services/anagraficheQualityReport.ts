@@ -631,14 +631,18 @@ export async function generaReportQualitaAnagraficheAML(): Promise<
         documento?.id || null,
 
       tipo_documento:
-        documento
-          ?.tipo_documento ||
-        null,
+  documento?.tipo_documento
+    ? String(
+        documento.tipo_documento
+      ).trim()
+    : null,
 
-      scadenza_documento:
-        documento
-          ?.scadenza_documento ||
-        null,
+scadenza_documento:
+  documento?.scadenza_documento
+    ? String(
+        documento.scadenza_documento
+      ).trim()
+    : null,
 
       anomalie,
     });
