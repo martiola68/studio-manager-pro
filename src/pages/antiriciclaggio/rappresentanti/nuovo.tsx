@@ -306,16 +306,19 @@ export default function NuovoRappresentantePage() {
           throw new Error(`Errore autenticazione: ${authError.message}`);
         }
 
-        const email = authData?.user?.email;
-        if (!email) {
-          throw new Error("Utente non loggato: impossibile recuperare studio_id.");
-        }
+            const userId = authData?.user?.id;
 
-        const { data, error } = await supabase
-          .from("tbutenti")
-          .select("studio_id")
-          .eq("email", email)
-          .single();
+if (!userId) {
+  throw new Error(
+    "Utente non loggato: impossibile recuperare studio_id."
+  );
+}
+
+const { data, error } = await supabase
+  .from("tbutenti")
+  .select("studio_id")
+  .eq("id", userId)
+  .maybeSingle();
 
         if (error) {
           throw new Error(`Errore lettura tbutenti: ${error.message}`);
