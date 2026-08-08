@@ -2,6 +2,7 @@ import type {
   NextApiRequest,
   NextApiResponse,
 } from "next";
+
 import { createClient } from "@supabase/supabase-js";
 
 type ResponseData =
@@ -41,138 +42,269 @@ export default async function handler(
     });
   }
 
-  let documentoAmlId: string | null = null;
-
   try {
-    const id = String(
-      req.body?.id || ""
-    ).trim();
+    /*
+     * =========================================================
+     * 1. IDENTIFICATIVO ANAGRAFICA
+     * =========================================================
+     *
+     * L'id ricevuto dal frontend è:
+     *
+     * tbclienti.id
+     *
+     * cioè l'anagrafica del rappresentante.
+     */
+    const soggettoClienteId =
+      String(
+        req.body?.id || ""
+      ).trim();
 
-    if (!id) {
+    if (!soggettoClienteId) {
       return res.status(400).json({
         ok: false,
-        error: "ID mancante",
+        error: "ID rappresentante mancante",
       });
     }
 
     /*
-     * L'id ricevuto dal frontend è ancora
-     * rapp_legali.id.
+     * =========================================================
+     * 2. RECUPERO ANAGRAFICA
+     * =========================================================
      *
-     * Cerchiamo il relativo documento
-     * nella nuova struttura.
+     * Serve anche per conoscere lo studio_id
+     * ed evitare operazioni fuori studio.
      */
     const {
-      data: documentoAml,
-      error: documentoLookupError,
+      data: soggetto,
+      error: soggettoError,
     } = await supabaseAdmin
-      .from("tbclienti_documenti_aml")
-      .select(
-        `
-          id,
-          studio_id,
-          soggetto_cliente_id,
-          attivo
-        `
-      )
+      .from("tbclienti")
+      .select(`
+        id,
+        studio_id
+      `)
       .eq(
-        "legacy_rapp_legale_id",
-        id
+        "id",
+        soggettoClienteId
       )
-      .eq("attivo", true)
       .maybeSingle();
 
-    if (documentoLookupError) {
+    if (soggettoError) {
+      return res.status(500).json({
+        ok: false,
+        error: soggettoError.message,
+      });
+    }
+
+    if (!soggetto?.id) {
+      return res.status(404).json({
+        ok: false,
+        error:
+          "Anagrafica del rappresentante non trovata",
+      });
+    }
+
+    const studioId =
+      String(
+        soggetto.studio_id || ""
+      );
+
+    if (!studioId) {
+      return res.status(400).json({
+        ok: false,
+        error:
+          "Studio del rappresentante non disponibile",
+      });
+    }
+
+    /*
+     * =========================================================
+     * 3. RECUPERO DOCUMENTI AML ATTIVI
+     * =========================================================
+     *
+     * Non utilizziamo più:
+     *
+     * - rapp_legali
+     * - legacy_rapp_legale_id
+     *
+     * La relazione corretta è:
+     *
+     * tbclienti_documenti_aml.soggetto_cliente_id
+     * =
+     * tbclienti.id
+     */
+    const {
+      data: documentiAml,
+      error: documentiError,
+    } = await supabaseAdmin
+      .from(
+        "tbclienti_documenti_aml"
+      )
+      .select(`
+        id
+      `)
+      .eq(
+        "studio_id",
+        studioId
+      )
+      .eq(
+        "soggetto_cliente_id",
+        soggettoClienteId
+      )
+      .eq(
+        "attivo",
+        true
+      );
+
+    if (documentiError) {
       return res.status(500).json({
         ok: false,
         error:
-          documentoLookupError.message,
+          documentiError.message,
       });
     }
 
+    const documentoIds =
+      (documentiAml || [])
+        .map((documento) =>
+          String(
+            documento.id || ""
+          )
+        )
+        .filter(Boolean);
+
     /*
-     * Se il documento nuovo esiste,
-     * lo disattiviamo.
+     * =========================================================
+     * 4. DISATTIVAZIONE DOCUMENTI AML
+     * =========================================================
      *
-     * Non eliminiamo tbclienti:
-     * il soggetto potrebbe essere socio,
-     * amministratore o rappresentante
-     * di altre società.
+     * Non cancelliamo fisicamente i record.
+     *
+     * In questo modo:
+     * - manteniamo lo storico;
+     * - il rappresentante sparisce dalla view;
+     * - eventuali link pubblici vengono disabilitati.
      */
-    if (documentoAml?.id) {
-      documentoAmlId = String(
-        documentoAml.id
-      );
+    if (documentoIds.length > 0) {
+      const adesso =
+        new Date().toISOString();
 
       const {
-        error: documentoUpdateError,
+        error:
+          disattivaDocumentiError,
       } = await supabaseAdmin
         .from(
           "tbclienti_documenti_aml"
         )
         .update({
-          attivo: false,
+          attivo:
+            false,
 
           public_doc_enabled:
             false,
 
           updated_at:
-            new Date().toISOString(),
+            adesso,
         })
         .eq(
-          "id",
-          documentoAmlId
+          "studio_id",
+          studioId
+        )
+        .eq(
+          "soggetto_cliente_id",
+          soggettoClienteId
+        )
+        .eq(
+          "attivo",
+          true
         );
 
-      if (documentoUpdateError) {
+      if (
+        disattivaDocumentiError
+      ) {
         return res.status(500).json({
           ok: false,
           error:
-            documentoUpdateError.message,
+            disattivaDocumentiError
+              .message,
+        });
+      }
+
+      /*
+       * =======================================================
+       * 5. ANNULLAMENTO SCADENZE AML COLLEGATE
+       * =======================================================
+       *
+       * Se il rappresentante viene rimosso dall'elenco AML,
+       * non devono continuare a partire alert relativi
+       * ai suoi documenti disattivati.
+       */
+      const {
+        error:
+          annullaScadenzeError,
+      } = await supabaseAdmin
+        .from(
+          "tbscadenze_centrale"
+        )
+        .update({
+          stato:
+            "annullata",
+
+          prossimo_alert_at:
+            null,
+
+          annullata_at:
+            adesso,
+
+          updated_at:
+            adesso,
+        })
+        .eq(
+          "studio_id",
+          studioId
+        )
+        .eq(
+          "origine_tabella",
+          "tbclienti_documenti_aml"
+        )
+        .in(
+          "origine_record_id",
+          documentoIds
+        )
+        .neq(
+          "stato",
+          "annullata"
+        );
+
+      if (
+        annullaScadenzeError
+      ) {
+        return res.status(500).json({
+          ok: false,
+          error:
+            annullaScadenzeError
+              .message,
         });
       }
     }
 
     /*
-     * Durante la fase transitoria
-     * eliminiamo anche la riga legacy.
+     * =========================================================
+     * 6. NON ELIMINIAMO TBCLIENTI
+     * =========================================================
+     *
+     * L'anagrafica rimane perché lo stesso soggetto
+     * può essere:
+     *
+     * - socio;
+     * - amministratore;
+     * - titolare effettivo;
+     * - rappresentante di altre società;
+     * - cliente dello studio.
+     *
+     * Eliminiamo quindi soltanto la sua presenza
+     * nel modulo Rappresentanti AML.
      */
-    const {
-      error: legacyDeleteError,
-    } = await supabaseAdmin
-      .from("rapp_legali")
-      .delete()
-      .eq("id", id);
-
-    if (legacyDeleteError) {
-      /*
-       * Ripristino compensativo:
-       * se l'eliminazione legacy fallisce,
-       * riattiviamo il documento nuovo.
-       */
-      if (documentoAmlId) {
-        await supabaseAdmin
-          .from(
-            "tbclienti_documenti_aml"
-          )
-          .update({
-            attivo: true,
-
-            updated_at:
-              new Date().toISOString(),
-          })
-          .eq(
-            "id",
-            documentoAmlId
-          );
-      }
-
-      return res.status(500).json({
-        ok: false,
-        error:
-          legacyDeleteError.message,
-      });
-    }
 
     return res.status(200).json({
       ok: true,
