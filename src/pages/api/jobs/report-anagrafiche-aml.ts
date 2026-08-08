@@ -88,15 +88,15 @@ function formatDateEU(
   }
 
   const raw =
-    value.includes("T")
-      ? value.split("T")[0]
-      : value;
+    String(value).includes("T")
+      ? String(value).split("T")[0]
+      : String(value);
 
   const parts =
     raw.split("-");
 
   if (parts.length !== 3) {
-    return value;
+    return String(value);
   }
 
   return `${parts[2]}/${parts[1]}/${parts[0]}`;
@@ -123,6 +123,63 @@ function labelAnomalia(
   }
 }
 
+function labelAzione(
+  anomalie: string[],
+  scadenzaDocumento: string | null
+): string[] {
+  const azioni: string[] = [];
+
+  if (
+    anomalie.includes(
+      "EMAIL_MANCANTE"
+    )
+  ) {
+    azioni.push(
+      "Inserire un indirizzo email valido"
+    );
+  }
+
+  if (
+    anomalie.includes(
+      "EMAIL_NON_VALIDA"
+    )
+  ) {
+    azioni.push(
+      "Correggere l'indirizzo email"
+    );
+  }
+
+  if (
+    anomalie.includes(
+      "DOCUMENTO_SCADUTO"
+    )
+  ) {
+    azioni.push(
+      scadenzaDocumento
+        ? `Aggiornare il documento scaduto il ${formatDateEU(
+            scadenzaDocumento
+          )}`
+        : "Aggiornare il documento scaduto"
+    );
+  }
+
+  if (
+    anomalie.includes(
+      "DOCUMENTO_IN_SCADENZA_60_GIORNI"
+    )
+  ) {
+    azioni.push(
+      scadenzaDocumento
+        ? `Richiedere l'aggiornamento del documento in scadenza il ${formatDateEU(
+            scadenzaDocumento
+          )}`
+        : "Richiedere l'aggiornamento del documento in scadenza"
+    );
+  }
+
+  return azioni;
+}
+
 function aggregaPerRappresentante(
   gruppo: ReportOperatoreAML
 ): AnomaliaAggregata[] {
@@ -140,7 +197,7 @@ function aggregaPerRappresentante(
       String(
         voce.soggetto_cliente_id ||
           ""
-      );
+      ).trim();
 
     if (!soggettoId) {
       continue;
@@ -158,22 +215,44 @@ function aggregaPerRappresentante(
             soggettoId,
 
           rappresentante:
-            voce.rappresentante,
+            normalizzaTesto(
+              voce.rappresentante
+            ),
 
           codice_fiscale:
-            voce.codice_fiscale,
+            voce.codice_fiscale
+              ? normalizzaTesto(
+                  voce.codice_fiscale
+                )
+              : null,
 
           email_rappresentante:
-            voce.email_rappresentante,
+            voce.email_rappresentante
+              ? normalizzaTesto(
+                  voce.email_rappresentante
+                )
+              : null,
 
           documento_aml_id:
-            voce.documento_aml_id,
+            voce.documento_aml_id
+              ? normalizzaTesto(
+                  voce.documento_aml_id
+                )
+              : null,
 
           tipo_documento:
-            voce.tipo_documento,
+            voce.tipo_documento
+              ? normalizzaTesto(
+                  voce.tipo_documento
+                )
+              : null,
 
           scadenza_documento:
-            voce.scadenza_documento,
+            voce.scadenza_documento
+              ? normalizzaTesto(
+                  voce.scadenza_documento
+                )
+              : null,
 
           anomalie:
             [],
@@ -189,9 +268,6 @@ function aggregaPerRappresentante(
         soggettoId
       )!;
 
-    /*
-     * Uniamo le anomalie.
-     */
     for (
       const anomalia of
         voce.anomalie
@@ -207,16 +283,11 @@ function aggregaPerRappresentante(
       }
     }
 
-    /*
-     * Uniamo le società.
-     *
-     * Lo stesso amministratore può essere
-     * rappresentante di più società.
-     */
     const clienteId =
       String(
-        voce.cliente_id || ""
-      );
+        voce.cliente_id ||
+          ""
+      ).trim();
 
     if (clienteId) {
       const giaPresente =
@@ -232,21 +303,21 @@ function aggregaPerRappresentante(
             clienteId,
 
           cliente:
-            voce.cliente,
+            normalizzaTesto(
+              voce.cliente
+            ),
         });
       }
     }
 
-    /*
-     * Manteniamo eventuali dati documento
-     * se la prima riga aggregata non li aveva.
-     */
     if (
       !aggregato.documento_aml_id &&
       voce.documento_aml_id
     ) {
       aggregato.documento_aml_id =
-        voce.documento_aml_id;
+        normalizzaTesto(
+          voce.documento_aml_id
+        );
     }
 
     if (
@@ -254,7 +325,9 @@ function aggregaPerRappresentante(
       voce.tipo_documento
     ) {
       aggregato.tipo_documento =
-        voce.tipo_documento;
+        normalizzaTesto(
+          voce.tipo_documento
+        );
     }
 
     if (
@@ -262,7 +335,9 @@ function aggregaPerRappresentante(
       voce.scadenza_documento
     ) {
       aggregato.scadenza_documento =
-        voce.scadenza_documento;
+        normalizzaTesto(
+          voce.scadenza_documento
+        );
     }
   }
 
@@ -305,6 +380,67 @@ function aggregaPerRappresentante(
   return result;
 }
 
+function calcolaRiepilogo(
+  gruppo: ReportOperatoreAML
+) {
+  const rappresentanti =
+    aggregaPerRappresentante(
+      gruppo
+    );
+
+  let emailMancanti = 0;
+  let emailNonValide = 0;
+  let documentiScaduti = 0;
+  let documentiInScadenza = 0;
+
+  for (
+    const rappresentante of
+      rappresentanti
+  ) {
+    if (
+      rappresentante.anomalie.includes(
+        "EMAIL_MANCANTE"
+      )
+    ) {
+      emailMancanti++;
+    }
+
+    if (
+      rappresentante.anomalie.includes(
+        "EMAIL_NON_VALIDA"
+      )
+    ) {
+      emailNonValide++;
+    }
+
+    if (
+      rappresentante.anomalie.includes(
+        "DOCUMENTO_SCADUTO"
+      )
+    ) {
+      documentiScaduti++;
+    }
+
+    if (
+      rappresentante.anomalie.includes(
+        "DOCUMENTO_IN_SCADENZA_60_GIORNI"
+      )
+    ) {
+      documentiInScadenza++;
+    }
+  }
+
+  return {
+    totaleRappresentanti:
+      rappresentanti.length,
+
+    emailMancanti,
+    emailNonValide,
+    documentiScaduti,
+    documentiInScadenza,
+  };
+}
+
 function buildHtml(
   gruppo: ReportOperatoreAML
 ): string {
@@ -313,33 +449,43 @@ function buildHtml(
       gruppo
     );
 
+  const riepilogo =
+    calcolaRiepilogo(
+      gruppo
+    );
+
   const righe =
     rappresentanti
       .map(
         (rappresentante) => {
-          const societa =
+          const societaHtml =
             rappresentante.societa
               .map(
                 (societa) =>
-                  `<div style="margin-bottom:3px;">
-                    ${escapeHtml(
-                      societa.cliente
-                    )}
-                  </div>`
+                  `
+                    <div style="margin-bottom:3px;">
+                      ${escapeHtml(
+                        societa.cliente
+                      )}
+                    </div>
+                  `
               )
               .join("");
 
-          const anomalie =
-            rappresentante.anomalie
+          const azioniHtml =
+            labelAzione(
+              rappresentante.anomalie,
+              rappresentante.scadenza_documento
+            )
               .map(
-                (anomalia) =>
-                  `<div style="margin-bottom:3px;">
-                    ${escapeHtml(
-                      labelAnomalia(
-                        anomalia
-                      )
-                    )}
-                  </div>`
+                (azione) =>
+                  `
+                    <div style="margin-bottom:3px;">
+                      ${escapeHtml(
+                        azione
+                      )}
+                    </div>
+                  `
               )
               .join("");
 
@@ -385,7 +531,7 @@ function buildHtml(
                   vertical-align:top;
                 "
               >
-                ${societa || "-"}
+                ${societaHtml || "-"}
               </td>
 
               <td
@@ -395,7 +541,7 @@ function buildHtml(
                   vertical-align:top;
                 "
               >
-                ${anomalie || "-"}
+                ${azioniHtml || "-"}
               </td>
 
               <td
@@ -437,10 +583,85 @@ function buildHtml(
 
       <p>
         È necessario verificare e aggiornare i dati segnalati.
-        In particolare, l'indirizzo email del rappresentante
-        è obbligatorio perché necessario per le comunicazioni
-        automatiche relative agli adempimenti antiriciclaggio.
+        L'indirizzo email del rappresentante è obbligatorio
+        perché necessario per le comunicazioni automatiche
+        relative agli adempimenti antiriciclaggio.
       </p>
+
+      <div
+        style="
+          margin:16px 0;
+          padding:12px;
+          background:#f9fafb;
+          border:1px solid #e5e7eb;
+          border-radius:6px;
+        "
+      >
+        <div>
+          <strong>
+            Riepilogo controlli
+          </strong>
+        </div>
+
+        <div style="margin-top:6px;">
+          Rappresentanti da verificare:
+          <strong>
+            ${riepilogo.totaleRappresentanti}
+          </strong>
+        </div>
+
+        ${
+          riepilogo.emailMancanti > 0
+            ? `
+              <div>
+                Email mancanti:
+                <strong>
+                  ${riepilogo.emailMancanti}
+                </strong>
+              </div>
+            `
+            : ""
+        }
+
+        ${
+          riepilogo.emailNonValide > 0
+            ? `
+              <div>
+                Email non valide:
+                <strong>
+                  ${riepilogo.emailNonValide}
+                </strong>
+              </div>
+            `
+            : ""
+        }
+
+        ${
+          riepilogo.documentiScaduti > 0
+            ? `
+              <div>
+                Documenti scaduti:
+                <strong>
+                  ${riepilogo.documentiScaduti}
+                </strong>
+              </div>
+            `
+            : ""
+        }
+
+        ${
+          riepilogo.documentiInScadenza > 0
+            ? `
+              <div>
+                Documenti in scadenza:
+                <strong>
+                  ${riepilogo.documentiInScadenza}
+                </strong>
+              </div>
+            `
+            : ""
+        }
+      </div>
 
       <table
         style="
@@ -482,7 +703,7 @@ function buildHtml(
                 text-align:left;
               "
             >
-              Anomalie
+              Azione richiesta
             </th>
 
             <th
@@ -528,6 +749,11 @@ function buildText(
       gruppo
     );
 
+  const riepilogo =
+    calcolaRiepilogo(
+      gruppo
+    );
+
   const righe =
     rappresentanti
       .map(
@@ -540,13 +766,14 @@ function buildText(
               )
               .join("\n");
 
-          const anomalie =
-            rappresentante.anomalie
+          const azioni =
+            labelAzione(
+              rappresentante.anomalie,
+              rappresentante.scadenza_documento
+            )
               .map(
-                (anomalia) =>
-                  `- ${labelAnomalia(
-                    anomalia
-                  )}`
+                (azione) =>
+                  `- ${azione}`
               )
               .join("\n");
 
@@ -561,8 +788,8 @@ ${
 Società collegate:
 ${societa || "-"}
 
-Anomalie:
-${anomalie || "-"}
+Azioni richieste:
+${azioni || "-"}
 
 Scadenza documento:
 ${formatDateEU(
@@ -586,6 +813,25 @@ relative ai clienti assegnati.
 
 L'indirizzo email del rappresentante è obbligatorio
 perché necessario per le comunicazioni automatiche AML.
+
+RIEPILOGO
+
+Rappresentanti da verificare:
+${riepilogo.totaleRappresentanti}
+
+Email mancanti:
+${riepilogo.emailMancanti}
+
+Email non valide:
+${riepilogo.emailNonValide}
+
+Documenti scaduti:
+${riepilogo.documentiScaduti}
+
+Documenti in scadenza:
+${riepilogo.documentiInScadenza}
+
+----------------------------------------
 
 ${righe}
 
@@ -674,7 +920,9 @@ export default async function handler(
      * TEST
      * =========================================================
      */
-    if (testMode) {
+    if (
+      testMode
+    ) {
       return res
         .status(200)
         .json({
@@ -698,6 +946,11 @@ export default async function handler(
 
                 email_operatore:
                   gruppo.email_operatore,
+
+                riepilogo:
+                  calcolaRiepilogo(
+                    gruppo
+                  ),
 
                 rappresentanti:
                   aggregaPerRappresentante(
@@ -726,8 +979,7 @@ export default async function handler(
       dataOggiKey();
 
     /*
-     * Cache per non cercare l'Utente comunicazioni
-     * dello stesso Studio ad ogni operatore.
+     * Cache mittente per Studio.
      */
     const mittentiStudio =
       new Map<
@@ -748,7 +1000,9 @@ export default async function handler(
             gruppo.email_operatore
           );
 
-        if (!emailOperatore) {
+        if (
+          !emailOperatore
+        ) {
           throw new Error(
             "Email operatore mancante."
           );
@@ -822,7 +1076,7 @@ export default async function handler(
 
         /*
          * =====================================================
-         * MITTENTE DELLO STUDIO
+         * UTENTE COMUNICAZIONI DELLO STUDIO
          * =====================================================
          */
         let mittente =
@@ -830,7 +1084,9 @@ export default async function handler(
             gruppo.studio_id
           );
 
-        if (!mittente) {
+        if (
+          !mittente
+        ) {
           const {
             data:
               utenteComunicazioni,
@@ -894,7 +1150,7 @@ export default async function handler(
             );
 
           /*
-           * Verifica token Microsoft.
+           * Verifica token Microsoft valido.
            */
           const {
             data:
@@ -996,7 +1252,7 @@ export default async function handler(
 
         /*
          * =====================================================
-         * LOG
+         * LOG INVIO
          * =====================================================
          */
         const {
