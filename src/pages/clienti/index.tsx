@@ -1208,11 +1208,13 @@ tipologia_cliente: formData.tipologia_cliente,
           citta: formData.citta || null,
           provincia: formData.provincia || null,
           rapp_legale_id: formData.rapp_legale_id || null,
-          email: formData.email || null,
-        telefono: formData.telefono || null,
-        pec: formData.pec || null,
-       attivo: formData.attivo,
-          cassetto_fiscale_id: formData.cassetto_fiscale_id || null,
+        email: formData.email || null,
+telefono: formData.telefono || null,
+pec: formData.pec || null,
+
+attivo: formData.attivo,
+
+cassetto_fiscale_id: formData.cassetto_fiscale_id || null,
           matricola_inps: formData.matricola_inps || null,
           pat_inail: formData.pat_inail || null,
           codice_ditta_ce: formData.codice_ditta_ce || null,
@@ -1255,28 +1257,72 @@ tipologia_cliente: formData.tipologia_cliente,
           dataToSave = { ...dataToSave, ...encrypted };
         }
 
-        if (editingCliente) {
-  const updateData: ClienteUpdate = dataToSave as ClienteUpdate;
+    if (editingCliente) {
+  const updateData: ClienteUpdate =
+    dataToSave as ClienteUpdate;
 
-  const { error } = await supabase
+  const {
+    data: clienteAggiornato,
+    error,
+  } = await supabase
     .from("tbclienti")
     .update(updateData)
-    .eq("id", editingCliente.id);
+    .eq("id", editingCliente.id)
+    .select("id, cliente, attivo")
+    .single();
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
-await syncClienteToContatto(editingCliente.id, {
-  ...updateData,
-  studio_id:
-    updateData.studio_id ||
-    editingCliente.studio_id ||
-    studioId ||
-    undefined,
-});
+  if (!clienteAggiornato?.id) {
+    throw new Error(
+      "Il record non è stato aggiornato in tbclienti."
+    );
+  }
+
+  if (
+    clienteAggiornato.attivo !==
+    formData.attivo
+  ) {
+    throw new Error(
+      `Lo stato Attivo non è stato salvato. ` +
+      `Richiesto: ${formData.attivo}, ` +
+      `salvato nel database: ${clienteAggiornato.attivo}`
+    );
+  }
+
+  await syncClienteToContatto(
+    editingCliente.id,
+    {
+      ...updateData,
+      studio_id:
+        updateData.studio_id ||
+        editingCliente.studio_id ||
+        studioId ||
+        undefined,
+    }
+  );
+
+  setClienti((prev) =>
+    prev.map((item) =>
+      item.id === editingCliente.id
+        ? {
+            ...item,
+            ...updateData,
+            attivo:
+              clienteAggiornato.attivo,
+          }
+        : item
+    )
+  );
 
   toast({
     title: "Successo",
-    description: "Cliente aggiornato con successo",
+    description:
+      clienteAggiornato.attivo
+        ? "Nominativo aggiornato e attivato"
+        : "Nominativo aggiornato e disattivato",
   });
 } else {
   const insertData: ClienteInsert = dataToSave as ClienteInsert;
@@ -1320,25 +1366,103 @@ await syncClienteToContatto(nuovoCliente.id, {
   }
 };
   
-  const handleDelete = async (id: string) => {
-    if (!confirm("Sei sicuro di voler eliminare questo cliente?")) return;
+const handleDelete = async (id: string) => {
+  if (!confirm("Sei sicuro di voler eliminare questo cliente?")) return;
+  const supabase = getSupabaseClient();
+
+  try {
+    const { error } = await supabase.from("tbclienti").delete().eq("id", id);
+    if (error) throw error;
+
+    toast({ title: "Successo", description: "Cliente eliminato con successo" });
+    loadData();
+  } catch (error) {
+    console.error("Errore eliminazione cliente:", error);
+    toast({
+      title: "Errore",
+      description: "Impossibile eliminare il cliente",
+      variant: "destructive",
+    });
+  }
+};
+
+const handleToggleAttivo = async (
+  cliente: ClienteRow,
+  nuovoStato: boolean
+) => {
+  const nominativo =
+    String(cliente.ragione_sociale || "").trim() ||
+    "il nominativo selezionato";
+
+  const confermato = window.confirm(
+    nuovoStato
+      ? `Confermi di voler attivare "${nominativo}"?\n\nIl nominativo verrà incluso nel filtro dei soggetti attivi.`
+      : `Confermi di voler disattivare "${nominativo}"?\n\nIl nominativo verrà escluso dal filtro dei soggetti attivi ma resterà presente in anagrafica.`
+  );
+
+  if (!confermato) {
+    return;
+  }
+
+  try {
     const supabase = getSupabaseClient();
 
-    try {
-      const { error } = await supabase.from("tbclienti").delete().eq("id", id);
-      if (error) throw error;
+    const { data, error } = await supabase
+      .from("tbclienti")
+      .update({
+        attivo: nuovoStato,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", cliente.id)
+      .select("id, attivo")
+      .single();
 
-      toast({ title: "Successo", description: "Cliente eliminato con successo" });
-      loadData();
-    } catch (error) {
-      console.error("Errore eliminazione cliente:", error);
-      toast({
-        title: "Errore",
-        description: "Impossibile eliminare il cliente",
-        variant: "destructive",
-      });
+    if (error) {
+      throw error;
     }
-  };
+
+    if (!data?.id) {
+      throw new Error(
+        "Il nominativo non è stato aggiornato."
+      );
+    }
+
+    setClienti((prev) =>
+      prev.map((item) =>
+        item.id === cliente.id
+          ? {
+              ...item,
+              attivo: data.attivo,
+            }
+          : item
+      )
+    );
+
+    toast({
+      title: nuovoStato
+        ? "Nominativo attivato"
+        : "Nominativo disattivato",
+      description: nuovoStato
+        ? `${nominativo} è ora attivo.`
+        : `${nominativo} è ora non attivo.`,
+    });
+  } catch (error: any) {
+    console.error(
+      "Errore aggiornamento stato nominativo:",
+      error
+    );
+
+    toast({
+      title: "Errore",
+      description:
+        error?.message ||
+        "Impossibile aggiornare lo stato del nominativo.",
+      variant: "destructive",
+    });
+  }
+};
+
+const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
 
 const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
   try {
@@ -2392,18 +2516,38 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
       size="icon"
       title="Servizi e scadenzari"
       onClick={() =>
-       router.push(
-  `/clienti/servizi?cliente_id=${cliente.id}`
-)
+        router.push(
+          `/clienti/servizi?cliente_id=${cliente.id}`
+        )
       }
     >
       <CalendarCog className="h-4 w-4" />
     </Button>
 )}
 
+<div
+  className="flex items-center"
+  title={
+    cliente.attivo === true
+      ? "Disattiva nominativo"
+      : "Attiva nominativo"
+  }
+>
+  <Switch
+    checked={cliente.attivo === true}
+    onCheckedChange={(checked) =>
+      handleToggleAttivo(
+        cliente,
+        checked
+      )
+    }
+  />
+</div>
+
 <Button
   variant="ghost"
   size="icon"
+  title="Modifica"
   onClick={() => handleEdit(cliente)}
 >
   <Edit className="h-4 w-4" />
