@@ -2417,7 +2417,15 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
                 <TableHead className="min-w-[90px] text-center">
                   Scadenzari
                 </TableHead>
-                <TableHead className="sticky right-0 bg-background z-20 w-[340px] min-w-[340px] text-right" />
+                <TableHead className="sticky right-0 bg-background z-20 w-[300px] min-w-[300px]">
+  <div className="grid grid-cols-5 items-center text-center text-xs">
+    <span>Organi</span>
+    <span>Servizi</span>
+    <span>Attivo</span>
+    <span>Modifica</span>
+    <span>Elimina</span>
+  </div>
+</TableHead>
               </TableRow>
             </TableHeader>
 
@@ -2475,57 +2483,60 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
     )}
 </TableCell>
 
-<TableCell className="sticky right-0 bg-background z-10 w-[340px] min-w-[340px] text-right">
-  <div className="flex items-center justify-end gap-2 whitespace-nowrap">
+<TableCell className="sticky right-0 bg-background z-10 w-[300px] min-w-[300px]">
+  <div className="grid grid-cols-5 items-center justify-items-center">
 
-    {cliente.tipo_cliente?.toLowerCase() !== "persona fisica" &&
-      !(
-        cliente.settore_lavoro === true &&
-        cliente.settore_fiscale !== true &&
-        cliente.settore_consulenza !== true
-      ) && (
-        <Button
-          variant="ghost"
-          size="sm"
-          title={
-            organiSocialiMancanti(cliente)
-              ? "Soci e organi sociali mancanti"
-              : "Soci e organi sociali"
-          }
-          onClick={() =>
-            router.push(
-              `/clienti/organi-sociali?cliente_id=${cliente.id}`
-            )
-          }
-          className={
-            organiSocialiMancanti(cliente)
-              ? "h-7 px-2 border border-red-500 text-red-600 hover:text-red-700"
-              : "h-7 px-2 border border-green-500 text-green-600 hover:text-green-700"
-          }
-        >
-          Organi
-        </Button>
-      )}
+    <div className="flex justify-center">
+      {cliente.tipo_cliente?.toLowerCase() !== "persona fisica" &&
+        !(
+          cliente.settore_lavoro === true &&
+          cliente.settore_fiscale !== true &&
+          cliente.settore_consulenza !== true
+        ) && (
+          <Button
+            variant="ghost"
+            size="icon"
+            title={
+              organiSocialiMancanti(cliente)
+                ? "Soci e organi sociali mancanti"
+                : "Soci e organi sociali"
+            }
+            onClick={() =>
+              router.push(
+                `/clienti/organi-sociali?cliente_id=${cliente.id}`
+              )
+            }
+            className={
+              organiSocialiMancanti(cliente)
+                ? "rounded-full border-2 border-red-500 text-red-600"
+                : "rounded-full border-2 border-green-500 text-green-600"
+            }
+          >
+            <Users className="h-4 w-4" />
+          </Button>
+        )}
+    </div>
 
-    {cliente.cliente === true &&
-      cliente.attivo === true && (
-        <Button
-          variant="ghost"
-          size="sm"
-          title="Servizi e scadenzari"
-          onClick={() =>
-            router.push(
-              `/clienti/servizi?cliente_id=${cliente.id}`
-            )
-          }
-          className="h-7 px-2"
-        >
-          Servizi
-        </Button>
-      )}
+    <div className="flex justify-center">
+      {cliente.cliente === true &&
+        cliente.attivo === true && (
+          <Button
+            variant="ghost"
+            size="icon"
+            title="Servizi e scadenzari"
+            onClick={() =>
+              router.push(
+                `/clienti/servizi?cliente_id=${cliente.id}`
+              )
+            }
+          >
+            <CalendarCog className="h-4 w-4" />
+          </Button>
+        )}
+    </div>
 
     <div
-      className="flex items-center gap-1.5"
+      className="flex items-center justify-center"
       title={
         cliente.attivo === true
           ? "Disattiva nominativo"
@@ -2541,36 +2552,29 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
           )
         }
       />
-
-      <span className="text-xs">
-        {cliente.attivo === true
-          ? "Attivo"
-          : "Non attivo"}
-      </span>
     </div>
 
     <Button
       variant="ghost"
-      size="sm"
+      size="icon"
       title="Modifica"
       onClick={() =>
         handleEdit(cliente)
       }
-      className="h-7 px-2"
     >
-      Modifica
+      <Edit className="h-4 w-4" />
     </Button>
 
     <Button
       variant="ghost"
-      size="sm"
+      size="icon"
       title="Elimina"
       onClick={() =>
         handleDelete(cliente.id)
       }
-      className="h-7 px-2 text-destructive hover:text-destructive"
+      className="text-destructive hover:text-destructive"
     >
-      Elimina
+      <Trash2 className="h-4 w-4" />
     </Button>
 
   </div>
