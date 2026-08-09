@@ -8,7 +8,6 @@ type ClienteRow = {
   id: string;
   ragione_sociale?: string | null;
   cod_cliente?: string | null;
-  rapp_legale_id?: string | null;
 };
 
 type DocumentoRow = {
@@ -304,11 +303,11 @@ if (av2DocumentoData?.allegato_av2_firmato) {
   });
 }
 
-  const { data: clienteData, error: clienteError } = await supabase
-    .from("tbclienti")
-    .select("id, ragione_sociale, cod_cliente, rapp_legale_id")
-    .eq("id", effectiveClienteId)
-    .maybeSingle();
+ const { data: clienteData, error: clienteError } = await supabase
+  .from("tbclienti")
+  .select("id, ragione_sociale, cod_cliente")
+  .eq("id", effectiveClienteId)
+  .maybeSingle();
 
   if (clienteError) {
     throw clienteError;
@@ -336,38 +335,71 @@ if (av2DocumentoData?.allegato_av2_firmato) {
     );
   }
 
-  const rappLegaleId = clienteData?.rapp_legale_id || null;
+ const { data: organoData, error: organoError } = await supabase
+  .from("tbclienti_organi")
+  .select("soggetto_cliente_id")
+  .eq("studio_id", studioId)
+  .eq("cliente_id", effectiveClienteId)
+  .eq("tipo_ruolo", "R")
+  .eq("principale", true)
+  .eq("attivo", true)
+  .limit(1)
+  .maybeSingle();
 
-  if (rappLegaleId) {
-    const { data: rappresentanteData, error: rappresentanteError } = await supabase
-      .from("rapp_legali")
-      .select("id, allegato_doc, tipo_doc")
-      .eq("id", rappLegaleId)
-      .maybeSingle();
+if (organoError) {
+  throw organoError;
+}
 
-    if (rappresentanteError) {
-      throw rappresentanteError;
-    }
+const soggettoClienteId =
+  organoData?.soggetto_cliente_id
+    ? String(organoData.soggetto_cliente_id)
+    : null;
 
-    if (rappresentanteData?.allegato_doc) {
-      await ensureDocumentoInFascicolo({
-        supabase,
-        studioId,
-        praticaId,
-        clienteId: effectiveClienteId,
-        tipoDocumento: "Documento identità",
-        storagePath: rappresentanteData.allegato_doc,
-        bucketName: rappresentanteData.allegato_doc.startsWith("av4/")
-          ? "messaggi-allegati"
-          : "allegati",
-        mimeType: getMimeTypeFromPath(rappresentanteData.allegato_doc),
-        origine: "documento_rappresentante",
-        note: rappresentanteData?.tipo_doc
-          ? `Importato da documento rappresentante (${rappresentanteData.tipo_doc})`
-          : "Importato da documento rappresentante",
-      });
-    }
+if (soggettoClienteId) {
+  const {
+    data: documentoRappresentante,
+    error: documentoRappresentanteError,
+  } = await supabase
+    .from("tbclienti_documenti_aml")
+    .select(`
+      id,
+      tipo_documento,
+      allegato_documento,
+      scadenza_documento
+    `)
+    .eq("studio_id", studioId)
+    .eq("soggetto_cliente_id", soggettoClienteId)
+    .eq("attivo", true)
+    .not("allegato_documento", "is", null)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (documentoRappresentanteError) {
+    throw documentoRappresentanteError;
   }
+
+  if (documentoRappresentante?.allegato_documento) {
+    await ensureDocumentoInFascicolo({
+      supabase,
+      studioId,
+      praticaId,
+      clienteId: effectiveClienteId,
+      tipoDocumento: "Documento identità",
+      storagePath: documentoRappresentante.allegato_documento,
+      bucketName: documentoRappresentante.allegato_documento.startsWith("av4/")
+        ? "messaggi-allegati"
+        : "allegati",
+      mimeType: getMimeTypeFromPath(
+        documentoRappresentante.allegato_documento
+      ),
+      origine: "documento_rappresentante",
+      note: documentoRappresentante?.tipo_documento
+        ? `Importato da documento rappresentante (${documentoRappresentante.tipo_documento})`
+        : "Importato da documento rappresentante",
+    });
+  }
+}
 };
 
  const calcolaStatoFascicolo = (docs: DocumentoRow[], isSocietaCliente: boolean) => {
