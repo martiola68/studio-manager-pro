@@ -17,6 +17,8 @@ type DocumentoRow = {
   cliente_id?: string | null;
   av4_id?: string | number | null;
   tipo_documento?: string | null;
+   societa_documento_id?: string | null;
+  societa_documento_nome?: string | null;
   nome_file?: string | null;
   storage_path?: string | null;
   bucket_name?: string | null;
@@ -167,6 +169,8 @@ const ensureDocumentoInFascicolo = async ({
   studioId,
   praticaId,
   clienteId,
+  societaDocumentoId = null,
+  societaDocumentoNome = null,
   tipoDocumento,
   storagePath,
   bucketName = "allegati",
@@ -178,6 +182,8 @@ const ensureDocumentoInFascicolo = async ({
   studioId: string;
   praticaId: string;
   clienteId: string | null;
+  societaDocumentoId?: string | null;
+societaDocumentoNome?: string | null;
   tipoDocumento: string;
   storagePath: string;
   bucketName?: string;
@@ -212,6 +218,8 @@ const { data: existing, error: existingError } = await supabase
       studio_id: studioId,
       pratica_id: praticaId,
       cliente_id: clienteId,
+      societa_documento_id: societaDocumentoId,
+      societa_documento_nome: societaDocumentoNome,
       tipo_documento: tipoDocumento,
       nome_file: nomeFile,
       storage_path: storagePath,
@@ -575,6 +583,10 @@ let query = supabase
     cliente_id,
     av4_id,
     tipo_documento,
+
+    societa_documento_id,
+    societa_documento_nome,
+
     nome_file,
     storage_path,
     bucket_name,
