@@ -491,7 +491,7 @@ export default function ModelloAV4() {
       return;
     }
 
-    /*
+   
     const rappresentanteId = soggettoClienteId;
 
   const nominativo =
