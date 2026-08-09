@@ -1261,25 +1261,25 @@ cassetto_fiscale_id: formData.cassetto_fiscale_id || null,
   const updateData: ClienteUpdate =
     dataToSave as ClienteUpdate;
 
-  const {
-    data: clienteAggiornato,
-    error,
-  } = await supabase
-    .from("tbclienti")
-    .update(updateData)
-    .eq("id", editingCliente.id)
-    .select("id, cliente, attivo")
-    .single();
+ const {
+  data: clienteAggiornato,
+  error,
+} = await supabase
+  .from("tbclienti")
+  .update(updateData)
+  .eq("id", editingCliente.id)
+  .select("id, attivo")
+  .single();
 
-  if (error) {
-    throw error;
-  }
+if (error) {
+  throw error;
+}
 
-  if (!clienteAggiornato?.id) {
-    throw new Error(
-      "Il record non è stato aggiornato in tbclienti."
-    );
-  }
+if (!clienteAggiornato?.id) {
+  throw new Error(
+    "Il record non è stato aggiornato in tbclienti."
+  );
+}
 
   if (
     clienteAggiornato.attivo !==
