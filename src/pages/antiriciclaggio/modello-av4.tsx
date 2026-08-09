@@ -494,39 +494,38 @@ export default function ModelloAV4() {
     /*
     const rappresentanteId = soggettoClienteId;
 
-    const nominativo =
-      [
-        soggettoRow?.cognome,
-        soggettoRow?.nome,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .trim() ||
-      soggettoRow?.ragione_sociale ||
-      "";
+  const nominativo =
+  [
+    soggettoRow?.cognome,
+    soggettoRow?.nome,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .trim() ||
+  soggettoRow?.ragione_sociale ||
+  "";
 
-    setForm((prev) => ({
-      ...prev,
+setForm((prev) => ({
+  ...prev,
 
-      cliente_id:
-        String(clienteId),
+  cliente_id:
+    String(clienteId),
 
-      soggetto_cliente_id:
-        soggettoClienteId,
+  soggetto_cliente_id:
+    soggettoClienteId,
 
-      /*
-       * Legacy temporaneo.
-       * Verrà eliminato negli step successivi.
-       */
-      rapp_legale_id:
+  rapp_legale_id:
+    soggettoClienteId,
 
-      dichiarante_nome_cognome:
-        nominativo,
+  microsoft_connection_id: "",
 
-      dichiarante_codice_fiscale:
-        soggettoRow?.codice_fiscale ||
-        "",
+  dichiarante_nome_cognome:
+    nominativo,
 
+  dichiarante_codice_fiscale:
+    soggettoRow?.codice_fiscale ||
+    "",
+    
       dichiarante_luogo_nascita:
         soggettoRow?.luogo_nascita ||
         "",
