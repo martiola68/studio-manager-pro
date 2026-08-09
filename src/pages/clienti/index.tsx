@@ -1211,9 +1211,7 @@ tipologia_cliente: formData.tipologia_cliente,
           email: formData.email || null,
         telefono: formData.telefono || null,
         pec: formData.pec || null,
-        attivo: formData.cliente
-  ? formData.attivo
-  : false,
+       attivo: formData.attivo,
           cassetto_fiscale_id: formData.cassetto_fiscale_id || null,
           matricola_inps: formData.matricola_inps || null,
           pat_inail: formData.pat_inail || null,
@@ -2673,14 +2671,11 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
   id="cliente"
   checked={formData.cliente}
   onCheckedChange={(checked) =>
-    setFormData((prev) => ({
-      ...prev,
-      cliente: checked,
-      attivo: checked
-        ? prev.attivo
-        : false,
-    }))
-  }
+  setFormData((prev) => ({
+    ...prev,
+    cliente: checked,
+  }))
+}
 />
 
     <Label htmlFor="cliente">
@@ -2692,19 +2687,13 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
   {/* Cliente Attivo */}
   <div className="flex items-end">
     <div className="flex items-center space-x-2 pb-2">
-     <Switch
+    <Switch
   id="attivo"
-  checked={
-    formData.cliente &&
-    formData.attivo
-  }
-  disabled={!formData.cliente}
+  checked={formData.attivo}
   onCheckedChange={(checked) =>
     setFormData((prev) => ({
       ...prev,
-      attivo: prev.cliente
-        ? checked
-        : false,
+      attivo: checked,
     }))
   }
 />
