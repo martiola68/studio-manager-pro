@@ -301,11 +301,12 @@ const fileInputRef = useRef<HTMLInputElement | null>(null);
   selected: boolean;
 };
 
-  const [filtroClienti, setFiltroClienti] =
+ const [filtroClienti, setFiltroClienti] =
   useState<
     "attivi" |
     "inattivi" |
     "organi" |
+    "non_attivi" |
     "tutti"
   >("attivi");
 
@@ -713,24 +714,29 @@ if ((organiRes as Response).ok) {
 const filteredClienti = useMemo(() => {
   let filtered = [...clienti];
 
-  if (filtroClienti === "attivi") {
-    filtered = filtered.filter(
-      (cliente) =>
-        cliente.cliente === true &&
-        cliente.attivo === true
-    );
-  } else if (filtroClienti === "inattivi") {
-    filtered = filtered.filter(
-      (cliente) =>
-        cliente.cliente === true &&
-        cliente.attivo !== true
-    );
-  } else if (filtroClienti === "organi") {
-    filtered = filtered.filter(
-      (cliente) =>
-        cliente.cliente === false
-    );
-  }
+if (filtroClienti === "attivi") {
+  filtered = filtered.filter(
+    (cliente) =>
+      cliente.cliente === true &&
+      cliente.attivo === true
+  );
+} else if (filtroClienti === "inattivi") {
+  filtered = filtered.filter(
+    (cliente) =>
+      cliente.cliente === true &&
+      cliente.attivo !== true
+  );
+} else if (filtroClienti === "organi") {
+  filtered = filtered.filter(
+    (cliente) =>
+      cliente.cliente === false
+  );
+} else if (filtroClienti === "non_attivi") {
+  filtered = filtered.filter(
+    (cliente) =>
+      cliente.attivo !== true
+  );
+}
 
   if (searchTerm.trim()) {
       const s = searchTerm.toLowerCase();
@@ -2122,14 +2128,15 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
 <Select
   value={filtroClienti}
   onValueChange={(value) =>
-    setFiltroClienti(
-      value as
-        | "attivi"
-        | "inattivi"
-        | "organi"
-        | "tutti"
-    )
-  }
+  setFiltroClienti(
+    value as
+      | "attivi"
+      | "inattivi"
+      | "organi"
+      | "non_attivi"
+      | "tutti"
+  )
+}
 >
   <SelectTrigger className="w-full md:w-[230px] h-12">
     <SelectValue />
@@ -2140,17 +2147,21 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
       Solo clienti attivi
     </SelectItem>
 
-    <SelectItem value="inattivi">
-      Solo clienti inattivi
-    </SelectItem>
+   <SelectItem value="inattivi">
+  Solo clienti inattivi
+</SelectItem>
 
-    <SelectItem value="organi">
-      Solo soci - organi sociali
-    </SelectItem>
+<SelectItem value="organi">
+  Solo soci - organi sociali
+</SelectItem>
 
-    <SelectItem value="tutti">
-      Tutti
-    </SelectItem>
+<SelectItem value="non_attivi">
+  Tutti i non attivi
+</SelectItem>
+
+<SelectItem value="tutti">
+  Tutti
+</SelectItem>
   </SelectContent>
 </Select>
 
