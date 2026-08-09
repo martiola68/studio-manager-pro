@@ -59,8 +59,12 @@ function classificaPartecipazione(quota: number) {
   return "altra_partecipazione";
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+
+    const clienteIdRichiesto =
+      searchParams.get("cliente_id")?.trim() || "";
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -555,6 +559,142 @@ const societaSingole = clienti
       "it"
     )
   );
+
+    const visureTeMap = new Map<
+  string,
+  {
+    societa_id: string;
+    societa_nome: string;
+    motivo: "cliente" | "percorso_te";
+    percorsi: string[][];
+  }
+>();
+
+if (clienteIdRichiesto) {
+  /*
+   * La società cliente deve sempre avere
+   * la propria visura.
+   */
+  const clienteRichiesto =
+    clientiMap.get(clienteIdRichiesto);
+
+  if (clienteRichiesto) {
+    visureTeMap.set(clienteIdRichiesto, {
+      societa_id: clienteIdRichiesto,
+      societa_nome:
+        clienteRichiesto.ragione_sociale ||
+        "Società cliente",
+      motivo: "cliente",
+      percorsi: [],
+    });
+  }
+
+  /*
+   * Prendiamo SOLO i titolari effettivi
+   * effettivamente candidati per questa società.
+   */
+  const titolariCliente =
+    titolariEffettivi.filter(
+      (titolare: any) =>
+        String(titolare.societa_id) ===
+          String(clienteIdRichiesto) &&
+        titolare.candidato_titolare_effettivo === true
+    );
+
+  titolariCliente.forEach((titolare: any) => {
+    const percorsi = Array.isArray(titolare.percorsi)
+      ? titolare.percorsi
+      : [];
+
+    percorsi.forEach((percorso: any) => {
+      const percorsoIds: string[] =
+        Array.isArray(percorso.percorso_ids)
+          ? percorso.percorso_ids.map(String)
+          : [];
+
+      const percorsoNomi: string[] =
+        Array.isArray(percorso.percorso_nomi)
+          ? percorso.percorso_nomi.map(String)
+          : [];
+
+      /*
+       * percorso_ids contiene anche la persona fisica.
+       * Conserviamo esclusivamente i nodi che
+       * nell'anagrafica risultano società.
+       */
+      percorsoIds.forEach((idSocieta, index) => {
+        const anagrafica =
+          clientiMap.get(idSocieta);
+
+        if (!anagrafica) {
+          return;
+        }
+
+        const tipoCliente = String(
+          anagrafica.tipo_cliente || ""
+        ).toLowerCase();
+
+        if (tipoCliente.includes("persona fisica")) {
+          return;
+        }
+
+        const nomeSocieta =
+          anagrafica.ragione_sociale ||
+          percorsoNomi[index] ||
+          "Società";
+
+        const percorsoCompleto =
+          percorsoNomi.filter(Boolean);
+
+        const esistente =
+          visureTeMap.get(idSocieta);
+
+        if (esistente) {
+          const chiavePercorso =
+            percorsoCompleto.join(" > ");
+
+          const giaPresente =
+            esistente.percorsi.some(
+              (p) => p.join(" > ") === chiavePercorso
+            );
+
+          if (!giaPresente) {
+            esistente.percorsi.push(
+              percorsoCompleto
+            );
+          }
+
+          return;
+        }
+
+        visureTeMap.set(idSocieta, {
+          societa_id: idSocieta,
+          societa_nome: nomeSocieta,
+          motivo:
+            idSocieta === clienteIdRichiesto
+              ? "cliente"
+              : "percorso_te",
+          percorsi: percorsoCompleto.length
+            ? [percorsoCompleto]
+            : [],
+        });
+      });
+    });
+  });
+}
+
+const visureTeRichieste =
+  Array.from(visureTeMap.values()).sort(
+    (a, b) => {
+      if (a.motivo === "cliente") return -1;
+      if (b.motivo === "cliente") return 1;
+
+      return a.societa_nome.localeCompare(
+        b.societa_nome,
+        "it"
+      );
+    }
+  );
 return NextResponse.json({
   partecipazioni: relazioni,
 
@@ -565,6 +705,8 @@ return NextResponse.json({
   societa_singole: societaSingole,
 
   titolari_effettivi: titolariEffettivi,
+
+  visure_te_richieste: visureTeRichieste,
   
   candidati_titolari_effettivi:
     titolariEffettivi.filter(
