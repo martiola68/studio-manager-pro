@@ -1463,8 +1463,6 @@ const handleToggleAttivo = async (
 };
 
 const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
-
-const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
   try {
     const supabase = getSupabaseClient();
     const annoRiferimento = new Date().getFullYear();
