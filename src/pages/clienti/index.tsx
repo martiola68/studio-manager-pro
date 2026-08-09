@@ -2417,9 +2417,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
                 <TableHead className="min-w-[90px] text-center">
                   Scadenzari
                 </TableHead>
-                <TableHead className="sticky right-0 bg-background z-20 w-[220px] min-w-[220px] text-right">
-                Azioni
-                </TableHead>
+                <TableHead className="sticky right-0 bg-background z-20 w-[340px] min-w-[340px] text-right" />
               </TableRow>
             </TableHeader>
 
@@ -2477,88 +2475,103 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
     )}
 </TableCell>
 
-<TableCell className="sticky right-0 bg-background z-10 w-[220px] min-w-[220px] text-right">
-  <div className="flex justify-end gap-3">
+<TableCell className="sticky right-0 bg-background z-10 w-[340px] min-w-[340px] text-right">
+  <div className="flex items-center justify-end gap-2 whitespace-nowrap">
 
-{cliente.tipo_cliente?.toLowerCase() !== "persona fisica" &&
-  !(
-    cliente.settore_lavoro === true &&
-    cliente.settore_fiscale !== true &&
-    cliente.settore_consulenza !== true
-  ) && (
-  <Button
-    variant="ghost"
-    size="icon"
-    title={
-      organiSocialiMancanti(cliente)
-        ? "Soci e organi sociali mancanti"
-        : "Soci e organi sociali"
-    }
-    onClick={() =>
-      router.push(`/clienti/organi-sociali?cliente_id=${cliente.id}`)
-    }
-    className={
-      organiSocialiMancanti(cliente)
-        ? "rounded-full border-2 border-red-500 text-red-600"
-        : "rounded-full border-2 border-green-500 text-green-600"
-    }
-  >
-    <Users className="h-4 w-4" />
-  </Button>
-)}
+    {cliente.tipo_cliente?.toLowerCase() !== "persona fisica" &&
+      !(
+        cliente.settore_lavoro === true &&
+        cliente.settore_fiscale !== true &&
+        cliente.settore_consulenza !== true
+      ) && (
+        <Button
+          variant="ghost"
+          size="sm"
+          title={
+            organiSocialiMancanti(cliente)
+              ? "Soci e organi sociali mancanti"
+              : "Soci e organi sociali"
+          }
+          onClick={() =>
+            router.push(
+              `/clienti/organi-sociali?cliente_id=${cliente.id}`
+            )
+          }
+          className={
+            organiSocialiMancanti(cliente)
+              ? "h-7 px-2 border border-red-500 text-red-600 hover:text-red-700"
+              : "h-7 px-2 border border-green-500 text-green-600 hover:text-green-700"
+          }
+        >
+          Organi
+        </Button>
+      )}
 
-{cliente.cliente === true &&
-  cliente.attivo === true && (
-    <Button
-      variant="ghost"
-      size="icon"
-      title="Servizi e scadenzari"
-      onClick={() =>
-        router.push(
-          `/clienti/servizi?cliente_id=${cliente.id}`
-        )
+    {cliente.cliente === true &&
+      cliente.attivo === true && (
+        <Button
+          variant="ghost"
+          size="sm"
+          title="Servizi e scadenzari"
+          onClick={() =>
+            router.push(
+              `/clienti/servizi?cliente_id=${cliente.id}`
+            )
+          }
+          className="h-7 px-2"
+        >
+          Servizi
+        </Button>
+      )}
+
+    <div
+      className="flex items-center gap-1.5"
+      title={
+        cliente.attivo === true
+          ? "Disattiva nominativo"
+          : "Attiva nominativo"
       }
     >
-      <CalendarCog className="h-4 w-4" />
+      <Switch
+        checked={cliente.attivo === true}
+        onCheckedChange={(checked) =>
+          handleToggleAttivo(
+            cliente,
+            checked
+          )
+        }
+      />
+
+      <span className="text-xs">
+        {cliente.attivo === true
+          ? "Attivo"
+          : "Non attivo"}
+      </span>
+    </div>
+
+    <Button
+      variant="ghost"
+      size="sm"
+      title="Modifica"
+      onClick={() =>
+        handleEdit(cliente)
+      }
+      className="h-7 px-2"
+    >
+      Modifica
     </Button>
-)}
 
-<div
-  className="flex items-center"
-  title={
-    cliente.attivo === true
-      ? "Disattiva nominativo"
-      : "Attiva nominativo"
-  }
->
-  <Switch
-    checked={cliente.attivo === true}
-    onCheckedChange={(checked) =>
-      handleToggleAttivo(
-        cliente,
-        checked
-      )
-    }
-  />
-</div>
-
-<Button
-  variant="ghost"
-  size="icon"
-  title="Modifica"
-  onClick={() => handleEdit(cliente)}
->
-  <Edit className="h-4 w-4" />
-</Button>
-
-<Button
-  variant="ghost"
-  size="icon"
-  onClick={() => handleDelete(cliente.id)}
-  className="text-destructive hover:text-destructive"
->
-  <Trash2 className="h-4 w-4" />
-</Button>
+    <Button
+      variant="ghost"
+      size="sm"
+      title="Elimina"
+      onClick={() =>
+        handleDelete(cliente.id)
+      }
+      className="h-7 px-2 text-destructive hover:text-destructive"
+    >
+      Elimina
+    </Button>
 
   </div>
 </TableCell>
