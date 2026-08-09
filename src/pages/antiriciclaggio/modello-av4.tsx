@@ -1428,11 +1428,17 @@ if (form.invia_altra_email && !form.email_destinatario_alternativa.trim()) {
             ? crypto.randomUUID()
             : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-      const updatePayload: any = {
-        public_token: token,
+    const updatePayload: any = {
+  public_token: token,
 
-        rapp_legale_id: form.rapp_legale_id || null,
-        amm_no_associato: !!form.amm_no_associato,
+  soggetto_cliente_id:
+    form.soggetto_cliente_id || null,
+
+  // legacy temporaneo
+  rapp_legale_id:
+    form.rapp_legale_id || null,
+
+  amm_no_associato: !!form.amm_no_associato,
 
         dichiarante_nome_cognome: form.dichiarante_nome_cognome || null,
         dichiarante_codice_fiscale: form.dichiarante_codice_fiscale || null,
@@ -1800,15 +1806,21 @@ ${nomeOperatore}
 
     await validaTitolariPrimaDelSalvataggio();
 
-    const payload = {
-      studio_id: form.studio_id,
-      cliente_id: form.cliente_id,
-      pratica_id: form.pratica_id || null,
-      societa_id: form.societa_id || null,
-      av1_id: form.av1_id ? Number(form.av1_id) : null,
-      rapp_legale_id: form.rapp_legale_id || null,
+  const payload = {
+  studio_id: form.studio_id,
+  cliente_id: form.cliente_id,
+  pratica_id: form.pratica_id || null,
+  societa_id: form.societa_id || null,
+  av1_id: form.av1_id ? Number(form.av1_id) : null,
 
-      invia_altra_email: !!form.invia_altra_email,
+  soggetto_cliente_id:
+    form.soggetto_cliente_id || null,
+
+  // legacy temporaneo: NON eliminare ancora
+  rapp_legale_id:
+    form.rapp_legale_id || null,
+
+  invia_altra_email: !!form.invia_altra_email,
       email_destinatario_alternativa: form.invia_altra_email
       ? form.email_destinatario_alternativa.trim()
       : null,
