@@ -284,15 +284,48 @@ export default function StampaAV4Page() {
           setCliente((clienteData as ClienteRow) || null);
         }
 
-        if (av4Data.rapp_legale_id) {
-          const { data: rappData } = await supabase
-            .from("rapp_legali")
-            .select("*")
-            .eq("id", av4Data.rapp_legale_id)
-            .maybeSingle();
+      if (av4Data.rapp_legale_id) {
+  const { data: rappData } = await supabase
+    .from("tbclienti")
+    .select(`
+      id,
+      nome,
+      cognome,
+      ragione_sociale,
+      codice_fiscale,
+      luogo_nascita,
+      data_nascita,
+      indirizzo,
+      citta,
+      cap,
+      nazionalita
+    `)
+    .eq("id", av4Data.rapp_legale_id)
+    .maybeSingle();
 
-          setRappresentante((rappData as RappresentanteRow) || null);
-        }
+  if (rappData) {
+    setRappresentante({
+      id: rappData.id,
+      nome_cognome:
+        [rappData.cognome, rappData.nome]
+          .filter(Boolean)
+          .join(" ")
+          .trim() ||
+        rappData.ragione_sociale ||
+        "",
+
+      codice_fiscale: rappData.codice_fiscale,
+      luogo_nascita: rappData.luogo_nascita,
+      data_nascita: rappData.data_nascita,
+      indirizzo_residenza: rappData.indirizzo,
+      citta_residenza: rappData.citta,
+      cap_residenza: rappData.cap,
+      nazionalita: rappData.nazionalita,
+    });
+  } else {
+    setRappresentante(null);
+  }
+}
 
         const { data: titolariData } = await supabase
           .from("tbAV4_titolari")
