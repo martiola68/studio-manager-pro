@@ -18,8 +18,9 @@ type FormState = {
   pratica_id: string;
   societa_id: string;
   av1_id: string;
-  rapp_legale_id: string;
-  microsoft_connection_id: string;
+soggetto_cliente_id: string;
+rapp_legale_id: string;
+microsoft_connection_id: string;
 
   invia_altra_email: boolean;
   email_destinatario_alternativa: string;
@@ -100,8 +101,9 @@ const initialFormState = (
   pratica_id: praticaId,
   societa_id: societaId,
   av1_id: av1Id,
-  rapp_legale_id: "",
-   microsoft_connection_id: "",
+soggetto_cliente_id: "",
+rapp_legale_id: "",
+microsoft_connection_id: "",
   invia_altra_email: false,
   email_destinatario_alternativa: "",
   amm_no_associato: false,
@@ -204,10 +206,17 @@ function mapDbRowToForm(row: any): FormState {
     cliente_id: row?.cliente_id ? String(row.cliente_id) : "",
     pratica_id: row?.pratica_id ? String(row.pratica_id) : "",
     societa_id: row?.societa_id ? String(row.societa_id) : "",
-    av1_id: row?.av1_id != null ? String(row.av1_id) : "",
-    rapp_legale_id: row?.rapp_legale_id ? String(row.rapp_legale_id) : "",
-    
-   microsoft_connection_id: row?.microsoft_connection_id
+   av1_id: row?.av1_id != null ? String(row.av1_id) : "",
+
+soggetto_cliente_id: row?.soggetto_cliente_id
+  ? String(row.soggetto_cliente_id)
+  : "",
+
+rapp_legale_id: row?.rapp_legale_id
+  ? String(row.rapp_legale_id)
+  : "",
+
+microsoft_connection_id: row?.microsoft_connection_id
   ? String(row.microsoft_connection_id)
   : "",
   invia_altra_email: !!row?.invia_altra_email,
@@ -343,12 +352,13 @@ export default function ModelloAV4() {
   }
 
  function clearRappresentanteFields() {
-  setForm((prev) => ({
-    ...prev,
-      amm_no_associato: false,
-      rapp_legale_id: "",
-      microsoft_connection_id: "",
-      dichiarante_nome_cognome: "",
+ setForm((prev) => ({
+  ...prev,
+  amm_no_associato: false,
+  soggetto_cliente_id: "",
+  rapp_legale_id: "",
+  microsoft_connection_id: "",
+  dichiarante_nome_cognome: "",
       dichiarante_codice_fiscale: "",
       dichiarante_luogo_nascita: "",
       dichiarante_data_nascita: "",
@@ -359,115 +369,318 @@ export default function ModelloAV4() {
     }));
   }
 
-  async function hydrateClienteAndRappresentante(clienteId: string) {
-    if (form.amm_no_associato) {
-  return;
-}
-    if (!clienteId) {
-      setClienteLabel("");
-      clearRappresentanteFields();
-      return;
-    }
+ async function hydrateClienteAndRappresentante(clienteId: string) {
+  if (form.amm_no_associato) {
+    return;
+  }
 
-    const supabase = getSupabaseClient() as any;
-    setLoadingRappresentante(true);
+  if (!clienteId) {
+    setClienteLabel("");
+    clearRappresentanteFields();
+    return;
+  }
 
-    try {
-      const { data: clienteRow, error: clienteError } = await supabase
+  const supabase = getSupabaseClient() as any;
+  setLoadingRappresentante(true);
+
+  try {
+    /*
+     * 1. Carichiamo la società / cliente della pratica.
+     */
+    const { data: clienteRow, error: clienteError } =
+      await supabase
         .from("tbclienti")
         .select("*")
         .eq("id", clienteId)
         .single();
 
-      if (clienteError || !clienteRow) {
-        console.error("Errore caricamento cliente:", clienteError);
-        setClienteLabel("");
-        clearRappresentanteFields();
-        return;
-      }
+    if (clienteError || !clienteRow) {
+      console.error(
+        "Errore caricamento cliente:",
+        clienteError
+      );
 
-      setClienteLabel(buildClienteLabel(clienteRow));
-
-      const rappLegaleId =
-        clienteRow?.rapp_legale_id != null
-          ? String(clienteRow.rapp_legale_id).trim()
-          : "";
-
-      if (!rappLegaleId) {
-        clearRappresentanteFields();
-        return;
-      }
-
-      const { data: rappRow, error: rappError } = await supabase
-        .from("rapp_legali")
-        .select("*")
-        .eq("id", rappLegaleId)
-        .single();
-
-      if (rappError || !rappRow) {
-        console.error("Errore caricamento rappresentante:", rappError);
-        clearRappresentanteFields();
-        return;
-      }
-
-      setForm((prev) => ({
-        ...prev,
-        cliente_id: String(clienteId),
-        rapp_legale_id: String(rappRow.id),
-        microsoft_connection_id: rappRow?.microsoft_connection_id
-          ? String(rappRow.microsoft_connection_id)
-          : "",
-        dichiarante_nome_cognome: rappRow?.nome_cognome ?? "",
-        dichiarante_codice_fiscale: rappRow?.codice_fiscale ?? "",
-        dichiarante_luogo_nascita: rappRow?.luogo_nascita ?? "",
-        dichiarante_data_nascita: normalizeDateForInput(rappRow?.data_nascita),
-        dichiarante_indirizzo_residenza: rappRow?.indirizzo_residenza ?? "",
-        dichiarante_citta_residenza: rappRow?.citta_residenza ?? "",
-        dichiarante_cap_residenza: rappRow?.CAP ?? "",
-        dichiarante_nazionalita: rappRow?.nazionalita ?? "",
-      }));
-    } catch (error) {
-      console.error("Errore imprevisto caricamento cliente/rappresentante:", error);
       setClienteLabel("");
       clearRappresentanteFields();
-    } finally {
-      setLoadingRappresentante(false);
-    }
-  }
-
-  async function importaAmministratoreDaCliente() {
-    if (!form.cliente_id) {
-      alert("Cliente non valorizzato.");
       return;
     }
 
-    setForm((prev) => ({
-  ...prev,
-  amm_no_associato: false,
-}));
+    setClienteLabel(buildClienteLabel(clienteRow));
 
+    /*
+     * 2. Il rappresentante non viene più ricavato da
+     *    tbclienti.rapp_legale_id.
+     *
+     *    Cerchiamo la carica PRINCIPALE attiva
+     *    negli organi sociali della società.
+     */
+    const {
+      data: organoRow,
+      error: organoError,
+    } = await supabase
+      .from("tbclienti_organi")
+      .select(`
+        id,
+        soggetto_cliente_id,
+        tipo_ruolo,
+        ruolo,
+        rappresentante_legale,
+        principale,
+        attivo
+      `)
+      .eq("cliente_id", clienteId)
+      .eq("tipo_ruolo", "R")
+      .eq("principale", true)
+      .eq("attivo", true)
+      .limit(1)
+      .maybeSingle();
 
-    await hydrateClienteAndRappresentante(form.cliente_id);
+    if (organoError) {
+      console.error(
+        "Errore caricamento rappresentante da organi sociali:",
+        organoError
+      );
 
-    const supabase = getSupabaseClient() as any;
-    const { data: clienteRow } = await supabase
-      .from("tbclienti")
-      .select("id, rapp_legale_id")
-      .eq("id", form.cliente_id)
-      .single();
+      clearRappresentanteFields();
+      return;
+    }
 
-    const rappLegaleId =
-      clienteRow?.rapp_legale_id != null
-        ? String(clienteRow.rapp_legale_id).trim()
+    const soggettoClienteId =
+      organoRow?.soggetto_cliente_id
+        ? String(organoRow.soggetto_cliente_id).trim()
         : "";
 
-    if (!rappLegaleId) {
-      alert("Per questo cliente non risulta alcun rappresentante legale collegato.");
+    if (!soggettoClienteId) {
+      clearRappresentanteFields();
       return;
     }
 
-    alert("Amministratore importato correttamente.");
+    /*
+     * 3. Anagrafica unica del rappresentante:
+     *    tbclienti.
+     */
+    const {
+      data: soggettoRow,
+      error: soggettoError,
+    } = await supabase
+      .from("tbclienti")
+      .select(`
+        id,
+        ragione_sociale,
+        cognome,
+        nome,
+        codice_fiscale,
+        email,
+        luogo_nascita,
+        data_nascita,
+        indirizzo,
+        citta,
+        cap,
+        nazionalita
+      `)
+      .eq("id", soggettoClienteId)
+      .single();
+
+    if (soggettoError || !soggettoRow) {
+      console.error(
+        "Errore caricamento anagrafica rappresentante:",
+        soggettoError
+      );
+
+      clearRappresentanteFields();
+      return;
+    }
+
+    /*
+     * 4. COMPATIBILITÀ TRANSITORIA.
+     *
+     * Cerchiamo ancora l'eventuale UUID legacy
+     * solamente per non rompere le parti AV4
+     * che non abbiamo ancora migrato.
+     *
+     * Il dato principale è già soggetto_cliente_id.
+     */
+    let legacyRappLegaleId = "";
+    let legacyMicrosoftConnectionId = "";
+
+    const cf =
+      String(
+        soggettoRow?.codice_fiscale || ""
+      ).trim();
+
+    if (cf) {
+      const {
+        data: legacyRow,
+        error: legacyError,
+      } = await supabase
+        .from("rapp_legali")
+        .select(
+          "id, microsoft_connection_id"
+        )
+        .eq(
+          "studio_id",
+          clienteRow.studio_id
+        )
+        .ilike(
+          "codice_fiscale",
+          cf
+        )
+        .maybeSingle();
+
+      if (legacyError) {
+        console.warn(
+          "Rappresentante legacy non trovato:",
+          legacyError
+        );
+      }
+
+      if (legacyRow?.id) {
+        legacyRappLegaleId =
+          String(legacyRow.id);
+
+        legacyMicrosoftConnectionId =
+          legacyRow?.microsoft_connection_id
+            ? String(
+                legacyRow.microsoft_connection_id
+              )
+            : "";
+      }
+    }
+
+    const nominativo =
+      [
+        soggettoRow?.cognome,
+        soggettoRow?.nome,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .trim() ||
+      soggettoRow?.ragione_sociale ||
+      "";
+
+    setForm((prev) => ({
+      ...prev,
+
+      cliente_id:
+        String(clienteId),
+
+      soggetto_cliente_id:
+        soggettoClienteId,
+
+      /*
+       * Legacy temporaneo.
+       * Verrà eliminato negli step successivi.
+       */
+      rapp_legale_id:
+        legacyRappLegaleId,
+
+      microsoft_connection_id:
+        legacyMicrosoftConnectionId,
+
+      dichiarante_nome_cognome:
+        nominativo,
+
+      dichiarante_codice_fiscale:
+        soggettoRow?.codice_fiscale ||
+        "",
+
+      dichiarante_luogo_nascita:
+        soggettoRow?.luogo_nascita ||
+        "",
+
+      dichiarante_data_nascita:
+        normalizeDateForInput(
+          soggettoRow?.data_nascita
+        ),
+
+      dichiarante_indirizzo_residenza:
+        soggettoRow?.indirizzo ||
+        "",
+
+      dichiarante_citta_residenza:
+        soggettoRow?.citta ||
+        "",
+
+      dichiarante_cap_residenza:
+        soggettoRow?.cap ||
+        "",
+
+      dichiarante_nazionalita:
+        soggettoRow?.nazionalita ||
+        "",
+    }));
+  } catch (error) {
+    console.error(
+      "Errore imprevisto caricamento cliente/rappresentante:",
+      error
+    );
+
+    setClienteLabel("");
+    clearRappresentanteFields();
+  } finally {
+    setLoadingRappresentante(false);
   }
+}
+
+async function importaAmministratoreDaCliente() {
+  if (!form.cliente_id) {
+    alert("Cliente non valorizzato.");
+    return;
+  }
+
+  setForm((prev) => ({
+    ...prev,
+    amm_no_associato: false,
+  }));
+
+  const supabase =
+    getSupabaseClient() as any;
+
+  const {
+    data: organoRow,
+    error: organoError,
+  } = await supabase
+    .from("tbclienti_organi")
+    .select(
+      "id, soggetto_cliente_id"
+    )
+    .eq(
+      "cliente_id",
+      form.cliente_id
+    )
+    .eq(
+      "tipo_ruolo",
+      "R"
+    )
+    .eq(
+      "principale",
+      true
+    )
+    .eq(
+      "attivo",
+      true
+    )
+    .limit(1)
+    .maybeSingle();
+
+  if (
+    organoError ||
+    !organoRow?.soggetto_cliente_id
+  ) {
+    alert(
+      "Per questo cliente non risulta alcun rappresentante principale attivo negli Organi Sociali."
+    );
+    return;
+  }
+
+  await hydrateClienteAndRappresentante(
+    form.cliente_id
+  );
+
+  alert(
+    "Amministratore importato correttamente."
+  );
+}
 
  async function prefillFromPraticaOrAV1(
     studioIdValue: string,
