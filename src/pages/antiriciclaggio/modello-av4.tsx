@@ -492,60 +492,7 @@ export default function ModelloAV4() {
     }
 
     /*
-     * 4. COMPATIBILITÀ TRANSITORIA.
-     *
-     * Cerchiamo ancora l'eventuale UUID legacy
-     * solamente per non rompere le parti AV4
-     * che non abbiamo ancora migrato.
-     *
-     * Il dato principale è già soggetto_cliente_id.
-     */
-    let legacyRappLegaleId = "";
-    let legacyMicrosoftConnectionId = "";
-
-    const cf =
-      String(
-        soggettoRow?.codice_fiscale || ""
-      ).trim();
-
-    if (cf) {
-      const {
-        data: legacyRow,
-        error: legacyError,
-      } = await supabase
-        .from("rapp_legali")
-        .select(
-          "id, microsoft_connection_id"
-        )
-        .eq(
-          "studio_id",
-          clienteRow.studio_id
-        )
-        .ilike(
-          "codice_fiscale",
-          cf
-        )
-        .maybeSingle();
-
-      if (legacyError) {
-        console.warn(
-          "Rappresentante legacy non trovato:",
-          legacyError
-        );
-      }
-
-      if (legacyRow?.id) {
-        legacyRappLegaleId =
-          String(legacyRow.id);
-
-        legacyMicrosoftConnectionId =
-          legacyRow?.microsoft_connection_id
-            ? String(
-                legacyRow.microsoft_connection_id
-              )
-            : "";
-      }
-    }
+    const rappresentanteId = soggettoClienteId;
 
     const nominativo =
       [
@@ -572,10 +519,6 @@ export default function ModelloAV4() {
        * Verrà eliminato negli step successivi.
        */
       rapp_legale_id:
-        legacyRappLegaleId,
-
-      microsoft_connection_id:
-        legacyMicrosoftConnectionId,
 
       dichiarante_nome_cognome:
         nominativo,
@@ -1110,11 +1053,14 @@ function validateBeforeSave() {
     return false;
   }
 
-if (!form.rapp_legale_id && !form.invia_altra_email && !form.amm_no_associato) {
+if (
+  !form.soggetto_cliente_id &&
+  !form.invia_altra_email &&
+  !form.amm_no_associato
+) {
   alert("Per il cliente selezionato non risulta un rappresentante collegato.");
   return false;
 }
-
 if (form.invia_altra_email && !form.email_destinatario_alternativa.trim()) {
   alert("Inserisci l'email alternativa a cui inviare l'AV4.");
   return false;
@@ -1368,11 +1314,11 @@ async function handleUploadPdfFirmatoDiretto(
         return;
       }
 
-     if (!form.rapp_legale_id && !form.invia_altra_email) {
+ if (!form.soggetto_cliente_id && !form.invia_altra_email) {
   alert("Rappresentante legale non valorizzato.");
   return;
 }
-
+      
 if (form.invia_altra_email && !form.email_destinatario_alternativa.trim()) {
   alert("Inserisci l'email alternativa a cui inviare l'AV4.");
   return;
@@ -1487,11 +1433,11 @@ if (form.invia_altra_email && !form.email_destinatario_alternativa.trim()) {
     clienteLabel ||
     "Cliente";
 } else {
-  const { data: rappRow, error: rappError } = await supabase
-    .from("rapp_legali")
-    .select("email, nome_cognome")
-    .eq("id", form.rapp_legale_id)
-    .single();
+ const { data: rappRow, error: rappError } = await supabase
+  .from("tbclienti")
+  .select("email, ragione_sociale, cognome, nome")
+  .eq("id", form.soggetto_cliente_id)
+  .single();
 
   if (rappError) {
     console.error("Errore recupero email rappresentante:", rappError);
@@ -1501,9 +1447,16 @@ if (form.invia_altra_email && !form.email_destinatario_alternativa.trim()) {
     return;
   }
 
-  destinatario = rappRow?.email?.trim() || "";
-  nomeDestinatario = rappRow?.nome_cognome?.trim() || "Cliente";
+destinatario = rappRow?.email?.trim() || "";
 
+nomeDestinatario =
+  [rappRow?.cognome, rappRow?.nome]
+    .filter(Boolean)
+    .join(" ")
+    .trim() ||
+  rappRow?.ragione_sociale?.trim() ||
+  "Cliente";
+         
   if (!destinatario) {
     alert(
       `Link pubblico generato, ma il rappresentante legale non ha un indirizzo email valorizzato.\n${url}`
@@ -2061,12 +2014,12 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                       className="w-full rounded-md border bg-gray-50 px-3 py-2"
                       readOnly
                     />
-                    <p className="mt-1 text-xs text-gray-500">
-                      Il rappresentante viene recuperato automaticamente da
-                      <strong> tbclienti.rapp_legale_id </strong>
-                      e caricato dalla tabella
-                      <strong> rapp_legali</strong>.
-                    </p>
+                   <p className="mt-1 text-xs text-gray-500">
+  Il rappresentante viene recuperato automaticamente dagli
+  <strong> Organi Sociali </strong>
+  e caricato dall'anagrafica
+  <strong> tbclienti</strong>.
+</p>
                   </div>
 
                   <div className="flex flex-wrap gap-3">
