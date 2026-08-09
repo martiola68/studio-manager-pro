@@ -2418,7 +2418,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
                   Scadenzari
                 </TableHead>
                 <TableHead className="sticky right-0 bg-background z-20 w-[300px] min-w-[300px]">
-  <div className="grid grid-cols-5 items-center text-center text-xs">
+ <div className="grid grid-cols-5 items-center text-center text-sm font-medium">
     <span>Organi</span>
     <span>Servizi</span>
     <span>Attivo</span>
