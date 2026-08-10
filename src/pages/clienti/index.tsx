@@ -55,7 +55,6 @@ import {
   Upload,
   FileSpreadsheet,
   CheckCircle2,
-  Calendar,
   CalendarCog,
   Lock,
   Unlock,
@@ -77,21 +76,18 @@ import {
 type ClienteRow = Database["public"]["Tables"]["tbclienti"]["Row"] & {
   telefono?: string | null;
   pec?: string | null;
-  rapp_legale_id?: string | null;
   cliente?: boolean | null;
 };
 
 type ClienteInsert = Database["public"]["Tables"]["tbclienti"]["Insert"] & {
   telefono?: string | null;
   pec?: string | null;
-  rapp_legale_id?: string | null;
   cliente?: boolean;
 };
 
 type ClienteUpdate = Database["public"]["Tables"]["tbclienti"]["Update"] & {
   telefono?: string | null;
   pec?: string | null;
-  rapp_legale_id?: string | null;
   cliente?: boolean;
 };
 
@@ -100,19 +96,6 @@ type UtenteRow = Database["public"]["Tables"]["tbutenti"]["Row"];
 type CassettoFiscaleRow =
   Database["public"]["Tables"]["tbcassetti_fiscali"]["Row"];
 type PrestazioneRow = Database["public"]["Tables"]["tbprestazioni"]["Row"];
-
-type ScadenzariSelezionati = {
-  iva: boolean;
-  cu: boolean;
-  bilancio: boolean;
-  fiscali: boolean;
-  lipe: boolean;
-  modello_770: boolean;
-  esterometro: boolean;
-  ccgg: boolean;
-  proforma: boolean;
-  imu: boolean;
-};
 
 type ClienteFormData = {
   cod_cliente: string;
@@ -130,7 +113,7 @@ type ClienteFormData = {
   cap: string;
   citta: string;
   provincia: string;
-  rapp_legale_id: string;
+  
  email: string;
 telefono: string;
 pec: string;
@@ -193,7 +176,7 @@ const initialFormData: ClienteFormData = {
   cap: "",
   citta: "",
   provincia: "",
-  rapp_legale_id: "",
+
  email: "",
 telefono: "",
 pec: "",
@@ -222,35 +205,6 @@ attivo: true,
   flag_mail_scadenze: false,
   flag_mail_newsletter: false,
 };
-
-const initialScadenzari: ScadenzariSelezionati = {
-  iva: false,
-  cu: false,
-  bilancio: false,
-  fiscali: false,
-  lipe: false,
-  modello_770: false,
-  esterometro: false,
-  ccgg: false,
-  proforma: false,
-  imu: false,
-};
-
-const SCADENZARI_OPTIONS: Array<{
-  key: keyof ScadenzariSelezionati;
-  label: string;
-}> = [
-  { key: "iva", label: "IVA" },
-  { key: "lipe", label: "LIPE" },
-  { key: "cu", label: "CU (Certificazione Unica)" },
-  { key: "bilancio", label: "Bilanci" },
-  { key: "fiscali", label: "Fiscali" },
-  { key: "modello_770", label: "770" },
-  { key: "esterometro", label: "Esterometro" },
-  { key: "ccgg", label: "CCGG" },
-  { key: "proforma", label: "Proforma" },
-  { key: "imu", label: "IMU" },
-];
 
 function safeString(v: unknown): string {
   return typeof v === "string" ? v : "";
@@ -443,10 +397,6 @@ const [vistaClienti, setVistaClienti] = useState<
   "clienti" | "elenco_generale"
 >("clienti");
 
-const [rappLegali, setRappLegali] = useState<
-  { id: string; nome_cognome: string }[]
->([]);
-
 const [searchTerm, setSearchTerm] = useState("");
   
   const [selectedLetter, setSelectedLetter] = useState<string>("Tutti");
@@ -463,9 +413,8 @@ const [searchTerm, setSearchTerm] = useState("");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
 
-  const [formData, setFormData] = useState<ClienteFormData>(initialFormData);
-  const [scadenzari, setScadenzari] =
-    useState<ScadenzariSelezionati>(initialScadenzari);
+const [formData, setFormData] =
+  useState<ClienteFormData>(initialFormData);
 
   const [encryptionEnabled, setEncryptionEnabled] = useState(false);
   const [encryptionLocked, setEncryptionLocked] = useState(true);
@@ -516,7 +465,7 @@ if (user?.id) {
     utentiRes,
     cassettiRes,
     prestazioniRes,
-    rappLegaliRes,
+   
     organiRes,
   ] = await Promise.all([
   supabase
@@ -544,12 +493,7 @@ if (user?.id) {
       .select("*")
       .order("descrizione"),
 
-    supabase
-      .from("rapp_legali" as any)
-      .select("id, nome_cognome")
-      .order("nome_cognome"),
-
-    fetch("/api/clienti-organi?modalita=conteggi", {
+      fetch("/api/clienti-organi?modalita=conteggi", {
       cache: "no-store",
     }),
   ]);
@@ -559,10 +503,6 @@ if (utentiRes.error) throw utentiRes.error;
 if (cassettiRes.error) throw cassettiRes.error;
 if (prestazioniRes.error) throw prestazioniRes.error;
 
-if ((rappLegaliRes as any).error) {
-  throw (rappLegaliRes as any).error;
-}
-
 /*
  * Caricamento dati principali della pagina.
  */
@@ -571,14 +511,6 @@ setContatti(contattiRes.data ?? []);
 setUtenti(utentiRes.data ?? []);
 setCassettiFiscali(cassettiRes.data ?? []);
 setPrestazioni(prestazioniRes.data ?? []);
-
-const rappLegaliData =
-  ((rappLegaliRes as any).data ?? []) as {
-    id: string;
-    nome_cognome: string;
-  }[];
-
-setRappLegali(rappLegaliData);
 
 /*
  * Calcolo del totale quote dei soci attivi
@@ -654,64 +586,7 @@ if ((organiRes as Response).ok) {
     checkEncryption();
   }, [studioId, loadData]);
 
-  const toggleClienteFlag = useCallback(
-    async (
-      clienteId: string,
-      field:
-        | "flag_iva"
-        | "flag_lipe"
-        | "flag_bilancio"
-        | "flag_770"
-        | "flag_imu"
-        | "flag_cu"
-        | "flag_fiscali"
-        | "flag_esterometro"
-        | "flag_ccgg"
-        | "flag_proforma",
-      nextValue: boolean
-    ) => {
-      setClienti((prev) =>
-        prev.map((c) => (c.id === clienteId ? { ...c, [field]: nextValue } : c))
-      );
-
-      try {
-        const supabase = getSupabaseClient();
-        const updateData: Partial<ClienteUpdate> = { [field]: nextValue };
-
-        const { error } = await supabase
-          .from("tbclienti")
-          .update(updateData)
-          .eq("id", clienteId);
-
-        if (error) throw error;
-
-        toast({
-          title: "Aggiornato",
-          description: "Scadenzario aggiornato correttamente",
-        });
-      } catch (e: unknown) {
-        setClienti((prev) =>
-          prev.map((c) =>
-            c.id === clienteId ? { ...c, [field]: !nextValue } : c
-          )
-        );
-
-        const message =
-          e && typeof e === "object" && "message" in e
-            ? String((e as { message: unknown }).message)
-            : "Impossibile aggiornare lo scadenzario";
-
-        toast({
-          title: "Errore",
-          description: message,
-          variant: "destructive",
-        });
-      }
-    },
-    [toast]
-  );
-
-const filteredClienti = useMemo(() => {
+ const filteredClienti = useMemo(() => {
   let filtered = [...clienti];
 
 if (filtroClienti === "attivi") {
@@ -784,11 +659,10 @@ if (filtroClienti === "attivi") {
   selectedUtentePayroll,
 ]);
 
-  const resetForm = () => {
-    setEditingCliente(null);
-    setFormData(initialFormData);
-    setScadenzari(initialScadenzari);
-  };
+const resetForm = () => {
+  setEditingCliente(null);
+  setFormData(initialFormData);
+};
 
 const organiSocialiMancanti = (
   cliente: ClienteRow
@@ -896,8 +770,7 @@ nome:
     cap: clienteData.cap || "",
     citta: clienteData.citta || "",
     provincia: clienteData.provincia || "",
-    rapp_legale_id: clienteData.rapp_legale_id ?? "",
-   email: clienteData.email || "",
+     email: clienteData.email || "",
 telefono: (clienteData as any).telefono || "",
 pec: (clienteData as any).pec || "",
 cliente: (clienteData as any).cliente ?? true,
@@ -938,19 +811,7 @@ attivo: clienteData.attivo ?? true,
     flag_mail_newsletter: clienteData.flag_mail_newsletter ?? false,
   });
 
-  setScadenzari({
-    iva: clienteData.flag_iva ?? false,
-    cu: clienteData.flag_cu ?? false,
-    bilancio: clienteData.flag_bilancio ?? false,
-    fiscali: clienteData.flag_fiscali ?? false,
-    lipe: clienteData.flag_lipe ?? false,
-    modello_770: clienteData.flag_770 ?? false,
-    esterometro: clienteData.flag_esterometro ?? false,
-    ccgg: clienteData.flag_ccgg ?? false,
-    proforma: clienteData.flag_proforma ?? false,
-    imu: clienteData.flag_imu ?? false,
-  });
-};
+ };
 
 const syncClienteToContatto = async (
   clienteId: string,
@@ -1203,12 +1064,11 @@ tipologia_cliente: formData.tipologia_cliente,
           : null,
           partita_iva: formData.partita_iva || null,
           codice_fiscale: formData.codice_fiscale || null,
-          indirizzo: formData.indirizzo || null,
-          cap: formData.cap || null,
-          citta: formData.citta || null,
-          provincia: formData.provincia || null,
-          rapp_legale_id: formData.rapp_legale_id || null,
-        email: formData.email || null,
+         indirizzo: formData.indirizzo || null,
+cap: formData.cap || null,
+citta: formData.citta || null,
+provincia: formData.provincia || null,
+email: formData.email || null,
 telefono: formData.telefono || null,
 pec: formData.pec || null,
 
@@ -1231,17 +1091,7 @@ cassetto_fiscale_id: formData.cassetto_fiscale_id || null,
           flag_mail_attivo: formData.flag_mail_attivo,
           flag_mail_scadenze: formData.flag_mail_scadenze,
           flag_mail_newsletter: formData.flag_mail_newsletter,
-          flag_iva: scadenzari.iva,
-          flag_cu: scadenzari.cu,
-          flag_bilancio: scadenzari.bilancio,
-          flag_lipe: scadenzari.lipe,
-          flag_esterometro: scadenzari.esterometro,
-          flag_proforma: scadenzari.proforma,
-          flag_fiscali: scadenzari.fiscali,
-          flag_770: scadenzari.modello_770,
-          flag_ccgg: scadenzari.ccgg,
-          flag_imu: scadenzari.imu,
-        };
+          };
 
         let dataToSave: Partial<ClienteInsert> = base;
 
@@ -1462,22 +1312,6 @@ const handleToggleAttivo = async (
   }
 };
 
-const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
-  try {
-    const supabase = getSupabaseClient();
-    const annoRiferimento = new Date().getFullYear();
-
-    const studioIdEffettivo = (cliente as any).studio_id ?? studioId ?? null;
-
-    if (!studioIdEffettivo) {
-      toast({
-        title: "Errore",
-        description: "Studio ID mancante, impossibile inserire negli scadenzari",
-        variant: "destructive",
-      });
-      return;
-    }
-
     const scadenzariAttivi: string[] = [];
     if (cliente.flag_iva) scadenzariAttivi.push("IVA");
     if (cliente.flag_lipe) scadenzariAttivi.push("LIPE");
@@ -1490,352 +1324,7 @@ const handleInsertIntoScadenzari = async (cliente: ClienteRow) => {
     if (cliente.flag_ccgg) scadenzariAttivi.push("CCGG");
     if (cliente.flag_imu) scadenzariAttivi.push("IMU");
 
-    if (scadenzariAttivi.length === 0) {
-      toast({
-        title: "Attenzione",
-        description: "Per questo cliente non risultano scadenzari attivi",
-      });
-      return;
-    }
-  
-     const esisteRecord = async (tabella: string) => {
-      const { data, error } = await supabase
-        .from(tabella as any)
-        .select("id")
-        .eq("cliente_id", cliente.id)
-        .eq("anno_riferimento", annoRiferimento)
-        .maybeSingle();
 
-      if (error) throw error;
-      return !!data;
-    };
-
-    const nuovoId = () => crypto.randomUUID();
-
-    const eseguiInsert = async (
-      tabella: string,
-      payload: Record<string, any>,
-      nome: string
-    ) => {
-      const { error } = await supabase
-        .from(tabella as any)
-        .insert(payload as any);
-
-      if (error) {
-        throw new Error(`${nome}: ${error.message}`);
-      }
-    };
-
-    let inseriti = 0;
-    let giaPresenti = 0;
-
-    for (const s of scadenzariAttivi) {
-      switch (s) {
-        case "IVA": {
-          const exists = await esisteRecord("tbscadiva");
-          if (exists) {
-            giaPresenti++;
-            break;
-          }
-
-          await eseguiInsert(
-            "tbscadiva",
-            {
-              id: nuovoId(),
-              cliente_id: cliente.id,
-              anno_riferimento: annoRiferimento,
-              archiviato: false,
-              studio_id: studioIdEffettivo,
-              nominativo: cliente.ragione_sociale,
-              utente_operatore_id: cliente.utente_operatore_id ?? null,
-              utente_professionista_id: cliente.utente_professionista_id ?? null,
-              conferma_riga: false,
-              alert_1_inviato: false,
-              alert_2_inviato: false,
-            },
-            "IVA"
-          );
-          inseriti++;
-          break;
-        }
-
-        case "LIPE": {
-          const exists = await esisteRecord("tbscadlipe");
-          if (exists) {
-            giaPresenti++;
-            break;
-          }
-
-          await eseguiInsert(
-            "tbscadlipe",
-            {
-              id: nuovoId(),
-              cliente_id: cliente.id,
-              anno_riferimento: annoRiferimento,
-              archiviato: false,
-              studio_id: studioIdEffettivo,
-              nominativo: cliente.ragione_sociale,
-              utente_operatore_id: cliente.utente_operatore_id ?? null,
-              utente_professionista_id: cliente.utente_professionista_id ?? null,
-              alert_1_inviato: false,
-              alert_2_inviato: false,
-            },
-            "LIPE"
-          );
-          inseriti++;
-          break;
-        }
-
-        case "CU": {
-          const exists = await esisteRecord("tbscadcu");
-          if (exists) {
-            giaPresenti++;
-            break;
-          }
-
-          await eseguiInsert(
-            "tbscadcu",
-            {
-              id: nuovoId(),
-              cliente_id: cliente.id,
-              anno_riferimento: annoRiferimento,
-              archiviato: false,
-              studio_id: studioIdEffettivo,
-              nominativo: cliente.ragione_sociale,
-              utente_operatore_id: cliente.utente_operatore_id ?? null,
-              utente_professionista_id: cliente.utente_professionista_id ?? null,
-              conferma_riga: false,
-              alert_1_inviato: false,
-              alert_2_inviato: false,
-            },
-            "CU"
-          );
-          inseriti++;
-          break;
-        }
-
-        case "Bilanci": {
-          const exists = await esisteRecord("tbscadbilanci");
-          if (exists) {
-            giaPresenti++;
-            break;
-          }
-
-          await eseguiInsert(
-            "tbscadbilanci",
-            {
-              id: nuovoId(),
-              cliente_id: cliente.id,
-              anno_riferimento: annoRiferimento,
-              archiviato: false,
-              studio_id: studioIdEffettivo,
-              nominativo: cliente.ragione_sociale,
-              utente_operatore_id: cliente.utente_operatore_id ?? null,
-              utente_professionista_id: cliente.utente_professionista_id ?? null,
-              conferma_riga: false,
-              consorzio: false,
-              alert_1_inviato: false,
-              alert_2_inviato: false,
-            },
-            "Bilanci"
-          );
-          inseriti++;
-          break;
-        }
-
-        case "Fiscali": {
-          const exists = await esisteRecord("tbscadfiscali");
-          if (exists) {
-            giaPresenti++;
-            break;
-          }
-
-          await eseguiInsert(
-            "tbscadfiscali",
-            {
-              id: nuovoId(),
-              cliente_id: cliente.id,
-              anno_riferimento: annoRiferimento,
-              archiviato: false,
-              studio_id: studioIdEffettivo,
-              nominativo: cliente.ragione_sociale,
-              utente_operatore_id: cliente.utente_operatore_id ?? null,
-              utente_professionista_id: cliente.utente_professionista_id ?? null,
-              tipo_redditi: cliente.tipo_redditi ?? null,
-              conferma_riga: false,
-              alert_1_inviato: false,
-              alert_2_inviato: false,
-            },
-            "Fiscali"
-          );
-          inseriti++;
-          break;
-        }
-
-        case "770": {
-          const exists = await esisteRecord("tbscad770");
-          if (exists) {
-            giaPresenti++;
-            break;
-          }
-
-          await eseguiInsert(
-            "tbscad770",
-            {
-              id: nuovoId(),
-              cliente_id: cliente.id,
-              anno_riferimento: annoRiferimento,
-              archiviato: false,
-              studio_id: studioIdEffettivo,
-              nominativo: cliente.ragione_sociale,
-              utente_operatore_id: cliente.utente_operatore_id ?? null,
-              utente_professionista_id: cliente.utente_professionista_id ?? null,
-              utente_payroll_id: cliente.utente_payroll_id ?? null,
-              professionista_payroll_id:
-                cliente.professionista_payroll_id ?? null,
-              conferma_riga: false,
-              alert_1_inviato: false,
-              alert_2_inviato: false,
-            },
-            "770"
-          );
-          inseriti++;
-          break;
-        }
-
-        case "Proforma": {
-          const exists = await esisteRecord("tbscadproforma");
-          if (exists) {
-            giaPresenti++;
-            break;
-          }
-
-          await eseguiInsert(
-            "tbscadproforma",
-            {
-              id: nuovoId(),
-              cliente_id: cliente.id,
-              anno_riferimento: annoRiferimento,
-              archiviato: false,
-              studio_id: studioIdEffettivo,
-              nominativo: cliente.ragione_sociale,
-              utente_operatore_id: cliente.utente_operatore_id ?? null,
-              utente_professionista_id: cliente.utente_professionista_id ?? null,
-            },
-            "Proforma"
-          );
-          inseriti++;
-          break;
-        }
-
-        case "Esterometro": {
-          const exists = await esisteRecord("tbscadestero");
-          if (exists) {
-            giaPresenti++;
-            break;
-          }
-
-          await eseguiInsert(
-            "tbscadestero",
-            {
-              id: nuovoId(),
-              cliente_id: cliente.id,
-              anno_riferimento: annoRiferimento,
-              archiviato: false,
-              studio_id: studioIdEffettivo,
-              nominativo: cliente.ragione_sociale,
-              utente_operatore_id: cliente.utente_operatore_id ?? null,
-              utente_professionista_id: cliente.utente_professionista_id ?? null,
-            },
-            "Esterometro"
-          );
-          inseriti++;
-          break;
-        }
-
-        case "CCGG": {
-          const exists = await esisteRecord("tbscadccgg");
-          if (exists) {
-            giaPresenti++;
-            break;
-          }
-
-          await eseguiInsert(
-            "tbscadccgg",
-            {
-              id: nuovoId(),
-              cliente_id: cliente.id,
-              anno_riferimento: annoRiferimento,
-              archiviato: false,
-              studio_id: studioIdEffettivo,
-              nominativo: cliente.ragione_sociale,
-              utente_operatore_id: cliente.utente_operatore_id ?? null,
-              utente_professionista_id: cliente.utente_professionista_id ?? null,
-              conferma_riga: false,
-              alert_1_inviato: false,
-              alert_2_inviato: false,
-            },
-            "CCGG"
-          );
-          inseriti++;
-          break;
-        }
-
-       case "IMU": {
-  const exists = await esisteRecord("tbscadimu");
-
-  if (exists) {
-    giaPresenti++;
-    break;
-  }
-
-  await eseguiInsert(
-    "tbscadimu",
-    {
-      id: nuovoId(),
-      cliente_id: cliente.id,
-      anno_riferimento: annoRiferimento,
-      archiviato: false,
-      studio_id: studioIdEffettivo,
-      nominativo: cliente.ragione_sociale,
-
-      // SOLO OPERATORE
-      utente_operatore_id:
-        cliente.utente_operatore_id ?? null,
-
-      conferma_riga: false,
-      alert_1_inviato: false,
-      alert_2_inviato: false,
-    },
-    "IMU"
-  );
-
-  inseriti++;
-  break;
-}
-      }
-    }
-
-    toast({
-      title: "Successo",
-      description:
-        inseriti > 0
-          ? `Inseriti ${inseriti} scadenzari per l'anno ${annoRiferimento}${
-              giaPresenti > 0 ? ` (${giaPresenti} già presenti)` : ""
-            }`
-          : `Tutti gli scadenzari risultano già presenti per l'anno ${annoRiferimento}`,
-    });
-  } catch (error: any) {
-    console.error("Errore inserimento scadenzari:", error);
-    toast({
-      title: "Errore",
-      description:
-        error?.message || "Impossibile inserire il cliente negli scadenzari",
-      variant: "destructive",
-    });
-  }
-};
-  
   const downloadTemplate = () => {
     const headers = [
       "Tipo Cliente",
@@ -3126,42 +2615,6 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
           </div>
 
 {/* Riga rappresentante legale + recapiti società */}
-<div className="md:col-span-2 mt-4 grid grid-cols-12 gap-4">
-  <div className="col-span-12 md:col-span-6">
-    <Label htmlFor="rapp_legale_id">Rappresentante legale</Label>
-  
-    <Select
-  value={formData.rapp_legale_id || "none"}
-  disabled
->
-      <SelectTrigger id="rapp_legale_id">
-        <SelectValue placeholder="Seleziona rappresentante legale" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="none">
-          Seleziona rappresentante legale
-        </SelectItem>
-        {rappLegali.map((r) => (
-          <SelectItem key={r.id} value={r.id}>
-            {r.nome_cognome}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-    <p
-  style={{
-    fontSize: 12,
-    color: "#6b7280",
-    marginTop: 4,
-  }}
->
-  Il rappresentante legale viene aggiornato automaticamente dal modulo
-  "Organi sociali".
-</p>
-  </div>
-
-  <div className="col-span-12 md:col-span-6">
-    <Label htmlFor="email">Email</Label>
     <Input
       id="email"
       name="email"
