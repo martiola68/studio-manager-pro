@@ -9,8 +9,6 @@ import type { Database } from "@/lib/supabase/types";
 import { useToast } from "@/hooks/use-toast";
 
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"] & {
-  utente_fiscale?: { nome: string; cognome: string } | null;
-};
 
 const TIPI_SCADENZE = [
   { id: "flag_iva", label: "IVA" },
@@ -30,9 +28,10 @@ export default function ElencoGenerale() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filtroUtenteFiscale, setFiltroUtenteFiscale] = useState<string>("tutti");
-  const [updating, setUpdating] = useState<string | null>(null);
-  const { toast } = useToast();
-
+const [updating, setUpdating] = useState<string | null>(null);
+const [studioId, setStudioId] = useState<string>("");
+const { toast } = useToast();
+  
   useEffect(() => {
     loadClienti();
   }, []);
@@ -86,21 +85,41 @@ export default function ElencoGenerale() {
         .eq("id", user.id)
         .single();
 
-      if (!userData?.studio_id) return;
+  if (!userData?.studio_id) return;
 
-      const { data, error } = await supabase
-        .from("tbclienti")
-        .select(`
-          *,
-          utente_fiscale:tbutenti!tbclienti_utente_operatore_id_fkey(nome, cognome)
-        `)
-        .eq("studio_id", userData.studio_id)
-        .order("ragione_sociale", { ascending: true });
+setStudioId(userData.studio_id);
 
-      if (error) throw error;
+const { data, error } = await supabase
+  .from("tbclienti")
+  .select(`
+    *,
+    utente_fiscale:tbutenti!tbclienti_utente_operatore_id_fkey(nome, cognome),
+    servizi:tbclienti_servizi(
+      flag_iva,
+      flag_lipe,
+      flag_bilancio,
+      flag_770,
+      flag_imu,
+      flag_cu,
+      flag_fiscali,
+      flag_esterometro,
+      flag_ccgg
+    )
+  `)
+  .eq("studio_id", userData.studio_id)
+  .order("ragione_sociale", { ascending: true });
 
-      setClienti(data || []);
-      setFilteredClienti(data || []);
+if (error) throw error;
+
+const clientiNormalizzati = (data || []).map((cliente: any) => ({
+  ...cliente,
+  servizi: Array.isArray(cliente.servizi)
+    ? cliente.servizi[0] || null
+    : cliente.servizi || null,
+}));
+
+setClienti(clientiNormalizzati);
+setFilteredClienti(clientiNormalizzati);
     } catch (error) {
       console.error("Errore caricamento clienti:", error);
       toast({
@@ -113,38 +132,66 @@ export default function ElencoGenerale() {
     }
   }
 
-  async function handleToggleFlag(clienteId: string, field: keyof Cliente, checked: boolean | "indeterminate") {
-    try {
-      setUpdating(clienteId);
+async function handleToggleFlag(
+  clienteId: string,
+  field: keyof ServiziCliente,
+  checked: boolean | "indeterminate"
+) {
+  try {
+    setUpdating(clienteId);
 
-      const value = checked === true ? true : false;
+    const value = checked === true;
 
-      const { error } = await supabase
-        .from("tbclienti")
-        .update({ [field]: value })
-        .eq("id", clienteId);
-
-      if (error) throw error;
-
-      setClienti(prev =>
-        prev.map(c => (c.id === clienteId ? { ...c, [field]: value } : c))
+    const { error } = await (supabase as any)
+      .from("tbclienti_servizi")
+      .upsert(
+        {
+          studio_id: (
+            await supabase.auth.getUser()
+          ).data.user?.user_metadata?.studio_id,
+          cliente_id: clienteId,
+          [field]: value,
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: "studio_id,cliente_id",
+        }
       );
 
-      toast({
-        title: "Aggiornato",
-        description: `Flag ${field.replace("flag_", "").toUpperCase()} aggiornato con successo`,
-      });
-    } catch (error) {
-      console.error("Errore aggiornamento flag:", error);
-      toast({
-        title: "Errore",
-        description: "Impossibile aggiornare il flag",
-        variant: "destructive"
-      });
-    } finally {
-      setUpdating(null);
-    }
+    if (error) throw error;
+
+    setClienti(prev =>
+      prev.map(c =>
+        c.id === clienteId
+          ? {
+              ...c,
+              servizi: {
+                ...(c.servizi || {}),
+                [field]: value,
+              },
+            }
+          : c
+      )
+    );
+
+    toast({
+      title: "Aggiornato",
+      description: `Flag ${String(field)
+        .replace("flag_", "")
+        .toUpperCase()} aggiornato con successo`,
+    });
+  } catch (error) {
+    console.error("Errore aggiornamento flag:", error);
+
+    toast({
+      title: "Errore",
+      description: "Impossibile aggiornare il flag",
+      variant: "destructive",
+    });
+  } finally {
+    setUpdating(null);
   }
+}
 
   if (loading) {
     return (
@@ -239,10 +286,20 @@ export default function ElencoGenerale() {
                         <td key={tipo.id} className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[100px] border-l">
                           <div className="flex items-center justify-center">
                             <Checkbox
-                              checked={cliente[tipo.id as keyof Cliente] === true}
-                              onCheckedChange={(checked) => handleToggleFlag(cliente.id, tipo.id as keyof Cliente, checked)}
-                              disabled={updating === cliente.id}
-                            />
+  checked={
+    cliente.servizi?.[
+      tipo.id as keyof ServiziCliente
+    ] === true
+  }
+  onCheckedChange={(checked) =>
+    handleToggleFlag(
+      cliente.id,
+      tipo.id as keyof ServiziCliente,
+      checked
+    )
+  }
+  disabled={updating === cliente.id}
+/>
                           </div>
                         </td>
                       ))}
