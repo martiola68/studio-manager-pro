@@ -1909,9 +1909,6 @@ const handleToggleAttivo = async (
   }
 };
 
-const downloadTemplate = () => {
-
-
   const downloadTemplate = () => {
     const headers = [
       "Tipo Cliente",
