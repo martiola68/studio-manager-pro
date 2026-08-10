@@ -327,21 +327,11 @@ microsoft365_connections: {
           data_creazione: string | null
           data_ultima_verifica_antiric: string | null
           data_ultima_verifica_b: string | null
-          email: string
-          flag_770: boolean | null
-          flag_bilancio: boolean | null
-          flag_ccgg: boolean | null
-          flag_cu: boolean | null
-          flag_esterometro: boolean | null
-          flag_fiscali: boolean | null
-          flag_imu: boolean | null
-          flag_iva: boolean | null
-          flag_lipe: boolean | null
-          flag_mail_attivo: boolean | null
-          flag_mail_newsletter: boolean | null
-          flag_mail_scadenze: boolean | null
-          flag_proforma: boolean | null
-          id: string
+         email: string
+flag_mail_attivo: boolean | null
+flag_mail_newsletter: boolean | null
+flag_mail_scadenze: boolean | null
+id: string
           indirizzo: string
           note: string | null
           partita_iva: string
@@ -370,21 +360,11 @@ microsoft365_connections: {
           data_creazione?: string | null
           data_ultima_verifica_antiric?: string | null
           data_ultima_verifica_b?: string | null
-          email: string
-          flag_770?: boolean | null
-          flag_bilancio?: boolean | null
-          flag_ccgg?: boolean | null
-          flag_cu?: boolean | null
-          flag_esterometro?: boolean | null
-          flag_fiscali?: boolean | null
-          flag_imu?: boolean | null
-          flag_iva?: boolean | null
-          flag_lipe?: boolean | null
-          flag_mail_attivo?: boolean | null
-          flag_mail_newsletter?: boolean | null
-          flag_mail_scadenze?: boolean | null
-          flag_proforma?: boolean | null
-          id?: string
+         email: string
+flag_mail_attivo?: boolean | null
+flag_mail_newsletter?: boolean | null
+flag_mail_scadenze?: boolean | null
+id?: string
           indirizzo: string
           note?: string | null
           partita_iva: string
@@ -414,20 +394,10 @@ microsoft365_connections: {
           data_ultima_verifica_antiric?: string | null
           data_ultima_verifica_b?: string | null
           email?: string
-          flag_770?: boolean | null
-          flag_bilancio?: boolean | null
-          flag_ccgg?: boolean | null
-          flag_cu?: boolean | null
-          flag_esterometro?: boolean | null
-          flag_fiscali?: boolean | null
-          flag_imu?: boolean | null
-          flag_iva?: boolean | null
-          flag_lipe?: boolean | null
-          flag_mail_attivo?: boolean | null
-          flag_mail_newsletter?: boolean | null
-          flag_mail_scadenze?: boolean | null
-          flag_proforma?: boolean | null
-          id?: string
+flag_mail_attivo?: boolean | null
+flag_mail_newsletter?: boolean | null
+flag_mail_scadenze?: boolean | null
+id?: string
           indirizzo?: string
           note?: string | null
           partita_iva?: string
