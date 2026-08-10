@@ -96,35 +96,27 @@ soggetto_cliente:tbclienti!tbclienti_organi_soggetto_cliente_id_fkey (
 
     const organiNormalizzati = (data || []).map((o: any) => {
   const soggettoCliente = o.soggetto_cliente;
-  const rappLegale = o.rapp_legali;
-
+  
   return {
     ...o,
 
     nominativo_id:
-      o.soggetto_cliente_id ||
-      o.rapp_legale_id ||
-      null,
-
-  nominativo_nome:
+  o.soggetto_cliente_id || null,
+    
+nominativo_nome:
   soggettoCliente?.ragione_sociale ||
   [soggettoCliente?.cognome, soggettoCliente?.nome]
     .filter(Boolean)
     .join(" ") ||
-  rappLegale?.nome_cognome ||
   "",
 
-    nominativo_codice_fiscale:
-      soggettoCliente?.codice_fiscale ||
-      rappLegale?.codice_fiscale ||
-      "",
+nominativo_codice_fiscale:
+  soggettoCliente?.codice_fiscale || "",
 
-    nominativo_tipo:
-      o.soggetto_cliente_id
-        ? "cliente"
-        : o.rapp_legale_id
-        ? "rapp_legale"
-        : null,
+  nominativo_tipo:
+  o.soggetto_cliente_id
+    ? "cliente"
+    : null,
   };
 });
 
