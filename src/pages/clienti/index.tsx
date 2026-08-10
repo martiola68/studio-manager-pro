@@ -55,6 +55,7 @@ import {
   Upload,
   FileSpreadsheet,
   CheckCircle2,
+  Calendar,
   CalendarCog,
   Lock,
   Unlock,
@@ -584,9 +585,79 @@ if ((organiRes as Response).ok) {
     };
 
     checkEncryption();
-  }, [studioId, loadData]);
+}, [studioId, loadData]);
 
- const filteredClienti = useMemo(() => {
+const toggleClienteFlag = useCallback(
+  async (
+    clienteId: string,
+    field:
+      | "flag_iva"
+      | "flag_lipe"
+      | "flag_bilancio"
+      | "flag_770"
+      | "flag_imu"
+      | "flag_cu"
+      | "flag_fiscali"
+      | "flag_esterometro"
+      | "flag_ccgg"
+      | "flag_proforma",
+    nextValue: boolean
+  ) => {
+    setClienti((prev) =>
+      prev.map((c) =>
+        c.id === clienteId
+          ? { ...c, [field]: nextValue }
+          : c
+      )
+    );
+
+    try {
+      const supabase = getSupabaseClient();
+
+      const updateData: Partial<ClienteUpdate> = {
+        [field]: nextValue,
+      };
+
+      const { error } = await supabase
+        .from("tbclienti")
+        .update(updateData)
+        .eq("id", clienteId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Aggiornato",
+        description: "Scadenzario aggiornato correttamente",
+      });
+    } catch (e: unknown) {
+      setClienti((prev) =>
+        prev.map((c) =>
+          c.id === clienteId
+            ? { ...c, [field]: !nextValue }
+            : c
+        )
+      );
+
+      const message =
+        e &&
+        typeof e === "object" &&
+        "message" in e
+          ? String(
+              (e as { message: unknown }).message
+            )
+          : "Impossibile aggiornare lo scadenzario";
+
+      toast({
+        title: "Errore",
+        description: message,
+        variant: "destructive",
+      });
+    }
+  },
+  [toast]
+);
+
+const filteredClienti = useMemo(() => {
   let filtered = [...clienti];
 
 if (filtroClienti === "attivi") {
@@ -1312,17 +1383,533 @@ const handleToggleAttivo = async (
   }
 };
 
+  const handleInsertIntoScadenzari = async (
+  cliente: ClienteRow
+) => {
+  try {
+    const supabase = getSupabaseClient();
+
+    const annoRiferimento =
+      new Date().getFullYear();
+
+    const studioIdEffettivo =
+      (cliente as any).studio_id ??
+      studioId ??
+      null;
+
+    if (!studioIdEffettivo) {
+      toast({
+        title: "Errore",
+        description:
+          "Studio ID mancante, impossibile inserire negli scadenzari",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const scadenzariAttivi: string[] = [];
-    if (cliente.flag_iva) scadenzariAttivi.push("IVA");
-    if (cliente.flag_lipe) scadenzariAttivi.push("LIPE");
-    if (cliente.flag_cu) scadenzariAttivi.push("CU");
-    if (cliente.flag_770) scadenzariAttivi.push("770");
-    if (cliente.flag_bilancio) scadenzariAttivi.push("Bilanci");
-    if (cliente.flag_fiscali) scadenzariAttivi.push("Fiscali");
-    if (cliente.flag_proforma) scadenzariAttivi.push("Proforma");
-    if (cliente.flag_esterometro) scadenzariAttivi.push("Esterometro");
-    if (cliente.flag_ccgg) scadenzariAttivi.push("CCGG");
-    if (cliente.flag_imu) scadenzariAttivi.push("IMU");
+
+    if (cliente.flag_iva)
+      scadenzariAttivi.push("IVA");
+
+    if (cliente.flag_lipe)
+      scadenzariAttivi.push("LIPE");
+
+    if (cliente.flag_cu)
+      scadenzariAttivi.push("CU");
+
+    if (cliente.flag_770)
+      scadenzariAttivi.push("770");
+
+    if (cliente.flag_bilancio)
+      scadenzariAttivi.push("Bilanci");
+
+    if (cliente.flag_fiscali)
+      scadenzariAttivi.push("Fiscali");
+
+    if (cliente.flag_proforma)
+      scadenzariAttivi.push("Proforma");
+
+    if (cliente.flag_esterometro)
+      scadenzariAttivi.push("Esterometro");
+
+    if (cliente.flag_ccgg)
+      scadenzariAttivi.push("CCGG");
+
+    if (cliente.flag_imu)
+      scadenzariAttivi.push("IMU");
+
+    if (scadenzariAttivi.length === 0) {
+      toast({
+        title: "Attenzione",
+        description:
+          "Per questo cliente non risultano scadenzari attivi",
+      });
+      return;
+    }
+
+    const esisteRecord = async (
+      tabella: string
+    ) => {
+      const { data, error } = await supabase
+        .from(tabella as any)
+        .select("id")
+        .eq("cliente_id", cliente.id)
+        .eq(
+          "anno_riferimento",
+          annoRiferimento
+        )
+        .maybeSingle();
+
+      if (error) throw error;
+
+      return !!data;
+    };
+
+    const nuovoId = () =>
+      crypto.randomUUID();
+
+    const eseguiInsert = async (
+      tabella: string,
+      payload: Record<string, any>,
+      nome: string
+    ) => {
+      const { error } = await supabase
+        .from(tabella as any)
+        .insert(payload as any);
+
+      if (error) {
+        throw new Error(
+          `${nome}: ${error.message}`
+        );
+      }
+    };
+
+    let inseriti = 0;
+    let giaPresenti = 0;
+
+    for (const s of scadenzariAttivi) {
+      switch (s) {
+        case "IVA": {
+          const exists =
+            await esisteRecord("tbscadiva");
+
+          if (exists) {
+            giaPresenti++;
+            break;
+          }
+
+          await eseguiInsert(
+            "tbscadiva",
+            {
+              id: nuovoId(),
+              cliente_id: cliente.id,
+              anno_riferimento:
+                annoRiferimento,
+              archiviato: false,
+              studio_id:
+                studioIdEffettivo,
+              nominativo:
+                cliente.ragione_sociale,
+              utente_operatore_id:
+                cliente.utente_operatore_id ??
+                null,
+              utente_professionista_id:
+                cliente.utente_professionista_id ??
+                null,
+              conferma_riga: false,
+              alert_1_inviato: false,
+              alert_2_inviato: false,
+            },
+            "IVA"
+          );
+
+          inseriti++;
+          break;
+        }
+
+        case "LIPE": {
+          const exists =
+            await esisteRecord("tbscadlipe");
+
+          if (exists) {
+            giaPresenti++;
+            break;
+          }
+
+          await eseguiInsert(
+            "tbscadlipe",
+            {
+              id: nuovoId(),
+              cliente_id: cliente.id,
+              anno_riferimento:
+                annoRiferimento,
+              archiviato: false,
+              studio_id:
+                studioIdEffettivo,
+              nominativo:
+                cliente.ragione_sociale,
+              utente_operatore_id:
+                cliente.utente_operatore_id ??
+                null,
+              utente_professionista_id:
+                cliente.utente_professionista_id ??
+                null,
+              alert_1_inviato: false,
+              alert_2_inviato: false,
+            },
+            "LIPE"
+          );
+
+          inseriti++;
+          break;
+        }
+
+        case "CU": {
+          const exists =
+            await esisteRecord("tbscadcu");
+
+          if (exists) {
+            giaPresenti++;
+            break;
+          }
+
+          await eseguiInsert(
+            "tbscadcu",
+            {
+              id: nuovoId(),
+              cliente_id: cliente.id,
+              anno_riferimento:
+                annoRiferimento,
+              archiviato: false,
+              studio_id:
+                studioIdEffettivo,
+              nominativo:
+                cliente.ragione_sociale,
+              utente_operatore_id:
+                cliente.utente_operatore_id ??
+                null,
+              utente_professionista_id:
+                cliente.utente_professionista_id ??
+                null,
+              conferma_riga: false,
+              alert_1_inviato: false,
+              alert_2_inviato: false,
+            },
+            "CU"
+          );
+
+          inseriti++;
+          break;
+        }
+
+        case "Bilanci": {
+          const exists =
+            await esisteRecord(
+              "tbscadbilanci"
+            );
+
+          if (exists) {
+            giaPresenti++;
+            break;
+          }
+
+          await eseguiInsert(
+            "tbscadbilanci",
+            {
+              id: nuovoId(),
+              cliente_id: cliente.id,
+              anno_riferimento:
+                annoRiferimento,
+              archiviato: false,
+              studio_id:
+                studioIdEffettivo,
+              nominativo:
+                cliente.ragione_sociale,
+              utente_operatore_id:
+                cliente.utente_operatore_id ??
+                null,
+              utente_professionista_id:
+                cliente.utente_professionista_id ??
+                null,
+              conferma_riga: false,
+              consorzio: false,
+              alert_1_inviato: false,
+              alert_2_inviato: false,
+            },
+            "Bilanci"
+          );
+
+          inseriti++;
+          break;
+        }
+
+        case "Fiscali": {
+          const exists =
+            await esisteRecord(
+              "tbscadfiscali"
+            );
+
+          if (exists) {
+            giaPresenti++;
+            break;
+          }
+
+          await eseguiInsert(
+            "tbscadfiscali",
+            {
+              id: nuovoId(),
+              cliente_id: cliente.id,
+              anno_riferimento:
+                annoRiferimento,
+              archiviato: false,
+              studio_id:
+                studioIdEffettivo,
+              nominativo:
+                cliente.ragione_sociale,
+              utente_operatore_id:
+                cliente.utente_operatore_id ??
+                null,
+              utente_professionista_id:
+                cliente.utente_professionista_id ??
+                null,
+              tipo_redditi:
+                cliente.tipo_redditi ??
+                null,
+              conferma_riga: false,
+              alert_1_inviato: false,
+              alert_2_inviato: false,
+            },
+            "Fiscali"
+          );
+
+          inseriti++;
+          break;
+        }
+
+        case "770": {
+          const exists =
+            await esisteRecord("tbscad770");
+
+          if (exists) {
+            giaPresenti++;
+            break;
+          }
+
+          await eseguiInsert(
+            "tbscad770",
+            {
+              id: nuovoId(),
+              cliente_id: cliente.id,
+              anno_riferimento:
+                annoRiferimento,
+              archiviato: false,
+              studio_id:
+                studioIdEffettivo,
+              nominativo:
+                cliente.ragione_sociale,
+              utente_operatore_id:
+                cliente.utente_operatore_id ??
+                null,
+              utente_professionista_id:
+                cliente.utente_professionista_id ??
+                null,
+              utente_payroll_id:
+                cliente.utente_payroll_id ??
+                null,
+              professionista_payroll_id:
+                cliente.professionista_payroll_id ??
+                null,
+              conferma_riga: false,
+              alert_1_inviato: false,
+              alert_2_inviato: false,
+            },
+            "770"
+          );
+
+          inseriti++;
+          break;
+        }
+
+        case "Proforma": {
+          const exists =
+            await esisteRecord(
+              "tbscadproforma"
+            );
+
+          if (exists) {
+            giaPresenti++;
+            break;
+          }
+
+          await eseguiInsert(
+            "tbscadproforma",
+            {
+              id: nuovoId(),
+              cliente_id: cliente.id,
+              anno_riferimento:
+                annoRiferimento,
+              archiviato: false,
+              studio_id:
+                studioIdEffettivo,
+              nominativo:
+                cliente.ragione_sociale,
+              utente_operatore_id:
+                cliente.utente_operatore_id ??
+                null,
+              utente_professionista_id:
+                cliente.utente_professionista_id ??
+                null,
+            },
+            "Proforma"
+          );
+
+          inseriti++;
+          break;
+        }
+
+        case "Esterometro": {
+          const exists =
+            await esisteRecord(
+              "tbscadestero"
+            );
+
+          if (exists) {
+            giaPresenti++;
+            break;
+          }
+
+          await eseguiInsert(
+            "tbscadestero",
+            {
+              id: nuovoId(),
+              cliente_id: cliente.id,
+              anno_riferimento:
+                annoRiferimento,
+              archiviato: false,
+              studio_id:
+                studioIdEffettivo,
+              nominativo:
+                cliente.ragione_sociale,
+              utente_operatore_id:
+                cliente.utente_operatore_id ??
+                null,
+              utente_professionista_id:
+                cliente.utente_professionista_id ??
+                null,
+            },
+            "Esterometro"
+          );
+
+          inseriti++;
+          break;
+        }
+
+        case "CCGG": {
+          const exists =
+            await esisteRecord(
+              "tbscadccgg"
+            );
+
+          if (exists) {
+            giaPresenti++;
+            break;
+          }
+
+          await eseguiInsert(
+            "tbscadccgg",
+            {
+              id: nuovoId(),
+              cliente_id: cliente.id,
+              anno_riferimento:
+                annoRiferimento,
+              archiviato: false,
+              studio_id:
+                studioIdEffettivo,
+              nominativo:
+                cliente.ragione_sociale,
+              utente_operatore_id:
+                cliente.utente_operatore_id ??
+                null,
+              utente_professionista_id:
+                cliente.utente_professionista_id ??
+                null,
+              conferma_riga: false,
+              alert_1_inviato: false,
+              alert_2_inviato: false,
+            },
+            "CCGG"
+          );
+
+          inseriti++;
+          break;
+        }
+
+        case "IMU": {
+          const exists =
+            await esisteRecord("tbscadimu");
+
+          if (exists) {
+            giaPresenti++;
+            break;
+          }
+
+          await eseguiInsert(
+            "tbscadimu",
+            {
+              id: nuovoId(),
+              cliente_id: cliente.id,
+              anno_riferimento:
+                annoRiferimento,
+              archiviato: false,
+              studio_id:
+                studioIdEffettivo,
+              nominativo:
+                cliente.ragione_sociale,
+              utente_operatore_id:
+                cliente.utente_operatore_id ??
+                null,
+              conferma_riga: false,
+              alert_1_inviato: false,
+              alert_2_inviato: false,
+            },
+            "IMU"
+          );
+
+          inseriti++;
+          break;
+        }
+      }
+    }
+
+    toast({
+      title: "Successo",
+      description:
+        inseriti > 0
+          ? `Inseriti ${inseriti} scadenzari per l'anno ${annoRiferimento}${
+              giaPresenti > 0
+                ? ` (${giaPresenti} già presenti)`
+                : ""
+            }`
+          : `Tutti gli scadenzari risultano già presenti per l'anno ${annoRiferimento}`,
+    });
+  } catch (error: any) {
+    console.error(
+      "Errore inserimento scadenzari:",
+      error
+    );
+
+    toast({
+      title: "Errore",
+      description:
+        error?.message ||
+        "Impossibile inserire il cliente negli scadenzari",
+      variant: "destructive",
+    });
+  }
+};
+
+const downloadTemplate = () => {
 
 
   const downloadTemplate = () => {
