@@ -2614,14 +2614,20 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
             </div>
           </div>
 
-{/* Riga rappresentante legale + recapiti società */}
+{/* Recapiti società */}
+<div className="md:col-span-2 mt-4 grid grid-cols-12 gap-4">
+  <div className="col-span-12 md:col-span-6">
+    <Label htmlFor="email">Email</Label>
     <Input
       id="email"
       name="email"
       type="email"
       value={formData.email || ""}
       onChange={(e) =>
-        setFormData((prev) => ({ ...prev, email: e.target.value }))
+        setFormData((prev) => ({
+          ...prev,
+          email: e.target.value,
+        }))
       }
     />
   </div>
@@ -2633,7 +2639,10 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
       name="telefono"
       value={formData.telefono || ""}
       onChange={(e) =>
-        setFormData((prev) => ({ ...prev, telefono: e.target.value }))
+        setFormData((prev) => ({
+          ...prev,
+          telefono: e.target.value,
+        }))
       }
     />
   </div>
@@ -2646,7 +2655,10 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
       type="email"
       value={formData.pec || ""}
       onChange={(e) =>
-        setFormData((prev) => ({ ...prev, pec: e.target.value }))
+        setFormData((prev) => ({
+          ...prev,
+          pec: e.target.value,
+        }))
       }
     />
   </div>
