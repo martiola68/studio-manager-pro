@@ -270,24 +270,6 @@ export default function FormCambioAmministratore({ pratica }: any) {
   }
 
   function applicaNominativo(
-    amministratore: Amministratore,
-    nominativoId: string
-  ) {
-const selected = organiSocieta.find(
-  (o) => o.nominativo_id === nominativoId
-);
-
-return {
-  ...amministratore,
-  nominativo_id: selected?.nominativo_id || "",
-  nome_cognome: selected?.nominativo_nome || "",
-  codice_fiscale: selected?.nominativo_codice_fiscale || "",
-  indirizzo: selected?.indirizzo || "",
-  cap: selected?.cap || "",
-  citta: selected?.citta || "",
-  provincia: selected?.provincia || "",
-};
-  async function caricaClienti() {
     const res = await fetch("/api/clienti/import-nominativi", {
       cache: "no-store",
     });
