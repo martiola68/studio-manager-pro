@@ -71,16 +71,7 @@ export interface Cliente {
   TipoCliente?: TipoCliente;
   tipo_cliente?: string; // Persona fisica/Persona giuridica
   tipologia_cliente?: string; // Interno/Esterno
-  // Flag per servizi attivi
-  Flag_Iva?: boolean;
-  Flag_CU?: boolean;
-  Flag_Bilancio?: boolean;
-  Flag_Fiscali?: boolean;
-  Flag_Lipe?: boolean;
-  Flag_770?: boolean;
-  Flag_Esterometro?: boolean;
-  Flag_ccgg?: boolean;
-  Flag_Proforma?: boolean;
+  
   DataCreazione: string;
   DataUltimaModifica: string;
 }
