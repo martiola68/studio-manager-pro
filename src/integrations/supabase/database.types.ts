@@ -404,22 +404,11 @@ export type Database = {
           contatto2_id: string | null
           created_at: string | null
           data_creazione: string | null
-          email: string | null
-          flag_770: boolean | null
-          flag_bilancio: boolean | null
-          flag_ccgg: boolean | null
-          flag_cu: boolean | null
-          flag_esterometro: boolean | null
-          flag_fiscali: boolean | null
-          flag_imu: boolean | null
-          flag_iva: boolean | null
-          flag_lipe: boolean | null
-          flag_mail_attivo: boolean | null
-          flag_mail_newsletter: boolean | null
-          flag_mail_scadenze: boolean | null
-          flag_proforma: boolean | null
-          gestione_esterometro: boolean | null
-          id: string
+         email: string | null
+flag_mail_attivo: boolean | null
+flag_mail_newsletter: boolean | null
+flag_mail_scadenze: boolean | null
+gestione_esterometro: boolean | null
           indirizzo: string | null
           matricola_inps: string | null
           note: string | null
@@ -455,22 +444,11 @@ export type Database = {
           contatto2_id?: string | null
           created_at?: string | null
           data_creazione?: string | null
-          email?: string | null
-          flag_770?: boolean | null
-          flag_bilancio?: boolean | null
-          flag_ccgg?: boolean | null
-          flag_cu?: boolean | null
-          flag_esterometro?: boolean | null
-          flag_fiscali?: boolean | null
-          flag_imu?: boolean | null
-          flag_iva?: boolean | null
-          flag_lipe?: boolean | null
-          flag_mail_attivo?: boolean | null
-          flag_mail_newsletter?: boolean | null
-          flag_mail_scadenze?: boolean | null
-          flag_proforma?: boolean | null
-          gestione_esterometro?: boolean | null
-          id?: string
+        email?: string | null
+flag_mail_attivo?: boolean | null
+flag_mail_newsletter?: boolean | null
+flag_mail_scadenze?: boolean | null
+gestione_esterometro?: boolean | null
           indirizzo?: string | null
           matricola_inps?: string | null
           note?: string | null
@@ -506,22 +484,11 @@ export type Database = {
           contatto2_id?: string | null
           created_at?: string | null
           data_creazione?: string | null
-          email?: string | null
-          flag_770?: boolean | null
-          flag_bilancio?: boolean | null
-          flag_ccgg?: boolean | null
-          flag_cu?: boolean | null
-          flag_esterometro?: boolean | null
-          flag_fiscali?: boolean | null
-          flag_imu?: boolean | null
-          flag_iva?: boolean | null
-          flag_lipe?: boolean | null
-          flag_mail_attivo?: boolean | null
-          flag_mail_newsletter?: boolean | null
-          flag_mail_scadenze?: boolean | null
-          flag_proforma?: boolean | null
-          gestione_esterometro?: boolean | null
-          id?: string
+         email?: string | null
+flag_mail_attivo?: boolean | null
+flag_mail_newsletter?: boolean | null
+flag_mail_scadenze?: boolean | null
+gestione_esterometro?: boolean | null
           indirizzo?: string | null
           matricola_inps?: string | null
           note?: string | null
