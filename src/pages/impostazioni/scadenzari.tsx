@@ -472,18 +472,34 @@ useEffect(() => {
         7
       );
 
-      const getClientiByFlag = async (flagColumn: string) => {
-        const { data, error } = await supabase
-          .from("tbclienti")
-          .select("*")
-          .eq("attivo", true)
-          .eq("studio_id", currentStudioId)
-          .eq(flagColumn, true);
+     const getClientiByFlag = async (flagColumn: string) => {
+  const { data: servizi, error: serviziError } = await (supabase as any)
+    .from("tbclienti_servizi")
+    .select("cliente_id")
+    .eq("studio_id", currentStudioId)
+    .eq(flagColumn, true);
 
-        if (error) throw error;
-        return data || [];
-      };
+  if (serviziError) throw serviziError;
 
+  const clienteIds = (servizi || [])
+    .map((riga: any) => riga.cliente_id)
+    .filter(Boolean);
+
+  if (clienteIds.length === 0) {
+    return [];
+  }
+
+  const { data: clienti, error: clientiError } = await supabase
+    .from("tbclienti")
+    .select("*")
+    .eq("attivo", true)
+    .eq("studio_id", currentStudioId)
+    .in("id", clienteIds);
+
+  if (clientiError) throw clientiError;
+
+  return clienti || [];
+};
       if (scadenzariFlags.iva) {
         const clientiIva = await getClientiByFlag("flag_iva");
 
