@@ -68,8 +68,9 @@ Object.keys(updateData).forEach((k) => {
   if (updateData[k] === undefined) delete updateData[k];
 });
 
-// ✅ Ensure flags are booleans when present (robust even if they arrive as "true"/"false")
-const flagKeys = [
+// I flag degli scadenzari non appartengono più a tbclienti.
+// Sono gestiti esclusivamente tramite tbclienti_servizi.
+const scadenzariKeys = [
   "flag_iva",
   "flag_cu",
   "flag_bilancio",
@@ -80,7 +81,16 @@ const flagKeys = [
   "flag_770",
   "flag_ccgg",
   "flag_imu",
-  // ✅ comunicazioni
+];
+
+for (const key of scadenzariKeys) {
+  if (key in updateData) {
+    delete updateData[key];
+  }
+}
+
+// I flag delle comunicazioni restano invece su tbclienti.
+const flagKeys = [
   "flag_mail_attivo",
   "flag_mail_scadenze",
   "flag_mail_newsletter",
@@ -89,10 +99,13 @@ const flagKeys = [
 for (const key of flagKeys) {
   if (key in updateData) {
     const v = updateData[key];
+
     updateData[key] =
-      v === true || v === "true" || v === 1 || v === "1" ? true :
-      v === false || v === "false" || v === 0 || v === "0" ? false :
-      Boolean(v);
+      v === true || v === "true" || v === 1 || v === "1"
+        ? true
+        : v === false || v === "false" || v === 0 || v === "0"
+        ? false
+        : Boolean(v);
   }
 }
 
