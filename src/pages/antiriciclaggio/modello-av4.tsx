@@ -369,11 +369,7 @@ export default function ModelloAV4() {
     }));
   }
 
- async function hydrateClienteAndRappresentante(clienteId: string) {
-  if (form.amm_no_associato) {
-    return;
-  }
-
+async function hydrateClienteAndRappresentante(clienteId: string) {
   if (!clienteId) {
     setClienteLabel("");
     clearRappresentanteFields();
@@ -565,7 +561,9 @@ setForm((prev) => ({
 }
 
 async function importaAmministratoreDaCliente() {
-  if (!form.cliente_id) {
+  const clienteId = String(form.cliente_id || "").trim();
+
+  if (!clienteId) {
     alert("Cliente non valorizzato.");
     return;
   }
@@ -575,55 +573,8 @@ async function importaAmministratoreDaCliente() {
     amm_no_associato: false,
   }));
 
-  const supabase =
-    getSupabaseClient() as any;
-
-  const {
-    data: organoRow,
-    error: organoError,
-  } = await supabase
-    .from("tbclienti_organi")
-    .select(
-      "id, soggetto_cliente_id"
-    )
-    .eq(
-      "cliente_id",
-      form.cliente_id
-    )
-    .eq(
-      "tipo_ruolo",
-      "R"
-    )
-    .eq(
-      "principale",
-      true
-    )
-    .eq(
-      "attivo",
-      true
-    )
-    .limit(1)
-    .maybeSingle();
-
-  if (
-    organoError ||
-    !organoRow?.soggetto_cliente_id
-  ) {
-    alert(
-      "Per questo cliente non risulta alcun rappresentante principale attivo negli Organi Sociali."
-    );
-    return;
-  }
-
-  await hydrateClienteAndRappresentante(
-    form.cliente_id
-  );
-
-  alert(
-    "Amministratore importato correttamente."
-  );
+  await hydrateClienteAndRappresentante(clienteId);
 }
-
  async function prefillFromPraticaOrAV1(
     studioIdValue: string,
     praticaIdValue: string,
