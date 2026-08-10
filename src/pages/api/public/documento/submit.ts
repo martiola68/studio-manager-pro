@@ -492,44 +492,6 @@ if (scadenzaEsistente?.id) {
   }
 }
 
-/*
- * 4. Compatibilità temporanea.
- *
- * Se esiste ancora il vecchio rappresentante,
- * manteniamo sincronizzata rapp_legali finché
- * il portale pubblico e tutti i moduli legacy
- * non saranno definitivamente migrati.
- */
-if (documentoAml.legacy_rapp_legale_id) {
-  const { error: legacyUpdateError } = await supabase
-    .from("rapp_legali")
-    .update({
-      citta_residenza,
-      indirizzo_residenza,
-      CAP,
-      tipo_doc,
-      num_doc: String(num_doc).trim(),
-      scadenza_doc,
-      allegato_doc: filePath,
-
-      public_doc_submitted_at: submittedAt,
-      public_doc_enabled: false,
-      public_doc_token: null,
-
-      updated_at: submittedAt,
-    })
-    .eq(
-      "id",
-      documentoAml.legacy_rapp_legale_id
-    );
-
-  if (legacyUpdateError) {
-    console.error(
-      "Errore sincronizzazione legacy rapp_legali:",
-      legacyUpdateError
-    );
-  }
-}
     return res.status(200).json({
       ok: true,
       path: filePath,
