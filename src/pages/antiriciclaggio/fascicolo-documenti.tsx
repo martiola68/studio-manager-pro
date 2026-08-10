@@ -16,7 +16,10 @@ type DocumentoRow = {
   pratica_id?: string | null;
   cliente_id?: string | null;
   av4_id?: string | number | null;
- tipo_documento?: string | null;
+  tipo_documento?: string | null;
+
+  societa_documento_id?: string | null;
+
   storage_path?: string | null;
   bucket_name?: string | null;
   mime_type?: string | null;
