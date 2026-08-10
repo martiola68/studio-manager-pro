@@ -52,7 +52,6 @@ export default async function handler(
       citta,
       citta_residenza,
       provincia,
-      amministratore_principale,
     } = req.body ?? {};
 
     if (!praticaId) {
@@ -82,14 +81,22 @@ export default async function handler(
       });
     }
 
-    const { data: pratica, error: praticaError } =
-      await supabaseAdmin
-        .from("tbpratiche")
-        .select("studio_id")
-        .eq("id", praticaId)
-        .single();
+    /*
+     * Recuperiamo lo studio dalla pratica.
+     */
+    const {
+      data: pratica,
+      error: praticaError,
+    } = await supabaseAdmin
+      .from("tbpratiche")
+      .select("studio_id")
+      .eq("id", praticaId)
+      .single();
 
-    if (praticaError || !pratica?.studio_id) {
+    if (
+      praticaError ||
+      !pratica?.studio_id
+    ) {
       return res.status(400).json({
         ok: false,
         error:
@@ -98,7 +105,8 @@ export default async function handler(
       });
     }
 
-    const studioId = String(pratica.studio_id);
+    const studioId =
+      String(pratica.studio_id);
 
     const indirizzoFinale =
       testoPulito(indirizzo_residenza) ||
@@ -109,15 +117,20 @@ export default async function handler(
       testoPulito(citta);
 
     /*
-     * 1. Cerchiamo o creiamo l'anagrafica unica.
+     * 1. ANAGRAFICA UNICA
+     *
+     * Cerchiamo il soggetto direttamente in tbclienti
+     * tramite studio_id + codice fiscale.
      */
-    const { data: soggetti, error: soggettiError } =
-      await supabaseAdmin
-        .from("tbclienti")
-        .select("id")
-        .eq("studio_id", studioId)
-        .eq("codice_fiscale", codiceFiscale)
-        .limit(2);
+    const {
+      data: soggetti,
+      error: soggettiError,
+    } = await supabaseAdmin
+      .from("tbclienti")
+      .select("id")
+      .eq("studio_id", studioId)
+      .eq("codice_fiscale", codiceFiscale)
+      .limit(2);
 
     if (soggettiError) {
       throw soggettiError;
@@ -136,6 +149,11 @@ export default async function handler(
         ? String(soggetti[0].id)
         : "";
 
+    /*
+     * Se il soggetto non esiste lo creiamo
+     * nell'anagrafica unica come nominativo
+     * non cliente.
+     */
     if (!soggettoClienteId) {
       const {
         data: nuovoSoggetto,
@@ -144,48 +162,144 @@ export default async function handler(
         .from("tbclienti")
         .insert({
           studio_id: studioId,
-          ragione_sociale: nomeCognome,
-          codice_fiscale: codiceFiscale,
-          luogo_nascita: testoPulito(luogo_nascita),
-          data_nascita: data_nascita || null,
-          indirizzo: indirizzoFinale,
-          citta: cittaFinale,
-          provincia: testoPulito(provincia)?.toUpperCase() || null,
-          cap: testoPulito(cap),
-          tipo_cliente: "Persona fisica",
-          tipologia_cliente: "Interno",
-          cliente: false,
-          attivo: false,
-          updated_at: new Date().toISOString(),
+
+          ragione_sociale:
+            nomeCognome,
+
+          codice_fiscale:
+            codiceFiscale,
+
+          luogo_nascita:
+            testoPulito(luogo_nascita),
+
+          data_nascita:
+            data_nascita || null,
+
+          indirizzo:
+            indirizzoFinale,
+
+          citta:
+            cittaFinale,
+
+          provincia:
+            testoPulito(provincia)
+              ?.toUpperCase() ||
+            null,
+
+          cap:
+            testoPulito(cap),
+
+          tipo_cliente:
+            "Persona fisica",
+
+          tipologia_cliente:
+            "Interno",
+
+          cliente:
+            false,
+
+          attivo:
+            true,
+
+          professionista_incaricato:
+            false,
+
+          soggetto_isa:
+            false,
+
+          updated_at:
+            new Date().toISOString(),
         })
-        .select("id")
+        .select(`
+          id,
+          ragione_sociale,
+          codice_fiscale,
+          luogo_nascita,
+          data_nascita,
+          indirizzo,
+          citta,
+          provincia,
+          cap,
+          nazionalita,
+          email
+        `)
         .single();
 
-      if (nuovoSoggettoError || !nuovoSoggetto?.id) {
+      if (
+        nuovoSoggettoError ||
+        !nuovoSoggetto?.id
+      ) {
         throw new Error(
           nuovoSoggettoError?.message ||
             "Errore creazione anagrafica rappresentante"
         );
       }
 
-      soggettoClienteId = String(nuovoSoggetto.id);
+      soggettoClienteId =
+        String(nuovoSoggetto.id);
     } else {
-      const { error: aggiornaSoggettoError } =
-        await supabaseAdmin
-          .from("tbclienti")
-          .update({
-            ragione_sociale: nomeCognome,
-            luogo_nascita: testoPulito(luogo_nascita),
-            data_nascita: data_nascita || null,
-            indirizzo: indirizzoFinale,
-            citta: cittaFinale,
-            provincia:
-              testoPulito(provincia)?.toUpperCase() || null,
-            cap: testoPulito(cap),
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", soggettoClienteId)
-          .eq("studio_id", studioId);
+      /*
+       * Se il nominativo esiste già,
+       * aggiorniamo i dati anagrafici senza
+       * creare duplicati.
+       */
+      const {
+        data: soggettoAggiornato,
+        error: aggiornaSoggettoError,
+      } = await supabaseAdmin
+        .from("tbclienti")
+        .update({
+          ragione_sociale:
+            nomeCognome,
+
+          luogo_nascita:
+            testoPulito(luogo_nascita),
+
+          data_nascita:
+            data_nascita || null,
+
+          indirizzo:
+            indirizzoFinale,
+
+          citta:
+            cittaFinale,
+
+          provincia:
+            testoPulito(provincia)
+              ?.toUpperCase() ||
+            null,
+
+          cap:
+            testoPulito(cap),
+
+          attivo:
+            true,
+
+          updated_at:
+            new Date().toISOString(),
+        })
+        .eq(
+          "id",
+          soggettoClienteId
+        )
+        .eq(
+          "studio_id",
+          studioId
+        )
+        .select(`
+          id,
+          ragione_sociale,
+          codice_fiscale,
+          luogo_nascita,
+          data_nascita,
+          indirizzo,
+          citta,
+          provincia,
+          cap,
+          nazionalita,
+          email
+        `)
+        .single();
 
       if (aggiornaSoggettoError) {
         throw aggiornaSoggettoError;
@@ -193,125 +307,203 @@ export default async function handler(
     }
 
     /*
-     * 2. Manteniamo temporaneamente il record legacy.
-     * Se esiste già per CF, lo aggiorniamo.
+     * Recuperiamo sempre il record definitivo
+     * dall'anagrafica unica.
      */
     const {
-      data: legacyEsistente,
-      error: legacyLookupError,
+      data: soggettoData,
+      error: soggettoDataError,
     } = await supabaseAdmin
-      .from("rapp_legali")
-      .select("id")
-      .eq("codice_fiscale", codiceFiscale)
-      .maybeSingle();
+      .from("tbclienti")
+      .select(`
+        id,
+        ragione_sociale,
+        codice_fiscale,
+        luogo_nascita,
+        data_nascita,
+        indirizzo,
+        citta,
+        provincia,
+        cap,
+        nazionalita,
+        email
+      `)
+      .eq(
+        "id",
+        soggettoClienteId
+      )
+      .eq(
+        "studio_id",
+        studioId
+      )
+      .single();
 
-    if (legacyLookupError) {
-      throw legacyLookupError;
-    }
-
-    const payloadLegacy = {
-      studio_id: studioId,
-      nome_cognome: nomeCognome,
-      codice_fiscale: codiceFiscale,
-      luogo_nascita: testoPulito(luogo_nascita),
-      data_nascita: data_nascita || null,
-      indirizzo: indirizzoFinale,
-      indirizzo_residenza: indirizzoFinale,
-      citta: cittaFinale,
-      citta_residenza: cittaFinale,
-      provincia:
-        testoPulito(provincia)?.toUpperCase() || null,
-      cap: testoPulito(cap),
-      rappresentante_legale: true,
-      amministratore_principale:
-        amministratore_principale === true,
-      updated_at: new Date().toISOString(),
-    };
-
-    let legacyData: any;
-
-    if (legacyEsistente?.id) {
-      const { data, error } = await supabaseAdmin
-        .from("rapp_legali")
-        .update(payloadLegacy)
-        .eq("id", legacyEsistente.id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      legacyData = data;
-    } else {
-      const { data, error } = await supabaseAdmin
-        .from("rapp_legali")
-        .insert(payloadLegacy)
-        .select()
-        .single();
-
-      if (error) throw error;
-      legacyData = data;
+    if (
+      soggettoDataError ||
+      !soggettoData
+    ) {
+      throw new Error(
+        soggettoDataError?.message ||
+          "Errore recupero anagrafica rappresentante"
+      );
     }
 
     /*
-     * 3. Creiamo, riattiviamo o aggiorniamo
-     * il contenitore documentale AML.
+     * 2. DOCUMENTO AML
+     *
+     * Creiamo o riattiviamo il contenitore
+     * documentale associato direttamente
+     * a tbclienti.id.
+     *
+     * legacy_rapp_legale_id non viene più
+     * valorizzato.
      */
-   const {
-  data: documentiEsistenti,
-  error: documentoLookupError,
-} = await supabaseAdmin
-  .from("tbclienti_documenti_aml")
-  .select("id, attivo")
-  .eq("studio_id", studioId)
-  .eq("soggetto_cliente_id", soggettoClienteId)
-  .order("created_at", {
-    ascending: false,
-  })
-  .limit(1);
+    const {
+      data: documentiEsistenti,
+      error: documentoLookupError,
+    } = await supabaseAdmin
+      .from(
+        "tbclienti_documenti_aml"
+      )
+      .select("id, attivo")
+      .eq(
+        "studio_id",
+        studioId
+      )
+      .eq(
+        "soggetto_cliente_id",
+        soggettoClienteId
+      )
+      .order(
+        "created_at",
+        {
+          ascending: false,
+        }
+      )
+      .limit(1);
 
-if (documentoLookupError) {
-  throw documentoLookupError;
-}
+    if (documentoLookupError) {
+      throw documentoLookupError;
+    }
 
-const documentoEsistente =
-  documentiEsistenti?.[0] || null;
+    const documentoEsistente =
+      documentiEsistenti?.[0] ||
+      null;
+
     let documentoAml: any;
 
     if (documentoEsistente?.id) {
-      const { data, error } = await supabaseAdmin
-        .from("tbclienti_documenti_aml")
+      const {
+        data,
+        error,
+      } = await supabaseAdmin
+        .from(
+          "tbclienti_documenti_aml"
+        )
         .update({
-          legacy_rapp_legale_id: legacyData.id,
           attivo: true,
-          updated_at: new Date().toISOString(),
+          updated_at:
+            new Date().toISOString(),
         })
-        .eq("id", documentoEsistente.id)
+        .eq(
+          "id",
+          documentoEsistente.id
+        )
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
+
       documentoAml = data;
     } else {
-      const { data, error } = await supabaseAdmin
-        .from("tbclienti_documenti_aml")
+      const {
+        data,
+        error,
+      } = await supabaseAdmin
+        .from(
+          "tbclienti_documenti_aml"
+        )
         .insert({
-          studio_id: studioId,
-          soggetto_cliente_id: soggettoClienteId,
-          legacy_rapp_legale_id: legacyData.id,
-          attivo: true,
+          studio_id:
+            studioId,
+
+          soggetto_cliente_id:
+            soggettoClienteId,
+
+          attivo:
+            true,
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
+
       documentoAml = data;
     }
 
+    /*
+     * Restituiamo il soggetto moderno mantenendo
+     * anche alcuni alias compatibili con il
+     * frontend che prima riceveva rapp_legali.
+     */
     return res.status(200).json({
       ok: true,
+
       data: {
-        ...legacyData,
-        soggetto_cliente_id: soggettoClienteId,
-        documento_aml_id: documentoAml.id,
+        id:
+          soggettoData.id,
+
+        soggetto_cliente_id:
+          soggettoClienteId,
+
+        nome_cognome:
+          soggettoData.ragione_sociale,
+
+        ragione_sociale:
+          soggettoData.ragione_sociale,
+
+        codice_fiscale:
+          soggettoData.codice_fiscale,
+
+        luogo_nascita:
+          soggettoData.luogo_nascita,
+
+        data_nascita:
+          soggettoData.data_nascita,
+
+        indirizzo:
+          soggettoData.indirizzo,
+
+        indirizzo_residenza:
+          soggettoData.indirizzo,
+
+        citta:
+          soggettoData.citta,
+
+        citta_residenza:
+          soggettoData.citta,
+
+        provincia:
+          soggettoData.provincia,
+
+        cap:
+          soggettoData.cap,
+
+        CAP:
+          soggettoData.cap,
+
+        nazionalita:
+          soggettoData.nazionalita,
+
+        email:
+          soggettoData.email,
+
+        documento_aml_id:
+          documentoAml.id,
       },
     });
   } catch (error: any) {
