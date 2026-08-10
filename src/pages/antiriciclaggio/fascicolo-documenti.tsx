@@ -16,10 +16,7 @@ type DocumentoRow = {
   pratica_id?: string | null;
   cliente_id?: string | null;
   av4_id?: string | number | null;
-  tipo_documento?: string | null;
-   societa_documento_id?: string | null;
-  societa_documento_nome?: string | null;
-  nome_file?: string | null;
+ tipo_documento?: string | null;
   storage_path?: string | null;
   bucket_name?: string | null;
   mime_type?: string | null;
@@ -27,6 +24,13 @@ type DocumentoRow = {
   origine?: string | null;
   note?: string | null;
   created_at?: string | null;
+};
+
+type VisuraTeRichiesta = {
+  societa_id: string;
+  societa_nome: string;
+  motivo: "cliente" | "percorso_te";
+  percorsi: string[][];
 };
 
 const TIPO_DOCUMENTO_OPTIONS = [
@@ -140,8 +144,13 @@ export default function FascicoloDocumentiPage() {
   const [documentiMancanti, setDocumentiMancanti] = useState<string[]>([]);
 
   const [documentiOpzionaliMancanti, setDocumentiOpzionaliMancanti] = useState<string[]>([]);
-  const [fascicoloCompleto, setFascicoloCompleto] = useState(false);
+const [fascicoloCompleto, setFascicoloCompleto] = useState(false);
 
+const [visureTeRichieste, setVisureTeRichieste] =
+  useState<VisuraTeRichiesta[]>([]);
+
+const [societaDocumentoId, setSocietaDocumentoId] =
+  useState("");
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -169,9 +178,9 @@ const ensureDocumentoInFascicolo = async ({
   studioId,
   praticaId,
   clienteId,
-  societaDocumentoId = null,
-  societaDocumentoNome = null,
-  tipoDocumento,
+  clienteId,
+societaDocumentoId = null,
+tipoDocumento,
   storagePath,
   bucketName = "allegati",
   mimeType = null,
@@ -181,10 +190,9 @@ const ensureDocumentoInFascicolo = async ({
   supabase: any;
   studioId: string;
   praticaId: string;
-  clienteId: string | null;
-  societaDocumentoId?: string | null;
-societaDocumentoNome?: string | null;
-  tipoDocumento: string;
+ clienteId: string | null;
+societaDocumentoId?: string | null;
+tipoDocumento: string;
   storagePath: string;
   bucketName?: string;
   mimeType?: string | null;
@@ -217,10 +225,9 @@ const { data: existing, error: existingError } = await supabase
     .insert({
       studio_id: studioId,
       pratica_id: praticaId,
-      cliente_id: clienteId,
-      societa_documento_id: societaDocumentoId,
-      societa_documento_nome: societaDocumentoNome,
-      tipo_documento: tipoDocumento,
+     cliente_id: clienteId,
+    societa_documento_id: societaDocumentoId,
+    tipo_documento: tipoDocumento,
       nome_file: nomeFile,
       storage_path: storagePath,
       bucket_name: bucketName,
@@ -410,7 +417,11 @@ if (soggettoClienteId) {
 }
 };
 
- const calcolaStatoFascicolo = (docs: DocumentoRow[], isSocietaCliente: boolean) => {
+ const calcolaStatoFascicolo = (
+  docs: DocumentoRow[],
+  isSocietaCliente: boolean,
+  visureRichieste: VisuraTeRichiesta[]
+) => {
   const normalizza = (value: any) =>
     String(value || "").toLowerCase().trim();
 
@@ -465,12 +476,62 @@ if (soggettoClienteId) {
     );
   });
 
-  const hasVisura = hasDoc((doc) => {
-    const origine = normalizza(doc.origine);
-    const tipo = normalizza(doc.tipo_documento);
+ const isVisura = (doc: DocumentoRow) => {
+  const origine = normalizza(doc.origine);
+  const tipo = normalizza(doc.tipo_documento);
 
-    return origine.includes("visura") || tipo.includes("visura");
-  });
+  return origine.includes("visura") || tipo.includes("visura");
+};
+
+const visurePresentiConSocieta = new Set(
+  docs
+    .filter(
+      (doc) =>
+        isVisura(doc) &&
+        !!doc.societa_documento_id
+    )
+    .map((doc) =>
+      String(doc.societa_documento_id)
+    )
+);
+
+const visureGenericheLegacy = docs.filter(
+  (doc) =>
+    isVisura(doc) &&
+    !doc.societa_documento_id
+);
+
+const visureMancanti =
+  isSocietaCliente
+    ? visureRichieste.filter((visura) => {
+        if (
+          visurePresentiConSocieta.has(
+            String(visura.societa_id)
+          )
+        ) {
+          return false;
+        }
+
+        /*
+         * Compatibilità con i vecchi fascicoli:
+         * se serve una sola visura e ne esiste già
+         * una vecchia senza societa_documento_id,
+         * la consideriamo quella del cliente.
+         *
+         * Se le visure richieste sono più di una,
+         * NON possiamo attribuire una vecchia
+         * visura generica a una società a caso.
+         */
+        if (
+          visureRichieste.length === 1 &&
+          visureGenericheLegacy.length > 0
+        ) {
+          return false;
+        }
+
+        return true;
+      })
+    : [];
 
   const hasContratto = hasDoc((doc) => {
     const origine = normalizza(doc.origine);
@@ -496,9 +557,19 @@ const isSocieta = isSocietaCliente;
   );
 });
 
-if (!hasDocumentoIdentita) mancanti.push("Documento identità");
-if (isSocieta && !hasVisura) mancanti.push("Visura camerale");
-if (!hasContratto) mancanti.push("Contratto professionale");
+if (!hasDocumentoIdentita) {
+  mancanti.push("Documento identità");
+}
+
+visureMancanti.forEach((visura) => {
+  mancanti.push(
+    `Visura camerale - ${visura.societa_nome}`
+  );
+});
+
+if (!hasContratto) {
+  mancanti.push("Contratto professionale");
+}
 
 const opzionaliMancanti: string[] = [];
 
@@ -538,13 +609,38 @@ body: JSON.stringify({
       }
 
       const supabase = getSupabaseClient() as any;
-     const clienteIdValue =
+   const clienteIdValue =
   typeof cliente_id === "string" && cliente_id.trim() !== ""
     ? cliente_id
     : null;
 
-const syncKey = `${studioId}|${pratica_id}|${clienteIdValue || ""}`;
+let visureRichieste: VisuraTeRichiesta[] = [];
 
+if (clienteIdValue) {
+  const responseGruppi = await fetch(
+    `/api/gruppi-societari?cliente_id=${encodeURIComponent(
+      clienteIdValue
+    )}`
+  );
+
+  if (!responseGruppi.ok) {
+    throw new Error(
+      "Errore nel recupero delle società rilevanti per il Titolare Effettivo."
+    );
+  }
+
+  const gruppiData = await responseGruppi.json();
+
+  visureRichieste = Array.isArray(
+    gruppiData?.visure_te_richieste
+  )
+    ? gruppiData.visure_te_richieste
+    : [];
+
+  setVisureTeRichieste(visureRichieste);
+}
+
+const syncKey = `${studioId}|${pratica_id}|${clienteIdValue || ""}`;
 if (syncedRef.current !== syncKey) {
   syncedRef.current = syncKey;
   await syncDocumentiCollegati(supabase, studioId, pratica_id, clienteIdValue);
@@ -582,12 +678,10 @@ let query = supabase
     pratica_id,
     cliente_id,
     av4_id,
-    tipo_documento,
+   tipo_documento,
+societa_documento_id,
 
-    societa_documento_id,
-    societa_documento_nome,
-
-    nome_file,
+nome_file,
     storage_path,
     bucket_name,
     mime_type,
@@ -610,8 +704,13 @@ const { data, error } = await query;
         return;
       }
 
-      setDocumenti(data || []);
-      calcolaStatoFascicolo(data || [], isSocietaCliente);
+     setDocumenti(data || []);
+
+calcolaStatoFascicolo(
+  data || [],
+  isSocietaCliente,
+  visureRichieste
+);
     } catch (err: any) {
       console.error("Errore loadData fascicolo:", err);
       alert(err?.message || "Errore caricamento fascicolo documenti");
@@ -624,6 +723,16 @@ const { data, error } = await query;
   const handleUploadFile = async (file: File) => {
     try {
      if (!file || typeof pratica_id !== "string" || !pratica_id) return;
+
+      if (
+  tipoDocumento === "Visura camerale" &&
+  !societaDocumentoId
+) {
+  alert(
+    "Seleziona la società a cui appartiene la visura camerale."
+  );
+  return;
+}
 
       setUploading(true);
 
@@ -661,8 +770,15 @@ const { data, error } = await query;
           bucket_name: "allegati",
           mime_type: file.type || null,
           dimensione: file.size,
-          origine: "manuale",
-          tipo_documento: tipoDocumento || "Documento generico",
+         origine: "manuale",
+
+societa_documento_id:
+  tipoDocumento === "Visura camerale"
+    ? societaDocumentoId
+    : null,
+
+tipo_documento:
+  tipoDocumento || "Documento generico",
         });
 
       if (insertError) throw insertError;
@@ -830,6 +946,36 @@ useEffect(() => {
               ))}
             </select>
           </div>
+
+          {tipoDocumento === "Visura camerale" && (
+  <div className="min-w-[280px]">
+    <label className="mb-1 block text-sm font-medium text-gray-700">
+      Società della visura
+    </label>
+
+    <select
+      value={societaDocumentoId}
+      onChange={(e) =>
+        setSocietaDocumentoId(e.target.value)
+      }
+      disabled={uploading}
+      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+    >
+      <option value="">
+        Seleziona società
+      </option>
+
+      {visureTeRichieste.map((visura) => (
+        <option
+          key={visura.societa_id}
+          value={visura.societa_id}
+        >
+          {visura.societa_nome}
+        </option>
+      ))}
+    </select>
+  </div>
+)}
 
           <div>
             <button
