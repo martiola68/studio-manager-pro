@@ -269,13 +269,39 @@ export default function FormCambioAmministratore({ pratica }: any) {
     setForm((prev) => ({ ...prev, [campo]: valore }));
   }
 
-  function applicaNominativo(
-    const res = await fetch("/api/clienti/import-nominativi", {
-      cache: "no-store",
-    });
-    const data = await res.json();
-    setClienti(Array.isArray(data) ? data : data.clienti || []);
-  }
+function applicaNominativo(
+  amministratore: Amministratore,
+  nominativoId: string
+) {
+  const selected = organiSocieta.find(
+    (o) => o.nominativo_id === nominativoId
+  );
+
+  return {
+    ...amministratore,
+    nominativo_id: selected?.nominativo_id || "",
+    nome_cognome: selected?.nominativo_nome || "",
+    codice_fiscale: selected?.nominativo_codice_fiscale || "",
+    indirizzo: selected?.indirizzo || "",
+    cap: selected?.cap || "",
+    citta: selected?.citta || "",
+    provincia: selected?.provincia || "",
+  };
+}
+
+async function caricaClienti() {
+  const res = await fetch("/api/clienti/import-nominativi", {
+    cache: "no-store",
+  });
+
+  const data = await res.json();
+
+  setClienti(
+    Array.isArray(data)
+      ? data
+      : data.clienti || []
+  );
+}
 
   async function caricaOrganiSocieta() {
   if (!pratica?.cliente_id) return;
