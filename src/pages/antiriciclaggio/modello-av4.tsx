@@ -410,47 +410,51 @@ async function hydrateClienteAndRappresentante(clienteId: string) {
      *    Cerchiamo la carica PRINCIPALE attiva
      *    negli organi sociali della società.
      */
-    const {
-      data: organoRow,
-      error: organoError,
-    } = await supabase
-      .from("tbclienti_organi")
-      .select(`
-        id,
-        soggetto_cliente_id,
-        tipo_ruolo,
-        ruolo,
-        rappresentante_legale,
-        principale,
-        attivo
-      `)
-      .eq("cliente_id", clienteId)
-      .eq("tipo_ruolo", "R")
-      .eq("principale", true)
-      .eq("attivo", true)
-      .limit(1)
-      .maybeSingle();
+   const organiResponse = await fetch(
+  `/api/clienti-organi?cliente_id=${encodeURIComponent(clienteId)}`,
+  {
+    cache: "no-store",
+  }
+);
 
-    if (organoError) {
-      console.error(
-        "Errore caricamento rappresentante da organi sociali:",
-        organoError
-      );
+const organiData = await organiResponse.json();
 
-      clearRappresentanteFields();
-      return;
-    }
+if (!organiResponse.ok) {
+  console.error(
+    "Errore caricamento rappresentante da organi sociali:",
+    organiData
+  );
 
-    const soggettoClienteId =
-      organoRow?.soggetto_cliente_id
-        ? String(organoRow.soggetto_cliente_id).trim()
-        : "";
+  clearRappresentanteFields();
+  return;
+}
 
-    if (!soggettoClienteId) {
-      clearRappresentanteFields();
-      return;
-    }
+const organi = Array.isArray(organiData?.organi)
+  ? organiData.organi
+  : [];
 
+const organoRow = organi.find(
+  (organo: any) =>
+    String(organo?.tipo_ruolo || "") === "R" &&
+    organo?.principale === true &&
+    organo?.attivo === true &&
+    !!organo?.soggetto_cliente_id
+);
+
+const soggettoClienteId =
+  organoRow?.soggetto_cliente_id
+    ? String(organoRow.soggetto_cliente_id).trim()
+    : "";
+
+if (!soggettoClienteId) {
+  console.error(
+    "Nessun rappresentante principale attivo trovato.",
+    organi
+  );
+
+  clearRappresentanteFields();
+  return;
+}
     /*
      * 3. Anagrafica unica del rappresentante:
      *    tbclienti.
