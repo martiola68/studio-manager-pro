@@ -3,6 +3,13 @@ import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import TitolariEffettiviForm from "@/components/antiriciclaggio/TitolariEffettiviForm";
 
+import {
+  normalizeCF,
+  isValidCF,
+  extractDataNascitaFromCF,
+  extractCodiceCatastaleFromCF,
+} from "@/utils/codiceFiscale";
+
 import { isEncryptionEnabled } from "@/services/encryptionService";
 
 import { useMasterPasswordGate } from "@/hooks/useMasterPasswordGate";
@@ -491,6 +498,121 @@ if (!soggettoClienteId) {
       return;
     }
 
+    let luogoNascitaFinale =
+  String(soggettoRow?.luogo_nascita || "").trim();
+
+let dataNascitaFinale =
+  normalizeDateForInput(soggettoRow?.data_nascita);
+
+let nazionalitaFinale =
+  String(soggettoRow?.nazionalita || "").trim();
+
+const codiceFiscale =
+  normalizeCF(soggettoRow?.codice_fiscale || "");
+
+if (
+  codiceFiscale &&
+  isValidCF(codiceFiscale) &&
+  (
+    !luogoNascitaFinale ||
+    !dataNascitaFinale ||
+    !nazionalitaFinale
+  )
+) {
+  if (!dataNascitaFinale) {
+    dataNascitaFinale =
+      extractDataNascitaFromCF(codiceFiscale) || "";
+  }
+
+  if (!luogoNascitaFinale) {
+    const codiceCatastale =
+      extractCodiceCatastaleFromCF(codiceFiscale);
+
+    if (codiceCatastale) {
+      const today =
+        new Date().toISOString().slice(0, 10);
+
+      const {
+        data: comuneRows,
+        error: comuneError,
+      } = await supabase
+        .from("tb_comuni_catastali")
+        .select(`
+          comune,
+          data_inizio_validita,
+          data_fine_validita
+        `)
+        .eq("codice_catastale", codiceCatastale)
+        .or(
+          `data_fine_validita.is.null,data_fine_validita.gte.${today}`
+        )
+        .order("data_inizio_validita", {
+          ascending: false,
+        })
+        .limit(1);
+
+      if (comuneError) {
+        console.error(
+          "Errore recupero comune da codice fiscale:",
+          comuneError
+        );
+      } else if (comuneRows?.[0]?.comune) {
+        luogoNascitaFinale =
+          String(comuneRows[0].comune).trim();
+      }
+    }
+  }
+
+  if (!nazionalitaFinale && luogoNascitaFinale) {
+    nazionalitaFinale = "Italiana";
+  }
+
+  const aggiornamentoAnagrafica: any = {};
+
+  if (
+    !soggettoRow?.luogo_nascita &&
+    luogoNascitaFinale
+  ) {
+    aggiornamentoAnagrafica.luogo_nascita =
+      luogoNascitaFinale;
+  }
+
+  if (
+    !soggettoRow?.data_nascita &&
+    dataNascitaFinale
+  ) {
+    aggiornamentoAnagrafica.data_nascita =
+      dataNascitaFinale;
+  }
+
+  if (
+    !soggettoRow?.nazionalita &&
+    nazionalitaFinale
+  ) {
+    aggiornamentoAnagrafica.nazionalita =
+      nazionalitaFinale;
+  }
+
+  if (
+    Object.keys(aggiornamentoAnagrafica).length > 0
+  ) {
+    aggiornamentoAnagrafica.updated_at =
+      new Date().toISOString();
+
+    const { error: updateAnagraficaError } =
+      await supabase
+        .from("tbclienti")
+        .update(aggiornamentoAnagrafica)
+        .eq("id", soggettoClienteId);
+
+    if (updateAnagraficaError) {
+      console.error(
+        "Errore aggiornamento dati anagrafici da CF:",
+        updateAnagraficaError
+      );
+    }
+  }
+}
    
     const rappresentanteId = soggettoClienteId;
 
@@ -526,14 +648,11 @@ setForm((prev) => ({
     soggettoRow?.codice_fiscale ||
     "",
     
-      dichiarante_luogo_nascita:
-        soggettoRow?.luogo_nascita ||
-        "",
+    dichiarante_luogo_nascita:
+  luogoNascitaFinale,
 
-      dichiarante_data_nascita:
-        normalizeDateForInput(
-          soggettoRow?.data_nascita
-        ),
+dichiarante_data_nascita:
+  dataNascitaFinale,
 
       dichiarante_indirizzo_residenza:
         soggettoRow?.indirizzo ||
@@ -547,9 +666,9 @@ setForm((prev) => ({
         soggettoRow?.cap ||
         "",
 
-      dichiarante_nazionalita:
-        soggettoRow?.nazionalita ||
-        "",
+     dichiarante_nazionalita:
+  nazionalitaFinale,
+  
     }));
   } catch (error) {
     console.error(
