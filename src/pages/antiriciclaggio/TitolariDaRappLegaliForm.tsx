@@ -56,20 +56,28 @@ export default function TitolariDaRappLegaliForm({
   async function loadRappresentanti() {
     const supabase = getSupabaseClient() as any;
 
-    const { data, error } = await supabase
-      .from("rapp_legali")
-      .select(`
-        id,
-        nome_cognome,
-        codice_fiscale,
-        luogo_nascita,
-        data_nascita,
-        indirizzo_residenza,
-        citta_residenza,
-        cap_residenza,
-        nazionalita
-      `)
-      .order("nome_cognome", { ascending: true });
+ const { data, error } = await supabase
+  .from("tbclienti_organi")
+  .select(`
+    soggetto_cliente_id,
+    rappresentante_legale,
+    principale,
+    attivo,
+    tbclienti!tbclienti_organi_soggetto_cliente_id_fkey (
+      id,
+      ragione_sociale,
+      codice_fiscale,
+      luogo_nascita,
+      data_nascita,
+      indirizzo,
+      citta,
+      cap,
+      nazionalita
+    )
+  `)
+  .eq("cliente_id", cliente_id)
+  .eq("attivo", true)
+  .eq("principale", true);
 
     if (error) {
       console.error("Errore caricamento rapp_legali:", error);
