@@ -1331,14 +1331,10 @@ if (form.invia_altra_email && !form.email_destinatario_alternativa.trim()) {
     const updatePayload: any = {
   public_token: token,
 
-  soggetto_cliente_id:
-    form.soggetto_cliente_id || null,
+soggetto_cliente_id:
+  form.soggetto_cliente_id || null,
 
-  // legacy temporaneo
-  rapp_legale_id:
-    form.rapp_legale_id || null,
-
-  amm_no_associato: !!form.amm_no_associato,
+amm_no_associato: !!form.amm_no_associato,
 
         dichiarante_nome_cognome: form.dichiarante_nome_cognome || null,
         dichiarante_codice_fiscale: form.dichiarante_codice_fiscale || null,
@@ -1720,14 +1716,11 @@ ${nomeOperatore}
   societa_id: form.societa_id || null,
   av1_id: form.av1_id ? Number(form.av1_id) : null,
 
-  soggetto_cliente_id:
-    form.soggetto_cliente_id || null,
+ soggetto_cliente_id:
+  form.soggetto_cliente_id || null,
 
-  // legacy temporaneo: NON eliminare ancora
-  rapp_legale_id:
-    form.rapp_legale_id || null,
-
-  invia_altra_email: !!form.invia_altra_email,
+invia_altra_email: !!form.invia_altra_email,
+    
       email_destinatario_alternativa: form.invia_altra_email
       ? form.email_destinatario_alternativa.trim()
       : null,
