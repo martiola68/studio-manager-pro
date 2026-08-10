@@ -273,22 +273,20 @@ export default function FormCambioAmministratore({ pratica }: any) {
     amministratore: Amministratore,
     nominativoId: string
   ) {
-    const selected = organiSocieta.find(
-  (o) => o.rapp_legale_id === nominativoId
+const selected = organiSocieta.find(
+  (o) => o.nominativo_id === nominativoId
 );
 
-    return {
-      ...amministratore,
-     nominativo_id: selected?.rapp_legale_id || "",
-nome_cognome: selected?.rapp_legali?.nome_cognome || "",
-codice_fiscale: selected?.rapp_legali?.codice_fiscale || "",
-indirizzo: selected?.rapp_legali?.indirizzo || "",
-cap: selected?.rapp_legali?.cap || "",
-citta: selected?.rapp_legali?.citta || "",
-provincia: selected?.rapp_legali?.provincia || "",
-    };
-  }
-
+return {
+  ...amministratore,
+  nominativo_id: selected?.nominativo_id || "",
+  nome_cognome: selected?.nominativo_nome || "",
+  codice_fiscale: selected?.nominativo_codice_fiscale || "",
+  indirizzo: selected?.indirizzo || "",
+  cap: selected?.cap || "",
+  citta: selected?.citta || "",
+  provincia: selected?.provincia || "",
+};
   async function caricaClienti() {
     const res = await fetch("/api/clienti/import-nominativi", {
       cache: "no-store",
@@ -719,9 +717,12 @@ alert("Documento generato.");
               >
                 <option value="">Seleziona nominativo</option>
                 {organiSocieta.map((n) => (
-                  <option key={n.id} value={n.id}>
-                    {n.nome_cognome}
-                  </option>
+                  <option
+  key={n.nominativo_id}
+  value={n.nominativo_id}
+>
+  {n.nominativo_nome}
+</option>
                 ))}
               </select>
             </div>
@@ -815,14 +816,14 @@ alert("Documento generato.");
                 }
               >
                 <option value="">Seleziona nominativo</option>
-                {organiSocieta.map((n) => (
-                 <option
-  key={n.rapp_legale_id}
-  value={n.rapp_legale_id}
->
-  {n.rapp_legali?.nome_cognome}
-</option>
-                ))}
+               {organiSocieta.map((n) => (
+  <option
+    key={n.nominativo_id}
+    value={n.nominativo_id}
+  >
+    {n.nominativo_nome}
+  </option>
+))}
               </select>
             </div>
 
