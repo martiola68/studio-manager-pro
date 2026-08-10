@@ -337,16 +337,27 @@ export default function TitolariEffettiviForm({
     }
 
     try {
-      let query = supabase
-        .from("rapp_legali")
-        .select("*")
-        .eq("codice_fiscale", codiceFiscale);
+     let query = supabase
+  .from("tbclienti")
+  .select(`
+    id,
+    ragione_sociale,
+    codice_fiscale,
+    luogo_nascita,
+    data_nascita,
+    indirizzo,
+    citta,
+    cap,
+    nazionalita
+  `)
+  .eq("codice_fiscale", codiceFiscale)
+  .eq("cliente", false);
 
-      if (studio_id) {
-        query = query.eq("studio_id", studio_id);
-      }
+if (studio_id) {
+  query = query.eq("studio_id", studio_id);
+}
 
-      const { data, error } = await query.maybeSingle();
+const { data, error } = await query.maybeSingle();
 
       if (error) {
         console.error("Errore import da codice fiscale:", error);
@@ -365,22 +376,22 @@ export default function TitolariEffettiviForm({
         return;
       }
 
-      const next: RigaTitolare = {
-        ...righe[index],
-        rapp_legale_id: normalizeId(data.id),
-        source_mode: "import",
-        nome_cognome: normalizeText(data.nome_cognome),
-        codice_fiscale: normalizeCF(data.codice_fiscale),
-        luogo_nascita: normalizeText(data.luogo_nascita ?? data.comune_nascita),
-        data_nascita: normalizeDateForInput(data.data_nascita),
-        indirizzo_residenza: normalizeText(data.indirizzo_residenza),
-        citta_residenza: normalizeText(data.citta_residenza ?? data.comune_residenza),
-        cap_residenza: normalizeText(data.CAP),
-        nazionalita: normalizeText(data.nazionalita ?? data.cittadinanza),
-        error_codice_fiscale: "",
-        import_status: "success",
-        import_message: "Importazione avvenuta con successo",
-      };
+    const next: RigaTitolare = {
+  ...righe[index],
+  rapp_legale_id: normalizeId(data.id),
+  source_mode: "import",
+  nome_cognome: normalizeText(data.ragione_sociale),
+  codice_fiscale: normalizeCF(data.codice_fiscale),
+  luogo_nascita: normalizeText(data.luogo_nascita),
+  data_nascita: normalizeDateForInput(data.data_nascita),
+  indirizzo_residenza: normalizeText(data.indirizzo),
+  citta_residenza: normalizeText(data.citta),
+  cap_residenza: normalizeText(data.cap),
+  nazionalita: normalizeText(data.nazionalita),
+  error_codice_fiscale: "",
+  import_status: "success",
+  import_message: "Importazione avvenuta con successo",
+};
 
       if (isDuplicateTitolare(righe, next, index)) {
         updateRiga(index, {
@@ -398,51 +409,82 @@ export default function TitolariEffettiviForm({
     }
   }
 
-  async function findOrCreateRappLegale(riga: RigaTitolare): Promise<string> {
-    const codiceFiscale = normalizeCF(riga.codice_fiscale);
+ async function findOrCreateRappLegale(riga: RigaTitolare): Promise<string> {
+  const codiceFiscale = normalizeCF(riga.codice_fiscale);
 
-    if (!codiceFiscale) {
-      throw new Error("Codice fiscale obbligatorio.");
-    }
-
-    const query = supabase.from("rapp_legali").select("id").eq("codice_fiscale", codiceFiscale);
-
-    const { data: existing, error: existingError } = studio_id
-      ? await query.eq("studio_id", studio_id).maybeSingle()
-      : await query.maybeSingle();
-
-    if (existingError) {
-      throw new Error(existingError.message || "Errore ricerca rappresentante legale.");
-    }
-
-    if (existing?.id) {
-      return normalizeId(existing.id);
-    }
-
-    const payload = {
-      studio_id: normalizeId(studio_id) || null,
-      nome_cognome: normalizeText(riga.nome_cognome),
-      codice_fiscale: codiceFiscale,
-      luogo_nascita: normalizeText(riga.luogo_nascita) || null,
-      data_nascita: normalizeDateForInput(riga.data_nascita) || null,
-      indirizzo_residenza: normalizeText(riga.indirizzo_residenza) || null,
-      citta_residenza: normalizeText(riga.citta_residenza) || null,
-      CAP: normalizeText(riga.cap_residenza) || null,
-      nazionalita: normalizeText(riga.nazionalita) || null,
-    };
-
-    const { data: inserted, error: insertError } = await supabase
-      .from("rapp_legali")
-      .insert([payload])
-      .select("id")
-      .single();
-
-    if (insertError) {
-      throw new Error(insertError.message || "Errore inserimento in rapp_legali.");
-    }
-
-    return normalizeId(inserted.id);
+  if (!codiceFiscale) {
+    throw new Error("Codice fiscale obbligatorio.");
   }
+
+  let query = supabase
+    .from("tbclienti")
+    .select("id")
+    .eq("codice_fiscale", codiceFiscale)
+    .eq("cliente", false);
+
+  const { data: existing, error: existingError } = studio_id
+    ? await query.eq("studio_id", studio_id).maybeSingle()
+    : await query.maybeSingle();
+
+  if (existingError) {
+    throw new Error(
+      existingError.message ||
+        "Errore ricerca nominativo in tbclienti."
+    );
+  }
+
+  if (existing?.id) {
+    return normalizeId(existing.id);
+  }
+
+  const payload = {
+    studio_id: normalizeId(studio_id),
+    ragione_sociale: normalizeText(riga.nome_cognome),
+    codice_fiscale: codiceFiscale,
+
+    tipo_cliente: "Persona fisica",
+    tipologia_cliente: "Altro",
+
+    cliente: false,
+    professionista_incaricato: false,
+    soggetto_isa: false,
+
+    luogo_nascita:
+      normalizeText(riga.luogo_nascita) || null,
+
+    data_nascita:
+      normalizeDateForInput(riga.data_nascita) || null,
+
+    indirizzo:
+      normalizeText(riga.indirizzo_residenza) || null,
+
+    citta:
+      normalizeText(riga.citta_residenza) || null,
+
+    cap:
+      normalizeText(riga.cap_residenza) || null,
+
+    nazionalita:
+      normalizeText(riga.nazionalita) || null,
+
+    attivo: true,
+  };
+
+  const { data: inserted, error: insertError } = await supabase
+    .from("tbclienti")
+    .insert([payload])
+    .select("id")
+    .single();
+
+  if (insertError) {
+    throw new Error(
+      insertError.message ||
+        "Errore inserimento nominativo in tbclienti."
+    );
+  }
+
+  return normalizeId(inserted.id);
+}
 
   function validateRows(): { ok: boolean; message?: string; normalizedRows: RigaTitolare[] } {
     const righeValide = righe
@@ -602,7 +644,8 @@ export default function TitolariEffettiviForm({
         <div className="mb-4 rounded-md border bg-amber-50 px-4 py-3 text-sm text-amber-800">
           Puoi inserire i titolari anche prima del salvataggio AV4. In questa fase vengono
           conservati in bozza e i nominativi manuali vengono registrati in{" "}
-          <strong>rapp_legali</strong> quando premi <strong>Salva titolari</strong>.
+         <strong>tbclienti</strong> come nominativi non-clienti quando premi{" "}
+          <strong>Salva titolari</strong>.
         </div>
       )}
 
