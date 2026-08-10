@@ -20,6 +20,8 @@ type DocumentoRow = {
 
   societa_documento_id?: string | null;
 
+  nome_file?: string | null;
+
   storage_path?: string | null;
   bucket_name?: string | null;
   mime_type?: string | null;
