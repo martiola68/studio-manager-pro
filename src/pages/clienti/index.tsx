@@ -1407,39 +1407,64 @@ const handleToggleAttivo = async (
       return;
     }
 
-    const scadenzariAttivi: string[] = [];
+ const {
+  data: serviziCliente,
+  error: serviziClienteError,
+} = await (supabase as any)
+  .from("tbclienti_servizi")
+  .select(`
+    flag_iva,
+    flag_lipe,
+    flag_cu,
+    flag_770,
+    flag_bilancio,
+    flag_fiscali,
+    flag_proforma,
+    flag_esterometro,
+    flag_ccgg,
+    flag_imu
+  `)
+  .eq("cliente_id", cliente.id)
+  .eq("studio_id", studioIdEffettivo)
+  .maybeSingle();
 
-    if (cliente.flag_iva)
-      scadenzariAttivi.push("IVA");
+if (serviziClienteError) {
+  throw serviziClienteError;
+}
 
-    if (cliente.flag_lipe)
-      scadenzariAttivi.push("LIPE");
+const scadenzariAttivi: string[] = [];
 
-    if (cliente.flag_cu)
-      scadenzariAttivi.push("CU");
+if (serviziCliente?.flag_iva)
+  scadenzariAttivi.push("IVA");
 
-    if (cliente.flag_770)
-      scadenzariAttivi.push("770");
+if (serviziCliente?.flag_lipe)
+  scadenzariAttivi.push("LIPE");
 
-    if (cliente.flag_bilancio)
-      scadenzariAttivi.push("Bilanci");
+if (serviziCliente?.flag_cu)
+  scadenzariAttivi.push("CU");
 
-    if (cliente.flag_fiscali)
-      scadenzariAttivi.push("Fiscali");
+if (serviziCliente?.flag_770)
+  scadenzariAttivi.push("770");
 
-    if (cliente.flag_proforma)
-      scadenzariAttivi.push("Proforma");
+if (serviziCliente?.flag_bilancio)
+  scadenzariAttivi.push("Bilanci");
 
-    if (cliente.flag_esterometro)
-      scadenzariAttivi.push("Esterometro");
+if (serviziCliente?.flag_fiscali)
+  scadenzariAttivi.push("Fiscali");
 
-    if (cliente.flag_ccgg)
-      scadenzariAttivi.push("CCGG");
+if (serviziCliente?.flag_proforma)
+  scadenzariAttivi.push("Proforma");
 
-    if (cliente.flag_imu)
-      scadenzariAttivi.push("IMU");
+if (serviziCliente?.flag_esterometro)
+  scadenzariAttivi.push("Esterometro");
 
-    if (scadenzariAttivi.length === 0) {
+if (serviziCliente?.flag_ccgg)
+  scadenzariAttivi.push("CCGG");
+
+if (serviziCliente?.flag_imu)
+  scadenzariAttivi.push("IMU");
+
+if (scadenzariAttivi.length === 0) {
       toast({
         title: "Attenzione",
         description:
