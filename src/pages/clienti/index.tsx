@@ -75,8 +75,11 @@ import {
  *  Supabase DB Types
  *  ========= */
 type ClienteRow = Database["public"]["Tables"]["tbclienti"]["Row"] & {
+  id: string;
+  studio_id: string;
   telefono?: string | null;
   pec?: string | null;
+  rapp_legale_id?: string | null;
   cliente?: boolean | null;
 };
 
