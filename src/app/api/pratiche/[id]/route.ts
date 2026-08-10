@@ -27,30 +27,65 @@ export async function GET(req: Request, { params }: Params) {
       );
     }
 
-    const { data: cliente } = await supabaseAdmin
-      .from("tbclienti")
-     .select(`
-  id,
-  ragione_sociale,
-  codice_fiscale,
-  partita_iva,
-  indirizzo,
-  cap,
-  citta,
-  provincia,
-  numero_rea,
-  rapp_legale_id
-`)
-      .eq("id", pratica.cliente_id)
-      .single();
+ const { data: cliente } = await supabaseAdmin
+  .from("tbclienti")
+  .select(`
+    id,
+    ragione_sociale,
+    codice_fiscale,
+    partita_iva,
+    indirizzo,
+    cap,
+    citta,
+    provincia,
+    numero_rea
+  `)
+  .eq("id", pratica.cliente_id)
+  .single();
 
- const { data: rappresentanteLegale } = cliente?.rapp_legale_id
-  ? await supabaseAdmin
-      .from("rapp_legali" as any)
-      .select("id, nome_cognome, codice_fiscale, indirizzo, citta, provincia, cap")
-      .eq("id", cliente.rapp_legale_id)
-      .single()
-  : { data: null };
+let rappresentanteLegale: any = null;
+
+if (cliente?.id) {
+  const { data: organoRapp } = await supabaseAdmin
+    .from("tbclienti_organi")
+    .select(`
+      soggetto_cliente_id
+    `)
+    .eq("cliente_id", cliente.id)
+    .eq("tipo_ruolo", "R")
+    .eq("principale", true)
+    .eq("attivo", true)
+    .limit(1)
+    .maybeSingle();
+
+  if (organoRapp?.soggetto_cliente_id) {
+    const { data: soggettoRapp } = await supabaseAdmin
+      .from("tbclienti")
+      .select(`
+        id,
+        ragione_sociale,
+        codice_fiscale,
+        indirizzo,
+        citta,
+        provincia,
+        cap
+      `)
+      .eq("id", organoRapp.soggetto_cliente_id)
+      .maybeSingle();
+
+    if (soggettoRapp) {
+      rappresentanteLegale = {
+        id: soggettoRapp.id,
+        nome_cognome: soggettoRapp.ragione_sociale,
+        codice_fiscale: soggettoRapp.codice_fiscale,
+        indirizzo: soggettoRapp.indirizzo,
+        citta: soggettoRapp.citta,
+        provincia: soggettoRapp.provincia,
+        cap: soggettoRapp.cap,
+      };
+    }
+  }
+}
 
 const { data: tipo } = await supabaseAdmin
   .from("tbpratiche_tipi")
@@ -90,24 +125,35 @@ const { data: diciture } = await supabaseAdmin
   .eq("attiva", true)
   .order("titolo");
 
-const { data: rappresentantiLegali } = cliente?.id
+const { data: rappresentantiRows } = cliente?.id
   ? await supabaseAdmin
-      .from("rapp_legali" as any)
+      .from("tbclienti")
       .select(`
-       id,
-  nome_cognome,
-  codice_fiscale,
-  indirizzo_residenza,
-  citta_residenza,
-  indirizzo,
-  citta,
-  provincia,
-  cap
+        id,
+        ragione_sociale,
+        codice_fiscale,
+        indirizzo,
+        citta,
+        provincia,
+        cap
       `)
-     .eq("studio_id", pratica.studio_id)
-      .order("nome_cognome")
+      .eq("studio_id", pratica.studio_id)
+      .eq("cliente", false)
+      .order("ragione_sociale")
   : { data: [] };
 
+const rappresentantiLegali =
+  (rappresentantiRows || []).map((r: any) => ({
+    id: r.id,
+    nome_cognome: r.ragione_sociale,
+    codice_fiscale: r.codice_fiscale,
+    indirizzo_residenza: r.indirizzo,
+    citta_residenza: r.citta,
+    indirizzo: r.indirizzo,
+    citta: r.citta,
+    provincia: r.provincia,
+    cap: r.cap,
+  }));
  return NextResponse.json({
 pratica: {
   ...pratica,
