@@ -8,7 +8,25 @@ import { Search, Loader2 } from "lucide-react";
 import type { Database } from "@/lib/supabase/types";
 import { useToast } from "@/hooks/use-toast";
 
+type ServiziCliente = {
+  flag_iva?: boolean | null;
+  flag_lipe?: boolean | null;
+  flag_bilancio?: boolean | null;
+  flag_770?: boolean | null;
+  flag_imu?: boolean | null;
+  flag_cu?: boolean | null;
+  flag_fiscali?: boolean | null;
+  flag_esterometro?: boolean | null;
+  flag_ccgg?: boolean | null;
+};
+
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"] & {
+  utente_fiscale?: {
+    nome: string;
+    cognome: string;
+  } | null;
+  servizi?: ServiziCliente | null;
+};
 
 const TIPI_SCADENZE = [
   { id: "flag_iva", label: "IVA" },
@@ -137,19 +155,21 @@ async function handleToggleFlag(
   field: keyof ServiziCliente,
   checked: boolean | "indeterminate"
 ) {
-  try {
-    setUpdating(clienteId);
+ try {
+  setUpdating(clienteId);
 
-    const value = checked === true;
+  if (!studioId) {
+    throw new Error("studio_id non disponibile");
+  }
+
+  const value = checked === true;
 
     const { error } = await (supabase as any)
       .from("tbclienti_servizi")
       .upsert(
         {
-          studio_id: (
-            await supabase.auth.getUser()
-          ).data.user?.user_metadata?.studio_id,
-          cliente_id: clienteId,
+         studio_id: studioId,
+cliente_id: clienteId,
           [field]: value,
           updated_at: new Date().toISOString(),
         },
