@@ -2588,9 +2588,19 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
       <Trash2 className="h-4 w-4" />
     </Button>
 
-  </div>
-</TableCell>
-              {/* DIALOG CREAZIONE/MODIFICA */}
+ </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  )}
+</CardContent>
+</Card>
+
+{/* DIALOG CREAZIONE/MODIFICA */}
+    
 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
   <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
     <DialogHeader>
