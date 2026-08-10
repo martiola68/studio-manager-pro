@@ -84,7 +84,20 @@ export default function TitolariDaRappLegaliForm({
       return;
     }
 
-    setRappresentanti((data || []) as RappLegale[]);
+    const elenco: RappLegale[] =
+  (data || []).map((r: any) => ({
+    id: r.tbclienti.id,
+    nome_cognome: r.tbclienti.ragione_sociale,
+    codice_fiscale: r.tbclienti.codice_fiscale,
+    luogo_nascita: r.tbclienti.luogo_nascita,
+    data_nascita: r.tbclienti.data_nascita,
+    indirizzo_residenza: r.tbclienti.indirizzo,
+    citta_residenza: r.tbclienti.citta,
+    cap_residenza: r.tbclienti.cap,
+    nazionalita: r.tbclienti.nazionalita,
+  })) || [];
+
+setRappresentanti(elenco);
   }
 
   async function loadSalvati() {
