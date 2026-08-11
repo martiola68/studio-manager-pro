@@ -12,7 +12,7 @@ type FormState = {
 studio_id: string;
 cliente_id: string;
 av1_id: string;
-
+  
 dichiarante_nome_cognome: string;
   dichiarante_codice_fiscale: string;
   dichiarante_luogo_nascita: string;
