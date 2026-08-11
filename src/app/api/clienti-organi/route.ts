@@ -131,16 +131,6 @@ return NextResponse.json({
   }
 }
 
-function ruoloAggiornaRappLegale(ruolo?: string | null) {
-  return [
-    "amministratore_unico",
-    "amministratore_delegato",
-    "presidente_cda",
-    "rappresentante_legale",
-    "liquidatore",
-  ].includes(String(ruolo || ""));
-}
-
 export async function POST(req: NextRequest) {
   try {
     const supabase = createClient(
@@ -263,21 +253,10 @@ if (error) {
   );
 }
 
-if (
-  payload.principale === true &&
-  ruoloAggiornaRappLegale(payload.ruolo)
-) {
-  await supabase
-    .from("tbclienti")
-    .update({
-      rapp_legale_id: payload.soggetto_cliente_id,
-    })
-    .eq("id", payload.cliente_id);
-}
-
 return NextResponse.json({
   organo: data,
 });
+    
   } catch (err: any) {
     return NextResponse.json(
       { error: err.message || "Errore server" },
@@ -378,27 +357,10 @@ if (!data || data.length === 0) {
 
 const organoAggiornato = data[0];
 
-if (
-  organoAggiornato?.cliente_id &&
-  organoAggiornato?.soggetto_cliente_id &&
-  organoAggiornato?.principale === true &&
-  ruoloAggiornaRappLegale(organoAggiornato?.ruolo)
-) {
-  await supabase
-    .from("tbclienti")
-    .update({
-      rapp_legale_id:
-        organoAggiornato.soggetto_cliente_id,
-    })
-    .eq(
-      "id",
-      organoAggiornato.cliente_id
-    );
-}
-
 return NextResponse.json({
   organo: organoAggiornato,
 });
+    
   } catch (err: any) {
     return NextResponse.json(
       { error: err.message || "Errore server" },
