@@ -335,33 +335,32 @@ if (documentoAmlError || !documentoAml?.id) {
       rollbackError
     );
   }
-
-  try {
-    await supabase
-      .from("tbAMLComunicazioni")
-      .insert({
-        studio_id: studioId,
-        tipo_comunicazione:
-          "richiesta_documento",
-        cliente_id: clienteId,
-        rapp_legale_id: null,
-        av4_id: av4Id,
-        destinatario_email:
-          destinatario,
-        oggetto: subject,
-        body_preview:
-          `Errore invio richiesta documento a ${destinatario}.`,
-        stato_invio: "errore",
-        data_invio:
-          new Date().toISOString(),
-        utente_id: userId,
-        public_token:
-          token || null,
-        note:
-          error?.message ||
-          "Errore durante l'invio della richiesta documento.",
-      });
-  } catch {}
+try {
+  await supabase
+    .from("tbAMLComunicazioni")
+    .insert({
+      studio_id: studioId,
+      tipo_comunicazione:
+        "richiesta_documento",
+      cliente_id: clienteId,
+      soggetto_cliente_id: null,
+      av4_id: av4Id,
+      destinatario_email:
+        destinatario,
+      oggetto: subject,
+      body_preview:
+        `Errore invio richiesta documento a ${destinatario}.`,
+      stato_invio: "errore",
+      data_invio:
+        new Date().toISOString(),
+      utente_id: userId,
+      public_token:
+        token || null,
+      note:
+        error?.message ||
+        "Errore durante l'invio della richiesta documento.",
+    });
+} catch {}
 
   throw error;
 }
