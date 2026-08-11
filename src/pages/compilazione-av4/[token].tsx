@@ -169,12 +169,16 @@ function normalizeDateForInput(value?: string | null): string {
 }
 
 function mapDbRowToForm(row: any): FormState {
-  return {
-    id: String(row?.id ?? ""),
-    public_token: row?.public_token ?? "",
-    public_enabled: !!row?.public_enabled,
+return {
+  id: String(row?.id ?? ""),
+  public_token: row?.public_token ?? "",
+  public_enabled: !!row?.public_enabled,
 
-   dichiarante_nome_cognome: row?.dichiarante_nome_cognome ?? "",
+  studio_id: row?.studio_id ?? "",
+  cliente_id: row?.cliente_id ? String(row.cliente_id) : "",
+  av1_id: row?.av1_id != null ? String(row.av1_id) : "",
+
+  dichiarante_nome_cognome: row?.dichiarante_nome_cognome ?? "",
     
     dichiarante_codice_fiscale: row?.dichiarante_codice_fiscale ?? "",
     dichiarante_luogo_nascita: row?.dichiarante_luogo_nascita ?? "",
