@@ -4,12 +4,11 @@ import { getStudioId } from "@/services/getStudioId";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
-type ComunicazioneRow = {
-  id: string;
+type Comunicazione = {
   studio_id: string;
   tipo_comunicazione: "richiesta_documento" | "invio_av4";
   cliente_id?: string | null;
-  rapp_legale_id?: string | null;
+  soggetto_cliente_id?: string | null;
   av4_id?: string | null;
   destinatario_email?: string | null;
   oggetto?: string | null;
