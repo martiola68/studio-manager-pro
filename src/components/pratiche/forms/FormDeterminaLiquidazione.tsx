@@ -452,14 +452,14 @@ await fetch("/api/clienti-organi", {
   },
   body: JSON.stringify({
     cliente_id: pratica.cliente_id,
-    rapp_legale_id: rappresentante.id,
+    soggetto_cliente_id: rappresentante.id,
     ruolo: "amministratore",
     carica: "Amministratore",
     principale: nuovoRappLegale.amministratore_principale,
     attivo: true,
   }),
 });
-
+      
 setForm((prev) => ({
   ...prev,
   rappresentante_legale_id: rappresentante.id,
