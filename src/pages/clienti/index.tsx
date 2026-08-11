@@ -77,7 +77,6 @@ import {
 type ClienteRow = Database["public"]["Tables"]["tbclienti"]["Row"] & {
   telefono?: string | null;
   pec?: string | null;
-  rapp_legale_id?: string | null;
   cliente?: boolean | null;
 };
 
