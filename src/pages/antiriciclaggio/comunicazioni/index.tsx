@@ -34,7 +34,7 @@ function getTipoLabel(tipo: Comunicazione["tipo_comunicazione"]) {
 }
 
 export default function ComunicazioniAMLPage() {
-  const [rows, setRows] = useState<ComunicazioneRow[]>([]);
+ const [rows, setRows] = useState<Comunicazione[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
