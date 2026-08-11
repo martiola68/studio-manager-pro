@@ -15,7 +15,7 @@ type SourceMode = "import" | "manual";
 
 type RigaTitolare = {
   id?: string;
-  rapp_legale_id: string;
+    soggetto_cliente_id: string;
   source_mode: SourceMode;
   nome_cognome: string;
   codice_fiscale: string;
@@ -32,7 +32,7 @@ type RigaTitolare = {
 
 function emptyRiga(mode: SourceMode = "import"): RigaTitolare {
   return {
-    rapp_legale_id: "",
+    soggetto_cliente_id: "",
     source_mode: mode,
     nome_cognome: "",
     codice_fiscale: "",
@@ -88,7 +88,7 @@ function isDuplicateTitolare(
 
 function isMeaningfulRow(riga: RigaTitolare): boolean {
   return Boolean(
-    normalizeId(riga.rapp_legale_id) ||
+    normalizeId(riga.soggetto_cliente_id) ||
       normalizeText(riga.nome_cognome) ||
       normalizeCF(riga.codice_fiscale) ||
       normalizeText(riga.luogo_nascita) ||
@@ -157,7 +157,9 @@ export default function TitolariEffettiviForm({
               ...emptyRiga(row?.source_mode === "manual" ? "manual" : "import"),
               ...row,
               id: normalizeId(row?.id),
-              rapp_legale_id: normalizeId(row?.rapp_legale_id),
+              soggetto_cliente_id: normalizeId(
+  row?.soggetto_cliente_id || row?.rapp_legale_id
+),
               source_mode: row?.source_mode === "manual" ? "manual" : "import",
               nome_cognome: normalizeText(row?.nome_cognome),
               codice_fiscale: normalizeCF(row?.codice_fiscale),
@@ -196,7 +198,7 @@ export default function TitolariEffettiviForm({
       const payload = righe.map((r) => ({
         ...r,
         id: normalizeId(r.id),
-        rapp_legale_id: normalizeId(r.rapp_legale_id),
+        soggetto_cliente_id: normalizeId(r.soggetto_cliente_id),
         codice_fiscale: normalizeCF(r.codice_fiscale),
         data_nascita: normalizeDateForInput(r.data_nascita),
         error_codice_fiscale: "",
@@ -230,10 +232,10 @@ export default function TitolariEffettiviForm({
       return [];
     }
 
-    return (data || []).map((row: any) => ({
-      id: normalizeId(row.id),
-      rapp_legale_id: normalizeId(row.rapp_legale_id),
-      source_mode: normalizeId(row.rapp_legale_id) ? "import" : "manual",
+   return (data || []).map((row: any) => ({
+  id: normalizeId(row.id),
+  soggetto_cliente_id: normalizeId(row.soggetto_cliente_id),
+  source_mode: normalizeId(row.soggetto_cliente_id) ? "import" : "manual",
       nome_cognome: normalizeText(row?.nome_cognome),
       codice_fiscale: normalizeCF(row?.codice_fiscale),
       luogo_nascita: normalizeText(row?.luogo_nascita),
@@ -366,9 +368,9 @@ const { data, error } = await query.maybeSingle();
       }
 
       if (!data) {
-        updateRiga(index, {
-          rapp_legale_id: "",
-          source_mode: "manual",
+       updateRiga(index, {
+  soggetto_cliente_id: "",
+  source_mode: "manual",
           import_status: "not_found",
           import_message: "Nessun dato trovato, inerire i dati manualmente",
           error_codice_fiscale: "",
@@ -376,9 +378,9 @@ const { data, error } = await query.maybeSingle();
         return;
       }
 
-    const next: RigaTitolare = {
+   const next: RigaTitolare = {
   ...righe[index],
-  rapp_legale_id: normalizeId(data.id),
+  soggetto_cliente_id: normalizeId(data.id),
   source_mode: "import",
   nome_cognome: normalizeText(data.ragione_sociale),
   codice_fiscale: normalizeCF(data.codice_fiscale),
@@ -556,22 +558,22 @@ const { data, error } = await query.maybeSingle();
 
     try {
       const normalizedRows = validation.normalizedRows;
-      const rowsWithRappId: RigaTitolare[] = [];
+    const rowsWithSoggettoId: RigaTitolare[] = [];
 
-      for (const r of normalizedRows) {
-        let rappId = normalizeId(r.rapp_legale_id);
+for (const r of normalizedRows) {
+  let soggettoId = normalizeId(r.soggetto_cliente_id);
 
-        if (r.source_mode === "manual" || !rappId) {
-          rappId = await findOrCreateRappLegale(r);
-        }
+  if (r.source_mode === "manual" || !soggettoId) {
+    soggettoId = await findOrCreateRappLegale(r);
+  }
 
-        rowsWithRappId.push({
-          ...r,
-          rapp_legale_id: rappId,
-        });
-      }
+  rowsWithSoggettoId.push({
+    ...r,
+    soggetto_cliente_id: soggettoId,
+  });
+}
 
-      setRighe(rowsWithRappId);
+setRighe(rowsWithSoggettoId);
 
       if (!normalizeId(av4_id)) {
         persistDraft();
@@ -581,12 +583,12 @@ const { data, error } = await query.maybeSingle();
         return;
       }
 
-      const records = rowsWithRappId.map((r) => ({
-        av4_id: normalizeId(av4_id),
-        studio_id: normalizeId(studio_id) || null,
-        cliente_id: normalizeId(cliente_id) || null,
-        sezione,
-        rapp_legale_id: normalizeId(r.rapp_legale_id) || null,
+     const records = rowsWithSoggettoId.map((r) => ({
+  av4_id: normalizeId(av4_id),
+  studio_id: normalizeId(studio_id) || null,
+  cliente_id: normalizeId(cliente_id) || null,
+  sezione,
+  soggetto_cliente_id: normalizeId(r.soggetto_cliente_id) || null,
         nome_cognome: r.nome_cognome,
         codice_fiscale: r.codice_fiscale,
         luogo_nascita: r.luogo_nascita || "",
@@ -671,13 +673,13 @@ const { data, error } = await query.maybeSingle();
                   <input
                     value={riga.codice_fiscale}
                     onChange={(e) =>
-                      updateRiga(index, {
-                        codice_fiscale: e.target.value,
-                        import_status: "",
-                        import_message: "",
-                        rapp_legale_id: "",
-                        source_mode: "manual",
-                      })
+                     updateRiga(index, {
+  codice_fiscale: e.target.value,
+  import_status: "",
+  import_message: "",
+  soggetto_cliente_id: "",
+  source_mode: "manual",
+})
                     }
                     placeholder="Codice fiscale"
                     className={`w-full rounded border p-2 ${
