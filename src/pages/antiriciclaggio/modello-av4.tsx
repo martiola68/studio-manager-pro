@@ -25,9 +25,8 @@ type FormState = {
   pratica_id: string;
   societa_id: string;
   av1_id: string;
-soggetto_cliente_id: string;
-rapp_legale_id: string;
-microsoft_connection_id: string;
+  soggetto_cliente_id: string;
+  microsoft_connection_id: string;
 
   invia_altra_email: boolean;
   email_destinatario_alternativa: string;
@@ -109,7 +108,7 @@ const initialFormState = (
   societa_id: societaId,
   av1_id: av1Id,
 soggetto_cliente_id: "",
-rapp_legale_id: "",
+
 microsoft_connection_id: "",
   invia_altra_email: false,
   email_destinatario_alternativa: "",
@@ -217,10 +216,6 @@ function mapDbRowToForm(row: any): FormState {
 
 soggetto_cliente_id: row?.soggetto_cliente_id
   ? String(row.soggetto_cliente_id)
-  : "",
-
-rapp_legale_id: row?.rapp_legale_id
-  ? String(row.rapp_legale_id)
   : "",
 
 microsoft_connection_id: row?.microsoft_connection_id
@@ -363,7 +358,7 @@ export default function ModelloAV4() {
   ...prev,
   amm_no_associato: false,
   soggetto_cliente_id: "",
-  rapp_legale_id: "",
+
   microsoft_connection_id: "",
   dichiarante_nome_cognome: "",
       dichiarante_codice_fiscale: "",
@@ -636,10 +631,7 @@ setForm((prev) => ({
   soggetto_cliente_id:
     soggettoClienteId,
 
-  rapp_legale_id:
-    soggettoClienteId,
-
-  microsoft_connection_id: "",
+   microsoft_connection_id: "",
 
   dichiarante_nome_cognome:
     nominativo,
@@ -1665,10 +1657,10 @@ ${nomeOperatore}
           pratica_id: form.pratica_id || null,
           societa_id: form.societa_id || null,
           tipo_comunicazione: "invio_av4",
-          cliente_id: form.cliente_id || null,
-          rapp_legale_id: form.rapp_legale_id || null,
-          // amm_no_associato: !!form.amm_no_associato,
-          av4_id: av4Id,
+         cliente_id: form.cliente_id || null,
+rapp_legale_id: form.soggetto_cliente_id || null,
+// amm_no_associato: !!form.amm_no_associato,
+av4_id: av4Id,
           destinatario_email: destinatario,
           oggetto: subject,
           body_preview: `Invio AV4 a ${destinatario}. Link pubblico: ${url}`,
@@ -1699,8 +1691,8 @@ ${nomeOperatore}
               societa_id: form.societa_id || null,
               tipo_comunicazione: "invio_av4",
               cliente_id: form.cliente_id || null,
-              rapp_legale_id: form.rapp_legale_id || null,
-              av4_id: av4Id,
+rapp_legale_id: form.soggetto_cliente_id || null,
+av4_id: av4Id,
               destinatario_email: destinatario || null,
               oggetto: subject,
               body_preview: `Errore invio AV4 a ${destinatario || "-"}.`,
