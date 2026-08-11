@@ -9,12 +9,11 @@ type FormState = {
   public_token: string;
   public_enabled: boolean;
 
-  studio_id: string;
-  cliente_id: string;
-  av1_id: string;
-  rapp_legale_id: string;
+studio_id: string;
+cliente_id: string;
+av1_id: string;
 
-  dichiarante_nome_cognome: string;
+dichiarante_nome_cognome: string;
   dichiarante_codice_fiscale: string;
   dichiarante_luogo_nascita: string;
   dichiarante_data_nascita: string;
@@ -86,12 +85,11 @@ const emptyForm: FormState = {
   public_token: "",
   public_enabled: false,
 
-  studio_id: "",
-  cliente_id: "",
-  av1_id: "",
-  rapp_legale_id: "",
+ studio_id: "",
+cliente_id: "",
+av1_id: "",
 
-  dichiarante_nome_cognome: "",
+dichiarante_nome_cognome: "",
   dichiarante_codice_fiscale: "",
   dichiarante_luogo_nascita: "",
   dichiarante_data_nascita: "",
@@ -176,12 +174,8 @@ function mapDbRowToForm(row: any): FormState {
     public_token: row?.public_token ?? "",
     public_enabled: !!row?.public_enabled,
 
-    studio_id: row?.studio_id ?? "",
-    cliente_id: row?.cliente_id ? String(row.cliente_id) : "",
-    av1_id: row?.av1_id != null ? String(row.av1_id) : "",
-    rapp_legale_id: row?.rapp_legale_id ? String(row.rapp_legale_id) : "",
-
-    dichiarante_nome_cognome: row?.dichiarante_nome_cognome ?? "",
+   dichiarante_nome_cognome: row?.dichiarante_nome_cognome ?? "",
+    
     dichiarante_codice_fiscale: row?.dichiarante_codice_fiscale ?? "",
     dichiarante_luogo_nascita: row?.dichiarante_luogo_nascita ?? "",
     dichiarante_data_nascita: normalizeDateForInput(row?.dichiarante_data_nascita),
