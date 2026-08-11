@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
 type Comunicazione = {
+  id: string;
   studio_id: string;
   tipo_comunicazione: "richiesta_documento" | "invio_av4";
   cliente_id?: string | null;
@@ -60,7 +61,7 @@ export default function ComunicazioniAMLPage() {
 
       if (error) throw new Error(error.message);
 
-      setRows((data || []) as ComunicazioneRow[]);
+      setRows((data || []) as Comunicazione[]);
     } catch (err: any) {
       setError(err?.message || "Errore caricamento comunicazioni.");
       setRows([]);
