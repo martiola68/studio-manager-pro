@@ -30,7 +30,7 @@ type AV4Row = {
   studio_id?: string | null;
   cliente_id?: string | null;
   av1_id?: number | null;
-  rapp_legale_id?: string | null;
+  soggetto_cliente_id?: string | null;
 
   dichiarante_nome_cognome?: string | null;
   dichiarante_codice_fiscale?: string | null;
@@ -284,7 +284,7 @@ export default function StampaAV4Page() {
           setCliente((clienteData as ClienteRow) || null);
         }
 
-      if (av4Data.rapp_legale_id) {
+      if (av4Data.soggetto_cliente_id) {
   const { data: rappData } = await supabase
     .from("tbclienti")
     .select(`
@@ -300,7 +300,7 @@ export default function StampaAV4Page() {
       cap,
       nazionalita
     `)
-    .eq("id", av4Data.rapp_legale_id)
+    .eq("id", av4Data.soggetto_cliente_id)
     .maybeSingle();
 
   if (rappData) {
