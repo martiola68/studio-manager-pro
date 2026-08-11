@@ -818,24 +818,10 @@ const result = await sendRichiestaDocumentoRappresentante({
           );
         }
 
-        const savedId =
-          result?.data?.id || result?.id || result?.record?.id || "";
+       const savedId =
+  result?.data?.id || result?.id || result?.record?.id || "";
 
-        if (!isEditMode && from === "av4" && clienteIdFromQuery && savedId) {
-          const supabase = getSupabaseClient() as any;
-
-          const { error: updateClienteError } = await supabase
-            .from("tbclienti")
-            .update({ rapp_legale_id: savedId })
-            .eq("id", clienteIdFromQuery);
-
-          if (updateClienteError) {
-            throw new Error(
-              `Rappresentante salvato ma errore aggiornamento cliente: ${updateClienteError.message}`
-            );
-          }
-
-        if (returnTo) {
+if (returnTo) {
   const safeReturnTo = getSafeInternalReturnPath(
     returnTo,
     "/antiriciclaggio/rappresentanti"
