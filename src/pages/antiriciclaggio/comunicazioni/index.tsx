@@ -27,7 +27,7 @@ function formatDateTime(value?: string | null) {
   return d.toLocaleString("it-IT");
 }
 
-function getTipoLabel(tipo: ComunicazioneRow["tipo_comunicazione"]) {
+function getTipoLabel(tipo: Comunicazione["tipo_comunicazione"]) {
   if (tipo === "richiesta_documento") return "Richiesta documento";
   if (tipo === "invio_av4") return "Invio AV4";
   return tipo;
