@@ -826,29 +826,32 @@ if (returnTo) {
     returnTo,
     "/antiriciclaggio/rappresentanti"
   );
+
   const sep = safeReturnTo.includes("?") ? "&" : "?";
+
   await router.push(`${safeReturnTo}${sep}rapp_saved=1`);
   return;
 }
 
-          const fallbackParams = new URLSearchParams({
-            av1_id: av1IdFromQuery || "",
-            cliente_id: clienteIdFromQuery || "",
-            studio_id: studioId || "",
-            rapp_saved: "1",
-          });
+if (from === "av4") {
+  const fallbackParams = new URLSearchParams({
+    av1_id: av1IdFromQuery || "",
+    cliente_id: clienteIdFromQuery || "",
+    studio_id: studioId || "",
+    rapp_saved: "1",
+  });
 
-          if (av4IdFromQuery) {
-            fallbackParams.set("id", av4IdFromQuery);
-          }
+  if (av4IdFromQuery) {
+    fallbackParams.set("id", av4IdFromQuery);
+  }
 
-          await router.push(
-            `/antiriciclaggio/modello-av4?${fallbackParams.toString()}`
-          );
-          return;
-        }
+  await router.push(
+    `/antiriciclaggio/modello-av4?${fallbackParams.toString()}`
+  );
+  return;
+}
 
-        await router.push("/antiriciclaggio/rappresentanti?saved=1");
+await router.push("/antiriciclaggio/rappresentanti?saved=1");
       },
     });
   } catch (error: any) {
