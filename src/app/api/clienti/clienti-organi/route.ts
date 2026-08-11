@@ -52,12 +52,12 @@ export async function POST(req: Request) {
     const body = await req.json();
     const supabaseAdmin = getSupabaseAdmin();
 
-    if (!body.cliente_id || !body.rapp_legale_id || !body.ruolo) {
-      return NextResponse.json(
-        { error: "cliente_id, rapp_legale_id e ruolo sono obbligatori" },
-        { status: 400 }
-      );
-    }
+  if (!body.cliente_id || !body.soggetto_cliente_id || !body.ruolo) {
+  return NextResponse.json(
+    { error: "cliente_id, soggetto_cliente_id e ruolo sono obbligatori" },
+    { status: 400 }
+  );
+}
 
     if (body.principale && body.cliente_id && body.ruolo) {
       await supabaseAdmin
@@ -73,25 +73,25 @@ export async function POST(req: Request) {
         .eq("principale", true);
     }
 
-    const { data, error } = await supabaseAdmin
-      .from("tbclienti_organi")
-      .upsert(
+  const { data, error } = await supabaseAdmin
+  .from("tbclienti_organi")
+  .upsert(
+    {
+      cliente_id: body.cliente_id,
+      soggetto_cliente_id: body.soggetto_cliente_id,
+      ruolo: body.ruolo,
+      percentuale_partecipazione:
+        body.percentuale_partecipazione || null,
+      presenza: body.presenza || null,
+      carica: body.carica || null,
+      principale: body.principale || false,
+      attivo: body.attivo ?? true,
+      data_nomina: body.data_nomina || null,
+      data_cessazione: body.data_cessazione || null,
+      updated_at: new Date().toISOString(),
+    },
         {
-          cliente_id: body.cliente_id,
-          rapp_legale_id: body.rapp_legale_id,
-          ruolo: body.ruolo,
-          percentuale_partecipazione:
-            body.percentuale_partecipazione || null,
-          presenza: body.presenza || null,
-          carica: body.carica || null,
-          principale: body.principale || false,
-          attivo: body.attivo ?? true,
-          data_nomina: body.data_nomina || null,
-          data_cessazione: body.data_cessazione || null,
-          updated_at: new Date().toISOString(),
-        },
-        {
-          onConflict: "cliente_id,rapp_legale_id,ruolo",
+         onConflict: "cliente_id,soggetto_cliente_id,ruolo",
         }
       )
       .select()
