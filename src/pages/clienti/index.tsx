@@ -965,12 +965,12 @@ if (tipoClienteEffettivo === "Persona fisica") {
   missingFields.push("Ragione Sociale");
 }
 
-// if (!formData.codice_fiscale.trim()) {
-//   newErrors.codice_fiscale = true;
-//   missingFields.push("Codice Fiscale");
-// }
+if (!formData.codice_fiscale.trim()) {
+  newErrors.codice_fiscale = true;
+  missingFields.push("Codice Fiscale");
+}
 
-        const codiceFiscaleUpper = formData.codice_fiscale.trim().toUpperCase();
+const codiceFiscaleUpper = formData.codice_fiscale.trim().toUpperCase();
 
 if (codiceFiscaleUpper) {
   const cfValido =
