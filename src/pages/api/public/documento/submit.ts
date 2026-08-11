@@ -170,7 +170,7 @@ export default async function handler(
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-  const {
+const {
   data: documentoAml,
   error: documentoAmlError,
 } = await supabase
@@ -179,7 +179,6 @@ export default async function handler(
     id,
     studio_id,
     soggetto_cliente_id,
-    legacy_rapp_legale_id,
     public_doc_enabled,
     public_doc_token
   `)
