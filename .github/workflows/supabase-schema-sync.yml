@@ -1,0 +1,44 @@
+name: Supabase Schema Sync
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync-schema:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Dump current Supabase schema
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          supabase db dump \
+            --db-url "$SUPABASE_DB_URL" \
+            --schema public \
+            --file supabase/current_schema.sql
+
+      - name: Commit schema changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add supabase/current_schema.sql
+
+          if git diff --cached --quiet; then
+            echo "Nessuna modifica dello schema da salvare."
+            exit 0
+          fi
+
+          git commit -m "chore(db): sync Supabase schema"
+          git push
