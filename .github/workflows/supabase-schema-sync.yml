@@ -1,69 +1,17 @@
-name: Supabase Schema Sync
+name: Supabase Direct DB Test
 
 on:
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
-  sync-schema:
+  test-direct:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install PostgreSQL client
+      - name: Check direct database DNS
         run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
+          getent ahosts db.ngeltlygytupgdjiagve.supabase.co || true
 
-      - name: Test database connection
-        env:
-          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      - name: Check IPv6 connectivity
         run: |
-          psql \
-            -h aws-1-eu-central-1.pooler.supabase.com \
-            -p 5432 \
-            -U postgres.ngeltlygytupgdjiagve \
-            -d postgres \
-            -c "SELECT current_user, current_database();"
-
-      - name: Dump current public schema
-        env:
-          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-        run: |
-          mkdir -p supabase
-
-          pg_dump \
-            -h aws-1-eu-central-1.pooler.supabase.com \
-            -p 5432 \
-            -U postgres.ngeltlygytupgdjiagve \
-            -d postgres \
-            --schema=public \
-            --schema-only \
-            --no-owner \
-            --no-privileges \
-            -f supabase/current_schema.sql
-
-      - name: Verify schema file
-        run: |
-          test -s supabase/current_schema.sql
-          echo "Schema creato correttamente."
-          wc -l supabase/current_schema.sql
-
-      - name: Commit schema changes
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git add supabase/current_schema.sql
-
-          if git diff --cached --quiet; then
-            echo "Nessuna modifica dello schema da salvare."
-            exit 0
-          fi
-
-          git commit -m "chore(db): sync Supabase schema"
-          git push
+          ping -6 -c 2 db.ngeltlygytupgdjiagve.supabase.co || true
