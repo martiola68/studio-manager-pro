@@ -14,47 +14,43 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
       - name: Test database connection
         env:
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
-          docker run --rm \
-            -e PGPASSWORD="$SUPABASE_DB_PASSWORD" \
-            postgres:17 \
-            psql \
-              --host=aws-1-eu-central-1.pooler.supabase.com \
-              --port=5432 \
-              --username=postgres.ngeltlygytupgdjiagve \
-              --dbname=postgres \
-              --command="SELECT current_database(), current_user;"
+          psql \
+            -h aws-1-eu-central-1.pooler.supabase.com \
+            -p 5432 \
+            -U postgres.ngeltlygytupgdjiagve \
+            -d postgres \
+            -c "SELECT current_user, current_database();"
 
       - name: Dump current public schema
         env:
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
-          docker run --rm \
-            -e PGPASSWORD="$SUPABASE_DB_PASSWORD" \
-            -v "$PWD:/workspace" \
-            postgres:17 \
-            pg_dump \
-              --host=aws-1-eu-central-1.pooler.supabase.com \
-              --port=5432 \
-              --username=postgres.ngeltlygytupgdjiagve \
-              --dbname=postgres \
-              --schema=public \
-              --schema-only \
-              --no-owner \
-              --no-privileges \
-              --file=/workspace/supabase/current_schema.sql
+          mkdir -p supabase
+
+          pg_dump \
+            -h aws-1-eu-central-1.pooler.supabase.com \
+            -p 5432 \
+            -U postgres.ngeltlygytupgdjiagve \
+            -d postgres \
+            --schema=public \
+            --schema-only \
+            --no-owner \
+            --no-privileges \
+            -f supabase/current_schema.sql
 
       - name: Verify schema file
         run: |
-          if [ ! -s supabase/current_schema.sql ]; then
-            echo "ERRORE: current_schema.sql non è stato creato o è vuoto."
-            exit 1
-          fi
-
-          echo "Schema esportato correttamente."
+          test -s supabase/current_schema.sql
+          echo "Schema creato correttamente."
           wc -l supabase/current_schema.sql
 
       - name: Commit schema changes
@@ -69,5 +65,5 @@ jobs:
             exit 0
           fi
 
-          git commit -m "chore(db): sync current Supabase schema"
+          git commit -m "chore(db): sync Supabase schema"
           git push
