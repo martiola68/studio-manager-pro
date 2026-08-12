@@ -14,24 +14,48 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: latest
-
-      - name: Build database URL
+      - name: Test database connection
         env:
-          DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
-          ENCODED_PASSWORD=$(python3 -c "import urllib.parse,os; print(urllib.parse.quote(os.environ['DB_PASSWORD'], safe=''))")
-          echo "SUPABASE_DATABASE_URL=postgresql://postgres.ngeltlygytupgdjiagve:${ENCODED_PASSWORD}@aws-1-eu-central-1.pooler.supabase.com:5432/postgres" >> "$GITHUB_ENV"
+          docker run --rm \
+            -e PGPASSWORD="$SUPABASE_DB_PASSWORD" \
+            postgres:17 \
+            psql \
+              --host=aws-1-eu-central-1.pooler.supabase.com \
+              --port=5432 \
+              --username=postgres.ngeltlygytupgdjiagve \
+              --dbname=postgres \
+              --command="SELECT current_database(), current_user;"
 
-      - name: Dump current Supabase schema
+      - name: Dump current public schema
+        env:
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
-          supabase db dump \
-            --db-url "$SUPABASE_DATABASE_URL" \
-            --schema public \
-            --file supabase/current_schema.sql
+          docker run --rm \
+            -e PGPASSWORD="$SUPABASE_DB_PASSWORD" \
+            -v "$PWD:/workspace" \
+            postgres:17 \
+            pg_dump \
+              --host=aws-1-eu-central-1.pooler.supabase.com \
+              --port=5432 \
+              --username=postgres.ngeltlygytupgdjiagve \
+              --dbname=postgres \
+              --schema=public \
+              --schema-only \
+              --no-owner \
+              --no-privileges \
+              --file=/workspace/supabase/current_schema.sql
+
+      - name: Verify schema file
+        run: |
+          if [ ! -s supabase/current_schema.sql ]; then
+            echo "ERRORE: current_schema.sql non è stato creato o è vuoto."
+            exit 1
+          fi
+
+          echo "Schema esportato correttamente."
+          wc -l supabase/current_schema.sql
 
       - name: Commit schema changes
         run: |
@@ -45,5 +69,5 @@ jobs:
             exit 0
           fi
 
-          git commit -m "chore(db): sync Supabase schema"
+          git commit -m "chore(db): sync current Supabase schema"
           git push
