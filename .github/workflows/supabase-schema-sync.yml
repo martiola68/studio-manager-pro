@@ -72,3 +72,5 @@ jobs:
 
           git commit -m "chore(db): sync Supabase schema"
           git push
+
+          # test SSL
