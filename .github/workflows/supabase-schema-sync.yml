@@ -1,17 +1,73 @@
-name: Supabase Direct DB Test
+name: Supabase Schema Sync
 
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  test-direct:
+  sync-schema:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check direct database DNS
-        run: |
-          getent ahosts db.ngeltlygytupgdjiagve.supabase.co || true
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Check IPv6 connectivity
+      - name: Install PostgreSQL client
         run: |
-          ping -6 -c 2 db.ngeltlygytupgdjiagve.supabase.co || true
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Test database connection
+        env:
+          PGPASSWORD: ${{ secrets.SUPABASE_SCHEMA_SYNC_PASSWORD }}
+        run: |
+          psql \
+            -h aws-1-eu-central-1.pooler.supabase.com \
+            -p 5432 \
+            -U github_schema_sync.ngeltlygytupgdjiagve \
+            -d postgres \
+            -c "select current_user, current_database();"
+
+      - name: Dump current public schema
+        env:
+          PGPASSWORD: ${{ secrets.SUPABASE_SCHEMA_SYNC_PASSWORD }}
+        run: |
+          mkdir -p supabase
+
+          pg_dump \
+            -h aws-1-eu-central-1.pooler.supabase.com \
+            -p 5432 \
+            -U github_schema_sync.ngeltlygytupgdjiagve \
+            -d postgres \
+            --schema=public \
+            --schema-only \
+            --no-owner \
+            --no-privileges \
+            -f supabase/current_schema.sql
+
+      - name: Verify schema file
+        run: |
+          if [ ! -s supabase/current_schema.sql ]; then
+            echo "ERRORE: supabase/current_schema.sql non creato o vuoto."
+            exit 1
+          fi
+
+          echo "Schema esportato correttamente."
+          wc -l supabase/current_schema.sql
+
+      - name: Commit schema changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add supabase/current_schema.sql
+
+          if git diff --cached --quiet; then
+            echo "Nessuna modifica dello schema da salvare."
+            exit 0
+          fi
+
+          git commit -m "chore(db): sync Supabase schema"
+          git push
