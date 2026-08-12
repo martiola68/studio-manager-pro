@@ -19,17 +19,18 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y postgresql-client
 
-      - name: Test database connection
-        env:
-          PGPASSWORD: ${{ secrets.SUPABASE_SCHEMA_SYNC_PASSWORD }}
-        run: |
-          psql \
-            -h aws-1-eu-central-1.pooler.supabase.com \
-            -p 5432 \
-            -U github_schema_sync.ngeltlygytupgdjiagve \
-            -d postgres \
-            -c "select current_user, current_database();"
-
+   - name: Test database connection
+    env:
+      PGPASSWORD: ${{ secrets.SUPABASE_SCHEMA_SYNC_PASSWORD }}
+      PGSSLMODE: require
+    run: |
+      psql \
+        -h aws-1-eu-central-1.pooler.supabase.com \
+        -p 5432 \
+        -U github_schema_sync.ngeltlygytupgdjiagve \
+        -d postgres \
+        -c "select current_user, current_database();"
+        
       - name: Dump current public schema
         env:
           PGPASSWORD: ${{ secrets.SUPABASE_SCHEMA_SYNC_PASSWORD }}
