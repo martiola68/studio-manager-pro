@@ -19,12 +19,22 @@ jobs:
         with:
           version: latest
 
+      - name: Link Supabase project
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          supabase link \
+            --project-ref "${{ secrets.SUPABASE_PROJECT_ID }}" \
+            --password "$SUPABASE_DB_PASSWORD"
+
       - name: Dump current Supabase schema
         env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
           supabase db dump \
-            --db-url "$SUPABASE_DB_URL" \
+            --linked \
             --schema public \
             --file supabase/current_schema.sql
 
