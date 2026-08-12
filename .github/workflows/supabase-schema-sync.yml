@@ -24,10 +24,29 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y postgresql-client
 
+      - name: Configure Supabase Temporary Access
+        env:
+          SUPABASE_PAT: ${{ secrets.SUPABASE_PAT }}
+        run: |
+          curl --fail-with-body \
+            -X PUT \
+            "https://api.supabase.com/v1/projects/ngeltlygytupgdjiagve/database/jit" \
+            -H "Authorization: Bearer $SUPABASE_PAT" \
+            -H "Content-Type: application/json" \
+            --data '{
+              "user_id": "746b89e3-d3a3-4330-aab2-2e39a9ef29c5",
+              "user_roles": [
+                {
+                  "role": "github_schema_sync"
+                }
+              ]
+            }'
+
       - name: Test database connection
         env:
-          PGPASSWORD: ${{ secrets.SUPABASE_SCHEMA_SYNC_PASSWORD }}
+          PGPASSWORD: ${{ secrets.SUPABASE_PAT }}
           PGSSLMODE: require
+          PGOPTIONS: "-c jit=true"
         run: |
           psql \
             -h aws-1-eu-central-1.pooler.supabase.com \
@@ -38,8 +57,9 @@ jobs:
 
       - name: Dump current public schema
         env:
-          PGPASSWORD: ${{ secrets.SUPABASE_SCHEMA_SYNC_PASSWORD }}
+          PGPASSWORD: ${{ secrets.SUPABASE_PAT }}
           PGSSLMODE: require
+          PGOPTIONS: "-c jit=true"
         run: |
           mkdir -p supabase
 
