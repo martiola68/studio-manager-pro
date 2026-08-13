@@ -700,11 +700,17 @@ setLockedCells(loadedLockedCells);
   };
 
 const getCode = (utenteId: string, day: DayInfo) => {
+  const savedCode = values[`${utenteId}|${day.date}`];
+
+  if (savedCode) {
+    return savedCode;
+  }
+
   if (day.isWeekend || day.isHoliday) {
     return DEFAULT_NON_WORKDAY_CODE;
   }
 
-  return values[`${utenteId}|${day.date}`] ?? '';
+  return '';
 };
 
   const getSummaryForEmployee = (utenteId: string) => {
