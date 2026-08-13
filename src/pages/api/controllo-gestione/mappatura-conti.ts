@@ -90,26 +90,36 @@ export default async function handler(
       if (templateId) {
         const { data, error } = await supabaseAdmin
           .from("tbcontrollo_gestione_template_conti")
-          .select(`
-            id,
-            template_id,
-            codice_conto,
-            descrizione_conto,
-            voce_id,
-            moltiplicatore,
-            escluso,
-            created_at,
-            updated_at,
-            voce:tbcontrollo_gestione_voci (
-              id,
-              codice,
-              descrizione,
-              sezione,
-              macrovoce,
-              natura,
-              ordine
-            )
-          `)
+         .select(`
+  id,
+  template_id,
+  codice_conto,
+  descrizione_conto,
+  voce_id,
+  voce_id_negativo,
+  moltiplicatore,
+  escluso,
+  created_at,
+  updated_at,
+  voce:tbcontrollo_gestione_voci (
+    id,
+    codice,
+    descrizione,
+    sezione,
+    macrovoce,
+    natura,
+    ordine
+  ),
+  voce_negativa:tbcontrollo_gestione_voci!tbcontrollo_gestione_template_conti_voce_id_negativo_fkey (
+    id,
+    codice,
+    descrizione,
+    sezione,
+    macrovoce,
+    natura,
+    ordine
+  )
+`)
           .eq("template_id", templateId)
           .order("codice_conto", {
             ascending: true,
@@ -222,29 +232,22 @@ export default async function handler(
     }
 
     if (req.method === "POST") {
-      const {
-        studio_id,
-        cliente_id,
-        software_contabile = "datev_koinos",
+     const {
+  studio_id,
+  cliente_id,
+  software_contabile = "datev_koinos",
 
-        codice_conto,
-        descrizione_conto,
+  codice_conto,
+  descrizione_conto,
 
-        voce_id,
+  voce_id,
+  voce_id_negativo = null,
 
-        moltiplicatore = 1,
-        escluso = false,
+  moltiplicatore = 1,
+  escluso = false,
 
-        /*
-         * NUOVA LOGICA:
-         *
-         * template = vale per tutte le società
-         *            associate al template
-         *
-         * cliente = eccezione solo per questa società
-         */
-        ambito = "template",
-      } = req.body;
+  ambito = "template",
+} = req.body;
 
       if (!studio_id) {
         return res.status(400).json({
@@ -377,33 +380,35 @@ export default async function handler(
           }
         }
 
-        const payload = {
-          template_id: templateId,
+      const payload = {
+  template_id: templateId,
 
-          codice_conto:
-            String(codice_conto).trim(),
+  codice_conto:
+    String(codice_conto).trim(),
 
-          descrizione_conto:
-            descrizione_conto != null
-              ? String(
-                  descrizione_conto
-                ).trim()
-              : null,
+  descrizione_conto:
+    descrizione_conto != null
+      ? String(descrizione_conto).trim()
+      : null,
 
-          voce_id:
-            escluso
-              ? null
-              : voce_id,
+  voce_id:
+    escluso
+      ? null
+      : voce_id,
 
-          moltiplicatore:
-            Number(moltiplicatore || 1),
+  voce_id_negativo:
+    escluso
+      ? null
+      : voce_id_negativo || null,
 
-          escluso: Boolean(escluso),
+  moltiplicatore:
+    Number(moltiplicatore || 1),
 
-          updated_at:
-            new Date().toISOString(),
-        };
+  escluso: Boolean(escluso),
 
+  updated_at:
+    new Date().toISOString(),
+};
         const { data, error } =
           await supabaseAdmin
             .from(
@@ -414,17 +419,26 @@ export default async function handler(
                 "template_id,codice_conto",
             })
             .select(`
-              *,
-              voce:tbcontrollo_gestione_voci (
-                id,
-                codice,
-                descrizione,
-                sezione,
-                macrovoce,
-                natura,
-                ordine
-              )
-            `)
+  *,
+  voce:tbcontrollo_gestione_voci (
+    id,
+    codice,
+    descrizione,
+    sezione,
+    macrovoce,
+    natura,
+    ordine
+  ),
+  voce_negativa:tbcontrollo_gestione_voci!tbcontrollo_gestione_template_conti_voce_id_negativo_fkey (
+    id,
+    codice,
+    descrizione,
+    sezione,
+    macrovoce,
+    natura,
+    ordine
+  )
+`)
             .single();
 
         if (error) throw error;
