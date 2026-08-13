@@ -4,28 +4,31 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 const supabaseAdmin = getSupabaseAdmin();
 
 export async function GET() {
-  const { data: prestazione, error: prestazioneError } = await supabaseAdmin
-    .from("tbprestazioni")
-    .select("id")
-    .ilike("descrizione", "Controllo di gestione")
-    .maybeSingle();
+const { data: prestazioni, error: prestazioneError } = await supabaseAdmin
+  .from("tbprestazioni")
+  .select("id, descrizione")
+  .in("descrizione", [
+    "Controllo di gestione",
+    "Assistenza totale",
+  ]);
 
-  if (prestazioneError) {
-    return NextResponse.json(
-      { error: prestazioneError.message },
-      { status: 500 }
-    );
-  }
+if (prestazioneError) {
+  return NextResponse.json(
+    { error: prestazioneError.message },
+    { status: 500 }
+  );
+}
 
-  if (!prestazione) {
-    return NextResponse.json([]);
-  }
+const prestazioniIds = (prestazioni || []).map((p) => p.id);
 
+if (prestazioniIds.length === 0) {
+  return NextResponse.json([]);
+}
   const { data: clienti, error } = await supabaseAdmin
     .from("tbclienti")
     .select("id, ragione_sociale, cod_cliente, tipo_prestazione_id, attivo")
     .eq("attivo", true)
-    .eq("tipo_prestazione_id", prestazione.id)
+    .in("tipo_prestazione_id", prestazioniIds)
     .order("ragione_sociale", { ascending: true });
 
   if (error) {
