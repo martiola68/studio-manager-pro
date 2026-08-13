@@ -18,6 +18,9 @@ export default function RichiestaFeriePermessiPage() {
   const [utente, setUtente] = useState<any>(null);
   const [studio, setStudio] = useState<any>(null);
 
+  const [festivita, setFestivita] = useState<string[]>([]);
+const [calcoloGiorni, setCalcoloGiorni] = useState(false);
+
   const [form, setForm] = useState({
     tipo_richiesta: "ferie",
     data_inizio: "",
@@ -30,6 +33,74 @@ export default function RichiestaFeriePermessiPage() {
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+  async function aggiornaGiorniFerie() {
+    if (
+      form.tipo_richiesta !== "ferie" ||
+      !form.data_inizio ||
+      !form.data_fine
+    ) {
+      setForm((prev) => ({
+        ...prev,
+        giorni: "",
+      }));
+      return;
+    }
+
+    const start = parseDateLocale(form.data_inizio);
+    const end = parseDateLocale(form.data_fine);
+
+    if (end < start) {
+      setForm((prev) => ({
+        ...prev,
+        giorni: "",
+      }));
+      return;
+    }
+
+    try {
+      setCalcoloGiorni(true);
+
+      const { data, error } = await supabase
+        .from("tbfestivita")
+        .select("data_festivita")
+        .gte("data_festivita", form.data_inizio)
+        .lte("data_festivita", form.data_fine)
+        .in("tipo", ["nazionale", "locale", "aziendale"]);
+
+      if (error) throw error;
+
+      const giorniFestivi = (data ?? []).map(
+        (item: any) => item.data_festivita
+      );
+
+      setFestivita(giorniFestivi);
+
+      const giorniEffettivi = calcolaGiorniFerieEffettivi(
+        form.data_inizio,
+        form.data_fine,
+        giorniFestivi
+      );
+
+      setForm((prev) => ({
+        ...prev,
+        giorni: String(giorniEffettivi),
+      }));
+    } catch (error) {
+      console.error("Errore calcolo giorni ferie:", error);
+
+      setForm((prev) => ({
+        ...prev,
+        giorni: "",
+      }));
+    } finally {
+      setCalcoloGiorni(false);
+    }
+  }
+
+  aggiornaGiorniFerie();
+}, [form.tipo_richiesta, form.data_inizio, form.data_fine]);
 
   async function loadData() {
     try {
@@ -79,6 +150,54 @@ const { data: studioRow, error: studioError } = await supabase
     }
   }
 
+  function parseDateLocale(dateString: string) {
+  const [year, month, day] = dateString.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function formatDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function calcolaGiorniFerieEffettivi(
+  dataInizio: string,
+  dataFine: string,
+  giorniFestivi: string[]
+) {
+  if (!dataInizio || !dataFine) return 0;
+
+  const start = parseDateLocale(dataInizio);
+  const end = parseDateLocale(dataFine);
+
+  if (end < start) return 0;
+
+  const festivitaSet = new Set(giorniFestivi);
+
+  let totale = 0;
+  const corrente = new Date(start);
+
+  while (corrente <= end) {
+    const giornoSettimana = corrente.getDay();
+    const dataKey = formatDateKey(corrente);
+
+    const sabato = giornoSettimana === 6;
+    const domenica = giornoSettimana === 0;
+    const festivo = festivitaSet.has(dataKey);
+
+    if (!sabato && !domenica && !festivo) {
+      totale++;
+    }
+
+    corrente.setDate(corrente.getDate() + 1);
+  }
+
+  return totale;
+}
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
@@ -102,14 +221,18 @@ const { data: studioRow, error: studioError } = await supabase
       return;
     }
 
-    if (form.tipo_richiesta === "ferie" && !form.giorni) {
-      toast({
-        title: "Errore",
-        description: "Inserisci il numero di giorni di ferie.",
-        variant: "destructive",
-      });
-      return;
-    }
+   if (
+  form.tipo_richiesta === "ferie" &&
+  Number(form.giorni || 0) <= 0
+) {
+  toast({
+    title: "Errore",
+    description:
+      "L'intervallo selezionato non contiene giorni lavorativi di ferie.",
+    variant: "destructive",
+  });
+  return;
+}
 
     if (form.tipo_richiesta === "permesso" && !form.ore) {
       toast({
@@ -231,15 +354,12 @@ if (!response.ok || !result.success) {
               <div className="space-y-2">
                 <Label>Giorni ferie</Label>
                 <Input
-                  type="number"
-                  step="0.5"
-                  min="0"
-                  value={form.giorni}
-                  onChange={(e) =>
-                    setForm({ ...form, giorni: e.target.value })
-                  }
-                  disabled={!isFerie}
-                />
+  type="number"
+  value={form.giorni}
+  readOnly
+  disabled={!isFerie}
+  className="bg-gray-50 cursor-not-allowed"
+/>
               </div>
 
               <div className="space-y-2">
@@ -277,9 +397,13 @@ if (!response.ok || !result.success) {
                 Annulla
               </Button>
 
-              <Button type="submit" disabled={saving}>
-                {saving ? "Invio..." : "Invia richiesta"}
-              </Button>
+             <Button type="submit" disabled={saving || calcoloGiorni}>
+  {saving
+    ? "Invio..."
+    : calcoloGiorni
+      ? "Calcolo..."
+      : "Invia richiesta"}
+</Button>
             </div>
           </form>
         </CardContent>
