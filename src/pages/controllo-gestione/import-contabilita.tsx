@@ -304,25 +304,25 @@ export default function ImportContabilitaPage() {
 
       const supabase = getSupabaseClient();
 
-      const {
-        data,
-        error,
-      } = await supabase
-        .from("tbcontrollo_gestione")
-        .select(`
-          id,
-          cliente_id,
-          cadenza_controllo,
-          data_esecuzione
-        `)
-        .eq("studio_id", studioId)
-        .eq("cliente_id", clienteId)
-        .eq("archiviato", false)
-        .order("data_esecuzione", {
-          ascending: false,
-        })
-        .limit(1)
-        .maybeSingle();
+    const {
+  data,
+  error,
+} = await (supabase as any)
+  .from("tbcontrollo_gestione")
+  .select(`
+    id,
+    cliente_id,
+    cadenza_controllo,
+    data_esecuzione
+  `)
+  .eq("studio_id", studioId)
+  .eq("cliente_id", clienteId)
+  .eq("archiviato", false)
+  .order("data_esecuzione", {
+    ascending: false,
+  })
+  .limit(1)
+  .maybeSingle();
 
       if (error) {
         throw error;
