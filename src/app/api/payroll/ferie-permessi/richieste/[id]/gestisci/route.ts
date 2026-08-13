@@ -204,25 +204,82 @@ export async function POST(
           ? 'F'
           : `P${Number(richiesta.ore)}`;
 
-      const datePresenze: string[] = [];
+  const start = new Date(`${richiesta.data_inizio}T00:00:00`);
+const end = new Date(
+  `${richiesta.data_fine || richiesta.data_inizio}T00:00:00`,
+);
 
-      const start = new Date(`${richiesta.data_inizio}T00:00:00`);
-      const end = new Date(`${richiesta.data_fine || richiesta.data_inizio}T00:00:00`);
+/*
+ * Recuperiamo le festività comprese nel periodo richiesto.
+ * Le festività NON devono mai essere conteggiate come ferie.
+ */
+const { data: festivitaData, error: festivitaError } =
+  await (supabaseAdmin as any)
+    .from('tbfestivita')
+    .select('data_festivita')
+    .gte('data_festivita', richiesta.data_inizio)
+    .lte(
+      'data_festivita',
+      richiesta.data_fine || richiesta.data_inizio,
+    )
+    .in('tipo', ['nazionale', 'locale', 'aziendale']);
 
-      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        datePresenze.push(d.toISOString().slice(0, 10));
-      }
+if (festivitaError) {
+  throw festivitaError;
+}
 
-      const rows = datePresenze.map((dataPresenza) => ({
-        studio_id: richiesta.studio_id,
-        utente_id: richiesta.utente_id,
-        data_presenza: dataPresenza,
-        codice_presenza: codicePresenza,
-        note: richiesta.motivazione || null,
-        inserito_da: gestore.id,
-        richiesta_ferie_permessi_id: richiesta.id,
-        generata_da_richiesta_ferie_permessi: true,
-      }));
+const festivita = new Set<string>(
+  (festivitaData || []).map(
+    (f: { data_festivita: string }) => f.data_festivita,
+  ),
+);
+
+const rows: any[] = [];
+
+for (
+  let d = new Date(start);
+  d <= end;
+  d.setDate(d.getDate() + 1)
+) {
+  const dataPresenza =
+    `${d.getFullYear()}-` +
+    `${String(d.getMonth() + 1).padStart(2, '0')}-` +
+    `${String(d.getDate()).padStart(2, '0')}`;
+
+  const giornoSettimana = d.getDay();
+
+  const isSabato = giornoSettimana === 6;
+  const isDomenica = giornoSettimana === 0;
+  const isFestivo = festivita.has(dataPresenza);
+
+  /*
+   * FERIE
+   *
+   * Sabato, domenica e festività devono essere registrati
+   * sempre come N.
+   *
+   * Solo i giorni lavorativi vengono registrati come F.
+   */
+  let codiceGiorno = codicePresenza;
+
+  if (
+    richiesta.tipo_richiesta === 'ferie' &&
+    (isSabato || isDomenica || isFestivo)
+  ) {
+    codiceGiorno = 'N';
+  }
+
+  rows.push({
+    studio_id: richiesta.studio_id,
+    utente_id: richiesta.utente_id,
+    data_presenza: dataPresenza,
+    codice_presenza: codiceGiorno,
+    note: richiesta.motivazione || null,
+    inserito_da: gestore.id,
+    richiesta_ferie_permessi_id: richiesta.id,
+    generata_da_richiesta_ferie_permessi: true,
+  });
+}
 
       const { error: presenzeError } = await (supabaseAdmin as any)
         .from('tbpresenze_dipendenti')
