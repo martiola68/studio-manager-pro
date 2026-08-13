@@ -15,10 +15,9 @@ export default function RichiestaFeriePermessiPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const [utente, setUtente] = useState<any>(null);
-  const [studio, setStudio] = useState<any>(null);
+const [utente, setUtente] = useState<any>(null);
+const [studio, setStudio] = useState<any>(null);
 
-  const [festivita, setFestivita] = useState<string[]>([]);
 const [calcoloGiorni, setCalcoloGiorni] = useState(false);
 
   const [form, setForm] = useState({
@@ -71,17 +70,15 @@ const [calcoloGiorni, setCalcoloGiorni] = useState(false);
 
       if (error) throw error;
 
-      const giorniFestivi = (data ?? []).map(
-        (item: any) => item.data_festivita
-      );
+    const giorniFestivi = (data ?? []).map(
+  (item: any) => item.data_festivita
+);
 
-      setFestivita(giorniFestivi);
-
-      const giorniEffettivi = calcolaGiorniFerieEffettivi(
-        form.data_inizio,
-        form.data_fine,
-        giorniFestivi
-      );
+const giorniEffettivi = calcolaGiorniFerieEffettivi(
+  form.data_inizio,
+  form.data_fine,
+  giorniFestivi
+);
 
       setForm((prev) => ({
         ...prev,
