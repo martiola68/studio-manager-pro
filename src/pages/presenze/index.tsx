@@ -699,9 +699,13 @@ setLockedCells(loadedLockedCells);
     setValues((prev) => ({ ...prev, [`${utenteId}|${date}`]: code }));
   };
 
-  const getCode = (utenteId: string, day: DayInfo) => {
-    return values[`${utenteId}|${day.date}`] ?? '';
-  };
+const getCode = (utenteId: string, day: DayInfo) => {
+  if (day.isWeekend || day.isHoliday) {
+    return DEFAULT_NON_WORKDAY_CODE;
+  }
+
+  return values[`${utenteId}|${day.date}`] ?? '';
+};
 
   const getSummaryForEmployee = (utenteId: string) => {
     return summarize(days.map((day) => getCode(utenteId, day)));
@@ -1276,11 +1280,13 @@ const isFutureDay = day.date > todayKey;
                 className="border-b p-1 text-center"
               >
                 <select
-               disabled={
+        disabled={
   isLockedPeriod ||
   !canEditEmployee(dipendente.utente_id) ||
   isLockedByRequest ||
-  isFutureDay
+  isFutureDay ||
+  day.isWeekend ||
+  day.isHoliday
 }
                   value={code}
                   onChange={(event) =>
