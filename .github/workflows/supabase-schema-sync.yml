@@ -19,23 +19,45 @@ jobs:
         with:
           version: latest
 
-      - name: Pull remote database schema
+      - name: Link Supabase project
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
-          supabase link --project-ref ngeltlygytupgdjiagve
-          supabase db pull github_sync
+          supabase link \
+            --project-ref ngeltlygytupgdjiagve \
+            --password "$SUPABASE_DB_PASSWORD"
 
-      - name: Commit database schema
+      - name: Dump current public schema
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          supabase db dump \
+            --linked \
+            --password "$SUPABASE_DB_PASSWORD" \
+            --schema public \
+            --file supabase/current_schema.sql
+
+      - name: Verify schema file
+        run: |
+          if [ ! -s supabase/current_schema.sql ]; then
+            echo "ERRORE: il file schema non è stato creato."
+            exit 1
+          fi
+
+          echo "Schema Supabase esportato correttamente."
+          wc -l supabase/current_schema.sql
+
+      - name: Commit schema changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add supabase/migrations
+          git add supabase/current_schema.sql
 
           if git diff --cached --quiet; then
-            echo "Database già allineato con GitHub."
+            echo "Schema già allineato. Nessuna modifica."
             exit 0
           fi
 
