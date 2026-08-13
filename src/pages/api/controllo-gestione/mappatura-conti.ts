@@ -89,37 +89,20 @@ export default async function handler(
 
       if (templateId) {
         const { data, error } = await supabaseAdmin
-          .from("tbcontrollo_gestione_template_conti")
-         .select(`
-  id,
-  template_id,
-  codice_conto,
-  descrizione_conto,
-  voce_id,
-  voce_id_negativo,
-  moltiplicatore,
-  escluso,
-  created_at,
-  updated_at,
-  voce:tbcontrollo_gestione_voci (
+        const { data, error } = await supabaseAdmin
+  .from("tbcontrollo_gestione_template_conti")
+  .select(`
     id,
-    codice,
-    descrizione,
-    sezione,
-    macrovoce,
-    natura,
-    ordine
-  ),
-  voce_negativa:tbcontrollo_gestione_voci!tbcontrollo_gestione_template_conti_voce_id_negativo_fkey (
-    id,
-    codice,
-    descrizione,
-    sezione,
-    macrovoce,
-    natura,
-    ordine
-  )
-`)
+    template_id,
+    codice_conto,
+    descrizione_conto,
+    voce_id,
+    voce_id_negativo,
+    moltiplicatore,
+    escluso,
+    created_at,
+    updated_at
+  `)
           .eq("template_id", templateId)
           .order("codice_conto", {
             ascending: true,
@@ -409,37 +392,17 @@ export default async function handler(
   updated_at:
     new Date().toISOString(),
 };
-        const { data, error } =
-          await supabaseAdmin
-            .from(
-              "tbcontrollo_gestione_template_conti"
-            )
-            .upsert(payload, {
-              onConflict:
-                "template_id,codice_conto",
-            })
-            .select(`
-  *,
-  voce:tbcontrollo_gestione_voci (
-    id,
-    codice,
-    descrizione,
-    sezione,
-    macrovoce,
-    natura,
-    ordine
-  ),
-  voce_negativa:tbcontrollo_gestione_voci!tbcontrollo_gestione_template_conti_voce_id_negativo_fkey (
-    id,
-    codice,
-    descrizione,
-    sezione,
-    macrovoce,
-    natura,
-    ordine
-  )
-`)
-            .single();
+       const { data, error } =
+  await supabaseAdmin
+    .from(
+      "tbcontrollo_gestione_template_conti"
+    )
+    .upsert(payload, {
+      onConflict:
+        "template_id,codice_conto",
+    })
+    .select("*")
+    .single();
 
         if (error) throw error;
 
@@ -504,19 +467,8 @@ export default async function handler(
             onConflict:
               "studio_id,cliente_id,software_contabile,codice_conto",
           })
-          .select(`
-            *,
-            voce:tbcontrollo_gestione_voci (
-              id,
-              codice,
-              descrizione,
-              sezione,
-              macrovoce,
-              natura,
-              ordine
-            )
-          `)
-          .single();
+         .select("*")
+.single();
 
       if (error) throw error;
 
