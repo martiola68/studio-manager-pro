@@ -218,6 +218,28 @@ function calcolaGiorniFerieEffettivi(
       return;
     }
 
+   if (form.data_inizio < todayKey) {
+  toast({
+    title: "Errore",
+    description: "Non è possibile inserire una richiesta per una data antecedente a oggi.",
+    variant: "destructive",
+  });
+  return;
+}
+
+if (
+  form.tipo_richiesta === "ferie" &&
+  form.data_fine &&
+  form.data_fine < form.data_inizio
+) {
+  toast({
+    title: "Errore",
+    description: "La data fine non può essere precedente alla data inizio.",
+    variant: "destructive",
+  });
+  return;
+}
+
    if (
   form.tipo_richiesta === "ferie" &&
   Number(form.giorni || 0) <= 0
@@ -291,7 +313,14 @@ if (!response.ok || !result.success) {
     return <div className="p-6">Caricamento...</div>;
   }
 
-  const isFerie = form.tipo_richiesta === "ferie";
+const isFerie = form.tipo_richiesta === "ferie";
+
+const oggi = new Date();
+const todayKey = [
+  oggi.getFullYear(),
+  String(oggi.getMonth() + 1).padStart(2, "0"),
+  String(oggi.getDate()).padStart(2, "0"),
+].join("-");
 
   return (
     <div className="mx-auto max-w-2xl p-6">
@@ -324,26 +353,41 @@ if (!response.ok || !result.success) {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Data inizio</Label>
-                <Input
-                  type="date"
-                  value={form.data_inizio}
-                  onChange={(e) =>
-                    setForm({ ...form, data_inizio: e.target.value })
-                  }
-                  required
-                />
+               <Input
+  type="date"
+  min={todayKey}
+  value={form.data_inizio}
+  onChange={(e) => {
+    const nuovaDataInizio = e.target.value;
+
+    setForm((prev) => ({
+      ...prev,
+      data_inizio: nuovaDataInizio,
+
+      // Per le ferie, se la data fine è vuota o precedente,
+      // la portiamo automaticamente alla data iniziale.
+      data_fine:
+        prev.tipo_richiesta === "ferie" &&
+        (!prev.data_fine || prev.data_fine < nuovaDataInizio)
+          ? nuovaDataInizio
+          : prev.data_fine,
+    }));
+  }}
+  required
+/>
               </div>
 
               <div className="space-y-2">
                 <Label>Data fine</Label>
-                <Input
-                  type="date"
-                  value={form.data_fine}
-                  onChange={(e) =>
-                    setForm({ ...form, data_fine: e.target.value })
-                  }
-                  disabled={!isFerie}
-                />
+              <Input
+  type="date"
+  min={form.data_inizio || todayKey}
+  value={form.data_fine}
+  onChange={(e) =>
+    setForm({ ...form, data_fine: e.target.value })
+  }
+  disabled={!isFerie}
+/>
               </div>
             </div>
 
@@ -361,16 +405,26 @@ if (!response.ok || !result.success) {
 
               <div className="space-y-2">
                 <Label>Ore permesso</Label>
-                <Input
-                  type="number"
-                  step="0.25"
-                  min="0"
-                  value={form.ore}
-                  onChange={(e) =>
-                    setForm({ ...form, ore: e.target.value })
-                  }
-                  disabled={isFerie}
-                />
+               <Input
+  type="number"
+  step="0.25"
+  min="0.25"
+  max="8"
+  value={form.ore}
+  onChange={(e) =>
+    setForm({ ...form, ore: e.target.value })
+  }
+  onKeyDown={(e) => {
+    e.preventDefault();
+  }}
+  onPaste={(e) => {
+    e.preventDefault();
+  }}
+  onWheel={(e) => {
+    e.currentTarget.blur();
+  }}
+  disabled={isFerie}
+/>
               </div>
             </div>
 
