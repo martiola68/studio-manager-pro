@@ -614,11 +614,12 @@ const voceEffettiva =
             mapping?.escluso
           );
 
-        const voceEffettiva =
-          getVoceEffettiva(
-            mapping,
-            conto.importo
-          );
+      const voceEffettiva =
+  getVoceEffettiva(
+    mapping,
+    conto.importo,
+    conto.sezione
+  );
 
         const mappata =
           Boolean(mapping) &&
