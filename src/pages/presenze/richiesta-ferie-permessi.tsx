@@ -62,12 +62,12 @@ const [calcoloGiorni, setCalcoloGiorni] = useState(false);
     try {
       setCalcoloGiorni(true);
 
-      const { data, error } = await supabase
-        .from("tbfestivita")
-        .select("data_festivita")
-        .gte("data_festivita", form.data_inizio)
-        .lte("data_festivita", form.data_fine)
-        .in("tipo", ["nazionale", "locale", "aziendale"]);
+     const { data, error } = await (supabase as any)
+  .from("tbfestivita")
+  .select("data_festivita")
+  .gte("data_festivita", form.data_inizio)
+  .lte("data_festivita", form.data_fine)
+  .in("tipo", ["nazionale", "locale", "aziendale"]);
 
       if (error) throw error;
 
