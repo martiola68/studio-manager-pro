@@ -14,25 +14,37 @@ type ImportRequestBody = {
   studio_id: string;
   cliente_id: string;
   controllo_id: string;
-
   software_contabile?: string;
-
   nome_file?: string;
-
-  /*
-   * Per questa prima versione il frontend invierà il CSV
-   * già convertito in stringa.
-   */
   contenuto_csv: string;
 };
 
-type MappingRow = {
+type TemplateMappingRow = {
+  id: string;
+  template_id: string;
+  codice_conto: string;
+  voce_id: string | null;
+  voce_id_negativo: string | null;
+  moltiplicatore: number | null;
+  escluso: boolean;
+};
+
+type ClienteMappingRow = {
   id: string;
   codice_conto: string;
   voce_id: string | null;
   moltiplicatore: number | null;
   escluso: boolean;
   confermato: boolean;
+};
+
+type EffectiveMapping = {
+  codice_conto: string;
+  voce_id: string | null;
+  voce_id_negativo: string | null;
+  moltiplicatore: number;
+  escluso: boolean;
+  origine: "template" | "cliente";
 };
 
 function normalizeCodice(value: unknown): string {
@@ -45,21 +57,6 @@ function round2(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
-/*
- * Restituisce soltanto i conti da utilizzare per l'elaborazione.
- *
- * IMPORTANTE:
- * il CSV DATEV contiene sia conti sintetici sia analitici.
- * Non possiamo sommare entrambi.
- *
- * Per questa prima versione:
- * - se un conto è chiaramente analitico, viene preferito;
- * - i sintetici rimangono disponibili nel risultato del parser,
- *   ma non vengono automaticamente sommati nello staging.
- *
- * Successivamente, se il formato DATEV richiederà una gerarchia
- * più complessa, questa funzione sarà il solo punto da modificare.
- */
 function estraiContiUtili(
   righe: RigaContabileDatev[]
 ): RigaContabileDatev[] {
@@ -77,23 +74,10 @@ function estraiContiUtili(
   const risultato: RigaContabileDatev[] = [];
 
   for (const [, elenco] of perSezione) {
-    /*
-     * Nel parser abbiamo già una prima classificazione
-     * conto / analitico.
-     *
-     * I conti analitici sono quelli da preferire.
-     */
     const analitici = elenco.filter(
       (riga) => riga.livello === "analitico"
     );
 
-    /*
-     * Alcuni raggruppamenti DATEV potrebbero non avere
-     * sottoconti analitici nel file.
-     *
-     * In quel caso dobbiamo mantenere il conto sintetico,
-     * altrimenti perderemmo l'importo.
-     */
     const padriConFigli = new Set(
       analitici
         .map((riga) => riga.codicePadre)
@@ -106,21 +90,33 @@ function estraiContiUtili(
         continue;
       }
 
-      /*
-       * Se il sintetico ha figli analitici, NON lo sommiamo.
-       */
       if (padriConFigli.has(riga.codiceConto)) {
         continue;
       }
 
-      /*
-       * Se non ha figli, il suo importo deve essere mantenuto.
-       */
       risultato.push(riga);
     }
   }
 
   return risultato;
+}
+
+function getVoceEffettiva(
+  mapping: EffectiveMapping | undefined,
+  saldo: number
+): string | null {
+  if (!mapping || mapping.escluso) {
+    return null;
+  }
+
+  if (
+    saldo < 0 &&
+    mapping.voce_id_negativo
+  ) {
+    return mapping.voce_id_negativo;
+  }
+
+  return mapping.voce_id;
 }
 
 export default async function handler(
@@ -175,8 +171,7 @@ export default async function handler(
     }
 
     /*
-     * 1. Verifica che il controllo appartenga davvero
-     *    allo studio e al cliente indicati.
+     * 1. Controllo di gestione.
      */
     const {
       data: controllo,
@@ -215,9 +210,89 @@ export default async function handler(
     }
 
     /*
-     * 2. Parsing DATEV.
+     * 2. Cliente + template associato.
      */
-    const parsed = parseDatevKoinosCsv(contenuto_csv);
+    const {
+      data: cliente,
+      error: clienteError,
+    } = await supabaseAdmin
+      .from("tbclienti")
+      .select(`
+        id,
+        studio_id,
+        controllo_gestione_template_id
+      `)
+      .eq("id", cliente_id)
+      .eq("studio_id", studio_id)
+      .maybeSingle();
+
+    if (clienteError) {
+      throw clienteError;
+    }
+
+    if (!cliente) {
+      return res.status(404).json({
+        success: false,
+        error: "Cliente non trovato nello studio",
+      });
+    }
+
+    let templateId =
+      cliente.controllo_gestione_template_id || null;
+
+    /*
+     * Se non associato, usa il template predefinito.
+     */
+    if (!templateId) {
+      const {
+        data: templateDefault,
+        error: templateError,
+      } = await supabaseAdmin
+        .from("tbcontrollo_gestione_template")
+        .select("id")
+        .eq("studio_id", studio_id)
+        .eq(
+          "software_contabile",
+          software_contabile
+        )
+        .eq("predefinito", true)
+        .eq("attivo", true)
+        .maybeSingle();
+
+      if (templateError) {
+        throw templateError;
+      }
+
+      templateId =
+        templateDefault?.id || null;
+
+      /*
+       * Se abbiamo trovato il template predefinito,
+       * associamolo automaticamente al cliente.
+       */
+      if (templateId) {
+        const {
+          error: updateClienteError,
+        } = await supabaseAdmin
+          .from("tbclienti")
+          .update({
+            controllo_gestione_template_id:
+              templateId,
+          })
+          .eq("id", cliente_id)
+          .eq("studio_id", studio_id);
+
+        if (updateClienteError) {
+          throw updateClienteError;
+        }
+      }
+    }
+
+    /*
+     * 3. Parsing DATEV.
+     */
+    const parsed =
+      parseDatevKoinosCsv(contenuto_csv);
 
     if (!parsed.righe.length) {
       return res.status(400).json({
@@ -228,15 +303,14 @@ export default async function handler(
     }
 
     /*
-     * 3. Controllo quadrature.
-     *
-     * Per ora NON blocchiamo l'import in presenza di differenze:
-     * restituiamo l'anomalia e consentiamo di capire se il parser
-     * deve essere adattato a qualche ulteriore caso DATEV.
+     * 4. Quadrature.
      */
     const anomalie: string[] = [];
 
-    if (!parsed.quadratura.statoPatrimoniale) {
+    if (
+      !parsed.quadratura
+        .statoPatrimoniale
+    ) {
       anomalie.push(
         `Stato patrimoniale non quadrato. Differenza: ${parsed.quadratura.differenzaSP.toFixed(
           2
@@ -244,7 +318,10 @@ export default async function handler(
       );
     }
 
-    if (!parsed.quadratura.contoEconomico) {
+    if (
+      !parsed.quadratura
+        .contoEconomico
+    ) {
       anomalie.push(
         `Conto economico non quadrato. Differenza: ${parsed.quadratura.differenzaCE.toFixed(
           2
@@ -253,10 +330,10 @@ export default async function handler(
     }
 
     /*
-     * 4. Selezioniamo i conti da elaborare evitando
-     *    la doppia contabilizzazione sintetico + analitico.
+     * 5. Conti utili.
      */
-    const contiUtili = estraiContiUtili(parsed.righe);
+    const contiUtili =
+      estraiContiUtili(parsed.righe);
 
     if (!contiUtili.length) {
       return res.status(400).json({
@@ -267,14 +344,51 @@ export default async function handler(
     }
 
     /*
-     * 5. Recuperiamo tutte le mappature già conosciute
-     *    per questa SPECIFICA società.
+     * 6. MAPPATURE TEMPLATE.
+     */
+    let templateMappings:
+      TemplateMappingRow[] = [];
+
+    if (templateId) {
+      const {
+        data,
+        error,
+      } = await supabaseAdmin
+        .from(
+          "tbcontrollo_gestione_template_conti"
+        )
+        .select(`
+          id,
+          template_id,
+          codice_conto,
+          voce_id,
+          voce_id_negativo,
+          moltiplicatore,
+          escluso
+        `)
+        .eq(
+          "template_id",
+          templateId
+        );
+
+      if (error) {
+        throw error;
+      }
+
+      templateMappings =
+        (data || []) as TemplateMappingRow[];
+    }
+
+    /*
+     * 7. ECCEZIONI CLIENTE.
      */
     const {
-      data: mappings,
-      error: mappingsError,
+      data: clienteMappings,
+      error: clienteMappingsError,
     } = await supabaseAdmin
-      .from("tbcontrollo_gestione_mappatura_conti")
+      .from(
+        "tbcontrollo_gestione_mappatura_conti"
+      )
       .select(`
         id,
         codice_conto,
@@ -285,32 +399,107 @@ export default async function handler(
       `)
       .eq("studio_id", studio_id)
       .eq("cliente_id", cliente_id)
-      .eq("software_contabile", software_contabile);
+      .eq(
+        "software_contabile",
+        software_contabile
+      );
 
-    if (mappingsError) {
-      throw mappingsError;
+    if (clienteMappingsError) {
+      throw clienteMappingsError;
     }
 
-    const mappingMap = new Map<string, MappingRow>();
+    /*
+     * 8. MERGE MAPPATURE.
+     *
+     * Prima template.
+     * Poi cliente, che prevale.
+     */
+    const mappingMap =
+      new Map<string, EffectiveMapping>();
 
-    for (const mapping of (mappings || []) as MappingRow[]) {
+    for (const mapping of templateMappings) {
       mappingMap.set(
-        normalizeCodice(mapping.codice_conto),
-        mapping
+        normalizeCodice(
+          mapping.codice_conto
+        ),
+        {
+          codice_conto:
+            mapping.codice_conto,
+
+          voce_id:
+            mapping.voce_id,
+
+          voce_id_negativo:
+            mapping.voce_id_negativo,
+
+          moltiplicatore:
+            Number(
+              mapping.moltiplicatore || 1
+            ),
+
+          escluso:
+            Boolean(mapping.escluso),
+
+          origine: "template",
+        }
+      );
+    }
+
+    for (const mapping of
+      (clienteMappings ||
+        []) as ClienteMappingRow[]) {
+      /*
+       * Le vecchie righe cliente vengono
+       * considerate solo se confermate.
+       */
+      if (!mapping.confermato) {
+        continue;
+      }
+
+      mappingMap.set(
+        normalizeCodice(
+          mapping.codice_conto
+        ),
+        {
+          codice_conto:
+            mapping.codice_conto,
+
+          voce_id:
+            mapping.voce_id,
+
+          /*
+           * Le eccezioni cliente attuali non hanno
+           * ancora voce_id_negativo.
+           */
+          voce_id_negativo: null,
+
+          moltiplicatore:
+            Number(
+              mapping.moltiplicatore || 1
+            ),
+
+          escluso:
+            Boolean(mapping.escluso),
+
+          origine: "cliente",
+        }
       );
     }
 
     /*
-     * 6. Conteggi preliminari.
+     * 9. Conteggi.
      */
     let contiMappati = 0;
     let contiDaMappare = 0;
     let contiEsclusi = 0;
 
     for (const conto of contiUtili) {
-      const mapping = mappingMap.get(
-        normalizeCodice(conto.codiceConto)
-      );
+      const mapping =
+        mappingMap.get(
+          normalizeCodice(
+            conto.codiceConto
+          )
+        );
 
       if (!mapping) {
         contiDaMappare++;
@@ -322,10 +511,13 @@ export default async function handler(
         continue;
       }
 
-      if (
-        mapping.voce_id &&
-        mapping.confermato
-      ) {
+      const voceEffettiva =
+        getVoceEffettiva(
+          mapping,
+          conto.importo
+        );
+
+      if (voceEffettiva) {
         contiMappati++;
       } else {
         contiDaMappare++;
@@ -333,7 +525,7 @@ export default async function handler(
     }
 
     /*
-     * 7. Creazione registro import.
+     * 10. Registro import.
      */
     const statoImport =
       contiDaMappare > 0
@@ -344,30 +536,45 @@ export default async function handler(
       data: importRecord,
       error: importError,
     } = await supabaseAdmin
-      .from("tbcontrollo_gestione_import")
+      .from(
+        "tbcontrollo_gestione_import"
+      )
       .insert({
         studio_id,
         cliente_id,
         controllo_id,
 
         software_contabile,
-        tipo_import: "situazione_contabile",
+
+        tipo_import:
+          "situazione_contabile",
 
         data_riferimento:
           parsed.periodoAl ||
-          new Date().toISOString().slice(0, 10),
+          new Date()
+            .toISOString()
+            .slice(0, 10),
 
-        nome_file: nome_file || null,
+        nome_file:
+          nome_file || null,
 
-        numero_righe: parsed.righe.length,
-        numero_conti: contiUtili.length,
+        numero_righe:
+          parsed.righe.length,
 
-        conti_mappati: contiMappati,
-        conti_da_mappare: contiDaMappare,
+        numero_conti:
+          contiUtili.length,
 
-        numero_errori: anomalie.length,
+        conti_mappati:
+          contiMappati,
 
-        stato: statoImport,
+        conti_da_mappare:
+          contiDaMappare,
+
+        numero_errori:
+          anomalie.length,
+
+        stato:
+          statoImport,
 
         messaggio_errore:
           anomalie.length > 0
@@ -381,74 +588,125 @@ export default async function handler(
       throw importError;
     }
 
-    importId = importRecord.id;
+    importId =
+      importRecord.id;
 
     /*
-     * 8. Preparazione staging.
+     * 11. STAGING.
      */
-    const stagingRows = contiUtili.map((conto) => {
-      const mapping = mappingMap.get(
-        normalizeCodice(conto.codiceConto)
-      );
+    const stagingRows =
+      contiUtili.map((conto) => {
+        const mapping =
+          mappingMap.get(
+            normalizeCodice(
+              conto.codiceConto
+            )
+          );
 
-      const esclusa = Boolean(mapping?.escluso);
+        const esclusa =
+          Boolean(
+            mapping?.escluso
+          );
 
-      const mappata =
-        Boolean(mapping) &&
-        !esclusa &&
-        Boolean(mapping?.voce_id) &&
-        Boolean(mapping?.confermato);
+        const voceEffettiva =
+          getVoceEffettiva(
+            mapping,
+            conto.importo
+          );
 
-      return {
-        studio_id,
-        cliente_id,
-        import_id: importId,
+        const mappata =
+          Boolean(mapping) &&
+          !esclusa &&
+          Boolean(
+            voceEffettiva
+          );
 
-        numero_riga: conto.numeroRiga,
+        const moltiplicatore =
+          mapping?.moltiplicatore || 1;
 
-        codice_conto: conto.codiceConto,
-        descrizione_conto: conto.descrizione,
+        const importoEffettivo =
+          round2(
+            conto.importo *
+              moltiplicatore
+          );
 
-        /*
-         * DATEV ci fornisce già un importo per lato.
-         *
-         * Manteniamo per ora saldo = importo.
-         * Dare/Avere saranno valorizzati in base alla sezione.
-         */
-        saldo_dare:
-          conto.sezione === "SP_ATTIVO" ||
-          conto.sezione === "CE_COSTI"
-            ? round2(conto.importo)
-            : 0,
+        return {
+          studio_id,
+          cliente_id,
+          import_id: importId,
 
-        saldo_avere:
-          conto.sezione === "SP_PASSIVO" ||
-          conto.sezione === "CE_RICAVI"
-            ? round2(conto.importo)
-            : 0,
+          numero_riga:
+            conto.numeroRiga,
 
-        saldo: round2(conto.importo),
+          codice_conto:
+            conto.codiceConto,
 
-        voce_id:
-          esclusa
-            ? null
-            : mapping?.voce_id || null,
+          descrizione_conto:
+            conto.descrizione,
 
-        mappata,
-        esclusa,
+          saldo_dare:
+            conto.sezione ===
+              "SP_ATTIVO" ||
+            conto.sezione ===
+              "CE_COSTI"
+              ? importoEffettivo
+              : 0,
 
-        dati_originali: {
-          sezione: conto.sezione,
-          livello: conto.livello,
-          codice_padre:
-            conto.codicePadre || null,
-        },
-      };
-    });
+          saldo_avere:
+            conto.sezione ===
+              "SP_PASSIVO" ||
+            conto.sezione ===
+              "CE_RICAVI"
+              ? importoEffettivo
+              : 0,
+
+          saldo:
+            importoEffettivo,
+
+          voce_id:
+            esclusa
+              ? null
+              : voceEffettiva,
+
+          mappata,
+          esclusa,
+
+          dati_originali: {
+            sezione:
+              conto.sezione,
+
+            livello:
+              conto.livello,
+
+            codice_padre:
+              conto.codicePadre ||
+              null,
+
+            origine_mappatura:
+              mapping?.origine ||
+              null,
+
+            voce_id_standard:
+              mapping?.voce_id ||
+              null,
+
+            voce_id_negativo:
+              mapping
+                ?.voce_id_negativo ||
+              null,
+
+            applicata_voce_negativa:
+              Boolean(
+                conto.importo < 0 &&
+                mapping
+                  ?.voce_id_negativo
+              ),
+          },
+        };
+      });
 
     /*
-     * Supabase/PostgREST può gestire inserimenti multipli,
-     * ma evitiamo payload giganteschi usando batch.
+     * 12. Inserimento staging.
      */
     const BATCH_SIZE = 500;
 
@@ -457,17 +715,19 @@ export default async function handler(
       i < stagingRows.length;
       i += BATCH_SIZE
     ) {
-      const batch = stagingRows.slice(
-        i,
-        i + BATCH_SIZE
-      );
+      const batch =
+        stagingRows.slice(
+          i,
+          i + BATCH_SIZE
+        );
 
-      const { error: stagingError } =
-        await supabaseAdmin
-          .from(
-            "tbcontrollo_gestione_import_righe"
-          )
-          .insert(batch);
+      const {
+        error: stagingError,
+      } = await supabaseAdmin
+        .from(
+          "tbcontrollo_gestione_import_righe"
+        )
+        .insert(batch);
 
       if (stagingError) {
         throw stagingError;
@@ -475,43 +735,71 @@ export default async function handler(
     }
 
     /*
-     * 9. Aggiorniamo ultimo_utilizzo delle mappature
-     *    effettivamente incontrate.
+     * 13. Ultimo utilizzo:
+     *
+     * aggiorniamo soltanto le eventuali
+     * eccezioni cliente.
+     *
+     * Il template non possiede ultimo_utilizzo.
      */
-    const codiciUtilizzati = Array.from(
-      new Set(
-        contiUtili
-          .map((conto) =>
-            normalizeCodice(conto.codiceConto)
-          )
-          .filter((codice) =>
-            mappingMap.has(codice)
-          )
-      )
-    );
+    const codiciClienteUtilizzati =
+      Array.from(
+        new Set(
+          contiUtili
+            .map((conto) =>
+              normalizeCodice(
+                conto.codiceConto
+              )
+            )
+            .filter((codice) => {
+              const mapping =
+                mappingMap.get(
+                  codice
+                );
 
-    if (codiciUtilizzati.length > 0) {
-      const now = new Date().toISOString();
+              return (
+                mapping?.origine ===
+                "cliente"
+              );
+            })
+        )
+      );
 
-      const { error: utilizzoError } =
-        await supabaseAdmin
-          .from(
-            "tbcontrollo_gestione_mappatura_conti"
-          )
-          .update({
-            ultimo_utilizzo: now,
-            updated_at: now,
-          })
-          .eq("studio_id", studio_id)
-          .eq("cliente_id", cliente_id)
-          .eq(
-            "software_contabile",
-            software_contabile
-          )
-          .in(
-            "codice_conto",
-            codiciUtilizzati
-          );
+    if (
+      codiciClienteUtilizzati.length >
+      0
+    ) {
+      const now =
+        new Date().toISOString();
+
+      const {
+        error: utilizzoError,
+      } = await supabaseAdmin
+        .from(
+          "tbcontrollo_gestione_mappatura_conti"
+        )
+        .update({
+          ultimo_utilizzo:
+            now,
+          updated_at:
+            now,
+        })
+        .eq(
+          "studio_id",
+          studio_id
+        )
+        .eq(
+          "cliente_id",
+          cliente_id
+        )
+        .eq(
+          "software_contabile",
+          software_contabile
+        )
+        .in(
+          "codice_conto",
+          codiciClienteUtilizzati
+        );
 
       if (utilizzoError) {
         console.error(
@@ -522,50 +810,68 @@ export default async function handler(
     }
 
     /*
-     * 10. Prepariamo i conti mancanti da mostrare
-     *     immediatamente nella futura UI.
+     * 14. Conti ancora da mappare.
      */
-    const daMappare = stagingRows
-      .filter(
-        (riga) =>
-          !riga.mappata &&
-          !riga.esclusa
-      )
-      .map((riga) => ({
-        codice_conto: riga.codice_conto,
-        descrizione_conto:
-          riga.descrizione_conto,
+    const daMappare =
+      stagingRows
+        .filter(
+          (riga) =>
+            !riga.mappata &&
+            !riga.esclusa
+        )
+        .map((riga) => ({
+          codice_conto:
+            riga.codice_conto,
 
-        importo: riga.saldo,
+          descrizione_conto:
+            riga.descrizione_conto,
 
-        sezione:
-          riga.dati_originali.sezione,
+          importo:
+            riga.saldo,
 
-        codice_padre:
-          riga.dati_originali.codice_padre,
-      }));
+          sezione:
+            riga.dati_originali
+              .sezione,
+
+          codice_padre:
+            riga.dati_originali
+              .codice_padre,
+        }));
 
     /*
-     * 11. Risposta.
+     * 15. Risposta.
      */
     return res.status(200).json({
       success: true,
 
-      import_id: importId,
+      import_id:
+        importId,
+
+      template_id:
+        templateId,
 
       file: {
-        nome: nome_file || null,
+        nome:
+          nome_file || null,
 
-        societa: parsed.societa,
-        codice_azienda: parsed.codiceAzienda,
+        societa:
+          parsed.societa,
 
-        periodo_dal: parsed.periodoDal,
-        periodo_al: parsed.periodoAl,
+        codice_azienda:
+          parsed.codiceAzienda,
+
+        periodo_dal:
+          parsed.periodoDal,
+
+        periodo_al:
+          parsed.periodoAl,
       },
 
-      quadratura: parsed.quadratura,
+      quadratura:
+        parsed.quadratura,
 
-      totali: parsed.totali,
+      totali:
+        parsed.totali,
 
       riepilogo: {
         righe_lette:
@@ -587,11 +893,13 @@ export default async function handler(
           anomalie.length,
       },
 
-      stato: statoImport,
+      stato:
+        statoImport,
 
       anomalie,
 
-      da_mappare: daMappare,
+      da_mappare:
+        daMappare,
     });
   } catch (error: any) {
     console.error(
@@ -599,22 +907,25 @@ export default async function handler(
       error
     );
 
-    /*
-     * Se abbiamo già creato l'import ma qualcosa è fallito
-     * successivamente, lo marchiamo come errore.
-     */
     if (importId) {
       try {
         await supabaseAdmin
-          .from("tbcontrollo_gestione_import")
+          .from(
+            "tbcontrollo_gestione_import"
+          )
           .update({
             stato: "errore",
+
             numero_errori: 1,
+
             messaggio_errore:
               error?.message ||
               "Errore elaborazione import",
           })
-          .eq("id", importId);
+          .eq(
+            "id",
+            importId
+          );
       } catch (updateError) {
         console.error(
           "Impossibile aggiornare stato import:",
@@ -625,6 +936,7 @@ export default async function handler(
 
     return res.status(500).json({
       success: false,
+
       error:
         error?.message ||
         "Errore interno durante l'importazione",
