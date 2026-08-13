@@ -103,16 +103,21 @@ function estraiContiUtili(
 
 function getVoceEffettiva(
   mapping: EffectiveMapping | undefined,
-  saldo: number
+  saldo: number,
+  sezione: RigaContabileDatev["sezione"]
 ): string | null {
   if (!mapping || mapping.escluso) {
     return null;
   }
 
-  if (
-    saldo < 0 &&
-    mapping.voce_id_negativo
-  ) {
+  const usaVoceNegativa =
+    Boolean(mapping.voce_id_negativo) &&
+    (
+      saldo < 0 ||
+      sezione === "SP_PASSIVO"
+    );
+
+  if (usaVoceNegativa) {
     return mapping.voce_id_negativo;
   }
 
@@ -511,11 +516,12 @@ export default async function handler(
         continue;
       }
 
-      const voceEffettiva =
-        getVoceEffettiva(
-          mapping,
-          conto.importo
-        );
+   const voceEffettiva =
+  getVoceEffettiva(
+    mapping,
+    conto.importo,
+    conto.sezione
+  );
 
       if (voceEffettiva) {
         contiMappati++;
