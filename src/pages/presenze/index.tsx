@@ -688,14 +688,8 @@ setLockedCells(loadedLockedCells);
     loadData();
   }, [loadData]);
 
- const canEditEmployee = (utenteId: string) => {
-  if (!currentUser) return false;
-
-  if (currentUser.responsabile_paghe === true) {
-    return true;
-  }
-
-  return currentUser.id === utenteId;
+const canEditEmployee = (utenteId: string) => {
+  return currentUser?.id === utenteId;
 };
 
   const handleChange = (utenteId: string, date: string, code: string) => {
