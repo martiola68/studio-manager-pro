@@ -111,6 +111,17 @@ async function leggiCsvDatev(file: File): Promise<string> {
   return new TextDecoder("windows-1252").decode(buffer);
 }
 
+function isContoBancario(conto: ContoDaMappare) {
+  const descrizione = String(
+    conto.descrizione_conto || ""
+  ).toLowerCase();
+
+  return (
+    descrizione.includes("banca") ||
+    descrizione.includes("banco")
+  );
+}
+
 export default function ImportContabilitaPage() {
   const router = useRouter();
 
@@ -142,6 +153,10 @@ export default function ImportContabilitaPage() {
   const [mappature, setMappature] = useState<
     Record<string, string>
   >({});
+
+  const [mappatureNegative, setMappatureNegative] = useState<
+  Record<string, string>
+>({});
 
   /*
    * codice conto -> escluso
@@ -297,10 +312,11 @@ export default function ImportContabilitaPage() {
       setErrore("");
       setMessaggio("");
 
-      setFile(null);
-      setRisultato(null);
-      setMappature({});
-      setEsclusi({});
+     setFile(null);
+setRisultato(null);
+setMappature({});
+setMappatureNegative({});
+setEsclusi({});
 
       const supabase = getSupabaseClient();
 
@@ -419,10 +435,11 @@ export default function ImportContabilitaPage() {
         );
       }
 
-      setRisultato(json);
+     setRisultato(json);
 
-      setMappature({});
-      setEsclusi({});
+setMappature({});
+setMappatureNegative({});
+setEsclusi({});
 
       if (
         json?.riepilogo?.conti_da_mappare === 0
@@ -460,10 +477,13 @@ export default function ImportContabilitaPage() {
       const escluso =
         Boolean(esclusi[conto.codice_conto]);
 
-      const voceId =
-        mappature[conto.codice_conto] || "";
+   const voceId =
+  mappature[conto.codice_conto] || "";
 
-      if (!escluso && !voceId) {
+const voceIdNegativo =
+  mappatureNegative[conto.codice_conto] || "";
+
+if (!escluso && !voceId) {
         setErrore(
           `Seleziona una voce per il conto ${conto.codice_conto} oppure impostalo come escluso.`
         );
@@ -492,12 +512,17 @@ export default function ImportContabilitaPage() {
             descrizione_conto:
               conto.descrizione_conto,
 
-            voce_id:
-              escluso
-                ? null
-                : voceId,
+voce_id:
+  escluso
+    ? null
+    : voceId,
 
-            moltiplicatore: 1,
+voce_id_negativo:
+  escluso || !isContoBancario(conto)
+    ? null
+    : voceIdNegativo || null,
+
+moltiplicatore: 1,
 
             escluso,
             confermato: true,
@@ -1212,6 +1237,61 @@ export default function ImportContabilitaPage() {
                                     )
                                   )}
                                 </select>
+                                {isContoBancario(conto) && !escluso && (
+  <div
+    style={{
+      marginTop: 8,
+      paddingTop: 8,
+      borderTop: "1px dashed #cbd5e1",
+    }}
+  >
+    <div
+      style={{
+        marginBottom: 5,
+        fontSize: 11,
+        fontWeight: 600,
+        color: "#64748b",
+      }}
+    >
+      Se saldo passivo / negativo
+    </div>
+
+    <select
+      value={
+        mappatureNegative[conto.codice_conto] || ""
+      }
+      onChange={(e) =>
+        setMappatureNegative((prev) => ({
+          ...prev,
+          [conto.codice_conto]: e.target.value,
+        }))
+      }
+      style={inputStyle}
+    >
+      <option value="">
+        Seleziona voce...
+      </option>
+
+      {Object.entries(vociRaggruppate).map(
+        ([sezione, elenco]) => (
+          <optgroup
+            key={sezione}
+            label={sezione}
+          >
+            {elenco.map((voce) => (
+              <option
+                key={voce.id}
+                value={voce.id}
+              >
+                {voce.descrizione}
+              </option>
+            ))}
+          </optgroup>
+        )
+      )}
+    </select>
+  </div>
+)}
                               </td>
 
                               <td
