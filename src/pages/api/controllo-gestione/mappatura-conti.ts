@@ -88,8 +88,7 @@ export default async function handler(
       let templateMappings: any[] = [];
 
       if (templateId) {
-        const { data, error } = await supabaseAdmin
-        const { data, error } = await supabaseAdmin
+       const { data, error } = await supabaseAdmin
   .from("tbcontrollo_gestione_template_conti")
   .select(`
     id,
