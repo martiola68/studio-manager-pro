@@ -2,11 +2,6 @@ name: Supabase Schema Sync
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/supabase-schema-sync.yml"
 
 permissions:
   contents: write
@@ -19,85 +14,28 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-     - name: Install PostgreSQL 17 client
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-common
-          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client-17
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
 
-          pg_dump --version
-
-      - name: Configure Supabase Temporary Access
+      - name: Pull remote database schema
         env:
-          SUPABASE_PAT: ${{ secrets.SUPABASE_PAT }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
-          curl --fail-with-body \
-            -X PUT \
-            "https://api.supabase.com/v1/projects/ngeltlygytupgdjiagve/database/jit" \
-            -H "Authorization: Bearer $SUPABASE_PAT" \
-            -H "Content-Type: application/json" \
-            --data '{
-              "user_id": "746b89e3-d3a3-4330-aab2-2e39a9ef29c5",
-              "roles": [
-                {
-                  "role": "github_schema_sync"
-                }
-              ]
-            }'
+          supabase link --project-ref ngeltlygytupgdjiagve
+          supabase db pull github_sync
 
-      - name: Test database connection
-        env:
-          PGPASSWORD: ${{ secrets.SUPABASE_PAT }}
-          PGSSLMODE: require
-          PGOPTIONS: "-c jit=true"
-        run: |
-          psql \
-            -h aws-1-eu-central-1.pooler.supabase.com \
-            -p 5432 \
-            -U github_schema_sync.ngeltlygytupgdjiagve \
-            -d postgres \
-            -c "select current_user, current_database();"
-
-      - name: Dump current public schema
-        env:
-          PGPASSWORD: ${{ secrets.SUPABASE_PAT }}
-          PGSSLMODE: require
-          PGOPTIONS: "-c jit=true"
-        run: |
-          mkdir -p supabase
-
-          pg_dump \
-            -h aws-1-eu-central-1.pooler.supabase.com \
-            -p 5432 \
-            -U github_schema_sync.ngeltlygytupgdjiagve \
-            -d postgres \
-            --schema=public \
-            --schema-only \
-            --no-owner \
-            --no-privileges \
-            -f supabase/current_schema.sql
-
-      - name: Verify schema file
-        run: |
-          if [ ! -s supabase/current_schema.sql ]; then
-            echo "ERRORE: supabase/current_schema.sql non creato o vuoto."
-            exit 1
-          fi
-
-          echo "Schema esportato correttamente."
-          wc -l supabase/current_schema.sql
-
-      - name: Commit schema changes
+      - name: Commit database schema
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add supabase/current_schema.sql
+          git add supabase/migrations
 
           if git diff --cached --quiet; then
-            echo "Nessuna modifica dello schema da salvare."
+            echo "Database già allineato con GitHub."
             exit 0
           fi
 
