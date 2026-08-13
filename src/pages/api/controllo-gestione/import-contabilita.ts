@@ -516,7 +516,7 @@ export default async function handler(
         continue;
       }
 
-   const voceEffettiva =
+const voceEffettiva =
   getVoceEffettiva(
     mapping,
     conto.importo,
