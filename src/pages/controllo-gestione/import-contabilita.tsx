@@ -68,6 +68,23 @@ type ImportResult = {
   da_mappare: ContoDaMappare[];
 };
 
+type IntegrazioniForm = {
+  debiti_finanziari_bt: string;
+  debiti_finanziari_mlt: string;
+  rate_finanziarie_12_mesi: string;
+  cash_flow_operativo_previsionale: string;
+  note: string;
+};
+
+const integrazioniVuote: IntegrazioniForm = {
+  debiti_finanziari_bt: "",
+  debiti_finanziari_mlt: "",
+  rate_finanziarie_12_mesi: "",
+  cash_flow_operativo_previsionale: "",
+  note: "",
+};
+
+
 function euro(value: number) {
   return new Intl.NumberFormat("it-IT", {
     style: "currency",
@@ -122,6 +139,39 @@ function isContoBancario(conto: ContoDaMappare) {
   );
 }
 
+function parseImportoInput(value: string): number {
+  const testo = String(value || "")
+    .trim()
+    .replace(/\s/g, "");
+
+  if (!testo) {
+    return 0;
+  }
+
+  /*
+   * Formato italiano:
+   * 120.000,50 → 120000.50
+   */
+  if (testo.includes(",")) {
+    return Number(
+      testo
+        .replace(/\./g, "")
+        .replace(",", ".")
+    );
+  }
+
+  /*
+   * 120.000 → interpretiamo il punto come separatore migliaia.
+   */
+  if (/^-?\d{1,3}(\.\d{3})+$/.test(testo)) {
+    return Number(
+      testo.replace(/\./g, "")
+    );
+  }
+
+  return Number(testo);
+}
+
 export default function ImportContabilitaPage() {
   const router = useRouter();
 
@@ -146,6 +196,15 @@ export default function ImportContabilitaPage() {
 
   const [risultato, setRisultato] =
     useState<ImportResult | null>(null);
+
+  const [integrazioni, setIntegrazioni] =
+  useState<IntegrazioniForm>(integrazioniVuote);
+
+const [loadingIntegrazioni, setLoadingIntegrazioni] =
+  useState(false);
+
+const [salvataggioIntegrazioni, setSalvataggioIntegrazioni] =
+  useState(false);
 
   /*
    * codice conto -> voce_id
@@ -202,7 +261,7 @@ export default function ImportContabilitaPage() {
     clienteId,
   ]);
 
-  useEffect(() => {
+   useEffect(() => {
     if (!studioId || !clienteId) {
       setControllo(null);
       return;
@@ -210,6 +269,24 @@ export default function ImportContabilitaPage() {
 
     void caricaControlloAttivo();
   }, [studioId, clienteId]);
+
+  useEffect(() => {
+    if (
+      !studioId ||
+      !clienteId ||
+      !controllo?.id ||
+      !risultato?.import_id
+    ) {
+      return;
+    }
+
+    void caricaIntegrazioni();
+  }, [
+    studioId,
+    clienteId,
+    controllo?.id,
+    risultato?.import_id,
+  ]);
 
   async function inizializza() {
     try {
@@ -312,11 +389,12 @@ export default function ImportContabilitaPage() {
       setErrore("");
       setMessaggio("");
 
-     setFile(null);
+setFile(null);
 setRisultato(null);
 setMappature({});
 setMappatureNegative({});
 setEsclusi({});
+setIntegrazioni(integrazioniVuote);
 
       const supabase = getSupabaseClient();
 
@@ -466,6 +544,208 @@ setEsclusi({});
       setLoading(false);
     }
   }
+
+  async function caricaIntegrazioni() {
+  if (
+    !studioId ||
+    !clienteId ||
+    !controllo?.id ||
+    !risultato?.import_id
+  ) {
+    return;
+  }
+
+  try {
+    setLoadingIntegrazioni(true);
+
+    const params = new URLSearchParams({
+      studio_id: studioId,
+      cliente_id: clienteId,
+      controllo_id: controllo.id,
+      import_id: risultato.import_id,
+    });
+
+    const response = await fetch(
+      `/api/controllo-gestione/integrazioni?${params.toString()}`
+    );
+
+    const json = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        json?.error ||
+          "Errore caricamento integrazioni"
+      );
+    }
+
+    const data = json?.data;
+
+    if (!data) {
+      setIntegrazioni(integrazioniVuote);
+      return;
+    }
+
+    setIntegrazioni({
+      debiti_finanziari_bt:
+        data.debiti_finanziari_bt != null
+          ? String(data.debiti_finanziari_bt)
+          : "",
+
+      debiti_finanziari_mlt:
+        data.debiti_finanziari_mlt != null
+          ? String(data.debiti_finanziari_mlt)
+          : "",
+
+      rate_finanziarie_12_mesi:
+        data.rate_finanziarie_12_mesi != null
+          ? String(data.rate_finanziarie_12_mesi)
+          : "",
+
+      cash_flow_operativo_previsionale:
+        data.cash_flow_operativo_previsionale != null
+          ? String(
+              data.cash_flow_operativo_previsionale
+            )
+          : "",
+
+      note:
+        data.note || "",
+    });
+  } catch (error: any) {
+    console.error(
+      "Errore caricamento integrazioni:",
+      error
+    );
+
+    setErrore(
+      error?.message ||
+        "Errore caricamento integrazioni"
+    );
+  } finally {
+    setLoadingIntegrazioni(false);
+  }
+}
+
+async function salvaIntegrazioni() {
+  if (
+    !studioId ||
+    !clienteId ||
+    !controllo?.id ||
+    !risultato?.import_id
+  ) {
+    setErrore(
+      "Import o controllo non disponibile."
+    );
+    return;
+  }
+
+  try {
+    setErrore("");
+    setMessaggio("");
+    setSalvataggioIntegrazioni(true);
+
+    const bt = parseImportoInput(
+      integrazioni.debiti_finanziari_bt
+    );
+
+    const mlt = parseImportoInput(
+      integrazioni.debiti_finanziari_mlt
+    );
+
+    const rate = parseImportoInput(
+      integrazioni.rate_finanziarie_12_mesi
+    );
+
+    const cashFlowTesto =
+      integrazioni.cash_flow_operativo_previsionale.trim();
+
+    const cashFlow =
+      cashFlowTesto === ""
+        ? null
+        : parseImportoInput(cashFlowTesto);
+
+    if (
+      !Number.isFinite(bt) ||
+      !Number.isFinite(mlt) ||
+      !Number.isFinite(rate) ||
+      (
+        cashFlow !== null &&
+        !Number.isFinite(cashFlow)
+      )
+    ) {
+      setErrore(
+        "Uno o più importi inseriti non sono validi."
+      );
+      return;
+    }
+
+    if (
+      bt < 0 ||
+      mlt < 0 ||
+      rate < 0
+    ) {
+      setErrore(
+        "Debiti finanziari e rate devono essere indicati come valori positivi."
+      );
+      return;
+    }
+
+    const response = await fetch(
+      "/api/controllo-gestione/integrazioni",
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+        },
+
+        body: JSON.stringify({
+          studio_id: studioId,
+          cliente_id: clienteId,
+          controllo_id: controllo.id,
+          import_id: risultato.import_id,
+
+          debiti_finanziari_bt: bt,
+          debiti_finanziari_mlt: mlt,
+          rate_finanziarie_12_mesi: rate,
+
+          cash_flow_operativo_previsionale:
+            cashFlow,
+
+          note:
+            integrazioni.note,
+        }),
+      }
+    );
+
+    const json = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        json?.error ||
+          "Errore salvataggio integrazioni"
+      );
+    }
+
+    setMessaggio(
+      "Integrazioni gestionali salvate correttamente."
+    );
+
+    await caricaIntegrazioni();
+  } catch (error: any) {
+    console.error(
+      "Errore salvataggio integrazioni:",
+      error
+    );
+
+    setErrore(
+      error?.message ||
+        "Errore salvataggio integrazioni"
+    );
+  } finally {
+    setSalvataggioIntegrazioni(false);
+  }
+}
 
   async function salvaMappatura(
     conto: ContoDaMappare
@@ -1344,6 +1624,229 @@ moltiplicatore: 1,
               </>
             )}
           </section>
+          {risultato.riepilogo.conti_da_mappare === 0 && (
+  <section style={cardStyle}>
+    <h2 style={sectionTitleStyle}>
+      5. Integrazioni gestionali
+    </h2>
+
+    <div
+      style={{
+        marginBottom: 18,
+        color: "#64748b",
+        fontSize: 13,
+      }}
+    >
+      Integra i dati che non possono essere
+      determinati automaticamente dalla situazione
+      contabile. Gli importi dei debiti finanziari
+      devono essere indicati come valori positivi.
+    </div>
+
+    {loadingIntegrazioni ? (
+      <div style={infoStyle}>
+        Caricamento integrazioni...
+      </div>
+    ) : (
+      <>
+        <div style={grid2Style}>
+          <div>
+            <label style={labelStyle}>
+              Debiti finanziari entro 12 mesi
+            </label>
+
+            <input
+              type="text"
+              inputMode="decimal"
+              placeholder="0,00"
+              value={
+                integrazioni.debiti_finanziari_bt
+              }
+              onChange={(e) =>
+                setIntegrazioni((prev) => ({
+                  ...prev,
+                  debiti_finanziari_bt:
+                    e.target.value,
+                }))
+              }
+              style={inputStyle}
+            />
+
+            <div style={helpTextStyle}>
+              Quota capitale dei finanziamenti con
+              scadenza entro i prossimi 12 mesi.
+            </div>
+          </div>
+
+          <div>
+            <label style={labelStyle}>
+              Debiti finanziari oltre 12 mesi
+            </label>
+
+            <input
+              type="text"
+              inputMode="decimal"
+              placeholder="0,00"
+              value={
+                integrazioni.debiti_finanziari_mlt
+              }
+              onChange={(e) =>
+                setIntegrazioni((prev) => ({
+                  ...prev,
+                  debiti_finanziari_mlt:
+                    e.target.value,
+                }))
+              }
+              style={inputStyle}
+            />
+
+            <div style={helpTextStyle}>
+              Quota residua dei finanziamenti con
+              scadenza oltre 12 mesi.
+            </div>
+          </div>
+
+          <div>
+            <label style={labelStyle}>
+              Rate finanziarie prossimi 12 mesi
+            </label>
+
+            <input
+              type="text"
+              inputMode="decimal"
+              placeholder="0,00"
+              value={
+                integrazioni.rate_finanziarie_12_mesi
+              }
+              onChange={(e) =>
+                setIntegrazioni((prev) => ({
+                  ...prev,
+                  rate_finanziarie_12_mesi:
+                    e.target.value,
+                }))
+              }
+              style={inputStyle}
+            />
+
+            <div style={helpTextStyle}>
+              Servizio del debito previsto nei
+              prossimi 12 mesi.
+            </div>
+          </div>
+
+          <div>
+            <label style={labelStyle}>
+              Cash flow operativo previsionale
+            </label>
+
+            <input
+              type="text"
+              inputMode="decimal"
+              placeholder="Facoltativo"
+              value={
+                integrazioni
+                  .cash_flow_operativo_previsionale
+              }
+              onChange={(e) =>
+                setIntegrazioni((prev) => ({
+                  ...prev,
+                  cash_flow_operativo_previsionale:
+                    e.target.value,
+                }))
+              }
+              style={inputStyle}
+            />
+
+            <div style={helpTextStyle}>
+              Facoltativo. Sarà utilizzato per gli
+              indicatori prospettici, incluso il DSCR.
+            </div>
+          </div>
+        </div>
+
+        <div
+          style={{
+            ...subCardStyle,
+            marginTop: 18,
+            background: "#f8fafc",
+          }}
+        >
+          <div style={smallLabelStyle}>
+            Debito finanziario complessivo indicato
+          </div>
+
+          <div
+            style={{
+              marginTop: 5,
+              fontSize: 22,
+              fontWeight: 700,
+            }}
+          >
+            {euro(
+              parseImportoInput(
+                integrazioni.debiti_finanziari_bt
+              ) +
+                parseImportoInput(
+                  integrazioni.debiti_finanziari_mlt
+                )
+            )}
+          </div>
+        </div>
+
+        <div style={{ marginTop: 18 }}>
+          <label style={labelStyle}>
+            Note integrazioni gestionali
+          </label>
+
+          <textarea
+            value={integrazioni.note}
+            onChange={(e) =>
+              setIntegrazioni((prev) => ({
+                ...prev,
+                note: e.target.value,
+              }))
+            }
+            rows={4}
+            placeholder="Eventuali precisazioni su mutui, finanziamenti, rate, dati previsionali..."
+            style={{
+              ...inputStyle,
+              resize: "vertical",
+            }}
+          />
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            marginTop: 18,
+          }}
+        >
+          <button
+            type="button"
+            onClick={salvaIntegrazioni}
+            disabled={salvataggioIntegrazioni}
+            style={{
+              ...primaryButtonStyle,
+              opacity:
+                salvataggioIntegrazioni
+                  ? 0.5
+                  : 1,
+              cursor:
+                salvataggioIntegrazioni
+                  ? "not-allowed"
+                  : "pointer",
+            }}
+          >
+            {salvataggioIntegrazioni
+              ? "Salvataggio..."
+              : "Salva integrazioni"}
+          </button>
+        </div>
+      </>
+    )}
+  </section>
+)}
         </>
       )}
     </main>
@@ -1563,4 +2066,11 @@ const tdStyle: React.CSSProperties = {
   padding: "10px 8px",
   borderBottom: "1px solid #e2e8f0",
   verticalAlign: "middle",
+};
+
+const helpTextStyle: React.CSSProperties = {
+  marginTop: 5,
+  fontSize: 11,
+  color: "#64748b",
+  lineHeight: 1.4,
 };
