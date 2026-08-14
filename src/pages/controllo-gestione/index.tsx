@@ -58,10 +58,48 @@ const [showReportModal, setShowReportModal] = useState(false);
 const [reportAnno, setReportAnno] = useState(String(new Date().getFullYear()));
 const [reportClienteId, setReportClienteId] = useState("");
 
+const [riepilogoControllo, setRiepilogoControllo] = useState<any | null>(null);
+const [loadingRiepilogo, setLoadingRiepilogo] = useState(false);
+const [erroreRiepilogo, setErroreRiepilogo] = useState("");
+  
   async function load() {
     const res = await fetch("/api/controllo-gestione");
     setRecords(await res.json());
   }
+
+  async function caricaRiepilogoControllo(controlloId: string) {
+  if (!controlloId) return;
+
+  try {
+    setLoadingRiepilogo(true);
+    setErroreRiepilogo("");
+    setRiepilogoControllo(null);
+
+    const res = await fetch(
+      `/api/controllo-gestione/riepilogo-controllo?controllo_id=${encodeURIComponent(
+        controlloId
+      )}`
+    );
+
+    const json = await res.json();
+
+    if (!res.ok) {
+      throw new Error(
+        json?.error || "Errore caricamento riepilogo controllo"
+      );
+    }
+
+  setRiepilogoControllo(json);
+  } catch (error: any) {
+    console.error("Errore caricamento riepilogo controllo:", error);
+
+    setErroreRiepilogo(
+      error?.message || "Impossibile caricare i dati contabili"
+    );
+  } finally {
+    setLoadingRiepilogo(false);
+  }
+}
 
   async function confermaRinnovo() {
     if (!rinnovoId) return;
@@ -277,13 +315,18 @@ function rimuoviUtenteEdit(id: string) {
                   <RefreshCcw className="h-4 w-4" />
                 </button>
 
-                <button
-                  title="Modifica"
-                  onClick={() => setEditRecord({ ...r })}
-                  className="border p-2 rounded"
-                >
-                  <Pencil className="h-4 w-4" />
-                </button>
+              <button
+  title="Modifica"
+  onClick={() => {
+    setEditRecord({ ...r });
+    setRiepilogoControllo(null);
+    setErroreRiepilogo("");
+    void caricaRiepilogoControllo(r.id);
+  }}
+  className="border p-2 rounded"
+>
+  <Pencil className="h-4 w-4" />
+</button>
 
                 <button
                   title="Elimina tutto"
@@ -423,56 +466,323 @@ function rimuoviUtenteEdit(id: string) {
           onChange={(e) => setEditRecord({ ...editRecord, note: e.target.value })}
         />
 
-        <div className="border rounded p-4 space-y-4 bg-gray-50">
-          <h3 className="font-semibold text-lg">
-            Checklist controllo di gestione
-          </h3>
+      <div className="border rounded p-4 space-y-4 bg-gray-50">
+  <h3 className="font-semibold text-lg">
+    Checklist controllo di gestione
+  </h3>
 
-          {[
-            { n: 1, titolo: "Rilevamento Dati" },
-            { n: 2, titolo: "Analisi Scostamenti" },
-            { n: 3, titolo: "Reporting" },
-            { n: 4, titolo: "Azioni Correttive" },
-          ].map((step) => (
-            <div key={step.n} className="border rounded-lg bg-white p-3 space-y-2">
-              <label className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={!!editRecord[`step_${step.n}_completato`]}
-                  onChange={(e) =>
-                    setEditRecord({
-                      ...editRecord,
-                      [`step_${step.n}_completato`]: e.target.checked,
-                    })
-                  }
-                />
+  {/* STEP 1 */}
+  <div className="border rounded-lg bg-white p-4 space-y-4">
+    <label className="flex items-center gap-3">
+      <input
+        type="checkbox"
+        checked={!!editRecord.step_1_completato}
+        onChange={(e) =>
+          setEditRecord({
+            ...editRecord,
+            step_1_completato: e.target.checked,
+          })
+        }
+      />
 
-                <span className="font-medium">
-                  Step {step.n} — {step.titolo}
-                </span>
+      <span className="font-medium">
+        Step 1 — Rilevamento Dati
+      </span>
 
-                {editRecord[`step_${step.n}_completato`] && (
-                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
-                    Completato
-                  </span>
-                )}
-              </label>
+      {editRecord.step_1_completato && (
+        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+          Completato
+        </span>
+      )}
+    </label>
 
-              <textarea
-                className="border p-2 rounded w-full text-sm"
-                rows={2}
-                placeholder="Note operative step..."
-                value={editRecord[`step_${step.n}_note`] || ""}
-                onChange={(e) =>
-                  setEditRecord({
-                    ...editRecord,
-                    [`step_${step.n}_note`]: e.target.value,
-                  })
-                }
-              />
-            </div>
-          ))}
+    {loadingRiepilogo && (
+      <div className="border rounded p-3 bg-gray-50 text-sm text-gray-600">
+        Caricamento dati contabili...
+      </div>
+    )}
+
+    {!loadingRiepilogo && erroreRiepilogo && (
+      <div className="border border-red-200 rounded p-3 bg-red-50 text-sm text-red-700">
+        {erroreRiepilogo}
+      </div>
+    )}
+
+    {!loadingRiepilogo &&
+      !erroreRiepilogo &&
+      !riepilogoControllo && (
+        <div className="border rounded p-3 bg-yellow-50 text-sm">
+          Nessuna situazione contabile elaborata per questo controllo.
         </div>
+      )}
+
+  {!loadingRiepilogo &&
+  !erroreRiepilogo &&
+  riepilogoControllo && (
+    <div className="space-y-4">
+      <div className="grid grid-cols-3 gap-3">
+  <div className="border rounded p-3">
+    <div className="text-xs text-gray-500">
+      Periodo contabile
+    </div>
+
+    <div className="font-semibold">
+      {riepilogoControllo.import?.data_riferimento
+        ? formatDateIT(
+            riepilogoControllo.import.data_riferimento
+          )
+        : "-"}
+    </div>
+  </div>
+
+  <div className="border rounded p-3">
+    <div className="text-xs text-gray-500">
+      Conti importati
+    </div>
+
+    <div className="font-semibold">
+      {riepilogoControllo.import?.numero_conti ?? 0}
+    </div>
+  </div>
+
+  <div className="border rounded p-3">
+    <div className="text-xs text-gray-500">
+      Stato import
+    </div>
+
+    <div className="font-semibold">
+      {riepilogoControllo.import?.stato || "Non importato"}
+    </div>
+  </div>
+</div>
+
+<div className="grid grid-cols-3 gap-3">
+  <div className="border rounded p-3 bg-green-50">
+    <div className="text-xs text-gray-500">
+      Classificati
+    </div>
+
+    <div className="font-semibold text-green-700">
+      {riepilogoControllo.import?.conti_mappati ?? 0}
+    </div>
+  </div>
+
+  <div className="border rounded p-3">
+    <div className="text-xs text-gray-500">
+      Da classificare
+    </div>
+
+    <div
+      className={
+        (riepilogoControllo.import?.conti_da_mappare ?? 0) === 0
+          ? "font-semibold text-green-700"
+          : "font-semibold text-red-600"
+      }
+    >
+      {riepilogoControllo.import?.conti_da_mappare ?? 0}
+    </div>
+  </div>
+
+  <div className="border rounded p-3">
+    <div className="text-xs text-gray-500">
+      Elaborazione
+    </div>
+
+    <div className="font-semibold">
+      {riepilogoControllo.indici
+        ? "Disponibile"
+        : "Non elaborata"}
+    </div>
+  </div>
+</div>
+
+      {riepilogoControllo.indici && (
+  <div className="border rounded-lg p-4 bg-slate-50 space-y-3">
+    <div className="font-medium">
+      Dati economico-finanziari
+    </div>
+
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="border rounded bg-white p-3">
+        <div className="text-xs text-gray-500">
+          Ricavi
+        </div>
+
+        <div className="font-bold">
+          {Number(
+            riepilogoControllo.indici.ricavi || 0
+          ).toLocaleString("it-IT", {
+            style: "currency",
+            currency: "EUR",
+          })}
+        </div>
+      </div>
+
+      <div className="border rounded bg-white p-3">
+        <div className="text-xs text-gray-500">
+          EBITDA
+        </div>
+
+        <div className="font-bold">
+          {Number(
+            riepilogoControllo.indici.ebitda || 0
+          ).toLocaleString("it-IT", {
+            style: "currency",
+            currency: "EUR",
+          })}
+        </div>
+      </div>
+
+      <div className="border rounded bg-white p-3">
+        <div className="text-xs text-gray-500">
+          Risultato
+        </div>
+
+        <div className="font-bold">
+          {Number(
+            riepilogoControllo.indici.utile_netto || 0
+          ).toLocaleString("it-IT", {
+            style: "currency",
+            currency: "EUR",
+          })}
+        </div>
+      </div>
+
+      <div className="border rounded bg-white p-3">
+        <div className="text-xs text-gray-500">
+          Patrimonio netto
+        </div>
+
+        <div className="font-bold">
+          {Number(
+            riepilogoControllo.indici.patrimonio_netto || 0
+          ).toLocaleString("it-IT", {
+            style: "currency",
+            currency: "EUR",
+          })}
+        </div>
+      </div>
+    </div>
+ </div>
+)}
+
+{riepilogoControllo.integrazione && (
+  <div className="border rounded-lg p-4 bg-slate-50">
+    <div className="text-xs text-gray-500">
+      Debiti finanziari complessivi
+    </div>
+
+    <div className="text-lg font-bold">
+      {(
+        Number(
+          riepilogoControllo.integrazione
+            .debiti_finanziari_bt || 0
+        ) +
+        Number(
+          riepilogoControllo.integrazione
+            .debiti_finanziari_mlt || 0
+        )
+      ).toLocaleString("it-IT", {
+        style: "currency",
+        currency: "EUR",
+      })}
+    </div>
+
+    <div className="text-xs text-gray-500 mt-1">
+      BT{" "}
+      {Number(
+        riepilogoControllo.integrazione
+          .debiti_finanziari_bt || 0
+      ).toLocaleString("it-IT", {
+        style: "currency",
+        currency: "EUR",
+      })}
+      {" · "}
+      M/L{" "}
+      {Number(
+        riepilogoControllo.integrazione
+          .debiti_finanziari_mlt || 0
+      ).toLocaleString("it-IT", {
+        style: "currency",
+        currency: "EUR",
+      })}
+    </div>
+  </div>
+)}
+
+<div className="flex justify-end">
+  <Link
+    href={`/controllo-gestione/import-contabilita?cliente_id=${editRecord.cliente_id}&controllo_id=${editRecord.id}`}
+    className="bg-black text-white px-4 py-2 rounded text-sm"
+  >
+    Apri import contabilità
+  </Link>
+</div>
+        </div>
+      )}
+
+    <textarea
+      className="border p-2 rounded w-full text-sm"
+      rows={2}
+      placeholder="Note operative step..."
+      value={editRecord.step_1_note || ""}
+      onChange={(e) =>
+        setEditRecord({
+          ...editRecord,
+          step_1_note: e.target.value,
+        })
+      }
+    />
+  </div>
+
+  {/* STEP 2 - 4 */}
+  {[
+    { n: 2, titolo: "Analisi Scostamenti" },
+    { n: 3, titolo: "Reporting" },
+    { n: 4, titolo: "Azioni Correttive" },
+  ].map((step) => (
+    <div
+      key={step.n}
+      className="border rounded-lg bg-white p-3 space-y-2"
+    >
+      <label className="flex items-center gap-3">
+        <input
+          type="checkbox"
+          checked={!!editRecord[`step_${step.n}_completato`]}
+          onChange={(e) =>
+            setEditRecord({
+              ...editRecord,
+              [`step_${step.n}_completato`]: e.target.checked,
+            })
+          }
+        />
+
+        <span className="font-medium">
+          Step {step.n} — {step.titolo}
+        </span>
+
+        {editRecord[`step_${step.n}_completato`] && (
+          <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+            Completato
+          </span>
+        )}
+      </label>
+
+      <textarea
+        className="border p-2 rounded w-full text-sm"
+        rows={2}
+        placeholder="Note operative step..."
+        value={editRecord[`step_${step.n}_note`] || ""}
+        onChange={(e) =>
+          setEditRecord({
+            ...editRecord,
+            [`step_${step.n}_note`]: e.target.value,
+          })
+        }
+      />
+    </div>
+  ))}
+</div>
 
         <div className="border rounded p-3 space-y-3">
           <h3 className="font-semibold">Utenti assegnati</h3>
