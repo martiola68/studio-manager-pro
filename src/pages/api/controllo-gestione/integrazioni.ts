@@ -104,7 +104,7 @@ const debitiFinanziariContabili = (righeFinanziarie || [])
     0
   );
 
-  return res.status(200).json({
+return res.status(200).json({
   success: true,
 
   data: data || null,
@@ -115,7 +115,9 @@ const debitiFinanziariContabili = (righeFinanziarie || [])
     ) / 100,
 });
 
-    if (req.method === "POST") {
+} // <-- CHIUDE if (req.method === "GET")
+
+if (req.method === "POST") {
      const {
   studio_id,
   cliente_id,
