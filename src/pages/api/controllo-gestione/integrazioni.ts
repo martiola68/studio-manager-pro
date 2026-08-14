@@ -72,18 +72,55 @@ export default async function handler(
         throw error;
       }
 
-      const { data: righeFinanziarie, error: righeFinanziarieError } =
-  await supabaseAdmin
-    .from("tbcontrollo_gestione_import_righe")
-    .select(`
-      saldo,
-      voce:tbcontrollo_gestione_voci!tbcontrollo_gestione_import_righe_voce_id_fkey (
-        codice
+ const {
+  data: righeFinanziarie,
+  error: righeFinanziarieError,
+} = await supabaseAdmin
+  .from("tbcontrollo_gestione_import_righe")
+  .select(`
+    saldo,
+    voce_id
+  `)
+  .eq("import_id", import_id)
+  .eq("mappata", true)
+  .eq("esclusa", false);
+
+if (righeFinanziarieError) {
+  throw righeFinanziarieError;
+}
+
+const voceIds = Array.from(
+  new Set(
+    (righeFinanziarie || [])
+      .map((riga) => riga.voce_id)
+      .filter(
+        (value): value is string =>
+          Boolean(value)
       )
-    `)
-    .eq("import_id", import_id)
-    .eq("mappata", true)
-    .eq("esclusa", false);
+  )
+);
+
+const {
+  data: vociFinanziarie,
+  error: vociFinanziarieError,
+} = await supabaseAdmin
+  .from("tbcontrollo_gestione_voci")
+  .select(`
+    id,
+    codice
+  `)
+  .in("id", voceIds);
+
+if (vociFinanziarieError) {
+  throw vociFinanziarieError;
+}
+
+const vociMap = new Map(
+  (vociFinanziarie || []).map((voce) => [
+    voce.id,
+    voce.codice,
+  ])
+);
 
 if (righeFinanziarieError) {
   throw righeFinanziarieError;
