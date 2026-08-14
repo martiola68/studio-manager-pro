@@ -61,11 +61,75 @@ const [reportClienteId, setReportClienteId] = useState("");
 const [riepilogoControllo, setRiepilogoControllo] = useState<any | null>(null);
 const [loadingRiepilogo, setLoadingRiepilogo] = useState(false);
 const [erroreRiepilogo, setErroreRiepilogo] = useState("");
+
+const [riepiloghiByControllo, setRiepiloghiByControllo] =
+  useState<Record<string, any>>({});
+
+const [loadingRiepiloghi, setLoadingRiepiloghi] =
+  useState(false);
   
-  async function load() {
-    const res = await fetch("/api/controllo-gestione");
-    setRecords(await res.json());
+async function load() {
+  const res = await fetch("/api/controllo-gestione");
+  const json = await res.json();
+
+  const elenco = Array.isArray(json)
+    ? json
+    : [];
+
+  setRecords(elenco);
+
+  if (elenco.length === 0) {
+    setRiepiloghiByControllo({});
+    return;
   }
+
+  try {
+    setLoadingRiepiloghi(true);
+
+    const risultati = await Promise.all(
+      elenco.map(async (record: any) => {
+        try {
+          const response = await fetch(
+            `/api/controllo-gestione/riepilogo-controllo?controllo_id=${encodeURIComponent(
+              record.id
+            )}`
+          );
+
+          const riepilogo = await response.json();
+
+          return {
+            id: record.id,
+            riepilogo:
+              response.ok
+                ? riepilogo
+                : null,
+          };
+        } catch (error) {
+          console.error(
+            "Errore riepilogo controllo:",
+            record.id,
+            error
+          );
+
+          return {
+            id: record.id,
+            riepilogo: null,
+          };
+        }
+      })
+    );
+
+    const mappa: Record<string, any> = {};
+
+    risultati.forEach((item) => {
+      mappa[item.id] = item.riepilogo;
+    });
+
+    setRiepiloghiByControllo(mappa);
+  } finally {
+    setLoadingRiepiloghi(false);
+  }
+}
 
   async function caricaRiepilogoControllo(controlloId: string) {
   if (!controlloId) return;
@@ -225,13 +289,59 @@ function rimuoviUtenteEdit(id: string) {
     return;
   }
 
-  window.open(
-    `/api/controllo-gestione/report-pdf?cliente_id=${reportClienteId}&anno=${reportAnno}`,
-    "_blank"
-  );
+window.open(
+  `/api/controllo-gestione/report-pdf?cliente_id=${reportClienteId}&anno=${reportAnno}`,
+  "_blank"
+);
 }
 
-  return (
+function avanzamentoControllo(record: any) {
+  const completati = [
+    record.step_1_completato,
+    record.step_2_completato,
+    record.step_3_completato,
+    record.step_4_completato,
+  ].filter(Boolean).length;
+
+  return {
+    completati,
+    percentuale: completati * 25,
+  };
+}
+
+function statoDatiControllo(riepilogo: any) {
+  if (!riepilogo?.import) {
+    return {
+      label: "Da importare",
+      className: "bg-gray-100 text-gray-700",
+    };
+  }
+
+  if (
+    Number(
+      riepilogo.import.conti_da_mappare || 0
+    ) > 0
+  ) {
+    return {
+      label: "Da classificare",
+      className: "bg-yellow-100 text-yellow-800",
+    };
+  }
+
+  if (!riepilogo?.indici) {
+    return {
+      label: "Da elaborare",
+      className: "bg-blue-100 text-blue-800",
+    };
+  }
+
+  return {
+    label: "Elaborato",
+    className: "bg-green-100 text-green-700",
+  };
+}
+
+return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Controllo di gestione</h1>
@@ -255,90 +365,208 @@ function rimuoviUtenteEdit(id: string) {
 </div>
       </div>
 
-      <table className="w-full border text-sm">
-        <thead className="bg-gray-100">
-          <tr>
-            <th className="p-2 text-left">Società</th>
-            <th className="p-2 text-left">Cadenza</th>
-            <th className="p-2 text-left">Data esecuzione</th>
-            <th className="p-2 text-left">Utenti</th>
-            <th className="p-2 text-left">Note</th>
-            <th className="p-2 text-left">Link</th>
-            <th className="p-2 text-left">Azioni</th>
-          </tr>
-        </thead>
+     <table className="w-full border text-sm">
+  <thead className="bg-gray-100">
+    <tr>
+      <th className="p-2 text-left">Società</th>
+      <th className="p-2 text-left">Anno</th>
+      <th className="p-2 text-left">Periodo</th>
+      <th className="p-2 text-left">Cadenza</th>
+      <th className="p-2 text-left">Avanzamento</th>
+      <th className="p-2 text-left">Stato dati</th>
+      <th className="p-2 text-right">EBITDA</th>
+      <th className="p-2 text-right">Risultato</th>
+      <th className="p-2 text-left">Utenti</th>
+      <th className="p-2 text-left">Azioni</th>
+    </tr>
+  </thead>
 
-        <tbody>
-          {records.map((r) => (
-            <tr key={r.id} className="border-t align-top">
-              <td className="p-2">
-  <div className="flex items-center gap-2">
-    {isControlloInRitardo(r.data_esecuzione, r.cadenza_controllo) && (
-      <span
-        className="h-3 w-3 rounded-full bg-red-600 inline-block"
-        title="Controllo di gestione in ritardo"
-      />
-    )}
+       <tbody>
+  {records.map((r) => {
+    const riepilogo =
+      riepiloghiByControllo[r.id];
 
-    <span>{r.cliente?.ragione_sociale || r.cliente_id}</span>
-  </div>
-</td>
-              <td className="p-2">{r.cadenza_controllo}</td>
-              <td className="p-2">{formatDateIT(r.data_esecuzione)}</td>
-              <td className="p-2">{utentiLabel(r)}</td>
-              <td className="p-2 whitespace-pre-wrap">{r.note}</td>
-              <td className="p-2">
-                {r.link && (
-                  <a
-                    href={
-                      r.link.startsWith("http://") || r.link.startsWith("https://")
-                        ? r.link
-                        : `https://${r.link}`
-                    }
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline"
-                  >
-                    Apri
-                  </a>
-                )}
-              </td>
-              <td className="p-2 flex gap-2">
-                <button
-                  title="Rinnova"
-                  onClick={() => {
-                    setRinnovoId(r.id);
-                    setDataRinnovo(new Date().toISOString().slice(0, 10));
-                  }}
-                  className="border p-2 rounded"
-                >
-                  <RefreshCcw className="h-4 w-4" />
-                </button>
+    const avanzamento =
+      avanzamentoControllo(r);
 
-              <button
-  title="Modifica"
-  onClick={() => {
-    setEditRecord({ ...r });
-    setRiepilogoControllo(null);
-    setErroreRiepilogo("");
-    void caricaRiepilogoControllo(r.id);
-  }}
-  className="border p-2 rounded"
->
-  <Pencil className="h-4 w-4" />
-</button>
+    const stato =
+      statoDatiControllo(riepilogo);
 
-                <button
-                  title="Elimina tutto"
-                  onClick={() => eliminaCliente(r.id)}
-                  className="border p-2 rounded text-red-600"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
+    const dataRiferimento =
+      riepilogo?.import?.data_riferimento ||
+      null;
+
+    const anno =
+      dataRiferimento
+        ? String(dataRiferimento).slice(0, 4)
+        : "-";
+
+    const ebitda =
+      riepilogo?.indici?.ebitda;
+
+    const risultato =
+      riepilogo?.indici?.utile_netto;
+
+    return (
+      <tr
+        key={r.id}
+        className="border-t align-middle"
+      >
+        <td className="p-2">
+          <div className="flex items-center gap-2">
+            {isControlloInRitardo(
+              r.data_esecuzione,
+              r.cadenza_controllo
+            ) && (
+              <span
+                className="h-3 w-3 rounded-full bg-red-600 inline-block"
+                title="Controllo di gestione in ritardo"
+              />
+            )}
+
+            <span className="font-medium">
+              {r.cliente?.ragione_sociale ||
+                r.cliente_id}
+            </span>
+          </div>
+        </td>
+
+        <td className="p-2">
+          {anno}
+        </td>
+
+        <td className="p-2 whitespace-nowrap">
+          {dataRiferimento
+            ? formatDateIT(dataRiferimento)
+            : "-"}
+        </td>
+
+        <td className="p-2">
+          {r.cadenza_controllo}
+        </td>
+
+        <td className="p-2 min-w-[140px]">
+          <div className="flex justify-between text-xs mb-1">
+            <span>
+              {avanzamento.completati}/4
+            </span>
+
+            <span>
+              {avanzamento.percentuale}%
+            </span>
+          </div>
+
+          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-green-600 rounded-full"
+              style={{
+                width: `${avanzamento.percentuale}%`,
+              }}
+            />
+          </div>
+        </td>
+
+        <td className="p-2">
+          {loadingRiepiloghi &&
+          riepilogo === undefined ? (
+            <span className="text-xs text-gray-500">
+              Caricamento...
+            </span>
+          ) : (
+            <span
+              className={`inline-flex px-2 py-1 rounded text-xs font-medium ${stato.className}`}
+            >
+              {stato.label}
+            </span>
+          )}
+        </td>
+
+        <td className="p-2 text-right whitespace-nowrap font-medium">
+          {ebitda == null
+            ? "-"
+            : Number(ebitda).toLocaleString(
+                "it-IT",
+                {
+                  style: "currency",
+                  currency: "EUR",
+                  maximumFractionDigits: 0,
+                }
+              )}
+        </td>
+
+        <td
+          className={`p-2 text-right whitespace-nowrap font-medium ${
+            Number(risultato || 0) < 0
+              ? "text-red-600"
+              : ""
+          }`}
+        >
+          {risultato == null
+            ? "-"
+            : Number(
+                risultato
+              ).toLocaleString(
+                "it-IT",
+                {
+                  style: "currency",
+                  currency: "EUR",
+                  maximumFractionDigits: 0,
+                }
+              )}
+        </td>
+
+        <td className="p-2">
+          {utentiLabel(r)}
+        </td>
+
+        <td className="p-2">
+          <div className="flex gap-2">
+            <button
+              title="Rinnova"
+              onClick={() => {
+                setRinnovoId(r.id);
+                setDataRinnovo(
+                  new Date()
+                    .toISOString()
+                    .slice(0, 10)
+                );
+              }}
+              className="border p-2 rounded"
+            >
+              <RefreshCcw className="h-4 w-4" />
+            </button>
+
+            <button
+              title="Modifica"
+              onClick={() => {
+                setEditRecord({ ...r });
+                setRiepilogoControllo(null);
+                setErroreRiepilogo("");
+
+                void caricaRiepilogoControllo(
+                  r.id
+                );
+              }}
+              className="border p-2 rounded"
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+
+            <button
+              title="Elimina tutto"
+              onClick={() =>
+                eliminaCliente(r.id)
+              }
+              className="border p-2 rounded text-red-600"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        </td>
+      </tr>
+    );
+  })}
+</tbody>
       </table>
 
 {rinnovoId && (
