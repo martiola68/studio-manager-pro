@@ -127,25 +127,32 @@ export default function NuovoControlloGestione() {
         return;
       }
 
-      if (files?.length) {
-        const fd = new FormData();
-        Array.from(files).forEach((f) => fd.append("files", f));
+    if (files?.length) {
+  const fd = new FormData();
+  Array.from(files).forEach((f) => fd.append("files", f));
 
-        const uploadRes = await fetch(
-          `/api/controllo-gestione/${controllo.id}/allegati`,
-          {
-            method: "POST",
-            body: fd,
-          }
-        );
+  const uploadRes = await fetch(
+    `/api/controllo-gestione/${controllo.id}/allegati`,
+    {
+      method: "POST",
+      body: fd,
+    }
+  );
 
-        if (!uploadRes.ok) {
-          const uploadError = await uploadRes.json();
-          alert(uploadError.error || "Controllo creato, ma errore upload allegati");
-        }
-      }
+  if (!uploadRes.ok) {
+    const uploadError = await uploadRes.json();
+    alert(
+      uploadError.error ||
+        "Controllo creato, ma errore upload allegati"
+    );
+  }
+}
 
-      router.push("/controllo-gestione");
+router.push(
+  `/controllo-gestione/import-contabilita?cliente_id=${encodeURIComponent(
+    form.cliente_id
+  )}&controllo_id=${encodeURIComponent(controllo.id)}`
+);
     } finally {
       setSaving(false);
     }
