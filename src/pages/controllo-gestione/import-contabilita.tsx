@@ -293,42 +293,52 @@ const [loadingElaborazione, setLoadingElaborazione] =
    * passare cliente_id nella query string.
    */
   useEffect(() => {
-    if (
-      !router.isReady ||
-      clienti.length === 0
-    ) {
-      return;
-    }
+  if (
+    !router.isReady ||
+    clienti.length === 0
+  ) {
+    return;
+  }
 
-    const queryClienteId =
-      typeof router.query.cliente_id === "string"
-        ? router.query.cliente_id
-        : "";
+  const queryClienteId =
+    typeof router.query.cliente_id === "string"
+      ? router.query.cliente_id
+      : "";
 
-    if (
-      queryClienteId &&
-      clienti.some(
-        (cliente) => cliente.id === queryClienteId
-      ) &&
-      queryClienteId !== clienteId
-    ) {
-      setClienteId(queryClienteId);
-    }
-  }, [
-    router.isReady,
-    router.query.cliente_id,
-    clienti,
-    clienteId,
-  ]);
+  if (
+    queryClienteId &&
+    clienti.some(
+      (cliente) => cliente.id === queryClienteId
+    ) &&
+    queryClienteId !== clienteId
+  ) {
+    setClienteId(queryClienteId);
+  }
+}, [
+  router.isReady,
+  router.query.cliente_id,
+  clienti,
+  clienteId,
+]);
 
-   useEffect(() => {
-    if (!studioId || !clienteId) {
-      setControllo(null);
-      return;
-    }
+const controlloIdQuery =
+  router.isReady &&
+  typeof router.query.controllo_id === "string"
+    ? router.query.controllo_id
+    : "";
 
-    void caricaControlloAttivo();
-  }, [studioId, clienteId]);
+useEffect(() => {
+  if (!studioId || !clienteId) {
+    setControllo(null);
+    return;
+  }
+
+  void caricaControlloAttivo();
+}, [
+  studioId,
+  clienteId,
+  controlloIdQuery,
+]);
 
   useEffect(() => {
     if (
@@ -460,10 +470,7 @@ setElaborazione(null);
 
       const supabase = getSupabaseClient();
 
-    const {
-  data,
-  error,
-} = await (supabase as any)
+   let query = (supabase as any)
   .from("tbcontrollo_gestione")
   .select(`
     id,
@@ -472,13 +479,31 @@ setElaborazione(null);
     data_esecuzione
   `)
   .eq("studio_id", studioId)
-  .eq("cliente_id", clienteId)
-  .eq("archiviato", false)
-  .order("data_esecuzione", {
-    ascending: false,
-  })
-  .limit(1)
-  .maybeSingle();
+  .eq("cliente_id", clienteId);
+
+if (controlloIdQuery) {
+  /*
+   * Se arriviamo dalla checklist utilizziamo
+   * ESATTAMENTE il controllo richiesto.
+   */
+  query = query.eq("id", controlloIdQuery);
+} else {
+  /*
+   * Accesso diretto alla pagina:
+   * fallback sul controllo attivo corrente.
+   */
+  query = query
+    .eq("archiviato", false)
+    .order("data_esecuzione", {
+      ascending: false,
+    })
+    .limit(1);
+}
+
+const {
+  data,
+  error,
+} = await query.maybeSingle();
 
       if (error) {
         throw error;
