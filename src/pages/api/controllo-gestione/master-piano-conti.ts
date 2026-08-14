@@ -64,15 +64,11 @@ export default async function handler(
        *
        * Evitiamo embed complessi PostgREST.
        */
-      const templateIds = (data || []).map(
-        (row) => row.id
-      );
+    const templateIds = (data || []).map(
+  (row) => row.id
+);
 
-      let conteggiConti: Record<string, number> = {};
-      let conteggiClienti: Record<string, number> = {};
-
-      if (templateIds.length > 0) {
-       const conteggiConti: Record<string, number> = {};
+const conteggiConti: Record<string, number> = {};
 const conteggiClienti: Record<string, number> = {};
 
 for (const templateId of templateIds) {
@@ -117,28 +113,6 @@ for (const templateId of templateIds) {
   conteggiClienti[templateId] =
     configurazioniResponse.count || 0;
 }
-
-        if (contiResponse.error) {
-          throw contiResponse.error;
-        }
-
-        if (configurazioniResponse.error) {
-          throw configurazioniResponse.error;
-        }
-
-        for (const row of contiResponse.data || []) {
-          conteggiConti[row.template_id] =
-            (conteggiConti[row.template_id] || 0) + 1;
-        }
-
-        for (
-          const row of
-          configurazioniResponse.data || []
-        ) {
-          conteggiClienti[row.template_id] =
-            (conteggiClienti[row.template_id] || 0) + 1;
-        }
-      }
 
       const risultato = (data || []).map(
         (template) => ({
