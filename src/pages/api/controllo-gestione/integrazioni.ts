@@ -85,10 +85,6 @@ export default async function handler(
   .eq("mappata", true)
   .eq("esclusa", false);
 
-if (righeFinanziarieError) {
-  throw righeFinanziarieError;
-}
-
 const voceIds = Array.from(
   new Set(
     (righeFinanziarie || [])
@@ -126,20 +122,25 @@ if (righeFinanziarieError) {
   throw righeFinanziarieError;
 }
 
-const debitiFinanziariContabili = (righeFinanziarie || [])
-  .filter((riga: any) => {
-    const codice = riga.voce?.codice;
+const debitiFinanziariContabili =
+  (righeFinanziarie || [])
+    .filter((riga) => {
+      const codice =
+        riga.voce_id
+          ? vociMap.get(riga.voce_id)
+          : null;
 
-    return (
-      codice === "SP_DEBITI_BANCHE_BT" ||
-      codice === "SP_DEBITI_BANCHE_MLT"
+      return (
+        codice === "SP_DEBITI_BANCHE_BT" ||
+        codice === "SP_DEBITI_BANCHE_MLT"
+      );
+    })
+    .reduce(
+      (totale, riga) =>
+        totale +
+        Math.abs(Number(riga.saldo || 0)),
+      0
     );
-  })
-  .reduce(
-    (totale: number, riga: any) =>
-      totale + Math.abs(Number(riga.saldo || 0)),
-    0
-  );
 
 return res.status(200).json({
   success: true,
@@ -251,9 +252,7 @@ const {
   .from("tbcontrollo_gestione_import_righe")
   .select(`
     saldo,
-    voce:tbcontrollo_gestione_voci!tbcontrollo_gestione_import_righe_voce_id_fkey (
-      codice
-    )
+    voce_id
   `)
   .eq("import_id", import_id)
   .eq("mappata", true)
@@ -263,21 +262,62 @@ if (righeFinanziarieError) {
   throw righeFinanziarieError;
 }
 
-const totaleFinanziario = (righeFinanziarie || [])
-  .filter((riga: any) => {
-    const codice = riga.voce?.codice;
+const voceIds = Array.from(
+  new Set(
+    (righeFinanziarie || [])
+      .map((riga) => riga.voce_id)
+      .filter(
+        (value): value is string =>
+          Boolean(value)
+      )
+  )
+);
 
-    return (
-      codice === "SP_DEBITI_BANCHE_BT" ||
-      codice === "SP_DEBITI_BANCHE_MLT"
+const {
+  data: vociFinanziarie,
+  error: vociFinanziarieError,
+} = await supabaseAdmin
+  .from("tbcontrollo_gestione_voci")
+  .select(`
+    id,
+    codice
+  `)
+  .in("id", voceIds);
+
+if (vociFinanziarieError) {
+  throw vociFinanziarieError;
+}
+
+const vociMap = new Map(
+  (vociFinanziarie || []).map((voce) => [
+    voce.id,
+    voce.codice,
+  ])
+);
+
+if (righeFinanziarieError) {
+  throw righeFinanziarieError;
+}
+
+const totaleFinanziario =
+  (righeFinanziarie || [])
+    .filter((riga) => {
+      const codice =
+        riga.voce_id
+          ? vociMap.get(riga.voce_id)
+          : null;
+
+      return (
+        codice === "SP_DEBITI_BANCHE_BT" ||
+        codice === "SP_DEBITI_BANCHE_MLT"
+      );
+    })
+    .reduce(
+      (totale, riga) =>
+        totale +
+        Math.abs(Number(riga.saldo || 0)),
+      0
     );
-  })
-  .reduce(
-    (totale: number, riga: any) =>
-      totale + Math.abs(Number(riga.saldo || 0)),
-    0
-  );
-
 const totaleFinanziarioArrotondato =
   Math.round(
     (totaleFinanziario + Number.EPSILON) * 100
