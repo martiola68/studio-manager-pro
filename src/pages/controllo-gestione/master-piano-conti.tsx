@@ -279,9 +279,9 @@ async function leggiCsv(
             }
           },
 
-          error: (error) => {
+         error: (error: Error) => {
             reject(error);
-          },
+              },
         }
       );
     }
