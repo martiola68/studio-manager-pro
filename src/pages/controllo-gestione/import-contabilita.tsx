@@ -84,6 +84,55 @@ const integrazioniVuote: IntegrazioniForm = {
   note: "",
 };
 
+type ElaborazioneResult = {
+  success: boolean;
+
+  import_id: string;
+  controllo_id: string;
+  data_riferimento: string | null;
+
+  conto_economico: {
+    ricavi: number;
+    costi_operativi: number;
+    ebitda: number;
+    ammortamenti: number;
+    accantonamenti: number;
+    ebit: number;
+    proventi_finanziari: number;
+    oneri_finanziari_lordi: number;
+    oneri_finanziari_netti: number;
+    ebt: number;
+    imposte: number;
+    risultato_conto_economico: number;
+    risultato_provvisorio: number;
+    differenza_risultato: number;
+  };
+
+  stato_patrimoniale: {
+    totale_attivo: number;
+    attivo_corrente: number;
+    disponibilita_liquide: number;
+    patrimonio_netto_contabile: number;
+    risultato_provvisorio: number;
+    patrimonio_netto: number;
+    debiti_finanziari_contabili: number;
+    debiti_finanziari_bt: number;
+    debiti_finanziari_mlt: number;
+    debiti_totali: number;
+    passivo_corrente: number;
+    capitale_investito: number;
+  };
+
+  indicatori: {
+    roi: number;
+    roe: number;
+    ros: number;
+    roa: number;
+    indebitamento: number;
+    liquidita: number;
+    dscr: number | null;
+  };
+};
 
 function euro(value: number) {
   return new Intl.NumberFormat("it-IT", {
@@ -194,16 +243,22 @@ export default function ImportContabilitaPage() {
   const [errore, setErrore] = useState("");
   const [messaggio, setMessaggio] = useState("");
 
-  const [risultato, setRisultato] =
-    useState<ImportResult | null>(null);
+const [risultato, setRisultato] =
+  useState<ImportResult | null>(null);
 
-  const [integrazioni, setIntegrazioni] =
+const [integrazioni, setIntegrazioni] =
   useState<IntegrazioniForm>(integrazioniVuote);
 
 const [loadingIntegrazioni, setLoadingIntegrazioni] =
   useState(false);
 
 const [salvataggioIntegrazioni, setSalvataggioIntegrazioni] =
+  useState(false);
+
+const [elaborazione, setElaborazione] =
+  useState<ElaborazioneResult | null>(null);
+
+const [loadingElaborazione, setLoadingElaborazione] =
   useState(false);
 
   /*
@@ -395,6 +450,7 @@ setMappature({});
 setMappatureNegative({});
 setEsclusi({});
 setIntegrazioni(integrazioniVuote);
+setElaborazione(null);
 
       const supabase = getSupabaseClient();
 
@@ -518,6 +574,7 @@ setIntegrazioni(integrazioniVuote);
 setMappature({});
 setMappatureNegative({});
 setEsclusi({});
+      setElaborazione(null);
 
       if (
         json?.riepilogo?.conti_da_mappare === 0
@@ -744,6 +801,86 @@ async function salvaIntegrazioni() {
     );
   } finally {
     setSalvataggioIntegrazioni(false);
+  }
+}
+
+  async function elaboraControllo() {
+  if (!risultato?.import_id) {
+    setErrore(
+      "Import non disponibile per l'elaborazione."
+    );
+    return;
+  }
+
+  try {
+    setErrore("");
+    setMessaggio("");
+    setLoadingElaborazione(true);
+
+    const response = await fetch(
+      "/api/controllo-gestione/elabora-import",
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+        },
+
+        body: JSON.stringify({
+          import_id: risultato.import_id,
+        }),
+      }
+    );
+
+    const json = await response.json();
+
+    if (!response.ok) {
+      /*
+       * Se l'API restituisce anche il dettaglio
+       * della discordanza BT/MLT, lo mostriamo.
+       */
+      if (json?.dettaglio) {
+        const dettaglio = json.dettaglio;
+
+        throw new Error(
+          `${json.error || "Errore elaborazione"} ` +
+            `Contabilità: ${euro(
+              dettaglio.debiti_finanziari_contabili
+            )} · ` +
+            `Ripartizione inserita: ${euro(
+              dettaglio.totale_manuale
+            )} · ` +
+            `Differenza: ${euro(
+              dettaglio.differenza
+            )}`
+        );
+      }
+
+      throw new Error(
+        json?.error ||
+          "Errore elaborazione controllo di gestione"
+      );
+    }
+
+    setElaborazione(
+      json as ElaborazioneResult
+    );
+
+    setMessaggio(
+      "Controllo di gestione elaborato correttamente."
+    );
+  } catch (error: any) {
+    console.error(
+      "Errore elaborazione controllo:",
+      error
+    );
+
+    setErrore(
+      error?.message ||
+        "Errore elaborazione controllo di gestione"
+    );
+  } finally {
+    setLoadingElaborazione(false);
   }
 }
 
@@ -1815,38 +1952,340 @@ moltiplicatore: 1,
           />
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            marginTop: 18,
-          }}
-        >
-          <button
-            type="button"
-            onClick={salvaIntegrazioni}
-            disabled={salvataggioIntegrazioni}
-            style={{
-              ...primaryButtonStyle,
-              opacity:
-                salvataggioIntegrazioni
-                  ? 0.5
-                  : 1,
-              cursor:
-                salvataggioIntegrazioni
-                  ? "not-allowed"
-                  : "pointer",
-            }}
-          >
-            {salvataggioIntegrazioni
-              ? "Salvataggio..."
-              : "Salva integrazioni"}
-          </button>
-        </div>
+       <div
+  style={{
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: 12,
+    marginTop: 18,
+    flexWrap: "wrap",
+  }}
+>
+  <button
+    type="button"
+    onClick={salvaIntegrazioni}
+    disabled={
+      salvataggioIntegrazioni ||
+      loadingElaborazione
+    }
+    style={{
+      ...secondaryButtonStyle,
+
+      opacity:
+        salvataggioIntegrazioni ||
+        loadingElaborazione
+          ? 0.5
+          : 1,
+
+      cursor:
+        salvataggioIntegrazioni ||
+        loadingElaborazione
+          ? "not-allowed"
+          : "pointer",
+    }}
+  >
+    {salvataggioIntegrazioni
+      ? "Salvataggio..."
+      : "Salva integrazioni"}
+  </button>
+
+  <button
+    type="button"
+    onClick={elaboraControllo}
+    disabled={
+      loadingElaborazione ||
+      salvataggioIntegrazioni
+    }
+    style={{
+      ...primaryButtonStyle,
+
+      opacity:
+        loadingElaborazione ||
+        salvataggioIntegrazioni
+          ? 0.5
+          : 1,
+
+      cursor:
+        loadingElaborazione ||
+        salvataggioIntegrazioni
+          ? "not-allowed"
+          : "pointer",
+    }}
+  >
+    {loadingElaborazione
+      ? "Elaborazione..."
+      : "Elabora controllo di gestione"}
+  </button>
+</div>
       </>
     )}
+   </section>
+)}
+
+{elaborazione && (
+  <section style={cardStyle}>
+    <h2 style={sectionTitleStyle}>
+      6. Risultato controllo di gestione
+    </h2>
+
+    <div
+      style={{
+        marginBottom: 18,
+        color: "#64748b",
+        fontSize: 13,
+      }}
+    >
+      Elaborazione della situazione contabile al{" "}
+      <strong>
+        {dataIt(
+          elaborazione.data_riferimento
+        )}
+      </strong>
+    </div>
+
+    <h3
+      style={{
+        fontSize: 16,
+        marginBottom: 12,
+      }}
+    >
+      Conto economico
+    </h3>
+
+    <div style={grid4Style}>
+      <StatEuro
+        label="Ricavi"
+        value={
+          elaborazione.conto_economico.ricavi
+        }
+      />
+
+      <StatEuro
+        label="Costi operativi"
+        value={
+          elaborazione.conto_economico
+            .costi_operativi
+        }
+      />
+
+      <StatEuro
+        label="EBITDA"
+        value={
+          elaborazione.conto_economico.ebitda
+        }
+      />
+
+      <StatEuro
+        label="EBIT"
+        value={
+          elaborazione.conto_economico.ebit
+        }
+      />
+
+      <StatEuro
+        label="EBT"
+        value={
+          elaborazione.conto_economico.ebt
+        }
+      />
+
+      <StatEuro
+        label="Imposte"
+        value={
+          elaborazione.conto_economico.imposte
+        }
+      />
+
+      <StatEuro
+        label="Risultato da CE"
+        value={
+          elaborazione.conto_economico
+            .risultato_conto_economico
+        }
+      />
+
+      <StatEuro
+        label="Risultato provvisorio"
+        value={
+          elaborazione.conto_economico
+            .risultato_provvisorio
+        }
+      />
+    </div>
+
+    <div
+      style={{
+        ...subCardStyle,
+        marginTop: 16,
+        background:
+          Math.abs(
+            elaborazione.conto_economico
+              .differenza_risultato
+          ) <= 1
+            ? "#f0fdf4"
+            : "#fffbeb",
+      }}
+    >
+      <div style={smallLabelStyle}>
+        Differenza risultato CE / quadratura patrimoniale
+      </div>
+
+      <div
+        style={{
+          marginTop: 5,
+          fontSize: 20,
+          fontWeight: 700,
+        }}
+      >
+        {euro(
+          elaborazione.conto_economico
+            .differenza_risultato
+        )}
+      </div>
+    </div>
+
+    <h3
+      style={{
+        fontSize: 16,
+        marginTop: 28,
+        marginBottom: 12,
+      }}
+    >
+      Stato patrimoniale
+    </h3>
+
+    <div style={grid4Style}>
+      <StatEuro
+        label="Totale attivo"
+        value={
+          elaborazione.stato_patrimoniale
+            .totale_attivo
+        }
+      />
+
+      <StatEuro
+        label="Attivo corrente"
+        value={
+          elaborazione.stato_patrimoniale
+            .attivo_corrente
+        }
+      />
+
+      <StatEuro
+        label="Disponibilità liquide"
+        value={
+          elaborazione.stato_patrimoniale
+            .disponibilita_liquide
+        }
+      />
+
+      <StatEuro
+        label="Patrimonio netto"
+        value={
+          elaborazione.stato_patrimoniale
+            .patrimonio_netto
+        }
+      />
+
+      <StatEuro
+        label="Debiti finanziari BT"
+        value={
+          elaborazione.stato_patrimoniale
+            .debiti_finanziari_bt
+        }
+      />
+
+      <StatEuro
+        label="Debiti finanziari M/L"
+        value={
+          elaborazione.stato_patrimoniale
+            .debiti_finanziari_mlt
+        }
+      />
+
+      <StatEuro
+        label="Debiti totali"
+        value={
+          elaborazione.stato_patrimoniale
+            .debiti_totali
+        }
+      />
+
+      <StatEuro
+        label="Passivo corrente"
+        value={
+          elaborazione.stato_patrimoniale
+            .passivo_corrente
+        }
+      />
+    </div>
+
+    <h3
+      style={{
+        fontSize: 16,
+        marginTop: 28,
+        marginBottom: 12,
+      }}
+    >
+      Indicatori
+    </h3>
+
+    <div style={grid4Style}>
+      <StatPercentuale
+        label="ROI"
+        value={
+          elaborazione.indicatori.roi
+        }
+      />
+
+      <StatPercentuale
+        label="ROE"
+        value={
+          elaborazione.indicatori.roe
+        }
+      />
+
+      <StatPercentuale
+        label="ROS"
+        value={
+          elaborazione.indicatori.ros
+        }
+      />
+
+      <StatPercentuale
+        label="ROA"
+        value={
+          elaborazione.indicatori.roa
+        }
+      />
+
+      <StatNumero
+        label="Indebitamento"
+        value={
+          elaborazione.indicatori
+            .indebitamento
+        }
+      />
+
+      <StatNumero
+        label="Indice di liquidità"
+        value={
+          elaborazione.indicatori
+            .liquidita
+        }
+      />
+
+      <StatNumero
+        label="DSCR"
+        value={
+          elaborazione.indicatori
+            .dscr
+        }
+      />
+    </div>
   </section>
 )}
+
         </>
       )}
     </main>
@@ -1874,6 +2313,99 @@ function Stat({
         }}
       >
         {value}
+      </div>
+    </div>
+  );
+}
+
+function StatEuro({
+  label,
+  value,
+}: {
+  label: string;
+  value: number;
+}) {
+  return (
+    <div style={subCardStyle}>
+      <div style={smallLabelStyle}>
+        {label}
+      </div>
+
+      <div
+        style={{
+          marginTop: 5,
+          fontSize: 20,
+          fontWeight: 700,
+        }}
+      >
+        {euro(value)}
+      </div>
+    </div>
+  );
+}
+
+function StatPercentuale({
+  label,
+  value,
+}: {
+  label: string;
+  value: number;
+}) {
+  return (
+    <div style={subCardStyle}>
+      <div style={smallLabelStyle}>
+        {label}
+      </div>
+
+      <div
+        style={{
+          marginTop: 5,
+          fontSize: 22,
+          fontWeight: 700,
+        }}
+      >
+        {Number(value || 0).toLocaleString(
+          "it-IT",
+          {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          }
+        )}
+        %
+      </div>
+    </div>
+  );
+}
+
+function StatNumero({
+  label,
+  value,
+}: {
+  label: string;
+  value: number | null;
+}) {
+  return (
+    <div style={subCardStyle}>
+      <div style={smallLabelStyle}>
+        {label}
+      </div>
+
+      <div
+        style={{
+          marginTop: 5,
+          fontSize: 22,
+          fontWeight: 700,
+        }}
+      >
+        {value == null
+          ? "-"
+          : Number(value).toLocaleString(
+              "it-IT",
+              {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              }
+            )}
       </div>
     </div>
   );
