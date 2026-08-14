@@ -255,6 +255,11 @@ const [loadingIntegrazioni, setLoadingIntegrazioni] =
 const [salvataggioIntegrazioni, setSalvataggioIntegrazioni] =
   useState(false);
 
+  const [
+  debitiFinanziariContabili,
+  setDebitiFinanziariContabili,
+] = useState(0);
+
 const [elaborazione, setElaborazione] =
   useState<ElaborazioneResult | null>(null);
 
@@ -451,6 +456,7 @@ setMappatureNegative({});
 setEsclusi({});
 setIntegrazioni(integrazioniVuote);
 setElaborazione(null);
+      setDebitiFinanziariContabili(0);
 
       const supabase = getSupabaseClient();
 
@@ -635,6 +641,12 @@ setEsclusi({});
       );
     }
 
+    setDebitiFinanziariContabili(
+  Number(
+    json?.debiti_finanziari_contabili || 0
+  )
+);
+
     const data = json?.data;
 
     if (!data) {
@@ -701,14 +713,19 @@ async function salvaIntegrazioni() {
     setMessaggio("");
     setSalvataggioIntegrazioni(true);
 
-    const bt = parseImportoInput(
-      integrazioni.debiti_finanziari_bt
-    );
+  const mlt = parseImportoInput(
+  integrazioni.debiti_finanziari_mlt
+);
 
-    const mlt = parseImportoInput(
-      integrazioni.debiti_finanziari_mlt
-    );
-
+const bt =
+  Math.round(
+    (
+      debitiFinanziariContabili -
+      mlt +
+      Number.EPSILON
+    ) * 100
+  ) / 100;
+    
     const rate = parseImportoInput(
       integrazioni.rate_finanziarie_12_mesi
     );
@@ -722,7 +739,6 @@ async function salvaIntegrazioni() {
         : parseImportoInput(cashFlowTesto);
 
     if (
-      !Number.isFinite(bt) ||
       !Number.isFinite(mlt) ||
       !Number.isFinite(rate) ||
       (
@@ -736,18 +752,24 @@ async function salvaIntegrazioni() {
       return;
     }
 
-    if (
-      bt < 0 ||
-      mlt < 0 ||
-      rate < 0
-    ) {
-      setErrore(
-        "Debiti finanziari e rate devono essere indicati come valori positivi."
-      );
-      return;
-    }
+ if (
+  mlt < 0 ||
+  rate < 0
+) {
+  setErrore(
+    "Debiti finanziari e rate devono essere indicati come valori positivi."
+  );
+  return;
+}
 
-    const response = await fetch(
+if (mlt > debitiFinanziariContabili) {
+  setErrore(
+    "I debiti finanziari oltre 12 mesi non possono superare il totale dei debiti finanziari risultante dalla contabilità."
+  );
+  return;
+}
+
+const response = await fetch(
       "/api/controllo-gestione/integrazioni",
       {
         method: "POST",
@@ -762,11 +784,9 @@ async function salvaIntegrazioni() {
           controllo_id: controllo.id,
           import_id: risultato.import_id,
 
-          debiti_finanziari_bt: bt,
           debiti_finanziari_mlt: mlt,
           rate_finanziarie_12_mesi: rate,
-
-          cash_flow_operativo_previsionale:
+        cash_flow_operativo_previsionale:
             cashFlow,
 
           note:
@@ -1786,62 +1806,85 @@ moltiplicatore: 1,
       </div>
     ) : (
       <>
-        <div style={grid2Style}>
-          <div>
-            <label style={labelStyle}>
-              Debiti finanziari entro 12 mesi
-            </label>
+<div style={grid2Style}>
+  <div>
+    <label style={labelStyle}>
+      Debiti finanziari complessivi da contabilità
+    </label>
 
-            <input
-              type="text"
-              inputMode="decimal"
-              placeholder="0,00"
-              value={
-                integrazioni.debiti_finanziari_bt
-              }
-              onChange={(e) =>
-                setIntegrazioni((prev) => ({
-                  ...prev,
-                  debiti_finanziari_bt:
-                    e.target.value,
-                }))
-              }
-              style={inputStyle}
-            />
+    <input
+      type="text"
+      value={euro(
+        debitiFinanziariContabili
+      )}
+      disabled
+      style={{
+        ...inputStyle,
+        background: "#f8fafc",
+        fontWeight: 600,
+      }}
+    />
 
-            <div style={helpTextStyle}>
-              Quota capitale dei finanziamenti con
-              scadenza entro i prossimi 12 mesi.
-            </div>
-          </div>
+    <div style={helpTextStyle}>
+      Totale rilevato automaticamente dalla situazione contabile.
+    </div>
+  </div>
 
-          <div>
-            <label style={labelStyle}>
-              Debiti finanziari oltre 12 mesi
-            </label>
+  <div>
+    <label style={labelStyle}>
+      Debiti finanziari oltre 12 mesi
+    </label>
 
-            <input
-              type="text"
-              inputMode="decimal"
-              placeholder="0,00"
-              value={
-                integrazioni.debiti_finanziari_mlt
-              }
-              onChange={(e) =>
-                setIntegrazioni((prev) => ({
-                  ...prev,
-                  debiti_finanziari_mlt:
-                    e.target.value,
-                }))
-              }
-              style={inputStyle}
-            />
+    <input
+      type="text"
+      inputMode="decimal"
+      placeholder="0,00"
+      value={
+        integrazioni.debiti_finanziari_mlt
+      }
+      onChange={(e) =>
+        setIntegrazioni((prev) => ({
+          ...prev,
+          debiti_finanziari_mlt:
+            e.target.value,
+        }))
+      }
+      style={inputStyle}
+    />
 
-            <div style={helpTextStyle}>
-              Quota residua dei finanziamenti con
-              scadenza oltre 12 mesi.
-            </div>
-          </div>
+    <div style={helpTextStyle}>
+      Quota dei finanziamenti con scadenza oltre i prossimi 12 mesi.
+    </div>
+  </div>
+
+  <div>
+    <label style={labelStyle}>
+      Debiti finanziari entro 12 mesi
+    </label>
+
+    <input
+      type="text"
+      value={euro(
+        Math.max(
+          0,
+          debitiFinanziariContabili -
+            parseImportoInput(
+              integrazioni.debiti_finanziari_mlt
+            )
+        )
+      )}
+      disabled
+      style={{
+        ...inputStyle,
+        background: "#f8fafc",
+        fontWeight: 600,
+      }}
+    />
+
+    <div style={helpTextStyle}>
+      Calcolato automaticamente come debiti finanziari complessivi meno quota oltre 12 mesi.
+    </div>
+  </div>
 
           <div>
             <label style={labelStyle}>
@@ -1901,36 +1944,7 @@ moltiplicatore: 1,
           </div>
         </div>
 
-        <div
-          style={{
-            ...subCardStyle,
-            marginTop: 18,
-            background: "#f8fafc",
-          }}
-        >
-          <div style={smallLabelStyle}>
-            Debito finanziario complessivo indicato
-          </div>
-
-          <div
-            style={{
-              marginTop: 5,
-              fontSize: 22,
-              fontWeight: 700,
-            }}
-          >
-            {euro(
-              parseImportoInput(
-                integrazioni.debiti_finanziari_bt
-              ) +
-                parseImportoInput(
-                  integrazioni.debiti_finanziari_mlt
-                )
-            )}
-          </div>
-        </div>
-
-        <div style={{ marginTop: 18 }}>
+<div style={{ marginTop: 18 }}>
           <label style={labelStyle}>
             Note integrazioni gestionali
           </label>
