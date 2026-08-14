@@ -225,20 +225,7 @@ export default async function handler(
       });
     }
 
-    if (
-      Number(
-        importRecord.conti_da_mappare ||
-          0
-      ) > 0
-    ) {
-      return res.status(400).json({
-        success: false,
-        error:
-          "Non è possibile elaborare il controllo: esistono ancora conti da classificare.",
-      });
-    }
-
-    /*
+       /*
      * =====================================================
      * 2. CLIENTE
      * =====================================================
@@ -302,23 +289,49 @@ export default async function handler(
         import_id
       );
 
-    if (
-      righe.length === 0
-    ) {
-      return res.status(400).json({
-        success: false,
-        error:
-          "L'import non contiene righe contabili.",
-      });
-    }
+  if (
+  righe.length === 0
+) {
+  return res.status(400).json({
+    success: false,
+    error:
+      "L'import non contiene righe contabili.",
+  });
+}
 
-    const righeUtili =
-      righe.filter(
-        (row) =>
-          row.mappata === true &&
-          row.esclusa !== true &&
-          Boolean(row.voce_id)
-      );
+/*
+ * La fonte autorevole per verificare la classificazione
+ * è lo staging dell'import corrente.
+ *
+ * Non utilizziamo conti_da_mappare del registro import,
+ * perché potrebbe essere un valore precedente/non più
+ * coerente con le righe effettivamente riclassificate.
+ */
+const righeDaClassificare =
+  righe.filter(
+    (row) =>
+      row.esclusa !== true &&
+      (
+        row.mappata !== true ||
+        !row.voce_id
+      )
+  );
+
+if (righeDaClassificare.length > 0) {
+  return res.status(400).json({
+    success: false,
+    error:
+      `Non è possibile elaborare il controllo: ${righeDaClassificare.length} conti risultano ancora da classificare.`,
+  });
+}
+
+const righeUtili =
+  righe.filter(
+    (row) =>
+      row.mappata === true &&
+      row.esclusa !== true &&
+      Boolean(row.voce_id)
+  );
 
     if (
       righeUtili.length === 0
