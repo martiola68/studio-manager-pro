@@ -72,26 +72,51 @@ export default async function handler(
       let conteggiClienti: Record<string, number> = {};
 
       if (templateIds.length > 0) {
-        const [
-          contiResponse,
-          configurazioniResponse,
-        ] = await Promise.all([
-          supabaseAdmin
-            .from(
-              "tbcontrollo_gestione_template_conti"
-            )
-            .select("template_id")
-            .in("template_id", templateIds),
+       const conteggiConti: Record<string, number> = {};
+const conteggiClienti: Record<string, number> = {};
 
-          supabaseAdmin
-            .from(
-              "tbcontrollo_gestione_configurazioni"
-            )
-            .select("template_id")
-            .eq("studio_id", studio_id)
-            .eq("attiva", true)
-            .in("template_id", templateIds),
-        ]);
+for (const templateId of templateIds) {
+  const [
+    contiResponse,
+    configurazioniResponse,
+  ] = await Promise.all([
+    supabaseAdmin
+      .from(
+        "tbcontrollo_gestione_template_conti"
+      )
+      .select("*", {
+        count: "exact",
+        head: true,
+      })
+      .eq("template_id", templateId),
+
+    supabaseAdmin
+      .from(
+        "tbcontrollo_gestione_configurazioni"
+      )
+      .select("*", {
+        count: "exact",
+        head: true,
+      })
+      .eq("studio_id", studio_id)
+      .eq("template_id", templateId)
+      .eq("attiva", true),
+  ]);
+
+  if (contiResponse.error) {
+    throw contiResponse.error;
+  }
+
+  if (configurazioniResponse.error) {
+    throw configurazioniResponse.error;
+  }
+
+  conteggiConti[templateId] =
+    contiResponse.count || 0;
+
+  conteggiClienti[templateId] =
+    configurazioniResponse.count || 0;
+}
 
         if (contiResponse.error) {
           throw contiResponse.error;
