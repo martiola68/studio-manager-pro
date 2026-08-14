@@ -72,26 +72,62 @@ export default async function handler(
         throw error;
       }
 
-      return res.status(200).json({
-        success: true,
-        data: data || null,
-      });
-    }
+      const { data: righeFinanziarie, error: righeFinanziarieError } =
+  await supabaseAdmin
+    .from("tbcontrollo_gestione_import_righe")
+    .select(`
+      saldo,
+      voce:tbcontrollo_gestione_voci!tbcontrollo_gestione_import_righe_voce_id_fkey (
+        codice
+      )
+    `)
+    .eq("import_id", import_id)
+    .eq("mappata", true)
+    .eq("esclusa", false);
+
+if (righeFinanziarieError) {
+  throw righeFinanziarieError;
+}
+
+const debitiFinanziariContabili = (righeFinanziarie || [])
+  .filter((riga: any) => {
+    const codice = riga.voce?.codice;
+
+    return (
+      codice === "SP_DEBITI_BANCHE_BT" ||
+      codice === "SP_DEBITI_BANCHE_MLT"
+    );
+  })
+  .reduce(
+    (totale: number, riga: any) =>
+      totale + Math.abs(Number(riga.saldo || 0)),
+    0
+  );
+
+  return res.status(200).json({
+  success: true,
+
+  data: data || null,
+
+  debiti_finanziari_contabili:
+    Math.round(
+      (debitiFinanziariContabili + Number.EPSILON) * 100
+    ) / 100,
+});
 
     if (req.method === "POST") {
-      const {
-        studio_id,
-        cliente_id,
-        controllo_id,
-        import_id,
+     const {
+  studio_id,
+  cliente_id,
+  controllo_id,
+  import_id,
 
-        debiti_finanziari_bt = 0,
-        debiti_finanziari_mlt = 0,
-        rate_finanziarie_12_mesi = 0,
-        cash_flow_operativo_previsionale = null,
+  debiti_finanziari_mlt = 0,
+  rate_finanziarie_12_mesi = 0,
+  cash_flow_operativo_previsionale = null,
 
-        note = null,
-      } = req.body;
+  note = null,
+} = req.body;
 
       if (!studio_id) {
         return res.status(400).json({
@@ -154,17 +190,76 @@ export default async function handler(
         });
       }
 
-      const bt = Number(debiti_finanziari_bt || 0);
-      const mlt = Number(debiti_finanziari_mlt || 0);
-      const rate = Number(rate_finanziarie_12_mesi || 0);
+     const mlt = Number(debiti_finanziari_mlt || 0);
+const rate = Number(rate_finanziarie_12_mesi || 0);
 
-      if (bt < 0 || mlt < 0 || rate < 0) {
-        return res.status(400).json({
-          success: false,
-          error:
-            "Debiti finanziari e rate non possono essere negativi",
-        });
-      }
+if (mlt < 0 || rate < 0) {
+  return res.status(400).json({
+    success: false,
+    error:
+      "Debiti finanziari M/L e rate non possono essere negativi",
+  });
+}
+
+/*
+ * Calcoliamo il debito finanziario direttamente
+ * dall'import contabile.
+ */
+const {
+  data: righeFinanziarie,
+  error: righeFinanziarieError,
+} = await supabaseAdmin
+  .from("tbcontrollo_gestione_import_righe")
+  .select(`
+    saldo,
+    voce:tbcontrollo_gestione_voci!tbcontrollo_gestione_import_righe_voce_id_fkey (
+      codice
+    )
+  `)
+  .eq("import_id", import_id)
+  .eq("mappata", true)
+  .eq("esclusa", false);
+
+if (righeFinanziarieError) {
+  throw righeFinanziarieError;
+}
+
+const totaleFinanziario = (righeFinanziarie || [])
+  .filter((riga: any) => {
+    const codice = riga.voce?.codice;
+
+    return (
+      codice === "SP_DEBITI_BANCHE_BT" ||
+      codice === "SP_DEBITI_BANCHE_MLT"
+    );
+  })
+  .reduce(
+    (totale: number, riga: any) =>
+      totale + Math.abs(Number(riga.saldo || 0)),
+    0
+  );
+
+const totaleFinanziarioArrotondato =
+  Math.round(
+    (totaleFinanziario + Number.EPSILON) * 100
+  ) / 100;
+
+if (mlt > totaleFinanziarioArrotondato) {
+  return res.status(400).json({
+    success: false,
+    error:
+      "La quota di debiti finanziari oltre 12 mesi non può superare il debito finanziario complessivo risultante dalla contabilità.",
+  });
+}
+
+const bt =
+  Math.round(
+    (
+      totaleFinanziarioArrotondato -
+      mlt +
+      Number.EPSILON
+    ) * 100
+  ) / 100;
 
       const cashFlow =
         cash_flow_operativo_previsionale === null ||
