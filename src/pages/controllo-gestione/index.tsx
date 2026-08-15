@@ -522,13 +522,13 @@ return (
         <td className="p-2">
           <div className="flex gap-2">
 
-             <Link
-      href={`/controllo-gestione/analisi?cliente_id=${r.cliente_id}&controllo_id=${r.id}`}
-      title="Gestione periodi e analisi"
-      className="border px-3 py-2 rounded text-xs font-medium hover:bg-gray-50 whitespace-nowrap"
-    >
-      Analisi
-    </Link>
+    <Link
+  href={`/controllo-gestione/analisi?cliente_id=${r.cliente_id}&controllo_id=${r.id}&anno=${anno}`}
+  title="Gestione periodi e analisi"
+  className="border px-3 py-2 rounded text-xs font-medium hover:bg-gray-50 whitespace-nowrap"
+>
+  Analisi
+</Link>
             
             <button
               title="Rinnova"
