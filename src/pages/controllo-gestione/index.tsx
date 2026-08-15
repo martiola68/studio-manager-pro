@@ -586,15 +586,16 @@ const percentualePeriodi =
       >
         <td className="p-2">
           <div className="flex items-center gap-2">
-            {isControlloInRitardo(
-              r.data_esecuzione,
-              r.cadenza_controllo
-            ) && (
-              <span
-                className="h-3 w-3 rounded-full bg-red-600 inline-block"
-                title="Controllo di gestione in ritardo"
-              />
-            )}
+          {periodiElaborati < 4 &&
+  isControlloInRitardo(
+    r.data_esecuzione,
+    r.cadenza_controllo
+  ) && (
+    <span
+      className="h-3 w-3 rounded-full bg-red-600 inline-block"
+      title="Controllo di gestione con periodi ancora da completare"
+    />
+  )}
 
             <span className="font-medium">
               {r.cliente?.ragione_sociale ||
@@ -923,17 +924,19 @@ const percentualePeriodi =
       </p>
     </div>
 
-    {!loadingPeriodiModal && (
-      <span className="text-sm font-semibold">
-        {
-          periodiModal.filter(
-            (p: any) =>
-              p?.import?.stato === "elaborato"
-          ).length
-        }
-        /4 acquisiti
-      </span>
+  {!loadingPeriodiModal && (
+  <span className="text-sm font-semibold">
+    {Math.min(
+      4,
+      periodiModal.filter(
+        (p: any) =>
+          p?.import?.stato ===
+          "elaborato"
+      ).length
     )}
+    /4 acquisiti
+  </span>
+)}
   </div>
 
   {loadingPeriodiModal && (
