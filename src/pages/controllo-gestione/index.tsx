@@ -54,6 +54,10 @@ export default function ControlloGestioneIndex() {
   const [utentiDisponibili, setUtentiDisponibili] = useState<any[]>([]);
 const [utenteEditSelezionato, setUtenteEditSelezionato] = useState("");
 
+  const [periodiModal, setPeriodiModal] = useState<any[]>([]);
+const [loadingPeriodiModal, setLoadingPeriodiModal] = useState(false);
+const [errorePeriodiModal, setErrorePeriodiModal] = useState("");
+
 const [showReportModal, setShowReportModal] = useState(false);
 const [reportAnno, setReportAnno] = useState(String(new Date().getFullYear()));
 const [reportClienteId, setReportClienteId] = useState("");
@@ -128,6 +132,55 @@ async function load() {
     setRiepiloghiByControllo(mappa);
   } finally {
     setLoadingRiepiloghi(false);
+  }
+}
+  async function caricaPeriodiModal(
+  clienteId: string,
+  anno: string
+) {
+  if (!clienteId || !anno) {
+    setPeriodiModal([]);
+    return;
+  }
+
+  try {
+    setLoadingPeriodiModal(true);
+    setErrorePeriodiModal("");
+
+    const response = await fetch(
+      `/api/controllo-gestione/analisi-periodi?cliente_id=${encodeURIComponent(
+        clienteId
+      )}&anno=${encodeURIComponent(anno)}`
+    );
+
+    const json = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        json?.error ||
+          "Errore caricamento periodi contabili"
+      );
+    }
+
+    setPeriodiModal(
+      Array.isArray(json?.periodi)
+        ? json.periodi
+        : []
+    );
+  } catch (error: any) {
+    console.error(
+      "Errore caricamento periodi modale:",
+      error
+    );
+
+    setPeriodiModal([]);
+
+    setErrorePeriodiModal(
+      error?.message ||
+        "Errore caricamento periodi contabili"
+    );
+  } finally {
+    setLoadingPeriodiModal(false);
   }
 }
 
@@ -546,20 +599,34 @@ return (
             </button>
 
             <button
-              title="Modifica"
-              onClick={() => {
-                setEditRecord({ ...r });
-                setRiepilogoControllo(null);
-                setErroreRiepilogo("");
+  title="Modifica"
+  onClick={() => {
+    setEditRecord({ ...r });
 
-                void caricaRiepilogoControllo(
-                  r.id
-                );
-              }}
-              className="border p-2 rounded"
-            >
-              <Pencil className="h-4 w-4" />
-            </button>
+    setPeriodiModal([]);
+    setErrorePeriodiModal("");
+
+    const riepilogo =
+      riepiloghiByControllo?.[r.id];
+
+    const dataPeriodo =
+      riepilogo?.import?.data_riferimento ||
+      r.data_storico ||
+      r.data_esecuzione ||
+      "";
+
+    const annoControllo =
+      String(dataPeriodo).slice(0, 4);
+
+    void caricaPeriodiModal(
+      r.cliente_id,
+      annoControllo
+    );
+  }}
+  className="border p-2 rounded"
+>
+  <Pencil className="h-4 w-4" />
+</button>
 
             <button
               title="Elimina tutto"
@@ -703,274 +770,177 @@ return (
           onChange={(e) => setEditRecord({ ...editRecord, note: e.target.value })}
         />
 
+     <div className="border rounded p-4 bg-gray-50 space-y-3">
+  <div className="flex items-center justify-between">
+    <div>
+      <h3 className="font-semibold text-lg">
+        Situazioni contabili
+      </h3>
+
+      <p className="text-xs text-gray-500 mt-1">
+        Periodi acquisiti tramite importazione contabile.
+      </p>
+    </div>
+
+    {!loadingPeriodiModal && (
+      <span className="text-sm font-semibold">
+        {
+          periodiModal.filter(
+            (p: any) =>
+              p?.import?.stato === "elaborato"
+          ).length
+        }
+        /4 acquisiti
+      </span>
+    )}
+  </div>
+
+  {loadingPeriodiModal && (
+    <div className="text-sm text-gray-500">
+      Caricamento periodi...
+    </div>
+  )}
+
+  {!loadingPeriodiModal &&
+    errorePeriodiModal && (
+      <div className="border border-red-200 bg-red-50 text-red-700 rounded p-3 text-sm">
+        {errorePeriodiModal}
+      </div>
+    )}
+
+  {!loadingPeriodiModal &&
+    !errorePeriodiModal && (
+      <div className="grid grid-cols-1 gap-2">
+        {[
+          {
+            label: "1° trimestre",
+            data: "-03-31",
+          },
+          {
+            label: "2° trimestre",
+            data: "-06-30",
+          },
+          {
+            label: "3° trimestre",
+            data: "-09-30",
+          },
+          {
+            label: "4° trimestre",
+            data: "-12-31",
+          },
+        ].map((trimestre) => {
+          const periodo =
+            periodiModal.find(
+              (p: any) =>
+                String(
+                  p?.import
+                    ?.data_riferimento || ""
+                ).endsWith(
+                  trimestre.data
+                )
+            );
+
+          const elaborato =
+            periodo?.import?.stato ===
+            "elaborato";
+
+          return (
+            <div
+              key={trimestre.label}
+              className="border rounded bg-white px-3 py-2 flex items-center justify-between"
+            >
+              <div>
+                <div className="font-medium text-sm">
+                  {trimestre.label}
+                </div>
+
+                <div className="text-xs text-gray-500">
+                  {periodo?.import
+                    ?.data_riferimento
+                    ? new Date(
+                        periodo.import.data_riferimento
+                      ).toLocaleDateString(
+                        "it-IT"
+                      )
+                    : "Non importato"}
+                </div>
+              </div>
+
+              {elaborato ? (
+                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                  Elaborato
+                </span>
+              ) : periodo ? (
+                <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded">
+                  Da elaborare
+                </span>
+              ) : (
+                <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded">
+                  Da importare
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    )}
+</div>
+
       <div className="border rounded p-4 space-y-4 bg-gray-50">
   <h3 className="font-semibold text-lg">
     Checklist controllo di gestione
   </h3>
 
-  {/* STEP 1 */}
-  <div className="border rounded-lg bg-white p-4 space-y-4">
-    <label className="flex items-center gap-3">
-      <input
-        type="checkbox"
-        checked={!!editRecord.step_1_completato}
-        onChange={(e) =>
-          setEditRecord({
-            ...editRecord,
-            step_1_completato: e.target.checked,
-          })
-        }
-      />
-
-      <span className="font-medium">
-        Step 1 — Rilevamento Dati
-      </span>
-
-      {editRecord.step_1_completato && (
-        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
-          Completato
-        </span>
-      )}
-    </label>
-
-    {loadingRiepilogo && (
-      <div className="border rounded p-3 bg-gray-50 text-sm text-gray-600">
-        Caricamento dati contabili...
-      </div>
-    )}
-
-    {!loadingRiepilogo && erroreRiepilogo && (
-      <div className="border border-red-200 rounded p-3 bg-red-50 text-sm text-red-700">
-        {erroreRiepilogo}
-      </div>
-    )}
-
-    {!loadingRiepilogo &&
-      !erroreRiepilogo &&
-      !riepilogoControllo && (
-        <div className="border rounded p-3 bg-yellow-50 text-sm">
-          Nessuna situazione contabile elaborata per questo controllo.
-        </div>
-      )}
-
-  {!loadingRiepilogo &&
-  !erroreRiepilogo &&
-  riepilogoControllo && (
-    <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-3">
-  <div className="border rounded p-3">
-    <div className="text-xs text-gray-500">
-      Periodo contabile
-    </div>
-
-    <div className="font-semibold">
-      {riepilogoControllo.import?.data_riferimento
-        ? formatDateIT(
-            riepilogoControllo.import.data_riferimento
-          )
-        : "-"}
-    </div>
-  </div>
-
-  <div className="border rounded p-3">
-    <div className="text-xs text-gray-500">
-      Conti importati
-    </div>
-
-    <div className="font-semibold">
-      {riepilogoControllo.import?.numero_conti ?? 0}
-    </div>
-  </div>
-
-  <div className="border rounded p-3">
-    <div className="text-xs text-gray-500">
-      Stato import
-    </div>
-
-    <div className="font-semibold">
-      {riepilogoControllo.import?.stato || "Non importato"}
-    </div>
-  </div>
-</div>
-
-<div className="grid grid-cols-3 gap-3">
-  <div className="border rounded p-3 bg-green-50">
-    <div className="text-xs text-gray-500">
-      Classificati
-    </div>
-
-    <div className="font-semibold text-green-700">
-      {riepilogoControllo.import?.conti_mappati ?? 0}
-    </div>
-  </div>
-
-  <div className="border rounded p-3">
-    <div className="text-xs text-gray-500">
-      Da classificare
-    </div>
-
-    <div
-      className={
-        (riepilogoControllo.import?.conti_da_mappare ?? 0) === 0
-          ? "font-semibold text-green-700"
-          : "font-semibold text-red-600"
+ {/* STEP 1 */}
+<div className="border rounded-lg bg-white p-4 space-y-3">
+  <label className="flex items-center gap-3">
+    <input
+      type="checkbox"
+      checked={
+        !!editRecord.step_1_completato
       }
-    >
-      {riepilogoControllo.import?.conti_da_mappare ?? 0}
-    </div>
-  </div>
-
-  <div className="border rounded p-3">
-    <div className="text-xs text-gray-500">
-      Elaborazione
-    </div>
-
-    <div className="font-semibold">
-      {riepilogoControllo.indici
-        ? "Disponibile"
-        : "Non elaborata"}
-    </div>
-  </div>
-</div>
-
-      {riepilogoControllo.indici && (
-  <div className="border rounded-lg p-4 bg-slate-50 space-y-3">
-    <div className="font-medium">
-      Dati economico-finanziari
-    </div>
-
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-      <div className="border rounded bg-white p-3">
-        <div className="text-xs text-gray-500">
-          Ricavi
-        </div>
-
-        <div className="font-bold">
-          {Number(
-            riepilogoControllo.indici.ricavi || 0
-          ).toLocaleString("it-IT", {
-            style: "currency",
-            currency: "EUR",
-          })}
-        </div>
-      </div>
-
-      <div className="border rounded bg-white p-3">
-        <div className="text-xs text-gray-500">
-          EBITDA
-        </div>
-
-        <div className="font-bold">
-          {Number(
-            riepilogoControllo.indici.ebitda || 0
-          ).toLocaleString("it-IT", {
-            style: "currency",
-            currency: "EUR",
-          })}
-        </div>
-      </div>
-
-      <div className="border rounded bg-white p-3">
-        <div className="text-xs text-gray-500">
-          Risultato
-        </div>
-
-        <div className="font-bold">
-          {Number(
-            riepilogoControllo.indici.utile_netto || 0
-          ).toLocaleString("it-IT", {
-            style: "currency",
-            currency: "EUR",
-          })}
-        </div>
-      </div>
-
-      <div className="border rounded bg-white p-3">
-        <div className="text-xs text-gray-500">
-          Patrimonio netto
-        </div>
-
-        <div className="font-bold">
-          {Number(
-            riepilogoControllo.indici.patrimonio_netto || 0
-          ).toLocaleString("it-IT", {
-            style: "currency",
-            currency: "EUR",
-          })}
-        </div>
-      </div>
-    </div>
- </div>
-)}
-
-{riepilogoControllo.integrazione && (
-  <div className="border rounded-lg p-4 bg-slate-50">
-    <div className="text-xs text-gray-500">
-      Debiti finanziari complessivi
-    </div>
-
-    <div className="text-lg font-bold">
-      {(
-        Number(
-          riepilogoControllo.integrazione
-            .debiti_finanziari_bt || 0
-        ) +
-        Number(
-          riepilogoControllo.integrazione
-            .debiti_finanziari_mlt || 0
-        )
-      ).toLocaleString("it-IT", {
-        style: "currency",
-        currency: "EUR",
-      })}
-    </div>
-
-    <div className="text-xs text-gray-500 mt-1">
-      BT{" "}
-      {Number(
-        riepilogoControllo.integrazione
-          .debiti_finanziari_bt || 0
-      ).toLocaleString("it-IT", {
-        style: "currency",
-        currency: "EUR",
-      })}
-      {" · "}
-      M/L{" "}
-      {Number(
-        riepilogoControllo.integrazione
-          .debiti_finanziari_mlt || 0
-      ).toLocaleString("it-IT", {
-        style: "currency",
-        currency: "EUR",
-      })}
-    </div>
-  </div>
-)}
-
-<div className="flex justify-end">
-  <Link
-    href={`/controllo-gestione/import-contabilita?cliente_id=${editRecord.cliente_id}&controllo_id=${editRecord.id}`}
-    className="bg-black text-white px-4 py-2 rounded text-sm"
-  >
-    Apri import contabilità
-  </Link>
-</div>
-        </div>
-      )}
-
-    <textarea
-      className="border p-2 rounded w-full text-sm"
-      rows={2}
-      placeholder="Note operative step..."
-      value={editRecord.step_1_note || ""}
       onChange={(e) =>
         setEditRecord({
           ...editRecord,
-          step_1_note: e.target.value,
+          step_1_completato:
+            e.target.checked,
         })
       }
     />
-  </div>
+
+    <span className="font-medium">
+      Step 1 — Rilevamento dati
+    </span>
+
+    {editRecord.step_1_completato && (
+      <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+        Completato
+      </span>
+    )}
+  </label>
+
+  <p className="text-xs text-gray-500">
+    Acquisizione e verifica delle situazioni contabili.
+    I dettagli dei periodi sono disponibili nella pagina
+    Analisi controllo di gestione.
+  </p>
+
+  <textarea
+    className="border p-2 rounded w-full text-sm"
+    rows={2}
+    placeholder="Note operative sul rilevamento dati..."
+    value={
+      editRecord.step_1_note || ""
+    }
+    onChange={(e) =>
+      setEditRecord({
+        ...editRecord,
+        step_1_note:
+          e.target.value,
+      })
+    }
+  />
+</div>
 
   {/* STEP 2 - 4 */}
   {[
