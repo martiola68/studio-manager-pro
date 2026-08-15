@@ -120,18 +120,7 @@ async function leggiTutteLeRigheImport(
     const to =
       from + PAGE_SIZE - 1;
 
-    console.log(
-  "DEBUG STEP1",
-  {
-    import_id,
-    controllo_id_import:
-      importRecord.controllo_id,
-    cliente_id:
-      importRecord.cliente_id,
-  }
-);
-
-    const {
+     const {
       data,
       error,
     } = await supabaseAdmin
@@ -1213,15 +1202,21 @@ if (deleteSaldiError) {
         import_id
       );
 
-  if (updateImportError) {
+if (updateImportError) {
   throw updateImportError;
 }
+
+console.log("DEBUG STEP1 BEFORE UPDATE", {
+  import_id,
+  controllo_id_import: importRecord.controllo_id,
+  cliente_id: importRecord.cliente_id,
+});
 
 /*
  * =====================================================
  * 18. COMPLETAMENTO AUTOMATICO STEP 1
  * =====================================================
- *
+ */
  * Se l'elaborazione è arrivata fino a questo punto:
  * - l'import è valido;
  * - tutti i conti sono classificati;
