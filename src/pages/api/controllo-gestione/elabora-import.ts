@@ -120,6 +120,17 @@ async function leggiTutteLeRigheImport(
     const to =
       from + PAGE_SIZE - 1;
 
+    console.log(
+  "DEBUG STEP1",
+  {
+    import_id,
+    controllo_id_import:
+      importRecord.controllo_id,
+    cliente_id:
+      importRecord.cliente_id,
+  }
+);
+
     const {
       data,
       error,
@@ -1220,6 +1231,7 @@ if (deleteSaldiError) {
  * Quindi lo Step 1 - Rilevamento dati è completato.
  */
 const {
+  data: step1Updated,
   error: step1Error,
 } = await supabaseAdmin
   .from("tbcontrollo_gestione")
@@ -1229,11 +1241,21 @@ const {
   .eq(
     "id",
     importRecord.controllo_id
-  );
+  )
+  .select(`
+    id,
+    cliente_id,
+    step_1_completato
+  `);
 
 if (step1Error) {
   throw step1Error;
 }
+
+console.log(
+  "DEBUG STEP1 UPDATED",
+  step1Updated
+);
 
 /*
  * =====================================================
