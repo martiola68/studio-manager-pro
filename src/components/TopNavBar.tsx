@@ -426,15 +426,36 @@ const menuItems: MenuItem[] = [
         ],
       },
       {
-        label: "Controllo di gestione",
-        icon: <BriefcaseBusiness className="h-4 w-4" />,
-        children: [
-          { label: "Elenco generale", href: "/controllo-gestione", icon: <FileText className="h-4 w-4" /> },
-          { label: "Nuovo", href: "/controllo-gestione/nuovo", icon: <FileText className="h-4 w-4" /> },
-          { label: "Storico controlli", href: "/controllo-gestione/storico", icon: <Clock className="h-4 w-4" /> },
-          { label: "Calcolo indici", href: "/controllo-gestione/indici", icon: <BarChart3 className="h-4 w-4" /> },
-        ],
-      },
+  label: "Controllo di gestione",
+  icon: <BriefcaseBusiness className="h-4 w-4" />,
+  children: [
+    {
+      label: "Elenco generale",
+      href: "/controllo-gestione",
+      icon: <FileText className="h-4 w-4" />,
+    },
+    {
+      label: "Nuovo",
+      href: "/controllo-gestione/nuovo",
+      icon: <FileText className="h-4 w-4" />,
+    },
+    {
+      label: "Importa contabilità",
+      href: "/controllo-gestione/import-contabilita",
+      icon: <RefreshCcw className="h-4 w-4" />,
+    },
+    {
+      label: "Piano dei conti",
+      href: "/controllo-gestione/piano-conti",
+      icon: <Settings className="h-4 w-4" />,
+    },
+    {
+      label: "Storico controlli",
+      href: "/controllo-gestione/storico",
+      icon: <Clock className="h-4 w-4" />,
+    },
+  ],
+},
       {
         label: "Contenzioso",
         icon: <Scale className="h-4 w-4" />,
