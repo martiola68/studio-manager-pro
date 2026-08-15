@@ -1216,7 +1216,7 @@ console.log("DEBUG STEP1 BEFORE UPDATE", {
  * =====================================================
  * 18. COMPLETAMENTO AUTOMATICO STEP 1
  * =====================================================
- */
+ *
  * Se l'elaborazione è arrivata fino a questo punto:
  * - l'import è valido;
  * - tutti i conti sono classificati;
@@ -1225,6 +1225,7 @@ console.log("DEBUG STEP1 BEFORE UPDATE", {
  *
  * Quindi lo Step 1 - Rilevamento dati è completato.
  */
+    
 const {
   data: step1Updated,
   error: step1Error,
