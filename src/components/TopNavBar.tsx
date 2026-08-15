@@ -425,10 +425,6 @@ const menuItems: MenuItem[] = [
           { label: "Follow-up", href: "/revisione-controllo/followup", icon: <Clock className="h-4 w-4" /> },
         ],
       },
-      {
-  label: "Controllo di gestione",
-  icon: <BriefcaseBusiness className="h-4 w-4" />,
-  children: [
    {
   label: "Controllo di gestione",
   icon: <BriefcaseBusiness className="h-4 w-4" />,
@@ -571,9 +567,7 @@ const menuItems: MenuItem[] = [
           { label: "Tipo Promemoria", href: "/impostazioni/tipo-promemoria", icon: <Settings className="h-4 w-4" /> },
         ],
       },
-    ],
-  },
-];
+      ],
 
   const isExactRoute = (href?: string) => {
     if (!href) return false;
