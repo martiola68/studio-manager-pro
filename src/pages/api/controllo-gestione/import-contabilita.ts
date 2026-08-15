@@ -604,7 +604,7 @@ const payloadImport = {
   conti_da_mappare:
     contiDaMappare,
 
-  numero_errori:
+   numero_errori:
     anomalie.length,
 
   stato:
@@ -614,9 +614,6 @@ const payloadImport = {
     anomalie.length > 0
       ? anomalie.join(" | ")
       : null,
-
-  updated_at:
-    new Date().toISOString(),
 };
 
 if (importEsistente?.id) {
