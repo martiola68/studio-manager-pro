@@ -34,13 +34,13 @@ function n(value: any) {
 }
 
 function euro(value: any) {
-  return `${n(value).toLocaleString(
+  return n(value).toLocaleString(
     "it-IT",
     {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }
-  )} EUR`;
+  );
 }
 
 function percent(value: any) {
@@ -1101,30 +1101,27 @@ export async function GET(
      * =====================================================
      */
 
-    section(
-      "PERIODI CONTABILI"
-    );
+   section(
+  "PERIODI CONTABILI"
+);
 
-    elaborati.forEach(
-      (
-        item: any,
-        index: number
-      ) => {
-        row(
-          `Q${index + 1} - ${dataIT(
-            item.import
-              .data_riferimento
-          )}`,
-          `${
-            item.import
-              .conti_mappati
-          }/${
-            item.import
-              .numero_conti
-          } conti - Elaborato`
-        );
-      }
+elaborati.forEach(
+  (
+    item: any,
+    index: number
+  ) => {
+    text(
+      `Q${index + 1} - ${dataIT(
+        item.import
+          .data_riferimento
+      )}`,
+      MARGIN + 10,
+      9,
+      false,
+      navy
     );
+  }
+);
 
     /*
      * =====================================================
@@ -1142,15 +1139,23 @@ export async function GET(
       navy
     );
 
-    text(
-      "Valori progressivi dall'inizio dell'esercizio e variazioni rispetto al periodo precedente.",
-      MARGIN,
-      8,
-      false,
-      gray
-    );
+  text(
+  "Valori progressivi dall'inizio dell'esercizio e variazioni rispetto al periodo precedente.",
+  MARGIN,
+  8,
+  false,
+  gray
+);
 
-    y -= 7;
+text(
+  "Valori espressi in euro.",
+  MARGIN,
+  8,
+  false,
+  gray
+);
+
+y -= 7;
 
     const xCum =
       [
@@ -1422,15 +1427,23 @@ export async function GET(
       "PERFORMANCE TRIMESTRALE"
     );
 
-    text(
-      "Valori economici del singolo trimestre ottenuti per differenza tra situazioni cumulative.",
-      MARGIN,
-      8,
-      false,
-      gray
-    );
+   text(
+  "Valori economici del singolo trimestre ottenuti per differenza tra situazioni cumulative.",
+  MARGIN,
+  8,
+  false,
+  gray
+);
 
-    y -= 5;
+text(
+  "Valori espressi in euro.",
+  MARGIN,
+  8,
+  false,
+  gray
+);
+
+y -= 5;
 
     tableHeader(
       [
@@ -1815,108 +1828,7 @@ export async function GET(
       );
     }
 
-    /*
-     * =====================================================
-     * CHECKLIST
-     * =====================================================
-     */
-
-    const ultimoControllo =
-      elaborati[
-        last
-      ].controllo;
-
-    if (ultimoControllo) {
-      section(
-        "CHECKLIST CONTROLLO"
-      );
-
-      const steps =
-        [
-          {
-            label:
-              "Step 1 - Rilevamento dati",
-            done:
-              ultimoControllo
-                .step_1_completato,
-            note:
-              ultimoControllo
-                .step_1_note,
-          },
-          {
-            label:
-              "Step 2 - Analisi scostamenti",
-            done:
-              ultimoControllo
-                .step_2_completato,
-            note:
-              ultimoControllo
-                .step_2_note,
-          },
-          {
-            label:
-              "Step 3 - Reporting",
-            done:
-              ultimoControllo
-                .step_3_completato,
-            note:
-              ultimoControllo
-                .step_3_note,
-          },
-          {
-            label:
-              "Step 4 - Azioni correttive",
-            done:
-              ultimoControllo
-                .step_4_completato,
-            note:
-              ultimoControllo
-                .step_4_note,
-          },
-        ];
-
-      steps.forEach(
-        (step) => {
-          row(
-            step.label,
-            step.done
-              ? "COMPLETATO"
-              : "DA COMPLETARE",
-            Boolean(
-              step.done
-            )
-          );
-
-          if (
-            step.note &&
-            String(
-              step.note
-            ).trim()
-          ) {
-            text(
-              `Note: ${String(
-                step.note
-              ).replace(
-                /\r?\n/g,
-                " "
-              )}`,
-              MARGIN + 20,
-              8,
-              false,
-              gray
-            );
-          }
-        }
-      );
-    }
-
-    /*
-     * =====================================================
-     * FOOTER
-     * =====================================================
-     */
-
-    const pages =
+     const pages =
       pdf.getPages();
 
     pages.forEach(
