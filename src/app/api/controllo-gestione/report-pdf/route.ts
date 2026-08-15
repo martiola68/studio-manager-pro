@@ -1,105 +1,182 @@
-import { NextRequest, NextResponse } from "next/server";
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+
 import {
   PDFDocument,
   StandardFonts,
   rgb,
 } from "pdf-lib";
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+
+import {
+  getSupabaseAdmin,
+} from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
 
-const supabaseAdmin = getSupabaseAdmin();
+const supabaseAdmin =
+  getSupabaseAdmin();
 
-function formatDateIT(value?: string | null) {
-  if (!value) return "—";
+/*
+ * =====================================================
+ * FORMATTAZIONE
+ * =====================================================
+ */
 
-  const data = String(value).slice(0, 10);
-  const [y, m, d] = data.split("-");
+function n(value: any) {
+  const parsed =
+    Number(value);
 
-  if (!y || !m || !d) return value;
+  return Number.isFinite(parsed)
+    ? parsed
+    : 0;
+}
+
+function euro(value: any) {
+  return `${n(value).toLocaleString(
+    "it-IT",
+    {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }
+  )} EUR`;
+}
+
+function percent(value: any) {
+  return `${n(value).toLocaleString(
+    "it-IT",
+    {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }
+  )}%`;
+}
+
+function numero(value: any) {
+  return n(value).toLocaleString(
+    "it-IT",
+    {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }
+  );
+}
+
+function dataIT(
+  value?: string | null
+) {
+  if (!value) return "-";
+
+  const [y, m, d] =
+    String(value)
+      .slice(0, 10)
+      .split("-");
 
   return `${d}/${m}/${y}`;
 }
 
-function euro(value: any) {
-  const numero = Number(value || 0);
-
-  return numero.toLocaleString("it-IT", {
-    style: "currency",
-    currency: "EUR",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
-
-function percentuale(value: any) {
-  if (
-    value === null ||
-    value === undefined ||
-    value === ""
-  ) {
-    return "—";
+function deltaPercent(
+  attuale: number,
+  precedente: number
+) {
+  if (!precedente) {
+    return null;
   }
 
-  return `${Number(value).toLocaleString("it-IT", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}%`;
-}
-
-function numero(value: any) {
-  if (
-    value === null ||
-    value === undefined ||
-    value === ""
-  ) {
-    return "—";
-  }
-
-  return Number(value).toLocaleString("it-IT", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
-
-function yesNo(value: any) {
-  return value ? "SI" : "NO";
-}
-
-function cleanText(value: any) {
-  return String(value || "—")
-    .replace(/\r?\n/g, " ")
-    .trim();
-}
-
-function utentiLabel(record: any) {
   return (
-    record?.utenti
-      ?.map((u: any) =>
-        [u.utente?.nome, u.utente?.cognome]
-          .filter(Boolean)
-          .join(" ") ||
-        u.utente?.email
-      )
-      .filter(Boolean)
-      .join(", ") || "—"
+    ((attuale - precedente) /
+      Math.abs(precedente)) *
+    100
   );
 }
 
-export async function GET(req: NextRequest) {
+function deltaPP(
+  attuale: number,
+  precedente: number
+) {
+  return attuale - precedente;
+}
+
+function formatDeltaPercent(
+  value: number | null
+) {
+  if (value === null) {
+    return "-";
+  }
+
+  const segno =
+    value > 0 ? "+" : "";
+
+  return `${segno}${value.toLocaleString(
+    "it-IT",
+    {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    }
+  )}%`;
+}
+
+function formatDeltaPP(
+  value: number | null
+) {
+  if (value === null) {
+    return "-";
+  }
+
+  const segno =
+    value > 0 ? "+" : "";
+
+  return `${segno}${value.toLocaleString(
+    "it-IT",
+    {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }
+  )} p.p.`;
+}
+
+function margine(
+  valore: number,
+  ricavi: number
+) {
+  if (!ricavi) return 0;
+
+  return (
+    (valore / ricavi) *
+    100
+  );
+}
+
+/*
+ * =====================================================
+ * API
+ * =====================================================
+ */
+
+export async function GET(
+  req: NextRequest
+) {
   try {
-    const { searchParams } = new URL(req.url);
+    const {
+      searchParams,
+    } = new URL(req.url);
 
     const clienteId =
-      searchParams.get("cliente_id");
+      searchParams.get(
+        "cliente_id"
+      );
 
     const anno =
-      searchParams.get("anno");
+      searchParams.get(
+        "anno"
+      );
 
     if (!clienteId) {
       return NextResponse.json(
         {
-          error: "cliente_id mancante",
+          error:
+            "cliente_id mancante",
         },
         {
           status: 400,
@@ -110,7 +187,8 @@ export async function GET(req: NextRequest) {
     if (!anno) {
       return NextResponse.json(
         {
-          error: "anno mancante",
+          error:
+            "anno mancante",
         },
         {
           status: 400,
@@ -119,12 +197,11 @@ export async function GET(req: NextRequest) {
     }
 
     /*
-     * 1. Anagrafica società.
-     *
-     * La leggiamo direttamente da tbclienti:
-     * non dipendiamo più dal fatto che esistano
-     * controlli per poter stampare l'intestazione.
+     * =====================================================
+     * 1. CLIENTE
+     * =====================================================
      */
+
     const {
       data: cliente,
       error: clienteError,
@@ -135,7 +212,10 @@ export async function GET(req: NextRequest) {
         ragione_sociale,
         codice_fiscale
       `)
-      .eq("id", clienteId)
+      .eq(
+        "id",
+        clienteId
+      )
       .maybeSingle();
 
     if (clienteError) {
@@ -145,7 +225,8 @@ export async function GET(req: NextRequest) {
     if (!cliente) {
       return NextResponse.json(
         {
-          error: "Società non trovata",
+          error:
+            "Società non trovata",
         },
         {
           status: 404,
@@ -154,976 +235,1743 @@ export async function GET(req: NextRequest) {
     }
 
     /*
-     * 2. Recuperiamo TUTTI i controlli
-     * della società.
-     *
-     * NON filtriamo l'anno su data_esecuzione:
-     * l'anno contabile deriva dall'import.
+     * =====================================================
+     * 2. CONTROLLI
+     * =====================================================
      */
+
     const {
       data: controlli,
       error: controlliError,
     } = await supabaseAdmin
-      .from("tbcontrollo_gestione")
+      .from(
+        "tbcontrollo_gestione"
+      )
       .select(`
-        *,
-        utenti:tbcontrollo_gestione_utenti(
-          *,
-          utente:tbutenti(*)
-        )
+        id,
+        cliente_id,
+        cadenza_controllo,
+        data_esecuzione,
+        data_storico,
+        step_1_completato,
+        step_1_note,
+        step_2_completato,
+        step_2_note,
+        step_3_completato,
+        step_3_note,
+        step_4_completato,
+        step_4_note,
+        created_at
       `)
-      .eq("cliente_id", clienteId)
-      .order("data_esecuzione", {
-        ascending: true,
-      });
+      .eq(
+        "cliente_id",
+        clienteId
+      );
 
     if (controlliError) {
       throw controlliError;
     }
 
     const controlloIds =
-      (controlli || []).map((r: any) => r.id);
+      (controlli || []).map(
+        (item: any) =>
+          item.id
+      );
 
-    /*
-     * 3. Recuperiamo gli import appartenenti
-     * all'ANNO CONTABILE selezionato.
-     */
-    let importRecords: any[] = [];
-
-    if (controlloIds.length > 0) {
-      const {
-        data: imports,
-        error: importsError,
-      } = await supabaseAdmin
-        .from("tbcontrollo_gestione_import")
-        .select(`
-          id,
-          controllo_id,
-          software_contabile,
-          data_riferimento,
-          numero_conti,
-          conti_mappati,
-          conti_da_mappare,
-          stato,
-          created_at
-        `)
-        .in("controllo_id", controlloIds)
-        .gte(
-          "data_riferimento",
-          `${anno}-01-01`
-        )
-        .lte(
-          "data_riferimento",
-          `${anno}-12-31`
-        )
-        .order("data_riferimento", {
-          ascending: true,
-        })
-        .order("created_at", {
-          ascending: false,
-        });
-
-      if (importsError) {
-        throw importsError;
-      }
-
-      /*
-       * Possono esistere più tentativi di import
-       * dello stesso controllo.
-       * Manteniamo il più recente per controllo.
-       */
-      const seen = new Set<string>();
-
-      importRecords = (imports || []).filter(
-        (imp: any) => {
-          if (seen.has(imp.controllo_id)) {
-            return false;
-          }
-
-          seen.add(imp.controllo_id);
-          return true;
+    if (
+      controlloIds.length === 0
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Nessun controllo disponibile",
+        },
+        {
+          status: 404,
         }
       );
     }
 
-    const controlloIdsReport =
-      importRecords.map(
-        (imp: any) => imp.controllo_id
+    /*
+     * =====================================================
+     * 3. IMPORT ANNO
+     * =====================================================
+     */
+
+    const {
+      data: importsRaw,
+      error: importsError,
+    } = await supabaseAdmin
+      .from(
+        "tbcontrollo_gestione_import"
+      )
+      .select(`
+        id,
+        controllo_id,
+        software_contabile,
+        data_riferimento,
+        numero_conti,
+        conti_mappati,
+        conti_da_mappare,
+        stato,
+        created_at
+      `)
+      .in(
+        "controllo_id",
+        controlloIds
+      )
+      .gte(
+        "data_riferimento",
+        `${anno}-01-01`
+      )
+      .lte(
+        "data_riferimento",
+        `${anno}-12-31`
+      );
+
+    if (importsError) {
+      throw importsError;
+    }
+
+    /*
+     * Se esistono vecchi import duplicati,
+     * teniamo un solo import autorevole
+     * per ogni data_riferimento:
+     *
+     * - elaborato prima;
+     * - più recente a parità di stato.
+     */
+
+    const importsOrdinati =
+      [
+        ...(importsRaw || []),
+      ].sort(
+        (
+          a: any,
+          b: any
+        ) => {
+          const ae =
+            a.stato ===
+            "elaborato"
+              ? 1
+              : 0;
+
+          const be =
+            b.stato ===
+            "elaborato"
+              ? 1
+              : 0;
+
+          if (ae !== be) {
+            return be - ae;
+          }
+
+          return (
+            new Date(
+              b.created_at || 0
+            ).getTime() -
+            new Date(
+              a.created_at || 0
+            ).getTime()
+          );
+        }
+      );
+
+    const mapImport =
+      new Map<
+        string,
+        any
+      >();
+
+    for (
+      const item
+      of importsOrdinati
+    ) {
+      const data =
+        String(
+          item.data_riferimento ||
+            ""
+        ).slice(0, 10);
+
+      if (
+        data &&
+        !mapImport.has(data)
+      ) {
+        mapImport.set(
+          data,
+          item
+        );
+      }
+    }
+
+    const imports =
+      Array.from(
+        mapImport.values()
+      ).sort(
+        (
+          a: any,
+          b: any
+        ) =>
+          String(
+            a.data_riferimento
+          ).localeCompare(
+            String(
+              b.data_riferimento
+            )
+          )
       );
 
     /*
-     * 4. Risultati economico-finanziari.
+     * =====================================================
+     * 4. INDICI
+     * =====================================================
      */
-    let indiciRecords: any[] = [];
 
-    if (controlloIdsReport.length > 0) {
-      const {
-        data: indici,
-        error: indiciError,
-      } = await supabaseAdmin
-        .from("tbcontrollo_gestione_indici")
-        .select(`
-          *
-        `)
-        .in(
-          "controllo_gestione_id",
-          controlloIdsReport
-        );
+    const {
+      data: indiciRaw,
+      error: indiciError,
+    } = await supabaseAdmin
+      .from(
+        "tbcontrollo_gestione_indici"
+      )
+      .select(`
+        *,
+        controllo_gestione_id
+      `)
+      .in(
+        "controllo_gestione_id",
+        controlloIds
+      )
+      .order(
+        "updated_at",
+        {
+          ascending: false,
+        }
+      );
 
-      if (indiciError) {
-        throw indiciError;
-      }
-
-      indiciRecords = indici || [];
+    if (indiciError) {
+      throw indiciError;
     }
 
     /*
-     * 5. Integrazioni gestionali.
+     * Un solo set di indici,
+     * il più recente per controllo.
      */
-    let integrazioniRecords: any[] = [];
 
-    if (controlloIdsReport.length > 0) {
-      const {
-        data: integrazioni,
-        error: integrazioniError,
-      } = await supabaseAdmin
-        .from(
-          "tbcontrollo_gestione_integrazioni"
+    const indiciMap =
+      new Map<
+        string,
+        any
+      >();
+
+    for (
+      const item
+      of indiciRaw || []
+    ) {
+      if (
+        !indiciMap.has(
+          item.controllo_gestione_id
         )
-        .select(`
-          *
-        `)
-        .in(
-          "controllo_id",
-          controlloIdsReport
+      ) {
+        indiciMap.set(
+          item.controllo_gestione_id,
+          item
         );
-
-      if (integrazioniError) {
-        throw integrazioniError;
       }
-
-      integrazioniRecords =
-        integrazioni || [];
     }
 
-    const controlliMap = new Map(
-      (controlli || []).map((r: any) => [
-        r.id,
-        r,
-      ])
-    );
+    const periodi =
+      imports.map(
+        (imp: any) => ({
+          import: imp,
+          indici:
+            indiciMap.get(
+              imp.controllo_id
+            ) || null,
 
-    const indiciMap = new Map(
-      indiciRecords.map((r: any) => [
-        r.controllo_gestione_id,
-        r,
-      ])
-    );
+          controllo:
+            (controlli || [])
+              .find(
+                (c: any) =>
+                  c.id ===
+                  imp.controllo_id
+              ) || null,
+        })
+      );
 
-    const integrazioniMap = new Map(
-      integrazioniRecords.map((r: any) => [
-        r.controllo_id,
-        r,
-      ])
-    );
+    const elaborati =
+      periodi.filter(
+        (item: any) =>
+          item.import?.stato ===
+            "elaborato" &&
+          item.indici
+      );
 
-    const records = importRecords.map(
-      (imp: any) => ({
-        import: imp,
-        controllo:
-          controlliMap.get(
-            imp.controllo_id
-          ) || null,
-        indici:
-          indiciMap.get(
-            imp.controllo_id
-          ) || null,
-        integrazione:
-          integrazioniMap.get(
-            imp.controllo_id
-          ) || null,
-      })
-    );
+    if (
+      elaborati.length === 0
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Nessun periodo elaborato disponibile per il report",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
 
     /*
-     * 6. PDF
+     * =====================================================
+     * 5. DATI DERIVATI
+     * =====================================================
      */
-    const pdfDoc =
+
+    const get =
+      (
+        index: number,
+        field: string
+      ) =>
+        n(
+          elaborati[index]
+            ?.indici?.[field]
+        );
+
+    const ricavi =
+      elaborati.map(
+        (_, i) =>
+          get(
+            i,
+            "ricavi"
+          )
+      );
+
+    const costi =
+      elaborati.map(
+        (_, i) =>
+          get(
+            i,
+            "costi_operativi"
+          )
+      );
+
+    const ebitda =
+      elaborati.map(
+        (_, i) =>
+          get(
+            i,
+            "ebitda"
+          )
+      );
+
+    const ebit =
+      elaborati.map(
+        (_, i) =>
+          get(
+            i,
+            "ebit"
+          )
+      );
+
+    const risultato =
+      elaborati.map(
+        (_, i) =>
+          get(
+            i,
+            "utile_netto"
+          )
+      );
+
+    const trimestrePuro =
+      (
+        valori: number[]
+      ) =>
+        valori.map(
+          (
+            value,
+            index
+          ) =>
+            index === 0
+              ? value
+              : value -
+                valori[
+                  index - 1
+                ]
+        );
+
+    const ricaviPuri =
+      trimestrePuro(
+        ricavi
+      );
+
+    const costiPuri =
+      trimestrePuro(
+        costi
+      );
+
+    const ebitdaPuro =
+      trimestrePuro(
+        ebitda
+      );
+
+    const ebitPuro =
+      trimestrePuro(
+        ebit
+      );
+
+    const risultatoPuro =
+      trimestrePuro(
+        risultato
+      );
+
+    const margineEbitda =
+      ebitda.map(
+        (value, i) =>
+          margine(
+            value,
+            ricavi[i]
+          )
+      );
+
+    const margineNetto =
+      risultato.map(
+        (value, i) =>
+          margine(
+            value,
+            ricavi[i]
+          )
+      );
+
+    const margineEbitdaPuro =
+      ebitdaPuro.map(
+        (value, i) =>
+          margine(
+            value,
+            ricaviPuri[i]
+          )
+      );
+
+    const margineNettoPuro =
+      risultatoPuro.map(
+        (value, i) =>
+          margine(
+            value,
+            ricaviPuri[i]
+          )
+      );
+
+    const ultimo =
+      elaborati.length - 1;
+
+    const ultimoIndici =
+      elaborati[
+        ultimo
+      ].indici;
+
+    /*
+     * =====================================================
+     * 6. PDF
+     * =====================================================
+     */
+
+    const pdf =
       await PDFDocument.create();
 
-    const font =
-      await pdfDoc.embedFont(
+    const regular =
+      await pdf.embedFont(
         StandardFonts.Helvetica
       );
 
-    const boldFont =
-      await pdfDoc.embedFont(
+    const bold =
+      await pdf.embedFont(
         StandardFonts.HelveticaBold
       );
 
-    const pageWidth = 595.28;
-    const pageHeight = 841.89;
+    const PAGE_W =
+      595.28;
+
+    const PAGE_H =
+      841.89;
+
+    const MARGIN =
+      45;
 
     let page =
-      pdfDoc.addPage([
-        pageWidth,
-        pageHeight,
+      pdf.addPage([
+        PAGE_W,
+        PAGE_H,
       ]);
 
-    let y = pageHeight - 50;
+    let y =
+      PAGE_H - 45;
+
+    const navy =
+      rgb(
+        0.06,
+        0.10,
+        0.20
+      );
+
+    const gray =
+      rgb(
+        0.35,
+        0.39,
+        0.46
+      );
+
+    const lightGray =
+      rgb(
+        0.92,
+        0.94,
+        0.96
+      );
+
+    const green =
+      rgb(
+        0.05,
+        0.50,
+        0.28
+      );
+
+    const red =
+      rgb(
+        0.78,
+        0.12,
+        0.12
+      );
+
+    const blue =
+      rgb(
+        0.10,
+        0.32,
+        0.72
+      );
 
     function newPage() {
       page =
-        pdfDoc.addPage([
-          pageWidth,
-          pageHeight,
+        pdf.addPage([
+          PAGE_W,
+          PAGE_H,
         ]);
 
-      y = pageHeight - 50;
+      y =
+        PAGE_H - 45;
     }
 
-    function addPageIfNeeded(
-      requiredHeight = 50
+    function ensure(
+      heightNeeded:
+        number
     ) {
       if (
-        y - requiredHeight < 55
+        y -
+          heightNeeded <
+        55
       ) {
         newPage();
       }
     }
 
-    function drawText(
-      value: any,
-      options?: {
-        x?: number;
-        size?: number;
-        bold?: boolean;
-        color?: ReturnType<typeof rgb>;
-        maxWidth?: number;
-      }
+    function text(
+      value: string,
+      x = MARGIN,
+      size = 9,
+      isBold = false,
+      color = navy
     ) {
-      const x =
-        options?.x ?? 50;
-
-      const size =
-        options?.size ?? 10;
-
-      const bold =
-        options?.bold ?? false;
-
-      const color =
-        options?.color ??
-        rgb(0.08, 0.1, 0.15);
-
-      const maxWidth =
-        options?.maxWidth ?? 495;
-
-      const text =
-        cleanText(value);
-
-      addPageIfNeeded(size + 14);
+      ensure(
+        size + 10
+      );
 
       page.drawText(
-        text.slice(0, 180),
+        String(value)
+          .slice(0, 120),
         {
           x,
           y,
           size,
           font:
-            bold
-              ? boldFont
-              : font,
+            isBold
+              ? bold
+              : regular,
           color,
-          maxWidth,
         }
       );
 
-      y -= size + 7;
+      y -=
+        size + 6;
     }
 
-    function drawLine() {
-      addPageIfNeeded(20);
-
+    function line() {
       page.drawLine({
         start: {
-          x: 50,
+          x: MARGIN,
           y,
         },
         end: {
-          x: pageWidth - 50,
+          x:
+            PAGE_W -
+            MARGIN,
           y,
         },
-        thickness: 0.6,
-        color: rgb(
-          0.8,
-          0.82,
-          0.85
-        ),
+        thickness:
+          0.6,
+        color:
+          lightGray,
       });
 
-      y -= 14;
+      y -= 13;
     }
 
     function section(
-      titolo: string
+      title: string
     ) {
+      ensure(35);
+
       y -= 5;
 
-      drawText(titolo, {
-        size: 13,
-        bold: true,
-        color: rgb(
-          0.05,
-          0.1,
-          0.2
-        ),
-      });
+      text(
+        title,
+        MARGIN,
+        13,
+        true,
+        navy
+      );
 
-      drawLine();
+      line();
     }
 
     function row(
       label: string,
-      value: any,
-      bold = false
+      value: string,
+      boldValue = false
     ) {
-      addPageIfNeeded(22);
+      ensure(20);
 
       page.drawText(
-        cleanText(label),
+        label,
         {
-          x: 60,
+          x:
+            MARGIN + 10,
           y,
-          size: 9.5,
-          font:
-            bold
-              ? boldFont
-              : font,
-          color: rgb(
-            0.12,
-            0.14,
-            0.18
-          ),
+          size: 9,
+          font: regular,
+          color: gray,
         }
       );
 
       page.drawText(
-        cleanText(value),
+        value,
         {
-          x: 330,
+          x: 325,
           y,
-          size: 9.5,
+          size: 9,
           font:
-            bold
-              ? boldFont
-              : font,
-          color: rgb(
-            0.12,
-            0.14,
-            0.18
-          ),
-          maxWidth: 200,
+            boldValue
+              ? bold
+              : regular,
+          color: navy,
         }
       );
 
-      y -= 18;
+      y -= 17;
     }
 
-    const societa =
-      cliente.ragione_sociale ||
-      "Società";
+    function tableHeader(
+      labels: string[],
+      xs: number[]
+    ) {
+      ensure(28);
+
+      page.drawRectangle({
+        x: MARGIN,
+        y: y - 5,
+        width:
+          PAGE_W -
+          MARGIN * 2,
+        height: 22,
+        color:
+          rgb(
+            0.96,
+            0.97,
+            0.98
+          ),
+      });
+
+      labels.forEach(
+        (
+          label,
+          index
+        ) => {
+          page.drawText(
+            label,
+            {
+              x:
+                xs[index],
+              y:
+                y + 2,
+              size: 8,
+              font: bold,
+              color: navy,
+            }
+          );
+        }
+      );
+
+      y -= 25;
+    }
 
     /*
-     * INTESTAZIONE
+     * =====================================================
+     * COPERTINA / HEADER
+     * =====================================================
      */
-    drawText(
+
+    text(
       "STUDIO MANAGER PRO",
-      {
-        size: 10,
-        bold: true,
-        color: rgb(
-          0.35,
-          0.4,
-          0.5
-        ),
-      }
+      MARGIN,
+      10,
+      true,
+      gray
     );
 
-    drawText(
+    y -= 3;
+
+    text(
       "REPORT CONTROLLO DI GESTIONE",
-      {
-        size: 19,
-        bold: true,
-      }
+      MARGIN,
+      21,
+      true,
+      navy
     );
 
-    drawLine();
+    y -= 6;
 
-    drawText(
-      `Società: ${societa}`,
-      {
-        size: 11,
-        bold: true,
-      }
+    line();
+
+    text(
+      `Societa: ${
+        cliente.ragione_sociale ||
+        "-"
+      }`,
+      MARGIN,
+      11,
+      true
     );
 
-    drawText(
+    text(
       `Codice fiscale: ${
         cliente.codice_fiscale ||
-        "—"
+        "-"
       }`,
-      {
-        size: 10,
-      }
+      MARGIN,
+      9
     );
 
-    drawText(
+    text(
       `Esercizio: ${anno}`,
-      {
-        size: 10,
-      }
+      MARGIN,
+      9
     );
 
-    drawText(
-      `Data stampa: ${formatDateIT(
+    text(
+      `Periodicita: trimestrale`,
+      MARGIN,
+      9
+    );
+
+    text(
+      `Data stampa: ${dataIT(
         new Date()
           .toISOString()
           .slice(0, 10)
       )}`,
-      {
-        size: 10,
-      }
+      MARGIN,
+      9
     );
 
-    y -= 8;
+    y -= 10;
 
     /*
-     * RIEPILOGO PERIODI
+     * =====================================================
+     * KPI ANNUALI
+     * =====================================================
      */
+
     section(
-      "RIEPILOGO CONTROLLI"
+      "SINTESI ECONOMICO-FINANZIARIA"
     );
 
     row(
-      "Periodi contabili presenti",
-      records.length,
+      "Ricavi",
+      euro(
+        ultimoIndici.ricavi
+      ),
       true
     );
 
-    if (records.length === 0) {
-      drawText(
-        `Nessuna situazione contabile relativa all'esercizio ${anno}.`,
+    row(
+      "EBITDA",
+      euro(
+        ultimoIndici.ebitda
+      ),
+      true
+    );
+
+    row(
+      "EBITDA margin",
+      percent(
+        margineEbitda[
+          ultimo
+        ]
+      ),
+      true
+    );
+
+    row(
+      "EBIT",
+      euro(
+        ultimoIndici.ebit
+      )
+    );
+
+    row(
+      "Risultato netto",
+      euro(
+        ultimoIndici.utile_netto
+      ),
+      true
+    );
+
+    row(
+      "Margine netto",
+      percent(
+        margineNetto[
+          ultimo
+        ]
+      )
+    );
+
+    row(
+      "ROI",
+      percent(
+        ultimoIndici.roi
+      )
+    );
+
+    row(
+      "ROE",
+      percent(
+        ultimoIndici.roe
+      )
+    );
+
+    row(
+      "ROS",
+      percent(
+        ultimoIndici.ros
+      )
+    );
+
+    row(
+      "ROA",
+      percent(
+        ultimoIndici.roa
+      )
+    );
+
+    row(
+      "Indice indebitamento",
+      numero(
+        ultimoIndici
+          .indebitamento
+      )
+    );
+
+    row(
+      "Indice liquidita",
+      numero(
+        ultimoIndici
+          .liquidita
+      )
+    );
+
+    /*
+     * =====================================================
+     * PERIODI PRESENTI
+     * =====================================================
+     */
+
+    section(
+      "PERIODI CONTABILI"
+    );
+
+    elaborati.forEach(
+      (
+        item: any,
+        index: number
+      ) => {
+        row(
+          `Q${index + 1} - ${dataIT(
+            item.import
+              .data_riferimento
+          )}`,
+          `${
+            item.import
+              .conti_mappati
+          }/${
+            item.import
+              .numero_conti
+          } conti - Elaborato`
+        );
+      }
+    );
+
+    /*
+     * =====================================================
+     * CUMULATIVO
+     * =====================================================
+     */
+
+    newPage();
+
+    text(
+      "ANDAMENTO CUMULATIVO",
+      MARGIN,
+      15,
+      true,
+      navy
+    );
+
+    text(
+      "Valori progressivi dall'inizio dell'esercizio e variazioni rispetto al periodo precedente.",
+      MARGIN,
+      8,
+      false,
+      gray
+    );
+
+    y -= 7;
+
+    const xCum =
+      [
+        45,
+        180,
+        270,
+        360,
+        450,
+      ];
+
+    tableHeader(
+      [
+        "Indicatore",
+        "Q1",
+        "Q2",
+        "Q3",
+        "Q4",
+      ],
+      xCum
+    );
+
+    const cumulativeRows =
+      [
         {
-          size: 11,
-          color: rgb(
-            0.65,
-            0.15,
-            0.15
-          ),
+          label:
+            "Ricavi",
+          field:
+            "ricavi",
+          formatter:
+            euro,
+          delta:
+            "percent",
+        },
+        {
+          label:
+            "EBITDA",
+          field:
+            "ebitda",
+          formatter:
+            euro,
+          delta:
+            "percent",
+        },
+        {
+          label:
+            "EBIT",
+          field:
+            "ebit",
+          formatter:
+            euro,
+          delta:
+            "percent",
+        },
+        {
+          label:
+            "Risultato netto",
+          field:
+            "utile_netto",
+          formatter:
+            euro,
+          delta:
+            "percent",
+        },
+        {
+          label:
+            "ROI",
+          field:
+            "roi",
+          formatter:
+            percent,
+          delta:
+            "pp",
+        },
+        {
+          label:
+            "ROE",
+          field:
+            "roe",
+          formatter:
+            percent,
+          delta:
+            "pp",
+        },
+        {
+          label:
+            "ROS",
+          field:
+            "ros",
+          formatter:
+            percent,
+          delta:
+            "pp",
+        },
+      ];
+
+    for (
+      const item
+      of cumulativeRows
+    ) {
+      ensure(35);
+
+      page.drawText(
+        item.label,
+        {
+          x: xCum[0],
+          y,
+          size: 8,
+          font: bold,
+          color: navy,
         }
       );
+
+      elaborati.forEach(
+        (
+          periodo: any,
+          index: number
+        ) => {
+          const current =
+            n(
+              periodo
+                .indici[
+                item.field
+              ]
+            );
+
+          let value =
+            item.formatter(
+              current
+            );
+
+          if (index > 0) {
+            const previous =
+              n(
+                elaborati[
+                  index - 1
+                ].indici[
+                  item.field
+                ]
+              );
+
+            const delta =
+              item.delta ===
+              "pp"
+                ? formatDeltaPP(
+                    deltaPP(
+                      current,
+                      previous
+                    )
+                  )
+                : formatDeltaPercent(
+                    deltaPercent(
+                      current,
+                      previous
+                    )
+                  );
+
+            value +=
+              ` (${delta})`;
+          }
+
+          page.drawText(
+            value.slice(
+              0,
+              22
+            ),
+            {
+              x:
+                xCum[
+                  index + 1
+                ],
+              y,
+              size: 7,
+              font:
+                regular,
+              color:
+                navy,
+            }
+          );
+        }
+      );
+
+      y -= 21;
     }
 
     /*
-     * UN BLOCCO PER OGNI PERIODO
+     * Margini
      */
+
     for (
-      let index = 0;
-      index < records.length;
-      index++
-    ) {
-      const record =
-        records[index];
-
-      const imp =
-        record.import;
-
-      const controllo =
-        record.controllo;
-
-      const indici =
-        record.indici;
-
-      const integrazione =
-        record.integrazione;
-
-      if (index > 0) {
-        newPage();
-      } else {
-        y -= 12;
-      }
-
-      drawText(
-        `${index + 1}. CONTROLLO AL ${formatDateIT(
-          imp.data_riferimento
-        )}`,
+      const item
+      of [
         {
-          size: 15,
-          bold: true,
+          label:
+            "EBITDA margin",
+          values:
+            margineEbitda,
+        },
+        {
+          label:
+            "Margine netto",
+          values:
+            margineNetto,
+        },
+      ]
+    ) {
+      page.drawText(
+        item.label,
+        {
+          x: xCum[0],
+          y,
+          size: 8,
+          font: bold,
+          color: navy,
         }
       );
 
-      drawLine();
+      item.values.forEach(
+        (
+          current,
+          index
+        ) => {
+          let value =
+            percent(
+              current
+            );
 
-      section(
-        "DATI DEL CONTROLLO"
-      );
+          if (index > 0) {
+            value += ` (${formatDeltaPP(
+              current -
+                item.values[
+                  index - 1
+                ]
+            )})`;
+          }
 
-      row(
-        "Periodo contabile",
-        formatDateIT(
-          imp.data_riferimento
-        )
-      );
-
-      row(
-        "Cadenza",
-        controllo
-          ?.cadenza_controllo ||
-          "—"
-      );
-
-      row(
-        "Software contabile",
-        String(
-          imp.software_contabile ||
-          "—"
-        )
-          .replaceAll("_", " ")
-          .toUpperCase()
-      );
-
-      row(
-        "Conti importati",
-        imp.numero_conti ?? 0
-      );
-
-      row(
-        "Conti classificati",
-        imp.conti_mappati ?? 0
-      );
-
-      row(
-        "Conti da classificare",
-        imp.conti_da_mappare ?? 0
-      );
-
-      row(
-        "Stato",
-        imp.stato || "—"
-      );
-
-      row(
-        "Utenti assegnati",
-        utentiLabel(controllo)
-      );
-
-      /*
-       * CONTO ECONOMICO
-       */
-      if (indici) {
-        section(
-          "CONTO ECONOMICO"
-        );
-
-        row(
-          "Ricavi",
-          euro(indici.ricavi)
-        );
-
-        row(
-          "Costi operativi",
-          euro(
-            indici.costi_operativi
-          )
-        );
-
-        row(
-          "EBITDA",
-          euro(indici.ebitda),
-          true
-        );
-
-        row(
-          "Ammortamenti",
-          euro(
-            indici.ammortamenti
-          )
-        );
-
-        row(
-          "Accantonamenti",
-          euro(
-            indici.accantonamenti
-          )
-        );
-
-        row(
-          "EBIT",
-          euro(indici.ebit),
-          true
-        );
-
-        row(
-          "Oneri finanziari",
-          euro(
-            indici.oneri_finanziari
-          )
-        );
-
-        row(
-          "EBT",
-          euro(indici.ebt),
-          true
-        );
-
-        row(
-          "Imposte",
-          euro(indici.imposte)
-        );
-
-        row(
-          "Risultato",
-          euro(
-            indici.utile_netto
-          ),
-          true
-        );
-
-        /*
-         * STATO PATRIMONIALE
-         */
-        section(
-          "STATO PATRIMONIALE"
-        );
-
-        row(
-          "Totale attivo",
-          euro(
-            indici.totale_attivo
-          )
-        );
-
-        row(
-          "Capitale investito",
-          euro(
-            indici.capitale_investito
-          )
-        );
-
-        row(
-          "Attivo corrente",
-          euro(
-            indici.attivo_corrente
-          )
-        );
-
-        row(
-          "Patrimonio netto",
-          euro(
-            indici.patrimonio_netto
-          ),
-          true
-        );
-
-        row(
-          "Passivo corrente",
-          euro(
-            indici.passivo_corrente
-          )
-        );
-
-        row(
-          "Debiti totali",
-          euro(
-            indici.debiti_totali
-          )
-        );
-
-        /*
-         * INDICI
-         */
-        section(
-          "INDICI ECONOMICO-FINANZIARI"
-        );
-
-        row(
-          "ROI",
-          percentuale(
-            indici.roi
-          )
-        );
-
-        row(
-          "ROE",
-          percentuale(
-            indici.roe
-          )
-        );
-
-        row(
-          "ROS",
-          percentuale(
-            indici.ros
-          )
-        );
-
-        row(
-          "ROA",
-          percentuale(
-            indici.roa
-          )
-        );
-
-        row(
-          "Indice di indebitamento",
-          numero(
-            indici.indebitamento
-          )
-        );
-
-        row(
-          "Indice di liquidità",
-          numero(
-            indici.liquidita
-          )
-        );
-
-        row(
-          "DSCR",
-          indici.dscr === null ||
-          indici.dscr === undefined
-            ? "—"
-            : numero(
-                indici.dscr
-              )
-        );
-      } else {
-        section(
-          "DATI ECONOMICO-FINANZIARI"
-        );
-
-        drawText(
-          "Elaborazione degli indici non disponibile.",
-          {
-            color: rgb(
-              0.65,
-              0.15,
-              0.15
+          page.drawText(
+            value.slice(
+              0,
+              22
             ),
+            {
+              x:
+                xCum[
+                  index + 1
+                ],
+              y,
+              size: 7,
+              font:
+                regular,
+              color:
+                navy,
+            }
+          );
+        }
+      );
+
+      y -= 21;
+    }
+
+    /*
+     * =====================================================
+     * TRIMESTRI PURI
+     * =====================================================
+     */
+
+    y -= 10;
+
+    section(
+      "PERFORMANCE TRIMESTRALE"
+    );
+
+    text(
+      "Valori economici del singolo trimestre ottenuti per differenza tra situazioni cumulative.",
+      MARGIN,
+      8,
+      false,
+      gray
+    );
+
+    y -= 5;
+
+    tableHeader(
+      [
+        "Indicatore",
+        "Q1",
+        "Q2",
+        "Q3",
+        "Q4",
+      ],
+      xCum
+    );
+
+    const pureRows =
+      [
+        {
+          label:
+            "Ricavi",
+          values:
+            ricaviPuri,
+          format:
+            euro,
+        },
+        {
+          label:
+            "Costi operativi",
+          values:
+            costiPuri,
+          format:
+            euro,
+        },
+        {
+          label:
+            "EBITDA",
+          values:
+            ebitdaPuro,
+          format:
+            euro,
+        },
+        {
+          label:
+            "EBIT",
+          values:
+            ebitPuro,
+          format:
+            euro,
+        },
+        {
+          label:
+            "Risultato netto",
+          values:
+            risultatoPuro,
+          format:
+            euro,
+        },
+        {
+          label:
+            "EBITDA margin",
+          values:
+            margineEbitdaPuro,
+          format:
+            percent,
+        },
+        {
+          label:
+            "Margine netto",
+          values:
+            margineNettoPuro,
+          format:
+            percent,
+        },
+      ];
+
+    pureRows.forEach(
+      (item) => {
+        ensure(25);
+
+        page.drawText(
+          item.label,
+          {
+            x:
+              xCum[0],
+            y,
+            size: 8,
+            font: bold,
+            color: navy,
           }
         );
+
+        item.values.forEach(
+          (
+            value,
+            index
+          ) => {
+            page.drawText(
+              item
+                .format(
+                  value
+                )
+                .slice(
+                  0,
+                  20
+                ),
+              {
+                x:
+                  xCum[
+                    index + 1
+                  ],
+                y,
+                size: 7,
+                font:
+                  regular,
+                color:
+                  navy,
+              }
+            );
+          }
+        );
+
+        y -= 21;
       }
+    );
+
+    /*
+     * =====================================================
+     * SINTESI GESTIONALE AUTOMATICA
+     * =====================================================
+     */
+
+    newPage();
+
+    text(
+      "SINTESI GESTIONALE",
+      MARGIN,
+      15,
+      true,
+      navy
+    );
+
+    line();
+
+    const last =
+      elaborati.length -
+      1;
+
+    const previous =
+      last - 1;
+
+    if (previous >= 0) {
+      const crescitaRicavi =
+        deltaPercent(
+          ricaviPuri[last],
+          ricaviPuri[
+            previous
+          ]
+        );
+
+      const deltaMargin =
+        margineEbitdaPuro[
+          last
+        ] -
+        margineEbitdaPuro[
+          previous
+        ];
+
+      const deltaRoi =
+        n(
+          elaborati[last]
+            .indici.roi
+        ) -
+        n(
+          elaborati[
+            previous
+          ].indici.roi
+        );
 
       /*
-       * DEBITI / INTEGRAZIONI
+       * RICAVI
        */
-      if (integrazione) {
-        section(
-          "INTEGRAZIONI GESTIONALI"
-        );
 
-        const bt =
-          Number(
-            integrazione
-              .debiti_finanziari_bt ||
-              0
-          );
+      text(
+        "Andamento dei ricavi",
+        MARGIN,
+        11,
+        true
+      );
 
-        const mlt =
-          Number(
-            integrazione
-              .debiti_finanziari_mlt ||
-              0
-          );
+      text(
+        `L'ultimo trimestre presenta ricavi per ${euro(
+          ricaviPuri[last]
+        )}, con una variazione del ${formatDeltaPercent(
+          crescitaRicavi
+        )} rispetto al trimestre precedente.`,
+        MARGIN,
+        9,
+        false,
+        crescitaRicavi !==
+          null &&
+        crescitaRicavi >= 0
+          ? green
+          : red
+      );
 
-        row(
-          "Debiti finanziari complessivi",
-          euro(bt + mlt),
-          true
-        );
-
-        row(
-          "Debiti finanziari entro 12 mesi",
-          euro(bt)
-        );
-
-        row(
-          "Debiti finanziari oltre 12 mesi",
-          euro(mlt)
-        );
-
-        row(
-          "Rate finanziarie prossimi 12 mesi",
-          euro(
-            integrazione
-              .rate_finanziarie_12_mesi
-          )
-        );
-
-        row(
-          "Cash flow operativo previsionale",
-          integrazione
-              .cash_flow_operativo_previsionale ===
-            null
-            ? "—"
-            : euro(
-                integrazione
-                  .cash_flow_operativo_previsionale
-              )
-        );
-
-        if (
-          integrazione.note
-        ) {
-          row(
-            "Note integrazioni",
-            integrazione.note
-          );
-        }
-      }
+      y -= 8;
 
       /*
-       * CHECKLIST
+       * EBITDA
        */
-      if (controllo) {
-        section(
-          "CHECKLIST CONTROLLO"
+
+      text(
+        "Marginalita operativa",
+        MARGIN,
+        11,
+        true
+      );
+
+      text(
+        `L'EBITDA margin dell'ultimo trimestre e pari al ${percent(
+          margineEbitdaPuro[
+            last
+          ]
+        )}, con uno scostamento di ${formatDeltaPP(
+          deltaMargin
+        )} rispetto al trimestre precedente.`,
+        MARGIN,
+        9,
+        false,
+        deltaMargin >= 0
+          ? green
+          : red
+      );
+
+      y -= 8;
+
+      /*
+       * RISULTATO
+       */
+
+      text(
+        "Risultato economico",
+        MARGIN,
+        11,
+        true
+      );
+
+      text(
+        `Il risultato economico del solo ultimo trimestre e pari a ${euro(
+          risultatoPuro[
+            last
+          ]
+        )}.`,
+        MARGIN,
+        9,
+        false,
+        risultatoPuro[
+          last
+        ] >= 0
+          ? green
+          : red
+      );
+
+      if (
+        risultatoPuro[
+          last
+        ] < 0
+      ) {
+        text(
+          "L'ultimo trimestre ha assorbito una parte del risultato positivo maturato nei periodi precedenti e richiede approfondimento.",
+          MARGIN,
+          9,
+          true,
+          red
         );
-
-        row(
-          "Step 1 - Rilevamento dati",
-          yesNo(
-            controllo
-              .step_1_completato
-          )
-        );
-
-        if (
-          controllo.step_1_note
-        ) {
-          row(
-            "Note Step 1",
-            controllo.step_1_note
-          );
-        }
-
-        row(
-          "Step 2 - Analisi scostamenti",
-          yesNo(
-            controllo
-              .step_2_completato
-          )
-        );
-
-        if (
-          controllo.step_2_note
-        ) {
-          row(
-            "Note Step 2",
-            controllo.step_2_note
-          );
-        }
-
-        row(
-          "Step 3 - Reporting",
-          yesNo(
-            controllo
-              .step_3_completato
-          )
-        );
-
-        if (
-          controllo.step_3_note
-        ) {
-          row(
-            "Note Step 3",
-            controllo.step_3_note
-          );
-        }
-
-        row(
-          "Step 4 - Azioni correttive",
-          yesNo(
-            controllo
-              .step_4_completato
-          )
-        );
-
-        if (
-          controllo.step_4_note
-        ) {
-          row(
-            "Note Step 4",
-            controllo.step_4_note
-          );
-        }
       }
+
+      y -= 8;
+
+      /*
+       * ROI
+       */
+
+      text(
+        "Redditivita del capitale",
+        MARGIN,
+        11,
+        true
+      );
+
+      text(
+        `Il ROI si attesta al ${percent(
+          elaborati[last]
+            .indici.roi
+        )}, con una variazione di ${formatDeltaPP(
+          deltaRoi
+        )} rispetto al periodo precedente.`,
+        MARGIN,
+        9,
+        false,
+        deltaRoi >= 0
+          ? green
+          : red
+      );
     }
 
     /*
-     * Footer su tutte le pagine.
+     * =====================================================
+     * STATO PATRIMONIALE FINALE
+     * =====================================================
      */
+
+    section(
+      "STRUTTURA PATRIMONIALE E FINANZIARIA"
+    );
+
+    row(
+      "Totale attivo",
+      euro(
+        ultimoIndici
+          .totale_attivo
+      )
+    );
+
+    row(
+      "Attivo corrente",
+      euro(
+        ultimoIndici
+          .attivo_corrente
+      )
+    );
+
+    row(
+      "Patrimonio netto",
+      euro(
+        ultimoIndici
+          .patrimonio_netto
+      ),
+      true
+    );
+
+    row(
+      "Passivo corrente",
+      euro(
+        ultimoIndici
+          .passivo_corrente
+      )
+    );
+
+    row(
+      "Debiti totali",
+      euro(
+        ultimoIndici
+          .debiti_totali
+      )
+    );
+
+    row(
+      "Indice indebitamento",
+      numero(
+        ultimoIndici
+          .indebitamento
+      )
+    );
+
+    row(
+      "Indice liquidita",
+      numero(
+        ultimoIndici
+          .liquidita
+      )
+    );
+
+    if (
+      ultimoIndici.dscr !==
+        null &&
+      ultimoIndici.dscr !==
+        undefined
+    ) {
+      row(
+        "DSCR",
+        numero(
+          ultimoIndici.dscr
+        )
+      );
+    }
+
+    /*
+     * =====================================================
+     * CHECKLIST
+     * =====================================================
+     */
+
+    const ultimoControllo =
+      elaborati[
+        last
+      ].controllo;
+
+    if (ultimoControllo) {
+      section(
+        "CHECKLIST CONTROLLO"
+      );
+
+      const steps =
+        [
+          {
+            label:
+              "Step 1 - Rilevamento dati",
+            done:
+              ultimoControllo
+                .step_1_completato,
+            note:
+              ultimoControllo
+                .step_1_note,
+          },
+          {
+            label:
+              "Step 2 - Analisi scostamenti",
+            done:
+              ultimoControllo
+                .step_2_completato,
+            note:
+              ultimoControllo
+                .step_2_note,
+          },
+          {
+            label:
+              "Step 3 - Reporting",
+            done:
+              ultimoControllo
+                .step_3_completato,
+            note:
+              ultimoControllo
+                .step_3_note,
+          },
+          {
+            label:
+              "Step 4 - Azioni correttive",
+            done:
+              ultimoControllo
+                .step_4_completato,
+            note:
+              ultimoControllo
+                .step_4_note,
+          },
+        ];
+
+      steps.forEach(
+        (step) => {
+          row(
+            step.label,
+            step.done
+              ? "COMPLETATO"
+              : "DA COMPLETARE",
+            Boolean(
+              step.done
+            )
+          );
+
+          if (
+            step.note &&
+            String(
+              step.note
+            ).trim()
+          ) {
+            text(
+              `Note: ${String(
+                step.note
+              ).replace(
+                /\r?\n/g,
+                " "
+              )}`,
+              MARGIN + 20,
+              8,
+              false,
+              gray
+            );
+          }
+        }
+      );
+    }
+
+    /*
+     * =====================================================
+     * FOOTER
+     * =====================================================
+     */
+
     const pages =
-      pdfDoc.getPages();
+      pdf.getPages();
 
     pages.forEach(
-      (pdfPage, index) => {
-        pdfPage.drawLine({
+      (
+        p,
+        index
+      ) => {
+        p.drawLine({
           start: {
-            x: 50,
-            y: 42,
+            x: MARGIN,
+            y: 35,
           },
           end: {
             x:
-              pageWidth - 50,
-            y: 42,
+              PAGE_W -
+              MARGIN,
+            y: 35,
           },
-          thickness: 0.5,
-          color: rgb(
-            0.82,
-            0.84,
-            0.87
-          ),
+          thickness:
+            0.4,
+          color:
+            lightGray,
         });
 
-        pdfPage.drawText(
+        p.drawText(
           "Studio Manager Pro - Controllo di gestione",
           {
-            x: 50,
-            y: 27,
-            size: 8,
-            font,
-            color: rgb(
-              0.4,
-              0.43,
-              0.5
-            ),
+            x: MARGIN,
+            y: 20,
+            size: 7,
+            font: regular,
+            color: gray,
           }
         );
 
-        pdfPage.drawText(
-          `Pagina ${index + 1} di ${pages.length}`,
+        p.drawText(
+          `Pagina ${
+            index + 1
+          } / ${pages.length}`,
           {
-            x: 455,
-            y: 27,
-            size: 8,
-            font,
-            color: rgb(
-              0.4,
-              0.43,
-              0.5
-            ),
+            x: 485,
+            y: 20,
+            size: 7,
+            font: regular,
+            color: gray,
           }
         );
       }
     );
 
-    const pdfBytes =
-      await pdfDoc.save();
+    const bytes =
+      await pdf.save();
 
     return new NextResponse(
-      Buffer.from(pdfBytes),
+      Buffer.from(bytes),
       {
         status: 200,
         headers: {
@@ -1131,26 +1979,21 @@ export async function GET(req: NextRequest) {
             "application/pdf",
 
           "Content-Disposition":
-            `inline; filename="controllo-gestione-${societa
-              .replace(
-                /[^a-zA-Z0-9]+/g,
-                "-"
-              )
-              .toLowerCase()}-${anno}.pdf"`,
+            `inline; filename="controllo-gestione-${anno}-${clienteId}.pdf"`,
         },
       }
     );
-  } catch (err: any) {
+  } catch (error: any) {
     console.error(
-      "Errore report controllo di gestione:",
-      err
+      "Errore report controllo gestione:",
+      error
     );
 
     return NextResponse.json(
       {
         error:
-          err?.message ||
-          "Errore generazione PDF",
+          error?.message ||
+          "Errore generazione report",
       },
       {
         status: 500,
