@@ -528,30 +528,38 @@ const righeUtili =
             b.ordine
         );
 
-    /*
-     * =====================================================
-     * 7. SALVATAGGIO SALDI RICLASSIFICATI
-     * =====================================================
-     *
-     * L'elaborazione è ripetibile:
-     * cancelliamo soltanto i saldi dello stesso import.
-     */
-    const {
-      error: deleteSaldiError,
-    } = await supabaseAdmin
-      .from(
-        "tbcontrollo_gestione_saldi"
-      )
-      .delete()
-      .eq(
-        "import_id",
-        import_id
-      );
+/*
+ * =====================================================
+ * 7. SALVATAGGIO SALDI RICLASSIFICATI
+ * =====================================================
+ *
+ * L'elaborazione è ripetibile.
+ *
+ * Un controllo di gestione deve contenere una sola
+ * elaborazione corrente dei saldi riclassificati.
+ *
+ * Quando viene effettuato un nuovo import dello stesso
+ * controllo, il nuovo import_id è diverso dal precedente.
+ *
+ * Per questo motivo eliminiamo i saldi precedenti
+ * dell'intero controllo e li rigeneriamo utilizzando
+ * l'import corrente.
+ */
+const {
+  error: deleteSaldiError,
+} = await supabaseAdmin
+  .from(
+    "tbcontrollo_gestione_saldi"
+  )
+  .delete()
+  .eq(
+    "controllo_id",
+    importRecord.controllo_id
+  );
 
-    if (deleteSaldiError) {
-      throw deleteSaldiError;
-    }
-
+if (deleteSaldiError) {
+  throw deleteSaldiError;
+}
     if (
       saldi.length > 0
     ) {
