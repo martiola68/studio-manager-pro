@@ -1,4 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  Fragment,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import {
@@ -8,6 +13,12 @@ import {
   FileText,
   ChevronDown,
   ChevronUp,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Activity,
+  BarChart3,
+  Target,
 } from "lucide-react";
 
 function formatDateIT(value?: string | null) {
@@ -79,6 +90,176 @@ function numero(value: any) {
       maximumFractionDigits: 2,
     }
   );
+}
+
+function valoreNumerico(value: any) {
+  const numero = Number(value);
+
+  return Number.isFinite(numero)
+    ? numero
+    : null;
+}
+
+function variazionePercentuale(
+  attuale: number | null,
+  precedente: number | null
+) {
+  if (
+    attuale === null ||
+    precedente === null ||
+    precedente === 0
+  ) {
+    return null;
+  }
+
+  return (
+    ((attuale - precedente) /
+      Math.abs(precedente)) *
+    100
+  );
+}
+
+function variazioneAssoluta(
+  attuale: number | null,
+  precedente: number | null
+) {
+  if (
+    attuale === null ||
+    precedente === null
+  ) {
+    return null;
+  }
+
+  return attuale - precedente;
+}
+
+function trimestrePuro(
+  attuale: number | null,
+  precedente: number | null,
+  indice: number
+) {
+  if (attuale === null) {
+    return null;
+  }
+
+  /*
+   * Il primo trimestre coincide
+   * con il cumulativo Q1.
+   */
+  if (indice === 0) {
+    return attuale;
+  }
+
+  if (precedente === null) {
+    return null;
+  }
+
+  return attuale - precedente;
+}
+
+function percentualeSu(
+  valore: number | null,
+  base: number | null
+) {
+  if (
+    valore === null ||
+    base === null ||
+    base === 0
+  ) {
+    return null;
+  }
+
+  return (valore / base) * 100;
+}
+
+function formatDeltaPercentuale(
+  value: number | null
+) {
+  if (value === null) return "—";
+
+  const segno =
+    value > 0 ? "+" : "";
+
+  return `${segno}${value.toLocaleString(
+    "it-IT",
+    {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    }
+  )}%`;
+}
+
+function formatDeltaPunti(
+  value: number | null
+) {
+  if (value === null) return "—";
+
+  const segno =
+    value > 0 ? "+" : "";
+
+  return `${segno}${value.toLocaleString(
+    "it-IT",
+    {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }
+  )} p.p.`;
+}
+
+function formatDeltaNumero(
+  value: number | null
+) {
+  if (value === null) return "—";
+
+  const segno =
+    value > 0 ? "+" : "";
+
+  return `${segno}${value.toLocaleString(
+    "it-IT",
+    {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }
+  )}`;
+}
+
+function classeDelta(
+  value: number | null,
+  direzione:
+    | "up"
+    | "down"
+    | "neutral" = "up"
+) {
+  if (
+    value === null ||
+    Math.abs(value) < 0.0001 ||
+    direzione === "neutral"
+  ) {
+    return {
+      className:
+        "bg-gray-100 text-gray-700",
+      icona: "neutral",
+    };
+  }
+
+  const positivo =
+    direzione === "up"
+      ? value > 0
+      : value < 0;
+
+  if (positivo) {
+    return {
+      className:
+        "bg-green-100 text-green-700",
+      icona: "up",
+    };
+  }
+
+  return {
+    className:
+      "bg-red-100 text-red-700",
+    icona: "down",
+  };
 }
 
 type PeriodoConfig = {
@@ -244,6 +425,209 @@ export default function AnalisiControlloGestione() {
         record:
           trovaPeriodo(config),
       }));
+
+  /*
+ * =====================================================
+ * ANALISI COMPARATIVA
+ * =====================================================
+ */
+
+const datiPeriodi =
+  periodiPresenti.map(
+    ({ config, record }, index) => ({
+      config,
+      record,
+      index,
+      indici:
+        record?.indici || null,
+    })
+  );
+
+function valoreIndice(
+  index: number,
+  campo: string
+) {
+  return valoreNumerico(
+    datiPeriodi[index]
+      ?.indici?.[campo]
+  );
+}
+
+/*
+ * Flussi economici cumulativi.
+ */
+const ricaviCumulativi =
+  datiPeriodi.map(
+    (_, index) =>
+      valoreIndice(
+        index,
+        "ricavi"
+      )
+  );
+
+const costiCumulativi =
+  datiPeriodi.map(
+    (_, index) =>
+      valoreIndice(
+        index,
+        "costi_operativi"
+      )
+  );
+
+const ebitdaCumulativo =
+  datiPeriodi.map(
+    (_, index) =>
+      valoreIndice(
+        index,
+        "ebitda"
+      )
+  );
+
+const ebitCumulativo =
+  datiPeriodi.map(
+    (_, index) =>
+      valoreIndice(
+        index,
+        "ebit"
+      )
+  );
+
+const risultatoCumulativo =
+  datiPeriodi.map(
+    (_, index) =>
+      valoreIndice(
+        index,
+        "utile_netto"
+      )
+  );
+
+const oneriFinanziariCumulativi =
+  datiPeriodi.map(
+    (_, index) =>
+      valoreIndice(
+        index,
+        "oneri_finanziari"
+      )
+  );
+
+const imposteCumulative =
+  datiPeriodi.map(
+    (_, index) =>
+      valoreIndice(
+        index,
+        "imposte"
+      )
+  );
+
+/*
+ * Trimestri puri:
+ * Q1 = Q1
+ * Q2 = cumulativo Q2 - cumulativo Q1
+ * ecc.
+ */
+function creaTrimestriPuri(
+  valori: Array<number | null>
+) {
+  return valori.map(
+    (valore, index) =>
+      trimestrePuro(
+        valore,
+        index > 0
+          ? valori[index - 1]
+          : null,
+        index
+      )
+  );
+}
+
+const ricaviPuri =
+  creaTrimestriPuri(
+    ricaviCumulativi
+  );
+
+const costiPuri =
+  creaTrimestriPuri(
+    costiCumulativi
+  );
+
+const ebitdaPuro =
+  creaTrimestriPuri(
+    ebitdaCumulativo
+  );
+
+const ebitPuro =
+  creaTrimestriPuri(
+    ebitCumulativo
+  );
+
+const risultatoPuro =
+  creaTrimestriPuri(
+    risultatoCumulativo
+  );
+
+const oneriFinanziariPuri =
+  creaTrimestriPuri(
+    oneriFinanziariCumulativi
+  );
+
+const impostePure =
+  creaTrimestriPuri(
+    imposteCumulative
+  );
+
+const margineEbitdaCumulativo =
+  ebitdaCumulativo.map(
+    (value, index) =>
+      percentualeSu(
+        value,
+        ricaviCumulativi[index]
+      )
+  );
+
+const margineNettoCumulativo =
+  risultatoCumulativo.map(
+    (value, index) =>
+      percentualeSu(
+        value,
+        ricaviCumulativi[index]
+      )
+  );
+
+const margineEbitdaPuro =
+  ebitdaPuro.map(
+    (value, index) =>
+      percentualeSu(
+        value,
+        ricaviPuri[index]
+      )
+  );
+
+const margineNettoPuro =
+  risultatoPuro.map(
+    (value, index) =>
+      percentualeSu(
+        value,
+        ricaviPuri[index]
+      )
+  );
+
+/*
+ * Ultimo periodo disponibile.
+ */
+const ultimoIndiceDisponibile =
+  [...datiPeriodi]
+    .reverse()
+    .find(
+      (item) =>
+        Boolean(item.indici)
+    )?.index ?? -1;
+
+const ultimoIndici =
+  ultimoIndiceDisponibile >= 0
+    ? datiPeriodi[
+        ultimoIndiceDisponibile
+      ]?.indici
+    : null;
 
   const primoMancante =
     periodiPresenti.find(
@@ -921,134 +1305,890 @@ export default function AnalisiControlloGestione() {
         </div>
       </div>
 
-      {/* CONFRONTO */}
-      <div className="border rounded-lg bg-white">
-        <div className="border-b px-5 py-4">
-          <h2 className="font-semibold text-lg">
-            Confronto periodi
-          </h2>
+{/* =====================================================
+    DASHBOARD ECONOMICO-FINANZIARIA
+===================================================== */}
 
-          <p className="text-sm text-gray-500 mt-1">
-            I valori economici visualizzati
-            in questa fase sono cumulativi.
-            Il calcolo dei trimestri puri
-            sarà effettuato nello Step 2 -
-            Analisi scostamenti.
-          </p>
+<div className="space-y-6">
+
+  {/* KPI ANNUALI */}
+  {ultimoIndici && (
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+      {/* RICAVI */}
+      <div className="border rounded-xl bg-white p-5 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div className="text-xs uppercase tracking-wide text-gray-500">
+            Ricavi
+          </div>
+
+          <div className="h-9 w-9 rounded-lg bg-blue-50 flex items-center justify-center">
+            <BarChart3 className="h-5 w-5 text-blue-700" />
+          </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="p-3 text-left">
-                  Indicatore
-                </th>
+        <div className="text-2xl font-bold mt-3">
+          {euro(
+            ultimoIndici.ricavi
+          )}
+        </div>
 
-                {periodiPresenti.map(
-                  ({ config }) => (
-                    <th
+        {ultimoIndiceDisponibile >= 0 && (
+          <div className="text-xs text-gray-500 mt-2">
+            Q
+            {ultimoIndiceDisponibile + 1}
+            {" puro: "}
+            <span className="font-medium text-gray-800">
+              {euro(
+                ricaviPuri[
+                  ultimoIndiceDisponibile
+                ]
+              )}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* EBITDA */}
+      <div className="border rounded-xl bg-white p-5 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div className="text-xs uppercase tracking-wide text-gray-500">
+            EBITDA
+          </div>
+
+          <div className="h-9 w-9 rounded-lg bg-green-50 flex items-center justify-center">
+            <Activity className="h-5 w-5 text-green-700" />
+          </div>
+        </div>
+
+        <div className="text-2xl font-bold mt-3">
+          {euro(
+            ultimoIndici.ebitda
+          )}
+        </div>
+
+        <div className="text-xs text-gray-500 mt-2">
+          EBITDA margin{" "}
+          <span className="font-semibold text-gray-800">
+            {percentuale(
+              margineEbitdaCumulativo[
+                ultimoIndiceDisponibile
+              ]
+            )}
+          </span>
+        </div>
+      </div>
+
+      {/* RISULTATO */}
+      <div className="border rounded-xl bg-white p-5 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div className="text-xs uppercase tracking-wide text-gray-500">
+            Risultato netto
+          </div>
+
+          <div
+            className={`h-9 w-9 rounded-lg flex items-center justify-center ${
+              Number(
+                ultimoIndici.utile_netto ||
+                  0
+              ) >= 0
+                ? "bg-green-50"
+                : "bg-red-50"
+            }`}
+          >
+            <Target
+              className={`h-5 w-5 ${
+                Number(
+                  ultimoIndici.utile_netto ||
+                    0
+                ) >= 0
+                  ? "text-green-700"
+                  : "text-red-700"
+              }`}
+            />
+          </div>
+        </div>
+
+        <div
+          className={`text-2xl font-bold mt-3 ${
+            Number(
+              ultimoIndici.utile_netto ||
+                0
+            ) < 0
+              ? "text-red-600"
+              : ""
+          }`}
+        >
+          {euro(
+            ultimoIndici.utile_netto
+          )}
+        </div>
+
+        <div className="text-xs text-gray-500 mt-2">
+          Margine netto{" "}
+          <span className="font-semibold text-gray-800">
+            {percentuale(
+              margineNettoCumulativo[
+                ultimoIndiceDisponibile
+              ]
+            )}
+          </span>
+        </div>
+      </div>
+
+      {/* ROI */}
+      <div className="border rounded-xl bg-white p-5 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div className="text-xs uppercase tracking-wide text-gray-500">
+            ROI
+          </div>
+
+          <div className="h-9 w-9 rounded-lg bg-violet-50 flex items-center justify-center">
+            <TrendingUp className="h-5 w-5 text-violet-700" />
+          </div>
+        </div>
+
+        <div className="text-2xl font-bold mt-3">
+          {percentuale(
+            ultimoIndici.roi
+          )}
+        </div>
+
+        {ultimoIndiceDisponibile > 0 && (
+          <div className="text-xs text-gray-500 mt-2">
+            vs periodo precedente{" "}
+            <span
+              className={
+                Number(
+                  ultimoIndici.roi
+                ) -
+                  Number(
+                    datiPeriodi[
+                      ultimoIndiceDisponibile -
+                        1
+                    ]?.indici?.roi ||
+                      0
+                  ) >=
+                0
+                  ? "font-semibold text-green-700"
+                  : "font-semibold text-red-700"
+              }
+            >
+              {formatDeltaPunti(
+                variazioneAssoluta(
+                  valoreNumerico(
+                    ultimoIndici.roi
+                  ),
+                  valoreNumerico(
+                    datiPeriodi[
+                      ultimoIndiceDisponibile -
+                        1
+                    ]?.indici?.roi
+                  )
+                )
+              )}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  )}
+
+  {/* ===================================================
+      ANDAMENTO CUMULATIVO
+  =================================================== */}
+  <div className="border rounded-xl bg-white overflow-hidden">
+    <div className="px-5 py-4 border-b">
+      <h2 className="font-semibold text-lg">
+        Andamento cumulativo
+      </h2>
+
+      <p className="text-sm text-gray-500 mt-1">
+        Valori progressivi dall'inizio dell'esercizio.
+        Le colonne Δ evidenziano la variazione rispetto
+        alla situazione contabile precedente.
+      </p>
+    </div>
+
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead className="bg-gray-50">
+          <tr>
+            <th className="p-3 text-left">
+              Indicatore
+            </th>
+
+            {periodiPresenti.map(
+              ({ config }, index) => (
+                <Fragment
+                  key={config.key}
+                >
+                  <th className="p-3 text-right whitespace-nowrap">
+                    Q{index + 1}
+                  </th>
+
+                  {index > 0 && (
+                    <th className="p-3 text-center whitespace-nowrap text-gray-500">
+                      Δ
+                    </th>
+                  )}
+                </Fragment>
+              )
+            )}
+          </tr>
+        </thead>
+
+        <tbody>
+          {[
+            {
+              label: "Ricavi",
+              field: "ricavi",
+              format: euro,
+              delta: "percent",
+              direzione: "up",
+            },
+            {
+              label: "EBITDA",
+              field: "ebitda",
+              format: euro,
+              delta: "percent",
+              direzione: "up",
+            },
+            {
+              label: "EBIT",
+              field: "ebit",
+              format: euro,
+              delta: "percent",
+              direzione: "up",
+            },
+            {
+              label: "Risultato netto",
+              field: "utile_netto",
+              format: euro,
+              delta: "percent",
+              direzione: "up",
+            },
+            {
+              label: "EBITDA margin",
+              custom:
+                margineEbitdaCumulativo,
+              format: percentuale,
+              delta: "pp",
+              direzione: "up",
+            },
+            {
+              label: "Margine netto",
+              custom:
+                margineNettoCumulativo,
+              format: percentuale,
+              delta: "pp",
+              direzione: "up",
+            },
+            {
+              label: "ROI",
+              field: "roi",
+              format: percentuale,
+              delta: "pp",
+              direzione: "up",
+            },
+            {
+              label: "ROE",
+              field: "roe",
+              format: percentuale,
+              delta: "pp",
+              direzione: "up",
+            },
+            {
+              label: "ROS",
+              field: "ros",
+              format: percentuale,
+              delta: "pp",
+              direzione: "up",
+            },
+            {
+              label: "ROA",
+              field: "roa",
+              format: percentuale,
+              delta: "pp",
+              direzione: "up",
+            },
+            {
+              label:
+                "Indice indebitamento",
+              field:
+                "indebitamento",
+              format: numero,
+              delta: "number",
+              direzione: "down",
+            },
+            {
+              label:
+                "Indice liquidità",
+              field: "liquidita",
+              format: numero,
+              delta: "number",
+              direzione: "neutral",
+            },
+          ].map((riga: any) => (
+            <tr
+              key={riga.label}
+              className="border-t hover:bg-gray-50/60"
+            >
+              <td className="p-3 font-medium whitespace-nowrap">
+                {riga.label}
+              </td>
+
+              {periodiPresenti.map(
+                (
+                  { record, config },
+                  index
+                ) => {
+                  const attuale =
+                    riga.custom
+                      ? valoreNumerico(
+                          riga.custom[
+                            index
+                          ]
+                        )
+                      : valoreNumerico(
+                          record
+                            ?.indici?.[
+                            riga.field
+                          ]
+                        );
+
+                  const precedente =
+                    index > 0
+                      ? riga.custom
+                        ? valoreNumerico(
+                            riga.custom[
+                              index - 1
+                            ]
+                          )
+                        : valoreNumerico(
+                            periodiPresenti[
+                              index - 1
+                            ]?.record
+                              ?.indici?.[
+                              riga.field
+                            ]
+                          )
+                      : null;
+
+                  let delta:
+                    | number
+                    | null = null;
+
+                  if (index > 0) {
+                    if (
+                      riga.delta ===
+                      "percent"
+                    ) {
+                      delta =
+                        variazionePercentuale(
+                          attuale,
+                          precedente
+                        );
+                    } else {
+                      delta =
+                        variazioneAssoluta(
+                          attuale,
+                          precedente
+                        );
+                    }
+                  }
+
+                  const stato =
+                    classeDelta(
+                      delta,
+                      riga.direzione
+                    );
+
+                  return (
+                    <Fragment
                       key={
                         config.key
                       }
-                      className="p-3 text-right"
                     >
-                      {
-                        config.titolo
-                      }
-                    </th>
-                  )
-                )}
-              </tr>
-            </thead>
-
-            <tbody>
-              {[
-                {
-                  label: "Ricavi",
-                  field: "ricavi",
-                  format: euro,
-                },
-                {
-                  label: "EBITDA",
-                  field: "ebitda",
-                  format: euro,
-                },
-                {
-                  label: "EBIT",
-                  field: "ebit",
-                  format: euro,
-                },
-                {
-                  label: "Risultato",
-                  field:
-                    "utile_netto",
-                  format: euro,
-                },
-                {
-                  label: "ROI",
-                  field: "roi",
-                  format:
-                    percentuale,
-                },
-                {
-                  label: "ROE",
-                  field: "roe",
-                  format:
-                    percentuale,
-                },
-                {
-                  label: "ROS",
-                  field: "ros",
-                  format:
-                    percentuale,
-                },
-                {
-                  label:
-                    "Liquidità",
-                  field:
-                    "liquidita",
-                  format: numero,
-                },
-              ].map((riga) => (
-                <tr
-                  key={riga.field}
-                  className="border-t"
-                >
-                  <td className="p-3 font-medium">
-                    {riga.label}
-                  </td>
-
-                  {periodiPresenti.map(
-                    ({
-                      config,
-                      record,
-                    }) => (
-                      <td
-                        key={
-                          config.key
-                        }
-                        className="p-3 text-right whitespace-nowrap"
-                      >
-                        {record
-                          ?.indici
-                          ? riga.format(
-                              record
-                                .indici[
-                                riga
-                                  .field
-                              ]
-                            )
-                          : "—"}
+                      <td className="p-3 text-right font-medium whitespace-nowrap">
+                        {attuale === null
+                          ? "—"
+                          : riga.format(
+                              attuale
+                            )}
                       </td>
-                    )
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+
+                      {index > 0 && (
+                        <td className="p-3 text-center whitespace-nowrap">
+                          {delta ===
+                          null ? (
+                            <span className="text-gray-400">
+                              —
+                            </span>
+                          ) : (
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ${stato.className}`}
+                            >
+                              {stato.icona ===
+                              "up" ? (
+                                <TrendingUp className="h-3 w-3" />
+                              ) : stato.icona ===
+                                "down" ? (
+                                <TrendingDown className="h-3 w-3" />
+                              ) : (
+                                <Minus className="h-3 w-3" />
+                              )}
+
+                              {riga.delta ===
+                              "percent"
+                                ? formatDeltaPercentuale(
+                                    delta
+                                  )
+                                : riga.delta ===
+                                  "pp"
+                                ? formatDeltaPunti(
+                                    delta
+                                  )
+                                : formatDeltaNumero(
+                                    delta
+                                  )}
+                            </span>
+                          )}
+                        </td>
+                      )}
+                    </Fragment>
+                  );
+                }
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {/* ===================================================
+      TRIMESTRI PURI
+  =================================================== */}
+  <div className="border rounded-xl bg-white overflow-hidden">
+    <div className="px-5 py-4 border-b">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="font-semibold text-lg">
+            Performance trimestrale
+          </h2>
+
+          <p className="text-sm text-gray-500 mt-1">
+            Dati del solo trimestre,
+            determinati per differenza tra
+            situazioni contabili cumulative.
+          </p>
         </div>
+
+        <span className="text-xs bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full font-medium">
+          Trimestri puri
+        </span>
       </div>
+    </div>
+
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead className="bg-gray-50">
+          <tr>
+            <th className="p-3 text-left">
+              Indicatore
+            </th>
+
+            {periodiPresenti.map(
+              ({ config }, index) => (
+                <Fragment
+                  key={config.key}
+                >
+                  <th className="p-3 text-right whitespace-nowrap">
+                    Q{index + 1}
+                  </th>
+
+                  {index > 0 && (
+                    <th className="p-3 text-center whitespace-nowrap text-gray-500">
+                      Δ vs Q{index}
+                    </th>
+                  )}
+                </Fragment>
+              )
+            )}
+          </tr>
+        </thead>
+
+        <tbody>
+          {[
+            {
+              label: "Ricavi",
+              valori: ricaviPuri,
+              format: euro,
+              direzione: "up",
+            },
+            {
+              label: "Costi operativi",
+              valori: costiPuri,
+              format: euro,
+              direzione: "down",
+            },
+            {
+              label: "EBITDA",
+              valori: ebitdaPuro,
+              format: euro,
+              direzione: "up",
+            },
+            {
+              label: "EBIT",
+              valori: ebitPuro,
+              format: euro,
+              direzione: "up",
+            },
+            {
+              label:
+                "Oneri finanziari",
+              valori:
+                oneriFinanziariPuri,
+              format: euro,
+              direzione: "down",
+            },
+            {
+              label: "Imposte",
+              valori: impostePure,
+              format: euro,
+              direzione:
+                "neutral",
+            },
+            {
+              label:
+                "Risultato netto",
+              valori:
+                risultatoPuro,
+              format: euro,
+              direzione: "up",
+            },
+            {
+              label:
+                "EBITDA margin",
+              valori:
+                margineEbitdaPuro,
+              format: percentuale,
+              direzione: "up",
+              deltaMode: "pp",
+            },
+            {
+              label:
+                "Margine netto",
+              valori:
+                margineNettoPuro,
+              format: percentuale,
+              direzione: "up",
+              deltaMode: "pp",
+            },
+          ].map((riga: any) => (
+            <tr
+              key={riga.label}
+              className="border-t hover:bg-gray-50/60"
+            >
+              <td className="p-3 font-medium whitespace-nowrap">
+                {riga.label}
+              </td>
+
+              {riga.valori.map(
+                (
+                  valore: number | null,
+                  index: number
+                ) => {
+                  const precedente =
+                    index > 0
+                      ? riga.valori[
+                          index - 1
+                        ]
+                      : null;
+
+                  const delta =
+                    index === 0
+                      ? null
+                      : riga.deltaMode ===
+                        "pp"
+                      ? variazioneAssoluta(
+                          valore,
+                          precedente
+                        )
+                      : variazionePercentuale(
+                          valore,
+                          precedente
+                        );
+
+                  const stato =
+                    classeDelta(
+                      delta,
+                      riga.direzione
+                    );
+
+                  return (
+                    <Fragment
+                      key={index}
+                    >
+                      <td className="p-3 text-right font-semibold whitespace-nowrap">
+                        {valore === null
+                          ? "—"
+                          : riga.format(
+                              valore
+                            )}
+                      </td>
+
+                      {index > 0 && (
+                        <td className="p-3 text-center whitespace-nowrap">
+                          {delta ===
+                          null ? (
+                            "—"
+                          ) : (
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ${stato.className}`}
+                            >
+                              {stato.icona ===
+                              "up" ? (
+                                <TrendingUp className="h-3 w-3" />
+                              ) : stato.icona ===
+                                "down" ? (
+                                <TrendingDown className="h-3 w-3" />
+                              ) : (
+                                <Minus className="h-3 w-3" />
+                              )}
+
+                              {riga.deltaMode ===
+                              "pp"
+                                ? formatDeltaPunti(
+                                    delta
+                                  )
+                                : formatDeltaPercentuale(
+                                    delta
+                                  )}
+                            </span>
+                          )}
+                        </td>
+                      )}
+                    </Fragment>
+                  );
+                }
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {/* ===================================================
+      SINTESI GESTIONALE
+  =================================================== */}
+  {ultimoIndiceDisponibile >= 1 && (
+    <div className="border rounded-xl bg-slate-50 p-5">
+      <div className="flex items-center gap-2 mb-4">
+        <Activity className="h-5 w-5" />
+
+        <h2 className="font-semibold text-lg">
+          Sintesi gestionale
+        </h2>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+
+        {/* RICAVI ULTIMO TRIMESTRE */}
+        {(() => {
+          const indice =
+            ultimoIndiceDisponibile;
+
+          const crescita =
+            variazionePercentuale(
+              ricaviPuri[indice],
+              ricaviPuri[
+                indice - 1
+              ]
+            );
+
+          const stato =
+            classeDelta(
+              crescita,
+              "up"
+            );
+
+          return (
+            <div className="bg-white border rounded-lg p-4">
+              <div className="text-xs text-gray-500 uppercase">
+                Andamento ricavi
+              </div>
+
+              <div className="font-semibold mt-1">
+                Q{indice + 1}:{" "}
+                {euro(
+                  ricaviPuri[
+                    indice
+                  ]
+                )}
+              </div>
+
+              <div className="mt-2">
+                <span
+                  className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full ${stato.className}`}
+                >
+                  {formatDeltaPercentuale(
+                    crescita
+                  )}{" "}
+                  vs Q{indice}
+                </span>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* EBITDA MARGIN */}
+        {(() => {
+          const indice =
+            ultimoIndiceDisponibile;
+
+          const delta =
+            variazioneAssoluta(
+              margineEbitdaPuro[
+                indice
+              ],
+              margineEbitdaPuro[
+                indice - 1
+              ]
+            );
+
+          const stato =
+            classeDelta(
+              delta,
+              "up"
+            );
+
+          return (
+            <div className="bg-white border rounded-lg p-4">
+              <div className="text-xs text-gray-500 uppercase">
+                Marginalità EBITDA
+              </div>
+
+              <div className="font-semibold mt-1">
+                {percentuale(
+                  margineEbitdaPuro[
+                    indice
+                  ]
+                )}
+              </div>
+
+              <div className="mt-2">
+                <span
+                  className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full ${stato.className}`}
+                >
+                  {formatDeltaPunti(
+                    delta
+                  )}{" "}
+                  vs Q{indice}
+                </span>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* RISULTATO */}
+        {(() => {
+          const indice =
+            ultimoIndiceDisponibile;
+
+          const valore =
+            risultatoPuro[indice];
+
+          return (
+            <div className="bg-white border rounded-lg p-4">
+              <div className="text-xs text-gray-500 uppercase">
+                Risultato ultimo trimestre
+              </div>
+
+              <div
+                className={`font-bold text-lg mt-1 ${
+                  Number(
+                    valore || 0
+                  ) < 0
+                    ? "text-red-600"
+                    : "text-green-700"
+                }`}
+              >
+                {euro(valore)}
+              </div>
+
+              {Number(
+                valore || 0
+              ) < 0 && (
+                <div className="text-xs text-red-600 mt-2">
+                  Il trimestre evidenzia
+                  una perdita economica.
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ROI */}
+        {(() => {
+          const indice =
+            ultimoIndiceDisponibile;
+
+          const roiAttuale =
+            valoreIndice(
+              indice,
+              "roi"
+            );
+
+          const roiPrecedente =
+            valoreIndice(
+              indice - 1,
+              "roi"
+            );
+
+          const delta =
+            variazioneAssoluta(
+              roiAttuale,
+              roiPrecedente
+            );
+
+          const stato =
+            classeDelta(
+              delta,
+              "up"
+            );
+
+          return (
+            <div className="bg-white border rounded-lg p-4">
+              <div className="text-xs text-gray-500 uppercase">
+                Redditività capitale
+              </div>
+
+              <div className="font-semibold mt-1">
+                ROI{" "}
+                {percentuale(
+                  roiAttuale
+                )}
+              </div>
+
+              <div className="mt-2">
+                <span
+                  className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full ${stato.className}`}
+                >
+                  {formatDeltaPunti(
+                    delta
+                  )}{" "}
+                  vs Q{indice}
+                </span>
+              </div>
+            </div>
+          );
+        })()}
+      </div>
+    </div>
+  )}
+</div>
 
       {/* CHECKLIST */}
       <div className="border rounded-lg bg-white p-5">
