@@ -158,14 +158,94 @@ export default async function handler(
         }
       );
 
-    if (importsError) {
-      throw importsError;
-    }
+   if (importsError) {
+  throw importsError;
+}
 
-    const importIds =
-      (imports || []).map(
-        (item: any) => item.id
-      );
+/*
+ * =====================================================
+ * IMPORT AUTOREVOLE PER PERIODO
+ * =====================================================
+ *
+ * Possono esistere vecchi import riferiti allo stesso
+ * trimestre, creati prima dell'introduzione della logica
+ * di sostituzione.
+ *
+ * Per ogni data_riferimento conserviamo UN SOLO import:
+ *
+ * 1. preferiamo quello già ELABORATO;
+ * 2. a parità di stato, prendiamo il più recente.
+ */
+const importsOrdinati = [
+  ...(imports || []),
+].sort((a: any, b: any) => {
+  const aElaborato =
+    a.stato === "elaborato" ? 1 : 0;
+
+  const bElaborato =
+    b.stato === "elaborato" ? 1 : 0;
+
+  if (aElaborato !== bElaborato) {
+    return bElaborato - aElaborato;
+  }
+
+  return (
+    new Date(
+      b.created_at || 0
+    ).getTime() -
+    new Date(
+      a.created_at || 0
+    ).getTime()
+  );
+});
+
+const importPerPeriodo =
+  new Map<string, any>();
+
+for (const item of importsOrdinati) {
+  const dataRiferimento =
+    String(
+      item.data_riferimento || ""
+    ).slice(0, 10);
+
+  if (!dataRiferimento) {
+    continue;
+  }
+
+  /*
+   * La prima riga incontrata è già quella
+   * autorevole grazie all'ordinamento precedente.
+   */
+  if (
+    !importPerPeriodo.has(
+      dataRiferimento
+    )
+  ) {
+    importPerPeriodo.set(
+      dataRiferimento,
+      item
+    );
+  }
+}
+
+const importsAutorevoli =
+  Array.from(
+    importPerPeriodo.values()
+  ).sort(
+    (a: any, b: any) =>
+      String(
+        a.data_riferimento
+      ).localeCompare(
+        String(
+          b.data_riferimento
+        )
+      )
+  );
+
+const importIds =
+  importsAutorevoli.map(
+    (item: any) => item.id
+  );
 
     /*
      * 4. INDICI
@@ -289,9 +369,9 @@ export default async function handler(
     /*
      * 7. PERIODI
      */
-    const periodi =
-      (imports || []).map(
-        (importRecord: any) => {
+   const periodi =
+  importsAutorevoli.map(
+    (importRecord: any) => {
           const controllo =
             controlliMap.get(
               importRecord.controllo_id
