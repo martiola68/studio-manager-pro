@@ -1001,53 +1001,67 @@ moltiplicatore: 1,
         );
       }
 
-      /*
-       * Per ora aggiorniamo la schermata localmente.
-       * Nel prossimo step sincronizzeremo anche la riga
-       * dello staging.
-       */
-      setRisultato((prev) => {
-        if (!prev) return prev;
+    /*
+ * La mappatura è stata salvata.
+ *
+ * Rilanciamo immediatamente l'import del CSV già
+ * selezionato, così il nuovo mapping viene applicato
+ * anche alle righe staging dell'import corrente.
+ *
+ * In questo modo UI e database rimangono sempre
+ * sincronizzati e "Elabora controllo" può essere
+ * eseguito senza refresh manuale.
+ */
+if (file) {
+  await handleImport();
+} else {
+  /*
+   * Fallback prudenziale:
+   * se per qualche motivo il file non fosse più
+   * disponibile, aggiorniamo almeno la UI locale.
+   */
+  setRisultato((prev) => {
+    if (!prev) return prev;
 
-        const nuoveRighe =
-          prev.da_mappare.filter(
-            (riga) =>
-              riga.codice_conto !==
-              conto.codice_conto
-          );
+    const nuoveRighe =
+      prev.da_mappare.filter(
+        (riga) =>
+          riga.codice_conto !==
+          conto.codice_conto
+      );
 
-        return {
-          ...prev,
+    return {
+      ...prev,
 
-          riepilogo: {
-            ...prev.riepilogo,
+      riepilogo: {
+        ...prev.riepilogo,
 
-            conti_da_mappare:
-              Math.max(
-                0,
-                prev.riepilogo
-                  .conti_da_mappare - 1
-              ),
+        conti_da_mappare:
+          Math.max(
+            0,
+            prev.riepilogo
+              .conti_da_mappare - 1
+          ),
 
-            conti_mappati:
-              escluso
-                ? prev.riepilogo
-                    .conti_mappati
-                : prev.riepilogo
-                    .conti_mappati + 1,
+        conti_mappati:
+          escluso
+            ? prev.riepilogo
+                .conti_mappati
+            : prev.riepilogo
+                .conti_mappati + 1,
 
-            conti_esclusi:
-              escluso
-                ? prev.riepilogo
-                    .conti_esclusi + 1
-                : prev.riepilogo
-                    .conti_esclusi,
-          },
+        conti_esclusi:
+          escluso
+            ? prev.riepilogo
+                .conti_esclusi + 1
+            : prev.riepilogo
+                .conti_esclusi,
+      },
 
-          da_mappare: nuoveRighe,
-        };
-      });
-
+      da_mappare: nuoveRighe,
+    };
+  });
+}
       setMessaggio(
         escluso
           ? `Conto ${conto.codice_conto} escluso.`
