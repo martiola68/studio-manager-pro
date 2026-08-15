@@ -429,6 +429,10 @@ const menuItems: MenuItem[] = [
   label: "Controllo di gestione",
   icon: <BriefcaseBusiness className="h-4 w-4" />,
   children: [
+   {
+  label: "Controllo di gestione",
+  icon: <BriefcaseBusiness className="h-4 w-4" />,
+  children: [
     {
       label: "Elenco generale",
       href: "/controllo-gestione",
@@ -445,8 +449,8 @@ const menuItems: MenuItem[] = [
       icon: <RefreshCcw className="h-4 w-4" />,
     },
     {
-      label: "Piano dei conti",
-      href: "/controllo-gestione/piano-conti",
+      label: "Piani dei conti",
+      href: "/controllo-gestione/piani-conti",
       icon: <Settings className="h-4 w-4" />,
     },
     {
