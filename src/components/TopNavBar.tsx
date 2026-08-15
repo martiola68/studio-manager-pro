@@ -571,10 +571,10 @@ const menuItems: MenuItem[] = [
   },
 ];
 
-const isExactRoute = (href?: string) => 
-    if (!href) return false;
-    return currentRoute === href;
-  };
+const isExactRoute = (href?: string) => {
+  if (!href) return false;
+  return currentRoute === href;
+};
 
   const isPathActive = (href?: string) => {
     if (!href) return false;
