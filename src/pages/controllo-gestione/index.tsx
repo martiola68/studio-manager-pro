@@ -71,6 +71,9 @@ const [riepiloghiByControllo, setRiepiloghiByControllo] =
 
 const [loadingRiepiloghi, setLoadingRiepiloghi] =
   useState(false);
+
+  const [periodiElaboratiByControllo, setPeriodiElaboratiByControllo] =
+  useState<Record<string, number>>({});
   
 async function load() {
   const res = await fetch("/api/controllo-gestione");
@@ -82,10 +85,11 @@ async function load() {
 
   setRecords(elenco);
 
-  if (elenco.length === 0) {
-    setRiepiloghiByControllo({});
-    return;
-  }
+if (elenco.length === 0) {
+  setRiepiloghiByControllo({});
+  setPeriodiElaboratiByControllo({});
+  return;
+}
 
   try {
     setLoadingRiepiloghi(true);
@@ -123,13 +127,108 @@ async function load() {
       })
     );
 
-    const mappa: Record<string, any> = {};
+   const mappa: Record<string, any> = {};
 
-    risultati.forEach((item) => {
-      mappa[item.id] = item.riepilogo;
-    });
+risultati.forEach((item) => {
+  mappa[item.id] = item.riepilogo;
+});
 
-    setRiepiloghiByControllo(mappa);
+setRiepiloghiByControllo(mappa);
+
+/*
+ * Carichiamo anche il numero reale dei periodi
+ * contabili elaborati nell'esercizio.
+ */
+const periodiRisultati = await Promise.all(
+  elenco.map(async (record: any) => {
+    try {
+      const riepilogo =
+        mappa[record.id];
+
+      const dataRiferimento =
+        riepilogo?.import?.data_riferimento ||
+        record.data_storico ||
+        record.data_esecuzione ||
+        "";
+
+      const anno =
+        String(dataRiferimento).slice(0, 4);
+
+      if (
+        !record.cliente_id ||
+        !anno
+      ) {
+        return {
+          id: record.id,
+          completati: 0,
+        };
+      }
+
+      const response = await fetch(
+        `/api/controllo-gestione/analisi-periodi?cliente_id=${encodeURIComponent(
+          record.cliente_id
+        )}&anno=${encodeURIComponent(
+          anno
+        )}`
+      );
+
+      const json =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          json?.error ||
+            "Errore caricamento periodi"
+        );
+      }
+
+      const periodi =
+        Array.isArray(json?.periodi)
+          ? json.periodi
+          : [];
+
+      const completati =
+        periodi.filter(
+          (periodo: any) =>
+            periodo?.import?.stato ===
+            "elaborato"
+        ).length;
+
+      return {
+        id: record.id,
+        completati:
+          Math.min(4, completati),
+      };
+    } catch (error) {
+      console.error(
+        "Errore conteggio periodi:",
+        record.id,
+        error
+      );
+
+      return {
+        id: record.id,
+        completati: 0,
+      };
+    }
+  })
+);
+
+const mappaPeriodi: Record<
+  string,
+  number
+> = {};
+
+periodiRisultati.forEach(
+  (item) => {
+    mappaPeriodi[item.id] =
+      item.completati;
+  }
+);
+
+setPeriodiElaboratiByControllo(
+  mappaPeriodi
+);
   } finally {
     setLoadingRiepiloghi(false);
   }
@@ -424,9 +523,21 @@ return (
       <th className="p-2 text-left">Società</th>
       <th className="p-2 text-left">Anno</th>
       <th className="p-2 text-left">Periodo</th>
-      <th className="p-2 text-left">Cadenza</th>
-      <th className="p-2 text-left">Avanzamento</th>
-      <th className="p-2 text-left">Stato dati</th>
+    <th className="p-2 text-left">
+  Cadenza
+</th>
+
+<th className="p-2 text-left">
+  Periodi
+</th>
+
+<th className="p-2 text-left">
+  Checklist
+</th>
+
+<th className="p-2 text-left">
+  Stato dati
+</th>
       <th className="p-2 text-right">EBITDA</th>
       <th className="p-2 text-right">Risultato</th>
       <th className="p-2 text-left">Utenti</th>
@@ -441,6 +552,14 @@ return (
 
     const avanzamento =
       avanzamentoControllo(r);
+
+      const periodiElaborati =
+  periodiElaboratiByControllo[
+    r.id
+  ] || 0;
+
+const percentualePeriodi =
+  periodiElaborati * 25;
 
     const stato =
       statoDatiControllo(riepilogo);
@@ -498,27 +617,49 @@ return (
           {r.cadenza_controllo}
         </td>
 
-        <td className="p-2 min-w-[140px]">
-          <div className="flex justify-between text-xs mb-1">
-            <span>
-              {avanzamento.completati}/4
-            </span>
+       {/* PERIODI CONTABILI */}
+<td className="p-2 min-w-[125px]">
+  <div className="flex justify-between text-xs mb-1">
+    <span className="font-medium">
+      {periodiElaborati}/4
+    </span>
 
-            <span>
-              {avanzamento.percentuale}%
-            </span>
-          </div>
+    <span>
+      {percentualePeriodi}%
+    </span>
+  </div>
 
-          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-green-600 rounded-full"
-              style={{
-                width: `${avanzamento.percentuale}%`,
-              }}
-            />
-          </div>
-        </td>
+  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+    <div
+      className="h-full bg-blue-600 rounded-full"
+      style={{
+        width: `${percentualePeriodi}%`,
+      }}
+    />
+  </div>
+</td>
 
+{/* CHECKLIST OPERATIVA */}
+<td className="p-2 min-w-[125px]">
+  <div className="flex justify-between text-xs mb-1">
+    <span className="font-medium">
+      {avanzamento.completati}/4
+    </span>
+
+    <span>
+      {avanzamento.percentuale}%
+    </span>
+  </div>
+
+  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+    <div
+      className="h-full bg-green-600 rounded-full"
+      style={{
+        width: `${avanzamento.percentuale}%`,
+      }}
+    />
+  </div>
+</td>
         <td className="p-2">
           {loadingRiepiloghi &&
           riepilogo === undefined ? (
