@@ -1202,16 +1202,45 @@ if (deleteSaldiError) {
         import_id
       );
 
-    if (updateImportError) {
-      throw updateImportError;
-    }
+  if (updateImportError) {
+  throw updateImportError;
+}
 
-    /*
-     * =====================================================
-     * 18. RISPOSTA
-     * =====================================================
-     */
-    return res.status(200).json({
+/*
+ * =====================================================
+ * 18. COMPLETAMENTO AUTOMATICO STEP 1
+ * =====================================================
+ *
+ * Se l'elaborazione è arrivata fino a questo punto:
+ * - l'import è valido;
+ * - tutti i conti sono classificati;
+ * - i saldi sono stati elaborati;
+ * - gli indici sono stati salvati.
+ *
+ * Quindi lo Step 1 - Rilevamento dati è completato.
+ */
+const {
+  error: step1Error,
+} = await supabaseAdmin
+  .from("tbcontrollo_gestione")
+  .update({
+    step_1_completato: true,
+  })
+  .eq(
+    "id",
+    importRecord.controllo_id
+  );
+
+if (step1Error) {
+  throw step1Error;
+}
+
+/*
+ * =====================================================
+ * 19. RISPOSTA
+ * =====================================================
+ */
+return res.status(200).json({
       success: true,
 
       import_id,
