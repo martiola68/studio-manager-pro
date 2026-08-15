@@ -340,17 +340,42 @@ export default async function handler(
     const contiUtili =
       estraiContiUtili(parsed.righe);
 
-    if (!contiUtili.length) {
-      return res.status(400).json({
-        success: false,
-        error:
-          "Nessun conto utilizzabile individuato nel file DATEV",
-      });
-    }
+   if (!contiUtili.length) {
+  return res.status(400).json({
+    success: false,
+    error:
+      "Nessun conto utilizzabile individuato nel file DATEV",
+  });
+}
 
-    /*
-     * 6. MAPPATURE TEMPLATE.
-     */
+/*
+ * Verifichiamo se il controllo possiede già un import.
+ *
+ * Un controllo deve avere un solo import corrente.
+ * Se esiste, lo sostituiremo mantenendo lo stesso import_id.
+ */
+const {
+  data: importEsistente,
+  error: importEsistenteError,
+} = await supabaseAdmin
+  .from("tbcontrollo_gestione_import")
+  .select("id")
+  .eq("studio_id", studio_id)
+  .eq("cliente_id", cliente_id)
+  .eq("controllo_id", controllo_id)
+  .order("created_at", {
+    ascending: false,
+  })
+  .limit(1)
+  .maybeSingle();
+
+if (importEsistenteError) {
+  throw importEsistenteError;
+}
+
+/*
+ * 6. MAPPATURE TEMPLATE.
+ */
     let templateMappings:
       TemplateMappingRow[] = [];
 
@@ -530,72 +555,174 @@ const voceEffettiva =
       }
     }
 
-    /*
-     * 10. Registro import.
-     */
-    const statoImport =
-      contiDaMappare > 0
-        ? "da_mappare"
-        : "validazione";
+   /*
+ * 10. Registro import.
+ *
+ * Analizza e importa = SALVATAGGIO AUTOMATICO.
+ *
+ * Se il controllo possiede già un import:
+ * - manteniamo lo stesso import_id;
+ * - sostituiamo i dati;
+ * - eliminiamo le vecchie righe contabili;
+ * - invalidiamo saldi e indici già elaborati.
+ *
+ * Se non esiste, creiamo il primo import.
+ */
+const statoImport =
+  contiDaMappare > 0
+    ? "da_mappare"
+    : "validazione";
 
-    const {
-      data: importRecord,
-      error: importError,
-    } = await supabaseAdmin
-      .from(
-        "tbcontrollo_gestione_import"
-      )
-      .insert({
-        studio_id,
-        cliente_id,
-        controllo_id,
+const payloadImport = {
+  studio_id,
+  cliente_id,
+  controllo_id,
 
-        software_contabile,
+  software_contabile,
 
-        tipo_import:
-          "situazione_contabile",
+  tipo_import:
+    "situazione_contabile",
 
-        data_riferimento:
-          parsed.periodoAl ||
-          new Date()
-            .toISOString()
-            .slice(0, 10),
+  data_riferimento:
+    parsed.periodoAl ||
+    new Date()
+      .toISOString()
+      .slice(0, 10),
 
-        nome_file:
-          nome_file || null,
+  nome_file:
+    nome_file || null,
 
-        numero_righe:
-          parsed.righe.length,
+  numero_righe:
+    parsed.righe.length,
 
-        numero_conti:
-          contiUtili.length,
+  numero_conti:
+    contiUtili.length,
 
-        conti_mappati:
-          contiMappati,
+  conti_mappati:
+    contiMappati,
 
-        conti_da_mappare:
-          contiDaMappare,
+  conti_da_mappare:
+    contiDaMappare,
 
-        numero_errori:
-          anomalie.length,
+  numero_errori:
+    anomalie.length,
 
-        stato:
-          statoImport,
+  stato:
+    statoImport,
 
-        messaggio_errore:
-          anomalie.length > 0
-            ? anomalie.join(" | ")
-            : null,
-      })
-      .select("id")
-      .single();
+  messaggio_errore:
+    anomalie.length > 0
+      ? anomalie.join(" | ")
+      : null,
 
-    if (importError) {
-      throw importError;
-    }
+  updated_at:
+    new Date().toISOString(),
+};
 
-    importId =
-      importRecord.id;
+if (importEsistente?.id) {
+  importId = importEsistente.id;
+
+  /*
+   * Eliminiamo prima le righe appartenenti
+   * al precedente file importato.
+   */
+  const {
+    error: deleteRigheError,
+  } = await supabaseAdmin
+    .from(
+      "tbcontrollo_gestione_import_righe"
+    )
+    .delete()
+    .eq(
+      "import_id",
+      importId
+    );
+
+  if (deleteRigheError) {
+    throw deleteRigheError;
+  }
+
+  /*
+   * I saldi derivati non sono più validi.
+   * Verranno rigenerati con "Elabora controllo".
+   */
+  const {
+    error: deleteSaldiError,
+  } = await supabaseAdmin
+    .from(
+      "tbcontrollo_gestione_saldi"
+    )
+    .delete()
+    .eq(
+      "controllo_id",
+      controllo_id
+    );
+
+  if (deleteSaldiError) {
+    throw deleteSaldiError;
+  }
+
+  /*
+   * Anche gli indici automatici non sono più validi.
+   */
+  const {
+    error: deleteIndiciError,
+  } = await supabaseAdmin
+    .from(
+      "tbcontrollo_gestione_indici"
+    )
+    .delete()
+    .eq(
+      "controllo_gestione_id",
+      controllo_id
+    )
+    .eq(
+      "origine",
+      "contabilita_datev"
+    );
+
+  if (deleteIndiciError) {
+    throw deleteIndiciError;
+  }
+
+  const {
+    error: updateImportError,
+  } = await supabaseAdmin
+    .from(
+      "tbcontrollo_gestione_import"
+    )
+    .update(
+      payloadImport
+    )
+    .eq(
+      "id",
+      importId
+    );
+
+  if (updateImportError) {
+    throw updateImportError;
+  }
+} else {
+  const {
+    data: importRecord,
+    error: importError,
+  } = await supabaseAdmin
+    .from(
+      "tbcontrollo_gestione_import"
+    )
+    .insert(
+      payloadImport
+    )
+    .select("id")
+    .single();
+
+  if (importError) {
+    throw importError;
+  }
+
+  importId =
+    importRecord.id;
+}
 
     /*
      * 11. STAGING.
