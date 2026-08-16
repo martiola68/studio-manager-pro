@@ -412,20 +412,51 @@ const menuItems: MenuItem[] = [
         ],
       },
       {
-        label: "Revisione e Controllo",
-        icon: <ClipboardCheck className="h-4 w-4" />,
-        children: [
-          { label: "Dashboard", href: "/revisione-controllo/dashboard", icon: <BarChart3 className="h-4 w-4" /> },
-          { label: "Archivio incarichi", href: "/revisione-controllo", icon: <FileText className="h-4 w-4" /> },
-          { label: "Nuovo incarico", href: "/revisione-controllo/nuovo", icon: <FileText className="h-4 w-4" /> },
-          { label: "Controlli trimestrali", href: "/revisione-controllo/controlli", icon: <Calendar className="h-4 w-4" /> },
-          { label: "Checklist controlli", href: "/revisione-controllo/checklist", icon: <ClipboardCheck className="h-4 w-4" /> },
-          { label: "Documenti revisione", href: "/revisione-controllo/documenti", icon: <FileText className="h-4 w-4" /> },
-          { label: "Relazioni / Verbali", href: "/revisione-controllo/relazioni", icon: <FileText className="h-4 w-4" /> },
-          { label: "Modelli relazioni", href: "/revisione-controllo/modelli", icon: <FileText className="h-4 w-4" /> },
-          { label: "Follow-up", href: "/revisione-controllo/followup", icon: <Clock className="h-4 w-4" /> },
-        ],
-      },
+  label: "Revisione e Controllo",
+  icon: <ClipboardCheck className="h-4 w-4" />,
+  children: [
+    {
+      label: "Dashboard",
+      href: "/revisione-controllo/dashboard",
+      icon: <BarChart3 className="h-4 w-4" />,
+    },
+    {
+      label: "Incarichi / Fascicoli",
+      href: "/revisione-controllo",
+      icon: <FolderKanban className="h-4 w-4" />,
+    },
+    {
+      label: "Nuovo incarico",
+      href: "/revisione-controllo/nuovo",
+      icon: <FileText className="h-4 w-4" />,
+    },
+    {
+      label: "Controlli periodici",
+      href: "/revisione-controllo/controlli",
+      icon: <Calendar className="h-4 w-4" />,
+    },
+    {
+      label: "Rilievi / Follow-up",
+      href: "/revisione-controllo/followup",
+      icon: <AlertTriangle className="h-4 w-4" />,
+    },
+    {
+      label: "Carte di lavoro",
+      href: "/revisione-controllo/documenti",
+      icon: <FolderKanban className="h-4 w-4" />,
+    },
+    {
+      label: "Relazioni annuali",
+      href: "/revisione-controllo/relazioni",
+      icon: <FileText className="h-4 w-4" />,
+    },
+    {
+      label: "Modelli relazioni",
+      href: "/revisione-controllo/modelli",
+      icon: <FileText className="h-4 w-4" />,
+    },
+  ],
+},
    {
   label: "Controllo di gestione",
   icon: <BriefcaseBusiness className="h-4 w-4" />,
