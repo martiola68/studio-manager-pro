@@ -102,13 +102,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const annoInizio = new Date(`${data_inizio}T00:00:00`).getFullYear();
 
-      const rowsControlli = [1, 2, 3, 4].map((trimestre) => ({
-        incarico_id: data.id,
-        anno: annoInizio,
-        trimestre,
-        data_scadenza: getScadenzaTrimestre(annoInizio, trimestre),
-        stato: "DA_FARE",
-      }));
+     const rowsControlli = [1, 2, 3, 4].map((trimestre) => ({
+  studio_id,
+  incarico_id: data.id,
+  anno: annoInizio,
+  trimestre,
+  data_scadenza: getScadenzaTrimestre(annoInizio, trimestre),
+  stato: "DA_FARE",
+}));
 
       const { error: controlliError } = await supabaseAdmin
         .from("tbrevisione_controlli")
