@@ -755,42 +755,85 @@ const superaMaterialita =
                     </td>
 
                     <td className="p-3 text-center">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const indice =
-                            checklist.findIndex(
-                              (item) =>
-                                item.voce_smp_id ===
-                                saldo.voce_id
-                            );
+                     <button
+  type="button"
+  onClick={() => {
+    const indice =
+      checklist.findIndex(
+        (item) =>
+          item.voce_smp_id ===
+          saldo.voce_id
+      );
 
-                          if (
-                            indice >= 0
-                          ) {
-                            const element =
-                              document.getElementById(
-                                `checklist-${checklist[indice].id}`
-                              );
+    if (indice < 0) {
+      setError(
+        `Non esiste ancora una procedura collegata alla voce ${saldo.descrizione}.`
+      );
+      return;
+    }
 
-                            element?.scrollIntoView({
-                              behavior:
-                                "smooth",
-                              block:
-                                "center",
-                            });
+    const voceChecklist =
+      checklist[indice];
 
-                            return;
-                          }
+    const materialita =
+      Number(
+        fascicolo?.materialita || 0
+      );
 
-                          setError(
-                            `Non esiste ancora una procedura collegata alla voce ${saldo.descrizione}.`
-                          );
-                        }}
-                        className="rounded-md border bg-white px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-50"
-                      >
-                        Apri verifica
-                      </button>
+    const saldoAssoluto =
+      Math.abs(
+        Number(
+          saldo.importo || 0
+        )
+      );
+
+    const significativitaProposta =
+      materialita > 0
+        ? saldoAssoluto >= materialita
+          ? "SIGNIFICATIVO"
+          : "NON_SIGNIFICATIVO"
+        : null;
+
+    const rischioProposto =
+      fascicolo?.rischio_complessivo ||
+      null;
+
+    setChecklist((prev) =>
+      prev.map((item, i) => {
+        if (i !== indice) {
+          return item;
+        }
+
+        return {
+          ...item,
+
+          significativita:
+            item.significativita ||
+            significativitaProposta,
+
+          rischio:
+            item.rischio ||
+            rischioProposto,
+        };
+      })
+    );
+
+    setTimeout(() => {
+      const element =
+        document.getElementById(
+          `checklist-${voceChecklist.id}`
+        );
+
+      element?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 50);
+  }}
+  className="rounded-md border bg-white px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-50"
+>
+  Apri verifica
+</button>
                     </td>
                   </tr>
                 );
@@ -871,14 +914,19 @@ const superaMaterialita =
                         );
 
                         return (
-                          <tr
+                         <tr
   key={item.id}
   id={
     item.id
       ? `checklist-${item.id}`
       : undefined
   }
-  className="border-b"
+  className={`border-b transition-colors ${
+    item.significativita ===
+    "SIGNIFICATIVO"
+      ? "bg-amber-50"
+      : ""
+  }`}
 >
                             <td className="p-3">
                               {item.domanda}
@@ -924,7 +972,7 @@ const superaMaterialita =
   })()}
 </td>
                             
-                            <td className="p-3 text-center">
+   <td className="p-3 text-center">
   <select
     value={item.asserzione || ""}
     onChange={(e) =>
@@ -968,6 +1016,12 @@ const superaMaterialita =
     <option value="MEDIO">Medio</option>
     <option value="ALTO">Alto</option>
   </select>
+  {item.voce_smp_id &&
+  item.rischio && (
+    <div className="mt-1 text-[10px] text-gray-400">
+      Valutazione area
+    </div>
+  )}
 </td>
 
 <td className="p-3">
@@ -1064,6 +1118,12 @@ const superaMaterialita =
       Significativo
     </option>
   </select>
+   {item.voce_smp_id &&
+    item.significativita && (
+      <div className="mt-1 text-[10px] text-gray-400">
+        Modificabile dal revisore
+      </div>
+    )}
 </td>
 
 {/* NUOVO — IMPORTO RILIEVO */}
