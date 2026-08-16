@@ -456,6 +456,11 @@ const menuItems: MenuItem[] = [
       href: "/revisione-controllo/modelli",
       icon: <FileText className="h-4 w-4" />,
     },
+   {
+  label: "Manuale operativo",
+  href: "/guide/Manuale_Revisione_e_Controllo_SMP.pdf",
+  icon: <BookOpen className="h-4 w-4" />,
+},
   ],
 },
    {
