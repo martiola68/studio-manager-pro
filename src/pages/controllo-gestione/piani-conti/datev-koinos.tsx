@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import ExcelJS from "exceljs";
 import Papa from "papaparse";
-import { getSupabaseClient } from "../../lib/supabaseClient";
+import { getSupabaseClient } from "../../../lib/supabaseClient";
 
 type MasterRow = {
   id: string;
@@ -838,7 +838,7 @@ export default function MasterPianoContiPage() {
                 "#64748b",
             }}
           >
-            Configurazione dei piani dei conti per il controllo di gestione
+           Gestione del master DATEV KOINOS e delle associazioni alle voci di bilancio SMP
           </div>
         </div>
 
@@ -1035,6 +1035,29 @@ export default function MasterPianoContiPage() {
             />
           </div>
         )}
+
+        {masterSelezionato && (
+  <div
+    style={{
+      marginTop: 16,
+      display: "flex",
+      gap: 10,
+      flexWrap: "wrap",
+    }}
+  >
+    <button
+      type="button"
+      onClick={() =>
+        router.push(
+          `/controllo-gestione/piani-conti/datev-koinos/${masterSelezionato.id}`
+        )
+      }
+      style={primaryButtonStyle}
+    >
+      Gestisci classificazione conti
+    </button>
+  </div>
+)}
       </section>
 
       <section
