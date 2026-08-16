@@ -9,7 +9,95 @@ const supabaseAdmin = createClient(
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     if (req.method === "GET") {
-      const { studio_id, anno, trimestre, stato, cliente_id } = req.query;
+      const {
+  studio_id,
+  anno,
+  trimestre,
+  stato,
+  cliente_id,
+  azione,
+} = req.query;
+
+/*
+ * =====================================================
+ * IMPORT CONTABILI DISPONIBILI PER IL CONTROLLO
+ * =====================================================
+ */
+if (azione === "import_disponibili") {
+  if (
+    typeof studio_id !== "string" ||
+    !studio_id ||
+    typeof cliente_id !== "string" ||
+    !cliente_id ||
+    typeof anno !== "string" ||
+    !anno ||
+    typeof trimestre !== "string" ||
+    !trimestre
+  ) {
+    return res.status(400).json({
+      success: false,
+      error:
+        "studio_id, cliente_id, anno e trimestre sono obbligatori",
+    });
+  }
+
+  const annoNum = Number(anno);
+  const trimestreNum = Number(trimestre);
+
+  const dateFineTrimestre: Record<number, string> = {
+    1: `${annoNum}-03-31`,
+    2: `${annoNum}-06-30`,
+    3: `${annoNum}-09-30`,
+    4: `${annoNum}-12-31`,
+  };
+
+  const dataRiferimento =
+    dateFineTrimestre[trimestreNum];
+
+  if (!dataRiferimento) {
+    return res.status(400).json({
+      success: false,
+      error: "Trimestre non valido",
+    });
+  }
+
+  const {
+    data: imports,
+    error: importsError,
+  } = await supabaseAdmin
+    .from("tbcontrollo_gestione_import")
+    .select(`
+      id,
+      studio_id,
+      cliente_id,
+      controllo_id,
+      template_id,
+      software_contabile,
+      nome_file,
+      data_riferimento,
+      numero_conti,
+      conti_mappati,
+      conti_da_mappare,
+      stato,
+      created_at
+    `)
+    .eq("studio_id", studio_id)
+    .eq("cliente_id", cliente_id)
+    .eq("data_riferimento", dataRiferimento)
+    .order("created_at", {
+      ascending: false,
+    });
+
+  if (importsError) {
+    throw importsError;
+  }
+
+  return res.status(200).json({
+    success: true,
+    data: imports || [],
+    data_riferimento: dataRiferimento,
+  });
+}
 
       let query = supabaseAdmin
         .from("vw_revisione_controlli")
@@ -36,25 +124,141 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         query = query.eq("stato", stato);
       }
 
-      const { data, error } = await query;
+    const { data, error } = await query;
 
-      if (error) throw error;
+if (error) throw error;
 
-      return res.status(200).json({
-        success: true,
-        data: data || [],
-      });
+const controlli = data || [];
+
+if (controlli.length === 0) {
+  return res.status(200).json({
+    success: true,
+    data: [],
+  });
+}
+
+/*
+ * La vista vw_revisione_controlli esiste già e non
+ * vogliamo modificarla.
+ *
+ * Recuperiamo quindi dalla tabella base solamente
+ * il collegamento all'import contabile.
+ */
+const controlloIds = controlli.map(
+  (item: any) => item.id
+);
+
+const {
+  data: collegamenti,
+  error: collegamentiError,
+} = await supabaseAdmin
+  .from("tbrevisione_controlli")
+  .select(`
+    id,
+    controllo_gestione_import_id
+  `)
+  .in("id", controlloIds);
+
+if (collegamentiError) {
+  throw collegamentiError;
+}
+
+const collegamentoByControllo =
+  new Map(
+    (collegamenti || []).map(
+      (item: any) => [
+        item.id,
+        item.controllo_gestione_import_id || null,
+      ]
+    )
+  );
+
+const importIds = Array.from(
+  new Set(
+    (collegamenti || [])
+      .map(
+        (item: any) =>
+          item.controllo_gestione_import_id
+      )
+      .filter(Boolean)
+  )
+);
+
+let importById =
+  new Map<string, any>();
+
+if (importIds.length > 0) {
+  const {
+    data: imports,
+    error: importsError,
+  } = await supabaseAdmin
+    .from("tbcontrollo_gestione_import")
+    .select(`
+      id,
+      template_id,
+      software_contabile,
+      nome_file,
+      data_riferimento,
+      numero_conti,
+      conti_mappati,
+      conti_da_mappare,
+      stato,
+      created_at
+    `)
+    .in("id", importIds);
+
+  if (importsError) {
+    throw importsError;
+  }
+
+  importById = new Map(
+    (imports || []).map(
+      (item: any) => [
+        item.id,
+        item,
+      ]
+    )
+  );
+}
+
+const risultato =
+  controlli.map((item: any) => {
+    const importId =
+      collegamentoByControllo.get(
+        item.id
+      ) || null;
+
+    return {
+      ...item,
+
+      controllo_gestione_import_id:
+        importId,
+
+      import_contabile:
+        importId
+          ? importById.get(importId) ||
+            null
+          : null,
+    };
+  });
+
+return res.status(200).json({
+  success: true,
+  data: risultato,
+});
     }
 
     if (req.method === "PUT") {
-      const {
-        id,
-        stato,
-        data_controllo,
-        esito,
-        note,
-        completato_da,
-      } = req.body;
+     const {
+  id,
+  stato,
+  data_controllo,
+  esito,
+  note,
+  completato_da,
+
+  controllo_gestione_import_id,
+} = req.body;
 
       if (!id) {
         return res.status(400).json({
@@ -73,6 +277,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (typeof data_controllo !== "undefined") {
         updateData.data_controllo = data_controllo || null;
       }
+
+      if (
+  typeof controllo_gestione_import_id !==
+  "undefined"
+) {
+  updateData.controllo_gestione_import_id =
+    controllo_gestione_import_id || null;
+}
 
       if (stato === "COMPLETATO") {
         updateData.completato_da = completato_da || null;
