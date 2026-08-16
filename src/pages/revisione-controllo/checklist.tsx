@@ -211,16 +211,38 @@ export default function ChecklistRevisionePage() {
                 </div>
 
                 <div className="overflow-auto">
-                  <table className="w-full text-sm">
+                  <table className="w-full min-w-[2200px] text-sm">
                     <thead>
                       <tr className="border-b">
                         <th className="p-3 text-left w-[55%]">
                           Verifica
                         </th>
+                        <th className="p-3 text-center">
+                        Asserzione
+                        </th>
+
+                          <th className="p-3 text-center">
+                            Rischio
+                            </th>
+
+                        <th className="p-3 text-left">
+                        Procedura
+                          </th>
 
                        <th className="p-3 text-center">Risposta</th>
 <th className="p-3 text-center">Esito</th>
 <th className="p-3 text-center">Gravità</th>
+                        <th className="p-3 text-center">
+  Significatività
+</th>
+
+<th className="p-3 text-right">
+  Importo rilievo
+</th>
+
+<th className="p-3 text-left">
+  Effetto relazione
+</th>
 <th className="p-3 text-center">Follow-up</th>
 <th className="p-3 text-center">Data follow-up</th>
 <th className="p-3 text-left">Raccomandazione</th>
@@ -239,6 +261,66 @@ export default function ChecklistRevisionePage() {
                             <td className="p-3">
                               {item.domanda}
                             </td>
+                            <td className="p-3 text-center">
+  <select
+    value={item.asserzione || ""}
+    onChange={(e) =>
+      updateItem(
+        index,
+        "asserzione",
+        e.target.value || null
+      )
+    }
+    className="rounded border px-2 py-1"
+  >
+    <option value="">--</option>
+    <option value="ESISTENZA">Esistenza</option>
+    <option value="COMPLETEZZA">Completezza</option>
+    <option value="ACCURATEZZA">Accuratezza</option>
+    <option value="VALUTAZIONE">Valutazione</option>
+    <option value="COMPETENZA">Competenza</option>
+    <option value="DIRITTI_OBBLIGHI">
+      Diritti / obblighi
+    </option>
+    <option value="PRESENTAZIONE">
+      Presentazione
+    </option>
+  </select>
+</td>
+
+<td className="p-3 text-center">
+  <select
+    value={item.rischio || ""}
+    onChange={(e) =>
+      updateItem(
+        index,
+        "rischio",
+        e.target.value || null
+      )
+    }
+    className="rounded border px-2 py-1"
+  >
+    <option value="">--</option>
+    <option value="BASSO">Basso</option>
+    <option value="MEDIO">Medio</option>
+    <option value="ALTO">Alto</option>
+  </select>
+</td>
+
+<td className="p-3">
+  <input
+    value={item.procedura || ""}
+    onChange={(e) =>
+      updateItem(
+        index,
+        "procedura",
+        e.target.value
+      )
+    }
+    className="min-w-[220px] w-full rounded border px-2 py-1"
+    placeholder="Procedura di revisione..."
+  />
+</td>
 
                             <td className="p-3 text-center">
                               <select
@@ -295,6 +377,73 @@ export default function ChecklistRevisionePage() {
     <option value="ALTA">Alta</option>
   </select>
 </td>
+
+                            {/* NUOVO — SIGNIFICATIVITÀ */}
+<td className="p-3 text-center">
+  <select
+    value={item.significativita || ""}
+    onChange={(e) =>
+      updateItem(
+        index,
+        "significativita",
+        e.target.value || null
+      )
+    }
+    className="rounded border px-2 py-1"
+  >
+    <option value="">--</option>
+
+    <option value="NON_SIGNIFICATIVO">
+      Non significativo
+    </option>
+
+    <option value="SIGNIFICATIVO">
+      Significativo
+    </option>
+  </select>
+</td>
+
+{/* NUOVO — IMPORTO RILIEVO */}
+<td className="p-3">
+  <input
+    type="number"
+    step="0.01"
+    value={item.importo_rilievo ?? ""}
+    onChange={(e) =>
+      updateItem(
+        index,
+        "importo_rilievo",
+        e.target.value === ""
+          ? null
+          : Number(e.target.value)
+      )
+    }
+    className="w-32 rounded border px-2 py-1 text-right"
+    placeholder="0,00"
+  />
+</td>
+
+{/* NUOVO — EFFETTO RELAZIONE */}
+<td className="p-3">
+  <input
+    value={item.effetto_relazione || ""}
+    onChange={(e) =>
+      updateItem(
+        index,
+        "effetto_relazione",
+        e.target.value
+      )
+    }
+    className="min-w-[220px] w-full rounded border px-2 py-1"
+    placeholder="Effetto sulla relazione..."
+  />
+</td>
+
+{/* QUESTO ESISTE GIÀ — FOLLOW-UP */}
+<td className="p-3 text-center">
+  <input
+    type="checkbox"
+    checked={item.follow_up === true}
 
 <td className="p-3 text-center">
   <input
