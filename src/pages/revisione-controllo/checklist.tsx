@@ -337,6 +337,243 @@ export default function ChecklistRevisionePage() {
   </div>
 )}
 
+        {datiContabili?.saldi &&
+  datiContabili.saldi.length > 0 && (
+    <div className="mb-6 overflow-hidden rounded-xl border bg-white shadow-sm">
+      <div className="border-b bg-slate-50 px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">
+              Aree di bilancio
+            </h2>
+
+            <p className="mt-1 text-xs text-slate-500">
+              Saldi riclassificati della situazione contabile collegata al controllo.
+            </p>
+          </div>
+
+          <div className="text-sm text-slate-500">
+            {datiContabili.saldi.length} voci SMP
+          </div>
+        </div>
+      </div>
+
+      <div className="overflow-auto">
+        <table className="w-full min-w-[1050px] text-sm">
+          <thead className="bg-white">
+            <tr className="border-b">
+              <th className="p-3 text-left">
+                Codice
+              </th>
+
+              <th className="p-3 text-left">
+                Area
+              </th>
+
+              <th className="p-3 text-left">
+                Sezione
+              </th>
+
+              <th className="p-3 text-left">
+                Macrovoce
+              </th>
+
+              <th className="p-3 text-right">
+                Saldo
+              </th>
+
+              <th className="p-3 text-right">
+                Incidenza
+              </th>
+
+              <th className="p-3 text-center">
+                Conti
+              </th>
+
+              <th className="p-3 text-center">
+                Azione
+              </th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {datiContabili.saldi.map(
+              (saldo) => {
+                const totaleRiferimento =
+                  saldo.sezione ===
+                  "stato_patrimoniale_attivo"
+                    ? datiContabili.saldi
+                        .filter(
+                          (x) =>
+                            x.sezione ===
+                            "stato_patrimoniale_attivo"
+                        )
+                        .reduce(
+                          (tot, x) =>
+                            tot +
+                            Number(
+                              x.importo || 0
+                            ),
+                          0
+                        )
+                    : saldo.sezione ===
+                      "stato_patrimoniale_passivo"
+                    ? datiContabili.saldi
+                        .filter(
+                          (x) =>
+                            x.sezione ===
+                            "stato_patrimoniale_passivo"
+                        )
+                        .reduce(
+                          (tot, x) =>
+                            tot +
+                            Number(
+                              x.importo || 0
+                            ),
+                          0
+                        )
+                    : datiContabili.saldi
+                        .filter(
+                          (x) =>
+                            x.sezione ===
+                            "conto_economico"
+                        )
+                        .reduce(
+                          (tot, x) =>
+                            tot +
+                            Math.abs(
+                              Number(
+                                x.importo || 0
+                              )
+                            ),
+                          0
+                        );
+
+                const incidenza =
+                  totaleRiferimento !== 0
+                    ? (
+                        (
+                          Math.abs(
+                            Number(
+                              saldo.importo ||
+                                0
+                            )
+                          ) /
+                          Math.abs(
+                            totaleRiferimento
+                          )
+                        ) *
+                        100
+                      )
+                    : 0;
+
+                return (
+                  <tr
+                    key={saldo.voce_id}
+                    className="border-b hover:bg-slate-50"
+                  >
+                    <td className="p-3 font-mono text-xs text-slate-600">
+                      {saldo.codice}
+                    </td>
+
+                    <td className="p-3 font-medium">
+                      {saldo.descrizione}
+                    </td>
+
+                    <td className="p-3 text-slate-600">
+                      {saldo.sezione ===
+                      "stato_patrimoniale_attivo"
+                        ? "SP Attivo"
+                        : saldo.sezione ===
+                          "stato_patrimoniale_passivo"
+                        ? "SP Passivo"
+                        : "Conto economico"}
+                    </td>
+
+                    <td className="p-3 text-slate-600">
+                      {saldo.macrovoce ||
+                        "-"}
+                    </td>
+
+                    <td className="p-3 text-right font-semibold">
+                      {Number(
+                        saldo.importo || 0
+                      ).toLocaleString(
+                        "it-IT",
+                        {
+                          minimumFractionDigits:
+                            2,
+                          maximumFractionDigits:
+                            2,
+                        }
+                      )}
+                    </td>
+
+                    <td className="p-3 text-right">
+                      {incidenza.toLocaleString(
+                        "it-IT",
+                        {
+                          minimumFractionDigits:
+                            1,
+                          maximumFractionDigits:
+                            1,
+                        }
+                      )}
+                      %
+                    </td>
+
+                    <td className="p-3 text-center">
+                      {saldo.numero_conti}
+                    </td>
+
+                    <td className="p-3 text-center">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const indice =
+                            checklist.findIndex(
+                              (item) =>
+                                item.voce_smp_id ===
+                                saldo.voce_id
+                            );
+
+                          if (
+                            indice >= 0
+                          ) {
+                            const element =
+                              document.getElementById(
+                                `checklist-${checklist[indice].id}`
+                              );
+
+                            element?.scrollIntoView({
+                              behavior:
+                                "smooth",
+                              block:
+                                "center",
+                            });
+
+                            return;
+                          }
+
+                          setError(
+                            `Non esiste ancora una procedura collegata alla voce ${saldo.descrizione}.`
+                          );
+                        }}
+                        className="rounded-md border bg-white px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-50"
+                      >
+                        Apri verifica
+                      </button>
+                    </td>
+                  </tr>
+                );
+              }
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )}
+
       {mancaControlloId ? (
   <div className="rounded border border-amber-300 bg-amber-50 p-8 text-center text-amber-900">
     Seleziona un controllo trimestrale dalla pagina “Controlli trimestrali” e apri la checklist dall’icona dedicata.
@@ -403,7 +640,15 @@ export default function ChecklistRevisionePage() {
                         );
 
                         return (
-                          <tr key={item.id} className="border-b">
+                          <tr
+  key={item.id}
+  id={
+    item.id
+      ? `checklist-${item.id}`
+      : undefined
+  }
+  className="border-b"
+>
                             <td className="p-3">
                               {item.domanda}
                             </td>
