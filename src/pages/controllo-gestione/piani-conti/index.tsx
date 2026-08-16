@@ -34,27 +34,27 @@ const gestionali: GestionaleCard[] = [
     nome: "Zucchetti",
     descrizione:
       "Configurazione del piano dei conti Zucchetti e relativo mapping contabile.",
-    stato: "da_configurare",
-    href:
-      "/controllo-gestione/piani-conti/zucchetti",
+    stato: "attivo",
+href:
+  "/controllo-gestione/piani-conti/crea-master?software=zucchetti",
   },
   {
     key: "teamsystem",
     nome: "TeamSystem",
     descrizione:
       "Configurazione del piano dei conti TeamSystem e relativo mapping contabile.",
-    stato: "da_configurare",
-    href:
-      "/controllo-gestione/piani-conti/teamsystem",
+    stato: "attivo",
+href:
+  "/controllo-gestione/piani-conti/crea-master?software=teamsystem",
   },
   {
     key: "ipsoa",
     nome: "IPSOA",
     descrizione:
       "Configurazione del piano dei conti IPSOA e relativo mapping contabile.",
-    stato: "da_configurare",
-    href:
-      "/controllo-gestione/piani-conti/ipsoa",
+    stato: "attivo",
+href:
+  "/controllo-gestione/piani-conti/crea-master?software=ipsoa",
   },
 ];
 
@@ -336,9 +336,9 @@ export default function PianiContiIndexPage() {
                       gap: 8,
                     }}
                   >
-                    {attivo
-                      ? "Gestisci piano dei conti"
-                      : "Configurazione non disponibile"}
+                    {gestionale.key === "datev-koinos"
+  ? "Gestisci piano dei conti"
+  : "Crea master da file"}
 
                     {attivo && (
                       <ChevronRight
