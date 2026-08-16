@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
-import { Plus, Trash2, Pencil, RefreshCw } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Pencil,
+  RefreshCw,
+  FolderOpen,
+} from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
 type Incarico = {
@@ -19,6 +25,13 @@ type Incarico = {
   responsabile_cognome: string | null;
   attivo: boolean;
   note: string | null;
+  esercizio: number | null;
+materialita: number | null;
+materialita_operativa: number | null;
+errore_chiaramente_trascurabile: number | null;
+rischio_complessivo: string | null;
+stato_fascicolo: string | null;
+conclusione_finale: string | null;
 };
 
 const TIPI_LABEL: Record<string, string> = {
@@ -198,8 +211,22 @@ export default function RevisioneControlloPage() {
                     <th className="p-3 text-center">Inizio</th>
                     <th className="p-3 text-center">Fine</th>
                     <th className="p-3 text-left">Responsabile</th>
-                    <th className="p-3 text-center">Stato</th>
-                    <th className="p-3 text-center">Azioni</th>
+
+<th className="p-3 text-center">
+  Esercizio
+</th>
+
+<th className="p-3 text-center">
+  Fascicolo
+</th>
+
+<th className="p-3 text-center">
+  Stato
+</th>
+
+<th className="p-3 text-center">
+  Azioni
+</th>
                   </tr>
                 </thead>
 
@@ -231,6 +258,28 @@ export default function RevisioneControlloPage() {
                       </td>
 
                       <td className="p-3 text-center">
+  {item.esercizio || "-"}
+</td>
+
+<td className="p-3 text-center">
+  <span
+    className={`rounded-full px-2 py-1 text-xs font-semibold ${
+      item.stato_fascicolo === "CHIUSO"
+        ? "bg-green-100 text-green-700"
+        : item.stato_fascicolo === "RELAZIONE"
+        ? "bg-purple-100 text-purple-700"
+        : item.stato_fascicolo === "VERIFICA_FINALE"
+        ? "bg-orange-100 text-orange-700"
+        : item.stato_fascicolo === "IN_CORSO"
+        ? "bg-blue-100 text-blue-700"
+        : "bg-gray-100 text-gray-700"
+    }`}
+  >
+    {item.stato_fascicolo || "PIANIFICAZIONE"}
+  </span>
+</td>
+
+                      <td className="p-3 text-center">
                         <span
                           className={`rounded-full px-2 py-1 text-xs font-semibold ${
                             item.attivo
@@ -244,6 +293,17 @@ export default function RevisioneControlloPage() {
 
                       <td className="p-3">
                         <div className="flex justify-center gap-2">
+                          <button
+  title="Apri fascicolo"
+  onClick={() =>
+    router.push(
+      `/revisione-controllo/fascicolo?incarico_id=${item.id}`
+    )
+  }
+  className="rounded-md border bg-white p-2 text-blue-700 hover:bg-blue-50"
+>
+  <FolderOpen size={16} />
+</button>
                           <button
                             title="Modifica"
                             onClick={() =>
