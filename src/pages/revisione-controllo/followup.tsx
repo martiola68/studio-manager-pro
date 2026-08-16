@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import Head from "next/head";
-import { CheckCircle, RefreshCw, Trash2 } from "lucide-react";
+import {
+  CheckCircle,
+  RefreshCw,
+  Trash2,
+  XCircle,
+  AlertTriangle,
+} from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
 type Followup = {
@@ -86,6 +92,12 @@ export default function FollowupRevisionePage() {
   const [followup, setFollowup] = useState<Followup[]>([]);
 
   const [filtro, setFiltro] = useState("aperti");
+
+  const [
+  filtroSignificativo,
+  setFiltroSignificativo,
+] = useState("tutti");
+  
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
 
@@ -147,6 +159,26 @@ export default function FollowupRevisionePage() {
         rows = rows.filter((r: Followup) => r.gravita === "ALTA" && !r.completato);
       }
 
+      if (
+  filtroSignificativo ===
+  "significativi"
+) {
+  rows = rows.filter(
+    (r: Followup) =>
+      r.significativo === true
+  );
+}
+
+if (
+  filtroSignificativo ===
+  "non_significativi"
+) {
+  rows = rows.filter(
+    (r: Followup) =>
+      r.significativo !== true
+  );
+}
+
       setFollowup(rows);
     } catch (err: any) {
       setError(err?.message || "Errore caricamento follow-up.");
@@ -158,7 +190,7 @@ export default function FollowupRevisionePage() {
   useEffect(() => {
     loadFollowup();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtro]);
+ }, [filtro, filtroSignificativo]);
 
   async function completaFollowup(item: Followup) {
     try {
@@ -194,6 +226,71 @@ export default function FollowupRevisionePage() {
     }
   }
 
+  async function segnaNonRisolto(
+  item: Followup
+) {
+  try {
+    setSavingId(item.id);
+    setError("");
+    setSuccess("");
+
+    const res =
+      await fetch(
+        "/api/revisione-controllo/followup",
+        {
+          method: "PUT",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+
+          body: JSON.stringify({
+            id: item.id,
+
+            stato:
+              "NON_RISOLTO",
+
+            completato:
+              false,
+
+            corretto:
+              false,
+
+            note:
+              item.note || null,
+          }),
+        }
+      );
+
+    const json =
+      await res.json();
+
+    if (
+      !res.ok ||
+      !json.success
+    ) {
+      throw new Error(
+        json.error ||
+          "Errore aggiornamento rilievo."
+      );
+    }
+
+    setSuccess(
+      "Rilievo segnato come non risolto."
+    );
+
+    await loadFollowup();
+  } catch (err: any) {
+    setError(
+      err?.message ||
+        "Errore aggiornamento rilievo."
+    );
+  } finally {
+    setSavingId(null);
+  }
+}
+
   async function eliminaFollowup(id: string) {
     const ok = window.confirm("Confermi l'eliminazione del follow-up?");
     if (!ok) return;
@@ -222,6 +319,34 @@ export default function FollowupRevisionePage() {
     }
   }
 
+  const rilieviAperti =
+  followup.filter(
+    (item) =>
+      item.completato !== true &&
+      item.stato !== "RISOLTO"
+  );
+
+const rilieviSignificativi =
+  rilieviAperti.filter(
+    (item) =>
+      item.significativo === true
+  );
+
+const importoRilieviAperti =
+  rilieviAperti.reduce(
+    (totale, item) =>
+      totale +
+      Number(item.importo || 0),
+    0
+  );
+
+const rilieviRisolti =
+  followup.filter(
+    (item) =>
+      item.completato === true ||
+      item.stato === "RISOLTO"
+  );
+
   return (
     <>
       <Head>
@@ -249,22 +374,120 @@ export default function FollowupRevisionePage() {
             Aggiorna
           </button>
         </div>
+<div className="mb-4 grid grid-cols-1 gap-4 rounded-lg border bg-white p-4 md:grid-cols-2">
+  <div>
+    <label className="mb-1 block text-xs font-medium text-gray-500">
+      Stato rilievo
+    </label>
 
-        <div className="mb-4 rounded-lg border bg-white p-4">
-          <label className="mb-1 block text-xs font-medium text-gray-500">
-            Filtro
-          </label>
-          <select
-            value={filtro}
-            onChange={(e) => setFiltro(e.target.value)}
-            className="h-10 rounded-md border px-3 text-sm"
-          >
-            <option value="aperti">Aperti</option>
-            <option value="completati">Completati</option>
-            <option value="critici">Critici</option>
-            <option value="tutti">Tutti</option>
-          </select>
-        </div>
+    <select
+      value={filtro}
+      onChange={(e) =>
+        setFiltro(e.target.value)
+      }
+      className="h-10 w-full rounded-md border px-3 text-sm"
+    >
+      <option value="aperti">
+        Aperti
+      </option>
+
+      <option value="completati">
+        Risolti
+      </option>
+
+      <option value="critici">
+        Critici
+      </option>
+
+      <option value="tutti">
+        Tutti
+      </option>
+    </select>
+  </div>
+
+  <div>
+    <label className="mb-1 block text-xs font-medium text-gray-500">
+      Significatività
+    </label>
+
+    <select
+      value={
+        filtroSignificativo
+      }
+      onChange={(e) =>
+        setFiltroSignificativo(
+          e.target.value
+        )
+      }
+      className="h-10 w-full rounded-md border px-3 text-sm"
+    >
+      <option value="tutti">
+        Tutti
+      </option>
+
+      <option value="significativi">
+        Significativi
+      </option>
+
+      <option value="non_significativi">
+        Non significativi
+      </option>
+    </select>
+  </div>
+</div>
+
+        <div className="mb-4 grid grid-cols-2 gap-4 md:grid-cols-4">
+  <div className="rounded-lg border bg-white p-4">
+    <div className="text-xs text-gray-500">
+      Rilievi aperti
+    </div>
+
+    <div className="mt-1 text-2xl font-bold">
+      {rilieviAperti.length}
+    </div>
+  </div>
+
+  <div className="rounded-lg border bg-white p-4">
+    <div className="text-xs text-gray-500">
+      Significativi
+    </div>
+
+    <div
+      className={`mt-1 text-2xl font-bold ${
+        rilieviSignificativi.length >
+        0
+          ? "text-red-700"
+          : "text-green-700"
+      }`}
+    >
+      {
+        rilieviSignificativi.length
+      }
+    </div>
+  </div>
+
+  <div className="rounded-lg border bg-white p-4">
+    <div className="text-xs text-gray-500">
+      Importo aperto
+    </div>
+
+    <div className="mt-1 text-2xl font-bold">
+      {formatEuro(
+        importoRilieviAperti
+      )}
+    </div>
+  </div>
+
+  <div className="rounded-lg border bg-white p-4">
+    <div className="text-xs text-gray-500">
+      Risolti
+    </div>
+
+    <div className="mt-1 text-2xl font-bold text-green-700">
+      {rilieviRisolti.length}
+    </div>
+  </div>
+</div>
 
         {error && (
           <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -289,75 +512,226 @@ export default function FollowupRevisionePage() {
             </div>
           ) : (
             <div className="overflow-auto">
-              <table className="w-full min-w-[1000px] text-sm">
+              <table className="w-full min-w-[1900px] text-sm">
                 <thead className="bg-gray-50">
-                  <tr>
-                    <th className="p-3 text-left">Descrizione</th>
-                    <th className="p-3 text-center">Gravità</th>
-                    <th className="p-3 text-center">Scadenza</th>
-                    <th className="p-3 text-center">Stato</th>
-                    <th className="p-3 text-left">Note</th>
-                    <th className="p-3 text-center">Azioni</th>
-                  </tr>
+                 <tr>
+  <th className="p-3 text-left">
+    Società
+  </th>
+
+  <th className="p-3 text-center">
+    Periodo
+  </th>
+
+  <th className="p-3 text-left">
+    Area
+  </th>
+
+  <th className="p-3 text-left">
+    Rilievo
+  </th>
+
+  <th className="p-3 text-right">
+    Importo
+  </th>
+
+  <th className="p-3 text-center">
+    Gravità
+  </th>
+
+  <th className="p-3 text-center">
+    Significativo
+  </th>
+
+  <th className="p-3 text-center">
+    Stato
+  </th>
+
+  <th className="p-3 text-center">
+    Corretto
+  </th>
+
+  <th className="p-3 text-left">
+    Effetto relazione
+  </th>
+
+  <th className="p-3 text-center">
+    Scadenza
+  </th>
+
+  <th className="p-3 text-left">
+    Note
+  </th>
+
+  <th className="p-3 text-center">
+    Azioni
+  </th>
+</tr>
                 </thead>
 
                 <tbody>
                   {followup.map((item) => (
-                    <tr key={item.id} className="border-t hover:bg-gray-50">
-                      <td className="p-3 font-medium">{item.descrizione}</td>
+                   <tr
+  key={item.id}
+  className={`border-t hover:bg-gray-50 ${
+    item.significativo &&
+    !item.completato
+      ? "bg-amber-50"
+      : ""
+  }`}
+>
+  <td className="p-3 font-medium">
+    {item.ragione_sociale ||
+      "-"}
+  </td>
 
-                      <td className="p-3 text-center">
-                        <span
-                          className={`rounded-full px-2 py-1 text-xs font-semibold ${gravitaClass(
-                            item.gravita
-                          )}`}
-                        >
-                          {item.gravita || "-"}
-                        </span>
-                      </td>
+  <td className="p-3 text-center">
+    {item.anno
+      ? `${item.anno} · Q${
+          item.trimestre || "-"
+        }`
+      : "-"}
+  </td>
 
-                      <td className="p-3 text-center">
-                        {formatDateIT(item.data_scadenza)}
-                      </td>
+  <td className="p-3">
+    {item.area || "-"}
+  </td>
 
-                      <td className="p-3 text-center">
-                        <span
-                          className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                            item.completato
-                              ? "bg-green-100 text-green-700"
-                              : "bg-yellow-100 text-yellow-800"
-                          }`}
-                        >
-                          {item.completato ? "Completato" : "Aperto"}
-                        </span>
-                      </td>
+  <td className="p-3 font-medium">
+    {item.descrizione}
+  </td>
 
-                      <td className="p-3">{item.note || "-"}</td>
+  <td className="p-3 text-right font-semibold">
+    {formatEuro(item.importo)}
+  </td>
 
-                      <td className="p-3">
-                        <div className="flex justify-center gap-2">
-                          {!item.completato && (
-                            <button
-                              onClick={() => completaFollowup(item)}
-                              disabled={savingId === item.id}
-                              className="rounded-md border bg-white p-2 text-green-700 hover:bg-green-50 disabled:opacity-50"
-                              title="Completa"
-                            >
-                              <CheckCircle size={16} />
-                            </button>
-                          )}
+  <td className="p-3 text-center">
+    <span
+      className={`rounded-full px-2 py-1 text-xs font-semibold ${gravitaClass(
+        item.gravita
+      )}`}
+    >
+      {item.gravita || "-"}
+    </span>
+  </td>
 
-                          <button
-                            onClick={() => eliminaFollowup(item.id)}
-                            disabled={savingId === item.id}
-                            className="rounded-md border bg-white p-2 text-red-600 hover:bg-red-50 disabled:opacity-50"
-                            title="Elimina"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+  <td className="p-3 text-center">
+    {item.significativo ? (
+      <span className="rounded-full bg-red-100 px-2 py-1 text-xs font-semibold text-red-700">
+        SI
+      </span>
+    ) : (
+      <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-600">
+        NO
+      </span>
+    )}
+  </td>
+
+  <td className="p-3 text-center">
+    <span
+      className={`rounded-full px-2 py-1 text-xs font-semibold ${
+        item.stato === "RISOLTO" ||
+        item.completato
+          ? "bg-green-100 text-green-700"
+          : item.stato ===
+            "NON_RISOLTO"
+          ? "bg-red-100 text-red-700"
+          : item.stato ===
+            "IN_VERIFICA"
+          ? "bg-blue-100 text-blue-700"
+          : "bg-yellow-100 text-yellow-800"
+      }`}
+    >
+      {item.stato ||
+        (item.completato
+          ? "RISOLTO"
+          : "APERTO")}
+    </span>
+  </td>
+
+  <td className="p-3 text-center">
+    {item.corretto ? (
+      <CheckCircle
+        size={18}
+        className="mx-auto text-green-600"
+      />
+    ) : (
+      <span className="text-xs text-gray-400">
+        No
+      </span>
+    )}
+  </td>
+
+  <td className="p-3">
+    {item.effetto_relazione ||
+      "-"}
+  </td>
+
+  <td className="p-3 text-center">
+    {formatDateIT(
+      item.data_scadenza
+    )}
+  </td>
+
+  <td className="p-3">
+    {item.note || "-"}
+  </td>
+
+  <td className="p-3">
+    <div className="flex justify-center gap-2">
+      {!item.completato &&
+        item.stato !==
+          "RISOLTO" && (
+          <button
+            onClick={() =>
+              completaFollowup(item)
+            }
+            disabled={
+              savingId === item.id
+            }
+            className="rounded-md border bg-white p-2 text-green-700 hover:bg-green-50 disabled:opacity-50"
+            title="Segna come risolto"
+          >
+            <CheckCircle
+              size={16}
+            />
+          </button>
+        )}
+
+      {!item.completato &&
+        item.stato !==
+          "RISOLTO" && (
+          <button
+            onClick={() =>
+              segnaNonRisolto(item)
+            }
+            disabled={
+              savingId === item.id
+            }
+            className="rounded-md border bg-white p-2 text-red-700 hover:bg-red-50 disabled:opacity-50"
+            title="Segna come non risolto"
+          >
+            <XCircle size={16} />
+          </button>
+        )}
+
+      <button
+        onClick={() =>
+          eliminaFollowup(
+            item.id
+          )
+        }
+        disabled={
+          savingId === item.id
+        }
+        className="rounded-md border bg-white p-2 text-red-600 hover:bg-red-50 disabled:opacity-50"
+        title="Elimina"
+      >
+        <Trash2 size={16} />
+      </button>
+    </div>
+  </td>
+</tr>
                   ))}
                 </tbody>
               </table>
