@@ -440,10 +440,6 @@ export default function ChecklistRevisionePage() {
 </td>
 
 {/* QUESTO ESISTE GIÀ — FOLLOW-UP */}
-<td className="p-3 text-center">
-  <input
-    type="checkbox"
-    checked={item.follow_up === true}
 
 <td className="p-3 text-center">
   <input
