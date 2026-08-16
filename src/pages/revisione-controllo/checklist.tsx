@@ -35,6 +35,9 @@ type ChecklistItem = {
 
   eseguito_da: string | null;
   eseguito_at: string | null;
+
+  saldo_contabile?: number | null;
+numero_conti?: number | null;
 };
 
 type SaldoContabile = {
@@ -188,6 +191,25 @@ export default function ChecklistRevisionePage() {
       )
     );
   }
+
+  function getSaldoChecklist(
+  item: ChecklistItem
+) {
+  if (
+    !item.voce_smp_id ||
+    !datiContabili?.saldi
+  ) {
+    return null;
+  }
+
+  return (
+    datiContabili.saldi.find(
+      (saldo) =>
+        saldo.voce_id ===
+        item.voce_smp_id
+    ) || null
+  );
+}
 
   const grouped = checklist.reduce(
     (acc: Record<string, ChecklistItem[]>, item) => {
@@ -600,6 +622,9 @@ export default function ChecklistRevisionePage() {
                         <th className="p-3 text-left w-[55%]">
                           Verifica
                         </th>
+                        <th className="p-3 text-right">
+                          Saldo
+                        </th>
                         <th className="p-3 text-center">
                         Asserzione
                         </th>
@@ -652,6 +677,47 @@ export default function ChecklistRevisionePage() {
                             <td className="p-3">
                               {item.domanda}
                             </td>
+
+                            <td className="p-3 text-right whitespace-nowrap">
+  {(() => {
+    const saldo =
+      getSaldoChecklist(item);
+
+    if (!saldo) {
+      return (
+        <span className="text-gray-400">
+          -
+        </span>
+      );
+    }
+
+    return (
+      <div>
+        <div className="font-semibold">
+          {Number(
+            saldo.importo || 0
+          ).toLocaleString(
+            "it-IT",
+            {
+              minimumFractionDigits:
+                2,
+              maximumFractionDigits:
+                2,
+            }
+          )}
+        </div>
+
+        <div className="text-[10px] text-gray-400">
+          {saldo.numero_conti}{" "}
+          {saldo.numero_conti === 1
+            ? "conto"
+            : "conti"}
+        </div>
+      </div>
+    );
+  })()}
+</td>
+                            
                             <td className="p-3 text-center">
   <select
     value={item.asserzione || ""}
