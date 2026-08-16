@@ -5,23 +5,72 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 
 type Followup = {
   id: string;
+
   studio_id: string;
   controllo_id: string;
   checklist_id: string;
   cliente_id: string;
+
   descrizione: string;
+
   gravita: string | null;
+
+  importo: number | null;
+
+  significativo: boolean;
+
+  corretto: boolean;
+
+  effetto_relazione: string | null;
+
+  stato:
+    | "APERTO"
+    | "IN_VERIFICA"
+    | "RISOLTO"
+    | "NON_RISOLTO"
+    | null;
+
   data_scadenza: string | null;
+
   completato: boolean;
+
   completato_da: string | null;
   completato_at: string | null;
+
   note: string | null;
+
   created_at: string;
+
+  anno?: number | null;
+  trimestre?: number | null;
+  ragione_sociale?: string | null;
+
+  area?: string | null;
+  voce_smp_id?: string | null;
 };
 
 function formatDateIT(value?: string | null) {
   if (!value) return "-";
   return new Date(`${value}T00:00:00`).toLocaleDateString("it-IT");
+}
+
+function formatEuro(
+  value?: number | null
+) {
+  if (
+    value === null ||
+    value === undefined
+  ) {
+    return "-";
+  }
+
+  return Number(value).toLocaleString(
+    "it-IT",
+    {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }
+  );
 }
 
 function gravitaClass(value?: string | null) {
@@ -182,10 +231,14 @@ export default function FollowupRevisionePage() {
       <div className="mx-auto max-w-[1500px] p-6">
         <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Follow-up revisione</h1>
-            <p className="text-sm text-gray-500">
-              Monitoraggio delle criticità e delle raccomandazioni emerse dalle checklist.
-            </p>
+          <h1 className="text-2xl font-bold">
+  Registro rilievi e follow-up
+</h1>
+
+<p className="text-sm text-gray-500">
+  Gestione delle anomalie rilevate durante le verifiche,
+  del loro follow-up e degli eventuali effetti sulla relazione annuale.
+</p>
           </div>
 
           <button
