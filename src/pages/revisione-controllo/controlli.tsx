@@ -1,7 +1,29 @@
 import { useEffect, useState } from "react";
 import Head from "next/head";
-import { CheckCircle, FileText, RefreshCw, Trash2, ClipboardCheck } from "lucide-react";
+import {
+  CheckCircle,
+  FileText,
+  RefreshCw,
+  Trash2,
+  ClipboardCheck,
+  Database,
+} from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabase/client";
+
+type ImportContabile = {
+  id: string;
+  template_id: string | null;
+  software_contabile: string | null;
+  nome_file: string | null;
+  data_riferimento: string | null;
+
+  numero_conti: number | null;
+  conti_mappati: number | null;
+  conti_da_mappare: number | null;
+
+  stato: string | null;
+  created_at: string | null;
+};
 
 type Controllo = {
   id: string;
@@ -17,6 +39,13 @@ type Controllo = {
   stato: string;
   esito: string | null;
   note: string | null;
+  controllo_gestione_import_id:
+  | string
+  | null;
+
+import_contabile:
+  | ImportContabile
+  | null;
 };
 
 const TIPI_LABEL: Record<string, string> = {
@@ -58,11 +87,25 @@ export default function RevisioneControlliPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const [modalOpen, setModalOpen] = useState(false);
-  const [selected, setSelected] = useState<Controllo | null>(null);
-  const [dataControllo, setDataControllo] = useState("");
-  const [esito, setEsito] = useState("");
-  const [note, setNote] = useState("");
+ const [
+  importModalOpen,
+  setImportModalOpen,
+] = useState(false);
+
+const [
+  importDisponibili,
+  setImportDisponibili,
+] = useState<ImportContabile[]>([]);
+
+const [
+  importSelezionatoId,
+  setImportSelezionatoId,
+] = useState("");
+
+const [
+  loadingImport,
+  setLoadingImport,
+] = useState(false);
 
   async function loadCurrentUser() {
     const supabase = getSupabaseClient();
@@ -139,6 +182,145 @@ params.set("studio_id", String(user.studio_id));
     setNote(item.note || "");
     setModalOpen(true);
   }
+
+  async function apriImportContabile(
+  item: Controllo
+) {
+  try {
+    setSelected(item);
+
+    setImportSelezionatoId(
+      item.controllo_gestione_import_id ||
+        ""
+    );
+
+    setImportDisponibili([]);
+    setError("");
+    setSuccess("");
+    setLoadingImport(true);
+
+    const params =
+      new URLSearchParams();
+
+    params.set(
+      "azione",
+      "import_disponibili"
+    );
+
+    params.set(
+      "studio_id",
+      item.studio_id
+    );
+
+    params.set(
+      "cliente_id",
+      item.cliente_id
+    );
+
+    params.set(
+      "anno",
+      String(item.anno)
+    );
+
+    params.set(
+      "trimestre",
+      String(item.trimestre)
+    );
+
+    const res =
+      await fetch(
+        `/api/revisione-controllo/controlli?${params.toString()}`
+      );
+
+    const json =
+      await res.json();
+
+    if (
+      !res.ok ||
+      !json.success
+    ) {
+      throw new Error(
+        json.error ||
+          "Errore caricamento import contabili."
+      );
+    }
+
+    setImportDisponibili(
+      json.data || []
+    );
+
+    setImportModalOpen(true);
+  } catch (err: any) {
+    setError(
+      err?.message ||
+        "Errore caricamento import contabili."
+    );
+  } finally {
+    setLoadingImport(false);
+  }
+}
+
+  async function salvaImportContabile() {
+  if (!selected) return;
+
+  try {
+    setSaving(true);
+    setError("");
+    setSuccess("");
+
+    const res =
+      await fetch(
+        "/api/revisione-controllo/controlli",
+        {
+          method: "PUT",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+
+          body: JSON.stringify({
+            id: selected.id,
+
+            controllo_gestione_import_id:
+              importSelezionatoId ||
+              null,
+          }),
+        }
+      );
+
+    const json =
+      await res.json();
+
+    if (
+      !res.ok ||
+      !json.success
+    ) {
+      throw new Error(
+        json.error ||
+          "Errore collegamento situazione contabile."
+      );
+    }
+
+    setSuccess(
+      importSelezionatoId
+        ? "Situazione contabile collegata al controllo."
+        : "Collegamento alla situazione contabile rimosso."
+    );
+
+    setImportModalOpen(false);
+    setSelected(null);
+
+    await loadControlli();
+  } catch (err: any) {
+    setError(
+      err?.message ||
+        "Errore collegamento situazione contabile."
+    );
+  } finally {
+    setSaving(false);
+  }
+}
 
   async function salvaCompletamento() {
     if (!selected) return;
@@ -316,6 +498,9 @@ params.set("studio_id", String(user.studio_id));
                     <th className="p-3 text-left">Tipo incarico</th>
                     <th className="p-3 text-center">Anno</th>
                     <th className="p-3 text-center">Trimestre</th>
+                    <th className="p-3 text-center">
+                      Dati contabili
+                      </th>
                     <th className="p-3 text-center">Scadenza</th>
                     <th className="p-3 text-center">Stato</th>
                     <th className="p-3 text-center">Data controllo</th>
@@ -333,6 +518,26 @@ params.set("studio_id", String(user.studio_id));
                       </td>
                       <td className="p-3 text-center">{item.anno}</td>
                       <td className="p-3 text-center">{item.trimestre}°</td>
+                      <td className="p-3 text-center">
+  {item.import_contabile ? (
+    <div className="flex flex-col items-center gap-1">
+      <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-semibold text-green-700">
+        Collegata
+      </span>
+
+      <span className="text-[11px] text-gray-500">
+        {formatDateIT(
+          item.import_contabile
+            .data_riferimento
+        )}
+      </span>
+    </div>
+  ) : (
+    <span className="rounded-full bg-yellow-100 px-2 py-1 text-xs font-semibold text-yellow-800">
+      Da collegare
+    </span>
+  )}
+</td>
                       <td className="p-3 text-center">{formatDateIT(item.data_scadenza)}</td>
                       <td className="p-3 text-center">
                         <span className={`rounded-full px-2 py-1 text-xs font-semibold ${statoClass(item.stato)}`}>
@@ -351,6 +556,18 @@ params.set("studio_id", String(user.studio_id));
                           >
                             <CheckCircle size={16} />
                           </button>
+
+                          <button
+  title="Situazione contabile"
+  onClick={() =>
+    void apriImportContabile(
+      item
+    )
+  }
+  className="rounded-md border bg-white p-2 text-slate-700 hover:bg-slate-50"
+>
+  <Database size={16} />
+</button>
 
                           <button
                             title="Checklist"
@@ -457,6 +674,169 @@ params.set("studio_id", String(user.studio_id));
           </div>
         </div>
       )}
+      {importModalOpen && selected && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div className="w-full max-w-3xl rounded-lg bg-white p-6 shadow-lg">
+      <div className="mb-5">
+        <h2 className="text-xl font-semibold">
+          Situazione contabile
+        </h2>
+
+        <p className="mt-1 text-sm text-gray-500">
+          {selected.ragione_sociale}
+          {" · "}
+          {selected.trimestre}° trimestre
+          {" · "}
+          {selected.anno}
+        </p>
+      </div>
+
+      {loadingImport ? (
+        <div className="py-8 text-center text-sm text-gray-500">
+          Caricamento situazioni contabili...
+        </div>
+      ) : (
+        <>
+          <label className="mb-1 block text-xs font-medium text-gray-500">
+            Situazione contabile da utilizzare
+          </label>
+
+          <select
+            value={importSelezionatoId}
+            onChange={(e) =>
+              setImportSelezionatoId(
+                e.target.value
+              )
+            }
+            className="h-11 w-full rounded-md border px-3 text-sm"
+          >
+            <option value="">
+              Nessuna situazione collegata
+            </option>
+
+            {importDisponibili.map(
+              (item) => (
+                <option
+                  key={item.id}
+                  value={item.id}
+                >
+                  {formatDateIT(
+                    item.data_riferimento
+                  )}
+                  {" · "}
+                  {item.software_contabile ||
+                    "Software"}
+                  {" · "}
+                  {item.numero_conti || 0} conti
+                  {" · "}
+                  {item.stato || "-"}
+                </option>
+              )
+            )}
+          </select>
+
+          {importDisponibili.length === 0 && (
+            <div className="mt-4 rounded-md border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
+              Non risulta una situazione contabile importata
+              per questo trimestre.
+            </div>
+          )}
+
+          {importSelezionatoId && (
+            <div className="mt-4 rounded-lg border bg-gray-50 p-4">
+              {(() => {
+                const imp =
+                  importDisponibili.find(
+                    (x) =>
+                      x.id ===
+                      importSelezionatoId
+                  );
+
+                if (!imp) return null;
+
+                return (
+                  <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
+                    <div>
+                      <div className="text-xs text-gray-500">
+                        Data
+                      </div>
+                      <div className="font-semibold">
+                        {formatDateIT(
+                          imp.data_riferimento
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-xs text-gray-500">
+                        Conti
+                      </div>
+                      <div className="font-semibold">
+                        {imp.numero_conti || 0}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-xs text-gray-500">
+                        Mappati
+                      </div>
+                      <div className="font-semibold">
+                        {imp.conti_mappati || 0}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-xs text-gray-500">
+                        Da mappare
+                      </div>
+
+                      <div
+                        className={
+                          Number(
+                            imp.conti_da_mappare ||
+                              0
+                          ) === 0
+                            ? "font-semibold text-green-700"
+                            : "font-semibold text-red-700"
+                        }
+                      >
+                        {imp.conti_da_mappare || 0}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+        </>
+      )}
+
+      <div className="mt-5 flex justify-end gap-2">
+        <button
+          onClick={() =>
+            setImportModalOpen(false)
+          }
+          disabled={saving}
+          className="rounded-md border bg-white px-4 py-2 text-sm hover:bg-gray-50"
+        >
+          Annulla
+        </button>
+
+        <button
+          onClick={
+            salvaImportContabile
+          }
+          disabled={saving}
+          className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+        >
+          {saving
+            ? "Salvataggio..."
+            : "Collega situazione"}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </>
   );
 }
