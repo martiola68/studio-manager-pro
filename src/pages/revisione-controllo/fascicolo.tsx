@@ -13,6 +13,7 @@ import {
   FileText,
   AlertTriangle,
   FolderOpen,
+  CheckCircle,
 } from "lucide-react";
 
 type Fascicolo = {
@@ -875,7 +876,7 @@ setRiepilogo({
   </div>
 </section>
 
-            <section className="grid grid-cols-1 gap-4 md:grid-cols-4">
+           <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
               <button
                 type="button"
                 onClick={() =>
@@ -895,6 +896,28 @@ setRiepilogo({
                   Q1, Q2, Q3 e Q4
                 </div>
               </button>
+
+              <button
+  type="button"
+  onClick={() =>
+    router.push(
+      `/revisione-controllo/verifica-finale?incarico_id=${incaricoId}&anno=${
+        fascicolo?.esercizio || esercizio
+      }`
+    )
+  }
+  className="rounded-xl border bg-white p-5 text-left shadow-sm hover:bg-green-50"
+>
+  <CheckCircle className="mb-3 text-green-600" />
+
+  <div className="font-semibold">
+    Verifica finale
+  </div>
+
+  <div className="mt-1 text-xs text-gray-500">
+    Chiusura dell'esercizio e valutazioni conclusive
+  </div>
+</button>
 
               <button
                 type="button"
