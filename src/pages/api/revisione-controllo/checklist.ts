@@ -35,6 +35,187 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
       }
 
+      /*
+ * =====================================================
+ * DATI CONTABILI COLLEGATI AL CONTROLLO DI REVISIONE
+ * =====================================================
+ */
+
+const {
+  data: controlloRevisione,
+  error: controlloRevisioneError,
+} = await supabaseAdmin
+  .from("tbrevisione_controlli")
+  .select(`
+    id,
+    controllo_gestione_import_id
+  `)
+  .eq("id", controllo_id)
+  .maybeSingle();
+
+if (controlloRevisioneError) {
+  throw controlloRevisioneError;
+}
+
+const importId =
+  controlloRevisione
+    ?.controllo_gestione_import_id ||
+  null;
+
+let datiContabili: any = null;
+
+if (importId) {
+  /*
+   * Registro dell'import collegato.
+   */
+  const {
+    data: importRecord,
+    error: importError,
+  } = await supabaseAdmin
+    .from("tbcontrollo_gestione_import")
+    .select(`
+      id,
+      software_contabile,
+      data_riferimento,
+      numero_conti,
+      conti_mappati,
+      conti_da_mappare,
+      stato
+    `)
+    .eq("id", importId)
+    .maybeSingle();
+
+  if (importError) {
+    throw importError;
+  }
+
+  /*
+   * Saldi già elaborati dal Controllo di gestione.
+   */
+  const {
+    data: saldiData,
+    error: saldiError,
+  } = await supabaseAdmin
+    .from("tbcontrollo_gestione_saldi")
+    .select(`
+      voce_id,
+      importo,
+      numero_conti
+    `)
+    .eq("import_id", importId);
+
+  if (saldiError) {
+    throw saldiError;
+  }
+
+  const saldi = saldiData || [];
+
+  /*
+   * Recuperiamo le voci SMP associate ai saldi.
+   */
+  const voceIds = Array.from(
+    new Set(
+      saldi
+        .map((row: any) => row.voce_id)
+        .filter(Boolean)
+    )
+  );
+
+  let vociMap =
+    new Map<string, any>();
+
+  if (voceIds.length > 0) {
+    const {
+      data: voci,
+      error: vociError,
+    } = await supabaseAdmin
+      .from("tbcontrollo_gestione_voci")
+      .select(`
+        id,
+        codice,
+        descrizione,
+        sezione,
+        macrovoce,
+        natura,
+        ordine
+      `)
+      .in("id", voceIds);
+
+    if (vociError) {
+      throw vociError;
+    }
+
+    vociMap = new Map(
+      (voci || []).map(
+        (voce: any) => [
+          voce.id,
+          voce,
+        ]
+      )
+    );
+  }
+
+  const saldiRiclassificati =
+    saldi
+      .map((saldo: any) => {
+        const voce =
+          vociMap.get(
+            saldo.voce_id
+          );
+
+        if (!voce) {
+          return null;
+        }
+
+        return {
+          voce_id:
+            saldo.voce_id,
+
+          codice:
+            voce.codice,
+
+          descrizione:
+            voce.descrizione,
+
+          sezione:
+            voce.sezione,
+
+          macrovoce:
+            voce.macrovoce,
+
+          natura:
+            voce.natura,
+
+          ordine:
+            voce.ordine,
+
+          importo:
+            Number(
+              saldo.importo || 0
+            ),
+
+          numero_conti:
+            Number(
+              saldo.numero_conti || 0
+            ),
+        };
+      })
+      .filter(Boolean)
+      .sort(
+        (a: any, b: any) =>
+          Number(a.ordine || 0) -
+          Number(b.ordine || 0)
+      );
+
+  datiContabili = {
+    import:
+      importRecord || null,
+
+    saldi:
+      saldiRiclassificati,
+  };
+}
+
       let { data, error } = await supabaseAdmin
         .from("tbrevisione_checklist")
         .select("*")
@@ -91,10 +272,15 @@ eseguito_at: null,
         data = inserted || [];
       }
 
-      return res.status(200).json({
-        success: true,
-        data: data || [],
-      });
+     return res.status(200).json({
+  success: true,
+
+  data:
+    data || [],
+
+  dati_contabili:
+    datiContabili,
+});
     }
 
     if (req.method === "POST") {
