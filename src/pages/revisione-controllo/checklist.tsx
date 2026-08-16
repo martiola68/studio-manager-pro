@@ -277,24 +277,31 @@ export default function ChecklistRevisionePage() {
             </p>
           </div>
 
-          <div className="flex gap-2">
-            <button
-              onClick={loadChecklist}
-              className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
-            >
-              <RefreshCw size={16} />
-              Aggiorna
-            </button>
+         <div className="flex gap-2">
+  <button
+    onClick={() => router.push("/revisione-controllo/controlli")}
+    className="inline-flex items-center gap-2 rounded-md border bg-white px-3 py-2 text-sm hover:bg-gray-50"
+  >
+    ← Indietro
+  </button>
 
-            <button
-              onClick={salvaChecklist}
-              disabled={saving}
-              className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-3 py-2 text-sm text-white"
-            >
-              <Save size={16} />
-              {saving ? "Salvataggio..." : "Salva"}
-            </button>
-          </div>
+  <button
+    onClick={loadChecklist}
+    className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
+  >
+    <RefreshCw size={16} />
+    Aggiorna
+  </button>
+
+  <button
+    onClick={salvaChecklist}
+    disabled={saving}
+    className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-3 py-2 text-sm text-white"
+  >
+    <Save size={16} />
+    {saving ? "Salvataggio..." : "Salva"}
+  </button>
+</div>
         </div>
 
         {error && (
