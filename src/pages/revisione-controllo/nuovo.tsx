@@ -44,6 +44,59 @@ const RUOLI_SOGGETTO = [
   { value: "SINDACO_SUPPLENTE", label: "Sindaco supplente" },
 ];
 
+const RUOLI_PER_TIPO_INCARICO: Record<string, string[]> = {
+  REVISIONE_LEGALE: [
+    "REVISORE",
+  ],
+
+  SOCIETA_REVISIONE: [
+    "SOCIETA_REVISIONE",
+    "REVISORE",
+  ],
+
+  SINDACO_UNICO: [
+    "SINDACO_UNICO",
+  ],
+
+  COLLEGIO_SINDACALE: [
+    "PRESIDENTE_COLLEGIO",
+    "SINDACO_EFFETTIVO",
+    "SINDACO_SUPPLENTE",
+  ],
+
+  ORGANO_UNICO_DOPPIA_FUNZIONE: [
+    "SINDACO_UNICO",
+  ],
+
+  SINDACO_COLLEGIO_PIU_REVISORE: [
+    "PRESIDENTE_COLLEGIO",
+    "SINDACO_EFFETTIVO",
+    "SINDACO_SUPPLENTE",
+    "REVISORE",
+    "SOCIETA_REVISIONE",
+  ],
+};
+
+function getRuoliDisponibili(tipoIncarico: string) {
+  const ammessi =
+    RUOLI_PER_TIPO_INCARICO[tipoIncarico];
+
+  if (!ammessi?.length) {
+    return RUOLI_SOGGETTO;
+  }
+
+  return RUOLI_SOGGETTO.filter((ruolo) =>
+    ammessi.includes(ruolo.value)
+  );
+}
+
+function getRuoloDefault(tipoIncarico: string) {
+  const ruoli =
+    getRuoliDisponibili(tipoIncarico);
+
+  return ruoli[0]?.value || "";
+}
+
 export default function NuovoIncaricoRevisionePage() {
   const router = useRouter();
   const incaricoId = typeof router.query.id === "string" ? router.query.id : null;
@@ -52,14 +105,18 @@ export default function NuovoIncaricoRevisionePage() {
   const [clienti, setClienti] = useState<Cliente[]>([]);
   const [utenti, setUtenti] = useState<Utente[]>([]);
 
-  const [clienteId, setClienteId] = useState("");
-  const [tipoIncarico, setTipoIncarico] = useState("");
-  const [dataNomina, setDataNomina] = useState("");
-  const [dataInizio, setDataInizio] = useState("");
-  const [dataFine, setDataFine] = useState("");
-  const [responsabileId, setResponsabileId] = useState("");
-  const [attivo, setAttivo] = useState(true);
-  const [note, setNote] = useState("");
+ const [clienteId, setClienteId] = useState("");
+const [tipoIncarico, setTipoIncarico] = useState("");
+
+const [periodicita, setPeriodicita] =
+  useState("TRIMESTRALE");
+
+const [dataNomina, setDataNomina] = useState("");
+const [dataInizio, setDataInizio] = useState("");
+const [dataFine, setDataFine] = useState("");
+const [responsabileId, setResponsabileId] = useState("");
+const [attivo, setAttivo] = useState(true);
+const [note, setNote] = useState("");
 
   const [soggetti, setSoggetti] = useState<Soggetto[]>([]);
 
@@ -122,14 +179,19 @@ export default function NuovoIncaricoRevisionePage() {
 
     const item = json.data;
 
-    setClienteId(item.cliente_id || "");
-    setTipoIncarico(item.tipo_incarico || "");
-    setDataNomina(item.data_nomina || "");
-    setDataInizio(item.data_inizio || "");
-    setDataFine(item.data_fine || "");
-    setResponsabileId(item.responsabile_id || "");
-    setAttivo(item.attivo !== false);
-    setNote(item.note || "");
+   setClienteId(item.cliente_id || "");
+setTipoIncarico(item.tipo_incarico || "");
+
+setPeriodicita(
+  item.periodicita || "TRIMESTRALE"
+);
+
+setDataNomina(item.data_nomina || "");
+setDataInizio(item.data_inizio || "");
+setDataFine(item.data_fine || "");
+setResponsabileId(item.responsabile_id || "");
+setAttivo(item.attivo !== false);
+setNote(item.note || "");
 
     const soggettiRes = await fetch(`/api/revisione-controllo/soggetti?incarico_id=${id}`);
     const soggettiJson = await soggettiRes.json();
@@ -183,26 +245,88 @@ export default function NuovoIncaricoRevisionePage() {
     if (router.isReady) init();
   }, [router.isReady, incaricoId]);
 
-  function addSoggetto() {
-    setSoggetti((prev) => [
-      ...prev,
-      {
-        ruolo: "",
-        nome: "",
-        codice_fiscale: "",
-        email: "",
-        principale: false,
-        attivo: true,
-      },
-    ]);
-  }
-
-  function updateSoggetto(index: number, field: keyof Soggetto, value: any) {
-    setSoggetti((prev) =>
-      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item))
+function addSoggetto() {
+  const ruoliDisponibili =
+    getRuoliDisponibili(
+      tipoIncarico
     );
+
+  let ruoloProposto = "";
+
+  /*
+   * Per il collegio:
+   * dopo il Presidente proponiamo
+   * automaticamente Sindaco effettivo.
+   */
+  if (
+    tipoIncarico ===
+      "COLLEGIO_SINDACALE" ||
+    tipoIncarico ===
+      "SINDACO_COLLEGIO_PIU_REVISORE"
+  ) {
+    const haPresidente =
+      soggetti.some(
+        (s) =>
+          s.ruolo ===
+          "PRESIDENTE_COLLEGIO"
+      );
+
+    ruoloProposto =
+      haPresidente
+        ? "SINDACO_EFFETTIVO"
+        : "PRESIDENTE_COLLEGIO";
+  } else {
+    ruoloProposto =
+      ruoliDisponibili[0]
+        ?.value || "";
   }
 
+  setSoggetti((prev) => [
+    ...prev,
+    {
+      ruolo:
+        ruoloProposto,
+      nome: "",
+      codice_fiscale: "",
+      email: "",
+      principale: false,
+      attivo: true,
+    },
+  ]);
+}
+
+function updateSoggetto(
+  index: number,
+  field: keyof Soggetto,
+  value: any
+) {
+  setSoggetti((prev) =>
+    prev.map((item, i) => {
+      /*
+       * Un solo soggetto può essere principale.
+       */
+      if (
+        field === "principale" &&
+        value === true
+      ) {
+        return {
+          ...item,
+          principale:
+            i === index,
+        };
+      }
+
+      if (i === index) {
+        return {
+          ...item,
+          [field]: value,
+        };
+      }
+
+      return item;
+    })
+  );
+}
   function removeSoggetto(index: number) {
     setSoggetti((prev) => prev.filter((_, i) => i !== index));
   }
@@ -217,17 +341,117 @@ export default function NuovoIncaricoRevisionePage() {
       if (!tipoIncarico) throw new Error("Seleziona il tipo incarico.");
       if (!dataInizio) throw new Error("Inserisci la data inizio.");
 
-      const payload = {
-        studio_id: studioId,
-        cliente_id: clienteId,
-        tipo_incarico: tipoIncarico,
-        data_nomina: dataNomina || null,
-        data_inizio: dataInizio,
-        data_fine: dataFine || null,
-        responsabile_id: responsabileId || null,
-        attivo,
-        note: note || null,
-      };
+      const soggettiAttivi =
+  soggetti.filter(
+    (s) => s.attivo
+  );
+
+if (
+  soggettiAttivi.length === 0
+) {
+  throw new Error(
+    "Inserisci almeno un soggetto incaricato attivo."
+  );
+}
+
+for (
+  const soggetto
+  of soggettiAttivi
+) {
+  if (!soggetto.ruolo) {
+    throw new Error(
+      "Ogni soggetto attivo deve avere un ruolo."
+    );
+  }
+
+  if (
+    !soggetto.nome.trim()
+  ) {
+    throw new Error(
+      "Ogni soggetto attivo deve avere un nome o una ragione sociale."
+    );
+  }
+
+  const ruoliAmmessi =
+    RUOLI_PER_TIPO_INCARICO[
+      tipoIncarico
+    ];
+
+  if (
+    ruoliAmmessi?.length &&
+    !ruoliAmmessi.includes(
+      soggetto.ruolo
+    )
+  ) {
+    throw new Error(
+      `Il ruolo "${soggetto.ruolo}" non è compatibile con il tipo di incarico selezionato.`
+    );
+  }
+}
+
+const principali =
+  soggettiAttivi.filter(
+    (s) => s.principale
+  );
+
+if (
+  principali.length !== 1
+) {
+  throw new Error(
+    "Deve essere indicato un solo soggetto principale."
+  );
+}
+
+/*
+ * Controlli specifici del Collegio.
+ */
+if (
+  tipoIncarico ===
+    "COLLEGIO_SINDACALE" ||
+  tipoIncarico ===
+    "SINDACO_COLLEGIO_PIU_REVISORE"
+) {
+  const presidenti =
+    soggettiAttivi.filter(
+      (s) =>
+        s.ruolo ===
+        "PRESIDENTE_COLLEGIO"
+    );
+
+  if (
+    presidenti.length !== 1
+  ) {
+    throw new Error(
+      "Per il Collegio sindacale deve essere indicato un solo Presidente."
+    );
+  }
+}
+
+     const payload = {
+  studio_id: studioId,
+  cliente_id: clienteId,
+  tipo_incarico: tipoIncarico,
+
+  periodicita:
+    "TRIMESTRALE",
+
+  data_nomina:
+    dataNomina || null,
+
+  data_inizio:
+    dataInizio,
+
+  data_fine:
+    dataFine || null,
+
+  responsabile_id:
+    responsabileId || null,
+
+  attivo,
+
+  note:
+    note || null,
+};
 
       const res = await fetch(
         incaricoId ? `/api/revisione-controllo/${incaricoId}` : "/api/revisione-controllo",
@@ -308,7 +532,16 @@ export default function NuovoIncaricoRevisionePage() {
         ) : (
           <div className="space-y-5">
             <div className="rounded-lg border bg-white p-5">
-              <h2 className="mb-4 text-lg font-semibold">Dati incarico</h2>
+             <div className="mb-4">
+  <h2 className="text-lg font-semibold">
+    Dati incarico
+  </h2>
+
+  <p className="mt-1 text-xs text-gray-500">
+    Definisce l'incarico professionale. Pianificazione, rischi,
+    materialità e verifiche saranno gestiti nel fascicolo annuale.
+  </p>
+</div>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
@@ -334,11 +567,45 @@ export default function NuovoIncaricoRevisionePage() {
                   <label className="mb-1 block text-xs font-medium text-gray-500">
                     Tipo incarico
                   </label>
-                  <select
-                    value={tipoIncarico}
-                    onChange={(e) => setTipoIncarico(e.target.value)}
-                    className="h-10 w-full rounded-md border px-3 text-sm"
-                  >
+                 <select
+  value={tipoIncarico}
+  onChange={(e) => {
+    const nuovoTipo =
+      e.target.value;
+
+    setTipoIncarico(nuovoTipo);
+
+    /*
+     * Se stiamo creando un nuovo incarico
+     * e il soggetto iniziale è ancora vuoto,
+     * proponiamo automaticamente il ruolo coerente.
+     */
+    if (!incaricoId) {
+      setSoggetti((prev) =>
+        prev.map((s, index) => {
+          if (
+            index === 0 &&
+            !s.nome.trim() &&
+            !s.codice_fiscale.trim() &&
+            !s.email.trim()
+          ) {
+            return {
+              ...s,
+              ruolo:
+                getRuoloDefault(
+                  nuovoTipo
+                ),
+              principale: true,
+            };
+          }
+
+          return s;
+        })
+      );
+    }
+  }}
+  className="h-10 w-full rounded-md border px-3 text-sm"
+>
                     <option value="">Seleziona tipo incarico</option>
                     {TIPI_INCARICO.map((t) => (
                       <option key={t.value} value={t.value}>
@@ -347,6 +614,33 @@ export default function NuovoIncaricoRevisionePage() {
                     ))}
                   </select>
                 </div>
+
+                {/* PERIODICITÀ VERIFICHE */}
+<div>
+  <label className="mb-1 block text-xs font-medium text-gray-500">
+    Periodicità verifiche
+  </label>
+
+  <select
+    value={periodicita}
+    disabled
+    className="h-10 w-full rounded-md border bg-gray-100 px-3 text-sm text-gray-700"
+  >
+    <option value="TRIMESTRALE">
+      Trimestrale
+    </option>
+  </select>
+
+  <div className="mt-1 text-[11px] text-gray-400">
+    Le verifiche periodiche vengono generate sui quattro trimestri dell'esercizio.
+  </div>
+</div>
+
+{/* DATA NOMINA - QUESTO È IL BLOCCO CHE GIÀ HAI */}
+<div>
+  <label className="mb-1 block text-xs font-medium text-gray-500">
+    Data nomina
+  </label>
 
                 <div>
                   <label className="mb-1 block text-xs font-medium text-gray-500">
@@ -465,11 +759,16 @@ export default function NuovoIncaricoRevisionePage() {
                             className="h-9 w-full rounded-md border px-2 text-sm"
                           >
                             <option value="">Ruolo</option>
-                            {RUOLI_SOGGETTO.map((r) => (
-                              <option key={r.value} value={r.value}>
-                                {r.label}
-                              </option>
-                            ))}
+                            {getRuoliDisponibili(
+  tipoIncarico
+).map((r) => (
+  <option
+    key={r.value}
+    value={r.value}
+  >
+    {r.label}
+  </option>
+))}
                           </select>
                         </td>
 
