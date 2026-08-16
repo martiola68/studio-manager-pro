@@ -29,6 +29,7 @@ import {
   BarChart3,
   Menu,
   BookOpen,
+  AlertTriangle,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
