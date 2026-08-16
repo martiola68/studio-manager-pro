@@ -48,6 +48,7 @@ const {
   .from("tbrevisione_controlli")
   .select(`
     id,
+    incarico_id,
     controllo_gestione_import_id
   `)
   .eq("id", controllo_id)
@@ -55,6 +56,37 @@ const {
 
 if (controlloRevisioneError) {
   throw controlloRevisioneError;
+}
+
+      let fascicolo: any = null;
+
+if (controlloRevisione?.incarico_id) {
+  const {
+    data: incarico,
+    error: incaricoError,
+  } = await supabaseAdmin
+    .from("tbrevisione_incarichi")
+    .select(`
+      id,
+      esercizio,
+      materialita,
+      materialita_operativa,
+      errore_chiaramente_trascurabile,
+      rischio_complessivo,
+      stato_fascicolo,
+      conclusione_finale
+    `)
+    .eq(
+      "id",
+      controlloRevisione.incarico_id
+    )
+    .maybeSingle();
+
+  if (incaricoError) {
+    throw incaricoError;
+  }
+
+  fascicolo = incarico || null;
 }
 
 const importId =
@@ -571,7 +603,7 @@ if (
   }
 }
 
-     return res.status(200).json({
+   return res.status(200).json({
   success: true,
 
   data:
@@ -579,6 +611,8 @@ if (
 
   dati_contabili:
     datiContabili,
+
+  fascicolo,
 });
     }
 
