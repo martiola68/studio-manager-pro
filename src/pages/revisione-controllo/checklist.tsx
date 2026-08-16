@@ -37,6 +37,53 @@ type ChecklistItem = {
   eseguito_at: string | null;
 };
 
+type SaldoContabile = {
+  voce_id: string;
+  codice: string;
+  descrizione: string;
+
+  sezione: string;
+  macrovoce: string | null;
+  natura: string;
+
+  ordine: number;
+
+  importo: number;
+  numero_conti: number;
+};
+
+type DatiContabili = {
+  import: {
+    id: string;
+
+    software_contabile:
+      | string
+      | null;
+
+    data_riferimento:
+      | string
+      | null;
+
+    numero_conti:
+      | number
+      | null;
+
+    conti_mappati:
+      | number
+      | null;
+
+    conti_da_mappare:
+      | number
+      | null;
+
+    stato:
+      | string
+      | null;
+  } | null;
+
+  saldi: SaldoContabile[];
+};
+
 export default function ChecklistRevisionePage() {
   const router = useRouter();
 
@@ -51,6 +98,13 @@ export default function ChecklistRevisionePage() {
   const [saving, setSaving] = useState(false);
 
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
+
+  const [
+  datiContabili,
+  setDatiContabili,
+] = useState<DatiContabili | null>(
+  null
+);
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -76,6 +130,9 @@ export default function ChecklistRevisionePage() {
       }
 
       setChecklist(json.data || []);
+      setDatiContabili(
+  json.dati_contabili || null
+);
     } catch (err: any) {
       setError(err?.message || "Errore caricamento checklist");
     } finally {
@@ -190,6 +247,95 @@ export default function ChecklistRevisionePage() {
             {success}
           </div>
         )}
+
+        {datiContabili?.import && (
+  <div className="mb-6 overflow-hidden rounded-xl border bg-white shadow-sm">
+    <div className="flex flex-wrap items-center justify-between gap-4 border-b bg-slate-50 px-5 py-4">
+      <div>
+        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Situazione contabile collegata
+        </div>
+
+        <div className="mt-1 text-lg font-semibold text-slate-900">
+          {datiContabili.import
+            .software_contabile ||
+            "Software contabile"}
+        </div>
+      </div>
+
+      <div className="text-right">
+        <div className="text-xs text-slate-500">
+          Data riferimento
+        </div>
+
+        <div className="font-semibold">
+          {datiContabili.import
+            .data_riferimento
+            ? new Date(
+                `${datiContabili.import.data_riferimento}T00:00:00`
+              ).toLocaleDateString(
+                "it-IT"
+              )
+            : "-"}
+        </div>
+      </div>
+    </div>
+
+    <div className="grid grid-cols-2 gap-4 p-5 md:grid-cols-4">
+      <div>
+        <div className="text-xs text-slate-500">
+          Conti
+        </div>
+
+        <div className="text-xl font-bold">
+          {datiContabili.import
+            .numero_conti || 0}
+        </div>
+      </div>
+
+      <div>
+        <div className="text-xs text-slate-500">
+          Classificati
+        </div>
+
+        <div className="text-xl font-bold text-green-700">
+          {datiContabili.import
+            .conti_mappati || 0}
+        </div>
+      </div>
+
+      <div>
+        <div className="text-xs text-slate-500">
+          Da classificare
+        </div>
+
+        <div
+          className={`text-xl font-bold ${
+            Number(
+              datiContabili.import
+                .conti_da_mappare || 0
+            ) === 0
+              ? "text-green-700"
+              : "text-red-700"
+          }`}
+        >
+          {datiContabili.import
+            .conti_da_mappare || 0}
+        </div>
+      </div>
+
+      <div>
+        <div className="text-xs text-slate-500">
+          Voci SMP
+        </div>
+
+        <div className="text-xl font-bold">
+          {datiContabili.saldi.length}
+        </div>
+      </div>
+    </div>
+  </div>
+)}
 
       {mancaControlloId ? (
   <div className="rounded border border-amber-300 bg-amber-50 p-8 text-center text-amber-900">
