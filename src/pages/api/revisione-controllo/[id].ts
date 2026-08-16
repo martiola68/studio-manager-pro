@@ -34,30 +34,141 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (req.method === "PUT") {
       const {
-        tipo_incarico,
-        data_nomina,
-        data_inizio,
-        data_fine,
-        responsabile_id,
-        attivo,
-        note,
-      } = req.body;
+  tipo_incarico,
+  data_nomina,
+  data_inizio,
+  data_fine,
+  periodicita,
+  responsabile_id,
+  attivo,
+  note,
+
+  esercizio,
+  materialita,
+  materialita_operativa,
+  errore_chiaramente_trascurabile,
+  rischio_complessivo,
+  stato_fascicolo,
+  conclusione_finale,
+} = req.body;
+
+      const updateData: Record<string, any> = {
+  updated_at: new Date().toISOString(),
+};
+
+/*
+ * Campi incarico
+ */
+if (typeof tipo_incarico !== "undefined") {
+  updateData.tipo_incarico = tipo_incarico;
+}
+
+if (typeof data_nomina !== "undefined") {
+  updateData.data_nomina = data_nomina || null;
+}
+
+if (typeof data_inizio !== "undefined") {
+  updateData.data_inizio = data_inizio;
+}
+
+if (typeof data_fine !== "undefined") {
+  updateData.data_fine = data_fine || null;
+}
+
+if (typeof periodicita !== "undefined") {
+  updateData.periodicita =
+    periodicita || "TRIMESTRALE";
+}
+
+if (typeof responsabile_id !== "undefined") {
+  updateData.responsabile_id =
+    responsabile_id || null;
+}
+
+if (typeof attivo !== "undefined") {
+  updateData.attivo =
+    typeof attivo === "boolean"
+      ? attivo
+      : true;
+}
+
+if (typeof note !== "undefined") {
+  updateData.note = note || null;
+}
+
+/*
+ * Campi fascicolo / pianificazione
+ */
+if (typeof esercizio !== "undefined") {
+  updateData.esercizio =
+    esercizio === null ||
+    esercizio === ""
+      ? null
+      : Number(esercizio);
+}
+
+if (typeof materialita !== "undefined") {
+  updateData.materialita =
+    materialita === null ||
+    materialita === ""
+      ? null
+      : Number(materialita);
+}
+
+if (
+  typeof materialita_operativa !==
+  "undefined"
+) {
+  updateData.materialita_operativa =
+    materialita_operativa === null ||
+    materialita_operativa === ""
+      ? null
+      : Number(materialita_operativa);
+}
+
+if (
+  typeof errore_chiaramente_trascurabile !==
+  "undefined"
+) {
+  updateData.errore_chiaramente_trascurabile =
+    errore_chiaramente_trascurabile === null ||
+    errore_chiaramente_trascurabile === ""
+      ? null
+      : Number(
+          errore_chiaramente_trascurabile
+        );
+}
+
+if (
+  typeof rischio_complessivo !==
+  "undefined"
+) {
+  updateData.rischio_complessivo =
+    rischio_complessivo || null;
+}
+
+if (
+  typeof stato_fascicolo !==
+  "undefined"
+) {
+  updateData.stato_fascicolo =
+    stato_fascicolo || "PIANIFICAZIONE";
+}
+
+if (
+  typeof conclusione_finale !==
+  "undefined"
+) {
+  updateData.conclusione_finale =
+    conclusione_finale || null;
+}
 
       const { data, error } = await supabaseAdmin
-        .from("tbrevisione_incarichi")
-        .update({
-          tipo_incarico,
-          data_nomina: data_nomina || null,
-          data_inizio,
-          data_fine: data_fine || null,
-          responsabile_id: responsabile_id || null,
-          attivo: typeof attivo === "boolean" ? attivo : true,
-          note: note || null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", id)
-        .select("*")
-        .single();
+  .from("tbrevisione_incarichi")
+  .update(updateData)
+  .eq("id", id)
+  .select("*")
+  .single();
 
       if (error) throw error;
 
