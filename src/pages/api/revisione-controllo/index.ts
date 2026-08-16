@@ -80,25 +80,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           error: "Data inizio obbligatoria",
         });
       }
+const annoInizio = new Date(
+  `${data_inizio}T00:00:00`
+).getFullYear();
 
-      const { data, error } = await supabaseAdmin
-        .from("tbrevisione_incarichi")
-       .insert({
-  studio_id,
-  cliente_id,
-  tipo_incarico,
-  data_nomina: data_nomina || null,
-  data_inizio,
-  data_fine: data_fine || null,
-  responsabile_id: responsabile_id || null,
-  periodicita: "TRIMESTRALE",
-  attivo: true,
-  note: note || null,
+const { data, error } = await supabaseAdmin
+  .from("tbrevisione_incarichi")
+  .insert({
+    studio_id,
+    cliente_id,
+    tipo_incarico,
+    data_nomina: data_nomina || null,
+    data_inizio,
+    data_fine: data_fine || null,
+    responsabile_id: responsabile_id || null,
+    periodicita: "TRIMESTRALE",
+    attivo: true,
+    note: note || null,
 
-  // Il primo fascicolo annuale coincide con l'anno di inizio incarico
-  esercizio: new Date(`${data_inizio}T00:00:00`).getFullYear(),
-  stato_fascicolo: "PIANIFICAZIONE",
-})
+    esercizio: annoInizio,
+    stato_fascicolo: "PIANIFICAZIONE",
+  })
         .select("*")
         .single();
 
