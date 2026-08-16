@@ -87,6 +87,38 @@ type DatiContabili = {
   saldi: SaldoContabile[];
 };
 
+type FascicoloRevisione = {
+  id: string;
+
+  esercizio:
+    | number
+    | null;
+
+  materialita:
+    | number
+    | null;
+
+  materialita_operativa:
+    | number
+    | null;
+
+  errore_chiaramente_trascurabile:
+    | number
+    | null;
+
+  rischio_complessivo:
+    | string
+    | null;
+
+  stato_fascicolo:
+    | string
+    | null;
+
+  conclusione_finale:
+    | string
+    | null;
+};
+
 export default function ChecklistRevisionePage() {
   const router = useRouter();
 
@@ -106,6 +138,13 @@ export default function ChecklistRevisionePage() {
   datiContabili,
   setDatiContabili,
 ] = useState<DatiContabili | null>(
+  null
+);
+
+  const [
+  fascicolo,
+  setFascicolo,
+] = useState<FascicoloRevisione | null>(
   null
 );
 
@@ -133,8 +172,8 @@ export default function ChecklistRevisionePage() {
       }
 
       setChecklist(json.data || []);
-      setDatiContabili(
-  json.dati_contabili || null
+    setFascicolo(
+  json.fascicolo || null
 );
     } catch (err: any) {
       setError(err?.message || "Errore caricamento checklist");
@@ -359,6 +398,112 @@ export default function ChecklistRevisionePage() {
   </div>
 )}
 
+        {fascicolo && (
+  <div className="mb-6 overflow-hidden rounded-xl border bg-white shadow-sm">
+    <div className="border-b bg-slate-50 px-5 py-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Parametri di revisione
+          </div>
+
+          <h2 className="mt-1 text-lg font-semibold text-slate-900">
+            Materialità e rischio
+          </h2>
+        </div>
+
+        <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+          {fascicolo.stato_fascicolo ||
+            "PIANIFICAZIONE"}
+        </div>
+      </div>
+    </div>
+
+    <div className="grid grid-cols-2 gap-4 p-5 md:grid-cols-5">
+      <div>
+        <div className="text-xs text-slate-500">
+          Esercizio
+        </div>
+
+        <div className="text-lg font-bold">
+          {fascicolo.esercizio || "-"}
+        </div>
+      </div>
+
+      <div>
+        <div className="text-xs text-slate-500">
+          Materialità
+        </div>
+
+        <div className="text-lg font-bold">
+          {fascicolo.materialita != null
+            ? Number(
+                fascicolo.materialita
+              ).toLocaleString(
+                "it-IT",
+                {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                }
+              )
+            : "-"}
+        </div>
+      </div>
+
+      <div>
+        <div className="text-xs text-slate-500">
+          Materialità operativa
+        </div>
+
+        <div className="text-lg font-bold">
+          {fascicolo.materialita_operativa != null
+            ? Number(
+                fascicolo.materialita_operativa
+              ).toLocaleString(
+                "it-IT",
+                {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                }
+              )
+            : "-"}
+        </div>
+      </div>
+
+      <div>
+        <div className="text-xs text-slate-500">
+          Errore trascurabile
+        </div>
+
+        <div className="text-lg font-bold">
+          {fascicolo.errore_chiaramente_trascurabile != null
+            ? Number(
+                fascicolo.errore_chiaramente_trascurabile
+              ).toLocaleString(
+                "it-IT",
+                {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                }
+              )
+            : "-"}
+        </div>
+      </div>
+
+      <div>
+        <div className="text-xs text-slate-500">
+          Rischio complessivo
+        </div>
+
+        <div className="text-lg font-bold">
+          {fascicolo.rischio_complessivo ||
+            "-"}
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
         {datiContabili?.saldi &&
   datiContabili.saldi.length > 0 && (
     <div className="mb-6 overflow-hidden rounded-xl border bg-white shadow-sm">
@@ -407,6 +552,14 @@ export default function ChecklistRevisionePage() {
               <th className="p-3 text-right">
                 Incidenza
               </th>
+
+              <th className="p-3 text-right">
+                  Vs materialità
+                </th>
+
+                <th className="p-3 text-center">
+                  Significativa
+                  </th>
 
               <th className="p-3 text-center">
                 Conti
@@ -489,6 +642,31 @@ export default function ChecklistRevisionePage() {
                       )
                     : 0;
 
+                const materialita =
+  Number(
+    fascicolo?.materialita || 0
+  );
+
+const rapportoMaterialita =
+  materialita > 0
+    ? (
+        Math.abs(
+          Number(
+            saldo.importo || 0
+          )
+        ) /
+        materialita
+      ) * 100
+    : 0;
+
+const superaMaterialita =
+  materialita > 0 &&
+  Math.abs(
+    Number(
+      saldo.importo || 0
+    )
+  ) >= materialita;
+
                 return (
                   <tr
                     key={saldo.voce_id}
@@ -543,6 +721,34 @@ export default function ChecklistRevisionePage() {
                       )}
                       %
                     </td>
+
+                    <td className="p-3 text-right">
+  {materialita > 0
+    ? `${rapportoMaterialita.toLocaleString(
+        "it-IT",
+        {
+          minimumFractionDigits: 1,
+          maximumFractionDigits: 1,
+        }
+      )}%`
+    : "-"}
+</td>
+
+<td className="p-3 text-center">
+  {materialita <= 0 ? (
+    <span className="text-xs text-gray-400">
+      N/D
+    </span>
+  ) : superaMaterialita ? (
+    <span className="rounded-full bg-red-100 px-2 py-1 text-xs font-semibold text-red-700">
+      SI
+    </span>
+  ) : (
+    <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-semibold text-green-700">
+      NO
+    </span>
+  )}
+</td>
 
                     <td className="p-3 text-center">
                       {saldo.numero_conti}
