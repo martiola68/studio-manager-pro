@@ -636,11 +636,6 @@ if (
   </div>
 </div>
 
-{/* DATA NOMINA - QUESTO È IL BLOCCO CHE GIÀ HAI */}
-<div>
-  <label className="mb-1 block text-xs font-medium text-gray-500">
-    Data nomina
-  </label>
 
                 <div>
                   <label className="mb-1 block text-xs font-medium text-gray-500">
