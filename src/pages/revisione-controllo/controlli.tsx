@@ -87,6 +87,13 @@ export default function RevisioneControlliPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  const [selected, setSelected] = useState<Controllo | null>(null);
+const [modalOpen, setModalOpen] = useState(false);
+
+const [dataControllo, setDataControllo] = useState("");
+const [esito, setEsito] = useState("");
+const [note, setNote] = useState("");
+
  const [
   importModalOpen,
   setImportModalOpen,
