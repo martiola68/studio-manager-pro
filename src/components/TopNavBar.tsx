@@ -28,6 +28,7 @@ import {
    Network,
   BarChart3,
   Menu,
+  BookOpen,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -454,6 +455,11 @@ const menuItems: MenuItem[] = [
       href: "/controllo-gestione/storico",
       icon: <Clock className="h-4 w-4" />,
     },
+    {
+      label: "Manuale operativo",
+      href: "/guide/Manuale_Controllo_di_Gestione_SMP.pdf",
+      icon: <BookOpen className="h-4 w-4" />,
+    },
   ],
 },
       {
@@ -659,22 +665,32 @@ const showPostGiornoBadge =
   const subActive = isActive(sub);
 
   return (
-    <DropdownMenuItem key={sub.label} asChild>
-      <Link
-        href={sub.href || "#"}
-        className={cn(
-          "flex min-h-[44px] flex-col items-center justify-center gap-1 rounded-lg border px-2 py-2 text-center text-xs font-medium transition-colors",
-          subActive
-            ? "border-blue-600 bg-blue-50 text-blue-700"
-            : "border-gray-200 bg-gray-50 text-gray-700 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
-        )}
-      >
-        <span className="text-blue-600 flex items-center justify-center [&>svg]:h-4 [&>svg]:w-4">
-          {sub.icon}
-        </span>
-        <span>{sub.label}</span>
-      </Link>
-    </DropdownMenuItem>
+   <DropdownMenuItem key={sub.label} asChild>
+  <Link
+    href={sub.href || "#"}
+    target={
+      sub.href?.toLowerCase().endsWith(".pdf")
+        ? "_blank"
+        : undefined
+    }
+    rel={
+      sub.href?.toLowerCase().endsWith(".pdf")
+        ? "noopener noreferrer"
+        : undefined
+    }
+    className={cn(
+      "flex min-h-[44px] flex-col items-center justify-center gap-1 rounded-lg border px-2 py-2 text-center text-xs font-medium transition-colors",
+      subActive
+        ? "border-blue-600 bg-blue-50 text-blue-700"
+        : "border-gray-200 bg-gray-50 text-gray-700 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+    )}
+  >
+    <span className="text-blue-600 flex items-center justify-center [&>svg]:h-4 [&>svg]:w-4">
+      {sub.icon}
+    </span>
+    <span>{sub.label}</span>
+  </Link>
+</DropdownMenuItem>
   );
 })}
             </div>
