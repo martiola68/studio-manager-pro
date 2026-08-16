@@ -43,6 +43,47 @@ type Fascicolo = {
     | null;
 };
 
+type ImportContabile = {
+  id: string;
+  data_riferimento: string | null;
+  software_contabile: string | null;
+  stato: string | null;
+  numero_conti: number | null;
+  conti_mappati: number | null;
+  conti_da_mappare: number | null;
+};
+
+type ControlloFascicolo = {
+  id: string;
+  anno: number;
+  trimestre: number;
+
+  data_scadenza: string | null;
+  data_controllo: string | null;
+
+  stato: string;
+  esito: string | null;
+
+  import_contabile:
+    | ImportContabile
+    | null;
+
+  checklist_totale: number;
+  checklist_compilate: number;
+  checklist_percentuale: number;
+
+  followup_aperti: number;
+  rilievi_significativi: number;
+};
+
+type RiepilogoFascicolo = {
+  totale_controlli: number;
+  controlli_completati: number;
+  percentuale_controlli: number;
+  rilievi_aperti: number;
+  rilievi_significativi: number;
+};
+
 export default function FascicoloRevisionePage() {
   const router = useRouter();
 
@@ -54,6 +95,22 @@ export default function FascicoloRevisionePage() {
 
   const [fascicolo, setFascicolo] =
     useState<Fascicolo | null>(null);
+
+  const [
+  controlli,
+  setControlli,
+] = useState<ControlloFascicolo[]>([]);
+
+const [
+  riepilogo,
+  setRiepilogo,
+] = useState<RiepilogoFascicolo>({
+  totale_controlli: 0,
+  controlli_completati: 0,
+  percentuale_controlli: 0,
+  rilievi_aperti: 0,
+  rilievi_significativi: 0,
+});
 
   const [esercizio, setEsercizio] =
     useState("");
@@ -129,6 +186,39 @@ export default function FascicoloRevisionePage() {
         json.data;
 
       setFascicolo(item);
+
+      setControlli(
+  Array.isArray(json.controlli)
+    ? json.controlli
+    : []
+);
+
+setRiepilogo({
+  totale_controlli:
+    Number(
+      json.riepilogo?.totale_controlli
+    ) || 0,
+
+  controlli_completati:
+    Number(
+      json.riepilogo?.controlli_completati
+    ) || 0,
+
+  percentuale_controlli:
+    Number(
+      json.riepilogo?.percentuale_controlli
+    ) || 0,
+
+  rilievi_aperti:
+    Number(
+      json.riepilogo?.rilievi_aperti
+    ) || 0,
+
+  rilievi_significativi:
+    Number(
+      json.riepilogo?.rilievi_significativi
+    ) || 0,
+});
 
       setEsercizio(
         item.esercizio != null
@@ -526,6 +616,264 @@ export default function FascicoloRevisionePage() {
                 </button>
               </div>
             </section>
+
+            <section className="overflow-hidden rounded-xl border bg-white shadow-sm">
+  <div className="border-b bg-slate-50 px-5 py-4">
+    <div className="flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Avanzamento annuale
+        </div>
+
+        <h2 className="mt-1 text-lg font-semibold">
+          Controlli periodici
+        </h2>
+      </div>
+
+      <div className="text-right">
+        <div className="text-2xl font-bold">
+          {riepilogo.percentuale_controlli}%
+        </div>
+
+        <div className="text-xs text-gray-500">
+          {riepilogo.controlli_completati} di{" "}
+          {riepilogo.totale_controlli} controlli completati
+        </div>
+      </div>
+    </div>
+
+    <div className="mt-4 h-2 overflow-hidden rounded-full bg-gray-200">
+      <div
+        className="h-full bg-blue-600 transition-all"
+        style={{
+          width: `${Math.min(
+            100,
+            Math.max(
+              0,
+              riepilogo.percentuale_controlli
+            )
+          )}%`,
+        }}
+      />
+    </div>
+  </div>
+
+  <div className="grid grid-cols-2 gap-px bg-gray-200 md:grid-cols-4">
+    <div className="bg-white p-4">
+      <div className="text-xs text-gray-500">
+        Controlli previsti
+      </div>
+
+      <div className="mt-1 text-2xl font-bold">
+        {riepilogo.totale_controlli}
+      </div>
+    </div>
+
+    <div className="bg-white p-4">
+      <div className="text-xs text-gray-500">
+        Completati
+      </div>
+
+      <div className="mt-1 text-2xl font-bold text-green-700">
+        {riepilogo.controlli_completati}
+      </div>
+    </div>
+
+    <div className="bg-white p-4">
+      <div className="text-xs text-gray-500">
+        Rilievi aperti
+      </div>
+
+      <div className="mt-1 text-2xl font-bold">
+        {riepilogo.rilievi_aperti}
+      </div>
+    </div>
+
+    <div className="bg-white p-4">
+      <div className="text-xs text-gray-500">
+        Rilievi significativi
+      </div>
+
+      <div
+        className={`mt-1 text-2xl font-bold ${
+          riepilogo.rilievi_significativi > 0
+            ? "text-red-700"
+            : "text-green-700"
+        }`}
+      >
+        {riepilogo.rilievi_significativi}
+      </div>
+    </div>
+  </div>
+</section>
+
+            <section>
+  <div className="mb-3 flex items-center justify-between">
+    <div>
+      <h2 className="text-lg font-semibold">
+        Verifiche dell'esercizio
+      </h2>
+
+      <p className="text-xs text-gray-500">
+        Stato dei controlli periodici e delle relative carte di lavoro.
+      </p>
+    </div>
+  </div>
+
+  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+    {[1, 2, 3, 4].map((trimestre) => {
+      const controllo =
+        controlli.find(
+          (item) =>
+            item.trimestre === trimestre &&
+            (
+              !fascicolo?.esercizio ||
+              item.anno === fascicolo.esercizio
+            )
+        ) || null;
+
+      const completato =
+        controllo?.stato === "COMPLETATO";
+
+      const inLavorazione =
+        controllo?.stato === "IN_LAVORAZIONE";
+
+      const scaduto =
+        controllo?.stato === "SCADUTO";
+
+      return (
+        <div
+          key={trimestre}
+          className="overflow-hidden rounded-xl border bg-white shadow-sm"
+        >
+          <div className="flex items-center justify-between border-b bg-gray-50 px-4 py-3">
+            <div className="text-lg font-bold">
+              Q{trimestre}
+            </div>
+
+            {!controllo ? (
+              <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-500">
+                Non creato
+              </span>
+            ) : (
+              <span
+                className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                  completato
+                    ? "bg-green-100 text-green-700"
+                    : inLavorazione
+                    ? "bg-blue-100 text-blue-700"
+                    : scaduto
+                    ? "bg-red-100 text-red-700"
+                    : "bg-amber-100 text-amber-700"
+                }`}
+              >
+                {completato
+                  ? "Completato"
+                  : inLavorazione
+                  ? "In lavorazione"
+                  : scaduto
+                  ? "Scaduto"
+                  : "Da fare"}
+              </span>
+            )}
+          </div>
+
+          <div className="space-y-4 p-4">
+            <div>
+              <div className="mb-1 flex justify-between text-xs">
+                <span className="text-gray-500">
+                  Checklist
+                </span>
+
+                <span className="font-semibold">
+                  {controllo
+                    ? `${controllo.checklist_compilate}/${controllo.checklist_totale}`
+                    : "-"}
+                </span>
+              </div>
+
+              <div className="h-1.5 overflow-hidden rounded-full bg-gray-200">
+                <div
+                  className="h-full bg-blue-600"
+                  style={{
+                    width: `${
+                      controllo?.checklist_percentuale || 0
+                    }%`,
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <div className="text-gray-500">
+                  Contabilità
+                </div>
+
+                <div className="mt-1 font-semibold">
+                  {controllo?.import_contabile
+                    ? "Collegata"
+                    : "Non collegata"}
+                </div>
+              </div>
+
+              <div>
+                <div className="text-gray-500">
+                  Rilievi aperti
+                </div>
+
+                <div
+                  className={`mt-1 font-semibold ${
+                    (controllo?.followup_aperti || 0) > 0
+                      ? "text-amber-700"
+                      : "text-green-700"
+                  }`}
+                >
+                  {controllo?.followup_aperti || 0}
+                </div>
+              </div>
+            </div>
+
+            {controllo?.import_contabile?.data_riferimento && (
+              <div className="text-xs text-gray-500">
+                Situazione al{" "}
+                {new Date(
+                  `${controllo.import_contabile.data_riferimento}T00:00:00`
+                ).toLocaleDateString("it-IT")}
+              </div>
+            )}
+
+            {controllo ? (
+              <button
+                type="button"
+                onClick={() =>
+                  router.push(
+                    `/revisione-controllo/checklist?controllo_id=${controllo.id}`
+                  )
+                }
+                className="w-full rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100"
+              >
+                Apri verifica
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() =>
+                  router.push(
+                    `/revisione-controllo/controlli?incarico_id=${incaricoId}`
+                  )
+                }
+                className="w-full rounded-md border px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
+              >
+                Gestisci controlli
+              </button>
+            )}
+          </div>
+        </div>
+      );
+    })}
+  </div>
+</section>
 
             <section className="grid grid-cols-1 gap-4 md:grid-cols-4">
               <button
