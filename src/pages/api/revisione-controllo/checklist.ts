@@ -216,6 +216,112 @@ if (importId) {
   };
 }
 
+      function getProceduraDefault(saldo: any) {
+  const codice = String(saldo.codice || "");
+  const descrizione = String(
+    saldo.descrizione || "voce contabile"
+  );
+
+  if (codice === "SP_DISPONIBILITA_LIQUIDE") {
+    return {
+      asserzione: "ESISTENZA",
+      procedura:
+        "Verificare saldi bancari e di cassa, riconciliazioni bancarie, estratti conto, eventuali vincoli e operazioni prossime alla chiusura del periodo.",
+    };
+  }
+
+  if (
+    codice.includes("CREDITI") ||
+    codice.includes("CLIENT")
+  ) {
+    return {
+      asserzione: "VALUTAZIONE",
+      procedura:
+        "Verificare esistenza, recuperabilità, anzianità dei crediti, incassi successivi ed eventuale adeguatezza dei fondi svalutazione.",
+    };
+  }
+
+  if (
+    codice.includes("FORNITOR") ||
+    codice.includes("DEBIT")
+  ) {
+    return {
+      asserzione: "COMPLETEZZA",
+      procedura:
+        "Verificare completezza dei debiti, pagamenti successivi, documentazione di supporto e corretta imputazione temporale.",
+    };
+  }
+
+  if (codice.startsWith("PN_")) {
+    return {
+      asserzione: "PRESENTAZIONE",
+      procedura:
+        "Verificare composizione e movimentazioni del patrimonio netto, delibere societarie, destinazioni del risultato e corretta esposizione contabile.",
+    };
+  }
+
+  if (
+    codice.includes("RICAVI") ||
+    saldo.macrovoce === "ricavi"
+  ) {
+    return {
+      asserzione: "COMPETENZA",
+      procedura:
+        "Verificare corretta rilevazione dei ricavi, competenza economica, cut-off e coerenza con la documentazione commerciale.",
+    };
+  }
+
+  if (
+    codice.includes("COST") ||
+    saldo.macrovoce === "costi_operativi"
+  ) {
+    return {
+      asserzione: "COMPETENZA",
+      procedura:
+        "Verificare corretta rilevazione dei costi, documentazione giustificativa, competenza economica e cut-off.",
+    };
+  }
+
+  if (
+    codice.includes("IMMOB") ||
+    saldo.macrovoce === "immobilizzazioni"
+  ) {
+    return {
+      asserzione: "VALUTAZIONE",
+      procedura:
+        "Verificare esistenza, titolarità, incrementi e decrementi, ammortamenti e criteri di valutazione delle immobilizzazioni.",
+    };
+  }
+
+  if (
+    codice.includes("TRIBUT") ||
+    codice.includes("IMPOST")
+  ) {
+    return {
+      asserzione: "COMPLETEZZA",
+      procedura:
+        "Verificare riconciliazione dei saldi fiscali, dichiarazioni, versamenti, debiti e crediti tributari e corretta competenza.",
+    };
+  }
+
+  if (
+    codice.includes("PREVID") ||
+    codice === "SP_TFR"
+  ) {
+    return {
+      asserzione: "COMPLETEZZA",
+      procedura:
+        "Verificare riconciliazione con dati del personale, versamenti contributivi, fondi e corretta determinazione delle passività.",
+    };
+  }
+
+  return {
+    asserzione: null,
+    procedura:
+      `Verificare composizione, movimentazioni, documentazione di supporto e corretta rappresentazione della voce "${descrizione}".`,
+  };
+}
+
       let { data, error } = await supabaseAdmin
         .from("tbrevisione_checklist")
         .select("*")
@@ -271,6 +377,199 @@ eseguito_at: null,
 
         data = inserted || [];
       }
+
+      /*
+ * =====================================================
+ * SINCRONIZZAZIONE AREE CONTABILI SMP
+ * =====================================================
+ *
+ * Manteniamo la checklist generale già esistente
+ * e aggiungiamo soltanto le voci contabili che
+ * non hanno ancora una procedura collegata.
+ */
+if (
+  crea_default === "true" &&
+  datiContabili?.saldi?.length
+) {
+  const checklistCorrente =
+    data || [];
+
+  const vociGiaPresenti =
+    new Set(
+      checklistCorrente
+        .map(
+          (item: any) =>
+            item.voce_smp_id
+        )
+        .filter(Boolean)
+    );
+
+  const nuoviSaldi =
+    datiContabili.saldi.filter(
+      (saldo: any) =>
+        saldo.voce_id &&
+        Math.abs(
+          Number(
+            saldo.importo || 0
+          )
+        ) > 0 &&
+        !vociGiaPresenti.has(
+          saldo.voce_id
+        )
+    );
+
+  if (nuoviSaldi.length > 0) {
+    /*
+     * Recuperiamo lo studio del controllo.
+     */
+    const {
+      data: controlloInfo,
+      error: controlloInfoError,
+    } = await supabaseAdmin
+      .from("vw_revisione_controlli")
+      .select("studio_id")
+      .eq("id", controllo_id)
+      .single();
+
+    if (controlloInfoError) {
+      throw controlloInfoError;
+    }
+
+    const ordineBase =
+      checklistCorrente.reduce(
+        (
+          max: number,
+          item: any
+        ) =>
+          Math.max(
+            max,
+            Number(
+              item.ordine || 0
+            )
+          ),
+        0
+      );
+
+    const rowsContabili =
+      nuoviSaldi.map(
+        (
+          saldo: any,
+          index: number
+        ) => {
+          const defaultProcedura =
+            getProceduraDefault(
+              saldo
+            );
+
+          const area =
+            saldo.sezione ===
+            "stato_patrimoniale_attivo"
+              ? "Stato patrimoniale - Attivo"
+              : saldo.sezione ===
+                "stato_patrimoniale_passivo"
+              ? "Stato patrimoniale - Passivo"
+              : "Conto economico";
+
+          return {
+            controllo_id,
+            studio_id:
+              controlloInfo.studio_id,
+
+            area,
+
+            domanda:
+              `Verifica della voce ${saldo.descrizione}`,
+
+            voce_smp_id:
+              saldo.voce_id,
+
+            asserzione:
+              defaultProcedura.asserzione,
+
+            rischio:
+              null,
+
+            procedura:
+              defaultProcedura.procedura,
+
+            significativita:
+              null,
+
+            importo_rilievo:
+              null,
+
+            effetto_relazione:
+              null,
+
+            risposta:
+              null,
+
+            esito:
+              null,
+
+            gravita:
+              null,
+
+            follow_up:
+              false,
+
+            data_follow_up:
+              null,
+
+            raccomandazione:
+              null,
+
+            note:
+              null,
+
+            eseguito_da:
+              null,
+
+            eseguito_at:
+              null,
+
+            ordine:
+              ordineBase +
+              (
+                index + 1
+              ) *
+                10,
+          };
+        }
+      );
+
+    const {
+      data: insertedContabili,
+      error:
+        insertedContabiliError,
+    } = await supabaseAdmin
+      .from(
+        "tbrevisione_checklist"
+      )
+      .insert(rowsContabili)
+      .select("*");
+
+    if (
+      insertedContabiliError
+    ) {
+      throw insertedContabiliError;
+    }
+
+    data = [
+      ...checklistCorrente,
+      ...(insertedContabili ||
+        []),
+    ].sort(
+      (a: any, b: any) =>
+        Number(
+          a.ordine || 0
+        ) -
+        Number(
+          b.ordine || 0
+        )
+    );
+  }
+}
 
      return res.status(200).json({
   success: true,
