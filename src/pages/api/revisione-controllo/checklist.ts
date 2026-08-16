@@ -64,6 +64,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           data_follow_up: null,
           raccomandazione: null,
           note: null,
+          voce_smp_id: null,
+
+asserzione: null,
+rischio: null,
+procedura: null,
+
+significativita: null,
+
+importo_rilievo: null,
+
+effetto_relazione: null,
+
+eseguito_da: null,
+eseguito_at: null,
           ordine: item.ordine,
         }));
 
@@ -123,6 +137,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           data_follow_up: item.data_follow_up || null,
           raccomandazione: item.raccomandazione || null,
           note: item.note || null,
+          voce_smp_id:
+  item.voce_smp_id || null,
+
+asserzione:
+  item.asserzione || null,
+
+rischio:
+  item.rischio || null,
+
+procedura:
+  item.procedura || null,
+
+significativita:
+  item.significativita || null,
+
+importo_rilievo:
+  item.importo_rilievo === null ||
+  item.importo_rilievo === undefined ||
+  item.importo_rilievo === ""
+    ? null
+    : Number(item.importo_rilievo),
+
+effetto_relazione:
+  item.effetto_relazione || null,
+
+eseguito_da:
+  item.eseguito_da || null,
+
+eseguito_at:
+  item.eseguito_at || null,
           ordine: Number(item.ordine ?? (index + 1) * 10),
           updated_at: new Date().toISOString(),
         }));
@@ -161,32 +205,80 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             const { error: updateFollowupError } = await supabaseAdmin
               .from("tbrevisione_followup")
               .update({
-                studio_id: item.studio_id,
-                controllo_id: item.controllo_id,
-                checklist_id: item.id,
-                cliente_id: controllo.cliente_id,
-                descrizione,
-                gravita: item.gravita || null,
-                data_scadenza: item.data_follow_up || null,
-                note: item.note || null,
-              })
+  studio_id: item.studio_id,
+  controllo_id: item.controllo_id,
+  checklist_id: item.id,
+  cliente_id: controllo.cliente_id,
+
+  descrizione,
+
+  gravita:
+    item.gravita || null,
+
+  data_scadenza:
+    item.data_follow_up || null,
+
+  note:
+    item.note || null,
+
+  importo:
+    item.importo_rilievo === null ||
+    item.importo_rilievo === undefined
+      ? null
+      : Number(item.importo_rilievo),
+
+  significativo:
+    item.significativita ===
+    "SIGNIFICATIVO",
+
+  effetto_relazione:
+    item.effetto_relazione || null,
+
+  stato:
+    "APERTO",
+})
               .eq("id", existingFollowup.id);
 
             if (updateFollowupError) throw updateFollowupError;
           } else {
             const { error: insertFollowupError } = await supabaseAdmin
               .from("tbrevisione_followup")
-              .insert({
-                studio_id: item.studio_id,
-                controllo_id: item.controllo_id,
-                checklist_id: item.id,
-                cliente_id: controllo.cliente_id,
-                descrizione,
-                gravita: item.gravita || null,
-                data_scadenza: item.data_follow_up || null,
-                completato: false,
-                note: item.note || null,
-              });
+             .insert({
+  studio_id: item.studio_id,
+  controllo_id: item.controllo_id,
+  checklist_id: item.id,
+  cliente_id: controllo.cliente_id,
+
+  descrizione,
+
+  gravita:
+    item.gravita || null,
+
+  data_scadenza:
+    item.data_follow_up || null,
+
+  completato:
+    false,
+
+  note:
+    item.note || null,
+
+  importo:
+    item.importo_rilievo === null ||
+    item.importo_rilievo === undefined
+      ? null
+      : Number(item.importo_rilievo),
+
+  significativo:
+    item.significativita ===
+    "SIGNIFICATIVO",
+
+  effetto_relazione:
+    item.effetto_relazione || null,
+
+  stato:
+    "APERTO",
+});
 
             if (insertFollowupError) throw insertFollowupError;
           }
