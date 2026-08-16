@@ -5,16 +5,36 @@ import { Save, RefreshCw } from "lucide-react";
 
 type ChecklistItem = {
   id?: string;
+
   area: string;
   domanda: string;
+
   risposta: string | null;
   esito: string | null;
   gravita: string | null;
+
   follow_up: boolean;
   data_follow_up: string | null;
+
   raccomandazione: string | null;
   note: string | null;
+
   ordine: number;
+
+  voce_smp_id: string | null;
+
+  asserzione: string | null;
+  rischio: string | null;
+  procedura: string | null;
+
+  significativita: string | null;
+
+  importo_rilievo: number | null;
+
+  effetto_relazione: string | null;
+
+  eseguito_da: string | null;
+  eseguito_at: string | null;
 };
 
 export default function ChecklistRevisionePage() {
