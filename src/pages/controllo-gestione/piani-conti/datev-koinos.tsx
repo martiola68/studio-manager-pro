@@ -828,7 +828,7 @@ export default function MasterPianoContiPage() {
               fontWeight: 700,
             }}
           >
-            Master piani dei conti
+            Piano dei conti DATEV KOINOS
           </h1>
 
           <div
