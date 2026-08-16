@@ -17,20 +17,400 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    if (req.method === "GET") {
-      const { data, error } = await supabaseAdmin
-        .from("vw_revisione_incarichi")
-        .select("*")
-        .eq("id", id)
-        .single();
+   if (req.method === "GET") {
+  /*
+   * =====================================================
+   * 1. INCARICO / FASCICOLO
+   * =====================================================
+   *
+   * Leggiamo dalla tabella reale e non dalla vista,
+   * così siamo sicuri di avere anche i nuovi campi:
+   *
+   * - esercizio
+   * - materialita
+   * - materialita_operativa
+   * - errore_chiaramente_trascurabile
+   * - rischio_complessivo
+   * - stato_fascicolo
+   * - conclusione_finale
+   */
+  const {
+    data: incarico,
+    error: incaricoError,
+  } = await supabaseAdmin
+    .from("tbrevisione_incarichi")
+    .select("*")
+    .eq("id", id)
+    .single();
 
-      if (error) throw error;
+  if (incaricoError) {
+    throw incaricoError;
+  }
 
-      return res.status(200).json({
-        success: true,
-        data,
-      });
+  /*
+   * =====================================================
+   * 2. CLIENTE
+   * =====================================================
+   */
+  const {
+    data: cliente,
+    error: clienteError,
+  } = await supabaseAdmin
+    .from("tbclienti")
+    .select(`
+      id,
+      ragione_sociale
+    `)
+    .eq("id", incarico.cliente_id)
+    .maybeSingle();
+
+  if (clienteError) {
+    throw clienteError;
+  }
+
+  /*
+   * =====================================================
+   * 3. CONTROLLI PERIODICI
+   * =====================================================
+   */
+  const {
+    data: controlliData,
+    error: controlliError,
+  } = await supabaseAdmin
+    .from("tbrevisione_controlli")
+    .select(`
+      id,
+      incarico_id,
+      anno,
+      trimestre,
+      data_scadenza,
+      data_controllo,
+      stato,
+      esito,
+      note,
+      controllo_gestione_import_id,
+      completato_at
+    `)
+    .eq("incarico_id", id)
+    .order("anno", {
+      ascending: true,
+    })
+    .order("trimestre", {
+      ascending: true,
+    });
+
+  if (controlliError) {
+    throw controlliError;
+  }
+
+  const controlli =
+    controlliData || [];
+
+  const controlloIds =
+    controlli.map(
+      (controllo: any) =>
+        controllo.id
+    );
+
+  /*
+   * =====================================================
+   * 4. CHECKLIST
+   * =====================================================
+   */
+  let checklist: any[] = [];
+
+  if (controlloIds.length > 0) {
+    const {
+      data: checklistData,
+      error: checklistError,
+    } = await supabaseAdmin
+      .from("tbrevisione_checklist")
+      .select(`
+        id,
+        controllo_id,
+        risposta,
+        esito,
+        gravita,
+        significativita,
+        follow_up
+      `)
+      .in(
+        "controllo_id",
+        controlloIds
+      );
+
+    if (checklistError) {
+      throw checklistError;
     }
+
+    checklist =
+      checklistData || [];
+  }
+
+  /*
+   * =====================================================
+   * 5. FOLLOW-UP / RILIEVI
+   * =====================================================
+   */
+  let followup: any[] = [];
+
+  if (controlloIds.length > 0) {
+    const {
+      data: followupData,
+      error: followupError,
+    } = await supabaseAdmin
+      .from("tbrevisione_followup")
+      .select(`
+        id,
+        controllo_id,
+        gravita,
+        significativo,
+        completato,
+        stato,
+        importo
+      `)
+      .in(
+        "controllo_id",
+        controlloIds
+      );
+
+    if (followupError) {
+      throw followupError;
+    }
+
+    followup =
+      followupData || [];
+  }
+
+  /*
+   * =====================================================
+   * 6. IMPORT CONTABILI COLLEGATI
+   * =====================================================
+   */
+  const importIds =
+    Array.from(
+      new Set(
+        controlli
+          .map(
+            (controllo: any) =>
+              controllo
+                .controllo_gestione_import_id
+          )
+          .filter(Boolean)
+      )
+    );
+
+  let importMap =
+    new Map<string, any>();
+
+  if (importIds.length > 0) {
+    const {
+      data: imports,
+      error: importsError,
+    } = await supabaseAdmin
+      .from(
+        "tbcontrollo_gestione_import"
+      )
+      .select(`
+        id,
+        data_riferimento,
+        software_contabile,
+        stato,
+        numero_conti,
+        conti_mappati,
+        conti_da_mappare
+      `)
+      .in("id", importIds);
+
+    if (importsError) {
+      throw importsError;
+    }
+
+    importMap = new Map(
+      (imports || []).map(
+        (item: any) => [
+          item.id,
+          item,
+        ]
+      )
+    );
+  }
+
+  /*
+   * =====================================================
+   * 7. RIEPILOGO PER CONTROLLO
+   * =====================================================
+   */
+  const controlliRiepilogo =
+    controlli.map(
+      (controllo: any) => {
+        const checklistControllo =
+          checklist.filter(
+            (item: any) =>
+              item.controllo_id ===
+              controllo.id
+          );
+
+        const checklistCompilate =
+          checklistControllo.filter(
+            (item: any) =>
+              Boolean(
+                item.risposta
+              )
+          );
+
+        const followupControllo =
+          followup.filter(
+            (item: any) =>
+              item.controllo_id ===
+              controllo.id
+          );
+
+        const followupAperti =
+          followupControllo.filter(
+            (item: any) =>
+              item.completato !== true &&
+              item.stato !== "RISOLTO"
+          );
+
+        const rilieviSignificativi =
+          followupAperti.filter(
+            (item: any) =>
+              item.significativo ===
+              true
+          );
+
+        const importId =
+          controllo
+            .controllo_gestione_import_id ||
+          null;
+
+        return {
+          ...controllo,
+
+          import_contabile:
+            importId
+              ? importMap.get(
+                  importId
+                ) || null
+              : null,
+
+          checklist_totale:
+            checklistControllo.length,
+
+          checklist_compilate:
+            checklistCompilate.length,
+
+          checklist_percentuale:
+            checklistControllo.length >
+            0
+              ? Math.round(
+                  (
+                    checklistCompilate.length /
+                    checklistControllo.length
+                  ) *
+                    100
+                )
+              : 0,
+
+          followup_aperti:
+            followupAperti.length,
+
+          rilievi_significativi:
+            rilieviSignificativi.length,
+        };
+      }
+    );
+
+  /*
+   * =====================================================
+   * 8. AVANZAMENTO ANNUALE
+   * =====================================================
+   */
+  const controlliCompletati =
+    controlliRiepilogo.filter(
+      (item: any) =>
+        item.stato ===
+        "COMPLETATO"
+    ).length;
+
+  const totaleControlli =
+    controlliRiepilogo.length;
+
+  const percentualeControlli =
+    totaleControlli > 0
+      ? Math.round(
+          (
+            controlliCompletati /
+            totaleControlli
+          ) * 100
+        )
+      : 0;
+
+  const rilieviApertiTotali =
+    controlliRiepilogo.reduce(
+      (
+        totale: number,
+        item: any
+      ) =>
+        totale +
+        Number(
+          item.followup_aperti || 0
+        ),
+      0
+    );
+
+  const rilieviSignificativiTotali =
+    controlliRiepilogo.reduce(
+      (
+        totale: number,
+        item: any
+      ) =>
+        totale +
+        Number(
+          item.rilievi_significativi ||
+            0
+        ),
+      0
+    );
+
+  /*
+   * =====================================================
+   * 9. RISPOSTA
+   * =====================================================
+   */
+  return res.status(200).json({
+    success: true,
+
+    data: {
+      ...incarico,
+
+      ragione_sociale:
+        cliente?.ragione_sociale ||
+        null,
+    },
+
+    controlli:
+      controlliRiepilogo,
+
+    riepilogo: {
+      totale_controlli:
+        totaleControlli,
+
+      controlli_completati:
+        controlliCompletati,
+
+      percentuale_controlli:
+        percentualeControlli,
+
+      rilievi_aperti:
+        rilieviApertiTotali,
+
+      rilievi_significativi:
+        rilieviSignificativiTotali,
+    },
+  });
+}
 
     if (req.method === "PUT") {
       const {
