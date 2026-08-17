@@ -196,7 +196,64 @@ setSuccess("Relazione generata e archiviata correttamente.");
     link.click();
     document.body.removeChild(link);
 
-    URL.revokeObjectURL(url);
+      URL.revokeObjectURL(url);
+  }
+
+  async function scaricaDocx() {
+    try {
+      setError("");
+
+      if (!controlloId) {
+        throw new Error("controllo_id mancante.");
+      }
+
+      if (!modelloId) {
+        throw new Error("Seleziona un modello.");
+      }
+
+      const res = await fetch("/api/revisione-controllo/genera-docx", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          controllo_id: controlloId,
+          modello_id: modelloId,
+        }),
+      });
+
+      if (!res.ok) {
+        let message = "Errore generazione documento Word.";
+
+        try {
+          const json = await res.json();
+          message = json.error || message;
+        } catch {}
+
+        throw new Error(message);
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+
+      const nomeSocieta = (controllo?.ragione_sociale || "cliente")
+        .replace(/[^a-zA-Z0-9À-ÿ_-]+/g, "_")
+        .replace(/^_+|_+$/g, "");
+
+      link.href = url;
+      link.download =
+        `relazione_revisione_${nomeSocieta}_${controllo?.anno || ""}_T${controllo?.trimestre || ""}.docx`;
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setError(err?.message || "Errore generazione documento Word.");
+    }
   }
 
   const modelliFiltrati = modelli.filter((m) => {
@@ -319,16 +376,25 @@ setSuccess("Relazione generata e archiviata correttamente.");
             {testoGenerato && (
               <div className="rounded-lg border bg-white p-5">
                 <div className="mb-3 flex items-center justify-between">
-                  <h2 className="text-lg font-semibold">Testo generato</h2>
+                 <h2 className="text-lg font-semibold">Testo generato</h2>
 
-                  <button
-                    onClick={scaricaTxt}
-                    className="inline-flex items-center gap-2 rounded-md border bg-white px-3 py-2 text-sm hover:bg-gray-50"
-                  >
-                    <Save size={16} />
-                    Scarica TXT
-                  </button>
-                </div>
+<div className="flex items-center gap-2">
+  <button
+    onClick={scaricaDocx}
+    className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700"
+  >
+    <FileText size={16} />
+    Scarica Word
+  </button>
+
+  <button
+    onClick={scaricaTxt}
+    className="inline-flex items-center gap-2 rounded-md border bg-white px-3 py-2 text-sm hover:bg-gray-50"
+  >
+    <Save size={16} />
+    Scarica TXT
+  </button>
+</div>
 
                 <textarea
                   value={testoGenerato}
