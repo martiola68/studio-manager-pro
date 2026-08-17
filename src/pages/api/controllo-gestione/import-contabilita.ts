@@ -413,20 +413,40 @@ if (origineModulo === "CONTROLLO_GESTIONE") {
  * Un controllo deve avere un solo import corrente.
  * Se esiste, lo sostituiremo mantenendo lo stesso import_id.
  */
-const {
-  data: importEsistente,
-  error: importEsistenteError,
-} = await supabaseAdmin
+let importEsistenteQuery = supabaseAdmin
   .from("tbcontrollo_gestione_import")
   .select("id")
   .eq("studio_id", studio_id)
   .eq("cliente_id", cliente_id)
-  .eq("controllo_id", controllo_id)
+  .eq("origine_modulo", origineModulo);
+
+if (origineModulo === "REVISIONE") {
+  importEsistenteQuery =
+    importEsistenteQuery.eq(
+      "revisione_controllo_id",
+      revisione_controllo_id
+    );
+} else {
+  importEsistenteQuery =
+    importEsistenteQuery.eq(
+      "controllo_id",
+      controllo_id
+    );
+}
+
+const {
+  data: importEsistente,
+  error: importEsistenteError,
+} = await importEsistenteQuery
   .order("created_at", {
     ascending: false,
   })
   .limit(1)
   .maybeSingle();
+
+if (importEsistenteError) {
+  throw importEsistenteError;
+}
 
 if (importEsistenteError) {
   throw importEsistenteError;
@@ -635,7 +655,18 @@ const statoImport =
 const payloadImport = {
   studio_id,
   cliente_id,
-  controllo_id,
+
+  origine_modulo: origineModulo,
+
+  controllo_id:
+    origineModulo === "CONTROLLO_GESTIONE"
+      ? controllo_id || null
+      : null,
+
+  revisione_controllo_id:
+    origineModulo === "REVISIONE"
+      ? revisione_controllo_id || null
+      : null,
 
   software_contabile,
 
@@ -663,7 +694,7 @@ const payloadImport = {
   conti_da_mappare:
     contiDaMappare,
 
-   numero_errori:
+  numero_errori:
     anomalie.length,
 
   stato:
@@ -674,7 +705,6 @@ const payloadImport = {
       ? anomalie.join(" | ")
       : null,
 };
-
 if (importEsistente?.id) {
   importId = importEsistente.id;
 
