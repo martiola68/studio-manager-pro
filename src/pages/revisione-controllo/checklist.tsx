@@ -265,7 +265,7 @@ export default function ChecklistRevisionePage() {
         <title>Checklist Revisione</title>
       </Head>
 
-      <div className="mx-auto max-w-[1500px] p-6">
+     <div className="w-full max-w-none px-3 py-6">
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">
