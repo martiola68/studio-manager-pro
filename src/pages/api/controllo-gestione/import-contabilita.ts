@@ -13,9 +13,19 @@ const supabaseAdmin = createClient(
 type ImportRequestBody = {
   studio_id: string;
   cliente_id: string;
-  controllo_id: string;
+
+  controllo_id?: string | null;
+  revisione_controllo_id?: string | null;
+  origine_modulo?: "CONTROLLO_GESTIONE" | "REVISIONE";
+
   software_contabile?: string;
+
   nome_file?: string;
+
+  /*
+   * Per questa prima versione il frontend invierà il CSV
+   * già convertito in stringa.
+   */
   contenuto_csv: string;
 };
 
@@ -138,14 +148,21 @@ export default async function handler(
       });
     }
 
-    const {
-      studio_id,
-      cliente_id,
-      controllo_id,
-      software_contabile = "datev_koinos",
-      nome_file,
-      contenuto_csv,
-    } = req.body as ImportRequestBody;
+   const {
+  studio_id,
+  cliente_id,
+  controllo_id,
+  revisione_controllo_id,
+  origine_modulo = "CONTROLLO_GESTIONE",
+  software_contabile = "datev_koinos",
+  nome_file,
+  contenuto_csv,
+} = req.body as ImportRequestBody;
+
+const origineModulo =
+  origine_modulo === "REVISIONE"
+    ? "REVISIONE"
+    : "CONTROLLO_GESTIONE";
 
     if (!studio_id) {
       return res.status(400).json({
@@ -161,59 +178,101 @@ export default async function handler(
       });
     }
 
-    if (!controllo_id) {
-      return res.status(400).json({
-        success: false,
-        error: "controllo_id obbligatorio",
-      });
-    }
+  if (
+  origineModulo === "CONTROLLO_GESTIONE" &&
+  !controllo_id
+) {
+  return res.status(400).json({
+    success: false,
+    error:
+      "controllo_id obbligatorio per il Controllo di gestione",
+  });
+}
 
-    if (!contenuto_csv) {
-      return res.status(400).json({
-        success: false,
-        error: "contenuto_csv obbligatorio",
-      });
-    }
+if (
+  origineModulo === "REVISIONE" &&
+  !revisione_controllo_id
+) {
+  return res.status(400).json({
+    success: false,
+    error:
+      "revisione_controllo_id obbligatorio per la Revisione",
+  });
+}
 
-    /*
-     * 1. Controllo di gestione.
-     */
-    const {
-      data: controllo,
-      error: controlloError,
-    } = await supabaseAdmin
-      .from("tbcontrollo_gestione")
-      .select(`
-        id,
-        studio_id,
-        cliente_id,
-        archiviato
-      `)
-      .eq("id", controllo_id)
-      .eq("studio_id", studio_id)
-      .eq("cliente_id", cliente_id)
-      .maybeSingle();
+if (!contenuto_csv) {
+  return res.status(400).json({
+    success: false,
+    error: "contenuto_csv obbligatorio",
+  });
+}
 
-    if (controlloError) {
-      throw controlloError;
-    }
+  /*
+ * 1. Verifica contesto operativo.
+ */
+if (origineModulo === "CONTROLLO_GESTIONE") {
+  const {
+    data: controllo,
+    error: controlloError,
+  } = await supabaseAdmin
+    .from("tbcontrollo_gestione")
+    .select(`
+      id,
+      studio_id,
+      cliente_id,
+      archiviato
+    `)
+    .eq("id", controllo_id)
+    .eq("studio_id", studio_id)
+    .eq("cliente_id", cliente_id)
+    .maybeSingle();
 
-    if (!controllo) {
-      return res.status(404).json({
-        success: false,
-        error:
-          "Controllo di gestione non trovato per lo studio/cliente indicato",
-      });
-    }
+  if (controlloError) {
+    throw controlloError;
+  }
 
-    if (controllo.archiviato) {
-      return res.status(400).json({
-        success: false,
-        error:
-          "Non è possibile importare dati in un controllo archiviato",
-      });
-    }
+  if (!controllo) {
+    return res.status(404).json({
+      success: false,
+      error:
+        "Controllo di gestione non trovato per lo studio/cliente indicato",
+    });
+  }
 
+  if (controllo.archiviato) {
+    return res.status(400).json({
+      success: false,
+      error:
+        "Non è possibile importare dati in un controllo archiviato",
+    });
+  }
+} else {
+  const {
+    data: controlloRevisione,
+    error: controlloRevisioneError,
+  } = await supabaseAdmin
+    .from("tbrevisione_controlli")
+    .select(`
+      id,
+      studio_id,
+      incarico_id
+    `)
+    .eq("id", revisione_controllo_id)
+    .eq("studio_id", studio_id)
+    .maybeSingle();
+
+  if (controlloRevisioneError) {
+    throw controlloRevisioneError;
+  }
+
+  if (!controlloRevisione) {
+    return res.status(404).json({
+      success: false,
+      error:
+        "Controllo di revisione non trovato per lo studio indicato",
+    });
+  }
+}
     /*
      * 2. Cliente + template associato.
      */
