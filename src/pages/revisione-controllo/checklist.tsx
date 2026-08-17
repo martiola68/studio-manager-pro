@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
-import { Save, RefreshCw } from "lucide-react";
+import {
+  Save,
+  RefreshCw,
+  Info,
+  X,
+} from "lucide-react";
 
 type ChecklistItem = {
   id?: string;
@@ -148,8 +153,13 @@ export default function ChecklistRevisionePage() {
   null
 );
 
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+ const [error, setError] = useState("");
+const [success, setSuccess] = useState("");
+
+const [
+  showCompilationGuide,
+  setShowCompilationGuide,
+] = useState(false);
 
   async function loadChecklist() {
     try {
@@ -861,8 +871,42 @@ const superaMaterialita =
     Caricamento checklist...
   </div>
 ) : (
-          <div className="space-y-6">
-            {Object.entries(grouped).map(([area, items]) => (
+         <div className="mb-5 rounded-xl border border-blue-200 bg-blue-50 p-4">
+  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+    <div className="flex items-start gap-3">
+      <div className="mt-0.5 rounded-full bg-blue-100 p-2 text-blue-700">
+        <Info size={18} />
+      </div>
+
+      <div>
+        <div className="font-semibold text-blue-950">
+          Guida alla compilazione della checklist
+        </div>
+
+        <div className="mt-1 text-sm leading-6 text-blue-900">
+          <b>Risposta</b> = risultato della verifica ·{" "}
+          <b>Esito</b> = valutazione professionale ·{" "}
+          <b>Gravità</b> = rilevanza della criticità ·{" "}
+          <b>Significatività</b> = possibile impatto sul fascicolo/materialità ·{" "}
+          <b>Follow-up</b> = attività da riesaminare successivamente.
+        </div>
+      </div>
+    </div>
+
+    <button
+      type="button"
+      onClick={() =>
+        setShowCompilationGuide(true)
+      }
+      className="shrink-0 rounded-md border border-blue-300 bg-white px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100"
+    >
+      Mostra istruzioni complete
+    </button>
+  </div>
+</div>
+
+<div className="space-y-6">
+  {Object.entries(grouped).map(([area, items]) => (
               <div
                 key={area}
                 className="overflow-hidden rounded-lg border bg-white"
@@ -1219,7 +1263,376 @@ const superaMaterialita =
             ))}
           </div>
         )}
-      </div>
+           </div>
+
+      {showCompilationGuide && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
+          onClick={() =>
+            setShowCompilationGuide(false)
+          }
+        >
+          <div
+            className="max-h-[92vh] w-full max-w-[1400px] overflow-hidden rounded-xl bg-white shadow-2xl"
+            onClick={(e) =>
+              e.stopPropagation()
+            }
+          >
+            <div className="flex items-center justify-between border-b bg-slate-50 px-6 py-4">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">
+                  Guida alla compilazione della checklist
+                </h2>
+
+                <p className="mt-1 text-sm text-gray-500">
+                  Criteri uniformi per la compilazione delle verifiche periodiche.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setShowCompilationGuide(false)
+                }
+                className="rounded-md border bg-white p-2 hover:bg-gray-50"
+                title="Chiudi"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="max-h-[calc(92vh-80px)] overflow-auto p-6">
+              <div className="overflow-auto rounded-lg border">
+                <table className="w-full min-w-[1100px] text-sm">
+                  <thead className="bg-slate-100">
+                    <tr>
+                      <th className="w-[190px] p-3 text-left">
+                        Campo
+                      </th>
+
+                      <th className="p-3 text-left">
+                        Come si compila
+                      </th>
+
+                      <th className="p-3 text-left">
+                        Regola operativa
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    <tr className="border-t">
+                      <td className="p-3 font-semibold">
+                        Verifica
+                      </td>
+
+                      <td className="p-3">
+                        Domanda o procedura di controllo prevista dal sistema.
+                      </td>
+
+                      <td className="p-3">
+                        Identifica cosa deve essere verificato. Normalmente non viene modificata dall'operatore.
+                      </td>
+                    </tr>
+
+                    <tr className="border-t">
+                      <td className="p-3 font-semibold">
+                        Saldo
+                      </td>
+
+                      <td className="p-3">
+                        Valore contabile collegato alla verifica, quando disponibile.
+                      </td>
+
+                      <td className="p-3">
+                        Deriva preferibilmente dai dati contabili collegati al trimestre e non deve essere inserito manualmente salvo casi specifici.
+                      </td>
+                    </tr>
+
+                    <tr className="border-t">
+                      <td className="p-3 font-semibold">
+                        Asserzione
+                      </td>
+
+                      <td className="p-3">
+                        Selezionare l'asserzione interessata dalla procedura.
+                      </td>
+
+                      <td className="p-3">
+                        Utilizzare, quando applicabile: Esistenza, Completezza, Accuratezza, Valutazione, Competenza, Diritti/Obblighi, Presentazione.
+                      </td>
+                    </tr>
+
+                    <tr className="border-t">
+                      <td className="p-3 font-semibold">
+                        Rischio
+                      </td>
+
+                      <td className="p-3">
+                        Valutazione del rischio specifico della singola verifica.
+                      </td>
+
+                      <td className="p-3">
+                        Basso / Medio / Alto. Non deve essere confuso con il rischio complessivo del fascicolo.
+                      </td>
+                    </tr>
+
+                    <tr className="border-t">
+                      <td className="p-3 font-semibold">
+                        Procedura
+                      </td>
+
+                      <td className="p-3">
+                        Descrivere concretamente il lavoro effettuato.
+                      </td>
+
+                      <td className="p-3">
+                        Indicare documenti esaminati, riconciliazioni, campioni, verifiche, conferme o altre evidenze raccolte.
+                      </td>
+                    </tr>
+
+                    <tr className="border-t">
+                      <td className="p-3 font-semibold">
+                        Risposta
+                      </td>
+
+                      <td className="p-3">
+                        Risultato diretto della domanda.
+                      </td>
+
+                      <td className="p-3">
+                        SI / NO / N.A. Il significato di SI o NO dipende dalla formulazione della domanda e non determina automaticamente l'esito.
+                      </td>
+                    </tr>
+
+                    <tr className="border-t">
+                      <td className="p-3 font-semibold">
+                        Esito
+                      </td>
+
+                      <td className="p-3">
+                        Valutazione professionale conclusiva della singola verifica.
+                      </td>
+
+                      <td className="p-3">
+                        Regolare / Da monitorare / Irregolare.
+                      </td>
+                    </tr>
+
+                    <tr className="border-t">
+                      <td className="p-3 font-semibold">
+                        Gravità
+                      </td>
+
+                      <td className="p-3">
+                        Intensità della criticità riscontrata.
+                      </td>
+
+                      <td className="p-3">
+                        Bassa / Media / Alta. Deve essere valorizzata quando emerge una criticità.
+                      </td>
+                    </tr>
+
+                    <tr className="border-t">
+                      <td className="p-3 font-semibold">
+                        Significatività
+                      </td>
+
+                      <td className="p-3">
+                        Indica se il rilievo è rilevante rispetto al fascicolo.
+                      </td>
+
+                      <td className="p-3">
+                        La valutazione deve considerare sia l'importo sia la natura qualitativa della questione.
+                      </td>
+                    </tr>
+
+                    <tr className="border-t">
+                      <td className="p-3 font-semibold">
+                        Importo rilievo
+                      </td>
+
+                      <td className="p-3">
+                        Quantificazione economica dell'errore o dell'anomalia.
+                      </td>
+
+                      <td className="p-3">
+                        Inserire il valore quando quantificabile. Lasciare zero in assenza di un effetto economico determinabile.
+                      </td>
+                    </tr>
+
+                    <tr className="border-t">
+                      <td className="p-3 font-semibold">
+                        Effetto relazione
+                      </td>
+
+                      <td className="p-3">
+                        Possibile impatto del rilievo sulla relazione finale.
+                      </td>
+
+                      <td className="p-3">
+                        Utilizzare quando la questione potrebbe incidere sul giudizio, sui richiami di informativa, sulla continuità o su altri paragrafi della relazione.
+                      </td>
+                    </tr>
+
+                    <tr className="border-t">
+                      <td className="p-3 font-semibold">
+                        Follow-up
+                      </td>
+
+                      <td className="p-3">
+                        Attiva il monitoraggio successivo della criticità.
+                      </td>
+
+                      <td className="p-3">
+                        Se selezionato, il rilievo viene gestito nel Registro rilievi / Follow-up.
+                      </td>
+                    </tr>
+
+                    <tr className="border-t">
+                      <td className="p-3 font-semibold">
+                        Data follow-up
+                      </td>
+
+                      <td className="p-3">
+                        Termine per riesaminare la questione.
+                      </td>
+
+                      <td className="p-3">
+                        Deve essere valorizzata quando viene attivato il follow-up.
+                      </td>
+                    </tr>
+
+                    <tr className="border-t">
+                      <td className="p-3 font-semibold">
+                        Raccomandazione
+                      </td>
+
+                      <td className="p-3">
+                        Azione richiesta o suggerita per rimuovere o mitigare la criticità.
+                      </td>
+
+                      <td className="p-3">
+                        Deve essere concreta, comprensibile e successivamente verificabile.
+                      </td>
+                    </tr>
+
+                    <tr className="border-t">
+                      <td className="p-3 font-semibold">
+                        Note
+                      </td>
+
+                      <td className="p-3">
+                        Informazioni integrative.
+                      </td>
+
+                      <td className="p-3">
+                        Inserire riferimenti a documenti, spiegazioni o elementi utili che non trovano posto negli altri campi.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-3">
+                <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+                  <div className="font-semibold text-green-800">
+                    Esito REGOLARE
+                  </div>
+
+                  <div className="mt-2 text-sm leading-6 text-green-900">
+                    La verifica non evidenzia criticità rilevanti.
+                    Gravità, rilievo e follow-up normalmente non sono necessari.
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                  <div className="font-semibold text-amber-800">
+                    Esito DA MONITORARE
+                  </div>
+
+                  <div className="mt-2 text-sm leading-6 text-amber-900">
+                    Indicare gravità e significatività.
+                    Valutare importo, raccomandazione e follow-up in funzione della criticità.
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+                  <div className="font-semibold text-red-800">
+                    Esito IRREGOLARE
+                  </div>
+
+                  <div className="mt-2 text-sm leading-6 text-red-900">
+                    Gravità e significatività devono essere definite.
+                    Quantificare il rilievo quando possibile e attivare il follow-up con relativa scadenza.
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 rounded-lg border border-blue-200 bg-blue-50 p-5">
+                <div className="font-semibold text-blue-900">
+                  Esempio pratico
+                </div>
+
+                <div className="mt-3 grid grid-cols-1 gap-x-8 gap-y-2 text-sm text-blue-950 md:grid-cols-2">
+                  <div>
+                    <b>Verifica:</b> Sono presenti debiti tributari o previdenziali scaduti?
+                  </div>
+
+                  <div>
+                    <b>Risposta:</b> SI
+                  </div>
+
+                  <div>
+                    <b>Esito:</b> DA MONITORARE
+                  </div>
+
+                  <div>
+                    <b>Gravità:</b> MEDIA
+                  </div>
+
+                  <div>
+                    <b>Significatività:</b> SIGNIFICATIVO
+                  </div>
+
+                  <div>
+                    <b>Importo rilievo:</b> € 42.000,00
+                  </div>
+
+                  <div>
+                    <b>Follow-up:</b> SI
+                  </div>
+
+                  <div>
+                    <b>Data follow-up:</b> 30/06/2025
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <b>Procedura:</b> Acquisita situazione debitoria tributaria al 31/03/2025; verificati F24, comunicazioni dell'Agenzia delle Entrate e piani di rateazione in essere; riconciliati i saldi con la situazione contabile.
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <b>Raccomandazione:</b> Acquisire la documentazione relativa alla rateazione e verificare il regolare pagamento delle rate alle successive scadenze.
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowCompilationGuide(false)
+                  }
+                  className="rounded-md bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  Chiudi
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </>
   );
 }
