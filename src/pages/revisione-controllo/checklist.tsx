@@ -871,6 +871,7 @@ const superaMaterialita =
     Caricamento checklist...
   </div>
 ) : (
+        <>
          <div className="mb-5 rounded-xl border border-blue-200 bg-blue-50 p-4">
   <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
     <div className="flex items-start gap-3">
