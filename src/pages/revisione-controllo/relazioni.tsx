@@ -377,7 +377,6 @@ setSuccess("Relazione generata e archiviata correttamente.");
               <div className="rounded-lg border bg-white p-5">
                 <div className="mb-3 flex items-center justify-between">
                  <h2 className="text-lg font-semibold">Testo generato</h2>
-
 <div className="flex items-center gap-2">
   <button
     onClick={scaricaDocx}
@@ -396,12 +395,14 @@ setSuccess("Relazione generata e archiviata correttamente.");
   </button>
 </div>
 
-                <textarea
-                  value={testoGenerato}
-                  onChange={(e) => setTestoGenerato(e.target.value)}
-                  rows={20}
-                  className="w-full rounded-md border px-3 py-2 text-sm"
-                />
+</div>
+
+<textarea
+  value={testoGenerato}
+  onChange={(e) => setTestoGenerato(e.target.value)}
+  rows={20}
+  className="w-full rounded-md border px-3 py-2 text-sm"
+/>
               </div>
             )}
           </div>
