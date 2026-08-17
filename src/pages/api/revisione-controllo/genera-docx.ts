@@ -54,7 +54,7 @@ function bodyParagraph(
   options?: {
     bold?: boolean;
     spacingAfter?: number;
-    alignment?: AlignmentType;
+   alignment?: (typeof AlignmentType)[keyof typeof AlignmentType];
   }
 ) {
   return new Paragraph({
