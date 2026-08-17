@@ -1263,7 +1263,8 @@ const superaMaterialita =
               </div>
             ))}
           </div>
-        )}
+  </>
+)}
            </div>
 
       {showCompilationGuide && (
