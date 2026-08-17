@@ -818,29 +818,75 @@ params.set("studio_id", String(user.studio_id));
         </>
       )}
 
-      <div className="mt-5 flex justify-end gap-2">
-        <button
-          onClick={() =>
-            setImportModalOpen(false)
-          }
-          disabled={saving}
-          className="rounded-md border bg-white px-4 py-2 text-sm hover:bg-gray-50"
-        >
-          Annulla
-        </button>
+     <div className="mt-5 flex flex-wrap justify-between gap-2">
+  <button
+    type="button"
+    onClick={() => {
+      const params =
+        new URLSearchParams();
 
-        <button
-          onClick={
-            salvaImportContabile
-          }
-          disabled={saving}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
-        >
-          {saving
-            ? "Salvataggio..."
-            : "Collega situazione"}
-        </button>
-      </div>
+      params.set(
+        "origine",
+        "revisione"
+      );
+
+      params.set(
+        "cliente_id",
+        selected.cliente_id
+      );
+
+      params.set(
+        "controllo_id",
+        selected.id
+      );
+
+      params.set(
+        "anno",
+        String(selected.anno)
+      );
+
+      params.set(
+        "trimestre",
+        String(selected.trimestre)
+      );
+
+      params.set(
+        "return_to",
+        `/revisione-controllo/controlli?anno=${selected.anno}`
+      );
+
+      window.location.href =
+        `/controllo-gestione/import-contabilita?${params.toString()}`;
+    }}
+    className="rounded-md border border-blue-300 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100"
+  >
+    Importa nuova situazione
+  </button>
+
+  <div className="flex gap-2">
+    <button
+      onClick={() =>
+        setImportModalOpen(false)
+      }
+      disabled={saving}
+      className="rounded-md border bg-white px-4 py-2 text-sm hover:bg-gray-50"
+    >
+      Annulla
+    </button>
+
+    <button
+      onClick={
+        salvaImportContabile
+      }
+      disabled={saving}
+      className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+    >
+      {saving
+        ? "Salvataggio..."
+        : "Collega situazione"}
+    </button>
+  </div>
+</div>
     </div>
   </div>
 )}
