@@ -137,6 +137,31 @@ const [
   ] = useState("");
 
   const [
+  baseMaterialita,
+  setBaseMaterialita,
+] = useState("");
+
+const [
+  valoreBaseMaterialita,
+  setValoreBaseMaterialita,
+] = useState("");
+
+const [
+  percentualeMaterialita,
+  setPercentualeMaterialita,
+] = useState("1");
+
+const [
+  percentualeOperativa,
+  setPercentualeOperativa,
+] = useState("75");
+
+const [
+  percentualeErroreTrascurabile,
+  setPercentualeErroreTrascurabile,
+] = useState("5");
+
+  const [
     statoFascicolo,
     setStatoFascicolo,
   ] = useState("PIANIFICAZIONE");
@@ -285,6 +310,46 @@ setRiepilogo({
     router.isReady,
     incaricoId,
   ]);
+
+  function calcolaMaterialita() {
+  const valoreBase = Number(valoreBaseMaterialita || 0);
+  const percMaterialita = Number(percentualeMaterialita || 0);
+  const percOperativa = Number(percentualeOperativa || 0);
+  const percErrore = Number(percentualeErroreTrascurabile || 0);
+
+  if (valoreBase <= 0) {
+    setError("Inserisci un valore base valido per il calcolo della materialità.");
+    return;
+  }
+
+  if (percMaterialita <= 0) {
+    setError("Inserisci una percentuale valida per la materialità.");
+    return;
+  }
+
+  const materialitaCalcolata =
+    valoreBase * (percMaterialita / 100);
+
+  const materialitaOperativaCalcolata =
+    materialitaCalcolata * (percOperativa / 100);
+
+  const erroreTrascurabileCalcolato =
+    materialitaCalcolata * (percErrore / 100);
+
+  setMaterialita(
+    materialitaCalcolata.toFixed(2)
+  );
+
+  setMaterialitaOperativa(
+    materialitaOperativaCalcolata.toFixed(2)
+  );
+
+  setErroreTrascurabile(
+    erroreTrascurabileCalcolato.toFixed(2)
+  );
+
+  setError("");
+}
 
   async function salva() {
     if (!incaricoId) return;
@@ -454,63 +519,179 @@ setRiepilogo({
                   />
                 </div>
 
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-500">
-                    Materialità
-                  </label>
+               <div className="md:col-span-3 rounded-lg border bg-slate-50 p-4">
+  <div className="mb-4">
+    <h3 className="font-semibold text-slate-900">
+      Calcolo guidato della materialità
+    </h3>
 
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={materialita}
-                    onChange={(e) =>
-                      setMaterialita(
-                        e.target.value
-                      )
-                    }
-                    className="h-10 w-full rounded-md border px-3 text-sm"
-                  />
-                </div>
+    <p className="mt-1 text-xs text-gray-500">
+      Seleziona la base di riferimento e le percentuali.
+      I valori calcolati restano modificabili dal revisore.
+    </p>
+  </div>
 
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-500">
-                    Materialità operativa
-                  </label>
+  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+    <div>
+      <label className="mb-1 block text-xs font-medium text-gray-500">
+        Base di calcolo
+      </label>
 
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={
-                      materialitaOperativa
-                    }
-                    onChange={(e) =>
-                      setMaterialitaOperativa(
-                        e.target.value
-                      )
-                    }
-                    className="h-10 w-full rounded-md border px-3 text-sm"
-                  />
-                </div>
+      <select
+        value={baseMaterialita}
+        onChange={(e) =>
+          setBaseMaterialita(e.target.value)
+        }
+        className="h-10 w-full rounded-md border bg-white px-3 text-sm"
+      >
+        <option value="">Seleziona base</option>
+        <option value="RICAVI">Ricavi</option>
+        <option value="TOTALE_ATTIVO">Totale attivo</option>
+        <option value="PATRIMONIO_NETTO">Patrimonio netto</option>
+        <option value="RISULTATO_ANTE_IMPOSTE">
+          Risultato ante imposte
+        </option>
+        <option value="COSTI">Costi</option>
+        <option value="ALTRO">Altro</option>
+      </select>
+    </div>
 
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-500">
-                    Errore chiaramente trascurabile
-                  </label>
+    <div>
+      <label className="mb-1 block text-xs font-medium text-gray-500">
+        Valore base
+      </label>
 
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={
-                      erroreTrascurabile
-                    }
-                    onChange={(e) =>
-                      setErroreTrascurabile(
-                        e.target.value
-                      )
-                    }
-                    className="h-10 w-full rounded-md border px-3 text-sm"
-                  />
-                </div>
+      <input
+        type="number"
+        step="0.01"
+        value={valoreBaseMaterialita}
+        onChange={(e) =>
+          setValoreBaseMaterialita(
+            e.target.value
+          )
+        }
+        className="h-10 w-full rounded-md border bg-white px-3 text-sm text-right"
+        placeholder="0,00"
+      />
+    </div>
+
+    <div>
+      <label className="mb-1 block text-xs font-medium text-gray-500">
+        % Materialità
+      </label>
+
+      <input
+        type="number"
+        step="0.01"
+        value={percentualeMaterialita}
+        onChange={(e) =>
+          setPercentualeMaterialita(
+            e.target.value
+          )
+        }
+        className="h-10 w-full rounded-md border bg-white px-3 text-sm text-right"
+      />
+    </div>
+
+    <div>
+      <label className="mb-1 block text-xs font-medium text-gray-500">
+        % Materialità operativa
+      </label>
+
+      <input
+        type="number"
+        step="0.01"
+        value={percentualeOperativa}
+        onChange={(e) =>
+          setPercentualeOperativa(
+            e.target.value
+          )
+        }
+        className="h-10 w-full rounded-md border bg-white px-3 text-sm text-right"
+      />
+    </div>
+
+    <div>
+      <label className="mb-1 block text-xs font-medium text-gray-500">
+        % Errore trascurabile
+      </label>
+
+      <input
+        type="number"
+        step="0.01"
+        value={percentualeErroreTrascurabile}
+        onChange={(e) =>
+          setPercentualeErroreTrascurabile(
+            e.target.value
+          )
+        }
+        className="h-10 w-full rounded-md border bg-white px-3 text-sm text-right"
+      />
+    </div>
+
+    <div className="flex items-end">
+      <button
+        type="button"
+        onClick={calcolaMaterialita}
+        className="h-10 w-full rounded-md border border-blue-200 bg-blue-50 px-4 text-sm font-medium text-blue-700 hover:bg-blue-100"
+      >
+        Calcola materialità
+      </button>
+    </div>
+  </div>
+</div>
+
+<div>
+  <label className="mb-1 block text-xs font-medium text-gray-500">
+    Materialità
+  </label>
+
+  <input
+    type="number"
+    step="0.01"
+    value={materialita}
+    onChange={(e) =>
+      setMaterialita(e.target.value)
+    }
+    className="h-10 w-full rounded-md border px-3 text-sm text-right"
+  />
+</div>
+
+<div>
+  <label className="mb-1 block text-xs font-medium text-gray-500">
+    Materialità operativa
+  </label>
+
+  <input
+    type="number"
+    step="0.01"
+    value={materialitaOperativa}
+    onChange={(e) =>
+      setMaterialitaOperativa(
+        e.target.value
+      )
+    }
+    className="h-10 w-full rounded-md border px-3 text-sm text-right"
+  />
+</div>
+
+<div>
+  <label className="mb-1 block text-xs font-medium text-gray-500">
+    Errore chiaramente trascurabile
+  </label>
+
+  <input
+    type="number"
+    step="0.01"
+    value={erroreTrascurabile}
+    onChange={(e) =>
+      setErroreTrascurabile(
+        e.target.value
+      )
+    }
+    className="h-10 w-full rounded-md border px-3 text-sm text-right"
+  />
+</div>
 
                 <div>
                   <label className="mb-1 block text-xs font-medium text-gray-500">
