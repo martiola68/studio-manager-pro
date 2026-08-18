@@ -85,6 +85,19 @@ type RiepilogoFascicolo = {
   rilievi_significativi: number;
 };
 
+type BasiMaterialita = {
+  import_id: string;
+  data_riferimento: string | null;
+  software_contabile: string | null;
+
+  ricavi: number | null;
+  patrimonio_netto: number | null;
+  costi: number | null;
+
+  totale_attivo: number | null;
+  risultato_ante_imposte: number | null;
+};
+
 export default function FascicoloRevisionePage() {
   const router = useRouter();
 
@@ -112,6 +125,11 @@ const [
   rilievi_aperti: 0,
   rilievi_significativi: 0,
 });
+
+  const [
+  basiMaterialita,
+  setBasiMaterialita,
+] = useState<BasiMaterialita | null>(null);
 
   const [esercizio, setEsercizio] =
     useState("");
@@ -246,6 +264,10 @@ setRiepilogo({
     ) || 0,
 });
 
+      setBasiMaterialita(
+  json.basi_materialita || null
+);
+
       setEsercizio(
         item.esercizio != null
           ? String(item.esercizio)
@@ -311,16 +333,53 @@ setRiepilogo({
     incaricoId,
   ]);
 
+  function getValoreBaseAutomatico(
+  base: string
+) {
+  if (!basiMaterialita) {
+    return null;
+  }
+
+  switch (base) {
+    case "RICAVI":
+      return basiMaterialita.ricavi;
+
+    case "PATRIMONIO_NETTO":
+      return basiMaterialita.patrimonio_netto;
+
+    case "COSTI":
+      return basiMaterialita.costi;
+
+    case "TOTALE_ATTIVO":
+      return basiMaterialita.totale_attivo;
+
+    case "RISULTATO_ANTE_IMPOSTE":
+      return basiMaterialita.risultato_ante_imposte;
+
+    default:
+      return null;
+  }
+}
+
   function calcolaMaterialita() {
   const valoreBase = Number(valoreBaseMaterialita || 0);
   const percMaterialita = Number(percentualeMaterialita || 0);
   const percOperativa = Number(percentualeOperativa || 0);
   const percErrore = Number(percentualeErroreTrascurabile || 0);
 
-  if (valoreBase <= 0) {
-    setError("Inserisci un valore base valido per il calcolo della materialità.");
-    return;
-  }
+ if (!baseMaterialita) {
+  setError(
+    "Seleziona la base di calcolo della materialità."
+  );
+  return;
+}
+
+if (valoreBase <= 0) {
+  setError(
+    "La base selezionata non contiene un valore contabile valido."
+  );
+  return;
+}
 
   if (percMaterialita <= 0) {
     setError("Inserisci una percentuale valida per la materialità.");
@@ -537,23 +596,78 @@ setRiepilogo({
         Base di calcolo
       </label>
 
-      <select
-        value={baseMaterialita}
-        onChange={(e) =>
-          setBaseMaterialita(e.target.value)
-        }
-        className="h-10 w-full rounded-md border bg-white px-3 text-sm"
-      >
-        <option value="">Seleziona base</option>
-        <option value="RICAVI">Ricavi</option>
-        <option value="TOTALE_ATTIVO">Totale attivo</option>
-        <option value="PATRIMONIO_NETTO">Patrimonio netto</option>
-        <option value="RISULTATO_ANTE_IMPOSTE">
-          Risultato ante imposte
-        </option>
-        <option value="COSTI">Costi</option>
-        <option value="ALTRO">Altro</option>
-      </select>
+     <select
+  value={baseMaterialita}
+  onChange={(e) => {
+    const nuovaBase =
+      e.target.value;
+
+    setBaseMaterialita(
+      nuovaBase
+    );
+
+    const valore =
+      getValoreBaseAutomatico(
+        nuovaBase
+      );
+
+    if (
+      valore !== null &&
+      valore !== undefined
+    ) {
+      setValoreBaseMaterialita(
+        String(valore)
+      );
+    } else {
+      setValoreBaseMaterialita("");
+    }
+  }}
+  className="h-10 w-full rounded-md border bg-white px-3 text-sm"
+>
+  <option value="">
+    Seleziona base
+  </option>
+
+  <option value="RICAVI">
+    Ricavi
+  </option>
+
+  <option
+    value="TOTALE_ATTIVO"
+    disabled={
+      basiMaterialita?.totale_attivo ==
+      null
+    }
+  >
+    Totale attivo
+    {basiMaterialita?.totale_attivo ==
+    null
+      ? " - non disponibile"
+      : ""}
+  </option>
+
+  <option value="PATRIMONIO_NETTO">
+    Patrimonio netto
+  </option>
+
+  <option
+    value="RISULTATO_ANTE_IMPOSTE"
+    disabled={
+      basiMaterialita?.risultato_ante_imposte ==
+      null
+    }
+  >
+    Risultato ante imposte
+    {basiMaterialita?.risultato_ante_imposte ==
+    null
+      ? " - non disponibile"
+      : ""}
+  </option>
+
+  <option value="COSTI">
+    Costi
+  </option>
+</select>
     </div>
 
     <div>
@@ -561,18 +675,50 @@ setRiepilogo({
         Valore base
       </label>
 
-      <input
-        type="number"
-        step="0.01"
-        value={valoreBaseMaterialita}
-        onChange={(e) =>
-          setValoreBaseMaterialita(
-            e.target.value
-          )
-        }
-        className="h-10 w-full rounded-md border bg-white px-3 text-sm text-right"
-        placeholder="0,00"
-      />
+     <input
+  type="text"
+  value={
+    valoreBaseMaterialita
+      ? Number(
+          valoreBaseMaterialita
+        ).toLocaleString(
+          "it-IT",
+          {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          }
+        )
+      : ""
+  }
+  readOnly
+  className="h-10 w-full rounded-md border bg-gray-100 px-3 text-sm text-right font-semibold text-gray-700"
+  placeholder="Seleziona una base"
+/>
+
+      {basiMaterialita && (
+  <div className="mt-1 text-[11px] text-gray-500">
+    Fonte:{" "}
+    {basiMaterialita.software_contabile
+      ? String(
+          basiMaterialita.software_contabile
+        )
+          .replace(/_/g, " ")
+          .toUpperCase()
+      : "Contabilità"}
+
+    {basiMaterialita.data_riferimento && (
+      <>
+        {" "}
+        · situazione al{" "}
+        {new Date(
+          `${basiMaterialita.data_riferimento}T00:00:00`
+        ).toLocaleDateString(
+          "it-IT"
+        )}
+      </>
+    )}
+  </div>
+)}
     </div>
 
     <div>
