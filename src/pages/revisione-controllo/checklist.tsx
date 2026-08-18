@@ -1009,6 +1009,16 @@ const superaMaterialita =
       fascicolo?.materialita || 0
     );
 
+  console.log(
+  "CHECK MATERIALITA",
+  {
+    materialita,
+    fascicolo,
+    saldo: saldo.importo,
+    voce: saldo.descrizione,
+  }
+);
+
     const rapportoMaterialita =
       materialita > 0
         ? (saldoAssoluto / materialita) * 100
