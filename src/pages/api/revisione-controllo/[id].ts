@@ -226,7 +226,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       throw importsError;
     }
 
-    importMap = new Map(
+       importMap = new Map(
       (imports || []).map(
         (item: any) => [
           item.id,
@@ -234,6 +234,214 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ]
       )
     );
+  }
+
+  /*
+   * =====================================================
+   * 6B. BASI CONTABILI PER MATERIALITA
+   * =====================================================
+   */
+
+  let basiMaterialita: any = null;
+
+  if (importIds.length > 0) {
+    /*
+     * Per la pianificazione utilizziamo l'import contabile
+     * più recente tra quelli collegati ai controlli
+     * dell'incarico.
+     */
+
+    const importsOrdinati = Array.from(
+      importMap.values()
+    ).sort((a: any, b: any) => {
+      const dataA = a?.data_riferimento
+        ? new Date(a.data_riferimento).getTime()
+        : 0;
+
+      const dataB = b?.data_riferimento
+        ? new Date(b.data_riferimento).getTime()
+        : 0;
+
+      return dataB - dataA;
+    });
+
+    const ultimoImport =
+      importsOrdinati[0] || null;
+
+    if (ultimoImport?.id) {
+      const {
+        data: saldiMaterialita,
+        error: saldiMaterialitaError,
+      } = await supabaseAdmin
+        .from("tbcontrollo_gestione_saldi")
+        .select(`
+          voce_id,
+          importo,
+          numero_conti
+        `)
+        .eq(
+          "import_id",
+          ultimoImport.id
+        );
+
+      if (saldiMaterialitaError) {
+        throw saldiMaterialitaError;
+      }
+
+      const voceIdsMaterialita = Array.from(
+        new Set(
+          (saldiMaterialita || [])
+            .map(
+              (saldo: any) =>
+                saldo.voce_id
+            )
+            .filter(Boolean)
+        )
+      );
+
+      let vociMaterialita: any[] = [];
+
+      if (voceIdsMaterialita.length > 0) {
+        const {
+          data: vociData,
+          error: vociError,
+        } = await supabaseAdmin
+          .from("tbcontrollo_gestione_voci")
+          .select(`
+            id,
+            codice,
+            descrizione,
+            sezione
+          `)
+          .in(
+            "id",
+            voceIdsMaterialita
+          );
+
+        if (vociError) {
+          throw vociError;
+        }
+
+        vociMaterialita =
+          vociData || [];
+      }
+
+      const voceMapMaterialita =
+        new Map(
+          vociMaterialita.map(
+            (voce: any) => [
+              voce.id,
+              voce,
+            ]
+          )
+        );
+
+      const saldiConVoce =
+        (saldiMaterialita || []).map(
+          (saldo: any) => ({
+            ...saldo,
+            voce:
+              voceMapMaterialita.get(
+                saldo.voce_id
+              ) || null,
+          })
+        );
+
+      /*
+       * Helper temporaneo.
+       *
+       * Cerchiamo le voci sulla riclassificazione SMP.
+       * Dopo il primo test verifichiamo i codici reali
+       * presenti in tbcontrollo_gestione_voci e rendiamo
+       * il mapping definitivo.
+       */
+
+      const sommaPerDescrizione = (
+        termini: string[]
+      ) => {
+        return saldiConVoce.reduce(
+          (
+            totale: number,
+            saldo: any
+          ) => {
+            const descrizione =
+              String(
+                saldo.voce?.descrizione ||
+                  ""
+              ).toLowerCase();
+
+            const trovato =
+              termini.some(
+                (termine) =>
+                  descrizione.includes(
+                    termine.toLowerCase()
+                  )
+              );
+
+            return trovato
+              ? totale +
+                  Math.abs(
+                    Number(
+                      saldo.importo || 0
+                    )
+                  )
+              : totale;
+          },
+          0
+        );
+      };
+
+      const ricavi =
+        sommaPerDescrizione([
+          "ricavi delle vendite",
+          "ricavi vendite",
+        ]);
+
+      const patrimonioNetto =
+        sommaPerDescrizione([
+          "capitale sociale",
+          "altre riserve",
+          "utile / perdita",
+          "utile/perdita",
+        ]);
+
+      const costi =
+        sommaPerDescrizione([
+          "acquisti materie",
+          "costi per servizi",
+          "godimento beni",
+          "costo del personale",
+          "oneri diversi",
+        ]);
+
+      basiMaterialita = {
+        import_id:
+          ultimoImport.id,
+
+        data_riferimento:
+          ultimoImport.data_riferimento ||
+          null,
+
+        software_contabile:
+          ultimoImport.software_contabile ||
+          null,
+
+        ricavi,
+
+        patrimonio_netto:
+          patrimonioNetto,
+
+        costi,
+
+        /*
+         * Questi due li lasciamo null finché non
+         * identifichiamo in modo certo le relative
+         * voci SMP.
+         */
+        totale_attivo: null,
+        risultato_ante_imposte: null,
+      };
+    }
   }
 
   /*
@@ -393,7 +601,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     controlli:
       controlliRiepilogo,
 
-    riepilogo: {
+      riepilogo: {
       totale_controlli:
         totaleControlli,
 
@@ -409,6 +617,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       rilievi_significativi:
         rilieviSignificativiTotali,
     },
+
+    basi_materialita:
+      basiMaterialita,
   });
 }
 
