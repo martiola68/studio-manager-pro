@@ -181,8 +181,13 @@ const [
         throw new Error(json.error || "Errore caricamento checklist");
       }
 
-      setChecklist(json.data || []);
-    setFascicolo(
+     setChecklist(json.data || []);
+
+setDatiContabili(
+  json.dati_contabili || null
+);
+
+setFascicolo(
   json.fascicolo || null
 );
     } catch (err: any) {
