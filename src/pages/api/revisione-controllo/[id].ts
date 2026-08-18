@@ -405,42 +405,74 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           "utile/perdita",
         ]);
 
-      const costi =
-        sommaPerDescrizione([
-          "acquisti materie",
-          "costi per servizi",
-          "godimento beni",
-          "costo del personale",
-          "oneri diversi",
-        ]);
+    const costi =
+  sommaPerDescrizione([
+    "acquisti materie",
+    "costi per servizi",
+    "godimento beni",
+    "costo del personale",
+    "oneri diversi",
+  ]);
 
-      basiMaterialita = {
-        import_id:
-          ultimoImport.id,
+/*
+ * Totale attivo della situazione contabile.
+ * Sommiamo tutte le voci riclassificate nella
+ * sezione stato_patrimoniale_attivo.
+ */
+const totaleAttivo =
+  saldiConVoce.reduce(
+    (
+      totale: number,
+      saldo: any
+    ) => {
+      if (
+        saldo.voce?.sezione !==
+        "stato_patrimoniale_attivo"
+      ) {
+        return totale;
+      }
 
-        data_riferimento:
-          ultimoImport.data_riferimento ||
-          null,
+      return (
+        totale +
+        Math.abs(
+          Number(
+            saldo.importo || 0
+          )
+        )
+      );
+    },
+    0
+  );
 
-        software_contabile:
-          ultimoImport.software_contabile ||
-          null,
+basiMaterialita = {
+  import_id:
+    ultimoImport.id,
 
-        ricavi,
+  data_riferimento:
+    ultimoImport.data_riferimento ||
+    null,
 
-        patrimonio_netto:
-          patrimonioNetto,
+  software_contabile:
+    ultimoImport.software_contabile ||
+    null,
 
-        costi,
+  ricavi,
 
-        /*
-         * Questi due li lasciamo null finché non
-         * identifichiamo in modo certo le relative
-         * voci SMP.
-         */
-        totale_attivo: null,
-        risultato_ante_imposte: null,
-      };
+  patrimonio_netto:
+    patrimonioNetto,
+
+  costi,
+
+  totale_attivo:
+    totaleAttivo,
+
+  /*
+   * Lo collegheremo successivamente
+   * alla voce contabile corretta.
+   */
+  risultato_ante_imposte:
+    null,
+};
     }
   }
 
