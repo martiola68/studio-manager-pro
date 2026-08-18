@@ -1067,27 +1067,30 @@ const superaMaterialita =
             : "conti"}
         </div>
 
-        {materialita > 0 && (
-          <div
-            className={`mt-0.5 text-[10px] font-medium ${
-              livello === "ALTO"
-                ? "text-red-700"
-                : livello === "MEDIO"
-                ? "text-amber-700"
-                : "text-gray-400"
-            }`}
-          >
-            {rapportoMaterialita.toLocaleString(
-              "it-IT",
-              {
-                minimumFractionDigits: 1,
-                maximumFractionDigits: 1,
-              }
-            )}
-            % materialità
-          </div>
-        )}
-
+       {materialita > 0 ? (
+  <div
+    className={`mt-0.5 text-[10px] font-medium ${
+      livello === "ALTO"
+        ? "text-red-700"
+        : livello === "MEDIO"
+        ? "text-amber-700"
+        : "text-gray-400"
+    }`}
+  >
+    {rapportoMaterialita.toLocaleString(
+      "it-IT",
+      {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+      }
+    )}
+    % materialità
+  </div>
+) : (
+  <div className="mt-0.5 text-[10px] font-medium text-orange-600">
+    Materialità non impostata
+  </div>
+)}
         {livello === "ALTO" && (
           <div className="mt-1 text-[10px] font-semibold text-red-700">
             ⚠ Sopra materialità
