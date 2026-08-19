@@ -221,35 +221,37 @@ function parseImportoInput(value: string): number {
   return Number(testo);
 }
 
-const origineRevisione =
-  router.isReady &&
-  router.query.origine === "revisione";
+export default function ImportContabilitaPage() {
+  const router = useRouter();
 
-const revisioneControlloId =
-  origineRevisione &&
-  typeof router.query.controllo_id === "string"
-    ? router.query.controllo_id
-    : "";
+  const origineRevisione =
+    router.isReady &&
+    router.query.origine === "revisione";
 
-const annoRevisione =
-  origineRevisione &&
-  typeof router.query.anno === "string"
-    ? router.query.anno
-    : "";
+  const revisioneControlloId =
+    origineRevisione &&
+    typeof router.query.controllo_id === "string"
+      ? router.query.controllo_id
+      : "";
 
-const trimestreRevisione =
-  origineRevisione &&
-  typeof router.query.trimestre === "string"
-    ? router.query.trimestre
-    : "";
+  const annoRevisione =
+    origineRevisione &&
+    typeof router.query.anno === "string"
+      ? router.query.anno
+      : "";
 
-const returnTo =
-  typeof router.query.return_to === "string"
-    ? router.query.return_to
-    : "";
+  const trimestreRevisione =
+    origineRevisione &&
+    typeof router.query.trimestre === "string"
+      ? router.query.trimestre
+      : "";
+
+  const returnTo =
+    typeof router.query.return_to === "string"
+      ? router.query.return_to
+      : "";
 
   const [studioId, setStudioId] = useState("");
-
   const [clienti, setClienti] = useState<Cliente[]>([]);
   const [clienteId, setClienteId] = useState("");
 
