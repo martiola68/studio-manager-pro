@@ -352,6 +352,30 @@ if (origineModulo === "CONTROLLO_GESTIONE") {
       }
     }
 
+/*
+ * Nessun Piano dei Conti Master disponibile.
+ *
+ * Il flusso corretto è:
+ * Master PC → situazione contabile.
+ *
+ * Non creiamo automaticamente un master
+ * partendo dalla situazione perché il master
+ * deve essere preventivamente identificato
+ * e può essere condiviso da più società.
+ */
+if (!templateId) {
+  return res.status(400).json({
+    success: false,
+
+    code:
+      "MASTER_PIANO_CONTI_NON_CONFIGURATO",
+
+    error:
+      "Per questa società non risulta configurato alcun Piano dei Conti Master. Configura o associa prima il piano dei conti e poi importa la situazione contabile.",
+  });
+}
+    
+
     /*
      * 3. Parsing DATEV.
      */
@@ -396,15 +420,190 @@ if (origineModulo === "CONTROLLO_GESTIONE") {
     /*
      * 5. Conti utili.
      */
-    const contiUtili =
-      estraiContiUtili(parsed.righe);
+   const contiUtili =
+  estraiContiUtili(parsed.righe);
 
-   if (!contiUtili.length) {
+if (!contiUtili.length) {
   return res.status(400).json({
     success: false,
     error:
       "Nessun conto utilizzabile individuato nel file DATEV",
   });
+}
+
+/*
+ * =========================================================
+ * 5A. SINCRONIZZAZIONE SITUAZIONE → MASTER PC
+ * =========================================================
+ *
+ * Il Piano dei Conti Master è la fonte condivisa.
+ *
+ * Se nella situazione compare un conto che non esiste
+ * ancora nel Master:
+ *
+ * - lo aggiungiamo automaticamente;
+ * - NON lo classifichiamo;
+ * - voce_id resta null;
+ * - verrà quindi restituito come conto da classificare.
+ *
+ * Le classificazioni dei conti già presenti
+ * NON vengono mai modificate.
+ */
+
+/*
+ * Codici già presenti nel Master.
+ */
+const {
+  data: contiMasterEsistenti,
+  error: contiMasterError,
+} = await supabaseAdmin
+  .from(
+    "tbcontrollo_gestione_template_conti"
+  )
+  .select(`
+    codice_conto
+  `)
+  .eq(
+    "template_id",
+    templateId
+  );
+
+if (contiMasterError) {
+  throw contiMasterError;
+}
+
+const codiciMaster =
+  new Set(
+    (contiMasterEsistenti || [])
+      .map((conto) =>
+        normalizeCodice(
+          conto.codice_conto
+        )
+      )
+      .filter(Boolean)
+  );
+
+/*
+ * Evitiamo doppioni anche all'interno
+ * della situazione stessa.
+ */
+const nuoviContiMap =
+  new Map<
+    string,
+    {
+      template_id: string;
+      codice_conto: string;
+      descrizione_conto: string;
+      voce_id: null;
+      voce_id_negativo: null;
+      moltiplicatore: number;
+      escluso: boolean;
+      updated_at: string;
+    }
+  >();
+
+for (const conto of contiUtili) {
+  const codice =
+    normalizeCodice(
+      conto.codiceConto
+    );
+
+  if (
+    !codice ||
+    codiciMaster.has(codice)
+  ) {
+    continue;
+  }
+
+  nuoviContiMap.set(
+    codice,
+    {
+      template_id:
+        templateId,
+
+      codice_conto:
+        codice,
+
+      descrizione_conto:
+        String(
+          conto.descrizione || ""
+        )
+          .trim()
+          .replace(/\s+/g, " "),
+
+      /*
+       * Nuovo conto:
+       * deve ancora essere classificato.
+       */
+      voce_id:
+        null,
+
+      voce_id_negativo:
+        null,
+
+      moltiplicatore:
+        1,
+
+      escluso:
+        false,
+
+      updated_at:
+        new Date()
+          .toISOString(),
+    }
+  );
+}
+
+const nuoviContiMaster =
+  Array.from(
+    nuoviContiMap.values()
+  );
+
+/*
+ * Inserimento a blocchi.
+ *
+ * Usiamo upsert + ignoreDuplicates
+ * anche come protezione da eventuali
+ * import concorrenti.
+ */
+if (
+  nuoviContiMaster.length > 0
+) {
+  const BATCH_SIZE_MASTER =
+    500;
+
+  for (
+    let i = 0;
+    i < nuoviContiMaster.length;
+    i += BATCH_SIZE_MASTER
+  ) {
+    const batch =
+      nuoviContiMaster.slice(
+        i,
+        i + BATCH_SIZE_MASTER
+      );
+
+    const {
+      error: insertMasterError,
+    } = await supabaseAdmin
+      .from(
+        "tbcontrollo_gestione_template_conti"
+      )
+      .upsert(
+        batch,
+        {
+          onConflict:
+            "template_id,codice_conto",
+
+          ignoreDuplicates:
+            true,
+        }
+      );
+
+    if (insertMasterError) {
+      throw insertMasterError;
+    }
+  }
 }
 
 /*
