@@ -1054,6 +1054,10 @@ if (deleteSaldiError) {
           )
         : null;
 
+    let analisi = null;
+
+if (origineControlloGestione) {
+
     /*
      * Rielaborazione ripetibile.
      *
@@ -1166,10 +1170,10 @@ if (deleteSaldiError) {
         new Date().toISOString(),
     };
 
-    const {
-      data: analisi,
-      error: indiciError,
-    } = await supabaseAdmin
+  const {
+  data: analisiSalvata,
+  error: indiciError,
+} = await supabaseAdmin
       .from(
         "tbcontrollo_gestione_indici"
       )
@@ -1182,6 +1186,9 @@ if (deleteSaldiError) {
     if (indiciError) {
       throw indiciError;
     }
+  analisi = analisiSalvata;
+
+}
 
     /*
      * =====================================================
@@ -1207,52 +1214,60 @@ if (updateImportError) {
   throw updateImportError;
 }
 
-console.log("DEBUG STEP1 BEFORE UPDATE", {
-  import_id,
-  controllo_id_import: importRecord.controllo_id,
-  cliente_id: importRecord.cliente_id,
-});
-
 /*
  * =====================================================
  * 18. COMPLETAMENTO AUTOMATICO STEP 1
  * =====================================================
  *
- * Se l'elaborazione è arrivata fino a questo punto:
- * - l'import è valido;
- * - tutti i conti sono classificati;
- * - i saldi sono stati elaborati;
- * - gli indici sono stati salvati.
+ * Lo Step 1 appartiene esclusivamente
+ * al modulo Controllo di gestione.
  *
- * Quindi lo Step 1 - Rilevamento dati è completato.
+ * Gli import provenienti dalla Revisione
+ * non devono creare né aggiornare
+ * tbcontrollo_gestione.
  */
-    
-const {
-  data: step1Updated,
-  error: step1Error,
-} = await supabaseAdmin
-  .from("tbcontrollo_gestione")
-  .update({
-    step_1_completato: true,
-  })
-  .eq(
-    "id",
-    importRecord.controllo_id
-  )
-  .select(`
-    id,
-    cliente_id,
-    step_1_completato
-  `);
+if (
+  origineControlloGestione &&
+  importRecord.controllo_id
+) {
+  console.log(
+    "DEBUG STEP1 BEFORE UPDATE",
+    {
+      import_id,
+      controllo_id_import:
+        importRecord.controllo_id,
+      cliente_id:
+        importRecord.cliente_id,
+    }
+  );
 
-if (step1Error) {
-  throw step1Error;
+  const {
+    data: step1Updated,
+    error: step1Error,
+  } = await supabaseAdmin
+    .from("tbcontrollo_gestione")
+    .update({
+      step_1_completato: true,
+    })
+    .eq(
+      "id",
+      importRecord.controllo_id
+    )
+    .select(`
+      id,
+      cliente_id,
+      step_1_completato
+    `);
+
+  if (step1Error) {
+    throw step1Error;
+  }
+
+  console.log(
+    "DEBUG STEP1 UPDATED",
+    step1Updated
+  );
 }
-
-console.log(
-  "DEBUG STEP1 UPDATED",
-  step1Updated
-);
 
 /*
  * =====================================================
