@@ -174,11 +174,53 @@ export default async function handler(
       });
     }
 
-    const {
-      import_id,
-    } = req.body;
+   const {
+  import_id,
+  modulo,
+  controllo_id,
+  revisione_controllo_id,
+} = req.body;
 
-    if (!import_id) {
+if (!import_id) {
+  return res.status(400).json({
+    success: false,
+    error:
+      "import_id obbligatorio",
+  });
+}
+
+if (
+  modulo !== "CONTROLLO_GESTIONE" &&
+  modulo !== "REVISIONE"
+) {
+  return res.status(400).json({
+    success: false,
+    error:
+      "modulo obbligatorio: CONTROLLO_GESTIONE oppure REVISIONE",
+  });
+}
+
+if (
+  modulo === "CONTROLLO_GESTIONE" &&
+  !controllo_id
+) {
+  return res.status(400).json({
+    success: false,
+    error:
+      "controllo_id obbligatorio per il Controllo di gestione",
+  });
+}
+
+if (
+  modulo === "REVISIONE" &&
+  !revisione_controllo_id
+) {
+  return res.status(400).json({
+    success: false,
+    error:
+      "revisione_controllo_id obbligatorio per la Revisione",
+  });
+}
       return res.status(400).json({
         success: false,
         error:
@@ -226,12 +268,18 @@ if (!importRecord) {
   });
 }
 
+/*
+ * Il modulo corrente è determinato dalla chiamata,
+ * NON dall'origine storica dell'import.
+ *
+ * Una situazione contabile può essere condivisa
+ * da Controllo di gestione e Revisione.
+ */
 const origineRevisione =
-  importRecord.origine_modulo ===
-  "REVISIONE";
+  modulo === "REVISIONE";
 
 const origineControlloGestione =
-  !origineRevisione;
+  modulo === "CONTROLLO_GESTIONE";
 
 /*
  * =====================================================
@@ -571,34 +619,38 @@ if (deleteSaldiError) {
     if (
       saldi.length > 0
     ) {
-      const rowsSaldi =
-        saldi.map(
-          (saldo) => ({
-            studio_id:
-              importRecord.studio_id,
+     const rowsSaldi =
+  saldi.map(
+    (saldo) => ({
+      studio_id:
+        importRecord.studio_id,
 
-            cliente_id:
-              importRecord.cliente_id,
+      cliente_id:
+        importRecord.cliente_id,
 
-            controllo_id:
-              importRecord.controllo_id,
+      /*
+       * Il saldo appartiene alla situazione
+       * contabile unica, non al modulo.
+       */
+      controllo_id:
+        null,
 
-            import_id,
+      import_id,
 
-            voce_id:
-              saldo.voce_id,
+      voce_id:
+        saldo.voce_id,
 
-            importo:
-              saldo.importo,
+      importo:
+        saldo.importo,
 
-            numero_conti:
-              saldo.numero_conti,
+      numero_conti:
+        saldo.numero_conti,
 
-            updated_at:
-              new Date()
-                .toISOString(),
-          })
-        );
+      updated_at:
+        new Date()
+          .toISOString(),
+    })
+  );
 
       const {
         error: insertSaldiError,
@@ -1078,10 +1130,10 @@ if (origineControlloGestione) {
         "tbcontrollo_gestione_indici"
       )
       .delete()
-      .eq(
-        "controllo_gestione_id",
-        importRecord.controllo_id
-      )
+  .eq(
+  "controllo_gestione_id",
+  controllo_id
+)
       .eq(
         "origine",
         "contabilita_datev"
@@ -1098,8 +1150,8 @@ if (origineControlloGestione) {
       cliente_id:
         importRecord.cliente_id,
 
-      controllo_gestione_id:
-        importRecord.controllo_id,
+    controllo_gestione_id:
+  controllo_id,
 
       anno,
 
@@ -1235,14 +1287,14 @@ if (updateImportError) {
  */
 if (
   origineControlloGestione &&
-  importRecord.controllo_id
+  controllo_id
 ) {
   console.log(
     "DEBUG STEP1 BEFORE UPDATE",
     {
       import_id,
-      controllo_id_import:
-        importRecord.controllo_id,
+     controllo_id_import:
+  controllo_id,
       cliente_id:
         importRecord.cliente_id,
     }
@@ -1256,10 +1308,10 @@ if (
     .update({
       step_1_completato: true,
     })
-    .eq(
-      "id",
-      importRecord.controllo_id
-    )
+.eq(
+  "id",
+  controllo_id
+)
     .select(`
       id,
       cliente_id,
@@ -1286,9 +1338,16 @@ return res.status(200).json({
 
       import_id,
 
-      controllo_id:
-        importRecord.controllo_id,
+  controllo_id:
+  origineControlloGestione
+    ? controllo_id
+    : null,
 
+revisione_controllo_id:
+  origineRevisione
+    ? revisione_controllo_id
+    : null,
+  
       data_riferimento:
         importRecord.data_riferimento,
 
