@@ -26,9 +26,12 @@ type ChecklistItem = {
 
   ordine: number;
 
-  voce_smp_id: string | null;
+voce_smp_id: string | null;
 
-  asserzione: string | null;
+codice_procedura: string | null;
+
+asserzione: string | null;
+  
   rischio: string | null;
   procedura: string | null;
 
