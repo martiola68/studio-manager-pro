@@ -1106,6 +1106,8 @@ voce_id_negativo:
 
 moltiplicatore: 1,
 
+ambito: "template",
+
             escluso,
             confermato: true,
           }),
