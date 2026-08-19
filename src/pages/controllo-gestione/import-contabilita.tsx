@@ -88,9 +88,9 @@ type ElaborazioneResult = {
   success: boolean;
 
   import_id: string;
-  controllo_id: string;
+  controllo_id: string | null;
   data_riferimento: string | null;
-
+  
   conto_economico: {
     ricavi: number;
     costi_operativi: number;
@@ -1020,9 +1020,11 @@ const response = await fetch(
       json as ElaborazioneResult
     );
 
-    setMessaggio(
-      "Controllo di gestione elaborato correttamente."
-    );
+   setMessaggio(
+  origineRevisione
+    ? "Situazione contabile elaborata correttamente e disponibile per il controllo di revisione."
+    : "Controllo di gestione elaborato correttamente."
+);
   } catch (error: any) {
     console.error(
       "Errore elaborazione controllo:",
@@ -1991,7 +1993,8 @@ if (file) {
               </>
             )}
           </section>
-          {risultato.riepilogo.conti_da_mappare === 0 && (
+       {!origineRevisione &&
+  risultato.riepilogo.conti_da_mappare === 0 && (
   <section style={cardStyle}>
     <h2 style={sectionTitleStyle}>
       5. Integrazioni gestionali
@@ -2244,6 +2247,59 @@ if (file) {
       </>
     )}
    </section>
+)}
+
+          {origineRevisione &&
+  risultato.riepilogo.conti_da_mappare === 0 &&
+  !elaborazione && (
+    <section style={cardStyle}>
+      <h2 style={sectionTitleStyle}>
+        5. Elaborazione situazione contabile
+      </h2>
+
+      <div
+        style={{
+          marginBottom: 18,
+          color: "#64748b",
+          fontSize: 13,
+        }}
+      >
+        Tutti i conti risultano classificati.
+        Puoi elaborare la situazione contabile
+        e renderla disponibile nel controllo
+        trimestrale di revisione.
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+        }}
+      >
+        <button
+          type="button"
+          onClick={elaboraControllo}
+          disabled={loadingElaborazione}
+          style={{
+            ...primaryButtonStyle,
+
+            opacity:
+              loadingElaborazione
+                ? 0.5
+                : 1,
+
+            cursor:
+              loadingElaborazione
+                ? "not-allowed"
+                : "pointer",
+          }}
+        >
+          {loadingElaborazione
+            ? "Elaborazione..."
+            : "Elabora situazione contabile"}
+        </button>
+      </div>
+    </section>
 )}
 
 {elaborazione && (
