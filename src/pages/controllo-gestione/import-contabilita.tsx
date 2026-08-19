@@ -221,8 +221,32 @@ function parseImportoInput(value: string): number {
   return Number(testo);
 }
 
-export default function ImportContabilitaPage() {
-  const router = useRouter();
+const origineRevisione =
+  router.isReady &&
+  router.query.origine === "revisione";
+
+const revisioneControlloId =
+  origineRevisione &&
+  typeof router.query.controllo_id === "string"
+    ? router.query.controllo_id
+    : "";
+
+const annoRevisione =
+  origineRevisione &&
+  typeof router.query.anno === "string"
+    ? router.query.anno
+    : "";
+
+const trimestreRevisione =
+  origineRevisione &&
+  typeof router.query.trimestre === "string"
+    ? router.query.trimestre
+    : "";
+
+const returnTo =
+  typeof router.query.return_to === "string"
+    ? router.query.return_to
+    : "";
 
   const [studioId, setStudioId] = useState("");
 
@@ -323,6 +347,7 @@ const [loadingElaborazione, setLoadingElaborazione] =
 
 const controlloIdQuery =
   router.isReady &&
+  !origineRevisione &&
   typeof router.query.controllo_id === "string"
     ? router.query.controllo_id
     : "";
@@ -333,11 +358,22 @@ useEffect(() => {
     return;
   }
 
+  /*
+   * In Revisione non serve un record
+   * tbcontrollo_gestione.
+   */
+  if (origineRevisione) {
+    setControllo(null);
+    setLoadingCliente(false);
+    return;
+  }
+
   void caricaControlloAttivo();
 }, [
   studioId,
   clienteId,
   controlloIdQuery,
+  origineRevisione,
 ]);
 
   useEffect(() => {
@@ -548,12 +584,25 @@ const {
         return;
       }
 
-      if (!controllo?.id) {
-        setErrore(
-          "Per questa società non esiste un controllo di gestione attivo."
-        );
-        return;
-      }
+   if (
+  !origineRevisione &&
+  !controllo?.id
+) {
+  setErrore(
+    "Per questa società non esiste un controllo di gestione attivo."
+  );
+  return;
+}
+
+if (
+  origineRevisione &&
+  !revisioneControlloId
+) {
+  setErrore(
+    "Controllo trimestrale di revisione non disponibile."
+  );
+  return;
+}
 
       if (!file) {
         setErrore(
@@ -576,18 +625,32 @@ const {
             "Content-Type": "application/json",
           },
 
-          body: JSON.stringify({
-            studio_id: studioId,
-            cliente_id: clienteId,
-            controllo_id: controllo.id,
+        body: JSON.stringify({
+  studio_id: studioId,
+  cliente_id: clienteId,
 
-            software_contabile:
-              "datev_koinos",
+  origine_modulo:
+    origineRevisione
+      ? "REVISIONE"
+      : "CONTROLLO_GESTIONE",
 
-            nome_file: file.name,
+  controllo_id:
+    origineRevisione
+      ? null
+      : controllo?.id || null,
 
-            contenuto_csv: contenutoCsv,
-          }),
+  revisione_controllo_id:
+    origineRevisione
+      ? revisioneControlloId
+      : null,
+
+  software_contabile:
+    "datev_koinos",
+
+  nome_file: file.name,
+
+  contenuto_csv: contenutoCsv,
+}),
         }
       );
 
@@ -602,22 +665,66 @@ const {
 
      setRisultato(json);
 
+      if (
+  origineRevisione &&
+  revisioneControlloId &&
+  json?.import_id
+) {
+  const collegaResponse =
+    await fetch(
+      "/api/revisione-controllo/controlli",
+      {
+        method: "PUT",
+
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+
+        body: JSON.stringify({
+          id:
+            revisioneControlloId,
+
+          controllo_gestione_import_id:
+            json.import_id,
+        }),
+      }
+    );
+
+  const collegaJson =
+    await collegaResponse.json();
+
+  if (
+    !collegaResponse.ok ||
+    !collegaJson.success
+  ) {
+    throw new Error(
+      collegaJson.error ||
+        "Import eseguito, ma non è stato possibile collegare automaticamente la situazione al controllo di revisione."
+    );
+  }
+}
+      
 setMappature({});
 setMappatureNegative({});
 setEsclusi({});
       setElaborazione(null);
 
-      if (
-        json?.riepilogo?.conti_da_mappare === 0
-      ) {
-        setMessaggio(
-          "Importazione completata. Tutti i conti risultano già classificati."
-        );
-      } else {
-        setMessaggio(
-          `Importazione completata. ${json.riepilogo.conti_da_mappare} conti devono essere classificati.`
-        );
-      }
+    if (
+  json?.riepilogo?.conti_da_mappare === 0
+) {
+  setMessaggio(
+    origineRevisione
+      ? "Importazione completata e situazione collegata automaticamente al controllo di revisione. Tutti i conti risultano classificati."
+      : "Importazione completata. Tutti i conti risultano già classificati."
+  );
+} else {
+  setMessaggio(
+    origineRevisione
+      ? `Importazione completata e situazione collegata al controllo di revisione. ${json.riepilogo.conti_da_mappare} conti devono essere classificati.`
+      : `Importazione completata. ${json.riepilogo.conti_da_mappare} conti devono essere classificati.`
+  );
+}
     } catch (error: any) {
       console.error(
         "Errore import contabilità:",
@@ -1111,6 +1218,15 @@ if (file) {
       return result;
     }, [voci]);
 
+  const contestoImportValido =
+    origineRevisione
+      ? Boolean(
+          revisioneControlloId
+        )
+      : Boolean(
+          controllo?.id
+        );
+
   return (
     <main
       style={{
@@ -1140,26 +1256,45 @@ if (file) {
           </h1>
 
           <div
-            style={{
-              marginTop: 6,
-              color: "#64748b",
-            }}
-          >
-            Controllo di gestione · DATEV KOINOS
-          </div>
+  style={{
+    marginTop: 6,
+    color: "#64748b",
+  }}
+>
+  {origineRevisione
+    ? "Revisione e Controllo · DATEV KOINOS"
+    : "Controllo di gestione · DATEV KOINOS"}
+</div>
         </div>
 
         <button
-          type="button"
-          onClick={() =>
-            router.push(
-              "/controllo-gestione"
-            )
-          }
-          style={secondaryButtonStyle}
-        >
-          Torna al controllo di gestione
-        </button>
+  type="button"
+  onClick={() => {
+    if (
+      origineRevisione &&
+      returnTo
+    ) {
+      router.push(returnTo);
+      return;
+    }
+
+    if (origineRevisione) {
+      router.push(
+        "/revisione-controllo/controlli"
+      );
+      return;
+    }
+
+    router.push(
+      "/controllo-gestione"
+    );
+  }}
+  style={secondaryButtonStyle}
+>
+  {origineRevisione
+    ? "Torna ai controlli di revisione"
+    : "Torna al controllo di gestione"}
+</button>
       </div>
 
       {errore && (
@@ -1232,15 +1367,49 @@ if (file) {
           </div>
         )}
 
-        {!loadingCliente &&
-          clienteId &&
-          !controllo && (
-            <div style={warningStyle}>
-              Per questa società non
-              risulta un controllo di
-              gestione attivo.
-            </div>
-          )}
+      {!origineRevisione &&
+  !loadingCliente &&
+  clienteId &&
+  !controllo && (
+    <div style={warningStyle}>
+      Per questa società non
+      risulta un controllo di
+      gestione attivo.
+    </div>
+)}
+        {origineRevisione &&
+  clienteId &&
+  revisioneControlloId && (
+    <div
+      style={{
+        ...infoStyle,
+        marginTop: 16,
+      }}
+    >
+      <strong>
+        Controllo di revisione:
+      </strong>{" "}
+      {trimestreRevisione
+        ? `${trimestreRevisione}° trimestre`
+        : "Controllo trimestrale"}
+
+      {annoRevisione
+        ? ` ${annoRevisione}`
+        : ""}
+
+      {clienteSelezionato
+        ?.codice_fiscale && (
+        <>
+          {" · "}
+          CF{" "}
+          {
+            clienteSelezionato
+              .codice_fiscale
+          }
+        </>
+      )}
+    </div>
+)}
 
         {controllo && (
           <div
@@ -1312,14 +1481,14 @@ if (file) {
             />
           </div>
 
-          <button
+           <button
             type="button"
             onClick={handleImport}
             disabled={
               loading ||
               !file ||
               !clienteId ||
-              !controllo
+              !contestoImportValido
             }
             style={{
               ...primaryButtonStyle,
@@ -1328,7 +1497,7 @@ if (file) {
                 loading ||
                 !file ||
                 !clienteId ||
-                !controllo
+                !contestoImportValido
                   ? 0.5
                   : 1,
 
@@ -1336,7 +1505,7 @@ if (file) {
                 loading ||
                 !file ||
                 !clienteId ||
-                !controllo
+                !contestoImportValido
                   ? "not-allowed"
                   : "pointer",
             }}
