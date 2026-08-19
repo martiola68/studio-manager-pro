@@ -181,14 +181,95 @@ const [
         throw new Error(json.error || "Errore caricamento checklist");
       }
 
-     setChecklist(json.data || []);
+  const checklistCaricata =
+  Array.isArray(json.data)
+    ? json.data
+    : [];
+
+const datiContabiliCaricati =
+  json.dati_contabili || null;
+
+const fascicoloCaricato =
+  json.fascicolo || null;
+
+const materialita =
+  Number(
+    fascicoloCaricato?.materialita || 0
+  );
+
+const saldi =
+  Array.isArray(
+    datiContabiliCaricati?.saldi
+  )
+    ? datiContabiliCaricati.saldi
+    : [];
+
+const checklistConSignificativita =
+  checklistCaricata.map(
+    (item: ChecklistItem) => {
+      /*
+       * Se il revisore ha già espresso
+       * una valutazione, non la tocchiamo.
+       */
+      if (item.significativita) {
+        return item;
+      }
+
+      /*
+       * Senza voce contabile collegata
+       * non possiamo fare una proposta.
+       */
+      if (!item.voce_smp_id) {
+        return item;
+      }
+
+      /*
+       * Senza materialità impostata
+       * non facciamo alcuna proposta.
+       */
+      if (materialita <= 0) {
+        return item;
+      }
+
+      const saldo =
+        saldi.find(
+          (s: SaldoContabile) =>
+            s.voce_id ===
+            item.voce_smp_id
+        );
+
+      if (!saldo) {
+        return item;
+      }
+
+      const saldoAssoluto =
+        Math.abs(
+          Number(
+            saldo.importo || 0
+          )
+        );
+
+      return {
+        ...item,
+
+        significativita:
+          saldoAssoluto >= materialita
+            ? "SIGNIFICATIVO"
+            : "NON_SIGNIFICATIVO",
+      };
+    }
+  );
+
+setChecklist(
+  checklistConSignificativita
+);
 
 setDatiContabili(
-  json.dati_contabili || null
+  datiContabiliCaricati
 );
 
 setFascicolo(
-  json.fascicolo || null
+  fascicoloCaricato
 );
     } catch (err: any) {
       setError(err?.message || "Errore caricamento checklist");
