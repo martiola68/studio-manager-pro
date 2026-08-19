@@ -221,13 +221,7 @@ if (
       "revisione_controllo_id obbligatorio per la Revisione",
   });
 }
-      return res.status(400).json({
-        success: false,
-        error:
-          "import_id obbligatorio",
-      });
-    }
-
+      
     /*
      * =====================================================
      * 1. IMPORT
