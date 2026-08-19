@@ -1040,15 +1040,6 @@ setMessaggio(
     ? "Situazione contabile elaborata correttamente e disponibile per il controllo di revisione."
     : "Controllo di gestione elaborato correttamente."
 );
-
-if (origineRevisione) {
-  const destinazione =
-    returnTo ||
-    `/revisione-controllo/controlli?anno=${annoRevisione}`;
-
-  await router.push(destinazione);
-  return;
-}
   } catch (error: any) {
     console.error(
       "Errore elaborazione controllo:",
