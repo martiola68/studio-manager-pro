@@ -410,14 +410,21 @@ eseguito_at: null,
         data = inserted || [];
       }
 
-      /*
+   /*
  * =====================================================
- * SINCRONIZZAZIONE AREE CONTABILI SMP
+ * SINCRONIZZAZIONE PROCEDURE CONTABILI SMP
  * =====================================================
  *
- * Manteniamo la checklist generale già esistente
- * e aggiungiamo soltanto le voci contabili che
- * non hanno ancora una procedura collegata.
+ * Ogni voce SMP può avere più procedure standard.
+ *
+ * Le procedure vengono lette da:
+ * tbrevisione_procedure_template
+ *
+ * Chiave logica:
+ * voce_smp_id + codice_procedura
+ *
+ * Se una voce non possiede procedure template,
+ * manteniamo il fallback generico precedente.
  */
 if (
   crea_default === "true" &&
@@ -426,17 +433,23 @@ if (
   const checklistCorrente =
     data || [];
 
-  const vociGiaPresenti =
-    new Set(
-      checklistCorrente
-        .map(
-          (item: any) =>
-            item.voce_smp_id
-        )
-        .filter(Boolean)
-    );
+  /*
+   * Studio del controllo.
+   */
+  const {
+    data: controlloInfo,
+    error: controlloInfoError,
+  } = await supabaseAdmin
+    .from("vw_revisione_controlli")
+    .select("studio_id")
+    .eq("id", controllo_id)
+    .single();
 
-  const nuoviSaldi =
+  if (controlloInfoError) {
+    throw controlloInfoError;
+  }
+
+  const saldiUtili =
     datiContabili.saldi.filter(
       (saldo: any) =>
         saldo.voce_id &&
@@ -444,153 +457,381 @@ if (
           Number(
             saldo.importo || 0
           )
-        ) > 0 &&
-        !vociGiaPresenti.has(
-          saldo.voce_id
-        )
+        ) > 0
     );
 
-  if (nuoviSaldi.length > 0) {
-    /*
-     * Recuperiamo lo studio del controllo.
-     */
+  const voceIdsSaldi =
+    Array.from(
+      new Set(
+        saldiUtili.map(
+          (saldo: any) =>
+            saldo.voce_id
+        )
+      )
+    );
+
+  /*
+   * Recuperiamo tutte le procedure standard
+   * delle voci presenti nella situazione.
+   */
+  let procedureTemplate: any[] = [];
+
+  if (voceIdsSaldi.length > 0) {
     const {
-      data: controlloInfo,
-      error: controlloInfoError,
+      data: procedureData,
+      error: procedureError,
     } = await supabaseAdmin
-      .from("vw_revisione_controlli")
-      .select("studio_id")
-      .eq("id", controllo_id)
-      .single();
-
-    if (controlloInfoError) {
-      throw controlloInfoError;
-    }
-
-    const ordineBase =
-      checklistCorrente.reduce(
-        (
-          max: number,
-          item: any
-        ) =>
-          Math.max(
-            max,
-            Number(
-              item.ordine || 0
-            )
-          ),
-        0
-      );
-
-    const rowsContabili =
-      nuoviSaldi.map(
-        (
-          saldo: any,
-          index: number
-        ) => {
-          const defaultProcedura =
-            getProceduraDefault(
-              saldo
-            );
-
-          const area =
-            saldo.sezione ===
-            "stato_patrimoniale_attivo"
-              ? "Stato patrimoniale - Attivo"
-              : saldo.sezione ===
-                "stato_patrimoniale_passivo"
-              ? "Stato patrimoniale - Passivo"
-              : "Conto economico";
-
-          return {
-            controllo_id,
-            studio_id:
-              controlloInfo.studio_id,
-
-            area,
-
-            domanda:
-              `Verifica della voce ${saldo.descrizione}`,
-
-            voce_smp_id:
-              saldo.voce_id,
-
-            asserzione:
-              defaultProcedura.asserzione,
-
-            rischio:
-              null,
-
-            procedura:
-              defaultProcedura.procedura,
-
-            significativita:
-              null,
-
-            importo_rilievo:
-              null,
-
-            effetto_relazione:
-              null,
-
-            risposta:
-              null,
-
-            esito:
-              null,
-
-            gravita:
-              null,
-
-            follow_up:
-              false,
-
-            data_follow_up:
-              null,
-
-            raccomandazione:
-              null,
-
-            note:
-              null,
-
-            eseguito_da:
-              null,
-
-            eseguito_at:
-              null,
-
-            ordine:
-              ordineBase +
-              (
-                index + 1
-              ) *
-                10,
-          };
+      .from(
+        "tbrevisione_procedure_template"
+      )
+      .select(`
+        id,
+        voce_smp_id,
+        codice,
+        titolo,
+        asserzione,
+        procedura,
+        ordine
+      `)
+      .eq(
+        "studio_id",
+        controlloInfo.studio_id
+      )
+      .eq(
+        "attiva",
+        true
+      )
+      .in(
+        "voce_smp_id",
+        voceIdsSaldi
+      )
+      .order(
+        "ordine",
+        {
+          ascending: true,
         }
       );
 
+    if (procedureError) {
+      throw procedureError;
+    }
+
+    procedureTemplate =
+      procedureData || [];
+  }
+
+  /*
+   * Raggruppamento template per voce SMP.
+   */
+  const procedureByVoce =
+    new Map<string, any[]>();
+
+  for (
+    const proceduraTemplate
+    of procedureTemplate
+  ) {
+    const voceId =
+      proceduraTemplate.voce_smp_id;
+
+    if (!procedureByVoce.has(voceId)) {
+      procedureByVoce.set(
+        voceId,
+        []
+      );
+    }
+
+    procedureByVoce
+      .get(voceId)!
+      .push(proceduraTemplate);
+  }
+
+  /*
+   * Procedure già esistenti nella checklist.
+   */
+  const procedureGiaPresenti =
+    new Set(
+      checklistCorrente
+        .filter(
+          (item: any) =>
+            item.voce_smp_id &&
+            item.codice_procedura
+        )
+        .map(
+          (item: any) =>
+            `${item.voce_smp_id}::${item.codice_procedura}`
+        )
+    );
+
+  /*
+   * Per compatibilità individuiamo anche
+   * le vecchie righe generiche senza codice.
+   */
+  const vociFallbackGiaPresenti =
+    new Set(
+      checklistCorrente
+        .filter(
+          (item: any) =>
+            item.voce_smp_id &&
+            !item.codice_procedura
+        )
+        .map(
+          (item: any) =>
+            item.voce_smp_id
+        )
+    );
+
+  const ordineBase =
+    checklistCorrente.reduce(
+      (
+        max: number,
+        item: any
+      ) =>
+        Math.max(
+          max,
+          Number(
+            item.ordine || 0
+          )
+        ),
+      0
+    );
+
+  const rowsDaInserire: any[] = [];
+
+  let progressivo = 0;
+
+  for (const saldo of saldiUtili) {
+    const area =
+      saldo.sezione ===
+      "stato_patrimoniale_attivo"
+        ? "Stato patrimoniale - Attivo"
+        : saldo.sezione ===
+            "stato_patrimoniale_passivo"
+          ? "Stato patrimoniale - Passivo"
+          : "Conto economico";
+
+    const templatesVoce =
+      procedureByVoce.get(
+        saldo.voce_id
+      ) || [];
+
+    /*
+     * =================================================
+     * CASO A
+     * La voce possiede procedure standard.
+     * =================================================
+     */
+    if (templatesVoce.length > 0) {
+      for (
+        const template
+        of templatesVoce
+      ) {
+        const chiave =
+          `${saldo.voce_id}::${template.codice}`;
+
+        if (
+          procedureGiaPresenti.has(
+            chiave
+          )
+        ) {
+          continue;
+        }
+
+        progressivo += 1;
+
+        rowsDaInserire.push({
+          controllo_id,
+
+          studio_id:
+            controlloInfo.studio_id,
+
+          area,
+
+          domanda:
+            template.titolo,
+
+          voce_smp_id:
+            saldo.voce_id,
+
+          codice_procedura:
+            template.codice,
+
+          asserzione:
+            template.asserzione ||
+            null,
+
+          rischio:
+            null,
+
+          procedura:
+            template.procedura,
+
+          significativita:
+            null,
+
+          importo_rilievo:
+            null,
+
+          effetto_relazione:
+            null,
+
+          risposta:
+            null,
+
+          esito:
+            null,
+
+          gravita:
+            null,
+
+          follow_up:
+            false,
+
+          data_follow_up:
+            null,
+
+          raccomandazione:
+            null,
+
+          note:
+            null,
+
+          eseguito_da:
+            null,
+
+          eseguito_at:
+            null,
+
+          ordine:
+            ordineBase +
+            progressivo * 10,
+        });
+
+        procedureGiaPresenti.add(
+          chiave
+        );
+      }
+
+      continue;
+    }
+
+    /*
+     * =================================================
+     * CASO B
+     * Nessun template:
+     * utilizziamo ancora il fallback generico.
+     * =================================================
+     */
+    if (
+      vociFallbackGiaPresenti.has(
+        saldo.voce_id
+      )
+    ) {
+      continue;
+    }
+
+    const defaultProcedura =
+      getProceduraDefault(
+        saldo
+      );
+
+    progressivo += 1;
+
+    rowsDaInserire.push({
+      controllo_id,
+
+      studio_id:
+        controlloInfo.studio_id,
+
+      area,
+
+      domanda:
+        `Verifica della voce ${saldo.descrizione}`,
+
+      voce_smp_id:
+        saldo.voce_id,
+
+      /*
+       * NULL intenzionalmente:
+       * identifica il vecchio fallback generico.
+       */
+      codice_procedura:
+        null,
+
+      asserzione:
+        defaultProcedura.asserzione,
+
+      rischio:
+        null,
+
+      procedura:
+        defaultProcedura.procedura,
+
+      significativita:
+        null,
+
+      importo_rilievo:
+        null,
+
+      effetto_relazione:
+        null,
+
+      risposta:
+        null,
+
+      esito:
+        null,
+
+      gravita:
+        null,
+
+      follow_up:
+        false,
+
+      data_follow_up:
+        null,
+
+      raccomandazione:
+        null,
+
+      note:
+        null,
+
+      eseguito_da:
+        null,
+
+      eseguito_at:
+        null,
+
+      ordine:
+        ordineBase +
+        progressivo * 10,
+    });
+
+    vociFallbackGiaPresenti.add(
+      saldo.voce_id
+    );
+  }
+
+  if (rowsDaInserire.length > 0) {
     const {
       data: insertedContabili,
-      error:
-        insertedContabiliError,
+      error: insertedContabiliError,
     } = await supabaseAdmin
       .from(
         "tbrevisione_checklist"
       )
-      .insert(rowsContabili)
+      .insert(
+        rowsDaInserire
+      )
       .select("*");
 
-    if (
-      insertedContabiliError
-    ) {
+    if (insertedContabiliError) {
       throw insertedContabiliError;
     }
 
     data = [
       ...checklistCorrente,
-      ...(insertedContabili ||
-        []),
+      ...(insertedContabili || []),
     ].sort(
       (a: any, b: any) =>
         Number(
@@ -656,8 +897,11 @@ if (
           data_follow_up: item.data_follow_up || null,
           raccomandazione: item.raccomandazione || null,
           note: item.note || null,
-          voce_smp_id:
+voce_smp_id:
   item.voce_smp_id || null,
+
+codice_procedura:
+  item.codice_procedura || null,
 
 asserzione:
   item.asserzione || null,
