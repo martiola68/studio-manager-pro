@@ -431,6 +431,12 @@ if (!contiUtili.length) {
   });
 }
 
+    const dataRiferimento =
+  parsed.periodoAl ||
+  new Date()
+    .toISOString()
+    .slice(0, 10);
+
 /*
  * =========================================================
  * 5A. SINCRONIZZAZIONE SITUAZIONE → MASTER PC
@@ -607,45 +613,46 @@ if (
 }
 
 /*
- * Verifichiamo se il controllo possiede già un import.
+ * =========================================================
+ * SITUAZIONE CONTABILE UNICA
+ * =========================================================
  *
- * Un controllo deve avere un solo import corrente.
- * Se esiste, lo sostituiremo mantenendo lo stesso import_id.
+ * L'import non appartiene al modulo che lo utilizza.
+ *
+ * La stessa situazione della stessa società/data/software
+ * deve essere riutilizzata sia dal Controllo di gestione
+ * sia dalla Revisione.
  */
-let importEsistenteQuery = supabaseAdmin
-  .from("tbcontrollo_gestione_import")
-  .select("id")
-  .eq("studio_id", studio_id)
-  .eq("cliente_id", cliente_id)
-  .eq("origine_modulo", origineModulo);
-
-if (origineModulo === "REVISIONE") {
-  importEsistenteQuery =
-    importEsistenteQuery.eq(
-      "revisione_controllo_id",
-      revisione_controllo_id
-    );
-} else {
-  importEsistenteQuery =
-    importEsistenteQuery.eq(
-      "controllo_id",
-      controllo_id
-    );
-}
-
 const {
   data: importEsistente,
   error: importEsistenteError,
-} = await importEsistenteQuery
+} = await supabaseAdmin
+  .from("tbcontrollo_gestione_import")
+  .select(`
+    id,
+    origine_modulo,
+    controllo_id,
+    revisione_controllo_id
+  `)
+  .eq("studio_id", studio_id)
+  .eq("cliente_id", cliente_id)
+  .eq(
+    "software_contabile",
+    software_contabile
+  )
+  .eq(
+    "tipo_import",
+    "situazione_contabile"
+  )
+  .eq(
+    "data_riferimento",
+    dataRiferimento
+  )
   .order("created_at", {
-    ascending: false,
+    ascending: true,
   })
   .limit(1)
   .maybeSingle();
-
-if (importEsistenteError) {
-  throw importEsistenteError;
-}
 
 if (importEsistenteError) {
   throw importEsistenteError;
@@ -855,28 +862,40 @@ const payloadImport = {
   studio_id,
   cliente_id,
 
-  origine_modulo: origineModulo,
-
-  controllo_id:
-    origineModulo === "CONTROLLO_GESTIONE"
-      ? controllo_id || null
-      : null,
-
-  revisione_controllo_id:
-    origineModulo === "REVISIONE"
-      ? revisione_controllo_id || null
-      : null,
-
   software_contabile,
 
   tipo_import:
     "situazione_contabile",
 
   data_riferimento:
-    parsed.periodoAl ||
-    new Date()
-      .toISOString()
-      .slice(0, 10),
+    dataRiferimento,
+
+  nome_file:
+    nome_file || null,
+
+  numero_righe:
+    parsed.righe.length,
+
+  numero_conti:
+    contiUtili.length,
+
+  conti_mappati:
+    contiMappati,
+
+  conti_da_mappare:
+    contiDaMappare,
+
+  numero_errori:
+    anomalie.length,
+
+  stato:
+    statoImport,
+
+  messaggio_errore:
+    anomalie.length > 0
+      ? anomalie.join(" | ")
+      : null,
+};
 
   nome_file:
     nome_file || null,
@@ -1008,9 +1027,31 @@ if (
     .from(
       "tbcontrollo_gestione_import"
     )
-    .insert(
-      payloadImport
-    )
+.insert({
+  ...payloadImport,
+
+  /*
+   * Campi legacy ancora necessari
+   * per soddisfare i constraint attuali.
+   *
+   * Non definiscono più l'identità
+   * della situazione contabile.
+   */
+  origine_modulo:
+    origineModulo,
+
+  controllo_id:
+    origineModulo ===
+    "CONTROLLO_GESTIONE"
+      ? controllo_id || null
+      : null,
+
+  revisione_controllo_id:
+    origineModulo ===
+    "REVISIONE"
+      ? revisione_controllo_id || null
+      : null,
+})
     .select("id")
     .single();
 
@@ -1020,6 +1061,75 @@ if (
 
   importId =
     importRecord.id;
+}
+
+  /*
+ * =========================================================
+ * COLLEGAMENTO DELLA SITUAZIONE AL MODULO CHIAMANTE
+ * =========================================================
+ *
+ * La situazione è unica.
+ * I moduli puntano allo stesso import_id.
+ */
+if (
+  origineModulo ===
+    "CONTROLLO_GESTIONE" &&
+  controllo_id
+) {
+  const {
+    error: collegaControlloError,
+  } = await supabaseAdmin
+    .from(
+      "tbcontrollo_gestione"
+    )
+    .update({
+      controllo_gestione_import_id:
+        importId,
+    })
+    .eq(
+      "id",
+      controllo_id
+    )
+    .eq(
+      "studio_id",
+      studio_id
+    )
+    .eq(
+      "cliente_id",
+      cliente_id
+    );
+
+  if (collegaControlloError) {
+    throw collegaControlloError;
+  }
+}
+
+if (
+  origineModulo === "REVISIONE" &&
+  revisione_controllo_id
+) {
+  const {
+    error: collegaRevisioneError,
+  } = await supabaseAdmin
+    .from(
+      "tbrevisione_controlli"
+    )
+    .update({
+      controllo_gestione_import_id:
+        importId,
+    })
+    .eq(
+      "id",
+      revisione_controllo_id
+    )
+    .eq(
+      "studio_id",
+      studio_id
+    );
+
+  if (collegaRevisioneError) {
+    throw collegaRevisioneError;
+  }
 }
 
     /*
