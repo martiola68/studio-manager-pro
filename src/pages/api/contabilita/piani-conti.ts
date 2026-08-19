@@ -3,7 +3,7 @@ import type {
   NextApiResponse,
 } from "next";
 
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 type PianoPayload = {
   studio_id?: string;
