@@ -219,13 +219,12 @@ export default async function handler(
       throw importError;
     }
 
-  const origineRevisione =
-  importRecord.origine_modulo ===
+const origineRevisione =
+  importRecord?.origine_modulo ===
   "REVISIONE";
 
 const origineControlloGestione =
   !origineRevisione;
-
        /*
      * =====================================================
      * 2. CLIENTE
