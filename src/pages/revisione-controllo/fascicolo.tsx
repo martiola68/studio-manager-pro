@@ -511,17 +511,29 @@ if (valoreBase <= 0) {
 
       <div className="mx-auto max-w-[1500px] p-6">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="flex items-center gap-2 text-2xl font-bold">
-              <FolderOpen size={24} />
-              Fascicolo di revisione
-            </h1>
+         <div>
+  <h1 className="flex items-center gap-2 text-2xl font-bold">
+    <FolderOpen size={24} />
+    Fascicolo di revisione
+  </h1>
 
-            <p className="mt-1 text-sm text-gray-500">
-              {fascicolo?.ragione_sociale ||
-                "Incarico di revisione"}
-            </p>
-          </div>
+  <div className="mt-3 flex flex-wrap items-center gap-3">
+    <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+      Società
+    </span>
+
+    <span className="text-xl font-bold text-gray-900">
+      {fascicolo?.ragione_sociale ||
+        "Incarico di revisione"}
+    </span>
+
+    {fascicolo?.esercizio && (
+      <span className="rounded-md border border-gray-200 bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700">
+        Esercizio {fascicolo.esercizio}
+      </span>
+    )}
+  </div>
+</div>
 
           <button
             type="button"
