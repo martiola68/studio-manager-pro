@@ -728,6 +728,18 @@ if (importEsistente?.id) {
     throw deleteRigheError;
   }
 
+ /*
+ * Saldi e indici del Controllo di gestione
+ * esistono soltanto quando l'import proviene
+ * dal modulo CONTROLLO_GESTIONE.
+ *
+ * Un import proveniente dalla Revisione non deve
+ * dipendere da tbcontrollo_gestione.
+ */
+if (
+  origineModulo === "CONTROLLO_GESTIONE" &&
+  controllo_id
+) {
   /*
    * I saldi derivati non sono più validi.
    * Verranno rigenerati con "Elabora controllo".
@@ -749,7 +761,8 @@ if (importEsistente?.id) {
   }
 
   /*
-   * Anche gli indici automatici non sono più validi.
+   * Anche gli indici automatici
+   * non sono più validi.
    */
   const {
     error: deleteIndiciError,
@@ -770,7 +783,7 @@ if (importEsistente?.id) {
   if (deleteIndiciError) {
     throw deleteIndiciError;
   }
-
+}
   const {
     error: updateImportError,
   } = await supabaseAdmin
