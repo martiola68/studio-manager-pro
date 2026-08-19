@@ -2321,9 +2321,11 @@ if (file) {
 
 {elaborazione && (
   <section style={cardStyle}>
-    <h2 style={sectionTitleStyle}>
-      6. Risultato controllo di gestione
-    </h2>
+   <h2 style={sectionTitleStyle}>
+  {origineRevisione
+    ? "6. Risultato situazione contabile per la revisione"
+    : "6. Risultato controllo di gestione"}
+</h2>
 
     <div
       style={{
