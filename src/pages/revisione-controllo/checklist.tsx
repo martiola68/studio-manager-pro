@@ -381,13 +381,16 @@ setFascicolo(
     ← Indietro
   </button>
 
-  <button
-    onClick={loadChecklist}
-    className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
-  >
-    <RefreshCw size={16} />
-    Aggiorna
-  </button>
+<button
+  onClick={() => {
+    console.log("AGGIORNA CHECKLIST - CLICK");
+    loadChecklist();
+  }}
+  className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
+>
+  <RefreshCw size={16} />
+  Aggiorna
+</button>
 
   <button
     onClick={salvaChecklist}
