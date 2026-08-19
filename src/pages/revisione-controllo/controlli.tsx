@@ -896,17 +896,24 @@ params.set("studio_id", String(user.studio_id));
       Annulla
     </button>
 
-    <button
-      onClick={
-        salvaImportContabile
-      }
-      disabled={saving}
-      className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
-    >
-      {saving
-        ? "Salvataggio..."
-        : "Collega situazione"}
-    </button>
+   <button
+  onClick={
+    salvaImportContabile
+  }
+  disabled={
+    saving ||
+    selected?.controllo_gestione_import_id ===
+      importSelezionatoId
+  }
+  className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+>
+  {saving
+    ? "Salvataggio..."
+    : selected?.controllo_gestione_import_id ===
+        importSelezionatoId
+      ? "Situazione già collegata"
+      : "Collega situazione"}
+</button>
   </div>
 </div>
     </div>
