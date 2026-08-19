@@ -267,6 +267,46 @@ params.set("studio_id", String(user.studio_id));
   }
 }
 
+  function vaiImportazioneContabile(
+  item: Controllo
+) {
+  const params =
+    new URLSearchParams();
+
+  params.set(
+    "origine",
+    "revisione"
+  );
+
+  params.set(
+    "cliente_id",
+    item.cliente_id
+  );
+
+  params.set(
+    "controllo_id",
+    item.id
+  );
+
+  params.set(
+    "anno",
+    String(item.anno)
+  );
+
+  params.set(
+    "trimestre",
+    String(item.trimestre)
+  );
+
+  params.set(
+    "return_to",
+    `/revisione-controllo/controlli?anno=${item.anno}`
+  );
+
+  window.location.href =
+    `/controllo-gestione/import-contabilita?${params.toString()}`;
+}
+
   async function salvaImportContabile() {
   if (!selected) return;
 
@@ -540,9 +580,9 @@ params.set("studio_id", String(user.studio_id));
       </span>
     </div>
   ) : (
-    <span className="rounded-full bg-yellow-100 px-2 py-1 text-xs font-semibold text-yellow-800">
-      Da collegare
-    </span>
+  <span className="rounded-full bg-yellow-100 px-2 py-1 text-xs font-semibold text-yellow-800">
+  Da importare
+</span>
   )}
 </td>
                       <td className="p-3 text-center">{formatDateIT(item.data_scadenza)}</td>
@@ -563,15 +603,29 @@ params.set("studio_id", String(user.studio_id));
                           >
                             <CheckCircle size={16} />
                           </button>
-
-                          <button
-  title="Situazione contabile"
-  onClick={() =>
-    void apriImportContabile(
-      item
-    )
+<button
+  title={
+    item.import_contabile
+      ? "Gestisci situazione contabile"
+      : "Importa situazione contabile"
   }
-  className="rounded-md border bg-white p-2 text-slate-700 hover:bg-slate-50"
+  onClick={() => {
+    if (item.import_contabile) {
+      void apriImportContabile(
+        item
+      );
+      return;
+    }
+
+    vaiImportazioneContabile(
+      item
+    );
+  }}
+  className={
+    item.import_contabile
+      ? "rounded-md border bg-white p-2 text-slate-700 hover:bg-slate-50"
+      : "rounded-md border border-blue-300 bg-blue-50 p-2 text-blue-700 hover:bg-blue-100"
+  }
 >
   <Database size={16} />
 </button>
@@ -819,49 +873,17 @@ params.set("studio_id", String(user.studio_id));
       )}
 
      <div className="mt-5 flex flex-wrap justify-between gap-2">
-  <button
-    type="button"
-    onClick={() => {
-      const params =
-        new URLSearchParams();
-
-      params.set(
-        "origine",
-        "revisione"
-      );
-
-      params.set(
-        "cliente_id",
-        selected.cliente_id
-      );
-
-      params.set(
-        "controllo_id",
-        selected.id
-      );
-
-      params.set(
-        "anno",
-        String(selected.anno)
-      );
-
-      params.set(
-        "trimestre",
-        String(selected.trimestre)
-      );
-
-      params.set(
-        "return_to",
-        `/revisione-controllo/controlli?anno=${selected.anno}`
-      );
-
-      window.location.href =
-        `/controllo-gestione/import-contabilita?${params.toString()}`;
-    }}
-    className="rounded-md border border-blue-300 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100"
-  >
-    Importa nuova situazione
-  </button>
+ <button
+  type="button"
+  onClick={() =>
+    vaiImportazioneContabile(
+      selected
+    )
+  }
+  className="rounded-md border border-blue-300 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100"
+>
+  Importa nuova situazione
+</button>
 
   <div className="flex gap-2">
     <button
