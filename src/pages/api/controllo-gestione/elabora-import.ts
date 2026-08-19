@@ -215,21 +215,29 @@ export default async function handler(
       .eq("id", import_id)
       .maybeSingle();
 
-    if (importError) {
-      throw importError;
-    }
+ if (importError) {
+  throw importError;
+}
+
+if (!importRecord) {
+  return res.status(404).json({
+    success: false,
+    error: "Import non trovato",
+  });
+}
 
 const origineRevisione =
-  importRecord?.origine_modulo ===
+  importRecord.origine_modulo ===
   "REVISIONE";
 
 const origineControlloGestione =
   !origineRevisione;
-       /*
-     * =====================================================
-     * 2. CLIENTE
-     * =====================================================
-     */
+
+/*
+ * =====================================================
+ * 2. CLIENTE
+ * =====================================================
+ */
     const {
       data: cliente,
       error: clienteError,
