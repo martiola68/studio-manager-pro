@@ -84,12 +84,25 @@ const integrazioniVuote: IntegrazioniForm = {
   note: "",
 };
 
+type SaldoElaborato = {
+  voce_id: string;
+  codice: string;
+  descrizione: string;
+  sezione: string;
+  macrovoce: string | null;
+  natura: string;
+  ordine: number;
+  importo: number;
+  numero_conti: number;
+};
+
 type ElaborazioneResult = {
   success: boolean;
 
   import_id: string;
   controllo_id: string | null;
   data_riferimento: string | null;
+  saldi: SaldoElaborato[];
   
   conto_economico: {
     ricavi: number;
@@ -2321,11 +2334,11 @@ if (file) {
 
 {elaborazione && (
   <section style={cardStyle}>
-   <h2 style={sectionTitleStyle}>
-  {origineRevisione
-    ? "6. Risultato situazione contabile per la revisione"
-    : "6. Risultato controllo di gestione"}
-</h2>
+    <h2 style={sectionTitleStyle}>
+      {origineRevisione
+        ? "6. Aree di bilancio per la revisione"
+        : "6. Risultato controllo di gestione"}
+    </h2>
 
     <div
       style={{
@@ -2342,249 +2355,387 @@ if (file) {
       </strong>
     </div>
 
-    <h3
-      style={{
-        fontSize: 16,
-        marginBottom: 12,
-      }}
-    >
-      Conto economico
-    </h3>
+    {origineRevisione ? (
+      <>
+        <div
+          style={{
+            marginBottom: 16,
+            color: "#64748b",
+            fontSize: 13,
+          }}
+        >
+          Saldi riclassificati utilizzati dal controllo
+          trimestrale di revisione e dalla checklist.
+        </div>
 
-    <div style={grid4Style}>
-      <StatEuro
-        label="Ricavi"
-        value={
-          elaborazione.conto_economico.ricavi
-        }
-      />
+        <div
+          style={{
+            overflowX: "auto",
+          }}
+        >
+          <table style={tableStyle}>
+            <thead>
+              <tr>
+                <th style={thStyle}>
+                  Codice
+                </th>
 
-      <StatEuro
-        label="Costi operativi"
-        value={
-          elaborazione.conto_economico
-            .costi_operativi
-        }
-      />
+                <th style={thStyle}>
+                  Area / voce
+                </th>
 
-      <StatEuro
-        label="EBITDA"
-        value={
-          elaborazione.conto_economico.ebitda
-        }
-      />
+                <th style={thStyle}>
+                  Sezione
+                </th>
 
-      <StatEuro
-        label="EBIT"
-        value={
-          elaborazione.conto_economico.ebit
-        }
-      />
+                <th style={thStyle}>
+                  Macrovoce
+                </th>
 
-      <StatEuro
-        label="EBT"
-        value={
-          elaborazione.conto_economico.ebt
-        }
-      />
+                <th
+                  style={{
+                    ...thStyle,
+                    textAlign: "right",
+                  }}
+                >
+                  Saldo
+                </th>
 
-      <StatEuro
-        label="Imposte"
-        value={
-          elaborazione.conto_economico.imposte
-        }
-      />
+                <th
+                  style={{
+                    ...thStyle,
+                    textAlign: "center",
+                  }}
+                >
+                  Conti
+                </th>
+              </tr>
+            </thead>
 
-      <StatEuro
-        label="Risultato da CE"
-        value={
-          elaborazione.conto_economico
-            .risultato_conto_economico
-        }
-      />
+            <tbody>
+              {(elaborazione.saldi || [])
+                .slice()
+                .sort(
+                  (a, b) =>
+                    Number(a.ordine || 0) -
+                    Number(b.ordine || 0)
+                )
+                .map((saldo) => (
+                  <tr
+                    key={saldo.voce_id}
+                  >
+                    <td style={tdStyle}>
+                      <strong>
+                        {saldo.codice}
+                      </strong>
+                    </td>
 
-      <StatEuro
-        label="Risultato provvisorio"
-        value={
-          elaborazione.conto_economico
-            .risultato_provvisorio
-        }
-      />
-    </div>
+                    <td style={tdStyle}>
+                      <strong>
+                        {saldo.descrizione}
+                      </strong>
+                    </td>
 
-    <div
-      style={{
-        ...subCardStyle,
-        marginTop: 16,
-        background:
-          Math.abs(
-            elaborazione.conto_economico
-              .differenza_risultato
-          ) <= 1
-            ? "#f0fdf4"
-            : "#fffbeb",
-      }}
-    >
-      <div style={smallLabelStyle}>
-        Differenza risultato CE / quadratura patrimoniale
-      </div>
+                    <td style={tdStyle}>
+                      {saldo.sezione ===
+                      "stato_patrimoniale_attivo"
+                        ? "Stato patrimoniale - Attivo"
+                        : saldo.sezione ===
+                            "stato_patrimoniale_passivo"
+                          ? "Stato patrimoniale - Passivo"
+                          : saldo.sezione ===
+                              "conto_economico"
+                            ? "Conto economico"
+                            : saldo.sezione || "-"}
+                    </td>
 
-      <div
-        style={{
-          marginTop: 5,
-          fontSize: 20,
-          fontWeight: 700,
-        }}
-      >
-        {euro(
-          elaborazione.conto_economico
-            .differenza_risultato
+                    <td style={tdStyle}>
+                      {saldo.macrovoce || "-"}
+                    </td>
+
+                    <td
+                      style={{
+                        ...tdStyle,
+                        textAlign: "right",
+                        whiteSpace: "nowrap",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {euro(saldo.importo)}
+                    </td>
+
+                    <td
+                      style={{
+                        ...tdStyle,
+                        textAlign: "center",
+                      }}
+                    >
+                      {saldo.numero_conti}
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </div>
+
+        {(elaborazione.saldi || []).length === 0 && (
+          <div style={warningStyle}>
+            Nessuna area di bilancio disponibile
+            nell'elaborazione.
+          </div>
         )}
-      </div>
-    </div>
+      </>
+    ) : (
+      <>
+        <h3
+          style={{
+            fontSize: 16,
+            marginBottom: 12,
+          }}
+        >
+          Conto economico
+        </h3>
 
-    <h3
-      style={{
-        fontSize: 16,
-        marginTop: 28,
-        marginBottom: 12,
-      }}
-    >
-      Stato patrimoniale
-    </h3>
+        <div style={grid4Style}>
+          <StatEuro
+            label="Ricavi"
+            value={
+              elaborazione.conto_economico
+                .ricavi
+            }
+          />
 
-    <div style={grid4Style}>
-      <StatEuro
-        label="Totale attivo"
-        value={
-          elaborazione.stato_patrimoniale
-            .totale_attivo
-        }
-      />
+          <StatEuro
+            label="Costi operativi"
+            value={
+              elaborazione.conto_economico
+                .costi_operativi
+            }
+          />
 
-      <StatEuro
-        label="Attivo corrente"
-        value={
-          elaborazione.stato_patrimoniale
-            .attivo_corrente
-        }
-      />
+          <StatEuro
+            label="EBITDA"
+            value={
+              elaborazione.conto_economico
+                .ebitda
+            }
+          />
 
-      <StatEuro
-        label="Disponibilità liquide"
-        value={
-          elaborazione.stato_patrimoniale
-            .disponibilita_liquide
-        }
-      />
+          <StatEuro
+            label="EBIT"
+            value={
+              elaborazione.conto_economico
+                .ebit
+            }
+          />
 
-      <StatEuro
-        label="Patrimonio netto"
-        value={
-          elaborazione.stato_patrimoniale
-            .patrimonio_netto
-        }
-      />
+          <StatEuro
+            label="EBT"
+            value={
+              elaborazione.conto_economico
+                .ebt
+            }
+          />
 
-      <StatEuro
-        label="Debiti finanziari BT"
-        value={
-          elaborazione.stato_patrimoniale
-            .debiti_finanziari_bt
-        }
-      />
+          <StatEuro
+            label="Imposte"
+            value={
+              elaborazione.conto_economico
+                .imposte
+            }
+          />
 
-      <StatEuro
-        label="Debiti finanziari M/L"
-        value={
-          elaborazione.stato_patrimoniale
-            .debiti_finanziari_mlt
-        }
-      />
+          <StatEuro
+            label="Risultato da CE"
+            value={
+              elaborazione.conto_economico
+                .risultato_conto_economico
+            }
+          />
 
-      <StatEuro
-        label="Debiti totali"
-        value={
-          elaborazione.stato_patrimoniale
-            .debiti_totali
-        }
-      />
+          <StatEuro
+            label="Risultato provvisorio"
+            value={
+              elaborazione.conto_economico
+                .risultato_provvisorio
+            }
+          />
+        </div>
 
-      <StatEuro
-        label="Passivo corrente"
-        value={
-          elaborazione.stato_patrimoniale
-            .passivo_corrente
-        }
-      />
-    </div>
+        <div
+          style={{
+            ...subCardStyle,
+            marginTop: 16,
+            background:
+              Math.abs(
+                elaborazione.conto_economico
+                  .differenza_risultato
+              ) <= 1
+                ? "#f0fdf4"
+                : "#fffbeb",
+          }}
+        >
+          <div style={smallLabelStyle}>
+            Differenza risultato CE / quadratura patrimoniale
+          </div>
 
-    <h3
-      style={{
-        fontSize: 16,
-        marginTop: 28,
-        marginBottom: 12,
-      }}
-    >
-      Indicatori
-    </h3>
+          <div
+            style={{
+              marginTop: 5,
+              fontSize: 20,
+              fontWeight: 700,
+            }}
+          >
+            {euro(
+              elaborazione.conto_economico
+                .differenza_risultato
+            )}
+          </div>
+        </div>
 
-    <div style={grid4Style}>
-      <StatPercentuale
-        label="ROI"
-        value={
-          elaborazione.indicatori.roi
-        }
-      />
+        <h3
+          style={{
+            fontSize: 16,
+            marginTop: 28,
+            marginBottom: 12,
+          }}
+        >
+          Stato patrimoniale
+        </h3>
 
-      <StatPercentuale
-        label="ROE"
-        value={
-          elaborazione.indicatori.roe
-        }
-      />
+        <div style={grid4Style}>
+          <StatEuro
+            label="Totale attivo"
+            value={
+              elaborazione.stato_patrimoniale
+                .totale_attivo
+            }
+          />
 
-      <StatPercentuale
-        label="ROS"
-        value={
-          elaborazione.indicatori.ros
-        }
-      />
+          <StatEuro
+            label="Attivo corrente"
+            value={
+              elaborazione.stato_patrimoniale
+                .attivo_corrente
+            }
+          />
 
-      <StatPercentuale
-        label="ROA"
-        value={
-          elaborazione.indicatori.roa
-        }
-      />
+          <StatEuro
+            label="Disponibilità liquide"
+            value={
+              elaborazione.stato_patrimoniale
+                .disponibilita_liquide
+            }
+          />
 
-      <StatNumero
-        label="Indebitamento"
-        value={
-          elaborazione.indicatori
-            .indebitamento
-        }
-      />
+          <StatEuro
+            label="Patrimonio netto"
+            value={
+              elaborazione.stato_patrimoniale
+                .patrimonio_netto
+            }
+          />
 
-      <StatNumero
-        label="Indice di liquidità"
-        value={
-          elaborazione.indicatori
-            .liquidita
-        }
-      />
+          <StatEuro
+            label="Debiti finanziari BT"
+            value={
+              elaborazione.stato_patrimoniale
+                .debiti_finanziari_bt
+            }
+          />
 
-      <StatNumero
-        label="DSCR"
-        value={
-          elaborazione.indicatori
-            .dscr
-        }
-      />
-    </div>
+          <StatEuro
+            label="Debiti finanziari M/L"
+            value={
+              elaborazione.stato_patrimoniale
+                .debiti_finanziari_mlt
+            }
+          />
+
+          <StatEuro
+            label="Debiti totali"
+            value={
+              elaborazione.stato_patrimoniale
+                .debiti_totali
+            }
+          />
+
+          <StatEuro
+            label="Passivo corrente"
+            value={
+              elaborazione.stato_patrimoniale
+                .passivo_corrente
+            }
+          />
+        </div>
+
+        <h3
+          style={{
+            fontSize: 16,
+            marginTop: 28,
+            marginBottom: 12,
+          }}
+        >
+          Indicatori
+        </h3>
+
+        <div style={grid4Style}>
+          <StatPercentuale
+            label="ROI"
+            value={
+              elaborazione.indicatori.roi
+            }
+          />
+
+          <StatPercentuale
+            label="ROE"
+            value={
+              elaborazione.indicatori.roe
+            }
+          />
+
+          <StatPercentuale
+            label="ROS"
+            value={
+              elaborazione.indicatori.ros
+            }
+          />
+
+          <StatPercentuale
+            label="ROA"
+            value={
+              elaborazione.indicatori.roa
+            }
+          />
+
+          <StatNumero
+            label="Indebitamento"
+            value={
+              elaborazione.indicatori
+                .indebitamento
+            }
+          />
+
+          <StatNumero
+            label="Indice di liquidità"
+            value={
+              elaborazione.indicatori
+                .liquidita
+            }
+          />
+
+          <StatNumero
+            label="DSCR"
+            value={
+              elaborazione.indicatori
+                .dscr
+            }
+          />
+        </div>
+      </>
+    )}
   </section>
 )}
-
         </>
       )}
     </main>
