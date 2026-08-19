@@ -897,32 +897,6 @@ const payloadImport = {
       : null,
 };
 
-  nome_file:
-    nome_file || null,
-
-  numero_righe:
-    parsed.righe.length,
-
-  numero_conti:
-    contiUtili.length,
-
-  conti_mappati:
-    contiMappati,
-
-  conti_da_mappare:
-    contiDaMappare,
-
-  numero_errori:
-    anomalie.length,
-
-  stato:
-    statoImport,
-
-  messaggio_errore:
-    anomalie.length > 0
-      ? anomalie.join(" | ")
-      : null,
-};
 if (importEsistente?.id) {
   importId = importEsistente.id;
 
@@ -945,7 +919,6 @@ if (importEsistente?.id) {
   if (deleteRigheError) {
     throw deleteRigheError;
   }
-
  /*
  * Saldi e indici del Controllo di gestione
  * esistono soltanto quando l'import proviene
