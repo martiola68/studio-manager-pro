@@ -199,17 +199,19 @@ export default async function handler(
         "tbcontrollo_gestione_import"
       )
       .select(`
-        id,
-        studio_id,
-        cliente_id,
-        controllo_id,
-        software_contabile,
-        data_riferimento,
-        numero_conti,
-        conti_mappati,
-        conti_da_mappare,
-        stato
-      `)
+  id,
+  studio_id,
+  cliente_id,
+  controllo_id,
+  revisione_controllo_id,
+  origine_modulo,
+  software_contabile,
+  data_riferimento,
+  numero_conti,
+  conti_mappati,
+  conti_da_mappare,
+  stato
+`)
       .eq("id", import_id)
       .maybeSingle();
 
@@ -217,13 +219,12 @@ export default async function handler(
       throw importError;
     }
 
-    if (!importRecord) {
-      return res.status(404).json({
-        success: false,
-        error:
-          "Import non trovato",
-      });
-    }
+  const origineRevisione =
+  importRecord.origine_modulo ===
+  "REVISIONE";
+
+const origineControlloGestione =
+  !origineRevisione;
 
        /*
      * =====================================================
@@ -553,8 +554,8 @@ const {
   )
   .delete()
   .eq(
-    "controllo_id",
-    importRecord.controllo_id
+    "import_id",
+    import_id
   );
 
 if (deleteSaldiError) {
