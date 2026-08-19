@@ -5,9 +5,6 @@ import type {
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
-const supabaseAdmin =
-  getSupabaseAdmin();
-
 type PianoPayload = {
   studio_id?: string;
   id?: string;
