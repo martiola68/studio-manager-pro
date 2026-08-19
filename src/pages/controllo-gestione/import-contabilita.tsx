@@ -980,9 +980,24 @@ const response = await fetch(
           "Content-Type": "application/json",
         },
 
-        body: JSON.stringify({
-          import_id: risultato.import_id,
-        }),
+       body: JSON.stringify({
+  import_id: risultato.import_id,
+
+  modulo:
+    origineRevisione
+      ? "REVISIONE"
+      : "CONTROLLO_GESTIONE",
+
+  controllo_id:
+    origineRevisione
+      ? null
+      : controllo?.id || null,
+
+  revisione_controllo_id:
+    origineRevisione
+      ? revisioneControlloId
+      : null,
+}),
       }
     );
 
