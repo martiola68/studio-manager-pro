@@ -382,11 +382,23 @@ setFascicolo(
   </button>
 
 <button
+  type="button"
   onClick={loadChecklist}
-  className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
+  disabled={loading}
+  className="inline-flex items-center gap-2 rounded-md border bg-white px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
 >
-  <RefreshCw size={16} />
-  Aggiorna
+  <RefreshCw
+    size={16}
+    className={
+      loading
+        ? "animate-spin"
+        : ""
+    }
+  />
+
+  {loading
+    ? "Aggiornamento..."
+    : "Aggiorna"}
 </button>
 
   <button
