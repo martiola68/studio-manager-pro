@@ -1125,7 +1125,7 @@ voce_id_negativo:
 
 moltiplicatore: 1,
 
-ambito: "template",
+ambito: "cliente",
 
             escluso,
             confermato: true,
