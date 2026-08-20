@@ -10,7 +10,7 @@ import {
 
 import {
   getSupabaseClient,
-} from "../../../../lib/supabaseClient";
+} from "../../../lib/supabaseClient";
 
 type ContoMaster = {
   id: string;
