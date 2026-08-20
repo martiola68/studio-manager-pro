@@ -1061,12 +1061,28 @@ const superaMaterialita =
                     </thead>
 
                     <tbody>
-                      {items.map((item) => {
-                        const index = checklist.findIndex(
-                          (x) => x.id === item.id
-                        );
+                     {items.map((item, itemIndex) => {
+  const index = checklist.findIndex(
+    (x) => x.id === item.id
+  );
 
-                        return (
+  /*
+   * Per le procedure contabili mostriamo
+   * saldo/materialità soltanto sulla prima
+   * procedura della stessa voce SMP.
+   */
+  const primaProceduraVoce =
+    !item.voce_smp_id ||
+    items.findIndex(
+      (x) =>
+        x.voce_smp_id ===
+        item.voce_smp_id
+    ) === itemIndex;
+
+  const saldoVoce =
+    getSaldoChecklist(item);
+
+  return (
                          <tr
   key={item.id}
   id={
@@ -1085,122 +1101,107 @@ const superaMaterialita =
                               {item.domanda}
                             </td>
 
- <td className="p-3 text-right whitespace-nowrap">
-  {(() => {
-    const saldo = getSaldoChecklist(item);
+<td className="p-3 text-right whitespace-nowrap align-top">
+  {!primaProceduraVoce ? (
+    <span className="text-gray-300">
+      ·
+    </span>
+  ) : !saldoVoce ? (
+    <span className="text-gray-400">
+      -
+    </span>
+  ) : (
+    (() => {
+      const saldoAssoluto =
+        Math.abs(
+          Number(
+            saldoVoce.importo || 0
+          )
+        );
 
-    if (!saldo) {
+      const materialita =
+        Number(
+          fascicolo?.materialita || 0
+        );
+
+      const rapportoMaterialita =
+        materialita > 0
+          ? (
+              saldoAssoluto /
+              materialita
+            ) * 100
+          : 0;
+
+      const livello =
+        materialita <= 0
+          ? "ND"
+          : rapportoMaterialita >= 100
+            ? "ALTO"
+            : rapportoMaterialita >= 50
+              ? "MEDIO"
+              : "BASSO";
+
       return (
-        <span className="text-gray-400">
-          -
-        </span>
-      );
-    }
-
-    const saldoAssoluto = Math.abs(
-      Number(saldo.importo || 0)
-    );
-
-    const materialita = Number(
-      fascicolo?.materialita || 0
-    );
-
-  console.log(
-  "CHECK MATERIALITA",
-  {
-    materialita,
-    fascicolo,
-    saldo: saldo.importo,
-    voce: saldo.descrizione,
-  }
-);
-
-    const rapportoMaterialita =
-      materialita > 0
-        ? (saldoAssoluto / materialita) * 100
-        : 0;
-
-    const livello =
-      materialita <= 0
-        ? "ND"
-        : rapportoMaterialita >= 100
-        ? "ALTO"
-        : rapportoMaterialita >= 50
-        ? "MEDIO"
-        : "BASSO";
-
-    return (
-      <div
-        className={`inline-block min-w-[115px] rounded-md px-2 py-1 ${
-          livello === "ALTO"
-            ? "bg-red-50 text-red-700"
-            : livello === "MEDIO"
-            ? "bg-amber-50 text-amber-700"
-            : ""
-        }`}
-      >
-        <div className="font-semibold">
-          {Number(
-            saldo.importo || 0
-          ).toLocaleString("it-IT", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}
-        </div>
-
         <div
-          className={`text-[10px] ${
+          className={`inline-block min-w-[125px] rounded-md px-2 py-2 ${
             livello === "ALTO"
-              ? "text-red-600"
+              ? "bg-red-50 text-red-700"
               : livello === "MEDIO"
-              ? "text-amber-600"
-              : "text-gray-400"
+                ? "bg-amber-50 text-amber-700"
+                : "bg-slate-50 text-slate-700"
           }`}
         >
-          {saldo.numero_conti}{" "}
-          {saldo.numero_conti === 1
-            ? "conto"
-            : "conti"}
+          <div className="font-semibold">
+            {Number(
+              saldoVoce.importo || 0
+            ).toLocaleString(
+              "it-IT",
+              {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              }
+            )}
+          </div>
+
+          <div className="text-[10px]">
+            {saldoVoce.numero_conti}{" "}
+            {saldoVoce.numero_conti === 1
+              ? "conto"
+              : "conti"}
+          </div>
+
+          {materialita > 0 ? (
+            <div className="mt-0.5 text-[10px] font-medium">
+              {rapportoMaterialita.toLocaleString(
+                "it-IT",
+                {
+                  minimumFractionDigits: 1,
+                  maximumFractionDigits: 1,
+                }
+              )}
+              % materialità
+            </div>
+          ) : (
+            <div className="mt-0.5 text-[10px] text-orange-600">
+              Materialità non impostata
+            </div>
+          )}
+
+          {livello === "ALTO" && (
+            <div className="mt-1 text-[10px] font-semibold text-red-700">
+              ⚠ Sopra materialità
+            </div>
+          )}
+
+          {livello === "MEDIO" && (
+            <div className="mt-1 text-[10px] font-semibold text-amber-700">
+              Attenzione
+            </div>
+          )}
         </div>
-
-       {materialita > 0 ? (
-  <div
-    className={`mt-0.5 text-[10px] font-medium ${
-      livello === "ALTO"
-        ? "text-red-700"
-        : livello === "MEDIO"
-        ? "text-amber-700"
-        : "text-gray-400"
-    }`}
-  >
-    {rapportoMaterialita.toLocaleString(
-      "it-IT",
-      {
-        minimumFractionDigits: 1,
-        maximumFractionDigits: 1,
-      }
-    )}
-    % materialità
-  </div>
-) : (
-  <div className="mt-0.5 text-[10px] font-medium text-orange-600">
-    Materialità non impostata
-  </div>
-)}
-        {livello === "ALTO" && (
-          <div className="mt-1 text-[10px] font-semibold text-red-700">
-            ⚠ Sopra materialità
-          </div>
-        )}
-
-        {livello === "MEDIO" && (
-          <div className="mt-1 text-[10px] font-semibold text-amber-700">
-            Attenzione
-          </div>
-        )}
-      </div>
-    );
-  })()}
+      );
+    })()
+  )}
 </td>
                             
    <td className="p-3 text-center">
