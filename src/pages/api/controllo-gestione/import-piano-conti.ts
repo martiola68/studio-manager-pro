@@ -92,14 +92,32 @@ export default async function handler(
       throw templateError;
     }
 
-    if (!template) {
-      return res.status(404).json({
-        success: false,
-        error: "Master piano dei conti non trovato nello studio",
-      });
-    }
+   if (!template) {
+  return res.status(404).json({
+    success: false,
+    error: "Piano dei conti non trovato nello studio",
+  });
+}
 
-    if (!template.attivo) {
+const softwareSupportati = [
+  "datev_koinos",
+  "zucchetti",
+  "teamsystem",
+  "ipsoa",
+];
+
+if (
+  !softwareSupportati.includes(
+    String(template.software_contabile)
+  )
+) {
+  return res.status(400).json({
+    success: false,
+    error: "Software contabile non supportato",
+  });
+}
+
+if (!template.attivo) {
       return res.status(400).json({
         success: false,
         error: "Il master selezionato non è attivo",
