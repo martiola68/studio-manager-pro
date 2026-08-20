@@ -20,15 +20,15 @@ type GestionaleCard = {
 };
 
 const gestionali: GestionaleCard[] = [
-  {
-    key: "datev-koinos",
-    nome: "DATEV KOINOS",
-    descrizione:
-      "Gestione del piano dei conti master DATEV KOINOS e delle associazioni alle voci SMP.",
-    stato: "attivo",
-    href:
-      "/controllo-gestione/piani-conti/datev-koinos",
-  },
+{
+  key: "datev-koinos",
+  nome: "DATEV KOINOS",
+  descrizione:
+    "Configurazione del piano dei conti DATEV KOINOS e relativo mapping contabile.",
+  stato: "attivo",
+  href:
+    "/controllo-gestione/piani-conti/crea-master?software=datev_koinos",
+},
   {
     key: "zucchetti",
     nome: "Zucchetti",
@@ -336,9 +336,7 @@ export default function PianiContiIndexPage() {
                       gap: 8,
                     }}
                   >
-                    {gestionale.key === "datev-koinos"
-  ? "Gestisci piano dei conti"
-  : "Crea master da file"}
+                    Crea / gestisci master
 
                     {attivo && (
                       <ChevronRight
