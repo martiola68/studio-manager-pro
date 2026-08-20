@@ -12,11 +12,21 @@ export default async function handler(
 ) {
   try {
     if (req.method === "GET") {
-      const {
-        studio_id,
-        cliente_id,
-        software_contabile = "datev_koinos",
-      } = req.query;
+    const {
+  studio_id,
+  cliente_id,
+  software_contabile,
+} = req.query;
+
+if (
+  typeof software_contabile !== "string" ||
+  !software_contabile
+) {
+  return res.status(400).json({
+    success: false,
+    error: "software_contabile obbligatorio",
+  });
+}
 
       if (typeof studio_id !== "string" || !studio_id) {
         return res.status(400).json({
@@ -214,10 +224,10 @@ export default async function handler(
     }
 
     if (req.method === "POST") {
-     const {
+   const {
   studio_id,
   cliente_id,
-  software_contabile = "datev_koinos",
+  software_contabile,
 
   codice_conto,
   descrizione_conto,
@@ -238,14 +248,21 @@ export default async function handler(
         });
       }
 
-      if (!cliente_id) {
-        return res.status(400).json({
-          success: false,
-          error: "cliente_id obbligatorio",
-        });
-      }
+     if (!cliente_id) {
+  return res.status(400).json({
+    success: false,
+    error: "cliente_id obbligatorio",
+  });
+}
 
-      if (!codice_conto) {
+if (!software_contabile) {
+  return res.status(400).json({
+    success: false,
+    error: "software_contabile obbligatorio",
+  });
+}
+
+if (!codice_conto) {
         return res.status(400).json({
           success: false,
           error: "codice_conto obbligatorio",
