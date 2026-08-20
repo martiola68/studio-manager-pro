@@ -855,6 +855,29 @@ if (
 
   fascicolo,
 });
+      return res.status(200).json({
+  success: true,
+
+  data:
+    data || [],
+
+  dati_contabili:
+    datiContabili,
+
+  fascicolo,
+
+  debug_procedure: {
+    crea_default,
+    saldi:
+      datiContabili?.saldi?.length || 0,
+
+    template_trovati:
+      procedureTemplate?.length || 0,
+
+    righe_da_inserire:
+      rowsDaInserire?.length || 0,
+  },
+});
     }
 
     if (req.method === "POST") {
