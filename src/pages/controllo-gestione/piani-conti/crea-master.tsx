@@ -16,6 +16,7 @@ import {
 } from "../../../lib/supabaseClient";
 
 type Software =
+  | "datev_koinos"
   | "zucchetti"
   | "teamsystem"
   | "ipsoa";
@@ -110,16 +111,15 @@ export default function CreaMasterPage() {
           .software
       : "";
 
-  const software =
-    [
-      "zucchetti",
-      "teamsystem",
-      "ipsoa",
-    ].includes(
-      softwareQuery
-    )
-      ? (softwareQuery as Software)
-      : null;
+const software =
+  [
+    "datev_koinos",
+    "zucchetti",
+    "teamsystem",
+    "ipsoa",
+  ].includes(softwareQuery)
+    ? (softwareQuery as Software)
+    : null;
 
   const [
     studioId,
