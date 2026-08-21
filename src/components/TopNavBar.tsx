@@ -82,6 +82,9 @@ const [eventiImminenti, setEventiImminenti] = useState(0);
 
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+    const [desktopMenuOpen, setDesktopMenuOpen] =
+  useState<string | null>(null);
+
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -721,7 +724,7 @@ const renderMenuItem = (item: MenuItem) => {
   }
 
   const hasChildren =
-    !!(
+    Boolean(
       item.children &&
       item.children.length > 0
     );
@@ -729,9 +732,8 @@ const renderMenuItem = (item: MenuItem) => {
   const itemActive =
     isActive(item);
 
-  const showMessaggiBadge =
-    item.label === "Messaggi" &&
-    messaggiNonLetti > 0;
+  const menuOpen =
+    desktopMenuOpen === item.label;
 
   const showPromemoriaRicevutiBadge =
     item.label === "Promemoria" &&
@@ -745,371 +747,51 @@ const renderMenuItem = (item: MenuItem) => {
     item.label === "Agenda" &&
     eventiImminenti > 0;
 
-  const showPostGiornoBadge =
-    item.label === "Post del giorno" &&
-    postGiornoAttivi > 0;
-
-  /*
-   * MENU CON SOTTOMENU
-   * Ribbon orizzontale stile Office.
-   */
   if (hasChildren) {
     return (
-      <DropdownMenu
+      <Button
         key={item.label}
+        type="button"
+        variant="ghost"
+        onClick={() =>
+          setDesktopMenuOpen(
+            menuOpen
+              ? null
+              : item.label
+          )
+        }
+        className={cn(
+          "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+          itemActive || menuOpen
+            ? "bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
+            : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+        )}
       >
-        <DropdownMenuTrigger
-          asChild
-        >
-          <Button
-            variant="ghost"
-            className={cn(
-              "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-              itemActive
-                ? "bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
-                : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
-            )}
-          >
-            {item.icon}
+        {item.icon}
 
-            <span>
-              {item.label}
-            </span>
+        <span>
+          {item.label}
+        </span>
 
-            <ChevronDown className="ml-0.5 h-3.5 w-3.5" />
-          </Button>
-        </DropdownMenuTrigger>
-
-<DropdownMenuContent
-  align="start"
-  sideOffset={0}
-  collisionPadding={0}
-  className="
-    !absolute
-    !left-0
-    !right-0
-    !top-full
-    !translate-x-0
-    !translate-y-0
-    !w-full
-    !max-w-none
-    overflow-visible
-    rounded-none
-    border-x-0
-    border-b
-    border-t
-    border-gray-200
-    bg-white
-    p-3
-    shadow-lg
-  "
->
-  <div
-    className="
-      flex
-      w-full
-      flex-row
-      flex-nowrap
-      items-stretch
-      justify-start
-      gap-0
-    "
-  >
-            {item.children?.map(
-              (child) => {
-                if (
-                  child.adminOnly &&
-                  currentUser?.tipo_utente !==
-                    "Admin"
-                ) {
-                  return null;
-                }
-
-                const childActive =
-                  isActive(child);
-
-                /*
-                 * GRUPPO CON SOTTOMENU.
-                 *
-                 * Esempi:
-                 * Studio → Strumenti
-                 * AML → Antiriciclaggio
-                 * Payroll → Payroll
-                 * Configurazione → Connessioni / Impostazioni
-                 */
-                if (
-                  child.children?.length
-                ) {
-                  return (
-                    <div
-                      key={
-                        child.label
-                      }
-                      className="
-                        flex
-                        flex-col
-                        border-r
-                        border-gray-200
-                        px-4
-                        last:border-r-0
-                      "
-                    >
-                      <div
-                        className="
-                          mb-2
-                          flex
-                          items-center
-                          gap-2
-                          whitespace-nowrap
-                          text-xs
-                          font-bold
-                          text-gray-800
-                        "
-                      >
-                        <span
-                          className="
-                            flex
-                            items-center
-                            justify-center
-                            text-blue-600
-                            [&>svg]:h-4
-                            [&>svg]:w-4
-                          "
-                        >
-                          {
-                            child.icon
-                          }
-                        </span>
-
-                        <span>
-                          {
-                            child.label
-                          }
-                        </span>
-                      </div>
-
-                      <div
-                        className="
-                          flex
-                          items-stretch
-                          gap-1
-                        "
-                      >
-                        {child.children.map(
-                          (sub) => {
-                            if (
-                              sub.adminOnly &&
-                              currentUser?.tipo_utente !==
-                                "Admin"
-                            ) {
-                              return null;
-                            }
-
-                            const subActive =
-                              isActive(
-                                sub
-                              );
-
-                            return (
-                              <DropdownMenuItem
-                                key={
-                                  sub.label
-                                }
-                                asChild
-                                className="p-0"
-                              >
-                                <Link
-                                  href={
-                                    sub.href ||
-                                    "#"
-                                  }
-                                  target={
-                                    sub.href
-                                      ?.toLowerCase()
-                                      .endsWith(
-                                        ".pdf"
-                                      )
-                                      ? "_blank"
-                                      : undefined
-                                  }
-                                  rel={
-                                    sub.href
-                                      ?.toLowerCase()
-                                      .endsWith(
-                                        ".pdf"
-                                      )
-                                      ? "noopener noreferrer"
-                                      : undefined
-                                  }
-                                  className={cn(
-                                    `
-                                    flex
-                                    min-h-[68px]
-                                    min-w-[92px]
-                                    max-w-[115px]
-                                    flex-col
-                                    items-center
-                                    justify-center
-                                    gap-1.5
-                                    rounded-md
-                                    px-2
-                                    py-2
-                                    text-center
-                                    text-[11px]
-                                    font-medium
-                                    leading-tight
-                                    transition-colors
-                                    `,
-                                    subActive
-                                      ? "bg-blue-50 text-blue-700"
-                                      : "text-gray-700 hover:bg-blue-50 hover:text-blue-700"
-                                  )}
-                                >
-                                  <span
-                                    className="
-                                      flex
-                                      items-center
-                                      justify-center
-                                      text-blue-600
-                                      [&>svg]:h-5
-                                      [&>svg]:w-5
-                                    "
-                                  >
-                                    {
-                                      sub.icon
-                                    }
-                                  </span>
-
-                                  <span>
-                                    {
-                                      sub.label
-                                    }
-                                  </span>
-                                </Link>
-                              </DropdownMenuItem>
-                            );
-                          }
-                        )}
-                      </div>
-                    </div>
-                  );
-                }
-
-                /*
-                 * VOCE DIRETTA.
-                 *
-                 * Esempi:
-                 * Scadenzario
-                 * Pratiche
-                 * Revisione
-                 * Controllo di gestione
-                 * Contenzioso
-                 */
-                return (
-                  <DropdownMenuItem
-                    key={
-                      child.label
-                    }
-                    asChild
-                    className="p-0"
-                  >
-                    <Link
-                      href={
-                        child.href ||
-                        "#"
-                      }
-                      target={
-                        child.href
-                          ?.toLowerCase()
-                          .endsWith(
-                            ".pdf"
-                          )
-                          ? "_blank"
-                          : undefined
-                      }
-                      rel={
-                        child.href
-                          ?.toLowerCase()
-                          .endsWith(
-                            ".pdf"
-                          )
-                          ? "noopener noreferrer"
-                          : undefined
-                      }
-                     className={cn(
-  `
-  mx-0.5
-  flex
-  min-h-[76px]
-  min-w-[98px]
-  max-w-[125px]
-  flex-col
-  items-center
-  justify-center
-  gap-1.5
-  rounded-md
-  border-r
-  border-gray-100
-  px-3
-  py-2
-  text-center
-  text-[11px]
-  font-medium
-  leading-tight
-  transition-colors
-  last:border-r-0
-  `,
-  childActive
-    ? "bg-blue-50 text-blue-700"
-    : "text-gray-700 hover:bg-blue-50 hover:text-blue-700"
-)}
-                    >
-                      <span
-                        className="
-                          flex
-                          items-center
-                          justify-center
-                          text-blue-600
-                          [&>svg]:h-5
-                          [&>svg]:w-5
-                        "
-                      >
-                        {
-                          child.icon
-                        }
-                      </span>
-
-                      <span>
-                        {
-                          child.label
-                        }
-                      </span>
-                    </Link>
-                  </DropdownMenuItem>
-                );
-              }
-            )}
-          </div>
-        </DropdownMenuContent>
-      </DropdownMenu>
+        <ChevronDown className="ml-0.5 h-3.5 w-3.5" />
+      </Button>
     );
   }
 
-  /*
-   * VOCE PRINCIPALE SENZA SOTTOMENU.
-   */
   return (
     <Link
       key={item.label}
-      href={
-        item.href || "#"
-      }
-      onClick={
-        item.label ===
-        "Promemoria"
-          ? handlePromemoriaClick
-          : undefined
-      }
+      href={item.href || "#"}
+      onClick={() => {
+        setDesktopMenuOpen(null);
+
+        if (
+          item.label ===
+          "Promemoria"
+        ) {
+          handlePromemoriaClick();
+        }
+      }}
       className={cn(
         "relative flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
         itemActive
@@ -1123,25 +805,12 @@ const renderMenuItem = (item: MenuItem) => {
         {item.label}
       </span>
 
-      {showMessaggiBadge && (
-        <Badge
-          variant="destructive"
-          className="ml-1 h-5 min-w-[20px] px-1.5 py-0 text-xs"
-        >
-          {messaggiNonLetti >
-          99
-            ? "99+"
-            : messaggiNonLetti}
-        </Badge>
-      )}
-
       {showPromemoriaRicevutiBadge && (
         <Badge
           variant="destructive"
           className="ml-1 h-5 min-w-[20px] px-1.5 py-0 text-xs"
         >
-          {promemoriaRicevuti >
-          99
+          {promemoriaRicevuti > 99
             ? "99+"
             : promemoriaRicevuti}
         </Badge>
@@ -1152,8 +821,7 @@ const renderMenuItem = (item: MenuItem) => {
           variant="destructive"
           className="ml-1 h-5 min-w-[20px] px-1.5 py-0 text-xs"
         >
-          {promemoriaAttivi >
-          99
+          {promemoriaAttivi > 99
             ? "99+"
             : promemoriaAttivi}
         </Badge>
@@ -1164,39 +832,36 @@ const renderMenuItem = (item: MenuItem) => {
           variant="destructive"
           className="ml-1 h-5 min-w-[20px] px-1.5 py-0 text-xs"
         >
-          {eventiImminenti >
-          99
+          {eventiImminenti > 99
             ? "99+"
             : eventiImminenti}
         </Badge>
       )}
-
-      {showPostGiornoBadge && (
-        <span
-          className="
-            ml-1
-            flex
-            h-[18px]
-            min-w-[18px]
-            items-center
-            justify-center
-            rounded-full
-            bg-yellow-400
-            px-1
-            text-[11px]
-            font-bold
-            text-black
-          "
-        >
-          {postGiornoAttivi >
-          99
-            ? "99+"
-            : postGiornoAttivi}
-        </span>
-      )}
     </Link>
   );
 };
+
+    const desktopMenuAttivo =
+  menuItems.find(
+    (item) =>
+      item.label === desktopMenuOpen
+  ) || null;
+
+const desktopMenuVoci =
+  desktopMenuAttivo?.children
+    ?.flatMap((child) => {
+      if (child.children?.length) {
+        return child.children;
+      }
+
+      return [child];
+    })
+    .filter(
+      (voce) =>
+        !voce.adminOnly ||
+        currentUser?.tipo_utente ===
+          "Admin"
+    ) || [];
 
   if (loading) {
     return (
@@ -1269,13 +934,121 @@ return (
       </div>
     )}
 
-    {/* DESKTOP */}
-   <div className="hidden overflow-x-auto lg:block">
+  {/* DESKTOP */}
+<div className="relative hidden lg:block">
+
+  {/* MENU PRINCIPALE */}
   <div className="flex min-w-max items-center gap-0.5 px-4 py-1.5">
     {menuItems.map((item) =>
       renderMenuItem(item)
     )}
   </div>
+
+  {/* RIBBON SOTTOMENU */}
+  {desktopMenuAttivo &&
+    desktopMenuVoci.length > 0 && (
+      <div
+        className="
+          absolute
+          left-0
+          right-0
+          top-full
+          z-50
+          border-y
+          border-gray-200
+          bg-white
+          shadow-lg
+        "
+      >
+        <div
+          className="
+            flex
+            w-full
+            flex-row
+            flex-nowrap
+            items-stretch
+            justify-start
+            gap-0
+            px-4
+            py-2
+          "
+        >
+          {desktopMenuVoci.map(
+            (voce) => {
+              const voceActive =
+                isActive(voce);
+
+              return (
+                <Link
+                  key={voce.label}
+                  href={voce.href || "#"}
+                  target={
+                    voce.href
+                      ?.toLowerCase()
+                      .endsWith(".pdf")
+                      ? "_blank"
+                      : undefined
+                  }
+                  rel={
+                    voce.href
+                      ?.toLowerCase()
+                      .endsWith(".pdf")
+                      ? "noopener noreferrer"
+                      : undefined
+                  }
+                  onClick={() =>
+                    setDesktopMenuOpen(
+                      null
+                    )
+                  }
+                  className={cn(
+                    `
+                    flex
+                    min-h-[72px]
+                    min-w-[96px]
+                    max-w-[120px]
+                    flex-col
+                    items-center
+                    justify-center
+                    gap-1.5
+                    border-r
+                    border-gray-100
+                    px-3
+                    py-2
+                    text-center
+                    text-[11px]
+                    font-medium
+                    leading-tight
+                    transition-colors
+                    `,
+                    voceActive
+                      ? "bg-blue-50 text-blue-700"
+                      : "text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+                  )}
+                >
+                  <span
+                    className="
+                      flex
+                      items-center
+                      justify-center
+                      text-blue-600
+                      [&>svg]:h-5
+                      [&>svg]:w-5
+                    "
+                  >
+                    {voce.icon}
+                  </span>
+
+                  <span>
+                    {voce.label}
+                  </span>
+                </Link>
+              );
+            }
+          )}
+        </div>
+      </div>
+    )}
 </div>
   </nav>
 );
