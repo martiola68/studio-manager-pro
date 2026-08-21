@@ -780,29 +780,34 @@ const renderMenuItem = (item: MenuItem) => {
           </Button>
         </DropdownMenuTrigger>
 
-        <DropdownMenuContent
-          align="start"
-          sideOffset={6}
-          className="
-            w-[1250px]
-            max-w-[calc(100vw-32px)]
-            overflow-x-auto
-            rounded-md
-            border
-            border-gray-200
-            bg-white
-            p-3
-            shadow-xl
-          "
-        >
-          <div
-            className="
-              flex
-              min-w-max
-              items-stretch
-              gap-0
-            "
-          >
+       <DropdownMenuContent
+  align="start"
+  sideOffset={6}
+  collisionPadding={8}
+  className="
+    fixed
+    left-2
+    right-2
+    w-auto
+    max-w-none
+    overflow-visible
+    rounded-md
+    border
+    border-gray-200
+    bg-white
+    p-3
+    shadow-xl
+  "
+>
+         <div
+  className="
+    flex
+    w-full
+    flex-wrap
+    items-stretch
+    gap-0
+  "
+>
             {item.children?.map(
               (child) => {
                 if (
