@@ -780,26 +780,28 @@ const renderMenuItem = (item: MenuItem) => {
           </Button>
         </DropdownMenuTrigger>
 
- <DropdownMenuContent
+<DropdownMenuContent
   align="start"
-  sideOffset={6}
+  sideOffset={0}
   collisionPadding={0}
   className="
-    !fixed
-    !left-2
-    !right-2
-    !top-[calc(119px+42px)]
+    !absolute
+    !left-0
+    !right-0
+    !top-full
     !translate-x-0
     !translate-y-0
-    !w-[calc(100vw-16px)]
+    !w-full
     !max-w-none
     overflow-visible
-    rounded-md
-    border
+    rounded-none
+    border-x-0
+    border-b
+    border-t
     border-gray-200
     bg-white
     p-3
-    shadow-xl
+    shadow-lg
   "
 >
   <div
@@ -1209,7 +1211,7 @@ const renderMenuItem = (item: MenuItem) => {
 }
     
 return (
-  <nav className="w-full bg-white border-b border-gray-200 shadow-sm sticky top-[119px] z-40">
+ <nav className="relative w-full bg-white border-b border-gray-200 shadow-sm sticky top-[119px] z-40">
     {/* MOBILE */}
     <div className="flex items-center justify-between px-3 py-2 lg:hidden">
       <button
