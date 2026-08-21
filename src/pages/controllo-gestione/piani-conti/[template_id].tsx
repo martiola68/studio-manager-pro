@@ -519,11 +519,7 @@ export default function ClassificazioneDatevPage() {
 
         <button
           type="button"
-          onClick={() =>
-            router.push(
-              "/controllo-gestione/piani-conti/datev-koinos"
-            )
-          }
+         
           style={
             secondaryButtonStyle
           }
