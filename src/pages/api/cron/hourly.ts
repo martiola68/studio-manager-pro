@@ -118,80 +118,52 @@ if (
   });
 }
 
-  const results = [];
-
- const now = new Date();
+const now = new Date();
 const hourUtc = now.getUTCHours();
 const minuteUtc = now.getUTCMinutes();
 
-results.push(
-  await callInternal(
+const results = await Promise.all([
+  callInternal(
     `/api/scadenze-centrale/processa-alert?secret=${SECRET}`
-  )
-);
+  ),
 
-/*
- * Non invia email.
- * Gestisce esclusivamente avanzamento annualità
- * e chiusura automatica dei contratti di affitto.
- */
-results.push(
-  await callInternal(
+  callInternal(
     `/api/scadenze/affitti/processa?secret=${SECRET}`
-  )
-);
+  ),
 
-/*
- * Non invia email.
- * Porta all'anno successivo le scadenze
- * generali ricorrenti già trascorse.
- */
-results.push(
-  await callInternal(
+  callInternal(
     `/api/scadenze/tipi/processa?secret=${SECRET}`
-  )
-);
+  ),
 
-results.push(
-  await callInternal(
+  callInternal(
     `/api/cron/aml-fascicoli-alert`,
     "GET"
-  )
-);
+  ),
 
-results.push(
-  await callInternal(
+  callInternal(
     `/api/presenze/sollecito-settimanale?secret=${SECRET}`
-  )
-);
+  ),
 
-results.push(
-  await callInternal(
+  callInternal(
     `/api/revisione-controllo/followup-alert?secret=${SECRET}`,
     "POST"
-  )
-);
+  ),
 
-results.push(
-  await callInternal(
+  callInternal(
     `/api/promemoria/alert?secret=${SECRET}`,
     "POST"
-  )
-);
+  ),
 
-results.push(
-  await callInternal(
+  callInternal(
     `/api/controllo-gestione/alert?secret=${SECRET}`,
     "POST"
-  )
-);
+  ),
 
-results.push(
-  await callInternal(
+  callInternal(
     `/api/revisione-controllo/alert?secret=${SECRET}`,
     "POST"
-  )
-);
+  ),
+]);
 
  const errori = results.filter(
   (result) => !result.ok
