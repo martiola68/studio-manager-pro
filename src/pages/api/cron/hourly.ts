@@ -90,15 +90,33 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const querySecret =
-    typeof req.query.secret === "string" ? req.query.secret : null;
+ const querySecret =
+  typeof req.query.secret === "string"
+    ? req.query.secret
+    : null;
 
-  if (!SECRET || querySecret !== SECRET) {
-    return res.status(401).json({
-      ok: false,
-      error: "Non autorizzato",
-    });
-  }
+const authorization =
+  typeof req.headers.authorization === "string"
+    ? req.headers.authorization
+    : "";
+
+const bearerSecret =
+  authorization.startsWith("Bearer ")
+    ? authorization.slice(7)
+    : null;
+
+const secretRicevuto =
+  querySecret || bearerSecret;
+
+if (
+  !SECRET ||
+  secretRicevuto !== SECRET
+) {
+  return res.status(401).json({
+    ok: false,
+    error: "Non autorizzato",
+  });
+}
 
   const results = [];
 
