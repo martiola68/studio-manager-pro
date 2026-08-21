@@ -780,16 +780,19 @@ const renderMenuItem = (item: MenuItem) => {
           </Button>
         </DropdownMenuTrigger>
 
-       <DropdownMenuContent
+ <DropdownMenuContent
   align="start"
   sideOffset={6}
-  collisionPadding={8}
+  collisionPadding={0}
   className="
-    fixed
-    left-2
-    right-2
-    w-auto
-    max-w-none
+    !fixed
+    !left-2
+    !right-2
+    !top-[calc(119px+42px)]
+    !translate-x-0
+    !translate-y-0
+    !w-[calc(100vw-16px)]
+    !max-w-none
     overflow-visible
     rounded-md
     border
@@ -799,15 +802,17 @@ const renderMenuItem = (item: MenuItem) => {
     shadow-xl
   "
 >
-         <div
-  className="
-    flex
-    w-full
-    flex-wrap
-    items-stretch
-    gap-0
-  "
->
+  <div
+    className="
+      flex
+      w-full
+      flex-row
+      flex-nowrap
+      items-stretch
+      justify-start
+      gap-0
+    "
+  >
             {item.children?.map(
               (child) => {
                 if (
@@ -1029,33 +1034,33 @@ const renderMenuItem = (item: MenuItem) => {
                           ? "noopener noreferrer"
                           : undefined
                       }
-                      className={cn(
-                        `
-                        mx-0.5
-                        flex
-                        min-h-[76px]
-                        min-w-[98px]
-                        max-w-[125px]
-                        flex-col
-                        items-center
-                        justify-center
-                        gap-1.5
-                        rounded-md
-                        border-r
-                        border-gray-100
-                        px-3
-                        py-2
-                        text-center
-                        text-[11px]
-                        font-medium
-                        leading-tight
-                        transition-colors
-                        last:border-r-0
-                        `,
-                        childActive
-                          ? "bg-blue-50 text-blue-700"
-                          : "text-gray-700 hover:bg-blue-50 hover:text-blue-700"
-                      )}
+                     className={cn(
+  `
+  mx-0.5
+  flex
+  min-h-[76px]
+  min-w-[98px]
+  max-w-[125px]
+  flex-col
+  items-center
+  justify-center
+  gap-1.5
+  rounded-md
+  border-r
+  border-gray-100
+  px-3
+  py-2
+  text-center
+  text-[11px]
+  font-medium
+  leading-tight
+  transition-colors
+  last:border-r-0
+  `,
+  childActive
+    ? "bg-blue-50 text-blue-700"
+    : "text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+)}
                     >
                       <span
                         className="
