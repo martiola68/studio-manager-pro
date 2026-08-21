@@ -362,152 +362,222 @@ const menuItems: MenuItem[] = [
       },
     ],
   },
+   {
+    label: "Scadenzario",
+    icon: <Calendar className="h-4 w-4" />,
+    children: [
+      {
+        label: "Scadenze unificate",
+        href: "/scadenze",
+        icon: <Calendar className="h-4 w-4" />,
+      },
+      {
+        label: "Elenco Generale",
+        href: "/scadenze/elenco-generale",
+        icon: <FileText className="h-4 w-4" />,
+      },
+      {
+        label: "Calendario",
+        href: "/scadenze/calendario",
+        icon: <Calendar className="h-4 w-4" />,
+      },
+      {
+        label: "Riepilogo",
+        href: "/scadenze/riepilogo",
+        icon: <FileText className="h-4 w-4" />,
+      },
+      {
+        label: "IVA",
+        href: "/scadenze/iva",
+        icon: <FileText className="h-4 w-4" />,
+      },
+      {
+        label: "CCGG",
+        href: "/scadenze/ccgg",
+        icon: <FileText className="h-4 w-4" />,
+      },
+      {
+        label: "CU",
+        href: "/scadenze/cu",
+        icon: <FileText className="h-4 w-4" />,
+      },
+      {
+        label: "IMU",
+        href: "/scadenze/imu",
+        icon: <FileText className="h-4 w-4" />,
+      },
+      {
+        label: "Fiscali",
+        href: "/scadenze/fiscali",
+        icon: <FileText className="h-4 w-4" />,
+      },
+      {
+        label: "Bilanci",
+        href: "/scadenze/bilanci",
+        icon: <FileText className="h-4 w-4" />,
+      },
+      {
+        label: "770",
+        href: "/scadenze/modello-770",
+        icon: <FileText className="h-4 w-4" />,
+      },
+      {
+        label: "Liquidazioni IVA - LIPE",
+        href: "/scadenze/lipe",
+        icon: <FileText className="h-4 w-4" />,
+      },
+      {
+        label: "Esterometro",
+        href: "/scadenze/esterometro",
+        icon: <FileText className="h-4 w-4" />,
+      },
+      {
+        label: "Affitti",
+        href: "/scadenze/affitti",
+        icon: <FileText className="h-4 w-4" />,
+      },
+      {
+        label: "Proforma",
+        href: "/scadenze/proforma",
+        icon: <FileText className="h-4 w-4" />,
+      },
+    ],
+  },
+
   {
-    label: "Operatività",
+    label: "Pratiche",
     icon: <FolderKanban className="h-4 w-4" />,
     children: [
-     {
-  label: "Scadenzario",
-  icon: <Calendar className="h-4 w-4" />,
-  children: [
-    {
-      label: "Scadenze unificate",
-      href: "/scadenze",
-      icon: <Calendar className="h-4 w-4" />,
-    },
-    {
-      label: "Elenco Generale",
-      href: "/scadenze/elenco-generale",
-      icon: <FileText className="h-4 w-4" />,
-    },
-    {
-      label: "Calendario",
-      href: "/scadenze/calendario",
-      icon: <Calendar className="h-4 w-4" />,
-    },
-    {
-      label: "Riepilogo",
-      href: "/scadenze/riepilogo",
-      icon: <FileText className="h-4 w-4" />,
-    },
-          { label: "IVA", href: "/scadenze/iva", icon: <FileText className="h-4 w-4" /> },
-          { label: "CCGG", href: "/scadenze/ccgg", icon: <FileText className="h-4 w-4" /> },
-          { label: "CU", href: "/scadenze/cu", icon: <FileText className="h-4 w-4" /> },
-          { label: "IMU", href: "/scadenze/imu", icon: <FileText className="h-4 w-4" /> },
-          { label: "Fiscali", href: "/scadenze/fiscali", icon: <FileText className="h-4 w-4" /> },
-          { label: "Bilanci", href: "/scadenze/bilanci", icon: <FileText className="h-4 w-4" /> },
-          { label: "770", href: "/scadenze/modello-770", icon: <FileText className="h-4 w-4" /> },
-          { label: "Liquidazioni IVA - LIPE", href: "/scadenze/lipe", icon: <FileText className="h-4 w-4" /> },
-          { label: "Esterometro", href: "/scadenze/esterometro", icon: <FileText className="h-4 w-4" /> },
-          { label: "Affitti", href: "/scadenze/affitti", icon: <FileText className="h-4 w-4" /> },
-          { label: "Proforma", href: "/scadenze/proforma", icon: <FileText className="h-4 w-4" /> },
-        ],
+      {
+        label: "Variazioni CCIAA / AdE",
+        href: "/pratiche/variazioni",
+        icon: <FileText className="h-4 w-4" />,
       },
       {
-        label: "Pratiche",
+        label: "Modelli documenti",
+        href: "/pratiche/modelli",
+        icon: <FileText className="h-4 w-4" />,
+      },
+      {
+        label: "Diciture documenti",
+        href: "/pratiche/diciture",
+        icon: <FileText className="h-4 w-4" />,
+      },
+    ],
+  },
+
+  {
+    label: "Revisione",
+    icon: <ClipboardCheck className="h-4 w-4" />,
+    children: [
+      {
+        label: "Dashboard",
+        href: "/revisione-controllo/dashboard",
+        icon: <BarChart3 className="h-4 w-4" />,
+      },
+      {
+        label: "Incarichi / Fascicoli",
+        href: "/revisione-controllo",
         icon: <FolderKanban className="h-4 w-4" />,
-        children: [
-          { label: "Variazioni CCIAA / AdE", href: "/pratiche/variazioni", icon: <FileText className="h-4 w-4" /> },
-          { label: "Modelli documenti", href: "/pratiche/modelli", icon: <FileText className="h-4 w-4" /> },
-          { label: "Diciture documenti", href: "/pratiche/diciture", icon: <FileText className="h-4 w-4" /> },
-        ],
       },
       {
-  label: "Revisione e Controllo",
-  icon: <ClipboardCheck className="h-4 w-4" />,
-  children: [
-    {
-      label: "Dashboard",
-      href: "/revisione-controllo/dashboard",
-      icon: <BarChart3 className="h-4 w-4" />,
-    },
-    {
-      label: "Incarichi / Fascicoli",
-      href: "/revisione-controllo",
-      icon: <FolderKanban className="h-4 w-4" />,
-    },
-    {
-      label: "Nuovo incarico",
-      href: "/revisione-controllo/nuovo",
-      icon: <FileText className="h-4 w-4" />,
-    },
-    {
-      label: "Controlli periodici",
-      href: "/revisione-controllo/controlli",
-      icon: <Calendar className="h-4 w-4" />,
-    },
-    {
-      label: "Rilievi / Follow-up",
-      href: "/revisione-controllo/followup",
-      icon: <AlertTriangle className="h-4 w-4" />,
-    },
-    {
-      label: "Carte di lavoro",
-      href: "/revisione-controllo/documenti",
-      icon: <FolderKanban className="h-4 w-4" />,
-    },
-    {
-      label: "Relazioni annuali",
-      href: "/revisione-controllo/relazioni",
-      icon: <FileText className="h-4 w-4" />,
-    },
-    {
-      label: "Modelli relazioni",
-      href: "/revisione-controllo/modelli",
-      icon: <FileText className="h-4 w-4" />,
-    },
-   {
-  label: "Manuale operativo",
-  href: "/guide/Manuale_Revisione_e_Controllo_SMP.pdf",
-  icon: <BookOpen className="h-4 w-4" />,
-},
-  ],
-},
-   {
-  label: "Controllo di gestione",
-  icon: <BriefcaseBusiness className="h-4 w-4" />,
-  children: [
-    {
-      label: "Elenco generale",
-      href: "/controllo-gestione",
-      icon: <FileText className="h-4 w-4" />,
-    },
-    {
-      label: "Nuovo",
-      href: "/controllo-gestione/nuovo",
-      icon: <FileText className="h-4 w-4" />,
-    },
-    {
-      label: "Importa contabilità",
-      href: "/controllo-gestione/import-contabilita",
-      icon: <RefreshCcw className="h-4 w-4" />,
-    },
-    {
-      label: "Piani dei conti",
-      href: "/controllo-gestione/piani-conti",
-      icon: <Settings className="h-4 w-4" />,
-    },
-    {
-      label: "Storico controlli",
-      href: "/controllo-gestione/storico",
-      icon: <Clock className="h-4 w-4" />,
-    },
-    {
-      label: "Manuale operativo",
-      href: "/guide/Manuale_Controllo_di_Gestione_SMP.pdf",
-      icon: <BookOpen className="h-4 w-4" />,
-    },
-  ],
-},
+        label: "Nuovo incarico",
+        href: "/revisione-controllo/nuovo",
+        icon: <FileText className="h-4 w-4" />,
+      },
       {
-        label: "Contenzioso",
-        icon: <Scale className="h-4 w-4" />,
-        children: [
-          { label: "Pratiche contenzioso", href: "/contenzioso", icon: <FolderKanban className="h-4 w-4" /> },
-          { label: "Regole scadenze", href: "/contenzioso/regole-scadenze", icon: <Settings className="h-4 w-4" /> },
-          { label: "Sospensioni termini", href: "/contenzioso/sospensioni", icon: <Clock className="h-4 w-4" /> },
-          { label: "Tipi atto", href: "/contenzioso/tipi-atto", icon: <FileText className="h-4 w-4" /> },
-        ],
+        label: "Controlli periodici",
+        href: "/revisione-controllo/controlli",
+        icon: <Calendar className="h-4 w-4" />,
+      },
+      {
+        label: "Rilievi / Follow-up",
+        href: "/revisione-controllo/followup",
+        icon: <AlertTriangle className="h-4 w-4" />,
+      },
+      {
+        label: "Carte di lavoro",
+        href: "/revisione-controllo/documenti",
+        icon: <FolderKanban className="h-4 w-4" />,
+      },
+      {
+        label: "Relazioni annuali",
+        href: "/revisione-controllo/relazioni",
+        icon: <FileText className="h-4 w-4" />,
+      },
+      {
+        label: "Modelli relazioni",
+        href: "/revisione-controllo/modelli",
+        icon: <FileText className="h-4 w-4" />,
+      },
+      {
+        label: "Manuale operativo",
+        href: "/guide/Manuale_Revisione_e_Controllo_SMP.pdf",
+        icon: <BookOpen className="h-4 w-4" />,
+      },
+    ],
+  },
+
+  {
+    label: "Controllo di gestione",
+    icon: <BriefcaseBusiness className="h-4 w-4" />,
+    children: [
+      {
+        label: "Elenco generale",
+        href: "/controllo-gestione",
+        icon: <FileText className="h-4 w-4" />,
+      },
+      {
+        label: "Nuovo",
+        href: "/controllo-gestione/nuovo",
+        icon: <FileText className="h-4 w-4" />,
+      },
+      {
+        label: "Importa contabilità",
+        href: "/controllo-gestione/import-contabilita",
+        icon: <RefreshCcw className="h-4 w-4" />,
+      },
+      {
+        label: "Piani dei conti",
+        href: "/controllo-gestione/piani-conti",
+        icon: <Settings className="h-4 w-4" />,
+      },
+      {
+        label: "Storico controlli",
+        href: "/controllo-gestione/storico",
+        icon: <Clock className="h-4 w-4" />,
+      },
+      {
+        label: "Manuale operativo",
+        href: "/guide/Manuale_Controllo_di_Gestione_SMP.pdf",
+        icon: <BookOpen className="h-4 w-4" />,
+      },
+    ],
+  },
+
+  {
+    label: "Contenzioso",
+    icon: <Scale className="h-4 w-4" />,
+    children: [
+      {
+        label: "Pratiche contenzioso",
+        href: "/contenzioso",
+        icon: <FolderKanban className="h-4 w-4" />,
+      },
+      {
+        label: "Regole scadenze",
+        href: "/contenzioso/regole-scadenze",
+        icon: <Settings className="h-4 w-4" />,
+      },
+      {
+        label: "Sospensioni termini",
+        href: "/contenzioso/sospensioni",
+        icon: <Clock className="h-4 w-4" />,
+      },
+      {
+        label: "Tipi atto",
+        href: "/contenzioso/tipi-atto",
+        icon: <FileText className="h-4 w-4" />,
       },
     ],
   },
@@ -642,167 +712,479 @@ const isActive = (item: MenuItem): boolean => {
   return false;
 };
 
-  const renderMenuItem = (item: MenuItem) => {
-    if (item.adminOnly && currentUser?.tipo_utente !== "Admin") return null;
+const renderMenuItem = (item: MenuItem) => {
+  if (
+    item.adminOnly &&
+    currentUser?.tipo_utente !== "Admin"
+  ) {
+    return null;
+  }
 
-    const hasChildren = !!(item.children && item.children.length > 0);
-    const itemActive = isActive(item);
-
-   const showMessaggiBadge = item.label === "Messaggi" && messaggiNonLetti > 0;
-const showPromemoriaRicevutiBadge = item.label === "Promemoria" && promemoriaRicevuti > 0;
-const showPromemoriaAlert = item.label === "Promemoria" && promemoriaAttivi > 0;
-const showAgendaBadge = item.label === "Agenda" && eventiImminenti > 0;
-
-const showPostGiornoBadge =
-  item.label === "Post del giorno" && postGiornoAttivi > 0;
-
-    if (hasChildren) {
-      return (
-        <DropdownMenu key={item.label}>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              className={cn(
-                "flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-lg",
-                itemActive
-                  ? "bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
-                  : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
-              )}
-            >
-              {item.icon}
-              <span>{item.label}</span>
-              <ChevronDown className="h-4 w-4 ml-1" />
-            </Button>
-          </DropdownMenuTrigger>
-
-<DropdownMenuContent
-  align="start"
-  className="w-[980px] max-w-[calc(100vw-40px)] p-4"
->
-  <div className="grid grid-cols-5 gap-4 items-start">
-    {item.children?.map((child) => {
-      if (child.adminOnly && currentUser?.tipo_utente !== "Admin") return null;
-
-      const childActive = isActive(child);
-
-      if (child.children?.length) {
-        return (
-          <div key={child.label} className="rounded-xl border bg-white p-3">
-            <div className="mb-3 flex items-center gap-2 text-sm font-bold text-gray-900">
-              <span className="text-blue-600 flex items-center justify-center [&>svg]:h-4 [&>svg]:w-4">
-  {child.icon}
-</span>
-              <span>{child.label}</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-            {child.children.map((sub) => {
-  if (sub.adminOnly && currentUser?.tipo_utente !== "Admin") return null;
-
-  const subActive = isActive(sub);
-
-  return (
-   <DropdownMenuItem key={sub.label} asChild>
-  <Link
-    href={sub.href || "#"}
-    target={
-      sub.href?.toLowerCase().endsWith(".pdf")
-        ? "_blank"
-        : undefined
-    }
-    rel={
-      sub.href?.toLowerCase().endsWith(".pdf")
-        ? "noopener noreferrer"
-        : undefined
-    }
-    className={cn(
-      "flex min-h-[44px] flex-col items-center justify-center gap-1 rounded-lg border px-2 py-2 text-center text-xs font-medium transition-colors",
-      subActive
-        ? "border-blue-600 bg-blue-50 text-blue-700"
-        : "border-gray-200 bg-gray-50 text-gray-700 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
-    )}
-  >
-    <span className="text-blue-600 flex items-center justify-center [&>svg]:h-4 [&>svg]:w-4">
-      {sub.icon}
-    </span>
-    <span>{sub.label}</span>
-  </Link>
-</DropdownMenuItem>
-  );
-})}
-            </div>
-          </div>
-        );
-      }
-    })}
-  </div>
-</DropdownMenuContent>
-        </DropdownMenu>
-      );
-    }
-
-    return (
-      <Link
-        key={item.label}
-        href={item.href || "#"}
-        onClick={item.label === "Promemoria" ? handlePromemoriaClick : undefined}
-        className={cn(
-          "flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors relative",
-          itemActive
-            ? "bg-blue-600 text-white"
-            : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
-        )}
-      >
-        {item.icon}
-        <span>{item.label}</span>
-
-        {showMessaggiBadge && (
-          <Badge variant="destructive" className="ml-1 px-1.5 py-0 h-5 min-w-[20px] text-xs">
-            {messaggiNonLetti > 99 ? "99+" : messaggiNonLetti}
-          </Badge>
-        )}
-
-        {showPromemoriaRicevutiBadge && (
-          <Badge variant="destructive" className="ml-1 px-1.5 py-0 h-5 min-w-[20px] text-xs">
-            {promemoriaRicevuti > 99 ? "99+" : promemoriaRicevuti}
-          </Badge>
-        )}
-
-        {showPromemoriaAlert && (
-          <Badge variant="destructive" className="ml-1 px-1.5 py-0 h-5 min-w-[20px] text-xs">
-            {promemoriaAttivi > 99 ? "99+" : promemoriaAttivi}
-          </Badge>
-        )}
-
-        {showAgendaBadge && (
-          <Badge variant="destructive" className="ml-1 px-1.5 py-0 h-5 min-w-[20px] text-xs">
-            {eventiImminenti > 99 ? "99+" : eventiImminenti}
-          </Badge>
-        )}
-{showPostGiornoBadge && (
-  <span
-    className="
-      ml-1
-      flex
-      items-center
-      justify-center
-      rounded-full
-      bg-yellow-400
-      text-black
-      text-[11px]
-      font-bold
-      min-w-[18px]
-      h-[18px]
-      px-1
-    "
-  >
-    {postGiornoAttivi > 99 ? "99+" : postGiornoAttivi}
-  </span>
-)}
-        
-      </Link>
+  const hasChildren =
+    !!(
+      item.children &&
+      item.children.length > 0
     );
-  };
+
+  const itemActive =
+    isActive(item);
+
+  const showMessaggiBadge =
+    item.label === "Messaggi" &&
+    messaggiNonLetti > 0;
+
+  const showPromemoriaRicevutiBadge =
+    item.label === "Promemoria" &&
+    promemoriaRicevuti > 0;
+
+  const showPromemoriaAlert =
+    item.label === "Promemoria" &&
+    promemoriaAttivi > 0;
+
+  const showAgendaBadge =
+    item.label === "Agenda" &&
+    eventiImminenti > 0;
+
+  const showPostGiornoBadge =
+    item.label === "Post del giorno" &&
+    postGiornoAttivi > 0;
+
+  /*
+   * MENU CON SOTTOMENU
+   * Ribbon orizzontale stile Office.
+   */
+  if (hasChildren) {
+    return (
+      <DropdownMenu
+        key={item.label}
+      >
+        <DropdownMenuTrigger
+          asChild
+        >
+          <Button
+            variant="ghost"
+            className={cn(
+              "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+              itemActive
+                ? "bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
+                : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+            )}
+          >
+            {item.icon}
+
+            <span>
+              {item.label}
+            </span>
+
+            <ChevronDown className="ml-0.5 h-3.5 w-3.5" />
+          </Button>
+        </DropdownMenuTrigger>
+
+        <DropdownMenuContent
+          align="start"
+          sideOffset={6}
+          className="
+            w-[1250px]
+            max-w-[calc(100vw-32px)]
+            overflow-x-auto
+            rounded-md
+            border
+            border-gray-200
+            bg-white
+            p-3
+            shadow-xl
+          "
+        >
+          <div
+            className="
+              flex
+              min-w-max
+              items-stretch
+              gap-0
+            "
+          >
+            {item.children?.map(
+              (child) => {
+                if (
+                  child.adminOnly &&
+                  currentUser?.tipo_utente !==
+                    "Admin"
+                ) {
+                  return null;
+                }
+
+                const childActive =
+                  isActive(child);
+
+                /*
+                 * GRUPPO CON SOTTOMENU.
+                 *
+                 * Esempi:
+                 * Studio → Strumenti
+                 * AML → Antiriciclaggio
+                 * Payroll → Payroll
+                 * Configurazione → Connessioni / Impostazioni
+                 */
+                if (
+                  child.children?.length
+                ) {
+                  return (
+                    <div
+                      key={
+                        child.label
+                      }
+                      className="
+                        flex
+                        flex-col
+                        border-r
+                        border-gray-200
+                        px-4
+                        last:border-r-0
+                      "
+                    >
+                      <div
+                        className="
+                          mb-2
+                          flex
+                          items-center
+                          gap-2
+                          whitespace-nowrap
+                          text-xs
+                          font-bold
+                          text-gray-800
+                        "
+                      >
+                        <span
+                          className="
+                            flex
+                            items-center
+                            justify-center
+                            text-blue-600
+                            [&>svg]:h-4
+                            [&>svg]:w-4
+                          "
+                        >
+                          {
+                            child.icon
+                          }
+                        </span>
+
+                        <span>
+                          {
+                            child.label
+                          }
+                        </span>
+                      </div>
+
+                      <div
+                        className="
+                          flex
+                          items-stretch
+                          gap-1
+                        "
+                      >
+                        {child.children.map(
+                          (sub) => {
+                            if (
+                              sub.adminOnly &&
+                              currentUser?.tipo_utente !==
+                                "Admin"
+                            ) {
+                              return null;
+                            }
+
+                            const subActive =
+                              isActive(
+                                sub
+                              );
+
+                            return (
+                              <DropdownMenuItem
+                                key={
+                                  sub.label
+                                }
+                                asChild
+                                className="p-0"
+                              >
+                                <Link
+                                  href={
+                                    sub.href ||
+                                    "#"
+                                  }
+                                  target={
+                                    sub.href
+                                      ?.toLowerCase()
+                                      .endsWith(
+                                        ".pdf"
+                                      )
+                                      ? "_blank"
+                                      : undefined
+                                  }
+                                  rel={
+                                    sub.href
+                                      ?.toLowerCase()
+                                      .endsWith(
+                                        ".pdf"
+                                      )
+                                      ? "noopener noreferrer"
+                                      : undefined
+                                  }
+                                  className={cn(
+                                    `
+                                    flex
+                                    min-h-[68px]
+                                    min-w-[92px]
+                                    max-w-[115px]
+                                    flex-col
+                                    items-center
+                                    justify-center
+                                    gap-1.5
+                                    rounded-md
+                                    px-2
+                                    py-2
+                                    text-center
+                                    text-[11px]
+                                    font-medium
+                                    leading-tight
+                                    transition-colors
+                                    `,
+                                    subActive
+                                      ? "bg-blue-50 text-blue-700"
+                                      : "text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+                                  )}
+                                >
+                                  <span
+                                    className="
+                                      flex
+                                      items-center
+                                      justify-center
+                                      text-blue-600
+                                      [&>svg]:h-5
+                                      [&>svg]:w-5
+                                    "
+                                  >
+                                    {
+                                      sub.icon
+                                    }
+                                  </span>
+
+                                  <span>
+                                    {
+                                      sub.label
+                                    }
+                                  </span>
+                                </Link>
+                              </DropdownMenuItem>
+                            );
+                          }
+                        )}
+                      </div>
+                    </div>
+                  );
+                }
+
+                /*
+                 * VOCE DIRETTA.
+                 *
+                 * Esempi:
+                 * Scadenzario
+                 * Pratiche
+                 * Revisione
+                 * Controllo di gestione
+                 * Contenzioso
+                 */
+                return (
+                  <DropdownMenuItem
+                    key={
+                      child.label
+                    }
+                    asChild
+                    className="p-0"
+                  >
+                    <Link
+                      href={
+                        child.href ||
+                        "#"
+                      }
+                      target={
+                        child.href
+                          ?.toLowerCase()
+                          .endsWith(
+                            ".pdf"
+                          )
+                          ? "_blank"
+                          : undefined
+                      }
+                      rel={
+                        child.href
+                          ?.toLowerCase()
+                          .endsWith(
+                            ".pdf"
+                          )
+                          ? "noopener noreferrer"
+                          : undefined
+                      }
+                      className={cn(
+                        `
+                        mx-0.5
+                        flex
+                        min-h-[76px]
+                        min-w-[98px]
+                        max-w-[125px]
+                        flex-col
+                        items-center
+                        justify-center
+                        gap-1.5
+                        rounded-md
+                        border-r
+                        border-gray-100
+                        px-3
+                        py-2
+                        text-center
+                        text-[11px]
+                        font-medium
+                        leading-tight
+                        transition-colors
+                        last:border-r-0
+                        `,
+                        childActive
+                          ? "bg-blue-50 text-blue-700"
+                          : "text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+                      )}
+                    >
+                      <span
+                        className="
+                          flex
+                          items-center
+                          justify-center
+                          text-blue-600
+                          [&>svg]:h-5
+                          [&>svg]:w-5
+                        "
+                      >
+                        {
+                          child.icon
+                        }
+                      </span>
+
+                      <span>
+                        {
+                          child.label
+                        }
+                      </span>
+                    </Link>
+                  </DropdownMenuItem>
+                );
+              }
+            )}
+          </div>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
+
+  /*
+   * VOCE PRINCIPALE SENZA SOTTOMENU.
+   */
+  return (
+    <Link
+      key={item.label}
+      href={
+        item.href || "#"
+      }
+      onClick={
+        item.label ===
+        "Promemoria"
+          ? handlePromemoriaClick
+          : undefined
+      }
+      className={cn(
+        "relative flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+        itemActive
+          ? "bg-blue-600 text-white"
+          : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+      )}
+    >
+      {item.icon}
+
+      <span>
+        {item.label}
+      </span>
+
+      {showMessaggiBadge && (
+        <Badge
+          variant="destructive"
+          className="ml-1 h-5 min-w-[20px] px-1.5 py-0 text-xs"
+        >
+          {messaggiNonLetti >
+          99
+            ? "99+"
+            : messaggiNonLetti}
+        </Badge>
+      )}
+
+      {showPromemoriaRicevutiBadge && (
+        <Badge
+          variant="destructive"
+          className="ml-1 h-5 min-w-[20px] px-1.5 py-0 text-xs"
+        >
+          {promemoriaRicevuti >
+          99
+            ? "99+"
+            : promemoriaRicevuti}
+        </Badge>
+      )}
+
+      {showPromemoriaAlert && (
+        <Badge
+          variant="destructive"
+          className="ml-1 h-5 min-w-[20px] px-1.5 py-0 text-xs"
+        >
+          {promemoriaAttivi >
+          99
+            ? "99+"
+            : promemoriaAttivi}
+        </Badge>
+      )}
+
+      {showAgendaBadge && (
+        <Badge
+          variant="destructive"
+          className="ml-1 h-5 min-w-[20px] px-1.5 py-0 text-xs"
+        >
+          {eventiImminenti >
+          99
+            ? "99+"
+            : eventiImminenti}
+        </Badge>
+      )}
+
+      {showPostGiornoBadge && (
+        <span
+          className="
+            ml-1
+            flex
+            h-[18px]
+            min-w-[18px]
+            items-center
+            justify-center
+            rounded-full
+            bg-yellow-400
+            px-1
+            text-[11px]
+            font-bold
+            text-black
+          "
+        >
+          {postGiornoAttivi >
+          99
+            ? "99+"
+            : postGiornoAttivi}
+        </span>
+      )}
+    </Link>
+  );
+};
 
   if (loading) {
     return (
@@ -876,11 +1258,13 @@ return (
     )}
 
     {/* DESKTOP */}
-    <div className="hidden overflow-x-auto lg:block">
-      <div className="flex min-w-max items-center gap-1 px-4 py-2">
-        {menuItems.map((item) => renderMenuItem(item))}
-      </div>
-    </div>
+   <div className="hidden overflow-x-auto lg:block">
+  <div className="flex min-w-max items-center gap-0.5 px-4 py-1.5">
+    {menuItems.map((item) =>
+      renderMenuItem(item)
+    )}
+  </div>
+</div>
   </nav>
 );
 }
