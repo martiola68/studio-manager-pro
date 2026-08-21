@@ -56,7 +56,7 @@ type Template = {
   software_contabile: string;
 };
 
-export default function ClassificazioneDatevPage() {
+export default function ClassificazionePianoContiPage() {
   const router =
     useRouter();
 
@@ -467,7 +467,7 @@ export default function ClassificazioneDatevPage() {
           padding: 24,
         }}
       >
-        Caricamento piano dei conti DATEV KOINOS...
+       Caricamento piano dei conti...
       </main>
     );
   }
@@ -501,7 +501,7 @@ export default function ClassificazioneDatevPage() {
               fontWeight: 700,
             }}
           >
-            Classificazione DATEV KOINOS
+           Classificazione piano dei conti
           </h1>
 
           <div
@@ -511,21 +511,21 @@ export default function ClassificazioneDatevPage() {
                 "#64748b",
             }}
           >
-            {template
-              ?.nome ||
-              "Master DATEV KOINOS"}
+          {template?.nome || "Master piano dei conti"}
           </div>
         </div>
 
-        <button
-          type="button"
-         
-          style={
-            secondaryButtonStyle
-          }
-        >
-          Torna al piano DATEV
-        </button>
+     <button
+  type="button"
+  onClick={() =>
+    router.push(
+      "/controllo-gestione/piani-conti"
+    )
+  }
+  style={secondaryButtonStyle}
+>
+  Torna ai piani dei conti
+</button>
       </div>
 
       {errore && (
