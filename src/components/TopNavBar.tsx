@@ -650,19 +650,69 @@ const menuItems: MenuItem[] = [
   icon: <BookOpen className="h-4 w-4" />,
   children: [
     {
+      label: "Agenda",
+      href: "/guide/Manuale_Agenda_SMP.pdf",
+      icon: <Calendar className="h-4 w-4" />,
+    },
+    {
+      label: "Promemoria",
+      href: "/guide/Manuale_Promemoria_SMP.pdf",
+      icon: <FileText className="h-4 w-4" />,
+    },
+    {
+      label: "Studio",
+      href: "/guide/Manuale_Studio_SMP.pdf",
+      icon: <BriefcaseBusiness className="h-4 w-4" />,
+    },
+    {
+      label: "Scadenzario",
+      href: "/guide/Manuale_Scadenzario_SMP.pdf",
+      icon: <Calendar className="h-4 w-4" />,
+    },
+    {
+      label: "Pratiche",
+      href: "/guide/Manuale_Pratiche_SMP.pdf",
+      icon: <FolderKanban className="h-4 w-4" />,
+    },
+    {
       label: "Revisione e Controllo",
       href: "/guide/Manuale_Revisione_e_Controllo_SMP.pdf",
-      icon: <BookOpen className="h-4 w-4" />,
+      icon: <ClipboardCheck className="h-4 w-4" />,
     },
     {
       label: "Controllo di Gestione",
       href: "/guide/Manuale_Controllo_di_Gestione_SMP.pdf",
-      icon: <BookOpen className="h-4 w-4" />,
+      icon: <BriefcaseBusiness className="h-4 w-4" />,
+    },
+    {
+      label: "Contenzioso",
+      href: "/guide/Manuale_Contenzioso_SMP.pdf",
+      icon: <Scale className="h-4 w-4" />,
+    },
+    {
+      label: "Antiriciclaggio",
+      href: "/guide/Manuale_Antiriciclaggio_SMP.pdf",
+      icon: <ShieldCheck className="h-4 w-4" />,
+    },
+    {
+      label: "Payroll",
+      href: "/guide/Manuale_Payroll_SMP.pdf",
+      icon: <Clock className="h-4 w-4" />,
+    },
+    {
+      label: "Anagrafiche",
+      href: "/guide/Manuale_Anagrafiche_SMP.pdf",
+      icon: <Users className="h-4 w-4" />,
     },
     {
       label: "Microsoft 365",
       href: "/guide/Manuale_Operativo_Microsoft_365_SMP.pdf",
-      icon: <BookOpen className="h-4 w-4" />,
+      icon: <Cloud className="h-4 w-4" />,
+    },
+    {
+      label: "Configurazione",
+      href: "/guide/Manuale_Configurazione_SMP.pdf",
+      icon: <Settings className="h-4 w-4" />,
     },
   ],
 },
