@@ -513,12 +513,7 @@ const menuItems: MenuItem[] = [
         href: "/revisione-controllo/modelli",
         icon: <FileText className="h-4 w-4" />,
       },
-      {
-        label: "Manuale operativo",
-        href: "/guide/Manuale_Revisione_e_Controllo_SMP.pdf",
-        icon: <BookOpen className="h-4 w-4" />,
-      },
-    ],
+      ],
   },
 
   {
@@ -550,12 +545,7 @@ const menuItems: MenuItem[] = [
         href: "/controllo-gestione/storico",
         icon: <Clock className="h-4 w-4" />,
       },
-      {
-        label: "Manuale operativo",
-        href: "/guide/Manuale_Controllo_di_Gestione_SMP.pdf",
-        icon: <BookOpen className="h-4 w-4" />,
-      },
-    ],
+      ],
   },
 
   {
@@ -654,9 +644,27 @@ const menuItems: MenuItem[] = [
     },
   ],
 },
-  {
-    label: "Configurazione",
-    icon: <Settings className="h-4 w-4" />,
+
+{
+  label: "Manuali di istruzioni",
+  icon: <BookOpen className="h-4 w-4" />,
+  children: [
+    {
+      label: "Revisione e Controllo",
+      href: "/guide/Manuale_Revisione_e_Controllo_SMP.pdf",
+      icon: <BookOpen className="h-4 w-4" />,
+    },
+    {
+      label: "Controllo di Gestione",
+      href: "/guide/Manuale_Controllo_di_Gestione_SMP.pdf",
+      icon: <BookOpen className="h-4 w-4" />,
+    },
+  ],
+},
+
+{
+  label: "Configurazione",
+  icon: <Settings className="h-4 w-4" />,
     children: [
       {
         label: "Connessioni",
