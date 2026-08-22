@@ -659,6 +659,11 @@ const menuItems: MenuItem[] = [
       href: "/guide/Manuale_Controllo_di_Gestione_SMP.pdf",
       icon: <BookOpen className="h-4 w-4" />,
     },
+    {
+      label: "Microsoft 365",
+      href: "/guide/Manuale_Microsoft_365_SMP.pdf",
+      icon: <BookOpen className="h-4 w-4" />,
+    },
   ],
 },
 
