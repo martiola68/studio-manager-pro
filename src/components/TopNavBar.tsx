@@ -706,7 +706,7 @@ const menuItems: MenuItem[] = [
     },
     {
       label: "Configurazione",
-      href: "/guide/Manuale_Configurazione_SMP.pdf",
+      href: "/guide/Manuale_Generale_Configurazione_SMP.pdf",
       icon: <Settings className="h-4 w-4" />,
     },
   ],
