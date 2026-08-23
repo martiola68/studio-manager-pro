@@ -660,11 +660,6 @@ const menuItems: MenuItem[] = [
       icon: <FileText className="h-4 w-4" />,
     },
     {
-      label: "Studio",
-      href: "/guide/Manuale_Studio_SMP.pdf",
-      icon: <BriefcaseBusiness className="h-4 w-4" />,
-    },
-    {
       label: "Scadenzario",
       href: "/guide/Manuale_Scadenzario_SMP.pdf",
       icon: <Calendar className="h-4 w-4" />,
