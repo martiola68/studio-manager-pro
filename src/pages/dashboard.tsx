@@ -22,10 +22,6 @@ import {
   CheckCircle,
   Clock,
   TrendingUp,
-  MessageSquare,
-  Mail,
-  BookOpen,
-  Lock,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -60,7 +56,6 @@ const router = useRouter();
   const [prossimiAppuntamenti, setProssimiAppuntamenti] = useState<EventoAgenda[]>(
     []
   );
-  const [messaggiNonLetti, setMessaggiNonLetti] = useState(0);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isPartner, setIsPartner] = useState(false);
 
@@ -125,16 +120,6 @@ const router = useRouter();
         // Dashboard data
         await loadDashboardData(userData.id);
 
-        // Unread messages
-        try {
-          const { messaggioService } = await import("@/services/messaggioService");
-          const nonLetti = await messaggioService.getMessaggiNonLettiCount(
-            userData.id
-          );
-          if (!cancelled) setMessaggiNonLetti(nonLetti);
-        } catch (e) {
-          console.warn("Messaggi service non disponibile:", e);
-        }
       } catch (error) {
         console.error("Errore nel caricamento dashboard:", error);
       } finally {
@@ -146,27 +131,6 @@ const router = useRouter();
       cancelled = true;
     };
   }, [ready, session?.user?.email]);
-
-  /**
-   * ✅ Poll messaggi non letti (solo quando abbiamo userId)
-   */
-  useEffect(() => {
-    if (!currentUserId) return;
-
-    const interval = setInterval(async () => {
-      try {
-        const { messaggioService } = await import("@/services/messaggioService");
-        const nonLetti = await messaggioService.getMessaggiNonLettiCount(
-          currentUserId
-        );
-        setMessaggiNonLetti(nonLetti);
-      } catch {
-        // non bloccare UI se manca
-      }
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, [currentUserId]);
 
   /**
    * ✅ Load dashboard stats, clienti, eventi, scadenze
@@ -206,16 +170,6 @@ const router = useRouter();
 
       const counts = await scadenzaService.getAllScadenzeCounts();
 
-      // (optional) refresh unread count once here as well
-      if (userIdForMessages) {
-        try {
-          const { messaggioService } = await import("@/services/messaggioService");
-          const nonLetti = await messaggioService.getMessaggiNonLettiCount(
-            userIdForMessages
-          );
-          setMessaggiNonLetti(nonLetti);
-        } catch {}
-      }
 
       setStats({
         clientiAttivi,
@@ -495,97 +449,6 @@ const router = useRouter();
 />
 </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Accessi Rapidi</CardTitle>
-          <CardDescription>Funzioni principali del gestionale</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Link href="/messaggi">
-              <Button variant="outline" className="w-full h-24 flex flex-col gap-2">
-                <MessageSquare className="h-8 w-8 text-blue-600" />
-                <span className="text-sm font-medium">
-                  Messaggi {messaggiNonLetti > 0 ? `(${messaggiNonLetti})` : ""}
-                </span>
-              </Button>
-            </Link>
-            <Link href="/agenda">
-              <Button variant="outline" className="w-full h-24 flex flex-col gap-2">
-                <Calendar className="h-8 w-8 text-green-600" />
-                <span className="text-sm font-medium">Agenda</span>
-              </Button>
-            </Link>
-            <Link href="/contatti">
-              <Button variant="outline" className="w-full h-24 flex flex-col gap-2">
-                <Users className="h-8 w-8 text-purple-600" />
-                <span className="text-sm font-medium">Contatti</span>
-              </Button>
-            </Link>
-            <Link href="/comunicazioni">
-              <Button variant="outline" className="w-full h-24 flex flex-col gap-2">
-                <Mail className="h-8 w-8 text-orange-600" />
-                <span className="text-sm font-medium">Comunicazioni</span>
-              </Button>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="mt-8 border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-blue-600 rounded-lg">
-              <BookOpen className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <CardTitle className="text-blue-900">📚 Manuale Utente Completo</CardTitle>
-              <CardDescription className="text-blue-700">
-                Guida completa all'utilizzo di Studio Manager Pro
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-gray-700 mb-4">
-            Scopri tutte le funzionalità del sistema: Agenda, Messaggi, Promemoria, Rubrica,
-            Clienti, Accesso Portali, Cassetti Fiscali e Scadenzari.
-          </p>
-          <a href="/guide/MANUALE_UTENTE_COMPLETO.html" target="_blank" rel="noopener noreferrer">
-            <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-              <BookOpen className="h-5 w-5 mr-2" />
-              Apri Manuale Completo
-            </Button>
-          </a>
-        </CardContent>
-      </Card>
-
-      <Card className="mt-8 border-2 border-amber-300 bg-gradient-to-br from-amber-50 to-yellow-50">
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-amber-500 rounded-lg">
-              <Lock className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <CardTitle className="text-amber-900">🔐 Guida Master Password - Gestione Sicura Dati</CardTitle>
-              <CardDescription className="text-amber-700">
-                Impara a configurare e utilizzare la Master Password
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-gray-700 mb-4">
-            Guida completa per configurare, utilizzare e gestire la Master Password in modo sicuro e autonomo.
-          </p>
-          <a href="/guide/GUIDA_MASTER_PASSWORD_TEAM.html" target="_blank" rel="noopener noreferrer">
-            <Button className="w-full bg-amber-500 hover:bg-amber-600 text-white">
-              <Lock className="h-5 w-5 mr-2" />
-              Apri Guida Master Password
-            </Button>
-          </a>
-        </CardContent>
-      </Card>
     </div>
   );
 }
