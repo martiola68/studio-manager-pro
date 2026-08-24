@@ -869,10 +869,10 @@ const renderMenuItem = (item: MenuItem) => {
           )
         }
         className={cn(
-          "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+          "flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-colors",
           itemActive || menuOpen
-            ? "bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
-            : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+            ? "border-[#62cfff] bg-[#0879c8] text-white hover:bg-[#0e4da5] hover:text-white"
+            : "border-[#1f5b8f] bg-[#082342] text-[#9fdcff] hover:border-[#62cfff] hover:bg-[#0b2851] hover:text-white"
         )}
       >
         {item.icon}
@@ -901,10 +901,10 @@ const renderMenuItem = (item: MenuItem) => {
         }
       }}
       className={cn(
-        "relative flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+        "relative flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-colors",
         itemActive
-          ? "bg-blue-600 text-white"
-          : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+          ? "border-[#62cfff] bg-[#0879c8] text-white"
+          : "border-[#1f5b8f] bg-[#082342] text-[#9fdcff] hover:border-[#62cfff] hover:bg-[#0b2851] hover:text-white"
       )}
     >
       {item.icon}
@@ -978,7 +978,7 @@ const desktopMenuVoci =
 }
     
 return (
- <nav className="relative w-full bg-white border-b border-gray-200 shadow-sm sticky top-[119px] z-40">
+ <nav className="relative w-full border-b border-[#25405e] bg-[#06162d] shadow-sm sticky top-[119px] z-40">
     {/* MOBILE */}
     <div className="flex items-center justify-between px-3 py-2 lg:hidden">
       <button
@@ -1040,7 +1040,7 @@ return (
 <div className="relative hidden lg:block">
 
   {/* MENU PRINCIPALE */}
-  <div className="flex min-w-max items-center gap-0.5 px-4 py-0">
+  <div className="flex min-w-max items-center gap-1.5 px-4 py-0">
     {menuItems.map((item) =>
       renderMenuItem(item)
     )}
@@ -1057,8 +1057,8 @@ return (
           top-full
           z-50
           border-y
-          border-gray-200
-          bg-white
+          border-[#25405e]
+          bg-[#06162d]
           shadow-lg
         "
       >
@@ -1117,7 +1117,7 @@ return (
                     justify-center
                     gap-1.5
                     border-r
-                    border-gray-100
+                    border-[#1f5b8f]
                     px-3
                     py-2
                     text-center
@@ -1129,10 +1129,10 @@ return (
                     desktopMenuAttivo.label === "Archivi di base" &&
                     "min-w-0 max-w-none",
                     voceRiservata
-  ? "cursor-not-allowed bg-gray-50 text-gray-400 opacity-70 hover:bg-gray-50 hover:text-gray-400"
+  ? "cursor-not-allowed bg-[#082342] text-slate-500 opacity-70"
   : voceActive
-    ? "bg-blue-50 text-blue-700"
-    : "text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+    ? "bg-[#0879c8] text-white"
+    : "bg-[#082342] text-[#9fdcff] hover:bg-[#0b2851] hover:text-white"
                   )}
                 >
                   <span
@@ -1140,7 +1140,7 @@ return (
                       flex
                       items-center
                       justify-center
-                      text-blue-600
+                      text-[#62cfff]
                       [&>svg]:h-5
                       [&>svg]:w-5
                     "
