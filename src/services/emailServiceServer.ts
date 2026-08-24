@@ -18,7 +18,7 @@ export async function sendPasswordResetEmailServer(
       return { success: false, error: "RESEND_API_KEY non configurata" };
     }
 
-    const loginUrl = "https://studio-manager-pro.vercel.app/login";
+    const loginUrl = "https://app.studiomanagerpro.it/login";
 
     const html = getPasswordResetEmailTemplate(nome, email, password, loginUrl);
 
