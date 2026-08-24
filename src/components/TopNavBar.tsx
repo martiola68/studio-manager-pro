@@ -1040,7 +1040,7 @@ return (
 <div className="relative hidden lg:block">
 
   {/* MENU PRINCIPALE */}
-  <div className="flex min-w-max items-center gap-0.5 px-4 py-1.5">
+  <div className="flex min-w-max items-center gap-0.5 px-4 py-0">
     {menuItems.map((item) =>
       renderMenuItem(item)
     )}
