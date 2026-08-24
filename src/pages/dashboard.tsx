@@ -22,7 +22,6 @@ import {
   CheckCircle,
   Clock,
   TrendingUp,
-  AddressBook,
   ArrowRight,
   BellRing,
   BriefcaseBusiness,
@@ -477,7 +476,7 @@ const router = useRouter();
       <Card className="border border-[#8cddff] bg-white shadow-[0_12px_30px_rgba(14,78,112,0.12)]">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2">
-            <AddressBook className="h-5 w-5 text-[#0d6f9f]" />
+            <Users className="h-5 w-5 text-[#0d6f9f]" />
             Rubrica dello studio
           </CardTitle>
           <CardDescription>Anagrafiche e relazioni sempre a portata di mano</CardDescription>
