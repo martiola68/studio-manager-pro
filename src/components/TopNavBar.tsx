@@ -871,8 +871,8 @@ const renderMenuItem = (item: MenuItem) => {
         className={cn(
           "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
           itemActive || menuOpen
-            ? "bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
-            : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+            ? "bg-[#06162d] text-white hover:bg-[#082746] hover:text-white"
+            : "text-white hover:bg-white/15 hover:text-white"
         )}
       >
         {item.icon}
@@ -903,8 +903,8 @@ const renderMenuItem = (item: MenuItem) => {
       className={cn(
         "relative flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
         itemActive
-          ? "bg-blue-600 text-white"
-          : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+          ? "bg-[#06162d] text-white"
+          : "text-white hover:bg-white/15 hover:text-white"
       )}
     >
       {item.icon}
@@ -967,24 +967,24 @@ const desktopMenuVoci =
     
   if (loading) {
     return (
-      <nav className="w-full bg-white border-b border-gray-200 px-4 py-3">
+      <nav className="w-full border-b border-cyan-200/30 bg-[#0d6f9f] px-4 py-3">
         <div className="flex items-center gap-2">
-          <div className="h-8 w-24 bg-gray-200 rounded animate-pulse" />
-          <div className="h-8 w-24 bg-gray-200 rounded animate-pulse" />
-          <div className="h-8 w-24 bg-gray-200 rounded animate-pulse" />
+          <div className="h-8 w-24 rounded bg-white/20 animate-pulse" />
+          <div className="h-8 w-24 rounded bg-white/20 animate-pulse" />
+          <div className="h-8 w-24 rounded bg-white/20 animate-pulse" />
         </div>
    </nav>
   );
 }
     
 return (
- <nav className="relative z-40 w-full border-b border-gray-200 bg-white shadow-sm">
+ <nav className="relative z-40 w-full border-b border-cyan-200/30 bg-[#0d6f9f] shadow-sm">
     {/* MOBILE */}
     <div className="flex items-center justify-between px-3 py-2 lg:hidden">
       <button
         type="button"
         onClick={() => setMobileMenuOpen(true)}
-        className="flex h-11 items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-800"
+        className="flex h-11 items-center gap-2 rounded-lg border border-white/30 bg-white/10 px-4 text-sm font-semibold text-white"
       >
         <Menu className="h-5 w-5" />
         Menu
