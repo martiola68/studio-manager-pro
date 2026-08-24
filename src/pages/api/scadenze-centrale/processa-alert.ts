@@ -953,7 +953,7 @@ await sendRichiestaDocumentoRappresentante({
 const urlApplicazione =
   process.env.NEXT_PUBLIC_APP_URL ||
   process.env.NEXT_PUBLIC_SITE_URL ||
-  "https://studio-manager-pro.vercel.app";
+  "https://app.studiomanagerpro.it";
 
 const link =
   riga.link_dettaglio
