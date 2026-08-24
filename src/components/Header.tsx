@@ -256,10 +256,10 @@ return (
                 href="https://studiomanagerpro.it"
                 target="_blank"
                 rel="noopener noreferrer"
-                title="Torna al sito web"
+                title="Vai al sito web"
               >
                 <ExternalLink className="h-4 w-4" />
-                <span className="hidden xl:inline">Torna al sito web</span>
+                <span className="hidden xl:inline">Vai al sito web</span>
               </a>
             </Button>
 
