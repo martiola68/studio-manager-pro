@@ -22,6 +22,12 @@ import {
   CheckCircle,
   Clock,
   TrendingUp,
+  AddressBook,
+  ArrowRight,
+  BellRing,
+  BriefcaseBusiness,
+  Building2,
+  UserRoundPlus,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -264,6 +270,14 @@ const router = useRouter();
     );
   }
 
+  const prossimeScadenze = [...scadenzeAlert]
+    .sort(
+      (a, b) =>
+        new Date(a.data_scadenza).getTime() -
+        new Date(b.data_scadenza).getTime()
+    )
+    .slice(0, 5);
+
   return (
     <div className="-mx-4 min-h-full bg-[#f3f5f7] px-4 py-8 md:-mx-6 md:px-8">
       <div className="mb-8">
@@ -359,95 +373,188 @@ const router = useRouter();
         </Card>
       </div>
 
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-  <Card className="border border-[#8cddff] bg-white shadow-[0_12px_30px_rgba(14,78,112,0.12)]">
-    <CardHeader>
-      <CardTitle>Stato Scadenze</CardTitle>
-      <CardDescription>Scadenze confermate per tipologia</CardDescription>
-    </CardHeader>
-    <CardContent>
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <CheckCircle className="h-5 w-5 text-green-600" />
-            <span className="text-sm font-medium">CCGG</span>
-          </div>
-          <span className="text-sm font-bold">{stats.scadenzeCCGGConfermate}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <CheckCircle className="h-5 w-5 text-green-600" />
-            <span className="text-sm font-medium">CU</span>
-          </div>
-          <span className="text-sm font-bold">{stats.scadenzeCUConfermate}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <CheckCircle className="h-5 w-5 text-green-600" />
-            <span className="text-sm font-medium">Bilanci</span>
-          </div>
-          <span className="text-sm font-medium">{stats.scadenzeBilanciConfermate}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <CheckCircle className="h-5 w-5 text-green-600" />
-            <span className="text-sm font-medium">770</span>
-          </div>
-          <span className="text-sm font-bold">{stats.scadenze770Confermate}</span>
-        </div>
-      </div>
-      <Link href="/scadenze/iva">
-        <Button variant="outline" className="mt-6 w-full border-[#8cddff] text-[#0b4f7d] hover:bg-[#e8f7ff]">
-          Visualizza tutte le scadenze
-        </Button>
-      </Link>
-    </CardContent>
-  </Card>
-
-  <Card className="border border-[#8cddff] bg-white shadow-[0_12px_30px_rgba(14,78,112,0.12)]">
-    <CardHeader>
-      <CardTitle>Prossimi Appuntamenti</CardTitle>
-      <CardDescription>Agenda dei prossimi 7 giorni</CardDescription>
-    </CardHeader>
-    <CardContent>
-      {prossimiAppuntamenti.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">
-          <Clock className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-          <p>Nessun appuntamento programmato</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {prossimiAppuntamenti.map((app) => (
-            <div key={app.id} className="flex items-start gap-3 rounded-lg border border-[#bfeeff] bg-[#eef9ff] p-3">
-              <div
-                className={`w-2 h-2 rounded-full mt-2 ${
-                  app.in_sede ? "bg-green-500" : "bg-red-500"
-                }`}
-              />
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm text-gray-900 truncate">{app.titolo}</p>
-                <p className="text-xs text-gray-500">{formatDateTime(app.data_inizio)}</p>
-                {app.sala && (
-                  <p className="text-xs text-gray-400 mt-1">Sala: {app.sala}</p>
-                )}
-              </div>
+    <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-12">
+      <Card className="border border-[#8cddff] bg-white shadow-[0_12px_30px_rgba(14,78,112,0.12)] xl:col-span-5">
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <BellRing className="h-5 w-5 text-[#0d6f9f]" />
+                Prossime scadenze operative
+              </CardTitle>
+              <CardDescription>Le attività che richiedono attenzione per prime</CardDescription>
             </div>
-          ))}
-        </div>
-      )}
-      <Link href="/agenda">
-        <Button variant="outline" className="mt-4 w-full border-[#8cddff] text-[#0b4f7d] hover:bg-[#e8f7ff]">
-          Apri agenda completa
-        </Button>
-      </Link>
-    </CardContent>
-  </Card>
+            <Link href="/scadenze">
+              <Button variant="ghost" size="sm" className="text-[#0b4f7d]">
+                Vedi tutte <ArrowRight className="ml-1 h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {prossimeScadenze.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-[#8cddff] bg-[#eef9ff] px-4 py-8 text-center">
+              <CheckCircle className="mx-auto mb-2 h-9 w-9 text-emerald-500" />
+              <p className="font-medium text-[#071b36]">Nessuna scadenza urgente</p>
+              <p className="mt-1 text-sm text-gray-500">Il quadro operativo è sotto controllo.</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-[#d8edf7]">
+              {prossimeScadenze.map((scadenza) => (
+                <div key={scadenza.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+                  <div
+                    className={`h-2.5 w-2.5 shrink-0 rounded-full ${
+                      scadenza.urgenza === "critica"
+                        ? "bg-red-500"
+                        : scadenza.urgenza === "urgente"
+                        ? "bg-amber-500"
+                        : "bg-sky-500"
+                    }`}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-[#071b36]">
+                      {scadenza.descrizione}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {scadenza.tipo}
+                      {scadenza.cliente_nome ? ` · ${scadenza.cliente_nome}` : ""}
+                    </p>
+                  </div>
+                  <div className="shrink-0 rounded-lg bg-[#e8f7ff] px-2.5 py-1 text-xs font-semibold text-[#0b4f7d]">
+                    {new Date(scadenza.data_scadenza).toLocaleDateString("it-IT", {
+                      day: "2-digit",
+                      month: "2-digit",
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-  <PromemoriaImminentiCard
-  userId={currentUserId}
-  onOpenPromemoriaPage={() => router.push("/promemoria")}
-/>
-</div>
+      <Card className="border border-[#8cddff] bg-white shadow-[0_12px_30px_rgba(14,78,112,0.12)] xl:col-span-3">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-[#0d6f9f]" />
+            Prossimi appuntamenti
+          </CardTitle>
+          <CardDescription>Agenda dei prossimi 7 giorni</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {prossimiAppuntamenti.length === 0 ? (
+            <div className="rounded-xl bg-[#eef9ff] px-4 py-6 text-center">
+              <Clock className="mx-auto mb-2 h-9 w-9 text-[#8db8cc]" />
+              <p className="text-sm text-gray-600">Nessun appuntamento programmato</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {prossimiAppuntamenti.slice(0, 4).map((app) => (
+                <div key={app.id} className="rounded-xl border border-[#bfeeff] bg-[#eef9ff] p-3">
+                  <p className="truncate text-sm font-semibold text-[#071b36]">{app.titolo}</p>
+                  <p className="mt-1 text-xs text-gray-500">{formatDateTime(app.data_inizio)}</p>
+                </div>
+              ))}
+            </div>
+          )}
+          <Link href="/agenda">
+            <Button variant="outline" className="mt-4 w-full border-[#8cddff] text-[#0b4f7d] hover:bg-[#e8f7ff]">
+              Apri agenda
+            </Button>
+          </Link>
+        </CardContent>
+      </Card>
+
+      <div className="xl:col-span-4">
+        <PromemoriaImminentiCard
+          userId={currentUserId}
+          onOpenPromemoriaPage={() => router.push("/promemoria")}
+        />
+      </div>
+    </div>
+
+    <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+      <Card className="border border-[#8cddff] bg-white shadow-[0_12px_30px_rgba(14,78,112,0.12)]">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2">
+            <AddressBook className="h-5 w-5 text-[#0d6f9f]" />
+            Rubrica dello studio
+          </CardTitle>
+          <CardDescription>Anagrafiche e relazioni sempre a portata di mano</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 gap-3">
+          {[
+            { label: "Clienti", href: "/clienti", icon: Users },
+            { label: "Nuovo cliente", href: "/clienti/nuovo", icon: UserRoundPlus },
+            { label: "Organi sociali", href: "/clienti/organi-sociali", icon: Building2 },
+            { label: "Gruppi societari", href: "/anagrafiche/gruppi-societari", icon: BriefcaseBusiness },
+          ].map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link key={item.label} href={item.href} className="group rounded-xl border border-[#c7eafb] bg-[#f5fbfe] p-4 transition hover:-translate-y-0.5 hover:border-[#38bdf8] hover:shadow-md">
+                <Icon className="mb-3 h-5 w-5 text-[#0d6f9f]" />
+                <span className="text-sm font-semibold text-[#071b36] group-hover:text-[#0d6f9f]">
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+        </CardContent>
+      </Card>
+
+      <Card className="border border-[#8cddff] bg-white shadow-[0_12px_30px_rgba(14,78,112,0.12)]">
+        <CardHeader className="pb-3">
+          <CardTitle>Scadenze per tipologia</CardTitle>
+          <CardDescription>Riepilogo delle confermate</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              ["CCGG", stats.scadenzeCCGGConfermate],
+              ["CU", stats.scadenzeCUConfermate],
+              ["Bilanci", stats.scadenzeBilanciConfermate],
+              ["770", stats.scadenze770Confermate],
+            ].map(([label, value]) => (
+              <div key={String(label)} className="rounded-xl border border-[#c7eafb] bg-[#f5fbfe] p-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-[#3f7189]">{label}</p>
+                <p className="mt-1 text-2xl font-bold text-[#071b36]">{value}</p>
+              </div>
+            ))}
+          </div>
+          <Link href="/scadenze">
+            <Button variant="outline" className="mt-4 w-full border-[#8cddff] text-[#0b4f7d] hover:bg-[#e8f7ff]">
+              Apri lo scadenzario
+            </Button>
+          </Link>
+        </CardContent>
+      </Card>
+
+      <Card className="border border-[#8cddff] bg-white shadow-[0_12px_30px_rgba(14,78,112,0.12)]">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2">
+            <BriefcaseBusiness className="h-5 w-5 text-[#0d6f9f]" />
+            Centro operativo
+          </CardTitle>
+          <CardDescription>Entra subito nelle aree di lavoro più utilizzate</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {[
+            { label: "Agenda e attività", href: "/agenda", note: "Appuntamenti e pianificazione" },
+            { label: "Promemoria", href: "/promemoria", note: "Memo personali e condivisi" },
+            { label: "Pratiche professionali", href: "/pratiche", note: "Processi, documenti e avanzamento" },
+            { label: "Controllo di gestione", href: "/controllo-gestione", note: "Dati, analisi e controllo" },
+          ].map((item) => (
+            <Link key={item.label} href={item.href} className="flex items-center justify-between rounded-xl border border-transparent px-3 py-2.5 transition hover:border-[#bfeeff] hover:bg-[#eef9ff]">
+              <div>
+                <p className="text-sm font-semibold text-[#071b36]">{item.label}</p>
+                <p className="text-xs text-gray-500">{item.note}</p>
+              </div>
+              <ArrowRight className="h-4 w-4 text-[#0d6f9f]" />
+            </Link>
+          ))}
+        </CardContent>
+      </Card>
+    </div>
 
     </div>
   );
