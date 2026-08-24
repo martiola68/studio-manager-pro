@@ -166,6 +166,12 @@ export default function LoginPage() {
           </div>
 
           <InstallAppButton />
+
+          <Button variant="ghost" className="mt-2 w-full text-gray-600" asChild>
+            <a href="https://studiomanagerpro.it">
+              Torna al sito web
+            </a>
+          </Button>
         </CardContent>
       </Card>
     </div>
