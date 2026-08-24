@@ -265,10 +265,10 @@ const router = useRouter();
   }
 
   return (
-    <div className="-mx-4 min-h-full bg-gradient-to-br from-[#06162d] via-[#0b2851] to-[#0879c8] px-4 py-8 md:-mx-6 md:px-8">
+    <div className="-mx-4 min-h-full bg-[linear-gradient(135deg,#06162d_0%,#0b3f69_52%,#0d6f9f_100%)] px-4 py-8 md:-mx-6 md:px-8">
       <div className="mb-8">
         <h1 className="text-4xl font-bold tracking-tight text-white">Dashboard</h1>
-        <p className="mt-1 text-cyan-100">Panoramica generale dello studio</p>
+        <p className="mt-1 text-[#bfeeff]">Panoramica generale dello studio</p>
       </div>
 
       {scadenzeAlert.length > 0 && (
@@ -296,29 +296,29 @@ const router = useRouter();
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <Card className="border border-cyan-200 border-l-4 border-l-[#0879c8] bg-white shadow-xl">
+        <Card className="border border-[#8cddff] border-l-4 border-l-[#0d6f9f] bg-white shadow-[0_16px_40px_rgba(3,25,51,0.22)]">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
               Clienti Attivi
             </CardTitle>
-            <Users className="h-5 w-5 text-blue-600" />
+            <Users className="h-5 w-5 text-[#0d6f9f]" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-gray-900">{stats.clientiAttivi}</div>
             <Link href="/clienti">
-              <Button variant="link" className="p-0 h-auto text-sm text-blue-600 mt-2">
+              <Button variant="link" className="p-0 h-auto text-sm text-[#0d6f9f] hover:text-[#063f66] mt-2">
                 Gestisci clienti →
               </Button>
             </Link>
           </CardContent>
         </Card>
 
-        <Card className="border border-cyan-200 border-l-4 border-l-[#00a6de] bg-white shadow-xl">
+        <Card className="border border-[#8cddff] border-l-4 border-l-[#38bdf8] bg-white shadow-[0_16px_40px_rgba(3,25,51,0.22)]">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
               Appuntamenti Prossimi
             </CardTitle>
-            <Calendar className="h-5 w-5 text-green-600" />
+            <Calendar className="h-5 w-5 text-[#0d6f9f]" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-gray-900">
@@ -328,12 +328,12 @@ const router = useRouter();
           </CardContent>
         </Card>
 
-        <Card className="border border-cyan-200 border-l-4 border-l-[#0e4da5] bg-white shadow-xl">
+        <Card className="border border-[#8cddff] border-l-4 border-l-[#0b4f7d] bg-white shadow-[0_16px_40px_rgba(3,25,51,0.22)]">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
               Scadenze IVA
             </CardTitle>
-            <FileText className="h-5 w-5 text-purple-600" />
+            <FileText className="h-5 w-5 text-[#0d6f9f]" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-gray-900">
@@ -343,12 +343,12 @@ const router = useRouter();
           </CardContent>
         </Card>
 
-        <Card className="border border-cyan-200 border-l-4 border-l-[#62cfff] bg-white shadow-xl">
+        <Card className="border border-[#8cddff] border-l-4 border-l-[#62cfff] bg-white shadow-[0_16px_40px_rgba(3,25,51,0.22)]">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
               Scadenze Fiscali
             </CardTitle>
-            <TrendingUp className="h-5 w-5 text-orange-600" />
+            <TrendingUp className="h-5 w-5 text-[#0d6f9f]" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-gray-900">
@@ -360,7 +360,7 @@ const router = useRouter();
       </div>
 
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-  <Card className="border border-cyan-200 bg-white shadow-xl">
+  <Card className="border border-[#8cddff] bg-white shadow-[0_16px_40px_rgba(3,25,51,0.22)]">
     <CardHeader>
       <CardTitle>Stato Scadenze</CardTitle>
       <CardDescription>Scadenze confermate per tipologia</CardDescription>
@@ -397,14 +397,14 @@ const router = useRouter();
         </div>
       </div>
       <Link href="/scadenze/iva">
-        <Button variant="outline" className="mt-6 w-full border-blue-200 text-[#0e4da5] hover:bg-blue-50">
+        <Button variant="outline" className="mt-6 w-full border-[#8cddff] text-[#0b4f7d] hover:bg-[#e8f7ff]">
           Visualizza tutte le scadenze
         </Button>
       </Link>
     </CardContent>
   </Card>
 
-  <Card className="border border-cyan-200 bg-white shadow-xl">
+  <Card className="border border-[#8cddff] bg-white shadow-[0_16px_40px_rgba(3,25,51,0.22)]">
     <CardHeader>
       <CardTitle>Prossimi Appuntamenti</CardTitle>
       <CardDescription>Agenda dei prossimi 7 giorni</CardDescription>
@@ -418,7 +418,7 @@ const router = useRouter();
       ) : (
         <div className="space-y-3">
           {prossimiAppuntamenti.map((app) => (
-            <div key={app.id} className="flex items-start gap-3 rounded-lg border border-blue-100 bg-blue-50/80 p-3">
+            <div key={app.id} className="flex items-start gap-3 rounded-lg border border-[#bfeeff] bg-[#eef9ff] p-3">
               <div
                 className={`w-2 h-2 rounded-full mt-2 ${
                   app.in_sede ? "bg-green-500" : "bg-red-500"
@@ -436,7 +436,7 @@ const router = useRouter();
         </div>
       )}
       <Link href="/agenda">
-        <Button variant="outline" className="mt-4 w-full border-blue-200 text-[#0e4da5] hover:bg-blue-50">
+        <Button variant="outline" className="mt-4 w-full border-[#8cddff] text-[#0b4f7d] hover:bg-[#e8f7ff]">
           Apri agenda completa
         </Button>
       </Link>
