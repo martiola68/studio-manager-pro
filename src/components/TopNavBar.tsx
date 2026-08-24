@@ -1075,10 +1075,15 @@ return (
               const voceActive =
                 isActive(voce);
 
+               const voceRiservata =
+      voce.adminOnly &&
+      currentUser?.tipo_utente !== "Admin";
+
+
               return (
                 <Link
                   key={voce.label}
-                  href={voce.href || "#"}
+                  href={voceRiservata ? "#" : voce.href || "#"}
                   target={
                     voce.href
                       ?.toLowerCase()
@@ -1093,11 +1098,14 @@ return (
                       ? "noopener noreferrer"
                       : undefined
                   }
-                  onClick={() =>
-                    setDesktopMenuOpen(
-                      null
-                    )
-                  }
+                 onClick={(event) => {
+  if (voceRiservata) {
+    event.preventDefault();
+    return;
+  }
+
+  setDesktopMenuOpen(null);
+}}
                   className={cn(
                     `
                     flex
@@ -1118,9 +1126,13 @@ return (
                     leading-tight
                     transition-colors
                     `,
-                    voceActive
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+                    desktopMenuAttivo.label === "Archivi di base" &&
+                    "min-w-0 max-w-none",
+                    voceRiservata
+  ? "cursor-not-allowed bg-gray-50 text-gray-400 opacity-70 hover:bg-gray-50 hover:text-gray-400"
+  : voceActive
+    ? "bg-blue-50 text-blue-700"
+    : "text-gray-700 hover:bg-blue-50 hover:text-blue-700"
                   )}
                 >
                   <span
@@ -1136,9 +1148,15 @@ return (
                     {voce.icon}
                   </span>
 
-                  <span>
-                    {voce.label}
-                  </span>
+                 <span>
+  {voce.label}
+</span>
+
+{voceRiservata && (
+  <span className="text-[9px] font-normal text-gray-400">
+    Solo amministratore
+  </span>
+)}
                 </Link>
               );
             }
