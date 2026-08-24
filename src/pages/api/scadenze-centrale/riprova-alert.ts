@@ -230,10 +230,10 @@ export default async function handler(
       throw updateError;
     }
 
-    const baseUrl =
-      process.env.NEXT_PUBLIC_APP_URL ||
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      "https://studio-manager-pro.vercel.app";
+   const baseUrl =
+  process.env.NEXT_PUBLIC_APP_URL ||
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  "https://app.studiomanagerpro.it";
 
     const url =
       `${baseUrl}` +

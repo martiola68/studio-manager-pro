@@ -78,7 +78,7 @@ if (updatePasswordError) {
   });
 }
 
-    const linkAccesso = "https://studio-manager-public.vercel.app/area-cliente/login";
+   const linkAccesso = "https://app.studiomanagerpro.it/area-cliente/login";
 
     const cliente: any = Array.isArray(accesso.tbclienti)
       ? accesso.tbclienti[0]

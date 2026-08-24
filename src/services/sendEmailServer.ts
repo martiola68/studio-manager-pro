@@ -12,9 +12,9 @@ export async function sendEmailServer(params: {
 }): Promise<{ success: boolean; error?: string }> {
   try {
     const baseUrl =
-      process.env.NEXT_PUBLIC_APP_URL ||
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      "https://studio-manager-pro.vercel.app";
+  process.env.NEXT_PUBLIC_APP_URL ||
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  "https://app.studiomanagerpro.it";
 
     const message: any = {
       subject: params.subject,

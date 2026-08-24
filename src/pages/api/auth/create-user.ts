@@ -310,9 +310,9 @@ export default async function handler(
       });
     }
 
-    const appBaseUrl =
-      process.env.NEXT_PUBLIC_APP_URL ||
-      "https://studio-manager-pro.vercel.app";
+  const appBaseUrl =
+  process.env.NEXT_PUBLIC_APP_URL ||
+  "https://app.studiomanagerpro.it";
 
     const loginUrl = `${appBaseUrl.replace(/\/$/, "")}/login`;
 
