@@ -89,7 +89,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     }
 
     // 3) Prepara contenuti email
-    const loginUrl = "https://studio-manager-pro.vercel.app/login";
+    const loginUrl = "https://app.studiomanagerpro.it/login";
     const displayName = (nome && String(nome).trim()) || "Utente";
 
     const html = getPasswordResetEmailTemplate(displayName, email, tempPassword, loginUrl);
