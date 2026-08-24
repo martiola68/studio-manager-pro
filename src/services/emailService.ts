@@ -394,7 +394,7 @@ export async function sendWelcomeEmail(
   microsoftConnectionId?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const loginUrl = "https://studio-manager-pro.vercel.app/login";
+   const loginUrl = "https://app.studiomanagerpro.it/login";
 
     const htmlContent = getWelcomeEmailTemplate(nome, email, password, loginUrl);
 
@@ -446,7 +446,7 @@ export async function sendPasswordResetEmail(
   microsoftConnectionId?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const loginUrl = "https://studio-manager-pro.vercel.app/login";
+    const loginUrl = "https://app.studiomanagerpro.it/login";
 
     const htmlContent = getPasswordResetEmailTemplate(
       nome,
