@@ -163,7 +163,7 @@ export default function PromemoriaImminentiCard({ userId, onOpenPromemoriaPage }
         ) : grouped.length === 0 ? (
           <p className="text-sm text-gray-500">Nessun promemoria imminente.</p>
         ) : (
-          <div className="space-y-3">
+          <div className="max-h-[360px] space-y-3 overflow-y-auto pr-2">
             {grouped.slice(0, 8).map((item) => (
               <div
                 key={item.id}
