@@ -177,7 +177,7 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
   };
 
 return (
-  <header className="relative bg-white border-b border-gray-200 shadow-sm">
+  <header className="relative border-b border-cyan-200/30 bg-[linear-gradient(110deg,#0b4f7d_0%,#0d6f9f_58%,#1688b7_100%)] shadow-sm">
     <div className="px-4 md:px-6 py-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
@@ -197,10 +197,10 @@ return (
           />
 
           <div className="min-w-0 hidden sm:block">
-            <h1 className="text-lg font-bold text-gray-900 leading-tight">
+            <h1 className="text-lg font-bold text-white leading-tight">
               {title || "Studio Manager Pro"}
             </h1>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-cyan-100/80">
               Sistema Gestionale Integrato
             </p>
           </div>
@@ -209,7 +209,7 @@ return (
    <div className="flex-1 flex flex-col items-center justify-center">
   {currentUser && (
     <>
-      <div className="text-xs md:text-sm text-gray-700 font-medium text-center">
+      <div className="text-xs md:text-sm text-white font-medium text-center">
         Utente: {currentUser.nome} {currentUser.cognome}
         {displayedStudioName ? ` - ${displayedStudioName}` : ""}
       </div>
@@ -222,7 +222,7 @@ return (
         className={
           nuovaVersioneDisponibile
             ? "mt-2 bg-red-600 hover:bg-red-700 animate-pulse text-white"
-            : "mt-2 bg-gray-100 text-gray-400 border border-gray-200 cursor-default hover:bg-gray-100"
+            : "mt-2 border border-white/20 bg-white/10 text-cyan-100/60 cursor-default hover:bg-white/10"
         }
       >
         {nuovaVersioneDisponibile
@@ -236,7 +236,7 @@ return (
         {currentUser && (
           <div className="flex items-center gap-3 shrink-0">
             <div className="text-right">
-              <p className="text-sm font-semibold text-gray-900 leading-tight">
+              <p className="text-sm font-semibold text-white leading-tight">
                 {currentUser.nome} {currentUser.cognome}
               </p>
 
@@ -247,11 +247,11 @@ return (
               </p>
             </div>
 
-            <div className="h-9 w-9 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
-              <User className="h-5 w-5 text-blue-600" />
+            <div className="h-9 w-9 rounded-full bg-white/15 ring-1 ring-white/25 flex items-center justify-center shrink-0">
+              <User className="h-5 w-5 text-white" />
             </div>
 
-            <Button variant="outline" size="sm" asChild className="shrink-0">
+            <Button variant="outline" size="sm" asChild className="shrink-0 border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white">
               <a
                 href="https://studiomanagerpro.it"
                 target="_blank"
@@ -267,7 +267,7 @@ return (
               variant="ghost"
               size="icon"
               onClick={handleLogout}
-              className="text-gray-600 hover:text-red-600 shrink-0"
+              className="text-white/80 hover:bg-white/15 hover:text-white shrink-0"
               aria-label="Logout"
               title="Logout"
             >
@@ -278,7 +278,7 @@ return (
       </div>
     </div>
 
- <div className="flex h-[20px] items-center justify-center border-t border-gray-100 px-4 text-center text-[10px] leading-none text-gray-500 md:px-6 md:text-xs">
+ <div className="flex h-[20px] items-center justify-center border-t border-white/15 px-4 text-center text-[10px] leading-none text-cyan-50/80 md:px-6 md:text-xs">
   © {new Date().getFullYear()} Studio Manager Pro. Creato da Artiola
   Mario. Tutti i diritti riservati. Opera tutelata ai sensi della Legge
   22 aprile 1941, n. 633, e successive modificazioni.
