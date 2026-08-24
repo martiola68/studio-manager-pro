@@ -177,7 +177,7 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
   };
 
 return (
-  <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+  <header className="relative bg-white border-b border-gray-200 shadow-sm">
     <div className="px-4 md:px-6 py-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
@@ -278,7 +278,7 @@ return (
       </div>
     </div>
 
- <div className="flex h-[21px] items-center justify-center border-t border-gray-100 px-4 text-center text-[10px] leading-none text-gray-500 md:px-6 md:text-xs">
+ <div className="flex h-[20px] items-center justify-center border-t border-gray-100 px-4 text-center text-[10px] leading-none text-gray-500 md:px-6 md:text-xs">
   © {new Date().getFullYear()} Studio Manager Pro. Creato da Artiola
   Mario. Tutti i diritti riservati. Opera tutelata ai sensi della Legge
   22 aprile 1941, n. 633, e successive modificazioni.
