@@ -265,10 +265,10 @@ const router = useRouter();
   }
 
   return (
-    <div className="-mx-4 min-h-full bg-[linear-gradient(135deg,#06162d_0%,#0b3f69_52%,#0d6f9f_100%)] px-4 py-8 md:-mx-6 md:px-8">
+    <div className="-mx-4 min-h-full bg-[linear-gradient(135deg,#e8f2f7_0%,#d9ebf3_52%,#c9e2ed_100%)] px-4 py-8 md:-mx-6 md:px-8">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold tracking-tight text-white">Dashboard</h1>
-        <p className="mt-1 text-[#bfeeff]">Panoramica generale dello studio</p>
+        <h1 className="text-4xl font-bold tracking-tight text-[#071b36]">Dashboard</h1>
+        <p className="mt-1 text-[#315f78]">Panoramica generale dello studio</p>
       </div>
 
       {scadenzeAlert.length > 0 && (
@@ -296,7 +296,7 @@ const router = useRouter();
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <Card className="border border-[#8cddff] border-l-4 border-l-[#0d6f9f] bg-white shadow-[0_16px_40px_rgba(3,25,51,0.22)]">
+        <Card className="border border-[#8cddff] border-l-4 border-l-[#0d6f9f] bg-white shadow-[0_12px_30px_rgba(14,78,112,0.12)]">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
               Clienti Attivi
@@ -313,7 +313,7 @@ const router = useRouter();
           </CardContent>
         </Card>
 
-        <Card className="border border-[#8cddff] border-l-4 border-l-[#38bdf8] bg-white shadow-[0_16px_40px_rgba(3,25,51,0.22)]">
+        <Card className="border border-[#8cddff] border-l-4 border-l-[#38bdf8] bg-white shadow-[0_12px_30px_rgba(14,78,112,0.12)]">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
               Appuntamenti Prossimi
@@ -328,7 +328,7 @@ const router = useRouter();
           </CardContent>
         </Card>
 
-        <Card className="border border-[#8cddff] border-l-4 border-l-[#0b4f7d] bg-white shadow-[0_16px_40px_rgba(3,25,51,0.22)]">
+        <Card className="border border-[#8cddff] border-l-4 border-l-[#0b4f7d] bg-white shadow-[0_12px_30px_rgba(14,78,112,0.12)]">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
               Scadenze IVA
@@ -343,7 +343,7 @@ const router = useRouter();
           </CardContent>
         </Card>
 
-        <Card className="border border-[#8cddff] border-l-4 border-l-[#62cfff] bg-white shadow-[0_16px_40px_rgba(3,25,51,0.22)]">
+        <Card className="border border-[#8cddff] border-l-4 border-l-[#62cfff] bg-white shadow-[0_12px_30px_rgba(14,78,112,0.12)]">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
               Scadenze Fiscali
@@ -360,7 +360,7 @@ const router = useRouter();
       </div>
 
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-  <Card className="border border-[#8cddff] bg-white shadow-[0_16px_40px_rgba(3,25,51,0.22)]">
+  <Card className="border border-[#8cddff] bg-white shadow-[0_12px_30px_rgba(14,78,112,0.12)]">
     <CardHeader>
       <CardTitle>Stato Scadenze</CardTitle>
       <CardDescription>Scadenze confermate per tipologia</CardDescription>
@@ -404,7 +404,7 @@ const router = useRouter();
     </CardContent>
   </Card>
 
-  <Card className="border border-[#8cddff] bg-white shadow-[0_16px_40px_rgba(3,25,51,0.22)]">
+  <Card className="border border-[#8cddff] bg-white shadow-[0_12px_30px_rgba(14,78,112,0.12)]">
     <CardHeader>
       <CardTitle>Prossimi Appuntamenti</CardTitle>
       <CardDescription>Agenda dei prossimi 7 giorni</CardDescription>
