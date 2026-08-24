@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { studioService } from "@/services/studioService";
-import { User, LogOut, Menu } from "lucide-react";
+import { User, LogOut, Menu, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { hardLogout } from "@/services/logoutService";
 import type { Database } from "@/lib/supabase/types";
@@ -250,6 +250,18 @@ return (
             <div className="h-9 w-9 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
               <User className="h-5 w-5 text-blue-600" />
             </div>
+
+            <Button variant="outline" size="sm" asChild className="shrink-0">
+              <a
+                href="https://studiomanagerpro.it"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Torna al sito web"
+              >
+                <ExternalLink className="h-4 w-4" />
+                <span className="hidden xl:inline">Torna al sito web</span>
+              </a>
+            </Button>
 
             <Button
               variant="ghost"
