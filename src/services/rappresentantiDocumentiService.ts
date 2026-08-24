@@ -56,9 +56,9 @@ let userId: string | null = null;
 
   const nowIso = new Date().toISOString();
 
-  const publicAppUrl =
-    process.env.NEXT_PUBLIC_PUBLIC_APP_URL ||
-    "https://studio-manager-public.vercel.app";
+const publicAppUrl =
+  process.env.NEXT_PUBLIC_PUBLIC_APP_URL ||
+  "https://app.studiomanagerpro.it";
 
   const url = `${publicAppUrl}/documento/${token}`;
 
