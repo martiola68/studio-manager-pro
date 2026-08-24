@@ -1,103 +1,52 @@
 {
+  "id": "/",
   "name": "Studio Manager Pro",
   "short_name": "SMP",
-  "description": "Gestionale amministrativo professionale - El.Ma. Software",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#1F2937",
-  "theme_color": "#4F46E5",
-  "orientation": "portrait-primary",
+  "description": "Sistema gestionale integrato per studi professionali",
+  "start_url": "/login?source=pwa",
   "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "background_color": "#eff6ff",
+  "theme_color": "#0b1f3a",
+  "orientation": "any",
+  "lang": "it-IT",
+  "dir": "ltr",
+  "categories": ["business", "productivity", "finance"],
   "icons": [
     {
-      "src": "/favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon",
-      "purpose": "any"
-    },
-    {
-      "src": "/favicon.ico",
+      "src": "/LogoSMP_.png",
       "sizes": "192x192",
-      "type": "image/x-icon",
-      "purpose": "maskable"
-    },
-    {
-      "src": "/favicon.ico",
-      "sizes": "512x512",
-      "type": "image/x-icon",
+      "type": "image/png",
       "purpose": "any"
-    }
-  ],
-  "categories": [
-    "business",
-    "productivity",
-    "finance"
-  ],
-  "dir": "ltr",
-  "lang": "it-IT",
-  "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
-  "screenshots": [
-    {
-      "src": "/favicon.ico",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide"
     },
     {
-      "src": "/favicon.ico",
-      "sizes": "750x1334",
+      "src": "/LogoSMP_.png",
+      "sizes": "512x512",
       "type": "image/png",
-      "form_factor": "narrow"
+      "purpose": "any maskable"
     }
   ],
   "shortcuts": [
     {
       "name": "Dashboard",
       "short_name": "Dashboard",
-      "description": "Vai alla dashboard principale",
       "url": "/dashboard",
-      "icons": [
-        {
-          "src": "/favicon.ico",
-          "sizes": "96x96"
-        }
-      ]
+      "icons": [{ "src": "/LogoSMP_.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
-      "name": "Clienti",
-      "short_name": "Clienti",
-      "description": "Gestisci i clienti",
-      "url": "/clienti",
-      "icons": [
-        {
-          "src": "/favicon.ico",
-          "sizes": "96x96"
-        }
-      ]
+      "name": "Agenda",
+      "short_name": "Agenda",
+      "url": "/agenda",
+      "icons": [{ "src": "/LogoSMP_.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "Scadenze",
       "short_name": "Scadenze",
-      "description": "Visualizza le scadenze",
-      "url": "/scadenze/calendario",
-      "icons": [
-        {
-          "src": "/favicon.ico",
-          "sizes": "96x96"
-        }
-      ]
+      "url": "/scadenze",
+      "icons": [{ "src": "/LogoSMP_.png", "sizes": "192x192", "type": "image/png" }]
     }
   ],
   "related_applications": [],
-  "prefer_related_applications": false,
-  "share_target": {
-    "action": "/share",
-    "method": "POST",
-    "enctype": "multipart/form-data",
-    "params": {
-      "title": "title",
-      "text": "text",
-      "url": "url"
-    }
-  }
+  "prefer_related_applications": false
 }
