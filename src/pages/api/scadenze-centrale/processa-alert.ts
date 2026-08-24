@@ -22,8 +22,14 @@ type ScadenzaRow = {
   operatore_responsabile_id: string | null;
 
 origine_modulo: string;
+origine_tabella: string;
 origine_record_id: string;
 tipo_scadenza: string;
+
+metadati: {
+  ha_scadenzario?: boolean | null;
+  ricorrente?: boolean | null;
+} | null;
 titolo: string;
   descrizione: string | null;
 
@@ -112,6 +118,17 @@ function formattaDataItaliana(
   return `${giorno}/${mese}/${anno}`;
 }
 
+function isMemoCalendarioSenzaScadenzario(
+  scadenza: ScadenzaRow
+): boolean {
+  return (
+    scadenza.origine_tabella ===
+      "tbtipi_scadenze" &&
+    scadenza.metadati
+      ?.ha_scadenzario === false
+  );
+}
+
 function calcolaTipoAlert(
   scadenza: ScadenzaRow,
   oggi: string
@@ -126,6 +143,21 @@ function calcolaTipoAlert(
       scadenza.data_scadenza,
       oggi
     );
+
+  /*
+ * I memo di calendario privi di scadenzario
+ * terminano con l'alert del giorno zero.
+ * L'eventuale ricorrenza verrà riattivata
+ * dall'aggiornamento di tbtipi_scadenze.
+ */
+if (
+  isMemoCalendarioSenzaScadenzario(
+    scadenza
+  ) &&
+  giorniResidui <= 0
+) {
+  return null;
+}
 
   if (giorniResidui < 0) {
     return {
@@ -332,10 +364,12 @@ try {
     studio_id,
     cliente_id,
     operatore_responsabile_id,
-  origine_modulo,
+origine_modulo,
+origine_tabella,
 origine_record_id,
 tipo_scadenza,
 titolo,
+metadati,
     descrizione,
     data_scadenza,
     stato,
@@ -392,10 +426,53 @@ if (scadenzeError) {
       messaggio: string;
     }> = [];
 
-for (
-  const riga of
-    (scadenze || []) as ScadenzaRow[]
-) {
+  /*
+   * Un memo di calendario senza scadenzario
+   * non deve generare solleciti successivi
+   * al giorno della scadenza.
+   */
+  const giorniResiduiMemo =
+    differenzaGiorni(
+      riga.data_scadenza,
+      oggi
+    );
+
+  if (
+    isMemoCalendarioSenzaScadenzario(
+      riga
+    ) &&
+    giorniResiduiMemo < 0
+  ) {
+    const {
+      error: arrestoMemoError,
+    } = await supabaseAdmin
+      .from("tbscadenze_centrale")
+      .update({
+        prossimo_alert_at: null,
+        updated_at:
+          new Date().toISOString(),
+      })
+      .eq("id", riga.id)
+      .eq(
+        "studio_id",
+        riga.studio_id
+      );
+
+    if (arrestoMemoError) {
+      throw arrestoMemoError;
+    }
+
+    saltati += 1;
+
+    dettagli.push({
+      scadenza_id: riga.id,
+      ok: true,
+      messaggio:
+        "Memo di calendario terminato al giorno zero",
+    });
+
+    continue;
+  }
   /*
    * 1. Recuperiamo lo studio e la relativa
    * connessione Microsoft.
