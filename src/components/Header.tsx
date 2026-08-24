@@ -240,7 +240,7 @@ return (
                 {currentUser.nome} {currentUser.cognome}
               </p>
 
-              <p className="text-xs text-gray-500">
+              <p className="text-xs font-medium text-cyan-100">
                 {currentUser.tipo_utente === "Admin"
                   ? "Amministratore"
                   : "Utente"}
@@ -251,7 +251,7 @@ return (
               <User className="h-5 w-5 text-white" />
             </div>
 
-            <Button variant="outline" size="sm" asChild className="shrink-0 border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white">
+            <Button variant="outline" size="sm" asChild className="shrink-0 border-[#b9e4f7] bg-[#d9f1fb] text-[#075985] hover:border-[#a3dbf2] hover:bg-[#c7eafa] hover:text-[#064b72]">
               <a
                 href="https://studiomanagerpro.it"
                 target="_blank"
