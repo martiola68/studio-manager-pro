@@ -144,21 +144,6 @@ function calcolaTipoAlert(
       oggi
     );
 
-  /*
- * I memo di calendario privi di scadenzario
- * terminano con l'alert del giorno zero.
- * L'eventuale ricorrenza verrà riattivata
- * dall'aggiornamento di tbtipi_scadenze.
- */
-if (
-  isMemoCalendarioSenzaScadenzario(
-    scadenza
-  ) &&
-  giorniResidui <= 0
-) {
-  return null;
-}
-
   if (giorniResidui < 0) {
     return {
       tipoAlert: "scadenza_superata",
@@ -242,6 +227,21 @@ function calcolaProssimoAlert(
       scadenza.data_scadenza,
       oggi
     );
+
+  /*
+ * I memo di calendario privi di scadenzario
+ * terminano con l'alert del giorno zero.
+ * L'eventuale ricorrenza verrà riattivata
+ * dall'aggiornamento di tbtipi_scadenze.
+ */
+if (
+  isMemoCalendarioSenzaScadenzario(
+    scadenza
+  ) &&
+  giorniResidui <= 0
+) {
+  return null;
+}
 
   /*
    * Scadenza già superata:
@@ -425,6 +425,11 @@ if (scadenzeError) {
       ok: boolean;
       messaggio: string;
     }> = [];
+
+  for (
+  const riga of
+    (scadenze || []) as ScadenzaRow[]
+) {
 
   /*
    * Un memo di calendario senza scadenzario
