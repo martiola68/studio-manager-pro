@@ -612,8 +612,8 @@ const menuItems: MenuItem[] = [
       },
     ],
   },
- {
-  label: "Anagrafiche",
+{
+  label: "Archivi di base",
   icon: <Users className="h-4 w-4" />,
   children: [
     {
@@ -639,6 +639,88 @@ const menuItems: MenuItem[] = [
           label: "Rappresentanti legali",
           href: "/antiriciclaggio/rappresentanti",
           icon: <UserCircle className="h-4 w-4" />,
+        },
+      ],
+    },
+    {
+      label: "Connessioni",
+      icon: <Cloud className="h-4 w-4" />,
+      children: [
+        {
+          label: "Microsoft 365 - Connessioni",
+          href: "/microsoft365?tab=connessioni",
+          icon: <Link2 className="h-4 w-4" />,
+        },
+        {
+          label: "Microsoft 365 - Sync",
+          href: "/microsoft365?tab=sync",
+          icon: <RefreshCcw className="h-4 w-4" />,
+        },
+      ],
+    },
+    {
+      label: "Impostazioni",
+      icon: <Settings className="h-4 w-4" />,
+      children: [
+        {
+          label: "Utenti",
+          href: "/impostazioni/utenti",
+          icon: <Users className="h-4 w-4" />,
+          adminOnly: true,
+        },
+        {
+          label: "Dati Studio",
+          href: "/impostazioni/studio",
+          icon: <Building2 className="h-4 w-4" />,
+          adminOnly: true,
+        },
+        {
+          label: "Ruoli",
+          href: "/impostazioni/ruoli",
+          icon: <Settings className="h-4 w-4" />,
+          adminOnly: true,
+        },
+        {
+          label: "Prestazioni",
+          href: "/impostazioni/prestazioni",
+          icon: <Settings className="h-4 w-4" />,
+          adminOnly: true,
+        },
+        {
+          label: "Payroll Festività",
+          href: "/impostazioni/payroll-festivita",
+          icon: <Calendar className="h-4 w-4" />,
+          adminOnly: true,
+        },
+        {
+          label: "Payroll Codici Presenza",
+          href: "/impostazioni/payroll-codici-presenza",
+          icon: <Clock className="h-4 w-4" />,
+          adminOnly: true,
+        },
+        {
+          label: "Scadenzari",
+          href: "/impostazioni/scadenzari",
+          icon: <Settings className="h-4 w-4" />,
+          adminOnly: true,
+        },
+        {
+          label: "Template Email",
+          href: "/impostazioni/template-email",
+          icon: <Mail className="h-4 w-4" />,
+          adminOnly: true,
+        },
+        {
+          label: "Tipi Scadenze",
+          href: "/impostazioni/tipi-scadenze",
+          icon: <Settings className="h-4 w-4" />,
+          adminOnly: true,
+        },
+        {
+          label: "Tipo Promemoria",
+          href: "/impostazioni/tipo-promemoria",
+          icon: <Settings className="h-4 w-4" />,
+          adminOnly: true,
         },
       ],
     },
@@ -711,38 +793,6 @@ const menuItems: MenuItem[] = [
     },
   ],
 },
-
-{
-  label: "Configurazione",
-  icon: <Settings className="h-4 w-4" />,
-    children: [
-      {
-        label: "Connessioni",
-        icon: <Cloud className="h-4 w-4" />,
-        children: [
-          { label: "Microsoft 365 - Connessioni", href: "/microsoft365?tab=connessioni", icon: <Link2 className="h-4 w-4" /> },
-          { label: "Microsoft 365 - Sync", href: "/microsoft365?tab=sync", icon: <RefreshCcw className="h-4 w-4" /> },
-        ],
-      },
-      {
-        label: "Impostazioni",
-        icon: <Settings className="h-4 w-4" />,
-        adminOnly: true,
-        children: [
-          { label: "Utenti", href: "/impostazioni/utenti", icon: <Users className="h-4 w-4" /> },
-          { label: "Dati Studio", href: "/impostazioni/studio", icon: <Building2 className="h-4 w-4" /> },
-          { label: "Ruoli", href: "/impostazioni/ruoli", icon: <Settings className="h-4 w-4" /> },
-          { label: "Prestazioni", href: "/impostazioni/prestazioni", icon: <Settings className="h-4 w-4" /> },
-          { label: "Payroll Festività", href: "/impostazioni/payroll-festivita", icon: <Calendar className="h-4 w-4" /> },
-          { label: "Payroll Codici Presenza", href: "/impostazioni/payroll-codici-presenza", icon: <Clock className="h-4 w-4" /> },
-          { label: "Scadenzari", href: "/impostazioni/scadenzari", icon: <Settings className="h-4 w-4" /> },
-          { label: "Template Email", href: "/impostazioni/template-email", icon: <Mail className="h-4 w-4" /> },
-          { label: "Tipi Scadenze", href: "/impostazioni/tipi-scadenze", icon: <Settings className="h-4 w-4" /> },
-          { label: "Tipo Promemoria", href: "/impostazioni/tipo-promemoria", icon: <Settings className="h-4 w-4" /> },
-        ],
-      },
-       ],
-  },
 ];
 
 const isExactRoute = (href?: string) => {
@@ -913,14 +963,8 @@ const desktopMenuVoci =
       }
 
       return [child];
-    })
-    .filter(
-      (voce) =>
-        !voce.adminOnly ||
-        currentUser?.tipo_utente ===
-          "Admin"
-    ) || [];
-
+    }) || [];
+    
   if (loading) {
     return (
       <nav className="w-full bg-white border-b border-gray-200 px-4 py-3">
@@ -1018,28 +1062,28 @@ return (
           shadow-lg
         "
       >
-        <div
-          className="
-            flex
-            w-full
-            flex-row
-            flex-nowrap
-            items-stretch
-            justify-start
-            gap-0
-            px-4
-            py-2
-          "
-        >
+       <div
+  className={cn(
+    "w-full items-stretch justify-start gap-0 px-4 py-2",
+    desktopMenuAttivo.label === "Archivi di base"
+      ? "grid grid-cols-8"
+      : "flex flex-row flex-nowrap"
+  )}
+>
           {desktopMenuVoci.map(
             (voce) => {
               const voceActive =
                 isActive(voce);
 
+               const voceRiservata =
+      voce.adminOnly &&
+      currentUser?.tipo_utente !== "Admin";
+
+
               return (
                 <Link
                   key={voce.label}
-                  href={voce.href || "#"}
+                  href={voceRiservata ? "#" : voce.href || "#"}
                   target={
                     voce.href
                       ?.toLowerCase()
@@ -1054,11 +1098,14 @@ return (
                       ? "noopener noreferrer"
                       : undefined
                   }
-                  onClick={() =>
-                    setDesktopMenuOpen(
-                      null
-                    )
-                  }
+                 onClick={(event) => {
+  if (voceRiservata) {
+    event.preventDefault();
+    return;
+  }
+
+  setDesktopMenuOpen(null);
+}}
                   className={cn(
                     `
                     flex
@@ -1079,9 +1126,13 @@ return (
                     leading-tight
                     transition-colors
                     `,
-                    voceActive
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+                    desktopMenuAttivo.label === "Archivi di base" &&
+                    "min-w-0 max-w-none",
+                    voceRiservata
+  ? "cursor-not-allowed bg-gray-50 text-gray-400 opacity-70 hover:bg-gray-50 hover:text-gray-400"
+  : voceActive
+    ? "bg-blue-50 text-blue-700"
+    : "text-gray-700 hover:bg-blue-50 hover:text-blue-700"
                   )}
                 >
                   <span
@@ -1097,9 +1148,15 @@ return (
                     {voce.icon}
                   </span>
 
-                  <span>
-                    {voce.label}
-                  </span>
+                 <span>
+  {voce.label}
+</span>
+
+{voceRiservata && (
+  <span className="text-[9px] font-normal text-gray-400">
+    Solo amministratore
+  </span>
+)}
                 </Link>
               );
             }
