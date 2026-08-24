@@ -612,8 +612,8 @@ const menuItems: MenuItem[] = [
       },
     ],
   },
- {
-  label: "Anagrafiche",
+{
+  label: "Archivi di base",
   icon: <Users className="h-4 w-4" />,
   children: [
     {
@@ -639,6 +639,88 @@ const menuItems: MenuItem[] = [
           label: "Rappresentanti legali",
           href: "/antiriciclaggio/rappresentanti",
           icon: <UserCircle className="h-4 w-4" />,
+        },
+      ],
+    },
+    {
+      label: "Connessioni",
+      icon: <Cloud className="h-4 w-4" />,
+      children: [
+        {
+          label: "Microsoft 365 - Connessioni",
+          href: "/microsoft365?tab=connessioni",
+          icon: <Link2 className="h-4 w-4" />,
+        },
+        {
+          label: "Microsoft 365 - Sync",
+          href: "/microsoft365?tab=sync",
+          icon: <RefreshCcw className="h-4 w-4" />,
+        },
+      ],
+    },
+    {
+      label: "Impostazioni",
+      icon: <Settings className="h-4 w-4" />,
+      children: [
+        {
+          label: "Utenti",
+          href: "/impostazioni/utenti",
+          icon: <Users className="h-4 w-4" />,
+          adminOnly: true,
+        },
+        {
+          label: "Dati Studio",
+          href: "/impostazioni/studio",
+          icon: <Building2 className="h-4 w-4" />,
+          adminOnly: true,
+        },
+        {
+          label: "Ruoli",
+          href: "/impostazioni/ruoli",
+          icon: <Settings className="h-4 w-4" />,
+          adminOnly: true,
+        },
+        {
+          label: "Prestazioni",
+          href: "/impostazioni/prestazioni",
+          icon: <Settings className="h-4 w-4" />,
+          adminOnly: true,
+        },
+        {
+          label: "Payroll Festività",
+          href: "/impostazioni/payroll-festivita",
+          icon: <Calendar className="h-4 w-4" />,
+          adminOnly: true,
+        },
+        {
+          label: "Payroll Codici Presenza",
+          href: "/impostazioni/payroll-codici-presenza",
+          icon: <Clock className="h-4 w-4" />,
+          adminOnly: true,
+        },
+        {
+          label: "Scadenzari",
+          href: "/impostazioni/scadenzari",
+          icon: <Settings className="h-4 w-4" />,
+          adminOnly: true,
+        },
+        {
+          label: "Template Email",
+          href: "/impostazioni/template-email",
+          icon: <Mail className="h-4 w-4" />,
+          adminOnly: true,
+        },
+        {
+          label: "Tipi Scadenze",
+          href: "/impostazioni/tipi-scadenze",
+          icon: <Settings className="h-4 w-4" />,
+          adminOnly: true,
+        },
+        {
+          label: "Tipo Promemoria",
+          href: "/impostazioni/tipo-promemoria",
+          icon: <Settings className="h-4 w-4" />,
+          adminOnly: true,
         },
       ],
     },
@@ -711,38 +793,6 @@ const menuItems: MenuItem[] = [
     },
   ],
 },
-
-{
-  label: "Configurazione",
-  icon: <Settings className="h-4 w-4" />,
-    children: [
-      {
-        label: "Connessioni",
-        icon: <Cloud className="h-4 w-4" />,
-        children: [
-          { label: "Microsoft 365 - Connessioni", href: "/microsoft365?tab=connessioni", icon: <Link2 className="h-4 w-4" /> },
-          { label: "Microsoft 365 - Sync", href: "/microsoft365?tab=sync", icon: <RefreshCcw className="h-4 w-4" /> },
-        ],
-      },
-      {
-        label: "Impostazioni",
-        icon: <Settings className="h-4 w-4" />,
-        adminOnly: true,
-        children: [
-          { label: "Utenti", href: "/impostazioni/utenti", icon: <Users className="h-4 w-4" /> },
-          { label: "Dati Studio", href: "/impostazioni/studio", icon: <Building2 className="h-4 w-4" /> },
-          { label: "Ruoli", href: "/impostazioni/ruoli", icon: <Settings className="h-4 w-4" /> },
-          { label: "Prestazioni", href: "/impostazioni/prestazioni", icon: <Settings className="h-4 w-4" /> },
-          { label: "Payroll Festività", href: "/impostazioni/payroll-festivita", icon: <Calendar className="h-4 w-4" /> },
-          { label: "Payroll Codici Presenza", href: "/impostazioni/payroll-codici-presenza", icon: <Clock className="h-4 w-4" /> },
-          { label: "Scadenzari", href: "/impostazioni/scadenzari", icon: <Settings className="h-4 w-4" /> },
-          { label: "Template Email", href: "/impostazioni/template-email", icon: <Mail className="h-4 w-4" /> },
-          { label: "Tipi Scadenze", href: "/impostazioni/tipi-scadenze", icon: <Settings className="h-4 w-4" /> },
-          { label: "Tipo Promemoria", href: "/impostazioni/tipo-promemoria", icon: <Settings className="h-4 w-4" /> },
-        ],
-      },
-       ],
-  },
 ];
 
 const isExactRoute = (href?: string) => {
@@ -913,14 +963,8 @@ const desktopMenuVoci =
       }
 
       return [child];
-    })
-    .filter(
-      (voce) =>
-        !voce.adminOnly ||
-        currentUser?.tipo_utente ===
-          "Admin"
-    ) || [];
-
+    }) || [];
+    
   if (loading) {
     return (
       <nav className="w-full bg-white border-b border-gray-200 px-4 py-3">
