@@ -372,7 +372,90 @@ const router = useRouter();
         </Card>
       </div>
 
-    <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-12">
+    <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+      <Card className="border border-[#8cddff] bg-white shadow-[0_12px_30px_rgba(14,78,112,0.12)]">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5 text-[#0d6f9f]" />
+            Rubrica dello studio
+          </CardTitle>
+          <CardDescription>Anagrafiche e relazioni sempre a portata di mano</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 gap-3">
+          {[
+            { label: "Clienti", href: "/clienti", icon: Users },
+            { label: "Nuovo cliente", href: "/clienti/nuovo", icon: UserRoundPlus },
+            { label: "Organi sociali", href: "/clienti/organi-sociali", icon: Building2 },
+            { label: "Gruppi societari", href: "/anagrafiche/gruppi-societari", icon: BriefcaseBusiness },
+          ].map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link key={item.label} href={item.href} className="group rounded-xl border border-[#c7eafb] bg-[#f5fbfe] p-4 transition hover:-translate-y-0.5 hover:border-[#38bdf8] hover:shadow-md">
+                <Icon className="mb-3 h-5 w-5 text-[#0d6f9f]" />
+                <span className="text-sm font-semibold text-[#071b36] group-hover:text-[#0d6f9f]">
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+        </CardContent>
+      </Card>
+
+      <Card className="border border-[#8cddff] bg-white shadow-[0_12px_30px_rgba(14,78,112,0.12)]">
+        <CardHeader className="pb-3">
+          <CardTitle>Scadenze per tipologia</CardTitle>
+          <CardDescription>Riepilogo delle confermate</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              ["CCGG", stats.scadenzeCCGGConfermate],
+              ["CU", stats.scadenzeCUConfermate],
+              ["Bilanci", stats.scadenzeBilanciConfermate],
+              ["770", stats.scadenze770Confermate],
+            ].map(([label, value]) => (
+              <div key={String(label)} className="rounded-xl border border-[#c7eafb] bg-[#f5fbfe] p-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-[#3f7189]">{label}</p>
+                <p className="mt-1 text-2xl font-bold text-[#071b36]">{value}</p>
+              </div>
+            ))}
+          </div>
+          <Link href="/scadenze">
+            <Button variant="outline" className="mt-4 w-full border-[#8cddff] text-[#0b4f7d] hover:bg-[#e8f7ff]">
+              Apri lo scadenzario
+            </Button>
+          </Link>
+        </CardContent>
+      </Card>
+
+      <Card className="border border-[#8cddff] bg-white shadow-[0_12px_30px_rgba(14,78,112,0.12)]">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2">
+            <BriefcaseBusiness className="h-5 w-5 text-[#0d6f9f]" />
+            Centro operativo
+          </CardTitle>
+          <CardDescription>Entra subito nelle aree di lavoro più utilizzate</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {[
+            { label: "Agenda e attività", href: "/agenda", note: "Appuntamenti e pianificazione" },
+            { label: "Promemoria", href: "/promemoria", note: "Memo personali e condivisi" },
+            { label: "Pratiche professionali", href: "/pratiche", note: "Processi, documenti e avanzamento" },
+            { label: "Controllo di gestione", href: "/controllo-gestione", note: "Dati, analisi e controllo" },
+          ].map((item) => (
+            <Link key={item.label} href={item.href} className="flex items-center justify-between rounded-xl border border-transparent px-3 py-2.5 transition hover:border-[#bfeeff] hover:bg-[#eef9ff]">
+              <div>
+                <p className="text-sm font-semibold text-[#071b36]">{item.label}</p>
+                <p className="text-xs text-gray-500">{item.note}</p>
+              </div>
+              <ArrowRight className="h-4 w-4 text-[#0d6f9f]" />
+            </Link>
+          ))}
+        </CardContent>
+      </Card>
+    </div>
+
+    <div className="mt-6 grid grid-cols-1 items-start gap-6 xl:grid-cols-12">
       <Card className="border border-[#8cddff] bg-white shadow-[0_12px_30px_rgba(14,78,112,0.12)] xl:col-span-5">
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-4">
@@ -470,89 +553,6 @@ const router = useRouter();
           onOpenPromemoriaPage={() => router.push("/promemoria")}
         />
       </div>
-    </div>
-
-    <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
-      <Card className="border border-[#8cddff] bg-white shadow-[0_12px_30px_rgba(14,78,112,0.12)]">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-[#0d6f9f]" />
-            Rubrica dello studio
-          </CardTitle>
-          <CardDescription>Anagrafiche e relazioni sempre a portata di mano</CardDescription>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-3">
-          {[
-            { label: "Clienti", href: "/clienti", icon: Users },
-            { label: "Nuovo cliente", href: "/clienti/nuovo", icon: UserRoundPlus },
-            { label: "Organi sociali", href: "/clienti/organi-sociali", icon: Building2 },
-            { label: "Gruppi societari", href: "/anagrafiche/gruppi-societari", icon: BriefcaseBusiness },
-          ].map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link key={item.label} href={item.href} className="group rounded-xl border border-[#c7eafb] bg-[#f5fbfe] p-4 transition hover:-translate-y-0.5 hover:border-[#38bdf8] hover:shadow-md">
-                <Icon className="mb-3 h-5 w-5 text-[#0d6f9f]" />
-                <span className="text-sm font-semibold text-[#071b36] group-hover:text-[#0d6f9f]">
-                  {item.label}
-                </span>
-              </Link>
-            );
-          })}
-        </CardContent>
-      </Card>
-
-      <Card className="border border-[#8cddff] bg-white shadow-[0_12px_30px_rgba(14,78,112,0.12)]">
-        <CardHeader className="pb-3">
-          <CardTitle>Scadenze per tipologia</CardTitle>
-          <CardDescription>Riepilogo delle confermate</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              ["CCGG", stats.scadenzeCCGGConfermate],
-              ["CU", stats.scadenzeCUConfermate],
-              ["Bilanci", stats.scadenzeBilanciConfermate],
-              ["770", stats.scadenze770Confermate],
-            ].map(([label, value]) => (
-              <div key={String(label)} className="rounded-xl border border-[#c7eafb] bg-[#f5fbfe] p-4">
-                <p className="text-xs font-medium uppercase tracking-wide text-[#3f7189]">{label}</p>
-                <p className="mt-1 text-2xl font-bold text-[#071b36]">{value}</p>
-              </div>
-            ))}
-          </div>
-          <Link href="/scadenze">
-            <Button variant="outline" className="mt-4 w-full border-[#8cddff] text-[#0b4f7d] hover:bg-[#e8f7ff]">
-              Apri lo scadenzario
-            </Button>
-          </Link>
-        </CardContent>
-      </Card>
-
-      <Card className="border border-[#8cddff] bg-white shadow-[0_12px_30px_rgba(14,78,112,0.12)]">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2">
-            <BriefcaseBusiness className="h-5 w-5 text-[#0d6f9f]" />
-            Centro operativo
-          </CardTitle>
-          <CardDescription>Entra subito nelle aree di lavoro più utilizzate</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {[
-            { label: "Agenda e attività", href: "/agenda", note: "Appuntamenti e pianificazione" },
-            { label: "Promemoria", href: "/promemoria", note: "Memo personali e condivisi" },
-            { label: "Pratiche professionali", href: "/pratiche", note: "Processi, documenti e avanzamento" },
-            { label: "Controllo di gestione", href: "/controllo-gestione", note: "Dati, analisi e controllo" },
-          ].map((item) => (
-            <Link key={item.label} href={item.href} className="flex items-center justify-between rounded-xl border border-transparent px-3 py-2.5 transition hover:border-[#bfeeff] hover:bg-[#eef9ff]">
-              <div>
-                <p className="text-sm font-semibold text-[#071b36]">{item.label}</p>
-                <p className="text-xs text-gray-500">{item.note}</p>
-              </div>
-              <ArrowRight className="h-4 w-4 text-[#0d6f9f]" />
-            </Link>
-          ))}
-        </CardContent>
-      </Card>
     </div>
 
     </div>
