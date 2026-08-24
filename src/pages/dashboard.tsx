@@ -265,10 +265,10 @@ const router = useRouter();
   }
 
   return (
-    <div className="w-full max-w-[96vw] mx-auto p-4 md:p-8">
+    <div className="-mx-4 min-h-full bg-gradient-to-br from-[#06162d] via-[#0b2851] to-[#0879c8] px-4 py-8 md:-mx-6 md:px-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-500 mt-1">Panoramica generale dello studio</p>
+        <h1 className="text-4xl font-bold tracking-tight text-white">Dashboard</h1>
+        <p className="mt-1 text-cyan-100">Panoramica generale dello studio</p>
       </div>
 
       {scadenzeAlert.length > 0 && (
@@ -296,7 +296,7 @@ const router = useRouter();
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <Card className="border-l-4 border-l-blue-600">
+        <Card className="border border-cyan-200 border-l-4 border-l-[#0879c8] bg-white/95 shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
               Clienti Attivi
@@ -313,7 +313,7 @@ const router = useRouter();
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-green-600">
+        <Card className="border border-cyan-200 border-l-4 border-l-[#00a6de] bg-white/95 shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
               Appuntamenti Prossimi
@@ -328,7 +328,7 @@ const router = useRouter();
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-purple-600">
+        <Card className="border border-cyan-200 border-l-4 border-l-[#0e4da5] bg-white/95 shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
               Scadenze IVA
@@ -343,7 +343,7 @@ const router = useRouter();
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-orange-600">
+        <Card className="border border-cyan-200 border-l-4 border-l-[#62cfff] bg-white/95 shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
               Scadenze Fiscali
@@ -360,7 +360,7 @@ const router = useRouter();
       </div>
 
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-  <Card>
+  <Card className="border border-cyan-200 bg-white/95 shadow-xl">
     <CardHeader>
       <CardTitle>Stato Scadenze</CardTitle>
       <CardDescription>Scadenze confermate per tipologia</CardDescription>
@@ -397,14 +397,14 @@ const router = useRouter();
         </div>
       </div>
       <Link href="/scadenze/iva">
-        <Button variant="outline" className="w-full mt-6">
+        <Button variant="outline" className="mt-6 w-full border-blue-200 text-[#0e4da5] hover:bg-blue-50">
           Visualizza tutte le scadenze
         </Button>
       </Link>
     </CardContent>
   </Card>
 
-  <Card>
+  <Card className="border border-cyan-200 bg-white/95 shadow-xl">
     <CardHeader>
       <CardTitle>Prossimi Appuntamenti</CardTitle>
       <CardDescription>Agenda dei prossimi 7 giorni</CardDescription>
@@ -418,7 +418,7 @@ const router = useRouter();
       ) : (
         <div className="space-y-3">
           {prossimiAppuntamenti.map((app) => (
-            <div key={app.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+            <div key={app.id} className="flex items-start gap-3 rounded-lg border border-blue-100 bg-blue-50/80 p-3">
               <div
                 className={`w-2 h-2 rounded-full mt-2 ${
                   app.in_sede ? "bg-green-500" : "bg-red-500"
@@ -436,7 +436,7 @@ const router = useRouter();
         </div>
       )}
       <Link href="/agenda">
-        <Button variant="outline" className="w-full mt-4">
+        <Button variant="outline" className="mt-4 w-full border-blue-200 text-[#0e4da5] hover:bg-blue-50">
           Apri agenda completa
         </Button>
       </Link>
