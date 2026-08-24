@@ -21,17 +21,17 @@ export default function Document() {
         <meta name="apple-mobile-web-app-title" content="Studio Manager Pro" />
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="theme-color" content="#2563EB" />
+        <meta name="theme-color" content="#0b1f3a" />
         
         {/* Apple Touch Icons */}
-        <link rel="apple-touch-icon" href="/icon-192.png" />
-        <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png" />
-        <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png" />
+        <link rel="apple-touch-icon" href="/LogoSMP_.png" />
+        <link rel="apple-touch-icon" sizes="192x192" href="/LogoSMP_.png" />
+        <link rel="apple-touch-icon" sizes="512x512" href="/LogoSMP_.png" />
         
         {/* Favicon */}
         <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-        <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
-        <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/LogoSMP_.png" />
+        <link rel="icon" type="image/png" sizes="512x512" href="/LogoSMP_.png" />
 
         {/*
           CRITICAL: DO NOT REMOVE THIS SCRIPT
