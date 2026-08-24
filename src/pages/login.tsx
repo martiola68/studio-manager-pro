@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { InstallAppButton } from "@/components/InstallAppButton";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -155,6 +156,16 @@ export default function LoginPage() {
               {loading ? "Accesso in corso..." : "Accedi"}
             </Button>
           </form>
+
+          <div className="my-4 flex items-center gap-3">
+            <div className="h-px flex-1 bg-gray-200" />
+            <span className="text-xs font-medium uppercase tracking-wider text-gray-400">
+              App desktop
+            </span>
+            <div className="h-px flex-1 bg-gray-200" />
+          </div>
+
+          <InstallAppButton />
         </CardContent>
       </Card>
     </div>
