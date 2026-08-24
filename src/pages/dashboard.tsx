@@ -296,7 +296,7 @@ const router = useRouter();
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <Card className="border border-cyan-200 border-l-4 border-l-[#0879c8] bg-white/95 shadow-xl">
+        <Card className="border border-cyan-200 border-l-4 border-l-[#0879c8] bg-white shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
               Clienti Attivi
@@ -313,7 +313,7 @@ const router = useRouter();
           </CardContent>
         </Card>
 
-        <Card className="border border-cyan-200 border-l-4 border-l-[#00a6de] bg-white/95 shadow-xl">
+        <Card className="border border-cyan-200 border-l-4 border-l-[#00a6de] bg-white shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
               Appuntamenti Prossimi
@@ -328,7 +328,7 @@ const router = useRouter();
           </CardContent>
         </Card>
 
-        <Card className="border border-cyan-200 border-l-4 border-l-[#0e4da5] bg-white/95 shadow-xl">
+        <Card className="border border-cyan-200 border-l-4 border-l-[#0e4da5] bg-white shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
               Scadenze IVA
@@ -343,7 +343,7 @@ const router = useRouter();
           </CardContent>
         </Card>
 
-        <Card className="border border-cyan-200 border-l-4 border-l-[#62cfff] bg-white/95 shadow-xl">
+        <Card className="border border-cyan-200 border-l-4 border-l-[#62cfff] bg-white shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
               Scadenze Fiscali
@@ -360,7 +360,7 @@ const router = useRouter();
       </div>
 
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-  <Card className="border border-cyan-200 bg-white/95 shadow-xl">
+  <Card className="border border-cyan-200 bg-white shadow-xl">
     <CardHeader>
       <CardTitle>Stato Scadenze</CardTitle>
       <CardDescription>Scadenze confermate per tipologia</CardDescription>
@@ -404,7 +404,7 @@ const router = useRouter();
     </CardContent>
   </Card>
 
-  <Card className="border border-cyan-200 bg-white/95 shadow-xl">
+  <Card className="border border-cyan-200 bg-white shadow-xl">
     <CardHeader>
       <CardTitle>Prossimi Appuntamenti</CardTitle>
       <CardDescription>Agenda dei prossimi 7 giorni</CardDescription>
