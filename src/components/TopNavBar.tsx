@@ -621,10 +621,10 @@ const menuItems: MenuItem[] = [
       icon: <Users className="h-4 w-4" />,
       children: [
         {
-          label: "Clienti",
-          href: "/clienti",
-          icon: <Users className="h-4 w-4" />,
-        },
+  label: "Anagrafiche",
+  href: "/clienti",
+  icon: <Users className="h-4 w-4" />,
+},
         {
           label: "Soci e organi sociali",
           href: "/clienti/organi-sociali",
