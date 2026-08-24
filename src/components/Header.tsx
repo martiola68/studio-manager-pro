@@ -278,7 +278,7 @@ return (
       </div>
     </div>
 
- <div className="flex h-[21px] items-center justify-center border-t border-gray-100 px-4 text-center text-[10px] leading-none text-gray-500 md:px-6 md:text-xs">
+ <div className="flex h-[19px] items-center justify-center border-t border-gray-100 px-4 text-center text-[10px] leading-none text-gray-500 md:px-6 md:text-xs">
   © {new Date().getFullYear()} Studio Manager Pro. Creato da Artiola
   Mario. Tutti i diritti riservati. Opera tutelata ai sensi della Legge
   22 aprile 1941, n. 633, e successive modificazioni.
