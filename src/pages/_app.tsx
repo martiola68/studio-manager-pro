@@ -32,8 +32,10 @@ export default function App({ Component, pageProps }: AppProps) {
           </>
         ) : (
           <div className="flex flex-col min-h-screen bg-gray-50">
-            <Header onMenuToggle={() => {}} />
-            <TopNavBar />
+            <div className="sticky top-0 z-50">
+              <Header onMenuToggle={() => {}} />
+              <TopNavBar />
+            </div>
             <main className="flex-1 overflow-y-auto px-4 pb-4 pt-0 md:px-6 md:pb-6 md:pt-0">
               <Component {...pageProps} />
             </main>
