@@ -871,7 +871,7 @@ const renderMenuItem = (item: MenuItem) => {
         className={cn(
           "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
           itemActive || menuOpen
-            ? "bg-[#06162d] text-white hover:bg-[#082746] hover:text-white"
+            ? "bg-[#d9f1fb] text-[#075985] hover:bg-[#c7eafa] hover:text-[#064b72]"
             : "text-white hover:bg-white/15 hover:text-white"
         )}
       >
@@ -903,7 +903,7 @@ const renderMenuItem = (item: MenuItem) => {
       className={cn(
         "relative flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
         itemActive
-          ? "bg-[#06162d] text-white"
+          ? "bg-[#d9f1fb] text-[#075985]"
           : "text-white hover:bg-white/15 hover:text-white"
       )}
     >
