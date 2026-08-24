@@ -25,10 +25,10 @@ export default async function handler(
   try {
     const notifications = Array.isArray(req.body?.value) ? req.body.value : [];
 
-    const baseUrl =
-      process.env.NEXT_PUBLIC_APP_URL ||
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      "https://studio-manager-pro.vercel.app";
+   const baseUrl =
+  process.env.NEXT_PUBLIC_APP_URL ||
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  "https://app.studiomanagerpro.it";
 
     const results: any[] = [];
 
