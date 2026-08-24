@@ -978,7 +978,7 @@ const desktopMenuVoci =
 }
     
 return (
- <nav className="sticky top-[119px] z-40 w-full border-b border-gray-200 bg-white shadow-sm">
+ <nav className="relative z-40 w-full border-b border-gray-200 bg-white shadow-sm">
     {/* MOBILE */}
     <div className="flex items-center justify-between px-3 py-2 lg:hidden">
       <button
