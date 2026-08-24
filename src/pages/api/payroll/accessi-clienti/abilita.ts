@@ -91,7 +91,7 @@ if (studioError || !studio?.microsoft_connection_id) {
 }
 
 const linkAccesso =
-  "https://studio-manager-public.vercel.app/area-cliente/login";
+  "https://app.studiomanagerpro.it/area-cliente/login";
 
 const subject = "Accesso area richieste assunzioni";
 
