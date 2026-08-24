@@ -1062,19 +1062,14 @@ return (
           shadow-lg
         "
       >
-        <div
-          className="
-            flex
-            w-full
-            flex-row
-            flex-nowrap
-            items-stretch
-            justify-start
-            gap-0
-            px-4
-            py-2
-          "
-        >
+       <div
+  className={cn(
+    "w-full items-stretch justify-start gap-0 px-4 py-2",
+    desktopMenuAttivo.label === "Archivi di base"
+      ? "grid grid-cols-8"
+      : "flex flex-row flex-nowrap"
+  )}
+>
           {desktopMenuVoci.map(
             (voce) => {
               const voceActive =
