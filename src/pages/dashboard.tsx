@@ -265,7 +265,7 @@ const router = useRouter();
   }
 
   return (
-    <div className="-mx-4 min-h-full bg-[linear-gradient(135deg,#e8f2f7_0%,#d9ebf3_52%,#c9e2ed_100%)] px-4 py-8 md:-mx-6 md:px-8">
+    <div className="-mx-4 min-h-full bg-[#f3f5f7] px-4 py-8 md:-mx-6 md:px-8">
       <div className="mb-8">
         <h1 className="text-4xl font-bold tracking-tight text-[#071b36]">Dashboard</h1>
         <p className="mt-1 text-[#315f78]">Panoramica generale dello studio</p>
