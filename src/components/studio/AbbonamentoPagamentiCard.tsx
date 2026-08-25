@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CreditCard, ExternalLink, RefreshCw, ShieldCheck } from "lucide-react";
+import { CreditCard, ExternalLink, RefreshCw, ShieldCheck, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type SubscriptionData = {
@@ -49,12 +49,14 @@ function formatDate(value?: string | null) {
 function statusLabel(status?: string | null) {
   const labels: Record<string, string> = {
     active: "Attivo",
+    trialing: "Attivo",
     attivo: "Attivo",
     past_due: "Pagamento insoluto",
     unpaid: "Non pagato",
     incomplete: "Pagamento incompleto",
     incomplete_expired: "Pagamento scaduto",
     canceled: "Annullato",
+    paused: "Sospeso",
     sospeso: "Sospeso",
     scaduto: "Scaduto",
     in_scadenza: "In scadenza",
@@ -67,6 +69,7 @@ export default function AbbonamentoPagamentiCard() {
   const [data, setData] = useState<SubscriptionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [openingPortal, setOpeningPortal] = useState(false);
+  const [reactivating, setReactivating] = useState(false);
 
   const authHeaders = useCallback(async () => {
     const { data: sessionData } = await supabase.auth.getSession();
@@ -109,6 +112,20 @@ export default function AbbonamentoPagamentiCard() {
     }
   };
 
+  const reactivateSubscription = async () => {
+    try {
+      setReactivating(true);
+      const headers = await authHeaders();
+      const response = await fetch("/api/studio/riattiva-abbonamento", { method: "POST", headers });
+      const json = await response.json();
+      if (!response.ok || !json.url) throw new Error(json.error || "Impossibile avviare la riattivazione");
+      window.location.assign(json.url);
+    } catch (error: any) {
+      toast({ title: "Errore", description: error?.message || "Impossibile riattivare l'abbonamento", variant: "destructive" });
+      setReactivating(false);
+    }
+  };
+
   if (loading) {
     return (
       <Card>
@@ -128,8 +145,12 @@ export default function AbbonamentoPagamentiCard() {
   }
 
   const { licenza, metodo_pagamento: paymentMethod } = data;
-  const stripeStatus = licenza.stripe_status || data.studio.stato_abbonamento;
-  const isProblem = ["past_due", "unpaid", "incomplete", "incomplete_expired", "sospeso", "scaduto", "canceled"].includes(String(stripeStatus));
+  const stripeStatus = String(licenza.stripe_status || data.studio.stato_abbonamento || "").toLowerCase();
+  const recoverablePaymentStatuses = ["past_due", "incomplete"];
+  const terminatedStatuses = ["canceled", "unpaid", "incomplete_expired", "paused", "sospeso", "scaduto"];
+  const isPaymentProblem = recoverablePaymentStatuses.includes(stripeStatus);
+  const isTerminated = terminatedStatuses.includes(stripeStatus) || licenza.stato === "sospeso";
+  const isProblem = isPaymentProblem || isTerminated;
   const isCancelScheduled = licenza.stripe_cancel_at_period_end || !licenza.rinnovo_automatico;
 
   return (
@@ -142,8 +163,20 @@ export default function AbbonamentoPagamentiCard() {
         <Button variant="outline" size="sm" onClick={() => void load()}><RefreshCw className="mr-2 h-4 w-4" />Aggiorna</Button>
       </CardHeader>
       <CardContent className="space-y-5">
-        {isProblem && (
-          <Alert variant="destructive"><AlertDescription>Il pagamento dell'abbonamento richiede attenzione. Aggiorna la modalità di pagamento per evitare o risolvere la sospensione del servizio.</AlertDescription></Alert>
+        {isPaymentProblem && (
+          <Alert variant="destructive">
+            <AlertDescription>
+              Il pagamento dell'abbonamento non è andato a buon fine. Aggiorna la modalità di pagamento in Stripe; dopo il pagamento riuscito Studio Manager Pro verrà riallineato automaticamente.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {isTerminated && (
+          <Alert variant="destructive">
+            <AlertDescription>
+              L'abbonamento Stripe è terminato o sospeso. Per riattivare il servizio è necessario creare una nuova sottoscrizione sullo stesso studio.
+            </AlertDescription>
+          </Alert>
         )}
 
         <div className="grid gap-4 md:grid-cols-4">
@@ -163,14 +196,39 @@ export default function AbbonamentoPagamentiCard() {
                 <p className="mt-1 text-sm text-muted-foreground">Nessun dettaglio carta disponibile. I dati completi della carta non vengono memorizzati in Studio Manager Pro.</p>
               )}
             </div>
-            {licenza.ha_customer_stripe && (
-              <Button onClick={openPortal} disabled={openingPortal}>{openingPortal ? "Apertura..." : "Gestisci metodo di pagamento"}<ExternalLink className="ml-2 h-4 w-4" /></Button>
-            )}
+
+            <div className="flex flex-wrap gap-2">
+              {licenza.ha_customer_stripe && !isTerminated && (
+                <Button onClick={openPortal} disabled={openingPortal || reactivating}>
+                  {openingPortal ? "Apertura..." : isPaymentProblem ? "Aggiorna carta e recupera pagamento" : "Gestisci metodo di pagamento"}
+                  <ExternalLink className="ml-2 h-4 w-4" />
+                </Button>
+              )}
+
+              {isTerminated && licenza.ha_customer_stripe && licenza.ha_subscription_stripe && (
+                <Button onClick={reactivateSubscription} disabled={reactivating || openingPortal}>
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  {reactivating ? "Apertura Stripe..." : "Riattiva abbonamento"}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 
         <div className="rounded-lg bg-muted/40 p-4 text-sm">
-          <div className="flex gap-3"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" /><div className="space-y-1"><p className="font-medium">Rinnovo dell'abbonamento</p><p className="text-muted-foreground">{isCancelScheduled ? `Il rinnovo automatico risulta disattivato. L'abbonamento resta utilizzabile fino alla scadenza prevista (${formatDate(data.studio.data_scadenza_abbonamento || licenza.data_scadenza)}).` : `Il rinnovo è automatico. La richiesta di recesso deve pervenire almeno ${licenza.giorni_preavviso_disdetta || 30} giorni prima della scadenza/rata successiva prevista.`}</p></div></div>
+          <div className="flex gap-3">
+            <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" />
+            <div className="space-y-1">
+              <p className="font-medium">Rinnovo dell'abbonamento</p>
+              <p className="text-muted-foreground">
+                {isTerminated
+                  ? "L'abbonamento non è attualmente attivo. La riattivazione genera una nuova sottoscrizione Stripe collegata allo stesso studio."
+                  : isCancelScheduled
+                    ? `Il rinnovo automatico risulta disattivato. L'abbonamento resta utilizzabile fino alla scadenza prevista (${formatDate(data.studio.data_scadenza_abbonamento || licenza.data_scadenza)}).`
+                    : `Il rinnovo è automatico. La richiesta di recesso deve pervenire almeno ${licenza.giorni_preavviso_disdetta || 30} giorni prima della scadenza/rata successiva prevista.`}
+              </p>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>
