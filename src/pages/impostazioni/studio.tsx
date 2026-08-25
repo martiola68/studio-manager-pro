@@ -16,6 +16,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Building2, Upload, Save, Shield, Lock, Eye, EyeOff, Mail, KeyRound } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/lib/supabase/types";
+import AbbonamentoPagamentiCard from "@/components/studio/AbbonamentoPagamentiCard";
 import bcrypt from "bcryptjs";
 
 type Studio = Database["public"]["Tables"]["tbstudio"]["Row"];
@@ -858,6 +859,8 @@ const [formData, setFormData] = useState({
     </div>
   </CardContent>
 </Card>
+
+    <AbbonamentoPagamentiCard />
 
          <Card>
             <CardHeader>
