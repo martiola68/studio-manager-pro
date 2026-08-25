@@ -562,8 +562,8 @@ return (
     <form onSubmit={handleSubmit}>
       <div className="space-y-6">
 
-<Card className="border-2 border-[#015EB5]">
-  <CardHeader className="border-b border-[#015EB5]/20">
+<Card className="border-2 border-[#0d6f9f]">
+  <CardHeader className="border-b border-[#0d6f9f]/25">
     <CardTitle>Dati Anagrafici</CardTitle>
   </CardHeader>
 
@@ -765,7 +765,7 @@ return (
 
 
 <Card className="border-2 border-[#015EB5]">
-  <CardHeader className="border-b border-[#015EB5]/20">
+  <CardHeader className="border-b border-[#0d6f9f]/25">
     <CardTitle>Recapiti e note</CardTitle>
   </CardHeader>
 
@@ -837,13 +837,13 @@ return (
 </Card>
 
 
-<div className="[&>div]:border-2 [&>div]:border-[#015EB5]">
+<div className="[&>div]:border-2 [&>div]:border-[#0d6f9f]">
   <AbbonamentoPagamentiCard />
 </div>
 
 
 <Card className="border-2 border-[#015EB5]">
-  <CardHeader className="border-b border-[#015EB5]/20">
+ <CardHeader className="border-b border-[#0d6f9f]/25">
     <CardTitle className="flex items-center gap-2">
       <Shield className="h-5 w-5" />
       Protezione Dati Sensibili
