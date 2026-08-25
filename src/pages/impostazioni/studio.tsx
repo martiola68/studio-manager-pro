@@ -619,12 +619,14 @@ const [formData, setFormData] = useState({
   const passwordStrength = getPasswordStrength(masterPassword);
   const newPasswordStrength = getPasswordStrength(newPassword);
 
-  return (
-    <div className="max-w-4xl mx-auto p-4 md:p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Dati Studio</h1>
-        <p className="text-gray-500 mt-1">Gestisci anagrafica e logo dello studio</p>
-      </div>
+ return (
+  <div className="max-w-7xl mx-auto px-4 py-6 md:px-8 md:py-8">
+     <div className="mb-6">
+  <h1 className="text-3xl font-bold text-gray-900">Dati Studio</h1>
+  <p className="text-gray-500 mt-1">
+    Gestisci anagrafica, recapiti, logo e impostazioni dello studio
+  </p>
+</div>
 
       <form onSubmit={handleSubmit}>
         <div className="space-y-6">
@@ -674,201 +676,462 @@ const [formData, setFormData] = useState({
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Dati Anagrafici</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-            <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="ragione_sociale">Ragione Sociale *</Label>
-                  <Input
-                    id="ragione_sociale"
-                    value={formData.ragione_sociale}
-                    onChange={(e) => setFormData({ ...formData, ragione_sociale: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="ragione_sociale_tenant2">Ragione Sociale Tenant 2</Label>
-                  <Input
-                    id="ragione_sociale_tenant2"
-                    value={formData.ragione_sociale_tenant2}
-                    onChange={(e) => setFormData({ ...formData, ragione_sociale_tenant2: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="denominazione_breve">Denominazione Breve *</Label>
-                  <Input
-                    id="denominazione_breve"
-                    value={formData.denominazione_breve}
-                    onChange={(e) => setFormData({ ...formData, denominazione_breve: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="telefono">Telefono *</Label>
-                  <Input
-                    id="telefono"
-                    type="tel"
-                    value={formData.telefono}
-                    onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email alert fiscale *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email_tenant2">Email alert consulenza</Label>
-                  <Input
-                    id="email_tenant2"
-                    type="email"
-                    value={formData.email_tenant2}
-                    onChange={(e) => setFormData({ ...formData, email_tenant2: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="mail_alert_paghe">Email alert paghe</Label>
-                    <Input
-                        id="mail_alert_paghe"
-                      type="email"
-                      value={formData.mail_alert_paghe}
-                          onChange={(e) => setFormData({ ...formData, mail_alert_paghe: e.target.value })}
-                          placeholder="paghe@studio.it"
-                        />
-                  </div>
-
-                <div className="space-y-2">
-  <Label htmlFor="mail_alert_ferie_permessi">
-    Email richiesta ferie/permessi
-  </Label>
-
-  <Input
-    id="mail_alert_ferie_permessi"
-    type="email"
-    value={formData.mail_alert_ferie_permessi}
-    onChange={(e) =>
-      setFormData({
-        ...formData,
-        mail_alert_ferie_permessi: e.target.value,
-      })
-    }
-    placeholder="feriepermessi@studio.it"
-  />
-</div>
-                
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="indirizzo">Indirizzo *</Label>
-                <Input
-                  id="indirizzo"
-                  value={formData.indirizzo}
-                  onChange={(e) => setFormData({ ...formData, indirizzo: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="cap">CAP *</Label>
-                  <Input
-                    id="cap"
-                    value={formData.cap}
-                    onChange={(e) => setFormData({ ...formData, cap: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="citta">Città *</Label>
-                  <Input
-                    id="citta"
-                    value={formData.citta}
-                    onChange={(e) => setFormData({ ...formData, citta: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="provincia">Provincia *</Label>
-                  <Input
-                    id="provincia"
-                    value={formData.provincia}
-                    onChange={(e) => setFormData({ ...formData, provincia: e.target.value })}
-                    maxLength={2}
-                    required
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
+        <Card>
   <CardHeader>
-    <CardTitle>Recapiti e note</CardTitle>
+    <CardTitle>Dati Anagrafici</CardTitle>
   </CardHeader>
-  <CardContent className="space-y-4">
-    <div className="grid grid-cols-2 gap-4">
+
+  <CardContent className="space-y-5">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       <div className="space-y-2">
-        <Label htmlFor="pec">PEC *</Label>
+        <Label htmlFor="ragione_sociale">
+          Ragione Sociale *
+        </Label>
         <Input
-          id="pec"
-          type="email"
-          value={formData.pec}
-          onChange={(e) => setFormData({ ...formData, pec: e.target.value })}
+          id="ragione_sociale"
+          value={formData.ragione_sociale}
+          onChange={(e) =>
+            setFormData({
+              ...formData,
+              ragione_sociale: e.target.value,
+            })
+          }
           required
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="sito_web">Sito Web</Label>
+        <Label htmlFor="denominazione_breve">
+          Denominazione Breve *
+        </Label>
         <Input
-          id="sito_web"
-          type="url"
-          value={formData.sito_web}
-          onChange={(e) => setFormData({ ...formData, sito_web: e.target.value })}
-          placeholder="https://..."
+          id="denominazione_breve"
+          value={formData.denominazione_breve}
+          onChange={(e) =>
+            setFormData({
+              ...formData,
+              denominazione_breve: e.target.value,
+            })
+          }
+          required
+        />
+      </div>
+    </div>
+
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="space-y-2">
+        <Label htmlFor="telefono">Telefono *</Label>
+        <Input
+          id="telefono"
+          type="tel"
+          value={formData.telefono}
+          onChange={(e) =>
+            setFormData({
+              ...formData,
+              telefono: e.target.value,
+            })
+          }
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="email">Email alert fiscale *</Label>
+        <Input
+          id="email"
+          type="email"
+          value={formData.email}
+          onChange={(e) =>
+            setFormData({
+              ...formData,
+              email: e.target.value,
+            })
+          }
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="mail_alert_paghe">
+          Email alert paghe
+        </Label>
+        <Input
+          id="mail_alert_paghe"
+          type="email"
+          value={formData.mail_alert_paghe}
+          onChange={(e) =>
+            setFormData({
+              ...formData,
+              mail_alert_paghe: e.target.value,
+            })
+          }
+          placeholder="paghe@studio.it"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="mail_alert_ferie_permessi">
+          Email ferie/permessi
+        </Label>
+        <Input
+          id="mail_alert_ferie_permessi"
+          type="email"
+          value={formData.mail_alert_ferie_permessi}
+          onChange={(e) =>
+            setFormData({
+              ...formData,
+              mail_alert_ferie_permessi: e.target.value,
+            })
+          }
+          placeholder="feriepermessi@studio.it"
         />
       </div>
     </div>
 
     <div className="space-y-2">
-      <Label htmlFor="note">Note</Label>
-      <Textarea
-        id="note"
-        value={formData.note}
-        onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-        rows={4}
-        placeholder="Note aggiuntive..."
+      <Label htmlFor="indirizzo">Indirizzo *</Label>
+      <Input
+        id="indirizzo"
+        value={formData.indirizzo}
+        onChange={(e) =>
+          setFormData({
+            ...formData,
+            indirizzo: e.target.value,
+          })
+        }
+        required
       />
+    </div>
+
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="space-y-2">
+        <Label htmlFor="cap">CAP *</Label>
+        <Input
+          id="cap"
+          value={formData.cap}
+          onChange={(e) =>
+            setFormData({
+              ...formData,
+              cap: e.target.value,
+            })
+          }
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="citta">Città *</Label>
+        <Input
+          id="citta"
+          value={formData.citta}
+          onChange={(e) =>
+            setFormData({
+              ...formData,
+              citta: e.target.value,
+            })
+          }
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="provincia">Provincia *</Label>
+        <Input
+          id="provincia"
+          value={formData.provincia}
+          onChange={(e) =>
+            setFormData({
+              ...formData,
+              provincia: e.target.value,
+            })
+          }
+          maxLength={2}
+          required
+        />
+      </div>
     </div>
   </CardContent>
 </Card>
+<div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
 
-    <AbbonamentoPagamentiCard />
+  <Card>
+    <CardHeader>
+      <CardTitle>Dati Anagrafici</CardTitle>
+    </CardHeader>
 
-         <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                Protezione Dati Sensibili
-              </CardTitle>
-            </CardHeader>
+    <CardContent className="space-y-5">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="ragione_sociale">
+            Ragione Sociale *
+          </Label>
+
+          <Input
+            id="ragione_sociale"
+            value={formData.ragione_sociale}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                ragione_sociale: e.target.value,
+              })
+            }
+            required
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="denominazione_breve">
+            Denominazione Breve *
+          </Label>
+
+          <Input
+            id="denominazione_breve"
+            value={formData.denominazione_breve}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                denominazione_breve: e.target.value,
+              })
+            }
+            required
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="telefono">
+            Telefono *
+          </Label>
+
+          <Input
+            id="telefono"
+            type="tel"
+            value={formData.telefono}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                telefono: e.target.value,
+              })
+            }
+            required
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="email">
+            Email alert fiscale *
+          </Label>
+
+          <Input
+            id="email"
+            type="email"
+            value={formData.email}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                email: e.target.value,
+              })
+            }
+            required
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="mail_alert_paghe">
+            Email alert paghe
+          </Label>
+
+          <Input
+            id="mail_alert_paghe"
+            type="email"
+            value={formData.mail_alert_paghe}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                mail_alert_paghe: e.target.value,
+              })
+            }
+            placeholder="paghe@studio.it"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="mail_alert_ferie_permessi">
+            Email richiesta ferie/permessi
+          </Label>
+
+          <Input
+            id="mail_alert_ferie_permessi"
+            type="email"
+            value={formData.mail_alert_ferie_permessi}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                mail_alert_ferie_permessi: e.target.value,
+              })
+            }
+            placeholder="feriepermessi@studio.it"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="indirizzo">
+          Indirizzo *
+        </Label>
+
+        <Input
+          id="indirizzo"
+          value={formData.indirizzo}
+          onChange={(e) =>
+            setFormData({
+              ...formData,
+              indirizzo: e.target.value,
+            })
+          }
+          required
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="space-y-2">
+          <Label htmlFor="cap">
+            CAP *
+          </Label>
+
+          <Input
+            id="cap"
+            value={formData.cap}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                cap: e.target.value,
+              })
+            }
+            required
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="citta">
+            Città *
+          </Label>
+
+          <Input
+            id="citta"
+            value={formData.citta}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                citta: e.target.value,
+              })
+            }
+            required
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="provincia">
+            Provincia *
+          </Label>
+
+          <Input
+            id="provincia"
+            value={formData.provincia}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                provincia: e.target.value,
+              })
+            }
+            maxLength={2}
+            required
+          />
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+
+  <Card>
+    <CardHeader>
+      <CardTitle>Recapiti e note</CardTitle>
+    </CardHeader>
+
+    <CardContent className="space-y-5">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="pec">
+            PEC *
+          </Label>
+
+          <Input
+            id="pec"
+            type="email"
+            value={formData.pec}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                pec: e.target.value,
+              })
+            }
+            required
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="sito_web">
+            Sito Web
+          </Label>
+
+          <Input
+            id="sito_web"
+            type="url"
+            value={formData.sito_web}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                sito_web: e.target.value,
+              })
+            }
+            placeholder="https://..."
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="note">
+          Note
+        </Label>
+
+        <Textarea
+          id="note"
+          value={formData.note}
+          onChange={(e) =>
+            setFormData({
+              ...formData,
+              note: e.target.value,
+            })
+          }
+          rows={9}
+          placeholder="Note aggiuntive..."
+          className="resize-none"
+        />
+      </div>
+    </CardContent>
+  </Card>
+
+</div>
+
+<AbbonamentoPagamentiCard />
+
+<Card>
+  <CardHeader>
+    <CardTitle className="flex items-center gap-2">
+      <Shield className="h-5 w-5" />
+      Protezione Dati Sensibili
+    </CardTitle>
+  </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
