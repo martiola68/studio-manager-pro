@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Building2, Upload, Save, Shield, Lock, Eye, EyeOff, Mail, KeyRound } from "lucide-react";
+import { Save, Shield, Lock, Eye, EyeOff, Mail, KeyRound } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/lib/supabase/types";
 import AbbonamentoPagamentiCard from "@/components/studio/AbbonamentoPagamentiCard";
@@ -26,9 +26,7 @@ export default function DatiStudioPage() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [studio, setStudio] = useState<Studio | null>(null);
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+ const [studio, setStudio] = useState<Studio | null>(null);
 
   // Master Password states
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
@@ -117,27 +115,24 @@ const [formData, setFormData] = useState({
         setStudio(studioData);
         setIsPasswordProtected(studioData.protezione_attiva || false);
         setFormData({
-          ragione_sociale: studioData.ragione_sociale || "",
-          ragione_sociale_tenant2: studioData.ragione_sociale_tenant2 || "",
-          denominazione_breve: studioData.denominazione_breve || "",
-          partita_iva: studioData.partita_iva || "",
-          codice_fiscale: studioData.codice_fiscale || "",
-          indirizzo: studioData.indirizzo || "",
-          cap: studioData.cap || "",
-          citta: studioData.citta || "",
-          provincia: studioData.provincia || "",
-          telefono: studioData.telefono || "",
-          email: studioData.email || "",
-          email_tenant2: studioData.email_tenant2 || "",
-          pec: studioData.pec || "",
-          mail_alert_paghe: studioData.mail_alert_paghe || "",
-          mail_alert_ferie_permessi: studioData.mail_alert_ferie_permessi || "",
-          sito_web: studioData.sito_web || "",
-          note: studioData.note || ""
-        });
-        if (studioData.logo_url) {
-          setLogoPreview(studioData.logo_url);
-        }
+  ragione_sociale: studioData.ragione_sociale || "",
+  ragione_sociale_tenant2: studioData.ragione_sociale_tenant2 || "",
+  denominazione_breve: studioData.denominazione_breve || "",
+  partita_iva: studioData.partita_iva || "",
+  codice_fiscale: studioData.codice_fiscale || "",
+  indirizzo: studioData.indirizzo || "",
+  cap: studioData.cap || "",
+  citta: studioData.citta || "",
+  provincia: studioData.provincia || "",
+  telefono: studioData.telefono || "",
+  email: studioData.email || "",
+  email_tenant2: studioData.email_tenant2 || "",
+  pec: studioData.pec || "",
+  mail_alert_paghe: studioData.mail_alert_paghe || "",
+  mail_alert_ferie_permessi: studioData.mail_alert_ferie_permessi || "",
+  sito_web: studioData.sito_web || "",
+  note: studioData.note || ""
+});
       }
     } catch (error) {
       console.error("Errore caricamento studio:", error);
@@ -151,66 +146,7 @@ const [formData, setFormData] = useState({
     }
   };
 
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        toast({
-          title: "Errore",
-          description: "Il file è troppo grande. Massimo 2MB",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      if (!file.type.startsWith("image/")) {
-        toast({
-          title: "Errore",
-          description: "Il file deve essere un'immagine",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      setLogoFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setLogoPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const uploadLogo = async (): Promise<string | null> => {
-    if (!logoFile || !studio) return null;
-
-    try {
-      const fileExt = logoFile.name.split(".").pop();
-      const fileName = `${studio.id}-${Date.now()}.${fileExt}`;
-      const filePath = `logos/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("studio-assets")
-        .upload(filePath, logoFile, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from("studio-assets")
-        .getPublicUrl(filePath);
-
-      return publicUrl;
-    } catch (error) {
-      console.error("Errore upload logo:", error);
-      toast({
-        title: "Errore",
-        description: "Impossibile caricare il logo",
-        variant: "destructive"
-      });
-      return null;
-    }
-  };
-
+   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -223,28 +159,20 @@ const [formData, setFormData] = useState({
       return;
     }
 
-    try {
-      setSaving(true);
+  try {
+  setSaving(true);
 
-      let logoUrl = studio.logo_url;
-      if (logoFile) {
-        const uploadedUrl = await uploadLogo();
-        if (uploadedUrl) {
-          logoUrl = uploadedUrl;
-        }
-      }
+  await studioService.updateStudio(studio.id, {
+    ...formData
+  });
 
-      await studioService.updateStudio(studio.id, {
-        ...formData,
-        logo_url: logoUrl
-      });
+  toast({
+    title: "Successo",
+    description: "Dati studio salvati con successo"
+  });
 
-      toast({
-        title: "Successo",
-        description: "Dati studio salvati con successo"
-      });
-
-      await loadStudio();
+  await loadStudio();
+    
     } catch (error) {
       console.error("Errore salvataggio:", error);
       toast({
@@ -619,240 +547,22 @@ const [formData, setFormData] = useState({
   const passwordStrength = getPasswordStrength(masterPassword);
   const newPasswordStrength = getPasswordStrength(newPassword);
 
- return (
+return (
   <div className="max-w-7xl mx-auto px-4 py-6 md:px-8 md:py-8">
-     <div className="mb-6">
-  <h1 className="text-3xl font-bold text-gray-900">Dati Studio</h1>
-  <p className="text-gray-500 mt-1">
-    Gestisci anagrafica, recapiti, logo e impostazioni dello studio
-  </p>
-</div>
+    <div className="mb-6">
+      <h1 className="text-3xl font-bold text-gray-900">
+        Dati Studio
+      </h1>
 
-      <form onSubmit={handleSubmit}>
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Upload className="h-5 w-5" />
-                Logo Studio
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-6">
-                {logoPreview ? (
-                  <img
-                    src={logoPreview}
-                    alt="Logo Studio"
-                    className="w-32 h-32 object-contain border-2 border-gray-200 rounded-lg"
-                  />
-                ) : (
-                  <div className="w-32 h-32 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <Building2 className="h-12 w-12 text-gray-400" />
-                  </div>
-                )}
-                <div className="flex-1">
-                  <Label htmlFor="logo" className="cursor-pointer">
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-500 transition-colors">
-                      <div className="text-center">
-                        <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                        <p className="text-sm text-gray-600">
-                          Clicca per caricare il logo
-                        </p>
-                        <p className="text-xs text-gray-400 mt-1">
-                          PNG, JPG fino a 2MB
-                        </p>
-                      </div>
-                    </div>
-                  </Label>
-                  <Input
-                    id="logo"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleLogoChange}
-                    className="hidden"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-        <Card>
-  <CardHeader>
-    <CardTitle>Dati Anagrafici</CardTitle>
-  </CardHeader>
-
-  <CardContent className="space-y-5">
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-      <div className="space-y-2">
-        <Label htmlFor="ragione_sociale">
-          Ragione Sociale *
-        </Label>
-        <Input
-          id="ragione_sociale"
-          value={formData.ragione_sociale}
-          onChange={(e) =>
-            setFormData({
-              ...formData,
-              ragione_sociale: e.target.value,
-            })
-          }
-          required
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="denominazione_breve">
-          Denominazione Breve *
-        </Label>
-        <Input
-          id="denominazione_breve"
-          value={formData.denominazione_breve}
-          onChange={(e) =>
-            setFormData({
-              ...formData,
-              denominazione_breve: e.target.value,
-            })
-          }
-          required
-        />
-      </div>
+      <p className="text-gray-500 mt-1">
+        Gestisci anagrafica, recapiti e impostazioni dello studio
+      </p>
     </div>
 
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <div className="space-y-2">
-        <Label htmlFor="telefono">Telefono *</Label>
-        <Input
-          id="telefono"
-          type="tel"
-          value={formData.telefono}
-          onChange={(e) =>
-            setFormData({
-              ...formData,
-              telefono: e.target.value,
-            })
-          }
-          required
-        />
-      </div>
+    <form onSubmit={handleSubmit}>
+      <div className="space-y-6">
 
-      <div className="space-y-2">
-        <Label htmlFor="email">Email alert fiscale *</Label>
-        <Input
-          id="email"
-          type="email"
-          value={formData.email}
-          onChange={(e) =>
-            setFormData({
-              ...formData,
-              email: e.target.value,
-            })
-          }
-          required
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="mail_alert_paghe">
-          Email alert paghe
-        </Label>
-        <Input
-          id="mail_alert_paghe"
-          type="email"
-          value={formData.mail_alert_paghe}
-          onChange={(e) =>
-            setFormData({
-              ...formData,
-              mail_alert_paghe: e.target.value,
-            })
-          }
-          placeholder="paghe@studio.it"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="mail_alert_ferie_permessi">
-          Email ferie/permessi
-        </Label>
-        <Input
-          id="mail_alert_ferie_permessi"
-          type="email"
-          value={formData.mail_alert_ferie_permessi}
-          onChange={(e) =>
-            setFormData({
-              ...formData,
-              mail_alert_ferie_permessi: e.target.value,
-            })
-          }
-          placeholder="feriepermessi@studio.it"
-        />
-      </div>
-    </div>
-
-    <div className="space-y-2">
-      <Label htmlFor="indirizzo">Indirizzo *</Label>
-      <Input
-        id="indirizzo"
-        value={formData.indirizzo}
-        onChange={(e) =>
-          setFormData({
-            ...formData,
-            indirizzo: e.target.value,
-          })
-        }
-        required
-      />
-    </div>
-
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-      <div className="space-y-2">
-        <Label htmlFor="cap">CAP *</Label>
-        <Input
-          id="cap"
-          value={formData.cap}
-          onChange={(e) =>
-            setFormData({
-              ...formData,
-              cap: e.target.value,
-            })
-          }
-          required
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="citta">Città *</Label>
-        <Input
-          id="citta"
-          value={formData.citta}
-          onChange={(e) =>
-            setFormData({
-              ...formData,
-              citta: e.target.value,
-            })
-          }
-          required
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="provincia">Provincia *</Label>
-        <Input
-          id="provincia"
-          value={formData.provincia}
-          onChange={(e) =>
-            setFormData({
-              ...formData,
-              provincia: e.target.value,
-            })
-          }
-          maxLength={2}
-          required
-        />
-      </div>
-    </div>
-  </CardContent>
-</Card>
-<div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+  <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
 
   <Card>
     <CardHeader>
