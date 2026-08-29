@@ -3,195 +3,150 @@ import type { Database } from "@/integrations/supabase/types";
 import { teamsNotificationService } from "./teamsNotificationService";
 
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
-// Omit studio_id because it's handled server-side
-type ClienteInsert = Omit<
-  Database["public"]["Tables"]["tbclienti"]["Insert"],
-  "studio_id"
->;
-type ClienteUpdate = Omit<
-  Database["public"]["Tables"]["tbclienti"]["Update"],
-  "studio_id"
->;
+type ClienteInsert = Omit<Database["public"]["Tables"]["tbclienti"]["Insert"], "studio_id">;
+type ClienteUpdate = Omit<Database["public"]["Tables"]["tbclienti"]["Update"], "studio_id">;
 
-/**
- * ✅ Single place to read the session token (Supabase v2 safe)
- */
 async function getAuthToken(): Promise<string> {
   const { data, error } = await supabase.auth.getSession();
-
-  if (error) {
-    console.error("[clienteService] ❌ getSession error:", error);
-    throw new Error("Auth session error");
-  }
-
+  if (error) throw new Error("Auth session error");
   const token = data?.session?.access_token;
+  if (!token) throw new Error("No session found (user not authenticated)");
+  return token;
+}
 
-  if (!token) {
-    console.error("[clienteService] ❌ No session found - user not authenticated");
-    throw new Error("No session found (user not authenticated)");
+/**
+ * Risolve SEMPRE lo studio dalla sessione autenticata.
+ * Non accetta studio_id dal chiamante: un tenant non deve poter scegliere quale studio leggere.
+ */
+async function getCurrentStudioId(): Promise<string> {
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError || !session?.user) throw new Error("Sessione non valida");
+
+  let { data: utente, error } = await supabase
+    .from("tbutenti")
+    .select("studio_id")
+    .eq("user_id", session.user.id)
+    .maybeSingle();
+
+  if ((!utente || error) && session.user.email) {
+    const fallback = await supabase
+      .from("tbutenti")
+      .select("studio_id")
+      .eq("email", session.user.email.toLowerCase())
+      .maybeSingle();
+    utente = fallback.data;
+    error = fallback.error;
   }
 
-  return token;
+  if (error) throw error;
+  const studioId = String(utente?.studio_id || "").trim();
+  if (!studioId) throw new Error("Utente senza studio associato");
+  return studioId;
 }
 
 export const clienteService = {
   async getClienti() {
+    const studioId = await getCurrentStudioId();
     const { data, error } = await supabase
       .from("tbclienti")
       .select("*")
+      .eq("studio_id", studioId)
       .order("ragione_sociale");
-
-    if (error) {
-      console.error("Error fetching clienti:", error);
-      throw error;
-    }
+    if (error) throw error;
     return data || [];
   },
 
   async getClienteById(id: string) {
+    const studioId = await getCurrentStudioId();
     const { data, error } = await supabase
       .from("tbclienti")
       .select("*")
       .eq("id", id)
+      .eq("studio_id", studioId)
       .single();
-
     if (error) throw error;
     return data;
   },
 
   async createCliente(cliente: ClienteInsert) {
-    // ✅ Get current session token for API authentication
     const token = await getAuthToken();
-
     const response = await fetch("/api/clienti/create", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(cliente),
     });
-
     if (!response.ok) {
       let errorMsg = "Errore durante la creazione del cliente";
-      try {
-        const errorData = await response.json();
-        errorMsg = errorData?.error || errorMsg;
-      } catch {}
+      try { const errorData = await response.json(); errorMsg = errorData?.error || errorMsg; } catch {}
       throw new Error(errorMsg);
     }
-
     const newCliente = await response.json();
-
-    // Invia notifica Teams (non bloccare se fallisce)
-    try {
-      await teamsNotificationService.sendNuovoClienteNotification(
-        cliente.ragione_sociale || "Nuovo Cliente"
-      );
-    } catch (e) {
-      console.error("Errore invio notifica Teams:", e);
-    }
-
+    try { await teamsNotificationService.sendNuovoClienteNotification(cliente.ragione_sociale || "Nuovo Cliente"); } catch (e) { console.error("Errore invio notifica Teams:", e); }
     return { data: newCliente, error: null };
   },
 
   async updateCliente(id: string, updates: ClienteUpdate) {
-    // ✅ Get current session token for API authentication
     const token = await getAuthToken();
-
     const response = await fetch("/api/clienti/update", {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ id, ...updates }),
     });
-
     if (!response.ok) {
       let errorMsg = "Errore durante l'aggiornamento del cliente";
-      try {
-        const errorData = await response.json();
-        errorMsg = errorData?.error || errorMsg;
-      } catch {}
+      try { const errorData = await response.json(); errorMsg = errorData?.error || errorMsg; } catch {}
       throw new Error(errorMsg);
     }
-
     return await response.json();
   },
 
   async deleteCliente(id: string) {
-    const deletePromises = [
-      supabase.from("tbscadiva").delete().eq("id", id),
-      supabase.from("tbscad770").delete().eq("id", id),
-      supabase.from("tbscadlipe").delete().eq("id", id),
-      supabase.from("tbscadestero").delete().eq("id", id),
-      supabase.from("tbscadproforma").delete().eq("id", id),
-      supabase.from("tbscadimu").delete().eq("id", id),
-      supabase.from("tbscadcu").delete().eq("id", id),
-      supabase.from("tbscadbilanci").delete().eq("id", id),
-      supabase.from("tbscadccgg").delete().eq("id", id),
-      supabase.from("tbscadfiscali").delete().eq("id", id),
-    ];
+    const studioId = await getCurrentStudioId();
+    const { data: cliente, error: checkError } = await supabase
+      .from("tbclienti").select("id").eq("id", id).eq("studio_id", studioId).maybeSingle();
+    if (checkError) throw checkError;
+    if (!cliente) throw new Error("Cliente non appartenente allo studio corrente");
 
+    const deletePromises = ["tbscadiva", "tbscad770", "tbscadlipe", "tbscadestero", "tbscadproforma", "tbscadimu", "tbscadcu", "tbscadbilanci", "tbscadccgg", "tbscadfiscali"].map((table) =>
+      supabase.from(table as any).delete().eq("id", id)
+    );
     await Promise.all(deletePromises);
-
-    const { error } = await supabase.from("tbclienti").delete().eq("id", id);
-
+    const { error } = await supabase.from("tbclienti").delete().eq("id", id).eq("studio_id", studioId);
     if (error) throw error;
   },
 
-  async searchClienti(query: string, studioId?: string | null) {
-    let supabaseQuery = supabase
+  async searchClienti(query: string, _studioId?: string | null) {
+    const studioId = await getCurrentStudioId();
+    const { data, error } = await supabase
       .from("tbclienti")
       .select("*")
-      .or(
-        `ragione_sociale.ilike.%${query}%,partita_iva.ilike.%${query}%,codice_fiscale.ilike.%${query}%`
-      )
+      .eq("studio_id", studioId)
+      .or(`ragione_sociale.ilike.%${query}%,partita_iva.ilike.%${query}%,codice_fiscale.ilike.%${query}%`)
       .order("ragione_sociale");
-
-    if (studioId) {
-      supabaseQuery = supabaseQuery.eq("studio_id", studioId);
-    }
-
-    const { data, error } = await supabaseQuery;
-
     if (error) throw error;
     return data || [];
   },
 
-  async getClientiByUtente(utenteId: string, studioId?: string | null) {
-    let query = supabase
+  async getClientiByUtente(utenteId: string, _studioId?: string | null) {
+    const studioId = await getCurrentStudioId();
+    const { data, error } = await supabase
       .from("tbclienti")
       .select("*")
-      .or(
-        `utente_operatore_id.eq.${utenteId},utente_professionista_id.eq.${utenteId}`
-      )
+      .eq("studio_id", studioId)
+      .or(`utente_operatore_id.eq.${utenteId},utente_professionista_id.eq.${utenteId}`)
       .order("ragione_sociale");
-
-    if (studioId) {
-      query = query.eq("studio_id", studioId);
-    }
-
-    const { data, error } = await query;
-
     if (error) throw error;
     return data || [];
   },
 
-  async getClientiAttivi(studioId?: string | null) {
-    let query = supabase
+  async getClientiAttivi(_studioId?: string | null) {
+    const studioId = await getCurrentStudioId();
+    const { data, error } = await supabase
       .from("tbclienti")
       .select("*")
+      .eq("studio_id", studioId)
       .eq("attivo", true)
       .order("ragione_sociale");
-
-    if (studioId) {
-      query = query.eq("studio_id", studioId);
-    }
-
-    const { data, error } = await query;
-
     if (error) throw error;
     return data || [];
   },
