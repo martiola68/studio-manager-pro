@@ -60,7 +60,6 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
         .eq("user_id", session.user.id)
         .maybeSingle();
 
-      // Compatibilità con utenti storici nei quali user_id può non essere valorizzato.
       if ((!utente || utenteError) && session.user.email) {
         const fallback = await supabase
           .from("tbutenti")
@@ -82,12 +81,14 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
 
       setStudioId(resolvedStudioId);
 
-      const { data: licenza, error: licenzaError } = await supabase
+      // I tipi Supabase generati nel progetto non includono ancora tbsoftware_licenze.
+      // Manteniamo la query runtime corretta evitando che il type-check blocchi il deploy.
+      const db = supabase as any;
+      const { data: licenza, error: licenzaError } = await db
         .from("tbsoftware_licenze")
         .select("piano, note, stato")
         .eq("studio_id", resolvedStudioId)
         .eq("stato", "attivo")
-        .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
 
@@ -102,7 +103,6 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
       setAddons(leggiAddons(licenza?.note));
     } catch (error) {
       console.error("[StudioContext] Impossibile risolvere il tenant:", error);
-      // FAIL CLOSED: in caso di dubbio non manteniamo mai un tenant precedente.
       setStudioId(null);
       setPiano(null);
       setAddons([]);
@@ -127,7 +127,10 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
     return false;
   }, [piano, addons]);
 
-  const value = useMemo(() => ({ studioId, isLoading, piano, addons, hasModule, refreshStudio: loadStudio }), [studioId, isLoading, piano, addons, hasModule, loadStudio]);
+  const value = useMemo(
+    () => ({ studioId, isLoading, piano, addons, hasModule, refreshStudio: loadStudio }),
+    [studioId, isLoading, piano, addons, hasModule, loadStudio]
+  );
 
   return <StudioContext.Provider value={value}>{children}</StudioContext.Provider>;
 }
