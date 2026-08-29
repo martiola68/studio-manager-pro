@@ -152,10 +152,14 @@
     display: none !important;
   }
 
-  /* Nasconde esclusivamente il riquadro Guida alla configurazione che segue
-     immediatamente la card Credenziali Azure AD (riconoscibile dal Tenant ID). */
-  .microsoft365-page div.rounded-lg.border.bg-card.text-card-foreground.shadow-sm:has(#tenantId)
-    + div.rounded-lg.border.bg-card.text-card-foreground.shadow-sm {
+  /* Microsoft 365: nasconde il link guida dentro la card credenziali e la
+     card immediatamente successiva, che è il riquadro Guida alla configurazione. */
+  .microsoft365-page a[href="/guide/MICROSOFT_365_SETUP_GUIDE.md"] {
+    display: none !important;
+  }
+
+  .microsoft365-page .mx-auto.max-w-5xl > div:has(a[href="/guide/MICROSOFT_365_SETUP_GUIDE.md"])
+    + div {
     display: none !important;
   }
 }
