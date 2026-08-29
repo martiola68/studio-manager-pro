@@ -145,4 +145,10 @@
     letter-spacing: 0.01em;
     margin-bottom: 6px;
   }
+
+  /* I preavvisi delle scadenze sono centralizzati nel cron: non devono più
+     essere configurabili manualmente nel form Tipi Scadenze. */
+  .grid.grid-cols-2.gap-4:has(#giorni_preavviso_1):has(#giorni_preavviso_2) {
+    display: none !important;
+  }
 }
