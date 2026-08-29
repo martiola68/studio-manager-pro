@@ -152,8 +152,10 @@
     display: none !important;
   }
 
-  /* La guida Microsoft 365 non deve più comparire nella pagina di configurazione. */
-  .microsoft365-page div.rounded-lg.border.bg-card.text-card-foreground.shadow-sm:has(button[onclick*="MICROSOFT_365_SETUP_GUIDE.md"]) {
+  /* Nasconde esclusivamente il riquadro Guida alla configurazione che segue
+     immediatamente la card Credenziali Azure AD (riconoscibile dal Tenant ID). */
+  .microsoft365-page div.rounded-lg.border.bg-card.text-card-foreground.shadow-sm:has(#tenantId)
+    + div.rounded-lg.border.bg-card.text-card-foreground.shadow-sm {
     display: none !important;
   }
 }
