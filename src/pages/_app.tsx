@@ -23,6 +23,13 @@ export default function App({ Component, pageProps }: AppProps) {
     router.asPath.startsWith("/compilazione-av4/") ||
     router.asPath.startsWith("/stampa/");
 
+  const pageClass = [
+    router.pathname === "/presenze" ? "presenze-page" : "",
+    router.pathname === "/clienti/organi-sociali" ? "organi-sociali-page" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
     <ThemeProvider>
       <StudioProvider>
@@ -38,9 +45,7 @@ export default function App({ Component, pageProps }: AppProps) {
               <TopNavBar />
             </div>
             <main
-              className={`flex-1 overflow-y-auto px-4 pb-4 pt-0 md:px-6 md:pb-6 md:pt-0 ${
-                router.pathname === "/presenze" ? "presenze-page" : ""
-              }`}
+              className={`flex-1 overflow-y-auto px-4 pb-4 pt-0 md:px-6 md:pb-6 md:pt-0 ${pageClass}`}
             >
               <ModuleAccessGuard>
                 <Component {...pageProps} />
