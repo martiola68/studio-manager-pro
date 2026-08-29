@@ -135,4 +135,14 @@
     max-height: 520px !important;
     min-height: 420px;
   }
+
+  /* Evidenzia il nominativo del Titolare Effettivo senza alterare la logica
+     della scheda: il nome è il div verde, bold, immediatamente prima del CF. */
+  .organi-sociali-page div[style*="color: rgb(22, 101, 52)"][style*="font-size: 16px"],
+  .organi-sociali-page div[style*="color:#166534"][style*="font-size:16px"] {
+    font-size: 24px !important;
+    line-height: 1.15 !important;
+    letter-spacing: 0.01em;
+    margin-bottom: 6px;
+  }
 }
