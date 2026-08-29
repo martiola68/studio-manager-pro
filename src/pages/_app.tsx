@@ -26,6 +26,7 @@ export default function App({ Component, pageProps }: AppProps) {
   const pageClass = [
     router.pathname === "/presenze" ? "presenze-page" : "",
     router.pathname === "/clienti/organi-sociali" ? "organi-sociali-page" : "",
+    router.pathname === "/microsoft365" ? "microsoft365-page" : "",
   ]
     .filter(Boolean)
     .join(" ");
