@@ -74,19 +74,37 @@ export const utenteService = {
   },
 
   async updateUtente(id: string, updates: UtenteUpdate): Promise<Utente | null> {
-    const { data, error } = await supabase
-      .from("tbutenti")
-      .update(updates)
-      .eq("id", id)
-      .select()
-      .single();
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
 
-    if (error) {
-      console.error("Error updating utente:", error);
-      throw error;
+    if (sessionError || !session?.access_token) {
+      throw new Error("Sessione non valida. Effettua nuovamente l'accesso.");
     }
 
-    return data as unknown as Utente | null;
+    const response = await fetch("/api/admin/update-user", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        userId: id,
+        updates,
+      }),
+    });
+
+    const result = await response.json().catch(() => null);
+
+    if (!response.ok || !result?.success) {
+      const message =
+        result?.details || result?.error || "Impossibile aggiornare l'utente";
+      console.error("Error updating utente:", result);
+      throw new Error(message);
+    }
+
+    return (result.user ?? null) as Utente | null;
   },
 
   async deleteUtente(id: string): Promise<boolean> {
