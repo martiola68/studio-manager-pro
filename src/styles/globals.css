@@ -105,7 +105,7 @@
     --chart-4: 303.9 75.8% 51.6%;
     --chart-5: 16.4 84.7% 55.4%;
     --sidebar: 0 0% 4.5%;
-    --sidebar-foreground: 0 0% 97.5%;
+    --sidebar-foreground: 330 0% 97.5%;
     --sidebar-primary: 264.4 77.2% 41.9%;
     --sidebar-primary-foreground: 0 0% 97.5%;
     --sidebar-accent: 0 0% 8.6%;
@@ -127,5 +127,12 @@
 @layer components {
   .container {
     @apply mx-auto px-4 md:px-6 lg:px-8 max-w-7xl w-full;
+  }
+
+  /* Nella pagina presenze il calendario mensile deve mostrare più dipendenti
+     mantenendo lo scroll interno e le intestazioni sticky. */
+  .presenze-page .max-h-\[320px\] {
+    max-height: 520px !important;
+    min-height: 420px;
   }
 }
