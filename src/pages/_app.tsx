@@ -2,6 +2,7 @@ import "@/styles/globals.css";
 import type { AppProps } from "next/app";
 import { ThemeProvider } from "@/contexts/ThemeProvider";
 import { StudioProvider } from "@/contexts/StudioContext";
+import { ModuleAccessGuard } from "@/components/security/ModuleAccessGuard";
 import { Toaster } from "@/components/ui/toaster";
 
 // Layout (Header + Nav) SOLO per pagine private
@@ -13,14 +14,14 @@ export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
 
   // Pagine pubbliche / standalone: niente layout
- const isPublicPage =
-  router.pathname === "/login" ||
-  router.pathname === "/auth/callback" ||
-  router.pathname === "/404" ||
-  router.pathname === "/mobile/agenda" ||
-  router.asPath.startsWith("/documento/") ||
-  router.asPath.startsWith("/compilazione-av4/") ||
-  router.asPath.startsWith("/stampa/");
+  const isPublicPage =
+    router.pathname === "/login" ||
+    router.pathname === "/auth/callback" ||
+    router.pathname === "/404" ||
+    router.pathname === "/mobile/agenda" ||
+    router.asPath.startsWith("/documento/") ||
+    router.asPath.startsWith("/compilazione-av4/") ||
+    router.asPath.startsWith("/stampa/");
 
   return (
     <ThemeProvider>
@@ -37,7 +38,9 @@ export default function App({ Component, pageProps }: AppProps) {
               <TopNavBar />
             </div>
             <main className="flex-1 overflow-y-auto px-4 pb-4 pt-0 md:px-6 md:pb-6 md:pt-0">
-              <Component {...pageProps} />
+              <ModuleAccessGuard>
+                <Component {...pageProps} />
+              </ModuleAccessGuard>
             </main>
             <Toaster />
           </div>
