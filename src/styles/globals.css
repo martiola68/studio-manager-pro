@@ -151,4 +151,9 @@
   .grid.grid-cols-2.gap-4:has(#giorni_preavviso_1):has(#giorni_preavviso_2) {
     display: none !important;
   }
+
+  /* La guida Microsoft 365 non deve più comparire nella pagina di configurazione. */
+  .microsoft365-page div.rounded-lg.border.bg-card.text-card-foreground.shadow-sm:has(button[onclick*="MICROSOFT_365_SETUP_GUIDE.md"]) {
+    display: none !important;
+  }
 }
