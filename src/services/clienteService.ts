@@ -2,7 +2,6 @@ import { supabase } from "@/lib/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { teamsNotificationService } from "./teamsNotificationService";
 
-type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
 type ClienteInsert = Omit<Database["public"]["Tables"]["tbclienti"]["Insert"], "studio_id">;
 type ClienteUpdate = Omit<Database["public"]["Tables"]["tbclienti"]["Update"], "studio_id">;
 
@@ -14,10 +13,6 @@ async function getAuthToken(): Promise<string> {
   return token;
 }
 
-/**
- * Risolve SEMPRE lo studio dalla sessione autenticata.
- * Non accetta studio_id dal chiamante: un tenant non deve poter scegliere quale studio leggere.
- */
 async function getCurrentStudioId(): Promise<string> {
   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
   if (sessionError || !session?.user) throw new Error("Sessione non valida");
@@ -47,23 +42,14 @@ async function getCurrentStudioId(): Promise<string> {
 export const clienteService = {
   async getClienti() {
     const studioId = await getCurrentStudioId();
-    const { data, error } = await supabase
-      .from("tbclienti")
-      .select("*")
-      .eq("studio_id", studioId)
-      .order("ragione_sociale");
+    const { data, error } = await supabase.from("tbclienti").select("*").eq("studio_id", studioId).order("ragione_sociale");
     if (error) throw error;
     return data || [];
   },
 
   async getClienteById(id: string) {
     const studioId = await getCurrentStudioId();
-    const { data, error } = await supabase
-      .from("tbclienti")
-      .select("*")
-      .eq("id", id)
-      .eq("studio_id", studioId)
-      .single();
+    const { data, error } = await supabase.from("tbclienti").select("*").eq("id", id).eq("studio_id", studioId).single();
     if (error) throw error;
     return data;
   },
@@ -102,14 +88,12 @@ export const clienteService = {
 
   async deleteCliente(id: string) {
     const studioId = await getCurrentStudioId();
-    const { data: cliente, error: checkError } = await supabase
-      .from("tbclienti").select("id").eq("id", id).eq("studio_id", studioId).maybeSingle();
+    const { data: cliente, error: checkError } = await supabase.from("tbclienti").select("id").eq("id", id).eq("studio_id", studioId).maybeSingle();
     if (checkError) throw checkError;
     if (!cliente) throw new Error("Cliente non appartenente allo studio corrente");
 
-    const deletePromises = ["tbscadiva", "tbscad770", "tbscadlipe", "tbscadestero", "tbscadproforma", "tbscadimu", "tbscadcu", "tbscadbilanci", "tbscadccgg", "tbscadfiscali"].map((table) =>
-      supabase.from(table as any).delete().eq("id", id)
-    );
+    const db = supabase as any;
+    const deletePromises = ["tbscadiva", "tbscad770", "tbscadlipe", "tbscadestero", "tbscadproforma", "tbscadimu", "tbscadcu", "tbscadbilanci", "tbscadccgg", "tbscadfiscali"].map((table) => db.from(table).delete().eq("id", id));
     await Promise.all(deletePromises);
     const { error } = await supabase.from("tbclienti").delete().eq("id", id).eq("studio_id", studioId);
     if (error) throw error;
@@ -117,36 +101,21 @@ export const clienteService = {
 
   async searchClienti(query: string, _studioId?: string | null) {
     const studioId = await getCurrentStudioId();
-    const { data, error } = await supabase
-      .from("tbclienti")
-      .select("*")
-      .eq("studio_id", studioId)
-      .or(`ragione_sociale.ilike.%${query}%,partita_iva.ilike.%${query}%,codice_fiscale.ilike.%${query}%`)
-      .order("ragione_sociale");
+    const { data, error } = await supabase.from("tbclienti").select("*").eq("studio_id", studioId).or(`ragione_sociale.ilike.%${query}%,partita_iva.ilike.%${query}%,codice_fiscale.ilike.%${query}%`).order("ragione_sociale");
     if (error) throw error;
     return data || [];
   },
 
   async getClientiByUtente(utenteId: string, _studioId?: string | null) {
     const studioId = await getCurrentStudioId();
-    const { data, error } = await supabase
-      .from("tbclienti")
-      .select("*")
-      .eq("studio_id", studioId)
-      .or(`utente_operatore_id.eq.${utenteId},utente_professionista_id.eq.${utenteId}`)
-      .order("ragione_sociale");
+    const { data, error } = await supabase.from("tbclienti").select("*").eq("studio_id", studioId).or(`utente_operatore_id.eq.${utenteId},utente_professionista_id.eq.${utenteId}`).order("ragione_sociale");
     if (error) throw error;
     return data || [];
   },
 
   async getClientiAttivi(_studioId?: string | null) {
     const studioId = await getCurrentStudioId();
-    const { data, error } = await supabase
-      .from("tbclienti")
-      .select("*")
-      .eq("studio_id", studioId)
-      .eq("attivo", true)
-      .order("ragione_sociale");
+    const { data, error } = await supabase.from("tbclienti").select("*").eq("studio_id", studioId).eq("attivo", true).order("ragione_sociale");
     if (error) throw error;
     return data || [];
   },
