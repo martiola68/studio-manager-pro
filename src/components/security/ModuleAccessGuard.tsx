@@ -45,7 +45,6 @@ export function ModuleAccessGuard({ children }: { children: ReactNode }) {
     );
   }
 
-  // Fail closed: se il tenant o la licenza non sono determinabili, il modulo resta inaccessibile.
   const allowed = Boolean(studioId && piano && hasModule(protectedModule.modulo));
   if (allowed) return <>{children}</>;
 
@@ -60,7 +59,7 @@ export function ModuleAccessGuard({ children }: { children: ReactNode }) {
         <button
           type="button"
           className="mt-6 rounded-lg bg-slate-900 px-5 py-2.5 font-medium text-white"
-          onClick={() => void router.push("/dashboard")}
+          onClick={() => void router.push("/")}
         >
           Torna alla dashboard
         </button>
