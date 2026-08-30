@@ -297,7 +297,12 @@ export function ClientiImportTemplateEnhancer() {
 
     const handleTrigger = (event: MouseEvent) => {
       const button = (event.target as Element | null)?.closest("button");
-      const label = button?.textContent?.trim();
+      if (!button) return;
+
+      // Non intercettare mai i pulsanti della modale stessa.
+      if (button.closest('[role="dialog"]')) return;
+
+      const label = button.textContent?.trim();
       if (label !== "Importa Excel" && label !== "Importa Excel/CSV") return;
 
       event.preventDefault();
