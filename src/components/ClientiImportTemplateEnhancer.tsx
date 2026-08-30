@@ -69,7 +69,6 @@ async function downloadExcelTemplate() {
   instructions.getCell("A3").alignment = { wrapText: true };
 
   instructions.getRow(5).values = ["Campo", "Obbligatorio", "Formato / valori ammessi", "Max caratteri", "Istruzioni / esempio"];
-  const iHeader = instructions.getRange ? null : null;
   instructions.getRow(5).eachCell((cell) => {
     cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1F4E78" } };
