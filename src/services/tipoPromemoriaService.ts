@@ -1,18 +1,21 @@
 import { supabase } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/types";
 
-type TipoPromemoria = Database["public"]["Tables"]["tbtipopromemoria"]["Row"];
-type TipoPromemoriaInsert = Database["public"]["Tables"]["tbtipopromemoria"]["Insert"];
-type TipoPromemoriaUpdate = Database["public"]["Tables"]["tbtipopromemoria"]["Update"];
+type TipoPromemoriaBase = Database["public"]["Tables"]["tbtipopromemoria"]["Row"];
+
+export type TipoPromemoriaCatalogo = TipoPromemoriaBase & {
+  origine: "S" | "P";
+  studio_id?: string | null;
+};
+
+const db = supabase as any;
 
 export const tipoPromemoriaService = {
-  /**
-   * Ottiene tutti i tipi di promemoria
-   */
-  async getTipiPromemoria(): Promise<TipoPromemoria[]> {
-    const { data, error } = await supabase
+  async getTipiPromemoria(studioId: string): Promise<TipoPromemoriaCatalogo[]> {
+    const { data, error } = await db
       .from("tbtipopromemoria")
       .select("*")
+      .or(`origine.eq.S,and(origine.eq.P,studio_id.eq.${studioId})`)
       .order("nome", { ascending: true });
 
     if (error) {
@@ -20,14 +23,11 @@ export const tipoPromemoriaService = {
       throw error;
     }
 
-    return data || [];
+    return (data || []) as TipoPromemoriaCatalogo[];
   },
 
-  /**
-   * Ottiene un tipo promemoria per ID
-   */
-  async getTipoPromemoriaById(id: string): Promise<TipoPromemoria | null> {
-    const { data, error } = await supabase
+  async getTipoPromemoriaById(id: string): Promise<TipoPromemoriaCatalogo | null> {
+    const { data, error } = await db
       .from("tbtipopromemoria")
       .select("*")
       .eq("id", id)
@@ -38,18 +38,19 @@ export const tipoPromemoriaService = {
       throw error;
     }
 
-    return data;
+    return data as TipoPromemoriaCatalogo;
   },
 
-  /**
-   * Crea un nuovo tipo promemoria
-   */
-  async creaTipoPromemoria(
-    tipo: TipoPromemoriaInsert
-  ): Promise<TipoPromemoria | null> {
-    const { data, error } = await supabase
+  async creaTipoPromemoria(tipo: {
+    nome: string;
+    descrizione?: string | null;
+    colore?: string | null;
+    studio_id: string;
+    origine?: "S" | "P";
+  }): Promise<TipoPromemoriaCatalogo | null> {
+    const { data, error } = await db
       .from("tbtipopromemoria")
-      .insert([tipo])
+      .insert([{ ...tipo, origine: tipo.origine || "P" }])
       .select()
       .single();
 
@@ -58,17 +59,14 @@ export const tipoPromemoriaService = {
       throw error;
     }
 
-    return data;
+    return data as TipoPromemoriaCatalogo;
   },
 
-  /**
-   * Aggiorna un tipo promemoria
-   */
   async aggiornaTipoPromemoria(
     id: string,
-    updates: TipoPromemoriaUpdate
-  ): Promise<TipoPromemoria | null> {
-    const { data, error } = await supabase
+    updates: { nome?: string; descrizione?: string | null; colore?: string | null },
+  ): Promise<TipoPromemoriaCatalogo | null> {
+    const { data, error } = await db
       .from("tbtipopromemoria")
       .update(updates)
       .eq("id", id)
@@ -80,14 +78,11 @@ export const tipoPromemoriaService = {
       throw error;
     }
 
-    return data;
+    return data as TipoPromemoriaCatalogo;
   },
 
-  /**
-   * Elimina un tipo promemoria
-   */
   async eliminaTipoPromemoria(id: string): Promise<void> {
-    const { error } = await supabase
+    const { error } = await db
       .from("tbtipopromemoria")
       .delete()
       .eq("id", id);
