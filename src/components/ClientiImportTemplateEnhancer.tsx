@@ -274,6 +274,7 @@ export function ClientiImportTemplateEnhancer() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [errors, setErrors] = useState<string[]>([]);
+  const [fileInputKey, setFileInputKey] = useState(0);
 
   useEffect(() => {
     const renameButton = () => {
@@ -304,6 +305,7 @@ export function ClientiImportTemplateEnhancer() {
       setFile(null);
       setMessage("");
       setErrors([]);
+      setFileInputKey((current) => current + 1);
       setOpen(true);
     };
 
@@ -451,6 +453,7 @@ export function ClientiImportTemplateEnhancer() {
           setFile(null);
           setMessage("");
           setErrors([]);
+          setFileInputKey((current) => current + 1);
         }
       }}
     >
@@ -481,10 +484,14 @@ export function ClientiImportTemplateEnhancer() {
           <div className="space-y-2">
             <Label htmlFor="clienti-import-file">File Excel da importare</Label>
             <Input
+              key={fileInputKey}
               id="clienti-import-file"
               type="file"
               accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               disabled={busy}
+              onClick={(event) => {
+                event.currentTarget.value = "";
+              }}
               onChange={(event) => {
                 const selected = event.target.files?.[0] ?? null;
                 setMessage("");
