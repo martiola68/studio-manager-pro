@@ -1,4 +1,6 @@
 import { useEffect } from "react";
+import { useStudio } from "@/contexts/StudioContext";
+import { getSupabaseClient } from "@/lib/supabase/client";
 
 const HEADERS = [
   "Tipo Cliente",
@@ -19,26 +21,65 @@ const HEADERS = [
 ];
 
 const FIELD_RULES = [
-  ["Tipo Cliente", "Sì", "Persona fisica | Altro", "-", "Se omesso il sistema usa Persona fisica."],
-  ["Tipologia Cliente", "Sì", "Interno | Esterno", "-", "Se omesso il sistema usa Interno."],
-  ["Settore Fiscale (VERO/FALSO)", "No", "VERO | FALSO", "-", "Usare esclusivamente VERO oppure FALSO."],
+  ["Tipo Cliente", "Sì", "Persona fisica | Altro", "-", "Per le persone fisiche usare Persona fisica; per società/enti usare Altro."],
+  ["Tipologia Cliente", "Sì", "Interno | Esterno", "-", "Indicare la tipologia anagrafica."],
+  ["Settore Fiscale (VERO/FALSO)", "No", "VERO | FALSO", "-", "Se tutti i settori sono vuoti viene impostato automaticamente Settore Fiscale = VERO."],
   ["Settore Lavoro (VERO/FALSO)", "No", "VERO | FALSO", "-", "Usare esclusivamente VERO oppure FALSO."],
   ["Settore Consulenza (VERO/FALSO)", "No", "VERO | FALSO", "-", "Usare esclusivamente VERO oppure FALSO."],
-  ["Ragione Sociale", "Sì", "Testo", "255", "Campo indispensabile per l'importazione. Per persona fisica indicare COGNOME NOME."],
-  ["Partita IVA", "No", "11 cifre", "11", "Solo numeri, senza spazi o prefissi IT."],
-  ["Codice Fiscale", "Sì", "16 caratteri PF oppure 11 cifre per altri soggetti", "16", "Inserire senza spazi. Per persona fisica usare il CF di 16 caratteri."],
+  ["Ragione Sociale", "Sì", "Testo", "255", "Per persona fisica indicare COGNOME NOME; per società indicare la denominazione completa."],
+  ["Partita IVA", "No", "11 cifre", "11", "Solo numeri, senza spazi o prefisso IT."],
+  ["Codice Fiscale", "Sì", "16 caratteri PF oppure 11 cifre altri soggetti", "16", "Senza spazi. Il file viene controllato prima dell'inserimento."],
   ["Indirizzo", "No", "Testo", "255", "Via/piazza e numero civico."],
-  ["CAP", "No", "5 cifre", "5", "La colonna è in formato testo per conservare eventuali zeri iniziali."],
+  ["CAP", "No", "5 cifre", "5", "Formato testo per conservare eventuali zeri iniziali."],
   ["Città", "No", "Testo", "100", "Comune/località."],
   ["Provincia", "No", "Sigla provincia", "2", "Esempio: RM, MI, TO."],
   ["Email", "No", "Indirizzo email", "255", "Esempio: amministrazione@cliente.it"],
-  ["Attivo", "No", "VERO | FALSO", "-", "Se non valorizzato il comportamento resta quello previsto dall'importatore."],
+  ["Attivo", "No", "VERO | FALSO", "-", "Se vuoto viene impostato VERO."],
   ["Note", "No", "Testo libero", "1000", "Eventuali annotazioni sul cliente."],
-];
+] as const;
 
-function csvEscape(value: string) {
-  const text = String(value ?? "");
-  return `"${text.replace(/"/g, '""')}"`;
+function normalizeBoolean(value: string, defaultValue: boolean) {
+  const normalized = value.trim().toUpperCase();
+  if (!normalized) return defaultValue;
+  if (["VERO", "TRUE", "1", "SI", "SÌ"].includes(normalized)) return true;
+  if (["FALSO", "FALSE", "0", "NO"].includes(normalized)) return false;
+  throw new Error(`Valore booleano non valido: ${value}. Usare VERO o FALSO.`);
+}
+
+function validateRow(row: Record<string, string>, rowNumber: number) {
+  const tipo = row["Tipo Cliente"].trim();
+  const tipologia = row["Tipologia Cliente"].trim();
+  const ragione = row["Ragione Sociale"].trim();
+  const cf = row["Codice Fiscale"].trim().toUpperCase();
+
+  if (!tipo || !["Persona fisica", "Altro"].includes(tipo)) {
+    throw new Error(`Riga ${rowNumber}: Tipo Cliente deve essere Persona fisica oppure Altro.`);
+  }
+  if (!tipologia || !["Interno", "Esterno"].includes(tipologia)) {
+    throw new Error(`Riga ${rowNumber}: Tipologia Cliente deve essere Interno oppure Esterno.`);
+  }
+  if (!ragione) throw new Error(`Riga ${rowNumber}: Ragione Sociale obbligatoria.`);
+  if (!cf) throw new Error(`Riga ${rowNumber}: Codice Fiscale obbligatorio.`);
+
+  if (tipo === "Persona fisica" && !/^[A-Z0-9]{16}$/.test(cf)) {
+    throw new Error(`Riga ${rowNumber}: il Codice Fiscale della persona fisica deve avere 16 caratteri.`);
+  }
+  if (tipo === "Altro" && !/^\d{11}$/.test(cf)) {
+    throw new Error(`Riga ${rowNumber}: per società/enti il Codice Fiscale deve contenere 11 cifre.`);
+  }
+
+  const piva = row["Partita IVA"].trim();
+  if (piva && !/^\d{11}$/.test(piva)) {
+    throw new Error(`Riga ${rowNumber}: la Partita IVA deve contenere 11 cifre.`);
+  }
+  const cap = row["CAP"].trim();
+  if (cap && !/^\d{5}$/.test(cap)) {
+    throw new Error(`Riga ${rowNumber}: il CAP deve contenere 5 cifre.`);
+  }
+  const provincia = row["Provincia"].trim();
+  if (provincia && provincia.length !== 2) {
+    throw new Error(`Riga ${rowNumber}: la Provincia deve essere una sigla di 2 caratteri.`);
+  }
 }
 
 async function downloadExcelTemplate() {
@@ -59,13 +100,13 @@ async function downloadExcelTemplate() {
   instructions.getRow(1).height = 28;
 
   instructions.mergeCells("A2:E2");
-  instructions.getCell("A2").value = "Compilare esclusivamente il foglio DATI DA IMPORTARE. Non modificare i nomi delle colonne.";
+  instructions.getCell("A2").value = "Compilare esclusivamente il foglio DATI DA IMPORTARE. Non modificare, rinominare o spostare le colonne.";
   instructions.getCell("A2").font = { bold: true, color: { argb: "FF7F1D1D" } };
   instructions.getCell("A2").fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFEF2F2" } };
   instructions.getCell("A2").alignment = { wrapText: true };
 
   instructions.mergeCells("A3:E3");
-  instructions.getCell("A3").value = "I campi obbligatori sono evidenziati in rosso nel foglio dati. Le colonne VERO/FALSO dispongono di menu a tendina.";
+  instructions.getCell("A3").value = "ROSSO = obbligatorio. VERDE = facoltativo. I campi a scelta dispongono di menu a tendina.";
   instructions.getCell("A3").alignment = { wrapText: true };
 
   instructions.getRow(5).values = ["Campo", "Obbligatorio", "Formato / valori ammessi", "Max caratteri", "Istruzioni / esempio"];
@@ -73,28 +114,14 @@ async function downloadExcelTemplate() {
     cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1F4E78" } };
     cell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
-    cell.border = {
-      top: { style: "thin", color: { argb: "FFD1D5DB" } },
-      left: { style: "thin", color: { argb: "FFD1D5DB" } },
-      bottom: { style: "thin", color: { argb: "FFD1D5DB" } },
-      right: { style: "thin", color: { argb: "FFD1D5DB" } },
-    };
   });
 
   FIELD_RULES.forEach((rule, index) => {
-    const row = instructions.addRow(rule);
+    const row = instructions.addRow([...rule]);
     row.alignment = { vertical: "top", wrapText: true };
-    row.eachCell((cell) => {
-      cell.border = {
-        top: { style: "thin", color: { argb: "FFE5E7EB" } },
-        left: { style: "thin", color: { argb: "FFE5E7EB" } },
-        bottom: { style: "thin", color: { argb: "FFE5E7EB" } },
-        right: { style: "thin", color: { argb: "FFE5E7EB" } },
-      };
-    });
     if (rule[1] === "Sì") {
-      row.getCell(2).font = { bold: true, color: { argb: "FFB91C1C" } };
       row.getCell(1).font = { bold: true };
+      row.getCell(2).font = { bold: true, color: { argb: "FFB91C1C" } };
       row.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF7ED" } };
     } else if (index % 2 === 1) {
       row.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF8FAFC" } };
@@ -104,9 +131,9 @@ async function downloadExcelTemplate() {
   instructions.columns = [
     { width: 34 },
     { width: 15 },
-    { width: 36 },
+    { width: 40 },
     { width: 16 },
-    { width: 62 },
+    { width: 68 },
   ];
 
   const data = workbook.addWorksheet("DATI DA IMPORTARE", {
@@ -119,38 +146,9 @@ async function downloadExcelTemplate() {
   data.getRow(1).eachCell((cell) => {
     const required = mandatory.has(String(cell.value));
     cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
-    cell.fill = {
-      type: "pattern",
-      pattern: "solid",
-      fgColor: { argb: required ? "FFB91C1C" : "FF166534" },
-    };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: required ? "FFB91C1C" : "FF166534" } };
     cell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
-    cell.border = {
-      top: { style: "thin", color: { argb: "FFFFFFFF" } },
-      left: { style: "thin", color: { argb: "FFFFFFFF" } },
-      bottom: { style: "thin", color: { argb: "FFFFFFFF" } },
-      right: { style: "thin", color: { argb: "FFFFFFFF" } },
-    };
   });
-
-  const example = [
-    "Altro",
-    "Interno",
-    "VERO",
-    "FALSO",
-    "FALSO",
-    "ESEMPIO SRL",
-    "01234567890",
-    "01234567890",
-    "Via Roma 1",
-    "00100",
-    "Roma",
-    "RM",
-    "info@esempio.it",
-    "VERO",
-    "Riga di esempio: cancellarla prima dell'importazione",
-  ];
-  data.addRow(example);
 
   const widths = [18, 20, 24, 24, 28, 34, 16, 20, 30, 10, 20, 12, 30, 12, 42];
   data.columns.forEach((col, idx) => {
@@ -184,13 +182,11 @@ async function downloadExcelTemplate() {
         error: "Inserire esclusivamente VERO oppure FALSO.",
       };
     });
-
     [7, 8, 10].forEach((col) => {
       data.getCell(row, col).numFmt = "@";
     });
   }
 
-  data.getRow(2).font = { italic: true, color: { argb: "FF6B7280" } };
   data.autoFilter = { from: "A1", to: "O1" };
 
   const buffer = await workbook.xlsx.writeBuffer();
@@ -207,47 +203,35 @@ async function downloadExcelTemplate() {
   URL.revokeObjectURL(url);
 }
 
-async function excelToCsvFile(file: File) {
+async function readExcelRows(file: File) {
   const ExcelJS = await import("exceljs");
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(await file.arrayBuffer());
 
-  const sheet =
-    workbook.getWorksheet("DATI DA IMPORTARE") ||
-    workbook.getWorksheet("Dati da importare") ||
-    workbook.worksheets[1] ||
-    workbook.worksheets[0];
+  const sheet = workbook.getWorksheet("DATI DA IMPORTARE");
+  if (!sheet) throw new Error("Manca il foglio DATI DA IMPORTARE.");
 
-  if (!sheet) throw new Error("Il file Excel non contiene fogli leggibili.");
-
-  const headerRow = sheet.getRow(1);
-  const headerCount = HEADERS.length;
-  const actualHeaders = Array.from({ length: headerCount }, (_, index) =>
-    headerRow.getCell(index + 1).text.trim()
-  );
-
+  const actualHeaders = HEADERS.map((_, index) => sheet.getRow(1).getCell(index + 1).text.trim());
   if (actualHeaders.join("|") !== HEADERS.join("|")) {
-    throw new Error(
-      "Il foglio DATI DA IMPORTARE non ha la struttura prevista. Scarica nuovamente il template e non modificare le intestazioni."
-    );
+    throw new Error("Le colonne del foglio DATI DA IMPORTARE sono state modificate. Scarica un nuovo template.");
   }
 
-  const lines = [HEADERS.map(csvEscape).join(",")];
+  const rows: { rowNumber: number; values: Record<string, string> }[] = [];
   for (let rowNumber = 2; rowNumber <= sheet.rowCount; rowNumber += 1) {
-    const row = sheet.getRow(rowNumber);
-    const values = Array.from({ length: headerCount }, (_, index) =>
-      row.getCell(index + 1).text.trim()
-    );
-    if (values.every((value) => !value)) continue;
-    lines.push(values.map(csvEscape).join(","));
+    const excelRow = sheet.getRow(rowNumber);
+    const values: Record<string, string> = {};
+    HEADERS.forEach((header, index) => {
+      values[header] = excelRow.getCell(index + 1).text.trim();
+    });
+    if (HEADERS.every((header) => !values[header])) continue;
+    rows.push({ rowNumber, values });
   }
-
-  return new File([lines.join("\n")], "importazione_clienti_da_excel.csv", {
-    type: "text/csv;charset=utf-8",
-  });
+  return rows;
 }
 
 export function ClientiImportTemplateEnhancer() {
+  const { studioId } = useStudio();
+
   useEffect(() => {
     const enhanceDialog = () => {
       const input = document.getElementById("csv-file-clienti") as HTMLInputElement | null;
@@ -291,18 +275,95 @@ export function ClientiImportTemplateEnhancer() {
       event.preventDefault();
       event.stopImmediatePropagation();
 
-      void excelToCsvFile(file)
-        .then((csvFile) => {
-          const transfer = new DataTransfer();
-          transfer.items.add(csvFile);
-          input.files = transfer.files;
-          input.dispatchEvent(new Event("change", { bubbles: true }));
-        })
-        .catch((error) => {
-          console.error("Errore lettura template Excel clienti", error);
-          window.alert(error instanceof Error ? error.message : "Errore nella lettura del file Excel.");
+      void (async () => {
+        try {
+          if (!studioId) throw new Error("Studio non disponibile. Ricarica la pagina e riprova.");
+
+          input.disabled = true;
+          const rows = await readExcelRows(file);
+          if (!rows.length) throw new Error("Il foglio DATI DA IMPORTARE non contiene righe da importare.");
+
+          const supabase = getSupabaseClient();
+          let imported = 0;
+          let duplicates = 0;
+          const errors: string[] = [];
+
+          for (const item of rows) {
+            try {
+              const row = item.values;
+              validateRow(row, item.rowNumber);
+
+              const cf = row["Codice Fiscale"].trim().toUpperCase();
+              const { data: existing, error: duplicateError } = await supabase
+                .from("tbclienti")
+                .select("id")
+                .eq("studio_id", studioId)
+                .eq("codice_fiscale", cf)
+                .maybeSingle();
+
+              if (duplicateError) throw duplicateError;
+              if (existing?.id) {
+                duplicates += 1;
+                continue;
+              }
+
+              const fiscalRaw = row["Settore Fiscale (VERO/FALSO)"];
+              const lavoroRaw = row["Settore Lavoro (VERO/FALSO)"];
+              const consulenzaRaw = row["Settore Consulenza (VERO/FALSO)"];
+              const nessunSettoreCompilato = !fiscalRaw.trim() && !lavoroRaw.trim() && !consulenzaRaw.trim();
+
+              const payload = {
+                studio_id: studioId,
+                tipo_cliente: row["Tipo Cliente"],
+                tipologia_cliente: row["Tipologia Cliente"],
+                ragione_sociale: row["Ragione Sociale"],
+                codice_fiscale: cf,
+                partita_iva: row["Partita IVA"].trim() || null,
+                indirizzo: row["Indirizzo"].trim() || null,
+                cap: row["CAP"].trim() || null,
+                citta: row["Città"].trim() || null,
+                provincia: row["Provincia"].trim().toUpperCase() || null,
+                email: row["Email"].trim() || null,
+                settore_fiscale: nessunSettoreCompilato ? true : normalizeBoolean(fiscalRaw, false),
+                settore_lavoro: normalizeBoolean(lavoroRaw, false),
+                settore_consulenza: normalizeBoolean(consulenzaRaw, false),
+                attivo: normalizeBoolean(row["Attivo"], true),
+                cliente: true,
+                note: row["Note"].trim() || null,
+              };
+
+              const { error: insertError } = await supabase.from("tbclienti").insert(payload);
+              if (insertError) throw insertError;
+              imported += 1;
+            } catch (error) {
+              const message = error instanceof Error ? error.message : "Errore sconosciuto";
+              errors.push(message.startsWith("Riga ") ? message : `Riga ${item.rowNumber}: ${message}`);
+            }
+          }
+
+          const summary = [
+            `${imported} clienti importati`,
+            duplicates ? `${duplicates} duplicati saltati` : "",
+            errors.length ? `${errors.length} righe con errore` : "",
+          ].filter(Boolean).join("\n");
+
+          if (errors.length) {
+            console.error("Errori importazione Excel clienti:", errors);
+            window.alert(`${summary}\n\nPrimi errori:\n${errors.slice(0, 5).join("\n")}`);
+          } else {
+            window.alert(summary);
+          }
+
           input.value = "";
-        });
+          if (imported > 0) window.location.reload();
+        } catch (error) {
+          console.error("Errore importazione Excel clienti", error);
+          window.alert(error instanceof Error ? error.message : "Errore nell'importazione del file Excel.");
+          input.value = "";
+        } finally {
+          input.disabled = false;
+        }
+      })();
     };
 
     document.addEventListener("click", onClickCapture, true);
@@ -313,7 +374,7 @@ export function ClientiImportTemplateEnhancer() {
       document.removeEventListener("click", onClickCapture, true);
       document.removeEventListener("change", onChangeCapture, true);
     };
-  }, []);
+  }, [studioId]);
 
   return null;
 }
