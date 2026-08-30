@@ -53,6 +53,36 @@ const CATALOGO_TIPI: Record<string, string[]> = {
   "Incassi / Amministrazione": ["Emissione parcella", "Proforma", "Fattura", "Incasso", "Pagamento", "Sollecito pagamento", "Recupero credito", "Rinnovo contratto"],
 };
 
+const COLORI_GRUPPI: Record<string, string> = {
+  "Generali": "#3B82F6",
+  "Clienti / Pratiche": "#06B6D4",
+  "Fiscale": "#8B5CF6",
+  "Contabilità": "#6366F1",
+  "Enti": "#0EA5E9",
+  "Contenzioso": "#EF4444",
+  "Lavoro / Paghe": "#F59E0B",
+  "Societario": "#14B8A6",
+  "Antiriciclaggio": "#7C3AED",
+  "Revisione / Controllo": "#10B981",
+  "Consulenza": "#84CC16",
+  "Documenti": "#64748B",
+  "Incassi / Amministrazione": "#F97316",
+};
+
+function getGruppoCatalogo(nome: string) {
+  const normalized = nome.trim().toLocaleLowerCase("it");
+  if (!normalized) return null;
+  for (const [gruppo, nomi] of Object.entries(CATALOGO_TIPI)) {
+    if (nomi.some((item) => item.toLocaleLowerCase("it") === normalized)) return gruppo;
+  }
+  return null;
+}
+
+function getColoreCatalogo(nome: string) {
+  const gruppo = getGruppoCatalogo(nome);
+  return gruppo ? COLORI_GRUPPI[gruppo] : null;
+}
+
 export default function TipoPromemoriaPage() {
   const { toast } = useToast();
   const [tipi, setTipi] = useState<TipoPromemoriaCatalogo[]>([]);
@@ -93,8 +123,14 @@ export default function TipoPromemoriaPage() {
 
   const catalogoFiltrato = useMemo(() => {
     const q = formData.nome.trim().toLocaleLowerCase("it");
-    return Object.entries(CATALOGO_TIPI).map(([categoria, nomi]) => [categoria, q ? nomi.filter((nome) => nome.toLocaleLowerCase("it").includes(q)) : nomi] as const).filter(([, nomi]) => nomi.length > 0);
+    return Object.entries(CATALOGO_TIPI)
+      .map(([categoria, nomi]) => [categoria, q ? nomi.filter((nome) => nome.toLocaleLowerCase("it").includes(q)) : nomi] as const)
+      .filter(([, nomi]) => nomi.length > 0);
   }, [formData.nome]);
+
+  const gruppoSelezionato = getGruppoCatalogo(formData.nome);
+  const coloreGruppo = gruppoSelezionato ? COLORI_GRUPPI[gruppoSelezionato] : null;
+  const coloreBloccato = Boolean(coloreGruppo);
 
   const canEditTipo = (tipo: TipoPromemoriaCatalogo) => tipo.origine === "P" || canManageSystem;
 
@@ -102,13 +138,14 @@ export default function TipoPromemoriaPage() {
     event.preventDefault();
     if (!studioId) return;
     try {
+      const coloreEffettivo = getColoreCatalogo(formData.nome) || formData.colore;
       if (editingTipo) {
         if (!canEditTipo(editingTipo)) throw new Error("Tipo di sistema modificabile solo dall'Amministratore di Sistema.");
-        await tipoPromemoriaService.aggiornaTipoPromemoria(editingTipo.id, { nome: formData.nome.trim(), descrizione: formData.descrizione.trim(), colore: formData.colore });
+        await tipoPromemoriaService.aggiornaTipoPromemoria(editingTipo.id, { nome: formData.nome.trim(), descrizione: formData.descrizione.trim(), colore: coloreEffettivo });
         toast({ title: "Successo", description: "Tipo promemoria aggiornato" });
       } else {
         const origine = canManageSystem ? formData.origine : "P";
-        await tipoPromemoriaService.creaTipoPromemoria({ nome: formData.nome.trim(), descrizione: formData.descrizione.trim(), colore: formData.colore, studio_id: studioId, origine });
+        await tipoPromemoriaService.creaTipoPromemoria({ nome: formData.nome.trim(), descrizione: formData.descrizione.trim(), colore: coloreEffettivo, studio_id: studioId, origine });
         toast({ title: "Successo", description: origine === "S" ? "Tipo promemoria di sistema creato" : "Tipo promemoria personale creato" });
       }
       setShowDialog(false); resetForm(); await fetchTipi(studioId);
@@ -126,7 +163,10 @@ export default function TipoPromemoriaPage() {
 
   const handleEdit = (tipo: TipoPromemoriaCatalogo) => {
     if (!canEditTipo(tipo)) return;
-    setEditingTipo(tipo); setFormData({ origine: tipo.origine, nome: tipo.nome, descrizione: tipo.descrizione || "", colore: tipo.colore || "#3B82F6" }); setShowDialog(true);
+    const coloreCatalogo = getColoreCatalogo(tipo.nome);
+    setEditingTipo(tipo);
+    setFormData({ origine: tipo.origine, nome: tipo.nome, descrizione: tipo.descrizione || "", colore: coloreCatalogo || tipo.colore || "#3B82F6" });
+    setShowDialog(true);
   };
 
   const resetForm = () => { setEditingTipo(null); setFormData({ ...EMPTY_FORM }); setCatalogOpen(false); };
@@ -140,12 +180,12 @@ export default function TipoPromemoriaPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {!editingTipo && <div><Label>Origine</Label>{canManageSystem ? <div className="mt-2 flex gap-2"><Button type="button" variant={formData.origine === "S" ? "default" : "outline"} onClick={() => setFormData((p) => ({...p, origine:"S"}))}>S · Sistema</Button><Button type="button" variant={formData.origine === "P" ? "default" : "outline"} onClick={() => setFormData((p) => ({...p, origine:"P"}))}>P · Personale</Button></div> : <div className="mt-2"><Badge className="bg-amber-100 text-amber-900">P · Personale</Badge><p className="text-xs text-muted-foreground mt-1">I nuovi tipi sono personali dello studio.</p></div>}</div>}
             {editingTipo && <div><Label>Origine</Label><div className="mt-2"><Badge className={editingTipo.origine === "S" ? "bg-slate-900 text-white" : "bg-amber-100 text-amber-900"}>{editingTipo.origine === "S" ? "S · Sistema" : "P · Personale"}</Badge></div></div>}
-            <div className="relative"><Label htmlFor="nome">Nome *</Label><div className="relative mt-1"><Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"/><Input id="nome" className="pl-9" value={formData.nome} onFocus={() => !editingTipo && setCatalogOpen(true)} onChange={(e) => { setFormData({...formData,nome:e.target.value}); if (!editingTipo) setCatalogOpen(true); }} placeholder="Cerca o scrivi un tipo di promemoria..." required /></div>
-              {!editingTipo && catalogOpen && <div className="absolute z-50 mt-1 w-full max-h-72 overflow-y-auto rounded-md border bg-background shadow-lg">{catalogoFiltrato.length ? catalogoFiltrato.map(([categoria,nomi]) => <div key={categoria}><div className="sticky top-0 bg-muted px-3 py-1.5 text-xs font-semibold text-muted-foreground">{categoria}</div>{nomi.map((nome) => <button key={nome} type="button" className="block w-full px-3 py-2 text-left text-sm hover:bg-muted" onClick={() => {setFormData((p)=>({...p,nome}));setCatalogOpen(false);}}>{nome}</button>)}</div>) : <div className="p-3 text-sm"><strong>“{formData.nome}”</strong> non è nel catalogo.<div className="mt-1 text-muted-foreground">Puoi comunque crearlo come tipo personalizzato dello studio.</div></div>}</div>}
+            <div className="relative"><Label htmlFor="nome">Nome *</Label><div className="relative mt-1"><Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"/><Input id="nome" className="pl-9" value={formData.nome} onFocus={() => !editingTipo && setCatalogOpen(true)} onChange={(e) => { const nome = e.target.value; const colore = getColoreCatalogo(nome); setFormData({...formData,nome,colore:colore || formData.colore}); if (!editingTipo) setCatalogOpen(true); }} placeholder="Cerca o scrivi un tipo di promemoria..." required /></div>
+              {!editingTipo && catalogOpen && <div className="absolute z-50 mt-1 w-full max-h-72 overflow-y-auto rounded-md border bg-background shadow-lg">{catalogoFiltrato.length ? catalogoFiltrato.map(([categoria,nomi]) => <div key={categoria}><div className="sticky top-0 flex items-center gap-2 bg-muted px-3 py-1.5 text-xs font-semibold text-muted-foreground"><span className="h-2.5 w-2.5 rounded-full" style={{backgroundColor:COLORI_GRUPPI[categoria]}} />{categoria}</div>{nomi.map((nome) => <button key={nome} type="button" className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted" onClick={() => {setFormData((p)=>({...p,nome,colore:COLORI_GRUPPI[categoria]}));setCatalogOpen(false);}}><span className="h-2.5 w-2.5 rounded-full" style={{backgroundColor:COLORI_GRUPPI[categoria]}} />{nome}</button>)}</div>) : <div className="p-3 text-sm"><strong>“{formData.nome}”</strong> non è nel catalogo.<div className="mt-1 text-muted-foreground">Puoi comunque crearlo come tipo personalizzato dello studio.</div></div>}</div>}
               {!editingTipo && <p className="mt-1 text-xs text-muted-foreground">Seleziona dal catalogo oppure scrivi un tipo personalizzato.</p>}
             </div>
             <div><Label htmlFor="descrizione">Descrizione</Label><Textarea id="descrizione" value={formData.descrizione} onChange={(e)=>setFormData({...formData,descrizione:e.target.value})} placeholder="Descrizione della tipologia" rows={3}/></div>
-            <div><Label htmlFor="colore">Colore</Label><div className="flex gap-2"><Input id="colore" type="color" value={formData.colore} onChange={(e)=>setFormData({...formData,colore:e.target.value})} className="w-20 h-10"/><Input type="text" value={formData.colore} onChange={(e)=>setFormData({...formData,colore:e.target.value})} placeholder="#3B82F6"/></div></div>
+            <div><Label htmlFor="colore">Colore</Label><div className="flex gap-2"><Input id="colore" type="color" value={coloreGruppo || formData.colore} disabled={coloreBloccato} onChange={(e)=>setFormData({...formData,colore:e.target.value})} className="w-20 h-10"/><Input type="text" value={coloreGruppo || formData.colore} readOnly={coloreBloccato} onChange={(e)=>setFormData({...formData,colore:e.target.value})} placeholder="#3B82F6" className={coloreBloccato ? "bg-muted cursor-not-allowed" : ""}/></div>{gruppoSelezionato && <p className="mt-1 text-xs text-muted-foreground">Colore predefinito del gruppo “{gruppoSelezionato}”. Non modificabile.</p>}</div>
             <div className="flex gap-2 justify-end"><Button type="button" variant="outline" onClick={()=>setShowDialog(false)}>Annulla</Button><Button type="submit">{editingTipo ? "Aggiorna" : "Crea"}</Button></div>
           </form></DialogContent></Dialog></div>
     <Card><CardHeader><CardTitle>Elenco Tipi Promemoria</CardTitle></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>Colore</TableHead><TableHead>Tipo</TableHead><TableHead>Nome</TableHead><TableHead>Descrizione</TableHead><TableHead className="text-right">Azioni</TableHead></TableRow></TableHeader><TableBody>
