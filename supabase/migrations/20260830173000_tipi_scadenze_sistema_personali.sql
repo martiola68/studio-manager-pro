@@ -30,8 +30,22 @@ grant execute on function public.is_system_catalog_admin() to authenticated;
 -- 1) Origine del tipo scadenza.
 alter table public.tbtipi_scadenze add column if not exists origine char(1);
 
--- Tutte le scadenze già presenti diventano scadenze di sistema.
-update public.tbtipi_scadenze set origine = 'S' where origine is null or origine not in ('S', 'P');
+-- Solo le tipologie del catalogo di sistema indicate esplicitamente sono S.
+-- Tutte le altre tipologie preesistenti restano/personali diventano P.
+update public.tbtipi_scadenze
+set origine = case
+  when upper(trim(coalesce(nome, ''))) in (
+    'AGENZIA DELLE ENTRATE',
+    'ALTRI ENTI',
+    'ALTRO',
+    'APPUNTAMENTO',
+    'AVVISO DI SCADENZA',
+    'INAIL',
+    'INPS',
+    'SCADENZA DOCUMENTO'
+  ) then 'S'
+  else 'P'
+end;
 
 alter table public.tbtipi_scadenze alter column origine set default 'P';
 alter table public.tbtipi_scadenze alter column origine set not null;
@@ -158,5 +172,7 @@ commit;
 
 -- VERIFICHE:
 -- select origine, count(*) from public.tbtipi_scadenze group by origine order by origine;
--- Tutte le righe preesistenti devono risultare S.
+-- Devono risultare S solo: Agenzia delle Entrate, Altri enti, Altro, Appuntamento,
+-- Avviso di scadenza, Inail, Inps e Scadenza Documento.
+-- select nome, origine from public.tbtipi_scadenze order by nome;
 -- select public.is_system_catalog_admin(); -- true solo per Mario Artiola / REVISIONI COMMERCIALI / Admin.
