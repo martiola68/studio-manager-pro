@@ -11,85 +11,34 @@ export type TipoPromemoriaCatalogo = TipoPromemoriaBase & {
 const db = supabase as any;
 
 export const tipoPromemoriaService = {
-  async getTipiPromemoria(studioId: string): Promise<TipoPromemoriaCatalogo[]> {
-    const { data, error } = await db
-      .from("tbtipopromemoria")
-      .select("*")
-      .or(`origine.eq.S,and(origine.eq.P,studio_id.eq.${studioId})`)
-      .order("nome", { ascending: true });
-
-    if (error) {
-      console.error("Errore caricamento tipi promemoria:", error);
-      throw error;
-    }
-
+  async getTipiPromemoria(_studioId?: string): Promise<TipoPromemoriaCatalogo[]> {
+    const { data, error } = await db.from("tbtipopromemoria").select("*").eq("origine", "S").order("nome", { ascending: true });
+    if (error) { console.error("Errore caricamento tipi promemoria:", error); throw error; }
     return (data || []) as TipoPromemoriaCatalogo[];
   },
 
   async getTipoPromemoriaById(id: string): Promise<TipoPromemoriaCatalogo | null> {
-    const { data, error } = await db
-      .from("tbtipopromemoria")
-      .select("*")
-      .eq("id", id)
-      .single();
-
-    if (error) {
-      console.error("Errore caricamento tipo promemoria:", error);
-      throw error;
-    }
-
+    const { data, error } = await db.from("tbtipopromemoria").select("*").eq("id", id).eq("origine", "S").single();
+    if (error) { console.error("Errore caricamento tipo promemoria:", error); throw error; }
     return data as TipoPromemoriaCatalogo;
   },
 
-  async creaTipoPromemoria(tipo: {
-    nome: string;
-    descrizione?: string | null;
-    colore?: string | null;
-    studio_id: string;
-    origine?: "S" | "P";
-  }): Promise<TipoPromemoriaCatalogo | null> {
-    const { data, error } = await db
-      .from("tbtipopromemoria")
-      .insert([{ ...tipo, origine: tipo.origine || "P" }])
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Errore creazione tipo promemoria:", error);
-      throw error;
-    }
-
+  async creaTipoPromemoria(tipo: { nome: string; descrizione?: string | null; colore?: string | null; studio_id?: string | null; origine?: "S" | "P"; }): Promise<TipoPromemoriaCatalogo | null> {
+    const payload = { nome: tipo.nome, descrizione: null, colore: tipo.colore || "#3B82F6", origine: "S", studio_id: null };
+    const { data, error } = await db.from("tbtipopromemoria").insert([payload]).select().single();
+    if (error) { console.error("Errore creazione tipo promemoria:", error); throw error; }
     return data as TipoPromemoriaCatalogo;
   },
 
-  async aggiornaTipoPromemoria(
-    id: string,
-    updates: { nome?: string; descrizione?: string | null; colore?: string | null },
-  ): Promise<TipoPromemoriaCatalogo | null> {
-    const { data, error } = await db
-      .from("tbtipopromemoria")
-      .update(updates)
-      .eq("id", id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Errore aggiornamento tipo promemoria:", error);
-      throw error;
-    }
-
+  async aggiornaTipoPromemoria(id: string, updates: { nome?: string; descrizione?: string | null; colore?: string | null }): Promise<TipoPromemoriaCatalogo | null> {
+    const payload = { ...updates, descrizione: null, origine: "S", studio_id: null };
+    const { data, error } = await db.from("tbtipopromemoria").update(payload).eq("id", id).eq("origine", "S").select().single();
+    if (error) { console.error("Errore aggiornamento tipo promemoria:", error); throw error; }
     return data as TipoPromemoriaCatalogo;
   },
 
   async eliminaTipoPromemoria(id: string): Promise<void> {
-    const { error } = await db
-      .from("tbtipopromemoria")
-      .delete()
-      .eq("id", id);
-
-    if (error) {
-      console.error("Errore eliminazione tipo promemoria:", error);
-      throw error;
-    }
+    const { error } = await db.from("tbtipopromemoria").delete().eq("id", id).eq("origine", "S");
+    if (error) { console.error("Errore eliminazione tipo promemoria:", error); throw error; }
   },
 };
