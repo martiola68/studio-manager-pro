@@ -2,132 +2,85 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Only allow POST
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {
-    // 1) Read token
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith("Bearer ")) {
-      return res
-        .status(401)
-        .json({ error: "Missing or invalid authorization header" });
+      return res.status(401).json({ error: "Sessione non valida" });
     }
+
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+    if (!url || !anonKey || !serviceKey) {
+      return res.status(500).json({ error: "Configurazione server Supabase incompleta" });
+    }
+
     const token = authHeader.slice("Bearer ".length).trim();
+    const authClient = createClient(url, anonKey, {
+      auth: { persistSession: false },
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
+    const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
 
-    // 2) Supabase client WITH USER CONTEXT (RLS works)
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        auth: { persistSession: false },
-        global: {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      }
-    );
+    const { data: authData, error: authError } = await authClient.auth.getUser();
+    const user = authData.user;
+    if (authError || !user) return res.status(401).json({ error: "Sessione scaduta o non valida" });
 
-    // 3) Validate JWT -> user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      console.error("Auth error:", authError);
-      return res.status(401).json({ error: "Invalid or expired token" });
-    }
-
-    // 4) Get studio_id from logged user (SERVER-SIDE GUARANTEE)
-    const { data: userData, error: userError } = await supabase
+    let { data: userData, error: userError } = await admin
       .from("tbutenti")
       .select("studio_id")
-      .eq("id", user.id)
+      .eq("user_id", user.id)
       .maybeSingle();
 
-    if (userError) {
-      console.error("User fetch error:", userError);
-      return res.status(500).json({ error: "Failed to fetch user data" });
+    if ((!userData || userError) && user.email) {
+      const fallback = await admin
+        .from("tbutenti")
+        .select("studio_id")
+        .eq("email", user.email.toLowerCase())
+        .maybeSingle();
+      userData = fallback.data;
+      userError = fallback.error;
     }
 
-    if (!userData?.studio_id) {
-      return res.status(403).json({
-        error: "User has no studio assigned. Cannot create cliente.",
-      });
-    }
+    if (userError) return res.status(500).json({ error: "Impossibile determinare lo studio dell'utente", details: userError.message });
+    if (!userData?.studio_id) return res.status(403).json({ error: "Utente senza studio associato" });
 
-    // 5) Body (safe parse)
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+    const codiceFiscale = String(body?.codice_fiscale ?? "").trim().toUpperCase();
+    if (!codiceFiscale) return res.status(400).json({ error: "Codice Fiscale obbligatorio" });
 
-    // 6) Codice fiscale: obbligatorio + normalizzazione
-    const rawCF: string = (body?.codice_fiscale ?? "").toString().trim();
-    const codiceFiscale = rawCF.toUpperCase();
-
-    if (!codiceFiscale) {
-      return res.status(400).json({
-        error: "Codice Fiscale obbligatorio",
-      });
-    }
-
-    // 7) Controllo duplicati (stesso studio)
-    // Se esiste già un cliente con stesso CF nello stesso studio -> blocca
-    const { data: existing, error: existingError } = await supabase
+    const { data: existing, error: existingError } = await admin
       .from("tbclienti")
-      .select("id, ragione_sociale, codice_fiscale")
+      .select("id, ragione_sociale")
       .eq("studio_id", userData.studio_id)
       .eq("codice_fiscale", codiceFiscale)
       .limit(1);
 
-    if (existingError) {
-      console.error("Duplicate check error:", existingError);
-      return res.status(500).json({ error: "Failed to check duplicate cliente" });
+    if (existingError) return res.status(500).json({ error: "Errore nel controllo duplicati", details: existingError.message });
+    if (existing?.length) {
+      return res.status(409).json({ error: `Cliente già esistente: ${existing[0].ragione_sociale || codiceFiscale}` });
     }
 
-    if (existing && existing.length > 0) {
-      return res.status(409).json({
-        error: "Cliente già esistente: Codice Fiscale duplicato",
-        existingClienteId: existing[0].id,
-      });
-    }
+    const clienteData = { ...body, codice_fiscale: codiceFiscale, studio_id: userData.studio_id };
+    delete clienteData.id;
 
-    // 8) FORCE studio_id on insert (CRITICAL: not from frontend!)
-    const clienteData = {
-      ...body,
-      codice_fiscale: codiceFiscale, // normalized
-      studio_id: userData.studio_id, // SERVER-SIDE FORCED
-    };
-
-    // 9) Insert cliente
-    const { data: inserted, error: insertError } = await supabase
+    const { data: inserted, error: insertError } = await admin
       .from("tbclienti")
       .insert(clienteData)
-      .select("*");
+      .select("*")
+      .single();
 
     if (insertError) {
-      console.error("Insert error:", insertError);
-      return res.status(500).json({
-        error: "Failed to create cliente",
-        details: insertError.message,
-      });
+      return res.status(500).json({ error: "Errore inserimento cliente", details: insertError.message, code: insertError.code });
     }
 
-    if (!inserted || inserted.length === 0) {
-      return res.status(500).json({
-        error: "Insert failed: no rows returned",
-      });
-    }
-
-    // 10) Return created cliente
-    return res.status(201).json(inserted[0]);
+    return res.status(201).json(inserted);
   } catch (error) {
-    console.error("Unexpected error in /api/clienti/create:", error);
     return res.status(500).json({
-      error: "Internal server error",
-      details: error instanceof Error ? error.message : "Unknown error",
+      error: "Errore interno durante la creazione del cliente",
+      details: error instanceof Error ? error.message : String(error),
     });
   }
 }
