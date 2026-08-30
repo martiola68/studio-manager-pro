@@ -6,15 +6,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import {
-  Check,
-  X,
-  Trash2,
-  Undo2,
-} from 'lucide-react';
+import { Check, X, Trash2, Undo2 } from 'lucide-react';
 
 type StatoRichiesta = 'inviata' | 'approvata' | 'rifiutata' | 'revocata';
-
 type Richiesta = {
   id: string;
   studio_id: string;
@@ -35,26 +29,13 @@ type Richiesta = {
   richiedente_email?: string | null;
 };
 
-type UtenteLookup = {
-  id: string;
-  nome: string | null;
-  cognome: string | null;
-  email: string | null;
-};
+type UtenteLookup = { id: string; nome: string | null; cognome: string | null; email: string | null };
+type RevocaMode = 'totale' | 'parziale';
 
 const mesi = [
-  { value: '1', label: 'Gennaio' },
-  { value: '2', label: 'Febbraio' },
-  { value: '3', label: 'Marzo' },
-  { value: '4', label: 'Aprile' },
-  { value: '5', label: 'Maggio' },
-  { value: '6', label: 'Giugno' },
-  { value: '7', label: 'Luglio' },
-  { value: '8', label: 'Agosto' },
-  { value: '9', label: 'Settembre' },
-  { value: '10', label: 'Ottobre' },
-  { value: '11', label: 'Novembre' },
-  { value: '12', label: 'Dicembre' },
+  ['1', 'Gennaio'], ['2', 'Febbraio'], ['3', 'Marzo'], ['4', 'Aprile'],
+  ['5', 'Maggio'], ['6', 'Giugno'], ['7', 'Luglio'], ['8', 'Agosto'],
+  ['9', 'Settembre'], ['10', 'Ottobre'], ['11', 'Novembre'], ['12', 'Dicembre'],
 ];
 
 function formatDateIT(date: string | null) {
@@ -62,43 +43,20 @@ function formatDateIT(date: string | null) {
   return new Date(`${date}T00:00:00`).toLocaleDateString('it-IT');
 }
 
-function getRichiedenteName(richiesta: Richiesta) {
-  const fullName = `${richiesta.richiedente_cognome ?? ''} ${
-    richiesta.richiedente_nome ?? ''
-  }`.trim();
-
-  return fullName || richiesta.email_richiedente || '-';
-}
-
-function getRichiedenteFiltroName(richiesta: Richiesta) {
-  const fullName = `${richiesta.richiedente_cognome ?? ''} ${
-    richiesta.richiedente_nome ?? ''
-  }`.trim();
-
-  return fullName || richiesta.email_richiedente || 'Dipendente';
+function getRichiedenteName(r: Richiesta) {
+  return `${r.richiedente_cognome ?? ''} ${r.richiedente_nome ?? ''}`.trim() || r.email_richiedente || '-';
 }
 
 function statoBadge(stato: StatoRichiesta) {
-  if (stato === 'approvata') {
-    return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Approvata</Badge>;
-  }
-
-  if (stato === 'rifiutata') {
-    return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Rifiutata</Badge>;
-  }
-
-  if (stato === 'revocata') {
-    return <Badge className="bg-slate-100 text-slate-700 hover:bg-slate-100">Revocata</Badge>;
-  }
-
+  if (stato === 'approvata') return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Approvata</Badge>;
+  if (stato === 'rifiutata') return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Rifiutata</Badge>;
+  if (stato === 'revocata') return <Badge className="bg-slate-100 text-slate-700 hover:bg-slate-100">Revocata</Badge>;
   return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Inviata</Badge>;
 }
 
 export default function FeriePermessiPage() {
   const router = useRouter();
-
   const { toast } = useToast();
-
   const currentYear = new Date().getFullYear();
 
   const [loading, setLoading] = useState(true);
@@ -106,46 +64,44 @@ export default function FeriePermessiPage() {
   const [richieste, setRichieste] = useState<Richiesta[]>([]);
   const [note, setNote] = useState<Record<string, string>>({});
   const [isResponsabilePaghe, setIsResponsabilePaghe] = useState(false);
-
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-const [revocaFormId, setRevocaFormId] = useState<string | null>(null);
-const [motivoRevoca, setMotivoRevoca] = useState<Record<string, string>>({});
+  const [revocaFormId, setRevocaFormId] = useState<string | null>(null);
+  const [motivoRevoca, setMotivoRevoca] = useState<Record<string, string>>({});
+  const [azioniInCorso, setAzioniInCorso] = useState<Set<string>>(new Set());
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const [filtroDipendente, setFiltroDipendente] = useState<string>('tutti');
-  const [filtroMese, setFiltroMese] = useState<string>('tutti');
-  const [filtroAnno, setFiltroAnno] = useState<string>(String(currentYear));
-  const [filtroStato, setFiltroStato] = useState<string>('tutti');
+  const [revocaRichiesta, setRevocaRichiesta] = useState<Richiesta | null>(null);
+  const [revocaMode, setRevocaMode] = useState<RevocaMode>('totale');
+  const [revocaDal, setRevocaDal] = useState('');
+  const [revocaAl, setRevocaAl] = useState('');
+  const [revocaNota, setRevocaNota] = useState('');
 
-      const [azioniInCorso, setAzioniInCorso] = useState<Set<string>>(new Set());
-const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [filtroDipendente, setFiltroDipendente] = useState('tutti');
+  const [filtroMese, setFiltroMese] = useState('tutti');
+  const [filtroAnno, setFiltroAnno] = useState(String(currentYear));
+  const [filtroStato, setFiltroStato] = useState('tutti');
 
-  useEffect(() => {
-    void loadData();
-  }, []);
+  useEffect(() => { void loadData(); }, []);
+
+  async function getSessionToken() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) throw new Error('Sessione non valida. Effettua nuovamente il login.');
+    return session.access_token;
+  }
 
   async function loadData() {
     try {
       setLoading(true);
-
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
+      const { data: { session } } = await supabase.auth.getSession();
       const email = session?.user?.email?.trim().toLowerCase();
-
-      if (!email) {
-        router.push('/login');
-        return;
-      }
+      if (!email) { router.push('/login'); return; }
 
       const { data: userRow, error: userError } = await (supabase as any)
         .from('tbutenti')
         .select('id, studio_id, email, responsabile_paghe, responsabile_ferie_permessi')
         .eq('email', email)
         .single();
-
-      if (userError || !userRow) throw userError;
-
+      if (userError || !userRow) throw userError || new Error('Utente non trovato.');
       setCurrentUserId(userRow.id);
 
       const { data: studioRow, error: studioError } = await (supabase as any)
@@ -153,617 +109,245 @@ const [deleteId, setDeleteId] = useState<string | null>(null);
         .select('mail_alert_ferie_permessi')
         .eq('id', userRow.studio_id)
         .single();
+      if (studioError || !studioRow) throw studioError || new Error('Studio non trovato.');
 
-      if (studioError || !studioRow) throw studioError;
-
-      const isGestoreFeriePermessi =
-        Boolean(userRow.responsabile_ferie_permessi) ||
-        Boolean(userRow.responsabile_paghe) ||
+      const isGestore = Boolean(userRow.responsabile_ferie_permessi) || Boolean(userRow.responsabile_paghe) ||
         String(studioRow.mail_alert_ferie_permessi || '').trim().toLowerCase() === email;
-
-      setIsResponsabilePaghe(isGestoreFeriePermessi);
+      setIsResponsabilePaghe(isGestore);
 
       let query = (supabase as any)
         .from('tbferie_permessi_richieste')
         .select('*')
-        .eq('studio_id', userRow.studio_id as string)
+        .eq('studio_id', userRow.studio_id)
         .order('created_at', { ascending: false });
-
-      if (!isGestoreFeriePermessi) {
-        query = query.eq('utente_id', userRow.id);
-      }
+      if (!isGestore) query = query.eq('utente_id', userRow.id);
 
       const { data: richiesteData, error: richiesteError } = await query;
-
       if (richiesteError) throw richiesteError;
-
       const rows = (richiesteData || []) as Richiesta[];
-      const userIds = Array.from(new Set(rows.map((r) => r.utente_id).filter(Boolean)));
-
+      const userIds = Array.from(new Set(rows.map(r => r.utente_id).filter(Boolean)));
       let utentiMap = new Map<string, UtenteLookup>();
 
-      if (userIds.length > 0) {
+      if (userIds.length) {
         const { data: utentiData, error: utentiError } = await (supabase as any)
-          .from('tbutenti')
-          .select('id, nome, cognome, email')
-          .in('id', userIds);
-
+          .from('tbutenti').select('id, nome, cognome, email').in('id', userIds);
         if (utentiError) throw utentiError;
-
-        utentiMap = new Map(
-          ((utentiData || []) as UtenteLookup[]).map((utente) => [utente.id, utente]),
-        );
+        utentiMap = new Map(((utentiData || []) as UtenteLookup[]).map(u => [u.id, u]));
       }
 
-      const enrichedRows = rows.map((richiesta) => {
-        const utente = utentiMap.get(richiesta.utente_id);
-
-        return {
-          ...richiesta,
-          richiedente_nome: utente?.nome ?? null,
-          richiedente_cognome: utente?.cognome ?? null,
-          richiedente_email: utente?.email ?? richiesta.email_richiedente,
-        };
+      const enriched = rows.map(r => {
+        const u = utentiMap.get(r.utente_id);
+        return { ...r, richiedente_nome: u?.nome ?? null, richiedente_cognome: u?.cognome ?? null, richiedente_email: u?.email ?? r.email_richiedente };
       });
-
-      setRichieste(enrichedRows);
-
-      const initialNotes: Record<string, string> = {};
-      enrichedRows.forEach((richiesta) => {
-        initialNotes[richiesta.id] = richiesta.note_responsabile || '';
-      });
-      setNote(initialNotes);
+      setRichieste(enriched);
+      setNote(Object.fromEntries(enriched.map(r => [r.id, r.note_responsabile || ''])));
     } catch (error: any) {
-      console.error(error);
-      toast({
-        title: 'Errore',
-        description: error?.message || 'Impossibile caricare le richieste.',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
+      toast({ title: 'Errore', description: error?.message || 'Impossibile caricare le richieste.', variant: 'destructive' });
+    } finally { setLoading(false); }
   }
 
-  async function gestisciRichiesta(
-    id: string,
-    azione: 'approvata' | 'rifiutata' | 'revocata',
-  ) {
-  if (azioniInCorso.has(id)) return;
+  function setBusy(id: string, busy: boolean) {
+    setSavingId(busy ? id : null);
+    setAzioniInCorso(prev => {
+      const next = new Set(prev);
+      if (busy) next.add(id); else next.delete(id);
+      return next;
+    });
+  }
 
-setAzioniInCorso(prev => new Set(prev).add(id));
-
-try {
-  setSavingId(id);
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session?.access_token) {
-        throw new Error('Sessione non valida. Effettua nuovamente il login.');
-      }
-
+  async function gestisciRichiesta(id: string, azione: 'approvata' | 'rifiutata' | 'revocata', notaOverride?: string) {
+    if (azioniInCorso.has(id)) return;
+    try {
+      setBusy(id, true);
+      const token = await getSessionToken();
       const response = await fetch(`/api/payroll/ferie-permessi/richieste/${id}/gestisci`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          azione,
-          note_responsabile: note[id] || null,
-        }),
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ azione, note_responsabile: notaOverride ?? note[id] || null }),
       });
-
       const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result?.error || 'Impossibile gestire la richiesta.');
-      }
-
-      const description =
-        azione === 'approvata'
-          ? 'Richiesta approvata correttamente.'
-          : azione === 'rifiutata'
-            ? 'Richiesta rifiutata correttamente.'
-            : 'Richiesta revocata correttamente.';
-
-      toast({
-        title: 'Operazione completata',
-        description,
-      });
-
+      if (!response.ok) throw new Error(result?.error || 'Impossibile gestire la richiesta.');
+      toast({ title: 'Operazione completata', description: azione === 'approvata' ? 'Richiesta approvata correttamente.' : azione === 'rifiutata' ? 'Richiesta rifiutata correttamente.' : 'Richiesta revocata totalmente.' });
       await loadData();
     } catch (error: any) {
-      console.error(error);
-      toast({
-        title: 'Errore',
-        description: error?.message || 'Impossibile gestire la richiesta.',
-        variant: 'destructive',
-      });
-    } finally {
-  setSavingId(null);
+      toast({ title: 'Errore', description: error?.message || 'Impossibile gestire la richiesta.', variant: 'destructive' });
+    } finally { setBusy(id, false); }
+  }
 
-  setAzioniInCorso(prev => {
-    const next = new Set(prev);
-    next.delete(id);
-    return next;
-  });
-}
+  function apriRevoca(r: Richiesta) {
+    if (r.tipo_richiesta !== 'ferie' || !r.data_fine || r.data_fine <= r.data_inizio) {
+      void gestisciRichiesta(r.id, 'revocata');
+      return;
+    }
+    setRevocaRichiesta(r);
+    setRevocaMode('totale');
+    setRevocaDal(r.data_inizio);
+    setRevocaAl(r.data_fine);
+    setRevocaNota('');
+  }
+
+  async function confermaRevoca() {
+    if (!revocaRichiesta) return;
+    const r = revocaRichiesta;
+    if (revocaMode === 'totale') {
+      setRevocaRichiesta(null);
+      await gestisciRichiesta(r.id, 'revocata', revocaNota || undefined);
+      return;
+    }
+
+    if (!revocaDal || !revocaAl) {
+      toast({ title: 'Dati mancanti', description: 'Indica il periodo da revocare.', variant: 'destructive' });
+      return;
+    }
+    if (revocaDal < r.data_inizio || revocaAl > (r.data_fine || r.data_inizio) || revocaAl < revocaDal) {
+      toast({ title: 'Periodo non valido', description: 'Il periodo deve essere compreso nelle ferie originariamente approvate.', variant: 'destructive' });
+      return;
+    }
+    if (revocaDal === r.data_inizio && revocaAl === (r.data_fine || r.data_inizio)) {
+      toast({ title: 'Revoca totale', description: 'Hai selezionato tutto il periodo. Scegli “Revoca totale”.', variant: 'destructive' });
+      return;
+    }
+
+    try {
+      setBusy(r.id, true);
+      const token = await getSessionToken();
+      const response = await fetch(`/api/payroll/ferie-permessi/richieste/${r.id}/revoca-parziale`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ revoca_dal: revocaDal, revoca_al: revocaAl, note_responsabile: revocaNota || null }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result?.error || 'Impossibile effettuare la revoca parziale.');
+      setRevocaRichiesta(null);
+      toast({ title: 'Revoca parziale completata', description: `Revocate le ferie dal ${formatDateIT(revocaDal)} al ${formatDateIT(revocaAl)}. I giorni residui restano approvati.` });
+      await loadData();
+    } catch (error: any) {
+      toast({ title: 'Errore', description: error?.message || 'Impossibile effettuare la revoca parziale.', variant: 'destructive' });
+    } finally { setBusy(r.id, false); }
   }
 
   async function richiediRevoca(id: string) {
- if (azioniInCorso.has(id)) return;
-
-setAzioniInCorso(prev => new Set(prev).add(id));
-
-try {
-  setSavingId(id);
-
-    const motivo = motivoRevoca[id]?.trim();
-
-    if (!motivo) {
-      throw new Error('Inserisci il motivo della richiesta di revoca.');
-    }
-
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session?.access_token) {
-      throw new Error('Sessione non valida. Effettua nuovamente il login.');
-    }
-
-    const response = await fetch(`/api/payroll/ferie-permessi/richieste/${id}/richiedi-revoca`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({
-        motivo_revoca: motivo,
-      }),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result?.error || 'Impossibile inviare la richiesta di revoca.');
-    }
-
-    toast({
-      title: 'Richiesta inviata',
-      description: 'La richiesta di revoca è stata inviata al responsabile.',
-    });
-
-    setRevocaFormId(null);
-    setMotivoRevoca((prev) => ({ ...prev, [id]: '' }));
-  } catch (error: any) {
-    toast({
-      title: 'Errore',
-      description: error?.message || 'Impossibile inviare la richiesta di revoca.',
-      variant: 'destructive',
-    });
-  }  finally {
-  setSavingId(null);
-
-  setAzioniInCorso(prev => {
-    const next = new Set(prev);
-    next.delete(id);
-    return next;
-  });
-}
-}
+    if (azioniInCorso.has(id)) return;
+    try {
+      setBusy(id, true);
+      const motivo = motivoRevoca[id]?.trim();
+      if (!motivo) throw new Error('Inserisci il motivo della richiesta di revoca.');
+      const token = await getSessionToken();
+      const response = await fetch(`/api/payroll/ferie-permessi/richieste/${id}/richiedi-revoca`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ motivo_revoca: motivo }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result?.error || 'Impossibile inviare la richiesta di revoca.');
+      toast({ title: 'Richiesta inviata', description: 'La richiesta di revoca è stata inviata al responsabile.' });
+      setRevocaFormId(null);
+      setMotivoRevoca(prev => ({ ...prev, [id]: '' }));
+    } catch (error: any) {
+      toast({ title: 'Errore', description: error?.message || 'Impossibile inviare la richiesta di revoca.', variant: 'destructive' });
+    } finally { setBusy(id, false); }
+  }
 
   async function eliminaRichiesta(id: string) {
-  try {
-    setSavingId(id);
-
-    const response = await fetch(
-      `/api/payroll/ferie-permessi/richieste/${id}/elimina`,
-      {
-        method: "DELETE",
-      }
-    );
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result?.error || "Impossibile eliminare la richiesta.");
-    }
-
-    setRichieste((prev) => prev.filter((r) => r.id !== id));
-    setDeleteId(null);
-
-    toast({
-      title: "Richiesta eliminata",
-      description: "La richiesta è stata eliminata definitivamente.",
-    });
-
-    await loadData();
-  } catch (error: any) {
-    console.error("Errore eliminazione richiesta:", error);
-
-    toast({
-      title: "Errore",
-      description: error?.message || "Errore durante l'eliminazione.",
-      variant: "destructive",
-    });
-  } finally {
-    setSavingId(null);
+    try {
+      setSavingId(id);
+      const response = await fetch(`/api/payroll/ferie-permessi/richieste/${id}/elimina`, { method: 'DELETE' });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result?.error || 'Impossibile eliminare la richiesta.');
+      setDeleteId(null);
+      toast({ title: 'Richiesta eliminata', description: 'La richiesta è stata eliminata definitivamente.' });
+      await loadData();
+    } catch (error: any) {
+      toast({ title: 'Errore', description: error?.message || "Errore durante l'eliminazione.", variant: 'destructive' });
+    } finally { setSavingId(null); }
   }
-}
 
   const dipendentiOptions = useMemo(() => {
     const map = new Map<string, string>();
-
-    richieste.forEach((richiesta) => {
-      map.set(richiesta.utente_id, getRichiedenteFiltroName(richiesta));
-    });
-
+    richieste.forEach(r => map.set(r.utente_id, getRichiedenteName(r)));
     return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1], 'it'));
   }, [richieste]);
 
   const anniOptions = useMemo(() => {
     const anni = new Set<string>([String(currentYear)]);
-
-    richieste.forEach((richiesta) => {
-      if (richiesta.data_inizio) {
-        anni.add(String(new Date(`${richiesta.data_inizio}T00:00:00`).getFullYear()));
-      }
-    });
-
+    richieste.forEach(r => r.data_inizio && anni.add(String(new Date(`${r.data_inizio}T00:00:00`).getFullYear())));
     return Array.from(anni).sort((a, b) => Number(b) - Number(a));
   }, [richieste, currentYear]);
 
-  const richiesteFiltrate = useMemo(() => {
-    return richieste.filter((richiesta) => {
-      const data = new Date(`${richiesta.data_inizio}T00:00:00`);
-      const mese = String(data.getMonth() + 1);
-      const anno = String(data.getFullYear());
+  const richiesteFiltrate = useMemo(() => richieste.filter(r => {
+    const data = new Date(`${r.data_inizio}T00:00:00`);
+    return (filtroDipendente === 'tutti' || r.utente_id === filtroDipendente) &&
+      (filtroMese === 'tutti' || String(data.getMonth() + 1) === filtroMese) &&
+      (filtroAnno === 'tutti' || String(data.getFullYear()) === filtroAnno) &&
+      (filtroStato === 'tutti' || r.stato === filtroStato);
+  }), [richieste, filtroDipendente, filtroMese, filtroAnno, filtroStato]);
 
-      const matchDipendente =
-        filtroDipendente === 'tutti' || richiesta.utente_id === filtroDipendente;
+  const riepilogo = useMemo(() => ({
+    inviate: richiesteFiltrate.filter(r => r.stato === 'inviata').length,
+    approvate: richiesteFiltrate.filter(r => r.stato === 'approvata').length,
+    rifiutate: richiesteFiltrate.filter(r => r.stato === 'rifiutata').length,
+    revocate: richiesteFiltrate.filter(r => r.stato === 'revocata').length,
+  }), [richiesteFiltrate]);
 
-      const matchMese = filtroMese === 'tutti' || mese === filtroMese;
-      const matchAnno = filtroAnno === 'tutti' || anno === filtroAnno;
-      const matchStato = filtroStato === 'tutti' || richiesta.stato === filtroStato;
-
-      return matchDipendente && matchMese && matchAnno && matchStato;
-    });
-  }, [richieste, filtroDipendente, filtroMese, filtroAnno, filtroStato]);
-
-  const riepilogo = useMemo(() => {
-    return {
-      inviate: richiesteFiltrate.filter((r) => r.stato === 'inviata').length,
-      approvate: richiesteFiltrate.filter((r) => r.stato === 'approvata').length,
-      rifiutate: richiesteFiltrate.filter((r) => r.stato === 'rifiutata').length,
-      revocate: richiesteFiltrate.filter((r) => r.stato === 'revocata').length,
-    };
-  }, [richiesteFiltrate]);
-
-  if (loading) {
-    return (
-      <div className="p-6">
-        <p className="text-sm text-muted-foreground">Caricamento richieste...</p>
-      </div>
-    );
-  }
+  if (loading) return <div className="p-6"><p className="text-sm text-muted-foreground">Caricamento richieste...</p></div>;
 
   return (
     <div className="space-y-6 p-6">
-     <div className="flex items-center justify-between gap-4">
-  <div>
-    <h1 className="text-2xl font-semibold">Richieste ferie/permessi</h1>
-    <p className="text-sm text-muted-foreground">
-      Gestione richieste ferie e permessi dei dipendenti.
-    </p>
-  </div>
-
-  <Button
-    variant="outline"
-    onClick={() => router.push('/presenze')}
-  >
-    Torna alle presenze
-  </Button>
-</div>
+      <div className="flex items-center justify-between gap-4">
+        <div><h1 className="text-2xl font-semibold">Richieste ferie/permessi</h1><p className="text-sm text-muted-foreground">Gestione richieste ferie e permessi dei dipendenti.</p></div>
+        <Button variant="outline" onClick={() => router.push('/presenze')}>Torna alle presenze</Button>
+      </div>
 
       <div className="grid gap-3 md:grid-cols-4">
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Inviate</p>
-            <p className="text-2xl font-semibold">{riepilogo.inviate}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Approvate</p>
-            <p className="text-2xl font-semibold">{riepilogo.approvate}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Rifiutate</p>
-            <p className="text-2xl font-semibold">{riepilogo.rifiutate}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Revocate</p>
-            <p className="text-2xl font-semibold">{riepilogo.revocate}</p>
-          </CardContent>
-        </Card>
+        {([['Inviate', riepilogo.inviate], ['Approvate', riepilogo.approvate], ['Rifiutate', riepilogo.rifiutate], ['Revocate', riepilogo.revocate]] as const).map(([label, value]) => (
+          <Card key={label}><CardContent className="p-4"><p className="text-sm text-muted-foreground">{label}</p><p className="text-2xl font-semibold">{value}</p></CardContent></Card>
+        ))}
       </div>
 
-      <Card>
-        <CardContent className="grid gap-4 p-4 md:grid-cols-4">
-          <div className="space-y-1">
-            <label className="text-sm font-medium">Dipendente</label>
-            <select
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-              value={filtroDipendente}
-              onChange={(event) => setFiltroDipendente(event.target.value)}
-            >
-              <option value="tutti">Tutti</option>
-              {dipendentiOptions.map(([id, label]) => (
-                <option key={id} value={id}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </div>
+      <Card><CardContent className="grid gap-4 p-4 md:grid-cols-4">
+        <div className="space-y-1"><label className="text-sm font-medium">Dipendente</label><select className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={filtroDipendente} onChange={e => setFiltroDipendente(e.target.value)}><option value="tutti">Tutti</option>{dipendentiOptions.map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></div>
+        <div className="space-y-1"><label className="text-sm font-medium">Mese</label><select className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={filtroMese} onChange={e => setFiltroMese(e.target.value)}><option value="tutti">Tutti</option>{mesi.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
+        <div className="space-y-1"><label className="text-sm font-medium">Anno</label><select className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={filtroAnno} onChange={e => setFiltroAnno(e.target.value)}>{anniOptions.map(anno => <option key={anno} value={anno}>{anno}</option>)}</select></div>
+        <div className="space-y-1"><label className="text-sm font-medium">Stato</label><select className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={filtroStato} onChange={e => setFiltroStato(e.target.value)}><option value="tutti">Tutti</option><option value="inviata">Inviata</option><option value="approvata">Approvata</option><option value="rifiutata">Rifiutata</option><option value="revocata">Revocata</option></select></div>
+      </CardContent></Card>
 
-          <div className="space-y-1">
-            <label className="text-sm font-medium">Mese</label>
-            <select
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-              value={filtroMese}
-              onChange={(event) => setFiltroMese(event.target.value)}
-            >
-              <option value="tutti">Tutti</option>
-              {mesi.map((mese) => (
-                <option key={mese.value} value={mese.value}>
-                  {mese.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-sm font-medium">Anno</label>
-            <select
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-              value={filtroAnno}
-              onChange={(event) => setFiltroAnno(event.target.value)}
-            >
-              {anniOptions.map((anno) => (
-                <option key={anno} value={anno}>
-                  {anno}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-sm font-medium">Stato</label>
-            <select
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-              value={filtroStato}
-              onChange={(event) => setFiltroStato(event.target.value)}
-            >
-              <option value="tutti">Tutti</option>
-              <option value="inviata">Inviata</option>
-              <option value="approvata">Approvata</option>
-              <option value="rifiutata">Rifiutata</option>
-              <option value="revocata">Revocata</option>
-            </select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {richiesteFiltrate.length === 0 ? (
-        <Card>
-          <CardContent className="p-6">
-            <p className="text-sm text-muted-foreground">Nessuna richiesta trovata.</p>
-          </CardContent>
-        </Card>
-      ) : (
-            <div className="space-y-0.5">
-          {richiesteFiltrate.map((richiesta) => (
-
-<Card key={richiesta.id} className="rounded-md">
-  <CardContent className="p-2">
-    <div className="grid grid-cols-[250px_80px_170px_60px_1fr_300px_130px_140px] items-center gap-2 text-[14px]">
-      <div className="flex items-center gap-2 font-semibold">
-        <span className="truncate">{getRichiedenteName(richiesta)}</span>
-        {statoBadge(richiesta.stato)}
-      </div>
-
-      <div className="text-muted-foreground">
-        {richiesta.tipo_richiesta === 'ferie' ? 'Ferie' : 'Permesso'}
-      </div>
-
-      <div className="truncate text-muted-foreground">
-        {formatDateIT(richiesta.data_inizio)}
-        {richiesta.data_fine ? ` - ${formatDateIT(richiesta.data_fine)}` : ''}
-      </div>
-
-      <div className="text-muted-foreground">
-        {richiesta.giorni ? `${richiesta.giorni} gg` : ''}
-        {richiesta.ore ? `${richiesta.ore} ore` : ''}
-      </div>
-
-<div className="truncate rounded bg-muted px-2 py-1">
-  {richiesta.motivazione ? (
-    <>
-      <strong>Motivo:</strong> {richiesta.motivazione}
-    </>
-  ) : (
-    <span className="text-muted-foreground">-</span>
-  )}
-</div>
-
-{isResponsabilePaghe && richiesta.stato === 'inviata' ? (
-  <Textarea
-    className="h-8 min-h-0 w-full resize-none py-1 text-xs"
-    value={note[richiesta.id] || ''}
-    onChange={(event) =>
-      setNote((prev) => ({
-        ...prev,
-        [richiesta.id]: event.target.value,
-      }))
-    }
-    placeholder="Note responsabile..."
-  />
-) : (
-  <div className="truncate text-xs text-muted-foreground">
-    {richiesta.note_responsabile || '-'}
-  </div>
-)}
-
-      <div className="text-xs text-muted-foreground">
-        Inviata il {new Date(richiesta.created_at).toLocaleDateString('it-IT')}
-      </div>
-
-     <div className="flex justify-end gap-2">
-  {isResponsabilePaghe && richiesta.stato === 'inviata' && (
-    <>
- <Button
-  size="icon"
-  className="h-8 w-8 bg-green-600 text-white hover:bg-green-700"
-  disabled={savingId === richiesta.id || azioniInCorso.has(richiesta.id)}
-  onClick={() => gestisciRichiesta(richiesta.id, 'approvata')}
->
-  <Check className="h-4 w-4" />
-</Button>
-
-<Button
-  size="icon"
-  className="h-8 w-8 bg-black text-white hover:bg-zinc-800"
-  disabled={savingId === richiesta.id || azioniInCorso.has(richiesta.id)}
-  onClick={() => gestisciRichiesta(richiesta.id, 'rifiutata')}
->
-  <X className="h-4 w-4" />
-</Button>
-    </>
-  )}
-
-  {isResponsabilePaghe && richiesta.stato === 'approvata' && (
-<Button
-  size="icon"
-  className="h-8 w-8 bg-orange-500 text-white hover:bg-orange-600"
-  disabled={savingId === richiesta.id || azioniInCorso.has(richiesta.id)}
-  onClick={() => gestisciRichiesta(richiesta.id, 'revocata')}
->
-  <Undo2 className="h-4 w-4" />
-</Button>
-  )}
-       {isResponsabilePaghe && (
-<Button
-  size="icon"
-  variant="destructive"
-  className="h-8 w-8"
-  disabled={savingId === richiesta.id}
-  onClick={() => setDeleteId(richiesta.id)}
->
-  <Trash2 className="h-4 w-4" />
-</Button>
-)}
-
-       {!isResponsabilePaghe &&
-  richiesta.stato === 'approvata' &&
-  richiesta.utente_id === currentUserId && (
-    <Button
-      size="sm"
-      className="h-8 bg-orange-500 px-3 text-white hover:bg-orange-600"
-      disabled={savingId === richiesta.id}
-      onClick={() => setRevocaFormId(richiesta.id)}
-    >
-      Richiedi revoca
-    </Button>
-  )}
-</div>
-    </div>
-  </CardContent>
-  {revocaFormId === richiesta.id && (
-  <div className="mt-2 flex items-center gap-2 border-t pt-2">
-    <input
-      className="h-9 flex-1 rounded-md border px-3 text-sm"
-      value={motivoRevoca[richiesta.id] || ''}
-      onChange={(event) =>
-        setMotivoRevoca((prev) => ({
-          ...prev,
-          [richiesta.id]: event.target.value,
-        }))
-      }
-      placeholder="Motivo richiesta revoca..."
-    />
-
-    <Button
-      size="sm"
-      className="h-9 bg-orange-500 px-3 text-white hover:bg-orange-600"
-      disabled={savingId === richiesta.id}
-      onClick={() => richiediRevoca(richiesta.id)}
-    >
-      Invia richiesta
-    </Button>
-
-    <Button
-      size="sm"
-      variant="outline"
-      className="h-9 px-3"
-      disabled={savingId === richiesta.id}
-      onClick={() => setRevocaFormId(null)}
-    >
-      Annulla
-    </Button>
-  </div>
-)}
-</Card>
-          
-          ))}
-        </div>
+      {richiesteFiltrate.length === 0 ? <Card><CardContent className="p-6"><p className="text-sm text-muted-foreground">Nessuna richiesta trovata.</p></CardContent></Card> : (
+        <div className="space-y-0.5">{richiesteFiltrate.map(r => (
+          <Card key={r.id} className="rounded-md">
+            <CardContent className="p-2">
+              <div className="grid grid-cols-[250px_80px_170px_60px_1fr_300px_130px_140px] items-center gap-2 text-[14px]">
+                <div className="flex items-center gap-2 font-semibold"><span className="truncate">{getRichiedenteName(r)}</span>{statoBadge(r.stato)}</div>
+                <div className="text-muted-foreground">{r.tipo_richiesta === 'ferie' ? 'Ferie' : 'Permesso'}</div>
+                <div className="truncate text-muted-foreground">{formatDateIT(r.data_inizio)}{r.data_fine ? ` - ${formatDateIT(r.data_fine)}` : ''}</div>
+                <div className="text-muted-foreground">{r.giorni ? `${r.giorni} gg` : ''}{r.ore ? `${r.ore} ore` : ''}</div>
+                <div className="truncate rounded bg-muted px-2 py-1">{r.motivazione ? <><strong>Motivo:</strong> {r.motivazione}</> : <span className="text-muted-foreground">-</span>}</div>
+                {isResponsabilePaghe && r.stato === 'inviata' ? <Textarea className="h-8 min-h-0 w-full resize-none py-1 text-xs" value={note[r.id] || ''} onChange={e => setNote(prev => ({ ...prev, [r.id]: e.target.value }))} placeholder="Note responsabile..." /> : <div className="truncate text-xs text-muted-foreground">{r.note_responsabile || '-'}</div>}
+                <div className="text-xs text-muted-foreground">Inviata il {new Date(r.created_at).toLocaleDateString('it-IT')}</div>
+                <div className="flex justify-end gap-2">
+                  {isResponsabilePaghe && r.stato === 'inviata' && <><Button size="icon" className="h-8 w-8 bg-green-600 text-white hover:bg-green-700" disabled={savingId === r.id || azioniInCorso.has(r.id)} onClick={() => gestisciRichiesta(r.id, 'approvata')} title="Approva"><Check className="h-4 w-4" /></Button><Button size="icon" className="h-8 w-8 bg-black text-white hover:bg-zinc-800" disabled={savingId === r.id || azioniInCorso.has(r.id)} onClick={() => gestisciRichiesta(r.id, 'rifiutata')} title="Rifiuta"><X className="h-4 w-4" /></Button></>}
+                  {isResponsabilePaghe && r.stato === 'approvata' && <Button size="icon" className="h-8 w-8 bg-orange-500 text-white hover:bg-orange-600" disabled={savingId === r.id || azioniInCorso.has(r.id)} onClick={() => apriRevoca(r)} title={r.tipo_richiesta === 'ferie' ? 'Revoca ferie' : 'Revoca'}><Undo2 className="h-4 w-4" /></Button>}
+                  {isResponsabilePaghe && <Button size="icon" variant="destructive" className="h-8 w-8" disabled={savingId === r.id} onClick={() => setDeleteId(r.id)} title="Elimina"><Trash2 className="h-4 w-4" /></Button>}
+                  {!isResponsabilePaghe && r.stato === 'approvata' && r.utente_id === currentUserId && <Button size="sm" className="h-8 bg-orange-500 px-3 text-white hover:bg-orange-600" disabled={savingId === r.id} onClick={() => setRevocaFormId(r.id)}>Richiedi revoca</Button>}
+                </div>
+              </div>
+            </CardContent>
+            {revocaFormId === r.id && <div className="mx-2 mb-2 flex items-center gap-2 border-t pt-2"><input className="h-9 flex-1 rounded-md border px-3 text-sm" value={motivoRevoca[r.id] || ''} onChange={e => setMotivoRevoca(prev => ({ ...prev, [r.id]: e.target.value }))} placeholder="Motivo richiesta revoca..." /><Button size="sm" className="h-9 bg-orange-500 px-3 text-white hover:bg-orange-600" disabled={savingId === r.id} onClick={() => richiediRevoca(r.id)}>Invia richiesta</Button><Button size="sm" variant="outline" className="h-9 px-3" disabled={savingId === r.id} onClick={() => setRevocaFormId(null)}>Annulla</Button></div>}
+          </Card>
+        ))}</div>
       )}
-      {deleteId && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-    <div className="w-[500px] rounded-lg bg-white p-6 shadow-xl">
-      <h3 className="mb-4 text-lg font-semibold text-red-600">
-        Eliminazione richiesta
-      </h3>
 
-      <p className="mb-4 text-sm">
-        Stai per eliminare definitivamente una richiesta di ferie/permesso.
-      </p>
+      {revocaRichiesta && <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4">
+        <div className="w-full max-w-[560px] rounded-lg bg-white p-6 shadow-xl">
+          <h3 className="text-lg font-semibold">Revoca ferie</h3>
+          <p className="mt-1 text-sm text-muted-foreground">{getRichiedenteName(revocaRichiesta)} · periodo approvato {formatDateIT(revocaRichiesta.data_inizio)} - {formatDateIT(revocaRichiesta.data_fine || revocaRichiesta.data_inizio)}</p>
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            <button type="button" onClick={() => setRevocaMode('totale')} className={`rounded-lg border p-4 text-left ${revocaMode === 'totale' ? 'border-orange-500 bg-orange-50 ring-1 ring-orange-500' : 'hover:bg-slate-50'}`}><div className="font-semibold">Revoca totale</div><div className="mt-1 text-xs text-muted-foreground">Revoca l’intero periodo approvato.</div></button>
+            <button type="button" onClick={() => setRevocaMode('parziale')} className={`rounded-lg border p-4 text-left ${revocaMode === 'parziale' ? 'border-orange-500 bg-orange-50 ring-1 ring-orange-500' : 'hover:bg-slate-50'}`}><div className="font-semibold">Revoca parziale</div><div className="mt-1 text-xs text-muted-foreground">Scegli solo i giorni da revocare.</div></button>
+          </div>
+          {revocaMode === 'parziale' && <div className="mt-5 rounded-lg border bg-slate-50 p-4"><div className="grid grid-cols-2 gap-4"><div><label className="mb-1 block text-sm font-medium">Revoca dal</label><input type="date" min={revocaRichiesta.data_inizio} max={revocaRichiesta.data_fine || revocaRichiesta.data_inizio} value={revocaDal} onChange={e => setRevocaDal(e.target.value)} className="h-10 w-full rounded-md border bg-white px-3 text-sm" /></div><div><label className="mb-1 block text-sm font-medium">Revoca al</label><input type="date" min={revocaDal || revocaRichiesta.data_inizio} max={revocaRichiesta.data_fine || revocaRichiesta.data_inizio} value={revocaAl} onChange={e => setRevocaAl(e.target.value)} className="h-10 w-full rounded-md border bg-white px-3 text-sm" /></div></div><p className="mt-3 text-xs text-muted-foreground">I giorni non revocati resteranno approvati. Se il periodo revocato è centrale, le ferie residue verranno suddivise automaticamente nei due intervalli corretti.</p></div>}
+          <div className="mt-4"><label className="mb-1 block text-sm font-medium">Nota revoca <span className="font-normal text-muted-foreground">(facoltativa)</span></label><Textarea value={revocaNota} onChange={e => setRevocaNota(e.target.value)} placeholder="Motivo o annotazioni sulla revoca..." /></div>
+          <div className="mt-6 flex justify-end gap-2"><Button variant="outline" disabled={savingId === revocaRichiesta.id} onClick={() => setRevocaRichiesta(null)}>Annulla</Button><Button className="bg-orange-500 text-white hover:bg-orange-600" disabled={savingId === revocaRichiesta.id} onClick={confermaRevoca}>{savingId === revocaRichiesta.id ? 'Revoca in corso...' : revocaMode === 'totale' ? 'Conferma revoca totale' : 'Conferma revoca parziale'}</Button></div>
+        </div>
+      </div>}
 
-      <p className="mb-6 text-sm font-medium text-red-600">
-        L'operazione NON è reversibile.
-      </p>
-
-      <div className="flex justify-end gap-2">
-        <Button
-          variant="outline"
-          onClick={() => setDeleteId(null)}
-        >
-          Annulla
-        </Button>
-
-        <Button
-          variant="destructive"
-          disabled={savingId === deleteId}
-          onClick={async () => {
-            await eliminaRichiesta(deleteId);
-            setDeleteId(null);
-          }}
-        >
-          Elimina definitivamente
-        </Button>
-      </div>
-    </div>
-  </div>
-)}
+      {deleteId && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"><div className="w-[500px] rounded-lg bg-white p-6 shadow-xl"><h3 className="mb-4 text-lg font-semibold text-red-600">Eliminazione richiesta</h3><p className="mb-4 text-sm">Stai per eliminare definitivamente una richiesta di ferie/permesso.</p><p className="mb-6 text-sm font-medium text-red-600">L'operazione NON è reversibile.</p><div className="flex justify-end gap-2"><Button variant="outline" onClick={() => setDeleteId(null)}>Annulla</Button><Button variant="destructive" disabled={savingId === deleteId} onClick={() => eliminaRichiesta(deleteId)}>Elimina definitivamente</Button></div></div></div>}
     </div>
   );
 }
