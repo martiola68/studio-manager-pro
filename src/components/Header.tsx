@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { studioService } from "@/services/studioService";
-import { User, LogOut, Menu, ExternalLink, KeyRound } from "lucide-react";
+import { User, LogOut, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { hardLogout } from "@/services/logoutService";
 import type { Database } from "@/lib/supabase/types";
@@ -71,8 +71,6 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
       <div className="flex items-center gap-3 min-w-0"><Button variant="ghost" size="icon" className="lg:hidden shrink-0" onClick={onMenuToggle}><Menu className="h-6 w-6" /></Button><img src="/logo-elma.png" alt="Studio Manager Pro" className="h-10 w-auto object-contain shrink-0" /><div className="min-w-0 hidden sm:block"><h1 className="text-lg font-bold text-white leading-tight">{title || "Studio Manager Pro"}</h1><p className="text-xs text-cyan-100/80">Sistema Gestionale Integrato</p></div></div>
       <div className="flex-1 flex flex-col items-center justify-center">{currentUser && <><div className="text-xs md:text-sm text-white font-medium text-center">Utente: {currentUser.nome} {currentUser.cognome}{displayedStudioName ? ` - ${displayedStudioName}` : ""}</div><Button type="button" size="sm" onClick={nuovaVersioneDisponibile ? handleRefreshApp : undefined} disabled={!nuovaVersioneDisponibile} className={nuovaVersioneDisponibile ? "mt-2 bg-red-600 hover:bg-red-700 animate-pulse text-white" : "mt-2 border border-white/20 bg-white/10 text-cyan-100/60 cursor-default hover:bg-white/10"}>{nuovaVersioneDisponibile ? "AGGIORNA VERSIONE" : "VERSIONE AGGIORNATA"}</Button></>}</div>
       {currentUser && <div className="flex items-center gap-3 shrink-0"><div className="text-right"><p className="text-sm font-semibold text-white leading-tight">{currentUser.nome} {currentUser.cognome}</p><p className="text-xs font-medium text-cyan-100">{currentUser.tipo_utente === "Admin" ? "Amministratore" : "Utente"}</p></div><div className="h-9 w-9 rounded-full bg-white/15 ring-1 ring-white/25 flex items-center justify-center shrink-0"><User className="h-5 w-5 text-white" /></div>
-        <Button variant="outline" size="sm" asChild className="shrink-0 border-[#b9e4f7] bg-[#d9f1fb] text-[#075985] hover:border-[#a3dbf2] hover:bg-[#c7eafa] hover:text-[#064b72]"><a href="/profilo/password" title="Modifica password"><KeyRound className="h-4 w-4" /><span className="hidden xl:inline">Password</span></a></Button>
-        <Button variant="outline" size="sm" asChild className="shrink-0 border-[#b9e4f7] bg-[#d9f1fb] text-[#075985] hover:border-[#a3dbf2] hover:bg-[#c7eafa] hover:text-[#064b72]"><a href="https://studiomanagerpro.it" target="_blank" rel="noopener noreferrer" title="Vai al sito web"><ExternalLink className="h-4 w-4" /><span className="hidden xl:inline">Vai al sito web</span></a></Button>
         <Button variant="ghost" size="icon" onClick={handleLogout} className="text-white/80 hover:bg-white/15 hover:text-white shrink-0" aria-label="Logout" title="Logout"><LogOut className="h-5 w-5" /></Button></div>}
     </div></div>
     <div className="flex h-[20px] items-center justify-center border-t border-white/15 px-4 text-center text-[10px] leading-none text-cyan-50/80 md:px-6 md:text-xs">© {new Date().getFullYear()} Studio Manager Pro. Creato da Artiola Mario. Tutti i diritti riservati. Opera tutelata ai sensi della Legge 22 aprile 1941, n. 633, e successive modificazioni.</div>
