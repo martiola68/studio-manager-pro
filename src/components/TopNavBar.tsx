@@ -25,12 +25,14 @@ import {
   Scale,
   StickyNote,
   ClipboardCheck,
-   Network,
+  Network,
   BarChart3,
   Menu,
   BookOpen,
   AlertTriangle,
   X,
+  ExternalLink,
+  KeyRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -65,29 +67,21 @@ interface MenuItem {
   children?: MenuItem[];
 }
 
-  export function TopNavBar() {
+export function TopNavBar() {
   const [currentUser, setCurrentUser] = useState<TopNavUser | null>(null);
-
-    const [loading, setLoading] = useState(true);
-    
+  const [loading, setLoading] = useState(true);
   const versioneCorrenteRef = useRef<string | null>(null);
   const [nuovaVersioneDisponibile, setNuovaVersioneDisponibile] = useState(false);
-
   const [messaggiNonLetti, setMessaggiNonLetti] = useState(0);
   const [promemoriaRicevuti, setPromemoriaRicevuti] = useState(0);
-    
-const [promemoriaAttivi, setPromemoriaAttivi] = useState(0);
-const [postGiornoAttivi, setPostGiornoAttivi] = useState(0);
-const [eventiImminenti, setEventiImminenti] = useState(0);
-
-    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-    const [desktopMenuOpen, setDesktopMenuOpen] =
-  useState<string | null>(null);
+  const [promemoriaAttivi, setPromemoriaAttivi] = useState(0);
+  const [postGiornoAttivi, setPostGiornoAttivi] = useState(0);
+  const [eventiImminenti, setEventiImminenti] = useState(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [desktopMenuOpen, setDesktopMenuOpen] = useState<string | null>(null);
 
   const pathname = usePathname();
   const searchParams = useSearchParams();
-
   const currentRoute = searchParams?.toString()
     ? `${pathname}?${searchParams.toString()}`
     : pathname;
@@ -95,19 +89,13 @@ const [eventiImminenti, setEventiImminenti] = useState(0);
   const loadCurrentUser = async () => {
     try {
       const supabase = getSupabaseClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
+      const { data: { session } } = await supabase.auth.getSession();
       if (session?.user?.email) {
         const { data: utente, error } = await supabase
           .from("tbutenti")
-          .select(
-            "id, nome, cognome, email, tipo_utente, ruolo_operatore_id, attivo, created_at, updated_at"
-          )
+          .select("id, nome, cognome, email, tipo_utente, ruolo_operatore_id, attivo, created_at, updated_at")
           .eq("email", session.user.email)
           .maybeSingle();
-
         if (error) {
           console.error("Errore caricamento utente:", error);
           setCurrentUser(null);
@@ -130,15 +118,11 @@ const [eventiImminenti, setEventiImminenti] = useState(0);
   const loadMessaggiNonLetti = async () => {
     try {
       const supabase = getSupabaseClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
+      const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user?.id) {
         setMessaggiNonLetti(0);
         return;
       }
-
       const { messaggioService } = await import("@/services/messaggioService");
       const count = await messaggioService.getMessaggiNonLettiCount(session.user.id);
       setMessaggiNonLetti(count);
@@ -153,18 +137,14 @@ const [eventiImminenti, setEventiImminenti] = useState(0);
       setPromemoriaAttivi(0);
       return;
     }
-
     try {
       const supabase = getSupabaseClient();
-
       const { count, error } = await supabase
         .from("tbpromemoria")
         .select("*", { count: "exact", head: true })
         .eq("working_progress", "Aperto")
         .eq("destinatario_id", currentUser.id);
-
       if (error) throw error;
-
       setPromemoriaAttivi(count ?? 0);
     } catch (error) {
       console.error("Errore caricamento promemoria attivi (gestito):", error);
@@ -172,48 +152,40 @@ const [eventiImminenti, setEventiImminenti] = useState(0);
     }
   };
 
-    const loadPostGiornoAttivi = async () => {
-  if (!currentUser) {
-    setPostGiornoAttivi(0);
-    return;
-  }
-
-  try {
-    const supabase = getSupabaseClient();
-
-    const { count, error } = await supabase
-      .from("tbpromemoria")
-      .select("*", { count: "exact", head: true })
-      .eq("tipo", "POST_GIORNO")
-      .eq("destinatario_id", currentUser.id)
-      .neq("working_progress", "Completato");
-
-    if (error) throw error;
-
-    setPostGiornoAttivi(count ?? 0);
-  } catch (error) {
-    console.error("Errore caricamento post del giorno:", error);
-    setPostGiornoAttivi(0);
-  }
-};
+  const loadPostGiornoAttivi = async () => {
+    if (!currentUser) {
+      setPostGiornoAttivi(0);
+      return;
+    }
+    try {
+      const supabase = getSupabaseClient();
+      const { count, error } = await supabase
+        .from("tbpromemoria")
+        .select("*", { count: "exact", head: true })
+        .eq("tipo", "POST_GIORNO")
+        .eq("destinatario_id", currentUser.id)
+        .neq("working_progress", "Completato");
+      if (error) throw error;
+      setPostGiornoAttivi(count ?? 0);
+    } catch (error) {
+      console.error("Errore caricamento post del giorno:", error);
+      setPostGiornoAttivi(0);
+    }
+  };
 
   const loadPromemoriaRicevuti = async () => {
     if (!currentUser) return;
-
     try {
       const supabase = getSupabaseClient();
-
       const { count, error } = await supabase
         .from("tbpromemoria")
         .select("*", { count: "exact", head: true })
         .eq("destinatario_id", currentUser.id)
         .eq("working_progress", "da_fare");
-
       if (error) {
         console.warn("⚠️ Errore query promemoria ricevuti:", error);
         return;
       }
-
       setPromemoriaRicevuti(count || 0);
     } catch (error) {
       console.warn("⚠️ Errore caricamento promemoria ricevuti:", error);
@@ -223,133 +195,85 @@ const [eventiImminenti, setEventiImminenti] = useState(0);
 
   const loadEventiImminenti = async () => {
     if (!currentUser) return;
-
     try {
       const supabase = getSupabaseClient();
-
       const now = new Date();
       const twoDaysLater = new Date();
       twoDaysLater.setDate(now.getDate() + 2);
-
       const { count, error } = await supabase
         .from("tbagenda")
         .select("*", { count: "exact", head: true })
         .eq("utente_id", currentUser.id)
         .gte("data_inizio", now.toISOString())
         .lte("data_inizio", twoDaysLater.toISOString());
-
       if (error) {
         console.warn("⚠️ Errore query eventi imminenti:", error);
         return;
       }
-
       setEventiImminenti(count || 0);
     } catch (error) {
       console.warn("⚠️ Errore caricamento eventi imminenti:", error);
     }
   };
 
-  const handlePromemoriaClick = () => {
-    setPromemoriaRicevuti(0);
+  const handlePromemoriaClick = () => setPromemoriaRicevuti(0);
+
+  const controllaVersioneApplicazione = async () => {
+    try {
+      const response = await fetch(`/api/version?t=${Date.now()}`, { cache: "no-store" });
+      if (!response.ok) return;
+      const data = await response.json();
+      if (!versioneCorrenteRef.current) {
+        versioneCorrenteRef.current = data.version;
+        return;
+      }
+      if (versioneCorrenteRef.current !== data.version) setNuovaVersioneDisponibile(true);
+    } catch (error) {
+      console.warn("Errore controllo versione:", error);
+    }
   };
 
-    const controllaVersioneApplicazione = async () => {
-  try {
-    const response = await fetch(`/api/version?t=${Date.now()}`, {
-      cache: "no-store",
-    });
+  const aggiornaApplicazione = () => window.location.reload();
 
-    if (!response.ok) return;
-
-    const data = await response.json();
-
-    if (!versioneCorrenteRef.current) {
-      versioneCorrenteRef.current = data.version;
-      return;
-    }
-
-    if (versioneCorrenteRef.current !== data.version) {
-      setNuovaVersioneDisponibile(true);
-    }
-  } catch (error) {
-    console.warn("Errore controllo versione:", error);
-  }
-};
-
-const aggiornaApplicazione = () => {
-  window.location.reload();
-};
-
+  useEffect(() => { void loadCurrentUser(); }, []);
   useEffect(() => {
-    void loadCurrentUser();
-  }, []);
-
-    useEffect(() => {
-  void controllaVersioneApplicazione();
-
-  const interval = setInterval(() => {
     void controllaVersioneApplicazione();
-  }, 60000);
-
-  return () => clearInterval(interval);
-}, []);
-
+    const interval = setInterval(() => void controllaVersioneApplicazione(), 60000);
+    return () => clearInterval(interval);
+  }, []);
   useEffect(() => {
     if (!currentUser) return;
-
     void loadMessaggiNonLetti();
-void loadPromemoriaAttivi();
-void loadPostGiornoAttivi();
-void loadPromemoriaRicevuti();
-void loadEventiImminenti();
-
+    void loadPromemoriaAttivi();
+    void loadPostGiornoAttivi();
+    void loadPromemoriaRicevuti();
+    void loadEventiImminenti();
     const interval = setInterval(() => {
-    void loadMessaggiNonLetti();
-void loadPromemoriaAttivi();
-void loadPostGiornoAttivi();
-void loadPromemoriaRicevuti();
-void loadEventiImminenti();
+      void loadMessaggiNonLetti();
+      void loadPromemoriaAttivi();
+      void loadPostGiornoAttivi();
+      void loadPromemoriaRicevuti();
+      void loadEventiImminenti();
     }, 60000);
-
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
-
   useEffect(() => {
     if (!currentUser) return;
-
-    const handler = () => {
-      void loadPromemoriaAttivi();
-    };
-
+    const handler = () => void loadPromemoriaAttivi();
     window.addEventListener("promemoria-updated", handler);
-    return () => {
-      window.removeEventListener("promemoria-updated", handler);
-    };
+    return () => window.removeEventListener("promemoria-updated", handler);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
 
-const menuItems: MenuItem[] = [
-  {
-    label: "Dashboard",
-    icon: <LayoutDashboard className="h-4 w-4" />,
-    href: "/dashboard",
-  },
-  {
-    label: "Agenda",
-    icon: <Calendar className="h-4 w-4" />,
-    href: "/agenda",
-  },
-  {
-    label: "Promemoria",
-    icon: <FileText className="h-4 w-4" />,
-    href: "/promemoria",
-  },
-  {
-    label: "Studio",
-    icon: <BriefcaseBusiness className="h-4 w-4" />,
-    children: [
-      {
+  const menuItems: MenuItem[] = [
+    { label: "Dashboard", icon: <LayoutDashboard className="h-4 w-4" />, href: "/dashboard" },
+    { label: "Agenda", icon: <Calendar className="h-4 w-4" />, href: "/agenda" },
+    { label: "Promemoria", icon: <FileText className="h-4 w-4" />, href: "/promemoria" },
+    {
+      label: "Studio",
+      icon: <BriefcaseBusiness className="h-4 w-4" />,
+      children: [{
         label: "Strumenti",
         icon: <BriefcaseBusiness className="h-4 w-4" />,
         children: [
@@ -362,223 +286,77 @@ const menuItems: MenuItem[] = [
           { label: "Accesso Portali", href: "/accesso-portali", icon: <Key className="h-4 w-4" /> },
           { label: "Cassetti Fiscali", href: "/cassetti-fiscali", icon: <FileText className="h-4 w-4" /> },
         ],
-      },
-    ],
-  },
-   {
-    label: "Scadenzario",
-    icon: <Calendar className="h-4 w-4" />,
-    children: [
-      {
-        label: "Scadenze unificate",
-        href: "/scadenze",
-        icon: <Calendar className="h-4 w-4" />,
-      },
-      {
-        label: "Elenco Generale",
-        href: "/scadenze/elenco-generale",
-        icon: <FileText className="h-4 w-4" />,
-      },
-      {
-        label: "Calendario",
-        href: "/scadenze/calendario",
-        icon: <Calendar className="h-4 w-4" />,
-      },
-      {
-        label: "Riepilogo",
-        href: "/scadenze/riepilogo",
-        icon: <FileText className="h-4 w-4" />,
-      },
-      {
-        label: "IVA",
-        href: "/scadenze/iva",
-        icon: <FileText className="h-4 w-4" />,
-      },
-      {
-        label: "CCGG",
-        href: "/scadenze/ccgg",
-        icon: <FileText className="h-4 w-4" />,
-      },
-      {
-        label: "CU",
-        href: "/scadenze/cu",
-        icon: <FileText className="h-4 w-4" />,
-      },
-      {
-        label: "IMU",
-        href: "/scadenze/imu",
-        icon: <FileText className="h-4 w-4" />,
-      },
-      {
-        label: "Fiscali",
-        href: "/scadenze/fiscali",
-        icon: <FileText className="h-4 w-4" />,
-      },
-      {
-        label: "Bilanci",
-        href: "/scadenze/bilanci",
-        icon: <FileText className="h-4 w-4" />,
-      },
-      {
-        label: "770",
-        href: "/scadenze/modello-770",
-        icon: <FileText className="h-4 w-4" />,
-      },
-      {
-        label: "Liquidazioni IVA - LIPE",
-        href: "/scadenze/lipe",
-        icon: <FileText className="h-4 w-4" />,
-      },
-      {
-        label: "Esterometro",
-        href: "/scadenze/esterometro",
-        icon: <FileText className="h-4 w-4" />,
-      },
-      {
-        label: "Affitti",
-        href: "/scadenze/affitti",
-        icon: <FileText className="h-4 w-4" />,
-      },
-      {
-        label: "Proforma",
-        href: "/scadenze/proforma",
-        icon: <FileText className="h-4 w-4" />,
-      },
-    ],
-  },
-
-  {
-    label: "Pratiche",
-    icon: <FolderKanban className="h-4 w-4" />,
-    children: [
-      {
-        label: "Variazioni CCIAA / AdE",
-        href: "/pratiche/variazioni",
-        icon: <FileText className="h-4 w-4" />,
-      },
-      {
-        label: "Modelli documenti",
-        href: "/pratiche/modelli",
-        icon: <FileText className="h-4 w-4" />,
-      },
-      {
-        label: "Diciture documenti",
-        href: "/pratiche/diciture",
-        icon: <FileText className="h-4 w-4" />,
-      },
-    ],
-  },
-
-  {
-    label: "Revisione",
-    icon: <ClipboardCheck className="h-4 w-4" />,
-    children: [
-      {
-        label: "Dashboard",
-        href: "/revisione-controllo/dashboard",
-        icon: <BarChart3 className="h-4 w-4" />,
-      },
-      {
-        label: "Incarichi / Fascicoli",
-        href: "/revisione-controllo",
-        icon: <FolderKanban className="h-4 w-4" />,
-      },
-      {
-        label: "Nuovo incarico",
-        href: "/revisione-controllo/nuovo",
-        icon: <FileText className="h-4 w-4" />,
-      },
-      {
-        label: "Controlli periodici",
-        href: "/revisione-controllo/controlli",
-        icon: <Calendar className="h-4 w-4" />,
-      },
-      {
-        label: "Rilievi / Follow-up",
-        href: "/revisione-controllo/followup",
-        icon: <AlertTriangle className="h-4 w-4" />,
-      },
-      {
-        label: "Carte di lavoro",
-        href: "/revisione-controllo/documenti",
-        icon: <FolderKanban className="h-4 w-4" />,
-      },
-      {
-        label: "Relazioni annuali",
-        href: "/revisione-controllo/relazioni",
-        icon: <FileText className="h-4 w-4" />,
-      },
-      {
-        label: "Modelli relazioni",
-        href: "/revisione-controllo/modelli",
-        icon: <FileText className="h-4 w-4" />,
-      },
+      }],
+    },
+    {
+      label: "Scadenzario",
+      icon: <Calendar className="h-4 w-4" />,
+      children: [
+        { label: "Scadenze unificate", href: "/scadenze", icon: <Calendar className="h-4 w-4" /> },
+        { label: "Elenco Generale", href: "/scadenze/elenco-generale", icon: <FileText className="h-4 w-4" /> },
+        { label: "Calendario", href: "/scadenze/calendario", icon: <Calendar className="h-4 w-4" /> },
+        { label: "Riepilogo", href: "/scadenze/riepilogo", icon: <FileText className="h-4 w-4" /> },
+        { label: "IVA", href: "/scadenze/iva", icon: <FileText className="h-4 w-4" /> },
+        { label: "CCGG", href: "/scadenze/ccgg", icon: <FileText className="h-4 w-4" /> },
+        { label: "CU", href: "/scadenze/cu", icon: <FileText className="h-4 w-4" /> },
+        { label: "IMU", href: "/scadenze/imu", icon: <FileText className="h-4 w-4" /> },
+        { label: "Fiscali", href: "/scadenze/fiscali", icon: <FileText className="h-4 w-4" /> },
+        { label: "Bilanci", href: "/scadenze/bilanci", icon: <FileText className="h-4 w-4" /> },
+        { label: "770", href: "/scadenze/modello-770", icon: <FileText className="h-4 w-4" /> },
+        { label: "Liquidazioni IVA - LIPE", href: "/scadenze/lipe", icon: <FileText className="h-4 w-4" /> },
+        { label: "Esterometro", href: "/scadenze/esterometro", icon: <FileText className="h-4 w-4" /> },
+        { label: "Affitti", href: "/scadenze/affitti", icon: <FileText className="h-4 w-4" /> },
+        { label: "Proforma", href: "/scadenze/proforma", icon: <FileText className="h-4 w-4" /> },
       ],
-  },
-
-  {
-    label: "Controllo di gestione",
-    icon: <BriefcaseBusiness className="h-4 w-4" />,
-    children: [
-      {
-        label: "Elenco generale",
-        href: "/controllo-gestione",
-        icon: <FileText className="h-4 w-4" />,
-      },
-      {
-        label: "Nuovo",
-        href: "/controllo-gestione/nuovo",
-        icon: <FileText className="h-4 w-4" />,
-      },
-      {
-        label: "Importa contabilità",
-        href: "/controllo-gestione/import-contabilita",
-        icon: <RefreshCcw className="h-4 w-4" />,
-      },
-      {
-        label: "Piani dei conti",
-        href: "/controllo-gestione/piani-conti",
-        icon: <Settings className="h-4 w-4" />,
-      },
-      {
-        label: "Storico controlli",
-        href: "/controllo-gestione/storico",
-        icon: <Clock className="h-4 w-4" />,
-      },
+    },
+    {
+      label: "Pratiche",
+      icon: <FolderKanban className="h-4 w-4" />,
+      children: [
+        { label: "Variazioni CCIAA / AdE", href: "/pratiche/variazioni", icon: <FileText className="h-4 w-4" /> },
+        { label: "Modelli documenti", href: "/pratiche/modelli", icon: <FileText className="h-4 w-4" /> },
+        { label: "Diciture documenti", href: "/pratiche/diciture", icon: <FileText className="h-4 w-4" /> },
       ],
-  },
-
-  {
-    label: "Contenzioso",
-    icon: <Scale className="h-4 w-4" />,
-    children: [
-      {
-        label: "Pratiche contenzioso",
-        href: "/contenzioso",
-        icon: <FolderKanban className="h-4 w-4" />,
-      },
-      {
-        label: "Regole scadenze",
-        href: "/contenzioso/regole-scadenze",
-        icon: <Settings className="h-4 w-4" />,
-      },
-      {
-        label: "Sospensioni termini",
-        href: "/contenzioso/sospensioni",
-        icon: <Clock className="h-4 w-4" />,
-      },
-      {
-        label: "Tipi atto",
-        href: "/contenzioso/tipi-atto",
-        icon: <FileText className="h-4 w-4" />,
-      },
-    ],
-  },
-  {
-    label: "AML",
-    icon: <ShieldCheck className="h-4 w-4" />,
-    children: [
-      {
+    },
+    {
+      label: "Revisione",
+      icon: <ClipboardCheck className="h-4 w-4" />,
+      children: [
+        { label: "Dashboard", href: "/revisione-controllo/dashboard", icon: <BarChart3 className="h-4 w-4" /> },
+        { label: "Incarichi / Fascicoli", href: "/revisione-controllo", icon: <FolderKanban className="h-4 w-4" /> },
+        { label: "Nuovo incarico", href: "/revisione-controllo/nuovo", icon: <FileText className="h-4 w-4" /> },
+        { label: "Controlli periodici", href: "/revisione-controllo/controlli", icon: <Calendar className="h-4 w-4" /> },
+        { label: "Rilievi / Follow-up", href: "/revisione-controllo/followup", icon: <AlertTriangle className="h-4 w-4" /> },
+        { label: "Carte di lavoro", href: "/revisione-controllo/documenti", icon: <FolderKanban className="h-4 w-4" /> },
+        { label: "Relazioni annuali", href: "/revisione-controllo/relazioni", icon: <FileText className="h-4 w-4" /> },
+        { label: "Modelli relazioni", href: "/revisione-controllo/modelli", icon: <FileText className="h-4 w-4" /> },
+      ],
+    },
+    {
+      label: "Controllo di gestione",
+      icon: <BriefcaseBusiness className="h-4 w-4" />,
+      children: [
+        { label: "Elenco generale", href: "/controllo-gestione", icon: <FileText className="h-4 w-4" /> },
+        { label: "Nuovo", href: "/controllo-gestione/nuovo", icon: <FileText className="h-4 w-4" /> },
+        { label: "Importa contabilità", href: "/controllo-gestione/import-contabilita", icon: <RefreshCcw className="h-4 w-4" /> },
+        { label: "Piani dei conti", href: "/controllo-gestione/piani-conti", icon: <Settings className="h-4 w-4" /> },
+        { label: "Storico controlli", href: "/controllo-gestione/storico", icon: <Clock className="h-4 w-4" /> },
+      ],
+    },
+    {
+      label: "Contenzioso",
+      icon: <Scale className="h-4 w-4" />,
+      children: [
+        { label: "Pratiche contenzioso", href: "/contenzioso", icon: <FolderKanban className="h-4 w-4" /> },
+        { label: "Regole scadenze", href: "/contenzioso/regole-scadenze", icon: <Settings className="h-4 w-4" /> },
+        { label: "Sospensioni termini", href: "/contenzioso/sospensioni", icon: <Clock className="h-4 w-4" /> },
+        { label: "Tipi atto", href: "/contenzioso/tipi-atto", icon: <FileText className="h-4 w-4" /> },
+      ],
+    },
+    {
+      label: "AML",
+      icon: <ShieldCheck className="h-4 w-4" />,
+      children: [{
         label: "Antiriciclaggio",
         icon: <ShieldCheck className="h-4 w-4" />,
         children: [
@@ -589,14 +367,12 @@ const menuItems: MenuItem[] = [
           { label: "Soggetti responsabili", href: "/antiriciclaggio/responsabili-av-societa", icon: <Users className="h-4 w-4" /> },
           { label: "Comunicazioni inviate", href: "/antiriciclaggio/comunicazioni", icon: <Mail className="h-4 w-4" /> },
         ],
-      },
-    ],
-  },
-  {
-    label: "Payroll",
-    icon: <Clock className="h-4 w-4" />,
-    children: [
-      {
+      }],
+    },
+    {
+      label: "Payroll",
+      icon: <Clock className="h-4 w-4" />,
+      children: [{
         label: "Payroll",
         icon: <Clock className="h-4 w-4" />,
         children: [
@@ -609,562 +385,206 @@ const menuItems: MenuItem[] = [
           { label: "Creazione gruppi smart", href: "/presenze/smart-gruppi", icon: <Users className="h-4 w-4" /> },
           { label: "Qualifiche", href: "/payroll/qualifiche", icon: <FileText className="h-4 w-4" /> },
         ],
-      },
-    ],
-  },
-{
-  label: "Archivi di base",
-  icon: <Users className="h-4 w-4" />,
-  children: [
+      }],
+    },
     {
-      label: "Anagrafiche",
+      label: "Archivi di base",
       icon: <Users className="h-4 w-4" />,
       children: [
         {
-  label: "Anagrafiche",
-  href: "/clienti",
-  icon: <Users className="h-4 w-4" />,
-},
-        {
-          label: "Soci e organi sociali",
-          href: "/clienti/organi-sociali",
-          icon: <UserCircle className="h-4 w-4" />,
-        },
-        {
-          label: "Gruppi societari",
-          href: "/anagrafiche/gruppi-societari",
-          icon: <Network className="h-4 w-4" />,
-        },
-        {
-          label: "Rappresentanti legali",
-          href: "/antiriciclaggio/rappresentanti",
-          icon: <UserCircle className="h-4 w-4" />,
-        },
-      ],
-    },
-    {
-      label: "Connessioni",
-      icon: <Cloud className="h-4 w-4" />,
-      children: [
-        {
-          label: "Microsoft 365 - Connessioni",
-          href: "/microsoft365?tab=connessioni",
-          icon: <Link2 className="h-4 w-4" />,
-        },
-        {
-          label: "Microsoft 365 - Sync",
-          href: "/microsoft365?tab=sync",
-          icon: <RefreshCcw className="h-4 w-4" />,
-        },
-      ],
-    },
-    {
-      label: "Impostazioni",
-      icon: <Settings className="h-4 w-4" />,
-      children: [
-        {
-          label: "Utenti",
-          href: "/impostazioni/utenti",
+          label: "Anagrafiche",
           icon: <Users className="h-4 w-4" />,
-          adminOnly: true,
+          children: [
+            { label: "Anagrafiche", href: "/clienti", icon: <Users className="h-4 w-4" /> },
+            { label: "Soci e organi sociali", href: "/clienti/organi-sociali", icon: <UserCircle className="h-4 w-4" /> },
+            { label: "Gruppi societari", href: "/anagrafiche/gruppi-societari", icon: <Network className="h-4 w-4" /> },
+            { label: "Rappresentanti legali", href: "/antiriciclaggio/rappresentanti", icon: <UserCircle className="h-4 w-4" /> },
+          ],
         },
         {
-          label: "Dati Studio",
-          href: "/impostazioni/studio",
-          icon: <Building2 className="h-4 w-4" />,
-          adminOnly: true,
+          label: "Connessioni",
+          icon: <Cloud className="h-4 w-4" />,
+          children: [
+            { label: "Microsoft 365 - Connessioni", href: "/microsoft365?tab=connessioni", icon: <Link2 className="h-4 w-4" /> },
+            { label: "Microsoft 365 - Sync", href: "/microsoft365?tab=sync", icon: <RefreshCcw className="h-4 w-4" /> },
+          ],
         },
         {
-          label: "Ruoli",
-          href: "/impostazioni/ruoli",
+          label: "Impostazioni",
           icon: <Settings className="h-4 w-4" />,
-          adminOnly: true,
+          children: [
+            { label: "Utenti", href: "/impostazioni/utenti", icon: <Users className="h-4 w-4" />, adminOnly: true },
+            { label: "Dati Studio", href: "/impostazioni/studio", icon: <Building2 className="h-4 w-4" />, adminOnly: true },
+            { label: "Ruoli", href: "/impostazioni/ruoli", icon: <Settings className="h-4 w-4" />, adminOnly: true },
+            { label: "Prestazioni", href: "/impostazioni/prestazioni", icon: <Settings className="h-4 w-4" />, adminOnly: true },
+            { label: "Payroll Festività", href: "/impostazioni/payroll-festivita", icon: <Calendar className="h-4 w-4" />, adminOnly: true },
+            { label: "Payroll Codici Presenza", href: "/impostazioni/payroll-codici-presenza", icon: <Clock className="h-4 w-4" />, adminOnly: true },
+            { label: "Scadenzari", href: "/impostazioni/scadenzari", icon: <Settings className="h-4 w-4" />, adminOnly: true },
+            { label: "Template Email", href: "/impostazioni/template-email", icon: <Mail className="h-4 w-4" />, adminOnly: true },
+            { label: "Tipi Scadenze", href: "/impostazioni/tipi-scadenze", icon: <Settings className="h-4 w-4" />, adminOnly: true },
+            { label: "Tipo Promemoria", href: "/impostazioni/tipo-promemoria", icon: <Settings className="h-4 w-4" />, adminOnly: true },
+          ],
         },
-        {
-          label: "Prestazioni",
-          href: "/impostazioni/prestazioni",
-          icon: <Settings className="h-4 w-4" />,
-          adminOnly: true,
-        },
-        {
-          label: "Payroll Festività",
-          href: "/impostazioni/payroll-festivita",
-          icon: <Calendar className="h-4 w-4" />,
-          adminOnly: true,
-        },
-        {
-          label: "Payroll Codici Presenza",
-          href: "/impostazioni/payroll-codici-presenza",
-          icon: <Clock className="h-4 w-4" />,
-          adminOnly: true,
-        },
-        {
-          label: "Scadenzari",
-          href: "/impostazioni/scadenzari",
-          icon: <Settings className="h-4 w-4" />,
-          adminOnly: true,
-        },
-        {
-          label: "Template Email",
-          href: "/impostazioni/template-email",
-          icon: <Mail className="h-4 w-4" />,
-          adminOnly: true,
-        },
-        {
-          label: "Tipi Scadenze",
-          href: "/impostazioni/tipi-scadenze",
-          icon: <Settings className="h-4 w-4" />,
-          adminOnly: true,
-        },
-        {
-          label: "Tipo Promemoria",
-          href: "/impostazioni/tipo-promemoria",
-          icon: <Settings className="h-4 w-4" />,
-          adminOnly: true,
-        },
+        { label: "Modifica Password", href: "/profilo/password", icon: <KeyRound className="h-4 w-4" /> },
+        { label: "Vai al sito web", href: "https://studiomanagerpro.it", icon: <ExternalLink className="h-4 w-4" /> },
       ],
     },
-  ],
-},
+    {
+      label: "Manuali di istruzioni",
+      icon: <BookOpen className="h-4 w-4" />,
+      children: [
+        { label: "Agenda", href: "/guide/Manuale_Agenda_SMP.pdf", icon: <Calendar className="h-4 w-4" /> },
+        { label: "Promemoria", href: "/guide/Manuale_Promemoria_SMP.pdf", icon: <FileText className="h-4 w-4" /> },
+        { label: "Scadenzario", href: "/guide/Manuale_Scadenzario_SMP.pdf", icon: <Calendar className="h-4 w-4" /> },
+        { label: "Pratiche", href: "/guide/Manuale_Pratiche_SMP.pdf", icon: <FolderKanban className="h-4 w-4" /> },
+        { label: "Revisione e Controllo", href: "/guide/Manuale_Revisione_e_Controllo_SMP.pdf", icon: <ClipboardCheck className="h-4 w-4" /> },
+        { label: "Controllo di Gestione", href: "/guide/Manuale_Controllo_di_Gestione_SMP.pdf", icon: <BriefcaseBusiness className="h-4 w-4" /> },
+        { label: "Contenzioso", href: "/guide/Manuale_Contenzioso_SMP.pdf", icon: <Scale className="h-4 w-4" /> },
+        { label: "Antiriciclaggio", href: "/guide/Manuale_Antiriciclaggio_SMP.pdf", icon: <ShieldCheck className="h-4 w-4" /> },
+        { label: "Payroll", href: "/guide/Manuale_Payroll_SMP.pdf", icon: <Clock className="h-4 w-4" /> },
+        { label: "Anagrafiche", href: "/guide/Manuale_Anagrafiche_SMP.pdf", icon: <Users className="h-4 w-4" /> },
+        { label: "Microsoft 365", href: "/guide/Manuale_Operativo_Microsoft_365_SMP.pdf", icon: <Cloud className="h-4 w-4" /> },
+        { label: "Configurazione", href: "/guide/Manuale_Generale_Configurazione_SMP.pdf", icon: <Settings className="h-4 w-4" /> },
+      ],
+    },
+  ];
 
-{
-  label: "Manuali di istruzioni",
-  icon: <BookOpen className="h-4 w-4" />,
-  children: [
-    {
-      label: "Agenda",
-      href: "/guide/Manuale_Agenda_SMP.pdf",
-      icon: <Calendar className="h-4 w-4" />,
-    },
-    {
-      label: "Promemoria",
-      href: "/guide/Manuale_Promemoria_SMP.pdf",
-      icon: <FileText className="h-4 w-4" />,
-    },
-    {
-      label: "Scadenzario",
-      href: "/guide/Manuale_Scadenzario_SMP.pdf",
-      icon: <Calendar className="h-4 w-4" />,
-    },
-    {
-      label: "Pratiche",
-      href: "/guide/Manuale_Pratiche_SMP.pdf",
-      icon: <FolderKanban className="h-4 w-4" />,
-    },
-    {
-      label: "Revisione e Controllo",
-      href: "/guide/Manuale_Revisione_e_Controllo_SMP.pdf",
-      icon: <ClipboardCheck className="h-4 w-4" />,
-    },
-    {
-      label: "Controllo di Gestione",
-      href: "/guide/Manuale_Controllo_di_Gestione_SMP.pdf",
-      icon: <BriefcaseBusiness className="h-4 w-4" />,
-    },
-    {
-      label: "Contenzioso",
-      href: "/guide/Manuale_Contenzioso_SMP.pdf",
-      icon: <Scale className="h-4 w-4" />,
-    },
-    {
-      label: "Antiriciclaggio",
-      href: "/guide/Manuale_Antiriciclaggio_SMP.pdf",
-      icon: <ShieldCheck className="h-4 w-4" />,
-    },
-    {
-      label: "Payroll",
-      href: "/guide/Manuale_Payroll_SMP.pdf",
-      icon: <Clock className="h-4 w-4" />,
-    },
-    {
-      label: "Anagrafiche",
-      href: "/guide/Manuale_Anagrafiche_SMP.pdf",
-      icon: <Users className="h-4 w-4" />,
-    },
-    {
-      label: "Microsoft 365",
-      href: "/guide/Manuale_Operativo_Microsoft_365_SMP.pdf",
-      icon: <Cloud className="h-4 w-4" />,
-    },
-    {
-      label: "Configurazione",
-      href: "/guide/Manuale_Generale_Configurazione_SMP.pdf",
-      icon: <Settings className="h-4 w-4" />,
-    },
-  ],
-},
-];
-
-const isExactRoute = (href?: string) => {
-  if (!href) return false;
-  return currentRoute === href;
-};
-
-  const isPathActive = (href?: string) => {
-    if (!href) return false;
-
-    if (!pathname) return false;
-
-const normalizedHref = href.split("?")[0];
-return pathname === normalizedHref || pathname.startsWith(`${normalizedHref}/`);
+  const isExactRoute = (href?: string) => {
+    if (!href || href.startsWith("http")) return false;
+    return currentRoute === href;
   };
 
-const isActive = (item: MenuItem): boolean => {
-  if (!pathname) return false;
+  const isPathActive = (href?: string) => {
+    if (!href || !pathname || href.startsWith("http")) return false;
+    const normalizedHref = href.split("?")[0];
+    return pathname === normalizedHref || pathname.startsWith(`${normalizedHref}/`);
+  };
 
-  if (item.href && (isExactRoute(item.href) || isPathActive(item.href))) {
-    return true;
-  }
+  const isActive = (item: MenuItem): boolean => {
+    if (!pathname) return false;
+    if (item.href && (isExactRoute(item.href) || isPathActive(item.href))) return true;
+    if (item.children?.length) return item.children.some((child) => isActive(child));
+    return false;
+  };
 
-  if (item.children?.length) {
-    return item.children.some((child) => isActive(child));
-  }
+  const renderMenuItem = (item: MenuItem) => {
+    if (item.adminOnly && currentUser?.tipo_utente !== "Admin") return null;
+    const hasChildren = Boolean(item.children && item.children.length > 0);
+    const itemActive = isActive(item);
+    const menuOpen = desktopMenuOpen === item.label;
+    const showPromemoriaRicevutiBadge = item.label === "Promemoria" && promemoriaRicevuti > 0;
+    const showPromemoriaAlert = item.label === "Promemoria" && promemoriaAttivi > 0;
+    const showAgendaBadge = item.label === "Agenda" && eventiImminenti > 0;
 
-  return false;
-};
+    if (hasChildren) {
+      return (
+        <Button
+          key={item.label}
+          type="button"
+          variant="ghost"
+          onClick={() => setDesktopMenuOpen(menuOpen ? null : item.label)}
+          className={cn(
+            "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+            itemActive || menuOpen
+              ? "bg-[#d9f1fb] text-[#075985] hover:bg-[#c7eafa] hover:text-[#064b72]"
+              : "text-white hover:bg-white/15 hover:text-white"
+          )}
+        >
+          {item.icon}<span>{item.label}</span><ChevronDown className="ml-0.5 h-3.5 w-3.5" />
+        </Button>
+      );
+    }
 
-const renderMenuItem = (item: MenuItem) => {
-  if (
-    item.adminOnly &&
-    currentUser?.tipo_utente !== "Admin"
-  ) {
-    return null;
-  }
-
-  const hasChildren =
-    Boolean(
-      item.children &&
-      item.children.length > 0
-    );
-
-  const itemActive =
-    isActive(item);
-
-  const menuOpen =
-    desktopMenuOpen === item.label;
-
-  const showPromemoriaRicevutiBadge =
-    item.label === "Promemoria" &&
-    promemoriaRicevuti > 0;
-
-  const showPromemoriaAlert =
-    item.label === "Promemoria" &&
-    promemoriaAttivi > 0;
-
-  const showAgendaBadge =
-    item.label === "Agenda" &&
-    eventiImminenti > 0;
-
-  if (hasChildren) {
     return (
-      <Button
+      <Link
         key={item.label}
-        type="button"
-        variant="ghost"
-        onClick={() =>
-          setDesktopMenuOpen(
-            menuOpen
-              ? null
-              : item.label
-          )
-        }
+        href={item.href || "#"}
+        onClick={() => {
+          setDesktopMenuOpen(null);
+          if (item.label === "Promemoria") handlePromemoriaClick();
+        }}
         className={cn(
-          "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-          itemActive || menuOpen
-            ? "bg-[#d9f1fb] text-[#075985] hover:bg-[#c7eafa] hover:text-[#064b72]"
-            : "text-white hover:bg-white/15 hover:text-white"
+          "relative flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+          itemActive ? "bg-[#d9f1fb] text-[#075985]" : "text-white hover:bg-white/15 hover:text-white"
         )}
       >
-        {item.icon}
-
-        <span>
-          {item.label}
-        </span>
-
-        <ChevronDown className="ml-0.5 h-3.5 w-3.5" />
-      </Button>
+        {item.icon}<span>{item.label}</span>
+        {showPromemoriaRicevutiBadge && <Badge variant="destructive" className="ml-1 h-5 min-w-[20px] px-1.5 py-0 text-xs">{promemoriaRicevuti > 99 ? "99+" : promemoriaRicevuti}</Badge>}
+        {showPromemoriaAlert && <Badge variant="destructive" className="ml-1 h-5 min-w-[20px] px-1.5 py-0 text-xs">{promemoriaAttivi > 99 ? "99+" : promemoriaAttivi}</Badge>}
+        {showAgendaBadge && <Badge variant="destructive" className="ml-1 h-5 min-w-[20px] px-1.5 py-0 text-xs">{eventiImminenti > 99 ? "99+" : eventiImminenti}</Badge>}
+      </Link>
     );
+  };
+
+  const desktopMenuAttivo = menuItems.find((item) => item.label === desktopMenuOpen) || null;
+  const desktopMenuVoci = desktopMenuAttivo?.children?.flatMap((child) => child.children?.length ? child.children : [child]) || [];
+
+  if (loading) {
+    return <nav className="w-full border-b border-cyan-200/30 bg-[#0d6f9f] px-4 py-3"><div className="flex items-center gap-2"><div className="h-8 w-24 rounded bg-white/20 animate-pulse" /><div className="h-8 w-24 rounded bg-white/20 animate-pulse" /><div className="h-8 w-24 rounded bg-white/20 animate-pulse" /></div></nav>;
   }
 
   return (
-    <Link
-      key={item.label}
-      href={item.href || "#"}
-      onClick={() => {
-        setDesktopMenuOpen(null);
-
-        if (
-          item.label ===
-          "Promemoria"
-        ) {
-          handlePromemoriaClick();
-        }
-      }}
-      className={cn(
-        "relative flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-        itemActive
-          ? "bg-[#d9f1fb] text-[#075985]"
-          : "text-white hover:bg-white/15 hover:text-white"
-      )}
-    >
-      {item.icon}
-
-      <span>
-        {item.label}
-      </span>
-
-      {showPromemoriaRicevutiBadge && (
-        <Badge
-          variant="destructive"
-          className="ml-1 h-5 min-w-[20px] px-1.5 py-0 text-xs"
-        >
-          {promemoriaRicevuti > 99
-            ? "99+"
-            : promemoriaRicevuti}
-        </Badge>
-      )}
-
-      {showPromemoriaAlert && (
-        <Badge
-          variant="destructive"
-          className="ml-1 h-5 min-w-[20px] px-1.5 py-0 text-xs"
-        >
-          {promemoriaAttivi > 99
-            ? "99+"
-            : promemoriaAttivi}
-        </Badge>
-      )}
-
-      {showAgendaBadge && (
-        <Badge
-          variant="destructive"
-          className="ml-1 h-5 min-w-[20px] px-1.5 py-0 text-xs"
-        >
-          {eventiImminenti > 99
-            ? "99+"
-            : eventiImminenti}
-        </Badge>
-      )}
-    </Link>
-  );
-};
-
-    const desktopMenuAttivo =
-  menuItems.find(
-    (item) =>
-      item.label === desktopMenuOpen
-  ) || null;
-
-const desktopMenuVoci =
-  desktopMenuAttivo?.children
-    ?.flatMap((child) => {
-      if (child.children?.length) {
-        return child.children;
-      }
-
-      return [child];
-    }) || [];
-    
-  if (loading) {
-    return (
-      <nav className="w-full border-b border-cyan-200/30 bg-[#0d6f9f] px-4 py-3">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-24 rounded bg-white/20 animate-pulse" />
-          <div className="h-8 w-24 rounded bg-white/20 animate-pulse" />
-          <div className="h-8 w-24 rounded bg-white/20 animate-pulse" />
-        </div>
-   </nav>
-  );
-}
-    
-return (
- <nav className="relative z-40 w-full border-b border-cyan-200/30 bg-[#0d6f9f] shadow-sm">
-    {/* MOBILE */}
-    <div className="flex items-center justify-between px-3 py-2 lg:hidden">
-      <button
-        type="button"
-        onClick={() => setMobileMenuOpen(true)}
-        className="flex h-11 items-center gap-2 rounded-lg border border-white/30 bg-white/10 px-4 text-sm font-semibold text-white"
-      >
-        <Menu className="h-5 w-5" />
-        Menu
-      </button>
-    </div>
-
-    {mobileMenuOpen && (
-      <div className="fixed inset-0 z-[9999] bg-black/40 lg:hidden">
-        <div className="h-full w-[86vw] max-w-sm overflow-y-auto bg-white shadow-xl">
-          <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-white px-4 py-3">
-            <div className="font-bold text-gray-900">Studio Manager Pro</div>
-
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(false)}
-              className="rounded-lg border p-2"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-
-          <div className="space-y-1 p-3">
-            {[
-              {
-    label: "Agenda",
-    href: "/agenda",
-    icon: <Calendar className="h-5 w-5" />,
-  },
-              { label: "Rubrica", href: "/contatti", icon: <UserCircle className="h-5 w-5" /> },
-              { label: "Presenze", href: "/presenze", icon: <Clock className="h-5 w-5" /> },
-            ].map((item) => (
-              <Link
-                key={item.label}
-                href={item.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className={cn(
-                  "flex min-h-12 items-center gap-3 rounded-lg px-4 py-3 text-base font-semibold",
-                  isPathActive(item.href)
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-50 text-gray-800"
-                )}
-              >
-                {item.icon}
-                <span>{item.label}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
+    <nav className="relative z-40 w-full border-b border-cyan-200/30 bg-[#0d6f9f] shadow-sm">
+      <div className="flex items-center justify-between px-3 py-2 lg:hidden">
+        <button type="button" onClick={() => setMobileMenuOpen(true)} className="flex h-11 items-center gap-2 rounded-lg border border-white/30 bg-white/10 px-4 text-sm font-semibold text-white"><Menu className="h-5 w-5" />Menu</button>
       </div>
-    )}
 
-  {/* DESKTOP */}
-<div className="relative hidden lg:block">
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-[9999] bg-black/40 lg:hidden">
+          <div className="h-full w-[86vw] max-w-sm overflow-y-auto bg-white shadow-xl">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-white px-4 py-3"><div className="font-bold text-gray-900">Studio Manager Pro</div><button type="button" onClick={() => setMobileMenuOpen(false)} className="rounded-lg border p-2"><X className="h-5 w-5" /></button></div>
+            <div className="space-y-1 p-3">
+              {[
+                { label: "Agenda", href: "/agenda", icon: <Calendar className="h-5 w-5" /> },
+                { label: "Rubrica", href: "/contatti", icon: <UserCircle className="h-5 w-5" /> },
+                { label: "Presenze", href: "/presenze", icon: <Clock className="h-5 w-5" /> },
+              ].map((item) => (
+                <Link key={item.label} href={item.href} onClick={() => setMobileMenuOpen(false)} className={cn("flex min-h-12 items-center gap-3 rounded-lg px-4 py-3 text-base font-semibold", isPathActive(item.href) ? "bg-blue-600 text-white" : "bg-gray-50 text-gray-800")}>{item.icon}<span>{item.label}</span></Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
-  {/* MENU PRINCIPALE */}
-  <div className="flex min-w-max items-center gap-0.5 px-4 py-0">
-    {menuItems.map((item) =>
-      renderMenuItem(item)
-    )}
-  </div>
-
-  {/* RIBBON SOTTOMENU */}
-  {desktopMenuAttivo &&
-    desktopMenuVoci.length > 0 && (
-      <div
-        className="
-          absolute
-          left-0
-          right-0
-          top-full
-          z-50
-          border-y
-          border-gray-200
-          bg-white
-          shadow-lg
-        "
-      >
-       <div
-  className={cn(
-    "w-full items-stretch justify-start gap-0 px-4 py-2",
-    desktopMenuAttivo.label === "Archivi di base"
-      ? "grid grid-cols-8"
-      : "flex flex-row flex-nowrap"
-  )}
->
-          {desktopMenuVoci.map(
-            (voce) => {
-              const voceActive =
-                isActive(voce);
-
-               const voceRiservata =
-      voce.adminOnly &&
-      currentUser?.tipo_utente !== "Admin";
-
-
-              return (
-                <Link
-                  key={voce.label}
-                  href={voceRiservata ? "#" : voce.href || "#"}
-                  target={
-                    voce.href
-                      ?.toLowerCase()
-                      .endsWith(".pdf")
-                      ? "_blank"
-                      : undefined
-                  }
-                  rel={
-                    voce.href
-                      ?.toLowerCase()
-                      .endsWith(".pdf")
-                      ? "noopener noreferrer"
-                      : undefined
-                  }
-                 onClick={(event) => {
-  if (voceRiservata) {
-    event.preventDefault();
-    return;
-  }
-
-  setDesktopMenuOpen(null);
-}}
-                  className={cn(
-                    `
-                    flex
-                    min-h-[72px]
-                    min-w-[96px]
-                    max-w-[120px]
-                    flex-col
-                    items-center
-                    justify-center
-                    gap-1.5
-                    border-r
-                    border-gray-100
-                    px-3
-                    py-2
-                    text-center
-                    text-[11px]
-                    font-medium
-                    leading-tight
-                    transition-colors
-                    `,
-                    desktopMenuAttivo.label === "Archivi di base" &&
-                    "min-w-0 max-w-none",
-                    voceRiservata
-  ? "cursor-not-allowed bg-gray-50 text-gray-400 opacity-70 hover:bg-gray-50 hover:text-gray-400"
-  : voceActive
-    ? "bg-blue-50 text-blue-700"
-    : "text-gray-700 hover:bg-blue-50 hover:text-blue-700"
-                  )}
-                >
-                  <span
-                    className="
-                      flex
-                      items-center
-                      justify-center
-                      text-blue-600
-                      [&>svg]:h-5
-                      [&>svg]:w-5
-                    "
+      <div className="relative hidden lg:block">
+        <div className="flex min-w-max items-center gap-0.5 px-4 py-0">{menuItems.map((item) => renderMenuItem(item))}</div>
+        {desktopMenuAttivo && desktopMenuVoci.length > 0 && (
+          <div className="absolute left-0 right-0 top-full z-50 border-y border-gray-200 bg-white shadow-lg">
+            <div className={cn("w-full items-stretch justify-start gap-0 px-4 py-2", desktopMenuAttivo.label === "Archivi di base" ? "grid grid-cols-8" : "flex flex-row flex-nowrap")}>
+              {desktopMenuVoci.map((voce) => {
+                const voceActive = isActive(voce);
+                const voceRiservata = voce.adminOnly && currentUser?.tipo_utente !== "Admin";
+                const voceEsterna = !!voce.href?.startsWith("http");
+                const vocePdf = !!voce.href?.toLowerCase().endsWith(".pdf");
+                return (
+                  <Link
+                    key={voce.label}
+                    href={voceRiservata ? "#" : voce.href || "#"}
+                    target={voceEsterna || vocePdf ? "_blank" : undefined}
+                    rel={voceEsterna || vocePdf ? "noopener noreferrer" : undefined}
+                    onClick={(event) => {
+                      if (voceRiservata) {
+                        event.preventDefault();
+                        return;
+                      }
+                      setDesktopMenuOpen(null);
+                    }}
+                    className={cn(
+                      "flex min-h-[72px] min-w-[96px] max-w-[120px] flex-col items-center justify-center gap-1.5 border-r border-gray-100 px-3 py-2 text-center text-[11px] font-medium leading-tight transition-colors",
+                      desktopMenuAttivo.label === "Archivi di base" && "min-w-0 max-w-none",
+                      voceRiservata ? "cursor-not-allowed bg-gray-50 text-gray-400 opacity-70 hover:bg-gray-50 hover:text-gray-400" : voceActive ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+                    )}
                   >
-                    {voce.icon}
-                  </span>
-
-                 <span>
-  {voce.label}
-</span>
-
-{voceRiservata && (
-  <span className="text-[9px] font-normal text-gray-400">
-    Solo amministratore
-  </span>
-)}
-                </Link>
-              );
-            }
-          )}
-        </div>
+                    <span className="flex items-center justify-center text-blue-600 [&>svg]:h-5 [&>svg]:w-5">{voce.icon}</span>
+                    <span>{voce.label}</span>
+                    {voceRiservata && <span className="text-[9px] font-normal text-gray-400">Solo amministratore</span>}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
-    )}
-</div>
-  </nav>
-);
+    </nav>
+  );
 }
