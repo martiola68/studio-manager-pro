@@ -8,6 +8,7 @@ type TipoScadenzaUpdate = Database["public"]["Tables"]["tbtipi_scadenze"]["Updat
 export type TipoScadenzaCatalogo = TipoScadenzaBase & {
   origine: "S" | "P";
   attivo_effettivo?: boolean;
+  ha_scadenzario?: boolean | null;
 };
 
 const db = supabase as any;
