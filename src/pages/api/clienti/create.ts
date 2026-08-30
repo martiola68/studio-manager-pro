@@ -30,14 +30,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     let { data: userData, error: userError } = await admin
       .from("tbutenti")
-      .select("studio_id")
+      .select("id, studio_id")
       .eq("user_id", user.id)
       .maybeSingle();
 
     if ((!userData || userError) && user.email) {
       const fallback = await admin
         .from("tbutenti")
-        .select("studio_id")
+        .select("id, studio_id")
         .eq("email", user.email.toLowerCase())
         .maybeSingle();
       userData = fallback.data;
@@ -45,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (userError) return res.status(500).json({ error: "Impossibile determinare lo studio dell'utente", details: userError.message });
-    if (!userData?.studio_id) return res.status(403).json({ error: "Utente senza studio associato" });
+    if (!userData?.studio_id || !userData?.id) return res.status(403).json({ error: "Utente senza studio associato" });
 
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
     const codiceFiscale = String(body?.codice_fiscale ?? "").trim().toUpperCase();
@@ -63,7 +63,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(409).json({ error: `Cliente già esistente: ${existing[0].ragione_sociale || codiceFiscale}` });
     }
 
-    const clienteData = { ...body, codice_fiscale: codiceFiscale, studio_id: userData.studio_id };
+    const hasResponsabile = Boolean(body?.utente_operatore_id || body?.utente_professionista_id || body?.utente_payroll_id);
+    const clienteData = {
+      ...body,
+      codice_fiscale: codiceFiscale,
+      studio_id: userData.studio_id,
+      utente_operatore_id: hasResponsabile ? body?.utente_operatore_id ?? null : userData.id,
+      utente_professionista_id: body?.utente_professionista_id ?? null,
+      utente_payroll_id: body?.utente_payroll_id ?? null,
+    };
     delete clienteData.id;
 
     const { data: inserted, error: insertError } = await admin
