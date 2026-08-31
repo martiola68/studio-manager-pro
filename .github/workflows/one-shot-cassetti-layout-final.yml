@@ -1,0 +1,61 @@
+name: One-shot cassetti fiscali layout final
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[cassetti-layout-final]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply full width and full height layout
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('src/pages/cassetti-fiscali/index.tsx')
+          s = p.read_text()
+
+          old_width = '<div className="w-full max-w-none mx-auto px-4 md:px-6 xl:px-8 py-4 md:py-8">'
+          new_width = '''<div
+    className="max-w-none py-4 md:py-8"
+    style={{
+      width: "calc(100vw - 48px)",
+      marginLeft: "calc(50% - 50vw + 24px)",
+      marginRight: "calc(50% - 50vw + 24px)",
+    }}
+  >'''
+
+          if s.count(old_width) != 1:
+              raise SystemExit(f'Contenitore larghezza: atteso 1, trovato {s.count(old_width)}')
+          s = s.replace(old_width, new_width)
+
+          old_height = '<div className="relative w-full overflow-auto max-h-[600px]">'
+          new_height = '<div className="relative w-full overflow-auto h-[calc(100vh-250px)] min-h-[600px]">'
+          if old_height in s:
+              s = s.replace(old_height, new_height, 1)
+          elif new_height not in s:
+              raise SystemExit('Contenitore altezza non riconosciuto')
+
+          if 'export default function CassettiFiscaliPage()' not in s:
+              raise SystemExit('Il file non è più un modulo valido: annullo')
+
+          p.write_text(s)
+          Path('.github/workflows/one-shot-cassetti-layout-final.yml').unlink()
+          PY
+
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/cassetti-fiscali/index.tsx .github/workflows/one-shot-cassetti-layout-final.yml
+          git commit -m "style: completa cassetti fiscali a tutta pagina [cassetti-layout-final]"
+          git push origin main
