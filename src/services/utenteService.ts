@@ -19,6 +19,7 @@ const utentiSelect = `
   responsabile_paghe,
   responsabile_ferie_permessi,
   utente_comunicazioni,
+  amministratore_sistema_generale,
   studio_id,
   settore,
   microsoft_connection_id,
