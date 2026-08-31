@@ -1,6 +1,12 @@
 import { supabase } from "@/lib/supabase/client";
 import type { MicrosoftConnection } from "@/types/microsoftConnection";
 
+const REVISIONI_STUDIO_ID = "f9d3ca10-6134-4061-a2b4-0be74e8c7654";
+
+function getMaxMicrosoftConnections(studioId: string): number {
+  return studioId === REVISIONI_STUDIO_ID ? 2 : 1;
+}
+
 export async function getMicrosoftConnections(
   studioId: string
 ): Promise<MicrosoftConnection[]> {
@@ -59,6 +65,7 @@ export async function createMicrosoftConnection(input: {
   organizer_email?: string | null;
 }): Promise<MicrosoftConnection> {
   const client = supabase as any;
+  const maxConnections = getMaxMicrosoftConnections(input.studio_id);
 
   const { count: connectionsCount, error: countError } = await client
     .from("microsoft365_connections")
@@ -70,8 +77,10 @@ export async function createMicrosoftConnection(input: {
     throw countError;
   }
 
-  if ((connectionsCount || 0) >= 2) {
-    throw new Error("Limite massimo di 2 connessioni Microsoft raggiunto per questo studio");
+  if ((connectionsCount || 0) >= maxConnections) {
+    throw new Error(
+      `Limite massimo di ${maxConnections} connessione${maxConnections > 1 ? "i" : ""} Microsoft raggiunto per questo studio`
+    );
   }
 
   if (input.is_default) {
