@@ -1,0 +1,74 @@
+name: One-shot promemoria table code
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[promemoria-table-code]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch promemoria table
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          page = Path('src/pages/promemoria/index.tsx')
+          s = page.read_text()
+
+          old = '<TableHead>Stato</TableHead><TableHead>Data completato</TableHead><TableHead>Settore</TableHead><TableHead>Allegati</TableHead>'
+          new = '<TableHead>Stato</TableHead><TableHead>Data completato</TableHead><TableHead>Allegati</TableHead>'
+          if s.count(old) != 1:
+              raise SystemExit(f'Header Settore: atteso 1, trovato {s.count(old)}')
+          s = s.replace(old, new)
+
+          old = '<TableCell>{p.settore || "-"}</TableCell>'
+          if s.count(old) != 1:
+              raise SystemExit(f'Cella Settore: atteso 1, trovato {s.count(old)}')
+          s = s.replace(old, '')
+
+          if s.count('colSpan={15}') != 1:
+              raise SystemExit(f'colSpan 15: atteso 1, trovato {s.count("colSpan={15}")}')
+          s = s.replace('colSpan={15}', 'colSpan={14}')
+
+          old = '<TableCell className="font-mono text-xs font-semibold whitespace-nowrap">{(p as any).codice_promemoria || "-"}</TableCell>'
+          new = '<TableCell className="font-mono text-sm font-bold whitespace-nowrap tracking-wide">{(p as any).codice_promemoria || "-"}</TableCell>'
+          if s.count(old) != 1:
+              raise SystemExit(f'Cella Codice: atteso 1, trovato {s.count(old)}')
+          s = s.replace(old, new)
+          page.write_text(s)
+
+          css = Path('src/styles/globals.css')
+          c = css.read_text()
+          marker = '/* Promemoria: usa tutta la larghezza disponibile e mantiene leggibili tutte le colonne. */'
+          pos = c.find(marker)
+          if pos < 0:
+              raise SystemExit('Blocco CSS Promemoria non trovato')
+          head, block = c[:pos], c[pos:]
+          block = block.replace('table th:nth-child(15)', 'table th:nth-child(14)')
+          block = block.replace('min-width: 1680px;', 'min-width: 1580px;')
+          block = block.replace('th:nth-child(2) { min-width: 145px; width: 145px; white-space: nowrap; }', 'th:nth-child(2) { min-width: 175px; width: 175px; white-space: nowrap; }')
+          # Dopo la rimozione di Settore, Allegati/Completato/Modifica scalano di una posizione.
+          block = block.replace('  .container:has(table th:nth-child(14)) th:nth-child(12) { min-width: 95px; }\n  .container:has(table th:nth-child(14)) th:nth-child(13) { min-width: 90px; }\n  .container:has(table th:nth-child(14)) th:nth-child(14) { min-width: 105px; }\n  .container:has(table th:nth-child(14)) th:nth-child(15) { min-width: 90px; }', '  .container:has(table th:nth-child(14)) th:nth-child(12) { min-width: 90px; }\n  .container:has(table th:nth-child(14)) th:nth-child(13) { min-width: 105px; }\n  .container:has(table th:nth-child(14)) th:nth-child(14) { min-width: 90px; }')
+          # Se la sostituzione sopra non ha intercettato per via del selector già convertito, elimina l'eventuale regola duplicata finale.
+          block = block.replace('\n  .container:has(table th:nth-child(14)) th:nth-child(15) { min-width: 90px; }', '')
+          css.write_text(head + block)
+
+          Path('.github/workflows/one-shot-promemoria-table-code.yml').unlink()
+          PY
+
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/promemoria/index.tsx src/styles/globals.css .github/workflows/one-shot-promemoria-table-code.yml
+          git commit -m "style: amplia codice e rimuove settore dalla griglia promemoria [promemoria-table-code]"
+          git push origin main
