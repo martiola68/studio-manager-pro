@@ -173,44 +173,45 @@
   }
 
   /* Promemoria: usa tutta la larghezza disponibile e mantiene leggibili tutte le colonne. */
-  .container:has(table th:nth-child(14)) {
+  .container:has(table th:nth-child(15)) {
     max-width: none !important;
     width: 100% !important;
     padding-left: 24px !important;
     padding-right: 24px !important;
   }
 
-  .container:has(table th:nth-child(14)) table {
-    min-width: 1540px;
+  .container:has(table th:nth-child(15)) table {
+    min-width: 1680px;
     width: 100%;
     table-layout: auto;
   }
 
-  .container:has(table th:nth-child(14)) th,
-  .container:has(table th:nth-child(14)) td {
+  .container:has(table th:nth-child(15)) th,
+  .container:has(table th:nth-child(15)) td {
     padding-left: 10px;
     padding-right: 10px;
     vertical-align: middle;
     line-height: 1.35;
   }
 
-  .container:has(table th:nth-child(14)) td {
+  .container:has(table th:nth-child(15)) td {
     white-space: normal;
     overflow-wrap: anywhere;
   }
 
-  .container:has(table th:nth-child(14)) th:nth-child(1) { min-width: 46px; width: 46px; }
-  .container:has(table th:nth-child(14)) th:nth-child(2) { min-width: 135px; }
-  .container:has(table th:nth-child(14)) th:nth-child(3) { min-width: 90px; }
-  .container:has(table th:nth-child(14)) th:nth-child(4) { min-width: 220px; }
-  .container:has(table th:nth-child(14)) th:nth-child(5) { min-width: 330px; }
-  .container:has(table th:nth-child(14)) th:nth-child(6) { min-width: 120px; }
-  .container:has(table th:nth-child(14)) th:nth-child(7) { min-width: 105px; }
-  .container:has(table th:nth-child(14)) th:nth-child(8) { min-width: 115px; }
-  .container:has(table th:nth-child(14)) th:nth-child(9) { min-width: 130px; }
-  .container:has(table th:nth-child(14)) th:nth-child(10) { min-width: 130px; }
-  .container:has(table th:nth-child(14)) th:nth-child(11) { min-width: 95px; }
-  .container:has(table th:nth-child(14)) th:nth-child(12) { min-width: 90px; }
-  .container:has(table th:nth-child(14)) th:nth-child(13) { min-width: 105px; }
-  .container:has(table th:nth-child(14)) th:nth-child(14) { min-width: 90px; }
+  .container:has(table th:nth-child(15)) th:nth-child(1) { min-width: 46px; width: 46px; }
+  .container:has(table th:nth-child(15)) th:nth-child(2) { min-width: 145px; width: 145px; white-space: nowrap; }
+  .container:has(table th:nth-child(15)) th:nth-child(3) { min-width: 135px; }
+  .container:has(table th:nth-child(15)) th:nth-child(4) { min-width: 90px; }
+  .container:has(table th:nth-child(15)) th:nth-child(5) { min-width: 220px; }
+  .container:has(table th:nth-child(15)) th:nth-child(6) { min-width: 330px; }
+  .container:has(table th:nth-child(15)) th:nth-child(7) { min-width: 120px; }
+  .container:has(table th:nth-child(15)) th:nth-child(8) { min-width: 105px; }
+  .container:has(table th:nth-child(15)) th:nth-child(9) { min-width: 115px; }
+  .container:has(table th:nth-child(15)) th:nth-child(10) { min-width: 130px; }
+  .container:has(table th:nth-child(15)) th:nth-child(11) { min-width: 130px; }
+  .container:has(table th:nth-child(15)) th:nth-child(12) { min-width: 95px; }
+  .container:has(table th:nth-child(15)) th:nth-child(13) { min-width: 90px; }
+  .container:has(table th:nth-child(15)) th:nth-child(14) { min-width: 105px; }
+  .container:has(table th:nth-child(15)) th:nth-child(15) { min-width: 90px; }
 }
