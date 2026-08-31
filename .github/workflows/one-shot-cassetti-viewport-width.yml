@@ -1,0 +1,53 @@
+name: One-shot cassetti fiscali viewport width
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[cassetti-viewport-width]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Force cassetti fiscali to viewport width
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('src/pages/cassetti-fiscali/index.tsx')
+          s = p.read_text()
+
+          old = '<div className="w-full max-w-none mx-auto px-4 md:px-6 xl:px-8 py-4 md:py-8">'
+          new = '''<div
+    className="max-w-none py-4 md:py-8"
+    style={{
+      width: "calc(100vw - 48px)",
+      marginLeft: "calc(50% - 50vw + 24px)",
+      marginRight: "calc(50% - 50vw + 24px)",
+    }}
+  >'''
+
+          count = s.count(old)
+          if count != 1:
+              raise SystemExit(f'Contenitore corrente: atteso 1, trovato {count}')
+
+          s = s.replace(old, new)
+          p.write_text(s)
+
+          Path('.github/workflows/one-shot-cassetti-viewport-width.yml').unlink()
+          PY
+
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/cassetti-fiscali/index.tsx .github/workflows/one-shot-cassetti-viewport-width.yml
+          git commit -m "style: estende cassetti fiscali alla larghezza pagina [cassetti-viewport-width]"
+          git push origin main
