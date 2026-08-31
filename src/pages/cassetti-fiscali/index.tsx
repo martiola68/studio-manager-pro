@@ -487,7 +487,7 @@ const copyToClipboard = (text: string | null | undefined, label: string) => {
   };
 
   return (
-  <div className="max-w-7xl mx-auto p-4 md:p-8">
+  <div className="w-full max-w-none mx-auto px-4 md:px-6 xl:px-8 py-4 md:py-8">
     <div className="flex justify-between items-center mb-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Cassetti Fiscali</h1>
