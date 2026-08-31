@@ -1,0 +1,140 @@
+name: One-shot promemoria code patch
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[promemoria-code-patch]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch promemoria code UI and emails
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          def must_replace(text, old, new, label):
+              if old not in text:
+                  raise SystemExit(f"Pattern non trovato: {label}")
+              return text.replace(old, new)
+
+          # Pagina Promemoria: aggiunge solo visualizzazione codice e lo passa alla mail di creazione.
+          p = Path('src/pages/promemoria/index.tsx')
+          s = p.read_text()
+
+          s = must_replace(
+              s,
+              'const sendPromemoriaCreationEmail = async (destinatario: Utente | undefined) => {',
+              'const sendPromemoriaCreationEmail = async (destinatario: Utente | undefined, codicePromemoria?: string | null) => {',
+              'firma email creazione'
+          )
+          s = must_replace(
+              s,
+              'const subject = `Nuovo promemoria: ${formData.titolo}`;',
+              'const subject = `${codicePromemoria ? `[${codicePromemoria}] ` : ""}Nuovo promemoria: ${formData.titolo}`;',
+              'subject email creazione'
+          )
+          s = must_replace(
+              s,
+              '<div style="margin-bottom: 12px;"><span style="${priorityBadgeStyle}">Priorità ${formData.priorita}</span></div><div style="font-size: 20px;',
+              '<div style="margin-bottom: 12px;"><span style="${priorityBadgeStyle}">Priorità ${formData.priorita}</span></div>${codicePromemoria ? `<p style="margin: 0 0 8px 0;"><strong>Codice:</strong> ${codicePromemoria}</p>` : ""}<div style="font-size: 20px;',
+              'codice html email creazione'
+          )
+          s = must_replace(
+              s,
+              'const text = `Nuovo promemoria assegnato\\n\\nTitolo:',
+              'const text = `Nuovo promemoria assegnato\\n\\n${codicePromemoria ? `Codice: ${codicePromemoria}\\n` : ""}Titolo:',
+              'codice testo email creazione'
+          )
+          s = must_replace(
+              s,
+              'if (destinatario?.email) await sendPromemoriaCreationEmail(destinatario);',
+              'if (destinatario?.email) await sendPromemoriaCreationEmail(destinatario, (newPromemoria as any)?.codice_promemoria);',
+              'chiamate email creazione'
+          )
+          s = must_replace(
+              s,
+              '<TableHead className="w-12"><Checkbox checked={selectAll} onCheckedChange={handleSelectAll} /></TableHead><TableHead>Tipo</TableHead>',
+              '<TableHead className="w-12"><Checkbox checked={selectAll} onCheckedChange={handleSelectAll} /></TableHead><TableHead>Codice</TableHead><TableHead>Tipo</TableHead>',
+              'header codice'
+          )
+          s = must_replace(
+              s,
+              '<TableCell><Checkbox checked={selectedIds.includes(p.id)} disabled={!canDeletePromemoria(p)} onCheckedChange={() => handleToggleSelect(p.id)} /></TableCell>\n            <TableCell>{tipiPromemoria.find',
+              '<TableCell><Checkbox checked={selectedIds.includes(p.id)} disabled={!canDeletePromemoria(p)} onCheckedChange={() => handleToggleSelect(p.id)} /></TableCell>\n            <TableCell className="font-mono text-xs font-semibold whitespace-nowrap">{(p as any).codice_promemoria || "-"}</TableCell>\n            <TableCell>{tipiPromemoria.find',
+              'cella codice'
+          )
+          s = must_replace(s, 'colSpan={14}', 'colSpan={15}', 'colspan tabella')
+          p.write_text(s)
+
+          # Servizio: codice nelle notifiche di scadenza, senza cambiare criteri, date o destinatari.
+          p = Path('src/services/promemoriaService.ts')
+          s = p.read_text()
+          s = must_replace(
+              s,
+              'const dataScadenzaFormattata = new Date(p.data_scadenza).toLocaleDateString("it-IT");',
+              'const dataScadenzaFormattata = new Date(p.data_scadenza).toLocaleDateString("it-IT");\n      const codicePromemoria = (p as any).codice_promemoria || "-";',
+              'variabile codice scadenza'
+          )
+          s = must_replace(
+              s,
+              'Promemoria: ${p.titolo}\n\nScadenza:',
+              'Codice: ${codicePromemoria}\nPromemoria: ${p.titolo}\n\nScadenza:',
+              'messaggio interno codice'
+          )
+          s = must_replace(
+              s,
+              '? `Promemoria in scadenza tra 7 giorni: ${p.titolo}`\n              : `Promemoria in scadenza oggi: ${p.titolo}`;',
+              '? `[${codicePromemoria}] Promemoria in scadenza tra 7 giorni: ${p.titolo}`\n              : `[${codicePromemoria}] Promemoria in scadenza oggi: ${p.titolo}`;',
+              'subject scadenza codice'
+          )
+          s = must_replace(
+              s,
+              '<ul>\n                <li><strong>Titolo:</strong> ${p.titolo}</li>',
+              '<ul>\n                <li><strong>Codice:</strong> ${codicePromemoria}</li>\n                <li><strong>Titolo:</strong> ${p.titolo}</li>',
+              'html scadenza codice'
+          )
+          s = must_replace(
+              s,
+              '${giorniRimasti === 7 ? "Promemoria in scadenza tra 7 giorni" : "Promemoria in scadenza oggi"}\n\nTitolo:',
+              '${giorniRimasti === 7 ? "Promemoria in scadenza tra 7 giorni" : "Promemoria in scadenza oggi"}\n\nCodice: ${codicePromemoria}\nTitolo:',
+              'testo scadenza codice'
+          )
+          p.write_text(s)
+
+          # Mantiene la tabella larga e leggibile dopo l'aggiunta della quindicesima colonna.
+          p = Path('src/styles/globals.css')
+          s = p.read_text()
+          marker = '/* Promemoria: usa tutta la larghezza disponibile e mantiene leggibili tutte le colonne. */'
+          pos = s.find(marker)
+          if pos < 0:
+              raise SystemExit('Blocco CSS Promemoria non trovato')
+          head, block = s[:pos], s[pos:]
+          block = block.replace('min-width: 1540px;', 'min-width: 1680px;')
+          block = re.sub(r'nth-child\((\d+)\)', lambda m: f'nth-child({int(m.group(1)) if int(m.group(1)) == 1 else int(m.group(1)) + 1})', block)
+          anchor = '.container:has(table th:nth-child(15)) th:nth-child(1) { min-width: 46px; width: 46px; }'
+          if anchor not in block:
+              raise SystemExit('Anchor CSS colonne non trovato')
+          block = block.replace(anchor, anchor + '\n  .container:has(table th:nth-child(15)) th:nth-child(2) { min-width: 145px; width: 145px; white-space: nowrap; }')
+          p.write_text(head + block)
+
+          # Workflow one-shot: si elimina nello stesso commit applicativo.
+          Path('.github/workflows/one-shot-promemoria-code.yml').unlink()
+          PY
+
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/promemoria/index.tsx src/services/promemoriaService.ts src/styles/globals.css .github/workflows/one-shot-promemoria-code.yml
+          git commit -m "feat: mostra codice univoco promemoria in tabella e notifiche [promemoria-code-patch]"
+          git push origin main
