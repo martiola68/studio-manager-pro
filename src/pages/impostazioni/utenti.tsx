@@ -57,6 +57,7 @@ const [formData, setFormData] = useState({
     | "Socio"
     | "",
   utente_comunicazioni: false,
+  amministratore_sistema_generale: false,
 });
   
   useEffect(() => {
@@ -209,6 +210,7 @@ const [formData, setFormData] = useState({
   cognome: formData.cognome,
   email: formData.email,
   tipo_utente: formData.tipo_utente,
+  amministratore_sistema_generale: formData.amministratore_sistema_generale,
   ruolo_operatore_id: formData.ruolo_operatore_id || null,
   attivo: formData.attivo,
   settore: formData.settore || null,
@@ -495,6 +497,9 @@ const handleEdit = (utente: Utente) => {
     utente_comunicazioni: Boolean(
       (utente as any).utente_comunicazioni
     ),
+    amministratore_sistema_generale: Boolean(
+      (utente as any).amministratore_sistema_generale
+    ),
   });
 
   setDialogOpen(true);
@@ -515,6 +520,7 @@ const handleEdit = (utente: Utente) => {
       microsoft_connection_id: "",
       tipo_rapporto: "",
       utente_comunicazioni: false,
+      amministratore_sistema_generale: false,
     });
     setEditingUtente(null);
   };
@@ -835,6 +841,27 @@ const handleEdit = (utente: Utente) => {
     Utente comunicazioni di Studio
   </Label>
 </div>
+
+{editingUtente && (
+  <div className="flex items-center space-x-2">
+    <Checkbox
+      id="amministratore_sistema_generale"
+      checked={formData.amministratore_sistema_generale}
+      onCheckedChange={(checked) =>
+        setFormData((prev) => ({
+          ...prev,
+          amministratore_sistema_generale: !!checked,
+        }))
+      }
+    />
+    <Label
+      htmlFor="amministratore_sistema_generale"
+      className="cursor-pointer font-medium"
+    >
+      Amministratore generale di sistema
+    </Label>
+  </div>
+)}
 
 <div className="flex items-center space-x-2">
   <Checkbox
