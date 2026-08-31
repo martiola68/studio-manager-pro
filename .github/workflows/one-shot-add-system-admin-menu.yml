@@ -1,0 +1,53 @@
+name: One-shot add system admin menu
+on:
+  push:
+    branches:
+      - main
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[system-admin-menu-fixed]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch TopNavBar
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/components/TopNavBar.tsx')
+          s = p.read_text()
+
+          replacements = [
+            (
+              '  | "tipo_utente"\n  | "ruolo_operatore_id"',
+              '  | "tipo_utente"\n  | "amministratore_sistema_generale"\n  | "ruolo_operatore_id"'
+            ),
+            (
+              '.select("id, nome, cognome, email, tipo_utente, ruolo_operatore_id, attivo, created_at, updated_at")',
+              '.select("id, nome, cognome, email, tipo_utente, amministratore_sistema_generale, ruolo_operatore_id, attivo, created_at, updated_at")'
+            ),
+            (
+              '{ label: "Utenti", href: "/impostazioni/utenti", icon: <Users className="h-4 w-4" />, adminOnly: true },\n            { label: "Dati Studio"',
+              '{ label: "Utenti", href: "/impostazioni/utenti", icon: <Users className="h-4 w-4" />, adminOnly: true },\n            ...(currentUser?.amministratore_sistema_generale\n              ? [{ label: "Amministrazione sistema", href: "/impostazioni/amministrazione-sistema", icon: <ShieldCheck className="h-4 w-4" /> }]\n              : []),\n            { label: "Dati Studio"'
+            ),
+          ]
+
+          for old, new in replacements:
+            count = s.count(old)
+            if count != 1:
+              raise SystemExit(f'Patch target non univoco: atteso 1, trovato {count}: {old[:90]}')
+            s = s.replace(old, new, 1)
+
+          p.write_text(s)
+          Path('.github/workflows/one-shot-add-system-admin-menu.yml').unlink()
+          PY
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/TopNavBar.tsx .github/workflows/one-shot-add-system-admin-menu.yml
+          git commit -m "feat: mostra amministrazione sistema solo al generale [system-admin-menu-fixed]"
+          git push origin main
