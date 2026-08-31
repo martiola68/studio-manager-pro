@@ -3,6 +3,12 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import crypto from "crypto";
 
+const REVISIONI_STUDIO_ID = "f9d3ca10-6134-4061-a2b4-0be74e8c7654";
+
+function getMaxMicrosoftConnections(studioId: string): number {
+  return studioId === REVISIONI_STUDIO_ID ? 2 : 1;
+}
+
 function getBearerToken(req: NextApiRequest) {
   const header = typeof req.headers.authorization === "string"
     ? req.headers.authorization
@@ -102,33 +108,33 @@ export default async function handler(
       userRow = data;
     }
 
-  const userId = userRow.id;
-const studioId = userRow.studio_id;
+    const userId = userRow.id;
+    const studioId = userRow.studio_id;
 
-if (!studioId) {
-  return res.status(400).json({ error: "Studio utente non trovato" });
-}
+    if (!studioId) {
+      return res.status(400).json({ error: "Studio utente non trovato" });
+    }
 
-// BLOCCO SICUREZZA: massimo 2 connessioni Microsoft per studio
-const { count: connectionsCount, error: countErr } = await supabaseAdmin
-  .from("microsoft365_connections")
-  .select("id", { count: "exact", head: true })
-  .eq("studio_id", studioId);
+    // BLOCCO SICUREZZA: Revisioni massimo 2 connessioni, tutti gli altri studi massimo 1.
+    const maxConnections = getMaxMicrosoftConnections(studioId);
+    const { count: connectionsCount, error: countErr } = await supabaseAdmin
+      .from("microsoft365_connections")
+      .select("id", { count: "exact", head: true })
+      .eq("studio_id", studioId);
 
-if (countErr) {
-  return res.status(500).json({
-    error: `Errore conteggio connessioni Microsoft: ${countErr.message}`,
-  });
-}
+    if (countErr) {
+      return res.status(500).json({
+        error: `Errore conteggio connessioni Microsoft: ${countErr.message}`,
+      });
+    }
 
-if ((connectionsCount || 0) > 2) {
-  return res.status(400).json({
-    error: "Limite massimo di 2 connessioni Microsoft superato per questo studio",
-  });
-}
+    if ((connectionsCount || 0) > maxConnections) {
+      return res.status(400).json({
+        error: `Limite massimo di ${maxConnections} connessione${maxConnections > 1 ? "i" : ""} Microsoft superato per questo studio`,
+      });
+    }
 
-// 3) Recupera microsoft_connection_id dalla richiesta
-    
+    // 3) Recupera microsoft_connection_id dalla richiesta
     const microsoftConnectionId =
       typeof req.query.microsoft_connection_id === "string"
         ? req.query.microsoft_connection_id
