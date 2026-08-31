@@ -1,0 +1,61 @@
+name: One-shot fix TopNav system admin type
+on:
+  push:
+    branches:
+      - main
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[topnav-system-admin-type-fixed]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fix TopNavUser type
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/components/TopNavBar.tsx')
+          s = p.read_text()
+          old = '''type TopNavUser = Pick<
+  UtenteRow,
+  | "id"
+  | "nome"
+  | "cognome"
+  | "email"
+  | "tipo_utente"
+  | "amministratore_sistema_generale"
+  | "ruolo_operatore_id"
+  | "attivo"
+  | "created_at"
+  | "updated_at"
+>;'''
+          new = '''type TopNavUser = Pick<
+  UtenteRow,
+  | "id"
+  | "nome"
+  | "cognome"
+  | "email"
+  | "tipo_utente"
+  | "ruolo_operatore_id"
+  | "attivo"
+  | "created_at"
+  | "updated_at"
+> & {
+  amministratore_sistema_generale?: boolean | null;
+};'''
+          count = s.count(old)
+          if count != 1:
+            raise SystemExit(f'TopNavUser target: atteso 1, trovato {count}')
+          p.write_text(s.replace(old, new, 1))
+          Path('.github/workflows/one-shot-fix-topnav-system-admin-type.yml').unlink()
+          PY
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/TopNavBar.tsx .github/workflows/one-shot-fix-topnav-system-admin-type.yml
+          git commit -m "fix: corregge tipo TopNav amministratore sistema [topnav-system-admin-type-fixed]"
+          git push origin main
