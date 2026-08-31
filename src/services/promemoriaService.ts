@@ -225,7 +225,6 @@ if (!promemoria || promemoria.length === 0) {
           : "PROMEMORIA IN SCADENZA OGGI";
 
       const dataScadenzaFormattata = new Date(p.data_scadenza).toLocaleDateString("it-IT");
-      const codicePromemoria = (p as any).codice_promemoria || "-";
 
       const markerMessaggio =
         giorniRimasti === 7
@@ -250,7 +249,6 @@ if (!promemoria || promemoria.length === 0) {
       const messaggioTesto = `${markerMessaggio}
 ${urgenza}
 
-Codice: ${codicePromemoria}
 Promemoria: ${p.titolo}
 
 Scadenza: ${dataScadenzaFormattata}
@@ -288,8 +286,8 @@ Vai su /promemoria per gestire questo promemoria.`;
         if (p.destinatario.email) {
           const emailSubject =
             giorniRimasti === 7
-              ? `[${codicePromemoria}] Promemoria in scadenza tra 7 giorni: ${p.titolo}`
-              : `[${codicePromemoria}] Promemoria in scadenza oggi: ${p.titolo}`;
+              ? `Promemoria in scadenza tra 7 giorni: ${p.titolo}`
+              : `Promemoria in scadenza oggi: ${p.titolo}`;
 
           const emailHtml = `
             <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
@@ -305,7 +303,6 @@ Vai su /promemoria per gestire questo promemoria.`;
 
               <p><strong>Dettagli promemoria</strong></p>
               <ul>
-                <li><strong>Codice:</strong> ${codicePromemoria}</li>
                 <li><strong>Titolo:</strong> ${p.titolo}</li>
                 <li><strong>Scadenza:</strong> ${dataScadenzaFormattata}</li>
                 <li><strong>Priorità:</strong> ${p.priorita || "-"}</li>
@@ -326,7 +323,6 @@ Vai su /promemoria per gestire questo promemoria.`;
           const emailText = `
 ${giorniRimasti === 7 ? "Promemoria in scadenza tra 7 giorni" : "Promemoria in scadenza oggi"}
 
-Codice: ${codicePromemoria}
 Titolo: ${p.titolo}
 Scadenza: ${dataScadenzaFormattata}
 Priorità: ${p.priorita || "-"}

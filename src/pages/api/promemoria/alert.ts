@@ -202,12 +202,14 @@ if (
         continue;
       }
 
+      const codicePromemoria = (p as any).codice_promemoria || "-";
+
  const subject =
   giorniRimasti < 0
-    ? `Promemoria scaduto: ${p.titolo}`
+    ? `[${codicePromemoria}] Promemoria scaduto: ${p.titolo}`
     : tipoAlert === "oggi"
-      ? `Promemoria in scadenza oggi: ${p.titolo}`
-      : `Promemoria in scadenza tra ${giorniRimasti} giorni: ${p.titolo}`;
+      ? `[${codicePromemoria}] Promemoria in scadenza oggi: ${p.titolo}`
+      : `[${codicePromemoria}] Promemoria in scadenza tra ${giorniRimasti} giorni: ${p.titolo}`;
 
       const html = `
         <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
@@ -230,6 +232,7 @@ if (
   }
 </p>
           <ul>
+            <li><strong>Codice:</strong> ${codicePromemoria}</li>
             <li><strong>Titolo:</strong> ${p.titolo}</li>
             <li><strong>Scadenza:</strong> ${new Date(p.data_scadenza).toLocaleDateString("it-IT")}</li>
             <li><strong>Priorità:</strong> ${p.priorita || "-"}</li>
