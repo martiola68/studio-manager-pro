@@ -100,7 +100,8 @@ const [isAdmin, setIsAdmin] = useState(false);
   [connections, selectedConnectionId]
 );
 
-const maxConnectionsReached = connections.length >= 2;
+const maxConnections = studioId === "f9d3ca10-6134-4061-a2b4-0be74e8c7654" ? 2 : 1;
+const maxConnectionsReached = connections.length >= maxConnections;
 
   const [testResult, setTestResult] = useState<TestResult | null>(null);
 
@@ -243,7 +244,7 @@ const studioConfigValid = useMemo(() => {
      const { data: user, error: userErr } = await supabase
   .from("tbutenti")
   .select("studio_id, microsoft_connection_id, tipo_utente")
-  .eq("id", currentUserId)
+  .eq("user_id", currentUserId)
   .single();
 
       if (userErr) throw userErr;
@@ -428,8 +429,8 @@ async function handleCreateConnection() {
     return;
   }
 
-  if (connections.length >= 2) {
-    setError("Limite massimo di 2 connessioni Microsoft raggiunto per questo studio");
+  if (connections.length >= maxConnections) {
+    setError(`Limite massimo di ${maxConnections} connessione${maxConnections > 1 ? "i" : ""} Microsoft raggiunto per questo studio`);
     return;
   }
 
