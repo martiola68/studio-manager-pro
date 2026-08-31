@@ -53,6 +53,7 @@ type TopNavUser = Pick<
   | "cognome"
   | "email"
   | "tipo_utente"
+  | "amministratore_sistema_generale"
   | "ruolo_operatore_id"
   | "attivo"
   | "created_at"
@@ -93,7 +94,7 @@ export function TopNavBar() {
       if (session?.user?.email) {
         const { data: utente, error } = await supabase
           .from("tbutenti")
-          .select("id, nome, cognome, email, tipo_utente, ruolo_operatore_id, attivo, created_at, updated_at")
+          .select("id, nome, cognome, email, tipo_utente, amministratore_sistema_generale, ruolo_operatore_id, attivo, created_at, updated_at")
           .eq("email", session.user.email)
           .maybeSingle();
         if (error) {
@@ -414,6 +415,9 @@ export function TopNavBar() {
           icon: <Settings className="h-4 w-4" />,
           children: [
             { label: "Utenti", href: "/impostazioni/utenti", icon: <Users className="h-4 w-4" />, adminOnly: true },
+            ...(currentUser?.amministratore_sistema_generale
+              ? [{ label: "Amministrazione sistema", href: "/impostazioni/amministrazione-sistema", icon: <ShieldCheck className="h-4 w-4" /> }]
+              : []),
             { label: "Dati Studio", href: "/impostazioni/studio", icon: <Building2 className="h-4 w-4" />, adminOnly: true },
             { label: "Ruoli", href: "/impostazioni/ruoli", icon: <Settings className="h-4 w-4" />, adminOnly: true },
             { label: "Prestazioni", href: "/impostazioni/prestazioni", icon: <Settings className="h-4 w-4" />, adminOnly: true },
