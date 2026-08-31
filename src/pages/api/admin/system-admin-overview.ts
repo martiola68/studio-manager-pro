@@ -37,7 +37,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .limit(1)
       .maybeSingle();
 
-    if (currentError) return res.status(500).json({ error: "Errore lettura amministratore generale", details: currentError.message });
+    if (currentError) {
+      return res.status(500).json({ error: "Errore lettura amministratore generale", details: currentError.message });
+    }
 
     const { data: candidates, error: candidatesError } = await supabaseAdmin
       .from("tbutenti")
@@ -47,11 +49,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .order("cognome", { ascending: true })
       .order("nome", { ascending: true });
 
-    if (candidatesError) return res.status(500).json({ error: "Errore lettura amministratori", details: candidatesError.message });
+    if (candidatesError) {
+      return res.status(500).json({ error: "Errore lettura amministratori", details: candidatesError.message });
+    }
+
+    const { data: studi, error: studiError } = await supabaseAdmin
+      .from("tbstudio")
+      .select("id, ragione_sociale, denominazione_breve, email")
+      .order("ragione_sociale", { ascending: true });
+
+    if (studiError) {
+      return res.status(500).json({ error: "Errore lettura studi", details: studiError.message });
+    }
+
+    const { data: utenti, error: utentiError } = await supabaseAdmin
+      .from("tbutenti")
+      .select("studio_id, tipo_utente, attivo");
+
+    if (utentiError) {
+      return res.status(500).json({ error: "Errore lettura utenti studi", details: utentiError.message });
+    }
+
+    const studioStats = (studi || []).map((studio) => {
+      const utentiStudio = (utenti || []).filter((utente) => utente.studio_id === studio.id);
+      return {
+        ...studio,
+        utenti_totali: utentiStudio.length,
+        utenti_attivi: utentiStudio.filter((utente) => utente.attivo !== false).length,
+        amministratori_attivi: utentiStudio.filter(
+          (utente) => utente.tipo_utente === "Admin" && utente.attivo !== false
+        ).length,
+      };
+    });
 
     return res.status(200).json({
       currentAdmin,
       candidates: (candidates || []).filter((u) => u.id !== currentAdmin?.id),
+      studi: studioStats,
     });
   } catch (error: any) {
     console.error("Errore API system-admin-overview:", error);
