@@ -596,7 +596,7 @@ const copyToClipboard = (text: string | null | undefined, label: string) => {
       </div>
 
         <div className="rounded-md border bg-white shadow-sm overflow-hidden">
-          <div className="relative w-full overflow-auto h-[calc(100vh-340px)] min-h-[420px] max-h-[650px]">
+          <div className="relative w-full overflow-auto h-[calc(100vh-220px)] min-h-[540px] max-h-[780px]">
             <table className="w-full caption-bottom text-sm">
               <TableHeader className="sticky top-0 z-30 bg-white shadow-sm">
                 <TableRow>
