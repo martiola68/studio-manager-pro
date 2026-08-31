@@ -3,13 +3,35 @@
 
 import type { Database as DB } from "@/integrations/supabase/database.types";
 
-export type Database = DB;
+type TbutentiTable = DB["public"]["Tables"]["tbutenti"];
+
+type TbutentiTableWithSystemAdmin = {
+  Row: TbutentiTable["Row"] & {
+    amministratore_sistema_generale: boolean;
+  };
+  Insert: TbutentiTable["Insert"] & {
+    amministratore_sistema_generale?: boolean;
+  };
+  Update: TbutentiTable["Update"] & {
+    amministratore_sistema_generale?: boolean;
+  };
+  Relationships: TbutentiTable["Relationships"];
+};
+
+export type Database = Omit<DB, "public"> & {
+  public: Omit<DB["public"], "Tables"> & {
+    Tables: Omit<DB["public"]["Tables"], "tbutenti"> & {
+      tbutenti: TbutentiTableWithSystemAdmin;
+    };
+  };
+};
 
 // Re-export commonly used types for convenience
-export type Tables<T extends keyof DB["public"]["Tables"]> =
-  DB["public"]["Tables"][T]["Row"];
+export type Tables<T extends keyof Database["public"]["Tables"]> =
+  Database["public"]["Tables"][T]["Row"];
 
-export type Enums<T extends keyof DB["public"]["Enums"]> = DB["public"]["Enums"][T];
+export type Enums<T extends keyof Database["public"]["Enums"]> =
+  Database["public"]["Enums"][T];
 
-export type Functions<T extends keyof DB["public"]["Functions"]> =
-  DB["public"]["Functions"][T];
+export type Functions<T extends keyof Database["public"]["Functions"]> =
+  Database["public"]["Functions"][T];
