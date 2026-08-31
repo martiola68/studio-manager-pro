@@ -1,0 +1,159 @@
+name: One-shot admin sistema utenti UI
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[admin-sistema-utenti-ui]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch gestione utenti
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('src/pages/impostazioni/utenti.tsx')
+          s = p.read_text()
+
+          def rep(old, new, label, expected=1):
+              global s
+              count = s.count(old)
+              if count != expected:
+                  raise SystemExit(f'{label}: atteso {expected}, trovato {count}')
+              s = s.replace(old, new)
+
+          rep(
+              '  const [connections, setConnections] = useState<any[]>([]);',
+              '  const [connections, setConnections] = useState<any[]>([]);\n  const [currentUserIsSystemAdmin, setCurrentUserIsSystemAdmin] = useState(false);',
+              'state admin sistema'
+          )
+
+          rep(
+              '  utente_comunicazioni: false,\n});',
+              '  utente_comunicazioni: false,\n  amministratore_sistema_generale: false,\n});',
+              'formData iniziale'
+          )
+
+          rep(
+              '.select("tipo_utente")\n        .eq("email", session.user.email)\n        .single();',
+              '.select("tipo_utente, amministratore_sistema_generale")\n        .eq("email", session.user.email)\n        .single();',
+              'select utente corrente'
+          )
+
+          rep(
+              '      if (utente?.tipo_utente !== "Admin") {\n        router.push("/dashboard");\n        return;\n      }\n\n      await loadData();',
+              '      if (utente?.tipo_utente !== "Admin") {\n        router.push("/dashboard");\n        return;\n      }\n\n      setCurrentUserIsSystemAdmin(Boolean((utente as any)?.amministratore_sistema_generale));\n      await loadData();',
+              'set admin sistema corrente'
+          )
+
+          rep(
+              '          utente_comunicazioni:\n    formData.utente_comunicazioni,\n} as any);',
+              '          utente_comunicazioni:\n    formData.utente_comunicazioni,\n  amministratore_sistema_generale: editingUtente\n    ? Boolean(formData.amministratore_sistema_generale)\n    : false,\n} as any);',
+              'update payload flag'
+          )
+
+          rep(
+              '    utente_comunicazioni: Boolean(\n      (utente as any).utente_comunicazioni\n    ),\n  });',
+              '    utente_comunicazioni: Boolean(\n      (utente as any).utente_comunicazioni\n    ),\n    amministratore_sistema_generale: Boolean(\n      (utente as any).amministratore_sistema_generale\n    ),\n  });',
+              'handleEdit flag'
+          )
+
+          rep(
+              '      utente_comunicazioni: false,\n    });',
+              '      utente_comunicazioni: false,\n      amministratore_sistema_generale: false,\n    });',
+              'reset flag'
+          )
+
+          rep(
+              '''<div className="flex items-center space-x-2">
+  <Checkbox
+    id="attivo"
+    checked={formData.attivo}''',
+              '''{editingUtente && (
+<div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+  <div className="flex items-center space-x-2">
+    <Checkbox
+      id="amministratore_sistema_generale"
+      checked={formData.amministratore_sistema_generale}
+      disabled
+    />
+    <Label htmlFor="amministratore_sistema_generale" className="font-semibold">
+      Amministratore di sistema generale
+    </Label>
+  </div>
+  <p className="mt-1 text-xs text-slate-500">
+    Privilegio globale unico e protetto. Il trasferimento verrà gestito con procedura dedicata e verifica server.
+  </p>
+</div>
+)}
+
+<div className="flex items-center space-x-2">
+  <Checkbox
+    id="attivo"
+    checked={formData.attivo}''',
+              'checkbox form admin sistema'
+          )
+
+          rep(
+              '<Table className="min-w-[1500px]">',
+              '<Table className="min-w-[1650px]">',
+              'larghezza tabella'
+          )
+
+          rep(
+              '<TableHead>Tipo</TableHead>\n                <TableHead>Settore</TableHead>',
+              '<TableHead>Tipo</TableHead>\n                <TableHead className="w-[170px]">Admin Sistema</TableHead>\n                <TableHead>Settore</TableHead>',
+              'header admin sistema'
+          )
+
+          rep(
+              '<TableCell colSpan={9} className="text-center py-8 text-gray-500">',
+              '<TableCell colSpan={10} className="text-center py-8 text-gray-500">',
+              'colspan vuoto'
+          )
+
+          rep(
+              '''                      <TableCell>
+                        <Badge variant={utente.tipo_utente === "Admin" ? "default" : "secondary"}>
+                          {utente.tipo_utente === "Admin" ? "Amministratore" : "Utente"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>''',
+              '''                      <TableCell>
+                        <Badge variant={utente.tipo_utente === "Admin" ? "default" : "secondary"}>
+                          {utente.tipo_utente === "Admin" ? "Amministratore" : "Utente"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="w-[170px]">
+                        {(utente as any).amministratore_sistema_generale ? (
+                          <Badge className="bg-purple-600 text-white hover:bg-purple-600">Generale</Badge>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>''',
+              'cella admin sistema'
+          )
+
+          # Manteniamo il flag visibile ma non modificabile in questo step: evita lockout
+          # dell'unico amministratore generale finché non esiste il trasferimento atomico dedicato.
+          p.write_text(s)
+          Path('.github/workflows/one-shot-admin-sistema-utenti-ui.yml').unlink()
+          PY
+
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/impostazioni/utenti.tsx .github/workflows/one-shot-admin-sistema-utenti-ui.yml
+          git commit -m "feat: mostra amministratore sistema generale negli utenti [admin-sistema-utenti-ui]"
+          git push origin main
