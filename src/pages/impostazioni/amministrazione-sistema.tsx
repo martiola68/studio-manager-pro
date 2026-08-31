@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ShieldCheck, Loader2, AlertTriangle } from "lucide-react";
+import { ShieldCheck, Loader2, AlertTriangle, Building2, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type AdminUser = {
@@ -19,6 +19,16 @@ type AdminUser = {
   attivo: boolean | null;
 };
 
+type StudioOverview = {
+  id: string;
+  ragione_sociale: string | null;
+  denominazione_breve: string | null;
+  email: string | null;
+  utenti_totali: number;
+  utenti_attivi: number;
+  amministratori_attivi: number;
+};
+
 export default function AmministrazioneSistemaPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -26,6 +36,7 @@ export default function AmministrazioneSistemaPage() {
   const [transferring, setTransferring] = useState(false);
   const [currentAdmin, setCurrentAdmin] = useState<AdminUser | null>(null);
   const [candidates, setCandidates] = useState<AdminUser[]>([]);
+  const [studi, setStudi] = useState<StudioOverview[]>([]);
   const [targetUserId, setTargetUserId] = useState("");
   const [confirmation, setConfirmation] = useState("");
 
@@ -51,6 +62,7 @@ export default function AmministrazioneSistemaPage() {
 
       setCurrentAdmin(result.currentAdmin || null);
       setCandidates(result.candidates || []);
+      setStudi(result.studi || []);
     } catch (error: any) {
       toast({ title: "Errore", description: error?.message || "Impossibile caricare la pagina", variant: "destructive" });
     } finally {
@@ -62,6 +74,8 @@ export default function AmministrazioneSistemaPage() {
 
   const target = candidates.find((u) => u.id === targetUserId) || null;
   const expectedConfirmation = target?.email ? `TRASFERISCI A ${target.email.toLowerCase()}` : "";
+  const utentiTotali = studi.reduce((totale, studio) => totale + studio.utenti_totali, 0);
+  const utentiAttivi = studi.reduce((totale, studio) => totale + studio.utenti_attivi, 0);
 
   const handleTransfer = async () => {
     if (!targetUserId || !target) return;
@@ -102,7 +116,7 @@ export default function AmministrazioneSistemaPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl p-4 md:p-8">
+    <div className="mx-auto w-full max-w-6xl p-4 md:p-8">
       <div className="mb-8">
         <div className="flex items-center gap-3">
           <ShieldCheck className="h-8 w-8" />
@@ -110,6 +124,61 @@ export default function AmministrazioneSistemaPage() {
         </div>
         <p className="mt-2 text-gray-500">Area riservata all'Amministratore generale di sistema di Studio Manager Pro.</p>
       </div>
+
+      <div className="mb-6 grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardContent className="flex items-center gap-4 p-5">
+            <Building2 className="h-8 w-8" />
+            <div><div className="text-2xl font-bold">{studi.length}</div><div className="text-sm text-gray-500">Studi registrati</div></div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-4 p-5">
+            <Users className="h-8 w-8" />
+            <div><div className="text-2xl font-bold">{utentiTotali}</div><div className="text-sm text-gray-500">Utenti totali</div></div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-4 p-5">
+            <ShieldCheck className="h-8 w-8" />
+            <div><div className="text-2xl font-bold">{utentiAttivi}</div><div className="text-sm text-gray-500">Utenti attivi</div></div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="mb-6">
+        <CardHeader><CardTitle>Studi registrati</CardTitle></CardHeader>
+        <CardContent>
+          {studi.length === 0 ? (
+            <p className="text-sm text-gray-500">Nessuno studio disponibile.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left">
+                    <th className="px-3 py-3 font-semibold">Studio</th>
+                    <th className="px-3 py-3 font-semibold">Email</th>
+                    <th className="px-3 py-3 text-center font-semibold">Utenti</th>
+                    <th className="px-3 py-3 text-center font-semibold">Attivi</th>
+                    <th className="px-3 py-3 text-center font-semibold">Admin attivi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {studi.map((studio) => (
+                    <tr key={studio.id} className="border-b last:border-0">
+                      <td className="px-3 py-3 font-medium">{studio.denominazione_breve || studio.ragione_sociale || "—"}</td>
+                      <td className="px-3 py-3 text-gray-600">{studio.email || "—"}</td>
+                      <td className="px-3 py-3 text-center">{studio.utenti_totali}</td>
+                      <td className="px-3 py-3 text-center">{studio.utenti_attivi}</td>
+                      <td className="px-3 py-3 text-center">{studio.amministratori_attivi}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card className="mb-6">
         <CardHeader><CardTitle>Amministratore generale corrente</CardTitle></CardHeader>
