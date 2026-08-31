@@ -83,7 +83,7 @@
     --background: 330 0% 0.3%;
     --foreground: 0 0% 97.5%;
     --card: 0 0% 4.5%;
-    --card-foreground: 0 0% 97.5%;
+    --card-foreground: 330 0% 97.5%;
     --popover: 0 0% 8.6%;
     --popover-foreground: 0 0% 97.5%;
     --primary: 0 0% 92.2%;
@@ -160,6 +160,15 @@
 
   .microsoft365-page .mx-auto.max-w-5xl > div:has(a[href="/guide/MICROSOFT_365_SETUP_GUIDE.md"])
     + div {
+    display: none !important;
+  }
+
+  /* Nuovo/Modifica Cliente: l'importazione da visura è stata rimossa dal form. */
+  .flex.items-center.justify-between.gap-3.pt-6.border-t:has(input[type="file"][accept=".pdf,.txt"]) {
+    justify-content: flex-end !important;
+  }
+
+  .flex.items-center.justify-between.gap-3.pt-6.border-t:has(input[type="file"][accept=".pdf,.txt"]) > div:first-child {
     display: none !important;
   }
 }
