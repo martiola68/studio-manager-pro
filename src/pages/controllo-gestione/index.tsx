@@ -320,7 +320,7 @@ setPeriodiElaboratiByControllo(
   async function confermaRinnovo() {
     if (!rinnovoId) return;
 
-    const res = await fetch(`/api/controllo-gestione/${rinnovoId}/rinnova`, {
+    const res = await fetch(`/api/controllo-gestione/${encodeURIComponent(String(rinnovoId))}/rinnova`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -342,7 +342,7 @@ setPeriodiElaboratiByControllo(
   async function salvaModifica() {
     if (!editRecord) return;
 
-    const res = await fetch(`/api/controllo-gestione/${editRecord.id}`, {
+    const res = await fetch(`/api/controllo-gestione/${encodeURIComponent(String(editRecord.id))}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -381,7 +381,7 @@ step_4_note: editRecord.step_4_note,
 
     if (!ok) return;
 
-    await fetch(`/api/controllo-gestione/${id}?scope=cliente`, {
+    await fetch(`/api/controllo-gestione/${encodeURIComponent(String(id))}?scope=cliente`, {
       method: "DELETE",
     });
 
@@ -442,7 +442,7 @@ function rimuoviUtenteEdit(id: string) {
   }
 
 window.open(
-  `/api/controllo-gestione/report-pdf?cliente_id=${reportClienteId}&anno=${reportAnno}`,
+  `/api/controllo-gestione/report-pdf?cliente_id=${encodeURIComponent(String(reportClienteId))}&anno=${encodeURIComponent(String(reportAnno))}`,
   "_blank"
 );
 }

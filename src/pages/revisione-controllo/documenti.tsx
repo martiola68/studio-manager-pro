@@ -52,7 +52,7 @@ export default function DocumentiRevisionePage() {
 
       const sid = studio || studioId || (await loadCurrentUser());
 
-      const res = await fetch(`/api/revisione-controllo/documenti?studio_id=${sid}`);
+      const res = await fetch(`/api/revisione-controllo/documenti?studio_id=${encodeURIComponent(String(sid))}`);
       const json = await res.json();
 
       if (!res.ok || !json.success) {
@@ -97,7 +97,7 @@ export default function DocumentiRevisionePage() {
       setError("");
       setSuccess("");
 
-      const res = await fetch(`/api/revisione-controllo/documenti?id=${id}`, {
+      const res = await fetch(`/api/revisione-controllo/documenti?id=${encodeURIComponent(String(id))}`, {
         method: "DELETE",
       });
 
