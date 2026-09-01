@@ -125,6 +125,8 @@ const { data, error } = await supabase
     )
   `)
   .eq("studio_id", userData.studio_id)
+  .eq("attivo", true)
+  .eq("cliente", true)
   .order("ragione_sociale", { ascending: true });
 
 if (error) throw error;
