@@ -1,0 +1,30 @@
+name: Security validate build 2026-09-01
+
+on:
+  push:
+    branches:
+      - security/dependabot-cleanup-20260901
+    paths:
+      - '.github/workflows/security-validate-build-20260901.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/dependabot-cleanup-20260901
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Installa esattamente il lockfile
+        run: npm ci --ignore-scripts
+
+      - name: Verifica TypeScript e build Next.js
+        run: npm run build
