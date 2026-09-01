@@ -1,0 +1,47 @@
+name: Security CodeQL Critical SSRF inventory
+
+on:
+  push:
+    branches:
+      - security/dependabot-cleanup-20260901
+    paths:
+      - '.github/workflows/security-codeql-critical-ssrf-20260901.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/dependabot-cleanup-20260901
+
+      - name: Elenca fetch dinamici nei file segnalati da CodeQL
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          targets = [
+            'src/pages/revisione-controllo/fascicolo.tsx',
+            'src/pages/antiriciclaggio/titolari-effettivi/verifica.tsx',
+            'src/pages/clienti/organi-sociali.tsx',
+            'src/components/pratiche/forms/FormDeterminaLiquidazione.tsx',
+            'src/components/pratiche/forms/FormMessaLiquidazione.tsx',
+            'src/components/pratiche/forms/FormDistribuzioneUtili.tsx',
+            'src/components/pratiche/forms/FormCambioAmministratore.tsx',
+            'src/pages/revisione-controllo/nuovo.tsx',
+          ]
+          for t in targets:
+            p = Path(t)
+            if not p.exists():
+              print(f'MISSING {t}')
+              continue
+            print(f'\n### {t}')
+            lines = p.read_text(errors='replace').splitlines()
+            for i,line in enumerate(lines,1):
+              if 'fetch(' in line or 'window.location' in line or 'location.href' in line:
+                lo=max(1,i-2); hi=min(len(lines),i+3)
+                for n in range(lo,hi+1): print(f'{n}: {lines[n-1]}')
+                print('---')
+          PY
