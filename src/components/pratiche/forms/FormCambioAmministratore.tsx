@@ -1131,7 +1131,7 @@ alert("Documento generato.");
                       }}
                     >
                       <a
-                        href={`/api/pratiche/${encodeURIComponent(String(praticaId))}/documenti/${doc.id}/download`}
+                        href={`/api/pratiche/${encodeURIComponent(String(praticaId))}/documenti/${encodeURIComponent(String(doc.id))}/download`}
                         download
                         title="Scarica documento"
                         style={{
@@ -1194,7 +1194,7 @@ alert("Documento generato.");
                           if (!confirm("Eliminare questo documento?")) return;
 
                           const res = await fetch(
-                            `/api/pratiche/${encodeURIComponent(String(praticaId))}/documenti/${doc.id}`,
+                            `/api/pratiche/${encodeURIComponent(String(praticaId))}/documenti/${encodeURIComponent(String(doc.id))}`,
                             { method: "DELETE" }
                           );
 
