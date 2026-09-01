@@ -240,7 +240,7 @@ useEffect(() => {
 }, [praticaId]);
 
 async function caricaDocumenti() {
-  const res = await fetch(`/api/pratiche/${praticaId}/documenti`, {
+  const res = await fetch(`/api/pratiche/${encodeURIComponent(String(praticaId))}/documenti`, {
     cache: "no-store",
   });
 
@@ -252,7 +252,7 @@ async function caricaDocumenti() {
 }
 
 async function caricaSoci() {
-  const res = await fetch(`/api/pratiche/${praticaId}/soci`, {
+  const res = await fetch(`/api/pratiche/${encodeURIComponent(String(praticaId))}/soci`, {
     cache: "no-store",
   });
 
@@ -320,7 +320,7 @@ async function caricaOrganiSocieta() {
   if (!pratica?.cliente_id) return;
 
   const res = await fetch(
-    `/api/clienti-organi?cliente_id=${pratica.cliente_id}`,
+    `/api/clienti-organi?cliente_id=${encodeURIComponent(String(pratica.cliente_id))}`,
     { cache: "no-store" }
   );
 
@@ -359,7 +359,7 @@ function aggiornaCampo(campo: string, valore: string) {
     setMessaggio("");
 
     try {
-      const res = await fetch(`/api/pratiche/${praticaId}`, {
+      const res = await fetch(`/api/pratiche/${encodeURIComponent(String(praticaId))}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -408,7 +408,7 @@ async function generaAccettazioneCarica() {
   if (!ok) return;
 
   const res = await fetch(
-    `/api/pratiche/${praticaId}/genera-documento`,
+    `/api/pratiche/${encodeURIComponent(String(praticaId))}/genera-documento`,
     {
       method: "POST",
       headers: {
@@ -695,7 +695,7 @@ provincia: selected?.soggetto_cliente?.provincia || "",
           return;
         }
 
-        const res = await fetch(`/api/pratiche/${praticaId}/soci`, {
+        const res = await fetch(`/api/pratiche/${encodeURIComponent(String(praticaId))}/soci`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(nuovoSocio),
@@ -775,7 +775,7 @@ await fetch("/api/clienti-organi", {
               onClick={async () => {
                 if (!confirm("Eliminare il socio?")) return;
 
-                await fetch(`/api/pratiche/${praticaId}/soci/${s.id}`, {
+                await fetch(`/api/pratiche/${encodeURIComponent(String(praticaId))}/soci/${encodeURIComponent(String(s.id))}`, {
                   method: "DELETE",
                 });
 
@@ -1488,7 +1488,7 @@ onChange={(e) => {
                       formData.append("documento_id", doc.id);
 
                       const res = await fetch(
-                        `/api/pratiche/${praticaId}/documento-modificato`,
+                        `/api/pratiche/${encodeURIComponent(String(praticaId))}/documento-modificato`,
                         {
                           method: "POST",
                           body: formData,
@@ -1523,7 +1523,7 @@ onChange={(e) => {
                     if (!confirm("Eliminare documento?")) return;
 
                     const res = await fetch(
-                      `/api/pratiche/${praticaId}/documenti/${doc.id}`,
+                      `/api/pratiche/${encodeURIComponent(String(praticaId))}/documenti/${encodeURIComponent(String(doc.id))}`,
                       {
                         method: "DELETE",
                       }
