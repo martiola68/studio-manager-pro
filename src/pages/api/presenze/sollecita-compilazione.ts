@@ -1,13 +1,15 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { createClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 function toDate(date: Date) {
   return date.toISOString().split("T")[0];
+}
+
+function getBearerToken(req: NextApiRequest): string | null {
+  const authHeader = req.headers.authorization || "";
+  if (!authHeader.toLowerCase().startsWith("bearer ")) return null;
+  return authHeader.slice(7).trim() || null;
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -16,29 +18,54 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const authHeader = req.headers.authorization || "";
-    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+    const supabase = createClient(req, res);
 
-    if (!token) {
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    let authUserId = session?.user?.id || null;
+    let authEmail = session?.user?.email || null;
+
+    if (!authUserId) {
+      const token = getBearerToken(req);
+      if (token) {
+        const { data, error } = await supabaseAdmin.auth.getUser(token);
+        if (!error && data.user) {
+          authUserId = data.user.id;
+          authEmail = data.user.email || null;
+        }
+      }
+    }
+
+    if (!authUserId && !authEmail) {
+      console.warn("[Solleciti presenze] Non autenticato", {
+        sessionError: sessionError?.message,
+        hasBearer: Boolean(getBearerToken(req)),
+      });
       return res.status(401).json({ ok: false, error: "Non autenticato" });
     }
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser(token);
+    let utenteQuery = supabaseAdmin
+      .from("tbutenti")
+      .select("id, studio_id")
+      .eq("attivo", true);
 
-    if (authError || !user?.id) {
-      return res.status(401).json({ ok: false, error: "Sessione non valida" });
+    if (authUserId) {
+      utenteQuery = utenteQuery.eq("user_id", authUserId);
+    } else if (authEmail) {
+      utenteQuery = utenteQuery.eq("email", authEmail);
     }
 
-    const { data: utenteCorrente, error: utenteError } = await supabase
-      .from("tbutenti")
-      .select("studio_id")
-      .eq("user_id", user.id)
-      .single();
+    const { data: utenteCorrente, error: utenteError } = await utenteQuery.maybeSingle();
 
     if (utenteError || !utenteCorrente?.studio_id) {
+      console.error("[Solleciti presenze] Studio utente non disponibile", {
+        authUserId,
+        authEmail,
+        error: utenteError?.message,
+      });
       return res.status(403).json({ ok: false, error: "Studio utente non disponibile" });
     }
 
@@ -50,7 +77,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const inizioMese = toDate(new Date(oggi.getFullYear(), oggi.getMonth(), 1));
     const fineMese = toDate(new Date(oggi.getFullYear(), oggi.getMonth() + 1, 0));
 
-    const { data: dipendenti, error } = await supabase
+    const { data: dipendenti, error } = await supabaseAdmin
       .from("tbutenti")
       .select("id, nome, cognome, email")
       .eq("studio_id", studioId)
@@ -63,7 +90,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const incompleti: any[] = [];
 
     for (const dipendente of dipendenti || []) {
-      const { count, error: countError } = await supabase
+      const { count, error: countError } = await supabaseAdmin
         .from("tbpresenze_dipendenti")
         .select("id", { count: "exact", head: true })
         .eq("studio_id", studioId)
@@ -78,7 +105,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const oggiKey = toDate(oggi);
 
-      const { count: giorniLavorativiTrascorsi, error: giorniError } = await supabase
+      const { count: giorniLavorativiTrascorsi, error: giorniError } = await supabaseAdmin
         .from("tbpresenze_dipendenti")
         .select("data_presenza", { count: "exact", head: true })
         .eq("studio_id", studioId)
