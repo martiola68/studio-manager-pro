@@ -636,7 +636,7 @@ if (documentoError) {
 const { data: variazione } = await supabaseAdmin
   .from("tbpratiche_variazioni")
   .select("id")
-  .or(`pratica_determina_id.eq.${id},pratica_liquidazione_id.eq.${id}`)
+  .or(`pratica_id.eq.${id},pratica_determina_id.eq.${id},pratica_liquidazione_id.eq.${id}`)
   .maybeSingle();
 
 if (variazione?.id) {
