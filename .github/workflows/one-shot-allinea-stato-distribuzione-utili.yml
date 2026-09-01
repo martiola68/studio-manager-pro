@@ -1,0 +1,71 @@
+name: One-shot allinea stato distribuzione utili
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[stato-distribuzione-allineato]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Allinea avanzamento e stato alla conferma deposito AdE
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          page = Path('src/pages/pratiche/variazioni.tsx')
+          s = page.read_text()
+          old = '''if (v.tipo_variazione === "Distribuzione utili") {
+  steps = [v.step_verbale_stato || "da_fare"];
+}'''
+          new = '''if (v.tipo_variazione === "Distribuzione utili") {
+  steps = [
+    v.step_verbale_stato || "da_fare",
+    v.conferma_record === true ? "completato" : (v.data_comunicazione_ade ? "in_lavorazione" : "da_fare"),
+  ];
+}'''
+          if old not in s:
+            raise SystemExit('blocco avanzamento distribuzione non trovato')
+          s = s.replace(old, new, 1)
+          page.write_text(s)
+
+          api = Path('src/pages/api/pratiche/variazioni/index.ts')
+          a = api.read_text()
+          old2 = '''  return {
+    ...v,
+
+  step_determina_stato:'''
+          new2 = '''  const statoDistribuzione =
+    isDistribuzioneUtili && v.conferma_record === true && verbaleGenerato
+      ? "completata"
+      : isDistribuzioneUtili
+      ? "in_lavorazione"
+      : v.stato;
+
+  return {
+    ...v,
+    stato: statoDistribuzione,
+
+  step_determina_stato:'''
+          if old2 not in a:
+            raise SystemExit('blocco arricchimento API non trovato')
+          a = a.replace(old2, new2, 1)
+          api.write_text(a)
+
+          Path('.github/workflows/one-shot-allinea-stato-distribuzione-utili.yml').unlink()
+          PY
+      - name: Verifica diff
+        run: |
+          git diff --check
+          git diff -- src/pages/pratiche/variazioni.tsx src/pages/api/pratiche/variazioni/index.ts
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/pratiche/variazioni.tsx src/pages/api/pratiche/variazioni/index.ts .github/workflows/one-shot-allinea-stato-distribuzione-utili.yml
+          git commit -m "fix: allinea stato e avanzamento distribuzione utili [stato-distribuzione-allineato]"
+          git push origin main
