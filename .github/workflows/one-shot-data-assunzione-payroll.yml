@@ -1,0 +1,88 @@
+name: One-shot data assunzione payroll
+
+on:
+  push:
+    paths:
+      - '.github/workflows/one-shot-data-assunzione-payroll.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Patch chirurgico data assunzione
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          # 1) Form Dipendenti Payroll
+          p = Path('src/pages/payroll/dipendenti/index.tsx')
+          s = p.read_text()
+
+          old = """  orario_giornaliero: number | null;\n\ndata_cessazione: string | null;"""
+          new = """  orario_giornaliero: number | null;\n\ndata_assunzione: string | null;\ndata_cessazione: string | null;"""
+          assert s.count(old) == 1, f'type payroll: atteso 1, trovato {s.count(old)}'
+          s = s.replace(old, new, 1)
+
+          old = """            numero_rapporto_paghe: dipendente.numero_rapporto_paghe,\n          data_cessazione: dipendente.data_cessazione || null,"""
+          new = """            numero_rapporto_paghe: dipendente.numero_rapporto_paghe,\n          data_assunzione: dipendente.data_assunzione || null,\n          data_cessazione: dipendente.data_cessazione || null,"""
+          assert s.count(old) == 1, f'save payroll: atteso 1, trovato {s.count(old)}'
+          s = s.replace(old, new, 1)
+
+          old = """                      <th className=\"p-2 text-left\">Ore giorno</th>\n\n                      <th className=\"p-2 text-left\">Data cessazione</th>"""
+          new = """                      <th className=\"p-2 text-left\">Ore giorno</th>\n\n                      <th className=\"p-2 text-left\">Data assunzione</th>\n                      <th className=\"p-2 text-left\">Data cessazione</th>"""
+          assert s.count(old) == 1, f'header payroll: atteso 1, trovato {s.count(old)}'
+          s = s.replace(old, new, 1)
+
+          old = """                        <td className=\"p-2\">\n                          <Input type=\"number\" step=\"0.25\" value={dip.orario_giornaliero ?? 8} onChange={(e) => updateField(dip.id, 'orario_giornaliero', Number(e.target.value))} />\n                        </td>\n\n                        <td className=\"p-2\">\n                        <Input\n                        type=\"date\"\n                        value={dip.data_cessazione ?? ''}"""
+          new = """                        <td className=\"p-2\">\n                          <Input type=\"number\" step=\"0.25\" value={dip.orario_giornaliero ?? 8} onChange={(e) => updateField(dip.id, 'orario_giornaliero', Number(e.target.value))} />\n                        </td>\n\n                        <td className=\"p-2\">\n                          <Input\n                            type=\"date\"\n                            value={dip.data_assunzione ?? ''}\n                            onChange={(e) =>\n                              updateField(dip.id, 'data_assunzione', e.target.value || null)\n                            }\n                          />\n                        </td>\n\n                        <td className=\"p-2\">\n                        <Input\n                        type=\"date\"\n                        value={dip.data_cessazione ?? ''}"""
+          assert s.count(old) == 1, f'input payroll: atteso 1, trovato {s.count(old)}'
+          s = s.replace(old, new, 1)
+          s = s.replace('min-w-[1600px]', 'min-w-[1750px]', 1)
+          p.write_text(s)
+
+          # 2) Presenze: escludi mesi precedenti e giorni fuori rapporto
+          p = Path('src/pages/presenze/index.tsx')
+          s = p.read_text()
+
+          old = """  orario_giornaliero: number | null;\n  data_cessazione: string | null;"""
+          new = """  orario_giornaliero: number | null;\n  data_assunzione: string | null;\n  data_cessazione: string | null;"""
+          assert s.count(old) == 1, f'type presenze: atteso 1, trovato {s.count(old)}'
+          s = s.replace(old, new, 1)
+
+          old = """              orario_giornaliero,\n              data_cessazione,\n              attivo"""
+          new = """              orario_giornaliero,\n              data_assunzione,\n              data_cessazione,\n              attivo"""
+          assert s.count(old) == 2, f'select presenze: atteso 2, trovato {s.count(old)}'
+          s = s.replace(old, new)
+
+          old = """      const loadedDipendenti = (dipendentiResult.data ?? []) as Dipendente[];"""
+          new = """      const loadedDipendenti = ((dipendentiResult.data ?? []) as Dipendente[]).filter(\n        (dipendente) =>\n          (!dipendente.data_assunzione || dipendente.data_assunzione <= endDate) &&\n          (!dipendente.data_cessazione || dipendente.data_cessazione >= startDate),\n      );"""
+          assert s.count(old) == 1, f'filter presenze: atteso 1, trovato {s.count(old)}'
+          s = s.replace(old, new, 1)
+
+          old = """const getCode = (utenteId: string, day: DayInfo) => {\n  const savedCode = values[`${utenteId}|${day.date}`];\n\n  if (savedCode) {\n    return savedCode;\n  }\n\n  if (day.isWeekend || day.isHoliday) {\n    return DEFAULT_NON_WORKDAY_CODE;\n  }\n\n  return '';\n};"""
+          new = """const getCode = (utenteId: string, day: DayInfo) => {\n  const dipendente = dipendenti.find((item) => item.utente_id === utenteId);\n\n  if (\n    (dipendente?.data_assunzione && day.date < dipendente.data_assunzione) ||\n    (dipendente?.data_cessazione && day.date > dipendente.data_cessazione)\n  ) {\n    return '';\n  }\n\n  const savedCode = values[`${utenteId}|${day.date}`];\n\n  if (savedCode) {\n    return savedCode;\n  }\n\n  if (day.isWeekend || day.isHoliday) {\n    return DEFAULT_NON_WORKDAY_CODE;\n  }\n\n  return '';\n};"""
+          assert s.count(old) == 1, f'getCode presenze: atteso 1, trovato {s.count(old)}'
+          s = s.replace(old, new, 1)
+
+          p.write_text(s)
+          PY
+
+          git diff --check
+          git diff -- src/pages/payroll/dipendenti/index.tsx src/pages/presenze/index.tsx
+
+      - name: Commit modifiche
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/payroll/dipendenti/index.tsx src/pages/presenze/index.tsx
+          git diff --cached --quiet && exit 0
+          git commit -m "fix: gestisci data assunzione dipendenti payroll"
+          git push origin main
