@@ -1245,7 +1245,7 @@ const handleToggleAttivo = async (
   const confermato = window.confirm(
     nuovoStato
       ? `Confermi di voler attivare "${nominativo}"?\n\nIl nominativo verrà incluso nel filtro dei soggetti attivi.`
-      : `Confermi di voler disattivare "${nominativo}"?\n\nIl nominativo verrà escluso dal filtro dei soggetti attivi ma resterà presente in anagrafica.`
+      : `Confermi di voler disattivare "${nominativo}"?\n\nIl nominativo verrà escluso dal filtro dei soggetti attivi ma resterà presente in anagrafica.\n\nATTENZIONE: il nominativo verrà cancellato da tutti gli scadenzari in cui è presente.`
   );
 
   if (!confermato) {
