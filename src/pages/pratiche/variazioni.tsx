@@ -287,7 +287,14 @@ if (v.tipo_variazione === "Scioglimento e liquidazione") {
 }
 
 if (v.tipo_variazione === "Distribuzione utili") {
-  steps = [v.step_verbale_stato || "da_fare"];
+  steps = [
+    v.step_verbale_stato || "da_fare",
+    v.conferma_record === true
+      ? "completato"
+      : v.data_comunicazione_ade
+      ? "in_lavorazione"
+      : "da_fare",
+  ];
 }
 
 if (v.tipo_variazione === "Cambio amministratore") {

@@ -433,6 +433,41 @@ export default async function handler(
 
 if (error) throw error;
 
+const distribuzioniSenzaPratica = (data || []).filter(
+  (v: any) =>
+    String(v.tipo_variazione || "").toLowerCase().includes("distribuzione") &&
+    !v.pratica_id
+);
+
+if (distribuzioniSenzaPratica.length > 0) {
+  const idsVariazione = distribuzioniSenzaPratica.map((v: any) => v.id);
+  const { data: praticheCollegate, error: praticheCollegateError } = await supabase
+    .from("tbpratiche")
+    .select("id, variazione_id, created_at")
+    .in("variazione_id", idsVariazione)
+    .order("created_at", { ascending: false });
+
+  if (praticheCollegateError) throw praticheCollegateError;
+
+  const praticaByVariazione = new Map<string, string>();
+  for (const pratica of praticheCollegate || []) {
+    if (pratica.variazione_id && !praticaByVariazione.has(String(pratica.variazione_id))) {
+      praticaByVariazione.set(String(pratica.variazione_id), String(pratica.id));
+    }
+  }
+
+  for (const variazione of distribuzioniSenzaPratica) {
+    const praticaIdRipristinata = praticaByVariazione.get(String(variazione.id));
+    if (!praticaIdRipristinata) continue;
+
+    variazione.pratica_id = praticaIdRipristinata;
+    await supabase
+      .from("tbpratiche_variazioni")
+      .update({ pratica_id: praticaIdRipristinata })
+      .eq("id", variazione.id);
+  }
+}
+
 const variazioniIds = (data || []).map((v: any) => v.id);
 const praticaIdsDistribuzione = (data || [])
   .filter((v: any) =>
@@ -489,8 +524,16 @@ const dataArricchita = (data || []).map((v: any) => {
     !!v.pratica_id &&
     praticheConVerbale.has(String(v.pratica_id));
 
+  const statoDistribuzione =
+    isDistribuzioneUtili
+      ? verbaleGenerato && v.conferma_record === true
+        ? "completata"
+        : "in_lavorazione"
+      : v.stato;
+
   return {
     ...v,
+    stato: statoDistribuzione,
 
   step_determina_stato:
   v.step_determina_stato || stepMap.DETERMINA?.stato || "da_fare",
@@ -594,7 +637,21 @@ return res.status(200).json({
         });
       }
 
-      const payload = buildPayload(body);
+      const { data: variazioneEsistente, error: variazioneEsistenteError } = await supabase
+        .from("tbpratiche_variazioni")
+        .select("pratica_id")
+        .eq("id", id)
+        .single();
+
+      if (variazioneEsistenteError) throw variazioneEsistenteError;
+
+      const payload = buildPayload({
+        ...body,
+        pratica_id:
+          body.pratica_id !== undefined
+            ? body.pratica_id
+            : variazioneEsistente?.pratica_id || null,
+      });
 
       const { data, error } = await supabase
         .from("tbpratiche_variazioni")
