@@ -234,7 +234,7 @@ useEffect(() => {
   async function caricaMotivi() {
     try {
       const res = await fetch(
-        `/api/pratiche/${praticaId}`,
+        `/api/pratiche/${encodeURIComponent(String(praticaId))}`,
         {
           cache: "no-store",
         }
@@ -254,7 +254,7 @@ useEffect(() => {
 async function caricaDocumenti() {
   try {
     const res = await fetch(
-      `/api/pratiche/${praticaId}/documenti`,
+      `/api/pratiche/${encodeURIComponent(String(praticaId))}/documenti`,
       {
         cache: "no-store",
       }
@@ -277,7 +277,7 @@ async function caricaAmministratori() {
 
   try {
     const res = await fetch(
-      `/api/clienti-organi?cliente_id=${pratica.cliente_id}`,
+      `/api/clienti-organi?cliente_id=${encodeURIComponent(String(pratica.cliente_id))}`,
       {
         cache: "no-store",
       }
@@ -311,7 +311,7 @@ setRappresentantiLegali(
 
     try {
       const res = await fetch(
-        `/api/pratiche/${praticaId}`,
+        `/api/pratiche/${encodeURIComponent(String(praticaId))}`,
         {
           method: "PUT",
           headers: {
@@ -352,7 +352,7 @@ setRappresentantiLegali(
     if (!salvato) return;
 
     const res = await fetch(
-      `/api/pratiche/${praticaId}/genera-documento`,
+      `/api/pratiche/${encodeURIComponent(String(praticaId))}/genera-documento`,
       {
         method: "POST",
         headers: {
@@ -385,7 +385,7 @@ setRappresentantiLegali(
   if (!salvato) return;
 
   const res = await fetch(
-    `/api/pratiche/${praticaId}/crea-pratica-liquidazione`,
+    `/api/pratiche/${encodeURIComponent(String(praticaId))}/crea-pratica-liquidazione`,
     {
       method: "POST",
     }
@@ -412,7 +412,7 @@ setRappresentantiLegali(
   async function salvaNuovoRappresentante() {
     try {
      const res = await fetch(
-  `/api/rapp-legali/${pratica.id}/nuovo-rapp-pratiche`,
+  `/api/rapp-legali/${encodeURIComponent(String(pratica.id))}/nuovo-rapp-pratiche`,
         {
           method: "POST",
           headers: {
@@ -1621,7 +1621,7 @@ await caricaAmministratori();
       );
 
       const res = await fetch(
-        `/api/pratiche/${praticaId}/documento-modificato`,
+        `/api/pratiche/${encodeURIComponent(String(praticaId))}/documento-modificato`,
         {
           method: "POST",
           body: formData,
@@ -1674,7 +1674,7 @@ await caricaAmministratori();
 
                             const res =
                               await fetch(
-                                `/api/pratiche/${praticaId}/documenti/${doc.id}`,
+                                `/api/pratiche/${encodeURIComponent(String(praticaId))}/documenti/${encodeURIComponent(String(doc.id))}`,
                                 {
                                   method:
                                     "DELETE",
