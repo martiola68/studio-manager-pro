@@ -1,0 +1,81 @@
+name: One-shot CodeQL SSRF round 3
+
+on:
+  push:
+    branches:
+      - security/codeql-ssrf-round3-20260901
+    paths:
+      - '.github/workflows/one-shot-codeql-ssrf-round3.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/codeql-ssrf-round3-20260901
+          fetch-depth: 0
+
+      - name: Sanitizza solo parametri URL dinamici
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          replacements = {
+            'src/pages/controllo-gestione/storico.tsx': [
+              ('${clienteId}', '${encodeURIComponent(String(clienteId))}'),
+              ('${id}', '${encodeURIComponent(String(id))}'),
+              ('${allegatoId}', '${encodeURIComponent(String(allegatoId))}'),
+            ],
+            'src/pages/pratiche/variazioni.tsx': [
+              ('?studio_id=${studioId}', '?studio_id=${encodeURIComponent(String(studioId))}'),
+              ('?id=${id}', '?id=${encodeURIComponent(String(id))}'),
+            ],
+            'src/pages/revisione-controllo/documenti.tsx': [
+              ('?studio_id=${sid}', '?studio_id=${encodeURIComponent(String(sid))}'),
+              ('?id=${id}', '?id=${encodeURIComponent(String(id))}'),
+            ],
+            'src/pages/controllo-gestione/index.tsx': [
+              ('${rinnovoId}/rinnova', '${encodeURIComponent(String(rinnovoId))}/rinnova'),
+              ('${editRecord.id}', '${encodeURIComponent(String(editRecord.id))}'),
+              ('${id}?scope=cliente', '${encodeURIComponent(String(id))}?scope=cliente'),
+              ('?cliente_id=${reportClienteId}&anno=${reportAnno}', '?cliente_id=${encodeURIComponent(String(reportClienteId))}&anno=${encodeURIComponent(String(reportAnno))}'),
+            ],
+          }
+          total = 0
+          for filename, reps in replacements.items():
+            p = Path(filename)
+            s = p.read_text()
+            for old, new in reps:
+              count = s.count(old)
+              assert count >= 1, f'{filename}: pattern non trovato: {old}'
+              s = s.replace(old, new)
+              total += count
+            p.write_text(s)
+          assert total >= 11, total
+          PY
+          git diff --check
+
+      - name: Verifica file e assenza modifiche funzionali
+        run: |
+          changed=$(git diff --name-only | sort)
+          expected=$(printf '%s\n' \
+            src/pages/controllo-gestione/index.tsx \
+            src/pages/controllo-gestione/storico.tsx \
+            src/pages/pratiche/variazioni.tsx \
+            src/pages/revisione-controllo/documenti.tsx | sort)
+          test "$changed" = "$expected"
+          if git diff --unified=0 -- $changed | grep -E '^[+-].*(method:|body:|JSON.stringify|set[A-Z]|alert\(|confirm\()'; then
+            echo 'ERRORE: modifica funzionale rilevata'
+            exit 1
+          fi
+
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/controllo-gestione/index.tsx src/pages/controllo-gestione/storico.tsx src/pages/pratiche/variazioni.tsx src/pages/revisione-controllo/documenti.tsx
+          git commit -m "fix: hardening URL dinamici CodeQL round 3"
+          git push origin security/codeql-ssrf-round3-20260901
