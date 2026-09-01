@@ -1,0 +1,39 @@
+name: One-shot fix stato verbale distribuzione utili
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[verbale-distribuzione-step-fixed]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Corregge lookup variazione dopo generazione documento
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/app/api/pratiche/[id]/genera-documento/route.ts')
+          s = p.read_text()
+          old = '.or(`pratica_determina_id.eq.${id},pratica_liquidazione_id.eq.${id}`)'
+          new = '.or(`pratica_id.eq.${id},pratica_determina_id.eq.${id},pratica_liquidazione_id.eq.${id}`)'
+          if old not in s:
+              raise SystemExit('lookup variazione atteso non trovato')
+          s = s.replace(old, new, 1)
+          p.write_text(s)
+          Path('.github/workflows/one-shot-fix-step-verbale-distribuzione.yml').unlink()
+          PY
+      - name: Verifica
+        run: |
+          git diff --check
+          git diff -- src/app/api/pratiche/[id]/genera-documento/route.ts
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/app/api/pratiche/[id]/genera-documento/route.ts .github/workflows/one-shot-fix-step-verbale-distribuzione.yml
+          git commit -m "fix: aggiorna stato verbale distribuzione utili [verbale-distribuzione-step-fixed]"
+          git push origin main
