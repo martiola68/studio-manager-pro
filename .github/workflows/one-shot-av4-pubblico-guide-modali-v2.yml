@@ -1,0 +1,80 @@
+name: One-shot AV4 pubblico guide modali v2
+
+on:
+  push:
+    paths:
+      - '.github/workflows/one-shot-av4-pubblico-guide-modali-v2.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Patch UI AV4 pubblico
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/pages/compilazione-av4/[token].tsx')
+          s = p.read_text()
+
+          old = 'import TitolariEffettiviForm from "@/components/antiriciclaggio/TitolariEffettiviForm";'
+          new = old + '\nimport AV4HelpButton from "@/components/antiriciclaggio/AV4HelpButton";'
+          assert s.count(old) == 1
+          s = s.replace(old, new, 1)
+
+          changes = [
+            ('''                <CardHeader>\n                  <CardTitle>Dati principali</CardTitle>\n                </CardHeader>''', '''                <CardHeader>\n                  <div className="flex items-center justify-between gap-3">\n                    <CardTitle>Dati principali</CardTitle>\n                    <AV4HelpButton topic="dati" />\n                  </div>\n                </CardHeader>'''),
+            ('''                <CardHeader>\n                  <CardTitle>Dichiarazioni del cliente</CardTitle>\n                </CardHeader>''', '''                <CardHeader>\n                  <div className="flex items-center justify-between gap-3">\n                    <CardTitle>Dichiarazioni del cliente</CardTitle>\n                    <AV4HelpButton topic="dichiarazioni" />\n                  </div>\n                </CardHeader>'''),
+            ('<div className="font-semibold">Persona politicamente esposta</div>', '<div className="flex items-center justify-between gap-3"><div className="font-semibold">Persona politicamente esposta</div><AV4HelpButton topic="ppe" /></div>'),
+            ('<div className="font-semibold">PPE titolari effettivi</div>', '<div className="flex items-center justify-between gap-3"><div className="font-semibold">PPE titolari effettivi</div><AV4HelpButton topic="ppeTitolari" /></div>'),
+            ('<div className="font-semibold">Professione / attività del cliente</div>', '<div className="flex items-center justify-between gap-3"><div className="font-semibold">Professione / attività del cliente</div><AV4HelpButton topic="attivita" /></div>'),
+            ('''                <CardHeader>\n                  <CardTitle>Firma</CardTitle>\n                </CardHeader>''', '''                <CardHeader>\n                  <div className="flex items-center justify-between gap-3">\n                    <CardTitle>Firma</CardTitle>\n                    <AV4HelpButton topic="firma" />\n                  </div>\n                </CardHeader>'''),
+          ]
+          for old, new in changes:
+            assert s.count(old) == 1, repr(old[:80])
+            s = s.replace(old, new, 1)
+
+          old = '''                    <div className="text-sm leading-6 text-gray-700">\n                      - ai fini dell’identificazione del Titolare Effettivo'''
+          new = '''                    <div className="flex justify-end">\n                      <AV4HelpButton topic="titolare" />\n                    </div>\n\n                    <div className="text-sm leading-6 text-gray-700">\n                      - ai fini dell’identificazione del Titolare Effettivo'''
+          assert s.count(old) == 1
+          s = s.replace(old, new, 1)
+
+          old = '''                    <div>\n                      <label className="mb-1 block text-sm font-medium">\n                        Che le relazioni intercorrenti tra il Cliente e il titolare effettivo'''
+          new = '''                    <div className="flex justify-end">\n                      <AV4HelpButton topic="fondi" />\n                    </div>\n\n                    <div>\n                      <label className="mb-1 block text-sm font-medium">\n                        Che le relazioni intercorrenti tra il Cliente e il titolare effettivo'''
+          assert s.count(old) == 1
+          s = s.replace(old, new, 1)
+
+          # Rimuove solo il testo dell'Allegato/Note, delimitandolo sul codice reale.
+          start = s.index('                                        <div className="md:col-span-2 whitespace-pre-line text-xs leading-5 text-gray-700">\n{`Allegato alla Dichiarazione del Cliente')
+          end_token = 'del presente articolo.`}\n                    </div>\n\n'
+          end = s.index(end_token, start) + len(end_token)
+          s = s[:start] + s[end:]
+
+          p.write_text(s)
+          PY
+
+          git diff --check
+
+          # Guardrail: nessuna riga critica può essere rimossa o modificata.
+          git diff --unified=0 -- 'src/pages/compilazione-av4/[token].tsx' > /tmp/av4.diff
+          if grep -E '^[+-].*(handleSubmit|validateTitolariPrimaDelSalvataggio|handleUploadSignedPdf|public_token|public_enabled|\.from\(|TitolariEffettiviForm[[:space:]]*$|name="domanda|checked=|onChange=|disabled=|payload)' /tmp/av4.diff; then
+            echo 'ERRORE: modifica rilevata su logica/campi critici AV4'
+            cat /tmp/av4.diff
+            exit 1
+          fi
+          cat /tmp/av4.diff
+
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add 'src/pages/compilazione-av4/[token].tsx'
+          git commit -m "feat: integra guide contestuali AV4 pubblico"
+          git push origin main
