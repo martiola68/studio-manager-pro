@@ -1,0 +1,55 @@
+name: One-shot CodeQL SSRF round 2 doc id
+
+on:
+  push:
+    branches:
+      - security/codeql-ssrf-round2-20260901
+    paths:
+      - '.github/workflows/one-shot-codeql-ssrf-round2-docid.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/codeql-ssrf-round2-20260901
+          fetch-depth: 0
+
+      - name: Codifica solo doc.id residui
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/components/pratiche/forms/FormCambioAmministratore.tsx')
+          s = p.read_text()
+          old1 = '`/api/pratiche/${encodeURIComponent(String(praticaId))}/documenti/${doc.id}/download`'
+          new1 = '`/api/pratiche/${encodeURIComponent(String(praticaId))}/documenti/${encodeURIComponent(String(doc.id))}/download`'
+          old2 = '`/api/pratiche/${encodeURIComponent(String(praticaId))}/documenti/${doc.id}`'
+          new2 = '`/api/pratiche/${encodeURIComponent(String(praticaId))}/documenti/${encodeURIComponent(String(doc.id))}`'
+          assert s.count(old1) == 1, f'download atteso 1, trovato {s.count(old1)}'
+          assert s.count(old2) == 1, f'delete atteso 1, trovato {s.count(old2)}'
+          s = s.replace(old1, new1).replace(old2, new2)
+          p.write_text(s)
+          PY
+          git diff --check
+          git diff -- src/components/pratiche/forms/FormCambioAmministratore.tsx
+
+      - name: Blocca modifiche funzionali
+        run: |
+          changed=$(git diff --name-only)
+          test "$changed" = "src/components/pratiche/forms/FormCambioAmministratore.tsx"
+          if git diff --unified=0 -- src/components/pratiche/forms/FormCambioAmministratore.tsx | grep -E '^[+-].*(method:|body:|JSON.stringify|set[A-Z]|alert\(|confirm\()'; then
+            echo 'ERRORE: modifica funzionale rilevata'
+            exit 1
+          fi
+
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/pratiche/forms/FormCambioAmministratore.tsx
+          git commit -m "fix: completa hardening doc id cambio amministratore"
+          git push origin security/codeql-ssrf-round2-20260901
