@@ -16,6 +16,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    const authHeader = req.headers.authorization || "";
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+
+    if (!token) {
+      return res.status(401).json({ ok: false, error: "Non autenticato" });
+    }
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser(token);
+
+    if (authError || !user?.id) {
+      return res.status(401).json({ ok: false, error: "Sessione non valida" });
+    }
+
+    const { data: utenteCorrente, error: utenteError } = await supabase
+      .from("tbutenti")
+      .select("studio_id")
+      .eq("user_id", user.id)
+      .single();
+
+    if (utenteError || !utenteCorrente?.studio_id) {
+      return res.status(403).json({ ok: false, error: "Studio utente non disponibile" });
+    }
+
+    const studioId = utenteCorrente.studio_id;
+
     const oggi = new Date();
     oggi.setHours(0, 0, 0, 0);
 
@@ -25,6 +53,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data: dipendenti, error } = await supabase
       .from("tbutenti")
       .select("id, nome, cognome, email")
+      .eq("studio_id", studioId)
       .eq("attivo", true)
       .eq("tipo_rapporto", "Dipendente")
       .not("email", "is", null);
@@ -37,30 +66,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const { count, error: countError } = await supabase
         .from("tbpresenze_dipendenti")
         .select("id", { count: "exact", head: true })
+        .eq("studio_id", studioId)
         .eq("utente_id", dipendente.id)
         .gte("data_presenza", inizioMese)
         .lte("data_presenza", fineMese);
 
       if (countError) throw countError;
 
-     const presenzeCompilate = count || 0;
-if (presenzeCompilate >= 4) continue;
+      const presenzeCompilate = count || 0;
+      if (presenzeCompilate >= 4) continue;
 
-const oggiKey = toDate(oggi);
+      const oggiKey = toDate(oggi);
 
-const { count: giorniLavorativiTrascorsi, error: giorniError } = await supabase
-  .from("tbpresenze_dipendenti")
-  .select("data_presenza", { count: "exact", head: true })
-  .eq("utente_id", dipendente.id)
-  .gte("data_presenza", inizioMese)
-  .lte("data_presenza", oggiKey);
+      const { count: giorniLavorativiTrascorsi, error: giorniError } = await supabase
+        .from("tbpresenze_dipendenti")
+        .select("data_presenza", { count: "exact", head: true })
+        .eq("studio_id", studioId)
+        .eq("utente_id", dipendente.id)
+        .gte("data_presenza", inizioMese)
+        .lte("data_presenza", oggiKey);
 
-if (giorniError) throw giorniError;
+      if (giorniError) throw giorniError;
 
-const mancanti = Math.max(
-  Number(giorniLavorativiTrascorsi || 0) - presenzeCompilate,
-  4 - presenzeCompilate
-);
+      const mancanti = Math.max(
+        Number(giorniLavorativiTrascorsi || 0) - presenzeCompilate,
+        4 - presenzeCompilate
+      );
 
       incompleti.push({
         utente_id: dipendente.id,
