@@ -1,0 +1,54 @@
+name: One-shot payroll rimuovi colonne inutili
+
+on:
+  push:
+    paths:
+      - '.github/workflows/one-shot-payroll-rimuovi-colonne-inutili.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Patch chirurgico form payroll
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/pages/payroll/dipendenti/index.tsx')
+          s = p.read_text()
+
+          old = '<table className="min-w-[1750px] w-full text-xs">'
+          new = '<table className="w-full text-xs">'
+          assert s.count(old) == 1, f'table width: atteso 1, trovato {s.count(old)}'
+          s = s.replace(old, new, 1)
+
+          old = '''                      <th className="p-2 text-left">Cod. dip.</th>\n                        <th className="p-2 text-left">Cod. sogg. paghe</th>\n                        <th className="p-2 text-left">Num. rapp.</th>\n                        \n                      <th className="p-2 text-left">Ore giorno</th>'''
+          new = '''                      <th className="p-2 text-left">Cod. dip.</th>\n                      <th className="p-2 text-left">Ore giorno</th>'''
+          assert s.count(old) == 1, f'header columns: atteso 1, trovato {s.count(old)}'
+          s = s.replace(old, new, 1)
+
+          old = '''                        <td className="p-2">\n  <Input\n    maxLength={8}\n    value={dip.codice_soggetto_paghe ?? ''}\n    onChange={(e) =>\n      updateField(dip.id, 'codice_soggetto_paghe', e.target.value)\n    }\n  />\n</td>\n\n<td className="p-2">\n  <Input\n    maxLength={3}\n    value={dip.numero_rapporto_paghe ?? ''}\n    onChange={(e) =>\n      updateField(dip.id, 'numero_rapporto_paghe', e.target.value)\n    }\n  />\n</td>\n\n                      \n'''
+          assert s.count(old) == 1, f'body columns: atteso 1, trovato {s.count(old)}'
+          s = s.replace(old, '', 1)
+
+          p.write_text(s)
+          PY
+
+          git diff --check
+          git diff -- src/pages/payroll/dipendenti/index.tsx
+
+      - name: Commit modifiche
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/payroll/dipendenti/index.tsx
+          git diff --cached --quiet && exit 0
+          git commit -m "fix: semplifica form dipendenti payroll"
+          git push origin main
