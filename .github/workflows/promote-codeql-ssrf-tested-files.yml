@@ -1,0 +1,49 @@
+name: Promote tested CodeQL SSRF files
+
+on:
+  push:
+    branches:
+      - security/codeql-ssrf-20260901
+    paths:
+      - '.github/workflows/promote-codeql-ssrf-tested-files.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Importa solo i tre file applicativi verificati
+        run: |
+          git fetch origin security/codeql-ssrf-20260901
+          git checkout origin/security/codeql-ssrf-20260901 -- \
+            src/components/pratiche/forms/FormDistribuzioneUtili.tsx \
+            src/components/pratiche/forms/FormMessaLiquidazione.tsx \
+            src/components/pratiche/forms/FormDeterminaLiquidazione.tsx
+
+          changed=$(git diff --name-only)
+          printf '%s\n' "$changed"
+          expected=$(printf '%s\n' \
+            src/components/pratiche/forms/FormDeterminaLiquidazione.tsx \
+            src/components/pratiche/forms/FormDistribuzioneUtili.tsx \
+            src/components/pratiche/forms/FormMessaLiquidazione.tsx | sort)
+          actual=$(printf '%s\n' "$changed" | sort)
+          test "$actual" = "$expected"
+          git diff --check
+
+      - name: Commit su main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            src/components/pratiche/forms/FormDistribuzioneUtili.tsx \
+            src/components/pratiche/forms/FormMessaLiquidazione.tsx \
+            src/components/pratiche/forms/FormDeterminaLiquidazione.tsx
+          git commit -m "fix: hardening URL interni pratiche CodeQL"
+          git push origin HEAD:main
