@@ -307,7 +307,7 @@ async function caricaClienti() {
   if (!pratica?.cliente_id) return;
 
   const res = await fetch(
-    `/api/clienti-organi?cliente_id=${pratica.cliente_id}`,
+    `/api/clienti-organi?cliente_id=${encodeURIComponent(String(pratica.cliente_id))}`,
     {
       cache: "no-store",
     }
@@ -334,7 +334,7 @@ async function caricaClienti() {
 }
 
   async function caricaModelli() {
-    const res = await fetch(`/api/pratiche/${praticaId}/modelli`, {
+    const res = await fetch(`/api/pratiche/${encodeURIComponent(String(praticaId))}/modelli`, {
       cache: "no-store",
     });
     const data = await res.json();
@@ -342,7 +342,7 @@ async function caricaClienti() {
   }
 
   async function caricaDocumenti() {
-    const res = await fetch(`/api/pratiche/${praticaId}/documenti`, {
+    const res = await fetch(`/api/pratiche/${encodeURIComponent(String(praticaId))}/documenti`, {
       cache: "no-store",
     });
     const data = await res.json();
@@ -362,7 +362,7 @@ async function caricaClienti() {
         nuovi_amministratori: nuoviAmministratori,
       };
 
-      const res = await fetch(`/api/pratiche/${praticaId}`, {
+      const res = await fetch(`/api/pratiche/${encodeURIComponent(String(praticaId))}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -446,7 +446,7 @@ async function caricaClienti() {
     const salvato = await salvaDatiDocumento();
     if (!salvato) return;
 
-    const res = await fetch(`/api/pratiche/${praticaId}/genera-documento`, {
+    const res = await fetch(`/api/pratiche/${encodeURIComponent(String(praticaId))}/genera-documento`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -1131,7 +1131,7 @@ alert("Documento generato.");
                       }}
                     >
                       <a
-                        href={`/api/pratiche/${praticaId}/documenti/${doc.id}/download`}
+                        href={`/api/pratiche/${encodeURIComponent(String(praticaId))}/documenti/${encodeURIComponent(String(doc.id))}/download`}
                         download
                         title="Scarica documento"
                         style={{
@@ -1167,7 +1167,7 @@ alert("Documento generato.");
                             formData.append("documento_id", doc.id);
 
                             const res = await fetch(
-                              `/api/pratiche/${praticaId}/documento-modificato`,
+                              `/api/pratiche/${encodeURIComponent(String(praticaId))}/documento-modificato`,
                               {
                                 method: "POST",
                                 body: formData,
@@ -1194,7 +1194,7 @@ alert("Documento generato.");
                           if (!confirm("Eliminare questo documento?")) return;
 
                           const res = await fetch(
-                            `/api/pratiche/${praticaId}/documenti/${doc.id}`,
+                            `/api/pratiche/${encodeURIComponent(String(praticaId))}/documenti/${encodeURIComponent(String(doc.id))}`,
                             { method: "DELETE" }
                           );
 
