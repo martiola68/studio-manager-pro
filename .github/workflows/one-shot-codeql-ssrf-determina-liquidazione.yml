@@ -1,0 +1,65 @@
+name: One-shot CodeQL SSRF determina liquidazione
+
+on:
+  push:
+    branches:
+      - security/codeql-ssrf-20260901
+    paths:
+      - '.github/workflows/one-shot-codeql-ssrf-determina-liquidazione.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/codeql-ssrf-20260901
+          fetch-depth: 0
+
+      - name: Hardening URL interni senza modificare logica
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/components/pratiche/forms/FormDeterminaLiquidazione.tsx')
+          s = p.read_text()
+          replacements = {
+            '`/api/pratiche/${praticaId}`': '`/api/pratiche/${encodeURIComponent(String(praticaId))}`',
+            '`/api/pratiche/${praticaId}/documenti`': '`/api/pratiche/${encodeURIComponent(String(praticaId))}/documenti`',
+            '`/api/clienti-organi?cliente_id=${pratica.cliente_id}`': '`/api/clienti-organi?cliente_id=${encodeURIComponent(String(pratica.cliente_id))}`',
+            '`/api/pratiche/${praticaId}/genera-documento`': '`/api/pratiche/${encodeURIComponent(String(praticaId))}/genera-documento`',
+            '`/api/pratiche/${praticaId}/crea-pratica-liquidazione`': '`/api/pratiche/${encodeURIComponent(String(praticaId))}/crea-pratica-liquidazione`',
+            '`/api/rapp-legali/${pratica.id}/nuovo-rapp-pratiche`': '`/api/rapp-legali/${encodeURIComponent(String(pratica.id))}/nuovo-rapp-pratiche`',
+            '`/api/pratiche/${praticaId}/documento-modificato`': '`/api/pratiche/${encodeURIComponent(String(praticaId))}/documento-modificato`',
+            '`/api/pratiche/${praticaId}/documenti/${doc.id}`': '`/api/pratiche/${encodeURIComponent(String(praticaId))}/documenti/${encodeURIComponent(String(doc.id))}`',
+          }
+          changed = 0
+          for old,new in replacements.items():
+            count=s.count(old)
+            if count:
+              s=s.replace(old,new)
+              changed += count
+          assert changed >= 9, f'attese almeno 9 sostituzioni, trovate {changed}'
+          p.write_text(s)
+          PY
+
+          git diff --check
+          git diff -- src/components/pratiche/forms/FormDeterminaLiquidazione.tsx
+
+      - name: Blocca modifiche alla logica funzionale
+        run: |
+          if git diff --unified=0 -- src/components/pratiche/forms/FormDeterminaLiquidazione.tsx | grep -E '^[+-].*(method:|body:|JSON.stringify|setForm|setMotivi|setDocumenti|setRappresentantiLegali|alert\(|router.push\()'; then
+            echo 'ERRORE: rilevata modifica alla logica funzionale'
+            exit 1
+          fi
+
+      - name: Commit hardening
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/pratiche/forms/FormDeterminaLiquidazione.tsx
+          git diff --cached --quiet && exit 0
+          git commit -m "fix: hardening URL interni determina liquidazione"
+          git push origin security/codeql-ssrf-20260901
