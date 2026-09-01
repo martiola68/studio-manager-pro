@@ -1,0 +1,56 @@
+name: Security Dependabot cleanup 2026-09-01
+
+on:
+  push:
+    branches:
+      - security/dependabot-cleanup-20260901
+    paths:
+      - '.github/workflows/security-dependabot-cleanup-20260901.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  remediate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/dependabot-cleanup-20260901
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Rigenera lockfile con versioni compatibili correnti
+        run: npm install --package-lock-only --ignore-scripts
+
+      - name: Applica fix npm audit compatibili
+        run: npm audit fix --package-lock-only --ignore-scripts || true
+
+      - name: Installa da lockfile aggiornato
+        run: npm ci --ignore-scripts
+
+      - name: Report audit residuo
+        run: |
+          npm audit --json > npm-audit-after.json || true
+          node - <<'NODE'
+          const fs = require('fs');
+          const data = JSON.parse(fs.readFileSync('npm-audit-after.json','utf8'));
+          const v = data.metadata?.vulnerabilities || {};
+          console.log('AUDIT AFTER:', JSON.stringify(v));
+          const total = Number(v.total || 0);
+          if (total > 0) process.exitCode = 2;
+          NODE
+        continue-on-error: true
+
+      - name: Commit aggiornamenti dipendenze
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          git diff --cached --quiet && exit 0
+          git commit -m "fix: aggiorna dipendenze vulnerabili"
+          git push origin security/dependabot-cleanup-20260901
