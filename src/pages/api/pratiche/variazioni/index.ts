@@ -705,6 +705,33 @@ if (body.data_comunicazione_ade) {
     .eq("codice_step", "COMUNICAZIONE_ADE");
 }
 
+const isDistribuzioneUtili = String(data.tipo_variazione || "").toLowerCase().includes("distribuzione");
+if (isDistribuzioneUtili && body.conferma_record === true) {
+  const now = new Date().toISOString();
+  await supabase
+    .from("tbpratiche_step")
+    .update({
+      stato: "completato",
+      completato: true,
+      data_evasione: body.data_comunicazione_ade || null,
+      data_completamento: now,
+      updated_at: now,
+    })
+    .eq("variazione_id", id);
+
+  if (data.pratica_id) {
+    await supabase
+      .from("tbpratiche")
+      .update({ stato: "Completata", stato_step: "completato", updated_at: now })
+      .eq("id", data.pratica_id);
+  }
+
+  await supabase
+    .from("tbpratiche_variazioni")
+    .update({ stato: "completata", pratica_chiusa: true })
+    .eq("id", id);
+}
+
 await aggiornaStatiVariazione(supabase, id);
 
 await sincronizzaPromemoriaVariazione(supabase, data);

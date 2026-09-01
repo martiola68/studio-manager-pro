@@ -121,8 +121,22 @@ setClienti(clientiData || []);
   (tipo) => tipo.descrizione_variazione === form.tipo_variazione
 );
 
+const isDistribuzioneUtili = form.tipo_variazione === "Distribuzione utili";
+
 const payload = {
   ...form,
+  ...(isDistribuzioneUtili ? {
+    ente_principale: "AGENZIA_ENTRATE",
+    obbligo_ade: true,
+    giorni_scadenza_cciaa: 0,
+    data_scadenza_cciaa: "",
+    data_evasione_cciaa: "",
+    giorni_scadenza_ade: 30,
+    data_scadenza_ade: aggiungiGiorni(form.data_atto, 30),
+    ricevuta_telematica_ade: "",
+    pratica_chiusa: form.conferma_record,
+    stato: form.conferma_record ? "completata" : "in_lavorazione",
+  } : {}),
   studio_id: utente.studio_id,
   utente_id: utente.id,
   assegnato_a: utente.id,
@@ -206,14 +220,14 @@ const payload = {
   }
 
  function aggiornaDataAtto(value: string) {
+  const isDistribuzioneUtili = form.tipo_variazione === "Distribuzione utili";
   setForm({
     ...form,
     data_atto: value,
-    data_scadenza_cciaa: aggiungiGiorni(
-      value,
-      form.giorni_scadenza_cciaa
-    ),
-    data_scadenza_ade: form.obbligo_ade
+    data_scadenza_cciaa: isDistribuzioneUtili ? "" : aggiungiGiorni(value, form.giorni_scadenza_cciaa),
+    data_scadenza_ade: isDistribuzioneUtili
+      ? aggiungiGiorni(value, 30)
+      : form.obbligo_ade
       ? aggiungiGiorni(value, form.giorni_scadenza_ade)
       : "",
   });
@@ -366,12 +380,25 @@ if (v.tipo_variazione === "Cambio amministratore") {
                 <select
                   className="border p-2 rounded w-full"
                   value={form.tipo_variazione}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    const tipo = e.target.value;
+                    const isDistribuzioneUtili = tipo === "Distribuzione utili";
                     setForm({
                       ...form,
-                      tipo_variazione: e.target.value,
-                    })
-                  }
+                      tipo_variazione: tipo,
+                      ...(isDistribuzioneUtili ? {
+                        ente_principale: "AGENZIA_ENTRATE",
+                        obbligo_ade: true,
+                        genera_verbale: true,
+                        giorni_scadenza_cciaa: 0,
+                        data_scadenza_cciaa: "",
+                        data_evasione_cciaa: "",
+                        giorni_scadenza_ade: 30,
+                        data_scadenza_ade: aggiungiGiorni(form.data_atto, 30),
+                        ricevuta_telematica_ade: "",
+                      } : {}),
+                    });
+                  }}
                 >
                
 
@@ -452,6 +479,8 @@ if (v.tipo_variazione === "Cambio amministratore") {
                 />
               </div>
 
+              {form.tipo_variazione !== "Distribuzione utili" && (
+                <>
               <div className="space-y-1">
                 <label className="text-sm font-medium">
                   Giorni lavorazione CCIAA
@@ -497,9 +526,12 @@ if (v.tipo_variazione === "Cambio amministratore") {
                   onChange={(e) => aggiornaDataEvasioneCciaa(e.target.value)}
                 />
               </div>
+                </>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              {form.tipo_variazione !== "Distribuzione utili" && (
               <label className="flex items-center gap-2">
                 <input
                   type="checkbox"
@@ -519,6 +551,7 @@ if (v.tipo_variazione === "Cambio amministratore") {
                 />
                 Obbligo comunicazione Agenzia Entrate
               </label>
+              )}
 
               <label className="flex items-center gap-2">
                 <input
@@ -544,7 +577,7 @@ if (v.tipo_variazione === "Cambio amministratore") {
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
                   <div className="space-y-1">
                     <label className="text-sm font-medium">
-                      Giorni lavorazione AdE
+                      {form.tipo_variazione === "Distribuzione utili" ? "Termine deposito AdE (giorni)" : "Giorni lavorazione AdE"}
                     </label>
 
                     <input
@@ -577,7 +610,7 @@ if (v.tipo_variazione === "Cambio amministratore") {
 
                   <div className="space-y-1">
                     <label className="text-sm font-medium">
-                      Data invio AdE
+                      {form.tipo_variazione === "Distribuzione utili" ? "Data deposito AdE" : "Data invio AdE"}
                     </label>
 
                     <input
@@ -593,6 +626,7 @@ if (v.tipo_variazione === "Cambio amministratore") {
                     />
                   </div>
 
+                  {form.tipo_variazione !== "Distribuzione utili" && (
                   <div className="space-y-1">
                     <label className="text-sm font-medium">
                       Ricevuta telematica
@@ -611,6 +645,8 @@ if (v.tipo_variazione === "Cambio amministratore") {
                     />
                   </div>
 
+                  )}
+
                   <label className="flex items-center gap-2 mt-6">
                     <input
                       type="checkbox"
@@ -622,7 +658,7 @@ if (v.tipo_variazione === "Cambio amministratore") {
                         })
                       }
                     />
-                    Conferma record AdE
+                    {form.tipo_variazione === "Distribuzione utili" ? "Conferma deposito AdE e chiudi pratica" : "Conferma record AdE"}
                   </label>
                 </div>
               </div>
@@ -698,8 +734,8 @@ if (v.tipo_variazione === "Cambio amministratore") {
                     <td className="p-2">{v.cliente?.ragione_sociale || "-"}</td>
                     <td className="p-2">{v.tipo_variazione || "-"}</td>
                    <td className="p-2">{formatDateIT(v.data_atto)}</td>
-                    <td className="p-2">{formatDateIT(v.data_scadenza_cciaa)}</td>
-                      <td className="p-2">{formatDateIT(v.data_evasione_cciaa)}</td>
+                    <td className="p-2">{v.tipo_variazione === "Distribuzione utili" ? "-" : formatDateIT(v.data_scadenza_cciaa)}</td>
+                      <td className="p-2">{v.tipo_variazione === "Distribuzione utili" ? "-" : formatDateIT(v.data_evasione_cciaa)}</td>
                       <td className="p-2">{formatDateIT(v.data_scadenza_ade)}</td>
                       <td className="p-2">{formatDateIT(v.data_comunicazione_ade)}</td>
   
@@ -771,7 +807,19 @@ if (v.tipo_variazione === "Cambio amministratore") {
     <button
       type="button"
       className="block underline text-left"
-      onClick={() => router.push(`/pratiche/${v.pratica_id}`)}
+      onClick={async () => {
+        const response = await fetch("/api/pratiche/variazioni/apri", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ variazione_id: v.id }),
+        });
+        const result = await response.json();
+        if (!result.success || !result.pratica_id) {
+          alert(result.error || "Impossibile aprire la pratica");
+          return;
+        }
+        router.push(`/pratiche/${result.pratica_id}`);
+      }}
     >
       Verbale distribuzione utili:
       <span className={`ml-1 ${coloreStep(v.step_verbale_stato)}`}>
