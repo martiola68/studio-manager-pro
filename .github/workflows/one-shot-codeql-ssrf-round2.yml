@@ -1,0 +1,59 @@
+name: One-shot CodeQL SSRF round 2
+
+on:
+  push:
+    branches:
+      - security/codeql-ssrf-round2-20260901
+    paths:
+      - '.github/workflows/one-shot-codeql-ssrf-round2.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/codeql-ssrf-round2-20260901
+          fetch-depth: 0
+
+      - name: Hardening URL dinamici residui
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          files = [
+            Path('src/lib/pratiche/generaDocumentoPratica.ts'),
+            Path('src/pages/pratiche/[id].tsx'),
+            Path('src/components/pratiche/forms/FormCambioAmministratore.tsx'),
+          ]
+          total = 0
+          for p in files:
+            s = p.read_text()
+            old = s
+            s = s.replace('${praticaId}', '${encodeURIComponent(String(praticaId))}')
+            if p.name == 'FormCambioAmministratore.tsx':
+              s = s.replace('${pratica.cliente_id}', '${encodeURIComponent(String(pratica.cliente_id))}')
+            total += old.count('${praticaId}') - s.count('${praticaId}')
+            p.write_text(s)
+          assert total >= 10, f'attese almeno 10 sanitizzazioni praticaId, trovate {total}'
+          PY
+          git diff --check
+          git diff -- src/lib/pratiche/generaDocumentoPratica.ts 'src/pages/pratiche/[id].tsx' src/components/pratiche/forms/FormCambioAmministratore.tsx
+
+      - name: Blocca modifiche funzionali
+        run: |
+          if git diff --unified=0 -- src/lib/pratiche/generaDocumentoPratica.ts 'src/pages/pratiche/[id].tsx' src/components/pratiche/forms/FormCambioAmministratore.tsx | grep -E '^[+-].*(method:|body:|JSON.stringify|set[A-Z]|router.push|alert\(|confirm\()'; then
+            echo 'ERRORE: rilevata modifica funzionale'
+            exit 1
+          fi
+
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/lib/pratiche/generaDocumentoPratica.ts 'src/pages/pratiche/[id].tsx' src/components/pratiche/forms/FormCambioAmministratore.tsx
+          git diff --cached --quiet && exit 0
+          git commit -m "fix: hardening URL residui pratiche CodeQL"
+          git push origin security/codeql-ssrf-round2-20260901
