@@ -1,1 +1,2 @@
 Trigger one-shot Microsoft 365 user lookup fix.
+Trigger auth solleciti presenze v2.
