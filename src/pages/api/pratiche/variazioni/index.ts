@@ -434,8 +434,15 @@ export default async function handler(
 if (error) throw error;
 
 const variazioniIds = (data || []).map((v: any) => v.id);
+const praticaIdsDistribuzione = (data || [])
+  .filter((v: any) =>
+    String(v.tipo_variazione || "").toLowerCase().includes("distribuzione") &&
+    !!v.pratica_id
+  )
+  .map((v: any) => v.pratica_id);
 
 let steps: any[] = [];
+let praticheConVerbale = new Set<string>();
 
 if (variazioniIds.length > 0) {
   const { data: stepsData, error: stepsError } = await supabase
@@ -448,6 +455,24 @@ if (variazioniIds.length > 0) {
   steps = stepsData || [];
 }
 
+if (praticaIdsDistribuzione.length > 0) {
+  const { data: documentiVerbale, error: documentiVerbaleError } = await supabase
+    .from("tbpratiche_documenti")
+    .select("pratica_id, tipo_documento")
+    .in("pratica_id", praticaIdsDistribuzione)
+    .in("tipo_documento", [
+      "VERBALE_UTILI",
+      "VERBALE_DISTRIBUZIONE_UTILI",
+      "DISTRIBUZIONE_UTILI",
+    ]);
+
+  if (documentiVerbaleError) throw documentiVerbaleError;
+
+  praticheConVerbale = new Set(
+    (documentiVerbale || []).map((doc: any) => String(doc.pratica_id))
+  );
+}
+
 const stepsByVariazione = steps.reduce((acc: any, step: any) => {
   if (!acc[step.variazione_id]) acc[step.variazione_id] = {};
   acc[step.variazione_id][step.codice_step] = step;
@@ -456,12 +481,24 @@ const stepsByVariazione = steps.reduce((acc: any, step: any) => {
 
 const dataArricchita = (data || []).map((v: any) => {
   const stepMap = stepsByVariazione[v.id] || {};
+  const isDistribuzioneUtili = String(v.tipo_variazione || "")
+    .toLowerCase()
+    .includes("distribuzione");
+  const verbaleGenerato =
+    isDistribuzioneUtili &&
+    !!v.pratica_id &&
+    praticheConVerbale.has(String(v.pratica_id));
 
   return {
     ...v,
 
   step_determina_stato:
   v.step_determina_stato || stepMap.DETERMINA?.stato || "da_fare",
+
+step_verbale_stato:
+  verbaleGenerato
+    ? "completato"
+    : v.step_verbale_stato || stepMap.VERBALE?.stato || "da_fare",
 
 step_liquidazione_stato:
   v.step_liquidazione_stato || stepMap.LIQUIDAZIONE?.stato || "da_fare",
@@ -522,121 +559,26 @@ return res.status(200).json({
         });
       }
 
-       const { data: variazioneEsistente, error: existingError } = await supabase
-  .from("tbpratiche_variazioni")
-  .select("id, pratica_id, pratica_determina_id, stato")
-  .eq("studio_id", payload.studio_id)
-  .eq("cliente_id", payload.cliente_id)
-  .eq("tipo_variazione", payload.tipo_variazione)
-  .eq("titolo", payload.titolo)
-  .in("stato", ["aperta", "in_lavorazione"])
-  .order("created_at", { ascending: false })
-  .limit(1);
-
-if (existingError) throw existingError;
-
-if (variazioneEsistente && variazioneEsistente.length > 0) {
-  return res.status(200).json({
-    success: true,
-    data: variazioneEsistente[0],
-  });
-}
+      if (!payload.assegnato_a) {
+        return res.status(400).json({
+          success: false,
+          error: "assegnato_a obbligatorio",
+        });
+      }
 
       const { data, error } = await supabase
         .from("tbpratiche_variazioni")
         .insert(payload)
-        .select(`
-          *,
-          cliente:tbclienti(id, ragione_sociale, codice_fiscale, partita_iva),
-          assegnato:tbutenti!tbpratiche_variazioni_assegnato_a_fkey(id, nome, cognome, email),
-          pratica:tbpratiche!tbpratiche_variazioni_pratica_id_fkey(id, numero_pratica, titolo, stato)
-        `)
+        .select()
         .single();
 
       if (error) throw error;
 
-      // ==============================
-// CREA PRATICA PADRE
-// ==============================
-
-if (req.body.genera_pratica || req.body.genera_verbale) {
-  const { data: variazioneCorrente, error: variazioneCorrenteError } =
-    await supabase
-      .from("tbpratiche_variazioni")
-      .select("id, pratica_id, pratica_determina_id")
-      .eq("id", data.id)
-      .single();
-
-  if (variazioneCorrenteError) throw variazioneCorrenteError;
-
-  if (variazioneCorrente?.pratica_id) {
-    data.pratica_id = variazioneCorrente.pratica_id;
-    data.pratica_determina_id = variazioneCorrente.pratica_determina_id;
-    data.stato = "in_lavorazione";
-  } else {
-    const { data: praticaCreata, error: praticaError } = await supabase
-      .from("tbpratiche")
-      .insert({
-        studio_id: data.studio_id,
-        cliente_id: data.cliente_id,
-        tipo_pratica_id: req.body.tipo_pratica_id,
-        numero_pratica: `VAR-${new Date().getFullYear()}-${String(Date.now()).slice(-5)}`,
-        titolo: data.titolo,
-        stato: "Aperta",
-        priorita: data.priorita,
-        data_apertura: new Date(),
-        assegnato_a: data.assegnato_a,
-        pratica_padre_id: null,
-        pratica_origine_id: null,
-        variazione_id: data.id,
-        codice_workflow: data.tipo_variazione,
-        codice_step: "ROOT",
-        nome_step: data.tipo_variazione,
-        ordine_step: 1,
-        stato_step: "aperta",
-      })
-      .select("id")
-      .single();
-
-    if (praticaError) throw praticaError;
-
-   const updatePratica: any = {
-  pratica_id: praticaCreata.id,
-  stato: "in_lavorazione",
-};
-
-if (
-  String(data.tipo_variazione).toLowerCase().includes("scioglimento") ||
-  String(data.tipo_variazione).toLowerCase().includes("liquidazione")
-) {
-  updatePratica.pratica_determina_id = praticaCreata.id;
-}
-
-await supabase
-  .from("tbpratiche_variazioni")
-  .update(updatePratica)
-  .eq("id", data.id);
-
-    await aggiornaStatiVariazione(supabase, data.id);
-
-   data.pratica_id = praticaCreata.id;
-
-if (
-  String(data.tipo_variazione).toLowerCase().includes("scioglimento") ||
-  String(data.tipo_variazione).toLowerCase().includes("liquidazione")
-) {
-  data.pratica_determina_id = praticaCreata.id;
-}
-
-data.stato = "in_lavorazione";
-  }
-}
-
       await creaStepVariazione(supabase, data);
-      
       await sincronizzaPromemoriaVariazione(supabase, data);
+      await aggiornaStatiVariazione(supabase, data.id);
 
-      return res.status(201).json({
+      return res.status(200).json({
         success: true,
         data,
       });
@@ -654,30 +596,19 @@ data.stato = "in_lavorazione";
 
       const payload = buildPayload(body);
 
-      delete (payload as any).studio_id;
-      delete (payload as any).cliente_id;
-
-      if (!body.stato) {
-  delete (payload as any).stato;
-}
-
       const { data, error } = await supabase
         .from("tbpratiche_variazioni")
         .update(payload)
         .eq("id", id)
-        .select(`
-          *,
-          cliente:tbclienti(id, ragione_sociale, codice_fiscale, partita_iva),
-          assegnato:tbutenti!tbpratiche_variazioni_assegnato_a_fkey(id, nome, cognome, email),
-          pratica:tbpratiche!tbpratiche_variazioni_pratica_id_fkey(id, numero_pratica, titolo, stato)
-        `)
+        .select()
         .single();
 
-     if (error) throw error;
+      if (error) throw error;
 
-await creaStepVariazione(supabase, data);
+      await creaStepVariazione(supabase, data);
+      await sincronizzaPromemoriaVariazione(supabase, data);
 
-   if (body.data_evasione_cciaa) {
+if (body.data_evasione_cciaa) {
   await supabase
     .from("tbpratiche_step")
     .update({
@@ -734,107 +665,46 @@ if (isDistribuzioneUtili && body.conferma_record === true) {
 
 await aggiornaStatiVariazione(supabase, id);
 
-await sincronizzaPromemoriaVariazione(supabase, data);
-
       return res.status(200).json({
         success: true,
         data,
       });
     }
 
-  if (req.method === "DELETE") {
-  const id =
-    typeof req.query.id === "string"
-      ? req.query.id
-      : req.body?.id;
+    if (req.method === "DELETE") {
+      const { id } = req.query;
 
-  if (!id) {
-    return res.status(400).json({
-      success: false,
-      error: "id obbligatorio",
-    });
-  }
+      if (!id || typeof id !== "string") {
+        return res.status(400).json({
+          success: false,
+          error: "id obbligatorio",
+        });
+      }
 
-  const { data: variazione } = await supabase
-    .from("tbpratiche_variazioni")
-    .select(`
-  id,
-  promemoria_cciaa_id,
-  promemoria_ade_id,
-  pratica_id,
-  pratica_determina_id,
-  pratica_liquidazione_id
-`)
-    .eq("id", id)
-    .single();
+      const { error } = await supabase
+        .from("tbpratiche_variazioni")
+        .delete()
+        .eq("id", id);
 
-  const idsPromemoria = [
-    variazione?.promemoria_cciaa_id,
-    variazione?.promemoria_ade_id,
-  ].filter(Boolean);
+      if (error) throw error;
 
-  if (idsPromemoria.length > 0) {
-    await supabase
-      .from("tbpromemoria")
-      .delete()
-      .in("id", idsPromemoria);
-  }
+      return res.status(200).json({
+        success: true,
+        data: { id },
+      });
+    }
 
-    await supabase
-  .from("tbpratiche_step")
-  .delete()
-  .eq("variazione_id", id);
-
-const praticaIds = [
-  variazione?.pratica_id,
-  variazione?.pratica_determina_id,
-  variazione?.pratica_liquidazione_id,
-].filter(Boolean);
-
-if (praticaIds.length > 0) {
-  await supabase
-    .from("tbpratiche_documenti")
-    .delete()
-    .in("pratica_id", praticaIds);
-
-  await supabase
-    .from("tbpratiche_dati_documenti")
-    .delete()
-    .in("pratica_id", praticaIds);
-
-  await supabase
-    .from("tbpratiche_soci")
-    .delete()
-    .in("pratica_id", praticaIds);
-
-  await supabase
-    .from("tbpratiche")
-    .delete()
-    .in("id", praticaIds);
-}
-
-  const { error } = await supabase
-    .from("tbpratiche_variazioni")
-    .delete()
-    .eq("id", id);
-
-  if (error) throw error;
-
-  return res.status(200).json({
-    success: true,
-    data: { id },
-  });
-}
+    res.setHeader("Allow", ["GET", "POST", "PUT", "DELETE"]);
     return res.status(405).json({
       success: false,
       error: "Metodo non consentito",
     });
   } catch (error: any) {
-    console.error("Errore API pratiche variazioni:", error);
+    console.error("Errore API variazioni:", error);
 
     return res.status(500).json({
       success: false,
-      error: error?.message || "Errore interno",
+      error: error?.message || "Errore interno server",
     });
   }
 }
