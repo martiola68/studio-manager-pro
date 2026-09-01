@@ -222,16 +222,13 @@ setQualifiche(qualificheData ?? []);
               </div>
             ) : (
               <div className="overflow-x-auto rounded-md border">
-                <table className="min-w-[1750px] w-full text-xs">
+                <table className="w-full text-xs">
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="p-2 text-left">Dipendente</th>
                       <th className="p-2 text-left">Email</th>
                      <th className="p-2 text-left">Cod. ditta</th>
                       <th className="p-2 text-left">Cod. dip.</th>
-                        <th className="p-2 text-left">Cod. sogg. paghe</th>
-                        <th className="p-2 text-left">Num. rapp.</th>
-                        
                       <th className="p-2 text-left">Ore giorno</th>
 
                       <th className="p-2 text-left">Data assunzione</th>
@@ -268,27 +265,6 @@ setQualifiche(qualificheData ?? []);
   />
 </td>
 
-                        <td className="p-2">
-  <Input
-    maxLength={8}
-    value={dip.codice_soggetto_paghe ?? ''}
-    onChange={(e) =>
-      updateField(dip.id, 'codice_soggetto_paghe', e.target.value)
-    }
-  />
-</td>
-
-<td className="p-2">
-  <Input
-    maxLength={3}
-    value={dip.numero_rapporto_paghe ?? ''}
-    onChange={(e) =>
-      updateField(dip.id, 'numero_rapporto_paghe', e.target.value)
-    }
-  />
-</td>
-
-                      
                         <td className="p-2">
                           <Input type="number" step="0.25" value={dip.orario_giornaliero ?? 8} onChange={(e) => updateField(dip.id, 'orario_giornaliero', Number(e.target.value))} />
                         </td>
