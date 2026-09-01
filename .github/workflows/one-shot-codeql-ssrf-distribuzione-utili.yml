@@ -1,0 +1,60 @@
+name: One-shot CodeQL SSRF distribuzione utili
+
+on:
+  push:
+    branches:
+      - security/codeql-ssrf-20260901
+    paths:
+      - '.github/workflows/one-shot-codeql-ssrf-distribuzione-utili.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/codeql-ssrf-20260901
+          fetch-depth: 0
+
+      - name: Hardening URL interni senza modificare logica
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/components/pratiche/forms/FormDistribuzioneUtili.tsx')
+          s = p.read_text()
+          replacements = {
+            '`/api/pratiche/${praticaId}/soci`': '`/api/pratiche/${encodeURIComponent(String(praticaId))}/soci`',
+            '`/api/clienti-organi?cliente_id=${pratica.cliente_id}`': '`/api/clienti-organi?cliente_id=${encodeURIComponent(String(pratica.cliente_id))}`',
+            '`/api/pratiche/${praticaId}/modelli`': '`/api/pratiche/${encodeURIComponent(String(praticaId))}/modelli`',
+            '`/api/pratiche/${praticaId}/documenti`': '`/api/pratiche/${encodeURIComponent(String(praticaId))}/documenti`',
+            '`/api/pratiche/${praticaId}`': '`/api/pratiche/${encodeURIComponent(String(praticaId))}`',
+            '`/api/pratiche/${praticaId}/genera-documento`': '`/api/pratiche/${encodeURIComponent(String(praticaId))}/genera-documento`',
+            '`/api/pratiche/${praticaId}/soci/${s.id}`': '`/api/pratiche/${encodeURIComponent(String(praticaId))}/soci/${encodeURIComponent(String(s.id))}`',
+            '`/api/pratiche/${praticaId}/documento-modificato`': '`/api/pratiche/${encodeURIComponent(String(praticaId))}/documento-modificato`',
+            '`/api/pratiche/${praticaId}/documenti/${doc.id}`': '`/api/pratiche/${encodeURIComponent(String(praticaId))}/documenti/${encodeURIComponent(String(doc.id))}`',
+          }
+          for old,new in replacements.items():
+            count=s.count(old)
+            if count:
+              s=s.replace(old,new)
+          p.write_text(s)
+          PY
+
+          git diff --check
+          git diff -- src/components/pratiche/forms/FormDistribuzioneUtili.tsx
+
+      - name: Verifica che payload e metodi non cambino
+        run: |
+          git diff --unified=0 -- src/components/pratiche/forms/FormDistribuzioneUtili.tsx | grep -E '^[+-].*(method:|body:|JSON.stringify|setForm|setSoci|setDocumenti|alert\(|confirm\()' && { echo 'ERRORE: modificata logica funzionale'; exit 1; } || true
+
+      - name: Commit hardening
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/pratiche/forms/FormDistribuzioneUtili.tsx
+          git diff --cached --quiet && exit 0
+          git commit -m "fix: hardening URL interni distribuzione utili"
+          git push origin security/codeql-ssrf-20260901
