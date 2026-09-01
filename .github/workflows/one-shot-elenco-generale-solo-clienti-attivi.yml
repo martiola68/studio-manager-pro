@@ -1,0 +1,44 @@
+name: One-shot filtra elenco generale scadenzari
+on:
+  push:
+    branches:
+      - main
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[elenco-scadenzari-clienti-attivi-fixed]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Mostra solo clienti attivi reali
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/pages/scadenze/elenco-generale.tsx')
+          s = p.read_text()
+          old = '''  .eq("studio_id", userData.studio_id)
+  .order("ragione_sociale", { ascending: true });'''
+          new = '''  .eq("studio_id", userData.studio_id)
+  .eq("attivo", true)
+  .eq("cliente", true)
+  .order("ragione_sociale", { ascending: true });'''
+          count = s.count(old)
+          if count != 1:
+            raise SystemExit(f'Query target: atteso 1, trovato {count}')
+          p.write_text(s.replace(old, new, 1))
+          Path('.github/workflows/one-shot-elenco-generale-solo-clienti-attivi.yml').unlink()
+          PY
+      - name: Verifica diff limitato al filtro query
+        run: |
+          git diff -- src/pages/scadenze/elenco-generale.tsx
+          test "$(git diff --numstat -- src/pages/scadenze/elenco-generale.tsx | awk '{print $1+$2}')" -eq 2
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/scadenze/elenco-generale.tsx .github/workflows/one-shot-elenco-generale-solo-clienti-attivi.yml
+          git commit -m "fix: esclude inattivi e non clienti dall'elenco scadenzari [elenco-scadenzari-clienti-attivi-fixed]"
+          git push origin main
