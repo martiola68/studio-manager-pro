@@ -25,6 +25,7 @@ type Dipendente = {
 
   orario_giornaliero: number | null;
 
+data_assunzione: string | null;
 data_cessazione: string | null;
 tipo_rapporto: string | null;
 
@@ -168,6 +169,7 @@ setQualifiche(qualificheData ?? []);
           codice_dipendente: dipendente.codice_dipendente,
           codice_soggetto_paghe: dipendente.codice_soggetto_paghe,
             numero_rapporto_paghe: dipendente.numero_rapporto_paghe,
+          data_assunzione: dipendente.data_assunzione || null,
           data_cessazione: dipendente.data_cessazione || null,
             orario_giornaliero: dipendente.orario_giornaliero,
               attivo: dipendente.attivo,
@@ -220,7 +222,7 @@ setQualifiche(qualificheData ?? []);
               </div>
             ) : (
               <div className="overflow-x-auto rounded-md border">
-                <table className="min-w-[1600px] w-full text-xs">
+                <table className="min-w-[1750px] w-full text-xs">
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="p-2 text-left">Dipendente</th>
@@ -232,6 +234,7 @@ setQualifiche(qualificheData ?? []);
                         
                       <th className="p-2 text-left">Ore giorno</th>
 
+                      <th className="p-2 text-left">Data assunzione</th>
                       <th className="p-2 text-left">Data cessazione</th>
                       <th className="p-2 text-center">Attivo</th>
                       <th className="p-2 text-right">Azioni</th>
@@ -288,6 +291,16 @@ setQualifiche(qualificheData ?? []);
                       
                         <td className="p-2">
                           <Input type="number" step="0.25" value={dip.orario_giornaliero ?? 8} onChange={(e) => updateField(dip.id, 'orario_giornaliero', Number(e.target.value))} />
+                        </td>
+
+                        <td className="p-2">
+                          <Input
+                            type="date"
+                            value={dip.data_assunzione ?? ''}
+                            onChange={(e) =>
+                              updateField(dip.id, 'data_assunzione', e.target.value || null)
+                            }
+                          />
                         </td>
 
                         <td className="p-2">

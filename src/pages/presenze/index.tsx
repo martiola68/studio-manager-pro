@@ -29,6 +29,7 @@ type Dipendente = {
   cognome: string | null;
   email: string | null;
   orario_giornaliero: number | null;
+  data_assunzione: string | null;
   data_cessazione: string | null;
   attivo: boolean | null;
 };
@@ -550,6 +551,7 @@ const days = useMemo<DayInfo[]>(() => {
               cognome,
               email,
               orario_giornaliero,
+              data_assunzione,
               data_cessazione,
               attivo
             `)
@@ -571,6 +573,7 @@ const days = useMemo<DayInfo[]>(() => {
               cognome,
               email,
               orario_giornaliero,
+              data_assunzione,
               data_cessazione,
               attivo
             `)
@@ -592,7 +595,11 @@ const days = useMemo<DayInfo[]>(() => {
       if (festivitaResult.error) throw festivitaResult.error;
       if (dipendentiResult.error) throw dipendentiResult.error;
 
-      const loadedDipendenti = (dipendentiResult.data ?? []) as Dipendente[];
+      const loadedDipendenti = ((dipendentiResult.data ?? []) as Dipendente[]).filter(
+        (dipendente) =>
+          (!dipendente.data_assunzione || dipendente.data_assunzione <= endDate) &&
+          (!dipendente.data_cessazione || dipendente.data_cessazione >= startDate),
+      );
       const loadedFestivita = (festivitaResult.data ?? []) as Festivita[];
 
       setCodici((codiciResult.data ?? []) as CodicePresenza[]);
@@ -700,6 +707,15 @@ const canEditEmployee = (utenteId: string) => {
   };
 
 const getCode = (utenteId: string, day: DayInfo) => {
+  const dipendente = dipendenti.find((item) => item.utente_id === utenteId);
+
+  if (
+    (dipendente?.data_assunzione && day.date < dipendente.data_assunzione) ||
+    (dipendente?.data_cessazione && day.date > dipendente.data_cessazione)
+  ) {
+    return '';
+  }
+
   const savedCode = values[`${utenteId}|${day.date}`];
 
   if (savedCode) {
