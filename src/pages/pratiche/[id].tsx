@@ -180,7 +180,7 @@ percentuale_soci_presenti: "100",
   useEffect(() => {
     async function caricaPratica() {
       try {
-        const res = await fetch(`/api/pratiche/${praticaId}`, {
+        const res = await fetch(`/api/pratiche/${encodeURIComponent(String(praticaId))}`, {
           cache: "no-store",
         });
 
@@ -302,7 +302,7 @@ if (praticaId) {
   async function caricaModelli() {
   try {
     const res = await fetch(
-      `/api/pratiche/${praticaId}/modelli`,
+      `/api/pratiche/${encodeURIComponent(String(praticaId))}/modelli`,
       {
         cache: "no-store",
       }
@@ -320,7 +320,7 @@ if (praticaId) {
 
 async function caricaSoci() {
   try {
-    const res = await fetch(`/api/pratiche/${praticaId}/soci`, {
+    const res = await fetch(`/api/pratiche/${encodeURIComponent(String(praticaId))}/soci`, {
       cache: "no-store",
     });
 
@@ -369,7 +369,7 @@ if (res.ok) {
   async function caricaSoggetti() {
   try {
     const res = await fetch(
-      `/api/pratiche/${praticaId}/soggetti`,
+      `/api/pratiche/${encodeURIComponent(String(praticaId))}/soggetti`,
       {
         cache: "no-store",
       }
@@ -388,7 +388,7 @@ if (res.ok) {
   async function caricaDocumenti() {
   try {
     const res = await fetch(
-      `/api/pratiche/${praticaId}/documenti`,
+      `/api/pratiche/${encodeURIComponent(String(praticaId))}/documenti`,
       {
         cache: "no-store",
       }
@@ -416,7 +416,7 @@ async function uploadDocumento() {
     formData.append("tipo_documento", tipoDocumento);
 
     const res = await fetch(
-      `/api/pratiche/${praticaId}/documenti`,
+      `/api/pratiche/${encodeURIComponent(String(praticaId))}/documenti`,
       {
         method: "POST",
         body: formData,
@@ -446,7 +446,7 @@ async function uploadDocumento() {
     setMessaggio("");
 
     try {
-      const res = await fetch(`/api/pratiche/${praticaId}`, {
+      const res = await fetch(`/api/pratiche/${encodeURIComponent(String(praticaId))}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

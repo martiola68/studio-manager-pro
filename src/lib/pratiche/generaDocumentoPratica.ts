@@ -7,7 +7,7 @@ export async function generaDocumentoPratica({
   codiceModello: string;
   onSuccess?: () => Promise<void> | void;
 }) {
-  const res = await fetch(`/api/pratiche/${praticaId}/genera-documento`, {
+  const res = await fetch(`/api/pratiche/${encodeURIComponent(String(praticaId))}/genera-documento`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
