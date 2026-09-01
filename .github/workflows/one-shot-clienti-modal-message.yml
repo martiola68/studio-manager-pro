@@ -1,0 +1,40 @@
+name: One-shot aggiorna messaggio disattivazione cliente
+on:
+  push:
+    branches:
+      - main
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[clienti-modal-message-fixed]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Modifica esclusivamente il messaggio della modale
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/pages/clienti/index.tsx')
+          s = p.read_text()
+          old = ': `Confermi di voler disattivare "${nominativo}"?\\n\\nIl nominativo verrà escluso dal filtro dei soggetti attivi ma resterà presente in anagrafica.`'
+          new = ': `Confermi di voler disattivare "${nominativo}"?\\n\\nIl nominativo verrà escluso dal filtro dei soggetti attivi ma resterà presente in anagrafica.\\n\\nATTENZIONE: il nominativo verrà cancellato da tutti gli scadenzari in cui è presente.`'
+          count = s.count(old)
+          if count != 1:
+            raise SystemExit(f'Messaggio target: atteso 1, trovato {count}')
+          p.write_text(s.replace(old, new, 1))
+          Path('.github/workflows/one-shot-clienti-modal-message.yml').unlink()
+          PY
+      - name: Verifica diff limitato alla sola stringa
+        run: |
+          git diff -- src/pages/clienti/index.tsx
+          test "$(git diff --numstat -- src/pages/clienti/index.tsx | awk '{print $1+$2}')" -eq 2
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/clienti/index.tsx .github/workflows/one-shot-clienti-modal-message.yml
+          git commit -m "ux: completa avviso disattivazione cliente [clienti-modal-message-fixed]"
+          git push origin main
