@@ -27,7 +27,7 @@ export default function StoricoControlliGestione() {
 
   async function load() {
     const url = clienteId
-      ? `/api/controllo-gestione?storico=true&cliente_id=${clienteId}`
+      ? `/api/controllo-gestione?storico=true&cliente_id=${encodeURIComponent(String(clienteId))}`
       : "/api/controllo-gestione?storico=true";
 
     const res = await fetch(url);
@@ -43,7 +43,7 @@ async function elimina(id: string) {
     return;
   }
 
-  const res = await fetch(`/api/controllo-gestione/${id}`, {
+  const res = await fetch(`/api/controllo-gestione/${encodeURIComponent(String(id))}`, {
     method: "DELETE",
   });
 
@@ -57,7 +57,7 @@ async function elimina(id: string) {
 }
 
   async function download(allegatoId: string) {
-    const res = await fetch(`/api/controllo-gestione/x/allegati/${allegatoId}`);
+    const res = await fetch(`/api/controllo-gestione/x/allegati/${encodeURIComponent(String(allegatoId))}`);
     const data = await res.json();
     window.open(data.url, "_blank");
   }

@@ -89,7 +89,7 @@ setClienti(clientiData || []);
 
     
       const response = await fetch(
-        `/api/pratiche/variazioni?studio_id=${studioId}`
+        `/api/pratiche/variazioni?studio_id=${encodeURIComponent(String(studioId))}`
       );
 
       const result = await response.json();
@@ -212,7 +212,7 @@ const payload = {
   async function elimina(id: string) {
     if (!confirm("Eliminare la variazione?")) return;
 
-    await fetch(`/api/pratiche/variazioni?id=${id}`, {
+    await fetch(`/api/pratiche/variazioni?id=${encodeURIComponent(String(id))}`, {
       method: "DELETE",
     });
 
