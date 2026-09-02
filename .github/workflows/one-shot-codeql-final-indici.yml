@@ -1,0 +1,263 @@
+name: One-shot CodeQL ultimo alert indici
+
+on:
+  push:
+    branches:
+      - security/codeql-final-indici-20260902
+    paths:
+      - '.github/workflows/one-shot-codeql-final-indici.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/codeql-final-indici-20260902
+          fetch-depth: 0
+
+      - name: Elimina DOMParser mantenendo estrazione XBRL
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/pages/controllo-gestione/indici.tsx')
+          s = p.read_text()
+
+          old_helpers = '''function getTagValue(xml: Document, names: string[], context = 'Corrente') {
+  for (const name of names) {
+    const nodes = Array.from(xml.getElementsByTagName('*')).filter((node) => {
+      const local = node.localName || node.nodeName.split(':').pop();
+      const contextRef = node.getAttribute('contextRef') || '';
+      return local === name && contextRef.includes(context);
+    });
+
+    if (nodes.length > 0) {
+      return num(nodes[0].textContent);
+    }
+  }
+
+  return 0;
+}
+
+function getStringTagValue(xml: Document, names: string[]) {
+  for (const name of names) {
+    const nodes = Array.from(xml.getElementsByTagName('*')).filter((node) => {
+      const local = node.localName || node.nodeName.split(':').pop();
+      return local === name;
+    });
+
+    if (nodes.length > 0) {
+      return String(nodes[0].textContent || '').trim();
+    }
+  }
+
+  return '';
+}'''
+
+          new_helpers = '''type XbrlElement = {
+  attributes: string;
+  text: string;
+};
+
+function getXmlAttribute(attributes: string, name: string) {
+  let cursor = 0;
+
+  while (cursor < attributes.length) {
+    const found = attributes.indexOf(name, cursor);
+    if (found < 0) return '';
+
+    const before = found === 0 ? ' ' : attributes[found - 1];
+    const afterName = found + name.length;
+    const boundaryBefore = /\\s/.test(before);
+
+    if (!boundaryBefore) {
+      cursor = afterName;
+      continue;
+    }
+
+    let i = afterName;
+    while (i < attributes.length && /\\s/.test(attributes[i])) i++;
+    if (attributes[i] !== '=') {
+      cursor = afterName;
+      continue;
+    }
+
+    i++;
+    while (i < attributes.length && /\\s/.test(attributes[i])) i++;
+    const quote = attributes[i];
+    if (quote !== '\"' && quote !== "'") return '';
+
+    const end = attributes.indexOf(quote, i + 1);
+    return end >= 0 ? attributes.slice(i + 1, end) : '';
+  }
+
+  return '';
+}
+
+function decodeXmlText(value: string) {
+  let result = value
+    .replaceAll('&lt;', '<')
+    .replaceAll('&gt;', '>')
+    .replaceAll('&quot;', '\"')
+    .replaceAll('&apos;', "'")
+    .replaceAll('&amp;', '&');
+
+  let cursor = 0;
+  while (cursor < result.length) {
+    const start = result.indexOf('&#', cursor);
+    if (start < 0) break;
+    const end = result.indexOf(';', start + 2);
+    if (end < 0) break;
+
+    const token = result.slice(start + 2, end);
+    const hex = token.startsWith('x') || token.startsWith('X');
+    const digits = hex ? token.slice(1) : token;
+    const codePoint = Number.parseInt(digits, hex ? 16 : 10);
+
+    if (Number.isInteger(codePoint) && codePoint >= 0 && codePoint <= 0x10ffff) {
+      result = result.slice(0, start) + String.fromCodePoint(codePoint) + result.slice(end + 1);
+      cursor = start + 1;
+    } else {
+      cursor = end + 1;
+    }
+  }
+
+  return result.trim();
+}
+
+function findXbrlElement(source: string, localName: string, context = ''): XbrlElement | null {
+  let cursor = 0;
+
+  while (cursor < source.length) {
+    const start = source.indexOf('<', cursor);
+    if (start < 0) return null;
+    const end = source.indexOf('>', start + 1);
+    if (end < 0) return null;
+
+    const opening = source.slice(start + 1, end).trim();
+    cursor = end + 1;
+
+    if (!opening || opening[0] === '/' || opening[0] === '!' || opening[0] === '?' || opening.endsWith('/')) {
+      continue;
+    }
+
+    let nameEnd = 0;
+    while (nameEnd < opening.length && !/\\s/.test(opening[nameEnd])) nameEnd++;
+    const qualifiedName = opening.slice(0, nameEnd);
+    const colon = qualifiedName.lastIndexOf(':');
+    const currentLocalName = colon >= 0 ? qualifiedName.slice(colon + 1) : qualifiedName;
+
+    if (currentLocalName !== localName) continue;
+
+    const attributes = opening.slice(nameEnd);
+    if (context && !getXmlAttribute(attributes, 'contextRef').includes(context)) continue;
+
+    const closing = `</${qualifiedName}>`;
+    const closeStart = source.indexOf(closing, end + 1);
+    if (closeStart < 0) continue;
+
+    return {
+      attributes,
+      text: source.slice(end + 1, closeStart),
+    };
+  }
+
+  return null;
+}
+
+function getTagValue(xbrl: string, names: string[], context = 'Corrente') {
+  for (const name of names) {
+    const element = findXbrlElement(xbrl, name, context);
+    if (element) return num(decodeXmlText(element.text));
+  }
+  return 0;
+}
+
+function getStringTagValue(xbrl: string, names: string[]) {
+  for (const name of names) {
+    const element = findXbrlElement(xbrl, name);
+    if (element) return decodeXmlText(element.text);
+  }
+  return '';
+}
+
+function getContextYear(xbrl: string) {
+  let cursor = 0;
+
+  while (cursor < xbrl.length) {
+    const remaining = xbrl.slice(cursor);
+    const context = findXbrlElement(remaining, 'context');
+    if (!context) return '';
+
+    const contextId = getXmlAttribute(context.attributes, 'id');
+    if (contextId.includes('Corrente')) {
+      const instant = findXbrlElement(context.text, 'instant');
+      const endDate = findXbrlElement(context.text, 'endDate');
+      const date = instant?.text || endDate?.text || '';
+      return decodeXmlText(date).slice(0, 4);
+    }
+
+    const nextContext = remaining.indexOf('</', remaining.indexOf('<context'));
+    cursor += nextContext >= 0 ? nextContext + 2 : remaining.length;
+  }
+
+  return '';
+}'''
+          assert s.count(old_helpers) == 1, f'helper block trovato {s.count(old_helpers)} volte'
+          s = s.replace(old_helpers, new_helpers)
+
+          old_parse = '''      const text = await file.text();
+      const parser = new DOMParser();
+      const xml = parser.parseFromString(text, 'application/xml');
+
+      const parserError = xml.getElementsByTagName('parsererror');
+      if (parserError.length > 0) {
+        throw new Error('File XML/XBRL non leggibile.');
+      }
+
+      const societa = getStringTagValue(xml, [
+  'DatiAnagraficiDenominazione',
+]);
+
+      const codiceFiscale =
+        xml.querySelector('identifier')?.textContent?.trim() || '';
+
+      const anno =
+        xml.querySelector('context[id*=\"Corrente\"] instant')?.textContent?.slice(0, 4) ||
+        xml.querySelector('context[id*=\"Corrente\"] endDate')?.textContent?.slice(0, 4) ||
+        '';'''
+          new_parse = '''      const text = await file.text();
+      if (!text.includes('<') || !text.includes('>')) {
+        throw new Error('File XML/XBRL non leggibile.');
+      }
+
+      const societa = getStringTagValue(text, [
+  'DatiAnagraficiDenominazione',
+]);
+
+      const codiceFiscale = getStringTagValue(text, ['identifier']);
+      const anno = getContextYear(text);'''
+          assert s.count(old_parse) == 1, f'parse block trovato {s.count(old_parse)} volte'
+          s = s.replace(old_parse, new_parse)
+
+          # Da questo punto in poi gli stessi helper ricevono il testo XBRL anziché un Document.
+          s = s.replace('getTagValue(xml,', 'getTagValue(text,')
+
+          p.write_text(s)
+          PY
+
+          git diff --check
+          test "$(git diff --name-only)" = "src/pages/controllo-gestione/indici.tsx"
+          ! grep -q "DOMParser" src/pages/controllo-gestione/indici.tsx
+          ! grep -q "parseFromString" src/pages/controllo-gestione/indici.tsx
+
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/controllo-gestione/indici.tsx
+          git commit -m "fix: elimina reinterpretazione DOM XBRL CodeQL"
+          git push origin security/codeql-final-indici-20260902
