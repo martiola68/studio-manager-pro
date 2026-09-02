@@ -1,0 +1,46 @@
+name: One-shot CodeQL fascicolo
+
+on:
+  push:
+    branches:
+      - security/codeql-final-fascicolo-20260902
+    paths:
+      - '.github/workflows/one-shot-codeql-final-fascicolo.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/codeql-final-fascicolo-20260902
+          fetch-depth: 0
+
+      - name: Sostituisce solo la navigazione Verifica finale
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/pages/revisione-controllo/fascicolo.tsx')
+          s = p.read_text()
+          old = '''  onClick={() =>\n    router.push(\n      `/revisione-controllo/verifica-finale?incarico_id=${incaricoId}&anno=${\n        fascicolo?.esercizio || esercizio\n      }`\n    )\n  }'''
+          new = '''  onClick={() =>\n    router.push({\n      pathname: \"/revisione-controllo/verifica-finale\",\n      query: {\n        incarico_id: incaricoId,\n        anno: fascicolo?.esercizio || esercizio,\n      },\n    })\n  }'''
+          assert s.count(old) == 1, f'blocco atteso 1 volta, trovato {s.count(old)}'
+          p.write_text(s.replace(old, new))
+          PY
+          git diff --check
+
+      - name: Verifica perimetro
+        run: |
+          changed=$(git diff --name-only)
+          test "$changed" = "src/pages/revisione-controllo/fascicolo.tsx"
+
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/revisione-controllo/fascicolo.tsx
+          git commit -m "fix: hardening navigazione fascicolo CodeQL"
+          git push origin security/codeql-final-fascicolo-20260902
