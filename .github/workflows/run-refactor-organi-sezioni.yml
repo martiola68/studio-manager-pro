@@ -1,0 +1,39 @@
+name: Run Soci e Organi sociali refactor
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - scripts/refactor-organi-sezioni-once.py
+
+permissions:
+  contents: write
+
+jobs:
+  refactor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply isolated page refactor
+        run: python scripts/refactor-organi-sezioni-once.py
+
+      - name: Verify only target page changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed="$(git diff --name-only)"
+          test "$changed" = "src/pages/clienti/organi-sociali.tsx"
+
+      - name: Commit page refactor
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/clienti/organi-sociali.tsx
+          git commit -m "Refactor Soci e Organi sociali into dedicated sections"
+          git push origin HEAD:main
