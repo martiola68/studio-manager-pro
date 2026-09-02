@@ -1,4 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
+import { randomInt } from "crypto";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseAdmin = createClient(
@@ -16,7 +17,7 @@ function generaPasswordTemporanea() {
   const chars =
     "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@$%";
   return Array.from({ length: 12 }, () =>
-    chars[Math.floor(Math.random() * chars.length)]
+    chars[randomInt(chars.length)]
   ).join("");
 }
 

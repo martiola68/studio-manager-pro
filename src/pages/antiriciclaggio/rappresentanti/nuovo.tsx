@@ -822,14 +822,50 @@ const result = await sendRichiestaDocumentoRappresentante({
   result?.data?.id || result?.id || result?.record?.id || "";
 
 if (returnTo) {
-  const safeReturnTo = getSafeInternalReturnPath(
-    returnTo,
-    "/antiriciclaggio/rappresentanti"
-  );
+  try {
+    const parsedReturnTo = new URL(
+      returnTo,
+      "https://app.studiomanagerpro.it"
+    );
 
-  const sep = safeReturnTo.includes("?") ? "&" : "?";
+    if (
+      parsedReturnTo.pathname ===
+      "/antiriciclaggio/modello-av4"
+    ) {
+      const allowedKeys = [
+        "studio_id",
+        "pratica_id",
+        "societa_id",
+        "av1_id",
+        "cliente_id",
+        "id",
+      ] as const;
 
-  await router.push(`${safeReturnTo}${sep}rapp_saved=1`);
+      const safeQuery: Record<string, string> = {
+        rapp_saved: "1",
+      };
+
+      for (const key of allowedKeys) {
+        const value = parsedReturnTo.searchParams.get(key);
+        if (value) {
+          safeQuery[key] = value;
+        }
+      }
+
+      await router.push({
+        pathname: "/antiriciclaggio/modello-av4",
+        query: safeQuery,
+      });
+      return;
+    }
+  } catch {
+    // usa il fallback statico qui sotto
+  }
+
+  await router.push({
+    pathname: "/antiriciclaggio/rappresentanti",
+    query: { rapp_saved: "1" },
+  });
   return;
 }
 
