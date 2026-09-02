@@ -29,6 +29,12 @@ jobs:
           changed="$(git diff --name-only)"
           test "$changed" = "src/pages/clienti/organi-sociali.tsx"
 
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build guard
+        run: npm run build
+
       - name: Commit page refinement
         shell: bash
         run: |
