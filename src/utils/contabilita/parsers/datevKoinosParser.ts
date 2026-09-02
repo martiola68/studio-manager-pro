@@ -137,17 +137,26 @@ function parsePeriodo(
   };
 }
 
+const MAX_CSV_LINE_LENGTH = 100_000;
+
 function splitCsvLine(line: string): string[] {
   /*
    * Il CSV DATEV utilizza ; come separatore.
    * Alcuni campi possono essere racchiusi tra virgolette.
    */
+  if (line.length > MAX_CSV_LINE_LENGTH) {
+    throw new Error("Riga CSV DATEV troppo lunga");
+  }
+
   const result: string[] = [];
 
   let current = "";
   let quoted = false;
 
-  for (let i = 0; i < line.length; i++) {
+  for (let i = 0; i < MAX_CSV_LINE_LENGTH; i++) {
+    if (i >= line.length) {
+      break;
+    }
     const char = line[i];
 
     if (char === '"') {
@@ -245,11 +254,19 @@ export function parseDatevKoinosCsv(
       numeroRiga === 2 &&
       col0
     ) {
-      const match = col0.match(/^(\d+)\s+(.+)$/);
+      const trimmedCol0 = col0.trim();
+      const separatorIndex = trimmedCol0.search(/[ \t]/);
 
-      if (match) {
-        codiceAzienda = match[1];
-        societa = match[2].trim();
+      if (separatorIndex > 0) {
+        const possibileCodice = trimmedCol0.slice(0, separatorIndex);
+        const possibileSocieta = trimmedCol0.slice(separatorIndex).trim();
+
+        if (/^\d+$/.test(possibileCodice) && possibileSocieta) {
+          codiceAzienda = possibileCodice;
+          societa = possibileSocieta;
+        } else {
+          societa = col0;
+        }
       } else {
         societa = col0;
       }

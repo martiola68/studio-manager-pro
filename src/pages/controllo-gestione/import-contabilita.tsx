@@ -1308,7 +1308,33 @@ if (file) {
       origineRevisione &&
       returnTo
     ) {
-      router.push(returnTo);
+      let annoRitorno = "";
+
+      try {
+        const parsedReturnTo = new URL(
+          returnTo,
+          "https://app.studiomanagerpro.it"
+        );
+
+        if (
+          parsedReturnTo.pathname ===
+          "/revisione-controllo/controlli"
+        ) {
+          const candidateAnno =
+            parsedReturnTo.searchParams.get("anno") || "";
+
+          if (/^\d{4}$/.test(candidateAnno)) {
+            annoRitorno = candidateAnno;
+          }
+        }
+      } catch {
+        // usa il fallback statico qui sotto
+      }
+
+      router.push({
+        pathname: "/revisione-controllo/controlli",
+        query: annoRitorno ? { anno: annoRitorno } : {},
+      });
       return;
     }
 
