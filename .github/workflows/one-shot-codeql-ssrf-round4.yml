@@ -1,0 +1,86 @@
+name: One-shot CodeQL SSRF round 4
+
+on:
+  push:
+    branches:
+      - security/codeql-ssrf-round4-20260901
+    paths:
+      - '.github/workflows/one-shot-codeql-ssrf-round4.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/codeql-ssrf-round4-20260901
+          fetch-depth: 0
+
+      - name: Sanitizza solo ID dinamici Revisione
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          patches = {
+            'src/pages/revisione-controllo/index.tsx': {
+              '`/api/revisione-controllo/${id}`': '`/api/revisione-controllo/${encodeURIComponent(String(id))}`',
+              '`/revisione-controllo/fascicolo?incarico_id=${item.id}`': '`/revisione-controllo/fascicolo?incarico_id=${encodeURIComponent(String(item.id))}`',
+              '`/revisione-controllo/nuovo?id=${item.id}`': '`/revisione-controllo/nuovo?id=${encodeURIComponent(String(item.id))}`',
+            },
+            'src/pages/revisione-controllo/nuovo.tsx': {
+              '`/api/revisione-controllo/${id}`': '`/api/revisione-controllo/${encodeURIComponent(String(id))}`',
+              '`/api/revisione-controllo/soggetti?incarico_id=${id}`': '`/api/revisione-controllo/soggetti?incarico_id=${encodeURIComponent(String(id))}`',
+              '`/api/revisione-controllo/${incaricoId}`': '`/api/revisione-controllo/${encodeURIComponent(String(incaricoId))}`',
+            },
+            'src/pages/revisione-controllo/fascicolo.tsx': {
+              '`/api/revisione-controllo/${incaricoId}`': '`/api/revisione-controllo/${encodeURIComponent(String(incaricoId))}`',
+            },
+          }
+
+          total = 0
+          for filename, replacements in patches.items():
+            p = Path(filename)
+            s = p.read_text()
+            for old, new in replacements.items():
+              count = s.count(old)
+              assert count >= 1, f'{filename}: pattern non trovato: {old}'
+              s = s.replace(old, new)
+              total += count
+            p.write_text(s)
+
+          assert total >= 8, f'attese almeno 8 sostituzioni, trovate {total}'
+          PY
+
+          git diff --check
+
+      - name: Verifica perimetro e logica invariata
+        run: |
+          changed=$(git diff --name-only | sort)
+          expected=$(printf '%s\n' \
+            src/pages/revisione-controllo/fascicolo.tsx \
+            src/pages/revisione-controllo/index.tsx \
+            src/pages/revisione-controllo/nuovo.tsx | sort)
+          test "$changed" = "$expected"
+
+          if git diff --unified=0 -- \
+            src/pages/revisione-controllo/fascicolo.tsx \
+            src/pages/revisione-controllo/index.tsx \
+            src/pages/revisione-controllo/nuovo.tsx \
+            | grep -E '^[+-].*(method:|body:|JSON.stringify|set[A-Z]|alert\(|confirm\(|window.confirm\()'; then
+            echo 'ERRORE: rilevata modifica funzionale'
+            exit 1
+          fi
+
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            src/pages/revisione-controllo/fascicolo.tsx \
+            src/pages/revisione-controllo/index.tsx \
+            src/pages/revisione-controllo/nuovo.tsx
+          git commit -m "fix: hardening URL Revisione CodeQL round 4"
+          git push origin security/codeql-ssrf-round4-20260901
