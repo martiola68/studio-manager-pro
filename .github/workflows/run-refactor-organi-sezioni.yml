@@ -5,6 +5,7 @@ on:
     branches:
       - main
     paths:
+      - .github/workflows/run-refactor-organi-sezioni.yml
       - scripts/refactor-organi-sezioni-once.py
       - scripts/refine-organi-ui-once.py
 
