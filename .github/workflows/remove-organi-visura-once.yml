@@ -1,0 +1,123 @@
+name: Remove organi visura import once
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/remove-organi-visura-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Remove only visura import from Soci e Organi sociali
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("src/pages/clienti/organi-sociali.tsx")
+          text = path.read_text(encoding="utf-8")
+          original = text
+
+          def remove_exact(block: str, label: str):
+              global text
+              count = text.count(block)
+              if count != 1:
+                  raise SystemExit(f"{label}: expected exactly 1 match, found {count}")
+              text = text.replace(block, "", 1)
+
+          def remove_between(start: str, end: str, label: str):
+              global text
+              i = text.find(start)
+              if i < 0:
+                  raise SystemExit(f"{label}: start marker not found")
+              j = text.find(end, i)
+              if j < 0:
+                  raise SystemExit(f"{label}: end marker not found")
+              if text.find(start, i + len(start)) >= 0:
+                  raise SystemExit(f"{label}: duplicate start marker")
+              text = text[:i] + text[j:]
+
+          remove_exact(
+              "const [anteprimaImportazione, setAnteprimaImportazione] =\n  useState<any[]>([]);\n\n",
+              "anteprima state",
+          )
+          remove_exact(
+              "const [showImportazioneVisura, setShowImportazioneVisura] =\n  useState(false);\n\n",
+              "show import state",
+          )
+          remove_exact(
+              "const [loadingImportazione, setLoadingImportazione] =\n  useState(false);\n\n",
+              "loading import state",
+          )
+
+          remove_between(
+              "async function importaVisura(\n",
+              "async function caricaTitolariEffettivi()",
+              "importaVisura function",
+          )
+
+          remove_between(
+              "async function importaSelezionatiDaVisura()",
+              "  function apriModificaNominativo()",
+              "visura confirm/helpers",
+          )
+
+          remove_between(
+              "  <button\n  type=\"button\"\n  disabled={!clienteId}\n  onClick={() =>\n    document\n      .getElementById(\n        \"visuraOrganiInput\"",
+              "  <button\n    type=\"button\"\n    style={secondaryButton}",
+              "visura button and file input",
+          )
+
+          remove_between(
+              "      {showImportazioneVisura && (\n",
+              "  {showNuovoNominativo && (",
+              "visura preview modal",
+          )
+
+          forbidden = [
+              "showImportazioneVisura",
+              "anteprimaImportazione",
+              "loadingImportazione",
+              "importaVisura",
+              "importaSelezionatiDaVisura",
+              "aggiornaRigaImportazione",
+              "selezionaTutteRigheImportazione",
+              "visuraOrganiInput",
+              "Importa da visura",
+              "Anteprima importazione visura",
+          ]
+          leftovers = [item for item in forbidden if item in text]
+          if leftovers:
+              raise SystemExit(f"Unexpected visura leftovers: {leftovers}")
+
+          if text == original:
+              raise SystemExit("No change produced")
+
+          path.write_text(text, encoding="utf-8")
+
+      - name: Verify only target page changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed="$(git diff --name-only)"
+          test "$changed" = "src/pages/clienti/organi-sociali.tsx"
+
+      - name: Remove one-shot workflow and commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/remove-organi-visura-once.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/clienti/organi-sociali.tsx .github/workflows/remove-organi-visura-once.yml
+          git commit -m "Remove import visura from Soci e Organi sociali"
+          git push origin HEAD:main
