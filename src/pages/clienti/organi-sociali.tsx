@@ -1998,9 +1998,10 @@ return (
     <button
       type="button"
       onClick={() =>
-        router.push(
-          `/clienti/titolari-effettivi/verifica?cliente_id=${clienteId}`
-        )
+        router.push({
+          pathname: "/clienti/titolari-effettivi/verifica",
+          query: { cliente_id: clienteId },
+        })
       }
       style={{
         padding: "9px 14px",
