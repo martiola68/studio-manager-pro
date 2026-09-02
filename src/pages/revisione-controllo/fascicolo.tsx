@@ -210,7 +210,7 @@ const [
 
       const res =
         await fetch(
-          `/api/revisione-controllo/${incaricoId}`
+          `/api/revisione-controllo/${encodeURIComponent(String(incaricoId))}`
         );
 
       const json =
@@ -420,7 +420,7 @@ if (valoreBase <= 0) {
 
       const res =
         await fetch(
-          `/api/revisione-controllo/${incaricoId}`,
+          `/api/revisione-controllo/${encodeURIComponent(String(incaricoId))}`,
           {
             method: "PUT",
 

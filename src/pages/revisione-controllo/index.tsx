@@ -116,7 +116,7 @@ export default function RevisioneControlloPage() {
     try {
       setError(null);
 
-      const res = await fetch(`/api/revisione-controllo/${id}`, {
+      const res = await fetch(`/api/revisione-controllo/${encodeURIComponent(String(id))}`, {
         method: "DELETE",
       });
 
@@ -297,7 +297,7 @@ export default function RevisioneControlloPage() {
   title="Apri fascicolo"
   onClick={() =>
     router.push(
-      `/revisione-controllo/fascicolo?incarico_id=${item.id}`
+      `/revisione-controllo/fascicolo?incarico_id=${encodeURIComponent(String(item.id))}`
     )
   }
   className="rounded-md border bg-white p-2 text-blue-700 hover:bg-blue-50"
@@ -307,7 +307,7 @@ export default function RevisioneControlloPage() {
                           <button
                             title="Modifica"
                             onClick={() =>
-                              router.push(`/revisione-controllo/nuovo?id=${item.id}`)
+                              router.push(`/revisione-controllo/nuovo?id=${encodeURIComponent(String(item.id))}`)
                             }
                             className="rounded-md border bg-white p-2 hover:bg-gray-50"
                           >
