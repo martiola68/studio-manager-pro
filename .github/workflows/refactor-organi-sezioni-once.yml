@@ -1,0 +1,338 @@
+name: Refactor organi sections once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/refactor-organi-sezioni-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Refactor only Soci e Organi sociali page
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("src/pages/clienti/organi-sociali.tsx")
+          text = path.read_text(encoding="utf-8")
+          original = text
+
+          marker = '''const ruoliConPrincipale = [
+  "amministratore",
+  "amministratore_unico",
+  "amministratore_delegato",
+  "presidente_cda",
+  "vice_presidente_cda",
+  "consigliere",
+  "liquidatore",
+  "rappresentante_legale",
+];
+'''
+          addition = marker + '''
+const ruoliAmministrazione = [
+  "amministratore",
+  "amministratore_unico",
+  "amministratore_delegato",
+  "consigliere_delegato",
+  "presidente_cda",
+  "vice_presidente_cda",
+  "consigliere",
+  "liquidatore",
+  "rappresentante_legale",
+];
+
+const ruoliControllo = [
+  "sindaco_effettivo",
+  "presidente_collegio_sindacale",
+  "sindaco_unico",
+  "sindaco_supplente",
+  "revisore",
+];
+'''
+          if text.count(marker) != 1:
+              raise SystemExit("ruoli marker mismatch")
+          text = text.replace(marker, addition, 1)
+
+          state_marker = 'const [messaggio, setMessaggio] = useState("");\n'
+          state_add = state_marker + '''const [modalSezione, setModalSezione] = useState<"soci" | "amministrazione" | "controllo" | null>(null);
+const [ricercaNominativo, setRicercaNominativo] = useState("");
+const [ricercaApplicata, setRicercaApplicata] = useState("");
+'''
+          if text.count(state_marker) != 1:
+              raise SystemExit("state marker mismatch")
+          text = text.replace(state_marker, state_add, 1)
+
+          return_marker = 'return (\n  <main\n'
+          helpers = '''const sociVisualizzati = organi.filter((organo) => organo.ruolo === "socio");
+const amministrazioneVisualizzata = organi.filter((organo) =>
+  ruoliAmministrazione.includes(String(organo.ruolo || ""))
+);
+const controlloVisualizzato = organi.filter((organo) =>
+  ruoliControllo.includes(String(organo.ruolo || ""))
+);
+
+const nominativiRicercati = nominativi.filter((nominativo) => {
+  const q = ricercaApplicata.trim().toLowerCase();
+  if (!q) return true;
+  return [
+    nominativo.ragione_sociale,
+    nominativo.codice_fiscale,
+    nominativo.partita_iva,
+  ].some((valore) => String(valore || "").toLowerCase().includes(q));
+});
+
+function apriInserimentoSezione(sezione: "soci" | "amministrazione" | "controllo") {
+  setOrganoInModificaId("");
+  setDirittiCollegati([]);
+  setErroreDiritti("");
+  setRicercaNominativo("");
+  setRicercaApplicata("");
+  setForm({
+    soggetto_cliente_id: "",
+    ruolo: sezione === "soci" ? "socio" : sezione === "controllo" ? "sindaco_effettivo" : "amministratore",
+    carica: "",
+    percentuale_partecipazione: "",
+    titolo_possesso: "piena_proprieta",
+    percentuale_diritti_voto: "",
+    percentuale_diritti_utili: "",
+    note_titolo_possesso: "",
+    partecipazione_collegata_id: "",
+    presenza: "Presente",
+    principale: false,
+    attivo: true,
+    data_nomina: "",
+    durata_carica: "Fino a revoca",
+    data_scadenza: "",
+    data_cessazione: "",
+  });
+  setModalSezione(sezione);
+}
+
+async function apriModificaSezione(organo: any, sezione: "soci" | "amministrazione" | "controllo") {
+  await caricaInModifica(organo);
+  setRicercaNominativo("");
+  setRicercaApplicata("");
+  setModalSezione(sezione);
+}
+
+'''
+          if text.count(return_marker) != 1:
+              raise SystemExit("return marker mismatch")
+          text = text.replace(return_marker, helpers + return_marker, 1)
+
+          start = '''<div style={cardStyle}>
+  <h2 style={titleStyle}>
+    Aggiungi socio / organo
+  </h2>'''
+          end = '  {showNuovoNominativo && ('
+          i = text.find(start)
+          j = text.find(end, i)
+          if i < 0 or j < 0:
+              raise SystemExit("main form/table region markers not found")
+
+          replacement = r'''<div style={{ ...cardStyle, border: "1px solid #dbeafe" }}>
+  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+    <div>
+      <h2 style={titleStyle}>Soci</h2>
+      <div style={{ marginTop: 5, color: "#64748b", fontSize: 13 }}>
+        Partecipazioni al capitale e diritti collegati.
+      </div>
+    </div>
+    <button type="button" style={blueButton} onClick={() => apriInserimentoSezione("soci")}>
+      + Aggiungi socio
+    </button>
+  </div>
+
+  <div style={{ marginTop: 16, overflowX: "auto" }}>
+    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+      <thead>
+        <tr>
+          <th style={thStyle}>Nominativo</th>
+          <th style={thStyle}>Codice fiscale</th>
+          <th style={thStyle}>Tipologia del diritto</th>
+          <th style={thStyle}>Quota</th>
+          <th style={thStyle}>Voto</th>
+          <th style={thStyle}>Utili</th>
+          <th style={thStyle}>Dal</th>
+          <th style={thStyle}>Al</th>
+          <th style={thStyle}>Azioni</th>
+        </tr>
+      </thead>
+      <tbody>
+        {sociVisualizzati.map((o) => (
+          <React.Fragment key={o.id}>
+            <tr>
+              <td style={tdStyle}>{o.soggetto_cliente?.ragione_sociale || "—"}</td>
+              <td style={tdStyle}>{o.soggetto_cliente?.codice_fiscale || o.soggetto_cliente?.partita_iva || "—"}</td>
+              <td style={tdStyle}>{titoliPossessoLabel[String(o.titolo_possesso || "piena_proprieta")] || "Piena proprietà"}</td>
+              <td style={tdStyle}>{o.percentuale_partecipazione != null ? `${Number(o.percentuale_partecipazione).toFixed(2)}%` : "—"}</td>
+              <td style={tdStyle}>{o.percentuale_diritti_voto != null ? `${Number(o.percentuale_diritti_voto).toFixed(2)}%` : "—"}</td>
+              <td style={tdStyle}>{o.percentuale_diritti_utili != null ? `${Number(o.percentuale_diritti_utili).toFixed(2)}%` : "—"}</td>
+              <td style={tdStyle}>{formattaDataItaliana(o.data_nomina)}</td>
+              <td style={tdStyle}>{formattaDataItaliana(o.data_scadenza)}</td>
+              <td style={tdStyle}>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button type="button" style={iconButton} title="Modifica" onClick={() => void apriModificaSezione(o, "soci")}><Pencil size={16} /></button>
+                  {o.attivo && <button type="button" style={iconButton} title="Disattiva" onClick={() => disattivaOrgano(o)}><Power size={16} /></button>}
+                  <button type="button" style={iconDangerButton} title="Elimina" onClick={() => eliminaOrgano(o)}><Trash2 size={16} /></button>
+                </div>
+              </td>
+            </tr>
+            {(o.diritti_collegati || []).map((diritto: any) => (
+              <tr key={diritto.id} style={{ background: "#fff7f7" }}>
+                <td style={{ ...tdStyle, paddingLeft: 28, color: "#b91c1c", fontWeight: 700 }}>↳ {diritto.nominativo_nome || "—"}</td>
+                <td style={tdStyle}>{diritto.nominativo_codice_fiscale || "—"}</td>
+                <td style={tdStyle}>Nuda proprietà</td>
+                <td style={tdStyle}>{Number(diritto.percentuale_quota || 0).toFixed(2)}%</td>
+                <td style={tdStyle}>{diritto.percentuale_diritti_voto != null ? `${Number(diritto.percentuale_diritti_voto).toFixed(2)}%` : "—"}</td>
+                <td style={tdStyle}>{diritto.percentuale_diritti_utili != null ? `${Number(diritto.percentuale_diritti_utili).toFixed(2)}%` : "—"}</td>
+                <td style={tdStyle}>—</td><td style={tdStyle}>—</td>
+                <td style={tdStyle}><button type="button" style={iconDangerButton} title="Elimina collegamento" onClick={() => eliminaDirittoCollegato(diritto)}><Trash2 size={16} /></button></td>
+              </tr>
+            ))}
+          </React.Fragment>
+        ))}
+        {sociVisualizzati.length === 0 && <tr><td style={tdStyle} colSpan={9}>Nessun socio presente.</td></tr>}
+      </tbody>
+    </table>
+  </div>
+
+  <div style={{ marginTop: 14, padding: "12px 14px", borderRadius: 9, background: totaleQuoteCorretto ? "#dcfce7" : "#fee2e2", color: totaleQuoteCorretto ? "#166534" : "#991b1b", fontWeight: 800, display: "flex", justifyContent: "space-between" }}>
+    <span>Totale quote societarie</span><span>{totaleQuote.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%</span>
+  </div>
+</div>
+
+<div style={{ ...cardStyle, border: "1px solid #dbeafe" }}>
+  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+    <div>
+      <h2 style={titleStyle}>Organo di amministrazione</h2>
+      <div style={{ marginTop: 5, color: "#64748b", fontSize: 13 }}>Amministratori, consiglieri, liquidatori e rappresentanti legali.</div>
+    </div>
+    <button type="button" style={blueButton} onClick={() => apriInserimentoSezione("amministrazione")}>
+      + Aggiungi componente
+    </button>
+  </div>
+  <div style={{ marginTop: 16, overflowX: "auto" }}>
+    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+      <thead><tr><th style={thStyle}>Nominativo</th><th style={thStyle}>Codice fiscale</th><th style={thStyle}>Qualifica / Carica</th><th style={thStyle}>Dal</th><th style={thStyle}>Al</th><th style={thStyle}>Principale</th><th style={thStyle}>Azioni</th></tr></thead>
+      <tbody>
+        {amministrazioneVisualizzata.map((o) => (
+          <tr key={o.id}>
+            <td style={tdStyle}>{o.soggetto_cliente?.ragione_sociale || "—"}</td>
+            <td style={tdStyle}>{o.soggetto_cliente?.codice_fiscale || o.soggetto_cliente?.partita_iva || "—"}</td>
+            <td style={tdStyle}>{o.carica || ruoliLabel[o.ruolo] || "—"}</td>
+            <td style={tdStyle}>{formattaDataItaliana(o.data_nomina)}</td>
+            <td style={tdStyle}>{formattaDataItaliana(o.data_scadenza)}</td>
+            <td style={tdStyle}>{o.principale ? "Sì" : "No"}</td>
+            <td style={tdStyle}><div style={{ display: "flex", gap: 8 }}><button type="button" style={iconButton} title="Modifica" onClick={() => void apriModificaSezione(o, "amministrazione")}><Pencil size={16} /></button>{o.attivo && <button type="button" style={iconButton} title="Disattiva" onClick={() => disattivaOrgano(o)}><Power size={16} /></button>}<button type="button" style={iconDangerButton} title="Elimina" onClick={() => eliminaOrgano(o)}><Trash2 size={16} /></button></div></td>
+          </tr>
+        ))}
+        {amministrazioneVisualizzata.length === 0 && <tr><td style={tdStyle} colSpan={7}>Nessun componente dell'organo di amministrazione presente.</td></tr>}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{controlloVisualizzato.length > 0 && (
+  <div style={{ ...cardStyle, border: "1px solid #dbeafe" }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+      <div><h2 style={titleStyle}>Organo di controllo</h2><div style={{ marginTop: 5, color: "#64748b", fontSize: 13 }}>Sindaci, revisori e componenti dell'organo di controllo.</div></div>
+      <button type="button" style={blueButton} onClick={() => apriInserimentoSezione("controllo")}>+ Aggiungi componente</button>
+    </div>
+    <div style={{ marginTop: 16, overflowX: "auto" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <thead><tr><th style={thStyle}>Nominativo</th><th style={thStyle}>Codice fiscale</th><th style={thStyle}>Qualifica</th><th style={thStyle}>Dal</th><th style={thStyle}>Al</th><th style={thStyle}>Azioni</th></tr></thead>
+        <tbody>{controlloVisualizzato.map((o) => <tr key={o.id}><td style={tdStyle}>{o.soggetto_cliente?.ragione_sociale || "—"}</td><td style={tdStyle}>{o.soggetto_cliente?.codice_fiscale || o.soggetto_cliente?.partita_iva || "—"}</td><td style={tdStyle}>{o.carica || ruoliLabel[o.ruolo] || "—"}</td><td style={tdStyle}>{formattaDataItaliana(o.data_nomina)}</td><td style={tdStyle}>{formattaDataItaliana(o.data_scadenza)}</td><td style={tdStyle}><div style={{ display: "flex", gap: 8 }}><button type="button" style={iconButton} title="Modifica" onClick={() => void apriModificaSezione(o, "controllo")}><Pencil size={16} /></button>{o.attivo && <button type="button" style={iconButton} title="Disattiva" onClick={() => disattivaOrgano(o)}><Power size={16} /></button>}<button type="button" style={iconDangerButton} title="Elimina" onClick={() => eliminaOrgano(o)}><Trash2 size={16} /></button></div></td></tr>)}</tbody>
+      </table>
+    </div>
+  </div>
+)}
+
+{modalSezione && (
+  <div style={{ position: "fixed", inset: 0, zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: "rgba(15,23,42,.55)" }}>
+    <div style={{ width: "min(920px, 96vw)", maxHeight: "92vh", overflowY: "auto", borderRadius: 12, background: "#fff", boxShadow: "0 24px 70px rgba(15,23,42,.28)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", background: "#5b5b5b", color: "#fff", borderRadius: "12px 12px 0 0" }}>
+        <strong style={{ fontSize: 18 }}>{modalSezione === "soci" ? "Soci" : modalSezione === "amministrazione" ? "Organo di amministrazione" : "Organo di controllo"}</strong>
+        <button type="button" onClick={() => setModalSezione(null)} style={{ border: 0, background: "transparent", color: "#fff", fontSize: 22, cursor: "pointer" }}>×</button>
+      </div>
+
+      <div style={{ padding: 20 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 8, alignItems: "end" }}>
+          <div><label style={labelStyle}>Ricerca nominativo</label><input style={inputStyle} value={ricercaNominativo} onChange={(e) => setRicercaNominativo(e.target.value)} placeholder="Cognome e nome, codice fiscale o partita IVA" onKeyDown={(e) => { if (e.key === "Enter") setRicercaApplicata(ricercaNominativo); }} /></div>
+          <button type="button" style={secondaryButton} onClick={() => setRicercaApplicata(ricercaNominativo)}>Cerca</button>
+        </div>
+
+        <div style={{ marginTop: 12 }}><label style={labelStyle}>Nominativo</label><select style={inputStyle} value={form.soggetto_cliente_id} onChange={(e) => setForm((p) => ({ ...p, soggetto_cliente_id: e.target.value }))}><option value="">Seleziona nominativo</option>{nominativiRicercati.map((n) => <option key={n.id} value={n.id}>{n.ragione_sociale}{n.codice_fiscale ? ` — ${n.codice_fiscale}` : ""}</option>)}</select></div>
+
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 10 }}>
+          <button type="button" style={secondaryButton} onClick={() => { setNominativoInModificaId(null); setNuovoNominativo({ nome_cognome: "", codice_fiscale: "", email: "", luogo_nascita: "", data_nascita: "", indirizzo: "", citta: "", provincia: "", cap: "", tipologia_cliente: "Persona fisica" }); setShowNuovoNominativo(true); }}>+ Nuovo</button>
+          <button type="button" style={secondaryButton} disabled={!form.soggetto_cliente_id} onClick={apriModificaNominativo}>Modifica anagrafica</button>
+        </div>
+
+        {modalSezione === "soci" ? (
+          <>
+            <div style={{ marginTop: 18, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+              <div><label style={labelStyle}>Tipo</label><input style={{ ...inputStyle, background: "#f1f5f9" }} value="Socio" disabled /></div>
+              <div><label style={labelStyle}>Dal</label><input type="date" style={inputStyle} value={form.data_nomina} onChange={(e) => setForm((p) => ({ ...p, data_nomina: e.target.value }))} /></div>
+              <div><label style={labelStyle}>Al</label><input type="date" style={inputStyle} value={form.data_scadenza} onChange={(e) => setForm((p) => ({ ...p, data_scadenza: e.target.value }))} /></div>
+            </div>
+            <div style={{ marginTop: 16, padding: 16, border: "1px solid #dbeafe", borderRadius: 10, background: "#f8fbff" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1.2fr .7fr .7fr", gap: 12 }}>
+                <div><label style={labelStyle}>Tipologia del diritto</label><select style={inputStyle} value={form.titolo_possesso} onChange={(e) => { const titolo = e.target.value; const collegato = isTitoloCollegato(titolo); setForm((p) => ({ ...p, titolo_possesso: titolo, percentuale_diritti_voto: collegato ? "0" : titolo === "piena_proprieta" ? p.percentuale_partecipazione : p.percentuale_diritti_voto, percentuale_diritti_utili: collegato ? "0" : titolo === "piena_proprieta" ? p.percentuale_partecipazione : p.percentuale_diritti_utili, partecipazione_collegata_id: collegato ? p.partecipazione_collegata_id : "" })); }}><option value="piena_proprieta">Piena proprietà</option><option value="usufrutto">Usufrutto</option><option value="nuda_proprieta">Nuda proprietà</option><option value="pegno">Pegno</option><option value="sequestro">Sequestro</option><option value="intestazione_fiduciaria">Intestazione fiduciaria</option><option value="altro">Altro</option></select></div>
+                <div><label style={labelStyle}>Quota %</label><input type="number" min="0" max="100" step="0.01" style={inputStyle} value={form.percentuale_partecipazione} onChange={(e) => { const valore=e.target.value; setForm((p) => ({ ...p, percentuale_partecipazione: valore, percentuale_diritti_voto: p.titolo_possesso === "piena_proprieta" ? valore : p.percentuale_diritti_voto, percentuale_diritti_utili: p.titolo_possesso === "piena_proprieta" ? valore : p.percentuale_diritti_utili })); }} /></div>
+                <div><label style={labelStyle}>Diritti di voto %</label><input type="number" min="0" max="100" step="0.01" style={inputStyle} disabled={isTitoloCollegato(form.titolo_possesso)} value={form.percentuale_diritti_voto} onChange={(e) => setForm((p) => ({ ...p, percentuale_diritti_voto: e.target.value }))} /></div>
+              </div>
+              <div style={{ marginTop: 12 }}><label style={labelStyle}>Partecipazione agli utili %</label><input type="number" min="0" max="100" step="0.01" style={inputStyle} disabled={isTitoloCollegato(form.titolo_possesso)} value={form.percentuale_diritti_utili} onChange={(e) => setForm((p) => ({ ...p, percentuale_diritti_utili: e.target.value }))} /></div>
+              {isTitoloCollegato(form.titolo_possesso) && <div style={{ marginTop: 12 }}><label style={labelStyle}>Partecipazione principale da collegare</label><select style={inputStyle} value={form.partecipazione_collegata_id} onChange={(e) => setForm((p) => ({ ...p, partecipazione_collegata_id: e.target.value }))}><option value="">Seleziona partecipazione</option>{organi.filter((o) => o.ruolo === "socio" && o.attivo === true && String(o.titolo_possesso) === "usufrutto").map((o) => <option key={o.id} value={o.id}>{o.soggetto_cliente?.ragione_sociale || "Nominativo"} — {Number(o.percentuale_partecipazione || 0).toFixed(2)}%</option>)}</select></div>}
+            </div>
+          </>
+        ) : (
+          <div style={{ marginTop: 18, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+            <div><label style={labelStyle}>Qualifica</label><select style={inputStyle} value={form.ruolo} onChange={(e) => { const ruolo=e.target.value; setForm((p) => ({ ...p, ruolo, carica: ruoliLabel[ruolo] || ruolo, principale: consentePrincipale(ruolo) ? p.principale : false })); }}>{(modalSezione === "amministrazione" ? ruoliAmministrazione : ruoliControllo).map((r) => <option key={r} value={r}>{ruoliLabel[r] || r}</option>)}</select></div>
+            <div><label style={labelStyle}>Data nomina</label><input type="date" style={inputStyle} value={form.data_nomina} onChange={(e) => setForm((p) => ({ ...p, data_nomina: e.target.value }))} /></div>
+            <div><label style={labelStyle}>Data revoca / dimissioni</label><input type="date" style={inputStyle} value={form.data_scadenza} onChange={(e) => setForm((p) => ({ ...p, data_scadenza: e.target.value }))} /></div>
+            {modalSezione === "amministrazione" && <><div><label style={labelStyle}>Durata</label><select style={inputStyle} value={form.durata_carica} onChange={(e) => setForm((p) => ({ ...p, durata_carica: e.target.value }))}><option value="Fino a revoca">Fino a revoca</option><option value="Anni: 1">Anni: 1</option><option value="Anni: 2">Anni: 2</option><option value="Anni: 3">Anni: 3</option><option value="Anni: 4">Anni: 4</option><option value="Anni: 5">Anni: 5</option><option value="Fino al bilancio">Fino al bilancio</option></select></div><label style={{ ...labelStyle, display: "flex", alignItems: "center", gap: 8, marginTop: 28 }}><input type="checkbox" checked={form.principale} disabled={!consentePrincipale(form.ruolo)} onChange={(e) => setForm((p) => ({ ...p, principale: e.target.checked }))} /> Principale</label></>}
+          </div>
+        )}
+
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 22, borderTop: "1px solid #e2e8f0", paddingTop: 16 }}>
+          <button type="button" style={secondaryButton} onClick={() => setModalSezione(null)}>Annulla</button>
+          <button type="button" style={blueButton} onClick={salvaOrgano}>{organoInModificaId ? "Salva modifiche" : "OK"}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
+'''
+          text = text[:i] + replacement + text[j:]
+
+          forbidden = ["Aggiungi socio / organo", "Soci / Organi collegati"]
+          leftovers = [x for x in forbidden if x in text]
+          if leftovers:
+              raise SystemExit(f"old layout leftovers: {leftovers}")
+          if text == original:
+              raise SystemExit("no application change")
+
+          path.write_text(text, encoding="utf-8")
+
+      - name: Verify only target page changed and commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed="$(git diff --name-only)"
+          test "$changed" = "src/pages/clienti/organi-sociali.tsx"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/clienti/organi-sociali.tsx
+          git commit -m "Refactor Soci e Organi sociali into dedicated sections"
+          git push origin HEAD:main
