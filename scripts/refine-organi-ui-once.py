@@ -1,0 +1,21 @@
+from pathlib import Path
+
+p=Path('src/pages/clienti/organi-sociali.tsx')
+s=p.read_text(encoding='utf-8')
+old=s
+
+# Use header blue for section/modal primary actions, keeping all existing handlers.
+s=s.replace('style={blueButton} onClick={() => apriInserimentoSezione("soci")}', 'style={{ ...blueButton, minWidth: 190, minHeight: 38, background: "#1684ad", borderColor: "#1684ad" }} onClick={() => apriInserimentoSezione("soci")}', 1)
+s=s.replace('style={blueButton} onClick={() => apriInserimentoSezione("amministrazione")}', 'style={{ ...blueButton, minWidth: 190, minHeight: 38, background: "#1684ad", borderColor: "#1684ad" }} onClick={() => apriInserimentoSezione("amministrazione")}', 1)
+s=s.replace('style={blueButton} onClick={()=>apriInserimentoSezione("controllo")}', 'style={{ ...blueButton, minWidth: 190, minHeight: 38, background: "#1684ad", borderColor: "#1684ad" }} onClick={()=>apriInserimentoSezione("controllo")}', 1)
+
+needle='<div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:8,alignItems:"end"}}><div><label style={labelStyle}>Ricerca nominativo</label><input style={inputStyle} value={ricercaNominativo} onChange={(e)=>setRicercaNominativo(e.target.value)} placeholder="Cognome e nome, codice fiscale o partita IVA"/></div><button type="button" style={secondaryButton}>Cerca</button></div>\n  <div style={{marginTop:12}}><label style={labelStyle}>Nominativo</label><select style={inputStyle} value={form.soggetto_cliente_id} onChange={(e)=>setForm((p)=>({...p,soggetto_cliente_id:e.target.value}))}><option value="">Seleziona nominativo</option>{nominativi.filter((n)=>!ricercaNominativo.trim() || [n.ragione_sociale,n.codice_fiscale,n.partita_iva].some((v)=>String(v||"").toLowerCase().includes(ricercaNominativo.trim().toLowerCase()))).map((n)=><option key={n.id} value={n.id}>{n.ragione_sociale}{n.codice_fiscale?` — ${n.codice_fiscale}`:""}</option>)}</select></div>'
+repl='<div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:8,alignItems:"end"}}><div><label style={labelStyle}>Filtra nomi</label><input style={inputStyle} value={ricercaNominativo} onChange={(e)=>setRicercaNominativo(e.target.value)} placeholder="Cognome e nome, codice fiscale o partita IVA"/></div><button type="button" style={{ ...secondaryButton, minWidth: 150, minHeight: 38 }}>Filtra nomi</button></div>\n  <div style={{marginTop:12}}><label style={labelStyle}>Nominativo</label><select style={inputStyle} value={form.soggetto_cliente_id} onChange={(e)=>setForm((p)=>({...p,soggetto_cliente_id:e.target.value}))}><option value="">Seleziona nominativo</option>{nominativi.filter((n)=>!ricercaNominativo.trim() || [n.ragione_sociale,n.codice_fiscale,n.partita_iva].some((v)=>String(v||"").toLowerCase().includes(ricercaNominativo.trim().toLowerCase()))).map((n)=><option key={n.id} value={n.id}>{n.ragione_sociale}{n.codice_fiscale?` — ${n.codice_fiscale}`:""}</option>)}</select></div>\n  <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:10,flexWrap:"wrap"}}><button type="button" style={{ ...secondaryButton, minWidth: 150, minHeight: 38 }} onClick={()=>{setNominativoInModificaId(null);setNuovoNominativo({nome_cognome:"",codice_fiscale:"",email:"",luogo_nascita:"",data_nascita:"",indirizzo:"",citta:"",provincia:"",cap:"",tipologia_cliente:"Persona fisica"});setShowNuovoNominativo(true);}}>+ Nuovo nominativo</button><button type="button" style={{ ...secondaryButton, minWidth: 150, minHeight: 38 }} disabled={!form.soggetto_cliente_id} onClick={apriModificaNominativo}>Modifica anagrafica</button></div>'
+if s.count(needle)!=1: raise SystemExit('modal filter marker mismatch')
+s=s.replace(needle,repl,1)
+
+# Same dimensions for modal footer buttons; primary uses header blue.
+s=s.replace('<button type="button" style={secondaryButton} onClick={()=>setModalSezione(null)}>Annulla</button><button type="button" style={blueButton} onClick={salvaOrgano}>', '<button type="button" style={{ ...secondaryButton, minWidth: 130, minHeight: 38 }} onClick={()=>setModalSezione(null)}>Annulla</button><button type="button" style={{ ...blueButton, minWidth: 130, minHeight: 38, background: "#1684ad", borderColor: "#1684ad" }} onClick={salvaOrgano}>',1)
+
+if s==old: raise SystemExit('no changes')
+p.write_text(s,encoding='utf-8')
