@@ -170,7 +170,7 @@ const [note, setNote] = useState("");
   }
 
   async function loadIncarico(id: string) {
-    const res = await fetch(`/api/revisione-controllo/${id}`);
+    const res = await fetch(`/api/revisione-controllo/${encodeURIComponent(String(id))}`);
     const json = await res.json();
 
     if (!res.ok || !json.success) {
@@ -193,7 +193,7 @@ setResponsabileId(item.responsabile_id || "");
 setAttivo(item.attivo !== false);
 setNote(item.note || "");
 
-    const soggettiRes = await fetch(`/api/revisione-controllo/soggetti?incarico_id=${id}`);
+    const soggettiRes = await fetch(`/api/revisione-controllo/soggetti?incarico_id=${encodeURIComponent(String(id))}`);
     const soggettiJson = await soggettiRes.json();
 
     if (!soggettiRes.ok || !soggettiJson.success) {
@@ -454,7 +454,7 @@ if (
 };
 
       const res = await fetch(
-        incaricoId ? `/api/revisione-controllo/${incaricoId}` : "/api/revisione-controllo",
+        incaricoId ? `/api/revisione-controllo/${encodeURIComponent(String(incaricoId))}` : "/api/revisione-controllo",
         {
           method: incaricoId ? "PUT" : "POST",
           headers: { "Content-Type": "application/json" },
