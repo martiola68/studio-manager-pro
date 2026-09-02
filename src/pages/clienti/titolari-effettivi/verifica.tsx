@@ -255,7 +255,7 @@ const [
         : "";
 
       const response = await fetch(
-        `/api/clienti/${clienteIdDaCaricare}/titolari-effettivi${queryData}`,
+        `/api/clienti/${encodeURIComponent(String(clienteIdDaCaricare))}/titolari-effettivi${queryData}`,
         {
           cache: "no-store",
         }
@@ -304,7 +304,7 @@ async function caricaDatiAml(
   }
 
   const response = await fetch(
-    `/api/clienti/${clienteIdDaCaricare}/titolari-effettivi/aml`,
+    `/api/clienti/${encodeURIComponent(String(clienteIdDaCaricare))}/titolari-effettivi/aml`,
     {
       cache: "no-store",
     }
@@ -484,7 +484,7 @@ async function confermaVerifica() {
   try {
     const response =
       await fetch(
-        `/api/clienti/${clienteId}/titolari-effettivi/verifiche`,
+        `/api/clienti/${encodeURIComponent(String(clienteId))}/titolari-effettivi/verifiche`,
         {
           method: "POST",
 

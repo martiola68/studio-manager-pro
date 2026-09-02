@@ -1025,7 +1025,7 @@ const payload = {
 console.log("PAYLOAD NUOVO LIQUIDATORE", payload);
 
 const res = await fetch(
-  `/api/rapp-legali/${praticaId}/nuovo-rapp-pratiche`,
+  `/api/rapp-legali/${encodeURIComponent(String(praticaId))}/nuovo-rapp-pratiche`,
   {
     method: "POST",
     headers: {
