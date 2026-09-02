@@ -1239,11 +1239,13 @@ if (valoreBase <= 0) {
               <button
   type="button"
   onClick={() =>
-    router.push(
-      `/revisione-controllo/verifica-finale?incarico_id=${incaricoId}&anno=${
-        fascicolo?.esercizio || esercizio
-      }`
-    )
+    router.push({
+      pathname: "/revisione-controllo/verifica-finale",
+      query: {
+        incarico_id: incaricoId,
+        anno: fascicolo?.esercizio || esercizio,
+      },
+    })
   }
   className="rounded-xl border bg-white p-5 text-left shadow-sm hover:bg-green-50"
 >
