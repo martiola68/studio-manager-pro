@@ -836,7 +836,7 @@ async function caricaTitolariEffettivi() {
 
   try {
     const response = await fetch(
-      `/api/clienti/${clienteId}/titolari-effettivi`,
+      `/api/clienti/${encodeURIComponent(String(clienteId))}/titolari-effettivi`,
       {
         cache: "no-store",
       }
