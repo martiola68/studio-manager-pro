@@ -73,3 +73,5 @@ jobs:
           git add src/pages/clienti/organi-sociali.tsx
           git commit -m "Remove import visura from Soci e Organi sociali"
           git push origin HEAD:main
+
+# trigger
