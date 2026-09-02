@@ -96,7 +96,6 @@ function escapeRegExp(value: string) {
 
 function decodeXmlText(value: string) {
   return value
-    .replace(/<[^>]*>/g, '')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
