@@ -1,0 +1,97 @@
+name: One-shot CodeQL round 6
+
+on:
+  push:
+    branches:
+      - security/codeql-round6-remaining-20260902
+    paths:
+      - '.github/workflows/one-shot-codeql-round6.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/codeql-round6-remaining-20260902
+          fetch-depth: 0
+
+      - name: Applica correzioni mirate
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          # 1) import-contabilita: mai router.push su URL proveniente dalla query.
+          p = Path('src/pages/controllo-gestione/import-contabilita.tsx')
+          s = p.read_text()
+          old = '''    if (\n      origineRevisione &&\n      returnTo\n    ) {\n      router.push(returnTo);\n      return;\n    }'''
+          new = '''    if (\n      origineRevisione &&\n      returnTo\n    ) {\n      let annoRitorno = \"\";\n\n      try {\n        const parsedReturnTo = new URL(\n          returnTo,\n          \"https://app.studiomanagerpro.it\"\n        );\n\n        if (\n          parsedReturnTo.pathname ===\n          \"/revisione-controllo/controlli\"\n        ) {\n          const candidateAnno =\n            parsedReturnTo.searchParams.get(\"anno\") || \"\";\n\n          if (/^\\d{4}$/.test(candidateAnno)) {\n            annoRitorno = candidateAnno;\n          }\n        }\n      } catch {\n        // usa il fallback statico qui sotto\n      }\n\n      router.push({\n        pathname: \"/revisione-controllo/controlli\",\n        query: annoRitorno ? { anno: annoRitorno } : {},\n      });\n      return;\n    }'''
+          assert s.count(old) == 1, 'import-contabilita: blocco returnTo non trovato'
+          p.write_text(s.replace(old, new))
+
+          # 2) rappresentanti/nuovo: allowlist pathname + soli parametri previsti.
+          p = Path('src/pages/antiriciclaggio/rappresentanti/nuovo.tsx')
+          s = p.read_text()
+          old = '''if (returnTo) {\n  const safeReturnTo = getSafeInternalReturnPath(\n    returnTo,\n    \"/antiriciclaggio/rappresentanti\"\n  );\n\n  const sep = safeReturnTo.includes(\"?\") ? \"&\" : \"?\";\n\n  await router.push(`${safeReturnTo}${sep}rapp_saved=1`);\n  return;\n}'''
+          new = '''if (returnTo) {\n  try {\n    const parsedReturnTo = new URL(\n      returnTo,\n      \"https://app.studiomanagerpro.it\"\n    );\n\n    if (\n      parsedReturnTo.pathname ===\n      \"/antiriciclaggio/modello-av4\"\n    ) {\n      const allowedKeys = [\n        \"studio_id\",\n        \"pratica_id\",\n        \"societa_id\",\n        \"av1_id\",\n        \"cliente_id\",\n        \"id\",\n      ] as const;\n\n      const safeQuery: Record<string, string> = {\n        rapp_saved: \"1\",\n      };\n\n      for (const key of allowedKeys) {\n        const value = parsedReturnTo.searchParams.get(key);\n        if (value) {\n          safeQuery[key] = value;\n        }\n      }\n\n      await router.push({\n        pathname: \"/antiriciclaggio/modello-av4\",\n        query: safeQuery,\n      });\n      return;\n    }\n  } catch {\n    // usa il fallback statico qui sotto\n  }\n\n  await router.push({\n    pathname: \"/antiriciclaggio/rappresentanti\",\n    query: { rapp_saved: \"1\" },\n  });\n  return;\n}'''
+          assert s.count(old) == 1, 'rappresentanti/nuovo: blocco returnTo non trovato'
+          p.write_text(s.replace(old, new))
+
+          # 3) parser DATEV: limite costante sulle righe e niente regex ambigua per ragione sociale.
+          p = Path('src/utils/contabilita/parsers/datevKoinosParser.ts')
+          s = p.read_text()
+          marker = 'function splitCsvLine(line: string): string[] {'
+          assert s.count(marker) == 1, 'parser: splitCsvLine non trovato'
+          s = s.replace(
+            marker,
+            'const MAX_CSV_LINE_LENGTH = 100_000;\n\nfunction splitCsvLine(line: string): string[] {',
+          )
+          old = '''  const result: string[] = [];\n\n  let current = \"\";\n  let quoted = false;\n\n  for (let i = 0; i < line.length; i++) {'''
+          new = '''  if (line.length > MAX_CSV_LINE_LENGTH) {\n    throw new Error(\"Riga CSV DATEV troppo lunga\");\n  }\n\n  const result: string[] = [];\n\n  let current = \"\";\n  let quoted = false;\n\n  for (let i = 0; i < MAX_CSV_LINE_LENGTH; i++) {\n    if (i >= line.length) {\n      break;\n    }'''
+          assert s.count(old) == 1, 'parser: loop non trovato'
+          s = s.replace(old, new)
+
+          old = '''      const match = col0.match(/^(\\d+)\\s+(.+)$/);\n\n      if (match) {\n        codiceAzienda = match[1];\n        societa = match[2].trim();\n      } else {\n        societa = col0;\n      }'''
+          new = '''      const trimmedCol0 = col0.trim();\n      const separatorIndex = trimmedCol0.search(/[ \\t]/);\n\n      if (separatorIndex > 0) {\n        const possibileCodice = trimmedCol0.slice(0, separatorIndex);\n        const possibileSocieta = trimmedCol0.slice(separatorIndex).trim();\n\n        if (/^\\d+$/.test(possibileCodice) && possibileSocieta) {\n          codiceAzienda = possibileCodice;\n          societa = possibileSocieta;\n        } else {\n          societa = col0;\n        }\n      } else {\n        societa = col0;\n      }'''
+          assert s.count(old) == 1, 'parser: regex societa non trovata'
+          p.write_text(s.replace(old, new))
+
+          # 4) reset password: casualita crittograficamente sicura.
+          p = Path('src/pages/api/auth/reset-password.ts')
+          s = p.read_text()
+          old = 'import { NextApiRequest, NextApiResponse } from \"next\";\n'
+          new = 'import { NextApiRequest, NextApiResponse } from \"next\";\nimport { randomInt } from \"crypto\";\n'
+          assert s.count(old) == 1, 'reset-password: import Next non trovato'
+          s = s.replace(old, new)
+          old = '''  return Array.from({ length: 12 }, () =>\n    chars[Math.floor(Math.random() * chars.length)]\n  ).join(\"\");'''
+          new = '''  return Array.from({ length: 12 }, () =>\n    chars[randomInt(chars.length)]\n  ).join(\"\");'''
+          assert s.count(old) == 1, 'reset-password: Math.random non trovato'
+          p.write_text(s.replace(old, new))
+          PY
+
+          git diff --check
+
+      - name: Verifica perimetro
+        run: |
+          changed=$(git diff --name-only | sort)
+          expected=$(printf '%s\n' \
+            src/pages/antiriciclaggio/rappresentanti/nuovo.tsx \
+            src/pages/api/auth/reset-password.ts \
+            src/pages/controllo-gestione/import-contabilita.tsx \
+            src/utils/contabilita/parsers/datevKoinosParser.ts | sort)
+          test "$changed" = "$expected"
+
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            src/pages/antiriciclaggio/rappresentanti/nuovo.tsx \
+            src/pages/api/auth/reset-password.ts \
+            src/pages/controllo-gestione/import-contabilita.tsx \
+            src/utils/contabilita/parsers/datevKoinosParser.ts
+          git commit -m "fix: chiude CodeQL residui round 6"
+          git push origin security/codeql-round6-remaining-20260902
