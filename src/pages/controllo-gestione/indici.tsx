@@ -90,35 +90,69 @@ function safeDiv(a: number, b: number) {
   return a / b;
 }
 
-function getTagValue(xml: Document, names: string[], context = 'Corrente') {
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function decodeXmlText(value: string) {
+  return value
+    .replace(/<[^>]*>/g, '')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&')
+    .trim();
+}
+
+function findXmlValues(xmlText: string, name: string) {
+  const safeName = escapeRegExp(name);
+  const tagPattern = new RegExp(
+    `<(?:[\\w.-]+:)?${safeName}\\b([^>]*)>([\\s\\S]*?)<\\/(?:[\\w.-]+:)?${safeName}\\s*>`,
+    'gi'
+  );
+
+  return Array.from(xmlText.matchAll(tagPattern), (match) => ({
+    attributes: match[1] || '',
+    rawValue: match[2] || '',
+    value: decodeXmlText(match[2] || ''),
+  }));
+}
+
+function getTagValue(xmlText: string, names: string[], context = 'Corrente') {
   for (const name of names) {
-    const nodes = Array.from(xml.getElementsByTagName('*')).filter((node) => {
-      const local = node.localName || node.nodeName.split(':').pop();
-      const contextRef = node.getAttribute('contextRef') || '';
-      return local === name && contextRef.includes(context);
+    const fact = findXmlValues(xmlText, name).find(({ attributes }) => {
+      const contextMatch = attributes.match(/\bcontextRef\s*=\s*["']([^"']*)["']/i);
+      return (contextMatch?.[1] || '').includes(context);
     });
 
-    if (nodes.length > 0) {
-      return num(nodes[0].textContent);
-    }
+    if (fact) return num(fact.value);
   }
 
   return 0;
 }
 
-function getStringTagValue(xml: Document, names: string[]) {
+function getStringTagValue(xmlText: string, names: string[]) {
   for (const name of names) {
-    const nodes = Array.from(xml.getElementsByTagName('*')).filter((node) => {
-      const local = node.localName || node.nodeName.split(':').pop();
-      return local === name;
-    });
-
-    if (nodes.length > 0) {
-      return String(nodes[0].textContent || '').trim();
-    }
+    const value = findXmlValues(xmlText, name)[0]?.value;
+    if (value) return value;
   }
 
   return '';
+}
+
+function getContextYear(xmlText: string) {
+  const context = findXmlValues(xmlText, 'context').find(({ attributes }) => {
+    const idMatch = attributes.match(/\bid\s*=\s*["']([^"']*)["']/i);
+    return (idMatch?.[1] || '').includes('Corrente');
+  });
+
+  if (!context) return '';
+
+  return (
+    getStringTagValue(context.rawValue, ['instant', 'endDate']).match(/\b\d{4}\b/)?.[0] ||
+    ''
+  );
 }
 
 function statoIndicatore(tipo: string, valore: number) {
@@ -240,38 +274,34 @@ const risultati = useMemo(() => {
     setFileName(file.name);
 
     try {
-      const text = await file.text();
-      const parser = new DOMParser();
-      const xml = parser.parseFromString(text, 'application/xml');
+      if (file.size > 10 * 1024 * 1024) {
+        throw new Error('Il file XBRL supera il limite di 10 MB.');
+      }
 
-      const parserError = xml.getElementsByTagName('parsererror');
-      if (parserError.length > 0) {
+      const xmlText = await file.text();
+
+      if (!/<(?:[\w.-]+:)?xbrl\b/i.test(xmlText)) {
         throw new Error('File XML/XBRL non leggibile.');
       }
 
-      const societa = getStringTagValue(xml, [
-  'DatiAnagraficiDenominazione',
-]);
+      const societa = getStringTagValue(xmlText, [
+        'DatiAnagraficiDenominazione',
+      ]);
 
-      const codiceFiscale =
-        xml.querySelector('identifier')?.textContent?.trim() || '';
+      const codiceFiscale = getStringTagValue(xmlText, ['identifier']);
+      const anno = getContextYear(xmlText);
 
-      const anno =
-        xml.querySelector('context[id*="Corrente"] instant')?.textContent?.slice(0, 4) ||
-        xml.querySelector('context[id*="Corrente"] endDate')?.textContent?.slice(0, 4) ||
-        '';
-
-      const ricavi = getTagValue(xml, [
+      const ricavi = getTagValue(xmlText, [
         'RicaviVenditePrestazioni',
         'ValoreProduzioneRicaviVenditePrestazioni',
       ]);
 
       const totaleCostiProduzione = Math.abs(
-        getTagValue(xml, ['TotaleCostiProduzione'])
+        getTagValue(xmlText, ['TotaleCostiProduzione'])
       );
 
      const ammortamenti = Math.abs(
-  getTagValue(xml, [
+  getTagValue(xmlText, [
     'CostiProduzioneAmmortamentiSvalutazioniTotaleAmmortamentiSvalutazioni',
     'TotaleAmmortamentiSvalutazioni',
     'AmmortamentiSvalutazioni',
@@ -279,45 +309,45 @@ const risultati = useMemo(() => {
 );
 
       const accantonamenti = Math.abs(
-        getTagValue(xml, [
+        getTagValue(xmlText, [
           'AccantonamentiPerRischi',
           'AltriAccantonamenti',
         ])
       );
 
       const oneriFinanziari = Math.abs(
-        getTagValue(xml, [
+        getTagValue(xmlText, [
           'InteressiAltriOneriFinanziari',
           'TotaleProventiOneriFinanziari',
         ])
       );
 
      const imposte = Math.abs(
-  getTagValue(xml, [
+  getTagValue(xmlText, [
     'ImposteRedditoEsercizioCorrentiDifferiteAnticipateTotaleImposteRedditoEsercizioCorrentiDifferiteAnticipate',
     'ImposteRedditoEsercizioCorrentiDifferiteAnticipate',
     'TotaleImposteRedditoEsercizioCorrentiDifferiteAnticipate',
   ])
 );
 
-      const utileNetto = getTagValue(xml, [
+      const utileNetto = getTagValue(xmlText, [
         'UtilePerditaEsercizio',
         'UtilePerditaDellEsercizio',
       ]);
 
-      const totaleAttivo = getTagValue(xml, ['TotaleAttivo']);
-      const patrimonioNetto = getTagValue(xml, ['TotalePatrimonioNetto']);
-const debitiTotali = getTagValue(xml, ['TotaleDebiti']);
-const attivoCorrente = getTagValue(xml, ['TotaleAttivoCircolante']);
+      const totaleAttivo = getTagValue(xmlText, ['TotaleAttivo']);
+      const patrimonioNetto = getTagValue(xmlText, ['TotalePatrimonioNetto']);
+const debitiTotali = getTagValue(xmlText, ['TotaleDebiti']);
+const attivoCorrente = getTagValue(xmlText, ['TotaleAttivoCircolante']);
 
 const passivoCorrente =
-  getTagValue(xml, ['DebitiDebitiVersoBancheEsigibiliEntroEsercizioSuccessivo']) +
-  getTagValue(xml, ['DebitiDebitiVersoAltriFinanziatoriEsigibiliEntroEsercizioSuccessivo']) +
-  getTagValue(xml, ['DebitiAccontiEsigibiliEntroEsercizioSuccessivo']) +
-  getTagValue(xml, ['DebitiDebitiVersoFornitoriEsigibiliEntroEsercizioSuccessivo']) +
-  getTagValue(xml, ['DebitiDebitiTributariEsigibiliEntroEsercizioSuccessivo']) +
-  getTagValue(xml, ['DebitiDebitiVersoIstitutiPrevidenzaSicurezzaSocialeEsigibiliEntroEsercizioSuccessivo']) +
-  getTagValue(xml, ['DebitiAltriDebitiEsigibiliEntroEsercizioSuccessivo']);
+  getTagValue(xmlText, ['DebitiDebitiVersoBancheEsigibiliEntroEsercizioSuccessivo']) +
+  getTagValue(xmlText, ['DebitiDebitiVersoAltriFinanziatoriEsigibiliEntroEsercizioSuccessivo']) +
+  getTagValue(xmlText, ['DebitiAccontiEsigibiliEntroEsercizioSuccessivo']) +
+  getTagValue(xmlText, ['DebitiDebitiVersoFornitoriEsigibiliEntroEsercizioSuccessivo']) +
+  getTagValue(xmlText, ['DebitiDebitiTributariEsigibiliEntroEsercizioSuccessivo']) +
+  getTagValue(xmlText, ['DebitiDebitiVersoIstitutiPrevidenzaSicurezzaSocialeEsigibiliEntroEsercizioSuccessivo']) +
+  getTagValue(xmlText, ['DebitiAltriDebitiEsigibiliEntroEsercizioSuccessivo']);
 
       setForm((prev) => ({
         ...prev,
