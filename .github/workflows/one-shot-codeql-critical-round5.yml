@@ -1,0 +1,66 @@
+name: One-shot CodeQL 5 Critical SSRF
+
+on:
+  push:
+    branches:
+      - security/codeql-critical-ssrf-round5-20260902
+    paths:
+      - '.github/workflows/one-shot-codeql-critical-round5.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/codeql-critical-ssrf-round5-20260902
+          fetch-depth: 0
+
+      - name: Corregge esclusivamente i 5 URL Critical SSRF
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          patches = {
+            'src/pages/clienti/titolari-effettivi/verifica.tsx': {
+              '`/api/clienti/${clienteIdDaCaricare}/titolari-effettivi${queryData}`': '`/api/clienti/${encodeURIComponent(String(clienteIdDaCaricare))}/titolari-effettivi${queryData}`',
+              '`/api/clienti/${clienteIdDaCaricare}/titolari-effettivi/aml`': '`/api/clienti/${encodeURIComponent(String(clienteIdDaCaricare))}/titolari-effettivi/aml`',
+              '`/api/clienti/${clienteId}/titolari-effettivi/verifiche`': '`/api/clienti/${encodeURIComponent(String(clienteId))}/titolari-effettivi/verifiche`',
+            },
+            'src/pages/clienti/organi-sociali.tsx': {
+              '`/api/clienti/${clienteId}/titolari-effettivi`': '`/api/clienti/${encodeURIComponent(String(clienteId))}/titolari-effettivi`',
+            },
+            'src/components/pratiche/forms/FormMessaLiquidazione.tsx': {
+              '`/api/rapp-legali/${praticaId}/nuovo-rapp-pratiche`': '`/api/rapp-legali/${encodeURIComponent(String(praticaId))}/nuovo-rapp-pratiche`',
+            },
+          }
+          total = 0
+          for filename, replacements in patches.items():
+            p = Path(filename); s = p.read_text()
+            for old,new in replacements.items():
+              count=s.count(old)
+              assert count == 1, f'{filename}: attesa 1 occorrenza, trovate {count}: {old}'
+              s=s.replace(old,new); total += 1
+            p.write_text(s)
+          assert total == 5
+          PY
+          git diff --check
+
+      - name: Verifica perimetro e logica invariata
+        run: |
+          changed=$(git diff --name-only | sort)
+          expected=$(printf '%s\n' src/components/pratiche/forms/FormMessaLiquidazione.tsx src/pages/clienti/organi-sociali.tsx src/pages/clienti/titolari-effettivi/verifica.tsx | sort)
+          test "$changed" = "$expected"
+          if git diff --unified=0 -- src/components/pratiche/forms/FormMessaLiquidazione.tsx src/pages/clienti/organi-sociali.tsx src/pages/clienti/titolari-effettivi/verifica.tsx | grep -E '^[+-].*(method:|body:|JSON.stringify|set[A-Z]|alert\(|confirm\(|window.confirm\()'; then
+            echo 'ERRORE: modifica funzionale rilevata'; exit 1
+          fi
+
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/pratiche/forms/FormMessaLiquidazione.tsx src/pages/clienti/organi-sociali.tsx src/pages/clienti/titolari-effettivi/verifica.tsx
+          git commit -m "fix: chiude 5 Critical SSRF CodeQL"
+          git push origin security/codeql-critical-ssrf-round5-20260902
