@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - scripts/patch-av4-interno-ui-guide.py
+      - scripts/patch-av4-gray-visual-hierarchy.py
       - .github/workflows/one-shot-av4-interno-ui-guide.yml
   workflow_dispatch:
 
@@ -22,15 +23,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.x'
-      - name: Apply UI-only patch
-        run: python scripts/patch-av4-interno-ui-guide.py
-      - name: Verify functional anchors remain
+      - name: Apply gray visual hierarchy
+        run: python scripts/patch-av4-gray-visual-hierarchy.py
+      - name: Verify functional anchors and visual hierarchy
         run: |
           grep -q 'function handleChange' src/pages/antiriciclaggio/modello-av4.tsx
           grep -q 'async function salvaAV4' src/pages/antiriciclaggio/modello-av4.tsx
           grep -q 'async function handleInvioPubblico' src/pages/antiriciclaggio/modello-av4.tsx
           grep -q 'AV4HelpButton topic="titolare"' src/pages/antiriciclaggio/modello-av4.tsx
-          grep -q 'border-sky-200' src/pages/antiriciclaggio/modello-av4.tsx
+          grep -q 'bg-slate-200/70' src/pages/antiriciclaggio/modello-av4.tsx
+          grep -q 'border-slate-300 bg-white' src/pages/antiriciclaggio/modello-av4.tsx
       - name: Commit runtime file
         run: |
           if git diff --quiet -- src/pages/antiriciclaggio/modello-av4.tsx; then
@@ -40,5 +42,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add src/pages/antiriciclaggio/modello-av4.tsx
-          git commit -m 'Restyle AV4 internal form and add help modals'
+          git commit -m 'Refine AV4 gray visual hierarchy'
           git push origin main
