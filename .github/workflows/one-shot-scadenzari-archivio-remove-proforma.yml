@@ -1,0 +1,45 @@
+name: One shot scadenzari archivio e rimozione Proforma
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - scripts/fix-scadenzari-archivio-remove-proforma-once.py
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply guarded patch
+        run: python scripts/fix-scadenzari-archivio-remove-proforma-once.py
+
+      - name: Verify Proforma is gone from active runtime code
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -f src/pages/scadenze/proforma.tsx
+          ! grep -RniE 'tbscadproforma|flag_proforma|/scadenze/proforma|scadenzariFlags\.proforma' src/pages src/components src/services --exclude='database.types.ts'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript guard
+        run: npx tsc --noEmit
+
+      - name: Commit patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Define yearly scadenziari archive and remove Proforma"
+          git push origin HEAD:main
