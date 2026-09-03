@@ -1,0 +1,53 @@
+name: Hotfix scadenzari generation user lookup
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/hotfix-scadenzari-generation-userid.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fix only generation user lookup
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/pages/impostazioni/scadenzari.tsx')
+          s = p.read_text(encoding='utf-8')
+          old = '.eq("id", session.user.id)'
+          new = '.eq("user_id", session.user.id)'
+          count = s.count(old)
+          if count != 1:
+              raise SystemExit(f'expected exactly 1 old lookup, found {count}')
+          s = s.replace(old, new, 1)
+          p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Verify runtime file
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'eq("user_id", session.user.id)' src/pages/impostazioni/scadenzari.tsx
+          ! grep -q 'eq("id", session.user.id)' src/pages/impostazioni/scadenzari.tsx
+
+      - name: Commit runtime hotfix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/impostazioni/scadenzari.tsx
+          git commit -m "Fix scadenzari generation user lookup"
+          git push origin HEAD:main
