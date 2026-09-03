@@ -1014,9 +1014,9 @@ useEffect(() => {
         </div>
 
         <div className="space-y-6">
-          <Card className="border-l-4 border-l-red-600">
+          <Card className="border border-blue-200 border-l-4 border-l-blue-500">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-red-700">
+              <CardTitle className="flex items-center gap-2 text-blue-700">
                 <Archive className="h-5 w-5" />
                 Archivia Scadenze
               </CardTitle>
@@ -1026,10 +1026,10 @@ useEffect(() => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <div className="flex gap-3">
-                  <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm text-red-800">
+                  <AlertTriangle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-blue-800">
                     <p className="font-semibold mb-1">ATTENZIONE!</p>
                     <p>
                       L'archiviazione NON sposta i record in altre tabelle:
@@ -1098,8 +1098,7 @@ useEffect(() => {
               <Button
                 onClick={handleArchivia}
                 disabled={processing || anniArchiviabili.length === 0}
-                variant="destructive"
-                className="w-full"
+                className="w-full bg-blue-600 hover:bg-blue-700"
               >
                 {processing ? (
                   <>
@@ -1220,9 +1219,9 @@ useEffect(() => {
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-orange-600">
+          <Card className="border border-red-200 border-l-4 border-l-red-500">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-orange-700">
+              <CardTitle className="flex items-center gap-2 text-red-700">
                 <Trash2 className="h-5 w-5" />
                 Elimina Archivi Definitivamente
               </CardTitle>
@@ -1231,10 +1230,10 @@ useEffect(() => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                 <div className="flex gap-3">
-                  <AlertTriangle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm text-orange-800">
+                  <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-red-800">
                     <p className="font-semibold mb-1">ATTENZIONE!</p>
                     <p>
                       L'eliminazione definitiva cancellerà solo i record già
