@@ -51,7 +51,6 @@ type ServiziCliente = {
   flag_770: boolean;
   flag_esterometro: boolean;
   flag_ccgg: boolean;
-  flag_proforma: boolean;
   flag_imu: boolean;
   flag_mail_scadenze: boolean;
   gestione_esterometro: boolean;
@@ -73,7 +72,6 @@ const initialServizi: ServiziCliente = {
   flag_770: false,
   flag_esterometro: false,
   flag_ccgg: false,
-  flag_proforma: false,
   flag_imu: false,
   flag_mail_scadenze: false,
   gestione_esterometro: false,
@@ -84,7 +82,7 @@ type BooleanField =
   | "contabilita" | "consulenza" | "paghe" | "consulenza_lavoro"
   | "flag_iva" | "flag_cu" | "flag_bilancio" | "flag_fiscali"
   | "flag_lipe" | "flag_770" | "flag_esterometro" | "flag_ccgg"
-  | "flag_proforma" | "flag_imu" | "flag_mail_scadenze" | "gestione_esterometro";
+  | "flag_imu" | "flag_mail_scadenze" | "gestione_esterometro";
 
 const serviziOptions: Array<{ key: BooleanField; label: string; description: string }> = [
   { key: "contabilita", label: "Contabilità", description: "Gestione contabile ordinaria o semplificata del cliente." },
@@ -102,7 +100,6 @@ const scadenzariOptions: Array<{ key: BooleanField; label: string }> = [
   { key: "flag_770", label: "Modello 770" },
   { key: "flag_esterometro", label: "Esterometro" },
   { key: "flag_ccgg", label: "Concessioni governative" },
-  { key: "flag_proforma", label: "Proforma" },
   { key: "flag_imu", label: "IMU" },
 ];
 
@@ -164,7 +161,6 @@ export default function ServiziScadenzariClientePage() {
           flag_770: Boolean(serviziData.flag_770),
           flag_esterometro: Boolean(serviziData.flag_esterometro),
           flag_ccgg: Boolean(serviziData.flag_ccgg),
-          flag_proforma: Boolean(serviziData.flag_proforma),
           flag_imu: Boolean(serviziData.flag_imu),
           flag_mail_scadenze: Boolean(serviziData.flag_mail_scadenze),
           gestione_esterometro: Boolean(serviziData.gestione_esterometro),
@@ -208,7 +204,6 @@ export default function ServiziScadenzariClientePage() {
         flag_770: formData.flag_770,
         flag_esterometro: formData.flag_esterometro,
         flag_ccgg: formData.flag_ccgg,
-        flag_proforma: formData.flag_proforma,
         flag_imu: formData.flag_imu,
         flag_mail_scadenze: formData.flag_mail_scadenze,
         gestione_esterometro: formData.gestione_esterometro,
