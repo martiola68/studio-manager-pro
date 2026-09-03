@@ -1157,7 +1157,7 @@ const handleRinnovoVerifica = async () => {
 };
 
   return (
-    <div className="flex h-[calc(100vh-64px)] flex-col overflow-hidden bg-background">
+    <div className="flex h-[calc(100vh-64px)] flex-col overflow-hidden bg-slate-300">
       <FormStickyHeader
         title="Modello AV1"
         subtitle={
@@ -1201,7 +1201,7 @@ const handleRinnovoVerifica = async () => {
       <div className="flex-1 overflow-hidden">
         <div className="h-full overflow-y-auto">
           <div className="mx-auto max-w-5xl px-4 pb-32 pt-4 md:px-8 md:pb-40 md:pt-4">
-            <Card>
+            <Card className="border-sky-300 bg-slate-100 shadow-sm">
               <CardHeader>
                 <CardTitle>Dati principali</CardTitle>
               </CardHeader>
@@ -1214,7 +1214,7 @@ const handleRinnovoVerifica = async () => {
                     <div className="md:col-span-2">
                       <label className="mb-1 block text-sm font-medium">Cliente</label>
                       <select
-                        className="w-full rounded-md border px-3 py-2"
+                        className="w-full rounded-md border border-slate-400 bg-white px-3 py-2"
                         value={formData.cliente_id}
                         onChange={(e) =>
                           setFormData((prev) => ({
@@ -1235,7 +1235,7 @@ const handleRinnovoVerifica = async () => {
                     <div>
                       <label className="mb-1 block text-sm font-medium">Prestazione</label>
                       <select
-                        className="w-full rounded-md border px-3 py-2"
+                        className="w-full rounded-md border border-slate-400 bg-white px-3 py-2"
                         value={formData.Prestazione}
                         onChange={(e) => handlePrestazioneChange(e.target.value)}
                       >
@@ -1266,7 +1266,7 @@ const handleRinnovoVerifica = async () => {
                       <label className="mb-1 block text-sm font-medium">Data verifica</label>
                       <input
                         type="date"
-                        className="w-full rounded-md border px-3 py-2"
+                        className="w-full rounded-md border border-slate-400 bg-white px-3 py-2"
                         value={formData.DataVerifica}
                         onChange={(e) => handleDataVerificaChange(e.target.value)}
                       />
@@ -1563,6 +1563,7 @@ const handleRinnovoVerifica = async () => {
                   />
 
 <Input
+        className="border-slate-400 bg-white"
   type="text"
   readOnly
   value={formData.allegato_av1_firmato || ""}

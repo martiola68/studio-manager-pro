@@ -537,7 +537,7 @@ const handleRemoveFirmato = async () => {
 };
 
   return (
-    <div className="flex h-[calc(100vh-64px)] flex-col overflow-hidden bg-background">
+    <div className="flex h-[calc(100vh-64px)] flex-col overflow-hidden bg-slate-300">
       <FormStickyHeader
         title="Modello AV2"
         subtitle="Gestione documentazione e annotazioni professionista"
@@ -550,7 +550,7 @@ const handleRemoveFirmato = async () => {
       <div className="flex-1 overflow-hidden">
         <div className="h-full overflow-y-auto">
           <div className="mx-auto max-w-7xl px-4 pb-32 pt-4 md:px-8 md:pb-40 md:pt-4">
-            <Card>
+            <Card className="border-sky-300 bg-slate-100 shadow-sm">
               <CardHeader>
                 <CardTitle>Dati principali</CardTitle>
               </CardHeader>
@@ -580,7 +580,7 @@ const handleRemoveFirmato = async () => {
                       <label className="mb-1 block text-sm font-medium">Data check</label>
                       <input
                         type="date"
-                        className="w-full rounded-md border px-3 py-2"
+                        className="w-full rounded-md border border-slate-400 bg-white px-3 py-2"
                         value={form.data_check || ""}
                         onChange={(e) =>
                           setForm((prev) => ({
@@ -652,7 +652,7 @@ const handleRemoveFirmato = async () => {
                           <div className="col-span-4">
                             <textarea
                               rows={5}
-                              className="w-full rounded-md border px-3 py-2 text-sm"
+                              className="w-full rounded-md border border-slate-400 bg-white px-3 py-2 text-sm"
                               value={String(form[`annotazioni${item.id}`] || "")}
                               onChange={(e) =>
                                 handleAnnotazioneChange(item.id, e.target.value)
@@ -749,7 +749,7 @@ const handleRemoveFirmato = async () => {
 
                     <input
                       type="text"
-                      className="w-full rounded-md border px-3 py-2"
+                      className="w-full rounded-md border border-slate-400 bg-white px-3 py-2"
                       value={form.firma_check || ""}
                       onChange={(e) =>
                         setForm((prev) => ({
