@@ -1,33 +1,34 @@
+import "@/styles/globals.css";
 import type { AppProps } from "next/app";
-import { useRouter } from "next/router";
-import { useEffect, useMemo, useState } from "react";
-import { ThemeProvider } from "@/components/ThemeProvider";
+import { ThemeProvider } from "@/contexts/ThemeProvider";
 import { StudioProvider } from "@/contexts/StudioContext";
+import { ModuleAccessGuard } from "@/components/security/ModuleAccessGuard";
+import { ClientiImportTemplateEnhancer } from "@/components/ClientiImportTemplateEnhancer";
+import { Toaster } from "@/components/ui/toaster";
+
+// Layout (Header + Nav) SOLO per pagine private
 import Header from "@/components/Header";
 import { TopNavBar } from "@/components/TopNavBar";
-import { Toaster } from "@/components/ui/toaster";
-import { ModuleAccessGuard } from "@/components/ModuleAccessGuard";
-import { ClientiImportTemplateEnhancer } from "@/components/ClientiImportTemplateEnhancer";
-import { supabase } from "@/lib/supabase/client";
-import "@/styles/globals.css";
+import { useRouter } from "next/router";
+import { useEffect, useState } from "react";
+import { getSupabaseClient } from "@/lib/supabase/client";
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
   const [scadenzariCleanupPending, setScadenzariCleanupPending] = useState(false);
 
-  const isScadenzarioPage = useMemo(
-    () => router.pathname.startsWith("/scadenze/"),
-    [router.pathname]
-  );
+  const isScadenzarioPage = router.pathname.startsWith("/scadenze/");
 
   useEffect(() => {
     if (!router.isReady || !isScadenzarioPage) return;
 
     let cancelled = false;
-    setScadenzariCleanupPending(true);
 
     const cleanup = async () => {
+      setScadenzariCleanupPending(true);
+
       try {
+        const supabase = getSupabaseClient();
         const {
           data: { session },
         } = await supabase.auth.getSession();
