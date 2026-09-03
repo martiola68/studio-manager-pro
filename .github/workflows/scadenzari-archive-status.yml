@@ -1,0 +1,38 @@
+name: Apply scadenzari archive status
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/patch-scadenzari-archive-status.py
+      - .github/workflows/scadenzari-archive-status.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply patch
+        run: python scripts/patch-scadenzari-archive-status.py
+      - name: Verify patch
+        run: |
+          grep -q 'loadStatoArchiviazione' src/pages/impostazioni/scadenzari.tsx
+          grep -q 'Archiviato —' src/pages/impostazioni/scadenzari.tsx
+          grep -q 'Da archiviare —' src/pages/impostazioni/scadenzari.tsx
+          grep -q 'Parziale —' src/pages/impostazioni/scadenzari.tsx
+      - name: Install dependencies
+        run: npm ci
+      - name: TypeScript guard
+        run: npx tsc --noEmit
+      - name: Commit runtime change
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/impostazioni/scadenzari.tsx
+          git commit -m "Show scadenzari archive status by year"
+          git push origin HEAD:main
