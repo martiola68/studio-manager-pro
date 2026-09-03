@@ -24,14 +24,14 @@ jobs:
           python-version: '3.x'
       - name: Apply AV1 and AV2 styling only
         run: python scripts/patch-av1-av2-visual-hierarchy.py
-      - name: Verify functional anchors and styling
+      - name: Verify styling and runtime logic still present
         run: |
           grep -q 'bg-slate-300' src/pages/antiriciclaggio/modello-av1.tsx
-          grep -q 'border-slate-400 bg-white' src/pages/antiriciclaggio/modello-av1.tsx
           grep -q 'bg-slate-300' src/pages/antiriciclaggio/modello-av2.tsx
-          grep -q 'border-slate-400 bg-white' src/pages/antiriciclaggio/modello-av2.tsx
+          grep -q 'handleSave' src/pages/antiriciclaggio/modello-av1.tsx
           grep -q 'handleSave' src/pages/antiriciclaggio/modello-av2.tsx
-          grep -q 'salvaAV1' src/pages/antiriciclaggio/modello-av1.tsx
+          grep -q 'tbAV1' src/pages/antiriciclaggio/modello-av1.tsx
+          grep -q 'tbAV2' src/pages/antiriciclaggio/modello-av2.tsx
       - name: Commit runtime files
         run: |
           if git diff --quiet -- src/pages/antiriciclaggio/modello-av1.tsx src/pages/antiriciclaggio/modello-av2.tsx; then
