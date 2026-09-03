@@ -11,6 +11,9 @@ type FormStickyHeaderProps = {
   sendToClientDisabled?: boolean;
 };
 
+const actionButtonClass =
+  "inline-flex h-9 w-32 items-center justify-center rounded-md border border-sky-700 bg-sky-700 px-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50";
+
 export default function FormStickyHeader({
   title,
   subtitle,
@@ -31,26 +34,26 @@ export default function FormStickyHeader({
           {subtitle ? <p className="mt-2 text-slate-600">{subtitle}</p> : null}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {beforeSaveSlot}
 
-        {showSendToClient && onSendToClient && (
-  <button
-    type="button"
-    onClick={onSendToClient}
-    disabled={sendToClientDisabled}
-    className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
-  >
-    Invia AV4 al cliente
-  </button>
-)}
+          {showSendToClient && onSendToClient && (
+            <button
+              type="button"
+              onClick={onSendToClient}
+              disabled={sendToClientDisabled}
+              className={actionButtonClass}
+            >
+              Invia AV4 al cliente
+            </button>
+          )}
 
           {onSave && (
             <button
               type="button"
               onClick={onSave}
               disabled={saving}
-              className="rounded-2xl border border-emerald-400 bg-emerald-50 p-4"
+              className={actionButtonClass}
             >
               Salva
             </button>
@@ -60,7 +63,7 @@ export default function FormStickyHeader({
             <button
               type="button"
               onClick={onPrint}
-              className="rounded-2xl border border-sky-400 bg-sky-50 p-4"
+              className={actionButtonClass}
             >
               Stampa
             </button>
@@ -70,7 +73,7 @@ export default function FormStickyHeader({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-2xl border border-rose-400 bg-rose-50 p-4"
+              className={actionButtonClass}
             >
               Chiudi
             </button>
