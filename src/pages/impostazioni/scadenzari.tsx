@@ -117,6 +117,10 @@ export default function GenerazioneScadenzariPage() {
   const [annoEliminazione, setAnnoEliminazione] = useState(currentYear - 1);
 
   const [showScadenzeModal, setShowScadenzeModal] = useState(false);
+  const [scadenzariGenerati, setScadenzariGenerati] = useState<
+    Partial<Record<keyof ScadenzariFlagsState, number>>
+  >({});
+  const [loadingStatoGenerazione, setLoadingStatoGenerazione] = useState(false);
 
   const [anniArchiviabili, setAnniArchiviabili] = useState<number[]>([]);
 const [anniEliminabili, setAnniEliminabili] = useState<number[]>([]);
@@ -146,6 +150,13 @@ const [anniEliminabili, setAnniEliminabili] = useState<number[]>([]);
   useEffect(() => {
     setScadenzeAdempimento(buildDefaultScadenzeAdempimento(annoGenerazione));
   }, [annoGenerazione]);
+
+  useEffect(() => {
+    if (!loading) {
+      void loadStatoGenerazione();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, annoGenerazione]);
 
   useEffect(() => {
   if (!loading) {
@@ -180,9 +191,12 @@ useEffect(() => {
   const scadenzariConData = useMemo(
     () =>
       SCADENZARI_CONFIG.filter(
-        (item) => item.hasScadenzaAdempimento && scadenzariFlags[item.key]
+        (item) =>
+          item.hasScadenzaAdempimento &&
+          scadenzariFlags[item.key] &&
+          (scadenzariGenerati[item.key] ?? 0) === 0
       ),
-    [scadenzariFlags]
+    [scadenzariFlags, scadenzariGenerati]
   );
 
   const hasScadenzariConData = scadenzariConData.length > 0;
@@ -219,6 +233,40 @@ useEffect(() => {
   const getSelectedScadenzari = () =>
     SCADENZARI_CONFIG.filter((item) => scadenzariFlags[item.key]);
 
+  const isScadenzarioGenerato = (key: keyof ScadenzariFlagsState) =>
+    (scadenzariGenerati[key] ?? 0) > 0;
+
+  const isScadenzarioDaGenerare = (key: keyof ScadenzariFlagsState) =>
+    scadenzariFlags[key] && !isScadenzarioGenerato(key);
+
+  const loadStatoGenerazione = async () => {
+    try {
+      setLoadingStatoGenerazione(true);
+      const risultati = await Promise.all(
+        SCADENZARI_CONFIG.map(async (item) => {
+          const { count, error } = await supabase
+            .from(item.table as any)
+            .select("id", { count: "exact", head: true })
+            .eq("anno_riferimento", annoGenerazione);
+
+          if (error) throw error;
+          return [item.key, count ?? 0] as const;
+        })
+      );
+
+      setScadenzariGenerati(
+        Object.fromEntries(risultati) as Partial<
+          Record<keyof ScadenzariFlagsState, number>
+        >
+      );
+    } catch (error) {
+      console.error("Errore controllo scadenzari già generati:", error);
+      setScadenzariGenerati({});
+    } finally {
+      setLoadingStatoGenerazione(false);
+    }
+  };
+
   const handleScadenzaChange = (
     key: keyof ScadenzeAdempimentoState,
     value: string
@@ -232,16 +280,16 @@ useEffect(() => {
   const validateScadenzeAdempimento = (): string[] => {
     const errors: string[] = [];
 
-    if (scadenzariFlags.iva && !scadenzeAdempimento.iva) errors.push("IVA");
-    if (scadenzariFlags.ccgg && !scadenzeAdempimento.ccgg) errors.push("CCGG");
-    if (scadenzariFlags.cu && !scadenzeAdempimento.cu) errors.push("CU");
-    if (scadenzariFlags.fiscali && !scadenzeAdempimento.fiscali) {
+    if (isScadenzarioDaGenerare("iva") && !scadenzeAdempimento.iva) errors.push("IVA");
+    if (isScadenzarioDaGenerare("ccgg") && !scadenzeAdempimento.ccgg) errors.push("CCGG");
+    if (isScadenzarioDaGenerare("cu") && !scadenzeAdempimento.cu) errors.push("CU");
+    if (isScadenzarioDaGenerare("fiscali") && !scadenzeAdempimento.fiscali) {
       errors.push("Fiscali");
     }
-    if (scadenzariFlags.bilanci && !scadenzeAdempimento.bilanci) {
+    if (isScadenzarioDaGenerare("bilanci") && !scadenzeAdempimento.bilanci) {
       errors.push("Bilanci");
     }
-    if (scadenzariFlags.modello770 && !scadenzeAdempimento.modello770) {
+    if (isScadenzarioDaGenerare("modello770") && !scadenzeAdempimento.modello770) {
       errors.push("Modello 770");
     }
 
@@ -497,7 +545,7 @@ useEffect(() => {
 
   return clienti || [];
 };
-      if (scadenzariFlags.iva) {
+      if (isScadenzarioDaGenerare("iva")) {
         const clientiIva = await getClientiByFlag("flag_iva");
 
         for (const cliente of clientiIva) {
@@ -544,7 +592,7 @@ useEffect(() => {
         }
       }
 
-      if (scadenzariFlags.ccgg) {
+      if (isScadenzarioDaGenerare("ccgg")) {
         const clientiCcgg = await getClientiByFlag("flag_ccgg");
 
         for (const cliente of clientiCcgg) {
@@ -593,7 +641,7 @@ useEffect(() => {
         }
       }
 
-      if (scadenzariFlags.cu) {
+      if (isScadenzarioDaGenerare("cu")) {
         const clientiCu = await getClientiByFlag("flag_cu");
 
         for (const cliente of clientiCu) {
@@ -640,7 +688,7 @@ useEffect(() => {
         }
       }
 
-      if (scadenzariFlags.fiscali) {
+      if (isScadenzarioDaGenerare("fiscali")) {
         const clientiFiscali = await getClientiByFlag("flag_fiscali");
 
         for (const cliente of clientiFiscali) {
@@ -690,7 +738,7 @@ useEffect(() => {
         }
       }
 
-      if (scadenzariFlags.bilanci) {
+      if (isScadenzarioDaGenerare("bilanci")) {
         const clientiBilanci = await getClientiByFlag("flag_bilancio");
 
         for (const cliente of clientiBilanci) {
@@ -739,7 +787,7 @@ useEffect(() => {
         }
       }
 
-      if (scadenzariFlags.modello770) {
+      if (isScadenzarioDaGenerare("modello770")) {
         const clienti770 = await getClientiByFlag("flag_770");
 
         for (const cliente of clienti770) {
@@ -788,7 +836,7 @@ useEffect(() => {
         }
       }
 
-      if (scadenzariFlags.lipe) {
+      if (isScadenzarioDaGenerare("lipe")) {
         const clientiLipe = await getClientiByFlag("flag_lipe");
 
         for (const cliente of clientiLipe) {
@@ -827,7 +875,7 @@ useEffect(() => {
         }
       }
 
-      if (scadenzariFlags.esterometro) {
+      if (isScadenzarioDaGenerare("esterometro")) {
         const clientiEstero = await getClientiByFlag("flag_esterometro");
 
         for (const cliente of clientiEstero) {
@@ -868,7 +916,7 @@ useEffect(() => {
         }
       }
 
-      if (scadenzariFlags.imu) {
+      if (isScadenzarioDaGenerare("imu")) {
         const clientiImu = await getClientiByFlag("flag_imu");
 
         for (const cliente of clientiImu) {
@@ -922,6 +970,7 @@ useEffect(() => {
         }`,
       });
 
+      await loadStatoGenerazione();
       setShowScadenzeModal(false);
     } catch (error) {
       console.error("Errore generazione:", error);
@@ -937,13 +986,17 @@ useEffect(() => {
 
   const handleGenera = async () => {
     const scadenzariSelezionati = Object.entries(scadenzariFlags)
-      .filter(([_, selected]) => selected)
+      .filter(
+        ([key, selected]) =>
+          selected &&
+          !isScadenzarioGenerato(key as keyof ScadenzariFlagsState)
+      )
       .map(([key]) => key);
 
     if (scadenzariSelezionati.length === 0) {
       toast({
         title: "Attenzione",
-        description: "Seleziona almeno uno scadenzario da generare",
+        description: "Seleziona almeno uno scadenzario da generare non già presente per l'anno scelto",
       });
       return;
     }
@@ -1143,10 +1196,6 @@ useEffect(() => {
                       Per IVA, CCGG, CU, Fiscali, Bilanci e 770 si apre una
                       modale per inserire la data scadenza adempimento
                     </li>
-                    <li>
-                      Alla generazione vengono salvati anche gli alert automatici
-                      a 15 e 7 giorni prima
-                    </li>
                   </ul>
                 </div>
               </div>
@@ -1173,35 +1222,68 @@ useEffect(() => {
               <div className="space-y-3">
                 <Label>Scadenzari da Generare</Label>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {SCADENZARI_CONFIG.map((item) => (
-                    <div
-                      key={`flag_${item.key}`}
-                      className="flex items-center space-x-2"
-                    >
-                      <Checkbox
-                        id={`flag_${item.key}`}
-                        checked={scadenzariFlags[item.key]}
-                        onCheckedChange={(checked) =>
-                          setScadenzariFlags({
-                            ...scadenzariFlags,
-                            [item.key]: checked as boolean,
-                          })
-                        }
-                      />
-                      <label
-                        htmlFor={`flag_${item.key}`}
-                        className="text-sm cursor-pointer"
+                  {SCADENZARI_CONFIG.map((item) => {
+                    const numeroGenerati = scadenzariGenerati[item.key] ?? 0;
+                    const giaGenerato = numeroGenerati > 0;
+
+                    return (
+                      <div
+                        key={`flag_${item.key}`}
+                        className={`flex items-center justify-between gap-3 rounded-md border px-3 py-2 ${
+                          giaGenerato
+                            ? "border-green-200 bg-green-50"
+                            : "border-gray-200 bg-white"
+                        }`}
                       >
-                        {item.label}
-                      </label>
-                    </div>
-                  ))}
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`flag_${item.key}`}
+                            checked={giaGenerato ? false : scadenzariFlags[item.key]}
+                            disabled={giaGenerato || loadingStatoGenerazione}
+                            onCheckedChange={(checked) =>
+                              setScadenzariFlags({
+                                ...scadenzariFlags,
+                                [item.key]: checked as boolean,
+                              })
+                            }
+                          />
+                          <label
+                            htmlFor={`flag_${item.key}`}
+                            className={`text-sm ${
+                              giaGenerato
+                                ? "cursor-default font-medium text-green-800"
+                                : "cursor-pointer"
+                            }`}
+                          >
+                            {item.label}
+                          </label>
+                        </div>
+                        <span
+                          className={`whitespace-nowrap text-xs font-medium ${
+                            giaGenerato ? "text-green-700" : "text-gray-500"
+                          }`}
+                        >
+                          {loadingStatoGenerazione
+                            ? "Controllo..."
+                            : giaGenerato
+                            ? `✓ Generato — ${numeroGenerati}`
+                            : "Da generare"}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
               <Button
                 onClick={handleGenera}
-                disabled={processing}
+                disabled={
+                  processing ||
+                  loadingStatoGenerazione ||
+                  !SCADENZARI_CONFIG.some((item) =>
+                    isScadenzarioDaGenerare(item.key)
+                  )
+                }
                 className="w-full bg-green-600 hover:bg-green-700"
               >
                 {processing ? (
