@@ -740,17 +740,21 @@ async function handleUploadSignedPdf(
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-8">
-      <div className="mx-auto max-w-5xl">
-        <Card>
-          <CardHeader>
-            <CardTitle>Modello AV4 pubblico</CardTitle>
-            <p className="text-sm text-slate-600">
-              Dichiarazione del cliente compilabile tramite collegamento riservato.
+    <div className="public-av4-shell min-h-screen bg-slate-200/70">
+      <header className="border-b-[6px] border-slate-500 bg-white">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 py-6">
+          <div>
+            <h1 className="text-4xl font-bold text-slate-900">Modello AV4</h1>
+            <p className="mt-2 text-slate-600">Dichiarazione del Cliente</p>
+            <p className="mt-1 text-xs font-medium uppercase tracking-[0.16em] text-sky-700">
+              Compilazione tramite collegamento riservato
             </p>
-          </CardHeader>
+          </div>
+        </div>
+      </header>
 
-          <CardContent>
+      <main className="bg-slate-200/70">
+        <div className="mx-auto max-w-5xl px-4 pb-32 pt-4 md:px-8 md:pb-40">
             {alreadySubmitted && (
               <div className="mb-6 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
                 Questo AV4 risulta già completato. Il link non è più riutilizzabile.
@@ -758,7 +762,7 @@ async function handleUploadSignedPdf(
             )}
 
             <div id="print-area" className="space-y-6">
-              <Card>
+              <Card className="border border-sky-200 bg-slate-50 shadow-sm">
                 <CardHeader>
                   <div className="flex items-center justify-between gap-3">
                     <CardTitle>Dati principali</CardTitle>
@@ -784,7 +788,7 @@ async function handleUploadSignedPdf(
                           name="dichiarante_nome_cognome"
                           value={form.dichiarante_nome_cognome}
                           onChange={handleChange}
-                          className="w-full rounded-md border bg-gray-50 px-3 py-2"
+                          className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                           readOnly
                         />
                       </div>
@@ -795,7 +799,7 @@ async function handleUploadSignedPdf(
                           name="dichiarante_codice_fiscale"
                           value={form.dichiarante_codice_fiscale}
                           onChange={handleChange}
-                          className="w-full rounded-md border bg-gray-50 px-3 py-2"
+                          className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                           readOnly
                         />
                       </div>
@@ -806,7 +810,7 @@ async function handleUploadSignedPdf(
                           name="dichiarante_luogo_nascita"
                           value={form.dichiarante_luogo_nascita}
                           onChange={handleChange}
-                          className="w-full rounded-md border bg-gray-50 px-3 py-2"
+                          className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                           readOnly
                         />
                       </div>
@@ -818,7 +822,7 @@ async function handleUploadSignedPdf(
                           name="dichiarante_data_nascita"
                           value={form.dichiarante_data_nascita}
                           onChange={handleChange}
-                          className="w-full rounded-md border bg-gray-50 px-3 py-2"
+                          className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                           readOnly
                         />
                       </div>
@@ -829,7 +833,7 @@ async function handleUploadSignedPdf(
                           name="dichiarante_indirizzo_residenza"
                           value={form.dichiarante_indirizzo_residenza}
                           onChange={handleChange}
-                          className="w-full rounded-md border bg-gray-50 px-3 py-2"
+                          className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                           readOnly
                         />
                       </div>
@@ -840,7 +844,7 @@ async function handleUploadSignedPdf(
                           name="dichiarante_citta_residenza"
                           value={form.dichiarante_citta_residenza}
                           onChange={handleChange}
-                          className="w-full rounded-md border bg-gray-50 px-3 py-2"
+                          className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                           readOnly
                         />
                       </div>
@@ -851,7 +855,7 @@ async function handleUploadSignedPdf(
                           name="dichiarante_cap_residenza"
                           value={form.dichiarante_cap_residenza}
                           onChange={handleChange}
-                          className="w-full rounded-md border bg-gray-50 px-3 py-2"
+                          className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                           readOnly
                         />
                       </div>
@@ -862,7 +866,7 @@ async function handleUploadSignedPdf(
                           name="dichiarante_nazionalita"
                           value={form.dichiarante_nazionalita}
                           onChange={handleChange}
-                          className="w-full rounded-md border bg-gray-50 px-3 py-2"
+                          className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                           readOnly
                         />
                       </div>
@@ -871,7 +875,7 @@ async function handleUploadSignedPdf(
                 </CardContent>
               </Card>
 
-              <Card className="mt-6">
+              <Card className="mt-6 border border-sky-200 bg-slate-50 shadow-sm">
                 <CardHeader>
                   <div className="flex items-center justify-between gap-3">
                     <CardTitle>Dichiarazioni del cliente</CardTitle>
@@ -916,7 +920,7 @@ async function handleUploadSignedPdf(
                         name="natura_prestazione"
                         value={form.natura_prestazione}
                         onChange={handleChange}
-                        className="w-full rounded-md border px-3 py-2"
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                         rows={4}
                         disabled={alreadySubmitted}
                       />
@@ -974,7 +978,7 @@ async function handleUploadSignedPdf(
                           name="spec_domanda5"
                           value={form.spec_domanda5}
                           onChange={handleChange}
-                          className="w-full rounded-md border px-3 py-2"
+                          className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                           rows={3}
                           disabled={alreadySubmitted}
                         />
@@ -1054,7 +1058,7 @@ async function handleUploadSignedPdf(
                               name="nome_soc"
                               value={form.nome_soc}
                               onChange={handleChange}
-                              className="w-full rounded-md border px-3 py-2"
+                              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                               disabled={alreadySubmitted}
                             />
                           </div>
@@ -1064,7 +1068,7 @@ async function handleUploadSignedPdf(
                               name="sede_legale"
                               value={form.sede_legale}
                               onChange={handleChange}
-                              className="w-full rounded-md border px-3 py-2"
+                              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                               disabled={alreadySubmitted}
                             />
                           </div>
@@ -1074,7 +1078,7 @@ async function handleUploadSignedPdf(
                               name="indirizzo_sede"
                               value={form.indirizzo_sede}
                               onChange={handleChange}
-                              className="w-full rounded-md border px-3 py-2"
+                              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                               disabled={alreadySubmitted}
                             />
                           </div>
@@ -1084,7 +1088,7 @@ async function handleUploadSignedPdf(
                               name="reg_imprese"
                               value={form.reg_imprese}
                               onChange={handleChange}
-                              className="w-full rounded-md border px-3 py-2"
+                              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                               disabled={alreadySubmitted}
                             />
                           </div>
@@ -1094,7 +1098,7 @@ async function handleUploadSignedPdf(
                               name="num_reg_imprese"
                               value={form.num_reg_imprese}
                               onChange={handleChange}
-                              className="w-full rounded-md border px-3 py-2"
+                              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                               disabled={alreadySubmitted}
                             />
                           </div>
@@ -1104,7 +1108,7 @@ async function handleUploadSignedPdf(
                               name="cod_fiscale_soc"
                               value={form.cod_fiscale_soc}
                               onChange={handleChange}
-                              className="w-full rounded-md border px-3 py-2"
+                              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                               disabled={alreadySubmitted}
                             />
                           </div>
@@ -1147,7 +1151,7 @@ async function handleUploadSignedPdf(
                               name="nome_soc_bis"
                               value={form.nome_soc_bis}
                               onChange={handleChange}
-                              className="w-full rounded-md border px-3 py-2"
+                              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                               disabled={alreadySubmitted}
                             />
                           </div>
@@ -1157,7 +1161,7 @@ async function handleUploadSignedPdf(
                               name="sede_legale_bis"
                               value={form.sede_legale_bis}
                               onChange={handleChange}
-                              className="w-full rounded-md border px-3 py-2"
+                              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                               disabled={alreadySubmitted}
                             />
                           </div>
@@ -1167,7 +1171,7 @@ async function handleUploadSignedPdf(
                               name="indirizzo_sede_bis"
                               value={form.indirizzo_sede_bis}
                               onChange={handleChange}
-                              className="w-full rounded-md border px-3 py-2"
+                              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                               disabled={alreadySubmitted}
                             />
                           </div>
@@ -1177,7 +1181,7 @@ async function handleUploadSignedPdf(
                               name="reg_imprese_bis"
                               value={form.reg_imprese_bis}
                               onChange={handleChange}
-                              className="w-full rounded-md border px-3 py-2"
+                              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                               disabled={alreadySubmitted}
                             />
                           </div>
@@ -1187,7 +1191,7 @@ async function handleUploadSignedPdf(
                               name="num_reg_imprese_bis"
                               value={form.num_reg_imprese_bis}
                               onChange={handleChange}
-                              className="w-full rounded-md border px-3 py-2"
+                              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                               disabled={alreadySubmitted}
                             />
                           </div>
@@ -1197,7 +1201,7 @@ async function handleUploadSignedPdf(
                               name="cod_fiscale_soc_bis"
                               value={form.cod_fiscale_soc_bis}
                               onChange={handleChange}
-                              className="w-full rounded-md border px-3 py-2"
+                              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                               disabled={alreadySubmitted}
                             />
                           </div>
@@ -1209,7 +1213,7 @@ async function handleUploadSignedPdf(
                               name="nome_soc_ter"
                               value={form.nome_soc_ter}
                               onChange={handleChange}
-                              className="w-full rounded-md border px-3 py-2"
+                              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                               disabled={alreadySubmitted}
                             />
                           </div>
@@ -1265,7 +1269,7 @@ async function handleUploadSignedPdf(
                           name="specifica12"
                           value={form.specifica12}
                           onChange={handleChange}
-                          className="w-full rounded-md border px-3 py-2"
+                          className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                           rows={3}
                           disabled={alreadySubmitted}
                         />
@@ -1284,7 +1288,7 @@ async function handleUploadSignedPdf(
                         name="specifica10b"
                         value={form.specifica10b}
                         onChange={handleChange}
-                        className="w-full rounded-md border px-3 py-2"
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                         rows={3}
                         disabled={alreadySubmitted}
                       />
@@ -1298,7 +1302,7 @@ async function handleUploadSignedPdf(
                         name="specifica10c"
                         value={form.specifica10c}
                         onChange={handleChange}
-                        className="w-full rounded-md border px-3 py-2"
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                         rows={3}
                         disabled={alreadySubmitted}
                       />
@@ -1312,7 +1316,7 @@ async function handleUploadSignedPdf(
                         name="specifica11c"
                         value={form.specifica11c}
                         onChange={handleChange}
-                        className="w-full rounded-md border px-3 py-2"
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                         rows={3}
                         disabled={alreadySubmitted}
                       />
@@ -1332,7 +1336,7 @@ async function handleUploadSignedPdf(
                         name="specifica10d"
                         value={form.specifica10d}
                         onChange={handleChange}
-                        className="w-full rounded-md border px-3 py-2"
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                         disabled={alreadySubmitted}
                       />
                     </div>
@@ -1343,7 +1347,7 @@ async function handleUploadSignedPdf(
                         name="specifica10e"
                         value={form.specifica10e}
                         onChange={handleChange}
-                        className="w-full rounded-md border px-3 py-2"
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                         disabled={alreadySubmitted}
                       />
                     </div>
@@ -1354,7 +1358,7 @@ async function handleUploadSignedPdf(
                         name="specifica10f"
                         value={form.specifica10f}
                         onChange={handleChange}
-                        className="w-full rounded-md border px-3 py-2"
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                         disabled={alreadySubmitted}
                       />
                     </div>
@@ -1362,7 +1366,7 @@ async function handleUploadSignedPdf(
                 </CardContent>
               </Card>
 
-              <Card className="mt-6">
+              <Card className="mt-6 border border-sky-200 bg-slate-50 shadow-sm">
                 <CardHeader>
                   <div className="flex items-center justify-between gap-3">
                     <CardTitle>Firma</CardTitle>
@@ -1378,7 +1382,7 @@ async function handleUploadSignedPdf(
                         name="luogo_firma"
                         value={form.luogo_firma}
                         onChange={handleChange}
-                        className="w-full rounded-md border px-3 py-2"
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                         disabled={alreadySubmitted}
                       />
                     </div>
@@ -1390,7 +1394,7 @@ async function handleUploadSignedPdf(
                         name="data_firma"
                         value={form.data_firma}
                         onChange={handleChange}
-                        className="w-full rounded-md border px-3 py-2"
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                         disabled={alreadySubmitted}
                       />
                     </div>
@@ -1401,7 +1405,7 @@ async function handleUploadSignedPdf(
                         name="luogo_firma_bis"
                         value={form.luogo_firma_bis}
                         onChange={handleChange}
-                        className="w-full rounded-md border px-3 py-2"
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                         disabled={alreadySubmitted}
                       />
                     </div>
@@ -1413,7 +1417,7 @@ async function handleUploadSignedPdf(
                         name="data_firma_bis"
                         value={form.data_firma_bis}
                         onChange={handleChange}
-                        className="w-full rounded-md border px-3 py-2"
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                         disabled={alreadySubmitted}
                       />
                     </div>
@@ -1424,7 +1428,7 @@ async function handleUploadSignedPdf(
                         accept="application/pdf"
                         onChange={handleUploadSignedPdf}
                         disabled={alreadySubmitted}
-                        className="block w-full rounded-md border px-3 py-2"
+                        className="block w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                       />
                       {uploadingPdf && (
                         <p className="text-sm text-slate-600">Caricamento PDF firmato...</p>
@@ -1446,7 +1450,7 @@ async function handleUploadSignedPdf(
                       <button
                         type="button"
                         onClick={handlePrintPdf}
-                        className="rounded-md border border-slate-300 bg-white px-5 py-3 text-slate-700 shadow hover:bg-slate-50"
+                        className="inline-flex h-9 w-40 items-center justify-center rounded-md border border-sky-700 bg-sky-700 px-3 text-center text-sm font-semibold leading-tight text-white shadow-sm transition-colors hover:bg-sky-800"
                       >
                         Stampa / Salva PDF
                       </button>
@@ -1455,7 +1459,7 @@ async function handleUploadSignedPdf(
                         type="button"
                         onClick={handleSubmit}
                         disabled={saving || alreadySubmitted}
-                        className="rounded-md bg-sky-600 px-5 py-3 text-white shadow hover:bg-sky-700 disabled:opacity-50"
+                        className="inline-flex h-9 w-40 items-center justify-center rounded-md border border-sky-700 bg-sky-700 px-3 text-center text-sm font-semibold leading-tight text-white shadow-sm transition-colors hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {saving ? "Salvataggio..." : "Salva e chiudi"}
                       </button>
@@ -1464,11 +1468,29 @@ async function handleUploadSignedPdf(
                 </CardContent>
               </Card>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+        </div>
+      </main>
 
       <style jsx global>{`
+        .public-av4-shell button:not([role="checkbox"]) {
+          border-color: rgb(3 105 161) !important;
+          background-color: rgb(3 105 161) !important;
+          color: white !important;
+          font-weight: 600 !important;
+          box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05) !important;
+        }
+
+        .public-av4-shell button:not([role="checkbox"]):hover {
+          background-color: rgb(7 89 133) !important;
+        }
+
+        .public-av4-shell input:not([type="checkbox"]):not([type="file"]),
+        .public-av4-shell textarea,
+        .public-av4-shell select {
+          border-color: rgb(203 213 225) !important;
+          background-color: white !important;
+        }
+
         @media print {
           body {
             background: white !important;
