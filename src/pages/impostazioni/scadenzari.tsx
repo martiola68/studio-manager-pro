@@ -431,7 +431,7 @@ useEffect(() => {
       const { data: utenteData, error: utenteError } = await supabase
         .from("tbutenti")
         .select("studio_id")
-        .eq("id", session.user.id)
+        .eq("user_id", session.user.id)
         .single();
 
       if (utenteError || !utenteData?.studio_id) {
