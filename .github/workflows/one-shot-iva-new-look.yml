@@ -1,0 +1,108 @@
+name: One shot - IVA new look
+
+on:
+  push:
+    paths:
+      - '.github/workflows/one-shot-iva-new-look.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Restyle IVA schedule
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/pages/scadenze/iva.tsx')
+          s = p.read_text(encoding='utf-8')
+          original = s
+
+          # Checkbox component no longer needed in IVA grid.
+          s = s.replace('import { Checkbox } from "@/components/ui/checkbox";\n', '')
+
+          # Operator filter: first name ascending, then surname for stable ordering.
+          s = s.replace('.order("cognome", { ascending: true });', '.order("nome", { ascending: true }).order("cognome", { ascending: true });', 1)
+
+          # Exact boolean setter (select SI/NO must set the chosen value, not toggle blindly).
+          anchor = '''  const handleUpdateField = async (\n    scadenzaId: string,\n    field: keyof ScadenzaIva,\n    value: any\n  ) => {'''
+          insert = '''  const handleSetBooleanField = async (\n    scadenzaId: string,\n    field: keyof ScadenzaIva,\n    newValue: boolean\n  ) => {\n    try {\n      const previous = scadenze.find((s) => s.id === scadenzaId)?.[field];\n\n      setScadenze((prev) =>\n        prev.map((s) => (s.id === scadenzaId ? { ...s, [field]: newValue } : s))\n      );\n\n      if (field === "conferma_riga" && Boolean(previous) !== newValue) {\n        setStats((prev) => ({\n          ...prev,\n          confermate: newValue ? prev.confermate + 1 : prev.confermate - 1,\n          nonConfermate: newValue ? prev.nonConfermate - 1 : prev.nonConfermate + 1,\n        }));\n      }\n\n      const { error } = await supabase\n        .from("tbscadiva" as any)\n        .update({ [field]: newValue } as any)\n        .eq("id", scadenzaId);\n\n      if (error) throw error;\n    } catch (error: any) {\n      toast({\n        title: "Errore aggiornamento",\n        description: error.message,\n        variant: "destructive",\n      });\n      await loadData();\n    }\n  };\n\n'''+anchor
+          if anchor not in s:
+              raise SystemExit('handleUpdateField anchor missing')
+          s = s.replace(anchor, insert, 1)
+
+          # Page canvas and card hierarchy.
+          s = s.replace('<div className="space-y-6">', '<div className="min-h-screen space-y-4 bg-slate-200/70 px-3 pb-6 pt-2">', 1)
+          s = s.replace('<Card>\n          <CardContent className="pt-6">', '<Card className="border border-sky-200 bg-slate-50 shadow-sm">\n          <CardContent className="pt-5">', 3)
+          s = s.replace('<Card>\n        <CardHeader>\n          <CardTitle>Filtri e Ricerca</CardTitle>', '<Card className="border border-sky-200 bg-slate-50 shadow-sm">\n        <CardHeader className="pb-3">\n          <CardTitle>Filtri e Ricerca</CardTitle>', 1)
+          s = s.replace('<Card>\n        <CardContent className="p-0">', '<Card className="overflow-hidden border border-sky-200 bg-slate-50 shadow-sm">\n        <CardContent className="p-0">', 1)
+
+          # Filter controls: fully white.
+          s = s.replace('className="pl-10"', 'className="h-9 border-slate-300 bg-white pl-10"', 1)
+          s = s.replace('<SelectTrigger>\n                  <SelectValue placeholder="Tutti" />', '<SelectTrigger className="h-9 border-slate-300 bg-white">\n                  <SelectValue placeholder="Tutti" />', 2)
+          s = s.replace('<SelectTrigger>\n                  <SelectValue placeholder="Seleziona anno" />', '<SelectTrigger className="h-9 border-slate-300 bg-white">\n                  <SelectValue placeholder="Seleziona anno" />', 1)
+
+          # Dark table header with light labels; more compact height.
+          s = s.replace('<thead className="[&_tr]:border-b sticky top-0 z-30 bg-white shadow-sm">', '<thead className="sticky top-0 z-30 bg-slate-600 text-white shadow-sm [&_tr]:border-b [&_tr]:border-slate-500">', 1)
+          s = s.replace('className="border-b transition-colors hover:bg-muted/50">\n                  <th', 'className="border-b border-slate-500">\n                  <th', 1)
+          s = s.replace('h-10 px-2', 'h-9 px-2')
+          s = s.replace('font-medium text-muted-foreground', 'font-semibold text-slate-50')
+
+          # Compact body cells and white entry controls.
+          s = s.replace('className="p-2 align-middle', 'className="px-2 py-1 align-middle')
+          s = s.replace('className={`p-2 align-middle', 'className={`px-2 py-1 align-middle')
+          s = s.replace('className="w-full"\n                          placeholder="0.00"', 'className="h-8 w-full border-slate-300 bg-white"\n                          placeholder="0.00"', 1)
+          s = s.replace('className="w-full"\n                        />', 'className="h-8 w-full border-slate-300 bg-white"\n                        />', 1)
+          s = s.replace('className="min-h-[60px] resize-none"', 'rows={1}\n                          className="min-h-8 h-8 resize-none border-slate-300 bg-white py-1.5"', 1)
+
+          # Replace six boolean Checkbox blocks with compact SI/NO native selects.
+          fields = [
+              ('mod_predisposto', '110px'),
+              ('mod_definitivo', '90px'),
+              ('asseverazione', '90px'),
+              ('mod_inviato', '90px'),
+              ('ricevuta', '100px'),
+              ('conferma_riga', '100px'),
+          ]
+          for field, width in fields:
+              old = f'''                      <td className="px-2 py-1 align-middle text-center min-w-[{width}]">\n                        <Checkbox\n                          checked={{scadenza.{field} || false}}\n                          onCheckedChange={{() =>\n                            handleToggleField(\n                              scadenza.id,\n                              "{field}",\n                              scadenza.{field}\n                            )\n                          }}\n                        />\n                      </td>'''
+              new = f'''                      <td className="px-2 py-1 align-middle text-center min-w-[{width}]">\n                        <select\n                          value={{scadenza.{field} ? "SI" : "NO"}}\n                          onChange={{(e) =>\n                            handleSetBooleanField(\n                              scadenza.id,\n                              "{field}",\n                              e.target.value === "SI"\n                            )\n                          }}\n                          className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"\n                        >\n                          <option value="NO">NO</option>\n                          <option value="SI">SI</option>\n                        </select>\n                      </td>'''
+              if old not in s:
+                  raise SystemExit(f'Checkbox block missing for {field}')
+              s = s.replace(old, new, 1)
+
+          # Keep row status colors but reduce visual bulk and make neutral rows slightly grey.
+          s = s.replace('"hover:bg-green-50"', '"bg-slate-50 hover:bg-slate-100"', 1)
+          s = s.replace(': "!bg-white"', ': "!bg-slate-50"', 1)
+
+          if s == original:
+              raise SystemExit('No IVA changes produced')
+
+          p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Verify IVA runtime changes
+        run: |
+          grep -q 'order("nome", { ascending: true })' src/pages/scadenze/iva.tsx
+          grep -q 'handleSetBooleanField' src/pages/scadenze/iva.tsx
+          grep -q 'bg-slate-600 text-white' src/pages/scadenze/iva.tsx
+          grep -q 'border border-sky-200 bg-slate-50 shadow-sm' src/pages/scadenze/iva.tsx
+          grep -q '<option value="SI">SI</option>' src/pages/scadenze/iva.tsx
+          ! grep -q '<Checkbox' src/pages/scadenze/iva.tsx
+
+      - name: Commit runtime IVA page
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/pages/scadenze/iva.tsx
+          git diff --cached --quiet && exit 0
+          git commit -m 'Restyle IVA schedule and replace checkboxes with SI NO'
+          git push origin main
