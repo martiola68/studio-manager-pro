@@ -4,29 +4,62 @@ p = Path('src/pages/clienti/organi-sociali.tsx')
 s = p.read_text(encoding='utf-8')
 old = s
 
-# 1) Pulsante Modifica anagrafica: testo sempre su una sola riga.
-old_btn = '<button type="button" style={{ ...secondaryButton, width: 160, height: 40, padding: "0 14px" }} disabled={!form.soggetto_cliente_id} onClick={apriModificaNominativo}>Modifica anagrafica</button>'
-new_btn = '<button type="button" style={{ ...secondaryButton, width: 190, minWidth: 190, height: 40, padding: "0 16px", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", justifyContent: "center" }} disabled={!form.soggetto_cliente_id} onClick={apriModificaNominativo}>Modifica anagrafica</button>'
-if s.count(old_btn) != 1:
-    raise SystemExit('Modifica anagrafica button marker mismatch')
-s = s.replace(old_btn, new_btn, 1)
+# 1) Organo di controllo sempre visibile, anche senza componenti.
+control_open = '{controlloVisualizzato.length > 0 && <div style={{ ...cardStyle, border: "1px solid #8cddff", borderRadius: 12, background: "#ffffff", boxShadow: "0 12px 30px rgba(14,78,112,0.12)" }}>'
+control_open_new = '<div style={{ ...cardStyle, border: "1px solid #8cddff", borderRadius: 12, background: "#ffffff", boxShadow: "0 12px 30px rgba(14,78,112,0.12)" }}>'
+if s.count(control_open) != 1:
+    raise SystemExit('control card opening marker mismatch')
+s = s.replace(control_open, control_open_new, 1)
 
-# 2) Firmatario: solo nella modale Organo di amministrazione, usando il campo esistente `principale`.
-footer = '<div style={{display:"flex",justifyContent:"flex-end",gap:10,marginTop:22,borderTop:"1px solid #e2e8f0",paddingTop:16}}><button type="button" style={{ ...secondaryButton, width: 130, height: 40, padding: "0 14px" }} onClick={()=>setModalSezione(null)}>Annulla</button>'
-firmatario = '{modalSezione==="amministrazione" && <div style={{marginTop:16,display:"flex",alignItems:"center",justifyContent:"flex-start"}}><label style={{display:"inline-flex",alignItems:"center",gap:9,fontSize:14,fontWeight:600,color:"#334155",cursor:form.soggetto_cliente_id?"pointer":"not-allowed",userSelect:"none"}}><input type="checkbox" checked={Boolean(form.principale)} disabled={!form.soggetto_cliente_id} onChange={(e)=>setForm((p)=>({...p,principale:e.target.checked}))} style={{width:17,height:17,accentColor:"#0d6f9f",cursor:form.soggetto_cliente_id?"pointer":"not-allowed"}}/><span>Firmatario</span></label></div>}\n  '
+control_close = '</tbody></table></div></div>}\n\n{modalSezione &&'
+control_close_new = '{controlloVisualizzato.length === 0 && <tr><td style={tdStyle} colSpan={6}>Nessun componente dell\'organo di controllo presente.</td></tr>}</tbody></table></div></div>\n\n{modalSezione &&'
+if s.count(control_close) != 1:
+    raise SystemExit('control card closing marker mismatch')
+s = s.replace(control_close, control_close_new, 1)
 
-if '<span>Firmatario</span>' not in s:
-    if s.count(footer) != 1:
-        raise SystemExit('modal footer marker mismatch')
-    s = s.replace(footer, firmatario + footer, 1)
+# 2) Pulsante Verifica Titolari Effettivi identico ai pulsanti Aggiungi.
+verify_style_old = '''      style={{
+        padding: "9px 14px",
+        borderRadius: 8,
+        border: "1px solid #2563eb",
+        background: "#2563eb",
+        color: "#ffffff",
+        fontWeight: 400,
+        cursor: "pointer",
+        whiteSpace: "nowrap",
+      }}'''
+verify_style_new = '''      style={{ ...blueButton, width: 190, height: 40, minWidth: 190, minHeight: 40, padding: "0 16px", display: "inline-flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(110deg, #0b4f7d 0%, #0d6f9f 58%, #1688b7 100%)", border: "1px solid #0d6f9f", whiteSpace: "nowrap" }}'''
+if s.count(verify_style_old) != 1:
+    raise SystemExit('verify titulari button style marker mismatch')
+s = s.replace(verify_style_old, verify_style_new, 1)
+
+# 3) Salva modifiche sempre leggibile su una riga.
+save_btn_old = '<button type="button" style={{ ...blueButton, width: 130, height: 40, padding: "0 14px", background: "linear-gradient(110deg, #0b4f7d 0%, #0d6f9f 58%, #1688b7 100%)", border: "1px solid #0d6f9f" }} onClick={salvaOrgano}>{organoInModificaId?"Salva modifiche":"OK"}</button>'
+save_btn_new = '<button type="button" style={{ ...blueButton, width: organoInModificaId ? 190 : 130, minWidth: organoInModificaId ? 190 : 130, height: 40, padding: "0 16px", background: "linear-gradient(110deg, #0b4f7d 0%, #0d6f9f 58%, #1688b7 100%)", border: "1px solid #0d6f9f", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", justifyContent: "center" }} onClick={salvaOrgano}>{organoInModificaId?"Salva modifiche":"OK"}</button>'
+if s.count(save_btn_old) != 1:
+    raise SystemExit('save modal button marker mismatch')
+s = s.replace(save_btn_old, save_btn_new, 1)
+
+# 4) Dopo un salvataggio riuscito chiude la modale prima di azzerare il form.
+normal_success = ' setMessaggio("Organo salvato correttamente.");\n\nsetForm({'
+normal_success_new = ' setMessaggio("Organo salvato correttamente.");\nsetModalSezione(null);\n\nsetForm({'
+if s.count(normal_success) != 1:
+    raise SystemExit('normal save success marker mismatch')
+s = s.replace(normal_success, normal_success_new, 1)
+
+# Anche il ramo dei diritti collegati chiude correttamente la modale.
+linked_success = '  setMessaggio("Diritto collegato correttamente.");\n\n  setForm({'
+linked_success_new = '  setMessaggio("Diritto collegato correttamente.");\n  setModalSezione(null);\n  setOrganoInModificaId("");\n\n  setForm({'
+if s.count(linked_success) != 1:
+    raise SystemExit('linked-right save success marker mismatch')
+s = s.replace(linked_success, linked_success_new, 1)
 
 # Verifiche forti.
-assert 'whiteSpace: "nowrap"' in s
-assert 'width: 190, minWidth: 190' in s
-assert 'modalSezione==="amministrazione"' in s
-assert '<span>Firmatario</span>' in s
-assert 'checked={Boolean(form.principale)}' in s
-assert 'disabled={!form.soggetto_cliente_id}' in s
+assert 'controlloVisualizzato.length > 0 &&' not in s
+assert 'Nessun componente dell\'organo di controllo presente.' in s
+assert 'Verifica Titolari Effettivi' in s
+assert 'width: organoInModificaId ? 190 : 130' in s
+assert 'setModalSezione(null);' in s
 
 if s == old:
     raise SystemExit('no changes')
