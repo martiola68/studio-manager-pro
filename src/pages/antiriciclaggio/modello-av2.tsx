@@ -537,7 +537,7 @@ const handleRemoveFirmato = async () => {
 };
 
   return (
-    <div className="flex h-[calc(100vh-64px)] flex-col overflow-hidden bg-slate-300">
+    <div className="flex h-[calc(100vh-64px)] flex-col overflow-hidden bg-slate-200/70">
       <FormStickyHeader
         title="Modello AV2"
         subtitle="Gestione documentazione e annotazioni professionista"
@@ -547,10 +547,10 @@ const handleRemoveFirmato = async () => {
         saving={saving || loading}
       />
 
-      <div className="flex-1 overflow-hidden">
-        <div className="h-full overflow-y-auto">
+      <div className="flex-1 overflow-hidden border-t border-slate-200 bg-slate-200/70">
+        <div className="h-full overflow-y-auto bg-slate-200/70">
           <div className="mx-auto max-w-7xl px-4 pb-32 pt-4 md:px-8 md:pb-40 md:pt-4">
-            <Card className="border border-sky-200 bg-slate-100 shadow-sm">
+            <Card className="border border-sky-200 bg-slate-50 shadow-sm">
               <CardHeader>
                 <CardTitle>Dati principali</CardTitle>
               </CardHeader>
@@ -563,7 +563,7 @@ const handleRemoveFirmato = async () => {
                     <div className="md:col-span-2">
                       <label className="mb-1 block text-sm font-medium">Cliente</label>
                       <select
-                        className="w-full rounded-md border border-slate-400 bg-white px-3 py-2"
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                         value={form.cliente_id}
                         disabled
                       >
@@ -580,7 +580,7 @@ const handleRemoveFirmato = async () => {
                       <label className="mb-1 block text-sm font-medium">Data check</label>
                       <input
                         type="date"
-                        className="w-full rounded-md border border-slate-400 bg-white px-3 py-2"
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                         value={form.data_check || ""}
                         onChange={(e) =>
                           setForm((prev) => ({
@@ -593,7 +593,7 @@ const handleRemoveFirmato = async () => {
 
                     {clienteSelezionato && (
                       <div className="md:col-span-3">
-                        <div className="rounded-md border border-slate-300 bg-slate-200/70 px-4 py-3 text-sm text-gray-700">
+                        <div className="rounded-md border border-slate-300 bg-slate-100/70 px-4 py-3 text-sm text-gray-700">
                           <span className="font-semibold">Cliente selezionato:</span>{" "}
                           {formatClienteLabel(clienteSelezionato)}
                         </div>
@@ -610,7 +610,7 @@ const handleRemoveFirmato = async () => {
               </CardContent>
             </Card>
 
-            <Card className="mt-6 border border-sky-200 bg-slate-100 shadow-sm">
+            <Card className="mt-6 border border-sky-200 bg-slate-50 shadow-sm">
               <CardHeader>
                 <CardTitle>Check-list fascicolo cliente</CardTitle>
               </CardHeader>
@@ -629,7 +629,7 @@ const handleRemoveFirmato = async () => {
                       {AV2_CHECKLIST.map((item) => (
                         <div
                           key={item.id}
-                          className="grid grid-cols-12 gap-3 rounded-lg border border-slate-300 bg-slate-200/70 p-4"
+                          className="grid grid-cols-12 gap-3 rounded-lg border border-slate-300 bg-slate-100/70 p-4"
                         >
                           <div className="col-span-1 flex items-start justify-center pt-1">
                             <input
@@ -652,7 +652,7 @@ const handleRemoveFirmato = async () => {
                           <div className="col-span-4">
                             <textarea
                               rows={5}
-                              className="w-full rounded-md border border-slate-400 bg-white px-3 py-2 text-sm"
+                              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
                               value={String(form[`annotazioni${item.id}`] || "")}
                               onChange={(e) =>
                                 handleAnnotazioneChange(item.id, e.target.value)
@@ -668,7 +668,7 @@ const handleRemoveFirmato = async () => {
               </CardContent>
             </Card>
 
-            <Card className="mt-6 border border-sky-200 bg-slate-100 shadow-sm">
+            <Card className="mt-6 border border-sky-200 bg-slate-50 shadow-sm">
               <CardHeader>
                 <CardTitle>Allegato AV2 firmato</CardTitle>
               </CardHeader>
@@ -737,7 +737,7 @@ const handleRemoveFirmato = async () => {
               </CardContent>
             </Card>
 
-            <Card className="mt-6 border border-sky-200 bg-slate-100 shadow-sm">
+            <Card className="mt-6 border border-sky-200 bg-slate-50 shadow-sm">
               <CardHeader>
                 <CardTitle>Chiusura check-list</CardTitle>
               </CardHeader>
@@ -749,7 +749,7 @@ const handleRemoveFirmato = async () => {
 
                     <input
                       type="text"
-                      className="w-full rounded-md border border-slate-400 bg-white px-3 py-2"
+                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                       value={form.firma_check || ""}
                       onChange={(e) =>
                         setForm((prev) => ({

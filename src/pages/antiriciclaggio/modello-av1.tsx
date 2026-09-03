@@ -1157,7 +1157,7 @@ const handleRinnovoVerifica = async () => {
 };
 
   return (
-    <div className="flex h-[calc(100vh-64px)] flex-col overflow-hidden bg-slate-300">
+    <div className="flex h-[calc(100vh-64px)] flex-col overflow-hidden bg-slate-200/70">
       <FormStickyHeader
         title="Modello AV1"
         subtitle={
@@ -1198,10 +1198,10 @@ const handleRinnovoVerifica = async () => {
         }
       />
 
-      <div className="flex-1 overflow-hidden">
-        <div className="h-full overflow-y-auto">
+      <div className="flex-1 overflow-hidden border-t border-slate-200 bg-slate-200/70">
+        <div className="h-full overflow-y-auto bg-slate-200/70">
           <div className="mx-auto max-w-5xl px-4 pb-32 pt-4 md:px-8 md:pb-40 md:pt-4">
-            <Card className="border border-sky-200 bg-slate-100 shadow-sm">
+            <Card className="border border-sky-200 bg-slate-50 shadow-sm">
               <CardHeader>
                 <CardTitle>Dati principali</CardTitle>
               </CardHeader>
@@ -1214,7 +1214,7 @@ const handleRinnovoVerifica = async () => {
                     <div className="md:col-span-2">
                       <label className="mb-1 block text-sm font-medium">Cliente</label>
                       <select
-                        className="w-full rounded-md border border-slate-400 bg-white px-3 py-2"
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                         value={formData.cliente_id}
                         onChange={(e) =>
                           setFormData((prev) => ({
@@ -1235,7 +1235,7 @@ const handleRinnovoVerifica = async () => {
                     <div>
                       <label className="mb-1 block text-sm font-medium">Prestazione</label>
                       <select
-                        className="w-full rounded-md border border-slate-400 bg-white px-3 py-2"
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                         value={formData.Prestazione}
                         onChange={(e) => handlePrestazioneChange(e.target.value)}
                       >
@@ -1266,7 +1266,7 @@ const handleRinnovoVerifica = async () => {
                       <label className="mb-1 block text-sm font-medium">Data verifica</label>
                       <input
                         type="date"
-                        className="w-full rounded-md border border-slate-400 bg-white px-3 py-2"
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                         value={formData.DataVerifica}
                         onChange={(e) => handleDataVerificaChange(e.target.value)}
                       />
@@ -1276,7 +1276,7 @@ const handleRinnovoVerifica = async () => {
                       <label className="mb-1 block text-sm font-medium">Scadenza verifica</label>
                       <input
                         type="date"
-                        className="w-full rounded-md border border-slate-400 bg-white px-3 py-2"
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                         value={ScadenzaVerificaCalcolata}
                         readOnly
                       />
@@ -1292,7 +1292,7 @@ const handleRinnovoVerifica = async () => {
               </CardContent>
             </Card>
 
-            <Card className="mt-6 border border-sky-200 bg-slate-100 shadow-sm">
+            <Card className="mt-6 border border-sky-200 bg-slate-50 shadow-sm">
               <CardHeader>
                 <CardTitle>A - Aspetti connessi al cliente</CardTitle>
               </CardHeader>
@@ -1327,7 +1327,7 @@ const handleRinnovoVerifica = async () => {
       )}
 
       <div
-        className={`rounded-lg border border-slate-300 bg-slate-200/70 p-4 ${
+        className={`rounded-lg border border-slate-300 bg-slate-100/70 p-4 ${
           disableSection ? "bg-red-50 opacity-70" : ""
         }`}
       >
@@ -1381,7 +1381,7 @@ const handleRinnovoVerifica = async () => {
               </CardContent>
             </Card>
 
-            <Card className="mt-6 border border-sky-200 bg-slate-100 shadow-sm">
+            <Card className="mt-6 border border-sky-200 bg-slate-50 shadow-sm">
               <CardHeader>
                 <CardTitle>Incaricato adeguata verifica</CardTitle>
               </CardHeader>
@@ -1417,7 +1417,7 @@ const handleRinnovoVerifica = async () => {
               </CardContent>
             </Card>
 
-            <Card className="mt-6 border border-sky-200 bg-slate-100 shadow-sm">
+            <Card className="mt-6 border border-sky-200 bg-slate-50 shadow-sm">
               <CardHeader>
                 <CardTitle>Calcoli finali</CardTitle>
               </CardHeader>
@@ -1428,7 +1428,7 @@ const handleRinnovoVerifica = async () => {
                     <label className="mb-1 block text-sm font-medium">TotA</label>
                     <input
                       type="text"
-                      className="w-full rounded-md border border-slate-400 bg-white px-3 py-2"
+                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                       value={TotA}
                       readOnly
                     />
@@ -1440,7 +1440,7 @@ const handleRinnovoVerifica = async () => {
 </label>
                     <input
                       type="text"
-                      className="w-full rounded-md border border-slate-400 bg-white px-3 py-2"
+                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                       value={TotB}
                       readOnly
                     />
@@ -1450,7 +1450,7 @@ const handleRinnovoVerifica = async () => {
                     <label className="mb-1 block text-sm font-medium">Media punteggio</label>
                     <input
                       type="text"
-                      className="w-full rounded-md border border-slate-400 bg-white px-3 py-2"
+                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                       value={MediaPunteggio}
                       readOnly
                     />
@@ -1474,7 +1474,7 @@ const handleRinnovoVerifica = async () => {
                     </label>
                     <input
                       type="text"
-                      className="w-full rounded-md border border-slate-400 bg-white px-3 py-2"
+                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                       value={RisInerentePonderato}
                       readOnly
                     />
@@ -1486,7 +1486,7 @@ const handleRinnovoVerifica = async () => {
                     </label>
                     <input
                       type="text"
-                      className="w-full rounded-md border border-slate-400 bg-white px-3 py-2"
+                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                       value={RisSpecificoPonderato}
                       readOnly
                     />
@@ -1496,7 +1496,7 @@ const handleRinnovoVerifica = async () => {
                     <label className="mb-1 block text-sm font-medium">Rischio effettivo</label>
                     <input
                       type="text"
-                      className="w-full rounded-md border border-slate-400 bg-white px-3 py-2"
+                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                       value={RischioEffettivo}
                       readOnly
                     />
@@ -1518,7 +1518,7 @@ const handleRinnovoVerifica = async () => {
                     <label className="mb-1 block text-sm font-medium">AV1 confermato</label>
                     <input
                       type="text"
-                      className="w-full rounded-md border border-slate-400 bg-white px-3 py-2"
+                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                       value={formData.AV1Conferma ? "SI" : "NO"}
                       readOnly
                     />
@@ -1528,7 +1528,7 @@ const handleRinnovoVerifica = async () => {
                     <label className="mb-1 block text-sm font-medium">AV4 generato</label>
                     <input
                       type="text"
-                      className="w-full rounded-md border border-slate-400 bg-white px-3 py-2"
+                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                       value={formData.AV4Generato ? "SI" : "NO"}
                       readOnly
                     />
@@ -1537,7 +1537,7 @@ const handleRinnovoVerifica = async () => {
               </CardContent>
             </Card>
 
-            <Card className="mt-6 border border-sky-200 bg-slate-100 shadow-sm">
+            <Card className="mt-6 border border-sky-200 bg-slate-50 shadow-sm">
               <CardHeader>
                 <CardTitle>Allegato AV1 firmato</CardTitle>
               </CardHeader>
@@ -1563,12 +1563,11 @@ const handleRinnovoVerifica = async () => {
                   />
 
 <Input
-        className="border-slate-400 bg-white"
   type="text"
   readOnly
   value={formData.allegato_av1_firmato || ""}
   placeholder="Nessun file allegato"
-  className="cursor-default"
+  className="cursor-default border-slate-300 bg-white"
 />
                   <div className="flex flex-wrap gap-2">
                     <Button
@@ -1606,7 +1605,7 @@ const handleRinnovoVerifica = async () => {
               </CardContent>
             </Card>
 
-            <Card className="mt-6 border border-sky-200 bg-slate-100 shadow-sm">
+            <Card className="mt-6 border border-sky-200 bg-slate-50 shadow-sm">
               <CardHeader>
                 <CardTitle>Matrice del rischio</CardTitle>
               </CardHeader>

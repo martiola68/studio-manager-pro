@@ -2032,7 +2032,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
   saving={loading}
 />
 
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden border-t border-slate-200 bg-slate-200/70">
         <div className="h-full overflow-y-auto bg-slate-200/70">
           <div className="mx-auto max-w-5xl px-4 pb-32 pt-4 md:px-8 md:pb-40 md:pt-4">
             <Card className="border border-sky-200 bg-slate-50 shadow-sm">
