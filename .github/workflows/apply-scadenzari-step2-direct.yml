@@ -1,0 +1,157 @@
+name: Apply direct yearly scadenzari fix
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/apply-scadenzari-step2-direct.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch only scadenzari runtime file
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/pages/impostazioni/scadenzari.tsx')
+          s = p.read_text(encoding='utf-8')
+
+          marker = '''  const getSelectedScadenzari = () =>
+            SCADENZARI_CONFIG.filter((item) => scadenzariFlags[item.key]);
+          '''
+          if marker not in s:
+              raise SystemExit('getSelectedScadenzari marker missing')
+
+          helper = marker + '''
+            const getCurrentStudioUser = async (): Promise<{ studioId: string; utenteId: string }> => {
+              const { data: { session } } = await supabase.auth.getSession();
+              if (!session?.user?.id) throw new Error("Sessione non valida");
+
+              let { data: utente, error } = await supabase
+                .from("tbutenti")
+                .select("id, studio_id")
+                .eq("user_id", session.user.id)
+                .maybeSingle();
+
+              if ((!utente || error) && session.user.email) {
+                const fallback = await supabase
+                  .from("tbutenti")
+                  .select("id, studio_id")
+                  .eq("email", session.user.email)
+                  .maybeSingle();
+                utente = fallback.data;
+                error = fallback.error;
+              }
+
+              if (error || !utente?.id || !utente?.studio_id) {
+                throw error || new Error("Utente studio non disponibile");
+              }
+
+              return { studioId: utente.studio_id, utenteId: utente.id };
+            };
+          '''
+          s = s.replace(marker, helper, 1)
+
+          load_start = s.index('  const loadAnniDisponibili = async () => {')
+          load_end = s.index('  const handleArchivia = async () => {', load_start)
+          load = s[load_start:load_end]
+          load = load.replace(
+              '    const selezionati = getSelectedScadenzari();\n',
+              '    const selezionati = getSelectedScadenzari();\n    const { studioId: currentStudioId } = await getCurrentStudioUser();\n',
+              1,
+          )
+          load = load.replace(
+              '.select("anno_riferimento")\n        .eq("archiviato", false);',
+              '.select("anno_riferimento")\n        .eq("studio_id", currentStudioId)\n        .eq("archiviato", false);',
+              1,
+          )
+          load = load.replace(
+              '.select("anno_riferimento")\n        .eq("archiviato", true);',
+              '.select("anno_riferimento")\n        .eq("studio_id", currentStudioId)\n        .eq("archiviato", true);',
+              1,
+          )
+          s = s[:load_start] + load + s[load_end:]
+
+          arch_start = s.index('  const handleArchivia = async () => {')
+          arch_end = s.index('  const handleEliminaArchivi = async (', arch_start)
+          arch = s[arch_start:arch_end]
+          arch = arch.replace(
+              '    try {\n      setProcessing(true);\n\n      for (const item of selezionati) {',
+              '    try {\n      setProcessing(true);\n      const { studioId: currentStudioId, utenteId: currentUtenteId } = await getCurrentStudioUser();\n\n      for (const item of selezionati) {',
+              1,
+          )
+          arch = arch.replace('            archiviato_da: session.user.id,', '            archiviato_da: currentUtenteId,', 1)
+          arch = arch.replace(
+              '          } as any)\n          .eq("anno_riferimento", annoArchiviazione)\n          .eq("archiviato", false);',
+              '          } as any)\n          .eq("studio_id", currentStudioId)\n          .eq("anno_riferimento", annoArchiviazione)\n          .eq("archiviato", false);',
+              1,
+          )
+          s = s[:arch_start] + arch + s[arch_end:]
+
+          old_lookup = '''      const { data: utenteData, error: utenteError } = await supabase
+                .from("tbutenti")
+                .select("studio_id")
+                .eq("id", session.user.id)
+                .single();
+
+              if (utenteError || !utenteData?.studio_id) {
+                toast({
+                  title: "Errore",
+                  description: "Impossibile recuperare lo studio_id",
+                  variant: "destructive",
+                });
+                return;
+              }
+
+              const currentStudioId = utenteData.studio_id;
+          '''
+          if old_lookup not in s:
+              raise SystemExit('generation lookup marker missing')
+          s = s.replace(old_lookup, '      const { studioId: currentStudioId } = await getCurrentStudioUser();\n', 1)
+
+          s = s.replace(
+              '              .eq("cliente_id", cliente.id)\n              .eq("anno_riferimento", annoGenerazione)',
+              '              .eq("cliente_id", cliente.id)\n              .eq("studio_id", currentStudioId)\n              .eq("anno_riferimento", annoGenerazione)',
+          )
+
+          if 'archiviato_da: session.user.id' in s:
+              raise SystemExit('old archiviato_da still present')
+          if '.eq("id", session.user.id)' in s:
+              raise SystemExit('old generation lookup still present')
+          if 'archiviato_da: currentUtenteId' not in s:
+              raise SystemExit('new archiviato_da missing')
+          if '.eq("user_id", session.user.id)' not in s:
+              raise SystemExit('new user_id lookup missing')
+
+          p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Verify exact runtime patterns
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'eq("user_id", session.user.id)' src/pages/impostazioni/scadenzari.tsx
+          grep -q 'archiviato_da: currentUtenteId' src/pages/impostazioni/scadenzari.tsx
+          grep -q 'eq("studio_id", currentStudioId)' src/pages/impostazioni/scadenzari.tsx
+          ! grep -q 'archiviato_da: session.user.id' src/pages/impostazioni/scadenzari.tsx
+          ! grep -q 'eq("id", session.user.id)' src/pages/impostazioni/scadenzari.tsx
+
+      - name: Commit runtime file
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/impostazioni/scadenzari.tsx
+          git commit -m "Fix scadenzari yearly generation identity"
+          git push origin HEAD:main
