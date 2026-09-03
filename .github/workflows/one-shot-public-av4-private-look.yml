@@ -1,0 +1,91 @@
+name: One shot - public AV4 private look
+
+on:
+  push:
+    paths:
+      - '.github/workflows/one-shot-public-av4-private-look.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Patch public AV4 runtime page
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('src/pages/compilazione-av4/[token].tsx')
+          s = p.read_text(encoding='utf-8')
+          original = s
+
+          old_start = '''  return (\n    <div className="min-h-screen bg-slate-50 px-4 py-8">\n      <div className="mx-auto max-w-5xl">\n        <Card>\n          <CardHeader>\n            <CardTitle>Modello AV4 pubblico</CardTitle>\n            <p className="text-sm text-slate-600">\n              Dichiarazione del cliente compilabile tramite collegamento riservato.\n            </p>\n          </CardHeader>\n\n          <CardContent>'''
+
+          new_start = '''  return (\n    <div className="public-av4-shell min-h-screen bg-slate-200/70">\n      <header className="border-b-[6px] border-slate-500 bg-white">\n        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 py-6">\n          <div>\n            <h1 className="text-4xl font-bold text-slate-900">Modello AV4</h1>\n            <p className="mt-2 text-slate-600">Dichiarazione del Cliente</p>\n            <p className="mt-1 text-xs font-medium uppercase tracking-[0.16em] text-sky-700">\n              Compilazione tramite collegamento riservato\n            </p>\n          </div>\n        </div>\n      </header>\n\n      <main className="bg-slate-200/70">\n        <div className="mx-auto max-w-5xl px-4 pb-32 pt-4 md:px-8 md:pb-40">'''
+
+          if old_start not in s:
+              raise SystemExit('START anchor not found')
+          s = s.replace(old_start, new_start, 1)
+
+          old_end = '''          </CardContent>\n        </Card>\n      </div>\n\n      <style jsx global>{`'''
+          new_end = '''        </div>\n      </main>\n\n      <style jsx global>{`'''
+          if old_end not in s:
+              raise SystemExit('END anchor not found')
+          s = s.replace(old_end, new_end, 1)
+
+          # Internal cards: same visual language as private AV4.
+          s = s.replace('<Card>\n                <CardHeader>', '<Card className="border border-sky-200 bg-slate-50 shadow-sm">\n                <CardHeader>', 1)
+          s = s.replace('<Card className="mt-6">', '<Card className="mt-6 border border-sky-200 bg-slate-50 shadow-sm">')
+
+          # Read-only fields and editable controls get the same border/background vocabulary.
+          s = s.replace('className="w-full rounded-md border bg-gray-50 px-3 py-2"', 'className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"')
+          s = s.replace('className="w-full rounded-md border px-3 py-2"', 'className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"')
+          s = s.replace('className="block w-full rounded-md border px-3 py-2"', 'className="block w-full rounded-md border border-slate-300 bg-white px-3 py-2"')
+
+          # Action buttons at the bottom, same blue geometry as private module.
+          s = s.replace(
+              'className="rounded-md border border-slate-300 bg-white px-5 py-3 text-slate-700 shadow hover:bg-slate-50"',
+              'className="inline-flex h-9 w-40 items-center justify-center rounded-md border border-sky-700 bg-sky-700 px-3 text-center text-sm font-semibold leading-tight text-white shadow-sm transition-colors hover:bg-sky-800"'
+          )
+          s = s.replace(
+              'className="rounded-md bg-sky-600 px-5 py-3 text-white shadow hover:bg-sky-700 disabled:opacity-50"',
+              'className="inline-flex h-9 w-40 items-center justify-center rounded-md border border-sky-700 bg-sky-700 px-3 text-center text-sm font-semibold leading-tight text-white shadow-sm transition-colors hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50"'
+          )
+
+          # Public help buttons are rendered by AV4HelpButton; normalize all non-checkbox buttons in this page.
+          style_anchor = '''      <style jsx global>{`\n        @media print {'''
+          style_replacement = '''      <style jsx global>{`\n        .public-av4-shell button:not([role="checkbox"]) {\n          border-color: rgb(3 105 161) !important;\n          background-color: rgb(3 105 161) !important;\n          color: white !important;\n          font-weight: 600 !important;\n          box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05) !important;\n        }\n\n        .public-av4-shell button:not([role="checkbox"]):hover {\n          background-color: rgb(7 89 133) !important;\n        }\n\n        .public-av4-shell input:not([type="checkbox"]):not([type="file"]),\n        .public-av4-shell textarea,\n        .public-av4-shell select {\n          border-color: rgb(203 213 225) !important;\n          background-color: white !important;\n        }\n\n        @media print {'''
+          if style_anchor not in s:
+              raise SystemExit('STYLE anchor not found')
+          s = s.replace(style_anchor, style_replacement, 1)
+
+          if s == original:
+              raise SystemExit('No changes produced')
+
+          p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Verify runtime anchors
+        run: |
+          grep -q 'public-av4-shell min-h-screen bg-slate-200/70' 'src/pages/compilazione-av4/[token].tsx'
+          grep -q 'border-b-\[6px\] border-slate-500 bg-white' 'src/pages/compilazione-av4/[token].tsx'
+          grep -q 'Compilazione tramite collegamento riservato' 'src/pages/compilazione-av4/[token].tsx'
+          grep -q 'border border-sky-200 bg-slate-50 shadow-sm' 'src/pages/compilazione-av4/[token].tsx'
+
+      - name: Commit runtime change
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add 'src/pages/compilazione-av4/[token].tsx'
+          git diff --cached --quiet && exit 0
+          git commit -m 'Style public AV4 like private module'
+          git push origin main
