@@ -1,0 +1,321 @@
+name: Show generated scadenzari status
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/scadenzari-generation-status.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Add generation status UI and guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/pages/impostazioni/scadenzari.tsx')
+          s = p.read_text(encoding='utf-8')
+
+          def one(old, new, label):
+              global s
+              count = s.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected 1 match, found {count}')
+              s = s.replace(old, new, 1)
+
+          one(
+          '''  const [showScadenzeModal, setShowScadenzeModal] = useState(false);
+
+  const [anniArchiviabili, setAnniArchiviabili] = useState<number[]>([]);''',
+          '''  const [showScadenzeModal, setShowScadenzeModal] = useState(false);
+  const [scadenzariGenerati, setScadenzariGenerati] = useState<
+    Partial<Record<keyof ScadenzariFlagsState, number>>
+  >({});
+  const [loadingStatoGenerazione, setLoadingStatoGenerazione] = useState(false);
+
+  const [anniArchiviabili, setAnniArchiviabili] = useState<number[]>([]);''',
+          'generation status state')
+
+          one(
+          '''  useEffect(() => {
+    setScadenzeAdempimento(buildDefaultScadenzeAdempimento(annoGenerazione));
+  }, [annoGenerazione]);
+
+  useEffect(() => {''',
+          '''  useEffect(() => {
+    setScadenzeAdempimento(buildDefaultScadenzeAdempimento(annoGenerazione));
+  }, [annoGenerazione]);
+
+  useEffect(() => {
+    if (!loading) {
+      void loadStatoGenerazione();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, annoGenerazione]);
+
+  useEffect(() => {''',
+          'generation status effect')
+
+          one(
+          '''  const scadenzariConData = useMemo(
+    () =>
+      SCADENZARI_CONFIG.filter(
+        (item) => item.hasScadenzaAdempimento && scadenzariFlags[item.key]
+      ),
+    [scadenzariFlags]
+  );''',
+          '''  const scadenzariConData = useMemo(
+    () =>
+      SCADENZARI_CONFIG.filter(
+        (item) =>
+          item.hasScadenzaAdempimento &&
+          scadenzariFlags[item.key] &&
+          (scadenzariGenerati[item.key] ?? 0) === 0
+      ),
+    [scadenzariFlags, scadenzariGenerati]
+  );''',
+          'modal only pending schedules')
+
+          one(
+          '''  const getSelectedScadenzari = () =>
+    SCADENZARI_CONFIG.filter((item) => scadenzariFlags[item.key]);
+
+  const handleScadenzaChange = (''',
+          '''  const getSelectedScadenzari = () =>
+    SCADENZARI_CONFIG.filter((item) => scadenzariFlags[item.key]);
+
+  const isScadenzarioGenerato = (key: keyof ScadenzariFlagsState) =>
+    (scadenzariGenerati[key] ?? 0) > 0;
+
+  const isScadenzarioDaGenerare = (key: keyof ScadenzariFlagsState) =>
+    scadenzariFlags[key] && !isScadenzarioGenerato(key);
+
+  const loadStatoGenerazione = async () => {
+    try {
+      setLoadingStatoGenerazione(true);
+      const risultati = await Promise.all(
+        SCADENZARI_CONFIG.map(async (item) => {
+          const { count, error } = await supabase
+            .from(item.table as any)
+            .select("id", { count: "exact", head: true })
+            .eq("anno_riferimento", annoGenerazione);
+
+          if (error) throw error;
+          return [item.key, count ?? 0] as const;
+        })
+      );
+
+      setScadenzariGenerati(
+        Object.fromEntries(risultati) as Partial<
+          Record<keyof ScadenzariFlagsState, number>
+        >
+      );
+    } catch (error) {
+      console.error("Errore controllo scadenzari già generati:", error);
+      setScadenzariGenerati({});
+    } finally {
+      setLoadingStatoGenerazione(false);
+    }
+  };
+
+  const handleScadenzaChange = (''',
+          'generation status loader')
+
+          # Validate dates only for schedules that are really pending.
+          for key, label in [
+              ('iva','IVA'),('ccgg','CCGG'),('cu','CU'),('fiscali','Fiscali'),
+              ('bilanci','Bilanci'),('modello770','Modello 770')
+          ]:
+              old = f'if (scadenzariFlags.{key} && !scadenzeAdempimento.{key})'
+              new = f'if (isScadenzarioDaGenerare("{key}") && !scadenzeAdempimento.{key})'
+              if old not in s:
+                  raise SystemExit(f'validate marker missing: {key}')
+              s = s.replace(old, new, 1)
+
+          # Execute only schedules not already generated for selected year.
+          for key in ['iva','ccgg','cu','fiscali','bilanci','modello770','lipe','esterometro','imu']:
+              old = f'      if (scadenzariFlags.{key}) {{'
+              new = f'      if (isScadenzarioDaGenerare("{key}")) {{'
+              if old not in s:
+                  raise SystemExit(f'execute marker missing: {key}')
+              s = s.replace(old, new, 1)
+
+          one(
+          '''      toast({
+        title: "Generazione completata",
+        description: `Generati ${generati} nuovi scadenzari per l'anno ${annoGenerazione}${
+          errori > 0 ? ` (${errori} errori)` : ""
+        }`,
+      });
+
+      setShowScadenzeModal(false);''',
+          '''      toast({
+        title: "Generazione completata",
+        description: `Generati ${generati} nuovi scadenzari per l'anno ${annoGenerazione}${
+          errori > 0 ? ` (${errori} errori)` : ""
+        }`,
+      });
+
+      await loadStatoGenerazione();
+      setShowScadenzeModal(false);''',
+          'refresh generated status')
+
+          one(
+          '''    const scadenzariSelezionati = Object.entries(scadenzariFlags)
+      .filter(([_, selected]) => selected)
+      .map(([key]) => key);''',
+          '''    const scadenzariSelezionati = Object.entries(scadenzariFlags)
+      .filter(
+        ([key, selected]) =>
+          selected &&
+          !isScadenzarioGenerato(key as keyof ScadenzariFlagsState)
+      )
+      .map(([key]) => key);''',
+          'handle genera filter')
+
+          one(
+          '''      toast({
+        title: "Attenzione",
+        description: "Seleziona almeno uno scadenzario da generare",
+      });''',
+          '''      toast({
+        title: "Attenzione",
+        description: "Tutti gli scadenzari selezionati risultano già generati per questo anno, oppure non è stato selezionato alcuno scadenzario.",
+      });''',
+          'already generated toast')
+
+          old_ui = '''                  {SCADENZARI_CONFIG.map((item) => (
+                    <div
+                      key={`flag_${item.key}`}
+                      className="flex items-center space-x-2"
+                    >
+                      <Checkbox
+                        id={`flag_${item.key}`}
+                        checked={scadenzariFlags[item.key]}
+                        onCheckedChange={(checked) =>
+                          setScadenzariFlags({
+                            ...scadenzariFlags,
+                            [item.key]: checked as boolean,
+                          })
+                        }
+                      />
+                      <label
+                        htmlFor={`flag_${item.key}`}
+                        className="text-sm cursor-pointer"
+                      >
+                        {item.label}
+                      </label>
+                    </div>
+                  ))}'''
+          new_ui = '''                  {SCADENZARI_CONFIG.map((item) => {
+                    const numeroGenerati = scadenzariGenerati[item.key] ?? 0;
+                    const giaGenerato = numeroGenerati > 0;
+
+                    return (
+                      <div
+                        key={`flag_${item.key}`}
+                        className={`flex items-center justify-between gap-3 rounded-md border px-3 py-2 ${
+                          giaGenerato
+                            ? "border-green-200 bg-green-50"
+                            : "border-gray-200 bg-white"
+                        }`}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`flag_${item.key}`}
+                            checked={
+                              giaGenerato ? false : scadenzariFlags[item.key]
+                            }
+                            disabled={giaGenerato || loadingStatoGenerazione}
+                            onCheckedChange={(checked) =>
+                              setScadenzariFlags({
+                                ...scadenzariFlags,
+                                [item.key]: checked as boolean,
+                              })
+                            }
+                          />
+                          <label
+                            htmlFor={`flag_${item.key}`}
+                            className={`text-sm ${
+                              giaGenerato
+                                ? "cursor-default font-medium text-green-800"
+                                : "cursor-pointer"
+                            }`}
+                          >
+                            {item.label}
+                          </label>
+                        </div>
+
+                        <span
+                          className={`whitespace-nowrap text-xs font-medium ${
+                            giaGenerato ? "text-green-700" : "text-gray-500"
+                          }`}
+                        >
+                          {loadingStatoGenerazione
+                            ? "Controllo..."
+                            : giaGenerato
+                            ? `✓ Generato — ${numeroGenerati}`
+                            : "Da generare"}
+                        </span>
+                      </div>
+                    );
+                  })}'''
+          one(old_ui, new_ui, 'generation grid status UI')
+
+          one(
+          '''              <Button
+                onClick={handleGenera}
+                disabled={processing}
+                className="w-full bg-green-600 hover:bg-green-700"''',
+          '''              <Button
+                onClick={handleGenera}
+                disabled={
+                  processing ||
+                  loadingStatoGenerazione ||
+                  !SCADENZARI_CONFIG.some((item) =>
+                    isScadenzarioDaGenerare(item.key)
+                  )
+                }
+                className="w-full bg-green-600 hover:bg-green-700"''',
+          'generation button guard')
+
+          p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Verify generation status feature
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'loadStatoGenerazione' src/pages/impostazioni/scadenzari.tsx
+          grep -q 'isScadenzarioGenerato' src/pages/impostazioni/scadenzari.tsx
+          grep -q 'isScadenzarioDaGenerare' src/pages/impostazioni/scadenzari.tsx
+          grep -q 'Generato —' src/pages/impostazioni/scadenzari.tsx
+          grep -q 'Da generare' src/pages/impostazioni/scadenzari.tsx
+          grep -q 'loadingStatoGenerazione' src/pages/impostazioni/scadenzari.tsx
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript guard
+        run: npx tsc --noEmit
+
+      - name: Commit runtime change
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/impostazioni/scadenzari.tsx
+          git commit -m "Show generated scadenzari status by year"
+          git push origin HEAD:main
