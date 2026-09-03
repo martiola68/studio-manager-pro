@@ -213,7 +213,6 @@ export function Sidebar({ mobileOpen = false, onClose = () => {} }: SidebarProps
         { label: "770", href: "/scadenze/modello-770", icon: null },
         { label: "LIPE", href: "/scadenze/lipe", icon: null },
         { label: "Esterometro", href: "/scadenze/esterometro", icon: null },
-        { label: "Proforma", href: "/scadenze/proforma", icon: null },
         { label: "Antiriciclaggio", href: "/scadenze/antiriciclaggio", icon: null },
       ],
     },

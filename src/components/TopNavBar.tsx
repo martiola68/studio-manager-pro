@@ -307,7 +307,6 @@ export function TopNavBar() {
         { label: "Liquidazioni IVA - LIPE", href: "/scadenze/lipe", icon: <FileText className="h-4 w-4" /> },
         { label: "Esterometro", href: "/scadenze/esterometro", icon: <FileText className="h-4 w-4" /> },
         { label: "Affitti", href: "/scadenze/affitti", icon: <FileText className="h-4 w-4" /> },
-        { label: "Proforma", href: "/scadenze/proforma", icon: <FileText className="h-4 w-4" /> },
       ],
     },
     {
