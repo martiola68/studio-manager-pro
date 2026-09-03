@@ -478,8 +478,8 @@ export default function ScadenzeIvaPage() {
   const anni = anniDisponibili;
 
   return (
-    <div className="min-h-screen space-y-4 bg-slate-200/70 px-3 pb-6 pt-2">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+    <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden bg-slate-200/70 px-3 pb-3 pt-2">
+      <div className="flex shrink-0 items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Scadenzario IVA</h1>
           <p className="text-gray-500 mt-1">
@@ -499,7 +499,7 @@ export default function ScadenzeIvaPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid shrink-0 grid-cols-1 gap-4 md:grid-cols-3">
         <Card className="border border-sky-200 bg-slate-50 shadow-sm">
           <CardContent className="pt-5">
             <div className="text-sm text-gray-600 mb-1">
@@ -528,7 +528,7 @@ export default function ScadenzeIvaPage() {
         </Card>
       </div>
 
-      <Card className="border border-sky-200 bg-slate-50 shadow-sm">
+      <Card className="shrink-0 border border-sky-200 bg-slate-50 shadow-sm">
         <CardHeader className="pb-3">
           <CardTitle>Filtri e Ricerca</CardTitle>
         </CardHeader>
@@ -608,13 +608,13 @@ export default function ScadenzeIvaPage() {
         </CardContent>
       </Card>
 
-      <Card className="overflow-hidden border border-sky-200 bg-slate-50 shadow-sm">
-        <CardContent className="p-0">
-          <div className="relative w-full overflow-auto max-h-[600px]">
+      <Card className="flex min-h-0 flex-1 flex-col overflow-hidden border border-sky-200 bg-slate-50 shadow-sm">
+        <CardContent className="min-h-0 flex-1 p-0">
+          <div className="relative h-full w-full overflow-auto">
             <table className="w-full caption-bottom text-sm">
               <thead className="sticky top-0 z-30 bg-slate-600 text-white shadow-sm [&_tr]:border-b [&_tr]:border-slate-500">
                 <tr className="border-b border-slate-500">
-                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 sticky-col-header border-r min-w-[260px]">
+                  <th className="sticky-col-header h-9 min-w-[260px] border-r border-slate-500 !bg-slate-600 px-2 text-left align-middle font-semibold !text-slate-50">
                     Nominativo
                   </th>
                   <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[180px]">
