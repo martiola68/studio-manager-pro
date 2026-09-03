@@ -7,7 +7,7 @@ import Header from "@/components/Header";
 import { TopNavBar } from "@/components/TopNavBar";
 import { Toaster } from "@/components/ui/toaster";
 import { ModuleAccessGuard } from "@/components/ModuleAccessGuard";
-import { ClientiImportTemplateEnhancer } from "@/components/clienti/ClientiImportTemplateEnhancer";
+import { ClientiImportTemplateEnhancer } from "@/components/ClientiImportTemplateEnhancer";
 import { supabase } from "@/lib/supabase/client";
 import "@/styles/globals.css";
 
