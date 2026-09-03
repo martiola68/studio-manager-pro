@@ -1,0 +1,72 @@
+name: Style scadenzari archive and delete cards
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/style-scadenzari-cards.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Update scadenzari card colors only
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/pages/impostazioni/scadenzari.tsx')
+          s = p.read_text(encoding='utf-8')
+
+          replacements = {
+            '          <Card className="border-l-4 border-l-red-600">': '          <Card className="border border-blue-200 border-l-4 border-l-blue-500">',
+            '              <CardTitle className="flex items-center gap-2 text-red-700">': '              <CardTitle className="flex items-center gap-2 text-blue-700">',
+            '              <div className="bg-red-50 border border-red-200 rounded-lg p-4">': '              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">',
+            '                  <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />': '                  <AlertTriangle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />',
+            '                  <div className="text-sm text-red-800">': '                  <div className="text-sm text-blue-800">',
+            '                variant="destructive"\n                className="w-full"': '                className="w-full bg-blue-600 hover:bg-blue-700"',
+            '          <Card className="border-l-4 border-l-orange-600">': '          <Card className="border border-red-200 border-l-4 border-l-red-500">',
+            '              <CardTitle className="flex items-center gap-2 text-orange-700">': '              <CardTitle className="flex items-center gap-2 text-red-700">',
+            '              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">': '              <div className="bg-red-50 border border-red-200 rounded-lg p-4">',
+            '                  <AlertTriangle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />': '                  <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />',
+            '                  <div className="text-sm text-orange-800">': '                  <div className="text-sm text-red-800">',
+          }
+
+          for old, new in replacements.items():
+              count = s.count(old)
+              if count != 1:
+                  raise SystemExit(f'Expected exactly 1 match for {old!r}, found {count}')
+              s = s.replace(old, new, 1)
+
+          p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Verify styles
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'border-l-blue-500' src/pages/impostazioni/scadenzari.tsx
+          grep -q 'text-blue-700' src/pages/impostazioni/scadenzari.tsx
+          grep -q 'bg-blue-600 hover:bg-blue-700' src/pages/impostazioni/scadenzari.tsx
+          grep -q 'border-l-red-500' src/pages/impostazioni/scadenzari.tsx
+          grep -q 'text-red-700' src/pages/impostazioni/scadenzari.tsx
+          grep -q 'bg-red-50 border border-red-200' src/pages/impostazioni/scadenzari.tsx
+
+      - name: Commit runtime style change
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/impostazioni/scadenzari.tsx
+          git commit -m "Restyle scadenzari archive and delete cards"
+          git push origin HEAD:main
