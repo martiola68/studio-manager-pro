@@ -47,7 +47,6 @@ type ScadenzariFlagsState = {
   modello770: boolean;
   lipe: boolean;
   esterometro: boolean;
-  proforma: boolean;
   imu: boolean;
 };
 
@@ -82,7 +81,6 @@ const SCADENZARI_CONFIG: ScadenzarioConfig[] = [
   },
   { key: "lipe", label: "LIPE", table: "tbscadlipe" },
   { key: "esterometro", label: "Esterometro", table: "tbscadestero" },
-  { key: "proforma", label: "Proforma", table: "tbscadproforma" },
   { key: "imu", label: "IMU", table: "tbscadimu" },
 ];
 
@@ -138,7 +136,6 @@ const [anniEliminabili, setAnniEliminabili] = useState<number[]>([]);
       modello770: true,
       lipe: true,
       esterometro: true,
-      proforma: true,
       imu: true,
     });
 
@@ -864,47 +861,6 @@ useEffect(() => {
           } catch (error) {
             console.error(
               `Errore elaborazione Esterometro ${cliente.ragione_sociale}:`,
-              error
-            );
-            errori++;
-          }
-        }
-      }
-
-      if (scadenzariFlags.proforma) {
-        const clientiProforma = await getClientiByFlag("flag_proforma");
-
-        for (const cliente of clientiProforma) {
-          try {
-            const { data: existing } = await supabase
-              .from("tbscadproforma")
-              .select("id")
-              .eq("cliente_id", cliente.id)
-              .eq("anno_riferimento", annoGenerazione)
-              .maybeSingle();
-
-            if (!existing) {
-              const { error } = await supabase
-                .from("tbscadproforma" as any)
-                .insert({
-                  cliente_id: cliente.id,
-                  anno_riferimento: annoGenerazione,
-                  archiviato: false,
-                  studio_id: currentStudioId,
-                  nominativo: cliente.ragione_sociale,
-                  utente_operatore_id: cliente.utente_operatore_id,
-                });
-
-              if (!error) {
-                generati++;
-              } else {
-                console.error("Errore inserimento Proforma:", error);
-                errori++;
-              }
-            }
-          } catch (error) {
-            console.error(
-              `Errore elaborazione Proforma ${cliente.ragione_sociale}:`,
               error
             );
             errori++;
