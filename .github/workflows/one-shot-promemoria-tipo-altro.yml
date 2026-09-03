@@ -1,0 +1,49 @@
+name: One shot promemoria tipo Altro
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - scripts/fix-promemoria-tipo-altro-once.py
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply promemoria tipo fallback patch
+        run: python scripts/fix-promemoria-tipo-altro-once.py
+
+      - name: Verify changed files
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed="$(git diff --name-only | sort)"
+          expected="$(printf '%s\n' \
+            'src/pages/promemoria/index.tsx' \
+            'src/services/promemoriaService.ts' \
+            'supabase/migrations/20260903090000_promemoria_tipo_altro_not_null.sql' | sort)"
+          test "$changed" = "$expected"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript guard
+        run: npx tsc --noEmit
+
+      - name: Commit patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/promemoria/index.tsx src/services/promemoriaService.ts supabase/migrations/20260903090000_promemoria_tipo_altro_not_null.sql
+          git commit -m "Fix promemoria type fallback to Altro"
+          git push origin HEAD:main
