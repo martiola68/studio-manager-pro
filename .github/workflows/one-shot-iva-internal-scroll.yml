@@ -1,0 +1,98 @@
+name: One shot - IVA internal scroll
+
+on:
+  push:
+    paths:
+      - '.github/workflows/one-shot-iva-internal-scroll.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Fit IVA page and fix Nominativo header
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('src/pages/scadenze/iva.tsx')
+          s = p.read_text(encoding='utf-8')
+          original = s
+
+          # Use the height already assigned to <main> by _app and prevent a second page scrollbar.
+          s = s.replace(
+              '<div className="min-h-screen space-y-4 bg-slate-200/70 px-3 pb-6 pt-2">',
+              '<div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden bg-slate-200/70 px-3 pb-3 pt-2">',
+              1,
+          )
+
+          # Fixed upper blocks; only the table area is allowed to scroll vertically.
+          s = s.replace(
+              '<div className="flex items-center justify-between gap-4 flex-wrap">',
+              '<div className="flex shrink-0 items-center justify-between gap-4 flex-wrap">',
+              1,
+          )
+          s = s.replace(
+              '<div className="grid grid-cols-1 md:grid-cols-3 gap-4">',
+              '<div className="grid shrink-0 grid-cols-1 gap-4 md:grid-cols-3">',
+              1,
+          )
+          s = s.replace(
+              '<Card className="border border-sky-200 bg-slate-50 shadow-sm">\n        <CardHeader className="pb-3">',
+              '<Card className="shrink-0 border border-sky-200 bg-slate-50 shadow-sm">\n        <CardHeader className="pb-3">',
+              1,
+          )
+
+          # Table card fills all remaining height. Scroll belongs to its inner viewport only.
+          s = s.replace(
+              '<Card className="overflow-hidden border border-sky-200 bg-slate-50 shadow-sm">\n        <CardContent className="p-0">\n          <div className="relative w-full overflow-auto max-h-[600px]">',
+              '<Card className="flex min-h-0 flex-1 flex-col overflow-hidden border border-sky-200 bg-slate-50 shadow-sm">\n        <CardContent className="min-h-0 flex-1 p-0">\n          <div className="relative h-full w-full overflow-auto">',
+              1,
+          )
+
+          # Sticky first column had a legacy white background; explicitly override it.
+          s = s.replace(
+              'className="h-9 px-2 text-left align-middle font-semibold text-slate-50 sticky-col-header border-r min-w-[260px]"',
+              'className="sticky-col-header h-9 min-w-[260px] border-r border-slate-500 !bg-slate-600 px-2 text-left align-middle font-semibold !text-slate-50"',
+              1,
+          )
+
+          if s == original:
+              raise SystemExit('No IVA changes matched')
+
+          required = [
+              'flex h-full min-h-0 flex-col gap-4 overflow-hidden',
+              'flex min-h-0 flex-1 flex-col overflow-hidden',
+              'relative h-full w-full overflow-auto',
+              '!bg-slate-600',
+          ]
+          for marker in required:
+              if marker not in s:
+                  raise SystemExit(f'Missing marker: {marker}')
+
+          p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Verify IVA runtime layout
+        run: |
+          grep -q 'flex h-full min-h-0 flex-col gap-4 overflow-hidden' src/pages/scadenze/iva.tsx
+          grep -q 'relative h-full w-full overflow-auto' src/pages/scadenze/iva.tsx
+          grep -q '!bg-slate-600' src/pages/scadenze/iva.tsx
+          ! grep -q 'max-h-\[600px\]' src/pages/scadenze/iva.tsx
+
+      - name: Commit runtime IVA page
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/pages/scadenze/iva.tsx
+          git diff --cached --quiet && exit 0
+          git commit -m 'Keep IVA scrolling inside table card'
+          git push origin main
