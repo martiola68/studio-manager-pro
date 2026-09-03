@@ -2012,7 +2012,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
 `;
 
   return (
-    <div className="flex h-[calc(100vh-64px)] flex-col overflow-hidden bg-background">
+    <div className="flex h-[calc(100vh-64px)] flex-col overflow-hidden bg-slate-200/70">
      <FormStickyHeader
   title="Modello AV4"
   subtitle="Dichiarazione del Cliente"
@@ -2033,9 +2033,9 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
 />
 
       <div className="flex-1 overflow-hidden">
-        <div className="h-full overflow-y-auto">
+        <div className="h-full overflow-y-auto bg-slate-200/70">
           <div className="mx-auto max-w-5xl px-4 pb-32 pt-4 md:px-8 md:pb-40 md:pt-4">
-            <Card className="border border-sky-200 shadow-sm">
+            <Card className="border border-sky-200 bg-slate-50 shadow-sm">
               <CardHeader>
                 <div className="flex items-center justify-between gap-3">
                   <CardTitle>Dati principali</CardTitle>
@@ -2058,7 +2058,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                     <label className="mb-1 block text-sm font-medium">Cliente</label>
                     <input
                       value={clienteLabel || "Cliente non valorizzato da AV1"}
-                      className="w-full rounded-md border bg-gray-50 px-3 py-2"
+                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                       readOnly
                     />
                   </div>
@@ -2073,7 +2073,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                           ? "Caricamento rappresentante..."
                           : form.dichiarante_nome_cognome || "Nessun rappresentante collegato"
                       }
-                      className="w-full rounded-md border bg-gray-50 px-3 py-2"
+                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                       readOnly
                     />
                    <p className="mt-1 text-xs text-gray-500">
@@ -2129,7 +2129,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                           Azzera rappresentante
                         </button>
                         </div>
-<div className="rounded-lg border bg-slate-50 p-4">
+<div className="rounded-lg border border-slate-300 bg-slate-100/70 p-4">
 <label className="flex items-center gap-2 text-sm font-medium">
     <input
       type="checkbox"
@@ -2150,7 +2150,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
         name="email_destinatario_alternativa"
         value={form.email_destinatario_alternativa}
         onChange={handleChange}
-        className="w-full rounded-md border px-3 py-2"
+        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
         placeholder="email@dominio.it"
       />
       <p className="mt-1 text-xs text-gray-500">
@@ -2195,7 +2195,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                         name="dichiarante_nome_cognome"
                         value={form.dichiarante_nome_cognome}
                         onChange={handleChange}
-                        className="w-full rounded-md border bg-gray-50 px-3 py-2"
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                         readOnly
                       />
                     </div>
@@ -2206,7 +2206,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                         name="dichiarante_codice_fiscale"
                         value={form.dichiarante_codice_fiscale}
                         onChange={handleChange}
-                        className="w-full rounded-md border bg-gray-50 px-3 py-2"
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                         readOnly
                       />
                     </div>
@@ -2217,7 +2217,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                         name="dichiarante_luogo_nascita"
                         value={form.dichiarante_luogo_nascita}
                         onChange={handleChange}
-                        className="w-full rounded-md border bg-gray-50 px-3 py-2"
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                         readOnly
                       />
                     </div>
@@ -2230,7 +2230,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                             ? new Date(form.dichiarante_data_nascita).toLocaleDateString("it-IT")
                             : ""
                         }
-                        className="w-full rounded-md border bg-gray-50 px-3 py-2"
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                         readOnly
                       />
                     </div>
@@ -2241,7 +2241,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                         name="dichiarante_indirizzo_residenza"
                         value={form.dichiarante_indirizzo_residenza}
                         onChange={handleChange}
-                        className="w-full rounded-md border bg-gray-50 px-3 py-2"
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                         readOnly
                       />
                     </div>
@@ -2252,7 +2252,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                         name="dichiarante_citta_residenza"
                         value={form.dichiarante_citta_residenza}
                         onChange={handleChange}
-                        className="w-full rounded-md border bg-gray-50 px-3 py-2"
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                         readOnly
                       />
                     </div>
@@ -2263,7 +2263,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                         name="dichiarante_cap_residenza"
                         value={form.dichiarante_cap_residenza}
                         onChange={handleChange}
-                        className="w-full rounded-md border bg-gray-50 px-3 py-2"
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                         readOnly
                       />
                     </div>
@@ -2274,7 +2274,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                         name="dichiarante_nazionalita"
                         value={form.dichiarante_nazionalita}
                         onChange={handleChange}
-                        className="w-full rounded-md border bg-gray-50 px-3 py-2"
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                         readOnly
                       />
                     </div>
@@ -2283,7 +2283,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
               </CardContent>
             </Card>
 
-            <Card className="mt-6 border border-sky-200 shadow-sm">
+            <Card className="mt-6 border border-sky-200 bg-slate-50 shadow-sm">
               <CardHeader>
                 <div className="flex items-center justify-between gap-3">
                   <CardTitle>Dichiarazioni del cliente</CardTitle>
@@ -2293,7 +2293,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
 
               <CardContent>
                 <div className="space-y-6">
-                  <section className="rounded-xl border border-sky-200 bg-white p-5">
+                  <section className="rounded-xl border border-sky-200 bg-slate-100/60 p-5">
                     <div className="space-y-5">
                   <div>
                     <label className="flex items-center gap-2">
@@ -2328,14 +2328,14 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                       name="natura_prestazione"
                       value={form.natura_prestazione}
                       onChange={handleChange}
-                      className="w-full rounded-md border px-3 py-2"
+                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                       rows={4}
                     />
                   </div>
                     </div>
                   </section>
 
-                  <section className="rounded-xl border border-sky-200 bg-white p-5">
+                  <section className="rounded-xl border border-sky-200 bg-slate-100/60 p-5">
                     <div className="mb-4 flex items-center justify-between gap-3">
                       <div className="font-semibold text-slate-900">Persona politicamente esposta</div>
                       <AV4HelpButton topic="ppe" />
@@ -2389,7 +2389,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                         name="spec_domanda5"
                         value={form.spec_domanda5}
                         onChange={handleChange}
-                        className="w-full rounded-md border px-3 py-2"
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                         rows={3}
                       />
                     </div>
@@ -2397,7 +2397,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                     </div>
                   </section>
 
-                  <section className="rounded-xl border border-sky-200 bg-white p-5">
+                  <section className="rounded-xl border border-sky-200 bg-slate-100/60 p-5">
                     <div className="mb-4 flex items-center justify-between gap-3">
                       <div className="font-semibold text-slate-900">Individuazione del titolare effettivo</div>
                       <AV4HelpButton topic="titolare" />
@@ -2438,7 +2438,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                   </div>
 
                   {form.domanda7 && (
-                    <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
+                    <div className="rounded-xl border border-slate-300 bg-slate-100/70 p-4">
                       <TitolariEffettiviForm
                         sezione="domanda7"
                         av4_id={av4Id || ""}
@@ -2469,7 +2469,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                             name="nome_soc"
                             value={form.nome_soc}
                             onChange={handleChange}
-                            className="w-full rounded-md border px-3 py-2"
+                            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                           />
                         </div>
                         <div>
@@ -2478,7 +2478,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                             name="sede_legale"
                             value={form.sede_legale}
                             onChange={handleChange}
-                            className="w-full rounded-md border px-3 py-2"
+                            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                           />
                         </div>
                         <div>
@@ -2487,7 +2487,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                             name="indirizzo_sede"
                             value={form.indirizzo_sede}
                             onChange={handleChange}
-                            className="w-full rounded-md border px-3 py-2"
+                            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                           />
                         </div>
                         <div>
@@ -2496,7 +2496,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                             name="reg_imprese"
                             value={form.reg_imprese}
                             onChange={handleChange}
-                            className="w-full rounded-md border px-3 py-2"
+                            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                           />
                         </div>
                         <div>
@@ -2505,7 +2505,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                             name="num_reg_imprese"
                             value={form.num_reg_imprese}
                             onChange={handleChange}
-                            className="w-full rounded-md border px-3 py-2"
+                            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                           />
                         </div>
                         <div>
@@ -2514,7 +2514,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                             name="cod_fiscale_soc"
                             value={form.cod_fiscale_soc}
                             onChange={handleChange}
-                            className="w-full rounded-md border px-3 py-2"
+                            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                           />
                         </div>
                       </div>
@@ -2523,7 +2523,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                         in qualità di legale rappresentante, munito dei necessari poteri, e attesta che il/i titolare/i effettivi sono:
                       </div>
 
-                      <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
+                      <div className="rounded-xl border border-slate-300 bg-slate-100/70 p-4">
                         <TitolariEffettiviForm
                           sezione="domanda8"
                           av4_id={av4Id || ""}
@@ -2547,7 +2547,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                   </div>
 
                   {form.domanda9 && (
-                    <div className="space-y-4 rounded-lg border border-slate-200 bg-slate-50/40 p-4">
+                    <div className="space-y-4 rounded-xl border border-slate-300 bg-slate-100/70 p-4">
                       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div>
                           <label className="mb-1 block text-sm font-medium">Nome società / ente</label>
@@ -2555,7 +2555,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                             name="nome_soc_bis"
                             value={form.nome_soc_bis}
                             onChange={handleChange}
-                            className="w-full rounded-md border px-3 py-2"
+                            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                           />
                         </div>
                         <div>
@@ -2564,7 +2564,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                             name="sede_legale_bis"
                             value={form.sede_legale_bis}
                             onChange={handleChange}
-                            className="w-full rounded-md border px-3 py-2"
+                            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                           />
                         </div>
                         <div>
@@ -2573,7 +2573,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                             name="indirizzo_sede_bis"
                             value={form.indirizzo_sede_bis}
                             onChange={handleChange}
-                            className="w-full rounded-md border px-3 py-2"
+                            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                           />
                         </div>
                         <div>
@@ -2582,7 +2582,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                             name="reg_imprese_bis"
                             value={form.reg_imprese_bis}
                             onChange={handleChange}
-                            className="w-full rounded-md border px-3 py-2"
+                            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                           />
                         </div>
                         <div>
@@ -2591,7 +2591,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                             name="num_reg_imprese_bis"
                             value={form.num_reg_imprese_bis}
                             onChange={handleChange}
-                            className="w-full rounded-md border px-3 py-2"
+                            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                           />
                         </div>
                         <div>
@@ -2600,7 +2600,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                             name="cod_fiscale_soc_bis"
                             value={form.cod_fiscale_soc_bis}
                             onChange={handleChange}
-                            className="w-full rounded-md border px-3 py-2"
+                            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                           />
                         </div>
                         <div className="md:col-span-2">
@@ -2611,7 +2611,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                             name="nome_soc_ter"
                             value={form.nome_soc_ter}
                             onChange={handleChange}
-                            className="w-full rounded-md border px-3 py-2"
+                            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                           />
                         </div>
                       </div>
@@ -2620,7 +2620,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                         in qualità di legale rappresentante, munito dei necessari poteri, e attesta che ai sensi dell’articolo 20, comma 4, D.Lgs. 231/2007, i titolari effettivi sono:
                       </div>
 
-                      <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
+                      <div className="rounded-xl border border-slate-300 bg-slate-100/70 p-4">
                         <TitolariEffettiviForm
                           sezione="domanda9"
                           av4_id={av4Id || ""}
@@ -2633,7 +2633,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                     </div>
                   </section>
 
-                  <section className="rounded-xl border border-sky-200 bg-white p-5">
+                  <section className="rounded-xl border border-sky-200 bg-slate-100/60 p-5">
                     <div className="mb-4 flex items-center justify-between gap-3">
                       <div className="font-semibold text-slate-900">PPE titolari effettivi</div>
                       <AV4HelpButton topic="ppeTitolari" />
@@ -2670,7 +2670,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                         name="specifica12"
                         value={form.specifica12}
                         onChange={handleChange}
-                        className="w-full rounded-md border px-3 py-2"
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                         rows={3}
                       />
                     </div>
@@ -2678,7 +2678,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                     </div>
                   </section>
 
-                  <section className="rounded-xl border border-sky-200 bg-white p-5">
+                  <section className="rounded-xl border border-sky-200 bg-slate-100/60 p-5">
                     <div className="mb-4 flex items-center justify-between gap-3">
                       <div className="font-semibold text-slate-900">Relazioni, fondi e mezzi di pagamento</div>
                       <AV4HelpButton topic="fondi" />
@@ -2692,7 +2692,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                       name="specifica10b"
                       value={form.specifica10b}
                       onChange={handleChange}
-                      className="w-full rounded-md border px-3 py-2"
+                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                       rows={3}
                     />
                   </div>
@@ -2705,7 +2705,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                       name="specifica10c"
                       value={form.specifica10c}
                       onChange={handleChange}
-                      className="w-full rounded-md border px-3 py-2"
+                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                       rows={3}
                     />
                   </div>
@@ -2718,7 +2718,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                       name="specifica11c"
                       value={form.specifica11c}
                       onChange={handleChange}
-                      className="w-full rounded-md border px-3 py-2"
+                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                       rows={3}
                     />
                   </div>
@@ -2729,7 +2729,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                     </div>
                   </section>
 
-                  <section className="rounded-xl border border-sky-200 bg-white p-5">
+                  <section className="rounded-xl border border-sky-200 bg-slate-100/60 p-5">
                     <div className="mb-4 flex items-center justify-between gap-3">
                       <div className="font-semibold text-slate-900">Professione / attività del cliente</div>
                       <AV4HelpButton topic="attivita" />
@@ -2744,7 +2744,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                       name="specifica10d"
                       value={form.specifica10d}
                       onChange={handleChange}
-                      className="w-full rounded-md border px-3 py-2"
+                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                     />
                   </div>
 
@@ -2754,7 +2754,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                       name="specifica10e"
                       value={form.specifica10e}
                       onChange={handleChange}
-                      className="w-full rounded-md border px-3 py-2"
+                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                     />
                   </div>
 
@@ -2764,7 +2764,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                       name="specifica10f"
                       value={form.specifica10f}
                       onChange={handleChange}
-                      className="w-full rounded-md border px-3 py-2"
+                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                     />
                   </div>
                     </div>
@@ -2773,7 +2773,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
               </CardContent>
             </Card>
 
-            <Card className="mt-6 border border-sky-200 shadow-sm">
+            <Card className="mt-6 border border-sky-200 bg-slate-50 shadow-sm">
               <CardHeader>
                 <div className="flex items-center justify-between gap-3">
                   <CardTitle>Firma</CardTitle>
@@ -2789,7 +2789,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                       name="luogo_firma"
                       value={form.luogo_firma}
                       onChange={handleChange}
-                      className="w-full rounded-md border px-3 py-2"
+                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                     />
                   </div>
 
@@ -2800,7 +2800,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                       name="data_firma"
                       value={form.data_firma}
                       onChange={handleChange}
-                      className="w-full rounded-md border px-3 py-2"
+                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                     />
                   </div>
                 </div>
@@ -2822,7 +2822,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                     name="luogo_firma_bis"
                     value={form.luogo_firma_bis}
                     onChange={handleChange}
-                    className="w-full rounded-md border px-3 py-2"
+                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                   />
                 </div>
 
@@ -2833,7 +2833,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                     name="data_firma_bis"
                     value={form.data_firma_bis}
                     onChange={handleChange}
-                    className="w-full rounded-md border px-3 py-2"
+                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                   />
                 </div>
 
