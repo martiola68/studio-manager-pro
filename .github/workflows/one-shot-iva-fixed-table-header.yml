@@ -18,7 +18,7 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Keep IVA fixed through column labels
+      - name: Restore normal table and keep labels fixed
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -27,69 +27,76 @@ jobs:
           s = p.read_text(encoding='utf-8')
           original = s
 
-          # The table card owns the remaining height.
+          # Restore the table card to a normal scroll viewport.
           s = s.replace(
-              '<Card className="flex min-h-0 flex-1 flex-col overflow-hidden border border-sky-200 bg-slate-50 shadow-sm">\n        <CardContent className="min-h-0 flex-1 p-0">\n          <div className="relative h-full w-full overflow-auto">',
-              '<Card className="flex min-h-0 flex-1 flex-col overflow-hidden border border-sky-200 bg-slate-50 shadow-sm">\n        <CardContent className="min-h-0 flex-1 overflow-hidden p-0">\n          <div className="relative h-full w-full overflow-x-auto overflow-y-hidden">',
+              '<CardContent className="min-h-0 flex-1 overflow-hidden p-0">\n          <div className="relative h-full w-full overflow-x-auto overflow-y-hidden">',
+              '<CardContent className="min-h-0 flex-1 overflow-hidden p-0">\n          <div className="relative h-full w-full overflow-auto">',
               1,
           )
 
-          # Make the table itself a flex column: THEAD fixed, TBODY scrollable.
+          # Restore native table layout; sticky THEAD keeps labels fixed while only rows move beneath it.
           s = s.replace(
-              '<table className="w-full caption-bottom text-sm">',
               '<table className="flex h-full min-w-max w-full flex-col caption-bottom text-sm">',
+              '<table className="w-full caption-bottom text-sm">',
               1,
           )
           s = s.replace(
-              '<thead className="sticky top-0 z-30 bg-slate-600 text-white shadow-sm [&_tr]:border-b [&_tr]:border-slate-500">',
               '<thead className="z-30 block shrink-0 bg-slate-600 text-white shadow-sm [&_tr]:border-b [&_tr]:border-slate-500">',
+              '<thead className="sticky top-0 z-30 bg-slate-600 text-white shadow-sm [&_tr]:border-b [&_tr]:border-slate-500">',
               1,
           )
           s = s.replace(
-              '<tr className="border-b border-slate-500">',
               '<tr className="table w-full table-fixed border-b border-slate-500">',
+              '<tr className="border-b border-slate-500">',
               1,
           )
           s = s.replace(
-              '<tbody className="[&_tr:last-child]:border-0">',
               '<tbody className="block min-h-0 flex-1 overflow-y-auto [&_tr:last-child]:border-0">',
+              '<tbody className="[&_tr:last-child]:border-0">',
               1,
           )
-
-          # Every body row must preserve the same table column geometry while tbody scrolls.
           s = s.replace(
-              'className="border-b transition-colors hover:bg-muted/50"',
               'className="table w-full table-fixed border-b transition-colors hover:bg-muted/50"',
+              'className="border-b transition-colors hover:bg-muted/50"',
               1,
           )
           s = s.replace(
-              'className={`border-b transition-colors ${',
               'className={`table w-full table-fixed border-b transition-colors ${',
+              'className={`border-b transition-colors ${',
               1,
           )
 
           if s == original:
-              raise SystemExit('No IVA fixed-header changes matched')
+              raise SystemExit('No corrective IVA changes matched')
 
           required = [
-              'overflow-x-auto overflow-y-hidden',
-              'flex h-full min-w-max w-full flex-col',
-              'block shrink-0 bg-slate-600',
-              'block min-h-0 flex-1 overflow-y-auto',
-              'table w-full table-fixed border-b transition-colors',
+              'relative h-full w-full overflow-auto',
+              '<table className="w-full caption-bottom text-sm">',
+              'sticky top-0 z-30 bg-slate-600',
+              '<tbody className="[&_tr:last-child]:border-0">',
           ]
           for marker in required:
               if marker not in s:
                   raise SystemExit(f'Missing marker: {marker}')
 
+          forbidden = [
+              'flex h-full min-w-max w-full flex-col',
+              'block min-h-0 flex-1 overflow-y-auto',
+              'table w-full table-fixed border-b transition-colors',
+          ]
+          for marker in forbidden:
+              if marker in s:
+                  raise SystemExit(f'Broken flex-table marker still present: {marker}')
+
           p.write_text(s, encoding='utf-8')
           PY
 
-      - name: Verify IVA fixed-header layout
+      - name: Verify corrected IVA table
         run: |
-          grep -q 'overflow-x-auto overflow-y-hidden' src/pages/scadenze/iva.tsx
-          grep -q 'block shrink-0 bg-slate-600' src/pages/scadenze/iva.tsx
-          grep -q 'block min-h-0 flex-1 overflow-y-auto' src/pages/scadenze/iva.tsx
+          grep -q 'relative h-full w-full overflow-auto' src/pages/scadenze/iva.tsx
+          grep -q 'sticky top-0 z-30 bg-slate-600' src/pages/scadenze/iva.tsx
+          ! grep -q 'flex h-full min-w-max w-full flex-col' src/pages/scadenze/iva.tsx
+          ! grep -q 'block min-h-0 flex-1 overflow-y-auto' src/pages/scadenze/iva.tsx
 
       - name: Commit runtime IVA page
         run: |
@@ -97,5 +104,5 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add src/pages/scadenze/iva.tsx
           git diff --cached --quiet && exit 0
-          git commit -m 'Keep IVA fixed through column labels'
+          git commit -m 'Restore IVA table geometry with sticky header'
           git push origin main
