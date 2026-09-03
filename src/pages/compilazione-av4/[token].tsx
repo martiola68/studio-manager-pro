@@ -741,7 +741,7 @@ async function handleUploadSignedPdf(
 
   return (
     <div className="public-av4-shell min-h-screen bg-slate-200/70">
-      <header className="border-b-[6px] border-slate-500 bg-white">
+      <header className="sticky top-0 z-30 border-b-[6px] border-slate-500 bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 py-6">
           <div>
             <h1 className="text-4xl font-bold text-slate-900">Modello AV4</h1>
