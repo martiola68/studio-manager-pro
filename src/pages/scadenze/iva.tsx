@@ -12,7 +12,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Search, Trash2, Printer } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
@@ -146,7 +145,7 @@ export default function ScadenzeIvaPage() {
     const { data, error } = await supabase
       .from("tbutenti")
       .select("*")
-      .order("cognome", { ascending: true });
+      .order("nome", { ascending: true }).order("cognome", { ascending: true });
 
     if (error) throw error;
     return ((data ?? []) as unknown) as Utente[];
@@ -171,6 +170,42 @@ export default function ScadenzeIvaPage() {
           nonConfermate: newValue
             ? prev.nonConfermate - 1
             : prev.nonConfermate + 1,
+        }));
+      }
+
+      const { error } = await supabase
+        .from("tbscadiva" as any)
+        .update({ [field]: newValue } as any)
+        .eq("id", scadenzaId);
+
+      if (error) throw error;
+    } catch (error: any) {
+      toast({
+        title: "Errore aggiornamento",
+        description: error.message,
+        variant: "destructive",
+      });
+      await loadData();
+    }
+  };
+
+  const handleSetBooleanField = async (
+    scadenzaId: string,
+    field: keyof ScadenzaIva,
+    newValue: boolean
+  ) => {
+    try {
+      const previous = scadenze.find((s) => s.id === scadenzaId)?.[field];
+
+      setScadenze((prev) =>
+        prev.map((s) => (s.id === scadenzaId ? { ...s, [field]: newValue } : s))
+      );
+
+      if (field === "conferma_riga" && Boolean(previous) !== newValue) {
+        setStats((prev) => ({
+          ...prev,
+          confermate: newValue ? prev.confermate + 1 : prev.confermate - 1,
+          nonConfermate: newValue ? prev.nonConfermate - 1 : prev.nonConfermate + 1,
         }));
       }
 
@@ -443,7 +478,7 @@ export default function ScadenzeIvaPage() {
   const anni = anniDisponibili;
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen space-y-4 bg-slate-200/70 px-3 pb-6 pt-2">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Scadenzario IVA</h1>
@@ -465,8 +500,8 @@ export default function ScadenzeIvaPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-6">
+        <Card className="border border-sky-200 bg-slate-50 shadow-sm">
+          <CardContent className="pt-5">
             <div className="text-sm text-gray-600 mb-1">
               Totale Dichiarazioni
             </div>
@@ -475,16 +510,16 @@ export default function ScadenzeIvaPage() {
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6">
+        <Card className="border border-sky-200 bg-slate-50 shadow-sm">
+          <CardContent className="pt-5">
             <div className="text-sm text-gray-600 mb-1">Confermate</div>
             <div className="text-3xl font-bold text-green-600">
               {stats.confermate}
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6">
+        <Card className="border border-sky-200 bg-slate-50 shadow-sm">
+          <CardContent className="pt-5">
             <div className="text-sm text-gray-600 mb-1">Non Confermate</div>
             <div className="text-3xl font-bold text-orange-600">
               {stats.nonConfermate}
@@ -493,8 +528,8 @@ export default function ScadenzeIvaPage() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
+      <Card className="border border-sky-200 bg-slate-50 shadow-sm">
+        <CardHeader className="pb-3">
           <CardTitle>Filtri e Ricerca</CardTitle>
         </CardHeader>
         <CardContent>
@@ -509,7 +544,7 @@ export default function ScadenzeIvaPage() {
                   placeholder="Cerca..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
+                  className="h-9 border-slate-300 bg-white pl-10"
                 />
               </div>
             </div>
@@ -519,7 +554,7 @@ export default function ScadenzeIvaPage() {
                 Utente Operatore
               </label>
               <Select value={filterOperatore} onValueChange={setFilterOperatore}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9 border-slate-300 bg-white">
                   <SelectValue placeholder="Tutti" />
                 </SelectTrigger>
                 <SelectContent>
@@ -538,7 +573,7 @@ export default function ScadenzeIvaPage() {
                 Stato Conferma
               </label>
               <Select value={filterConferma} onValueChange={setFilterConferma}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9 border-slate-300 bg-white">
                   <SelectValue placeholder="Tutti" />
                 </SelectTrigger>
                 <SelectContent>
@@ -557,7 +592,7 @@ export default function ScadenzeIvaPage() {
                 value={annoConsultazione.toString()}
                 onValueChange={(value) => setAnnoConsultazione(parseInt(value))}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-9 border-slate-300 bg-white">
                   <SelectValue placeholder="Seleziona anno" />
                 </SelectTrigger>
                 <SelectContent>
@@ -573,46 +608,46 @@ export default function ScadenzeIvaPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="overflow-hidden border border-sky-200 bg-slate-50 shadow-sm">
         <CardContent className="p-0">
           <div className="relative w-full overflow-auto max-h-[600px]">
             <table className="w-full caption-bottom text-sm">
-              <thead className="[&_tr]:border-b sticky top-0 z-30 bg-white shadow-sm">
-                <tr className="border-b transition-colors hover:bg-muted/50">
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground sticky-col-header border-r min-w-[260px]">
+              <thead className="sticky top-0 z-30 bg-slate-600 text-white shadow-sm [&_tr]:border-b [&_tr]:border-slate-500">
+                <tr className="border-b border-slate-500">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 sticky-col-header border-r min-w-[260px]">
                     Nominativo
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[180px]">
                     Operatore
                   </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[110px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[110px]">
                     Mod. Pred.
                   </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[90px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[90px]">
                     Def.
                   </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[90px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[90px]">
                     Ass.
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[130px]">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[130px]">
                     Credito
                   </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[90px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[90px]">
                     Inv.
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[150px]">
                     Data Invio
                   </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[100px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[100px]">
                     Ricevuta
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[300px]">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[300px]">
                     Note
                   </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[100px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[100px]">
                     Conferma
                   </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[100px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[100px]">
                     Azioni
                   </th>
                 </tr>
@@ -623,7 +658,7 @@ export default function ScadenzeIvaPage() {
                   <tr className="border-b transition-colors hover:bg-muted/50">
                     <td
                       colSpan={12}
-                      className="p-2 align-middle text-center py-8 text-gray-500"
+                      className="px-2 py-1 align-middle text-center py-8 text-gray-500"
                     >
                       Nessun record trovato
                     </td>
@@ -637,65 +672,77 @@ export default function ScadenzeIvaPage() {
                           ? "bg-green-100 hover:bg-green-100"
                           : scadenza.mod_definitivo
                           ? "bg-orange-100 hover:bg-orange-100"
-                          : "hover:bg-green-50"
+                          : "bg-slate-50 hover:bg-slate-100"
                       }`}
                     >
                       <td
-                        className={`p-2 align-middle sticky-col-cell border-r font-medium min-w-[260px] ${
+                        className={`px-2 py-1 align-middle sticky-col-cell border-r font-medium min-w-[260px] ${
                           scadenza.conferma_riga
                             ? "!bg-green-100"
                             : scadenza.mod_definitivo
                             ? "!bg-orange-100"
-                            : "!bg-white"
+                            : "!bg-slate-50"
                         }`}
                       >
                         {scadenza.nominativo}
                       </td>
 
-                      <td className="p-2 align-middle min-w-[180px]">
+                      <td className="px-2 py-1 align-middle min-w-[180px]">
                         {getUtenteNome(scadenza.utente_operatore_id)}
                       </td>
 
-                      <td className="p-2 align-middle text-center min-w-[110px]">
-                        <Checkbox
-                          checked={scadenza.mod_predisposto || false}
-                          onCheckedChange={() =>
-                            handleToggleField(
+                      <td className="px-2 py-1 align-middle text-center min-w-[110px]">
+                        <select
+                          value={scadenza.mod_predisposto ? "SI" : "NO"}
+                          onChange={(e) =>
+                            handleSetBooleanField(
                               scadenza.id,
                               "mod_predisposto",
-                              scadenza.mod_predisposto
+                              e.target.value === "SI"
                             )
                           }
-                        />
+                          className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"
+                        >
+                          <option value="NO">NO</option>
+                          <option value="SI">SI</option>
+                        </select>
                       </td>
 
-                      <td className="p-2 align-middle text-center min-w-[90px]">
-                        <Checkbox
-                          checked={scadenza.mod_definitivo || false}
-                          onCheckedChange={() =>
-                            handleToggleField(
+                      <td className="px-2 py-1 align-middle text-center min-w-[90px]">
+                        <select
+                          value={scadenza.mod_definitivo ? "SI" : "NO"}
+                          onChange={(e) =>
+                            handleSetBooleanField(
                               scadenza.id,
                               "mod_definitivo",
-                              scadenza.mod_definitivo
+                              e.target.value === "SI"
                             )
                           }
-                        />
+                          className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"
+                        >
+                          <option value="NO">NO</option>
+                          <option value="SI">SI</option>
+                        </select>
                       </td>
 
-                      <td className="p-2 align-middle text-center min-w-[90px]">
-                        <Checkbox
-                          checked={scadenza.asseverazione || false}
-                          onCheckedChange={() =>
-                            handleToggleField(
+                      <td className="px-2 py-1 align-middle text-center min-w-[90px]">
+                        <select
+                          value={scadenza.asseverazione ? "SI" : "NO"}
+                          onChange={(e) =>
+                            handleSetBooleanField(
                               scadenza.id,
                               "asseverazione",
-                              scadenza.asseverazione
+                              e.target.value === "SI"
                             )
                           }
-                        />
+                          className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"
+                        >
+                          <option value="NO">NO</option>
+                          <option value="SI">SI</option>
+                        </select>
                       </td>
 
-                      <td className="p-2 align-middle min-w-[130px]">
+                      <td className="px-2 py-1 align-middle min-w-[130px]">
                         <Input
                           type="number"
                           step="0.01"
@@ -707,25 +754,29 @@ export default function ScadenzeIvaPage() {
                               parseFloat(e.target.value) || null
                             )
                           }
-                          className="w-full"
+                          className="h-8 w-full border-slate-300 bg-white"
                           placeholder="0.00"
                         />
                       </td>
 
-                      <td className="p-2 align-middle text-center min-w-[90px]">
-                        <Checkbox
-                          checked={scadenza.mod_inviato || false}
-                          onCheckedChange={() =>
-                            handleToggleField(
+                      <td className="px-2 py-1 align-middle text-center min-w-[90px]">
+                        <select
+                          value={scadenza.mod_inviato ? "SI" : "NO"}
+                          onChange={(e) =>
+                            handleSetBooleanField(
                               scadenza.id,
                               "mod_inviato",
-                              scadenza.mod_inviato
+                              e.target.value === "SI"
                             )
                           }
-                        />
+                          className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"
+                        >
+                          <option value="NO">NO</option>
+                          <option value="SI">SI</option>
+                        </select>
                       </td>
 
-                      <td className="p-2 align-middle min-w-[150px]">
+                      <td className="px-2 py-1 align-middle min-w-[150px]">
                         <Input
                           type="date"
                           value={scadenza.data_invio || ""}
@@ -736,48 +787,57 @@ export default function ScadenzeIvaPage() {
                               e.target.value
                             )
                           }
-                          className="w-full"
+                          className="h-8 w-full border-slate-300 bg-white"
                         />
                       </td>
 
-                      <td className="p-2 align-middle text-center min-w-[100px]">
-                        <Checkbox
-                          checked={scadenza.ricevuta || false}
-                          onCheckedChange={() =>
-                            handleToggleField(
+                      <td className="px-2 py-1 align-middle text-center min-w-[100px]">
+                        <select
+                          value={scadenza.ricevuta ? "SI" : "NO"}
+                          onChange={(e) =>
+                            handleSetBooleanField(
                               scadenza.id,
                               "ricevuta",
-                              scadenza.ricevuta
+                              e.target.value === "SI"
                             )
                           }
-                        />
+                          className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"
+                        >
+                          <option value="NO">NO</option>
+                          <option value="SI">SI</option>
+                        </select>
                       </td>
 
-                      <td className="p-2 align-middle min-w-[300px]">
+                      <td className="px-2 py-1 align-middle min-w-[300px]">
                         <Textarea
                           value={localNotes[scadenza.id] ?? scadenza.note ?? ""}
                           onChange={(e) =>
                             handleNoteChange(scadenza.id, e.target.value)
                           }
                           placeholder="Aggiungi note..."
-                          className="min-h-[60px] resize-none"
+                          rows={1}
+                          className="min-h-8 h-8 resize-none border-slate-300 bg-white py-1.5"
                         />
                       </td>
 
-                      <td className="p-2 align-middle text-center min-w-[100px]">
-                        <Checkbox
-                          checked={scadenza.conferma_riga || false}
-                          onCheckedChange={() =>
-                            handleToggleField(
+                      <td className="px-2 py-1 align-middle text-center min-w-[100px]">
+                        <select
+                          value={scadenza.conferma_riga ? "SI" : "NO"}
+                          onChange={(e) =>
+                            handleSetBooleanField(
                               scadenza.id,
                               "conferma_riga",
-                              scadenza.conferma_riga
+                              e.target.value === "SI"
                             )
                           }
-                        />
+                          className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"
+                        >
+                          <option value="NO">NO</option>
+                          <option value="SI">SI</option>
+                        </select>
                       </td>
 
-                      <td className="p-2 align-middle text-center min-w-[100px]">
+                      <td className="px-2 py-1 align-middle text-center min-w-[100px]">
                         <Button
                           variant="ghost"
                           size="sm"
