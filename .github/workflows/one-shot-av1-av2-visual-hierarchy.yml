@@ -22,24 +22,27 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.x'
-      - name: Apply AV1 and AV2 styling only
+      - name: Apply AV1 AV2 AV4 styling
         run: python scripts/patch-av1-av2-visual-hierarchy.py
-      - name: Verify styling and runtime logic still present
+      - name: Verify styling and AV1 JSX repair
         run: |
-          grep -q 'bg-slate-300' src/pages/antiriciclaggio/modello-av1.tsx
-          grep -q 'bg-slate-300' src/pages/antiriciclaggio/modello-av2.tsx
+          grep -q 'border-t border-slate-200 bg-slate-200/70' src/pages/antiriciclaggio/modello-av1.tsx
+          grep -q 'border-t border-slate-200 bg-slate-200/70' src/pages/antiriciclaggio/modello-av2.tsx
+          grep -q 'h-full overflow-y-auto bg-slate-200/70' src/pages/antiriciclaggio/modello-av1.tsx
+          grep -q 'h-full overflow-y-auto bg-slate-200/70' src/pages/antiriciclaggio/modello-av2.tsx
+          grep -q 'cursor-default border-slate-300 bg-white' src/pages/antiriciclaggio/modello-av1.tsx
           grep -q 'handleSave' src/pages/antiriciclaggio/modello-av1.tsx
           grep -q 'handleSave' src/pages/antiriciclaggio/modello-av2.tsx
           grep -q 'tbAV1' src/pages/antiriciclaggio/modello-av1.tsx
           grep -q 'tbAV2' src/pages/antiriciclaggio/modello-av2.tsx
       - name: Commit runtime files
         run: |
-          if git diff --quiet -- src/pages/antiriciclaggio/modello-av1.tsx src/pages/antiriciclaggio/modello-av2.tsx; then
+          if git diff --quiet -- src/pages/antiriciclaggio/modello-av1.tsx src/pages/antiriciclaggio/modello-av2.tsx src/pages/antiriciclaggio/modello-av4.tsx; then
             echo 'No runtime changes produced'
-            exit 1
+            exit 0
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add src/pages/antiriciclaggio/modello-av1.tsx src/pages/antiriciclaggio/modello-av2.tsx
-          git commit -m 'Match AV1 and AV2 visual hierarchy to AV4'
+          git add src/pages/antiriciclaggio/modello-av1.tsx src/pages/antiriciclaggio/modello-av2.tsx src/pages/antiriciclaggio/modello-av4.tsx
+          git commit -m 'Fix AV form hierarchy and AV1 JSX'
           git push origin main
