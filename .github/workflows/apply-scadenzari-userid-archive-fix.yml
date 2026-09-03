@@ -1,0 +1,49 @@
+name: Apply scadenzari identity/year fix
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/apply-scadenzari-userid-archive-fix.yml
+      - scripts/fix-scadenzari-userid-archive-once.py
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply targeted scadenzari patch
+        run: python scripts/fix-scadenzari-userid-archive-once.py
+
+      - name: Verify exact runtime changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'eq("user_id", session.user.id)' src/pages/impostazioni/scadenzari.tsx
+          grep -q 'archiviato_da: currentUtenteId' src/pages/impostazioni/scadenzari.tsx
+          grep -q 'eq("studio_id", currentStudioId)' src/pages/impostazioni/scadenzari.tsx
+          ! grep -q 'archiviato_da: session.user.id' src/pages/impostazioni/scadenzari.tsx
+          ! grep -q 'eq("id", session.user.id)' src/pages/impostazioni/scadenzari.tsx
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript guard
+        run: npx tsc --noEmit
+
+      - name: Commit application file
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/impostazioni/scadenzari.tsx
+          git commit -m "Fix yearly scadenzari archive and generation identity"
+          git push origin HEAD:main
