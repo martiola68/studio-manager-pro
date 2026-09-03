@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import TitolariEffettiviForm from "@/components/antiriciclaggio/TitolariEffettiviForm";
+import AV4HelpButton from "@/components/antiriciclaggio/AV4HelpButton";
 
 import {
   normalizeCF,
@@ -2034,9 +2035,12 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
       <div className="flex-1 overflow-hidden">
         <div className="h-full overflow-y-auto">
           <div className="mx-auto max-w-5xl px-4 pb-32 pt-4 md:px-8 md:pb-40 md:pt-4">
-            <Card>
+            <Card className="border border-sky-200 shadow-sm">
               <CardHeader>
-                <CardTitle>Dati principali</CardTitle>
+                <div className="flex items-center justify-between gap-3">
+                  <CardTitle>Dati principali</CardTitle>
+                  <AV4HelpButton topic="dati" />
+                </div>
               </CardHeader>
 
               <CardContent>
@@ -2279,13 +2283,18 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
               </CardContent>
             </Card>
 
-            <Card className="mt-6">
+            <Card className="mt-6 border border-sky-200 shadow-sm">
               <CardHeader>
-                <CardTitle>Dichiarazioni del cliente</CardTitle>
+                <div className="flex items-center justify-between gap-3">
+                  <CardTitle>Dichiarazioni del cliente</CardTitle>
+                  <AV4HelpButton topic="dichiarazioni" />
+                </div>
               </CardHeader>
 
               <CardContent>
                 <div className="space-y-6">
+                  <section className="rounded-xl border border-sky-200 bg-white p-5">
+                    <div className="space-y-5">
                   <div>
                     <label className="flex items-center gap-2">
                       <input
@@ -2323,8 +2332,15 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                       rows={4}
                     />
                   </div>
+                    </div>
+                  </section>
 
-                  <div className="font-semibold">Persona politicamente esposta</div>
+                  <section className="rounded-xl border border-sky-200 bg-white p-5">
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                      <div className="font-semibold text-slate-900">Persona politicamente esposta</div>
+                      <AV4HelpButton topic="ppe" />
+                    </div>
+                    <div className="space-y-5">
 
                   <div>
                     <label className="flex items-center gap-2">
@@ -2378,7 +2394,15 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                       />
                     </div>
                   )}
+                    </div>
+                  </section>
 
+                  <section className="rounded-xl border border-sky-200 bg-white p-5">
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                      <div className="font-semibold text-slate-900">Individuazione del titolare effettivo</div>
+                      <AV4HelpButton topic="titolare" />
+                    </div>
+                    <div className="space-y-5">
                   <div className="text-sm leading-6 text-gray-700">
                     - ai fini dell’identificazione del Titolare Effettivo di cui all’art. 1, comma 2,
                     lettera pp) e ai criteri per la determinazione della titolarità effettiva di clienti
@@ -2414,7 +2438,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                   </div>
 
                   {form.domanda7 && (
-                    <div className="rounded-lg border p-4">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
                       <TitolariEffettiviForm
                         sezione="domanda7"
                         av4_id={av4Id || ""}
@@ -2437,7 +2461,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                   </div>
 
                   {form.domanda8 && (
-                    <div className="space-y-4 rounded-lg border p-4">
+                    <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/40 p-4">
                       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div>
                           <label className="mb-1 block text-sm font-medium">Nome società / ente</label>
@@ -2499,7 +2523,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                         in qualità di legale rappresentante, munito dei necessari poteri, e attesta che il/i titolare/i effettivi sono:
                       </div>
 
-                      <div className="rounded-lg border p-4">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
                         <TitolariEffettiviForm
                           sezione="domanda8"
                           av4_id={av4Id || ""}
@@ -2523,7 +2547,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                   </div>
 
                   {form.domanda9 && (
-                    <div className="space-y-4 rounded-lg border p-4">
+                    <div className="space-y-4 rounded-lg border border-slate-200 bg-slate-50/40 p-4">
                       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div>
                           <label className="mb-1 block text-sm font-medium">Nome società / ente</label>
@@ -2596,7 +2620,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                         in qualità di legale rappresentante, munito dei necessari poteri, e attesta che ai sensi dell’articolo 20, comma 4, D.Lgs. 231/2007, i titolari effettivi sono:
                       </div>
 
-                      <div className="rounded-lg border p-4">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
                         <TitolariEffettiviForm
                           sezione="domanda9"
                           av4_id={av4Id || ""}
@@ -2606,9 +2630,15 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                       </div>
                     </div>
                   )}
+                    </div>
+                  </section>
 
-                  <div className="font-semibold">PPE titolari effettivi</div>
-
+                  <section className="rounded-xl border border-sky-200 bg-white p-5">
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                      <div className="font-semibold text-slate-900">PPE titolari effettivi</div>
+                      <AV4HelpButton topic="ppeTitolari" />
+                    </div>
+                    <div className="space-y-5">
                   <div>
                     <label className="flex items-center gap-2">
                       <input
@@ -2645,7 +2675,15 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                       />
                     </div>
                   )}
+                    </div>
+                  </section>
 
+                  <section className="rounded-xl border border-sky-200 bg-white p-5">
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                      <div className="font-semibold text-slate-900">Relazioni, fondi e mezzi di pagamento</div>
+                      <AV4HelpButton topic="fondi" />
+                    </div>
+                    <div className="space-y-5">
                   <div>
                     <label className="mb-1 block text-sm font-medium">
                       Che le relazioni intercorrenti tra il Cliente e il titolare effettivo nonché, ove rilevi, l’esecutore sono
@@ -2688,8 +2726,15 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                   <div className="text-sm leading-6 text-gray-700">
                     Che i medesimi fondi e le risorse economiche eventualmente utilizzati non provengono né sono destinati a un’attività criminosa o al finanziamento del terrorismo di cui all’art. 2, co. 6, del D.Lgs. 231/2007.
                   </div>
+                    </div>
+                  </section>
 
-                  <div className="font-semibold">Professione / attività del cliente</div>
+                  <section className="rounded-xl border border-sky-200 bg-white p-5">
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                      <div className="font-semibold text-slate-900">Professione / attività del cliente</div>
+                      <AV4HelpButton topic="attivita" />
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
 
                   <div>
                     <label className="mb-1 block text-sm font-medium">
@@ -2722,13 +2767,18 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                       className="w-full rounded-md border px-3 py-2"
                     />
                   </div>
+                    </div>
+                  </section>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="mt-6">
+            <Card className="mt-6 border border-sky-200 shadow-sm">
               <CardHeader>
-                <CardTitle>Firma</CardTitle>
+                <div className="flex items-center justify-between gap-3">
+                  <CardTitle>Firma</CardTitle>
+                  <AV4HelpButton topic="firma" />
+                </div>
               </CardHeader>
 
               <CardContent>
