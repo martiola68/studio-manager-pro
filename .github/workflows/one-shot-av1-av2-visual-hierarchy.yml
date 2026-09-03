@@ -1,0 +1,45 @@
+name: One-shot AV1 AV2 visual hierarchy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/patch-av1-av2-visual-hierarchy.py
+      - .github/workflows/one-shot-av1-av2-visual-hierarchy.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Apply AV1 and AV2 styling only
+        run: python scripts/patch-av1-av2-visual-hierarchy.py
+      - name: Verify functional anchors and styling
+        run: |
+          grep -q 'bg-slate-300' src/pages/antiriciclaggio/modello-av1.tsx
+          grep -q 'border-slate-400 bg-white' src/pages/antiriciclaggio/modello-av1.tsx
+          grep -q 'bg-slate-300' src/pages/antiriciclaggio/modello-av2.tsx
+          grep -q 'border-slate-400 bg-white' src/pages/antiriciclaggio/modello-av2.tsx
+          grep -q 'handleSave' src/pages/antiriciclaggio/modello-av2.tsx
+          grep -q 'salvaAV1' src/pages/antiriciclaggio/modello-av1.tsx
+      - name: Commit runtime files
+        run: |
+          if git diff --quiet -- src/pages/antiriciclaggio/modello-av1.tsx src/pages/antiriciclaggio/modello-av2.tsx; then
+            echo 'No runtime changes produced'
+            exit 1
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/pages/antiriciclaggio/modello-av1.tsx src/pages/antiriciclaggio/modello-av2.tsx
+          git commit -m 'Match AV1 and AV2 visual hierarchy to AV4'
+          git push origin main
