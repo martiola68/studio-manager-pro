@@ -18,6 +18,7 @@ export default function App({ Component, pageProps }: AppProps) {
   const [scadenzariCleanupPending, setScadenzariCleanupPending] = useState(false);
 
   const isScadenzarioPage = router.pathname.startsWith("/scadenze/");
+  const isIvaPage = router.pathname === "/scadenze/iva";
 
   useEffect(() => {
     if (!router.isReady || !isScadenzarioPage) return;
@@ -74,7 +75,7 @@ export default function App({ Component, pageProps }: AppProps) {
     router.pathname === "/presenze" ? "presenze-page" : "",
     router.pathname === "/clienti/organi-sociali" ? "organi-sociali-page" : "",
     router.pathname === "/microsoft365" ? "microsoft365-page" : "",
-    router.pathname === "/scadenze/iva" ? "!min-h-0 !overflow-hidden" : "",
+    isIvaPage ? "!min-h-0 !overflow-hidden" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -98,8 +99,12 @@ export default function App({ Component, pageProps }: AppProps) {
             <Toaster />
           </>
         ) : (
-          <div className="flex min-h-screen flex-col bg-gray-50">
-            <div className="sticky top-0 z-50">
+          <div
+            className={`flex min-h-screen flex-col bg-gray-50 ${
+              isIvaPage ? "h-screen overflow-hidden" : ""
+            }`}
+          >
+            <div className="sticky top-0 z-50 shrink-0">
               <Header onMenuToggle={() => {}} />
               <TopNavBar />
             </div>
