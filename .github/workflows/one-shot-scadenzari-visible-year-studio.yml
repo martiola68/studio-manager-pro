@@ -1,0 +1,42 @@
+name: One shot scadenzari visible year and studio
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - scripts/fix-scadenzari-visible-year-studio-once.py
+      - .github/workflows/one-shot-scadenzari-visible-year-studio.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply targeted guarded patch
+        run: python scripts/fix-scadenzari-visible-year-studio-once.py
+
+      - name: Verify targeted files
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -nE 'flag_proforma|label: "Proforma"' src/pages/clienti/servizi.tsx
+          ! grep -nE 'scadenzariFlags\.proforma|tbscadproforma' src/pages/impostazioni/scadenzari.tsx
+          grep -n 'eq("studio_id", currentStudioId)' src/pages/scadenze/iva.tsx
+          grep -n 'eq("studio_id", currentStudioId)' src/pages/impostazioni/scadenzari.tsx
+
+      - name: Commit targeted patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/clienti/servizi.tsx src/pages/impostazioni/scadenzari.tsx src/pages/scadenze/iva.tsx
+          git commit -m "Fix scadenzari yearly archive and remove Proforma UI"
+          git push origin HEAD:main
