@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { StudioProvider } from "@/contexts/StudioContext";
-import { Header } from "@/components/Header";
+import Header from "@/components/Header";
 import { TopNavBar } from "@/components/TopNavBar";
 import { Toaster } from "@/components/ui/toaster";
 import { ModuleAccessGuard } from "@/components/ModuleAccessGuard";
