@@ -1,0 +1,59 @@
+name: Remove Proforma from navigation menus
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/remove-proforma-navigation.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Remove Proforma menu entries
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          targets = {
+              'src/components/TopNavBar.tsx': '        { label: "Proforma", href: "/scadenze/proforma", icon: <FileText className="h-4 w-4" /> },\n',
+              'src/components/Sidebar.tsx': '        { label: "Proforma", href: "/scadenze/proforma", icon: null },\n',
+          }
+
+          for path, old in targets.items():
+              p = Path(path)
+              s = p.read_text(encoding='utf-8')
+              if old not in s:
+                  raise SystemExit(f'Proforma menu marker missing in {path}')
+              s = s.replace(old, '', 1)
+              if '/scadenze/proforma' in s or 'label: "Proforma"' in s:
+                  raise SystemExit(f'Residual Proforma menu reference in {path}')
+              p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Verify menus
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -nE 'Proforma|/scadenze/proforma' src/components/TopNavBar.tsx
+          ! grep -nE 'Proforma|/scadenze/proforma' src/components/Sidebar.tsx
+
+      - name: Commit navigation cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/TopNavBar.tsx src/components/Sidebar.tsx
+          git commit -m "Remove Proforma from scadenzari navigation"
+          git push origin HEAD:main
