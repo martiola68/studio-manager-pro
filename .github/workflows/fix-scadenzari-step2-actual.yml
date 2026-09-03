@@ -1,0 +1,40 @@
+name: Fix scadenzari step 2 actual
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/fix-scadenzari-userid-archive-once.py
+      - .github/workflows/fix-scadenzari-step2-actual.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch real application file
+        run: python scripts/fix-scadenzari-userid-archive-once.py
+      - name: Verify exact fixes
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'archiviato_da: currentUtenteId' src/pages/impostazioni/scadenzari.tsx
+          grep -q 'eq("user_id", session.user.id)' src/pages/impostazioni/scadenzari.tsx
+          grep -q 'eq("studio_id", currentStudioId)' src/pages/impostazioni/scadenzari.tsx
+          ! grep -q 'archiviato_da: session.user.id' src/pages/impostazioni/scadenzari.tsx
+          ! grep -q 'eq("id", session.user.id)' src/pages/impostazioni/scadenzari.tsx
+      - name: Commit only real application change
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/impostazioni/scadenzari.tsx
+          git diff --cached --quiet && { echo 'No application change'; exit 1; }
+          git commit -m "Fix yearly scadenzari archive and generation"
+          git push origin HEAD:main
