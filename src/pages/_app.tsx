@@ -13,12 +13,24 @@ import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
+const SCADENZARI_VIEWPORT = new Set([
+  "/scadenze/iva",
+  "/scadenze/ccgg",
+  "/scadenze/cu",
+  "/scadenze/imu",
+  "/scadenze/fiscali",
+  "/scadenze/bilanci",
+  "/scadenze/modello-770",
+  "/scadenze/lipe",
+  "/scadenze/esterometro",
+]);
+
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
   const [scadenzariCleanupPending, setScadenzariCleanupPending] = useState(false);
 
   const isScadenzarioPage = router.pathname.startsWith("/scadenze/");
-  const isIvaPage = router.pathname === "/scadenze/iva";
+  const isOperationalScadenzario = SCADENZARI_VIEWPORT.has(router.pathname);
 
   useEffect(() => {
     if (!router.isReady || !isScadenzarioPage) return;
@@ -75,7 +87,7 @@ export default function App({ Component, pageProps }: AppProps) {
     router.pathname === "/presenze" ? "presenze-page" : "",
     router.pathname === "/clienti/organi-sociali" ? "organi-sociali-page" : "",
     router.pathname === "/microsoft365" ? "microsoft365-page" : "",
-    isIvaPage ? "!min-h-0 !overflow-hidden" : "",
+    isOperationalScadenzario ? "!min-h-0 !overflow-hidden" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -101,7 +113,7 @@ export default function App({ Component, pageProps }: AppProps) {
         ) : (
           <div
             className={`flex min-h-screen flex-col bg-gray-50 ${
-              isIvaPage ? "h-screen overflow-hidden" : ""
+              isOperationalScadenzario ? "h-screen overflow-hidden" : ""
             }`}
           >
             <div className="sticky top-0 z-50 shrink-0">
