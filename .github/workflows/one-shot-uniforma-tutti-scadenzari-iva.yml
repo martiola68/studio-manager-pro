@@ -1,0 +1,164 @@
+name: One shot - uniforma tutti scadenzari a IVA
+
+on:
+  push:
+    paths:
+      - '.github/workflows/one-shot-uniforma-tutti-scadenzari-iva.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  uniforma:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Applica standard grafico IVA agli scadenzari operativi
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          files = [
+            'src/pages/scadenze/ccgg.tsx',
+            'src/pages/scadenze/cu.tsx',
+            'src/pages/scadenze/imu.tsx',
+            'src/pages/scadenze/fiscali.tsx',
+            'src/pages/scadenze/bilanci.tsx',
+            'src/pages/scadenze/modello-770.tsx',
+            'src/pages/scadenze/lipe.tsx',
+            'src/pages/scadenze/esterometro.tsx',
+          ]
+
+          def patch(path):
+            p = Path(path)
+            s = p.read_text(encoding='utf-8')
+            original = s
+
+            # Operatori: nome, poi cognome.
+            s = s.replace('.order("cognome", { ascending: true });', '.order("nome", { ascending: true }).order("cognome", { ascending: true });', 1)
+
+            # Canvas come IVA: viewport vincolato, parte superiore fissa, tabella espandibile.
+            s = s.replace('<div className="space-y-6">', '<div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden bg-slate-200/70 px-3 pb-3 pt-2">', 1)
+            s = s.replace('<div className="space-y-4">', '<div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden bg-slate-200/70 px-3 pb-3 pt-2">', 1)
+
+            # Titolo e blocchi prima della tabella non devono restringersi.
+            s = s.replace('<div>\n        <h1', '<div className="shrink-0">\n        <h1', 1)
+            s = s.replace('<div className="grid grid-cols-1 md:grid-cols-3 gap-4">', '<div className="grid shrink-0 grid-cols-1 gap-4 md:grid-cols-3">', 1)
+            s = s.replace('<div className="grid grid-cols-1 gap-4 md:grid-cols-3">', '<div className="grid shrink-0 grid-cols-1 gap-4 md:grid-cols-3">', 1)
+
+            # Card statistiche e filtri: bordo azzurro/fondo chiaro.
+            s = s.replace('<Card>\n          <CardContent className="pt-6">', '<Card className="border border-sky-200 bg-slate-50 shadow-sm">\n          <CardContent className="pt-5">')
+            s = s.replace('<Card>\n        <CardHeader>\n          <CardTitle>Filtri e Ricerca</CardTitle>', '<Card className="shrink-0 border border-sky-200 bg-slate-50 shadow-sm">\n        <CardHeader className="pb-3">\n          <CardTitle>Filtri e Ricerca</CardTitle>', 1)
+            s = s.replace('<Card>\n        <CardHeader className="pb-3">\n          <CardTitle>Filtri e Ricerca</CardTitle>', '<Card className="shrink-0 border border-sky-200 bg-slate-50 shadow-sm">\n        <CardHeader className="pb-3">\n          <CardTitle>Filtri e Ricerca</CardTitle>', 1)
+
+            # Input e trigger filtri bianchi/compatti.
+            s = s.replace('className="pl-10"', 'className="h-9 border-slate-300 bg-white pl-10"')
+            s = re.sub(r'<SelectTrigger(?![^>]*className=)>', '<SelectTrigger className="h-9 border-slate-300 bg-white">', s)
+
+            # Card tabella: prende tutto lo spazio residuo e gestisce lo scroll internamente.
+            s = s.replace('<Card>\n        <CardContent className="p-0">', '<Card className="flex min-h-0 flex-1 flex-col overflow-hidden border border-sky-200 bg-slate-50 shadow-sm">\n        <CardContent className="min-h-0 flex-1 overflow-hidden p-0">', 1)
+            s = s.replace('<Card className="overflow-hidden">\n        <CardContent className="p-0">', '<Card className="flex min-h-0 flex-1 flex-col overflow-hidden border border-sky-200 bg-slate-50 shadow-sm">\n        <CardContent className="min-h-0 flex-1 overflow-hidden p-0">', 1)
+            s = s.replace('<div className="overflow-x-auto">', '<div className="relative h-full w-full overflow-auto">', 1)
+            s = s.replace('<div className="relative overflow-x-auto">', '<div className="relative h-full w-full overflow-auto">', 1)
+            s = s.replace('<div className="overflow-auto">', '<div className="relative h-full w-full overflow-auto">', 1)
+
+            # Header tabella nativo, sticky, grigio scuro.
+            s = re.sub(r'<thead className="[^"]*">', '<thead className="sticky top-0 z-30 bg-slate-600 text-white shadow-sm [&_tr]:border-b [&_tr]:border-slate-500">', s, count=1)
+            s = s.replace('h-10 px-2', 'h-9 px-2')
+            s = s.replace('font-medium text-muted-foreground', 'font-semibold text-slate-50')
+            s = s.replace('className="sticky-col-header ', 'className="sticky-col-header !bg-slate-600 !text-slate-50 ')
+
+            # Celle più compatte.
+            s = s.replace('className="p-2 align-middle', 'className="px-2 py-1 align-middle')
+            s = s.replace('className={`p-2 align-middle', 'className={`px-2 py-1 align-middle')
+
+            # Campi di inserimento bianchi e compatti senza alterare la logica.
+            s = re.sub(r'className="w-full"', 'className="h-8 w-full border-slate-300 bg-white"', s)
+            s = s.replace('className="min-h-[60px] resize-none"', 'rows={1} className="min-h-8 h-8 resize-none border-slate-300 bg-white py-1.5"')
+            s = s.replace('className="min-h-[80px] resize-none"', 'rows={1} className="min-h-8 h-8 resize-none border-slate-300 bg-white py-1.5"')
+
+            # Checkbox operativi -> select SI/NO. Mantiene handleToggleField e disabled.
+            checkbox = re.compile(r'''<Checkbox\s+checked=\{scadenza\.(?P<field>[A-Za-z0-9_]+)\s*\|\|\s*false\}\s+onCheckedChange=\{\(\)\s*=>\s*handleToggleField\(\s*scadenza\.id,\s*["'](?P=field)["'],\s*scadenza\.(?P=field)\s*\)\s*\}\s*(?P<disabled>disabled=\{[^}]+\}\s*)?/>''', re.S)
+
+            def repl(m):
+              field = m.group('field')
+              disabled = m.group('disabled') or ''
+              return f'''<select\n                          value={{scadenza.{field} ? "SI" : "NO"}}\n                          onChange={{(e) => {{\n                            const nextValue = e.target.value === "SI";\n                            if (nextValue !== Boolean(scadenza.{field})) {{\n                              handleToggleField(scadenza.id, "{field}", scadenza.{field});\n                            }}\n                          }}}}\n                          {disabled}className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"\n                        >\n                          <option value="NO">NO</option>\n                          <option value="SI">SI</option>\n                        </select>'''
+
+            s, replaced = checkbox.subn(repl, s)
+
+            # Alcuni file usano checked={Boolean(...)}.
+            checkbox_bool = re.compile(r'''<Checkbox\s+checked=\{Boolean\(scadenza\.(?P<field>[A-Za-z0-9_]+)\)\}\s+onCheckedChange=\{\(\)\s*=>\s*handleToggleField\(\s*scadenza\.id,\s*["'](?P=field)["'],\s*scadenza\.(?P=field)\s*\)\s*\}\s*(?P<disabled>disabled=\{[^}]+\}\s*)?/>''', re.S)
+            s, replaced2 = checkbox_bool.subn(repl, s)
+
+            # Rimuove import Checkbox solo se non più usato.
+            if '<Checkbox' not in s:
+              s = s.replace('import { Checkbox } from "@/components/ui/checkbox";\n', '')
+
+            # Se la tabella non aveva wrapper esplicito, crea il contenitore scroll attorno alla table.
+            if '<table' in s and 'relative h-full w-full overflow-auto' not in s:
+              s = s.replace('<table ', '<div className="relative h-full w-full overflow-auto">\n            <table ', 1)
+              # chiude wrapper subito dopo la prima table di runtime, non quelle nelle stringhe di stampa
+              pos = s.find('</table>', s.find('<div className="relative h-full w-full overflow-auto">'))
+              if pos != -1:
+                pos += len('</table>')
+                s = s[:pos] + '\n            </div>' + s[pos:]
+
+            if s == original:
+              raise SystemExit(f'Nessuna modifica prodotta per {path}')
+            p.write_text(s, encoding='utf-8')
+            print(path, 'checkbox convertiti:', replaced + replaced2)
+
+          for f in files:
+            patch(f)
+          PY
+
+      - name: Verifica runtime modificati
+        run: |
+          set -e
+          for f in \
+            src/pages/scadenze/ccgg.tsx \
+            src/pages/scadenze/cu.tsx \
+            src/pages/scadenze/imu.tsx \
+            src/pages/scadenze/fiscali.tsx \
+            src/pages/scadenze/bilanci.tsx \
+            src/pages/scadenze/modello-770.tsx \
+            src/pages/scadenze/lipe.tsx \
+            src/pages/scadenze/esterometro.tsx
+          do
+            echo "VERIFICA $f"
+            grep -q 'bg-slate-600 text-white' "$f"
+            grep -q 'border-sky-200' "$f"
+            grep -q 'bg-slate-200/70' "$f"
+            grep -q 'overflow-auto' "$f"
+            grep -q 'order("nome", { ascending: true })' "$f"
+          done
+          git diff -- src/pages/scadenze/affitti.tsx --exit-code
+
+      - name: Build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Commit e push su main
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            src/pages/scadenze/ccgg.tsx \
+            src/pages/scadenze/cu.tsx \
+            src/pages/scadenze/imu.tsx \
+            src/pages/scadenze/fiscali.tsx \
+            src/pages/scadenze/bilanci.tsx \
+            src/pages/scadenze/modello-770.tsx \
+            src/pages/scadenze/lipe.tsx \
+            src/pages/scadenze/esterometro.tsx
+          git diff --cached --quiet && exit 1
+          git commit -m 'Uniform all operational scadenzari to IVA visual standard'
+          git push origin main
