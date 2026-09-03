@@ -16,7 +16,6 @@ def patch_scadenzari(s):
     s = s.replace('  { key: "proforma", label: "Proforma", table: "tbscadproforma" },\n', '')
     s = s.replace('      proforma: true,\n', '')
 
-    # Rimuove l'intero blocco di generazione Proforma, lasciando intatti gli altri.
     start = s.find('      if (scadenzariFlags.proforma) {')
     if start < 0:
         raise SystemExit('Proforma generation block start not found')
@@ -25,24 +24,20 @@ def patch_scadenzari(s):
         raise SystemExit('IMU generation block not found after Proforma')
     s = s[:start] + s[next_imu:]
 
-    # Helper studio corrente per operazioni archivio/eliminazione.
     marker = '  const getSelectedScadenzari = () =>\n    SCADENZARI_CONFIG.filter((item) => scadenzariFlags[item.key]);\n'
     helper = marker + '''\n  const getCurrentStudioId = async (): Promise<string> => {\n    const { data: { session } } = await supabase.auth.getSession();\n    if (!session?.user?.id) throw new Error("Sessione non valida");\n\n    const { data, error } = await supabase\n      .from("tbutenti")\n      .select("studio_id")\n      .eq("user_id", session.user.id)\n      .maybeSingle();\n\n    if (error || !data?.studio_id) {\n      throw error || new Error("Studio non disponibile");\n    }\n    return data.studio_id;\n  };\n'''
     if s.count(marker) != 1:
         raise SystemExit('getSelectedScadenzari marker mismatch')
     s = s.replace(marker, helper, 1)
 
-    # Gli anni disponibili devono essere quelli dello studio corrente.
     marker = '    const selezionati = getSelectedScadenzari();\n\n    if (selezionati.length === 0) {'
     repl = '    const selezionati = getSelectedScadenzari();\n    const currentStudioId = await getCurrentStudioId();\n\n    if (selezionati.length === 0) {'
-    # Prima occorrenza = loadAnniDisponibili.
     if s.count(marker) < 2:
         raise SystemExit('selected scadenzari markers missing')
     s = s.replace(marker, repl, 1)
     s = s.replace('.select("anno_riferimento")\n        .eq("archiviato", false);', '.select("anno_riferimento")\n        .eq("studio_id", currentStudioId)\n        .eq("archiviato", false);', 1)
     s = s.replace('.select("anno_riferimento")\n        .eq("archiviato", true);', '.select("anno_riferimento")\n        .eq("studio_id", currentStudioId)\n        .eq("archiviato", true);', 1)
 
-    # Archiviazione: studio + anno + non archiviato.
     arch_marker = '  const handleArchivia = async () => {\n    const selezionati = getSelectedScadenzari();'
     arch_repl = '  const handleArchivia = async () => {\n    const selezionati = getSelectedScadenzari();\n    const currentStudioId = await getCurrentStudioId();'
     if s.count(arch_marker) != 1:
@@ -54,14 +49,12 @@ def patch_scadenzari(s):
         raise SystemExit('archive filter marker mismatch')
     s = s.replace(archive_eq, archive_eq_new, 1)
 
-    # Dopo archiviazione aggiorna subito gli anni disponibili.
     success = '      toast({\n        title: "Successo",\n        description: `Archiviazione logica completata per l\'anno ${annoArchiviazione}`,\n      });'
     success_new = success + '\n      await loadAnniDisponibili();'
     if s.count(success) != 1:
         raise SystemExit('archive success marker mismatch')
     s = s.replace(success, success_new, 1)
 
-    # Eliminazione definitiva: stesso isolamento studio + anno + archiviato.
     delete_try = '    try {\n      setProcessing(true);\n\n      const { error } = await supabase\n        .from(nomeTabella as any)'
     delete_new = '    try {\n      setProcessing(true);\n      const currentStudioId = await getCurrentStudioId();\n\n      const { error } = await supabase\n        .from(nomeTabella as any)'
     if s.count(delete_try) != 1:
@@ -104,6 +97,7 @@ def remove_tokens(s):
 for path in [
     'src/services/scadenzaService.ts',
     'src/services/scadenzaAlertService.ts',
+    'src/services/clienteService.ts',
     'src/pages/api/scadenzari/cleanup-inattivi.ts',
     'src/pages/api/clienti/update.ts',
 ]:
@@ -112,9 +106,7 @@ for path in [
 # 5. Pagina Clienti: rimuove riferimenti alla configurazione/generazione Proforma.
 def patch_clienti(s):
     s = re.sub(r'^.*flag_proforma.*\n', '', s, flags=re.M)
-    # Rimuove eventuale blocco push Proforma rimasto su due righe.
     s = re.sub(r'\nif \(serviziCliente\?\.flag_proforma\)\s*\n\s*scadenzariAttivi\.push\("Proforma"\);', '', s)
-    # Rimuove blocchi dedicati a tbscadproforma fino al successivo scadenzario noto.
     s = re.sub(r'\n\s*if \([^\n]*proforma[^\n]*\)\s*\{.*?\n\s*\}', '', s, flags=re.S|re.I)
     s = re.sub(r'\n\s*const\s+\w*[Pp]roforma\w*\s*=.*?;\n', '\n', s, flags=re.S)
     s = re.sub(r'\n\s*await eseguiInsert\(\s*"tbscadproforma".*?\n\s*\);', '', s, flags=re.S)
@@ -213,7 +205,6 @@ ON public.tbclienti_servizi
 FOR EACH ROW
 EXECUTE FUNCTION public.blocca_scadenzari_per_cliente_inattivo();
 
--- Elimina eventuali configurazioni del tipo Proforma prima di restringere il check.
 DELETE FROM public.tbtipi_scadenze WHERE tipo_scadenza = 'proforma';
 
 ALTER TABLE public.tbtipi_scadenze
@@ -230,7 +221,6 @@ REVOKE ALL ON FUNCTION public.blocca_scadenzari_per_cliente_inattivo() FROM PUBL
 COMMIT;
 ''', encoding='utf-8')
 
-# Guardie finali sul runtime (i database.types generati saranno rigenerabili dopo la migration).
 for root in ['src/pages', 'src/components', 'src/services']:
     for f in Path(root).rglob('*'):
         if f.is_file() and f.suffix in {'.ts', '.tsx'} and f.name != 'database.types.ts':
