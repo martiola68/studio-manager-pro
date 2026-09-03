@@ -27,18 +27,18 @@ jobs:
       - name: Verify functional anchors remain
         run: |
           grep -q 'function handleChange' src/pages/antiriciclaggio/modello-av4.tsx
-          grep -q 'async function salvaAV4' src/pages/antiriclaggio/modello-av4.tsx
+          grep -q 'async function salvaAV4' src/pages/antiriciclaggio/modello-av4.tsx
           grep -q 'async function handleInvioPubblico' src/pages/antiriciclaggio/modello-av4.tsx
-          grep -q 'AV4HelpButton topic="titolare"' src/pages/antiriclaggio/modello-av4.tsx
-          grep -q 'border-sky-200' src/pages/antiriclaggio/modello-av4.tsx
+          grep -q 'AV4HelpButton topic="titolare"' src/pages/antiriciclaggio/modello-av4.tsx
+          grep -q 'border-sky-200' src/pages/antiriciclaggio/modello-av4.tsx
       - name: Commit runtime file
         run: |
-          if git diff --quiet -- src/pages/antiriclaggio/modello-av4.tsx; then
+          if git diff --quiet -- src/pages/antiriciclaggio/modello-av4.tsx; then
             echo 'No runtime changes produced'
             exit 1
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add src/pages/antiriclaggio/modello-av4.tsx
+          git add src/pages/antiriciclaggio/modello-av4.tsx
           git commit -m 'Restyle AV4 internal form and add help modals'
           git push origin main
