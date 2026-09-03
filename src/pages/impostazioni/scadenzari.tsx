@@ -121,6 +121,10 @@ export default function GenerazioneScadenzariPage() {
     Partial<Record<keyof ScadenzariFlagsState, number>>
   >({});
   const [loadingStatoGenerazione, setLoadingStatoGenerazione] = useState(false);
+  const [statoArchiviazione, setStatoArchiviazione] = useState<
+    Partial<Record<keyof ScadenzariFlagsState, { archiviati: number; attivi: number }>>
+  >({});
+  const [loadingStatoArchiviazione, setLoadingStatoArchiviazione] = useState(false);
 
   const [anniArchiviabili, setAnniArchiviabili] = useState<number[]>([]);
 const [anniEliminabili, setAnniEliminabili] = useState<number[]>([]);
@@ -157,6 +161,13 @@ const [anniEliminabili, setAnniEliminabili] = useState<number[]>([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, annoGenerazione]);
+
+  useEffect(() => {
+    if (!loading) {
+      void loadStatoArchiviazione();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, annoArchiviazione]);
 
   useEffect(() => {
   if (!loading) {
@@ -238,6 +249,53 @@ useEffect(() => {
 
   const isScadenzarioDaGenerare = (key: keyof ScadenzariFlagsState) =>
     scadenzariFlags[key] && !isScadenzarioGenerato(key);
+
+  const getStatoArchiviazione = (key: keyof ScadenzariFlagsState) =>
+    statoArchiviazione[key] ?? { archiviati: 0, attivi: 0 };
+
+  const isScadenzarioDaArchiviare = (key: keyof ScadenzariFlagsState) =>
+    scadenzariFlags[key] && getStatoArchiviazione(key).attivi > 0;
+
+  const loadStatoArchiviazione = async () => {
+    try {
+      setLoadingStatoArchiviazione(true);
+      const risultati = await Promise.all(
+        SCADENZARI_CONFIG.map(async (item) => {
+          const [{ count: archiviati, error: errorArch }, { count: attivi, error: errorAtt }] =
+            await Promise.all([
+              supabase
+                .from(item.table as any)
+                .select("id", { count: "exact", head: true })
+                .eq("anno_riferimento", annoArchiviazione)
+                .eq("archiviato", true),
+              supabase
+                .from(item.table as any)
+                .select("id", { count: "exact", head: true })
+                .eq("anno_riferimento", annoArchiviazione)
+                .eq("archiviato", false),
+            ]);
+
+          if (errorArch) throw errorArch;
+          if (errorAtt) throw errorAtt;
+          return [
+            item.key,
+            { archiviati: archiviati ?? 0, attivi: attivi ?? 0 },
+          ] as const;
+        })
+      );
+
+      setStatoArchiviazione(
+        Object.fromEntries(risultati) as Partial<
+          Record<keyof ScadenzariFlagsState, { archiviati: number; attivi: number }>
+        >
+      );
+    } catch (error) {
+      console.error("Errore controllo stato archiviazione:", error);
+      setStatoArchiviazione({});
+    } finally {
+      setLoadingStatoArchiviazione(false);
+    }
+  };
 
   const loadStatoGenerazione = async () => {
     try {
@@ -353,12 +411,14 @@ useEffect(() => {
 };
   
   const handleArchivia = async () => {
-    const selezionati = getSelectedScadenzari();
+    const selezionati = SCADENZARI_CONFIG.filter((item) =>
+      isScadenzarioDaArchiviare(item.key)
+    );
 
     if (selezionati.length === 0) {
       toast({
         title: "Attenzione",
-        description: "Seleziona almeno uno scadenzario da archiviare",
+        description: "Seleziona almeno uno scadenzario con record ancora da archiviare",
       });
       return;
     }
@@ -405,6 +465,9 @@ useEffect(() => {
         title: "Successo",
         description: `Archiviazione logica completata per l'anno ${annoArchiviazione}`,
       });
+
+      await loadStatoArchiviazione();
+      await loadAnniDisponibili();
     } catch (error) {
       console.error("Errore archiviazione:", error);
       toast({
@@ -1122,35 +1185,81 @@ useEffect(() => {
               <div className="space-y-3">
                 <Label>Scadenzari da Archiviare</Label>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {SCADENZARI_CONFIG.map((item) => (
-                    <div
-                      key={`arch_${item.key}`}
-                      className="flex items-center space-x-2"
-                    >
-                      <Checkbox
-                        id={`arch_${item.key}`}
-                        checked={scadenzariFlags[item.key]}
-                        onCheckedChange={(checked) =>
-                          setScadenzariFlags({
-                            ...scadenzariFlags,
-                            [item.key]: checked as boolean,
-                          })
-                        }
-                      />
-                      <label
-                        htmlFor={`arch_${item.key}`}
-                        className="text-sm cursor-pointer"
+                  {SCADENZARI_CONFIG.map((item) => {
+                    const { archiviati, attivi } = getStatoArchiviazione(item.key);
+                    const completamenteArchiviato = archiviati > 0 && attivi === 0;
+                    const parziale = archiviati > 0 && attivi > 0;
+                    const nessunRecord = archiviati === 0 && attivi === 0;
+                    const disabilitato =
+                      completamenteArchiviato || nessunRecord || loadingStatoArchiviazione;
+
+                    return (
+                      <div
+                        key={`arch_${item.key}`}
+                        className={`flex items-center justify-between gap-3 rounded-md border px-3 py-2 ${
+                          completamenteArchiviato
+                            ? "border-blue-200 bg-blue-50"
+                            : parziale
+                            ? "border-amber-200 bg-amber-50"
+                            : "border-gray-200 bg-white"
+                        }`}
                       >
-                        {item.label}
-                      </label>
-                    </div>
-                  ))}
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`arch_${item.key}`}
+                            checked={disabilitato ? false : scadenzariFlags[item.key]}
+                            disabled={disabilitato}
+                            onCheckedChange={(checked) =>
+                              setScadenzariFlags({
+                                ...scadenzariFlags,
+                                [item.key]: checked as boolean,
+                              })
+                            }
+                          />
+                          <label
+                            htmlFor={`arch_${item.key}`}
+                            className={`text-sm ${
+                              disabilitato ? "cursor-default" : "cursor-pointer"
+                            }`}
+                          >
+                            {item.label}
+                          </label>
+                        </div>
+                        <span
+                          className={`whitespace-nowrap text-xs font-medium ${
+                            completamenteArchiviato
+                              ? "text-blue-700"
+                              : parziale
+                              ? "text-amber-700"
+                              : "text-gray-500"
+                          }`}
+                        >
+                          {loadingStatoArchiviazione
+                            ? "Controllo..."
+                            : completamenteArchiviato
+                            ? `✓ Archiviato — ${archiviati}`
+                            : parziale
+                            ? `Parziale — ${archiviati} arch. / ${attivi} da arch.`
+                            : nessunRecord
+                            ? "Nessun record"
+                            : `Da archiviare — ${attivi}`}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
               <Button
                 onClick={handleArchivia}
-                disabled={processing || anniArchiviabili.length === 0}
+                disabled={
+                  processing ||
+                  loadingStatoArchiviazione ||
+                  anniArchiviabili.length === 0 ||
+                  !SCADENZARI_CONFIG.some((item) =>
+                    isScadenzarioDaArchiviare(item.key)
+                  )
+                }
                 className="w-full bg-blue-600 hover:bg-blue-700"
               >
                 {processing ? (
