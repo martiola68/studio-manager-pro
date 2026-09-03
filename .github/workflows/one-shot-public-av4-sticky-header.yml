@@ -1,0 +1,49 @@
+name: One shot - public AV4 sticky header
+
+on:
+  push:
+    paths:
+      - '.github/workflows/one-shot-public-av4-sticky-header.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Make public AV4 header sticky
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/pages/compilazione-av4/[token].tsx')
+          s = p.read_text(encoding='utf-8')
+          old = '<header className="border-b-[6px] border-slate-500 bg-white">'
+          new = '<header className="sticky top-0 z-30 border-b-[6px] border-slate-500 bg-white">'
+          if old not in s:
+              if new in s:
+                  print('Already sticky')
+              else:
+                  raise SystemExit('Header anchor not found')
+          else:
+              s = s.replace(old, new, 1)
+              p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Verify runtime file
+        run: grep -q 'sticky top-0 z-30 border-b-\[6px\] border-slate-500 bg-white' 'src/pages/compilazione-av4/[token].tsx'
+
+      - name: Commit runtime change
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add 'src/pages/compilazione-av4/[token].tsx'
+          git diff --cached --quiet && exit 0
+          git commit -m 'Keep public AV4 header fixed while scrolling'
+          git push origin main
