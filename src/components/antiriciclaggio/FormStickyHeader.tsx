@@ -1,3 +1,5 @@
+import { useEffect, useRef } from "react";
+
 type FormStickyHeaderProps = {
   title: string;
   subtitle?: string;
@@ -26,9 +28,22 @@ export default function FormStickyHeader({
   showSendToClient = false,
   sendToClientDisabled = false,
 }: FormStickyHeaderProps) {
+  const headerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const shell = headerRef.current?.parentElement;
+    if (!shell) return;
+
+    shell.classList.add("aml-form-shell");
+    return () => shell.classList.remove("aml-form-shell");
+  }, []);
+
   return (
     <>
-      <div className="sticky top-0 z-30 border-b-[6px] border-slate-500 bg-background">
+      <div
+        ref={headerRef}
+        className="sticky top-0 z-30 border-b-[6px] border-slate-500 bg-background"
+      >
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-6">
           <div>
             <h1 className="text-4xl font-bold text-slate-900">{title}</h1>
