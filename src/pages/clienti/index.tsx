@@ -678,6 +678,16 @@ const organiSocialiMancanti = (
     setIsDialogOpen(true);
   };
 
+  useEffect(() => {
+    if (!router.isReady || router.query.nuovo !== "1") return;
+
+    handleAddNew();
+
+    // Rimuove il parametro senza ricaricare la pagina: chiudendo la modale
+    // non si riapre accidentalmente al prossimo render/back navigation.
+    void router.replace("/clienti", undefined, { shallow: true });
+  }, [router.isReady, router.query.nuovo]);
+
 const handleEdit = async (cliente: ClienteRow) => {
   setIsDialogOpen(true);
   setEditingCliente(cliente);

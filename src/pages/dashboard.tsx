@@ -384,7 +384,7 @@ const router = useRouter();
         <CardContent className="grid grid-cols-2 gap-3">
           {[
             { label: "Clienti", href: "/clienti", icon: Users },
-            { label: "Nuovo cliente", href: "/clienti/nuovo", icon: UserRoundPlus },
+            { label: "Nuovo cliente", href: "/clienti?nuovo=1", icon: UserRoundPlus },
             { label: "Organi sociali", href: "/clienti/organi-sociali", icon: Building2 },
             { label: "Gruppi societari", href: "/anagrafiche/gruppi-societari", icon: BriefcaseBusiness },
           ].map((item) => {
