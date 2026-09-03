@@ -610,10 +610,10 @@ export default function ScadenzeIvaPage() {
 
       <Card className="flex min-h-0 flex-1 flex-col overflow-hidden border border-sky-200 bg-slate-50 shadow-sm">
         <CardContent className="min-h-0 flex-1 overflow-hidden p-0">
-          <div className="relative h-full w-full overflow-x-auto overflow-y-hidden">
-            <table className="flex h-full min-w-max w-full flex-col caption-bottom text-sm">
-              <thead className="z-30 block shrink-0 bg-slate-600 text-white shadow-sm [&_tr]:border-b [&_tr]:border-slate-500">
-                <tr className="table w-full table-fixed border-b border-slate-500">
+          <div className="relative h-full w-full overflow-auto">
+            <table className="w-full caption-bottom text-sm">
+              <thead className="sticky top-0 z-30 bg-slate-600 text-white shadow-sm [&_tr]:border-b [&_tr]:border-slate-500">
+                <tr className="border-b border-slate-500">
                   <th className="sticky-col-header h-9 min-w-[260px] border-r border-slate-500 !bg-slate-600 px-2 text-left align-middle font-semibold !text-slate-50">
                     Nominativo
                   </th>
@@ -653,9 +653,9 @@ export default function ScadenzeIvaPage() {
                 </tr>
               </thead>
 
-              <tbody className="block min-h-0 flex-1 overflow-y-auto [&_tr:last-child]:border-0">
+              <tbody className="[&_tr:last-child]:border-0">
                 {filteredScadenze.length === 0 ? (
-                  <tr className="table w-full table-fixed border-b transition-colors hover:bg-muted/50">
+                  <tr className="border-b transition-colors hover:bg-muted/50">
                     <td
                       colSpan={12}
                       className="px-2 py-1 align-middle text-center py-8 text-gray-500"
@@ -667,7 +667,7 @@ export default function ScadenzeIvaPage() {
                   filteredScadenze.map((scadenza) => (
                     <tr
                       key={scadenza.id}
-                      className={`table w-full table-fixed border-b transition-colors ${
+                      className={`border-b transition-colors ${
                         scadenza.conferma_riga
                           ? "bg-green-100 hover:bg-green-100"
                           : scadenza.mod_definitivo
