@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - scripts/fix-scadenzari-archivio-remove-proforma-once.py
+      - .github/workflows/one-shot-scadenzari-archivio-remove-proforma.yml
 
 permissions:
   contents: write
