@@ -1,0 +1,27 @@
+name: One shot - Bilanci tipo e relazioni NP UI
+on:
+  push:
+    paths:
+      - '.github/workflows/one-shot-bilanci-tipo-relazioni-ui.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Patch Bilanci runtime
+        run: |
+          python .github/scripts/patch_bilanci_tipo_relazioni_ui.py
+          grep -q 'Tipo bilancio' src/pages/scadenze/bilanci.tsx
+          grep -q 'option value="NP"' src/pages/scadenze/bilanci.tsx
+          grep -q 'min-w-\[300px\]' src/pages/scadenze/bilanci.tsx
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/pages/scadenze/bilanci.tsx
+          git commit -m 'Add Bilanci type and NP relation controls'
+          git push origin main
