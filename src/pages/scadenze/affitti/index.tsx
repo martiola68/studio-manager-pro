@@ -125,6 +125,18 @@ export default function ScadenzarioAffittiIndex() {
       const enabled = await isEncryptionEnabled(currentStudioId as string);
       setEncryptionEnabled(Boolean(enabled));
 
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (accessToken) {
+        const repairResponse = await fetch("/api/scadenze/affitti/ripristina-visibilita", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (!repairResponse.ok) {
+          console.error("Ripristino visibilità contratti affitto fallito", await repairResponse.text());
+        }
+      }
+
       const { data, error } = await supabaseAny
         .from("tbscadaffitti")
         .select("*")
