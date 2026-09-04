@@ -175,7 +175,7 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
     const { data, error } = await supabase
       .from("tbutenti")
       .select("*")
-      .order("cognome", { ascending: true });
+      .order("nome", { ascending: true }).order("cognome", { ascending: true });
 
     if (error) throw error;
     return ((data ?? []) as unknown) as Utente[];
@@ -495,8 +495,8 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+    <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden bg-slate-200/70 px-3 pb-3 pt-2">
+      <div className="flex shrink-0 items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Scadenzario 770</h1>
           <p className="text-gray-500 mt-1">Gestione Modello 770</p>
@@ -515,9 +515,9 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-6">
+      <div className="grid shrink-0 grid-cols-1 gap-4 md:grid-cols-3">
+        <Card className="border border-sky-200 bg-slate-50 shadow-sm">
+          <CardContent className="pt-5">
             <div className="text-sm text-gray-600 mb-1">
               Totale Dichiarazioni
             </div>
@@ -526,16 +526,16 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6">
+        <Card className="border border-sky-200 bg-slate-50 shadow-sm">
+          <CardContent className="pt-5">
             <div className="text-sm text-gray-600 mb-1">Confermate</div>
             <div className="text-3xl font-bold text-green-600">
               {stats.confermate}
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6">
+        <Card className="border border-sky-200 bg-slate-50 shadow-sm">
+          <CardContent className="pt-5">
             <div className="text-sm text-gray-600 mb-1">Non Confermate</div>
             <div className="text-3xl font-bold text-orange-600">
               {stats.nonConfermate}
@@ -544,8 +544,8 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
         </Card>
       </div>
 
-      <Card className="mb-6">
-        <CardHeader>
+      <Card className="shrink-0 border border-sky-200 bg-slate-50 shadow-sm">
+        <CardHeader className="pb-3">
           <CardTitle>Filtri e Ricerca</CardTitle>
         </CardHeader>
         <CardContent>
@@ -558,7 +558,7 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                   placeholder="Cerca..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
+                  className="h-9 border-slate-300 bg-white pl-10"
                 />
               </div>
             </div>
@@ -566,7 +566,7 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
             <div className="space-y-2">
               <Label>Settore</Label>
               <Select value={filterSettore} onValueChange={setFilterSettore}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9 border-slate-300 bg-white">
                   <SelectValue placeholder="Tutti" />
                 </SelectTrigger>
                 <SelectContent>
@@ -583,7 +583,7 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                 value={filterOperatoreFiscale}
                 onValueChange={setFilterOperatoreFiscale}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-9 border-slate-300 bg-white">
                   <SelectValue placeholder="Tutti" />
                 </SelectTrigger>
                 <SelectContent>
@@ -603,7 +603,7 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                 value={filterOperatorePayroll}
                 onValueChange={setFilterOperatorePayroll}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-9 border-slate-300 bg-white">
                   <SelectValue placeholder="Tutti" />
                 </SelectTrigger>
                 <SelectContent>
@@ -623,7 +623,7 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                 value={annoConsultazione.toString()}
                 onValueChange={(value) => setAnnoConsultazione(parseInt(value))}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-9 border-slate-300 bg-white">
                   <SelectValue placeholder="Seleziona anno" />
                 </SelectTrigger>
                 <SelectContent>
@@ -639,52 +639,52 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="p-0">
-          <div className="relative w-full overflow-auto max-h-[600px]">
+      <Card className="flex min-h-0 flex-1 flex-col overflow-hidden border border-sky-200 bg-slate-50 shadow-sm">
+        <CardContent className="min-h-0 flex-1 overflow-hidden p-0">
+          <div className="h-full w-full overflow-auto">
             <table className="w-full caption-bottom text-sm">
-              <thead className="[&_tr]:border-b sticky top-0 z-30 bg-white shadow-sm">
-                <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground sticky-col-header border-r min-w-[200px]">
+              <thead className="sticky top-0 z-30 bg-slate-600 text-white shadow-sm [&_tr]:border-b [&_tr]:border-slate-500">
+                <tr className="border-b border-slate-500">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 sticky-col-header min-w-[260px] !bg-slate-600">
                     Nominativo
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[120px]">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[120px]">
                     Settore
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[180px]">
                     Operatore fiscale
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[180px]">
                     Operatore payroll
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[150px]">
                     Tipo invio
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[180px]">
                     Tipo 770
                   </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[110px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[110px]">
                     Mod. Compilato
                   </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[110px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[110px]">
                     Mod. Definitivo
                   </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[110px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[110px]">
                     Mod. Inviato
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[140px]">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[140px]">
                     data invio
                   </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[100px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[100px]">
                     Ricevuta
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[300px]">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[300px]">
                     Note
                   </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[120px]">
                     Conferma
                   </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[100px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[100px]">
                     Azioni
                   </th>
                 </tr>
@@ -695,7 +695,7 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                   <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                     <td
                       colSpan={14}
-                      className="p-2 align-middle text-center py-8 text-gray-500"
+                      className="px-2 py-1 align-middle text-center py-8 text-gray-500"
                     >
                       Nessun record trovato
                     </td>
@@ -721,17 +721,17 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                         key={scadenza.id}
                         className={`border-b transition-colors ${
                           isConfermata
-                            ? "bg-green-100 hover:bg-green-100"
-                            : "hover:bg-green-50"
+                            ? "bg-green-200 hover:bg-green-200"
+                            : "bg-slate-50 hover:bg-slate-100"
                         } data-[state=selected]:bg-muted`}
                       >
                         <td
                           style={{
                             backgroundColor: isConfermata
-                              ? "#dcfce7"
-                              : "#ffffff",
+                              ? "#bbf7d0"
+                              : "#f8fafc",
                           }}
-                          className={`p-2 align-middle sticky-col-cell border-r font-medium min-w-[200px] ${
+                          className={`px-2 py-1 align-middle sticky-col-cell border-r font-medium min-w-[260px] ${
                             isConfermata
                               ? "hover:bg-green-100"
                               : "hover:bg-green-50"
@@ -740,7 +740,7 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                           {scadenza.nominativo}
                         </td>
 
-                        <td className="p-2 align-middle min-w-[120px]">
+                        <td className="px-2 py-1 align-middle min-w-[120px]">
                           <div className="flex flex-col gap-1">
                             {scadenza.cliente?.settore_fiscale && (
                               <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
@@ -765,25 +765,25 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                           </div>
                         </td>
 
-                        <td className="p-2 align-middle min-w-[180px]">
+                        <td className="px-2 py-1 align-middle min-w-[180px]">
                           <Input
                             type="text"
                             value={operatoreFiscaleLabel}
                             disabled={true}
-                            className="w-full text-xs bg-gray-50 cursor-not-allowed"
+                            className="h-8 w-full border-slate-300 bg-white text-xs disabled:bg-slate-100"
                           />
                         </td>
 
-                        <td className="p-2 align-middle min-w-[180px]">
+                        <td className="px-2 py-1 align-middle min-w-[180px]">
                           <Input
                             type="text"
                             value={operatorePayrollLabel}
                             disabled={true}
-                            className="w-full text-xs bg-gray-50 cursor-not-allowed"
+                            className="h-8 w-full border-slate-300 bg-white text-xs disabled:bg-slate-100"
                           />
                         </td>
 
-                        <td className="p-2 align-middle min-w-[150px]">
+                        <td className="px-2 py-1 align-middle min-w-[150px]">
                           <Select
                             value={scadenza.tipo_invio || "__none__"}
                             onValueChange={(value) =>
@@ -795,7 +795,7 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                             }
                             disabled={isConfermata}
                           >
-                            <SelectTrigger className="w-full text-xs">
+                            <SelectTrigger className="h-8 w-full border-slate-300 bg-white text-xs">
                               <SelectValue placeholder="Seleziona..." />
                             </SelectTrigger>
                             <SelectContent>
@@ -809,7 +809,7 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                           </Select>
                         </td>
 
-                        <td className="p-2 align-middle min-w-[180px]">
+                        <td className="px-2 py-1 align-middle min-w-[180px]">
                           <Select
                             value={scadenza.modelli_770 || "__none__"}
                             onValueChange={(value) =>
@@ -821,7 +821,7 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                             }
                             disabled={isConfermata}
                           >
-                            <SelectTrigger className="w-full text-xs">
+                            <SelectTrigger className="h-8 w-full border-slate-300 bg-white text-xs">
                               <SelectValue placeholder="Seleziona..." />
                             </SelectTrigger>
                             <SelectContent>
@@ -835,55 +835,55 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                           </Select>
                         </td>
 
-                        <td className="p-2 align-middle text-center min-w-[110px]">
-                          <input
-                            type="checkbox"
-                            checked={scadenza.mod_compilato || false}
-                            onChange={() =>
-                              handleToggleField(
-                                scadenza.id,
-                                "mod_compilato",
-                                scadenza.mod_compilato
-                              )
-                            }
-                            className="rounded w-4 h-4 cursor-pointer"
-                            disabled={isConfermata}
-                          />
+                        <td className="px-2 py-1 align-middle text-center min-w-[110px]">
+                          <select
+                            value={scadenza.mod_compilato ? "SI" : "NO"}
+                            onChange={(e) => {
+                              const nextValue = e.target.value === "SI";
+                              if (nextValue !== Boolean(scadenza.mod_compilato)) {
+                                handleToggleField(scadenza.id, "mod_compilato", scadenza.mod_compilato);
+                              }
+                            }} disabled={isConfermata}
+                            className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                          >
+                            <option value="NO">NO</option>
+                            <option value="SI">SI</option>
+                          </select>
                         </td>
 
-                        <td className="p-2 align-middle text-center min-w-[110px]">
-                          <input
-                            type="checkbox"
-                            checked={scadenza.mod_definitivo || false}
-                            onChange={() =>
-                              handleToggleField(
-                                scadenza.id,
-                                "mod_definitivo",
-                                scadenza.mod_definitivo
-                              )
-                            }
-                            className="rounded w-4 h-4 cursor-pointer"
-                            disabled={isConfermata}
-                          />
+                        <td className="px-2 py-1 align-middle text-center min-w-[110px]">
+                          <select
+                            value={scadenza.mod_definitivo ? "SI" : "NO"}
+                            onChange={(e) => {
+                              const nextValue = e.target.value === "SI";
+                              if (nextValue !== Boolean(scadenza.mod_definitivo)) {
+                                handleToggleField(scadenza.id, "mod_definitivo", scadenza.mod_definitivo);
+                              }
+                            }} disabled={isConfermata}
+                            className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                          >
+                            <option value="NO">NO</option>
+                            <option value="SI">SI</option>
+                          </select>
                         </td>
 
-                        <td className="p-2 align-middle text-center min-w-[110px]">
-                          <input
-                            type="checkbox"
-                            checked={scadenza.mod_inviato || false}
-                            onChange={() =>
-                              handleToggleField(
-                                scadenza.id,
-                                "mod_inviato",
-                                scadenza.mod_inviato
-                              )
-                            }
-                            className="rounded w-4 h-4 cursor-pointer"
-                            disabled={isConfermata}
-                          />
+                        <td className="px-2 py-1 align-middle text-center min-w-[110px]">
+                          <select
+                            value={scadenza.mod_inviato ? "SI" : "NO"}
+                            onChange={(e) => {
+                              const nextValue = e.target.value === "SI";
+                              if (nextValue !== Boolean(scadenza.mod_inviato)) {
+                                handleToggleField(scadenza.id, "mod_inviato", scadenza.mod_inviato);
+                              }
+                            }} disabled={isConfermata}
+                            className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                          >
+                            <option value="NO">NO</option>
+                            <option value="SI">SI</option>
+                          </select>
                         </td>
 
-                        <td className="p-2 align-middle text-center min-w-[140px]">
+                        <td className="px-2 py-1 align-middle text-center min-w-[140px]">
                           <Input
                             type="date"
                             value={dataInvioValue}
@@ -894,56 +894,58 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                                 e.target.value
                               )
                             }
-                            className="w-36 text-xs"
+                            className="h-8 w-36 border-slate-300 bg-white text-xs"
                             disabled={isConfermata}
                             placeholder=""
                           />
                         </td>
 
-                        <td className="p-2 align-middle text-center min-w-[100px]">
-                          <input
-                            type="checkbox"
-                            checked={isRicevuta}
-                            onChange={() =>
-                              handleToggleField(
-                                scadenza.id,
-                                "ricevuta",
-                                scadenza.ricevuta
-                              )
-                            }
-                            className="rounded w-4 h-4 cursor-pointer"
-                            disabled={isConfermata}
-                          />
+                        <td className="px-2 py-1 align-middle text-center min-w-[100px]">
+                          <select
+                            value={isRicevuta ? "SI" : "NO"}
+                            onChange={(e) => {
+                              const nextValue = e.target.value === "SI";
+                              if (nextValue !== Boolean(isRicevuta)) {
+                                handleToggleField(scadenza.id, "ricevuta", scadenza.ricevuta);
+                              }
+                            }} disabled={isConfermata}
+                            className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                          >
+                            <option value="NO">NO</option>
+                            <option value="SI">SI</option>
+                          </select>
                         </td>
 
-                        <td className="p-2 align-middle min-w-[300px]">
+                        <td className="px-2 py-1 align-middle min-w-[300px]">
                           <Textarea
                             value={localNotes[scadenza.id] ?? scadenza.note ?? ""}
                             onChange={(e) =>
                               handleNoteChange(scadenza.id, e.target.value)
                             }
-                            className="min-h-[60px] text-xs resize-none"
+                            rows={1}
+                            className="h-8 min-h-8 resize-none border-slate-300 bg-white py-1.5 text-xs"
                             disabled={isConfermata}
                             placeholder="Note..."
                           />
                         </td>
 
-                        <td className="p-2 align-middle text-center min-w-[120px]">
-                          <input
-                            type="checkbox"
-                            checked={isConfermata}
-                            onChange={() =>
-                              handleToggleField(
-                                scadenza.id,
-                                "conferma_riga",
-                                scadenza.conferma_riga
-                              )
-                            }
-                            className="rounded w-4 h-4 cursor-pointer"
-                          />
+                        <td className="px-2 py-1 align-middle text-center min-w-[120px]">
+                          <select
+                            value={isConfermata ? "SI" : "NO"}
+                            onChange={(e) => {
+                              const nextValue = e.target.value === "SI";
+                              if (nextValue !== Boolean(isConfermata)) {
+                                handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga);
+                              }
+                            }}
+                            className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                          >
+                            <option value="NO">NO</option>
+                            <option value="SI">SI</option>
+                          </select>
                         </td>
 
-                        <td className="p-2 align-middle text-center min-w-[100px]">
+                        <td className="px-2 py-1 align-middle text-center min-w-[100px]">
                           <Button
                             variant="ghost"
                             size="sm"
