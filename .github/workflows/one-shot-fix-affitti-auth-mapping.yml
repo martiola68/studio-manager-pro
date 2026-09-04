@@ -1,0 +1,30 @@
+name: One shot - Fix Affitti auth mapping
+on:
+  push:
+    paths:
+      - '.github/workflows/one-shot-fix-affitti-auth-mapping.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Fix Affitti auth mapping
+        run: |
+          python .github/scripts/patch_affitti_auth_mapping.py
+          grep -q '.eq("user_id", user.id)' src/pages/scadenze/affitti/index.tsx
+          grep -q '.ilike("email", user.email)' src/pages/scadenze/affitti/index.tsx
+          grep -q '.eq("user_id", user.id)' src/pages/scadenze/affitti/nuovo.tsx
+          grep -q 'utente_operatore_id: utenteDb.id' src/pages/scadenze/affitti/nuovo.tsx
+          if grep -q '.eq("id", user.id)' src/pages/scadenze/affitti/index.tsx; then exit 1; fi
+          if grep -q '.eq("id", user.id)' src/pages/scadenze/affitti/nuovo.tsx; then exit 1; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/pages/scadenze/affitti/index.tsx src/pages/scadenze/affitti/nuovo.tsx
+          git commit -m 'Fix Affitti tenant user mapping'
+          git push origin main
