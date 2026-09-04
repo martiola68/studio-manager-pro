@@ -1,0 +1,24 @@
+name: One shot - IMU final tuning
+on:
+  push:
+    paths: ['.github/workflows/one-shot-imu-final-tuning.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Apply final IMU tuning
+        run: |
+          python .github/scripts/patch_imu_final_tuning.py
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/pages/scadenze/imu.tsx
+          git diff --cached --quiet && exit 1
+          git commit -m 'Finalize IMU colors and master defaults'
+          git push origin main
