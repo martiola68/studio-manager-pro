@@ -1,0 +1,27 @@
+name: One shot - IMU soggetto unico code
+on:
+  push:
+    paths:
+      - '.github/workflows/one-shot-imu-soggetto-unico-code.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Align runtime code with new DB schema
+        run: |
+          python .github/scripts/patch_imu_soggetto_unico_code.py
+          grep -q 'soggetto_imu' src/pages/scadenze/imu.tsx
+          if grep -Eq '\bacconto_imu\b|\bsaldo_imu\b' src/pages/scadenze/imu.tsx; then exit 1; fi
+          grep -q 'soggetto_imu' src/services/scadenzaAlertService.ts
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/pages/scadenze/imu.tsx src/services/scadenzaAlertService.ts src/lib/supabase/database.types.ts src/integrations/supabase/database.types.ts
+          git commit -m 'Align IMU code with unified soggetto_imu field'
+          git push origin main
