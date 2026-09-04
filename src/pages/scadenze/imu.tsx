@@ -657,7 +657,7 @@ const vars: Record<string, string> = {
     if (rowConfirmed) return "bg-green-200";
     if (!enabled) return "bg-slate-200";
     if (completed) return "bg-green-200";
-    return "bg-orange-300";
+    return "bg-[#fff200]";
   };
 
   const rowSideTone = (rowConfirmed: boolean) =>
