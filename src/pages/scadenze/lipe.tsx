@@ -9,7 +9,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase/client";
 import { useRouter } from "next/router";
@@ -55,6 +54,8 @@ conferma_4_trimestre?: boolean | null;
 conferma_acconto_iva?: boolean | null;
   professionista?: string;
   operatore?: string;
+  anno_riferimento?: number | null;
+  archiviato?: boolean | null;
 };
 
 type CampoMese =
@@ -78,20 +79,20 @@ const mesiDisabilitatiPerTipo: Record<TipoLiqValue, CampoMese[]> = {
 };
 
 const baseHeaderClass =
-  "h-10 px-2 text-center align-middle font-medium text-muted-foreground border-r border-gray-300";
+  "h-9 px-2 text-center align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600";
 
-const baseCellClass = "p-2 align-middle border-r border-gray-300";
+const baseCellClass = "px-2 py-1 align-middle border-r border-slate-200";
 
-const groupHeaderQ1 = "bg-sky-100";
+const groupHeaderQ1 = "bg-slate-600";
 const groupCellQ1 = "bg-sky-50";
 
-const groupHeaderQ2 = "bg-emerald-100";
+const groupHeaderQ2 = "bg-slate-600";
 const groupCellQ2 = "bg-emerald-50";
 
-const groupHeaderQ3 = "bg-amber-100";
+const groupHeaderQ3 = "bg-slate-600";
 const groupCellQ3 = "bg-amber-50";
 
-const groupHeaderQ4 = "bg-violet-100";
+const groupHeaderQ4 = "bg-slate-600";
 const groupCellQ4 = "bg-violet-50";
 
 const isInvioMancante = (
@@ -101,19 +102,45 @@ const isInvioMancante = (
   return lipe === true && !dataInvio;
 };
 
+function BooleanSelect({
+  value,
+  disabled = false,
+  onChange,
+}: {
+  value: boolean;
+  disabled?: boolean;
+  onChange: (value: boolean) => void;
+}) {
+  return (
+    <select
+      value={value ? "SI" : "NO"}
+      disabled={disabled}
+      onChange={(e) => onChange(e.target.value === "SI")}
+      className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+    >
+      <option value="NO">NO</option>
+      <option value="SI">SI</option>
+    </select>
+  );
+}
+
 export default function ScadenzeLipePage() {
   const router = useRouter();
   const { toast } = useToast();
+  const currentYear = new Date().getFullYear();
   const [loading, setLoading] = useState(true);
   const [scadenze, setScadenze] = useState<LipeRecord[]>([]);
   const [utenti, setUtenti] = useState<Utente[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterOperatore, setFilterOperatore] = useState("__all__");
- const [filterTipoLiq, setFilterTipoLiq] = useState("__all__");
+  const [filterTipoLiq, setFilterTipoLiq] = useState("__all__");
+  const [annoConsultazione, setAnnoConsultazione] = useState(currentYear);
+  const [anniDisponibili, setAnniDisponibili] = useState<number[]>([]);
 
   useEffect(() => {
     loadData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [annoConsultazione]);
 
   const loadData = async () => {
     try {
@@ -134,18 +161,45 @@ export default function ScadenzeLipePage() {
   };
 
   const loadScadenze = async (): Promise<LipeRecord[]> => {
+    const { data: anniData, error: anniError } = await supabase
+      .from("tbscadlipe" as any)
+      .select("anno_riferimento")
+      .order("anno_riferimento", { ascending: true });
+
+    if (anniError) throw anniError;
+
+    const anni = Array.from(
+      new Set(
+        (((anniData ?? []) as any[]) || [])
+          .map((r) => r.anno_riferimento)
+          .filter((a): a is number => typeof a === "number")
+      )
+    ).sort((a, b) => a - b);
+
+    setAnniDisponibili(anni);
+
+    const annoDaUsare =
+      anni.length > 0 && !anni.includes(annoConsultazione)
+        ? anni[anni.length - 1]
+        : annoConsultazione;
+
+    if (annoDaUsare !== annoConsultazione) {
+      setAnnoConsultazione(annoDaUsare);
+    }
+
     const { data, error } = await supabase
-      .from("tbscadlipe")
+      .from("tbscadlipe" as any)
       .select(`
         *,
         professionista:tbutenti!tbscadlipe_utente_professionista_id_fkey(nome, cognome),
         operatore:tbutenti!tbscadlipe_utente_operatore_id_fkey(nome, cognome)
       `)
+      .eq("anno_riferimento", annoDaUsare)
       .order("nominativo", { ascending: true });
 
     if (error) throw error;
 
-    return (data || []).map((record) => ({
+    return ((data || []) as any[]).map((record) => ({
       ...record,
       professionista: record.professionista
         ? `${record.professionista.nome} ${record.professionista.cognome}`
@@ -160,7 +214,7 @@ export default function ScadenzeLipePage() {
     const { data, error } = await supabase
       .from("tbutenti")
       .select("*")
-      .order("cognome", { ascending: true });
+      .order("nome", { ascending: true }).order("cognome", { ascending: true });
 
     if (error) throw error;
     return data || [];
@@ -312,20 +366,20 @@ const filteredScadenze = scadenze.filter((s) => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden bg-slate-200/70 px-3 pb-3 pt-2">
+      <div className="flex shrink-0 items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Scadenzario Liquidazioni IVA e LIPE</h1>
           <p className="text-gray-500 mt-1">Gestione liquidazioni IVA periodiche e LIPE</p>
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
+      <Card className="shrink-0 border border-sky-200 bg-slate-50 shadow-sm">
+        <CardHeader className="pb-3">
           <CardTitle>Filtri e Ricerca</CardTitle>
         </CardHeader>
         <CardContent>
- <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+ <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
   <div className="space-y-2">
     <label className="text-sm font-medium">Cerca Nominativo</label>
     <div className="relative">
@@ -334,7 +388,7 @@ const filteredScadenze = scadenze.filter((s) => {
         placeholder="Cerca per nominativo..."
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
-        className="pl-10"
+        className="h-9 border-slate-300 bg-white pl-10"
       />
     </div>
   </div>
@@ -342,7 +396,7 @@ const filteredScadenze = scadenze.filter((s) => {
   <div className="space-y-2">
     <label className="text-sm font-medium">Utente Operatore</label>
     <Select value={filterOperatore} onValueChange={setFilterOperatore}>
-      <SelectTrigger>
+      <SelectTrigger className="h-9 border-slate-300 bg-white">
         <SelectValue placeholder="Tutti gli operatori" />
       </SelectTrigger>
       <SelectContent>
@@ -359,7 +413,7 @@ const filteredScadenze = scadenze.filter((s) => {
   <div className="space-y-2">
     <label className="text-sm font-medium">Tipo liquidazione</label>
     <Select value={filterTipoLiq} onValueChange={setFilterTipoLiq}>
-      <SelectTrigger>
+      <SelectTrigger className="h-9 border-slate-300 bg-white">
         <SelectValue placeholder="Tutti i tipi" />
       </SelectTrigger>
       <SelectContent>
@@ -370,23 +424,42 @@ const filteredScadenze = scadenze.filter((s) => {
       </SelectContent>
     </Select>
   </div>
+
+  <div className="space-y-2">
+    <label className="text-sm font-medium">Anno consultazione</label>
+    <Select
+      value={annoConsultazione.toString()}
+      onValueChange={(value) => setAnnoConsultazione(parseInt(value))}
+    >
+      <SelectTrigger className="h-9 border-slate-300 bg-white">
+        <SelectValue placeholder="Seleziona anno" />
+      </SelectTrigger>
+      <SelectContent>
+        {anniDisponibili.map((anno) => (
+          <SelectItem key={anno} value={anno.toString()}>
+            {anno}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  </div>
 </div>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="p-0">
-          <div className="relative w-full overflow-auto max-h-[600px]">
+      <Card className="flex min-h-0 flex-1 flex-col overflow-hidden border border-sky-200 bg-slate-50 shadow-sm">
+        <CardContent className="min-h-0 flex-1 overflow-hidden p-0">
+          <div className="h-full w-full overflow-auto">
             <table className="w-full caption-bottom text-sm border-collapse">
-              <thead className="sticky top-0 z-30 bg-white">
-                <tr className="border-b border-gray-300">
-                 <th className="sticky-col-header h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[320px] border-r border-gray-300 bg-white">
+              <thead className="sticky top-0 z-30 bg-slate-600 text-white shadow-sm">
+                <tr className="border-b border-slate-500">
+                 <th className="sticky-col-header h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[300px] border-r border-slate-500 !bg-slate-600">
                   Nominativo
                   </th>
-                    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px] border-r border-gray-300 bg-white">
+                    <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[180px] border-r border-slate-500 bg-slate-600">
                       Operatore
                     </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[170px] border-r border-gray-300 bg-white">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[170px] border-r border-slate-500 bg-slate-600">
                     Tipo liquidazione
                   </th>
 
@@ -433,26 +506,26 @@ const filteredScadenze = scadenze.filter((s) => {
                   </tr>
                 ) : (
                   filteredScadenze.map((scadenza) => (
-                    <tr key={scadenza.id} className="border-b border-gray-300 hover:bg-green-50/40">
+                    <tr key={scadenza.id} className="border-b border-slate-200 hover:bg-slate-100">
                       <td
-  className={`sticky-col-cell p-2 align-middle font-medium min-w-[320px] border-r border-gray-300 bg-white ${
+  className={`sticky-col-cell px-2 py-1 align-middle font-medium min-w-[300px] border-r border-slate-200 bg-slate-50 ${
     getTipoLiq(scadenza) === "Esterna" ? "text-red-600 font-bold" : ""
   }`}
 >
   {scadenza.nominativo}
 </td>
-                          <td className="p-2 align-middle min-w-[180px] border-r border-gray-300">
+                          <td className="px-2 py-1 align-middle min-w-[180px] border-r border-slate-200">
                             {scadenza.operatore}
                           </td>
 
-                      <td className="p-2 align-middle min-w-[170px] border-r border-gray-300">
+                      <td className="px-2 py-1 align-middle min-w-[170px] border-r border-slate-200">
                         <Select
                           value={getTipoLiq(scadenza)}
                           onValueChange={(value: TipoLiqValue) =>
                             handleUpdateValue(scadenza.id, "TipoLiq", value)
                           }
                         >
-                          <SelectTrigger className="h-8 text-xs bg-white">
+                          <SelectTrigger className="h-8 border-slate-300 bg-white text-xs">
                             <SelectValue placeholder="Seleziona tipo" />
                           </SelectTrigger>
                           <SelectContent>
@@ -464,43 +537,47 @@ const filteredScadenze = scadenze.filter((s) => {
                       </td>
 
                       <td className={`${baseCellClass} ${groupCellQ1} text-center min-w-[60px]`}>
-                        <Checkbox
-                          checked={scadenza.gen || false}
+                        <BooleanSelect
+                          value={Boolean(scadenza.gen)}
                           disabled={isMonthDisabled(scadenza, "gen")}
-                          onCheckedChange={() =>
-                            handleToggleField(scadenza.id, "gen", scadenza.gen || false)
-                          }
+                          onChange={(nextValue) => {
+                            if (nextValue !== Boolean(scadenza.gen)) {
+                              handleToggleField(scadenza.id, "gen", scadenza.gen || false);
+                            }
+                          }}
                         />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ1} text-center min-w-[60px]`}>
-                        <Checkbox
-                          checked={scadenza.feb || false}
+                        <BooleanSelect
+                          value={Boolean(scadenza.feb)}
                           disabled={isMonthDisabled(scadenza, "feb")}
-                          onCheckedChange={() =>
-                            handleToggleField(scadenza.id, "feb", scadenza.feb || false)
-                          }
+                          onChange={(nextValue) => {
+                            if (nextValue !== Boolean(scadenza.feb)) {
+                              handleToggleField(scadenza.id, "feb", scadenza.feb || false);
+                            }
+                          }}
                         />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ1} text-center min-w-[60px]`}>
-                        <Checkbox
-                          checked={scadenza.mar || false}
+                        <BooleanSelect
+                          value={Boolean(scadenza.mar)}
                           disabled={isMonthDisabled(scadenza, "mar")}
-                          onCheckedChange={() =>
-                            handleToggleField(scadenza.id, "mar", scadenza.mar || false)
-                          }
+                          onChange={(nextValue) => {
+                            if (nextValue !== Boolean(scadenza.mar)) {
+                              handleToggleField(scadenza.id, "mar", scadenza.mar || false);
+                            }
+                          }}
                         />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ1} text-center min-w-[80px]`}>
-                       <Checkbox
-  checked={scadenza.conferma_1_trimestre || false}
-  onCheckedChange={() =>
-    handleToggleField(
-      scadenza.id,
-      "conferma_1_trimestre",
-      scadenza.conferma_1_trimestre || false
-    )
-  }
-/>
+                       <BooleanSelect
+                          value={Boolean(scadenza.conferma_1_trimestre)}
+                          onChange={(nextValue) => {
+                            if (nextValue !== Boolean(scadenza.conferma_1_trimestre)) {
+                              handleToggleField(scadenza.id, "conferma_1_trimestre", scadenza.conferma_1_trimestre || false);
+                            }
+                          }}
+                        />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ1} min-w-[140px]`}>
                         <Input
@@ -511,52 +588,56 @@ const filteredScadenze = scadenze.filter((s) => {
                           }
 className={
   isInvioMancante(scadenza.lipe1t, scadenza.lipe1t_invio)
-    ? "h-8 text-xs bg-red-600 text-white"
+    ? "h-8 border-slate-300 bg-red-600 text-xs text-white"
   : scadenza.conferma_1_trimestre
-? "h-8 text-xs bg-green-500 text-black"
-    : "h-8 text-xs bg-white"
+? "h-8 border-slate-300 bg-green-200 text-xs text-slate-900"
+    : "h-8 border-slate-300 bg-white text-xs"
 }
                         />
                       </td>
 
                       <td className={`${baseCellClass} ${groupCellQ2} text-center min-w-[60px]`}>
-                        <Checkbox
-                          checked={scadenza.apr || false}
+                        <BooleanSelect
+                          value={Boolean(scadenza.apr)}
                           disabled={isMonthDisabled(scadenza, "apr")}
-                          onCheckedChange={() =>
-                            handleToggleField(scadenza.id, "apr", scadenza.apr || false)
-                          }
+                          onChange={(nextValue) => {
+                            if (nextValue !== Boolean(scadenza.apr)) {
+                              handleToggleField(scadenza.id, "apr", scadenza.apr || false);
+                            }
+                          }}
                         />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ2} text-center min-w-[60px]`}>
-                        <Checkbox
-                          checked={scadenza.mag || false}
+                        <BooleanSelect
+                          value={Boolean(scadenza.mag)}
                           disabled={isMonthDisabled(scadenza, "mag")}
-                          onCheckedChange={() =>
-                            handleToggleField(scadenza.id, "mag", scadenza.mag || false)
-                          }
+                          onChange={(nextValue) => {
+                            if (nextValue !== Boolean(scadenza.mag)) {
+                              handleToggleField(scadenza.id, "mag", scadenza.mag || false);
+                            }
+                          }}
                         />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ2} text-center min-w-[60px]`}>
-                        <Checkbox
-                          checked={scadenza.giu || false}
+                        <BooleanSelect
+                          value={Boolean(scadenza.giu)}
                           disabled={isMonthDisabled(scadenza, "giu")}
-                          onCheckedChange={() =>
-                            handleToggleField(scadenza.id, "giu", scadenza.giu || false)
-                          }
+                          onChange={(nextValue) => {
+                            if (nextValue !== Boolean(scadenza.giu)) {
+                              handleToggleField(scadenza.id, "giu", scadenza.giu || false);
+                            }
+                          }}
                         />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ2} text-center min-w-[80px]`}>
-                        <Checkbox
-  checked={scadenza.conferma_2_trimestre || false}
-  onCheckedChange={() =>
-    handleToggleField(
-      scadenza.id,
-      "conferma_2_trimestre",
-      scadenza.conferma_2_trimestre || false
-    )
-  }
-/>
+                        <BooleanSelect
+                          value={Boolean(scadenza.conferma_2_trimestre)}
+                          onChange={(nextValue) => {
+                            if (nextValue !== Boolean(scadenza.conferma_2_trimestre)) {
+                              handleToggleField(scadenza.id, "conferma_2_trimestre", scadenza.conferma_2_trimestre || false);
+                            }
+                          }}
+                        />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ2} min-w-[140px]`}>
                         <Input
@@ -567,52 +648,56 @@ className={
                           }
  className={
   isInvioMancante(scadenza.lipe2t, scadenza.lipe2t_invio)
-    ? "h-8 text-xs bg-red-600 text-white"
+    ? "h-8 border-slate-300 bg-red-600 text-xs text-white"
    : scadenza.conferma_2_trimestre
-? "h-8 text-xs bg-green-500 text-black"
-    : "h-8 text-xs bg-white"
+? "h-8 border-slate-300 bg-green-200 text-xs text-slate-900"
+    : "h-8 border-slate-300 bg-white text-xs"
 }
                         />
                       </td>
 
                       <td className={`${baseCellClass} ${groupCellQ3} text-center min-w-[60px]`}>
-                        <Checkbox
-                          checked={scadenza.lug || false}
+                        <BooleanSelect
+                          value={Boolean(scadenza.lug)}
                           disabled={isMonthDisabled(scadenza, "lug")}
-                          onCheckedChange={() =>
-                            handleToggleField(scadenza.id, "lug", scadenza.lug || false)
-                          }
+                          onChange={(nextValue) => {
+                            if (nextValue !== Boolean(scadenza.lug)) {
+                              handleToggleField(scadenza.id, "lug", scadenza.lug || false);
+                            }
+                          }}
                         />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ3} text-center min-w-[60px]`}>
-                        <Checkbox
-                          checked={scadenza.ago || false}
+                        <BooleanSelect
+                          value={Boolean(scadenza.ago)}
                           disabled={isMonthDisabled(scadenza, "ago")}
-                          onCheckedChange={() =>
-                            handleToggleField(scadenza.id, "ago", scadenza.ago || false)
-                          }
+                          onChange={(nextValue) => {
+                            if (nextValue !== Boolean(scadenza.ago)) {
+                              handleToggleField(scadenza.id, "ago", scadenza.ago || false);
+                            }
+                          }}
                         />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ3} text-center min-w-[60px]`}>
-                        <Checkbox
-                          checked={scadenza.set || false}
+                        <BooleanSelect
+                          value={Boolean(scadenza.set)}
                           disabled={isMonthDisabled(scadenza, "set")}
-                          onCheckedChange={() =>
-                            handleToggleField(scadenza.id, "set", scadenza.set || false)
-                          }
+                          onChange={(nextValue) => {
+                            if (nextValue !== Boolean(scadenza.set)) {
+                              handleToggleField(scadenza.id, "set", scadenza.set || false);
+                            }
+                          }}
                         />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ3} text-center min-w-[80px]`}>
-                       <Checkbox
-  checked={scadenza.conferma_3_trimestre || false}
-  onCheckedChange={() =>
-    handleToggleField(
-      scadenza.id,
-      "conferma_3_trimestre",
-      scadenza.conferma_3_trimestre || false
-    )
-  }
-/>
+                       <BooleanSelect
+                          value={Boolean(scadenza.conferma_3_trimestre)}
+                          onChange={(nextValue) => {
+                            if (nextValue !== Boolean(scadenza.conferma_3_trimestre)) {
+                              handleToggleField(scadenza.id, "conferma_3_trimestre", scadenza.conferma_3_trimestre || false);
+                            }
+                          }}
+                        />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ3} min-w-[140px]`}>
  <Input
@@ -623,39 +708,45 @@ className={
   }
   className={
     isInvioMancante(scadenza.lipe3t, scadenza.lipe3t_invio)
-      ? "h-8 text-xs bg-red-600 text-white"
+      ? "h-8 border-slate-300 bg-red-600 text-xs text-white"
     : scadenza.conferma_3_trimestre
-? "h-8 text-xs bg-green-500 text-black"
-      : "h-8 text-xs bg-white"
+? "h-8 border-slate-300 bg-green-200 text-xs text-slate-900"
+      : "h-8 border-slate-300 bg-white text-xs"
   }
 />
                       </td>
 
                       <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[60px]`}>
-                        <Checkbox
-                          checked={scadenza.ott || false}
+                        <BooleanSelect
+                          value={Boolean(scadenza.ott)}
                           disabled={isMonthDisabled(scadenza, "ott")}
-                          onCheckedChange={() =>
-                            handleToggleField(scadenza.id, "ott", scadenza.ott || false)
-                          }
+                          onChange={(nextValue) => {
+                            if (nextValue !== Boolean(scadenza.ott)) {
+                              handleToggleField(scadenza.id, "ott", scadenza.ott || false);
+                            }
+                          }}
                         />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[60px]`}>
-                        <Checkbox
-                          checked={scadenza.nov || false}
+                        <BooleanSelect
+                          value={Boolean(scadenza.nov)}
                           disabled={isMonthDisabled(scadenza, "nov")}
-                          onCheckedChange={() =>
-                            handleToggleField(scadenza.id, "nov", scadenza.nov || false)
-                          }
+                          onChange={(nextValue) => {
+                            if (nextValue !== Boolean(scadenza.nov)) {
+                              handleToggleField(scadenza.id, "nov", scadenza.nov || false);
+                            }
+                          }}
                         />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[60px]`}>
-                        <Checkbox
-                          checked={scadenza.dic || false}
+                        <BooleanSelect
+                          value={Boolean(scadenza.dic)}
                           disabled={isMonthDisabled(scadenza, "dic")}
-                          onCheckedChange={() =>
-                            handleToggleField(scadenza.id, "dic", scadenza.dic || false)
-                          }
+                          onChange={(nextValue) => {
+                            if (nextValue !== Boolean(scadenza.dic)) {
+                              handleToggleField(scadenza.id, "dic", scadenza.dic || false);
+                            }
+                          }}
                         />
                       </td>
 
@@ -666,34 +757,30 @@ className={
                           onChange={(e) =>
                             handleUpdateValue(scadenza.id, "acconto", e.target.value)
                           }
-                          className="h-8 text-xs bg-white"
+                          className="h-8 border-slate-300 bg-white text-xs"
                           placeholder="Metodo"
                         />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[100px]`}>
-                        <Checkbox
-  checked={scadenza.conferma_acconto_iva || false}
-  onCheckedChange={() =>
-    handleToggleField(
-      scadenza.id,
-      "conferma_acconto_iva",
-      scadenza.conferma_acconto_iva || false
-    )
-  }
-/>
+                        <BooleanSelect
+                          value={Boolean(scadenza.conferma_acconto_iva)}
+                          onChange={(nextValue) => {
+                            if (nextValue !== Boolean(scadenza.conferma_acconto_iva)) {
+                              handleToggleField(scadenza.id, "conferma_acconto_iva", scadenza.conferma_acconto_iva || false);
+                            }
+                          }}
+                        />
                       </td>
 
                       <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[80px]`}>
-                        <Checkbox
-  checked={scadenza.conferma_4_trimestre || false}
-  onCheckedChange={() =>
-    handleToggleField(
-      scadenza.id,
-      "conferma_4_trimestre",
-      scadenza.conferma_4_trimestre || false
-    )
-  }
-/>
+                        <BooleanSelect
+                          value={Boolean(scadenza.conferma_4_trimestre)}
+                          onChange={(nextValue) => {
+                            if (nextValue !== Boolean(scadenza.conferma_4_trimestre)) {
+                              handleToggleField(scadenza.id, "conferma_4_trimestre", scadenza.conferma_4_trimestre || false);
+                            }
+                          }}
+                        />
                       </td>
   
 <td className={`${baseCellClass} ${groupCellQ4} min-w-[140px]`}>
@@ -705,10 +792,10 @@ className={
     }
     className={
       isInvioMancante(scadenza.lipe4t, scadenza.lipe4t_invio)
-        ? "h-8 text-xs bg-red-600 text-white"
+        ? "h-8 border-slate-300 bg-red-600 text-xs text-white"
        : scadenza.conferma_4_trimestre
-? "h-8 text-xs bg-green-500 text-black"
-        : "h-8 text-xs bg-white"
+? "h-8 border-slate-300 bg-green-200 text-xs text-slate-900"
+        : "h-8 border-slate-300 bg-white text-xs"
     }
   />
 </td>
