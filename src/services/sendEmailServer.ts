@@ -1,9 +1,40 @@
+import { supabaseAdmin } from "@/lib/supabase/admin";
+
+const REVISIONI_STUDIO_ID = "f9d3ca10-6134-4061-a2b4-0be74e8c7654";
+const REVISIONI_AUTOMATIC_SENDER = "noreply@revisionicommerciali.it";
+
+function isCentralAlertSubject(subject: string) {
+  return /^Scadenza (superata|di oggi|tra )/i.test(subject.trim());
+}
+
+async function resolveAutomaticSenderMailbox(params: {
+  microsoftConnectionId: string;
+  subject: string;
+}) {
+  if (!isCentralAlertSubject(params.subject)) return null;
+
+  const { data: connection, error } = await supabaseAdmin
+    .from("microsoft365_connections")
+    .select("studio_id")
+    .eq("id", params.microsoftConnectionId)
+    .maybeSingle();
+
+  if (error || !connection?.studio_id) return null;
+
+  if (connection.studio_id === REVISIONI_STUDIO_ID) {
+    return REVISIONI_AUTOMATIC_SENDER;
+  }
+
+  return null;
+}
+
 export async function sendEmailServer(params: {
   senderUserId: string;
   microsoftConnectionId: string;
   to: string;
   subject: string;
   html: string;
+  fromMailbox?: string | null;
   attachments?: {
     filename: string;
     contentType: string;
@@ -12,9 +43,9 @@ export async function sendEmailServer(params: {
 }): Promise<{ success: boolean; error?: string }> {
   try {
     const baseUrl =
-  process.env.NEXT_PUBLIC_APP_URL ||
-  process.env.NEXT_PUBLIC_SITE_URL ||
-  "https://app.studiomanagerpro.it";
+      process.env.NEXT_PUBLIC_APP_URL ||
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      "https://app.studiomanagerpro.it";
 
     const message: any = {
       subject: params.subject,
@@ -40,6 +71,18 @@ export async function sendEmailServer(params: {
       }));
     }
 
+    const automaticSender = await resolveAutomaticSenderMailbox({
+      microsoftConnectionId: params.microsoftConnectionId,
+      subject: params.subject,
+    });
+
+    const fromMailbox =
+      params.fromMailbox?.trim() || automaticSender || null;
+
+    const endpoint = fromMailbox
+      ? `/users/${encodeURIComponent(fromMailbox)}/sendMail`
+      : "/me/sendMail";
+
     const response = await fetch(`${baseUrl}/api/microsoft365/graph-cron`, {
       method: "POST",
       headers: {
@@ -48,7 +91,7 @@ export async function sendEmailServer(params: {
       },
       body: JSON.stringify({
         userId: params.senderUserId,
-        endpoint: "/me/sendMail",
+        endpoint,
         method: "POST",
         microsoftConnectionId: params.microsoftConnectionId,
         body: {
