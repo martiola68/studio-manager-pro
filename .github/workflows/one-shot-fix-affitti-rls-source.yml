@@ -1,0 +1,28 @@
+name: One shot - Fix Affitti RLS source
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/one-shot-fix-affitti-rls-source.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Patch Affitti list tenant source
+        run: |
+          python .github/scripts/patch_affitti_rls_source.py
+          grep -q '.rpc("current_studio_id")' src/pages/scadenze/affitti/index.tsx
+          npm ci
+          npx tsc --noEmit
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/pages/scadenze/affitti/index.tsx
+          git commit -m 'Use database tenant source for Affitti list'
+          git push origin main
