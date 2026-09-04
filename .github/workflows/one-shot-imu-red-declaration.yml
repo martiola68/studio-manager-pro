@@ -1,0 +1,27 @@
+name: One shot - IMU red declaration
+on:
+  push:
+    paths:
+      - '.github/workflows/one-shot-imu-red-declaration.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Apply verified patch
+        run: |
+          python .github/scripts/patch_imu_red_declaration.py
+          grep -q 'bg-red-300' src/pages/scadenze/imu.tsx
+          grep -q 'const declarationTone' src/pages/scadenze/imu.tsx
+          if grep -q 'bg-\[#fff200\]' src/pages/scadenze/imu.tsx; then exit 1; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/pages/scadenze/imu.tsx
+          git commit -m 'Use red IMU states and independent declaration styling'
+          git push origin main
