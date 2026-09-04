@@ -1,0 +1,82 @@
+name: One shot - IMU soggetto e sezioni
+on:
+  push:
+    paths: ['.github/workflows/one-shot-imu-soggetto-logica.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Aggiorna runtime IMU senza toccare conferma riga
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p=Path('src/pages/scadenze/imu.tsx')
+          s=p.read_text(encoding='utf-8')
+          original=s
+
+          # Stato locale solo per rendere obbligatoria la data dopo Comunicato=SI.
+          marker='''  const [localNotes, setLocalNotes] = useState<Record<string, string>>({});\n'''
+          if marker not in s: raise SystemExit('marker localNotes non trovato')
+          s=s.replace(marker, '''  const [pendingComunicato, setPendingComunicato] = useState<{ id: string; tipo: "acconto" | "saldo" } | null>(null);\n\n'''+marker,1)
+
+          # Helper: colori secondo nuova logica. La conferma riga continua ad avere priorità verde.
+          old=re.search(r'''  const sectionTone = \([\s\S]*?  const rowSideTone = \(rowConfirmed: boolean\) =>\n    rowConfirmed \? "bg-green-200" : "bg-slate-50";''',s)
+          if not old: raise SystemExit('helper colori non trovato')
+          new='''  const sectionColor = (\n    soggettoImu: boolean | null | undefined,\n    dovuto: boolean | null | undefined,\n    comunicato: boolean | null | undefined,\n    rowConfirmed: boolean\n  ) => {\n    if (rowConfirmed) return "#bbf7d0";\n    if (!soggettoImu || !dovuto) return "#e2e8f0";\n    if (comunicato) return "#bbf7d0";\n    return "#fecaca";\n  };\n\n  const subjectColor = (soggettoImu: boolean | null | undefined, rowConfirmed: boolean) => {\n    if (rowConfirmed) return "#bbf7d0";\n    return soggettoImu ? "#fecaca" : "#e2e8f0";\n  };\n\n  const declarationColor = (\n    prevista: boolean | null | undefined,\n    presentata: boolean | null | undefined,\n    rowConfirmed: boolean\n  ) => {\n    if (rowConfirmed) return "#bbf7d0";\n    if (!prevista) return "#e2e8f0";\n    if (presentata) return "#bbf7d0";\n    return "#fecaca";\n  };\n\n  const rowSideTone = (rowConfirmed: boolean) =>\n    rowConfirmed ? "bg-green-200" : "bg-slate-50";'''
+          s=s[:old.start()]+new+s[old.end():]
+
+          # Nuovi handler. Non cambia handleToggleField né la logica conferma_riga.
+          marker='''  const handleNoteChange = (scadenzaId: string, value: string) => {\n'''
+          if marker not in s: raise SystemExit('marker handleNoteChange non trovato')
+          handlers='''  const handleComunicatoChange = async (\n    scadenza: ScadenzaImu,\n    tipo: "acconto" | "saldo",\n    nextValue: boolean\n  ) => {\n    const field = tipo === "acconto" ? "conferma_acconto_imu" : "conferma_saldo_imu";\n    const dateField = tipo === "acconto" ? "data_com_acconto" : "data_com_saldo";\n    const currentValue = Boolean(scadenza[field]);\n\n    if (!nextValue) {\n      setPendingComunicato((prev) => prev?.id === scadenza.id && prev.tipo === tipo ? null : prev);\n      if (currentValue) await handleToggleField(scadenza.id, field, scadenza[field] as boolean | null);\n      return;\n    }\n\n    if (!scadenza[dateField]) {\n      setPendingComunicato({ id: scadenza.id, tipo });\n      toast({\n        title: "Data comunicazione obbligatoria",\n        description: "Inserisci la data di comunicazione per completare lo stato Comunicato = SI.",\n        variant: "destructive",\n      });\n      setTimeout(() => document.getElementById(`imu-${tipo}-data-${scadenza.id}`)?.focus(), 0);\n      return;\n    }\n\n    if (!currentValue) await handleToggleField(scadenza.id, field, scadenza[field] as boolean | null);\n  };\n\n  const handleCommunicationDateChange = async (\n    scadenza: ScadenzaImu,\n    tipo: "acconto" | "saldo",\n    value: string\n  ) => {\n    const dateField = tipo === "acconto" ? "data_com_acconto" : "data_com_saldo";\n    const communicatedField = tipo === "acconto" ? "conferma_acconto_imu" : "conferma_saldo_imu";\n    await handleUpdateField(scadenza.id, dateField, value);\n\n    if (\n      value &&\n      pendingComunicato?.id === scadenza.id &&\n      pendingComunicato.tipo === tipo &&\n      !scadenza[communicatedField]\n    ) {\n      await handleToggleField(scadenza.id, communicatedField, scadenza[communicatedField] as boolean | null);\n      setPendingComunicato(null);\n    }\n  };\n\n  const handleDichiarazioneImuChange = async (scadenza: ScadenzaImu, nextValue: boolean) => {\n    try {\n      const annoBase = scadenza.anno_riferimento ?? Number(filterAnno) ?? currentYear;\n      const dataScadenza = `${annoBase + 1}-06-30`;\n      const payload = nextValue\n        ? {\n            dichiarazione_imu: true,\n            data_scad_dichiarazione: scadenza.data_scad_dichiarazione || dataScadenza,\n          }\n        : {\n            dichiarazione_imu: false,\n            data_scad_dichiarazione: null,\n            conferma_dichiarazione_imu: false,\n          };\n\n      const { error } = await supabase.from("tbscadimu").update(payload).eq("id", scadenza.id);\n      if (error) throw error;\n\n      setScadenze((prev) =>\n        prev.map((row) => row.id === scadenza.id ? { ...row, ...payload } : row)\n      );\n    } catch (error: any) {\n      toast({ title: "Errore aggiornamento", description: error.message, variant: "destructive" });\n    }\n  };\n\n'''
+          s=s.replace(marker,handlers+marker,1)
+
+          # HEADER: Acconto IMU -> Soggetto IMU. Elimina Saldo IMU e sposta dichiarazione subito dopo acconto.
+          header_old='''    <th className={`${baseHeaderClass} min-w-[120px]`}>Acconto IMU</th>\n    <th className={`${baseHeaderClass} min-w-[120px] print-hide`}>Dovuto</th>\n    <th className={`${baseHeaderClass} min-w-[120px]`}>Comunicato</th>\n    <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[160px] border-r border-slate-500 bg-slate-600 print-hide">\n      Data comunicazione\n    </th>\n    <th className={`${baseHeaderClass} min-w-[120px]`}>Saldo IMU</th>\n    <th className={`${baseHeaderClass} min-w-[120px] print-hide`}>Dovuto</th>\n    <th className={`${baseHeaderClass} min-w-[120px]`}>Comunicato</th>\n    <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[160px] border-r border-slate-500 bg-slate-600 print-hide">\n      Data comunicazione\n    </th>\n    <th className={`${baseHeaderClass} min-w-[140px] print-hide`}>Con dic. IMU</th>\n    <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[170px] border-r border-slate-500 bg-slate-600 print-hide">\n      Data scadenza dic.\n    </th>\n    <th className={`${baseHeaderClass} min-w-[140px] print-hide`}>Dic. presentata</th>'''
+          header_new='''    <th className={`${baseHeaderClass} min-w-[120px]`}>Soggetto IMU</th>\n    <th className={`${baseHeaderClass} min-w-[120px] print-hide`}>Dovuto</th>\n    <th className={`${baseHeaderClass} min-w-[120px]`}>Comunicato</th>\n    <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[160px] border-r border-slate-500 bg-slate-600 print-hide">\n      Data comunicazione\n    </th>\n    <th className={`${baseHeaderClass} min-w-[140px] print-hide`}>Con dic. IMU</th>\n    <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[170px] border-r border-slate-500 bg-slate-600 print-hide">\n      Data scadenza dic.\n    </th>\n    <th className={`${baseHeaderClass} min-w-[140px] print-hide`}>Dic. presentata</th>\n    <th className={`${baseHeaderClass} min-w-[120px] print-hide`}>Dovuto saldo</th>\n    <th className={`${baseHeaderClass} min-w-[120px]`}>Comunicato saldo</th>\n    <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[160px] border-r border-slate-500 bg-slate-600 print-hide">\n      Data comunicazione saldo\n    </th>'''
+          if header_old not in s: raise SystemExit('header IMU atteso non trovato')
+          s=s.replace(header_old,header_new,1)
+
+          # Aggiorna colspan: una colonna in meno (Saldo IMU eliminata).
+          s=s.replace('colSpan={17}','colSpan={16}',1)
+
+          # Estrae i blocchi celle e li ricostruisce nell'ordine desiderato.
+          start=s.find('''          <td className={`${baseCellClass} text-center min-w-[120px] ${sectionTone(scadenza.acconto_imu''')
+          if start==-1:
+            # se inline-colors fosse già entrato, cerca per select soggetto
+            start=s.find('''          <td''', s.find('''<select value={scadenza.acconto_imu''')-250)
+          end=s.find('''          <td className={`${baseCellClass} min-w-[300px] print-hide''',start)
+          if start==-1 or end==-1: raise SystemExit('blocco sezioni IMU non trovato')
+
+          select_cls='h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400'
+          input_cls='h-8 w-full border-slate-300 bg-white text-xs disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400'
+
+          block=f'''          <td className="${{baseCellClass}} text-center min-w-[120px]" style={{{{ backgroundColor: subjectColor(scadenza.acconto_imu, isGreenRow) }}}}>\n            <select value={{scadenza.acconto_imu ? "SI" : "NO"}} onChange={{(e) => {{ const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.acconto_imu)) handleToggleField(scadenza.id, "acconto_imu", scadenza.acconto_imu); }}}} className="{select_cls}"><option value="NO">NO</option><option value="SI">SI</option></select>\n          </td>\n\n          <td className="${{baseCellClass}} text-center min-w-[120px] print-hide" style={{{{ backgroundColor: sectionColor(scadenza.acconto_imu, scadenza.acconto_dovuto, scadenza.conferma_acconto_imu, isGreenRow) }}}}>\n            <select disabled={{!scadenza.acconto_imu}} value={{scadenza.acconto_dovuto ? "SI" : "NO"}} onChange={{(e) => {{ const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.acconto_dovuto)) handleToggleField(scadenza.id, "acconto_dovuto", scadenza.acconto_dovuto); }}}} className="{select_cls}"><option value="NO">NO</option><option value="SI">SI</option></select>\n          </td>\n\n          <td className="${{baseCellClass}} text-center min-w-[120px]" style={{{{ backgroundColor: sectionColor(scadenza.acconto_imu, scadenza.acconto_dovuto, scadenza.conferma_acconto_imu, isGreenRow) }}}}>\n            <select disabled={{!scadenza.acconto_imu || !scadenza.acconto_dovuto}} value={{scadenza.conferma_acconto_imu ? "SI" : "NO"}} onChange={{(e) => void handleComunicatoChange(scadenza, "acconto", e.target.value === "SI")}} className="{select_cls}"><option value="NO">NO</option><option value="SI">SI</option></select>\n          </td>\n\n          <td className="${{baseCellClass}} min-w-[160px] print-hide" style={{{{ backgroundColor: sectionColor(scadenza.acconto_imu, scadenza.acconto_dovuto, scadenza.conferma_acconto_imu, isGreenRow) }}}}>\n            <Input id={{`imu-acconto-data-${{scadenza.id}}`}} type="date" disabled={{!scadenza.acconto_imu || !scadenza.acconto_dovuto}} value={{scadenza.data_com_acconto || ""}} onChange={{(e) => void handleCommunicationDateChange(scadenza, "acconto", e.target.value)}} className="{input_cls}" />\n          </td>\n\n          <td className="${{baseCellClass}} text-center min-w-[140px] print-hide" style={{{{ backgroundColor: declarationColor(scadenza.dichiarazione_imu, scadenza.conferma_dichiarazione_imu, isGreenRow) }}}}>\n            <select value={{scadenza.dichiarazione_imu ? "SI" : "NO"}} onChange={{(e) => void handleDichiarazioneImuChange(scadenza, e.target.value === "SI")}} className="{select_cls}"><option value="NO">NO</option><option value="SI">SI</option></select>\n          </td>\n\n          <td className="${{baseCellClass}} min-w-[170px] print-hide" style={{{{ backgroundColor: declarationColor(scadenza.dichiarazione_imu, scadenza.conferma_dichiarazione_imu, isGreenRow) }}}}>\n            <Input type="date" disabled={{!scadenza.dichiarazione_imu}} value={{scadenza.data_scad_dichiarazione || ""}} onChange={{(e) => handleUpdateField(scadenza.id, "data_scad_dichiarazione", e.target.value)}} className="{input_cls}" />\n          </td>\n\n          <td className="${{baseCellClass}} text-center min-w-[140px] print-hide" style={{{{ backgroundColor: declarationColor(scadenza.dichiarazione_imu, scadenza.conferma_dichiarazione_imu, isGreenRow) }}}}>\n            <select disabled={{!scadenza.dichiarazione_imu}} value={{scadenza.conferma_dichiarazione_imu ? "SI" : "NO"}} onChange={{(e) => {{ const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.conferma_dichiarazione_imu)) handleToggleField(scadenza.id, "conferma_dichiarazione_imu", scadenza.conferma_dichiarazione_imu); }}}} className="{select_cls}"><option value="NO">NO</option><option value="SI">SI</option></select>\n          </td>\n\n          <td className="${{baseCellClass}} text-center min-w-[120px] print-hide" style={{{{ backgroundColor: sectionColor(scadenza.acconto_imu, scadenza.saldo_dovuto, scadenza.conferma_saldo_imu, isGreenRow) }}}}>\n            <select disabled={{!scadenza.acconto_imu}} value={{scadenza.saldo_dovuto ? "SI" : "NO"}} onChange={{(e) => {{ const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.saldo_dovuto)) handleToggleField(scadenza.id, "saldo_dovuto", scadenza.saldo_dovuto); }}}} className="{select_cls}"><option value="NO">NO</option><option value="SI">SI</option></select>\n          </td>\n\n          <td className="${{baseCellClass}} text-center min-w-[120px]" style={{{{ backgroundColor: sectionColor(scadenza.acconto_imu, scadenza.saldo_dovuto, scadenza.conferma_saldo_imu, isGreenRow) }}}}>\n            <select disabled={{!scadenza.acconto_imu || !scadenza.saldo_dovuto}} value={{scadenza.conferma_saldo_imu ? "SI" : "NO"}} onChange={{(e) => void handleComunicatoChange(scadenza, "saldo", e.target.value === "SI")}} className="{select_cls}"><option value="NO">NO</option><option value="SI">SI</option></select>\n          </td>\n\n          <td className="${{baseCellClass}} min-w-[160px] print-hide" style={{{{ backgroundColor: sectionColor(scadenza.acconto_imu, scadenza.saldo_dovuto, scadenza.conferma_saldo_imu, isGreenRow) }}}}>\n            <Input id={{`imu-saldo-data-${{scadenza.id}}`}} type="date" disabled={{!scadenza.acconto_imu || !scadenza.saldo_dovuto}} value={{scadenza.data_com_saldo || ""}} onChange={{(e) => void handleCommunicationDateChange(scadenza, "saldo", e.target.value)}} className="{input_cls}" />\n          </td>\n\n'''
+          s=s[:start]+block+s[end:]
+
+          # Stampa: rinomina soltanto l'etichetta, non cambia conferma riga.
+          s=s.replace('<th>Acconto IMU</th>','<th>Soggetto IMU</th>',1)
+
+          # Verifiche forti: Saldo IMU non deve più essere una colonna runtime; conferma riga resta identica.
+          if '>Saldo IMU</th>' in s: raise SystemExit('colonna Saldo IMU ancora presente')
+          for check in ['>Soggetto IMU</th>','handleComunicatoChange','handleDichiarazioneImuChange','${annoBase + 1}-06-30','disabled={!scadenza.acconto_imu || !scadenza.saldo_dovuto}','value={scadenza.conferma_riga ? "SI" : "NO"}']:
+            if check not in s: raise SystemExit('verifica fallita '+check)
+          if s==original: raise SystemExit('nessuna modifica')
+          p.write_text(s,encoding='utf-8')
+          PY
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/pages/scadenze/imu.tsx
+          git diff --cached --quiet && exit 1
+          git commit -m 'Refine IMU subject sections and auto declaration deadline'
+          git push origin main
