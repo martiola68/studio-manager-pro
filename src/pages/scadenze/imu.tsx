@@ -6,7 +6,6 @@ import type { Database } from "@/integrations/supabase/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Search, Trash2, Printer, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,9 +37,9 @@ type UtenteLight = {
   cognome: string | null;
 };
 const baseHeaderClass =
-  "h-10 px-2 text-center align-middle font-medium text-muted-foreground border-r border-gray-300";
+  "h-9 px-2 text-center align-middle font-semibold text-slate-50 border-r border-slate-500";
 
-const baseCellClass = "p-2 align-middle border-r border-gray-300";
+const baseCellClass = "px-2 py-1 align-middle border-r border-gray-300";
 
 export default function ImuPage() {
   const router = useRouter();
@@ -186,20 +185,7 @@ const [sendingEmail, setSendingEmail] = useState(false);
     return years.length > 0 ? years : [currentYear];
   }, [scadenze, currentYear]);
 
-  const sortByCognome = (a: string, b: string) => {
-    const splitA = a.trim().split(/\s+/);
-    const splitB = b.trim().split(/\s+/);
-
-    const cognomeA =
-      splitA.length > 1 ? splitA[splitA.length - 1] : splitA[0] || "";
-    const cognomeB =
-      splitB.length > 1 ? splitB[splitB.length - 1] : splitB[0] || "";
-
-    const bySurname = cognomeA.localeCompare(cognomeB, "it");
-    if (bySurname !== 0) return bySurname;
-
-    return a.localeCompare(b, "it");
-  };
+  const sortByNome = (a: string, b: string) => a.localeCompare(b, "it");
 
   const operatoriDisponibili = useMemo(() => {
     const operatori = Array.from(
@@ -211,7 +197,7 @@ const [sendingEmail, setSendingEmail] = useState(false);
           })
           .filter((v) => v.length > 0)
       )
-    ).sort(sortByCognome);
+    ).sort(sortByNome);
 
     return operatori;
   }, [scadenze, operatoriMap]);
@@ -591,7 +577,7 @@ const vars: Record<string, string> = {
   
   const dateInputClass = (value?: string | null) =>
     [
-      "w-full",
+      "h-8 w-full border-slate-300 bg-white",
       !value ? "text-transparent caret-transparent" : "",
       "focus:text-gray-900 focus:caret-auto",
     ]
@@ -662,8 +648,8 @@ const vars: Record<string, string> = {
         }
       `}</style>
 
-      <div className="space-y-6">
-        <div className="flex items-center justify-between no-print">
+      <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden bg-slate-200/70 px-3 pb-3 pt-2">
+        <div className="flex shrink-0 items-center justify-between no-print">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Scadenzario IMU</h1>
             <p className="text-gray-500 mt-1">
@@ -683,9 +669,9 @@ const vars: Record<string, string> = {
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 no-print">
-          <Card>
-            <CardContent className="pt-6">
+        <div className="grid shrink-0 grid-cols-1 gap-4 md:grid-cols-3 no-print">
+          <Card className="border border-sky-200 bg-slate-50 shadow-sm">
+            <CardContent className="pt-5">
               <div className="text-sm text-gray-600 mb-1">
                 Totale Dichiarazioni
               </div>
@@ -694,16 +680,16 @@ const vars: Record<string, string> = {
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="pt-6">
+          <Card className="border border-sky-200 bg-slate-50 shadow-sm">
+            <CardContent className="pt-5">
               <div className="text-sm text-gray-600 mb-1">Confermate</div>
               <div className="text-3xl font-bold text-green-600">
                 {stats.confermate}
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="pt-6">
+          <Card className="border border-sky-200 bg-slate-50 shadow-sm">
+            <CardContent className="pt-5">
               <div className="text-sm text-gray-600 mb-1">Non Confermate</div>
               <div className="text-3xl font-bold text-orange-600">
                 {stats.nonConfermate}
@@ -712,8 +698,8 @@ const vars: Record<string, string> = {
           </Card>
         </div>
 
-        <Card className="no-print">
-          <CardHeader>
+        <Card className="shrink-0 border border-sky-200 bg-slate-50 shadow-sm no-print">
+          <CardHeader className="pb-3">
             <CardTitle>Filtri e Ricerca</CardTitle>
           </CardHeader>
           <CardContent>
@@ -726,7 +712,7 @@ const vars: Record<string, string> = {
                     placeholder="Cerca per nominativo o operatore..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
+                    className="h-9 border-slate-300 bg-white pl-10"
                   />
                 </div>
               </div>
@@ -739,7 +725,7 @@ const vars: Record<string, string> = {
                   value={filterOperatore}
                   onValueChange={setFilterOperatore}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="h-9 border-slate-300 bg-white">
                     <SelectValue placeholder="Tutti gli operatori" />
                   </SelectTrigger>
                   <SelectContent>
@@ -758,7 +744,7 @@ const vars: Record<string, string> = {
                   Stato Conferma
                 </label>
                 <Select value={filterConferma} onValueChange={setFilterConferma}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-9 border-slate-300 bg-white">
                     <SelectValue placeholder="Tutti" />
                   </SelectTrigger>
                   <SelectContent>
@@ -774,7 +760,7 @@ const vars: Record<string, string> = {
                   Anno consultazione
                 </label>
                 <Select value={filterAnno} onValueChange={setFilterAnno}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-9 border-slate-300 bg-white">
                     <SelectValue placeholder="Seleziona anno" />
                   </SelectTrigger>
                   <SelectContent>
@@ -790,8 +776,8 @@ const vars: Record<string, string> = {
           </CardContent>
         </Card>
 
-        <Card id="imu-print-area">
-          <CardContent className="p-0">
+        <Card id="imu-print-area" className="flex min-h-0 flex-1 flex-col overflow-hidden border border-sky-200 bg-slate-50 shadow-sm">
+          <CardContent className="min-h-0 flex-1 overflow-hidden p-0">
             <div className="hidden print:block p-4">
               <h2 className="text-xl font-bold text-center mb-1">
                 Scadenzario IMU
@@ -804,34 +790,34 @@ const vars: Record<string, string> = {
               </p>
             </div>
 
-            <div className="relative w-full overflow-auto max-h-[600px] no-print">
+            <div className="relative h-full w-full overflow-auto no-print">
                 <table className="w-full caption-bottom text-sm">
-                 <thead className="sticky top-0 z-30 bg-white">
-  <tr className="border-b border-gray-300">
-    <th className="sticky-col-header h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[320px] border-r border-gray-300 bg-white">
+                 <thead className="sticky top-0 z-30 bg-slate-600 text-white shadow-sm">
+  <tr className="border-b border-slate-500">
+    <th className="sticky-col-header h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[320px] border-r border-slate-500 !bg-slate-600">
       Nominativo
     </th>
-    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px] border-r border-gray-300 bg-white">
+    <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[150px] border-r border-slate-500 bg-slate-600">
       Operatore
     </th>
     <th className={`${baseHeaderClass} min-w-[120px]`}>Acconto IMU</th>
     <th className={`${baseHeaderClass} min-w-[120px] print-hide`}>Dovuto</th>
     <th className={`${baseHeaderClass} min-w-[120px]`}>Comunicato</th>
-    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[160px] border-r border-gray-300 bg-white print-hide">
+    <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[160px] border-r border-slate-500 bg-slate-600 print-hide">
       Data comunicazione
     </th>
     <th className={`${baseHeaderClass} min-w-[120px]`}>Saldo IMU</th>
     <th className={`${baseHeaderClass} min-w-[120px] print-hide`}>Dovuto</th>
     <th className={`${baseHeaderClass} min-w-[120px]`}>Comunicato</th>
-    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[160px] border-r border-gray-300 bg-white print-hide">
+    <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[160px] border-r border-slate-500 bg-slate-600 print-hide">
       Data comunicazione
     </th>
     <th className={`${baseHeaderClass} min-w-[140px] print-hide`}>Con dic. IMU</th>
-    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[170px] border-r border-gray-300 bg-white print-hide">
+    <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[170px] border-r border-slate-500 bg-slate-600 print-hide">
       Data scadenza dic.
     </th>
     <th className={`${baseHeaderClass} min-w-[140px] print-hide`}>Dic. presentata</th>
-    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[300px] border-r border-gray-300 bg-white print-hide">
+    <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[300px] border-r border-slate-500 bg-slate-600 print-hide">
       Note
     </th>
 <th className={`${baseHeaderClass} min-w-[180px] print-hide`}>
@@ -839,7 +825,7 @@ const vars: Record<string, string> = {
 </th>
     
     <th className={`${baseHeaderClass} min-w-[140px]`}>Conferma dati</th>
-    <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[100px] border-r-0 bg-white print-hide">
+    <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[100px] border-r-0 bg-slate-600 print-hide">
       Azioni
     </th>
   </tr>
@@ -865,12 +851,12 @@ const vars: Record<string, string> = {
           className={`border-b border-gray-300 ${
             isGreenRow
               ? "bg-green-300 hover:bg-green-300"
-              : "hover:bg-green-50/40"
+              : "bg-slate-50 hover:bg-slate-100"
           }`}
         >
           <td
             className={`sticky-col-cell p-2 align-middle font-medium min-w-[320px] border-r border-gray-300 ${
-              isGreenRow ? "!bg-green-300" : "bg-white"
+              isGreenRow ? "!bg-green-300" : "!bg-slate-50"
             }`}
           >
             {scadenza.nominativo}
@@ -883,42 +869,15 @@ const vars: Record<string, string> = {
           </td>
 
           <td className={`${baseCellClass} text-center min-w-[120px]`}>
-            <Checkbox
-              checked={scadenza.acconto_imu || false}
-              onCheckedChange={() =>
-                handleToggleField(
-                  scadenza.id,
-                  "acconto_imu",
-                  scadenza.acconto_imu
-                )
-              }
-            />
+            <select value={scadenza.acconto_imu ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.acconto_imu)) handleToggleField(scadenza.id, "acconto_imu", scadenza.acconto_imu); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"><option value="NO">NO</option><option value="SI">SI</option></select>
           </td>
 
           <td className={`${baseCellClass} text-center min-w-[120px] print-hide`}>
-            <Checkbox
-              checked={scadenza.acconto_dovuto || false}
-              onCheckedChange={() =>
-                handleToggleField(
-                  scadenza.id,
-                  "acconto_dovuto",
-                  scadenza.acconto_dovuto
-                )
-              }
-            />
+            <select value={scadenza.acconto_dovuto ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.acconto_dovuto)) handleToggleField(scadenza.id, "acconto_dovuto", scadenza.acconto_dovuto); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"><option value="NO">NO</option><option value="SI">SI</option></select>
           </td>
 
           <td className={`${baseCellClass} text-center min-w-[120px]`}>
-            <Checkbox
-  checked={scadenza.conferma_acconto_imu || false}
-  onCheckedChange={() =>
-    handleToggleField(
-      scadenza.id,
-      "conferma_acconto_imu",
-      scadenza.conferma_acconto_imu
-    )
-  }
-/>
+            <select value={scadenza.conferma_acconto_imu ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.conferma_acconto_imu)) handleToggleField(scadenza.id, "conferma_acconto_imu", scadenza.conferma_acconto_imu); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"><option value="NO">NO</option><option value="SI">SI</option></select>
           </td>
 
           <td className={`${baseCellClass} min-w-[160px] print-hide`}>
@@ -932,51 +891,20 @@ const vars: Record<string, string> = {
     e.target.value
   )
 }
-  className={
-    scadenza.conferma_acconto_imu
-      ? "h-8 text-xs bg-green-500 text-black"
-      : "h-8 text-xs"
-  }
+  className="h-8 w-full border-slate-300 bg-white text-xs"
 />
           </td>
 
           <td className={`${baseCellClass} text-center min-w-[120px]`}>
-            <Checkbox
-              checked={scadenza.saldo_imu || false}
-              onCheckedChange={() =>
-                handleToggleField(
-                  scadenza.id,
-                  "saldo_imu",
-                  scadenza.saldo_imu
-                )
-              }
-            />
+            <select value={scadenza.saldo_imu ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.saldo_imu)) handleToggleField(scadenza.id, "saldo_imu", scadenza.saldo_imu); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"><option value="NO">NO</option><option value="SI">SI</option></select>
           </td>
 
           <td className={`${baseCellClass} text-center min-w-[120px] print-hide`}>
-            <Checkbox
-              checked={scadenza.saldo_dovuto || false}
-              onCheckedChange={() =>
-                handleToggleField(
-                  scadenza.id,
-                  "saldo_dovuto",
-                  scadenza.saldo_dovuto
-                )
-              }
-            />
+            <select value={scadenza.saldo_dovuto ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.saldo_dovuto)) handleToggleField(scadenza.id, "saldo_dovuto", scadenza.saldo_dovuto); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"><option value="NO">NO</option><option value="SI">SI</option></select>
           </td>
 
           <td className={`${baseCellClass} text-center min-w-[120px]`}>
-           <Checkbox
-  checked={scadenza.conferma_saldo_imu || false}
-  onCheckedChange={() =>
-    handleToggleField(
-      scadenza.id,
-      "conferma_saldo_imu",
-      scadenza.conferma_saldo_imu
-    )
-  }
-/>
+           <select value={scadenza.conferma_saldo_imu ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.conferma_saldo_imu)) handleToggleField(scadenza.id, "conferma_saldo_imu", scadenza.conferma_saldo_imu); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"><option value="NO">NO</option><option value="SI">SI</option></select>
           </td>
 
           <td className={`${baseCellClass} min-w-[160px] print-hide`}>
@@ -990,25 +918,12 @@ const vars: Record<string, string> = {
     e.target.value
   )
 }
-  className={
-    scadenza.conferma_saldo_imu
-      ? "h-8 text-xs bg-green-500 text-black"
-      : "h-8 text-xs"
-  }
+  className="h-8 w-full border-slate-300 bg-white text-xs"
 />
           </td>
 
           <td className={`${baseCellClass} text-center min-w-[140px] print-hide`}>
-            <Checkbox
-              checked={scadenza.dichiarazione_imu || false}
-              onCheckedChange={() =>
-                handleToggleField(
-                  scadenza.id,
-                  "dichiarazione_imu",
-                  scadenza.dichiarazione_imu
-                )
-              }
-            />
+            <select value={scadenza.dichiarazione_imu ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.dichiarazione_imu)) handleToggleField(scadenza.id, "dichiarazione_imu", scadenza.dichiarazione_imu); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"><option value="NO">NO</option><option value="SI">SI</option></select>
           </td>
 
           <td className={`${baseCellClass} min-w-[170px] print-hide`}>
@@ -1022,25 +937,12 @@ const vars: Record<string, string> = {
     e.target.value
   )
 }
-  className={
-    scadenza.conferma_dichiarazione_imu
-      ? "h-8 text-xs bg-green-500 text-black"
-      : "h-8 text-xs"
-  }
+  className="h-8 w-full border-slate-300 bg-white text-xs"
 />
           </td>
 
           <td className={`${baseCellClass} text-center min-w-[140px] print-hide`}>
-            <Checkbox
-  checked={scadenza.conferma_dichiarazione_imu || false}
-  onCheckedChange={() =>
-    handleToggleField(
-      scadenza.id,
-      "conferma_dichiarazione_imu",
-      scadenza.conferma_dichiarazione_imu
-    )
-  }
-/>
+            <select value={scadenza.conferma_dichiarazione_imu ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.conferma_dichiarazione_imu)) handleToggleField(scadenza.id, "conferma_dichiarazione_imu", scadenza.conferma_dichiarazione_imu); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"><option value="NO">NO</option><option value="SI">SI</option></select>
           </td>
 
           <td className={`${baseCellClass} min-w-[300px] print-hide`}>
@@ -1050,7 +952,7 @@ const vars: Record<string, string> = {
                 handleNoteChange(scadenza.id, e.target.value)
               }
               placeholder="Aggiungi note..."
-              className="min-h-[60px] resize-none"
+              rows={1} className="h-8 min-h-8 resize-none border-slate-300 bg-white py-1.5"
             />
           </td>
 
@@ -1091,16 +993,7 @@ const vars: Record<string, string> = {
 </td>
 
 <td className={`${baseCellClass} text-center min-w-[140px]`}>
-  <Checkbox
-    checked={scadenza.conferma_riga || false}
-    onCheckedChange={() =>
-      handleToggleField(
-        scadenza.id,
-        "conferma_riga",
-        scadenza.conferma_riga
-      )
-    }
-  />
+  <select value={scadenza.conferma_riga ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.conferma_riga)) handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"><option value="NO">NO</option><option value="SI">SI</option></select>
 </td>
 
           <td className="p-2 align-middle text-center min-w-[100px] border-r-0 print-hide">
