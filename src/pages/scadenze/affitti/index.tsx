@@ -111,38 +111,23 @@ export default function ScadenzarioAffittiIndex() {
         return;
       }
 
-      let { data: utenteDb, error: utenteError } = await supabaseAny
-        .from("tbutenti")
-        .select("id, studio_id, email")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      const { data: currentStudioId, error: studioError } = await supabaseAny
+        .rpc("current_studio_id");
 
-      if (!utenteDb && user.email) {
-        const fallback = await supabaseAny
-          .from("tbutenti")
-          .select("id, studio_id, email")
-          .ilike("email", user.email)
-          .maybeSingle();
-        utenteDb = fallback.data;
-        utenteError = fallback.error;
-      }
-
-      if (utenteError || !utenteDb?.studio_id) {
-        console.error("Errore recupero studio utente:", utenteError);
+      if (studioError || !currentStudioId) {
+        console.error("Errore recupero studio corrente:", studioError);
         setContratti([]);
         return;
       }
 
-      const currentStudioId = utenteDb.studio_id as string;
-      setStudioId(currentStudioId);
+      setStudioId(currentStudioId as string);
 
-      const enabled = await isEncryptionEnabled(currentStudioId);
+      const enabled = await isEncryptionEnabled(currentStudioId as string);
       setEncryptionEnabled(Boolean(enabled));
 
       const { data, error } = await supabaseAny
         .from("tbscadaffitti")
         .select("*")
-        .eq("studio_id", currentStudioId)
         .order("data_prossima_scadenza", { ascending: true });
 
       if (error) {
