@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Search, Trash2, Printer } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
@@ -197,7 +196,7 @@ export default function ScadenzeCCGGPage() {
     const { data, error } = await supabase
       .from("tbutenti")
       .select("*")
-      .order("cognome", { ascending: true });
+      .order("nome", { ascending: true }).order("cognome", { ascending: true });
 
     if (error) throw error;
     return data || [];
@@ -497,8 +496,8 @@ export default function ScadenzeCCGGPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+    <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden bg-slate-200/70 px-3 pb-3 pt-2">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Scadenzario CCGG</h1>
           <p className="text-gray-500 mt-1">
@@ -518,29 +517,29 @@ export default function ScadenzeCCGGPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-6">
+      <div className="grid shrink-0 grid-cols-1 gap-4 md:grid-cols-3">
+        <Card className="border border-sky-200 bg-slate-50 shadow-sm">
+          <CardContent className="pt-5">
             <div className="text-sm text-gray-600 mb-1">Totale Dichiarazioni</div>
             <div className="text-3xl font-bold text-gray-900">{stats.totale}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6">
+        <Card className="border border-sky-200 bg-slate-50 shadow-sm">
+          <CardContent className="pt-5">
             <div className="text-sm text-gray-600 mb-1">Confermate</div>
             <div className="text-3xl font-bold text-green-600">{stats.confermate}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6">
+        <Card className="border border-sky-200 bg-slate-50 shadow-sm">
+          <CardContent className="pt-5">
             <div className="text-sm text-gray-600 mb-1">Non Confermate</div>
             <div className="text-3xl font-bold text-orange-600">{stats.nonConfermate}</div>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
+      <Card className="shrink-0 border border-sky-200 bg-slate-50 shadow-sm">
+        <CardHeader className="pb-3">
           <CardTitle>Filtri e Ricerca</CardTitle>
         </CardHeader>
         <CardContent>
@@ -553,7 +552,7 @@ export default function ScadenzeCCGGPage() {
                   placeholder="Cerca..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
+                  className="h-9 border-slate-300 bg-white pl-10"
                 />
               </div>
             </div>
@@ -561,7 +560,7 @@ export default function ScadenzeCCGGPage() {
             <div>
               <label className="text-sm font-medium mb-2 block">Utente Operatore</label>
               <Select value={filterOperatore} onValueChange={setFilterOperatore}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9 border-slate-300 bg-white">
                   <SelectValue placeholder="Tutti" />
                 </SelectTrigger>
                 <SelectContent>
@@ -578,7 +577,7 @@ export default function ScadenzeCCGGPage() {
             <div>
               <label className="text-sm font-medium mb-2 block">Stato Conferma</label>
               <Select value={filterConferma} onValueChange={setFilterConferma}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9 border-slate-300 bg-white">
                   <SelectValue placeholder="Tutti" />
                 </SelectTrigger>
                 <SelectContent>
@@ -595,7 +594,7 @@ export default function ScadenzeCCGGPage() {
                 value={annoConsultazione.toString()}
                 onValueChange={(value) => setAnnoConsultazione(parseInt(value))}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-9 border-slate-300 bg-white">
                   <SelectValue placeholder="Seleziona anno" />
                 </SelectTrigger>
                 <SelectContent>
@@ -611,37 +610,37 @@ export default function ScadenzeCCGGPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="p-0">
-          <div className="relative w-full overflow-auto max-h-[600px]">
+      <Card className="flex min-h-0 flex-1 flex-col overflow-hidden border border-sky-200 bg-slate-50 shadow-sm">
+        <CardContent className="min-h-0 flex-1 overflow-hidden p-0">
+          <div className="relative h-full w-full overflow-auto">
             <table className="w-full caption-bottom text-sm">
-              <thead className="[&_tr]:border-b sticky top-0 z-30 bg-white shadow-sm">
-                <tr className="border-b border-gray-400 transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground sticky-col-header border-r min-w-[260px]">
+              <thead className="sticky top-0 z-30 bg-slate-600 text-white shadow-sm [&_tr]:border-b [&_tr]:border-slate-500">
+                <tr className="border-b border-slate-500">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 sticky-col-header border-r border-slate-500 !bg-slate-600 !text-slate-50 min-w-[260px]">
                     Nominativo
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[180px]">
                     Operatore
                   </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[150px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[150px]">
                     Importo Calcolato
                   </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[120px]">
                     F24 Generato
                   </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[120px]">
                     F24 Comunicato
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[150px]">
                     Data Comunicato
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[300px]">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[300px]">
                     Note
                   </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[120px]">
                     Conferma
                   </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[100px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[100px]">
                     Azioni
                   </th>
                 </tr>
@@ -650,7 +649,7 @@ export default function ScadenzeCCGGPage() {
               <tbody className="[&_tr:last-child]:border-0">
                 {filteredScadenze.length === 0 ? (
                   <tr className="border-b border-gray-400 transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                    <td colSpan={9} className="p-2 align-middle text-center py-8 text-gray-500">
+                    <td colSpan={9} className="px-2 py-1 align-middle text-center py-8 text-gray-500">
                       Nessun record trovato
                     </td>
                   </tr>
@@ -662,61 +661,34 @@ export default function ScadenzeCCGGPage() {
                       <tr
                         key={scadenza.id}
                         className={`border-b border-gray-400 transition-colors data-[state=selected]:bg-muted ${
-                          isGreenRow ? "bg-green-300 hover:bg-green-300" : "hover:bg-green-50"
+                          isGreenRow ? "bg-green-300 hover:bg-green-300" : "bg-slate-50 hover:bg-slate-100"
                         }`}
                       >
                         <td
-                          className={`p-2 align-middle sticky-col-cell border-r font-medium min-w-[260px] ${
-                            isGreenRow ? "!bg-green-300" : ""
+                          className={`px-2 py-1 align-middle sticky-col-cell border-r font-medium min-w-[260px] ${
+                            isGreenRow ? "!bg-green-300" : "!bg-slate-50"
                           }`}
                         >
                           {scadenza.nominativo}
                         </td>
 
-                        <td className="p-2 align-middle min-w-[180px]">
+                        <td className="px-2 py-1 align-middle min-w-[180px]">
                           {scadenza.operatore}
                         </td>
 
-                        <td className="p-2 align-middle text-center min-w-[150px]">
-                          <Checkbox
-                            checked={!!scadenza.importo_calcolato}
-                            onCheckedChange={() =>
-                              handleToggleField(
-                                scadenza.id,
-                                "importo_calcolato",
-                                scadenza.importo_calcolato
-                              )
-                            }
-                          />
+                        <td className="px-2 py-1 align-middle text-center min-w-[150px]">
+                          <select value={scadenza.importo_calcolato ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.importo_calcolato)) handleToggleField(scadenza.id, "importo_calcolato", scadenza.importo_calcolato); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"><option value="NO">NO</option><option value="SI">SI</option></select>
                         </td>
 
-                        <td className="p-2 align-middle text-center min-w-[120px]">
-                          <Checkbox
-                            checked={scadenza.f24_generato || false}
-                            onCheckedChange={() =>
-                              handleToggleField(
-                                scadenza.id,
-                                "f24_generato",
-                                scadenza.f24_generato
-                              )
-                            }
-                          />
+                        <td className="px-2 py-1 align-middle text-center min-w-[120px]">
+                          <select value={scadenza.f24_generato ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.f24_generato)) handleToggleField(scadenza.id, "f24_generato", scadenza.f24_generato); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"><option value="NO">NO</option><option value="SI">SI</option></select>
                         </td>
 
-                        <td className="p-2 align-middle text-center min-w-[120px]">
-                          <Checkbox
-                            checked={scadenza.f24_comunicato || false}
-                            onCheckedChange={() =>
-                              handleToggleField(
-                                scadenza.id,
-                                "f24_comunicato",
-                                scadenza.f24_comunicato
-                              )
-                            }
-                          />
+                        <td className="px-2 py-1 align-middle text-center min-w-[120px]">
+                          <select value={scadenza.f24_comunicato ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.f24_comunicato)) handleToggleField(scadenza.id, "f24_comunicato", scadenza.f24_comunicato); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"><option value="NO">NO</option><option value="SI">SI</option></select>
                         </td>
 
-                        <td className="p-2 align-middle min-w-[150px]">
+                        <td className="px-2 py-1 align-middle min-w-[150px]">
                           <Input
                             type="text"
                             inputMode="numeric"
@@ -754,33 +726,24 @@ export default function ScadenzeCCGGPage() {
                                 });
                               }
                             }}
-                            className="w-full"
+                            className="h-8 w-full border-slate-300 bg-white"
                           />
                         </td>
 
-                        <td className="p-2 align-middle min-w-[300px]">
+                        <td className="px-2 py-1 align-middle min-w-[300px]">
                           <Textarea
                             value={localNotes[scadenza.id] ?? scadenza.note ?? ""}
                             onChange={(e) => handleNoteChange(scadenza.id, e.target.value)}
                             placeholder="Aggiungi note..."
-                            className="min-h-[60px] resize-none"
+                            rows={1} className="h-8 min-h-8 resize-none border-slate-300 bg-white py-1.5"
                           />
                         </td>
 
-                        <td className="p-2 align-middle text-center min-w-[120px]">
-                          <Checkbox
-                            checked={scadenza.conferma_riga || false}
-                            onCheckedChange={() =>
-                              handleToggleField(
-                                scadenza.id,
-                                "conferma_riga",
-                                scadenza.conferma_riga
-                              )
-                            }
-                          />
+                        <td className="px-2 py-1 align-middle text-center min-w-[120px]">
+                          <select value={scadenza.conferma_riga ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.conferma_riga)) handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"><option value="NO">NO</option><option value="SI">SI</option></select>
                         </td>
 
-                        <td className="p-2 align-middle text-center min-w-[100px]">
+                        <td className="px-2 py-1 align-middle text-center min-w-[100px]">
                           <Button
                             variant="ghost"
                             size="sm"
