@@ -1,0 +1,30 @@
+name: One shot - IMU runtime v4
+on:
+  push:
+    paths:
+      - '.github/workflows/one-shot-imu-runtime-v4.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Apply IMU patch
+        run: python .github/scripts/patch_imu_layout.py
+      - name: Verify runtime markers
+        run: |
+          grep -q '>Soggetto IMU</th>' src/pages/scadenze/imu.tsx
+          ! grep -q '>Saldo IMU</th>' src/pages/scadenze/imu.tsx
+          grep -q 'handleSoggettoImuChange' src/pages/scadenze/imu.tsx
+      - name: Commit runtime
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/pages/scadenze/imu.tsx
+          git commit -m 'Apply IMU Soggetto Acconto Dichiarazione Saldo layout'
+          git push origin main
