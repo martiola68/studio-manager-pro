@@ -111,11 +111,21 @@ export default function ScadenzarioAffittiIndex() {
         return;
       }
 
-      const { data: utenteDb, error: utenteError } = await supabase
+      let { data: utenteDb, error: utenteError } = await supabaseAny
         .from("tbutenti")
-        .select("id, studio_id")
-        .eq("id", user.id)
-        .single();
+        .select("id, studio_id, email")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!utenteDb && user.email) {
+        const fallback = await supabaseAny
+          .from("tbutenti")
+          .select("id, studio_id, email")
+          .ilike("email", user.email)
+          .maybeSingle();
+        utenteDb = fallback.data;
+        utenteError = fallback.error;
+      }
 
       if (utenteError || !utenteDb?.studio_id) {
         console.error("Errore recupero studio utente:", utenteError);

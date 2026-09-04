@@ -423,11 +423,21 @@ const initialize = async () => {
 
 setCurrentUserId(user.id);
 
-      const { data: utenteDb, error: utenteError } = await supabase
+      let { data: utenteDb, error: utenteError } = await supabaseAny
         .from("tbutenti")
         .select("id, studio_id, nome, cognome, email")
-        .eq("id", user.id)
-        .single();
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!utenteDb && user.email) {
+        const fallback = await supabaseAny
+          .from("tbutenti")
+          .select("id, studio_id, nome, cognome, email")
+          .ilike("email", user.email)
+          .maybeSingle();
+        utenteDb = fallback.data;
+        utenteError = fallback.error;
+      }
 
       if (utenteError || !utenteDb?.studio_id) {
         console.error("Errore recupero dati utente:", utenteError);
@@ -471,7 +481,7 @@ setOperatoreLabel(fullName || utenteDb.email || user.email || "");
 
           setFormData({
             cliente_id: contratto.cliente_id || "",
-            utente_operatore_id: contratto.utente_operatore_id || user.id,
+            utente_operatore_id: contratto.utente_operatore_id || utenteDb.id,
             conduttore: contratto.conduttore || "",
             descrizione_immobile_locato:
               contratto.descrizione_immobile_locato || "",
@@ -521,7 +531,7 @@ emailperalert: contratto.emailperalert || "",
       } else {
         setFormData((prev) => ({
           ...prev,
-          utente_operatore_id: user.id,
+          utente_operatore_id: utenteDb.id,
         }));
       }
     } catch (err) {
