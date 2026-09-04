@@ -66,9 +66,15 @@ async function buildMsalSerializedCache(params: {
     "User.Read",
     "Calendars.ReadWrite",
     "Mail.Send",
+    "Mail.Send.Shared",
   ];
 
-  const graphScopes = ["User.Read", "Calendars.ReadWrite", "Mail.Send"];
+  const graphScopes = [
+    "User.Read",
+    "Calendars.ReadWrite",
+    "Mail.Send",
+    "Mail.Send.Shared",
+  ];
 
   await msalApp.acquireTokenByCode({
     code: params.code,
