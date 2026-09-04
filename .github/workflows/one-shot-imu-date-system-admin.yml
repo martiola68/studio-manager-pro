@@ -1,0 +1,29 @@
+name: One shot - IMU date and system admin edit
+on:
+  push:
+    paths:
+      - '.github/workflows/one-shot-imu-date-system-admin.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Apply fixes
+        run: |
+          python .github/scripts/patch_imu_date_and_system_admin.py
+          grep -q 'const handleDichiarazioneImuChange' src/pages/scadenze/imu.tsx
+          grep -q 'from("tbtipi_scadenze")' src/pages/scadenze/imu.tsx
+          grep -q 'void handleDichiarazioneImuChange' src/pages/scadenze/imu.tsx
+          grep -q 'let canManageCatalog = systemAdmin === true' src/pages/impostazioni/tipi-scadenze.tsx
+          grep -q 'handleOpenDialog(tipo)' src/pages/impostazioni/tipi-scadenze.tsx
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/pages/scadenze/imu.tsx src/pages/impostazioni/tipi-scadenze.tsx
+          git commit -m 'Restore IMU declaration deadline lookup and system admin edit'
+          git push origin main
