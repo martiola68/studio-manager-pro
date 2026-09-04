@@ -234,7 +234,7 @@ export default async function handler(
       redirect_uri: redirectUri,
       response_mode: "query",
       scope:
-        "openid profile offline_access User.Read Calendars.ReadWrite Mail.Send",
+        "openid profile offline_access User.Read Calendars.ReadWrite Mail.Send Mail.Send.Shared",
       prompt: "select_account",
       state,
     });
