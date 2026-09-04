@@ -1,0 +1,27 @@
+name: One shot - 770 come IVA
+on:
+  push:
+    paths:
+      - '.github/workflows/one-shot-770-come-iva.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Patch 770 runtime
+        run: |
+          python .github/scripts/patch_770_come_iva.py
+          grep -q '!bg-slate-600' src/pages/scadenze/modello-770.tsx
+          grep -q 'value={isConfermata ? "SI" : "NO"}' src/pages/scadenze/modello-770.tsx
+          if grep -q 'type="checkbox"' src/pages/scadenze/modello-770.tsx; then exit 1; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/pages/scadenze/modello-770.tsx
+          git commit -m 'Align Scadenzario 770 with approved visual standard'
+          git push origin main
