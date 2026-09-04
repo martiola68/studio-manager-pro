@@ -13,7 +13,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Search,
   Trash2,
@@ -251,7 +250,7 @@ return rows.map((r) => {
     const { data, error } = await supabase
       .from("tbutenti")
       .select("*")
-      .order("cognome", { ascending: true });
+      .order("nome", { ascending: true }).order("cognome", { ascending: true });
 
     if (error) throw error;
     return ((data ?? []) as unknown) as Utente[];
@@ -965,30 +964,29 @@ const vars: Record<string, string> = {
     scadenza: ScadenzaFiscali,
     field: keyof ScadenzaFiscali
   ) => (
-    <Select
+    <select
       value={scadenza[field] ? "SI" : "NO"}
-      onValueChange={(value) =>
-        handleUpdateField(scadenza.id, field, value === "SI")
-      }
+      onChange={(e) => handleUpdateField(scadenza.id, field, e.target.value === "SI")}
+      className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"
     >
-      <SelectTrigger className="w-full">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="SI">SI</SelectItem>
-        <SelectItem value="NO">NO</SelectItem>
-      </SelectContent>
-    </Select>
+      <option value="NO">NO</option><option value="SI">SI</option>
+    </select>
   );
 
   const renderCheck = (
     scadenza: ScadenzaFiscali,
     field: keyof ScadenzaFiscali
   ) => (
-    <Checkbox
-      checked={Boolean(scadenza[field])}
-      onCheckedChange={() => handleToggleField(scadenza.id, field, scadenza[field])}
-    />
+    <select
+      value={scadenza[field] ? "SI" : "NO"}
+      onChange={(e) => {
+        const nextValue = e.target.value === "SI";
+        if (nextValue !== Boolean(scadenza[field])) handleToggleField(scadenza.id, field, scadenza[field]);
+      }}
+      className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"
+    >
+      <option value="NO">NO</option><option value="SI">SI</option>
+    </select>
   );
 
   if (loading) {
@@ -1005,8 +1003,8 @@ const vars: Record<string, string> = {
   const anni = anniDisponibili;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+    <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden bg-slate-200/70 px-3 pb-3 pt-2">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
             Scadenzario Fiscali
@@ -1039,9 +1037,9 @@ const vars: Record<string, string> = {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-6">
+      <div className="grid shrink-0 grid-cols-1 gap-4 md:grid-cols-3">
+        <Card className="border border-sky-200 bg-slate-50 shadow-sm">
+          <CardContent className="pt-5">
             <div className="text-sm text-gray-600 mb-1">
               Totale Dichiarazioni
             </div>
@@ -1050,16 +1048,16 @@ const vars: Record<string, string> = {
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6">
+        <Card className="border border-sky-200 bg-slate-50 shadow-sm">
+          <CardContent className="pt-5">
             <div className="text-sm text-gray-600 mb-1">Confermate</div>
             <div className="text-3xl font-bold text-green-600">
               {stats.confermate}
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6">
+        <Card className="border border-sky-200 bg-slate-50 shadow-sm">
+          <CardContent className="pt-5">
             <div className="text-sm text-gray-600 mb-1">Non Confermate</div>
             <div className="text-3xl font-bold text-orange-600">
               {stats.nonConfermate}
@@ -1068,8 +1066,8 @@ const vars: Record<string, string> = {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
+      <Card className="shrink-0 border border-sky-200 bg-slate-50 shadow-sm">
+        <CardHeader className="pb-3">
           <CardTitle>Filtri e Ricerca</CardTitle>
         </CardHeader>
         <CardContent>
@@ -1081,13 +1079,13 @@ const vars: Record<string, string> = {
                 placeholder="Cerca nominativo..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="h-9 border-slate-300 bg-white pl-10"
               />
             </div>
 
             <div>
               <Select value={filterOperatore} onValueChange={setFilterOperatore}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9 border-slate-300 bg-white">
                   <SelectValue placeholder="Utente Operatore" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1106,7 +1104,7 @@ const vars: Record<string, string> = {
                 value={annoConsultazione.toString()}
                 onValueChange={(value) => setAnnoConsultazione(parseInt(value))}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-9 border-slate-300 bg-white">
                   <SelectValue placeholder="Anno consultazione" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1122,91 +1120,91 @@ const vars: Record<string, string> = {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="p-0">
-          <div className="relative w-full overflow-auto max-h-[600px]">
+      <Card className="flex min-h-0 flex-1 flex-col overflow-hidden border border-sky-200 bg-slate-50 shadow-sm">
+        <CardContent className="min-h-0 flex-1 overflow-hidden p-0">
+          <div className="relative h-full w-full overflow-auto">
             <table className="w-full caption-bottom text-sm">
-              <thead className="[&_tr]:border-b sticky top-0 z-30 bg-white shadow-sm">
-                <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                  <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground sticky-col-header border-r min-w-[300px]">
+              <thead className="sticky top-0 z-30 bg-slate-600 text-white shadow-sm [&_tr]:border-b [&_tr]:border-slate-500">
+                <tr className="border-b border-slate-500">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 sticky-col-header border-r border-slate-500 !bg-slate-600 !text-slate-50 min-w-[300px]">
                     Nominativo
                   </th>
-                  <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[180px]">
                     Operatore
                   </th>
-                  <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground min-w-[120px]">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[120px]">
   Tipo Redditi
 </th>
 
-<th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">
+<th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[120px]">
   Soggetto ISA/Equiparati
 </th>
 
-<th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[80px]">
+<th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[80px]">
   Comp.
 </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[80px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[80px]">
                     Def.
                   </th>
 
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[170px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[170px]">
                     Saldo/1° Acc./CCIAA
                   </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[120px]">
                     Comunicato
                   </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[150px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[150px]">
                     Data comunicazione
                   </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[120px]">
                     Email F24
                   </th>
 
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[140px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[140px]">
                     Invio Redditi
                   </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[130px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[130px]">
                     Data invio
                   </th>
                  
 
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[100px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[100px]">
                     IRAP
                   </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[140px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[140px]">
                     Compilato
                   </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[140px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[140px]">
                     Definitivo
                   </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[140px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[140px]">
                     Invio IRAP
                   </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[130px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[130px]">
                     Data invio
                   </th>
                  
 
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[150px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[150px]">
                     2° Acconto
                   </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[120px]">
                     Comunicato
                   </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[150px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[150px]">
                     Data comunicazione
                   </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[120px]">
                     Email F24
                   </th>
 
-                  <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground min-w-[200px]">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[200px]">
                     Note
                   </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[120px]">
                     Conferma Riga
                   </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[100px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[100px]">
                     Azioni
                   </th>
                 </tr>
@@ -1217,7 +1215,7 @@ const vars: Record<string, string> = {
                   <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                     <td
                       colSpan={24}
-                      className="p-2 align-middle text-center text-gray-500"
+                      className="px-2 py-1 align-middle text-center text-gray-500"
                     >
                       Nessun record trovato
                     </td>
@@ -1229,25 +1227,25 @@ const vars: Record<string, string> = {
                       className={`border-b transition-colors data-[state=selected]:bg-muted ${
                         scadenza.conferma_riga
                           ? "bg-green-100 hover:bg-green-200"
-                          : "hover:bg-green-50"
+                          : "bg-slate-50 hover:bg-slate-100"
                       }`}
                     >
                       <td
                         style={{
                           backgroundColor: scadenza.conferma_riga
                             ? "#dcfce7"
-                            : "#ffffff",
+                            : "#f8fafc",
                         }}
-                        className="p-2 align-middle sticky-col-cell border-r font-medium min-w-[300px]"
+                        className="px-2 py-1 align-middle sticky-col-cell border-r font-medium min-w-[300px]"
                       >
                         {scadenza.nominativo}
                       </td>
 
-                      <td className="p-2 align-middle min-w-[180px]">
+                      <td className="px-2 py-1 align-middle min-w-[180px]">
                         {getUtenteNome(scadenza.utente_operatore_id)}
                       </td>
 
-<td className="p-2 align-middle min-w-[140px]">
+<td className="px-2 py-1 align-middle min-w-[140px]">
   <Select
     value={scadenza.tipo_redditi || "__none__"}
     onValueChange={(value) =>
@@ -1257,7 +1255,7 @@ const vars: Record<string, string> = {
       )
     }
   >
-    <SelectTrigger className="w-full">
+    <SelectTrigger className="h-8 w-full border-slate-300 bg-white">
       <SelectValue placeholder="Tipo Redditi" />
     </SelectTrigger>
 
@@ -1274,36 +1272,33 @@ const vars: Record<string, string> = {
   </Select>
 </td>
 
-<td className="p-2 align-middle text-center min-w-[120px]">
-  <Checkbox
-    checked={Boolean(scadenza.soggetto_isa)}
-    onCheckedChange={() => handleToggleSoggettoIsa(scadenza)}
-  />
+<td className="px-2 py-1 align-middle text-center min-w-[120px]">
+  <select value={scadenza.soggetto_isa ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.soggetto_isa)) handleToggleSoggettoIsa(scadenza); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"><option value="NO">NO</option><option value="SI">SI</option></select>
 </td>
 
-<td className="p-2 align-middle text-center min-w-[80px]">
+<td className="px-2 py-1 align-middle text-center min-w-[80px]">
   {renderCheck(scadenza, "mod_r_compilato")}
 </td>
 
-                      <td className="p-2 align-middle text-center min-w-[80px]">
+                      <td className="px-2 py-1 align-middle text-center min-w-[80px]">
                         {renderCheck(scadenza, "mod_r_definitivo")}
                       </td>
 
-                      <td className="p-2 align-middle min-w-[170px]">
+                      <td className="px-2 py-1 align-middle min-w-[170px]">
                         {renderSiNoSelect(
                           scadenza,
                           "saldi_primo_acconti_cciaa_dovuti"
                         )}
                       </td>
 
-                      <td className="p-2 align-middle min-w-[120px]">
+                      <td className="px-2 py-1 align-middle min-w-[120px]">
                         {renderCheck(
   scadenza,
   "conferma_ires_saldo_acconto"
 )}
                       </td>
 
-                      <td className="p-2 align-middle min-w-[150px]">
+                      <td className="px-2 py-1 align-middle min-w-[150px]">
                         <Input
                           type="date"
                           value={scadenza.data_com1 || ""}
@@ -1314,15 +1309,11 @@ const vars: Record<string, string> = {
                               e.target.value
                             )
                           }
-                          className={
-                            scadenza.conferma_ires_saldo_acconto
-                              ? "w-full bg-green-500 text-black"
-                              : "w-full"
-                          }
+                          className="h-8 w-full border-slate-300 bg-white"
                         />
                       </td>
 
-                      <td className="p-2 align-middle text-center min-w-[120px]">
+                      <td className="px-2 py-1 align-middle text-center min-w-[120px]">
                        {scadenza.saldi_primo_acconti_cciaa_dovuti ? (
 <Button
   type="button"
@@ -1344,11 +1335,11 @@ const vars: Record<string, string> = {
 )}
                       </td>
 
-                      <td className="p-2 align-middle text-center min-w-[140px]">
+                      <td className="px-2 py-1 align-middle text-center min-w-[140px]">
                         {renderCheck(scadenza, "conferma_invio_dichiarazione")}
                       </td>
 
-                      <td className="p-2 align-middle min-w-[130px]">
+                      <td className="px-2 py-1 align-middle min-w-[130px]">
                         <Input
                           type="date"
                           value={scadenza.data_r_invio || ""}
@@ -1359,34 +1350,30 @@ const vars: Record<string, string> = {
                               e.target.value
                             )
                           }
-                          className={
-                            scadenza.conferma_invio_dichiarazione
-                              ? "w-full bg-green-500 text-black"
-                              : "w-full"
-                          }
+                          className="h-8 w-full border-slate-300 bg-white"
                         />
                       </td>
 
-                      <td className="p-2 align-middle text-center min-w-[100px]">
+                      <td className="px-2 py-1 align-middle text-center min-w-[100px]">
                         {renderCheck(scadenza, "con_irap")}
                       </td>
 
-                      <td className="p-2 align-middle text-center min-w-[140px]">
+                      <td className="px-2 py-1 align-middle text-center min-w-[140px]">
                         {renderCheck(scadenza, "conferma_irap_saldo_acconto")}
                       </td>
 
-                      <td className="p-2 align-middle text-center min-w-[140px]">
+                      <td className="px-2 py-1 align-middle text-center min-w-[140px]">
                         {renderCheck(scadenza, "conferma_irap_secondo_acconto")}
                       </td>
 
-                      <td className="p-2 align-middle text-center min-w-[140px]">
+                      <td className="px-2 py-1 align-middle text-center min-w-[140px]">
                         {renderCheck(
                           scadenza,
                           "conferma_irap_invio_dichiarazione"
                         )}
                       </td>
 
-                      <td className="p-2 align-middle min-w-[130px]">
+                      <td className="px-2 py-1 align-middle min-w-[130px]">
                         <Input
                           type="date"
                           value={scadenza.data_i_invio || ""}
@@ -1397,26 +1384,22 @@ const vars: Record<string, string> = {
                               e.target.value
                             )
                           }
-                          className={
-                            scadenza.conferma_irap_invio_dichiarazione
-                              ? "w-full bg-green-500 text-black"
-                              : "w-full"
-                          }
+                          className="h-8 w-full border-slate-300 bg-white"
                         />
                       </td>
 
-                      <td className="p-2 align-middle min-w-[150px]">
+                      <td className="px-2 py-1 align-middle min-w-[150px]">
                         {renderSiNoSelect(scadenza, "secondo_acconti_dovuti")}
                       </td>
 
-                      <td className="p-2 align-middle min-w-[120px]">
+                      <td className="px-2 py-1 align-middle min-w-[120px]">
                         {renderCheck(
   scadenza,
   "conferma_ires_secondo_acconto"
 )}
                       </td>
 
-                      <td className="p-2 align-middle min-w-[150px]">
+                      <td className="px-2 py-1 align-middle min-w-[150px]">
                         <Input
                           type="date"
                           value={scadenza.data_com2 || ""}
@@ -1427,15 +1410,11 @@ const vars: Record<string, string> = {
                               e.target.value
                             )
                           }
-                          className={
-                            scadenza.conferma_ires_secondo_acconto
-                              ? "w-full bg-green-500 text-black"
-                              : "w-full"
-                          }
+                          className="h-8 w-full border-slate-300 bg-white"
                         />
                       </td>
 
-                      <td className="p-2 align-middle text-center min-w-[120px]">
+                      <td className="px-2 py-1 align-middle text-center min-w-[120px]">
                         {scadenza.secondo_acconti_dovuti ? (
  <Button
   type="button"
@@ -1454,22 +1433,22 @@ const vars: Record<string, string> = {
 )}
                       </td>
 
-                      <td className="p-2 align-middle min-w-[200px]">
+                      <td className="px-2 py-1 align-middle min-w-[200px]">
                         <Textarea
                           value={localNotes[scadenza.id] ?? scadenza.note ?? ""}
                           onChange={(e) =>
                             handleNoteChange(scadenza.id, e.target.value)
                           }
-                          className="w-full min-h-[60px]"
+                          rows={1} className="h-8 min-h-8 w-full resize-none border-slate-300 bg-white py-1.5"
                           placeholder="Note..."
                         />
                       </td>
 
-                      <td className="p-2 align-middle text-center min-w-[120px]">
+                      <td className="px-2 py-1 align-middle text-center min-w-[120px]">
                         {renderCheck(scadenza, "conferma_riga")}
                       </td>
 
-                      <td className="p-2 align-middle text-center min-w-[100px]">
+                      <td className="px-2 py-1 align-middle text-center min-w-[100px]">
                         <Button
                           variant="destructive"
                           size="sm"
