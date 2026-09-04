@@ -1,0 +1,39 @@
+name: One shot - 770 come IVA v2
+on:
+  push:
+    paths:
+      - '.github/workflows/one-shot-770-come-iva-v2.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Fix patch script header matcher
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('.github/scripts/patch_770_come_iva.py')
+          s = p.read_text(encoding='utf-8')
+          old = "s = s.replace('sticky-col-header border-r min-w-[200px]', 'sticky-col-header border-r border-slate-500 min-w-[260px] !bg-slate-600', 1)"
+          new = "s = re.sub(r'(sticky-col-header)([^\\\"]*?)min-w-\\[200px\\]', r'\\1\\2min-w-[260px] !bg-slate-600', s, count=1)"
+          if old not in s:
+              raise SystemExit('old sticky header matcher not found')
+          p.write_text(s.replace(old, new, 1), encoding='utf-8')
+          PY
+      - name: Patch 770 runtime
+        run: |
+          python .github/scripts/patch_770_come_iva.py
+          grep -q '!bg-slate-600' src/pages/scadenze/modello-770.tsx
+          grep -q 'value={isConfermata ? "SI" : "NO"}' src/pages/scadenze/modello-770.tsx
+          if grep -q 'type="checkbox"' src/pages/scadenze/modello-770.tsx; then exit 1; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/pages/scadenze/modello-770.tsx
+          git commit -m 'Align Scadenzario 770 with approved visual standard'
+          git push origin main
