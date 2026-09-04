@@ -63,31 +63,50 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (clientiError) throw clientiError;
 
     const clienteIdSet = new Set((clienti || []).map((c: any) => String(c.id)));
-    if (clienteIdSet.size === 0) {
-      return res.status(200).json({ repaired: 0, studio_id: studioId });
-    }
 
-    // Service role bypassa la RLS: leggiamo la tabella una sola volta ed evitiamo
-    // una query .in(...) enorme con centinaia/migliaia di cliente_id.
     const { data: contratti, error: contrattiError } = await supabaseAdmin
       .from("tbscadaffitti")
       .select("id, cliente_id, studio_id");
 
     if (contrattiError) throw contrattiError;
 
-    const daRiparare = (contratti || []).filter((r: any) => {
-      const clienteId = String(r.cliente_id || "");
-      return (
-        clienteIdSet.has(clienteId) &&
-        String(r.studio_id || "") !== studioId
-      );
+    const all = contratti || [];
+    const matchingCliente = all.filter((r: any) =>
+      clienteIdSet.has(String(r.cliente_id || ""))
+    );
+    const matchingStudio = all.filter(
+      (r: any) => String(r.studio_id || "") === studioId
+    );
+    const nullStudio = all.filter((r: any) => !r.studio_id);
+    const daRiparare = matchingCliente.filter(
+      (r: any) => String(r.studio_id || "") !== studioId
+    );
+
+    console.info("AFFITTI_DIAGNOSTICA", {
+      studioId,
+      clientiStudio: clienteIdSet.size,
+      contrattiTotali: all.length,
+      contrattiConClienteStudio: matchingCliente.length,
+      contrattiGiaStudio: matchingStudio.length,
+      contrattiStudioNull: nullStudio.length,
+      contrattiDaRiparare: daRiparare.length,
     });
 
-    if (daRiparare.length === 0) {
-      return res.status(200).json({ repaired: 0, studio_id: studioId });
+    if (clienteIdSet.size === 0 || daRiparare.length === 0) {
+      return res.status(200).json({
+        repaired: 0,
+        studio_id: studioId,
+        diagnostics: {
+          clientiStudio: clienteIdSet.size,
+          contrattiTotali: all.length,
+          contrattiConClienteStudio: matchingCliente.length,
+          contrattiGiaStudio: matchingStudio.length,
+          contrattiStudioNull: nullStudio.length,
+          contrattiDaRiparare: daRiparare.length,
+        },
+      });
     }
 
-    // Aggiornamento a blocchi per evitare URL troppo lunghi anche nella fase di repair.
     const ids = daRiparare.map((r: any) => String(r.id));
     const batchSize = 100;
     for (let i = 0; i < ids.length; i += batchSize) {
@@ -100,7 +119,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (updateError) throw updateError;
     }
 
-    return res.status(200).json({ repaired: ids.length, studio_id: studioId });
+    return res.status(200).json({
+      repaired: ids.length,
+      studio_id: studioId,
+      diagnostics: {
+        clientiStudio: clienteIdSet.size,
+        contrattiTotali: all.length,
+        contrattiConClienteStudio: matchingCliente.length,
+        contrattiGiaStudio: matchingStudio.length,
+        contrattiStudioNull: nullStudio.length,
+        contrattiDaRiparare: daRiparare.length,
+      },
+    });
   } catch (error: any) {
     console.error("Errore ripristino visibilità contratti affitto:", error);
     return res.status(500).json({
