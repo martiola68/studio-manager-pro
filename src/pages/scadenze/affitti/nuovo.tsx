@@ -87,6 +87,8 @@ emailperalert: "",
   contratto_concluso: false,
 };
 
+const ALERT_CENTRALI_GIORNI = [30, 20, 10, 5, 2, 1, 0] as const;
+
 function addYears(dateString: string, yearsToAdd: number) {
   const d = new Date(dateString);
   if (Number.isNaN(d.getTime())) return "";
@@ -295,6 +297,17 @@ function calcolaDateAlert(dataScadenza: string) {
     alert2_data: subtractDays(dataScadenza, 15),
     alert3_data: dataScadenza,
   };
+}
+
+function calcolaDateAlertCentrali(dataScadenza: string) {
+  return ALERT_CENTRALI_GIORNI.map((giorni) => ({
+    giorni,
+    data: dataScadenza
+      ? giorni === 0
+        ? dataScadenza
+        : subtractDays(dataScadenza, giorni)
+      : "",
+  }));
 }
 
 function getContattoLabel(contatto: ContattoOption) {
@@ -1365,30 +1378,31 @@ if (typeof id === "string") {
 </div>
 
         <div className="mt-6 rounded border bg-white p-4">
-          <h2 className="mb-4 text-lg font-semibold">Alert annuali automatici</h2>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold">Alert annuali automatici</h2>
+            <span className="rounded bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
+              Gestiti da Scadenze unificate
+            </span>
+          </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="rounded border p-3">
-              <div className="mb-2 text-sm font-medium">Alert 1</div>
-              <div className="text-sm text-gray-700">
-                30 giorni prima: <strong>{formatDate(formData.alert1_data)}</strong>
-              </div>
-            </div>
+          <p className="mb-4 text-sm text-gray-600">
+            Sequenza standard centralizzata: 30, 20, 10, 5, 2 e 1 giorno prima,
+            più l&apos;alert nel giorno della scadenza.
+          </p>
 
-            <div className="rounded border p-3">
-              <div className="mb-2 text-sm font-medium">Alert 2</div>
-              <div className="text-sm text-gray-700">
-                15 giorni prima: <strong>{formatDate(formData.alert2_data)}</strong>
-              </div>
-            </div>
-
-            <div className="rounded border p-3">
-              <div className="mb-2 text-sm font-medium">Alert 3</div>
-              <div className="text-sm text-gray-700">
-                Giorno della scadenza:{" "}
-                <strong>{formatDate(formData.alert3_data)}</strong>
-              </div>
-            </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-7">
+            {calcolaDateAlertCentrali(formData.data_prossima_scadenza).map(
+              ({ giorni, data }) => (
+                <div key={giorni} className="rounded border p-3">
+                  <div className="mb-2 text-sm font-medium">
+                    {giorni === 0 ? "Giorno scadenza" : `-${giorni} giorni`}
+                  </div>
+                  <div className="text-sm text-gray-700">
+                    <strong>{formatDate(data)}</strong>
+                  </div>
+                </div>
+              )
+            )}
           </div>
         </div>
 
