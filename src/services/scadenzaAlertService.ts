@@ -167,8 +167,8 @@ export const scadenzaAlertService = {
             nominativo, 
             operatore,
             professionista,
-            acconto_imu, acconto_dovuto, acconto_comunicato,
-            saldo_imu, saldo_dovuto, saldo_comunicato,
+            soggetto_imu, acconto_dovuto, acconto_comunicato,
+            saldo_dovuto, saldo_comunicato,
             dichiarazione_imu, dichiarazione_presentata,
             tbclienti!inner(utente_operatore_id)
           `);
@@ -183,12 +183,12 @@ export const scadenzaAlertService = {
         
         if (nomeScadenza.includes("acconto")) {
           query = query
-            .eq("acconto_imu", true)
+            .eq("soggetto_imu", true)
             .eq("acconto_dovuto", true)
             .eq("acconto_comunicato", false);
         } else if (nomeScadenza.includes("saldo")) {
           query = query
-            .eq("saldo_imu", true)
+            .eq("soggetto_imu", true)
             .eq("saldo_dovuto", true)
             .eq("saldo_comunicato", false);
         } else if (nomeScadenza.includes("dichiarazione")) {

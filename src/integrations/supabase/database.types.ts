@@ -1948,7 +1948,7 @@ gestione_esterometro?: boolean | null
         Row: {
           acconto_comunicato: boolean | null
           acconto_dovuto: boolean | null
-          acconto_imu: boolean | null
+          soggetto_imu: boolean | null
           conferma_riga: boolean | null
           created_at: string | null
           data_com_acconto: string | null
@@ -1964,14 +1964,13 @@ gestione_esterometro?: boolean | null
           professionista: string | null
           saldo_comunicato: boolean | null
           saldo_dovuto: boolean | null
-          saldo_imu: boolean | null
           studio_id: string | null
           updated_at: string | null
         }
         Insert: {
           acconto_comunicato?: boolean | null
           acconto_dovuto?: boolean | null
-          acconto_imu?: boolean | null
+          soggetto_imu?: boolean | null
           conferma_riga?: boolean | null
           created_at?: string | null
           data_com_acconto?: string | null
@@ -1987,14 +1986,13 @@ gestione_esterometro?: boolean | null
           professionista?: string | null
           saldo_comunicato?: boolean | null
           saldo_dovuto?: boolean | null
-          saldo_imu?: boolean | null
           studio_id?: string | null
           updated_at?: string | null
         }
         Update: {
           acconto_comunicato?: boolean | null
           acconto_dovuto?: boolean | null
-          acconto_imu?: boolean | null
+          soggetto_imu?: boolean | null
           conferma_riga?: boolean | null
           created_at?: string | null
           data_com_acconto?: string | null
@@ -2010,7 +2008,6 @@ gestione_esterometro?: boolean | null
           professionista?: string | null
           saldo_comunicato?: boolean | null
           saldo_dovuto?: boolean | null
-          saldo_imu?: boolean | null
           studio_id?: string | null
           updated_at?: string | null
         }

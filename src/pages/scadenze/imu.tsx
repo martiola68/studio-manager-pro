@@ -301,14 +301,12 @@ const [sendingEmail, setSendingEmail] = useState(false);
     try {
       const payload = value
         ? {
-            acconto_imu: true,
-            saldo_imu: true,
+            soggetto_imu: true,
             acconto_dovuto: true,
             saldo_dovuto: true,
           }
         : {
-            acconto_imu: false,
-            saldo_imu: false,
+            soggetto_imu: false,
           };
 
       const { error } = await supabase
@@ -1021,9 +1019,9 @@ const vars: Record<string, string> = {
               "-"}
           </td>
 
-          <td className={`${baseCellClass} text-center min-w-[120px] ${sectionTone(scadenza.acconto_imu, false, isGreenRow)}`}>
+          <td className={`${baseCellClass} text-center min-w-[120px] ${sectionTone(scadenza.soggetto_imu, false, isGreenRow)}`}>
             <select
-              value={scadenza.acconto_imu ? "SI" : "NO"}
+              value={scadenza.soggetto_imu ? "SI" : "NO"}
               onChange={(e) => handleSoggettoImuChange(scadenza, e.target.value === "SI")}
               className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"
             >
@@ -1032,40 +1030,40 @@ const vars: Record<string, string> = {
             </select>
           </td>
 
-          <td className={`${baseCellClass} text-center min-w-[120px] print-hide ${sectionTone(scadenza.acconto_imu, scadenza.conferma_acconto_imu, isGreenRow)}`}>
-            <select disabled={!scadenza.acconto_imu} value={scadenza.acconto_dovuto ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.acconto_dovuto)) handleToggleField(scadenza.id, "acconto_dovuto", scadenza.acconto_dovuto); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"><option value="NO">NO</option><option value="SI">SI</option></select>
+          <td className={`${baseCellClass} text-center min-w-[120px] print-hide ${sectionTone(scadenza.soggetto_imu, scadenza.conferma_acconto_imu, isGreenRow)}`}>
+            <select disabled={!scadenza.soggetto_imu} value={scadenza.acconto_dovuto ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.acconto_dovuto)) handleToggleField(scadenza.id, "acconto_dovuto", scadenza.acconto_dovuto); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"><option value="NO">NO</option><option value="SI">SI</option></select>
           </td>
 
-          <td className={`${baseCellClass} text-center min-w-[120px] ${sectionTone(scadenza.acconto_imu, scadenza.conferma_acconto_imu, isGreenRow)}`}>
-            <select disabled={!scadenza.acconto_imu} value={scadenza.conferma_acconto_imu ? "SI" : "NO"} onChange={(e) => handleComunicatoChange(scadenza, "acconto", e.target.value === "SI")} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"><option value="NO">NO</option><option value="SI">SI</option></select>
+          <td className={`${baseCellClass} text-center min-w-[120px] ${sectionTone(scadenza.soggetto_imu, scadenza.conferma_acconto_imu, isGreenRow)}`}>
+            <select disabled={!scadenza.soggetto_imu} value={scadenza.conferma_acconto_imu ? "SI" : "NO"} onChange={(e) => handleComunicatoChange(scadenza, "acconto", e.target.value === "SI")} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"><option value="NO">NO</option><option value="SI">SI</option></select>
           </td>
 
-          <td className={`${baseCellClass} min-w-[160px] print-hide ${sectionTone(scadenza.acconto_imu, scadenza.conferma_acconto_imu, isGreenRow)}`}>
-            <Input type="date" disabled={!scadenza.acconto_imu} value={scadenza.data_com_acconto || ""} onChange={(e) => handleUpdateField(scadenza.id, "data_com_acconto", e.target.value)} className="h-8 w-full border-slate-300 bg-white text-xs disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400" />
+          <td className={`${baseCellClass} min-w-[160px] print-hide ${sectionTone(scadenza.soggetto_imu, scadenza.conferma_acconto_imu, isGreenRow)}`}>
+            <Input type="date" disabled={!scadenza.soggetto_imu} value={scadenza.data_com_acconto || ""} onChange={(e) => handleUpdateField(scadenza.id, "data_com_acconto", e.target.value)} className="h-8 w-full border-slate-300 bg-white text-xs disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400" />
           </td>
 
-          <td className={`${baseCellClass} text-center min-w-[140px] print-hide ${declarationTone(scadenza.acconto_imu, scadenza.dichiarazione_imu, scadenza.conferma_dichiarazione_imu)}`}>
-            <select disabled={!scadenza.acconto_imu} value={scadenza.dichiarazione_imu ? "SI" : "NO"} onChange={(e) => void handleDichiarazioneImuChange(scadenza, e.target.value === "SI")} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"><option value="NO">NO</option><option value="SI">SI</option></select>
+          <td className={`${baseCellClass} text-center min-w-[140px] print-hide ${declarationTone(scadenza.soggetto_imu, scadenza.dichiarazione_imu, scadenza.conferma_dichiarazione_imu)}`}>
+            <select disabled={!scadenza.soggetto_imu} value={scadenza.dichiarazione_imu ? "SI" : "NO"} onChange={(e) => void handleDichiarazioneImuChange(scadenza, e.target.value === "SI")} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"><option value="NO">NO</option><option value="SI">SI</option></select>
           </td>
 
-          <td className={`${baseCellClass} min-w-[170px] print-hide ${declarationTone(scadenza.acconto_imu, scadenza.dichiarazione_imu, scadenza.conferma_dichiarazione_imu)}`}>
+          <td className={`${baseCellClass} min-w-[170px] print-hide ${declarationTone(scadenza.soggetto_imu, scadenza.dichiarazione_imu, scadenza.conferma_dichiarazione_imu)}`}>
             <Input type="date" disabled value={scadenza.data_scad_dichiarazione || ""} className="h-8 w-full border-slate-300 bg-white text-xs disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500" />
           </td>
 
-          <td className={`${baseCellClass} text-center min-w-[140px] print-hide ${declarationTone(scadenza.acconto_imu, scadenza.dichiarazione_imu, scadenza.conferma_dichiarazione_imu)}`}>
-            <select disabled={!scadenza.acconto_imu || !scadenza.dichiarazione_imu} value={scadenza.conferma_dichiarazione_imu ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.conferma_dichiarazione_imu)) handleToggleField(scadenza.id, "conferma_dichiarazione_imu", scadenza.conferma_dichiarazione_imu); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"><option value="NO">NO</option><option value="SI">SI</option></select>
+          <td className={`${baseCellClass} text-center min-w-[140px] print-hide ${declarationTone(scadenza.soggetto_imu, scadenza.dichiarazione_imu, scadenza.conferma_dichiarazione_imu)}`}>
+            <select disabled={!scadenza.soggetto_imu || !scadenza.dichiarazione_imu} value={scadenza.conferma_dichiarazione_imu ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.conferma_dichiarazione_imu)) handleToggleField(scadenza.id, "conferma_dichiarazione_imu", scadenza.conferma_dichiarazione_imu); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"><option value="NO">NO</option><option value="SI">SI</option></select>
           </td>
 
-          <td className={`${baseCellClass} text-center min-w-[120px] print-hide ${sectionTone(scadenza.acconto_imu, scadenza.conferma_saldo_imu, isGreenRow)}`}>
-            <select disabled={!scadenza.acconto_imu} value={scadenza.saldo_dovuto ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.saldo_dovuto)) handleToggleField(scadenza.id, "saldo_dovuto", scadenza.saldo_dovuto); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"><option value="NO">NO</option><option value="SI">SI</option></select>
+          <td className={`${baseCellClass} text-center min-w-[120px] print-hide ${sectionTone(scadenza.soggetto_imu, scadenza.conferma_saldo_imu, isGreenRow)}`}>
+            <select disabled={!scadenza.soggetto_imu} value={scadenza.saldo_dovuto ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.saldo_dovuto)) handleToggleField(scadenza.id, "saldo_dovuto", scadenza.saldo_dovuto); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"><option value="NO">NO</option><option value="SI">SI</option></select>
           </td>
 
-          <td className={`${baseCellClass} text-center min-w-[120px] ${sectionTone(scadenza.acconto_imu, scadenza.conferma_saldo_imu, isGreenRow)}`}>
-            <select disabled={!scadenza.acconto_imu} value={scadenza.conferma_saldo_imu ? "SI" : "NO"} onChange={(e) => handleComunicatoChange(scadenza, "saldo", e.target.value === "SI")} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"><option value="NO">NO</option><option value="SI">SI</option></select>
+          <td className={`${baseCellClass} text-center min-w-[120px] ${sectionTone(scadenza.soggetto_imu, scadenza.conferma_saldo_imu, isGreenRow)}`}>
+            <select disabled={!scadenza.soggetto_imu} value={scadenza.conferma_saldo_imu ? "SI" : "NO"} onChange={(e) => handleComunicatoChange(scadenza, "saldo", e.target.value === "SI")} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"><option value="NO">NO</option><option value="SI">SI</option></select>
           </td>
 
-          <td className={`${baseCellClass} min-w-[160px] print-hide ${sectionTone(scadenza.acconto_imu, scadenza.conferma_saldo_imu, isGreenRow)}`}>
-            <Input type="date" disabled={!scadenza.acconto_imu} value={scadenza.data_com_saldo || ""} onChange={(e) => handleUpdateField(scadenza.id, "data_com_saldo", e.target.value)} className="h-8 w-full border-slate-300 bg-white text-xs disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400" />
+          <td className={`${baseCellClass} min-w-[160px] print-hide ${sectionTone(scadenza.soggetto_imu, scadenza.conferma_saldo_imu, isGreenRow)}`}>
+            <Input type="date" disabled={!scadenza.soggetto_imu} value={scadenza.data_com_saldo || ""} onChange={(e) => handleUpdateField(scadenza.id, "data_com_saldo", e.target.value)} className="h-8 w-full border-slate-300 bg-white text-xs disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400" />
           </td>
 
           <td className={`${baseCellClass} min-w-[300px] print-hide ${rowSideTone(isGreenRow)}`}>
@@ -1159,7 +1157,7 @@ const vars: Record<string, string> = {
                         <td style={{ textAlign: "left" }}>
                           {scadenza.nominativo || "-"}
                         </td>
-                        <td>{scadenza.acconto_imu ? "Sì" : "No"}</td>
+                        <td>{scadenza.soggetto_imu ? "Sì" : "No"}</td>
                         <td>{scadenza.acconto_comunicato ? "Sì" : "No"}</td>
                         <td>{scadenza.saldo_comunicato ? "Sì" : "No"}</td>
                         <td>{scadenza.conferma_riga ? "Sì" : "No"}</td>

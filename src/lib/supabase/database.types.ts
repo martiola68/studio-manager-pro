@@ -1530,7 +1530,7 @@ id?: string
           acconto_comunicato: boolean | null
           acconto_data: string | null
           acconto_dovuto: boolean | null
-          acconto_imu: boolean | null
+          soggetto_imu: boolean | null
           conferma_riga: boolean | null
           confermariga: boolean | null
           created_at: string | null
@@ -1544,7 +1544,6 @@ id?: string
           saldo_comunicato: boolean | null
           saldo_data: string | null
           saldo_dovuto: boolean | null
-          saldo_imu: boolean | null
           studio_id: string
           updated_at: string | null
           utente_operatore_id: string | null
@@ -1554,7 +1553,7 @@ id?: string
           acconto_comunicato?: boolean | null
           acconto_data?: string | null
           acconto_dovuto?: boolean | null
-          acconto_imu?: boolean | null
+          soggetto_imu?: boolean | null
           conferma_riga?: boolean | null
           confermariga?: boolean | null
           created_at?: string | null
@@ -1568,7 +1567,6 @@ id?: string
           saldo_comunicato?: boolean | null
           saldo_data?: string | null
           saldo_dovuto?: boolean | null
-          saldo_imu?: boolean | null
           studio_id: string
           updated_at?: string | null
           utente_operatore_id?: string | null
@@ -1578,7 +1576,7 @@ id?: string
           acconto_comunicato?: boolean | null
           acconto_data?: string | null
           acconto_dovuto?: boolean | null
-          acconto_imu?: boolean | null
+          soggetto_imu?: boolean | null
           conferma_riga?: boolean | null
           confermariga?: boolean | null
           created_at?: string | null
@@ -1592,7 +1590,6 @@ id?: string
           saldo_comunicato?: boolean | null
           saldo_data?: string | null
           saldo_dovuto?: boolean | null
-          saldo_imu?: boolean | null
           studio_id?: string
           updated_at?: string | null
           utente_operatore_id?: string | null
