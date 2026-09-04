@@ -1148,7 +1148,6 @@ const loadScadenze = async (): Promise<ScadenzaBilancioExt[]> => {
                           placeholder="Aggiungi note..."
                           rows={1}
                           className="h-8 min-h-8 resize-none border-slate-300 bg-white py-1.5"
-                          className="min-h-[60px] resize-none"
                         />
                       </td>
 
