@@ -1,0 +1,24 @@
+name: One shot - Bilanci come IVA
+on:
+  push:
+    paths:
+      - '.github/workflows/one-shot-bilanci-come-iva.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Patch Bilanci
+        run: |
+          python .github/scripts/patch_bilanci_come_iva.py
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/pages/scadenze/bilanci.tsx
+          git commit -m 'Restyle Scadenzario Bilanci like approved IVA layout'
+          git push origin main
