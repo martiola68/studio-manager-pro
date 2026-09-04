@@ -299,18 +299,28 @@ const [sendingEmail, setSendingEmail] = useState(false);
 
   const handleSoggettoImuChange = async (scadenza: ScadenzaImu, value: boolean) => {
     try {
+      const payload = value
+        ? {
+            acconto_imu: true,
+            saldo_imu: true,
+            acconto_dovuto: true,
+            saldo_dovuto: true,
+          }
+        : {
+            acconto_imu: false,
+            saldo_imu: false,
+          };
+
       const { error } = await supabase
         .from("tbscadimu")
-        .update({ acconto_imu: value, saldo_imu: value })
+        .update(payload)
         .eq("id", scadenza.id);
 
       if (error) throw error;
 
       setScadenze((prev) =>
         prev.map((row) =>
-          row.id === scadenza.id
-            ? { ...row, acconto_imu: value, saldo_imu: value }
-            : row
+          row.id === scadenza.id ? { ...row, ...payload } : row
         )
       );
     } catch (error: any) {
@@ -646,8 +656,8 @@ const vars: Record<string, string> = {
   ) => {
     if (rowConfirmed) return "bg-green-200";
     if (!enabled) return "bg-slate-200";
-    if (completed) return "bg-yellow-200";
-    return "bg-orange-200";
+    if (completed) return "bg-green-200";
+    return "bg-orange-300";
   };
 
   const rowSideTone = (rowConfirmed: boolean) =>
@@ -919,7 +929,9 @@ const vars: Record<string, string> = {
           className="border-b border-gray-300"
         >
           <td
-            className="sticky-col-cell p-2 align-middle font-medium min-w-[320px] border-r border-gray-300 !bg-slate-50"
+            className={`sticky-col-cell p-2 align-middle font-medium min-w-[320px] border-r border-gray-300 ${
+              isGreenRow ? "!bg-green-200" : "!bg-slate-50"
+            }`}
           >
             {scadenza.nominativo}
           </td>
