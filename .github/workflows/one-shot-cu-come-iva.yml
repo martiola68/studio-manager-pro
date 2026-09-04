@@ -1,0 +1,73 @@
+name: One shot - CU come IVA
+on:
+  push:
+    paths: ['.github/workflows/one-shot-cu-come-iva.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Modifica e commit runtime CU
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/pages/scadenze/cu.tsx')
+          s=p.read_text(encoding='utf-8'); original=s
+          s=s.replace('import { Checkbox } from "@/components/ui/checkbox";\n','')
+          s=s.replace('.order("cognome", { ascending: true });','.order("nome", { ascending: true }).order("cognome", { ascending: true });',1)
+          s=s.replace('<div className="space-y-6">','<div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden bg-slate-200/70 px-3 pb-3 pt-2">',1)
+          s=s.replace('<div className="flex items-center justify-between gap-4 flex-wrap">','<div className="flex shrink-0 flex-wrap items-center justify-between gap-4">',1)
+          s=s.replace('<div className="grid grid-cols-1 md:grid-cols-3 gap-4">','<div className="grid shrink-0 grid-cols-1 gap-4 md:grid-cols-3">',1)
+          s=s.replace('<Card>\n          <CardContent className="pt-6">','<Card className="border border-sky-200 bg-slate-50 shadow-sm">\n          <CardContent className="pt-5">',3)
+          s=s.replace('<Card>\n        <CardHeader>\n          <CardTitle>Filtri e Ricerca</CardTitle>','<Card className="shrink-0 border border-sky-200 bg-slate-50 shadow-sm">\n        <CardHeader className="pb-3">\n          <CardTitle>Filtri e Ricerca</CardTitle>',1)
+          s=s.replace('className="pl-10"','className="h-9 border-slate-300 bg-white pl-10"',1)
+          # all three filter selects
+          s=s.replace('<SelectTrigger>','<SelectTrigger className="h-9 border-slate-300 bg-white">',3)
+          s=s.replace('<Card>\n        <CardContent className="p-0">\n          <div className="relative w-full overflow-auto max-h-[600px]">','<Card className="flex min-h-0 flex-1 flex-col overflow-hidden border border-sky-200 bg-slate-50 shadow-sm">\n        <CardContent className="min-h-0 flex-1 overflow-hidden p-0">\n          <div className="relative h-full w-full overflow-auto">',1)
+          s=s.replace('<thead className="[&_tr]:border-b sticky top-0 z-30 bg-white shadow-sm">','<thead className="sticky top-0 z-30 bg-slate-600 text-white shadow-sm [&_tr]:border-b [&_tr]:border-slate-500">',1)
+          s=s.replace('border-b border-gray-400 transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted','border-b border-slate-500',1)
+          s=s.replace('h-12 px-2','h-9 px-2').replace('font-medium text-muted-foreground','font-semibold text-slate-50')
+          s=s.replace('sticky-col-header border-r min-w-[260px]','sticky-col-header border-r border-slate-500 !bg-slate-600 !text-slate-50 min-w-[260px]',1)
+          s=s.replace('className="p-2 align-middle','className="px-2 py-1 align-middle')
+          s=s.replace('className={`p-2 align-middle','className={`px-2 py-1 align-middle')
+          # CU autonomi select native compact
+          old='''<Select\n                            value={scadenza.cu_autonomi === false ? "NO" : "SI"}\n                            onValueChange={(value) =>\n                              handleUpdateField(\n                                scadenza.id,\n                                "cu_autonomi",\n                                value === "SI"\n                              )\n                            }\n                          >\n                            <SelectTrigger className="w-full">\n                              <SelectValue placeholder="Seleziona" />\n                            </SelectTrigger>\n                            <SelectContent>\n                              <SelectItem value="SI">SI</SelectItem>\n                              <SelectItem value="NO">NO</SelectItem>\n                            </SelectContent>\n                          </Select>'''
+          new='''<select value={scadenza.cu_autonomi === false ? "NO" : "SI"} onChange={(e) => handleUpdateField(scadenza.id, "cu_autonomi", e.target.value === "SI")} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"><option value="NO">NO</option><option value="SI">SI</option></select>'''
+          if old not in s: raise SystemExit('CU autonomi non trovato')
+          s=s.replace(old,new,1)
+          # checkboxes -> SI/NO, preserving toggle handler
+          import re
+          pat=re.compile(r'''<Checkbox\s+checked=\{([^}]*(?:\}[^}]*)?)\}\s+onCheckedChange=\{\(\) =>\s+handleToggleField\(\s+scadenza\.id,\s+"([^"]+)",\s+scadenza\.\2\s+\)\s+\}\s*/>''',re.S)
+          # use explicit replacements for known CU booleans
+          for field in ['inserite','generate','inviate','conferma_riga']:
+            # locate from opening Checkbox through matching /> around field
+            rx=re.compile(r'<Checkbox\s+checked=\{[^\n]+\}\s+onCheckedChange=\{\(\) =>\s+handleToggleField\(\s+scadenza\.id,\s+"'+field+r'",\s+scadenza\.'+field+r'\s+\)\s+\}\s*/>',re.S)
+            repl='<select value={scadenza.'+field+' ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.'+field+')) handleToggleField(scadenza.id, "'+field+'", scadenza.'+field+'); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"><option value="NO">NO</option><option value="SI">SI</option></select>'
+            s,n=rx.subn(repl,s,count=1)
+            if n!=1: raise SystemExit('checkbox '+field+' non trovato')
+          # white compact inputs
+          s=s.replace('className="w-full"','className="h-8 w-full border-slate-300 bg-white"')
+          # neutral row and sticky nominativo; preserve CU gray and confirmed green semantics
+          s=s.replace(': "hover:bg-muted/50"',': "bg-slate-50 hover:bg-slate-100"',1)
+          s=s.replace(': ""\n                          }`}\n                        >\n                          {scadenza.nominativo}',': "!bg-slate-50"\n                          }`}\n                        >\n                          {scadenza.nominativo}',1)
+          if '<Checkbox' in s: raise SystemExit('Checkbox residui presenti')
+          if s==original: raise SystemExit('Nessuna modifica prodotta')
+          p.write_text(s,encoding='utf-8')
+          PY
+          grep -q 'bg-slate-200/70' src/pages/scadenze/cu.tsx
+          grep -q 'bg-slate-600 text-white' src/pages/scadenze/cu.tsx
+          grep -q 'relative h-full w-full overflow-auto' src/pages/scadenze/cu.tsx
+          grep -q 'order("nome", { ascending: true })' src/pages/scadenze/cu.tsx
+          ! grep -q '<Checkbox' src/pages/scadenze/cu.tsx
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/pages/scadenze/cu.tsx
+          git diff --cached --quiet && exit 1
+          git commit -m 'Restyle CU schedule to approved IVA layout'
+          git push origin main
