@@ -18,10 +18,17 @@ import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/lib/supabase/types";
 
 type ScadenzaBilancio = Database["public"]["Tables"]["tbscadbilanci"]["Row"];
-type ScadenzaBilancioExt = ScadenzaBilancio & {
+type ScadenzaBilancioExt = Omit<
+  ScadenzaBilancio,
+  "relazione_gest" | "relazione_sindaci" | "relazione_revisore"
+> & {
   consorzio?: boolean | null;
   anno_riferimento?: number | null;
   archiviato?: boolean | null;
+  tipo_bilancio?: "micro" | "abbreviato" | "ordinario" | null;
+  relazione_gest?: "SI" | "NO" | "NP" | null;
+  relazione_sindaci?: "SI" | "NO" | "NP" | null;
+  relazione_revisore?: "SI" | "NO" | "NP" | null;
 };
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
@@ -299,6 +306,71 @@ const loadScadenze = async (): Promise<ScadenzaBilancioExt[]> => {
       toast({
         title: "Errore",
         description: "Impossibile aggiornare il campo",
+        variant: "destructive",
+      });
+      await loadData();
+    }
+  };
+
+  const handleTipoBilancioChange = async (
+    scadenza: ScadenzaBilancioExt,
+    value: "micro" | "abbreviato" | "ordinario"
+  ) => {
+    try {
+      const payload: any = { tipo_bilancio: value };
+
+      if (value === "micro") {
+        payload.relazione_gest = "NP";
+        payload.relazione_sindaci = "NP";
+        payload.relazione_revisore = "NP";
+      }
+
+      const { error } = await supabase
+        .from("tbscadbilanci" as any)
+        .update(payload)
+        .eq("id", scadenza.id);
+
+      if (error) throw error;
+
+      setScadenze((prev) =>
+        prev.map((row) =>
+          row.id === scadenza.id ? { ...row, ...payload } : row
+        )
+      );
+    } catch (error) {
+      console.error("Errore aggiornamento tipo bilancio:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile aggiornare il tipo bilancio",
+        variant: "destructive",
+      });
+      await loadData();
+    }
+  };
+
+  const handleRelazioneChange = async (
+    scadenzaId: string,
+    field: "relazione_gest" | "relazione_sindaci" | "relazione_revisore",
+    value: "SI" | "NO" | "NP"
+  ) => {
+    try {
+      const { error } = await supabase
+        .from("tbscadbilanci" as any)
+        .update({ [field]: value })
+        .eq("id", scadenzaId);
+
+      if (error) throw error;
+
+      setScadenze((prev) =>
+        prev.map((row) =>
+          row.id === scadenzaId ? { ...row, [field]: value } : row
+        )
+      );
+    } catch (error) {
+      console.error("Errore aggiornamento relazione:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile aggiornare la relazione",
         variant: "destructive",
       });
       await loadData();
@@ -610,6 +682,7 @@ const loadScadenze = async (): Promise<ScadenzaBilancioExt[]> => {
     { header: "#", key: "num", width: 6 },
     { header: "Nominativo", key: "nominativo", width: 45 },
     { header: "Operatore", key: "operatore", width: 25 },
+    { header: "Tipo bilancio", key: "tipo_bilancio", width: 16 },
     { header: "Confermato", key: "confermato", width: 14 },
     { header: "Data approvazione", key: "data_approvazione", width: 18 },
     { header: "Data scadenza", key: "data_scadenza", width: 18 },
@@ -631,6 +704,7 @@ const loadScadenze = async (): Promise<ScadenzaBilancioExt[]> => {
       num: index + 1,
       nominativo: s.nominativo || "",
       operatore: operatoreNome,
+      tipo_bilancio: s.tipo_bilancio || "ordinario",
       confermato: s.conferma_riga ? "SI" : "NO",
       data_approvazione: formatFromISODate(s.data_approvazione),
       data_scadenza: formatFromISODate(s.data_scad_pres),
@@ -638,9 +712,9 @@ const loadScadenze = async (): Promise<ScadenzaBilancioExt[]> => {
       consorzio: s.consorzio ? "SI" : "NO",
       bilancio_def: s.bilancio_def ? "SI" : "NO",
       verbale_def: s.verbale_app ? "SI" : "NO",
-      rel_gestione: s.relazione_gest ? "SI" : "NO",
-      rel_sindaci: s.relazione_sindaci ? "SI" : "NO",
-      rel_revisore: s.relazione_revisore ? "SI" : "NO",
+      rel_gestione: s.relazione_gest || "NO",
+      rel_sindaci: s.relazione_sindaci || "NO",
+      rel_revisore: s.relazione_revisore || "NO",
       approvato: s.bil_approvato ? "SI" : "NO",
       inviato: s.invio_bil ? "SI" : "NO",
       ricevuta: s.ricevuta ? "SI" : "NO",
@@ -849,6 +923,9 @@ const loadScadenze = async (): Promise<ScadenzaBilancioExt[]> => {
                   <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[180px]">
                     Operatore
                   </th>
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[135px]">
+                    Tipo bilancio
+                  </th>
                   <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 text-center min-w-[120px]">
                     Consorzio
                   </th>
@@ -901,7 +978,7 @@ const loadScadenze = async (): Promise<ScadenzaBilancioExt[]> => {
                 {filteredScadenze.length === 0 ? (
                   <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                     <td
-                      colSpan={17}
+                      colSpan={18}
                       className="px-2 py-1 align-middle text-center py-8 text-gray-500"
                     >
                       Nessun record trovato
@@ -920,7 +997,7 @@ const loadScadenze = async (): Promise<ScadenzaBilancioExt[]> => {
                     >
                       <td
                         className={[
-                          "px-2 py-1 align-middle sticky-col-cell border-r-2 border-gray-300 font-medium min-w-[200px]",
+                          "px-2 py-1 align-middle sticky-col-cell border-r-2 border-gray-300 font-medium min-w-[300px]",
                           scadenza.conferma_riga ? "!bg-green-200" : "!bg-slate-50",
                         ].join(" ")}
                       >
@@ -929,6 +1006,23 @@ const loadScadenze = async (): Promise<ScadenzaBilancioExt[]> => {
 
                       <td className="px-2 py-1 align-middle min-w-[180px]">
                         {getUtenteNome(scadenza.utente_operatore_id)}
+                      </td>
+
+                      <td className="px-2 py-1 align-middle text-center min-w-[135px]">
+                        <select
+                          value={scadenza.tipo_bilancio || "ordinario"}
+                          onChange={(e) =>
+                            void handleTipoBilancioChange(
+                              scadenza,
+                              e.target.value as "micro" | "abbreviato" | "ordinario"
+                            )
+                          }
+                          className="h-8 w-[110px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"
+                        >
+                          <option value="micro">Micro</option>
+                          <option value="abbreviato">Abbreviato</option>
+                          <option value="ordinario">Ordinario</option>
+                        </select>
                       </td>
 
                       <td className="px-2 py-1 align-middle text-center min-w-[120px]">
@@ -981,49 +1075,70 @@ const loadScadenze = async (): Promise<ScadenzaBilancioExt[]> => {
 
                       <td className="px-2 py-1 align-middle text-center min-w-[120px]">
                         <select
-                          value={scadenza.relazione_gest ? "SI" : "NO"}
-                          onChange={(e) => {
-                            const nextValue = e.target.value === "SI";
-                            if (nextValue !== Boolean(scadenza.relazione_gest)) {
-                              handleToggleField(scadenza.id, "relazione_gest", scadenza.relazione_gest);
-                            }
-                          }}
-                          className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"
+                          disabled={scadenza.tipo_bilancio === "micro"}
+                          value={
+                            scadenza.tipo_bilancio === "micro"
+                              ? "NP"
+                              : scadenza.relazione_gest || "NO"
+                          }
+                          onChange={(e) =>
+                            void handleRelazioneChange(
+                              scadenza.id,
+                              "relazione_gest",
+                              e.target.value as "SI" | "NO" | "NP"
+                            )
+                          }
+                          className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                         >
                           <option value="NO">NO</option>
                           <option value="SI">SI</option>
+                          <option value="NP">NP</option>
                         </select>
                       </td>
 
                       <td className="px-2 py-1 align-middle text-center min-w-[120px]">
                         <select
-                          value={scadenza.relazione_sindaci ? "SI" : "NO"}
-                          onChange={(e) => {
-                            const nextValue = e.target.value === "SI";
-                            if (nextValue !== Boolean(scadenza.relazione_sindaci)) {
-                              handleToggleField(scadenza.id, "relazione_sindaci", scadenza.relazione_sindaci);
-                            }
-                          }}
-                          className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"
+                          disabled={scadenza.tipo_bilancio === "micro"}
+                          value={
+                            scadenza.tipo_bilancio === "micro"
+                              ? "NP"
+                              : scadenza.relazione_sindaci || "NO"
+                          }
+                          onChange={(e) =>
+                            void handleRelazioneChange(
+                              scadenza.id,
+                              "relazione_sindaci",
+                              e.target.value as "SI" | "NO" | "NP"
+                            )
+                          }
+                          className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                         >
                           <option value="NO">NO</option>
                           <option value="SI">SI</option>
+                          <option value="NP">NP</option>
                         </select>
                       </td>
 
                       <td className="px-2 py-1 align-middle text-center min-w-[120px]">
                         <select
-                          value={scadenza.relazione_revisore ? "SI" : "NO"}
-                          onChange={(e) => {
-                            const nextValue = e.target.value === "SI";
-                            if (nextValue !== Boolean(scadenza.relazione_revisore)) {
-                              handleToggleField(scadenza.id, "relazione_revisore", scadenza.relazione_revisore);
-                            }
-                          }}
-                          className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"
+                          disabled={scadenza.tipo_bilancio === "micro"}
+                          value={
+                            scadenza.tipo_bilancio === "micro"
+                              ? "NP"
+                              : scadenza.relazione_revisore || "NO"
+                          }
+                          onChange={(e) =>
+                            void handleRelazioneChange(
+                              scadenza.id,
+                              "relazione_revisore",
+                              e.target.value as "SI" | "NO" | "NP"
+                            )
+                          }
+                          className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                         >
                           <option value="NO">NO</option>
                           <option value="SI">SI</option>
+                          <option value="NP">NP</option>
                         </select>
                       </td>
 
