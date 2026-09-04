@@ -1,0 +1,36 @@
+name: One shot - IMU yellow tone
+on:
+  push:
+    paths:
+      - '.github/workflows/one-shot-imu-yellow-tone.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Change only IMU active section color
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/pages/scadenze/imu.tsx')
+          s = p.read_text(encoding='utf-8')
+          old = '    return "bg-orange-300";'
+          new = '    return "bg-[#fff200]";'
+          if old not in s:
+              raise SystemExit('orange tone marker not found')
+          s = s.replace(old, new, 1)
+          if 'bg-[#fff200]' not in s:
+              raise SystemExit('yellow tone verification failed')
+          p.write_text(s, encoding='utf-8')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/pages/scadenze/imu.tsx
+          git commit -m 'Use yellow tone for active IMU sections'
+          git push origin main
