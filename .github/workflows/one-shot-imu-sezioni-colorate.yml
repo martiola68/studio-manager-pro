@@ -1,0 +1,87 @@
+name: One shot - IMU sezioni colorate
+on:
+  push:
+    paths: ['.github/workflows/one-shot-imu-sezioni-colorate.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Applica solo regole grafiche alle tre sezioni IMU
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/pages/scadenze/imu.tsx')
+          s=p.read_text(encoding='utf-8')
+          original=s
+
+          marker='''  const dateInputClass = (value?: string | null) =>\n    [\n      "h-8 w-full border-slate-300 bg-white",\n      !value ? "text-transparent caret-transparent" : "",\n      "focus:text-gray-900 focus:caret-auto",\n    ]\n      .filter(Boolean)\n      .join(" ");\n'''
+          helper=marker+'''\n  const sectionTone = (\n    enabled: boolean | null | undefined,\n    completed: boolean | null | undefined,\n    rowConfirmed: boolean\n  ) => {\n    if (rowConfirmed) return "bg-green-200";\n    if (!enabled) return "bg-slate-200";\n    if (completed) return "bg-yellow-200";\n    return "bg-orange-200";\n  };\n\n  const rowSideTone = (rowConfirmed: boolean) =>\n    rowConfirmed ? "bg-green-200" : "bg-slate-50";\n'''
+          if marker not in s: raise SystemExit('marker dateInputClass non trovato')
+          s=s.replace(marker,helper,1)
+
+          old='''        <tr\n          key={scadenza.id}\n          className={`border-b border-gray-300 ${\n            isGreenRow\n              ? "bg-green-300 hover:bg-green-300"\n              : "bg-slate-50 hover:bg-slate-100"\n          }`}\n        >'''
+          new='''        <tr\n          key={scadenza.id}\n          className="border-b border-gray-300"\n        >'''
+          if old not in s: raise SystemExit('row class non trovata')
+          s=s.replace(old,new,1)
+
+          old='''          <td\n            className={`sticky-col-cell p-2 align-middle font-medium min-w-[320px] border-r border-gray-300 ${\n              isGreenRow ? "!bg-green-300" : "!bg-slate-50"\n            }`}\n          >'''
+          new='''          <td\n            className="sticky-col-cell p-2 align-middle font-medium min-w-[320px] border-r border-gray-300 !bg-slate-50"\n          >'''
+          if old not in s: raise SystemExit('nominativo class non trovata')
+          s=s.replace(old,new,1)
+
+          s=s.replace('''          <td className="p-2 align-middle min-w-[150px] border-r border-gray-300">''','''          <td className={`p-2 align-middle min-w-[150px] border-r border-gray-300 ${rowSideTone(isGreenRow)}`}>''',1)
+
+          # ACCONTO: tutta la sezione prende lo stesso tono.
+          s=s.replace('''          <td className={`${baseCellClass} text-center min-w-[120px]`}>\n            <select value={scadenza.acconto_imu''','''          <td className={`${baseCellClass} text-center min-w-[120px] ${sectionTone(scadenza.acconto_imu, scadenza.conferma_acconto_imu, isGreenRow)}`}>\n            <select value={scadenza.acconto_imu''',1)
+          s=s.replace('''          <td className={`${baseCellClass} text-center min-w-[120px] print-hide`}>\n            <select value={scadenza.acconto_dovuto''','''          <td className={`${baseCellClass} text-center min-w-[120px] print-hide ${sectionTone(scadenza.acconto_imu, scadenza.conferma_acconto_imu, isGreenRow)}`}>\n            <select disabled={!scadenza.acconto_imu} value={scadenza.acconto_dovuto''',1)
+          s=s.replace('''          <td className={`${baseCellClass} text-center min-w-[120px]`}>\n            <select value={scadenza.conferma_acconto_imu''','''          <td className={`${baseCellClass} text-center min-w-[120px] ${sectionTone(scadenza.acconto_imu, scadenza.conferma_acconto_imu, isGreenRow)}`}>\n            <select disabled={!scadenza.acconto_imu} value={scadenza.conferma_acconto_imu''',1)
+          s=s.replace('''          <td className={`${baseCellClass} min-w-[160px] print-hide`}>\n <Input\n  type="date"\n  value={scadenza.data_com_acconto || ""}''','''          <td className={`${baseCellClass} min-w-[160px] print-hide ${sectionTone(scadenza.acconto_imu, scadenza.conferma_acconto_imu, isGreenRow)}`}>\n <Input\n  type="date"\n  disabled={!scadenza.acconto_imu}\n  value={scadenza.data_com_acconto || ""}''',1)
+
+          # SALDO.
+          s=s.replace('''          <td className={`${baseCellClass} text-center min-w-[120px]`}>\n            <select value={scadenza.saldo_imu''','''          <td className={`${baseCellClass} text-center min-w-[120px] ${sectionTone(scadenza.saldo_imu, scadenza.conferma_saldo_imu, isGreenRow)}`}>\n            <select value={scadenza.saldo_imu''',1)
+          s=s.replace('''          <td className={`${baseCellClass} text-center min-w-[120px] print-hide`}>\n            <select value={scadenza.saldo_dovuto''','''          <td className={`${baseCellClass} text-center min-w-[120px] print-hide ${sectionTone(scadenza.saldo_imu, scadenza.conferma_saldo_imu, isGreenRow)}`}>\n            <select disabled={!scadenza.saldo_imu} value={scadenza.saldo_dovuto''',1)
+          s=s.replace('''          <td className={`${baseCellClass} text-center min-w-[120px]`}>\n           <select value={scadenza.conferma_saldo_imu''','''          <td className={`${baseCellClass} text-center min-w-[120px] ${sectionTone(scadenza.saldo_imu, scadenza.conferma_saldo_imu, isGreenRow)}`}>\n           <select disabled={!scadenza.saldo_imu} value={scadenza.conferma_saldo_imu''',1)
+          s=s.replace('''          <td className={`${baseCellClass} min-w-[160px] print-hide`}>\n <Input\n  type="date"\n  value={scadenza.data_com_saldo || ""}''','''          <td className={`${baseCellClass} min-w-[160px] print-hide ${sectionTone(scadenza.saldo_imu, scadenza.conferma_saldo_imu, isGreenRow)}`}>\n <Input\n  type="date"\n  disabled={!scadenza.saldo_imu}\n  value={scadenza.data_com_saldo || ""}''',1)
+
+          # DICHIARAZIONE IMU: "Dic. presentata" equivale allo stato completato/comunicato.
+          s=s.replace('''          <td className={`${baseCellClass} text-center min-w-[140px] print-hide`}>\n            <select value={scadenza.dichiarazione_imu''','''          <td className={`${baseCellClass} text-center min-w-[140px] print-hide ${sectionTone(scadenza.dichiarazione_imu, scadenza.conferma_dichiarazione_imu, isGreenRow)}`}>\n            <select value={scadenza.dichiarazione_imu''',1)
+          s=s.replace('''          <td className={`${baseCellClass} min-w-[170px] print-hide`}>\n  <Input\n  type="date"\n  value={scadenza.data_scad_dichiarazione || ""}''','''          <td className={`${baseCellClass} min-w-[170px] print-hide ${sectionTone(scadenza.dichiarazione_imu, scadenza.conferma_dichiarazione_imu, isGreenRow)}`}>\n  <Input\n  type="date"\n  disabled={!scadenza.dichiarazione_imu}\n  value={scadenza.data_scad_dichiarazione || ""}''',1)
+          s=s.replace('''          <td className={`${baseCellClass} text-center min-w-[140px] print-hide`}>\n            <select value={scadenza.conferma_dichiarazione_imu''','''          <td className={`${baseCellClass} text-center min-w-[140px] print-hide ${sectionTone(scadenza.dichiarazione_imu, scadenza.conferma_dichiarazione_imu, isGreenRow)}`}>\n            <select disabled={!scadenza.dichiarazione_imu} value={scadenza.conferma_dichiarazione_imu''',1)
+
+          # Campi esterni alle tre sezioni diventano verdi alla conferma riga; Nominativo resta escluso.
+          s=s.replace('''          <td className={`${baseCellClass} min-w-[300px] print-hide`}>''','''          <td className={`${baseCellClass} min-w-[300px] print-hide ${rowSideTone(isGreenRow)}`}>''',1)
+          s=s.replace('''        <td className={`${baseCellClass} text-center min-w-[180px] print-hide`}>''','''        <td className={`${baseCellClass} text-center min-w-[180px] print-hide ${rowSideTone(isGreenRow)}`}>''',1)
+          s=s.replace('''<td className={`${baseCellClass} text-center min-w-[140px]`}>\n  <select value={scadenza.conferma_riga''','''<td className={`${baseCellClass} text-center min-w-[140px] ${rowSideTone(isGreenRow)}`}>\n  <select value={scadenza.conferma_riga''',1)
+          s=s.replace('''          <td className="p-2 align-middle text-center min-w-[100px] border-r-0 print-hide">''','''          <td className={`p-2 align-middle text-center min-w-[100px] border-r-0 print-hide ${rowSideTone(isGreenRow)}`}>''',1)
+
+          # Visual disabled state only: no data/business logic changes.
+          s=s.replace('className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"','className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"')
+          s=s.replace('className="h-8 w-full border-slate-300 bg-white text-xs"','className="h-8 w-full border-slate-300 bg-white text-xs disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"')
+
+          if s==original: raise SystemExit('nessuna modifica')
+          checks=[
+            'sectionTone(scadenza.acconto_imu, scadenza.conferma_acconto_imu, isGreenRow)',
+            'disabled={!scadenza.acconto_imu}',
+            'sectionTone(scadenza.saldo_imu, scadenza.conferma_saldo_imu, isGreenRow)',
+            'disabled={!scadenza.saldo_imu}',
+            'sectionTone(scadenza.dichiarazione_imu, scadenza.conferma_dichiarazione_imu, isGreenRow)',
+            'disabled={!scadenza.dichiarazione_imu}',
+            'sticky-col-cell p-2 align-middle font-medium min-w-[320px] border-r border-gray-300 !bg-slate-50',
+          ]
+          for c in checks:
+            if c not in s: raise SystemExit('verifica fallita: '+c)
+          p.write_text(s,encoding='utf-8')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/pages/scadenze/imu.tsx
+          git diff --cached --quiet && exit 1
+          git commit -m 'Add IMU section visual states without changing business logic'
+          git push origin main
