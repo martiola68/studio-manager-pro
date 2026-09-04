@@ -164,7 +164,7 @@ const loadScadenze = async (): Promise<ScadenzaBilancioExt[]> => {
   const { data, error } = await supabase
     .from("tbutenti")
     .select("*")
-    .order("cognome", { ascending: true });
+    .order("nome", { ascending: true }).order("cognome", { ascending: true });
 
   if (error) throw error;
 
@@ -697,8 +697,8 @@ const loadScadenze = async (): Promise<ScadenzaBilancioExt[]> => {
   const anni = anniDisponibili;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+    <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden bg-slate-200/70 px-3 pb-3 pt-2">
+      <div className="flex shrink-0 items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
             Scadenzario Bilanci
@@ -730,25 +730,25 @@ const loadScadenze = async (): Promise<ScadenzaBilancioExt[]> => {
 )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-6">
+      <div className="grid shrink-0 grid-cols-1 gap-4 md:grid-cols-3">
+        <Card className="border border-sky-200 bg-slate-50 shadow-sm">
+          <CardContent className="pt-5">
             <div className="text-sm text-gray-600 mb-1">Totale Bilanci</div>
             <div className="text-3xl font-bold text-gray-900">
               {stats.totale}
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6">
+        <Card className="border border-sky-200 bg-slate-50 shadow-sm">
+          <CardContent className="pt-5">
             <div className="text-sm text-gray-600 mb-1">Confermate</div>
             <div className="text-3xl font-bold text-green-600">
               {stats.confermate}
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6">
+        <Card className="border border-sky-200 bg-slate-50 shadow-sm">
+          <CardContent className="pt-5">
             <div className="text-sm text-gray-600 mb-1">Non Confermate</div>
             <div className="text-3xl font-bold text-orange-600">
               {stats.nonConfermate}
@@ -757,8 +757,8 @@ const loadScadenze = async (): Promise<ScadenzaBilancioExt[]> => {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
+      <Card className="shrink-0 border border-sky-200 bg-slate-50 shadow-sm">
+        <CardHeader className="pb-3">
           <CardTitle>Filtri e Ricerca</CardTitle>
         </CardHeader>
         <CardContent>
@@ -773,7 +773,7 @@ const loadScadenze = async (): Promise<ScadenzaBilancioExt[]> => {
                   placeholder="Cerca..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
+                  className="h-9 border-slate-300 bg-white pl-10"
                 />
               </div>
             </div>
@@ -783,7 +783,7 @@ const loadScadenze = async (): Promise<ScadenzaBilancioExt[]> => {
                 Utente Operatore
               </label>
               <Select value={filterOperatore} onValueChange={setFilterOperatore}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9 border-slate-300 bg-white">
                   <SelectValue placeholder="Tutti" />
                 </SelectTrigger>
                 <SelectContent>
@@ -802,7 +802,7 @@ const loadScadenze = async (): Promise<ScadenzaBilancioExt[]> => {
                 Stato Conferma
               </label>
               <Select value={filterConferma} onValueChange={setFilterConferma}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9 border-slate-300 bg-white">
                   <SelectValue placeholder="Tutti" />
                 </SelectTrigger>
                 <SelectContent>
@@ -821,7 +821,7 @@ const loadScadenze = async (): Promise<ScadenzaBilancioExt[]> => {
   value={annoConsultazione.toString()}
   onValueChange={(value) => setAnnoConsultazione(parseInt(value))}
 >
-  <SelectTrigger>
+  <SelectTrigger className="h-9 border-slate-300 bg-white">
     <SelectValue placeholder="Seleziona anno" />
   </SelectTrigger>
   <SelectContent>
@@ -837,61 +837,61 @@ const loadScadenze = async (): Promise<ScadenzaBilancioExt[]> => {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="p-0">
-          <div className="relative w-full overflow-auto max-h-[600px]">
+      <Card className="flex min-h-0 flex-1 flex-col overflow-hidden border border-sky-200 bg-slate-50 shadow-sm">
+        <CardContent className="min-h-0 flex-1 overflow-hidden p-0">
+          <div className="h-full w-full overflow-auto">
             <table className="w-full caption-bottom text-sm">
-              <thead className="[&_tr]:border-b sticky top-0 z-30 bg-white shadow-sm">
-                <tr className="border-b-2 border-gray-300 transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground sticky-col-header border-r-2 border-gray-300 min-w-[200px]">
+              <thead className="sticky top-0 z-30 bg-slate-600 text-white shadow-sm [&_tr]:border-b [&_tr]:border-slate-500">
+                <tr className="border-b border-slate-500">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 sticky-col-header min-w-[200px]">
                     Nominativo
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[180px]">
                     Operatore
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 text-center min-w-[120px]">
                     Consorzio
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 text-center min-w-[120px]">
                     Bilancio def
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 text-center min-w-[120px]">
                     Verbale def
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 text-center min-w-[120px]">
                     Rel. gestione
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 text-center min-w-[120px]">
                     Rel. Sindaci
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 text-center min-w-[120px]">
                     Rel. Revisore
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[150px]">
                     Data approvazione
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[150px]">
                     Data scadenza
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 text-center min-w-[120px]">
                     Approvato
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 text-center min-w-[120px]">
                     Inviato
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[150px]">
                     Data invio
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 text-center min-w-[120px]">
                     Ricevuta
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[300px]">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[300px]">
                     Note
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[120px] text-center">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[120px] text-center">
                     Conferma
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[100px] text-center">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[100px] text-center">
                     Azioni
                   </th>
                 </tr>
@@ -902,7 +902,7 @@ const loadScadenze = async (): Promise<ScadenzaBilancioExt[]> => {
                   <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                     <td
                       colSpan={17}
-                      className="p-2 align-middle text-center py-8 text-gray-500"
+                      className="px-2 py-1 align-middle text-center py-8 text-gray-500"
                     >
                       Nessun record trovato
                     </td>
@@ -912,116 +912,122 @@ const loadScadenze = async (): Promise<ScadenzaBilancioExt[]> => {
                     <tr
                       key={scadenza.id}
                       className={[
-                        "border-b-2 border-gray-500 transition-colors",
+                        "border-b border-gray-300 transition-colors",
                         scadenza.conferma_riga
-                          ? "bg-green-300 hover:bg-green-300"
-                          : "hover:bg-green-50",
+                          ? "bg-green-200 hover:bg-green-200"
+                          : "bg-slate-50 hover:bg-slate-100",
                       ].join(" ")}
                     >
                       <td
                         className={[
-                          "p-2 align-middle sticky-col-cell border-r-2 border-gray-300 font-medium min-w-[200px]",
-                          scadenza.conferma_riga ? "!bg-green-300" : "!bg-white",
+                          "px-2 py-1 align-middle sticky-col-cell border-r-2 border-gray-300 font-medium min-w-[200px]",
+                          scadenza.conferma_riga ? "!bg-green-200" : "!bg-slate-50",
                         ].join(" ")}
                       >
                         {scadenza.nominativo}
                       </td>
 
-                      <td className="p-2 align-middle min-w-[180px]">
+                      <td className="px-2 py-1 align-middle min-w-[180px]">
                         {getUtenteNome(scadenza.utente_operatore_id)}
                       </td>
 
-                      <td className="p-2 align-middle text-center min-w-[120px]">
-                        <input
-                          type="checkbox"
-                          checked={scadenza.consorzio || false}
-                          onChange={() =>
-                            handleToggleField(
-                              scadenza.id,
-                              "consorzio",
-                              scadenza.consorzio
-                            )
-                          }
-                          className="rounded w-4 h-4 cursor-pointer"
-                        />
+                      <td className="px-2 py-1 align-middle text-center min-w-[120px]">
+                        <select
+                          value={scadenza.consorzio ? "SI" : "NO"}
+                          onChange={(e) => {
+                            const nextValue = e.target.value === "SI";
+                            if (nextValue !== Boolean(scadenza.consorzio)) {
+                              handleToggleField(scadenza.id, "consorzio", scadenza.consorzio);
+                            }
+                          }}
+                          className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"
+                        >
+                          <option value="NO">NO</option>
+                          <option value="SI">SI</option>
+                        </select>
                       </td>
 
-                      <td className="p-2 align-middle text-center min-w-[120px]">
-                        <input
-                          type="checkbox"
-                          checked={scadenza.bilancio_def || false}
-                          onChange={() =>
-                            handleToggleField(
-                              scadenza.id,
-                              "bilancio_def",
-                              scadenza.bilancio_def
-                            )
-                          }
-                          className="rounded w-4 h-4 cursor-pointer"
-                        />
+                      <td className="px-2 py-1 align-middle text-center min-w-[120px]">
+                        <select
+                          value={scadenza.bilancio_def ? "SI" : "NO"}
+                          onChange={(e) => {
+                            const nextValue = e.target.value === "SI";
+                            if (nextValue !== Boolean(scadenza.bilancio_def)) {
+                              handleToggleField(scadenza.id, "bilancio_def", scadenza.bilancio_def);
+                            }
+                          }}
+                          className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"
+                        >
+                          <option value="NO">NO</option>
+                          <option value="SI">SI</option>
+                        </select>
                       </td>
 
-                      <td className="p-2 align-middle text-center min-w-[120px]">
-                        <input
-                          type="checkbox"
-                          checked={scadenza.verbale_app || false}
-                          onChange={() =>
-                            handleToggleField(
-                              scadenza.id,
-                              "verbale_app",
-                              scadenza.verbale_app
-                            )
-                          }
-                          className="rounded w-4 h-4 cursor-pointer"
-                        />
+                      <td className="px-2 py-1 align-middle text-center min-w-[120px]">
+                        <select
+                          value={scadenza.verbale_app ? "SI" : "NO"}
+                          onChange={(e) => {
+                            const nextValue = e.target.value === "SI";
+                            if (nextValue !== Boolean(scadenza.verbale_app)) {
+                              handleToggleField(scadenza.id, "verbale_app", scadenza.verbale_app);
+                            }
+                          }}
+                          className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"
+                        >
+                          <option value="NO">NO</option>
+                          <option value="SI">SI</option>
+                        </select>
                       </td>
 
-                      <td className="p-2 align-middle text-center min-w-[120px]">
-                        <input
-                          type="checkbox"
-                          checked={scadenza.relazione_gest || false}
-                          onChange={() =>
-                            handleToggleField(
-                              scadenza.id,
-                              "relazione_gest",
-                              scadenza.relazione_gest
-                            )
-                          }
-                          className="rounded w-4 h-4 cursor-pointer"
-                        />
+                      <td className="px-2 py-1 align-middle text-center min-w-[120px]">
+                        <select
+                          value={scadenza.relazione_gest ? "SI" : "NO"}
+                          onChange={(e) => {
+                            const nextValue = e.target.value === "SI";
+                            if (nextValue !== Boolean(scadenza.relazione_gest)) {
+                              handleToggleField(scadenza.id, "relazione_gest", scadenza.relazione_gest);
+                            }
+                          }}
+                          className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"
+                        >
+                          <option value="NO">NO</option>
+                          <option value="SI">SI</option>
+                        </select>
                       </td>
 
-                      <td className="p-2 align-middle text-center min-w-[120px]">
-                        <input
-                          type="checkbox"
-                          checked={scadenza.relazione_sindaci || false}
-                          onChange={() =>
-                            handleToggleField(
-                              scadenza.id,
-                              "relazione_sindaci",
-                              scadenza.relazione_sindaci
-                            )
-                          }
-                          className="rounded w-4 h-4 cursor-pointer"
-                        />
+                      <td className="px-2 py-1 align-middle text-center min-w-[120px]">
+                        <select
+                          value={scadenza.relazione_sindaci ? "SI" : "NO"}
+                          onChange={(e) => {
+                            const nextValue = e.target.value === "SI";
+                            if (nextValue !== Boolean(scadenza.relazione_sindaci)) {
+                              handleToggleField(scadenza.id, "relazione_sindaci", scadenza.relazione_sindaci);
+                            }
+                          }}
+                          className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"
+                        >
+                          <option value="NO">NO</option>
+                          <option value="SI">SI</option>
+                        </select>
                       </td>
 
-                      <td className="p-2 align-middle text-center min-w-[120px]">
-                        <input
-                          type="checkbox"
-                          checked={scadenza.relazione_revisore || false}
-                          onChange={() =>
-                            handleToggleField(
-                              scadenza.id,
-                              "relazione_revisore",
-                              scadenza.relazione_revisore
-                            )
-                          }
-                          className="rounded w-4 h-4 cursor-pointer"
-                        />
+                      <td className="px-2 py-1 align-middle text-center min-w-[120px]">
+                        <select
+                          value={scadenza.relazione_revisore ? "SI" : "NO"}
+                          onChange={(e) => {
+                            const nextValue = e.target.value === "SI";
+                            if (nextValue !== Boolean(scadenza.relazione_revisore)) {
+                              handleToggleField(scadenza.id, "relazione_revisore", scadenza.relazione_revisore);
+                            }
+                          }}
+                          className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"
+                        >
+                          <option value="NO">NO</option>
+                          <option value="SI">SI</option>
+                        </select>
                       </td>
 
-                      <td className="p-2 align-middle min-w-[150px]">
+                      <td className="px-2 py-1 align-middle min-w-[150px]">
                         <Input
                           type="text"
                           value={dataApprovazioneInputs[scadenza.id] ?? ""}
@@ -1042,55 +1048,57 @@ const loadScadenze = async (): Promise<ScadenzaBilancioExt[]> => {
                           }
                           placeholder="DD/MM/YYYY"
                           inputMode="numeric"
-                          className={dateInputClass(scadenza.data_approvazione)}
+                          className={`${dateInputClass(scadenza.data_approvazione)} h-8 border-slate-300 bg-white text-xs`}
                         />
                       </td>
 
-                      <td className="p-2 align-middle min-w-[150px]">
+                      <td className="px-2 py-1 align-middle min-w-[150px]">
                         <Input
                           type="text"
                           value={formatFromISODate(scadenza.data_scad_pres)}
                           readOnly
                           placeholder="DD/MM/YYYY"
                           inputMode="numeric"
-                          className={dateInputClass(
+                          className={`${dateInputClass(
                             scadenza.data_scad_pres,
                             true
-                          )}
+                          )} h-8 border-slate-300 text-xs`}
                         />
                       </td>
 
-                      <td className="p-2 align-middle text-center min-w-[120px]">
-                        <input
-                          type="checkbox"
-                          checked={scadenza.bil_approvato || false}
-                          onChange={() =>
-                            handleToggleField(
-                              scadenza.id,
-                              "bil_approvato",
-                              scadenza.bil_approvato
-                            )
-                          }
-                          className="rounded w-4 h-4 cursor-pointer"
-                        />
+                      <td className="px-2 py-1 align-middle text-center min-w-[120px]">
+                        <select
+                          value={scadenza.bil_approvato ? "SI" : "NO"}
+                          onChange={(e) => {
+                            const nextValue = e.target.value === "SI";
+                            if (nextValue !== Boolean(scadenza.bil_approvato)) {
+                              handleToggleField(scadenza.id, "bil_approvato", scadenza.bil_approvato);
+                            }
+                          }}
+                          className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"
+                        >
+                          <option value="NO">NO</option>
+                          <option value="SI">SI</option>
+                        </select>
                       </td>
 
-                      <td className="p-2 align-middle text-center min-w-[120px]">
-                        <input
-                          type="checkbox"
-                          checked={scadenza.invio_bil || false}
-                          onChange={() =>
-                            handleToggleField(
-                              scadenza.id,
-                              "invio_bil",
-                              scadenza.invio_bil
-                            )
-                          }
-                          className="rounded w-4 h-4 cursor-pointer"
-                        />
+                      <td className="px-2 py-1 align-middle text-center min-w-[120px]">
+                        <select
+                          value={scadenza.invio_bil ? "SI" : "NO"}
+                          onChange={(e) => {
+                            const nextValue = e.target.value === "SI";
+                            if (nextValue !== Boolean(scadenza.invio_bil)) {
+                              handleToggleField(scadenza.id, "invio_bil", scadenza.invio_bil);
+                            }
+                          }}
+                          className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"
+                        >
+                          <option value="NO">NO</option>
+                          <option value="SI">SI</option>
+                        </select>
                       </td>
 
-                      <td className="p-2 align-middle min-w-[150px]">
+                      <td className="px-2 py-1 align-middle min-w-[150px]">
                         <Input
                           type="text"
                           value={dataInvioInputs[scadenza.id] ?? ""}
@@ -1111,52 +1119,56 @@ const loadScadenze = async (): Promise<ScadenzaBilancioExt[]> => {
                           }
                           placeholder="DD/MM/YYYY"
                           inputMode="numeric"
-                          className={dateInputClass(scadenza.data_invio)}
+                          className={`${dateInputClass(scadenza.data_invio)} h-8 border-slate-300 bg-white text-xs`}
                         />
                       </td>
 
-                      <td className="p-2 align-middle text-center min-w-[120px]">
-                        <input
-                          type="checkbox"
-                          checked={scadenza.ricevuta || false}
-                          onChange={() =>
-                            handleToggleField(
-                              scadenza.id,
-                              "ricevuta",
-                              scadenza.ricevuta
-                            )
-                          }
-                          className="rounded w-4 h-4 cursor-pointer"
-                        />
+                      <td className="px-2 py-1 align-middle text-center min-w-[120px]">
+                        <select
+                          value={scadenza.ricevuta ? "SI" : "NO"}
+                          onChange={(e) => {
+                            const nextValue = e.target.value === "SI";
+                            if (nextValue !== Boolean(scadenza.ricevuta)) {
+                              handleToggleField(scadenza.id, "ricevuta", scadenza.ricevuta);
+                            }
+                          }}
+                          className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"
+                        >
+                          <option value="NO">NO</option>
+                          <option value="SI">SI</option>
+                        </select>
                       </td>
 
-                      <td className="p-2 align-middle min-w-[300px]">
+                      <td className="px-2 py-1 align-middle min-w-[300px]">
                         <Textarea
                           value={localNotes[scadenza.id] ?? scadenza.note ?? ""}
                           onChange={(e) =>
                             handleNoteChange(scadenza.id, e.target.value)
                           }
                           placeholder="Aggiungi note..."
+                          rows={1}
+                          className="h-8 min-h-8 resize-none border-slate-300 bg-white py-1.5"
                           className="min-h-[60px] resize-none"
                         />
                       </td>
 
-                      <td className="p-2 align-middle text-center min-w-[120px]">
-                        <input
-                          type="checkbox"
-                          checked={scadenza.conferma_riga || false}
-                          onChange={() =>
-                            handleToggleField(
-                              scadenza.id,
-                              "conferma_riga",
-                              scadenza.conferma_riga
-                            )
-                          }
-                          className="rounded w-4 h-4 cursor-pointer"
-                        />
+                      <td className="px-2 py-1 align-middle text-center min-w-[120px]">
+                        <select
+                          value={scadenza.conferma_riga ? "SI" : "NO"}
+                          onChange={(e) => {
+                            const nextValue = e.target.value === "SI";
+                            if (nextValue !== Boolean(scadenza.conferma_riga)) {
+                              handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga);
+                            }
+                          }}
+                          className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"
+                        >
+                          <option value="NO">NO</option>
+                          <option value="SI">SI</option>
+                        </select>
                       </td>
 
-                      <td className="p-2 align-middle text-center min-w-[100px]">
+                      <td className="px-2 py-1 align-middle text-center min-w-[100px]">
                         <Button
                           variant="ghost"
                           size="sm"
