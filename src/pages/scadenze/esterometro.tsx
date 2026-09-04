@@ -10,7 +10,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Search, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
@@ -22,6 +21,8 @@ type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 type ScadenzaEsterometro = ScadenzaEsterometroRow & {
   professionista?: string;
   operatore?: string;
+  anno_riferimento?: number | null;
+  archiviato?: boolean | null;
 };
 
 const MONTHS = [
@@ -37,17 +38,39 @@ const MONTHS = [
   { prefix: "ott", label: "Ott", index: 10 },
   { prefix: "nov", label: "Nov", index: 11 },
   { prefix: "dic", label: "Dic", index: 12 },
-] as const;
+ ] as const;
+
+function BooleanSelect({
+  value,
+  onChange,
+}: {
+  value: boolean;
+  onChange: (value: boolean) => void;
+}) {
+  return (
+    <select
+      value={value ? "SI" : "NO"}
+      onChange={(e) => onChange(e.target.value === "SI")}
+      className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"
+    >
+      <option value="NO">NO</option>
+      <option value="SI">SI</option>
+    </select>
+  );
+}
 
 export default function ScadenzeEsterometroPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const currentYear = new Date().getFullYear();
 
   const [loading, setLoading] = useState(true);
   const [scadenze, setScadenze] = useState<ScadenzaEsterometro[]>([]);
   const [utenti, setUtenti] = useState<Utente[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterOperatore, setFilterOperatore] = useState("__all__");
+  const [annoConsultazione, setAnnoConsultazione] = useState(currentYear);
+  const [anniDisponibili, setAnniDisponibili] = useState<number[]>([]);
 
   const [stats, setStats] = useState({
     totale: 0,
@@ -56,7 +79,8 @@ export default function ScadenzeEsterometroPage() {
 
   useEffect(() => {
     checkAuthAndLoad();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [annoConsultazione]);
 
   const checkAuthAndLoad = async () => {
     try {
@@ -105,8 +129,34 @@ export default function ScadenzeEsterometroPage() {
   };
 
   const loadScadenze = async (): Promise<ScadenzaEsterometro[]> => {
+    const { data: anniData, error: anniError } = await supabase
+      .from("tbscadestero" as any)
+      .select("anno_riferimento")
+      .order("anno_riferimento", { ascending: true });
+
+    if (anniError) throw anniError;
+
+    const anni = Array.from(
+      new Set(
+        (((anniData ?? []) as any[]) || [])
+          .map((r) => r.anno_riferimento)
+          .filter((a): a is number => typeof a === "number")
+      )
+    ).sort((a, b) => a - b);
+
+    setAnniDisponibili(anni);
+
+    const annoDaUsare =
+      anni.length > 0 && !anni.includes(annoConsultazione)
+        ? anni[anni.length - 1]
+        : annoConsultazione;
+
+    if (annoDaUsare !== annoConsultazione) {
+      setAnnoConsultazione(annoDaUsare);
+    }
+
     const { data, error } = await supabase
-      .from("tbscadestero")
+      .from("tbscadestero" as any)
       .select(
         `
         *,
@@ -114,6 +164,7 @@ export default function ScadenzeEsterometroPage() {
         operatore:tbutenti!tbscadestero_utente_operatore_id_fkey(nome, cognome)
       `
       )
+      .eq("anno_riferimento", annoDaUsare)
       .order("nominativo", { ascending: true });
 
     if (error) {
@@ -121,7 +172,7 @@ export default function ScadenzeEsterometroPage() {
       throw error;
     }
 
-    return (data || []).map((record: any) => ({
+    return ((data || []) as any[]).map((record: any) => ({
       ...record,
       professionista: record.professionista
         ? `${record.professionista.nome} ${record.professionista.cognome}`
@@ -136,7 +187,7 @@ export default function ScadenzeEsterometroPage() {
     const { data, error } = await supabase
       .from("tbutenti")
       .select("*")
-      .order("cognome", { ascending: true });
+      .order("nome", { ascending: true }).order("cognome", { ascending: true });
 
     if (error) throw error;
     return data || [];
@@ -264,8 +315,8 @@ export default function ScadenzeEsterometroPage() {
   }
 
   return (
-    <div className="w-full max-w-none px-4 py-8 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden bg-slate-200/70 px-3 pb-3 pt-2">
+      <div className="flex shrink-0 items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
             Scadenzario Esterometro
@@ -276,9 +327,9 @@ export default function ScadenzeEsterometroPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
-          <CardContent className="pt-6">
+      <div className="grid shrink-0 grid-cols-1 gap-4 md:grid-cols-2">
+        <Card className="border border-sky-200 bg-slate-50 shadow-sm">
+          <CardContent className="pt-5">
             <div className="text-sm text-gray-600 mb-1">Totale Record</div>
             <div className="text-3xl font-bold text-gray-900">
               {stats.totale}
@@ -287,12 +338,12 @@ export default function ScadenzeEsterometroPage() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
+      <Card className="shrink-0 border border-sky-200 bg-slate-50 shadow-sm">
+        <CardHeader className="pb-3">
           <CardTitle>Filtri e Ricerca</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
@@ -300,13 +351,13 @@ export default function ScadenzeEsterometroPage() {
                 placeholder="Cerca nominativo..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="h-9 border-slate-300 bg-white pl-10"
               />
             </div>
 
             <div>
               <Select value={filterOperatore} onValueChange={setFilterOperatore}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9 border-slate-300 bg-white">
                   <SelectValue placeholder="Utente Operatore" />
                 </SelectTrigger>
                 <SelectContent>
@@ -319,20 +370,38 @@ export default function ScadenzeEsterometroPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            <div>
+              <Select
+                value={annoConsultazione.toString()}
+                onValueChange={(value) => setAnnoConsultazione(parseInt(value))}
+              >
+                <SelectTrigger className="h-9 border-slate-300 bg-white">
+                  <SelectValue placeholder="Anno consultazione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {anniDisponibili.map((anno) => (
+                    <SelectItem key={anno} value={anno.toString()}>
+                      {anno}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="p-0">
-          <div className="relative w-full overflow-auto max-h-[600px]">
+      <Card className="flex min-h-0 flex-1 flex-col overflow-hidden border border-sky-200 bg-slate-50 shadow-sm">
+        <CardContent className="min-h-0 flex-1 overflow-hidden p-0">
+          <div className="h-full w-full overflow-auto">
             <table className="w-full caption-bottom text-sm border-collapse">
-              <thead className="[&_tr]:border-b sticky top-0 z-30 bg-white shadow-sm">
-                <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                  <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground sticky left-0 z-40 min-w-[200px] bg-white border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+              <thead className="sticky top-0 z-30 bg-slate-600 text-white shadow-sm [&_tr]:border-b [&_tr]:border-slate-500">
+                <tr className="border-b border-slate-500">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 sticky left-0 z-40 min-w-[260px] !bg-slate-600 border-r border-slate-500 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                     Nominativo
                   </th>
-                  <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px] border-r">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[170px] border-r border-slate-500 bg-slate-600">
                     Operatore
                   </th>
 
@@ -340,23 +409,23 @@ export default function ScadenzeEsterometroPage() {
                     <th
                       key={month.prefix}
                       colSpan={3}
-                      className="h-12 px-2 text-center align-middle font-medium text-muted-foreground border-r border-l border-gray-200 bg-gray-50/50"
+                      className="h-9 px-2 text-center align-middle font-semibold text-slate-50 border-r border-l border-slate-500 bg-slate-600"
                     >
                       {month.label}
                     </th>
                   ))}
 
-                  <th className="h-12 px-2 text-center align-middle font-bold text-gray-900 min-w-[80px] bg-gray-100">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[80px] bg-slate-600 border-r border-slate-500">
                     Tot Doc
                   </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[90px] bg-white">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[90px] bg-slate-600">
                     Azioni
                   </th>
                 </tr>
 
-                <tr className="border-b text-xs text-gray-500 bg-gray-50">
-                  <th className="bg-white sticky left-0 z-40 border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]"></th>
-                  <th className="bg-white border-r"></th>
+                <tr className="border-b border-slate-500 bg-slate-700 text-xs text-slate-100">
+                  <th className="sticky left-0 z-40 border-r border-slate-500 !bg-slate-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]"></th>
+                  <th className="border-r border-slate-500 bg-slate-700"></th>
 
                   {MONTHS.map((month) => (
                     <th
@@ -366,19 +435,19 @@ export default function ScadenzeEsterometroPage() {
                     >
                       <div className="grid grid-cols-3">
                         <div
-                          className="px-1 py-1 text-center font-normal border-l"
+                          className="px-1 py-1 text-center font-medium border-l border-slate-500"
                           style={{ width: "60px", minWidth: "60px" }}
                         >
                           Prev
                         </div>
                         <div
-                          className="px-1 py-1 text-center font-normal"
+                          className="px-1 py-1 text-center font-medium"
                           style={{ width: "60px", minWidth: "60px" }}
                         >
                           Inv
                         </div>
                         <div
-                          className="px-1 py-1 text-center font-normal border-r"
+                          className="px-1 py-1 text-center font-medium border-r border-slate-500"
                           style={{ width: "60px", minWidth: "60px" }}
                         >
                           N. Doc
@@ -387,8 +456,8 @@ export default function ScadenzeEsterometroPage() {
                     </th>
                   ))}
 
-                  <th className="bg-gray-100"></th>
-                  <th className="bg-white"></th>
+                  <th className="bg-slate-700 border-r border-slate-500"></th>
+                  <th className="bg-slate-700"></th>
                 </tr>
               </thead>
 
@@ -403,13 +472,13 @@ export default function ScadenzeEsterometroPage() {
                   filteredScadenze.map((scadenza) => (
                     <tr
                       key={scadenza.id}
-                      className="border-b transition-colors hover:bg-green-50 data-[state=selected]:bg-muted group"
+                      className="group border-b border-slate-200 hover:bg-slate-100"
                     >
-                      <td className="p-2 align-middle sticky left-0 z-20 border-r font-medium min-w-[200px] bg-white group-hover:bg-green-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+                      <td className="px-2 py-1 align-middle sticky left-0 z-20 border-r border-slate-200 font-medium min-w-[260px] bg-slate-50 group-hover:bg-slate-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                         {scadenza.nominativo}
                       </td>
 
-                      <td className="p-2 align-middle min-w-[150px] border-r text-xs">
+                      <td className="px-2 py-1 align-middle min-w-[170px] border-r border-slate-200 text-xs">
                         {scadenza.operatore}
                       </td>
 
@@ -418,7 +487,7 @@ export default function ScadenzeEsterometroPage() {
                           (scadenza as any)[`${month.prefix}_invio`] || false;
                         const monthBgClass = isInviato
                           ? "bg-green-100"
-                          : "bg-gray-50/30";
+                          : "bg-slate-50";
 
                         return (
                           <React.Fragment key={`${scadenza.id}-${month.prefix}`}>
@@ -426,18 +495,22 @@ export default function ScadenzeEsterometroPage() {
                               className={`p-1 align-middle text-center border-l ${monthBgClass}`}
                               style={{ width: "60px", minWidth: "60px" }}
                             >
-                              <Checkbox
-                                checked={
-                                  (scadenza as any)[`${month.prefix}_previsto`] ||
-                                  false
-                                }
-                                onCheckedChange={() =>
-                                  handleToggleField(
-                                    scadenza.id,
-                                    `${month.prefix}_previsto` as keyof ScadenzaEsterometro,
+                              <BooleanSelect
+                                value={Boolean(
+                                  (scadenza as any)[`${month.prefix}_previsto`]
+                                )}
+                                onChange={(nextValue) => {
+                                  const currentValue = Boolean(
                                     (scadenza as any)[`${month.prefix}_previsto`]
-                                  )
-                                }
+                                  );
+                                  if (nextValue !== currentValue) {
+                                    handleToggleField(
+                                      scadenza.id,
+                                      `${month.prefix}_previsto` as keyof ScadenzaEsterometro,
+                                      currentValue
+                                    );
+                                  }
+                                }}
                               />
                             </td>
 
@@ -445,17 +518,22 @@ export default function ScadenzeEsterometroPage() {
                               className={`p-1 align-middle text-center ${monthBgClass}`}
                               style={{ width: "60px", minWidth: "60px" }}
                             >
-                              <Checkbox
-                                checked={
-                                  (scadenza as any)[`${month.prefix}_invio`] || false
-                                }
-                                onCheckedChange={() =>
-                                  handleToggleField(
-                                    scadenza.id,
-                                    `${month.prefix}_invio` as keyof ScadenzaEsterometro,
+                              <BooleanSelect
+                                value={Boolean(
+                                  (scadenza as any)[`${month.prefix}_invio`]
+                                )}
+                                onChange={(nextValue) => {
+                                  const currentValue = Boolean(
                                     (scadenza as any)[`${month.prefix}_invio`]
-                                  )
-                                }
+                                  );
+                                  if (nextValue !== currentValue) {
+                                    handleToggleField(
+                                      scadenza.id,
+                                      `${month.prefix}_invio` as keyof ScadenzaEsterometro,
+                                      currentValue
+                                    );
+                                  }
+                                }}
                               />
                             </td>
 
@@ -465,7 +543,7 @@ export default function ScadenzeEsterometroPage() {
                             >
                               <Input
                                 type="number"
-                                className="h-8 w-full text-center px-1"
+                                className="h-8 w-full border-slate-300 bg-white px-1 text-center"
                                 style={{ width: "60px", minWidth: "60px" }}
                                 value={
                                   (scadenza as any)[`nmese${month.index}`] ?? ""
