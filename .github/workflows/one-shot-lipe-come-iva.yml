@@ -1,0 +1,28 @@
+name: One shot - LIPE come IVA
+on:
+  push:
+    paths:
+      - '.github/workflows/one-shot-lipe-come-iva.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Patch LIPE runtime
+        run: |
+          python .github/scripts/patch_lipe_come_iva.py
+          grep -q '!bg-slate-600' src/pages/scadenze/lipe.tsx
+          grep -q 'value={annoConsultazione.toString()}' src/pages/scadenze/lipe.tsx
+          grep -q 'BooleanSelect' src/pages/scadenze/lipe.tsx
+          if grep -q '<Checkbox' src/pages/scadenze/lipe.tsx; then exit 1; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/pages/scadenze/lipe.tsx
+          git commit -m 'Align Scadenzario LIPE with approved visual standard'
+          git push origin main
