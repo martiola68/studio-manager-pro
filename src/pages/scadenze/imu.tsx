@@ -657,7 +657,17 @@ const vars: Record<string, string> = {
     if (rowConfirmed) return "bg-green-200";
     if (!enabled) return "bg-slate-200";
     if (completed) return "bg-green-200";
-    return "bg-[#fff200]";
+    return "bg-red-300";
+  };
+
+  const declarationTone = (
+    soggettoImu: boolean | null | undefined,
+    conDichiarazione: boolean | null | undefined,
+    presentata: boolean | null | undefined
+  ) => {
+    if (!soggettoImu || !conDichiarazione) return "bg-slate-200";
+    if (presentata) return "bg-green-200";
+    return "bg-red-300";
   };
 
   const rowSideTone = (rowConfirmed: boolean) =>
@@ -965,15 +975,15 @@ const vars: Record<string, string> = {
             <Input type="date" disabled={!scadenza.acconto_imu} value={scadenza.data_com_acconto || ""} onChange={(e) => handleUpdateField(scadenza.id, "data_com_acconto", e.target.value)} className="h-8 w-full border-slate-300 bg-white text-xs disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400" />
           </td>
 
-          <td className={`${baseCellClass} text-center min-w-[140px] print-hide ${sectionTone(scadenza.acconto_imu, scadenza.conferma_dichiarazione_imu, isGreenRow)}`}>
+          <td className={`${baseCellClass} text-center min-w-[140px] print-hide ${declarationTone(scadenza.acconto_imu, scadenza.dichiarazione_imu, scadenza.conferma_dichiarazione_imu)}`}>
             <select disabled={!scadenza.acconto_imu} value={scadenza.dichiarazione_imu ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.dichiarazione_imu)) handleToggleField(scadenza.id, "dichiarazione_imu", scadenza.dichiarazione_imu); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"><option value="NO">NO</option><option value="SI">SI</option></select>
           </td>
 
-          <td className={`${baseCellClass} min-w-[170px] print-hide ${sectionTone(scadenza.acconto_imu, scadenza.conferma_dichiarazione_imu, isGreenRow)}`}>
+          <td className={`${baseCellClass} min-w-[170px] print-hide ${declarationTone(scadenza.acconto_imu, scadenza.dichiarazione_imu, scadenza.conferma_dichiarazione_imu)}`}>
             <Input type="date" disabled={!scadenza.acconto_imu || !scadenza.dichiarazione_imu} value={scadenza.data_scad_dichiarazione || ""} onChange={(e) => handleUpdateField(scadenza.id, "data_scad_dichiarazione", e.target.value)} className="h-8 w-full border-slate-300 bg-white text-xs disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400" />
           </td>
 
-          <td className={`${baseCellClass} text-center min-w-[140px] print-hide ${sectionTone(scadenza.acconto_imu, scadenza.conferma_dichiarazione_imu, isGreenRow)}`}>
+          <td className={`${baseCellClass} text-center min-w-[140px] print-hide ${declarationTone(scadenza.acconto_imu, scadenza.dichiarazione_imu, scadenza.conferma_dichiarazione_imu)}`}>
             <select disabled={!scadenza.acconto_imu || !scadenza.dichiarazione_imu} value={scadenza.conferma_dichiarazione_imu ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.conferma_dichiarazione_imu)) handleToggleField(scadenza.id, "conferma_dichiarazione_imu", scadenza.conferma_dichiarazione_imu); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"><option value="NO">NO</option><option value="SI">SI</option></select>
           </td>
 
