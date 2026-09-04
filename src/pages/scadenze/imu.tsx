@@ -362,6 +362,75 @@ const [sendingEmail, setSendingEmail] = useState(false);
     }
   };
 
+  const handleDichiarazioneImuChange = async (
+    scadenza: ScadenzaImu,
+    value: boolean
+  ) => {
+    try {
+      if (!value) {
+        const payload = {
+          dichiarazione_imu: false,
+          data_scad_dichiarazione: null,
+          conferma_dichiarazione_imu: false,
+        };
+        const { error } = await supabase
+          .from("tbscadimu")
+          .update(payload)
+          .eq("id", scadenza.id);
+        if (error) throw error;
+        setScadenze((prev) =>
+          prev.map((row) => (row.id === scadenza.id ? { ...row, ...payload } : row))
+        );
+        return;
+      }
+
+      const annoBase = scadenza.anno_riferimento ?? Number(filterAnno);
+      const annoScadenza = annoBase + 1;
+
+      const { data: tipoScadenza, error: tipoError } = await supabase
+        .from("tbtipi_scadenze")
+        .select("data_scadenza, nome")
+        .eq("tipo_scadenza", "imu")
+        .eq("attivo", true)
+        .ilike("nome", "%dichiarazione%")
+        .gte("data_scadenza", `${annoScadenza}-01-01`)
+        .lte("data_scadenza", `${annoScadenza}-12-31`)
+        .order("data_scadenza", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (tipoError) throw tipoError;
+      if (!tipoScadenza?.data_scadenza) {
+        toast({
+          title: "Scadenza Dichiarazione IMU non configurata",
+          description: `Configura in Tipi Scadenze la Dichiarazione IMU per il ${annoScadenza}.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const payload = {
+        dichiarazione_imu: true,
+        data_scad_dichiarazione: tipoScadenza.data_scadenza,
+      };
+      const { error } = await supabase
+        .from("tbscadimu")
+        .update(payload)
+        .eq("id", scadenza.id);
+      if (error) throw error;
+
+      setScadenze((prev) =>
+        prev.map((row) => (row.id === scadenza.id ? { ...row, ...payload } : row))
+      );
+    } catch (error: any) {
+      toast({
+        title: "Errore aggiornamento",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleNoteChange = (scadenzaId: string, value: string) => {
     setLocalNotes((prev) => ({ ...prev, [scadenzaId]: value }));
 
@@ -976,11 +1045,11 @@ const vars: Record<string, string> = {
           </td>
 
           <td className={`${baseCellClass} text-center min-w-[140px] print-hide ${declarationTone(scadenza.acconto_imu, scadenza.dichiarazione_imu, scadenza.conferma_dichiarazione_imu)}`}>
-            <select disabled={!scadenza.acconto_imu} value={scadenza.dichiarazione_imu ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.dichiarazione_imu)) handleToggleField(scadenza.id, "dichiarazione_imu", scadenza.dichiarazione_imu); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"><option value="NO">NO</option><option value="SI">SI</option></select>
+            <select disabled={!scadenza.acconto_imu} value={scadenza.dichiarazione_imu ? "SI" : "NO"} onChange={(e) => void handleDichiarazioneImuChange(scadenza, e.target.value === "SI")} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"><option value="NO">NO</option><option value="SI">SI</option></select>
           </td>
 
           <td className={`${baseCellClass} min-w-[170px] print-hide ${declarationTone(scadenza.acconto_imu, scadenza.dichiarazione_imu, scadenza.conferma_dichiarazione_imu)}`}>
-            <Input type="date" disabled={!scadenza.acconto_imu || !scadenza.dichiarazione_imu} value={scadenza.data_scad_dichiarazione || ""} onChange={(e) => handleUpdateField(scadenza.id, "data_scad_dichiarazione", e.target.value)} className="h-8 w-full border-slate-300 bg-white text-xs disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400" />
+            <Input type="date" disabled value={scadenza.data_scad_dichiarazione || ""} className="h-8 w-full border-slate-300 bg-white text-xs disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500" />
           </td>
 
           <td className={`${baseCellClass} text-center min-w-[140px] print-hide ${declarationTone(scadenza.acconto_imu, scadenza.dichiarazione_imu, scadenza.conferma_dichiarazione_imu)}`}>

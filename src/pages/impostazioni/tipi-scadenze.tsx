@@ -117,7 +117,28 @@ export default function TipiScadenzePage() {
       if (systemAdminError) {
         console.warn("Verifica amministratore catalogo non disponibile:", systemAdminError);
       }
-      setCanManageSystem(systemAdmin === true);
+
+      let canManageCatalog = systemAdmin === true;
+
+      // Fallback UI per l'amministratore generale: la RLS resta comunque l'autorità finale.
+      if (!canManageCatalog && user.email) {
+        const { data: adminProfile } = await supabase
+          .from("tbutenti")
+          .select("nome, cognome, tipo_utente, attivo")
+          .eq("email", user.email)
+          .maybeSingle();
+
+        const role = String(adminProfile?.tipo_utente || "").trim().toUpperCase();
+        const nome = String(adminProfile?.nome || "").trim().toUpperCase();
+        const cognome = String(adminProfile?.cognome || "").trim().toUpperCase();
+        canManageCatalog =
+          adminProfile?.attivo !== false &&
+          (role === "ADMIN" || role === "AMMINISTRATORE") &&
+          nome === "MARIO" &&
+          cognome === "ARTIOLA";
+      }
+
+      setCanManageSystem(canManageCatalog);
 
       await loadTipiScadenze(studio.id);
     } catch (error) {
