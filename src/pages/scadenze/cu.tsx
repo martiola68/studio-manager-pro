@@ -11,7 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Search, Trash2, Printer } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
@@ -201,7 +200,7 @@ export default function ScadenzeCUPage() {
     const { data, error } = await supabase
       .from("tbutenti")
       .select("*")
-      .order("cognome", { ascending: true });
+      .order("nome", { ascending: true }).order("cognome", { ascending: true });
 
     if (error) throw error;
     return data || [];
@@ -461,8 +460,8 @@ export default function ScadenzeCUPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+    <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden bg-slate-200/70 px-3 pb-3 pt-2">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Scadenzario CU</h1>
           <p className="text-gray-500 mt-1">Gestione Certificazioni Uniche</p>
@@ -480,9 +479,9 @@ export default function ScadenzeCUPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-6">
+      <div className="grid shrink-0 grid-cols-1 gap-4 md:grid-cols-3">
+        <Card className="border border-sky-200 bg-slate-50 shadow-sm">
+          <CardContent className="pt-5">
             <div className="text-sm text-gray-600 mb-1">
               Totale Certificazioni
             </div>
@@ -491,16 +490,16 @@ export default function ScadenzeCUPage() {
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6">
+        <Card className="border border-sky-200 bg-slate-50 shadow-sm">
+          <CardContent className="pt-5">
             <div className="text-sm text-gray-600 mb-1">Confermate</div>
             <div className="text-3xl font-bold text-green-600">
               {stats.confermate}
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6">
+        <Card className="border border-sky-200 bg-slate-50 shadow-sm">
+          <CardContent className="pt-5">
             <div className="text-sm text-gray-600 mb-1">Non Confermate</div>
             <div className="text-3xl font-bold text-orange-600">
               {stats.nonConfermate}
@@ -509,8 +508,8 @@ export default function ScadenzeCUPage() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
+      <Card className="shrink-0 border border-sky-200 bg-slate-50 shadow-sm">
+        <CardHeader className="pb-3">
           <CardTitle>Filtri e Ricerca</CardTitle>
         </CardHeader>
         <CardContent>
@@ -522,13 +521,13 @@ export default function ScadenzeCUPage() {
                 placeholder="Cerca Nominativo..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="h-9 border-slate-300 bg-white pl-10"
               />
             </div>
 
             <div>
               <Select value={filterOperatore} onValueChange={setFilterOperatore}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9 border-slate-300 bg-white">
                   <SelectValue placeholder="Utente Operatore" />
                 </SelectTrigger>
                 <SelectContent>
@@ -544,7 +543,7 @@ export default function ScadenzeCUPage() {
 
             <div>
               <Select value={filterConferma} onValueChange={setFilterConferma}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9 border-slate-300 bg-white">
                   <SelectValue placeholder="Stato Conferma" />
                 </SelectTrigger>
                 <SelectContent>
@@ -560,7 +559,7 @@ export default function ScadenzeCUPage() {
                 value={annoConsultazione.toString()}
                 onValueChange={(value) => setAnnoConsultazione(parseInt(value))}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-9 border-slate-300 bg-white">
                   <SelectValue placeholder="Anno consultazione" />
                 </SelectTrigger>
                 <SelectContent>
@@ -576,40 +575,40 @@ export default function ScadenzeCUPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="p-0">
-          <div className="relative w-full overflow-auto max-h-[600px]">
+      <Card className="flex min-h-0 flex-1 flex-col overflow-hidden border border-sky-200 bg-slate-50 shadow-sm">
+        <CardContent className="min-h-0 flex-1 overflow-hidden p-0">
+          <div className="relative h-full w-full overflow-auto">
             <table className="w-full caption-bottom text-sm">
-              <thead className="[&_tr]:border-b sticky top-0 z-30 bg-white shadow-sm">
-                <tr className="border-b border-gray-400 transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                  <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground sticky-col-header border-r min-w-[260px]">
+              <thead className="sticky top-0 z-30 bg-slate-600 text-white shadow-sm [&_tr]:border-b [&_tr]:border-slate-500">
+                <tr className="border-b border-slate-500">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 sticky-col-header border-r border-slate-500 !bg-slate-600 !text-slate-50 min-w-[260px]">
                     Nominativo
                   </th>
-                  <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[180px]">
                     Operatore
                   </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[140px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[140px]">
                     CU Autonomi
                   </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[120px]">
                     Inserite
                   </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[120px]">
                     Generate
                   </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[120px]">
                     Inviate
                   </th>
-                  <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[150px]">
                     Data Invio
                   </th>
-                  <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground min-w-[120px]">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[120px]">
                     Num CU
                   </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[120px]">
                     Conferma
                   </th>
-                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[100px]">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[100px]">
                     Azioni
                   </th>
                 </tr>
@@ -620,7 +619,7 @@ export default function ScadenzeCUPage() {
                   <tr className="border-b border-gray-400 transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                     <td
                       colSpan={10}
-                      className="p-2 align-middle text-center text-gray-500"
+                      className="px-2 py-1 align-middle text-center text-gray-500"
                     >
                       Nessun record trovato
                     </td>
@@ -640,86 +639,42 @@ export default function ScadenzeCUPage() {
                             ? "bg-gray-200 hover:bg-gray-200"
                             : isGreenRow
                             ? "bg-green-300 hover:bg-green-300"
-                            : "hover:bg-muted/50"
+                            : "bg-slate-50 hover:bg-slate-100"
                         }`}
                       >
                         <td
-                          className={`p-2 align-middle sticky-col-cell border-r font-medium min-w-[260px] ${
+                          className={`px-2 py-1 align-middle sticky-col-cell border-r font-medium min-w-[260px] ${
                             isGrayRow
                               ? "!bg-gray-200"
                               : isGreenRow
                               ? "!bg-green-300"
-                              : ""
+                              : "!bg-slate-50"
                           }`}
                         >
                           {scadenza.nominativo}
                         </td>
 
-                        <td className="p-2 align-middle min-w-[180px]">
+                        <td className="px-2 py-1 align-middle min-w-[180px]">
                           {scadenza.operatore}
                         </td>
 
-                        <td className="p-2 align-middle text-center min-w-[140px]">
-                          <Select
-                            value={scadenza.cu_autonomi === false ? "NO" : "SI"}
-                            onValueChange={(value) =>
-                              handleUpdateField(
-                                scadenza.id,
-                                "cu_autonomi",
-                                value === "SI"
-                              )
-                            }
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Seleziona" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="SI">SI</SelectItem>
-                              <SelectItem value="NO">NO</SelectItem>
-                            </SelectContent>
-                          </Select>
+                        <td className="px-2 py-1 align-middle text-center min-w-[140px]">
+                          <select value={scadenza.cu_autonomi === false ? "NO" : "SI"} onChange={(e) => handleUpdateField(scadenza.id, "cu_autonomi", e.target.value === "SI")} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"><option value="NO">NO</option><option value="SI">SI</option></select>
                         </td>
 
-                        <td className="p-2 align-middle text-center min-w-[120px]">
-                          <Checkbox
-                            checked={scadenza.inserite || false}
-                            onCheckedChange={() =>
-                              handleToggleField(
-                                scadenza.id,
-                                "inserite",
-                                scadenza.inserite
-                              )
-                            }
-                          />
+                        <td className="px-2 py-1 align-middle text-center min-w-[120px]">
+                          <select value={scadenza.inserite ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.inserite)) handleToggleField(scadenza.id, "inserite", scadenza.inserite); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"><option value="NO">NO</option><option value="SI">SI</option></select>
                         </td>
 
-                        <td className="p-2 align-middle text-center min-w-[120px]">
-                          <Checkbox
-                            checked={scadenza.generate || false}
-                            onCheckedChange={() =>
-                              handleToggleField(
-                                scadenza.id,
-                                "generate",
-                                scadenza.generate
-                              )
-                            }
-                          />
+                        <td className="px-2 py-1 align-middle text-center min-w-[120px]">
+                          <select value={scadenza.generate ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.generate)) handleToggleField(scadenza.id, "generate", scadenza.generate); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"><option value="NO">NO</option><option value="SI">SI</option></select>
                         </td>
 
-                        <td className="p-2 align-middle text-center min-w-[120px]">
-                          <Checkbox
-                            checked={scadenza.inviate || false}
-                            onCheckedChange={() =>
-                              handleToggleField(
-                                scadenza.id,
-                                "inviate",
-                                scadenza.inviate
-                              )
-                            }
-                          />
+                        <td className="px-2 py-1 align-middle text-center min-w-[120px]">
+                          <select value={scadenza.inviate ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.inviate)) handleToggleField(scadenza.id, "inviate", scadenza.inviate); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"><option value="NO">NO</option><option value="SI">SI</option></select>
                         </td>
 
-                        <td className="p-2 align-middle min-w-[150px]">
+                        <td className="px-2 py-1 align-middle min-w-[150px]">
                           <Input
                             type="text"
                             inputMode="numeric"
@@ -758,11 +713,11 @@ export default function ScadenzeCUPage() {
                                 });
                               }
                             }}
-                            className="w-full"
+                            className="h-8 w-full border-slate-300 bg-white"
                           />
                         </td>
 
-                        <td className="p-2 align-middle min-w-[120px]">
+                        <td className="px-2 py-1 align-middle min-w-[120px]">
                           <Input
                             type="text"
                             value={scadenza.num_cu || ""}
@@ -773,25 +728,16 @@ export default function ScadenzeCUPage() {
                                 e.target.value
                               )
                             }
-                            className="w-full"
+                            className="h-8 w-full border-slate-300 bg-white"
                             placeholder="Numero CU"
                           />
                         </td>
 
-                        <td className="p-2 align-middle text-center min-w-[120px]">
-                          <Checkbox
-                            checked={scadenza.conferma_riga || false}
-                            onCheckedChange={() =>
-                              handleToggleField(
-                                scadenza.id,
-                                "conferma_riga",
-                                scadenza.conferma_riga
-                              )
-                            }
-                          />
+                        <td className="px-2 py-1 align-middle text-center min-w-[120px]">
+                          <select value={scadenza.conferma_riga ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.conferma_riga)) handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"><option value="NO">NO</option><option value="SI">SI</option></select>
                         </td>
 
-                        <td className="p-2 align-middle text-center min-w-[100px]">
+                        <td className="px-2 py-1 align-middle text-center min-w-[100px]">
                           <Button
                             variant="ghost"
                             size="sm"
