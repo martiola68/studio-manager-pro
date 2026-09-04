@@ -1,0 +1,29 @@
+name: One shot - Esterometro come IVA
+on:
+  push:
+    paths:
+      - '.github/workflows/one-shot-esterometro-come-iva.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Patch Esterometro runtime
+        run: |
+          python .github/scripts/patch_esterometro_come_iva.py
+          grep -q 'function BooleanSelect' src/pages/scadenze/esterometro.tsx
+          grep -q 'value={annoConsultazione.toString()}' src/pages/scadenze/esterometro.tsx
+          grep -q '!bg-slate-600' src/pages/scadenze/esterometro.tsx
+          grep -q 'h-full w-full overflow-auto' src/pages/scadenze/esterometro.tsx
+          if grep -q '<Checkbox' src/pages/scadenze/esterometro.tsx; then exit 1; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/pages/scadenze/esterometro.tsx
+          git commit -m 'Align Scadenzario Esterometro with approved visual standard'
+          git push origin main
