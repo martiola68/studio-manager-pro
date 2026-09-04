@@ -62,33 +62,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (clientiError) throw clientiError;
 
-    const clienteIds = (clienti || []).map((c: any) => String(c.id));
-    if (clienteIds.length === 0) {
+    const clienteIdSet = new Set((clienti || []).map((c: any) => String(c.id)));
+    if (clienteIdSet.size === 0) {
       return res.status(200).json({ repaired: 0, studio_id: studioId });
     }
 
+    // Service role bypassa la RLS: leggiamo la tabella una sola volta ed evitiamo
+    // una query .in(...) enorme con centinaia/migliaia di cliente_id.
     const { data: contratti, error: contrattiError } = await supabaseAdmin
       .from("tbscadaffitti")
-      .select("id, cliente_id, studio_id")
-      .in("cliente_id", clienteIds);
+      .select("id, cliente_id, studio_id");
 
     if (contrattiError) throw contrattiError;
 
-    const daRiparare = (contratti || []).filter(
-      (r: any) => String(r.studio_id || "") !== studioId
-    );
+    const daRiparare = (contratti || []).filter((r: any) => {
+      const clienteId = String(r.cliente_id || "");
+      return (
+        clienteIdSet.has(clienteId) &&
+        String(r.studio_id || "") !== studioId
+      );
+    });
 
     if (daRiparare.length === 0) {
       return res.status(200).json({ repaired: 0, studio_id: studioId });
     }
 
+    // Aggiornamento a blocchi per evitare URL troppo lunghi anche nella fase di repair.
     const ids = daRiparare.map((r: any) => String(r.id));
-    const { error: updateError } = await supabaseAdmin
-      .from("tbscadaffitti")
-      .update({ studio_id: studioId })
-      .in("id", ids);
+    const batchSize = 100;
+    for (let i = 0; i < ids.length; i += batchSize) {
+      const batch = ids.slice(i, i + batchSize);
+      const { error: updateError } = await supabaseAdmin
+        .from("tbscadaffitti")
+        .update({ studio_id: studioId })
+        .in("id", batch);
 
-    if (updateError) throw updateError;
+      if (updateError) throw updateError;
+    }
 
     return res.status(200).json({ repaired: ids.length, studio_id: studioId });
   } catch (error: any) {
