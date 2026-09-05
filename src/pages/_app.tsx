@@ -9,6 +9,7 @@ import { AgendaTeamsPastCleanup } from "@/components/agenda/AgendaTeamsPastClean
 import { CalendarioMasterGraficaEnhancer } from "@/components/scadenze/CalendarioMasterGraficaEnhancer";
 import { CassettiFiscaliMasterGraficaEnhancer } from "@/components/cassetti-fiscali/CassettiFiscaliMasterGraficaEnhancer";
 import { AccessoPortaliMasterGraficaEnhancer } from "@/components/accesso-portali/AccessoPortaliMasterGraficaEnhancer";
+import { ComunicazioniClientiMasterGraficaEnhancer } from "@/components/comunicazioni/ComunicazioniClientiMasterGraficaEnhancer";
 import { Toaster } from "@/components/ui/toaster";
 
 import Header from "@/components/Header";
@@ -43,7 +44,8 @@ export default function App({ Component, pageProps }: AppProps) {
   const isMasterGraficaCalendario = router.pathname === "/scadenze/calendario";
   const isMasterGraficaCassettiFiscali = router.pathname === "/cassetti-fiscali";
   const isMasterGraficaAccessoPortali = router.pathname === "/accesso-portali";
-  const isFixedViewportPage = isOperationalScadenzario || isMasterGraficaPromemoria || isMasterGraficaAgenda || isMasterGraficaCassettiFiscali || isMasterGraficaAccessoPortali;
+  const isMasterGraficaComunicazioniClienti = router.pathname === "/comunicazioni-clienti";
+  const isFixedViewportPage = isOperationalScadenzario || isMasterGraficaPromemoria || isMasterGraficaAgenda || isMasterGraficaCassettiFiscali || isMasterGraficaAccessoPortali || isMasterGraficaComunicazioniClienti;
 
   useEffect(() => {
     document.body.classList.toggle("master-grafica-promemoria", isMasterGraficaPromemoria);
@@ -115,6 +117,7 @@ export default function App({ Component, pageProps }: AppProps) {
     isMasterGraficaCalendario ? "calendario-master-page" : "",
     isMasterGraficaCassettiFiscali ? "cassetti-fiscali-master-page !min-h-0 !overflow-hidden" : "",
     isMasterGraficaAccessoPortali ? "accesso-portali-master-page !min-h-0 !overflow-hidden" : "",
+    isMasterGraficaComunicazioniClienti ? "comunicazioni-clienti-master-page !min-h-0 !overflow-hidden" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -137,6 +140,7 @@ export default function App({ Component, pageProps }: AppProps) {
         {isMasterGraficaCalendario && <CalendarioMasterGraficaEnhancer />}
         {isMasterGraficaCassettiFiscali && <CassettiFiscaliMasterGraficaEnhancer />}
         {isMasterGraficaAccessoPortali && <AccessoPortaliMasterGraficaEnhancer />}
+        {isMasterGraficaComunicazioniClienti && <ComunicazioniClientiMasterGraficaEnhancer />}
         {isPublicPage ? (
           <>
             {pageContent}
