@@ -125,7 +125,6 @@ export default function ElencoGenerale() {
     const key = `${clienteId}:${String(field)}`;
     const previous = clienti.find((c) => c.id === clienteId)?.servizi?.[field] === true;
 
-    // Aggiornamento ottimistico: il cambio SI/NO è visibile immediatamente e non blocca la riga.
     setClienti((prev) => prev.map((c) =>
       c.id === clienteId
         ? { ...c, servizi: { ...(c.servizi || {}), [field]: value } }
@@ -141,7 +140,6 @@ export default function ElencoGenerale() {
       );
       if (error) throw error;
     } catch (error) {
-      // In caso di errore ripristina soltanto la singola cella modificata.
       setClienti((prev) => prev.map((c) =>
         c.id === clienteId
           ? { ...c, servizi: { ...(c.servizi || {}), [field]: previous } }
@@ -212,7 +210,7 @@ export default function ElencoGenerale() {
                     return (
                       <td key={tipo.id} className="border-r border-slate-200 px-1.5 py-1 text-center last:border-r-0">
                         <Select value={enabled ? "si" : "no"} onValueChange={(value) => void handleToggleFlag(cliente.id, field, value === "si")}>
-                          <SelectTrigger aria-label={`${tipo.label} ${cliente.ragione_sociale}`} className={`mx-auto h-7 w-[64px] justify-center gap-1 border bg-white px-2 text-[11px] font-semibold shadow-none ${enabled ? "border-sky-700 text-sky-800" : "border-sky-300 text-slate-500"} ${cellUpdating ? "opacity-60" : "hover:bg-sky-50"}`}>
+                          <SelectTrigger aria-label={`${tipo.label} ${cliente.ragione_sociale}`} className={`mx-auto h-7 w-[64px] justify-center gap-1 border bg-white px-2 text-[11px] font-semibold shadow-none ${enabled ? "border-sky-700 text-sky-800 hover:bg-sky-50" : "border-red-300 text-red-600 hover:bg-red-50"} ${cellUpdating ? "opacity-60" : ""}`}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent><SelectItem value="si">SI</SelectItem><SelectItem value="no">NO</SelectItem></SelectContent>
