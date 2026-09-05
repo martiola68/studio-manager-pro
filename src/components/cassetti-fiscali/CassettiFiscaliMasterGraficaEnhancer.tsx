@@ -95,6 +95,41 @@ export function CassettiFiscaliMasterGraficaEnhancer() {
         min-height: 0 !important;
         max-height: none !important;
       }
+
+      /* Colonne bilanciate: Password 1, Password 2, PIN e Password iniziale/Codice fiscale identiche. */
+      .cassetti-fiscali-master-page table {
+        table-layout: fixed;
+        width: 100%;
+      }
+      .cassetti-fiscali-master-page thead th:nth-child(1),
+      .cassetti-fiscali-master-page tbody td:nth-child(1) { width: 22%; }
+      .cassetti-fiscali-master-page thead th:nth-child(2),
+      .cassetti-fiscali-master-page tbody td:nth-child(2) { width: 18%; }
+      .cassetti-fiscali-master-page thead th:nth-child(3),
+      .cassetti-fiscali-master-page tbody td:nth-child(3),
+      .cassetti-fiscali-master-page thead th:nth-child(4),
+      .cassetti-fiscali-master-page tbody td:nth-child(4),
+      .cassetti-fiscali-master-page thead th:nth-child(5),
+      .cassetti-fiscali-master-page tbody td:nth-child(5),
+      .cassetti-fiscali-master-page thead th:nth-child(6),
+      .cassetti-fiscali-master-page tbody td:nth-child(6) {
+        width: 13%;
+      }
+      .cassetti-fiscali-master-page thead th:nth-child(7),
+      .cassetti-fiscali-master-page tbody td:nth-child(7) { width: 8%; }
+
+      /* Separatore verticale sempre presente tra le 4 colonne credenziali. */
+      .cassetti-fiscali-master-page thead th:nth-child(3),
+      .cassetti-fiscali-master-page tbody td:nth-child(3),
+      .cassetti-fiscali-master-page thead th:nth-child(4),
+      .cassetti-fiscali-master-page tbody td:nth-child(4),
+      .cassetti-fiscali-master-page thead th:nth-child(5),
+      .cassetti-fiscali-master-page tbody td:nth-child(5),
+      .cassetti-fiscali-master-page thead th:nth-child(6),
+      .cassetti-fiscali-master-page tbody td:nth-child(6) {
+        border-right: 1px solid rgb(203 213 225) !important;
+      }
+
       .cassetti-fiscali-master-page thead {
         background: rgb(71 85 105) !important;
         color: white !important;
@@ -106,7 +141,6 @@ export function CassettiFiscaliMasterGraficaEnhancer() {
         border-color: rgb(100 116 139) !important;
       }
 
-      /* Righe più compatte e uniformi: nessuna alternanza cromatica. */
       .cassetti-fiscali-master-page tbody tr,
       .cassetti-fiscali-master-page tbody tr:nth-child(even),
       .cassetti-fiscali-master-page tbody tr:nth-child(odd) {
@@ -122,7 +156,6 @@ export function CassettiFiscaliMasterGraficaEnhancer() {
         background-color: rgb(240 249 255) !important;
       }
 
-      /* Password attuale: azzurro SMP al posto del verde legacy. */
       .cassetti-fiscali-master-page tbody td.bg-green-100,
       .cassetti-fiscali-master-page tbody td[class*="bg-green-100"] {
         background-color: rgb(224 242 254) !important;
