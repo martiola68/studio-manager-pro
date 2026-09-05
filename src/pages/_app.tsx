@@ -27,6 +27,7 @@ const SCADENZARI_VIEWPORT = new Set([
   "/scadenze/esterometro",
   "/scadenze/elenco-generale",
   "/scadenze/calendario",
+  "/scadenze/riepilogo",
 ]);
 
 export default function App({ Component, pageProps }: AppProps) {
