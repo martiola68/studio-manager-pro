@@ -1,0 +1,146 @@
+name: Rubrica scroll letter highlight
+
+on:
+  push:
+    paths:
+      - '.github/workflows/one-shot-rubrica-scroll-letter.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch Rubrica letter UI
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/pages/contatti/index.tsx')
+          s = p.read_text()
+
+          old = '  const [letterFilter, setLetterFilter] = useState<string>("");\n'
+          new = '  const [letterFilter, setLetterFilter] = useState<string>("");\n  const [activeScrollLetter, setActiveScrollLetter] = useState<string>("");\n'
+          if old not in s:
+            raise SystemExit('letterFilter state not found')
+          s = s.replace(old, new, 1)
+
+          marker = '''const mostraVistaSocieta =
+  searchQuery.trim().length >= 2 && societaRaggruppate.length > 0;
+'''
+          handler = '''const mostraVistaSocieta =
+  searchQuery.trim().length >= 2 && societaRaggruppate.length > 0;
+
+const handleRubricaScroll = (e: React.UIEvent<HTMLDivElement>) => {
+  if (letterFilter || mostraVistaSocieta) {
+    if (activeScrollLetter) setActiveScrollLetter("");
+    return;
+  }
+
+  const container = e.currentTarget;
+  const cards = Array.from(
+    container.querySelectorAll<HTMLElement>("[data-rubrica-letter]")
+  );
+
+  if (!cards.length) return;
+
+  const containerTop = container.getBoundingClientRect().top + 2;
+  let active = cards[0].dataset.rubricaLetter || "";
+
+  for (const card of cards) {
+    const rect = card.getBoundingClientRect();
+    if (rect.top <= containerTop) {
+      active = card.dataset.rubricaLetter || active;
+    } else {
+      break;
+    }
+  }
+
+  if (active && active !== activeScrollLetter) {
+    setActiveScrollLetter(active);
+  }
+};
+'''
+          if marker not in s:
+            raise SystemExit('mostraVistaSocieta marker not found')
+          s = s.replace(marker, handler, 1)
+
+          old = '''  onClick={() => setLetterFilter("")}
+  className={
+   letterFilter === ""
+  ? "min-w-[44px] border-red-600 bg-red-600 text-white hover:bg-red-700"
+  : "min-w-[44px]"
+  }'''
+          new = '''  onClick={() => {
+    setLetterFilter("");
+    setActiveScrollLetter("");
+  }}
+  className={
+   letterFilter === "" && activeScrollLetter === ""
+  ? "min-w-[44px] border-red-600 bg-red-600 text-white hover:bg-red-700"
+  : "min-w-[44px]"
+  }'''
+          if old not in s:
+            raise SystemExit('Tutti button block not found')
+          s = s.replace(old, new, 1)
+
+          old = '''  onClick={() => setLetterFilter(letter)}
+  className={
+   letterFilter === letter
+  ? "h-10 w-10 border-red-600 bg-red-600 text-white hover:bg-red-700"
+  : "h-10 w-10"
+  }'''
+          new = '''  onClick={() => {
+    setLetterFilter(letter);
+    setActiveScrollLetter("");
+  }}
+  className={
+   letterFilter === letter || (!letterFilter && activeScrollLetter === letter)
+  ? "h-10 w-10 border-red-600 bg-red-600 text-white hover:bg-red-700"
+  : "h-10 w-10"
+  }'''
+          if old not in s:
+            raise SystemExit('alphabet button block not found')
+          s = s.replace(old, new, 1)
+
+          old = '<div className="space-y-6">\n'
+          new = '<div className="space-y-6" onScroll={handleRubricaScroll}>\n'
+          if old not in s:
+            raise SystemExit('rubrica scroll container not found')
+          s = s.replace(old, new, 1)
+
+          old = '''      <Card key={letter} className="overflow-hidden border-2 border-blue-100 shadow-sm">
+       <CardHeader className="bg-blue-600 py-3 text-white">
+          <CardTitle className="flex items-center justify-between text-xl">
+            <span>Lettera {letter}</span>
+          <span className="rounded-full bg-blue-700 px-3 py-1 text-sm font-semibold text-white">
+              {(groupedContatti[letter] || []).length} contatti
+            </span>
+          </CardTitle>
+        </CardHeader>
+
+        <CardContent className="divide-y p-0">'''
+          new = '''      <Card
+        key={letter}
+        data-rubrica-letter={letter}
+        className="overflow-hidden border-2 border-blue-100 shadow-sm"
+      >
+        <CardContent className="divide-y p-0">'''
+          if old not in s:
+            raise SystemExit('letter card header block not found')
+          s = s.replace(old, new, 1)
+
+          p.write_text(s)
+          PY
+
+      - name: Commit patch
+        run: |
+          git config user.name "studio-manager-bot"
+          git config user.email "actions@github.com"
+          git add src/pages/contatti/index.tsx
+          git commit -m "Remove Rubrica letter headers and sync active filter on scroll"
+          git push origin HEAD:main
