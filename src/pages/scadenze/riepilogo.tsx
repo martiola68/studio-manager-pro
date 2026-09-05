@@ -112,7 +112,12 @@ export default function ScadenzarioRiepilogo() {
       {loading ? <div className="flex min-h-0 flex-1 items-center justify-center rounded-lg border border-sky-200 bg-white text-sm text-slate-500">Caricamento...</div> : filteredRows.length === 0 ? <div className="flex min-h-0 flex-1 items-center justify-center rounded-lg border border-sky-200 bg-white text-sm text-slate-500">Nessun risultato trovato.</div> : (
         <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-sky-200 bg-white shadow-sm">
           <table className="w-full table-fixed border-collapse text-xs">
-            <colgroup>{Array.from({ length: 10 }).map((_, i) => <col key={i} style={{ width: "10%" }} />)}</colgroup>
+            <colgroup>
+              <col style={{ width: "28%" }} />
+              <col style={{ width: "15%" }} />
+              <col style={{ width: "8%" }} />
+              {Array.from({ length: 7 }).map((_, i) => <col key={i} style={{ width: "7%" }} />)}
+            </colgroup>
             <thead className="sticky top-0 z-30 bg-slate-600 text-white shadow-sm"><tr>
               {['Nominativo','Operatore','Avanz.','IVA','Fiscali','Bilanci','770','CCGG','CU','IMU'].map((h, i) => <th key={h} className={`${i === 0 ? "sticky left-0 z-40 bg-slate-600 text-left" : i === 1 ? "text-left" : "text-center"} border-r border-slate-500 px-2 py-2 font-semibold last:border-r-0`}>{h}</th>)}
             </tr></thead>
