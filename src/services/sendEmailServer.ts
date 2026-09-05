@@ -1,33 +1,3 @@
-import { supabaseAdmin } from "@/lib/supabase/admin";
-
-const REVISIONI_STUDIO_ID = "f9d3ca10-6134-4061-a2b4-0be74e8c7654";
-const REVISIONI_AUTOMATIC_SENDER = "noreply@revisionicommerciali.it";
-
-function isCentralAlertSubject(subject: string) {
-  return /^Scadenza (superata|di oggi|tra )/i.test(subject.trim());
-}
-
-async function resolveAutomaticSenderMailbox(params: {
-  microsoftConnectionId: string;
-  subject: string;
-}) {
-  if (!isCentralAlertSubject(params.subject)) return null;
-
-  const { data: connection, error } = await supabaseAdmin
-    .from("microsoft365_connections")
-    .select("studio_id")
-    .eq("id", params.microsoftConnectionId)
-    .maybeSingle();
-
-  if (error || !connection?.studio_id) return null;
-
-  if (connection.studio_id === REVISIONI_STUDIO_ID) {
-    return REVISIONI_AUTOMATIC_SENDER;
-  }
-
-  return null;
-}
-
 export async function sendEmailServer(params: {
   senderUserId: string;
   microsoftConnectionId: string;
@@ -71,14 +41,7 @@ export async function sendEmailServer(params: {
       }));
     }
 
-    const automaticSender = await resolveAutomaticSenderMailbox({
-      microsoftConnectionId: params.microsoftConnectionId,
-      subject: params.subject,
-    });
-
-    const fromMailbox =
-      params.fromMailbox?.trim() || automaticSender || null;
-
+    const fromMailbox = params.fromMailbox?.trim() || null;
     const endpoint = fromMailbox
       ? `/users/${encodeURIComponent(fromMailbox)}/sendMail`
       : "/me/sendMail";
@@ -110,9 +73,7 @@ export async function sendEmailServer(params: {
       };
     }
 
-    return {
-      success: true,
-    };
+    return { success: true };
   } catch (error: any) {
     return {
       success: false,
