@@ -41,12 +41,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       userRow = fallback.data;
     }
 
-    if (!userRow?.studio_id || userRow.studio_id !== REVISIONI_STUDIO_ID) {
-      return res.status(403).json({ success: false, error: "Test disponibile solo per Revisioni Commerciali" });
+    if (!userRow?.studio_id) {
+      return res.status(403).json({ success: false, error: "Studio utente non trovato" });
     }
 
-    if (userRow.tipo_utente !== "Admin") {
-      return res.status(403).json({ success: false, error: "Test disponibile solo agli amministratori" });
+    // Questo endpoint e il mittente noreply sono riservati esclusivamente
+    // allo studio Revisioni Commerciali. Manteniamo il controllo lato server.
+    if (String(userRow.studio_id).toLowerCase() !== REVISIONI_STUDIO_ID) {
+      console.error("[microsoft365/test-noreply] studio non autorizzato", {
+        userId: userRow.id,
+        studioId: userRow.studio_id,
+      });
+      return res.status(403).json({ success: false, error: "Test noreply non abilitato per questo studio" });
     }
 
     const microsoftConnectionId = userRow.microsoft_connection_id;
