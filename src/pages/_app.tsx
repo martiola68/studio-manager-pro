@@ -8,6 +8,7 @@ import { AgendaMasterGraficaEnhancer } from "@/components/agenda/AgendaMasterGra
 import { AgendaTeamsPastCleanup } from "@/components/agenda/AgendaTeamsPastCleanup";
 import { CalendarioMasterGraficaEnhancer } from "@/components/scadenze/CalendarioMasterGraficaEnhancer";
 import { CassettiFiscaliMasterGraficaEnhancer } from "@/components/cassetti-fiscali/CassettiFiscaliMasterGraficaEnhancer";
+import { AccessoPortaliMasterGraficaEnhancer } from "@/components/accesso-portali/AccessoPortaliMasterGraficaEnhancer";
 import { Toaster } from "@/components/ui/toaster";
 
 import Header from "@/components/Header";
@@ -41,7 +42,8 @@ export default function App({ Component, pageProps }: AppProps) {
   const isMasterGraficaAgenda = router.pathname === "/agenda";
   const isMasterGraficaCalendario = router.pathname === "/scadenze/calendario";
   const isMasterGraficaCassettiFiscali = router.pathname === "/cassetti-fiscali";
-  const isFixedViewportPage = isOperationalScadenzario || isMasterGraficaPromemoria || isMasterGraficaAgenda || isMasterGraficaCassettiFiscali;
+  const isMasterGraficaAccessoPortali = router.pathname === "/accesso-portali";
+  const isFixedViewportPage = isOperationalScadenzario || isMasterGraficaPromemoria || isMasterGraficaAgenda || isMasterGraficaCassettiFiscali || isMasterGraficaAccessoPortali;
 
   useEffect(() => {
     document.body.classList.toggle("master-grafica-promemoria", isMasterGraficaPromemoria);
@@ -112,6 +114,7 @@ export default function App({ Component, pageProps }: AppProps) {
     isMasterGraficaAgenda ? "agenda-master-page !min-h-0 !overflow-hidden" : "",
     isMasterGraficaCalendario ? "calendario-master-page" : "",
     isMasterGraficaCassettiFiscali ? "cassetti-fiscali-master-page !min-h-0 !overflow-hidden" : "",
+    isMasterGraficaAccessoPortali ? "accesso-portali-master-page !min-h-0 !overflow-hidden" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -133,6 +136,7 @@ export default function App({ Component, pageProps }: AppProps) {
         {isMasterGraficaAgenda && <AgendaTeamsPastCleanup />}
         {isMasterGraficaCalendario && <CalendarioMasterGraficaEnhancer />}
         {isMasterGraficaCassettiFiscali && <CassettiFiscaliMasterGraficaEnhancer />}
+        {isMasterGraficaAccessoPortali && <AccessoPortaliMasterGraficaEnhancer />}
         {isPublicPage ? (
           <>
             {pageContent}
