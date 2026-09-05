@@ -25,6 +25,7 @@ const SCADENZARI_VIEWPORT = new Set([
   "/scadenze/modello-770",
   "/scadenze/lipe",
   "/scadenze/esterometro",
+  "/scadenze/elenco-generale",
 ]);
 
 export default function App({ Component, pageProps }: AppProps) {
