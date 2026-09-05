@@ -31,6 +31,16 @@ export default function App({ Component, pageProps }: AppProps) {
 
   const isScadenzarioPage = router.pathname.startsWith("/scadenze/");
   const isOperationalScadenzario = SCADENZARI_VIEWPORT.has(router.pathname);
+  const isMasterGraficaPromemoria = router.pathname === "/promemoria";
+  const isFixedViewportPage = isOperationalScadenzario || isMasterGraficaPromemoria;
+
+  useEffect(() => {
+    document.body.classList.toggle("master-grafica-promemoria", isMasterGraficaPromemoria);
+
+    return () => {
+      document.body.classList.remove("master-grafica-promemoria");
+    };
+  }, [isMasterGraficaPromemoria]);
 
   useEffect(() => {
     if (!router.isReady || !isScadenzarioPage) return;
@@ -88,6 +98,7 @@ export default function App({ Component, pageProps }: AppProps) {
     router.pathname === "/clienti/organi-sociali" ? "organi-sociali-page" : "",
     router.pathname === "/microsoft365" ? "microsoft365-page" : "",
     isOperationalScadenzario ? "!min-h-0 !overflow-hidden" : "",
+    isMasterGraficaPromemoria ? "promemoria-master-page !min-h-0 !overflow-hidden" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -113,7 +124,7 @@ export default function App({ Component, pageProps }: AppProps) {
         ) : (
           <div
             className={`flex min-h-screen flex-col bg-gray-50 ${
-              isOperationalScadenzario ? "h-screen overflow-hidden" : ""
+              isFixedViewportPage ? "h-screen overflow-hidden" : ""
             }`}
           >
             <div className="sticky top-0 z-50 shrink-0">
