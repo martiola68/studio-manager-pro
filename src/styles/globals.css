@@ -299,4 +299,71 @@
     background-color: white;
     border-color: rgb(203 213 225);
   }
+
+  /* MASTER_GRAFICA: Agenda desktop. Mantiene intatta la logica calendario. */
+  .agenda-master-page {
+    background-color: rgb(241 245 249);
+  }
+
+  .agenda-master-page > div {
+    max-width: none !important;
+    width: 100% !important;
+  }
+
+  .agenda-master-page > div > .hidden.md\:block {
+    display: flex !important;
+    height: 100%;
+    min-height: 0;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .agenda-master-page > div > .hidden.md\:block > div:first-child {
+    flex: 0 0 auto;
+    border: 1px solid rgb(186 230 253) !important;
+    background-color: rgb(248 250 252) !important;
+    box-shadow: none !important;
+  }
+
+  .agenda-master-page > div > .hidden.md\:block > div:nth-child(2) {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    border: 1px solid rgb(186 230 253);
+    border-radius: 8px;
+    background-color: white;
+    box-shadow: none !important;
+  }
+
+  .agenda-master-page > div > .hidden.md\:block > div:nth-child(2) > div {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .agenda-master-page > div > .hidden.md\:block > div:first-child > div:first-child > button:last-child {
+    background-color: rgb(3 105 161) !important;
+    border-color: rgb(3 105 161) !important;
+    color: white !important;
+  }
+
+  .agenda-master-page > div > .hidden.md\:block > div:first-child > div:first-child > button:last-child:hover {
+    background-color: rgb(2 132 199) !important;
+  }
+
+  .agenda-master-page > div > .hidden.md\:block > div:first-child > div:last-child > div:last-child button[data-state="active"],
+  .agenda-master-page > div > .hidden.md\:block > div:first-child > div:last-child > div:last-child button.bg-primary {
+    background-color: rgb(3 105 161) !important;
+    color: white !important;
+  }
+
+  body.master-grafica-agenda [role="dialog"] {
+    background-color: rgb(248 250 252);
+  }
+
+  body.master-grafica-agenda [role="dialog"] input,
+  body.master-grafica-agenda [role="dialog"] textarea,
+  body.master-grafica-agenda [role="dialog"] button[role="combobox"] {
+    background-color: white;
+    border-color: rgb(203 213 225);
+  }
 }
