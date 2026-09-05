@@ -24,20 +24,18 @@
     box-shadow: 2px 0 5px -2px rgba(0, 0, 0, 0.1);
   }
   
-  /* Support for row backgrounds (hover) - using !important to override specificity issues */
   tr:hover .sticky-col-cell {
-    background-color: rgb(240 253 244) !important; /* Matches hover:bg-green-50 */
+    background-color: rgb(240 253 244) !important;
   }
   
-  /* Fix for dark mode if needed */
   :is(.dark) .sticky-col-header,
   :is(.dark) .sticky-col-cell {
-    background-color: #1f2937; /* gray-800 */
+    background-color: #1f2937;
     color: #e5e7eb;
   }
   
   :is(.dark) tr:hover .sticky-col-cell {
-    background-color: #374151 !important; /* gray-700 */
+    background-color: #374151 !important;
   }
 }
 
@@ -129,15 +127,11 @@
     @apply mx-auto px-4 md:px-6 lg:px-8 max-w-7xl w-full;
   }
 
-  /* Nella pagina presenze il calendario mensile deve mostrare più dipendenti
-     mantenendo lo scroll interno e le intestazioni sticky. */
   .presenze-page .max-h-\[320px\] {
     max-height: 520px !important;
     min-height: 420px;
   }
 
-  /* Evidenzia il nominativo del Titolare Effettivo senza alterare la logica
-     della scheda: il nome è il div verde, bold, immediatamente prima del CF. */
   .organi-sociali-page div[style*="color: rgb(22, 101, 52)"][style*="font-size: 16px"],
   .organi-sociali-page div[style*="color:#166534"][style*="font-size:16px"] {
     font-size: 24px !important;
@@ -146,14 +140,10 @@
     margin-bottom: 6px;
   }
 
-  /* I preavvisi delle scadenze sono centralizzati nel cron: non devono più
-     essere configurabili manualmente nel form Tipi Scadenze. */
   .grid.grid-cols-2.gap-4:has(#giorni_preavviso_1):has(#giorni_preavviso_2) {
     display: none !important;
   }
 
-  /* Microsoft 365: nasconde il link guida dentro la card credenziali e la
-     card immediatamente successiva, che è il riquadro Guida alla configurazione. */
   .microsoft365-page a[href="/guide/MICROSOFT_365_SETUP_GUIDE.md"] {
     display: none !important;
   }
@@ -163,7 +153,6 @@
     display: none !important;
   }
 
-  /* Nuovo/Modifica Cliente: l'importazione da visura è stata rimossa dal form. */
   .flex.items-center.justify-between.gap-3.pt-6.border-t:has(input[type="file"][accept=".pdf,.txt"]) {
     justify-content: flex-end !important;
   }
@@ -172,7 +161,6 @@
     display: none !important;
   }
 
-  /* Promemoria: usa tutta la larghezza disponibile e mantiene leggibili tutte le colonne. */
   .container:has(table th:nth-child(14)) {
     max-width: none !important;
     width: 100% !important;
@@ -214,7 +202,6 @@
   .container:has(table th:nth-child(14)) th:nth-child(13) { min-width: 105px; }
   .container:has(table th:nth-child(14)) th:nth-child(14) { min-width: 90px; }
 
-  /* MASTER_GRAFICA: Promemoria. Regole semplici e completamente circoscritte alla pagina. */
   .promemoria-master-page {
     background-color: rgb(241 245 249);
   }
@@ -300,7 +287,7 @@
     border-color: rgb(203 213 225);
   }
 
-  /* MASTER_GRAFICA: Agenda desktop. Mantiene intatta la logica calendario. */
+  /* MASTER_GRAFICA Agenda: solo selettori semplici per evitare trasformazioni PostCSS non valide. */
   .agenda-master-page {
     background-color: rgb(241 245 249);
   }
@@ -310,50 +297,22 @@
     width: 100% !important;
   }
 
-  .agenda-master-page > div > .hidden.md\:block {
-    display: flex !important;
+  .agenda-master-page .md\:block {
     height: 100%;
     min-height: 0;
-    flex-direction: column;
-    gap: 10px;
   }
 
-  .agenda-master-page > div > .hidden.md\:block > div:first-child {
-    flex: 0 0 auto;
+  .agenda-master-page .md\:block > div:first-child {
     border: 1px solid rgb(186 230 253) !important;
     background-color: rgb(248 250 252) !important;
     box-shadow: none !important;
   }
 
-  .agenda-master-page > div > .hidden.md\:block > div:nth-child(2) {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow: hidden;
+  .agenda-master-page .md\:block > div:nth-child(2) {
     border: 1px solid rgb(186 230 253);
     border-radius: 8px;
     background-color: white;
     box-shadow: none !important;
-  }
-
-  .agenda-master-page > div > .hidden.md\:block > div:nth-child(2) > div {
-    height: 100%;
-    min-height: 0;
-  }
-
-  .agenda-master-page > div > .hidden.md\:block > div:first-child > div:first-child > button:last-child {
-    background-color: rgb(3 105 161) !important;
-    border-color: rgb(3 105 161) !important;
-    color: white !important;
-  }
-
-  .agenda-master-page > div > .hidden.md\:block > div:first-child > div:first-child > button:last-child:hover {
-    background-color: rgb(2 132 199) !important;
-  }
-
-  .agenda-master-page > div > .hidden.md\:block > div:first-child > div:last-child > div:last-child button[data-state="active"],
-  .agenda-master-page > div > .hidden.md\:block > div:first-child > div:last-child > div:last-child button.bg-primary {
-    background-color: rgb(3 105 161) !important;
-    color: white !important;
   }
 
   body.master-grafica-agenda [role="dialog"] {
