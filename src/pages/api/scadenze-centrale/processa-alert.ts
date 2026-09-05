@@ -8,8 +8,6 @@ import { sendEmailServer } from "@/services/sendEmailServer";
 import { sendRichiestaDocumentoRappresentante } from "@/services/rappresentantiDocumentiService";
 
 const SECRET = process.env.CRON_SECRET;
-const REVISIONI_STUDIO_ID = "1ea8b9e8-3f1a-4bb2-b5ea-362cf13fb058";
-const REVISIONI_NOREPLY = "noreply@revisionicommerciali.it";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -118,7 +116,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (error) throw error;
         saltati++; dettagli.push({scadenza_id:riga.id,ok:true,messaggio:"Memo di calendario terminato al giorno zero"}); continue;
       }
-      const { data: studio, error: studioError } = await supabaseAdmin.from("tbstudio").select("id,email,microsoft_connection_id").eq("id",riga.studio_id).maybeSingle();
+      const { data: studio, error: studioError } = await supabaseAdmin.from("tbstudio").select("id,email,email_alert_fiscale,microsoft_connection_id").eq("id",riga.studio_id).maybeSingle();
       if (studioError || !studio?.microsoft_connection_id) { saltati++; dettagli.push({scadenza_id:riga.id,ok:false,messaggio:"Connessione Microsoft dello studio assente"}); continue; }
 
       const { data: assegnazioni, error: assegnazioniError } = await supabaseAdmin.from("tbscadenze_centrale_destinatari").select("utente_id,destinatario_email,tipo_destinatario").eq("studio_id",riga.studio_id).eq("scadenza_id",riga.id).eq("attivo",true);
@@ -174,7 +172,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if(!senderUserId){errori++;erroriScadenza++;await supabaseAdmin.from("tbscadenze_centrale_alert_log").update({esito:"errore",errore:"Nessun utente dello studio possiede un token Microsoft valido"}).eq("id",logCreato!.id);continue;}
         const nomeDestinatario=destinatario.tipo==="esterno"?"Cliente":[destinatario.nome,destinatario.cognome].filter(Boolean).join(" ")||destinatarioEmail;
         const html=`<div style="font-family:Arial,sans-serif;font-size:14px;color:#111827;line-height:1.55"><h2 style="margin-bottom:8px;color:#1d4ed8">${alert.intestazione}</h2><p>Ciao <strong>${nomeDestinatario}</strong>,</p><p>è presente una scadenza che richiede la tua attenzione.</p><table style="border-collapse:collapse;width:100%;max-width:700px"><tr><td style="padding:7px;border:1px solid #d1d5db"><strong>Modulo</strong></td><td style="padding:7px;border:1px solid #d1d5db">${riga.origine_modulo}</td></tr><tr><td style="padding:7px;border:1px solid #d1d5db"><strong>Oggetto</strong></td><td style="padding:7px;border:1px solid #d1d5db">${riga.titolo}</td></tr><tr><td style="padding:7px;border:1px solid #d1d5db"><strong>Data di scadenza</strong></td><td style="padding:7px;border:1px solid #d1d5db">${formattaDataItaliana(riga.data_scadenza)}</td></tr>${riga.descrizione?`<tr><td style="padding:7px;border:1px solid #d1d5db"><strong>Descrizione</strong></td><td style="padding:7px;border:1px solid #d1d5db">${riga.descrizione}</td></tr>`:""}</table><p style="margin-top:20px"><a href="${link}" style="display:inline-block;padding:10px 16px;border-radius:6px;background:#2563eb;color:#fff;text-decoration:none;font-weight:bold">Apri la scadenza</a></p>${alert.tipoAlert==="scadenza_superata"?`<p style="color:#b91c1c;font-weight:bold">Il promemoria verrà ripetuto ogni lunedì mattina fino alla chiusura o all’annullamento della scadenza.</p>`:""}<p style="margin-top:24px;font-size:12px;color:#6b7280"><strong>Email generata automaticamente da Studio Manager Pro.</strong><br/>Si prega di non rispondere a questo messaggio.</p></div>`;
-        const risultatoInvio=await sendEmailServer({senderUserId,microsoftConnectionId:studio.microsoft_connection_id,fromMailbox:riga.studio_id===REVISIONI_STUDIO_ID?REVISIONI_NOREPLY:null,to:destinatarioEmail,subject:alert.oggetto,html});
+        const risultatoInvio=await sendEmailServer({senderUserId,microsoftConnectionId:studio.microsoft_connection_id,fromMailbox:String(studio.email_alert_fiscale||"").trim()||null,to:destinatarioEmail,subject:alert.oggetto,html});
         if(!risultatoInvio.success){errori++;erroriScadenza++;await supabaseAdmin.from("tbscadenze_centrale_alert_log").update({esito:"errore",errore:risultatoInvio.error||"Errore invio email"}).eq("id",logCreato!.id);dettagli.push({scadenza_id:riga.id,ok:false,messaggio:`${risultatoInvio.error||"Errore invio email"} - ${destinatarioEmail}`});continue;}
         await supabaseAdmin.from("tbscadenze_centrale_alert_log").update({esito:"inviato",inviato_at:new Date().toISOString(),errore:null}).eq("id",logCreato!.id);
         inviati++;inviatiScadenza++;dettagli.push({scadenza_id:riga.id,ok:true,messaggio:`Alert inviato a ${destinatarioEmail}`});
