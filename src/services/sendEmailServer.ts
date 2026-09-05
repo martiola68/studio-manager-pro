@@ -42,9 +42,17 @@ export async function sendEmailServer(params: {
     }
 
     const fromMailbox = params.fromMailbox?.trim() || null;
-    const endpoint = fromMailbox
-      ? `/users/${encodeURIComponent(fromMailbox)}/sendMail`
-      : "/me/sendMail";
+
+    // Con token delegato, gli invii normali continuano a passare da /me/sendMail.
+    // Solo quando viene richiesto esplicitamente un mittente alternativo aggiungiamo
+    // message.from; Exchange applichera' i permessi Send As / Send on Behalf.
+    if (fromMailbox) {
+      message.from = {
+        emailAddress: {
+          address: fromMailbox,
+        },
+      };
+    }
 
     const response = await fetch(`${baseUrl}/api/microsoft365/graph-cron`, {
       method: "POST",
@@ -54,7 +62,7 @@ export async function sendEmailServer(params: {
       },
       body: JSON.stringify({
         userId: params.senderUserId,
-        endpoint,
+        endpoint: "/me/sendMail",
         method: "POST",
         microsoftConnectionId: params.microsoftConnectionId,
         body: {
