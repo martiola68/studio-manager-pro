@@ -6,6 +6,111 @@ export function RubricaMasterGraficaEnhancer() {
     return () => document.body.classList.remove("master-grafica-rubrica");
   }, []);
 
+  useEffect(() => {
+    let scrollArea: HTMLElement | null = null;
+    let mutationObserver: MutationObserver | null = null;
+    let frame = 0;
+
+    const refresh = () => {
+      const page = document.querySelector<HTMLElement>(".rubrica-master-page");
+      if (!page) return;
+
+      const pageRoot = page.firstElementChild as HTMLElement | null;
+      if (!pageRoot) return;
+
+      const nextScrollArea = Array.from(pageRoot.children).find((el) =>
+        (el as HTMLElement).classList.contains("space-y-6")
+      ) as HTMLElement | undefined;
+
+      const filterPanel = pageRoot.children.item(1) as HTMLElement | null;
+      if (!nextScrollArea || !filterPanel) return;
+
+      if (scrollArea !== nextScrollArea) {
+        scrollArea?.removeEventListener("scroll", scheduleUpdate);
+        scrollArea = nextScrollArea;
+        scrollArea.addEventListener("scroll", scheduleUpdate, { passive: true });
+      }
+
+      Array.from(scrollArea.children).forEach((node) => {
+        const card = node as HTMLElement;
+        const title = card.querySelector("h3");
+        const match = title?.textContent?.trim().match(/^Lettera\s+([A-Z])$/i);
+        if (!match) return;
+
+        card.dataset.rubricaLetter = match[1].toUpperCase();
+        const header = card.firstElementChild as HTMLElement | null;
+        header?.classList.add("rubrica-letter-header-hidden");
+      });
+
+      updateActiveLetter(filterPanel);
+    };
+
+    const updateActiveLetter = (filterPanel?: HTMLElement | null) => {
+      if (!scrollArea) return;
+
+      const page = document.querySelector<HTMLElement>(".rubrica-master-page");
+      const pageRoot = page?.firstElementChild as HTMLElement | null;
+      const panel = filterPanel || (pageRoot?.children.item(1) as HTMLElement | null);
+      if (!panel) return;
+
+      const cards = Array.from(
+        scrollArea.querySelectorAll<HTMLElement>("[data-rubrica-letter]")
+      );
+      if (!cards.length) return;
+
+      const topLine = scrollArea.getBoundingClientRect().top + 4;
+      let activeCard = cards[0];
+
+      for (const card of cards) {
+        const rect = card.getBoundingClientRect();
+        if (rect.top <= topLine) activeCard = card;
+        if (rect.top > topLine) break;
+      }
+
+      const activeLetter = activeCard.dataset.rubricaLetter || "";
+      const buttons = Array.from(panel.querySelectorAll<HTMLButtonElement>("button"));
+
+      buttons.forEach((button) => {
+        const label = button.textContent?.trim().toUpperCase() || "";
+        button.classList.toggle(
+          "rubrica-scroll-letter-active",
+          label.length === 1 && label === activeLetter
+        );
+        button.classList.toggle(
+          "rubrica-scroll-tutti-inactive",
+          label === "TUTTI" && Boolean(activeLetter)
+        );
+      });
+    };
+
+    function scheduleUpdate() {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => updateActiveLetter());
+    }
+
+    const timer = window.setTimeout(() => {
+      refresh();
+      const page = document.querySelector<HTMLElement>(".rubrica-master-page");
+      if (page) {
+        mutationObserver = new MutationObserver(() => {
+          refresh();
+          scheduleUpdate();
+        });
+        mutationObserver.observe(page, { childList: true, subtree: true });
+      }
+    }, 0);
+
+    window.addEventListener("resize", scheduleUpdate);
+
+    return () => {
+      window.clearTimeout(timer);
+      cancelAnimationFrame(frame);
+      mutationObserver?.disconnect();
+      scrollArea?.removeEventListener("scroll", scheduleUpdate);
+      window.removeEventListener("resize", scheduleUpdate);
+    };
+  }, []);
+
   return (
     <style jsx global>{`
       .rubrica-master-page { background: rgb(241 245 249); }
@@ -80,6 +185,16 @@ export function RubricaMasterGraficaEnhancer() {
         width: 52px !important;
         min-width: 52px !important;
       }
+      .rubrica-master-page > div > div:nth-child(2) button.rubrica-scroll-letter-active {
+        background: rgb(3 105 161) !important;
+        border-color: rgb(3 105 161) !important;
+        color: white !important;
+      }
+      .rubrica-master-page > div > div:nth-child(2) button.rubrica-scroll-tutti-inactive {
+        background: white !important;
+        border-color: rgb(125 211 252) !important;
+        color: rgb(3 105 161) !important;
+      }
 
       .rubrica-master-page > div > div.space-y-6 {
         min-height: 0;
@@ -103,14 +218,7 @@ export function RubricaMasterGraficaEnhancer() {
         background: white !important;
       }
       .rubrica-master-page > div > div.space-y-6 > div:last-child { margin-bottom: 0 !important; }
-      .rubrica-master-page > div > div.space-y-6 > div > div:first-child {
-        padding: 7px 12px !important;
-        background: rgb(71 85 105) !important;
-        color: white !important;
-      }
-      .rubrica-master-page > div > div.space-y-6 > div > div:first-child h3,
-      .rubrica-master-page > div > div.space-y-6 > div > div:first-child span { color: white !important; }
-      .rubrica-master-page > div > div.space-y-6 > div > div:first-child h3 { font-size: .875rem !important; }
+      .rubrica-master-page .rubrica-letter-header-hidden { display: none !important; }
       .rubrica-master-page > div > div.space-y-6 > div > div:nth-child(2) > div {
         padding: 8px 12px !important;
         min-height: 52px;
@@ -123,7 +231,6 @@ export function RubricaMasterGraficaEnhancer() {
       .rubrica-master-page > div > div.space-y-6 .bg-red-100 { background: rgb(254 242 242) !important; }
       .rubrica-master-page > div > div.space-y-6 .bg-red-600 { background: rgb(220 38 38) !important; }
 
-      /* Modale Nuovo/Modifica Contatto in MASTER_GRAFICA */
       body.master-grafica-rubrica [role="dialog"] {
         width: min(96vw, 1120px) !important;
         max-width: 1120px !important;
