@@ -19,7 +19,6 @@ export function RubricaMasterGraficaEnhancer() {
         display: flex;
         flex-direction: column;
       }
-
       .rubrica-master-page > div > div:first-child {
         flex: 0 0 auto;
         position: static !important;
@@ -48,7 +47,6 @@ export function RubricaMasterGraficaEnhancer() {
         border-color: rgb(3 105 161) !important;
         color: rgb(3 105 161) !important;
       }
-
       .rubrica-master-page > div > div:nth-child(2) {
         flex: 0 0 auto;
         margin-bottom: 10px !important;
@@ -83,7 +81,6 @@ export function RubricaMasterGraficaEnhancer() {
         min-width: 52px !important;
       }
 
-      /* Rubrica singola: una sola pagina a tutta larghezza, con scroll verticale. */
       .rubrica-master-page > div > div.space-y-6 {
         min-height: 0;
         flex: 1 1 auto;
@@ -120,29 +117,93 @@ export function RubricaMasterGraficaEnhancer() {
         border-color: rgb(226 232 240) !important;
       }
       .rubrica-master-page > div > div.space-y-6 > div > div:nth-child(2) > div:hover { background: rgb(240 249 255) !important; }
-      .rubrica-master-page > div > div.space-y-6 .text-xl {
-        font-size: .9rem !important;
-        line-height: 1.25rem !important;
-      }
-      .rubrica-master-page > div > div.space-y-6 .text-base {
-        font-size: .75rem !important;
-        line-height: 1rem !important;
-      }
+      .rubrica-master-page > div > div.space-y-6 .text-xl { font-size: .9rem !important; line-height: 1.25rem !important; }
+      .rubrica-master-page > div > div.space-y-6 .text-base { font-size: .75rem !important; line-height: 1rem !important; }
       .rubrica-master-page > div > div.space-y-6 svg { width: 15px !important; height: 15px !important; }
       .rubrica-master-page > div > div.space-y-6 .bg-red-100 { background: rgb(254 242 242) !important; }
       .rubrica-master-page > div > div.space-y-6 .bg-red-600 { background: rgb(220 38 38) !important; }
 
+      /* Modale Nuovo/Modifica Contatto in MASTER_GRAFICA */
       body.master-grafica-rubrica [role="dialog"] {
-        width: min(94vw, 980px) !important;
-        max-width: 980px !important;
+        width: min(96vw, 1120px) !important;
+        max-width: 1120px !important;
+        max-height: 90vh !important;
+        padding: 0 !important;
+        overflow: hidden !important;
         background: rgb(248 250 252) !important;
-        border-color: rgb(186 230 253) !important;
+        border: 1px solid rgb(186 230 253) !important;
+        border-radius: 10px !important;
+      }
+      body.master-grafica-rubrica [role="dialog"] > div:first-child,
+      body.master-grafica-rubrica [role="dialog"] > header {
+        padding: 14px 18px 10px !important;
+        border-bottom: 1px solid rgb(186 230 253);
+        background: rgb(248 250 252);
+      }
+      body.master-grafica-rubrica [role="dialog"] h2 {
+        font-size: 1.125rem !important;
+        color: rgb(15 23 42) !important;
+      }
+      body.master-grafica-rubrica [role="dialog"] form {
+        max-height: calc(90vh - 78px);
+        overflow-y: auto;
+        padding: 12px 18px 16px !important;
+      }
+      body.master-grafica-rubrica [role="dialog"] form.space-y-4 > :not([hidden]) ~ :not([hidden]) {
+        margin-top: 10px !important;
+      }
+      body.master-grafica-rubrica [role="dialog"] label {
+        font-size: .75rem !important;
+        font-weight: 600 !important;
+        color: rgb(51 65 85) !important;
       }
       body.master-grafica-rubrica [role="dialog"] input,
-      body.master-grafica-rubrica [role="dialog"] textarea,
-      body.master-grafica-rubrica [role="dialog"] select {
+      body.master-grafica-rubrica [role="dialog"] select,
+      body.master-grafica-rubrica [role="dialog"] textarea {
         background: white !important;
         border-color: rgb(203 213 225) !important;
+      }
+      body.master-grafica-rubrica [role="dialog"] input,
+      body.master-grafica-rubrica [role="dialog"] select {
+        height: 34px !important;
+      }
+      body.master-grafica-rubrica [role="dialog"] textarea {
+        min-height: 72px !important;
+        height: 72px !important;
+      }
+      body.master-grafica-rubrica [role="dialog"] .rounded-lg.border.bg-gray-50 {
+        background: rgb(248 250 252) !important;
+        border-color: rgb(186 230 253) !important;
+        padding: 10px 12px !important;
+      }
+      body.master-grafica-rubrica [role="dialog"] .border-blue-200.bg-blue-50 {
+        background: rgb(240 249 255) !important;
+        border-color: rgb(125 211 252) !important;
+        padding: 10px 12px !important;
+      }
+      body.master-grafica-rubrica [role="dialog"] input[type="checkbox"] {
+        accent-color: rgb(3 105 161);
+      }
+      body.master-grafica-rubrica [role="dialog"] button.bg-blue-600,
+      body.master-grafica-rubrica [role="dialog"] button[class*="bg-blue-600"] {
+        background: rgb(3 105 161) !important;
+        border-color: rgb(3 105 161) !important;
+        color: white !important;
+      }
+      body.master-grafica-rubrica [role="dialog"] button.bg-blue-600:hover,
+      body.master-grafica-rubrica [role="dialog"] button[class*="bg-blue-600"]:hover {
+        background: rgb(2 132 199) !important;
+      }
+      body.master-grafica-rubrica [role="dialog"] .mt-4.flex.flex-col.gap-3.border-t {
+        position: sticky;
+        bottom: -16px;
+        z-index: 5;
+        margin-left: -18px !important;
+        margin-right: -18px !important;
+        margin-bottom: -16px !important;
+        padding: 10px 18px 12px !important;
+        background: rgb(248 250 252);
+        border-top-color: rgb(186 230 253) !important;
       }
     `}</style>
   );
