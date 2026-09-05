@@ -14,6 +14,7 @@ import { ComunicazioniInterneMasterGraficaEnhancer } from "@/components/comunica
 import { RubricaMasterGraficaEnhancer } from "@/components/contatti/RubricaMasterGraficaEnhancer";
 import { ContattiImportTemplateEnhancer } from "@/components/contatti/ContattiImportTemplateEnhancer";
 import { VariazioniMasterGraficaEnhancer } from "@/components/pratiche/VariazioniMasterGraficaEnhancer";
+import { DocumentiMasterGraficaEnhancer } from "@/components/pratiche/DocumentiMasterGraficaEnhancer";
 import { Toaster } from "@/components/ui/toaster";
 
 import Header from "@/components/Header";
@@ -52,6 +53,7 @@ export default function App({ Component, pageProps }: AppProps) {
   const isMasterGraficaComunicazioniInterne = router.pathname === "/comunicazioni/interne";
   const isMasterGraficaRubrica = router.pathname === "/contatti";
   const isMasterGraficaVariazioni = router.pathname === "/pratiche/variazioni";
+  const isMasterGraficaDocumenti = router.pathname === "/pratiche/modelli" || router.pathname === "/pratiche/diciture";
   const isFixedViewportPage = isOperationalScadenzario || isMasterGraficaPromemoria || isMasterGraficaAgenda || isMasterGraficaCassettiFiscali || isMasterGraficaAccessoPortali || isMasterGraficaComunicazioniClienti || isMasterGraficaComunicazioniInterne || isMasterGraficaRubrica || isMasterGraficaVariazioni;
 
   useEffect(() => {
@@ -128,6 +130,7 @@ export default function App({ Component, pageProps }: AppProps) {
     isMasterGraficaComunicazioniInterne ? "comunicazioni-interne-master-page !min-h-0 !overflow-hidden" : "",
     isMasterGraficaRubrica ? "rubrica-master-page !min-h-0 !overflow-hidden" : "",
     isMasterGraficaVariazioni ? "variazioni-master-page !min-h-0 !overflow-hidden" : "",
+    isMasterGraficaDocumenti ? "pratiche-documenti-master-page" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -155,6 +158,7 @@ export default function App({ Component, pageProps }: AppProps) {
         {isMasterGraficaRubrica && <RubricaMasterGraficaEnhancer />}
         {isMasterGraficaRubrica && <ContattiImportTemplateEnhancer />}
         {isMasterGraficaVariazioni && <VariazioniMasterGraficaEnhancer />}
+        {isMasterGraficaDocumenti && <DocumentiMasterGraficaEnhancer />}
         {isPublicPage ? (
           <>
             {pageContent}
