@@ -1,9 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
-import { getSupabaseClient } from "@/lib/supabase/client";
-
-type FestivitaRow = {
-  data_festivita: string;
-};
+import { useEffect } from "react";
 
 const pad = (value: number) => String(value).padStart(2, "0");
 const toLocalIso = (date: Date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
@@ -16,52 +11,57 @@ const getIsoWeekStart = (year: number, week: number) => {
   return monday;
 };
 
+const getEasterSunday = (year: number) => {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31) - 1;
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(year, month, day, 12, 0, 0, 0);
+};
+
+const getItalianNationalHolidaySet = (year: number) => {
+  const fixed = [
+    [1, 1],
+    [1, 6],
+    [4, 25],
+    [5, 1],
+    [6, 2],
+    [8, 15],
+    [11, 1],
+    [12, 8],
+    [12, 25],
+    [12, 26],
+  ];
+
+  const values = new Set(
+    fixed.map(([month, day]) => toLocalIso(new Date(year, month - 1, day, 12, 0, 0, 0)))
+  );
+
+  const easterMonday = getEasterSunday(year);
+  easterMonday.setDate(easterMonday.getDate() + 1);
+  values.add(toLocalIso(easterMonday));
+
+  return values;
+};
+
 const MONTHS_IT = [
   "gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno",
   "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre",
 ];
 
 export function AgendaMasterGraficaEnhancer() {
-  const [festivita, setFestivita] = useState<string[]>([]);
-  const festivitaSet = useMemo(() => new Set(festivita), [festivita]);
-
   useEffect(() => {
-    let cancelled = false;
-
-    const loadFestivita = async () => {
-      try {
-        const supabase = getSupabaseClient();
-        const currentYear = new Date().getFullYear();
-        const { data, error } = await (supabase as any)
-          .from("tbfestivita")
-          .select("data_festivita")
-          .eq("tipo", "nazionale")
-          .gte("data_festivita", `${currentYear - 2}-01-01`)
-          .lte("data_festivita", `${currentYear + 3}-12-31`);
-
-        if (error) throw error;
-        if (!cancelled) {
-          setFestivita(
-            ((data || []) as FestivitaRow[])
-              .map((row) => String(row.data_festivita || "").slice(0, 10))
-              .filter(Boolean)
-          );
-        }
-      } catch (error) {
-        console.error("Errore caricamento festività Agenda:", error);
-      }
-    };
-
-    void loadFestivita();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    let timer: number | null = null;
-
-    const enhanceAgenda = () => {
+    const apply = () => {
       const root = document.querySelector(".agenda-master-page");
       if (!root) return;
 
@@ -74,6 +74,7 @@ export function AgendaMasterGraficaEnhancer() {
         const week = Number(match[1]);
         const year = Number(match[2]);
         const monday = getIsoWeekStart(year, week);
+        const holidays = getItalianNationalHolidaySet(year);
         const headerGrid = root.querySelector(".sticky > div");
         const headerCells = headerGrid ? Array.from(headerGrid.children) : [];
 
@@ -82,10 +83,26 @@ export function AgendaMasterGraficaEnhancer() {
 
           const date = new Date(monday);
           date.setDate(monday.getDate() + index - 1);
-          const weekend = date.getDay() === 0 || date.getDay() === 6;
-          const holiday = festivitaSet.has(toLocalIso(date));
+          const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+          const isHoliday = holidays.has(toLocalIso(date));
 
-          cell.dataset.agendaSpecialDay = weekend || holiday ? "true" : "false";
+          if (isWeekend || isHoliday) {
+            cell.style.setProperty("background-color", "rgb(254 226 226)", "important");
+            cell.style.setProperty("color", "rgb(185 28 28)", "important");
+            cell.style.setProperty("border-color", "rgb(252 165 165)", "important");
+            Array.from(cell.querySelectorAll("*")).forEach((node) => {
+              if (node instanceof HTMLElement) {
+                node.style.setProperty("color", "rgb(185 28 28)", "important");
+              }
+            });
+          } else {
+            cell.style.removeProperty("background-color");
+            cell.style.removeProperty("color");
+            cell.style.removeProperty("border-color");
+            Array.from(cell.querySelectorAll("*")).forEach((node) => {
+              if (node instanceof HTMLElement) node.style.removeProperty("color");
+            });
+          }
         });
 
         const newEventButton = Array.from(root.querySelectorAll("button")).find((button) =>
@@ -113,49 +130,56 @@ export function AgendaMasterGraficaEnhancer() {
       );
 
       buttons.forEach((button) => {
-        const active = button.className.includes("bg-primary");
-        button.dataset.agendaViewButton = "true";
-        button.dataset.agendaViewActive = active ? "true" : "false";
+        const isActive = button.className.includes("bg-primary");
+        button.style.setProperty(
+          "background-color",
+          isActive ? "rgb(3 105 161)" : "white",
+          "important"
+        );
+        button.style.setProperty(
+          "color",
+          isActive ? "white" : "rgb(15 23 42)",
+          "important"
+        );
+        button.style.setProperty("border", "1px solid rgb(125 211 252)", "important");
+        button.style.setProperty(
+          "border-color",
+          isActive ? "rgb(3 105 161)" : "rgb(125 211 252)",
+          "important"
+        );
+        button.style.setProperty("box-shadow", "none", "important");
       });
     };
 
-    const scheduleEnhance = () => {
-      if (timer !== null) window.clearTimeout(timer);
-      timer = window.setTimeout(enhanceAgenda, 80);
-    };
-
-    enhanceAgenda();
-    const onClick = () => scheduleEnhance();
-    document.addEventListener("click", onClick, true);
-
-    return () => {
-      document.removeEventListener("click", onClick, true);
-      if (timer !== null) window.clearTimeout(timer);
-    };
-  }, [festivitaSet]);
+    apply();
+    const interval = window.setInterval(apply, 500);
+    return () => window.clearInterval(interval);
+  }, []);
 
   return (
     <style jsx global>{`
-      .agenda-master-page button[data-agenda-view-button="true"] {
-        background: white !important;
+      .agenda-master-page .md\\:block > div:first-child > div:last-child > div:last-child button {
+        background-color: white !important;
         color: rgb(15 23 42) !important;
         border: 1px solid rgb(125 211 252) !important;
         box-shadow: none !important;
       }
 
-      .agenda-master-page button[data-agenda-view-button="true"][data-agenda-view-active="true"] {
-        background: rgb(3 105 161) !important;
+      .agenda-master-page .md\\:block > div:first-child > div:last-child > div:last-child button[class*="bg-primary"] {
+        background-color: rgb(3 105 161) !important;
         color: white !important;
         border-color: rgb(3 105 161) !important;
       }
 
-      .agenda-master-page .sticky > div > div[data-agenda-special-day="true"] {
-        background: rgb(254 226 226) !important;
+      .agenda-master-page .sticky > div > div:nth-child(7),
+      .agenda-master-page .sticky > div > div:nth-child(8) {
+        background-color: rgb(254 226 226) !important;
         color: rgb(185 28 28) !important;
         border-color: rgb(252 165 165) !important;
       }
 
-      .agenda-master-page .sticky > div > div[data-agenda-special-day="true"] * {
+      .agenda-master-page .sticky > div > div:nth-child(7) *,
+      .agenda-master-page .sticky > div > div:nth-child(8) * {
         color: rgb(185 28 28) !important;
       }
 
@@ -166,7 +190,7 @@ export function AgendaMasterGraficaEnhancer() {
         padding: 0 14px;
         border: 1px solid rgb(125 211 252);
         border-radius: 8px;
-        background: white;
+        background-color: white;
         color: rgb(3 105 161);
         font-weight: 700;
         text-transform: capitalize;
