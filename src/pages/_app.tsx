@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/contexts/ThemeProvider";
 import { StudioProvider } from "@/contexts/StudioContext";
 import { ModuleAccessGuard } from "@/components/security/ModuleAccessGuard";
 import { ClientiImportTemplateEnhancer } from "@/components/ClientiImportTemplateEnhancer";
+import { AgendaMasterGraficaEnhancer } from "@/components/agenda/AgendaMasterGraficaEnhancer";
 import { Toaster } from "@/components/ui/toaster";
 
 // Layout (Header + Nav) SOLO per pagine private
@@ -86,7 +87,6 @@ export default function App({ Component, pageProps }: AppProps) {
     };
   }, [router.isReady, router.pathname, isScadenzarioPage]);
 
-  // Pagine pubbliche / standalone: niente layout
   const isPublicPage =
     router.pathname === "/login" ||
     router.pathname === "/auth/callback" ||
@@ -120,6 +120,7 @@ export default function App({ Component, pageProps }: AppProps) {
     <ThemeProvider>
       <StudioProvider>
         {router.pathname === "/clienti" && <ClientiImportTemplateEnhancer />}
+        {isMasterGraficaAgenda && <AgendaMasterGraficaEnhancer />}
         {isPublicPage ? (
           <>
             {pageContent}
@@ -138,9 +139,7 @@ export default function App({ Component, pageProps }: AppProps) {
             <main
               className={`flex-1 overflow-y-auto px-4 pb-4 pt-0 md:px-6 md:pb-6 md:pt-0 ${pageClass}`}
             >
-              <ModuleAccessGuard>
-                {pageContent}
-              </ModuleAccessGuard>
+              <ModuleAccessGuard>{pageContent}</ModuleAccessGuard>
             </main>
             <Toaster />
           </div>
