@@ -21,36 +21,23 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
 
           path = Path('src/pages/agenda/index.tsx')
           text = path.read_text()
+          original = text
 
-          old = ''' const teamsEvents = useMemo(() => {
-  return groupedEvents
-    .filter((e) => {
-      const isTeams =
-        Boolean(e.riunione_teams) &&
-        Boolean(String(e.link_teams || "").trim());
+          text = text.replace(
+            '      riunione_teams: Boolean((master as any).riunione_teams),\n      link_teams: ((master as any).link_teams as string) || null,',
+            '      riunione_teams: sortedRows.some((row) => Boolean((row as any).riunione_teams) || Boolean(String((row as any).link_teams || "").trim())),\n      link_teams: (sortedRows.find((row) => Boolean(String((row as any).link_teams || "").trim())) as any)?.link_teams || null,'
+          )
 
-      if (!isTeams) return false;
+          pattern = re.compile(
+            r' const teamsEvents = useMemo\(\(\) => \{.*?\n\}, \[groupedEvents, filtroUtenti(?:, filtroSettori, utenti)?\]\);',
+            re.S,
+          )
 
-      if (filtroUtenti.length === 0) return true;
-
-      const ownerMatch = filtroUtenti.includes(String(e.utente_id || ""));
-      const participantMatch = e.partecipanti.some((id) =>
-        filtroUtenti.includes(String(id))
-      );
-
-      return ownerMatch || participantMatch;
-    })
-    .sort(
-      (a, b) =>
-        safeParseISO(a.data_inizio).getTime() -
-        safeParseISO(b.data_inizio).getTime()
-    );
-}, [groupedEvents, filtroUtenti]);'''
-
-          new = ''' const teamsEvents = useMemo(() => {
+          replacement = ''' const teamsEvents = useMemo(() => {
   const activeUserIds = new Set<string>(filtroUtenti);
 
   if (filtroSettori.length > 0) {
@@ -64,16 +51,20 @@ jobs:
 
   return groupedEvents
     .filter((e) => {
+      // Considera Teams se almeno una riga del gruppo è marcata Teams
+      // oppure contiene il relativo link. In questo modo non dipendiamo
+      // dalla riga scelta come master del gruppo.
       const isTeams =
-        Boolean(e.riunione_teams) &&
-        Boolean(String(e.link_teams || "").trim());
+        Boolean(e.riunione_teams) ||
+        Boolean(String(e.link_teams || "").trim()) ||
+        e.rows.some((row) =>
+          Boolean((row as any).riunione_teams) ||
+          Boolean(String((row as any).link_teams || "").trim())
+        );
 
       if (!isTeams) return false;
       if (activeUserIds.size === 0) return true;
 
-      // Un gruppo evento ha una riga per ogni utente coinvolto.
-      // Filtriamo quindi sulle righe del gruppo, come già fa la vista agenda,
-      // invece di basarci solo sul master/array partecipanti.
       return e.rows.some((row) =>
         activeUserIds.has(String(row.utente_id || ""))
       );
@@ -85,10 +76,14 @@ jobs:
     );
 }, [groupedEvents, filtroUtenti, filtroSettori, utenti]);'''
 
-          if old not in text:
-              raise SystemExit('Blocco teamsEvents atteso non trovato: nessuna modifica eseguita')
+          text, count = pattern.subn(replacement, text, count=1)
+          if count != 1:
+            raise SystemExit(f'Blocco teamsEvents non trovato o ambiguo: {count}')
 
-          path.write_text(text.replace(old, new, 1))
+          if text == original:
+            raise SystemExit('Nessuna modifica prodotta')
+
+          path.write_text(text)
           PY
 
       - name: Commit fix
@@ -96,5 +91,5 @@ jobs:
           git config user.name "studio-manager-bot"
           git config user.email "actions@github.com"
           git add src/pages/agenda/index.tsx
-          git commit -m "Fix Agenda Teams user filtering"
+          git commit -m "Fix grouped Teams meeting detection and user filter"
           git push origin HEAD:main
