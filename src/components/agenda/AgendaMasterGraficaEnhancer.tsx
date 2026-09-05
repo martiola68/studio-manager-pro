@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { getSupabaseClient } from "@/lib/supabase/client";
 
 const pad = (value: number) => String(value).padStart(2, "0");
 const toLocalIso = (date: Date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
@@ -47,6 +48,23 @@ const viewByLabel: Record<string, string> = {
   "Mese": "month",
   "Settimana": "week",
 };
+
+const normalizeName = (value: string) => value.trim().replace(/\s+/g, " ").toLowerCase();
+
+const extractTeamsUrl = (value: string | null | undefined) => {
+  const text = String(value || "");
+  const match = text.match(/https:\/\/(?:teams\.microsoft\.com|teams\.live\.com)\/[^\s<>'\"]+/i);
+  return match?.[0] || null;
+};
+
+const formatAgendaDate = (value: string | null | undefined) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value).slice(0, 10);
+  return date.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" });
+};
+
+const formatAgendaTime = (value: string | null | undefined) => String(value || "").slice(0, 5);
 
 export function AgendaMasterGraficaEnhancer() {
   useEffect(() => {
@@ -123,8 +141,140 @@ export function AgendaMasterGraficaEnhancer() {
       });
     };
 
+    let teamsLookupRunning = false;
+    let lastTeamsKey = "";
+
+    const repairTeamsEmptyView = async () => {
+      if (teamsLookupRunning) return;
+      const root = document.querySelector(".agenda-master-page");
+      if (!root) return;
+
+      const emptyMessage = Array.from(root.querySelectorAll("p")).find((node) =>
+        /Nessuna riunione Teams trovata per/i.test(node.textContent || "")
+      ) as HTMLElement | undefined;
+
+      if (!emptyMessage) {
+        const fallback = root.querySelector("[data-agenda-teams-fallback]");
+        if (fallback) fallback.remove();
+        lastTeamsKey = "";
+        return;
+      }
+
+      const rawNames = (emptyMessage.textContent || "")
+        .replace(/^.*Nessuna riunione Teams trovata per\s*/i, "")
+        .trim();
+      if (!rawNames) return;
+
+      const key = rawNames.toLowerCase();
+      if (key === lastTeamsKey && root.querySelector("[data-agenda-teams-fallback]")) return;
+
+      teamsLookupRunning = true;
+      try {
+        const supabase = getSupabaseClient() as any;
+        const { data: users, error: usersError } = await supabase
+          .from("tbutenti")
+          .select("id,nome,cognome,email")
+          .eq("attivo", true);
+        if (usersError) return;
+
+        let selectedIds: string[] = [];
+        if (/tutti gli utenti/i.test(rawNames)) {
+          selectedIds = (users || []).map((u: any) => String(u.id));
+        } else {
+          const selectedNames = rawNames.split(",").map(normalizeName).filter(Boolean);
+          selectedIds = (users || [])
+            .filter((u: any) => {
+              const surnameFirst = normalizeName(`${u.cognome || ""} ${u.nome || ""}`);
+              const nameFirst = normalizeName(`${u.nome || ""} ${u.cognome || ""}`);
+              return selectedNames.includes(surnameFirst) || selectedNames.includes(nameFirst);
+            })
+            .map((u: any) => String(u.id));
+        }
+        if (selectedIds.length === 0) return;
+
+        const { data: rows, error: rowsError } = await supabase
+          .from("tbagenda")
+          .select("id,titolo,data_inizio,data_fine,ora_inizio,ora_fine,utente_id,riunione_teams,link_teams,luogo,descrizione,provider")
+          .in("utente_id", selectedIds)
+          .order("data_inizio", { ascending: true });
+        if (rowsError) return;
+
+        const meetings = (rows || []).filter((row: any) => {
+          const description = String(row.descrizione || "");
+          const place = String(row.luogo || "");
+          return Boolean(row.riunione_teams) ||
+            Boolean(String(row.link_teams || "").trim()) ||
+            /teams\.microsoft\.com|teams\.live\.com/i.test(description) ||
+            /microsoft teams/i.test(description) ||
+            /microsoft teams/i.test(place);
+        });
+
+        if (meetings.length === 0) return;
+
+        const nativeContainer = emptyMessage.parentElement;
+        if (!nativeContainer?.parentElement) return;
+
+        nativeContainer.style.display = "none";
+        root.querySelector("[data-agenda-teams-fallback]")?.remove();
+
+        const wrapper = document.createElement("div");
+        wrapper.dataset.agendaTeamsFallback = "true";
+        wrapper.className = "agenda-teams-fallback";
+
+        const title = document.createElement("div");
+        title.className = "agenda-teams-fallback-title";
+        title.textContent = `Riunioni Teams di ${rawNames}`;
+        wrapper.appendChild(title);
+
+        const table = document.createElement("table");
+        table.className = "agenda-teams-fallback-table";
+        table.innerHTML = "<thead><tr><th>Data</th><th>Orario</th><th>Descrizione</th><th>Teams</th></tr></thead>";
+        const tbody = document.createElement("tbody");
+
+        meetings.forEach((row: any) => {
+          const tr = document.createElement("tr");
+          const tdDate = document.createElement("td");
+          const tdTime = document.createElement("td");
+          const tdTitle = document.createElement("td");
+          const tdLink = document.createElement("td");
+
+          tdDate.textContent = formatAgendaDate(row.data_inizio);
+          tdTime.textContent = `${formatAgendaTime(row.ora_inizio || String(row.data_inizio || "").slice(11, 16))} - ${formatAgendaTime(row.ora_fine || String(row.data_fine || "").slice(11, 16))}`;
+          tdTitle.textContent = String(row.titolo || "Riunione Teams");
+
+          const joinUrl = String(row.link_teams || "").trim() || extractTeamsUrl(row.descrizione);
+          if (joinUrl) {
+            const a = document.createElement("a");
+            a.href = joinUrl;
+            a.target = "_blank";
+            a.rel = "noreferrer";
+            a.textContent = "Partecipa";
+            a.className = "agenda-teams-join-link";
+            tdLink.appendChild(a);
+          } else {
+            tdLink.textContent = "Teams";
+          }
+
+          tr.append(tdDate, tdTime, tdTitle, tdLink);
+          tbody.appendChild(tr);
+        });
+
+        table.appendChild(tbody);
+        wrapper.appendChild(table);
+        nativeContainer.parentElement.appendChild(wrapper);
+        lastTeamsKey = key;
+      } finally {
+        teamsLookupRunning = false;
+      }
+    };
+
     apply();
-    const interval = window.setInterval(apply, 250);
+    void repairTeamsEmptyView();
+    const interval = window.setInterval(() => {
+      apply();
+      void repairTeamsEmptyView();
+    }, 500);
+
     return () => window.clearInterval(interval);
   }, []);
 
@@ -140,5 +290,11 @@ export function AgendaMasterGraficaEnhancer() {
     .agenda-master-month-label {
       display:inline-flex;align-items:center;height:36px;padding:0 14px;border:1px solid rgb(3 105 161);border-radius:8px;background:white;color:rgb(3 105 161);font-weight:700;text-transform:capitalize;white-space:nowrap;
     }
+    .agenda-teams-fallback { padding: 16px; }
+    .agenda-teams-fallback-title { margin-bottom: 12px; padding: 10px 12px; border: 1px solid rgb(186 230 253); border-radius: 8px; background: rgb(248 250 252); color: rgb(3 105 161); font-weight: 700; }
+    .agenda-teams-fallback-table { width: 100%; border-collapse: collapse; background: white; border: 1px solid rgb(226 232 240); }
+    .agenda-teams-fallback-table th { background: rgb(71 85 105); color: white; text-align: left; font-size: 12px; padding: 10px; }
+    .agenda-teams-fallback-table td { border-top: 1px solid rgb(226 232 240); padding: 10px; font-size: 13px; }
+    .agenda-teams-join-link { display: inline-flex; padding: 6px 10px; border-radius: 6px; background: rgb(3 105 161); color: white !important; font-weight: 600; text-decoration: none; }
   `}</style>;
 }
