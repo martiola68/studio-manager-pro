@@ -40,6 +40,14 @@ const getItalianNationalHolidaySet = (year: number) => {
 
 const MONTHS_IT = ["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"];
 
+const viewByLabel: Record<string, string> = {
+  "Eventi ricorrenti": "ricorrenti",
+  "Scaduti": "list",
+  "Riunioni Teams": "teams",
+  "Mese": "month",
+  "Settimana": "week",
+};
+
 export function AgendaMasterGraficaEnhancer() {
   useEffect(() => {
     const apply = () => {
@@ -90,20 +98,33 @@ export function AgendaMasterGraficaEnhancer() {
         }
       }
 
-      const labels = ["Eventi ricorrenti", "Scaduti", "Riunioni Teams", "Mese", "Settimana"];
-      const buttons = Array.from(root.querySelectorAll("button")).filter((button) => labels.some((label) => (button.textContent || "").trim().includes(label)));
-      buttons.forEach((button) => {
-        const cn = String(button.className || "");
-        const isActive = cn.includes("bg-primary") || (!cn.includes("border-input") && !cn.includes("bg-background"));
-        button.style.setProperty("background-color", isActive ? "rgb(3 105 161)" : "white", "important");
+      const buttons = Array.from(root.querySelectorAll("button"));
+      const viewButtons = buttons.filter((button) => Object.keys(viewByLabel).some((label) => (button.textContent || "").trim().includes(label)));
+
+      let activeView: string | null = null;
+      for (const button of viewButtons) {
+        const text = (button.textContent || "").trim();
+        const label = Object.keys(viewByLabel).find((item) => text.includes(item));
+        if (label && String(button.className || "").includes("bg-primary")) {
+          activeView = viewByLabel[label];
+          break;
+        }
+      }
+
+      viewButtons.forEach((button) => {
+        const text = (button.textContent || "").trim();
+        const label = Object.keys(viewByLabel).find((item) => text.includes(item));
+        const isActive = !!label && viewByLabel[label] === activeView;
+
+        button.style.setProperty("background-color", isActive ? "rgb(14 165 233)" : "white", "important");
         button.style.setProperty("color", isActive ? "white" : "rgb(3 105 161)", "important");
-        button.style.setProperty("border", `1px solid ${isActive ? "rgb(3 105 161)" : "rgb(125 211 252)"}`, "important");
+        button.style.setProperty("border", `1px solid ${isActive ? "rgb(14 165 233)" : "rgb(56 189 248)"}`, "important");
         button.style.setProperty("box-shadow", "none", "important");
       });
     };
 
     apply();
-    const interval = window.setInterval(apply, 500);
+    const interval = window.setInterval(apply, 250);
     return () => window.clearInterval(interval);
   }, []);
 
