@@ -12,6 +12,7 @@ import { AccessoPortaliMasterGraficaEnhancer } from "@/components/accesso-portal
 import { ComunicazioniClientiMasterGraficaEnhancer } from "@/components/comunicazioni/ComunicazioniClientiMasterGraficaEnhancer";
 import { ComunicazioniInterneMasterGraficaEnhancer } from "@/components/comunicazioni/ComunicazioniInterneMasterGraficaEnhancer";
 import { RubricaMasterGraficaEnhancer } from "@/components/contatti/RubricaMasterGraficaEnhancer";
+import { ContattiImportExcelEnhancer } from "@/components/contatti/ContattiImportExcelEnhancer";
 import { Toaster } from "@/components/ui/toaster";
 
 import Header from "@/components/Header";
@@ -149,6 +150,7 @@ export default function App({ Component, pageProps }: AppProps) {
         {isMasterGraficaComunicazioniClienti && <ComunicazioniClientiMasterGraficaEnhancer />}
         {isMasterGraficaComunicazioniInterne && <ComunicazioniInterneMasterGraficaEnhancer />}
         {isMasterGraficaRubrica && <RubricaMasterGraficaEnhancer />}
+        {isMasterGraficaRubrica && <ContattiImportExcelEnhancer />}
         {isPublicPage ? (
           <>
             {pageContent}
