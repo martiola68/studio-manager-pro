@@ -36,9 +36,7 @@ export function CalendarioMasterGraficaEnhancer() {
       }
 
       .calendario-master-page > div.space-y-6 > div:first-child button {
-        background: rgb(3 105 161) !important;
-        border-color: rgb(3 105 161) !important;
-        color: white !important;
+        display: none !important;
       }
 
       .calendario-master-page > div.space-y-6 > div:nth-child(2),
