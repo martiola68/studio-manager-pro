@@ -6,9 +6,9 @@ import { ModuleAccessGuard } from "@/components/security/ModuleAccessGuard";
 import { ClientiImportTemplateEnhancer } from "@/components/ClientiImportTemplateEnhancer";
 import { AgendaMasterGraficaEnhancer } from "@/components/agenda/AgendaMasterGraficaEnhancer";
 import { AgendaTeamsPastCleanup } from "@/components/agenda/AgendaTeamsPastCleanup";
+import { CalendarioMasterGraficaEnhancer } from "@/components/scadenze/CalendarioMasterGraficaEnhancer";
 import { Toaster } from "@/components/ui/toaster";
 
-// Layout (Header + Nav) SOLO per pagine private
 import Header from "@/components/Header";
 import { TopNavBar } from "@/components/TopNavBar";
 import { useRouter } from "next/router";
@@ -26,6 +26,7 @@ const SCADENZARI_VIEWPORT = new Set([
   "/scadenze/lipe",
   "/scadenze/esterometro",
   "/scadenze/elenco-generale",
+  "/scadenze/calendario",
 ]);
 
 export default function App({ Component, pageProps }: AppProps) {
@@ -36,6 +37,7 @@ export default function App({ Component, pageProps }: AppProps) {
   const isOperationalScadenzario = SCADENZARI_VIEWPORT.has(router.pathname);
   const isMasterGraficaPromemoria = router.pathname === "/promemoria";
   const isMasterGraficaAgenda = router.pathname === "/agenda";
+  const isMasterGraficaCalendario = router.pathname === "/scadenze/calendario";
   const isFixedViewportPage = isOperationalScadenzario || isMasterGraficaPromemoria || isMasterGraficaAgenda;
 
   useEffect(() => {
@@ -105,6 +107,7 @@ export default function App({ Component, pageProps }: AppProps) {
     isOperationalScadenzario ? "!min-h-0 !overflow-hidden" : "",
     isMasterGraficaPromemoria ? "promemoria-master-page !min-h-0 !overflow-hidden" : "",
     isMasterGraficaAgenda ? "agenda-master-page !min-h-0 !overflow-hidden" : "",
+    isMasterGraficaCalendario ? "calendario-master-page" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -124,6 +127,7 @@ export default function App({ Component, pageProps }: AppProps) {
         {router.pathname === "/clienti" && <ClientiImportTemplateEnhancer />}
         {isMasterGraficaAgenda && <AgendaMasterGraficaEnhancer />}
         {isMasterGraficaAgenda && <AgendaTeamsPastCleanup />}
+        {isMasterGraficaCalendario && <CalendarioMasterGraficaEnhancer />}
         {isPublicPage ? (
           <>
             {pageContent}
