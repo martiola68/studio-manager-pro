@@ -11,6 +11,7 @@ import { CassettiFiscaliMasterGraficaEnhancer } from "@/components/cassetti-fisc
 import { AccessoPortaliMasterGraficaEnhancer } from "@/components/accesso-portali/AccessoPortaliMasterGraficaEnhancer";
 import { ComunicazioniClientiMasterGraficaEnhancer } from "@/components/comunicazioni/ComunicazioniClientiMasterGraficaEnhancer";
 import { ComunicazioniInterneMasterGraficaEnhancer } from "@/components/comunicazioni/ComunicazioniInterneMasterGraficaEnhancer";
+import { RubricaMasterGraficaEnhancer } from "@/components/contatti/RubricaMasterGraficaEnhancer";
 import { Toaster } from "@/components/ui/toaster";
 
 import Header from "@/components/Header";
@@ -47,7 +48,8 @@ export default function App({ Component, pageProps }: AppProps) {
   const isMasterGraficaAccessoPortali = router.pathname === "/accesso-portali";
   const isMasterGraficaComunicazioniClienti = router.pathname === "/comunicazioni-clienti";
   const isMasterGraficaComunicazioniInterne = router.pathname === "/comunicazioni/interne";
-  const isFixedViewportPage = isOperationalScadenzario || isMasterGraficaPromemoria || isMasterGraficaAgenda || isMasterGraficaCassettiFiscali || isMasterGraficaAccessoPortali || isMasterGraficaComunicazioniClienti || isMasterGraficaComunicazioniInterne;
+  const isMasterGraficaRubrica = router.pathname === "/contatti";
+  const isFixedViewportPage = isOperationalScadenzario || isMasterGraficaPromemoria || isMasterGraficaAgenda || isMasterGraficaCassettiFiscali || isMasterGraficaAccessoPortali || isMasterGraficaComunicazioniClienti || isMasterGraficaComunicazioniInterne || isMasterGraficaRubrica;
 
   useEffect(() => {
     document.body.classList.toggle("master-grafica-promemoria", isMasterGraficaPromemoria);
@@ -121,6 +123,7 @@ export default function App({ Component, pageProps }: AppProps) {
     isMasterGraficaAccessoPortali ? "accesso-portali-master-page !min-h-0 !overflow-hidden" : "",
     isMasterGraficaComunicazioniClienti ? "comunicazioni-clienti-master-page !min-h-0 !overflow-hidden" : "",
     isMasterGraficaComunicazioniInterne ? "comunicazioni-interne-master-page !min-h-0 !overflow-hidden" : "",
+    isMasterGraficaRubrica ? "rubrica-master-page !min-h-0 !overflow-hidden" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -145,6 +148,7 @@ export default function App({ Component, pageProps }: AppProps) {
         {isMasterGraficaAccessoPortali && <AccessoPortaliMasterGraficaEnhancer />}
         {isMasterGraficaComunicazioniClienti && <ComunicazioniClientiMasterGraficaEnhancer />}
         {isMasterGraficaComunicazioniInterne && <ComunicazioniInterneMasterGraficaEnhancer />}
+        {isMasterGraficaRubrica && <RubricaMasterGraficaEnhancer />}
         {isPublicPage ? (
           <>
             {pageContent}
