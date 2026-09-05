@@ -317,18 +317,7 @@
     overflow: hidden;
   }
 
-  /* Pulsanti primari MASTER_GRAFICA: Nuovo Evento e vista attiva */
-  .agenda-master-page button.bg-primary {
-    background-color: rgb(3 105 161) !important;
-    border-color: rgb(3 105 161) !important;
-    color: white !important;
-  }
-
-  .agenda-master-page button.bg-primary:hover {
-    background-color: rgb(2 132 199) !important;
-  }
-
-  /* Nuovo Evento: è il bottone diretto del gruppo sinistro della toolbar */
+  /* Nuovo Evento: bottone diretto del gruppo sinistro della toolbar */
   .agenda-master-page .md\:block > div:first-child > div:first-child > button {
     background-color: rgb(3 105 161) !important;
     border-color: rgb(3 105 161) !important;
@@ -339,7 +328,7 @@
     background-color: rgb(2 132 199) !important;
   }
 
-  /* Intestazione settimanale scura come le tabelle MASTER_GRAFICA */
+  /* Intestazione settimanale scura come MASTER_GRAFICA */
   .agenda-master-page .sticky {
     background-color: rgb(71 85 105) !important;
   }
@@ -350,13 +339,11 @@
     color: white !important;
   }
 
-  /* Sabato evidenziato con il richiamo azzurro del master */
   .agenda-master-page .sticky > div > div:nth-child(7) {
     background-color: rgb(224 242 254) !important;
     color: rgb(3 105 161) !important;
   }
 
-  /* Area oraria chiara e compatta */
   .agenda-master-page .sticky + div > div > div:first-child {
     background-color: rgb(248 250 252) !important;
     color: rgb(100 116 139) !important;
