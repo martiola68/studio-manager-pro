@@ -1,734 +1,99 @@
 import { supabase } from "@/lib/supabase/client";
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import type { Database } from "@/lib/supabase/types";
-import { messaggioService } from "./messaggioService";
-import { teamsNotificationService } from "./teamsNotificationService";
-import { sendEmailServer } from "@/services/sendEmailServer";
+import {
+  promemoriaService as legacyPromemoriaService,
+  type Promemoria,
+  type Allegato,
+} from "./promemoriaServiceLegacy";
 
-export type Promemoria = Database["public"]["Tables"]["tbpromemoria"]["Row"];
+export type { Promemoria, Allegato } from "./promemoriaServiceLegacy";
 
-export interface Allegato {
-  nome: string;
-  url: string;
-  size: number;
-  tipo: string;
-  data_upload: string;
+async function getPromemoria(
+  studioId?: string | null,
+  userId?: string,
+  isResponsabile?: boolean,
+  userSettore?: string | null
+) {
+  let query = supabase
+    .from("tbpromemoria")
+    .select(`
+      *,
+      operatore:tbutenti!tbpromemoria_operatore_id_fkey(id, nome, cognome, settore, responsabile),
+      destinatario:tbutenti!tbpromemoria_destinatario_id_fkey(id, nome, cognome, settore, responsabile)
+    `);
+
+  if (studioId) {
+    query = query.eq("studio_id", studioId);
+  }
+
+  query = query.order("data_scadenza", {
+    ascending: true,
+    nullsFirst: false,
+  });
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  let filteredData = data || [];
+
+  if (isResponsabile && userSettore) {
+    filteredData = filteredData.filter((p) => {
+      const op = p.operatore;
+
+      if (p.operatore_id === userId || p.destinatario_id === userId) {
+        return true;
+      }
+
+      if (op?.settore === userSettore && op?.responsabile === false) {
+        return true;
+      }
+
+      return false;
+    });
+  } else {
+    filteredData = filteredData.filter(
+      (p) => p.destinatario_id === userId || p.operatore_id === userId
+    );
+  }
+
+  return filteredData as Promemoria[];
+}
+
+async function getStatistiche(utenteId: string) {
+  const { data, error } = await supabase
+    .from("tbpromemoria")
+    .select("working_progress, da_fatturare, fatturato")
+    .eq("operatore_id", utenteId);
+
+  if (error) {
+    console.error("Errore caricamento statistiche:", error);
+    return {
+      totali: 0,
+      inLavorazione: 0,
+      conclusi: 0,
+      daFatturare: 0,
+      fatturati: 0,
+    };
+  }
+
+  const promemoria = data || [];
+
+  return {
+    totali: promemoria.length,
+    inLavorazione: promemoria.filter(
+      (p) => p.working_progress === "In lavorazione"
+    ).length,
+    conclusi: promemoria.filter(
+      (p) => p.working_progress === "Concluso"
+    ).length,
+    daFatturare: promemoria.filter(
+      (p) => p.da_fatturare && !p.fatturato
+    ).length,
+    fatturati: promemoria.filter((p) => p.fatturato).length,
+  };
 }
 
 export const promemoriaService = {
-async getPromemoria(
-    studioId?: string | null,
-    userId?: string,
-    isResponsabile?: boolean,
-    userSettore?: string | null
-  ) {
-  let query = supabase
-  .from("tbpromemoria")
-  .select(`
-    *,
-    operatore:tbutenti!tbpromemoria_operatore_id_fkey(id, nome, cognome, settore, responsabile),
-    destinatario:tbutenti!tbpromemoria_destinatario_id_fkey(id, nome, cognome, settore, responsabile)
-  `)
-  .or("eliminato.is.null,eliminato.eq.false");
-
-    if (studioId) {
-      query = query.eq("studio_id", studioId);
-    }
-
-    query = query.order("data_scadenza", { ascending: true, nullsFirst: false });
-
-    const { data, error } = await query;
-
-    if (error) throw error;
-
-    let filteredData = data || [];
-
-    if (isResponsabile && userSettore) {
-      filteredData = filteredData.filter((p) => {
-        const op = p.operatore;
-
-        if (p.operatore_id === userId || p.destinatario_id === userId) return true;
-
-        if (op?.settore === userSettore && op?.responsabile === false) return true;
-
-        return false;
-      });
-    } else {
-      filteredData = filteredData.filter(
-        (p) => p.destinatario_id === userId || p.operatore_id === userId
-      );
-    }
-
-    return filteredData as Promemoria[];
-  },
-
-  async getAllegati(promemoriaId: string) {
-    const { data, error } = await supabase
-      .from("tbpromemoria")
-      .select("allegati")
-      .eq("id", promemoriaId)
-      .single();
-
-    if (error) {
-      console.error("Errore recupero allegati DB:", error);
-      return [];
-    }
-
-    if (data.allegati && Array.isArray(data.allegati)) {
-      return data.allegati as unknown as Allegato[];
-    }
-
-    const { data: storageFiles, error: storageError } = await supabase.storage
-      .from("promemoria-allegati")
-      .list(promemoriaId);
-
-    if (storageError) {
-      return [];
-    }
-
-    return storageFiles
-      .filter(f => f.name !== ".emptyFolderPlaceholder")
-      .map(file => {
-        const { data: { publicUrl } } = supabase.storage
-          .from("promemoria-allegati")
-          .getPublicUrl(`${promemoriaId}/${file.name}`);
-          
-        return {
-          nome: file.name,
-          url: publicUrl,
-          size: file.metadata?.size || 0,
-          tipo: file.metadata?.mimetype || "application/octet-stream",
-          data_upload: file.created_at
-        };
-      });
-  },
-
-  async getPromemoriaInScadenza(utenteId: string, studioId?: string | null): Promise<Promemoria[]> {
-    const oggi = new Date().toISOString().split("T")[0];
-    const traSetteGiorni = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .split("T")[0];
-
-    let query = supabase
-      .from("tbpromemoria")
-      .select(`
-        *,
-        tbtipopromemoria (
-          id, nome, descrizione, colore
-        )
-      `)
-      .eq("operatore_id", utenteId)
-      .eq("working_progress", "In lavorazione")
-      .gte("data_scadenza", oggi)
-      .lte("data_scadenza", traSetteGiorni)
-      .order("data_scadenza", { ascending: true });
-
-    if (studioId) {
-      query = query.eq("studio_id", studioId);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error("Errore caricamento promemoria in scadenza:", error);
-      throw error;
-    }
-
-    return data || [];
-  },
-
- async controllaEInviaNotificheScadenza(currentUserId: string, studioId: string) {
-  try {
-    const supabase = getSupabaseAdmin();
-    
-    console.log("Controllo promemoria in scadenza...");
-
-    const oggi = new Date();
-    oggi.setHours(0, 0, 0, 0);
-
-    const traSetteGiorni = new Date(oggi);
-    traSetteGiorni.setDate(traSetteGiorni.getDate() + 7);
-
-    const oggiIso = oggi.toISOString().split("T")[0];
-    const setteGiorniIso = traSetteGiorni.toISOString().split("T")[0];
-
-  const { data: promemoria, error } = await supabase
-  .from("tbpromemoria")
-  .select(`
-    *,
-    destinatario:tbutenti!destinatario_id (
-      id, nome, cognome, email
-    )
-  `)
-  .eq("studio_id", studioId)
-  .neq("working_progress", "Completato")
-  .in("data_scadenza", [oggiIso, setteGiorniIso]);
-
-    console.log("Date cercate:", {
-  oggiIso,
-  setteGiorniIso,
-  studioId,
-});
-
-console.log(
-  "Promemoria trovati:",
-  promemoria?.map((p) => ({
-    id: p.id,
-    titolo: p.titolo,
-    stato: p.working_progress,
-    data_scadenza: p.data_scadenza,
-    destinatario_id: p.destinatario_id,
-    destinatario_email: p.destinatario?.email,
-  }))
-);
-
-if (error) {
-  console.error("Errore recupero promemoria per notifiche:", error);
-
-  return {
-    success: false,
-    error: error.message,
-  };
-}
-
-if (!promemoria || promemoria.length === 0) {
-  console.log("Nessun promemoria da notificare");
-
-  return {
-    success: true,
-    promemoria_trovati: 0,
-    email_inviate: 0,
-    motivo: "Nessun promemoria trovato per oggi o +7 giorni",
-  };
-}
-
-    console.log(`Trovati ${promemoria.length} promemoria da notificare`);
-
-    for (const p of promemoria) {
-      if (!p.destinatario_id || !p.destinatario) continue;
-
-      const scadenza = new Date(p.data_scadenza);
-      scadenza.setHours(0, 0, 0, 0);
-
-      const giorniRimasti = Math.round(
-        (scadenza.getTime() - oggi.getTime()) / (1000 * 60 * 60 * 24)
-      );
-
-      if (giorniRimasti !== 7 && giorniRimasti !== 0) {
-        continue;
-      }
-
-      const tipoNotifica = giorniRimasti === 7 ? "7GIORNI" : "SCADENZA";
-      const urgenza =
-        giorniRimasti === 7
-          ? "PROMEMORIA IN SCADENZA TRA 7 GIORNI"
-          : "PROMEMORIA IN SCADENZA OGGI";
-
-      const dataScadenzaFormattata = new Date(p.data_scadenza).toLocaleDateString("it-IT");
-
-      const markerMessaggio =
-        giorniRimasti === 7
-          ? `[PROMEMORIA-7GG-${p.id}]`
-          : `[PROMEMORIA-OGGI-${p.id}]`;
-
-      const { data: notificheEsistenti, error: checkError } = await supabase
-        .from("tbmessaggi")
-        .select("id")
-        .ilike("testo", `%${markerMessaggio}%`)
-        .gte("created_at", oggi.toISOString());
-
-      if (checkError) {
-        console.error("Errore verifica notifiche esistenti:", checkError);
-      }
-
-    if (notificheEsistenti && notificheEsistenti.length > 0) {
-  console.log(`Notifica già inviata per promemoria: ${p.titolo} (${tipoNotifica})`);
-  continue;
-}
-
-      const messaggioTesto = `${markerMessaggio}
-${urgenza}
-
-Promemoria: ${p.titolo}
-
-Scadenza: ${dataScadenzaFormattata}
-Descrizione: ${p.descrizione || "Nessuna descrizione"}
-Priorità: ${p.priorita}
-Stato: ${p.working_progress}
-
-Vai su /promemoria per gestire questo promemoria.`;
-
-      try {
-        const conversazione = await messaggioService.getOrCreateConversazioneDiretta(
-          currentUserId,
-          p.destinatario_id,
-          studioId
-        );
-
-        if (conversazione) {
-          await messaggioService.inviaMessaggio(
-            conversazione.id,
-            currentUserId,
-            messaggioTesto
-          );
-
-          console.log(
-            `Messaggio interno inviato per promemoria: ${p.titolo} a ${p.destinatario.nome} ${p.destinatario.cognome}`
-          );
-        } else {
-          console.error(`Impossibile creare conversazione per promemoria: ${p.titolo}`);
-        }
-      } catch (msgError) {
-        console.error(`Errore invio messaggio interno per promemoria ${p.titolo}:`, msgError);
-      }
-
-      try {
-        if (p.destinatario.email) {
-          const emailSubject =
-            giorniRimasti === 7
-              ? `Promemoria in scadenza tra 7 giorni: ${p.titolo}`
-              : `Promemoria in scadenza oggi: ${p.titolo}`;
-
-          const emailHtml = `
-            <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
-              <p>Gentile ${p.destinatario.nome || "utente"},</p>
-
-              <p>
-                ${
-                  giorniRimasti === 7
-                    ? "ti ricordiamo che il seguente promemoria andrà in scadenza tra 7 giorni."
-                    : "ti ricordiamo che il seguente promemoria scade oggi."
-                }
-              </p>
-
-              <p><strong>Dettagli promemoria</strong></p>
-              <ul>
-                <li><strong>Titolo:</strong> ${p.titolo}</li>
-                <li><strong>Scadenza:</strong> ${dataScadenzaFormattata}</li>
-                <li><strong>Priorità:</strong> ${p.priorita || "-"}</li>
-                <li><strong>Stato:</strong> ${p.working_progress || "-"}</li>
-                <li><strong>Descrizione:</strong> ${p.descrizione || "Nessuna descrizione"}</li>
-              </ul>
-
-              <p>
-                Accedi a Studio Manager Pro per gestire il promemoria.
-              </p>
-
-              <p>
-                Questa comunicazione è stata generata automaticamente dal sistema promemoria.
-              </p>
-            </div>
-          `.trim();
-
-          const emailText = `
-${giorniRimasti === 7 ? "Promemoria in scadenza tra 7 giorni" : "Promemoria in scadenza oggi"}
-
-Titolo: ${p.titolo}
-Scadenza: ${dataScadenzaFormattata}
-Priorità: ${p.priorita || "-"}
-Stato: ${p.working_progress || "-"}
-Descrizione: ${p.descrizione || "Nessuna descrizione"}
-
-Accedi a Studio Manager Pro per gestire il promemoria.
-          `.trim();
-
- if (!p.studio_id) {
-  console.error(`studio_id mancante per promemoria ${p.titolo}`);
-  continue;
-}
-
-const { data: studio } = await (supabase as any)
-  .from("tbstudio")
-  .select("microsoft_connection_id")
-  .eq("id", p.studio_id)
-  .maybeSingle();
-
-          console.log("Studio email promemoria:", {
-  promemoria: p.titolo,
-  studio_id: p.studio_id,
-  microsoft_connection_id: studio?.microsoft_connection_id,
-  destinatario_email: p.destinatario?.email,
-});
-
-if (!studio?.microsoft_connection_id) {
-  console.error(`Connessione Microsoft studio mancante per promemoria ${p.titolo}`);
-  continue;
-}
-
-const emailResult = await sendEmailServer({
-  senderUserId: currentUserId,
-  microsoftConnectionId: studio.microsoft_connection_id,
-  to: p.destinatario.email,
-  subject: emailSubject,
-  html: emailHtml,
-});
-          if (!emailResult.success) {
-            console.error(
-              `Errore invio email promemoria ${p.titolo} a ${p.destinatario.email}:`,
-              emailResult.error
-            );
-          } else {
-            console.log(
-              `Email inviata per promemoria: ${p.titolo} a ${p.destinatario.email}`
-            );
-          }
-        }
-      } catch (mailError) {
-        console.error(`Errore invio email per promemoria ${p.titolo}:`, mailError);
-      }
-    }
-
-    console.log("Controllo notifiche promemoria completato");
-    return {
-  success: true,
-  promemoria_trovati: promemoria?.length || 0,
-};
-  } catch (error: any) {
-  console.error("Errore controllo notifiche scadenza promemoria:", error);
-
-  return {
-    success: false,
-    error: error?.message || String(error),
-  };
-}
-},
-
-async createPromemoria(nuovoPromemoria: {
-  titolo: string;
-  descrizione?: string;
-  data_inserimento: string;
-  giorni_scadenza: number;
-  data_scadenza: string;
-  priorita: string;
-  working_progress: string;
-  operatore_id: string;
-  destinatario_id?: string | null;
-  settore?: string;
-  tipo_promemoria_id?: string | null;
-  studio_id?: string | null;
-  gruppo_promemoria_id?: string | null;
-}) {
-    const { data, error } = await supabase
-      .from("tbpromemoria")
-      .insert([{
-        titolo: nuovoPromemoria.titolo,
-        descrizione: nuovoPromemoria.descrizione || null,
-        data_inserimento: nuovoPromemoria.data_inserimento,
-        giorni_scadenza: nuovoPromemoria.giorni_scadenza,
-        data_scadenza: nuovoPromemoria.data_scadenza,
-        priorita: nuovoPromemoria.priorita,
-        working_progress: nuovoPromemoria.working_progress,
-        operatore_id: nuovoPromemoria.operatore_id,
-        destinatario_id: nuovoPromemoria.destinatario_id || null,
-        settore: nuovoPromemoria.settore || null,
-        tipo_promemoria_id: nuovoPromemoria.tipo_promemoria_id || null,
-        studio_id: nuovoPromemoria.studio_id || null,
-        gruppo_promemoria_id: nuovoPromemoria.gruppo_promemoria_id || null
-      }])
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Errore creazione promemoria:", error);
-      throw error;
-    }
-
-    if (data && nuovoPromemoria.destinatario_id) {
-      try {
-        const { data: operatoreData } = await supabase
-          .from("tbutenti")
-          .select("nome, cognome")
-          .eq("id", nuovoPromemoria.operatore_id)
-          .single();
-
-        const { data: destinatarioData } = await supabase
-          .from("tbutenti")
-          .select("nome, cognome")
-          .eq("id", nuovoPromemoria.destinatario_id)
-          .single();
-
-        if (operatoreData && destinatarioData) {
-          await teamsNotificationService.sendPromemoriaNotification(
-            nuovoPromemoria.titolo,
-            nuovoPromemoria.data_scadenza,
-            nuovoPromemoria.destinatario_id
-          );
-        }
-      } catch (teamsError) {
-        console.log("Teams notification skipped:", teamsError);
-      }
-    }
-
-    return data;
-  },
-
- async updatePromemoria(id: string, promemoria: {
-  titolo?: string;
-  descrizione?: string;
-  data_inserimento?: string;
-  giorni_scadenza?: number;
-  data_scadenza?: string;
-  priorita?: string;
-  working_progress?: string;
-  destinatario_id?: string | null;
-  settore?: string;
-  tipo_promemoria_id?: string | null;
-}) {
-  const { data: prima } = await supabase
-    .from("tbpromemoria")
-    .select(`
-      id,
-      titolo,
-      descrizione,
-      working_progress,
-      operatore_id,
-      destinatario_id
-    `)
-    .eq("id", id)
-    .single();
-
-  const { data, error } = await supabase
-    .from("tbpromemoria")
-    .update({
-      ...promemoria,
-      stato_aggiornato_da: promemoria.working_progress ? prima?.destinatario_id : undefined,
-      stato_aggiornato_at: promemoria.working_progress ? new Date().toISOString() : undefined,
-    } as any)
-    .eq("id", id)
-    .select()
-    .single();
-
-  if (error) throw error;
-
-  const statoCambiato =
-    !!promemoria.working_progress &&
-    prima?.working_progress &&
-    prima.working_progress !== promemoria.working_progress;
-
-  const promemoriaTraUtentiDiversi =
-    prima?.operatore_id &&
-    prima?.destinatario_id &&
-    prima.operatore_id !== prima.destinatario_id;
-
-  if (statoCambiato && promemoriaTraUtentiDiversi) {
-    try {
-      await fetch("/api/promemoria/stato-aggiornato-email", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          promemoria_id: id,
-          nuovo_stato: promemoria.working_progress,
-        }),
-      });
-    } catch (emailError) {
-      console.error("Errore invio email cambio stato promemoria:", emailError);
-    }
-  }
-
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new Event("promemoria-updated"));
-  }
-
-  return data;
-},
-
-async deletePromemoria(
-  id: string,
-  currentUserId: string
-): Promise<void> {
-  /*
-   * Eliminazione definitiva: prima rimuoviamo eventuali file
-   * presenti nella cartella storage del promemoria, poi cancelliamo
-   * fisicamente la riga. Il filtro operatore_id mantiene invariata
-   * la regola: può eliminare soltanto chi ha creato il promemoria.
-   */
-  const { data: storageFiles, error: storageListError } = await supabase.storage
-    .from("promemoria-allegati")
-    .list(id);
-
-  if (!storageListError && storageFiles?.length) {
-    const paths = storageFiles
-      .filter((file) => file.name !== ".emptyFolderPlaceholder")
-      .map((file) => `${id}/${file.name}`);
-
-    if (paths.length) {
-      const { error: storageDeleteError } = await supabase.storage
-        .from("promemoria-allegati")
-        .remove(paths);
-
-      if (storageDeleteError) {
-        console.error("Errore eliminazione allegati promemoria:", storageDeleteError);
-        throw storageDeleteError;
-      }
-    }
-  }
-
-  const { data, error } = await supabase
-    .from("tbpromemoria")
-    .delete()
-    .eq("id", id)
-    .eq("operatore_id", currentUserId)
-    .select("id")
-    .maybeSingle();
-
-  if (error) {
-    console.error("Errore eliminazione definitiva promemoria:", error);
-    throw error;
-  }
-
-  if (!data?.id) {
-    throw new Error("Promemoria non eliminato: record non trovato o operazione non autorizzata");
-  }
-
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new Event("promemoria-updated"));
-  }
-},
-
-  calcolaDataScadenza(dataInizio: string, giorniScadenza: number): string {
-    const data = new Date(dataInizio);
-    data.setDate(data.getDate() + giorniScadenza);
-    return data.toISOString().split("T")[0];
-  },
-
-  async getStatistiche(utenteId: string) {
-   const { data, error } = await supabase
-  .from("tbpromemoria")
-  .select("working_progress, da_fatturare, fatturato")
-  .eq("operatore_id", utenteId)
-  .or("eliminato.is.null,eliminato.eq.false");
-
-    if (error) {
-      console.error("Errore caricamento statistiche:", error);
-      return {
-        totali: 0,
-        inLavorazione: 0,
-        conclusi: 0,
-        daFatturare: 0,
-        fatturati: 0,
-      };
-    }
-
-    const promemoria = data || [];
-    return {
-      totali: promemoria.length,
-      inLavorazione: promemoria.filter((p) => p.working_progress === "In lavorazione")
-        .length,
-      conclusi: promemoria.filter((p) => p.working_progress === "Concluso").length,
-      daFatturare: promemoria.filter(
-        (p) => p.da_fatturare && !p.fatturato
-      ).length,
-      fatturati: promemoria.filter((p) => p.fatturato).length,
-    };
-  },
-
-  async uploadAllegato(
-    promemoriaId: string,
-    file: File
-  ): Promise<Allegato> {
-    const maxSize = 10 * 1024 * 1024;
-    if (file.size > maxSize) {
-      throw new Error("File troppo grande. Dimensione massima: 10MB");
-    }
-
-    const tipiAccettati = [
-      "application/pdf",
-      "application/msword",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "application/vnd.ms-excel",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "image/jpeg",
-      "image/png",
-      "image/gif"
-    ];
-
-    if (!tipiAccettati.includes(file.type)) {
-      throw new Error("Tipo file non supportato. Usa: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG, GIF");
-    }
-
-    const timestamp = Date.now();
-    const nomeFile = `${promemoriaId}/${timestamp}_${file.name}`;
-
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from("promemoria-allegati")
-      .upload(nomeFile, file, {
-        cacheControl: "3600",
-        upsert: false
-      });
-
-    if (uploadError) {
-      console.error("Errore upload allegato:", uploadError);
-      throw new Error("Errore durante l'upload del file");
-    }
-
-    const { data: urlData } = supabase.storage
-      .from("promemoria-allegati")
-      .getPublicUrl(nomeFile);
-
-    const allegato: Allegato = {
-      nome: file.name,
-      url: urlData.publicUrl,
-      size: file.size,
-      tipo: file.type,
-      data_upload: new Date().toISOString()
-    };
-
-    const { data: currentPromemoria } = await supabase
-      .from("tbpromemoria")
-      .select("allegati")
-      .eq("id", promemoriaId)
-      .single();
-
-    const allegatiAttuali = (currentPromemoria?.allegati as unknown as Allegato[]) || [];
-    const nuoviAllegati = [...allegatiAttuali, allegato];
-
-    const { error: updateError } = await supabase
-      .from("tbpromemoria")
-      .update({ allegati: nuoviAllegati as any })
-      .eq("id", promemoriaId);
-
-    if (updateError) {
-      await supabase.storage
-        .from("promemoria-allegati")
-        .remove([nomeFile]);
-      throw new Error("Errore aggiornamento database");
-    }
-
-    return allegato;
-  },
-
-  async deleteAllegato(
-    promemoriaId: string,
-    allegatoUrl: string
-  ): Promise<void> {
-    const { data: currentPromemoria } = await supabase
-      .from("tbpromemoria")
-      .select("allegati")
-      .eq("id", promemoriaId)
-      .single();
-
-    if (!currentPromemoria) return;
-
-    const allegatiAttuali = (currentPromemoria.allegati as unknown as Allegato[]) || [];
-    const allegato = allegatiAttuali.find(a => a.url === allegatoUrl);
-
-    if (!allegato) return;
-
-    const path = allegato.url.split('/promemoria-allegati/')[1];
-    if (path) {
-      await supabase.storage
-        .from("promemoria-allegati")
-        .remove([path]);
-    }
-
-    const nuoviAllegati = allegatiAttuali.filter(a => a.url !== allegatoUrl);
-    const { error } = await supabase
-      .from("tbpromemoria")
-      .update({ allegati: nuoviAllegati as any })
-      .eq("id", promemoriaId);
-
-    if (error) throw error;
-  }
+  ...legacyPromemoriaService,
+  getPromemoria,
+  getStatistiche,
 };
