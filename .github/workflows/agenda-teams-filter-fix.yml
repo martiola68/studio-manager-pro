@@ -1,0 +1,100 @@
+name: Agenda Teams filter fix
+
+on:
+  push:
+    paths:
+      - '.github/workflows/agenda-teams-filter-fix.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix-agenda-teams-filter:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch Agenda Teams filtering
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/pages/agenda/index.tsx')
+          text = path.read_text()
+
+          old = ''' const teamsEvents = useMemo(() => {
+  return groupedEvents
+    .filter((e) => {
+      const isTeams =
+        Boolean(e.riunione_teams) &&
+        Boolean(String(e.link_teams || "").trim());
+
+      if (!isTeams) return false;
+
+      if (filtroUtenti.length === 0) return true;
+
+      const ownerMatch = filtroUtenti.includes(String(e.utente_id || ""));
+      const participantMatch = e.partecipanti.some((id) =>
+        filtroUtenti.includes(String(id))
+      );
+
+      return ownerMatch || participantMatch;
+    })
+    .sort(
+      (a, b) =>
+        safeParseISO(a.data_inizio).getTime() -
+        safeParseISO(b.data_inizio).getTime()
+    );
+}, [groupedEvents, filtroUtenti]);'''
+
+          new = ''' const teamsEvents = useMemo(() => {
+  const activeUserIds = new Set<string>(filtroUtenti);
+
+  if (filtroSettori.length > 0) {
+    utenti
+      .filter((u) => {
+        const settore = normalizeSettore(u.settore);
+        return settore && filtroSettori.includes(settore as "Fiscale" | "Consulenza" | "Lavoro");
+      })
+      .forEach((u) => activeUserIds.add(String(u.id)));
+  }
+
+  return groupedEvents
+    .filter((e) => {
+      const isTeams =
+        Boolean(e.riunione_teams) &&
+        Boolean(String(e.link_teams || "").trim());
+
+      if (!isTeams) return false;
+      if (activeUserIds.size === 0) return true;
+
+      // Un gruppo evento ha una riga per ogni utente coinvolto.
+      // Filtriamo quindi sulle righe del gruppo, come già fa la vista agenda,
+      // invece di basarci solo sul master/array partecipanti.
+      return e.rows.some((row) =>
+        activeUserIds.has(String(row.utente_id || ""))
+      );
+    })
+    .sort(
+      (a, b) =>
+        safeParseISO(a.data_inizio).getTime() -
+        safeParseISO(b.data_inizio).getTime()
+    );
+}, [groupedEvents, filtroUtenti, filtroSettori, utenti]);'''
+
+          if old not in text:
+              raise SystemExit('Blocco teamsEvents atteso non trovato: nessuna modifica eseguita')
+
+          path.write_text(text.replace(old, new, 1))
+          PY
+
+      - name: Commit fix
+        run: |
+          git config user.name "studio-manager-bot"
+          git config user.email "actions@github.com"
+          git add src/pages/agenda/index.tsx
+          git commit -m "Fix Agenda Teams user filtering"
+          git push origin HEAD:main
