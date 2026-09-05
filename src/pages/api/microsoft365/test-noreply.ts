@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendEmailServer } from "@/services/sendEmailServer";
 
-const REVISIONI_STUDIO_ID = "f9d3ca10-6134-4061-a2b4-0be74e8c7654";
+const REVISIONI_TENANT_ID = "7aa03348-fa29-4f5f-bcf3-81698de3da7a";
 const NOREPLY = "noreply@revisionicommerciali.it";
 
 function getBearerToken(req: NextApiRequest) {
@@ -45,19 +45,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(403).json({ success: false, error: "Studio utente non trovato" });
     }
 
-    // Questo endpoint e il mittente noreply sono riservati esclusivamente
-    // allo studio Revisioni Commerciali. Manteniamo il controllo lato server.
-    if (String(userRow.studio_id).toLowerCase() !== REVISIONI_STUDIO_ID) {
-      console.error("[microsoft365/test-noreply] studio non autorizzato", {
-        userId: userRow.id,
-        studioId: userRow.studio_id,
-      });
-      return res.status(403).json({ success: false, error: "Test noreply non abilitato per questo studio" });
-    }
-
     const microsoftConnectionId = userRow.microsoft_connection_id;
     if (!microsoftConnectionId) {
       return res.status(400).json({ success: false, error: "Connessione Microsoft non assegnata all'utente" });
+    }
+
+    // Verifica multi-tenant lato server: la connessione deve appartenere allo stesso studio
+    // dell'utente autenticato e al tenant Microsoft 365 di Revisioni Commerciali.
+    const { data: connection, error: connectionError } = await supabaseAdmin
+      .from("microsoft365_connections")
+      .select("id, studio_id, tenant_id, enabled")
+      .eq("id", microsoftConnectionId)
+      .eq("studio_id", userRow.studio_id)
+      .maybeSingle();
+
+    if (connectionError || !connection) {
+      return res.status(403).json({ success: false, error: "Connessione Microsoft non valida per questo studio" });
+    }
+
+    if (connection.enabled === false) {
+      return res.status(403).json({ success: false, error: "Connessione Microsoft disabilitata" });
+    }
+
+    if (String(connection.tenant_id || "").toLowerCase() !== REVISIONI_TENANT_ID) {
+      console.error("[microsoft365/test-noreply] tenant non autorizzato", {
+        userId: userRow.id,
+        studioId: userRow.studio_id,
+        tenantId: connection.tenant_id,
+      });
+      return res.status(403).json({ success: false, error: "Test noreply non abilitato per questo tenant Microsoft" });
     }
 
     const recipient = String(req.body?.to || userRow.email || authUser.email || "").trim();
