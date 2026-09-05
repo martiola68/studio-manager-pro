@@ -22,13 +22,20 @@ jobs:
           from pathlib import Path
           p = Path('src/pages/contatti/index.tsx')
           s = p.read_text()
+          original = s
 
-          # Reset also pending link fields when opening a new contact.
-          old = '''  const resetForm = () => {
+          # New-contact modal: show the same Clienti collegati panel used in edit mode.
+          target = '{editingContatto && (\n  <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">'
+          replacement = '{(\n  <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">'
+          if target in s:
+            s = s.replace(target, replacement, 1)
+
+          # Reset pending association fields whenever a new contact form is opened/reset.
+          old_reset = '''  const resetForm = () => {
     setFormData(initialFormData);
     setEditingContatto(null);
   };'''
-          new = '''  const resetForm = () => {
+          new_reset = '''  const resetForm = () => {
     setFormData(initialFormData);
     setEditingContatto(null);
     setClienteDaCollegare("");
@@ -37,36 +44,15 @@ jobs:
     setTelefonoSocieta("");
     setPecSocieta("");
   };'''
-          if old not in s:
-            raise SystemExit('resetForm block not found')
-          s = s.replace(old, new, 1)
+          if old_reset in s:
+            s = s.replace(old_reset, new_reset, 1)
 
-          # Show the linked-client/contact panel also for new contacts.
-          old = '''                  {editingContatto && (
-  <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">'''
-          new = '''                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">'''
-          if old not in s:
-            raise SystemExit('editingContatto panel opening not found')
-          s = s.replace(old, new, 1)
-
-          old = '''  </div>
-)}
-
-                  <div className="mt-4 flex flex-col gap-3 border-t pt-4 sm:flex-row">'''
-          new = '''  </div>
-
-                  <div className="mt-4 flex flex-col gap-3 border-t pt-4 sm:flex-row">'''
-          if old not in s:
-            raise SystemExit('editingContatto panel closing not found')
-          s = s.replace(old, new, 1)
-
-          # When a contact is created, persist the pending association selected in the same modal.
+          # When saving a brand-new contact, persist a pending client/contact association.
           anchor = '''} else {
   const nuovoContatto = await contattoService.createContatto(dataToSave);
 '''
-          if anchor not in s:
-            raise SystemExit('new contact create anchor not found')
-          insert = '''} else {
+          if anchor in s and 'tipoCollegamento' not in s:
+            insert = '''} else {
   const nuovoContatto = await contattoService.createContatto(dataToSave);
 
   if (clienteDaCollegare) {
@@ -78,13 +64,18 @@ jobs:
         contatto_id: nuovoContatto.id,
         cliente_id: idCollegamento,
         ruolo: ruoloCliente || null,
+        principale: false,
+        riceve_comunicazioni: true,
+        riceve_scadenze: true,
         email_societa: emailSocieta || null,
         telefono_societa: telefonoSocieta || null,
         pec_societa: pecSocieta || null,
       });
-    } else if (tipoCollegamento === "contatto" && idCollegamento) {
-      const supabaseRel = getSupabaseClient() as any;
-      const { error: relazioneError } = await supabaseRel
+    }
+
+    if (tipoCollegamento === "contatto" && idCollegamento) {
+      const supabaseRel = getSupabaseClient();
+      const { error: relazioneError } = await (supabaseRel as any)
         .from("tbcontatti_relazioni")
         .insert({
           contatto_id: nuovoContatto.id,
@@ -95,10 +86,10 @@ jobs:
     }
   }
 '''
-          s = s.replace(anchor, insert, 1)
+            s = s.replace(anchor, insert, 1)
 
-          # For a new contact, the Collega button confirms that the selection will be saved together with the contact.
-          old = '''  <Button
+          # Make the button meaningful also while creating a contact.
+          old_button = '''  <Button
     type="button"
     onClick={() => void handleCollegaCliente()}
     className="bg-blue-600 hover:bg-blue-700"
@@ -106,7 +97,7 @@ jobs:
     <Link2 className="mr-2 h-4 w-4" />
     Collega
   </Button>'''
-          new = '''  <Button
+          new_button = '''  <Button
     type="button"
     onClick={() => {
       if (editingContatto) {
@@ -116,15 +107,16 @@ jobs:
 
       if (!clienteDaCollegare) {
         toast({
-          title: "Seleziona un collegamento",
-          description: "Scegli prima un cliente o un contatto da collegare.",
+          title: "Attenzione",
+          description: "Seleziona un cliente o un contatto da collegare.",
+          variant: "destructive",
         });
         return;
       }
 
       toast({
         title: "Collegamento pronto",
-        description: "Il collegamento verrà creato insieme al nuovo contatto al salvataggio.",
+        description: "Verrà creato automaticamente quando salvi il nuovo contatto.",
       });
     }}
     className="bg-blue-600 hover:bg-blue-700"
@@ -132,9 +124,11 @@ jobs:
     <Link2 className="mr-2 h-4 w-4" />
     {editingContatto ? "Collega" : "Collega al salvataggio"}
   </Button>'''
-          if old not in s:
-            raise SystemExit('link button block not found')
-          s = s.replace(old, new, 1)
+          if old_button in s:
+            s = s.replace(old_button, new_button, 1)
+
+          if s == original:
+            raise SystemExit('No Rubrica changes were applied')
 
           p.write_text(s)
           PY
@@ -144,5 +138,5 @@ jobs:
           git config user.name "studio-manager-bot"
           git config user.email "actions@github.com"
           git add src/pages/contatti/index.tsx
-          git commit -m "Enable contact linking while creating Rubrica entries"
+          git commit -m "Show and save contact links in new Rubrica form"
           git push origin HEAD:main
