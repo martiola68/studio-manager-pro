@@ -1,0 +1,176 @@
+name: Fix Cassetti Fiscali distinct fields
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-cassetti-fiscali-fields.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch cassetti fiscali
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('src/pages/cassetti-fiscali/index.tsx')
+          text = p.read_text()
+
+          text = text.replace(
+'''          const decryptedPwInit =
+            item.pw_iniziale && isEncrypted(item.pw_iniziale) ? decryptData(item.pw_iniziale, key) : item.pw_iniziale;
+
+          return {
+            ...item,
+            username: decryptedUsername,
+            password1: decryptedPassword1,
+            password2: decryptedPassword2,
+            pin: decryptedPin,
+            pw_iniziale: decryptedPwInit,
+          };''',
+'''          const decryptedPwInit =
+            item.pw_iniziale && isEncrypted(item.pw_iniziale) ? decryptData(item.pw_iniziale, key) : item.pw_iniziale;
+
+          const rawCodiceFiscale = (item as any).codice_fiscale as string | null | undefined;
+          const decryptedCodiceFiscale =
+            rawCodiceFiscale && isEncrypted(rawCodiceFiscale)
+              ? decryptData(rawCodiceFiscale, key)
+              : rawCodiceFiscale;
+
+          return {
+            ...item,
+            username: decryptedUsername,
+            password1: decryptedPassword1,
+            password2: decryptedPassword2,
+            pin: decryptedPin,
+            pw_iniziale: decryptedPwInit,
+            codice_fiscale: decryptedCodiceFiscale,
+          };''')
+
+          text = text.replace(
+'''  field: "pw1" | "pw2" | "pin" | "pw_init",
+  forceShow?: boolean
+) => {
+  const currentValue =
+    field === "pw1"
+      ? cassetti.find((x) => x.id === id)?.password1
+      : field === "pw2"
+      ? cassetti.find((x) => x.id === id)?.password2
+      : field === "pin"
+      ? cassetti.find((x) => x.id === id)?.pin
+      : cassetti.find((x) => x.id === id)?.pw_iniziale;''',
+'''  field: "pw1" | "pw2" | "pin" | "pw_init" | "codice_fiscale",
+  forceShow?: boolean
+) => {
+  const currentItem = cassetti.find((x) => x.id === id);
+  const currentValue =
+    field === "pw1"
+      ? currentItem?.password1
+      : field === "pw2"
+      ? currentItem?.password2
+      : field === "pin"
+      ? currentItem?.pin
+      : field === "pw_init"
+      ? currentItem?.pw_iniziale
+      : (currentItem as any)?.codice_fiscale;''')
+
+          text = text.replace(
+'''    field: "pw1" | "pw2" | "pin" | "pw_init"
+  ) => {''',
+'''    field: "pw1" | "pw2" | "pin" | "pw_init" | "codice_fiscale"
+  ) => {''')
+
+          text = text.replace(
+'''      pin: { value: cassetto.pin, mask: "••••", label: "PIN" },
+      pw_init: { value: cassetto.pw_iniziale, mask: "••••••••", label: "Password Iniziale" },
+    };''',
+'''      pin: { value: cassetto.pin, mask: "••••", label: "PIN" },
+      pw_init: { value: cassetto.pw_iniziale, mask: "••••••••", label: "Password Iniziale" },
+      codice_fiscale: { value: (cassetto as any).codice_fiscale, mask: "••••••••", label: "Codice fiscale" },
+    };''')
+
+          text = text.replace(
+'''<TableCell>
+  {renderSensitiveCell(cassetto, "pw_init")}
+</TableCell>''',
+'''<TableCell>
+  {viewMode === "societa"
+    ? renderSensitiveCell(cassetto, "codice_fiscale")
+    : renderSensitiveCell(cassetto, "pw_init")}
+</TableCell>''')
+
+          old_modal = '''            <FormField
+  control={form.control}
+  name="pw_iniziale"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>
+        {viewMode === "societa" ? "Codice fiscale" : "Password iniziale"}
+      </FormLabel>
+      <FormControl>
+        <Input
+          placeholder={
+            viewMode === "societa"
+              ? "Codice fiscale..."
+              : "Password iniziale..."
+          }
+          {...field}
+        />
+      </FormControl>
+      <FormMessage />
+    </FormItem>
+  )}
+/>'''
+
+          new_modal = '''              <div className={viewMode === "societa" ? "grid grid-cols-2 gap-4" : "grid grid-cols-1 gap-4"}>
+                <FormField
+                  control={form.control}
+                  name="pw_iniziale"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password iniziale</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Password iniziale..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {viewMode === "societa" && (
+                  <FormItem>
+                    <FormLabel>Codice fiscale</FormLabel>
+                    <FormControl>
+                      <Input
+                        value={String((editingCassetto as any)?.codice_fiscale || "")}
+                        placeholder="Codice fiscale..."
+                        readOnly
+                        className="bg-slate-50"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              </div>'''
+
+          if old_modal not in text:
+            raise SystemExit('Blocco modale pw_iniziale atteso non trovato')
+          text = text.replace(old_modal, new_modal, 1)
+
+          p.write_text(text)
+          PY
+
+      - name: Commit
+        run: |
+          git config user.name "studio-manager-bot"
+          git config user.email "actions@github.com"
+          git add src/pages/cassetti-fiscali/index.tsx
+          git commit -m "Separate initial password and tax code in Cassetti Fiscali"
+          git push origin HEAD:main
