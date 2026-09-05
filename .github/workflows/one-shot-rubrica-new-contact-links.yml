@@ -1,0 +1,148 @@
+name: Rubrica new contact links
+
+on:
+  push:
+    paths:
+      - '.github/workflows/one-shot-rubrica-new-contact-links.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch Rubrica new-contact linking
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/pages/contatti/index.tsx')
+          s = p.read_text()
+
+          # Reset also pending link fields when opening a new contact.
+          old = '''  const resetForm = () => {
+    setFormData(initialFormData);
+    setEditingContatto(null);
+  };'''
+          new = '''  const resetForm = () => {
+    setFormData(initialFormData);
+    setEditingContatto(null);
+    setClienteDaCollegare("");
+    setRuoloCliente("");
+    setEmailSocieta("");
+    setTelefonoSocieta("");
+    setPecSocieta("");
+  };'''
+          if old not in s:
+            raise SystemExit('resetForm block not found')
+          s = s.replace(old, new, 1)
+
+          # Show the linked-client/contact panel also for new contacts.
+          old = '''                  {editingContatto && (
+  <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">'''
+          new = '''                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">'''
+          if old not in s:
+            raise SystemExit('editingContatto panel opening not found')
+          s = s.replace(old, new, 1)
+
+          old = '''  </div>
+)}
+
+                  <div className="mt-4 flex flex-col gap-3 border-t pt-4 sm:flex-row">'''
+          new = '''  </div>
+
+                  <div className="mt-4 flex flex-col gap-3 border-t pt-4 sm:flex-row">'''
+          if old not in s:
+            raise SystemExit('editingContatto panel closing not found')
+          s = s.replace(old, new, 1)
+
+          # When a contact is created, persist the pending association selected in the same modal.
+          anchor = '''} else {
+  const nuovoContatto = await contattoService.createContatto(dataToSave);
+'''
+          if anchor not in s:
+            raise SystemExit('new contact create anchor not found')
+          insert = '''} else {
+  const nuovoContatto = await contattoService.createContatto(dataToSave);
+
+  if (clienteDaCollegare) {
+    const [tipoCollegamento, idCollegamento] = clienteDaCollegare.split(":");
+
+    if (tipoCollegamento === "cliente" && idCollegamento) {
+      await contattoService.collegaCliente({
+        studio_id: studioId,
+        contatto_id: nuovoContatto.id,
+        cliente_id: idCollegamento,
+        ruolo: ruoloCliente || null,
+        email_societa: emailSocieta || null,
+        telefono_societa: telefonoSocieta || null,
+        pec_societa: pecSocieta || null,
+      });
+    } else if (tipoCollegamento === "contatto" && idCollegamento) {
+      const supabaseRel = getSupabaseClient() as any;
+      const { error: relazioneError } = await supabaseRel
+        .from("tbcontatti_relazioni")
+        .insert({
+          contatto_id: nuovoContatto.id,
+          contatto_collegato_id: idCollegamento,
+        });
+
+      if (relazioneError) throw relazioneError;
+    }
+  }
+'''
+          s = s.replace(anchor, insert, 1)
+
+          # For a new contact, the Collega button confirms that the selection will be saved together with the contact.
+          old = '''  <Button
+    type="button"
+    onClick={() => void handleCollegaCliente()}
+    className="bg-blue-600 hover:bg-blue-700"
+  >
+    <Link2 className="mr-2 h-4 w-4" />
+    Collega
+  </Button>'''
+          new = '''  <Button
+    type="button"
+    onClick={() => {
+      if (editingContatto) {
+        void handleCollegaCliente();
+        return;
+      }
+
+      if (!clienteDaCollegare) {
+        toast({
+          title: "Seleziona un collegamento",
+          description: "Scegli prima un cliente o un contatto da collegare.",
+        });
+        return;
+      }
+
+      toast({
+        title: "Collegamento pronto",
+        description: "Il collegamento verrà creato insieme al nuovo contatto al salvataggio.",
+      });
+    }}
+    className="bg-blue-600 hover:bg-blue-700"
+  >
+    <Link2 className="mr-2 h-4 w-4" />
+    {editingContatto ? "Collega" : "Collega al salvataggio"}
+  </Button>'''
+          if old not in s:
+            raise SystemExit('link button block not found')
+          s = s.replace(old, new, 1)
+
+          p.write_text(s)
+          PY
+
+      - name: Commit patch
+        run: |
+          git config user.name "studio-manager-bot"
+          git config user.email "actions@github.com"
+          git add src/pages/contatti/index.tsx
+          git commit -m "Enable contact linking while creating Rubrica entries"
+          git push origin HEAD:main
