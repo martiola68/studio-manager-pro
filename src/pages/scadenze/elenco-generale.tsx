@@ -19,10 +19,7 @@ type ServiziCliente = {
 };
 
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"] & {
-  utente_fiscale?: {
-    nome: string;
-    cognome: string;
-  } | null;
+  utente_fiscale?: { nome: string; cognome: string } | null;
   servizi?: ServiziCliente | null;
 };
 
@@ -43,37 +40,30 @@ export default function ElencoGenerale() {
   const [filteredClienti, setFilteredClienti] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filtroUtenteFiscale, setFiltroUtenteFiscale] = useState<string>("tutti");
-  const [updating, setUpdating] = useState<string | null>(null);
-  const [studioId, setStudioId] = useState<string>("");
+  const [filtroUtenteFiscale, setFiltroUtenteFiscale] = useState("tutti");
+  const [updating, setUpdating] = useState<Set<string>>(new Set());
+  const [studioId, setStudioId] = useState("");
   const { toast } = useToast();
 
-  useEffect(() => {
-    void loadClienti();
-  }, []);
+  useEffect(() => { void loadClienti(); }, []);
 
   useEffect(() => {
     let filtered = clienti;
-
-    if (searchQuery.trim() !== "") {
+    if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (cliente) =>
-          cliente.ragione_sociale?.toLowerCase().includes(query) ||
-          cliente.codice_fiscale?.toLowerCase().includes(query) ||
-          cliente.partita_iva?.toLowerCase().includes(query)
+      filtered = filtered.filter((cliente) =>
+        cliente.ragione_sociale?.toLowerCase().includes(query) ||
+        cliente.codice_fiscale?.toLowerCase().includes(query) ||
+        cliente.partita_iva?.toLowerCase().includes(query)
       );
     }
-
-    if (filtroUtenteFiscale && filtroUtenteFiscale !== "tutti") {
-      filtered = filtered.filter((cliente) => {
-        const nomeCompleto = cliente.utente_fiscale
-          ? `${cliente.utente_fiscale.nome} ${cliente.utente_fiscale.cognome}`
-          : "";
-        return nomeCompleto === filtroUtenteFiscale;
-      });
+    if (filtroUtenteFiscale !== "tutti") {
+      filtered = filtered.filter((cliente) =>
+        cliente.utente_fiscale
+          ? `${cliente.utente_fiscale.nome} ${cliente.utente_fiscale.cognome}` === filtroUtenteFiscale
+          : false
+      );
     }
-
     setFilteredClienti(filtered);
   }, [searchQuery, filtroUtenteFiscale, clienti]);
 
@@ -85,7 +75,6 @@ export default function ElencoGenerale() {
         utentiMap.set(nomeCompleto, cliente.utente_fiscale);
       }
     });
-
     return Array.from(utentiMap.entries())
       .map(([nomeCompleto, utente]) => ({ nomeCompleto, ...utente }))
       .sort((a, b) => a.nomeCompleto.localeCompare(b.nomeCompleto));
@@ -94,9 +83,7 @@ export default function ElencoGenerale() {
   async function loadClienti() {
     try {
       setLoading(true);
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
       const { data: userData } = await supabase
@@ -104,9 +91,7 @@ export default function ElencoGenerale() {
         .select("studio_id")
         .eq("id", user.id)
         .single();
-
       if (!userData?.studio_id) return;
-
       setStudioId(userData.studio_id);
 
       const { data, error } = await supabase
@@ -114,105 +99,67 @@ export default function ElencoGenerale() {
         .select(`
           *,
           utente_fiscale:tbutenti!tbclienti_utente_operatore_id_fkey(nome, cognome),
-          servizi:tbclienti_servizi(
-            flag_iva,
-            flag_lipe,
-            flag_bilancio,
-            flag_770,
-            flag_imu,
-            flag_cu,
-            flag_fiscali,
-            flag_esterometro,
-            flag_ccgg
-          )
+          servizi:tbclienti_servizi(flag_iva,flag_lipe,flag_bilancio,flag_770,flag_imu,flag_cu,flag_fiscali,flag_esterometro,flag_ccgg)
         `)
         .eq("studio_id", userData.studio_id)
         .eq("attivo", true)
         .eq("cliente", true)
         .order("ragione_sociale", { ascending: true });
-
       if (error) throw error;
 
-      const clientiNormalizzati = (data || []).map((cliente: any) => ({
+      const normalizzati = (data || []).map((cliente: any) => ({
         ...cliente,
-        servizi: Array.isArray(cliente.servizi)
-          ? cliente.servizi[0] || null
-          : cliente.servizi || null,
+        servizi: Array.isArray(cliente.servizi) ? cliente.servizi[0] || null : cliente.servizi || null,
       }));
-
-      setClienti(clientiNormalizzati);
-      setFilteredClienti(clientiNormalizzati);
+      setClienti(normalizzati);
+      setFilteredClienti(normalizzati);
     } catch (error) {
       console.error("Errore caricamento clienti:", error);
-      toast({
-        title: "Errore",
-        description: "Impossibile caricare i clienti",
-        variant: "destructive",
-      });
+      toast({ title: "Errore", description: "Impossibile caricare i clienti", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleToggleFlag(
-    clienteId: string,
-    field: keyof ServiziCliente,
-    value: boolean
-  ) {
+  async function handleToggleFlag(clienteId: string, field: keyof ServiziCliente, value: boolean) {
+    const key = `${clienteId}:${String(field)}`;
+    const previous = clienti.find((c) => c.id === clienteId)?.servizi?.[field] === true;
+
+    // Aggiornamento ottimistico: il cambio SI/NO è visibile immediatamente e non blocca la riga.
+    setClienti((prev) => prev.map((c) =>
+      c.id === clienteId
+        ? { ...c, servizi: { ...(c.servizi || {}), [field]: value } }
+        : c
+    ));
+    setUpdating((prev) => new Set(prev).add(key));
+
     try {
-      setUpdating(`${clienteId}:${String(field)}`);
-
-      if (!studioId) {
-        throw new Error("studio_id non disponibile");
-      }
-
-      const { error } = await (supabase as any)
-        .from("tbclienti_servizi")
-        .upsert(
-          {
-            studio_id: studioId,
-            cliente_id: clienteId,
-            [field]: value,
-            updated_at: new Date().toISOString(),
-          },
-          {
-            onConflict: "studio_id,cliente_id",
-          }
-        );
-
-      if (error) throw error;
-
-      setClienti((prev) =>
-        prev.map((c) =>
-          c.id === clienteId
-            ? {
-                ...c,
-                servizi: {
-                  ...(c.servizi || {}),
-                  [field]: value,
-                },
-              }
-            : c
-        )
+      if (!studioId) throw new Error("studio_id non disponibile");
+      const { error } = await (supabase as any).from("tbclienti_servizi").upsert(
+        { studio_id: studioId, cliente_id: clienteId, [field]: value, updated_at: new Date().toISOString() },
+        { onConflict: "studio_id,cliente_id" }
       );
+      if (error) throw error;
     } catch (error) {
+      // In caso di errore ripristina soltanto la singola cella modificata.
+      setClienti((prev) => prev.map((c) =>
+        c.id === clienteId
+          ? { ...c, servizi: { ...(c.servizi || {}), [field]: previous } }
+          : c
+      ));
       console.error("Errore aggiornamento flag:", error);
-      toast({
-        title: "Errore",
-        description: "Impossibile aggiornare il flag",
-        variant: "destructive",
-      });
+      toast({ title: "Errore", description: "Impossibile aggiornare il flag", variant: "destructive" });
     } finally {
-      setUpdating(null);
+      setUpdating((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
     }
   }
 
   if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center bg-slate-100">
-        <Loader2 className="h-8 w-8 animate-spin text-sky-700" />
-      </div>
-    );
+    return <div className="flex h-full items-center justify-center bg-slate-100"><Loader2 className="h-8 w-8 animate-spin text-sky-700" /></div>;
   }
 
   return (
@@ -221,134 +168,60 @@ export default function ElencoGenerale() {
         <div className="mb-3 flex items-end justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Elenco Generale Scadenzari</h1>
-            <p className="mt-0.5 text-sm text-slate-500">
-              Visione completa degli scadenzari per ogni cliente
-            </p>
+            <p className="mt-0.5 text-sm text-slate-500">Visione completa degli scadenzari per ogni cliente</p>
           </div>
-          <div className="rounded-md border border-sky-200 bg-white px-3 py-1.5 text-sm font-semibold text-sky-800">
-            {filteredClienti.length} Clienti
-          </div>
+          <div className="rounded-md border border-sky-200 bg-white px-3 py-1.5 text-sm font-semibold text-sky-800">{filteredClienti.length} Clienti</div>
         </div>
-
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <Input
-              placeholder="Cerca nominativo, codice fiscale o partita IVA"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-9 border-slate-300 bg-white pl-9"
-            />
+            <Input placeholder="Cerca nominativo, codice fiscale o partita IVA" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="h-9 border-slate-300 bg-white pl-9" />
           </div>
-
           <Select value={filtroUtenteFiscale} onValueChange={setFiltroUtenteFiscale}>
-            <SelectTrigger className="h-9 border-slate-300 bg-white">
-              <SelectValue placeholder="Utente fiscale" />
-            </SelectTrigger>
+            <SelectTrigger className="h-9 border-slate-300 bg-white"><SelectValue placeholder="Utente fiscale" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="tutti">Tutti gli utenti fiscali</SelectItem>
-              {utentiFiscaliUnici.map((utente) => (
-                <SelectItem key={utente.nomeCompleto} value={utente.nomeCompleto}>
-                  {utente.nomeCompleto}
-                </SelectItem>
-              ))}
+              {utentiFiscaliUnici.map((utente) => <SelectItem key={utente.nomeCompleto} value={utente.nomeCompleto}>{utente.nomeCompleto}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-sky-200 bg-white shadow-sm">
-        <div className="shrink-0 border-b border-sky-200 bg-slate-50 px-4 py-2.5">
-          <div className="text-sm font-semibold text-slate-800">Riepilogo Generale Scadenze</div>
-        </div>
-
+        <div className="shrink-0 border-b border-sky-200 bg-slate-50 px-4 py-2.5"><div className="text-sm font-semibold text-slate-800">Riepilogo Generale Scadenze</div></div>
         <div className="min-h-0 flex-1 overflow-auto">
           <table className="w-full table-fixed border-collapse text-xs">
             <thead className="sticky top-0 z-30 bg-slate-600 text-white shadow-sm">
               <tr>
-                <th className="sticky left-0 z-40 min-w-[280px] w-[280px] border-r border-slate-500 bg-slate-600 px-3 py-2 text-left font-semibold">
-                  Cliente
-                </th>
-                <th className="min-w-[170px] w-[170px] border-r border-slate-500 px-3 py-2 text-left font-semibold">
-                  Utente Fiscale
-                </th>
-                {TIPI_SCADENZE.map((tipo) => (
-                  <th
-                    key={tipo.id}
-                    className="min-w-[92px] w-[92px] border-r border-slate-500 px-2 py-2 text-center font-semibold last:border-r-0"
-                  >
-                    {tipo.label}
-                  </th>
-                ))}
+                <th className="sticky left-0 z-40 w-[280px] min-w-[280px] border-r border-slate-500 bg-slate-600 px-3 py-2 text-left font-semibold">Cliente</th>
+                <th className="w-[170px] min-w-[170px] border-r border-slate-500 px-3 py-2 text-left font-semibold">Utente Fiscale</th>
+                {TIPI_SCADENZE.map((tipo) => <th key={tipo.id} className="w-[92px] min-w-[92px] border-r border-slate-500 px-2 py-2 text-center font-semibold last:border-r-0">{tipo.label}</th>)}
               </tr>
             </thead>
-
             <tbody>
               {filteredClienti.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={2 + TIPI_SCADENZE.length}
-                    className="px-4 py-10 text-center text-sm text-slate-500"
-                  >
-                    Nessun dato trovato
-                  </td>
+                <tr><td colSpan={2 + TIPI_SCADENZE.length} className="px-4 py-10 text-center text-sm text-slate-500">Nessun dato trovato</td></tr>
+              ) : filteredClienti.map((cliente, rowIndex) => (
+                <tr key={cliente.id} className={`border-b border-slate-200 hover:bg-sky-50 ${rowIndex % 2 === 0 ? "bg-white" : "bg-slate-50/60"}`}>
+                  <td className="sticky left-0 z-20 border-r border-slate-200 bg-inherit px-3 py-1.5 font-medium text-slate-900"><div className="truncate" title={cliente.ragione_sociale || ""}>{cliente.ragione_sociale}</div></td>
+                  <td className="border-r border-slate-200 px-3 py-1.5 text-slate-600"><div className="truncate">{cliente.utente_fiscale ? `${cliente.utente_fiscale.nome} ${cliente.utente_fiscale.cognome}` : "-"}</div></td>
+                  {TIPI_SCADENZE.map((tipo) => {
+                    const field = tipo.id as keyof ServiziCliente;
+                    const enabled = cliente.servizi?.[field] === true;
+                    const cellUpdating = updating.has(`${cliente.id}:${tipo.id}`);
+                    return (
+                      <td key={tipo.id} className="border-r border-slate-200 px-1.5 py-1 text-center last:border-r-0">
+                        <Select value={enabled ? "si" : "no"} onValueChange={(value) => void handleToggleFlag(cliente.id, field, value === "si")}>
+                          <SelectTrigger aria-label={`${tipo.label} ${cliente.ragione_sociale}`} className={`mx-auto h-7 w-[64px] justify-center gap-1 border bg-white px-2 text-[11px] font-semibold shadow-none ${enabled ? "border-sky-700 text-sky-800" : "border-sky-300 text-slate-500"} ${cellUpdating ? "opacity-60" : "hover:bg-sky-50"}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent><SelectItem value="si">SI</SelectItem><SelectItem value="no">NO</SelectItem></SelectContent>
+                        </Select>
+                      </td>
+                    );
+                  })}
                 </tr>
-              ) : (
-                filteredClienti.map((cliente, rowIndex) => (
-                  <tr
-                    key={cliente.id}
-                    className={`border-b border-slate-200 hover:bg-sky-50 ${
-                      rowIndex % 2 === 0 ? "bg-white" : "bg-slate-50/60"
-                    }`}
-                  >
-                    <td className="sticky left-0 z-20 border-r border-slate-200 bg-inherit px-3 py-1.5 font-medium text-slate-900">
-                      <div className="truncate" title={cliente.ragione_sociale || ""}>
-                        {cliente.ragione_sociale}
-                      </div>
-                    </td>
-                    <td className="border-r border-slate-200 px-3 py-1.5 text-slate-600">
-                      <div className="truncate">
-                        {cliente.utente_fiscale
-                          ? `${cliente.utente_fiscale.nome} ${cliente.utente_fiscale.cognome}`
-                          : "-"}
-                      </div>
-                    </td>
-
-                    {TIPI_SCADENZE.map((tipo) => {
-                      const field = tipo.id as keyof ServiziCliente;
-                      const enabled = cliente.servizi?.[field] === true;
-                      const cellUpdating = updating === `${cliente.id}:${tipo.id}`;
-
-                      return (
-                        <td key={tipo.id} className="border-r border-slate-200 px-1.5 py-1 text-center last:border-r-0">
-                          <Select
-                            value={enabled ? "si" : "no"}
-                            onValueChange={(value) =>
-                              void handleToggleFlag(cliente.id, field, value === "si")
-                            }
-                            disabled={cellUpdating}
-                          >
-                            <SelectTrigger
-                              aria-label={`${tipo.label} ${cliente.ragione_sociale}`}
-                              className={`mx-auto h-7 w-[64px] justify-center gap-1 border px-2 text-[11px] font-semibold shadow-none ${
-                                enabled
-                                  ? "border-sky-700 bg-sky-700 text-white hover:bg-sky-600"
-                                  : "border-sky-300 bg-white text-sky-800 hover:bg-sky-50"
-                              }`}
-                            >
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="si">SI</SelectItem>
-                              <SelectItem value="no">NO</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))
-              )}
+              ))}
             </tbody>
           </table>
         </div>
