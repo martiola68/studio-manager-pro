@@ -74,20 +74,22 @@ export function AgendaMasterGraficaEnhancer() {
       const headerCells = root.querySelectorAll(".sticky > div > div");
 
       headerCells.forEach((cell, index) => {
-        cell.removeAttribute("data-agenda-weekend");
-        cell.removeAttribute("data-agenda-holiday");
         if (index === 0 || index > 7) return;
 
         const date = new Date(monday);
         date.setDate(monday.getDate() + index - 1);
         const iso = toLocalIso(date);
         const day = date.getDay();
+        const weekend = day === 0 || day === 6;
+        const holiday = festivitaSet.has(iso);
 
-        if (day === 0 || day === 6) {
-          cell.setAttribute("data-agenda-weekend", "true");
+        if (cell.getAttribute("data-agenda-weekend") !== (weekend ? "true" : null)) {
+          if (weekend) cell.setAttribute("data-agenda-weekend", "true");
+          else cell.removeAttribute("data-agenda-weekend");
         }
-        if (festivitaSet.has(iso)) {
-          cell.setAttribute("data-agenda-holiday", "true");
+        if (cell.getAttribute("data-agenda-holiday") !== (holiday ? "true" : null)) {
+          if (holiday) cell.setAttribute("data-agenda-holiday", "true");
+          else cell.removeAttribute("data-agenda-holiday");
         }
       });
     };
