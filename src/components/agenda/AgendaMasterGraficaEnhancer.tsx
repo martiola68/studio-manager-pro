@@ -116,9 +116,9 @@ export function AgendaMasterGraficaEnhancer() {
         const label = Object.keys(viewByLabel).find((item) => text.includes(item));
         const isActive = !!label && viewByLabel[label] === activeView;
 
-        button.style.setProperty("background-color", isActive ? "rgb(14 165 233)" : "white", "important");
+        button.style.setProperty("background-color", isActive ? "rgb(3 105 161)" : "white", "important");
         button.style.setProperty("color", isActive ? "white" : "rgb(3 105 161)", "important");
-        button.style.setProperty("border", `1px solid ${isActive ? "rgb(14 165 233)" : "rgb(56 189 248)"}`, "important");
+        button.style.setProperty("border", `1px solid rgb(3 105 161)`, "important");
         button.style.setProperty("box-shadow", "none", "important");
       });
     };
@@ -138,7 +138,7 @@ export function AgendaMasterGraficaEnhancer() {
     .agenda-master-page .sticky > div > div:nth-child(7) *,
     .agenda-master-page .sticky > div > div:nth-child(8) * { color: rgb(185 28 28) !important; }
     .agenda-master-month-label {
-      display:inline-flex;align-items:center;height:36px;padding:0 14px;border:1px solid rgb(125 211 252);border-radius:8px;background:white;color:rgb(3 105 161);font-weight:700;text-transform:capitalize;white-space:nowrap;
+      display:inline-flex;align-items:center;height:36px;padding:0 14px;border:1px solid rgb(3 105 161);border-radius:8px;background:white;color:rgb(3 105 161);font-weight:700;text-transform:capitalize;white-space:nowrap;
     }
   `}</style>;
 }
