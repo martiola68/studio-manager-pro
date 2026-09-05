@@ -13,6 +13,7 @@ import { ComunicazioniClientiMasterGraficaEnhancer } from "@/components/comunica
 import { ComunicazioniInterneMasterGraficaEnhancer } from "@/components/comunicazioni/ComunicazioniInterneMasterGraficaEnhancer";
 import { RubricaMasterGraficaEnhancer } from "@/components/contatti/RubricaMasterGraficaEnhancer";
 import { ContattiImportTemplateEnhancer } from "@/components/contatti/ContattiImportTemplateEnhancer";
+import { VariazioniMasterGraficaEnhancer } from "@/components/pratiche/VariazioniMasterGraficaEnhancer";
 import { Toaster } from "@/components/ui/toaster";
 
 import Header from "@/components/Header";
@@ -50,7 +51,8 @@ export default function App({ Component, pageProps }: AppProps) {
   const isMasterGraficaComunicazioniClienti = router.pathname === "/comunicazioni-clienti";
   const isMasterGraficaComunicazioniInterne = router.pathname === "/comunicazioni/interne";
   const isMasterGraficaRubrica = router.pathname === "/contatti";
-  const isFixedViewportPage = isOperationalScadenzario || isMasterGraficaPromemoria || isMasterGraficaAgenda || isMasterGraficaCassettiFiscali || isMasterGraficaAccessoPortali || isMasterGraficaComunicazioniClienti || isMasterGraficaComunicazioniInterne || isMasterGraficaRubrica;
+  const isMasterGraficaVariazioni = router.pathname === "/pratiche/variazioni";
+  const isFixedViewportPage = isOperationalScadenzario || isMasterGraficaPromemoria || isMasterGraficaAgenda || isMasterGraficaCassettiFiscali || isMasterGraficaAccessoPortali || isMasterGraficaComunicazioniClienti || isMasterGraficaComunicazioniInterne || isMasterGraficaRubrica || isMasterGraficaVariazioni;
 
   useEffect(() => {
     document.body.classList.toggle("master-grafica-promemoria", isMasterGraficaPromemoria);
@@ -125,6 +127,7 @@ export default function App({ Component, pageProps }: AppProps) {
     isMasterGraficaComunicazioniClienti ? "comunicazioni-clienti-master-page !min-h-0 !overflow-hidden" : "",
     isMasterGraficaComunicazioniInterne ? "comunicazioni-interne-master-page !min-h-0 !overflow-hidden" : "",
     isMasterGraficaRubrica ? "rubrica-master-page !min-h-0 !overflow-hidden" : "",
+    isMasterGraficaVariazioni ? "variazioni-master-page !min-h-0 !overflow-hidden" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -151,6 +154,7 @@ export default function App({ Component, pageProps }: AppProps) {
         {isMasterGraficaComunicazioniInterne && <ComunicazioniInterneMasterGraficaEnhancer />}
         {isMasterGraficaRubrica && <RubricaMasterGraficaEnhancer />}
         {isMasterGraficaRubrica && <ContattiImportTemplateEnhancer />}
+        {isMasterGraficaVariazioni && <VariazioniMasterGraficaEnhancer />}
         {isPublicPage ? (
           <>
             {pageContent}
