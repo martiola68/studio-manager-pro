@@ -10,6 +10,7 @@ import { CalendarioMasterGraficaEnhancer } from "@/components/scadenze/Calendari
 import { CassettiFiscaliMasterGraficaEnhancer } from "@/components/cassetti-fiscali/CassettiFiscaliMasterGraficaEnhancer";
 import { AccessoPortaliMasterGraficaEnhancer } from "@/components/accesso-portali/AccessoPortaliMasterGraficaEnhancer";
 import { ComunicazioniClientiMasterGraficaEnhancer } from "@/components/comunicazioni/ComunicazioniClientiMasterGraficaEnhancer";
+import { ComunicazioniInterneMasterGraficaEnhancer } from "@/components/comunicazioni/ComunicazioniInterneMasterGraficaEnhancer";
 import { Toaster } from "@/components/ui/toaster";
 
 import Header from "@/components/Header";
@@ -45,7 +46,8 @@ export default function App({ Component, pageProps }: AppProps) {
   const isMasterGraficaCassettiFiscali = router.pathname === "/cassetti-fiscali";
   const isMasterGraficaAccessoPortali = router.pathname === "/accesso-portali";
   const isMasterGraficaComunicazioniClienti = router.pathname === "/comunicazioni-clienti";
-  const isFixedViewportPage = isOperationalScadenzario || isMasterGraficaPromemoria || isMasterGraficaAgenda || isMasterGraficaCassettiFiscali || isMasterGraficaAccessoPortali || isMasterGraficaComunicazioniClienti;
+  const isMasterGraficaComunicazioniInterne = router.pathname === "/comunicazioni/interne";
+  const isFixedViewportPage = isOperationalScadenzario || isMasterGraficaPromemoria || isMasterGraficaAgenda || isMasterGraficaCassettiFiscali || isMasterGraficaAccessoPortali || isMasterGraficaComunicazioniClienti || isMasterGraficaComunicazioniInterne;
 
   useEffect(() => {
     document.body.classList.toggle("master-grafica-promemoria", isMasterGraficaPromemoria);
@@ -118,6 +120,7 @@ export default function App({ Component, pageProps }: AppProps) {
     isMasterGraficaCassettiFiscali ? "cassetti-fiscali-master-page !min-h-0 !overflow-hidden" : "",
     isMasterGraficaAccessoPortali ? "accesso-portali-master-page !min-h-0 !overflow-hidden" : "",
     isMasterGraficaComunicazioniClienti ? "comunicazioni-clienti-master-page !min-h-0 !overflow-hidden" : "",
+    isMasterGraficaComunicazioniInterne ? "comunicazioni-interne-master-page !min-h-0 !overflow-hidden" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -141,6 +144,7 @@ export default function App({ Component, pageProps }: AppProps) {
         {isMasterGraficaCassettiFiscali && <CassettiFiscaliMasterGraficaEnhancer />}
         {isMasterGraficaAccessoPortali && <AccessoPortaliMasterGraficaEnhancer />}
         {isMasterGraficaComunicazioniClienti && <ComunicazioniClientiMasterGraficaEnhancer />}
+        {isMasterGraficaComunicazioniInterne && <ComunicazioniInterneMasterGraficaEnhancer />}
         {isPublicPage ? (
           <>
             {pageContent}
