@@ -433,10 +433,8 @@ async createPromemoria(nuovoPromemoria: {
       throw error;
     }
 
-    // NUOVO: Invia notifica Teams al destinatario (se configurato)
     if (data && nuovoPromemoria.destinatario_id) {
       try {
-        // Recupera info operatore e destinatario per notifica
         const { data: operatoreData } = await supabase
           .from("tbutenti")
           .select("nome, cognome")
@@ -457,7 +455,6 @@ async createPromemoria(nuovoPromemoria: {
           );
         }
       } catch (teamsError) {
-        // Non blocchiamo l'operazione se la notifica Teams fallisce
         console.log("Teams notification skipped:", teamsError);
       }
     }
@@ -537,24 +534,56 @@ async createPromemoria(nuovoPromemoria: {
   return data;
 },
 
- async deletePromemoria(
+async deletePromemoria(
   id: string,
   currentUserId: string
 ): Promise<void> {
+  /*
+   * Eliminazione definitiva: prima rimuoviamo eventuali file
+   * presenti nella cartella storage del promemoria, poi cancelliamo
+   * fisicamente la riga. Il filtro operatore_id mantiene invariata
+   * la regola: può eliminare soltanto chi ha creato il promemoria.
+   */
+  const { data: storageFiles, error: storageListError } = await supabase.storage
+    .from("promemoria-allegati")
+    .list(id);
 
- const { error } = await supabase
-  .from("tbpromemoria")
-  .update({
-    eliminato: true,
-    eliminato_at: new Date().toISOString(),
-    eliminato_da: currentUserId,
-  } as any)
-  .eq("id", id)
-  .eq("operatore_id", currentUserId);
+  if (!storageListError && storageFiles?.length) {
+    const paths = storageFiles
+      .filter((file) => file.name !== ".emptyFolderPlaceholder")
+      .map((file) => `${id}/${file.name}`);
+
+    if (paths.length) {
+      const { error: storageDeleteError } = await supabase.storage
+        .from("promemoria-allegati")
+        .remove(paths);
+
+      if (storageDeleteError) {
+        console.error("Errore eliminazione allegati promemoria:", storageDeleteError);
+        throw storageDeleteError;
+      }
+    }
+  }
+
+  const { data, error } = await supabase
+    .from("tbpromemoria")
+    .delete()
+    .eq("id", id)
+    .eq("operatore_id", currentUserId)
+    .select("id")
+    .maybeSingle();
 
   if (error) {
-    console.error("Errore eliminazione promemoria:", error);
+    console.error("Errore eliminazione definitiva promemoria:", error);
     throw error;
+  }
+
+  if (!data?.id) {
+    throw new Error("Promemoria non eliminato: record non trovato o operazione non autorizzata");
+  }
+
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("promemoria-updated"));
   }
 },
 
@@ -680,38 +709,26 @@ async createPromemoria(nuovoPromemoria: {
       .eq("id", promemoriaId)
       .single();
 
-    const allegatiAttuali = (currentPromemoria?.allegati as unknown as Allegato[]) || [];
-    const allegatoDaEliminare = allegatiAttuali.find(a => a.url === allegatoUrl);
+    if (!currentPromemoria) return;
 
-    if (!allegatoDaEliminare) {
-      throw new Error("Allegato non trovato");
-    }
+    const allegatiAttuali = (currentPromemoria.allegati as unknown as Allegato[]) || [];
+    const allegato = allegatiAttuali.find(a => a.url === allegatoUrl);
 
-    const url = new URL(allegatoDaEliminare.url);
-    const pathParts = url.pathname.split("/");
-    const nomeFile = pathParts.slice(-2).join("/");
+    if (!allegato) return;
 
-    const { error: storageError } = await supabase.storage
-      .from("promemoria-allegati")
-      .remove([nomeFile]);
-
-    if (storageError) {
-      console.error("Errore eliminazione file storage:", storageError);
+    const path = allegato.url.split('/promemoria-allegati/')[1];
+    if (path) {
+      await supabase.storage
+        .from("promemoria-allegati")
+        .remove([path]);
     }
 
     const nuoviAllegati = allegatiAttuali.filter(a => a.url !== allegatoUrl);
-
-    const { error: updateError } = await supabase
+    const { error } = await supabase
       .from("tbpromemoria")
       .update({ allegati: nuoviAllegati as any })
       .eq("id", promemoriaId);
 
-    if (updateError) {
-      throw new Error("Errore aggiornamento database");
-    }
-  },
-
-  getUrlAllegato(allegato: Allegato): string {
-    return allegato.url;
-  },
+    if (error) throw error;
+  }
 };
