@@ -30,34 +30,15 @@ const getEasterSunday = (year: number) => {
 };
 
 const getItalianNationalHolidaySet = (year: number) => {
-  const fixed = [
-    [1, 1],
-    [1, 6],
-    [4, 25],
-    [5, 1],
-    [6, 2],
-    [8, 15],
-    [11, 1],
-    [12, 8],
-    [12, 25],
-    [12, 26],
-  ];
-
-  const values = new Set(
-    fixed.map(([month, day]) => toLocalIso(new Date(year, month - 1, day, 12, 0, 0, 0)))
-  );
-
+  const fixed = [[1,1],[1,6],[4,25],[5,1],[6,2],[8,15],[11,1],[12,8],[12,25],[12,26]];
+  const values = new Set(fixed.map(([month, day]) => toLocalIso(new Date(year, month - 1, day, 12, 0, 0, 0))));
   const easterMonday = getEasterSunday(year);
   easterMonday.setDate(easterMonday.getDate() + 1);
   values.add(toLocalIso(easterMonday));
-
   return values;
 };
 
-const MONTHS_IT = [
-  "gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno",
-  "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre",
-];
+const MONTHS_IT = ["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"];
 
 export function AgendaMasterGraficaEnhancer() {
   useEffect(() => {
@@ -65,9 +46,7 @@ export function AgendaMasterGraficaEnhancer() {
       const root = document.querySelector(".agenda-master-page");
       if (!root) return;
 
-      const weekLabel = Array.from(root.querySelectorAll("span")).find((node) =>
-        /Settimana\s+\d+.*\d{4}/i.test(node.textContent || "")
-      );
+      const weekLabel = Array.from(root.querySelectorAll("span")).find((node) => /Settimana\s+\d+.*\d{4}/i.test(node.textContent || ""));
       const match = weekLabel?.textContent?.match(/Settimana\s+(\d+).*?(\d{4})/i);
 
       if (match) {
@@ -80,35 +59,23 @@ export function AgendaMasterGraficaEnhancer() {
 
         headerCells.forEach((cell, index) => {
           if (!(cell instanceof HTMLElement) || index === 0 || index > 7) return;
-
           const date = new Date(monday);
           date.setDate(monday.getDate() + index - 1);
-          const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-          const isHoliday = holidays.has(toLocalIso(date));
-
-          if (isWeekend || isHoliday) {
+          const special = date.getDay() === 0 || date.getDay() === 6 || holidays.has(toLocalIso(date));
+          if (special) {
             cell.style.setProperty("background-color", "rgb(254 226 226)", "important");
             cell.style.setProperty("color", "rgb(185 28 28)", "important");
             cell.style.setProperty("border-color", "rgb(252 165 165)", "important");
-            Array.from(cell.querySelectorAll("*")).forEach((node) => {
-              if (node instanceof HTMLElement) {
-                node.style.setProperty("color", "rgb(185 28 28)", "important");
-              }
-            });
+            cell.querySelectorAll("*").forEach((node) => node instanceof HTMLElement && node.style.setProperty("color", "rgb(185 28 28)", "important"));
           } else {
             cell.style.removeProperty("background-color");
             cell.style.removeProperty("color");
             cell.style.removeProperty("border-color");
-            Array.from(cell.querySelectorAll("*")).forEach((node) => {
-              if (node instanceof HTMLElement) node.style.removeProperty("color");
-            });
+            cell.querySelectorAll("*").forEach((node) => node instanceof HTMLElement && node.style.removeProperty("color"));
           }
         });
 
-        const newEventButton = Array.from(root.querySelectorAll("button")).find((button) =>
-          /Nuovo Evento/i.test(button.textContent || "")
-        );
-
+        const newEventButton = Array.from(root.querySelectorAll("button")).find((button) => /Nuovo Evento/i.test(button.textContent || ""));
         if (newEventButton?.parentElement) {
           let monthLabel = newEventButton.parentElement.querySelector("[data-agenda-month-label]") as HTMLElement | null;
           if (!monthLabel) {
@@ -117,7 +84,6 @@ export function AgendaMasterGraficaEnhancer() {
             monthLabel.className = "agenda-master-month-label";
             newEventButton.insertAdjacentElement("afterend", monthLabel);
           }
-
           const monthDate = new Date(monday);
           monthDate.setDate(monday.getDate() + 3);
           monthLabel.textContent = `${MONTHS_IT[monthDate.getMonth()]} ${monthDate.getFullYear()}`;
@@ -125,28 +91,13 @@ export function AgendaMasterGraficaEnhancer() {
       }
 
       const labels = ["Eventi ricorrenti", "Scaduti", "Riunioni Teams", "Mese", "Settimana"];
-      const buttons = Array.from(root.querySelectorAll("button")).filter((button) =>
-        labels.some((label) => (button.textContent || "").trim().includes(label))
-      );
-
+      const buttons = Array.from(root.querySelectorAll("button")).filter((button) => labels.some((label) => (button.textContent || "").trim().includes(label)));
       buttons.forEach((button) => {
-        const isActive = button.className.includes("bg-primary");
-        button.style.setProperty(
-          "background-color",
-          isActive ? "rgb(3 105 161)" : "white",
-          "important"
-        );
-        button.style.setProperty(
-          "color",
-          isActive ? "white" : "rgb(15 23 42)",
-          "important"
-        );
-        button.style.setProperty("border", "1px solid rgb(125 211 252)", "important");
-        button.style.setProperty(
-          "border-color",
-          isActive ? "rgb(3 105 161)" : "rgb(125 211 252)",
-          "important"
-        );
+        const cn = String(button.className || "");
+        const isActive = cn.includes("bg-primary") || (!cn.includes("border-input") && !cn.includes("bg-background"));
+        button.style.setProperty("background-color", isActive ? "rgb(3 105 161)" : "white", "important");
+        button.style.setProperty("color", isActive ? "white" : "rgb(3 105 161)", "important");
+        button.style.setProperty("border", `1px solid ${isActive ? "rgb(3 105 161)" : "rgb(125 211 252)"}`, "important");
         button.style.setProperty("box-shadow", "none", "important");
       });
     };
@@ -156,46 +107,17 @@ export function AgendaMasterGraficaEnhancer() {
     return () => window.clearInterval(interval);
   }, []);
 
-  return (
-    <style jsx global>{`
-      .agenda-master-page .md\\:block > div:first-child > div:last-child > div:last-child button {
-        background-color: white !important;
-        color: rgb(15 23 42) !important;
-        border: 1px solid rgb(125 211 252) !important;
-        box-shadow: none !important;
-      }
-
-      .agenda-master-page .md\\:block > div:first-child > div:last-child > div:last-child button[class*="bg-primary"] {
-        background-color: rgb(3 105 161) !important;
-        color: white !important;
-        border-color: rgb(3 105 161) !important;
-      }
-
-      .agenda-master-page .sticky > div > div:nth-child(7),
-      .agenda-master-page .sticky > div > div:nth-child(8) {
-        background-color: rgb(254 226 226) !important;
-        color: rgb(185 28 28) !important;
-        border-color: rgb(252 165 165) !important;
-      }
-
-      .agenda-master-page .sticky > div > div:nth-child(7) *,
-      .agenda-master-page .sticky > div > div:nth-child(8) * {
-        color: rgb(185 28 28) !important;
-      }
-
-      .agenda-master-month-label {
-        display: inline-flex;
-        align-items: center;
-        height: 36px;
-        padding: 0 14px;
-        border: 1px solid rgb(125 211 252);
-        border-radius: 8px;
-        background-color: white;
-        color: rgb(3 105 161);
-        font-weight: 700;
-        text-transform: capitalize;
-        white-space: nowrap;
-      }
-    `}</style>
-  );
+  return <style jsx global>{`
+    .agenda-master-page .sticky > div > div:nth-child(7),
+    .agenda-master-page .sticky > div > div:nth-child(8) {
+      background-color: rgb(254 226 226) !important;
+      color: rgb(185 28 28) !important;
+      border-color: rgb(252 165 165) !important;
+    }
+    .agenda-master-page .sticky > div > div:nth-child(7) *,
+    .agenda-master-page .sticky > div > div:nth-child(8) * { color: rgb(185 28 28) !important; }
+    .agenda-master-month-label {
+      display:inline-flex;align-items:center;height:36px;padding:0 14px;border:1px solid rgb(125 211 252);border-radius:8px;background:white;color:rgb(3 105 161);font-weight:700;text-transform:capitalize;white-space:nowrap;
+    }
+  `}</style>;
 }
