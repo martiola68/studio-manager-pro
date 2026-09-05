@@ -105,15 +105,35 @@ export function CassettiFiscaliMasterGraficaEnhancer() {
         color: white !important;
         border-color: rgb(100 116 139) !important;
       }
-      .cassetti-fiscali-master-page tbody tr:nth-child(even) td:not(.bg-green-100) {
-        background-color: rgb(241 245 249);
+
+      /* Righe più compatte e uniformi: nessuna alternanza cromatica. */
+      .cassetti-fiscali-master-page tbody tr,
+      .cassetti-fiscali-master-page tbody tr:nth-child(even),
+      .cassetti-fiscali-master-page tbody tr:nth-child(odd) {
+        background: white !important;
+        border-color: rgb(226 232 240);
       }
-      .cassetti-fiscali-master-page tbody tr {
-        border-color: rgb(203 213 225);
+      .cassetti-fiscali-master-page tbody td {
+        padding-top: 5px !important;
+        padding-bottom: 5px !important;
+        background-color: white;
       }
       .cassetti-fiscali-master-page tbody tr:hover td {
-        background-color: rgb(224 242 254) !important;
+        background-color: rgb(240 249 255) !important;
       }
+
+      /* Password attuale: azzurro SMP al posto del verde legacy. */
+      .cassetti-fiscali-master-page tbody td.bg-green-100,
+      .cassetti-fiscali-master-page tbody td[class*="bg-green-100"] {
+        background-color: rgb(224 242 254) !important;
+        color: rgb(3 105 161) !important;
+        border-color: rgb(125 211 252) !important;
+      }
+      .cassetti-fiscali-master-page tbody tr:hover td.bg-green-100,
+      .cassetti-fiscali-master-page tbody tr:hover td[class*="bg-green-100"] {
+        background-color: rgb(186 230 253) !important;
+      }
+
       body.master-grafica-cassetti-fiscali [role="dialog"] {
         background: rgb(248 250 252);
         border-color: rgb(186 230 253);
