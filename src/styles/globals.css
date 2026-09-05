@@ -3,66 +3,361 @@
 @tailwind utilities;
 
 @layer utilities {
-  .text-balance { text-wrap: balance; }
-  .sticky-col-header { position: sticky; left: 0; z-index: 40; background-color: white; box-shadow: 2px 0 5px -2px rgba(0,0,0,.1); }
-  .sticky-col-cell { position: sticky; left: 0; z-index: 20; background-color: white; box-shadow: 2px 0 5px -2px rgba(0,0,0,.1); }
-  tr:hover .sticky-col-cell { background-color: rgb(240 253 244) !important; }
-  :is(.dark) .sticky-col-header, :is(.dark) .sticky-col-cell { background-color:#1f2937; color:#e5e7eb; }
-  :is(.dark) tr:hover .sticky-col-cell { background-color:#374151 !important; }
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  /* Sticky column for Nominativo in all scadenzari tables */
+  .sticky-col-header {
+    position: sticky;
+    left: 0;
+    z-index: 40;
+    background-color: white;
+    box-shadow: 2px 0 5px -2px rgba(0, 0, 0, 0.1);
+  }
+  
+  .sticky-col-cell {
+    position: sticky;
+    left: 0;
+    z-index: 20;
+    background-color: white;
+    box-shadow: 2px 0 5px -2px rgba(0, 0, 0, 0.1);
+  }
+  
+  tr:hover .sticky-col-cell {
+    background-color: rgb(240 253 244) !important;
+  }
+  
+  :is(.dark) .sticky-col-header,
+  :is(.dark) .sticky-col-cell {
+    background-color: #1f2937;
+    color: #e5e7eb;
+  }
+  
+  :is(.dark) tr:hover .sticky-col-cell {
+    background-color: #374151 !important;
+  }
 }
 
 @layer base {
   :root {
-    --radius: .55rem; --background:0 0% 100%; --foreground:330 0% .3%; --card:0 0% 100%; --card-foreground:330 0% .3%; --popover:0 0% 100%; --popover-foreground:330 0% .3%; --primary:0 0% 4.5%; --primary-foreground:0 0% 97.5%; --secondary:0 0% 97.3%; --secondary-foreground:0 0% 4.5%; --muted:0 0% 97.3%; --muted-foreground:0 0% 55.7%; --accent:0 0% 97.3%; --accent-foreground:0 0% 4.5%; --destructive:359.9132 100.2494% 67.8807%; --destructive-foreground:0 0% 0%; --border:0 0% 92.2%; --input:0 0% 92.2%; --ring:0 0% 70.8%; --chart-1:41.1 71.2% 54.4%; --chart-2:184.7 32.4% 48.6%; --chart-3:227.4 15.2% 33.3%; --chart-4:84.4 74.8% 75.7%; --chart-5:70.1 74.3% 70.5%; --sidebar:0 0% 97.5%; --sidebar-foreground:330 0% .3%; --sidebar-primary:0 0% 4.5%; --sidebar-primary-foreground:0 0% 97.5%; --sidebar-accent:0 0% 97.3%; --sidebar-accent-foreground:330 0% 4.5%; --sidebar-border:0 0% 92.2%; --sidebar-ring:0 0% 70.8%;
+    --radius: 0.55rem;
+    --background: 0 0% 100%;
+    --foreground: 330 0% 0.3%;
+    --card: 0 0% 100%;
+    --card-foreground: 330 0% 0.3%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 330 0% 0.3%;
+    --primary: 0 0% 4.5%;
+    --primary-foreground: 0 0% 97.5%;
+    --secondary: 0 0% 97.3%;
+    --secondary-foreground: 0 0% 4.5%;
+    --muted: 0 0% 97.3%;
+    --muted-foreground: 0 0% 55.7%;
+    --accent: 0 0% 97.3%;
+    --accent-foreground: 0 0% 4.5%;
+    --destructive: 359.9132 100.2494% 67.8807%;
+    --destructive-foreground: 0 0% 0%;
+    --border: 0 0% 92.2%;
+    --input: 0 0% 92.2%;
+    --ring: 0 0% 70.8%;
+    --chart-1: 41.1 71.2% 54.4%;
+    --chart-2: 184.7 32.4% 48.6%;
+    --chart-3: 227.4 15.2% 33.3%;
+    --chart-4: 84.4 74.8% 75.7%;
+    --chart-5: 70.1 74.3% 70.5%;
+    --sidebar: 0 0% 97.5%;
+    --sidebar-foreground: 330 0% 0.3%;
+    --sidebar-primary: 0 0% 4.5%;
+    --sidebar-primary-foreground: 0 0% 97.5%;
+    --sidebar-accent: 0 0% 97.3%;
+    --sidebar-accent-foreground: 330 0% 4.5%;
+    --sidebar-border: 0 0% 92.2%;
+    --sidebar-ring: 0 0% 70.8%;
   }
+
   .dark {
-    --radius:.55rem; --background:330 0% .3%; --foreground:0 0% 97.5%; --card:0 0% 4.5%; --card-foreground:330 0% 97.5%; --popover:0 0% 8.6%; --popover-foreground:0 0% 97.5%; --primary:0 0% 92.2%; --primary-foreground:0 0% 4.5%; --secondary:0 0% 8.6%; --secondary-foreground:0 0% 97.5%; --muted:0 0% 8.6%; --muted-foreground:0 0% 70.8%; --accent:0 0% 21.2%; --accent-foreground:0 0% 97.5%; --destructive:359.9132 100.2494% 67.8807%; --destructive-foreground:0 0% 0%; --border:0 0% 100% / 15%; --input:0 0% 100% / 15%; --ring:0 0% 55.7%; --chart-1:264.4 77.2% 41.9%; --chart-2:162.5 46.7% 57.3%; --chart-3:70.1 74.3% 70.5%; --chart-4:303.9 75.8% 51.6%; --chart-5:16.4 84.7% 55.4%; --sidebar:0 0% 4.5%; --sidebar-foreground:330 0% 97.5%; --sidebar-primary:264.4 77.2% 41.9%; --sidebar-primary-foreground:0 0% 97.5%; --sidebar-accent:0 0% 8.6%; --sidebar-accent-foreground:330 0% 97.5%; --sidebar-border:0 0% 100% / 10%; --sidebar-ring:0 0% 43.9%;
+    --radius: 0.55rem;
+    --background: 330 0% 0.3%;
+    --foreground: 0 0% 97.5%;
+    --card: 0 0% 4.5%;
+    --card-foreground: 330 0% 97.5%;
+    --popover: 0 0% 8.6%;
+    --popover-foreground: 0 0% 97.5%;
+    --primary: 0 0% 92.2%;
+    --primary-foreground: 0 0% 4.5%;
+    --secondary: 0 0% 8.6%;
+    --secondary-foreground: 0 0% 97.5%;
+    --muted: 0 0% 8.6%;
+    --muted-foreground: 0 0% 70.8%;
+    --accent: 0 0% 21.2%;
+    --accent-foreground: 0 0% 97.5%;
+    --destructive: 359.9132 100.2494% 67.8807%;
+    --destructive-foreground: 0 0% 0%;
+    --border: 0 0% 100% / 15%;
+    --input: 0 0% 100% / 15%;
+    --ring: 0 0% 55.7%;
+    --chart-1: 264.4 77.2% 41.9%;
+    --chart-2: 162.5 46.7% 57.3%;
+    --chart-3: 70.1 74.3% 70.5%;
+    --chart-4: 303.9 75.8% 51.6%;
+    --chart-5: 16.4 84.7% 55.4%;
+    --sidebar: 0 0% 4.5%;
+    --sidebar-foreground: 330 0% 97.5%;
+    --sidebar-primary: 264.4 77.2% 41.9%;
+    --sidebar-primary-foreground: 0 0% 97.5%;
+    --sidebar-accent: 0 0% 8.6%;
+    --sidebar-accent-foreground: 0 0% 97.5%;
+    --sidebar-border: 0 0% 100% / 10%;
+    --sidebar-ring: 0 0% 43.9%;
   }
 }
 
-@layer base { * { @apply border-border; } body { @apply bg-background text-foreground; } }
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
 
 @layer components {
-  .container { @apply mx-auto px-4 md:px-6 lg:px-8 max-w-7xl w-full; }
-  .presenze-page .max-h-\[320px\] { max-height:520px !important; min-height:420px; }
-  .organi-sociali-page div[style*="color: rgb(22, 101, 52)"][style*="font-size: 16px"], .organi-sociali-page div[style*="color:#166534"][style*="font-size:16px"] { font-size:24px !important; line-height:1.15 !important; letter-spacing:.01em; margin-bottom:6px; }
-  .grid.grid-cols-2.gap-4:has(#giorni_preavviso_1):has(#giorni_preavviso_2) { display:none !important; }
-  .microsoft365-page a[href="/guide/MICROSOFT_365_SETUP_GUIDE.md"] { display:none !important; }
-  .microsoft365-page .mx-auto.max-w-5xl > div:has(a[href="/guide/MICROSOFT_365_SETUP_GUIDE.md"]) + div { display:none !important; }
-  .flex.items-center.justify-between.gap-3.pt-6.border-t:has(input[type="file"][accept=".pdf,.txt"]) { justify-content:flex-end !important; }
-  .flex.items-center.justify-between.gap-3.pt-6.border-t:has(input[type="file"][accept=".pdf,.txt"]) > div:first-child { display:none !important; }
+  .container {
+    @apply mx-auto px-4 md:px-6 lg:px-8 max-w-7xl w-full;
+  }
 
-  .container:has(table th:nth-child(14)) { max-width:none !important; width:100% !important; padding-left:24px !important; padding-right:24px !important; }
-  .container:has(table th:nth-child(14)) table { min-width:1580px; width:100%; table-layout:auto; }
-  .container:has(table th:nth-child(14)) th, .container:has(table th:nth-child(14)) td { padding-left:10px; padding-right:10px; vertical-align:middle; line-height:1.35; }
-  .container:has(table th:nth-child(14)) td { white-space:normal; overflow-wrap:anywhere; }
-  .container:has(table th:nth-child(14)) th:nth-child(1){min-width:46px;width:46px}.container:has(table th:nth-child(14)) th:nth-child(2){min-width:175px;width:175px;white-space:nowrap}.container:has(table th:nth-child(14)) th:nth-child(3){min-width:135px}.container:has(table th:nth-child(14)) th:nth-child(4){min-width:90px}.container:has(table th:nth-child(14)) th:nth-child(5){min-width:220px}.container:has(table th:nth-child(14)) th:nth-child(6){min-width:330px}.container:has(table th:nth-child(14)) th:nth-child(7){min-width:120px}.container:has(table th:nth-child(14)) th:nth-child(8){min-width:105px}.container:has(table th:nth-child(14)) th:nth-child(9){min-width:115px}.container:has(table th:nth-child(14)) th:nth-child(10){min-width:130px}.container:has(table th:nth-child(14)) th:nth-child(11){min-width:130px}.container:has(table th:nth-child(14)) th:nth-child(12){min-width:90px}.container:has(table th:nth-child(14)) th:nth-child(13){min-width:105px}.container:has(table th:nth-child(14)) th:nth-child(14){min-width:90px}
+  .presenze-page .max-h-\[320px\] {
+    max-height: 520px !important;
+    min-height: 420px;
+  }
 
-  .promemoria-master-page { background-color:rgb(241 245 249); }
-  .promemoria-master-page > .container { display:flex; height:100%; min-height:0; max-width:none !important; width:100% !important; flex-direction:column; overflow:hidden; padding-top:12px !important; padding-bottom:0 !important; }
-  .promemoria-master-page > .container > div:first-child, .promemoria-master-page > .container > div:nth-child(2) { flex:0 0 auto; border:1px solid rgb(186 230 253); border-radius:8px; background-color:rgb(248 250 252); padding:12px 16px; }
-  .promemoria-master-page > .container > div:first-child, .promemoria-master-page > .container > div:nth-child(2) { margin-bottom:10px !important; }
-  .promemoria-master-page > .container > div:nth-child(3) { flex:1 1 auto; min-height:0; overflow:auto !important; border:1px solid rgb(186 230 253); border-radius:8px; background-color:white; }
-  .promemoria-master-page > .container > div:nth-child(3) table { margin:0; }
-  .promemoria-master-page thead { position:sticky; top:0; z-index:30; background-color:rgb(71 85 105); }
-  .promemoria-master-page thead tr, .promemoria-master-page thead th { background-color:rgb(71 85 105); }
-  .promemoria-master-page thead th { color:white; font-weight:600; white-space:nowrap; }
-  .promemoria-master-page > .container > div:first-child button { background-color:rgb(3 105 161) !important; color:white !important; border-color:rgb(3 105 161) !important; }
-  .promemoria-master-page > .container > div:first-child button:hover { background-color:rgb(2 132 199) !important; }
-  body.master-grafica-promemoria [role="dialog"] { background-color:rgb(248 250 252); }
-  body.master-grafica-promemoria [role="dialog"] input, body.master-grafica-promemoria [role="dialog"] textarea, body.master-grafica-promemoria [role="dialog"] button[role="combobox"] { background-color:white; border-color:rgb(203 213 225); }
+  .organi-sociali-page div[style*="color: rgb(22, 101, 52)"][style*="font-size: 16px"],
+  .organi-sociali-page div[style*="color:#166534"][style*="font-size:16px"] {
+    font-size: 24px !important;
+    line-height: 1.15 !important;
+    letter-spacing: 0.01em;
+    margin-bottom: 6px;
+  }
+
+  .grid.grid-cols-2.gap-4:has(#giorni_preavviso_1):has(#giorni_preavviso_2) {
+    display: none !important;
+  }
+
+  .microsoft365-page a[href="/guide/MICROSOFT_365_SETUP_GUIDE.md"] {
+    display: none !important;
+  }
+
+  .microsoft365-page .mx-auto.max-w-5xl > div:has(a[href="/guide/MICROSOFT_365_SETUP_GUIDE.md"])
+    + div {
+    display: none !important;
+  }
+
+  .flex.items-center.justify-between.gap-3.pt-6.border-t:has(input[type="file"][accept=".pdf,.txt"]) {
+    justify-content: flex-end !important;
+  }
+
+  .flex.items-center.justify-between.gap-3.pt-6.border-t:has(input[type="file"][accept=".pdf,.txt"]) > div:first-child {
+    display: none !important;
+  }
+
+  .container:has(table th:nth-child(14)) {
+    max-width: none !important;
+    width: 100% !important;
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+  }
+
+  .container:has(table th:nth-child(14)) table {
+    min-width: 1580px;
+    width: 100%;
+    table-layout: auto;
+  }
+
+  .container:has(table th:nth-child(14)) th,
+  .container:has(table th:nth-child(14)) td {
+    padding-left: 10px;
+    padding-right: 10px;
+    vertical-align: middle;
+    line-height: 1.35;
+  }
+
+  .container:has(table th:nth-child(14)) td {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .container:has(table th:nth-child(14)) th:nth-child(1) { min-width: 46px; width: 46px; }
+  .container:has(table th:nth-child(14)) th:nth-child(2) { min-width: 175px; width: 175px; white-space: nowrap; }
+  .container:has(table th:nth-child(14)) th:nth-child(3) { min-width: 135px; }
+  .container:has(table th:nth-child(14)) th:nth-child(4) { min-width: 90px; }
+  .container:has(table th:nth-child(14)) th:nth-child(5) { min-width: 220px; }
+  .container:has(table th:nth-child(14)) th:nth-child(6) { min-width: 330px; }
+  .container:has(table th:nth-child(14)) th:nth-child(7) { min-width: 120px; }
+  .container:has(table th:nth-child(14)) th:nth-child(8) { min-width: 105px; }
+  .container:has(table th:nth-child(14)) th:nth-child(9) { min-width: 115px; }
+  .container:has(table th:nth-child(14)) th:nth-child(10) { min-width: 130px; }
+  .container:has(table th:nth-child(14)) th:nth-child(11) { min-width: 130px; }
+  .container:has(table th:nth-child(14)) th:nth-child(12) { min-width: 90px; }
+  .container:has(table th:nth-child(14)) th:nth-child(13) { min-width: 105px; }
+  .container:has(table th:nth-child(14)) th:nth-child(14) { min-width: 90px; }
+
+  .promemoria-master-page {
+    background-color: rgb(241 245 249);
+  }
+
+  .promemoria-master-page > .container {
+    display: flex;
+    height: 100%;
+    min-height: 0;
+    max-width: none !important;
+    width: 100% !important;
+    flex-direction: column;
+    overflow: hidden;
+    padding-top: 12px !important;
+    padding-bottom: 0 !important;
+  }
+
+  .promemoria-master-page > .container > div:first-child,
+  .promemoria-master-page > .container > div:nth-child(2) {
+    flex: 0 0 auto;
+    border: 1px solid rgb(186 230 253);
+    border-radius: 8px;
+    background-color: rgb(248 250 252);
+    padding: 12px 16px;
+  }
+
+  .promemoria-master-page > .container > div:first-child {
+    margin-bottom: 10px !important;
+  }
+
+  .promemoria-master-page > .container > div:nth-child(2) {
+    margin-bottom: 10px !important;
+  }
+
+  .promemoria-master-page > .container > div:nth-child(3) {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto !important;
+    border: 1px solid rgb(186 230 253);
+    border-radius: 8px;
+    background-color: white;
+  }
+
+  .promemoria-master-page > .container > div:nth-child(3) table {
+    margin: 0;
+  }
+
+  .promemoria-master-page thead {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background-color: rgb(71 85 105);
+  }
+
+  .promemoria-master-page thead tr,
+  .promemoria-master-page thead th {
+    background-color: rgb(71 85 105);
+  }
+
+  .promemoria-master-page thead th {
+    color: white;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .promemoria-master-page > .container > div:first-child button {
+    background-color: rgb(3 105 161) !important;
+    color: white !important;
+    border-color: rgb(3 105 161) !important;
+  }
+
+  .promemoria-master-page > .container > div:first-child button:hover {
+    background-color: rgb(2 132 199) !important;
+  }
+
+  body.master-grafica-promemoria [role="dialog"] {
+    background-color: rgb(248 250 252);
+  }
+
+  body.master-grafica-promemoria [role="dialog"] input,
+  body.master-grafica-promemoria [role="dialog"] textarea,
+  body.master-grafica-promemoria [role="dialog"] button[role="combobox"] {
+    background-color: white;
+    border-color: rgb(203 213 225);
+  }
 
   /* MASTER_GRAFICA Agenda */
-  .agenda-master-page { background-color:rgb(241 245 249); }
-  .agenda-master-page > div { max-width:none !important; width:100% !important; }
-  .agenda-master-page .md\:block { height:100%; min-height:0; }
-  .agenda-master-page .md\:block > div:first-child { border:1px solid rgb(186 230 253) !important; border-radius:8px !important; background-color:rgb(248 250 252) !important; box-shadow:none !important; }
-  .agenda-master-page .md\:block > div:nth-child(2) { border:1px solid rgb(186 230 253) !important; border-radius:8px !important; background-color:white !important; box-shadow:none !important; overflow:hidden; }
-  .agenda-master-page .md\:block > div:first-child > div:first-child > button { background-color:rgb(3 105 161) !important; border-color:rgb(3 105 161) !important; color:white !important; }
-  .agenda-master-page .md\:block > div:first-child > div:first-child > button:hover { background-color:rgb(2 132 199) !important; }
-  .agenda-master-page .sticky { background-color:rgb(71 85 105) !important; }
-  .agenda-master-page .sticky > div > div { background-color:rgb(71 85 105) !important; border-color:rgb(100 116 139) !important; color:white !important; }
-  .agenda-master-page .sticky + div > div > div:first-child { background-color:rgb(248 250 252) !important; color:rgb(100 116 139) !important; }
-  body.master-grafica-agenda [role="dialog"] { background-color:rgb(248 250 252); border-color:rgb(186 230 253); }
-  body.master-grafica-agenda [role="dialog"] input, body.master-grafica-agenda [role="dialog"] textarea, body.master-grafica-agenda [role="dialog"] button[role="combobox"] { background-color:white; border-color:rgb(203 213 225); }
+  .agenda-master-page {
+    background-color: rgb(241 245 249);
+  }
+
+  .agenda-master-page > div {
+    max-width: none !important;
+    width: 100% !important;
+  }
+
+  .agenda-master-page .md\:block {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .agenda-master-page .md\:block > div:first-child {
+    border: 1px solid rgb(186 230 253) !important;
+    border-radius: 8px !important;
+    background-color: rgb(248 250 252) !important;
+    box-shadow: none !important;
+  }
+
+  .agenda-master-page .md\:block > div:nth-child(2) {
+    border: 1px solid rgb(186 230 253) !important;
+    border-radius: 8px !important;
+    background-color: white !important;
+    box-shadow: none !important;
+    overflow: hidden;
+  }
+
+  /* Nuovo Evento: bottone diretto del gruppo sinistro della toolbar */
+  .agenda-master-page .md\:block > div:first-child > div:first-child > button {
+    background-color: rgb(3 105 161) !important;
+    border-color: rgb(3 105 161) !important;
+    color: white !important;
+  }
+
+  .agenda-master-page .md\:block > div:first-child > div:first-child > button:hover {
+    background-color: rgb(2 132 199) !important;
+  }
+
+  /* Intestazione settimanale scura come MASTER_GRAFICA */
+  .agenda-master-page .sticky {
+    background-color: rgb(71 85 105) !important;
+  }
+
+  .agenda-master-page .sticky > div > div {
+    background-color: rgb(71 85 105) !important;
+    border-color: rgb(100 116 139) !important;
+    color: white !important;
+  }
+
+  .agenda-master-page .sticky > div > div:nth-child(7) {
+    background-color: rgb(224 242 254) !important;
+    color: rgb(3 105 161) !important;
+  }
+
+  .agenda-master-page .sticky + div > div > div:first-child {
+    background-color: rgb(248 250 252) !important;
+    color: rgb(100 116 139) !important;
+  }
+
+  body.master-grafica-agenda [role="dialog"] {
+    background-color: rgb(248 250 252);
+    border-color: rgb(186 230 253);
+  }
+
+  body.master-grafica-agenda [role="dialog"] input,
+  body.master-grafica-agenda [role="dialog"] textarea,
+  body.master-grafica-agenda [role="dialog"] button[role="combobox"] {
+    background-color: white;
+    border-color: rgb(203 213 225);
+  }
 }
