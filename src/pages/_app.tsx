@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/contexts/ThemeProvider";
 import { StudioProvider } from "@/contexts/StudioContext";
 import { ModuleAccessGuard } from "@/components/security/ModuleAccessGuard";
 import { ClientiImportTemplateEnhancer } from "@/components/ClientiImportTemplateEnhancer";
+import { AgendaMasterGraficaEnhancer } from "@/components/agenda/AgendaMasterGraficaEnhancer";
 import { Toaster } from "@/components/ui/toaster";
 
 // Layout (Header + Nav) SOLO per pagine private
@@ -120,6 +121,7 @@ export default function App({ Component, pageProps }: AppProps) {
     <ThemeProvider>
       <StudioProvider>
         {router.pathname === "/clienti" && <ClientiImportTemplateEnhancer />}
+        {isMasterGraficaAgenda && <AgendaMasterGraficaEnhancer />}
         {isPublicPage ? (
           <>
             {pageContent}
