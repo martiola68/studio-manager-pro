@@ -32,15 +32,18 @@ export default function App({ Component, pageProps }: AppProps) {
   const isScadenzarioPage = router.pathname.startsWith("/scadenze/");
   const isOperationalScadenzario = SCADENZARI_VIEWPORT.has(router.pathname);
   const isMasterGraficaPromemoria = router.pathname === "/promemoria";
-  const isFixedViewportPage = isOperationalScadenzario || isMasterGraficaPromemoria;
+  const isMasterGraficaAgenda = router.pathname === "/agenda";
+  const isFixedViewportPage = isOperationalScadenzario || isMasterGraficaPromemoria || isMasterGraficaAgenda;
 
   useEffect(() => {
     document.body.classList.toggle("master-grafica-promemoria", isMasterGraficaPromemoria);
+    document.body.classList.toggle("master-grafica-agenda", isMasterGraficaAgenda);
 
     return () => {
       document.body.classList.remove("master-grafica-promemoria");
+      document.body.classList.remove("master-grafica-agenda");
     };
-  }, [isMasterGraficaPromemoria]);
+  }, [isMasterGraficaPromemoria, isMasterGraficaAgenda]);
 
   useEffect(() => {
     if (!router.isReady || !isScadenzarioPage) return;
@@ -99,6 +102,7 @@ export default function App({ Component, pageProps }: AppProps) {
     router.pathname === "/microsoft365" ? "microsoft365-page" : "",
     isOperationalScadenzario ? "!min-h-0 !overflow-hidden" : "",
     isMasterGraficaPromemoria ? "promemoria-master-page !min-h-0 !overflow-hidden" : "",
+    isMasterGraficaAgenda ? "agenda-master-page !min-h-0 !overflow-hidden" : "",
   ]
     .filter(Boolean)
     .join(" ");
