@@ -19,6 +19,7 @@ import { PayrollMasterGraficaEnhancer } from "@/components/payroll/PayrollMaster
 import { DipendentiPayrollMasterGraficaEnhancer } from "@/components/payroll/DipendentiPayrollMasterGraficaEnhancer";
 import { RevisioneMasterGraficaEnhancer } from "@/components/revisione/RevisioneMasterGraficaEnhancer";
 import { ControlloGestioneMasterGraficaEnhancer } from "@/components/controllo-gestione/ControlloGestioneMasterGraficaEnhancer";
+import { ContenziosoMasterGraficaEnhancer } from "@/components/contenzioso/ContenziosoMasterGraficaEnhancer";
 import { Toaster } from "@/components/ui/toaster";
 
 import Header from "@/components/Header";
@@ -60,6 +61,7 @@ export default function App({ Component, pageProps }: AppProps) {
   const isPayrollDipendenti = router.pathname === "/payroll/dipendenti";
   const isMasterGraficaRevisione = router.pathname === "/revisione-controllo" || router.pathname.startsWith("/revisione-controllo/");
   const isMasterGraficaControlloGestione = router.pathname === "/controllo-gestione" || router.pathname.startsWith("/controllo-gestione/");
+  const isMasterGraficaContenzioso = router.pathname === "/contenzioso" || router.pathname.startsWith("/contenzioso/");
   const isFixedViewportPage = isOperationalScadenzario || isMasterGraficaPromemoria || isMasterGraficaAgenda || isMasterGraficaCassettiFiscali || isMasterGraficaAccessoPortali || isMasterGraficaComunicazioniClienti || isMasterGraficaComunicazioniInterne || isMasterGraficaRubrica || isMasterGraficaVariazioni || isMasterGraficaPayroll;
 
   useEffect(() => {
@@ -110,6 +112,7 @@ export default function App({ Component, pageProps }: AppProps) {
     isPayrollDipendenti ? "payroll-dipendenti-page" : "",
     isMasterGraficaRevisione ? "revisione-master-page" : "",
     isMasterGraficaControlloGestione ? "controllo-gestione-master-page" : "",
+    isMasterGraficaContenzioso ? "contenzioso-master-page" : "",
     router.pathname === "/clienti/organi-sociali" ? "organi-sociali-page" : "",
     router.pathname === "/microsoft365" ? "microsoft365-page" : "",
     isOperationalScadenzario ? "!min-h-0 !overflow-hidden" : "",
@@ -148,6 +151,7 @@ export default function App({ Component, pageProps }: AppProps) {
         {isPayrollDipendenti && <DipendentiPayrollMasterGraficaEnhancer />}
         {isMasterGraficaRevisione && <RevisioneMasterGraficaEnhancer />}
         {isMasterGraficaControlloGestione && <ControlloGestioneMasterGraficaEnhancer />}
+        {isMasterGraficaContenzioso && <ContenziosoMasterGraficaEnhancer />}
         {isPublicPage ? (
           <>{pageContent}<Toaster /></>
         ) : (
