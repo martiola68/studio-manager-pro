@@ -5,6 +5,7 @@ import { StudioProvider } from "@/contexts/StudioContext";
 import { ModuleAccessGuard } from "@/components/security/ModuleAccessGuard";
 import { ClientiImportTemplateEnhancer } from "@/components/ClientiImportTemplateEnhancer";
 import { AnagraficheMasterGraficaEnhancer } from "@/components/anagrafiche/AnagraficheMasterGraficaEnhancer";
+import { ClientiMasterGraficaFixes } from "@/components/anagrafiche/ClientiMasterGraficaFixes";
 import { AgendaMasterGraficaEnhancer } from "@/components/agenda/AgendaMasterGraficaEnhancer";
 import { AgendaTeamsPastCleanup } from "@/components/agenda/AgendaTeamsPastCleanup";
 import { CalendarioMasterGraficaEnhancer } from "@/components/scadenze/CalendarioMasterGraficaEnhancer";
@@ -164,6 +165,7 @@ export default function App({ Component, pageProps }: AppProps) {
     <ThemeProvider>
       <StudioProvider>
         {router.pathname === "/clienti" && <ClientiImportTemplateEnhancer />}
+        {router.pathname === "/clienti" && <ClientiMasterGraficaFixes />}
         {isMasterGraficaAnagrafiche && <AnagraficheMasterGraficaEnhancer />}
         {isMasterGraficaAgenda && <AgendaMasterGraficaEnhancer />}
         {isMasterGraficaAgenda && <AgendaTeamsPastCleanup />}
