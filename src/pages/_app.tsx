@@ -8,6 +8,7 @@ import { AnagraficheMasterGraficaEnhancer } from "@/components/anagrafiche/Anagr
 import { ClientiMasterGraficaFixes } from "@/components/anagrafiche/ClientiMasterGraficaFixes";
 import { GruppiSocietariMasterGraficaFixes } from "@/components/anagrafiche/GruppiSocietariMasterGraficaFixes";
 import { Microsoft365DashboardGrafica } from "@/components/anagrafiche/Microsoft365DashboardGrafica";
+import { GestioneUtentiMasterGraficaFixes } from "@/components/anagrafiche/GestioneUtentiMasterGraficaFixes";
 import { AgendaMasterGraficaEnhancer } from "@/components/agenda/AgendaMasterGraficaEnhancer";
 import { AgendaTeamsPastCleanup } from "@/components/agenda/AgendaTeamsPastCleanup";
 import { CalendarioMasterGraficaEnhancer } from "@/components/scadenze/CalendarioMasterGraficaEnhancer";
@@ -171,6 +172,7 @@ export default function App({ Component, pageProps }: AppProps) {
         {router.pathname === "/anagrafiche/gruppi-societari" && <GruppiSocietariMasterGraficaFixes />}
         {router.pathname === "/microsoft365" && <Microsoft365DashboardGrafica />}
         {isMasterGraficaAnagrafiche && <AnagraficheMasterGraficaEnhancer />}
+        {router.pathname === "/impostazioni/utenti" && <GestioneUtentiMasterGraficaFixes />}
         {isMasterGraficaAgenda && <AgendaMasterGraficaEnhancer />}
         {isMasterGraficaAgenda && <AgendaTeamsPastCleanup />}
         {isMasterGraficaCalendario && <CalendarioMasterGraficaEnhancer />}
