@@ -4,14 +4,72 @@ export function PayrollMasterGraficaEnhancer() {
       .payroll-master-page {
         background: rgb(241 245 249) !important;
         min-height: 0 !important;
+        overflow: hidden !important;
       }
 
       .payroll-master-page > div,
       .payroll-master-page > main {
         width: 100% !important;
         max-width: none !important;
+        height: 100% !important;
+        min-height: 0 !important;
         margin-left: 0 !important;
         margin-right: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+      }
+
+      .payroll-master-page > div > :not(:has(table)),
+      .payroll-master-page > main > :not(:has(table)) {
+        flex: 0 0 auto;
+      }
+
+      .payroll-master-page > div > :has(table),
+      .payroll-master-page > main > :has(table) {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+      }
+
+      .payroll-master-page > div > div:has(> table),
+      .payroll-master-page > main > div:has(> table),
+      .payroll-master-page > div > div:has(table) > div[class*="overflow-x-auto"],
+      .payroll-master-page > div > div:has(table) > div[class*="overflow-auto"],
+      .payroll-master-page > main > div:has(table) > div[class*="overflow-x-auto"],
+      .payroll-master-page > main > div:has(table) > div[class*="overflow-auto"] {
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        overflow-x: auto !important;
+        max-height: none !important;
+      }
+
+      .payroll-master-page > div > div:has(> table),
+      .payroll-master-page > main > div:has(> table) {
+        flex: 1 1 auto !important;
+      }
+
+      .payroll-master-page > div > div:has(table):not(:has(> table)),
+      .payroll-master-page > main > div:has(table):not(:has(> table)) {
+        display: flex !important;
+        flex-direction: column !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+      }
+
+      .payroll-master-page > div > div:has(table):not(:has(> table)) > div[class*="overflow-x-auto"],
+      .payroll-master-page > div > div:has(table):not(:has(> table)) > div[class*="overflow-auto"],
+      .payroll-master-page > main > div:has(table):not(:has(> table)) > div[class*="overflow-x-auto"],
+      .payroll-master-page > main > div:has(table):not(:has(> table)) > div[class*="overflow-auto"] {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        overflow: auto !important;
+        max-height: none !important;
+      }
+
+      .payroll-master-page [data-radix-scroll-area-viewport],
+      .payroll-master-page [class*="overflow-y-auto"],
+      .payroll-master-page [class*="overflow-auto"] {
+        scrollbar-gutter: stable;
       }
 
       .payroll-master-page h1 {
