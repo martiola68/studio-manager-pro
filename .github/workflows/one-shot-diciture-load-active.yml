@@ -1,0 +1,79 @@
+name: Fix active diciture loading
+
+on:
+  push:
+    paths:
+      - '.github/workflows/one-shot-diciture-load-active.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch diciture loader
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/pages/pratiche/diciture.tsx')
+          s = p.read_text()
+          old = '''  async function caricaDiciture() {
+    const supabase = getSupabaseClient();
+
+    const { data, error } = await supabase
+      .from("tbpratiche_dicitura_documenti" as any)
+      .select("*")
+      .order("categoria")
+      .order("titolo");
+
+    if (error) {
+      setMessaggio(error.message);
+    } else {
+     setDiciture((data || []) as unknown as Dicitura[]);
+    }
+
+    setLoading(false);
+  }
+'''
+          new = '''  async function caricaDiciture() {
+    setLoading(true);
+    setMessaggio("");
+
+    try {
+      const response = await fetch("/api/pratiche/diciture-documenti", {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result?.error || "Errore caricamento diciture");
+      }
+
+      setDiciture((result?.diciture || []) as Dicitura[]);
+    } catch (error) {
+      setDiciture([]);
+      setMessaggio(error instanceof Error ? error.message : "Errore caricamento diciture");
+    } finally {
+      setLoading(false);
+    }
+  }
+'''
+          if old not in s:
+            raise SystemExit('loader block not found')
+          p.write_text(s.replace(old, new, 1))
+          PY
+
+      - name: Commit patch
+        run: |
+          git config user.name "studio-manager-bot"
+          git config user.email "actions@github.com"
+          git add src/pages/pratiche/diciture.tsx
+          git commit -m "Load active document diciture through server API"
+          git push origin HEAD:main
