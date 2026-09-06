@@ -10,6 +10,7 @@ import { GruppiSocietariMasterGraficaFixes } from "@/components/anagrafiche/Grup
 import { Microsoft365DashboardGrafica } from "@/components/anagrafiche/Microsoft365DashboardGrafica";
 import { GestioneUtentiMasterGraficaFixes } from "@/components/anagrafiche/GestioneUtentiMasterGraficaFixes";
 import { ImpostazioniMasterGraficaEnhancer } from "@/components/impostazioni/ImpostazioniMasterGraficaEnhancer";
+import { TipiScadenzeMasterGraficaFixes } from "@/components/impostazioni/TipiScadenzeMasterGraficaFixes";
 import { AgendaMasterGraficaEnhancer } from "@/components/agenda/AgendaMasterGraficaEnhancer";
 import { AgendaTeamsPastCleanup } from "@/components/agenda/AgendaTeamsPastCleanup";
 import { CalendarioMasterGraficaEnhancer } from "@/components/scadenze/CalendarioMasterGraficaEnhancer";
@@ -47,35 +48,22 @@ const PAYROLL_MASTER_ROUTES = new Set([
 ]);
 
 const CONTENZIOSO_SCROLL_ROUTES = new Set([
-  "/contenzioso/regole-scadenze",
-  "/contenzioso/sospensioni",
-  "/contenzioso/tipi-atto",
+  "/contenzioso/regole-scadenze", "/contenzioso/sospensioni", "/contenzioso/tipi-atto",
 ]);
 
 const ANAGRAFICHE_MASTER_ROUTES = new Set([
-  "/clienti",
-  "/anagrafiche/gruppi-societari",
-  "/antiriciclaggio/rappresentanti",
-  "/microsoft365",
-  "/impostazioni/utenti",
+  "/clienti", "/anagrafiche/gruppi-societari", "/antiriciclaggio/rappresentanti", "/microsoft365", "/impostazioni/utenti",
 ]);
 
 const IMPOSTAZIONI_MASTER_ROUTES = new Set([
-  "/impostazioni/studio",
-  "/impostazioni/ruoli",
-  "/impostazioni/prestazioni",
-  "/impostazioni/payroll-festivita",
-  "/impostazioni/payroll-codici-presenza",
-  "/impostazioni/scadenzari",
-  "/impostazioni/template-email",
-  "/impostazioni/tipi-scadenze",
-  "/impostazioni/tipo-promemoria",
+  "/impostazioni/studio", "/impostazioni/ruoli", "/impostazioni/prestazioni", "/impostazioni/payroll-festivita",
+  "/impostazioni/payroll-codici-presenza", "/impostazioni/scadenzari", "/impostazioni/template-email",
+  "/impostazioni/tipi-scadenze", "/impostazioni/tipo-promemoria",
 ]);
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
   const [scadenzariCleanupPending, setScadenzariCleanupPending] = useState(false);
-
   const isScadenzarioPage = router.pathname.startsWith("/scadenze/");
   const isOperationalScadenzario = SCADENZARI_VIEWPORT.has(router.pathname);
   const isMasterGraficaPromemoria = router.pathname === "/promemoria";
@@ -122,10 +110,7 @@ export default function App({ Component, pageProps }: AppProps) {
         const supabase = getSupabaseClient();
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.access_token) return;
-        const response = await fetch("/api/scadenzari/cleanup-inattivi", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        });
+        const response = await fetch("/api/scadenzari/cleanup-inattivi", { method: "POST", headers: { Authorization: `Bearer ${session.access_token}` } });
         if (!response.ok) {
           const body = await response.json().catch(() => ({}));
           throw new Error(body?.error || "Pulizia scadenzari non riuscita");
@@ -140,84 +125,52 @@ export default function App({ Component, pageProps }: AppProps) {
     return () => { cancelled = true; };
   }, [router.isReady, router.pathname, isScadenzarioPage]);
 
-  const isPublicPage =
-    router.pathname === "/login" || router.pathname === "/auth/callback" || router.pathname === "/404" ||
-    router.pathname === "/mobile/agenda" || router.asPath.startsWith("/documento/") ||
-    router.asPath.startsWith("/compilazione-av4/") || router.asPath.startsWith("/stampa/");
+  const isPublicPage = router.pathname === "/login" || router.pathname === "/auth/callback" || router.pathname === "/404" || router.pathname === "/mobile/agenda" || router.asPath.startsWith("/documento/") || router.asPath.startsWith("/compilazione-av4/") || router.asPath.startsWith("/stampa/");
 
   const pageClass = [
     isMasterGraficaPayroll ? "payroll-master-page !min-h-0 !overflow-hidden" : "",
-    isPayrollPresenze ? "payroll-presenze-page" : "",
-    isPayrollSmartGroups ? "payroll-smart-groups-page" : "",
-    isPayrollDipendenti ? "payroll-dipendenti-page" : "",
-    isMasterGraficaRevisione ? "revisione-master-page" : "",
-    isMasterGraficaControlloGestione ? "controllo-gestione-master-page" : "",
-    isMasterGraficaContenzioso ? "contenzioso-master-page" : "",
-    isContenziosoScrollPage ? "contenzioso-scroll-page !min-h-0 !overflow-hidden" : "",
-    isMasterGraficaAntiriciclaggio ? "antiriciclaggio-master-page !min-h-0 !overflow-hidden" : "",
-    isAntiriciclaggioElenco ? "antiriciclaggio-elenco-page" : "",
-    isAntiriciclaggioFascicolo ? "antiriciclaggio-fascicolo-page" : "",
-    isMasterGraficaAnagrafiche ? "anagrafiche-master-page !min-h-0 !overflow-hidden" : "",
-    isAnagraficheScrollPage ? "anagrafiche-master-scroll-page" : "",
-    isMasterGraficaImpostazioni ? "impostazioni-master-page !min-h-0 !overflow-hidden" : "",
-    router.pathname === "/clienti/organi-sociali" ? "organi-sociali-page" : "",
-    router.pathname === "/microsoft365" ? "microsoft365-page" : "",
-    isOperationalScadenzario ? "!min-h-0 !overflow-hidden" : "",
-    isMasterGraficaPromemoria ? "promemoria-master-page !min-h-0 !overflow-hidden" : "",
-    isMasterGraficaAgenda ? "agenda-master-page !min-h-0 !overflow-hidden" : "",
-    isMasterGraficaCalendario ? "calendario-master-page" : "",
-    isMasterGraficaCassettiFiscali ? "cassetti-fiscali-master-page !min-h-0 !overflow-hidden" : "",
-    isMasterGraficaAccessoPortali ? "accesso-portali-master-page !min-h-0 !overflow-hidden" : "",
-    isMasterGraficaComunicazioniClienti ? "comunicazioni-clienti-master-page !min-h-0 !overflow-hidden" : "",
-    isMasterGraficaComunicazioniInterne ? "comunicazioni-interne-master-page !min-h-0 !overflow-hidden" : "",
-    isMasterGraficaRubrica ? "rubrica-master-page !min-h-0 !overflow-hidden" : "",
-    isMasterGraficaVariazioni ? "variazioni-master-page !min-h-0 !overflow-hidden" : "",
-    isMasterGraficaDocumenti ? "pratiche-documenti-master-page" : "",
+    isPayrollPresenze ? "payroll-presenze-page" : "", isPayrollSmartGroups ? "payroll-smart-groups-page" : "", isPayrollDipendenti ? "payroll-dipendenti-page" : "",
+    isMasterGraficaRevisione ? "revisione-master-page" : "", isMasterGraficaControlloGestione ? "controllo-gestione-master-page" : "", isMasterGraficaContenzioso ? "contenzioso-master-page" : "",
+    isContenziosoScrollPage ? "contenzioso-scroll-page !min-h-0 !overflow-hidden" : "", isMasterGraficaAntiriciclaggio ? "antiriciclaggio-master-page !min-h-0 !overflow-hidden" : "",
+    isAntiriciclaggioElenco ? "antiriciclaggio-elenco-page" : "", isAntiriciclaggioFascicolo ? "antiriciclaggio-fascicolo-page" : "",
+    isMasterGraficaAnagrafiche ? "anagrafiche-master-page !min-h-0 !overflow-hidden" : "", isAnagraficheScrollPage ? "anagrafiche-master-scroll-page" : "",
+    isMasterGraficaImpostazioni ? "impostazioni-master-page !min-h-0 !overflow-hidden" : "", router.pathname === "/clienti/organi-sociali" ? "organi-sociali-page" : "", router.pathname === "/microsoft365" ? "microsoft365-page" : "",
+    isOperationalScadenzario ? "!min-h-0 !overflow-hidden" : "", isMasterGraficaPromemoria ? "promemoria-master-page !min-h-0 !overflow-hidden" : "", isMasterGraficaAgenda ? "agenda-master-page !min-h-0 !overflow-hidden" : "",
+    isMasterGraficaCalendario ? "calendario-master-page" : "", isMasterGraficaCassettiFiscali ? "cassetti-fiscali-master-page !min-h-0 !overflow-hidden" : "", isMasterGraficaAccessoPortali ? "accesso-portali-master-page !min-h-0 !overflow-hidden" : "",
+    isMasterGraficaComunicazioniClienti ? "comunicazioni-clienti-master-page !min-h-0 !overflow-hidden" : "", isMasterGraficaComunicazioniInterne ? "comunicazioni-interne-master-page !min-h-0 !overflow-hidden" : "",
+    isMasterGraficaRubrica ? "rubrica-master-page !min-h-0 !overflow-hidden" : "", isMasterGraficaVariazioni ? "variazioni-master-page !min-h-0 !overflow-hidden" : "", isMasterGraficaDocumenti ? "pratiche-documenti-master-page" : "",
   ].filter(Boolean).join(" ");
 
-  const pageContent = isScadenzarioPage && scadenzariCleanupPending ? (
-    <div className="flex min-h-[240px] items-center justify-center text-sm text-gray-500">Aggiornamento scadenzari...</div>
-  ) : <Component {...pageProps} />;
+  const pageContent = isScadenzarioPage && scadenzariCleanupPending ? <div className="flex min-h-[240px] items-center justify-center text-sm text-gray-500">Aggiornamento scadenzari...</div> : <Component {...pageProps} />;
 
   return (
-    <ThemeProvider>
-      <StudioProvider>
-        {router.pathname === "/clienti" && <ClientiImportTemplateEnhancer />}
-        {router.pathname === "/clienti" && <ClientiMasterGraficaFixes />}
-        {router.pathname === "/anagrafiche/gruppi-societari" && <GruppiSocietariMasterGraficaFixes />}
-        {router.pathname === "/microsoft365" && <Microsoft365DashboardGrafica />}
-        {isMasterGraficaAnagrafiche && <AnagraficheMasterGraficaEnhancer />}
-        {router.pathname === "/impostazioni/utenti" && <GestioneUtentiMasterGraficaFixes />}
-        {isMasterGraficaImpostazioni && <ImpostazioniMasterGraficaEnhancer />}
-        {isMasterGraficaAgenda && <AgendaMasterGraficaEnhancer />}
-        {isMasterGraficaAgenda && <AgendaTeamsPastCleanup />}
-        {isMasterGraficaCalendario && <CalendarioMasterGraficaEnhancer />}
-        {isMasterGraficaCassettiFiscali && <CassettiFiscaliMasterGraficaEnhancer />}
-        {isMasterGraficaAccessoPortali && <AccessoPortaliMasterGraficaEnhancer />}
-        {isMasterGraficaComunicazioniClienti && <ComunicazioniClientiMasterGraficaEnhancer />}
-        {isMasterGraficaComunicazioniInterne && <ComunicazioniInterneMasterGraficaEnhancer />}
-        {isMasterGraficaRubrica && <RubricaMasterGraficaEnhancer />}
-        {isMasterGraficaRubrica && <ContattiImportTemplateEnhancer />}
-        {isMasterGraficaVariazioni && <VariazioniMasterGraficaEnhancer />}
-        {isMasterGraficaDocumenti && <DocumentiMasterGraficaEnhancer />}
-        {isMasterGraficaPayroll && <PayrollMasterGraficaEnhancer />}
-        {isPayrollDipendenti && <DipendentiPayrollMasterGraficaEnhancer />}
-        {isMasterGraficaRevisione && <RevisioneMasterGraficaEnhancer />}
-        {isMasterGraficaControlloGestione && <ControlloGestioneMasterGraficaEnhancer />}
-        {isMasterGraficaContenzioso && <ContenziosoMasterGraficaEnhancer />}
-        {isMasterGraficaAntiriciclaggio && <AntiriciclaggioMasterGraficaEnhancer />}
-        {isPublicPage ? (
-          <>{pageContent}<Toaster /></>
-        ) : (
-          <div className={`flex min-h-screen flex-col bg-gray-50 ${isFixedViewportPage ? "h-screen overflow-hidden" : ""}`}>
-            <div className="sticky top-0 z-50 shrink-0"><Header onMenuToggle={() => {}} /><TopNavBar /></div>
-            <main className={`flex-1 overflow-y-auto px-4 pb-4 pt-0 md:px-6 md:pb-6 md:pt-0 ${pageClass}`}>
-              <ModuleAccessGuard>{pageContent}</ModuleAccessGuard>
-            </main>
-            <Toaster />
-          </div>
-        )}
-      </StudioProvider>
-    </ThemeProvider>
+    <ThemeProvider><StudioProvider>
+      {router.pathname === "/clienti" && <ClientiImportTemplateEnhancer />}
+      {router.pathname === "/clienti" && <ClientiMasterGraficaFixes />}
+      {router.pathname === "/anagrafiche/gruppi-societari" && <GruppiSocietariMasterGraficaFixes />}
+      {router.pathname === "/microsoft365" && <Microsoft365DashboardGrafica />}
+      {isMasterGraficaAnagrafiche && <AnagraficheMasterGraficaEnhancer />}
+      {router.pathname === "/impostazioni/utenti" && <GestioneUtentiMasterGraficaFixes />}
+      {isMasterGraficaImpostazioni && <ImpostazioniMasterGraficaEnhancer />}
+      {router.pathname === "/impostazioni/tipi-scadenze" && <TipiScadenzeMasterGraficaFixes />}
+      {isMasterGraficaAgenda && <AgendaMasterGraficaEnhancer />}
+      {isMasterGraficaAgenda && <AgendaTeamsPastCleanup />}
+      {isMasterGraficaCalendario && <CalendarioMasterGraficaEnhancer />}
+      {isMasterGraficaCassettiFiscali && <CassettiFiscaliMasterGraficaEnhancer />}
+      {isMasterGraficaAccessoPortali && <AccessoPortaliMasterGraficaEnhancer />}
+      {isMasterGraficaComunicazioniClienti && <ComunicazioniClientiMasterGraficaEnhancer />}
+      {isMasterGraficaComunicazioniInterne && <ComunicazioniInterneMasterGraficaEnhancer />}
+      {isMasterGraficaRubrica && <RubricaMasterGraficaEnhancer />}
+      {isMasterGraficaRubrica && <ContattiImportTemplateEnhancer />}
+      {isMasterGraficaVariazioni && <VariazioniMasterGraficaEnhancer />}
+      {isMasterGraficaDocumenti && <DocumentiMasterGraficaEnhancer />}
+      {isMasterGraficaPayroll && <PayrollMasterGraficaEnhancer />}
+      {isPayrollDipendenti && <DipendentiPayrollMasterGraficaEnhancer />}
+      {isMasterGraficaRevisione && <RevisioneMasterGraficaEnhancer />}
+      {isMasterGraficaControlloGestione && <ControlloGestioneMasterGraficaEnhancer />}
+      {isMasterGraficaContenzioso && <ContenziosoMasterGraficaEnhancer />}
+      {isMasterGraficaAntiriciclaggio && <AntiriciclaggioMasterGraficaEnhancer />}
+      {isPublicPage ? <>{pageContent}<Toaster /></> : <div className={`flex min-h-screen flex-col bg-gray-50 ${isFixedViewportPage ? "h-screen overflow-hidden" : ""}`}><div className="sticky top-0 z-50 shrink-0"><Header onMenuToggle={() => {}} /><TopNavBar /></div><main className={`flex-1 overflow-y-auto px-4 pb-4 pt-0 md:px-6 md:pb-6 md:pt-0 ${pageClass}`}><ModuleAccessGuard>{pageContent}</ModuleAccessGuard></main><Toaster /></div>}
+    </StudioProvider></ThemeProvider>
   );
 }
