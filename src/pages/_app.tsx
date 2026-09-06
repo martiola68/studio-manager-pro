@@ -137,7 +137,7 @@ export default function App({ Component, pageProps }: AppProps) {
     isMasterGraficaContenzioso ? "contenzioso-master-page" : "",
     isContenziosoScrollPage ? "contenzioso-scroll-page !min-h-0 !overflow-hidden" : "",
     isMasterGraficaAntiriciclaggio ? "antiriciclaggio-master-page !min-h-0 !overflow-hidden" : "",
-    isAntiriclaggioElenco ? "antiriciclaggio-elenco-page" : "",
+    isAntiriciclaggioElenco ? "antiriciclaggio-elenco-page" : "",
     isAntiriciclaggioFascicolo ? "antiriciclaggio-fascicolo-page" : "",
     isMasterGraficaAnagrafiche ? "anagrafiche-master-page !min-h-0 !overflow-hidden" : "",
     isAnagraficheScrollPage ? "anagrafiche-master-scroll-page" : "",
