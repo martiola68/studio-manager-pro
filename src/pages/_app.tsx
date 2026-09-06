@@ -39,6 +39,17 @@ const SCADENZARI_VIEWPORT = new Set([
   "/scadenze/riepilogo",
 ]);
 
+const PAYROLL_MASTER_ROUTES = new Set([
+  "/presenze",
+  "/presenze/smart",
+  "/presenze/assenze-settimanali",
+  "/payroll/pratica-assunzione",
+  "/payroll/richieste-area-cliente",
+  "/payroll/dipendenti",
+  "/presenze/smart-gruppi",
+  "/payroll/qualifiche",
+]);
+
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
   const [scadenzariCleanupPending, setScadenzariCleanupPending] = useState(false);
@@ -55,7 +66,7 @@ export default function App({ Component, pageProps }: AppProps) {
   const isMasterGraficaRubrica = router.pathname === "/contatti";
   const isMasterGraficaVariazioni = router.pathname === "/pratiche/variazioni";
   const isMasterGraficaDocumenti = router.pathname === "/pratiche/modelli" || router.pathname === "/pratiche/diciture";
-  const isMasterGraficaPayroll = router.pathname === "/presenze";
+  const isMasterGraficaPayroll = PAYROLL_MASTER_ROUTES.has(router.pathname);
   const isFixedViewportPage = isOperationalScadenzario || isMasterGraficaPromemoria || isMasterGraficaAgenda || isMasterGraficaCassettiFiscali || isMasterGraficaAccessoPortali || isMasterGraficaComunicazioniClienti || isMasterGraficaComunicazioniInterne || isMasterGraficaRubrica || isMasterGraficaVariazioni || isMasterGraficaPayroll;
 
   useEffect(() => {
@@ -119,7 +130,7 @@ export default function App({ Component, pageProps }: AppProps) {
     router.asPath.startsWith("/stampa/");
 
   const pageClass = [
-    isMasterGraficaPayroll ? "presenze-page !min-h-0 !overflow-hidden" : "",
+    isMasterGraficaPayroll ? "payroll-master-page !min-h-0 !overflow-hidden" : "",
     router.pathname === "/clienti/organi-sociali" ? "organi-sociali-page" : "",
     router.pathname === "/microsoft365" ? "microsoft365-page" : "",
     isOperationalScadenzario ? "!min-h-0 !overflow-hidden" : "",
