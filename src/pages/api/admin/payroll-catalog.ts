@@ -10,9 +10,9 @@ async function getAuthorizedCatalogAdmin(req: NextApiRequest) {
   let userRow: any = null;
   const { data: byUserId } = await supabaseAdmin.from('tbutenti').select('id, user_id, email, nome, cognome, tipo_utente, studio_id, attivo').eq('user_id', authUser.id).limit(1).maybeSingle(); userRow = byUserId;
   if (!userRow && authUser.email) { const { data: byEmail } = await supabaseAdmin.from('tbutenti').select('id, user_id, email, nome, cognome, tipo_utente, studio_id, attivo').ilike('email', authUser.email).limit(1).maybeSingle(); userRow = byEmail; }
-  if (!userRow || !userRow.studio_id) return null;
-  const { data: studioRow } = await supabaseAdmin.from('tbstudio').select('id, ragione_sociale').eq('id', userRow.studio_id).limit(1).maybeSingle(); if (!studioRow) return null;
-  const authorized = userRow.attivo !== false && normalize(userRow.tipo_utente) === 'ADMIN' && normalize(userRow.nome) === 'MARIO' && normalize(userRow.cognome) === 'ARTIOLA' && normalize(studioRow.ragione_sociale) === 'REVISIONI COMMERCIALI';
+  if (!userRow) return null;
+  const tipo = normalize(userRow.tipo_utente);
+  const authorized = userRow.attivo !== false && ['ADMIN', 'AMMINISTRATORE DI SISTEMA', 'AMMINISTRATORE SISTEMA', 'SUPER ADMIN', 'SUPERADMIN'].includes(tipo);
   return authorized ? userRow : null;
 }
 function cleanNullable(value: unknown) { const text = String(value ?? '').trim(); return text || null; }
