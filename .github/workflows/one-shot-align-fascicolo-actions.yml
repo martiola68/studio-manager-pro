@@ -20,40 +20,14 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
           p = Path('src/pages/antiriciclaggio/fascicolo-documenti.tsx')
           s = p.read_text()
+          s = s.replace('import { FileText, Image as ImageIcon, File } from "lucide-react";', 'import { FileText, Image as ImageIcon, File, Trash2 } from "lucide-react";', 1)
 
-          old_import = 'import { FileText, Image as ImageIcon, File } from "lucide-react";'
-          new_import = 'import { FileText, Image as ImageIcon, File, Trash2 } from "lucide-react";'
-          if old_import not in s:
-              raise SystemExit('lucide import not found')
-          s = s.replace(old_import, new_import, 1)
+          pattern = re.compile(r'''<td className="p-3">\s*<div className="flex items-center justify-center gap-2">\s*<button\s+type="button"\s+onClick=\{\(\) => void handleApriDocumento\(doc\)\}\s+disabled=\{isWorking\}\s+className="rounded-lg border border-blue-200 px-3 py-1\.5 text-sm font-medium text-blue-700 hover:bg-blue-50 disabled:opacity-60"\s*>\s*Apri\s*</button>\s*\{canDelete && \(\s*<button\s+type="button"\s+onClick=\{\(\) => void handleEliminaDocumento\(doc\)\}\s+disabled=\{isWorking\}\s+className="rounded-lg border border-red-200 px-3 py-1\.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-60"\s*>\s*Elimina\s*</button>\s*\)\}\s*</div>\s*</td>''', re.S)
 
-          old_block = '''                    <td className="p-3">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => void handleApriDocumento(doc)}
-                          disabled={isWorking}
-                          className="rounded-lg border border-blue-200 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-50 disabled:opacity-60"
-                        >
-                          Apri
-                        </button>
-
-                        {canDelete && (
-                          <button
-                            type="button"
-                            onClick={() => void handleEliminaDocumento(doc)}
-                            disabled={isWorking}
-                            className="rounded-lg border border-red-200 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-60"
-                          >
-                            Elimina
-                          </button>
-                        )}
-                      </div>
-                    </td>'''
-
-          new_block = '''                    <td className="p-3">
+          replacement = '''<td className="p-3">
                       <div className="grid grid-cols-[64px_34px] items-center justify-center gap-2">
                         <button
                           type="button"
@@ -63,7 +37,6 @@ jobs:
                         >
                           Apri
                         </button>
-
                         {canDelete ? (
                           <button
                             type="button"
@@ -80,11 +53,10 @@ jobs:
                         )}
                       </div>
                     </td>'''
-
-          if old_block not in s:
-              raise SystemExit('action block not found')
-          s = s.replace(old_block, new_block, 1)
-          p.write_text(s)
+          s2, n = pattern.subn(replacement, s, count=1)
+          if n != 1:
+              raise SystemExit(f'action block replacements: {n}')
+          p.write_text(s2)
           PY
 
       - name: Commit patch
