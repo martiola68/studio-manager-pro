@@ -226,13 +226,13 @@ export function ImpostazioniMasterGraficaEnhancer() {
         accent-color: rgb(3 105 161) !important;
       }
 
-      .impostazioni-master-page [class*="rounded-lg"][class*="border"]:has([class*="text-green-700"]) {
+      .impostazioni-master-page [class*="rounded-lg"][class*="border"]:not(.payroll-codici-card):has([class*="text-green-700"]) {
         background: rgb(240 253 244) !important;
         border-color: rgb(134 239 172) !important;
         border-left: 3px solid rgb(22 163 74) !important;
       }
 
-      .impostazioni-master-page [class*="rounded-lg"][class*="border"]:has([class*="text-green-700"]) > div:first-child {
+      .impostazioni-master-page [class*="rounded-lg"][class*="border"]:not(.payroll-codici-card):has([class*="text-green-700"]) > div:first-child {
         background: rgb(220 252 231) !important;
         border-bottom: 1px solid rgb(187 247 208) !important;
       }
