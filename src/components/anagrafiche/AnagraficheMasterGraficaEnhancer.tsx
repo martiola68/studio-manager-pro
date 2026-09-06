@@ -209,6 +209,109 @@ export function AnagraficheMasterGraficaEnhancer() {
       .anagrafiche-master-page [class*="shadow-md"] {
         box-shadow: 0 8px 20px rgb(15 23 42 / 0.08) !important;
       }
+
+      /* CLIENTI: una sola scrollbar verticale, quella interna alla tabella. */
+      .anagrafiche-master-page:has(table th.sticky.left-0):has(table th.sticky.right-0) {
+        overflow: hidden !important;
+      }
+
+      .anagrafiche-master-page:has(table th.sticky.left-0):has(table th.sticky.right-0)
+        [class*="overflow-x-auto"]:has(> table) {
+        overflow-x: auto !important;
+        overflow-y: auto !important;
+        max-height: none !important;
+        min-height: 0 !important;
+      }
+
+      /* CLIENTI: distribuzione colonne su tutta la larghezza disponibile. */
+      .anagrafiche-master-page table:has(th.sticky.left-0):has(th.sticky.right-0) {
+        table-layout: fixed !important;
+        width: 100% !important;
+        min-width: 1750px !important;
+      }
+
+      .anagrafiche-master-page table:has(th.sticky.left-0):has(th.sticky.right-0) th:nth-child(1),
+      .anagrafiche-master-page table:has(th.sticky.left-0):has(th.sticky.right-0) td:nth-child(1) {
+        width: 6% !important;
+        min-width: 6% !important;
+        max-width: 6% !important;
+      }
+
+      .anagrafiche-master-page table:has(th.sticky.left-0):has(th.sticky.right-0) th:nth-child(2),
+      .anagrafiche-master-page table:has(th.sticky.left-0):has(th.sticky.right-0) td:nth-child(2) {
+        left: 6% !important;
+        width: 28% !important;
+        min-width: 28% !important;
+        max-width: 28% !important;
+      }
+
+      .anagrafiche-master-page table:has(th.sticky.left-0):has(th.sticky.right-0) th:nth-child(3),
+      .anagrafiche-master-page table:has(th.sticky.left-0):has(th.sticky.right-0) td:nth-child(3),
+      .anagrafiche-master-page table:has(th.sticky.left-0):has(th.sticky.right-0) th:nth-child(4),
+      .anagrafiche-master-page table:has(th.sticky.left-0):has(th.sticky.right-0) td:nth-child(4) {
+        width: 10% !important;
+        min-width: 10% !important;
+        max-width: 10% !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+      }
+
+      .anagrafiche-master-page table:has(th.sticky.left-0):has(th.sticky.right-0) th:nth-child(5),
+      .anagrafiche-master-page table:has(th.sticky.left-0):has(th.sticky.right-0) td:nth-child(5),
+      .anagrafiche-master-page table:has(th.sticky.left-0):has(th.sticky.right-0) th:nth-child(6),
+      .anagrafiche-master-page table:has(th.sticky.left-0):has(th.sticky.right-0) td:nth-child(6) {
+        width: 6.57% !important;
+        min-width: 6.57% !important;
+        max-width: 6.57% !important;
+        text-align: center !important;
+      }
+
+      .anagrafiche-master-page table:has(th.sticky.left-0):has(th.sticky.right-0) th:nth-child(7),
+      .anagrafiche-master-page table:has(th.sticky.left-0):has(th.sticky.right-0) td:nth-child(7) {
+        width: 32.86% !important;
+        min-width: 32.86% !important;
+        max-width: 32.86% !important;
+      }
+
+      .anagrafiche-master-page table:has(th.sticky.left-0):has(th.sticky.right-0) th:nth-child(7) > div,
+      .anagrafiche-master-page table:has(th.sticky.left-0):has(th.sticky.right-0) td:nth-child(7) > div {
+        grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+      }
+
+      /* CLIENTI: stato sempre leggibile. */
+      .anagrafiche-master-page table:has(th.sticky.left-0):has(th.sticky.right-0)
+        td:nth-child(5) span[class*="bg-green-600"] {
+        background: rgb(22 163 74) !important;
+        border-color: rgb(22 163 74) !important;
+        color: white !important;
+        min-width: 58px !important;
+        justify-content: center !important;
+      }
+
+      .anagrafiche-master-page table:has(th.sticky.left-0):has(th.sticky.right-0)
+        td:nth-child(5) span[class*="bg-secondary"] {
+        background: rgb(226 232 240) !important;
+        border-color: rgb(203 213 225) !important;
+        color: rgb(51 65 85) !important;
+        min-width: 58px !important;
+        justify-content: center !important;
+      }
+
+      /* CLIENTI: stato organi sociali rosso se incompleto, verde se completo. */
+      .anagrafiche-master-page table:has(th.sticky.left-0):has(th.sticky.right-0)
+        td:nth-child(7) button[class*="border-red-500"] {
+        background: white !important;
+        border-color: rgb(239 68 68) !important;
+        color: rgb(220 38 38) !important;
+      }
+
+      .anagrafiche-master-page table:has(th.sticky.left-0):has(th.sticky.right-0)
+        td:nth-child(7) button[class*="border-green-500"] {
+        background: white !important;
+        border-color: rgb(34 197 94) !important;
+        color: rgb(22 163 74) !important;
+      }
     `}</style>
   );
 }
