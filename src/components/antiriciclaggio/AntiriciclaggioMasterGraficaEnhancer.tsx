@@ -19,7 +19,7 @@ export function AntiriciclaggioMasterGraficaEnhancer() {
         line-height: 1.7rem !important;
       }
 
-      .antiriclaggio-master-page h2,
+      .antiriciclaggio-master-page h2,
       .antiriciclaggio-master-page h3 {
         color: rgb(15 23 42) !important;
       }
@@ -95,6 +95,42 @@ export function AntiriciclaggioMasterGraficaEnhancer() {
         background: white !important;
         border-color: rgb(125 211 252) !important;
         color: rgb(3 105 161) !important;
+      }
+
+      /* AML: NON sovrascrivere i colori semantici AV1/AV2/AV4.
+         Verde = completato, giallo/arancio = in avanzamento, rosso = da completare. */
+      .antiriciclaggio-elenco-page button[class*="border-lime-500"] {
+        background: white !important;
+        border-color: rgb(132 204 22) !important;
+        color: rgb(63 98 18) !important;
+        box-shadow: 0 0 10px rgba(132, 204, 22, .9) !important;
+      }
+
+      .antiriciclaggio-elenco-page button[class*="border-yellow-400"] {
+        background: white !important;
+        border-color: rgb(250 204 21) !important;
+        color: rgb(161 98 7) !important;
+        box-shadow: 0 0 10px rgba(250, 204, 21, .9) !important;
+      }
+
+      .antiriciclaggio-elenco-page button[class*="border-red-500"] {
+        background: white !important;
+        border-color: rgb(239 68 68) !important;
+        color: rgb(185 28 28) !important;
+        box-shadow: 0 0 8px rgba(239, 68, 68, .5) !important;
+      }
+
+      .antiriciclaggio-elenco-page button[class*="border-blue-500"] {
+        background: white !important;
+        border-color: rgb(59 130 246) !important;
+        color: rgb(37 99 235) !important;
+        box-shadow: none !important;
+      }
+
+      .antiriciclaggio-elenco-page button:has(svg.text-red-500) {
+        background: white !important;
+        border-color: transparent !important;
+        color: rgb(239 68 68) !important;
       }
 
       .antiriciclaggio-master-page .rounded-xl.border,
@@ -188,6 +224,38 @@ export function AntiriciclaggioMasterGraficaEnhancer() {
         border: 1px solid rgb(203 213 225) !important;
         border-radius: 8px !important;
         background: white !important;
+      }
+
+      /* Fascicolo: i pulsanti tabella devono avere testo sempre leggibile,
+         anche durante lo stato disabled/working. */
+      .antiriciclaggio-fascicolo-page tbody button[class*="border-blue-200"] {
+        background: white !important;
+        border-color: rgb(125 211 252) !important;
+        color: rgb(3 105 161) !important;
+        opacity: 1 !important;
+      }
+
+      .antiriciclaggio-fascicolo-page tbody button[class*="border-blue-200"]:disabled {
+        background: rgb(248 250 252) !important;
+        border-color: rgb(186 230 253) !important;
+        color: rgb(71 85 105) !important;
+        opacity: 1 !important;
+        cursor: wait !important;
+      }
+
+      .antiriciclaggio-fascicolo-page tbody button[class*="border-red-200"] {
+        background: white !important;
+        border-color: rgb(254 202 202) !important;
+        color: rgb(185 28 28) !important;
+        opacity: 1 !important;
+      }
+
+      .antiriciclaggio-fascicolo-page tbody button[class*="border-red-200"]:disabled {
+        background: rgb(248 250 252) !important;
+        border-color: rgb(254 202 202) !important;
+        color: rgb(127 29 29) !important;
+        opacity: 1 !important;
+        cursor: wait !important;
       }
 
       .antiriciclaggio-master-page [class*="bg-yellow-50"] {
