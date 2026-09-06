@@ -18,6 +18,7 @@ import { DocumentiMasterGraficaEnhancer } from "@/components/pratiche/DocumentiM
 import { PayrollMasterGraficaEnhancer } from "@/components/payroll/PayrollMasterGraficaEnhancer";
 import { DipendentiPayrollMasterGraficaEnhancer } from "@/components/payroll/DipendentiPayrollMasterGraficaEnhancer";
 import { RevisioneMasterGraficaEnhancer } from "@/components/revisione/RevisioneMasterGraficaEnhancer";
+import { ControlloGestioneMasterGraficaEnhancer } from "@/components/controllo-gestione/ControlloGestioneMasterGraficaEnhancer";
 import { Toaster } from "@/components/ui/toaster";
 
 import Header from "@/components/Header";
@@ -27,29 +28,14 @@ import { useEffect, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
 const SCADENZARI_VIEWPORT = new Set([
-  "/scadenze/iva",
-  "/scadenze/ccgg",
-  "/scadenze/cu",
-  "/scadenze/imu",
-  "/scadenze/fiscali",
-  "/scadenze/bilanci",
-  "/scadenze/modello-770",
-  "/scadenze/lipe",
-  "/scadenze/esterometro",
-  "/scadenze/elenco-generale",
-  "/scadenze/calendario",
-  "/scadenze/riepilogo",
+  "/scadenze/iva", "/scadenze/ccgg", "/scadenze/cu", "/scadenze/imu", "/scadenze/fiscali",
+  "/scadenze/bilanci", "/scadenze/modello-770", "/scadenze/lipe", "/scadenze/esterometro",
+  "/scadenze/elenco-generale", "/scadenze/calendario", "/scadenze/riepilogo",
 ]);
 
 const PAYROLL_MASTER_ROUTES = new Set([
-  "/presenze",
-  "/presenze/smart",
-  "/presenze/assenze-settimanali",
-  "/payroll/pratica-assunzione",
-  "/payroll/richieste-area-cliente",
-  "/payroll/dipendenti",
-  "/presenze/smart-gruppi",
-  "/payroll/qualifiche",
+  "/presenze", "/presenze/smart", "/presenze/assenze-settimanali", "/payroll/pratica-assunzione",
+  "/payroll/richieste-area-cliente", "/payroll/dipendenti", "/presenze/smart-gruppi", "/payroll/qualifiche",
 ]);
 
 export default function App({ Component, pageProps }: AppProps) {
@@ -73,12 +59,12 @@ export default function App({ Component, pageProps }: AppProps) {
   const isPayrollSmartGroups = router.pathname === "/presenze/smart-gruppi";
   const isPayrollDipendenti = router.pathname === "/payroll/dipendenti";
   const isMasterGraficaRevisione = router.pathname === "/revisione-controllo" || router.pathname.startsWith("/revisione-controllo/");
+  const isMasterGraficaControlloGestione = router.pathname === "/controllo-gestione" || router.pathname.startsWith("/controllo-gestione/");
   const isFixedViewportPage = isOperationalScadenzario || isMasterGraficaPromemoria || isMasterGraficaAgenda || isMasterGraficaCassettiFiscali || isMasterGraficaAccessoPortali || isMasterGraficaComunicazioniClienti || isMasterGraficaComunicazioniInterne || isMasterGraficaRubrica || isMasterGraficaVariazioni || isMasterGraficaPayroll;
 
   useEffect(() => {
     document.body.classList.toggle("master-grafica-promemoria", isMasterGraficaPromemoria);
     document.body.classList.toggle("master-grafica-agenda", isMasterGraficaAgenda);
-
     return () => {
       document.body.classList.remove("master-grafica-promemoria");
       document.body.classList.remove("master-grafica-agenda");
@@ -87,27 +73,17 @@ export default function App({ Component, pageProps }: AppProps) {
 
   useEffect(() => {
     if (!router.isReady || !isScadenzarioPage) return;
-
     let cancelled = false;
-
     const cleanup = async () => {
       setScadenzariCleanupPending(true);
-
       try {
         const supabase = getSupabaseClient();
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
+        const { data: { session } } = await supabase.auth.getSession();
         if (!session?.access_token) return;
-
         const response = await fetch("/api/scadenzari/cleanup-inattivi", {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
+          headers: { Authorization: `Bearer ${session.access_token}` },
         });
-
         if (!response.ok) {
           const body = await response.json().catch(() => ({}));
           throw new Error(body?.error || "Pulizia scadenzari non riuscita");
@@ -118,22 +94,14 @@ export default function App({ Component, pageProps }: AppProps) {
         if (!cancelled) setScadenzariCleanupPending(false);
       }
     };
-
     void cleanup();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [router.isReady, router.pathname, isScadenzarioPage]);
 
   const isPublicPage =
-    router.pathname === "/login" ||
-    router.pathname === "/auth/callback" ||
-    router.pathname === "/404" ||
-    router.pathname === "/mobile/agenda" ||
-    router.asPath.startsWith("/documento/") ||
-    router.asPath.startsWith("/compilazione-av4/") ||
-    router.asPath.startsWith("/stampa/");
+    router.pathname === "/login" || router.pathname === "/auth/callback" || router.pathname === "/404" ||
+    router.pathname === "/mobile/agenda" || router.asPath.startsWith("/documento/") ||
+    router.asPath.startsWith("/compilazione-av4/") || router.asPath.startsWith("/stampa/");
 
   const pageClass = [
     isMasterGraficaPayroll ? "payroll-master-page !min-h-0 !overflow-hidden" : "",
@@ -141,6 +109,7 @@ export default function App({ Component, pageProps }: AppProps) {
     isPayrollSmartGroups ? "payroll-smart-groups-page" : "",
     isPayrollDipendenti ? "payroll-dipendenti-page" : "",
     isMasterGraficaRevisione ? "revisione-master-page" : "",
+    isMasterGraficaControlloGestione ? "controllo-gestione-master-page" : "",
     router.pathname === "/clienti/organi-sociali" ? "organi-sociali-page" : "",
     router.pathname === "/microsoft365" ? "microsoft365-page" : "",
     isOperationalScadenzario ? "!min-h-0 !overflow-hidden" : "",
@@ -154,18 +123,11 @@ export default function App({ Component, pageProps }: AppProps) {
     isMasterGraficaRubrica ? "rubrica-master-page !min-h-0 !overflow-hidden" : "",
     isMasterGraficaVariazioni ? "variazioni-master-page !min-h-0 !overflow-hidden" : "",
     isMasterGraficaDocumenti ? "pratiche-documenti-master-page" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  ].filter(Boolean).join(" ");
 
-  const pageContent =
-    isScadenzarioPage && scadenzariCleanupPending ? (
-      <div className="flex min-h-[240px] items-center justify-center text-sm text-gray-500">
-        Aggiornamento scadenzari...
-      </div>
-    ) : (
-      <Component {...pageProps} />
-    );
+  const pageContent = isScadenzarioPage && scadenzariCleanupPending ? (
+    <div className="flex min-h-[240px] items-center justify-center text-sm text-gray-500">Aggiornamento scadenzari...</div>
+  ) : <Component {...pageProps} />;
 
   return (
     <ThemeProvider>
@@ -185,24 +147,13 @@ export default function App({ Component, pageProps }: AppProps) {
         {isMasterGraficaPayroll && <PayrollMasterGraficaEnhancer />}
         {isPayrollDipendenti && <DipendentiPayrollMasterGraficaEnhancer />}
         {isMasterGraficaRevisione && <RevisioneMasterGraficaEnhancer />}
+        {isMasterGraficaControlloGestione && <ControlloGestioneMasterGraficaEnhancer />}
         {isPublicPage ? (
-          <>
-            {pageContent}
-            <Toaster />
-          </>
+          <>{pageContent}<Toaster /></>
         ) : (
-          <div
-            className={`flex min-h-screen flex-col bg-gray-50 ${
-              isFixedViewportPage ? "h-screen overflow-hidden" : ""
-            }`}
-          >
-            <div className="sticky top-0 z-50 shrink-0">
-              <Header onMenuToggle={() => {}} />
-              <TopNavBar />
-            </div>
-            <main
-              className={`flex-1 overflow-y-auto px-4 pb-4 pt-0 md:px-6 md:pb-6 md:pt-0 ${pageClass}`}
-            >
+          <div className={`flex min-h-screen flex-col bg-gray-50 ${isFixedViewportPage ? "h-screen overflow-hidden" : ""}`}>
+            <div className="sticky top-0 z-50 shrink-0"><Header onMenuToggle={() => {}} /><TopNavBar /></div>
+            <main className={`flex-1 overflow-y-auto px-4 pb-4 pt-0 md:px-6 md:pb-6 md:pt-0 ${pageClass}`}>
               <ModuleAccessGuard>{pageContent}</ModuleAccessGuard>
             </main>
             <Toaster />
