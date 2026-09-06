@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/contexts/ThemeProvider";
 import { StudioProvider } from "@/contexts/StudioContext";
 import { ModuleAccessGuard } from "@/components/security/ModuleAccessGuard";
 import { ClientiImportTemplateEnhancer } from "@/components/ClientiImportTemplateEnhancer";
+import { AnagraficheMasterGraficaEnhancer } from "@/components/anagrafiche/AnagraficheMasterGraficaEnhancer";
 import { AgendaMasterGraficaEnhancer } from "@/components/agenda/AgendaMasterGraficaEnhancer";
 import { AgendaTeamsPastCleanup } from "@/components/agenda/AgendaTeamsPastCleanup";
 import { CalendarioMasterGraficaEnhancer } from "@/components/scadenze/CalendarioMasterGraficaEnhancer";
@@ -46,6 +47,14 @@ const CONTENZIOSO_SCROLL_ROUTES = new Set([
   "/contenzioso/tipi-atto",
 ]);
 
+const ANAGRAFICHE_MASTER_ROUTES = new Set([
+  "/clienti",
+  "/anagrafiche/gruppi-societari",
+  "/antiriciclaggio/rappresentanti",
+  "/microsoft365",
+  "/impostazioni/utenti",
+]);
+
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
   const [scadenzariCleanupPending, setScadenzariCleanupPending] = useState(false);
@@ -73,7 +82,9 @@ export default function App({ Component, pageProps }: AppProps) {
   const isMasterGraficaAntiriciclaggio = router.pathname === "/antiriciclaggio" || router.pathname === "/antiriciclaggio/fascicolo-documenti";
   const isAntiriciclaggioElenco = router.pathname === "/antiriciclaggio";
   const isAntiriciclaggioFascicolo = router.pathname === "/antiriciclaggio/fascicolo-documenti";
-  const isFixedViewportPage = isOperationalScadenzario || isMasterGraficaPromemoria || isMasterGraficaAgenda || isMasterGraficaCassettiFiscali || isMasterGraficaAccessoPortali || isMasterGraficaComunicazioniClienti || isMasterGraficaComunicazioniInterne || isMasterGraficaRubrica || isMasterGraficaVariazioni || isMasterGraficaPayroll || isContenziosoScrollPage || isMasterGraficaAntiriciclaggio;
+  const isMasterGraficaAnagrafiche = ANAGRAFICHE_MASTER_ROUTES.has(router.pathname);
+  const isAnagraficheScrollPage = isMasterGraficaAnagrafiche;
+  const isFixedViewportPage = isOperationalScadenzario || isMasterGraficaPromemoria || isMasterGraficaAgenda || isMasterGraficaCassettiFiscali || isMasterGraficaAccessoPortali || isMasterGraficaComunicazioniClienti || isMasterGraficaComunicazioniInterne || isMasterGraficaRubrica || isMasterGraficaVariazioni || isMasterGraficaPayroll || isContenziosoScrollPage || isMasterGraficaAntiriciclaggio || isMasterGraficaAnagrafiche;
 
   useEffect(() => {
     document.body.classList.toggle("master-grafica-promemoria", isMasterGraficaPromemoria);
@@ -126,8 +137,10 @@ export default function App({ Component, pageProps }: AppProps) {
     isMasterGraficaContenzioso ? "contenzioso-master-page" : "",
     isContenziosoScrollPage ? "contenzioso-scroll-page !min-h-0 !overflow-hidden" : "",
     isMasterGraficaAntiriciclaggio ? "antiriciclaggio-master-page !min-h-0 !overflow-hidden" : "",
-    isAntiriciclaggioElenco ? "antiriciclaggio-elenco-page" : "",
+    isAntiriclaggioElenco ? "antiriciclaggio-elenco-page" : "",
     isAntiriciclaggioFascicolo ? "antiriciclaggio-fascicolo-page" : "",
+    isMasterGraficaAnagrafiche ? "anagrafiche-master-page !min-h-0 !overflow-hidden" : "",
+    isAnagraficheScrollPage ? "anagrafiche-master-scroll-page" : "",
     router.pathname === "/clienti/organi-sociali" ? "organi-sociali-page" : "",
     router.pathname === "/microsoft365" ? "microsoft365-page" : "",
     isOperationalScadenzario ? "!min-h-0 !overflow-hidden" : "",
@@ -151,6 +164,7 @@ export default function App({ Component, pageProps }: AppProps) {
     <ThemeProvider>
       <StudioProvider>
         {router.pathname === "/clienti" && <ClientiImportTemplateEnhancer />}
+        {isMasterGraficaAnagrafiche && <AnagraficheMasterGraficaEnhancer />}
         {isMasterGraficaAgenda && <AgendaMasterGraficaEnhancer />}
         {isMasterGraficaAgenda && <AgendaTeamsPastCleanup />}
         {isMasterGraficaCalendario && <CalendarioMasterGraficaEnhancer />}
