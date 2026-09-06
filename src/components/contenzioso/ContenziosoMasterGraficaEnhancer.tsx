@@ -5,10 +5,17 @@ export function ContenziosoMasterGraficaEnhancer() {
         background: rgb(241 245 249) !important;
       }
 
+      /* Tutti i form Contenzioso occupano tutta la larghezza disponibile */
       .contenzioso-master-page > div,
-      .contenzioso-master-page > main {
+      .contenzioso-master-page > main,
+      .contenzioso-master-page [class*="mx-auto"][class*="max-w-"] {
         width: 100% !important;
         max-width: none !important;
+      }
+
+      .contenzioso-master-page > div[class*="min-h-screen"] {
+        padding-left: 12px !important;
+        padding-right: 12px !important;
       }
 
       .contenzioso-master-page h1 {
@@ -77,7 +84,6 @@ export function ContenziosoMasterGraficaEnhancer() {
         box-shadow: none !important;
       }
 
-      /* Azioni principali MASTER_GRAFICA */
       .contenzioso-master-page button[class*="bg-black"],
       .contenzioso-master-page button[class*="bg-blue"],
       .contenzioso-master-page button[class*="bg-primary"],
@@ -109,7 +115,6 @@ export function ContenziosoMasterGraficaEnhancer() {
         border-color: rgb(2 132 199) !important;
       }
 
-      /* Azioni secondarie */
       .contenzioso-master-page button[class*="border"]:not([class*="bg-red"]):not([class*="bg-green"]):not([class*="bg-black"]):not([class*="bg-blue"]):not([class*="bg-primary"]):not([type="submit"]),
       .contenzioso-master-page a[class*="border"]:not([class*="bg-red"]):not([class*="bg-green"]):not([class*="bg-black"]):not([class*="bg-blue"]):not([class*="bg-primary"]) {
         background: white !important;
@@ -117,7 +122,6 @@ export function ContenziosoMasterGraficaEnhancer() {
         color: rgb(3 105 161) !important;
       }
 
-      /* Mantieni le azioni distruttive in rosso */
       .contenzioso-master-page button[class*="bg-red"],
       .contenzioso-master-page a[class*="bg-red"] {
         background: rgb(220 38 38) !important;
@@ -130,7 +134,6 @@ export function ContenziosoMasterGraficaEnhancer() {
         color: rgb(220 38 38) !important;
       }
 
-      /* Pannelli / card */
       .contenzioso-master-page .rounded-xl.border,
       .contenzioso-master-page .rounded-lg.border,
       .contenzioso-master-page .rounded-md.border,
@@ -151,13 +154,18 @@ export function ContenziosoMasterGraficaEnhancer() {
         background: rgb(248 250 252) !important;
       }
 
-      /* Tabelle */
       .contenzioso-master-page table {
         width: 100% !important;
         border-collapse: separate !important;
         border-spacing: 0 !important;
         background: white !important;
         font-size: .74rem !important;
+      }
+
+      .contenzioso-master-page thead {
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 8 !important;
       }
 
       .contenzioso-master-page thead th {
@@ -180,7 +188,50 @@ export function ContenziosoMasterGraficaEnhancer() {
         background: rgb(240 249 255) !important;
       }
 
-      /* Stati semantici */
+      /* MASTER_GRAFICA scadenzari: testata/form fissi, record in scroll interno */
+      .contenzioso-scroll-page {
+        min-height: 0 !important;
+        overflow: hidden !important;
+      }
+
+      .contenzioso-scroll-page > div[class*="min-h-screen"] {
+        height: 100% !important;
+        min-height: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+        padding-top: 12px !important;
+        padding-bottom: 12px !important;
+      }
+
+      .contenzioso-scroll-page > div[class*="min-h-screen"] > div[class*="mx-auto"] {
+        width: 100% !important;
+        max-width: none !important;
+        height: 100% !important;
+        min-height: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+      }
+
+      .contenzioso-scroll-page div:has(> table) {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        overflow-y: auto !important;
+        overflow-x: auto !important;
+        scrollbar-gutter: stable !important;
+      }
+
+      .contenzioso-scroll-page div:has(> table) > table {
+        min-width: 100% !important;
+      }
+
+      /* Se il contenitore tabella è preceduto da filtri/form, questi restano fissi */
+      .contenzioso-scroll-page div:has(> table) ~ * {
+        flex: 0 0 auto;
+      }
+
       .contenzioso-master-page .bg-green-50,
       .contenzioso-master-page [class*="bg-green-50"] {
         background: rgb(240 253 244) !important;
@@ -211,7 +262,6 @@ export function ContenziosoMasterGraficaEnhancer() {
         background: rgb(240 249 255) !important;
       }
 
-      /* Dialog / modali */
       .contenzioso-master-page [role="dialog"] {
         border: 1px solid rgb(186 230 253) !important;
         border-radius: 10px !important;
@@ -226,7 +276,6 @@ export function ContenziosoMasterGraficaEnhancer() {
         border-color: rgb(203 213 225) !important;
       }
 
-      /* Barre / sezioni tecniche */
       .contenzioso-master-page hr {
         border-color: rgb(186 230 253) !important;
       }
