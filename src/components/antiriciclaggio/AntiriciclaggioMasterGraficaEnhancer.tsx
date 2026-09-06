@@ -31,14 +31,19 @@ export function AntiriciclaggioMasterGraficaEnhancer() {
       .antiriciclaggio-master-page button[class*="bg-primary"]:hover,
       .antiriciclaggio-master-page button[class*="bg-black"]:hover,
       .antiriciclaggio-master-page button[class*="bg-slate-900"]:hover { background: rgb(2 132 199) !important; border-color: rgb(2 132 199) !important; }
-      .antiriciclaggio-master-page button[class*="border"]:not([class*="bg-red"]):not([class*="bg-green"]):not([class*="bg-blue"]):not([class*="bg-primary"]):not([class*="bg-black"]),
+
+      /* Azioni secondarie: ESCLUDI espressamente i pulsanti semantici AV1/AV2/AV4 */
+      .antiriciclaggio-master-page button[class*="border"]:not([class*="bg-red"]):not([class*="bg-green"]):not([class*="bg-blue"]):not([class*="bg-primary"]):not([class*="bg-black"]):not([class*="border-lime-500"]):not([class*="border-yellow-400"]):not([class*="border-red-500"]):not([class*="border-green-200"]):not([class*="border-amber-200"]):not([class*="border-red-200"]),
       .antiriciclaggio-master-page a[class*="border"]:not([class*="bg-red"]):not([class*="bg-green"]):not([class*="bg-blue"]):not([class*="bg-primary"]):not([class*="bg-black"]) { background: white !important; border-color: rgb(125 211 252) !important; color: rgb(3 105 161) !important; }
 
-      /* AML: stato leggibile dal RIEMPIMENTO del pulsante, non dal bordo. */
-      .antiriciclaggio-elenco-page button[class*="border-lime-500"] { background: rgb(220 252 231) !important; border-color: rgb(220 252 231) !important; color: rgb(21 128 61) !important; box-shadow: none !important; }
-      .antiriciclaggio-elenco-page button[class*="border-yellow-400"] { background: rgb(254 249 195) !important; border-color: rgb(254 249 195) !important; color: rgb(161 98 7) !important; box-shadow: none !important; }
-      .antiriciclaggio-elenco-page button[class*="border-red-500"] { background: rgb(254 226 226) !important; border-color: rgb(254 226 226) !important; color: rgb(185 28 28) !important; box-shadow: none !important; }
-      .antiriciclaggio-elenco-page button[class*="border-blue-500"] { background: white !important; border-color: rgb(59 130 246) !important; color: rgb(37 99 235) !important; box-shadow: none !important; }
+      /* AML: stato visualizzato con RIEMPIMENTO, non con bordo/aloni. */
+      .antiriciclaggio-master-page.antiriciclaggio-elenco-page button[class*="border-lime-500"],
+      .antiriciclaggio-master-page.antiriciclaggio-elenco-page button[class*="border-green-200"] { background: rgb(220 252 231) !important; border-color: rgb(220 252 231) !important; color: rgb(21 128 61) !important; box-shadow: none !important; }
+      .antiriciclaggio-master-page.antiriciclaggio-elenco-page button[class*="border-yellow-400"],
+      .antiriciclaggio-master-page.antiriciclaggio-elenco-page button[class*="border-amber-200"] { background: rgb(254 249 195) !important; border-color: rgb(254 249 195) !important; color: rgb(161 98 7) !important; box-shadow: none !important; }
+      .antiriciclaggio-master-page.antiriciclaggio-elenco-page button[class*="border-red-500"],
+      .antiriciclaggio-master-page.antiriciclaggio-elenco-page button[class*="border-red-200"] { background: rgb(254 226 226) !important; border-color: rgb(254 226 226) !important; color: rgb(185 28 28) !important; box-shadow: none !important; }
+      .antiriciclaggio-master-page.antiriciclaggio-elenco-page button[class*="border-blue-500"] { background: white !important; border-color: rgb(59 130 246) !important; color: rgb(37 99 235) !important; box-shadow: none !important; }
       .antiriciclaggio-elenco-page button:has(svg.text-red-500) { background: white !important; border-color: transparent !important; color: rgb(239 68 68) !important; }
 
       .antiriciclaggio-master-page .rounded-xl.border,
