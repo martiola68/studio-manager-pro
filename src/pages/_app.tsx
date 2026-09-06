@@ -15,6 +15,7 @@ import { RubricaMasterGraficaEnhancer } from "@/components/contatti/RubricaMaste
 import { ContattiImportTemplateEnhancer } from "@/components/contatti/ContattiImportTemplateEnhancer";
 import { VariazioniMasterGraficaEnhancer } from "@/components/pratiche/VariazioniMasterGraficaEnhancer";
 import { DocumentiMasterGraficaEnhancer } from "@/components/pratiche/DocumentiMasterGraficaEnhancer";
+import { PayrollMasterGraficaEnhancer } from "@/components/payroll/PayrollMasterGraficaEnhancer";
 import { Toaster } from "@/components/ui/toaster";
 
 import Header from "@/components/Header";
@@ -54,7 +55,8 @@ export default function App({ Component, pageProps }: AppProps) {
   const isMasterGraficaRubrica = router.pathname === "/contatti";
   const isMasterGraficaVariazioni = router.pathname === "/pratiche/variazioni";
   const isMasterGraficaDocumenti = router.pathname === "/pratiche/modelli" || router.pathname === "/pratiche/diciture";
-  const isFixedViewportPage = isOperationalScadenzario || isMasterGraficaPromemoria || isMasterGraficaAgenda || isMasterGraficaCassettiFiscali || isMasterGraficaAccessoPortali || isMasterGraficaComunicazioniClienti || isMasterGraficaComunicazioniInterne || isMasterGraficaRubrica || isMasterGraficaVariazioni;
+  const isMasterGraficaPayroll = router.pathname === "/presenze";
+  const isFixedViewportPage = isOperationalScadenzario || isMasterGraficaPromemoria || isMasterGraficaAgenda || isMasterGraficaCassettiFiscali || isMasterGraficaAccessoPortali || isMasterGraficaComunicazioniClienti || isMasterGraficaComunicazioniInterne || isMasterGraficaRubrica || isMasterGraficaVariazioni || isMasterGraficaPayroll;
 
   useEffect(() => {
     document.body.classList.toggle("master-grafica-promemoria", isMasterGraficaPromemoria);
@@ -117,7 +119,7 @@ export default function App({ Component, pageProps }: AppProps) {
     router.asPath.startsWith("/stampa/");
 
   const pageClass = [
-    router.pathname === "/presenze" ? "presenze-page" : "",
+    isMasterGraficaPayroll ? "presenze-page !min-h-0 !overflow-hidden" : "",
     router.pathname === "/clienti/organi-sociali" ? "organi-sociali-page" : "",
     router.pathname === "/microsoft365" ? "microsoft365-page" : "",
     isOperationalScadenzario ? "!min-h-0 !overflow-hidden" : "",
@@ -159,6 +161,7 @@ export default function App({ Component, pageProps }: AppProps) {
         {isMasterGraficaRubrica && <ContattiImportTemplateEnhancer />}
         {isMasterGraficaVariazioni && <VariazioniMasterGraficaEnhancer />}
         {isMasterGraficaDocumenti && <DocumentiMasterGraficaEnhancer />}
+        {isMasterGraficaPayroll && <PayrollMasterGraficaEnhancer />}
         {isPublicPage ? (
           <>
             {pageContent}
