@@ -66,6 +66,43 @@ export function PayrollMasterGraficaEnhancer() {
         max-height: none !important;
       }
 
+      /* Dipendenti Payroll: header pagina e card fissi, scroll solo sui record */
+      .payroll-master-page > div.mx-auto.max-w-\[1800px\].p-4 {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+      }
+
+      .payroll-master-page > div.mx-auto.max-w-\[1800px\].p-4 > div.mb-4 {
+        flex: 0 0 auto !important;
+      }
+
+      .payroll-master-page > div.mx-auto.max-w-\[1800px\].p-4 > div[class*="rounded-xl"],
+      .payroll-master-page > div.mx-auto.max-w-\[1800px\].p-4 > div[class*="border"]:has(table) {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+      }
+
+      .payroll-master-page > div.mx-auto.max-w-\[1800px\].p-4 > div[class*="rounded-xl"] > div:last-child,
+      .payroll-master-page > div.mx-auto.max-w-\[1800px\].p-4 > div[class*="border"]:has(table) > div:last-child {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+      }
+
+      .payroll-master-page > div.mx-auto.max-w-\[1800px\].p-4 .overflow-x-auto.rounded-md.border {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        overflow-x: auto !important;
+        scrollbar-gutter: stable !important;
+      }
+
       .payroll-master-page [data-radix-scroll-area-viewport],
       .payroll-master-page [class*="overflow-y-auto"],
       .payroll-master-page [class*="overflow-auto"] {
