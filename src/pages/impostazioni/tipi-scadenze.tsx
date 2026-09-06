@@ -120,7 +120,6 @@ export default function TipiScadenzePage() {
 
       let canManageCatalog = systemAdmin === true;
 
-      // Fallback UI per l'amministratore generale: la RLS resta comunque l'autorità finale.
       if (!canManageCatalog && user.email) {
         const { data: adminProfile } = await supabase
           .from("tbutenti")
@@ -139,7 +138,6 @@ export default function TipiScadenzePage() {
       }
 
       setCanManageSystem(canManageCatalog);
-
       await loadTipiScadenze(studio.id);
     } catch (error) {
       console.error("Errore autenticazione:", error);
@@ -163,8 +161,7 @@ export default function TipiScadenzePage() {
     }
   };
 
-  const canEditTipo = (tipo: TipoScadenzaCatalogo) =>
-    tipo.origine === "P" || canManageSystem;
+  const canEditTipo = (tipo: TipoScadenzaCatalogo) => tipo.origine === "P" || canManageSystem;
 
   const handleOpenDialog = (tipo?: TipoScadenzaCatalogo) => {
     if (tipo) {
@@ -198,7 +195,6 @@ export default function TipiScadenzePage() {
 
   const handleSave = async () => {
     if (!studioId) return;
-
     try {
       const origine = editingTipo?.origine || (canManageSystem ? formData.origine : "P");
       const dataToSave = {
@@ -223,7 +219,6 @@ export default function TipiScadenzePage() {
           ...dataToSave,
           studio_id: studioId,
           origine,
-          // Mantenuti solo per compatibilità con il cron esistente; non sono più configurabili dalla UI.
           giorni_preavviso_1: 15,
           giorni_preavviso_2: 7,
         } as any);
@@ -273,11 +268,7 @@ export default function TipiScadenzePage() {
         description: `Tipo scadenza ${attivo ? "attivato" : "disattivato"} per questo studio`,
       });
     } catch (error) {
-      toast({
-        title: "Errore",
-        description: "Impossibile modificare lo stato",
-        variant: "destructive",
-      });
+      toast({ title: "Errore", description: "Impossibile modificare lo stato", variant: "destructive" });
     }
   };
 
@@ -298,8 +289,7 @@ export default function TipiScadenzePage() {
     }
   };
 
-  const getTipoLabel = (tipo: string) =>
-    TIPI_SCADENZA_OPTIONS.find((item) => item.value === tipo)?.label || tipo;
+  const getTipoLabel = (tipo: string) => TIPI_SCADENZA_OPTIONS.find((item) => item.value === tipo)?.label || tipo;
 
   const getUrgencyColor = (dataScadenza: string) => {
     const today = new Date();
@@ -336,17 +326,45 @@ export default function TipiScadenzePage() {
   return (
     <>
       <Head><title>Gestione Tipi Scadenze - Studio Manager Pro</title></Head>
-      <div className="max-w-7xl mx-auto p-4 md:p-8">
+      <style jsx global>{`
+        .tipi-scadenze-page .tipo-origine-system {
+          background: rgb(15 23 42) !important;
+          border-color: rgb(15 23 42) !important;
+          color: white !important;
+        }
+        .tipi-scadenze-page .tipo-origine-personal {
+          background: rgb(254 243 199) !important;
+          border-color: rgb(252 211 77) !important;
+          color: rgb(120 53 15) !important;
+        }
+        .tipi-scadenze-page [role="switch"] {
+          min-width: 40px !important;
+          width: 40px !important;
+          height: 22px !important;
+          min-height: 22px !important;
+          border: 1px solid rgb(148 163 184) !important;
+          background: rgb(203 213 225) !important;
+        }
+        .tipi-scadenze-page [role="switch"][data-state="checked"] {
+          background: rgb(3 105 161) !important;
+          border-color: rgb(3 105 161) !important;
+        }
+        .tipi-scadenze-page [role="switch"] > span {
+          display: block !important;
+          width: 18px !important;
+          height: 18px !important;
+          border-radius: 9999px !important;
+          background: white !important;
+          box-shadow: 0 1px 2px rgb(15 23 42 / .25) !important;
+        }
+      `}</style>
+      <div className="tipi-scadenze-page max-w-7xl mx-auto p-4 md:p-8">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Gestione Tipi Scadenze</h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Scadenze di sistema condivise e scadenze personali dello studio
-            </p>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">Scadenze di sistema condivise e scadenze personali dello studio</p>
           </div>
-          <Button onClick={() => handleOpenDialog()}>
-            <Plus className="w-4 h-4 mr-2" />Nuovo Tipo Scadenza
-          </Button>
+          <Button onClick={() => handleOpenDialog()}><Plus className="w-4 h-4 mr-2" />Nuovo Tipo Scadenza</Button>
         </div>
 
         {tipiScadenze.length === 0 ? (
@@ -362,7 +380,7 @@ export default function TipiScadenzePage() {
                       <div className="flex-1 space-y-3">
                         <div className="flex items-center gap-3 flex-wrap">
                           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{tipo.nome}</h3>
-                          <Badge className={tipo.origine === "S" ? "bg-slate-900 text-white" : "bg-amber-100 text-amber-900"}>
+                          <Badge className={tipo.origine === "S" ? "tipo-origine-system" : "tipo-origine-personal"}>
                             {tipo.origine === "S" ? "S · Sistema" : "P · Personale"}
                           </Badge>
                           <Badge variant="outline" className="text-xs">{getTipoLabel(tipo.tipo_scadenza)}</Badge>
@@ -408,11 +426,7 @@ export default function TipiScadenzePage() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingTipo ? "Modifica Tipo Scadenza" : "Nuovo Tipo Scadenza"}</DialogTitle>
-            <DialogDescription>
-              {editingTipo?.origine === "S"
-                ? "Scadenza di sistema: la modifica sarà visibile a tutti gli studi."
-                : "Le nuove scadenze sono personali dello studio che le crea."}
-            </DialogDescription>
+            <DialogDescription>{editingTipo?.origine === "S" ? "Scadenza di sistema: la modifica sarà visibile a tutti gli studi." : "Le nuove scadenze sono personali dello studio che le crea."}</DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
@@ -428,76 +442,39 @@ export default function TipiScadenzePage() {
                     </SelectContent>
                   </Select>
                 ) : (
-                  <div className="rounded-md border bg-amber-50 px-3 py-2 text-sm text-amber-900"><strong>P · Personale</strong> — visibile e modificabile solo dal tuo studio.</div>
+                  <Input value="P · Personale dello studio" disabled />
                 )}
               </div>
             )}
 
-            {editingTipo && (
-              <div className="rounded-md border bg-gray-50 px-3 py-2 text-sm">
-                <strong>{editingTipo.origine === "S" ? "S · Sistema" : "P · Personale"}</strong>
-                {editingTipo.origine === "S" && " — condivisa con tutti gli studi"}
-              </div>
-            )}
-
-            <div className="grid gap-2">
-              <Label>Settori *</Label>
-              <div className="space-y-3 p-4 border rounded-md bg-gray-50 dark:bg-gray-800">
-                {[
-                  ["settore_fiscale", "Settore Fiscale"],
-                  ["settore_lavoro", "Settore Lavoro"],
-                  ["settore_consulenza", "Settore Consulenza"],
-                ].map(([key, label]) => (
-                  <div className="flex items-center space-x-2" key={key}>
-                    <Checkbox id={key} checked={Boolean((formData as any)[key])} onCheckedChange={(checked) => setFormData({ ...formData, [key]: !!checked })} />
-                    <Label htmlFor={key} className="font-normal cursor-pointer">{label}</Label>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid gap-2"><Label htmlFor="nome">Nome Scadenza *</Label><Input id="nome" value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} placeholder="es. IVA 4° Trimestre" /></div>
-            <div className="grid gap-2"><Label htmlFor="descrizione">Descrizione</Label><Textarea id="descrizione" value={formData.descrizione} onChange={(e) => setFormData({ ...formData, descrizione: e.target.value })} placeholder="Descrizione opzionale" rows={3} /></div>
-
+            <div className="grid gap-2"><Label>Nome</Label><Input value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} placeholder="Es. Comunicazione IVA" /></div>
+            <div className="grid gap-2"><Label>Descrizione</Label><Textarea value={formData.descrizione} onChange={(e) => setFormData({ ...formData, descrizione: e.target.value })} /></div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="tipo_scadenza">Tipo Scadenza *</Label>
-                <Select value={formData.tipo_scadenza} onValueChange={(value) => setFormData({ ...formData, tipo_scadenza: value })}>
-                  <SelectTrigger><SelectValue placeholder="Seleziona tipo" /></SelectTrigger>
-                  <SelectContent>{TIPI_SCADENZA_OPTIONS.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center space-x-2"><Switch id="ha_scadenzario" checked={formData.ha_scadenzario} onCheckedChange={(checked) => setFormData({ ...formData, ha_scadenzario: checked })} /><Label htmlFor="ha_scadenzario">Scadenza collegata a scadenzario operativo</Label></div>
-              <div className="grid gap-2"><Label htmlFor="data_scadenza">Data Scadenza *</Label><Input id="data_scadenza" type="date" value={formData.data_scadenza} onChange={(e) => setFormData({ ...formData, data_scadenza: e.target.value })} /></div>
+              <div className="grid gap-2"><Label>Data Scadenza</Label><Input type="date" value={formData.data_scadenza} onChange={(e) => setFormData({ ...formData, data_scadenza: e.target.value })} /></div>
+              <div className="grid gap-2"><Label>Tipo Scadenza</Label><Select value={formData.tipo_scadenza} onValueChange={(value) => setFormData({ ...formData, tipo_scadenza: value })}><SelectTrigger><SelectValue placeholder="Seleziona tipo" /></SelectTrigger><SelectContent>{TIPI_SCADENZA_OPTIONS.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent></Select></div>
             </div>
 
-            <div className="flex items-center space-x-2"><Switch id="ricorrente" checked={formData.ricorrente} onCheckedChange={(checked) => setFormData({ ...formData, ricorrente: checked })} /><Label htmlFor="ricorrente">Scadenza ricorrente (si ripete ogni anno)</Label></div>
-            <div className="flex items-center space-x-2"><Switch id="attivo" checked={formData.attivo} onCheckedChange={(checked) => setFormData({ ...formData, attivo: checked })} /><Label htmlFor="attivo">Attivo</Label></div>
+            <div className="grid gap-3 rounded-lg border p-4">
+              <div className="flex items-center space-x-2"><Checkbox id="ricorrente" checked={formData.ricorrente} onCheckedChange={(checked) => setFormData({ ...formData, ricorrente: Boolean(checked) })} /><Label htmlFor="ricorrente">Ricorrente annuale</Label></div>
+              <div className="flex items-center space-x-2"><Checkbox id="settore-fiscale" checked={formData.settore_fiscale} onCheckedChange={(checked) => setFormData({ ...formData, settore_fiscale: Boolean(checked) })} /><Label htmlFor="settore-fiscale">Settore Fiscale</Label></div>
+              <div className="flex items-center space-x-2"><Checkbox id="settore-lavoro" checked={formData.settore_lavoro} onCheckedChange={(checked) => setFormData({ ...formData, settore_lavoro: Boolean(checked) })} /><Label htmlFor="settore-lavoro">Settore Lavoro</Label></div>
+              <div className="flex items-center space-x-2"><Checkbox id="settore-consulenza" checked={formData.settore_consulenza} onCheckedChange={(checked) => setFormData({ ...formData, settore_consulenza: Boolean(checked) })} /><Label htmlFor="settore-consulenza">Settore Consulenza</Label></div>
+              <div className="flex items-center space-x-2"><Checkbox id="ha-scadenzario" checked={formData.ha_scadenzario} onCheckedChange={(checked) => setFormData({ ...formData, ha_scadenzario: Boolean(checked) })} /><Label htmlFor="ha-scadenzario">Ha scadenzario dedicato</Label></div>
+              <div className="flex items-center space-x-2"><Checkbox id="attivo" checked={formData.attivo} onCheckedChange={(checked) => setFormData({ ...formData, attivo: Boolean(checked) })} /><Label htmlFor="attivo">Attivo</Label></div>
+            </div>
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={handleCloseDialog}>Annulla</Button>
-            <Button onClick={handleSave} disabled={!formData.nome || !formData.tipo_scadenza || !formData.data_scadenza}>
-              {editingTipo ? "Salva Modifiche" : "Crea Tipo Scadenza"}
-            </Button>
+            <Button onClick={handleSave} disabled={!formData.nome.trim() || !formData.data_scadenza || !formData.tipo_scadenza}>Salva</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Conferma Eliminazione</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deletingTipo?.origine === "S"
-                ? "Questa è una scadenza di sistema: eliminandola verrà rimossa per tutti gli studi. Continuare?"
-                : "Sei sicuro di voler eliminare questa scadenza personale?"}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annulla</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-500 hover:bg-red-600">Elimina</AlertDialogAction>
-          </AlertDialogFooter>
+          <AlertDialogHeader><AlertDialogTitle>Conferma eliminazione</AlertDialogTitle><AlertDialogDescription>Vuoi eliminare il tipo di scadenza “{deletingTipo?.nome}”? L'operazione non può essere annullata.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel onClick={() => setDeletingTipo(null)}>Annulla</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">Elimina</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </>
