@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CreditCard, ExternalLink, RefreshCw, ShieldCheck, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -62,6 +61,20 @@ function statusLabel(status?: string | null) {
     in_scadenza: "In scadenza",
   };
   return status ? labels[status] || status : "Non disponibile";
+}
+
+function StudioSectionTitleStyles() {
+  return (
+    <style jsx global>{`
+      .impostazioni-master-page [class*="border-[#0d6f9f]"] > div:first-child h3,
+      .impostazioni-master-page [class*="border-[#015EB5]"] > div:first-child h3,
+      .impostazioni-master-page [class*="[&>div]:border-2"] > div > div:first-child h3 {
+        font-size: 1rem !important;
+        line-height: 1.35rem !important;
+        font-weight: 700 !important;
+      }
+    `}</style>
+  );
 }
 
 export default function AbbonamentoPagamentiCard() {
@@ -128,19 +141,25 @@ export default function AbbonamentoPagamentiCard() {
 
   if (loading) {
     return (
-      <Card>
-        <CardHeader><CardTitle className="flex items-center gap-2"><CreditCard className="h-5 w-5" />Abbonamento e pagamenti</CardTitle></CardHeader>
-        <CardContent className="text-sm text-muted-foreground">Caricamento dati abbonamento...</CardContent>
-      </Card>
+      <>
+        <StudioSectionTitleStyles />
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2"><CreditCard className="h-5 w-5" />Abbonamento e pagamenti</CardTitle></CardHeader>
+          <CardContent className="text-sm text-muted-foreground">Caricamento dati abbonamento...</CardContent>
+        </Card>
+      </>
     );
   }
 
   if (!data?.licenza) {
     return (
-      <Card>
-        <CardHeader><CardTitle className="flex items-center gap-2"><CreditCard className="h-5 w-5" />Abbonamento e pagamenti</CardTitle></CardHeader>
-        <CardContent><Alert><AlertDescription>Nessun abbonamento associato a questo studio.</AlertDescription></Alert></CardContent>
-      </Card>
+      <>
+        <StudioSectionTitleStyles />
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2"><CreditCard className="h-5 w-5" />Abbonamento e pagamenti</CardTitle></CardHeader>
+          <CardContent><Alert><AlertDescription>Nessun abbonamento associato a questo studio.</AlertDescription></Alert></CardContent>
+        </Card>
+      </>
     );
   }
 
@@ -154,83 +173,109 @@ export default function AbbonamentoPagamentiCard() {
   const isCancelScheduled = licenza.stripe_cancel_at_period_end || !licenza.rinnovo_automatico;
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-4">
-        <div>
-          <CardTitle className="flex items-center gap-2"><CreditCard className="h-5 w-5" />Abbonamento e pagamenti</CardTitle>
-          <p className="mt-1 text-sm text-muted-foreground">Gestione del piano Studio Manager Pro e della modalità di pagamento.</p>
-        </div>
-        <Button variant="outline" size="sm" onClick={() => void load()}><RefreshCw className="mr-2 h-4 w-4" />Aggiorna</Button>
-      </CardHeader>
-      <CardContent className="space-y-5">
-        {isPaymentProblem && (
-          <Alert variant="destructive">
-            <AlertDescription>
-              Il pagamento dell'abbonamento non è andato a buon fine. Aggiorna la modalità di pagamento in Stripe; dopo il pagamento riuscito Studio Manager Pro verrà riallineato automaticamente.
-            </AlertDescription>
-          </Alert>
-        )}
+    <>
+      <StudioSectionTitleStyles />
+      <Card>
+        <CardHeader className="flex flex-row items-start justify-between gap-4">
+          <div>
+            <CardTitle className="flex items-center gap-2"><CreditCard className="h-5 w-5" />Abbonamento e pagamenti</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">Gestione del piano Studio Manager Pro e della modalità di pagamento.</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => void load()}><RefreshCw className="mr-2 h-4 w-4" />Aggiorna</Button>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {isPaymentProblem && (
+            <Alert variant="destructive">
+              <AlertDescription>
+                Il pagamento dell'abbonamento non è andato a buon fine. Aggiorna la modalità di pagamento in Stripe; dopo il pagamento riuscito Studio Manager Pro verrà riallineato automaticamente.
+              </AlertDescription>
+            </Alert>
+          )}
 
-        {isTerminated && (
-          <Alert variant="destructive">
-            <AlertDescription>
-              L'abbonamento Stripe è terminato o sospeso. Per riattivare il servizio è necessario creare una nuova sottoscrizione sullo stesso studio.
-            </AlertDescription>
-          </Alert>
-        )}
+          {isTerminated && (
+            <Alert variant="destructive">
+              <AlertDescription>
+                L'abbonamento Stripe è terminato o sospeso. Per riattivare il servizio è necessario creare una nuova sottoscrizione sullo stesso studio.
+              </AlertDescription>
+            </Alert>
+          )}
 
-        <div className="grid gap-4 md:grid-cols-4">
-          <div><p className="text-xs font-medium uppercase text-muted-foreground">Piano</p><p className="mt-1 font-semibold">{licenza.piano || "—"}</p></div>
-          <div><p className="text-xs font-medium uppercase text-muted-foreground">Stato</p><div className="mt-1"><Badge variant={isProblem ? "destructive" : "default"}>{statusLabel(stripeStatus)}</Badge></div></div>
-          <div><p className="text-xs font-medium uppercase text-muted-foreground">Canone mensile</p><p className="mt-1 font-semibold">{money.format(licenza.canone_mensile || 0)}</p></div>
-          <div><p className="text-xs font-medium uppercase text-muted-foreground">Prossimo addebito</p><p className="mt-1 font-semibold">{formatDate(licenza.data_prossimo_pagamento)}</p></div>
-        </div>
-
-        <div className="rounded-lg border p-4">
-          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+          <div className="grid gap-4 md:grid-cols-4">
+            <div><p className="text-xs font-medium uppercase text-muted-foreground">Piano</p><p className="mt-1 font-semibold">{licenza.piano || "—"}</p></div>
             <div>
-              <p className="font-medium">Modalità di pagamento</p>
-              {paymentMethod ? (
-                <p className="mt-1 text-sm text-muted-foreground">{paymentMethod.brand.toUpperCase()} •••• {paymentMethod.last4}{paymentMethod.exp_month && paymentMethod.exp_year ? ` · scadenza ${String(paymentMethod.exp_month).padStart(2, "0")}/${paymentMethod.exp_year}` : ""}</p>
-              ) : (
-                <p className="mt-1 text-sm text-muted-foreground">Nessun dettaglio carta disponibile. I dati completi della carta non vengono memorizzati in Studio Manager Pro.</p>
-              )}
+              <p className="text-xs font-medium uppercase text-muted-foreground">Stato</p>
+              <div className="mt-1">
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minHeight: 22,
+                    padding: "2px 9px",
+                    borderRadius: 9999,
+                    border: `1px solid ${isProblem ? "rgb(220 38 38)" : "rgb(22 163 74)"}`,
+                    backgroundColor: isProblem ? "rgb(220 38 38)" : "rgb(22 163 74)",
+                    color: "white",
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    lineHeight: 1.2,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {statusLabel(stripeStatus)}
+                </span>
+              </div>
             </div>
+            <div><p className="text-xs font-medium uppercase text-muted-foreground">Canone mensile</p><p className="mt-1 font-semibold">{money.format(licenza.canone_mensile || 0)}</p></div>
+            <div><p className="text-xs font-medium uppercase text-muted-foreground">Prossimo addebito</p><p className="mt-1 font-semibold">{formatDate(licenza.data_prossimo_pagamento)}</p></div>
+          </div>
 
-            <div className="flex flex-wrap gap-2">
-              {licenza.ha_customer_stripe && !isTerminated && (
-                <Button onClick={openPortal} disabled={openingPortal || reactivating}>
-                  {openingPortal ? "Apertura..." : isPaymentProblem ? "Aggiorna carta e recupera pagamento" : "Gestisci metodo di pagamento"}
-                  <ExternalLink className="ml-2 h-4 w-4" />
-                </Button>
-              )}
+          <div className="rounded-lg border p-4">
+            <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+              <div>
+                <p className="font-medium">Modalità di pagamento</p>
+                {paymentMethod ? (
+                  <p className="mt-1 text-sm text-muted-foreground">{paymentMethod.brand.toUpperCase()} •••• {paymentMethod.last4}{paymentMethod.exp_month && paymentMethod.exp_year ? ` · scadenza ${String(paymentMethod.exp_month).padStart(2, "0")}/${paymentMethod.exp_year}` : ""}</p>
+                ) : (
+                  <p className="mt-1 text-sm text-muted-foreground">Nessun dettaglio carta disponibile. I dati completi della carta non vengono memorizzati in Studio Manager Pro.</p>
+                )}
+              </div>
 
-              {isTerminated && licenza.ha_customer_stripe && licenza.ha_subscription_stripe && (
-                <Button onClick={reactivateSubscription} disabled={reactivating || openingPortal}>
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  {reactivating ? "Apertura Stripe..." : "Riattiva abbonamento"}
-                </Button>
-              )}
+              <div className="flex flex-wrap gap-2">
+                {licenza.ha_customer_stripe && !isTerminated && (
+                  <Button onClick={openPortal} disabled={openingPortal || reactivating}>
+                    {openingPortal ? "Apertura..." : isPaymentProblem ? "Aggiorna carta e recupera pagamento" : "Gestisci metodo di pagamento"}
+                    <ExternalLink className="ml-2 h-4 w-4" />
+                  </Button>
+                )}
+
+                {isTerminated && licenza.ha_customer_stripe && licenza.ha_subscription_stripe && (
+                  <Button onClick={reactivateSubscription} disabled={reactivating || openingPortal}>
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    {reactivating ? "Apertura Stripe..." : "Riattiva abbonamento"}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="rounded-lg bg-muted/40 p-4 text-sm">
-          <div className="flex gap-3">
-            <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" />
-            <div className="space-y-1">
-              <p className="font-medium">Rinnovo dell'abbonamento</p>
-              <p className="text-muted-foreground">
-                {isTerminated
-                  ? "L'abbonamento non è attualmente attivo. La riattivazione genera una nuova sottoscrizione Stripe collegata allo stesso studio."
-                  : isCancelScheduled
-                    ? `Il rinnovo automatico risulta disattivato. L'abbonamento resta utilizzabile fino alla scadenza prevista (${formatDate(data.studio.data_scadenza_abbonamento || licenza.data_scadenza)}).`
-                    : `Il rinnovo è automatico. La richiesta di recesso deve pervenire almeno ${licenza.giorni_preavviso_disdetta || 30} giorni prima della scadenza/rata successiva prevista.`}
-              </p>
+          <div className="rounded-lg bg-muted/40 p-4 text-sm">
+            <div className="flex gap-3">
+              <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" />
+              <div className="space-y-1">
+                <p className="font-medium">Rinnovo dell'abbonamento</p>
+                <p className="text-muted-foreground">
+                  {isTerminated
+                    ? "L'abbonamento non è attualmente attivo. La riattivazione genera una nuova sottoscrizione Stripe collegata allo stesso studio."
+                    : isCancelScheduled
+                      ? `Il rinnovo automatico risulta disattivato. L'abbonamento resta utilizzabile fino alla scadenza prevista (${formatDate(data.studio.data_scadenza_abbonamento || licenza.data_scadenza)}).`
+                      : `Il rinnovo è automatico. La richiesta di recesso deve pervenire almeno ${licenza.giorni_preavviso_disdetta || 30} giorni prima della scadenza/rata successiva prevista.`}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </>
   );
 }
