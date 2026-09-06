@@ -9,6 +9,7 @@ import { ClientiMasterGraficaFixes } from "@/components/anagrafiche/ClientiMaste
 import { GruppiSocietariMasterGraficaFixes } from "@/components/anagrafiche/GruppiSocietariMasterGraficaFixes";
 import { Microsoft365DashboardGrafica } from "@/components/anagrafiche/Microsoft365DashboardGrafica";
 import { GestioneUtentiMasterGraficaFixes } from "@/components/anagrafiche/GestioneUtentiMasterGraficaFixes";
+import { ImpostazioniMasterGraficaEnhancer } from "@/components/impostazioni/ImpostazioniMasterGraficaEnhancer";
 import { AgendaMasterGraficaEnhancer } from "@/components/agenda/AgendaMasterGraficaEnhancer";
 import { AgendaTeamsPastCleanup } from "@/components/agenda/AgendaTeamsPastCleanup";
 import { CalendarioMasterGraficaEnhancer } from "@/components/scadenze/CalendarioMasterGraficaEnhancer";
@@ -59,6 +60,18 @@ const ANAGRAFICHE_MASTER_ROUTES = new Set([
   "/impostazioni/utenti",
 ]);
 
+const IMPOSTAZIONI_MASTER_ROUTES = new Set([
+  "/impostazioni/studio",
+  "/impostazioni/ruoli",
+  "/impostazioni/prestazioni",
+  "/impostazioni/payroll-festivita",
+  "/impostazioni/payroll-codici-presenza",
+  "/impostazioni/scadenzari",
+  "/impostazioni/template-email",
+  "/impostazioni/tipi-scadenze",
+  "/impostazioni/tipo-promemoria",
+]);
+
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
   const [scadenzariCleanupPending, setScadenzariCleanupPending] = useState(false);
@@ -88,7 +101,8 @@ export default function App({ Component, pageProps }: AppProps) {
   const isAntiriciclaggioFascicolo = router.pathname === "/antiriciclaggio/fascicolo-documenti";
   const isMasterGraficaAnagrafiche = ANAGRAFICHE_MASTER_ROUTES.has(router.pathname);
   const isAnagraficheScrollPage = isMasterGraficaAnagrafiche;
-  const isFixedViewportPage = isOperationalScadenzario || isMasterGraficaPromemoria || isMasterGraficaAgenda || isMasterGraficaCassettiFiscali || isMasterGraficaAccessoPortali || isMasterGraficaComunicazioniClienti || isMasterGraficaComunicazioniInterne || isMasterGraficaRubrica || isMasterGraficaVariazioni || isMasterGraficaPayroll || isContenziosoScrollPage || isMasterGraficaAntiriciclaggio || isMasterGraficaAnagrafiche;
+  const isMasterGraficaImpostazioni = IMPOSTAZIONI_MASTER_ROUTES.has(router.pathname);
+  const isFixedViewportPage = isOperationalScadenzario || isMasterGraficaPromemoria || isMasterGraficaAgenda || isMasterGraficaCassettiFiscali || isMasterGraficaAccessoPortali || isMasterGraficaComunicazioniClienti || isMasterGraficaComunicazioniInterne || isMasterGraficaRubrica || isMasterGraficaVariazioni || isMasterGraficaPayroll || isContenziosoScrollPage || isMasterGraficaAntiriciclaggio || isMasterGraficaAnagrafiche || isMasterGraficaImpostazioni;
 
   useEffect(() => {
     document.body.classList.toggle("master-grafica-promemoria", isMasterGraficaPromemoria);
@@ -145,6 +159,7 @@ export default function App({ Component, pageProps }: AppProps) {
     isAntiriciclaggioFascicolo ? "antiriciclaggio-fascicolo-page" : "",
     isMasterGraficaAnagrafiche ? "anagrafiche-master-page !min-h-0 !overflow-hidden" : "",
     isAnagraficheScrollPage ? "anagrafiche-master-scroll-page" : "",
+    isMasterGraficaImpostazioni ? "impostazioni-master-page !min-h-0 !overflow-hidden" : "",
     router.pathname === "/clienti/organi-sociali" ? "organi-sociali-page" : "",
     router.pathname === "/microsoft365" ? "microsoft365-page" : "",
     isOperationalScadenzario ? "!min-h-0 !overflow-hidden" : "",
@@ -173,6 +188,7 @@ export default function App({ Component, pageProps }: AppProps) {
         {router.pathname === "/microsoft365" && <Microsoft365DashboardGrafica />}
         {isMasterGraficaAnagrafiche && <AnagraficheMasterGraficaEnhancer />}
         {router.pathname === "/impostazioni/utenti" && <GestioneUtentiMasterGraficaFixes />}
+        {isMasterGraficaImpostazioni && <ImpostazioniMasterGraficaEnhancer />}
         {isMasterGraficaAgenda && <AgendaMasterGraficaEnhancer />}
         {isMasterGraficaAgenda && <AgendaTeamsPastCleanup />}
         {isMasterGraficaCalendario && <CalendarioMasterGraficaEnhancer />}
