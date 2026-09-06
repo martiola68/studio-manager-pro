@@ -312,6 +312,111 @@ export function AnagraficheMasterGraficaEnhancer() {
         border-color: rgb(34 197 94) !important;
         color: rgb(22 163 74) !important;
       }
+
+      /* RAPPRESENTANTI LEGALI: intestazione, tabella compatta e scroll verticale interno. */
+      .anagrafiche-master-page:has(input[placeholder^="Cerca per cognome e nome"]) > div.p-3 {
+        position: relative !important;
+        display: flex !important;
+        flex-direction: column !important;
+        height: 100% !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+        padding-top: 50px !important;
+      }
+
+      .anagrafiche-master-page:has(input[placeholder^="Cerca per cognome e nome"]) > div.p-3::before {
+        content: "Rappresentanti legali";
+        position: absolute;
+        top: 10px;
+        left: 12px;
+        color: rgb(15 23 42);
+        font-size: 1.25rem;
+        line-height: 1.7rem;
+        font-weight: 700;
+      }
+
+      .anagrafiche-master-page:has(input[placeholder^="Cerca per cognome e nome"]) > div.p-3 > [class*="rounded"] {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+        background: white !important;
+        border: 1px solid rgb(125 211 252) !important;
+      }
+
+      .anagrafiche-master-page:has(input[placeholder^="Cerca per cognome e nome"]) [class*="CardContent"],
+      .anagrafiche-master-page:has(input[placeholder^="Cerca per cognome e nome"]) .space-y-3.px-3.pb-3.pt-0 {
+        display: flex !important;
+        flex-direction: column !important;
+        height: 100% !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+      }
+
+      .anagrafiche-master-page:has(input[placeholder^="Cerca per cognome e nome"])
+        .overflow-x-auto.rounded-md.border {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        overflow-x: auto !important;
+        overflow-y: auto !important;
+        scrollbar-gutter: stable !important;
+        background: white !important;
+      }
+
+      .anagrafiche-master-page:has(input[placeholder^="Cerca per cognome e nome"])
+        .overflow-x-auto.rounded-md.border > div > .sticky {
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 20 !important;
+        background: rgb(71 85 105) !important;
+        color: white !important;
+        border-bottom-color: rgb(51 65 85) !important;
+        padding-top: 6px !important;
+        padding-bottom: 6px !important;
+      }
+
+      .anagrafiche-master-page:has(input[placeholder^="Cerca per cognome e nome"])
+        .overflow-x-auto.rounded-md.border > div > div:last-child > div {
+        min-height: 36px !important;
+        padding-top: 4px !important;
+        padding-bottom: 4px !important;
+        background: white !important;
+        border-color: rgb(203 213 225) !important;
+      }
+
+      .anagrafiche-master-page:has(input[placeholder^="Cerca per cognome e nome"])
+        .overflow-x-auto.rounded-md.border > div > div:last-child > div:hover {
+        background: white !important;
+      }
+
+      .anagrafiche-master-page:has(input[placeholder^="Cerca per cognome e nome"])
+        .overflow-x-auto.rounded-md.border > div > div:last-child > div > div:nth-child(2) span {
+        background: rgb(241 245 249) !important;
+        color: rgb(51 65 85) !important;
+      }
+
+      .anagrafiche-master-page:has(input[placeholder^="Cerca per cognome e nome"])
+        .overflow-x-auto.rounded-md.border > div > div:last-child > div > div:nth-child(5) span {
+        color: rgb(51 65 85) !important;
+      }
+
+      .anagrafiche-master-page:has(input[placeholder^="Cerca per cognome e nome"])
+        .overflow-x-auto.rounded-md.border > div > div:last-child > div > div:nth-child(5) span:first-child {
+        display: none !important;
+      }
+
+      .anagrafiche-master-page:has(input[placeholder^="Cerca per cognome e nome"])
+        .overflow-x-auto.rounded-md.border > div > div:last-child > div > div:nth-child(3) span,
+      .anagrafiche-master-page:has(input[placeholder^="Cerca per cognome e nome"])
+        .overflow-x-auto.rounded-md.border > div > div:last-child > div > div:nth-child(7) span {
+        min-width: 76px !important;
+        padding-top: 3px !important;
+        padding-bottom: 3px !important;
+      }
+
+      .anagrafiche-master-page:has(input[placeholder^="Cerca per cognome e nome"])
+        .flex.flex-wrap.gap-2.pt-1.text-xs.text-muted-foreground {
+        display: none !important;
+      }
     `}</style>
   );
 }
