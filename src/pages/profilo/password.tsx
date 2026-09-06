@@ -29,46 +29,38 @@ export default function ModificaPasswordPage() {
       const { data: sessionData } = await supabase.auth.getSession();
       const session = sessionData.session;
       if (!session?.user?.email) throw new Error("Sessione non valida. Effettua nuovamente l’accesso.");
-
-      // Prima di modificare la password richiediamo una nuova autenticazione
-      // con la password attuale. La sola presenza di una sessione aperta non basta.
-      const { error: verifyError } = await supabase.auth.signInWithPassword({
-        email: session.user.email,
-        password: currentPassword,
-      });
+      const { error: verifyError } = await supabase.auth.signInWithPassword({ email: session.user.email, password: currentPassword });
       if (verifyError) throw new Error("La password attuale non è corretta.");
-
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) throw updateError;
-
-      setCurrentPassword("");
-      setPassword("");
-      setConfirm("");
+      setCurrentPassword(""); setPassword(""); setConfirm("");
       setSuccess("Password modificata correttamente. Dal prossimo accesso utilizza la nuova password.");
     } catch (e: any) {
       setError(e?.message || "Impossibile modificare la password.");
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   }
 
-  return <main className="min-h-screen bg-slate-50 px-4 py-10">
-    <div className="mx-auto max-w-xl">
-      <Button variant="ghost" className="mb-5" onClick={() => router.back()}><ArrowLeft className="mr-2 h-4 w-4" />Torna indietro</Button>
-      <Card>
-        <CardHeader>
-          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-cyan-100"><LockKeyhole className="h-6 w-6 text-cyan-800" /></div>
-          <CardTitle>Modifica password</CardTitle>
-          <CardDescription>Per sicurezza verifica prima la password attuale, quindi inserisci e conferma la nuova password. Il recupero password dalla pagina di login resta riservato ai casi di smarrimento.</CardDescription>
+  return <main className="min-h-screen bg-slate-100 px-6 py-6">
+    <div className="mx-auto max-w-3xl">
+      <Button variant="outline" className="mb-4 h-9 border-sky-400 bg-white text-sky-700 hover:bg-sky-50 hover:text-sky-800" onClick={() => router.back()}><ArrowLeft className="mr-2 h-4 w-4" />Torna indietro</Button>
+      <Card className="overflow-hidden rounded-xl border border-sky-300 bg-white shadow-sm">
+        <CardHeader className="border-b border-sky-200 bg-sky-50 px-6 py-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-sky-600"><LockKeyhole className="h-5 w-5 text-white" /></div>
+            <div>
+              <CardTitle className="text-xl font-bold text-slate-900">Modifica password</CardTitle>
+              <CardDescription className="mt-1 text-sm text-slate-600">Per sicurezza verifica prima la password attuale, quindi inserisci e conferma la nuova password. Il recupero password dalla pagina di login resta riservato ai casi di smarrimento.</CardDescription>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-6 py-6">
           <form onSubmit={submit} className="space-y-4">
-            <div><label className="mb-1 block text-sm font-medium">Password attuale</label><Input type="password" autoComplete="current-password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required /></div>
-            <div><label className="mb-1 block text-sm font-medium">Nuova password</label><Input type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={10} /></div>
-            <div><label className="mb-1 block text-sm font-medium">Conferma nuova password</label><Input type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={10} /></div>
+            <div><label className="mb-1.5 block text-sm font-semibold text-slate-700">Password attuale</label><Input className="h-10 border-slate-300 bg-white focus-visible:ring-sky-500" type="password" autoComplete="current-password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required /></div>
+            <div><label className="mb-1.5 block text-sm font-semibold text-slate-700">Nuova password</label><Input className="h-10 border-slate-300 bg-white focus-visible:ring-sky-500" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={10} /></div>
+            <div><label className="mb-1.5 block text-sm font-semibold text-slate-700">Conferma nuova password</label><Input className="h-10 border-slate-300 bg-white focus-visible:ring-sky-500" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={10} /></div>
             {error && <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
             {success && <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700">{success}</div>}
-            <Button type="submit" className="w-full" disabled={loading}>{loading ? "Verifica e aggiornamento…" : "Modifica password"}</Button>
+            <Button type="submit" className="h-10 w-full bg-sky-700 font-semibold text-white hover:bg-sky-600" disabled={loading}>{loading ? "Verifica e aggiornamento…" : "Modifica password"}</Button>
           </form>
         </CardContent>
       </Card>
