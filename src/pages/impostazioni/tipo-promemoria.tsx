@@ -15,6 +15,10 @@ import { supabase } from "@/lib/supabase/client";
 
 const EMPTY_FORM = { nome: "", colore: "#3B82F6" };
 
+function normalize(value: unknown) {
+  return String(value ?? "").trim().replace(/\s+/g, " ").toUpperCase();
+}
+
 export default function TipoPromemoriaPage() {
   const { toast } = useToast();
   const [tipi, setTipi] = useState<TipoPromemoriaCatalogo[]>([]);
@@ -33,14 +37,58 @@ export default function TipoPromemoriaPage() {
       const studio = await studioService.getStudio();
       if (!studio?.id) throw new Error("Studio non configurato");
       setStudioId(studio.id);
+
+      let isGlobalSystemAdmin = false;
       const { data: systemAdmin, error } = await (supabase as any).rpc("is_system_catalog_admin");
       if (error) console.warn("Verifica amministratore catalogo non disponibile:", error);
-      setCanManageSystem(systemAdmin === true);
+      isGlobalSystemAdmin = systemAdmin === true;
+
+      if (!isGlobalSystemAdmin) {
+        const { data: authData } = await supabase.auth.getUser();
+        const authUser = authData?.user;
+        if (authUser) {
+          let profile: any = null;
+          const { data: byUserId } = await supabase
+            .from("tbutenti")
+            .select("nome, cognome, tipo_utente, attivo, studio_id")
+            .eq("user_id", authUser.id)
+            .maybeSingle();
+          profile = byUserId;
+
+          if (!profile && authUser.email) {
+            const { data: byEmail } = await supabase
+              .from("tbutenti")
+              .select("nome, cognome, tipo_utente, attivo, studio_id")
+              .ilike("email", authUser.email)
+              .maybeSingle();
+            profile = byEmail;
+          }
+
+          if (profile?.studio_id) {
+            const { data: profileStudio } = await supabase
+              .from("tbstudio")
+              .select("ragione_sociale")
+              .eq("id", profile.studio_id)
+              .maybeSingle();
+
+            isGlobalSystemAdmin =
+              profile?.attivo !== false &&
+              normalize(profile?.tipo_utente) === "ADMIN" &&
+              normalize(profile?.nome) === "MARIO" &&
+              normalize(profile?.cognome) === "ARTIOLA" &&
+              normalize(profileStudio?.ragione_sociale).startsWith("REVISIONI COMMERCIALI");
+          }
+        }
+      }
+
+      setCanManageSystem(isGlobalSystemAdmin);
       await fetchTipi(studio.id);
     } catch (error) {
       console.error(error);
       toast({ title: "Errore", description: "Impossibile caricare i tipi di promemoria", variant: "destructive" });
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fetchTipi = async (currentStudioId = studioId) => {
@@ -67,10 +115,11 @@ export default function TipoPromemoriaPage() {
       } else {
         await tipoPromemoriaService.creaTipoPromemoria({ nome: formData.nome.trim(), descrizione: null, colore: formData.colore, studio_id: studioId, origine: "S" });
       }
+      const wasEditing = Boolean(editingTipo);
       setShowDialog(false);
       resetForm();
       await fetchTipi(studioId);
-      toast({ title: "Successo", description: editingTipo ? "Tipo di sistema aggiornato" : "Tipo di sistema creato" });
+      toast({ title: "Successo", description: wasEditing ? "Tipo di sistema aggiornato" : "Tipo di sistema creato" });
     } catch (error) {
       console.error(error);
       toast({ title: "Errore", description: error instanceof Error ? error.message : "Impossibile salvare il tipo promemoria", variant: "destructive" });
@@ -89,46 +138,15 @@ export default function TipoPromemoriaPage() {
     }
   };
 
-  if (loading) return <div className="flex items-center justify-center min-h-screen">Caricamento tipi promemoria...</div>;
+  if (loading) return <div className="flex min-h-screen items-center justify-center">Caricamento tipi promemoria...</div>;
 
-  return <>
-    <Head><title>Tipi Promemoria | Studio Manager</title></Head>
-    <style jsx global>{`
-      .tipo-promemoria-page .tipo-promemoria-system-badge {
-        display: inline-flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        min-width: 82px !important;
-        min-height: 24px !important;
-        padding: 3px 9px !important;
-        border: 1px solid rgb(15 23 42) !important;
-        border-radius: 7px !important;
-        background: rgb(15 23 42) !important;
-        color: white !important;
-        opacity: 1 !important;
-        visibility: visible !important;
-        font-size: .72rem !important;
-        font-weight: 700 !important;
-        line-height: 1.1 !important;
-        box-shadow: none !important;
-      }
-
-      .tipo-promemoria-page .tipo-promemoria-new-button {
-        background: rgb(3 105 161) !important;
-        border-color: rgb(3 105 161) !important;
-        color: white !important;
-      }
-
-      .tipo-promemoria-page .tipo-promemoria-new-button:hover {
-        background: rgb(2 132 199) !important;
-        border-color: rgb(2 132 199) !important;
-      }
-    `}</style>
-    <div className="tipo-promemoria-page flex-1 p-8"><div className="max-w-6xl mx-auto">
-      <div className="flex justify-between items-center mb-8"><div><h1 className="text-3xl font-bold">Tipi Promemoria</h1><p className="text-muted-foreground mt-2">Catalogo unico dei tipi promemoria di sistema</p></div>
-        {canManageSystem && <Dialog open={showDialog} onOpenChange={(open) => { setShowDialog(open); if (!open) resetForm(); }}><DialogTrigger asChild><Button className="tipo-promemoria-new-button" onClick={resetForm}><Plus className="mr-2 h-4 w-4" />Nuovo Tipo</Button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>{editingTipo ? "Modifica Tipo Promemoria" : "Nuovo Tipo Promemoria"}</DialogTitle></DialogHeader><form onSubmit={handleSubmit} className="space-y-4"><div><Label>Tipo</Label><div className="mt-2"><Badge className="tipo-promemoria-system-badge">S · Sistema</Badge></div></div><div><Label htmlFor="nome">Nome *</Label><Input id="nome" className="mt-1" value={formData.nome} onChange={(e)=>setFormData({...formData,nome:e.target.value})} required /></div><div><Label htmlFor="colore">Colore</Label><div className="flex gap-2"><Input id="colore" type="color" value={formData.colore} onChange={(e)=>setFormData({...formData,colore:e.target.value})} className="w-20 h-10"/><Input value={formData.colore} onChange={(e)=>setFormData({...formData,colore:e.target.value})}/></div></div><div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={()=>setShowDialog(false)}>Annulla</Button><Button className="tipo-promemoria-new-button" type="submit">{editingTipo ? "Aggiorna" : "Crea"}</Button></div></form></DialogContent></Dialog>}
-      </div>
-      <Card><CardHeader><CardTitle>Elenco Tipi Promemoria</CardTitle></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>Colore</TableHead><TableHead>Tipo</TableHead><TableHead>Nome</TableHead>{canManageSystem && <TableHead className="text-right">Azioni</TableHead>}</TableRow></TableHeader><TableBody>{tipi.length===0?<TableRow><TableCell colSpan={canManageSystem?4:3} className="text-center py-8 text-muted-foreground">Nessun tipo di promemoria trovato</TableCell></TableRow>:tipi.map((tipo)=><TableRow key={tipo.id}><TableCell><div className="w-8 h-8 rounded-full border-2" style={{backgroundColor:tipo.colore||"#3B82F6"}}/></TableCell><TableCell><Badge className="tipo-promemoria-system-badge">S · Sistema</Badge></TableCell><TableCell className="font-medium">{tipo.nome}</TableCell>{canManageSystem&&<TableCell className="text-right"><div className="flex justify-end gap-2"><Button variant="ghost" size="icon" onClick={()=>handleEdit(tipo)} title="Modifica"><Edit className="h-4 w-4"/></Button><Button variant="ghost" size="icon" onClick={()=>handleDelete(tipo)} title="Elimina"><Trash2 className="h-4 w-4"/></Button></div></TableCell>}</TableRow>)}</TableBody></Table></CardContent></Card>
-    </div></div>
-  </>;
+  return <><Head><title>Tipi Promemoria | Studio Manager</title></Head><style jsx global>{`
+    .tipo-promemoria-page .tipo-promemoria-system-badge { display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:82px!important;min-height:24px!important;padding:3px 9px!important;border:1px solid rgb(15 23 42)!important;border-radius:7px!important;background:rgb(15 23 42)!important;color:white!important;-webkit-text-fill-color:white!important;opacity:1!important;visibility:visible!important;font-size:.72rem!important;font-weight:700!important;line-height:1.1!important;box-shadow:none!important; }
+    .tipo-promemoria-page .tipo-promemoria-new-button { background:rgb(3 105 161)!important;border-color:rgb(3 105 161)!important;color:white!important;-webkit-text-fill-color:white!important; }
+    .tipo-promemoria-page .tipo-promemoria-actions button { border:1px solid rgb(56 189 248)!important;background:white!important;color:rgb(3 105 161)!important; }
+    .tipo-promemoria-page .tipo-promemoria-actions button:last-child { border-color:rgb(252 165 165)!important;color:rgb(220 38 38)!important; }
+  `}</style><div className="tipo-promemoria-page flex-1 p-8"><div className="mx-auto max-w-6xl">
+    <div className="mb-8 flex items-center justify-between"><div><h1 className="text-3xl font-bold">Tipi Promemoria</h1><p className="mt-2 text-muted-foreground">Catalogo unico dei tipi promemoria di sistema</p></div>{canManageSystem&&<Dialog open={showDialog} onOpenChange={(open)=>{setShowDialog(open);if(!open)resetForm();}}><DialogTrigger asChild><Button className="tipo-promemoria-new-button" onClick={resetForm}><Plus className="mr-2 h-4 w-4"/>Nuovo Tipo</Button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>{editingTipo?"Modifica Tipo Promemoria":"Nuovo Tipo Promemoria"}</DialogTitle></DialogHeader><form onSubmit={handleSubmit} className="space-y-4"><div><Label>Tipo</Label><div className="mt-2"><Badge className="tipo-promemoria-system-badge">S · Sistema</Badge></div></div><div><Label htmlFor="nome">Nome *</Label><Input id="nome" className="mt-1" value={formData.nome} onChange={(e)=>setFormData({...formData,nome:e.target.value})} required/></div><div><Label htmlFor="colore">Colore</Label><div className="flex gap-2"><Input id="colore" type="color" value={formData.colore} onChange={(e)=>setFormData({...formData,colore:e.target.value})} className="h-10 w-20"/><Input value={formData.colore} onChange={(e)=>setFormData({...formData,colore:e.target.value})}/></div></div><div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={()=>setShowDialog(false)}>Annulla</Button><Button className="tipo-promemoria-new-button" type="submit">{editingTipo?"Aggiorna":"Crea"}</Button></div></form></DialogContent></Dialog>}</div>
+    <Card><CardHeader><CardTitle>Elenco Tipi Promemoria</CardTitle></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>Colore</TableHead><TableHead>Tipo</TableHead><TableHead>Nome</TableHead>{canManageSystem&&<TableHead className="text-right">Azioni</TableHead>}</TableRow></TableHeader><TableBody>{tipi.length===0?<TableRow><TableCell colSpan={canManageSystem?4:3} className="py-8 text-center text-muted-foreground">Nessun tipo di promemoria trovato</TableCell></TableRow>:tipi.map((tipo)=><TableRow key={tipo.id}><TableCell><div className="h-8 w-8 rounded-full border-2" style={{backgroundColor:tipo.colore||"#3B82F6"}}/></TableCell><TableCell><Badge className="tipo-promemoria-system-badge">S · Sistema</Badge></TableCell><TableCell className="font-medium">{tipo.nome}</TableCell>{canManageSystem&&<TableCell className="text-right"><div className="tipo-promemoria-actions flex justify-end gap-2"><Button variant="ghost" size="icon" onClick={()=>handleEdit(tipo)} title="Modifica"><Edit className="h-4 w-4"/></Button><Button variant="ghost" size="icon" onClick={()=>handleDelete(tipo)} title="Elimina"><Trash2 className="h-4 w-4"/></Button></div></TableCell>}</TableRow>)}</TableBody></Table></CardContent></Card>
+  </div></div></>;
 }
