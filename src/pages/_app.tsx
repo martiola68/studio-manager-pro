@@ -17,6 +17,7 @@ import { VariazioniMasterGraficaEnhancer } from "@/components/pratiche/Variazion
 import { DocumentiMasterGraficaEnhancer } from "@/components/pratiche/DocumentiMasterGraficaEnhancer";
 import { PayrollMasterGraficaEnhancer } from "@/components/payroll/PayrollMasterGraficaEnhancer";
 import { DipendentiPayrollMasterGraficaEnhancer } from "@/components/payroll/DipendentiPayrollMasterGraficaEnhancer";
+import { RevisioneMasterGraficaEnhancer } from "@/components/revisione/RevisioneMasterGraficaEnhancer";
 import { Toaster } from "@/components/ui/toaster";
 
 import Header from "@/components/Header";
@@ -71,6 +72,7 @@ export default function App({ Component, pageProps }: AppProps) {
   const isPayrollPresenze = router.pathname === "/presenze";
   const isPayrollSmartGroups = router.pathname === "/presenze/smart-gruppi";
   const isPayrollDipendenti = router.pathname === "/payroll/dipendenti";
+  const isMasterGraficaRevisione = router.pathname === "/revisione-controllo" || router.pathname.startsWith("/revisione-controllo/");
   const isFixedViewportPage = isOperationalScadenzario || isMasterGraficaPromemoria || isMasterGraficaAgenda || isMasterGraficaCassettiFiscali || isMasterGraficaAccessoPortali || isMasterGraficaComunicazioniClienti || isMasterGraficaComunicazioniInterne || isMasterGraficaRubrica || isMasterGraficaVariazioni || isMasterGraficaPayroll;
 
   useEffect(() => {
@@ -138,6 +140,7 @@ export default function App({ Component, pageProps }: AppProps) {
     isPayrollPresenze ? "payroll-presenze-page" : "",
     isPayrollSmartGroups ? "payroll-smart-groups-page" : "",
     isPayrollDipendenti ? "payroll-dipendenti-page" : "",
+    isMasterGraficaRevisione ? "revisione-master-page" : "",
     router.pathname === "/clienti/organi-sociali" ? "organi-sociali-page" : "",
     router.pathname === "/microsoft365" ? "microsoft365-page" : "",
     isOperationalScadenzario ? "!min-h-0 !overflow-hidden" : "",
@@ -181,6 +184,7 @@ export default function App({ Component, pageProps }: AppProps) {
         {isMasterGraficaDocumenti && <DocumentiMasterGraficaEnhancer />}
         {isMasterGraficaPayroll && <PayrollMasterGraficaEnhancer />}
         {isPayrollDipendenti && <DipendentiPayrollMasterGraficaEnhancer />}
+        {isMasterGraficaRevisione && <RevisioneMasterGraficaEnhancer />}
         {isPublicPage ? (
           <>
             {pageContent}
