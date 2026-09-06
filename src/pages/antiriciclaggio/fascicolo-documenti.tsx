@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { getStudioId } from "@/services/getStudioId";
-import { FileText, Image as ImageIcon, File } from "lucide-react";
+import { FileText, Image as ImageIcon, File, Trash2 } from "lucide-react";
 
 type ClienteRow = {
   id: string;
@@ -1094,28 +1094,31 @@ useEffect(() => {
                     </td>
 
                     <td className="p-3">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => void handleApriDocumento(doc)}
-                          disabled={isWorking}
-                          className="rounded-lg border border-blue-200 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-50 disabled:opacity-60"
-                        >
-                          Apri
-                        </button>
-
-                        {canDelete && (
-                          <button
-                            type="button"
-                            onClick={() => void handleEliminaDocumento(doc)}
-                            disabled={isWorking}
-                            className="rounded-lg border border-red-200 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-60"
-                          >
-                            Elimina
-                          </button>
-                        )}
-                      </div>
-                    </td>
+            <div className="grid grid-cols-[64px_34px] items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => void handleApriDocumento(doc)}
+                disabled={isWorking}
+                className="h-8 w-16 rounded-lg border border-blue-200 px-3 text-sm font-medium text-blue-700 disabled:opacity-60"
+              >
+                Apri
+              </button>
+              {canDelete ? (
+                <button
+                  type="button"
+                  onClick={() => void handleEliminaDocumento(doc)}
+                  disabled={isWorking}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-red-200 text-red-600 disabled:opacity-60"
+                  title="Elimina documento"
+                  aria-label="Elimina documento"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              ) : (
+                <span className="block h-8 w-8" aria-hidden="true" />
+              )}
+            </div>
+          </td>
                   </tr>
                 );
               })
