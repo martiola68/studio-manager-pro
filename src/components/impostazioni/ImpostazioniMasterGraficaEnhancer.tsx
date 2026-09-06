@@ -184,7 +184,6 @@ export function ImpostazioniMasterGraficaEnhancer() {
         border-color: rgb(125 211 252) !important;
       }
 
-      /* Badge di sistema: non devono essere sbiancati dalla normalizzazione delle card. */
       .impostazioni-master-page [class*="bg-primary"][class*="text-primary-foreground"],
       .impostazioni-master-page [class*="bg-slate-900"],
       .impostazioni-master-page [class*="bg-gray-900"],
@@ -206,9 +205,7 @@ export function ImpostazioniMasterGraficaEnhancer() {
         color: rgb(29 78 216) !important;
       }
 
-      /* Switch sempre leggibili, con stato evidente. */
       .impostazioni-master-page [role="switch"] {
-        position: relative !important;
         min-width: 44px !important;
         min-height: 24px !important;
         border: 1px solid rgb(148 163 184) !important;
@@ -229,7 +226,6 @@ export function ImpostazioniMasterGraficaEnhancer() {
         accent-color: rgb(3 105 161) !important;
       }
 
-      /* Gestione scadenzari: il pannello di generazione resta semanticamente verde. */
       .impostazioni-master-page [class*="rounded-lg"][class*="border"]:has([class*="text-green-700"]) {
         background: rgb(240 253 244) !important;
         border-color: rgb(134 239 172) !important;
@@ -241,64 +237,66 @@ export function ImpostazioniMasterGraficaEnhancer() {
         border-bottom: 1px solid rgb(187 247 208) !important;
       }
 
-      /* Dati Studio: intestazioni sezione evidenziate come vere fasce di card. */
+      /* Dati Studio: colore solo sull'etichetta della sezione, non sull'intera card. */
       .impostazioni-master-page [class*="border-[#0d6f9f]"] > div:first-child,
       .impostazioni-master-page [class*="border-[#015EB5]"] > div:first-child,
       .impostazioni-master-page [class*="[&>div]:border-2"] > div > div:first-child {
-        background: rgb(224 242 254) !important;
-        border-bottom: 1px solid rgb(125 211 252) !important;
-        color: rgb(3 105 161) !important;
+        background: white !important;
+        border-bottom: 1px solid rgb(186 230 253) !important;
       }
 
       .impostazioni-master-page [class*="border-[#0d6f9f]"] > div:first-child h3,
       .impostazioni-master-page [class*="border-[#015EB5]"] > div:first-child h3,
       .impostazioni-master-page [class*="[&>div]:border-2"] > div > div:first-child h3 {
-        color: rgb(15 23 42) !important;
+        display: inline-flex !important;
+        width: fit-content !important;
+        align-items: center !important;
+        gap: 6px !important;
+        padding: 5px 10px !important;
+        border-radius: 6px !important;
+        background: rgb(224 242 254) !important;
+        color: rgb(3 105 161) !important;
         font-weight: 700 !important;
       }
 
-      /* Il blocco Protezione aveva due intestazioni: ne mostriamo una sola. */
+      /* Protezione dati sensibili: una sola intestazione. */
       .impostazioni-master-page [class*="border-[#015EB5]"]:has([role="switch"]) > div:nth-child(2) {
         display: none !important;
       }
 
-      /* Abilita protezione diventa visivamente un pulsante d'azione esplicito. */
-      .impostazioni-master-page [class*="border-[#015EB5]"]:has([role="switch"]) [role="switch"] {
-        width: auto !important;
-        min-width: 150px !important;
-        height: 34px !important;
-        padding: 0 12px !important;
-        border-radius: 7px !important;
-        color: white !important;
-        font-size: 0 !important;
-        font-weight: 700 !important;
+      /* Il link/etichetta "Abilita Protezione" diventa il pulsante; lo switch a destra resta nascosto. */
+      .impostazioni-master-page [class*="border-[#015EB5]"]:has([role="switch"]) label[for="protezione"] {
         display: inline-flex !important;
+        width: fit-content !important;
+        min-height: 32px !important;
         align-items: center !important;
         justify-content: center !important;
-      }
-
-      .impostazioni-master-page [class*="border-[#015EB5]"]:has([role="switch"]) [role="switch"] > span {
-        display: none !important;
-      }
-
-      .impostazioni-master-page [class*="border-[#015EB5]"]:has([role="switch"]) [role="switch"]::after {
-        content: "Attiva protezione";
-        font-size: .76rem;
-        color: white;
-      }
-
-      .impostazioni-master-page [class*="border-[#015EB5]"]:has([role="switch"]) [role="switch"][data-state="checked"]::after {
-        content: "Disattiva protezione";
-      }
-
-      .impostazioni-master-page [class*="border-[#015EB5]"]:has([role="switch"]) [role="switch"][data-state="unchecked"] {
+        padding: 0 11px !important;
+        border: 1px solid rgb(3 105 161) !important;
+        border-radius: 7px !important;
         background: rgb(3 105 161) !important;
-        border-color: rgb(3 105 161) !important;
+        color: white !important;
+        font-size: .76rem !important;
+        font-weight: 700 !important;
+        cursor: pointer !important;
       }
 
-      .impostazioni-master-page [class*="border-[#015EB5]"]:has([role="switch"]) [role="switch"][data-state="checked"] {
-        background: rgb(22 163 74) !important;
-        border-color: rgb(22 163 74) !important;
+      .impostazioni-master-page [class*="border-[#015EB5]"]:has([role="switch"]) label[for="protezione"]:hover {
+        background: rgb(2 132 199) !important;
+        border-color: rgb(2 132 199) !important;
+      }
+
+      .impostazioni-master-page [class*="border-[#015EB5]"]:has([role="switch"]) [role="switch"] {
+        position: absolute !important;
+        width: 1px !important;
+        min-width: 1px !important;
+        height: 1px !important;
+        min-height: 1px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        overflow: hidden !important;
       }
 
       .impostazioni-master-page [class*="shadow-lg"],
