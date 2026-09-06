@@ -39,6 +39,12 @@ const PAYROLL_MASTER_ROUTES = new Set([
   "/payroll/richieste-area-cliente", "/payroll/dipendenti", "/presenze/smart-gruppi", "/payroll/qualifiche",
 ]);
 
+const CONTENZIOSO_SCROLL_ROUTES = new Set([
+  "/contenzioso/regole-scadenze",
+  "/contenzioso/sospensioni",
+  "/contenzioso/tipi-atto",
+]);
+
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
   const [scadenzariCleanupPending, setScadenzariCleanupPending] = useState(false);
@@ -62,7 +68,8 @@ export default function App({ Component, pageProps }: AppProps) {
   const isMasterGraficaRevisione = router.pathname === "/revisione-controllo" || router.pathname.startsWith("/revisione-controllo/");
   const isMasterGraficaControlloGestione = router.pathname === "/controllo-gestione" || router.pathname.startsWith("/controllo-gestione/");
   const isMasterGraficaContenzioso = router.pathname === "/contenzioso" || router.pathname.startsWith("/contenzioso/");
-  const isFixedViewportPage = isOperationalScadenzario || isMasterGraficaPromemoria || isMasterGraficaAgenda || isMasterGraficaCassettiFiscali || isMasterGraficaAccessoPortali || isMasterGraficaComunicazioniClienti || isMasterGraficaComunicazioniInterne || isMasterGraficaRubrica || isMasterGraficaVariazioni || isMasterGraficaPayroll;
+  const isContenziosoScrollPage = CONTENZIOSO_SCROLL_ROUTES.has(router.pathname);
+  const isFixedViewportPage = isOperationalScadenzario || isMasterGraficaPromemoria || isMasterGraficaAgenda || isMasterGraficaCassettiFiscali || isMasterGraficaAccessoPortali || isMasterGraficaComunicazioniClienti || isMasterGraficaComunicazioniInterne || isMasterGraficaRubrica || isMasterGraficaVariazioni || isMasterGraficaPayroll || isContenziosoScrollPage;
 
   useEffect(() => {
     document.body.classList.toggle("master-grafica-promemoria", isMasterGraficaPromemoria);
@@ -113,6 +120,7 @@ export default function App({ Component, pageProps }: AppProps) {
     isMasterGraficaRevisione ? "revisione-master-page" : "",
     isMasterGraficaControlloGestione ? "controllo-gestione-master-page" : "",
     isMasterGraficaContenzioso ? "contenzioso-master-page" : "",
+    isContenziosoScrollPage ? "contenzioso-scroll-page !min-h-0 !overflow-hidden" : "",
     router.pathname === "/clienti/organi-sociali" ? "organi-sociali-page" : "",
     router.pathname === "/microsoft365" ? "microsoft365-page" : "",
     isOperationalScadenzario ? "!min-h-0 !overflow-hidden" : "",
