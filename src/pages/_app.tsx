@@ -20,6 +20,7 @@ import { DipendentiPayrollMasterGraficaEnhancer } from "@/components/payroll/Dip
 import { RevisioneMasterGraficaEnhancer } from "@/components/revisione/RevisioneMasterGraficaEnhancer";
 import { ControlloGestioneMasterGraficaEnhancer } from "@/components/controllo-gestione/ControlloGestioneMasterGraficaEnhancer";
 import { ContenziosoMasterGraficaEnhancer } from "@/components/contenzioso/ContenziosoMasterGraficaEnhancer";
+import { AntiriciclaggioMasterGraficaEnhancer } from "@/components/antiriciclaggio/AntiriciclaggioMasterGraficaEnhancer";
 import { Toaster } from "@/components/ui/toaster";
 
 import Header from "@/components/Header";
@@ -69,7 +70,10 @@ export default function App({ Component, pageProps }: AppProps) {
   const isMasterGraficaControlloGestione = router.pathname === "/controllo-gestione" || router.pathname.startsWith("/controllo-gestione/");
   const isMasterGraficaContenzioso = router.pathname === "/contenzioso" || router.pathname.startsWith("/contenzioso/");
   const isContenziosoScrollPage = CONTENZIOSO_SCROLL_ROUTES.has(router.pathname);
-  const isFixedViewportPage = isOperationalScadenzario || isMasterGraficaPromemoria || isMasterGraficaAgenda || isMasterGraficaCassettiFiscali || isMasterGraficaAccessoPortali || isMasterGraficaComunicazioniClienti || isMasterGraficaComunicazioniInterne || isMasterGraficaRubrica || isMasterGraficaVariazioni || isMasterGraficaPayroll || isContenziosoScrollPage;
+  const isMasterGraficaAntiriciclaggio = router.pathname === "/antiriciclaggio" || router.pathname === "/antiriciclaggio/fascicolo-documenti";
+  const isAntiriciclaggioElenco = router.pathname === "/antiriciclaggio";
+  const isAntiriciclaggioFascicolo = router.pathname === "/antiriciclaggio/fascicolo-documenti";
+  const isFixedViewportPage = isOperationalScadenzario || isMasterGraficaPromemoria || isMasterGraficaAgenda || isMasterGraficaCassettiFiscali || isMasterGraficaAccessoPortali || isMasterGraficaComunicazioniClienti || isMasterGraficaComunicazioniInterne || isMasterGraficaRubrica || isMasterGraficaVariazioni || isMasterGraficaPayroll || isContenziosoScrollPage || isMasterGraficaAntiriciclaggio;
 
   useEffect(() => {
     document.body.classList.toggle("master-grafica-promemoria", isMasterGraficaPromemoria);
@@ -121,6 +125,9 @@ export default function App({ Component, pageProps }: AppProps) {
     isMasterGraficaControlloGestione ? "controllo-gestione-master-page" : "",
     isMasterGraficaContenzioso ? "contenzioso-master-page" : "",
     isContenziosoScrollPage ? "contenzioso-scroll-page !min-h-0 !overflow-hidden" : "",
+    isMasterGraficaAntiriciclaggio ? "antiriciclaggio-master-page !min-h-0 !overflow-hidden" : "",
+    isAntiriciclaggioElenco ? "antiriciclaggio-elenco-page" : "",
+    isAntiriciclaggioFascicolo ? "antiriciclaggio-fascicolo-page" : "",
     router.pathname === "/clienti/organi-sociali" ? "organi-sociali-page" : "",
     router.pathname === "/microsoft365" ? "microsoft365-page" : "",
     isOperationalScadenzario ? "!min-h-0 !overflow-hidden" : "",
@@ -160,6 +167,7 @@ export default function App({ Component, pageProps }: AppProps) {
         {isMasterGraficaRevisione && <RevisioneMasterGraficaEnhancer />}
         {isMasterGraficaControlloGestione && <ControlloGestioneMasterGraficaEnhancer />}
         {isMasterGraficaContenzioso && <ContenziosoMasterGraficaEnhancer />}
+        {isMasterGraficaAntiriciclaggio && <AntiriciclaggioMasterGraficaEnhancer />}
         {isPublicPage ? (
           <>{pageContent}<Toaster /></>
         ) : (
