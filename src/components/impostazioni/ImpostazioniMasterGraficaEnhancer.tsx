@@ -237,12 +237,12 @@ export function ImpostazioniMasterGraficaEnhancer() {
         border-bottom: 1px solid rgb(187 247 208) !important;
       }
 
-      /* Dati Studio: colore solo sull'etichetta della sezione, non sull'intera card. */
+      /* Dati Studio: titoli come pill/pulsanti MASTER_ANAGRAFICA, senza riga centrale. */
       .impostazioni-master-page [class*="border-[#0d6f9f]"] > div:first-child,
       .impostazioni-master-page [class*="border-[#015EB5]"] > div:first-child,
       .impostazioni-master-page [class*="[&>div]:border-2"] > div > div:first-child {
         background: white !important;
-        border-bottom: 1px solid rgb(186 230 253) !important;
+        border-bottom: 0 !important;
       }
 
       .impostazioni-master-page [class*="border-[#0d6f9f]"] > div:first-child h3,
@@ -252,20 +252,31 @@ export function ImpostazioniMasterGraficaEnhancer() {
         width: fit-content !important;
         align-items: center !important;
         gap: 6px !important;
-        padding: 5px 10px !important;
-        border-radius: 6px !important;
-        background: rgb(224 242 254) !important;
-        color: rgb(3 105 161) !important;
+        padding: 6px 11px !important;
+        border-radius: 7px !important;
+        background: rgb(3 105 161) !important;
+        border: 1px solid rgb(3 105 161) !important;
+        color: white !important;
         font-weight: 700 !important;
       }
 
-      /* Protezione dati sensibili: una sola intestazione. */
-      .impostazioni-master-page [class*="border-[#015EB5]"]:has([role="switch"]) > div:nth-child(2) {
+      /* Protezione dati sensibili: una sola intestazione e card leggermente più alta. */
+      .impostazioni-master-page [class*="border-[#015EB5]"]:has(label[for="protezione"]) {
+        min-height: 190px !important;
+      }
+
+      .impostazioni-master-page [class*="border-[#015EB5]"]:has(label[for="protezione"]) > div:nth-child(2) {
         display: none !important;
       }
 
-      /* Il link/etichetta "Abilita Protezione" diventa il pulsante; lo switch a destra resta nascosto. */
-      .impostazioni-master-page [class*="border-[#015EB5]"]:has([role="switch"]) label[for="protezione"] {
+      .impostazioni-master-page [class*="border-[#015EB5]"]:has(label[for="protezione"]) > div:last-child {
+        min-height: 112px !important;
+        padding-top: 18px !important;
+        padding-bottom: 20px !important;
+      }
+
+      /* "Abilita Protezione" è l'unico comando che apre la configurazione. */
+      .impostazioni-master-page [class*="border-[#015EB5]"]:has(label[for="protezione"]) label[for="protezione"] {
         display: inline-flex !important;
         width: fit-content !important;
         min-height: 32px !important;
@@ -281,12 +292,12 @@ export function ImpostazioniMasterGraficaEnhancer() {
         cursor: pointer !important;
       }
 
-      .impostazioni-master-page [class*="border-[#015EB5]"]:has([role="switch"]) label[for="protezione"]:hover {
+      .impostazioni-master-page [class*="border-[#015EB5]"]:has(label[for="protezione"]) label[for="protezione"]:hover {
         background: rgb(2 132 199) !important;
         border-color: rgb(2 132 199) !important;
       }
 
-      .impostazioni-master-page [class*="border-[#015EB5]"]:has([role="switch"]) [role="switch"] {
+      .impostazioni-master-page [class*="border-[#015EB5]"]:has(label[for="protezione"]) [role="switch"] {
         position: absolute !important;
         width: 1px !important;
         min-width: 1px !important;
@@ -297,6 +308,11 @@ export function ImpostazioniMasterGraficaEnhancer() {
         opacity: 0 !important;
         pointer-events: none !important;
         overflow: hidden !important;
+      }
+
+      /* Se manca la Master Password, il secondo pulsante equivalente è ridondante. */
+      .impostazioni-master-page [class*="border-[#015EB5]"]:has(label[for="protezione"]) > div:last-child > button.w-full {
+        display: none !important;
       }
 
       .impostazioni-master-page [class*="shadow-lg"],
