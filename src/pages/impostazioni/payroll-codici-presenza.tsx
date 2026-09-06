@@ -48,13 +48,53 @@ export default function PayrollCodiciPresenzaPage() {
 
   return <>
     <Head><title>Payroll Codici Presenza</title></Head>
-    <div className="mx-auto flex max-w-[1300px] flex-col gap-4 p-6">
+    <style jsx global>{`
+      .impostazioni-master-page > div.payroll-codici-page {
+        height: 100% !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+      }
+
+      .impostazioni-master-page .payroll-codici-page > .payroll-codici-card {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        background: white !important;
+        border: 1px solid rgb(125 211 252) !important;
+        border-left: 1px solid rgb(125 211 252) !important;
+        box-shadow: 0 8px 20px rgb(15 23 42 / .055) !important;
+      }
+
+      .impostazioni-master-page .payroll-codici-page > .payroll-codici-card > div:first-child {
+        flex: 0 0 auto !important;
+        background: white !important;
+        border-bottom: 0 !important;
+      }
+
+      .impostazioni-master-page .payroll-codici-page > .payroll-codici-card > .payroll-codici-content {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+      }
+
+      .impostazioni-master-page .payroll-codici-page .payroll-codici-scroll {
+        height: 100% !important;
+        max-height: none !important;
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        overflow-x: auto !important;
+        scrollbar-gutter: stable !important;
+        background: white !important;
+      }
+    `}</style>
+    <div className="payroll-codici-page mx-auto flex h-full min-h-0 max-w-[1300px] flex-col gap-4 overflow-hidden p-6">
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between"><div><h1 className="text-2xl font-semibold tracking-tight">Payroll Codici Presenza</h1><p className="text-sm text-muted-foreground">Gestione dei codici usati nelle presenze dipendenti.</p></div><div className="flex gap-2">{canEdit === true && <Button type="button" onClick={startNew}>+ Aggiungi codice</Button>}<Button variant="outline" onClick={() => window.history.back()}>Torna indietro</Button></div></div>
       {canEdit === false && <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">Archivio in sola lettura. Inserimento, modifica, attivazione e cancellazione sono riservati all’Amministratore di Sistema autorizzato.</div>}
       {error && <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</div>}{success && <div className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">{success}</div>}
       {canEdit === true && showForm && <Card><CardHeader className="pb-3"><CardTitle className="text-base">{form.originalCodice ? 'Modifica codice presenza' : 'Aggiungi codice presenza'}</CardTitle></CardHeader><CardContent><form onSubmit={saveItem} className="grid gap-3 md:grid-cols-[140px_1fr_160px_120px_120px_auto]"><div><label className="mb-1 block text-xs font-medium">Codice</label><input className="h-10 w-full rounded-md border px-3 text-sm" value={form.codice} onChange={(e) => setForm((p) => ({ ...p, codice: e.target.value }))} placeholder="Es. Pp" /></div><div><label className="mb-1 block text-xs font-medium">Descrizione</label><input className="h-10 w-full rounded-md border px-3 text-sm" value={form.descrizione} onChange={(e) => setForm((p) => ({ ...p, descrizione: e.target.value }))} placeholder="Es. Presenza ufficio" /></div><div><label className="mb-1 block text-xs font-medium">Tipo</label><select className="h-10 w-full rounded-md border px-3 text-sm" value={form.tipo} onChange={(e) => setForm((p) => ({ ...p, tipo: e.target.value as TipoCodice }))}>{tipiCodice.map((tipo) => <option key={tipo} value={tipo}>{tipo}</option>)}</select></div><div><label className="mb-1 block text-xs font-medium">Ordine</label><input type="number" className="h-10 w-full rounded-md border px-3 text-sm" value={form.ordine} onChange={(e) => setForm((p) => ({ ...p, ordine: e.target.value }))} /></div><div><label className="mb-1 block text-xs font-medium">Attivo</label><select className="h-10 w-full rounded-md border px-3 text-sm" value={form.attivo ? 'true' : 'false'} onChange={(e) => setForm((p) => ({ ...p, attivo: e.target.value === 'true' }))}><option value="true">Sì</option><option value="false">No</option></select></div><div className="flex items-end gap-2"><Button type="submit" disabled={saving}>{saving ? 'Salvo...' : form.originalCodice ? 'Aggiorna' : 'Inserisci'}</Button><Button type="button" variant="outline" disabled={saving} onClick={resetForm}>Annulla</Button></div></form></CardContent></Card>}
-      <Card className="min-h-0"><CardHeader className="sticky top-0 z-20 bg-white pb-3"><div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between"><CardTitle className="text-base">Elenco codici presenza</CardTitle><div className="flex flex-wrap items-center gap-2"><select className="h-9 rounded-md border px-3 text-sm" value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value as 'tutti' | TipoCodice)}><option value="tutti">Tutti i tipi</option>{tipiCodice.map((tipo) => <option key={tipo} value={tipo}>{tipo}</option>)}</select><select className="h-9 rounded-md border px-3 text-sm" value={filtroAttivo} onChange={(e) => setFiltroAttivo(e.target.value as 'tutti' | 'attivi' | 'disattivi')}><option value="tutti">Tutti</option><option value="attivi">Solo attivi</option><option value="disattivi">Solo disattivi</option></select></div></div></CardHeader><CardContent>
-        {loading ? <div className="py-8 text-center text-sm text-muted-foreground">Caricamento codici...</div> : filteredItems.length === 0 ? <div className="rounded-md border bg-gray-50 px-4 py-6 text-center text-sm text-muted-foreground">Nessun codice trovato.</div> : <div className="max-h-[calc(100vh-285px)] overflow-auto rounded-md border"><table className="w-full min-w-[800px] text-sm"><thead className="sticky top-0 z-10 bg-gray-50 text-xs text-muted-foreground"><tr><th className="px-3 py-2 text-left">Ordine</th><th className="px-3 py-2 text-left">Codice</th><th className="px-3 py-2 text-left">Descrizione</th><th className="px-3 py-2 text-left">Tipo</th><th className="px-3 py-2 text-left">Attivo</th>{canEdit === true && <th className="px-3 py-2 text-right">Azioni</th>}</tr></thead><tbody>{filteredItems.map((item) => <tr key={item.codice} className="border-t"><td className="px-3 py-2">{item.ordine}</td><td className="px-3 py-2 font-semibold">{item.codice}</td><td className="px-3 py-2">{item.descrizione}</td><td className="px-3 py-2"><span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${getTipoBadgeClass(item.tipo)}`}>{item.tipo}</span></td><td className="px-3 py-2">{item.attivo ? <span className="text-green-700">Sì</span> : <span className="text-red-700">No</span>}</td>{canEdit === true && <td className="px-3 py-2"><div className="flex justify-end gap-2"><Button type="button" variant="outline" className="px-3 py-1 text-xs" disabled={saving} onClick={() => editItem(item)}>Modifica</Button><Button type="button" variant="outline" className="px-3 py-1 text-xs" disabled={saving} onClick={() => toggleAttivo(item)}>{item.attivo ? 'Disattiva' : 'Attiva'}</Button><Button type="button" variant="destructive" className="px-3 py-1 text-xs" disabled={saving} onClick={() => deleteItem(item)}>Elimina</Button></div></td>}</tr>)}</tbody></table></div>}
+      <Card className="payroll-codici-card"><CardHeader className="sticky top-0 z-20 bg-white pb-3"><div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between"><CardTitle className="text-base">Elenco codici presenza</CardTitle><div className="flex flex-wrap items-center gap-2"><select className="h-9 rounded-md border px-3 text-sm" value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value as 'tutti' | TipoCodice)}><option value="tutti">Tutti i tipi</option>{tipiCodice.map((tipo) => <option key={tipo} value={tipo}>{tipo}</option>)}</select><select className="h-9 rounded-md border px-3 text-sm" value={filtroAttivo} onChange={(e) => setFiltroAttivo(e.target.value as 'tutti' | 'attivi' | 'disattivi')}><option value="tutti">Tutti</option><option value="attivi">Solo attivi</option><option value="disattivi">Solo disattivi</option></select></div></div></CardHeader><CardContent className="payroll-codici-content">
+        {loading ? <div className="py-8 text-center text-sm text-muted-foreground">Caricamento codici...</div> : filteredItems.length === 0 ? <div className="rounded-md border bg-gray-50 px-4 py-6 text-center text-sm text-muted-foreground">Nessun codice trovato.</div> : <div className="payroll-codici-scroll rounded-md border"><table className="w-full min-w-[800px] text-sm"><thead className="sticky top-0 z-10 bg-gray-50 text-xs text-muted-foreground"><tr><th className="px-3 py-2 text-left">Ordine</th><th className="px-3 py-2 text-left">Codice</th><th className="px-3 py-2 text-left">Descrizione</th><th className="px-3 py-2 text-left">Tipo</th><th className="px-3 py-2 text-left">Attivo</th>{canEdit === true && <th className="px-3 py-2 text-right">Azioni</th>}</tr></thead><tbody>{filteredItems.map((item) => <tr key={item.codice} className="border-t"><td className="px-3 py-2">{item.ordine}</td><td className="px-3 py-2 font-semibold">{item.codice}</td><td className="px-3 py-2">{item.descrizione}</td><td className="px-3 py-2"><span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${getTipoBadgeClass(item.tipo)}`}>{item.tipo}</span></td><td className="px-3 py-2">{item.attivo ? <span className="text-green-700">Sì</span> : <span className="text-red-700">No</span>}</td>{canEdit === true && <td className="px-3 py-2"><div className="flex justify-end gap-2"><Button type="button" variant="outline" className="px-3 py-1 text-xs" disabled={saving} onClick={() => editItem(item)}>Modifica</Button><Button type="button" variant="outline" className="px-3 py-1 text-xs" disabled={saving} onClick={() => toggleAttivo(item)}>{item.attivo ? 'Disattiva' : 'Attiva'}</Button><Button type="button" variant="destructive" className="px-3 py-1 text-xs" disabled={saving} onClick={() => deleteItem(item)}>Elimina</Button></div></td>}</tr>)}</tbody></table></div>}
       </CardContent></Card>
     </div>
   </>;
