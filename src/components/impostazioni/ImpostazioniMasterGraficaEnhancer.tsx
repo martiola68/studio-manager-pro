@@ -237,7 +237,6 @@ export function ImpostazioniMasterGraficaEnhancer() {
         border-bottom: 1px solid rgb(187 247 208) !important;
       }
 
-      /* Dati Studio: titoli come pill/pulsanti MASTER_ANAGRAFICA, senza riga centrale. */
       .impostazioni-master-page [class*="border-[#0d6f9f]"] > div:first-child,
       .impostazioni-master-page [class*="border-[#015EB5]"] > div:first-child,
       .impostazioni-master-page [class*="[&>div]:border-2"] > div > div:first-child {
@@ -260,7 +259,6 @@ export function ImpostazioniMasterGraficaEnhancer() {
         font-weight: 700 !important;
       }
 
-      /* Protezione dati sensibili: una sola intestazione e card leggermente più alta. */
       .impostazioni-master-page [class*="border-[#015EB5]"]:has(label[for="protezione"]) {
         min-height: 190px !important;
       }
@@ -275,7 +273,6 @@ export function ImpostazioniMasterGraficaEnhancer() {
         padding-bottom: 20px !important;
       }
 
-      /* "Abilita Protezione" è l'unico comando che apre la configurazione. */
       .impostazioni-master-page [class*="border-[#015EB5]"]:has(label[for="protezione"]) label[for="protezione"] {
         display: inline-flex !important;
         width: fit-content !important;
@@ -310,7 +307,6 @@ export function ImpostazioniMasterGraficaEnhancer() {
         overflow: hidden !important;
       }
 
-      /* Se manca la Master Password, il secondo pulsante equivalente è ridondante. */
       .impostazioni-master-page [class*="border-[#015EB5]"]:has(label[for="protezione"]) > div:last-child > button.w-full {
         display: none !important;
       }
@@ -327,8 +323,11 @@ export function ImpostazioniMasterGraficaEnhancer() {
         border-color: rgb(186 230 253) !important;
       }
 
-      .impostazioni-master-page button[class*="bg-red"],
-      .impostazioni-master-page button[class*="text-red"] {
+      .impostazioni-master-page button[class*="bg-red"] {
+        color: white !important;
+      }
+
+      .impostazioni-master-page button[class*="text-red"]:not([class*="bg-red"]) {
         color: rgb(220 38 38) !important;
       }
     `}</style>
