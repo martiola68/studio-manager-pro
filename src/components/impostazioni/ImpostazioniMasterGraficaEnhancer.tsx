@@ -226,7 +226,6 @@ export function ImpostazioniMasterGraficaEnhancer() {
         accent-color: rgb(3 105 161) !important;
       }
 
-      /* Card Genera Nuovi Scadenzari: contenitore principale bianco, colore solo nella card informativa interna. */
       .impostazioni-master-page [class*="rounded-lg"][class*="border"]:not(.payroll-codici-card):has([class*="text-green-700"]) {
         background: white !important;
         border-color: rgb(134 239 172) !important;
@@ -330,6 +329,61 @@ export function ImpostazioniMasterGraficaEnhancer() {
 
       .impostazioni-master-page button[class*="text-red"]:not([class*="bg-red"]) {
         color: rgb(220 38 38) !important;
+      }
+
+      /* FIX SPECIFICO GESTIONE TIPI SCADENZE: prevale sulla MASTER_GRAFICA generale. */
+      .impostazioni-master-page .tipi-scadenze-page .tipo-origine-system,
+      .impostazioni-master-page .tipi-scadenze-page span.tipo-origine-system {
+        background: rgb(15 23 42) !important;
+        border-color: rgb(15 23 42) !important;
+        color: white !important;
+        opacity: 1 !important;
+      }
+
+      .impostazioni-master-page .tipi-scadenze-page .tipo-origine-personal,
+      .impostazioni-master-page .tipi-scadenze-page span.tipo-origine-personal {
+        background: rgb(254 243 199) !important;
+        border-color: rgb(252 211 77) !important;
+        color: rgb(120 53 15) !important;
+        opacity: 1 !important;
+      }
+
+      .impostazioni-master-page .tipi-scadenze-page button[class*="bg-primary"][class*="text-primary-foreground"],
+      .impostazioni-master-page .tipi-scadenze-page button[class*="bg-primary"] {
+        background: rgb(3 105 161) !important;
+        border-color: rgb(3 105 161) !important;
+        color: white !important;
+      }
+
+      .impostazioni-master-page .tipi-scadenze-page button[class*="bg-primary"][class*="text-primary-foreground"]:hover,
+      .impostazioni-master-page .tipi-scadenze-page button[class*="bg-primary"]:hover {
+        background: rgb(2 132 199) !important;
+        border-color: rgb(2 132 199) !important;
+      }
+
+      .impostazioni-master-page .tipi-scadenze-page [role="switch"] {
+        width: 42px !important;
+        min-width: 42px !important;
+        height: 24px !important;
+        min-height: 24px !important;
+        border: 1px solid rgb(148 163 184) !important;
+        background: rgb(203 213 225) !important;
+        opacity: 1 !important;
+      }
+
+      .impostazioni-master-page .tipi-scadenze-page [role="switch"][data-state="checked"] {
+        background: rgb(3 105 161) !important;
+        border-color: rgb(3 105 161) !important;
+      }
+
+      .impostazioni-master-page .tipi-scadenze-page [role="switch"] > span {
+        display: block !important;
+        width: 18px !important;
+        height: 18px !important;
+        border-radius: 9999px !important;
+        background: white !important;
+        opacity: 1 !important;
+        box-shadow: 0 1px 2px rgb(15 23 42 / .25) !important;
       }
     `}</style>
   );
