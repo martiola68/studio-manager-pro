@@ -103,6 +103,40 @@ export function PayrollMasterGraficaEnhancer() {
         scrollbar-gutter: stable !important;
       }
 
+      /* Presenze mensili: usa tutta l'altezza residua come gli scadenzari */
+      .payroll-presenze-page > div.mx-auto.flex.max-w-\[1800px\].flex-col.gap-4.p-4 {
+        height: 100% !important;
+        min-height: 0 !important;
+        max-width: none !important;
+        flex: 1 1 auto !important;
+        overflow: hidden !important;
+      }
+
+      .payroll-presenze-page > div.mx-auto.flex.max-w-\[1800px\].flex-col.gap-4.p-4 > div:last-child {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+      }
+
+      .payroll-presenze-page > div.mx-auto.flex.max-w-\[1800px\].flex-col.gap-4.p-4 > div:last-child > div:last-child {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+      }
+
+      .payroll-presenze-page .max-h-\[320px\].w-full.overflow-auto.rounded-md.border {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        height: 100% !important;
+        max-height: none !important;
+        overflow: auto !important;
+        scrollbar-gutter: stable !important;
+      }
+
       .payroll-master-page [data-radix-scroll-area-viewport],
       .payroll-master-page [class*="overflow-y-auto"],
       .payroll-master-page [class*="overflow-auto"] {
