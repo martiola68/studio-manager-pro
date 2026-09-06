@@ -417,6 +417,61 @@ export function AnagraficheMasterGraficaEnhancer() {
         .flex.flex-wrap.gap-2.pt-1.text-xs.text-muted-foreground {
         display: none !important;
       }
+
+      /* MICROSOFT 365: scroll verticale ripristinato e card stile dashboard/gruppi. */
+      .microsoft365-page > div {
+        height: 100% !important;
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        padding: 12px 4px 18px !important;
+        scrollbar-gutter: stable !important;
+      }
+
+      .microsoft365-page > div > .rounded-xl.border,
+      .microsoft365-page > div > [class*="rounded-xl"][class*="border"] {
+        border: 1px solid rgb(125 211 252) !important;
+        border-left: 3px solid rgb(14 165 233) !important;
+        border-radius: 10px !important;
+        background: white !important;
+        box-shadow: 0 8px 22px rgb(15 23 42 / 0.06) !important;
+      }
+
+      .microsoft365-page > div > .rounded-xl.border:hover,
+      .microsoft365-page > div > [class*="rounded-xl"][class*="border"]:hover {
+        box-shadow: 0 10px 26px rgb(15 23 42 / 0.09) !important;
+      }
+
+      .microsoft365-page > div > .rounded-xl.border [class*="rounded-md"][class*="border"],
+      .microsoft365-page > div > [class*="rounded-xl"][class*="border"] [class*="rounded-md"][class*="border"] {
+        border-color: rgb(186 230 253) !important;
+        background: rgb(240 249 255) !important;
+      }
+
+      .microsoft365-page > div > .rounded-xl.border [class*="CardHeader"],
+      .microsoft365-page > div > [class*="rounded-xl"][class*="border"] > div:first-child {
+        padding-top: 16px !important;
+        padding-bottom: 12px !important;
+      }
+
+      .microsoft365-page > div > .rounded-xl.border [class*="text-2xl"],
+      .microsoft365-page > div > [class*="rounded-xl"][class*="border"] [class*="font-semibold"] {
+        color: rgb(15 23 42) !important;
+      }
+
+      .microsoft365-page > div > .rounded-xl.border select,
+      .microsoft365-page > div > [class*="rounded-xl"][class*="border"] select {
+        border-color: rgb(125 211 252) !important;
+        background: white !important;
+      }
+
+      .microsoft365-page > div > [role="alert"] {
+        border: 1px solid rgb(125 211 252) !important;
+        border-left: 3px solid rgb(14 165 233) !important;
+        border-radius: 10px !important;
+        background: white !important;
+        box-shadow: 0 8px 22px rgb(15 23 42 / 0.05) !important;
+      }
     `}</style>
   );
 }
