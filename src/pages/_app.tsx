@@ -68,6 +68,7 @@ export default function App({ Component, pageProps }: AppProps) {
   const isMasterGraficaDocumenti = router.pathname === "/pratiche/modelli" || router.pathname === "/pratiche/diciture";
   const isMasterGraficaPayroll = PAYROLL_MASTER_ROUTES.has(router.pathname);
   const isPayrollPresenze = router.pathname === "/presenze";
+  const isPayrollSmartGroups = router.pathname === "/presenze/smart-gruppi";
   const isFixedViewportPage = isOperationalScadenzario || isMasterGraficaPromemoria || isMasterGraficaAgenda || isMasterGraficaCassettiFiscali || isMasterGraficaAccessoPortali || isMasterGraficaComunicazioniClienti || isMasterGraficaComunicazioniInterne || isMasterGraficaRubrica || isMasterGraficaVariazioni || isMasterGraficaPayroll;
 
   useEffect(() => {
@@ -133,6 +134,7 @@ export default function App({ Component, pageProps }: AppProps) {
   const pageClass = [
     isMasterGraficaPayroll ? "payroll-master-page !min-h-0 !overflow-hidden" : "",
     isPayrollPresenze ? "payroll-presenze-page" : "",
+    isPayrollSmartGroups ? "payroll-smart-groups-page" : "",
     router.pathname === "/clienti/organi-sociali" ? "organi-sociali-page" : "",
     router.pathname === "/microsoft365" ? "microsoft365-page" : "",
     isOperationalScadenzario ? "!min-h-0 !overflow-hidden" : "",
