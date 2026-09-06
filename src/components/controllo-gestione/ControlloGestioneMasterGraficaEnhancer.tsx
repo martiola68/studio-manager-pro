@@ -52,24 +52,53 @@ export function ControlloGestioneMasterGraficaEnhancer() {
         accent-color: rgb(3 105 161) !important;
       }
 
-      .controllo-gestione-master-page button {
+      .controllo-gestione-master-page button,
+      .controllo-gestione-master-page a[class*="rounded"] {
         min-height: 34px !important;
-        border-radius: 6px !important;
+        border-radius: 7px !important;
         font-size: .76rem !important;
+        font-weight: 600 !important;
       }
 
+      /* MASTER_GRAFICA: azioni principali sempre blu SMP */
       .controllo-gestione-master-page button[class*="bg-blue"],
       .controllo-gestione-master-page button[class*="bg-primary"],
-      .controllo-gestione-master-page button[type="submit"] {
+      .controllo-gestione-master-page button[class*="bg-black"],
+      .controllo-gestione-master-page button[class*="bg-slate-900"],
+      .controllo-gestione-master-page button[class*="bg-gray-900"],
+      .controllo-gestione-master-page button[type="submit"],
+      .controllo-gestione-master-page a[class*="bg-blue"],
+      .controllo-gestione-master-page a[class*="bg-primary"],
+      .controllo-gestione-master-page a[class*="bg-black"],
+      .controllo-gestione-master-page a[class*="bg-slate-900"],
+      .controllo-gestione-master-page a[class*="bg-gray-900"] {
         background: rgb(3 105 161) !important;
-        border-color: rgb(3 105 161) !important;
+        border: 1px solid rgb(3 105 161) !important;
         color: white !important;
+        box-shadow: none !important;
       }
 
       .controllo-gestione-master-page button[class*="bg-blue"]:hover,
       .controllo-gestione-master-page button[class*="bg-primary"]:hover,
-      .controllo-gestione-master-page button[type="submit"]:hover {
+      .controllo-gestione-master-page button[class*="bg-black"]:hover,
+      .controllo-gestione-master-page button[class*="bg-slate-900"]:hover,
+      .controllo-gestione-master-page button[class*="bg-gray-900"]:hover,
+      .controllo-gestione-master-page button[type="submit"]:hover,
+      .controllo-gestione-master-page a[class*="bg-blue"]:hover,
+      .controllo-gestione-master-page a[class*="bg-primary"]:hover,
+      .controllo-gestione-master-page a[class*="bg-black"]:hover,
+      .controllo-gestione-master-page a[class*="bg-slate-900"]:hover,
+      .controllo-gestione-master-page a[class*="bg-gray-900"]:hover {
         background: rgb(2 132 199) !important;
+        border-color: rgb(2 132 199) !important;
+      }
+
+      /* azioni secondarie coerenti con MASTER_GRAFICA */
+      .controllo-gestione-master-page button[class*="border"]:not([class*="bg-black"]):not([class*="bg-blue"]):not([class*="bg-primary"]):not([type="submit"]),
+      .controllo-gestione-master-page a[class*="border"]:not([class*="bg-black"]):not([class*="bg-blue"]):not([class*="bg-primary"]) {
+        background: white !important;
+        border-color: rgb(125 211 252) !important;
+        color: rgb(3 105 161) !important;
       }
 
       .controllo-gestione-master-page .rounded-xl.border,
