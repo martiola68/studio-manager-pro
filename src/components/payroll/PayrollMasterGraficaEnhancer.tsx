@@ -1,67 +1,43 @@
 export function PayrollMasterGraficaEnhancer() {
   return (
     <style jsx global>{`
-      .presenze-page {
+      .payroll-master-page {
         background: rgb(241 245 249) !important;
         min-height: 0 !important;
-        overflow: hidden !important;
       }
 
-      .presenze-page > div {
+      .payroll-master-page > div,
+      .payroll-master-page > main {
         width: 100% !important;
         max-width: none !important;
-        height: 100% !important;
-        min-height: 0 !important;
-        margin: 0 !important;
-        padding: 12px !important;
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 10px !important;
-        overflow: hidden !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
       }
 
-      .presenze-page > div > div:first-child {
-        flex: 0 0 auto !important;
-        padding: 10px 14px !important;
-        border: 1px solid rgb(186 230 253) !important;
-        border-radius: 8px !important;
-        background: rgb(248 250 252) !important;
-      }
-
-      .presenze-page h1 {
-        margin: 0 !important;
+      .payroll-master-page h1 {
         color: rgb(15 23 42) !important;
         font-size: 1.25rem !important;
         line-height: 1.7rem !important;
       }
 
-      .presenze-page h2,
-      .presenze-page h3 {
+      .payroll-master-page h2,
+      .payroll-master-page h3 {
         color: rgb(15 23 42) !important;
       }
 
-      .presenze-page > div > div:first-child p {
-        margin-top: 2px !important;
+      .payroll-master-page p {
         color: rgb(100 116 139) !important;
-        font-size: .78rem !important;
       }
 
-      .presenze-page button {
-        min-height: 34px !important;
-        border-radius: 6px !important;
-        font-size: .76rem !important;
+      .payroll-master-page label {
+        color: rgb(51 65 85) !important;
+        font-size: .75rem !important;
+        font-weight: 600 !important;
       }
 
-      .presenze-page button[class*="bg-blue"],
-      .presenze-page button[class*="bg-primary"] {
-        background: rgb(3 105 161) !important;
-        border-color: rgb(3 105 161) !important;
-        color: white !important;
-      }
-
-      .presenze-page input,
-      .presenze-page select,
-      .presenze-page textarea {
+      .payroll-master-page input,
+      .payroll-master-page select,
+      .payroll-master-page textarea {
         min-height: 34px !important;
         border-color: rgb(203 213 225) !important;
         border-radius: 6px !important;
@@ -70,65 +46,100 @@ export function PayrollMasterGraficaEnhancer() {
         font-size: .78rem !important;
       }
 
-      .presenze-page label {
-        color: rgb(51 65 85) !important;
-        font-size: .72rem !important;
-        font-weight: 600 !important;
+      .payroll-master-page input[type="checkbox"] {
+        min-height: auto !important;
+        accent-color: rgb(3 105 161) !important;
       }
 
-      .presenze-page .rounded-xl.border.bg-card,
-      .presenze-page .rounded-lg.border.bg-card,
-      .presenze-page [class*="rounded-xl"][class*="border"] {
+      .payroll-master-page button {
+        min-height: 34px !important;
+        border-radius: 6px !important;
+        font-size: .76rem !important;
+      }
+
+      .payroll-master-page button[class*="bg-blue"],
+      .payroll-master-page button[class*="bg-primary"],
+      .payroll-master-page button[type="submit"] {
+        background: rgb(3 105 161) !important;
+        border-color: rgb(3 105 161) !important;
+        color: white !important;
+      }
+
+      .payroll-master-page .rounded-xl.border.bg-card,
+      .payroll-master-page .rounded-lg.border.bg-card,
+      .payroll-master-page [class*="rounded-xl"][class*="border"],
+      .payroll-master-page [class*="rounded-lg"][class*="border"] {
         border-color: rgb(186 230 253) !important;
         background: rgb(248 250 252) !important;
         box-shadow: none !important;
       }
 
-      .presenze-page [class*="border-blue-200"],
-      .presenze-page [class*="bg-blue-50"] {
+      .payroll-master-page [class*="border-blue-200"],
+      .payroll-master-page [class*="bg-blue-50"] {
         border-color: rgb(186 230 253) !important;
         background: rgb(240 249 255) !important;
       }
 
-      .presenze-page table {
+      .payroll-master-page table {
         border-collapse: separate !important;
         border-spacing: 0 !important;
         background: white !important;
         font-size: .72rem !important;
       }
 
-      .presenze-page thead {
+      .payroll-master-page thead {
         position: sticky !important;
         top: 0 !important;
         z-index: 8 !important;
       }
 
-      .presenze-page thead th {
+      .payroll-master-page thead th {
+        padding-top: 8px !important;
+        padding-bottom: 8px !important;
         background: rgb(71 85 105) !important;
         color: white !important;
         border-color: rgb(51 65 85) !important;
         font-weight: 700 !important;
       }
 
-      .presenze-page tbody td {
+      .payroll-master-page tbody td {
         border-color: rgb(226 232 240) !important;
-        background: white !important;
       }
 
-      .presenze-page tbody tr:hover td {
+      .payroll-master-page tbody tr:hover td {
         background: rgb(240 249 255) !important;
       }
 
-      .presenze-page [role="dialog"] {
+      .payroll-master-page [role="dialog"] {
         border: 1px solid rgb(186 230 253) !important;
         border-radius: 10px !important;
         background: rgb(248 250 252) !important;
       }
 
-      .presenze-page [role="dialog"] button[class*="bg-blue"],
-      .presenze-page [role="dialog"] button[class*="bg-primary"] {
+      .payroll-master-page [role="dialog"] button[class*="bg-blue"],
+      .payroll-master-page [role="dialog"] button[class*="bg-primary"] {
         background: rgb(3 105 161) !important;
         color: white !important;
+      }
+
+      .payroll-master-page .bg-green-50,
+      .payroll-master-page [class*="bg-green-50"] {
+        background: rgb(240 253 244) !important;
+      }
+
+      .payroll-master-page .bg-red-50,
+      .payroll-master-page [class*="bg-red-50"] {
+        background: rgb(254 242 242) !important;
+      }
+
+      .payroll-master-page .bg-yellow-50,
+      .payroll-master-page [class*="bg-yellow-50"] {
+        background: rgb(254 252 232) !important;
+      }
+
+      .payroll-master-page .bg-blue-50,
+      .payroll-master-page [class*="bg-blue-50"] {
+        background: rgb(239 246 255) !important;
       }
     `}</style>
   );
