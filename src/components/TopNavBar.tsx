@@ -31,16 +31,9 @@ import {
   BookOpen,
   AlertTriangle,
   X,
-  ExternalLink,
   KeyRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -65,6 +58,7 @@ interface MenuItem {
   icon: React.ReactNode;
   href?: string;
   adminOnly?: boolean;
+  systemAdminOnly?: boolean;
   children?: MenuItem[];
 }
 
@@ -233,8 +227,6 @@ export function TopNavBar() {
       console.warn("Errore controllo versione:", error);
     }
   };
-
-  const aggiornaApplicazione = () => window.location.reload();
 
   useEffect(() => { void loadCurrentUser(); }, []);
   useEffect(() => {
@@ -414,9 +406,7 @@ export function TopNavBar() {
           icon: <Settings className="h-4 w-4" />,
           children: [
             { label: "Utenti", href: "/impostazioni/utenti", icon: <Users className="h-4 w-4" />, adminOnly: true },
-            ...(currentUser?.amministratore_sistema_generale
-              ? [{ label: "Amministrazione sistema", href: "/impostazioni/amministrazione-sistema", icon: <ShieldCheck className="h-4 w-4" /> }]
-              : []),
+            { label: "Amministrazione sistema", href: "/impostazioni/amministrazione-sistema", icon: <ShieldCheck className="h-4 w-4" />, systemAdminOnly: true },
             { label: "Ruoli", href: "/impostazioni/ruoli", icon: <Settings className="h-4 w-4" />, adminOnly: true },
             { label: "Prestazioni", href: "/impostazioni/prestazioni", icon: <Settings className="h-4 w-4" />, adminOnly: true },
             { label: "Payroll Festività", href: "/impostazioni/payroll-festivita", icon: <Calendar className="h-4 w-4" />, adminOnly: true },
@@ -428,7 +418,6 @@ export function TopNavBar() {
           ],
         },
         { label: "Modifica Password", href: "/profilo/password", icon: <KeyRound className="h-4 w-4" /> },
-        { label: "Vai al sito web", href: "https://studiomanagerpro.it", icon: <ExternalLink className="h-4 w-4" /> },
       ],
     },
     {
@@ -471,6 +460,7 @@ export function TopNavBar() {
 
   const renderMenuItem = (item: MenuItem) => {
     if (item.adminOnly && currentUser?.tipo_utente !== "Admin") return null;
+    if (item.systemAdminOnly && !currentUser?.amministratore_sistema_generale) return null;
     const hasChildren = Boolean(item.children && item.children.length > 0);
     const itemActive = isActive(item);
     const menuOpen = desktopMenuOpen === item.label;
@@ -555,15 +545,19 @@ export function TopNavBar() {
             <div className={cn("w-full items-stretch justify-start gap-0 px-4 py-2", desktopMenuAttivo.label === "Strumenti" ? "grid grid-cols-8" : "flex flex-row flex-nowrap")}>
               {desktopMenuVoci.map((voce) => {
                 const voceActive = isActive(voce);
-                const voceRiservata = voce.adminOnly && currentUser?.tipo_utente !== "Admin";
-                const voceEsterna = !!voce.href?.startsWith("http");
+                const voceRiservata =
+                  (voce.adminOnly && currentUser?.tipo_utente !== "Admin") ||
+                  (voce.systemAdminOnly && !currentUser?.amministratore_sistema_generale);
                 const vocePdf = !!voce.href?.toLowerCase().endsWith(".pdf");
+                const motivoRiserva = voce.systemAdminOnly
+                  ? "Solo amministratore generale"
+                  : "Solo amministratore";
                 return (
                   <Link
                     key={voce.label}
                     href={voceRiservata ? "#" : voce.href || "#"}
-                    target={voceEsterna || vocePdf ? "_blank" : undefined}
-                    rel={voceEsterna || vocePdf ? "noopener noreferrer" : undefined}
+                    target={vocePdf ? "_blank" : undefined}
+                    rel={vocePdf ? "noopener noreferrer" : undefined}
                     onClick={(event) => {
                       if (voceRiservata) {
                         event.preventDefault();
@@ -577,9 +571,9 @@ export function TopNavBar() {
                       voceRiservata ? "cursor-not-allowed bg-gray-50 text-gray-400 opacity-70 hover:bg-gray-50 hover:text-gray-400" : voceActive ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-blue-50 hover:text-blue-700"
                     )}
                   >
-                    <span className="flex items-center justify-center text-blue-600 [&>svg]:h-5 [&>svg]:w-5">{voce.icon}</span>
+                    <span className={cn("flex items-center justify-center [&>svg]:h-5 [&>svg]:w-5", voceRiservata ? "text-gray-400" : "text-blue-600")}>{voce.icon}</span>
                     <span>{voce.label}</span>
-                    {voceRiservata && <span className="text-[9px] font-normal text-gray-400">Solo amministratore</span>}
+                    {voceRiservata && <span className="text-[9px] font-normal text-gray-400">{motivoRiserva}</span>}
                   </Link>
                 );
               })}
