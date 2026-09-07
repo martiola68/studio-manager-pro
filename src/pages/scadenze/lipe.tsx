@@ -390,12 +390,10 @@ export default function ScadenzeLipePage() {
   });
 
   const quarterlyStats = ([1, 2, 3, 4] as const).map((quarter) => {
-    const lipeField = `lipe${quarter}t` as keyof LipeRecord;
-    const invioField = `lipe${quarter}t_invio` as keyof LipeRecord;
-
-    const totale = scadenze.filter((record) => record[lipeField] === true).length;
-    const inviate = scadenze.filter(
-      (record) => record[lipeField] === true && Boolean(record[invioField])
+    const confermaField = `conferma_${quarter}_trimestre` as LipeConfermaField;
+    const totale = filteredScadenze.length;
+    const inviate = filteredScadenze.filter(
+      (record) => record[confermaField] === true
     ).length;
 
     return {
@@ -619,300 +617,79 @@ export default function ScadenzeLipePage() {
                       </td>
 
                       <td className={`${baseCellClass} ${groupCellQ1} text-center min-w-[60px]`}>
-                        <BooleanSelect
-                          value={Boolean(scadenza.gen)}
-                          disabled={isMonthDisabled(scadenza, "gen")}
-                          onChange={(nextValue) => {
-                            if (nextValue !== Boolean(scadenza.gen)) {
-                              handleToggleField(scadenza.id, "gen", scadenza.gen || false);
-                            }
-                          }}
-                        />
+                        <BooleanSelect value={Boolean(scadenza.gen)} disabled={isMonthDisabled(scadenza, "gen")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.gen)) handleToggleField(scadenza.id, "gen", scadenza.gen || false); }} />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ1} text-center min-w-[60px]`}>
-                        <BooleanSelect
-                          value={Boolean(scadenza.feb)}
-                          disabled={isMonthDisabled(scadenza, "feb")}
-                          onChange={(nextValue) => {
-                            if (nextValue !== Boolean(scadenza.feb)) {
-                              handleToggleField(scadenza.id, "feb", scadenza.feb || false);
-                            }
-                          }}
-                        />
+                        <BooleanSelect value={Boolean(scadenza.feb)} disabled={isMonthDisabled(scadenza, "feb")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.feb)) handleToggleField(scadenza.id, "feb", scadenza.feb || false); }} />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ1} text-center min-w-[60px]`}>
-                        <BooleanSelect
-                          value={Boolean(scadenza.mar)}
-                          disabled={isMonthDisabled(scadenza, "mar")}
-                          onChange={(nextValue) => {
-                            if (nextValue !== Boolean(scadenza.mar)) {
-                              handleToggleField(scadenza.id, "mar", scadenza.mar || false);
-                            }
-                          }}
-                        />
+                        <BooleanSelect value={Boolean(scadenza.mar)} disabled={isMonthDisabled(scadenza, "mar")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.mar)) handleToggleField(scadenza.id, "mar", scadenza.mar || false); }} />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ1} text-center min-w-[80px]`}>
-                        <BooleanSelect
-                          value={Boolean(scadenza.conferma_1_trimestre)}
-                          highlight={Boolean(scadenza.lipe1t_invio)}
-                          onChange={(nextValue) => {
-                            if (nextValue !== Boolean(scadenza.conferma_1_trimestre)) {
-                              handleToggleField(
-                                scadenza.id,
-                                "conferma_1_trimestre",
-                                scadenza.conferma_1_trimestre || false
-                              );
-                            }
-                          }}
-                        />
+                        <BooleanSelect value={Boolean(scadenza.conferma_1_trimestre)} highlight={Boolean(scadenza.lipe1t_invio)} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.conferma_1_trimestre)) handleToggleField(scadenza.id, "conferma_1_trimestre", scadenza.conferma_1_trimestre || false); }} />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ1} min-w-[140px]`}>
-                        <Input
-                          type="date"
-                          value={scadenza.lipe1t_invio || ""}
-                          onChange={(e) =>
-                            handleUpdateValue(scadenza.id, "lipe1t_invio", e.target.value)
-                          }
-                          className={
-                            scadenza.lipe1t_invio
-                              ? "h-8 border-green-300 bg-green-200 text-xs text-slate-900"
-                              : isInvioMancante(scadenza.lipe1t, scadenza.lipe1t_invio)
-                                ? "h-8 border-slate-300 bg-red-600 text-xs text-white"
-                                : "h-8 border-slate-300 bg-white text-xs"
-                          }
-                        />
+                        <Input type="date" value={scadenza.lipe1t_invio || ""} onChange={(e) => handleUpdateValue(scadenza.id, "lipe1t_invio", e.target.value)} className={scadenza.lipe1t_invio ? "h-8 border-green-300 bg-green-200 text-xs text-slate-900" : isInvioMancante(scadenza.lipe1t, scadenza.lipe1t_invio) ? "h-8 border-slate-300 bg-red-600 text-xs text-white" : "h-8 border-slate-300 bg-white text-xs"} />
                       </td>
 
                       <td className={`${baseCellClass} ${groupCellQ2} text-center min-w-[60px]`}>
-                        <BooleanSelect
-                          value={Boolean(scadenza.apr)}
-                          disabled={isMonthDisabled(scadenza, "apr")}
-                          onChange={(nextValue) => {
-                            if (nextValue !== Boolean(scadenza.apr)) {
-                              handleToggleField(scadenza.id, "apr", scadenza.apr || false);
-                            }
-                          }}
-                        />
+                        <BooleanSelect value={Boolean(scadenza.apr)} disabled={isMonthDisabled(scadenza, "apr")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.apr)) handleToggleField(scadenza.id, "apr", scadenza.apr || false); }} />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ2} text-center min-w-[60px]`}>
-                        <BooleanSelect
-                          value={Boolean(scadenza.mag)}
-                          disabled={isMonthDisabled(scadenza, "mag")}
-                          onChange={(nextValue) => {
-                            if (nextValue !== Boolean(scadenza.mag)) {
-                              handleToggleField(scadenza.id, "mag", scadenza.mag || false);
-                            }
-                          }}
-                        />
+                        <BooleanSelect value={Boolean(scadenza.mag)} disabled={isMonthDisabled(scadenza, "mag")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.mag)) handleToggleField(scadenza.id, "mag", scadenza.mag || false); }} />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ2} text-center min-w-[60px]`}>
-                        <BooleanSelect
-                          value={Boolean(scadenza.giu)}
-                          disabled={isMonthDisabled(scadenza, "giu")}
-                          onChange={(nextValue) => {
-                            if (nextValue !== Boolean(scadenza.giu)) {
-                              handleToggleField(scadenza.id, "giu", scadenza.giu || false);
-                            }
-                          }}
-                        />
+                        <BooleanSelect value={Boolean(scadenza.giu)} disabled={isMonthDisabled(scadenza, "giu")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.giu)) handleToggleField(scadenza.id, "giu", scadenza.giu || false); }} />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ2} text-center min-w-[80px]`}>
-                        <BooleanSelect
-                          value={Boolean(scadenza.conferma_2_trimestre)}
-                          highlight={Boolean(scadenza.lipe2t_invio)}
-                          onChange={(nextValue) => {
-                            if (nextValue !== Boolean(scadenza.conferma_2_trimestre)) {
-                              handleToggleField(
-                                scadenza.id,
-                                "conferma_2_trimestre",
-                                scadenza.conferma_2_trimestre || false
-                              );
-                            }
-                          }}
-                        />
+                        <BooleanSelect value={Boolean(scadenza.conferma_2_trimestre)} highlight={Boolean(scadenza.lipe2t_invio)} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.conferma_2_trimestre)) handleToggleField(scadenza.id, "conferma_2_trimestre", scadenza.conferma_2_trimestre || false); }} />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ2} min-w-[140px]`}>
-                        <Input
-                          type="date"
-                          value={scadenza.lipe2t_invio || ""}
-                          onChange={(e) =>
-                            handleUpdateValue(scadenza.id, "lipe2t_invio", e.target.value)
-                          }
-                          className={
-                            scadenza.lipe2t_invio
-                              ? "h-8 border-green-300 bg-green-200 text-xs text-slate-900"
-                              : isInvioMancante(scadenza.lipe2t, scadenza.lipe2t_invio)
-                                ? "h-8 border-slate-300 bg-red-600 text-xs text-white"
-                                : "h-8 border-slate-300 bg-white text-xs"
-                          }
-                        />
+                        <Input type="date" value={scadenza.lipe2t_invio || ""} onChange={(e) => handleUpdateValue(scadenza.id, "lipe2t_invio", e.target.value)} className={scadenza.lipe2t_invio ? "h-8 border-green-300 bg-green-200 text-xs text-slate-900" : isInvioMancante(scadenza.lipe2t, scadenza.lipe2t_invio) ? "h-8 border-slate-300 bg-red-600 text-xs text-white" : "h-8 border-slate-300 bg-white text-xs"} />
                       </td>
 
                       <td className={`${baseCellClass} ${groupCellQ3} text-center min-w-[60px]`}>
-                        <BooleanSelect
-                          value={Boolean(scadenza.lug)}
-                          disabled={isMonthDisabled(scadenza, "lug")}
-                          onChange={(nextValue) => {
-                            if (nextValue !== Boolean(scadenza.lug)) {
-                              handleToggleField(scadenza.id, "lug", scadenza.lug || false);
-                            }
-                          }}
-                        />
+                        <BooleanSelect value={Boolean(scadenza.lug)} disabled={isMonthDisabled(scadenza, "lug")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.lug)) handleToggleField(scadenza.id, "lug", scadenza.lug || false); }} />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ3} text-center min-w-[60px]`}>
-                        <BooleanSelect
-                          value={Boolean(scadenza.ago)}
-                          disabled={isMonthDisabled(scadenza, "ago")}
-                          onChange={(nextValue) => {
-                            if (nextValue !== Boolean(scadenza.ago)) {
-                              handleToggleField(scadenza.id, "ago", scadenza.ago || false);
-                            }
-                          }}
-                        />
+                        <BooleanSelect value={Boolean(scadenza.ago)} disabled={isMonthDisabled(scadenza, "ago")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.ago)) handleToggleField(scadenza.id, "ago", scadenza.ago || false); }} />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ3} text-center min-w-[60px]`}>
-                        <BooleanSelect
-                          value={Boolean(scadenza.set)}
-                          disabled={isMonthDisabled(scadenza, "set")}
-                          onChange={(nextValue) => {
-                            if (nextValue !== Boolean(scadenza.set)) {
-                              handleToggleField(scadenza.id, "set", scadenza.set || false);
-                            }
-                          }}
-                        />
+                        <BooleanSelect value={Boolean(scadenza.set)} disabled={isMonthDisabled(scadenza, "set")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.set)) handleToggleField(scadenza.id, "set", scadenza.set || false); }} />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ3} text-center min-w-[80px]`}>
-                        <BooleanSelect
-                          value={Boolean(scadenza.conferma_3_trimestre)}
-                          highlight={Boolean(scadenza.lipe3t_invio)}
-                          onChange={(nextValue) => {
-                            if (nextValue !== Boolean(scadenza.conferma_3_trimestre)) {
-                              handleToggleField(
-                                scadenza.id,
-                                "conferma_3_trimestre",
-                                scadenza.conferma_3_trimestre || false
-                              );
-                            }
-                          }}
-                        />
+                        <BooleanSelect value={Boolean(scadenza.conferma_3_trimestre)} highlight={Boolean(scadenza.lipe3t_invio)} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.conferma_3_trimestre)) handleToggleField(scadenza.id, "conferma_3_trimestre", scadenza.conferma_3_trimestre || false); }} />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ3} min-w-[140px]`}>
-                        <Input
-                          type="date"
-                          value={scadenza.lipe3t_invio || ""}
-                          onChange={(e) =>
-                            handleUpdateValue(scadenza.id, "lipe3t_invio", e.target.value)
-                          }
-                          className={
-                            scadenza.lipe3t_invio
-                              ? "h-8 border-green-300 bg-green-200 text-xs text-slate-900"
-                              : isInvioMancante(scadenza.lipe3t, scadenza.lipe3t_invio)
-                                ? "h-8 border-slate-300 bg-red-600 text-xs text-white"
-                                : "h-8 border-slate-300 bg-white text-xs"
-                          }
-                        />
+                        <Input type="date" value={scadenza.lipe3t_invio || ""} onChange={(e) => handleUpdateValue(scadenza.id, "lipe3t_invio", e.target.value)} className={scadenza.lipe3t_invio ? "h-8 border-green-300 bg-green-200 text-xs text-slate-900" : isInvioMancante(scadenza.lipe3t, scadenza.lipe3t_invio) ? "h-8 border-slate-300 bg-red-600 text-xs text-white" : "h-8 border-slate-300 bg-white text-xs"} />
                       </td>
 
                       <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[60px]`}>
-                        <BooleanSelect
-                          value={Boolean(scadenza.ott)}
-                          disabled={isMonthDisabled(scadenza, "ott")}
-                          onChange={(nextValue) => {
-                            if (nextValue !== Boolean(scadenza.ott)) {
-                              handleToggleField(scadenza.id, "ott", scadenza.ott || false);
-                            }
-                          }}
-                        />
+                        <BooleanSelect value={Boolean(scadenza.ott)} disabled={isMonthDisabled(scadenza, "ott")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.ott)) handleToggleField(scadenza.id, "ott", scadenza.ott || false); }} />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[60px]`}>
-                        <BooleanSelect
-                          value={Boolean(scadenza.nov)}
-                          disabled={isMonthDisabled(scadenza, "nov")}
-                          onChange={(nextValue) => {
-                            if (nextValue !== Boolean(scadenza.nov)) {
-                              handleToggleField(scadenza.id, "nov", scadenza.nov || false);
-                            }
-                          }}
-                        />
+                        <BooleanSelect value={Boolean(scadenza.nov)} disabled={isMonthDisabled(scadenza, "nov")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.nov)) handleToggleField(scadenza.id, "nov", scadenza.nov || false); }} />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[60px]`}>
-                        <BooleanSelect
-                          value={Boolean(scadenza.dic)}
-                          disabled={isMonthDisabled(scadenza, "dic")}
-                          onChange={(nextValue) => {
-                            if (nextValue !== Boolean(scadenza.dic)) {
-                              handleToggleField(scadenza.id, "dic", scadenza.dic || false);
-                            }
-                          }}
-                        />
+                        <BooleanSelect value={Boolean(scadenza.dic)} disabled={isMonthDisabled(scadenza, "dic")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.dic)) handleToggleField(scadenza.id, "dic", scadenza.dic || false); }} />
                       </td>
 
                       <td className={`${baseCellClass} ${groupCellQ4} min-w-[120px]`}>
-                        <Input
-                          type="text"
-                          value={scadenza.acconto || ""}
-                          onChange={(e) =>
-                            handleUpdateValue(scadenza.id, "acconto", e.target.value)
-                          }
-                          className="h-8 border-slate-300 bg-white text-xs"
-                          placeholder="Metodo"
-                        />
+                        <Input type="text" value={scadenza.acconto || ""} onChange={(e) => handleUpdateValue(scadenza.id, "acconto", e.target.value)} className="h-8 border-slate-300 bg-white text-xs" placeholder="Metodo" />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[100px]`}>
-                        <BooleanSelect
-                          value={Boolean(scadenza.conferma_acconto_iva)}
-                          onChange={(nextValue) => {
-                            if (nextValue !== Boolean(scadenza.conferma_acconto_iva)) {
-                              handleToggleField(
-                                scadenza.id,
-                                "conferma_acconto_iva",
-                                scadenza.conferma_acconto_iva || false
-                              );
-                            }
-                          }}
-                        />
+                        <BooleanSelect value={Boolean(scadenza.conferma_acconto_iva)} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.conferma_acconto_iva)) handleToggleField(scadenza.id, "conferma_acconto_iva", scadenza.conferma_acconto_iva || false); }} />
                       </td>
 
                       <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[80px]`}>
-                        <BooleanSelect
-                          value={Boolean(scadenza.conferma_4_trimestre)}
-                          highlight={Boolean(scadenza.lipe4t_invio)}
-                          onChange={(nextValue) => {
-                            if (nextValue !== Boolean(scadenza.conferma_4_trimestre)) {
-                              handleToggleField(
-                                scadenza.id,
-                                "conferma_4_trimestre",
-                                scadenza.conferma_4_trimestre || false
-                              );
-                            }
-                          }}
-                        />
+                        <BooleanSelect value={Boolean(scadenza.conferma_4_trimestre)} highlight={Boolean(scadenza.lipe4t_invio)} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.conferma_4_trimestre)) handleToggleField(scadenza.id, "conferma_4_trimestre", scadenza.conferma_4_trimestre || false); }} />
                       </td>
-
                       <td className={`${baseCellClass} ${groupCellQ4} min-w-[140px]`}>
-                        <Input
-                          type="date"
-                          value={scadenza.lipe4t_invio || ""}
-                          onChange={(e) =>
-                            handleUpdateValue(scadenza.id, "lipe4t_invio", e.target.value)
-                          }
-                          className={
-                            scadenza.lipe4t_invio
-                              ? "h-8 border-green-300 bg-green-200 text-xs text-slate-900"
-                              : isInvioMancante(scadenza.lipe4t, scadenza.lipe4t_invio)
-                                ? "h-8 border-slate-300 bg-red-600 text-xs text-white"
-                                : "h-8 border-slate-300 bg-white text-xs"
-                          }
-                        />
+                        <Input type="date" value={scadenza.lipe4t_invio || ""} onChange={(e) => handleUpdateValue(scadenza.id, "lipe4t_invio", e.target.value)} className={scadenza.lipe4t_invio ? "h-8 border-green-300 bg-green-200 text-xs text-slate-900" : isInvioMancante(scadenza.lipe4t, scadenza.lipe4t_invio) ? "h-8 border-slate-300 bg-red-600 text-xs text-white" : "h-8 border-slate-300 bg-white text-xs"} />
                       </td>
 
                       <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[100px] border-r-0`}>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteRecord(scadenza.id, scadenza.nominativo)}
-                          className="text-red-600 hover:text-red-800 transition-colors"
-                          title={`Elimina ${scadenza.nominativo}`}
-                        >
+                        <button type="button" onClick={() => handleDeleteRecord(scadenza.id, scadenza.nominativo)} className="text-red-600 hover:text-red-800 transition-colors" title={`Elimina ${scadenza.nominativo}`}>
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </td>
