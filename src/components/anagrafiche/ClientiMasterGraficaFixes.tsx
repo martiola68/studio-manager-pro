@@ -23,6 +23,15 @@ export function ClientiMasterGraficaFixes() {
         overflow: hidden !important;
       }
 
+      /* CLIENTI: il Card esterno della tabella non deve avere una propria scrollbar.
+         Lo scroll resta esclusivamente sul contenitore immediato della tabella. */
+      body.clienti-master-fixes main.anagrafiche-master-page.anagrafiche-master-scroll-page
+        > div > div:has(table th.sticky.left-0):has(table th.sticky.right-0) {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+      }
+
       body.clienti-master-fixes main.anagrafiche-master-page
         [class*="overflow-x-auto"]:has(> table) {
         overflow-x: auto !important;
