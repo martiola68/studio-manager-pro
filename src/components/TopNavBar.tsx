@@ -361,7 +361,6 @@ export function TopNavBar() {
         icon: <ShieldCheck className="h-4 w-4" />,
         children: [
           { label: "Elenco Antiriciclaggio", href: "/antiriciclaggio", icon: <ShieldCheck className="h-4 w-4" /> },
-          { label: "Rappresentanti legali", href: "/antiriciclaggio/rappresentanti", icon: <UserCircle className="h-4 w-4" /> },
           { label: "Prestazioni AR", href: "/impostazioni/elenco-prestazioni-ar", icon: <FileText className="h-4 w-4" /> },
           { label: "Professionisti", href: "/antiriciclaggio/responsabili-av", icon: <Users className="h-4 w-4" /> },
           { label: "Soggetti responsabili", href: "/antiriciclaggio/responsabili-av-societa", icon: <Users className="h-4 w-4" /> },
@@ -388,19 +387,20 @@ export function TopNavBar() {
       }],
     },
     {
-      label: "Archivi di base",
+      label: "Anagrafiche",
       icon: <Users className="h-4 w-4" />,
       children: [
-        {
-          label: "Anagrafiche",
-          icon: <Users className="h-4 w-4" />,
-          children: [
-            { label: "Anagrafiche", href: "/clienti", icon: <Users className="h-4 w-4" /> },
-            { label: "Soci e organi sociali", href: "/clienti/organi-sociali", icon: <UserCircle className="h-4 w-4" /> },
-            { label: "Gruppi societari", href: "/anagrafiche/gruppi-societari", icon: <Network className="h-4 w-4" /> },
-            { label: "Rappresentanti legali", href: "/antiriciclaggio/rappresentanti", icon: <UserCircle className="h-4 w-4" /> },
-          ],
-        },
+        { label: "Anagrafiche", href: "/clienti", icon: <Users className="h-4 w-4" /> },
+        { label: "Soci e organi sociali", href: "/clienti/organi-sociali", icon: <UserCircle className="h-4 w-4" /> },
+        { label: "Gruppi societari", href: "/anagrafiche/gruppi-societari", icon: <Network className="h-4 w-4" /> },
+        { label: "Rappresentanti legali", href: "/antiriciclaggio/rappresentanti", icon: <UserCircle className="h-4 w-4" /> },
+        { label: "Dati Studio", href: "/impostazioni/studio", icon: <Building2 className="h-4 w-4" />, adminOnly: true },
+      ],
+    },
+    {
+      label: "Strumenti",
+      icon: <Settings className="h-4 w-4" />,
+      children: [
         {
           label: "Connessioni",
           icon: <Cloud className="h-4 w-4" />,
@@ -417,7 +417,6 @@ export function TopNavBar() {
             ...(currentUser?.amministratore_sistema_generale
               ? [{ label: "Amministrazione sistema", href: "/impostazioni/amministrazione-sistema", icon: <ShieldCheck className="h-4 w-4" /> }]
               : []),
-            { label: "Dati Studio", href: "/impostazioni/studio", icon: <Building2 className="h-4 w-4" />, adminOnly: true },
             { label: "Ruoli", href: "/impostazioni/ruoli", icon: <Settings className="h-4 w-4" />, adminOnly: true },
             { label: "Prestazioni", href: "/impostazioni/prestazioni", icon: <Settings className="h-4 w-4" />, adminOnly: true },
             { label: "Payroll Festività", href: "/impostazioni/payroll-festivita", icon: <Calendar className="h-4 w-4" />, adminOnly: true },
@@ -553,7 +552,7 @@ export function TopNavBar() {
         <div className="flex min-w-max items-center gap-0.5 px-4 py-0">{menuItems.map((item) => renderMenuItem(item))}</div>
         {desktopMenuAttivo && desktopMenuVoci.length > 0 && (
           <div className="absolute left-0 right-0 top-full z-50 border-y border-gray-200 bg-white shadow-lg">
-            <div className={cn("w-full items-stretch justify-start gap-0 px-4 py-2", desktopMenuAttivo.label === "Archivi di base" ? "grid grid-cols-8" : "flex flex-row flex-nowrap")}>
+            <div className={cn("w-full items-stretch justify-start gap-0 px-4 py-2", desktopMenuAttivo.label === "Strumenti" ? "grid grid-cols-8" : "flex flex-row flex-nowrap")}>
               {desktopMenuVoci.map((voce) => {
                 const voceActive = isActive(voce);
                 const voceRiservata = voce.adminOnly && currentUser?.tipo_utente !== "Admin";
@@ -574,7 +573,7 @@ export function TopNavBar() {
                     }}
                     className={cn(
                       "flex min-h-[72px] min-w-[96px] max-w-[120px] flex-col items-center justify-center gap-1.5 border-r border-gray-100 px-3 py-2 text-center text-[11px] font-medium leading-tight transition-colors",
-                      desktopMenuAttivo.label === "Archivi di base" && "min-w-0 max-w-none",
+                      desktopMenuAttivo.label === "Strumenti" && "min-w-0 max-w-none",
                       voceRiservata ? "cursor-not-allowed bg-gray-50 text-gray-400 opacity-70 hover:bg-gray-50 hover:text-gray-400" : voceActive ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-blue-50 hover:text-blue-700"
                     )}
                   >
