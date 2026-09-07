@@ -116,6 +116,48 @@ export function PayrollMasterGraficaEnhancer() {
       .payroll-master-page .bg-red-50, .payroll-master-page [class*="bg-red-50"] { background: rgb(254 242 242) !important; }
       .payroll-master-page .bg-yellow-50, .payroll-master-page [class*="bg-yellow-50"] { background: rgb(254 252 232) !important; }
       .payroll-master-page .bg-blue-50, .payroll-master-page [class*="bg-blue-50"] { background: rgb(239 246 255) !important; }
+
+      /* Presenze: colora esclusivamente i campi giornalieri compilati in base al codice. */
+      .payroll-presenze-page select.bg-green-100 {
+        background: rgb(220 252 231) !important;
+        border-color: rgb(134 239 172) !important;
+        color: rgb(22 101 52) !important;
+      }
+      .payroll-presenze-page select.bg-violet-100 {
+        background: rgb(237 233 254) !important;
+        border-color: rgb(196 181 253) !important;
+        color: rgb(91 33 182) !important;
+      }
+      .payroll-presenze-page select.bg-sky-100 {
+        background: rgb(254 226 226) !important;
+        border-color: rgb(252 165 165) !important;
+        color: rgb(153 27 27) !important;
+      }
+      .payroll-presenze-page select.bg-red-100 {
+        background: rgb(254 226 226) !important;
+        border-color: rgb(252 165 165) !important;
+        color: rgb(153 27 27) !important;
+      }
+      .payroll-presenze-page select.bg-gray-100 {
+        background: rgb(241 245 249) !important;
+        border-color: rgb(203 213 225) !important;
+        color: rgb(71 85 105) !important;
+      }
+      .payroll-presenze-page select.bg-orange-100 {
+        background: rgb(255 237 213) !important;
+        border-color: rgb(253 186 116) !important;
+        color: rgb(154 52 18) !important;
+      }
+      .payroll-presenze-page select.bg-teal-100 {
+        background: rgb(207 250 254) !important;
+        border-color: rgb(103 232 249) !important;
+        color: rgb(14 116 144) !important;
+      }
+      .payroll-presenze-page select.bg-pink-100 {
+        background: rgb(252 231 243) !important;
+        border-color: rgb(249 168 212) !important;
+        color: rgb(157 23 77) !important;
+      }
     `}</style>
   );
 }
