@@ -1,4 +1,59 @@
+import { useEffect } from "react";
+
+const GENERAL_SYSTEM_ADMIN_EMAIL = "m.artiola@revisionicommerciali.it";
+
 export function GestioneUtentiMasterGraficaFixes() {
+  useEffect(() => {
+    let frame = 0;
+
+    const applyGeneralAdminGuard = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        document.querySelectorAll('[role="dialog"]').forEach((dialog) => {
+          const emailInput = dialog.querySelector('input[type="email"]') as HTMLInputElement | null;
+          const allowed =
+            String(emailInput?.value || "").trim().toLowerCase() === GENERAL_SYSTEM_ADMIN_EMAIL;
+
+          const label = Array.from(dialog.querySelectorAll("label")).find(
+            (node) => (node.textContent || "").trim() === "Amministratore generale di sistema"
+          ) as HTMLLabelElement | undefined;
+
+          if (!label) return;
+          const wrapper = label.parentElement;
+          const checkbox = wrapper?.querySelector('[role="checkbox"]') as HTMLButtonElement | null;
+          if (!checkbox) return;
+
+          if (!allowed) {
+            if (checkbox.getAttribute("data-state") === "checked") checkbox.click();
+            checkbox.disabled = true;
+            checkbox.setAttribute("aria-disabled", "true");
+            checkbox.style.setProperty("opacity", ".4", "important");
+            checkbox.style.setProperty("cursor", "not-allowed", "important");
+            label.style.setProperty("opacity", ".55", "important");
+            label.style.setProperty("cursor", "not-allowed", "important");
+            label.title = "Disponibile esclusivamente per Mario Artiola - m.artiola@revisionicommerciali.it";
+          } else {
+            checkbox.disabled = false;
+            checkbox.removeAttribute("aria-disabled");
+            checkbox.style.removeProperty("opacity");
+            checkbox.style.removeProperty("cursor");
+            label.style.removeProperty("opacity");
+            label.style.removeProperty("cursor");
+            label.title = "";
+          }
+        });
+      });
+    };
+
+    applyGeneralAdminGuard();
+    const observer = new MutationObserver(applyGeneralAdminGuard);
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, []);
+
   return (
     <style jsx global>{`
       .anagrafiche-master-page:has(h1:first-of-type) table {
