@@ -40,6 +40,33 @@ export function ClientiMasterGraficaFixes() {
         min-height: 0 !important;
       }
 
+      /* CLIENTI: intestazione sempre bloccata durante lo scroll verticale dei record. */
+      body.clienti-master-fixes main.anagrafiche-master-page
+        table:has(th.sticky.left-0):has(th.sticky.right-0) thead {
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 50 !important;
+      }
+
+      body.clienti-master-fixes main.anagrafiche-master-page
+        table:has(th.sticky.left-0):has(th.sticky.right-0) thead th {
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 50 !important;
+        background: rgb(71 85 105) !important;
+        color: white !important;
+      }
+
+      body.clienti-master-fixes main.anagrafiche-master-page
+        table:has(th.sticky.left-0):has(th.sticky.right-0) thead th:first-child,
+      body.clienti-master-fixes main.anagrafiche-master-page
+        table:has(th.sticky.left-0):has(th.sticky.right-0) thead th:nth-child(2),
+      body.clienti-master-fixes main.anagrafiche-master-page
+        table:has(th.sticky.left-0):has(th.sticky.right-0) thead th:last-child {
+        z-index: 60 !important;
+        background: rgb(71 85 105) !important;
+      }
+
       body.clienti-master-fixes main.anagrafiche-master-page
         table:has(th.sticky.left-0):has(th.sticky.right-0)
         td:nth-child(5) > div[class*="bg-green-600"] {
