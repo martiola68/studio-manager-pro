@@ -8,11 +8,10 @@ async function getAuthorizedCatalogAdmin(req: NextApiRequest) {
   const authHeader = req.headers.authorization || ''; const token = authHeader.startsWith('Bearer ') ? authHeader.slice('Bearer '.length).trim() : ''; if (!token) return null;
   const { data: { user: authUser }, error: authError } = await supabaseAdmin.auth.getUser(token); if (authError || !authUser) return null;
   let userRow: any = null;
-  const { data: byUserId } = await supabaseAdmin.from('tbutenti').select('id, user_id, email, nome, cognome, tipo_utente, studio_id, attivo').eq('user_id', authUser.id).limit(1).maybeSingle(); userRow = byUserId;
-  if (!userRow && authUser.email) { const { data: byEmail } = await supabaseAdmin.from('tbutenti').select('id, user_id, email, nome, cognome, tipo_utente, studio_id, attivo').ilike('email', authUser.email).limit(1).maybeSingle(); userRow = byEmail; }
+  const { data: byUserId } = await supabaseAdmin.from('tbutenti').select('id, user_id, email, nome, cognome, tipo_utente, studio_id, attivo, amministratore_sistema_generale').eq('user_id', authUser.id).limit(1).maybeSingle(); userRow = byUserId;
+  if (!userRow && authUser.email) { const { data: byEmail } = await supabaseAdmin.from('tbutenti').select('id, user_id, email, nome, cognome, tipo_utente, studio_id, attivo, amministratore_sistema_generale').ilike('email', authUser.email).limit(1).maybeSingle(); userRow = byEmail; }
   if (!userRow) return null;
-  const tipo = normalize(userRow.tipo_utente);
-  const authorized = userRow.attivo !== false && ['ADMIN', 'AMMINISTRATORE DI SISTEMA', 'AMMINISTRATORE SISTEMA', 'SUPER ADMIN', 'SUPERADMIN'].includes(tipo);
+  const authorized = userRow.attivo !== false && userRow.amministratore_sistema_generale === true;
   return authorized ? userRow : null;
 }
 function cleanNullable(value: unknown) { const text = String(value ?? '').trim(); return text || null; }
@@ -52,7 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const admin = await getAuthorizedCatalogAdmin(req);
     if (req.method === 'GET') return res.status(200).json({ canEdit: Boolean(admin) });
     if (req.method !== 'POST') return res.status(405).json({ error: 'Metodo non consentito' });
-    if (!admin) return res.status(403).json({ error: 'Archivio in sola lettura. La modifica è riservata all’Amministratore di Sistema autorizzato.' });
+    if (!admin) return res.status(403).json({ error: 'Archivio in sola lettura. La modifica è riservata all’Amministratore Generale di Sistema.' });
     const { catalog, action, key, payload = {} } = req.body || {};
 
     if (catalog === 'festivita') {
@@ -64,7 +63,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!descrizione) return res.status(400).json({ error: 'Descrizione obbligatoria' });
       if (!['nazionale', 'locale', 'aziendale'].includes(tipo)) return res.status(400).json({ error: 'Tipo festività non valido' });
       const record = { data_festivita: dataFestivita, descrizione, tipo, comune: cleanNullable(payload.comune), provincia: cleanNullable(payload.provincia), codice_catastale: cleanNullable(payload.codice_catastale) };
-      if (action === 'create') { const { error } = await supabaseAdmin.from('tbfestivita').insert(record); if (error) throw error; } else { if (!key) return res.status(400).json({ error: 'ID festività mancante' }); const { error } = await supabaseAdmin.from('tbfestivita').update(record).eq('id', key); if (error) throw error; }
+      if (action === 'create') { const { error } = await supabaseAdmin.from('tbfestivita').insert(record); if (error) throw error; } else { if (!key) return res.status(400).json({ error: 'ID festività mancante' }); const { error } = await supabaseAdmin.from('tbfestivita').update(record).eq('id', String(key)); if (error) throw error; }
       return res.status(200).json({ success: true });
     }
 
