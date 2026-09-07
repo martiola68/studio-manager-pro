@@ -5,128 +5,161 @@ export function ClientiMasterGraficaFixes() {
     document.documentElement.classList.add("clienti-master-fixes");
     document.body.classList.add("clienti-master-fixes");
 
+    let mutationObserver: MutationObserver | null = null;
+    let resizeObserver: ResizeObserver | null = null;
+    let raf = 0;
+
+    const setImportant = (el: HTMLElement | null, prop: string, value: string) => {
+      if (!el) return;
+      el.style.setProperty(prop, value, "important");
+    };
+
+    const applyClientiLayout = () => {
+      const main = document.querySelector(
+        "main.anagrafiche-master-page"
+      ) as HTMLElement | null;
+      if (!main) return;
+
+      const tables = Array.from(main.querySelectorAll("table")) as HTMLTableElement[];
+      const table = tables.find((candidate) => {
+        const headers = Array.from(candidate.querySelectorAll("th")).map((th) =>
+          (th.textContent || "").trim()
+        );
+        return headers.includes("Cod. Cliente") && headers.includes("Ragione Sociale");
+      });
+      if (!table) return;
+
+      const scrollOwner = table.parentElement as HTMLElement | null;
+      if (!scrollOwner) return;
+
+      const root = main.firstElementChild as HTMLElement | null;
+      if (!root) return;
+
+      setImportant(document.documentElement, "height", "100%");
+      setImportant(document.documentElement, "overflow", "hidden");
+      setImportant(document.body, "height", "100%");
+      setImportant(document.body, "overflow", "hidden");
+      setImportant(main, "height", "100%");
+      setImportant(main, "min-height", "0");
+      setImportant(main, "overflow", "hidden");
+
+      setImportant(root, "display", "flex");
+      setImportant(root, "flex-direction", "column");
+      setImportant(root, "height", "100%");
+      setImportant(root, "min-height", "0");
+      setImportant(root, "overflow", "hidden");
+
+      Array.from(root.children).forEach((child) => {
+        const element = child as HTMLElement;
+        if (!element.contains(table)) {
+          setImportant(element, "flex", "0 0 auto");
+        }
+      });
+
+      const chain: HTMLElement[] = [];
+      let node = scrollOwner.parentElement as HTMLElement | null;
+      while (node && node !== root && node !== main) {
+        chain.push(node);
+        node = node.parentElement as HTMLElement | null;
+      }
+
+      chain.forEach((element) => {
+        setImportant(element, "display", "flex");
+        setImportant(element, "flex-direction", "column");
+        setImportant(element, "flex", "1 1 0%");
+        setImportant(element, "min-height", "0");
+        setImportant(element, "max-height", "none");
+        setImportant(element, "overflow", "hidden");
+      });
+
+      setImportant(scrollOwner, "display", "block");
+      setImportant(scrollOwner, "flex", "1 1 0%");
+      setImportant(scrollOwner, "width", "100%");
+      setImportant(scrollOwner, "height", "100%");
+      setImportant(scrollOwner, "min-height", "0");
+      setImportant(scrollOwner, "max-height", "none");
+      setImportant(scrollOwner, "overflow-x", "auto");
+      setImportant(scrollOwner, "overflow-y", "auto");
+      setImportant(scrollOwner, "position", "relative");
+      setImportant(scrollOwner, "scrollbar-gutter", "stable");
+
+      let ancestor = scrollOwner.parentElement as HTMLElement | null;
+      while (ancestor && ancestor !== document.body) {
+        if (ancestor !== scrollOwner && ancestor !== main && ancestor !== root) {
+          setImportant(ancestor, "overflow", "hidden");
+          setImportant(ancestor, "min-height", "0");
+        }
+        if (ancestor === main) break;
+        ancestor = ancestor.parentElement as HTMLElement | null;
+      }
+
+      setImportant(table, "width", "100%");
+      setImportant(table, "min-width", "1750px");
+      setImportant(table, "border-collapse", "separate");
+      setImportant(table, "border-spacing", "0");
+      setImportant(table, "font-size", "0.86rem");
+
+      const thead = table.querySelector("thead") as HTMLElement | null;
+      setImportant(thead, "position", "sticky");
+      setImportant(thead, "top", "0");
+      setImportant(thead, "z-index", "100");
+      setImportant(thead, "background", "rgb(71 85 105)");
+
+      table.querySelectorAll("thead th").forEach((th) => {
+        const cell = th as HTMLElement;
+        setImportant(cell, "position", "sticky");
+        setImportant(cell, "top", "0");
+        setImportant(cell, "z-index", "101");
+        setImportant(cell, "background", "rgb(71 85 105)");
+        setImportant(cell, "color", "white");
+        setImportant(cell, "font-size", "0.86rem");
+      });
+
+      table.querySelectorAll("tbody td").forEach((td) => {
+        setImportant(td as HTMLElement, "font-size", "0.86rem");
+      });
+
+      main.querySelectorAll("input, select, textarea, button[role='combobox']").forEach((el) => {
+        setImportant(el as HTMLElement, "font-size", "0.9rem");
+      });
+      main.querySelectorAll("button").forEach((el) => {
+        setImportant(el as HTMLElement, "font-size", "0.88rem");
+      });
+      main.querySelectorAll("label").forEach((el) => {
+        setImportant(el as HTMLElement, "font-size", "0.87rem");
+      });
+
+      resizeObserver?.disconnect();
+      resizeObserver = new ResizeObserver(() => {
+        cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(applyClientiLayout);
+      });
+      resizeObserver.observe(root);
+      resizeObserver.observe(scrollOwner);
+    };
+
+    raf = requestAnimationFrame(applyClientiLayout);
+    mutationObserver = new MutationObserver(() => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(applyClientiLayout);
+    });
+    mutationObserver.observe(document.body, { childList: true, subtree: true });
+
     return () => {
+      cancelAnimationFrame(raf);
+      mutationObserver?.disconnect();
+      resizeObserver?.disconnect();
       document.documentElement.classList.remove("clienti-master-fixes");
       document.body.classList.remove("clienti-master-fixes");
+      document.documentElement.style.removeProperty("height");
+      document.documentElement.style.removeProperty("overflow");
+      document.body.style.removeProperty("height");
+      document.body.style.removeProperty("overflow");
     };
   }, []);
 
   return (
     <style jsx global>{`
-      html.clienti-master-fixes,
-      body.clienti-master-fixes {
-        height: 100% !important;
-        overflow: hidden !important;
-      }
-
-      body.clienti-master-fixes main.anagrafiche-master-page {
-        height: 100% !important;
-        min-height: 0 !important;
-        overflow: hidden !important;
-      }
-
-      body.clienti-master-fixes main.anagrafiche-master-page > div {
-        display: flex !important;
-        height: 100% !important;
-        min-height: 0 !important;
-        flex-direction: column !important;
-        overflow: hidden !important;
-      }
-
-      body.clienti-master-fixes main.anagrafiche-master-page > div > div:not(:last-child),
-      body.clienti-master-fixes main.anagrafiche-master-page > div > div[class*="grid"] {
-        flex: 0 0 auto !important;
-      }
-
-      /* Tutti gli antenati della tabella Clienti NON devono scrollare.
-         L'unico proprietario dello scroll sarà il parent diretto del table,
-         esattamente come il div overflow-auto di IvaScrollableTable. */
-      body.clienti-master-fixes main.anagrafiche-master-page
-        div:has(table:has(th.sticky.left-0):has(th.sticky.right-0)) {
-        min-height: 0 !important;
-        overflow: hidden !important;
-      }
-
-      body.clienti-master-fixes main.anagrafiche-master-page
-        > div > div[class*="rounded"]:has(table:has(th.sticky.left-0):has(th.sticky.right-0)) {
-        display: flex !important;
-        flex: 1 1 0% !important;
-        min-height: 0 !important;
-        flex-direction: column !important;
-        overflow: hidden !important;
-        margin-bottom: 0 !important;
-      }
-
-      body.clienti-master-fixes main.anagrafiche-master-page
-        > div > div[class*="rounded"]:has(table:has(th.sticky.left-0):has(th.sticky.right-0))
-        > div {
-        display: flex !important;
-        flex: 1 1 0% !important;
-        min-height: 0 !important;
-        flex-direction: column !important;
-        overflow: hidden !important;
-      }
-
-      /* SOLO questo elemento scrolla: è il wrapper generato dal componente Table
-         ed è il parent diretto del <table>. */
-      body.clienti-master-fixes main.anagrafiche-master-page
-        div:has(> table:has(th.sticky.left-0):has(th.sticky.right-0)) {
-        display: block !important;
-        flex: 1 1 0% !important;
-        width: 100% !important;
-        height: 100% !important;
-        min-height: 0 !important;
-        max-height: none !important;
-        overflow: auto !important;
-        position: relative !important;
-        scrollbar-gutter: stable !important;
-      }
-
-      body.clienti-master-fixes main.anagrafiche-master-page
-        table:has(th.sticky.left-0):has(th.sticky.right-0) {
-        width: 100% !important;
-        min-width: 1750px !important;
-        border-collapse: separate !important;
-        border-spacing: 0 !important;
-      }
-
-      /* Stessa logica IVA: thead sticky nel medesimo contenitore che scrolla. */
-      body.clienti-master-fixes main.anagrafiche-master-page
-        table:has(th.sticky.left-0):has(th.sticky.right-0) thead {
-        position: sticky !important;
-        top: 0 !important;
-        z-index: 50 !important;
-        background: rgb(71 85 105) !important;
-        color: white !important;
-        box-shadow: 0 1px 2px rgb(15 23 42 / 0.16) !important;
-      }
-
-      body.clienti-master-fixes main.anagrafiche-master-page
-        table:has(th.sticky.left-0):has(th.sticky.right-0) thead tr {
-        background: rgb(71 85 105) !important;
-      }
-
-      body.clienti-master-fixes main.anagrafiche-master-page
-        table:has(th.sticky.left-0):has(th.sticky.right-0) thead th {
-        position: sticky !important;
-        top: 0 !important;
-        z-index: 51 !important;
-        background: rgb(71 85 105) !important;
-        color: white !important;
-        border-color: rgb(51 65 85) !important;
-      }
-
-      body.clienti-master-fixes main.anagrafiche-master-page
-        table:has(th.sticky.left-0):has(th.sticky.right-0) thead th.sticky.left-0,
-      body.clienti-master-fixes main.anagrafiche-master-page
-        table:has(th.sticky.left-0):has(th.sticky.right-0) thead th.sticky[class*="left-"],
-      body.clienti-master-fixes main.anagrafiche-master-page
-        table:has(th.sticky.left-0):has(th.sticky.right-0) thead th.sticky.right-0 {
-        z-index: 60 !important;
-        background: rgb(71 85 105) !important;
-        color: white !important;
-      }
-
       body.clienti-master-fixes main.anagrafiche-master-page
         table:has(th.sticky.left-0):has(th.sticky.right-0)
         td:nth-child(5) > div[class*="bg-green-600"] {
