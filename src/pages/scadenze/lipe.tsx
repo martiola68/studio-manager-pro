@@ -119,20 +119,24 @@ function BooleanSelect({
   value,
   disabled = false,
   highlight = false,
+  monthStatus = false,
   onChange,
 }: {
   value: boolean;
   disabled?: boolean;
   highlight?: boolean;
+  monthStatus?: boolean;
   onChange: (value: boolean) => void;
 }) {
+  const isGreen = highlight || (monthStatus && value && !disabled);
+
   return (
     <select
       value={value ? "SI" : "NO"}
       disabled={disabled}
       onChange={(e) => onChange(e.target.value === "SI")}
       className={`h-8 w-[70px] rounded-md border px-2 text-center text-xs font-semibold disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 ${
-        highlight
+        isGreen
           ? "border-green-300 bg-green-200 text-slate-900"
           : "border-slate-300 bg-white text-slate-700"
       }`}
@@ -423,36 +427,21 @@ export default function ScadenzeLipePage() {
 
       <div className="grid shrink-0 grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-12">
         {quarterlyStats.flatMap((stats) => [
-          <Card
-            key={`${stats.quarter}-totale`}
-            className="border border-sky-200 border-l-4 border-l-sky-500 bg-white shadow-sm"
-          >
+          <Card key={`${stats.quarter}-totale`} className="border border-sky-200 border-l-4 border-l-sky-500 bg-white shadow-sm">
             <CardContent className="px-3 py-2">
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                LIPE {stats.quarter}T · Totale
-              </div>
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">LIPE {stats.quarter}T · Totale</div>
               <div className="mt-0.5 text-xl font-bold leading-none text-sky-600">{stats.totale}</div>
             </CardContent>
           </Card>,
-          <Card
-            key={`${stats.quarter}-inviate`}
-            className="border border-sky-200 border-l-4 border-l-green-500 bg-white shadow-sm"
-          >
+          <Card key={`${stats.quarter}-inviate`} className="border border-sky-200 border-l-4 border-l-green-500 bg-white shadow-sm">
             <CardContent className="px-3 py-2">
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                LIPE {stats.quarter}T · Inviate
-              </div>
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">LIPE {stats.quarter}T · Inviate</div>
               <div className="mt-0.5 text-xl font-bold leading-none text-green-600">{stats.inviate}</div>
             </CardContent>
           </Card>,
-          <Card
-            key={`${stats.quarter}-dainviare`}
-            className="border border-sky-200 border-l-4 border-l-amber-500 bg-white shadow-sm"
-          >
+          <Card key={`${stats.quarter}-dainviare`} className="border border-sky-200 border-l-4 border-l-amber-500 bg-white shadow-sm">
             <CardContent className="px-3 py-2">
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                LIPE {stats.quarter}T · Da inviare
-              </div>
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">LIPE {stats.quarter}T · Da inviare</div>
               <div className="mt-0.5 text-xl font-bold leading-none text-amber-600">{stats.daInviare}</div>
             </CardContent>
           </Card>,
@@ -460,37 +449,24 @@ export default function ScadenzeLipePage() {
       </div>
 
       <Card className="shrink-0 border border-sky-200 bg-slate-50 shadow-sm">
-        <CardHeader className="px-4 pb-1 pt-3">
-          <CardTitle>Filtri e Ricerca</CardTitle>
-        </CardHeader>
+        <CardHeader className="px-4 pb-1 pt-3"><CardTitle>Filtri e Ricerca</CardTitle></CardHeader>
         <CardContent className="px-4 pb-3 pt-1">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
             <div className="space-y-1">
               <label className="text-sm font-medium">Cerca Nominativo</label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Cerca per nominativo..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-9 border-slate-300 bg-white pl-10"
-                />
+                <Input placeholder="Cerca per nominativo..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="h-9 border-slate-300 bg-white pl-10" />
               </div>
             </div>
 
             <div className="space-y-1">
               <label className="text-sm font-medium">Utente Operatore</label>
               <Select value={filterOperatore} onValueChange={setFilterOperatore}>
-                <SelectTrigger className="h-9 border-slate-300 bg-white">
-                  <SelectValue placeholder="Tutti gli operatori" />
-                </SelectTrigger>
+                <SelectTrigger className="h-9 border-slate-300 bg-white"><SelectValue placeholder="Tutti gli operatori" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all__">Tutti gli operatori</SelectItem>
-                  {utenti.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {u.nome} {u.cognome}
-                    </SelectItem>
-                  ))}
+                  {utenti.map((u) => <SelectItem key={u.id} value={u.id}>{u.nome} {u.cognome}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -498,9 +474,7 @@ export default function ScadenzeLipePage() {
             <div className="space-y-1">
               <label className="text-sm font-medium">Tipo liquidazione</label>
               <Select value={filterTipoLiq} onValueChange={setFilterTipoLiq}>
-                <SelectTrigger className="h-9 border-slate-300 bg-white">
-                  <SelectValue placeholder="Tutti i tipi" />
-                </SelectTrigger>
+                <SelectTrigger className="h-9 border-slate-300 bg-white"><SelectValue placeholder="Tutti i tipi" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all__">Tutti i tipi</SelectItem>
                   <SelectItem value="Mensile">Mensile</SelectItem>
@@ -512,19 +486,10 @@ export default function ScadenzeLipePage() {
 
             <div className="space-y-1">
               <label className="text-sm font-medium">Anno consultazione</label>
-              <Select
-                value={annoConsultazione.toString()}
-                onValueChange={(value) => setAnnoConsultazione(parseInt(value))}
-              >
-                <SelectTrigger className="h-9 border-slate-300 bg-white">
-                  <SelectValue placeholder="Seleziona anno" />
-                </SelectTrigger>
+              <Select value={annoConsultazione.toString()} onValueChange={(value) => setAnnoConsultazione(parseInt(value))}>
+                <SelectTrigger className="h-9 border-slate-300 bg-white"><SelectValue placeholder="Seleziona anno" /></SelectTrigger>
                 <SelectContent>
-                  {anniDisponibili.map((anno) => (
-                    <SelectItem key={anno} value={anno.toString()}>
-                      {anno}
-                    </SelectItem>
-                  ))}
+                  {anniDisponibili.map((anno) => <SelectItem key={anno} value={anno.toString()}>{anno}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -538,34 +503,25 @@ export default function ScadenzeLipePage() {
             <table className="w-full caption-bottom text-sm border-collapse">
               <thead className="sticky top-0 z-30 bg-slate-600 text-white shadow-sm">
                 <tr className="border-b border-slate-500">
-                  <th className="sticky-col-header h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[300px] border-r border-slate-500 !bg-slate-600">
-                    Nominativo
-                  </th>
-                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[180px] border-r border-slate-500 bg-slate-600">
-                    Operatore
-                  </th>
-                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[170px] border-r border-slate-500 bg-slate-600">
-                    Tipo liquidazione
-                  </th>
+                  <th className="sticky-col-header h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[300px] border-r border-slate-500 !bg-slate-600">Nominativo</th>
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[180px] border-r border-slate-500 bg-slate-600">Operatore</th>
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[170px] border-r border-slate-500 bg-slate-600">Tipo liquidazione</th>
 
                   <th className={`${baseHeaderClass} ${groupHeaderQ1} min-w-[60px]`}>Gen</th>
                   <th className={`${baseHeaderClass} ${groupHeaderQ1} min-w-[60px]`}>Feb</th>
                   <th className={`${baseHeaderClass} ${groupHeaderQ1} min-w-[60px]`}>Mar</th>
                   <th className={`${baseHeaderClass} ${groupHeaderQ1} min-w-[80px]`}>LIPE 1T</th>
                   <th className={`${baseHeaderClass} ${groupHeaderQ1} min-w-[140px]`}>Data Invio 1T</th>
-
                   <th className={`${baseHeaderClass} ${groupHeaderQ2} min-w-[60px]`}>Apr</th>
                   <th className={`${baseHeaderClass} ${groupHeaderQ2} min-w-[60px]`}>Mag</th>
                   <th className={`${baseHeaderClass} ${groupHeaderQ2} min-w-[60px]`}>Giu</th>
                   <th className={`${baseHeaderClass} ${groupHeaderQ2} min-w-[80px]`}>LIPE 2T</th>
                   <th className={`${baseHeaderClass} ${groupHeaderQ2} min-w-[140px]`}>Data Invio 2T</th>
-
                   <th className={`${baseHeaderClass} ${groupHeaderQ3} min-w-[60px]`}>Lug</th>
                   <th className={`${baseHeaderClass} ${groupHeaderQ3} min-w-[60px]`}>Ago</th>
                   <th className={`${baseHeaderClass} ${groupHeaderQ3} min-w-[60px]`}>Set</th>
                   <th className={`${baseHeaderClass} ${groupHeaderQ3} min-w-[80px]`}>LIPE 3T</th>
                   <th className={`${baseHeaderClass} ${groupHeaderQ3} min-w-[140px]`}>Data Invio 3T</th>
-
                   <th className={`${baseHeaderClass} ${groupHeaderQ4} min-w-[60px]`}>Ott</th>
                   <th className={`${baseHeaderClass} ${groupHeaderQ4} min-w-[60px]`}>Nov</th>
                   <th className={`${baseHeaderClass} ${groupHeaderQ4} min-w-[60px]`}>Dic</th>
@@ -579,35 +535,15 @@ export default function ScadenzeLipePage() {
 
               <tbody>
                 {filteredScadenze.length === 0 ? (
-                  <tr className="border-b border-gray-300">
-                    <td colSpan={26} className="p-4 text-center text-gray-500">
-                      Nessun record trovato
-                    </td>
-                  </tr>
+                  <tr className="border-b border-gray-300"><td colSpan={26} className="p-4 text-center text-gray-500">Nessun record trovato</td></tr>
                 ) : (
                   filteredScadenze.map((scadenza) => (
                     <tr key={scadenza.id} className="border-b border-slate-200 hover:bg-slate-100">
-                      <td
-                        className={`sticky-col-cell px-2 py-1 align-middle font-medium min-w-[300px] border-r border-slate-200 bg-slate-50 ${
-                          getTipoLiq(scadenza) === "Esterna" ? "text-red-600 font-bold" : ""
-                        }`}
-                      >
-                        {scadenza.nominativo}
-                      </td>
-                      <td className="px-2 py-1 align-middle min-w-[180px] border-r border-slate-200">
-                        {scadenza.operatore}
-                      </td>
-
+                      <td className={`sticky-col-cell px-2 py-1 align-middle font-medium min-w-[300px] border-r border-slate-200 bg-slate-50 ${getTipoLiq(scadenza) === "Esterna" ? "text-red-600 font-bold" : ""}`}>{scadenza.nominativo}</td>
+                      <td className="px-2 py-1 align-middle min-w-[180px] border-r border-slate-200">{scadenza.operatore}</td>
                       <td className="px-2 py-1 align-middle min-w-[170px] border-r border-slate-200">
-                        <Select
-                          value={getTipoLiq(scadenza)}
-                          onValueChange={(value: TipoLiqValue) =>
-                            handleUpdateValue(scadenza.id, "TipoLiq", value)
-                          }
-                        >
-                          <SelectTrigger className="h-8 border-slate-300 bg-white text-xs">
-                            <SelectValue placeholder="Seleziona tipo" />
-                          </SelectTrigger>
+                        <Select value={getTipoLiq(scadenza)} onValueChange={(value: TipoLiqValue) => handleUpdateValue(scadenza.id, "TipoLiq", value)}>
+                          <SelectTrigger className="h-8 border-slate-300 bg-white text-xs"><SelectValue placeholder="Seleziona tipo" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="Mensile">Mensile</SelectItem>
                             <SelectItem value="Trimestrale">Trimestrale</SelectItem>
@@ -616,82 +552,35 @@ export default function ScadenzeLipePage() {
                         </Select>
                       </td>
 
-                      <td className={`${baseCellClass} ${groupCellQ1} text-center min-w-[60px]`}>
-                        <BooleanSelect value={Boolean(scadenza.gen)} disabled={isMonthDisabled(scadenza, "gen")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.gen)) handleToggleField(scadenza.id, "gen", scadenza.gen || false); }} />
-                      </td>
-                      <td className={`${baseCellClass} ${groupCellQ1} text-center min-w-[60px]`}>
-                        <BooleanSelect value={Boolean(scadenza.feb)} disabled={isMonthDisabled(scadenza, "feb")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.feb)) handleToggleField(scadenza.id, "feb", scadenza.feb || false); }} />
-                      </td>
-                      <td className={`${baseCellClass} ${groupCellQ1} text-center min-w-[60px]`}>
-                        <BooleanSelect value={Boolean(scadenza.mar)} disabled={isMonthDisabled(scadenza, "mar")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.mar)) handleToggleField(scadenza.id, "mar", scadenza.mar || false); }} />
-                      </td>
-                      <td className={`${baseCellClass} ${groupCellQ1} text-center min-w-[80px]`}>
-                        <BooleanSelect value={Boolean(scadenza.conferma_1_trimestre)} highlight={Boolean(scadenza.lipe1t_invio)} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.conferma_1_trimestre)) handleToggleField(scadenza.id, "conferma_1_trimestre", scadenza.conferma_1_trimestre || false); }} />
-                      </td>
-                      <td className={`${baseCellClass} ${groupCellQ1} min-w-[140px]`}>
-                        <Input type="date" value={scadenza.lipe1t_invio || ""} onChange={(e) => handleUpdateValue(scadenza.id, "lipe1t_invio", e.target.value)} className={scadenza.lipe1t_invio ? "h-8 border-green-300 bg-green-200 text-xs text-slate-900" : isInvioMancante(scadenza.lipe1t, scadenza.lipe1t_invio) ? "h-8 border-slate-300 bg-red-600 text-xs text-white" : "h-8 border-slate-300 bg-white text-xs"} />
-                      </td>
+                      <td className={`${baseCellClass} ${groupCellQ1} text-center min-w-[60px]`}><BooleanSelect monthStatus value={Boolean(scadenza.gen)} disabled={isMonthDisabled(scadenza, "gen")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.gen)) handleToggleField(scadenza.id, "gen", scadenza.gen || false); }} /></td>
+                      <td className={`${baseCellClass} ${groupCellQ1} text-center min-w-[60px]`}><BooleanSelect monthStatus value={Boolean(scadenza.feb)} disabled={isMonthDisabled(scadenza, "feb")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.feb)) handleToggleField(scadenza.id, "feb", scadenza.feb || false); }} /></td>
+                      <td className={`${baseCellClass} ${groupCellQ1} text-center min-w-[60px]`}><BooleanSelect monthStatus value={Boolean(scadenza.mar)} disabled={isMonthDisabled(scadenza, "mar")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.mar)) handleToggleField(scadenza.id, "mar", scadenza.mar || false); }} /></td>
+                      <td className={`${baseCellClass} ${groupCellQ1} text-center min-w-[80px]`}><BooleanSelect value={Boolean(scadenza.conferma_1_trimestre)} highlight={Boolean(scadenza.lipe1t_invio)} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.conferma_1_trimestre)) handleToggleField(scadenza.id, "conferma_1_trimestre", scadenza.conferma_1_trimestre || false); }} /></td>
+                      <td className={`${baseCellClass} ${groupCellQ1} min-w-[140px]`}><Input type="date" value={scadenza.lipe1t_invio || ""} onChange={(e) => handleUpdateValue(scadenza.id, "lipe1t_invio", e.target.value)} className={scadenza.lipe1t_invio ? "h-8 border-green-300 bg-green-200 text-xs text-slate-900" : isInvioMancante(scadenza.lipe1t, scadenza.lipe1t_invio) ? "h-8 border-slate-300 bg-red-600 text-xs text-white" : "h-8 border-slate-300 bg-white text-xs"} /></td>
 
-                      <td className={`${baseCellClass} ${groupCellQ2} text-center min-w-[60px]`}>
-                        <BooleanSelect value={Boolean(scadenza.apr)} disabled={isMonthDisabled(scadenza, "apr")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.apr)) handleToggleField(scadenza.id, "apr", scadenza.apr || false); }} />
-                      </td>
-                      <td className={`${baseCellClass} ${groupCellQ2} text-center min-w-[60px]`}>
-                        <BooleanSelect value={Boolean(scadenza.mag)} disabled={isMonthDisabled(scadenza, "mag")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.mag)) handleToggleField(scadenza.id, "mag", scadenza.mag || false); }} />
-                      </td>
-                      <td className={`${baseCellClass} ${groupCellQ2} text-center min-w-[60px]`}>
-                        <BooleanSelect value={Boolean(scadenza.giu)} disabled={isMonthDisabled(scadenza, "giu")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.giu)) handleToggleField(scadenza.id, "giu", scadenza.giu || false); }} />
-                      </td>
-                      <td className={`${baseCellClass} ${groupCellQ2} text-center min-w-[80px]`}>
-                        <BooleanSelect value={Boolean(scadenza.conferma_2_trimestre)} highlight={Boolean(scadenza.lipe2t_invio)} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.conferma_2_trimestre)) handleToggleField(scadenza.id, "conferma_2_trimestre", scadenza.conferma_2_trimestre || false); }} />
-                      </td>
-                      <td className={`${baseCellClass} ${groupCellQ2} min-w-[140px]`}>
-                        <Input type="date" value={scadenza.lipe2t_invio || ""} onChange={(e) => handleUpdateValue(scadenza.id, "lipe2t_invio", e.target.value)} className={scadenza.lipe2t_invio ? "h-8 border-green-300 bg-green-200 text-xs text-slate-900" : isInvioMancante(scadenza.lipe2t, scadenza.lipe2t_invio) ? "h-8 border-slate-300 bg-red-600 text-xs text-white" : "h-8 border-slate-300 bg-white text-xs"} />
-                      </td>
+                      <td className={`${baseCellClass} ${groupCellQ2} text-center min-w-[60px]`}><BooleanSelect monthStatus value={Boolean(scadenza.apr)} disabled={isMonthDisabled(scadenza, "apr")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.apr)) handleToggleField(scadenza.id, "apr", scadenza.apr || false); }} /></td>
+                      <td className={`${baseCellClass} ${groupCellQ2} text-center min-w-[60px]`}><BooleanSelect monthStatus value={Boolean(scadenza.mag)} disabled={isMonthDisabled(scadenza, "mag")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.mag)) handleToggleField(scadenza.id, "mag", scadenza.mag || false); }} /></td>
+                      <td className={`${baseCellClass} ${groupCellQ2} text-center min-w-[60px]`}><BooleanSelect monthStatus value={Boolean(scadenza.giu)} disabled={isMonthDisabled(scadenza, "giu")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.giu)) handleToggleField(scadenza.id, "giu", scadenza.giu || false); }} /></td>
+                      <td className={`${baseCellClass} ${groupCellQ2} text-center min-w-[80px]`}><BooleanSelect value={Boolean(scadenza.conferma_2_trimestre)} highlight={Boolean(scadenza.lipe2t_invio)} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.conferma_2_trimestre)) handleToggleField(scadenza.id, "conferma_2_trimestre", scadenza.conferma_2_trimestre || false); }} /></td>
+                      <td className={`${baseCellClass} ${groupCellQ2} min-w-[140px]`}><Input type="date" value={scadenza.lipe2t_invio || ""} onChange={(e) => handleUpdateValue(scadenza.id, "lipe2t_invio", e.target.value)} className={scadenza.lipe2t_invio ? "h-8 border-green-300 bg-green-200 text-xs text-slate-900" : isInvioMancante(scadenza.lipe2t, scadenza.lipe2t_invio) ? "h-8 border-slate-300 bg-red-600 text-xs text-white" : "h-8 border-slate-300 bg-white text-xs"} /></td>
 
-                      <td className={`${baseCellClass} ${groupCellQ3} text-center min-w-[60px]`}>
-                        <BooleanSelect value={Boolean(scadenza.lug)} disabled={isMonthDisabled(scadenza, "lug")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.lug)) handleToggleField(scadenza.id, "lug", scadenza.lug || false); }} />
-                      </td>
-                      <td className={`${baseCellClass} ${groupCellQ3} text-center min-w-[60px]`}>
-                        <BooleanSelect value={Boolean(scadenza.ago)} disabled={isMonthDisabled(scadenza, "ago")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.ago)) handleToggleField(scadenza.id, "ago", scadenza.ago || false); }} />
-                      </td>
-                      <td className={`${baseCellClass} ${groupCellQ3} text-center min-w-[60px]`}>
-                        <BooleanSelect value={Boolean(scadenza.set)} disabled={isMonthDisabled(scadenza, "set")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.set)) handleToggleField(scadenza.id, "set", scadenza.set || false); }} />
-                      </td>
-                      <td className={`${baseCellClass} ${groupCellQ3} text-center min-w-[80px]`}>
-                        <BooleanSelect value={Boolean(scadenza.conferma_3_trimestre)} highlight={Boolean(scadenza.lipe3t_invio)} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.conferma_3_trimestre)) handleToggleField(scadenza.id, "conferma_3_trimestre", scadenza.conferma_3_trimestre || false); }} />
-                      </td>
-                      <td className={`${baseCellClass} ${groupCellQ3} min-w-[140px]`}>
-                        <Input type="date" value={scadenza.lipe3t_invio || ""} onChange={(e) => handleUpdateValue(scadenza.id, "lipe3t_invio", e.target.value)} className={scadenza.lipe3t_invio ? "h-8 border-green-300 bg-green-200 text-xs text-slate-900" : isInvioMancante(scadenza.lipe3t, scadenza.lipe3t_invio) ? "h-8 border-slate-300 bg-red-600 text-xs text-white" : "h-8 border-slate-300 bg-white text-xs"} />
-                      </td>
+                      <td className={`${baseCellClass} ${groupCellQ3} text-center min-w-[60px]`}><BooleanSelect monthStatus value={Boolean(scadenza.lug)} disabled={isMonthDisabled(scadenza, "lug")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.lug)) handleToggleField(scadenza.id, "lug", scadenza.lug || false); }} /></td>
+                      <td className={`${baseCellClass} ${groupCellQ3} text-center min-w-[60px]`}><BooleanSelect monthStatus value={Boolean(scadenza.ago)} disabled={isMonthDisabled(scadenza, "ago")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.ago)) handleToggleField(scadenza.id, "ago", scadenza.ago || false); }} /></td>
+                      <td className={`${baseCellClass} ${groupCellQ3} text-center min-w-[60px]`}><BooleanSelect monthStatus value={Boolean(scadenza.set)} disabled={isMonthDisabled(scadenza, "set")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.set)) handleToggleField(scadenza.id, "set", scadenza.set || false); }} /></td>
+                      <td className={`${baseCellClass} ${groupCellQ3} text-center min-w-[80px]`}><BooleanSelect value={Boolean(scadenza.conferma_3_trimestre)} highlight={Boolean(scadenza.lipe3t_invio)} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.conferma_3_trimestre)) handleToggleField(scadenza.id, "conferma_3_trimestre", scadenza.conferma_3_trimestre || false); }} /></td>
+                      <td className={`${baseCellClass} ${groupCellQ3} min-w-[140px]`}><Input type="date" value={scadenza.lipe3t_invio || ""} onChange={(e) => handleUpdateValue(scadenza.id, "lipe3t_invio", e.target.value)} className={scadenza.lipe3t_invio ? "h-8 border-green-300 bg-green-200 text-xs text-slate-900" : isInvioMancante(scadenza.lipe3t, scadenza.lipe3t_invio) ? "h-8 border-slate-300 bg-red-600 text-xs text-white" : "h-8 border-slate-300 bg-white text-xs"} /></td>
 
-                      <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[60px]`}>
-                        <BooleanSelect value={Boolean(scadenza.ott)} disabled={isMonthDisabled(scadenza, "ott")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.ott)) handleToggleField(scadenza.id, "ott", scadenza.ott || false); }} />
-                      </td>
-                      <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[60px]`}>
-                        <BooleanSelect value={Boolean(scadenza.nov)} disabled={isMonthDisabled(scadenza, "nov")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.nov)) handleToggleField(scadenza.id, "nov", scadenza.nov || false); }} />
-                      </td>
-                      <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[60px]`}>
-                        <BooleanSelect value={Boolean(scadenza.dic)} disabled={isMonthDisabled(scadenza, "dic")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.dic)) handleToggleField(scadenza.id, "dic", scadenza.dic || false); }} />
-                      </td>
+                      <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[60px]`}><BooleanSelect monthStatus value={Boolean(scadenza.ott)} disabled={isMonthDisabled(scadenza, "ott")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.ott)) handleToggleField(scadenza.id, "ott", scadenza.ott || false); }} /></td>
+                      <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[60px]`}><BooleanSelect monthStatus value={Boolean(scadenza.nov)} disabled={isMonthDisabled(scadenza, "nov")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.nov)) handleToggleField(scadenza.id, "nov", scadenza.nov || false); }} /></td>
+                      <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[60px]`}><BooleanSelect monthStatus value={Boolean(scadenza.dic)} disabled={isMonthDisabled(scadenza, "dic")} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.dic)) handleToggleField(scadenza.id, "dic", scadenza.dic || false); }} /></td>
 
-                      <td className={`${baseCellClass} ${groupCellQ4} min-w-[120px]`}>
-                        <Input type="text" value={scadenza.acconto || ""} onChange={(e) => handleUpdateValue(scadenza.id, "acconto", e.target.value)} className="h-8 border-slate-300 bg-white text-xs" placeholder="Metodo" />
-                      </td>
-                      <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[100px]`}>
-                        <BooleanSelect value={Boolean(scadenza.conferma_acconto_iva)} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.conferma_acconto_iva)) handleToggleField(scadenza.id, "conferma_acconto_iva", scadenza.conferma_acconto_iva || false); }} />
-                      </td>
-
-                      <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[80px]`}>
-                        <BooleanSelect value={Boolean(scadenza.conferma_4_trimestre)} highlight={Boolean(scadenza.lipe4t_invio)} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.conferma_4_trimestre)) handleToggleField(scadenza.id, "conferma_4_trimestre", scadenza.conferma_4_trimestre || false); }} />
-                      </td>
-                      <td className={`${baseCellClass} ${groupCellQ4} min-w-[140px]`}>
-                        <Input type="date" value={scadenza.lipe4t_invio || ""} onChange={(e) => handleUpdateValue(scadenza.id, "lipe4t_invio", e.target.value)} className={scadenza.lipe4t_invio ? "h-8 border-green-300 bg-green-200 text-xs text-slate-900" : isInvioMancante(scadenza.lipe4t, scadenza.lipe4t_invio) ? "h-8 border-slate-300 bg-red-600 text-xs text-white" : "h-8 border-slate-300 bg-white text-xs"} />
-                      </td>
+                      <td className={`${baseCellClass} ${groupCellQ4} min-w-[120px]`}><Input type="text" value={scadenza.acconto || ""} onChange={(e) => handleUpdateValue(scadenza.id, "acconto", e.target.value)} className="h-8 border-slate-300 bg-white text-xs" placeholder="Metodo" /></td>
+                      <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[100px]`}><BooleanSelect value={Boolean(scadenza.conferma_acconto_iva)} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.conferma_acconto_iva)) handleToggleField(scadenza.id, "conferma_acconto_iva", scadenza.conferma_acconto_iva || false); }} /></td>
+                      <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[80px]`}><BooleanSelect value={Boolean(scadenza.conferma_4_trimestre)} highlight={Boolean(scadenza.lipe4t_invio)} onChange={(nextValue) => { if (nextValue !== Boolean(scadenza.conferma_4_trimestre)) handleToggleField(scadenza.id, "conferma_4_trimestre", scadenza.conferma_4_trimestre || false); }} /></td>
+                      <td className={`${baseCellClass} ${groupCellQ4} min-w-[140px]`}><Input type="date" value={scadenza.lipe4t_invio || ""} onChange={(e) => handleUpdateValue(scadenza.id, "lipe4t_invio", e.target.value)} className={scadenza.lipe4t_invio ? "h-8 border-green-300 bg-green-200 text-xs text-slate-900" : isInvioMancante(scadenza.lipe4t, scadenza.lipe4t_invio) ? "h-8 border-slate-300 bg-red-600 text-xs text-white" : "h-8 border-slate-300 bg-white text-xs"} /></td>
 
                       <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[100px] border-r-0`}>
-                        <button type="button" onClick={() => handleDeleteRecord(scadenza.id, scadenza.nominativo)} className="text-red-600 hover:text-red-800 transition-colors" title={`Elimina ${scadenza.nominativo}`}>
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        <button type="button" onClick={() => handleDeleteRecord(scadenza.id, scadenza.nominativo)} className="text-red-600 hover:text-red-800 transition-colors" title={`Elimina ${scadenza.nominativo}`}><Trash2 className="h-4 w-4" /></button>
                       </td>
                     </tr>
                   ))
