@@ -19,33 +19,46 @@ export function ClientiMasterGraficaFixes() {
         overflow: hidden !important;
       }
 
+      /* La pagina Clienti deve comportarsi come IVA: pannelli superiori fissi,
+         tabella che occupa tutto lo spazio residuo senza scroll pagina. */
       body.clienti-master-fixes main.anagrafiche-master-page {
-        overflow: hidden !important;
-      }
-
-      /* Replica della gerarchia usata nello Scadenzario IVA:
-         Card flex/overflow-hidden -> CardContent flex/overflow-hidden -> unico wrapper overflow-auto. */
-      body.clienti-master-fixes main.anagrafiche-master-page
-        div[class*="rounded"]:has(> div > div[class*="overflow-x-auto"] > table:has(th.sticky.left-0):has(th.sticky.right-0)) {
-        display: flex !important;
-        flex: 1 1 auto !important;
-        flex-direction: column !important;
+        height: 100% !important;
         min-height: 0 !important;
         overflow: hidden !important;
       }
 
+      body.clienti-master-fixes main.anagrafiche-master-page > div {
+        display: flex !important;
+        height: 100% !important;
+        min-height: 0 !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+      }
+
+      /* Card della tabella = equivalente della Card di IvaScrollableTable. */
       body.clienti-master-fixes main.anagrafiche-master-page
-        div[class*="rounded"]:has(> div > div[class*="overflow-x-auto"] > table:has(th.sticky.left-0):has(th.sticky.right-0))
+        > div > div[class*="rounded"]:has(table:has(th.sticky.left-0):has(th.sticky.right-0)) {
+        display: flex !important;
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+        margin-bottom: 0 !important;
+      }
+
+      body.clienti-master-fixes main.anagrafiche-master-page
+        > div > div[class*="rounded"]:has(table:has(th.sticky.left-0):has(th.sticky.right-0))
         > div {
         display: flex !important;
         flex: 1 1 auto !important;
-        flex-direction: column !important;
         min-height: 0 !important;
+        flex-direction: column !important;
         overflow: hidden !important;
       }
 
+      /* Questo è l'UNICO contenitore che deve scrollare, come il div h-full w-full overflow-auto di IVA. */
       body.clienti-master-fixes main.anagrafiche-master-page
-        div[class*="overflow-x-auto"]:has(> table:has(th.sticky.left-0):has(th.sticky.right-0)) {
+        div[class*="overflow-x-auto"][class*="max-h"]:has(table:has(th.sticky.left-0):has(th.sticky.right-0)) {
         flex: 1 1 auto !important;
         width: 100% !important;
         height: 100% !important;
@@ -55,7 +68,18 @@ export function ClientiMasterGraficaFixes() {
         position: relative !important;
       }
 
-      /* Come IVA: thead sticky dentro lo stesso elemento che effettua lo scroll. */
+      /* Il componente shadcn <Table> aggiunge di suo un secondo div overflow-auto.
+         Su Clienti lo neutralizziamo: è lui che generava la doppia scrollbar e impediva
+         all'intestazione sticky di riferirsi allo stesso scroll verticale. */
+      body.clienti-master-fixes main.anagrafiche-master-page
+        div[class*="overflow-x-auto"][class*="max-h"]:has(table:has(th.sticky.left-0):has(th.sticky.right-0))
+        > div.relative.w-full.overflow-auto {
+        overflow: visible !important;
+        position: static !important;
+        width: 100% !important;
+      }
+
+      /* Stessa logica IVA: thead sticky nello stesso contenitore che scrolla. */
       body.clienti-master-fixes main.anagrafiche-master-page
         table:has(th.sticky.left-0):has(th.sticky.right-0) thead {
         position: sticky !important;
@@ -124,11 +148,6 @@ export function ClientiMasterGraficaFixes() {
       body.clienti-master-fixes main.anagrafiche-master-page
         table:has(th.sticky.left-0):has(th.sticky.right-0) tbody tr > td {
         border-bottom: 1px solid rgb(148 163 184) !important;
-      }
-
-      body.clienti-master-fixes main.anagrafiche-master-page
-        table:has(th.sticky.left-0):has(th.sticky.right-0) tbody tr:last-child > td {
-        border-bottom-color: rgb(148 163 184) !important;
       }
     `}</style>
   );
