@@ -7,6 +7,8 @@ const supabaseAdmin = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
 
+const GENERAL_SYSTEM_ADMIN_EMAIL = "m.artiola@revisionicommerciali.it";
+
 const ALLOWED_FIELDS = [
   "nome",
   "cognome",
@@ -86,6 +88,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!payload.nome || !payload.cognome) return res.status(400).json({ error: "Nome e cognome sono obbligatori" });
 
     if (payload.amministratore_sistema_generale === true) {
+      if (String(targetUser.email || "").trim().toLowerCase() !== GENERAL_SYSTEM_ADMIN_EMAIL) {
+        return res.status(403).json({
+          error: "Amministratore generale di sistema non consentito",
+          details: `Il flag è riservato esclusivamente a ${GENERAL_SYSTEM_ADMIN_EMAIL}`,
+        });
+      }
       if (payload.tipo_utente !== "Admin") {
         return res.status(400).json({ error: "L'Amministratore di sistema generale deve essere di tipo Amministratore" });
       }
@@ -111,11 +119,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (targetUser.amministratore_sistema_generale && payload.amministratore_sistema_generale !== false) {
-      if (payload.tipo_utente && payload.tipo_utente !== "Admin") {
-        return res.status(400).json({ error: "L'Amministratore di sistema generale deve rimanere Amministratore" });
-      }
-      if (payload.attivo === false) {
-        return res.status(400).json({ error: "Rimuovi prima il flag Amministratore di sistema generale" });
+      if (String(targetUser.email || "").trim().toLowerCase() !== GENERAL_SYSTEM_ADMIN_EMAIL) {
+        payload.amministratore_sistema_generale = false;
+      } else {
+        if (payload.tipo_utente && payload.tipo_utente !== "Admin") {
+          return res.status(400).json({ error: "L'Amministratore di sistema generale deve rimanere Amministratore" });
+        }
+        if (payload.attivo === false) {
+          return res.status(400).json({ error: "Rimuovi prima il flag Amministratore di sistema generale" });
+        }
       }
     }
 
