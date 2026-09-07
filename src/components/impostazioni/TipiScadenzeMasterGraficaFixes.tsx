@@ -1,8 +1,37 @@
 import { useEffect } from "react";
+import { supabase } from "@/lib/supabase/client";
 
 export function TipiScadenzeMasterGraficaFixes() {
   useEffect(() => {
     let frame = 0;
+    let studioAdminReadOnly = false;
+
+    void (async () => {
+      const { data: authData } = await supabase.auth.getUser();
+      const user = authData?.user;
+      if (!user) return;
+      let profile: any = null;
+      const { data: byId } = await supabase
+        .from("tbutenti")
+        .select("tipo_utente, amministratore_sistema_generale, attivo")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      profile = byId;
+      if (!profile && user.email) {
+        const { data: byEmail } = await supabase
+          .from("tbutenti")
+          .select("tipo_utente, amministratore_sistema_generale, attivo")
+          .ilike("email", user.email)
+          .maybeSingle();
+        profile = byEmail;
+      }
+      studioAdminReadOnly =
+        profile?.attivo !== false &&
+        String(profile?.tipo_utente || "").trim().toUpperCase() === "ADMIN" &&
+        profile?.amministratore_sistema_generale !== true;
+      apply();
+    })();
+
     const apply = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
@@ -44,16 +73,20 @@ export function TipiScadenzeMasterGraficaFixes() {
         });
 
         page.querySelectorAll('[role="switch"]').forEach((node) => {
-          const sw = node as HTMLElement;
+          const sw = node as HTMLButtonElement;
           const checked = sw.getAttribute("data-state") === "checked";
           sw.style.setProperty("display", "inline-flex", "important");
           sw.style.setProperty("width", "42px", "important");
           sw.style.setProperty("min-width", "42px", "important");
           sw.style.setProperty("height", "24px", "important");
           sw.style.setProperty("min-height", "24px", "important");
-          sw.style.setProperty("opacity", "1", "important");
+          sw.style.setProperty("opacity", studioAdminReadOnly ? ".65" : "1", "important");
           sw.style.setProperty("background", checked ? "rgb(3 105 161)" : "rgb(203 213 225)", "important");
           sw.style.setProperty("border-color", checked ? "rgb(3 105 161)" : "rgb(148 163 184)", "important");
+          if (studioAdminReadOnly) {
+            sw.disabled = true;
+            sw.style.setProperty("cursor", "not-allowed", "important");
+          }
           const wrapper = sw.parentElement;
           if (!wrapper) return;
           let stateText = wrapper.querySelector(".tipi-scadenze-state-text") as HTMLElement | null;
@@ -68,6 +101,25 @@ export function TipiScadenzeMasterGraficaFixes() {
           stateText.style.setProperty("color", checked ? "rgb(21 128 61)" : "rgb(100 116 139)", "important");
           stateText.style.setProperty("white-space", "nowrap", "important");
         });
+
+        if (studioAdminReadOnly) {
+          page.querySelectorAll('button[title="Modifica"], button[title^="Rinnova"], button[title="Elimina"]').forEach((button) => {
+            (button as HTMLElement).style.setProperty("display", "none", "important");
+          });
+
+          document.querySelectorAll('[role="dialog"] label').forEach((label) => {
+            const text = (label.textContent || "").trim();
+            if (text !== "Ha scadenzario dedicato") return;
+            const wrapper = label.parentElement;
+            const checkbox = wrapper?.querySelector('[role="checkbox"]') as HTMLButtonElement | null;
+            if (!checkbox) return;
+            if (checkbox.getAttribute("data-state") === "checked") checkbox.click();
+            checkbox.disabled = true;
+            checkbox.setAttribute("aria-disabled", "true");
+            checkbox.style.setProperty("opacity", ".45", "important");
+            checkbox.style.setProperty("cursor", "not-allowed", "important");
+          });
+        }
       });
     };
 
