@@ -390,7 +390,7 @@ export function TopNavBar() {
       label: "Anagrafiche",
       icon: <Users className="h-4 w-4" />,
       children: [
-        { label: "Anagrafiche", href: "/clienti", icon: <Users className="h-4 w-4" /> },
+        { label: "Nominativi e clienti", href: "/clienti", icon: <Users className="h-4 w-4" /> },
         { label: "Soci e organi sociali", href: "/clienti/organi-sociali", icon: <UserCircle className="h-4 w-4" /> },
         { label: "Gruppi societari", href: "/anagrafiche/gruppi-societari", icon: <Network className="h-4 w-4" /> },
         { label: "Rappresentanti legali", href: "/antiriciclaggio/rappresentanti", icon: <UserCircle className="h-4 w-4" /> },
