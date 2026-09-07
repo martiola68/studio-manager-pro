@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Users,
   Building2,
+  BookOpen,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -125,10 +126,20 @@ export default function SetupWizardCard() {
     () => [
       {
         key: "microsoft" as const,
-        title: "Microsoft 365 e Azure",
-        description: "Configura l'App Azure, inserisci Tenant/Client ID e crea la connessione Microsoft 365.",
+        title: "Microsoft 365 e Microsoft Entra ID / Azure",
+        description: "Prima registra l'app STUDIO MANAGER PRO nel tenant Microsoft Entra, poi crea la connessione in SMP.",
         href: "/microsoft365?tab=connessioni",
         icon: CloudCog,
+        details: [
+          "Accedi a Microsoft Entra con un account amministrativo e apri App registrations > New registration.",
+          "Registra l'app con nome STUDIO MANAGER PRO e annota Application (client) ID e Directory (tenant) ID.",
+          "In Authentication configura una piattaforma Web con il Redirect URI usato da SMP: /api/microsoft365/callback sul dominio dell'app.",
+          "In Certificates & secrets crea il Client Secret e copia il Value: in SMP il secret viene cifrato prima del salvataggio.",
+          "Aggiungi i permessi Microsoft Graph necessari: Calendars.ReadWrite, Mail.Send, Mail.Send.Shared, OnlineMeetings.ReadWrite e User.Read, quindi concedi il consenso amministratore quando richiesto.",
+          "In SMP crea la connessione inserendo Nome connessione, Tenant ID, Client ID e Client Secret; rendila attiva/predefinita e assegna gli utenti autorizzati.",
+          "Completa infine il collegamento personale OAuth dell'utente e prova Sincronizza adesso dall'area Sync.",
+        ],
+        manualHref: "/guide/Manuale_Operativo_Microsoft_365_SMP.pdf",
       },
       {
         key: "users" as const,
@@ -220,6 +231,8 @@ export default function SetupWizardCard() {
             {steps.map((step, index) => {
               const done = status[step.key];
               const Icon = step.icon;
+              const details = "details" in step ? step.details : undefined;
+              const manualHref = "manualHref" in step ? step.manualHref : undefined;
               return (
                 <div
                   key={step.key}
@@ -227,7 +240,7 @@ export default function SetupWizardCard() {
                     done
                       ? "border-emerald-200 bg-emerald-50/70"
                       : "border-[#c7eafb] bg-[#f7fbfd]"
-                  }`}
+                  } ${step.key === "microsoft" ? "md:col-span-2 xl:col-span-3" : ""}`}
                 >
                   <div className="flex items-start gap-3">
                     <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${done ? "bg-emerald-100 text-emerald-700" : "bg-sky-100 text-[#0d6f9f]"}`}>
@@ -239,16 +252,39 @@ export default function SetupWizardCard() {
                         <h3 className="text-sm font-bold text-[#071b36]">{step.title}</h3>
                       </div>
                       <p className="mt-1 text-xs leading-5 text-[#617887]">{step.description}</p>
-                      <div className="mt-3 flex items-center justify-between gap-2">
+
+                      {details && (
+                        <div className="mt-3 grid gap-2 rounded-lg border border-sky-100 bg-white/80 p-3 md:grid-cols-2">
+                          {details.map((detail, detailIndex) => (
+                            <div key={detail} className="flex items-start gap-2 text-xs leading-5 text-slate-600">
+                              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-sky-100 text-[10px] font-bold text-sky-700">
+                                {detailIndex + 1}
+                              </span>
+                              <span>{detail}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                         <span className={`inline-flex items-center gap-1 text-xs font-semibold ${done ? "text-emerald-700" : "text-amber-700"}`}>
                           {done ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Circle className="h-3.5 w-3.5" />}
                           {done ? "Completato" : "Da completare"}
                         </span>
-                        <Link href={step.href}>
-                          <Button size="sm" variant="outline" className="h-8 border-[#8cddff] px-2.5 text-xs text-[#0b4f7d] hover:bg-[#e8f7ff]">
-                            Apri <ExternalLink className="ml-1 h-3.5 w-3.5" />
-                          </Button>
-                        </Link>
+                        <div className="flex flex-wrap gap-2">
+                          {manualHref && (
+                            <a href={manualHref} target="_blank" rel="noopener noreferrer">
+                              <Button size="sm" variant="outline" className="h-8 border-slate-300 px-2.5 text-xs text-slate-700 hover:bg-slate-50">
+                                Manuale <BookOpen className="ml-1 h-3.5 w-3.5" />
+                              </Button>
+                            </a>
+                          )}
+                          <Link href={step.href}>
+                            <Button size="sm" variant="outline" className="h-8 border-[#8cddff] px-2.5 text-xs text-[#0b4f7d] hover:bg-[#e8f7ff]">
+                              Apri configurazione <ExternalLink className="ml-1 h-3.5 w-3.5" />
+                            </Button>
+                          </Link>
+                        </div>
                       </div>
                     </div>
                   </div>
