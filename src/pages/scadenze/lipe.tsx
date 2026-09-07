@@ -46,12 +46,11 @@ type LipeRecord = LipeRow & {
   lipe4t_invio?: string | null;
   acconto?: string | null;
   acconto_com?: boolean | null;
-
-conferma_1_trimestre?: boolean | null;
-conferma_2_trimestre?: boolean | null;
-conferma_3_trimestre?: boolean | null;
-conferma_4_trimestre?: boolean | null;
-conferma_acconto_iva?: boolean | null;
+  conferma_1_trimestre?: boolean | null;
+  conferma_2_trimestre?: boolean | null;
+  conferma_3_trimestre?: boolean | null;
+  conferma_4_trimestre?: boolean | null;
+  conferma_acconto_iva?: boolean | null;
   professionista?: string;
   operatore?: string;
   anno_riferimento?: number | null;
@@ -71,6 +70,13 @@ type CampoMese =
   | "ott"
   | "nov"
   | "dic";
+
+type LipeInvioField = "lipe1t_invio" | "lipe2t_invio" | "lipe3t_invio" | "lipe4t_invio";
+type LipeConfermaField =
+  | "conferma_1_trimestre"
+  | "conferma_2_trimestre"
+  | "conferma_3_trimestre"
+  | "conferma_4_trimestre";
 
 const mesiDisabilitatiPerTipo: Record<TipoLiqValue, CampoMese[]> = {
   Mensile: [],
@@ -95,6 +101,13 @@ const groupCellQ3 = "bg-amber-50";
 const groupHeaderQ4 = "bg-slate-600";
 const groupCellQ4 = "bg-violet-50";
 
+const invioToConfermaField: Record<LipeInvioField, LipeConfermaField> = {
+  lipe1t_invio: "conferma_1_trimestre",
+  lipe2t_invio: "conferma_2_trimestre",
+  lipe3t_invio: "conferma_3_trimestre",
+  lipe4t_invio: "conferma_4_trimestre",
+};
+
 const isInvioMancante = (
   lipe: boolean | null | undefined,
   dataInvio: string | null | undefined
@@ -105,10 +118,12 @@ const isInvioMancante = (
 function BooleanSelect({
   value,
   disabled = false,
+  highlight = false,
   onChange,
 }: {
   value: boolean;
   disabled?: boolean;
+  highlight?: boolean;
   onChange: (value: boolean) => void;
 }) {
   return (
@@ -116,7 +131,11 @@ function BooleanSelect({
       value={value ? "SI" : "NO"}
       disabled={disabled}
       onChange={(e) => onChange(e.target.value === "SI")}
-      className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+      className={`h-8 w-[70px] rounded-md border px-2 text-center text-xs font-semibold disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 ${
+        highlight
+          ? "border-green-300 bg-green-200 text-slate-900"
+          : "border-slate-300 bg-white text-slate-700"
+      }`}
     >
       <option value="NO">NO</option>
       <option value="SI">SI</option>
@@ -214,7 +233,8 @@ export default function ScadenzeLipePage() {
     const { data, error } = await supabase
       .from("tbutenti")
       .select("*")
-      .order("nome", { ascending: true }).order("cognome", { ascending: true });
+      .order("nome", { ascending: true })
+      .order("cognome", { ascending: true });
 
     if (error) throw error;
     return data || [];
@@ -282,15 +302,35 @@ export default function ScadenzeLipePage() {
     value: string
   ) => {
     try {
+      const isInvioField = Object.prototype.hasOwnProperty.call(invioToConfermaField, field);
+      const confermaField = isInvioField
+        ? invioToConfermaField[field as LipeInvioField]
+        : null;
+
+      const updatePayload: Record<string, string | boolean | null> = {
+        [field]: value || null,
+      };
+
+      if (value && confermaField) {
+        updatePayload[confermaField] = true;
+      }
+
       const { error } = await supabase
         .from("tbscadlipe")
-        .update({ [field]: value || null })
+        .update(updatePayload)
         .eq("id", recordId);
 
       if (error) throw error;
 
       setScadenze((prev) =>
-        prev.map((r) => (r.id === recordId ? { ...r, [field]: value || null } : r))
+        prev.map((r) => {
+          if (r.id !== recordId) return r;
+          return {
+            ...r,
+            [field]: value || null,
+            ...(value && confermaField ? { [confermaField]: true } : {}),
+          };
+        })
       );
 
       toast({
@@ -307,55 +347,64 @@ export default function ScadenzeLipePage() {
     }
   };
 
-const handleDeleteRecord = async (
-  recordId: string,
-  nominativo: string
-) => {
-  if (
-    !confirm(
-      `Eliminare il record LIPE di "${nominativo}"?`
-    )
-  )
-    return;
+  const handleDeleteRecord = async (recordId: string, nominativo: string) => {
+    if (!confirm(`Eliminare il record LIPE di "${nominativo}"?`)) return;
 
-  try {
-    const { error } = await supabase
-      .from("tbscadlipe")
-      .delete()
-      .eq("id", recordId);
+    try {
+      const { error } = await supabase
+        .from("tbscadlipe")
+        .delete()
+        .eq("id", recordId);
 
-    if (error) throw error;
+      if (error) throw error;
 
-    setScadenze((prev) => prev.filter((r) => r.id !== recordId));
+      setScadenze((prev) => prev.filter((r) => r.id !== recordId));
 
-    toast({
-      title: "Eliminato",
-      description: "Record eliminato correttamente",
-    });
-  } catch (error) {
-    console.error("Errore eliminazione record:", error);
-    toast({
-      title: "Errore",
-      description: "Impossibile eliminare il record",
-      variant: "destructive",
-    });
-  }
-};
-  
-const filteredScadenze = scadenze.filter((s) => {
-  const matchSearch = (s.nominativo || "")
-    .toLowerCase()
-    .includes(searchQuery.toLowerCase());
+      toast({
+        title: "Eliminato",
+        description: "Record eliminato correttamente",
+      });
+    } catch (error) {
+      console.error("Errore eliminazione record:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile eliminare il record",
+        variant: "destructive",
+      });
+    }
+  };
 
-  const matchOperatore =
-    filterOperatore === "__all__" || s.utente_operatore_id === filterOperatore;
+  const filteredScadenze = scadenze.filter((s) => {
+    const matchSearch = (s.nominativo || "")
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
 
-  const tipoLiq = s.TipoLiq || "Mensile";
-  const matchTipoLiq =
-    filterTipoLiq === "__all__" || tipoLiq === filterTipoLiq;
+    const matchOperatore =
+      filterOperatore === "__all__" || s.utente_operatore_id === filterOperatore;
 
-  return matchSearch && matchOperatore && matchTipoLiq;
-});
+    const tipoLiq = s.TipoLiq || "Mensile";
+    const matchTipoLiq =
+      filterTipoLiq === "__all__" || tipoLiq === filterTipoLiq;
+
+    return matchSearch && matchOperatore && matchTipoLiq;
+  });
+
+  const quarterlyStats = ([1, 2, 3, 4] as const).map((quarter) => {
+    const lipeField = `lipe${quarter}t` as keyof LipeRecord;
+    const invioField = `lipe${quarter}t_invio` as keyof LipeRecord;
+
+    const totale = scadenze.filter((record) => record[lipeField] === true).length;
+    const inviate = scadenze.filter(
+      (record) => record[lipeField] === true && Boolean(record[invioField])
+    ).length;
+
+    return {
+      quarter,
+      totale,
+      inviate,
+      daInviare: Math.max(0, totale - inviate),
+    };
+  });
 
   if (loading) {
     return (
@@ -366,7 +415,7 @@ const filteredScadenze = scadenze.filter((s) => {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden bg-slate-200/70 px-3 pb-3 pt-2">
+    <div className="flex h-full min-h-0 flex-col gap-2 overflow-hidden bg-slate-200/70 px-3 pb-3 pt-2">
       <div className="flex shrink-0 items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Scadenzario Liquidazioni IVA e LIPE</h1>
@@ -374,76 +423,114 @@ const filteredScadenze = scadenze.filter((s) => {
         </div>
       </div>
 
+      <div className="grid shrink-0 grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-12">
+        {quarterlyStats.flatMap((stats) => [
+          <Card
+            key={`${stats.quarter}-totale`}
+            className="border border-sky-200 border-l-4 border-l-sky-500 bg-white shadow-sm"
+          >
+            <CardContent className="px-3 py-2">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                LIPE {stats.quarter}T · Totale
+              </div>
+              <div className="mt-0.5 text-xl font-bold leading-none text-sky-600">{stats.totale}</div>
+            </CardContent>
+          </Card>,
+          <Card
+            key={`${stats.quarter}-inviate`}
+            className="border border-sky-200 border-l-4 border-l-green-500 bg-white shadow-sm"
+          >
+            <CardContent className="px-3 py-2">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                LIPE {stats.quarter}T · Inviate
+              </div>
+              <div className="mt-0.5 text-xl font-bold leading-none text-green-600">{stats.inviate}</div>
+            </CardContent>
+          </Card>,
+          <Card
+            key={`${stats.quarter}-dainviare`}
+            className="border border-sky-200 border-l-4 border-l-amber-500 bg-white shadow-sm"
+          >
+            <CardContent className="px-3 py-2">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                LIPE {stats.quarter}T · Da inviare
+              </div>
+              <div className="mt-0.5 text-xl font-bold leading-none text-amber-600">{stats.daInviare}</div>
+            </CardContent>
+          </Card>,
+        ])}
+      </div>
+
       <Card className="shrink-0 border border-sky-200 bg-slate-50 shadow-sm">
-        <CardHeader className="pb-3">
+        <CardHeader className="px-4 pb-1 pt-3">
           <CardTitle>Filtri e Ricerca</CardTitle>
         </CardHeader>
-        <CardContent>
- <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-  <div className="space-y-2">
-    <label className="text-sm font-medium">Cerca Nominativo</label>
-    <div className="relative">
-      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-      <Input
-        placeholder="Cerca per nominativo..."
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        className="h-9 border-slate-300 bg-white pl-10"
-      />
-    </div>
-  </div>
+        <CardContent className="px-4 pb-3 pt-1">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Cerca Nominativo</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Cerca per nominativo..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-9 border-slate-300 bg-white pl-10"
+                />
+              </div>
+            </div>
 
-  <div className="space-y-2">
-    <label className="text-sm font-medium">Utente Operatore</label>
-    <Select value={filterOperatore} onValueChange={setFilterOperatore}>
-      <SelectTrigger className="h-9 border-slate-300 bg-white">
-        <SelectValue placeholder="Tutti gli operatori" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="__all__">Tutti gli operatori</SelectItem>
-        {utenti.map((u) => (
-          <SelectItem key={u.id} value={u.id}>
-            {u.nome} {u.cognome}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Utente Operatore</label>
+              <Select value={filterOperatore} onValueChange={setFilterOperatore}>
+                <SelectTrigger className="h-9 border-slate-300 bg-white">
+                  <SelectValue placeholder="Tutti gli operatori" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Tutti gli operatori</SelectItem>
+                  {utenti.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.nome} {u.cognome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-  <div className="space-y-2">
-    <label className="text-sm font-medium">Tipo liquidazione</label>
-    <Select value={filterTipoLiq} onValueChange={setFilterTipoLiq}>
-      <SelectTrigger className="h-9 border-slate-300 bg-white">
-        <SelectValue placeholder="Tutti i tipi" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="__all__">Tutti i tipi</SelectItem>
-        <SelectItem value="Mensile">Mensile</SelectItem>
-        <SelectItem value="Trimestrale">Trimestrale</SelectItem>
-        <SelectItem value="Esterna">Esterna</SelectItem>
-      </SelectContent>
-    </Select>
-  </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Tipo liquidazione</label>
+              <Select value={filterTipoLiq} onValueChange={setFilterTipoLiq}>
+                <SelectTrigger className="h-9 border-slate-300 bg-white">
+                  <SelectValue placeholder="Tutti i tipi" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Tutti i tipi</SelectItem>
+                  <SelectItem value="Mensile">Mensile</SelectItem>
+                  <SelectItem value="Trimestrale">Trimestrale</SelectItem>
+                  <SelectItem value="Esterna">Esterna</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-  <div className="space-y-2">
-    <label className="text-sm font-medium">Anno consultazione</label>
-    <Select
-      value={annoConsultazione.toString()}
-      onValueChange={(value) => setAnnoConsultazione(parseInt(value))}
-    >
-      <SelectTrigger className="h-9 border-slate-300 bg-white">
-        <SelectValue placeholder="Seleziona anno" />
-      </SelectTrigger>
-      <SelectContent>
-        {anniDisponibili.map((anno) => (
-          <SelectItem key={anno} value={anno.toString()}>
-            {anno}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  </div>
-</div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Anno consultazione</label>
+              <Select
+                value={annoConsultazione.toString()}
+                onValueChange={(value) => setAnnoConsultazione(parseInt(value))}
+              >
+                <SelectTrigger className="h-9 border-slate-300 bg-white">
+                  <SelectValue placeholder="Seleziona anno" />
+                </SelectTrigger>
+                <SelectContent>
+                  {anniDisponibili.map((anno) => (
+                    <SelectItem key={anno} value={anno.toString()}>
+                      {anno}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -453,12 +540,12 @@ const filteredScadenze = scadenze.filter((s) => {
             <table className="w-full caption-bottom text-sm border-collapse">
               <thead className="sticky top-0 z-30 bg-slate-600 text-white shadow-sm">
                 <tr className="border-b border-slate-500">
-                 <th className="sticky-col-header h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[300px] border-r border-slate-500 !bg-slate-600">
-                  Nominativo
+                  <th className="sticky-col-header h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[300px] border-r border-slate-500 !bg-slate-600">
+                    Nominativo
                   </th>
-                    <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[180px] border-r border-slate-500 bg-slate-600">
-                      Operatore
-                    </th>
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[180px] border-r border-slate-500 bg-slate-600">
+                    Operatore
+                  </th>
                   <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[170px] border-r border-slate-500 bg-slate-600">
                     Tipo liquidazione
                   </th>
@@ -487,20 +574,15 @@ const filteredScadenze = scadenze.filter((s) => {
                   <th className={`${baseHeaderClass} ${groupHeaderQ4} min-w-[120px]`}>Acconto</th>
                   <th className={`${baseHeaderClass} ${groupHeaderQ4} min-w-[100px]`}>Acconto Com</th>
                   <th className={`${baseHeaderClass} ${groupHeaderQ4} min-w-[80px]`}>LIPE 4T</th>
-                  <th className={`${baseHeaderClass} ${groupHeaderQ4} min-w-[140px]`}>
-                    Data Invio 4T
-                    </th>
-
-                    <th className={`${baseHeaderClass} ${groupHeaderQ4} min-w-[100px] border-r-0`}>
-                        Azioni
-                    </th>
+                  <th className={`${baseHeaderClass} ${groupHeaderQ4} min-w-[140px]`}>Data Invio 4T</th>
+                  <th className={`${baseHeaderClass} ${groupHeaderQ4} min-w-[100px] border-r-0`}>Azioni</th>
                 </tr>
               </thead>
 
               <tbody>
                 {filteredScadenze.length === 0 ? (
                   <tr className="border-b border-gray-300">
-                   <td colSpan={26} className="p-4 text-center text-gray-500">
+                    <td colSpan={26} className="p-4 text-center text-gray-500">
                       Nessun record trovato
                     </td>
                   </tr>
@@ -508,15 +590,15 @@ const filteredScadenze = scadenze.filter((s) => {
                   filteredScadenze.map((scadenza) => (
                     <tr key={scadenza.id} className="border-b border-slate-200 hover:bg-slate-100">
                       <td
-  className={`sticky-col-cell px-2 py-1 align-middle font-medium min-w-[300px] border-r border-slate-200 bg-slate-50 ${
-    getTipoLiq(scadenza) === "Esterna" ? "text-red-600 font-bold" : ""
-  }`}
->
-  {scadenza.nominativo}
-</td>
-                          <td className="px-2 py-1 align-middle min-w-[180px] border-r border-slate-200">
-                            {scadenza.operatore}
-                          </td>
+                        className={`sticky-col-cell px-2 py-1 align-middle font-medium min-w-[300px] border-r border-slate-200 bg-slate-50 ${
+                          getTipoLiq(scadenza) === "Esterna" ? "text-red-600 font-bold" : ""
+                        }`}
+                      >
+                        {scadenza.nominativo}
+                      </td>
+                      <td className="px-2 py-1 align-middle min-w-[180px] border-r border-slate-200">
+                        {scadenza.operatore}
+                      </td>
 
                       <td className="px-2 py-1 align-middle min-w-[170px] border-r border-slate-200">
                         <Select
@@ -570,11 +652,16 @@ const filteredScadenze = scadenze.filter((s) => {
                         />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ1} text-center min-w-[80px]`}>
-                       <BooleanSelect
+                        <BooleanSelect
                           value={Boolean(scadenza.conferma_1_trimestre)}
+                          highlight={Boolean(scadenza.lipe1t_invio)}
                           onChange={(nextValue) => {
                             if (nextValue !== Boolean(scadenza.conferma_1_trimestre)) {
-                              handleToggleField(scadenza.id, "conferma_1_trimestre", scadenza.conferma_1_trimestre || false);
+                              handleToggleField(
+                                scadenza.id,
+                                "conferma_1_trimestre",
+                                scadenza.conferma_1_trimestre || false
+                              );
                             }
                           }}
                         />
@@ -586,13 +673,13 @@ const filteredScadenze = scadenze.filter((s) => {
                           onChange={(e) =>
                             handleUpdateValue(scadenza.id, "lipe1t_invio", e.target.value)
                           }
-className={
-  isInvioMancante(scadenza.lipe1t, scadenza.lipe1t_invio)
-    ? "h-8 border-slate-300 bg-red-600 text-xs text-white"
-  : scadenza.conferma_1_trimestre
-? "h-8 border-slate-300 bg-green-200 text-xs text-slate-900"
-    : "h-8 border-slate-300 bg-white text-xs"
-}
+                          className={
+                            scadenza.lipe1t_invio
+                              ? "h-8 border-green-300 bg-green-200 text-xs text-slate-900"
+                              : isInvioMancante(scadenza.lipe1t, scadenza.lipe1t_invio)
+                                ? "h-8 border-slate-300 bg-red-600 text-xs text-white"
+                                : "h-8 border-slate-300 bg-white text-xs"
+                          }
                         />
                       </td>
 
@@ -632,9 +719,14 @@ className={
                       <td className={`${baseCellClass} ${groupCellQ2} text-center min-w-[80px]`}>
                         <BooleanSelect
                           value={Boolean(scadenza.conferma_2_trimestre)}
+                          highlight={Boolean(scadenza.lipe2t_invio)}
                           onChange={(nextValue) => {
                             if (nextValue !== Boolean(scadenza.conferma_2_trimestre)) {
-                              handleToggleField(scadenza.id, "conferma_2_trimestre", scadenza.conferma_2_trimestre || false);
+                              handleToggleField(
+                                scadenza.id,
+                                "conferma_2_trimestre",
+                                scadenza.conferma_2_trimestre || false
+                              );
                             }
                           }}
                         />
@@ -646,13 +738,13 @@ className={
                           onChange={(e) =>
                             handleUpdateValue(scadenza.id, "lipe2t_invio", e.target.value)
                           }
- className={
-  isInvioMancante(scadenza.lipe2t, scadenza.lipe2t_invio)
-    ? "h-8 border-slate-300 bg-red-600 text-xs text-white"
-   : scadenza.conferma_2_trimestre
-? "h-8 border-slate-300 bg-green-200 text-xs text-slate-900"
-    : "h-8 border-slate-300 bg-white text-xs"
-}
+                          className={
+                            scadenza.lipe2t_invio
+                              ? "h-8 border-green-300 bg-green-200 text-xs text-slate-900"
+                              : isInvioMancante(scadenza.lipe2t, scadenza.lipe2t_invio)
+                                ? "h-8 border-slate-300 bg-red-600 text-xs text-white"
+                                : "h-8 border-slate-300 bg-white text-xs"
+                          }
                         />
                       </td>
 
@@ -690,30 +782,35 @@ className={
                         />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ3} text-center min-w-[80px]`}>
-                       <BooleanSelect
+                        <BooleanSelect
                           value={Boolean(scadenza.conferma_3_trimestre)}
+                          highlight={Boolean(scadenza.lipe3t_invio)}
                           onChange={(nextValue) => {
                             if (nextValue !== Boolean(scadenza.conferma_3_trimestre)) {
-                              handleToggleField(scadenza.id, "conferma_3_trimestre", scadenza.conferma_3_trimestre || false);
+                              handleToggleField(
+                                scadenza.id,
+                                "conferma_3_trimestre",
+                                scadenza.conferma_3_trimestre || false
+                              );
                             }
                           }}
                         />
                       </td>
                       <td className={`${baseCellClass} ${groupCellQ3} min-w-[140px]`}>
- <Input
-  type="date"
-  value={scadenza.lipe3t_invio || ""}
-  onChange={(e) =>
-    handleUpdateValue(scadenza.id, "lipe3t_invio", e.target.value)
-  }
-  className={
-    isInvioMancante(scadenza.lipe3t, scadenza.lipe3t_invio)
-      ? "h-8 border-slate-300 bg-red-600 text-xs text-white"
-    : scadenza.conferma_3_trimestre
-? "h-8 border-slate-300 bg-green-200 text-xs text-slate-900"
-      : "h-8 border-slate-300 bg-white text-xs"
-  }
-/>
+                        <Input
+                          type="date"
+                          value={scadenza.lipe3t_invio || ""}
+                          onChange={(e) =>
+                            handleUpdateValue(scadenza.id, "lipe3t_invio", e.target.value)
+                          }
+                          className={
+                            scadenza.lipe3t_invio
+                              ? "h-8 border-green-300 bg-green-200 text-xs text-slate-900"
+                              : isInvioMancante(scadenza.lipe3t, scadenza.lipe3t_invio)
+                                ? "h-8 border-slate-300 bg-red-600 text-xs text-white"
+                                : "h-8 border-slate-300 bg-white text-xs"
+                          }
+                        />
                       </td>
 
                       <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[60px]`}>
@@ -766,7 +863,11 @@ className={
                           value={Boolean(scadenza.conferma_acconto_iva)}
                           onChange={(nextValue) => {
                             if (nextValue !== Boolean(scadenza.conferma_acconto_iva)) {
-                              handleToggleField(scadenza.id, "conferma_acconto_iva", scadenza.conferma_acconto_iva || false);
+                              handleToggleField(
+                                scadenza.id,
+                                "conferma_acconto_iva",
+                                scadenza.conferma_acconto_iva || false
+                              );
                             }
                           }}
                         />
@@ -775,48 +876,47 @@ className={
                       <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[80px]`}>
                         <BooleanSelect
                           value={Boolean(scadenza.conferma_4_trimestre)}
+                          highlight={Boolean(scadenza.lipe4t_invio)}
                           onChange={(nextValue) => {
                             if (nextValue !== Boolean(scadenza.conferma_4_trimestre)) {
-                              handleToggleField(scadenza.id, "conferma_4_trimestre", scadenza.conferma_4_trimestre || false);
+                              handleToggleField(
+                                scadenza.id,
+                                "conferma_4_trimestre",
+                                scadenza.conferma_4_trimestre || false
+                              );
                             }
                           }}
                         />
                       </td>
-  
-<td className={`${baseCellClass} ${groupCellQ4} min-w-[140px]`}>
-  <Input
-    type="date"
-    value={scadenza.lipe4t_invio || ""}
-    onChange={(e) =>
-      handleUpdateValue(scadenza.id, "lipe4t_invio", e.target.value)
-    }
-    className={
-      isInvioMancante(scadenza.lipe4t, scadenza.lipe4t_invio)
-        ? "h-8 border-slate-300 bg-red-600 text-xs text-white"
-       : scadenza.conferma_4_trimestre
-? "h-8 border-slate-300 bg-green-200 text-xs text-slate-900"
-        : "h-8 border-slate-300 bg-white text-xs"
-    }
-  />
-</td>
 
-<td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[100px] border-r-0`}>
- <button
-  type="button"
-  onClick={() =>
-    handleDeleteRecord(
-      scadenza.id,
-      scadenza.nominativo
-    )
-  }
-  className="text-red-600 hover:text-red-800 transition-colors"
-  title={`Elimina ${scadenza.nominativo}`}
->
-  <Trash2 className="h-4 w-4" />
-</button>
-</td>
+                      <td className={`${baseCellClass} ${groupCellQ4} min-w-[140px]`}>
+                        <Input
+                          type="date"
+                          value={scadenza.lipe4t_invio || ""}
+                          onChange={(e) =>
+                            handleUpdateValue(scadenza.id, "lipe4t_invio", e.target.value)
+                          }
+                          className={
+                            scadenza.lipe4t_invio
+                              ? "h-8 border-green-300 bg-green-200 text-xs text-slate-900"
+                              : isInvioMancante(scadenza.lipe4t, scadenza.lipe4t_invio)
+                                ? "h-8 border-slate-300 bg-red-600 text-xs text-white"
+                                : "h-8 border-slate-300 bg-white text-xs"
+                          }
+                        />
+                      </td>
 
-</tr>
+                      <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[100px] border-r-0`}>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteRecord(scadenza.id, scadenza.nominativo)}
+                          className="text-red-600 hover:text-red-800 transition-colors"
+                          title={`Elimina ${scadenza.nominativo}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
                   ))
                 )}
               </tbody>
