@@ -6,32 +6,6 @@ export function TipiScadenzeMasterGraficaFixes() {
     let frame = 0;
     let studioAdminReadOnly = false;
 
-    void (async () => {
-      const { data: authData } = await supabase.auth.getUser();
-      const user = authData?.user;
-      if (!user) return;
-      let profile: any = null;
-      const { data: byId } = await supabase
-        .from("tbutenti")
-        .select("tipo_utente, amministratore_sistema_generale, attivo")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      profile = byId;
-      if (!profile && user.email) {
-        const { data: byEmail } = await supabase
-          .from("tbutenti")
-          .select("tipo_utente, amministratore_sistema_generale, attivo")
-          .ilike("email", user.email)
-          .maybeSingle();
-        profile = byEmail;
-      }
-      studioAdminReadOnly =
-        profile?.attivo !== false &&
-        String(profile?.tipo_utente || "").trim().toUpperCase() === "ADMIN" &&
-        profile?.amministratore_sistema_generale !== true;
-      apply();
-    })();
-
     const apply = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
@@ -122,6 +96,32 @@ export function TipiScadenzeMasterGraficaFixes() {
         }
       });
     };
+
+    void (async () => {
+      const { data: authData } = await supabase.auth.getUser();
+      const user = authData?.user;
+      if (!user) return;
+      let profile: any = null;
+      const { data: byId } = await supabase
+        .from("tbutenti")
+        .select("tipo_utente, amministratore_sistema_generale, attivo")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      profile = byId;
+      if (!profile && user.email) {
+        const { data: byEmail } = await supabase
+          .from("tbutenti")
+          .select("tipo_utente, amministratore_sistema_generale, attivo")
+          .ilike("email", user.email)
+          .maybeSingle();
+        profile = byEmail;
+      }
+      studioAdminReadOnly =
+        profile?.attivo !== false &&
+        String(profile?.tipo_utente || "").trim().toUpperCase() === "ADMIN" &&
+        profile?.amministratore_sistema_generale !== true;
+      apply();
+    })();
 
     apply();
     const observer = new MutationObserver(apply);
