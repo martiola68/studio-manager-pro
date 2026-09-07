@@ -19,8 +19,8 @@ export function ClientiMasterGraficaFixes() {
         overflow: hidden !important;
       }
 
-      /* La pagina Clienti deve comportarsi come IVA: pannelli superiori fissi,
-         tabella che occupa tutto lo spazio residuo senza scroll pagina. */
+      /* STESSA GERARCHIA DI IVA:
+         pagina flex h-full min-h-0 overflow-hidden */
       body.clienti-master-fixes main.anagrafiche-master-page {
         height: 100% !important;
         min-height: 0 !important;
@@ -35,51 +35,59 @@ export function ClientiMasterGraficaFixes() {
         overflow: hidden !important;
       }
 
-      /* Card della tabella = equivalente della Card di IvaScrollableTable. */
+      /* Header, statistiche e filtri restano fissi. */
+      body.clienti-master-fixes main.anagrafiche-master-page > div > div:not(:last-child),
+      body.clienti-master-fixes main.anagrafiche-master-page > div > div[class*="grid"] {
+        flex: 0 0 auto !important;
+      }
+
+      /* Card tabella = Card flex min-h-0 flex-1 flex-col overflow-hidden di IVA. */
       body.clienti-master-fixes main.anagrafiche-master-page
         > div > div[class*="rounded"]:has(table:has(th.sticky.left-0):has(th.sticky.right-0)) {
         display: flex !important;
-        flex: 1 1 auto !important;
+        flex: 1 1 0% !important;
         min-height: 0 !important;
         flex-direction: column !important;
         overflow: hidden !important;
         margin-bottom: 0 !important;
       }
 
+      /* CardContent = min-h-0 flex-1 overflow-hidden p-0 di IVA. */
       body.clienti-master-fixes main.anagrafiche-master-page
         > div > div[class*="rounded"]:has(table:has(th.sticky.left-0):has(th.sticky.right-0))
         > div {
         display: flex !important;
-        flex: 1 1 auto !important;
+        flex: 1 1 0% !important;
         min-height: 0 !important;
         flex-direction: column !important;
         overflow: hidden !important;
       }
 
-      /* Questo è l'UNICO contenitore che deve scrollare, come il div h-full w-full overflow-auto di IVA. */
+      /* Wrapper esterno presente solo in Clienti: NON deve scrollare. */
       body.clienti-master-fixes main.anagrafiche-master-page
         div[class*="overflow-x-auto"][class*="max-h"]:has(table:has(th.sticky.left-0):has(th.sticky.right-0)) {
-        flex: 1 1 auto !important;
+        display: flex !important;
+        flex: 1 1 0% !important;
+        min-height: 0 !important;
+        height: 100% !important;
+        max-height: none !important;
+        overflow: hidden !important;
+      }
+
+      /* QUESTO è l'unico scroll, equivalente al div h-full w-full overflow-auto di IVA.
+         È il wrapper creato dal componente shadcn Table. */
+      body.clienti-master-fixes main.anagrafiche-master-page
+        div[class*="overflow-x-auto"][class*="max-h"]:has(table:has(th.sticky.left-0):has(th.sticky.right-0))
+        > div.relative.w-full.overflow-auto {
+        flex: 1 1 0% !important;
         width: 100% !important;
         height: 100% !important;
         min-height: 0 !important;
-        max-height: none !important;
         overflow: auto !important;
         position: relative !important;
       }
 
-      /* Il componente shadcn <Table> aggiunge di suo un secondo div overflow-auto.
-         Su Clienti lo neutralizziamo: è lui che generava la doppia scrollbar e impediva
-         all'intestazione sticky di riferirsi allo stesso scroll verticale. */
-      body.clienti-master-fixes main.anagrafiche-master-page
-        div[class*="overflow-x-auto"][class*="max-h"]:has(table:has(th.sticky.left-0):has(th.sticky.right-0))
-        > div.relative.w-full.overflow-auto {
-        overflow: visible !important;
-        position: static !important;
-        width: 100% !important;
-      }
-
-      /* Stessa logica IVA: thead sticky nello stesso contenitore che scrolla. */
+      /* Stesso thead di IVA: sticky top-0 nello STESSO contenitore che scorre. */
       body.clienti-master-fixes main.anagrafiche-master-page
         table:has(th.sticky.left-0):has(th.sticky.right-0) thead {
         position: sticky !important;
@@ -91,12 +99,15 @@ export function ClientiMasterGraficaFixes() {
       }
 
       body.clienti-master-fixes main.anagrafiche-master-page
+        table:has(th.sticky.left-0):has(th.sticky.right-0) thead tr {
+        background: rgb(71 85 105) !important;
+      }
+
+      body.clienti-master-fixes main.anagrafiche-master-page
         table:has(th.sticky.left-0):has(th.sticky.right-0) thead th {
-        top: 0 !important;
         background: rgb(71 85 105) !important;
         color: white !important;
         border-color: rgb(51 65 85) !important;
-        z-index: 31 !important;
       }
 
       body.clienti-master-fixes main.anagrafiche-master-page
@@ -106,6 +117,7 @@ export function ClientiMasterGraficaFixes() {
       body.clienti-master-fixes main.anagrafiche-master-page
         table:has(th.sticky.left-0):has(th.sticky.right-0) thead th.sticky.right-0 {
         position: sticky !important;
+        top: 0 !important;
         z-index: 40 !important;
         background: rgb(71 85 105) !important;
         color: white !important;
