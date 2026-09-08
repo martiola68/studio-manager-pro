@@ -2310,22 +2310,23 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
           <SelectValue placeholder="Utente Fiscale" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">Tutti (Fiscale)</SelectItem>
-          {utenti
-            .slice()
-            .sort((a, b) =>
-              `${safeString(a.cognome)} ${safeString(a.nome)}`
-                .toLowerCase()
-                .localeCompare(
-                  `${safeString(b.cognome)} ${safeString(b.nome)}`.toLowerCase()
-                )
-            )
-            .map((u) => (
-              <SelectItem key={u.id} value={u.id}>
-                {safeString(u.nome)} {safeString(u.cognome)}
-              </SelectItem>
-            ))}
-        </SelectContent>
+         <SelectContent>
+  <SelectItem value="all">Tutti (Fiscale)</SelectItem>
+  {utenti
+    .slice()
+    .sort((a, b) =>
+      `${safeString(a.nome)} ${safeString(a.cognome)}`
+        .toLowerCase()
+        .localeCompare(
+          `${safeString(b.nome)} ${safeString(b.cognome)}`.toLowerCase()
+        )
+    )
+    .map((u) => (
+      <SelectItem key={u.id} value={u.id}>
+        {safeString(u.nome)} {safeString(u.cognome)}
+      </SelectItem>
+    ))}
+</SelectContent>
       </Select>
 
       <Select
@@ -2335,23 +2336,23 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
         <SelectTrigger className="w-full md:w-[200px] h-12">
           <SelectValue placeholder="Utente Payroll" />
         </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Tutti (Payroll)</SelectItem>
-          {utenti
-            .slice()
-            .sort((a, b) =>
-              `${safeString(a.cognome)} ${safeString(a.nome)}`
-                .toLowerCase()
-                .localeCompare(
-                  `${safeString(b.cognome)} ${safeString(b.nome)}`.toLowerCase()
-                )
-            )
-            .map((u) => (
-              <SelectItem key={u.id} value={u.id}>
-                {safeString(u.nome)} {safeString(u.cognome)}
-              </SelectItem>
-            ))}
-        </SelectContent>
+       <SelectContent>
+  <SelectItem value="all">Tutti (Payroll)</SelectItem>
+  {utenti
+    .slice()
+    .sort((a, b) =>
+      `${safeString(a.nome)} ${safeString(a.cognome)}`
+        .toLowerCase()
+        .localeCompare(
+          `${safeString(b.nome)} ${safeString(b.cognome)}`.toLowerCase()
+        )
+    )
+    .map((u) => (
+      <SelectItem key={u.id} value={u.id}>
+        {safeString(u.nome)} {safeString(u.cognome)}
+      </SelectItem>
+    ))}
+</SelectContent>
       </Select>
     </div>
 
