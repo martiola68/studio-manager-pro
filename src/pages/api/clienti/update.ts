@@ -7,41 +7,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // 1) Read token
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith("Bearer ")) {
-      return res
-        .status(401)
-        .json({ error: "Missing or invalid authorization header" });
+      return res.status(401).json({ error: "Missing or invalid authorization header" });
     }
     const token = authHeader.slice("Bearer ".length).trim();
 
-    // 2) Supabase client WITH USER CONTEXT (RLS works)
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         auth: { persistSession: false },
-        global: {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
+        global: { headers: { Authorization: `Bearer ${token}` } },
       }
     );
 
-    // 3) Validate JWT -> user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       console.error("Auth error:", authError);
       return res.status(401).json({ error: "Invalid or expired token" });
     }
 
-    // 4) Get studio_id for logged user
     const { data: userData, error: userError } = await supabase
       .from("tbutenti")
       .select("studio_id")
@@ -54,72 +40,57 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (!userData?.studio_id) {
-      return res.status(403).json({
-        error: "User has no studio assigned. Cannot update cliente.",
-      });
+      return res.status(403).json({ error: "User has no studio assigned. Cannot update cliente." });
     }
 
- // 5) Body
-const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
-const { id, ...updateData } = body || {};
+    const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+    const { id, ...updateData } = body || {};
 
-// ✅ Remove undefined values (Supabase ignores undefined, so fields won't update)
-Object.keys(updateData).forEach((k) => {
-  if (updateData[k] === undefined) delete updateData[k];
-});
+    Object.keys(updateData).forEach((k) => {
+      if (updateData[k] === undefined) delete updateData[k];
+    });
 
-// I flag degli scadenzari non appartengono più a tbclienti.
-// Sono gestiti esclusivamente tramite tbclienti_servizi.
-const scadenzariKeys = [
-  "flag_iva",
-  "flag_cu",
-  "flag_bilancio",
-  "flag_lipe",
-  "flag_esterometro",
-  "flag_proforma",
-  "flag_fiscali",
-  "flag_770",
-  "flag_ccgg",
-  "flag_imu",
-];
+    const scadenzariKeys = [
+      "flag_iva",
+      "flag_cu",
+      "flag_bilancio",
+      "flag_lipe",
+      "flag_esterometro",
+      "flag_fiscali",
+      "flag_770",
+      "flag_ccgg",
+      "flag_imu",
+    ];
 
-for (const key of scadenzariKeys) {
-  if (key in updateData) {
-    delete updateData[key];
-  }
-}
-
-// I flag delle comunicazioni restano invece su tbclienti.
-const flagKeys = [
-  "flag_mail_attivo",
-  "flag_mail_scadenze",
-  "flag_mail_newsletter",
-];
-
-for (const key of flagKeys) {
-  if (key in updateData) {
-    const v = updateData[key];
-
-    updateData[key] =
-      v === true || v === "true" || v === 1 || v === "1"
-        ? true
-        : v === false || v === "false" || v === 0 || v === "0"
-        ? false
-        : Boolean(v);
-  }
-}
-
-    if (!id) {
-      return res.status(400).json({ error: "Cliente ID is required" });
+    for (const key of scadenzariKeys) {
+      if (key in updateData) delete updateData[key];
     }
 
-    // 6) Block studio_id changes
+    const flagKeys = [
+      "flag_mail_attivo",
+      "flag_mail_scadenze",
+      "flag_mail_newsletter",
+    ];
+
+    for (const key of flagKeys) {
+      if (key in updateData) {
+        const v = updateData[key];
+        updateData[key] =
+          v === true || v === "true" || v === 1 || v === "1"
+            ? true
+            : v === false || v === "false" || v === 0 || v === "0"
+            ? false
+            : Boolean(v);
+      }
+    }
+
+    if (!id) return res.status(400).json({ error: "Cliente ID is required" });
+
     if ("studio_id" in updateData) {
       delete updateData.studio_id;
       console.warn(`⚠️ Attempt to modify studio_id blocked for cliente ${id}`);
     }
 
-    // 7) Check cliente exists (and visible under RLS)
     const { data: existing, error: fetchError } = await supabase
       .from("tbclienti")
       .select("id, studio_id")
@@ -131,17 +102,11 @@ for (const key of flagKeys) {
       return res.status(500).json({ error: "Failed to fetch cliente" });
     }
 
-    if (!existing) {
-      return res.status(404).json({ error: "Cliente not found or access denied" });
-    }
-
+    if (!existing) return res.status(404).json({ error: "Cliente not found or access denied" });
     if (existing.studio_id !== userData.studio_id) {
-      return res
-        .status(403)
-        .json({ error: "Cannot update cliente from different studio" });
+      return res.status(403).json({ error: "Cannot update cliente from different studio" });
     }
 
-    // 8) Update (NO .single() → handle 0 rows cleanly)
     const { data: updated, error: updateError } = await supabase
       .from("tbclienti")
       .update(updateData)
@@ -150,18 +115,11 @@ for (const key of flagKeys) {
 
     if (updateError) {
       console.error("Update error:", updateError);
-      return res.status(500).json({
-        error: "Failed to update cliente",
-        details: updateError.message,
-      });
+      return res.status(500).json({ error: "Failed to update cliente", details: updateError.message });
     }
 
     if (!updated || updated.length === 0) {
-      // This is the key fix for your PGRST116
-      return res.status(404).json({
-        error:
-          "Nessun cliente aggiornato (id non trovato o permessi insufficienti)",
-      });
+      return res.status(404).json({ error: "Nessun cliente aggiornato (id non trovato o permessi insufficienti)" });
     }
 
     return res.status(200).json(updated[0]);
