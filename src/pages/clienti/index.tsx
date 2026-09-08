@@ -2314,10 +2314,10 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
           {utenti
             .slice()
             .sort((a, b) =>
-              `${safeString(a.cognome)} ${safeString(a.nome)}`
+              `${safeString(a.nome)} ${safeString(a.cognome)}`
                 .toLowerCase()
                 .localeCompare(
-                  `${safeString(b.cognome)} ${safeString(b.nome)}`.toLowerCase()
+                  `${safeString(b.nome)} ${safeString(b.cognome)}`.toLowerCase()
                 )
             )
             .map((u) => (
@@ -2340,10 +2340,10 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
           {utenti
             .slice()
             .sort((a, b) =>
-              `${safeString(a.cognome)} ${safeString(a.nome)}`
+              `${safeString(a.nome)} ${safeString(a.cognome)}`
                 .toLowerCase()
                 .localeCompare(
-                  `${safeString(b.cognome)} ${safeString(b.nome)}`.toLowerCase()
+                  `${safeString(b.nome)} ${safeString(b.cognome)}`.toLowerCase()
                 )
             )
             .map((u) => (
