@@ -146,8 +146,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const { error: syncError } = await (supabase as any)
           .from(table)
           .update({ utente_operatore_id: nuovoUtenteFiscale })
-          .eq("cliente_id", id)
-          .eq("studio_id", userData.studio_id);
+          .eq("cliente_id", id);
 
         if (syncError) {
           console.error(`Sync utente fiscale fallita su ${table}:`, syncError);
