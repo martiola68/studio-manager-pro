@@ -7,6 +7,7 @@ import {
 } from "@/utils/codiceFiscale";
 
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { syncUtenteFiscaleScadenzari } from "@/services/syncUtenteFiscaleScadenzari";
 import { mapVisuraText } from "@/utils/visuraMapper";
 import type { Database } from "@/integrations/supabase/database.types";
 
@@ -1147,6 +1148,16 @@ if (!clienteAggiornato?.id) {
       `Lo stato Attivo non è stato salvato. ` +
       `Richiesto: ${formData.attivo}, ` +
       `salvato nel database: ${clienteAggiornato.attivo}`
+    );
+  }
+
+  const utenteFiscalePrecedente = editingCliente.utente_operatore_id ?? null;
+  const nuovoUtenteFiscale = updateData.utente_operatore_id ?? null;
+
+  if (utenteFiscalePrecedente !== nuovoUtenteFiscale) {
+    await syncUtenteFiscaleScadenzari(
+      editingCliente.id,
+      nuovoUtenteFiscale
     );
   }
 
