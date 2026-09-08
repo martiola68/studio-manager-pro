@@ -68,6 +68,64 @@ const formatAgendaTime = (value: string | null | undefined) => String(value || "
 
 export function AgendaMasterGraficaEnhancer() {
   useEffect(() => {
+    let lastDetailHtml = "";
+
+    const syncDetailPanel = () => {
+      const root = document.querySelector(".agenda-master-page");
+      if (!root) return;
+
+      const column = root.querySelector("[data-agenda-list-column]") as HTMLElement | null;
+      const previousPanels = Array.from(root.querySelectorAll("[data-agenda-detail-panel]"));
+
+      if (!column || window.innerWidth < 1280) {
+        previousPanels.forEach((node) => node.remove());
+        if (column?.parentElement) column.parentElement.removeAttribute("data-agenda-list-layout");
+        document.querySelectorAll("[data-agenda-mirror-tooltip]").forEach((node) => {
+          if (node instanceof HTMLElement) {
+            node.style.removeProperty("visibility");
+            delete node.dataset.agendaMirrorTooltip;
+          }
+        });
+        return;
+      }
+
+      const container = column.parentElement as HTMLElement | null;
+      if (!container) return;
+
+      container.dataset.agendaListLayout = "true";
+
+      let panel = container.querySelector("[data-agenda-detail-panel]") as HTMLElement | null;
+      if (!panel) {
+        panel = document.createElement("div");
+        panel.dataset.agendaDetailPanel = "true";
+        panel.className = "agenda-master-detail-panel";
+        panel.innerHTML = `
+          <div class="agenda-master-detail-empty">
+            <div class="agenda-master-detail-empty-title">Dettaglio appuntamento</div>
+            <div class="agenda-master-detail-empty-text">Passa il mouse su un evento per visualizzarne qui il riepilogo completo.</div>
+          </div>
+        `;
+        container.appendChild(panel);
+      }
+
+      const tooltips = Array.from(document.querySelectorAll('[role="tooltip"]')) as HTMLElement[];
+      const activeTooltip = tooltips.find((tooltip) => {
+        const state = tooltip.getAttribute("data-state");
+        const rect = tooltip.getBoundingClientRect();
+        return (state === "delayed-open" || state === "instant-open") && rect.width > 0 && rect.height > 0;
+      });
+
+      if (activeTooltip) {
+        const html = activeTooltip.innerHTML;
+        if (html && html !== lastDetailHtml) {
+          lastDetailHtml = html;
+          panel.innerHTML = `<div class="agenda-master-detail-card">${html}</div>`;
+        }
+        activeTooltip.dataset.agendaMirrorTooltip = "true";
+        activeTooltip.style.setProperty("visibility", "hidden", "important");
+      }
+    };
+
     const apply = () => {
       const root = document.querySelector(".agenda-master-page");
       if (!root) return;
@@ -153,15 +211,23 @@ export function AgendaMasterGraficaEnhancer() {
       listColumns.forEach((column) => {
         column.dataset.agendaListColumn = "true";
         if (window.innerWidth >= 1280) {
-          column.style.setProperty("width", "calc(100% - 450px)", "important");
-          column.style.setProperty("max-width", "1120px", "important");
-          column.style.setProperty("min-width", "720px", "important");
+          column.style.setProperty("width", "100%", "important");
+          column.style.setProperty("max-width", "none", "important");
+          column.style.setProperty("min-width", "0", "important");
+          column.style.setProperty("height", "calc(100vh - 205px)", "important");
+          column.style.setProperty("max-height", "none", "important");
+          column.style.setProperty("min-height", "650px", "important");
         } else {
           column.style.removeProperty("width");
           column.style.removeProperty("max-width");
           column.style.removeProperty("min-width");
+          column.style.removeProperty("height");
+          column.style.removeProperty("max-height");
+          column.style.removeProperty("min-height");
         }
       });
+
+      syncDetailPanel();
     };
 
     let teamsLookupRunning = false;
@@ -295,8 +361,9 @@ export function AgendaMasterGraficaEnhancer() {
     void repairTeamsEmptyView();
     const interval = window.setInterval(() => {
       apply();
+      syncDetailPanel();
       void repairTeamsEmptyView();
-    }, 500);
+    }, 250);
 
     return () => window.clearInterval(interval);
   }, []);
@@ -313,10 +380,23 @@ export function AgendaMasterGraficaEnhancer() {
     .agenda-master-month-label {
       display:inline-flex;align-items:center;height:36px;padding:0 14px;border:1px solid rgb(3 105 161);border-radius:8px;background:white;color:rgb(3 105 161);font-weight:700;text-transform:capitalize;white-space:nowrap;
     }
+    .agenda-master-page [data-agenda-list-layout="true"] {
+      display: grid !important;
+      grid-template-columns: minmax(0, 1fr) 430px !important;
+      gap: 18px !important;
+      align-items: stretch !important;
+      min-height: calc(100vh - 205px) !important;
+      background: white !important;
+      border: 1px solid rgb(186 230 253) !important;
+      border-radius: 10px !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+    }
     .agenda-master-page [data-agenda-list-column] {
-      margin-right: auto !important;
-      padding-right: 8px !important;
+      margin-right: 0 !important;
+      padding: 0 8px 0 0 !important;
       overflow-x: hidden !important;
+      border-right: 1px solid rgb(226 232 240) !important;
     }
     .agenda-master-page [data-agenda-list-column] > div {
       border-radius: 10px !important;
@@ -329,8 +409,52 @@ export function AgendaMasterGraficaEnhancer() {
     .agenda-master-page [data-agenda-list-column] > div:hover {
       box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08) !important;
     }
-    [role="tooltip"] {
-      max-width: min(420px, calc(100vw - 32px));
+    .agenda-master-detail-panel {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 22px;
+      background: white;
+      overflow: auto;
+    }
+    .agenda-master-detail-card {
+      width: 100%;
+      max-width: 390px;
+      border: 1px solid rgb(203 213 225);
+      border-radius: 12px;
+      overflow: hidden;
+      background: white;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.10);
+    }
+    .agenda-master-detail-card > * {
+      width: 100% !important;
+      max-width: none !important;
+      border: 0 !important;
+      box-shadow: none !important;
+    }
+    .agenda-master-detail-empty {
+      width: 100%;
+      max-width: 330px;
+      text-align: center;
+      color: rgb(100 116 139);
+      padding: 28px;
+      border: 1px dashed rgb(186 230 253);
+      border-radius: 12px;
+      background: rgb(248 250 252);
+    }
+    .agenda-master-detail-empty-title {
+      color: rgb(3 105 161);
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .agenda-master-detail-empty-text {
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    [data-agenda-mirror-tooltip] {
+      visibility: hidden !important;
     }
     .agenda-teams-fallback { padding: 16px; }
     .agenda-teams-fallback-title { margin-bottom: 12px; padding: 10px 12px; border: 1px solid rgb(186 230 253); border-radius: 8px; background: rgb(248 250 252); color: rgb(3 105 161); font-weight: 700; }
@@ -338,5 +462,13 @@ export function AgendaMasterGraficaEnhancer() {
     .agenda-teams-fallback-table th { background: rgb(71 85 105); color: white; text-align: left; font-size: 12px; padding: 10px; }
     .agenda-teams-fallback-table td { border-top: 1px solid rgb(226 232 240); padding: 10px; font-size: 13px; }
     .agenda-teams-join-link { display: inline-flex; padding: 6px 10px; border-radius: 6px; background: rgb(3 105 161); color: white !important; font-weight: 600; text-decoration: none; }
+    @media (max-width: 1279px) {
+      .agenda-master-page [data-agenda-list-layout="true"] {
+        display: block !important;
+        min-height: 0 !important;
+        border: 0 !important;
+      }
+      .agenda-master-detail-panel { display: none !important; }
+    }
   `}</style>;
 }
