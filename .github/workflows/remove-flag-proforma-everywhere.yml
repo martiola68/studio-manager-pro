@@ -1,0 +1,101 @@
+name: Remove obsolete Proforma flag everywhere
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/remove-flag-proforma-everywhere.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Remove obsolete flag references
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          token = "flag_" + "proforma"
+
+          # Runtime: elenco generale clienti.
+          p = Path("src/pages/clienti/index.tsx")
+          s = p.read_text(encoding="utf-8")
+          s = s.replace(f"    {token},\n", "")
+          s = re.sub(
+              rf"\n\s*if \(serviziCliente\?\.{re.escape(token)}\)\s*\n\s*scadenzariAttivi\.push\(\"Proforma\"\);",
+              "",
+              s,
+          )
+          p.write_text(s, encoding="utf-8")
+
+          # API update cliente.
+          p = Path("src/pages/api/clienti/update.ts")
+          s = p.read_text(encoding="utf-8")
+          s = s.replace(f'  "{token}",\n', "")
+          p.write_text(s, encoding="utf-8")
+
+          # Pulizia clienti inattivi.
+          p = Path("src/pages/api/scadenzari/cleanup-inattivi.ts")
+          s = p.read_text(encoding="utf-8")
+          s = s.replace(f"      {token}: false,\n", "")
+          p.write_text(s, encoding="utf-8")
+
+          # Migrazione/trigger Supabase: rimuove il riferimento alla colonna inesistente.
+          p = Path("supabase/migrations/20260901122500_blocca_scadenzari_clienti_inattivi.sql")
+          lines = p.read_text(encoding="utf-8").splitlines(True)
+          lines = [line for line in lines if token not in line]
+          p.write_text("".join(lines), encoding="utf-8")
+
+          # I vecchi one-shot sono ormai obsoleti e contengono solo riferimenti storici al flag.
+          obsolete = [
+              "scripts/fix-scadenzari-visible-year-studio-once.py",
+              "scripts/fix-scadenzari-archivio-remove-proforma-once.py",
+              "scripts/patch-scadenzari-step2-once.py",
+              ".github/workflows/one-shot-scadenzari-visible-year-studio.yml",
+              ".github/workflows/one-shot-scadenzari-archivio-remove-proforma.yml",
+          ]
+          for name in obsolete:
+              path = Path(name)
+              if path.exists():
+                  path.unlink()
+          PY
+
+      - name: Verify zero remaining references
+        shell: bash
+        run: |
+          set -euo pipefail
+          needle="flag_""proforma"
+          if grep -Rni --exclude='remove-flag-proforma-everywhere.yml' "$needle" src scripts supabase .github 2>/dev/null; then
+            echo "Residual obsolete Proforma flag reference found"
+            exit 1
+          fi
+
+      - name: TypeScript check
+        run: |
+          npm ci
+          npx tsc --noEmit
+
+      - name: Commit cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git commit -m "Remove obsolete Proforma flag references"
+          git push origin HEAD:main
