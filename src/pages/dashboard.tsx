@@ -15,6 +15,7 @@ import type { Database } from "@/lib/supabase/types";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import PromemoriaImminentiCard from "@/components/dashboard/PromemoriaImminentiCard";
 import SetupWizardCard from "@/components/dashboard/SetupWizardCard";
+import UiScaleSelector from "@/components/dashboard/UiScaleSelector";
 import { useRouter } from "next/router";
 
 type EventoAgenda = Database["public"]["Tables"]["tbagenda"]["Row"];
@@ -88,7 +89,7 @@ export default function DashboardPage() {
 
   return (
     <div className="-mx-4 min-h-full bg-[#f3f5f7] px-4 py-8 md:-mx-6 md:px-8">
-      <div className="mb-8"><h1 className="text-4xl font-bold tracking-tight text-[#071b36]">Dashboard</h1><p className="mt-1 text-[#315f78]">Panoramica generale dello studio</p></div>
+      <div className="mb-8 flex flex-wrap items-start justify-between gap-4"><div><h1 className="text-4xl font-bold tracking-tight text-[#071b36]">Dashboard</h1><p className="mt-1 text-[#315f78]">Panoramica generale dello studio</p></div><UiScaleSelector /></div>
       <SetupWizardCard />
       {scadenzeAlert.length > 0 && <div className="mb-8"><AlertScadenze scadenze={scadenzeAlert} isPartner={isPartner} onDismiss={handleDismissAlert} onViewDetails={(_id, tipo) => { const target = tipo === "IVA" ? "/scadenze/iva" : tipo === "Fiscale" ? "/scadenze/fiscale" : tipo === "Bilancio" ? "/scadenze/bilanci" : "/scadenze/calendario"; window.location.assign(target); }} onNotifyTeams={handleNotifyTeams} /></div>}
 
