@@ -4,7 +4,6 @@ import { CalendarCheck, CheckCircle2, ChevronDown, ChevronUp, Circle, CloudCog, 
 import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import UiScaleSelector from "@/components/dashboard/UiScaleSelector";
 
 type SetupStatus = { microsoft: boolean; users: boolean; client: boolean; organs: boolean; services: boolean; agenda: boolean; };
 const EMPTY_STATUS: SetupStatus = { microsoft: false, users: false, client: false, organs: false, services: false, agenda: false };
@@ -65,7 +64,6 @@ export default function SetupWizardCard() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div><div className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-[#0d6f9f]" /><CardTitle className="text-lg text-[#071b36]">Prima configurazione SMP</CardTitle></div><p className="mt-1 text-sm text-[#5b7282]">Percorso guidato per rendere operativo lo studio senza saltare i passaggi essenziali.</p></div>
         <div className="flex items-center gap-3">
-          <UiScaleSelector />
           <div className="text-right"><div className="text-sm font-semibold text-[#071b36]">{loading ? "Verifica..." : `${completed} di ${steps.length} completati`}</div><div className="text-xs text-[#5b7282]">{loading ? "" : `${percent}% configurato`}</div></div>
           <Button type="button" variant="outline" size="sm" className="border-[#8cddff] text-[#0b4f7d]" onClick={() => setExpanded((value) => !value)}>{expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}</Button>
         </div>
