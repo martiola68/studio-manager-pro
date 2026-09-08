@@ -100,11 +100,12 @@ export default function CassettiFiscaliPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCassetto, setEditingCassetto] = useState<CassettoFiscale | null>(null);
+  const [societaCollegataNome, setSocietaCollegataNome] = useState("");
+  const [societaCollegataCodiceFiscale, setSocietaCollegataCodiceFiscale] = useState("");
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
   type ViewMode = "gestori" | "societa";
   const [viewMode, setViewMode] = useState<ViewMode>("gestori");
 
-  // Encryption (non blocca la UI)
   const [encryptionEnabled, setEncryptionEnabled] = useState(false);
   
   const { toast } = useToast();
@@ -131,7 +132,6 @@ export default function CassettiFiscaliPage() {
     },
   });
 
-  // Carica studioId SOLO lato client (evita errori in build/SSR)
   useEffect(() => {
     if (typeof window !== "undefined") {
       setStudioId(localStorage.getItem("studio_id") || "");
@@ -156,7 +156,6 @@ export default function CassettiFiscaliPage() {
     try {
       setLoading(true);
 
-      // Se studioId non è ancora pronto, carico comunque (se il tuo service accetta null)
       const data = await cassettiFiscaliService.getCassettiFiscali(
   studioId || null,
   viewMode
@@ -210,7 +209,6 @@ export default function CassettiFiscaliPage() {
     }
   };
 
-  // Carico dati quando studioId è disponibile (e anche al primo render client)
  useEffect(() => {
   refreshEncryptionEnabled();
   loadCassetti();
@@ -344,6 +342,10 @@ const copyToClipboard = (text: string | null | undefined, label: string) => {
     throw new Error("ID del cassetto fiscale collegato non disponibile");
   }
 
+  if (viewMode === "societa") {
+    delete dataToSave.nominativo;
+  }
+
   await cassettiFiscaliService.update(idDaAggiornare, dataToSave);
 
   toast({
@@ -367,6 +369,8 @@ const copyToClipboard = (text: string | null | undefined, label: string) => {
           note: "",
         });
 
+        setSocietaCollegataNome("");
+        setSocietaCollegataCodiceFiscale("");
         setDialogOpen(false);
         setEditingCassetto(null);
         await loadCassetti();
@@ -384,6 +388,59 @@ const copyToClipboard = (text: string | null | undefined, label: string) => {
 
   const onSubmit = async (values: FormValues) => {
     await doSubmit(values);
+  };
+
+  const handleEditCassetto = async (cassetto: CassettoFiscale) => {
+    try {
+      if (viewMode !== "societa") {
+        setSocietaCollegataNome("");
+        setSocietaCollegataCodiceFiscale("");
+        setEditingCassetto(cassetto);
+        setDialogOpen(true);
+        return;
+      }
+
+      const cassettoId = String((cassetto as any).cassetto_fiscale_id || "");
+      if (!cassettoId) {
+        throw new Error("ID del cassetto fiscale collegato non disponibile");
+      }
+
+      setSocietaCollegataNome(String(cassetto.nominativo || ""));
+      setSocietaCollegataCodiceFiscale(String((cassetto as any).codice_fiscale || cassetto.pw_iniziale || ""));
+
+      const gestoreReale = await cassettiFiscaliService.getById(cassettoId);
+      const key = getStoredEncryptionKey();
+
+      const decryptIfNeeded = (value: string | null | undefined) => {
+        if (!value || !key || !isEncrypted(value)) return value || "";
+        try {
+          return decryptData(value, key);
+        } catch {
+          return value;
+        }
+      };
+
+      setEditingCassetto({
+        ...(gestoreReale as CassettoFiscale),
+        id: cassetto.id,
+        nominativo: gestoreReale.nominativo,
+        username: decryptIfNeeded(gestoreReale.username),
+        password1: decryptIfNeeded(gestoreReale.password1),
+        password2: decryptIfNeeded(gestoreReale.password2),
+        pin: decryptIfNeeded(gestoreReale.pin),
+        pw_iniziale: decryptIfNeeded(gestoreReale.pw_iniziale),
+        ...( { cassetto_fiscale_id: cassettoId } as any),
+      } as CassettoFiscale);
+
+      setDialogOpen(true);
+    } catch (error) {
+      console.error("Errore apertura modifica cassetto:", error);
+      toast({
+        variant: "destructive",
+        title: "Errore",
+        description: "Impossibile caricare il cassetto fiscale collegato",
+      });
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -501,7 +558,6 @@ const copyToClipboard = (text: string | null | undefined, label: string) => {
       </div>
 
       <div className="flex gap-2 flex-wrap items-center">
-        {/* Toggle vista (spostato QUI, non dentro il bottone Agenzia) */}
         <Button
           type="button"
           onClick={() => setViewMode("gestori")}
@@ -546,6 +602,8 @@ const copyToClipboard = (text: string | null | undefined, label: string) => {
 
         <Button
           onClick={() => {
+            setSocietaCollegataNome("");
+            setSocietaCollegataCodiceFiscale("");
             setEditingCassetto(null);
             setDialogOpen(true);
           }}
@@ -559,8 +617,6 @@ const copyToClipboard = (text: string | null | undefined, label: string) => {
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-
-          {/* Toggle duplicato RIMOSSO da qui: resta solo l'Input */}
           <Input
             placeholder={
               viewMode === "gestori"
@@ -689,10 +745,7 @@ const copyToClipboard = (text: string | null | undefined, label: string) => {
    <Button
   variant="ghost"
   size="icon"
-  onClick={() => {
-    setEditingCassetto(cassetto);
-    setDialogOpen(true);
-  }}
+  onClick={() => handleEditCassetto(cassetto)}
 >
   <Edit className="h-4 w-4" />
 </Button>
@@ -723,8 +776,7 @@ const copyToClipboard = (text: string | null | undefined, label: string) => {
         </div>
       </div>
 
-   {/* Master Password Dialog */}
-<MasterPasswordDialog
+   <MasterPasswordDialog
   open={masterPasswordGate.open}
   onOpenChange={masterPasswordGate.setOpen}
   password={masterPasswordGate.password}
@@ -732,8 +784,14 @@ const copyToClipboard = (text: string | null | undefined, label: string) => {
   onUnlock={masterPasswordGate.handleUnlock}
   loading={masterPasswordGate.unlocking}
 />
-      {/* Edit/Create Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={(open) => {
+        setDialogOpen(open);
+        if (!open) {
+          setSocietaCollegataNome("");
+          setSocietaCollegataCodiceFiscale("");
+          setEditingCassetto(null);
+        }
+      }}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
@@ -743,19 +801,39 @@ const copyToClipboard = (text: string | null | undefined, label: string) => {
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="nominativo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nominativo / Cliente</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Es. Mario Rossi" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {viewMode === "societa" && editingCassetto ? (
+                <div className="grid grid-cols-1 gap-4 rounded-md border border-blue-200 bg-blue-50/50 p-4">
+                  <div className="space-y-2">
+                    <FormLabel>Società collegata</FormLabel>
+                    <Input value={societaCollegataNome} readOnly className="bg-white font-medium" />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <FormLabel>Gestore cassetto fiscale</FormLabel>
+                      <Input value={form.watch("nominativo")} readOnly className="bg-white font-medium" />
+                    </div>
+                    <div className="space-y-2">
+                      <FormLabel>Codice fiscale società</FormLabel>
+                      <Input value={societaCollegataCodiceFiscale} readOnly className="bg-white" />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <FormField
+                  control={form.control}
+                  name="nominativo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nominativo</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Es. Mario Rossi" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField
@@ -870,18 +948,9 @@ const copyToClipboard = (text: string | null | undefined, label: string) => {
   name="pw_iniziale"
   render={({ field }) => (
     <FormItem>
-      <FormLabel>
-        {viewMode === "societa" ? "Codice fiscale" : "Password iniziale"}
-      </FormLabel>
+      <FormLabel>Password iniziale</FormLabel>
       <FormControl>
-        <Input
-          placeholder={
-            viewMode === "societa"
-              ? "Codice fiscale..."
-              : "Password iniziale..."
-          }
-          {...field}
-        />
+        <Input placeholder="Password iniziale..." {...field} />
       </FormControl>
       <FormMessage />
     </FormItem>
