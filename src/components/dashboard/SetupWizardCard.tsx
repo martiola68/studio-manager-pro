@@ -39,7 +39,7 @@ const EMPTY_STATUS: SetupStatus = {
 
 export default function SetupWizardCard() {
   const [visible, setVisible] = useState(false);
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<SetupStatus>(EMPTY_STATUS);
 
