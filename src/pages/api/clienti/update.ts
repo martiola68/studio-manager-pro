@@ -1,6 +1,18 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 
+const SCADENZARI_FISCALI = [
+  "tbscadiva",
+  "tbscadccgg",
+  "tbscadcu",
+  "tbscadfiscali",
+  "tbscadbilanci",
+  "tbscad770",
+  "tbscadlipe",
+  "tbscadestero",
+  "tbscadimu",
+] as const;
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "PUT" && req.method !== "PATCH") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -93,7 +105,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { data: existing, error: fetchError } = await supabase
       .from("tbclienti")
-      .select("id, studio_id")
+      .select("id, studio_id, utente_operatore_id")
       .eq("id", id)
       .maybeSingle();
 
@@ -106,6 +118,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (existing.studio_id !== userData.studio_id) {
       return res.status(403).json({ error: "Cannot update cliente from different studio" });
     }
+
+    const nuovoUtenteFiscale = Object.prototype.hasOwnProperty.call(updateData, "utente_operatore_id")
+      ? updateData.utente_operatore_id ?? null
+      : existing.utente_operatore_id;
+    const utenteFiscaleCambiato =
+      Object.prototype.hasOwnProperty.call(updateData, "utente_operatore_id") &&
+      nuovoUtenteFiscale !== existing.utente_operatore_id;
 
     const { data: updated, error: updateError } = await supabase
       .from("tbclienti")
@@ -120,6 +139,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (!updated || updated.length === 0) {
       return res.status(404).json({ error: "Nessun cliente aggiornato (id non trovato o permessi insufficienti)" });
+    }
+
+    if (utenteFiscaleCambiato) {
+      for (const table of SCADENZARI_FISCALI) {
+        const { error: syncError } = await (supabase as any)
+          .from(table)
+          .update({ utente_operatore_id: nuovoUtenteFiscale })
+          .eq("cliente_id", id)
+          .eq("studio_id", userData.studio_id);
+
+        if (syncError) {
+          console.error(`Sync utente fiscale fallita su ${table}:`, syncError);
+          return res.status(500).json({
+            error: "Cliente aggiornato, ma sincronizzazione scadenzari fiscali non completata",
+            details: `${table}: ${syncError.message}`,
+          });
+        }
+      }
+
+      const { error: centraleError } = await (supabase as any)
+        .from("tbscadenze_centrale")
+        .update({ operatore_responsabile_id: nuovoUtenteFiscale })
+        .eq("cliente_id", id)
+        .eq("studio_id", userData.studio_id)
+        .in("origine_tabella", [...SCADENZARI_FISCALI]);
+
+      if (centraleError) {
+        console.error("Sync utente fiscale fallita su tbscadenze_centrale:", centraleError);
+        return res.status(500).json({
+          error: "Cliente e scadenzari aggiornati, ma sincronizzazione scadenze centrali non completata",
+          details: centraleError.message,
+        });
+      }
     }
 
     return res.status(200).json(updated[0]);
