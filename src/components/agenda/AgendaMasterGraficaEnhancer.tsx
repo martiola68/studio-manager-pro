@@ -86,6 +86,12 @@ export function AgendaMasterGraficaEnhancer() {
             delete node.dataset.agendaMirrorTooltip;
           }
         });
+        document.querySelectorAll("[data-agenda-mirror-wrapper]").forEach((node) => {
+          if (node instanceof HTMLElement) {
+            node.style.removeProperty("visibility");
+            delete node.dataset.agendaMirrorWrapper;
+          }
+        });
         return;
       }
 
@@ -110,9 +116,9 @@ export function AgendaMasterGraficaEnhancer() {
 
       const tooltips = Array.from(document.querySelectorAll('[role="tooltip"]')) as HTMLElement[];
       const activeTooltip = tooltips.find((tooltip) => {
-        const state = tooltip.getAttribute("data-state");
         const rect = tooltip.getBoundingClientRect();
-        return (state === "delayed-open" || state === "instant-open") && rect.width > 0 && rect.height > 0;
+        const style = window.getComputedStyle(tooltip);
+        return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
       });
 
       if (activeTooltip) {
@@ -121,8 +127,15 @@ export function AgendaMasterGraficaEnhancer() {
           lastDetailHtml = html;
           panel.innerHTML = `<div class="agenda-master-detail-card">${html}</div>`;
         }
+
         activeTooltip.dataset.agendaMirrorTooltip = "true";
         activeTooltip.style.setProperty("visibility", "hidden", "important");
+
+        const popperWrapper = activeTooltip.closest('[data-radix-popper-content-wrapper]');
+        if (popperWrapper instanceof HTMLElement) {
+          popperWrapper.dataset.agendaMirrorWrapper = "true";
+          popperWrapper.style.setProperty("visibility", "hidden", "important");
+        }
       }
     };
 
@@ -363,7 +376,7 @@ export function AgendaMasterGraficaEnhancer() {
       apply();
       syncDetailPanel();
       void repairTeamsEmptyView();
-    }, 250);
+    }, 125);
 
     return () => window.clearInterval(interval);
   }, []);
@@ -382,8 +395,8 @@ export function AgendaMasterGraficaEnhancer() {
     }
     .agenda-master-page [data-agenda-list-layout="true"] {
       display: grid !important;
-      grid-template-columns: minmax(0, 1fr) 430px !important;
-      gap: 18px !important;
+      grid-template-columns: minmax(0, 1fr) 360px !important;
+      gap: 12px !important;
       align-items: stretch !important;
       min-height: calc(100vh - 205px) !important;
       background: white !important;
@@ -411,21 +424,25 @@ export function AgendaMasterGraficaEnhancer() {
     }
     .agenda-master-detail-panel {
       min-width: 0;
+      width: 100%;
+      height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 24px 22px;
+      padding: 18px;
       background: white;
       overflow: auto;
+      box-sizing: border-box;
     }
     .agenda-master-detail-card {
       width: 100%;
-      max-width: 390px;
+      max-width: 318px;
+      margin: auto;
       border: 1px solid rgb(203 213 225);
       border-radius: 12px;
       overflow: hidden;
       background: white;
-      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.10);
+      box-shadow: 0 10px 26px rgba(15, 23, 42, 0.10);
     }
     .agenda-master-detail-card > * {
       width: 100% !important;
@@ -435,25 +452,28 @@ export function AgendaMasterGraficaEnhancer() {
     }
     .agenda-master-detail-empty {
       width: 100%;
-      max-width: 330px;
+      max-width: 280px;
+      margin: auto;
       text-align: center;
       color: rgb(100 116 139);
-      padding: 28px;
+      padding: 22px 18px;
       border: 1px dashed rgb(186 230 253);
       border-radius: 12px;
       background: rgb(248 250 252);
+      box-sizing: border-box;
     }
     .agenda-master-detail-empty-title {
       color: rgb(3 105 161);
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 700;
       margin-bottom: 8px;
     }
     .agenda-master-detail-empty-text {
-      font-size: 13px;
+      font-size: 12px;
       line-height: 1.5;
     }
-    [data-agenda-mirror-tooltip] {
+    [data-agenda-mirror-tooltip],
+    [data-agenda-mirror-wrapper] {
       visibility: hidden !important;
     }
     .agenda-teams-fallback { padding: 16px; }
