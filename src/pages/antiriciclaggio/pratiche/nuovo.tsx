@@ -157,120 +157,59 @@ const societaBloccata = !!preselectedSocietaId;
       setSaving(true);
 
       const supabase = getSupabaseClient();
-      const supabaseAny = supabase as any;
-      const studioId = await getStudioId();
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
 
-      if (!studioId) {
-        alert("Studio non trovato.");
-        return;
+      if (sessionError || !session?.access_token) {
+        throw new Error("Sessione non valida. Effettua nuovamente l'accesso.");
       }
 
-      const { data: duplicata, error: duplicataError } = await supabaseAny
-        .from("tbPraticheAML")
-        .select("id")
-        .eq("studio_id", studioId)
-        .eq("cliente_id", clienteId)
-        .eq("tipo_prestazione", tipoPrestazione)
-        .eq("data_apertura", dataApertura)
-        .limit(1)
-        .maybeSingle();
+      const payload = {
+        cliente_id: clienteId,
+        societa_id: societaId || null,
+        operatore_responsabile_id: operatoreResponsabileId || null,
+        data_apertura: dataApertura,
+        tipo_prestazione: tipoPrestazione,
+        allow_duplicate: false,
+      };
 
-      if (duplicataError) {
-        throw new Error(
-          duplicataError.message || "Errore controllo duplicato pratica."
-        );
-      }
+      let response = await fetch("/api/antiriciclaggio/pratiche/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(payload),
+      });
 
-      if (duplicata) {
+      let result = await response.json().catch(() => null);
+
+      if (response.status === 409 && result?.duplicate) {
         const conferma = window.confirm(
           "Esiste già una pratica con lo stesso cliente, la stessa prestazione e la stessa data di apertura. Vuoi proseguire comunque?"
         );
 
-        if (!conferma) {
-          setSaving(false);
-          return;
-        }
+        if (!conferma) return;
+
+        response = await fetch("/api/antiriciclaggio/pratiche/create", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ ...payload, allow_duplicate: true }),
+        });
+
+        result = await response.json().catch(() => null);
       }
 
-     const { data: praticaData, error: praticaError } = await supabaseAny
-  .from("tbPraticheAML")
-  .insert({
-    studio_id: studioId,
-    cliente_id: clienteId,
-    societa_id: societaId || null,
-    operatore_responsabile_id: operatoreResponsabileId || null,
-    data_apertura: dataApertura,
-    tipo_prestazione: tipoPrestazione,
-    stato: "aperta",
-  })
-  .select("id")
-  .single();
+      if (!response.ok || !result?.ok || !result?.id) {
+        throw new Error(result?.error || "Errore creazione pratica.");
+      }
 
-if (praticaError || !praticaData?.id) {
-  throw new Error(praticaError?.message || "Errore creazione pratica.");
-}
-
-const praticaId = praticaData.id;
-
-const { data: av1Data, error: av1Error } = await supabaseAny
-  .from("tbAV1")
-  .insert({
-    studio_id: studioId,
-    cliente_id: clienteId,
-    societa_id: societaId || null,
-    pratica_id: praticaId,
-    incaricato_adeguata_verifica_id: null,
-    DataVerifica: dataApertura,
-    ScadenzaVerifica: null,
-    AV1Conferma: false,
-    AV2Generato: true,
-    AV4Generato: true,
-     Prestazione: tipoPrestazione, // 👈 AGGIUNGI QUESTA RIGA
-  })
-  .select("id")
-  .single();
-
-if (av1Error || !av1Data?.id) {
-  throw new Error(av1Error?.message || "Errore creazione AV1.");
-}
-
-const av1Id = av1Data.id;
-
-const { data: av2Data, error: av2Error } = await supabaseAny
-  .from("tbAV2")
-  .insert({
-    studio_id: studioId,
-    cliente_id: clienteId,
-    societa_id: societaId || null,
-    pratica_id: praticaId,
-    av1_id: av1Id,
-  })
-  .select("id")
-  .single();
-
-if (av2Error || !av2Data?.id) {
-  throw new Error(av2Error?.message || "Errore creazione AV2.");
-}
-
-const { data: av4Data, error: av4Error } = await supabaseAny
-  .from("tbAV4")
-  .insert({
-    studio_id: studioId,
-    cliente_id: clienteId,
-    societa_id: societaId || null,
-    pratica_id: praticaId,
-    av1_id: av1Id,
-    stato: "bozza",
-  })
-  .select("id")
-  .single();
-
-if (av4Error || !av4Data?.id) {
-  throw new Error(av4Error?.message || "Errore creazione AV4.");
-}
-
-router.push("/antiriciclaggio");
-      
+      await router.push("/antiriciclaggio");
     } catch (err: any) {
       console.error("Errore creazione pratica AML:", err);
       alert(err?.message || "Errore creazione pratica.");
