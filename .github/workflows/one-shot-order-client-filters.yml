@@ -1,0 +1,72 @@
+name: One shot - order client filters by name
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/one-shot-order-client-filters.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Patch only top client filters
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('src/pages/clienti/index.tsx')
+          s = p.read_text(encoding='utf-8')
+
+          old = '''            .sort((a, b) =>
+              `${safeString(a.cognome)} ${safeString(a.nome)}`
+                .toLowerCase()
+                .localeCompare(
+                  `${safeString(b.cognome)} ${safeString(b.nome)}`.toLowerCase()
+                )
+            )'''
+
+          new = '''            .sort((a, b) =>
+              `${safeString(a.nome)} ${safeString(a.cognome)}`
+                .toLowerCase()
+                .localeCompare(
+                  `${safeString(b.nome)} ${safeString(b.cognome)}`.toLowerCase()
+                )
+            )'''
+
+          # Cambia soltanto le prime due occorrenze: filtro Fiscale e filtro Payroll in testata.
+          if s.count(old) < 2:
+              raise SystemExit(f'Expected at least 2 filter sort blocks, found {s.count(old)}')
+
+          s = s.replace(old, new, 2)
+          p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Verify filters
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -n -A8 'Tutti (Fiscale)' src/pages/clienti/index.tsx
+          grep -n -A8 'Tutti (Payroll)' src/pages/clienti/index.tsx
+
+      - name: Commit runtime change and remove one-shot
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/one-shot-order-client-filters.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/clienti/index.tsx .github/workflows/one-shot-order-client-filters.yml
+          git commit -m "Order client filters by first and last name"
+          git push origin HEAD:main
