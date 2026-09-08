@@ -6,7 +6,6 @@ const SCADENZARI_TABLES = [
   "tbscad770",
   "tbscadlipe",
   "tbscadestero",
-  "tbscadproforma",
   "tbscadimu",
   "tbscadcu",
   "tbscadbilanci",
@@ -39,14 +38,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     global: { headers: { Authorization: `Bearer ${token}` } },
   });
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabaseUser.auth.getUser();
-
-  if (authError || !user) {
-    return res.status(401).json({ error: "Sessione non valida" });
-  }
+  const { data: { user }, error: authError } = await supabaseUser.auth.getUser();
+  if (authError || !user) return res.status(401).json({ error: "Sessione non valida" });
 
   const { data: utente, error: utenteError } = await supabaseUser
     .from("tbutenti")
@@ -70,12 +63,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .eq("cliente", true)
     .neq("attivo", true);
 
-  if (inattiviError) {
-    return res.status(500).json({ error: inattiviError.message });
-  }
+  if (inattiviError) return res.status(500).json({ error: inattiviError.message });
 
   const clienteIds = (inattivi ?? []).map((row: any) => String(row.id)).filter(Boolean);
-
   if (clienteIds.length === 0) {
     return res.status(200).json({ ok: true, clienti_inattivi: 0, record_eliminati: 0 });
   }
@@ -91,19 +81,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       flag_770: false,
       flag_esterometro: false,
       flag_ccgg: false,
-      flag_proforma: false,
       flag_imu: false,
       updated_at: new Date().toISOString(),
     })
     .eq("studio_id", studioId)
     .in("cliente_id", clienteIds);
 
-  if (serviziError) {
-    return res.status(500).json({ error: serviziError.message });
-  }
+  if (serviziError) return res.status(500).json({ error: serviziError.message });
 
   let recordEliminati = 0;
-
   for (const table of SCADENZARI_TABLES) {
     const { data, error } = await admin
       .from(table as any)
@@ -113,11 +99,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .select("id");
 
     if (error) {
-      return res.status(500).json({
-        error: `Pulizia ${table} non riuscita: ${error.message}`,
-      });
+      return res.status(500).json({ error: `Pulizia ${table} non riuscita: ${error.message}` });
     }
-
     recordEliminati += Array.isArray(data) ? data.length : 0;
   }
 
