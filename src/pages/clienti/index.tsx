@@ -1356,7 +1356,6 @@ const handleToggleAttivo = async (
     flag_770,
     flag_bilancio,
     flag_fiscali,
-    flag_proforma,
     flag_esterometro,
     flag_ccgg,
     flag_imu
@@ -1388,9 +1387,6 @@ if (serviziCliente?.flag_bilancio)
 
 if (serviziCliente?.flag_fiscali)
   scadenzariAttivi.push("Fiscali");
-
-if (serviziCliente?.flag_proforma)
-  scadenzariAttivi.push("Proforma");
 
 if (serviziCliente?.flag_esterometro)
   scadenzariAttivi.push("Esterometro");
