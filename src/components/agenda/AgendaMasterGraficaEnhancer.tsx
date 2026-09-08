@@ -139,6 +139,29 @@ export function AgendaMasterGraficaEnhancer() {
         button.style.setProperty("border", `1px solid rgb(3 105 161)`, "important");
         button.style.setProperty("box-shadow", "none", "important");
       });
+
+      const listColumns = Array.from(root.querySelectorAll("div")).filter((node) => {
+        if (!(node instanceof HTMLElement)) return false;
+        return (
+          node.classList.contains("max-h-[600px]") &&
+          node.classList.contains("overflow-y-auto") &&
+          node.classList.contains("space-y-3") &&
+          node.classList.contains("pr-2")
+        );
+      }) as HTMLElement[];
+
+      listColumns.forEach((column) => {
+        column.dataset.agendaListColumn = "true";
+        if (window.innerWidth >= 1280) {
+          column.style.setProperty("width", "calc(100% - 450px)", "important");
+          column.style.setProperty("max-width", "1120px", "important");
+          column.style.setProperty("min-width", "720px", "important");
+        } else {
+          column.style.removeProperty("width");
+          column.style.removeProperty("max-width");
+          column.style.removeProperty("min-width");
+        }
+      });
     };
 
     let teamsLookupRunning = false;
@@ -289,6 +312,25 @@ export function AgendaMasterGraficaEnhancer() {
     .agenda-master-page .sticky > div > div:nth-child(8) * { color: rgb(185 28 28) !important; }
     .agenda-master-month-label {
       display:inline-flex;align-items:center;height:36px;padding:0 14px;border:1px solid rgb(3 105 161);border-radius:8px;background:white;color:rgb(3 105 161);font-weight:700;text-transform:capitalize;white-space:nowrap;
+    }
+    .agenda-master-page [data-agenda-list-column] {
+      margin-right: auto !important;
+      padding-right: 8px !important;
+      overflow-x: hidden !important;
+    }
+    .agenda-master-page [data-agenda-list-column] > div {
+      border-radius: 10px !important;
+      border-top-color: rgb(191 219 254) !important;
+      border-right-color: rgb(191 219 254) !important;
+      border-bottom-color: rgb(191 219 254) !important;
+      box-shadow: none !important;
+      background: white !important;
+    }
+    .agenda-master-page [data-agenda-list-column] > div:hover {
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08) !important;
+    }
+    [role="tooltip"] {
+      max-width: min(420px, calc(100vw - 32px));
     }
     .agenda-teams-fallback { padding: 16px; }
     .agenda-teams-fallback-title { margin-bottom: 12px; padding: 10px 12px; border: 1px solid rgb(186 230 253); border-radius: 8px; background: rgb(248 250 252); color: rgb(3 105 161); font-weight: 700; }
