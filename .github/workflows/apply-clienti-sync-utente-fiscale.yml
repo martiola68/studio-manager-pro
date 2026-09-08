@@ -1,0 +1,52 @@
+name: Apply client fiscal operator sync
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/apply-clienti-sync-utente-fiscale.yml
+      - scripts/patch-clienti-sync-utente-fiscale-once.py
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply targeted client save patch
+        run: python scripts/patch-clienti-sync-utente-fiscale-once.py
+
+      - name: Verify runtime hook
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'syncUtenteFiscaleScadenzari' src/pages/clienti/index.tsx
+          grep -q 'utenteFiscalePrecedente' src/pages/clienti/index.tsx
+          grep -q 'await syncUtenteFiscaleScadenzari(' src/pages/clienti/index.tsx
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript guard
+        run: npx tsc --noEmit
+
+      - name: Commit application file
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/clienti/index.tsx
+          if git diff --cached --quiet; then
+            echo "No runtime changes to commit"
+            exit 0
+          fi
+          git commit -m "Sync fiscal operator when client reference changes"
+          git pull --rebase origin main
+          git push origin HEAD:main
