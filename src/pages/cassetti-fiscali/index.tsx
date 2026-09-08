@@ -344,6 +344,8 @@ const copyToClipboard = (text: string | null | undefined, label: string) => {
 
   if (viewMode === "societa") {
     delete dataToSave.nominativo;
+    delete dataToSave.username;
+    delete dataToSave.pin;
   }
 
   await cassettiFiscaliService.update(idDaAggiornare, dataToSave);
@@ -843,7 +845,11 @@ const copyToClipboard = (text: string | null | undefined, label: string) => {
                     <FormItem>
                       <FormLabel>Username</FormLabel>
                       <FormControl>
-                        <Input placeholder="Username..." {...field} />
+                        <Input
+                          placeholder="Username..."
+                          {...field}
+                          readOnly={viewMode === "societa" && !!editingCassetto}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -857,7 +863,11 @@ const copyToClipboard = (text: string | null | undefined, label: string) => {
                     <FormItem>
                       <FormLabel>PIN</FormLabel>
                       <FormControl>
-                        <Input placeholder="PIN..." {...field} />
+                        <Input
+                          placeholder="PIN..."
+                          {...field}
+                          readOnly={viewMode === "societa" && !!editingCassetto}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
