@@ -1,0 +1,90 @@
+name: One shot - fix anagrafica filtri e Proforma
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/one-shot-fix-anagrafica-filtri-proforma.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Patch anagrafica
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('src/pages/clienti/index.tsx')
+          s = p.read_text(encoding='utf-8')
+          original = s
+
+          # 1) I menu dei filtri devono restare sempre sopra la tabella sticky.
+          marker_start = '{/* FILTRI */}'
+          marker_end = '{/* TABELLA */}'
+          if marker_start not in s or marker_end not in s:
+              raise SystemExit('Blocco FILTRI/TABELLA non trovato')
+          head, rest = s.split(marker_start, 1)
+          filters, tail = rest.split(marker_end, 1)
+          filters = filters.replace('<SelectContent>', '<SelectContent className="z-[100]">')
+          s = head + marker_start + filters + marker_end + tail
+
+          # 2) Proforma e' stato eliminato: rimuove ogni collegamento residuo
+          # dalla generazione scadenzari dell'anagrafica.
+          s = s.replace(
+              '    flag_fiscali,\n    flag_proforma,\n    flag_esterometro,',
+              '    flag_fiscali,\n    flag_esterometro,'
+          )
+
+          s = s.replace(
+              'if (serviziCliente?.flag_proforma)\n  scadenzariAttivi.push("Proforma");\n\n',
+              ''
+          )
+
+          pattern = re.compile(
+              r'\n\s*case "Proforma": \{.*?\n\s*\}\n\n\s*case "Esterometro": \{',
+              re.S,
+          )
+          s, n = pattern.subn('\n\n        case "Esterometro": {', s, count=1)
+          if n != 1:
+              raise SystemExit(f'Blocco case Proforma non rimosso: sostituzioni={n}')
+
+          for forbidden in ('flag_proforma', 'tbscadproforma', 'case "Proforma"'):
+              if forbidden in s:
+                  raise SystemExit(f'Riferimento Proforma residuo in anagrafica: {forbidden}')
+
+          if 'SelectContent className="z-[100]"' not in filters:
+              raise SystemExit('Fix z-index filtri non applicato')
+
+          if s == original:
+              raise SystemExit('Nessuna modifica applicata')
+
+          p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Verifica TypeScript build
+        shell: bash
+        run: |
+          npm ci
+          npm run build
+
+      - name: Rimuovi workflow one-shot e pubblica
+        shell: bash
+        run: |
+          rm -f .github/workflows/one-shot-fix-anagrafica-filtri-proforma.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/clienti/index.tsx .github/workflows/one-shot-fix-anagrafica-filtri-proforma.yml
+          git commit -m "Fix anagrafica filter overlay and remove Proforma generation"
+          git push origin main
