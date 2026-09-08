@@ -144,6 +144,14 @@ export const eventoService = {
     action: "created" | "updated" | "cancelled" = "created"
   ): Promise<void> {
     try {
+      if (action === "cancelled") {
+        const fineEvento = new Date(evento.data_fine || evento.data_inizio);
+        if (!Number.isNaN(fineEvento.getTime()) && fineEvento.getTime() < Date.now()) {
+          console.log("ℹ️ Evento scaduto eliminato: nessuna email di cancellazione inviata", evento.id);
+          return;
+        }
+      }
+
       console.log("📧 Preparing to send event notification for:", evento.id, action);
 
       if (!evento.utente_id) {
@@ -233,35 +241,35 @@ export const eventoService = {
         }
       };
 
-   const emailData = {
-  action,
-  eventoId: evento.id,
-  eventoTitolo: evento.titolo || "Evento senza titolo",
-  eventoData: formatDate(evento.data_inizio),
-  eventoOraInizio: evento.ora_inizio
-    ? evento.ora_inizio.substring(0, 5)
-    : formatTime(evento.data_inizio),
-  eventoOraFine: evento.ora_fine
-    ? evento.ora_fine.substring(0, 5)
-    : formatTime(evento.data_fine),
+      const emailData = {
+        action,
+        eventoId: evento.id,
+        eventoTitolo: evento.titolo || "Evento senza titolo",
+        eventoData: formatDate(evento.data_inizio),
+        eventoOraInizio: evento.ora_inizio
+          ? evento.ora_inizio.substring(0, 5)
+          : formatTime(evento.data_inizio),
+        eventoOraFine: evento.ora_fine
+          ? evento.ora_fine.substring(0, 5)
+          : formatTime(evento.data_fine),
 
-  eventoInSede: Boolean((evento as any).in_sede),
-  eventoLuogo: (evento as any).in_sede
-    ? ((evento as any).sala || undefined)
-    : ((evento as any).luogo || undefined),
+        eventoInSede: Boolean((evento as any).in_sede),
+        eventoLuogo: (evento as any).in_sede
+          ? ((evento as any).sala || undefined)
+          : ((evento as any).luogo || undefined),
 
-  eventoDescrizione: evento.descrizione || undefined,
-  responsabileEmail: responsabile.email,
-  responsabileNome:
-    `${responsabile.nome || ""} ${responsabile.cognome || ""}`.trim() ||
-    responsabile.email,
-  partecipantiEmails,
-  partecipantiNomi,
-  clienteEmail,
-  clienteNome,
-  riunione_teams: evento.riunione_teams || false,
-  link_teams: evento.link_teams || undefined,
-};
+        eventoDescrizione: evento.descrizione || undefined,
+        responsabileEmail: responsabile.email,
+        responsabileNome:
+          `${responsabile.nome || ""} ${responsabile.cognome || ""}`.trim() ||
+          responsabile.email,
+        partecipantiEmails,
+        partecipantiNomi,
+        clienteEmail,
+        clienteNome,
+        riunione_teams: evento.riunione_teams || false,
+        link_teams: evento.link_teams || undefined,
+      };
 
       console.log("📧 Sending notification via emailService");
       const result = await emailService.sendEventNotification(emailData);
