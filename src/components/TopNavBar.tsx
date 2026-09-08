@@ -476,7 +476,7 @@ export function TopNavBar() {
           variant="ghost"
           onClick={() => setDesktopMenuOpen(menuOpen ? null : item.label)}
           className={cn(
-            "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+            "flex shrink-0 items-center gap-1 rounded-md px-1.5 py-2 text-[11px] font-medium transition-colors xl:gap-1.5 xl:px-2 xl:text-xs 2xl:gap-2 2xl:px-3 2xl:text-sm",
             itemActive || menuOpen
               ? "bg-[#d9f1fb] text-[#075985] hover:bg-[#c7eafa] hover:text-[#064b72]"
               : "text-white hover:bg-white/15 hover:text-white"
@@ -496,7 +496,7 @@ export function TopNavBar() {
           if (item.label === "Promemoria") handlePromemoriaClick();
         }}
         className={cn(
-          "relative flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+          "relative flex shrink-0 items-center gap-1 rounded-md px-1.5 py-2 text-[11px] font-medium transition-colors xl:gap-1.5 xl:px-2 xl:text-xs 2xl:gap-2 2xl:px-3 2xl:text-sm",
           itemActive ? "bg-[#d9f1fb] text-[#075985]" : "text-white hover:bg-white/15 hover:text-white"
         )}
       >
@@ -539,7 +539,7 @@ export function TopNavBar() {
       )}
 
       <div className="relative hidden lg:block">
-        <div className="flex min-w-max items-center gap-0.5 px-4 py-0">{menuItems.map((item) => renderMenuItem(item))}</div>
+        <div className="flex flex-wrap items-center gap-0.5 px-2 py-0 xl:px-3 2xl:flex-nowrap 2xl:px-4">{menuItems.map((item) => renderMenuItem(item))}</div>
         {desktopMenuAttivo && desktopMenuVoci.length > 0 && (
           <div className="absolute left-0 right-0 top-full z-50 border-y border-gray-200 bg-white shadow-lg">
             <div className={cn("w-full items-stretch justify-start gap-0 px-4 py-2", desktopMenuAttivo.label === "Strumenti" ? "grid grid-cols-8" : "flex flex-row flex-nowrap")}>
