@@ -1150,6 +1150,28 @@ await loadContatti();
 
   const map = new Map<string, any>();
 
+  // Mostra anche i clienti provenienti direttamente da tbclienti,
+  // indipendentemente dalla presenza di relazioni/referenti in tbcontatti_clienti.
+  clienti.forEach((cliente) => {
+    const nomeSocieta = cliente.ragione_sociale || "";
+    const matchSocieta =
+      nomeSocieta.toLowerCase().includes(query) ||
+      (cliente.email || "").toLowerCase().includes(query) ||
+      (cliente.telefono || "").toLowerCase().includes(query) ||
+      (cliente.pec || "").toLowerCase().includes(query);
+
+    if (!matchSocieta) return;
+
+    map.set(cliente.id, {
+      cliente_id: cliente.id,
+      ragione_sociale: nomeSocieta,
+      email: cliente.email || "",
+      telefono: cliente.telefono || "",
+      pec: cliente.pec || "",
+      referenti: [],
+    });
+  });
+
   contatti.forEach((contatto) => {
     (contatto.clienti_collegati || []).forEach((rel) => {
       const nomeSocieta = rel.cliente?.ragione_sociale || "";

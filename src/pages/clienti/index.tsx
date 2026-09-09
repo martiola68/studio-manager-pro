@@ -841,13 +841,25 @@ const syncClienteToContatto = async (
 
  const isPersonaFisica = clienteData.tipo_cliente === "Persona fisica";
 
-const cognomeContatto = isPersonaFisica
-  ? String((clienteData as any).cognome || "").trim()
-  : String(clienteData.ragione_sociale || "").trim();
-
-const nomeContatto = isPersonaFisica
+const nomePersona = isPersonaFisica
   ? String((clienteData as any).nome || "").trim()
   : "";
+
+const cognomePersonaRaw = isPersonaFisica
+  ? String((clienteData as any).cognome || "").trim()
+  : "";
+
+const cognomePersona =
+  nomePersona &&
+  cognomePersonaRaw.toUpperCase().endsWith(` ${nomePersona.toUpperCase()}`)
+    ? cognomePersonaRaw.slice(0, -nomePersona.length).trim()
+    : cognomePersonaRaw;
+
+const cognomeContatto = isPersonaFisica
+  ? cognomePersona
+  : String(clienteData.ragione_sociale || "").trim();
+
+const nomeContatto = nomePersona;
 
 const payloadContatto: any = {
   studio_id: studioIdEffettivo,
