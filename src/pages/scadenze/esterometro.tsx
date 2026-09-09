@@ -397,7 +397,7 @@ export default function ScadenzeEsterometroPage() {
           <div className="h-full w-full overflow-auto">
             <table className="w-full caption-bottom text-sm border-collapse">
               <thead className="sticky top-0 z-30 bg-slate-600 text-white shadow-sm [&_tr]:border-b [&_tr]:border-slate-500">
-                <tr className="border-b border-slate-500">
+                <tr className="border-b border-slate-600">
                   <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 sticky left-0 z-40 min-w-[260px] !bg-slate-600 border-r border-slate-500 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                     Nominativo
                   </th>
@@ -423,7 +423,7 @@ export default function ScadenzeEsterometroPage() {
                   </th>
                 </tr>
 
-                <tr className="border-b border-slate-500 bg-slate-700 text-xs text-slate-100">
+                <tr className="border-b border-slate-600 bg-slate-700 text-xs text-slate-100">
                   <th className="sticky left-0 z-40 border-r border-slate-500 !bg-slate-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]"></th>
                   <th className="border-r border-slate-500 bg-slate-700"></th>
 
@@ -463,7 +463,7 @@ export default function ScadenzeEsterometroPage() {
 
               <tbody className="[&_tr:last-child]:border-0">
                 {filteredScadenze.length === 0 ? (
-                  <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                  <tr className="border-b border-slate-600 transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                     <td colSpan={40} className="p-4 text-center text-gray-500">
                       Nessun record trovato
                     </td>
@@ -472,7 +472,7 @@ export default function ScadenzeEsterometroPage() {
                   filteredScadenze.map((scadenza) => (
                     <tr
                       key={scadenza.id}
-                      className="group border-b border-slate-200 hover:bg-slate-100"
+                      className="group border-b border-slate-600 hover:bg-slate-100"
                     >
                       <td className="px-2 py-1 align-middle sticky left-0 z-20 border-r border-slate-200 font-medium min-w-[260px] bg-slate-50 group-hover:bg-slate-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                         {scadenza.nominativo}

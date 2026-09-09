@@ -502,7 +502,7 @@ export default function ScadenzeLipePage() {
           <div className="h-full w-full overflow-auto">
             <table className="w-full caption-bottom text-sm border-collapse">
               <thead className="sticky top-0 z-30 bg-slate-600 text-white shadow-sm">
-                <tr className="border-b border-slate-500">
+                <tr className="border-b border-slate-600">
                   <th className="sticky-col-header h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[300px] border-r border-slate-500 !bg-slate-600">Nominativo</th>
                   <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[180px] border-r border-slate-500 bg-slate-600">Operatore</th>
                   <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[170px] border-r border-slate-500 bg-slate-600">Tipo liquidazione</th>
@@ -535,10 +535,10 @@ export default function ScadenzeLipePage() {
 
               <tbody>
                 {filteredScadenze.length === 0 ? (
-                  <tr className="border-b border-gray-300"><td colSpan={26} className="p-4 text-center text-gray-500">Nessun record trovato</td></tr>
+                  <tr className="border-b border-slate-600"><td colSpan={26} className="p-4 text-center text-gray-500">Nessun record trovato</td></tr>
                 ) : (
                   filteredScadenze.map((scadenza) => (
-                    <tr key={scadenza.id} className="border-b border-slate-200 hover:bg-slate-100">
+                    <tr key={scadenza.id} className="border-b border-slate-600 hover:bg-slate-100">
                       <td className={`sticky-col-cell px-2 py-1 align-middle font-medium min-w-[300px] border-r border-slate-200 bg-slate-50 ${getTipoLiq(scadenza) === "Esterna" ? "text-red-600 font-bold" : ""}`}>{scadenza.nominativo}</td>
                       <td className="px-2 py-1 align-middle min-w-[180px] border-r border-slate-200">{scadenza.operatore}</td>
                       <td className="px-2 py-1 align-middle min-w-[170px] border-r border-slate-200">

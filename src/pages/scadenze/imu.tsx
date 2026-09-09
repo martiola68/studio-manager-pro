@@ -949,7 +949,7 @@ const vars: Record<string, string> = {
             <div className="relative h-full w-full overflow-auto no-print">
                 <table className="w-full caption-bottom text-sm">
                  <thead className="sticky top-0 z-30 bg-slate-600 text-white shadow-sm">
-  <tr className="border-b border-slate-500">
+  <tr className="border-b border-slate-600">
     <th className="sticky-col-header h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[320px] border-r border-slate-500 !bg-slate-600">
       Nominativo
     </th>
@@ -988,7 +988,7 @@ const vars: Record<string, string> = {
 
                 <tbody>
   {filteredScadenze.length === 0 ? (
-    <tr className="border-b border-gray-300">
+    <tr className="border-b border-slate-600">
       <td
         colSpan={16}
         className="p-4 text-center text-gray-500"
@@ -1003,7 +1003,7 @@ const vars: Record<string, string> = {
       return (
         <tr
           key={scadenza.id}
-          className="border-b border-gray-300"
+          className="border-b border-slate-600"
         >
           <td
             className={`sticky-col-cell p-2 align-middle font-medium min-w-[320px] border-r border-gray-300 ${

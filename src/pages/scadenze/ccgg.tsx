@@ -615,7 +615,7 @@ export default function ScadenzeCCGGPage() {
           <div className="relative h-full w-full overflow-auto">
             <table className="w-full caption-bottom text-sm">
               <thead className="sticky top-0 z-30 bg-slate-600 text-white shadow-sm [&_tr]:border-b [&_tr]:border-slate-500">
-                <tr className="border-b border-slate-500">
+                <tr className="border-b border-slate-600">
                   <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 sticky-col-header border-r border-slate-500 !bg-slate-600 !text-slate-50 min-w-[260px]">
                     Nominativo
                   </th>
@@ -648,7 +648,7 @@ export default function ScadenzeCCGGPage() {
 
               <tbody className="[&_tr:last-child]:border-0">
                 {filteredScadenze.length === 0 ? (
-                  <tr className="border-b border-gray-400 transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                  <tr className="border-b border-slate-600 transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                     <td colSpan={9} className="px-2 py-1 align-middle text-center py-8 text-gray-500">
                       Nessun record trovato
                     </td>
@@ -660,7 +660,7 @@ export default function ScadenzeCCGGPage() {
                     return (
                       <tr
                         key={scadenza.id}
-                        className={`border-b border-gray-400 transition-colors data-[state=selected]:bg-muted ${
+                        className={`border-b border-slate-600 transition-colors data-[state=selected]:bg-muted ${
                           isGreenRow ? "bg-blue-100 hover:bg-blue-100" : "bg-white hover:bg-white"
                         }`}
                       >

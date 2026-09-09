@@ -41,7 +41,7 @@ export function IvaScrollableTable({
         <div className="h-full w-full overflow-auto">
           <table className="w-full caption-bottom text-sm">
             <thead className="sticky top-0 z-30 bg-slate-600 text-white shadow-sm [&_tr]:border-b [&_tr]:border-slate-500">
-              <tr className="border-b border-slate-500">
+              <tr className="border-b border-slate-600">
                 <th className="sticky-col-header h-9 min-w-[260px] border-r border-slate-500 !bg-slate-600 px-2 text-left align-middle font-semibold !text-slate-50">Nominativo</th>
                 <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[180px]">Operatore</th>
                 <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[110px]">Mod. Pred.</th>
@@ -58,7 +58,7 @@ export function IvaScrollableTable({
             </thead>
             <tbody className="[&_tr:last-child]:border-0">
               {scadenze.length === 0 ? (
-                <tr className="border-b transition-colors hover:bg-muted/50">
+                <tr className="border-b border-slate-600 transition-colors hover:bg-muted/50">
                   <td colSpan={12} className="px-2 py-8 align-middle text-center text-gray-500">Nessun record trovato</td>
                 </tr>
               ) : (

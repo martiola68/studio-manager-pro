@@ -1125,7 +1125,7 @@ const vars: Record<string, string> = {
           <div className="relative h-full w-full overflow-auto">
             <table className="w-full caption-bottom text-sm">
               <thead className="sticky top-0 z-30 bg-slate-600 text-white shadow-sm [&_tr]:border-b [&_tr]:border-slate-500">
-                <tr className="border-b border-slate-500">
+                <tr className="border-b border-slate-600">
                   <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 sticky-col-header border-r border-slate-500 !bg-slate-600 !text-slate-50 min-w-[300px]">
                     Nominativo
                   </th>
@@ -1212,7 +1212,7 @@ const vars: Record<string, string> = {
 
               <tbody className="[&_tr:last-child]:border-0">
                 {filteredScadenze.length === 0 ? (
-                  <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                  <tr className="border-b border-slate-600 transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                     <td
                       colSpan={24}
                       className="px-2 py-1 align-middle text-center text-gray-500"

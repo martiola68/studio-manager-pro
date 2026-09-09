@@ -644,7 +644,7 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
           <div className="h-full w-full overflow-auto">
             <table className="w-full caption-bottom text-sm">
               <thead className="sticky top-0 z-30 bg-slate-600 text-white shadow-sm [&_tr]:border-b [&_tr]:border-slate-500">
-                <tr className="border-b border-slate-500">
+                <tr className="border-b border-slate-600">
                   <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 sticky-col-header min-w-[260px] !bg-slate-600">
                     Nominativo
                   </th>
@@ -692,7 +692,7 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
 
               <tbody className="[&_tr:last-child]:border-0">
                 {filteredScadenze.length === 0 ? (
-                  <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                  <tr className="border-b border-slate-600 transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                     <td
                       colSpan={14}
                       className="px-2 py-1 align-middle text-center py-8 text-gray-500"
