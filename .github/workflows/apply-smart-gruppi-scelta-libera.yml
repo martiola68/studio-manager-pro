@@ -1,0 +1,45 @@
+name: Apply smart working free-choice groups
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply-smart-gruppi-scelta-libera.yml
+      - scripts/patch-smart-gruppi-scelta-libera-once.py
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply Smart Working patch
+        run: python scripts/patch-smart-gruppi-scelta-libera-once.py
+      - name: Verify runtime markers
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'scelta_libera' src/pages/presenze/smart-gruppi.tsx
+          grep -q 'giorniPerUtente' src/pages/presenze/smart-gruppi.tsx
+          grep -q 'A scelta libera' src/pages/presenze/smart-gruppi.tsx
+          grep -q 'giorni_presenza' src/pages/api/presenze/smart/gruppi.ts
+          grep -q 'gruppo.scelta_libera' src/pages/api/presenze/smart/genera-mese.ts
+      - name: Commit runtime files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            src/pages/presenze/smart-gruppi.tsx \
+            src/pages/api/presenze/smart/gruppi.ts \
+            src/pages/api/presenze/smart/genera-mese.ts \
+            src/components/payroll/PayrollMasterGraficaEnhancer.tsx
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Add free-choice attendance days to smart working groups"
+          git pull --rebase origin main
+          git push origin HEAD:main
