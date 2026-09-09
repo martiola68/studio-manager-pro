@@ -1,0 +1,55 @@
+name: Apply dark row separators to scadenzari
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply-scadenzari-dark-row-separators.yml
+      - scripts/patch-scadenzari-dark-row-separators-once.py
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply row separator color only
+        run: python scripts/patch-scadenzari-dark-row-separators-once.py
+      - name: Verify separators
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -R -q 'border-b border-slate-600\|border-slate-600 border-b' \
+            src/components/scadenze/iva/IvaScrollableTable.tsx \
+            src/pages/scadenze/ccgg.tsx \
+            src/pages/scadenze/cu.tsx \
+            src/pages/scadenze/imu.tsx \
+            src/pages/scadenze/fiscali.tsx \
+            src/pages/scadenze/bilanci.tsx \
+            src/pages/scadenze/modello-770.tsx \
+            src/pages/scadenze/lipe.tsx \
+            src/pages/scadenze/esterometro.tsx
+      - name: Commit runtime files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            src/components/scadenze/iva/IvaScrollableTable.tsx \
+            src/pages/scadenze/ccgg.tsx \
+            src/pages/scadenze/cu.tsx \
+            src/pages/scadenze/imu.tsx \
+            src/pages/scadenze/fiscali.tsx \
+            src/pages/scadenze/bilanci.tsx \
+            src/pages/scadenze/modello-770.tsx \
+            src/pages/scadenze/lipe.tsx \
+            src/pages/scadenze/esterometro.tsx
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Use dark blue separators between scadenzario rows"
+          git pull --rebase origin main
+          git push origin HEAD:main
