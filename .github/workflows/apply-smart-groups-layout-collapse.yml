@@ -1,0 +1,47 @@
+name: Apply compact smart groups layout
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/apply-smart-groups-layout-collapse.yml
+      - scripts/patch-smart-groups-layout-collapse-once.py
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply smart groups layout patch
+        run: python scripts/patch-smart-groups-layout-collapse-once.py
+
+      - name: Verify runtime changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'smart-group-summary' src/pages/presenze/smart-gruppi.tsx
+          grep -q 'smart-new-group-card' src/pages/presenze/smart-gruppi.tsx
+          grep -q 'smart-groups-configured-card' src/pages/presenze/smart-gruppi.tsx
+          grep -q 'position: static !important' src/components/payroll/PayrollMasterGraficaEnhancer.tsx
+
+      - name: Commit runtime files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/presenze/smart-gruppi.tsx src/components/payroll/PayrollMasterGraficaEnhancer.tsx
+          if git diff --cached --quiet; then
+            echo "No runtime changes to commit"
+            exit 0
+          fi
+          git commit -m "Compact smart groups layout and collapsible summary"
+          git pull --rebase origin main
+          git push origin HEAD:main
