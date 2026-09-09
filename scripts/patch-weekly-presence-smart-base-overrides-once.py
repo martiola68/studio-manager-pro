@@ -77,7 +77,10 @@ if old_promise not in s:
     raise SystemExit('loadData Promise.all marker mismatch')
 s = s.replace(old_promise, new_promise, 1)
 
-# 2) merge: Smart Working è la base; ferie/permessi/malattia prevalgono.
+# 2) merge esplicito:
+#    - Smart Working è sempre il valore base
+#    - se Presenze è NULL/vuoto, resta il valore Smart
+#    - ferie, malattia, permessi e festivi sovrascrivono il valore Smart
 old_after_errors = '''      if (utentiError) throw utentiError;
       if (presenzeError) throw presenzeError;
 
@@ -91,26 +94,9 @@ new_after_errors = '''      if (utentiError) throw utentiError;
       const actualRows = (presenzeData || []) as Presenza[];
       const merged = new Map<string, Presenza>();
 
-      // Mantiene come fallback eventuali dati già presenti in Presenze
-      // (festivi/non lavorativi e dipendenti non inclusi nei gruppi Smart).
-      for (const presenza of actualRows) {
-        merged.set(`${presenza.utente_id}_${presenza.data_presenza}`, presenza);
-      }
-
-      // Il calendario dei gruppi Smart diventa la base P/SW.
-      // Non sovrascrive però ferie, permessi o malattia già registrati in Presenze.
+      // 1. Calendario Smart = base principale P/SW.
       for (const smart of smartData || []) {
         const key = `${smart.utente_id}_${smart.data}`;
-        const actual = merged.get(key);
-        const actualTipo = actual?.tbpresenze_codici?.tipo;
-        const actualCodice = actual?.codice_presenza || "";
-        const isPermesso = actualTipo === "permesso" || /^P\\d+(?:\\.\\d+)?(?:\\.104)?$/.test(actualCodice);
-        const isAssenza = actualTipo === "assenza" || actualCodice === "F" || actualCodice === "M";
-        const isFestivo = actualTipo === "festivo" || actualCodice === "N";
-
-        if (isPermesso || isAssenza || isFestivo) {
-          continue;
-        }
 
         if (smart.festivo) {
           merged.set(key, {
@@ -143,6 +129,33 @@ new_after_errors = '''      if (utentiError) throw utentiError;
         });
       }
 
+      // 2. Presenze reali: un NULL/non valorizzato NON deve cancellare il dato Smart.
+      //    Solo ferie, malattia, permessi e festivi hanno precedenza sul calendario Smart.
+      for (const actual of actualRows) {
+        const key = `${actual.utente_id}_${actual.data_presenza}`;
+        const codice = String(actual.codice_presenza || "").trim();
+        const tipo = actual.tbpresenze_codici?.tipo;
+
+        if (!codice) {
+          // Se la presenza è NULL/vuota, mantiene il valore già derivato dal gruppo Smart.
+          continue;
+        }
+
+        const isPermesso = tipo === "permesso" || /^P\\d+(?:\\.\\d+)?(?:\\.104)?$/.test(codice);
+        const isAssenza = tipo === "assenza" || codice === "F" || codice === "M";
+        const isFestivo = tipo === "festivo" || codice === "N";
+
+        if (isPermesso || isAssenza || isFestivo) {
+          merged.set(key, actual);
+          continue;
+        }
+
+        // Per dipendenti/giorni senza calendario Smart, conserva comunque il dato reale.
+        if (!merged.has(key)) {
+          merged.set(key, actual);
+        }
+      }
+
       setUtenti(utentiData || []);
       setPresenze(Array.from(merged.values()));'''
 
@@ -162,9 +175,10 @@ if s == old:
 
 checks = [
     'tbpresenze_smart_calendario',
-    'const merged = new Map<string, Presenza>();',
-    'actualCodice === "F" || actualCodice === "M"',
+    'Calendario Smart = base principale P/SW.',
+    'if (!codice)',
     'smart.presenza ? "Pp" : "Ps"',
+    'isAssenza = tipo === "assenza" || codice === "F" || codice === "M"',
 ]
 for token in checks:
     if token not in s:
