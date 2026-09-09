@@ -1,0 +1,35 @@
+name: Apply smart groups studio id fix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply-smart-groups-studio-id.yml
+      - scripts/patch-smart-groups-studio-id-once.py
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply studio id patch
+        run: python scripts/patch-smart-groups-studio-id-once.py
+      - name: Verify runtime
+        run: |
+          grep -q 'studio_id: studioId' src/pages/presenze/smart-gruppi.tsx
+          grep -q 'microsoft_connection_id, studio_id' src/pages/presenze/smart-gruppi.tsx
+          grep -q 'studio_id, settore, nome_gruppo' src/pages/api/presenze/smart/gruppi.ts
+      - name: Commit runtime files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/presenze/smart-gruppi.tsx src/pages/api/presenze/smart/gruppi.ts
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Persist studio id when creating smart groups"
+          git pull --rebase origin main
+          git push origin HEAD:main
