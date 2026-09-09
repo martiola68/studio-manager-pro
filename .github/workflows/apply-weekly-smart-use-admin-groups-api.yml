@@ -1,0 +1,35 @@
+name: Apply weekly smart groups admin API fix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/patch-weekly-smart-use-admin-groups-api-once.py'
+      - '.github/workflows/apply-weekly-smart-use-admin-groups-api.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Apply patch
+        run: python scripts/patch-weekly-smart-use-admin-groups-api-once.py
+      - name: Commit runtime change
+        run: |
+          if git diff --quiet -- src/pages/presenze/assenze-settimanali.tsx; then
+            echo "No runtime changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/presenze/assenze-settimanali.tsx
+          git commit -m "Load weekly smart groups through admin API"
+          git pull --rebase origin main
+          git push origin main
