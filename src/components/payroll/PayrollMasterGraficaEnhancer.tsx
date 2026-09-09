@@ -122,6 +122,22 @@ export function PayrollMasterGraficaEnhancer() {
       .payroll-master-page .bg-yellow-50, .payroll-master-page [class*="bg-yellow-50"] { background: rgb(254 252 232) !important; }
       .payroll-master-page .bg-blue-50, .payroll-master-page [class*="bg-blue-50"] { background: rgb(239 246 255) !important; }
 
+      /* Override finale Smart Working: font realmente leggibile anche con scala UI compatta. */
+      .payroll-master-page.payroll-smart-groups-page { font-size: 17px !important; }
+      .payroll-master-page.payroll-smart-groups-page h1 { font-size: 24px !important; line-height: 1.3 !important; }
+      .payroll-master-page.payroll-smart-groups-page h2,
+      .payroll-master-page.payroll-smart-groups-page h3 { font-size: 18px !important; line-height: 1.3 !important; }
+      .payroll-master-page.payroll-smart-groups-page label { font-size: 16px !important; }
+      .payroll-master-page.payroll-smart-groups-page p,
+      .payroll-master-page.payroll-smart-groups-page span,
+      .payroll-master-page.payroll-smart-groups-page td,
+      .payroll-master-page.payroll-smart-groups-page th { font-size: 16px !important; line-height: 1.35 !important; }
+      .payroll-master-page.payroll-smart-groups-page input,
+      .payroll-master-page.payroll-smart-groups-page select,
+      .payroll-master-page.payroll-smart-groups-page textarea { font-size: 16px !important; min-height: 42px !important; }
+      .payroll-master-page.payroll-smart-groups-page button { font-size: 15px !important; min-height: 40px !important; }
+      .payroll-master-page.payroll-smart-groups-page table { font-size: 16px !important; }
+
       /* Presenze: colora esclusivamente i campi giornalieri compilati in base al codice. */
       .payroll-presenze-page select.bg-green-100 {
         background: rgb(220 252 231) !important;
