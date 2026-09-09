@@ -176,26 +176,9 @@ export default function AssenzeSettimanaliPage() {
       const actualRows = (presenzeData || []) as Presenza[];
       const merged = new Map<string, Presenza>();
 
-      // Mantiene come fallback eventuali dati già presenti in Presenze
-      // (festivi/non lavorativi e dipendenti non inclusi nei gruppi Smart).
-      for (const presenza of actualRows) {
-        merged.set(`${presenza.utente_id}_${presenza.data_presenza}`, presenza);
-      }
-
-      // Il calendario dei gruppi Smart diventa la base P/SW.
-      // Non sovrascrive però ferie, permessi o malattia già registrati in Presenze.
+      // 1) Il calendario Smart è SEMPRE la base principale della settimana.
       for (const smart of smartData || []) {
         const key = `${smart.utente_id}_${smart.data}`;
-        const actual = merged.get(key);
-        const actualTipo = actual?.tbpresenze_codici?.tipo;
-        const actualCodice = actual?.codice_presenza || "";
-        const isPermesso = actualTipo === "permesso" || /^P\d+(?:\.\d+)?(?:\.104)?$/.test(actualCodice);
-        const isAssenza = actualTipo === "assenza" || actualCodice === "F" || actualCodice === "M";
-        const isFestivo = actualTipo === "festivo" || actualCodice === "N";
-
-        if (isPermesso || isAssenza || isFestivo) {
-          continue;
-        }
 
         if (smart.festivo) {
           merged.set(key, {
@@ -226,6 +209,33 @@ export default function AssenzeSettimanaliPage() {
             tipo: "presenza",
           },
         });
+      }
+
+      // 2) Le Presenze reali sovrascrivono la base Smart SOLO se valorizzate
+      //    con ferie, malattia, permessi o festivo. NULL/vuoto lascia P/SW Smart.
+      for (const actual of actualRows) {
+        const key = `${actual.utente_id}_${actual.data_presenza}`;
+        const codice = String(actual.codice_presenza || "").trim();
+        const tipo = actual.tbpresenze_codici?.tipo;
+
+        if (!codice || codice === "-") {
+          continue;
+        }
+
+        const isPermesso = tipo === "permesso" || /^P\d+(?:\.\d+)?(?:\.104)?$/.test(codice);
+        const isAssenza = tipo === "assenza" || codice === "F" || codice === "M";
+        const isFestivo = tipo === "festivo" || codice === "N";
+
+        if (isPermesso || isAssenza || isFestivo) {
+          merged.set(key, actual);
+          continue;
+        }
+
+        // Se il dipendente/giorno non appartiene a un calendario Smart,
+        // conserva comunque l'eventuale presenza reale valorizzata.
+        if (!merged.has(key)) {
+          merged.set(key, actual);
+        }
       }
 
       setUtenti(utentiData || []);
