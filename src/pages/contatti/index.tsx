@@ -1876,7 +1876,7 @@ const mostraVistaSocieta =
               key={`${societa.cliente_id}-${contatto.id}`}
               className="rounded-md border bg-white p-4 shadow-sm"
             >
-              <div className="text-xl font-bold text-gray-900">
+              <div className="text-[21px] font-bold text-gray-900">
                 {contatto.cognome} {contatto.nome}
               </div>
 
@@ -1942,7 +1942,7 @@ const mostraVistaSocieta =
 >
               <div className="min-w-0 flex-1">
                <div className="flex items-center gap-2">
-  <div className="text-xl font-bold text-gray-900">
+  <div className="text-[21px] font-bold text-gray-900">
     {contatto.cognome} {contatto.nome}
   </div>
 

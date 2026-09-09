@@ -103,48 +103,69 @@ const caricaContattiById = async (
   );
 };
 
-export const contattoService = {
-  async getContatti(studioId?: string | null): Promise<Contatto[]> {
+const RUBRICA_PAGE_SIZE = 1000;
+
+const fetchAllContatti = async (studioId?: string | null): Promise<Contatto[]> => {
+  const rows: Contatto[] = [];
+  let from = 0;
+
+  while (true) {
     let query = supabase
       .from("tbcontatti")
       .select("*")
-      .order("cognome", { ascending: true });
+      .order("cognome", { ascending: true })
+      .range(from, from + RUBRICA_PAGE_SIZE - 1);
 
-    if (studioId) {
-      query = query.eq("studio_id", studioId);
-    }
+    if (studioId) query = query.eq("studio_id", studioId);
 
     const { data, error } = await query;
-
     if (error) throw error;
-    return data || [];
+
+    const batch = (data || []) as Contatto[];
+    rows.push(...batch);
+
+    if (batch.length < RUBRICA_PAGE_SIZE) break;
+    from += RUBRICA_PAGE_SIZE;
+  }
+
+  return rows;
+};
+
+const fetchAllRelazioniClienti = async (studioId?: string | null): Promise<any[]> => {
+  const rows: any[] = [];
+  let from = 0;
+
+  while (true) {
+    let query = db
+      .from("tbcontatti_clienti")
+      .select("*")
+      .range(from, from + RUBRICA_PAGE_SIZE - 1);
+
+    if (studioId) query = query.eq("studio_id", studioId);
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    const batch = data || [];
+    rows.push(...batch);
+
+    if (batch.length < RUBRICA_PAGE_SIZE) break;
+    from += RUBRICA_PAGE_SIZE;
+  }
+
+  return rows;
+};
+
+export const contattoService = {
+  async getContatti(studioId?: string | null): Promise<Contatto[]> {
+    return fetchAllContatti(studioId);
   },
 
   async getContattiConClienti(
     studioId?: string | null
   ): Promise<ContattoConClienti[]> {
-    let contattiQuery = supabase
-      .from("tbcontatti")
-      .select("*")
-      .order("cognome", { ascending: true });
-
-    if (studioId) {
-      contattiQuery = contattiQuery.eq("studio_id", studioId);
-    }
-
-    const { data: contatti, error: contattiError } = await contattiQuery;
-
-    if (contattiError) throw contattiError;
-
-    let relazioniQuery = db.from("tbcontatti_clienti").select("*");
-
-    if (studioId) {
-      relazioniQuery = relazioniQuery.eq("studio_id", studioId);
-    }
-
-    const { data: relazioni, error: relazioniError } = await relazioniQuery;
-
-    if (relazioniError) throw relazioniError;
+    const contatti = await fetchAllContatti(studioId);
+    const relazioni = await fetchAllRelazioniClienti(studioId);
 
     const clientiById = await caricaClientiById(
       (relazioni || []).map((r: any) => r.cliente_id)
