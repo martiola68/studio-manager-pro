@@ -1,0 +1,29 @@
+name: Apply zero-day smart working summary fix
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply-smart-zero-days-summary.yml
+      - scripts/patch-smart-zero-days-summary-once.py
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - run: python scripts/patch-smart-zero-days-summary-once.py
+      - name: Verify
+        run: |
+          ! grep -q 'seleziona almeno un giorno di presenza per ogni utente' src/pages/presenze/smart-gruppi.tsx
+          grep -q 'presenza ? "Presenza" : "Smart working"' src/pages/api/presenze/smart/report-mese.ts
+      - name: Commit runtime
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/presenze/smart-gruppi.tsx src/pages/api/presenze/smart/report-mese.ts src/pages/api/presenze/smart/invia-report-mese.ts
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Treat zero presence days as smart working"
+          git pull --rebase origin main
+          git push origin HEAD:main
