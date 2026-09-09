@@ -134,8 +134,7 @@ export default function AssenzeSettimanaliPage() {
         { data: utentiData, error: utentiError },
         { data: presenzeData, error: presenzeError },
         { data: smartData, error: smartError },
-        { data: gruppiData, error: gruppiError },
-        { data: gruppiUtentiData, error: gruppiUtentiError },
+        gruppiResponse,
       ] = await Promise.all([
         supabase
           .from("tbutenti")
@@ -170,24 +169,27 @@ export default function AssenzeSettimanaliPage() {
           .gte("data", startStr)
           .lte("data", endStr),
 
-        supabase
-          .from("tbpresenze_smart_gruppi")
-          .select("id, giorno_fisso, scelta_libera")
-          .eq("studio_id", currentStudioId)
-          .eq("attivo", true),
-
-        supabase
-          .from("tbpresenze_smart_gruppi_utenti")
-          .select("id, gruppo_id, utente_id, ordine, giorni_presenza")
-          .eq("attivo", true)
-          .order("ordine", { ascending: true }),
+        fetch("/api/presenze/smart/gruppi"),
       ]);
 
       if (utentiError) throw utentiError;
       if (presenzeError) throw presenzeError;
       if (smartError) throw smartError;
-      if (gruppiError) throw gruppiError;
-      if (gruppiUtentiError) throw gruppiUtentiError;
+      if (!gruppiResponse.ok) {
+        const body = await gruppiResponse.json().catch(() => ({}));
+        throw new Error(body?.error || "Errore caricamento gruppi Smart Working");
+      }
+
+      const gruppiRaw = await gruppiResponse.json();
+      const gruppiData = Array.isArray(gruppiRaw)
+        ? gruppiRaw.filter((gruppo: any) => gruppo.studio_id === currentStudioId)
+        : [];
+      const gruppiUtentiData = gruppiData.flatMap((gruppo: any) =>
+        (gruppo.utenti || []).map((membro: any) => ({
+          ...membro,
+          gruppo_id: gruppo.id,
+        }))
+      );
 
       const actualRows = (presenzeData || []) as Presenza[];
       const merged = new Map<string, Presenza>();
@@ -237,8 +239,6 @@ export default function AssenzeSettimanaliPage() {
 
       const membriPerGruppo = new Map<string, any[]>();
       for (const membro of gruppiUtentiData || []) {
-        // Lo studio viene validato dal gruppo padre: così includiamo anche
-        // i membri legacy che hanno studio_id nullo nella tabella ponte.
         if (!gruppiById.has(membro.gruppo_id)) continue;
         const lista = membriPerGruppo.get(membro.gruppo_id) || [];
         lista.push(membro);
