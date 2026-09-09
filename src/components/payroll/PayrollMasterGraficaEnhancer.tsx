@@ -70,24 +70,27 @@ export function PayrollMasterGraficaEnhancer() {
       }
       .payroll-smart-groups-page > div.p-6.space-y-6 > div:first-child h1 { margin: 0 !important; }
       .payroll-smart-groups-page > div.p-6.space-y-6 > div:first-child p { margin-top: 2px !important; }
-      .payroll-smart-groups-page .grid.grid-cols-1.xl\:grid-cols-\[430px_1fr\] {
-        display: grid !important; grid-template-columns: minmax(420px, 36%) minmax(0, 64%) !important;
+      .payroll-smart-groups-page .grid.grid-cols-1.xl\:grid-cols-\[minmax\(340px\,38\%\)_1fr\] {
+        display: grid !important; grid-template-columns: minmax(340px, 38%) minmax(0, 62%) !important;
         gap: 14px !important; align-items: stretch !important; min-height: 0 !important;
       }
-      .payroll-smart-groups-page .grid.grid-cols-1.xl\:grid-cols-\[430px_1fr\] > div:first-child,
-      .payroll-smart-groups-page .grid.grid-cols-1.xl\:grid-cols-\[430px_1fr\] > div.space-y-4 > div {
+      .payroll-smart-groups-page .grid.grid-cols-1.xl\:grid-cols-\[minmax\(340px\,38\%\)_1fr\] > div:first-child,
+      .payroll-smart-groups-page .grid.grid-cols-1.xl\:grid-cols-\[minmax\(340px\,38\%\)_1fr\] > div.space-y-4 > div {
         border-color: rgb(186 230 253) !important; background: rgb(248 250 252) !important; box-shadow: none !important;
       }
-      .payroll-smart-groups-page .grid.grid-cols-1.xl\:grid-cols-\[430px_1fr\] > div.space-y-4 {
+      .payroll-smart-groups-page .grid.grid-cols-1.xl\:grid-cols-\[minmax\(340px\,38\%\)_1fr\] > div.space-y-4 {
         display: grid !important; grid-template-rows: auto auto !important; gap: 14px !important; min-width: 0 !important;
       }
       .payroll-smart-groups-page .grid.grid-cols-1.lg\:grid-cols-\[1fr_160px_120px_auto_auto_auto\] {
         display: grid !important; grid-template-columns: minmax(240px,1fr) 135px 100px auto auto auto !important; gap: 10px !important; align-items: end !important;
       }
       .payroll-smart-groups-page button[class*="bg-black"] { background: rgb(3 105 161) !important; border-color: rgb(3 105 161) !important; color: white !important; }
-      .payroll-smart-groups-page table { width: 100% !important; }
+      .payroll-smart-groups-page table { width: 100% !important; font-size: .82rem !important; }
+      .payroll-smart-groups-page input, .payroll-smart-groups-page select { font-size: .86rem !important; }
+      .payroll-smart-groups-page button { font-size: .82rem !important; }
+      .payroll-smart-groups-page h2, .payroll-smart-groups-page h3 { font-size: .92rem !important; }
       @media (max-width: 1150px) {
-        .payroll-smart-groups-page .grid.grid-cols-1.xl\:grid-cols-\[430px_1fr\] { grid-template-columns: 1fr !important; }
+        .payroll-smart-groups-page .grid.grid-cols-1.xl\:grid-cols-\[minmax\(340px\,38\%\)_1fr\] { grid-template-columns: 1fr !important; }
         .payroll-smart-groups-page .grid.grid-cols-1.lg\:grid-cols-\[1fr_160px_120px_auto_auto_auto\] { grid-template-columns: 1fr 140px 110px !important; }
       }
 

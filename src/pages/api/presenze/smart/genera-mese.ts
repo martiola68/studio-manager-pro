@@ -117,7 +117,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { data: utenti, error: utentiError } = await supabaseAdmin
     .from("tbpresenze_smart_gruppi_utenti")
-    .select("utente_id, ordine")
+    .select("utente_id, ordine, giorni_presenza")
     .eq("gruppo_id", gruppo_id)
     .eq("attivo", true)
     .order("ordine", { ascending: true });
@@ -155,9 +155,15 @@ for (const day of days) {
   for (let userIndex = 0; userIndex < utentiAttivi.length; userIndex++) {
     const utente = utentiAttivi[userIndex];
 
-    const presenza =
-      !festivoNome &&
-      (wd === giornoFisso || userIndex === extraIndex);
+    const giorniUtente = Array.isArray((utente as any).giorni_presenza)
+      ? (utente as any).giorni_presenza.map(Number)
+      : [];
+
+    const presenza = !festivoNome && (
+      gruppo.scelta_libera
+        ? giorniUtente.includes(wd)
+        : (wd === giornoFisso || userIndex === extraIndex)
+    );
 
     rows.push({
       studio_id: gruppo.studio_id,

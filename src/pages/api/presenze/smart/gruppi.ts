@@ -16,6 +16,7 @@ export default async function handler(
           id,
           utente_id,
           ordine,
+          giorni_presenza,
           utente:tbutenti(id, nome, cognome, email, settore, tipo_rapporto)
         )
       `)
@@ -38,6 +39,7 @@ export default async function handler(
       nome_gruppo,
       giorno_fisso,
       presenze_settimanali,
+      scelta_libera,
       utenti,
     } = req.body;
 
@@ -55,6 +57,7 @@ export default async function handler(
         nome_gruppo,
         giorno_fisso: giorno_fisso || 2,
         presenze_settimanali: presenze_settimanali || 2,
+        scelta_libera: !!scelta_libera,
       })
       .select("*")
       .single();
@@ -66,11 +69,19 @@ export default async function handler(
     }
 
     if (utenti.length > 0) {
-      const rows = utenti.map((utente_id: string, index: number) => ({
-        gruppo_id: gruppo.id,
-        utente_id,
-        ordine: index,
-      }));
+      const rows = utenti.map((item: any, index: number) => {
+        const utente_id = typeof item === "string" ? item : item.utente_id;
+        const giorni = Array.isArray(item?.giorni_presenza)
+          ? item.giorni_presenza.map(Number).filter((g: number) => g >= 1 && g <= 5)
+          : null;
+
+        return {
+          gruppo_id: gruppo.id,
+          utente_id,
+          ordine: index,
+          giorni_presenza: !!scelta_libera ? giorni : null,
+        };
+      });
 
       const { error: utentiError } = await supabaseAdmin
         .from("tbpresenze_smart_gruppi_utenti")

@@ -17,10 +17,12 @@ type Gruppo = {
   nome_gruppo: string;
   giorno_fisso: number;
   presenze_settimanali: number;
+  scelta_libera?: boolean;
   utenti?: {
     id: string;
     utente_id: string;
     ordine: number;
+    giorni_presenza?: number[] | null;
     utente?: Utente;
   }[];
 };
@@ -69,6 +71,7 @@ const [microsoftConnectionId, setMicrosoftConnectionId] = useState("");
   const [utenti, setUtenti] = useState<Utente[]>([]);
   const [utentiSelezionati, setUtentiSelezionati] = useState<string[]>([]);
   const [utenteDaAggiungere, setUtenteDaAggiungere] = useState("");
+  const [giorniPerUtente, setGiorniPerUtente] = useState<Record<string, number[]>>({});
 
   const [gruppoSelezionato, setGruppoSelezionato] = useState("");
   const [anno, setAnno] = useState(now.getFullYear());
@@ -81,6 +84,7 @@ const [microsoftConnectionId, setMicrosoftConnectionId] = useState("");
     nome_gruppo: "Turnazione smart working",
     giorno_fisso: 2,
     presenze_settimanali: 2,
+    scelta_libera: false,
   });
 
   useEffect(() => {
@@ -170,6 +174,21 @@ const [microsoftConnectionId, setMicrosoftConnectionId] = useState("");
 
   function rimuoviUtente(id: string) {
     setUtentiSelezionati((prev) => prev.filter((x) => x !== id));
+    setGiorniPerUtente((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  }
+
+  function toggleGiornoUtente(utenteId: string, giorno: number) {
+    setGiorniPerUtente((prev) => {
+      const current = prev[utenteId] || [];
+      const next = current.includes(giorno)
+        ? current.filter((g) => g !== giorno)
+        : [...current, giorno].sort((a, b) => a - b);
+      return { ...prev, [utenteId]: next };
+    });
   }
 
   async function creaGruppo() {
@@ -183,6 +202,14 @@ const [microsoftConnectionId, setMicrosoftConnectionId] = useState("");
       return;
     }
 
+    if (form.scelta_libera) {
+      const senzaGiorni = utentiSelezionati.filter((id) => !(giorniPerUtente[id] || []).length);
+      if (senzaGiorni.length > 0) {
+        alert("Per la scelta libera seleziona almeno un giorno di presenza per ogni utente");
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
@@ -191,7 +218,10 @@ const [microsoftConnectionId, setMicrosoftConnectionId] = useState("");
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
-          utenti: utentiSelezionati,
+          utenti: utentiSelezionati.map((utente_id) => ({
+            utente_id,
+            giorni_presenza: form.scelta_libera ? (giorniPerUtente[utente_id] || []) : null,
+          })),
         }),
       });
 
@@ -203,6 +233,7 @@ const [microsoftConnectionId, setMicrosoftConnectionId] = useState("");
       }
 
       setUtentiSelezionati([]);
+      setGiorniPerUtente({});
       setGruppoSelezionato(data.id);
       await loadGruppi();
 
@@ -383,15 +414,15 @@ const [microsoftConnectionId, setMicrosoftConnectionId] = useState("");
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 text-[14px]">
       <div>
         <h1 className="text-2xl font-bold">Creazione gruppi smart working</h1>
-        <p className="text-sm text-gray-600">
+        <p className="text-[14px] text-gray-600">
           Configurazione gruppi, generazione mesi ed eliminazione turnazioni smart.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[430px_1fr] gap-6 items-start">
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(340px,38%)_1fr] gap-4 items-start">
         <div className="border rounded-lg bg-white p-4 space-y-4">
           <h2 className="font-semibold">Nuovo gruppo</h2>
 
@@ -434,11 +465,16 @@ const [microsoftConnectionId, setMicrosoftConnectionId] = useState("");
 
           <select
             className="border p-2 rounded w-full"
-            value={form.giorno_fisso}
-            onChange={(e) =>
-              setForm({ ...form, giorno_fisso: Number(e.target.value) })
-            }
+            value={form.scelta_libera ? "libera" : String(form.giorno_fisso)}
+            onChange={(e) => {
+              if (e.target.value === "libera") {
+                setForm({ ...form, scelta_libera: true });
+              } else {
+                setForm({ ...form, scelta_libera: false, giorno_fisso: Number(e.target.value) });
+              }
+            }}
           >
+            <option value="libera">A scelta libera</option>
             {giorni.map((g) => (
               <option key={g.value} value={g.value}>
                 Giorno fisso: {g.label}
@@ -446,7 +482,7 @@ const [microsoftConnectionId, setMicrosoftConnectionId] = useState("");
             ))}
           </select>
 
-          <select
+          {!form.scelta_libera && <select
             className="border p-2 rounded w-full"
             value={form.presenze_settimanali}
             onChange={(e) =>
@@ -459,10 +495,10 @@ const [microsoftConnectionId, setMicrosoftConnectionId] = useState("");
             <option value={1}>1 giorno presenza/settimana</option>
             <option value={2}>2 giorni presenza/settimana</option>
             <option value={3}>3 giorni presenza/settimana</option>
-          </select>
+          </select>}
 
           <div className="border rounded p-3 space-y-3">
-            <h3 className="font-semibold text-sm">Utenti gruppo</h3>
+            <h3 className="font-semibold text-[14px]">Utenti gruppo</h3>
 
             <div className="flex gap-2">
               <select
@@ -492,7 +528,23 @@ const [microsoftConnectionId, setMicrosoftConnectionId] = useState("");
                 key={u.id}
                 className="flex justify-between items-center border rounded px-3 py-2 bg-white"
               >
-                <span>{nomeUtente(u)}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium">{nomeUtente(u)}</div>
+                  {form.scelta_libera && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {giorni.map((g) => (
+                        <label key={g.value} className="inline-flex items-center gap-1.5 rounded border bg-slate-50 px-2 py-1">
+                          <input
+                            type="checkbox"
+                            checked={(giorniPerUtente[u.id] || []).includes(g.value)}
+                            onChange={() => toggleGiornoUtente(u.id, g.value)}
+                          />
+                          <span>{g.label.slice(0, 3)}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 <button
                   type="button"
@@ -614,14 +666,16 @@ const [microsoftConnectionId, setMicrosoftConnectionId] = useState("");
             {gruppoCorrente && (
               <div className="text-sm text-gray-600">
                 Settore: <strong>{gruppoCorrente.settore}</strong> · Giorno fisso:{" "}
-                <strong>{giornoLabel(gruppoCorrente.giorno_fisso)}</strong> ·
+                <strong>{gruppoCorrente.scelta_libera ? "A scelta libera" : giornoLabel(gruppoCorrente.giorno_fisso)}</strong> ·
                 Presenze settimanali:{" "}
                 <strong>{gruppoCorrente.presenze_settimanali}</strong>
               </div>
             )}
           </div>
+        </div>
+      </div>
 
-          <div className="border rounded-lg bg-white p-4">
+      <div className="border rounded-lg bg-white p-4">
             <h2 className="font-semibold mb-3">Gruppi configurati</h2>
 
             <table className="w-full text-sm border">
@@ -641,7 +695,7 @@ const [microsoftConnectionId, setMicrosoftConnectionId] = useState("");
                     <td className="border p-2">{g.nome_gruppo}</td>
                     <td className="border p-2">{g.settore}</td>
                     <td className="border p-2">{g.tipo_rapporto || "-"}</td>
-                    <td className="border p-2">{giornoLabel(g.giorno_fisso)}</td>
+                    <td className="border p-2">{g.scelta_libera ? "A scelta libera" : giornoLabel(g.giorno_fisso)}</td>
                     <td className="border p-2">{g.presenze_settimanali}</td>
                     <td className="border p-2">
                       {(g.utenti || [])
@@ -661,8 +715,6 @@ const [microsoftConnectionId, setMicrosoftConnectionId] = useState("");
                 )}
               </tbody>
             </table>
-          </div>
-        </div>
       </div>
     </div>
   );
