@@ -67,18 +67,20 @@ export default async function handler(
       giorno_fisso,
       presenze_settimanali,
       scelta_libera,
+      studio_id,
       utenti,
     } = req.body;
 
-    if (!settore || !nome_gruppo || !Array.isArray(utenti)) {
+    if (!settore || !nome_gruppo || !studio_id || !Array.isArray(utenti)) {
       return res.status(400).json({
-        error: "settore, nome_gruppo e utenti sono obbligatori",
+        error: "studio_id, settore, nome_gruppo e utenti sono obbligatori",
       });
     }
 
     const { data: gruppo, error: gruppoError } = await supabaseAdmin
       .from("tbpresenze_smart_gruppi")
       .insert({
+        studio_id,
         settore,
         tipo_rapporto: tipo_rapporto || null,
         nome_gruppo,

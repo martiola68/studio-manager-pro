@@ -66,6 +66,7 @@ export default function SmartGruppi() {
   const [isAdmin, setIsAdmin] = useState(false);
 const [senderUserId, setSenderUserId] = useState("");
 const [microsoftConnectionId, setMicrosoftConnectionId] = useState("");
+const [studioId, setStudioId] = useState("");
   
   const [gruppi, setGruppi] = useState<Gruppo[]>([]);
   const [utenti, setUtenti] = useState<Utente[]>([]);
@@ -103,13 +104,14 @@ const [microsoftConnectionId, setMicrosoftConnectionId] = useState("");
 
       const { data } = await supabase
         .from("tbutenti")
-        .select("id, tipo_utente, microsoft_connection_id")
+        .select("id, tipo_utente, microsoft_connection_id, studio_id")
         .eq("email", session.user.email)
         .single();
 
       setIsAdmin(data?.tipo_utente === "Admin");
       setSenderUserId(data?.id || "");
       setMicrosoftConnectionId(data?.microsoft_connection_id || "");
+      setStudioId(data?.studio_id || "");
       setCheckingAdmin(false);
     }
 
@@ -210,6 +212,7 @@ const [microsoftConnectionId, setMicrosoftConnectionId] = useState("");
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
+          studio_id: studioId,
           utenti: utentiSelezionati.map((utente_id) => ({
             utente_id,
             giorni_presenza: form.scelta_libera ? (giorniPerUtente[utente_id] || []) : null,
