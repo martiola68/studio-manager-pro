@@ -179,7 +179,6 @@ export default function AssenzeSettimanaliPage() {
         supabase
           .from("tbpresenze_smart_gruppi_utenti")
           .select("id, gruppo_id, utente_id, ordine, giorni_presenza")
-          .eq("studio_id", currentStudioId)
           .eq("attivo", true)
           .order("ordine", { ascending: true }),
       ]);
@@ -238,6 +237,9 @@ export default function AssenzeSettimanaliPage() {
 
       const membriPerGruppo = new Map<string, any[]>();
       for (const membro of gruppiUtentiData || []) {
+        // Lo studio viene validato dal gruppo padre: così includiamo anche
+        // i membri legacy che hanno studio_id nullo nella tabella ponte.
+        if (!gruppiById.has(membro.gruppo_id)) continue;
         const lista = membriPerGruppo.get(membro.gruppo_id) || [];
         lista.push(membro);
         membriPerGruppo.set(membro.gruppo_id, lista);
