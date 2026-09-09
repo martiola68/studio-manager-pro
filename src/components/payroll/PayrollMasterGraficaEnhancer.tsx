@@ -138,6 +138,41 @@ export function PayrollMasterGraficaEnhancer() {
       .payroll-master-page.payroll-smart-groups-page button { font-size: 15px !important; min-height: 40px !important; }
       .payroll-master-page.payroll-smart-groups-page table { font-size: 16px !important; }
 
+      /* Smart Working gruppi: layout compatto e tabella sempre leggibile. */
+      .payroll-master-page.payroll-smart-groups-page .smart-new-group-card {
+        padding: 12px !important;
+      }
+      .payroll-master-page.payroll-smart-groups-page .smart-new-group-card > :not([hidden]) ~ :not([hidden]) {
+        margin-top: 10px !important;
+      }
+      .payroll-master-page.payroll-smart-groups-page .smart-new-group-card input,
+      .payroll-master-page.payroll-smart-groups-page .smart-new-group-card select,
+      .payroll-master-page.payroll-smart-groups-page .smart-new-group-card button {
+        min-height: 38px !important;
+      }
+      .payroll-master-page.payroll-smart-groups-page .smart-group-summary summary {
+        min-height: 0 !important;
+      }
+      .payroll-master-page.payroll-smart-groups-page .smart-groups-configured-card {
+        padding: 12px !important;
+        overflow: visible !important;
+        min-height: 0 !important;
+        flex: 0 0 auto !important;
+      }
+      .payroll-master-page.payroll-smart-groups-page .smart-groups-configured-card table {
+        width: 100% !important;
+        table-layout: auto !important;
+      }
+      .payroll-master-page.payroll-smart-groups-page .smart-groups-configured-card thead {
+        position: static !important;
+        top: auto !important;
+        z-index: auto !important;
+      }
+      .payroll-master-page.payroll-smart-groups-page .smart-groups-configured-card th,
+      .payroll-master-page.payroll-smart-groups-page .smart-groups-configured-card td {
+        vertical-align: middle !important;
+      }
+
       /* Presenze: colora esclusivamente i campi giornalieri compilati in base al codice. */
       .payroll-presenze-page select.bg-green-100 {
         background: rgb(220 252 231) !important;

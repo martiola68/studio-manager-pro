@@ -466,7 +466,7 @@ const [studioId, setStudioId] = useState("");
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(340px,38%)_1fr] gap-4 items-start">
-        <div className="border rounded-lg bg-white p-4 space-y-4">
+        <div className="border rounded-lg bg-white p-3 space-y-3 smart-new-group-card">
           <div className="flex items-center justify-between gap-3">
             <h2 className="font-semibold">{gruppoInModifica ? "Modifica gruppo" : "Nuovo gruppo"}</h2>
             {gruppoInModifica && (
@@ -704,12 +704,11 @@ const [studioId, setStudioId] = useState("");
               </div>
 
             {gruppoCorrente && (
-              <div className="space-y-3">
-                <div className="text-gray-600">
-                  Settore: <strong>{gruppoCorrente.settore}</strong> · Modalità:{" "}
-                  <strong>{gruppoCorrente.scelta_libera ? "A scelta libera" : `Giorno fisso: ${giornoLabel(gruppoCorrente.giorno_fisso)}`}</strong>
-                </div>
-                <div className="border rounded-md bg-white overflow-hidden">
+              <details className="smart-group-summary rounded-md border border-sky-200 bg-white">
+                <summary className="cursor-pointer select-none px-3 py-2 font-semibold text-slate-700">
+                  Riepilogo gruppo · {gruppoCorrente.settore} · {gruppoCorrente.scelta_libera ? "A scelta libera" : `Giorno fisso: ${giornoLabel(gruppoCorrente.giorno_fisso)}`}
+                </summary>
+                <div className="border-t border-sky-100">
                   {(gruppoCorrente.utenti || []).map((rel) => {
                     const giorniUtente = rel.giorni_presenza || [];
                     const dettaglio = gruppoCorrente.scelta_libera
@@ -728,14 +727,14 @@ const [studioId, setStudioId] = useState("");
                     <div className="px-3 py-2 text-slate-500">Nessun utente associato.</div>
                   )}
                 </div>
-              </div>
+              </details>
             )}
           </div>
         </div>
       </div>
 
-      <div className="border rounded-lg bg-white p-4">
-            <h2 className="font-semibold mb-3">Gruppi configurati</h2>
+      <div className="border rounded-lg bg-white p-3 smart-groups-configured-card">
+            <h2 className="font-semibold mb-2">Gruppi configurati</h2>
 
             <table className="w-full text-sm border">
               <thead className="bg-gray-100">
