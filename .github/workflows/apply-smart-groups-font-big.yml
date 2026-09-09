@@ -1,0 +1,34 @@
+name: Apply readable smart groups font sizes
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply-smart-groups-font-big.yml
+      - scripts/patch-smart-groups-font-big-once.py
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply font patch
+        run: python scripts/patch-smart-groups-font-big-once.py
+      - name: Verify font override
+        run: |
+          grep -q 'font-size: 17px !important' src/components/payroll/PayrollMasterGraficaEnhancer.tsx
+          grep -q 'font-size: 16px !important' src/components/payroll/PayrollMasterGraficaEnhancer.tsx
+      - name: Commit runtime file
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/payroll/PayrollMasterGraficaEnhancer.tsx
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Increase smart groups page font for readability"
+          git pull --rebase origin main
+          git push origin HEAD:main
