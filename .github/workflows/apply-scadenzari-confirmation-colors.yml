@@ -1,0 +1,57 @@
+name: Apply unified scadenzari confirmation colors
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply-scadenzari-confirmation-colors.yml
+      - scripts/patch-scadenzari-confirmation-colors-once.py
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply color-only scadenzari patch
+        run: python scripts/patch-scadenzari-confirmation-colors-once.py
+
+      - name: Verify requested palette
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'bg-blue-100 hover:bg-blue-100' src/components/scadenze/iva/IvaScrollableTable.tsx
+          grep -q 'bg-orange-300 hover:bg-orange-300' src/pages/scadenze/ccgg.tsx
+          grep -q 'bg-orange-300 hover:bg-orange-300' src/pages/scadenze/cu.tsx
+          grep -q 'rowConfirmed ? "bg-blue-100" : "bg-orange-300"' src/pages/scadenze/imu.tsx
+          grep -q 'bg-blue-100 hover:bg-blue-100' src/pages/scadenze/fiscali.tsx
+          grep -q 'bg-blue-100 hover:bg-blue-100' src/pages/scadenze/bilanci.tsx
+          grep -q 'bg-blue-100 hover:bg-blue-100' src/pages/scadenze/modello-770.tsx
+          grep -q 'bg-orange-300 text-slate-900' src/pages/scadenze/lipe.tsx
+          grep -q 'bg-orange-300' src/pages/scadenze/esterometro.tsx
+
+      - name: Commit runtime files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            src/components/scadenze/iva/IvaScrollableTable.tsx \
+            src/pages/scadenze/ccgg.tsx \
+            src/pages/scadenze/cu.tsx \
+            src/pages/scadenze/imu.tsx \
+            src/pages/scadenze/fiscali.tsx \
+            src/pages/scadenze/bilanci.tsx \
+            src/pages/scadenze/modello-770.tsx \
+            src/pages/scadenze/lipe.tsx \
+            src/pages/scadenze/esterometro.tsx
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Use blue and orange confirmation colors across scadenzari"
+          git pull --rebase origin main
+          git push origin HEAD:main
