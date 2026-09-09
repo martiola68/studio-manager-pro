@@ -27,8 +27,6 @@ export default async function handler(
       return res.status(200).json(enhanced.data || []);
     }
 
-    // Compatibilità con il DB precedente: i gruppi esistenti devono continuare
-    // ad essere visibili anche prima dell'esecuzione della migration scelta_libera.
     const legacy = await supabaseAdmin
       .from("tbpresenze_smart_gruppi")
       .select(`
@@ -105,6 +103,7 @@ export default async function handler(
           : null;
 
         return {
+          studio_id,
           gruppo_id: gruppo.id,
           utente_id,
           ordine: index,
@@ -117,6 +116,11 @@ export default async function handler(
         .insert(rows);
 
       if (utentiError) {
+        await supabaseAdmin
+          .from("tbpresenze_smart_gruppi")
+          .delete()
+          .eq("id", gruppo.id);
+
         return res.status(500).json({
           error: utentiError.message,
         });
