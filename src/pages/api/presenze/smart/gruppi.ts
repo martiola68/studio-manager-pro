@@ -57,8 +57,9 @@ export default async function handler(
     );
   }
 
-  if (req.method === "POST") {
+  if (req.method === "POST" || req.method === "PUT") {
     const {
+      gruppo_id,
       settore,
       tipo_rapporto,
       nome_gruppo,
@@ -75,24 +76,58 @@ export default async function handler(
       });
     }
 
-    const { data: gruppo, error: gruppoError } = await supabaseAdmin
-      .from("tbpresenze_smart_gruppi")
-      .insert({
-        studio_id,
-        settore,
-        tipo_rapporto: tipo_rapporto || null,
-        nome_gruppo,
-        giorno_fisso: giorno_fisso || 2,
-        presenze_settimanali: presenze_settimanali || 2,
-        scelta_libera: !!scelta_libera,
-      })
-      .select("*")
-      .single();
+    if (req.method === "PUT" && !gruppo_id) {
+      return res.status(400).json({ error: "gruppo_id obbligatorio" });
+    }
 
-    if (gruppoError) {
-      return res.status(500).json({
-        error: gruppoError.message,
-      });
+    const gruppoPayload = {
+      studio_id,
+      settore,
+      tipo_rapporto: tipo_rapporto || null,
+      nome_gruppo,
+      giorno_fisso: giorno_fisso || 2,
+      presenze_settimanali: presenze_settimanali || 2,
+      scelta_libera: !!scelta_libera,
+    };
+
+    let gruppo: any = null;
+
+    if (req.method === "POST") {
+      const result = await supabaseAdmin
+        .from("tbpresenze_smart_gruppi")
+        .insert(gruppoPayload)
+        .select("*")
+        .single();
+
+      if (result.error) {
+        return res.status(500).json({ error: result.error.message });
+      }
+
+      gruppo = result.data;
+    } else {
+      const result = await supabaseAdmin
+        .from("tbpresenze_smart_gruppi")
+        .update(gruppoPayload)
+        .eq("id", gruppo_id)
+        .eq("studio_id", studio_id)
+        .select("*")
+        .single();
+
+      if (result.error) {
+        return res.status(500).json({ error: result.error.message });
+      }
+
+      gruppo = result.data;
+
+      const { error: deleteUsersError } = await supabaseAdmin
+        .from("tbpresenze_smart_gruppi_utenti")
+        .delete()
+        .eq("gruppo_id", gruppo_id)
+        .eq("studio_id", studio_id);
+
+      if (deleteUsersError) {
+        return res.status(500).json({ error: deleteUsersError.message });
+      }
     }
 
     if (utenti.length > 0) {
@@ -116,14 +151,14 @@ export default async function handler(
         .insert(rows);
 
       if (utentiError) {
-        await supabaseAdmin
-          .from("tbpresenze_smart_gruppi")
-          .delete()
-          .eq("id", gruppo.id);
+        if (req.method === "POST") {
+          await supabaseAdmin
+            .from("tbpresenze_smart_gruppi")
+            .delete()
+            .eq("id", gruppo.id);
+        }
 
-        return res.status(500).json({
-          error: utentiError.message,
-        });
+        return res.status(500).json({ error: utentiError.message });
       }
     }
 
