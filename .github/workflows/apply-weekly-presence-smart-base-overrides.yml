@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - .github/workflows/apply-weekly-presence-smart-base-overrides.yml
-      - scripts/patch-weekly-presence-smart-base-overrides-once.py
+      - scripts/patch-weekly-presence-smart-base-v2-once.py
 
 permissions:
   contents: write
@@ -19,15 +19,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Apply weekly presence merge patch
-        run: python scripts/patch-weekly-presence-smart-base-overrides-once.py
+      - name: Apply corrected weekly presence merge patch
+        run: python scripts/patch-weekly-presence-smart-base-v2-once.py
 
       - name: Verify merge logic
         shell: bash
         run: |
           set -euo pipefail
-          grep -q 'tbpresenze_smart_calendario' src/pages/presenze/assenze-settimanali.tsx
-          grep -q 'const merged = new Map<string, Presenza>();' src/pages/presenze/assenze-settimanali.tsx
+          grep -q 'Il calendario Smart è SEMPRE la base principale' src/pages/presenze/assenze-settimanali.tsx
+          grep -q 'if (!codice || codice === "-")' src/pages/presenze/assenze-settimanali.tsx
           grep -q 'smart.presenza ? "Pp" : "Ps"' src/pages/presenze/assenze-settimanali.tsx
 
       - name: Install dependencies
@@ -47,6 +47,6 @@ jobs:
             echo "No runtime changes to commit"
             exit 0
           fi
-          git commit -m "Merge smart calendar with weekly absence overrides"
+          git commit -m "Use smart schedule when weekly presence is null"
           git pull --rebase origin main
           git push origin HEAD:main
