@@ -1812,7 +1812,7 @@ const mostraVistaSocieta =
               placeholder="Cerca per nome, cognome, email o telefono..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-12 pl-10"
+              className="h-12 pl-10 text-lg"
             />
           </div>
 
@@ -1856,16 +1856,16 @@ const mostraVistaSocieta =
         className="overflow-hidden border-2 border-blue-100 shadow-sm"
       >
         <CardHeader className="bg-blue-600 py-3 text-white">
-          <CardTitle className="flex items-center justify-between text-xl">
+          <CardTitle className="flex items-center justify-between text-2xl">
             <span>{societa.ragione_sociale || "Società collegata"}</span>
-            <span className="rounded-full bg-blue-700 px-3 py-1 text-sm font-semibold text-white">
+            <span className="rounded-full bg-blue-700 px-3 py-1 text-base font-semibold text-white">
               {societa.referenti.length} referenti
             </span>
           </CardTitle>
         </CardHeader>
 
         <CardContent className="space-y-4 p-5">
-          <div className="flex flex-wrap gap-5 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-base text-blue-900">
+          <div className="flex flex-wrap gap-5 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-lg font-medium text-blue-900">
             {societa.email && <span>Email: {societa.email}</span>}
             {societa.telefono && <span>Tel: {societa.telefono}</span>}
             {societa.pec && <span>PEC: {societa.pec}</span>}
@@ -1876,11 +1876,11 @@ const mostraVistaSocieta =
               key={`${societa.cliente_id}-${contatto.id}`}
               className="rounded-md border bg-white p-4 shadow-sm"
             >
-              <div className="text-xl font-bold text-gray-900">
+              <div className="text-2xl font-bold text-gray-900">
                 {contatto.cognome} {contatto.nome}
               </div>
 
-              <div className="mt-2 grid grid-cols-1 gap-3 text-base text-gray-700 md:grid-cols-3">
+              <div className="mt-2 grid grid-cols-1 gap-3 text-lg text-gray-700 md:grid-cols-3">
                 {contatto.email && (
                   <span className="flex items-center gap-2">
                     <Mail className="h-5 w-5 text-blue-600" />
@@ -1922,9 +1922,9 @@ const mostraVistaSocieta =
     visibleLetters.map((letter) => (
       <Card key={letter} className="overflow-hidden border-2 border-blue-100 shadow-sm">
        <CardHeader className="bg-blue-600 py-3 text-white">
-          <CardTitle className="flex items-center justify-between text-xl">
+          <CardTitle className="flex items-center justify-between text-2xl">
             <span>Lettera {letter}</span>
-          <span className="rounded-full bg-blue-700 px-3 py-1 text-sm font-semibold text-white">
+          <span className="rounded-full bg-blue-700 px-3 py-1 text-base font-semibold text-white">
               {(groupedContatti[letter] || []).length} contatti
             </span>
           </CardTitle>
@@ -1942,18 +1942,18 @@ const mostraVistaSocieta =
 >
               <div className="min-w-0 flex-1">
                <div className="flex items-center gap-2">
-  <div className="text-xl font-bold text-gray-900">
+  <div className="text-2xl font-bold text-gray-900">
     {contatto.cognome} {contatto.nome}
   </div>
 
  {!(contatto as any).cliente_id && (
-  <span className="rounded bg-red-600 px-2 py-1 text-xs font-bold text-white">
+  <span className="rounded bg-red-600 px-2 py-1 text-sm font-bold text-white">
     NO CLIENTE_ID
   </span>
 )}
 </div>
 
-              <div className="mt-2 grid grid-cols-1 gap-3 text-base text-gray-700 md:grid-cols-3">
+              <div className="mt-2 grid grid-cols-1 gap-3 text-lg text-gray-700 md:grid-cols-3">
                   {contatto.email && (
                     <a href={`mailto:${contatto.email}`} className="flex items-center gap-2 truncate hover:text-blue-600">
                      <Mail className="h-5 w-5 text-blue-600" />
