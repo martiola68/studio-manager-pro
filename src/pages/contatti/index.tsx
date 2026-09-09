@@ -98,6 +98,30 @@ type ContattoRubrica = {
   cell?: string | null;
 };
 
+const normalizeCognomeNome = (cognomeValue: unknown, nomeValue: unknown) => {
+  const cognome = String(cognomeValue || "").trim().replace(/\s+/g, " ");
+  const nome = String(nomeValue || "").trim().replace(/\s+/g, " ");
+
+  if (!cognome || !nome) {
+    return { cognome, nome };
+  }
+
+  const cognomeUpper = cognome.toUpperCase();
+  const nomeUpper = nome.toUpperCase();
+  const suffix = ` ${nomeUpper}`;
+
+  // Corregge solo il caso tipico di nome duplicato in coda al cognome,
+  // evitando sostituzioni nel mezzo di cognomi composti reali.
+  if (cognomeUpper.endsWith(suffix)) {
+    return {
+      cognome: cognome.slice(0, cognome.length - nome.length).trim(),
+      nome,
+    };
+  }
+
+  return { cognome, nome };
+};
+
 const initialFormData: FormDataState = {
   cognome: "",
   nome: "",
@@ -362,7 +386,15 @@ await loadRelazioniContattiGlobali();
      const data = await contattoService.getContattiConClienti(sid);
       
       const hydrated = await hydrateContatti(data, enabled);
-      setContatti(hydrated);
+      const normalized = hydrated.map((contatto) => {
+        const nominativo = normalizeCognomeNome(contatto.cognome, contatto.nome);
+        return {
+          ...contatto,
+          cognome: nominativo.cognome,
+          nome: nominativo.nome,
+        };
+      });
+      setContatti(normalized);
     } catch (error) {
       console.error("Errore caricamento contatti:", error);
       toast({
@@ -438,9 +470,10 @@ const clienti = (c.clienti_collegati || [])
 
   const openEditDialog = (contatto: Contatto) => {
     setEditingContatto(contatto);
+    const nominativo = normalizeCognomeNome(contatto.cognome, contatto.nome);
    setFormData({
-  cognome: contatto.cognome || "",
-  nome: contatto.nome || "",
+  cognome: nominativo.cognome,
+  nome: nominativo.nome,
   ragione_sociale: (contatto as any).ragione_sociale || "",
   ruolo: (contatto as any).ruolo || "",
   qualifica: (contatto as any).qualifica || "",
@@ -736,10 +769,15 @@ const loadRelazioniContatti = async (contattoId: string) => {
 
     const run = async () => {
       try {
+const nominativoNormalizzato = normalizeCognomeNome(
+  formData.cognome,
+  formData.nome
+);
+
 let dataToSave: any = {
   studio_id: studioId || null,
-  cognome: formData.cognome,
-  nome: formData.nome || "",
+  cognome: nominativoNormalizzato.cognome,
+  nome: nominativoNormalizzato.nome,
   cell: formData.cell || null,
   tel: formData.tel || null,
   altro_telefono: formData.altro_telefono || null,
@@ -1082,9 +1120,14 @@ await loadContatti();
         }
 
         try {
+          const nominativoImport = normalizeCognomeNome(
+            row.cognome,
+            row.nome
+          );
+
           let contattoData: any = {
-            cognome: row.cognome.trim(),
-            nome: row.nome?.trim() || "",
+            cognome: nominativoImport.cognome,
+            nome: nominativoImport.nome,
             cell: row.cell?.trim() || null,
             tel: row.tel?.trim() || null,
             altro_telefono: row.altro_telefono?.trim() || null,
