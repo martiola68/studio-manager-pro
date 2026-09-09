@@ -376,7 +376,19 @@ await loadRelazioniContattiGlobali();
   };
 
   const filterContatti = () => {
-    let filtered = [...contatti];
+    // In Rubrica devono comparire solo nominativi con almeno un recapito reale.
+    // Un record privo di email/PEC/telefono/cellulare non è utile come contatto.
+    let filtered = contatti.filter((c) =>
+      [
+        c.email,
+        c.pec,
+        c.cell,
+        c.tel,
+        c.altro_telefono,
+        c.email_secondaria,
+        c.email_altro,
+      ].some((value) => String(value || "").trim().length > 0)
+    );
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
