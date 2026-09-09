@@ -1,0 +1,37 @@
+name: Apply Rubrica empty-contact filtering
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply-rubrica-hide-empty-contacts.yml
+      - scripts/patch-rubrica-hide-empty-contacts-once.py
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply targeted Rubrica filter
+        run: python scripts/patch-rubrica-hide-empty-contacts-once.py
+      - name: Verify patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'Un record privo di email/PEC/telefono/cellulare non è utile come contatto' src/pages/contatti/index.tsx
+      - name: Commit runtime file
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/contatti/index.tsx
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Hide Rubrica entries without contact details"
+          git pull --rebase origin main
+          git push origin HEAD:main
