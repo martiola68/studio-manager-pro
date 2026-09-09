@@ -1,0 +1,46 @@
+name: Increase Rubrica typography
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/apply-rubrica-font-size.yml
+      - scripts/patch-rubrica-font-size-once.py
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply Rubrica typography patch
+        run: python scripts/patch-rubrica-font-size-once.py
+
+      - name: Verify typography
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'text-2xl font-bold text-gray-900' src/pages/contatti/index.tsx
+          grep -q 'text-lg font-medium text-blue-900' src/pages/contatti/index.tsx
+          grep -q 'h-12 pl-10 text-lg' src/pages/contatti/index.tsx
+
+      - name: Commit runtime file
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/contatti/index.tsx
+          if git diff --cached --quiet; then
+            echo "No runtime changes to commit"
+            exit 0
+          fi
+          git commit -m "Increase Rubrica contact typography"
+          git pull --rebase origin main
+          git push origin HEAD:main
