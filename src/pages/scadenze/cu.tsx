@@ -639,7 +639,7 @@ export default function ScadenzeCUPage() {
                             ? "bg-gray-200 hover:bg-gray-200"
                             : isGreenRow
                             ? "bg-blue-100 hover:bg-blue-100"
-                            : "bg-orange-300 hover:bg-orange-300"
+                            : "bg-white hover:bg-white"
                         }`}
                       >
                         <td

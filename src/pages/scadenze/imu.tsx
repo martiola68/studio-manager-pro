@@ -738,7 +738,7 @@ const vars: Record<string, string> = {
   };
 
   const rowSideTone = (rowConfirmed: boolean) =>
-    rowConfirmed ? "bg-blue-100" : "bg-orange-300";
+    rowConfirmed ? "bg-blue-100" : "bg-white";
 
   return (
     <>
@@ -1007,7 +1007,7 @@ const vars: Record<string, string> = {
         >
           <td
             className={`sticky-col-cell p-2 align-middle font-medium min-w-[320px] border-r border-gray-300 ${
-              isGreenRow ? "!bg-blue-100" : "!bg-orange-300"
+              isGreenRow ? "!bg-blue-100" : "!bg-white"
             }`}
           >
             {scadenza.nominativo}

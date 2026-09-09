@@ -487,7 +487,7 @@ export default function ScadenzeEsterometroPage() {
                           (scadenza as any)[`${month.prefix}_invio`] || false;
                         const monthBgClass = isInviato
                           ? "bg-blue-100"
-                          : "bg-orange-300";
+                          : "bg-white";
 
                         return (
                           <React.Fragment key={`${scadenza.id}-${month.prefix}`}>

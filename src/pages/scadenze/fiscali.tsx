@@ -1227,14 +1227,14 @@ const vars: Record<string, string> = {
                       className={`border-b transition-colors data-[state=selected]:bg-muted ${
                         scadenza.conferma_riga
                           ? "bg-blue-100 hover:bg-blue-100"
-                          : "bg-orange-300 hover:bg-orange-300"
+                          : "bg-white hover:bg-white"
                       }`}
                     >
                       <td
                         style={{
                           backgroundColor: scadenza.conferma_riga
                             ? "#dbeafe"
-                            : "#fdba74",
+                            : "#ffffff",
                         }}
                         className="px-2 py-1 align-middle sticky-col-cell border-r font-medium min-w-[300px]"
                       >

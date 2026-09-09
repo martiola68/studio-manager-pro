@@ -992,13 +992,13 @@ const loadScadenze = async (): Promise<ScadenzaBilancioExt[]> => {
                         "border-b border-gray-300 transition-colors",
                         scadenza.conferma_riga
                           ? "bg-blue-100 hover:bg-blue-100"
-                          : "bg-orange-300 hover:bg-orange-300",
+                          : "bg-white hover:bg-white",
                       ].join(" ")}
                     >
                       <td
                         className={[
                           "px-2 py-1 align-middle sticky-col-cell border-r-2 border-gray-300 font-medium min-w-[300px]",
-                          scadenza.conferma_riga ? "!bg-blue-100" : "!bg-orange-300",
+                          scadenza.conferma_riga ? "!bg-blue-100" : "!bg-white",
                         ].join(" ")}
                       >
                         {scadenza.nominativo}
