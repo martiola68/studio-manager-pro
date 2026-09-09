@@ -1,0 +1,34 @@
+name: Apply Rubrica contacts-only font correction
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply-rubrica-recapiti-font-only.yml
+      - scripts/patch-rubrica-recapiti-font-only-once.py
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply targeted font correction
+        run: python scripts/patch-rubrica-recapiti-font-only-once.py
+      - name: Verify
+        run: |
+          grep -q 'text-xl font-bold text-gray-900' src/pages/contatti/index.tsx
+          grep -q 'text-lg font-medium text-blue-900' src/pages/contatti/index.tsx
+      - name: Commit runtime file
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/contatti/index.tsx
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Keep Rubrica names standard and enlarge contact details"
+          git pull --rebase origin main
+          git push origin HEAD:main
