@@ -1,0 +1,39 @@
+name: Apply Rubrica name surname normalization
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply-rubrica-normalize-name-surname.yml
+      - scripts/patch-rubrica-normalize-name-surname-once.py
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply targeted Rubrica normalization patch
+        run: python scripts/patch-rubrica-normalize-name-surname-once.py
+      - name: Verify runtime patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'normalizeCognomeNome' src/pages/contatti/index.tsx
+          grep -q 'nominativoNormalizzato' src/pages/contatti/index.tsx
+          grep -q 'nominativoImport' src/pages/contatti/index.tsx
+      - name: Commit runtime file
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/contatti/index.tsx
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Normalize duplicated names in Rubrica surnames"
+          git pull --rebase origin main
+          git push origin HEAD:main
