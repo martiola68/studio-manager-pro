@@ -202,14 +202,6 @@ const [microsoftConnectionId, setMicrosoftConnectionId] = useState("");
       return;
     }
 
-    if (form.scelta_libera) {
-      const senzaGiorni = utentiSelezionati.filter((id) => !(giorniPerUtente[id] || []).length);
-      if (senzaGiorni.length > 0) {
-        alert("Per la scelta libera seleziona almeno un giorno di presenza per ogni utente");
-        return;
-      }
-    }
-
     setLoading(true);
 
     try {

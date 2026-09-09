@@ -169,7 +169,7 @@ const utenti = (utentiGruppo || []).map((ug) => {
       const presenza = righe.find((r) => r.utente_id === u.utente_id)?.presenza;
 
       doc.text(
-        presenza ? "Presenza" : "",
+        presenza ? "Presenza" : "Smart working",
         startX + colData + colGiorno + index * colUtente,
         y,
         { width: colUtente }
