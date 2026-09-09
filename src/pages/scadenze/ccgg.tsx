@@ -661,12 +661,12 @@ export default function ScadenzeCCGGPage() {
                       <tr
                         key={scadenza.id}
                         className={`border-b border-gray-400 transition-colors data-[state=selected]:bg-muted ${
-                          isGreenRow ? "bg-green-300 hover:bg-green-300" : "bg-slate-50 hover:bg-slate-100"
+                          isGreenRow ? "bg-blue-100 hover:bg-blue-100" : "bg-orange-300 hover:bg-orange-300"
                         }`}
                       >
                         <td
                           className={`px-2 py-1 align-middle sticky-col-cell border-r font-medium min-w-[260px] ${
-                            isGreenRow ? "!bg-green-300" : "!bg-slate-50"
+                            isGreenRow ? "!bg-blue-100" : "!bg-orange-300"
                           }`}
                         >
                           {scadenza.nominativo}

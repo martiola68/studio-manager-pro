@@ -136,9 +136,9 @@ function BooleanSelect({
       disabled={disabled}
       onChange={(e) => onChange(e.target.value === "SI")}
       className={`h-8 w-[70px] rounded-md border px-2 text-center text-xs font-semibold disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 ${
-        isGreen
-          ? "border-green-300 bg-green-200 text-slate-900"
-          : "border-slate-300 bg-white text-slate-700"
+        value
+          ? "border-blue-300 bg-blue-100 text-slate-900"
+          : "border-orange-400 bg-orange-300 text-slate-900"
       }`}
     >
       <option value="NO">NO</option>

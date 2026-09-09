@@ -67,13 +67,11 @@ export function IvaScrollableTable({
                     key={scadenza.id}
                     className={`border-b transition-colors ${
                       scadenza.conferma_riga
-                        ? "bg-green-100 hover:bg-green-100"
-                        : scadenza.mod_definitivo
-                        ? "bg-orange-100 hover:bg-orange-100"
-                        : "bg-slate-50 hover:bg-slate-100"
+                        ? "bg-blue-100 hover:bg-blue-100"
+                        : "bg-orange-300 hover:bg-orange-300"
                     }`}
                   >
-                    <td className={`px-2 py-1 align-middle sticky-col-cell border-r font-medium min-w-[260px] ${scadenza.conferma_riga ? "!bg-green-100" : scadenza.mod_definitivo ? "!bg-orange-100" : "!bg-slate-50"}`}>
+                    <td className={`px-2 py-1 align-middle sticky-col-cell border-r font-medium min-w-[260px] ${scadenza.conferma_riga ? "!bg-blue-100" : "!bg-orange-300"}`}>
                       {scadenza.nominativo}
                     </td>
                     <td className="px-2 py-1 align-middle min-w-[180px]">{getUtenteNome(scadenza.utente_operatore_id)}</td>

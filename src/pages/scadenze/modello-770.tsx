@@ -721,15 +721,15 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                         key={scadenza.id}
                         className={`border-b transition-colors ${
                           isConfermata
-                            ? "bg-green-200 hover:bg-green-200"
-                            : "bg-slate-50 hover:bg-slate-100"
+                            ? "bg-blue-100 hover:bg-blue-100"
+                            : "bg-orange-300 hover:bg-orange-300"
                         } data-[state=selected]:bg-muted`}
                       >
                         <td
                           style={{
                             backgroundColor: isConfermata
-                              ? "#bbf7d0"
-                              : "#f8fafc",
+                              ? "#dbeafe"
+                              : "#fdba74",
                           }}
                           className={`px-2 py-1 align-middle sticky-col-cell border-r font-medium min-w-[260px] ${
                             isConfermata
