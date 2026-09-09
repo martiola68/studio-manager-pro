@@ -78,6 +78,7 @@ const [studioId, setStudioId] = useState("");
   const [anno, setAnno] = useState(now.getFullYear());
   const [mese, setMese] = useState(now.getMonth() + 1);
   const [loading, setLoading] = useState(false);
+  const [gruppoInModifica, setGruppoInModifica] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     settore: "Fiscale",
@@ -193,6 +194,46 @@ const [studioId, setStudioId] = useState("");
     });
   }
 
+  function resetFormGruppo() {
+    setGruppoInModifica(null);
+    setForm({
+      settore: "Fiscale",
+      tipo_rapporto: "Dipendente",
+      nome_gruppo: "Turnazione smart working",
+      giorno_fisso: 2,
+      presenze_settimanali: 2,
+      scelta_libera: false,
+    });
+    setUtentiSelezionati([]);
+    setGiorniPerUtente({});
+    setUtenteDaAggiungere("");
+  }
+
+  function modificaGruppo(g: Gruppo) {
+    setGruppoSelezionato(g.id);
+    setGruppoInModifica(g.id);
+    setForm({
+      settore: g.settore,
+      tipo_rapporto: g.tipo_rapporto || "",
+      nome_gruppo: g.nome_gruppo,
+      giorno_fisso: g.giorno_fisso || 2,
+      presenze_settimanali: g.presenze_settimanali || 2,
+      scelta_libera: !!g.scelta_libera,
+    });
+
+    const ids = (g.utenti || []).map((u) => u.utente_id).filter(Boolean);
+    const giorniMap: Record<string, number[]> = {};
+    (g.utenti || []).forEach((u) => {
+      giorniMap[u.utente_id] = Array.isArray(u.giorni_presenza)
+        ? u.giorni_presenza
+        : [];
+    });
+    setUtentiSelezionati(ids);
+    setGiorniPerUtente(giorniMap);
+    setUtenteDaAggiungere("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   async function creaGruppo() {
     if (!form.settore || !form.nome_gruppo) {
       alert("Settore e nome gruppo sono obbligatori");
@@ -208,10 +249,11 @@ const [studioId, setStudioId] = useState("");
 
     try {
       const res = await fetch("/api/presenze/smart/gruppi", {
-        method: "POST",
+        method: gruppoInModifica ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
+          gruppo_id: gruppoInModifica || undefined,
           studio_id: studioId,
           utenti: utentiSelezionati.map((utente_id) => ({
             utente_id,
@@ -227,12 +269,12 @@ const [studioId, setStudioId] = useState("");
         return;
       }
 
-      setUtentiSelezionati([]);
-      setGiorniPerUtente({});
       setGruppoSelezionato(data.id);
+      const wasEditing = !!gruppoInModifica;
+      resetFormGruppo();
       await loadGruppi();
 
-      alert("Gruppo creato correttamente");
+      alert(wasEditing ? "Gruppo modificato correttamente" : "Gruppo creato correttamente");
     } finally {
       setLoading(false);
     }
@@ -298,8 +340,9 @@ const [studioId, setStudioId] = useState("");
     alert("Mese eliminato correttamente");
   }
 
-  async function eliminaGruppo() {
-    if (!gruppoSelezionato) {
+  async function eliminaGruppo(gruppoId?: string) {
+    const idDaEliminare = gruppoId || gruppoSelezionato;
+    if (!idDaEliminare) {
       alert("Seleziona un gruppo");
       return;
     }
@@ -316,7 +359,7 @@ const [studioId, setStudioId] = useState("");
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        gruppo_id: gruppoSelezionato,
+        gruppo_id: idDaEliminare,
       }),
     });
 
@@ -327,7 +370,12 @@ const [studioId, setStudioId] = useState("");
       return;
     }
 
-    setGruppoSelezionato("");
+    if (gruppoSelezionato === idDaEliminare) {
+      setGruppoSelezionato("");
+    }
+    if (gruppoInModifica === idDaEliminare) {
+      resetFormGruppo();
+    }
     await loadGruppi();
 
     alert("Gruppo eliminato correttamente");
@@ -419,7 +467,12 @@ const [studioId, setStudioId] = useState("");
 
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(340px,38%)_1fr] gap-4 items-start">
         <div className="border rounded-lg bg-white p-4 space-y-4">
-          <h2 className="font-semibold">Nuovo gruppo</h2>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="font-semibold">{gruppoInModifica ? "Modifica gruppo" : "Nuovo gruppo"}</h2>
+            {gruppoInModifica && (
+              <button type="button" onClick={resetFormGruppo} className="border px-3 py-1 rounded text-slate-600">Annulla modifica</button>
+            )}
+          </div>
 
           <input
             className="border p-2 rounded w-full"
@@ -558,7 +611,7 @@ const [studioId, setStudioId] = useState("");
             disabled={loading}
             className="bg-black text-white px-4 py-2 rounded disabled:opacity-50"
           >
-            {loading ? "Salvataggio..." : "Crea gruppo"}
+            {loading ? "Salvataggio..." : gruppoInModifica ? "Salva modifiche" : "Crea gruppo"}
           </button>
         </div>
 
@@ -648,22 +701,33 @@ const [studioId, setStudioId] = useState("");
   Elimina mese
 </button>
 
-<button
-  type="button"
-  onClick={eliminaGruppo}
-  disabled={loading || !gruppoSelezionato}
-  className="bg-red-600 text-white px-4 py-2 rounded disabled:opacity-50"
->
-  Elimina gruppo
-</button>
               </div>
 
             {gruppoCorrente && (
-              <div className="text-sm text-gray-600">
-                Settore: <strong>{gruppoCorrente.settore}</strong> · Giorno fisso:{" "}
-                <strong>{gruppoCorrente.scelta_libera ? "A scelta libera" : giornoLabel(gruppoCorrente.giorno_fisso)}</strong> ·
-                Presenze settimanali:{" "}
-                <strong>{gruppoCorrente.presenze_settimanali}</strong>
+              <div className="space-y-3">
+                <div className="text-gray-600">
+                  Settore: <strong>{gruppoCorrente.settore}</strong> · Modalità:{" "}
+                  <strong>{gruppoCorrente.scelta_libera ? "A scelta libera" : `Giorno fisso: ${giornoLabel(gruppoCorrente.giorno_fisso)}`}</strong>
+                </div>
+                <div className="border rounded-md bg-white overflow-hidden">
+                  {(gruppoCorrente.utenti || []).map((rel) => {
+                    const giorniUtente = rel.giorni_presenza || [];
+                    const dettaglio = gruppoCorrente.scelta_libera
+                      ? giorniUtente.length
+                        ? giorniUtente.map(giornoLabel).join(", ")
+                        : "Smart working tutta la settimana"
+                      : `${gruppoCorrente.presenze_settimanali} presenze/settimana · ${giornoLabel(gruppoCorrente.giorno_fisso)} fisso`;
+                    return (
+                      <div key={rel.id} className="flex items-center justify-between gap-4 border-b last:border-b-0 px-3 py-2">
+                        <strong>{nomeUtente(rel.utente)}</strong>
+                        <span className="text-slate-600">{dettaglio}</span>
+                      </div>
+                    );
+                  })}
+                  {(gruppoCorrente.utenti || []).length === 0 && (
+                    <div className="px-3 py-2 text-slate-500">Nessun utente associato.</div>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -682,11 +746,16 @@ const [studioId, setStudioId] = useState("");
                   <th className="border p-2 text-left">Giorno fisso</th>
                   <th className="border p-2 text-left">Presenze</th>
                   <th className="border p-2 text-left">Utenti</th>
+                  <th className="border p-2 text-center w-[110px]">Azioni</th>
                 </tr>
               </thead>
               <tbody>
                 {gruppi.map((g) => (
-                  <tr key={g.id}>
+                  <tr
+                    key={g.id}
+                    onClick={() => setGruppoSelezionato(g.id)}
+                    className={`cursor-pointer ${gruppoSelezionato === g.id ? "bg-sky-100 ring-1 ring-inset ring-sky-400" : "hover:bg-slate-50"}`}
+                  >
                     <td className="border p-2">{g.nome_gruppo}</td>
                     <td className="border p-2">{g.settore}</td>
                     <td className="border p-2">{g.tipo_rapporto || "-"}</td>
@@ -698,12 +767,34 @@ const [studioId, setStudioId] = useState("");
                         .filter(Boolean)
                         .join(", ")}
                     </td>
+                    <td className="border p-2">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          type="button"
+                          title="Modifica gruppo"
+                          aria-label={`Modifica ${g.nome_gruppo}`}
+                          onClick={(e) => { e.stopPropagation(); modificaGruppo(g); }}
+                          className="border border-blue-500 text-blue-700 px-2 py-1 rounded hover:bg-blue-50"
+                        >
+                          ✎
+                        </button>
+                        <button
+                          type="button"
+                          title="Elimina gruppo"
+                          aria-label={`Elimina ${g.nome_gruppo}`}
+                          onClick={(e) => { e.stopPropagation(); setGruppoSelezionato(g.id); eliminaGruppo(g.id); }}
+                          className="border border-red-500 text-red-600 px-2 py-1 rounded hover:bg-red-50"
+                        >
+                          🗑
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
 
                 {gruppi.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="p-4 text-center text-gray-500">
+                    <td colSpan={7} className="p-4 text-center text-gray-500">
                       Nessun gruppo configurato.
                     </td>
                   </tr>
