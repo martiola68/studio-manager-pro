@@ -85,10 +85,12 @@ export function PayrollMasterGraficaEnhancer() {
         display: grid !important; grid-template-columns: minmax(240px,1fr) 135px 100px auto auto auto !important; gap: 10px !important; align-items: end !important;
       }
       .payroll-smart-groups-page button[class*="bg-black"] { background: rgb(3 105 161) !important; border-color: rgb(3 105 161) !important; color: white !important; }
-      .payroll-smart-groups-page table { width: 100% !important; font-size: .82rem !important; }
-      .payroll-smart-groups-page input, .payroll-smart-groups-page select { font-size: .86rem !important; }
-      .payroll-smart-groups-page button { font-size: .82rem !important; }
-      .payroll-smart-groups-page h2, .payroll-smart-groups-page h3 { font-size: .92rem !important; }
+      .payroll-smart-groups-page table { width: 100% !important; font-size: .90rem !important; }
+      .payroll-smart-groups-page input, .payroll-smart-groups-page select { font-size: .94rem !important; }
+      .payroll-smart-groups-page button { font-size: .88rem !important; }
+      .payroll-smart-groups-page h2, .payroll-smart-groups-page h3 { font-size: 1rem !important; }
+      .payroll-smart-groups-page label { font-size: .88rem !important; }
+      .payroll-smart-groups-page p, .payroll-smart-groups-page span { font-size: .90rem; }
       @media (max-width: 1150px) {
         .payroll-smart-groups-page .grid.grid-cols-1.xl\:grid-cols-\[minmax\(340px\,38\%\)_1fr\] { grid-template-columns: 1fr !important; }
         .payroll-smart-groups-page .grid.grid-cols-1.lg\:grid-cols-\[1fr_160px_120px_auto_auto_auto\] { grid-template-columns: 1fr 140px 110px !important; }
