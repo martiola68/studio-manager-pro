@@ -66,9 +66,8 @@ export default function PayrollDailyPresenceEmailConfig({ studioId }: Props) {
       const token = sessionData?.session?.access_token;
       if (!token) throw new Error("Sessione utente non disponibile");
 
-      const to = email1.trim() || "m.artiola@revisionicommerciali.it";
       const response = await fetch(
-        `/api/presenze/report-giornaliero-email?force=true&to=${encodeURIComponent(to)}&studio_id=${encodeURIComponent(studioId)}`,
+        `/api/presenze/report-giornaliero-email?force=true&studio_id=${encodeURIComponent(studioId)}`,
         {
           method: "POST",
           headers: {
@@ -85,17 +84,24 @@ export default function PayrollDailyPresenceEmailConfig({ studioId }: Props) {
 
       if (!response.ok || !body?.success || !result?.sent || failed.length > 0) {
         const details = failed
-          .map((r: any) => `${r?.to || to}: ${r?.error || "invio non riuscito"}`)
+          .map((r: any) => `${r?.to || "destinatario"}: ${r?.error || "invio non riuscito"}`)
           .join(" | ");
         throw new Error(
           details || body?.error || result?.reason || "Il server non ha confermato l'invio dell'email"
         );
       }
 
-      const detail = result?.presenze_fisiche != null
-        ? ` Presenze fisiche incluse: ${result.presenze_fisiche}.`
-        : "";
-      setMessage(`Email realmente accettata per l'invio a ${to}.${detail}`);
+      const destinatariOk = recipientResults
+        .filter((r: any) => r?.success)
+        .map((r: any) => r.to)
+        .join(", ");
+
+      const fisiche = result?.presenze_fisiche ?? 0;
+      const smart = result?.presenze_smart ?? 0;
+
+      setMessage(
+        `Email realmente accettata per l'invio a: ${destinatariOk}. Presenze fisiche: ${fisiche}. Smart working: ${smart}.`
+      );
     } catch (error: any) {
       setMessage(`ERRORE INVIO: ${error?.message || "Errore invio email di test"}`);
     } finally {
@@ -108,7 +114,7 @@ export default function PayrollDailyPresenceEmailConfig({ studioId }: Props) {
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="font-semibold text-slate-900">Invio automatico presenze</div>
-          <div className="text-xs text-slate-500">Report giornaliero dei dipendenti fisicamente presenti, suddivisi per settore.</div>
+          <div className="text-xs text-slate-500">Report giornaliero delle presenze fisiche e in smart working, suddivise per settore.</div>
         </div>
         <label className="flex items-center gap-2 text-sm font-medium">
           <input type="checkbox" checked={attivo} onChange={(e) => setAttivo(e.target.checked)} />
@@ -123,7 +129,7 @@ export default function PayrollDailyPresenceEmailConfig({ studioId }: Props) {
         <button type="button" onClick={() => void sendTest()} disabled={saving || testing} className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">{testing ? "Invio..." : "Invia email di test"}</button>
       </div>
       {message && <div className="mt-3 rounded bg-slate-50 px-3 py-2 text-sm text-slate-700">{message}</div>}
-      <div className="mt-3 text-xs text-slate-500">Il test usa Email 1. L'automatismo partirà solo quando il flag sarà attivo.</div>
+      <div className="mt-3 text-xs text-slate-500">Mittente automatico: noreply@revisionicommerciali.it. Il test viene inviato a Email 1 e Email 2, se valorizzate. L'automatismo partirà solo quando il flag sarà attivo.</div>
     </div>
   );
 }
