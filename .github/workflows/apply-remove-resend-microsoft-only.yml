@@ -1,0 +1,41 @@
+name: Apply Microsoft-only email migration
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/patch-remove-resend-microsoft-only-once.py'
+      - '.github/workflows/apply-remove-resend-microsoft-only.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Apply conservative migration
+        run: python scripts/patch-remove-resend-microsoft-only-once.py
+      - name: Install dependencies
+        run: npm ci
+      - name: TypeScript check
+        run: npx tsc --noEmit
+      - name: Commit runtime changes
+        run: |
+          if git diff --quiet; then
+            echo "No runtime changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/services/emailServiceServer.ts src/pages/api/controllo-gestione/alert.ts
+          git commit -m "Remove direct Resend and use Microsoft 365 only"
+          git push origin main
