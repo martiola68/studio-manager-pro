@@ -61,21 +61,43 @@ export default function PayrollDailyPresenceEmailConfig({ studioId }: Props) {
     try {
       const ok = await saveConfig();
       if (!ok) return;
+
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
       if (!token) throw new Error("Sessione utente non disponibile");
+
       const to = email1.trim() || "m.artiola@revisionicommerciali.it";
-      const response = await fetch(`/api/presenze/report-giornaliero-email?force=true&to=${encodeURIComponent(to)}&studio_id=${encodeURIComponent(studioId)}`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      });
+      const response = await fetch(
+        `/api/presenze/report-giornaliero-email?force=true&to=${encodeURIComponent(to)}&studio_id=${encodeURIComponent(studioId)}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
       const body = await response.json().catch(() => ({}));
-      if (!response.ok || !body?.success) throw new Error(body?.error || "Errore invio email di test");
-      const result = Array.isArray(body.results) ? body.results[0] : null;
-      const detail = result?.presenze_fisiche != null ? ` Presenze fisiche incluse: ${result.presenze_fisiche}.` : "";
-      setMessage(`Email di test inviata a ${to}.${detail}`);
+      const result = Array.isArray(body?.results) ? body.results[0] : null;
+      const recipientResults = Array.isArray(result?.recipients) ? result.recipients : [];
+      const failed = recipientResults.filter((r: any) => !r?.success);
+
+      if (!response.ok || !body?.success || !result?.sent || failed.length > 0) {
+        const details = failed
+          .map((r: any) => `${r?.to || to}: ${r?.error || "invio non riuscito"}`)
+          .join(" | ");
+        throw new Error(
+          details || body?.error || result?.reason || "Il server non ha confermato l'invio dell'email"
+        );
+      }
+
+      const detail = result?.presenze_fisiche != null
+        ? ` Presenze fisiche incluse: ${result.presenze_fisiche}.`
+        : "";
+      setMessage(`Email realmente accettata per l'invio a ${to}.${detail}`);
     } catch (error: any) {
-      setMessage(error?.message || "Errore invio email di test");
+      setMessage(`ERRORE INVIO: ${error?.message || "Errore invio email di test"}`);
     } finally {
       setTesting(false);
     }
