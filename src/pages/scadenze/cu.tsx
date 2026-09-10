@@ -635,21 +635,21 @@ export default function ScadenzeCUPage() {
                       <tr
                         key={scadenza.id}
                         className={`border-b border-slate-600 transition-colors data-[state=selected]:bg-muted ${
-                          isGrayRow
-                            ? "bg-gray-200 hover:bg-gray-200"
-                            : isGreenRow
+                          isGreenRow
                             ? "bg-blue-100 hover:bg-blue-100"
                             : "bg-white hover:bg-white"
+                        } ${
+                          isGrayRow
+                            ? "text-red-600 [&_select]:!text-red-600 [&_input]:!text-red-600"
+                            : ""
                         }`}
                       >
                         <td
                           className={`px-2 py-1 align-middle sticky-col-cell border-r font-medium min-w-[260px] ${
-                            isGrayRow
-                              ? "!bg-gray-200"
-                              : isGreenRow
-                              ? "!bg-green-300"
-                              : "!bg-slate-50"
-                          }`}
+                            isGreenRow
+                              ? "!bg-blue-100"
+                              : "!bg-white"
+                          } ${isGrayRow ? "!text-red-600" : ""}`}
                         >
                           {scadenza.nominativo}
                         </td>
