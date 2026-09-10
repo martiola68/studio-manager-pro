@@ -190,8 +190,12 @@ export default function AntiriciclaggioPage() {
     if (!row.AV1Conferma) return { dotClass: "bg-orange-500", text: "AV1 da confermare", className: "font-semibold text-orange-700" };
     if (!row.AV2Confermato) return { dotClass: "bg-red-500", text: "AV2 da confermare", className: "font-semibold text-red-700" };
     const av4Info = getAV4Info(row);
-    const av4Ok = av4Info?.Av4InviatoCL || av4Info?.public_sent_at || av4Info?.compilato_da_cliente || av4Info?.av4_caricato_manualmente || row.stato_pratica === "av4_inviato" || row.stato_pratica === "av4_ricevuto";
-    if (!av4Ok) return { dotClass: "bg-red-500", text: "AV4 da generare", className: "font-semibold text-red-700" };
+    // Lo stato pratica non basta a dichiarare AV4 ricevuto: il verde richiede
+    // una compilazione reale del cliente oppure un caricamento manuale reale.
+    const av4Ricevuto = !!(av4Info?.compilato_da_cliente || av4Info?.av4_caricato_manualmente);
+    const av4Inviato = !!(av4Info?.Av4InviatoCL || av4Info?.public_sent_at || av4Ricevuto);
+    if (!av4Inviato) return { dotClass: "bg-red-500", text: "AV4 da generare", className: "font-semibold text-red-700" };
+    if (!av4Ricevuto) return { dotClass: "bg-yellow-400", text: "AV4 inviato - in attesa", className: "font-semibold text-yellow-700" };
     if (row.fascicolo_completo === false) return { dotClass: "bg-yellow-500", text: "Fascicolo incompleto", className: "font-semibold text-yellow-700" };
     return { dotClass: "bg-green-500", text: "Completa", className: "font-semibold text-green-700" };
   };
@@ -202,8 +206,8 @@ export default function AntiriciclaggioPage() {
 
   const getAV4IconBorderClass = (row: AV1Row) => {
     const av4Info = getAV4Info(row);
-    const av4Ricevuto = av4Info?.compilato_da_cliente || av4Info?.av4_caricato_manualmente || row.stato_pratica === "av4_ricevuto";
-    const av4Inviato = av4Info?.Av4InviatoCL || av4Info?.public_sent_at || av4Info?.compilato_da_cliente || av4Info?.av4_caricato_manualmente || row.stato_pratica === "av4_inviato" || row.stato_pratica === "av4_ricevuto";
+    const av4Ricevuto = !!(av4Info?.compilato_da_cliente || av4Info?.av4_caricato_manualmente);
+    const av4Inviato = !!(av4Info?.Av4InviatoCL || av4Info?.public_sent_at || av4Ricevuto);
     if (av4Ricevuto) return "border-2 border-lime-500 shadow-[0_0_10px_rgba(132,204,22,0.9)]";
     if (av4Inviato) return "border-2 border-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.9)]";
     return "border-2 border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]";
@@ -624,9 +628,29 @@ export default function AntiriciclaggioPage() {
     if (!canAccessAntiriciclaggio || !row.pratica_id) return;
     if (!window.confirm("Vuoi eliminare questa pratica AML?")) return;
     const supabaseAny = getSupabaseClient() as any;
-    const { error } = await supabaseAny.from("tbPraticheAML").delete().eq("id", row.pratica_id);
-    if (error) return alert(error.message);
-    await loadRowsBySocieta(societaFilter);
+    setWorkingId(row.pratica_id);
+    try {
+      const { data: { session }, error: sessionError } = await supabaseAny.auth.getSession();
+      if (sessionError || !session?.access_token) {
+        return alert("Sessione non valida. Effettua nuovamente l'accesso.");
+      }
+
+      const response = await fetch("/api/antiriciclaggio/pratiche/delete", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ pratica_id: row.pratica_id }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body?.ok) {
+        return alert(body?.error || "Errore eliminazione pratica AML");
+      }
+      await loadRowsBySocieta(societaFilter);
+    } finally {
+      setWorkingId(null);
+    }
   };
 
   return (
