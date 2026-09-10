@@ -1,0 +1,45 @@
+name: Apply daily presence email settings panel
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/patch-weekly-presence-email-config-panel-once.py'
+      - '.github/workflows/apply-weekly-presence-email-config-panel.yml'
+      - 'src/components/PayrollDailyPresenceEmailConfig.tsx'
+      - 'src/pages/api/presenze/report-giornaliero-email.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Apply patch
+        run: python scripts/patch-weekly-presence-email-config-panel-once.py
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+      - name: Commit runtime change
+        run: |
+          if git diff --quiet -- src/pages/presenze/assenze-settimanali.tsx; then
+            echo "No runtime changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/presenze/assenze-settimanali.tsx
+          git commit -m "Add daily presence email settings to weekly payroll page"
+          git pull --rebase origin main
+          git push origin main
