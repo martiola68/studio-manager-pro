@@ -56,40 +56,36 @@ export default function ImuPage() {
   const [operatoriMap, setOperatoriMap] = useState<Record<string, string>>({});
 
   const [utenteLoggato, setUtenteLoggato] = useState<{
-  nome: string | null;
-  cognome: string | null;
-    } | null>(null);
-
-  const [invioEmailModal, setInvioEmailModal] = useState<{
-  open: boolean;
-  scadenza: ScadenzaImu | null;
-  tipo: "acconto" | "saldo" | null;
-}>({
-  open: false,
-  scadenza: null,
-  tipo: null,
-});
-
-const [emailDestinatario, setEmailDestinatario] = useState("");
-const [searchContatti, setSearchContatti] = useState("");
-
-const [emailContatti, setEmailContatti] = useState<
-  {
-    id: string;
     nome: string | null;
     cognome: string | null;
-    email: string | null;
-  }[]
->([]);
+  } | null>(null);
 
-const [sendingEmail, setSendingEmail] = useState(false);
+  const [invioEmailModal, setInvioEmailModal] = useState<{
+    open: boolean;
+    scadenza: ScadenzaImu | null;
+    tipo: "acconto" | "saldo" | null;
+  }>({
+    open: false,
+    scadenza: null,
+    tipo: null,
+  });
 
+  const [emailDestinatario, setEmailDestinatario] = useState("");
+  const [searchContatti, setSearchContatti] = useState("");
+
+  const [emailContatti, setEmailContatti] = useState<
+    {
+      id: string;
+      nome: string | null;
+      cognome: string | null;
+      email: string | null;
+    }[]
+  >([]);
+
+  const [sendingEmail, setSendingEmail] = useState(false);
   const [f24File, setF24File] = useState<File | null>(null);
-
   const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
-  const [noteTimers, setNoteTimers] = useState<Record<string, NodeJS.Timeout>>(
-    {}
-  );
+  const [noteTimers, setNoteTimers] = useState<Record<string, NodeJS.Timeout>>({});
 
   useEffect(() => {
     checkAuthAndLoad();
@@ -101,26 +97,25 @@ const [sendingEmail, setSendingEmail] = useState(false);
     };
   }, [noteTimers]);
 
- const checkAuthAndLoad = async () => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const checkAuthAndLoad = async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
-  if (!session) {
-    router.push("/login");
-    return;
-  }
+    if (!session) {
+      router.push("/login");
+      return;
+    }
 
-  const { data: utenteData } = await supabase
-    .from("tbutenti")
-    .select("nome, cognome")
-    .eq("id", session.user.id)
-    .maybeSingle();
+    const { data: utenteData } = await supabase
+      .from("tbutenti")
+      .select("nome, cognome")
+      .eq("id", session.user.id)
+      .maybeSingle();
 
-  setUtenteLoggato(utenteData || null);
-
-  await loadScadenze();
-};
+    setUtenteLoggato(utenteData || null);
+    await loadScadenze();
+  };
 
   const loadScadenze = async () => {
     try {
@@ -134,7 +129,7 @@ const [sendingEmail, setSendingEmail] = useState(false);
 
       if (error) throw error;
 
-      const rows = ((data || []) as unknown) as ScadenzaImu[];
+      const rows = (data || []) as unknown as ScadenzaImu[];
       setScadenze(rows);
 
       const operatoreIds = Array.from(
@@ -224,23 +219,13 @@ const [sendingEmail, setSendingEmail] = useState(false);
 
       return matchSearch && matchConferma && matchAnno && matchOperatore;
     });
-  }, [
-    scadenze,
-    searchQuery,
-    filterConferma,
-    filterAnno,
-    filterOperatore,
-    operatoriMap,
-  ]);
+  }, [scadenze, searchQuery, filterConferma, filterAnno, filterOperatore, operatoriMap]);
 
   const stats = useMemo(() => {
     return {
       totale: filteredScadenze.length,
-      confermate: filteredScadenze.filter((s: ScadenzaImu) => !!s.conferma_riga)
-        .length,
-      nonConfermate: filteredScadenze.filter(
-        (s: ScadenzaImu) => !s.conferma_riga
-      ).length,
+      confermate: filteredScadenze.filter((s: ScadenzaImu) => !!s.conferma_riga).length,
+      nonConfermate: filteredScadenze.filter((s: ScadenzaImu) => !s.conferma_riga).length,
     };
   }, [filteredScadenze]);
 
@@ -502,211 +487,211 @@ const [sendingEmail, setSendingEmail] = useState(false);
     );
   }
 
-const loadContattiDestinatari = async (term: string) => {
-  let query = supabase
-    .from("tbcontatti")
-    .select("id, nome, cognome, email")
-    .not("email", "is", null)
-    .limit(30);
+  const loadContattiDestinatari = async (term: string) => {
+    let query = supabase
+      .from("tbcontatti")
+      .select("id, nome, cognome, email")
+      .not("email", "is", null)
+      .limit(30);
 
-  if (term.trim()) {
-    query = query.or(
-      `nome.ilike.%${term}%,cognome.ilike.%${term}%,email.ilike.%${term}%`
-    );
-  }
+    if (term.trim()) {
+      query = query.or(
+        `nome.ilike.%${term}%,cognome.ilike.%${term}%,email.ilike.%${term}%`
+      );
+    }
 
-  const { data, error } = await query;
+    const { data, error } = await query;
 
-  if (error) {
-    console.error(error);
+    if (error) {
+      console.error(error);
+      setEmailContatti([]);
+      return;
+    }
+
+    setEmailContatti((data || []) as any[]);
+  };
+
+  const getContattoLabel = (contatto: {
+    nome: string | null;
+    cognome: string | null;
+    email: string | null;
+  }) => {
+    const fullName = `${contatto.cognome || ""} ${contatto.nome || ""}`.trim();
+    return fullName || contatto.email || "Contatto";
+  };
+
+  const apriInvioEmail = (
+    scadenza: ScadenzaImu,
+    tipo: "acconto" | "saldo"
+  ) => {
+    setInvioEmailModal({
+      open: true,
+      scadenza,
+      tipo,
+    });
+
+    setEmailDestinatario("");
+    setSearchContatti("");
     setEmailContatti([]);
-    return;
-  }
-
-  setEmailContatti((data || []) as any[]);
-};
-
-const getContattoLabel = (contatto: {
-  nome: string | null;
-  cognome: string | null;
-  email: string | null;
-}) => {
-  const fullName = `${contatto.cognome || ""} ${contatto.nome || ""}`.trim();
-  return fullName || contatto.email || "Contatto";
-};
-
-const apriInvioEmail = (
-  scadenza: ScadenzaImu,
-  tipo: "acconto" | "saldo"
-) => {
-  setInvioEmailModal({
-    open: true,
-    scadenza,
-    tipo,
-  });
-
-  setEmailDestinatario("");
-  setSearchContatti("");
-  setEmailContatti([]);
-};
+  };
 
   const chiudiInvioEmail = () => {
-  setInvioEmailModal({
-    open: false,
-    scadenza: null,
-    tipo: null,
-  });
+    setInvioEmailModal({
+      open: false,
+      scadenza: null,
+      tipo: null,
+    });
 
-  setEmailDestinatario("");
-  setSearchContatti("");
-  setEmailContatti([]);
-  setF24File(null);
-};
+    setEmailDestinatario("");
+    setSearchContatti("");
+    setEmailContatti([]);
+    setF24File(null);
+  };
 
-const inviaComunicazioneScadenza = async () => {
-  try {
-    if (!invioEmailModal.scadenza || !invioEmailModal.tipo || !emailDestinatario) {
+  const inviaComunicazioneScadenza = async () => {
+    try {
+      if (!invioEmailModal.scadenza || !invioEmailModal.tipo || !emailDestinatario) {
+        toast({
+          title: "Errore",
+          description: "Seleziona un indirizzo email",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!f24File) {
+        toast({
+          title: "Errore",
+          description: "Allega il modello F24 prima di inviare",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setSendingEmail(true);
+
+      const templateCode =
+        invioEmailModal.tipo === "acconto" ? "IMU_ACCONTO" : "IMU_SALDO";
+
+      const { data: template, error: templateError } = await (supabase as any)
+        .from("tbemail_template")
+        .select("oggetto, corpo")
+        .eq("codice", templateCode)
+        .eq("attivo", true)
+        .maybeSingle();
+
+      if (templateError) throw templateError;
+      if (!template) throw new Error(`Template ${templateCode} non trovato`);
+
+      const scadenza = invioEmailModal.scadenza;
+
+      const { data: tipoScadenza } = await supabase
+        .from("tbtipi_scadenze")
+        .select("data_scadenza")
+        .eq("tipo_scadenza", "imu")
+        .eq("attivo", true)
+        .ilike(
+          "nome",
+          invioEmailModal.tipo === "acconto" ? "%acconto%" : "%saldo%"
+        )
+        .maybeSingle();
+
+      const firmaUtente = `${utenteLoggato?.nome || ""} ${
+        utenteLoggato?.cognome || ""
+      }`.trim();
+
+      const vars: Record<string, string> = {
+        CLIENTE: scadenza.nominativo || "Cliente",
+        ANNO: String(scadenza.anno_riferimento || new Date().getFullYear()),
+        DATA_SCADENZA: tipoScadenza?.data_scadenza
+          ? new Date(tipoScadenza.data_scadenza).toLocaleDateString("it-IT")
+          : "",
+        TIPO_IMU: invioEmailModal.tipo === "acconto" ? "Acconto" : "Saldo",
+        FIRMA_UTENTE: firmaUtente,
+      };
+
+      const replaceVars = (text: string) => {
+        let output = text || "";
+        Object.entries(vars).forEach(([key, value]) => {
+          output = output.replaceAll(`[${key}]`, value || "");
+        });
+        return output;
+      };
+
+      const oggetto = replaceVars(template.oggetto);
+      const messaggio = replaceVars(template.corpo);
+
+      const safeName = f24File.name.replace(/[^\w.\-]+/g, "_");
+      const fileName = `${Date.now()}_${safeName}`;
+      const filePath = `comunicazioni/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("messaggi-allegati")
+        .upload(filePath, f24File);
+
+      if (uploadError) throw uploadError;
+
+      const allegati = [
+        {
+          nome: f24File.name,
+          tipo: f24File.type || "application/pdf",
+          dimensione: f24File.size,
+          bucket: "messaggi-allegati",
+          path: filePath,
+        },
+      ];
+
+      const emailResult = await emailService.sendComunicazioneEmail({
+        tipo: "singola",
+        destinatarioId: scadenza.cliente_id || "",
+        destinatarioEmail: emailDestinatario,
+        oggetto,
+        messaggio,
+        allegati,
+      });
+
+      if (!emailResult?.success) {
+        throw new Error(emailResult?.error || "Errore invio email");
+      }
+
+      const updatePayload =
+        invioEmailModal.tipo === "acconto"
+          ? {
+              conferma_acconto_imu: true,
+              acconto_comunicato: true,
+              data_com_acconto: new Date().toISOString().slice(0, 10),
+            }
+          : {
+              conferma_saldo_imu: true,
+              saldo_comunicato: true,
+              data_com_saldo: new Date().toISOString().slice(0, 10),
+            };
+
+      const { error: updateError } = await supabase
+        .from("tbscadimu")
+        .update(updatePayload)
+        .eq("id", scadenza.id);
+
+      if (updateError) throw updateError;
+
       toast({
-        title: "Errore",
-        description: "Seleziona un indirizzo email",
+        title: "Email inviata",
+        description: "Comunicazione IMU inviata correttamente",
+      });
+
+      chiudiInvioEmail();
+      await loadScadenze();
+    } catch (error: any) {
+      toast({
+        title: "Errore invio email",
+        description: error.message,
         variant: "destructive",
       });
-      return;
+    } finally {
+      setSendingEmail(false);
     }
+  };
 
-    if (!f24File) {
-      toast({
-        title: "Errore",
-        description: "Allega il modello F24 prima di inviare",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setSendingEmail(true);
-
-    const templateCode =
-      invioEmailModal.tipo === "acconto" ? "IMU_ACCONTO" : "IMU_SALDO";
-
-    const { data: template, error: templateError } = await (supabase as any)
-      .from("tbemail_template")
-      .select("oggetto, corpo")
-      .eq("codice", templateCode)
-      .eq("attivo", true)
-      .maybeSingle();
-
-    if (templateError) throw templateError;
-    if (!template) throw new Error(`Template ${templateCode} non trovato`);
-
-    const scadenza = invioEmailModal.scadenza;
-
-const { data: tipoScadenza } = await supabase
-  .from("tbtipi_scadenze")
-  .select("data_scadenza")
-  .eq("tipo_scadenza", "imu")
-  .eq("attivo", true)
-  .ilike(
-    "nome",
-    invioEmailModal.tipo === "acconto" ? "%acconto%" : "%saldo%"
-  )
-  .maybeSingle();
-
-const firmaUtente = `${utenteLoggato?.nome || ""} ${
-  utenteLoggato?.cognome || ""
-}`.trim();
-
-const vars: Record<string, string> = {
-  CLIENTE: scadenza.nominativo || "Cliente",
-  ANNO: String(scadenza.anno_riferimento || new Date().getFullYear()),
-  DATA_SCADENZA: tipoScadenza?.data_scadenza
-    ? new Date(tipoScadenza.data_scadenza).toLocaleDateString("it-IT")
-    : "",
-  TIPO_IMU: invioEmailModal.tipo === "acconto" ? "Acconto" : "Saldo",
-  FIRMA_UTENTE: firmaUtente,
-};
-
-    const replaceVars = (text: string) => {
-      let output = text || "";
-      Object.entries(vars).forEach(([key, value]) => {
-        output = output.replaceAll(`[${key}]`, value || "");
-      });
-      return output;
-    };
-
-    const oggetto = replaceVars(template.oggetto);
-    const messaggio = replaceVars(template.corpo);
-
-    const safeName = f24File.name.replace(/[^\w.\-]+/g, "_");
-    const fileName = `${Date.now()}_${safeName}`;
-    const filePath = `comunicazioni/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from("messaggi-allegati")
-      .upload(filePath, f24File);
-
-    if (uploadError) throw uploadError;
-
-    const allegati = [
-      {
-        nome: f24File.name,
-        tipo: f24File.type || "application/pdf",
-        dimensione: f24File.size,
-        bucket: "messaggi-allegati",
-        path: filePath,
-      },
-    ];
-
-    const emailResult = await emailService.sendComunicazioneEmail({
-      tipo: "singola",
-      destinatarioId: scadenza.cliente_id || "",
-      destinatarioEmail: emailDestinatario,
-      oggetto,
-      messaggio,
-      allegati,
-    });
-
-    if (!emailResult?.success) {
-      throw new Error(emailResult?.error || "Errore invio email");
-    }
-
-    const updatePayload =
-      invioEmailModal.tipo === "acconto"
-        ? {
-            conferma_acconto_imu: true,
-            acconto_comunicato: true,
-            data_com_acconto: new Date().toISOString().slice(0, 10),
-          }
-        : {
-            conferma_saldo_imu: true,
-            saldo_comunicato: true,
-            data_com_saldo: new Date().toISOString().slice(0, 10),
-          };
-
-    const { error: updateError } = await supabase
-      .from("tbscadimu")
-      .update(updatePayload)
-      .eq("id", scadenza.id);
-
-    if (updateError) throw updateError;
-
-    toast({
-      title: "Email inviata",
-      description: "Comunicazione IMU inviata correttamente",
-    });
-
-    chiudiInvioEmail();
-    await loadScadenze();
-  } catch (error: any) {
-    toast({
-      title: "Errore invio email",
-      description: error.message,
-      variant: "destructive",
-    });
-  } finally {
-    setSendingEmail(false);
-  }
-};
-  
   const dateInputClass = (value?: string | null) =>
     [
       "h-8 w-full border-slate-300 bg-white",
@@ -721,8 +706,9 @@ const vars: Record<string, string> = {
     completed: boolean | null | undefined,
     rowConfirmed: boolean
   ) => {
+    if (rowConfirmed) return "bg-blue-100";
     if (!enabled) return "bg-white";
-    if (completed || rowConfirmed) return "bg-blue-100";
+    if (completed) return "bg-blue-100";
     return "bg-white";
   };
 
@@ -732,8 +718,9 @@ const vars: Record<string, string> = {
     presentata: boolean | null | undefined,
     rowConfirmed: boolean
   ) => {
+    if (rowConfirmed) return "bg-blue-100";
     if (!soggettoImu || !conDichiarazione) return "bg-white";
-    if (presentata || rowConfirmed) return "bg-blue-100";
+    if (presentata) return "bg-blue-100";
     return "bg-white";
   };
 
@@ -877,10 +864,7 @@ const vars: Record<string, string> = {
                 <label className="text-sm font-medium mb-2 block">
                   Operatore
                 </label>
-                <Select
-                  value={filterOperatore}
-                  onValueChange={setFilterOperatore}
-                >
+                <Select value={filterOperatore} onValueChange={setFilterOperatore}>
                   <SelectTrigger className="h-9 border-slate-300 bg-white">
                     <SelectValue placeholder="Tutti gli operatori" />
                   </SelectTrigger>
@@ -935,211 +919,149 @@ const vars: Record<string, string> = {
         <Card id="imu-print-area" className="flex min-h-0 flex-1 flex-col overflow-hidden border border-sky-200 bg-slate-50 shadow-sm">
           <CardContent className="min-h-0 flex-1 overflow-hidden p-0">
             <div className="hidden print:block p-4">
-              <h2 className="text-xl font-bold text-center mb-1">
-                Scadenzario IMU
-              </h2>
+              <h2 className="text-xl font-bold text-center mb-1">Scadenzario IMU</h2>
               <p className="text-sm text-center text-gray-600 mb-4">
                 Anno: {filterAnno}
-                {filterOperatore !== "__all__"
-                  ? ` - Operatore: ${filterOperatore}`
-                  : ""}
+                {filterOperatore !== "__all__" ? ` - Operatore: ${filterOperatore}` : ""}
               </p>
             </div>
 
             <div className="relative h-full w-full overflow-auto no-print">
-                <table className="w-full caption-bottom text-sm">
-                 <thead className="sticky top-0 z-30 bg-slate-600 text-white shadow-sm">
-  <tr className="border-b border-sky-300">
-    <th className="sticky-col-header h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[320px] border-r border-slate-500 !bg-slate-600">
-      Nominativo
-    </th>
-    <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[150px] border-r border-slate-500 bg-slate-600">
-      Operatore
-    </th>
-    <th className={`${baseHeaderClass} min-w-[120px]`}>Soggetto IMU</th>
-    <th className={`${baseHeaderClass} min-w-[120px] print-hide`}>Dovuto</th>
-    <th className={`${baseHeaderClass} min-w-[120px]`}>Comunicato</th>
-    <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[160px] border-r border-slate-500 bg-slate-600 print-hide">
-      Data comunicazione
-    </th>
-    <th className={`${baseHeaderClass} min-w-[140px] print-hide`}>Con dic. IMU</th>
-    <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[170px] border-r border-slate-500 bg-slate-600 print-hide">
-      Data scadenza dic.
-    </th>
-    <th className={`${baseHeaderClass} min-w-[140px] print-hide`}>Dic. presentata</th>
-    <th className={`${baseHeaderClass} min-w-[120px] print-hide`}>Dovuto</th>
-    <th className={`${baseHeaderClass} min-w-[120px]`}>Comunicato</th>
-    <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[160px] border-r border-slate-500 bg-slate-600 print-hide">
-      Data comunicazione
-    </th>
-    <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[300px] border-r border-slate-500 bg-slate-600 print-hide">
-      Note
-    </th>
-<th className={`${baseHeaderClass} min-w-[180px] print-hide`}>
-  Email F24
-</th>
-    
-    <th className={`${baseHeaderClass} min-w-[140px]`}>Conferma dati</th>
-    <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[100px] border-r-0 bg-slate-600 print-hide">
-      Azioni
-    </th>
-  </tr>
-</thead>
+              <table className="w-full caption-bottom text-sm">
+                <thead className="sticky top-0 z-30 bg-slate-600 text-white shadow-sm">
+                  <tr className="border-b border-sky-400">
+                    <th className="sticky-col-header h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[320px] border-r border-slate-500 !bg-slate-600">Nominativo</th>
+                    <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[150px] border-r border-slate-500 bg-slate-600">Operatore</th>
+                    <th className={`${baseHeaderClass} min-w-[120px]`}>Soggetto IMU</th>
+                    <th className={`${baseHeaderClass} min-w-[120px] print-hide`}>Dovuto</th>
+                    <th className={`${baseHeaderClass} min-w-[120px]`}>Comunicato</th>
+                    <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[160px] border-r border-slate-500 bg-slate-600 print-hide">Data comunicazione</th>
+                    <th className={`${baseHeaderClass} min-w-[140px] print-hide`}>Con dic. IMU</th>
+                    <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[170px] border-r border-slate-500 bg-slate-600 print-hide">Data scadenza dic.</th>
+                    <th className={`${baseHeaderClass} min-w-[140px] print-hide`}>Dic. presentata</th>
+                    <th className={`${baseHeaderClass} min-w-[120px] print-hide`}>Dovuto</th>
+                    <th className={`${baseHeaderClass} min-w-[120px]`}>Comunicato</th>
+                    <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[160px] border-r border-slate-500 bg-slate-600 print-hide">Data comunicazione</th>
+                    <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[300px] border-r border-slate-500 bg-slate-600 print-hide">Note</th>
+                    <th className={`${baseHeaderClass} min-w-[180px] print-hide`}>Email F24</th>
+                    <th className={`${baseHeaderClass} min-w-[140px]`}>Conferma dati</th>
+                    <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[100px] border-r-0 bg-slate-600 print-hide">Azioni</th>
+                  </tr>
+                </thead>
 
                 <tbody>
-  {filteredScadenze.length === 0 ? (
-    <tr className="border-b border-sky-300">
-      <td
-        colSpan={16}
-        className="p-4 text-center text-gray-500"
-      >
-        Nessun record trovato
-      </td>
-    </tr>
-  ) : (
-    filteredScadenze.map((scadenza) => {
-      const isGreenRow = scadenza.conferma_riga === true;
+                  {filteredScadenze.length === 0 ? (
+                    <tr className="border-b border-sky-400">
+                      <td colSpan={16} className="p-4 text-center text-gray-500">
+                        Nessun record trovato
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredScadenze.map((scadenza) => {
+                      const isGreenRow = scadenza.conferma_riga === true;
+                      const isNotSubject = scadenza.soggetto_imu === false;
 
-      const isNotSubject = scadenza.soggetto_imu === false;
+                      return (
+                        <tr
+                          key={scadenza.id}
+                          className={`border-b border-sky-400 ${
+                            isGreenRow
+                              ? "[&_td]:!bg-blue-100"
+                              : isNotSubject
+                                ? "bg-white text-red-600 [&_td]:!bg-white [&_select]:!bg-white [&_select]:!text-red-600 [&_input]:!bg-white [&_input]:!text-red-600 [&_textarea]:!bg-white [&_textarea]:!text-red-600"
+                                : ""
+                          }`}
+                        >
+                          <td className={`sticky-col-cell p-2 align-middle font-medium min-w-[320px] border-r border-gray-300 ${isGreenRow ? "!bg-blue-100" : isNotSubject ? "!bg-white !text-red-600" : "!bg-white"}`}>
+                            {scadenza.nominativo}
+                          </td>
 
-      return (
-        <tr
-          key={scadenza.id}
-          className={`border-b border-sky-300 ${
-            isNotSubject
-              ? "bg-white text-red-600 [&_td]:!bg-white [&_select]:!bg-white [&_select]:!text-red-600 [&_input]:!bg-white [&_input]:!text-red-600 [&_textarea]:!bg-white [&_textarea]:!text-red-600"
-              : ""
-          }`}
-        >
-          <td
-            className={`sticky-col-cell p-2 align-middle font-medium min-w-[320px] border-r border-gray-300 ${
-              isNotSubject ? "!bg-white !text-red-600" : isGreenRow ? "!bg-blue-100" : "!bg-white"
-            }`}
-          >
-            {scadenza.nominativo}
-          </td>
+                          <td className={`p-2 align-middle min-w-[150px] border-r border-gray-300 ${rowSideTone(isGreenRow)}`}>
+                            {(scadenza.utente_operatore_id && operatoriMap[scadenza.utente_operatore_id]) || "-"}
+                          </td>
 
-          <td className={`p-2 align-middle min-w-[150px] border-r border-gray-300 ${rowSideTone(isGreenRow)}`}>
-            {(scadenza.utente_operatore_id &&
-              operatoriMap[scadenza.utente_operatore_id]) ||
-              "-"}
-          </td>
+                          <td className={`${baseCellClass} text-center min-w-[120px] ${sectionTone(scadenza.soggetto_imu, false, isGreenRow)}`}>
+                            <select value={scadenza.soggetto_imu ? "SI" : "NO"} onChange={(e) => handleSoggettoImuChange(scadenza, e.target.value === "SI")} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"><option value="NO">NO</option><option value="SI">SI</option></select>
+                          </td>
 
-          <td className={`${baseCellClass} text-center min-w-[120px] ${sectionTone(scadenza.soggetto_imu, false, isGreenRow)}`}>
-            <select
-              value={scadenza.soggetto_imu ? "SI" : "NO"}
-              onChange={(e) => handleSoggettoImuChange(scadenza, e.target.value === "SI")}
-              className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"
-            >
-              <option value="NO">NO</option>
-              <option value="SI">SI</option>
-            </select>
-          </td>
+                          <td className={`${baseCellClass} text-center min-w-[120px] print-hide ${sectionTone(scadenza.soggetto_imu, scadenza.conferma_acconto_imu, isGreenRow)}`}>
+                            <select disabled={!scadenza.soggetto_imu} value={scadenza.acconto_dovuto ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.acconto_dovuto)) handleToggleField(scadenza.id, "acconto_dovuto", scadenza.acconto_dovuto); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-white disabled:text-slate-400"><option value="NO">NO</option><option value="SI">SI</option></select>
+                          </td>
 
-          <td className={`${baseCellClass} text-center min-w-[120px] print-hide ${sectionTone(scadenza.soggetto_imu, scadenza.conferma_acconto_imu, isGreenRow)}`}>
-            <select disabled={!scadenza.soggetto_imu} value={scadenza.acconto_dovuto ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.acconto_dovuto)) handleToggleField(scadenza.id, "acconto_dovuto", scadenza.acconto_dovuto); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-white disabled:text-slate-400"><option value="NO">NO</option><option value="SI">SI</option></select>
-          </td>
+                          <td className={`${baseCellClass} text-center min-w-[120px] ${sectionTone(scadenza.soggetto_imu, scadenza.conferma_acconto_imu, isGreenRow)}`}>
+                            <select disabled={!scadenza.soggetto_imu} value={scadenza.conferma_acconto_imu ? "SI" : "NO"} onChange={(e) => handleComunicatoChange(scadenza, "acconto", e.target.value === "SI")} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-white disabled:text-slate-400"><option value="NO">NO</option><option value="SI">SI</option></select>
+                          </td>
 
-          <td className={`${baseCellClass} text-center min-w-[120px] ${sectionTone(scadenza.soggetto_imu, scadenza.conferma_acconto_imu, isGreenRow)}`}>
-            <select disabled={!scadenza.soggetto_imu} value={scadenza.conferma_acconto_imu ? "SI" : "NO"} onChange={(e) => handleComunicatoChange(scadenza, "acconto", e.target.value === "SI")} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-white disabled:text-slate-400"><option value="NO">NO</option><option value="SI">SI</option></select>
-          </td>
+                          <td className={`${baseCellClass} min-w-[160px] print-hide ${sectionTone(scadenza.soggetto_imu, scadenza.conferma_acconto_imu, isGreenRow)}`}>
+                            <Input type="date" disabled={!scadenza.soggetto_imu} value={scadenza.data_com_acconto || ""} onChange={(e) => handleUpdateField(scadenza.id, "data_com_acconto", e.target.value)} className="h-8 w-full border-slate-300 bg-white text-xs disabled:cursor-not-allowed disabled:bg-white disabled:text-slate-400" />
+                          </td>
 
-          <td className={`${baseCellClass} min-w-[160px] print-hide ${sectionTone(scadenza.soggetto_imu, scadenza.conferma_acconto_imu, isGreenRow)}`}>
-            <Input type="date" disabled={!scadenza.soggetto_imu} value={scadenza.data_com_acconto || ""} onChange={(e) => handleUpdateField(scadenza.id, "data_com_acconto", e.target.value)} className="h-8 w-full border-slate-300 bg-white text-xs disabled:cursor-not-allowed disabled:bg-white disabled:text-slate-400" />
-          </td>
+                          <td className={`${baseCellClass} text-center min-w-[140px] print-hide ${declarationTone(scadenza.soggetto_imu, scadenza.dichiarazione_imu, scadenza.conferma_dichiarazione_imu, isGreenRow)}`}>
+                            <select disabled={!scadenza.soggetto_imu} value={scadenza.dichiarazione_imu ? "SI" : "NO"} onChange={(e) => void handleDichiarazioneImuChange(scadenza, e.target.value === "SI")} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-white disabled:text-slate-400"><option value="NO">NO</option><option value="SI">SI</option></select>
+                          </td>
 
-          <td className={`${baseCellClass} text-center min-w-[140px] print-hide ${declarationTone(scadenza.soggetto_imu, scadenza.dichiarazione_imu, scadenza.conferma_dichiarazione_imu, isGreenRow)}`}>
-            <select disabled={!scadenza.soggetto_imu} value={scadenza.dichiarazione_imu ? "SI" : "NO"} onChange={(e) => void handleDichiarazioneImuChange(scadenza, e.target.value === "SI")} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-white disabled:text-slate-400"><option value="NO">NO</option><option value="SI">SI</option></select>
-          </td>
+                          <td className={`${baseCellClass} min-w-[170px] print-hide ${declarationTone(scadenza.soggetto_imu, scadenza.dichiarazione_imu, scadenza.conferma_dichiarazione_imu, isGreenRow)}`}>
+                            <Input type="date" disabled value={scadenza.data_scad_dichiarazione || ""} className="h-8 w-full border-slate-300 bg-white text-xs disabled:cursor-not-allowed disabled:bg-white disabled:text-slate-500" />
+                          </td>
 
-          <td className={`${baseCellClass} min-w-[170px] print-hide ${declarationTone(scadenza.soggetto_imu, scadenza.dichiarazione_imu, scadenza.conferma_dichiarazione_imu, isGreenRow)}`}>
-            <Input type="date" disabled value={scadenza.data_scad_dichiarazione || ""} className="h-8 w-full border-slate-300 bg-white text-xs disabled:cursor-not-allowed disabled:bg-white disabled:text-slate-500" />
-          </td>
+                          <td className={`${baseCellClass} text-center min-w-[140px] print-hide ${declarationTone(scadenza.soggetto_imu, scadenza.dichiarazione_imu, scadenza.conferma_dichiarazione_imu, isGreenRow)}`}>
+                            <select disabled={!scadenza.soggetto_imu || !scadenza.dichiarazione_imu} value={scadenza.conferma_dichiarazione_imu ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.conferma_dichiarazione_imu)) handleToggleField(scadenza.id, "conferma_dichiarazione_imu", scadenza.conferma_dichiarazione_imu); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-white disabled:text-slate-400"><option value="NO">NO</option><option value="SI">SI</option></select>
+                          </td>
 
-          <td className={`${baseCellClass} text-center min-w-[140px] print-hide ${declarationTone(scadenza.soggetto_imu, scadenza.dichiarazione_imu, scadenza.conferma_dichiarazione_imu, isGreenRow)}`}>
-            <select disabled={!scadenza.soggetto_imu || !scadenza.dichiarazione_imu} value={scadenza.conferma_dichiarazione_imu ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.conferma_dichiarazione_imu)) handleToggleField(scadenza.id, "conferma_dichiarazione_imu", scadenza.conferma_dichiarazione_imu); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-white disabled:text-slate-400"><option value="NO">NO</option><option value="SI">SI</option></select>
-          </td>
+                          <td className={`${baseCellClass} text-center min-w-[120px] print-hide ${sectionTone(scadenza.soggetto_imu, scadenza.conferma_saldo_imu, isGreenRow)}`}>
+                            <select disabled={!scadenza.soggetto_imu} value={scadenza.saldo_dovuto ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.saldo_dovuto)) handleToggleField(scadenza.id, "saldo_dovuto", scadenza.saldo_dovuto); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-white disabled:text-slate-400"><option value="NO">NO</option><option value="SI">SI</option></select>
+                          </td>
 
-          <td className={`${baseCellClass} text-center min-w-[120px] print-hide ${sectionTone(scadenza.soggetto_imu, scadenza.conferma_saldo_imu, isGreenRow)}`}>
-            <select disabled={!scadenza.soggetto_imu} value={scadenza.saldo_dovuto ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.saldo_dovuto)) handleToggleField(scadenza.id, "saldo_dovuto", scadenza.saldo_dovuto); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-white disabled:text-slate-400"><option value="NO">NO</option><option value="SI">SI</option></select>
-          </td>
+                          <td className={`${baseCellClass} text-center min-w-[120px] ${sectionTone(scadenza.soggetto_imu, scadenza.conferma_saldo_imu, isGreenRow)}`}>
+                            <select disabled={!scadenza.soggetto_imu} value={scadenza.conferma_saldo_imu ? "SI" : "NO"} onChange={(e) => handleComunicatoChange(scadenza, "saldo", e.target.value === "SI")} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-white disabled:text-slate-400"><option value="NO">NO</option><option value="SI">SI</option></select>
+                          </td>
 
-          <td className={`${baseCellClass} text-center min-w-[120px] ${sectionTone(scadenza.soggetto_imu, scadenza.conferma_saldo_imu, isGreenRow)}`}>
-            <select disabled={!scadenza.soggetto_imu} value={scadenza.conferma_saldo_imu ? "SI" : "NO"} onChange={(e) => handleComunicatoChange(scadenza, "saldo", e.target.value === "SI")} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-white disabled:text-slate-400"><option value="NO">NO</option><option value="SI">SI</option></select>
-          </td>
+                          <td className={`${baseCellClass} min-w-[160px] print-hide ${sectionTone(scadenza.soggetto_imu, scadenza.conferma_saldo_imu, isGreenRow)}`}>
+                            <Input type="date" disabled={!scadenza.soggetto_imu} value={scadenza.data_com_saldo || ""} onChange={(e) => handleUpdateField(scadenza.id, "data_com_saldo", e.target.value)} className="h-8 w-full border-slate-300 bg-white text-xs disabled:cursor-not-allowed disabled:bg-white disabled:text-slate-400" />
+                          </td>
 
-          <td className={`${baseCellClass} min-w-[160px] print-hide ${sectionTone(scadenza.soggetto_imu, scadenza.conferma_saldo_imu, isGreenRow)}`}>
-            <Input type="date" disabled={!scadenza.soggetto_imu} value={scadenza.data_com_saldo || ""} onChange={(e) => handleUpdateField(scadenza.id, "data_com_saldo", e.target.value)} className="h-8 w-full border-slate-300 bg-white text-xs disabled:cursor-not-allowed disabled:bg-white disabled:text-slate-400" />
-          </td>
+                          <td className={`${baseCellClass} min-w-[300px] print-hide ${rowSideTone(isGreenRow)}`}>
+                            <Textarea value={localNotes[scadenza.id] ?? scadenza.note ?? ""} onChange={(e) => handleNoteChange(scadenza.id, e.target.value)} placeholder="Aggiungi note..." rows={1} className="h-8 min-h-8 resize-none border-slate-300 bg-white py-1.5" />
+                          </td>
 
-          <td className={`${baseCellClass} min-w-[300px] print-hide ${rowSideTone(isGreenRow)}`}>
-            <Textarea
-              value={localNotes[scadenza.id] ?? scadenza.note ?? ""}
-              onChange={(e) =>
-                handleNoteChange(scadenza.id, e.target.value)
-              }
-              placeholder="Aggiungi note..."
-              rows={1} className="h-8 min-h-8 resize-none border-slate-300 bg-white py-1.5"
-            />
-          </td>
+                          <td className={`${baseCellClass} text-center min-w-[180px] print-hide ${rowSideTone(isGreenRow)}`}>
+                            <div className="flex items-center justify-center gap-2">
+                              {scadenza.acconto_dovuto && !scadenza.conferma_acconto_imu && (
+                                <Button type="button" size="sm" variant="outline" className="h-8 text-xs" onClick={() => apriInvioEmail(scadenza, "acconto")}>
+                                  <Mail className="h-3.5 w-3.5 mr-1" />
+                                  Invia Acconto
+                                </Button>
+                              )}
 
-        <td className={`${baseCellClass} text-center min-w-[180px] print-hide ${rowSideTone(isGreenRow)}`}>
-  <div className="flex items-center justify-center gap-2">
-    {scadenza.acconto_dovuto && !scadenza.conferma_acconto_imu && (
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        className="h-8 text-xs"
-        onClick={() => apriInvioEmail(scadenza, "acconto")}
-      >
-        <Mail className="h-3.5 w-3.5 mr-1" />
-        Invia Acconto
-      </Button>
-    )}
+                              {scadenza.saldo_dovuto && !scadenza.conferma_saldo_imu && (
+                                <Button type="button" size="sm" variant="outline" className="h-8 text-xs" onClick={() => apriInvioEmail(scadenza, "saldo")}>
+                                  <Mail className="h-3.5 w-3.5 mr-1" />
+                                  Invia Saldo
+                                </Button>
+                              )}
 
-    {scadenza.saldo_dovuto && !scadenza.conferma_saldo_imu && (
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        className="h-8 text-xs"
-        onClick={() => apriInvioEmail(scadenza, "saldo")}
-      >
-        <Mail className="h-3.5 w-3.5 mr-1" />
-        Invia Saldo
-      </Button>
-    )}
+                              {scadenza.conferma_acconto_imu && scadenza.conferma_saldo_imu && (
+                                <span className="text-xs text-blue-700 font-semibold">Comunicati</span>
+                              )}
+                            </div>
+                          </td>
 
-    {scadenza.conferma_acconto_imu && scadenza.conferma_saldo_imu && (
-      <span className="text-xs text-blue-700 font-semibold">
-        Comunicati
-      </span>
-    )}
-  </div>
-</td>
+                          <td className={`${baseCellClass} text-center min-w-[140px] ${rowSideTone(isGreenRow)}`}>
+                            <select value={scadenza.conferma_riga ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.conferma_riga)) handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-white disabled:text-slate-400"><option value="NO">NO</option><option value="SI">SI</option></select>
+                          </td>
 
-<td className={`${baseCellClass} text-center min-w-[140px] ${rowSideTone(isGreenRow)}`}>
-  <select value={scadenza.conferma_riga ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.conferma_riga)) handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-white disabled:text-slate-400"><option value="NO">NO</option><option value="SI">SI</option></select>
-</td>
-
-          <td className={`p-2 align-middle text-center min-w-[100px] border-r-0 print-hide ${rowSideTone(isGreenRow)}`}>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleDelete(scadenza.id)}
-              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </td>
-        </tr>
-      );
-    })
-  )}
-</tbody>
-                </table>
-              </div>
+                          <td className={`p-2 align-middle text-center min-w-[100px] border-r-0 print-hide ${rowSideTone(isGreenRow)}`}>
+                            <Button variant="ghost" size="sm" onClick={() => handleDelete(scadenza.id)} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
 
             <div className="hidden print:block p-4">
               <table className="print-table">
@@ -1160,9 +1082,7 @@ const vars: Record<string, string> = {
                   ) : (
                     filteredScadenze.map((scadenza) => (
                       <tr key={scadenza.id}>
-                        <td style={{ textAlign: "left" }}>
-                          {scadenza.nominativo || "-"}
-                        </td>
+                        <td style={{ textAlign: "left" }}>{scadenza.nominativo || "-"}</td>
                         <td>{scadenza.soggetto_imu ? "Sì" : "No"}</td>
                         <td>{scadenza.acconto_comunicato ? "Sì" : "No"}</td>
                         <td>{scadenza.saldo_comunicato ? "Sì" : "No"}</td>
@@ -1176,125 +1096,76 @@ const vars: Record<string, string> = {
           </CardContent>
         </Card>
       </div>
-        {invioEmailModal.open && invioEmailModal.scadenza && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 no-print">
-    <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
-      <h2 className="text-xl font-bold mb-2">
-        Invia F24 IMU{" "}
-        {invioEmailModal.tipo === "acconto" ? "Acconto" : "Saldo"}
-      </h2>
 
-      <p className="text-sm text-gray-500 mb-4">
-        {invioEmailModal.scadenza.nominativo}
-      </p>
+      {invioEmailModal.open && invioEmailModal.scadenza && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 no-print">
+          <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
+            <h2 className="text-xl font-bold mb-2">
+              Invia F24 IMU {invioEmailModal.tipo === "acconto" ? "Acconto" : "Saldo"}
+            </h2>
 
-      <div className="space-y-4">
-       <div>
-  <label className="text-sm font-medium mb-2 block">
-    Contatto Email
-  </label>
+            <p className="text-sm text-gray-500 mb-4">
+              {invioEmailModal.scadenza.nominativo}
+            </p>
 
-  <div className="flex gap-2">
-    <Input
-      value={searchContatti}
-      onChange={(e) => setSearchContatti(e.target.value)}
-      placeholder="Cerca contatto..."
-    />
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Contatto Email</label>
 
-    <Button
-      type="button"
-      variant="outline"
-      onClick={() => loadContattiDestinatari(searchContatti)}
-    >
-      Cerca
-    </Button>
-  </div>
+                <div className="flex gap-2">
+                  <Input value={searchContatti} onChange={(e) => setSearchContatti(e.target.value)} placeholder="Cerca contatto..." />
+                  <Button type="button" variant="outline" onClick={() => loadContattiDestinatari(searchContatti)}>Cerca</Button>
+                </div>
 
-  {emailContatti.length > 0 && (
-    <div className="max-h-[140px] overflow-y-auto rounded-md border bg-white">
-      {emailContatti.map((contatto) => (
-        <button
-          key={contatto.id}
-          type="button"
-          className="flex w-full items-center justify-between border-b px-3 py-2 text-left text-sm hover:bg-gray-50"
-          onClick={() => {
-            setEmailDestinatario(contatto.email || "");
-            setSearchContatti(contatto.email || "");
-            setEmailContatti([]);
-          }}
-        >
-          <span>
-            {getContattoLabel(contatto)}
-            <span className="ml-2 text-gray-500">
-              {contatto.email}
-            </span>
-          </span>
-        </button>
-      ))}
-    </div>
-  )}
-</div>
+                {emailContatti.length > 0 && (
+                  <div className="max-h-[140px] overflow-y-auto rounded-md border bg-white">
+                    {emailContatti.map((contatto) => (
+                      <button
+                        key={contatto.id}
+                        type="button"
+                        className="flex w-full items-center justify-between border-b px-3 py-2 text-left text-sm hover:bg-gray-50"
+                        onClick={() => {
+                          setEmailDestinatario(contatto.email || "");
+                          setSearchContatti(contatto.email || "");
+                          setEmailContatti([]);
+                        }}
+                      >
+                        <span>
+                          {getContattoLabel(contatto)}
+                          <span className="ml-2 text-gray-500">{contatto.email}</span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
-        <div>
-          <label className="text-sm font-medium mb-2 block">
-            Oppure inserisci email manualmente
-          </label>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Oppure inserisci email manualmente</label>
+                <Input type="email" value={emailDestinatario} onChange={(e) => setEmailDestinatario(e.target.value)} placeholder="email@cliente.it" />
+              </div>
 
-          <Input
-            type="email"
-            value={emailDestinatario}
-            onChange={(e) => setEmailDestinatario(e.target.value)}
-            placeholder="email@cliente.it"
-          />
+              <div>
+                <label className="text-sm font-medium mb-2 block">Allegato F24 *</label>
+                <Input type="file" accept=".pdf" onChange={(e) => setF24File(e.target.files?.[0] || null)} />
+                {f24File && (
+                  <p className="mt-1 text-xs text-gray-500">File selezionato: {f24File.name}</p>
+                )}
+              </div>
+
+              <div className="rounded-md border bg-gray-50 p-3 text-sm text-gray-600">
+                Template usato: <strong>{invioEmailModal.tipo === "acconto" ? "IMU_ACCONTO" : "IMU_SALDO"}</strong>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button type="button" variant="outline" onClick={chiudiInvioEmail} disabled={sendingEmail}>Annulla</Button>
+                <Button type="button" onClick={inviaComunicazioneScadenza} disabled={sendingEmail || !emailDestinatario} className="bg-blue-600 hover:bg-blue-700">
+                  {sendingEmail ? "Invio..." : "Invia email"}
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
-
-        <div>
-  <label className="text-sm font-medium mb-2 block">
-    Allegato F24 *
-  </label>
-
-  <Input
-    type="file"
-    accept=".pdf"
-    onChange={(e) => setF24File(e.target.files?.[0] || null)}
-  />
-
-  {f24File && (
-    <p className="mt-1 text-xs text-gray-500">
-      File selezionato: {f24File.name}
-    </p>
-  )}
-</div>
-
-        <div className="rounded-md border bg-gray-50 p-3 text-sm text-gray-600">
-          Template usato:{" "}
-          <strong>
-            {invioEmailModal.tipo === "acconto" ? "IMU_ACCONTO" : "IMU_SALDO"}
-          </strong>
-        </div>
-
-        <div className="flex justify-end gap-2 pt-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={chiudiInvioEmail}
-            disabled={sendingEmail}
-          >
-            Annulla
-          </Button>
-
-          <Button
-            type="button"
-            onClick={inviaComunicazioneScadenza}
-            disabled={sendingEmail || !emailDestinatario}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            {sendingEmail ? "Invio..." : "Invia email"}
-          </Button>
-        </div>
-      </div>
-    </div>
-  </div>
       )}
     </>
   );
