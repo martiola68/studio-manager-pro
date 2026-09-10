@@ -39,3 +39,5 @@ jobs:
           git add src/services/emailServiceServer.ts src/pages/api/controllo-gestione/alert.ts
           git commit -m "Remove direct Resend and use Microsoft 365 only"
           git push origin main
+
+# Intentional trigger: validate TypeScript before committing runtime changes.
