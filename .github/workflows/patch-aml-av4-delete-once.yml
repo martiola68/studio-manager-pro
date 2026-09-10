@@ -1,0 +1,33 @@
+name: Apply AML AV4 status and delete fix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/patch-aml-av4-delete-once.yml'
+      - 'scripts/patch-aml-av4-delete.py'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Apply patch
+        run: python scripts/patch-aml-av4-delete.py
+      - name: Commit runtime change
+        run: |
+          if git diff --quiet -- src/pages/antiriciclaggio/index.tsx; then
+            echo 'No runtime changes to commit'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/pages/antiriciclaggio/index.tsx
+          git commit -m 'Fix AML AV4 status and complete practice deletion'
+          git push origin main
