@@ -5,8 +5,9 @@ type Props = { studioId: string };
 
 export default function PayrollDailyPresenceEmailConfig({ studioId }: Props) {
   const supabase = getSupabaseClient() as any;
-  const [email1, setEmail1] = useState("m.artiola@revisionicommerciali.it");
-  const [email2, setEmail2] = useState("");
+  const [emailFiscale, setEmailFiscale] = useState("m.artiola@revisionicommerciali.it");
+  const [emailLavoro, setEmailLavoro] = useState("");
+  const [emailConsulenza, setEmailConsulenza] = useState("");
   const [attivo, setAttivo] = useState(false);
   const [oraInvio, setOraInvio] = useState("08:00");
   const [saving, setSaving] = useState(false);
@@ -15,20 +16,25 @@ export default function PayrollDailyPresenceEmailConfig({ studioId }: Props) {
 
   useEffect(() => {
     if (!studioId) return;
+
     void (async () => {
       const { data, error } = await supabase
         .from("tbpresenze_report_email_config")
         .select("destinatari,attivo,ora_invio")
         .eq("studio_id", studioId)
         .maybeSingle();
+
       if (error) {
         setMessage(`Errore caricamento configurazione: ${error.message}`);
         return;
       }
+
       if (!data) return;
+
       const destinatari = Array.isArray(data.destinatari) ? data.destinatari : [];
-      setEmail1(destinatari[0] || "m.artiola@revisionicommerciali.it");
-      setEmail2(destinatari[1] || "");
+      setEmailFiscale(destinatari[0] || "m.artiola@revisionicommerciali.it");
+      setEmailLavoro(destinatari[1] || "");
+      setEmailConsulenza(destinatari[2] || "");
       setAttivo(!!data.attivo);
       setOraInvio(String(data.ora_invio || "08:00").slice(0, 5));
     })();
@@ -37,14 +43,32 @@ export default function PayrollDailyPresenceEmailConfig({ studioId }: Props) {
   async function saveConfig() {
     setSaving(true);
     setMessage("");
+
     try {
-      const destinatari = [email1.trim(), email2.trim()].filter(Boolean);
-      if (!destinatari.length) throw new Error("Inserisci almeno un indirizzo email");
-      const { error } = await supabase.from("tbpresenze_report_email_config").upsert(
-        { studio_id: studioId, destinatari, ora_invio: oraInvio, attivo, updated_at: new Date().toISOString() },
-        { onConflict: "studio_id" }
-      );
+      // L'ordine è intenzionale e costituisce la mappatura:
+      // 0 = Fiscale, 1 = Lavoro, 2 = Consulenza.
+      // I campi vuoti vengono mantenuti come stringa vuota così non si spostano i settori.
+      const destinatari = [
+        emailFiscale.trim(),
+        emailLavoro.trim(),
+        emailConsulenza.trim(),
+      ];
+
+      const { error } = await supabase
+        .from("tbpresenze_report_email_config")
+        .upsert(
+          {
+            studio_id: studioId,
+            destinatari,
+            ora_invio: oraInvio,
+            attivo,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "studio_id" }
+        );
+
       if (error) throw error;
+
       setMessage("Configurazione salvata.");
       return true;
     } catch (error: any) {
@@ -58,6 +82,7 @@ export default function PayrollDailyPresenceEmailConfig({ studioId }: Props) {
   async function sendTest() {
     setTesting(true);
     setMessage("");
+
     try {
       const ok = await saveConfig();
       if (!ok) return;
@@ -84,24 +109,35 @@ export default function PayrollDailyPresenceEmailConfig({ studioId }: Props) {
 
       if (!response.ok || !body?.success || !result?.sent || failed.length > 0) {
         const details = failed
-          .map((r: any) => `${r?.to || "destinatario"}: ${r?.error || "invio non riuscito"}`)
+          .map(
+            (r: any) =>
+              `${r?.settore || "settore"} → ${r?.to || "destinatario"}: ${r?.error || "invio non riuscito"}`
+          )
           .join(" | ");
+
         throw new Error(
-          details || body?.error || result?.reason || "Il server non ha confermato l'invio dell'email"
+          details ||
+            body?.error ||
+            result?.reason ||
+            "Il server non ha confermato l'invio delle email"
         );
       }
 
-      const destinatariOk = recipientResults
+      const inviati = recipientResults
         .filter((r: any) => r?.success)
-        .map((r: any) => r.to)
-        .join(", ");
+        .map((r: any) => `${r.settore}: ${r.to}`)
+        .join(" | ");
 
-      const fisiche = result?.presenze_fisiche ?? 0;
-      const smart = result?.presenze_smart ?? 0;
+      const saltati = Array.isArray(result?.skipped_recipients)
+        ? result.skipped_recipients.join(", ")
+        : "";
 
-      setMessage(
-        `Email realmente accettata per l'invio a: ${destinatariOk}. Presenze fisiche: ${fisiche}. Smart working: ${smart}.`
-      );
+      const parti = [
+        inviati ? `Invii accettati: ${inviati}.` : "Nessun destinatario valorizzato: nessun invio eseguito.",
+        saltati ? ` Campi vuoti saltati: ${saltati}.` : "",
+      ];
+
+      setMessage(parti.join(""));
     } catch (error: any) {
       setMessage(`ERRORE INVIO: ${error?.message || "Errore invio email di test"}`);
     } finally {
@@ -114,22 +150,90 @@ export default function PayrollDailyPresenceEmailConfig({ studioId }: Props) {
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="font-semibold text-slate-900">Invio automatico presenze</div>
-          <div className="text-xs text-slate-500">Report giornaliero delle presenze fisiche e in smart working, suddivise per settore.</div>
+          <div className="text-xs text-slate-500">
+            Ogni destinatario riceve esclusivamente le presenze fisiche e Smart Working del proprio settore.
+          </div>
         </div>
+
         <label className="flex items-center gap-2 text-sm font-medium">
-          <input type="checkbox" checked={attivo} onChange={(e) => setAttivo(e.target.checked)} />
+          <input
+            type="checkbox"
+            checked={attivo}
+            onChange={(e) => setAttivo(e.target.checked)}
+          />
           Invio automatico attivo
         </label>
       </div>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_140px_auto_auto] md:items-end">
-        <label className="text-sm"><span className="mb-1 block text-slate-600">Email 1</span><input type="email" value={email1} onChange={(e) => setEmail1(e.target.value)} className="w-full rounded border px-3 py-2" /></label>
-        <label className="text-sm"><span className="mb-1 block text-slate-600">Email 2</span><input type="email" value={email2} onChange={(e) => setEmail2(e.target.value)} className="w-full rounded border px-3 py-2" /></label>
-        <label className="text-sm"><span className="mb-1 block text-slate-600">Ora prevista</span><input type="time" value={oraInvio} onChange={(e) => setOraInvio(e.target.value)} className="w-full rounded border px-3 py-2" /></label>
-        <button type="button" onClick={() => void saveConfig()} disabled={saving || testing} className="rounded border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50 disabled:opacity-50">{saving ? "Salvataggio..." : "Salva"}</button>
-        <button type="button" onClick={() => void sendTest()} disabled={saving || testing} className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">{testing ? "Invio..." : "Invia email di test"}</button>
+
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1fr_1fr_1fr_140px_auto_auto] xl:items-end">
+        <label className="text-sm">
+          <span className="mb-1 block text-slate-600">Destinatario fiscale</span>
+          <input
+            type="email"
+            value={emailFiscale}
+            onChange={(e) => setEmailFiscale(e.target.value)}
+            className="w-full rounded border px-3 py-2"
+          />
+        </label>
+
+        <label className="text-sm">
+          <span className="mb-1 block text-slate-600">Destinatario lavoro</span>
+          <input
+            type="email"
+            value={emailLavoro}
+            onChange={(e) => setEmailLavoro(e.target.value)}
+            className="w-full rounded border px-3 py-2"
+          />
+        </label>
+
+        <label className="text-sm">
+          <span className="mb-1 block text-slate-600">Destinatario consulenza</span>
+          <input
+            type="email"
+            value={emailConsulenza}
+            onChange={(e) => setEmailConsulenza(e.target.value)}
+            className="w-full rounded border px-3 py-2"
+          />
+        </label>
+
+        <label className="text-sm">
+          <span className="mb-1 block text-slate-600">Ora prevista</span>
+          <input
+            type="time"
+            value={oraInvio}
+            onChange={(e) => setOraInvio(e.target.value)}
+            className="w-full rounded border px-3 py-2"
+          />
+        </label>
+
+        <button
+          type="button"
+          onClick={() => void saveConfig()}
+          disabled={saving || testing}
+          className="rounded border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50 disabled:opacity-50"
+        >
+          {saving ? "Salvataggio..." : "Salva"}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => void sendTest()}
+          disabled={saving || testing}
+          className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+        >
+          {testing ? "Invio..." : "Invia email di test"}
+        </button>
       </div>
-      {message && <div className="mt-3 rounded bg-slate-50 px-3 py-2 text-sm text-slate-700">{message}</div>}
-      <div className="mt-3 text-xs text-slate-500">Mittente automatico: noreply@revisionicommerciali.it. Il test viene inviato a Email 1 e Email 2, se valorizzate. L'automatismo partirà solo quando il flag sarà attivo.</div>
+
+      {message && (
+        <div className="mt-3 rounded bg-slate-50 px-3 py-2 text-sm text-slate-700">
+          {message}
+        </div>
+      )}
+
+      <div className="mt-3 text-xs text-slate-500">
+        Mittente automatico: noreply@revisionicommerciali.it. I destinatari vuoti vengono semplicemente saltati, senza errore.
+      </div>
     </div>
   );
 }
