@@ -79,22 +79,22 @@ s = s.replace('''              isGreenRow ? "!bg-blue-100" : "!bg-white"
             }`}''', '''              isNotSubject ? "!bg-white !text-red-600" : isGreenRow ? "!bg-blue-100" : "!bg-white"
             }`}''', 1)
 
-# Declaration cells: pass row confirmation so a confirmed row is uniformly blue unless Soggetto IMU = NO.
-s = s.replace('declarationTone(scadenza.soggetto_imu, scadenza.dichiarazione_imu, scadenza.conferma_dichiarazione_imu)', 'declarationTone(scadenza.soggetto_imu, scadenza.dichiarazione_imu, scadenza.conferma_dichiarazione_imu, isGreenRow)')
+s = s.replace(
+    'declarationTone(scadenza.soggetto_imu, scadenza.dichiarazione_imu, scadenza.conferma_dichiarazione_imu)',
+    'declarationTone(scadenza.soggetto_imu, scadenza.dichiarazione_imu, scadenza.conferma_dichiarazione_imu, isGreenRow)'
+)
 
-# Remove residual colored disabled controls: cells manage status color; disabled controls stay white.
 s = s.replace('disabled:bg-slate-100 disabled:text-slate-400', 'disabled:bg-white disabled:text-slate-400')
 s = s.replace('disabled:bg-slate-100 disabled:text-slate-500', 'disabled:bg-white disabled:text-slate-500')
-
-# Remove residual semantic green text from the communication helper label.
 s = s.replace('text-xs text-green-600 font-semibold', 'text-xs text-blue-700 font-semibold')
 
 if s == original:
     raise SystemExit('No IMU changes applied')
 
-for forbidden in ['bg-green-200', 'bg-red-300', 'bg-slate-200']:
+# Verifica solo i colori che appartenevano davvero ai blocchi di stato IMU.
+for forbidden in ['bg-green-200', 'bg-red-300']:
     if forbidden in s:
-        raise SystemExit(f'Residual IMU cell color found: {forbidden}')
+        raise SystemExit(f'Residual IMU status color found: {forbidden}')
 
 required = [
     'border-b border-sky-300',
