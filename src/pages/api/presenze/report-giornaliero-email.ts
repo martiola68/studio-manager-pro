@@ -38,7 +38,7 @@ async function resolveAuth(req: NextApiRequest) {
   const querySecret = typeof req.query.secret === "string" ? req.query.secret : "";
 
   if (SECRET && (bearer === SECRET || querySecret === SECRET)) {
-    return { mode: "cron" as const, studioId: "" };
+    return { mode: "cron" as const, studioId: "", userId: "" };
   }
 
   if (!bearer) return null;
@@ -48,13 +48,13 @@ async function resolveAuth(req: NextApiRequest) {
 
   const { data: utente, error: utenteError } = await supabaseAdmin
     .from("tbutenti")
-    .select("studio_id, attivo")
+    .select("id, studio_id, attivo")
     .eq("email", authData.user.email)
     .eq("attivo", true)
     .maybeSingle();
 
-  if (utenteError || !utente?.studio_id) return null;
-  return { mode: "user" as const, studioId: utente.studio_id };
+  if (utenteError || !utente?.studio_id || !utente?.id) return null;
+  return { mode: "user" as const, studioId: utente.studio_id, userId: utente.id };
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -73,10 +73,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (auth.mode === "user") {
     requestedStudio = auth.studioId;
-    if (!force || !testTo) {
+    if (!force) {
       return res.status(400).json({
         success: false,
-        error: "Il test manuale richiede force=true e un destinatario",
+        error: "Il test manuale richiede force=true",
       });
     }
   }
@@ -219,30 +219,54 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const { data: studio, error: studioError } = await supabaseAdmin
         .from("tbstudio")
-        .select("microsoft_connection_id")
+        .select("microsoft_connection_id,email_alert_fiscale")
         .eq("id", config.studio_id)
         .single();
       if (studioError || !studio?.microsoft_connection_id) {
         throw new Error("Connessione Microsoft dello studio non trovata");
       }
 
-      const { data: tokenOwner, error: tokenError } = await supabaseAdmin
-        .from("tbmicrosoft365_user_tokens")
-        .select("user_id")
-        .eq("microsoft_connection_id", studio.microsoft_connection_id)
-        .is("revoked_at", null)
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (tokenError || !tokenOwner?.user_id) {
-        throw new Error("Proprietario token Microsoft non trovato");
+      const fromMailbox = String(studio.email_alert_fiscale || "").trim();
+      if (!fromMailbox) {
+        throw new Error("Mittente noreply Microsoft dello studio non configurato");
+      }
+
+      let senderUserId = "";
+
+      if (auth.mode === "user") {
+        const { data: ownToken, error: ownTokenError } = await supabaseAdmin
+          .from("tbmicrosoft365_user_tokens")
+          .select("user_id")
+          .eq("microsoft_connection_id", studio.microsoft_connection_id)
+          .eq("user_id", auth.userId)
+          .is("revoked_at", null)
+          .maybeSingle();
+
+        if (ownTokenError || !ownToken?.user_id) {
+          throw new Error("L'utente che esegue il test non ha un token Microsoft 365 valido");
+        }
+        senderUserId = ownToken.user_id;
+      } else {
+        const { data: tokenOwner, error: tokenError } = await supabaseAdmin
+          .from("tbmicrosoft365_user_tokens")
+          .select("user_id")
+          .eq("microsoft_connection_id", studio.microsoft_connection_id)
+          .is("revoked_at", null)
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (tokenError || !tokenOwner?.user_id) {
+          throw new Error("Proprietario token Microsoft non trovato");
+        }
+        senderUserId = tokenOwner.user_id;
       }
 
       const sent: any[] = [];
       for (const to of recipients) {
         const result = await sendEmailServer({
-          senderUserId: tokenOwner.user_id,
+          senderUserId,
           microsoftConnectionId: studio.microsoft_connection_id,
+          fromMailbox,
           to,
           subject: `Presenze fisiche - ${dataIt}`,
           html,
@@ -252,7 +276,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const ok = sent.every((x) => x.success);
 
-      if (ok && !testTo) {
+      if (ok && !force) {
         await supabaseAdmin
           .from("tbpresenze_report_email_config")
           .update({
@@ -265,6 +289,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       results.push({
         studio_id: config.studio_id,
         sent: ok,
+        sender: fromMailbox,
         presenze_fisiche: Array.from(perSettore.values()).reduce((n, l) => n + l.length, 0),
         recipients: sent,
       });
