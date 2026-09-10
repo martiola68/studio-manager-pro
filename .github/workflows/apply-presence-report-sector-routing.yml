@@ -1,0 +1,47 @@
+name: Apply presence report sector routing
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/patch-presence-report-sector-routing-once.py'
+      - '.github/workflows/apply-presence-report-sector-routing.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Apply patch
+        run: python scripts/patch-presence-report-sector-routing-once.py
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+      - name: Commit runtime change
+        run: |
+          if git diff --quiet -- src/pages/api/presenze/report-giornaliero-email.ts; then
+            echo 'No runtime changes to commit'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/pages/api/presenze/report-giornaliero-email.ts
+          git commit -m 'Route daily presence reports by sector with leave details'
+          git push origin main
