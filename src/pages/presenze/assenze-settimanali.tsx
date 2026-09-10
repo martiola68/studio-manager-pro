@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { getStudioId } from "@/services/getStudioId";
+import PayrollDailyPresenceEmailConfig from "@/components/PayrollDailyPresenceEmailConfig";
 
 type Utente = {
   id: string;
@@ -423,6 +424,8 @@ export default function AssenzeSettimanaliPage() {
           </button>
         </div>
       </div>
+
+      {studioId && <PayrollDailyPresenceEmailConfig studioId={studioId} />}
 
       <div className="mb-6 grid grid-cols-1 gap-3 md:grid-cols-4">
         <div className="rounded-lg border bg-white p-4">
