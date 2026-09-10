@@ -1,0 +1,41 @@
+name: Apply presence report style and Smart members
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/patch-presence-report-style-and-smart-members-once.py'
+      - '.github/workflows/apply-presence-report-style-smart-members.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Apply patch
+        run: python scripts/patch-presence-report-style-and-smart-members-once.py
+      - name: Install dependencies
+        run: npm ci
+      - name: TypeScript check
+        run: npx tsc --noEmit
+      - name: Commit runtime changes
+        run: |
+          if git diff --quiet; then
+            echo "No runtime changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/api/presenze/report-giornaliero-email.ts src/pages/presenze/assenze-settimanali.tsx
+          git commit -m "Restore presence report layout and include Smart group members"
+          git push origin main
