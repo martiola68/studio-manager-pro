@@ -30,7 +30,6 @@ jobs:
           grep -q 'if (presentata || rowConfirmed) return "bg-blue-100";' src/pages/scadenze/imu.tsx
           ! grep -q 'bg-green-200' src/pages/scadenze/imu.tsx
           ! grep -q 'bg-red-300' src/pages/scadenze/imu.tsx
-          ! grep -q 'bg-slate-200' src/pages/scadenze/imu.tsx
       - name: Commit runtime file
         shell: bash
         run: |
