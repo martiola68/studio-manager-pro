@@ -4,6 +4,14 @@
     {
       "path": "/api/cron/hourly",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/presenze/report-giornaliero-email",
+      "schedule": "0 6 * * 1-5"
+    },
+    {
+      "path": "/api/presenze/report-giornaliero-email",
+      "schedule": "0 7 * * 1-5"
     }
   ]
 }
