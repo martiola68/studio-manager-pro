@@ -23,6 +23,7 @@ jobs:
 
           s=s.replace('''  percentuale_partecipazione: \"\",\n  titolo_possesso:''','''  percentuale_partecipazione: \"\",\n  importo_quota_nominale: \"\",\n  titolo_possesso:''',1)
           s=s.replace('''carica: \"\", percentuale_partecipazione: \"\", titolo_possesso:''','''carica: \"\", percentuale_partecipazione: \"\", importo_quota_nominale: \"\", titolo_possesso:''')
+          s=s.replace('''    percentuale_partecipazione: \"\",\n    titolo_possesso:''','''    percentuale_partecipazione: \"\",\n    importo_quota_nominale: \"\",\n    titolo_possesso:''')
           s=s.replace('''  percentuale_partecipazione: \"\",\n  presenza:''','''  percentuale_partecipazione: \"\",\n  importo_quota_nominale: \"\",\n  presenza:''')
           s=s.replace('''    percentuale_partecipazione: \"\",\n    presenza:''','''    percentuale_partecipazione: \"\",\n    importo_quota_nominale: \"\",\n    presenza:''')
           s=s.replace('''    percentuale_partecipazione:\n      organo.percentuale_partecipazione\n        ? String(organo.percentuale_partecipazione)\n        : \"\",\n    presenza:''','''    percentuale_partecipazione:\n      organo.percentuale_partecipazione\n        ? String(organo.percentuale_partecipazione)\n        : \"\",\n    importo_quota_nominale:\n      organo.importo_quota_nominale != null\n        ? String(organo.importo_quota_nominale)\n        : \"\",\n    presenza:''')
