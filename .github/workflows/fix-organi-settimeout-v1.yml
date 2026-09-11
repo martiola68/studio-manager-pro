@@ -1,0 +1,45 @@
+name: Fix Soci e Organi TypeScript setTimeout v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/fix-organi-settimeout-v1.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch setTimeout typing
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('src/pages/clienti/organi-sociali.tsx')
+          s = p.read_text(encoding='utf-8')
+          old = '''      if (typeof window !== "undefined" && "requestIdleCallback" in window) {\n        (window as any).requestIdleCallback(avviaTitolareEffettivo, { timeout: 1200 });\n      } else {\n        window.setTimeout(avviaTitolareEffettivo, 350);\n      }'''
+          new = '''      if (typeof window !== "undefined" && "requestIdleCallback" in window) {\n        (window as any).requestIdleCallback(avviaTitolareEffettivo, { timeout: 1200 });\n      } else if (typeof window !== "undefined") {\n        globalThis.setTimeout(avviaTitolareEffettivo, 350);\n      }'''
+          if old not in s:
+              raise SystemExit('setTimeout block not found')
+          s = s.replace(old, new, 1)
+          p.write_text(s, encoding='utf-8')
+
+      - name: Type check
+        run: |
+          npm ci
+          npx tsc --noEmit
+
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/clienti/organi-sociali.tsx
+          git commit -m "Fix TypeScript setTimeout in Soci e Organi"
+          git pull --rebase origin main
+          git push origin HEAD:main
