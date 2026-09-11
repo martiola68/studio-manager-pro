@@ -44,81 +44,101 @@ if (!cliente_id) {
   );
 }
 
-    const { data, error } = await supabase
+    const { data: organiData, error: organiError } = await supabase
       .from("tbclienti_organi")
-     .select(`
-  id,
-  cliente_id,
-  soggetto_cliente_id,
-  tipo_soggetto,
- rappresentante_legale,
-tipo_ruolo,
-ruolo,
-percentuale_partecipazione,
-titolo_possesso,
-percentuale_diritti_voto,
-percentuale_diritti_utili,
-note_titolo_possesso,
-presenza,
-carica,
-principale,
-attivo,
+      .select(`
+        id,
+        cliente_id,
+        soggetto_cliente_id,
+        tipo_soggetto,
+        rappresentante_legale,
+        tipo_ruolo,
+        ruolo,
+        percentuale_partecipazione,
+        titolo_possesso,
+        percentuale_diritti_voto,
+        percentuale_diritti_utili,
+        note_titolo_possesso,
+        presenza,
+        carica,
+        principale,
+        attivo,
         data_nomina,
         data_cessazione,
         durata_carica,
-        data_scadenza,
-    
-soggetto_cliente:tbclienti!tbclienti_organi_soggetto_cliente_id_fkey (
-  id,
-  ragione_sociale,
-  cognome,
-  nome,
-  codice_fiscale,
-  partita_iva,
-  tipo_cliente,
-  indirizzo,
-  citta,
-  provincia,
-  cap,
-  email,
-  pec
-)
+        data_scadenza
       `)
       .eq("cliente_id", cliente_id)
       .order("ruolo", { ascending: true });
 
-    if (error) {
+    if (organiError) {
       return NextResponse.json(
-        { error: error.message },
+        { error: organiError.message },
         { status: 500 }
       );
     }
 
-    const organiNormalizzati = (data || []).map((o: any) => {
-  const soggettoCliente = o.soggetto_cliente;
-  
-  return {
-    ...o,
+    const soggettoIds = Array.from(
+      new Set(
+        (organiData || [])
+          .map((o: any) => o.soggetto_cliente_id)
+          .filter(Boolean)
+      )
+    );
 
-    nominativo_id:
-  o.soggetto_cliente_id || null,
-    
-nominativo_nome:
-  soggettoCliente?.ragione_sociale ||
-  [soggettoCliente?.cognome, soggettoCliente?.nome]
-    .filter(Boolean)
-    .join(" ") ||
-  "",
+    let soggettiById = new Map<string, any>();
 
-nominativo_codice_fiscale:
-  soggettoCliente?.codice_fiscale || "",
+    if (soggettoIds.length > 0) {
+      const { data: soggettiData, error: soggettiError } = await supabase
+        .from("tbclienti")
+        .select(`
+          id,
+          ragione_sociale,
+          cognome,
+          nome,
+          codice_fiscale,
+          partita_iva,
+          tipo_cliente,
+          indirizzo,
+          citta,
+          provincia,
+          cap,
+          email,
+          pec
+        `)
+        .in("id", soggettoIds);
 
-  nominativo_tipo:
-  o.soggetto_cliente_id
-    ? "cliente"
-    : null,
-  };
-});
+      if (soggettiError) {
+        return NextResponse.json(
+          { error: soggettiError.message },
+          { status: 500 }
+        );
+      }
+
+      soggettiById = new Map(
+        (soggettiData || []).map((s: any) => [String(s.id), s])
+      );
+    }
+
+    const organiNormalizzati = (organiData || []).map((o: any) => {
+      const soggettoCliente = o.soggetto_cliente_id
+        ? soggettiById.get(String(o.soggetto_cliente_id))
+        : null;
+
+      return {
+        ...o,
+        nominativo_id: o.soggetto_cliente_id || null,
+        nominativo_nome:
+          soggettoCliente?.ragione_sociale ||
+          [soggettoCliente?.cognome, soggettoCliente?.nome]
+            .filter(Boolean)
+            .join(" ") ||
+          "",
+        nominativo_codice_fiscale:
+          soggettoCliente?.codice_fiscale || "",
+        nominativo_tipo: o.soggetto_cliente_id ? "cliente" : null,
+      };
+    });
 
 return NextResponse.json({
   organi: organiNormalizzati,
