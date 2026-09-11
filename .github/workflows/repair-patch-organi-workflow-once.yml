@@ -1,0 +1,36 @@
+name: Repair Soci e Organi patch workflow once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/repair-patch-organi-workflow-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Repair matcher
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('.github/workflows/patch-organi-quota-nominativi-once.yml')
+          s = p.read_text(encoding='utf-8')
+          old = '''          # carica in modifica: aggancia il valore esistente.\n          marker = ''' + "'''" + '''    percentuale_partecipazione:\\n      organo.percentuale_partecipazione != null\\n        ? String(organo.percentuale_partecipazione)\\n        : \"\",''' + "'''" + '''\n          if marker in text:\n            text = text.replace(marker, marker + ''' + "'''" + '''\\n\\n    importo_quota_nominale:\\n      organo.importo_quota_nominale != null\\n        ? String(organo.importo_quota_nominale)\\n        : \"\",''' + "'''" + ''', 1)\n          else:\n            # variante compatta\n            compact = 'percentuale_partecipazione: organo.percentuale_partecipazione != null ? String(organo.percentuale_partecipazione) : \"\",'\n            if compact in text:\n              text = text.replace(compact, compact + ' importo_quota_nominale: organo.importo_quota_nominale != null ? String(organo.importo_quota_nominale) : \"\",', 1)\n            else:\n              raise SystemExit(\"load-edit participation marker not found\")\n'''
+          new = '''          # carica in modifica: aggancia il valore esistente.\n          marker = ''' + "'''" + '''    percentuale_partecipazione:\\n      organo.percentuale_partecipazione\\n        ? String(organo.percentuale_partecipazione)\\n        : \"\",''' + "'''" + '''\n          if marker not in text:\n            raise SystemExit(\"load-edit participation marker not found\")\n          text = text.replace(marker, marker + ''' + "'''" + '''\\n    importo_quota_nominale:\\n      organo.importo_quota_nominale != null\\n        ? String(organo.importo_quota_nominale)\\n        : \"\",''' + "'''" + ''', 1)\n'''
+          if old not in s:
+            raise SystemExit('target matcher block not found')
+          p.write_text(s.replace(old, new, 1), encoding='utf-8')
+      - name: Commit repaired workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/patch-organi-quota-nominativi-once.yml
+          git commit -m "Repair Soci e Organi patch matcher"
+          git push origin main
