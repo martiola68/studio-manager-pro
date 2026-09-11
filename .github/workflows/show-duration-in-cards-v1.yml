@@ -1,0 +1,62 @@
+name: Show duration in organi cards v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/show-duration-in-cards-v1.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Show duration when no expiry date exists
+        shell: python
+        run: |
+          from pathlib import Path
+
+          p = Path('src/pages/clienti/organi-sociali.tsx')
+          s = p.read_text(encoding='utf-8')
+
+          old = '<td style={tdStyle}>{formattaDataItaliana(o.data_scadenza)}</td>'
+          new = '<td style={tdStyle}>{o.data_scadenza ? formattaDataItaliana(o.data_scadenza) : (o.durata_carica === "Fino a revoca" ? "A revoca" : o.durata_carica || "—")}</td>'
+
+          count = s.count(old)
+          if count < 3:
+              raise SystemExit(f'expected at least 3 expiry cells, found {count}')
+
+          # Keep the socio card date-only; update administration and control cards.
+          first = s.find(old)
+          second = s.find(old, first + len(old))
+          third = s.find(old, second + len(old))
+          if second == -1 or third == -1:
+              raise SystemExit('administration/control expiry cells not found')
+
+          s = s[:second] + new + s[second + len(old):]
+          third = s.find(old, second + len(new))
+          if third == -1:
+              raise SystemExit('control expiry cell not found after admin replacement')
+          s = s[:third] + new + s[third + len(old):]
+
+          p.write_text(s, encoding='utf-8')
+
+      - name: Type check
+        run: |
+          npm ci
+          npx tsc --noEmit
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/clienti/organi-sociali.tsx
+          git commit -m "Show A revoca and duration in organi cards"
+          git pull --rebase origin main
+          git push origin HEAD:main
