@@ -765,23 +765,16 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                           </div>
                         </td>
 
-                        <td className="px-2 py-1 align-middle min-w-[180px]">
-                          <Input
-  type="text"
-  value={operatoreFiscaleLabel}
-  readOnly
-  className="h-8 w-full border-slate-300 bg-white text-xs text-slate-700"
-/>
-                        </td>
-
-                        <td className="px-2 py-1 align-middle min-w-[180px]">
-                         <Input
-  type="text"
-  value={operatorePayrollLabel}
-  readOnly
-  className="h-8 w-full border-slate-300 bg-white text-xs text-slate-700"
-/>
-                        </td>
+          <td className="px-2 py-1 align-middle min-w-[180px]">
+  <div className="flex h-8 w-full items-center rounded-md border border-slate-300 bg-white px-3 text-xs text-slate-900">
+    {operatoreFiscaleLabel || "-"}
+  </div>
+</td>
+<td className="px-2 py-1 align-middle min-w-[180px]">
+  <div className="flex h-8 w-full items-center rounded-md border border-slate-300 bg-white px-3 text-xs text-slate-900">
+    {operatorePayrollLabel || "-"}
+  </div>
+</td>
 
                         <td className="px-2 py-1 align-middle min-w-[150px]">
                           <Select
