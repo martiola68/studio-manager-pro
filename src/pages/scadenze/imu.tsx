@@ -964,8 +964,8 @@ export default function ImuPage() {
                       return (
                         <tr
                           key={scadenza.id}
-                          className={`border-b border-sky-400 ${
-                            isGreenRow
+                          className={`border-b border-slate-600 ${
+                              isGreenRow
                               ? "[&_td]:!bg-blue-100"
                               : isNotSubject
                                 ? "bg-white text-red-600 [&_td]:!bg-white [&_select]:!bg-white [&_select]:!text-red-600 [&_input]:!bg-white [&_input]:!text-red-600 [&_textarea]:!bg-white [&_textarea]:!text-red-600"
