@@ -1,0 +1,59 @@
+name: Fix Soci e Organi relation lookup v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/fix-organi-relation-v1.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Replace embedded FK relation with explicit ID lookup
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('src/app/api/clienti-organi/route.ts')
+          s = p.read_text(encoding='utf-8')
+          old = '''    const { data, error } = await supabase\n      .from(\"tbclienti_organi\")\n     .select(`\n  id,\n  cliente_id,\n  soggetto_cliente_id,\n  tipo_soggetto,\n rappresentante_legale,\ntipo_ruolo,\nruolo,\npercentuale_partecipazione,\ntitolo_possesso,\npercentuale_diritti_voto,\npercentuale_diritti_utili,\nnote_titolo_possesso,\npresenza,\ncarica,\nprincipale,\nattivo,\n        data_nomina,\n        data_cessazione,\n        durata_carica,\n        data_scadenza,\n    \nsoggetto_cliente:tbclienti!tbclienti_organi_soggetto_cliente_id_fkey (\n  id,\n  ragione_sociale,\n  cognome,\n  nome,\n  codice_fiscale,\n  partita_iva,\n  tipo_cliente,\n  indirizzo,\n  citta,\n  provincia,\n  cap,\n  email,\n  pec\n)\n      `)\n      .eq(\"cliente_id\", cliente_id)\n      .order(\"ruolo\", { ascending: true });\n\n    if (error) {\n      return NextResponse.json(\n        { error: error.message },\n        { status: 500 }\n      );\n    }\n\n    const organiNormalizzati = (data || []).map((o: any) => {\n  const soggettoCliente = o.soggetto_cliente;\n  \n  return {\n    ...o,\n\n    nominativo_id:\n  o.soggetto_cliente_id || null,\n    \nnominativo_nome:\n  soggettoCliente?.ragione_sociale ||\n  [soggettoCliente?.cognome, soggettoCliente?.nome]\n    .filter(Boolean)\n    .join(\" \") ||\n  \"\",\n\nnominativo_codice_fiscale:\n  soggettoCliente?.codice_fiscale || \"\",\n\n  nominativo_tipo:\n  o.soggetto_cliente_id\n    ? \"cliente\"\n    : null,\n  };\n});'''
+          new = '''    const { data: organiData, error: organiError } = await supabase\n      .from(\"tbclienti_organi\")\n      .select(`\n        id,\n        cliente_id,\n        soggetto_cliente_id,\n        tipo_soggetto,\n        rappresentante_legale,\n        tipo_ruolo,\n        ruolo,\n        percentuale_partecipazione,\n        titolo_possesso,\n        percentuale_diritti_voto,\n        percentuale_diritti_utili,\n        note_titolo_possesso,\n        presenza,\n        carica,\n        principale,\n        attivo,\n        data_nomina,\n        data_cessazione,\n        durata_carica,\n        data_scadenza\n      `)\n      .eq(\"cliente_id\", cliente_id)\n      .order(\"ruolo\", { ascending: true });\n\n    if (organiError) {\n      return NextResponse.json(\n        { error: organiError.message },\n        { status: 500 }\n      );\n    }\n\n    const soggettoIds = Array.from(\n      new Set(\n        (organiData || [])\n          .map((o: any) => o.soggetto_cliente_id)\n          .filter(Boolean)\n      )\n    );\n\n    let soggettiById = new Map<string, any>();\n\n    if (soggettoIds.length > 0) {\n      const { data: soggettiData, error: soggettiError } = await supabase\n        .from(\"tbclienti\")\n        .select(`\n          id,\n          ragione_sociale,\n          cognome,\n          nome,\n          codice_fiscale,\n          partita_iva,\n          tipo_cliente,\n          indirizzo,\n          citta,\n          provincia,\n          cap,\n          email,\n          pec\n        `)\n        .in(\"id\", soggettoIds);\n\n      if (soggettiError) {\n        return NextResponse.json(\n          { error: soggettiError.message },\n          { status: 500 }\n        );\n      }\n\n      soggettiById = new Map(\n        (soggettiData || []).map((s: any) => [String(s.id), s])\n      );\n    }\n\n    const organiNormalizzati = (organiData || []).map((o: any) => {\n      const soggettoCliente = o.soggetto_cliente_id\n        ? soggettiById.get(String(o.soggetto_cliente_id))\n        : null;\n\n      return {\n        ...o,\n        nominativo_id: o.soggetto_cliente_id || null,\n        nominativo_nome:\n          soggettoCliente?.ragione_sociale ||\n          [soggettoCliente?.cognome, soggettoCliente?.nome]\n            .filter(Boolean)\n            .join(\" \") ||\n          \"\",\n        nominativo_codice_fiscale:\n          soggettoCliente?.codice_fiscale || \"\",\n        nominativo_tipo: o.soggetto_cliente_id ? \"cliente\" : null,\n      };\n    });'''
+          if old not in s:
+              raise SystemExit('embedded relation block not found')
+          s = s.replace(old, new, 1)
+          p.write_text(s, encoding='utf-8')
+
+      - name: Add safe DB index migration
+        shell: bash
+        run: |
+          cat > supabase/migrations/20260911191000_optimize_tbclienti_organi_lookup.sql <<'SQL'
+          create index if not exists idx_tbclienti_organi_cliente_id
+            on public.tbclienti_organi (cliente_id);
+
+          create index if not exists idx_tbclienti_organi_soggetto_cliente_id
+            on public.tbclienti_organi (soggetto_cliente_id);
+
+          create index if not exists idx_tbclienti_organi_cliente_ruolo
+            on public.tbclienti_organi (cliente_id, ruolo);
+          SQL
+
+      - name: Type check
+        run: |
+          npm ci
+          npx tsc --noEmit
+
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/app/api/clienti-organi/route.ts supabase/migrations/20260911191000_optimize_tbclienti_organi_lookup.sql
+          git commit -m "Fix organi lookup without embedded Supabase relation"
+          git pull --rebase origin main
+          git push origin HEAD:main
