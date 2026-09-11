@@ -127,6 +127,7 @@ if (!cliente_id) {
 
       return {
         ...o,
+        soggetto_cliente: soggettoCliente || null,
         nominativo_id: o.soggetto_cliente_id || null,
         nominativo_nome:
           soggettoCliente?.ragione_sociale ||
