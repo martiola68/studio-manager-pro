@@ -1,0 +1,111 @@
+name: Add valore nominale e scadenza amministratore v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/add-organi-nominale-scadenza-v1.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch page and API
+        shell: python
+        run: |
+          from pathlib import Path
+
+          page = Path('src/pages/clienti/organi-sociali.tsx')
+          s = page.read_text(encoding='utf-8')
+
+          # Form state: nominal value + exact administrator expiry values.
+          s = s.replace('  percentuale_partecipazione: "",\n  titolo_possesso:', '  percentuale_partecipazione: "",\n  importo_quota_nominale: "",\n  titolo_possesso:', 1)
+          s = s.replace('  durata_carica: "Fino a revoca",', '  durata_carica: "A revoca",')
+
+          # Save payload.
+          needle = '''percentuale_diritti_utili:\n  form.ruolo === "socio"\n    ? form.percentuale_diritti_utili || null\n    : null,\n'''
+          repl = needle + '''\nimporto_quota_nominale:\n  form.ruolo === "socio"\n    ? form.importo_quota_nominale || null\n    : null,\n'''
+          if needle not in s:
+              raise SystemExit('save payload marker not found')
+          s = s.replace(needle, repl, 1)
+
+          # Reset state.
+          reset_marker = '  percentuale_partecipazione: "",\n  presenza: "Presente",'
+          if reset_marker not in s:
+              raise SystemExit('reset marker not found')
+          s = s.replace(reset_marker, '  percentuale_partecipazione: "",\n  importo_quota_nominale: "",\n  presenza: "Presente",', 1)
+
+          # Edit state.
+          edit_marker = '''    percentuale_partecipazione:\n      organo.percentuale_partecipazione\n        ? String(organo.percentuale_partecipazione)\n        : "",\n'''
+          if edit_marker not in s:
+              raise SystemExit('edit marker not found')
+          s = s.replace(edit_marker, edit_marker + '''    importo_quota_nominale:\n      organo.importo_quota_nominale != null\n        ? String(organo.importo_quota_nominale)\n        : "",\n''', 1)
+          s = s.replace('    durata_carica: organo.durata_carica || "Fino a revoca",', '    durata_carica: organo.durata_carica === "A tempo indeterminato" ? "A tempo indeterminato" : "A revoca",', 1)
+
+          # Socio modal: nominal amount immediately before profit participation.
+          utili = '''<div style={{marginTop:12}}><label style={labelStyle}>Partecipazione agli utili %</label><input type="number" min="0" max="100" step="0.01" style={inputStyle} value={form.percentuale_diritti_utili} onChange={(e)=>setForm((p)=>({...p,percentuale_diritti_utili:e.target.value}))}/></div>'''
+          utili_new = '''<div style={{marginTop:12,display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}><div><label style={labelStyle}>Valore nominale</label><input type="number" min="0" step="0.01" style={inputStyle} value={form.importo_quota_nominale} onChange={(e)=>setForm((p)=>({...p,importo_quota_nominale:e.target.value}))}/></div><div><label style={labelStyle}>Partecipazione agli utili %</label><input type="number" min="0" max="100" step="0.01" style={inputStyle} value={form.percentuale_diritti_utili} onChange={(e)=>setForm((p)=>({...p,percentuale_diritti_utili:e.target.value}))}/></div></div>'''
+          if utili not in s:
+              raise SystemExit('socio utili block not found')
+          s = s.replace(utili, utili_new, 1)
+
+          # Administrator modal: add expiry selector before Firmatario/Principale block.
+          # Locate the non-socio branch and insert after its 3-field qualification/date grid.
+          branch = s.find(' : <div style={{marginTop:18,display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>', s.find('modalSezione==="soci"'))
+          if branch < 0:
+              raise SystemExit('administrator branch not found')
+          close_grid = s.find('</div><div style={{marginTop:14', branch)
+          if close_grid < 0:
+              raise SystemExit('administrator grid end not found')
+          duration = '''</div><div style={{marginTop:14,display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,alignItems:"end"}}><div><label style={labelStyle}>Scadenza amministratore</label><select style={inputStyle} value={form.durata_carica} onChange={(e)=>setForm((p)=>({...p,durata_carica:e.target.value}))}><option value="A revoca">A revoca</option><option value="A tempo indeterminato">A tempo indeterminato</option></select></div>'''
+          # Preserve the existing second block by replacing only its opening.
+          old_open = '</div><div style={{marginTop:14'
+          s = s[:close_grid] + duration + '<div style={{marginTop:14' + s[close_grid + len(old_open):]
+
+          page.write_text(s, encoding='utf-8')
+
+          api = Path('src/app/api/clienti-organi/route.ts')
+          a = api.read_text(encoding='utf-8')
+          a = a.replace('        percentuale_partecipazione,\n        titolo_possesso,', '        percentuale_partecipazione,\n        importo_quota_nominale,\n        titolo_possesso,', 1)
+
+          post_marker = '''percentuale_partecipazione:\n  payload.ruolo === "socio"\n    ? payload.percentuale_partecipazione || null\n    : null,\n'''
+          if a.count(post_marker) < 1:
+              raise SystemExit('POST quota marker not found')
+          a = a.replace(post_marker, post_marker + '''\nimporto_quota_nominale:\n  payload.ruolo === "socio" &&\n  payload.importo_quota_nominale !== "" &&\n  payload.importo_quota_nominale !== undefined\n    ? payload.importo_quota_nominale\n    : null,\n''', 1)
+
+          put_marker = '''    percentuale_partecipazione:\n      payload.ruolo === "socio"\n        ? payload.percentuale_partecipazione || null\n        : null,\n'''
+          if put_marker not in a:
+              raise SystemExit('PUT quota marker not found')
+          a = a.replace(put_marker, put_marker + '''\n    importo_quota_nominale:\n      payload.ruolo === "socio" &&\n      payload.importo_quota_nominale !== "" &&\n      payload.importo_quota_nominale !== undefined\n        ? payload.importo_quota_nominale\n        : null,\n''', 1)
+          api.write_text(a, encoding='utf-8')
+
+      - name: Add migration
+        run: |
+          cat > supabase/migrations/20260911213000_add_importo_quota_nominale.sql <<'SQL'
+          alter table public.tbclienti_organi
+            add column if not exists importo_quota_nominale numeric(15,2);
+
+          comment on column public.tbclienti_organi.importo_quota_nominale
+            is 'Valore nominale della quota posseduta dal socio';
+          SQL
+
+      - name: Type check
+        run: |
+          npm ci
+          npx tsc --noEmit
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/clienti/organi-sociali.tsx src/app/api/clienti-organi/route.ts supabase/migrations/20260911213000_add_importo_quota_nominale.sql
+          git commit -m "Add valore nominale and administrator expiry"
+          git pull --rebase origin main
+          git push origin HEAD:main
