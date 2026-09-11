@@ -1224,11 +1224,11 @@ const vars: Record<string, string> = {
                   filteredScadenze.map((scadenza) => (
                     <tr
                       key={scadenza.id}
-                      className={`border-b transition-colors data-[state=selected]:bg-muted ${
-                        scadenza.conferma_riga
-                          ? "bg-blue-100 hover:bg-blue-100"
-                          : "bg-white hover:bg-white"
-                      }`}
+                     className={`border-b border-slate-600 transition-colors data-[state=selected]:bg-muted ${
+  scadenza.conferma_riga
+    ? "bg-blue-100 hover:bg-blue-100"
+    : "bg-white hover:bg-white"
+}`}
                     >
                       <td
                         style={{
