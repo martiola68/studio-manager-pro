@@ -1,0 +1,45 @@
+name: Fix Soci e Organi API UI contract v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/fix-organi-ui-contract-v1.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Restore nested soggetto_cliente in API response
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('src/app/api/clienti-organi/route.ts')
+          s = p.read_text(encoding='utf-8')
+          old = '''      return {\n        ...o,\n        nominativo_id: o.soggetto_cliente_id || null,'''
+          new = '''      return {\n        ...o,\n        soggetto_cliente: soggettoCliente || null,\n        nominativo_id: o.soggetto_cliente_id || null,'''
+          if old not in s:
+              raise SystemExit('normalization return block not found')
+          s = s.replace(old, new, 1)
+          p.write_text(s, encoding='utf-8')
+
+      - name: Type check
+        run: |
+          npm ci
+          npx tsc --noEmit
+
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/app/api/clienti-organi/route.ts
+          git commit -m "Restore soggetto_cliente payload for Soci e Organi"
+          git pull --rebase origin main
+          git push origin HEAD:main
