@@ -1,0 +1,154 @@
+name: Add organi fields v4
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/add-organi-fields-v4.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch page and API
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          page = Path('src/pages/clienti/organi-sociali.tsx')
+          s = page.read_text(encoding='utf-8')
+
+          # Add new form fields to every form/reset shape that contains the related base fields.
+          s = re.sub(
+              r'percentuale_partecipazione: "",(?!\s*importo_quota_nominale:)',
+              'percentuale_partecipazione: "", importo_quota_nominale: "",',
+              s,
+          )
+          s = s.replace('durata_carica: "Fino a revoca"', 'durata_carica: "A revoca"')
+          s = re.sub(
+              r'durata_carica: "A revoca",(?!\s*durata_carica_anni:)',
+              'durata_carica: "A revoca", durata_carica_anni: "",',
+              s,
+          )
+
+          # Save payload: nominal amount.
+          if 'importo_quota_nominale:\n  form.ruolo === "socio"' not in s:
+              marker = '''percentuale_diritti_utili:\n  form.ruolo === "socio"\n    ? form.percentuale_diritti_utili || null\n    : null,\n'''
+              if marker not in s:
+                  raise SystemExit('save utili marker not found')
+              s = s.replace(marker, marker + '''\nimporto_quota_nominale:\n  form.ruolo === "socio"\n    ? form.importo_quota_nominale || null\n    : null,\n''', 1)
+
+          # Save payload: administrator duration years.
+          if 'durata_carica_anni:\n  form.ruolo !== "socio"' not in s:
+              marker = '''durata_carica:\n  form.ruolo === "socio"\n    ? null\n    : form.durata_carica || null,\n'''
+              if marker not in s:
+                  raise SystemExit('save duration marker not found')
+              s = s.replace(marker, marker + '''\ndurata_carica_anni:\n  form.ruolo !== "socio" && form.durata_carica === "Anni n."\n    ? Number(form.durata_carica_anni) || null\n    : null,\n''', 1)
+
+          # Edit state.
+          if 'organo.importo_quota_nominale' not in s:
+              marker = '''    percentuale_partecipazione:\n      organo.percentuale_partecipazione\n        ? String(organo.percentuale_partecipazione)\n        : "",\n'''
+              if marker not in s:
+                  raise SystemExit('edit quota marker not found')
+              s = s.replace(marker, marker + '''    importo_quota_nominale:\n      organo.importo_quota_nominale != null\n        ? String(organo.importo_quota_nominale)\n        : "",\n''', 1)
+
+          old_edit_duration = '    durata_carica: organo.durata_carica || "Fino a revoca",'
+          if old_edit_duration in s:
+              s = s.replace(old_edit_duration, '    durata_carica: ["A revoca", "A tempo indeterminato", "Anni n."].includes(organo.durata_carica) ? organo.durata_carica : "A revoca",', 1)
+          elif 'durata_carica: ["A revoca", "A tempo indeterminato", "Anni n."]' not in s:
+              raise SystemExit('edit duration marker not found')
+
+          if 'organo.durata_carica_anni' not in s:
+              marker = '    data_scadenza: organo.data_scadenza || "",'
+              if marker not in s:
+                  raise SystemExit('edit data scadenza marker not found')
+              s = s.replace(marker, '    durata_carica_anni: organo.durata_carica_anni != null ? String(organo.durata_carica_anni) : "",\n' + marker, 1)
+
+          # Socio UI: add Valore nominale before utili.
+          if 'value={form.importo_quota_nominale}' not in s:
+              old = '''<div style={{marginTop:12}}><label style={labelStyle}>Partecipazione agli utili %</label><input type="number" min="0" max="100" step="0.01" style={inputStyle} value={form.percentuale_diritti_utili} onChange={(e)=>setForm((p)=>({...p,percentuale_diritti_utili:e.target.value}))}/></div>'''
+              new = '''<div style={{marginTop:12,display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}><div><label style={labelStyle}>Valore nominale</label><input type="number" min="0" step="0.01" style={inputStyle} value={form.importo_quota_nominale} onChange={(e)=>setForm((p)=>({...p,importo_quota_nominale:e.target.value}))}/></div><div><label style={labelStyle}>Partecipazione agli utili %</label><input type="number" min="0" max="100" step="0.01" style={inputStyle} value={form.percentuale_diritti_utili} onChange={(e)=>setForm((p)=>({...p,percentuale_diritti_utili:e.target.value}))}/></div></div>'''
+              if old not in s:
+                  raise SystemExit('socio UI marker not found')
+              s = s.replace(old, new, 1)
+
+          # Administrator UI: duration selector + conditional years field before Firmatario.
+          if 'Scadenza amministratore' not in s:
+              firmatario = '''  {modalSezione==="amministrazione" && <div style={{marginTop:16,display:"flex",alignItems:"center",justifyContent:"flex-start"}}><label style={{display:"inline-flex",alignItems:"center",gap:9,fontSize:14,fontWeight:600,color:"#334155",cursor:form.soggetto_cliente_id?"pointer":"not-allowed",userSelect:"none"}}><input type="checkbox" checked={Boolean(form.principale)} disabled={!form.soggetto_cliente_id} onChange={(e)=>setForm((p)=>({...p,principale:e.target.checked}))} style={{width:17,height:17,accentColor:"#0d6f9f",cursor:form.soggetto_cliente_id?"pointer":"not-allowed"}}/><span>Firmatario</span></label></div>}'''
+              duration_ui = '''  {modalSezione==="amministrazione" && <div style={{marginTop:16,display:"grid",gridTemplateColumns:form.durata_carica==="Anni n."?"1fr 1fr":"1fr",gap:12,alignItems:"end"}}><div><label style={labelStyle}>Scadenza amministratore</label><select style={inputStyle} value={form.durata_carica} onChange={(e)=>setForm((p)=>({...p,durata_carica:e.target.value,durata_carica_anni:e.target.value==="Anni n."?p.durata_carica_anni:""}))}><option value="A revoca">A revoca</option><option value="A tempo indeterminato">A tempo indeterminato</option><option value="Anni n.">Anni n.</option></select></div>{form.durata_carica==="Anni n." && <div><label style={labelStyle}>Numero anni</label><input type="number" min="1" step="1" style={inputStyle} value={form.durata_carica_anni} onChange={(e)=>setForm((p)=>({...p,durata_carica_anni:e.target.value}))}/></div>}</div>}\n'''
+              if firmatario not in s:
+                  raise SystemExit('firmatario marker not found')
+              s = s.replace(firmatario, duration_ui + firmatario, 1)
+
+          # Make all form field borders more visible.
+          s = s.replace('  border: "1px solid #d1d5db",', '  border: "1.5px solid #94a3b8",', 1)
+
+          page.write_text(s, encoding='utf-8')
+
+          api = Path('src/app/api/clienti-organi/route.ts')
+          a = api.read_text(encoding='utf-8')
+
+          if '        importo_quota_nominale,' not in a:
+              a = a.replace('        percentuale_partecipazione,\n        titolo_possesso,', '        percentuale_partecipazione,\n        importo_quota_nominale,\n        titolo_possesso,', 1)
+          if '        durata_carica_anni,' not in a:
+              a = a.replace('        durata_carica,\n        data_scadenza', '        durata_carica,\n        durata_carica_anni,\n        data_scadenza', 1)
+
+          if 'payload.importo_quota_nominale' not in a:
+              marker = '''percentuale_partecipazione:\n  payload.ruolo === "socio"\n    ? payload.percentuale_partecipazione || null\n    : null,\n'''
+              if marker not in a:
+                  raise SystemExit('API POST nominal marker not found')
+              a = a.replace(marker, marker + '''\nimporto_quota_nominale:\n  payload.ruolo === "socio" &&\n  payload.importo_quota_nominale !== "" &&\n  payload.importo_quota_nominale !== undefined\n    ? payload.importo_quota_nominale\n    : null,\n''', 1)
+
+              marker_put = '''    percentuale_partecipazione:\n      payload.ruolo === "socio"\n        ? payload.percentuale_partecipazione || null\n        : null,\n'''
+              if marker_put not in a:
+                  raise SystemExit('API PUT nominal marker not found')
+              a = a.replace(marker_put, marker_put + '''\n    importo_quota_nominale:\n      payload.ruolo === "socio" &&\n      payload.importo_quota_nominale !== "" &&\n      payload.importo_quota_nominale !== undefined\n        ? payload.importo_quota_nominale\n        : null,\n''', 1)
+
+          if 'durata_carica_anni: payload.durata_carica === "Anni n."' not in a:
+              post = '        durata_carica: payload.durata_carica || null,\n        data_scadenza:'
+              if post not in a:
+                  raise SystemExit('API POST years marker not found')
+              a = a.replace(post, '        durata_carica: payload.durata_carica || null,\n        durata_carica_anni: payload.durata_carica === "Anni n." ? payload.durata_carica_anni || null : null,\n        data_scadenza:', 1)
+              put = '    durata_carica: payload.durata_carica || null,\n    data_scadenza:'
+              if put not in a:
+                  raise SystemExit('API PUT years marker not found')
+              a = a.replace(put, '    durata_carica: payload.durata_carica || null,\n    durata_carica_anni: payload.durata_carica === "Anni n." ? payload.durata_carica_anni || null : null,\n    data_scadenza:', 1)
+
+          api.write_text(a, encoding='utf-8')
+
+      - name: Record migration
+        run: |
+          cat > supabase/migrations/20260911223000_add_organi_nominale_duration_years.sql <<'SQL'
+          alter table public.tbclienti_organi
+            add column if not exists importo_quota_nominale numeric(15,2),
+            add column if not exists durata_carica_anni integer;
+
+          alter table public.tbclienti_organi
+            drop constraint if exists tbclienti_organi_durata_carica_anni_check;
+
+          alter table public.tbclienti_organi
+            add constraint tbclienti_organi_durata_carica_anni_check
+            check (durata_carica_anni is null or durata_carica_anni > 0);
+          SQL
+
+      - name: Type check
+        run: |
+          npm ci
+          npx tsc --noEmit
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/clienti/organi-sociali.tsx src/app/api/clienti-organi/route.ts supabase/migrations/20260911223000_add_organi_nominale_duration_years.sql
+          git commit -m "Add organi nominal value duration years and stronger borders"
+          git pull --rebase origin main
+          git push origin HEAD:main
