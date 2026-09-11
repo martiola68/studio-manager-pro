@@ -55,6 +55,7 @@ if (!cliente_id) {
         tipo_ruolo,
         ruolo,
         percentuale_partecipazione,
+        importo_quota_nominale,
         titolo_possesso,
         percentuale_diritti_voto,
         percentuale_diritti_utili,
@@ -66,6 +67,7 @@ if (!cliente_id) {
         data_nomina,
         data_cessazione,
         durata_carica,
+        durata_carica_anni,
         data_scadenza
       `)
       .eq("cliente_id", cliente_id)
@@ -233,6 +235,13 @@ percentuale_partecipazione:
     ? payload.percentuale_partecipazione || null
     : null,
 
+importo_quota_nominale:
+  payload.ruolo === "socio" &&
+  payload.importo_quota_nominale !== "" &&
+  payload.importo_quota_nominale !== undefined
+    ? payload.importo_quota_nominale
+    : null,
+
 titolo_possesso:
   payload.ruolo === "socio"
     ? payload.titolo_possesso || "piena_proprieta"
@@ -262,6 +271,7 @@ principale: payload.principale,
         attivo: payload.attivo ?? true,
         data_nomina: payload.data_nomina || null,
         durata_carica: payload.durata_carica || null,
+        durata_carica_anni: payload.durata_carica === "Anni n." ? payload.durata_carica_anni || null : null,
         data_scadenza: payload.data_scadenza || null,
         data_cessazione: payload.data_cessazione || null,
       })
@@ -324,6 +334,13 @@ export async function PUT(req: NextRequest) {
         ? payload.percentuale_partecipazione || null
         : null,
 
+    importo_quota_nominale:
+      payload.ruolo === "socio" &&
+      payload.importo_quota_nominale !== "" &&
+      payload.importo_quota_nominale !== undefined
+        ? payload.importo_quota_nominale
+        : null,
+
     titolo_possesso:
       payload.ruolo === "socio"
         ? payload.titolo_possesso || "piena_proprieta"
@@ -353,6 +370,7 @@ export async function PUT(req: NextRequest) {
     attivo: payload.attivo,
     data_nomina: payload.data_nomina || null,
     durata_carica: payload.durata_carica || null,
+    durata_carica_anni: payload.durata_carica === "Anni n." ? payload.durata_carica_anni || null : null,
     data_scadenza: payload.data_scadenza || null,
     data_cessazione: payload.data_cessazione || null,
   })
