@@ -1,0 +1,82 @@
+name: Hotfix Soci e Organi page blocking v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/hotfix-organi-page-block-v1.yml
+
+permissions:
+  contents: write
+
+jobs:
+  hotfix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Remove blocking eager loads
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('src/pages/clienti/organi-sociali.tsx')
+          s = p.read_text(encoding='utf-8')
+          original = s
+
+          old = '''useEffect(() => {\n  caricaClienti();\n  caricaNominativi();\n}, []);'''
+          new = '''useEffect(() => {\n  void caricaClienti();\n}, []);'''
+          if old not in s:
+              raise SystemExit('initial eager load marker not found')
+          s = s.replace(old, new, 1)
+
+          old = '''  .order(\"ragione_sociale\");\n\n    setClienti(data || []);'''
+          new = '''  .eq(\"cliente\", true)\n  .order(\"ragione_sociale\");\n\n    setClienti(data || []);'''
+          if old not in s:
+              raise SystemExit('client query marker not found')
+          s = s.replace(old, new, 1)
+
+          old = '''function apriInserimentoSezione(sezione: \"soci\" | \"amministrazione\" | \"controllo\") {\n  setOrganoInModificaId(\"\");'''
+          new = '''async function apriInserimentoSezione(sezione: \"soci\" | \"amministrazione\" | \"controllo\") {\n  if (nominativi.length === 0) {\n    await caricaNominativi();\n  }\n  setOrganoInModificaId(\"\");'''
+          if old not in s:
+              raise SystemExit('insert modal marker not found')
+          s = s.replace(old, new, 1)
+
+          old = '''async function apriModificaSezione(organo: any, sezione: \"soci\" | \"amministrazione\" | \"controllo\") {\n  await caricaInModifica(organo);'''
+          new = '''async function apriModificaSezione(organo: any, sezione: \"soci\" | \"amministrazione\" | \"controllo\") {\n  if (nominativi.length === 0) {\n    await caricaNominativi();\n  }\n  await caricaInModifica(organo);'''
+          if old not in s:
+              raise SystemExit('edit modal marker not found')
+          s = s.replace(old, new, 1)
+
+          start_marker = '''      /*\n       * I diritti collegati vengono caricati\n       * successivamente, senza bloccare il TE.\n       */\n      const organiConDiritti ='''
+          end_marker = '''\n\n      setOrgani(organiConDiritti);'''
+          start = s.find(start_marker)
+          if start < 0:
+              raise SystemExit('rights preload start marker not found')
+          end = s.find(end_marker, start)
+          if end < 0:
+              raise SystemExit('rights preload end marker not found')
+          end += len(end_marker)
+          replacement = '''      /*\n       * I diritti collegati NON vengono precaricati qui.\n       * Vengono richiesti solo quando si apre la modifica di un socio,\n       * così l'ingresso nella pagina resta immediato.\n       */'''
+          s = s[:start] + replacement + s[end:]
+
+          if s == original:
+              raise SystemExit('no source changes')
+
+          p.write_text(s, encoding='utf-8')
+
+      - name: Sanity check exact hotfix
+        run: |
+          grep -q 'void caricaClienti();' src/pages/clienti/organi-sociali.tsx
+          ! grep -q 'caricaNominativi();' <(sed -n '330,390p' src/pages/clienti/organi-sociali.tsx)
+          grep -q 'I diritti collegati NON vengono precaricati qui' src/pages/clienti/organi-sociali.tsx
+
+      - name: Commit hotfix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/clienti/organi-sociali.tsx
+          git commit -m "Fix Soci e Organi page blocking eager loads"
+          git pull --rebase origin main
+          git push origin HEAD:main
