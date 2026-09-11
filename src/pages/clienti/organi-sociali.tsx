@@ -362,8 +362,7 @@ useEffect(() => {
 }, [router.isReady, router.query.cliente_id]);
   
   useEffect(() => {
-  caricaClienti();
-  caricaNominativi();
+  void caricaClienti();
 }, []);
 
 useEffect(() => {
@@ -414,6 +413,7 @@ const { data } = await supabase
   codice_fiscale,
   studio_id
 `)
+  .eq("cliente", true)
   .order("ragione_sociale");
 
     setClienti(data || []);
@@ -809,53 +809,10 @@ async function caricaOrgani() {
       );
 
       /*
-       * I diritti collegati vengono caricati
-       * successivamente, senza bloccare il TE.
+       * I diritti collegati NON vengono precaricati qui.
+       * Vengono richiesti solo quando si apre la modifica di un socio,
+       * così l'ingresso nella pagina resta immediato.
        */
-      const organiConDiritti =
-        await Promise.all(
-          organiBase.map(
-            async (organo: any) => {
-              if (
-                organo.ruolo !== "socio"
-              ) {
-                return {
-                  ...organo,
-                  diritti_collegati: [],
-                };
-              }
-
-              try {
-                const rispostaDiritti =
-                  await fetch(
-                    `/api/clienti-organi-diritti?organo_id=${organo.id}`,
-                    {
-                      cache: "no-store",
-                    }
-                  );
-
-                const datiDiritti =
-                  await rispostaDiritti.json();
-
-                return {
-                  ...organo,
-                  diritti_collegati:
-                    rispostaDiritti.ok
-                      ? datiDiritti.diritti ||
-                        []
-                      : [],
-                };
-              } catch {
-                return {
-                  ...organo,
-                  diritti_collegati: [],
-                };
-              }
-            }
-          )
-        );
-
-      setOrgani(organiConDiritti);
     } else {
       console.error(
         "Errore caricaOrgani:",
@@ -1548,7 +1505,10 @@ const sociVisualizzati = organi.filter((o) => o.ruolo === "socio");
 const amministrazioneVisualizzata = organi.filter((o) => ruoliAmministrazione.includes(String(o.ruolo || "")));
 const controlloVisualizzato = organi.filter((o) => ruoliControllo.includes(String(o.ruolo || "")));
 
-function apriInserimentoSezione(sezione: "soci" | "amministrazione" | "controllo") {
+async function apriInserimentoSezione(sezione: "soci" | "amministrazione" | "controllo") {
+  if (nominativi.length === 0) {
+    await caricaNominativi();
+  }
   setOrganoInModificaId("");
   setDirittiCollegati([]);
   setErroreDiritti("");
@@ -1565,6 +1525,9 @@ function apriInserimentoSezione(sezione: "soci" | "amministrazione" | "controllo
 }
 
 async function apriModificaSezione(organo: any, sezione: "soci" | "amministrazione" | "controllo") {
+  if (nominativi.length === 0) {
+    await caricaNominativi();
+  }
   await caricaInModifica(organo);
   setRicercaNominativo("");
   setModalSezione(sezione);
