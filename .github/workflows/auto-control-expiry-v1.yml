@@ -1,0 +1,74 @@
+name: Auto calculate control expiry v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/auto-control-expiry-v1.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch organi sociali page
+        shell: python
+        run: |
+          from pathlib import Path
+
+          p = Path('src/pages/clienti/organi-sociali.tsx')
+          s = p.read_text(encoding='utf-8')
+
+          helper_marker = '''function formattaDataItaliana(\n  data: string | null | undefined\n): string {'''
+          helper = '''function calcolaScadenzaDaAnni(dataNomina: string, anniRaw: string | number): string {\n  if (!dataNomina) return "";\n  const anni = Number(anniRaw);\n  if (!Number.isFinite(anni) || anni <= 0) return "";\n  const parti = dataNomina.split("-").map(Number);\n  if (parti.length !== 3 || parti.some((n) => !Number.isFinite(n))) return "";\n  const [anno, mese, giorno] = parti;\n  const targetYear = anno + Math.trunc(anni);\n  const ultimoGiornoMese = new Date(targetYear, mese, 0).getDate();\n  const giornoValido = Math.min(giorno, ultimoGiornoMese);\n  return `${targetYear}-${String(mese).padStart(2, "0")}-${String(giornoValido).padStart(2, "0")}`;\n}\n\n'''
+          if 'function calcolaScadenzaDaAnni' not in s:
+              if helper_marker not in s:
+                  raise SystemExit('format helper marker not found')
+              s = s.replace(helper_marker, helper + helper_marker, 1)
+
+          old_label = '<label style={labelStyle}>Data revoca / dimissioni</label>'
+          if old_label in s:
+              s = s.replace(old_label, '<label style={labelStyle}>Scadenza</label>', 1)
+          elif '<label style={labelStyle}>Scadenza</label>' not in s:
+              raise SystemExit('expiry label marker not found')
+
+          old_nomina = '''<input type="date" style={inputStyle} value={form.data_nomina} onChange={(e)=>setForm((p)=>({...p,data_nomina:e.target.value}))}/>'''
+          new_nomina = '''<input type="date" style={inputStyle} value={form.data_nomina} onChange={(e)=>{const dataNomina=e.target.value;setForm((p)=>({...p,data_nomina:dataNomina,data_scadenza:p.durata_carica==="Anni n."?calcolaScadenzaDaAnni(dataNomina,p.durata_carica_anni):p.data_scadenza}))}}/>'''
+          if old_nomina in s:
+              s = s.replace(old_nomina, new_nomina, 1)
+          elif 'calcolaScadenzaDaAnni(dataNomina,p.durata_carica_anni)' not in s:
+              raise SystemExit('nomina input marker not found')
+
+          old_years = '''<input type="number" min="1" step="1" style={inputStyle} value={form.durata_carica_anni} onChange={(e)=>setForm((p)=>({...p,durata_carica_anni:e.target.value}))}/>'''
+          new_years = '''<input type="number" min="1" step="1" style={inputStyle} value={form.durata_carica_anni} onChange={(e)=>{const anni=e.target.value;setForm((p)=>({...p,durata_carica_anni:anni,data_scadenza:p.data_nomina?calcolaScadenzaDaAnni(p.data_nomina,anni):p.data_scadenza}))}}/>'''
+          if old_years in s:
+              s = s.replace(old_years, new_years, 1)
+          elif 'calcolaScadenzaDaAnni(p.data_nomina,anni)' not in s:
+              raise SystemExit('years input marker not found')
+
+          old_select = '''onChange={(e)=>setForm((p)=>({...p,durata_carica:e.target.value,durata_carica_anni:e.target.value==="Anni n."?p.durata_carica_anni:""}))}'''
+          new_select = '''onChange={(e)=>{const durata=e.target.value;setForm((p)=>({...p,durata_carica:durata,durata_carica_anni:durata==="Anni n."?p.durata_carica_anni:"",data_scadenza:durata==="Anni n."&&p.data_nomina&&p.durata_carica_anni?calcolaScadenzaDaAnni(p.data_nomina,p.durata_carica_anni):p.data_scadenza}))}}'''
+          if old_select in s:
+              s = s.replace(old_select, new_select, 1)
+
+          p.write_text(s, encoding='utf-8')
+
+      - name: Type check
+        run: |
+          npm ci
+          npx tsc --noEmit
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "418982d+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/clienti/organi-sociali.tsx
+          git commit -m "Auto calculate control expiry from duration years"
+          git pull --rebase origin main
+          git push origin HEAD:main
