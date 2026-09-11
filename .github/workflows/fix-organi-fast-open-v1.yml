@@ -1,0 +1,47 @@
+name: Fix fast opening Soci e Organi v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/fix-organi-fast-open-v1.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch Organi navigation
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('src/pages/clienti/index.tsx')
+          s = p.read_text(encoding='utf-8')
+          old = '''            onClick={() =>\n              router.push(\n                `/clienti/organi-sociali?cliente_id=${cliente.id}`\n              )\n            }'''
+          new = '''            onClick={() => {\n              window.location.assign(\n                `/clienti/organi-sociali?cliente_id=${encodeURIComponent(String(cliente.id))}`\n              );\n            }}'''
+          if old not in s:
+              raise SystemExit('Organi navigation block not found')
+          count = s.count(old)
+          s = s.replace(old, new)
+          print(f'Replaced {count} Organi navigation block(s)')
+          p.write_text(s, encoding='utf-8')
+
+      - name: Type check
+        run: |
+          npm ci
+          npx tsc --noEmit
+
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/clienti/index.tsx
+          git commit -m "Open Soci e Organi immediately from large client list"
+          git pull --rebase origin main
+          git push origin HEAD:main
