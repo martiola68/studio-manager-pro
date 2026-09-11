@@ -1,0 +1,218 @@
+name: Apply complete Soci e Organi update v6
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply-organi-complete-v6.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch Soci e Organi page
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          p = Path('src/pages/clienti/organi-sociali.tsx')
+          s = p.read_text(encoding='utf-8')
+          original = s
+
+          def require_replace(old, new, label, count=1):
+              global s
+              if old not in s:
+                  raise SystemExit(f'{label}: marker not found')
+              s = s.replace(old, new, count)
+
+          # 1. CF: stesso comportamento della pagina Rappresentanti.
+          require_replace(
+          '''async function leggiDatiDaCF(\n  cf: string,\n  setNuovoNominativo: any\n) {\n  // ...\n}''',
+          '''async function leggiDatiDaCF(\n  cf: string,\n  setNuovoNominativo: any\n) {\n  const codice = normalizeCF(cf);\n  if (codice.length !== 16 || !isValidCF(codice)) return;\n\n  try {\n    const [dataNascita, comune] = await Promise.all([\n      Promise.resolve(extractDataNascitaFromCF(codice)),\n      getComuneFromCF(codice),\n    ]);\n\n    setNuovoNominativo((prev: any) => ({\n      ...prev,\n      data_nascita: dataNascita || prev.data_nascita || \"\",\n      luogo_nascita: comune?.comune || prev.luogo_nascita || \"\",\n      provincia: comune?.siglaProvincia || prev.provincia || \"\",\n    }));\n  } catch (error) {\n    console.error(\"Errore lettura dati anagrafici dal codice fiscale:\", error);\n  }\n}''', 'CF helper')
+
+          # 2. Stato form: quota nominale.
+          require_replace(
+          '''  percentuale_partecipazione: \"\",\n  titolo_possesso: \"piena_proprieta\",''',
+          '''  percentuale_partecipazione: \"\",\n  importo_quota_nominale: \"\",\n  titolo_possesso: \"piena_proprieta\",''', 'initial nominale')
+
+          # Aggiunge il campo a tutti i reset setForm con quota vuota, evitando duplicati.
+          s = re.sub(
+              r'(?m)^(\s*)percentuale_partecipazione: \"\",\n(?!\1importo_quota_nominale:)',
+              r'\1percentuale_partecipazione: \"\",\n\1importo_quota_nominale: \"\",\n',
+              s,
+          )
+          s = s.replace(
+              'carica: \"\", percentuale_partecipazione: \"\", titolo_possesso:',
+              'carica: \"\", percentuale_partecipazione: \"\", importo_quota_nominale: \"\", titolo_possesso:',
+          )
+
+          # Modifica record esistente.
+          require_replace(
+          '''    percentuale_partecipazione:\n      organo.percentuale_partecipazione\n        ? String(organo.percentuale_partecipazione)\n        : \"\",\n    presenza:''',
+          '''    percentuale_partecipazione:\n      organo.percentuale_partecipazione\n        ? String(organo.percentuale_partecipazione)\n        : \"\",\n    importo_quota_nominale:\n      organo.importo_quota_nominale != null\n        ? String(organo.importo_quota_nominale)\n        : \"\",\n    presenza:''', 'edit nominale')
+
+          # Payload salvataggio.
+          require_replace(
+          '''  percentuale_partecipazione:\n    form.ruolo === \"socio\"\n      ? form.percentuale_partecipazione || null\n      : null,\n  titolo_possesso:''',
+          '''  percentuale_partecipazione:\n    form.ruolo === \"socio\"\n      ? form.percentuale_partecipazione || null\n      : null,\n  importo_quota_nominale:\n    form.ruolo === \"socio\"\n      ? form.importo_quota_nominale || null\n      : null,\n  titolo_possesso:''', 'payload nominale')
+
+          # 3. Caricamento pagina: niente lista nominativi all'apertura.
+          require_replace(
+          '''useEffect(() => {\n  caricaClienti();\n  caricaNominativi();\n}, []);''',
+          '''useEffect(() => {\n  void caricaClienti();\n}, []);''', 'initial loading')
+
+          require_replace(
+          '''  .order(\"ragione_sociale\");\n\n    setClienti(data || []);''',
+          '''  .eq(\"cliente\", true)\n  .order(\"ragione_sociale\");\n\n    setClienti(data || []);''', 'clienti filter')
+
+          require_replace(
+          '''function apriInserimentoSezione(sezione: \"soci\" | \"amministrazione\" | \"controllo\") {\n  setOrganoInModificaId(\"\");''',
+          '''async function apriInserimentoSezione(sezione: \"soci\" | \"amministrazione\" | \"controllo\") {\n  if (nominativi.length === 0) {\n    await caricaNominativi();\n  }\n  setOrganoInModificaId(\"\");''', 'lazy nominativi insert')
+
+          require_replace(
+          '''async function apriModificaSezione(organo: any, sezione: \"soci\" | \"amministrazione\" | \"controllo\") {\n  await caricaInModifica(organo);''',
+          '''async function apriModificaSezione(organo: any, sezione: \"soci\" | \"amministrazione\" | \"controllo\") {\n  if (nominativi.length === 0) {\n    await caricaNominativi();\n  }\n  await caricaInModifica(organo);''', 'lazy nominativi edit')
+
+          # 4. Tabella soci: quota nominale.
+          require_replace(
+              '<th style={thStyle}>Voto</th><th style={thStyle}>Utili</th>',
+              '<th style={thStyle}>Voto</th><th style={thStyle}>Quota nominale</th><th style={thStyle}>Utili</th>',
+              'soci table header')
+          require_replace(
+              '<td style={tdStyle}>{o.percentuale_diritti_voto != null ? `${Number(o.percentuale_diritti_voto).toFixed(2)}%` : \"—\"}</td><td style={tdStyle}>{o.percentuale_diritti_utili != null ?',
+              '<td style={tdStyle}>{o.percentuale_diritti_voto != null ? `${Number(o.percentuale_diritti_voto).toFixed(2)}%` : \"—\"}</td><td style={tdStyle}>{o.importo_quota_nominale != null ? Number(o.importo_quota_nominale).toLocaleString(\"it-IT\", { style: \"currency\", currency: \"EUR\" }) : \"—\"}</td><td style={tdStyle}>{o.percentuale_diritti_utili != null ?',
+              'soci table body')
+          require_replace('colSpan={9}>Nessun socio presente.', 'colSpan={10}>Nessun socio presente.', 'soci colspan')
+
+          # 5. Form socio: nominale prima degli utili; utili più stretto.
+          old_utili = '''<div style={{marginTop:12}}><label style={labelStyle}>Partecipazione agli utili %</label><input type=\"number\" min=\"0\" max=\"100\" step=\"0.01\" style={inputStyle} value={form.percentuale_diritti_utili} onChange={(e)=>setForm((p)=>({...p,percentuale_diritti_utili:e.target.value}))}/></div>'''
+          new_utili = '''<div style={{marginTop:12,display:\"grid\",gridTemplateColumns:\"1fr .55fr\",gap:12}}><div><label style={labelStyle}>Importo quota capitale posseduta (nominale)</label><input type=\"number\" min=\"0\" step=\"0.01\" style={inputStyle} value={form.importo_quota_nominale} onChange={(e)=>setForm((p)=>({...p,importo_quota_nominale:e.target.value}))}/></div><div><label style={labelStyle}>Partecipazione agli utili %</label><input type=\"number\" min=\"0\" max=\"100\" step=\"0.01\" style={inputStyle} value={form.percentuale_diritti_utili} onChange={(e)=>setForm((p)=>({...p,percentuale_diritti_utili:e.target.value}))}/></div></div>'''
+          require_replace(old_utili, new_utili, 'socio nominale ui')
+
+          # 6. Durata amministratore: valori esatti richiesti, prima di Firmatario.
+          old_firmatario = '''{modalSezione===\"amministrazione\" && <div style={{marginTop:16,display:\"flex\",alignItems:\"center\",justifyContent:\"flex-start\"}}><label style={{display:\"inline-flex\",alignItems:\"center\",gap:9,fontSize:14,fontWeight:600,color:\"#334155\",cursor:form.soggetto_cliente_id?\"pointer\":\"not-allowed\",userSelect:\"none\"}}><input type=\"checkbox\" checked={Boolean(form.principale)} disabled={!form.soggetto_cliente_id} onChange={(e)=>setForm((p)=>({...p,principale:e.target.checked}))} style={{width:17,height:17,accentColor:\"#0d6f9f\",cursor:form.soggetto_cliente_id?\"pointer\":\"not-allowed\"}}/><span>Firmatario</span></label></div>}'''
+          new_firmatario = '''{modalSezione===\"amministrazione\" && <div style={{marginTop:16,display:\"grid\",gridTemplateColumns:\"minmax(240px,1fr) auto\",gap:22,alignItems:\"end\"}}><div><label style={labelStyle}>Durata amministratore</label><select style={inputStyle} value={form.durata_carica || \"Fino a revoca\"} onChange={(e)=>setForm((p)=>({...p,durata_carica:e.target.value}))}><option value=\"Fino a revoca\">Fino a revoca</option><option value=\"A tempo indeterminato\">A tempo indeterminato</option></select></div><div style={{minHeight:42,display:\"flex\",alignItems:\"center\",paddingRight:10}}><label style={{display:\"inline-flex\",alignItems:\"center\",gap:9,fontSize:14,fontWeight:600,color:\"#334155\",cursor:form.soggetto_cliente_id?\"pointer\":\"not-allowed\",userSelect:\"none\",whiteSpace:\"nowrap\"}}><input type=\"checkbox\" checked={Boolean(form.principale)} disabled={!form.soggetto_cliente_id} onChange={(e)=>setForm((p)=>({...p,principale:e.target.checked}))} style={{width:17,height:17,accentColor:\"#0d6f9f\",cursor:form.soggetto_cliente_id?\"pointer\":\"not-allowed\"}}/><span>Firmatario</span></label></div></div>}'''
+          require_replace(old_firmatario, new_firmatario, 'durata amministratore')
+
+          # Normalizza eventuali valori legacy al caricamento.
+          require_replace(
+              'durata_carica: organo.durata_carica || \"Fino a revoca\",',
+              'durata_carica: organo.durata_carica === \"Indeterminato\" || organo.durata_carica === \"A tempo indeterminato\" ? \"A tempo indeterminato\" : \"Fino a revoca\",',
+              'durata edit normalize')
+
+          # 7. Nuovo nominativo: label sopra tutti i campi.
+          modal_start = s.index('{showNuovoNominativo && (')
+          grid_marker = '''            <div\n              style={{\n                display: \"grid\",\n                gridTemplateColumns: \"1fr 1fr\",\n                gap: 10,\n                marginTop: 15,\n              }}\n            >'''
+          grid_start = s.index(grid_marker, modal_start)
+          actions_marker = '''\n\n<div\n  style={{\n    display: \"flex\",\n    justifyContent: \"flex-end\",'''
+          grid_end = s.index(actions_marker, grid_start)
+          new_grid = '''            <div\n              style={{\n                display: \"grid\",\n                gridTemplateColumns: \"1fr 1fr\",\n                gap: 12,\n                marginTop: 15,\n              }}\n            >\n              <div><label style={labelStyle}>Cognome e nome</label><input style={inputStyle} value={nuovoNominativo.nome_cognome} onChange={(e)=>setNuovoNominativo((p)=>({...p,nome_cognome:e.target.value}))}/></div>\n              <div><label style={labelStyle}>Tipologia</label><select style={inputStyle} value={nuovoNominativo.tipologia_cliente} onChange={(e)=>{const tipologia=e.target.value;setNuovoNominativo((p)=>({...p,tipologia_cliente:tipologia,luogo_nascita:tipologia===\"Persona fisica\"?p.luogo_nascita:\"\",data_nascita:tipologia===\"Persona fisica\"?p.data_nascita:\"\"}))}}><option value=\"Persona fisica\">Persona fisica</option><option value=\"Altro\">Società / ente</option></select></div>\n              <div><label style={labelStyle}>{nuovoNominativo.tipologia_cliente===\"Persona fisica\"?\"Codice fiscale\":\"Codice fiscale società / ente\"}</label><input style={{...inputStyle,borderColor:nuovoNominativo.codice_fiscale&&!isCodiceFiscaleNominativoValido()?\"#dc2626\":\"#64748b\"}} maxLength={nuovoNominativo.tipologia_cliente===\"Persona fisica\"?16:11} value={nuovoNominativo.codice_fiscale} onChange={async(e)=>{const cf=normalizeCF(e.target.value);setNuovoNominativo((p)=>({...p,codice_fiscale:cf}));if(nuovoNominativo.tipologia_cliente===\"Persona fisica\"&&cf.length===16&&isValidCF(cf)){await leggiDatiDaCF(cf,setNuovoNominativo)}}}/>{nuovoNominativo.codice_fiscale&&!isCodiceFiscaleNominativoValido()&&<div style={{marginTop:4,color:\"#dc2626\",fontSize:12}}>{nuovoNominativo.tipologia_cliente===\"Persona fisica\"?\"Codice fiscale della persona fisica non valido\":\"Il codice fiscale della società o ente deve essere composto da 11 cifre\"}</div>}</div>\n              <div><label style={labelStyle}>Email</label><input style={inputStyle} value={nuovoNominativo.email} onChange={(e)=>setNuovoNominativo((p)=>({...p,email:e.target.value}))}/></div>\n              <div><label style={labelStyle}>Luogo di nascita</label><input style={{...inputStyle,background:nuovoNominativo.tipologia_cliente===\"Persona fisica\"?\"#fff\":\"#f1f5f9\"}} disabled={nuovoNominativo.tipologia_cliente!==\"Persona fisica\"} value={nuovoNominativo.luogo_nascita} onChange={(e)=>setNuovoNominativo((p)=>({...p,luogo_nascita:e.target.value}))}/></div>\n              <div><label style={labelStyle}>Data di nascita</label><input type=\"date\" style={{...inputStyle,background:nuovoNominativo.tipologia_cliente===\"Persona fisica\"?\"#fff\":\"#f1f5f9\"}} disabled={nuovoNominativo.tipologia_cliente!==\"Persona fisica\"} value={nuovoNominativo.data_nascita} onChange={(e)=>setNuovoNominativo((p)=>({...p,data_nascita:e.target.value}))}/></div>\n              <div><label style={labelStyle}>Indirizzo</label><input style={inputStyle} value={nuovoNominativo.indirizzo} onChange={(e)=>setNuovoNominativo((p)=>({...p,indirizzo:e.target.value}))}/></div>\n              <div><label style={labelStyle}>Città</label><input style={inputStyle} value={nuovoNominativo.citta} onChange={(e)=>setNuovoNominativo((p)=>({...p,citta:e.target.value}))}/></div>\n              <div><label style={labelStyle}>Provincia</label><input style={inputStyle} maxLength={2} value={nuovoNominativo.provincia} onChange={(e)=>setNuovoNominativo((p)=>({...p,provincia:e.target.value.toUpperCase().slice(0,2)}))}/></div>\n              <div><label style={labelStyle}>CAP</label><input style={inputStyle} maxLength={5} value={nuovoNominativo.cap} onChange={(e)=>setNuovoNominativo((p)=>({...p,cap:e.target.value.replace(/\\D/g,\"\").slice(0,5)}))}/></div>\n            </div>'''
+          s = s[:grid_start] + new_grid + s[grid_end:]
+
+          # 8. Bordi molto più visibili.
+          require_replace(
+              '  border: \"1px solid #d1d5db\",\n  borderRadius: 8,',
+              '  border: \"1.5px solid #64748b\",\n  boxShadow: \"inset 0 0 0 1px rgba(100,116,139,0.08)\",\n  borderRadius: 8,',
+              'input border')
+
+          if s == original:
+              raise SystemExit('no page changes')
+          p.write_text(s, encoding='utf-8')
+
+      - name: Patch clienti-organi API
+        shell: python
+        run: |
+          from pathlib import Path
+
+          p = Path('src/app/api/clienti-organi/route.ts')
+          s = p.read_text(encoding='utf-8')
+          original = s
+
+          if 'percentuale_partecipazione,\ntitolo_possesso,' not in s:
+              raise SystemExit('GET API marker missing')
+          s = s.replace(
+              'percentuale_partecipazione,\ntitolo_possesso,',
+              'percentuale_partecipazione,\nimporto_quota_nominale,\ntitolo_possesso,',
+              1,
+          )
+
+          post_old = '''percentuale_partecipazione:\n  payload.ruolo === \"socio\"\n    ? payload.percentuale_partecipazione || null\n    : null,\n\ntitolo_possesso:'''
+          post_new = '''percentuale_partecipazione:\n  payload.ruolo === \"socio\"\n    ? payload.percentuale_partecipazione || null\n    : null,\n\nimporto_quota_nominale:\n  payload.ruolo === \"socio\" &&\n  payload.importo_quota_nominale !== \"\" &&\n  payload.importo_quota_nominale !== undefined\n    ? payload.importo_quota_nominale\n    : null,\n\ntitolo_possesso:'''
+          if post_old not in s:
+              raise SystemExit('POST API marker missing')
+          s = s.replace(post_old, post_new, 1)
+
+          put_old = '''    percentuale_partecipazione:\n      payload.ruolo === \"socio\"\n        ? payload.percentuale_partecipazione || null\n        : null,\n\n    titolo_possesso:'''
+          put_new = '''    percentuale_partecipazione:\n      payload.ruolo === \"socio\"\n        ? payload.percentuale_partecipazione || null\n        : null,\n\n    importo_quota_nominale:\n      payload.ruolo === \"socio\" &&\n      payload.importo_quota_nominale !== \"\" &&\n      payload.importo_quota_nominale !== undefined\n        ? payload.importo_quota_nominale\n        : null,\n\n    titolo_possesso:'''
+          if put_old not in s:
+              raise SystemExit('PUT API marker missing')
+          s = s.replace(put_old, put_new, 1)
+
+          if s == original:
+              raise SystemExit('no API changes')
+          p.write_text(s, encoding='utf-8')
+
+      - name: Add database migration
+        run: |
+          cat > supabase/migrations/20260911180000_organi_quota_nominale_durata.sql <<'SQL'
+          alter table if exists public.tbclienti_organi
+            add column if not exists importo_quota_nominale numeric(15,2);
+
+          alter table if exists public.tbclienti_organi
+            add column if not exists durata_carica text;
+
+          update public.tbclienti_organi
+             set durata_carica = 'A tempo indeterminato'
+           where durata_carica = 'Indeterminato';
+
+          update public.tbclienti_organi
+             set durata_carica = 'Fino a revoca'
+           where durata_carica = 'A revoca';
+
+          comment on column public.tbclienti_organi.importo_quota_nominale
+            is 'Importo nominale della quota di capitale posseduta dal socio';
+
+          comment on column public.tbclienti_organi.durata_carica
+            is 'Durata amministratore: Fino a revoca oppure A tempo indeterminato';
+          SQL
+
+      - name: TypeScript check
+        run: |
+          npm ci
+          npx tsc --noEmit
+
+      - name: Apply exact Supabase schema update
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ngeltlygytupgdjiagve
+        run: |
+          test -n "$SUPABASE_ACCESS_TOKEN" || (echo "SUPABASE_ACCESS_TOKEN mancante" && exit 1)
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          sql = Path('supabase/migrations/20260911180000_organi_quota_nominale_durata.sql').read_text()
+          Path('/tmp/supabase-query.json').write_text(json.dumps({'query': sql}))
+          PY
+          curl --fail-with-body \
+            -X POST \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data-binary @/tmp/supabase-query.json \
+            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/query"
+
+      - name: Commit application and migration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/clienti/organi-sociali.tsx src/app/api/clienti-organi/route.ts supabase/migrations/20260911180000_organi_quota_nominale_durata.sql
+          git commit -m "Complete Soci e Organi fields and form behavior"
+          git pull --rebase origin main
+          git push origin HEAD:main
