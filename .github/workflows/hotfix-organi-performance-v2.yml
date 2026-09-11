@@ -1,0 +1,63 @@
+name: Hotfix Soci e Organi performance v2
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/hotfix-organi-performance-v2.yml
+
+permissions:
+  contents: write
+
+jobs:
+  hotfix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch page performance
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('src/pages/clienti/organi-sociali.tsx')
+          s = p.read_text(encoding='utf-8')
+          original = s
+
+          old = '''  useEffect(() => {\n  void caricaClienti();\n}, []);'''
+          new = '''useEffect(() => {\n  if (!router.isReady) return;\n  void caricaClienti();\n}, [router.isReady, router.query.cliente_id]);'''
+          if old not in s:
+              raise SystemExit('clienti effect marker missing')
+          s = s.replace(old, new, 1)
+
+          old = '''  async function caricaClienti() {\n   const supabase = getSupabaseClient() as any;\n    \nconst { data } = await supabase\n  .from(\"tbclienti\")\n .select(`\n  id,\n  ragione_sociale,\n  codice_fiscale,\n  studio_id\n`)\n  .eq(\"cliente\", true)\n  .order(\"ragione_sociale\");\n\n    setClienti(data || []);\n  }'''
+          new = '''  async function caricaClienti() {\n    const supabase = getSupabaseClient() as any;\n    const idDaQuery =\n      typeof router.query.cliente_id === \"string\"\n        ? router.query.cliente_id.trim()\n        : \"\";\n\n    let query = supabase\n      .from(\"tbclienti\")\n      .select(`\n        id,\n        ragione_sociale,\n        codice_fiscale,\n        studio_id\n      `)\n      .eq(\"cliente\", true);\n\n    if (idDaQuery) {\n      query = query.eq(\"id\", idDaQuery).limit(1);\n    } else {\n      query = query.order(\"ragione_sociale\");\n    }\n\n    const { data, error } = await query;\n\n    if (error) {\n      console.error(\"Errore caricaClienti:\", error);\n      setClienti([]);\n      return;\n    }\n\n    setClienti(data || []);\n  }'''
+          if old not in s:
+              raise SystemExit('caricaClienti marker missing')
+          s = s.replace(old, new, 1)
+
+          old = '''      /*\n       * Il calcolo del Titolare Effettivo\n       * parte immediatamente.\n       */\n      void caricaTitolariEffettivi().catch(\n        (error) => {\n          console.error(\n            \"Errore aggiornamento Titolare Effettivo:\",\n            error\n          );\n        }\n      );'''
+          new = '''      /*\n       * Il Titolare Effettivo non deve rallentare l'ingresso nella pagina.\n       * Lo avviamo quando il browser e' libero, dopo che gli organi sono gia' visibili.\n       */\n      const avviaTitolareEffettivo = () => {\n        void caricaTitolariEffettivi().catch((error) => {\n          console.error(\n            \"Errore aggiornamento Titolare Effettivo:\",\n            error\n          );\n        });\n      };\n\n      if (typeof window !== \"undefined\" && \"requestIdleCallback\" in window) {\n        (window as any).requestIdleCallback(avviaTitolareEffettivo, { timeout: 1200 });\n      } else {\n        window.setTimeout(avviaTitolareEffettivo, 350);\n      }'''
+          if old not in s:
+              raise SystemExit('TE marker missing')
+          s = s.replace(old, new, 1)
+
+          p.write_text(s, encoding='utf-8')
+          if s == original:
+              raise SystemExit('no changes')
+
+      - name: Sanity check
+        run: |
+          grep -q 'requestIdleCallback' src/pages/clienti/organi-sociali.tsx
+          grep -q 'query.eq("id", idDaQuery).limit(1)' src/pages/clienti/organi-sociali.tsx
+          grep -q 'void caricaClienti();' src/pages/clienti/organi-sociali.tsx
+
+      - name: Commit hotfix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/clienti/organi-sociali.tsx
+          git commit -m "Speed up Soci e Organi initial load"
+          git pull --rebase origin main
+          git push origin HEAD:main
