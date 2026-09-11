@@ -2541,11 +2541,11 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
                 ? "Soci e organi sociali mancanti"
                 : "Soci e organi sociali"
             }
-            onClick={() =>
-              router.push(
-                `/clienti/organi-sociali?cliente_id=${cliente.id}`
-              )
-            }
+            onClick={() => {
+              window.location.assign(
+                `/clienti/organi-sociali?cliente_id=${encodeURIComponent(String(cliente.id))}`
+              );
+            }}
             className={
               organiSocialiMancanti(cliente)
                 ? "rounded-full border-2 border-red-500 text-red-600"
