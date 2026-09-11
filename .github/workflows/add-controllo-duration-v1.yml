@@ -1,0 +1,50 @@
+name: Add durata organo di controllo v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/add-controllo-duration-v1.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Add duration controls to organo di controllo
+        shell: python
+        run: |
+          from pathlib import Path
+
+          p = Path('src/pages/clienti/organi-sociali.tsx')
+          s = p.read_text(encoding='utf-8')
+
+          old = '''  {modalSezione==="amministrazione" && <div style={{marginTop:16,display:"grid",gridTemplateColumns:form.durata_carica==="Anni n."?"1fr 1fr":"1fr",gap:12,alignItems:"end"}}><div><label style={labelStyle}>Scadenza amministratore</label><select style={inputStyle} value={form.durata_carica} onChange={(e)=>setForm((p)=>({...p,durata_carica:e.target.value,durata_carica_anni:e.target.value==="Anni n."?p.durata_carica_anni:""}))}><option value="A revoca">A revoca</option><option value="A tempo indeterminato">A tempo indeterminato</option><option value="Anni n.">Anni n.</option></select></div>{form.durata_carica==="Anni n." && <div><label style={labelStyle}>Numero anni</label><input type="number" min="1" step="1" style={inputStyle} value={form.durata_carica_anni} onChange={(e)=>setForm((p)=>({...p,durata_carica_anni:e.target.value}))}/></div>}</div>}'''
+
+          new = '''  {(modalSezione==="amministrazione" || modalSezione==="controllo") && <div style={{marginTop:16,display:"grid",gridTemplateColumns:form.durata_carica==="Anni n."?"1fr 1fr":"1fr",gap:12,alignItems:"end"}}><div><label style={labelStyle}>{modalSezione==="amministrazione"?"Scadenza amministratore":"Scadenza organo di controllo"}</label><select style={inputStyle} value={form.durata_carica} onChange={(e)=>setForm((p)=>({...p,durata_carica:e.target.value,durata_carica_anni:e.target.value==="Anni n."?p.durata_carica_anni:""}))}><option value="A revoca">A revoca</option><option value="A tempo indeterminato">A tempo indeterminato</option><option value="Anni n.">Anni n.</option></select></div>{form.durata_carica==="Anni n." && <div><label style={labelStyle}>Numero anni</label><input type="number" min="1" step="1" style={inputStyle} value={form.durata_carica_anni} onChange={(e)=>setForm((p)=>({...p,durata_carica_anni:e.target.value}))}/></div>}</div>}'''
+
+          if old not in s:
+              raise SystemExit('duration UI block not found')
+
+          s = s.replace(old, new, 1)
+          p.write_text(s, encoding='utf-8')
+
+      - name: Type check
+        run: |
+          npm ci
+          npx tsc --noEmit
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/clienti/organi-sociali.tsx
+          git commit -m "Add duration years to organo di controllo"
+          git pull --rebase origin main
+          git push origin HEAD:main
