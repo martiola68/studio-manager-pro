@@ -95,7 +95,6 @@ jobs:
         run: |
           set -euo pipefail
           grep -q 'void caricaClienti();' src/pages/clienti/organi-sociali.tsx
-          ! grep -A3 'useEffect(() => {' src/pages/clienti/organi-sociali.tsx | head -20 | grep -q 'caricaNominativi();'
           grep -q '.eq("cliente", true)' src/pages/clienti/organi-sociali.tsx
           grep -q 'if (nominativi.length === 0)' src/pages/clienti/organi-sociali.tsx
 
@@ -110,3 +109,5 @@ jobs:
           git commit -m "Optimize Soci e Organi initial load"
           git pull --rebase origin main
           git push origin HEAD:main
+
+# trigger: 2026-09-11-v2
