@@ -1,0 +1,51 @@
+name: Auto calculate administrator expiry v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/auto-admin-expiry-v1.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch shared administration/control nomination date
+        shell: python
+        run: |
+          from pathlib import Path
+
+          p = Path('src/pages/clienti/organi-sociali.tsx')
+          s = p.read_text(encoding='utf-8')
+
+          old = '''<div><label style={labelStyle}>Data nomina</label><input type="date" style={inputStyle} value={form.data_nomina} onChange={(e)=>setForm((p)=>({...p,data_nomina:e.target.value}))}/></div><div><label style={labelStyle}>Scadenza</label>'''
+          new = '''<div><label style={labelStyle}>Data nomina</label><input type="date" style={inputStyle} value={form.data_nomina} onChange={(e)=>{const dataNomina=e.target.value;setForm((p)=>({...p,data_nomina:dataNomina,data_scadenza:p.durata_carica==="Anni n."&&p.durata_carica_anni?calcolaScadenzaDaAnni(dataNomina,p.durata_carica_anni):p.data_scadenza}))}}/></div><div><label style={labelStyle}>Scadenza</label>'''
+
+          if old not in s:
+              if 'p.durata_carica==="Anni n."&&p.durata_carica_anni?calcolaScadenzaDaAnni(dataNomina,p.durata_carica_anni)' in s:
+                  raise SystemExit(0)
+              raise SystemExit('shared nomination date marker not found')
+
+          s = s.replace(old, new, 1)
+          p.write_text(s, encoding='utf-8')
+
+      - name: Type check
+        run: |
+          npm ci
+          npx tsc --noEmit
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/clienti/organi-sociali.tsx
+          git commit -m "Auto calculate administrator expiry from duration years"
+          git pull --rebase origin main
+          git push origin HEAD:main
