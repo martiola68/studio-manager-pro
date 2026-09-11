@@ -1,0 +1,163 @@
+name: Patch soci organi quota nominativi once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/patch-organi-quota-nominativi-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply requested changes
+        shell: python
+        run: |
+          from pathlib import Path
+
+          page = Path("src/pages/clienti/organi-sociali.tsx")
+          text = page.read_text(encoding="utf-8")
+          original = text
+
+          # 1) CF -> data e luogo di nascita, stesso motore dei rappresentanti legali.
+          old = '''async function leggiDatiDaCF(\n  cf: string,\n  setNuovoNominativo: any\n) {\n  // ...\n}\n'''
+          new = '''async function leggiDatiDaCF(\n  cf: string,\n  setNuovoNominativo: any\n) {\n  const normalized = normalizeCF(cf);\n  if (normalized.length !== 16 || !isValidCF(normalized)) return;\n\n  try {\n    const [comuneData, dataNascita] = await Promise.all([\n      getComuneFromCF(normalized),\n      Promise.resolve(extractDataNascitaFromCF(normalized)),\n    ]);\n\n    setNuovoNominativo((prev: any) => ({\n      ...prev,\n      data_nascita: dataNascita || prev.data_nascita || "",\n      luogo_nascita: comuneData?.comune || prev.luogo_nascita || "",\n    }));\n  } catch (error) {\n    console.error("Errore lettura dati anagrafici dal codice fiscale:", error);\n  }\n}\n'''
+          if old not in text:
+            raise SystemExit("CF helper marker not found")
+          text = text.replace(old, new, 1)
+
+          # 2) Stato form: importo nominale della quota.
+          text = text.replace('''  percentuale_partecipazione: "",\n  titolo_possesso: "piena_proprieta",''', '''  percentuale_partecipazione: "",\n  importo_quota_nominale: "",\n  titolo_possesso: "piena_proprieta",''')
+          text = text.replace('''    carica: "", percentuale_partecipazione: "", titolo_possesso: "piena_proprieta",''', '''    carica: "", percentuale_partecipazione: "", importo_quota_nominale: "", titolo_possesso: "piena_proprieta",''')
+
+          # reset multilineari rimasti
+          text = text.replace('''    percentuale_partecipazione: "",\n    titolo_possesso: "piena_proprieta",''', '''    percentuale_partecipazione: "",\n    importo_quota_nominale: "",\n    titolo_possesso: "piena_proprieta",''')
+          text = text.replace('''  percentuale_partecipazione: "",\n  presenza: "Presente",''', '''  percentuale_partecipazione: "",\n  importo_quota_nominale: "",\n  presenza: "Presente",''')
+
+          # carica in modifica: aggancia il valore esistente.
+          marker = '''    percentuale_partecipazione:\n      organo.percentuale_partecipazione != null\n        ? String(organo.percentuale_partecipazione)\n        : "",'''
+          if marker in text:
+            text = text.replace(marker, marker + '''\n\n    importo_quota_nominale:\n      organo.importo_quota_nominale != null\n        ? String(organo.importo_quota_nominale)\n        : "",''', 1)
+          else:
+            # variante compatta
+            compact = 'percentuale_partecipazione: organo.percentuale_partecipazione != null ? String(organo.percentuale_partecipazione) : "",'
+            if compact in text:
+              text = text.replace(compact, compact + ' importo_quota_nominale: organo.importo_quota_nominale != null ? String(organo.importo_quota_nominale) : "",', 1)
+            else:
+              raise SystemExit("load-edit participation marker not found")
+
+          # payload salvataggio verso API.
+          payload_marker = '''  percentuale_partecipazione:\n    form.ruolo === "socio"\n      ? form.percentuale_partecipazione || null\n      : null,'''
+          if payload_marker not in text:
+            raise SystemExit("payload participation marker not found")
+          text = text.replace(payload_marker, payload_marker + '''\n  importo_quota_nominale:\n    form.ruolo === "socio"\n      ? form.importo_quota_nominale || null\n      : null,''', 1)
+
+          # tabella Soci: mostra anche nominale.
+          head = '<th style={thStyle}>Tipologia del diritto</th><th style={thStyle}>Quota</th><th style={thStyle}>Voto</th>'
+          if head in text:
+            text = text.replace(head, '<th style={thStyle}>Tipologia del diritto</th><th style={thStyle}>Quota</th><th style={thStyle}>Quota nominale</th><th style={thStyle}>Voto</th>', 1)
+            row = '<td style={tdStyle}>{o.percentuale_partecipazione != null ? `${Number(o.percentuale_partecipazione).toFixed(2)}%` : "—"}</td><td style={tdStyle}>{o.percentuale_diritti_voto'
+            if row in text:
+              text = text.replace(row, '<td style={tdStyle}>{o.percentuale_partecipazione != null ? `${Number(o.percentuale_partecipazione).toFixed(2)}%` : "—"}</td><td style={tdStyle}>{o.importo_quota_nominale != null ? Number(o.importo_quota_nominale).toLocaleString("it-IT", { style: "currency", currency: "EUR" }) : "—"}</td><td style={tdStyle}>{o.percentuale_diritti_voto', 1)
+            text = text.replace('colSpan={9}>Nessun socio presente.', 'colSpan={10}>Nessun socio presente.', 1)
+
+          # Modale socio: aggiunge nominale prima degli utili e restringe il campo utili.
+          utili = '''<div style={{ marginTop: 12 }}><label style={labelStyle}>Partecipazione agli utili %</label><input type="number" min="0" max="100" step="0.01" style={inputStyle}'''
+          if utili not in text:
+            utili = '''<div style={{marginTop:12}}><label style={labelStyle}>Partecipazione agli utili %</label><input type="number" min="0" max="100" step="0.01" style={inputStyle}'''
+          if utili not in text:
+            raise SystemExit("utili field marker not found")
+          nominale = '''<div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "minmax(220px, 1.4fr) minmax(150px, .7fr)", gap: 12, alignItems: "end" }}><div><label style={labelStyle}>Importo quota capitale posseduta (nominale)</label><input type="number" min="0" step="0.01" style={inputStyle} value={form.importo_quota_nominale} onChange={(e)=>setForm((p)=>({...p,importo_quota_nominale:e.target.value}))} /></div><div><label style={labelStyle}>Partecipazione agli utili %</label><input type="number" min="0" max="100" step="0.01" style={inputStyle}'''
+          text = text.replace(utili, nominale, 1)
+          # chiude il wrapper grid dopo l'input utili: identifica la chiusura prima della sezione successiva.
+          after_utili = 'value={form.percentuale_diritti_utili} onChange={(e)=>setForm((p)=>({...p,percentuale_diritti_utili:e.target.value}))}/></div>'
+          if after_utili in text:
+            text = text.replace(after_utili, after_utili + '</div>', 1)
+
+          # 3) Organo amministrazione: scadenza testuale prima di Firmatario.
+          firm = '''{modalSezione==="amministrazione" && <div style={{marginTop:16,display:"flex",alignItems:"center"'''
+          if firm not in text:
+            raise SystemExit("firmatario marker not found")
+          admin_scadenza = '''{modalSezione==="amministrazione" && <div style={{marginTop:16,display:"grid",gridTemplateColumns:"minmax(220px,1fr) auto",gap:28,alignItems:"end"}}><div><label style={labelStyle}>Scadenza</label><select style={inputStyle} value={form.durata_carica === "Indeterminato" ? "Indeterminato" : "A revoca"} onChange={(e)=>setForm((p)=>({...p,durata_carica:e.target.value === "A revoca" ? "Fino a revoca" : "Indeterminato",data_scadenza:""}))}><option value="A revoca">A revoca</option><option value="Indeterminato">Indeterminato</option></select></div><div style={{paddingRight:18}}>'''
+          text = text.replace(firm, admin_scadenza + firm, 1)
+          # chiusura del wrapper dopo il vecchio blocco firmatario
+          firm_end = '<span>Firmatario</span></label></div>}'
+          if firm_end not in text:
+            raise SystemExit("firmatario end marker not found")
+          text = text.replace(firm_end, '<span>Firmatario</span></label></div>}</div>}', 1)
+
+          # 4) Nuovo nominativo: etichette sopra i campi (non placeholder interni).
+          fields = [
+            ('Email', 'email'),
+            ('Luogo di nascita', 'luogo_nascita'),
+            ('Indirizzo', 'indirizzo'),
+            ('Città', 'citta'),
+            ('Provincia', 'provincia'),
+            ('CAP', 'cap'),
+          ]
+          # sostituzioni semplici sui placeholder esistenti; wrapper div e label.
+          for label, key in fields:
+            ph = f'placeholder="{label if label != "Luogo di nascita" else "Luogo nascita"}"'
+            pos = text.find(ph)
+            if pos >= 0:
+              start = text.rfind('<input', 0, pos)
+              text = text[:start] + f'<div><label style={{labelStyle}}>{label}</label>\n' + text[start:]
+              close = text.find('/>', pos)
+              text = text[:close+2] + '</div>' + text[close+2:]
+              text = text.replace(ph, '', 1)
+
+          # Data nascita: aggiunge label al primo input date della modale nominativo (riconosciuto dal value).
+          dn = '''<input\n  type="date"\n  style={{\n    ...inputStyle,'''
+          idx = text.find(dn)
+          if idx >= 0:
+            value_idx = text.find('value={nuovoNominativo.data_nascita}', idx)
+            if value_idx >= 0 and value_idx - idx < 900:
+              text = text[:idx] + '<div><label style={labelStyle}>Data di nascita</label>\n' + text[idx:]
+              end = text.find('/>', value_idx)
+              text = text[:end+2] + '</div>' + text[end+2:]
+
+          # Nominativo e CF: rimuove placeholder dove presenti e rende label sempre sopra.
+          text = text.replace('placeholder="Cognome e nome"', '', 1)
+          text = text.replace('placeholder="Codice fiscale"', '', 1)
+
+          # 5) bordo campi più evidente in tutti i form della pagina.
+          text = text.replace('border: "1px solid #d1d5db",', 'border: "1.5px solid #94a3b8",\n  boxShadow: "inset 0 0 0 1px rgba(148,163,184,0.10)",', 1)
+
+          if text == original:
+            raise SystemExit("No page changes applied")
+          page.write_text(text, encoding="utf-8")
+
+          # API clienti-organi: lettura e persistenza quota nominale.
+          api = Path("src/app/api/clienti-organi/route.ts")
+          a = api.read_text(encoding="utf-8")
+          a0 = a
+          a = a.replace('''percentuale_partecipazione,\ntitolo_possesso,''', '''percentuale_partecipazione,\nimporto_quota_nominale,\ntitolo_possesso,''', 1)
+          ins = '''percentuale_partecipazione:\n  payload.ruolo === "socio"\n    ? payload.percentuale_partecipazione || null\n    : null,'''
+          a = a.replace(ins, ins + '''\n\nimporto_quota_nominale:\n  payload.ruolo === "socio" && payload.importo_quota_nominale !== "" && payload.importo_quota_nominale !== undefined\n    ? payload.importo_quota_nominale\n    : null,''', 1)
+          upd = '''    percentuale_partecipazione:\n      payload.ruolo === "socio"\n        ? payload.percentuale_partecipazione || null\n        : null,'''
+          a = a.replace(upd, upd + '''\n\n    importo_quota_nominale:\n      payload.ruolo === "socio" && payload.importo_quota_nominale !== "" && payload.importo_quota_nominale !== undefined\n        ? payload.importo_quota_nominale\n        : null,''', 1)
+          if a == a0:
+            raise SystemExit("No API changes applied")
+          api.write_text(a, encoding="utf-8")
+
+          # Migrazione DB idempotente.
+          mig = Path("supabase/migrations/20260911131500_add_importo_quota_nominale_organi.sql")
+          mig.parent.mkdir(parents=True, exist_ok=True)
+          mig.write_text('''alter table if exists public.tbclienti_organi\n  add column if not exists importo_quota_nominale numeric(15,2);\n\ncomment on column public.tbclienti_organi.importo_quota_nominale\n  is 'Importo nominale della quota di capitale posseduta dal socio';\n''', encoding="utf-8")
+
+      - name: Commit patch
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/clienti/organi-sociali.tsx src/app/api/clienti-organi/route.ts supabase/migrations/20260911131500_add_importo_quota_nominale_organi.sql
+          git diff --cached --check
+          git commit -m "Aggiorna form soci e organi sociali"
+          git push origin main
