@@ -1,0 +1,121 @@
+name: Fix Organi cliente link load once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-organi-cliente-link-load-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Patch linked-client initial load
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/pages/clienti/organi-sociali.tsx')
+          s = p.read_text(encoding='utf-8')
+          original = s
+
+          old = '''useEffect(() => {
+  if (!router.isReady) return;
+
+  const id = router.query.cliente_id;
+
+  if (typeof id === "string" && id.trim()) {
+    setClienteId(id);
+  }
+}, [router.isReady, router.query.cliente_id]);
+  
+  useEffect(() => {
+  void caricaClienti();
+}, []);'''
+
+          new = '''useEffect(() => {
+  if (!router.isReady) return;
+
+  const id = router.query.cliente_id;
+
+  if (typeof id === "string" && id.trim()) {
+    // Arrivo da Gestione Clienti: l'ID e' gia noto.
+    // Evitiamo il giro a vuoto del caricamento dell'intero elenco societa'.
+    setClienteId(id);
+    void caricaClienteSelezionato(id);
+    return;
+  }
+
+  // Accesso diretto a Soci e Organi: serve l'elenco per il selettore.
+  void caricaClienti();
+}, [router.isReady, router.query.cliente_id]);'''
+
+          if old not in s:
+              raise SystemExit('initial effect marker not found')
+          s = s.replace(old, new, 1)
+
+          marker = '''  async function caricaClienti() {
+   const supabase = getSupabaseClient() as any;'''
+          replacement = '''  async function caricaClienteSelezionato(id: string) {
+    const supabase = getSupabaseClient() as any;
+
+    const { data, error } = await supabase
+      .from("tbclienti")
+      .select(`
+        id,
+        ragione_sociale,
+        codice_fiscale,
+        studio_id
+      `)
+      .eq("id", id)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Errore caricaClienteSelezionato:", error);
+      return;
+    }
+
+    setClienti(data ? [data] : []);
+  }
+
+  async function caricaClienti() {
+   const supabase = getSupabaseClient() as any;'''
+
+          if marker not in s:
+              raise SystemExit('caricaClienti marker not found')
+          s = s.replace(marker, replacement, 1)
+
+          if s == original:
+              raise SystemExit('no changes applied')
+          p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Commit runtime fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/clienti/organi-sociali.tsx
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Fix Organi linked-client initial load"
+          git pull --rebase origin main
+          git push origin HEAD:main
