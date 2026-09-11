@@ -1,0 +1,69 @@
+name: Apply Soci e Organi UI fixes v4
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/apply-organi-ui-fix-v4.yml]
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: Patch source
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('src/pages/clienti/organi-sociali.tsx')
+          s=p.read_text(encoding='utf-8')
+          old=s
+
+          s=s.replace('''async function leggiDatiDaCF(\n  cf: string,\n  setNuovoNominativo: any\n) {\n  // ...\n}''','''async function leggiDatiDaCF(cf: string, setNuovoNominativo: any) {\n  const codice = normalizeCF(cf);\n  if (codice.length !== 16 || !isValidCF(codice)) return;\n  const dataNascita = extractDataNascitaFromCF(codice);\n  const comune = await getComuneFromCF(codice);\n  setNuovoNominativo((prev: any) => ({\n    ...prev,\n    data_nascita: dataNascita || prev.data_nascita || \"\",\n    luogo_nascita: comune?.comune || prev.luogo_nascita || \"\",\n  }));\n}''')
+
+          s=s.replace('''  percentuale_partecipazione: \"\",\n  titolo_possesso:''','''  percentuale_partecipazione: \"\",\n  importo_quota_nominale: \"\",\n  titolo_possesso:''',1)
+          s=s.replace('''carica: \"\", percentuale_partecipazione: \"\", titolo_possesso:''','''carica: \"\", percentuale_partecipazione: \"\", importo_quota_nominale: \"\", titolo_possesso:''')
+          s=s.replace('''  percentuale_partecipazione: \"\",\n  presenza:''','''  percentuale_partecipazione: \"\",\n  importo_quota_nominale: \"\",\n  presenza:''')
+          s=s.replace('''    percentuale_partecipazione: \"\",\n    presenza:''','''    percentuale_partecipazione: \"\",\n    importo_quota_nominale: \"\",\n    presenza:''')
+          s=s.replace('''    percentuale_partecipazione:\n      organo.percentuale_partecipazione\n        ? String(organo.percentuale_partecipazione)\n        : \"\",\n    presenza:''','''    percentuale_partecipazione:\n      organo.percentuale_partecipazione\n        ? String(organo.percentuale_partecipazione)\n        : \"\",\n    importo_quota_nominale:\n      organo.importo_quota_nominale != null\n        ? String(organo.importo_quota_nominale)\n        : \"\",\n    presenza:''')
+
+          s=s.replace('''  percentuale_partecipazione:\n    form.ruolo === \"socio\"\n      ? form.percentuale_partecipazione || null\n      : null,\n  titolo_possesso:''','''  percentuale_partecipazione:\n    form.ruolo === \"socio\" ? form.percentuale_partecipazione || null : null,\n  importo_quota_nominale:\n    form.ruolo === \"socio\" ? form.importo_quota_nominale || null : null,\n  titolo_possesso:''')
+
+          s=s.replace('''useEffect(() => {\n  caricaClienti();\n  caricaNominativi();\n}, []);''','''useEffect(() => {\n  void caricaClienti();\n}, []);''')
+          s=s.replace('''.order(\"ragione_sociale\");\n\n    setClienti(data || []);''','''.eq(\"cliente\", true)\n  .order(\"ragione_sociale\");\n\n    setClienti(data || []);''',1)
+          s=s.replace('''function apriInserimentoSezione(sezione: \"soci\" | \"amministrazione\" | \"controllo\") {''','''async function apriInserimentoSezione(sezione: \"soci\" | \"amministrazione\" | \"controllo\") {\n  if (nominativi.length === 0) await caricaNominativi();''')
+
+          s=s.replace('''<th style={thStyle}>Voto</th><th style={thStyle}>Utili</th>''','''<th style={thStyle}>Voto</th><th style={thStyle}>Quota nominale</th><th style={thStyle}>Utili</th>''')
+          s=s.replace('''<td style={tdStyle}>{o.percentuale_diritti_voto != null ? `${Number(o.percentuale_diritti_voto).toFixed(2)}%` : \"—\"}</td><td style={tdStyle}>{o.percentuale_diritti_utili != null ?''','''<td style={tdStyle}>{o.percentuale_diritti_voto != null ? `${Number(o.percentuale_diritti_voto).toFixed(2)}%` : \"—\"}</td><td style={tdStyle}>{o.importo_quota_nominale != null ? Number(o.importo_quota_nominale).toLocaleString(\"it-IT\",{style:\"currency\",currency:\"EUR\"}) : \"—\"}</td><td style={tdStyle}>{o.percentuale_diritti_utili != null ?''')
+          s=s.replace('''colSpan={9}>Nessun socio presente.''','''colSpan={10}>Nessun socio presente.''')
+
+          marker='''<label style={labelStyle}>Partecipazione agli utili %</label>'''
+          idx=s.find(marker)
+          if idx<0: raise SystemExit('utili marker missing')
+          start=s.rfind('<div',0,idx)
+          end=s.find('</div>',idx)+6
+          block=s[start:end]
+          nominal='''<div style={{display:\"grid\",gridTemplateColumns:\"1fr .55fr\",gap:12,marginTop:12}}><div><label style={labelStyle}>Importo quota capitale posseduta (nominale)</label><input type=\"number\" min=\"0\" step=\"0.01\" style={inputStyle} value={form.importo_quota_nominale} onChange={(e)=>setForm((p)=>({...p,importo_quota_nominale:e.target.value}))}/></div>'''+block+'''</div>'''
+          s=s[:start]+nominal+s[end:]
+
+          fm='''<label style={{display:\"flex\",alignItems:\"center\",gap:8}}><input type=\"checkbox\" checked={form.principale}'''
+          if fm in s:
+            sc='''<div style={{display:\"grid\",gridTemplateColumns:\"220px auto\",gap:18,alignItems:\"end\",marginTop:12}}><div><label style={labelStyle}>Scadenza</label><select style={inputStyle} value={form.durata_carica === \"Indeterminato\" ? \"Indeterminato\" : \"A revoca\"} onChange={(e)=>setForm((p)=>({...p,durata_carica:e.target.value === \"Indeterminato\" ? \"Indeterminato\" : \"Fino a revoca\",data_scadenza:\"\"}))}><option value=\"A revoca\">A revoca</option><option value=\"Indeterminato\">Indeterminato</option></select></div>'''
+            s=s.replace(fm,sc+fm,1).replace('''Firmatario</label>''','''Firmatario</label></div>''',1)
+
+          s=s.replace('''border: \"1px solid #d1d5db\",''','''border: \"1.5px solid #94a3b8\",''')
+
+          if s==old: raise SystemExit('no changes')
+          p.write_text(s,encoding='utf-8')
+
+      - name: Build
+        run: npm ci && npm run build
+
+      - name: Commit source
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/clienti/organi-sociali.tsx
+          git commit -m "Apply Soci e Organi visible UI fixes"
+          git pull --rebase origin main
+          git push origin HEAD:main
