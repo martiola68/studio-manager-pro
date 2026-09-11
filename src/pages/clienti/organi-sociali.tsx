@@ -828,8 +828,8 @@ async function caricaOrgani() {
 
       if (typeof window !== "undefined" && "requestIdleCallback" in window) {
         (window as any).requestIdleCallback(avviaTitolareEffettivo, { timeout: 1200 });
-      } else {
-        window.setTimeout(avviaTitolareEffettivo, 350);
+      } else if (typeof window !== "undefined") {
+        globalThis.setTimeout(avviaTitolareEffettivo, 350);
       }
 
       /*
