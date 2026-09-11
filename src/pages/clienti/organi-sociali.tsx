@@ -361,9 +361,10 @@ useEffect(() => {
   }
 }, [router.isReady, router.query.cliente_id]);
   
-  useEffect(() => {
+useEffect(() => {
+  if (!router.isReady) return;
   void caricaClienti();
-}, []);
+}, [router.isReady, router.query.cliente_id]);
 
 useEffect(() => {
   if (!clienteId) {
@@ -403,18 +404,35 @@ const totaleQuoteCorretto =
 const differenzaQuote = totaleQuote - 100;
 
   async function caricaClienti() {
-   const supabase = getSupabaseClient() as any;
-    
-const { data } = await supabase
-  .from("tbclienti")
- .select(`
-  id,
-  ragione_sociale,
-  codice_fiscale,
-  studio_id
-`)
-  .eq("cliente", true)
-  .order("ragione_sociale");
+    const supabase = getSupabaseClient() as any;
+    const idDaQuery =
+      typeof router.query.cliente_id === "string"
+        ? router.query.cliente_id.trim()
+        : "";
+
+    let query = supabase
+      .from("tbclienti")
+      .select(`
+        id,
+        ragione_sociale,
+        codice_fiscale,
+        studio_id
+      `)
+      .eq("cliente", true);
+
+    if (idDaQuery) {
+      query = query.eq("id", idDaQuery).limit(1);
+    } else {
+      query = query.order("ragione_sociale");
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("Errore caricaClienti:", error);
+      setClienti([]);
+      return;
+    }
 
     setClienti(data || []);
   }
@@ -796,17 +814,23 @@ async function caricaOrgani() {
       );
 
       /*
-       * Il calcolo del Titolare Effettivo
-       * parte immediatamente.
+       * Il Titolare Effettivo non deve rallentare l'ingresso nella pagina.
+       * Lo avviamo quando il browser e' libero, dopo che gli organi sono gia' visibili.
        */
-      void caricaTitolariEffettivi().catch(
-        (error) => {
+      const avviaTitolareEffettivo = () => {
+        void caricaTitolariEffettivi().catch((error) => {
           console.error(
             "Errore aggiornamento Titolare Effettivo:",
             error
           );
-        }
-      );
+        });
+      };
+
+      if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+        (window as any).requestIdleCallback(avviaTitolareEffettivo, { timeout: 1200 });
+      } else {
+        window.setTimeout(avviaTitolareEffettivo, 350);
+      }
 
       /*
        * I diritti collegati NON vengono precaricati qui.
