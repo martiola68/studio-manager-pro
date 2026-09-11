@@ -719,11 +719,11 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                     return (
                       <tr
                         key={scadenza.id}
-                        className={`border-b transition-colors ${
-                          isConfermata
-                            ? "bg-blue-100 hover:bg-blue-100"
-                            : "bg-white hover:bg-white"
-                        } data-[state=selected]:bg-muted`}
+                    className={`border-b border-slate-600 transition-colors ${
+  isConfermata
+    ? "bg-blue-100 hover:bg-blue-100"
+    : "bg-white hover:bg-white"
+} data-[state=selected]:bg-muted`}
                       >
                         <td
                           style={{
@@ -767,20 +767,20 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
 
                         <td className="px-2 py-1 align-middle min-w-[180px]">
                           <Input
-                            type="text"
-                            value={operatoreFiscaleLabel}
-                            disabled={true}
-                            className="h-8 w-full border-slate-300 bg-white text-xs disabled:bg-slate-100"
-                          />
+  type="text"
+  value={operatoreFiscaleLabel}
+  readOnly
+  className="h-8 w-full border-slate-300 bg-white text-xs text-slate-700"
+/>
                         </td>
 
                         <td className="px-2 py-1 align-middle min-w-[180px]">
-                          <Input
-                            type="text"
-                            value={operatorePayrollLabel}
-                            disabled={true}
-                            className="h-8 w-full border-slate-300 bg-white text-xs disabled:bg-slate-100"
-                          />
+                         <Input
+  type="text"
+  value={operatorePayrollLabel}
+  readOnly
+  className="h-8 w-full border-slate-300 bg-white text-xs text-slate-700"
+/>
                         </td>
 
                         <td className="px-2 py-1 align-middle min-w-[150px]">
