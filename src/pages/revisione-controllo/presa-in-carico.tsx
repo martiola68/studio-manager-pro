@@ -173,7 +173,19 @@ export default function PresaInCaricoRevisione() {
     const { data, error } = await supabase.from("tbrevisione_preincarichi").select("id,step_corrente,snapshot_cliente,stato,pratica_revisione_id").eq("studio_id", studioId).eq("cliente_id", clienteId).eq("data_bilancio", dataBilancio).maybeSingle();
     if (error) { setErrore(error.message); return; }
     if (!data?.id) { setPreincaricoId(null); return; }
-    setPreincaricoId(data.id); setPreincaricoStato(data.stato || ""); setPraticaRevisioneId(data.pratica_revisione_id || null); setStep(Math.max(1, Math.min(8, Number(data.step_corrente || 1)))); if (data.snapshot_cliente) setSnapshot(data.snapshot_cliente);
+    const praticaGenerata = Boolean(data.pratica_revisione_id) || data.stato === "generato";
+    setPreincaricoId(data.id);
+    setPreincaricoStato(data.stato || "");
+    setPraticaRevisioneId(data.pratica_revisione_id || null);
+    setStep(Math.max(1, Math.min(8, Number(data.step_corrente || 1))));
+    if (praticaGenerata && data.snapshot_cliente) {
+      // Le pratiche finalizzate mantengono lo snapshot congelato nello storico.
+      setSnapshot(data.snapshot_cliente);
+    } else {
+      // Le bozze devono sempre riflettere gli archivi SMP correnti: uno snapshot
+      // salvato prima delle correzioni non deve sovrascrivere i dati appena letti.
+      await caricaSnapshot();
+    }
 
     const { data: questionari, error: qError } = await supabase.from("tbrevisione_questionari").select("id,codice,conclusioni,esito").eq("preincarico_id", data.id).in("codice", ["VALUTAZIONE_PRELIMINARE", "ACCETTAZIONE_INCARICO", "VALUTAZIONE_INDIPENDENZA", "RISCHIO_RICICLAGGIO"]);
     if (qError) { setErrore(qError.message); return; }
