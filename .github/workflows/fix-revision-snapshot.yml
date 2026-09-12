@@ -1,9 +1,8 @@
-name: Fix revisione snapshot data
+name: Fix revisione snapshot data v2
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
       - .github/workflows/fix-revision-snapshot.yml
 
@@ -17,6 +16,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
 
       - name: Patch presa in carico snapshot
         shell: python
@@ -26,29 +31,44 @@ jobs:
           path = Path("src/pages/revisione-controllo/presa-in-carico.tsx")
           text = path.read_text(encoding="utf-8")
 
-          old_helper_anchor = '''const incaricoTrasparenzaVuoto = (): IncaricoTrasparenza => ({ ente: "", ateco: "", sede: "", codiceFiscale: "", ruolo: "" });
+          helper_anchor = '''const incaricoTrasparenzaVuoto = (): IncaricoTrasparenza => ({ ente: "", ateco: "", sede: "", codiceFiscale: "", ruolo: "" });
 function nomeCliente(c: Cliente) { return c.ragione_sociale || "Cliente senza denominazione"; }
 '''
-          new_helper_anchor = '''const incaricoTrasparenzaVuoto = (): IncaricoTrasparenza => ({ ente: "", ateco: "", sede: "", codiceFiscale: "", ruolo: "" });
+          helper_new = '''const incaricoTrasparenzaVuoto = (): IncaricoTrasparenza => ({ ente: "", ateco: "", sede: "", codiceFiscale: "", ruolo: "" });
 function nomeCliente(c: Cliente) { return c.ragione_sociale || "Cliente senza denominazione"; }
 
+function parseDataOrgano(value: unknown, fineGiornata = false) {
+  if (!value) return null;
+  const raw = String(value).trim();
+  const italiana = raw.match(/^(\\d{2})\\/(\\d{2})\\/(\\d{4})$/);
+  const iso = italiana ? `${italiana[3]}-${italiana[2]}-${italiana[1]}` : raw.slice(0, 10);
+  const data = new Date(`${iso}T${fineGiornata ? "23:59:59" : "00:00:00"}`);
+  return Number.isNaN(data.getTime()) ? null : data;
+}
+
 function organoValidoAllaData(organo: any, dataRiferimento: string) {
-  const riferimento = dataRiferimento ? new Date(`${dataRiferimento}T23:59:59`) : new Date();
-  const inizio = organo?.data_nomina ? new Date(`${organo.data_nomina}T00:00:00`) : null;
-  const fineRaw = organo?.data_cessazione || organo?.data_scadenza || null;
-  const fine = fineRaw ? new Date(`${fineRaw}T23:59:59`) : null;
+  const riferimento = dataRiferimento ? parseDataOrgano(dataRiferimento, true) : new Date();
+  if (!riferimento) return true;
 
-  if (inizio && !Number.isNaN(inizio.getTime()) && inizio > riferimento) return false;
-  if (fine && !Number.isNaN(fine.getTime()) && fine < riferimento) return false;
+  const dalRaw = organo?.data_nomina || organo?.data_inizio || organo?.dal || null;
+  const alRaw = organo?.data_cessazione || organo?.data_scadenza || organo?.data_fine || organo?.al || null;
+  const dal = parseDataOrgano(dalRaw, false);
+  const al = parseDataOrgano(alRaw, true);
 
-  if (organo?.attivo === false && !fineRaw) return false;
+  if (dal && dal > riferimento) return false;
+  if (al && al < riferimento) return false;
+
+  // Un record cessato resta valido nello snapshot storico fino alla data di fine.
+  // Se invece e' disattivato senza alcuna data di fine, non e' considerato vigente.
+  if (organo?.attivo === false && !alRaw) return false;
 
   return true;
 }
 '''
-          if old_helper_anchor not in text:
-            raise SystemExit("Anchor helper non trovato: nessuna modifica applicata")
-          text = text.replace(old_helper_anchor, new_helper_anchor, 1)
+          if "function organoValidoAllaData" not in text:
+            if helper_anchor not in text:
+              raise SystemExit("Anchor helper non trovato")
+            text = text.replace(helper_anchor, helper_new, 1)
 
           old_snapshot = '''  async function caricaSnapshot() {
     setLoadingSnapshot(true); setErrore("");
@@ -62,34 +82,21 @@ function organoValidoAllaData(organo: any, dataRiferimento: string) {
           new_snapshot = '''  async function caricaSnapshot() {
     setLoadingSnapshot(true); setErrore("");
     const supabase = getSupabaseClient() as any;
-
-    try {
-      const [clienteRes, organiResponse] = await Promise.all([
-        supabase.from("tbclienti").select("*").eq("id", clienteId).maybeSingle(),
-        fetch(`/api/clienti-organi?cliente_id=${encodeURIComponent(clienteId)}`, { cache: "no-store" }),
-      ]);
-
-      if (clienteRes.error) throw new Error(clienteRes.error.message);
-
-      const organiPayload = await organiResponse.json();
-      if (!organiResponse.ok) throw new Error(organiPayload?.error || "Errore nel caricamento di soci e organi sociali.");
-
-      setSnapshot({
-        acquisito_il: new Date().toISOString(),
-        cliente: clienteRes.data || null,
-        organi_sociali: organiPayload?.organi || [],
-      });
-    } catch (e: any) {
-      setSnapshot(null);
-      setErrore(e?.message || "Errore durante l'acquisizione dei dati societari.");
-    } finally {
-      setLoadingSnapshot(false);
-    }
+    const [clienteRes, organiRes] = await Promise.all([
+      supabase.from("tbclienti").select("*").eq("id", clienteId).maybeSingle(),
+      supabase.from("tbclienti_organi").select("*").eq("cliente_id", clienteId),
+    ]);
+    if (clienteRes.error) { setErrore(clienteRes.error.message); setLoadingSnapshot(false); return; }
+    if (organiRes.error) { setErrore(organiRes.error.message); setLoadingSnapshot(false); return; }
+    setSnapshot({ acquisito_il: new Date().toISOString(), cliente: clienteRes.data || null, organi_sociali: organiRes.data || [] }); setLoadingSnapshot(false);
   }
 '''
-          if old_snapshot not in text:
-            raise SystemExit("Blocco caricaSnapshot non trovato: nessuna modifica applicata")
-          text = text.replace(old_snapshot, new_snapshot, 1)
+          if old_snapshot in text:
+            text = text.replace(old_snapshot, new_snapshot, 1)
+          elif '.eq("cliente_id", clienteId).eq("attivo", true)' in text:
+            text = text.replace('.eq("cliente_id", clienteId).eq("attivo", true)', '.eq("cliente_id", clienteId)', 1)
+          elif 'fetch(`/api/clienti-organi?' in text:
+            raise SystemExit("Sorgente snapshot inattesa: presente variante API, verificare prima di sovrascrivere")
 
           old_counts = '''  const soci = (snapshot?.organi_sociali || []).filter((o: any) => o.ruolo === "socio");
   const amministratori = (snapshot?.organi_sociali || []).filter((o: any) => ["amministratore_unico", "amministratore", "presidente_cda", "amministratore_delegato", "liquidatore"].includes(o.ruolo));
@@ -100,11 +107,23 @@ function organoValidoAllaData(organo: any, dataRiferimento: string) {
   const amministratori = organiAllaData.filter((o: any) => ["amministratore_unico", "amministratore", "presidente_cda", "amministratore_delegato", "liquidatore"].includes(o.ruolo));
   const controllo = organiAllaData.filter((o: any) => ["sindaco", "presidente_collegio_sindacale", "revisore"].includes(o.ruolo));
 '''
-          if old_counts not in text:
-            raise SystemExit("Blocco conteggi non trovato: nessuna modifica applicata")
-          text = text.replace(old_counts, new_counts, 1)
+          if old_counts in text:
+            text = text.replace(old_counts, new_counts, 1)
+          elif "const organiAllaData" not in text:
+            raise SystemExit("Blocco conteggi non trovato")
+
+          if '.eq("cliente_id", clienteId).eq("attivo", true)' in text:
+            raise SystemExit("Filtro attivo=true ancora presente nello snapshot")
+          if "function organoValidoAllaData" not in text or "const organiAllaData" not in text:
+            raise SystemExit("Fix storico incompleto")
 
           path.write_text(text, encoding="utf-8")
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
 
       - name: Commit fix
         run: |
@@ -115,7 +134,6 @@ function organoValidoAllaData(organo: any, dataRiferimento: string) {
             echo "Nessuna modifica da salvare"
             exit 0
           fi
-          git commit -m "fix: load revisione snapshot from organi API"
-          git push origin main
-
-# retrigger 2026-09-12
+          git commit -m "fix: revision snapshot uses historical company organs"
+          git pull --rebase origin main
+          git push origin HEAD:main
