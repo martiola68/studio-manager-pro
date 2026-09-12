@@ -1,0 +1,53 @@
+name: Route new audit to pre-engagement
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Route new engagements to pre-engagement wizard
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          p = Path('src/pages/revisione-controllo/index.tsx')
+          s = p.read_text()
+          old = '''            <button
+              onClick={() => router.push("/revisione-controllo/nuovo")}
+              className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700"
+            >
+              <Plus size={16} />
+              Nuovo incarico
+            </button>'''
+          new = '''            <button
+              onClick={() => router.push("/revisione-controllo/presa-in-carico")}
+              className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700"
+            >
+              <Plus size={16} />
+              Nuova presa in carico
+            </button>'''
+          if old not in s:
+              raise SystemExit('New engagement button anchor not found')
+          p.write_text(s.replace(old, new, 1))
+          PY
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - name: Commit source
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/pages/revisione-controllo/index.tsx
+          git commit -m "Route new audits through pre-engagement"
+          git push origin HEAD:main
