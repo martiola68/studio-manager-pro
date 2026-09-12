@@ -1,5 +1,6 @@
 {
   "framework": "nextjs",
+  "buildCommand": "node scripts/patch-revisione-organi-api.mjs && next build",
   "crons": [
     {
       "path": "/api/cron/daily-alerts",
