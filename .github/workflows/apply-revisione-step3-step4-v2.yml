@@ -1,0 +1,178 @@
+name: Apply revisione Step 3 and Step 4 v2
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/apply-revisione-step3-step4-v2.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Patch wizard
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/pages/revisione-controllo/presa-in-carico.tsx')
+          s=p.read_text()
+          def rep(a,b):
+            global s
+            if a not in s: raise SystemExit('ANCHOR NOT FOUND: '+a[:100])
+            s=s.replace(a,b,1)
+
+          rep('import { useStudio } from "@/contexts/StudioContext";','import { useStudio } from "@/contexts/StudioContext";\nimport { domandeStep3 } from "@/lib/revisione/revisione-step3-data";\nimport { domandeStep4 } from "@/lib/revisione/revisione-step4-antiriciclaggio";')
+
+          rep('  const [dataAccettazioneStep2, setDataAccettazioneStep2] = useState("");\n  const [loadingClienti, setLoadingClienti] = useState(false);','''  const [dataAccettazioneStep2, setDataAccettazioneStep2] = useState("");
+  const [risposteStep3, setRisposteStep3] = useState<Record<string, Riga>>({});
+  const [conclusioniStep3, setConclusioniStep3] = useState("");
+  const [rischioIndipendenza, setRischioIndipendenza] = useState("");
+  const [esitoIndipendenza, setEsitoIndipendenza] = useState("");
+  const [misureSalvaguardia, setMisureSalvaguardia] = useState("");
+  const [compensoS, setCompensoS] = useState("");
+  const [compensoC, setCompensoC] = useState("");
+  const [compensoCT, setCompensoCT] = useState("");
+  const [risposteStep4, setRisposteStep4] = useState<Record<string, Riga>>({});
+  const [conclusioniStep4, setConclusioniStep4] = useState("");
+  const [rischioAml, setRischioAml] = useState("");
+  const [punteggioNatura, setPunteggioNatura] = useState("1");
+  const [punteggioAttivita, setPunteggioAttivita] = useState("1");
+  const [punteggioComportamento, setPunteggioComportamento] = useState("1");
+  const [punteggioArea, setPunteggioArea] = useState("1");
+  const [loadingClienti, setLoadingClienti] = useState(false);''')
+
+          rep('  const completateStep2 = useMemo(() => domandeStep2.filter(([c]) => !!risposteStep2[c]?.risposta).length, [risposteStep2]);\n  const clienteSelezionato', '''  const completateStep2 = useMemo(() => domandeStep2.filter(([c]) => !!risposteStep2[c]?.risposta).length, [risposteStep2]);
+  const completateStep3 = useMemo(() => domandeStep3.filter(([c]) => !!risposteStep3[c]?.risposta).length, [risposteStep3]);
+  const completateStep4 = useMemo(() => domandeStep4.filter(([c]) => !!risposteStep4[c]?.risposta).length, [risposteStep4]);
+  const rapportoSCCT = useMemo(() => { const S=Number(compensoS.replace(",","."))||0,C=Number(compensoC.replace(",","."))||0,CT=Number(compensoCT.replace(",","."))||0; return CT ? ((S+C)/CT)*100 : 0; }, [compensoS,compensoC,compensoCT]);
+  const rapportoSsuSC = useMemo(() => { const S=Number(compensoS.replace(",","."))||0,C=Number(compensoC.replace(",","."))||0; return S+C ? S/(S+C) : 0; }, [compensoS,compensoC]);
+  const clienteSelezionato''')
+
+          rep('.in("codice", ["VALUTAZIONE_PRELIMINARE", "ACCETTAZIONE_INCARICO"]);','.in("codice", ["VALUTAZIONE_PRELIMINARE", "ACCETTAZIONE_INCARICO", "VALUTAZIONE_INDIPENDENZA", "VALUTAZIONE_RISCHIO_RICICLAGGIO"]);')
+
+          rep('''        if (q.codice === "ACCETTAZIONE_INCARICO" && String(r.codice_domanda) === "16") {
+          setDataAccettazioneStep2(r.specifica || "");
+          continue;
+        }
+        mappa[String(r.codice_domanda)] = {''','''        if (q.codice === "ACCETTAZIONE_INCARICO" && String(r.codice_domanda) === "16") { setDataAccettazioneStep2(r.specifica || ""); continue; }
+        const rc=String(r.codice_domanda);
+        if (q.codice === "VALUTAZIONE_INDIPENDENZA") {
+          if (rc === "SALVAGUARDIE") { setMisureSalvaguardia(r.specifica || ""); continue; }
+          if (rc === "ESITO") { setEsitoIndipendenza(r.specifica || ""); continue; }
+          if (rc === "FEE_S") { setCompensoS(r.specifica || ""); continue; }
+          if (rc === "FEE_C") { setCompensoC(r.specifica || ""); continue; }
+          if (rc === "FEE_CT") { setCompensoCT(r.specifica || ""); continue; }
+        }
+        if (q.codice === "VALUTAZIONE_RISCHIO_RICICLAGGIO") {
+          if (rc === "PUNTEGGIO_NATURA") { setPunteggioNatura(r.specifica || "1"); continue; }
+          if (rc === "PUNTEGGIO_ATTIVITA") { setPunteggioAttivita(r.specifica || "1"); continue; }
+          if (rc === "PUNTEGGIO_COMPORTAMENTO") { setPunteggioComportamento(r.specifica || "1"); continue; }
+          if (rc === "PUNTEGGIO_AREA") { setPunteggioArea(r.specifica || "1"); continue; }
+        }
+        mappa[String(r.codice_domanda)] = {''')
+
+          rep('''      if (q.codice === "ACCETTAZIONE_INCARICO") {
+        setRisposteStep2(mappa);
+        setConclusioniStep2(q.conclusioni || "");
+        setRischioIncarico(q.esito || "");
+      }
+    }''','''      if (q.codice === "ACCETTAZIONE_INCARICO") { setRisposteStep2(mappa); setConclusioniStep2(q.conclusioni || ""); setRischioIncarico(q.esito || ""); }
+      if (q.codice === "VALUTAZIONE_INDIPENDENZA") { setRisposteStep3(mappa); setConclusioniStep3(q.conclusioni || ""); setRischioIndipendenza(q.esito || ""); }
+      if (q.codice === "VALUTAZIONE_RISCHIO_RICICLAGGIO") { setRisposteStep4(mappa); setConclusioniStep4(q.conclusioni || ""); setRischioAml(q.esito || ""); }
+    }''')
+
+          rep('''  async function salvaBozza() {''','''  function aggiornaStep3(codice: string, patch: Partial<Riga>) { setRisposteStep3((p) => ({ ...p, [codice]: { risposta: p[codice]?.risposta || "", specifica: p[codice]?.specifica || "", ...patch } })); }
+  function aggiornaStep4(codice: string, patch: Partial<Riga>) { setRisposteStep4((p) => ({ ...p, [codice]: { risposta: p[codice]?.risposta || "", specifica: p[codice]?.specifica || "", ...patch } })); }
+
+  async function salvaBozza() {''')
+
+          rep('''    setMessaggio(`Step ${step} salvato correttamente.`);''','''    if (step === 3) {
+      const ok = await salvaQuestionario({ supabase, preincaricoId: pre.id, codice: "VALUTAZIONE_INDIPENDENZA", titolo: "Questionario valutazione indipendenza", domande: domandeStep3.map(([c])=>c), risposte: risposteStep3, conclusioni: conclusioniStep3, esito: rischioIndipendenza || null, completato: completateStep3 === domandeStep3.length && !!rischioIndipendenza && !!esitoIndipendenza, extraRighe: [{codice:"SALVAGUARDIE",specifica:misureSalvaguardia},{codice:"ESITO",specifica:esitoIndipendenza},{codice:"FEE_S",specifica:compensoS},{codice:"FEE_C",specifica:compensoC},{codice:"FEE_CT",specifica:compensoCT}] });
+      if (!ok) return;
+    }
+    if (step === 4) {
+      const ok = await salvaQuestionario({ supabase, preincaricoId: pre.id, codice: "VALUTAZIONE_RISCHIO_RICICLAGGIO", titolo: "Valutazione rischio riciclaggio", domande: domandeStep4.map(([c])=>c), risposte: risposteStep4, conclusioni: conclusioniStep4, esito: rischioAml || null, completato: completateStep4 === domandeStep4.length && !!rischioAml, extraRighe: [{codice:"PUNTEGGIO_NATURA",specifica:punteggioNatura},{codice:"PUNTEGGIO_ATTIVITA",specifica:punteggioAttivita},{codice:"PUNTEGGIO_COMPORTAMENTO",specifica:punteggioComportamento},{codice:"PUNTEGGIO_AREA",specifica:punteggioArea}] });
+      if (!ok) return;
+    }
+
+    setMessaggio(`Step ${step} salvato correttamente.`);''')
+
+          rep('''    dataAccettazione?: string;
+  }) {''','''    dataAccettazione?: string;
+    extraRighe?: Array<{ codice: string; specifica: string }>;
+  }) {''')
+          rep('''    const righe = args.domande''','''    const righe: any[] = args.domande''')
+          rep('''    if (righe.length) {
+      const { error: rError }''','''    for (const extra of args.extraRighe || []) {
+      if (!extra.specifica) continue;
+      righe.push({ studio_id: studioId, questionario_id: q.id, codice_domanda: extra.codice, risposta: null, specifica: extra.specifica, ordine: righe.length + 1, updated_at: new Date().toISOString() });
+    }
+
+    if (righe.length) {
+      const { error: rError }''')
+
+          rep('''    setDataAccettazioneStep2("");
+    setMessaggio("");''','''    setDataAccettazioneStep2("");
+    setRisposteStep3({}); setConclusioniStep3(""); setRischioIndipendenza(""); setEsitoIndipendenza(""); setMisureSalvaguardia(""); setCompensoS(""); setCompensoC(""); setCompensoCT("");
+    setRisposteStep4({}); setConclusioniStep4(""); setRischioAml(""); setPunteggioNatura("1"); setPunteggioAttivita("1"); setPunteggioComportamento("1"); setPunteggioArea("1");
+    setMessaggio("");''')
+
+          old='''      {step > 2 && (
+        <section style={card}>
+          <h2 style={{ marginTop: 0 }}>Step {step} — {steps[step - 1]}</h2>
+          <p style={{ color: "#64748b" }}>Modulo predisposto nel workflow. I quesiti del relativo documento saranno inseriti nel blocco dedicato.</p>
+        </section>
+      )}'''
+          new='''      {step === 3 && (
+        <section style={card}>
+          <StepHeader title="Step 3 — Questionario valutazione indipendenza" completed={completateStep3} total={domandeStep3.length} />
+          <div style={{marginTop:18}}>{domandeStep3.map(([codice,sezione,testo,help],i)=><React.Fragment key={codice}>{(i===0||domandeStep3[i-1][1]!==sezione)&&<div style={{marginTop:i?24:0,padding:"10px 12px",borderRadius:8,background:"#eaf8ff",color:"#075985",fontWeight:900}}>{sezione}</div>}<QuestionRow codice={codice} testo={testo} help={help} riga={risposteStep3[codice]} onChange={(patch)=>aggiornaStep3(codice,patch)} /></React.Fragment>)}</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginTop:18}}><Field label="(S) Compensi revisione / sindaco"><input value={compensoS} onChange={e=>setCompensoS(e.target.value)} style={input}/></Field><Field label="(C) Altri compensi società/gruppo"><input value={compensoC} onChange={e=>setCompensoC(e.target.value)} style={input}/></Field><Field label="(CT) Compensi totali professionista/rete"><input value={compensoCT} onChange={e=>setCompensoCT(e.target.value)} style={input}/></Field></div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginTop:12}}><Mini label="(S+C)/CT" value={`${rapportoSCCT.toFixed(2)}%`}/><Mini label="S/(S+C)" value={rapportoSsuSC.toFixed(4)}/></div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginTop:18}}><Field label="Rischio indipendenza"><select value={rischioIndipendenza} onChange={e=>setRischioIndipendenza(e.target.value)} style={input}><option value="">Seleziona</option><option value="BASSO">Basso</option><option value="MEDIO">Medio</option><option value="ALTO">Alto</option></select></Field><Field label="Esito"><select value={esitoIndipendenza} onChange={e=>setEsitoIndipendenza(e.target.value)} style={input}><option value="">Seleziona</option><option value="ACCETTATO">Accettato</option><option value="RIFIUTATO">Rifiutato</option></select></Field></div>
+          <div style={{marginTop:16}}><Field label="Misure di salvaguardia"><textarea value={misureSalvaguardia} onChange={e=>setMisureSalvaguardia(e.target.value)} style={{...input,minHeight:120}} /></Field></div>
+          <div style={{marginTop:16}}><Field label="Conclusioni"><textarea value={conclusioniStep3} onChange={e=>setConclusioniStep3(e.target.value)} style={{...input,minHeight:130}} /></Field></div>
+        </section>
+      )}
+
+      {step === 4 && (
+        <section style={card}>
+          <StepHeader title="Step 4 — Valutazione rischio riciclaggio" completed={completateStep4} total={domandeStep4.length} />
+          <div style={{marginTop:14,padding:14,borderRadius:10,background:"#fff7ed",border:"1px solid #fdba74",fontSize:13,color:"#9a3412"}}><b>Antiriciclaggio:</b> valutazione strutturata secondo il questionario di presa in carico. Il titolare effettivo e i dati anagrafici restano collegati allo snapshot del cliente.</div>
+          <div style={{marginTop:18}}>{domandeStep4.map(([codice,sezione,testo,help],i)=><React.Fragment key={codice}>{(i===0||domandeStep4[i-1][1]!==sezione)&&<div style={{marginTop:i?24:0,padding:"10px 12px",borderRadius:8,background:"#eaf8ff",color:"#075985",fontWeight:900}}>{sezione}</div>}<QuestionRow codice={codice} testo={testo} help={help} riga={risposteStep4[codice]} onChange={(patch)=>aggiornaStep4(codice,patch)} /></React.Fragment>)}</div>
+          <div style={{marginTop:22,padding:16,border:"1px solid #cbd5e1",borderRadius:10,background:"#f8fafc"}}><h3 style={{margin:"0 0 14px"}}>Rischio specifico — aspetti connessi al cliente</h3><div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}}><Field label="a) Natura giuridica"><input type="number" min="1" value={punteggioNatura} onChange={e=>setPunteggioNatura(e.target.value)} style={input}/></Field><Field label="b) Prevalente attività"><input type="number" min="1" value={punteggioAttivita} onChange={e=>setPunteggioAttivita(e.target.value)} style={input}/></Field><Field label="c) Comportamento"><input type="number" min="1" value={punteggioComportamento} onChange={e=>setPunteggioComportamento(e.target.value)} style={input}/></Field><Field label="d) Area geografica"><input type="number" min="1" value={punteggioArea} onChange={e=>setPunteggioArea(e.target.value)} style={input}/></Field></div></div>
+          <div style={{marginTop:18}}><Field label="Esito della valutazione del rischio di riciclaggio e finanziamento del terrorismo"><select value={rischioAml} onChange={e=>setRischioAml(e.target.value)} style={input}><option value="">Seleziona</option><option value="BASSO">Basso</option><option value="MEDIO">Medio</option><option value="ALTO">Alto</option></select></Field></div>
+          <div style={{marginTop:16}}><Field label="Conclusioni"><textarea value={conclusioniStep4} onChange={e=>setConclusioniStep4(e.target.value)} placeholder="Riportare le conclusioni della valutazione antiriciclaggio..." style={{...input,minHeight:140}} /></Field></div>
+        </section>
+      )}
+
+      {step > 4 && (
+        <section style={card}>
+          <h2 style={{ marginTop: 0 }}>Step {step} — {steps[step - 1]}</h2>
+          <p style={{ color: "#64748b" }}>Modulo predisposto nel workflow. I quesiti del relativo documento saranno inseriti nel blocco dedicato.</p>
+        </section>
+      )}'''
+          rep(old,new)
+          p.write_text(s)
+          PY
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/revisione-controllo/presa-in-carico.tsx
+          git commit -m "Add audit independence and AML intake steps"
+          git push origin HEAD:main
