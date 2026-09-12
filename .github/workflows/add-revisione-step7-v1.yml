@@ -1,0 +1,72 @@
+name: Add revisione Step 7 proposal
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Patch Step 7
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          p=Path('src/pages/revisione-controllo/presa-in-carico.tsx')
+          s=p.read_text()
+          if 'const [decorrenzaProposta' in s:
+              print('Step 7 already present')
+              raise SystemExit(0)
+          anchor='  const [trasparenzaConfermata, setTrasparenzaConfermata] = useState(false);'
+          add='''\n  const [decorrenzaProposta, setDecorrenzaProposta] = useState("");\n  const [numeroEserciziProposta, setNumeroEserciziProposta] = useState("3");\n  const [eserciziProposta, setEserciziProposta] = useState("");\n  const [compensoAnnualeProposta, setCompensoAnnualeProposta] = useState("");\n  const [attivitaAggiuntiveProposta, setAttivitaAggiuntiveProposta] = useState("Sottoscrizione delle dichiarazioni fiscali, ove prevista dalla normativa vigente.");\n  const [responsabileProposta, setResponsabileProposta] = useState("");\n  const [polizzaProposta, setPolizzaProposta] = useState("");\n  const [noteProposta, setNoteProposta] = useState("");\n  const [dataProposta, setDataProposta] = useState("");\n  const [propostaConfermata, setPropostaConfermata] = useState(false);'''
+          assert anchor in s
+          s=s.replace(anchor,anchor+add,1)
+
+          old='.in("tipo", ["ATTESTAZIONE_INDIPENDENZA", "DICHIARAZIONE_TRASPARENZA"])'
+          new='.in("tipo", ["ATTESTAZIONE_INDIPENDENZA", "DICHIARAZIONE_TRASPARENZA", "PROPOSTA_INCARICO"])'
+          assert old in s
+          s=s.replace(old,new,1)
+
+          anchor='''      if (documento.tipo === "DICHIARAZIONE_TRASPARENZA") {\n        const righe = Array.isArray(contenuto.incarichi) ? contenuto.incarichi : [];\n        setIncarichiTrasparenza(righe.length ? righe : [incaricoTrasparenzaVuoto()]);\n        setDataTrasparenza(contenuto.data || ""); setFirmatarioTrasparenza(contenuto.firmatario || ""); setTrasparenzaConfermata(Boolean(contenuto.confermato));\n      }'''
+          add='''\n      if (documento.tipo === "PROPOSTA_INCARICO") {\n        setDecorrenzaProposta(contenuto.decorrenza || ""); setNumeroEserciziProposta(String(contenuto.numero_esercizi || "3")); setEserciziProposta(contenuto.esercizi || ""); setCompensoAnnualeProposta(contenuto.compenso_annuale || ""); setAttivitaAggiuntiveProposta(contenuto.attivita_aggiuntive || ""); setResponsabileProposta(contenuto.responsabile || ""); setPolizzaProposta(contenuto.polizza || ""); setNoteProposta(contenuto.note || ""); setDataProposta(contenuto.data || ""); setPropostaConfermata(Boolean(contenuto.confermato));\n      }'''
+          assert anchor in s
+          s=s.replace(anchor,anchor+add,1)
+
+          anchor='''    else if (step === 6) ok = await salvaDocumentoPreincarico({ supabase, preincaricoId: pre.id, tipo: "DICHIARAZIONE_TRASPARENZA", stato: trasparenzaConfermata ? "confermato" : "bozza", contenuto: { data: dataTrasparenza, firmatario: firmatarioTrasparenza, confermato: trasparenzaConfermata, incarichi: incarichiTrasparenza.filter((r) => r.ente || r.ateco || r.sede || r.codiceFiscale || r.ruolo) } });'''
+          add='''\n    else if (step === 7) ok = await salvaDocumentoPreincarico({ supabase, preincaricoId: pre.id, tipo: "PROPOSTA_INCARICO", stato: propostaConfermata ? "confermato" : "bozza", contenuto: { data: dataProposta, decorrenza: decorrenzaProposta, numero_esercizi: numeroEserciziProposta, esercizi: eserciziProposta, compenso_annuale: compensoAnnualeProposta, attivita_aggiuntive: attivitaAggiuntiveProposta, responsabile: responsabileProposta, polizza: polizzaProposta, note: noteProposta, confermato: propostaConfermata } });'''
+          assert anchor in s
+          s=s.replace(anchor,anchor+add,1)
+
+          reset='setTrasparenzaConfermata(false); setMessaggio("");'
+          repl='setTrasparenzaConfermata(false); setDecorrenzaProposta(""); setNumeroEserciziProposta("3"); setEserciziProposta(""); setCompensoAnnualeProposta(""); setAttivitaAggiuntiveProposta("Sottoscrizione delle dichiarazioni fiscali, ove prevista dalla normativa vigente."); setResponsabileProposta(""); setPolizzaProposta(""); setNoteProposta(""); setDataProposta(""); setPropostaConfermata(false); setMessaggio("");'
+          assert reset in s
+          s=s.replace(reset,repl,1)
+
+          placeholder='''      {step > 6 && <section style={card}><h2 style={{ marginTop: 0 }}>Step {step} — {steps[step - 1]}</h2><p style={{ color: "#64748b" }}>Modulo predisposto nel workflow. Il documento dello step sarà inserito nel blocco dedicato.</p></section>}'''
+          ui='''      {step === 7 && <section style={card}><h2 style={{ marginTop: 0 }}>Step 7 — Proposta di incarico di revisione</h2><p style={{ color: "#64748b", marginBottom: 18 }}>Lettera di proposta costruita sul modello allegato: oggetto e durata dell’incarico, responsabilità, modalità di svolgimento, corrispettivi, indipendenza, riservatezza, antiriciclaggio e copertura assicurativa.</p><div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}><Field label="Data proposta"><input type="date" value={dataProposta} onChange={(e) => setDataProposta(e.target.value)} style={input} /></Field><Field label="Decorrenza incarico"><input type="date" value={decorrenzaProposta} onChange={(e) => setDecorrenzaProposta(e.target.value)} style={input} /></Field><Field label="Numero esercizi"><input type="number" min="1" value={numeroEserciziProposta} onChange={(e) => setNumeroEserciziProposta(e.target.value)} style={input} /></Field></div><div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}><Field label="Esercizi interessati"><input value={eserciziProposta} onChange={(e) => setEserciziProposta(e.target.value)} placeholder="es. 2025 – 2026 – 2027" style={input} /></Field><Field label="Compenso annuale"><input value={compensoAnnualeProposta} onChange={(e) => setCompensoAnnualeProposta(e.target.value)} placeholder="Euro 0,00 oltre IVA e cassa" style={input} /></Field><Field label="Responsabile dell’incarico"><input value={responsabileProposta} onChange={(e) => setResponsabileProposta(e.target.value)} placeholder="Dott./Dott.ssa ..." style={input} /></Field><Field label="Copertura assicurativa"><textarea value={polizzaProposta} onChange={(e) => setPolizzaProposta(e.target.value)} placeholder="Compagnia, numero polizza, eventuali estremi..." style={{ ...input, minHeight: 88, resize: "vertical" }} /></Field></div><div style={{ marginTop: 14 }}><Field label="Attività aggiuntive"><textarea value={attivitaAggiuntiveProposta} onChange={(e) => setAttivitaAggiuntiveProposta(e.target.value)} style={{ ...input, minHeight: 88, resize: "vertical" }} /></Field></div><div style={{ marginTop: 14 }}><Field label="Note e condizioni particolari"><textarea value={noteProposta} onChange={(e) => setNoteProposta(e.target.value)} placeholder="Eventuali condizioni particolari, adeguamenti del compenso o ulteriori pattuizioni..." style={{ ...input, minHeight: 100, resize: "vertical" }} /></Field></div><div style={{ marginTop: 22, border: "1px solid #cbd5e1", borderRadius: 12, padding: 24, lineHeight: 1.6 }}><h3 style={{ textAlign: "center", marginTop: 0 }}>PROPOSTA DI INCARICO DI REVISIONE LEGALE</h3><p><b>Società:</b> {snapshot?.cliente?.ragione_sociale || clienteSelezionato?.ragione_sociale || "—"}</p><p>Con riferimento ai contatti intercorsi, vengono sottoposte le modalità e condizioni relative all’incarico di revisione legale dei conti per gli esercizi indicati.</p><h4>Oggetto dell’incarico</h4><p>L’incarico comprende la revisione dei bilanci degli esercizi per i quali è conferito, al fine di esprimere il giudizio sul bilancio, e la verifica della regolare esecuzione della contabilità sociale e della corretta rilevazione dei fatti e atti di gestione.</p><h4>Durata</h4><p>Durata prevista: <b>{numeroEserciziProposta || "—"} esercizi</b>{eserciziProposta ? ` (${eserciziProposta})` : ""}, con decorrenza {decorrenzaProposta || "—"}.</p><h4>Obiettivi e responsabilità</h4><p>La revisione è svolta secondo i principi di revisione applicabili. La direzione resta responsabile della redazione del bilancio, della correttezza delle informazioni, dell’adeguatezza del controllo interno e della messa a disposizione del revisore di informazioni, documenti e persone necessarie. Il revisore esegue le verifiche periodiche e formula il giudizio professionale sul bilancio nel suo complesso.</p><h4>Modalità di svolgimento</h4><p>Le attività comprendono pianificazione, verifiche sul bilancio, valutazione degli eventuali errori rispetto alla materialità, rapporti con le parti correlate, eventi successivi, continuità aziendale e verifiche della regolare contabilità sociale.</p><h4>Attività aggiuntive</h4><p>{attivitaAggiuntiveProposta || "—"}</p><h4>Corrispettivi e spese</h4><p>Responsabile: <b>{responsabileProposta || "—"}</b>. Compenso annuale: <b>{compensoAnnualeProposta || "—"}</b>. Eventuali variazioni significative della struttura o circostanze imprevedibili potranno determinare un adeguamento documentato degli onorari.</p><h4>Indipendenza, riservatezza e antiriciclaggio</h4><p>L’assunzione dell’incarico presuppone il mantenimento dell’indipendenza e l’assenza di incompatibilità. I dati e le carte di lavoro sono trattati secondo la disciplina applicabile; restano inoltre fermi gli obblighi di adeguata verifica, conservazione e segnalazione previsti dalla normativa antiriciclaggio.</p><h4>Copertura assicurativa</h4><p>{polizzaProposta || "—"}</p>{noteProposta && <><h4>Condizioni particolari</h4><p>{noteProposta}</p></>}<div style={{ marginTop: 34 }}><b>Per accettazione (la società)</b><div style={{ borderBottom: "1px solid #64748b", width: 280, marginTop: 40 }} /></div></div><label style={{ display: "flex", gap: 12, alignItems: "flex-start", marginTop: 20, padding: 16, borderRadius: 10, border: propostaConfermata ? "2px solid #16a34a" : "1px solid #94a3b8", background: propostaConfermata ? "#f0fdf4" : "#f8fafc", cursor: "pointer" }}><input type="checkbox" checked={propostaConfermata} onChange={(e) => setPropostaConfermata(e.target.checked)} style={{ width: 20, height: 20, marginTop: 2 }} /><span><b>Confermo la proposta di incarico</b><br/><span style={{ color: "#64748b", fontSize: 13 }}>La versione confermata viene congelata nel fascicolo preliminare e sarà utilizzata nello Step 8.</span></span></label></section>}
+
+      {step > 7 && <section style={card}><h2 style={{ marginTop: 0 }}>Step {step} — {steps[step - 1]}</h2><p style={{ color: "#64748b" }}>Modulo predisposto nel workflow. Il documento dello step sarà inserito nel blocco dedicato.</p></section>}'''
+          assert placeholder in s
+          s=s.replace(placeholder,ui,1)
+          p.write_text(s)
+          PY
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - name: Commit source
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/pages/revisione-controllo/presa-in-carico.tsx
+          git commit -m "Add audit engagement proposal step"
+          git push origin HEAD:main
