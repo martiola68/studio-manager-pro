@@ -1,0 +1,54 @@
+name: Harden revisione preincarico finalization
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Harden finalization
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          p=Path('src/pages/revisione-controllo/presa-in-carico.tsx')
+          s=p.read_text()
+          if 'const [praticaRevisioneId, setPraticaRevisioneId]' not in s:
+              s=s.replace('  const [generatingPratica, setGeneratingPratica] = useState(false);','  const [generatingPratica, setGeneratingPratica] = useState(false);\n  const [praticaRevisioneId, setPraticaRevisioneId] = useState<string | null>(null);\n  const [preincaricoStato, setPreincaricoStato] = useState("");',1)
+          s=s.replace('.select("id,step_corrente,snapshot_cliente")','.select("id,step_corrente,snapshot_cliente,stato,pratica_revisione_id")',1)
+          s=s.replace('setPreincaricoId(data.id); setStep(Math.max(1, Math.min(8, Number(data.step_corrente || 1)))); if (data.snapshot_cliente) setSnapshot(data.snapshot_cliente);','setPreincaricoId(data.id); setPreincaricoStato(data.stato || ""); setPraticaRevisioneId(data.pratica_revisione_id || null); setStep(Math.max(1, Math.min(8, Number(data.step_corrente || 1)))); if (data.snapshot_cliente) setSnapshot(data.snapshot_cliente);',1)
+          s=s.replace('  async function salvaBozza() {\n    if (!studioId || !clienteId || !dataBilancio)', '  async function salvaBozza() {\n    if (preincaricoStato === "generato" || praticaRevisioneId) { setErrore("La presa in carico è già stata finalizzata ed è bloccata nello storico."); return; }\n    if (!studioId || !clienteId || !dataBilancio)',1)
+          s=s.replace('setPropostaConfermata(false); setDataAccettazioneFinale(""); setResponsabileFinale(""); setNoteFinali(""); setAccettazioneFinaleConfermata(false); setMessaggio("");', 'setPropostaConfermata(false); setDataAccettazioneFinale(""); setResponsabileFinale(""); setNoteFinali(""); setAccettazioneFinaleConfermata(false); setPraticaRevisioneId(null); setPreincaricoStato(""); setMessaggio("");',1)
+          s=s.replace('    if (!studioId || !clienteId || !preincaricoId) { setErrore("Salva prima la presa in carico."); return; }', '    if (!studioId || !clienteId || !preincaricoId) { setErrore("Salva prima la presa in carico."); return; }\n    if (praticaRevisioneId || preincaricoStato === "generato") { setErrore("La pratica di revisione è già stata generata per questa presa in carico."); return; }',1)
+          old='''      const supabase = getSupabaseClient() as any;\n      const { error: updateError } = await supabase.from("tbrevisione_preincarichi").update({ stato: "generato", accettato: true, data_accettazione: dataAccettazioneFinale, note_finali: noteFinali || null, pratica_revisione_id: payload.data.id, step_corrente: 8, snapshot_cliente: snapshot || {}, updated_at: new Date().toISOString() }).eq("id", preincaricoId);\n      if (updateError) throw updateError;\n      await salvaDocumentoPreincarico({ supabase, preincaricoId, tipo: "ACCETTAZIONE_FINALE", stato: "confermato", contenuto: { data: dataAccettazioneFinale, responsabile: responsabileFinale, note: noteFinali, confermato: true, pratica_revisione_id: payload.data.id } });\n      setMessaggio("Pratica di revisione generata correttamente.");'''
+          new='''      const supabase = getSupabaseClient() as any;\n      const savedFinal = await salvaDocumentoPreincarico({ supabase, preincaricoId, tipo: "ACCETTAZIONE_FINALE", stato: "confermato", contenuto: { data: dataAccettazioneFinale, responsabile: responsabileFinale, note: noteFinali, confermato: true, pratica_revisione_id: payload.data.id } });\n      if (!savedFinal) throw new Error("Impossibile congelare il documento di accettazione finale.");\n      const { error: updateError } = await supabase.from("tbrevisione_preincarichi").update({ stato: "generato", accettato: true, data_accettazione: dataAccettazioneFinale, note_finali: noteFinali || null, pratica_revisione_id: payload.data.id, step_corrente: 8, snapshot_cliente: snapshot || {}, updated_at: new Date().toISOString() }).eq("id", preincaricoId);\n      if (updateError) throw updateError;\n      setPraticaRevisioneId(payload.data.id); setPreincaricoStato("generato");\n      setMessaggio("Pratica di revisione generata correttamente. La presa in carico è ora congelata nello storico.");'''
+          if old not in s: raise SystemExit('generation anchor not found')
+          s=s.replace(old,new,1)
+          s=s.replace('disabled={!stepFinaliCompleti || !accettazioneFinaleConfermata || !dataAccettazioneFinale || generatingPratica}', 'disabled={!stepFinaliCompleti || !accettazioneFinaleConfermata || !dataAccettazioneFinale || generatingPratica || !!praticaRevisioneId}',1)
+          s=s.replace('{generatingPratica ? "Generazione pratica..." : "GENERA PRATICA DI REVISIONE"}', '{praticaRevisioneId ? "PRATICA DI REVISIONE GIÀ GENERATA" : generatingPratica ? "Generazione pratica..." : "GENERA PRATICA DI REVISIONE"}',1)
+          p.write_text(s)
+
+          m=Path('supabase/migrations/20260912143000_lock_revisione_preincarico_generato.sql')
+          if not m.exists():
+              m.write_text('''create or replace function public.revisione_preincarico_bloccato(p_preincarico_id uuid)\nreturns boolean\nlanguage sql\nstable\nas $$\n  select exists (\n    select 1 from public.tbrevisione_preincarichi p\n    where p.id = p_preincarico_id and p.stato = 'generato'\n  );\n$$;\n\ncreate or replace function public.trg_blocca_preincarico_generato()\nreturns trigger\nlanguage plpgsql\nas $$\nbegin\n  if old.stato = 'generato' then\n    raise exception 'Presa in carico già generata: modifica non consentita';\n  end if;\n  return new;\nend;\n$$;\n\ndrop trigger if exists trg_blocca_preincarico_generato on public.tbrevisione_preincarichi;\ncreate trigger trg_blocca_preincarico_generato\nbefore update or delete on public.tbrevisione_preincarichi\nfor each row execute function public.trg_blocca_preincarico_generato();\n\ncreate or replace function public.trg_blocca_questionario_preincarico_generato()\nreturns trigger\nlanguage plpgsql\nas $$\ndeclare v_pre uuid;\nbegin\n  v_pre := coalesce(new.preincarico_id, old.preincarico_id);\n  if public.revisione_preincarico_bloccato(v_pre) then\n    raise exception 'Presa in carico già generata: questionario non modificabile';\n  end if;\n  return coalesce(new, old);\nend;\n$$;\n\ndrop trigger if exists trg_blocca_questionario_preincarico_generato on public.tbrevisione_questionari;\ncreate trigger trg_blocca_questionario_preincarico_generato\nbefore update or delete on public.tbrevisione_questionari\nfor each row execute function public.trg_blocca_questionario_preincarico_generato();\n\ncreate or replace function public.trg_blocca_risposta_preincarico_generato()\nreturns trigger\nlanguage plpgsql\nas $$\ndeclare v_q uuid; v_pre uuid;\nbegin\n  v_q := coalesce(new.questionario_id, old.questionario_id);\n  select preincarico_id into v_pre from public.tbrevisione_questionari where id = v_q;\n  if public.revisione_preincarico_bloccato(v_pre) then\n    raise exception 'Presa in carico già generata: risposta non modificabile';\n  end if;\n  return coalesce(new, old);\nend;\n$$;\n\ndrop trigger if exists trg_blocca_risposta_preincarico_generato on public.tbrevisione_risposte;\ncreate trigger trg_blocca_risposta_preincarico_generato\nbefore insert or update or delete on public.tbrevisione_risposte\nfor each row execute function public.trg_blocca_risposta_preincarico_generato();\n\ncreate or replace function public.trg_blocca_documento_preincarico_generato()\nreturns trigger\nlanguage plpgsql\nas $$\ndeclare v_pre uuid;\nbegin\n  v_pre := coalesce(new.preincarico_id, old.preincarico_id);\n  if public.revisione_preincarico_bloccato(v_pre) then\n    raise exception 'Presa in carico già generata: documento non modificabile';\n  end if;\n  return coalesce(new, old);\nend;\n$$;\n\ndrop trigger if exists trg_blocca_documento_preincarico_generato on public.tbrevisione_preincarico_documenti;\ncreate trigger trg_blocca_documento_preincarico_generato\nbefore insert or update or delete on public.tbrevisione_preincarico_documenti\nfor each row execute function public.trg_blocca_documento_preincarico_generato();\n''')
+          PY
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - name: Commit source
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/pages/revisione-controllo/presa-in-carico.tsx supabase/migrations/20260912143000_lock_revisione_preincarico_generato.sql
+          git commit -m "Harden audit pre-engagement finalization"
+          git push origin HEAD:main
