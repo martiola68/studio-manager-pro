@@ -1,0 +1,65 @@
+name: Replace legacy revision engagement entry flow
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/replace-revisione-new-engagement-flow-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Replace legacy new-engagement flow
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          nav = Path('src/components/TopNavBar.tsx')
+          s = nav.read_text()
+          old = '{ label: "Nuovo incarico", href: "/revisione-controllo/nuovo", icon: <FileText className="h-4 w-4" /> },'
+          new = '{ label: "Nuova presa in carico", href: "/revisione-controllo/presa-in-carico", icon: <FileText className="h-4 w-4" /> },'
+          if old not in s:
+              raise SystemExit('TopNavBar: legacy Nuovo incarico entry not found')
+          nav.write_text(s.replace(old, new, 1))
+
+          idx = Path('src/pages/revisione-controllo/index.tsx')
+          s = idx.read_text()
+          s = s.replace('  Pencil,\n', '')
+          legacy_button = '''                          <button\n                            title="Modifica"\n                            onClick={() =>\n                              router.push(`/revisione-controllo/nuovo?id=${encodeURIComponent(String(item.id))}`)\n                            }\n                            className="rounded-md border bg-white p-2 hover:bg-gray-50"\n                          >\n                            <Pencil size={16} />\n                          </button>\n\n'''
+          if legacy_button not in s:
+              raise SystemExit('index.tsx: legacy edit button not found')
+          idx.write_text(s.replace(legacy_button, '', 1))
+
+          nuovo = Path('src/pages/revisione-controllo/nuovo.tsx')
+          nuovo.write_text('''import { useEffect } from "react";\nimport { useRouter } from "next/router";\n\nexport default function NuovoIncaricoRevisioneLegacyRedirect() {\n  const router = useRouter();\n\n  useEffect(() => {\n    void router.replace("/revisione-controllo/presa-in-carico");\n  }, [router]);\n\n  return (\n    <div className="flex min-h-[220px] items-center justify-center text-sm text-slate-500">\n      Apertura della nuova presa in carico...\n    </div>\n  );\n}\n''')
+          PY
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/TopNavBar.tsx src/pages/revisione-controllo/index.tsx src/pages/revisione-controllo/nuovo.tsx
+          git diff --cached --quiet && exit 0
+          git commit -m "Retire legacy revision engagement form"
+          git push origin main
