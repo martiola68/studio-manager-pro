@@ -1,4 +1,4 @@
-name: Agenda Teams filter fix
+name: Revisione snapshot patch runner
 
 on:
   push:
@@ -9,87 +9,51 @@ permissions:
   contents: write
 
 jobs:
-  fix-agenda-teams-filter:
+  patch-revisione-snapshot:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0
-
-      - name: Patch Agenda Teams filtering
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Patch snapshot soci e organi
         run: |
-          python - <<'PY'
+          python3 <<'PY'
           from pathlib import Path
-          import re
-
-          path = Path('src/pages/agenda/index.tsx')
-          text = path.read_text()
-          original = text
-
-          text = text.replace(
-            '      riunione_teams: Boolean((master as any).riunione_teams),\n      link_teams: ((master as any).link_teams as string) || null,',
-            '      riunione_teams: sortedRows.some((row) => Boolean((row as any).riunione_teams) || Boolean(String((row as any).link_teams || "").trim())),\n      link_teams: (sortedRows.find((row) => Boolean(String((row as any).link_teams || "").trim())) as any)?.link_teams || null,'
-          )
-
-          pattern = re.compile(
-            r' const teamsEvents = useMemo\(\(\) => \{.*?\n\}, \[groupedEvents, filtroUtenti(?:, filtroSettori, utenti)?\]\);',
-            re.S,
-          )
-
-          replacement = ''' const teamsEvents = useMemo(() => {
-  const activeUserIds = new Set<string>(filtroUtenti);
-
-  if (filtroSettori.length > 0) {
-    utenti
-      .filter((u) => {
-        const settore = normalizeSettore(u.settore);
-        return settore && filtroSettori.includes(settore as "Fiscale" | "Consulenza" | "Lavoro");
-      })
-      .forEach((u) => activeUserIds.add(String(u.id)));
-  }
-
-  return groupedEvents
-    .filter((e) => {
-      // Considera Teams se almeno una riga del gruppo è marcata Teams
-      // oppure contiene il relativo link. In questo modo non dipendiamo
-      // dalla riga scelta come master del gruppo.
-      const isTeams =
-        Boolean(e.riunione_teams) ||
-        Boolean(String(e.link_teams || "").trim()) ||
-        e.rows.some((row) =>
-          Boolean((row as any).riunione_teams) ||
-          Boolean(String((row as any).link_teams || "").trim())
-        );
-
-      if (!isTeams) return false;
-      if (activeUserIds.size === 0) return true;
-
-      return e.rows.some((row) =>
-        activeUserIds.has(String(row.utente_id || ""))
-      );
-    })
-    .sort(
-      (a, b) =>
-        safeParseISO(a.data_inizio).getTime() -
-        safeParseISO(b.data_inizio).getTime()
-    );
-}, [groupedEvents, filtroUtenti, filtroSettori, utenti]);'''
-
-          text, count = pattern.subn(replacement, text, count=1)
-          if count != 1:
-            raise SystemExit(f'Blocco teamsEvents non trovato o ambiguo: {count}')
-
-          if text == original:
-            raise SystemExit('Nessuna modifica prodotta')
-
-          path.write_text(text)
+          p=Path('src/pages/revisione-controllo/presa-in-carico.tsx')
+          s=p.read_text(encoding='utf-8')
+          anchor='''const incaricoTrasparenzaVuoto = (): IncaricoTrasparenza => ({ ente: "", ateco: "", sede: "", codiceFiscale: "", ruolo: "" });\nfunction nomeCliente(c: Cliente) { return c.ragione_sociale || "Cliente senza denominazione"; }\n'''
+          helper='''const incaricoTrasparenzaVuoto = (): IncaricoTrasparenza => ({ ente: "", ateco: "", sede: "", codiceFiscale: "", ruolo: "" });\nfunction nomeCliente(c: Cliente) { return c.ragione_sociale || "Cliente senza denominazione"; }\n\nfunction parseDataOrgano(value: unknown, fineGiornata = false) {\n  if (!value) return null;\n  const raw = String(value).trim();\n  const italiana = raw.match(/^(\\d{2})\\/(\\d{2})\\/(\\d{4})$/);\n  const iso = italiana ? `${italiana[3]}-${italiana[2]}-${italiana[1]}` : raw.slice(0, 10);\n  const data = new Date(`${iso}T${fineGiornata ? "23:59:59" : "00:00:00"}`);\n  return Number.isNaN(data.getTime()) ? null : data;\n}\n\nfunction organoValidoAllaData(organo: any, dataRiferimento: string) {\n  const riferimento = dataRiferimento ? parseDataOrgano(dataRiferimento, true) : new Date();\n  if (!riferimento) return true;\n  const dalRaw = organo?.data_nomina || organo?.data_inizio || organo?.dal || null;\n  const alRaw = organo?.data_cessazione || organo?.data_scadenza || organo?.data_fine || organo?.al || null;\n  const dal = parseDataOrgano(dalRaw, false);\n  const al = parseDataOrgano(alRaw, true);\n  if (dal && dal > riferimento) return false;\n  if (al && al < riferimento) return false;\n  if (organo?.attivo === false && !alRaw) return false;\n  return true;\n}\n'''
+          if 'function organoValidoAllaData' not in s:
+              if anchor not in s: raise SystemExit('ANCHOR helper non trovato')
+              s=s.replace(anchor,helper,1)
+          old='supabase.from("tbclienti_organi").select("*").eq("cliente_id", clienteId).eq("attivo", true)'
+          if old in s:
+              s=s.replace(old,'supabase.from("tbclienti_organi").select("*").eq("cliente_id", clienteId)',1)
+          old_counts='''  const soci = (snapshot?.organi_sociali || []).filter((o: any) => o.ruolo === "socio");\n  const amministratori = (snapshot?.organi_sociali || []).filter((o: any) => ["amministratore_unico", "amministratore", "presidente_cda", "amministratore_delegato", "liquidatore"].includes(o.ruolo));\n  const controllo = (snapshot?.organi_sociali || []).filter((o: any) => ["sindaco", "presidente_collegio_sindacale", "revisore"].includes(o.ruolo));\n'''
+          new_counts='''  const organiAllaData = (snapshot?.organi_sociali || []).filter((o: any) => organoValidoAllaData(o, dataBilancio));\n  const soci = organiAllaData.filter((o: any) => o.ruolo === "socio");\n  const amministratori = organiAllaData.filter((o: any) => ["amministratore_unico", "amministratore", "presidente_cda", "amministratore_delegato", "liquidatore"].includes(o.ruolo));\n  const controllo = organiAllaData.filter((o: any) => ["sindaco", "presidente_collegio_sindacale", "revisore"].includes(o.ruolo));\n'''
+          if old_counts in s:
+              s=s.replace(old_counts,new_counts,1)
+          if old in s: raise SystemExit('Filtro attivo=true ancora presente')
+          if 'function organoValidoAllaData' not in s or 'const organiAllaData' not in s:
+              raise SystemExit('Fix snapshot incompleto')
+          p.write_text(s,encoding='utf-8')
           PY
-
-      - name: Commit fix
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - name: Commit source
         run: |
-          git config user.name "studio-manager-bot"
-          git config user.email "actions@github.com"
-          git add src/pages/agenda/index.tsx
-          git commit -m "Fix grouped Teams meeting detection and user filter"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/revisione-controllo/presa-in-carico.tsx
+          if git diff --cached --quiet; then
+            echo "Fix già applicato"
+            exit 0
+          fi
+          git commit -m "fix: revision snapshot uses historical company organs"
+          git pull --rebase origin main
           git push origin HEAD:main
