@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { useStudio } from "@/contexts/StudioContext";
+import { domandeStep3 } from "@/lib/revisione/revisione-step3-data";
+import { domandeStep4 } from "@/lib/revisione/revisione-step4-antiriciclaggio";
 
 const steps = [
   "Dati e valutazione preliminare",
@@ -81,6 +83,21 @@ export default function PresaInCaricoRevisione() {
   const [conclusioniStep2, setConclusioniStep2] = useState("");
   const [rischioIncarico, setRischioIncarico] = useState("");
   const [dataAccettazioneStep2, setDataAccettazioneStep2] = useState("");
+  const [risposteStep3, setRisposteStep3] = useState<Record<string, Riga>>({});
+  const [conclusioniStep3, setConclusioniStep3] = useState("");
+  const [rischioIndipendenza, setRischioIndipendenza] = useState("");
+  const [esitoIndipendenza, setEsitoIndipendenza] = useState("");
+  const [misureSalvaguardia, setMisureSalvaguardia] = useState("");
+  const [compensoS, setCompensoS] = useState("");
+  const [compensoC, setCompensoC] = useState("");
+  const [compensoCT, setCompensoCT] = useState("");
+  const [risposteStep4, setRisposteStep4] = useState<Record<string, Riga>>({});
+  const [conclusioniStep4, setConclusioniStep4] = useState("");
+  const [rischioRiciclaggio, setRischioRiciclaggio] = useState("");
+  const [scoreA, setScoreA] = useState("");
+  const [scoreB, setScoreB] = useState("");
+  const [scoreC, setScoreC] = useState("");
+  const [scoreD, setScoreD] = useState("");
   const [loadingClienti, setLoadingClienti] = useState(false);
   const [loadingSnapshot, setLoadingSnapshot] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -89,7 +106,20 @@ export default function PresaInCaricoRevisione() {
 
   const completate = useMemo(() => domandeStep1.filter(([c]) => !!risposte[c]?.risposta).length, [risposte]);
   const completateStep2 = useMemo(() => domandeStep2.filter(([c]) => !!risposteStep2[c]?.risposta).length, [risposteStep2]);
+  const completateStep3 = useMemo(() => domandeStep3.filter(([c]) => !!risposteStep3[c]?.risposta).length, [risposteStep3]);
+  const completateStep4 = useMemo(() => domandeStep4.filter(([c]) => !!risposteStep4[c]?.risposta).length, [risposteStep4]);
   const clienteSelezionato = useMemo(() => clienti.find((c) => c.id === clienteId) || null, [clienti, clienteId]);
+  const rapportoSCCT = useMemo(() => {
+    const s = numero(compensoS);
+    const c = numero(compensoC);
+    const ct = numero(compensoCT);
+    return ct > 0 ? ((s + c) / ct) * 100 : 0;
+  }, [compensoS, compensoC, compensoCT]);
+  const rapportoSsuSC = useMemo(() => {
+    const s = numero(compensoS);
+    const c = numero(compensoC);
+    return s + c > 0 ? s / (s + c) : 0;
+  }, [compensoS, compensoC]);
 
   useEffect(() => {
     if (!studioId) return;
@@ -176,7 +206,7 @@ export default function PresaInCaricoRevisione() {
       .from("tbrevisione_questionari")
       .select("id,codice,conclusioni,esito")
       .eq("preincarico_id", data.id)
-      .in("codice", ["VALUTAZIONE_PRELIMINARE", "ACCETTAZIONE_INCARICO"]);
+      .in("codice", ["VALUTAZIONE_PRELIMINARE", "ACCETTAZIONE_INCARICO", "VALUTAZIONE_INDIPENDENZA", "RISCHIO_RICICLAGGIO"]);
     if (qError) {
       setErrore(qError.message);
       return;
@@ -194,11 +224,25 @@ export default function PresaInCaricoRevisione() {
 
       const mappa: Record<string, Riga> = {};
       for (const r of rr || []) {
-        if (q.codice === "ACCETTAZIONE_INCARICO" && String(r.codice_domanda) === "16") {
+        const codice = String(r.codice_domanda);
+        if (q.codice === "ACCETTAZIONE_INCARICO" && codice === "16") {
           setDataAccettazioneStep2(r.specifica || "");
           continue;
         }
-        mappa[String(r.codice_domanda)] = {
+        if (q.codice === "VALUTAZIONE_INDIPENDENZA") {
+          if (codice === "FEE_S") { setCompensoS(r.specifica || ""); continue; }
+          if (codice === "FEE_C") { setCompensoC(r.specifica || ""); continue; }
+          if (codice === "FEE_CT") { setCompensoCT(r.specifica || ""); continue; }
+          if (codice === "SALVAGUARDIE") { setMisureSalvaguardia(r.specifica || ""); continue; }
+          if (codice === "ESITO") { setEsitoIndipendenza(r.specifica || ""); continue; }
+        }
+        if (q.codice === "RISCHIO_RICICLAGGIO") {
+          if (codice === "SCORE_A") { setScoreA(r.specifica || ""); continue; }
+          if (codice === "SCORE_B") { setScoreB(r.specifica || ""); continue; }
+          if (codice === "SCORE_C") { setScoreC(r.specifica || ""); continue; }
+          if (codice === "SCORE_D") { setScoreD(r.specifica || ""); continue; }
+        }
+        mappa[codice] = {
           risposta: (r.risposta || "") as Risposta,
           specifica: r.specifica || "",
         };
@@ -207,28 +251,37 @@ export default function PresaInCaricoRevisione() {
       if (q.codice === "VALUTAZIONE_PRELIMINARE") {
         setRisposte(mappa);
         setConclusioni(q.conclusioni || "");
-      }
-      if (q.codice === "ACCETTAZIONE_INCARICO") {
+      } else if (q.codice === "ACCETTAZIONE_INCARICO") {
         setRisposteStep2(mappa);
         setConclusioniStep2(q.conclusioni || "");
         setRischioIncarico(q.esito || "");
+      } else if (q.codice === "VALUTAZIONE_INDIPENDENZA") {
+        setRisposteStep3(mappa);
+        setConclusioniStep3(q.conclusioni || "");
+        setRischioIndipendenza(q.esito || "");
+      } else if (q.codice === "RISCHIO_RICICLAGGIO") {
+        setRisposteStep4(mappa);
+        setConclusioniStep4(q.conclusioni || "");
+        setRischioRiciclaggio(q.esito || "");
       }
     }
     setMessaggio("Bozza esistente caricata.");
   }
 
   function aggiorna(codice: string, patch: Partial<Riga>) {
-    setRisposte((p) => ({
-      ...p,
-      [codice]: { risposta: p[codice]?.risposta || "", specifica: p[codice]?.specifica || "", ...patch },
-    }));
+    setRisposte((p) => ({ ...p, [codice]: rigaAggiornata(p[codice], patch) }));
   }
 
   function aggiornaStep2(codice: string, patch: Partial<Riga>) {
-    setRisposteStep2((p) => ({
-      ...p,
-      [codice]: { risposta: p[codice]?.risposta || "", specifica: p[codice]?.specifica || "", ...patch },
-    }));
+    setRisposteStep2((p) => ({ ...p, [codice]: rigaAggiornata(p[codice], patch) }));
+  }
+
+  function aggiornaStep3(codice: string, patch: Partial<Riga>) {
+    setRisposteStep3((p) => ({ ...p, [codice]: rigaAggiornata(p[codice], patch) }));
+  }
+
+  function aggiornaStep4(codice: string, patch: Partial<Riga>) {
+    setRisposteStep4((p) => ({ ...p, [codice]: rigaAggiornata(p[codice], patch) }));
   }
 
   async function salvaBozza() {
@@ -265,8 +318,9 @@ export default function PresaInCaricoRevisione() {
     }
     setPreincaricoId(pre.id);
 
+    let ok = true;
     if (step === 1) {
-      const ok = await salvaQuestionario({
+      ok = await salvaQuestionario({
         supabase,
         preincaricoId: pre.id,
         codice: "VALUTAZIONE_PRELIMINARE",
@@ -277,11 +331,8 @@ export default function PresaInCaricoRevisione() {
         esito: null,
         completato: completate === domandeStep1.length,
       });
-      if (!ok) return;
-    }
-
-    if (step === 2) {
-      const ok = await salvaQuestionario({
+    } else if (step === 2) {
+      ok = await salvaQuestionario({
         supabase,
         preincaricoId: pre.id,
         codice: "ACCETTAZIONE_INCARICO",
@@ -293,9 +344,46 @@ export default function PresaInCaricoRevisione() {
         completato: completateStep2 === domandeStep2.length && !!rischioIncarico,
         dataAccettazione: dataAccettazioneStep2,
       });
-      if (!ok) return;
+    } else if (step === 3) {
+      ok = await salvaQuestionario({
+        supabase,
+        preincaricoId: pre.id,
+        codice: "VALUTAZIONE_INDIPENDENZA",
+        titolo: "Questionario valutazione indipendenza",
+        domande: domandeStep3.map(([codice]) => codice),
+        risposte: risposteStep3,
+        conclusioni: conclusioniStep3,
+        esito: rischioIndipendenza || null,
+        completato: completateStep3 === domandeStep3.length && !!rischioIndipendenza && !!esitoIndipendenza,
+        extraRighe: [
+          { codice: "SALVAGUARDIE", specifica: misureSalvaguardia },
+          { codice: "ESITO", specifica: esitoIndipendenza },
+          { codice: "FEE_S", specifica: compensoS },
+          { codice: "FEE_C", specifica: compensoC },
+          { codice: "FEE_CT", specifica: compensoCT },
+        ],
+      });
+    } else if (step === 4) {
+      ok = await salvaQuestionario({
+        supabase,
+        preincaricoId: pre.id,
+        codice: "RISCHIO_RICICLAGGIO",
+        titolo: "Valutazione rischio riciclaggio",
+        domande: domandeStep4.map(([codice]) => codice),
+        risposte: risposteStep4,
+        conclusioni: conclusioniStep4,
+        esito: rischioRiciclaggio || null,
+        completato: completateStep4 === domandeStep4.length && !!rischioRiciclaggio && !!scoreA && !!scoreB && !!scoreC && !!scoreD,
+        extraRighe: [
+          { codice: "SCORE_A", specifica: scoreA },
+          { codice: "SCORE_B", specifica: scoreB },
+          { codice: "SCORE_C", specifica: scoreC },
+          { codice: "SCORE_D", specifica: scoreD },
+        ],
+      });
     }
 
+    if (!ok) return;
     setMessaggio(`Step ${step} salvato correttamente.`);
     setSaving(false);
   }
@@ -311,6 +399,7 @@ export default function PresaInCaricoRevisione() {
     esito: string | null;
     completato: boolean;
     dataAccettazione?: string;
+    extraRighe?: Array<{ codice: string; specifica: string }>;
   }) {
     const { data: q, error: qError } = await args.supabase
       .from("tbrevisione_questionari")
@@ -347,7 +436,7 @@ export default function PresaInCaricoRevisione() {
       return false;
     }
 
-    const righe = args.domande
+    const righe: any[] = args.domande
       .filter((codice) => args.risposte[codice]?.risposta || args.risposte[codice]?.specifica)
       .map((codice, ordine) => ({
         studio_id: studioId,
@@ -367,6 +456,19 @@ export default function PresaInCaricoRevisione() {
         risposta: null,
         specifica: args.dataAccettazione,
         ordine: 16,
+        updated_at: new Date().toISOString(),
+      });
+    }
+
+    for (const extra of args.extraRighe || []) {
+      if (!extra.specifica) continue;
+      righe.push({
+        studio_id: studioId,
+        questionario_id: q.id,
+        codice_domanda: extra.codice,
+        risposta: null,
+        specifica: extra.specifica,
+        ordine: righe.length + 1,
         updated_at: new Date().toISOString(),
       });
     }
@@ -398,6 +500,21 @@ export default function PresaInCaricoRevisione() {
     setConclusioniStep2("");
     setRischioIncarico("");
     setDataAccettazioneStep2("");
+    setRisposteStep3({});
+    setConclusioniStep3("");
+    setRischioIndipendenza("");
+    setEsitoIndipendenza("");
+    setMisureSalvaguardia("");
+    setCompensoS("");
+    setCompensoC("");
+    setCompensoCT("");
+    setRisposteStep4({});
+    setConclusioniStep4("");
+    setRischioRiciclaggio("");
+    setScoreA("");
+    setScoreB("");
+    setScoreC("");
+    setScoreD("");
     setMessaggio("");
     setErrore("");
     setStep(1);
@@ -490,27 +607,12 @@ export default function PresaInCaricoRevisione() {
         <section style={card}>
           <StepHeader title="Step 2 — Questionario accettazione incarico" completed={completateStep2} total={domandeStep2.length} />
           <div style={{ marginTop: 14, padding: 14, borderRadius: 10, background: "#f8fafc", border: "1px solid #cbd5e1", fontSize: 13, color: "#475569" }}>
-            <b>Collegamenti del fascicolo:</b> le valutazioni preliminari sull’informativa finanziaria sono supportate dallo Step 1; indipendenza e antiriciclaggio saranno completati negli Step 3 e 4.
+            <b>Collegamenti del fascicolo:</b> le valutazioni preliminari sull’informativa finanziaria sono supportate dallo Step 1; indipendenza e antiriciclaggio sono completati negli Step 3 e 4.
           </div>
-          <div style={{ marginTop: 18 }}>
-            {domandeStep2.map(([codice, sezione, testo, help], i) => {
-              const nuovaSezione = i === 0 || domandeStep2[i - 1][1] !== sezione;
-              return (
-                <React.Fragment key={codice}>
-                  {nuovaSezione && <div style={{ marginTop: i ? 24 : 0, padding: "10px 12px", borderRadius: 8, background: "#eaf8ff", color: "#075985", fontWeight: 900 }}>{sezione}</div>}
-                  <QuestionRow codice={codice} testo={testo} help={help} riga={risposteStep2[codice]} onChange={(patch) => aggiornaStep2(codice, patch)} />
-                </React.Fragment>
-              );
-            })}
-          </div>
+          <QuestionSection domande={domandeStep2} risposte={risposteStep2} onChange={aggiornaStep2} />
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 18 }}>
             <Field label="Valutazione complessiva del rischio di incarico">
-              <select value={rischioIncarico} onChange={(e) => setRischioIncarico(e.target.value)} style={input}>
-                <option value="">Seleziona</option>
-                <option value="BASSO">Basso</option>
-                <option value="MEDIO">Medio</option>
-                <option value="ALTO">Alto</option>
-              </select>
+              <RiskSelect value={rischioIncarico} onChange={setRischioIncarico} />
             </Field>
             <Field label="Data di accettazione dell’incarico">
               <input type="date" value={dataAccettazioneStep2} onChange={(e) => setDataAccettazioneStep2(e.target.value)} style={input} />
@@ -524,10 +626,73 @@ export default function PresaInCaricoRevisione() {
         </section>
       )}
 
-      {step > 2 && (
+      {step === 3 && (
+        <section style={card}>
+          <StepHeader title="Step 3 — Questionario valutazione indipendenza" completed={completateStep3} total={domandeStep3.length} />
+          <div style={noticeOrange}>
+            <b>Valutazione obbligatoria:</b> verificare rapporti personali, altri incarichi, rapporti economici, minacce e misure di salvaguardia prima dell’accettazione.
+          </div>
+          <QuestionSection domande={domandeStep3} risposte={risposteStep3} onChange={aggiornaStep3} />
+
+          <div style={{ marginTop: 22, padding: 16, borderRadius: 10, border: "1px solid #cbd5e1", background: "#f8fafc" }}>
+            <h3 style={{ margin: "0 0 14px" }}>Compensi e dipendenza economica</h3>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14 }}>
+              <Field label="(S) Compensi revisione / sindaco"><input value={compensoS} onChange={(e) => setCompensoS(e.target.value)} inputMode="decimal" placeholder="0,00" style={input} /></Field>
+              <Field label="(C) Altri compensi società / gruppo"><input value={compensoC} onChange={(e) => setCompensoC(e.target.value)} inputMode="decimal" placeholder="0,00" style={input} /></Field>
+              <Field label="(CT) Compensi totali professionista / rete"><input value={compensoCT} onChange={(e) => setCompensoCT(e.target.value)} inputMode="decimal" placeholder="0,00" style={input} /></Field>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 12 }}>
+              <Mini label="(S + C) / CT" value={`${rapportoSCCT.toFixed(2)}%`} />
+              <Mini label="S / (S + C)" value={rapportoSsuSC.toFixed(4)} />
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 18 }}>
+            <Field label="Rischio di indipendenza"><RiskSelect value={rischioIndipendenza} onChange={setRischioIndipendenza} /></Field>
+            <Field label="Esito della valutazione">
+              <select value={esitoIndipendenza} onChange={(e) => setEsitoIndipendenza(e.target.value)} style={input}>
+                <option value="">Seleziona</option>
+                <option value="ACCETTATO">Accettato</option>
+                <option value="RIFIUTATO">Rifiutato</option>
+              </select>
+            </Field>
+          </div>
+          <div style={{ marginTop: 16 }}><Field label="Misure di salvaguardia"><textarea value={misureSalvaguardia} onChange={(e) => setMisureSalvaguardia(e.target.value)} placeholder="Descrivere le misure previste per eliminare o ridurre le minacce a un livello accettabile..." style={{ ...input, minHeight: 120, resize: "vertical" }} /></Field></div>
+          <div style={{ marginTop: 16 }}><Field label="Conclusioni sulla valutazione di indipendenza"><textarea value={conclusioniStep3} onChange={(e) => setConclusioniStep3(e.target.value)} placeholder="Riportare le conclusioni finali e gli elementi acquisiti..." style={{ ...input, minHeight: 140, resize: "vertical" }} /></Field></div>
+        </section>
+      )}
+
+      {step === 4 && (
+        <section style={card}>
+          <StepHeader title="Step 4 — Valutazione rischio riciclaggio" completed={completateStep4} total={domandeStep4.length} />
+          <div style={noticeOrange}>
+            <b>Antiriciclaggio:</b> la valutazione considera natura giuridica, attività prevalente, comportamento al conferimento e area geografica. Le motivazioni restano archiviate nel fascicolo di presa in carico.
+          </div>
+          <QuestionSection domande={domandeStep4} risposte={risposteStep4} onChange={aggiornaStep4} />
+
+          <div style={{ marginTop: 22, padding: 16, borderRadius: 10, border: "1px solid #cbd5e1", background: "#f8fafc" }}>
+            <h3 style={{ margin: "0 0 14px" }}>Rischio specifico — aspetti connessi al cliente</h3>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
+              <Field label="a) Natura giuridica"><input type="number" min="0" step="1" value={scoreA} onChange={(e) => setScoreA(e.target.value)} placeholder="Punteggio" style={input} /></Field>
+              <Field label="b) Prevalente attività svolta"><input type="number" min="0" step="1" value={scoreB} onChange={(e) => setScoreB(e.target.value)} placeholder="Punteggio" style={input} /></Field>
+              <Field label="c) Comportamento al conferimento"><input type="number" min="0" step="1" value={scoreC} onChange={(e) => setScoreC(e.target.value)} placeholder="Punteggio" style={input} /></Field>
+              <Field label="d) Area geografica"><input type="number" min="0" step="1" value={scoreD} onChange={(e) => setScoreD(e.target.value)} placeholder="Punteggio" style={input} /></Field>
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 14, marginTop: 18 }}>
+            <Field label="Esito della valutazione del rischio"><RiskSelect value={rischioRiciclaggio} onChange={setRischioRiciclaggio} /></Field>
+            <Field label="Conclusioni">
+              <textarea value={conclusioniStep4} onChange={(e) => setConclusioniStep4(e.target.value)} placeholder="Sintetizzare l’esito della valutazione del rischio di riciclaggio e finanziamento del terrorismo..." style={{ ...input, minHeight: 120, resize: "vertical" }} />
+            </Field>
+          </div>
+        </section>
+      )}
+
+      {step > 4 && (
         <section style={card}>
           <h2 style={{ marginTop: 0 }}>Step {step} — {steps[step - 1]}</h2>
-          <p style={{ color: "#64748b" }}>Modulo predisposto nel workflow. I quesiti del relativo documento saranno inseriti nel blocco dedicato.</p>
+          <p style={{ color: "#64748b" }}>Modulo predisposto nel workflow. Il documento dello step sarà inserito nel blocco dedicato.</p>
         </section>
       )}
 
@@ -540,6 +705,22 @@ export default function PresaInCaricoRevisione() {
         </div>
       </div>
     </main>
+  );
+}
+
+function QuestionSection({ domande, risposte, onChange }: { domande: readonly (readonly [string, string, string, string])[]; risposte: Record<string, Riga>; onChange: (codice: string, patch: Partial<Riga>) => void }) {
+  return (
+    <div style={{ marginTop: 18 }}>
+      {domande.map(([codice, sezione, testo, help], i) => {
+        const nuovaSezione = i === 0 || domande[i - 1][1] !== sezione;
+        return (
+          <React.Fragment key={codice}>
+            {nuovaSezione && <div style={{ marginTop: i ? 24 : 0, padding: "10px 12px", borderRadius: 8, background: "#eaf8ff", color: "#075985", fontWeight: 900 }}>{sezione}</div>}
+            <QuestionRow codice={codice} testo={testo} help={help} riga={risposte[codice]} onChange={(patch) => onChange(codice, patch)} />
+          </React.Fragment>
+        );
+      })}
+    </div>
   );
 }
 
@@ -576,6 +757,17 @@ function QuestionRow({ codice, testo, help, riga, onChange }: { codice: string; 
   );
 }
 
+function RiskSelect({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)} style={input}>
+      <option value="">Seleziona</option>
+      <option value="BASSO">Basso</option>
+      <option value="MEDIO">Medio</option>
+      <option value="ALTO">Alto</option>
+    </select>
+  );
+}
+
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <label style={{ display: "block", fontSize: 13, fontWeight: 800, color: "#334155" }}>{label}<div style={{ marginTop: 7 }}>{children}</div></label>;
 }
@@ -584,7 +776,18 @@ function Mini({ label, value }: { label: string; value: React.ReactNode }) {
   return <div style={{ border: "1px solid #cbd5e1", borderRadius: 9, padding: "10px 12px", background: "#fff" }}><div style={{ fontSize: 11, fontWeight: 800, color: "#64748b", textTransform: "uppercase" }}>{label}</div><div style={{ fontSize: 18, fontWeight: 900, marginTop: 3 }}>{value}</div></div>;
 }
 
+function rigaAggiornata(attuale: Riga | undefined, patch: Partial<Riga>): Riga {
+  return { risposta: attuale?.risposta || "", specifica: attuale?.specifica || "", ...patch };
+}
+
+function numero(value: string) {
+  const normalized = value.replace(/\./g, "").replace(",", ".");
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 const card: React.CSSProperties = { background: "#fff", border: "1px solid #8cddff", borderRadius: 12, padding: 22, boxShadow: "0 12px 30px rgba(14,78,112,0.10)" };
 const input: React.CSSProperties = { width: "100%", boxSizing: "border-box", border: "1px solid #94a3b8", borderRadius: 8, padding: "10px 12px", fontSize: 14, background: "#fff", color: "#0f172a" };
 const primary: React.CSSProperties = { border: 0, borderRadius: 9, padding: "11px 18px", background: "linear-gradient(110deg,#0b4f7d,#0d6f9f 58%,#1688b7)", color: "white", fontWeight: 800, cursor: "pointer" };
 const secondary: React.CSSProperties = { border: "1px solid #94a3b8", borderRadius: 9, padding: "10px 16px", background: "#fff", color: "#334155", fontWeight: 800, cursor: "pointer" };
+const noticeOrange: React.CSSProperties = { marginTop: 14, padding: 14, borderRadius: 10, background: "#fff7ed", border: "1px solid #fdba74", fontSize: 13, color: "#9a3412" };
