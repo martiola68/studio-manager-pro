@@ -72,6 +72,9 @@ const newRoles = `  const organiAllaData = (snapshot?.organi_sociali || []).filt
   ].includes(o.ruolo));
 `;
 
+const oldCards = `{snapshot && <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginTop: 12 }}><Mini label="Soci" value={soci.length} /><Mini label="Amministratori" value={amministratori.length} /><Mini label="Organo di controllo" value={controllo.length} /><Mini label="CF / P.IVA" value={snapshot.cliente?.codice_fiscale || snapshot.cliente?.partita_iva || "—"} /></div>}`;
+const newCards = `<div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginTop: 12 }}><Mini label="Soci" value={soci.length} /><Mini label="Amministratori" value={amministratori.length} /><Mini label="Organo di controllo" value={controllo.length} /><Mini label="CF / P.IVA" value={snapshot?.cliente?.codice_fiscale || snapshot?.cliente?.partita_iva || "—"} /></div>`;
+
 if (source.includes(oldSnapshot)) {
   source = source.replace(oldSnapshot, newSnapshot);
 } else if (!source.includes("/api/clienti-organi?cliente_id=")) {
@@ -80,6 +83,10 @@ if (source.includes(oldSnapshot)) {
 
 if (source.includes(oldRoles)) {
   source = source.replace(oldRoles, newRoles);
+}
+
+if (source.includes(oldCards)) {
+  source = source.replace(oldCards, newCards);
 }
 
 const snapshotStart = source.indexOf("async function caricaSnapshot");
@@ -95,6 +102,9 @@ if (!snapshotBlock.includes("/api/clienti-organi?cliente_id=")) {
 if (!source.includes('"consigliere_delegato"') || !source.includes('"sindaco_effettivo"')) {
   throw new Error("Ruoli societari non allineati");
 }
+if (source.includes(oldCards) || !source.includes('value={snapshot?.cliente?.codice_fiscale || snapshot?.cliente?.partita_iva || "—"}')) {
+  throw new Error("Card riepilogo non impostate come sempre visibili");
+}
 
 fs.writeFileSync(path, source, "utf8");
-console.log("Presa in carico allineata a /api/clienti-organi");
+console.log("Presa in carico allineata a /api/clienti-organi; card riepilogo sempre visibili");
