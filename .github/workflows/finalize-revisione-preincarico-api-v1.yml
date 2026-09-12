@@ -1,0 +1,61 @@
+name: Finalize revisione preincarico API
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Patch API and finalization flow
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          api=Path('src/pages/api/revisione-controllo/index.ts')
+          s=api.read_text()
+          if 'preincarico_id' not in s:
+              s=s.replace('''        responsabile_id,\n        note,\n      } = req.body;''','''        responsabile_id,\n        note,\n        preincarico_id,\n        data_accettazione,\n        note_finali,\n        accettazione_finale,\n      } = req.body;''',1)
+
+              anchor='''      if (!data_inizio) {\n        return res.status(400).json({\n          success: false,\n          error: "Data inizio obbligatoria",\n        });\n      }'''
+              guard='''\n\n      let preincarico: any = null;\n      if (preincarico_id) {\n        const { data: pre, error: preError } = await supabaseAdmin\n          .from("tbrevisione_preincarichi")\n          .select("id,studio_id,cliente_id,stato,pratica_revisione_id")\n          .eq("id", preincarico_id)\n          .maybeSingle();\n        if (preError) throw preError;\n        if (!pre) return res.status(404).json({ success: false, error: "Presa in carico non trovata" });\n        if (pre.studio_id !== studio_id || pre.cliente_id !== cliente_id) {\n          return res.status(409).json({ success: false, error: "Presa in carico non coerente con studio o cliente" });\n        }\n        if (pre.pratica_revisione_id) {\n          const { data: existing, error: existingError } = await supabaseAdmin\n            .from("tbrevisione_incarichi")\n            .select("*")\n            .eq("id", pre.pratica_revisione_id)\n            .maybeSingle();\n          if (existingError) throw existingError;\n          return res.status(200).json({ success: true, data: existing, already_exists: true });\n        }\n        if (pre.stato === "generato") {\n          return res.status(409).json({ success: false, error: "Presa in carico già generata ma priva di collegamento alla pratica" });\n        }\n        preincarico = pre;\n      }'''
+              if anchor not in s: raise SystemExit('API validation anchor missing')
+              s=s.replace(anchor,anchor+guard,1)
+
+              old='''      if (controlliError) throw controlliError;\n\n      return res.status(201).json({\n        success: true,\n        data,\n      });'''
+              new='''      if (controlliError) {\n        await supabaseAdmin.from("tbrevisione_incarichi").delete().eq("id", data.id);\n        throw controlliError;\n      }\n\n      if (preincarico) {\n        const { error: docError } = await supabaseAdmin\n          .from("tbrevisione_preincarico_documenti")\n          .upsert({\n            studio_id,\n            preincarico_id,\n            tipo: "ACCETTAZIONE_FINALE",\n            versione: 1,\n            stato: "confermato",\n            contenuto: { ...(accettazione_finale || {}), pratica_revisione_id: data.id, confermato: true },\n            confermato_at: new Date().toISOString(),\n            updated_at: new Date().toISOString(),\n          }, { onConflict: "preincarico_id,tipo" });\n\n        if (docError) {\n          await supabaseAdmin.from("tbrevisione_controlli").delete().eq("incarico_id", data.id);\n          await supabaseAdmin.from("tbrevisione_incarichi").delete().eq("id", data.id);\n          throw docError;\n        }\n\n        const { error: preUpdateError } = await supabaseAdmin\n          .from("tbrevisione_preincarichi")\n          .update({\n            stato: "generato",\n            accettato: true,\n            data_accettazione: data_accettazione || data_nomina || null,\n            note_finali: note_finali || null,\n            pratica_revisione_id: data.id,\n            step_corrente: 8,\n            updated_at: new Date().toISOString(),\n          })\n          .eq("id", preincarico_id)\n          .neq("stato", "generato");\n\n        if (preUpdateError) {\n          await supabaseAdmin.from("tbrevisione_preincarico_documenti").delete().eq("preincarico_id", preincarico_id).eq("tipo", "ACCETTAZIONE_FINALE");\n          await supabaseAdmin.from("tbrevisione_controlli").delete().eq("incarico_id", data.id);\n          await supabaseAdmin.from("tbrevisione_incarichi").delete().eq("id", data.id);\n          throw preUpdateError;\n        }\n      }\n\n      return res.status(201).json({ success: true, data, already_exists: false });'''
+              if old not in s: raise SystemExit('API return anchor missing')
+              s=s.replace(old,new,1)
+              api.write_text(s)
+
+          page=Path('src/pages/revisione-controllo/presa-in-carico.tsx')
+          s=page.read_text()
+          old='''      const response = await fetch("/api/revisione-controllo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ studio_id: studioId, cliente_id: clienteId, tipo_incarico: "REVISIONE_LEGALE", data_nomina: dataAccettazioneFinale, data_inizio: dataInizio, data_fine: null, responsabile_id: null, note: [responsabileFinale ? `Responsabile presa in carico: ${responsabileFinale}` : "", noteFinali].filter(Boolean).join("\\n") || null }) });\n      const payload = await response.json();\n      if (!response.ok || !payload?.success || !payload?.data?.id) throw new Error(payload?.error || "Impossibile generare la pratica di revisione");\n      const supabase = getSupabaseClient() as any;\n      const savedFinal = await salvaDocumentoPreincarico({ supabase, preincaricoId, tipo: "ACCETTAZIONE_FINALE", stato: "confermato", contenuto: { data: dataAccettazioneFinale, responsabile: responsabileFinale, note: noteFinali, confermato: true, pratica_revisione_id: payload.data.id } });\n      if (!savedFinal) throw new Error("Impossibile congelare il documento di accettazione finale.");\n      const { error: updateError } = await supabase.from("tbrevisione_preincarichi").update({ stato: "generato", accettato: true, data_accettazione: dataAccettazioneFinale, note_finali: noteFinali || null, pratica_revisione_id: payload.data.id, step_corrente: 8, snapshot_cliente: snapshot || {}, updated_at: new Date().toISOString() }).eq("id", preincaricoId);\n      if (updateError) throw updateError;\n      setPraticaRevisioneId(payload.data.id); setPreincaricoStato("generato");\n      setMessaggio("Pratica di revisione generata correttamente. La presa in carico è ora congelata nello storico.");'''
+          new='''      const response = await fetch("/api/revisione-controllo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ studio_id: studioId, cliente_id: clienteId, tipo_incarico: "REVISIONE_LEGALE", data_nomina: dataAccettazioneFinale, data_inizio: dataInizio, data_fine: null, responsabile_id: null, note: [responsabileFinale ? `Responsabile presa in carico: ${responsabileFinale}` : "", noteFinali].filter(Boolean).join("\\n") || null, preincarico_id: preincaricoId, data_accettazione: dataAccettazioneFinale, note_finali: noteFinali || null, accettazione_finale: { data: dataAccettazioneFinale, responsabile: responsabileFinale, note: noteFinali, snapshot_cliente: snapshot || {} } }) });\n      const payload = await response.json();\n      if (!response.ok || !payload?.success || !payload?.data?.id) throw new Error(payload?.error || "Impossibile generare la pratica di revisione");\n      setPraticaRevisioneId(payload.data.id); setPreincaricoStato("generato");\n      setMessaggio(payload.already_exists ? "La pratica di revisione risultava già generata ed è stata ricollegata." : "Pratica di revisione generata correttamente. La presa in carico è ora congelata nello storico.");'''
+          if old not in s: raise SystemExit('Frontend generation block missing')
+          s=s.replace(old,new,1)
+          page.write_text(s)
+
+          mig=Path('supabase/migrations/20260912144500_revisione_preincarico_final_lock.sql')
+          mig.write_text('''create or replace function public.revisione_preincarico_bloccato(p_preincarico_id uuid)\nreturns boolean\nlanguage sql\nstable\nas $$\n  select exists (select 1 from public.tbrevisione_preincarichi p where p.id = p_preincarico_id and p.stato = 'generato');\n$$;\n\ncreate or replace function public.trg_blocca_preincarico_generato()\nreturns trigger language plpgsql as $$\nbegin\n  if old.stato = 'generato' then raise exception 'Presa in carico già generata: modifica non consentita'; end if;\n  if tg_op = 'DELETE' then return old; end if;\n  return new;\nend; $$;\n\ndrop trigger if exists trg_blocca_preincarico_generato on public.tbrevisione_preincarichi;\ncreate trigger trg_blocca_preincarico_generato before update or delete on public.tbrevisione_preincarichi for each row execute function public.trg_blocca_preincarico_generato();\n\ncreate or replace function public.trg_blocca_questionario_preincarico_generato()\nreturns trigger language plpgsql as $$\ndeclare v_pre uuid;\nbegin\n  if tg_op = 'DELETE' then v_pre := old.preincarico_id; else v_pre := new.preincarico_id; end if;\n  if public.revisione_preincarico_bloccato(v_pre) then raise exception 'Presa in carico già generata: questionario non modificabile'; end if;\n  if tg_op = 'DELETE' then return old; end if;\n  return new;\nend; $$;\n\ndrop trigger if exists trg_blocca_questionario_preincarico_generato on public.tbrevisione_questionari;\ncreate trigger trg_blocca_questionario_preincarico_generato before insert or update or delete on public.tbrevisione_questionari for each row execute function public.trg_blocca_questionario_preincarico_generato();\n\ncreate or replace function public.trg_blocca_risposta_preincarico_generato()\nreturns trigger language plpgsql as $$\ndeclare v_q uuid; v_pre uuid;\nbegin\n  if tg_op = 'DELETE' then v_q := old.questionario_id; else v_q := new.questionario_id; end if;\n  select preincarico_id into v_pre from public.tbrevisione_questionari where id = v_q;\n  if public.revisione_preincarico_bloccato(v_pre) then raise exception 'Presa in carico già generata: risposta non modificabile'; end if;\n  if tg_op = 'DELETE' then return old; end if;\n  return new;\nend; $$;\n\ndrop trigger if exists trg_blocca_risposta_preincarico_generato on public.tbrevisione_risposte;\ncreate trigger trg_blocca_risposta_preincarico_generato before insert or update or delete on public.tbrevisione_risposte for each row execute function public.trg_blocca_risposta_preincarico_generato();\n\ncreate or replace function public.trg_blocca_documento_preincarico_generato()\nreturns trigger language plpgsql as $$\ndeclare v_pre uuid;\nbegin\n  if tg_op = 'DELETE' then v_pre := old.preincarico_id; else v_pre := new.preincarico_id; end if;\n  if public.revisione_preincarico_bloccato(v_pre) then raise exception 'Presa in carico già generata: documento non modificabile'; end if;\n  if tg_op = 'DELETE' then return old; end if;\n  return new;\nend; $$;\n\ndrop trigger if exists trg_blocca_documento_preincarico_generato on public.tbrevisione_preincarico_documenti;\ncreate trigger trg_blocca_documento_preincarico_generato before insert or update or delete on public.tbrevisione_preincarico_documenti for each row execute function public.trg_blocca_documento_preincarico_generato();\n''')
+          PY
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - name: Commit source
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/pages/api/revisione-controllo/index.ts src/pages/revisione-controllo/presa-in-carico.tsx supabase/migrations/20260912144500_revisione_preincarico_final_lock.sql
+          git commit -m "Make audit pre-engagement finalization idempotent"
+          git push origin HEAD:main
