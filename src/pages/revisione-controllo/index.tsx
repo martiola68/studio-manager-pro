@@ -162,11 +162,11 @@ export default function RevisioneControlloPage() {
             </button>
 
             <button
-              onClick={() => router.push("/revisione-controllo/nuovo")}
+              onClick={() => router.push("/revisione-controllo/presa-in-carico")}
               className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700"
             >
               <Plus size={16} />
-              Nuovo incarico
+              Nuova presa in carico
             </button>
           </div>
         </div>
