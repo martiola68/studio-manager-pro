@@ -420,3 +420,5 @@ type Risposta = "" | "SI" | "NO" | "NON_APPLICABILE";'''
           git add src/pages/revisione-controllo/presa-in-carico.tsx
           git commit -m "Add audit independence questionnaire workflow"
           git push origin HEAD:main
+
+# trigger 2026-09-12
