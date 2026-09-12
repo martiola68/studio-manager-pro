@@ -1,4 +1,4 @@
-name: Fix elenco generale clienti attivi v2
+name: Fix revisione snapshot organi API registered
 
 on:
   push:
@@ -14,27 +14,102 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0
 
-      - name: Applica filtro clienti attivi
-        shell: bash
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Patch presa in carico
+        shell: python
         run: |
-          python3 <<'PY'
           from pathlib import Path
-          p = Path("src/pages/scadenze/elenco-generale.tsx")
-          s = p.read_text()
-          old = '.eq("studio_id", userData.studio_id)\n  .order("ragione_sociale", { ascending: true });'
-          new = '.eq("studio_id", userData.studio_id)\n  .eq("attivo", true)\n  .eq("cliente", true)\n  .order("ragione_sociale", { ascending: true });'
-          if old not in s:
-              raise SystemExit("Query target non trovata")
-          p.write_text(s.replace(old, new, 1))
-          PY
+          p = Path("src/pages/revisione-controllo/presa-in-carico.tsx")
+          s = p.read_text(encoding="utf-8")
+
+          old_snapshot = '''  async function caricaSnapshot() {
+    setLoadingSnapshot(true); setErrore("");
+    const supabase = getSupabaseClient() as any;
+    const [clienteRes, organiRes] = await Promise.all([supabase.from("tbclienti").select("*").eq("id", clienteId).maybeSingle(), supabase.from("tbclienti_organi").select("*").eq("cliente_id", clienteId)]);
+    if (clienteRes.error) { setErrore(clienteRes.error.message); setLoadingSnapshot(false); return; }
+    if (organiRes.error) { setErrore(organiRes.error.message); setLoadingSnapshot(false); return; }
+    setSnapshot({ acquisito_il: new Date().toISOString(), cliente: clienteRes.data || null, organi_sociali: organiRes.data || [] }); setLoadingSnapshot(false);
+  }
+'''
+
+          new_snapshot = '''  async function caricaSnapshot() {
+    setLoadingSnapshot(true); setErrore("");
+    const supabase = getSupabaseClient() as any;
+
+    try {
+      const [clienteRes, organiResponse] = await Promise.all([
+        supabase.from("tbclienti").select("*").eq("id", clienteId).maybeSingle(),
+        fetch(`/api/clienti-organi?cliente_id=${encodeURIComponent(clienteId)}`, { cache: "no-store" }),
+      ]);
+
+      if (clienteRes.error) throw new Error(clienteRes.error.message);
+      const organiPayload = await organiResponse.json();
+      if (!organiResponse.ok) throw new Error(organiPayload?.error || "Errore nel caricamento di soci e organi sociali.");
+
+      setSnapshot({
+        acquisito_il: new Date().toISOString(),
+        cliente: clienteRes.data || null,
+        organi_sociali: Array.isArray(organiPayload?.organi) ? organiPayload.organi : [],
+      });
+    } catch (e: any) {
+      setSnapshot(null);
+      setErrore(e?.message || "Errore durante l'acquisizione dei dati societari.");
+    } finally {
+      setLoadingSnapshot(false);
+    }
+  }
+'''
+
+          if old_snapshot in s:
+              s = s.replace(old_snapshot, new_snapshot, 1)
+          elif '/api/clienti-organi?cliente_id=' not in s:
+              raise SystemExit('Blocco caricaSnapshot non trovato')
+
+          old_roles = '''  const organiAllaData = (snapshot?.organi_sociali || []).filter((o: any) => organoValidoAllaData(o, dataBilancio));
+  const soci = organiAllaData.filter((o: any) => o.ruolo === "socio");
+  const amministratori = organiAllaData.filter((o: any) => ["amministratore_unico", "amministratore", "presidente_cda", "amministratore_delegato", "liquidatore"].includes(o.ruolo));
+  const controllo = organiAllaData.filter((o: any) => ["sindaco", "presidente_collegio_sindacale", "revisore"].includes(o.ruolo));
+'''
+          new_roles = '''  const organiAllaData = (snapshot?.organi_sociali || []).filter((o: any) => organoValidoAllaData(o, dataBilancio));
+  const soci = organiAllaData.filter((o: any) => o.ruolo === "socio");
+  const amministratori = organiAllaData.filter((o: any) => [
+    "amministratore", "amministratore_unico", "amministratore_delegato", "consigliere_delegato",
+    "presidente_cda", "vice_presidente_cda", "consigliere", "liquidatore", "rappresentante_legale",
+  ].includes(o.ruolo));
+  const controllo = organiAllaData.filter((o: any) => [
+    "sindaco_effettivo", "presidente_collegio_sindacale", "sindaco_unico", "sindaco_supplente", "revisore", "sindaco",
+  ].includes(o.ruolo));
+'''
+          if old_roles in s:
+              s = s.replace(old_roles, new_roles, 1)
+
+          block = s[s.find('async function caricaSnapshot'):s.find('async function caricaBozzaEsistente')]
+          if 'supabase.from("tbclienti_organi")' in block:
+              raise SystemExit('Lettura diretta tbclienti_organi ancora presente')
+          if '/api/clienti-organi?cliente_id=' not in block:
+              raise SystemExit('Endpoint clienti-organi mancante')
+
+          p.write_text(s, encoding="utf-8")
+
+      - run: npm ci
+      - run: npx tsc --noEmit
 
       - name: Commit
-        shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/pages/scadenze/elenco-generale.tsx
-          git commit -m "fix: filtra elenco generale su clienti attivi" || exit 0
-          git push origin main
+          git add src/pages/revisione-controllo/presa-in-carico.tsx
+          if git diff --cached --quiet; then
+            echo "Fix già presente"
+            exit 0
+          fi
+          git commit -m "fix: load audit snapshot through company organs API"
+          git pull --rebase origin main
+          git push origin HEAD:main
