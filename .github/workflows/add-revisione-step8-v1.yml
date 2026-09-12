@@ -1,0 +1,88 @@
+name: Add revisione Step 8 final acceptance
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Wait for Step 7 source
+        run: |
+          for i in $(seq 1 60); do
+            git pull --ff-only origin main || true
+            if grep -q 'const \[propostaConfermata' src/pages/revisione-controllo/presa-in-carico.tsx; then
+              echo 'Step 7 source ready'
+              exit 0
+            fi
+            echo "Waiting for Step 7 source ($i/60)..."
+            sleep 10
+          done
+          echo 'Step 7 source not found'
+          exit 1
+      - name: Patch Step 8
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          p=Path('src/pages/revisione-controllo/presa-in-carico.tsx')
+          s=p.read_text()
+          if 'const [accettazioneFinaleConfermata' in s:
+              print('Step 8 already present')
+              raise SystemExit(0)
+
+          anchor='  const [propostaConfermata, setPropostaConfermata] = useState(false);'
+          add='''\n  const [dataAccettazioneFinale, setDataAccettazioneFinale] = useState("");\n  const [responsabileFinale, setResponsabileFinale] = useState("");\n  const [noteFinali, setNoteFinali] = useState("");\n  const [accettazioneFinaleConfermata, setAccettazioneFinaleConfermata] = useState(false);\n  const [generatingPratica, setGeneratingPratica] = useState(false);'''
+          assert anchor in s
+          s=s.replace(anchor,anchor+add,1)
+
+          old='["ATTESTAZIONE_INDIPENDENZA", "DICHIARAZIONE_TRASPARENZA", "PROPOSTA_INCARICO"]'
+          new='["ATTESTAZIONE_INDIPENDENZA", "DICHIARAZIONE_TRASPARENZA", "PROPOSTA_INCARICO", "ACCETTAZIONE_FINALE"]'
+          assert old in s
+          s=s.replace(old,new,1)
+
+          anchor='''      if (documento.tipo === "PROPOSTA_INCARICO") {\n        setDecorrenzaProposta(contenuto.decorrenza || ""); setNumeroEserciziProposta(String(contenuto.numero_esercizi || "3")); setEserciziProposta(contenuto.esercizi || ""); setCompensoAnnualeProposta(contenuto.compenso_annuale || ""); setAttivitaAggiuntiveProposta(contenuto.attivita_aggiuntive || ""); setResponsabileProposta(contenuto.responsabile || ""); setPolizzaProposta(contenuto.polizza || ""); setNoteProposta(contenuto.note || ""); setDataProposta(contenuto.data || ""); setPropostaConfermata(Boolean(contenuto.confermato));\n      }'''
+          add='''\n      if (documento.tipo === "ACCETTAZIONE_FINALE") {\n        setDataAccettazioneFinale(contenuto.data || ""); setResponsabileFinale(contenuto.responsabile || ""); setNoteFinali(contenuto.note || ""); setAccettazioneFinaleConfermata(Boolean(contenuto.confermato));\n      }'''
+          assert anchor in s
+          s=s.replace(anchor,anchor+add,1)
+
+          anchor='''    else if (step === 7) ok = await salvaDocumentoPreincarico({ supabase, preincaricoId: pre.id, tipo: "PROPOSTA_INCARICO", stato: propostaConfermata ? "confermato" : "bozza", contenuto: { data: dataProposta, decorrenza: decorrenzaProposta, numero_esercizi: numeroEserciziProposta, esercizi: eserciziProposta, compenso_annuale: compensoAnnualeProposta, attivita_aggiuntive: attivitaAggiuntiveProposta, responsabile: responsabileProposta, polizza: polizzaProposta, note: noteProposta, confermato: propostaConfermata } });'''
+          add='''\n    else if (step === 8) ok = await salvaDocumentoPreincarico({ supabase, preincaricoId: pre.id, tipo: "ACCETTAZIONE_FINALE", stato: accettazioneFinaleConfermata ? "confermato" : "bozza", contenuto: { data: dataAccettazioneFinale, responsabile: responsabileFinale, note: noteFinali, confermato: accettazioneFinaleConfermata } });'''
+          assert anchor in s
+          s=s.replace(anchor,anchor+add,1)
+
+          reset='setPropostaConfermata(false); setMessaggio("");'
+          repl='setPropostaConfermata(false); setDataAccettazioneFinale(""); setResponsabileFinale(""); setNoteFinali(""); setAccettazioneFinaleConfermata(false); setMessaggio("");'
+          assert reset in s
+          s=s.replace(reset,repl,1)
+
+          marker='\n  return (\n'
+          fn='''\n  const stepFinaliCompleti = completate === domandeStep1.length && completateStep2 === domandeStep2.length && completateStep3 === domandeStep3.length && completateStep4 === domandeStep4.length && !!rischioIncarico && !!rischioIndipendenza && esitoIndipendenza === "ACCETTATO" && !!rischioRiciclaggio && attestazioneConfermata && trasparenzaConfermata && propostaConfermata;\n\n  async function generaPraticaRevisione() {\n    if (!studioId || !clienteId || !preincaricoId) { setErrore("Salva prima la presa in carico."); return; }\n    if (!stepFinaliCompleti) { setErrore("Completa e conferma tutti gli step precedenti prima di generare la pratica di revisione."); return; }\n    if (!accettazioneFinaleConfermata || !dataAccettazioneFinale) { setErrore("Conferma l’accettazione finale e indica la data di accettazione."); return; }\n    setGeneratingPratica(true); setErrore(""); setMessaggio("");\n    try {\n      const dataInizio = decorrenzaProposta || dataAccettazioneFinale || dataBilancio;\n      const response = await fetch("/api/revisione-controllo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ studio_id: studioId, cliente_id: clienteId, tipo_incarico: "REVISIONE_LEGALE", data_nomina: dataAccettazioneFinale, data_inizio: dataInizio, data_fine: null, responsabile_id: null, note: [responsabileFinale ? `Responsabile presa in carico: ${responsabileFinale}` : "", noteFinali].filter(Boolean).join("\\n") || null }) });\n      const payload = await response.json();\n      if (!response.ok || !payload?.success || !payload?.data?.id) throw new Error(payload?.error || "Impossibile generare la pratica di revisione");\n      const supabase = getSupabaseClient() as any;\n      const { error: updateError } = await supabase.from("tbrevisione_preincarichi").update({ stato: "generato", accettato: true, data_accettazione: dataAccettazioneFinale, note_finali: noteFinali || null, pratica_revisione_id: payload.data.id, step_corrente: 8, snapshot_cliente: snapshot || {}, updated_at: new Date().toISOString() }).eq("id", preincaricoId);\n      if (updateError) throw updateError;\n      await salvaDocumentoPreincarico({ supabase, preincaricoId, tipo: "ACCETTAZIONE_FINALE", stato: "confermato", contenuto: { data: dataAccettazioneFinale, responsabile: responsabileFinale, note: noteFinali, confermato: true, pratica_revisione_id: payload.data.id } });\n      setMessaggio("Pratica di revisione generata correttamente.");\n    } catch (e: any) { setErrore(e?.message || "Errore durante la generazione della pratica di revisione."); } finally { setGeneratingPratica(false); }\n  }\n'''
+          assert marker in s
+          s=s.replace(marker,fn+marker,1)
+
+          placeholder='''      {step > 7 && <section style={card}><h2 style={{ marginTop: 0 }}>Step {step} — {steps[step - 1]}</h2><p style={{ color: "#64748b" }}>Modulo predisposto nel workflow. Il documento dello step sarà inserito nel blocco dedicato.</p></section>}'''
+          ui='''      {step === 8 && <section style={card}><h2 style={{ marginTop: 0 }}>Step 8 — Accettazione finale</h2><p style={{ color: "#64748b", marginBottom: 18 }}>Riepilogo conclusivo della presa in carico. La pratica di revisione può essere generata solo quando tutti i passaggi precedenti risultano completati e l’indipendenza è stata accettata.</p><div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginBottom: 18 }}><Mini label="Valutazione preliminare" value={completate === domandeStep1.length ? "Completa" : `${completate}/${domandeStep1.length}`} /><Mini label="Accettazione incarico" value={completateStep2 === domandeStep2.length && !!rischioIncarico ? "Completa" : `${completateStep2}/${domandeStep2.length}`} /><Mini label="Indipendenza" value={completateStep3 === domandeStep3.length && esitoIndipendenza === "ACCETTATO" ? "Accettata" : esitoIndipendenza || `${completateStep3}/${domandeStep3.length}`} /><Mini label="Antiriciclaggio" value={completateStep4 === domandeStep4.length && !!rischioRiciclaggio ? "Completa" : `${completateStep4}/${domandeStep4.length}`} /><Mini label="Attestazione indipendenza" value={attestazioneConfermata ? "Confermata" : "Da confermare"} /><Mini label="Trasparenza" value={trasparenzaConfermata ? "Confermata" : "Da confermare"} /><Mini label="Proposta incarico" value={propostaConfermata ? "Confermata" : "Da confermare"} /><Mini label="Esito complessivo" value={stepFinaliCompleti ? "Pronto" : "Da completare"} /></div><div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}><Field label="Data accettazione finale"><input type="date" value={dataAccettazioneFinale} onChange={(e) => setDataAccettazioneFinale(e.target.value)} style={input} /></Field><Field label="Responsabile"><input value={responsabileFinale} onChange={(e) => setResponsabileFinale(e.target.value)} placeholder="Nominativo del responsabile" style={input} /></Field></div><div style={{ marginTop: 14 }}><Field label="Note finali"><textarea value={noteFinali} onChange={(e) => setNoteFinali(e.target.value)} placeholder="Annotazioni conclusive, condizioni e misure di salvaguardia residue..." style={{ ...input, minHeight: 120, resize: "vertical" }} /></Field></div><label style={{ display: "flex", gap: 12, alignItems: "flex-start", marginTop: 20, padding: 16, borderRadius: 10, border: accettazioneFinaleConfermata ? "2px solid #16a34a" : "1px solid #94a3b8", background: accettazioneFinaleConfermata ? "#f0fdf4" : "#f8fafc", cursor: "pointer" }}><input type="checkbox" checked={accettazioneFinaleConfermata} onChange={(e) => setAccettazioneFinaleConfermata(e.target.checked)} style={{ width: 20, height: 20, marginTop: 2 }} /><span><b>Confermo l’accettazione dell’incarico di revisione</b><br/><span style={{ color: "#64748b", fontSize: 13 }}>Con la generazione della pratica i dati anagrafici e i documenti della presa in carico restano congelati nello storico.</span></span></label>{!stepFinaliCompleti && <div style={{ ...noticeOrange, marginTop: 16 }}><b>Pratica non ancora generabile:</b> completa tutti gli step precedenti e verifica che l’esito dell’indipendenza sia “Accettato”.</div>}<button type="button" onClick={() => void generaPraticaRevisione()} disabled={!stepFinaliCompleti || !accettazioneFinaleConfermata || !dataAccettazioneFinale || generatingPratica} style={{ marginTop: 20, width: "100%", padding: "15px 18px", borderRadius: 10, border: 0, background: stepFinaliCompleti && accettazioneFinaleConfermata && dataAccettazioneFinale ? "#0d6f9f" : "#94a3b8", color: "#fff", fontWeight: 900, fontSize: 15, cursor: stepFinaliCompleti && accettazioneFinaleConfermata && dataAccettazioneFinale ? "pointer" : "not-allowed" }}>{generatingPratica ? "Generazione pratica..." : "GENERA PRATICA DI REVISIONE"}</button></section>}'''
+          assert placeholder in s
+          s=s.replace(placeholder,ui,1)
+          p.write_text(s)
+          PY
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - name: Commit source
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/pages/revisione-controllo/presa-in-carico.tsx
+          git commit -m "Add final audit acceptance and practice generation"
+          git push origin HEAD:main
