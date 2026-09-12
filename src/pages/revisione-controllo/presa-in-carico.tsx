@@ -32,10 +32,10 @@ const domandeStep1 = [
 
 type Risposta = "" | "SI" | "NO" | "NON_APPLICABILE";
 type Riga = { risposta: Risposta; specifica: string };
-type Cliente = { id: string; ragione_sociale?: string | null; cognome?: string | null; nome?: string | null; codice_fiscale?: string | null; partita_iva?: string | null; indirizzo?: string | null; citta?: string | null; provincia?: string | null; cap?: string | null; email?: string | null; pec?: string | null };
+type Cliente = { id: string; ragione_sociale: string; codice_fiscale?: string | null; partita_iva?: string | null; indirizzo?: string | null; citta?: string | null; provincia?: string | null; cap?: string | null; email?: string | null };
 
 function nomeCliente(c: Cliente) {
-  return c.ragione_sociale || [c.cognome, c.nome].filter(Boolean).join(" ") || "Cliente senza denominazione";
+  return c.ragione_sociale || "Cliente senza denominazione";
 }
 
 export default function PresaInCaricoRevisione() {
@@ -79,10 +79,10 @@ export default function PresaInCaricoRevisione() {
   async function caricaClienti() {
     setLoadingClienti(true);
     setErrore("");
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as any;
     const { data, error } = await supabase
       .from("tbclienti")
-      .select("id,ragione_sociale,cognome,nome,codice_fiscale,partita_iva,indirizzo,citta,provincia,cap,email,pec")
+      .select("id,ragione_sociale,codice_fiscale,partita_iva,indirizzo,citta,provincia,cap,email")
       .eq("studio_id", studioId as string)
       .eq("cliente", true)
       .eq("attivo", true)
@@ -95,7 +95,7 @@ export default function PresaInCaricoRevisione() {
   async function caricaSnapshot() {
     setLoadingSnapshot(true);
     setErrore("");
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as any;
     const [clienteRes, organiRes] = await Promise.all([
       supabase.from("tbclienti").select("*").eq("id", clienteId).maybeSingle(),
       supabase.from("tbclienti_organi").select("*").eq("cliente_id", clienteId).eq("attivo", true),
@@ -122,14 +122,14 @@ export default function PresaInCaricoRevisione() {
   async function caricaBozzaEsistente() {
     const supabase = getSupabaseClient() as any;
     const { data, error } = await supabase
-      .from("tb_revisione_preincarichi")
+      .from("tbrevisione_preincarichi")
       .select("id,step_corrente,note_finali,snapshot_cliente")
       .eq("studio_id", studioId)
       .eq("cliente_id", clienteId)
       .eq("data_bilancio", dataBilancio)
       .maybeSingle();
     if (error) {
-      if (!String(error.message || "").includes("tb_revisione_preincarichi")) setErrore(error.message);
+      if (!String(error.message || "").includes("tbrevisione_preincarichi")) setErrore(error.message);
       return;
     }
     if (!data?.id) {
@@ -142,7 +142,7 @@ export default function PresaInCaricoRevisione() {
     if (data.snapshot_cliente) setSnapshot(data.snapshot_cliente);
 
     const { data: q } = await supabase
-      .from("tb_revisione_questionari")
+      .from("tbrevisione_questionari")
       .select("id,conclusioni")
       .eq("preincarico_id", data.id)
       .eq("codice", "VALUTAZIONE_PRELIMINARE")
@@ -150,7 +150,7 @@ export default function PresaInCaricoRevisione() {
     if (!q?.id) return;
     if (q.conclusioni) setConclusioni(q.conclusioni);
     const { data: rr } = await supabase
-      .from("tb_revisione_risposte")
+      .from("tbrevisione_risposte")
       .select("codice_domanda,risposta,specifica")
       .eq("questionario_id", q.id);
     const mappa: Record<string, Riga> = {};
@@ -183,7 +183,7 @@ export default function PresaInCaricoRevisione() {
       updated_at: new Date().toISOString(),
     };
     const { data: pre, error: preError } = await supabase
-      .from("tb_revisione_preincarichi")
+      .from("tbrevisione_preincarichi")
       .upsert(payload, { onConflict: "studio_id,cliente_id,data_bilancio" })
       .select("id")
       .single();
@@ -195,7 +195,7 @@ export default function PresaInCaricoRevisione() {
     setPreincaricoId(pre.id);
 
     const { data: q, error: qError } = await supabase
-      .from("tb_revisione_questionari")
+      .from("tbrevisione_questionari")
       .upsert({
         preincarico_id: pre.id,
         codice: "VALUTAZIONE_PRELIMINARE",
@@ -212,7 +212,7 @@ export default function PresaInCaricoRevisione() {
       return;
     }
 
-    await supabase.from("tb_revisione_risposte").delete().eq("questionario_id", q.id);
+    await supabase.from("tbrevisione_risposte").delete().eq("questionario_id", q.id);
     const righe = domandeStep1
       .filter(([codice]) => risposte[codice]?.risposta || risposte[codice]?.specifica)
       .map(([codice], ordine) => ({
@@ -224,7 +224,7 @@ export default function PresaInCaricoRevisione() {
         updated_at: new Date().toISOString(),
       }));
     if (righe.length) {
-      const { error: rError } = await supabase.from("tb_revisione_risposte").insert(righe);
+      const { error: rError } = await supabase.from("tbrevisione_risposte").insert(righe);
       if (rError) {
         setErrore(rError.message);
         setSaving(false);
