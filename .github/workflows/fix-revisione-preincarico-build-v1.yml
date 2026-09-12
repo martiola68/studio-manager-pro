@@ -1,0 +1,65 @@
+name: Fix revisione preincarico build v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/fix-revisione-preincarico-build-v1.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch presa in carico page
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('src/pages/revisione-controllo/presa-in-carico.tsx')
+          s = p.read_text(encoding='utf-8')
+
+          s = s.replace(
+            'type Cliente = { id: string; ragione_sociale?: string | null; cognome?: string | null; nome?: string | null; codice_fiscale?: string | null; partita_iva?: string | null; indirizzo?: string | null; citta?: string | null; provincia?: string | null; cap?: string | null; email?: string | null; pec?: string | null };',
+            'type Cliente = { id: string; ragione_sociale: string; codice_fiscale?: string | null; partita_iva?: string | null; indirizzo?: string | null; citta?: string | null; provincia?: string | null; cap?: string | null; email?: string | null };'
+          )
+          s = s.replace(
+            'return c.ragione_sociale || [c.cognome, c.nome].filter(Boolean).join(" ") || "Cliente senza denominazione";',
+            'return c.ragione_sociale || "Cliente senza denominazione";'
+          )
+          s = s.replace('const supabase = getSupabaseClient();\n    const { data, error } = await supabase', 'const supabase = getSupabaseClient() as any;\n    const { data, error } = await supabase', 1)
+          s = s.replace('.select("id,ragione_sociale,cognome,nome,codice_fiscale,partita_iva,indirizzo,citta,provincia,cap,email,pec")', '.select("id,ragione_sociale,codice_fiscale,partita_iva,indirizzo,citta,provincia,cap,email")')
+
+          marker = 'async function caricaSnapshot() {'
+          idx = s.find(marker)
+          if idx == -1:
+              raise SystemExit('caricaSnapshot not found')
+          idx2 = s.find('const supabase = getSupabaseClient();', idx)
+          if idx2 == -1:
+              raise SystemExit('snapshot supabase client not found')
+          s = s[:idx2] + s[idx2:].replace('const supabase = getSupabaseClient();', 'const supabase = getSupabaseClient() as any;', 1)
+
+          s = s.replace('tb_revisione_preincarichi', 'tbrevisione_preincarichi')
+          s = s.replace('tb_revisione_questionari', 'tbrevisione_questionari')
+          s = s.replace('tb_revisione_risposte', 'tbrevisione_risposte')
+
+          p.write_text(s, encoding='utf-8')
+
+      - name: Type check
+        run: |
+          npm ci
+          npx tsc --noEmit
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/revisione-controllo/presa-in-carico.tsx
+          git commit -m "Fix audit pre-engagement build and table names"
+          git pull --rebase origin main
+          git push origin HEAD:main
