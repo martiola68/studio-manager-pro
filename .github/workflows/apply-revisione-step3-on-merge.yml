@@ -1,0 +1,114 @@
+name: Apply revisione step3 on merge
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/apply-revisione-step3-on-merge.yml']
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Apply Step 3 directly to source
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/pages/revisione-controllo/presa-in-carico.tsx')
+          s=p.read_text()
+          if 'domandeStep3' in s:
+              raise SystemExit('Step 3 already present')
+          s=s.replace('import { useStudio } from "@/contexts/StudioContext";','import { useStudio } from "@/contexts/StudioContext";\nimport { domandeStep3 } from "./revisione-step3-data";',1)
+          s=s.replace('  const [dataAccettazioneStep2, setDataAccettazioneStep2] = useState("");','''  const [dataAccettazioneStep2, setDataAccettazioneStep2] = useState("");
+  const [risposteStep3, setRisposteStep3] = useState<Record<string, Riga>>({});
+  const [conclusioniStep3, setConclusioniStep3] = useState("");
+  const [rischioIndipendenza, setRischioIndipendenza] = useState("");
+  const [esitoIndipendenza, setEsitoIndipendenza] = useState("");
+  const [misureSalvaguardia, setMisureSalvaguardia] = useState("");
+  const [compensoS, setCompensoS] = useState("");
+  const [compensoC, setCompensoC] = useState("");
+  const [compensoCT, setCompensoCT] = useState("");''',1)
+          s=s.replace('  const completateStep2 = useMemo(() => domandeStep2.filter(([c]) => !!risposteStep2[c]?.risposta).length, [risposteStep2]);','''  const completateStep2 = useMemo(() => domandeStep2.filter(([c]) => !!risposteStep2[c]?.risposta).length, [risposteStep2]);
+  const completateStep3 = useMemo(() => domandeStep3.filter(([c]) => !!risposteStep3[c]?.risposta).length, [risposteStep3]);
+  const rapportoSCCT = useMemo(() => { const S=Number(compensoS.replace(",","."))||0,C=Number(compensoC.replace(",","."))||0,CT=Number(compensoCT.replace(",","."))||0; return CT>0?((S+C)/CT)*100:0; }, [compensoS,compensoC,compensoCT]);
+  const rapportoSsuSC = useMemo(() => { const S=Number(compensoS.replace(",","."))||0,C=Number(compensoC.replace(",","."))||0; return S+C>0?S/(S+C):0; }, [compensoS,compensoC]);''',1)
+          s=s.replace('.in("codice", ["VALUTAZIONE_PRELIMINARE", "ACCETTAZIONE_INCARICO"]);','.in("codice", ["VALUTAZIONE_PRELIMINARE", "ACCETTAZIONE_INCARICO", "VALUTAZIONE_INDIPENDENZA"]);',1)
+          s=s.replace('''        if (q.codice === "ACCETTAZIONE_INCARICO" && String(r.codice_domanda) === "16") {
+          setDataAccettazioneStep2(r.specifica || "");
+          continue;
+        }''','''        if (q.codice === "ACCETTAZIONE_INCARICO" && String(r.codice_domanda) === "16") { setDataAccettazioneStep2(r.specifica || ""); continue; }
+        if (q.codice === "VALUTAZIONE_INDIPENDENZA") {
+          const c=String(r.codice_domanda);
+          if(c==="FEE_S"){setCompensoS(r.specifica||"");continue;} if(c==="FEE_C"){setCompensoC(r.specifica||"");continue;} if(c==="FEE_CT"){setCompensoCT(r.specifica||"");continue;}
+          if(c==="SALVAGUARDIE"){setMisureSalvaguardia(r.specifica||"");continue;} if(c==="ESITO"){setEsitoIndipendenza(r.specifica||"");continue;}
+        }''',1)
+          s=s.replace('''      if (q.codice === "ACCETTAZIONE_INCARICO") {
+        setRisposteStep2(mappa);
+        setConclusioniStep2(q.conclusioni || "");
+        setRischioIncarico(q.esito || "");
+      }''','''      if (q.codice === "ACCETTAZIONE_INCARICO") { setRisposteStep2(mappa); setConclusioniStep2(q.conclusioni || ""); setRischioIncarico(q.esito || ""); }
+      if (q.codice === "VALUTAZIONE_INDIPENDENZA") { setRisposteStep3(mappa); setConclusioniStep3(q.conclusioni || ""); setRischioIndipendenza(q.esito || ""); }''',1)
+          s=s.replace('''  async function salvaBozza() {''','''  function aggiornaStep3(codice: string, patch: Partial<Riga>) {
+    setRisposteStep3((p) => ({ ...p, [codice]: { risposta: p[codice]?.risposta || "", specifica: p[codice]?.specifica || "", ...patch } }));
+  }
+
+  async function salvaBozza() {''',1)
+          anchor='''    setMessaggio(`Step ${step} salvato correttamente.`);'''
+          block='''    if (step === 3) {
+      const ok = await salvaQuestionario({ supabase, preincaricoId: pre.id, codice: "VALUTAZIONE_INDIPENDENZA", titolo: "Questionario valutazione indipendenza", domande: domandeStep3.map(([codice]) => codice), risposte: risposteStep3, conclusioni: conclusioniStep3, esito: rischioIndipendenza || null, completato: completateStep3 === domandeStep3.length && !!rischioIndipendenza && !!esitoIndipendenza, extraRighe: [
+        { codice: "SALVAGUARDIE", specifica: misureSalvaguardia }, { codice: "ESITO", specifica: esitoIndipendenza }, { codice: "FEE_S", specifica: compensoS }, { codice: "FEE_C", specifica: compensoC }, { codice: "FEE_CT", specifica: compensoCT }
+      ] });
+      if (!ok) return;
+    }
+
+'''+anchor
+          s=s.replace(anchor,block,1)
+          s=s.replace('''    dataAccettazione?: string;
+  }) {''','''    dataAccettazione?: string;
+    extraRighe?: Array<{ codice: string; specifica: string }>;
+  }) {''',1)
+          s=s.replace('''    if (righe.length) {
+      const { error: rError }''','''    for (const extra of args.extraRighe || []) {
+      if (!extra.specifica) continue;
+      righe.push({ studio_id: studioId, questionario_id: q.id, codice_domanda: extra.codice, risposta: null, specifica: extra.specifica, ordine: righe.length + 1, updated_at: new Date().toISOString() });
+    }
+
+    if (righe.length) {
+      const { error: rError }''',1)
+          s=s.replace('''    setDataAccettazioneStep2("");
+    setMessaggio("");''','''    setDataAccettazioneStep2("");
+    setRisposteStep3({}); setConclusioniStep3(""); setRischioIndipendenza(""); setEsitoIndipendenza(""); setMisureSalvaguardia(""); setCompensoS(""); setCompensoC(""); setCompensoCT("");
+    setMessaggio("");''',1)
+          old='''      {step > 2 && (
+        <section style={card}>
+          <h2 style={{ marginTop: 0 }}>Step {step} — {steps[step - 1]}</h2>
+          <p style={{ color: "#64748b" }}>Modulo predisposto nel workflow. I quesiti del relativo documento saranno inseriti nel blocco dedicato.</p>
+        </section>
+      )}'''
+          ui='''      {step === 3 && (
+        <section style={card}>
+          <StepHeader title="Step 3 — Questionario valutazione indipendenza" completed={completateStep3} total={domandeStep3.length} />
+          <div style={{ marginTop: 18 }}>{domandeStep3.map(([codice,sezione,testo,help],i) => <React.Fragment key={codice}>{(i===0 || domandeStep3[i-1][1]!==sezione) && <div style={{ marginTop:i?24:0,padding:"10px 12px",borderRadius:8,background:"#eaf8ff",color:"#075985",fontWeight:900 }}>{sezione}</div>}<QuestionRow codice={codice} testo={testo} help={help} riga={risposteStep3[codice]} onChange={(patch)=>aggiornaStep3(codice,patch)} /></React.Fragment>)}</div>
+          <div style={{ marginTop:22,padding:16,borderRadius:10,border:"1px solid #cbd5e1",background:"#f8fafc" }}><h3 style={{margin:"0 0 14px"}}>Compensi e dipendenza economica</h3><div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14}}><Field label="(S) Compensi revisione / sindaco"><input value={compensoS} onChange={e=>setCompensoS(e.target.value)} style={input}/></Field><Field label="(C) Altri compensi società / gruppo"><input value={compensoC} onChange={e=>setCompensoC(e.target.value)} style={input}/></Field><Field label="(CT) Compensi totali professionista / rete"><input value={compensoCT} onChange={e=>setCompensoCT(e.target.value)} style={input}/></Field></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginTop:12}}><Mini label="(S + C) / CT" value={`${rapportoSCCT.toFixed(2)}%`}/><Mini label="S / (S + C)" value={rapportoSsuSC.toFixed(4)}/></div></div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginTop:18}}><Field label="Rischio di indipendenza"><select value={rischioIndipendenza} onChange={e=>setRischioIndipendenza(e.target.value)} style={input}><option value="">Seleziona</option><option value="BASSO">Basso</option><option value="MEDIO">Medio</option><option value="ALTO">Alto</option></select></Field><Field label="Esito"><select value={esitoIndipendenza} onChange={e=>setEsitoIndipendenza(e.target.value)} style={input}><option value="">Seleziona</option><option value="ACCETTATO">Accettato</option><option value="RIFIUTATO">Rifiutato</option></select></Field></div>
+          <div style={{marginTop:16}}><Field label="Misure di salvaguardia"><textarea value={misureSalvaguardia} onChange={e=>setMisureSalvaguardia(e.target.value)} style={{...input,minHeight:120}} /></Field></div>
+          <div style={{marginTop:16}}><Field label="Conclusioni sulla valutazione di indipendenza"><textarea value={conclusioniStep3} onChange={e=>setConclusioniStep3(e.target.value)} style={{...input,minHeight:140}} /></Field></div>
+        </section>
+      )}
+
+      {step > 3 && (<section style={card}><h2 style={{marginTop:0}}>Step {step} — {steps[step-1]}</h2><p style={{color:"#64748b"}}>Modulo predisposto nel workflow. I quesiti del relativo documento saranno inseriti nel blocco dedicato.</p></section>)}'''
+          if old not in s: raise SystemExit('placeholder not found')
+          s=s.replace(old,ui,1)
+          p.write_text(s)
+          PY
+          npm ci
+          npx tsc --noEmit
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/revisione-controllo/presa-in-carico.tsx
+          git commit -m "Add audit independence questionnaire workflow"
+          git push origin HEAD:main
