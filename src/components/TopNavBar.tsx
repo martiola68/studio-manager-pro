@@ -316,7 +316,7 @@ export function TopNavBar() {
       children: [
         { label: "Dashboard", href: "/revisione-controllo/dashboard", icon: <BarChart3 className="h-4 w-4" /> },
         { label: "Incarichi / Fascicoli", href: "/revisione-controllo", icon: <FolderKanban className="h-4 w-4" /> },
-        { label: "Nuovo incarico", href: "/revisione-controllo/nuovo", icon: <FileText className="h-4 w-4" /> },
+        { label: "Nuova presa in carico", href: "/revisione-controllo/presa-in-carico", icon: <FileText className="h-4 w-4" /> },
         { label: "Controlli periodici", href: "/revisione-controllo/controlli", icon: <Calendar className="h-4 w-4" /> },
         { label: "Rilievi / Follow-up", href: "/revisione-controllo/followup", icon: <AlertTriangle className="h-4 w-4" /> },
         { label: "Carte di lavoro", href: "/revisione-controllo/documenti", icon: <FolderKanban className="h-4 w-4" /> },

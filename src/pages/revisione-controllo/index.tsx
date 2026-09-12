@@ -4,7 +4,6 @@ import { useRouter } from "next/router";
 import {
   Plus,
   Trash2,
-  Pencil,
   RefreshCw,
   FolderOpen,
 } from "lucide-react";
@@ -304,16 +303,6 @@ export default function RevisioneControlloPage() {
 >
   <FolderOpen size={16} />
 </button>
-                          <button
-                            title="Modifica"
-                            onClick={() =>
-                              router.push(`/revisione-controllo/nuovo?id=${encodeURIComponent(String(item.id))}`)
-                            }
-                            className="rounded-md border bg-white p-2 hover:bg-gray-50"
-                          >
-                            <Pencil size={16} />
-                          </button>
-
                           <button
                             title="Elimina"
                             onClick={() => eliminaIncarico(item.id)}
