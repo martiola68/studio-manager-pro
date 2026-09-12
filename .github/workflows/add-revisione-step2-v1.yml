@@ -1,0 +1,248 @@
+name: Add revisione step2 v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/add-revisione-step2-v1.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Add Step 2 acceptance questionnaire
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('src/pages/revisione-controllo/presa-in-carico.tsx')
+          s = p.read_text(encoding='utf-8')
+
+          marker = '] as const;\n\ntype Risposta'
+          if marker not in s:
+              raise SystemExit('domandeStep1 marker not found')
+
+          step2 = r'''
+
+const domandeStep2 = [
+  ["1", "Integrità dell’entità e considerazioni etiche", "È stata effettuata una valutazione della struttura proprietaria, degli organi di gestione e del sistema di governance dell’entità in relazione a potenziali criticità di integrità e reputazionali?", "Annotare fonti consultate, segnali d’allarme, conflitti di interesse, precedenti violazioni o pressioni non etiche."],
+  ["2", "Integrità dell’entità e considerazioni etiche", "Vi è assenza di indicazioni di comportamenti non etici, violazioni normative o problematiche reputazionali che potrebbero compromettere l’associazione del revisore con l’entità?", "Riportare eventuali casi di frode, corruzione, contenziosi o violazioni normative e la relativa valutazione."],
+  ["3", "Integrità dell’entità e considerazioni etiche", "La direzione ha dimostrato un impegno verso prassi etiche e una rendicontazione finanziaria trasparente all’interno dell’entità?", "Valutare tone at the top, collaborazione con il revisore e risposta ai precedenti rilievi."],
+  ["4", "Integrità dell’entità e considerazioni etiche", "Esistono relazioni con parti correlate, stakeholder o terze parti che potrebbero rappresentare rischi significativi per l’integrità della rendicontazione finanziaria dell’entità?", "Specificare le relazioni significative e il loro possibile impatto sull’integrità della rendicontazione."],
+  ["5", "Integrità dell’entità e considerazioni etiche", "Sono state adeguatamente valutate e risolte tutte le criticità sollevate dai precedenti revisori o da altre parti esterne in relazione all’entità?", "Descrivere criticità, comunicazioni ricevute e modalità di risoluzione."],
+  ["6", "Comunicazione con i precedenti revisori e valutazione preliminare", "Sono state richieste ai precedenti revisori le informazioni necessarie per la valutazione dell’accettazione dell’incarico?", "Indicare data, modalità e contenuto delle comunicazioni effettuate."],
+  ["7", "Comunicazione con i precedenti revisori e valutazione preliminare", "Le eventuali criticità segnalate dai precedenti revisori (controversie, limitazioni al lavoro o rilievi) sono state adeguatamente analizzate e risolte?", "Analizzare controversie, limitazioni o rilievi e indicare se residuano rischi significativi."],
+  ["8", "Comunicazione con i precedenti revisori e valutazione preliminare", "Emergono dalle comunicazioni con i precedenti revisori elementi critici relativi alla governance, alla collaborazione della direzione o alle prassi di rendicontazione finanziaria?", "Riportare gli elementi emersi e valutarne l’impatto sulla possibilità di svolgere efficacemente l’incarico."],
+  ["9", "Comunicazione con i precedenti revisori e valutazione preliminare", "I precedenti revisori hanno segnalato problematiche di indipendenza o altri aspetti professionali rilevanti per l’accettazione dell’incarico?", "Descrivere eventuali problematiche e l’impatto sull’accettazione o sul rifiuto dell’incarico."],
+  ["10", "Valutazione delle competenze specifiche richieste per l’incarico", "Si è acquisita una comprensione sufficiente delle attività dell’entità, del settore e del contesto per identificare i rischi di errori significativi?", "Indicare eventuali lacune conoscitive o approfondimenti ancora necessari."],
+  ["11", "Valutazione delle competenze specifiche richieste per l’incarico", "È stata acquisita un’adeguata comprensione dei principi contabili e delle prassi dell’entità, con particolare riferimento alle aree che richiedono stime e valutazioni significative?", "Specificare aree con stime, valutazioni o trattamenti contabili particolarmente rilevanti."],
+  ["12", "Valutazione delle competenze specifiche richieste per l’incarico", "L’incarico richiede competenze specialistiche o conoscenze tecniche ulteriori rispetto a quelle già disponibili?", "Indicare specialisti, esperti o formazione specifica eventualmente necessari."],
+  ["13", "Verifica dei requisiti preliminari", "Sono state confermate le condizioni preliminari per la revisione, incluso il riconoscimento da parte della direzione delle proprie responsabilità?", "Documentare il riconoscimento delle responsabilità della direzione e l’accesso alle informazioni rilevanti."],
+  ["14", "Verifica dei requisiti preliminari", "Il quadro normativo sull’informazione finanziaria applicato dall’entità è appropriato e accettabile rispetto ai destinatari del bilancio?", "Specificare il quadro normativo applicabile e le ragioni della sua adeguatezza."],
+  ["15", "Verifica dei requisiti preliminari", "Sussiste una ragionevole aspettativa di assenza di limitazioni allo svolgimento delle procedure di revisione da parte dell’entità?", "Descrivere eventuali restrizioni all’accesso a documentazione, personale o informazioni chiave."],
+] as const;
+'''
+          s = s.replace(marker, '] as const;' + step2 + '\ntype Risposta', 1)
+
+          s = s.replace(
+            '  const [conclusioni, setConclusioni] = useState("");\n',
+            '  const [conclusioni, setConclusioni] = useState("");\n  const [risposteStep2, setRisposteStep2] = useState<Record<string, Riga>>({});\n  const [conclusioniStep2, setConclusioniStep2] = useState("");\n  const [rischioIncarico, setRischioIncarico] = useState("");\n  const [dataAccettazioneStep2, setDataAccettazioneStep2] = useState("");\n'
+          )
+          s = s.replace(
+            '  const completate = useMemo(() => domandeStep1.filter(([c]) => !!risposte[c]?.risposta).length, [risposte]);\n',
+            '  const completate = useMemo(() => domandeStep1.filter(([c]) => !!risposte[c]?.risposta).length, [risposte]);\n  const completateStep2 = useMemo(() => domandeStep2.filter(([c]) => !!risposteStep2[c]?.risposta).length, [risposteStep2]);\n'
+          )
+
+          s = s.replace(
+            'setRisposte({});setConclusioni("");setMessaggio("");',
+            'setRisposte({});setConclusioni("");setRisposteStep2({});setConclusioniStep2("");setRischioIncarico("");setDataAccettazioneStep2("");setMessaggio("");'
+          )
+
+          old_load = '''    setRisposte(mappa);\n    setMessaggio("Bozza esistente caricata.");'''
+          new_load = '''    setRisposte(mappa);\n\n    const { data: q2 } = await supabase\n      .from("tbrevisione_questionari")\n      .select("id,conclusioni,esito")\n      .eq("preincarico_id", data.id)\n      .eq("codice", "ACCETTAZIONE_INCARICO")\n      .maybeSingle();\n    if (q2?.id) {\n      setConclusioniStep2(q2.conclusioni || "");\n      setRischioIncarico(q2.esito || "");\n      const { data: rr2 } = await supabase\n        .from("tbrevisione_risposte")\n        .select("codice_domanda,risposta,specifica")\n        .eq("questionario_id", q2.id);\n      const mappa2: Record<string, Riga> = {};\n      for (const r of rr2 || []) {\n        if (String(r.codice_domanda) === "16") {\n          setDataAccettazioneStep2(r.specifica || "");\n        } else {\n          mappa2[String(r.codice_domanda)] = { risposta: (r.risposta || "") as Risposta, specifica: r.specifica || "" };\n        }\n      }\n      setRisposteStep2(mappa2);\n    }\n    setMessaggio("Bozza esistente caricata.");'''
+          if old_load not in s:
+              raise SystemExit('load block not found')
+          s = s.replace(old_load, new_load, 1)
+
+          s = s.replace(
+            '  function aggiorna(codice: string, patch: Partial<Riga>) {\n    setRisposte((p) => ({ ...p, [codice]: { risposta: p[codice]?.risposta || "", specifica: p[codice]?.specifica || "", ...patch } }));\n  }\n',
+            '  function aggiorna(codice: string, patch: Partial<Riga>) {\n    setRisposte((p) => ({ ...p, [codice]: { risposta: p[codice]?.risposta || "", specifica: p[codice]?.specifica || "", ...patch } }));\n  }\n\n  function aggiornaStep2(codice: string, patch: Partial<Riga>) {\n    setRisposteStep2((p) => ({ ...p, [codice]: { risposta: p[codice]?.risposta || "", specifica: p[codice]?.specifica || "", ...patch } }));\n  }\n'
+          )
+
+          start = s.index('  async function salvaBozza() {')
+          end = s.index('\n  const soci =', start)
+          save_fn = r'''  async function salvaBozza() {
+    if (!studioId || !clienteId || !dataBilancio) {
+      setErrore("Seleziona il cliente e indica la data di bilancio prima di salvare.");
+      return;
+    }
+    setSaving(true);
+    setErrore("");
+    setMessaggio("");
+    const supabase = getSupabaseClient() as any;
+    const payload = {
+      studio_id: studioId,
+      cliente_id: clienteId,
+      data_bilancio: dataBilancio,
+      stato: "in_compilazione",
+      step_corrente: step,
+      note_finali: null,
+      snapshot_cliente: snapshot || {},
+      updated_at: new Date().toISOString(),
+    };
+    const { data: pre, error: preError } = await supabase
+      .from("tbrevisione_preincarichi")
+      .upsert(payload, { onConflict: "studio_id,cliente_id,data_bilancio" })
+      .select("id")
+      .single();
+    if (preError) {
+      setErrore(preError.message);
+      setSaving(false);
+      return;
+    }
+    setPreincaricoId(pre.id);
+
+    if (step === 1) {
+      const { data: q, error: qError } = await supabase
+        .from("tbrevisione_questionari")
+        .upsert({
+          studio_id: studioId,
+          preincarico_id: pre.id,
+          codice: "VALUTAZIONE_PRELIMINARE",
+          titolo: "Dati del cliente e valutazione preliminare",
+          versione: 1,
+          completato: completate === domandeStep1.length,
+          conclusioni: conclusioni || null,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "preincarico_id,codice" })
+        .select("id")
+        .single();
+      if (qError) {
+        setErrore(qError.message);
+        setSaving(false);
+        return;
+      }
+      await supabase.from("tbrevisione_risposte").delete().eq("questionario_id", q.id);
+      const righe = domandeStep1
+        .filter(([codice]) => risposte[codice]?.risposta || risposte[codice]?.specifica)
+        .map(([codice], ordine) => ({
+          studio_id: studioId,
+          questionario_id: q.id,
+          codice_domanda: codice,
+          risposta: risposte[codice]?.risposta || null,
+          specifica: risposte[codice]?.specifica || null,
+          ordine: ordine + 1,
+          updated_at: new Date().toISOString(),
+        }));
+      if (righe.length) {
+        const { error: rError } = await supabase.from("tbrevisione_risposte").insert(righe);
+        if (rError) {
+          setErrore(rError.message);
+          setSaving(false);
+          return;
+        }
+      }
+    }
+
+    if (step === 2) {
+      const { data: q2, error: q2Error } = await supabase
+        .from("tbrevisione_questionari")
+        .upsert({
+          studio_id: studioId,
+          preincarico_id: pre.id,
+          codice: "ACCETTAZIONE_INCARICO",
+          titolo: "Questionario accettazione incarico",
+          versione: 1,
+          completato: completateStep2 === domandeStep2.length && !!rischioIncarico,
+          conclusioni: conclusioniStep2 || null,
+          esito: rischioIncarico || null,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "preincarico_id,codice" })
+        .select("id")
+        .single();
+      if (q2Error) {
+        setErrore(q2Error.message);
+        setSaving(false);
+        return;
+      }
+      await supabase.from("tbrevisione_risposte").delete().eq("questionario_id", q2.id);
+      const righe2 = domandeStep2
+        .filter(([codice]) => risposteStep2[codice]?.risposta || risposteStep2[codice]?.specifica)
+        .map(([codice], ordine) => ({
+          studio_id: studioId,
+          questionario_id: q2.id,
+          codice_domanda: codice,
+          risposta: risposteStep2[codice]?.risposta || null,
+          specifica: risposteStep2[codice]?.specifica || null,
+          ordine: ordine + 1,
+          updated_at: new Date().toISOString(),
+        }));
+      if (dataAccettazioneStep2) {
+        righe2.push({
+          studio_id: studioId,
+          questionario_id: q2.id,
+          codice_domanda: "16",
+          risposta: null,
+          specifica: dataAccettazioneStep2,
+          ordine: 16,
+          updated_at: new Date().toISOString(),
+        });
+      }
+      if (righe2.length) {
+        const { error: r2Error } = await supabase.from("tbrevisione_risposte").insert(righe2);
+        if (r2Error) {
+          setErrore(r2Error.message);
+          setSaving(false);
+          return;
+        }
+      }
+    }
+
+    setMessaggio(`Step ${step} salvato correttamente.`);
+    setSaving(false);
+  }
+'''
+          s = s[:start] + save_fn + s[end:]
+
+          old_ui = '''    {step===1 ? <section style={card}>\n      <div style={{display:"flex",justifyContent:"space-between",alignItems:"start",gap:16}}><div><h2 style={{margin:0,fontSize:22}}>Step 1 — Dati del cliente e valutazione preliminare</h2><p style={{margin:"7px 0 0",color:"#64748b"}}>Rispondere a ogni quesito con Sì, No o Non applicabile. Le specifiche possono essere estese.</p></div><div style={{fontWeight:800,color:completate===domandeStep1.length?"#15803d":"#0d6f9f"}}>{completate}/{domandeStep1.length}</div></div>\n      <div style={{marginTop:18}}>{domandeStep1.map(([codice,testo,help])=>{const r=risposte[codice]||{risposta:"",specifica:""};return <div key={codice} style={{padding:"18px 0",borderTop:"1px solid #e2e8f0"}}><div style={{display:"grid",gridTemplateColumns:"56px 1fr 360px",gap:16,alignItems:"start"}}><div style={{width:42,height:42,borderRadius:10,display:"grid",placeItems:"center",background:"#eaf8ff",fontWeight:900,color:"#075985"}}>{codice}</div><div><div style={{fontWeight:800,lineHeight:1.45}}>{testo}</div><div style={{fontSize:13,color:"#64748b",marginTop:6}}>{help}</div></div><div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6}}>{[["SI","Sì"],["NO","No"],["NON_APPLICABILE","N/A"]].map(([v,l])=><button key={v} onClick={()=>aggiorna(codice,{risposta:v as Risposta})} style={{height:40,borderRadius:8,border:r.risposta===v?"2px solid #0d6f9f":"1px solid #94a3b8",background:r.risposta===v?"#eaf8ff":"#fff",fontWeight:800,cursor:"pointer"}}>{l}</button>)}</div></div><textarea value={r.specifica} onChange={e=>aggiorna(codice,{specifica:e.target.value})} placeholder="Specifiche / osservazioni / elementi acquisiti..." style={{...input,minHeight:92,resize:"vertical",marginTop:12}}/></div>})}</div>\n      <Field label="Conclusioni della valutazione preliminare"><textarea value={conclusioni} onChange={e=>setConclusioni(e.target.value)} placeholder="Riportare le conclusioni della valutazione preliminare..." style={{...input,minHeight:130,resize:"vertical"}}/></Field>\n    </section> : <section style={card}><h2 style={{marginTop:0}}>Step {step} — {steps[step-1]}</h2><p style={{color:"#64748b"}}>Modulo predisposto nel workflow. I quesiti del relativo documento saranno inseriti nel blocco dedicato.</p></section>}'''
+
+          new_ui = r'''    {step===1 ? <section style={card}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"start",gap:16}}><div><h2 style={{margin:0,fontSize:22}}>Step 1 — Dati del cliente e valutazione preliminare</h2><p style={{margin:"7px 0 0",color:"#64748b"}}>Rispondere a ogni quesito con Sì, No o Non applicabile. Le specifiche possono essere estese.</p></div><div style={{fontWeight:800,color:completate===domandeStep1.length?"#15803d":"#0d6f9f"}}>{completate}/{domandeStep1.length}</div></div>
+      <div style={{marginTop:18}}>{domandeStep1.map(([codice,testo,help])=>{const r=risposte[codice]||{risposta:"",specifica:""};return <div key={codice} style={{padding:"18px 0",borderTop:"1px solid #e2e8f0"}}><div style={{display:"grid",gridTemplateColumns:"56px 1fr 360px",gap:16,alignItems:"start"}}><div style={{width:42,height:42,borderRadius:10,display:"grid",placeItems:"center",background:"#eaf8ff",fontWeight:900,color:"#075985"}}>{codice}</div><div><div style={{fontWeight:800,lineHeight:1.45}}>{testo}</div><div style={{fontSize:13,color:"#64748b",marginTop:6}}>{help}</div></div><div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6}}>{[["SI","Sì"],["NO","No"],["NON_APPLICABILE","N/A"]].map(([v,l])=><button key={v} onClick={()=>aggiorna(codice,{risposta:v as Risposta})} style={{height:40,borderRadius:8,border:r.risposta===v?"2px solid #0d6f9f":"1px solid #94a3b8",background:r.risposta===v?"#eaf8ff":"#fff",fontWeight:800,cursor:"pointer"}}>{l}</button>)}</div></div><textarea value={r.specifica} onChange={e=>aggiorna(codice,{specifica:e.target.value})} placeholder="Specifiche / osservazioni / elementi acquisiti..." style={{...input,minHeight:92,resize:"vertical",marginTop:12}}/></div>})}</div>
+      <Field label="Conclusioni della valutazione preliminare"><textarea value={conclusioni} onChange={e=>setConclusioni(e.target.value)} placeholder="Riportare le conclusioni della valutazione preliminare..." style={{...input,minHeight:130,resize:"vertical"}}/></Field>
+    </section> : step===2 ? <section style={card}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"start",gap:16}}><div><h2 style={{margin:0,fontSize:22}}>Step 2 — Questionario accettazione incarico</h2><p style={{margin:"7px 0 0",color:"#64748b"}}>Questionario strutturato sulla scheda di accettazione incarico. Ogni risposta può essere motivata con note estese.</p></div><div style={{fontWeight:800,color:completateStep2===domandeStep2.length?"#15803d":"#0d6f9f"}}>{completateStep2}/{domandeStep2.length}</div></div>
+      <div style={{marginTop:16,padding:14,borderRadius:10,background:"#f8fafc",border:"1px solid #cbd5e1",fontSize:13,color:"#475569"}}><b>Collegamenti del fascicolo:</b> le valutazioni sull’informativa finanziaria sono già supportate dallo Step 1; indipendenza e antiriciclaggio saranno sviluppati rispettivamente negli Step 3 e 4.</div>
+      <div style={{marginTop:18}}>{domandeStep2.map(([codice,sezione,testo,help],i)=>{const r=risposteStep2[codice]||{risposta:"",specifica:""};const nuovaSezione=i===0||domandeStep2[i-1][1]!==sezione;return <React.Fragment key={codice}>{nuovaSezione&&<div style={{marginTop:i?24:0,padding:"10px 12px",borderRadius:8,background:"#eaf8ff",color:"#075985",fontWeight:900}}>{sezione}</div>}<div style={{padding:"18px 0",borderTop:"1px solid #e2e8f0"}}><div style={{display:"grid",gridTemplateColumns:"56px 1fr 360px",gap:16,alignItems:"start"}}><div style={{width:42,height:42,borderRadius:10,display:"grid",placeItems:"center",background:"#eaf8ff",fontWeight:900,color:"#075985"}}>{codice}</div><div><div style={{fontWeight:800,lineHeight:1.45}}>{testo}</div><div style={{fontSize:13,color:"#64748b",marginTop:6}}>{help}</div></div><div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6}}>{[["SI","Sì"],["NO","No"],["NON_APPLICABILE","N/A"]].map(([v,l])=><button key={v} onClick={()=>aggiornaStep2(codice,{risposta:v as Risposta})} style={{height:40,borderRadius:8,border:r.risposta===v?"2px solid #0d6f9f":"1px solid #94a3b8",background:r.risposta===v?"#eaf8ff":"#fff",fontWeight:800,cursor:"pointer"}}>{l}</button>)}</div></div><textarea value={r.specifica} onChange={e=>aggiornaStep2(codice,{specifica:e.target.value})} placeholder="Specifiche / motivazioni / evidenze acquisite..." style={{...input,minHeight:92,resize:"vertical",marginTop:12}}/></div></React.Fragment>})}</div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginTop:18}}><Field label="Valutazione complessiva del rischio di incarico"><select value={rischioIncarico} onChange={e=>setRischioIncarico(e.target.value)} style={input}><option value="">Seleziona</option><option value="BASSO">Basso</option><option value="MEDIO">Medio</option><option value="ALTO">Alto</option></select></Field><Field label="Data di accettazione dell’incarico"><input type="date" value={dataAccettazioneStep2} onChange={e=>setDataAccettazioneStep2(e.target.value)} style={input}/></Field></div>
+      <div style={{marginTop:16}}><Field label="Conclusioni"><textarea value={conclusioniStep2} onChange={e=>setConclusioniStep2(e.target.value)} placeholder="Riportare la conclusione sull’accettazione dell’incarico, le eventuali criticità e le misure di salvaguardia..." style={{...input,minHeight:150,resize:"vertical"}}/></Field></div>
+    </section> : <section style={card}><h2 style={{marginTop:0}}>Step {step} — {steps[step-1]}</h2><p style={{color:"#64748b"}}>Modulo predisposto nel workflow. I quesiti del relativo documento saranno inseriti nel blocco dedicato.</p></section>}'''
+          if old_ui not in s:
+              raise SystemExit('UI block not found')
+          s = s.replace(old_ui, new_ui, 1)
+
+          p.write_text(s, encoding='utf-8')
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/revisione-controllo/presa-in-carico.tsx
+          git commit -m "Add audit engagement acceptance questionnaire"
+          git pull --rebase origin main
+          git push origin HEAD:main
