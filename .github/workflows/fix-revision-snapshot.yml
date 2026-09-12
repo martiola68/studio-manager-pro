@@ -41,9 +41,6 @@ function organoValidoAllaData(organo: any, dataRiferimento: string) {
   if (inizio && !Number.isNaN(inizio.getTime()) && inizio > riferimento) return false;
   if (fine && !Number.isNaN(fine.getTime()) && fine < riferimento) return false;
 
-  // Un record disattivato senza una data di cessazione/scadenza non e' valido.
-  // Se invece esiste una data, la validita' storica e' determinata dalle date:
-  // serve per ricostruire correttamente gli organi alla data del bilancio.
   if (organo?.attivo === false && !fineRaw) return false;
 
   return true;
@@ -120,3 +117,5 @@ function organoValidoAllaData(organo: any, dataRiferimento: string) {
           fi
           git commit -m "fix: load revisione snapshot from organi API"
           git push origin main
+
+# retrigger 2026-09-12
