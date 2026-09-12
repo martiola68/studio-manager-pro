@@ -51,6 +51,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         data_fine,
         responsabile_id,
         note,
+        preincarico_id,
+        data_accettazione,
+        note_finali,
+        accettazione_finale,
       } = req.body;
 
       if (!studio_id) {
@@ -79,6 +83,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           success: false,
           error: "Data inizio obbligatoria",
         });
+      }
+
+      let preincarico: any = null;
+      if (preincarico_id) {
+        const { data: pre, error: preError } = await supabaseAdmin
+          .from("tbrevisione_preincarichi")
+          .select("id,studio_id,cliente_id,stato,pratica_revisione_id")
+          .eq("id", preincarico_id)
+          .maybeSingle();
+        if (preError) throw preError;
+        if (!pre) return res.status(404).json({ success: false, error: "Presa in carico non trovata" });
+        if (pre.studio_id !== studio_id || pre.cliente_id !== cliente_id) {
+          return res.status(409).json({ success: false, error: "Presa in carico non coerente con studio o cliente" });
+        }
+        if (pre.pratica_revisione_id) {
+          const { data: existing, error: existingError } = await supabaseAdmin
+            .from("tbrevisione_incarichi")
+            .select("*")
+            .eq("id", pre.pratica_revisione_id)
+            .maybeSingle();
+          if (existingError) throw existingError;
+          return res.status(200).json({ success: true, data: existing, already_exists: true });
+        }
+        if (pre.stato === "generato") {
+          return res.status(409).json({ success: false, error: "Presa in carico già generata ma priva di collegamento alla pratica" });
+        }
+        preincarico = pre;
       }
 const annoInizio = new Date(
   `${data_inizio}T00:00:00`
@@ -122,12 +153,54 @@ const rowsControlli = [1, 2, 3, 4].map((trimestre) => ({
           ignoreDuplicates: true,
         });
 
-      if (controlliError) throw controlliError;
+      if (controlliError) {
+        await supabaseAdmin.from("tbrevisione_incarichi").delete().eq("id", data.id);
+        throw controlliError;
+      }
 
-      return res.status(201).json({
-        success: true,
-        data,
-      });
+      if (preincarico) {
+        const { error: docError } = await supabaseAdmin
+          .from("tbrevisione_preincarico_documenti")
+          .upsert({
+            studio_id,
+            preincarico_id,
+            tipo: "ACCETTAZIONE_FINALE",
+            versione: 1,
+            stato: "confermato",
+            contenuto: { ...(accettazione_finale || {}), pratica_revisione_id: data.id, confermato: true },
+            confermato_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }, { onConflict: "preincarico_id,tipo" });
+
+        if (docError) {
+          await supabaseAdmin.from("tbrevisione_controlli").delete().eq("incarico_id", data.id);
+          await supabaseAdmin.from("tbrevisione_incarichi").delete().eq("id", data.id);
+          throw docError;
+        }
+
+        const { error: preUpdateError } = await supabaseAdmin
+          .from("tbrevisione_preincarichi")
+          .update({
+            stato: "generato",
+            accettato: true,
+            data_accettazione: data_accettazione || data_nomina || null,
+            note_finali: note_finali || null,
+            pratica_revisione_id: data.id,
+            step_corrente: 8,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", preincarico_id)
+          .neq("stato", "generato");
+
+        if (preUpdateError) {
+          await supabaseAdmin.from("tbrevisione_preincarico_documenti").delete().eq("preincarico_id", preincarico_id).eq("tipo", "ACCETTAZIONE_FINALE");
+          await supabaseAdmin.from("tbrevisione_controlli").delete().eq("incarico_id", data.id);
+          await supabaseAdmin.from("tbrevisione_incarichi").delete().eq("id", data.id);
+          throw preUpdateError;
+        }
+      }
+
+      return res.status(201).json({ success: true, data, already_exists: false });
     }
 
     return res.status(405).json({

@@ -270,16 +270,11 @@ export default function PresaInCaricoRevisione() {
     setGeneratingPratica(true); setErrore(""); setMessaggio("");
     try {
       const dataInizio = decorrenzaProposta || dataAccettazioneFinale || dataBilancio;
-      const response = await fetch("/api/revisione-controllo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ studio_id: studioId, cliente_id: clienteId, tipo_incarico: "REVISIONE_LEGALE", data_nomina: dataAccettazioneFinale, data_inizio: dataInizio, data_fine: null, responsabile_id: null, note: [responsabileFinale ? `Responsabile presa in carico: ${responsabileFinale}` : "", noteFinali].filter(Boolean).join("\n") || null }) });
+      const response = await fetch("/api/revisione-controllo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ studio_id: studioId, cliente_id: clienteId, tipo_incarico: "REVISIONE_LEGALE", data_nomina: dataAccettazioneFinale, data_inizio: dataInizio, data_fine: null, responsabile_id: null, note: [responsabileFinale ? `Responsabile presa in carico: ${responsabileFinale}` : "", noteFinali].filter(Boolean).join("\n") || null, preincarico_id: preincaricoId, data_accettazione: dataAccettazioneFinale, note_finali: noteFinali || null, accettazione_finale: { data: dataAccettazioneFinale, responsabile: responsabileFinale, note: noteFinali, snapshot_cliente: snapshot || {} } }) });
       const payload = await response.json();
       if (!response.ok || !payload?.success || !payload?.data?.id) throw new Error(payload?.error || "Impossibile generare la pratica di revisione");
-      const supabase = getSupabaseClient() as any;
-      const savedFinal = await salvaDocumentoPreincarico({ supabase, preincaricoId, tipo: "ACCETTAZIONE_FINALE", stato: "confermato", contenuto: { data: dataAccettazioneFinale, responsabile: responsabileFinale, note: noteFinali, confermato: true, pratica_revisione_id: payload.data.id } });
-      if (!savedFinal) throw new Error("Impossibile congelare il documento di accettazione finale.");
-      const { error: updateError } = await supabase.from("tbrevisione_preincarichi").update({ stato: "generato", accettato: true, data_accettazione: dataAccettazioneFinale, note_finali: noteFinali || null, pratica_revisione_id: payload.data.id, step_corrente: 8, snapshot_cliente: snapshot || {}, updated_at: new Date().toISOString() }).eq("id", preincaricoId);
-      if (updateError) throw updateError;
       setPraticaRevisioneId(payload.data.id); setPreincaricoStato("generato");
-      setMessaggio("Pratica di revisione generata correttamente. La presa in carico è ora congelata nello storico.");
+      setMessaggio(payload.already_exists ? "La pratica di revisione risultava già generata ed è stata ricollegata." : "Pratica di revisione generata correttamente. La presa in carico è ora congelata nello storico.");
     } catch (e: any) { setErrore(e?.message || "Errore durante la generazione della pratica di revisione."); } finally { setGeneratingPratica(false); }
   }
 
