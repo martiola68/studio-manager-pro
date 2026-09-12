@@ -58,6 +58,28 @@ type IncaricoTrasparenza = { ente: string; ateco: string; sede: string; codiceFi
 const incaricoTrasparenzaVuoto = (): IncaricoTrasparenza => ({ ente: "", ateco: "", sede: "", codiceFiscale: "", ruolo: "" });
 function nomeCliente(c: Cliente) { return c.ragione_sociale || "Cliente senza denominazione"; }
 
+function parseDataOrgano(value: unknown, fineGiornata = false) {
+  if (!value) return null;
+  const raw = String(value).trim();
+  const italiana = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  const iso = italiana ? `${italiana[3]}-${italiana[2]}-${italiana[1]}` : raw.slice(0, 10);
+  const data = new Date(`${iso}T${fineGiornata ? "23:59:59" : "00:00:00"}`);
+  return Number.isNaN(data.getTime()) ? null : data;
+}
+
+function organoValidoAllaData(organo: any, dataRiferimento: string) {
+  const riferimento = dataRiferimento ? parseDataOrgano(dataRiferimento, true) : new Date();
+  if (!riferimento) return true;
+  const dalRaw = organo?.data_nomina || organo?.data_inizio || organo?.dal || null;
+  const alRaw = organo?.data_cessazione || organo?.data_scadenza || organo?.data_fine || organo?.al || null;
+  const dal = parseDataOrgano(dalRaw, false);
+  const al = parseDataOrgano(alRaw, true);
+  if (dal && dal > riferimento) return false;
+  if (al && al < riferimento) return false;
+  if (organo?.attivo === false && !alRaw) return false;
+  return true;
+}
+
 export default function PresaInCaricoRevisione() {
   const router = useRouter();
   const { studioId } = useStudio();
@@ -140,7 +162,7 @@ export default function PresaInCaricoRevisione() {
   async function caricaSnapshot() {
     setLoadingSnapshot(true); setErrore("");
     const supabase = getSupabaseClient() as any;
-    const [clienteRes, organiRes] = await Promise.all([supabase.from("tbclienti").select("*").eq("id", clienteId).maybeSingle(), supabase.from("tbclienti_organi").select("*").eq("cliente_id", clienteId).eq("attivo", true)]);
+    const [clienteRes, organiRes] = await Promise.all([supabase.from("tbclienti").select("*").eq("id", clienteId).maybeSingle(), supabase.from("tbclienti_organi").select("*").eq("cliente_id", clienteId)]);
     if (clienteRes.error) { setErrore(clienteRes.error.message); setLoadingSnapshot(false); return; }
     if (organiRes.error) { setErrore(organiRes.error.message); setLoadingSnapshot(false); return; }
     setSnapshot({ acquisito_il: new Date().toISOString(), cliente: clienteRes.data || null, organi_sociali: organiRes.data || [] }); setLoadingSnapshot(false);
@@ -252,9 +274,10 @@ export default function PresaInCaricoRevisione() {
     return true;
   }
 
-  const soci = (snapshot?.organi_sociali || []).filter((o: any) => o.ruolo === "socio");
-  const amministratori = (snapshot?.organi_sociali || []).filter((o: any) => ["amministratore_unico", "amministratore", "presidente_cda", "amministratore_delegato", "liquidatore"].includes(o.ruolo));
-  const controllo = (snapshot?.organi_sociali || []).filter((o: any) => ["sindaco", "presidente_collegio_sindacale", "revisore"].includes(o.ruolo));
+  const organiAllaData = (snapshot?.organi_sociali || []).filter((o: any) => organoValidoAllaData(o, dataBilancio));
+  const soci = organiAllaData.filter((o: any) => o.ruolo === "socio");
+  const amministratori = organiAllaData.filter((o: any) => ["amministratore_unico", "amministratore", "presidente_cda", "amministratore_delegato", "liquidatore"].includes(o.ruolo));
+  const controllo = organiAllaData.filter((o: any) => ["sindaco", "presidente_collegio_sindacale", "revisore"].includes(o.ruolo));
 
   function resetPratica() {
     setPreincaricoId(null); setRisposte({}); setConclusioni(""); setRisposteStep2({}); setConclusioniStep2(""); setRischioIncarico(""); setDataAccettazioneStep2(""); setRisposteStep3({}); setConclusioniStep3(""); setRischioIndipendenza(""); setEsitoIndipendenza(""); setMisureSalvaguardia(""); setCompensoS(""); setCompensoC(""); setCompensoCT(""); setRisposteStep4({}); setConclusioniStep4(""); setRischioRiciclaggio(""); setScoreA(""); setScoreB(""); setScoreC(""); setScoreD(""); setDataAttestazione(""); setFirmatarioAttestazione(""); setAttestazioneConfermata(false); setIncarichiTrasparenza([incaricoTrasparenzaVuoto()]); setDataTrasparenza(""); setFirmatarioTrasparenza(""); setTrasparenzaConfermata(false); setDecorrenzaProposta(""); setNumeroEserciziProposta("3"); setEserciziProposta(""); setCompensoAnnualeProposta(""); setAttivitaAggiuntiveProposta("Sottoscrizione delle dichiarazioni fiscali, ove prevista dalla normativa vigente."); setResponsabileProposta(""); setPolizzaProposta(""); setNoteProposta(""); setDataProposta(""); setPropostaConfermata(false); setDataAccettazioneFinale(""); setResponsabileFinale(""); setNoteFinali(""); setAccettazioneFinaleConfermata(false); setPraticaRevisioneId(null); setPreincaricoStato(""); setMessaggio(""); setErrore(""); setStep(1);
