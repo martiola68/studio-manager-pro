@@ -1,0 +1,220 @@
+name: Add revisione Step 5 attestation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/add-revisione-step5-v1.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Patch Step 5
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/pages/revisione-controllo/presa-in-carico.tsx')
+          s=p.read_text()
+          def rep(a,b):
+            global s
+            if a not in s:
+              raise SystemExit('ANCHOR NOT FOUND: '+a[:160])
+            s=s.replace(a,b,1)
+
+          rep('''  const [scoreD, setScoreD] = useState("");\n  const [loadingClienti, setLoadingClienti] = useState(false);''','''  const [scoreD, setScoreD] = useState("");
+  const [dataAttestazione, setDataAttestazione] = useState("");
+  const [firmatarioAttestazione, setFirmatarioAttestazione] = useState("");
+  const [attestazioneConfermata, setAttestazioneConfermata] = useState(false);
+  const [loadingClienti, setLoadingClienti] = useState(false);''')
+
+          rep('''    setMessaggio("Bozza esistente caricata.");\n  }''','''    const { data: attestazione, error: dError } = await supabase
+      .from("tbrevisione_preincarico_documenti")
+      .select("contenuto,stato")
+      .eq("preincarico_id", data.id)
+      .eq("tipo", "ATTESTAZIONE_INDIPENDENZA")
+      .maybeSingle();
+    if (dError) {
+      setErrore(dError.message);
+      return;
+    }
+    if (attestazione?.contenuto) {
+      const contenuto = attestazione.contenuto as any;
+      setDataAttestazione(contenuto.data || "");
+      setFirmatarioAttestazione(contenuto.firmatario || "");
+      setAttestazioneConfermata(Boolean(contenuto.confermato));
+    }
+    setMessaggio("Bozza esistente caricata.");
+  }''')
+
+          rep('''    } else if (step === 4) {
+      ok = await salvaQuestionario({
+        supabase,
+        preincaricoId: pre.id,
+        codice: "RISCHIO_RICICLAGGIO",
+        titolo: "Valutazione rischio riciclaggio",
+        domande: domandeStep4.map(([codice]) => codice),
+        risposte: risposteStep4,
+        conclusioni: conclusioniStep4,
+        esito: rischioRiciclaggio || null,
+        completato: completateStep4 === domandeStep4.length && !!rischioRiciclaggio && !!scoreA && !!scoreB && !!scoreC && !!scoreD,
+        extraRighe: [
+          { codice: "SCORE_A", specifica: scoreA },
+          { codice: "SCORE_B", specifica: scoreB },
+          { codice: "SCORE_C", specifica: scoreC },
+          { codice: "SCORE_D", specifica: scoreD },
+        ],
+      });
+    }
+
+    if (!ok) return;''','''    } else if (step === 4) {
+      ok = await salvaQuestionario({
+        supabase,
+        preincaricoId: pre.id,
+        codice: "RISCHIO_RICICLAGGIO",
+        titolo: "Valutazione rischio riciclaggio",
+        domande: domandeStep4.map(([codice]) => codice),
+        risposte: risposteStep4,
+        conclusioni: conclusioniStep4,
+        esito: rischioRiciclaggio || null,
+        completato: completateStep4 === domandeStep4.length && !!rischioRiciclaggio && !!scoreA && !!scoreB && !!scoreC && !!scoreD,
+        extraRighe: [
+          { codice: "SCORE_A", specifica: scoreA },
+          { codice: "SCORE_B", specifica: scoreB },
+          { codice: "SCORE_C", specifica: scoreC },
+          { codice: "SCORE_D", specifica: scoreD },
+        ],
+      });
+    } else if (step === 5) {
+      ok = await salvaDocumentoPreincarico({
+        supabase,
+        preincaricoId: pre.id,
+        tipo: "ATTESTAZIONE_INDIPENDENZA",
+        stato: attestazioneConfermata ? "confermato" : "bozza",
+        contenuto: {
+          data: dataAttestazione,
+          firmatario: firmatarioAttestazione,
+          confermato: attestazioneConfermata,
+          riferimenti: [
+            "Art. 10 Decreto Legislativo 27 gennaio 2010, n. 39",
+            "ISQC Italia 1 e ISA Italia n. 200 e n. 220",
+            "Codice Italiano di Etica e Indipendenza",
+            "Titolo I, art. 9 Codice deontologico dei Dottori Commercialisti e degli Esperti Contabili",
+            "Direttive e procedure in materia di indipendenza contenute nel manuale di controllo della qualità adottato",
+          ],
+        },
+      });
+    }
+
+    if (!ok) return;''')
+
+          rep('''    return true;\n  }\n\n  const soci =''','''    return true;
+  }
+
+  async function salvaDocumentoPreincarico(args: {
+    supabase: any;
+    preincaricoId: string;
+    tipo: string;
+    stato: "bozza" | "completato" | "confermato" | "generato";
+    contenuto: Record<string, any>;
+  }) {
+    const { error } = await args.supabase
+      .from("tbrevisione_preincarico_documenti")
+      .upsert(
+        {
+          studio_id: studioId,
+          preincarico_id: args.preincaricoId,
+          tipo: args.tipo,
+          versione: 1,
+          stato: args.stato,
+          contenuto: args.contenuto,
+          confermato_at: args.stato === "confermato" ? new Date().toISOString() : null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "preincarico_id,tipo" }
+      );
+    if (error) {
+      setErrore(error.message);
+      setSaving(false);
+      return false;
+    }
+    return true;
+  }
+
+  const soci =''')
+
+          rep('''    setScoreD("");\n    setMessaggio("");''','''    setScoreD("");
+    setDataAttestazione("");
+    setFirmatarioAttestazione("");
+    setAttestazioneConfermata(false);
+    setMessaggio("");''')
+
+          rep('''      {step > 4 && (
+        <section style={card}>
+          <h2 style={{ marginTop: 0 }}>Step {step} — {steps[step - 1]}</h2>
+          <p style={{ color: "#64748b" }}>Modulo predisposto nel workflow. Il documento dello step sarà inserito nel blocco dedicato.</p>
+        </section>
+      )}''','''      {step === 5 && (
+        <section style={card}>
+          <h2 style={{ marginTop: 0 }}>Step 5 — Attestazione di indipendenza</h2>
+          <p style={{ color: "#64748b", marginBottom: 20 }}>Documento generato sulla base dell’attestazione originale. La conferma viene archiviata nel fascicolo della presa in carico.</p>
+
+          <div style={{ border: "1px solid #cbd5e1", borderRadius: 12, padding: 28, background: "#fff", lineHeight: 1.65 }}>
+            <h3 style={{ textAlign: "center", letterSpacing: 1, marginTop: 0 }}>DICHIARO</h3>
+            <p>di aver letto e compreso le norme e i principi in materia di indipendenza qui di seguito elencati:</p>
+            <ul>
+              <li>Art. 10 Decreto Legislativo 27 gennaio 2010, n. 39;</li>
+              <li>ISQC Italia 1 e ISA Italia n. 200, “Obiettivi generali del revisore indipendente e svolgimento della revisione contabile in conformità ai principi di revisione internazionali” e n. 220, “Controllo della qualità dell’incarico di revisione contabile del bilancio”;</li>
+              <li>Codice Italiano di Etica e Indipendenza;</li>
+              <li>Titolo I, art. 9 Codice deontologico dei Dottori Commercialisti e degli Esperti Contabili;</li>
+              <li>direttive e procedure in materia di indipendenza contenute nel manuale di controllo della qualità adottato.</li>
+            </ul>
+
+            <h3 style={{ textAlign: "center", letterSpacing: 1, marginTop: 30 }}>CONFERMO</h3>
+            <p>che, tenuto conto delle informazioni fin qui ottenute e delle verifiche condotte, non ho riscontrato situazioni che, ai sensi di legge e dei principi deontologici che disciplinano l’attività di revisione, compromettano la mia indipendenza o che costituiscano cause di impossibilità ad accettare l’incarico o di cessazione anticipata dall’incarico.</p>
+            <p>È mia la responsabilità di segnalare eventuali modifiche a quanto sopra dichiarato.</p>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 22, marginTop: 30 }}>
+              <Field label="Data attestazione"><input type="date" value={dataAttestazione} onChange={(e) => setDataAttestazione(e.target.value)} style={input} /></Field>
+              <Field label="Revisore / firmatario"><input value={firmatarioAttestazione} onChange={(e) => setFirmatarioAttestazione(e.target.value)} placeholder="Nominativo del firmatario" style={input} /></Field>
+            </div>
+
+            <label style={{ display: "flex", gap: 12, alignItems: "flex-start", marginTop: 24, padding: 16, borderRadius: 10, border: attestazioneConfermata ? "2px solid #16a34a" : "1px solid #94a3b8", background: attestazioneConfermata ? "#f0fdf4" : "#f8fafc", cursor: "pointer" }}>
+              <input type="checkbox" checked={attestazioneConfermata} onChange={(e) => setAttestazioneConfermata(e.target.checked)} style={{ width: 20, height: 20, marginTop: 2 }} />
+              <span><b>Confermo l’indipendenza e l’assenza di cause ostative</b><br/><span style={{ color: "#64748b", fontSize: 13 }}>La conferma rende l’attestazione completata ai fini del fascicolo di presa in carico.</span></span>
+            </label>
+          </div>
+        </section>
+      )}
+
+      {step > 5 && (
+        <section style={card}>
+          <h2 style={{ marginTop: 0 }}>Step {step} — {steps[step - 1]}</h2>
+          <p style={{ color: "#64748b" }}>Modulo predisposto nel workflow. Il documento dello step sarà inserito nel blocco dedicato.</p>
+        </section>
+      )}''')
+
+          p.write_text(s)
+          PY
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Commit source
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/revisione-controllo/presa-in-carico.tsx
+          git diff --cached --quiet && exit 0
+          git commit -m "Add audit independence attestation step"
+          git push origin main
