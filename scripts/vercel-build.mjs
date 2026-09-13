@@ -10,6 +10,7 @@ const patches = [
   "scripts/patch-redditivita-clienti-tab.mjs",
   "scripts/patch-redditivita-compensi-tab.mjs",
   "scripts/patch-redditivita-incassi-tab.mjs",
+  "scripts/patch-redditivita-incassi-scadenzario-centrale.mjs",
 ];
 
 for (const script of patches) {
