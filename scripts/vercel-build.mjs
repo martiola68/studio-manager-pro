@@ -14,6 +14,7 @@ const patches = [
   "scripts/patch-redditivita-operativita.mjs",
   "scripts/oneoff-fix-redditivita-ux.mjs",
   "scripts/patch-redditivita-solo-clienti-attivi.mjs",
+  "scripts/patch-redditivita-v2.mjs",
 ];
 
 for (const script of patches) {
