@@ -1,0 +1,26 @@
+import { execFileSync } from "node:child_process";
+import path from "node:path";
+
+const root = process.cwd();
+const patches = [
+  "scripts/patch-revisione-organi-api.mjs",
+  "scripts/patch-revisione-print-layout.mjs",
+  "scripts/patch-revisione-print-style-v2.mjs",
+  "scripts/patch-menu-redditivita-studio.mjs",
+  "scripts/patch-redditivita-clienti-tab.mjs",
+];
+
+for (const script of patches) {
+  console.log(`\n▶ ${script}`);
+  execFileSync(process.execPath, [path.join(root, script)], {
+    cwd: root,
+    stdio: "inherit",
+  });
+}
+
+console.log("\n▶ next build");
+const nextBin = path.join(root, "node_modules", ".bin", "next");
+execFileSync(nextBin, ["build"], {
+  cwd: root,
+  stdio: "inherit",
+});
