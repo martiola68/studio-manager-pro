@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
 type ModuloLicenza = "aml" | "revisione" | "controllo_gestione";
@@ -41,18 +41,28 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [piano, setPiano] = useState<string | null>(null);
   const [addons, setAddons] = useState<string[]>([]);
+  const initializedRef = useRef(false);
+  const loadInFlightRef = useRef(false);
+  const loadedUserIdRef = useRef<string | null>(null);
 
   const loadStudio = useCallback(async () => {
+    if (loadInFlightRef.current) return;
+    loadInFlightRef.current = true;
+    const initialLoad = !initializedRef.current;
     const supabase = getSupabaseClient();
-    setIsLoading(true);
+    if (initialLoad) setIsLoading(true);
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) {
+        loadedUserIdRef.current = null;
         setStudioId(null);
         setPiano(null);
         setAddons([]);
         return;
       }
+
+      loadedUserIdRef.current = session.user.id;
 
       let { data: utente, error: utenteError } = await supabase
         .from("tbutenti")
@@ -81,8 +91,6 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
 
       setStudioId(resolvedStudioId);
 
-      // I tipi Supabase generati nel progetto non includono ancora tbsoftware_licenze.
-      // Manteniamo la query runtime corretta evitando che il type-check blocchi il deploy.
       const db = supabase as any;
       const { data: licenza, error: licenzaError } = await db
         .from("tbsoftware_licenze")
@@ -94,8 +102,10 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
 
       if (licenzaError) {
         console.error("[StudioContext] Errore caricamento licenza:", licenzaError);
-        setPiano(null);
-        setAddons([]);
+        if (initialLoad) {
+          setPiano(null);
+          setAddons([]);
+        }
         return;
       }
 
@@ -103,10 +113,14 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
       setAddons(leggiAddons(licenza?.note));
     } catch (error) {
       console.error("[StudioContext] Impossibile risolvere il tenant:", error);
-      setStudioId(null);
-      setPiano(null);
-      setAddons([]);
+      if (initialLoad) {
+        setStudioId(null);
+        setPiano(null);
+        setAddons([]);
+      }
     } finally {
+      initializedRef.current = true;
+      loadInFlightRef.current = false;
       setIsLoading(false);
     }
   }, []);
@@ -114,7 +128,27 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     void loadStudio();
     const supabase = getSupabaseClient();
-    const { data: listener } = supabase.auth.onAuthStateChange(() => void loadStudio());
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      const userId = session?.user?.id || null;
+
+      if (event === "SIGNED_OUT") {
+        loadedUserIdRef.current = null;
+        setStudioId(null);
+        setPiano(null);
+        setAddons([]);
+        setIsLoading(false);
+        return;
+      }
+
+      // Supabase può emettere SIGNED_IN/TOKEN_REFRESHED quando una scheda torna in primo piano.
+      // Se è lo stesso utente non ricarichiamo tenant/licenza e non smontiamo il modulo corrente.
+      if (event === "TOKEN_REFRESHED") return;
+      if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && userId === loadedUserIdRef.current) return;
+
+      if (event === "USER_UPDATED" || ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && userId)) {
+        void loadStudio();
+      }
+    });
     return () => listener.subscription.unsubscribe();
   }, [loadStudio]);
 
