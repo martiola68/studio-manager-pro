@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "node scripts/patch-revisione-organi-api.mjs && next build",
+    "build": "node scripts/patch-revisione-organi-api.mjs && node scripts/patch-clienti-filtri-settore.mjs && next build",
     "start": "next start",
     "lint": "next lint"
   },
@@ -76,7 +76,7 @@
     "react-resizable-panels": "^2.1.7",
     "stripe": "^17.6.0",
     "tailwind-merge": "^2.6.0",
-    "tailwindcss-animate": "^1.0.7",
+    "tailwindcss-animate": "^1.0.0",
     "docxtemplater": "^3.46.0",
     "pizzip": "^3.1.6",
     "vaul": "^1.1.2",
@@ -98,7 +98,7 @@
     "tailwindcss": "^3.4.1",
     "@types/pg": "^8.11.10",
     "typescript": "^5"
-     },
+  },
   "overrides": {
     "@tootallnate/once": "2.0.1",
     "ajv": "8.18.0",
@@ -106,7 +106,7 @@
     "flatted": "^3.3.4",
     "js-yaml": "4.3.2",
     "minimatch": "^10.2.3",
-    "@types/pdfkit": "^0.17.3",
+    "@types/pdfkit": "^17.3",
     "path-to-regexp": "^8.3.2",
     "smol-toml": "1.6.1",
     "srvx": "0.11.13",
