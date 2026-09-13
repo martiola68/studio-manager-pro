@@ -24,6 +24,7 @@ const patches = [
   "scripts/fix-redditivita-nuovo-servizio-reset.mjs",
   "scripts/patch-redditivita-filtro-operatore.mjs",
   "scripts/fix-redditivita-clienti-loading-operatori.mjs",
+  "scripts/fix-redditivita-clienti-pagination.mjs",
 ];
 
 for (const script of patches) {
