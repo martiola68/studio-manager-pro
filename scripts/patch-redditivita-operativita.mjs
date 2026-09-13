@@ -81,12 +81,12 @@ patchFile("src/components/controllo-gestione/RedditivitaClientiTab.tsx", (source
     `<label className="w-full max-w-2xl text-sm font-semibold text-slate-700">\n            Cliente`,
     `<div className="w-full max-w-2xl space-y-3">\n          <label className="block text-sm font-semibold text-slate-700">Cerca cliente\n            <input type="text" value={filtroClienti} onChange={(e) => setFiltroClienti(e.target.value)} placeholder="Ragione sociale o codice fiscale" className="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none focus:border-sky-600" />\n          </label>\n          <label className="block text-sm font-semibold text-slate-700">\n            Cliente`
   );
-  source = source.replace(
-    `          </label>\n          <div className="text-sm text-slate-500">{loading ? "Caricamento..." : \`${clienti.length} clienti disponibili\`}</div>`,
-    `          </label>\n          </div>\n          <div className="text-sm text-slate-500">{loading ? "Caricamento..." : \`${clientiFiltrati.length} clienti attivi disponibili\`}</div>`
-  );
+
+  const oldCounter = '          </label>\n          <div className="text-sm text-slate-500">{loading ? "Caricamento..." : `${clienti.length} clienti disponibili`}</div>';
+  const newCounter = '          </label>\n          </div>\n          <div className="text-sm text-slate-500">{loading ? "Caricamento..." : `${clientiFiltrati.length} clienti attivi disponibili`}</div>';
+  source = source.replace(oldCounter, newCounter);
+
   source = source.replaceAll(`{clienti.map((c) =>`, `{clientiFiltrati.map((c) =>`);
-  source = source.replace(`{clienti.map((c) => <option`, `{clientiFiltrati.map((c) => <option`);
 
   source = source.replaceAll("Coeff. cliente", "Difficoltà");
   source = source.replaceAll("Coefficiente complessità cliente", "Difficoltà / complessità cliente");
