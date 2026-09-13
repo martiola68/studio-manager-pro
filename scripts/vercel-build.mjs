@@ -27,6 +27,7 @@ const patches = [
   "scripts/fix-redditivita-clienti-pagination.mjs",
   "scripts/fix-redditivita-costo-orario-studio.mjs",
   "scripts/fix-redditivita-no-zero-cost.mjs",
+  "scripts/fix-redditivita-capacita-payroll.mjs",
 ];
 
 for (const script of patches) {
