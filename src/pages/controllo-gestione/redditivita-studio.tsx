@@ -10,22 +10,16 @@ import {
   History,
   ListChecks,
   Percent,
+  Plus,
   ReceiptText,
   Save,
   Users,
   WalletCards,
+  X,
 } from "lucide-react";
 import { getStudioId } from "@/lib/getStudioId";
 
-type TabKey =
-  | "dashboard"
-  | "costi"
-  | "operatori"
-  | "attivita"
-  | "clienti"
-  | "contratti"
-  | "incassi"
-  | "consuntivo";
+type TabKey = "dashboard" | "costi" | "operatori" | "attivita" | "clienti" | "contratti" | "incassi" | "consuntivo";
 
 type CostiStudio = {
   personale: number;
@@ -50,12 +44,9 @@ type Operatore = {
     ore_teoriche?: number | string | null;
     ore_non_produttive?: number | string | null;
     ore_produttive?: number | string | null;
-    costo_orario_diretto?: number | string | null;
-    quota_costi_generali?: number | string | null;
     costo_orario_pieno?: number | string | null;
   } | null;
   numero_operazioni?: number;
-  ore_carico?: number;
   percentuale_operazioni_studio?: number;
   percentuale_carico_studio?: number;
   saturazione_percentuale?: number;
@@ -66,6 +57,32 @@ type OperatoreDraft = {
   ore_teoriche: number;
   ore_non_produttive: number;
   ore_produttive: number;
+};
+
+type Attivita = {
+  id: string;
+  codice: string;
+  area: string;
+  descrizione: string;
+  driver: string;
+  unita_misura: string;
+  tempo_standard_minuti: number | string;
+  coefficiente_base: number | string;
+  attiva: boolean;
+  ordinamento?: number | string;
+};
+
+type AttivitaDraft = {
+  id?: string;
+  codice: string;
+  area: string;
+  descrizione: string;
+  driver: string;
+  unita_misura: string;
+  tempo_standard_minuti: number;
+  coefficiente_base: number;
+  ordinamento: number;
+  attiva: boolean;
 };
 
 const tabs: { key: TabKey; label: string; icon: any }[] = [
@@ -90,33 +107,35 @@ const initialCosts: CostiStudio = {
   margineObiettivo: 30,
 };
 
+const emptyAttivita: AttivitaDraft = {
+  codice: "",
+  area: "Contabilità",
+  descrizione: "",
+  driver: "",
+  unita_misura: "n.",
+  tempo_standard_minuti: 0,
+  coefficiente_base: 1,
+  ordinamento: 0,
+  attiva: true,
+};
+
+const aree = ["Contabilità", "Bilancio", "Dichiarativi", "Consulenza", "Societario", "Payroll", "Contenzioso", "Revisione", "Altro"];
+
 function num(value: unknown) {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function euro(value: number) {
-  return new Intl.NumberFormat("it-IT", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 0,
-  }).format(Number.isFinite(value) ? value : 0);
+  return new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(Number.isFinite(value) ? value : 0);
 }
 
 function euro2(value: number) {
-  return new Intl.NumberFormat("it-IT", {
-    style: "currency",
-    currency: "EUR",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(Number.isFinite(value) ? value : 0);
+  return new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number.isFinite(value) ? value : 0);
 }
 
 function pct(value: number | undefined) {
-  return `${num(value).toLocaleString("it-IT", {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
-  })}%`;
+  return `${num(value).toLocaleString("it-IT", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
 }
 
 export default function RedditivitaStudioPage() {
@@ -126,9 +145,13 @@ export default function RedditivitaStudioPage() {
   const [costi, setCosti] = useState<CostiStudio>(initialCosts);
   const [operatori, setOperatori] = useState<Operatore[]>([]);
   const [draftOperatori, setDraftOperatori] = useState<Record<string, OperatoreDraft>>({});
+  const [attivita, setAttivita] = useState<Attivita[]>([]);
+  const [attivitaDraft, setAttivitaDraft] = useState<AttivitaDraft>(emptyAttivita);
+  const [showAttivitaForm, setShowAttivitaForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [savingCosts, setSavingCosts] = useState(false);
   const [savingOperatorId, setSavingOperatorId] = useState<string | null>(null);
+  const [savingAttivita, setSavingAttivita] = useState(false);
   const [message, setMessage] = useState("");
 
   const totaleCosti = useMemo(
@@ -140,6 +163,7 @@ export default function RedditivitaStudioPage() {
   const fatturatoObiettivo = margine < 100 ? totaleCosti / (1 - margine / 100) : 0;
   const margineEuro = Math.max(0, fatturatoObiettivo - totaleCosti);
   const operatoriConfigurati = operatori.filter((o) => num(o.costo?.ore_produttive) > 0).length;
+  const attivitaAttive = attivita.filter((a) => a.attiva).length;
 
   useEffect(() => {
     (async () => {
@@ -162,9 +186,7 @@ export default function RedditivitaStudioPage() {
     try {
       setLoading(true);
       setMessage("");
-      const response = await fetch(
-        `/api/controllo-gestione/redditivita-studio?studio_id=${encodeURIComponent(id)}&esercizio=${encodeURIComponent(esercizio)}`
-      );
+      const response = await fetch(`/api/controllo-gestione/redditivita-studio?studio_id=${encodeURIComponent(id)}&esercizio=${encodeURIComponent(esercizio)}`);
       const json = await response.json();
       if (!response.ok) throw new Error(json?.error || "Errore caricamento Redditività Studio");
 
@@ -196,6 +218,7 @@ export default function RedditivitaStudioPage() {
         };
       });
       setDraftOperatori(drafts);
+      setAttivita(Array.isArray(json?.attivita) ? json.attivita : []);
     } catch (error: any) {
       setMessage(error?.message || "Errore caricamento dati");
     } finally {
@@ -262,13 +285,7 @@ export default function RedditivitaStudioPage() {
       const response = await fetch("/api/controllo-gestione/redditivita-studio", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "salva_operatore",
-          studio_id: studioId,
-          esercizio: Number(anno),
-          operatore_id: operatoreId,
-          ...d,
-        }),
+        body: JSON.stringify({ action: "salva_operatore", studio_id: studioId, esercizio: Number(anno), operatore_id: operatoreId, ...d }),
       });
       const json = await response.json();
       if (!response.ok) throw new Error(json?.error || "Errore salvataggio operatore");
@@ -281,15 +298,74 @@ export default function RedditivitaStudioPage() {
     }
   }
 
+  function nuovaAttivita() {
+    setAttivitaDraft({ ...emptyAttivita, ordinamento: attivita.length + 1 });
+    setShowAttivitaForm(true);
+  }
+
+  function modificaAttivita(a: Attivita) {
+    setAttivitaDraft({
+      id: a.id,
+      codice: a.codice || "",
+      area: a.area || "Altro",
+      descrizione: a.descrizione || "",
+      driver: a.driver || "",
+      unita_misura: a.unita_misura || "n.",
+      tempo_standard_minuti: num(a.tempo_standard_minuti),
+      coefficiente_base: num(a.coefficiente_base) || 1,
+      ordinamento: num(a.ordinamento),
+      attiva: a.attiva !== false,
+    });
+    setShowAttivitaForm(true);
+  }
+
+  async function salvaAttivita() {
+    if (!studioId) return;
+    try {
+      setSavingAttivita(true);
+      setMessage("");
+      const response = await fetch("/api/controllo-gestione/redditivita-studio", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "salva_attivita", studio_id: studioId, esercizio: Number(anno), ...attivitaDraft }),
+      });
+      const json = await response.json();
+      if (!response.ok) throw new Error(json?.error || "Errore salvataggio attività");
+      setShowAttivitaForm(false);
+      setAttivitaDraft(emptyAttivita);
+      setMessage("Attività salvata.");
+      await caricaDati(studioId, anno);
+    } catch (error: any) {
+      setMessage(error?.message || "Errore salvataggio attività");
+    } finally {
+      setSavingAttivita(false);
+    }
+  }
+
+  async function toggleAttivita(a: Attivita) {
+    if (!studioId) return;
+    try {
+      setMessage("");
+      const response = await fetch("/api/controllo-gestione/redditivita-studio", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "toggle_attivita", studio_id: studioId, esercizio: Number(anno), id: a.id, attiva: !a.attiva }),
+      });
+      const json = await response.json();
+      if (!response.ok) throw new Error(json?.error || "Errore aggiornamento attività");
+      await caricaDati(studioId, anno);
+    } catch (error: any) {
+      setMessage(error?.message || "Errore aggiornamento attività");
+    }
+  }
+
   return (
     <main className="mx-auto max-w-[1500px] px-5 py-6 lg:px-8">
       <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">Controllo di gestione</div>
           <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">Redditività Studio</h1>
-          <p className="mt-2 max-w-4xl text-sm text-slate-600">
-            Costi, carichi di lavoro, compensi, contratti e incassi in un unico ambiente.
-          </p>
+          <p className="mt-2 max-w-4xl text-sm text-slate-600">Costi, carichi di lavoro, compensi, contratti e incassi in un unico ambiente.</p>
         </div>
         <label className="w-full max-w-[180px] text-sm font-semibold text-slate-700">
           Esercizio
@@ -345,7 +421,7 @@ export default function RedditivitaStudioPage() {
                   <div className="mt-5 space-y-3">
                     <SetupRow done={totaleCosti > 0} label="Costi annuali dello studio" onClick={() => setTab("costi")} />
                     <SetupRow done={operatoriConfigurati > 0} label={`Operatori configurati: ${operatoriConfigurati}/${operatori.length}`} onClick={() => setTab("operatori")} />
-                    <SetupRow done={false} label="Catalogo attività e tempi standard" onClick={() => setTab("attivita")} />
+                    <SetupRow done={attivitaAttive > 0} label={`Attività configurate: ${attivitaAttive}`} onClick={() => setTab("attivita")} />
                     <SetupRow done={false} label="Profilo servizi dei clienti" onClick={() => setTab("clienti")} />
                   </div>
                 </div>
@@ -431,12 +507,80 @@ export default function RedditivitaStudioPage() {
             </section>
           )}
 
-          {tab === "attivita" && <EmptyWorkspace title="Catalogo attività e tempi standard" text="Ogni attività avrà area, driver, unità di misura, tempo standard e regola di complessità." columns={["Area", "Attività", "Driver", "Tempo standard", "Complessità", "Attiva"]} />}
+          {tab === "attivita" && (
+            <section className="space-y-5">
+              <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+                <div className="flex flex-col gap-3 border-b border-slate-200 p-5 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-xl font-semibold text-slate-900">Catalogo attività e tempi standard</h2>
+                    <p className="mt-1 text-sm text-slate-500">Il tempo standard è espresso in minuti per unità di driver. Le attività già utilizzate si disattivano invece di cancellarle.</p>
+                  </div>
+                  <button type="button" onClick={nuovaAttivita} className="flex items-center justify-center gap-2 rounded-lg bg-sky-700 px-4 py-2 text-sm font-semibold text-white">
+                    <Plus className="h-4 w-4" />Nuova attività
+                  </button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                      <tr><th className="px-4 py-3">Codice</th><th className="px-4 py-3">Area</th><th className="px-4 py-3">Attività</th><th className="px-4 py-3">Driver</th><th className="px-4 py-3">Unità</th><th className="px-4 py-3 text-right">Min./unità</th><th className="px-4 py-3 text-right">Coeff.</th><th className="px-4 py-3">Stato</th><th className="px-4 py-3"></th></tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {attivita.length === 0 ? (
+                        <tr><td colSpan={9} className="px-4 py-12 text-center text-slate-400">Nessuna attività configurata. Crea il primo driver di lavoro.</td></tr>
+                      ) : attivita.map((a) => (
+                        <tr key={a.id} className={a.attiva ? "" : "bg-slate-50 opacity-70"}>
+                          <td className="px-4 py-3 font-mono text-xs text-slate-600">{a.codice}</td>
+                          <td className="px-4 py-3">{a.area}</td>
+                          <td className="px-4 py-3 font-semibold text-slate-900">{a.descrizione}</td>
+                          <td className="px-4 py-3 text-slate-700">{a.driver}</td>
+                          <td className="px-4 py-3">{a.unita_misura}</td>
+                          <td className="px-4 py-3 text-right">{num(a.tempo_standard_minuti).toLocaleString("it-IT", { maximumFractionDigits: 2 })}</td>
+                          <td className="px-4 py-3 text-right">{num(a.coefficiente_base).toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                          <td className="px-4 py-3"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${a.attiva ? "bg-emerald-50 text-emerald-700" : "bg-slate-200 text-slate-600"}`}>{a.attiva ? "Attiva" : "Inattiva"}</span></td>
+                          <td className="whitespace-nowrap px-4 py-3 text-right">
+                            <button type="button" onClick={() => modificaAttivita(a)} className="mr-2 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700">Modifica</button>
+                            <button type="button" onClick={() => toggleAttivita(a)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700">{a.attiva ? "Disattiva" : "Riattiva"}</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+          )}
+
           {tab === "clienti" && <EmptyWorkspace title="Analisi economica clienti" text="Per ogni cliente attiveremo solo i servizi realmente svolti, inclusi bilancio, dichiarazioni e consulenza anche quando la contabilità è interna." columns={["Cliente", "Servizi", "Ore equivalenti", "Costo", "Compenso attuale", "Compenso obiettivo", "Margine"]} />}
           {tab === "contratti" && <EmptyWorkspace title="Compensi e contratti" text="Il compenso tecnico sarà trasformato in contratto forfettario, analitico o misto." columns={["Cliente", "Costo", "Compenso consigliato", "Tipo contratto", "Totale annuo", "Scostamento"]} />}
           {tab === "incassi" && <EmptyWorkspace title="Piano fatturazione e incassi" text="Rate mensili, trimestrali o personalizzate e stato previsto, fatturato, incassato o scaduto." columns={["Cliente", "Scadenza", "Importo", "Fatturazione", "Stato", "Incassato il"]} />}
           {tab === "consuntivo" && <EmptyWorkspace title="Consuntivo e rinnovo" text="Confronto tra carico previsto e carico realmente assorbito con proposta di rinnovo." columns={["Cliente", "Ore previste", "Ore consuntive", "Scostamento", "Margine reale", "Compenso rinnovo"]} />}
         </>
+      )}
+
+      {showAttivitaForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-3xl rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+              <div><h3 className="text-xl font-semibold text-slate-900">{attivitaDraft.id ? "Modifica attività" : "Nuova attività"}</h3><p className="mt-1 text-sm text-slate-500">Definisci il driver che trasforma il volume di lavoro in tempo standard.</p></div>
+              <button type="button" onClick={() => setShowAttivitaForm(false)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="grid gap-4 p-6 md:grid-cols-2">
+              <TextField label="Codice" value={attivitaDraft.codice} onChange={(v) => setAttivitaDraft((p) => ({ ...p, codice: v.toUpperCase() }))} placeholder="es. CONT_MOV_IVA" />
+              <label className="text-sm font-semibold text-slate-700">Area<select value={attivitaDraft.area} onChange={(e) => setAttivitaDraft((p) => ({ ...p, area: e.target.value }))} className="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none focus:border-sky-600">{aree.map((a) => <option key={a}>{a}</option>)}</select></label>
+              <TextField label="Attività" value={attivitaDraft.descrizione} onChange={(v) => setAttivitaDraft((p) => ({ ...p, descrizione: v }))} placeholder="es. Registrazione movimento IVA" />
+              <TextField label="Driver" value={attivitaDraft.driver} onChange={(v) => setAttivitaDraft((p) => ({ ...p, driver: v }))} placeholder="es. Numero movimenti IVA" />
+              <TextField label="Unità di misura" value={attivitaDraft.unita_misura} onChange={(v) => setAttivitaDraft((p) => ({ ...p, unita_misura: v }))} placeholder="n., ore, pratiche..." />
+              <NumberField label="Tempo standard minuti / unità" value={attivitaDraft.tempo_standard_minuti} onChange={(v) => setAttivitaDraft((p) => ({ ...p, tempo_standard_minuti: num(v) }))} />
+              <NumberField label="Coefficiente base" value={attivitaDraft.coefficiente_base} onChange={(v) => setAttivitaDraft((p) => ({ ...p, coefficiente_base: num(v) }))} />
+              <NumberField label="Ordinamento" value={attivitaDraft.ordinamento} onChange={(v) => setAttivitaDraft((p) => ({ ...p, ordinamento: num(v) }))} />
+              <label className="flex items-center gap-3 pt-7 text-sm font-semibold text-slate-700"><input type="checkbox" checked={attivitaDraft.attiva} onChange={(e) => setAttivitaDraft((p) => ({ ...p, attiva: e.target.checked }))} className="h-4 w-4" />Attività attiva</label>
+            </div>
+            <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
+              <button type="button" onClick={() => setShowAttivitaForm(false)} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">Annulla</button>
+              <button type="button" onClick={salvaAttivita} disabled={savingAttivita} className="flex items-center gap-2 rounded-lg bg-sky-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"><Save className="h-4 w-4" />{savingAttivita ? "Salvataggio..." : "Salva attività"}</button>
+            </div>
+          </div>
+        </div>
       )}
     </main>
   );
@@ -459,7 +603,11 @@ function MoneyField({ label, value, onChange }: { label: string; value: number; 
 }
 
 function NumberField({ label, value, onChange }: { label: string; value: number; onChange: (value: string) => void }) {
-  return <label className="text-sm font-semibold text-slate-700">{label}<input type="number" min="0" step="1" value={value || ""} onChange={(e) => onChange(e.target.value)} className="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-sky-600" placeholder="0" /></label>;
+  return <label className="text-sm font-semibold text-slate-700">{label}<input type="number" min="0" step="0.01" value={value || ""} onChange={(e) => onChange(e.target.value)} className="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-sky-600" placeholder="0" /></label>;
+}
+
+function TextField({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string }) {
+  return <label className="text-sm font-semibold text-slate-700">{label}<input type="text" value={value} onChange={(e) => onChange(e.target.value)} className="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-sky-600" placeholder={placeholder} /></label>;
 }
 
 function TableNumber({ value, onChange }: { value: number; onChange: (value: string) => void }) {
