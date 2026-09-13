@@ -35,6 +35,15 @@ patch("src/pages/api/controllo-gestione/redditivita-studio.ts", (source) => {
       "          coefficiente_base: coefficienteBase,\n          prezzo_minimo: prezzoMinimo,\n          prezzo_massimo: prezzoMassimo,\n          modalita_prezzo: modalitaPrezzo,\n          gruppo_listino: gruppoListino,\n          listino_attivo: listinoAttivo,\n          ordinamento,\n          attiva,"
     );
   }
+
+  // Messaggio esplicito se il codice è stato deployato prima della migration Supabase.
+  const genericCatch = '  } catch (error: any) {\n    console.error("Errore API Redditivita Studio:", error);\n    return res.status(500).json({ success: false, error: error?.message || "Errore interno server" });\n  }';
+  if (source.includes(genericCatch) && !source.includes("Schema listino non inizializzato")) {
+    source = source.replace(
+      genericCatch,
+      '  } catch (error: any) {\n    console.error("Errore API Redditivita Studio:", error);\n    const schemaMessage = String(error?.message || "");\n    if (String(error?.code || "") === "PGRST204" && /prezzo_minimo|prezzo_massimo|modalita_prezzo|gruppo_listino|listino_attivo/i.test(schemaMessage)) {\n      return res.status(503).json({ success: false, error: "Schema listino non inizializzato: applicare la migration Supabase 20260913213000_redditivita_listino_db.sql" });\n    }\n    return res.status(500).json({ success: false, error: error?.message || "Errore interno server" });\n  }'
+    );
+  }
   return source;
 });
 
@@ -75,6 +84,16 @@ patch("src/pages/controllo-gestione/redditivita-studio.tsx", (source) => {
     );
   }
 
+  // Validazione immediata prima della POST.
+  if (!source.includes("Il prezzo massimo deve essere maggiore o uguale al prezzo minimo")) {
+    source = replaceOrFail(
+      source,
+      "validazione form listino",
+      "  async function salvaAttivita() {\n    if (!studioId) return;\n    try {",
+      "  async function salvaAttivita() {\n    if (!studioId) return;\n    if (num(attivitaDraft.prezzo_massimo) < num(attivitaDraft.prezzo_minimo)) {\n      setMessage(\"Il prezzo massimo deve essere maggiore o uguale al prezzo minimo.\");\n      return;\n    }\n    try {"
+    );
+  }
+
   // Tabella catalogo: prezzi e modalità sono editabili aprendo Modifica.
   if (!source.includes("Min. listino")) {
     source = source.replace(
@@ -93,7 +112,7 @@ patch("src/pages/controllo-gestione/redditivita-studio.tsx", (source) => {
 
   if (!source.includes("Prezzo minimo listino")) {
     const coeff = '<NumberField label="Coefficiente base" value={attivitaDraft.coefficiente_base} onChange={(v) => setAttivitaDraft((p) => ({ ...p, coefficiente_base: num(v) }))} />';
-    const listinoFields = `${coeff}\n              <MoneyField label="Prezzo minimo listino" value={attivitaDraft.prezzo_minimo} onChange={(v) => setAttivitaDraft((p) => ({ ...p, prezzo_minimo: num(v) }))} />\n              <MoneyField label="Prezzo massimo listino" value={attivitaDraft.prezzo_massimo} onChange={(v) => setAttivitaDraft((p) => ({ ...p, prezzo_massimo: num(v) }))} />\n              <label className="text-sm font-semibold text-slate-700">Modalità prezzo<select value={attivitaDraft.modalita_prezzo} onChange={(e) => setAttivitaDraft((p) => ({ ...p, modalita_prezzo: e.target.value }))} className="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none focus:border-sky-600"><option value="unitario">Unitario × quantità</option><option value="mensile">Mensile × 12</option><option value="orario">Orario × quantità/ore</option></select></label>\n              <TextField label="Gruppo listino" value={attivitaDraft.gruppo_listino} onChange={(v) => setAttivitaDraft((p) => ({ ...p, gruppo_listino: v.toUpperCase() }))} placeholder="es. COGE (una sola tariffa per il gruppo)" />\n              <label className="flex items-center gap-3 pt-7 text-sm font-semibold text-slate-700"><input type="checkbox" checked={attivitaDraft.listino_attivo} onChange={(e) => setAttivitaDraft((p) => ({ ...p, listino_attivo: e.target.checked }))} className="h-4 w-4" />Listino attivo</label>`;
+    const listinoFields = `${coeff}\n              <div className="md:col-span-2 grid gap-4 md:grid-cols-2 rounded-lg border border-slate-200 bg-slate-50 p-4">\n                <MoneyField label="Prezzo minimo listino" value={attivitaDraft.prezzo_minimo} onChange={(v) => setAttivitaDraft((p) => ({ ...p, prezzo_minimo: num(v) }))} />\n                <MoneyField label="Prezzo massimo listino" value={attivitaDraft.prezzo_massimo} onChange={(v) => setAttivitaDraft((p) => ({ ...p, prezzo_massimo: num(v) }))} />\n              </div>\n              <label className="text-sm font-semibold text-slate-700">Modalità prezzo<select value={attivitaDraft.modalita_prezzo} onChange={(e) => setAttivitaDraft((p) => ({ ...p, modalita_prezzo: e.target.value }))} className="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none focus:border-sky-600"><option value="unitario">Unitario × quantità</option><option value="mensile">Mensile × 12</option><option value="orario">Orario × quantità/ore</option></select></label>\n              <div><TextField label="Gruppo listino (opzionale)" value={attivitaDraft.gruppo_listino} onChange={(v) => setAttivitaDraft((p) => ({ ...p, gruppo_listino: v.toUpperCase() }))} placeholder="es. COGE" /><p className="mt-1 text-xs text-slate-500">Usalo solo per prestazioni valorizzate una sola volta come gruppo.</p></div>\n              <label className="flex items-center gap-3 pt-7 text-sm font-semibold text-slate-700"><input type="checkbox" checked={attivitaDraft.listino_attivo} onChange={(e) => setAttivitaDraft((p) => ({ ...p, listino_attivo: e.target.checked }))} className="h-4 w-4" />Listino attivo</label>`;
     source = replaceOrFail(source, "form listino attività", coeff, listinoFields);
   }
 
@@ -120,4 +139,4 @@ patch("src/components/controllo-gestione/RedditivitaClientiTab.tsx", (source) =>
   return source;
 });
 
-console.log("✓ Redditività: listino DB modificabile e formule economiche rese esplicite");
+console.log("✓ Redditività: listino DB modificabile, form validato e formule economiche rese esplicite");
