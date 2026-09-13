@@ -8,6 +8,7 @@ const patches = [
   "scripts/patch-revisione-print-style-v2.mjs",
   "scripts/patch-menu-redditivita-studio.mjs",
   "scripts/patch-redditivita-clienti-tab.mjs",
+  "scripts/patch-redditivita-compensi-tab.mjs",
 ];
 
 for (const script of patches) {
