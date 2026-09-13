@@ -6,7 +6,10 @@ function patch(rel, fn) {
   const file = path.join(root, rel);
   const src = fs.readFileSync(file, "utf8");
   const out = fn(src);
-  if (out === src) throw new Error(`Nessuna modifica applicata a ${rel}`);
+  if (out === src) {
+    console.log(`↷ ${rel} già aggiornato`);
+    return;
+  }
   fs.writeFileSync(file, out, "utf8");
   console.log(`✓ ${rel}`);
 }
@@ -89,7 +92,7 @@ patch("src/components/controllo-gestione/RedditivitaClientiTab.tsx", (source) =>
 
 patch("src/components/TopNavBar.tsx", (source) => {
   const anchor = '        { label: "Controllo di Gestione", href: "/guide/Manuale_Controllo_di_Gestione_SMP.pdf", icon: <BriefcaseBusiness className="h-4 w-4" /> },';
-  if (!source.includes('label: "Redditività Studio"')) {
+  if (!source.includes('href: "/guide/redditivita-studio"')) {
     if (!source.includes(anchor)) throw new Error("Anchor manuali TopNavBar non trovato");
     source = source.replace(anchor, anchor + '\n        { label: "Redditività Studio", href: "/guide/redditivita-studio", icon: <BarChart3 className="h-4 w-4" /> },');
   }
