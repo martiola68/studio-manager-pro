@@ -38,20 +38,23 @@ patch("src/components/controllo-gestione/RedditivitaClientiTab.tsx", (source) =>
     );
   }
 
-  // Se una versione precedente della patch avesse già inserito il blocco nel posto sbagliato,
-  // lo rimuoviamo prima di reinserirlo dopo la definizione del margine.
+  // Elimina eventuali inserimenti precedenti del calcolo tariffario.
   source = source.replace(
     /\n  const economiaSettore = useMemo\(\n    \(\) => calcolaEconomiaListino\(serviziSettore, marginePercentuale\),\n    \[serviziSettore, marginePercentuale\]\n  \);/g,
     ""
   );
 
-  const margineAnchor = '  const marginePercentuale = Math.min(95, Math.max(0, n(margineObiettivo)));';
-  if (!source.includes(margineAnchor)) {
-    throw new Error("[listino-professionale] marginePercentuale non trovato");
+  // IMPORTANTE: serviziSettore viene creato dalla patch settoriale più avanti nel file.
+  // Inseriamo economiaSettore solo dopo il blocco totali, quindi mai prima della sua dichiarazione.
+  const totaliSettoreAnchor = `  const totali = useMemo(() => ({\n    operazioni: serviziSettore.reduce((s, x) => s + n(x.quantita_driver), 0),\n    ore: serviziSettore.reduce((s, x) => s + n(x.ore_equivalenti), 0),\n    costo: serviziSettore.reduce((s, x) => s + n(x.costo_stimato), 0),\n  }), [serviziSettore]);`;
+
+  if (!source.includes(totaliSettoreAnchor)) {
+    throw new Error("[listino-professionale] blocco totali settoriale non trovato");
   }
+
   source = source.replace(
-    margineAnchor,
-    `${margineAnchor}\n\n  const economiaSettore = useMemo(\n    () => calcolaEconomiaListino(serviziSettore, marginePercentuale),\n    [serviziSettore, marginePercentuale]\n  );`
+    totaliSettoreAnchor,
+    `${totaliSettoreAnchor}\n\n  const economiaSettore = useMemo(\n    () => calcolaEconomiaListino(serviziSettore, marginePercentuale),\n    [serviziSettore, marginePercentuale]\n  );`
   );
 
   source = source.replace(
