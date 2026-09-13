@@ -22,6 +22,7 @@ const patches = [
   "scripts/patch-redditivita-defaults-mensile.mjs",
   "scripts/fix-redditivita-defaults-race.mjs",
   "scripts/fix-redditivita-nuovo-servizio-reset.mjs",
+  "scripts/patch-redditivita-filtro-operatore.mjs",
 ];
 
 for (const script of patches) {
