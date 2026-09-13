@@ -22,17 +22,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (req.method === "GET") {
-      const [parametriResult, utentiResult, costiOperatoriResult, carichiResult] = await Promise.all([
+      const [parametriResult, utentiResult, costiOperatoriResult, carichiResult, attivitaResult] = await Promise.all([
         supabaseAdmin.from("tbcdg_studio_parametri").select("*").eq("studio_id", studioId).eq("esercizio", esercizio).maybeSingle(),
         supabaseAdmin.from("tbutenti").select("id,nome,cognome,email,tipo_rapporto,settore,studio_id").eq("studio_id", studioId).order("cognome", { ascending: true }).order("nome", { ascending: true }),
         supabaseAdmin.from("tbcdg_operatori_costi").select("*").eq("studio_id", studioId).eq("esercizio", esercizio),
         supabaseAdmin.from("tbcdg_cliente_attivita_operatori").select("operatore_id,numero_operazioni_attribuite,ore_attribuite,costo_attribuito").eq("studio_id", studioId).eq("esercizio", esercizio),
+        supabaseAdmin.from("tbcdg_attivita_catalogo").select("*").eq("studio_id", studioId).order("ordinamento", { ascending: true }).order("area", { ascending: true }).order("descrizione", { ascending: true }),
       ]);
 
       if (parametriResult.error) throw parametriResult.error;
       if (utentiResult.error) throw utentiResult.error;
       if (costiOperatoriResult.error) throw costiOperatoriResult.error;
       if (carichiResult.error) throw carichiResult.error;
+      if (attivitaResult.error) throw attivitaResult.error;
 
       const costiMap = new Map((costiOperatoriResult.data || []).map((r: any) => [r.operatore_id, r]));
       const carichiMap = new Map<string, { operazioni: number; ore: number; costo: number }>();
@@ -69,6 +71,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         success: true,
         parametri: parametriResult.data || null,
         operatori,
+        attivita: attivitaResult.data || [],
         totali: { operazioni: totaleOperazioni, ore_carico: totaleOreCarico },
       });
     }
@@ -152,6 +155,83 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const { data, error } = await supabaseAdmin
           .from("tbcdg_operatori_costi")
           .upsert(payload, { onConflict: "studio_id,esercizio,operatore_id" })
+          .select("*")
+          .single();
+        if (error) throw error;
+        return res.status(200).json({ success: true, data });
+      }
+
+      if (action === "salva_attivita") {
+        const id = String(req.body?.id || "").trim() || null;
+        const codice = String(req.body?.codice || "").trim().toUpperCase();
+        const area = String(req.body?.area || "").trim();
+        const descrizione = String(req.body?.descrizione || "").trim();
+        const driver = String(req.body?.driver || "").trim();
+        const unitaMisura = String(req.body?.unita_misura || "n.").trim() || "n.";
+        const tempoStandardMinuti = n(req.body?.tempo_standard_minuti);
+        const coefficienteBase = n(req.body?.coefficiente_base || 1);
+        const ordinamento = Math.trunc(n(req.body?.ordinamento));
+        const attiva = req.body?.attiva !== false;
+
+        if (!codice || !area || !descrizione || !driver) {
+          return res.status(400).json({ success: false, error: "Codice, area, attività e driver sono obbligatori" });
+        }
+        if (tempoStandardMinuti < 0) {
+          return res.status(400).json({ success: false, error: "Il tempo standard non può essere negativo" });
+        }
+        if (coefficienteBase <= 0) {
+          return res.status(400).json({ success: false, error: "Il coefficiente base deve essere maggiore di zero" });
+        }
+
+        const payload = {
+          studio_id: studioId,
+          codice,
+          area,
+          descrizione,
+          driver,
+          unita_misura: unitaMisura,
+          tempo_standard_minuti: tempoStandardMinuti,
+          coefficiente_base: coefficienteBase,
+          ordinamento,
+          attiva,
+        };
+
+        let query;
+        if (id) {
+          query = supabaseAdmin
+            .from("tbcdg_attivita_catalogo")
+            .update(payload)
+            .eq("id", id)
+            .eq("studio_id", studioId)
+            .select("*")
+            .single();
+        } else {
+          query = supabaseAdmin
+            .from("tbcdg_attivita_catalogo")
+            .insert(payload)
+            .select("*")
+            .single();
+        }
+
+        const { data, error } = await query;
+        if (error) {
+          if (String(error.code) === "23505") {
+            return res.status(409).json({ success: false, error: "Esiste già un'attività con questo codice" });
+          }
+          throw error;
+        }
+        return res.status(200).json({ success: true, data });
+      }
+
+      if (action === "toggle_attivita") {
+        const id = String(req.body?.id || "").trim();
+        if (!id) return res.status(400).json({ success: false, error: "id attività obbligatorio" });
+
+        const { data, error } = await supabaseAdmin
+          .from("tbcdg_attivita_catalogo")
+          .update({ attiva: Boolean(req.body?.attiva) })
+          .eq("id", id)
+          .eq("studio_id", studioId)
           .select("*")
           .single();
         if (error) throw error;
