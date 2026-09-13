@@ -17,6 +17,7 @@ const patches = [
   "scripts/patch-redditivita-v2.mjs",
   "scripts/fix-redditivita-v2-build.mjs",
   "scripts/patch-redditivita-manuale-v2.mjs",
+  "scripts/patch-redditivita-stabilita.mjs",
 ];
 
 for (const script of patches) {
