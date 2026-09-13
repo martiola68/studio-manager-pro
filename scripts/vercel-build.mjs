@@ -12,6 +12,7 @@ const patches = [
   "scripts/patch-redditivita-incassi-tab.mjs",
   "scripts/patch-redditivita-incassi-scadenzario-centrale.mjs",
   "scripts/patch-redditivita-operativita.mjs",
+  "scripts/oneoff-fix-redditivita-ux.mjs",
 ];
 
 for (const script of patches) {
