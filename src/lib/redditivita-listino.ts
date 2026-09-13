@@ -1,5 +1,13 @@
 export type ListinoModalita = "unitario" | "mensile" | "orario";
 
+export type ListinoPersistito = {
+  prezzo_minimo: number;
+  prezzo_massimo: number;
+  modalita_prezzo: ListinoModalita;
+  gruppo_listino: string;
+  listino_attivo: boolean;
+};
+
 export type ServizioListinoInput = {
   attivita?: {
     codice?: string | null;
@@ -10,6 +18,7 @@ export type ServizioListinoInput = {
     modalita_prezzo?: string | null;
     gruppo_listino?: string | null;
     listino_attivo?: boolean | null;
+    note?: string | null;
   } | null;
   codice?: string | null;
   area?: string | null;
@@ -19,11 +28,14 @@ export type ServizioListinoInput = {
   modalita_prezzo?: string | null;
   gruppo_listino?: string | null;
   listino_attivo?: boolean | null;
+  note?: string | null;
   quantita_driver?: number | string | null;
   coefficiente_complessita?: number | string | null;
   ore_equivalenti?: number | string | null;
   costo_stimato?: number | string | null;
 };
+
+export const LISTINO_NOTE_PREFIX = "[[SMP_LISTINO]]";
 
 function n(value: unknown) {
   const parsed = Number(value ?? 0);
@@ -33,6 +45,65 @@ function n(value: unknown) {
 function round(value: number, digits = 2) {
   const f = Math.pow(10, digits);
   return Math.round((value + Number.EPSILON) * f) / f;
+}
+
+export function leggiListinoDaNote(note: unknown): ListinoPersistito | null {
+  const text = String(note || "");
+  const idx = text.lastIndexOf(LISTINO_NOTE_PREFIX);
+  if (idx < 0) return null;
+  const raw = text.slice(idx + LISTINO_NOTE_PREFIX.length).trim();
+  try {
+    const parsed = JSON.parse(raw);
+    const modalitaRaw = String(parsed?.modalita_prezzo || "unitario").toLowerCase();
+    const modalita: ListinoModalita = modalitaRaw === "mensile" || modalitaRaw === "orario" ? modalitaRaw : "unitario";
+    const minimo = Math.max(0, n(parsed?.prezzo_minimo));
+    const massimo = Math.max(minimo, n(parsed?.prezzo_massimo));
+    return {
+      prezzo_minimo: minimo,
+      prezzo_massimo: massimo,
+      modalita_prezzo: modalita,
+      gruppo_listino: String(parsed?.gruppo_listino || "").trim().toUpperCase(),
+      listino_attivo: parsed?.listino_attivo !== false,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function scriviListinoInNote(note: unknown, listino: Partial<ListinoPersistito>) {
+  const text = String(note || "");
+  const idx = text.lastIndexOf(LISTINO_NOTE_PREFIX);
+  const base = (idx >= 0 ? text.slice(0, idx) : text).trim();
+  const modalitaRaw = String(listino.modalita_prezzo || "unitario").toLowerCase();
+  const modalita: ListinoModalita = modalitaRaw === "mensile" || modalitaRaw === "orario" ? modalitaRaw : "unitario";
+  const minimo = Math.max(0, n(listino.prezzo_minimo));
+  const massimo = Math.max(minimo, n(listino.prezzo_massimo));
+  const payload: ListinoPersistito = {
+    prezzo_minimo: minimo,
+    prezzo_massimo: massimo,
+    modalita_prezzo: modalita,
+    gruppo_listino: String(listino.gruppo_listino || "").trim().toUpperCase(),
+    listino_attivo: listino.listino_attivo !== false,
+  };
+  return `${base}${base ? "\n" : ""}${LISTINO_NOTE_PREFIX}${JSON.stringify(payload)}`;
+}
+
+export function attivitaConListinoFallback<T extends Record<string, any>>(attivita: T): T & ListinoPersistito {
+  const fallback = leggiListinoDaNote(attivita?.note);
+  if (fallback) return { ...attivita, ...fallback };
+
+  const modalitaRaw = String(attivita?.modalita_prezzo || "unitario").toLowerCase();
+  const modalita: ListinoModalita = modalitaRaw === "mensile" || modalitaRaw === "orario" ? modalitaRaw : "unitario";
+  const minimo = Math.max(0, n(attivita?.prezzo_minimo));
+  const massimo = Math.max(minimo, n(attivita?.prezzo_massimo));
+  return {
+    ...attivita,
+    prezzo_minimo: minimo,
+    prezzo_massimo: massimo,
+    modalita_prezzo: modalita,
+    gruppo_listino: String(attivita?.gruppo_listino || "").trim().toUpperCase(),
+    listino_attivo: attivita?.listino_attivo !== false,
+  };
 }
 
 export function difficoltaNormalizzata(value: unknown) {
@@ -48,18 +119,19 @@ export function interpolaListino(minimo: number, massimo: number, difficoltaRaw:
 }
 
 function datiAttivita(servizio: ServizioListinoInput) {
-  const a = servizio.attivita || {};
-  const modalitaRaw = String(a.modalita_prezzo ?? servizio.modalita_prezzo ?? "unitario").trim().toLowerCase();
+  const raw = (servizio.attivita || servizio) as Record<string, any>;
+  const a = attivitaConListinoFallback(raw);
+  const modalitaRaw = String(a.modalita_prezzo || "unitario").trim().toLowerCase();
   const modalita: ListinoModalita = modalitaRaw === "mensile" || modalitaRaw === "orario" ? modalitaRaw : "unitario";
   return {
-    codice: String(a.codice ?? servizio.codice ?? "").trim(),
-    area: String(a.area ?? servizio.area ?? "").trim(),
-    descrizione: String(a.descrizione ?? servizio.descrizione ?? "").trim(),
-    minimo: Math.max(0, n(a.prezzo_minimo ?? servizio.prezzo_minimo)),
-    massimo: Math.max(0, n(a.prezzo_massimo ?? servizio.prezzo_massimo)),
+    codice: String(a.codice || "").trim(),
+    area: String(a.area || "").trim(),
+    descrizione: String(a.descrizione || "").trim(),
+    minimo: Math.max(0, n(a.prezzo_minimo)),
+    massimo: Math.max(0, n(a.prezzo_massimo)),
     modalita,
-    gruppo: String(a.gruppo_listino ?? servizio.gruppo_listino ?? "").trim().toUpperCase(),
-    attivo: (a.listino_attivo ?? servizio.listino_attivo) !== false,
+    gruppo: String(a.gruppo_listino || "").trim().toUpperCase(),
+    attivo: a.listino_attivo !== false,
   };
 }
 
