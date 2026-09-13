@@ -31,6 +31,7 @@ const patches = [
   "scripts/fix-redditivita-solo-operatori-fiscali.mjs",
   "scripts/patch-clienti-filtri-settore.mjs",
   "scripts/fix-redditivita-settori-build.mjs",
+  "scripts/patch-redditivita-listino-professionale.mjs",
 ];
 
 for (const script of patches) {
