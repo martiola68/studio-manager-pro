@@ -32,6 +32,7 @@ const patches = [
   "scripts/patch-clienti-filtri-settore.mjs",
   "scripts/fix-redditivita-settori-build.mjs",
   "scripts/patch-redditivita-listino-professionale.mjs",
+  "scripts/patch-redditivita-listino-db.mjs",
 ];
 
 for (const script of patches) {
