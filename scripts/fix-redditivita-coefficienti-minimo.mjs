@@ -23,6 +23,18 @@ const newInterpola = `export function coefficienteRedditivita(difficoltaRaw: unk
   return coefficienti[difficolta] || 1.50;
 }
 
+export function coefficienteCoge(difficoltaRaw: unknown) {
+  const difficolta = difficoltaNormalizzata(difficoltaRaw);
+  const coefficienti: Record<number, number> = {
+    1: 1.00,
+    2: 1.00,
+    3: 1.05,
+    4: 1.10,
+    5: 1.15,
+  };
+  return coefficienti[difficolta] || 1.05;
+}
+
 export function interpolaListino(minimo: number, _massimo: number, difficoltaRaw: unknown) {
   const min = Math.max(0, n(minimo));
   return round(min * coefficienteRedditivita(difficoltaRaw), 2);
@@ -43,7 +55,7 @@ const cogeReplacement = `export function calcolaCogeMensile(
   const quotaBaseMensile = Math.max(0, n(minimoRaw)) || 250;
   const operazioni = Math.max(0, n(operazioniRaw));
   const difficolta = difficoltaNormalizzata(difficoltaRaw);
-  const coefficiente = coefficienteRedditivita(difficolta);
+  const coefficiente = coefficienteCoge(difficolta);
 
   // Scaglioni marginali progressivi: ogni fascia valorizza solo l'eccedenza.
   const q1 = Math.min(operazioni, 1000);
@@ -57,8 +69,11 @@ const cogeReplacement = `export function calcolaCogeMensile(
   const s3 = quotaBaseMensile * (q3 / 10000);
   const s4 = quotaBaseMensile * (q4 / 10000);
 
-  const baseMensile = round(s1 + s2 + s3 + s4, 2);
-  const prezzoMensile = round(baseMensile * coefficiente, 2);
+  // I primi 1.000 movimenti non subiscono MAI maggiorazioni.
+  // Il coefficiente COGE si applica esclusivamente alla quota maturata oltre 1.000.
+  const quotaOltreMille = s2 + s3 + s4;
+  const baseMensile = round(s1 + quotaOltreMille, 2);
+  const prezzoMensile = round(s1 + quotaOltreMille * coefficiente, 2);
 
   const fascia = operazioni <= 1000
     ? "Fino a 1.000"
@@ -74,6 +89,8 @@ const cogeReplacement = `export function calcolaCogeMensile(
     difficolta,
     coefficiente_redditivita: coefficiente,
     base_mensile: baseMensile,
+    quota_primi_1000_mensile: round(s1, 2),
+    quota_oltre_1000_mensile: round(quotaOltreMille, 2),
     minimo_mensile: baseMensile,
     massimo_mensile: baseMensile,
     prezzo_mensile: prezzoMensile,
@@ -81,10 +98,10 @@ const cogeReplacement = `export function calcolaCogeMensile(
     massimo_annuo: round(baseMensile * 12, 2),
     prezzo_annuo: round(prezzoMensile * 12, 2),
     scaglioni: [
-      { etichetta: "1–1.000", soglia: 1000, quantita: q1, quota_mensile: round(s1, 2) },
-      { etichetta: "1.001–5.000", soglia: 5000, quantita: q2, quota_mensile: round(s2, 2) },
-      { etichetta: "5.001–10.000", soglia: 10000, quantita: q3, quota_mensile: round(s3, 2) },
-      { etichetta: "Oltre 10.000", soglia: 10000, quantita: q4, quota_mensile: round(s4, 2) },
+      { etichetta: "1–1.000", soglia: 1000, quantita: q1, quota_mensile: round(s1, 2), coefficiente: 1.00 },
+      { etichetta: "1.001–5.000", soglia: 5000, quantita: q2, quota_mensile: round(s2, 2), coefficiente },
+      { etichetta: "5.001–10.000", soglia: 10000, quantita: q3, quota_mensile: round(s3, 2), coefficiente },
+      { etichetta: "Oltre 10.000", soglia: 10000, quantita: q4, quota_mensile: round(s4, 2), coefficiente },
     ],
   };
 }
@@ -117,4 +134,4 @@ source = source.replace(
 );
 
 fs.writeFileSync(path, source, "utf8");
-console.log("✓ Redditività: minimo unico + coefficienti 1,00/1,25/1,50/1,75/2,00; COGE progressiva");
+console.log("✓ Redditività: COGE 1,00/1,00/1,05/1,10/1,15 solo oltre 1.000; altre attività invarianti");
