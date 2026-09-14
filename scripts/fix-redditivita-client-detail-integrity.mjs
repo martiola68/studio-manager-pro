@@ -8,16 +8,11 @@ function patch(file, fn) {
 }
 
 patch("src/pages/api/controllo-gestione/redditivita-studio.ts", (source) => {
-  // La patch settoriale deve filtrare per id OPERATORE, non per id SERVIZIO.
-  // Il replaceAll precedente trasformava anche cliente_servizio_id e svuotava
-  // servizio.ripartizione, pur lasciando corretti i totali operatore in basso.
   source = source.replaceAll(
     'const key = String(r.cliente_servizio_id || "");\n          if (!key || !mappaSettoriCliente.idsAmmessi.has(key)) continue;',
     'const key = String(r.cliente_servizio_id || "");\n          if (!key) continue;'
   );
 
-  // Il catalogo deve arrivare al dettaglio cliente con il listino persistito
-  // (colonne dedicate oppure fallback nel campo note).
   if (source.includes("attivitaConListinoFallback")) {
     source = source.replaceAll(
       "const attivitaMap = new Map((attivitaResult.data || []).map((a: any) => [a.id, a]));",
@@ -33,69 +28,163 @@ patch("src/pages/api/controllo-gestione/redditivita-studio.ts", (source) => {
 });
 
 patch("src/components/controllo-gestione/RedditivitaClientiTab.tsx", (source) => {
-  // Difesa: il componente finale deve sempre avere il motore tariffario disponibile.
-  if (!source.includes('prezzoListinoServizio') || !source.includes('calcolaEconomiaListino')) {
+  if (!source.includes('from "@/lib/redditivita-listino"')) {
     source = source.replace(
       'import { Plus, Save, Trash2, X } from "lucide-react";',
       'import { Plus, Save, Trash2, X } from "lucide-react";\nimport { calcolaEconomiaListino, prezzoListinoServizio } from "@/lib/redditivita-listino";'
     );
   }
 
-  // La colonna costo non deve confondere costo industriale e tariffa professionale.
-  source = source.replaceAll(
-    '<th className="px-3 py-3 text-right">Costo</th>',
-    '<th className="px-3 py-3 text-right">Costo interno</th><th className="px-3 py-3 text-right">Listino min–max</th><th className="px-3 py-3 text-right">Ricavo da difficoltà</th>'
-  );
-  source = source.replaceAll(
-    '<th className="px-3 py-3 text-right">Costo interno / tariffa</th>',
-    '<th className="px-3 py-3 text-right">Costo interno</th><th className="px-3 py-3 text-right">Listino min–max</th><th className="px-3 py-3 text-right">Ricavo da difficoltà</th>'
-  );
-
-  // Garantisce il calcolo tariffario sulla singola riga.
-  if (!source.includes('const tariffa = prezzoListinoServizio(servizio);')) {
-    source = source.replace(
-      '  const rip = (servizio.ripartizione || []).reduce((s, x) => s + n(x.percentuale_ripartizione_attivita), 0);',
-      '  const rip = (servizio.ripartizione || []).reduce((s, x) => s + n(x.percentuale_ripartizione_attivita), 0);\n  const tariffa = prezzoListinoServizio(servizio);'
-    );
+  const headerRegex = /<tr><th className="px-3 py-3">Area \/ attività<\/th>[\s\S]*?<\/tr>/;
+  const header = `<tr>
+                    <th className="px-3 py-3">Area / attività</th>
+                    <th className="px-3 py-3">Driver</th>
+                    <th className="px-3 py-3 text-right">Quantità</th>
+                    <th className="px-3 py-3 text-right">Difficoltà</th>
+                    <th className="px-3 py-3 text-right">Ore eq.</th>
+                    <th className="px-3 py-3 text-right">Costo interno</th>
+                    <th className="px-3 py-3 text-right">Listino min–max</th>
+                    <th className="px-3 py-3 text-right">Ricavo da difficoltà</th>
+                    <th className="px-3 py-3">Operatore</th>
+                    <th className="px-3 py-3"></th>
+                  </tr>`;
+  if (!headerRegex.test(source)) {
+    throw new Error("[client-detail-integrity] header tabella servizi non trovato");
   }
+  source = source.replace(headerRegex, header);
 
-  // Sostituisce in modo robusto QUALSIASI variante della cella costo generata
-  // dalle patch precedenti con tre colonne distinte e leggibili.
-  const costCellRegex = /<td[^>]*>[\s\S]*?\{euro\(servizio\.costo_stimato\)\}[\s\S]*?<\/td>/;
-  const separateCells = '<td className="px-3 py-3 text-right font-semibold">{euro(servizio.costo_stimato)}</td><td className="px-3 py-3 text-right">{tariffa.trovato ? <><div className="font-semibold text-slate-900">{euro(tariffa.minimo)}–{euro(tariffa.massimo)}</div>{tariffa.incluso_gruppo && <div className="text-[11px] text-slate-500">Gruppo {tariffa.gruppo}</div>}</> : <span className="text-slate-400">—</span>}</td><td className="px-3 py-3 text-right font-semibold text-sky-800">{tariffa.trovato ? euro(tariffa.prezzo) : "—"}</td>';
-  if (costCellRegex.test(source)) {
-    source = source.replace(costCellRegex, separateCells);
-  }
-
-  // Le tre nuove colonne portano la tabella servizi da 8 a 10 colonne.
   source = source.replace(
-    '<tr><td colSpan={8} className="px-4 py-12 text-center text-slate-400">Nessun servizio configurato per questo cliente.</td></tr>',
+    /<tr><td colSpan=\{\d+\} className="px-4 py-12 text-center text-slate-400">Nessun servizio configurato per questo cliente\.<\/td><\/tr>/,
     '<tr><td colSpan={10} className="px-4 py-12 text-center text-slate-400">Nessun servizio configurato per questo cliente.</td></tr>'
   );
 
-  source = source.replaceAll("Nessun operatore in anagrafica", "Nessun operatore associato");
+  const serviceRowStart = source.indexOf("function ServiceRow(");
+  const summaryStart = source.indexOf("function Summary(", serviceRowStart);
+  if (serviceRowStart < 0 || summaryStart < 0) {
+    throw new Error("[client-detail-integrity] funzione ServiceRow non trovata");
+  }
 
-  // Riepilogo: rendiamo visibili i tre passaggi economici separati.
+  const serviceRow = `function ServiceRow({
+  servizio,
+  operatori,
+  onSave,
+  onRemove,
+}: {
+  servizio: Servizio;
+  operatori: Operatore[];
+  onSave: (s: Servizio, q: number, c: number) => void;
+  onRemove: (s: Servizio) => void;
+}) {
+  const [q, setQ] = useState(n(servizio.quantita_driver));
+  const [c, setC] = useState(n(servizio.coefficiente_complessita));
+
+  useEffect(() => {
+    setQ(n(servizio.quantita_driver));
+    setC(n(servizio.coefficiente_complessita));
+  }, [servizio.quantita_driver, servizio.coefficiente_complessita]);
+
+  const tariffa = prezzoListinoServizio(servizio);
+  const operatoreId = servizio.ripartizione?.[0]?.operatore_id;
+  const operatore = operatori.find((x) => String(x.id) === String(operatoreId || ""));
+  const operatoreNome = operatore
+    ? ([operatore.nome, operatore.cognome].filter(Boolean).join(" ") || operatore.email || "Operatore")
+    : "Nessun operatore associato";
+
+  return (
+    <tr>
+      <td className="px-3 py-3">
+        <div className="font-semibold text-slate-900">{servizio.attivita?.descrizione || "—"}</div>
+        <div className="text-xs text-slate-500">{servizio.attivita?.area || ""}</div>
+      </td>
+      <td className="px-3 py-3 text-slate-600">
+        {servizio.attivita?.driver || "—"}
+        <div className="text-xs">{servizio.attivita?.unita_misura || ""}</div>
+      </td>
+      <td className="px-3 py-3 text-right">
+        <input
+          type="number"
+          min="0"
+          step="1"
+          inputMode="numeric"
+          value={q || ""}
+          onChange={(e) => setQ(Math.max(0, Math.trunc(n(e.target.value))))}
+          className="h-9 w-24 rounded-md border border-slate-300 px-2 text-right"
+        />
+      </td>
+      <td className="px-3 py-3 text-right">
+        <select
+          value={c || 3}
+          onChange={(e) => setC(n(e.target.value))}
+          className="h-9 min-w-[150px] rounded-md border border-slate-300 bg-white px-2 text-sm"
+        >
+          <option value={1}>1 · Molto semplice</option>
+          <option value={2}>2 · Semplice</option>
+          <option value={3}>3 · Ordinaria</option>
+          <option value={4}>4 · Complessa</option>
+          <option value={5}>5 · Molto complessa</option>
+        </select>
+      </td>
+      <td className="px-3 py-3 text-right font-semibold">
+        {n(servizio.ore_equivalenti).toLocaleString("it-IT", { maximumFractionDigits: 2 })}
+      </td>
+      <td className="px-3 py-3 text-right font-semibold">{euro(servizio.costo_stimato)}</td>
+      <td className="px-3 py-3 text-right">
+        {tariffa.trovato ? (
+          <>
+            <div className="font-semibold text-slate-900">{euro(tariffa.minimo)} – {euro(tariffa.massimo)}</div>
+            {tariffa.incluso_gruppo && tariffa.gruppo ? (
+              <div className="text-[11px] text-slate-500">Gruppo {tariffa.gruppo}</div>
+            ) : null}
+          </>
+        ) : (
+          <span className="text-slate-400">—</span>
+        )}
+      </td>
+      <td className="px-3 py-3 text-right font-semibold text-sky-800">
+        {tariffa.trovato ? euro(tariffa.prezzo) : "—"}
+      </td>
+      <td className="px-3 py-3 text-sm font-semibold text-slate-700">{operatoreNome}</td>
+      <td className="whitespace-nowrap px-3 py-3">
+        <button
+          type="button"
+          onClick={() => onSave(servizio, q, c)}
+          className="mr-2 rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-800"
+        >
+          Salva
+        </button>
+        <button
+          type="button"
+          onClick={() => onRemove(servizio)}
+          className="rounded-lg border border-rose-200 bg-rose-50 p-1.5 text-rose-700"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </td>
+    </tr>
+  );
+}
+
+`;
+
+  source = source.slice(0, serviceRowStart) + serviceRow + source.slice(summaryStart);
+
+  if (!source.includes("operatori={operatori}")) {
+    source = source.replaceAll(
+      '<ServiceRow key={s.id} servizio={s}',
+      '<ServiceRow key={s.id} servizio={s} operatori={operatori}'
+    );
+  }
+
   source = source.replaceAll(
     '<Summary label="Costo stimato" value={euro(totali.costo)} />',
-    '<Summary label="Costo interno" value={euro(totali.costo)} /><Summary label="Listino minimo" value={euro(economiaSettore.listino_minimo)} /><Summary label="Listino da difficoltà" value={euro(economiaSettore.prezzo_listino)} /><Summary label="Minimo economico" value={euro(economiaSettore.minimo_economico)} />'
+    '<Summary label="Costo interno" value={euro(totali.costo)} />'
   );
-  source = source.replaceAll(
-    '<Summary label={`Costo ${settoreClienti}`} value={euro(riepilogoFiltrato.costo)} />',
-    '<Summary label={`Costo interno ${settoreClienti}`} value={euro(riepilogoFiltrato.costo)} />'
-  );
-  source = source.replaceAll('grid gap-3 md:grid-cols-6', 'grid gap-3 md:grid-cols-3 xl:grid-cols-9');
 
-  // Formula esplicita: il listino non modifica il costo interno.
-  const formulaMarker = '<strong>Formula costo stimato:</strong> ore equivalenti × costo orario pieno dello studio.';
-  if (source.includes(formulaMarker) && !source.includes('Il listino non modifica il costo interno')) {
-    source = source.replace(
-      formulaMarker,
-      '<strong>Costo interno:</strong> ore equivalenti × costo orario pieno dello studio. <strong>Il listino non modifica il costo interno:</strong> determina invece il prezzo/ricavo professionale.'
-    );
+  if (!source.includes("tariffa.minimo") || !source.includes("tariffa.prezzo")) {
+    throw new Error("[client-detail-integrity] rendering listino non applicato");
   }
 
   return source;
 });
 
-console.log("✓ Redditività Clienti: costo interno separato da listino e ricavo da difficoltà");
+console.log("✓ Redditività Clienti: ServiceRow ricostruita con costo, listino, ricavo e operatore");
