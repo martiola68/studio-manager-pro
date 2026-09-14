@@ -118,6 +118,7 @@ export function prezzoListinoServizio`;
 
 // -----------------------------------------------------------------------------
 // 2) Clienti: CONT_MOV_IVA non deve più comparire né essere selezionabile.
+//    Per COGE mostriamo anche il dettaglio del calcolo progressivo.
 // -----------------------------------------------------------------------------
 patch("src/components/controllo-gestione/RedditivitaClientiTab.tsx", (source) => {
   source = source.replaceAll(
@@ -134,6 +135,21 @@ patch("src/components/controllo-gestione/RedditivitaClientiTab.tsx", (source) =>
     "return attivita.filter((a) => a.attiva && !used.has(a.id));",
     "return attivita.filter((a) => a.attiva && String(a.codice || \"\").trim().toUpperCase() !== \"CONT_MOV_IVA\" && !used.has(a.id));"
   );
+
+  if (!source.includes("const tariffaCoge = tariffa as any;")) {
+    source = source.replace(
+      "  const tariffa = prezzoListinoServizio(servizio);",
+      "  const tariffa = prezzoListinoServizio(servizio);\n  const tariffaCoge = tariffa as any;"
+    );
+  }
+
+  const groupLine = `{tariffa.incluso_gruppo && tariffa.gruppo ? (\n              <div className="text-[11px] text-slate-500">Gruppo {tariffa.gruppo}</div>\n            ) : null}`;
+  if (source.includes(groupLine) && !source.includes("COGE progressiva:")) {
+    source = source.replace(
+      groupLine,
+      `${groupLine}\n            {tariffa.incluso_coge && tariffaCoge.mensile_prezzo != null ? (\n              <div className="mt-1 text-[11px] leading-4 text-sky-700">\n                <div><strong>COGE progressiva:</strong> base {euro(tariffaCoge.base_mensile)}/mese × difficoltà {Number(tariffaCoge.coefficiente_difficolta || 1).toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>\n                <div>{(tariffaCoge.scaglioni || []).filter((x: any) => Number(x.quantita || 0) > 0).map((x: any, i: number) => (\n                  <span key={i}>{i ? " + " : ""}{Number(x.quantita).toLocaleString("it-IT")} op. = {euro(x.quota_mensile)}</span>\n                ))}</div>\n                <div><strong>{euro(tariffaCoge.mensile_prezzo)}/mese · {euro(tariffa.prezzo)}/anno</strong></div>\n              </div>\n            ) : null}`
+    );
+  }
 
   return source;
 });
@@ -154,7 +170,6 @@ patch("src/pages/controllo-gestione/redditivita-studio.tsx", (source) => {
 //    I record storici restano nel DB ma sono dismessi dal modello operativo.
 // -----------------------------------------------------------------------------
 patch("src/pages/api/controllo-gestione/redditivita-studio.ts", (source) => {
-  // Escludi il codice dalla lista attività restituita, sia con che senza fallback listino.
   source = source.replaceAll(
     "attivita: attivitaResult.data || [],",
     "attivita: (attivitaResult.data || []).filter((a: any) => String(a?.codice || \"\").trim().toUpperCase() !== \"CONT_MOV_IVA\"),"
@@ -163,26 +178,20 @@ patch("src/pages/api/controllo-gestione/redditivita-studio.ts", (source) => {
     "attivita: (attivitaResult.data || []).map((a: any) => attivitaConListinoFallback(a)),",
     "attivita: (attivitaResult.data || []).filter((a: any) => String(a?.codice || \"\").trim().toUpperCase() !== \"CONT_MOV_IVA\").map((a: any) => attivitaConListinoFallback(a)),"
   );
-
-  // Se la patch fallback ha creato attivitaIdratate, filtra prima della Map.
   source = source.replaceAll(
     "const attivitaIdratate = (attivitaResult.data || []).map((a: any) => attivitaConListinoFallback(a));",
     "const attivitaIdratate = (attivitaResult.data || []).filter((a: any) => String(a?.codice || \"\").trim().toUpperCase() !== \"CONT_MOV_IVA\").map((a: any) => attivitaConListinoFallback(a));"
   );
-
-  // Caso base senza idratazione fallback.
   source = source.replaceAll(
     "const attivitaMap = new Map((attivitaResult.data || []).map((a: any) => [a.id, a]));",
     "const attivitaMap = new Map((attivitaResult.data || []).filter((a: any) => String(a?.codice || \"\").trim().toUpperCase() !== \"CONT_MOV_IVA\").map((a: any) => [a.id, a]));"
   );
 
-  // Non lasciare in dettaglio servizi che puntano all'attività dismessa.
   source = source.replace(
     "            ripartizione: ripartizioniByServizio.get(s.id) || [],\n          }))\n          .sort((a: any, b: any) => {",
     "            ripartizione: ripartizioniByServizio.get(s.id) || [],\n          }))\n          .filter((s: any) => Boolean(s.attivita))\n          .sort((a: any, b: any) => {"
   );
 
-  // L'overview deve conoscere attivita_id per poter escludere i servizi IVA dismessi.
   source = source.replaceAll(
     '.select("cliente_id,attivo,quantita_driver,ore_equivalenti,costo_stimato")',
     '.select("cliente_id,attivita_id,attivo,quantita_driver,ore_equivalenti,costo_stimato")'
@@ -196,7 +205,6 @@ patch("src/pages/api/controllo-gestione/redditivita-studio.ts", (source) => {
     );
   }
 
-  // Impedisci la ricreazione del vecchio codice dal catalogo.
   const salvaAttivitaAnchor = "        if (!codice || !area || !descrizione || !driver) {";
   if (source.includes(salvaAttivitaAnchor) && !source.includes("CONT_MOV_IVA è stata dismessa")) {
     source = source.replace(
@@ -205,7 +213,6 @@ patch("src/pages/api/controllo-gestione/redditivita-studio.ts", (source) => {
     );
   }
 
-  // Impedisci di associare a un cliente un eventuale record storico ancora presente nel DB.
   const activityFoundAnchor = "        if (!attivitaResult.data) return res.status(404).json({ success: false, error: \"Attività non appartenente allo studio\" });";
   if (source.includes(activityFoundAnchor) && !source.includes("Attività IVA dismessa")) {
     source = source.replace(
@@ -217,4 +224,4 @@ patch("src/pages/api/controllo-gestione/redditivita-studio.ts", (source) => {
   return source;
 });
 
-console.log("✓ Redditività: COGE progressiva marginale attiva e CONT_MOV_IVA dismessa");
+console.log("✓ Redditività: COGE progressiva marginale attiva, dettaglio visibile e CONT_MOV_IVA dismessa");
