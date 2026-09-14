@@ -71,6 +71,7 @@ patch("src/components/controllo-gestione/RedditivitaClientiTab.tsx", (source) =>
   onRemove,
 }: {
   servizio: Servizio;
+  costoModelloConfigurato?: boolean;
   operatori: Operatore[];
   onSave: (s: Servizio, q: number, c: number) => void;
   onRemove: (s: Servizio) => void;
