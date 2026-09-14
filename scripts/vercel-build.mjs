@@ -36,6 +36,7 @@ const patches = [
   "scripts/fix-redditivita-listino-save-fallback.mjs",
   "scripts/fix-redditivita-client-detail-integrity.mjs",
   "scripts/fix-redditivita-coefficienti-minimo.mjs",
+  "scripts/patch-presenze-permessi-ex-festivi.mjs",
   "scripts/patch-av4-public.mjs",
   "scripts/patch-av4-print-professionale.mjs",
   "scripts/fix-av4-public-validation-display.mjs",
