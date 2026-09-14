@@ -1,4 +1,5 @@
 export type ListinoModalita = "unitario" | "mensile" | "orario";
+export type FasciaCoge = "Piccola" | "Media" | "Grande" | "Extra grande";
 
 export type ListinoPersistito = {
   prezzo_minimo: number;
@@ -124,7 +125,7 @@ function datiAttivita(servizio: ServizioListinoInput) {
   const modalitaRaw = String(a.modalita_prezzo || "unitario").trim().toLowerCase();
   const modalita: ListinoModalita = modalitaRaw === "mensile" || modalitaRaw === "orario" ? modalitaRaw : "unitario";
   return {
-    codice: String(a.codice || "").trim(),
+    codice: String(a.codice || "").trim().toUpperCase(),
     area: String(a.area || "").trim(),
     descrizione: String(a.descrizione || "").trim(),
     minimo: Math.max(0, n(a.prezzo_minimo)),
@@ -142,15 +143,120 @@ function moltiplicatore(modalita: ListinoModalita, quantitaRaw: unknown) {
   return Math.max(1, quantita);
 }
 
+export function fasciaDimensionaleCoge(operazioniRaw: unknown): { nome: FasciaCoge; score: number } {
+  const operazioni = Math.max(0, n(operazioniRaw));
+  if (operazioni <= 1000) return { nome: "Piccola", score: 0 };
+  if (operazioni <= 5000) return { nome: "Media", score: 1 / 3 };
+  if (operazioni <= 10000) return { nome: "Grande", score: 2 / 3 };
+  return { nome: "Extra grande", score: 1 };
+}
+
+export function calcolaCogeMensile(
+  minimoRaw: unknown,
+  massimoRaw: unknown,
+  operazioniRaw: unknown,
+  difficoltaRaw: unknown
+) {
+  const minimo = Math.max(0, n(minimoRaw));
+  const massimo = Math.max(minimo, n(massimoRaw));
+  const operazioni = Math.max(0, n(operazioniRaw));
+  const fascia = fasciaDimensionaleCoge(operazioni);
+  const difficolta = difficoltaNormalizzata(difficoltaRaw);
+  const difficoltaScore = (difficolta - 1) / 4;
+
+  // La dimensione pesa il 60%, la difficoltà il 40%.
+  // Il risultato rimane SEMPRE compreso fra minimo e massimo mensile.
+  const score = Math.min(1, Math.max(0, fascia.score * 0.6 + difficoltaScore * 0.4));
+  const mensile = round(minimo + (massimo - minimo) * score, 2);
+
+  return {
+    fascia: fascia.nome,
+    operazioni,
+    difficolta,
+    minimo_mensile: minimo,
+    massimo_mensile: massimo,
+    prezzo_mensile: mensile,
+    minimo_annuo: round(minimo * 12, 2),
+    massimo_annuo: round(massimo * 12, 2),
+    prezzo_annuo: round(mensile * 12, 2),
+  };
+}
+
 export function prezzoListinoServizio(servizio: ServizioListinoInput) {
   const dati = datiAttivita(servizio);
+
+  // Il vecchio driver IVA è eliminato dal modello economico.
+  if (dati.codice === "CONT_MOV_IVA") {
+    return {
+      codice: dati.codice,
+      trovato: false,
+      escluso: true,
+      incluso_coge: true,
+      incluso_gruppo: false,
+      gruppo: "COGE",
+      minimo: 0,
+      massimo: 0,
+      prezzo: 0,
+      unita: "",
+      modalita: "mensile" as ListinoModalita,
+    };
+  }
+
   const configurato = dati.attivo && dati.minimo > 0 && dati.massimo >= dati.minimo;
+
+  // COGE: la quantità serve SOLO a determinare la fascia dimensionale.
+  // Non viene mai moltiplicata per il listino.
+  if (dati.codice === "CONT_MOV_CONT") {
+    if (!configurato) {
+      return {
+        codice: dati.codice,
+        trovato: false,
+        escluso: false,
+        incluso_coge: true,
+        incluso_gruppo: true,
+        gruppo: "COGE",
+        minimo: 0,
+        massimo: 0,
+        prezzo: 0,
+        unita: "mese",
+        modalita: "mensile" as ListinoModalita,
+      };
+    }
+
+    const coge = calcolaCogeMensile(
+      dati.minimo,
+      dati.massimo,
+      servizio.quantita_driver,
+      servizio.coefficiente_complessita
+    );
+
+    return {
+      codice: dati.codice,
+      trovato: true,
+      escluso: false,
+      incluso_coge: true,
+      incluso_gruppo: true,
+      gruppo: "COGE",
+      minimo: coge.minimo_annuo,
+      massimo: coge.massimo_annuo,
+      prezzo: coge.prezzo_annuo,
+      unita: "anno",
+      modalita: "mensile" as ListinoModalita,
+      fascia_dimensionale: coge.fascia,
+      operazioni_totali: coge.operazioni,
+      mensile_minimo: coge.minimo_mensile,
+      mensile_massimo: coge.massimo_mensile,
+      mensile_prezzo: coge.prezzo_mensile,
+    };
+  }
+
   const inclusoGruppo = configurato && Boolean(dati.gruppo);
 
   if (!configurato) {
     return {
       codice: dati.codice,
       trovato: false,
+      escluso: false,
       incluso_coge: false,
       incluso_gruppo: false,
       gruppo: dati.gruppo,
@@ -166,6 +272,7 @@ export function prezzoListinoServizio(servizio: ServizioListinoInput) {
     return {
       codice: dati.codice,
       trovato: true,
+      escluso: false,
       incluso_coge: dati.gruppo === "COGE",
       incluso_gruppo: true,
       gruppo: dati.gruppo,
@@ -181,6 +288,7 @@ export function prezzoListinoServizio(servizio: ServizioListinoInput) {
   return {
     codice: dati.codice,
     trovato: true,
+    escluso: false,
     incluso_coge: false,
     incluso_gruppo: false,
     gruppo: "",
@@ -207,8 +315,12 @@ function difficoltaPonderata(servizi: ServizioListinoInput[]) {
 
 export function calcolaEconomiaListino(servizi: ServizioListinoInput[], margineRaw: unknown) {
   const margine = Math.min(95, Math.max(0, n(margineRaw)));
-  const costoPieno = round(servizi.reduce((sum, s) => sum + n(s.costo_stimato), 0), 2);
-  const ore = round(servizi.reduce((sum, s) => sum + n(s.ore_equivalenti), 0), 4);
+
+  // CONT_MOV_IVA non esiste più nel modello: non contribuisce né a costi né a ricavi.
+  const serviziCalcolabili = servizi.filter((s) => datiAttivita(s).codice !== "CONT_MOV_IVA");
+
+  const costoPieno = round(serviziCalcolabili.reduce((sum, s) => sum + n(s.costo_stimato), 0), 2);
+  const ore = round(serviziCalcolabili.reduce((sum, s) => sum + n(s.ore_equivalenti), 0), 4);
 
   let listinoMinimo = 0;
   let listinoMassimo = 0;
@@ -218,13 +330,21 @@ export function calcolaEconomiaListino(servizi: ServizioListinoInput[], margineR
   const gruppi = new Map<string, ServizioListinoInput[]>();
   const singoli: ServizioListinoInput[] = [];
 
-  for (const servizio of servizi) {
+  for (const servizio of serviziCalcolabili) {
     const dati = datiAttivita(servizio);
     const configurato = dati.attivo && dati.minimo > 0 && dati.massimo >= dati.minimo;
+
     if (!configurato) {
       serviziSenzaListino += 1;
       continue;
     }
+
+    // La COGE usa sempre la sua regola speciale, anche se nel DB il gruppo è vuoto o errato.
+    if (dati.codice === "CONT_MOV_CONT") {
+      singoli.push(servizio);
+      continue;
+    }
+
     if (dati.gruppo) {
       const righe = gruppi.get(dati.gruppo) || [];
       righe.push(servizio);
