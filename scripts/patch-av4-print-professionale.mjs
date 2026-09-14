@@ -59,6 +59,12 @@ source = source.replaceAll(
   '<div className="av4-print-societa space-y-4 rounded-lg border p-4">'
 );
 
+// Page 4 must begin from the relationship/funds/profession block.
+source = source.replace(
+  '                    <div>\n                      <label className="mb-1 block text-sm font-medium">\n                        Che le relazioni intercorrenti tra il Cliente e il titolare effettivo nonché, ove rilevi, l’esecutore sono',
+  '                    <div className="av4-page4-start">\n                      <label className="mb-1 block text-sm font-medium">\n                        Che le relazioni intercorrenti tra il Cliente e il titolare effettivo nonché, ove rilevi, l’esecutore sono'
+);
+
 // Legal attachment is a proper document page.
 source = source.replace(
   '<div className="md:col-span-2 my-4 rounded-lg border border-slate-300 bg-white p-5 text-slate-800">\n                      <h3 className="mb-4 text-base font-semibold">Allegato alla Dichiarazione del Cliente</h3>',
@@ -71,10 +77,10 @@ source = source.replace(
   '<div className="av4-screen-status mb-6 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">'
 );
 
-// Fixed print footer in the reserved lower margin.
+// Keep the old footer node for screen compatibility; print footer is handled by @page.
 if (!source.includes('className="av4-doc-print-footer"')) {
   replaceOrFail(
-    "print footer",
+    "print footer node",
     '      </main>\n\n      <style jsx global>{`',
     '      </main>\n\n      <div className="av4-doc-print-footer">Modello AV4 · Dichiarazione del Cliente · D.Lgs. 231/2007</div>\n\n      <style jsx global>{`'
   );
@@ -102,6 +108,7 @@ if (!titolari.includes('className="av4-titolari-print"')) {
 
 fs.writeFileSync(titolariPath, titolari, "utf8");
 
+// Remove the old browser-form print rules; the real paged document CSS is injected below.
 const oldPrint = `        @media print {
           body {
             background: white !important;
@@ -127,383 +134,360 @@ const oldPrint = `        @media print {
           }
         }`;
 
-const professionalPrint = `        .av4-doc-eyebrow,
-        .av4-doc-print-footer,
-        .av4-titolari-print {
-          display: none;
-        }
-
-        @media print {
-          @page {
-            size: A4 portrait;
-            margin: 31mm 11mm 14mm;
-          }
-
-          html,
-          body {
-            width: auto !important;
-            min-width: 0 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            background: #ffffff !important;
-            color: #111827 !important;
-            font-family: Arial, Helvetica, sans-serif !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-
-          .public-av4-shell {
-            min-height: 0 !important;
-            background: #ffffff !important;
-            color: #111827 !important;
-          }
-
-          /* Fixed header: Chrome repeats fixed elements on every printed page. */
-          .av4-doc-header {
-            position: fixed !important;
-            top: -25mm !important;
-            right: 0 !important;
-            left: 0 !important;
-            z-index: 1000 !important;
-            height: 22mm !important;
-            margin: 0 !important;
-            padding: 0 0 3mm !important;
-            border: 0 !important;
-            border-bottom: 2px solid #0d6f9f !important;
-            background: #ffffff !important;
-          }
-
-          .av4-doc-header-inner {
-            display: block !important;
-            max-width: none !important;
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-
-          .av4-doc-eyebrow {
-            display: block !important;
-            margin: 0 0 1mm !important;
-            color: #0d6f9f !important;
-            font-size: 8pt !important;
-            font-weight: 800 !important;
-            letter-spacing: 0.08em !important;
-          }
-
-          .av4-doc-header h1 {
-            margin: 0 0 0.8mm !important;
-            color: #111827 !important;
-            font-size: 18pt !important;
-            line-height: 1.05 !important;
-            font-weight: 800 !important;
-          }
-
-          .av4-doc-header p {
-            margin: 0 !important;
-            color: #475569 !important;
-            font-size: 8.5pt !important;
-            line-height: 1.2 !important;
-          }
-
-          .av4-doc-main,
-          .av4-doc-container {
-            max-width: none !important;
-            min-height: 0 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            background: #ffffff !important;
-          }
-
-          .av4-screen-status,
-          .public-av4-shell button,
-          .public-av4-shell input[type="file"],
-          .public-av4-shell a[href*="pdf"],
-          .public-av4-shell a[target="_blank"] {
-            display: none !important;
-          }
-
-          .av4-doc-body {
-            display: block !important;
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-
-          .av4-doc-body.space-y-6 > :not([hidden]) ~ :not([hidden]) {
-            margin-top: 0 !important;
-          }
-
-          .av4-doc-section {
-            margin: 0 0 4mm !important;
-            padding: 0 !important;
-            border: 0 !important;
-            border-radius: 0 !important;
-            background: #ffffff !important;
-            box-shadow: none !important;
-            break-inside: auto !important;
-            page-break-inside: auto !important;
-          }
-
-          /* Page 1 = dati principali. Page 2 starts declarations. Firma stays with page 4. */
-          .av4-doc-section:nth-of-type(2) {
-            break-before: page !important;
-            page-break-before: always !important;
-          }
-
-          .av4-doc-section:nth-of-type(3) {
-            break-before: auto !important;
-            page-break-before: auto !important;
-            margin-top: 5mm !important;
-          }
-
-          .av4-doc-section > div:first-child {
-            margin: 0 0 2.5mm !important;
-            padding: 0 0 1.5mm !important;
-            border-bottom: 1.5px solid #0d6f9f !important;
-            break-after: avoid-page !important;
-            page-break-after: avoid !important;
-          }
-
-          .av4-doc-section > div:first-child h3,
-          .av4-doc-section > div:first-child [class*="CardTitle"],
-          .av4-doc-section > div:first-child .font-semibold {
-            margin: 0 !important;
-            color: #111827 !important;
-            font-size: 12pt !important;
-            line-height: 1.15 !important;
-            font-weight: 800 !important;
-          }
-
-          .av4-doc-section > div:last-child {
-            padding: 0 !important;
-          }
-
-          .av4-doc-body .grid {
-            gap: 2mm 4mm !important;
-          }
-
-          .av4-doc-body .space-y-2 > :not([hidden]) ~ :not([hidden]),
-          .av4-doc-body .space-y-3 > :not([hidden]) ~ :not([hidden]),
-          .av4-doc-body .space-y-4 > :not([hidden]) ~ :not([hidden]) {
-            margin-top: 1.8mm !important;
-          }
-
-          .av4-doc-body label {
-            margin: 0 0 0.6mm !important;
-            color: #334155 !important;
-            font-size: 7.5pt !important;
-            line-height: 1.2 !important;
-            font-weight: 700 !important;
-          }
-
-          .av4-doc-body input:not([type="checkbox"]):not([type="file"]),
-          .av4-doc-body textarea,
-          .av4-doc-body select {
-            width: 100% !important;
-            min-height: 6mm !important;
-            height: auto !important;
-            margin: 0 !important;
-            padding: 0.8mm 0 !important;
-            border: 0 !important;
-            border-bottom: 1px solid #94a3b8 !important;
-            border-radius: 0 !important;
-            outline: 0 !important;
-            background: #ffffff !important;
-            color: #111827 !important;
-            box-shadow: none !important;
-            font-family: Arial, Helvetica, sans-serif !important;
-            font-size: 8.5pt !important;
-            line-height: 1.25 !important;
-          }
-
-          .av4-doc-body textarea {
-            min-height: 8mm !important;
-            resize: none !important;
-            white-space: pre-wrap !important;
-          }
-
-          .av4-doc-body select {
-            appearance: none !important;
-            -webkit-appearance: none !important;
-            padding-right: 0 !important;
-          }
-
-          .av4-doc-body input[type="date"]::-webkit-calendar-picker-indicator {
-            display: none !important;
-          }
-
-          .av4-doc-body input[type="checkbox"] {
-            display: inline-block !important;
-            width: 3mm !important;
-            height: 3mm !important;
-            min-width: 3mm !important;
-            margin: 0 1.4mm 0 0 !important;
-            accent-color: #0d6f9f !important;
-            vertical-align: middle !important;
-          }
-
-          .av4-doc-body p,
-          .av4-doc-body .text-sm,
-          .av4-doc-body .text-slate-600,
-          .av4-doc-body .text-slate-700,
-          .av4-doc-body .text-gray-700 {
-            font-size: 8pt !important;
-            line-height: 1.35 !important;
-            color: #334155 !important;
-          }
-
-          .av4-doc-body .font-semibold {
-            font-weight: 700 !important;
-          }
-
-          /* Society details: same full-width line presentation as page 1. */
-          .av4-print-societa {
-            margin: 2mm 0 3mm !important;
-            padding: 0 !important;
-            border: 0 !important;
-            border-radius: 0 !important;
-            background: #ffffff !important;
-            box-shadow: none !important;
-            break-inside: auto !important;
-            page-break-inside: auto !important;
-          }
-
-          .av4-print-societa > .grid {
-            display: block !important;
-          }
-
-          .av4-print-societa > .grid > div {
-            display: block !important;
-            margin: 0 0 1.8mm !important;
-          }
-
-          .av4-print-societa .rounded-lg.border,
-          .av4-print-societa .av4-titolari-root {
-            margin: 2mm 0 0 !important;
-            padding: 0 !important;
-            border: 0 !important;
-            border-radius: 0 !important;
-            background: #ffffff !important;
-          }
-
-          /* Beneficial owners: print-only flat view with labels and lines. */
-          .av4-titolari-root > :not(.av4-titolari-print) {
-            display: none !important;
-          }
-
-          .av4-titolari-root {
-            margin: 0 !important;
-            padding: 0 !important;
-            border: 0 !important;
-            border-radius: 0 !important;
-            background: #ffffff !important;
-          }
-
-          .av4-titolari-print {
-            display: block !important;
-            margin: 2mm 0 0 !important;
-          }
-
-          .av4-titolari-print-title {
-            margin: 0 0 2mm !important;
-            color: #111827 !important;
-            font-size: 10.5pt !important;
-            font-weight: 800 !important;
-          }
-
-          .av4-print-persona {
-            margin: 0 0 3mm !important;
-            padding: 0 !important;
-            break-inside: avoid-page !important;
-            page-break-inside: avoid !important;
-          }
-
-          .av4-print-field {
-            margin: 0 0 1.6mm !important;
-          }
-
-          .av4-print-field-label {
-            margin-bottom: 0.4mm !important;
-            color: #334155 !important;
-            font-size: 7.5pt !important;
-            line-height: 1.15 !important;
-            font-weight: 700 !important;
-          }
-
-          .av4-print-field-value {
-            min-height: 5mm !important;
-            padding: 0.7mm 0 0.8mm !important;
-            border-bottom: 1px solid #94a3b8 !important;
-            color: #111827 !important;
-            font-size: 8.5pt !important;
-            line-height: 1.2 !important;
-          }
-
-          .av4-print-empty {
-            color: #64748b !important;
-            font-size: 8pt !important;
-          }
-
-          /* The attachment must be the next and final page (page 5). */
-          .av4-doc-legal {
-            margin: 0 !important;
-            padding: 3mm 0 0 !important;
-            border: 0 !important;
-            border-top: 1.5px solid #0d6f9f !important;
-            border-radius: 0 !important;
-            background: #ffffff !important;
-            break-before: page !important;
-            page-break-before: always !important;
-            break-inside: auto !important;
-            page-break-inside: auto !important;
-            color: #1f2937 !important;
-            text-align: justify !important;
-          }
-
-          .av4-doc-legal h3 {
-            margin: 0 0 2.5mm !important;
-            color: #111827 !important;
-            font-size: 10.5pt !important;
-            line-height: 1.15 !important;
-            font-weight: 800 !important;
-            text-align: left !important;
-          }
-
-          .av4-doc-legal .whitespace-pre-line {
-            font-size: 7.2pt !important;
-            line-height: 1.32 !important;
-            text-align: justify !important;
-          }
-
-          .av4-doc-print-footer {
-            display: block !important;
-            position: fixed !important;
-            right: 0 !important;
-            bottom: -9.5mm !important;
-            left: 0 !important;
-            padding-top: 1.2mm !important;
-            border-top: 1px solid #cbd5e1 !important;
-            color: #64748b !important;
-            background: #ffffff !important;
-            font-size: 6.8pt !important;
-            line-height: 1 !important;
-            text-align: right !important;
-          }
-
-          .shadow,
-          .shadow-sm {
-            box-shadow: none !important;
-          }
-
-          * {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-        }`;
-
-if (source.includes(oldPrint)) {
-  source = source.replace(oldPrint, professionalPrint);
-} else if (!source.includes(".av4-doc-print-footer")) {
+if (!source.includes(oldPrint)) {
   throw new Error("[AV4 print] old print block not found");
 }
+source = source.replace(oldPrint, "");
+
+// Header copied from the approved visual (image 4), rendered inside the true page margin.
+const headerSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 94">
+  <rect width="760" height="94" fill="#ffffff"/>
+  <text x="0" y="14" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="700" letter-spacing="1.15" fill="#0d6f9f">ANTIRICICLAGGIO · D.LGS. 231/2007</text>
+  <text x="0" y="42" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="800" fill="#111827">Modello AV4</text>
+  <text x="0" y="59" font-family="Arial, Helvetica, sans-serif" font-size="11.5" fill="#475569">Dichiarazione del Cliente</text>
+  <text x="0" y="75" font-family="Arial, Helvetica, sans-serif" font-size="10.5" letter-spacing="2.05" fill="#334155">COMPILAZIONE TRAMITE COLLEGAMENTO RISERVATO</text>
+  <line x1="0" y1="90" x2="760" y2="90" stroke="#0d6f9f" stroke-width="3"/>
+</svg>`;
+const headerDataUri = `data:image/svg+xml,${encodeURIComponent(headerSvg)}`;
+
+const pagedPrintCss = `
+@page {
+  size: A4 portrait;
+  margin: 29mm 11mm 14mm;
+
+  @top-center {
+    content: "";
+    background-image: url("${headerDataUri}");
+    background-repeat: no-repeat;
+    background-position: left bottom;
+    background-size: 100% 23mm;
+  }
+
+  @bottom-right {
+    content: "Modello AV4 · Dichiarazione del Cliente · D.Lgs. 231/2007 · Pagina " counter(page) " / " counter(pages);
+    border-top: 1px solid #cbd5e1;
+    padding-top: 1.3mm;
+    color: #64748b;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 6.7pt;
+    text-align: right;
+  }
+}
+
+@media print {
+  html,
+  body {
+    width: auto !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+    font-family: Arial, Helvetica, sans-serif !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .public-av4-shell {
+    min-height: 0 !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+  }
+
+  /* Real page-margin header/footer replace the HTML header/footer in print. */
+  .av4-doc-header,
+  .av4-doc-print-footer,
+  .av4-screen-status,
+  .public-av4-shell button,
+  .public-av4-shell input[type="file"],
+  .public-av4-shell a[href*="pdf"],
+  .public-av4-shell a[target="_blank"] {
+    display: none !important;
+  }
+
+  .av4-doc-main,
+  .av4-doc-container,
+  .av4-doc-body {
+    max-width: none !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+
+  .av4-doc-body.space-y-6 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0 !important;
+  }
+
+  .av4-doc-section {
+    margin: 0 0 4mm !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+
+  /* Deterministic pagination: 1 data, 2 declarations, 3 company/owners, 4 funds/profession/signature, 5 legal attachment. */
+  .av4-doc-section:nth-of-type(2) {
+    break-before: page !important;
+    page-break-before: always !important;
+  }
+
+  .av4-print-societa {
+    break-before: page !important;
+    page-break-before: always !important;
+  }
+
+  .av4-page4-start {
+    break-before: page !important;
+    page-break-before: always !important;
+  }
+
+  .av4-doc-section:nth-of-type(3) {
+    break-before: auto !important;
+    page-break-before: auto !important;
+    margin-top: 4mm !important;
+  }
+
+  .av4-doc-section > div:first-child {
+    margin: 0 0 2.5mm !important;
+    padding: 0 0 1.5mm !important;
+    border-bottom: 1.5px solid #0d6f9f !important;
+    break-after: avoid-page !important;
+    page-break-after: avoid !important;
+  }
+
+  .av4-doc-section > div:first-child h3,
+  .av4-doc-section > div:first-child .font-semibold {
+    margin: 0 !important;
+    color: #111827 !important;
+    font-size: 12pt !important;
+    line-height: 1.15 !important;
+    font-weight: 800 !important;
+  }
+
+  .av4-doc-section > div:last-child {
+    padding: 0 !important;
+  }
+
+  .av4-doc-body .grid {
+    gap: 1.8mm 4mm !important;
+  }
+
+  .av4-doc-body .space-y-2 > :not([hidden]) ~ :not([hidden]),
+  .av4-doc-body .space-y-3 > :not([hidden]) ~ :not([hidden]),
+  .av4-doc-body .space-y-4 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 1.6mm !important;
+  }
+
+  .av4-doc-body label {
+    margin: 0 0 0.5mm !important;
+    color: #334155 !important;
+    font-size: 7.4pt !important;
+    line-height: 1.18 !important;
+    font-weight: 700 !important;
+  }
+
+  .av4-doc-body input:not([type="checkbox"]):not([type="file"]),
+  .av4-doc-body textarea,
+  .av4-doc-body select {
+    width: 100% !important;
+    min-height: 5.7mm !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0.7mm 0 !important;
+    border: 0 !important;
+    border-bottom: 1px solid #94a3b8 !important;
+    border-radius: 0 !important;
+    outline: 0 !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+    box-shadow: none !important;
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-size: 8.4pt !important;
+    line-height: 1.2 !important;
+  }
+
+  .av4-doc-body textarea {
+    min-height: 7mm !important;
+    resize: none !important;
+    white-space: pre-wrap !important;
+  }
+
+  .av4-doc-body select {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    padding-right: 0 !important;
+  }
+
+  .av4-doc-body input[type="date"]::-webkit-calendar-picker-indicator {
+    display: none !important;
+  }
+
+  .av4-doc-body input[type="checkbox"] {
+    display: inline-block !important;
+    width: 3mm !important;
+    height: 3mm !important;
+    min-width: 3mm !important;
+    margin: 0 1.4mm 0 0 !important;
+    accent-color: #0d6f9f !important;
+    vertical-align: middle !important;
+  }
+
+  .av4-doc-body p,
+  .av4-doc-body .text-sm,
+  .av4-doc-body .text-slate-600,
+  .av4-doc-body .text-slate-700,
+  .av4-doc-body .text-gray-700 {
+    font-size: 7.9pt !important;
+    line-height: 1.32 !important;
+    color: #334155 !important;
+  }
+
+  .av4-doc-body .font-semibold {
+    font-weight: 700 !important;
+  }
+
+  /* Society details: same full-width line presentation as page 1. */
+  .av4-print-societa {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+
+  .av4-print-societa > .grid {
+    display: block !important;
+  }
+
+  .av4-print-societa > .grid > div {
+    display: block !important;
+    margin: 0 0 1.5mm !important;
+  }
+
+  .av4-print-societa .rounded-lg.border,
+  .av4-print-societa .av4-titolari-root {
+    margin: 1.8mm 0 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #ffffff !important;
+  }
+
+  /* Beneficial owners: print-only flat view with labels and lines. */
+  .av4-titolari-root > :not(.av4-titolari-print) {
+    display: none !important;
+  }
+
+  .av4-titolari-root {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #ffffff !important;
+  }
+
+  .av4-titolari-print {
+    display: block !important;
+    margin: 1.8mm 0 0 !important;
+  }
+
+  .av4-titolari-print-title {
+    margin: 0 0 1.5mm !important;
+    color: #111827 !important;
+    font-size: 10pt !important;
+    font-weight: 800 !important;
+  }
+
+  .av4-print-persona {
+    margin: 0 0 2.4mm !important;
+    padding: 0 !important;
+    break-inside: avoid-page !important;
+    page-break-inside: avoid !important;
+  }
+
+  .av4-print-field {
+    margin: 0 0 1.25mm !important;
+  }
+
+  .av4-print-field-label {
+    margin-bottom: 0.3mm !important;
+    color: #334155 !important;
+    font-size: 7.3pt !important;
+    line-height: 1.12 !important;
+    font-weight: 700 !important;
+  }
+
+  .av4-print-field-value {
+    min-height: 4.5mm !important;
+    padding: 0.55mm 0 0.65mm !important;
+    border-bottom: 1px solid #94a3b8 !important;
+    color: #111827 !important;
+    font-size: 8.3pt !important;
+    line-height: 1.15 !important;
+  }
+
+  .av4-print-empty {
+    color: #64748b !important;
+    font-size: 7.8pt !important;
+  }
+
+  /* Legal attachment = page 5. */
+  .av4-doc-legal {
+    margin: 0 !important;
+    padding: 2mm 0 0 !important;
+    border: 0 !important;
+    border-top: 1.5px solid #0d6f9f !important;
+    border-radius: 0 !important;
+    background: #ffffff !important;
+    break-before: page !important;
+    page-break-before: always !important;
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+    color: #1f2937 !important;
+    text-align: justify !important;
+  }
+
+  .av4-doc-legal h3 {
+    margin: 0 0 2mm !important;
+    color: #111827 !important;
+    font-size: 10.3pt !important;
+    line-height: 1.12 !important;
+    font-weight: 800 !important;
+    text-align: left !important;
+  }
+
+  .av4-doc-legal .whitespace-pre-line {
+    font-size: 7pt !important;
+    line-height: 1.28 !important;
+    text-align: justify !important;
+  }
+
+  .shadow,
+  .shadow-sm {
+    box-shadow: none !important;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+`;
+
+// Insert a raw style tag so modern paged-media margin boxes reach Chromium unchanged.
+replaceOrFail(
+  "paged print style",
+  '      <style jsx global>{`',
+  `      <style>{\`${pagedPrintCss.replace(/`/g, "\\`")}\`}</style>\n\n      <style jsx global>{\``
+);
 
 fs.writeFileSync(pagePath, source, "utf8");
-console.log("AV4 stampa professionale v2: header ripetuto, 5 pagine, società/titolari flat e firma accorpata");
+console.log("AV4 stampa professionale v3: header/footer @page, 5 pagine e nessuna intestazione nel flusso");
