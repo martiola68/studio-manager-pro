@@ -36,6 +36,7 @@ const patches = [
   "scripts/fix-redditivita-listino-save-fallback.mjs",
   "scripts/fix-redditivita-client-detail-integrity.mjs",
   "scripts/patch-av4-public.mjs",
+  "scripts/patch-av4-print-professionale.mjs",
 ];
 
 for (const script of patches) {
