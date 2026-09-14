@@ -34,6 +34,7 @@ const patches = [
   "scripts/patch-redditivita-listino-professionale.mjs",
   "scripts/patch-redditivita-listino-db.mjs",
   "scripts/fix-redditivita-listino-save-fallback.mjs",
+  "scripts/fix-redditivita-client-detail-integrity.mjs",
 ];
 
 for (const script of patches) {
