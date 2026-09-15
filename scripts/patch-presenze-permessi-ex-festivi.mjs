@@ -3,6 +3,24 @@ import fs from "node:fs";
 const path = "src/pages/presenze/index.tsx";
 let source = fs.readFileSync(path, "utf8");
 
+// Il sorgente aggiornato gestisce PF direttamente. In questo caso la vecchia patch
+// non deve cercare gli anchor legacy; normalizziamo solo l'eventuale blocco export.
+if (source.includes("permessiPfOre") || source.includes("isPermessoPfCode")) {
+  const brokenExportGrouping = `        if (!acc[codiceDitta]) acc[codiceDitta].push(dipendente);`;
+  const fixedExportGrouping = `        if (!acc[codiceDitta]) acc[codiceDitta] = [];
+        acc[codiceDitta].push(dipendente);`;
+
+  if (source.includes(brokenExportGrouping)) {
+    source = source.replace(brokenExportGrouping, fixedExportGrouping);
+    fs.writeFileSync(path, source, "utf8");
+    console.log("✓ Presenze PF già nel sorgente; corretto raggruppamento export paghe");
+  } else {
+    console.log("✓ Presenze PF già nel sorgente; patch legacy non necessaria");
+  }
+
+  process.exit(0);
+}
+
 if (source.includes("permessiExFestiviOre")) {
   console.log("✓ Presenze PF già applicati");
   process.exit(0);
