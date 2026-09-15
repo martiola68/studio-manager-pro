@@ -48,6 +48,7 @@ const patches = [
   "scripts/patch-controllo-gestione-software-dinamico.mjs",
   "scripts/patch-menu-revisione-controllo-unificato.mjs",
   "scripts/patch-menu-studio-archivi-base.mjs",
+  "scripts/patch-menu-ribbon-multilivello.mjs",
   "scripts/patch-menu-ordine-principale.mjs",
   "scripts/patch-av4-public.mjs",
   "scripts/patch-av4-print-professionale.mjs",
