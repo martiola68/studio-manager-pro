@@ -61,6 +61,19 @@ type Presenza = {
   generata_da_richiesta_ferie_permessi?: boolean | null;
 };
 
+type RichiestaFeriePermessi = {
+  id: string;
+  studio_id: string;
+  utente_id: string;
+  tipo_richiesta: 'ferie' | 'permesso';
+  tipo_permesso: 'P' | 'PF' | '104' | 'AL' | null;
+  data_inizio: string;
+  data_fine: string | null;
+  giorni: number | null;
+  ore: number | null;
+  stato: 'inviata' | 'approvata' | 'rifiutata' | 'revocata';
+};
+
 type DayInfo = {
   date: string;
   day: number;
@@ -77,6 +90,7 @@ type RowSummary = {
   malattia: number;
   festivi: number;
   permessiOre: number;
+  permessiPfOre: number;
   allattamentoOre: number;
   permessi104Ore: number;
 };
@@ -202,12 +216,16 @@ function isPermessoCode(code: string) {
   return /^P\d+(\.\d+)?$/.test(code);
 }
 
+function isPermessoPfCode(code: string) {
+  return /^PF\d+(\.\d+)?$/.test(code);
+}
+
 function isPermesso104Code(code: string) {
   return /^P\d+(\.\d+)?\.104$/.test(code);
 }
 
 function getPermessoHours(code: string) {
-  return Number(code.replace('P', '').replace('.104', ''));
+  return Number(code.replace(/^PF/, '').replace(/^P/, '').replace(/\.104$/, ''));
 }
 
 function formatHours(value: number) {
@@ -227,6 +245,7 @@ function buildQuarterHourCodes(suffix = '') {
 
 function getCellClass(code: string) {
   if (isPermesso104Code(code)) return 'bg-pink-100 text-pink-800 border-pink-200';
+  if (isPermessoPfCode(code)) return 'bg-amber-100 text-amber-900 border-amber-200';
   if (isPermessoCode(code)) return 'bg-orange-100 text-orange-800 border-orange-200';
   return PRESENCE_COLORS[code] ?? 'bg-white text-gray-800 border-gray-200';
 }
@@ -254,16 +273,10 @@ function summarize(codes: string[]): RowSummary {
       if (code === 'M') acc.malattia += 1;
       if (code === 'N') acc.festivi += 1;
       if (isPermessoCode(code)) acc.permessiOre += getPermessoHours(code);
+      if (isPermessoPfCode(code)) acc.permessiPfOre += getPermessoHours(code);
       if (isPermesso104Code(code)) acc.permessi104Ore += getPermessoHours(code);
-      if (code === 'AL1') {
-  acc.allattamentoOre += 1;
-  acc.permessiOre += 1;
-}
-
-if (code === 'AL2') {
-  acc.allattamentoOre += 2;
-  acc.permessiOre += 2;
-}
+      if (code === 'AL1') acc.allattamentoOre += 1;
+      if (code === 'AL2') acc.allattamentoOre += 2;
 
       return acc;
     },
@@ -274,6 +287,7 @@ if (code === 'AL2') {
       malattia: 0,
       festivi: 0,
       permessiOre: 0,
+      permessiPfOre: 0,
       permessi104Ore: 0,
       allattamentoOre: 0,
     },
@@ -297,7 +311,7 @@ function getPresenceHours(code: string, dailyHours: number) {
   if (code === 'AL1') return 1;
   if (code === 'AL2') return 2;
 
-  if (isPermessoCode(code) || isPermesso104Code(code)) {
+  if (isPermessoCode(code) || isPermessoPfCode(code) || isPermesso104Code(code)) {
     return getPermessoHours(code);
   }
 
@@ -380,6 +394,7 @@ export default function PresenzePage() {
   const [codici, setCodici] = useState<CodicePresenza[]>([]);
   const [festivita, setFestivita] = useState<Festivita[]>([]);
   const [dipendenti, setDipendenti] = useState<Dipendente[]>([]);
+  const [richiesteFeriePermessi, setRichiesteFeriePermessi] = useState<RichiestaFeriePermessi[]>([]);
   const [values, setValues] = useState<Record<string, string>>({});
   const [lockedCells, setLockedCells] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
@@ -512,6 +527,7 @@ const days = useMemo<DayInfo[]>(() => {
         setAccessDenied(true);
         setCurrentUser(typedUser);
         setDipendenti([]);
+        setRichiesteFeriePermessi([]);
         setValues({});
         return;
       }
@@ -609,9 +625,36 @@ const days = useMemo<DayInfo[]>(() => {
       const employeeIds = loadedDipendenti.map((item) => item.utente_id);
 
       if (employeeIds.length === 0) {
+        setRichiesteFeriePermessi([]);
         setValues({});
         return;
       }
+
+      const { data: richiesteData, error: richiesteError } = await supabase
+        .from('tbferie_permessi_richieste')
+        .select(`
+          id,
+          studio_id,
+          utente_id,
+          tipo_richiesta,
+          tipo_permesso,
+          data_inizio,
+          data_fine,
+          giorni,
+          ore,
+          stato
+        `)
+        .eq('studio_id', typedUser.studio_id)
+        .lte('data_inizio', endDate)
+        .in('utente_id', employeeIds)
+        .in('stato', ['inviata', 'approvata']);
+
+      if (richiesteError) throw richiesteError;
+
+      const loadedRichieste = ((richiesteData ?? []) as RichiestaFeriePermessi[]).filter(
+        (richiesta) => (richiesta.data_fine || richiesta.data_inizio) >= startDate,
+      );
+      setRichiesteFeriePermessi(loadedRichieste);
 
       const { data: presenzeData, error: presenzeError } = await supabase
         .from('tbpresenze_dipendenti')
@@ -732,6 +775,67 @@ const getCode = (utenteId: string, day: DayInfo) => {
   const getSummaryForEmployee = (utenteId: string) => {
     return summarize(days.map((day) => getCode(utenteId, day)));
   };
+
+  const riepilogoPermessi = useMemo(() => {
+    const totale = {
+      pRichiesto: 0,
+      pMese: 0,
+      pfRichiesto: 0,
+      pfMese: 0,
+      l104Richiesto: 0,
+      l104Mese: 0,
+      alRichiesto: 0,
+      alMese: 0,
+      ferieRichieste: 0,
+      feriePrese: 0,
+    };
+
+    dipendenti.forEach((dipendente) => {
+      const summary = summarize(
+        days.map((day) => {
+          if (
+            (dipendente.data_assunzione && day.date < dipendente.data_assunzione) ||
+            (dipendente.data_cessazione && day.date > dipendente.data_cessazione)
+          ) {
+            return '';
+          }
+
+          const savedCode = values[`${dipendente.utente_id}|${day.date}`];
+          if (savedCode) return savedCode;
+          if (day.isWeekend || day.isHoliday) return DEFAULT_NON_WORKDAY_CODE;
+          return '';
+        }),
+      );
+
+      totale.pMese += summary.permessiOre;
+      totale.pfMese += summary.permessiPfOre;
+      totale.l104Mese += summary.permessi104Ore;
+      totale.alMese += summary.allattamentoOre;
+      totale.feriePrese += summary.ferie;
+    });
+
+    richiesteFeriePermessi.forEach((richiesta) => {
+      if (richiesta.tipo_richiesta === 'permesso') {
+        const ore = Number(richiesta.ore || 0);
+        if (richiesta.tipo_permesso === 'PF') totale.pfRichiesto += ore;
+        else if (richiesta.tipo_permesso === '104') totale.l104Richiesto += ore;
+        else if (richiesta.tipo_permesso === 'AL') totale.alRichiesto += ore;
+        else totale.pRichiesto += ore;
+        return;
+      }
+
+      const fineRichiesta = richiesta.data_fine || richiesta.data_inizio;
+      totale.ferieRichieste += days.filter(
+        (day) =>
+          day.date >= richiesta.data_inizio &&
+          day.date <= fineRichiesta &&
+          !day.isWeekend &&
+          !day.isHoliday,
+      ).length;
+    });
+
+    return totale;
+  }, [days, dipendenti, richiesteFeriePermessi, values]);
 
 const validateRequiredWorkdays = () => {
   const today = new Date();
@@ -901,8 +1005,7 @@ if (rowsToUpsert.length === 0 && rowsToDelete.length === 0) {
     const dipendentiPerAzienda = dipendentiConCodici.reduce<Record<string, Dipendente[]>>(
       (acc, dipendente) => {
         const codiceDitta = dipendente.codice_ditta?.trim() || '';
-        if (!acc[codiceDitta]) acc[codiceDitta] = [];
-        acc[codiceDitta].push(dipendente);
+        if (!acc[codiceDitta]) acc[codiceDitta].push(dipendente);
         return acc;
       },
       {},
@@ -1101,12 +1204,55 @@ ${dipendentiXml}
             <CardTitle className="text-base">Periodo</CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="flex flex-wrap items-end gap-3">
-              <div className="min-w-[180px]">
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                  Mese
-                </label>
-                <select
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+              <div className="flex flex-1 flex-wrap gap-2">
+                <div className="min-w-[150px] rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 shadow-sm">
+                  <div className="text-xs font-semibold text-orange-900">Permesso P</div>
+                  <div className="mt-1 flex items-end justify-between gap-3">
+                    <div><div className="text-[10px] uppercase text-orange-700">Tot. richiesto</div><div className="text-sm font-bold text-orange-950">{formatHoursMinutes(riepilogoPermessi.pRichiesto)}</div></div>
+                    <div className="text-right"><div className="text-[10px] uppercase text-orange-700">Tot. mese</div><div className="text-sm font-bold text-orange-950">{formatHoursMinutes(riepilogoPermessi.pMese)}</div></div>
+                  </div>
+                </div>
+
+                <div className="min-w-[150px] rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 shadow-sm">
+                  <div className="text-xs font-semibold text-amber-900">Permesso PF</div>
+                  <div className="mt-1 flex items-end justify-between gap-3">
+                    <div><div className="text-[10px] uppercase text-amber-700">Tot. richiesto</div><div className="text-sm font-bold text-amber-950">{formatHoursMinutes(riepilogoPermessi.pfRichiesto)}</div></div>
+                    <div className="text-right"><div className="text-[10px] uppercase text-amber-700">Tot. mese</div><div className="text-sm font-bold text-amber-950">{formatHoursMinutes(riepilogoPermessi.pfMese)}</div></div>
+                  </div>
+                </div>
+
+                <div className="min-w-[150px] rounded-lg border border-pink-200 bg-pink-50 px-3 py-2 shadow-sm">
+                  <div className="text-xs font-semibold text-pink-900">Permesso L.104</div>
+                  <div className="mt-1 flex items-end justify-between gap-3">
+                    <div><div className="text-[10px] uppercase text-pink-700">Tot. richiesto</div><div className="text-sm font-bold text-pink-950">{formatHoursMinutes(riepilogoPermessi.l104Richiesto)}</div></div>
+                    <div className="text-right"><div className="text-[10px] uppercase text-pink-700">Tot. mese</div><div className="text-sm font-bold text-pink-950">{formatHoursMinutes(riepilogoPermessi.l104Mese)}</div></div>
+                  </div>
+                </div>
+
+                <div className="min-w-[150px] rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 shadow-sm">
+                  <div className="text-xs font-semibold text-teal-900">Allattamento AL</div>
+                  <div className="mt-1 flex items-end justify-between gap-3">
+                    <div><div className="text-[10px] uppercase text-teal-700">Tot. richiesto</div><div className="text-sm font-bold text-teal-950">{formatHoursMinutes(riepilogoPermessi.alRichiesto)}</div></div>
+                    <div className="text-right"><div className="text-[10px] uppercase text-teal-700">Tot. mese</div><div className="text-sm font-bold text-teal-950">{formatHoursMinutes(riepilogoPermessi.alMese)}</div></div>
+                  </div>
+                </div>
+
+                <div className="min-w-[150px] rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 shadow-sm">
+                  <div className="text-xs font-semibold text-sky-900">Ferie</div>
+                  <div className="mt-1 flex items-end justify-between gap-3">
+                    <div><div className="text-[10px] uppercase text-sky-700">Tot. richiesto</div><div className="text-sm font-bold text-sky-950">{riepilogoPermessi.ferieRichieste} gg</div></div>
+                    <div className="text-right"><div className="text-[10px] uppercase text-sky-700">Ferie prese</div><div className="text-sm font-bold text-sky-950">{riepilogoPermessi.feriePrese} gg</div></div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-end gap-3 xl:ml-auto">
+                <div className="min-w-[180px]">
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                    Mese
+                  </label>
+                  <select
   value={String(monthIndex)}
   onChange={(e) => setMonthIndex(Number(e.target.value))}
   className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -1117,13 +1263,13 @@ ${dipendentiXml}
     </option>
   ))}
 </select>
-              </div>
+                </div>
 
-              <div className="w-[120px]">
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                  Anno
-                </label>
-               <select
+                <div className="w-[120px]">
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                    Anno
+                  </label>
+                 <select
   value={String(year)}
   onChange={(e) => setYear(Number(e.target.value))}
   className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -1134,9 +1280,11 @@ ${dipendentiXml}
     </option>
   ))}
 </select>
+                </div>
               </div>
+            </div>
 
-              <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+            <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted-foreground">
                 <Badge className="border bg-green-100 text-green-800 hover:bg-green-100">
                   P ufficio
                 </Badge>
@@ -1161,7 +1309,9 @@ ${dipendentiXml}
                 <Badge className="border bg-pink-100 text-pink-800 hover:bg-pink-100">
                   P0.25.104-P8.104 L.104
                 </Badge>
-<div className="mt-3 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+            </div>
+
+            <div className="mt-3 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
  <p>
   Per i permessi orari è sufficiente inserire il codice del permesso
   (es. <strong>P2</strong>, <strong>P4</strong>, <strong>P1.104</strong>,
@@ -1178,8 +1328,6 @@ ${dipendentiXml}
     Sabati, domeniche e festivi vengono compilati automaticamente come non lavorativi.
   </p>
 </div>
-              </div>
-            </div>
           </CardContent>
         </Card>
 
