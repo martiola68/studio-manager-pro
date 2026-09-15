@@ -1,0 +1,39 @@
+name: Apply ferie permessi tipo ora
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/apply-ferie-permessi-tipo-ora-v1.yml
+      - supabase/migrations/20260915120000_add_tipo_permesso_ora_richiesta.sql
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply targeted migration
+        env:
+          PGHOST: db.ngeltlygytupgdjiagve.supabase.co
+          PGPORT: 5432
+          PGDATABASE: postgres
+          PGUSER: postgres
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PGSSLMODE: require
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20260915120000_add_tipo_permesso_ora_richiesta.sql
+
+      - name: Verify columns
+        env:
+          PGHOST: db.ngeltlygytupgdjiagve.supabase.co
+          PGPORT: 5432
+          PGDATABASE: postgres
+          PGUSER: postgres
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PGSSLMODE: require
+        run: |
+          set -euo pipefail
+          test "$(psql -Atc "select count(*) from information_schema.columns where table_schema='public' and table_name='tbferie_permessi_richieste' and column_name in ('tipo_permesso','ora_richiesta');")" = "2"
