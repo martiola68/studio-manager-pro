@@ -3,26 +3,88 @@ import fs from "node:fs";
 const path = "src/pages/presenze/index.tsx";
 let source = fs.readFileSync(path, "utf8");
 
+function patchRiepilogoPersonale() {
+  const blockStart = source.indexOf("  const riepilogoPermessi = useMemo(() => {");
+  const blockEnd = source.indexOf("const validateRequiredWorkdays", blockStart);
+
+  if (blockStart === -1 || blockEnd === -1) {
+    return false;
+  }
+
+  let block = source.slice(blockStart, blockEnd);
+  let changed = false;
+
+  const dipendentiAggregati = "    dipendenti.forEach((dipendente) => {";
+  const dipendenteLoggato = `    dipendenti
+      .filter((dipendente) => dipendente.utente_id === currentUser?.id)
+      .forEach((dipendente) => {`;
+
+  if (block.includes(dipendentiAggregati)) {
+    block = block.replace(dipendentiAggregati, dipendenteLoggato);
+    changed = true;
+  }
+
+  const richiesteAggregate = "    richiesteFeriePermessi.forEach((richiesta) => {";
+  const richiesteLoggato = `    richiesteFeriePermessi
+      .filter((richiesta) => richiesta.utente_id === currentUser?.id)
+      .forEach((richiesta) => {`;
+
+  if (block.includes(richiesteAggregate)) {
+    block = block.replace(richiesteAggregate, richiesteLoggato);
+    changed = true;
+  }
+
+  const depsAggregate = "  }, [days, dipendenti, richiesteFeriePermessi, values]);";
+  const depsPersonali = "  }, [currentUser?.id, days, dipendenti, richiesteFeriePermessi, values]);";
+
+  if (block.includes(depsAggregate)) {
+    block = block.replace(depsAggregate, depsPersonali);
+    changed = true;
+  }
+
+  if (changed) {
+    source = `${source.slice(0, blockStart)}${block}${source.slice(blockEnd)}`;
+  }
+
+  return changed;
+}
+
 // Il sorgente aggiornato gestisce PF direttamente. In questo caso la vecchia patch
-// non deve cercare gli anchor legacy; normalizziamo solo l'eventuale blocco export.
+// non deve cercare gli anchor legacy; normalizziamo solo l'eventuale blocco export
+// e rendiamo personale il riepilogo ferie/permessi delle card.
 if (source.includes("permessiPfOre") || source.includes("isPermessoPfCode")) {
+  let changed = false;
+
   const brokenExportGrouping = `        if (!acc[codiceDitta]) acc[codiceDitta].push(dipendente);`;
   const fixedExportGrouping = `        if (!acc[codiceDitta]) acc[codiceDitta] = [];
         acc[codiceDitta].push(dipendente);`;
 
   if (source.includes(brokenExportGrouping)) {
     source = source.replace(brokenExportGrouping, fixedExportGrouping);
+    changed = true;
+  }
+
+  if (patchRiepilogoPersonale()) {
+    changed = true;
+  }
+
+  if (changed) {
     fs.writeFileSync(path, source, "utf8");
-    console.log("✓ Presenze PF già nel sorgente; corretto raggruppamento export paghe");
+    console.log("✓ Presenze: PF compatibile e card riepilogo limitate al dipendente loggato");
   } else {
-    console.log("✓ Presenze PF già nel sorgente; patch legacy non necessaria");
+    console.log("✓ Presenze PF e riepilogo personale già applicati");
   }
 
   process.exit(0);
 }
 
 if (source.includes("permessiExFestiviOre")) {
-  console.log("✓ Presenze PF già applicati");
+  if (patchRiepilogoPersonale()) {
+    fs.writeFileSync(path, source, "utf8");
+    console.log("✓ Presenze PF già applicati; card riepilogo limitate al dipendente loggato");
+  } else {
+    console.log("✓ Presenze PF e riepilogo personale già applicati");
+  }
   process.exit(0);
 }
 
@@ -207,5 +269,7 @@ replaceOnce(
 "totale PF"
 );
 
+patchRiepilogoPersonale();
+
 fs.writeFileSync(path, source, "utf8");
-console.log("✓ Presenze: aggiunti PF0.25-PF8 e totale PF separato");
+console.log("✓ Presenze: aggiunti PF0.25-PF8, totale PF separato e riepilogo personale");
