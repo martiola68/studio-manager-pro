@@ -41,6 +41,7 @@ const patches = [
   "scripts/patch-permessi-legenda-quarti-ora.mjs",
   "scripts/patch-clienti-riferimenti-ordine-nome.mjs",
   "scripts/patch-scadenzari-operatori-attivi.mjs",
+  "scripts/patch-scadenze-forza-alert.mjs",
   "scripts/patch-av4-public.mjs",
   "scripts/patch-av4-print-professionale.mjs",
   "scripts/fix-av4-public-validation-display.mjs",
