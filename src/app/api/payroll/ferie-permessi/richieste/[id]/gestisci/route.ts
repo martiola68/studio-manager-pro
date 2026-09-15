@@ -19,6 +19,16 @@ function formatDateIT(date: string | null) {
   return new Date(`${date}T00:00:00`).toLocaleDateString('it-IT');
 }
 
+function getCodicePermesso(tipoPermesso: string | null | undefined, oreValue: unknown) {
+  const ore = Number(oreValue);
+  const tipo = String(tipoPermesso || 'P').toUpperCase();
+
+  if (tipo === 'PF') return `PF${ore}`;
+  if (tipo === '104') return `P${ore}.104`;
+  if (tipo === 'AL') return `AL${ore}`;
+  return `P${ore}`;
+}
+
 async function sendEmailFromLoggedUser(params: {
   request: Request;
   token: string;
@@ -202,84 +212,74 @@ export async function POST(
       const codicePresenza =
         richiesta.tipo_richiesta === 'ferie'
           ? 'F'
-          : `P${Number(richiesta.ore)}`;
+          : getCodicePermesso(richiesta.tipo_permesso, richiesta.ore);
 
-  const start = new Date(`${richiesta.data_inizio}T00:00:00`);
-const end = new Date(
-  `${richiesta.data_fine || richiesta.data_inizio}T00:00:00`,
-);
+      const start = new Date(`${richiesta.data_inizio}T00:00:00`);
+      const end = new Date(
+        `${richiesta.data_fine || richiesta.data_inizio}T00:00:00`,
+      );
 
-/*
- * Recuperiamo le festività comprese nel periodo richiesto.
- * Le festività NON devono mai essere conteggiate come ferie.
- */
-const { data: festivitaData, error: festivitaError } =
-  await (supabaseAdmin as any)
-    .from('tbfestivita')
-    .select('data_festivita')
-    .gte('data_festivita', richiesta.data_inizio)
-    .lte(
-      'data_festivita',
-      richiesta.data_fine || richiesta.data_inizio,
-    )
-    .in('tipo', ['nazionale', 'locale', 'aziendale']);
+      const { data: festivitaData, error: festivitaError } =
+        await (supabaseAdmin as any)
+          .from('tbfestivita')
+          .select('data_festivita')
+          .gte('data_festivita', richiesta.data_inizio)
+          .lte(
+            'data_festivita',
+            richiesta.data_fine || richiesta.data_inizio,
+          )
+          .in('tipo', ['nazionale', 'locale', 'aziendale']);
 
-if (festivitaError) {
-  throw festivitaError;
-}
+      if (festivitaError) {
+        throw festivitaError;
+      }
 
-const festivita = new Set<string>(
-  (festivitaData || []).map(
-    (f: { data_festivita: string }) => f.data_festivita,
-  ),
-);
+      const festivita = new Set<string>(
+        (festivitaData || []).map(
+          (f: { data_festivita: string }) => f.data_festivita,
+        ),
+      );
 
-const rows: any[] = [];
+      const rows: any[] = [];
 
-for (
-  let d = new Date(start);
-  d <= end;
-  d.setDate(d.getDate() + 1)
-) {
-  const dataPresenza =
-    `${d.getFullYear()}-` +
-    `${String(d.getMonth() + 1).padStart(2, '0')}-` +
-    `${String(d.getDate()).padStart(2, '0')}`;
+      for (
+        let d = new Date(start);
+        d <= end;
+        d.setDate(d.getDate() + 1)
+      ) {
+        const dataPresenza =
+          `${d.getFullYear()}-` +
+          `${String(d.getMonth() + 1).padStart(2, '0')}-` +
+          `${String(d.getDate()).padStart(2, '0')}`;
 
-  const giornoSettimana = d.getDay();
+        const giornoSettimana = d.getDay();
+        const isSabato = giornoSettimana === 6;
+        const isDomenica = giornoSettimana === 0;
+        const isFestivo = festivita.has(dataPresenza);
 
-  const isSabato = giornoSettimana === 6;
-  const isDomenica = giornoSettimana === 0;
-  const isFestivo = festivita.has(dataPresenza);
+        let codiceGiorno = codicePresenza;
 
-  /*
-   * FERIE
-   *
-   * Sabato, domenica e festività devono essere registrati
-   * sempre come N.
-   *
-   * Solo i giorni lavorativi vengono registrati come F.
-   */
-  let codiceGiorno = codicePresenza;
+        if (
+          richiesta.tipo_richiesta === 'ferie' &&
+          (isSabato || isDomenica || isFestivo)
+        ) {
+          codiceGiorno = 'N';
+        }
 
-  if (
-    richiesta.tipo_richiesta === 'ferie' &&
-    (isSabato || isDomenica || isFestivo)
-  ) {
-    codiceGiorno = 'N';
-  }
-
-  rows.push({
-    studio_id: richiesta.studio_id,
-    utente_id: richiesta.utente_id,
-    data_presenza: dataPresenza,
-    codice_presenza: codiceGiorno,
-    note: richiesta.motivazione || null,
-    inserito_da: gestore.id,
-    richiesta_ferie_permessi_id: richiesta.id,
-    generata_da_richiesta_ferie_permessi: true,
-  });
-}
+        rows.push({
+          studio_id: richiesta.studio_id,
+          utente_id: richiesta.utente_id,
+          data_presenza: dataPresenza,
+          codice_presenza: codiceGiorno,
+          note:
+            richiesta.tipo_richiesta === 'permesso' && richiesta.ora_richiesta
+              ? `${richiesta.motivazione ? `${richiesta.motivazione} - ` : ''}Ora richiesta: ${String(richiesta.ora_richiesta).slice(0, 5)}`
+              : richiesta.motivazione || null,
+          inserito_da: gestore.id,
+          richiesta_ferie_permessi_id: richiesta.id,
+          generata_da_richiesta_ferie_permessi: true,
+        });
+      }
 
       const { error: presenzeError } = await (supabaseAdmin as any)
         .from('tbpresenze_dipendenti')
@@ -322,7 +322,7 @@ for (
         ${
           richiesta.tipo_richiesta === 'ferie'
             ? `<p><strong>Data fine:</strong> ${escapeHtml(formatDateIT(richiesta.data_fine || richiesta.data_inizio))}</p><p><strong>Giorni:</strong> ${richiesta.giorni}</p>`
-            : `<p><strong>Ore:</strong> ${richiesta.ore}</p>`
+            : `<p><strong>Tipo permesso:</strong> ${escapeHtml(richiesta.tipo_permesso || 'P')}</p><p><strong>Ora richiesta:</strong> ${escapeHtml(String(richiesta.ora_richiesta || '').slice(0, 5))}</p><p><strong>Ore permesso:</strong> ${richiesta.ore}</p>`
         }
         ${noteResponsabile ? `<p><strong>Note responsabile:</strong><br/>${escapeHtml(noteResponsabile)}</p>` : ''}
       </div>
@@ -334,7 +334,7 @@ for (
       studioId: String(gestore.studio_id),
       senderUserId: String(gestore.id),
       toEmail: String(richiesta.email_richiedente),
-      subject: `Richiesta ${richiesta.tipo_richiesta} ${statoLabel}`,
+      subject: `Richiesta ${richiesta.tipo_richiesta === 'permesso' ? `permesso ${richiesta.tipo_permesso || 'P'}` : 'ferie'} ${statoLabel}`,
       html,
     });
 
