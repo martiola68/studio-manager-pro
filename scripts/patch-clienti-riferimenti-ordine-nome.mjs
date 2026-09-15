@@ -4,37 +4,49 @@ const filePath = "src/pages/clienti/index.tsx";
 let source = fs.readFileSync(filePath, "utf8");
 
 const startMarker = '{/* RIFERIMENTI */}';
-const endMarker = '{/* COMUNICAZIONI */}';
-const start = source.indexOf(startMarker);
-const end = source.indexOf(endMarker, start + startMarker.length);
+const contactMarker = '<Label htmlFor="contatto1_id">Contatto 1</Label>';
 
-if (start === -1 || end === -1 || end <= start) {
-  throw new Error("[clienti-riferimenti-ordine-nome] Sezione RIFERIMENTI non trovata");
+const start = source.indexOf(startMarker);
+const contact = source.indexOf(contactMarker, start + startMarker.length);
+
+if (start === -1 || contact === -1 || contact <= start) {
+  throw new Error(
+    "[clienti-riferimenti-ordine-nome] Blocco delle quattro select RIFERIMENTI non trovato"
+  );
 }
 
 const before = source.slice(0, start);
-let section = source.slice(start, end);
-const after = source.slice(end);
+let targetSection = source.slice(start, contact);
+const after = source.slice(contact);
 
 const cognomeNomeA = '${safeString(a.cognome)} ${safeString(a.nome)}';
 const nomeCognomeA = '${safeString(a.nome)} ${safeString(a.cognome)}';
 const cognomeNomeB = '${safeString(b.cognome)} ${safeString(b.nome)}';
 const nomeCognomeB = '${safeString(b.nome)} ${safeString(b.cognome)}';
 
-const countA = section.split(cognomeNomeA).length - 1;
-const countB = section.split(cognomeNomeB).length - 1;
+const oldA = targetSection.split(cognomeNomeA).length - 1;
+const oldB = targetSection.split(cognomeNomeB).length - 1;
+const newA = targetSection.split(nomeCognomeA).length - 1;
+const newB = targetSection.split(nomeCognomeB).length - 1;
 
-if (countA !== 4 || countB !== 4) {
+// Le quattro select interessate sono:
+// Utente Fiscale, Professionista Fiscale, Utente Payroll, Professionista Payroll.
+// Contatto 1 resta volutamente fuori da questo blocco.
+if (oldA === 4 && oldB === 4) {
+  targetSection = targetSection
+    .split(cognomeNomeA).join(nomeCognomeA)
+    .split(cognomeNomeB).join(nomeCognomeB);
+} else if (oldA === 0 && oldB === 0 && newA === 4 && newB === 4) {
+  // Patch già applicata: build idempotente.
+} else {
   throw new Error(
-    `[clienti-riferimenti-ordine-nome] Attese 4 select da correggere, trovate A=${countA}, B=${countB}`
+    `[clienti-riferimenti-ordine-nome] Stato inatteso nelle quattro select: oldA=${oldA}, oldB=${oldB}, newA=${newA}, newB=${newB}`
   );
 }
 
-section = section
-  .split(cognomeNomeA).join(nomeCognomeA)
-  .split(cognomeNomeB).join(nomeCognomeB);
-
-source = before + section + after;
+source = before + targetSection + after;
 fs.writeFileSync(filePath, source, "utf8");
 
-console.log("✓ Clienti/Riferimenti: Utente Fiscale, Professionista Fiscale, Utente Payroll e Professionista Payroll ordinati per Nome crescente");
+console.log(
+  "✓ Clienti/Riferimenti: le 4 select fiscali/payroll sono ordinate per Nome crescente; Contatto 1 invariato"
+);
