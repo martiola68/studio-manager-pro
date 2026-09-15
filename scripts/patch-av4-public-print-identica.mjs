@@ -23,6 +23,11 @@ function replaceOnce(source, from, to, label) {
 // Cambia esclusivamente la sorgente dati: token pubblico -> API pubblica sicura.
 // -----------------------------------------------------------------------------
 publicPrintSource = publicPrintSource.replace(
+  'import { useEffect, useMemo, useState } from "react";',
+  'import { useEffect, useMemo, useRef, useState } from "react";'
+);
+
+publicPrintSource = publicPrintSource.replace(
   'import { getSupabaseClient } from "@/lib/supabaseClient";\n',
   ""
 );
@@ -41,6 +46,13 @@ publicPrintSource = replaceOnce(
   "token route stampa pubblica"
 );
 
+publicPrintSource = replaceOnce(
+  publicPrintSource,
+  `  const [error, setError] = useState<string | null>(null);`,
+  `  const [error, setError] = useState<string | null>(null);\n  const autoPrintStarted = useRef(false);`,
+  "stato auto stampa"
+);
+
 const effectStart = `  useEffect(() => {\n    if (!router.isReady || !id) return;`;
 const effectEnd = `  }, [router.isReady, id]);`;
 const startIndex = publicPrintSource.indexOf(effectStart);
@@ -57,17 +69,40 @@ publicPrintSource =
   publicEffect +
   publicPrintSource.slice(endIndex + effectEnd.length);
 
-// Testo caricamento specifico, senza alterare il format grafico/documentale.
-publicPrintSource = publicPrintSource.replace(
-  "Caricamento stampa AV4...",
-  "Caricamento stampa AV4..."
-);
+// Appena i dati sono caricati, apre direttamente la finestra nativa di stampa.
+// Dopo Salva o Annulla chiude la scheda di stampa e torna al form AV4 rimasto aperto.
+const renderAnchor = `  if (loading) {`;
+const autoPrintEffect = `  useEffect(() => {\n    if (loading || error || !record || !token || autoPrintStarted.current) return;\n\n    autoPrintStarted.current = true;\n\n    const tornaAlModello = () => {\n      window.removeEventListener("afterprint", tornaAlModello);\n\n      // La pagina è stata aperta da "Stampa / Salva PDF": chiudendola\n      // il browser torna automaticamente alla scheda del modello AV4 pubblico.\n      window.close();\n\n      // Fallback per browser che impediscono window.close().\n      window.setTimeout(() => {\n        if (!window.closed) {\n          window.location.replace(\n            \`/compilazione-av4/\${encodeURIComponent(token)}\`\n          );\n        }\n      }, 250);\n    };\n\n    window.addEventListener("afterprint", tornaAlModello);\n\n    const timer = window.setTimeout(() => {\n      window.print();\n    }, 150);\n\n    return () => {\n      window.clearTimeout(timer);\n      window.removeEventListener("afterprint", tornaAlModello);\n    };\n  }, [loading, error, record, token]);\n\n`;
+
+if (!publicPrintSource.includes(autoPrintEffect)) {
+  const renderIndex = publicPrintSource.indexOf(renderAnchor);
+  if (renderIndex < 0) {
+    throw new Error("[AV4 public print] Anchor render/loading non trovato");
+  }
+  publicPrintSource =
+    publicPrintSource.slice(0, renderIndex) +
+    autoPrintEffect +
+    publicPrintSource.slice(renderIndex);
+}
+
+// Nella copia pubblica non serve il secondo toolbar con Indietro/Stampa:
+// il dialogo di stampa viene aperto automaticamente.
+const toolbarStart = `        <div className="no-print mx-auto flex max-w-6xl items-center justify-between p-4">`;
+const printAreaStart = `        <div id="print-area"`;
+const toolbarIndex = publicPrintSource.indexOf(toolbarStart);
+const printAreaIndex = publicPrintSource.indexOf(printAreaStart, toolbarIndex);
+if (toolbarIndex >= 0 && printAreaIndex > toolbarIndex) {
+  publicPrintSource =
+    publicPrintSource.slice(0, toolbarIndex) +
+    publicPrintSource.slice(printAreaIndex);
+}
 
 fs.mkdirSync(path.dirname(publicPrintPath), { recursive: true });
 fs.writeFileSync(publicPrintPath, publicPrintSource, "utf8");
 
 // -----------------------------------------------------------------------------
 // FORM PUBBLICO: il pulsante apre la COPIA PUBBLICA del documento, non l'area AML.
+// La pagina di stampa lancerà subito il dialogo nativo Salva/Annulla.
 // -----------------------------------------------------------------------------
 publicFormSource = replaceOnce(
   publicFormSource,
@@ -78,8 +113,7 @@ publicFormSource = replaceOnce(
 
 fs.writeFileSync(publicFormPath, publicFormSource, "utf8");
 
-// Verifiche di sicurezza: la pagina interna deve restare intatta e il pubblico
-// non deve mai puntare a /antiriciclaggio/stampa-av4.
+// Verifiche di sicurezza e comportamento.
 const normalAfter = fs.readFileSync(normalPrintPath, "utf8");
 if (normalAfter !== normalSource) {
   throw new Error("[AV4 public print] La stampa AV4 normale è stata modificata: operazione annullata");
@@ -90,5 +124,11 @@ if (publicFormSource.includes("/antiriciclaggio/stampa-av4?token=")) {
 if (!publicPrintSource.includes("/api/public/av4/stampa?token=")) {
   throw new Error("[AV4 public print] La copia pubblica non usa l'API token dedicata");
 }
+if (!publicPrintSource.includes("window.print();")) {
+  throw new Error("[AV4 public print] Auto-apertura dialogo stampa non applicata");
+}
+if (publicPrintSource.includes('className="no-print mx-auto flex max-w-6xl')) {
+  throw new Error("[AV4 public print] Toolbar intermedio ancora presente nella stampa pubblica");
+}
 
-console.log("✓ AV4 pubblico: format copiato dalla stampa normale in pagina pubblica autonoma, senza controllo licenza AML");
+console.log("✓ AV4 pubblico: un click apre direttamente il dialogo stampa; alla chiusura torna al modello AV4");
