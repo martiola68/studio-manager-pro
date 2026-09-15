@@ -37,10 +37,34 @@ if (oldA === 4 && oldB === 4) {
     .split(cognomeNomeA).join(nomeCognomeA)
     .split(cognomeNomeB).join(nomeCognomeB);
 } else if (oldA === 0 && oldB === 0 && newA === 4 && newB === 4) {
-  // Patch già applicata: build idempotente.
+  // Ordinamento già applicato: build idempotente.
 } else {
   throw new Error(
     `[clienti-riferimenti-ordine-nome] Stato inatteso nelle quattro select: oldA=${oldA}, oldB=${oldB}, newA=${newA}, newB=${newB}`
+  );
+}
+
+const activeFilter = '.filter((utente) => utente.attivo === true)';
+const activeFilterCount = targetSection.split(activeFilter).length - 1;
+
+if (activeFilterCount === 0) {
+  let replacements = 0;
+  targetSection = targetSection.replace(
+    /(\n\s*)\.slice\(\)(\n\s*)\.sort\(/g,
+    (_match, beforeSlice, beforeSort) => {
+      replacements += 1;
+      return `${beforeSlice}${activeFilter}${beforeSlice}.slice()${beforeSort}.sort(`;
+    }
+  );
+
+  if (replacements !== 4) {
+    throw new Error(
+      `[clienti-riferimenti-ordine-nome] Attese 4 select da filtrare per utenti attivi, trovate ${replacements}`
+    );
+  }
+} else if (activeFilterCount !== 4) {
+  throw new Error(
+    `[clienti-riferimenti-ordine-nome] Stato inatteso filtro utenti attivi: trovati ${activeFilterCount} filtri`
   );
 }
 
@@ -48,5 +72,5 @@ source = before + targetSection + after;
 fs.writeFileSync(filePath, source, "utf8");
 
 console.log(
-  "✓ Clienti/Riferimenti: le 4 select fiscali/payroll sono ordinate per Nome crescente; Contatto 1 invariato"
+  "✓ Clienti/Riferimenti: 4 select ordinate per Nome crescente e limitate agli utenti attivi; Contatto 1 invariato"
 );
