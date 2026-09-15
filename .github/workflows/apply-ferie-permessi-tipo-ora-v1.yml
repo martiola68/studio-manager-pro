@@ -16,24 +16,34 @@ jobs:
 
       - name: Apply targeted migration
         env:
-          PGHOST: db.ngeltlygytupgdjiagve.supabase.co
-          PGPORT: 5432
-          PGDATABASE: postgres
-          PGUSER: postgres
-          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-          PGSSLMODE: require
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           set -euo pipefail
-          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20260915120000_add_tipo_permesso_ora_richiesta.sql
+          jq -Rs '{query: ., read_only: false}' \
+            supabase/migrations/20260915120000_add_tipo_permesso_ora_richiesta.sql \
+            > /tmp/migration-payload.json
+
+          curl --fail-with-body --silent --show-error \
+            -X POST \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data-binary @/tmp/migration-payload.json \
+            https://api.supabase.com/v1/projects/ngeltlygytupgdjiagve/database/query
 
       - name: Verify columns
         env:
-          PGHOST: db.ngeltlygytupgdjiagve.supabase.co
-          PGPORT: 5432
-          PGDATABASE: postgres
-          PGUSER: postgres
-          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-          PGSSLMODE: require
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           set -euo pipefail
-          test "$(psql -Atc "select count(*) from information_schema.columns where table_schema='public' and table_name='tbferie_permessi_richieste' and column_name in ('tipo_permesso','ora_richiesta');")" = "2"
+          jq -n '{query: "select count(*)::int as count from information_schema.columns where table_schema='"'"'public'"'"' and table_name='"'"'tbferie_permessi_richieste'"'"' and column_name in ('"'"'tipo_permesso'"'"','"'"'ora_richiesta'"'"');", read_only: true}' \
+            > /tmp/verify-payload.json
+
+          response=$(curl --fail-with-body --silent --show-error \
+            -X POST \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data-binary @/tmp/verify-payload.json \
+            https://api.supabase.com/v1/projects/ngeltlygytupgdjiagve/database/query)
+
+          echo "$response"
+          test "$(echo "$response" | jq -r '.[0].count // .count // empty')" = "2"
