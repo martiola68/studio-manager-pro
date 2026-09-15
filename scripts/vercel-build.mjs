@@ -44,6 +44,7 @@ const patches = [
   "scripts/patch-scadenze-forza-alert.mjs",
   "scripts/fix-scadenze-resolver-prima-studio.mjs",
   "scripts/patch-scadenze-rimuovi-link-email.mjs",
+  "scripts/patch-utenti-alert-scadenze-calendario.mjs",
   "scripts/patch-av4-public.mjs",
   "scripts/patch-av4-print-professionale.mjs",
   "scripts/fix-av4-public-validation-display.mjs",
