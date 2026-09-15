@@ -6,6 +6,8 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
+const TIPI_PERMESSO = ['P', 'PF', '104', 'AL'] as const;
+
 function escapeHtml(value: string) {
   return String(value || '')
     .replace(/&/g, '&amp;')
@@ -95,6 +97,8 @@ export async function POST(request: Request) {
     const body = await request.json();
 
     const tipoRichiesta = body.tipo_richiesta;
+    const tipoPermesso = body.tipo_permesso ? String(body.tipo_permesso).trim().toUpperCase() : null;
+    const oraRichiesta = body.ora_richiesta ? String(body.ora_richiesta).trim() : null;
     const dataInizio = body.data_inizio;
     const dataFine = body.data_fine || body.data_inizio;
     const giorni = body.giorni ? Number(body.giorni) : null;
@@ -113,8 +117,34 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Giorni ferie obbligatori.' }, { status: 400 });
     }
 
-    if (tipoRichiesta === 'permesso' && !ore) {
-      return NextResponse.json({ success: false, error: 'Ore permesso obbligatorie.' }, { status: 400 });
+    if (tipoRichiesta === 'permesso') {
+      if (!tipoPermesso || !TIPI_PERMESSO.includes(tipoPermesso as (typeof TIPI_PERMESSO)[number])) {
+        return NextResponse.json(
+          { success: false, error: 'Tipo permesso non valido. Valori ammessi: P, PF, 104, AL.' },
+          { status: 400 },
+        );
+      }
+
+      if (!oraRichiesta || !/^([01]\d|2[0-3]):[0-5]\d$/.test(oraRichiesta)) {
+        return NextResponse.json(
+          { success: false, error: 'Ora richiesta obbligatoria e non valida.' },
+          { status: 400 },
+        );
+      }
+
+      if (!ore || ore <= 0 || ore > 8 || Math.round(ore * 4) !== ore * 4) {
+        return NextResponse.json(
+          { success: false, error: 'Le ore di permesso devono essere comprese tra 0,25 e 8, a intervalli di 15 minuti.' },
+          { status: 400 },
+        );
+      }
+
+      if (tipoPermesso === 'AL' && ![1, 2].includes(ore)) {
+        return NextResponse.json(
+          { success: false, error: 'Per il permesso AL sono ammesse 1 oppure 2 ore.' },
+          { status: 400 },
+        );
+      }
     }
 
     const { data: utente, error: userError } = await supabaseAdmin
@@ -150,6 +180,8 @@ export async function POST(request: Request) {
         studio_id: utente.studio_id,
         utente_id: utente.id,
         tipo_richiesta: tipoRichiesta,
+        tipo_permesso: tipoRichiesta === 'permesso' ? tipoPermesso : null,
+        ora_richiesta: tipoRichiesta === 'permesso' ? oraRichiesta : null,
         data_inizio: dataInizio,
         data_fine: tipoRichiesta === 'ferie' ? dataFine : null,
         giorni: tipoRichiesta === 'ferie' ? giorni : null,
@@ -165,38 +197,41 @@ export async function POST(request: Request) {
     if (insertError) throw insertError;
 
     function formatDateIT(date: string) {
-  return new Date(date).toLocaleDateString('it-IT');
-}
-    const html = `
-  <div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#111827;">
-    <p>Nuova richiesta ${tipoRichiesta === 'ferie' ? 'ferie' : 'permesso'}.</p>
-    <p><strong>Richiedente:</strong> ${escapeHtml(richiedente)}</p>
-    <p><strong>Data inizio:</strong> ${escapeHtml(formatDateIT(dataInizio))}</p>
-    ${
-      tipoRichiesta === 'ferie'
-        ? `<p><strong>Data fine:</strong> ${escapeHtml(formatDateIT(dataFine))}</p><p><strong>Giorni:</strong> ${giorni}</p>`
-        : `<p><strong>Ore:</strong> ${ore}</p>`
+      return new Date(`${date}T00:00:00`).toLocaleDateString('it-IT');
     }
-    ${motivazione ? `<p><strong>Note:</strong><br/>${escapeHtml(motivazione)}</p>` : ''}
-    <p>Accedi al gestionale per approvare o rifiutare la richiesta.</p>
-  </div>
-`;
 
-await sendEmailFromLoggedUser({
-  request,
-  token,
-  studioId: String(utente.studio_id),
-  senderUserId: String(utente.id),
-  toEmail: emailResponsabile,
-  subject: `Nuova richiesta ${tipoRichiesta === 'ferie' ? 'ferie' : 'permesso'} - ${richiedente}`,
-  html,
-});
-    
+    const html = `
+      <div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#111827;">
+        <p>Nuova richiesta ${tipoRichiesta === 'ferie' ? 'ferie' : 'permesso'}.</p>
+        <p><strong>Richiedente:</strong> ${escapeHtml(richiedente)}</p>
+        <p><strong>Data inizio:</strong> ${escapeHtml(formatDateIT(dataInizio))}</p>
+        ${
+          tipoRichiesta === 'ferie'
+            ? `<p><strong>Data fine:</strong> ${escapeHtml(formatDateIT(dataFine))}</p><p><strong>Giorni:</strong> ${giorni}</p>`
+            : `<p><strong>Tipo permesso:</strong> ${escapeHtml(tipoPermesso || '')}</p><p><strong>Ora richiesta:</strong> ${escapeHtml(oraRichiesta || '')}</p><p><strong>Ore permesso:</strong> ${ore}</p>`
+        }
+        ${motivazione ? `<p><strong>Note:</strong><br/>${escapeHtml(motivazione)}</p>` : ''}
+        <p>Accedi al gestionale per approvare o rifiutare la richiesta.</p>
+      </div>
+    `;
+
+    await sendEmailFromLoggedUser({
+      request,
+      token,
+      studioId: String(utente.studio_id),
+      senderUserId: String(utente.id),
+      toEmail: emailResponsabile,
+      subject: `Nuova richiesta ${tipoRichiesta === 'ferie' ? 'ferie' : `permesso ${tipoPermesso}`} - ${richiedente}`,
+      html,
+    });
+
     return NextResponse.json({
       success: true,
       id: richiesta.id,
     });
   } catch (error) {
+    console.error('Errore richiesta ferie/permessi:', error);
+
     return NextResponse.json(
       {
         success: false,
