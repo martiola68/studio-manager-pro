@@ -3,273 +3,258 @@ import fs from "node:fs";
 const path = "src/pages/presenze/index.tsx";
 let source = fs.readFileSync(path, "utf8");
 
-function patchRiepilogoPersonale() {
-  const blockStart = source.indexOf("  const riepilogoPermessi = useMemo(() => {");
-  const blockEnd = source.indexOf("const validateRequiredWorkdays", blockStart);
-
-  if (blockStart === -1 || blockEnd === -1) {
-    return false;
-  }
-
-  let block = source.slice(blockStart, blockEnd);
-  let changed = false;
-
-  const dipendentiAggregati = "    dipendenti.forEach((dipendente) => {";
-  const dipendenteLoggato = `    dipendenti
-      .filter((dipendente) => dipendente.utente_id === currentUser?.id)
-      .forEach((dipendente) => {`;
-
-  if (block.includes(dipendentiAggregati)) {
-    block = block.replace(dipendentiAggregati, dipendenteLoggato);
-    changed = true;
-  }
-
-  const richiesteAggregate = "    richiesteFeriePermessi.forEach((richiesta) => {";
-  const richiesteLoggato = `    richiesteFeriePermessi
-      .filter((richiesta) => richiesta.utente_id === currentUser?.id)
-      .forEach((richiesta) => {`;
-
-  if (block.includes(richiesteAggregate)) {
-    block = block.replace(richiesteAggregate, richiesteLoggato);
-    changed = true;
-  }
-
-  const depsAggregate = "  }, [days, dipendenti, richiesteFeriePermessi, values]);";
-  const depsPersonali = "  }, [currentUser?.id, days, dipendenti, richiesteFeriePermessi, values]);";
-
-  if (block.includes(depsAggregate)) {
-    block = block.replace(depsAggregate, depsPersonali);
-    changed = true;
-  }
-
-  if (changed) {
-    source = `${source.slice(0, blockStart)}${block}${source.slice(blockEnd)}`;
-  }
-
-  return changed;
-}
-
-// Il sorgente aggiornato gestisce PF direttamente. In questo caso la vecchia patch
-// non deve cercare gli anchor legacy; normalizziamo solo l'eventuale blocco export
-// e rendiamo personale il riepilogo ferie/permessi delle card.
-if (source.includes("permessiPfOre") || source.includes("isPermessoPfCode")) {
-  let changed = false;
-
-  const brokenExportGrouping = `        if (!acc[codiceDitta]) acc[codiceDitta].push(dipendente);`;
-  const fixedExportGrouping = `        if (!acc[codiceDitta]) acc[codiceDitta] = [];
-        acc[codiceDitta].push(dipendente);`;
-
-  if (source.includes(brokenExportGrouping)) {
-    source = source.replace(brokenExportGrouping, fixedExportGrouping);
-    changed = true;
-  }
-
-  if (patchRiepilogoPersonale()) {
-    changed = true;
-  }
-
-  if (changed) {
-    fs.writeFileSync(path, source, "utf8");
-    console.log("✓ Presenze: PF compatibile e card riepilogo limitate al dipendente loggato");
-  } else {
-    console.log("✓ Presenze PF e riepilogo personale già applicati");
-  }
-
-  process.exit(0);
-}
-
-if (source.includes("permessiExFestiviOre")) {
-  if (patchRiepilogoPersonale()) {
-    fs.writeFileSync(path, source, "utf8");
-    console.log("✓ Presenze PF già applicati; card riepilogo limitate al dipendente loggato");
-  } else {
-    console.log("✓ Presenze PF e riepilogo personale già applicati");
-  }
-  process.exit(0);
-}
-
 function replaceOnce(oldValue, newValue, label) {
   if (!source.includes(oldValue)) {
-    throw new Error(`[presenze-pf] Anchor non trovato: ${label}`);
+    throw new Error(`[presenze-progressivo] Anchor non trovato: ${label}`);
   }
   source = source.replace(oldValue, newValue);
 }
 
-replaceOnce(
-`  permessiOre: number;
-  allattamentoOre: number;`,
-`  permessiOre: number;
-  permessiExFestiviOre: number;
-  allattamentoOre: number;`,
-"RowSummary PF"
-);
-
-replaceOnce(
-`function isPermesso104Code(code: string) {
-  return /^P\\d+(\\.\\d+)?\\.104$/.test(code);
+// Mantiene compatibile il raggruppamento export già corretto nelle build precedenti.
+const brokenExportGrouping = `        if (!acc[codiceDitta]) acc[codiceDitta].push(dipendente);`;
+const fixedExportGrouping = `        if (!acc[codiceDitta]) acc[codiceDitta] = [];
+        acc[codiceDitta].push(dipendente);`;
+if (source.includes(brokenExportGrouping)) {
+  source = source.replace(brokenExportGrouping, fixedExportGrouping);
 }
 
-function getPermessoHours(code: string) {
-  return Number(code.replace('P', '').replace('.104', ''));
-}`,
-`function isPermesso104Code(code: string) {
-  return /^P\\d+(\\.\\d+)?\\.104$/.test(code);
+if (!source.includes("permessiPfOre") || !source.includes("isPermessoPfCode")) {
+  throw new Error("[presenze-progressivo] Gestione PF moderna non trovata nel sorgente");
 }
 
-function isPermessoExFestivoCode(code: string) {
-  return /^PF\\d+(\\.\\d+)?$/.test(code);
+// Carica per il solo utente autenticato lo storico delle presenze effettive
+// dall'avvio del modulo fino alla fine del mese selezionato.
+if (!source.includes("presenzeStorichePersonaliData")) {
+  replaceOnce(
+`      if (presenzeError) throw presenzeError;
+
+      const loadedValues: Record<string, string> = {};`,
+`      if (presenzeError) throw presenzeError;
+
+      const progressiveStartDate = toDateKey(MIN_YEAR, MIN_MONTH_INDEX, 1);
+      const { data: presenzeStorichePersonaliData, error: presenzeStorichePersonaliError } =
+        await supabase
+          .from('tbpresenze_dipendenti')
+          .select(\`
+            id,
+            studio_id,
+            utente_id,
+            data_presenza,
+            codice_presenza,
+            note,
+            inserito_da,
+            richiesta_ferie_permessi_id,
+            generata_da_richiesta_ferie_permessi
+          \`)
+          .eq('studio_id', typedUser.studio_id)
+          .eq('utente_id', typedUser.id)
+          .gte('data_presenza', progressiveStartDate)
+          .lte('data_presenza', endDate);
+
+      if (presenzeStorichePersonaliError) throw presenzeStorichePersonaliError;
+
+      const presenzePerRiepilogo = [
+        ...((presenzeStorichePersonaliData ?? []) as Presenza[]),
+        ...((presenzeData ?? []) as Presenza[]),
+      ];
+
+      const loadedValues: Record<string, string> = {};`,
+    "storico personale"
+  );
+
+  replaceOnce(
+`(presenzeData ?? []).forEach((presence: Presenza) => {`,
+`presenzePerRiepilogo.forEach((presence: Presenza) => {`,
+    "merge presenze storico"
+  );
 }
 
-function getPermessoHours(code: string) {
-  return Number(code.replace(/^PF?/, '').replace('.104', ''));
-}`,
-"helper PF"
-);
+// Riepilogo progressivo personale: mesi precedenti + mese selezionato = totale usufruito.
+const riepilogoStart = source.indexOf("  const riepilogoPermessi = useMemo(() => {");
+const riepilogoEnd = source.indexOf("const validateRequiredWorkdays", riepilogoStart);
 
-replaceOnce(
-`function buildQuarterHourCodes(suffix = '') {
-  const codes: string[] = [];
+if (riepilogoStart === -1 || riepilogoEnd === -1) {
+  throw new Error("[presenze-progressivo] Blocco riepilogo non trovato");
+}
 
-  for (let minutes = 15; minutes <= 8 * 60; minutes += 15) {
-    const hours = minutes / 60;
-    codes.push(\`P\${formatHours(hours)}\${suffix}\`);
+const riepilogoProgressivo = `  const riepilogoPermessi = useMemo(() => {
+    const totale = {
+      pRichiesto: 0,
+      pMese: 0,
+      pTotale: 0,
+      pfRichiesto: 0,
+      pfMese: 0,
+      pfTotale: 0,
+      l104Richiesto: 0,
+      l104Mese: 0,
+      l104Totale: 0,
+      alRichiesto: 0,
+      alMese: 0,
+      alTotale: 0,
+      ferieRichieste: 0,
+      feriePrese: 0,
+      ferieTotali: 0,
+    };
+
+    if (!currentUser?.id) return totale;
+
+    const progressiveStartDate = toDateKey(MIN_YEAR, MIN_MONTH_INDEX, 1);
+
+    Object.entries(values).forEach(([key, code]) => {
+      const separatorIndex = key.indexOf('|');
+      if (separatorIndex === -1) return;
+
+      const utenteId = key.slice(0, separatorIndex);
+      const data = key.slice(separatorIndex + 1);
+
+      if (utenteId !== currentUser.id) return;
+      if (data < progressiveStartDate || data > endDate) return;
+
+      const summary = summarize([code]);
+      const isMeseSelezionato = data >= startDate;
+
+      if (isMeseSelezionato) {
+        totale.pMese += summary.permessiOre;
+        totale.pfMese += summary.permessiPfOre;
+        totale.l104Mese += summary.permessi104Ore;
+        totale.alMese += summary.allattamentoOre;
+        totale.feriePrese += summary.ferie;
+      } else {
+        totale.pRichiesto += summary.permessiOre;
+        totale.pfRichiesto += summary.permessiPfOre;
+        totale.l104Richiesto += summary.permessi104Ore;
+        totale.alRichiesto += summary.allattamentoOre;
+        totale.ferieRichieste += summary.ferie;
+      }
+    });
+
+    totale.pTotale = totale.pRichiesto + totale.pMese;
+    totale.pfTotale = totale.pfRichiesto + totale.pfMese;
+    totale.l104Totale = totale.l104Richiesto + totale.l104Mese;
+    totale.alTotale = totale.alRichiesto + totale.alMese;
+    totale.ferieTotali = totale.ferieRichieste + totale.feriePrese;
+
+    return totale;
+  }, [currentUser?.id, endDate, startDate, values]);
+
+`;
+
+source = `${source.slice(0, riepilogoStart)}${riepilogoProgressivo}${source.slice(riepilogoEnd)}`;
+
+function cardMarkup({
+  title,
+  tone,
+  pastExpr,
+  monthExpr,
+  totalExpr,
+  suffix = "",
+}) {
+  return `                <div className="min-w-[175px] rounded-lg border border-${tone}-200 bg-${tone}-50 px-3 py-2 shadow-sm">
+                  <div className="text-xs font-semibold text-${tone}-900">${title}</div>
+                  <div className="mt-1 grid grid-cols-3 gap-2">
+                    <div>
+                      <div className="text-[9px] uppercase leading-tight text-${tone}-700">Già richiesti</div>
+                      <div className="text-sm font-bold text-${tone}-950">{${pastExpr}}${suffix}</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-[9px] uppercase leading-tight text-${tone}-700">In corso</div>
+                      <div className="text-sm font-bold text-${tone}-950">{${monthExpr}}${suffix}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[9px] uppercase leading-tight text-${tone}-700">Tot. usufruiti</div>
+                      <div className="text-sm font-bold text-${tone}-950">{${totalExpr}}${suffix}</div>
+                    </div>
+                  </div>
+                </div>`;
+}
+
+function replaceCard(title, replacement, isLast = false) {
+  const titleNeedle = `>${title}</div>`;
+  const titleIndex = source.indexOf(titleNeedle);
+  if (titleIndex === -1) {
+    throw new Error(`[presenze-progressivo] Card non trovata: ${title}`);
   }
 
-  return codes;
-}`,
-`function buildQuarterHourCodes(suffix = '', prefix = 'P') {
-  const codes: string[] = [];
-
-  for (let minutes = 15; minutes <= 8 * 60; minutes += 15) {
-    const hours = minutes / 60;
-    codes.push(\`\${prefix}\${formatHours(hours)}\${suffix}\`);
+  const start = source.lastIndexOf('                <div className="min-w-[150px]', titleIndex);
+  if (start === -1) {
+    throw new Error(`[presenze-progressivo] Inizio card non trovato: ${title}`);
   }
 
-  return codes;
-}`,
-"builder PF"
-);
+  let end;
+  if (isLast) {
+    end = source.indexOf(
+      '\n              </div>\n\n              <div className="flex flex-wrap items-end gap-3 xl:ml-auto">',
+      titleIndex,
+    );
+  } else {
+    end = source.indexOf('\n\n                <div className="min-w-[150px]', titleIndex);
+  }
 
-replaceOnce(
-`function getCellClass(code: string) {
-  if (isPermesso104Code(code)) return 'bg-pink-100 text-pink-800 border-pink-200';
-  if (isPermessoCode(code)) return 'bg-orange-100 text-orange-800 border-orange-200';`,
-`function getCellClass(code: string) {
-  if (isPermesso104Code(code)) return 'bg-pink-100 text-pink-800 border-pink-200';
-  if (isPermessoExFestivoCode(code)) return 'bg-amber-100 text-amber-800 border-amber-200';
-  if (isPermessoCode(code)) return 'bg-orange-100 text-orange-800 border-orange-200';`,
-"colore PF"
-);
+  if (end === -1) {
+    throw new Error(`[presenze-progressivo] Fine card non trovata: ${title}`);
+  }
 
-replaceOnce(
-`      if (isPermessoCode(code)) acc.permessiOre += getPermessoHours(code);
-      if (isPermesso104Code(code)) acc.permessi104Ore += getPermessoHours(code);`,
-`      if (isPermessoCode(code)) acc.permessiOre += getPermessoHours(code);
-      if (isPermessoExFestivoCode(code)) acc.permessiExFestiviOre += getPermessoHours(code);
-      if (isPermesso104Code(code)) acc.permessi104Ore += getPermessoHours(code);`,
-"somma PF"
-);
+  source = `${source.slice(0, start)}${replacement}${source.slice(end)}`;
+}
 
-replaceOnce(
-`      permessiOre: 0,
-      permessi104Ore: 0,`,
-`      permessiOre: 0,
-      permessiExFestiviOre: 0,
-      permessi104Ore: 0,`,
-"default PF"
-);
+if (!source.includes("Tot. usufruiti")) {
+  replaceCard(
+    "Permesso P",
+    cardMarkup({
+      title: "Permesso P",
+      tone: "orange",
+      pastExpr: "formatHoursMinutes(riepilogoPermessi.pRichiesto)",
+      monthExpr: "formatHoursMinutes(riepilogoPermessi.pMese)",
+      totalExpr: "formatHoursMinutes(riepilogoPermessi.pTotale)",
+    }),
+  );
 
-replaceOnce(
-`  if (isPermessoCode(code) || isPermesso104Code(code)) {
-    return getPermessoHours(code);
-  }`,
-`  if (isPermessoCode(code) || isPermessoExFestivoCode(code) || isPermesso104Code(code)) {
-    return getPermessoHours(code);
-  }`,
-"ore PF"
-);
+  replaceCard(
+    "Permesso PF",
+    cardMarkup({
+      title: "Permesso PF",
+      tone: "amber",
+      pastExpr: "formatHoursMinutes(riepilogoPermessi.pfRichiesto)",
+      monthExpr: "formatHoursMinutes(riepilogoPermessi.pfMese)",
+      totalExpr: "formatHoursMinutes(riepilogoPermessi.pfTotale)",
+    }),
+  );
 
-replaceOnce(
-`    const quarterHourPermessi = buildQuarterHourCodes();
-    const quarterHourPermessi104 = buildQuarterHourCodes('.104');`,
-`    const quarterHourPermessi = buildQuarterHourCodes();
-    const quarterHourPermessiExFestivi = buildQuarterHourCodes('', 'PF');
-    const quarterHourPermessi104 = buildQuarterHourCodes('.104');`,
-"codici PF"
-);
+  replaceCard(
+    "Permesso L.104",
+    cardMarkup({
+      title: "Permesso L.104",
+      tone: "pink",
+      pastExpr: "formatHoursMinutes(riepilogoPermessi.l104Richiesto)",
+      monthExpr: "formatHoursMinutes(riepilogoPermessi.l104Mese)",
+      totalExpr: "formatHoursMinutes(riepilogoPermessi.l104Totale)",
+    }),
+  );
 
-replaceOnce(
-`      ...quarterHourPermessi,
-      ...quarterHourPermessi104,`,
-`      ...quarterHourPermessi,
-      ...quarterHourPermessiExFestivi,
-      ...quarterHourPermessi104,`,
-"ordine PF"
-);
+  replaceCard(
+    "Allattamento AL",
+    cardMarkup({
+      title: "Allattamento AL",
+      tone: "teal",
+      pastExpr: "formatHoursMinutes(riepilogoPermessi.alRichiesto)",
+      monthExpr: "formatHoursMinutes(riepilogoPermessi.alMese)",
+      totalExpr: "formatHoursMinutes(riepilogoPermessi.alTotale)",
+    }),
+  );
 
-replaceOnce(
-`                <Badge className="border bg-orange-100 text-orange-800 hover:bg-orange-100">
-                  P0.25-P8 permessi
-                </Badge>
-                <Badge className="border bg-teal-100 text-teal-800 hover:bg-teal-100">`,
-`                <Badge className="border bg-orange-100 text-orange-800 hover:bg-orange-100">
-                  P0.25-P8 permessi
-                </Badge>
-                <Badge className="border bg-amber-100 text-amber-800 hover:bg-amber-100">
-                  PF0.25-PF8 ex-festivi
-                </Badge>
-                <Badge className="border bg-teal-100 text-teal-800 hover:bg-teal-100">`,
-"legenda PF"
-);
-
-replaceOnce(
-`  (es. <strong>P2</strong>, <strong>P4</strong>, <strong>P1.104</strong>,
-  <strong> AL1</strong>, <strong>AL2</strong>).`,
-`  (es. <strong>P2</strong>, <strong>P4</strong>, <strong>PF1.25</strong>, <strong>P1.104</strong>,
-  <strong> AL1</strong>, <strong>AL2</strong>).`,
-"esempio PF"
-);
-
-replaceOnce(
-`      gridTemplateColumns: \`220px repeat(\${days.length + 8}, 88px)\`,`,
-`      gridTemplateColumns: \`220px repeat(\${days.length + 9}, 88px)\`,`,
-"colonna PF"
-);
-
-replaceOnce(
-`   { top: 'Tot.', bottom: 'Perm.' },
-  { top: 'Tot.', bottom: 'AL' },`,
-`   { top: 'Tot.', bottom: 'Perm.' },
-  { top: 'Tot.', bottom: 'PF' },
-  { top: 'Tot.', bottom: 'AL' },`,
-"header totale PF"
-);
-
-replaceOnce(
-`<div className="border-b p-1 text-center">
-  <div className="flex h-8 items-center justify-center rounded-md bg-orange-100 font-bold text-orange-900">
-    {formatHoursMinutes(summary.permessiOre)}
-  </div>
-</div>
-
-          <div className="border-b p-1 text-center">`,
-`<div className="border-b p-1 text-center">
-  <div className="flex h-8 items-center justify-center rounded-md bg-orange-100 font-bold text-orange-900">
-    {formatHoursMinutes(summary.permessiOre)}
-  </div>
-</div>
-
-<div className="border-b p-1 text-center">
-  <div className="flex h-8 items-center justify-center rounded-md bg-amber-100 font-bold text-amber-900">
-    {formatHoursMinutes(summary.permessiExFestiviOre)}
-  </div>
-</div>
-
-          <div className="border-b p-1 text-center">`,
-"totale PF"
-);
-
-patchRiepilogoPersonale();
+  replaceCard(
+    "Ferie",
+    cardMarkup({
+      title: "Ferie",
+      tone: "sky",
+      pastExpr: "riepilogoPermessi.ferieRichieste",
+      monthExpr: "riepilogoPermessi.feriePrese",
+      totalExpr: "riepilogoPermessi.ferieTotali",
+      suffix: " gg",
+    }),
+    true,
+  );
+}
 
 fs.writeFileSync(path, source, "utf8");
-console.log("✓ Presenze: aggiunti PF0.25-PF8, totale PF separato e riepilogo personale");
+console.log("✓ Presenze: riepilogo personale progressivo per mesi precedenti, mese in corso e totale usufruito");
