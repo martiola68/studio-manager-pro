@@ -6,41 +6,34 @@ const av4Path = "src/pages/antiriclaggio/modello-av4.tsx";
 let av1 = fs.readFileSync(av1Path, "utf8");
 let av4 = fs.readFileSync(av4Path, "utf8");
 
-function replaceRange(source, startNeedle, endNeedle, replacement, label) {
-  if (source.includes(replacement)) return source;
-
-  const start = source.indexOf(startNeedle);
-  if (start === -1) throw new Error(`Patch AV: inizio blocco non trovato: ${label}`);
-
-  const endStart = source.indexOf(endNeedle, start);
-  if (endStart === -1) throw new Error(`Patch AV: fine blocco non trovata: ${label}`);
-
-  const end = endStart + endNeedle.length;
+function replaceBetween(source, startToken, endToken, replacement, label) {
+  const start = source.indexOf(startToken);
+  if (start < 0) throw new Error(`${label}: start token missing`);
+  const end = source.indexOf(endToken, start);
+  if (end < 0) throw new Error(`${label}: end token missing`);
   return source.slice(0, start) + replacement + source.slice(end);
 }
 
-// AV4: SOLO layout della card Professione / attività del cliente.
-// Nessun file di stampa viene modificato.
-const professioneMarker =
-  '<div className="font-semibold text-slate-900">Professione / attività del cliente</div>';
-const markerIndex = av4.indexOf(professioneMarker);
-if (markerIndex === -1) {
-  throw new Error('Patch AV4: card "Professione / attività del cliente" non trovata');
+// 1) AV4 UI ONLY: stack the three profession/activity fields vertically.
+// Print files are intentionally untouched.
+const professionTitle = "Professione / attività del cliente";
+const professionStart = av4.indexOf(professionTitle);
+if (professionStart < 0) throw new Error("AV4 profession card missing");
+const professionWindowEnd = Math.min(av4.length, professionStart + 1200);
+const professionWindow = av4.slice(professionStart, professionWindowEnd);
+if (professionWindow.includes('grid grid-cols-1 gap-4 md:grid-cols-3')) {
+  const changedWindow = professionWindow.replace(
+    'grid grid-cols-1 gap-4 md:grid-cols-3',
+    'grid grid-cols-1 gap-4'
+  );
+  av4 = av4.slice(0, professionStart) + changedWindow + av4.slice(professionWindowEnd);
+} else if (!professionWindow.includes('grid grid-cols-1 gap-4')) {
+  throw new Error("AV4 profession grid missing");
 }
 
-const gridOld = 'className="grid grid-cols-1 gap-4 md:grid-cols-3"';
-const gridNew = 'className="grid grid-cols-1 gap-4"';
-const gridIndex = av4.indexOf(gridOld, markerIndex);
-if (gridIndex !== -1 && gridIndex - markerIndex < 1000) {
-  av4 = av4.slice(0, gridIndex) + gridNew + av4.slice(gridIndex + gridOld.length);
-} else {
-  const verticalIndex = av4.indexOf(gridNew, markerIndex);
-  if (verticalIndex === -1 || verticalIndex - markerIndex >= 1000) {
-    throw new Error("Patch AV4: griglia professione non trovata vicino alla card");
-  }
-}
-
-const av1Replacement = `      const {
+// 2) AV1 PDF: browser no longer writes directly to storage.objects.
+if (!av1.includes('/api/storage/create-signed-upload')) {
+  const av1Replacement = `      const {
         data: { session },
       } = await supabase.auth.getSession();
 
@@ -74,19 +67,22 @@ const av1Replacement = `      const {
       if (error) {
         alert(error.message || "Errore caricamento file firmato.");
         throw error;
-      }`;
+      }
 
-if (!av1.includes('/api/storage/create-signed-upload')) {
-  av1 = replaceRange(
+`;
+
+  av1 = replaceBetween(
     av1,
     "      const { error } = await supabase.storage",
-    "        throw error;\n      }",
+    "      setFormData((prev) => ({",
     av1Replacement,
-    "upload AV1 firmato"
+    "AV1 upload"
   );
 }
 
-const av4Replacement = `    const {
+// 3) AV4 PDF: same signed-upload flow for the manually signed AV4.
+if (!av4.includes('/api/storage/create-signed-upload')) {
+  const av4Replacement = `    const {
       data: { session },
     } = await supabase.auth.getSession();
 
@@ -127,18 +123,19 @@ const av4Replacement = `    const {
       console.error(uploadError);
       alert(uploadError.message || "Errore caricamento PDF firmato.");
       return;
-    }`;
+    }
 
-if (!av4.includes('/api/storage/create-signed-upload')) {
-  av4 = replaceRange(
+`;
+
+  av4 = replaceBetween(
     av4,
     "    const { error: uploadError } = await supabase.storage",
-    "      return;\n    }",
+    "    const { error: updateError } = await supabase",
     av4Replacement,
-    "upload AV4 firmato"
+    "AV4 upload"
   );
 }
 
 fs.writeFileSync(av1Path, av1, "utf8");
 fs.writeFileSync(av4Path, av4, "utf8");
-console.log("Patch AV1/AV4 applicata: layout AV4 verticale e upload PDF signed.");
+console.log("AV patch applied successfully");
