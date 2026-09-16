@@ -17,3 +17,7 @@ comment on column public.tbferie_permessi_richieste.tipo_permesso
 
 comment on column public.tbferie_permessi_richieste.ora_richiesta
   is 'Ora di inizio richiesta per il permesso';
+
+-- Forza PostgREST a rileggere lo schema dopo l'aggiunta delle colonne.
+-- Evita PGRST204 quando l'API prova a salvare tipo_permesso/ora_richiesta.
+notify pgrst, 'reload schema';
