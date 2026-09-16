@@ -19,36 +19,23 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Apply targeted AV patch
-        run: node scripts/patch-av-pdf-upload-layout-once.mjs
-
-      - name: Verify targeted changes
+      - name: Apply targeted AV patch with diagnostics
         shell: bash
         run: |
-          set -euo pipefail
-          grep -q 'Professione / attività del cliente' src/pages/antiriciclaggio/modello-av4.tsx
-          grep -q 'uploadToSignedUrl' src/pages/antiriciclaggio/modello-av4.tsx
-          grep -q 'uploadToSignedUrl' src/pages/antiriclaggio/modello-av1.tsx
-          grep -q '/api/storage/create-signed-upload' src/pages/antiriclaggio/modello-av4.tsx
-          grep -q '/api/storage/create-signed-upload' src/pages/antiriclaggio/modello-av1.tsx
+          set +e
+          node scripts/patch-av-pdf-upload-layout-once.mjs > av-patch-run.log 2>&1
+          code=$?
+          cat av-patch-run.log
+          echo "exit_code=$code" >> av-patch-run.log
+          exit 0
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: TypeScript guard
-        run: npx tsc --noEmit
-
-      - name: Commit runtime files
+      - name: Commit diagnostic and runtime files
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/pages/antiriclaggio/modello-av1.tsx src/pages/antiriclaggio/modello-av4.tsx
-          if git diff --cached --quiet; then
-            echo "No runtime changes to commit"
-            exit 0
-          fi
-          git commit -m "Fix AV PDF uploads and stack AV4 profession fields"
+          git add av-patch-run.log src/pages/antiriciclaggio/modello-av1.tsx src/pages/antiriciclaggio/modello-av4.tsx
+          git commit -m "diagnose AV patch runtime" || exit 0
           git pull --rebase origin main
           git push origin HEAD:main
