@@ -792,9 +792,36 @@ const handleUploadFirmato = async (file: File) => {
       const safeName = file.name.replace(/\s+/g, "_");
       const path = `av1_firmati/${formData.studio_id}/${Date.now()}_${safeName}`;
 
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        throw new Error("Sessione scaduta. Accedi nuovamente e riprova.");
+      }
+
+      const signedResponse = await fetch("/api/storage/create-signed-upload", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ bucket: BUCKET_NAME, path }),
+      });
+
+      const signedPayload = await signedResponse.json();
+
+      if (!signedResponse.ok || !signedPayload?.token || !signedPayload?.path) {
+        throw new Error(
+          signedPayload?.error || "Impossibile preparare il caricamento del PDF."
+        );
+      }
+
       const { error } = await supabase.storage
         .from(BUCKET_NAME)
-        .upload(path, file, { upsert: true });
+        .uploadToSignedUrl(signedPayload.path, signedPayload.token, file, {
+          contentType: "application/pdf",
+        });
 
       if (error) {
         alert(error.message || "Errore caricamento file firmato.");

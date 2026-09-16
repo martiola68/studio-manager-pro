@@ -1286,16 +1286,46 @@ async function handleUploadPdfFirmatoDiretto(
 
     const storagePath = `av4/${av4Id}/${Date.now()}_${safeName}`;
 
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      alert("Sessione scaduta. Accedi nuovamente e riprova.");
+      return;
+    }
+
+    const signedResponse = await fetch("/api/storage/create-signed-upload", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        bucket: "messaggi-allegati",
+        path: storagePath,
+      }),
+    });
+
+    const signedPayload = await signedResponse.json();
+
+    if (!signedResponse.ok || !signedPayload?.token || !signedPayload?.path) {
+      console.error("Errore preparazione upload AV4:", signedPayload);
+      alert(
+        signedPayload?.error || "Impossibile preparare il caricamento del PDF firmato."
+      );
+      return;
+    }
+
     const { error: uploadError } = await supabase.storage
       .from("messaggi-allegati")
-      .upload(storagePath, file, {
+      .uploadToSignedUrl(signedPayload.path, signedPayload.token, file, {
         contentType: "application/pdf",
-        upsert: true,
       });
 
     if (uploadError) {
       console.error(uploadError);
-      alert("Errore caricamento PDF firmato.");
+      alert(uploadError.message || "Errore caricamento PDF firmato.");
       return;
     }
 
@@ -2734,7 +2764,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                       <div className="font-semibold text-slate-900">Professione / attività del cliente</div>
                       <AV4HelpButton topic="attivita" />
                     </div>
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div className="grid grid-cols-1 gap-4">
 
                   <div>
                     <label className="mb-1 block text-sm font-medium">
