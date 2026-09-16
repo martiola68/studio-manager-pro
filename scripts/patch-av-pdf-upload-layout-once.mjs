@@ -6,16 +6,21 @@ const av4Path = "src/pages/antiriclaggio/modello-av4.tsx";
 let av1 = fs.readFileSync(av1Path, "utf8");
 let av4 = fs.readFileSync(av4Path, "utf8");
 
-function replaceOnce(source, oldValue, newValue, label) {
-  if (source.includes(newValue)) return source;
-  if (!source.includes(oldValue)) {
-    throw new Error(`Patch AV: blocco non trovato: ${label}`);
-  }
-  return source.replace(oldValue, newValue);
+function replaceRange(source, startNeedle, endNeedle, replacement, label) {
+  if (source.includes(replacement)) return source;
+
+  const start = source.indexOf(startNeedle);
+  if (start === -1) throw new Error(`Patch AV: inizio blocco non trovato: ${label}`);
+
+  const endStart = source.indexOf(endNeedle, start);
+  if (endStart === -1) throw new Error(`Patch AV: fine blocco non trovata: ${label}`);
+
+  const end = endStart + endNeedle.length;
+  return source.slice(0, start) + replacement + source.slice(end);
 }
 
-// AV4: modifica SOLO il layout della card "Professione / attività del cliente".
-// La stampa non viene toccata.
+// AV4: SOLO layout della card Professione / attività del cliente.
+// Nessun file di stampa viene modificato.
 const professioneMarker =
   '<div className="font-semibold text-slate-900">Professione / attività del cliente</div>';
 const markerIndex = av4.indexOf(professioneMarker);
@@ -26,27 +31,16 @@ if (markerIndex === -1) {
 const gridOld = 'className="grid grid-cols-1 gap-4 md:grid-cols-3"';
 const gridNew = 'className="grid grid-cols-1 gap-4"';
 const gridIndex = av4.indexOf(gridOld, markerIndex);
-if (gridIndex !== -1 && gridIndex - markerIndex < 800) {
+if (gridIndex !== -1 && gridIndex - markerIndex < 1000) {
   av4 = av4.slice(0, gridIndex) + gridNew + av4.slice(gridIndex + gridOld.length);
 } else {
-  const alreadyVerticalIndex = av4.indexOf(gridNew, markerIndex);
-  if (alreadyVerticalIndex === -1 || alreadyVerticalIndex - markerIndex >= 800) {
+  const verticalIndex = av4.indexOf(gridNew, markerIndex);
+  if (verticalIndex === -1 || verticalIndex - markerIndex >= 1000) {
     throw new Error("Patch AV4: griglia professione non trovata vicino alla card");
   }
 }
 
-// AV1: usa un signed upload preparato server-side, così l'upload PDF non dipende
-// dalle policy INSERT di storage.objects del browser.
-const av1Old = `      const { error } = await supabase.storage
-        .from(BUCKET_NAME)
-        .upload(path, file, { upsert: true });
-
-      if (error) {
-        alert(error.message || "Errore caricamento file firmato.");
-        throw error;
-      }`;
-
-const av1New = `      const {
+const av1Replacement = `      const {
         data: { session },
       } = await supabase.auth.getSession();
 
@@ -82,23 +76,17 @@ const av1New = `      const {
         throw error;
       }`;
 
-av1 = replaceOnce(av1, av1Old, av1New, "upload AV1 firmato");
+if (!av1.includes('/api/storage/create-signed-upload')) {
+  av1 = replaceRange(
+    av1,
+    "      const { error } = await supabase.storage",
+    "        throw error;\n      }",
+    av1Replacement,
+    "upload AV1 firmato"
+  );
+}
 
-// AV4: stesso fix per il PDF firmato caricato manualmente.
-const av4Old = `    const { error: uploadError } = await supabase.storage
-      .from("messaggi-allegati")
-      .upload(storagePath, file, {
-        contentType: "application/pdf",
-        upsert: true,
-      });
-
-    if (uploadError) {
-      console.error(uploadError);
-      alert("Errore caricamento PDF firmato.");
-      return;
-    }`;
-
-const av4New = `    const {
+const av4Replacement = `    const {
       data: { session },
     } = await supabase.auth.getSession();
 
@@ -141,10 +129,16 @@ const av4New = `    const {
       return;
     }`;
 
-av4 = replaceOnce(av4, av4Old, av4New, "upload AV4 firmato");
+if (!av4.includes('/api/storage/create-signed-upload')) {
+  av4 = replaceRange(
+    av4,
+    "    const { error: uploadError } = await supabase.storage",
+    "      return;\n    }",
+    av4Replacement,
+    "upload AV4 firmato"
+  );
+}
 
 fs.writeFileSync(av1Path, av1, "utf8");
 fs.writeFileSync(av4Path, av4, "utf8");
-
 console.log("Patch AV1/AV4 applicata: layout AV4 verticale e upload PDF signed.");
-// trigger workflow after its initial registration on main
