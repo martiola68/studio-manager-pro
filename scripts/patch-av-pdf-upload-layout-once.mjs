@@ -60,10 +60,10 @@ if (!av1.includes('/api/storage/create-signed-upload')) {
   const endToken = "      setFormData((prev) => ({";
   const start = av1.indexOf(startToken);
   const end = start >= 0 ? av1.indexOf(endToken, start) : -1;
-  console.log("AV1 anchors", { start, end });
-  if (start >= 0 && end > start) {
-    av1 = av1.slice(0, start) + av1Replacement + av1.slice(end);
+  if (start < 0 || end <= start) {
+    throw new Error("AV1 upload block not found");
   }
+  av1 = av1.slice(0, start) + av1Replacement + av1.slice(end);
 }
 
 const av4Replacement = `    const {
@@ -116,12 +116,12 @@ if (!av4.includes('/api/storage/create-signed-upload')) {
   const endToken = "    const { error: updateError } = await supabase";
   const start = av4.indexOf(startToken);
   const end = start >= 0 ? av4.indexOf(endToken, start) : -1;
-  console.log("AV4 anchors", { start, end });
-  if (start >= 0 && end > start) {
-    av4 = av4.slice(0, start) + av4Replacement + av4.slice(end);
+  if (start < 0 || end <= start) {
+    throw new Error("AV4 upload block not found");
   }
+  av4 = av4.slice(0, start) + av4Replacement + av4.slice(end);
 }
 
 fs.writeFileSync(av1Path, av1, "utf8");
 fs.writeFileSync(av4Path, av4, "utf8");
-console.log("AV patch script completed");
+console.log("AV patch applied successfully");
