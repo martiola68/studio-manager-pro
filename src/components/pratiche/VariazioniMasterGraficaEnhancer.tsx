@@ -1,4 +1,162 @@
+import { useEffect } from "react";
+
+const NUOVI_ADEMPIMENTI = [
+  "Nomina Revisore legale",
+  "Nomina Collegio Sindacale",
+] as const;
+
+function isNuovoAdempimento(value: string) {
+  return NUOVI_ADEMPIMENTI.includes(value as (typeof NUOVI_ADEMPIMENTI)[number]);
+}
+
+function setNativeValue(element: HTMLInputElement | HTMLSelectElement, value: string) {
+  const prototype =
+    element instanceof HTMLSelectElement
+      ? HTMLSelectElement.prototype
+      : HTMLInputElement.prototype;
+  const setter = Object.getOwnPropertyDescriptor(prototype, "value")?.set;
+  setter?.call(element, value);
+  element.dispatchEvent(new Event("input", { bubbles: true }));
+  element.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
+function setNativeChecked(element: HTMLInputElement, checked: boolean) {
+  const setter = Object.getOwnPropertyDescriptor(
+    HTMLInputElement.prototype,
+    "checked"
+  )?.set;
+  setter?.call(element, checked);
+  element.dispatchEvent(new Event("input", { bubbles: true }));
+  element.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
+function findFieldByLabel<T extends HTMLElement>(
+  root: HTMLElement,
+  labelText: string,
+  selector: string
+): T | null {
+  const labels = Array.from(root.querySelectorAll("label"));
+  const label = labels.find((item) =>
+    (item.textContent || "").trim().startsWith(labelText)
+  );
+  if (!label) return null;
+
+  const container = label.closest("div");
+  return (container?.querySelector(selector) as T | null) || null;
+}
+
 export function VariazioniMasterGraficaEnhancer() {
+  useEffect(() => {
+    let applying = false;
+
+    const applyAdempimenti = () => {
+      if (applying) return;
+
+      const root = document.querySelector(
+        ".variazioni-master-page"
+      ) as HTMLElement | null;
+      if (!root) return;
+
+      const tipoSelect = findFieldByLabel<HTMLSelectElement>(
+        root,
+        "Tipo variazione",
+        "select"
+      );
+      if (!tipoSelect) return;
+
+      for (const descrizione of NUOVI_ADEMPIMENTI) {
+        const exists = Array.from(tipoSelect.options).some(
+          (option) => option.value === descrizione
+        );
+        if (!exists) {
+          const option = document.createElement("option");
+          option.value = descrizione;
+          option.textContent = descrizione;
+          tipoSelect.appendChild(option);
+        }
+      }
+
+      const speciale = isNuovoAdempimento(tipoSelect.value);
+
+      const enteSelect = findFieldByLabel<HTMLSelectElement>(
+        root,
+        "Ente principale",
+        "select"
+      );
+      const giorniInput = findFieldByLabel<HTMLInputElement>(
+        root,
+        "Giorni lavorazione CCIAA",
+        'input[type="number"]'
+      );
+      const dataLabel = Array.from(root.querySelectorAll("label")).find((label) =>
+        ["Data atto / Data pratica", "Data verbale assemblea"].includes(
+          (label.textContent || "").trim()
+        )
+      );
+      const adeLabel = Array.from(root.querySelectorAll("label")).find((label) =>
+        (label.textContent || "")
+          .trim()
+          .startsWith("Obbligo comunicazione Agenzia Entrate")
+      ) as HTMLLabelElement | undefined;
+      const adeCheckbox = adeLabel?.querySelector(
+        'input[type="checkbox"]'
+      ) as HTMLInputElement | null;
+
+      if (dataLabel) {
+        dataLabel.textContent = speciale
+          ? "Data verbale assemblea"
+          : "Data atto / Data pratica";
+      }
+
+      if (adeLabel) {
+        adeLabel.style.display = speciale ? "none" : "flex";
+      }
+
+      if (!speciale) {
+        if (enteSelect) enteSelect.disabled = false;
+        if (giorniInput) giorniInput.disabled = false;
+        return;
+      }
+
+      applying = true;
+      try {
+        if (enteSelect && enteSelect.value !== "CCIAA") {
+          setNativeValue(enteSelect, "CCIAA");
+        }
+        if (enteSelect) enteSelect.disabled = true;
+
+        if (giorniInput && giorniInput.value !== "30") {
+          setNativeValue(giorniInput, "30");
+        }
+        if (giorniInput) giorniInput.disabled = true;
+
+        if (adeCheckbox?.checked) {
+          setNativeChecked(adeCheckbox, false);
+        }
+        if (adeCheckbox) adeCheckbox.disabled = true;
+      } finally {
+        applying = false;
+      }
+    };
+
+    const onChange = (event: Event) => {
+      const target = event.target as HTMLSelectElement | null;
+      if (target?.tagName === "SELECT") {
+        window.setTimeout(applyAdempimenti, 0);
+      }
+    };
+
+    const observer = new MutationObserver(() => applyAdempimenti());
+    observer.observe(document.body, { childList: true, subtree: true });
+    document.addEventListener("change", onChange, true);
+    applyAdempimenti();
+
+    return () => {
+      observer.disconnect();
+      document.removeEventListener("change", onChange, true);
+    };
+  }, []);
+
   return (
     <style jsx global>{`
       .variazioni-master-page {
