@@ -7,6 +7,7 @@ on:
     paths:
       - .github/workflows/apply-av-pdf-upload-layout-once.yml
       - scripts/patch-av-pdf-upload-layout-once.mjs
+      - scripts/patch-fascicolo-signed-read-once.mjs
 
 permissions:
   contents: write
@@ -19,58 +20,29 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Apply targeted AV patch
-        run: node scripts/patch-av-pdf-upload-layout-once.mjs
+      - name: Apply fascicolo signed read patch
+        run: node scripts/patch-fascicolo-signed-read-once.mjs
 
-      - name: Verify targeted changes
+      - name: Verify fascicolo signed read patch
         shell: bash
         run: |
           set -euo pipefail
-          grep -q 'Professione / attività del cliente' src/pages/antiriciclaggio/modello-av4.tsx
-          grep -q 'uploadToSignedUrl' src/pages/antiriciclaggio/modello-av4.tsx
-          grep -q 'uploadToSignedUrl' src/pages/antiriciclaggio/modello-av1.tsx
-          grep -q '/api/storage/create-signed-upload' src/pages/antiriciclaggio/modello-av4.tsx
-          grep -q '/api/storage/create-signed-upload' src/pages/antiriciclaggio/modello-av1.tsx
-          node - <<'NODE'
-          const fs = require('fs');
-          const s = fs.readFileSync('src/pages/antiriciclaggio/modello-av4.tsx', 'utf8');
-          const p = s.indexOf('Professione / attività del cliente');
-          if (p < 0) throw new Error('Profession card missing');
-          const w = s.slice(p, p + 1200);
-          if (!w.includes('grid grid-cols-1 gap-4')) throw new Error('Profession fields are not vertical');
-          if (w.includes('md:grid-cols-3')) throw new Error('Old 3-column profession layout still present');
-          NODE
+          grep -q '/api/antiriciclaggio/fascicolo-documenti/signed-url' src/pages/antiriciclaggio/fascicolo-documenti.tsx
+          grep -q 'Authorization:' src/pages/antiriciclaggio/fascicolo-documenti.tsx
+          test -f src/pages/api/antiriciclaggio/fascicolo-documenti/signed-url.ts
+          grep -q 'supabaseAdmin.auth.getUser' src/pages/api/antiriciclaggio/fascicolo-documenti/signed-url.ts
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: TypeScript targeted guard
-        shell: bash
-        run: |
-          set +e
-          npx tsc --noEmit > /tmp/tsc-av.log 2>&1
-          code=$?
-          cat /tmp/tsc-av.log
-          if grep -E 'src/pages/antiriciclaggio/modello-av1\.tsx|src/pages/antiriciclaggio/modello-av4\.tsx|src/pages/api/storage/create-signed-upload\.ts' /tmp/tsc-av.log; then
-            echo "TypeScript error found in AV changes"
-            exit 1
-          fi
-          if [ "$code" -ne 0 ]; then
-            echo "TypeScript has pre-existing errors outside the AV files; not blocking this targeted patch."
-          fi
-          exit 0
-
-      - name: Commit runtime files
+      - name: Commit fascicolo runtime file
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/pages/antiriciclaggio/modello-av1.tsx src/pages/antiriciclaggio/modello-av4.tsx
+          git add src/pages/antiriciclaggio/fascicolo-documenti.tsx
           if git diff --cached --quiet; then
-            echo "No runtime changes to commit"
+            echo "No fascicolo runtime changes to commit"
             exit 0
           fi
-          git commit -m "Fix AV PDF uploads and stack AV4 profession fields"
+          git commit -m "Fix fascicolo document opening via authenticated signed URL"
           git pull --rebase origin main
           git push origin HEAD:main
