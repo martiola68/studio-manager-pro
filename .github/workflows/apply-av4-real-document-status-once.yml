@@ -1,0 +1,47 @@
+name: Apply AV4 real document status patch
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - scripts/patch-av4-real-document-status-once.mjs
+      - .github/workflows/apply-av4-real-document-status-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply AV4 real document patch
+        run: node scripts/patch-av4-real-document-status-once.mjs
+
+      - name: Verify targeted changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'av4_firmato_presente' src/pages/antiriciclaggio/index.tsx
+          grep -q 'const av4Ricevuto = !!row.av4_firmato_presente' src/pages/antiriciclaggio/index.tsx
+          grep -q 'compilato_da_cliente: !!form.allegato_pdf_cliente' src/pages/antiriciclaggio/modello-av4.tsx
+          grep -q 'av4_caricato_manualmente: true' src/pages/antiriciclaggio/modello-av4.tsx
+
+      - name: Commit runtime files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/antiriciclaggio/index.tsx src/pages/antiriciclaggio/modello-av4.tsx
+          if git diff --cached --quiet; then
+            echo "No runtime changes to commit"
+            exit 0
+          fi
+          git commit -m "Fix AV4 completion status using actual signed document"
+          git pull --rebase origin main
+          git push origin HEAD:main
