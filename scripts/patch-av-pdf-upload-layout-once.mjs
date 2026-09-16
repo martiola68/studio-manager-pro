@@ -1,39 +1,23 @@
 import fs from "node:fs";
 
 const av1Path = "src/pages/antiriciclaggio/modello-av1.tsx";
-const av4Path = "src/pages/antiriclaggio/modello-av4.tsx";
+const av4Path = "src/pages/antiriciclaggio/modello-av4.tsx";
 
 let av1 = fs.readFileSync(av1Path, "utf8");
 let av4 = fs.readFileSync(av4Path, "utf8");
 
-function replaceBetween(source, startToken, endToken, replacement, label) {
-  const start = source.indexOf(startToken);
-  if (start < 0) throw new Error(`${label}: start token missing`);
-  const end = source.indexOf(endToken, start);
-  if (end < 0) throw new Error(`${label}: end token missing`);
-  return source.slice(0, start) + replacement + source.slice(end);
+// AV4 layout: target only the profession/activity card.
+const title = "Professione / attività del cliente";
+const titlePos = av4.indexOf(title);
+if (titlePos >= 0) {
+  const oldGrid = 'grid grid-cols-1 gap-4 md:grid-cols-3';
+  const gridPos = av4.indexOf(oldGrid, titlePos);
+  if (gridPos >= 0 && gridPos - titlePos < 1200) {
+    av4 = av4.slice(0, gridPos) + 'grid grid-cols-1 gap-4' + av4.slice(gridPos + oldGrid.length);
+  }
 }
 
-// 1) AV4 UI ONLY: stack the three profession/activity fields vertically.
-// Print files are intentionally untouched.
-const professionTitle = "Professione / attività del cliente";
-const professionStart = av4.indexOf(professionTitle);
-if (professionStart < 0) throw new Error("AV4 profession card missing");
-const professionWindowEnd = Math.min(av4.length, professionStart + 1200);
-const professionWindow = av4.slice(professionStart, professionWindowEnd);
-if (professionWindow.includes('grid grid-cols-1 gap-4 md:grid-cols-3')) {
-  const changedWindow = professionWindow.replace(
-    'grid grid-cols-1 gap-4 md:grid-cols-3',
-    'grid grid-cols-1 gap-4'
-  );
-  av4 = av4.slice(0, professionStart) + changedWindow + av4.slice(professionWindowEnd);
-} else if (!professionWindow.includes('grid grid-cols-1 gap-4')) {
-  throw new Error("AV4 profession grid missing");
-}
-
-// 2) AV1 PDF: browser no longer writes directly to storage.objects.
-if (!av1.includes('/api/storage/create-signed-upload')) {
-  const av1Replacement = `      const {
+const av1Replacement = `      const {
         data: { session },
       } = await supabase.auth.getSession();
 
@@ -71,18 +55,18 @@ if (!av1.includes('/api/storage/create-signed-upload')) {
 
 `;
 
-  av1 = replaceBetween(
-    av1,
-    "      const { error } = await supabase.storage",
-    "      setFormData((prev) => ({",
-    av1Replacement,
-    "AV1 upload"
-  );
+if (!av1.includes('/api/storage/create-signed-upload')) {
+  const startToken = "      const { error } = await supabase.storage";
+  const endToken = "      setFormData((prev) => ({";
+  const start = av1.indexOf(startToken);
+  const end = start >= 0 ? av1.indexOf(endToken, start) : -1;
+  console.log("AV1 anchors", { start, end });
+  if (start >= 0 && end > start) {
+    av1 = av1.slice(0, start) + av1Replacement + av1.slice(end);
+  }
 }
 
-// 3) AV4 PDF: same signed-upload flow for the manually signed AV4.
-if (!av4.includes('/api/storage/create-signed-upload')) {
-  const av4Replacement = `    const {
+const av4Replacement = `    const {
       data: { session },
     } = await supabase.auth.getSession();
 
@@ -127,15 +111,17 @@ if (!av4.includes('/api/storage/create-signed-upload')) {
 
 `;
 
-  av4 = replaceBetween(
-    av4,
-    "    const { error: uploadError } = await supabase.storage",
-    "    const { error: updateError } = await supabase",
-    av4Replacement,
-    "AV4 upload"
-  );
+if (!av4.includes('/api/storage/create-signed-upload')) {
+  const startToken = "    const { error: uploadError } = await supabase.storage";
+  const endToken = "    const { error: updateError } = await supabase";
+  const start = av4.indexOf(startToken);
+  const end = start >= 0 ? av4.indexOf(endToken, start) : -1;
+  console.log("AV4 anchors", { start, end });
+  if (start >= 0 && end > start) {
+    av4 = av4.slice(0, start) + av4Replacement + av4.slice(end);
+  }
 }
 
 fs.writeFileSync(av1Path, av1, "utf8");
 fs.writeFileSync(av4Path, av4, "utf8");
-console.log("AV patch applied successfully");
+console.log("AV patch script completed");
