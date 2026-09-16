@@ -47,23 +47,7 @@ function findFieldByLabel<T extends HTMLElement>(
 
 export function VariazioniMasterGraficaEnhancer() {
   useEffect(() => {
-    let applying = false;
-
-    const applyAdempimenti = () => {
-      if (applying) return;
-
-      const root = document.querySelector(
-        ".variazioni-master-page"
-      ) as HTMLElement | null;
-      if (!root) return;
-
-      const tipoSelect = findFieldByLabel<HTMLSelectElement>(
-        root,
-        "Tipo variazione",
-        "select"
-      );
-      if (!tipoSelect) return;
-
+    const configureSelect = (tipoSelect: HTMLSelectElement) => {
       for (const descrizione of NUOVI_ADEMPIMENTI) {
         const exists = Array.from(tipoSelect.options).some(
           (option) => option.value === descrizione
@@ -76,50 +60,57 @@ export function VariazioniMasterGraficaEnhancer() {
         }
       }
 
-      const speciale = isNuovoAdempimento(tipoSelect.value);
+      if (tipoSelect.dataset.smpNomineBound === "1") return;
+      tipoSelect.dataset.smpNomineBound = "1";
 
-      const enteSelect = findFieldByLabel<HTMLSelectElement>(
-        root,
-        "Ente principale",
-        "select"
-      );
-      const giorniInput = findFieldByLabel<HTMLInputElement>(
-        root,
-        "Giorni lavorazione CCIAA",
-        'input[type="number"]'
-      );
-      const dataLabel = Array.from(root.querySelectorAll("label")).find((label) =>
-        ["Data atto / Data pratica", "Data verbale assemblea"].includes(
-          (label.textContent || "").trim()
-        )
-      );
-      const adeLabel = Array.from(root.querySelectorAll("label")).find((label) =>
-        (label.textContent || "")
-          .trim()
-          .startsWith("Obbligo comunicazione Agenzia Entrate")
-      ) as HTMLLabelElement | undefined;
-      const adeCheckbox = adeLabel?.querySelector(
-        'input[type="checkbox"]'
-      ) as HTMLInputElement | null;
+      const applyRules = () => {
+        const root = tipoSelect.closest(".variazioni-master-page") as HTMLElement | null;
+        if (!root) return;
 
-      if (dataLabel) {
-        dataLabel.textContent = speciale
+        const speciale = isNuovoAdempimento(tipoSelect.value);
+        const enteSelect = findFieldByLabel<HTMLSelectElement>(
+          root,
+          "Ente principale",
+          "select"
+        );
+        const giorniInput = findFieldByLabel<HTMLInputElement>(
+          root,
+          "Giorni lavorazione CCIAA",
+          'input[type="number"]'
+        );
+        const labels = Array.from(root.querySelectorAll("label"));
+        const dataLabel = labels.find((label) =>
+          ["Data atto / Data pratica", "Data verbale assemblea"].includes(
+            (label.textContent || "").trim()
+          )
+        );
+        const adeLabel = labels.find((label) =>
+          (label.textContent || "")
+            .trim()
+            .startsWith("Obbligo comunicazione Agenzia Entrate")
+        ) as HTMLLabelElement | undefined;
+        const adeCheckbox = adeLabel?.querySelector(
+          'input[type="checkbox"]'
+        ) as HTMLInputElement | null;
+
+        const desiredDateLabel = speciale
           ? "Data verbale assemblea"
           : "Data atto / Data pratica";
-      }
+        if (dataLabel && (dataLabel.textContent || "").trim() !== desiredDateLabel) {
+          dataLabel.textContent = desiredDateLabel;
+        }
 
-      if (adeLabel) {
-        adeLabel.style.display = speciale ? "none" : "flex";
-      }
+        if (adeLabel) {
+          adeLabel.style.display = speciale ? "none" : "flex";
+        }
 
-      if (!speciale) {
-        if (enteSelect) enteSelect.disabled = false;
-        if (giorniInput) giorniInput.disabled = false;
-        return;
-      }
+        if (!speciale) {
+          if (enteSelect) enteSelect.disabled = false;
+          if (giorniInput) giorniInput.disabled = false;
+          if (adeCheckbox) adeCheckbox.disabled = false;
+          return;
+        }
 
-      applying = true;
-      try {
         if (enteSelect && enteSelect.value !== "CCIAA") {
           setNativeValue(enteSelect, "CCIAA");
         }
@@ -134,27 +125,37 @@ export function VariazioniMasterGraficaEnhancer() {
           setNativeChecked(adeCheckbox, false);
         }
         if (adeCheckbox) adeCheckbox.disabled = true;
-      } finally {
-        applying = false;
-      }
+      };
+
+      tipoSelect.addEventListener("change", () => {
+        window.setTimeout(applyRules, 0);
+      });
+
+      applyRules();
     };
 
-    const onChange = (event: Event) => {
-      const target = event.target as HTMLSelectElement | null;
-      if (target?.tagName === "SELECT") {
-        window.setTimeout(applyAdempimenti, 0);
-      }
+    const scan = () => {
+      const root = document.querySelector(
+        ".variazioni-master-page"
+      ) as HTMLElement | null;
+      if (!root) return;
+
+      const tipoSelect = findFieldByLabel<HTMLSelectElement>(
+        root,
+        "Tipo variazione",
+        "select"
+      );
+      if (tipoSelect) configureSelect(tipoSelect);
     };
 
-    const observer = new MutationObserver(() => applyAdempimenti());
-    observer.observe(document.body, { childList: true, subtree: true });
-    document.addEventListener("change", onChange, true);
-    applyAdempimenti();
+    const root = document.querySelector(".variazioni-master-page");
+    if (!root) return;
 
-    return () => {
-      observer.disconnect();
-      document.removeEventListener("change", onChange, true);
-    };
+    scan();
+    const observer = new MutationObserver(scan);
+    observer.observe(root, { childList: true, subtree: true });
+
+    return () => observer.disconnect();
   }, []);
 
   return (
