@@ -147,3 +147,4 @@ fs.writeFileSync(av1Path, av1, "utf8");
 fs.writeFileSync(av4Path, av4, "utf8");
 
 console.log("Patch AV1/AV4 applicata: layout AV4 verticale e upload PDF signed.");
+// trigger workflow after its initial registration on main
