@@ -110,10 +110,11 @@ export const authService = {
     }
   },
 
-  // Sign out
+  // Sign out solo dalla sessione/browser corrente: non revoca le altre sessioni
+  // dello stesso utente su altri PC/browser.
   async signOut(): Promise<{ error: AuthError | null }> {
     try {
-      const { error } = await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut({ scope: "local" });
       
       if (error) {
         return { error: { message: error.message } };
@@ -196,7 +197,9 @@ export const authService = {
 
   async logout() {
     try {
-      const { error } = await supabase.auth.signOut({ scope: "global" });
+      // IMPORTANTE: scope local. Il logout di una postazione non deve invalidare
+      // le sessioni contemporanee dello stesso account su altre postazioni.
+      const { error } = await supabase.auth.signOut({ scope: "local" });
       
       if (error) {
         console.warn("Logout error (ignoring):", error);
@@ -204,7 +207,7 @@ export const authService = {
     } catch (error) {
       console.warn("Logout failed, clearing local session:", error);
     } finally {
-      // Pulizia forzata locale in ogni caso
+      // Pulizia limitata al browser corrente.
       if (typeof window !== "undefined") {
         localStorage.clear();
         sessionStorage.clear();
