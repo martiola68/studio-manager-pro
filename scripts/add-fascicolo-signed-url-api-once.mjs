@@ -98,3 +98,4 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 fs.mkdirSync(path.dirname(target), { recursive: true });
 fs.writeFileSync(target, content);
 console.log("Fascicolo signed URL API written");
+// trigger workflow 2026-09-16
