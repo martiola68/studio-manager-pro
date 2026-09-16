@@ -3,6 +3,7 @@ import type { AppProps } from "next/app";
 import { ThemeProvider } from "@/contexts/ThemeProvider";
 import { StudioProvider } from "@/contexts/StudioContext";
 import { ModuleAccessGuard } from "@/components/security/ModuleAccessGuard";
+import { SensitiveDataMasterGuard } from "@/components/security/SensitiveDataMasterGuard";
 import { ClientiImportTemplateEnhancer } from "@/components/ClientiImportTemplateEnhancer";
 import { AnagraficheMasterGraficaEnhancer } from "@/components/anagrafiche/AnagraficheMasterGraficaEnhancer";
 import { ClientiMasterGraficaFixes } from "@/components/anagrafiche/ClientiMasterGraficaFixes";
@@ -170,7 +171,7 @@ export default function App({ Component, pageProps }: AppProps) {
       {isMasterGraficaControlloGestione && <ControlloGestioneMasterGraficaEnhancer />}
       {isMasterGraficaContenzioso && <ContenziosoMasterGraficaEnhancer />}
       {isMasterGraficaAntiriciclaggio && <AntiriciclaggioMasterGraficaEnhancer />}
-      {isPublicPage ? <>{pageContent}<Toaster /></> : <div className={`flex min-h-screen flex-col bg-gray-50 ${isFixedViewportPage ? "h-screen overflow-hidden" : ""}`}><div className="sticky top-0 z-50 shrink-0"><Header onMenuToggle={() => {}} /><TopNavBar /></div><main className={`flex-1 overflow-y-auto px-4 pb-4 pt-0 md:px-6 md:pb-6 md:pt-0 ${pageClass}`}><ModuleAccessGuard>{pageContent}</ModuleAccessGuard></main><Toaster /></div>}
+      {isPublicPage ? <>{pageContent}<Toaster /></> : <div className={`flex min-h-screen flex-col bg-gray-50 ${isFixedViewportPage ? "h-screen overflow-hidden" : ""}`}><div className="sticky top-0 z-50 shrink-0"><Header onMenuToggle={() => {}} /><TopNavBar /></div><main className={`flex-1 overflow-y-auto px-4 pb-4 pt-0 md:px-6 md:pb-6 md:pt-0 ${pageClass}`}><ModuleAccessGuard><SensitiveDataMasterGuard>{pageContent}</SensitiveDataMasterGuard></ModuleAccessGuard></main><Toaster /></div>}
     </StudioProvider></ThemeProvider>
   );
 }
