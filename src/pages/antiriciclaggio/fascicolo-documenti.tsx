@@ -810,20 +810,28 @@ tipo_documento:
       setWorkingDocumentId(doc.id);
 
       const supabase = getSupabaseClient() as any;
-      const bucketName = doc.bucket_name || "allegati";
+      const { data: { session } } = await supabase.auth.getSession();
 
-      const { data, error } = await supabase.storage
-        .from(bucketName)
-        .createSignedUrl(doc.storage_path, 60);
-
-      if (error) throw error;
-
-      if (!data?.signedUrl) {
-        alert("Impossibile aprire il documento");
+      if (!session?.access_token) {
+        alert("Sessione non valida. Effettua nuovamente l'accesso.");
         return;
       }
 
-   setPreviewUrl(data.signedUrl);
+      const response = await fetch("/api/antiriciclaggio/fascicolo-documenti/signed-url", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ documento_id: doc.id }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.signedUrl) {
+        throw new Error(payload?.error || "Impossibile aprire il documento");
+      }
+
+      setPreviewUrl(payload.signedUrl);
     } catch (err: any) {
       console.error("Errore apertura documento:", err);
       alert(err?.message || "Errore apertura documento");
