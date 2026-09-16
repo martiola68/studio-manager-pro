@@ -1212,6 +1212,7 @@ function handleApriPdfFirmato() {
         .update({
           allegato_pdf_cliente: null,
           pdf_firmato_cliente: null,
+          av4_caricato_manualmente: false,
           compilato_da_cliente: false,
           stato: "bozza",
         })
@@ -1235,6 +1236,7 @@ function handleApriPdfFirmato() {
         ...prev,
         allegato_pdf_cliente: "",
         pdf_firmato_cliente: "",
+        av4_caricato_manualmente: false,
         stato: "bozza",
       }));
 
@@ -1334,6 +1336,7 @@ async function handleUploadPdfFirmatoDiretto(
       .update({
         allegato_pdf_cliente: storagePath,
         pdf_firmato_cliente: storagePath,
+        av4_caricato_manualmente: true,
         compilato_da_cliente: true,
         public_enabled: false,
         public_token: null,
@@ -1925,12 +1928,13 @@ invia_altra_email: !!form.invia_altra_email,
       data_firma_bis: form.data_firma_bis || null,
 
       av4_caricato_manualmente: !!form.av4_caricato_manualmente,
-      compilato_da_cliente: !!form.av4_caricato_manualmente || !!form.allegato_pdf_cliente,
+      // La modalità manuale abilita il caricamento, ma NON equivale a documento ricevuto.
+      compilato_da_cliente: !!form.allegato_pdf_cliente,
       Av4InviatoCL: form.av4_caricato_manualmente
-  ? false
-  : Boolean(form.stato === "completato"),
+        ? false
+        : Boolean(form.stato === "completato" && !!form.allegato_pdf_cliente),
 
-      stato: form.av4_caricato_manualmente ? "completato" : form.stato,
+      stato: form.allegato_pdf_cliente ? "completato" : "bozza",
       versione: form.versione,
     };
 
@@ -1988,8 +1992,8 @@ invia_altra_email: !!form.invia_altra_email,
     setForm((prev) => ({
   ...prev,
   av4_caricato_manualmente: !!form.av4_caricato_manualmente,
-  compilato_da_cliente: !!form.av4_caricato_manualmente || !!form.allegato_pdf_cliente,
-  stato: form.av4_caricato_manualmente ? "completato" : prev.stato,
+  compilato_da_cliente: !!form.allegato_pdf_cliente,
+  stato: form.allegato_pdf_cliente ? "completato" : "bozza",
 }));
 
     alert("AV4 salvato correttamente.");

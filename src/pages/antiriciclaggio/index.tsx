@@ -57,6 +57,7 @@ type AV1Row = {
   is_pratica_only?: boolean;
   fascicolo_completo?: boolean | null;
   fascicolo_mancanti?: string[];
+  av4_firmato_presente?: boolean;
 };
 
 type PraticaAMLRow = {
@@ -192,7 +193,7 @@ export default function AntiriciclaggioPage() {
     const av4Info = getAV4Info(row);
     // Lo stato pratica non basta a dichiarare AV4 ricevuto: il verde richiede
     // una compilazione reale del cliente oppure un caricamento manuale reale.
-    const av4Ricevuto = !!(av4Info?.compilato_da_cliente || av4Info?.av4_caricato_manualmente);
+    const av4Ricevuto = !!row.av4_firmato_presente;
     const av4Inviato = !!(av4Info?.Av4InviatoCL || av4Info?.public_sent_at || av4Ricevuto);
     if (!av4Inviato) return { dotClass: "bg-red-500", text: "AV4 da generare", className: "font-semibold text-red-700" };
     if (!av4Ricevuto) return { dotClass: "bg-yellow-400", text: "AV4 inviato - in attesa", className: "font-semibold text-yellow-700" };
@@ -206,7 +207,7 @@ export default function AntiriciclaggioPage() {
 
   const getAV4IconBorderClass = (row: AV1Row) => {
     const av4Info = getAV4Info(row);
-    const av4Ricevuto = !!(av4Info?.compilato_da_cliente || av4Info?.av4_caricato_manualmente);
+    const av4Ricevuto = !!row.av4_firmato_presente;
     const av4Inviato = !!(av4Info?.Av4InviatoCL || av4Info?.public_sent_at || av4Ricevuto);
     if (av4Ricevuto) return "border-2 border-lime-500 shadow-[0_0_10px_rgba(132,204,22,0.9)]";
     if (av4Inviato) return "border-2 border-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.9)]";
@@ -286,7 +287,7 @@ export default function AntiriciclaggioPage() {
     if (!documentoIdentita) mancanti.push("Documento identità");
     if (isSocietaCliente && !visura) mancanti.push("Visura camerale");
     if (!contratto) mancanti.push("Contratto professionale");
-    return { completo: mancanti.length === 0, mancanti };
+    return { completo: mancanti.length === 0, mancanti, av4Presente: av4 };
   };
 
   const loadRowsBySocieta = async (societaId: string) => {
@@ -324,7 +325,7 @@ export default function AntiriciclaggioPage() {
       }));
       const rowsConFascicolo = await Promise.all(rowsBase.map(async (row) => {
         const check = await checkFascicoloDocumenti(row);
-        return { ...row, fascicolo_completo: check.completo, fascicolo_mancanti: check.mancanti };
+        return { ...row, fascicolo_completo: check.completo, fascicolo_mancanti: check.mancanti, av4_firmato_presente: !!check.av4Presente };
       }));
       setRows(rowsConFascicolo);
     } catch (err: any) {
@@ -708,7 +709,7 @@ export default function AntiriciclaggioPage() {
                   <td className="p-2 text-center">{av4Info?.Av4InviatoCL || av4Info?.public_sent_at ? "Sì" : "No"}</td>
                   <td className="p-2 text-center">{av4Info?.av4_caricato_manualmente ? "Sì" : "-"}</td>
                   <td className="p-3 text-center">{formatDateTime(av4Info?.public_sent_at)}</td>
-                  <td className="p-2 text-center">{av4Info?.compilato_da_cliente || row.stato_pratica === "av4_ricevuto" ? "Sì" : "No"}</td>
+                  <td className="p-2 text-center">{row.av4_firmato_presente ? "Sì" : "No"}</td>
                   <td className="p-3"><div className="flex items-center justify-center gap-3">
                     <button onClick={() => handleApriAV1(row)} className={`rounded-[28px] bg-white p-1 ${getIconBorderClass(!!row.AV1Conferma)}`}>AV1</button>
                     <button onClick={() => handleApriAV2(row)} className={`rounded-[28px] bg-white p-1 ${getIconBorderClass(!!row.AV2Generato)}`}>AV2</button>
