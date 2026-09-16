@@ -14,3 +14,4 @@ if (!source.includes(oldBlock)) {
 source = source.replace(oldBlock, newBlock);
 fs.writeFileSync(file, source);
 console.log("Fascicolo signed read patch applied");
+// trigger workflow 2026-09-16
