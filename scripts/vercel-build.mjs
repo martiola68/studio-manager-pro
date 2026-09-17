@@ -50,6 +50,7 @@ const patches = [
   "scripts/patch-menu-studio-archivi-base.mjs",
   "scripts/patch-menu-ribbon-multilivello.mjs",
   "scripts/patch-menu-ordine-principale.mjs",
+  "scripts/patch-master-password-dati-studio-menu.mjs",
   "scripts/patch-av4-public.mjs",
   "scripts/patch-av4-print-professionale.mjs",
   "scripts/fix-av4-public-validation-display.mjs",
