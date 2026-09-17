@@ -58,6 +58,10 @@ const VERIFICATION_SOURCES: readonly VerificationSource[] = [
       "note",
     ],
   },
+  {
+    table: "tbcredenziali_accesso",
+    fields: ["login_pw", "login_pin"],
+  },
 ] as const;
 
 async function findEncryptedVerificationSample(
