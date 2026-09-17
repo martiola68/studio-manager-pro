@@ -53,6 +53,7 @@ const patches = [
   "scripts/patch-master-password-dati-studio-menu.mjs",
   "scripts/patch-master-password-disable-confirm-cleanup.mjs",
   "scripts/patch-menu-accessi-telematici.mjs",
+  "scripts/patch-pratiche-nomina-organo-controllo.mjs",
   "scripts/patch-av4-public.mjs",
   "scripts/patch-av4-print-professionale.mjs",
   "scripts/fix-av4-public-validation-display.mjs",
