@@ -59,6 +59,7 @@ const patches = [
   "scripts/fix-pratiche-iter-layout.mjs",
   "scripts/patch-pratiche-tipo-organo-controllo.mjs",
   "scripts/patch-pratiche-conferma-prefill-documenti.mjs",
+  "scripts/fix-pratiche-documenti-visura-cleanup.mjs",
   "scripts/patch-av4-public.mjs",
   "scripts/patch-av4-print-professionale.mjs",
   "scripts/fix-av4-public-validation-display.mjs",
