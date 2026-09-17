@@ -18,6 +18,10 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useStudio } from "@/contexts/StudioContext";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import {
+  clearMasterPasswordEncryptionKey,
+  syncEncryptionKeyFromMasterPassword,
+} from "@/lib/security/masterPasswordEncryptionBridge";
 
 const MASTER_UNLOCK_TIMEOUT = 15 * 60 * 1000;
 
@@ -94,6 +98,7 @@ export function SensitiveDataMasterGuard({ children }: { children: ReactNode }) 
       sessionStorage.removeItem(storageKey(studioId, userId));
       sessionStorage.removeItem(activityKey(studioId, userId));
     }
+    clearMasterPasswordEncryptionKey();
     setUnlocked(false);
     setPassword("");
   }, [studioId, userId]);
@@ -103,6 +108,7 @@ export function SensitiveDataMasterGuard({ children }: { children: ReactNode }) 
     const { data: listener } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_OUT") {
         clearMasterSessionKeys();
+        clearMasterPasswordEncryptionKey();
         setUnlocked(false);
         setUserId(null);
       }
@@ -178,6 +184,7 @@ export function SensitiveDataMasterGuard({ children }: { children: ReactNode }) 
         } else {
           sessionStorage.removeItem(unlockedKey);
           sessionStorage.removeItem(lastActivityKey);
+          clearMasterPasswordEncryptionKey();
           setUnlocked(false);
         }
       } catch (error) {
@@ -264,6 +271,21 @@ export function SensitiveDataMasterGuard({ children }: { children: ReactNode }) 
           variant: "destructive",
         });
         return;
+      }
+
+      // Se lo studio usa anche la cifratura AES gia' esistente, proviamo a
+      // sbloccarla con la stessa Master Password. Il bridge non inizializza
+      // cifratura, non cambia salt e non migra alcun dato.
+      const encryptionBridge = await syncEncryptionKeyFromMasterPassword(
+        studioId,
+        password
+      );
+
+      if (encryptionBridge.enabled && !encryptionBridge.unlocked) {
+        console.info(
+          "[SensitiveDataMasterGuard] Area sbloccata; chiave cifratura legacy non sincronizzata:",
+          encryptionBridge.reason
+        );
       }
 
       const now = Date.now();
