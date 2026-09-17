@@ -55,6 +55,7 @@ const patches = [
   "scripts/patch-menu-accessi-telematici.mjs",
   "scripts/patch-pratiche-nomina-organo-controllo.mjs",
   "scripts/patch-pratiche-nomina-organo-docx.mjs",
+  "scripts/patch-modelli-organo-controllo.mjs",
   "scripts/patch-av4-public.mjs",
   "scripts/patch-av4-print-professionale.mjs",
   "scripts/fix-av4-public-validation-display.mjs",
