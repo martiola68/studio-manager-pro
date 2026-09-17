@@ -8,7 +8,9 @@ type Params = {
 type Nominativo = {
   id: string;
   nome_cognome?: string | null;
+  ragione_sociale?: string | null;
   codice_fiscale?: string | null;
+  partita_iva?: string | null;
   indirizzo?: string | null;
   citta?: string | null;
   provincia?: string | null;
@@ -41,15 +43,18 @@ export async function GET(_req: Request, { params }: Params) {
 
   if (nominativoIds.length > 0) {
     const { data, error: nominativiError } = await supabaseAdmin
-      .from("tbpratiche_nominativi" as any)
-      .select("id, nome_cognome, codice_fiscale, indirizzo, citta, provincia, cap")
+      .from("tbclienti")
+      .select("id, ragione_sociale, codice_fiscale, partita_iva, indirizzo, citta, provincia, cap")
       .in("id", nominativoIds);
 
     if (nominativiError) {
       return NextResponse.json({ error: nominativiError.message }, { status: 500 });
     }
 
-    nominativi = (data || []) as Nominativo[];
+    nominativi = (data || []).map((row: any) => ({
+      ...row,
+      nome_cognome: row.ragione_sociale || "",
+    })) as Nominativo[];
   }
 
   const nominativiById = new Map(nominativi.map((item) => [String(item.id), item]));
