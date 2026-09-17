@@ -5,15 +5,79 @@ type ApiResponse =
   | { success: true; pratica_id: string }
   | { success: false; error: string };
 
+type TipoPratica = {
+  id: string;
+  nome?: string | null;
+  codice?: string | null;
+  classe_form?: string | null;
+};
+
+function normalizza(value: unknown) {
+  return String(value || "").trim().toLowerCase();
+}
+
 function isNominaOrganoControllo(tipo: unknown) {
-  const value = String(tipo || "").toLowerCase();
+  const value = normalizza(tipo);
   return (
     value.includes("revisore") ||
     value.includes("revisione") ||
     value.includes("sindaco") ||
     value.includes("sindacale") ||
+    value.includes("collegio") ||
     value.includes("organo di controllo")
   );
+}
+
+function scegliTipoPratica(tipoVariazione: unknown, tipi: TipoPratica[]) {
+  const variazione = normalizza(tipoVariazione);
+  const revisione = variazione.includes("revisore") || variazione.includes("revisione");
+  const sindaci =
+    variazione.includes("sindaco") ||
+    variazione.includes("sindacale") ||
+    variazione.includes("collegio");
+
+  const testoTipo = (tipo: TipoPratica) =>
+    normalizza(`${tipo.nome || ""} ${tipo.codice || ""} ${tipo.classe_form || ""}`);
+
+  const tipoUnificato = tipi.find((tipo) => {
+    const classe = normalizza(tipo.classe_form);
+    const testo = testoTipo(tipo);
+    return (
+      classe === "nomina_organo_controllo" ||
+      testo.includes("nomina organo di controllo") ||
+      testo.includes("organo_controllo")
+    );
+  });
+  if (tipoUnificato) return tipoUnificato;
+
+  if (revisione) {
+    const revisore = tipi.find((tipo) => {
+      const classe = normalizza(tipo.classe_form);
+      const testo = testoTipo(tipo);
+      return (
+        classe === "nomina_revisore" ||
+        testo.includes("revisore") ||
+        testo.includes("revisione")
+      );
+    });
+    if (revisore) return revisore;
+  }
+
+  if (sindaci) {
+    const sindaco = tipi.find((tipo) => {
+      const classe = normalizza(tipo.classe_form);
+      const testo = testoTipo(tipo);
+      return (
+        classe === "nomina_sindaco" ||
+        testo.includes("sindaco") ||
+        testo.includes("sindacale") ||
+        testo.includes("collegio")
+      );
+    });
+    if (sindaco) return sindaco;
+  }
+
+  return null;
 }
 
 export default async function handler(
@@ -87,10 +151,44 @@ export default async function handler(
       .limit(1)
       .maybeSingle();
 
-    if (!tipoVariazione?.tipo_pratica_id) {
+    let tipoPraticaId = tipoVariazione?.tipo_pratica_id || null;
+
+    if (!tipoPraticaId) {
+      const { data: tipiPratica, error: tipiError } = await supabase
+        .from("tbpratiche_tipi")
+        .select("id, nome, codice, classe_form")
+        .eq("attiva", true)
+        .order("nome", { ascending: true });
+
+      if (tipiError) throw tipiError;
+
+      const tipoRisolto = scegliTipoPratica(
+        variazione.tipo_variazione,
+        (tipiPratica || []) as TipoPratica[]
+      );
+
+      tipoPraticaId = tipoRisolto?.id || null;
+
+      if (tipoPraticaId) {
+        const { error: syncError } = await supabase
+          .from("tbpratiche_variazioni_tipi")
+          .update({ tipo_pratica_id: tipoPraticaId })
+          .eq("descrizione_variazione", variazione.tipo_variazione)
+          .eq("attivo", true);
+
+        if (syncError) {
+          console.warn(
+            "Impossibile riallineare tipo_pratica_id della variazione, proseguo con il tipo risolto:",
+            syncError
+          );
+        }
+      }
+    }
+
+    if (!tipoPraticaId) {
       return res.status(422).json({
         success: false,
-        error: `Tipo pratica non configurato per ${variazione.tipo_variazione}`,
+        error: `Nessun tipo pratica attivo compatibile con ${variazione.tipo_variazione}`,
       });
     }
 
@@ -100,7 +198,7 @@ export default async function handler(
       .insert({
         studio_id: variazione.studio_id,
         cliente_id: variazione.cliente_id,
-        tipo_pratica_id: tipoVariazione.tipo_pratica_id,
+        tipo_pratica_id: tipoPraticaId,
         numero_pratica: `VAR-${now.getFullYear()}-${String(Date.now()).slice(-5)}`,
         titolo: variazione.titolo || variazione.tipo_variazione,
         stato: "Aperta",
@@ -110,7 +208,7 @@ export default async function handler(
         pratica_padre_id: null,
         pratica_origine_id: null,
         variazione_id: variazione.id,
-        codice_workflow: variazione.tipo_variazione,
+        codice_workflow: "nomina_organo_controllo",
         codice_step: "ROOT",
         nome_step: "Verbale di nomina",
         ordine_step: 1,
