@@ -64,30 +64,50 @@ function cleanupClientiVisura() {
     source = source.slice(0, importFnStart) + source.slice(clientiStateStart);
   }
 
-  source = source.replace(
-    /\n\s*<div>\s*<button\s+type="button"\s+onClick=\{\(\) => fileInputRef\.current\?\.click\(\)\}[\s\S]*?<input[\s\S]*?onChange=\{handleImportVisura\}[\s\S]*?<\/div>/m,
-    ""
+  const importButtonStart = source.indexOf(
+    `      <div>\n        <button\n          type="button"\n          onClick={() => fileInputRef.current?.click()}`
   );
-
-  const previewStart = source.indexOf(`<Dialog open={visuraPreviewOpen}`);
-  if (previewStart >= 0) {
-    const nextDialog = source.indexOf(`<Dialog`, previewStart + 10);
-    if (nextDialog > previewStart) {
-      source = source.slice(0, previewStart) + source.slice(nextDialog);
-    } else {
-      const closeMarker = source.indexOf(`</Dialog>`, previewStart);
-      if (closeMarker > previewStart) {
-        source = source.slice(0, previewStart) + source.slice(closeMarker + `</Dialog>`.length);
-      }
+  if (importButtonStart >= 0) {
+    const saveButtonsStart = source.indexOf(
+      `      <div className="flex items-center gap-3">`,
+      importButtonStart
+    );
+    if (saveButtonsStart < 0) {
+      throw new Error("[visura cleanup] blocco pulsanti salva non trovato");
     }
+    source = source.slice(0, importButtonStart) + source.slice(saveButtonsStart);
   }
 
-  if (source.includes(`/api/import-visura`) || source.includes(`handleImportVisura`) || source.includes(`importingVisura`)) {
-    throw new Error("[visura cleanup] residui import visura ancora presenti in Clienti");
+  const previewStart = source.indexOf(
+    `      <Dialog open={visuraPreviewOpen} onOpenChange={setVisuraPreviewOpen}>`
+  );
+  if (previewStart >= 0) {
+    const dialogSbloccoMarker = `      \n{/* DIALOG SBLOCCO */}`;
+    const previewEnd = source.indexOf(dialogSbloccoMarker, previewStart);
+    if (previewEnd < 0) {
+      throw new Error("[visura cleanup] fine dialog anteprima visura non trovata");
+    }
+    source = source.slice(0, previewStart) + `\n{/* DIALOG SBLOCCO */}` + source.slice(previewEnd + dialogSbloccoMarker.length);
+  }
+
+  const residui = [
+    `/api/import-visura`,
+    `handleImportVisura`,
+    `importingVisura`,
+    `fileInputRef`,
+    `visuraPreviewOpen`,
+    `visuraClienteFields`,
+    `mapVisuraText`,
+    `inferTipoClienteDaCf`,
+    `estraiNumeroReaDaTesto`,
+  ].filter((token) => source.includes(token));
+
+  if (residui.length > 0) {
+    throw new Error(`[visura cleanup] residui import visura ancora presenti: ${residui.join(", ")}`);
   }
 
   fs.writeFileSync(path, source, "utf8");
-  console.log("✓ Clienti: rimossi handler, pulsante e dialog legacy Importa visura");
+  console.log("✓ Clienti: rimossi in modo sicuro handler, pulsante e dialog legacy Importa visura");
 }
 
 patchNominaOrgano();
