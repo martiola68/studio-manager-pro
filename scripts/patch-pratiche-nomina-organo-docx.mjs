@@ -5,10 +5,14 @@ let source = fs.readFileSync(path, "utf8");
 
 const oldQuery = `const { data: soggetti } = await supabaseAdmin\n  .from("tbpratiche_soggetti")\n  .select("*")\n  .eq("pratica_id", id);`;
 
-const newQuery = `const { data: soggetti } = await supabaseAdmin\n  .from("tbpratiche_soggetti")\n  .select(\`\n    *,\n    nominativo:tbpratiche_nominativi (\n      id,\n      nome_cognome,\n      codice_fiscale,\n      indirizzo,\n      citta,\n      provincia,\n      cap\n    )\n  \`)\n  .eq("pratica_id", id);`;
+const legacyEmbeddedQuery = `const { data: soggetti } = await supabaseAdmin\n  .from("tbpratiche_soggetti")\n  .select(\`\n    *,\n    nominativo:tbpratiche_nominativi (\n      id,\n      nome_cognome,\n      codice_fiscale,\n      indirizzo,\n      citta,\n      provincia,\n      cap\n    )\n  \`)\n  .eq("pratica_id", id);`;
 
-if (source.includes(oldQuery)) {
-  source = source.replace(oldQuery, newQuery);
+const safeQuery = `const { data: soggettiRaw, error: soggettiError } = await supabaseAdmin\n  .from("tbpratiche_soggetti")\n  .select("*")\n  .eq("pratica_id", id);\n\nif (soggettiError) {\n  return NextResponse.json({ error: soggettiError.message }, { status: 500 });\n}\n\nconst nominativoIds = Array.from(\n  new Set(\n    (soggettiRaw || [])\n      .map((row: any) => row.nominativo_id)\n      .filter((value: any) => Boolean(value))\n  )\n);\n\nlet nominativiPratica: any[] = [];\n\nif (nominativoIds.length > 0) {\n  const { data, error: nominativiError } = await supabaseAdmin\n    .from("tbpratiche_nominativi" as any)\n    .select("id, nome_cognome, codice_fiscale, indirizzo, citta, provincia, cap")\n    .in("id", nominativoIds);\n\n  if (nominativiError) {\n    return NextResponse.json({ error: nominativiError.message }, { status: 500 });\n  }\n\n  nominativiPratica = data || [];\n}\n\nconst nominativiById = new Map(\n  nominativiPratica.map((item: any) => [String(item.id), item])\n);\n\nconst soggetti = (soggettiRaw || []).map((row: any) => ({\n  ...row,\n  nominativo: row.nominativo_id\n    ? nominativiById.get(String(row.nominativo_id)) || null\n    : null,\n}));`;
+
+if (source.includes(legacyEmbeddedQuery)) {
+  source = source.replace(legacyEmbeddedQuery, safeQuery);
+} else if (source.includes(oldQuery)) {
+  source = source.replace(oldQuery, safeQuery);
 }
 
 if (!source.includes("const organiConfermati = righeNominaOrgano")) {
@@ -24,13 +28,6 @@ if (!source.includes("const organiConfermati = righeNominaOrgano")) {
 }
 
 if (!source.includes("for (const nuovaCarica of nuoveNomineTutte)")) {
-  const anchor = `if (codiceModello === "ACCETTAZIONE_CARICHE" && nominatoNome) {\n  cariche.push({`;
-  if (!source.includes(anchor)) {
-    throw new Error("[nomina organo docx] anchor cariche non trovato");
-  }
-
-  const insertAfter = `if (codiceModello === "ACCETTAZIONE_CARICHE" && nominatoNome) {\n  cariche.push({`;
-  // La nuova logica viene inserita dopo il blocco legacy, usando un anchor stabile successivo.
   const afterLegacy = `  });\n}\n    const { data: motivoLiquidazione }`;
   if (!source.includes(afterLegacy)) {
     throw new Error("[nomina organo docx] fine blocco cariche legacy non trovata");
@@ -52,4 +49,4 @@ if (!source.includes("SEZIONE_CONFERME:")) {
 }
 
 fs.writeFileSync(path, source, "utf8");
-console.log("✓ Verbale nomina organo controllo: merge fields per conferme, rimozioni, nomine, revisori, compensi e accettazioni");
+console.log("✓ Verbale nomina organo controllo: query sicura + merge fields per conferme, rimozioni, nomine, revisori, compensi e accettazioni");
