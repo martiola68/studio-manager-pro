@@ -26,8 +26,11 @@ import {
 const MASTER_UNLOCK_TIMEOUT = 15 * 60 * 1000;
 
 const PROTECTED_PREFIXES = [
-  "/clienti/organi-sociali",
-  "/clienti/titolari-effettivi",
+  "/clienti",
+  "/cassetti-fiscali",
+  "/accesso-portali",
+  "/gestione-password",
+  "/impostazioni/cassetti-fiscali",
   "/anagrafiche/gruppi-societari",
   "/revisione-controllo",
   "/controllo-gestione",
