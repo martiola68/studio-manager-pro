@@ -38,6 +38,22 @@ if (!source.includes('"[ORGANI_CONFERMATI]"')) {
     '  "[NUOVE_NOMINE]",',
     '  "[REVISORI_NOMINATI]",',
     '  "[COMPENSI_ORGANO]",',
+    '  "[CARICA]",',
+    '  "[OGGETTO]",',
+    '  "[NOMINATO_NOME]",',
+    '  "[NOMINATO_CITTA_NASCITA]",',
+    '  "[NOMINATO_DATA_NASCITA]",',
+    '  "[NOMINATO_CITTA]",',
+    '  "[NOMINATO_PROVINCIA]",',
+    '  "[NOMINATO_INDIRIZZO]",',
+    '  "[NOMINATO_CAP]",',
+    '  "[NOMINATO_CF]",',
+    '  "[SOCIETA_CF]",',
+    '  "[DATA_SCADENZA_CARICA]",',
+    '  "[PROFESSIONISTA_INCARICATO]",',
+    '  "[#CARICHE]",',
+    '  "[NOME_COGNOME]",',
+    '  "[/CARICHE]",',
   ].join("\n");
 
   source = source.replace(anchor, `${anchor}\n${vars}`);
