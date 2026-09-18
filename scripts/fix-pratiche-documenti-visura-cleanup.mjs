@@ -41,12 +41,6 @@ function cleanupClientiVisura() {
   );
   source = source.replace(`import { mapVisuraText } from "@/utils/visuraMapper";\n`, "");
 
-  const helperStart = source.indexOf(`function inferTipoClienteDaCf(`);
-  const pageStart = source.indexOf(`export default function ClientiPage() {`, helperStart);
-  if (helperStart >= 0 && pageStart > helperStart) {
-    source = source.slice(0, helperStart) + source.slice(pageStart);
-  }
-
   const visuraStateStart = source.indexOf(`const [importingVisura, setImportingVisura]`);
   const filtroStart = source.indexOf(` const [filtroClienti`, visuraStateStart);
   if (visuraStateStart >= 0 && filtroStart > visuraStateStart) {
@@ -98,8 +92,6 @@ function cleanupClientiVisura() {
     `visuraPreviewOpen`,
     `visuraClienteFields`,
     `mapVisuraText`,
-    `inferTipoClienteDaCf`,
-    `estraiNumeroReaDaTesto`,
   ].filter((token) => source.includes(token));
 
   if (residui.length > 0) {
