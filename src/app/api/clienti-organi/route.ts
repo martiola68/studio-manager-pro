@@ -101,6 +101,8 @@ if (!cliente_id) {
           codice_fiscale,
           partita_iva,
           tipo_cliente,
+          luogo_nascita,
+          data_nascita,
           indirizzo,
           citta,
           provincia,
