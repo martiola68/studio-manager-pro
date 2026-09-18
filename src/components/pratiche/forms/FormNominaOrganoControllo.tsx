@@ -272,11 +272,17 @@ export default function FormNominaOrganoControllo({ pratica }: any) {
     societa_partita_iva:
       pratica?.dati_documento?.societa_partita_iva || pratica?.cliente?.partita_iva || "",
     societa_rea: pratica?.dati_documento?.societa_rea || pratica?.cliente?.numero_rea || "",
-    data_atto: pratica?.dati_documento?.data_atto || "",
+    data_atto:
+      pratica?.dati_documento?.data_atto ||
+      pratica?.data_atto_variazione ||
+      "",
     ora_inizio: pratica?.dati_documento?.ora_inizio || "",
     ora_chiusura: pratica?.dati_documento?.ora_chiusura || "",
     luogo_assemblea: pratica?.dati_documento?.luogo_assemblea || sedeSocieta || "",
-    presidente: pratica?.dati_documento?.presidente || "",
+    presidente:
+      pratica?.dati_documento?.presidente ||
+      pratica?.amministratore_principale?.nome_cognome ||
+      "",
     segretario: pratica?.dati_documento?.segretario || "",
     professionista_nome: pratica?.dati_documento?.professionista_nome || "",
     professionista_codice_fiscale:
