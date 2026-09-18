@@ -11,6 +11,18 @@ const allowedPriorita = ["bassa", "normale", "alta", "urgente"];
 const allowedStati = ["aperta", "in_lavorazione", "completata"];
 const allowedEsiti = ["Accettata", "Respinta", "Protocollata", "Evasa"];
 
+function isNominaOrganoControllo(tipo: unknown) {
+  const value = String(tipo || "").toLowerCase();
+  return (
+    value.includes("revisore") ||
+    value.includes("revisione") ||
+    value.includes("sindaco") ||
+    value.includes("sindacale") ||
+    value.includes("collegio") ||
+    value.includes("organo di controllo")
+  );
+}
+
 function cleanString(value: any) {
   if (value === undefined || value === null) return null;
   const text = String(value).trim();
@@ -476,8 +488,14 @@ const praticaIdsDistribuzione = (data || [])
   )
   .map((v: any) => v.pratica_id);
 
+const praticaIdsNominaOrgano = (data || [])
+  .filter((v: any) => isNominaOrganoControllo(v.tipo_variazione) && !!v.pratica_id)
+  .map((v: any) => String(v.pratica_id));
+
 let steps: any[] = [];
 let praticheConVerbale = new Set<string>();
+let praticheNominaConVerbale = new Set<string>();
+let praticheNominaConAccettazione = new Set<string>();
 
 if (variazioniIds.length > 0) {
   const { data: stepsData, error: stepsError } = await supabase
@@ -508,6 +526,44 @@ if (praticaIdsDistribuzione.length > 0) {
   );
 }
 
+if (praticaIdsNominaOrgano.length > 0) {
+  const { data: documentiNomina, error: documentiNominaError } = await supabase
+    .from("tbpratiche_documenti")
+    .select("pratica_id, tipo_documento")
+    .in("pratica_id", praticaIdsNominaOrgano)
+    .in("tipo_documento", ["VERBALE_NOMINA_ORGANO_CONTROLLO", "ACCETTAZIONE_CARICHE"]);
+
+  if (documentiNominaError) throw documentiNominaError;
+
+  praticheNominaConVerbale = new Set(
+    (documentiNomina || [])
+      .filter((doc: any) => doc.tipo_documento === "VERBALE_NOMINA_ORGANO_CONTROLLO")
+      .map((doc: any) => String(doc.pratica_id))
+  );
+
+  praticheNominaConAccettazione = new Set(
+    (documentiNomina || [])
+      .filter((doc: any) => doc.tipo_documento === "ACCETTAZIONE_CARICHE")
+      .map((doc: any) => String(doc.pratica_id))
+  );
+
+  const variazioniDaRiconciliare = (data || []).filter(
+    (v: any) =>
+      isNominaOrganoControllo(v.tipo_variazione) &&
+      !!v.pratica_id &&
+      (
+        praticheNominaConVerbale.has(String(v.pratica_id)) ||
+        praticheNominaConAccettazione.has(String(v.pratica_id))
+      )
+  );
+
+  await Promise.all(
+    variazioniDaRiconciliare.map((v: any) =>
+      aggiornaStatiVariazione(supabase, String(v.id))
+    )
+  );
+}
+
 const stepsByVariazione = steps.reduce((acc: any, step: any) => {
   if (!acc[step.variazione_id]) acc[step.variazione_id] = {};
   acc[step.variazione_id][step.codice_step] = step;
@@ -524,6 +580,16 @@ const dataArricchita = (data || []).map((v: any) => {
     !!v.pratica_id &&
     praticheConVerbale.has(String(v.pratica_id));
 
+  const isNominaOrgano = isNominaOrganoControllo(v.tipo_variazione);
+  const verbaleNominaGenerato =
+    isNominaOrgano &&
+    !!v.pratica_id &&
+    praticheNominaConVerbale.has(String(v.pratica_id));
+  const accettazioneNominaGenerata =
+    isNominaOrgano &&
+    !!v.pratica_id &&
+    praticheNominaConAccettazione.has(String(v.pratica_id));
+
   const statoDistribuzione =
     isDistribuzioneUtili
       ? verbaleGenerato && v.conferma_record === true
@@ -539,7 +605,7 @@ const dataArricchita = (data || []).map((v: any) => {
   v.step_determina_stato || stepMap.DETERMINA?.stato || "da_fare",
 
 step_verbale_stato:
-  verbaleGenerato
+  verbaleGenerato || verbaleNominaGenerato
     ? "completato"
     : v.step_verbale_stato || stepMap.VERBALE?.stato || "da_fare",
 
@@ -547,9 +613,11 @@ step_liquidazione_stato:
   v.step_liquidazione_stato || stepMap.LIQUIDAZIONE?.stato || "da_fare",
 
 step_accettazione_carica_stato:
-  v.step_accettazione_carica_stato ||
-  stepMap.ACCETTAZIONE_CARICA?.stato ||
-  "da_fare",
+  accettazioneNominaGenerata
+    ? "completato"
+    : v.step_accettazione_carica_stato ||
+      stepMap.ACCETTAZIONE_CARICA?.stato ||
+      "da_fare",
 
 step_cciaa_stato:
   v.step_cciaa_stato || stepMap.DEPOSITO_CCIAA?.stato || "da_fare",
