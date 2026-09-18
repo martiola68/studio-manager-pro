@@ -408,10 +408,37 @@ export default async function handler(
       let query = supabase
         .from("tbpratiche_variazioni")
         .select(`
-          *,
-          cliente:tbclienti(id, ragione_sociale, codice_fiscale, partita_iva),
-          assegnato:tbutenti!tbpratiche_variazioni_assegnato_a_fkey(id, nome, cognome, email),
-          pratica:tbpratiche!tbpratiche_variazioni_pratica_id_fkey(id, numero_pratica, titolo, stato)
+          id,
+          cliente_id,
+          tipo_variazione,
+          ente_principale,
+          priorita,
+          data_atto,
+          giorni_scadenza_cciaa,
+          data_scadenza_cciaa,
+          data_evasione_cciaa,
+          obbligo_ade,
+          giorni_scadenza_ade,
+          data_scadenza_ade,
+          data_comunicazione_ade,
+          ricevuta_telematica_ade,
+          conferma_record,
+          genera_verbale,
+          note,
+          pratica_id,
+          pratica_determina_id,
+          pratica_liquidazione_id,
+          stato,
+          step_determina_stato,
+          step_verbale_stato,
+          step_liquidazione_stato,
+          step_accettazione_carica_stato,
+          step_cciaa_stato,
+          step_ade_stato,
+          data_presentazione_cciaa,
+          protocollo_cciaa,
+          created_at,
+          cliente:tbclienti(id, ragione_sociale)
         `)
         .eq("studio_id", studio_id)
         .order("data_atto", { ascending: false, nullsFirst: false })
