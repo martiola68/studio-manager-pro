@@ -74,10 +74,39 @@ if (cliente?.id) {
     .eq("principale", true)
     .eq("attivo", true);
 
-  const organoAmministratore = (organiPrincipali || []).find((organo: any) => {
-    const testo = String(`${organo?.ruolo || ""} ${organo?.carica || ""}`).toLowerCase();
-    return testo.includes("amministr");
-  });
+  const prioritaRuoliAmministrazione = [
+    "presidente_cda",
+    "amministratore_unico",
+    "amministratore_delegato",
+    "amministratore",
+    "consigliere_delegato",
+    "vice_presidente_cda",
+    "consigliere",
+    "rappresentante_legale",
+    "liquidatore",
+  ];
+
+  const organoAmministratore = (organiPrincipali || [])
+    .filter((organo: any) => {
+      const ruolo = String(organo?.ruolo || "").trim().toLowerCase();
+      if (prioritaRuoliAmministrazione.includes(ruolo)) return true;
+
+      const testo = String(`${organo?.ruolo || ""} ${organo?.carica || ""}`).toLowerCase();
+      return (
+        testo.includes("amministr") ||
+        testo.includes("presidente") ||
+        testo.includes("consigliere") ||
+        testo.includes("cda") ||
+        testo.includes("consiglio di amministrazione")
+      );
+    })
+    .sort((a: any, b: any) => {
+      const ruoloA = String(a?.ruolo || "").trim().toLowerCase();
+      const ruoloB = String(b?.ruolo || "").trim().toLowerCase();
+      const posA = prioritaRuoliAmministrazione.indexOf(ruoloA);
+      const posB = prioritaRuoliAmministrazione.indexOf(ruoloB);
+      return (posA < 0 ? 999 : posA) - (posB < 0 ? 999 : posB);
+    })[0];
 
   if (organoAmministratore?.soggetto_cliente_id) {
     const { data: soggettoAmministratore } = await supabaseAdmin
