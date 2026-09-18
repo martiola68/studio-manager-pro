@@ -48,32 +48,53 @@ const [loadingOpzioni, setLoadingOpzioni] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(FORM_INIZIALE);
 
+  async function risolviUtente() {
+    if (utente?.id && utente?.studio_id) return utente;
+
+    const supabase = getSupabaseClient();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session?.user?.email) return null;
+
+    const { data: user } = await supabase
+      .from("tbutenti")
+      .select("id, studio_id, nome, cognome, email")
+      .eq("email", session.user.email)
+      .single();
+
+    if (user?.studio_id && typeof window !== "undefined") {
+      localStorage.setItem("studio_id", String(user.studio_id));
+    }
+
+    if (user) setUtente(user);
+    return user || null;
+  }
+
+  async function risolviStudioId() {
+    if (typeof window !== "undefined") {
+      const cached = localStorage.getItem("studio_id");
+      if (cached) return cached;
+    }
+
+    const user = await risolviUtente();
+    return user?.studio_id ? String(user.studio_id) : "";
+  }
+
   async function loadData() {
     try {
       setLoading(true);
 
-      const supabase = getSupabaseClient();
-
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session?.user?.email) return;
-
-      const { data: user } = await supabase
-        .from("tbutenti")
-        .select("id, studio_id, nome, cognome, email")
-        .eq("email", session.user.email)
-        .single();
-
-      if (!user?.studio_id) return;
-
-      setUtente(user);
-
-      const studioId = String(user.studio_id);
+      const studioId = await risolviStudioId();
+      if (!studioId) {
+        setVariazioni([]);
+        return;
+      }
 
       const variazioniResponse = await fetch(
-        `/api/pratiche/variazioni?studio_id=${encodeURIComponent(studioId)}`
+        `/api/pratiche/variazioni?studio_id=${encodeURIComponent(studioId)}`,
+        { cache: "no-store" }
       );
       const variazioniResult = await variazioniResponse.json();
 
@@ -84,12 +105,15 @@ const [loadingOpzioni, setLoadingOpzioni] = useState(false);
   }
 
   async function caricaOpzioniForm() {
-    if (!utente?.studio_id || opzioniCaricate || loadingOpzioni) return;
+    if (opzioniCaricate || loadingOpzioni) return;
 
     try {
       setLoadingOpzioni(true);
+      const user = await risolviUtente();
+      if (!user?.studio_id) return;
+
       const supabase = getSupabaseClient();
-      const studioId = String(utente.studio_id);
+      const studioId = String(user.studio_id);
 
       const [tipiResult, clientiResult] = await Promise.all([
         (supabase as any)
