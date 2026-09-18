@@ -27,6 +27,26 @@ export async function GET(req: Request, { params }: Params) {
       );
     }
 
+let variazioneOrigine: any = null;
+
+if (pratica.variazione_id) {
+  const { data } = await supabaseAdmin
+    .from("tbpratiche_variazioni")
+    .select("id, data_atto")
+    .eq("id", pratica.variazione_id)
+    .maybeSingle();
+  variazioneOrigine = data || null;
+} else {
+  const { data } = await supabaseAdmin
+    .from("tbpratiche_variazioni")
+    .select("id, data_atto")
+    .eq("pratica_id", praticaId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  variazioneOrigine = data || null;
+}
+
  const { data: cliente } = await supabaseAdmin
   .from("tbclienti")
   .select(`
@@ -44,8 +64,39 @@ export async function GET(req: Request, { params }: Params) {
   .single();
 
 let rappresentanteLegale: any = null;
+let amministratorePrincipale: any = null;
 
 if (cliente?.id) {
+  const { data: organiPrincipali } = await supabaseAdmin
+    .from("tbclienti_organi")
+    .select("id, soggetto_cliente_id, ruolo, carica, principale, attivo")
+    .eq("cliente_id", cliente.id)
+    .eq("principale", true)
+    .eq("attivo", true);
+
+  const organoAmministratore = (organiPrincipali || []).find((organo: any) => {
+    const testo = String(`${organo?.ruolo || ""} ${organo?.carica || ""}`).toLowerCase();
+    return testo.includes("amministr");
+  });
+
+  if (organoAmministratore?.soggetto_cliente_id) {
+    const { data: soggettoAmministratore } = await supabaseAdmin
+      .from("tbclienti")
+      .select("id, ragione_sociale, codice_fiscale")
+      .eq("id", organoAmministratore.soggetto_cliente_id)
+      .maybeSingle();
+
+    if (soggettoAmministratore) {
+      amministratorePrincipale = {
+        id: soggettoAmministratore.id,
+        nome_cognome: soggettoAmministratore.ragione_sociale,
+        codice_fiscale: soggettoAmministratore.codice_fiscale,
+        ruolo: organoAmministratore.ruolo,
+        carica: organoAmministratore.carica,
+      };
+    }
+  }
+
   const { data: organoRapp } = await supabaseAdmin
     .from("tbclienti_organi")
     .select(`
@@ -161,6 +212,8 @@ pratica: {
   tipo,
   assegnatario,
   rappresentante_legale: rappresentanteLegale,
+  amministratore_principale: amministratorePrincipale,
+  data_atto_variazione: variazioneOrigine?.data_atto || null,
   rappresentanti_legali: rappresentantiLegali || [],
   dati_documento: datiDocumento,
 },
