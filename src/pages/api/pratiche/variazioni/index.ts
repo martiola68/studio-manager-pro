@@ -451,6 +451,8 @@ const distribuzioniSenzaPratica = (data || []).filter(
     !v.pratica_id
 );
 
+// La GET dell'elenco deve essere read-only: eventuali collegamenti legacy
+// vengono risolti in memoria, senza UPDATE per ogni riga durante la visualizzazione.
 if (distribuzioniSenzaPratica.length > 0) {
   const idsVariazione = distribuzioniSenzaPratica.map((v: any) => v.id);
   const { data: praticheCollegate, error: praticheCollegateError } = await supabase
@@ -463,106 +465,117 @@ if (distribuzioniSenzaPratica.length > 0) {
 
   const praticaByVariazione = new Map<string, string>();
   for (const pratica of praticheCollegate || []) {
-    if (pratica.variazione_id && !praticaByVariazione.has(String(pratica.variazione_id))) {
-      praticaByVariazione.set(String(pratica.variazione_id), String(pratica.id));
+    if (
+      pratica.variazione_id &&
+      !praticaByVariazione.has(String(pratica.variazione_id))
+    ) {
+      praticaByVariazione.set(
+        String(pratica.variazione_id),
+        String(pratica.id)
+      );
     }
   }
 
   for (const variazione of distribuzioniSenzaPratica) {
     const praticaIdRipristinata = praticaByVariazione.get(String(variazione.id));
-    if (!praticaIdRipristinata) continue;
-
-    variazione.pratica_id = praticaIdRipristinata;
-    await supabase
-      .from("tbpratiche_variazioni")
-      .update({ pratica_id: praticaIdRipristinata })
-      .eq("id", variazione.id);
+    if (praticaIdRipristinata) {
+      variazione.pratica_id = praticaIdRipristinata;
+    }
   }
 }
 
-const variazioniIds = (data || []).map((v: any) => v.id);
-const praticaIdsDistribuzione = (data || [])
-  .filter((v: any) =>
-    String(v.tipo_variazione || "").toLowerCase().includes("distribuzione") &&
-    !!v.pratica_id
-  )
-  .map((v: any) => v.pratica_id);
-
-const praticaIdsNominaOrgano = (data || [])
-  .filter((v: any) => isNominaOrganoControllo(v.tipo_variazione) && !!v.pratica_id)
-  .map((v: any) => String(v.pratica_id));
-
-let steps: any[] = [];
-let praticheConVerbale = new Set<string>();
-let praticheNominaConVerbale = new Set<string>();
-let praticheNominaConAccettazione = new Set<string>();
-
-if (variazioniIds.length > 0) {
-  const { data: stepsData, error: stepsError } = await supabase
-    .from("tbpratiche_step")
-    .select("variazione_id, codice_step, stato, data_evasione")
-    .in("variazione_id", variazioniIds);
-
-  if (stepsError) throw stepsError;
-
-  steps = stepsData || [];
-}
-
-if (praticaIdsDistribuzione.length > 0) {
-  const { data: documentiVerbale, error: documentiVerbaleError } = await supabase
-    .from("tbpratiche_documenti")
-    .select("pratica_id, tipo_documento")
-    .in("pratica_id", praticaIdsDistribuzione)
-    .in("tipo_documento", [
-      "VERBALE_UTILI",
-      "VERBALE_DISTRIBUZIONE_UTILI",
-      "DISTRIBUZIONE_UTILI",
-    ]);
-
-  if (documentiVerbaleError) throw documentiVerbaleError;
-
-  praticheConVerbale = new Set(
-    (documentiVerbale || []).map((doc: any) => String(doc.pratica_id))
-  );
-}
-
-if (praticaIdsNominaOrgano.length > 0) {
-  const { data: documentiNomina, error: documentiNominaError } = await supabase
-    .from("tbpratiche_documenti")
-    .select("pratica_id, tipo_documento")
-    .in("pratica_id", praticaIdsNominaOrgano)
-    .in("tipo_documento", ["VERBALE_NOMINA_ORGANO_CONTROLLO", "ACCETTAZIONE_CARICHE"]);
-
-  if (documentiNominaError) throw documentiNominaError;
-
-  praticheNominaConVerbale = new Set(
-    (documentiNomina || [])
-      .filter((doc: any) => doc.tipo_documento === "VERBALE_NOMINA_ORGANO_CONTROLLO")
-      .map((doc: any) => String(doc.pratica_id))
-  );
-
-  praticheNominaConAccettazione = new Set(
-    (documentiNomina || [])
-      .filter((doc: any) => doc.tipo_documento === "ACCETTAZIONE_CARICHE")
-      .map((doc: any) => String(doc.pratica_id))
-  );
-
-  const variazioniDaRiconciliare = (data || []).filter(
-    (v: any) =>
-      isNominaOrganoControllo(v.tipo_variazione) &&
-      !!v.pratica_id &&
-      (
-        praticheNominaConVerbale.has(String(v.pratica_id)) ||
-        praticheNominaConAccettazione.has(String(v.pratica_id))
+const variazioniIds = (data || []).map((v: any) => String(v.id));
+const praticaIdsDistribuzione = Array.from(
+  new Set(
+    (data || [])
+      .filter(
+        (v: any) =>
+          String(v.tipo_variazione || "").toLowerCase().includes("distribuzione") &&
+          !!v.pratica_id
       )
-  );
+      .map((v: any) => String(v.pratica_id))
+  )
+);
 
-  await Promise.all(
-    variazioniDaRiconciliare.map((v: any) =>
-      aggiornaStatiVariazione(supabase, String(v.id))
+const praticaIdsNominaOrgano = Array.from(
+  new Set(
+    (data || [])
+      .filter(
+        (v: any) =>
+          isNominaOrganoControllo(v.tipo_variazione) &&
+          !!v.pratica_id
+      )
+      .map((v: any) => String(v.pratica_id))
+  )
+);
+
+const stepsPromise =
+  variazioniIds.length > 0
+    ? supabase
+        .from("tbpratiche_step")
+        .select("variazione_id, codice_step, stato, data_evasione")
+        .in("variazione_id", variazioniIds)
+    : Promise.resolve({ data: [], error: null } as any);
+
+const documentiDistribuzionePromise =
+  praticaIdsDistribuzione.length > 0
+    ? supabase
+        .from("tbpratiche_documenti")
+        .select("pratica_id, tipo_documento")
+        .in("pratica_id", praticaIdsDistribuzione)
+        .in("tipo_documento", [
+          "VERBALE_UTILI",
+          "VERBALE_DISTRIBUZIONE_UTILI",
+          "DISTRIBUZIONE_UTILI",
+        ])
+    : Promise.resolve({ data: [], error: null } as any);
+
+const documentiNominaPromise =
+  praticaIdsNominaOrgano.length > 0
+    ? supabase
+        .from("tbpratiche_documenti")
+        .select("pratica_id, tipo_documento")
+        .in("pratica_id", praticaIdsNominaOrgano)
+        .in("tipo_documento", [
+          "VERBALE_NOMINA_ORGANO_CONTROLLO",
+          "ACCETTAZIONE_CARICHE",
+        ])
+    : Promise.resolve({ data: [], error: null } as any);
+
+const [
+  { data: stepsData, error: stepsError },
+  { data: documentiVerbale, error: documentiVerbaleError },
+  { data: documentiNomina, error: documentiNominaError },
+] = await Promise.all([
+  stepsPromise,
+  documentiDistribuzionePromise,
+  documentiNominaPromise,
+]);
+
+if (stepsError) throw stepsError;
+if (documentiVerbaleError) throw documentiVerbaleError;
+if (documentiNominaError) throw documentiNominaError;
+
+const steps: any[] = stepsData || [];
+
+const praticheConVerbale = new Set<string>(
+  (documentiVerbale || []).map((doc: any) => String(doc.pratica_id))
+);
+
+const praticheNominaConVerbale = new Set<string>(
+  (documentiNomina || [])
+    .filter(
+      (doc: any) =>
+        doc.tipo_documento === "VERBALE_NOMINA_ORGANO_CONTROLLO"
     )
-  );
-}
+    .map((doc: any) => String(doc.pratica_id))
+);
+
+const praticheNominaConAccettazione = new Set<string>(
+  (documentiNomina || [])
+    .filter((doc: any) => doc.tipo_documento === "ACCETTAZIONE_CARICHE")
+    .map((doc: any) => String(doc.pratica_id))
+);
 
 const stepsByVariazione = steps.reduce((acc: any, step: any) => {
   if (!acc[step.variazione_id]) acc[step.variazione_id] = {};
