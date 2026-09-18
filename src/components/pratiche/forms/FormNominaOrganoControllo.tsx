@@ -1,5 +1,7 @@
 "use client";
 
+// PERSISTENZA_NOMINE_V2: le delibere salvano i dati anagrafici nei metadati della pratica
+
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { Download, Trash2, Upload } from "lucide-react";
@@ -118,6 +120,8 @@ type NuovaNomina = {
   bilancio_chiuso_al: string;
   durata_anni: string;
   compenso_lordo: string;
+  source_organo_id?: string;
+  origine_azione?: "nomina" | "conferma";
 };
 
 type MetaSoggetto = {
@@ -134,6 +138,14 @@ type MetaSoggetto = {
   bilancio_chiuso_al?: string;
   durata_anni?: string;
   compenso_lordo?: string;
+  nominativo_nome?: string;
+  nominativo_codice_fiscale?: string;
+  nominativo_partita_iva?: string;
+  nominativo_indirizzo?: string;
+  nominativo_cap?: string;
+  nominativo_citta?: string;
+  nominativo_provincia?: string;
+  source_cliente_id?: string;
 };
 
 const caricheNomina = [
@@ -213,6 +225,8 @@ function nuovaNominaVuota(): NuovaNomina {
     bilancio_chiuso_al: "",
     durata_anni: "",
     compenso_lordo: "",
+    source_organo_id: "",
+    origine_azione: "nomina",
   };
 }
 
@@ -285,7 +299,8 @@ export default function FormNominaOrganoControllo({ pratica }: any) {
 
   const numeroConferme = Object.values(decisioni).filter((d) => d.azione === "CONFERMA").length;
   const numeroRimozioni = Object.values(decisioni).filter((d) => d.azione === "RIMOZIONE").length;
-  const numeroRevisoriNuovi = nomine.filter((n) =>
+  const nuoveNomineEffettive = nomine.filter((n) => n.origine_azione !== "conferma");
+  const numeroRevisoriNuovi = nuoveNomineEffettive.filter((n) =>
     String(n.carica).toLowerCase().includes("revisor")
   ).length;
 
@@ -370,6 +385,11 @@ export default function FormNominaOrganoControllo({ pratica }: any) {
       const meta = safeJson(row.note);
       if (meta.workflow !== "nomina_organo_controllo") continue;
 
+      const nominativo = row.nominativo || {};
+      const nome = nominativo.nome_cognome || nominativo.ragione_sociale || meta.nominativo_nome || "";
+      const codiceFiscale = nominativo.codice_fiscale || meta.nominativo_codice_fiscale || "";
+      const partitaIva = nominativo.partita_iva || meta.nominativo_partita_iva || meta.partita_iva || "";
+
       if ((meta.azione === "conferma" || meta.azione === "rimozione") && meta.source_organo_id) {
         nuoveDecisioni[String(meta.source_organo_id)] = {
           azione: meta.azione === "conferma" ? "CONFERMA" : "RIMOZIONE",
@@ -378,13 +398,13 @@ export default function FormNominaOrganoControllo({ pratica }: any) {
         };
       }
 
-      if (meta.azione === "nomina") {
+      if (meta.azione === "conferma") {
         nomineSalvate.push({
           id: String(row.id),
-          nominativo_id: String(row.nominativo_id || ""),
-          nome: row.nominativo?.nome_cognome || "",
-          codice_fiscale: row.nominativo?.codice_fiscale || "",
-          partita_iva: meta.partita_iva || "",
+          nominativo_id: meta.source_cliente_id || "",
+          nome,
+          codice_fiscale: codiceFiscale,
+          partita_iva: partitaIva,
           qualifica: meta.qualifica || "",
           carica: row.carica || "",
           data_inizio: meta.data_inizio || "",
@@ -393,6 +413,28 @@ export default function FormNominaOrganoControllo({ pratica }: any) {
           bilancio_chiuso_al: meta.bilancio_chiuso_al || "",
           durata_anni: meta.durata_anni || "",
           compenso_lordo: meta.compenso_lordo || "",
+          source_organo_id: meta.source_organo_id || "",
+          origine_azione: "conferma",
+        });
+      }
+
+      if (meta.azione === "nomina") {
+        nomineSalvate.push({
+          id: String(row.id),
+          nominativo_id: meta.source_cliente_id || "",
+          nome,
+          codice_fiscale: codiceFiscale,
+          partita_iva: partitaIva,
+          qualifica: meta.qualifica || "",
+          carica: row.carica || "",
+          data_inizio: meta.data_inizio || "",
+          durata_tipo: meta.durata_tipo || "APPROVAZIONE_BILANCIO",
+          data_fine: meta.data_fine || "",
+          bilancio_chiuso_al: meta.bilancio_chiuso_al || "",
+          durata_anni: meta.durata_anni || "",
+          compenso_lordo: meta.compenso_lordo || "",
+          source_organo_id: "",
+          origine_azione: "nomina",
         });
       }
     }
@@ -411,6 +453,62 @@ export default function FormNominaOrganoControllo({ pratica }: any) {
         ...patch,
       },
     }));
+  }
+
+  function normalizzaCaricaEsistente(organo: any) {
+    const testo = String(`${organo?.carica || ""} ${organo?.ruolo || ""}`).toLowerCase();
+    if (testo.includes("presidente") && testo.includes("sindac")) return "Presidente del collegio sindacale";
+    if (testo.includes("supplente")) return "Sindaco supplente";
+    if (testo.includes("sindaco unico")) return "Sindaco unico";
+    if (testo.includes("sindac")) return "Sindaco effettivo";
+    if ((testo.includes("società") || testo.includes("societa")) && testo.includes("revis")) return "Società di revisione";
+    if (testo.includes("revis")) return "Revisore legale";
+    return organo?.carica || organo?.ruolo || "Revisore legale";
+  }
+
+  function precompilaConferma(organo: any) {
+    const sourceId = String(organo?.id || "");
+    const giaInserita = nomine.find(
+      (item) => item.origine_azione === "conferma" && item.source_organo_id === sourceId
+    );
+    if (giaInserita) {
+      setNuovaNomina(giaInserita);
+      return;
+    }
+
+    const durataAnni = organo?.durata_carica_anni ? String(organo.durata_carica_anni) : "";
+    const dataScadenza = organo?.data_scadenza || "";
+    setNuovaNomina({
+      id: "",
+      nominativo_id: String(organo?.soggetto_cliente_id || ""),
+      nome: organo?.nominativo_nome || organo?.soggetto_cliente?.ragione_sociale || "",
+      codice_fiscale: organo?.nominativo_codice_fiscale || organo?.soggetto_cliente?.codice_fiscale || "",
+      partita_iva: organo?.soggetto_cliente?.partita_iva || "",
+      qualifica: organo?.qualifica || "",
+      carica: normalizzaCaricaEsistente(organo),
+      data_inizio: organo?.data_nomina || form.data_atto || "",
+      durata_tipo: durataAnni ? "ANNI" : dataScadenza ? "DATA_FINE" : "APPROVAZIONE_BILANCIO",
+      data_fine: dataScadenza,
+      bilancio_chiuso_al: "",
+      durata_anni: durataAnni,
+      compenso_lordo: organo?.compenso_lordo ? String(organo.compenso_lordo) : "",
+      source_organo_id: sourceId,
+      origine_azione: "conferma",
+    });
+  }
+
+  function handleDecisioneOrganoChange(organo: any, azione: AzioneOrgano) {
+    const organoId = String(organo.id);
+    const precedente = decisioni[organoId];
+    setDecisione(organoId, {
+      azione,
+      data_effetto:
+        azione === "RIMOZIONE"
+          ? precedente?.data_effetto || form.data_atto || ""
+          : precedente?.data_effetto || "",
+    });
+
+    if (azione === "CONFERMA") precompilaConferma(organo);
   }
 
   function applicaNominativo(id: string) {
@@ -443,7 +541,20 @@ export default function FormNominaOrganoControllo({ pratica }: any) {
       return alert("Inserisci la durata in anni.");
     }
 
-    setNomine((prev) => [...prev, { ...nuovaNomina, id: crypto.randomUUID() }]);
+    const voce = { ...nuovaNomina, id: nuovaNomina.id || crypto.randomUUID() };
+
+    if (voce.origine_azione === "conferma" && voce.source_organo_id) {
+      setNomine((prev) => [
+        ...prev.filter(
+          (item) =>
+            !(item.origine_azione === "conferma" && item.source_organo_id === voce.source_organo_id)
+        ),
+        voce,
+      ]);
+    } else {
+      setNomine((prev) => [...prev, voce]);
+    }
+
     setNuovaNomina(nuovaNominaVuota());
   }
 
@@ -492,30 +603,53 @@ export default function FormNominaOrganoControllo({ pratica }: any) {
       const decisione = decisioni[String(organo.id)];
       if (!decisione || decisione.azione === "NESSUNA") continue;
 
-      const nome = organo.nominativo_nome || organo.soggetto_cliente?.ragione_sociale || "";
-      const cf =
-        organo.nominativo_codice_fiscale ||
-        organo.soggetto_cliente?.codice_fiscale ||
-        organo.soggetto_cliente?.partita_iva ||
-        "";
-      if (!nome || !cf) {
+      const dettaglioConferma = nomine.find(
+        (item) =>
+          item.origine_azione === "conferma" &&
+          item.source_organo_id === String(organo.id)
+      );
+
+      const nome = dettaglioConferma?.nome || organo.nominativo_nome || organo.soggetto_cliente?.ragione_sociale || "";
+      const cf = dettaglioConferma?.codice_fiscale || organo.nominativo_codice_fiscale || organo.soggetto_cliente?.codice_fiscale || "";
+      const piva = dettaglioConferma?.partita_iva || organo.soggetto_cliente?.partita_iva || "";
+
+      if (!nome || (!cf && !piva)) {
         throw new Error(`Dati anagrafici incompleti per ${nome || organo.carica || "componente"}`);
       }
-      const nominativoId = await assicuraNominativo(nome, cf);
+
       const meta: MetaSoggetto = {
         workflow: "nomina_organo_controllo",
         azione: decisione.azione === "CONFERMA" ? "conferma" : "rimozione",
         source_organo_id: String(organo.id),
-        partita_iva: organo.soggetto_cliente?.partita_iva || "",
-        data_inizio: organo.data_nomina || "",
+        source_cliente_id: String(organo.soggetto_cliente_id || ""),
+        nominativo_nome: nome,
+        nominativo_codice_fiscale: cf,
+        nominativo_partita_iva: piva,
+        nominativo_indirizzo: organo.soggetto_cliente?.indirizzo || "",
+        nominativo_cap: organo.soggetto_cliente?.cap || "",
+        nominativo_citta: organo.soggetto_cliente?.citta || "",
+        nominativo_provincia: organo.soggetto_cliente?.provincia || "",
+        partita_iva: piva,
+        qualifica: dettaglioConferma?.qualifica || organo?.qualifica || "",
+        data_inizio: dettaglioConferma?.data_inizio || organo.data_nomina || "",
         data_effetto:
           decisione.azione === "RIMOZIONE"
             ? decisione.data_effetto || form.data_atto || ""
             : "",
         motivo: decisione.motivo || "",
-        durata_tipo: organo.durata_carica === "anni" ? "ANNI" : undefined,
-        data_fine: organo.data_scadenza || "",
-        durata_anni: organo.durata_carica_anni ? String(organo.durata_carica_anni) : "",
+        durata_tipo:
+          dettaglioConferma?.durata_tipo ||
+          (organo.durata_carica_anni
+            ? "ANNI"
+            : organo.data_scadenza
+            ? "DATA_FINE"
+            : undefined),
+        data_fine: dettaglioConferma?.data_fine || organo.data_scadenza || "",
+        bilancio_chiuso_al: dettaglioConferma?.bilancio_chiuso_al || "",
+        durata_anni:
+          dettaglioConferma?.durata_anni ||
+          (organo.durata_carica_anni ? String(organo.durata_carica_anni) : ""),
+        compenso_lordo: dettaglioConferma?.compenso_lordo || "",
       };
 
       const res = await fetch(`/api/pratiche/${encodeURIComponent(praticaId)}/soggetti`, {
@@ -523,8 +657,8 @@ export default function FormNominaOrganoControllo({ pratica }: any) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           tipo_soggetto: "organo_controllo",
-          nominativo_id: nominativoId,
-          carica: organo.carica || organo.ruolo || "Componente organo di controllo",
+          nominativo_id: null,
+          carica: dettaglioConferma?.carica || organo.carica || organo.ruolo || "Componente organo di controllo",
           note: JSON.stringify(meta),
           ordine: ordine++,
         }),
@@ -533,13 +667,23 @@ export default function FormNominaOrganoControllo({ pratica }: any) {
       if (!res.ok) throw new Error(data.error || "Errore salvataggio conferma/rimozione");
     }
 
-    for (const nomina of nomine) {
-      const cf = nomina.codice_fiscale.trim() || nomina.partita_iva.trim();
-      const nominativoId = await assicuraNominativo(nomina.nome, cf);
+    for (const nomina of nomine.filter((item) => item.origine_azione !== "conferma")) {
+      const cf = nomina.codice_fiscale.trim();
+      const piva = nomina.partita_iva.trim();
+      const selected = nominativi.find((n: any) => String(n.id) === String(nomina.nominativo_id));
+
       const meta: MetaSoggetto = {
         workflow: "nomina_organo_controllo",
         azione: "nomina",
-        partita_iva: nomina.partita_iva,
+        source_cliente_id: nomina.nominativo_id || "",
+        nominativo_nome: nomina.nome,
+        nominativo_codice_fiscale: cf,
+        nominativo_partita_iva: piva,
+        nominativo_indirizzo: selected?.indirizzo || "",
+        nominativo_cap: selected?.cap || "",
+        nominativo_citta: selected?.citta || "",
+        nominativo_provincia: selected?.provincia || "",
+        partita_iva: piva,
         qualifica: nomina.qualifica,
         data_inizio: nomina.data_inizio,
         durata_tipo: nomina.durata_tipo,
@@ -548,12 +692,13 @@ export default function FormNominaOrganoControllo({ pratica }: any) {
         durata_anni: nomina.durata_anni,
         compenso_lordo: nomina.compenso_lordo,
       };
+
       const res = await fetch(`/api/pratiche/${encodeURIComponent(praticaId)}/soggetti`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           tipo_soggetto: "organo_controllo",
-          nominativo_id: nominativoId,
+          nominativo_id: null,
           carica: nomina.carica,
           note: JSON.stringify(meta),
           ordine: ordine++,
@@ -610,35 +755,55 @@ export default function FormNominaOrganoControllo({ pratica }: any) {
   async function generaVerbale() {
     const salvato = await salvaDatiDocumento();
     if (!salvato) return;
-    try {
-      await generaDocumentoPratica({
-        praticaId,
-        codiceModello: "VERBALE_NOMINA_ORGANO_CONTROLLO",
-        onSuccess: caricaDocumenti,
-      });
-      alert("Verbale di nomina generato.");
-    } catch (error: any) {
-      alert(error.message || "Errore generazione verbale di nomina");
+
+    const res = await fetch(
+      `/api/pratiche/${encodeURIComponent(String(praticaId))}/genera-documento`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ codice_modello: "VERBALE_NOMINA_ORGANO_CONTROLLO" }),
+      }
+    );
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || "Errore generazione verbale di nomina");
+      return;
     }
+    alert("Verbale di nomina generato correttamente");
+    await caricaDocumenti();
   }
 
   async function generaAccettazioni() {
-    if (nomine.length === 0) {
-      alert("Non ci sono nuove cariche per le quali generare l'accettazione.");
+    const haCariche =
+      nuoveNomineEffettive.length > 0 ||
+      Object.values(decisioni).some((d) => d.azione === "CONFERMA");
+
+    if (!haCariche) {
+      alert("Non ci sono cariche per le quali generare l'accettazione.");
       return;
     }
+
+    const ok = confirm("Generare il documento di accettazione carica/cariche?");
+    if (!ok) return;
+
     const salvato = await salvaDatiDocumento();
     if (!salvato) return;
-    try {
-      await generaDocumentoPratica({
-        praticaId,
-        codiceModello: "ACCETTAZIONE_CARICHE",
-        onSuccess: caricaDocumenti,
-      });
-      alert("Accettazione carica/cariche generata.");
-    } catch (error: any) {
-      alert(error.message || "Errore generazione accettazione carica/cariche");
+
+    const res = await fetch(
+      `/api/pratiche/${encodeURIComponent(String(praticaId))}/genera-documento`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ codice_modello: "ACCETTAZIONE_CARICHE" }),
+      }
+    );
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || "Errore generazione accettazione carica/cariche");
+      return;
     }
+    alert("Accettazione carica/cariche generata correttamente");
+    await caricaDocumenti();
   }
 
   return (
@@ -727,7 +892,7 @@ export default function FormNominaOrganoControllo({ pratica }: any) {
               <thead><tr><th style={thStyle}>Nominativo</th><th style={thStyle}>Carica</th><th style={thStyle}>Decorrenza / scadenza</th><th style={thStyle}>Decisione assemblea</th></tr></thead>
               <tbody>{organiControllo.map((o: any) => {
                 const decisione = decisioni[String(o.id)] || { azione: "NESSUNA" as AzioneOrgano, data_effetto: form.data_atto || "", motivo: "" };
-                return <tr key={o.id}><td style={tdStyle}><strong>{o.nominativo_nome || o.soggetto_cliente?.ragione_sociale || "—"}</strong><div style={{ color: "#64748b", fontSize: 12 }}>{o.nominativo_codice_fiscale || o.soggetto_cliente?.codice_fiscale || ""}</div></td><td style={tdStyle}>{o.carica || o.ruolo || "—"}</td><td style={tdStyle}><div>Dal: {formatDateIt(o.data_nomina)}</div><div>Scadenza: {formatDateIt(o.data_scadenza)}</div></td><td style={tdStyle}><select style={inputStyle} value={decisione.azione} onChange={(e) => setDecisione(String(o.id), { azione: e.target.value as AzioneOrgano, data_effetto: e.target.value === "RIMOZIONE" ? decisione.data_effetto || form.data_atto : decisione.data_effetto })}><option value="NESSUNA">Nessuna modifica</option><option value="CONFERMA">Conferma in carica</option><option value="RIMOZIONE">Revoca / rimozione</option></select>{decisione.azione === "RIMOZIONE" && <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 8, marginTop: 8 }}><input type="date" style={inputStyle} value={decisione.data_effetto || form.data_atto} onChange={(e) => setDecisione(String(o.id), { data_effetto: e.target.value })} /><input style={inputStyle} placeholder="Motivo / nota (facoltativo)" value={decisione.motivo} onChange={(e) => setDecisione(String(o.id), { motivo: e.target.value })} /></div>}</td></tr>;
+                return <tr key={o.id}><td style={tdStyle}><strong>{o.nominativo_nome || o.soggetto_cliente?.ragione_sociale || "—"}</strong><div style={{ color: "#64748b", fontSize: 12 }}>{o.nominativo_codice_fiscale || o.soggetto_cliente?.codice_fiscale || ""}</div></td><td style={tdStyle}>{o.carica || o.ruolo || "—"}</td><td style={tdStyle}><div>Dal: {formatDateIt(o.data_nomina)}</div><div>Scadenza: {formatDateIt(o.data_scadenza)}</div></td><td style={tdStyle}><select style={inputStyle} value={decisione.azione} onChange={(e) => handleDecisioneOrganoChange(o, e.target.value as AzioneOrgano)}><option value="NESSUNA">Nessuna modifica</option><option value="CONFERMA">Conferma in carica</option><option value="RIMOZIONE">Revoca / rimozione</option></select>{decisione.azione === "RIMOZIONE" && <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 8, marginTop: 8 }}><input type="date" style={inputStyle} value={decisione.data_effetto || form.data_atto} onChange={(e) => setDecisione(String(o.id), { data_effetto: e.target.value })} /><input style={inputStyle} placeholder="Motivo / nota (facoltativo)" value={decisione.motivo} onChange={(e) => setDecisione(String(o.id), { motivo: e.target.value })} /></div>}</td></tr>;
               })}</tbody>
             </table>
           )}
@@ -757,7 +922,7 @@ export default function FormNominaOrganoControllo({ pratica }: any) {
               {nuovaNomina.durata_tipo === "ANNI" && <Field label="Durata (anni)"><input type="number" min="1" step="1" style={inputStyle} value={nuovaNomina.durata_anni} onChange={(e) => setNuovaNomina({ ...nuovaNomina, durata_anni: e.target.value })} /></Field>}
               <Field label="Compenso annuo lordo (€)"><input type="number" min="0" step="0.01" style={inputStyle} value={nuovaNomina.compenso_lordo} onChange={(e) => setNuovaNomina({ ...nuovaNomina, compenso_lordo: e.target.value })} /></Field>
             </div>
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}><button type="button" style={blueButton} onClick={aggiungiNomina}>Aggiungi nomina</button></div>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}><button type="button" style={blueButton} onClick={aggiungiNomina}>{nuovaNomina.origine_azione === "conferma" ? "Aggiorna conferma" : "Aggiungi nomina"}</button></div>
           </div>
 
           <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 20 }}>
@@ -771,7 +936,7 @@ export default function FormNominaOrganoControllo({ pratica }: any) {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginTop: 18 }}>
             <div style={subCardStyle}><div style={{ fontSize: 12, color: "#64748b" }}>CONFERME</div><div style={{ fontSize: 28, fontWeight: 800 }}>{numeroConferme}</div></div>
             <div style={subCardStyle}><div style={{ fontSize: 12, color: "#64748b" }}>RIMOZIONI / REVOCHE</div><div style={{ fontSize: 28, fontWeight: 800 }}>{numeroRimozioni}</div></div>
-            <div style={subCardStyle}><div style={{ fontSize: 12, color: "#64748b" }}>NUOVE NOMINE</div><div style={{ fontSize: 28, fontWeight: 800 }}>{nomine.length}</div></div>
+            <div style={subCardStyle}><div style={{ fontSize: 12, color: "#64748b" }}>NUOVE NOMINE</div><div style={{ fontSize: 28, fontWeight: 800 }}>{nuoveNomineEffettive.length}</div></div>
             <div style={subCardStyle}><div style={{ fontSize: 12, color: "#64748b" }}>REVISORI / SOCIETÀ REVISIONE</div><div style={{ fontSize: 28, fontWeight: 800 }}>{numeroRevisoriNuovi}</div></div>
           </div>
         </div>
