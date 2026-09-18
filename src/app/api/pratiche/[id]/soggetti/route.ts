@@ -74,12 +74,41 @@ export async function POST(req: Request, { params }: Params) {
   const body = await req.json();
   const supabaseAdmin = getSupabaseAdmin();
 
+  let meta: Record<string, any> = {};
+  if (body.note && typeof body.note === "string") {
+    try {
+      const parsed = JSON.parse(body.note);
+      if (parsed && typeof parsed === "object") meta = parsed;
+    } catch {
+      meta = {};
+    }
+  }
+
+  const nomeCognome =
+    String(body.nome_cognome || meta.nominativo_nome || "").trim();
+  const codiceFiscale =
+    String(body.codice_fiscale || meta.nominativo_codice_fiscale || "")
+      .trim()
+      .toUpperCase();
+  const partitaIva =
+    String(body.partita_iva || meta.nominativo_partita_iva || meta.partita_iva || "")
+      .trim();
+
+  if (!nomeCognome) {
+    return NextResponse.json(
+      { error: "Nominativo obbligatorio per il soggetto della pratica" },
+      { status: 400 }
+    );
+  }
+
   const { data, error } = await supabaseAdmin
     .from("tbpratiche_soggetti")
     .insert({
       pratica_id: id,
       tipo_soggetto: body.tipo_soggetto,
       nominativo_id: body.nominativo_id || null,
+      nome_cognome: nomeCognome,
+      codice_fiscale: codiceFiscale || null,
       carica: body.carica || null,
       note: body.note || null,
       ordine: body.ordine || 0,
@@ -91,5 +120,16 @@ export async function POST(req: Request, { params }: Params) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ success: true, soggetto: data });
+  return NextResponse.json({
+    success: true,
+    soggetto: {
+      ...data,
+      nominativo: {
+        id: data.nominativo_id || null,
+        nome_cognome: data.nome_cognome || nomeCognome,
+        codice_fiscale: data.codice_fiscale || codiceFiscale,
+        partita_iva: partitaIva,
+      },
+    },
+  });
 }
