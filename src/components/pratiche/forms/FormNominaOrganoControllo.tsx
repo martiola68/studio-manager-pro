@@ -183,6 +183,14 @@ function formatDateIt(value?: string | null) {
   return date.toLocaleDateString("it-IT");
 }
 
+function chiaveSocio(codiceFiscale?: unknown, nome?: unknown) {
+  const cf = String(codiceFiscale || "").trim().toUpperCase().replace(/\s+/g, "");
+  if (cf) return `CF:${cf}`;
+
+  const nominativo = String(nome || "").trim().toUpperCase().replace(/\s+/g, " ");
+  return nominativo ? `NOME:${nominativo}` : "";
+}
+
 function isSocio(organo: any) {
   return (
     String(organo?.tipo_ruolo || "").toUpperCase() === "S" ||
@@ -190,12 +198,37 @@ function isSocio(organo: any) {
   );
 }
 
+const ruoliAmministrazionePratica = new Set([
+  "amministratore",
+  "amministratore_unico",
+  "amministratore_delegato",
+  "consigliere_delegato",
+  "presidente_cda",
+  "vice_presidente_cda",
+  "consigliere",
+  "liquidatore",
+  "rappresentante_legale",
+]);
+
+const ruoliControlloPratica = new Set([
+  "sindaco_effettivo",
+  "presidente_collegio_sindacale",
+  "sindaco_unico",
+  "sindaco_supplente",
+  "revisore",
+]);
+
 function isOrganoControllo(organo: any) {
+  const ruolo = String(organo?.ruolo || "").trim().toLowerCase();
+
+  if (ruoliAmministrazionePratica.has(ruolo)) return false;
+  if (ruoliControlloPratica.has(ruolo)) return true;
+
   const testo = String(
-    `${organo?.tipo_ruolo || ""} ${organo?.ruolo || ""} ${organo?.carica || ""}`
+    `${organo?.ruolo || ""} ${organo?.carica || ""}`
   ).toLowerCase();
+
   return (
-    String(organo?.tipo_ruolo || "").toUpperCase() === "C" ||
     testo.includes("sindac") ||
     testo.includes("revisor") ||
     testo.includes("organo di controllo") ||
@@ -293,6 +326,25 @@ export default function FormNominaOrganoControllo({ pratica }: any) {
   });
 
   const sociArchivio = useMemo(() => organiArchivio.filter(isSocio), [organiArchivio]);
+
+  const sociDisponibili = useMemo(() => {
+    const giaInseriti = new Set(
+      soci
+        .map((s: any) => chiaveSocio(s.codice_fiscale, s.nome_cognome))
+        .filter(Boolean)
+    );
+
+    return sociArchivio.filter((o: any) => {
+      const chiave = chiaveSocio(
+        o.soggetto_cliente?.codice_fiscale ||
+          o.soggetto_cliente?.partita_iva ||
+          o.nominativo_codice_fiscale,
+        o.soggetto_cliente?.ragione_sociale || o.nominativo_nome
+      );
+      return !chiave || !giaInseriti.has(chiave);
+    });
+  }, [sociArchivio, soci]);
+
   const organiControllo = useMemo(
     () => organiArchivio.filter((o) => o.attivo !== false && isOrganoControllo(o)),
     [organiArchivio]
@@ -859,7 +911,7 @@ export default function FormNominaOrganoControllo({ pratica }: any) {
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr auto", gap: 12, marginTop: 18, alignItems: "end" }}>
             <Field label="Socio">
               <select style={inputStyle} value={nuovoSocio.nominativo_id} onChange={(e) => {
-                const selected = sociArchivio.find((o: any) => String(o.soggetto_cliente_id) === String(e.target.value));
+                const selected = sociDisponibili.find((o: any) => String(o.soggetto_cliente_id) === String(e.target.value));
                 setNuovoSocio({
                   nominativo_id: selected?.soggetto_cliente_id || "",
                   nome_cognome: selected?.soggetto_cliente?.ragione_sociale || selected?.nominativo_nome || "",
@@ -869,7 +921,7 @@ export default function FormNominaOrganoControllo({ pratica }: any) {
                 });
               }}>
                 <option value="">Seleziona socio</option>
-                {sociArchivio.map((o: any) => <option key={o.id} value={o.soggetto_cliente_id || ""}>{o.soggetto_cliente?.ragione_sociale || o.nominativo_nome || "-"}</option>)}
+                {sociDisponibili.map((o: any) => <option key={o.id} value={o.soggetto_cliente_id || ""}>{o.soggetto_cliente?.ragione_sociale || o.nominativo_nome || "-"}</option>)}
               </select>
             </Field>
             <Field label="% partecipazione"><input type="number" step="0.01" style={inputStyle} value={nuovoSocio.percentuale_partecipazione} onChange={(e) => setNuovoSocio({ ...nuovoSocio, percentuale_partecipazione: e.target.value })} /></Field>
