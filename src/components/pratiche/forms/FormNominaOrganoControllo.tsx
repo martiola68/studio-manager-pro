@@ -112,6 +112,12 @@ type NuovaNomina = {
   nome: string;
   codice_fiscale: string;
   partita_iva: string;
+  luogo_nascita: string;
+  data_nascita: string;
+  indirizzo: string;
+  cap: string;
+  citta: string;
+  provincia: string;
   qualifica: string;
   carica: string;
   data_inizio: string;
@@ -141,6 +147,8 @@ type MetaSoggetto = {
   nominativo_nome?: string;
   nominativo_codice_fiscale?: string;
   nominativo_partita_iva?: string;
+  nominativo_luogo_nascita?: string;
+  nominativo_data_nascita?: string;
   nominativo_indirizzo?: string;
   nominativo_cap?: string;
   nominativo_citta?: string;
@@ -250,6 +258,12 @@ function nuovaNominaVuota(): NuovaNomina {
     nome: "",
     codice_fiscale: "",
     partita_iva: "",
+    luogo_nascita: "",
+    data_nascita: "",
+    indirizzo: "",
+    cap: "",
+    citta: "",
+    provincia: "",
     qualifica: "",
     carica: "Revisore legale",
     data_inizio: "",
@@ -463,6 +477,12 @@ export default function FormNominaOrganoControllo({ pratica }: any) {
           nome,
           codice_fiscale: codiceFiscale,
           partita_iva: partitaIva,
+          luogo_nascita: meta.nominativo_luogo_nascita || "",
+          data_nascita: meta.nominativo_data_nascita || "",
+          indirizzo: meta.nominativo_indirizzo || "",
+          cap: meta.nominativo_cap || "",
+          citta: meta.nominativo_citta || "",
+          provincia: meta.nominativo_provincia || "",
           qualifica: meta.qualifica || "",
           carica: row.carica || "",
           data_inizio: meta.data_inizio || "",
@@ -483,6 +503,12 @@ export default function FormNominaOrganoControllo({ pratica }: any) {
           nome,
           codice_fiscale: codiceFiscale,
           partita_iva: partitaIva,
+          luogo_nascita: meta.nominativo_luogo_nascita || "",
+          data_nascita: meta.nominativo_data_nascita || "",
+          indirizzo: meta.nominativo_indirizzo || "",
+          cap: meta.nominativo_cap || "",
+          citta: meta.nominativo_citta || "",
+          provincia: meta.nominativo_provincia || "",
           qualifica: meta.qualifica || "",
           carica: row.carica || "",
           data_inizio: meta.data_inizio || "",
@@ -542,6 +568,12 @@ export default function FormNominaOrganoControllo({ pratica }: any) {
       nome: organo?.nominativo_nome || organo?.soggetto_cliente?.ragione_sociale || "",
       codice_fiscale: organo?.nominativo_codice_fiscale || organo?.soggetto_cliente?.codice_fiscale || "",
       partita_iva: organo?.soggetto_cliente?.partita_iva || "",
+      luogo_nascita: organo?.soggetto_cliente?.luogo_nascita || "",
+      data_nascita: organo?.soggetto_cliente?.data_nascita || "",
+      indirizzo: organo?.soggetto_cliente?.indirizzo || "",
+      cap: organo?.soggetto_cliente?.cap || "",
+      citta: organo?.soggetto_cliente?.citta || "",
+      provincia: organo?.soggetto_cliente?.provincia || "",
       qualifica: organo?.qualifica || "",
       carica: normalizzaCaricaEsistente(organo),
       data_inizio: organo?.data_nomina || form.data_atto || "",
@@ -577,6 +609,12 @@ export default function FormNominaOrganoControllo({ pratica }: any) {
       nome: selected?.ragione_sociale || selected?.nome_cognome || "",
       codice_fiscale: selected?.codice_fiscale || "",
       partita_iva: selected?.partita_iva || "",
+      luogo_nascita: selected?.luogo_nascita || "",
+      data_nascita: selected?.data_nascita || "",
+      indirizzo: selected?.indirizzo || "",
+      cap: selected?.cap || "",
+      citta: selected?.citta || "",
+      provincia: selected?.provincia || "",
     }));
   }
 
@@ -683,10 +721,21 @@ export default function FormNominaOrganoControllo({ pratica }: any) {
         nominativo_nome: nome,
         nominativo_codice_fiscale: cf,
         nominativo_partita_iva: piva,
-        nominativo_indirizzo: organo.soggetto_cliente?.indirizzo || "",
-        nominativo_cap: organo.soggetto_cliente?.cap || "",
-        nominativo_citta: organo.soggetto_cliente?.citta || "",
-        nominativo_provincia: organo.soggetto_cliente?.provincia || "",
+        nominativo_luogo_nascita:
+          dettaglioConferma?.luogo_nascita ||
+          organo.soggetto_cliente?.luogo_nascita ||
+          "",
+        nominativo_data_nascita:
+          dettaglioConferma?.data_nascita ||
+          organo.soggetto_cliente?.data_nascita ||
+          "",
+        nominativo_indirizzo:
+          dettaglioConferma?.indirizzo ||
+          organo.soggetto_cliente?.indirizzo ||
+          "",
+        nominativo_cap: dettaglioConferma?.cap || organo.soggetto_cliente?.cap || "",
+        nominativo_citta: dettaglioConferma?.citta || organo.soggetto_cliente?.citta || "",
+        nominativo_provincia: dettaglioConferma?.provincia || organo.soggetto_cliente?.provincia || "",
         partita_iva: piva,
         qualifica: dettaglioConferma?.qualifica || organo?.qualifica || "",
         data_inizio: dettaglioConferma?.data_inizio || organo.data_nomina || "",
@@ -737,10 +786,12 @@ export default function FormNominaOrganoControllo({ pratica }: any) {
         nominativo_nome: nomina.nome,
         nominativo_codice_fiscale: cf,
         nominativo_partita_iva: piva,
-        nominativo_indirizzo: selected?.indirizzo || "",
-        nominativo_cap: selected?.cap || "",
-        nominativo_citta: selected?.citta || "",
-        nominativo_provincia: selected?.provincia || "",
+        nominativo_luogo_nascita: nomina.luogo_nascita || selected?.luogo_nascita || "",
+        nominativo_data_nascita: nomina.data_nascita || selected?.data_nascita || "",
+        nominativo_indirizzo: nomina.indirizzo || selected?.indirizzo || "",
+        nominativo_cap: nomina.cap || selected?.cap || "",
+        nominativo_citta: nomina.citta || selected?.citta || "",
+        nominativo_provincia: nomina.provincia || selected?.provincia || "",
         partita_iva: piva,
         qualifica: nomina.qualifica,
         data_inizio: nomina.data_inizio,
@@ -968,6 +1019,14 @@ export default function FormNominaOrganoControllo({ pratica }: any) {
               <Field label="Nominativo / denominazione"><input style={inputStyle} value={nuovaNomina.nome} onChange={(e) => setNuovaNomina({ ...nuovaNomina, nome: e.target.value })} /></Field>
               <Field label="Codice fiscale"><input style={inputStyle} value={nuovaNomina.codice_fiscale} onChange={(e) => setNuovaNomina({ ...nuovaNomina, codice_fiscale: e.target.value.toUpperCase() })} /></Field>
               <Field label="Partita IVA"><input style={inputStyle} value={nuovaNomina.partita_iva} onChange={(e) => setNuovaNomina({ ...nuovaNomina, partita_iva: e.target.value })} /></Field>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 2fr 0.7fr 1fr 0.7fr", gap: 12, marginTop: 14 }}>
+              <Field label="Luogo di nascita"><input style={inputStyle} value={nuovaNomina.luogo_nascita} onChange={(e) => setNuovaNomina({ ...nuovaNomina, luogo_nascita: e.target.value })} /></Field>
+              <Field label="Data di nascita"><input type="date" style={inputStyle} value={nuovaNomina.data_nascita} onChange={(e) => setNuovaNomina({ ...nuovaNomina, data_nascita: e.target.value })} /></Field>
+              <Field label="Indirizzo"><input style={inputStyle} value={nuovaNomina.indirizzo} onChange={(e) => setNuovaNomina({ ...nuovaNomina, indirizzo: e.target.value })} /></Field>
+              <Field label="CAP"><input style={inputStyle} value={nuovaNomina.cap} onChange={(e) => setNuovaNomina({ ...nuovaNomina, cap: e.target.value })} /></Field>
+              <Field label="Città"><input style={inputStyle} value={nuovaNomina.citta} onChange={(e) => setNuovaNomina({ ...nuovaNomina, citta: e.target.value })} /></Field>
+              <Field label="Provincia"><input style={inputStyle} value={nuovaNomina.provincia} onChange={(e) => setNuovaNomina({ ...nuovaNomina, provincia: e.target.value.toUpperCase().slice(0, 2) })} /></Field>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 12, marginTop: 14 }}>
               <Field label="Qualifica professionale"><input style={inputStyle} placeholder="es. Dottore Commercialista / Revisore Legale" value={nuovaNomina.qualifica} onChange={(e) => setNuovaNomina({ ...nuovaNomina, qualifica: e.target.value })} /></Field>
