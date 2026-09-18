@@ -41,6 +41,8 @@ export default function PraticheVariazioniPage() {
  const [clienti, setClienti] = useState<any[]>([]);
 const [tipiVariazione, setTipiVariazione] = useState<any[]>([]);
 const [utente, setUtente] = useState<any>(null);
+const [opzioniCaricate, setOpzioniCaricate] = useState(false);
+const [loadingOpzioni, setLoadingOpzioni] = useState(false);
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -70,7 +72,26 @@ const [utente, setUtente] = useState<any>(null);
 
       const studioId = String(user.studio_id);
 
-      const [tipiResult, clientiResult, variazioniResponse] = await Promise.all([
+      const variazioniResponse = await fetch(
+        `/api/pratiche/variazioni?studio_id=${encodeURIComponent(studioId)}`
+      );
+      const variazioniResult = await variazioniResponse.json();
+
+      setVariazioni(variazioniResult.data || []);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function caricaOpzioniForm() {
+    if (!utente?.studio_id || opzioniCaricate || loadingOpzioni) return;
+
+    try {
+      setLoadingOpzioni(true);
+      const supabase = getSupabaseClient();
+      const studioId = String(utente.studio_id);
+
+      const [tipiResult, clientiResult] = await Promise.all([
         (supabase as any)
           .from("tbpratiche_variazioni_tipi")
           .select("id, descrizione_variazione, tipo_pratica_id, genera_pratica, genera_verbale, ordine")
@@ -82,18 +103,13 @@ const [utente, setUtente] = useState<any>(null);
           .eq("studio_id", studioId)
           .eq("attivo", true)
           .order("ragione_sociale"),
-        fetch(
-          `/api/pratiche/variazioni?studio_id=${encodeURIComponent(studioId)}`
-        ),
       ]);
-
-      const variazioniResult = await variazioniResponse.json();
 
       setTipiVariazione(tipiResult.data || []);
       setClienti(clientiResult.data || []);
-      setVariazioni(variazioniResult.data || []);
+      setOpzioniCaricate(true);
     } finally {
-      setLoading(false);
+      setLoadingOpzioni(false);
     }
   }
 
@@ -178,7 +194,8 @@ const payload = {
     setShowForm(false);
   }
 
-  function modifica(record: any) {
+  async function modifica(record: any) {
+    await caricaOpzioniForm();
     setEditingId(record.id);
 
     setForm({
@@ -340,10 +357,11 @@ if (v.tipo_variazione === "Cambio amministratore") {
             </button>
 
             <button
-              onClick={() => {
+              onClick={async () => {
                 setEditingId(null);
                 setForm(FORM_INIZIALE);
                 setShowForm(true);
+                await caricaOpzioniForm();
               }}
               className="bg-black text-white px-4 py-2 rounded flex items-center gap-2"
             >
