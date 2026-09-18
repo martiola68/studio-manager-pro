@@ -60,41 +60,38 @@ const [utente, setUtente] = useState<any>(null);
 
       const { data: user } = await supabase
         .from("tbutenti")
-        .select("*")
+        .select("id, studio_id, nome, cognome, email")
         .eq("email", session.user.email)
         .single();
 
-    const { data: tipiData } = await (supabase as any)
-  .from("tbpratiche_variazioni_tipi")
-  .select("*")
-  .eq("attivo", true)
-  .order("ordine", { ascending: true });
+      if (!user?.studio_id) return;
 
-setTipiVariazione(tipiData || []);
+      setUtente(user);
 
- 
-if (!user?.studio_id) return;
+      const studioId = String(user.studio_id);
 
-setUtente(user);
+      const [tipiResult, clientiResult, variazioniResponse] = await Promise.all([
+        (supabase as any)
+          .from("tbpratiche_variazioni_tipi")
+          .select("id, descrizione_variazione, tipo_pratica_id, genera_pratica, genera_verbale, ordine")
+          .eq("attivo", true)
+          .order("ordine", { ascending: true }),
+        supabase
+          .from("tbclienti")
+          .select("id, ragione_sociale")
+          .eq("studio_id", studioId)
+          .eq("attivo", true)
+          .order("ragione_sociale"),
+        fetch(
+          `/api/pratiche/variazioni?studio_id=${encodeURIComponent(studioId)}`
+        ),
+      ]);
 
-const studioId = String(user.studio_id);
+      const variazioniResult = await variazioniResponse.json();
 
-const { data: clientiData } = await supabase
-  .from("tbclienti")
-  .select("id, ragione_sociale")
-  .eq("studio_id", studioId)
-  .order("ragione_sociale");
-
-setClienti(clientiData || []);
-
-    
-      const response = await fetch(
-        `/api/pratiche/variazioni?studio_id=${encodeURIComponent(String(studioId))}`
-      );
-
-      const result = await response.json();
-
-      setVariazioni(result.data || []);
+      setTipiVariazione(tipiResult.data || []);
+      setClienti(clientiResult.data || []);
+      setVariazioni(variazioniResult.data || []);
     } finally {
       setLoading(false);
     }
