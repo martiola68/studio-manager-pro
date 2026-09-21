@@ -48,7 +48,10 @@ if (source.includes(classBlock)) {
   source = source.replace(classBlock, styleBlock);
 }
 
-if (!source.includes('backgroundColor: "#dc2626"')) {
+if (
+  !source.includes('data-client-status-toggle') &&
+  !source.includes('backgroundColor: "#dc2626"')
+) {
   const bareSwitch = `      <Switch
         checked={cliente.attivo === true}
         onCheckedChange={(checked) =>`;
@@ -63,7 +66,7 @@ if (!source.includes('backgroundColor: "#dc2626"')) {
         onCheckedChange={(checked) =>`;
 
   if (!source.includes(bareSwitch)) {
-    throw new Error("[clienti-inactive-red] switch clienti non trovato");
+    throw new Error("[clienti-inactive-red] controllo stato clienti non trovato");
   }
 
   source = source.replace(bareSwitch, styledSwitch);
