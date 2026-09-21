@@ -2585,6 +2585,11 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
     >
       <Switch
         checked={cliente.attivo === true}
+        className={
+          cliente.attivo === true
+            ? ""
+            : "data-[state=unchecked]:bg-red-600"
+        }
         onCheckedChange={(checked) =>
           handleToggleAttivo(
             cliente,
