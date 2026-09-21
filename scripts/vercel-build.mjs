@@ -40,6 +40,7 @@ const patches = [
   "scripts/patch-presenze-report-cc.mjs",
   "scripts/patch-permessi-legenda-quarti-ora.mjs",
   "scripts/patch-clienti-riferimenti-ordine-nome.mjs",
+  "scripts/fix-clienti-cassetti-sort-inactive-red.mjs",
   "scripts/patch-scadenzari-operatori-attivi.mjs",
   "scripts/patch-scadenze-forza-alert.mjs",
   "scripts/fix-scadenze-resolver-prima-studio.mjs",
