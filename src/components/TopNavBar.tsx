@@ -65,7 +65,11 @@ interface MenuItem {
 export function TopNavBar() {
   const [currentUser, setCurrentUser] = useState<TopNavUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const versioneCorrenteRef = useRef<string | null>(null);
+  const versioneCorrenteRef = useRef<string>(
+    process.env.NEXT_PUBLIC_BUILD_SHA ||
+      process.env.NEXT_PUBLIC_APP_VERSION ||
+      "local-dev"
+  );
   const [nuovaVersioneDisponibile, setNuovaVersioneDisponibile] = useState(false);
   const [messaggiNonLetti, setMessaggiNonLetti] = useState(0);
   const [promemoriaRicevuti, setPromemoriaRicevuti] = useState(0);
@@ -218,11 +222,10 @@ export function TopNavBar() {
       const response = await fetch(`/api/version?t=${Date.now()}`, { cache: "no-store" });
       if (!response.ok) return;
       const data = await response.json();
-      if (!versioneCorrenteRef.current) {
-        versioneCorrenteRef.current = data.version;
-        return;
-      }
-      if (versioneCorrenteRef.current !== data.version) setNuovaVersioneDisponibile(true);
+      if (!data?.version) return;
+      setNuovaVersioneDisponibile(
+        versioneCorrenteRef.current !== data.version
+      );
     } catch (error) {
       console.warn("Errore controllo versione:", error);
     }
