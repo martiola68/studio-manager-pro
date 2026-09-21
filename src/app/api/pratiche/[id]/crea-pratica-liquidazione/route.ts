@@ -71,34 +71,11 @@ if (!dataEvasioneScioglimento) {
   );
 }
 
-const dataVerbaleLiquidazione =
-  datiDocumento?.data_convocazione ||
-  datiDocumento?.data_assemblea ||
-  datiDocumento?.data_atto;
-
-if (!dataVerbaleLiquidazione) {
-  return NextResponse.json(
-    {
-      error:
-        "Inserisci la data del verbale di messa in liquidazione.",
-    },
-    { status: 400 }
-  );
-}
-
-if (
-  new Date(dataVerbaleLiquidazione) <=
-  new Date(dataEvasioneScioglimento)
-) {
-  return NextResponse.json(
-    {
-      error:
-        "La data del verbale di messa in liquidazione deve essere successiva alla data di evasione dello scioglimento.",
-    },
-    { status: 400 }
-  );
-}
-
+// La data del verbale/delibera non determina l'efficacia della nomina
+// del liquidatore: il verbale può precedere l'evasione dello scioglimento.
+// L'efficacia decorre dall'accettazione della carica, che può intervenire
+// successivamente. Per creare la pratica di liquidazione è quindi
+// sufficiente che lo scioglimento risulti evaso.
 const datiEreditati = {
   societa_denominazione:
     datiDocumento?.societa_denominazione || "",
