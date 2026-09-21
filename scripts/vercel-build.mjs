@@ -67,6 +67,7 @@ const patches = [
   "scripts/patch-av4-print-professionale.mjs",
   "scripts/fix-av4-public-validation-display.mjs",
   "scripts/patch-av4-public-print-identica.mjs",
+  "scripts/oneoff-riallineamento-distribuzione-utili.mjs",
 ];
 
 for (const script of patches) {
