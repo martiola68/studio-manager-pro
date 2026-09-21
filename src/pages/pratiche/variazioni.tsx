@@ -14,6 +14,7 @@ const FORM_INIZIALE = {
   giorni_scadenza_cciaa: 30,
   data_scadenza_cciaa: "",
   data_evasione_cciaa: "",
+  pratica_cciaa_chiusa: false,
 
   obbligo_ade: false,
   giorni_scadenza_ade: 30,
@@ -31,6 +32,15 @@ function aggiungiGiorni(data: string, giorni: number) {
   const d = new Date(data);
   d.setDate(d.getDate() + Number(giorni || 0));
   return d.toISOString().slice(0, 10);
+}
+
+function richiedeDepositoCciaa(value: any) {
+  return (
+    Number(value?.giorni_scadenza_cciaa || 0) > 0 ||
+    Boolean(value?.data_scadenza_cciaa) ||
+    Boolean(value?.data_evasione_cciaa) ||
+    value?.pratica_cciaa_chiusa === true
+  );
 }
 
 export default function PraticheVariazioniPage() {
@@ -159,20 +169,38 @@ const [loadingOpzioni, setLoadingOpzioni] = useState(false);
 );
 
 const isDistribuzioneUtili = form.tipo_variazione === "Distribuzione utili";
+const depositoCciaaDistribuzione =
+  isDistribuzioneUtili && richiedeDepositoCciaa(form);
+const depositoCciaaCompletato =
+  !depositoCciaaDistribuzione ||
+  form.pratica_cciaa_chiusa === true ||
+  Boolean(form.data_evasione_cciaa);
 
 const payload = {
   ...form,
   ...(isDistribuzioneUtili ? {
     ente_principale: "AGENZIA_ENTRATE",
     obbligo_ade: true,
-    giorni_scadenza_cciaa: 0,
-    data_scadenza_cciaa: "",
-    data_evasione_cciaa: "",
+    giorni_scadenza_cciaa: depositoCciaaDistribuzione
+      ? Math.max(Number(form.giorni_scadenza_cciaa || 0), 30)
+      : 0,
+    data_scadenza_cciaa: depositoCciaaDistribuzione
+      ? form.data_scadenza_cciaa || aggiungiGiorni(form.data_atto, 30)
+      : "",
+    data_evasione_cciaa: depositoCciaaDistribuzione
+      ? form.data_evasione_cciaa
+      : "",
+    pratica_cciaa_chiusa: depositoCciaaDistribuzione
+      ? form.pratica_cciaa_chiusa
+      : false,
     giorni_scadenza_ade: 30,
     data_scadenza_ade: aggiungiGiorni(form.data_atto, 30),
     ricevuta_telematica_ade: "",
-    pratica_chiusa: form.conferma_record,
-    stato: form.conferma_record ? "completata" : "in_lavorazione",
+    pratica_chiusa: form.conferma_record && depositoCciaaCompletato,
+    stato:
+      form.conferma_record && depositoCciaaCompletato
+        ? "completata"
+        : "in_lavorazione",
   } : {}),
   studio_id: utente.studio_id,
   utente_id: utente.id,
@@ -232,6 +260,7 @@ const payload = {
       giorni_scadenza_cciaa: record.giorni_scadenza_cciaa || 30,
       data_scadenza_cciaa: record.data_scadenza_cciaa || "",
       data_evasione_cciaa: record.data_evasione_cciaa || "",
+      pratica_cciaa_chiusa: record.pratica_cciaa_chiusa || false,
 
       obbligo_ade: record.obbligo_ade || false,
       giorni_scadenza_ade: record.giorni_scadenza_ade || 30,
@@ -325,13 +354,21 @@ if (v.tipo_variazione === "Scioglimento e liquidazione") {
 }
 
 if (v.tipo_variazione === "Distribuzione utili") {
+  const depositoCciaa = richiedeDepositoCciaa(v);
   steps = [
     v.step_verbale_stato || "da_fare",
+    ...(depositoCciaa
+      ? [
+          v.pratica_cciaa_chiusa === true || v.data_evasione_cciaa
+            ? "completato"
+            : v.step_cciaa_stato || "da_fare",
+        ]
+      : []),
     v.conferma_record === true
       ? "completato"
       : v.data_comunicazione_ade
       ? "in_lavorazione"
-      : "da_fare",
+      : v.step_ade_stato || "da_fare",
   ];
 }
 
@@ -439,6 +476,7 @@ if (v.tipo_variazione === "Cambio amministratore") {
                         giorni_scadenza_cciaa: 0,
                         data_scadenza_cciaa: "",
                         data_evasione_cciaa: "",
+                        pratica_cciaa_chiusa: false,
                         giorni_scadenza_ade: 30,
                         data_scadenza_ade: aggiungiGiorni(form.data_atto, 30),
                         ricevuta_telematica_ade: "",
@@ -612,7 +650,114 @@ if (v.tipo_variazione === "Cambio amministratore") {
                 />
                 Genera pratica / verbale
               </label>
+
+              {form.tipo_variazione === "Distribuzione utili" && (
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={richiedeDepositoCciaa(form)}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setForm({
+                        ...form,
+                        giorni_scadenza_cciaa: checked ? 30 : 0,
+                        data_scadenza_cciaa: checked
+                          ? aggiungiGiorni(form.data_atto, 30)
+                          : "",
+                        data_evasione_cciaa: checked
+                          ? form.data_evasione_cciaa
+                          : "",
+                        pratica_cciaa_chiusa: checked
+                          ? form.pratica_cciaa_chiusa
+                          : false,
+                      });
+                    }}
+                  />
+                  Deposito CCIAA
+                </label>
+              )}
             </div>
+
+            {form.tipo_variazione === "Distribuzione utili" &&
+              richiedeDepositoCciaa(form) && (
+              <div className="border rounded p-3 bg-gray-50">
+                <div className="font-semibold text-lg mb-3">
+                  DATI CAMERA DI COMMERCIO
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">
+                      Termine deposito CCIAA (giorni)
+                    </label>
+                    <input
+                      type="number"
+                      className="border p-2 rounded w-full"
+                      value={form.giorni_scadenza_cciaa}
+                      onChange={(e) => {
+                        const giorni = Number(e.target.value);
+                        setForm({
+                          ...form,
+                          giorni_scadenza_cciaa: giorni,
+                          data_scadenza_cciaa: aggiungiGiorni(
+                            form.data_atto,
+                            giorni
+                          ),
+                        });
+                      }}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">
+                      Data scadenza CCIAA
+                    </label>
+                    <input
+                      type="date"
+                      className="border p-2 rounded w-full"
+                      value={form.data_scadenza_cciaa}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          data_scadenza_cciaa: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">
+                      Data deposito CCIAA
+                    </label>
+                    <input
+                      type="date"
+                      className="border p-2 rounded w-full"
+                      value={form.data_evasione_cciaa}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          data_evasione_cciaa: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <label className="flex items-center gap-2 mt-6">
+                    <input
+                      type="checkbox"
+                      checked={form.pratica_cciaa_chiusa}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          pratica_cciaa_chiusa: e.target.checked,
+                        })
+                      }
+                    />
+                    Conferma deposito CCIAA
+                  </label>
+                </div>
+              </div>
+            )}
 
             {form.obbligo_ade && (
               <div className="border rounded p-3 bg-gray-50">
@@ -704,7 +849,11 @@ if (v.tipo_variazione === "Cambio amministratore") {
                         })
                       }
                     />
-                    {form.tipo_variazione === "Distribuzione utili" ? "Conferma deposito AdE e chiudi pratica" : "Conferma record AdE"}
+                    {form.tipo_variazione === "Distribuzione utili"
+                      ? richiedeDepositoCciaa(form)
+                        ? "Conferma deposito AdE"
+                        : "Conferma deposito AdE e chiudi pratica"
+                      : "Conferma record AdE"}
                   </label>
                 </div>
               </div>
