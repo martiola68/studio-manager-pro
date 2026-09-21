@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { mkdirSync, writeFileSync } from "node:fs";
 
 const SOURCE_EMAIL = "simona.italia@eius-advisory.it";
 const TARGET_EMAIL = "s.italia@revisionicommerciali.it";
@@ -100,5 +101,44 @@ console.log({
     target: targetByDate.get(String(r.data_presenza))?.codice_presenza || null,
   })),
 });
+
+const report = {
+  source: {
+    id: source.id,
+    email: source.email,
+    studio_id: source.studio_id,
+    attivo: source.attivo,
+  },
+  target: {
+    id: target.id,
+    email: target.email,
+    studio_id: target.studio_id,
+    attivo: target.attivo,
+  },
+  cutoff: CUTOFF,
+  source_total: (sourceRows || []).length,
+  source_through_cutoff: sourceThroughCutoff.length,
+  source_first_date: sourceThroughCutoff[0]?.data_presenza || null,
+  source_last_date: sourceThroughCutoff.at(-1)?.data_presenza || null,
+  source_future_count: sourceFuture.length,
+  source_future_dates: sourceFuture.map((r) => r.data_presenza),
+  target_total: (targetRows || []).length,
+  overlap_count: overlaps.length,
+  conflicting_overlap_count: conflicts.length,
+  conflicting_dates: conflicts.map((r) => ({
+    data: r.data_presenza,
+    source: r.codice_presenza,
+    target: targetByDate.get(String(r.data_presenza))?.codice_presenza || null,
+  })),
+  generated_at: new Date().toISOString(),
+  modified_database: false,
+};
+
+mkdirSync("public", { recursive: true });
+writeFileSync(
+  "public/oneoff-audit-simona.json",
+  JSON.stringify(report, null, 2),
+  "utf8"
+);
 
 console.log("=== FINE AUDIT - NESSUNA MODIFICA ESEGUITA ===");
