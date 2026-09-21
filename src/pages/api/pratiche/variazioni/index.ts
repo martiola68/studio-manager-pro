@@ -250,7 +250,11 @@ const { data: utente } = await supabase
   }
 }
 
-function getStepVariazione(tipoVariazione: string, obbligoAde: boolean) {
+function getStepVariazione(
+  tipoVariazione: string,
+  obbligoAde: boolean,
+  variazione?: any
+) {
   const tipo = String(tipoVariazione || "").toLowerCase();
 
   if (tipo.includes("scioglimento") || tipo.includes("liquidazione")) {
@@ -289,12 +293,34 @@ function getStepVariazione(tipoVariazione: string, obbligoAde: boolean) {
 }
 
 if (tipo.includes("distribuzione")) {
+  const depositoCciaa =
+    Number(variazione?.giorni_scadenza_cciaa || 0) > 0 ||
+    Boolean(variazione?.data_scadenza_cciaa) ||
+    Boolean(variazione?.data_evasione_cciaa) ||
+    variazione?.pratica_cciaa_chiusa === true;
+
   return [
     {
       ordine: 1,
       codice_step: "VERBALE",
       titolo: "Verbale distribuzione utili",
       ente: "Interno",
+    },
+    ...(depositoCciaa
+      ? [
+          {
+            ordine: 2,
+            codice_step: "DEPOSITO_CCIAA",
+            titolo: "Deposito pratica CCIAA",
+            ente: "CCIAA",
+          },
+        ]
+      : []),
+    {
+      ordine: depositoCciaa ? 3 : 2,
+      codice_step: "COMUNICAZIONE_ADE",
+      titolo: "Deposito Agenzia Entrate",
+      ente: "AGENZIA_ENTRATE",
     },
   ];
 }
@@ -342,7 +368,8 @@ async function creaStepVariazione(supabase: any, variazione: any) {
 
   const steps = getStepVariazione(
     variazione.tipo_variazione,
-    variazione.obbligo_ade === true
+    variazione.obbligo_ade === true,
+    variazione
   );
 
 const praticaUuid =
@@ -417,6 +444,7 @@ export default async function handler(
           giorni_scadenza_cciaa,
           data_scadenza_cciaa,
           data_evasione_cciaa,
+          pratica_cciaa_chiusa,
           obbligo_ade,
           giorni_scadenza_ade,
           data_scadenza_ade,
@@ -622,7 +650,11 @@ return res.status(200).json({
       await creaStepVariazione(supabase, data);
       await sincronizzaPromemoriaVariazione(supabase, data);
 
-if (body.data_evasione_cciaa) {
+if (body.pratica_cciaa_chiusa === true && !body.data_evasione_cciaa) {
+  body.data_evasione_cciaa = data.data_evasione_cciaa || new Date().toISOString().slice(0, 10);
+}
+
+if (body.data_evasione_cciaa || body.pratica_cciaa_chiusa === true) {
   await supabase
     .from("tbpratiche_step")
     .update({
@@ -651,7 +683,24 @@ if (body.data_comunicazione_ade) {
 }
 
 const isDistribuzioneUtili = String(data.tipo_variazione || "").toLowerCase().includes("distribuzione");
-if (isDistribuzioneUtili && body.conferma_record === true) {
+const depositoCciaaRichiesto =
+  isDistribuzioneUtili &&
+  (
+    Number(data.giorni_scadenza_cciaa || 0) > 0 ||
+    Boolean(data.data_scadenza_cciaa) ||
+    Boolean(data.data_evasione_cciaa) ||
+    data.pratica_cciaa_chiusa === true
+  );
+const depositoCciaaCompletato =
+  !depositoCciaaRichiesto ||
+  data.pratica_cciaa_chiusa === true ||
+  Boolean(data.data_evasione_cciaa);
+
+if (
+  isDistribuzioneUtili &&
+  body.conferma_record === true &&
+  depositoCciaaCompletato
+) {
   const now = new Date().toISOString();
   await supabase
     .from("tbpratiche_step")
