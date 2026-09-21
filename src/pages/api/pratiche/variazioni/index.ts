@@ -296,8 +296,9 @@ function getStepVariazione(
 if (tipo.includes("distribuzione")) {
   const depositoCciaa =
     Number(variazione?.giorni_scadenza_cciaa || 0) > 0 ||
-    Boolean(variazione?.data_scadenza_cciaa) ||
     Boolean(variazione?.data_evasione_cciaa) ||
+    Boolean(variazione?.data_presentazione_cciaa) ||
+    Boolean(variazione?.protocollo_cciaa) ||
     variazione?.pratica_cciaa_chiusa === true;
 
   return [
