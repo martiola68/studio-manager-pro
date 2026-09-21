@@ -260,6 +260,12 @@ function getTodayKey() {
   return toDateKey(today.getFullYear(), today.getMonth(), today.getDate());
 }
 
+function getMaxEditableDateKey() {
+  const maxDate = new Date();
+  maxDate.setDate(maxDate.getDate() + 1);
+  return toDateKey(maxDate.getFullYear(), maxDate.getMonth(), maxDate.getDate());
+}
+
 function isBeforeEnabledPeriod(year: number, monthIndex: number) {
   return year < MIN_YEAR || (year === MIN_YEAR && monthIndex < MIN_MONTH_INDEX);
 }
@@ -921,8 +927,12 @@ const validateRequiredWorkdays = () => {
      const rowsToUpsert: any[] = [];
 const rowsToDelete: { utente_id: string; data_presenza: string }[] = [];
 
+const maxEditableDateKey = getMaxEditableDateKey();
+
 editableDipendenti.forEach((dipendente) => {
   days.forEach((day) => {
+    if (day.date > maxEditableDateKey) return;
+
     const codicePresenza = getCode(dipendente.utente_id, day);
 
     if (!codicePresenza || codicePresenza === '-') {
@@ -1439,7 +1449,9 @@ ${dipendentiXml}
 
 const todayKey = getTodayKey();
 
-const isFutureDay = day.date > todayKey;
+const maxEditableDateKey = getMaxEditableDateKey();
+
+const isFutureDay = day.date > maxEditableDateKey;
 
           const isLockedByRequest =
           lockedCells[`${dipendente.utente_id}|${day.date}`];
@@ -1464,7 +1476,7 @@ const isFutureDay = day.date > todayKey;
                   }
                   title={
   isFutureDay
-    ? 'Non è possibile compilare giorni successivi alla data odierna.'
+    ? 'È possibile compilare le presenze fino al giorno successivo a quello corrente.'
     : isLockedByRequest
       ? 'Presenza generata da richiesta ferie/permessi approvata. Usa Revoca.'
       : day.holidayDescription
@@ -1477,7 +1489,7 @@ const isFutureDay = day.date > todayKey;
                       ? day.isHoliday
                         ? getHolidayCellClass(code)
                         : getCellClass(code)
-                      : day.date <= getTodayKey()
+                      : day.date <= getMaxEditableDateKey()
                         ? 'bg-yellow-50 text-gray-700 border-yellow-300'
                         : 'bg-white text-gray-400 border-gray-200'
                   }`}
