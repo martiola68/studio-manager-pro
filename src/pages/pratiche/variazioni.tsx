@@ -37,8 +37,9 @@ function aggiungiGiorni(data: string, giorni: number) {
 function richiedeDepositoCciaa(value: any) {
   return (
     Number(value?.giorni_scadenza_cciaa || 0) > 0 ||
-    Boolean(value?.data_scadenza_cciaa) ||
     Boolean(value?.data_evasione_cciaa) ||
+    Boolean(value?.data_presentazione_cciaa) ||
+    Boolean(value?.protocollo_cciaa) ||
     value?.pratica_cciaa_chiusa === true
   );
 }
@@ -929,8 +930,18 @@ if (v.tipo_variazione === "Cambio amministratore") {
                     <td className="p-2">{v.cliente?.ragione_sociale || "-"}</td>
                     <td className="p-2">{v.tipo_variazione || "-"}</td>
                    <td className="p-2">{formatDateIT(v.data_atto)}</td>
-                    <td className="p-2">{v.tipo_variazione === "Distribuzione utili" ? "-" : formatDateIT(v.data_scadenza_cciaa)}</td>
-                      <td className="p-2">{v.tipo_variazione === "Distribuzione utili" ? "-" : formatDateIT(v.data_evasione_cciaa)}</td>
+                    <td className="p-2">
+                        {v.tipo_variazione === "Distribuzione utili" &&
+                        !richiedeDepositoCciaa(v)
+                          ? "-"
+                          : formatDateIT(v.data_scadenza_cciaa)}
+                      </td>
+                      <td className="p-2">
+                        {v.tipo_variazione === "Distribuzione utili" &&
+                        !richiedeDepositoCciaa(v)
+                          ? "-"
+                          : formatDateIT(v.data_evasione_cciaa)}
+                      </td>
                       <td className="p-2">{formatDateIT(v.data_scadenza_ade)}</td>
                       <td className="p-2">{formatDateIT(v.data_comunicazione_ade)}</td>
   
@@ -999,28 +1010,46 @@ if (v.tipo_variazione === "Cambio amministratore") {
   )}
 
   {v.tipo_variazione === "Distribuzione utili" && (
-    <button
-      type="button"
-      className="block underline text-left"
-      onClick={async () => {
-        const response = await fetch("/api/pratiche/variazioni/apri", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ variazione_id: v.id }),
-        });
-        const result = await response.json();
-        if (!result.success || !result.pratica_id) {
-          alert(result.error || "Impossibile aprire la pratica");
-          return;
-        }
-        router.push(`/pratiche/${result.pratica_id}`);
-      }}
-    >
-      Verbale distribuzione utili:
-      <span className={`ml-1 ${coloreStep(v.step_verbale_stato)}`}>
-        {(v.step_verbale_stato || "da_fare").replaceAll("_", " ")}
-      </span>
-    </button>
+    <div className="space-y-1 text-xs">
+      <button
+        type="button"
+        className="block underline text-left"
+        onClick={async () => {
+          const response = await fetch("/api/pratiche/variazioni/apri", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ variazione_id: v.id }),
+          });
+          const result = await response.json();
+          if (!result.success || !result.pratica_id) {
+            alert(result.error || "Impossibile aprire la pratica");
+            return;
+          }
+          router.push(`/pratiche/${result.pratica_id}`);
+        }}
+      >
+        Verbale distribuzione utili:
+        <span className={`ml-1 ${coloreStep(v.step_verbale_stato)}`}>
+          {(v.step_verbale_stato || "da_fare").replaceAll("_", " ")}
+        </span>
+      </button>
+
+      {richiedeDepositoCciaa(v) && (
+        <div>
+          Deposito pratica CCIAA:
+          <span className={`ml-1 ${coloreStep(v.step_cciaa_stato)}`}>
+            {(v.step_cciaa_stato || "da_fare").replaceAll("_", " ")}
+          </span>
+        </div>
+      )}
+
+      <div>
+        Deposito AdE:
+        <span className={`ml-1 ${coloreStep(v.step_ade_stato)}`}>
+          {(v.step_ade_stato || "da_fare").replaceAll("_", " ")}
+        </span>
+      </div>
+    </div>
   )}
 
   {v.tipo_variazione === "Cambio amministratore" && (
