@@ -15,7 +15,11 @@ interface HeaderProps { onMenuToggle?: () => void; title?: string }
 export default function Header({ onMenuToggle, title }: HeaderProps) {
   const [currentUser, setCurrentUser] = useState<HeaderUser | null>(null);
   const [studio, setStudio] = useState<Studio | null>(null);
-  const versioneCorrenteRef = useRef<string | null>(null);
+  const versioneCorrenteRef = useRef<string>(
+    process.env.NEXT_PUBLIC_BUILD_SHA ||
+      process.env.NEXT_PUBLIC_APP_VERSION ||
+      "local-dev"
+  );
   const [nuovaVersioneDisponibile, setNuovaVersioneDisponibile] = useState(false);
 
   const getStudioLabelForUser = (utente: HeaderUser | null, studioData: Studio | null) => {
@@ -46,8 +50,9 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
       const data = await response.json();
       const versioneOnline = data?.version;
       if (!versioneOnline) return;
-      if (!versioneCorrenteRef.current) { versioneCorrenteRef.current = versioneOnline; return; }
-      if (versioneCorrenteRef.current !== versioneOnline) setNuovaVersioneDisponibile(true);
+      setNuovaVersioneDisponibile(
+        versioneCorrenteRef.current !== versioneOnline
+      );
     } catch (error) { console.warn("Controllo versione applicazione non riuscito:", error); }
   };
 
@@ -64,7 +69,25 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
   }, []);
 
   const handleLogout = async () => { await hardLogout("/login"); };
-  const handleRefreshApp = () => window.location.reload();
+  const handleRefreshApp = async () => {
+    try {
+      if ("caches" in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(
+          cacheNames
+            .filter((name) => name.startsWith("studio-manager-pro-"))
+            .map((name) => caches.delete(name))
+        );
+      }
+
+      if ("serviceWorker" in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map((registration) => registration.update()));
+      }
+    } finally {
+      window.location.reload();
+    }
+  };
 
   return <header className="relative border-b border-cyan-200/30 bg-[linear-gradient(110deg,#0b4f7d_0%,#0d6f9f_58%,#1688b7_100%)] shadow-sm">
     <div className="px-4 md:px-6 py-4"><div className="flex items-center justify-between gap-3">
