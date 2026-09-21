@@ -109,99 +109,100 @@ function buildPayload(body: any) {
 
 async function creaOAggiornaPromemoria(
   supabase: any,
-params: {
-  id?: string | null;
-  studio_id: string;
-  cliente_id: string;
-  assegnato_a: string | null;
-  titolo: string;
-  descrizione: string;
-  data_scadenza: string;
-  priorita: string;
-  origine: string;
-  origine_id: string;
-
-  tipo: string;
-  settore: string | null;
-}
-  
+  params: {
+    id?: string | null;
+    studio_id: string;
+    cliente_id: string;
+    assegnato_a: string | null;
+    titolo: string;
+    descrizione: string;
+    data_scadenza: string;
+    priorita: string;
+    origine: string;
+    origine_id: string;
+    tipo: string;
+    settore: string | null;
+  }
 ) {
-const payload = {
-  studio_id: params.studio_id,
-  destinatario_id: params.assegnato_a,
-  operatore_id: params.assegnato_a,
-  titolo: params.titolo,
-  descrizione: params.descrizione,
-  data_scadenza: params.data_scadenza,
-  priorita:
-    params.priorita === "urgente"
-      ? "Alta"
-      : params.priorita === "alta"
-      ? "Alta"
-      : params.priorita === "bassa"
-      ? "Bassa"
-      : "Media",
-  working_progress: "Aperto",
-  origine: params.origine,
-  origine_id: params.origine_id,
+  const payload = {
+    studio_id: params.studio_id,
+    destinatario_id: params.assegnato_a,
+    operatore_id: params.assegnato_a,
+    titolo: params.titolo,
+    descrizione: params.descrizione,
+    data_scadenza: params.data_scadenza,
+    priorita:
+      params.priorita === "urgente" || params.priorita === "alta"
+        ? "Alta"
+        : params.priorita === "bassa"
+        ? "Bassa"
+        : "Media",
+    working_progress: "Aperto",
+    origine: params.origine,
+    origine_id: params.origine_id,
+    tipo: params.tipo,
+    settore: params.settore,
+  };
 
-  tipo: params.tipo,
-  settore: params.settore,
-};
-  
   if (params.id) {
     const { data, error } = await supabase
       .from("tbpromemoria")
       .update(payload)
       .eq("id", params.id)
       .select("id")
-      .single();
+      .limit(1);
 
     if (error) throw error;
-    return data?.id || params.id;
+    if (data?.[0]?.id) return data[0].id;
   }
 
-  const { data: existing } = await supabase
+  const { data: existingRows, error: existingError } = await supabase
     .from("tbpromemoria")
     .select("id")
     .eq("origine", params.origine)
     .eq("origine_id", params.origine_id)
-    .maybeSingle();
+    .limit(1);
 
-  if (existing?.id) {
+  if (existingError) throw existingError;
+  const existingId = existingRows?.[0]?.id || null;
+
+  if (existingId) {
     const { data, error } = await supabase
       .from("tbpromemoria")
       .update(payload)
-      .eq("id", existing.id)
+      .eq("id", existingId)
       .select("id")
-      .single();
+      .limit(1);
 
     if (error) throw error;
-    return data?.id || existing.id;
+    return data?.[0]?.id || existingId;
   }
 
   const { data, error } = await supabase
     .from("tbpromemoria")
     .insert(payload)
     .select("id")
-    .single();
+    .limit(1);
 
   if (error) throw error;
-  return data.id;
+  if (!data?.[0]?.id) throw new Error("Promemoria creato senza id");
+  return data[0].id;
 }
 
 async function sincronizzaPromemoriaVariazione(supabase: any, variazione: any) {
-  const { data: cliente } = await supabase
-  .from("tbclienti")
-  .select("ragione_sociale")
-  .eq("id", variazione.cliente_id)
-  .single();
+  const { data: clienteRows } = await supabase
+    .from("tbclienti")
+    .select("ragione_sociale")
+    .eq("id", variazione.cliente_id)
+    .limit(1);
+  const cliente = clienteRows?.[0] || null;
 
-const { data: utente } = await supabase
-  .from("tbutenti")
-  .select("settore")
-  .eq("id", variazione.assegnato_a)
-  .single();
+  const { data: utenteRows } = await supabase
+    .from("tbutenti")
+    .select("settore")
+    .eq("id", variazione.assegnato_a)
+    .limit(1);
+  const utente = utenteRows?.[0] || null;
   const updatePayload: any = {};
 
   if (variazione.data_scadenza_cciaa) {
@@ -622,115 +623,120 @@ return res.status(200).json({
         });
       }
 
-      const { data: variazioneEsistente, error: variazioneEsistenteError } = await supabase
-        .from("tbpratiche_variazioni")
-        .select("pratica_id")
-        .eq("id", id)
-        .single();
+      const { data: variazioniEsistenti, error: variazioneEsistenteError } =
+        await supabase
+          .from("tbpratiche_variazioni")
+          .select("id, pratica_id, tipo_variazione")
+          .eq("id", id)
+          .limit(1);
 
       if (variazioneEsistenteError) throw variazioneEsistenteError;
 
+      const variazioneEsistente = variazioniEsistenti?.[0] || null;
+      if (!variazioneEsistente) {
+        return res.status(404).json({
+          success: false,
+          error: "Variazione non trovata",
+        });
+      }
+
+      let praticaId =
+        body.pratica_id !== undefined
+          ? body.pratica_id
+          : variazioneEsistente.pratica_id || null;
+
+      // Le distribuzioni utili legacy possono avere la pratica collegata
+      // tramite tbpratiche.variazione_id ma pratica_id nullo sulla variazione.
+      // Recuperiamo e persistiamo il collegamento prima del ricalcolo stati.
+      const isDistribuzioneUtili = String(
+        body.tipo_variazione || variazioneEsistente.tipo_variazione || ""
+      )
+        .toLowerCase()
+        .includes("distribuzione");
+
+      if (isDistribuzioneUtili && !praticaId) {
+        const { data: praticheLegacy, error: praticheLegacyError } =
+          await supabase
+            .from("tbpratiche")
+            .select("id, created_at")
+            .eq("variazione_id", id)
+            .order("created_at", { ascending: false })
+            .limit(1);
+
+        if (praticheLegacyError) throw praticheLegacyError;
+        praticaId = praticheLegacy?.[0]?.id || null;
+      }
+
       const payload = buildPayload({
         ...body,
-        pratica_id:
-          body.pratica_id !== undefined
-            ? body.pratica_id
-            : variazioneEsistente?.pratica_id || null,
+        pratica_id: praticaId,
       });
 
-      const { data, error } = await supabase
+      const { data: updatedRows, error } = await supabase
         .from("tbpratiche_variazioni")
         .update(payload)
         .eq("id", id)
         .select()
-        .single();
+        .limit(1);
 
       if (error) throw error;
+
+      const data = updatedRows?.[0] || null;
+      if (!data) {
+        return res.status(404).json({
+          success: false,
+          error: "Variazione non trovata dopo l'aggiornamento",
+        });
+      }
 
       await creaStepVariazione(supabase, data);
       await sincronizzaPromemoriaVariazione(supabase, data);
 
-if (body.pratica_cciaa_chiusa === true && !body.data_evasione_cciaa) {
-  body.data_evasione_cciaa = data.data_evasione_cciaa || new Date().toISOString().slice(0, 10);
-}
+      const now = new Date().toISOString();
 
-if (body.data_evasione_cciaa || body.pratica_cciaa_chiusa === true) {
-  await supabase
-    .from("tbpratiche_step")
-    .update({
-      data_evasione: body.data_evasione_cciaa,
-      stato: "completato",
-      completato: true,
-      data_completamento: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq("variazione_id", id)
-    .eq("codice_step", "DEPOSITO_CCIAA");
-}
+      if (data.pratica_cciaa_chiusa === true || data.data_evasione_cciaa) {
+        await supabase
+          .from("tbpratiche_step")
+          .update({
+            data_evasione: data.data_evasione_cciaa || null,
+            stato: "completato",
+            completato: true,
+            data_completamento: now,
+            updated_at: now,
+          })
+          .eq("variazione_id", id)
+          .eq("codice_step", "DEPOSITO_CCIAA");
+      }
 
-if (body.data_comunicazione_ade) {
-  await supabase
-    .from("tbpratiche_step")
-    .update({
-      data_evasione: body.data_comunicazione_ade,
-      stato: "completato",
-      completato: true,
-      data_completamento: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq("variazione_id", id)
-    .eq("codice_step", "COMUNICAZIONE_ADE");
-}
+      if (data.conferma_record === true || data.data_comunicazione_ade) {
+        await supabase
+          .from("tbpratiche_step")
+          .update({
+            data_evasione: data.data_comunicazione_ade || null,
+            stato: "completato",
+            completato: true,
+            data_completamento: now,
+            updated_at: now,
+          })
+          .eq("variazione_id", id)
+          .eq("codice_step", "COMUNICAZIONE_ADE");
+      }
 
-const isDistribuzioneUtili = String(data.tipo_variazione || "").toLowerCase().includes("distribuzione");
-const depositoCciaaRichiesto =
-  isDistribuzioneUtili &&
-  (
-    Number(data.giorni_scadenza_cciaa || 0) > 0 ||
-    Boolean(data.data_scadenza_cciaa) ||
-    Boolean(data.data_evasione_cciaa) ||
-    data.pratica_cciaa_chiusa === true
-  );
-const depositoCciaaCompletato =
-  !depositoCciaaRichiesto ||
-  data.pratica_cciaa_chiusa === true ||
-  Boolean(data.data_evasione_cciaa);
+      // Il verbale NON viene forzato completato: deve risultare realmente
+      // presente in tbpratiche_documenti. Il ricalcolo lo rileva subito.
+      await aggiornaStatiVariazione(supabase, id);
 
-if (
-  isDistribuzioneUtili &&
-  body.conferma_record === true &&
-  depositoCciaaCompletato
-) {
-  const now = new Date().toISOString();
-  await supabase
-    .from("tbpratiche_step")
-    .update({
-      stato: "completato",
-      completato: true,
-      data_evasione: body.data_comunicazione_ade || null,
-      data_completamento: now,
-      updated_at: now,
-    })
-    .eq("variazione_id", id);
+      const { data: finalRows, error: finalError } = await supabase
+        .from("tbpratiche_variazioni")
+        .select("*")
+        .eq("id", id)
+        .limit(1);
 
-  if (data.pratica_id) {
-    await supabase
-      .from("tbpratiche")
-      .update({ stato: "Completata", stato_step: "completato", updated_at: now })
-      .eq("id", data.pratica_id);
-  }
-
-  await supabase
-    .from("tbpratiche_variazioni")
-    .update({ stato: "completata", pratica_chiusa: true })
-    .eq("id", id);
-}
-
-await aggiornaStatiVariazione(supabase, id);
+      if (finalError) throw finalError;
 
       return res.status(200).json({
         success: true,
-        data,
+        data: finalRows?.[0] || data,
       });
     }
 
