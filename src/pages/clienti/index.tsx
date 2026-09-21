@@ -417,6 +417,19 @@ const [formData, setFormData] =
   const [encryptionEnabled, setEncryptionEnabled] = useState(false);
   const [encryptionLocked, setEncryptionLocked] = useState(true);
 
+  const cassettiFiscaliOrdinati = useMemo(
+    () =>
+      [...cassettiFiscali].sort((a, b) =>
+        safeString(a.nominativo)
+          .trim()
+          .localeCompare(safeString(b.nominativo).trim(), "it", {
+            sensitivity: "base",
+            numeric: true,
+          })
+      ),
+    [cassettiFiscali]
+  );
+
   const clientiConCassetto = useMemo(
     () => clienti.filter((c) => !!c.cassetto_fiscale_id).length,
     [clienti]
@@ -2585,10 +2598,10 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
     >
       <Switch
         checked={cliente.attivo === true}
-        className={
+        style={
           cliente.attivo === true
-            ? ""
-            : "data-[state=unchecked]:bg-red-600"
+            ? undefined
+            : { backgroundColor: "#dc2626" }
         }
         onCheckedChange={(checked) =>
           handleToggleAttivo(
@@ -3389,7 +3402,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
     </SelectTrigger>
     <SelectContent>
       <SelectItem value="none">Nessuno</SelectItem>
-      {cassettiFiscali.map((cassetto) => (
+      {cassettiFiscaliOrdinati.map((cassetto) => (
         <SelectItem key={cassetto.id} value={cassetto.id}>
           {safeString(cassetto.nominativo)} ({safeString(cassetto.username)})
         </SelectItem>
