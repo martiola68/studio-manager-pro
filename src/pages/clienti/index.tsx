@@ -2596,20 +2596,55 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
           : "Attiva nominativo"
       }
     >
-      <Switch
-        checked={cliente.attivo === true}
-        style={
+      <button
+        type="button"
+        data-client-status-toggle
+        aria-pressed={cliente.attivo === true}
+        aria-label={
           cliente.attivo === true
-            ? undefined
-            : { backgroundColor: "#dc2626" }
+            ? "Disattiva nominativo"
+            : "Attiva nominativo"
         }
-        onCheckedChange={(checked) =>
+        onClick={() =>
           handleToggleAttivo(
             cliente,
-            checked
+            cliente.attivo !== true
           )
         }
-      />
+        style={{
+          width: 36,
+          height: 20,
+          padding: 0,
+          border: 0,
+          borderRadius: 9999,
+          backgroundColor:
+            cliente.attivo === true
+              ? "#0284c7"
+              : "#dc2626",
+          position: "relative",
+          cursor: "pointer",
+          transition: "background-color 150ms ease",
+        }}
+      >
+        <span
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            top: 2,
+            left: 2,
+            width: 16,
+            height: 16,
+            borderRadius: "50%",
+            backgroundColor: "#ffffff",
+            transform:
+              cliente.attivo === true
+                ? "translateX(16px)"
+                : "translateX(0)",
+            transition: "transform 150ms ease",
+            boxShadow: "0 1px 2px rgba(0,0,0,0.15)",
+          }}
+        />
+      </button>
     </div>
 
     <Button
