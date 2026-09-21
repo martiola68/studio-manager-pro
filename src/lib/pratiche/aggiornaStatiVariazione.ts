@@ -14,17 +14,23 @@ function isCambioAmministratore(tipo: unknown) {
   return String(tipo || "").toLowerCase().includes("amministratore");
 }
 
+function isDistribuzioneUtili(tipo: unknown) {
+  return String(tipo || "").toLowerCase().includes("distribuzione");
+}
+
 export async function aggiornaStatiVariazione(
   supabase: any,
   variazioneId: string
 ) {
   if (!variazioneId) return;
 
-  const { data: variazione, error } = await supabase
+  const { data: variazioni, error } = await supabase
     .from("tbpratiche_variazioni")
     .select("*")
     .eq("id", variazioneId)
-    .single();
+    .limit(1);
+
+  const variazione = variazioni?.[0] || null;
 
   if (error || !variazione) {
     console.error("Errore caricamento variazione:", error);
@@ -48,6 +54,17 @@ export async function aggiornaStatiVariazione(
   const cambioAmministratore = isCambioAmministratore(
     variazione.tipo_variazione
   );
+  const distribuzioneUtili = isDistribuzioneUtili(
+    variazione.tipo_variazione
+  );
+  const depositoCciaaDistribuzione =
+    distribuzioneUtili &&
+    (
+      Number(variazione.giorni_scadenza_cciaa || 0) > 0 ||
+      Boolean(variazione.data_scadenza_cciaa) ||
+      Boolean(variazione.data_evasione_cciaa) ||
+      variazione.pratica_cciaa_chiusa === true
+    );
 
   if (praticaDeterminaId) {
     step_determina_stato = "in_lavorazione";
@@ -146,12 +163,18 @@ export async function aggiornaStatiVariazione(
         : "da_fare";
   }
 
-  if (variazione.data_evasione_cciaa) {
+  if (
+    variazione.data_evasione_cciaa ||
+    variazione.pratica_cciaa_chiusa === true
+  ) {
     step_cciaa_stato = "completato";
   } else if (
-    praticaLiquidazioneId ||
-    praticaVerbaleId ||
-    praticaDeterminaId
+    (!distribuzioneUtili || depositoCciaaDistribuzione) &&
+    (
+      praticaLiquidazioneId ||
+      praticaVerbaleId ||
+      praticaDeterminaId
+    )
   ) {
     step_cciaa_stato =
       variazione.data_presentazione_cciaa || variazione.protocollo_cciaa
@@ -159,17 +182,42 @@ export async function aggiornaStatiVariazione(
         : "da_fare";
   }
 
-  if (variazione.data_comunicazione_ade || variazione.conferma_record === true) {
+  if (
+    variazione.data_comunicazione_ade ||
+    variazione.conferma_record === true
+  ) {
     step_ade_stato = "completato";
-  } else if (praticaLiquidazioneId && variazione.obbligo_ade === true) {
+  } else if (
+    variazione.obbligo_ade === true &&
+    (
+      praticaLiquidazioneId ||
+      praticaVerbaleId ||
+      distribuzioneUtili
+    )
+  ) {
     step_ade_stato = "in_lavorazione";
   }
+
+  const distribuzioneCompletata =
+    distribuzioneUtili &&
+    step_verbale_stato === "completato" &&
+    step_ade_stato === "completato" &&
+    (
+      !depositoCciaaDistribuzione ||
+      step_cciaa_stato === "completato"
+    );
 
   const now = new Date().toISOString();
 
   const { error: updateError } = await supabase
     .from("tbpratiche_variazioni")
     .update({
+      ...(distribuzioneUtili
+        ? {
+            stato: distribuzioneCompletata ? "completata" : "in_lavorazione",
+            pratica_chiusa: distribuzioneCompletata,
+          }
+        : {}),
       step_determina_stato,
       step_verbale_stato,
       step_liquidazione_stato,
