@@ -165,7 +165,7 @@ export default function AssenzeSettimanaliPage() {
 
         supabase
           .from("tbpresenze_smart_calendario")
-          .select("id, utente_id, data, presenza, festivo, nota")
+          .select("id, gruppo_id, utente_id, data, presenza, festivo, nota")
           .eq("studio_id", currentStudioId)
           .gte("data", startStr)
           .lte("data", endStr),
@@ -192,11 +192,35 @@ export default function AssenzeSettimanaliPage() {
         }))
       );
 
+      const gruppiAttiviIds = new Set(
+        (gruppiData || []).map((gruppo: any) => String(gruppo.id))
+      );
+
+      const appartenenzeAttive = new Set(
+        (gruppiUtentiData || []).map(
+          (membro: any) =>
+            `${String(membro.gruppo_id)}_${String(membro.utente_id)}`
+        )
+      );
+
+      // Il riepilogo settimanale deve usare esclusivamente il calendario
+      // dei gruppi Smart attivi correnti. In questo modo eventuali righe
+      // residue di gruppi eliminati/inattivi non possono sovrascrivere
+      // la turnazione mostrata nella gestione Smart Working.
+      const smartRowsValide = (smartData || []).filter((smart: any) => {
+        const gruppoId = String(smart.gruppo_id || "");
+        const utenteId = String(smart.utente_id || "");
+        return (
+          gruppiAttiviIds.has(gruppoId) &&
+          appartenenzeAttive.has(`${gruppoId}_${utenteId}`)
+        );
+      });
+
       const actualRows = (presenzeData || []) as Presenza[];
       const merged = new Map<string, Presenza>();
 
       // 1) Il calendario Smart è SEMPRE la base principale della settimana.
-      for (const smart of smartData || []) {
+      for (const smart of smartRowsValide) {
         const key = `${smart.utente_id}_${smart.data}`;
 
         if (smart.festivo) {
@@ -347,7 +371,6 @@ export default function AssenzeSettimanaliPage() {
   }
 
   useEffect(() => {
-  
     const init = async () => {
       const id = await getStudioId();
 
@@ -358,7 +381,6 @@ export default function AssenzeSettimanaliPage() {
       }
 
       setStudioId(id);
-      await loadData(id, weekStart);
     };
 
     void init();
