@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { aggiornaStatiVariazione } from "@/lib/pratiche/aggiornaStatiVariazione";
 
 type Params = {
   params: Promise<{ id: string }>;
@@ -90,6 +91,19 @@ export async function POST(req: Request, { params }: Params) {
         { error: updateError.message },
         { status: 500 }
       );
+    }
+
+    const { data: variazioni } = await supabaseAdmin
+      .from("tbpratiche_variazioni")
+      .select("id")
+      .or(
+        `pratica_id.eq.${id},pratica_determina_id.eq.${id},pratica_liquidazione_id.eq.${id}`
+      )
+      .limit(1);
+
+    const variazione = variazioni?.[0] || null;
+    if (variazione?.id) {
+      await aggiornaStatiVariazione(supabaseAdmin, variazione.id);
     }
 
     return NextResponse.json({
