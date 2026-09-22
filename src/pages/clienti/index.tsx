@@ -346,6 +346,7 @@ const fileInputRef = useRef<HTMLInputElement | null>(null);
   >("attivi");
 
   const [showStampaModal, setShowStampaModal] = useState(false);
+  const [stampaPrestazioniOpen, setStampaPrestazioniOpen] = useState(false);
 
 const [filtroStampa, setFiltroStampa] = useState({
   utente_operatore_ids: [] as string[],
@@ -3860,36 +3861,35 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
         }
       />
 
-      <div>
+      <div className="relative">
         <Label>Tipo Prestazione</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              className="mt-1 w-full justify-between bg-white font-normal"
-            >
-              {filtroStampa.tipo_prestazione_ids.length === 0
-                ? "Tutti"
-                : filtroStampa.tipo_prestazione_ids.length === 1
-                  ? safeString(
-                      prestazioni.find(
-                        (p) =>
-                          String(p.id) ===
-                          filtroStampa.tipo_prestazione_ids[0]
-                      )?.descrizione
-                    ) || "1 selezionato"
-                  : `${filtroStampa.tipo_prestazione_ids.length} selezionati`}
-              <span className="ml-2 text-xs text-muted-foreground">▾</span>
-            </Button>
-          </PopoverTrigger>
 
-          <PopoverContent
-            align="start"
-            className="z-[10000] w-[var(--radix-popover-trigger-width)] min-w-[240px] p-2"
-          >
+        <Button
+          type="button"
+          variant="outline"
+          className="mt-1 w-full justify-between bg-white font-normal"
+          onClick={() => setStampaPrestazioniOpen((open) => !open)}
+        >
+          <span className="truncate">
+            {filtroStampa.tipo_prestazione_ids.length === 0
+              ? "Tutti"
+              : filtroStampa.tipo_prestazione_ids.length === 1
+                ? safeString(
+                    prestazioni.find(
+                      (p) =>
+                        String(p.id) ===
+                        filtroStampa.tipo_prestazione_ids[0]
+                    )?.descrizione
+                  ) || "1 selezionato"
+                : `${filtroStampa.tipo_prestazione_ids.length} selezionati`}
+          </span>
+          <span className="ml-2 text-xs text-muted-foreground">▾</span>
+        </Button>
+
+        {stampaPrestazioniOpen && (
+          <div className="absolute left-0 top-full z-[10001] mt-1 w-full min-w-[240px] rounded-md border bg-white p-2 shadow-lg">
             <div
-              className="flex items-center gap-2 px-2 py-2 rounded hover:bg-muted cursor-pointer"
+              className="flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-muted"
               onClick={() =>
                 setFiltroStampa((prev) => ({
                   ...prev,
@@ -3914,8 +3914,8 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
                 return (
                   <div
                     key={id}
-                    className="flex items-center gap-2 px-2 py-2 rounded hover:bg-muted cursor-pointer"
-                    onClick={() => {
+                    className="flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-muted"
+                    onClick={() =>
                       setFiltroStampa((prev) => ({
                         ...prev,
                         tipo_prestazione_ids:
@@ -3924,8 +3924,8 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
                                 (value) => value !== id
                               )
                             : [...prev.tipo_prestazione_ids, id],
-                      }));
-                    }}
+                      }))
+                    }
                   >
                     <Checkbox checked={checked} />
                     <span>{safeString(p.descrizione)}</span>
@@ -3933,8 +3933,8 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
                 );
               })}
             </div>
-          </PopoverContent>
-        </Popover>
+          </div>
+        )}
       </div>
 
       <StampaMultiSelect
