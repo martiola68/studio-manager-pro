@@ -245,11 +245,13 @@ function StampaMultiSelect({
   values,
   options,
   onChange,
+  directCheckbox = false,
 }: {
   label: string;
   values: string[];
   options: StampaMultiOption[];
   onChange: (values: string[]) => void;
+  directCheckbox?: boolean;
 }) {
   const summary =
     values.length === 0
@@ -289,7 +291,15 @@ function StampaMultiSelect({
             className="flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-muted"
             onClick={() => onChange([])}
           >
-            <Checkbox checked={values.length === 0} />
+            <Checkbox
+              checked={values.length === 0}
+              onClick={(event) => {
+                if (directCheckbox) event.stopPropagation();
+              }}
+              onCheckedChange={() => {
+                if (directCheckbox) onChange([]);
+              }}
+            />
             <span>Tutti</span>
           </div>
 
@@ -302,7 +312,15 @@ function StampaMultiSelect({
                 className="flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-muted"
                 onClick={() => toggle(option.value)}
               >
-                <Checkbox checked={values.includes(option.value)} />
+                <Checkbox
+                  checked={values.includes(option.value)}
+                  onClick={(event) => {
+                    if (directCheckbox) event.stopPropagation();
+                  }}
+                  onCheckedChange={() => {
+                    if (directCheckbox) toggle(option.value);
+                  }}
+                />
                 <span className="leading-tight">{option.label}</span>
               </div>
             ))}
@@ -3862,6 +3880,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
 
       <StampaMultiSelect
         label="Tipo Prestazione"
+        directCheckbox
         values={filtroStampa.tipo_prestazione_ids}
         options={prestazioni.map((p) => ({
           value: String(p.id),
