@@ -245,13 +245,11 @@ function StampaMultiSelect({
   values,
   options,
   onChange,
-  directCheckbox = false,
 }: {
   label: string;
   values: string[];
   options: StampaMultiOption[];
   onChange: (values: string[]) => void;
-  directCheckbox?: boolean;
 }) {
   const summary =
     values.length === 0
@@ -291,15 +289,7 @@ function StampaMultiSelect({
             className="flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-muted"
             onClick={() => onChange([])}
           >
-            <Checkbox
-              checked={values.length === 0}
-              onClick={(event) => {
-                if (directCheckbox) event.stopPropagation();
-              }}
-              onCheckedChange={() => {
-                if (directCheckbox) onChange([]);
-              }}
-            />
+            <Checkbox checked={values.length === 0} />
             <span>Tutti</span>
           </div>
 
@@ -312,15 +302,7 @@ function StampaMultiSelect({
                 className="flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-muted"
                 onClick={() => toggle(option.value)}
               >
-                <Checkbox
-                  checked={values.includes(option.value)}
-                  onClick={(event) => {
-                    if (directCheckbox) event.stopPropagation();
-                  }}
-                  onCheckedChange={() => {
-                    if (directCheckbox) toggle(option.value);
-                  }}
-                />
+                <Checkbox checked={values.includes(option.value)} />
                 <span className="leading-tight">{option.label}</span>
               </div>
             ))}
@@ -3878,21 +3860,82 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
         }
       />
 
-      <StampaMultiSelect
-        label="Tipo Prestazione"
-        directCheckbox
-        values={filtroStampa.tipo_prestazione_ids}
-        options={prestazioni.map((p) => ({
-          value: String(p.id),
-          label: safeString(p.descrizione) || String(p.id),
-        }))}
-        onChange={(values) =>
-          setFiltroStampa((prev) => ({
-            ...prev,
-            tipo_prestazione_ids: values,
-          }))
-        }
-      />
+      <div>
+        <Label>Tipo Prestazione</Label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              className="mt-1 w-full justify-between bg-white font-normal"
+            >
+              {filtroStampa.tipo_prestazione_ids.length === 0
+                ? "Tutti"
+                : filtroStampa.tipo_prestazione_ids.length === 1
+                  ? safeString(
+                      prestazioni.find(
+                        (p) =>
+                          String(p.id) ===
+                          filtroStampa.tipo_prestazione_ids[0]
+                      )?.descrizione
+                    ) || "1 selezionato"
+                  : `${filtroStampa.tipo_prestazione_ids.length} selezionati`}
+              <span className="ml-2 text-xs text-muted-foreground">▾</span>
+            </Button>
+          </PopoverTrigger>
+
+          <PopoverContent
+            align="start"
+            className="z-[10000] w-[var(--radix-popover-trigger-width)] min-w-[240px] p-2"
+          >
+            <div
+              className="flex items-center gap-2 px-2 py-2 rounded hover:bg-muted cursor-pointer"
+              onClick={() =>
+                setFiltroStampa((prev) => ({
+                  ...prev,
+                  tipo_prestazione_ids: [],
+                }))
+              }
+            >
+              <Checkbox
+                checked={filtroStampa.tipo_prestazione_ids.length === 0}
+              />
+              <span>Tutti</span>
+            </div>
+
+            <div className="my-2 border-t" />
+
+            <div className="max-h-[260px] overflow-auto">
+              {prestazioni.map((p) => {
+                const id = String(p.id);
+                const checked =
+                  filtroStampa.tipo_prestazione_ids.includes(id);
+
+                return (
+                  <div
+                    key={id}
+                    className="flex items-center gap-2 px-2 py-2 rounded hover:bg-muted cursor-pointer"
+                    onClick={() => {
+                      setFiltroStampa((prev) => ({
+                        ...prev,
+                        tipo_prestazione_ids:
+                          prev.tipo_prestazione_ids.includes(id)
+                            ? prev.tipo_prestazione_ids.filter(
+                                (value) => value !== id
+                              )
+                            : [...prev.tipo_prestazione_ids, id],
+                      }));
+                    }}
+                  >
+                    <Checkbox checked={checked} />
+                    <span>{safeString(p.descrizione)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
 
       <StampaMultiSelect
         label="Tipo Redditi"
