@@ -21,6 +21,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const {
   format,
   studio_id,
+  utente_operatore_ids,
+  utente_professionista_ids,
+  tipo_prestazione_ids,
+  tipi_redditi,
+  tipi_cliente,
+  settori,
+
+  // Compatibilità con eventuali link vecchi già salvati.
   utente_operatore_id,
   utente_professionista_id,
   tipo_prestazione_id,
@@ -30,6 +38,44 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   settore_lavoro,
   settore_consulenza,
 } = req.query;
+
+  const parseMulti = (value: string | string[] | undefined) => {
+    const raw = Array.isArray(value) ? value.join(",") : String(value || "");
+    if (!raw || raw.toLowerCase() === "tutti") return [];
+    return Array.from(
+      new Set(
+        raw
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean)
+      )
+    );
+  };
+
+  const operatoriIds = parseMulti(
+    (utente_operatore_ids ?? utente_operatore_id) as string | string[] | undefined
+  );
+  const professionistiIds = parseMulti(
+    (utente_professionista_ids ?? utente_professionista_id) as string | string[] | undefined
+  );
+  const prestazioniIds = parseMulti(
+    (tipo_prestazione_ids ?? tipo_prestazione_id) as string | string[] | undefined
+  );
+  const redditiSelezionati = parseMulti(
+    (tipi_redditi ?? tipo_redditi) as string | string[] | undefined
+  );
+  const tipiClienteSelezionati = parseMulti(
+    (tipi_cliente ?? tipo_cliente) as string | string[] | undefined
+  );
+
+  let settoriSelezionatiNuovi = parseMulti(settori as string | string[] | undefined);
+
+  // Compatibilità con il vecchio filtro a tre SI/NO.
+  if (settoriSelezionatiNuovi.length === 0 && !settori) {
+    if (settore_fiscale === "true") settoriSelezionatiNuovi.push("fiscale");
+    if (settore_lavoro === "true") settoriSelezionatiNuovi.push("lavoro");
+    if (settore_consulenza === "true") settoriSelezionatiNuovi.push("consulenza");
+  }
 
     if (!studio_id || typeof studio_id !== "string") {
       return res.status(400).json({ error: "studio_id mancante" });
@@ -60,46 +106,40 @@ settore_fiscale,
       .eq("attivo", true)
       .order("ragione_sociale", { ascending: true });
 
-    if (utente_operatore_id && utente_operatore_id !== "tutti") {
-      query = query.eq("utente_operatore_id", String(utente_operatore_id));
+    if (operatoriIds.length > 0) {
+      query = query.in("utente_operatore_id", operatoriIds);
     }
 
-    if (utente_professionista_id && utente_professionista_id !== "tutti") {
-      query = query.eq(
-        "utente_professionista_id",
-        String(utente_professionista_id)
-      );
+    if (professionistiIds.length > 0) {
+      query = query.in("utente_professionista_id", professionistiIds);
     }
 
-    if (tipo_prestazione_id && tipo_prestazione_id !== "tutti") {
-      query = query.eq("tipo_prestazione_id", String(tipo_prestazione_id));
+    if (prestazioniIds.length > 0) {
+      query = query.in("tipo_prestazione_id", prestazioniIds);
     }
 
-   if (tipo_redditi && tipo_redditi !== "tutti") {
-  query = query.eq("tipo_redditi", String(tipo_redditi));
-}
+    if (redditiSelezionati.length > 0) {
+      query = query.in("tipo_redditi", redditiSelezionati);
+    }
 
-if (tipo_cliente && tipo_cliente !== "tutti") {
-  query = query.eq("tipo_cliente", String(tipo_cliente));
-}
+    if (tipiClienteSelezionati.length > 0) {
+      query = query.in("tipo_cliente", tipiClienteSelezionati);
+    }
 
-const settoriSelezionati: string[] = [];
+    const condizioniSettore: string[] = [];
+    if (settoriSelezionatiNuovi.includes("fiscale")) {
+      condizioniSettore.push("settore_fiscale.eq.true");
+    }
+    if (settoriSelezionatiNuovi.includes("lavoro")) {
+      condizioniSettore.push("settore_lavoro.eq.true");
+    }
+    if (settoriSelezionatiNuovi.includes("consulenza")) {
+      condizioniSettore.push("settore_consulenza.eq.true");
+    }
 
-if (settore_fiscale === "true") {
-  settoriSelezionati.push("settore_fiscale.eq.true");
-}
-
-if (settore_lavoro === "true") {
-  settoriSelezionati.push("settore_lavoro.eq.true");
-}
-
-if (settore_consulenza === "true") {
-  settoriSelezionati.push("settore_consulenza.eq.true");
-}
-
-if (settoriSelezionati.length > 0) {
-  query = query.or(settoriSelezionati.join(","));
-}
+    if (condizioniSettore.length > 0) {
+      query = query.or(condizioniSettore.join(","));
+    }
 
     const { data, error } = await query;
 
@@ -113,8 +153,7 @@ if (settoriSelezionati.length > 0) {
 let titoloReport = "Lista Clienti";
 
 if (
-  utente_operatore_id &&
-  utente_operatore_id !== "tutti" &&
+  operatoriIds.length === 1 &&
   clienti.length > 0
 ) {
   const nomeUtente = nomeCompleto(

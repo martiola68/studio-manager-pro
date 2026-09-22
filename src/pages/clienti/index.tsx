@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
@@ -234,6 +235,84 @@ function estraiNumeroReaDaTesto(text: string) {
   return match?.[1]?.replace(/\s+/g, " ").trim() || "";
 }
 
+type StampaMultiOption = {
+  value: string;
+  label: string;
+};
+
+function StampaMultiSelect({
+  label,
+  values,
+  options,
+  onChange,
+}: {
+  label: string;
+  values: string[];
+  options: StampaMultiOption[];
+  onChange: (values: string[]) => void;
+}) {
+  const summary =
+    values.length === 0
+      ? "Tutti"
+      : values.length === 1
+        ? options.find((option) => option.value === values[0])?.label || "1 selezionato"
+        : `${values.length} selezionati`;
+
+  const toggle = (value: string) => {
+    onChange(
+      values.includes(value)
+        ? values.filter((item) => item !== value)
+        : [...values, value]
+    );
+  };
+
+  return (
+    <div>
+      <Label>{label}</Label>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            className="mt-1 w-full justify-between bg-white font-normal"
+          >
+            <span className="truncate">{summary}</span>
+            <span className="ml-2 text-xs text-muted-foreground">▾</span>
+          </Button>
+        </PopoverTrigger>
+
+        <PopoverContent
+          align="start"
+          className="w-[var(--radix-popover-trigger-width)] min-w-[240px] p-2"
+        >
+          <div
+            className="flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-muted"
+            onClick={() => onChange([])}
+          >
+            <Checkbox checked={values.length === 0} />
+            <span>Tutti</span>
+          </div>
+
+          <div className="my-2 border-t" />
+
+          <div className="max-h-[260px] overflow-auto">
+            {options.map((option) => (
+              <div
+                key={option.value}
+                className="flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-muted"
+                onClick={() => toggle(option.value)}
+              >
+                <Checkbox checked={values.includes(option.value)} />
+                <span className="leading-tight">{option.label}</span>
+              </div>
+            ))}
+          </div>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
 export default function ClientiPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -269,14 +348,13 @@ const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [showStampaModal, setShowStampaModal] = useState(false);
 
 const [filtroStampa, setFiltroStampa] = useState({
-  utente_operatore_id: "tutti",
-  utente_professionista_id: "tutti",
-  tipo_prestazione_id: "tutti",
-  tipo_redditi: "tutti",
-  tipo_cliente: "tutti",
-  settore_fiscale: "true",
-  settore_lavoro: "false",
-  settore_consulenza: "false",
+  utente_operatore_ids: [] as string[],
+  utente_professionista_ids: [] as string[],
+  tipo_prestazione_ids: [] as string[],
+  tipi_redditi: [] as string[],
+  tipi_cliente: [] as string[],
+  // Mantiene il comportamento precedente: all'apertura la stampa è filtrata sul settore Fiscale.
+  settori: ["fiscale"] as string[],
 });
 
   const [utentiFiscali, setUtentiFiscali] = useState([]);
@@ -2116,14 +2194,16 @@ if (!studioIdEffettivo) {
 
 params.set("studio_id", studioIdEffettivo);
     
-  params.set("utente_operatore_id", filtroStampa.utente_operatore_id);
-  params.set("utente_professionista_id", filtroStampa.utente_professionista_id);
-  params.set("tipo_prestazione_id", filtroStampa.tipo_prestazione_id);
- params.set("tipo_redditi", filtroStampa.tipo_redditi);
-params.set("tipo_cliente", filtroStampa.tipo_cliente);
-params.set("settore_fiscale", filtroStampa.settore_fiscale);
-  params.set("settore_lavoro", filtroStampa.settore_lavoro);
-  params.set("settore_consulenza", filtroStampa.settore_consulenza);
+  const setMultiParam = (key: string, values: string[]) => {
+    params.set(key, values.length > 0 ? values.join(",") : "tutti");
+  };
+
+  setMultiParam("utente_operatore_ids", filtroStampa.utente_operatore_ids);
+  setMultiParam("utente_professionista_ids", filtroStampa.utente_professionista_ids);
+  setMultiParam("tipo_prestazione_ids", filtroStampa.tipo_prestazione_ids);
+  setMultiParam("tipi_redditi", filtroStampa.tipi_redditi);
+  setMultiParam("tipi_cliente", filtroStampa.tipi_cliente);
+  setMultiParam("settori", filtroStampa.settori);
 
   return params.toString();
 };
@@ -3726,192 +3806,125 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
         <Input value="SI" disabled />
       </div>
 
-      <div>
-        <Label>Utente Fiscale</Label>
-        <Select
-          value={filtroStampa.utente_operatore_id}
-          onValueChange={(v) =>
-            setFiltroStampa((prev) => ({
-              ...prev,
-              utente_operatore_id: v,
-            }))
-          }
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="tutti">Tutti</SelectItem>
-            {utenti.map((u) => (
-              <SelectItem key={u.id} value={u.id}>
-                {safeString(u.nome)} {safeString(u.cognome)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <StampaMultiSelect
+        label="Utente Fiscale"
+        values={filtroStampa.utente_operatore_ids}
+        options={utenti
+          .slice()
+          .sort((a, b) =>
+            `${safeString(a.cognome)} ${safeString(a.nome)}`.localeCompare(
+              `${safeString(b.cognome)} ${safeString(b.nome)}`,
+              "it",
+              { sensitivity: "base" }
+            )
+          )
+          .map((u) => ({
+            value: String(u.id),
+            label:
+              `${safeString(u.cognome)} ${safeString(u.nome)}`.trim() ||
+              safeString(u.email) ||
+              String(u.id),
+          }))}
+        onChange={(values) =>
+          setFiltroStampa((prev) => ({
+            ...prev,
+            utente_operatore_ids: values,
+          }))
+        }
+      />
 
-      <div>
-        <Label>Professionista Fiscale</Label>
-        <Select
-          value={filtroStampa.utente_professionista_id}
-          onValueChange={(v) =>
-            setFiltroStampa((prev) => ({
-              ...prev,
-              utente_professionista_id: v,
-            }))
-          }
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="tutti">Tutti</SelectItem>
-            {utenti.map((u) => (
-              <SelectItem key={u.id} value={u.id}>
-                {safeString(u.nome)} {safeString(u.cognome)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <StampaMultiSelect
+        label="Professionista Fiscale"
+        values={filtroStampa.utente_professionista_ids}
+        options={utenti
+          .slice()
+          .sort((a, b) =>
+            `${safeString(a.cognome)} ${safeString(a.nome)}`.localeCompare(
+              `${safeString(b.cognome)} ${safeString(b.nome)}`,
+              "it",
+              { sensitivity: "base" }
+            )
+          )
+          .map((u) => ({
+            value: String(u.id),
+            label:
+              `${safeString(u.cognome)} ${safeString(u.nome)}`.trim() ||
+              safeString(u.email) ||
+              String(u.id),
+          }))}
+        onChange={(values) =>
+          setFiltroStampa((prev) => ({
+            ...prev,
+            utente_professionista_ids: values,
+          }))
+        }
+      />
 
-      <div>
-        <Label>Tipo Prestazione</Label>
-        <Select
-          value={filtroStampa.tipo_prestazione_id}
-          onValueChange={(v) =>
-            setFiltroStampa((prev) => ({
-              ...prev,
-              tipo_prestazione_id: v,
-            }))
-          }
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="tutti">Tutti</SelectItem>
-            {prestazioni.map((p) => (
-              <SelectItem key={p.id} value={p.id}>
-                {safeString(p.descrizione)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <StampaMultiSelect
+        label="Tipo Prestazione"
+        values={filtroStampa.tipo_prestazione_ids}
+        options={prestazioni.map((p) => ({
+          value: String(p.id),
+          label: safeString(p.descrizione) || String(p.id),
+        }))}
+        onChange={(values) =>
+          setFiltroStampa((prev) => ({
+            ...prev,
+            tipo_prestazione_ids: values,
+          }))
+        }
+      />
 
-      <div>
-        <Label>Tipo Redditi</Label>
-        <Select
-          value={filtroStampa.tipo_redditi}
-          onValueChange={(v) =>
-            setFiltroStampa((prev) => ({
-              ...prev,
-              tipo_redditi: v,
-            }))
-          }
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="tutti">Tutti</SelectItem>
-            <SelectItem value="USC">USC</SelectItem>
-            <SelectItem value="USP">USP</SelectItem>
-            <SelectItem value="ENC">ENC</SelectItem>
-            <SelectItem value="UPF BASE">UPF BASE</SelectItem>
-            <SelectItem value="UPF ORD.">UPF ORD.</SelectItem>
-            <SelectItem value="UPF FORF.">UPF FORF.</SelectItem>
-            <SelectItem value="730">730</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div>
-  <Label>Tipologia Cliente</Label>
-  <Select
-    value={filtroStampa.tipo_cliente}
-    onValueChange={(v) =>
-      setFiltroStampa((prev) => ({
-        ...prev,
-        tipo_cliente: v,
-      }))
-    }
-  >
-    <SelectTrigger>
-      <SelectValue />
-    </SelectTrigger>
-    <SelectContent>
-      <SelectItem value="tutti">Tutti</SelectItem>
-      <SelectItem value="Persona fisica">Persona fisica</SelectItem>
-      <SelectItem value="Altro">Altro</SelectItem>
-    </SelectContent>
-  </Select>
-</div>
-   <div>
-        <Label>Settore Fiscale</Label>
-        <Select
-          value={filtroStampa.settore_fiscale}
-          onValueChange={(v) =>
-            setFiltroStampa((prev) => ({
-              ...prev,
-              settore_fiscale: v,
-            }))
-          }
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-         <SelectContent>
-  <SelectItem value="tutti">Tutti</SelectItem>
-  <SelectItem value="true">SI</SelectItem>
-  <SelectItem value="false">NO</SelectItem>
-</SelectContent>
-        </Select>
-      </div>
+      <StampaMultiSelect
+        label="Tipo Redditi"
+        values={filtroStampa.tipi_redditi}
+        options={[
+          { value: "USC", label: "USC" },
+          { value: "USP", label: "USP" },
+          { value: "ENC", label: "ENC" },
+          { value: "UPF BASE", label: "UPF BASE" },
+          { value: "UPF ORD.", label: "UPF ORD." },
+          { value: "UPF FORF.", label: "UPF FORF." },
+          { value: "730", label: "730" },
+        ]}
+        onChange={(values) =>
+          setFiltroStampa((prev) => ({
+            ...prev,
+            tipi_redditi: values,
+          }))
+        }
+      />
 
-      <div>
-        <Label>Settore Lavoro</Label>
-        <Select
-          value={filtroStampa.settore_lavoro}
-          onValueChange={(v) =>
-            setFiltroStampa((prev) => ({
-              ...prev,
-              settore_lavoro: v,
-            }))
-          }
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-         <SelectContent>
-  <SelectItem value="tutti">Tutti</SelectItem>
-  <SelectItem value="true">SI</SelectItem>
-  <SelectItem value="false">NO</SelectItem>
-</SelectContent>
-        </Select>
-      </div>
+      <StampaMultiSelect
+        label="Tipologia Cliente"
+        values={filtroStampa.tipi_cliente}
+        options={[
+          { value: "Persona fisica", label: "Persona fisica" },
+          { value: "Altro", label: "Altro" },
+        ]}
+        onChange={(values) =>
+          setFiltroStampa((prev) => ({
+            ...prev,
+            tipi_cliente: values,
+          }))
+        }
+      />
 
-      <div>
-        <Label>Settore Consulenza</Label>
-        <Select
-          value={filtroStampa.settore_consulenza}
-          onValueChange={(v) =>
-            setFiltroStampa((prev) => ({
-              ...prev,
-              settore_consulenza: v,
-            }))
-          }
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-         <SelectContent>
-  <SelectItem value="tutti">Tutti</SelectItem>
-  <SelectItem value="true">SI</SelectItem>
-  <SelectItem value="false">NO</SelectItem>
-</SelectContent>
-        </Select>
+      <StampaMultiSelect
+        label="Settore"
+        values={filtroStampa.settori}
+        options={[
+          { value: "fiscale", label: "Fiscale" },
+          { value: "lavoro", label: "Lavoro" },
+          { value: "consulenza", label: "Consulenza" },
+        ]}
+        onChange={(values) =>
+          setFiltroStampa((prev) => ({
+            ...prev,
+            settori: values,
+          }))
+        }
+      />
       </div>
     </div>
 
