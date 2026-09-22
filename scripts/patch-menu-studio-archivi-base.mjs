@@ -21,6 +21,7 @@ const prefix = `  const menuItems: MenuItem[] = [
           { label: "Post del giorno", href: "/post-del-giorno", icon: <StickyNote className="h-4 w-4" />, groupLabel: "Memo" },
         ]},
         { label: "Comunicazione", icon: <Mail className="h-4 w-4" />, children: [
+          { label: "Messaggi", href: "/messaggi", icon: <MessageSquare className="h-4 w-4" />, groupLabel: "Comunicazione" },
           { label: "E-mail interne", href: "/comunicazioni/interne", icon: <MessageSquare className="h-4 w-4" />, groupLabel: "Comunicazione" },
           { label: "E-mail clienti", href: "/comunicazioni-clienti", icon: <Mail className="h-4 w-4" />, groupLabel: "Comunicazione" },
           { label: "Newsletter", href: "/newsletter", icon: <Mail className="h-4 w-4" />, groupLabel: "Comunicazione" },
