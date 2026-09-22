@@ -283,7 +283,7 @@ function StampaMultiSelect({
 
         <PopoverContent
           align="start"
-          className="w-[var(--radix-popover-trigger-width)] min-w-[240px] p-2"
+          className="z-[10000] w-[var(--radix-popover-trigger-width)] min-w-[240px] p-2"
         >
           <div
             className="flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-muted"
