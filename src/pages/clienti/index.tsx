@@ -156,6 +156,7 @@ soggetto_isa?: boolean;
   flag_mail_attivo: boolean;
   flag_mail_scadenze: boolean;
   flag_mail_newsletter: boolean;
+  flag_stampa_lista_clienti: boolean;
 };
 
 const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
@@ -206,6 +207,7 @@ attivo: true,
   flag_mail_attivo: false,
   flag_mail_scadenze: false,
   flag_mail_newsletter: false,
+  flag_stampa_lista_clienti: true,
 };
 
 function safeString(v: unknown): string {
@@ -352,6 +354,7 @@ const [filtroStampa, setFiltroStampa] = useState({
   tipo_prestazione_ids: [] as string[],
   tipi_redditi: [] as string[],
   tipi_cliente: [] as string[],
+  inclusione_stampa: ["inclusi"] as string[],
   // Mantiene il comportamento precedente: all'apertura la stampa è filtrata sul settore Fiscale.
   settori: ["fiscale"] as string[],
 });
@@ -908,6 +911,8 @@ attivo: clienteData.attivo ?? true,
     flag_mail_attivo: clienteData.flag_mail_attivo ?? false,
     flag_mail_scadenze: clienteData.flag_mail_scadenze ?? false,
     flag_mail_newsletter: clienteData.flag_mail_newsletter ?? false,
+    flag_stampa_lista_clienti:
+      (clienteData as any).flag_stampa_lista_clienti ?? true,
   });
 
  };
@@ -1202,6 +1207,7 @@ cassetto_fiscale_id: formData.cassetto_fiscale_id || null,
           flag_mail_attivo: formData.flag_mail_attivo,
           flag_mail_scadenze: formData.flag_mail_scadenze,
           flag_mail_newsletter: formData.flag_mail_newsletter,
+          flag_stampa_lista_clienti: formData.flag_stampa_lista_clienti,
           };
 
         let dataToSave: Partial<ClienteInsert> = base;
@@ -2202,6 +2208,7 @@ params.set("studio_id", studioIdEffettivo);
   setMultiParam("tipo_prestazione_ids", filtroStampa.tipo_prestazione_ids);
   setMultiParam("tipi_redditi", filtroStampa.tipi_redditi);
   setMultiParam("tipi_cliente", filtroStampa.tipi_cliente);
+  setMultiParam("inclusione_stampa", filtroStampa.inclusione_stampa);
   setMultiParam("settori", filtroStampa.settori);
 
   return params.toString();
@@ -3596,6 +3603,27 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
               }
             />
           </div>
+
+          <div className="flex items-center justify-between border rounded-md p-4">
+            <div className="space-y-1">
+              <Label htmlFor="flag_stampa_lista_clienti" className="font-medium">
+                Includi in Stampa Lista Clienti
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Disattiva per escludere il soggetto dalle stampe ordinarie della Lista Clienti
+              </p>
+            </div>
+            <Switch
+              id="flag_stampa_lista_clienti"
+              checked={formData.flag_stampa_lista_clienti}
+              onCheckedChange={(checked) =>
+                setFormData({
+                  ...formData,
+                  flag_stampa_lista_clienti: checked,
+                })
+              }
+            />
+          </div>
         </div>
       </TabsContent>
 
@@ -3966,6 +3994,21 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
           setFiltroStampa((prev) => ({
             ...prev,
             tipi_cliente: values,
+          }))
+        }
+      />
+
+      <StampaMultiSelect
+        label="Inclusione stampa"
+        values={filtroStampa.inclusione_stampa}
+        options={[
+          { value: "inclusi", label: "Inclusi" },
+          { value: "esclusi", label: "Esclusi" },
+        ]}
+        onChange={(values) =>
+          setFiltroStampa((prev) => ({
+            ...prev,
+            inclusione_stampa: values,
           }))
         }
       />

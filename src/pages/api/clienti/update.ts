@@ -82,6 +82,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       "flag_mail_attivo",
       "flag_mail_scadenze",
       "flag_mail_newsletter",
+      "flag_stampa_lista_clienti",
     ];
 
     for (const key of flagKeys) {

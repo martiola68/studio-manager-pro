@@ -26,6 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   tipo_prestazione_ids,
   tipi_redditi,
   tipi_cliente,
+  inclusione_stampa,
   settori,
 
   // Compatibilità con eventuali link vecchi già salvati.
@@ -66,6 +67,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   );
   const tipiClienteSelezionati = parseMulti(
     (tipi_cliente ?? tipo_cliente) as string | string[] | undefined
+  );
+  const inclusioneStampaSelezionata = parseMulti(
+    inclusione_stampa as string | string[] | undefined
   );
 
   let settoriSelezionatiNuovi = parseMulti(settori as string | string[] | undefined);
@@ -124,6 +128,15 @@ settore_fiscale,
 
     if (tipiClienteSelezionati.length > 0) {
       query = query.in("tipo_cliente", tipiClienteSelezionati);
+    }
+
+    const stampaInclusi = inclusioneStampaSelezionata.includes("inclusi");
+    const stampaEsclusi = inclusioneStampaSelezionata.includes("esclusi");
+
+    if (stampaInclusi && !stampaEsclusi) {
+      query = query.eq("flag_stampa_lista_clienti", true);
+    } else if (stampaEsclusi && !stampaInclusi) {
+      query = query.eq("flag_stampa_lista_clienti", false);
     }
 
     const condizioniSettore: string[] = [];

@@ -331,6 +331,7 @@ microsoft365_connections: {
 flag_mail_attivo: boolean | null
 flag_mail_newsletter: boolean | null
 flag_mail_scadenze: boolean | null
+flag_stampa_lista_clienti: boolean | null
 id: string
           indirizzo: string
           note: string | null
@@ -364,6 +365,7 @@ id: string
 flag_mail_attivo?: boolean | null
 flag_mail_newsletter?: boolean | null
 flag_mail_scadenze?: boolean | null
+flag_stampa_lista_clienti?: boolean | null
 id?: string
           indirizzo: string
           note?: string | null
@@ -397,6 +399,7 @@ id?: string
 flag_mail_attivo?: boolean | null
 flag_mail_newsletter?: boolean | null
 flag_mail_scadenze?: boolean | null
+flag_stampa_lista_clienti?: boolean | null
 id?: string
           indirizzo?: string
           note?: string | null

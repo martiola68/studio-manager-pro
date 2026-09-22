@@ -408,6 +408,7 @@ export type Database = {
 flag_mail_attivo: boolean | null
 flag_mail_newsletter: boolean | null
 flag_mail_scadenze: boolean | null
+flag_stampa_lista_clienti: boolean | null
 gestione_esterometro: boolean | null
 id: string
 indirizzo: string | null
@@ -449,6 +450,7 @@ indirizzo: string | null
 flag_mail_attivo?: boolean | null
 flag_mail_newsletter?: boolean | null
 flag_mail_scadenze?: boolean | null
+flag_stampa_lista_clienti?: boolean | null
 gestione_esterometro?: boolean | null
           indirizzo?: string | null
           matricola_inps?: string | null
@@ -489,6 +491,7 @@ gestione_esterometro?: boolean | null
 flag_mail_attivo?: boolean | null
 flag_mail_newsletter?: boolean | null
 flag_mail_scadenze?: boolean | null
+flag_stampa_lista_clienti?: boolean | null
 gestione_esterometro?: boolean | null
           indirizzo?: string | null
           matricola_inps?: string | null
