@@ -80,7 +80,7 @@ export default async function handler(
 
     const { data: av4, error: av4Error } = await supabase
       .from("tbAV4")
-      .select("id, public_token, public_enabled, pdf_firmato_cliente")
+      .select("id, studio_id, pratica_id, av1_id, cliente_id, public_token, public_enabled, pdf_firmato_cliente")
       .eq("id", av4_id)
      // .eq("public_token", token)
       .maybeSingle();
@@ -139,6 +139,52 @@ export default async function handler(
 
 if (updateError) {
   return res.status(500).json({ ok: false, error: updateError.message });
+}
+
+const fascicoloPayload = {
+  studio_id: av4.studio_id || null,
+  pratica_id: av4.pratica_id || null,
+  av1_id: av4.av1_id || null,
+  av4_id: av4.id,
+  cliente_id: av4.cliente_id || null,
+  tipo_documento: "AV4 firmato",
+  nome_file: safeName,
+  storage_path: filePath,
+  bucket_name: BUCKET_NAME,
+  mime_type: "application/pdf",
+  dimensione: fileBuffer.length,
+  origine: "av4_pdf",
+  caricato_da: null,
+};
+
+const { data: existingDoc, error: existingDocError } = await supabase
+  .from("tbAVFascicoliDocumenti")
+  .select("id")
+  .eq("origine", "av4_pdf")
+  .eq("av4_id", av4.id)
+  .maybeSingle();
+
+if (existingDocError) {
+  console.error("Errore verifica fascicolo AV4:", existingDocError);
+}
+
+if (existingDoc?.id) {
+  const { error: fascicoloUpdateError } = await supabase
+    .from("tbAVFascicoliDocumenti")
+    .update(fascicoloPayload)
+    .eq("id", existingDoc.id);
+
+  if (fascicoloUpdateError) {
+    console.error("Errore aggiornamento fascicolo AV4:", fascicoloUpdateError);
+  }
+} else {
+  const { error: fascicoloInsertError } = await supabase
+    .from("tbAVFascicoliDocumenti")
+    .insert(fascicoloPayload);
+
+  if (fascicoloInsertError) {
+    console.error("Errore inserimento fascicolo AV4:", fascicoloInsertError);
+  }
 }
 
 return res.status(200).json({

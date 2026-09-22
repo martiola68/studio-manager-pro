@@ -23,6 +23,8 @@ type AV4Info = {
   public_sent_at?: string | null;
   compilato_da_cliente?: boolean | null;
   av4_caricato_manualmente?: boolean | null;
+  allegato_pdf_cliente?: string | null;
+  pdf_firmato_cliente?: string | null;
 };
 
 type ResponsabileAV = {
@@ -274,7 +276,16 @@ export default function AntiriciclaggioPage() {
     const normalizza = (value: any) => String(value || "").toLowerCase().trim();
     const hasDoc = (check: (doc: any) => boolean) => docs.some(check);
     const av1 = hasDoc((doc: any) => ["av1_pdf", "av1 firmato"].includes(normalizza(doc.origine)) || ["av1 firmato", "modulo firmato"].includes(normalizza(doc.tipo_documento)));
-    const av4 = hasDoc((doc: any) => ["av4_pdf", "av4 firmato"].includes(normalizza(doc.origine)) || normalizza(doc.tipo_documento) === "av4 firmato");
+    const av4Info = getAV4Info(row);
+    const av4PathPresente = !!String(
+      av4Info?.pdf_firmato_cliente || av4Info?.allegato_pdf_cliente || ""
+    ).trim();
+    const av4 =
+      hasDoc(
+        (doc: any) =>
+          ["av4_pdf", "av4 firmato"].includes(normalizza(doc.origine)) ||
+          normalizza(doc.tipo_documento) === "av4 firmato"
+      ) || av4PathPresente;
     const documentoIdentita = hasDoc((doc: any) => ["documento_rappresentante", "documento rappresentante"].includes(normalizza(doc.origine)) || ["documento identità", "documento identita"].includes(normalizza(doc.tipo_documento)));
     const cliente = getCliente(row);
     const nomeCliente = normalizza(cliente?.ragione_sociale || cliente?.cod_cliente);
@@ -302,7 +313,7 @@ export default function AntiriciclaggioPage() {
         const [{ data: av1 }, { data: av2 }, { data: av4 }] = await Promise.all([
           supabaseAny.from("tbAV1").select("id, studio_id, cliente_id, societa_id, pratica_id, incaricato_adeguata_verifica_id, DataVerifica, ScadenzaVerifica, AV1Conferma, AV2Generato, AV4Generato").eq("pratica_id", pratica.id).maybeSingle(),
           pratica.av2_corrente_id || pratica.av2_id ? supabaseAny.from("tbAV2").select("id, confermato").eq("id", pratica.av2_corrente_id || pratica.av2_id).maybeSingle() : supabaseAny.from("tbAV2").select("id, confermato").eq("pratica_id", pratica.id).maybeSingle(),
-          supabaseAny.from("tbAV4").select("id, av1_id, Av4InviatoCL, public_sent_at, compilato_da_cliente, av4_caricato_manualmente").eq("pratica_id", pratica.id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+          supabaseAny.from("tbAV4").select("id, av1_id, Av4InviatoCL, public_sent_at, compilato_da_cliente, av4_caricato_manualmente, allegato_pdf_cliente, pdf_firmato_cliente").eq("pratica_id", pratica.id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
         ]);
         return {
           id: av1?.id ? String(av1.id) : "",
