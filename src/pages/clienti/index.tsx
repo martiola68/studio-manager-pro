@@ -43,7 +43,6 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
@@ -251,6 +250,8 @@ function StampaMultiSelect({
   options: StampaMultiOption[];
   onChange: (values: string[]) => void;
 }) {
+  const [open, setOpen] = useState(false);
+
   const summary =
     values.length === 0
       ? "Tutti"
@@ -267,24 +268,21 @@ function StampaMultiSelect({
   };
 
   return (
-    <div>
+    <div className="relative">
       <Label>{label}</Label>
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            type="button"
-            variant="outline"
-            className="mt-1 w-full justify-between bg-white font-normal"
-          >
-            <span className="truncate">{summary}</span>
-            <span className="ml-2 text-xs text-muted-foreground">▾</span>
-          </Button>
-        </PopoverTrigger>
 
-        <PopoverContent
-          align="start"
-          className="z-[10000] w-[var(--radix-popover-trigger-width)] min-w-[240px] p-2"
-        >
+      <Button
+        type="button"
+        variant="outline"
+        className="mt-1 w-full justify-between bg-white font-normal"
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span className="truncate">{summary}</span>
+        <span className="ml-2 text-xs text-muted-foreground">▾</span>
+      </Button>
+
+      {open && (
+        <div className="absolute left-0 top-full z-[10001] mt-1 w-full min-w-[240px] rounded-md border bg-white p-2 shadow-lg">
           <div
             className="flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-muted"
             onClick={() => onChange([])}
@@ -307,8 +305,8 @@ function StampaMultiSelect({
               </div>
             ))}
           </div>
-        </PopoverContent>
-      </Popover>
+        </div>
+      )}
     </div>
   );
 }
