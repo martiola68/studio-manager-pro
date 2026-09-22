@@ -3925,7 +3925,6 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
           }))
         }
       />
-      </div>
     </div>
 
     <div className="flex justify-end gap-2 mt-6">
