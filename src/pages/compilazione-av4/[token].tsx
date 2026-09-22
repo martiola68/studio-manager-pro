@@ -317,10 +317,17 @@ export default function PublicAV4Page() {
        setForm(mapped);
         setAv4Id(mapped.id);
 
-        if (mapped.pdf_firmato_cliente) {
+        const signedPath =
+          mapped.pdf_firmato_cliente || mapped.allegato_pdf_cliente || "";
+
+        if (signedPath) {
+          const bucketName = signedPath.startsWith("av4-firmati/")
+            ? "promemoria-allegati"
+            : "messaggi-allegati";
+
           const { data: storageData } = supabase.storage
-            .from("documenti")
-            .getPublicUrl(mapped.pdf_firmato_cliente);
+            .from(bucketName)
+            .getPublicUrl(signedPath);
 
           setSignedPdfUrl(storageData?.publicUrl || "");
         } else {
@@ -550,6 +557,7 @@ async function handleUploadSignedPdf(
     setForm((prev) => ({
   ...prev,
   allegato_pdf_cliente: savedPath,
+  pdf_firmato_cliente: savedPath,
 }));
 
       alert("PDF firmato caricato correttamente.");
@@ -661,6 +669,8 @@ async function handleUploadSignedPdf(
         luogo_firma_bis: form.luogo_firma_bis || null,
         data_firma_bis: form.data_firma_bis || null,
         allegato_pdf_cliente: form.allegato_pdf_cliente || null,
+        pdf_firmato_cliente:
+          form.pdf_firmato_cliente || form.allegato_pdf_cliente || null,
 
         compilato_da_cliente: true,
         public_submitted_at: new Date().toISOString(),

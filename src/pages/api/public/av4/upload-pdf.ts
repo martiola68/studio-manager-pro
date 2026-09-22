@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 
-const BUCKET_NAME = "promemoria-allegati";
+const BUCKET_NAME = "messaggi-allegati";
 
 export const config = {
   api: {
@@ -100,7 +100,7 @@ export default async function handler(
     }
 
     const safeName = sanitizeFileName(fileName || "av4_firmato.pdf");
-    const filePath = `av4-firmati/${av4.id}/${Date.now()}-${safeName}`;
+    const filePath = `av4/${av4.id}/${Date.now()}_${safeName}`;
 
     const cleanBase64 = String(fileBase64).includes(",")
       ? String(fileBase64).split(",")[1]
@@ -133,6 +133,7 @@ export default async function handler(
   .from("tbAV4")
   .update({
     allegato_pdf_cliente: filePath,
+    pdf_firmato_cliente: filePath,
   })
   .eq("id", av4.id);
 

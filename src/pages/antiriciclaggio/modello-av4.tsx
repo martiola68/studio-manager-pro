@@ -1156,9 +1156,14 @@ function handleApriPdfFirmato() {
 
     const supabase = getSupabaseClient() as any;
 
+    const storagePath = form.allegato_pdf_cliente;
+    const bucketName = storagePath.startsWith("av4-firmati/")
+      ? "promemoria-allegati"
+      : "messaggi-allegati";
+
     const { data } = supabase.storage
-      .from("messaggi-allegati")
-      .getPublicUrl(form.allegato_pdf_cliente);
+      .from(bucketName)
+      .getPublicUrl(storagePath);
 
     const url = data?.publicUrl || "";
 
@@ -1198,9 +1203,12 @@ function handleApriPdfFirmato() {
       setLoading(true);
 
       const storagePath = form.allegato_pdf_cliente;
+      const bucketName = storagePath.startsWith("av4-firmati/")
+        ? "promemoria-allegati"
+        : "messaggi-allegati";
 
       const { error: removeError } = await supabase.storage
-        .from("messaggi-allegati")
+        .from(bucketName)
         .remove([storagePath]);
 
       if (removeError) {
@@ -1446,8 +1454,12 @@ if (form.invia_altra_email && !form.email_destinatario_alternativa.trim()) {
             : "";
 
         if (previousPdfPath) {
+          const previousBucketName = previousPdfPath.startsWith("av4-firmati/")
+            ? "promemoria-allegati"
+            : "messaggi-allegati";
+
           const { error: removeOldPdfError } = await supabase.storage
-            .from("messaggi-allegati")
+            .from(previousBucketName)
             .remove([previousPdfPath]);
 
           if (removeOldPdfError) {
