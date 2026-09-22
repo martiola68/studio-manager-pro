@@ -451,6 +451,12 @@ export function TopNavBar() {
   const isPathActive = (href?: string) => {
     if (!href || !pathname || href.startsWith("http")) return false;
     const normalizedHref = href.split("?")[0];
+    if (
+      normalizedHref === "/controllo-gestione" &&
+      pathname.startsWith("/controllo-gestione/redditivita-studio")
+    ) {
+      return false;
+    }
     return pathname === normalizedHref || pathname.startsWith(`${normalizedHref}/`);
   };
 

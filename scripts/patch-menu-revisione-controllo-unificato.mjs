@@ -42,7 +42,6 @@ if (!source.includes(`label: "Revisione e controllo"`)) {
         { label: "Controllo di gestione", icon: <BriefcaseBusiness className="h-4 w-4" />, children: [
           { label: "Elenco generale", href: "/controllo-gestione", icon: <FileText className="h-4 w-4" />, groupLabel: "Controlli" },
           { label: "Nuovo controllo", href: "/controllo-gestione/nuovo", icon: <FileText className="h-4 w-4" />, groupLabel: "Controlli" },
-          { label: "Redditività Studio", href: "/controllo-gestione/redditivita-studio", icon: <BarChart3 className="h-4 w-4" />, groupLabel: "Analisi" },
           { label: "Analisi", href: "/controllo-gestione/analisi", icon: <BarChart3 className="h-4 w-4" />, groupLabel: "Analisi" },
           { label: "Indici", href: "/controllo-gestione/indici", icon: <BarChart3 className="h-4 w-4" />, groupLabel: "Analisi" },
           { label: "Storico controlli", href: "/controllo-gestione/storico", icon: <Clock className="h-4 w-4" />, groupLabel: "Storico" },
@@ -68,7 +67,8 @@ const helper = `  const resolveRibbonTab = (menuLabel: string) => {
       return "Attività e contatti";
     }
     if (menuLabel === "Archivi di base") {
-      if (pathname?.startsWith("/clienti") || pathname?.startsWith("/anagrafiche") || pathname?.startsWith("/antiriciclaggio/rappresentanti") || pathname?.startsWith("/impostazioni/studio")) return "Anagrafiche";
+      if (pathname?.startsWith("/controllo-gestione/redditivita-studio")) return "Economia dello Studio";
+      if (pathname?.startsWith("/clienti") || pathname?.startsWith("/anagrafiche") || pathname?.startsWith("/antiriclaggio/rappresentanti") || pathname?.startsWith("/antiriciclaggio/rappresentanti") || pathname?.startsWith("/impostazioni/studio")) return "Anagrafiche";
       if (pathname?.startsWith("/microsoft365")) return "Connessioni";
       if (pathname?.startsWith("/impostazioni/utenti") || pathname?.startsWith("/impostazioni/ruoli") || pathname?.startsWith("/impostazioni/prestazioni") || pathname?.startsWith("/impostazioni/payroll-") || pathname?.startsWith("/impostazioni/scadenzari") || pathname?.startsWith("/impostazioni/tipi-scadenze") || pathname?.startsWith("/impostazioni/tipo-promemoria") || pathname?.startsWith("/impostazioni/template-email")) return "Tabelle";
       if (pathname?.startsWith("/profilo/password") || pathname?.startsWith("/impostazioni/amministrazione-sistema")) return "Amministrazione";

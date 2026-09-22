@@ -63,6 +63,9 @@ const prefix = `  const menuItems: MenuItem[] = [
           { label: "Rappresentanti legali", href: "/antiriciclaggio/rappresentanti", icon: <UserCircle className="h-4 w-4" />, groupLabel: "Anagrafiche" },
           { label: "Dati Studio", href: "/impostazioni/studio", icon: <Building2 className="h-4 w-4" />, adminOnly: true, groupLabel: "Anagrafiche" },
         ]},
+        { label: "Economia dello Studio", icon: <BarChart3 className="h-4 w-4" />, children: [
+          { label: "Redditività Studio", href: "/controllo-gestione/redditivita-studio", icon: <BarChart3 className="h-4 w-4" />, groupLabel: "Economia dello Studio" },
+        ]},
         { label: "Connessioni", icon: <Cloud className="h-4 w-4" />, children: [
           { label: "Microsoft connessioni", href: "/microsoft365?tab=connessioni", icon: <Link2 className="h-4 w-4" />, groupLabel: "Connessioni" },
           { label: "Microsoft Sync", href: "/microsoft365?tab=sync", icon: <RefreshCcw className="h-4 w-4" />, groupLabel: "Connessioni" },
