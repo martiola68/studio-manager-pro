@@ -218,31 +218,18 @@ export default function AssenzeSettimanaliPage() {
         });
       }
 
-      // 2) Le Presenze reali sovrascrivono la base Smart SOLO se valorizzate
-      //    con ferie, malattia, permessi o festivo. NULL/vuoto lascia P/SW Smart.
+      // 2) Il dato reale salvato in Presenze ha SEMPRE priorità sulla base Smart.
+      //    Vale per Pp, Ps, ferie, malattia, permessi e festivi.
+      //    Se il dato reale viene rimosso/revocato, resta nuovamente visibile la base Smart.
       for (const actual of actualRows) {
         const key = `${actual.utente_id}_${actual.data_presenza}`;
         const codice = String(actual.codice_presenza || "").trim();
-        const tipo = actual.tbpresenze_codici?.tipo;
 
         if (!codice || codice === "-") {
           continue;
         }
 
-        const isPermesso = tipo === "permesso" || /^P\d+(?:\.\d+)?(?:\.104)?$/.test(codice);
-        const isAssenza = tipo === "assenza" || codice === "F" || codice === "M";
-        const isFestivo = tipo === "festivo" || codice === "N";
-
-        if (isPermesso || isAssenza || isFestivo) {
-          merged.set(key, actual);
-          continue;
-        }
-
-        // Se il dipendente/giorno non appartiene a un calendario Smart,
-        // conserva comunque l'eventuale presenza reale valorizzata.
-        if (!merged.has(key)) {
-          merged.set(key, actual);
-        }
+        merged.set(key, actual);
       }
 
       setUtenti(utentiData || []);
@@ -275,6 +262,19 @@ export default function AssenzeSettimanaliPage() {
     if (!studioId) return;
     void loadData(studioId, weekStart);
   }, [weekStart, studioId]);
+
+  // Se ferie/permessi o una presenza vengono modificati da un'altra pagina,
+  // ricarica il riepilogo appena l'utente torna su questa schermata.
+  useEffect(() => {
+    if (!studioId) return;
+
+    const refreshOnFocus = () => {
+      void loadData(studioId, weekStart);
+    };
+
+    window.addEventListener("focus", refreshOnFocus);
+    return () => window.removeEventListener("focus", refreshOnFocus);
+  }, [studioId, weekStart]);
 
   function formatCodicePresenza(codice?: string | null) {
   if (!codice || codice === "-") return "-";
