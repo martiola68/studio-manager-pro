@@ -244,15 +244,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           ? r.tbpresenze_codici[0]
           : r.tbpresenze_codici;
 
-        const tipo = rel?.tipo;
-        const isPermesso = tipo === "permesso" || /^P\d+(?:\.\d+)?(?:\.104)?$/.test(codice);
-        const isAssenza = tipo === "assenza" || codice === "F" || codice === "M";
-        const isFestivo = tipo === "festivo" || codice === "N";
         const userId = String(r.utente_id);
 
-        if (isPermesso || isAssenza || isFestivo || !stato.has(userId)) {
-          stato.set(userId, { codice, descrizione: rel?.descrizione || codice });
-        }
+        // Il dato reale salvato in Presenze prevale SEMPRE sulla previsione Smart.
+        // Vale anche per Pp/Ps, oltre a ferie, malattia, permessi e festivi.
+        stato.set(userId, {
+          codice,
+          descrizione:
+            rel?.descrizione ||
+            (codice === "Pp"
+              ? "Presente in ufficio"
+              : codice === "Ps"
+                ? "Smart working"
+                : codice),
+        });
       }
 
       const perSettore = new Map<
