@@ -2623,11 +2623,11 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
                   </TableCell>
 
                   <TableCell className="min-w-[150px] px-2 text-left align-middle">
-                    {getUtenteNome(cliente.utente_consulenza_id) ?? "-"}
+                    {getUtenteNome(cliente.utente_consulenza_id ?? null) ?? "-"}
                   </TableCell>
 
                   <TableCell className="min-w-[170px] px-2 text-left align-middle">
-                    {getUtenteNome(cliente.professionista_consulenza_id) ?? "-"}
+                    {getUtenteNome(cliente.professionista_consulenza_id ?? null) ?? "-"}
                   </TableCell>
 
                   <TableCell className="min-w-[80px]">
