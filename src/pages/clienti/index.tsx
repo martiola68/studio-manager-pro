@@ -224,6 +224,19 @@ function safeString(v: unknown): string {
   return typeof v === "string" ? v : "";
 }
 
+function aliasUtenteStampa(utente: { nome?: string | null; cognome?: string | null }): string {
+  const nome = safeString(utente.nome).trim();
+  const cognome = safeString(utente.cognome).trim();
+  const alias = `${nome.charAt(0)}${cognome.charAt(0)}`.toUpperCase();
+  return alias || "--";
+}
+
+function etichettaUtenteStampa(utente: { nome?: string | null; cognome?: string | null; email?: string | null; id: string }): string {
+  const nomeCompleto = `${safeString(utente.nome)} ${safeString(utente.cognome)}`.trim();
+  const base = nomeCompleto || safeString(utente.email) || String(utente.id);
+  return `${base} (${aliasUtenteStampa(utente)})`;
+}
+
 function inferTipoClienteDaCf(cfValue: string) {
   const cf = String(cfValue || "").trim().toUpperCase();
 
@@ -4096,10 +4109,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
           )
           .map((u) => ({
             value: String(u.id),
-            label:
-              `${safeString(u.cognome)} ${safeString(u.nome)}`.trim() ||
-              safeString(u.email) ||
-              String(u.id),
+            label: etichettaUtenteStampa(u),
           }))}
         onChange={(values) =>
           setFiltroStampa((prev) => ({
@@ -4123,10 +4133,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
           )
           .map((u) => ({
             value: String(u.id),
-            label:
-              `${safeString(u.cognome)} ${safeString(u.nome)}`.trim() ||
-              safeString(u.email) ||
-              String(u.id),
+            label: etichettaUtenteStampa(u),
           }))}
         onChange={(values) =>
           setFiltroStampa((prev) => ({
@@ -4150,10 +4157,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
           )
           .map((u) => ({
             value: String(u.id),
-            label:
-              `${safeString(u.cognome)} ${safeString(u.nome)}`.trim() ||
-              safeString(u.email) ||
-              String(u.id),
+            label: etichettaUtenteStampa(u),
           }))}
         onChange={(values) =>
           setFiltroStampa((prev) => ({
@@ -4177,10 +4181,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
           )
           .map((u) => ({
             value: String(u.id),
-            label:
-              `${safeString(u.cognome)} ${safeString(u.nome)}`.trim() ||
-              safeString(u.email) ||
-              String(u.id),
+            label: etichettaUtenteStampa(u),
           }))}
         onChange={(values) =>
           setFiltroStampa((prev) => ({
@@ -4204,10 +4205,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
           )
           .map((u) => ({
             value: String(u.id),
-            label:
-              `${safeString(u.cognome)} ${safeString(u.nome)}`.trim() ||
-              safeString(u.email) ||
-              String(u.id),
+            label: etichettaUtenteStampa(u),
           }))}
         onChange={(values) =>
           setFiltroStampa((prev) => ({
@@ -4231,10 +4229,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
           )
           .map((u) => ({
             value: String(u.id),
-            label:
-              `${safeString(u.cognome)} ${safeString(u.nome)}`.trim() ||
-              safeString(u.email) ||
-              String(u.id),
+            label: etichettaUtenteStampa(u),
           }))}
         onChange={(values) =>
           setFiltroStampa((prev) => ({
