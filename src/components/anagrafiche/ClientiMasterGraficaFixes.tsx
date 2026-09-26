@@ -94,7 +94,7 @@ export function ClientiMasterGraficaFixes() {
       }
 
       setImportant(table, "width", "100%");
-      setImportant(table, "min-width", "1750px");
+      setImportant(table, "min-width", "1320px");
       setImportant(table, "border-collapse", "separate");
       setImportant(table, "border-spacing", "0");
       setImportant(table, "font-size", "0.86rem");
@@ -161,22 +161,37 @@ export function ClientiMasterGraficaFixes() {
   return (
     <style jsx global>{`
       body.clienti-master-fixes main.anagrafiche-master-page
-        table:has(th.sticky.left-0):has(th.sticky.right-0)
-        td:nth-child(5) > div[class*="bg-green-600"] {
+        table[data-clienti-table] tbody tr > td {
+        border-bottom: 1px solid rgb(148 163 184) !important;
+      }
+
+      body.clienti-master-fixes main.anagrafiche-master-page
+        table[data-clienti-table] tbody tr:last-child > td {
+        border-bottom: 0 !important;
+      }
+
+      body.clienti-master-fixes main.anagrafiche-master-page
+        table[data-clienti-table] td:nth-child(6) > div {
         display: inline-flex !important;
         min-width: 62px !important;
         justify-content: center !important;
-        background: rgb(22 163 74) !important;
-        border-color: rgb(22 163 74) !important;
+        font-weight: 700 !important;
+      }
+
+      body.clienti-master-fixes main.anagrafiche-master-page
+        table[data-clienti-table] td:nth-child(6) > div:first-child {
         color: white !important;
       }
 
       body.clienti-master-fixes main.anagrafiche-master-page
-        table:has(th.sticky.left-0):has(th.sticky.right-0)
-        td:nth-child(5) > div[class*="bg-secondary"] {
-        display: inline-flex !important;
-        min-width: 62px !important;
-        justify-content: center !important;
+        table[data-clienti-table] td:nth-child(6) > div[style*="16a34a"] {
+        background: rgb(22 163 74) !important;
+        border-color: rgb(21 128 61) !important;
+        color: white !important;
+      }
+
+      body.clienti-master-fixes main.anagrafiche-master-page
+        table[data-clienti-table] td:nth-child(6) > div[style*="e2e8f0"] {
         background: rgb(226 232 240) !important;
         border-color: rgb(148 163 184) !important;
         color: rgb(51 65 85) !important;
@@ -194,10 +209,6 @@ export function ClientiMasterGraficaFixes() {
         color: white !important;
       }
 
-      body.clienti-master-fixes main.anagrafiche-master-page
-        table:has(th.sticky.left-0):has(th.sticky.right-0) tbody tr > td {
-        border-bottom: 1px solid rgb(148 163 184) !important;
-      }
     `}</style>
   );
 }
