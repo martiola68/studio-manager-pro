@@ -23,6 +23,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   studio_id,
   utente_operatore_ids,
   utente_professionista_ids,
+  utente_payroll_ids,
+  professionista_payroll_ids,
+  utente_consulenza_ids,
+  professionista_consulenza_ids,
   tipo_prestazione_ids,
   tipi_redditi,
   tipi_cliente,
@@ -58,6 +62,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   );
   const professionistiIds = parseMulti(
     (utente_professionista_ids ?? utente_professionista_id) as string | string[] | undefined
+  );
+  const utentiPayrollIds = parseMulti(
+    utente_payroll_ids as string | string[] | undefined
+  );
+  const professionistiPayrollIds = parseMulti(
+    professionista_payroll_ids as string | string[] | undefined
+  );
+  const utentiConsulenzaIds = parseMulti(
+    utente_consulenza_ids as string | string[] | undefined
+  );
+  const professionistiConsulenzaIds = parseMulti(
+    professionista_consulenza_ids as string | string[] | undefined
   );
   const prestazioniIds = parseMulti(
     (tipo_prestazione_ids ?? tipo_prestazione_id) as string | string[] | undefined
@@ -100,6 +116,10 @@ settore_fiscale,
         settore_consulenza,
         utente_operatore_id,
         utente_professionista_id,
+        utente_payroll_id,
+        professionista_payroll_id,
+        utente_consulenza_id,
+        professionista_consulenza_id,
         tipo_prestazione_id,
         utente_fiscale:tbutenti!tbclienti_utente_operatore_id_fkey(nome, cognome),
         professionista:tbutenti!tbclienti_utente_professionista_id_fkey(nome, cognome),
@@ -116,6 +136,22 @@ settore_fiscale,
 
     if (professionistiIds.length > 0) {
       query = query.in("utente_professionista_id", professionistiIds);
+    }
+
+    if (utentiPayrollIds.length > 0) {
+      query = query.in("utente_payroll_id", utentiPayrollIds);
+    }
+
+    if (professionistiPayrollIds.length > 0) {
+      query = query.in("professionista_payroll_id", professionistiPayrollIds);
+    }
+
+    if (utentiConsulenzaIds.length > 0) {
+      query = query.in("utente_consulenza_id", utentiConsulenzaIds);
+    }
+
+    if (professionistiConsulenzaIds.length > 0) {
+      query = query.in("professionista_consulenza_id", professionistiConsulenzaIds);
     }
 
     if (prestazioniIds.length > 0) {
