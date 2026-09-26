@@ -361,6 +361,10 @@ const fileInputRef = useRef<HTMLInputElement | null>(null);
 const [filtroStampa, setFiltroStampa] = useState({
   utente_operatore_ids: [] as string[],
   utente_professionista_ids: [] as string[],
+  utente_payroll_ids: [] as string[],
+  professionista_payroll_ids: [] as string[],
+  utente_consulenza_ids: [] as string[],
+  professionista_consulenza_ids: [] as string[],
   tipo_prestazione_ids: [] as string[],
   tipi_redditi: [] as string[],
   tipi_cliente: [] as string[],
@@ -2223,6 +2227,10 @@ params.set("studio_id", studioIdEffettivo);
 
   setMultiParam("utente_operatore_ids", filtroStampa.utente_operatore_ids);
   setMultiParam("utente_professionista_ids", filtroStampa.utente_professionista_ids);
+  setMultiParam("utente_payroll_ids", filtroStampa.utente_payroll_ids);
+  setMultiParam("professionista_payroll_ids", filtroStampa.professionista_payroll_ids);
+  setMultiParam("utente_consulenza_ids", filtroStampa.utente_consulenza_ids);
+  setMultiParam("professionista_consulenza_ids", filtroStampa.professionista_consulenza_ids);
   setMultiParam("tipo_prestazione_ids", filtroStampa.tipo_prestazione_ids);
   setMultiParam("tipi_redditi", filtroStampa.tipi_redditi);
   setMultiParam("tipi_cliente", filtroStampa.tipi_cliente);
@@ -3946,7 +3954,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
   open={showStampaModal}
   onOpenChange={setShowStampaModal}
 >
-  <DialogContent className="max-w-2xl">
+  <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
     <DialogHeader>
       <DialogTitle>
         Stampa Lista Clienti
@@ -4014,6 +4022,114 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
           setFiltroStampa((prev) => ({
             ...prev,
             utente_professionista_ids: values,
+          }))
+        }
+      />
+
+      <StampaMultiSelect
+        label="Utente Payroll"
+        values={filtroStampa.utente_payroll_ids}
+        options={utenti
+          .slice()
+          .sort((a, b) =>
+            `${safeString(a.cognome)} ${safeString(a.nome)}`.localeCompare(
+              `${safeString(b.cognome)} ${safeString(b.nome)}`,
+              "it",
+              { sensitivity: "base" }
+            )
+          )
+          .map((u) => ({
+            value: String(u.id),
+            label:
+              `${safeString(u.cognome)} ${safeString(u.nome)}`.trim() ||
+              safeString(u.email) ||
+              String(u.id),
+          }))}
+        onChange={(values) =>
+          setFiltroStampa((prev) => ({
+            ...prev,
+            utente_payroll_ids: values,
+          }))
+        }
+      />
+
+      <StampaMultiSelect
+        label="Professionista Payroll"
+        values={filtroStampa.professionista_payroll_ids}
+        options={utenti
+          .slice()
+          .sort((a, b) =>
+            `${safeString(a.cognome)} ${safeString(a.nome)}`.localeCompare(
+              `${safeString(b.cognome)} ${safeString(b.nome)}`,
+              "it",
+              { sensitivity: "base" }
+            )
+          )
+          .map((u) => ({
+            value: String(u.id),
+            label:
+              `${safeString(u.cognome)} ${safeString(u.nome)}`.trim() ||
+              safeString(u.email) ||
+              String(u.id),
+          }))}
+        onChange={(values) =>
+          setFiltroStampa((prev) => ({
+            ...prev,
+            professionista_payroll_ids: values,
+          }))
+        }
+      />
+
+      <StampaMultiSelect
+        label="Utente Consulenza"
+        values={filtroStampa.utente_consulenza_ids}
+        options={utenti
+          .slice()
+          .sort((a, b) =>
+            `${safeString(a.cognome)} ${safeString(a.nome)}`.localeCompare(
+              `${safeString(b.cognome)} ${safeString(b.nome)}`,
+              "it",
+              { sensitivity: "base" }
+            )
+          )
+          .map((u) => ({
+            value: String(u.id),
+            label:
+              `${safeString(u.cognome)} ${safeString(u.nome)}`.trim() ||
+              safeString(u.email) ||
+              String(u.id),
+          }))}
+        onChange={(values) =>
+          setFiltroStampa((prev) => ({
+            ...prev,
+            utente_consulenza_ids: values,
+          }))
+        }
+      />
+
+      <StampaMultiSelect
+        label="Professionista Consulenza"
+        values={filtroStampa.professionista_consulenza_ids}
+        options={utenti
+          .slice()
+          .sort((a, b) =>
+            `${safeString(a.cognome)} ${safeString(a.nome)}`.localeCompare(
+              `${safeString(b.cognome)} ${safeString(b.nome)}`,
+              "it",
+              { sensitivity: "base" }
+            )
+          )
+          .map((u) => ({
+            value: String(u.id),
+            label:
+              `${safeString(u.cognome)} ${safeString(u.nome)}`.trim() ||
+              safeString(u.email) ||
+              String(u.id),
+          }))}
+        onChange={(values) =>
+          setFiltroStampa((prev) => ({
+            ...prev,
+            professionista_consulenza_ids: values,
           }))
         }
       />
