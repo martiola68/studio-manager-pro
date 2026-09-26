@@ -652,6 +652,9 @@ const [
 const [contatti, setContatti] = useState<ContattoRow[]>([]);
   
   const [utenti, setUtenti] = useState<UtenteRow[]>([]);
+  const [ruoliOperatori, setRuoliOperatori] = useState<
+    Array<{ id: string; ruolo: string | null }>
+  >([]);
   const [cassettiFiscali, setCassettiFiscali] = useState<CassettoFiscaleRow[]>(
     []
   );
@@ -716,6 +719,92 @@ const [formData, setFormData] =
     [utenti]
   );
 
+  // FILTRI UTENTI FISCALE/PAYROLL SEPARATI
+  const ruoloOperatoreById = useMemo(
+    () =>
+      new Map(
+        ruoliOperatori.map((ruolo) => [
+          String(ruolo.id),
+          String(ruolo.ruolo || ""),
+        ])
+      ),
+    [ruoliOperatori]
+  );
+
+  const settoriUtente = useCallback(
+    (utente: UtenteRow) => {
+      const row = utente as UtenteRow & {
+        ruolo_operatore_id?: string | null;
+        settore?: string | null;
+        attivo?: boolean | null;
+      };
+
+      if (row.attivo !== true) return [] as Array<"fiscale" | "lavoro" | "consulenza">;
+
+      const result = new Set<"fiscale" | "lavoro" | "consulenza">();
+      const ruolo = ruoloOperatoreById.get(String(row.ruolo_operatore_id || ""));
+
+      if (ruolo) {
+        const [, areeRaw = ""] = ruolo.split("·");
+        const aree = areeRaw
+          .split("+")
+          .map((area) => area.trim().toLowerCase())
+          .filter(Boolean);
+
+        if (
+          aree.includes("contabilità e fiscale") ||
+          aree.includes("fiscale")
+        ) {
+          result.add("fiscale");
+        }
+        if (aree.includes("payroll") || aree.includes("lavoro")) {
+          result.add("lavoro");
+        }
+        if (aree.includes("consulenza")) {
+          result.add("consulenza");
+        }
+      }
+
+      if (result.size === 0) {
+        const settore = String(row.settore || "").trim().toLowerCase();
+        if (settore === "fiscale") result.add("fiscale");
+        if (settore === "lavoro" || settore === "payroll") result.add("lavoro");
+        if (settore === "consulenza") result.add("consulenza");
+      }
+
+      return Array.from(result);
+    },
+    [ruoloOperatoreById]
+  );
+
+  const utentiPerSettoreStampa = useMemo(() => {
+    const sortByNome = (a: UtenteRow, b: UtenteRow) =>
+      `${safeString(a.nome)} ${safeString(a.cognome)}`.localeCompare(
+        `${safeString(b.nome)} ${safeString(b.cognome)}`,
+        "it",
+        { sensitivity: "base" }
+      );
+
+    return {
+      fiscale: utenti
+        .filter((utente) => settoriUtente(utente).includes("fiscale"))
+        .slice()
+        .sort(sortByNome),
+      lavoro: utenti
+        .filter((utente) => settoriUtente(utente).includes("lavoro"))
+        .slice()
+        .sort(sortByNome),
+      consulenza: utenti
+        .filter((utente) => settoriUtente(utente).includes("consulenza"))
+        .slice()
+        .sort(sortByNome),
+    };
+  }, [utenti, settoriUtente]);
+
+  const utentiFiscaliFiltro = utentiPerSettoreStampa.fiscale;
+  const utentiPayrollFiltro = utentiPerSettoreStampa.lavoro;
+  const utentiConsulenzaFiltro = utentiPerSettoreStampa.consulenza;
+
   const loadData = useCallback(async () => {
     const supabase = getSupabaseClient();
 
@@ -740,6 +829,7 @@ if (user?.id) {
     clientiRes,
     contattiRes,
     utentiRes,
+    ruoliRes,
     cassettiRes,
     prestazioniRes,
    
@@ -761,6 +851,10 @@ if (user?.id) {
       .order("cognome"),
 
     supabase
+      .from("tbroperatore")
+      .select("id, ruolo"),
+
+    supabase
       .from("tbcassetti_fiscali")
       .select("*")
       .order("nominativo"),
@@ -777,6 +871,7 @@ if (user?.id) {
     if (clientiRes.error) throw clientiRes.error;
 if (contattiRes.error) throw contattiRes.error;
 if (utentiRes.error) throw utentiRes.error;
+if (ruoliRes.error) throw ruoliRes.error;
 if (cassettiRes.error) throw cassettiRes.error;
 if (prestazioniRes.error) throw prestazioniRes.error;
 
@@ -786,6 +881,9 @@ if (prestazioniRes.error) throw prestazioniRes.error;
 setClienti(clientiRes.data ?? []);
 setContatti(contattiRes.data ?? []);
 setUtenti(utentiRes.data ?? []);
+setRuoliOperatori(
+  ((ruoliRes.data ?? []) as Array<{ id: string; ruolo: string | null }>)
+);
 setCassettiFiscali(cassettiRes.data ?? []);
 setPrestazioni(prestazioniRes.data ?? []);
 
@@ -2655,16 +2753,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Tutti (Fiscale)</SelectItem>
-          {utenti
-            .slice()
-            .sort((a, b) =>
-              `${safeString(a.nome)} ${safeString(a.cognome)}`
-                .toLowerCase()
-                .localeCompare(
-                  `${safeString(b.nome)} ${safeString(b.cognome)}`.toLowerCase()
-                )
-            )
-            .map((u) => (
+          {utentiFiscaliFiltro.map((u) => (
               <SelectItem key={u.id} value={u.id}>
                 {safeString(u.nome)} {safeString(u.cognome)}
               </SelectItem>
@@ -2681,16 +2770,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Tutti (Payroll)</SelectItem>
-          {utenti
-            .slice()
-            .sort((a, b) =>
-              `${safeString(a.nome)} ${safeString(a.cognome)}`
-                .toLowerCase()
-                .localeCompare(
-                  `${safeString(b.nome)} ${safeString(b.cognome)}`.toLowerCase()
-                )
-            )
-            .map((u) => (
+          {utentiPayrollFiltro.map((u) => (
               <SelectItem key={u.id} value={u.id}>
                 {safeString(u.nome)} {safeString(u.cognome)}
               </SelectItem>
@@ -4171,19 +4251,10 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
       <StampaResponsabileSelect
         label="Utente Fiscale"
         values={filtroStampa.utente_operatore_ids}
-        options={utenti
-          .slice()
-          .sort((a, b) =>
-            `${safeString(a.nome)} ${safeString(a.cognome)}`.localeCompare(
-              `${safeString(b.nome)} ${safeString(b.cognome)}`,
-              "it",
-              { sensitivity: "base" }
-            )
-          )
-          .map((u) => ({
-            value: String(u.id),
-            label: etichettaUtenteStampa(u),
-          }))}
+        options={utentiFiscaliFiltro.map((u) => ({
+          value: String(u.id),
+          label: etichettaUtenteStampa(u),
+        }))}
         onChange={(values) =>
           setFiltroStampa((prev) => ({
             ...prev,
@@ -4195,19 +4266,10 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
       <StampaResponsabileSelect
         label="Professionista Fiscale"
         values={filtroStampa.utente_professionista_ids}
-        options={utenti
-          .slice()
-          .sort((a, b) =>
-            `${safeString(a.nome)} ${safeString(a.cognome)}`.localeCompare(
-              `${safeString(b.nome)} ${safeString(b.cognome)}`,
-              "it",
-              { sensitivity: "base" }
-            )
-          )
-          .map((u) => ({
-            value: String(u.id),
-            label: etichettaUtenteStampa(u),
-          }))}
+        options={utentiFiscaliFiltro.map((u) => ({
+          value: String(u.id),
+          label: etichettaUtenteStampa(u),
+        }))}
         onChange={(values) =>
           setFiltroStampa((prev) => ({
             ...prev,
@@ -4219,19 +4281,10 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
       <StampaResponsabileSelect
         label="Utente Payroll"
         values={filtroStampa.utente_payroll_ids}
-        options={utenti
-          .slice()
-          .sort((a, b) =>
-            `${safeString(a.nome)} ${safeString(a.cognome)}`.localeCompare(
-              `${safeString(b.nome)} ${safeString(b.cognome)}`,
-              "it",
-              { sensitivity: "base" }
-            )
-          )
-          .map((u) => ({
-            value: String(u.id),
-            label: etichettaUtenteStampa(u),
-          }))}
+        options={utentiPayrollFiltro.map((u) => ({
+          value: String(u.id),
+          label: etichettaUtenteStampa(u),
+        }))}
         onChange={(values) =>
           setFiltroStampa((prev) => ({
             ...prev,
@@ -4243,19 +4296,10 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
       <StampaResponsabileSelect
         label="Professionista Payroll"
         values={filtroStampa.professionista_payroll_ids}
-        options={utenti
-          .slice()
-          .sort((a, b) =>
-            `${safeString(a.nome)} ${safeString(a.cognome)}`.localeCompare(
-              `${safeString(b.nome)} ${safeString(b.cognome)}`,
-              "it",
-              { sensitivity: "base" }
-            )
-          )
-          .map((u) => ({
-            value: String(u.id),
-            label: etichettaUtenteStampa(u),
-          }))}
+        options={utentiPayrollFiltro.map((u) => ({
+          value: String(u.id),
+          label: etichettaUtenteStampa(u),
+        }))}
         onChange={(values) =>
           setFiltroStampa((prev) => ({
             ...prev,
@@ -4267,19 +4311,10 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
       <StampaResponsabileSelect
         label="Utente Consulenza"
         values={filtroStampa.utente_consulenza_ids}
-        options={utenti
-          .slice()
-          .sort((a, b) =>
-            `${safeString(a.nome)} ${safeString(a.cognome)}`.localeCompare(
-              `${safeString(b.nome)} ${safeString(b.cognome)}`,
-              "it",
-              { sensitivity: "base" }
-            )
-          )
-          .map((u) => ({
-            value: String(u.id),
-            label: etichettaUtenteStampa(u),
-          }))}
+        options={utentiConsulenzaFiltro.map((u) => ({
+          value: String(u.id),
+          label: etichettaUtenteStampa(u),
+        }))}
         onChange={(values) =>
           setFiltroStampa((prev) => ({
             ...prev,
@@ -4291,19 +4326,10 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
       <StampaResponsabileSelect
         label="Professionista Consulenza"
         values={filtroStampa.professionista_consulenza_ids}
-        options={utenti
-          .slice()
-          .sort((a, b) =>
-            `${safeString(a.nome)} ${safeString(a.cognome)}`.localeCompare(
-              `${safeString(b.nome)} ${safeString(b.cognome)}`,
-              "it",
-              { sensitivity: "base" }
-            )
-          )
-          .map((u) => ({
-            value: String(u.id),
-            label: etichettaUtenteStampa(u),
-          }))}
+        options={utentiConsulenzaFiltro.map((u) => ({
+          value: String(u.id),
+          label: etichettaUtenteStampa(u),
+        }))}
         onChange={(values) =>
           setFiltroStampa((prev) => ({
             ...prev,
