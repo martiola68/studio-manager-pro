@@ -1015,7 +1015,8 @@ if (rowsToUpsert.length === 0 && rowsToDelete.length === 0) {
     const dipendentiPerAzienda = dipendentiConCodici.reduce<Record<string, Dipendente[]>>(
       (acc, dipendente) => {
         const codiceDitta = dipendente.codice_ditta?.trim() || '';
-        if (!acc[codiceDitta]) acc[codiceDitta].push(dipendente);
+        if (!acc[codiceDitta]) acc[codiceDitta] = [];
+        acc[codiceDitta].push(dipendente);
         return acc;
       },
       {},
