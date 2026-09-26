@@ -2592,7 +2592,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
 
             <TableBody>
               {filteredClienti.map((cliente) => (
-                <TableRow key={cliente.id}>
+                <TableRow key={cliente.id} className="!border-b !border-slate-300">
                   <TableCell
                     className="w-[95px] px-2 font-mono text-sm truncate"
                     title={cliente.cod_cliente || cliente.id}
@@ -2631,11 +2631,25 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
 
                   <TableCell className="w-[90px] px-2 text-center">
                     {cliente.attivo ? (
-                      <Badge className="inline-flex min-w-[58px] justify-center bg-green-600 text-white hover:bg-green-600">
+                      <Badge
+                        className="inline-flex min-w-[62px] justify-center font-semibold"
+                        style={{
+                          backgroundColor: "#16a34a",
+                          color: "#ffffff",
+                          borderColor: "#15803d",
+                        }}
+                      >
                         Attivo
                       </Badge>
                     ) : (
-                      <Badge className="inline-flex min-w-[58px] justify-center bg-slate-200 text-slate-700 hover:bg-slate-200">
+                      <Badge
+                        className="inline-flex min-w-[62px] justify-center font-semibold"
+                        style={{
+                          backgroundColor: "#e2e8f0",
+                          color: "#334155",
+                          borderColor: "#94a3b8",
+                        }}
+                      >
                         Inattivo
                       </Badge>
                     )}
