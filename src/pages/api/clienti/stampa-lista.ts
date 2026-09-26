@@ -12,6 +12,12 @@ function nomeCompleto(u: any) {
   return `${u?.nome || ""} ${u?.cognome || ""}`.trim();
 }
 
+function aliasUtente(u: any) {
+  const nome = String(u?.nome || "").trim();
+  const cognome = String(u?.cognome || "").trim();
+  return `${nome.charAt(0)}${cognome.charAt(0)}`.toUpperCase() || "--";
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     if (req.method !== "GET") {
@@ -154,7 +160,11 @@ settore_fiscale,
         professionista_consulenza_id,
         tipo_prestazione_id,
         utente_fiscale:tbutenti!tbclienti_utente_operatore_id_fkey(nome, cognome),
-        professionista:tbutenti!tbclienti_utente_professionista_id_fkey(nome, cognome),
+        professionista_fiscale:tbutenti!tbclienti_utente_professionista_id_fkey(nome, cognome),
+        utente_payroll:tbutenti!tbclienti_utente_payroll_id_fkey(nome, cognome),
+        professionista_payroll:tbutenti!tbclienti_professionista_payroll_id_fkey(nome, cognome),
+        utente_consulenza:tbutenti!tbclienti_utente_consulenza_id_fkey(nome, cognome),
+        professionista_consulenza:tbutenti!tbclienti_professionista_consulenza_id_fkey(nome, cognome),
         prestazione:tbprestazioni!tbclienti_tipo_prestazione_id_fkey(descrizione)
       `)
       .eq("studio_id", studio_id)
@@ -305,19 +315,22 @@ settore_fiscale,
         { key: "ragione_sociale", width: 40 },
         { key: "partita_iva", width: 16 },
         { key: "codice_fiscale", width: 18 },
-        { key: "prestazione", width: 30 },
+        { key: "uf", width: 8 },
+        { key: "pf", width: 8 },
+        { key: "up", width: 8 },
+        { key: "pp", width: 8 },
+        { key: "uc", width: 8 },
+        { key: "pc", width: 8 },
         { key: "tipo_redditi", width: 14 },
-        { key: "settore_fiscale", width: 16 },
-        { key: "settore_lavoro", width: 16 },
-        { key: "settore_consulenza", width: 20 },
+        { key: "prestazione", width: 30 },
       ];
 
-      worksheet.mergeCells("A1:I1");
+      worksheet.mergeCells("A1:L1");
       worksheet.getCell("A1").value = "STUDIO MANAGER PRO";
       worksheet.getCell("A1").font = { bold: true, size: 16 };
       worksheet.getCell("A1").alignment = { horizontal: "center" };
 
-      worksheet.mergeCells("A2:I2");
+      worksheet.mergeCells("A2:L2");
       worksheet.getCell("A2").value = titoloReport;
       worksheet.getCell("A2").font = { bold: true, size: 13 };
       worksheet.getCell("A2").alignment = { horizontal: "center" };
@@ -326,7 +339,7 @@ settore_fiscale,
 
       let metadataRow = 4;
       righeResponsabili.forEach((riga) => {
-        worksheet.mergeCells(`A${metadataRow}:I${metadataRow}`);
+        worksheet.mergeCells(`A${metadataRow}:L${metadataRow}`);
         worksheet.getCell(`A${metadataRow}`).value = riga;
         worksheet.getCell(`A${metadataRow}`).font = { italic: true };
         metadataRow += 1;
@@ -338,11 +351,14 @@ settore_fiscale,
         "Ragione Sociale",
         "P.IVA",
         "Codice Fiscale",
-        "Prestazione",
+        "UF",
+        "PF",
+        "UP",
+        "PP",
+        "UC",
+        "PC",
         "Tipo Redditi",
-        "Settore Fiscale",
-        "Settore Lavoro",
-        "Settore Consulenza",
+        "Prestazione",
       ];
 
       worksheet.addRow([]);
@@ -355,11 +371,14 @@ settore_fiscale,
           ragione_sociale: c.ragione_sociale || "",
           partita_iva: c.partita_iva || "",
           codice_fiscale: c.codice_fiscale || "",
-          prestazione: c.prestazione?.descrizione || "",
+          uf: c.utente_fiscale ? aliasUtente(c.utente_fiscale) : "",
+          pf: c.professionista_fiscale ? aliasUtente(c.professionista_fiscale) : "",
+          up: c.utente_payroll ? aliasUtente(c.utente_payroll) : "",
+          pp: c.professionista_payroll ? aliasUtente(c.professionista_payroll) : "",
+          uc: c.utente_consulenza ? aliasUtente(c.utente_consulenza) : "",
+          pc: c.professionista_consulenza ? aliasUtente(c.professionista_consulenza) : "",
           tipo_redditi: c.tipo_redditi || "",
-          settore_fiscale: c.settore_fiscale ? "SI" : "NO",
-          settore_lavoro: c.settore_lavoro ? "SI" : "NO",
-          settore_consulenza: c.settore_consulenza ? "SI" : "NO",
+          prestazione: c.prestazione?.descrizione || "",
         });
       });
 
@@ -416,12 +435,18 @@ settore_fiscale,
       let y = doc.y;
 
       const columns = [
-        { label: "Cod.", x: startX, width: 70 },
-        { label: "Ragione Sociale", x: startX + 75, width: 255 },
-        { label: "P.IVA", x: startX + 335, width: 85 },
-        { label: "Codice Fiscale", x: startX + 425, width: 105 },
-        { label: "Tipo Redditi", x: startX + 535, width: 80 },
-        { label: "Prestazione", x: startX + 620, width: 170 },
+        { label: "Cod.", x: startX, width: 52 },
+        { label: "Ragione Sociale", x: startX + 56, width: 190 },
+        { label: "P.IVA", x: startX + 250, width: 72 },
+        { label: "Codice Fiscale", x: startX + 326, width: 88 },
+        { label: "UF", x: startX + 418, width: 28 },
+        { label: "PF", x: startX + 448, width: 28 },
+        { label: "UP", x: startX + 478, width: 28 },
+        { label: "PP", x: startX + 508, width: 28 },
+        { label: "UC", x: startX + 538, width: 28 },
+        { label: "PC", x: startX + 568, width: 28 },
+        { label: "Tipo Redditi", x: startX + 600, width: 75 },
+        { label: "Prestazione", x: startX + 680, width: 110 },
       ];
 
       const drawHeader = () => {
@@ -453,6 +478,12 @@ settore_fiscale,
           c.ragione_sociale || "",
           c.partita_iva || "",
           c.codice_fiscale || "",
+          c.utente_fiscale ? aliasUtente(c.utente_fiscale) : "",
+          c.professionista_fiscale ? aliasUtente(c.professionista_fiscale) : "",
+          c.utente_payroll ? aliasUtente(c.utente_payroll) : "",
+          c.professionista_payroll ? aliasUtente(c.professionista_payroll) : "",
+          c.utente_consulenza ? aliasUtente(c.utente_consulenza) : "",
+          c.professionista_consulenza ? aliasUtente(c.professionista_consulenza) : "",
           c.tipo_redditi || "",
           c.prestazione?.descrizione || "",
         ];
