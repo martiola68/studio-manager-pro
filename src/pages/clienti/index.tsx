@@ -2631,25 +2631,11 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
 
                   <TableCell className="w-[90px] px-2 text-center">
                     {cliente.attivo ? (
-                      <Badge
-                        className="inline-flex min-w-[62px] justify-center font-semibold"
-                        style={{
-                          backgroundColor: "#16a34a",
-                          color: "#ffffff",
-                          borderColor: "#15803d",
-                        }}
-                      >
+                      <Badge className="client-status-badge client-status-active">
                         Attivo
                       </Badge>
                     ) : (
-                      <Badge
-                        className="inline-flex min-w-[62px] justify-center font-semibold"
-                        style={{
-                          backgroundColor: "#e2e8f0",
-                          color: "#334155",
-                          borderColor: "#94a3b8",
-                        }}
-                      >
+                      <Badge className="client-status-badge client-status-inactive">
                         Inattivo
                       </Badge>
                     )}
