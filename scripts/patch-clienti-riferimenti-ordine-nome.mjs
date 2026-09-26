@@ -11,7 +11,7 @@ const contact = source.indexOf(contactMarker, start + startMarker.length);
 
 if (start === -1 || contact === -1 || contact <= start) {
   throw new Error(
-    "[clienti-riferimenti-ordine-nome] Blocco delle quattro select RIFERIMENTI non trovato"
+    "[clienti-riferimenti-ordine-nome] Blocco delle select RIFERIMENTI non trovato"
   );
 }
 
@@ -29,18 +29,26 @@ const oldB = targetSection.split(cognomeNomeB).length - 1;
 const newA = targetSection.split(nomeCognomeA).length - 1;
 const newB = targetSection.split(nomeCognomeB).length - 1;
 
-// Le quattro select interessate sono:
-// Utente Fiscale, Professionista Fiscale, Utente Payroll, Professionista Payroll.
+// Le sei select interessate sono:
+// Utente Fiscale, Professionista Fiscale, Utente Payroll, Professionista Payroll,
+// Utente Consulenza, Professionista Consulenza.
 // Contatto 1 resta volutamente fuori da questo blocco.
-if (oldA === 4 && oldB === 4) {
+const expectedSelects = 6;
+
+if (oldA === expectedSelects && oldB === expectedSelects) {
   targetSection = targetSection
     .split(cognomeNomeA).join(nomeCognomeA)
     .split(cognomeNomeB).join(nomeCognomeB);
-} else if (oldA === 0 && oldB === 0 && newA === 4 && newB === 4) {
+} else if (
+  oldA === 0 &&
+  oldB === 0 &&
+  newA === expectedSelects &&
+  newB === expectedSelects
+) {
   // Ordinamento già applicato: build idempotente.
 } else {
   throw new Error(
-    `[clienti-riferimenti-ordine-nome] Stato inatteso nelle quattro select: oldA=${oldA}, oldB=${oldB}, newA=${newA}, newB=${newB}`
+    `[clienti-riferimenti-ordine-nome] Stato inatteso nelle select RIFERIMENTI: oldA=${oldA}, oldB=${oldB}, newA=${newA}, newB=${newB}, attese=${expectedSelects}`
   );
 }
 
@@ -57,12 +65,12 @@ if (activeFilterCount === 0) {
     }
   );
 
-  if (replacements !== 4) {
+  if (replacements !== expectedSelects) {
     throw new Error(
-      `[clienti-riferimenti-ordine-nome] Attese 4 select da filtrare per utenti attivi, trovate ${replacements}`
+      `[clienti-riferimenti-ordine-nome] Attese ${expectedSelects} select da filtrare per utenti attivi, trovate ${replacements}`
     );
   }
-} else if (activeFilterCount !== 4) {
+} else if (activeFilterCount !== expectedSelects) {
   throw new Error(
     `[clienti-riferimenti-ordine-nome] Stato inatteso filtro utenti attivi: trovati ${activeFilterCount} filtri`
   );
@@ -72,5 +80,5 @@ source = before + targetSection + after;
 fs.writeFileSync(filePath, source, "utf8");
 
 console.log(
-  "✓ Clienti/Riferimenti: 4 select ordinate per Nome crescente e limitate agli utenti attivi; Contatto 1 invariato"
+  "✓ Clienti/Riferimenti: 6 select ordinate per Nome crescente e limitate agli utenti attivi; Contatto 1 invariato"
 );
