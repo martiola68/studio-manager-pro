@@ -323,6 +323,92 @@ function StampaMultiSelect({
   );
 }
 
+const RESPONSABILE_TUTTI = "__all__";
+
+function StampaResponsabileSelect({
+  label,
+  values,
+  options,
+  onChange,
+}: {
+  label: string;
+  values: string[];
+  options: StampaMultiOption[];
+  onChange: (values: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const isAll = values.includes(RESPONSABILE_TUTTI);
+
+  const summary =
+    values.length === 0
+      ? "Nessuno"
+      : isAll
+        ? "Tutti"
+        : values.length === 1
+          ? options.find((option) => option.value === values[0])?.label || "1 selezionato"
+          : `${values.length} selezionati`;
+
+  const toggle = (value: string) => {
+    const cleanValues = values.filter((item) => item !== RESPONSABILE_TUTTI);
+    onChange(
+      cleanValues.includes(value)
+        ? cleanValues.filter((item) => item !== value)
+        : [...cleanValues, value]
+    );
+  };
+
+  return (
+    <div className="relative">
+      <Label>{label}</Label>
+
+      <Button
+        type="button"
+        variant="outline"
+        className="mt-1 w-full justify-between bg-white font-normal"
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span className="truncate">{summary}</span>
+        <span className="ml-2 text-xs text-muted-foreground">▾</span>
+      </Button>
+
+      {open && (
+        <div className="absolute left-0 top-full z-[10001] mt-1 w-full min-w-[240px] rounded-md border bg-white p-2 shadow-lg">
+          <div
+            className="flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-muted"
+            onClick={() => onChange([])}
+          >
+            <Checkbox checked={values.length === 0} />
+            <span>Nessuno</span>
+          </div>
+
+          <div
+            className="flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-muted"
+            onClick={() => onChange([RESPONSABILE_TUTTI])}
+          >
+            <Checkbox checked={isAll} />
+            <span>Tutti</span>
+          </div>
+
+          <div className="my-2 border-t" />
+
+          <div className="max-h-[260px] overflow-auto">
+            {options.map((option) => (
+              <div
+                key={option.value}
+                className="flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-muted"
+                onClick={() => toggle(option.value)}
+              >
+                <Checkbox checked={!isAll && values.includes(option.value)} />
+                <span className="leading-tight">{option.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ClientiPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -369,8 +455,8 @@ const [filtroStampa, setFiltroStampa] = useState({
   tipi_redditi: [] as string[],
   tipi_cliente: [] as string[],
   inclusione_stampa: ["inclusi"] as string[],
-  // Mantiene il comportamento precedente: all'apertura la stampa è filtrata sul settore Fiscale.
-  settori: ["fiscale"] as string[],
+  // Nessun settore preselezionato: per default la stampa considera tutti i settori.
+  settori: [] as string[],
 });
 
   const [utentiFiscali, setUtentiFiscali] = useState([]);
@@ -2221,16 +2307,40 @@ if (!studioIdEffettivo) {
 
 params.set("studio_id", studioIdEffettivo);
     
+  const responsabiliSelezionati = [
+    filtroStampa.utente_operatore_ids,
+    filtroStampa.utente_professionista_ids,
+    filtroStampa.utente_payroll_ids,
+    filtroStampa.professionista_payroll_ids,
+    filtroStampa.utente_consulenza_ids,
+    filtroStampa.professionista_consulenza_ids,
+  ];
+
+  if (responsabiliSelezionati.every((values) => values.length === 0)) {
+    alert("Seleziona almeno un Utente o Professionista per effettuare la stampa.");
+    return "";
+  }
+
   const setMultiParam = (key: string, values: string[]) => {
     params.set(key, values.length > 0 ? values.join(",") : "tutti");
   };
 
-  setMultiParam("utente_operatore_ids", filtroStampa.utente_operatore_ids);
-  setMultiParam("utente_professionista_ids", filtroStampa.utente_professionista_ids);
-  setMultiParam("utente_payroll_ids", filtroStampa.utente_payroll_ids);
-  setMultiParam("professionista_payroll_ids", filtroStampa.professionista_payroll_ids);
-  setMultiParam("utente_consulenza_ids", filtroStampa.utente_consulenza_ids);
-  setMultiParam("professionista_consulenza_ids", filtroStampa.professionista_consulenza_ids);
+  const setResponsabileParam = (key: string, values: string[]) => {
+    if (values.length === 0) {
+      params.set(key, "nessuno");
+    } else if (values.includes(RESPONSABILE_TUTTI)) {
+      params.set(key, "tutti");
+    } else {
+      params.set(key, values.join(","));
+    }
+  };
+
+  setResponsabileParam("utente_operatore_ids", filtroStampa.utente_operatore_ids);
+  setResponsabileParam("utente_professionista_ids", filtroStampa.utente_professionista_ids);
+  setResponsabileParam("utente_payroll_ids", filtroStampa.utente_payroll_ids);
+  setResponsabileParam("professionista_payroll_ids", filtroStampa.professionista_payroll_ids);
+  setResponsabileParam("utente_consulenza_ids", filtroStampa.utente_consulenza_ids);
+  setResponsabileParam("professionista_consulenza_ids", filtroStampa.professionista_consulenza_ids);
   setMultiParam("tipo_prestazione_ids", filtroStampa.tipo_prestazione_ids);
   setMultiParam("tipi_redditi", filtroStampa.tipi_redditi);
   setMultiParam("tipi_cliente", filtroStampa.tipi_cliente);
@@ -3972,7 +4082,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
         <Input value="SI" disabled />
       </div>
 
-      <StampaMultiSelect
+      <StampaResponsabileSelect
         label="Utente Fiscale"
         values={filtroStampa.utente_operatore_ids}
         options={utenti
@@ -3999,7 +4109,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
         }
       />
 
-      <StampaMultiSelect
+      <StampaResponsabileSelect
         label="Professionista Fiscale"
         values={filtroStampa.utente_professionista_ids}
         options={utenti
@@ -4026,7 +4136,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
         }
       />
 
-      <StampaMultiSelect
+      <StampaResponsabileSelect
         label="Utente Payroll"
         values={filtroStampa.utente_payroll_ids}
         options={utenti
@@ -4053,7 +4163,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
         }
       />
 
-      <StampaMultiSelect
+      <StampaResponsabileSelect
         label="Professionista Payroll"
         values={filtroStampa.professionista_payroll_ids}
         options={utenti
@@ -4080,7 +4190,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
         }
       />
 
-      <StampaMultiSelect
+      <StampaResponsabileSelect
         label="Utente Consulenza"
         values={filtroStampa.utente_consulenza_ids}
         options={utenti
@@ -4107,7 +4217,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
         }
       />
 
-      <StampaMultiSelect
+      <StampaResponsabileSelect
         label="Professionista Consulenza"
         values={filtroStampa.professionista_consulenza_ids}
         options={utenti
