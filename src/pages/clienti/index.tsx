@@ -2550,7 +2550,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
     ) : (
       <div className="w-full overflow-x-auto max-h-[75vh]">
        
-          <Table className="w-full min-w-[1320px] table-fixed">
+          <Table data-clienti-table className="w-full min-w-[1320px] table-fixed">
             <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
               <TableRow>
                 <TableHead className="w-[95px] px-2 whitespace-nowrap">
