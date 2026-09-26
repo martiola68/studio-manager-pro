@@ -19,6 +19,7 @@ import {
   X,
   Key,
   FolderOpen,
+  Landmark,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -214,6 +215,13 @@ export function Sidebar({ mobileOpen = false, onClose = () => {} }: SidebarProps
         { label: "LIPE", href: "/scadenze/lipe", icon: null },
         { label: "Esterometro", href: "/scadenze/esterometro", icon: null },
         { label: "Antiriciclaggio", href: "/scadenze/antiriciclaggio", icon: null },
+      ],
+    },
+    {
+      label: "Contabilità / Fiscale",
+      icon: <Landmark className="h-5 w-5" />,
+      children: [
+        { label: "Cespiti e Ammortamenti", href: "/cespiti", icon: null },
       ],
     },
     {
