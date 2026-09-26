@@ -171,6 +171,34 @@ export function ClientiMasterGraficaFixes() {
       }
 
       body.clienti-master-fixes main.anagrafiche-master-page
+        table[data-clienti-table] .client-status-badge {
+        display: inline-flex !important;
+        min-width: 62px !important;
+        justify-content: center !important;
+        padding: 3px 8px !important;
+        border-width: 1px !important;
+        border-style: solid !important;
+        border-radius: 6px !important;
+        font-weight: 700 !important;
+        line-height: 1.1 !important;
+        opacity: 1 !important;
+      }
+
+      body.clienti-master-fixes main.anagrafiche-master-page
+        table[data-clienti-table] .client-status-active {
+        background-color: rgb(22 163 74) !important;
+        border-color: rgb(21 128 61) !important;
+        color: rgb(255 255 255) !important;
+      }
+
+      body.clienti-master-fixes main.anagrafiche-master-page
+        table[data-clienti-table] .client-status-inactive {
+        background-color: rgb(71 85 105) !important;
+        border-color: rgb(51 65 85) !important;
+        color: rgb(255 255 255) !important;
+      }
+
+      body.clienti-master-fixes main.anagrafiche-master-page
         table[data-clienti-table] td:nth-child(6) > div {
         display: inline-flex !important;
         min-width: 62px !important;
