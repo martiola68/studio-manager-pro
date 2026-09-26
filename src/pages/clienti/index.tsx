@@ -79,18 +79,24 @@ type ClienteRow = Database["public"]["Tables"]["tbclienti"]["Row"] & {
   telefono?: string | null;
   pec?: string | null;
   cliente?: boolean | null;
+  utente_consulenza_id?: string | null;
+  professionista_consulenza_id?: string | null;
 };
 
 type ClienteInsert = Database["public"]["Tables"]["tbclienti"]["Insert"] & {
   telefono?: string | null;
   pec?: string | null;
   cliente?: boolean;
+  utente_consulenza_id?: string | null;
+  professionista_consulenza_id?: string | null;
 };
 
 type ClienteUpdate = Database["public"]["Tables"]["tbclienti"]["Update"] & {
   telefono?: string | null;
   pec?: string | null;
   cliente?: boolean;
+  utente_consulenza_id?: string | null;
+  professionista_consulenza_id?: string | null;
 };
 
 type ContattoRow = Database["public"]["Tables"]["tbcontatti"]["Row"];
@@ -134,6 +140,8 @@ attivo: boolean;
   utente_professionista_id: string;
   utente_payroll_id: string;
   professionista_payroll_id: string;
+  utente_consulenza_id: string;
+  professionista_consulenza_id: string;
 
   contatto1_id: string;
   referente_esterno: string;
@@ -195,6 +203,8 @@ attivo: true,
   utente_professionista_id: "",
   utente_payroll_id: "",
   professionista_payroll_id: "",
+  utente_consulenza_id: "",
+  professionista_consulenza_id: "",
 
   contatto1_id: "",
   referente_esterno: "",
@@ -887,6 +897,8 @@ attivo: clienteData.attivo ?? true,
     utente_professionista_id: clienteData.utente_professionista_id || "",
     utente_payroll_id: clienteData.utente_payroll_id || "",
     professionista_payroll_id: clienteData.professionista_payroll_id || "",
+    utente_consulenza_id: clienteData.utente_consulenza_id || "",
+    professionista_consulenza_id: clienteData.professionista_consulenza_id || "",
 
     contatto1_id: clienteData.contatto1_id || "",
     referente_esterno: clienteData.referente_esterno || "",
@@ -1116,14 +1128,18 @@ if (
 }
 if (
   formData.cliente === true &&
-  !formData.utente_operatore_id &&
-  !formData.utente_payroll_id
+  !(
+    (formData.settore_fiscale && formData.utente_operatore_id) ||
+    (formData.settore_lavoro && formData.utente_payroll_id) ||
+    (formData.settore_consulenza && formData.utente_consulenza_id)
+  )
 ) {
-  newErrors.utente_operatore_id = true;
-  newErrors.utente_payroll_id = true;
+  if (formData.settore_fiscale) newErrors.utente_operatore_id = true;
+  if (formData.settore_lavoro) newErrors.utente_payroll_id = true;
+  if (formData.settore_consulenza) newErrors.utente_consulenza_id = true;
 
   missingFields.push(
-    "Selezionare almeno Utente Fiscale o Utente Payroll"
+    "Selezionare almeno un Utente per uno dei settori attivi"
   );
 }
 
@@ -1194,10 +1210,12 @@ cassetto_fiscale_id: formData.cassetto_fiscale_id || null,
           matricola_inps: formData.matricola_inps || null,
           pat_inail: formData.pat_inail || null,
           codice_ditta_ce: formData.codice_ditta_ce || null,
-          utente_operatore_id: formData.utente_operatore_id || null,
-          utente_professionista_id: formData.utente_professionista_id || null,
-          utente_payroll_id: formData.utente_payroll_id || null,
-          professionista_payroll_id: formData.professionista_payroll_id || null,
+          utente_operatore_id: formData.settore_fiscale ? formData.utente_operatore_id || null : null,
+          utente_professionista_id: formData.settore_fiscale ? formData.utente_professionista_id || null : null,
+          utente_payroll_id: formData.settore_lavoro ? formData.utente_payroll_id || null : null,
+          professionista_payroll_id: formData.settore_lavoro ? formData.professionista_payroll_id || null : null,
+          utente_consulenza_id: formData.settore_consulenza ? formData.utente_consulenza_id || null : null,
+          professionista_consulenza_id: formData.settore_consulenza ? formData.professionista_consulenza_id || null : null,
           contatto1_id: formData.contatto1_id || null,
           referente_esterno: formData.referente_esterno || null,
           tipo_prestazione_id: formData.tipo_prestazione_id || null,
@@ -2551,6 +2569,14 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
                   Utente Payroll
                 </TableHead>
 
+                <TableHead className="min-w-[150px] px-2 text-left">
+                  Utente Consulenza
+                </TableHead>
+
+                <TableHead className="min-w-[170px] px-2 text-left">
+                  Professionista Consulenza
+                </TableHead>
+
                 <TableHead className="min-w-[80px] text-left">Stato</TableHead>
 
                 <TableHead className="min-w-[90px] text-center">
@@ -2594,6 +2620,14 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
 
                   <TableCell className="min-w-[140px] px-2 text-left align-middle">
                     {getUtenteNome(cliente.utente_payroll_id) ?? "-"}
+                  </TableCell>
+
+                  <TableCell className="min-w-[150px] px-2 text-left align-middle">
+                    {getUtenteNome(cliente.utente_consulenza_id) ?? "-"}
+                  </TableCell>
+
+                  <TableCell className="min-w-[170px] px-2 text-left align-middle">
+                    {getUtenteNome(cliente.professionista_consulenza_id) ?? "-"}
                   </TableCell>
 
                   <TableCell className="min-w-[80px]">
@@ -2926,10 +2960,16 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
                   id="settore-fiscale"
                   checked={formData.settore_fiscale}
                   onCheckedChange={(checked) =>
-                    setFormData({
-                      ...formData,
+                    setFormData((prev) => ({
+                      ...prev,
                       settore_fiscale: checked as boolean,
-                    })
+                      ...(checked
+                        ? {}
+                        : {
+                            utente_operatore_id: "",
+                            utente_professionista_id: "",
+                          }),
+                    }))
                   }
                 />
                 <Label
@@ -2945,10 +2985,16 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
                   id="settore-lavoro"
                   checked={formData.settore_lavoro}
                   onCheckedChange={(checked) =>
-                    setFormData({
-                      ...formData,
+                    setFormData((prev) => ({
+                      ...prev,
                       settore_lavoro: checked as boolean,
-                    })
+                      ...(checked
+                        ? {}
+                        : {
+                            utente_payroll_id: "",
+                            professionista_payroll_id: "",
+                          }),
+                    }))
                   }
                 />
                 <Label
@@ -2964,10 +3010,16 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
                   id="settore-consulenza"
                   checked={formData.settore_consulenza}
                   onCheckedChange={(checked) =>
-                    setFormData({
-                      ...formData,
+                    setFormData((prev) => ({
+                      ...prev,
                       settore_consulenza: checked as boolean,
-                    })
+                      ...(checked
+                        ? {}
+                        : {
+                            utente_consulenza_id: "",
+                            professionista_consulenza_id: "",
+                          }),
+                    }))
                   }
                 />
                 <Label
@@ -3235,6 +3287,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
   Utente Fiscale <span className="text-red-500">*</span>
 </Label>
             <Select
+              disabled={!formData.settore_fiscale}
               value={formData.utente_operatore_id || "none"}
               onValueChange={(value) =>
                 setFormData({
@@ -3271,6 +3324,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
   Professionista Fiscale
 </Label>
             <Select
+              disabled={!formData.settore_fiscale}
               value={formData.utente_professionista_id || "none"}
               onValueChange={(value) =>
                 setFormData({
@@ -3310,6 +3364,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
 </Label>
 
   <Select
+    disabled={!formData.settore_lavoro}
     value={formData.utente_payroll_id || "none"}
     onValueChange={(value) =>
       setFormData({
@@ -3347,6 +3402,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
 </Label>
 
   <Select
+    disabled={!formData.settore_lavoro}
     value={formData.professionista_payroll_id || "none"}
     onValueChange={(value) =>
       setFormData({
@@ -3357,6 +3413,80 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
   >
     <SelectTrigger className={errors.professionista_payroll_id ? "border-red-500" : ""}>
       <SelectValue placeholder="Seleziona professionista payroll" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="none">Nessuno</SelectItem>
+      {utenti
+        .slice()
+        .sort((a, b) =>
+          `${safeString(a.cognome)} ${safeString(a.nome)}`
+            .toLowerCase()
+            .localeCompare(
+              `${safeString(b.cognome)} ${safeString(b.nome)}`.toLowerCase()
+            )
+        )
+        .map((utente) => (
+          <SelectItem key={utente.id} value={utente.id}>
+            {safeString(utente.nome)} {safeString(utente.cognome)}
+          </SelectItem>
+        ))}
+    </SelectContent>
+  </Select>
+</div>
+
+<div>
+  <Label htmlFor="utente_consulenza_id">
+    Utente Consulenza <span className="text-red-500">*</span>
+  </Label>
+  <Select
+    disabled={!formData.settore_consulenza}
+    value={formData.utente_consulenza_id || "none"}
+    onValueChange={(value) =>
+      setFormData({
+        ...formData,
+        utente_consulenza_id: value === "none" ? "" : value,
+      })
+    }
+  >
+    <SelectTrigger className={errors.utente_consulenza_id ? "border-red-500" : ""}>
+      <SelectValue placeholder="Seleziona utente consulenza" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="none">Nessuno</SelectItem>
+      {utenti
+        .slice()
+        .sort((a, b) =>
+          `${safeString(a.cognome)} ${safeString(a.nome)}`
+            .toLowerCase()
+            .localeCompare(
+              `${safeString(b.cognome)} ${safeString(b.nome)}`.toLowerCase()
+            )
+        )
+        .map((utente) => (
+          <SelectItem key={utente.id} value={utente.id}>
+            {safeString(utente.nome)} {safeString(utente.cognome)}
+          </SelectItem>
+        ))}
+    </SelectContent>
+  </Select>
+</div>
+
+<div>
+  <Label htmlFor="professionista_consulenza_id">
+    Professionista Consulenza
+  </Label>
+  <Select
+    disabled={!formData.settore_consulenza}
+    value={formData.professionista_consulenza_id || "none"}
+    onValueChange={(value) =>
+      setFormData({
+        ...formData,
+        professionista_consulenza_id: value === "none" ? "" : value,
+      })
+    }
+  >
+    <SelectTrigger className={errors.professionista_consulenza_id ? "border-red-500" : ""}>
+      <SelectValue placeholder="Seleziona professionista consulenza" />
     </SelectTrigger>
     <SelectContent>
       <SelectItem value="none">Nessuno</SelectItem>
