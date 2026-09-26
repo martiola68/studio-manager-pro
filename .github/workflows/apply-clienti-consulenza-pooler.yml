@@ -1,0 +1,53 @@
+name: Apply clienti consulenza via pooler
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/apply-clienti-consulenza-pooler.yml
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Find Supabase pooler and apply migration
+        env:
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          regions=(
+            eu-central-1
+            eu-west-1
+            eu-west-2
+            eu-west-3
+            us-east-1
+            us-west-1
+            us-west-2
+            ap-southeast-1
+            ap-southeast-2
+            ap-northeast-1
+            ap-south-1
+            sa-east-1
+            ca-central-1
+          )
+
+          success=0
+          for region in "${regions[@]}"; do
+            host="aws-0-${region}.pooler.supabase.com"
+            echo "Trying pooler region: ${region}"
+            if PGPASSWORD="$SUPABASE_DB_PASSWORD" psql               "host=${host} port=5432 dbname=postgres user=postgres.ngeltlygytupgdjiagve sslmode=require connect_timeout=5"               -v ON_ERROR_STOP=1               -f supabase/migrations/20260926154500_add_clienti_consulenza_responsabili.sql
+            then
+              echo "Migration applied through ${region}"
+              count=$(PGPASSWORD="$SUPABASE_DB_PASSWORD" psql                 "host=${host} port=5432 dbname=postgres user=postgres.ngeltlygytupgdjiagve sslmode=require connect_timeout=5"                 -Atc "select count(*) from information_schema.columns where table_schema='public' and table_name='tbclienti' and column_name in ('utente_consulenza_id','professionista_consulenza_id');")
+              echo "Columns found: $count"
+              test "$count" = "2"
+              success=1
+              break
+            fi
+          done
+
+          test "$success" = "1"
