@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
-import { Calculator, FolderTree, PackageOpen, ReceiptText, TrendingDown } from "lucide-react";
+import { Calculator, FolderTree, PackageOpen, ReceiptText, TrendingDown, BookOpen } from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { getStudioId } from "@/lib/getStudioId";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -74,7 +74,7 @@ export default function CespitiDashboardPage() {
       <Button variant="outline" className="h-24 flex-col gap-2" onClick={()=>router.push("/cespiti/elenco")}><PackageOpen/>Cespiti</Button>
       <Button variant="outline" className="h-24 flex-col gap-2" onClick={()=>router.push("/cespiti/movimenti")}><TrendingDown/>Movimenti</Button>
       <Button variant="outline" className="h-24 flex-col gap-2" onClick={()=>router.push("/cespiti/ammortamenti")}><Calculator/>Calcolo ammortamenti</Button>
-      <Button variant="outline" className="h-24 flex-col gap-2" onClick={()=>router.push("/cespiti/registro")}><ReceiptText/>Registro cespiti</Button>
+      <Button variant="outline" className="h-24 flex-col gap-2" onClick={()=>router.push("/cespiti/registro")}><ReceiptText/>Registro cespiti</Button>\n      <Button variant="outline" className="h-24 flex-col gap-2" onClick={()=>router.push("/cespiti/scritture")}><BookOpen/>Scritture contabili</Button>
     </CardContent></Card>
 
     <Card><CardContent className="pt-6 text-sm text-muted-foreground">
