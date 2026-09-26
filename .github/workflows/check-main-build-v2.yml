@@ -1,0 +1,22 @@
+name: Check main build v2
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/check-main-build-v2.yml
+      - src/pages/clienti/index.tsx
+      - src/pages/presenze/index.tsx
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
