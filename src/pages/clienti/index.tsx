@@ -277,6 +277,24 @@ function StampaMultiSelect({
 }) {
   const [open, setOpen] = useState(false);
 
+  useEffect(() => {
+    const closeWhenAnotherFilterOpens = (event: Event) => {
+      const openedLabel = (event as CustomEvent<string>).detail;
+      if (openedLabel !== label) setOpen(false);
+    };
+
+    window.addEventListener(
+      "stampa-select-open",
+      closeWhenAnotherFilterOpens as EventListener
+    );
+
+    return () =>
+      window.removeEventListener(
+        "stampa-select-open",
+        closeWhenAnotherFilterOpens as EventListener
+      );
+  }, [label]);
+
   const summary =
     values.length === 0
       ? "Tutti"
@@ -300,7 +318,15 @@ function StampaMultiSelect({
         type="button"
         variant="outline"
         className="mt-1 w-full justify-between bg-white font-normal"
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => {
+          const nextOpen = !open;
+          if (nextOpen) {
+            window.dispatchEvent(
+              new CustomEvent("stampa-select-open", { detail: label })
+            );
+          }
+          setOpen(nextOpen);
+        }}
       >
         <span className="truncate">{summary}</span>
         <span className="ml-2 text-xs text-muted-foreground">▾</span>
@@ -350,6 +376,25 @@ function StampaResponsabileSelect({
   onChange: (values: string[]) => void;
 }) {
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    const closeWhenAnotherFilterOpens = (event: Event) => {
+      const openedLabel = (event as CustomEvent<string>).detail;
+      if (openedLabel !== label) setOpen(false);
+    };
+
+    window.addEventListener(
+      "stampa-select-open",
+      closeWhenAnotherFilterOpens as EventListener
+    );
+
+    return () =>
+      window.removeEventListener(
+        "stampa-select-open",
+        closeWhenAnotherFilterOpens as EventListener
+      );
+  }, [label]);
+
   const isAll = values.includes(RESPONSABILE_TUTTI);
 
   const summary =
@@ -378,7 +423,15 @@ function StampaResponsabileSelect({
         type="button"
         variant="outline"
         className="mt-1 w-full justify-between bg-white font-normal"
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => {
+          const nextOpen = !open;
+          if (nextOpen) {
+            window.dispatchEvent(
+              new CustomEvent("stampa-select-open", { detail: label })
+            );
+          }
+          setOpen(nextOpen);
+        }}
       >
         <span className="truncate">{summary}</span>
         <span className="ml-2 text-xs text-muted-foreground">▾</span>
@@ -456,6 +509,26 @@ const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [showStampaModal, setShowStampaModal] = useState(false);
   const [stampaPrestazioniOpen, setStampaPrestazioniOpen] = useState(false);
+
+  useEffect(() => {
+    const closePrestazioniWhenAnotherFilterOpens = (event: Event) => {
+      const openedLabel = (event as CustomEvent<string>).detail;
+      if (openedLabel !== "Tipo Prestazione") {
+        setStampaPrestazioniOpen(false);
+      }
+    };
+
+    window.addEventListener(
+      "stampa-select-open",
+      closePrestazioniWhenAnotherFilterOpens as EventListener
+    );
+
+    return () =>
+      window.removeEventListener(
+        "stampa-select-open",
+        closePrestazioniWhenAnotherFilterOpens as EventListener
+      );
+  }, []);
 
 const [filtroStampa, setFiltroStampa] = useState({
   utente_operatore_ids: [] as string[],
@@ -4101,8 +4174,8 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
         options={utenti
           .slice()
           .sort((a, b) =>
-            `${safeString(a.cognome)} ${safeString(a.nome)}`.localeCompare(
-              `${safeString(b.cognome)} ${safeString(b.nome)}`,
+            `${safeString(a.nome)} ${safeString(a.cognome)}`.localeCompare(
+              `${safeString(b.nome)} ${safeString(b.cognome)}`,
               "it",
               { sensitivity: "base" }
             )
@@ -4125,8 +4198,8 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
         options={utenti
           .slice()
           .sort((a, b) =>
-            `${safeString(a.cognome)} ${safeString(a.nome)}`.localeCompare(
-              `${safeString(b.cognome)} ${safeString(b.nome)}`,
+            `${safeString(a.nome)} ${safeString(a.cognome)}`.localeCompare(
+              `${safeString(b.nome)} ${safeString(b.cognome)}`,
               "it",
               { sensitivity: "base" }
             )
@@ -4149,8 +4222,8 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
         options={utenti
           .slice()
           .sort((a, b) =>
-            `${safeString(a.cognome)} ${safeString(a.nome)}`.localeCompare(
-              `${safeString(b.cognome)} ${safeString(b.nome)}`,
+            `${safeString(a.nome)} ${safeString(a.cognome)}`.localeCompare(
+              `${safeString(b.nome)} ${safeString(b.cognome)}`,
               "it",
               { sensitivity: "base" }
             )
@@ -4173,8 +4246,8 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
         options={utenti
           .slice()
           .sort((a, b) =>
-            `${safeString(a.cognome)} ${safeString(a.nome)}`.localeCompare(
-              `${safeString(b.cognome)} ${safeString(b.nome)}`,
+            `${safeString(a.nome)} ${safeString(a.cognome)}`.localeCompare(
+              `${safeString(b.nome)} ${safeString(b.cognome)}`,
               "it",
               { sensitivity: "base" }
             )
@@ -4197,8 +4270,8 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
         options={utenti
           .slice()
           .sort((a, b) =>
-            `${safeString(a.cognome)} ${safeString(a.nome)}`.localeCompare(
-              `${safeString(b.cognome)} ${safeString(b.nome)}`,
+            `${safeString(a.nome)} ${safeString(a.cognome)}`.localeCompare(
+              `${safeString(b.nome)} ${safeString(b.cognome)}`,
               "it",
               { sensitivity: "base" }
             )
@@ -4221,8 +4294,8 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
         options={utenti
           .slice()
           .sort((a, b) =>
-            `${safeString(a.cognome)} ${safeString(a.nome)}`.localeCompare(
-              `${safeString(b.cognome)} ${safeString(b.nome)}`,
+            `${safeString(a.nome)} ${safeString(a.cognome)}`.localeCompare(
+              `${safeString(b.nome)} ${safeString(b.cognome)}`,
               "it",
               { sensitivity: "base" }
             )
@@ -4246,7 +4319,17 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
           type="button"
           variant="outline"
           className="mt-1 w-full justify-between bg-white font-normal"
-          onClick={() => setStampaPrestazioniOpen((open) => !open)}
+          onClick={() => {
+            const nextOpen = !stampaPrestazioniOpen;
+            if (nextOpen) {
+              window.dispatchEvent(
+                new CustomEvent("stampa-select-open", {
+                  detail: "Tipo Prestazione",
+                })
+              );
+            }
+            setStampaPrestazioniOpen(nextOpen);
+          }}
         >
           <span className="truncate">
             {filtroStampa.tipo_prestazione_ids.length === 0
