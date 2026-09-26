@@ -57,22 +57,54 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
   };
 
-  const operatoriIds = parseMulti(
+  type ResponsabileFiltro = {
+    mode: "none" | "all" | "ids";
+    ids: string[];
+  };
+
+  const parseResponsabile = (
+    value: string | string[] | undefined
+  ): ResponsabileFiltro => {
+    const raw = Array.isArray(value) ? value.join(",") : String(value || "");
+    const normalized = raw.trim().toLowerCase();
+
+    if (!raw || normalized === "nessuno") {
+      return { mode: "none", ids: [] };
+    }
+
+    if (normalized === "tutti") {
+      return { mode: "all", ids: [] };
+    }
+
+    return {
+      mode: "ids",
+      ids: Array.from(
+        new Set(
+          raw
+            .split(",")
+            .map((item) => item.trim())
+            .filter(Boolean)
+        )
+      ),
+    };
+  };
+
+  const operatori = parseResponsabile(
     (utente_operatore_ids ?? utente_operatore_id) as string | string[] | undefined
   );
-  const professionistiIds = parseMulti(
+  const professionisti = parseResponsabile(
     (utente_professionista_ids ?? utente_professionista_id) as string | string[] | undefined
   );
-  const utentiPayrollIds = parseMulti(
+  const utentiPayroll = parseResponsabile(
     utente_payroll_ids as string | string[] | undefined
   );
-  const professionistiPayrollIds = parseMulti(
+  const professionistiPayroll = parseResponsabile(
     professionista_payroll_ids as string | string[] | undefined
   );
-  const utentiConsulenzaIds = parseMulti(
+  const utentiConsulenza = parseResponsabile(
     utente_consulenza_ids as string | string[] | undefined
   );
-  const professionistiConsulenzaIds = parseMulti(
+  const professionistiConsulenza = parseResponsabile(
     professionista_consulenza_ids as string | string[] | undefined
   );
   const prestazioniIds = parseMulti(
@@ -130,28 +162,33 @@ settore_fiscale,
       .eq("attivo", true)
       .order("ragione_sociale", { ascending: true });
 
-    if (operatoriIds.length > 0) {
-      query = query.in("utente_operatore_id", operatoriIds);
+    const responsabili = [
+      { field: "utente_operatore_id", filter: operatori },
+      { field: "utente_professionista_id", filter: professionisti },
+      { field: "utente_payroll_id", filter: utentiPayroll },
+      { field: "professionista_payroll_id", filter: professionistiPayroll },
+      { field: "utente_consulenza_id", filter: utentiConsulenza },
+      { field: "professionista_consulenza_id", filter: professionistiConsulenza },
+    ] as const;
+
+    if (responsabili.every(({ filter }) => filter.mode === "none")) {
+      return res.status(400).json({
+        error: "Selezionare almeno un Utente o Professionista per la stampa",
+      });
     }
 
-    if (professionistiIds.length > 0) {
-      query = query.in("utente_professionista_id", professionistiIds);
-    }
+    const condizioniResponsabili: string[] = [];
 
-    if (utentiPayrollIds.length > 0) {
-      query = query.in("utente_payroll_id", utentiPayrollIds);
-    }
+    responsabili.forEach(({ field, filter }) => {
+      if (filter.mode === "all") {
+        condizioniResponsabili.push(`${field}.not.is.null`);
+      } else if (filter.mode === "ids" && filter.ids.length > 0) {
+        condizioniResponsabili.push(`${field}.in.(${filter.ids.join(",")})`);
+      }
+    });
 
-    if (professionistiPayrollIds.length > 0) {
-      query = query.in("professionista_payroll_id", professionistiPayrollIds);
-    }
-
-    if (utentiConsulenzaIds.length > 0) {
-      query = query.in("utente_consulenza_id", utentiConsulenzaIds);
-    }
-
-    if (professionistiConsulenzaIds.length > 0) {
-      query = query.in("professionista_consulenza_id", professionistiConsulenzaIds);
+    if (condizioniResponsabili.length > 0) {
+      query = query.or(condizioniResponsabili.join(","));
     }
 
     if (prestazioniIds.length > 0) {
@@ -201,12 +238,12 @@ settore_fiscale,
 
   const tuttiResponsabiliIds = Array.from(
     new Set([
-      ...operatoriIds,
-      ...professionistiIds,
-      ...utentiPayrollIds,
-      ...professionistiPayrollIds,
-      ...utentiConsulenzaIds,
-      ...professionistiConsulenzaIds,
+      ...operatori.ids,
+      ...professionisti.ids,
+      ...utentiPayroll.ids,
+      ...professionistiPayroll.ids,
+      ...utentiConsulenza.ids,
+      ...professionistiConsulenza.ids,
     ])
   );
 
@@ -227,36 +264,33 @@ settore_fiscale,
     }
   }
 
-  const nomiDaIds = (ids: string[]) =>
-    ids.length > 0
-      ? ids
-          .map((id) => nomiResponsabili.get(id) || id)
-          .filter(Boolean)
-          .join(", ")
-      : "Tutti";
+  const descriviResponsabile = (filter: ResponsabileFiltro) => {
+    if (filter.mode === "none") return "Nessuno";
+    if (filter.mode === "all") return "Tutti";
 
-  const settoriPerIntestazione =
-    settoriSelezionatiNuovi.length > 0
-      ? settoriSelezionatiNuovi
-      : ["fiscale", "lavoro", "consulenza"];
+    return filter.ids
+      .map((id) => nomiResponsabili.get(id) || id)
+      .filter(Boolean)
+      .join(", ");
+  };
 
   const righeResponsabili: string[] = [];
 
-  if (settoriPerIntestazione.includes("fiscale")) {
+  if (operatori.mode !== "none" || professionisti.mode !== "none") {
     righeResponsabili.push(
-      `Fiscale - Utente: ${nomiDaIds(operatoriIds)} | Professionista: ${nomiDaIds(professionistiIds)}`
+      `Fiscale - Utente: ${descriviResponsabile(operatori)} | Professionista: ${descriviResponsabile(professionisti)}`
     );
   }
 
-  if (settoriPerIntestazione.includes("lavoro")) {
+  if (utentiPayroll.mode !== "none" || professionistiPayroll.mode !== "none") {
     righeResponsabili.push(
-      `Payroll - Utente: ${nomiDaIds(utentiPayrollIds)} | Professionista: ${nomiDaIds(professionistiPayrollIds)}`
+      `Payroll - Utente: ${descriviResponsabile(utentiPayroll)} | Professionista: ${descriviResponsabile(professionistiPayroll)}`
     );
   }
 
-  if (settoriPerIntestazione.includes("consulenza")) {
+  if (utentiConsulenza.mode !== "none" || professionistiConsulenza.mode !== "none") {
     righeResponsabili.push(
-      `Consulenza - Utente: ${nomiDaIds(utentiConsulenzaIds)} | Professionista: ${nomiDaIds(professionistiConsulenzaIds)}`
+      `Consulenza - Utente: ${descriviResponsabile(utentiConsulenza)} | Professionista: ${descriviResponsabile(professionistiConsulenza)}`
     );
   }
 
