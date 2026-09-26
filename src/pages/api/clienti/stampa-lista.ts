@@ -199,38 +199,121 @@ settore_fiscale,
 
   const clienti = data ?? [];
 
-let titoloReport = "Lista Clienti";
-
-if (
-  operatoriIds.length === 1 &&
-  clienti.length > 0
-) {
-  const nomeUtente = nomeCompleto(
-    (clienti[0] as any).utente_fiscale
+  const tuttiResponsabiliIds = Array.from(
+    new Set([
+      ...operatoriIds,
+      ...professionistiIds,
+      ...utentiPayrollIds,
+      ...professionistiPayrollIds,
+      ...utentiConsulenzaIds,
+      ...professionistiConsulenzaIds,
+    ])
   );
 
-  if (nomeUtente) {
-    titoloReport = `Lista Clienti di ${nomeUtente}`;
+  const nomiResponsabili = new Map<string, string>();
+
+  if (tuttiResponsabiliIds.length > 0) {
+    const { data: responsabili, error: responsabiliError } = await supabase
+      .from("tbutenti")
+      .select("id, nome, cognome")
+      .in("id", tuttiResponsabiliIds);
+
+    if (responsabiliError) {
+      console.error("Errore lettura responsabili stampa:", responsabiliError);
+    } else {
+      (responsabili || []).forEach((utente: any) => {
+        nomiResponsabili.set(String(utente.id), nomeCompleto(utente));
+      });
+    }
   }
-}
+
+  const nomiDaIds = (ids: string[]) =>
+    ids.length > 0
+      ? ids
+          .map((id) => nomiResponsabili.get(id) || id)
+          .filter(Boolean)
+          .join(", ")
+      : "Tutti";
+
+  const settoriPerIntestazione =
+    settoriSelezionatiNuovi.length > 0
+      ? settoriSelezionatiNuovi
+      : ["fiscale", "lavoro", "consulenza"];
+
+  const righeResponsabili: string[] = [];
+
+  if (settoriPerIntestazione.includes("fiscale")) {
+    righeResponsabili.push(
+      `Fiscale - Utente: ${nomiDaIds(operatoriIds)} | Professionista: ${nomiDaIds(professionistiIds)}`
+    );
+  }
+
+  if (settoriPerIntestazione.includes("lavoro")) {
+    righeResponsabili.push(
+      `Payroll - Utente: ${nomiDaIds(utentiPayrollIds)} | Professionista: ${nomiDaIds(professionistiPayrollIds)}`
+    );
+  }
+
+  if (settoriPerIntestazione.includes("consulenza")) {
+    righeResponsabili.push(
+      `Consulenza - Utente: ${nomiDaIds(utentiConsulenzaIds)} | Professionista: ${nomiDaIds(professionistiConsulenzaIds)}`
+    );
+  }
+
+  const titoloReport = "Lista Clienti";
 
     if (format === "excel") {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Clienti");
 
       worksheet.columns = [
-        { header: "Codice Cliente", key: "cod_cliente", width: 18 },
-        { header: "Ragione Sociale", key: "ragione_sociale", width: 35 },
-        { header: "P.IVA", key: "partita_iva", width: 16 },
-        { header: "Codice Fiscale", key: "codice_fiscale", width: 18 },
-        { header: "Utente Fiscale", key: "utente_fiscale", width: 24 },
-        { header: "Professionista", key: "professionista", width: 24 },
-        { header: "Prestazione", key: "prestazione", width: 28 },
-        { header: "Tipo Redditi", key: "tipo_redditi", width: 14 },
-        { header: "Settore Fiscale", key: "settore_fiscale", width: 16 },
-        { header: "Settore Lavoro", key: "settore_lavoro", width: 16 },
-        { header: "Settore Consulenza", key: "settore_consulenza", width: 20 },
+        { key: "cod_cliente", width: 18 },
+        { key: "ragione_sociale", width: 40 },
+        { key: "partita_iva", width: 16 },
+        { key: "codice_fiscale", width: 18 },
+        { key: "prestazione", width: 30 },
+        { key: "tipo_redditi", width: 14 },
+        { key: "settore_fiscale", width: 16 },
+        { key: "settore_lavoro", width: 16 },
+        { key: "settore_consulenza", width: 20 },
       ];
+
+      worksheet.mergeCells("A1:I1");
+      worksheet.getCell("A1").value = "STUDIO MANAGER PRO";
+      worksheet.getCell("A1").font = { bold: true, size: 16 };
+      worksheet.getCell("A1").alignment = { horizontal: "center" };
+
+      worksheet.mergeCells("A2:I2");
+      worksheet.getCell("A2").value = titoloReport;
+      worksheet.getCell("A2").font = { bold: true, size: 13 };
+      worksheet.getCell("A2").alignment = { horizontal: "center" };
+
+      worksheet.getCell("A3").value = `Data stampa: ${new Date().toLocaleDateString("it-IT")}`;
+
+      let metadataRow = 4;
+      righeResponsabili.forEach((riga) => {
+        worksheet.mergeCells(`A${metadataRow}:I${metadataRow}`);
+        worksheet.getCell(`A${metadataRow}`).value = riga;
+        worksheet.getCell(`A${metadataRow}`).font = { italic: true };
+        metadataRow += 1;
+      });
+
+      const headerRow = metadataRow + 1;
+      const intestazioni = [
+        "Codice Cliente",
+        "Ragione Sociale",
+        "P.IVA",
+        "Codice Fiscale",
+        "Prestazione",
+        "Tipo Redditi",
+        "Settore Fiscale",
+        "Settore Lavoro",
+        "Settore Consulenza",
+      ];
+
+      worksheet.addRow([]);
+      const header = worksheet.addRow(intestazioni);
+      header.font = { bold: true };
 
       clienti.forEach((c: any) => {
         worksheet.addRow({
@@ -238,8 +321,6 @@ if (
           ragione_sociale: c.ragione_sociale || "",
           partita_iva: c.partita_iva || "",
           codice_fiscale: c.codice_fiscale || "",
-          utente_fiscale: nomeCompleto(c.utente_fiscale),
-          professionista: nomeCompleto(c.professionista),
           prestazione: c.prestazione?.descrizione || "",
           tipo_redditi: c.tipo_redditi || "",
           settore_fiscale: c.settore_fiscale ? "SI" : "NO",
@@ -248,8 +329,7 @@ if (
         });
       });
 
-      worksheet.getRow(1).font = { bold: true };
-      worksheet.views = [{ state: "frozen", ySplit: 1 }];
+      worksheet.views = [{ state: "frozen", ySplit: headerRow }];
 
       const buffer = await workbook.xlsx.writeBuffer();
 
@@ -282,25 +362,32 @@ if (
 
       doc.fontSize(16).text("STUDIO MANAGER PRO", { align: "center" });
       doc.moveDown(0.5);
-    doc.fontSize(13).text(titoloReport, {
-  align: "center",
-});
+      doc.fontSize(13).text(titoloReport, { align: "center" });
       doc.moveDown(0.5);
       doc
         .fontSize(9)
         .text(`Data stampa: ${new Date().toLocaleDateString("it-IT")}`);
+
+      if (righeResponsabili.length > 0) {
+        doc.moveDown(0.35);
+        doc.font("Helvetica").fontSize(8);
+        righeResponsabili.forEach((riga) => {
+          doc.text(riga, { align: "left" });
+        });
+      }
+
       doc.moveDown();
 
       const startX = 30;
       let y = doc.y;
 
       const columns = [
-        { label: "Cod.", x: startX, width: 60 },
-        { label: "Ragione Sociale", x: startX + 65, width: 180 },
-        { label: "Utente Fiscale", x: startX + 250, width: 110 },
-        { label: "Professionista", x: startX + 365, width: 110 },
-        { label: "Tipo Redditi", x: startX + 480, width: 70 },
-        { label: "Prestazione", x: startX + 555, width: 150 },
+        { label: "Cod.", x: startX, width: 70 },
+        { label: "Ragione Sociale", x: startX + 75, width: 255 },
+        { label: "P.IVA", x: startX + 335, width: 85 },
+        { label: "Codice Fiscale", x: startX + 425, width: 105 },
+        { label: "Tipo Redditi", x: startX + 535, width: 80 },
+        { label: "Prestazione", x: startX + 620, width: 170 },
       ];
 
       const drawHeader = () => {
@@ -330,8 +417,8 @@ if (
         const row = [
           c.cod_cliente || "",
           c.ragione_sociale || "",
-          nomeCompleto(c.utente_fiscale),
-          nomeCompleto(c.professionista),
+          c.partita_iva || "",
+          c.codice_fiscale || "",
           c.tipo_redditi || "",
           c.prestazione?.descrizione || "",
         ];
