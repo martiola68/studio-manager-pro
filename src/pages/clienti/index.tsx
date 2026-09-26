@@ -2550,39 +2550,35 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
     ) : (
       <div className="w-full overflow-x-auto max-h-[75vh]">
        
-          <Table className="min-w-[1710px] table-fixed">
+          <Table className="w-full min-w-[1320px] table-fixed">
             <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
               <TableRow>
-                <TableHead className="sticky top-0 left-0 bg-background z-30 w-[120px] min-w-[120px] max-w-[120px] border-r px-3 whitespace-nowrap">
+                <TableHead className="w-[95px] px-2 whitespace-nowrap">
                   Cod. Cliente
                 </TableHead>
 
-               <TableHead className="sticky top-0 left-[120px] bg-background z-30 w-[400px] min-w-[400px] max-w-[400px] border-r px-3 whitespace-nowrap">
+               <TableHead className="w-[360px] px-3 whitespace-nowrap">
                   Ragione Sociale
                 </TableHead>
 
-                <TableHead className="w-[170px] min-w-[170px] max-w-[170px] px-3 text-left whitespace-nowrap">
+                <TableHead className="w-[165px] px-3 text-left whitespace-nowrap">
                   Utente Fiscale
                 </TableHead>
 
-                <TableHead className="w-[160px] min-w-[160px] max-w-[160px] px-3 text-left whitespace-nowrap">
+                <TableHead className="w-[150px] px-3 text-left whitespace-nowrap">
                   Utente Payroll
                 </TableHead>
 
-                <TableHead className="w-[170px] min-w-[170px] max-w-[170px] px-3 text-left whitespace-normal leading-tight">
+                <TableHead className="w-[165px] px-3 text-left whitespace-nowrap">
                   Utente Consulenza
                 </TableHead>
 
-                <TableHead className="w-[190px] min-w-[190px] max-w-[190px] px-3 text-left whitespace-normal leading-tight">
-                  Professionista Consulenza
-                </TableHead>
+                <TableHead className="w-[90px] px-2 text-center whitespace-nowrap">Stato</TableHead>
 
-                <TableHead className="w-[90px] min-w-[90px] max-w-[90px] px-3 text-left whitespace-nowrap">Stato</TableHead>
-
-                <TableHead className="w-[90px] min-w-[90px] max-w-[90px] px-2 text-center whitespace-nowrap">
+                <TableHead className="w-[95px] px-2 text-center whitespace-nowrap">
                   Scadenzari
                 </TableHead>
-                <TableHead className="sticky right-0 bg-background z-20 w-[320px] min-w-[320px] max-w-[320px] px-2">
+                <TableHead className="w-[300px] px-2">
  <div className="grid grid-cols-5 items-center text-center text-sm font-medium">
     <span>Organi</span>
     <span>Servizi</span>
@@ -2598,7 +2594,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
               {filteredClienti.map((cliente) => (
                 <TableRow key={cliente.id}>
                   <TableCell
-                    className="sticky left-0 bg-background z-10 font-mono text-sm w-[120px] min-w-[120px] max-w-[120px] truncate border-r px-3"
+                    className="w-[95px] px-2 font-mono text-sm truncate"
                     title={cliente.cod_cliente || cliente.id}
                   >
                     {cliente.cod_cliente ||
@@ -2606,50 +2602,46 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
                   </TableCell>
 
                  <TableCell
-                  className="sticky left-[120px] bg-background z-20 font-medium w-[400px] min-w-[400px] max-w-[400px] truncate border-r px-3"
+                  className="w-[360px] px-3 font-medium truncate"
                     title={cliente.ragione_sociale || ""}
                   >
                     {cliente.ragione_sociale}
                   </TableCell>
 
-                  <TableCell className="w-[170px] min-w-[170px] max-w-[170px] px-3 text-left align-middle">
+                  <TableCell className="w-[165px] px-3 text-left align-middle">
                     <div
-                      className="w-full truncate whitespace-nowrap text-left"
+                      className="truncate whitespace-nowrap"
                       title={getUtenteNome(cliente.utente_operatore_id)}
                     >
                       {getUtenteNome(cliente.utente_operatore_id) ?? "-"}
                     </div>
                   </TableCell>
 
-                  <TableCell className="w-[160px] min-w-[160px] max-w-[160px] px-3 text-left align-middle">
+                  <TableCell className="w-[150px] px-3 text-left align-middle">
                     <div className="truncate whitespace-nowrap" title={getUtenteNome(cliente.utente_payroll_id)}>
                       {getUtenteNome(cliente.utente_payroll_id) ?? "-"}
                     </div>
                   </TableCell>
 
-                  <TableCell className="w-[170px] min-w-[170px] max-w-[170px] px-3 text-left align-middle">
+                  <TableCell className="w-[165px] px-3 text-left align-middle">
                     <div className="truncate whitespace-nowrap" title={getUtenteNome(cliente.utente_consulenza_id ?? null)}>
                       {getUtenteNome(cliente.utente_consulenza_id ?? null) ?? "-"}
                     </div>
                   </TableCell>
 
-                  <TableCell className="w-[190px] min-w-[190px] max-w-[190px] px-3 text-left align-middle">
-                    <div className="truncate whitespace-nowrap" title={getUtenteNome(cliente.professionista_consulenza_id ?? null)}>
-                      {getUtenteNome(cliente.professionista_consulenza_id ?? null) ?? "-"}
-                    </div>
-                  </TableCell>
-
-                  <TableCell className="w-[90px] min-w-[90px] max-w-[90px] px-3">
+                  <TableCell className="w-[90px] px-2 text-center">
                     {cliente.attivo ? (
-                      <Badge variant="default" className="bg-green-600">
+                      <Badge className="inline-flex min-w-[58px] justify-center bg-green-600 text-white hover:bg-green-600">
                         Attivo
                       </Badge>
                     ) : (
-                      <Badge variant="secondary">Inattivo</Badge>
+                      <Badge className="inline-flex min-w-[58px] justify-center bg-slate-200 text-slate-700 hover:bg-slate-200">
+                        Inattivo
+                      </Badge>
                     )}
                   </TableCell>
 
-                 <TableCell className="w-[90px] min-w-[90px] max-w-[90px] px-2 text-center">
+                 <TableCell className="w-[95px] px-2 text-center">
   {cliente.cliente === true &&
     cliente.attivo === true && (
       <Button
@@ -2665,7 +2657,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
     )}
 </TableCell>
 
-<TableCell className="sticky right-0 bg-background z-10 w-[320px] min-w-[320px] max-w-[320px] px-2">
+<TableCell className="w-[300px] px-2">
   <div className="grid grid-cols-5 items-center justify-items-center">
 
     <div className="flex justify-center">
