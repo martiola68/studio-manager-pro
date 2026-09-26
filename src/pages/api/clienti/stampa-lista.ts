@@ -306,31 +306,55 @@ settore_fiscale,
 
   const titoloReport = "Lista Clienti";
 
+  type ColonnaResponsabile = {
+    key: string;
+    label: string;
+    filter: ResponsabileFiltro;
+    relation: string;
+  };
+
+  const colonneResponsabili: ColonnaResponsabile[] = [
+    { key: "uf", label: "UF", filter: operatori, relation: "utente_fiscale" },
+    { key: "pf", label: "PF", filter: professionisti, relation: "professionista_fiscale" },
+    { key: "up", label: "UP", filter: utentiPayroll, relation: "utente_payroll" },
+    { key: "pp", label: "PP", filter: professionistiPayroll, relation: "professionista_payroll" },
+    { key: "uc", label: "UC", filter: utentiConsulenza, relation: "utente_consulenza" },
+    { key: "pc", label: "PC", filter: professionistiConsulenza, relation: "professionista_consulenza" },
+  ].filter((colonna) => colonna.filter.mode !== "none");
+
+  const aliasRelazione = (cliente: any, relation: string) => {
+    const utente = cliente?.[relation];
+    return utente ? aliasUtente(utente) : "";
+  };
+
     if (format === "excel") {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Clienti");
 
-      worksheet.columns = [
-        { key: "cod_cliente", width: 18 },
-        { key: "ragione_sociale", width: 40 },
-        { key: "partita_iva", width: 16 },
-        { key: "codice_fiscale", width: 18 },
-        { key: "uf", width: 8 },
-        { key: "pf", width: 8 },
-        { key: "up", width: 8 },
-        { key: "pp", width: 8 },
-        { key: "uc", width: 8 },
-        { key: "pc", width: 8 },
-        { key: "tipo_redditi", width: 14 },
-        { key: "prestazione", width: 30 },
+      const excelColumns = [
+        { key: "cod_cliente", header: "Codice Cliente", width: 18 },
+        { key: "ragione_sociale", header: "Ragione Sociale", width: 40 },
+        { key: "partita_iva", header: "P.IVA", width: 16 },
+        { key: "codice_fiscale", header: "Codice Fiscale", width: 18 },
+        ...colonneResponsabili.map((colonna) => ({
+          key: colonna.key,
+          header: colonna.label,
+          width: 8,
+        })),
+        { key: "tipo_redditi", header: "Tipo Redditi", width: 14 },
+        { key: "prestazione", header: "Prestazione", width: 30 },
       ];
 
-      worksheet.mergeCells("A1:L1");
+      worksheet.columns = excelColumns.map(({ key, width }) => ({ key, width }));
+
+      const lastColumnLetter = worksheet.getColumn(excelColumns.length).letter;
+
+      worksheet.mergeCells(`A1:${lastColumnLetter}1`);
       worksheet.getCell("A1").value = "STUDIO MANAGER PRO";
       worksheet.getCell("A1").font = { bold: true, size: 16 };
       worksheet.getCell("A1").alignment = { horizontal: "center" };
 
-      worksheet.mergeCells("A2:L2");
+      worksheet.mergeCells(`A2:${lastColumnLetter}2`);
       worksheet.getCell("A2").value = titoloReport;
       worksheet.getCell("A2").font = { bold: true, size: 13 };
       worksheet.getCell("A2").alignment = { horizontal: "center" };
@@ -339,47 +363,32 @@ settore_fiscale,
 
       let metadataRow = 4;
       righeResponsabili.forEach((riga) => {
-        worksheet.mergeCells(`A${metadataRow}:L${metadataRow}`);
+        worksheet.mergeCells(`A${metadataRow}:${lastColumnLetter}${metadataRow}`);
         worksheet.getCell(`A${metadataRow}`).value = riga;
         worksheet.getCell(`A${metadataRow}`).font = { italic: true };
         metadataRow += 1;
       });
 
       const headerRow = metadataRow + 1;
-      const intestazioni = [
-        "Codice Cliente",
-        "Ragione Sociale",
-        "P.IVA",
-        "Codice Fiscale",
-        "UF",
-        "PF",
-        "UP",
-        "PP",
-        "UC",
-        "PC",
-        "Tipo Redditi",
-        "Prestazione",
-      ];
-
       worksheet.addRow([]);
-      const header = worksheet.addRow(intestazioni);
+      const header = worksheet.addRow(excelColumns.map((colonna) => colonna.header));
       header.font = { bold: true };
 
       clienti.forEach((c: any) => {
-        worksheet.addRow({
+        const row: Record<string, string> = {
           cod_cliente: c.cod_cliente || "",
           ragione_sociale: c.ragione_sociale || "",
           partita_iva: c.partita_iva || "",
           codice_fiscale: c.codice_fiscale || "",
-          uf: c.utente_fiscale ? aliasUtente(c.utente_fiscale) : "",
-          pf: c.professionista_fiscale ? aliasUtente(c.professionista_fiscale) : "",
-          up: c.utente_payroll ? aliasUtente(c.utente_payroll) : "",
-          pp: c.professionista_payroll ? aliasUtente(c.professionista_payroll) : "",
-          uc: c.utente_consulenza ? aliasUtente(c.utente_consulenza) : "",
-          pc: c.professionista_consulenza ? aliasUtente(c.professionista_consulenza) : "",
           tipo_redditi: c.tipo_redditi || "",
           prestazione: c.prestazione?.descrizione || "",
+        };
+
+        colonneResponsabili.forEach((colonna) => {
+          row[colonna.key] = aliasRelazione(c, colonna.relation);
         });
+
+        worksheet.addRow(row);
       });
 
       worksheet.views = [{ state: "frozen", ySplit: headerRow }];
@@ -434,20 +443,28 @@ settore_fiscale,
       const startX = 30;
       let y = doc.y;
 
-      const columns = [
-        { label: "Cod.", x: startX, width: 52 },
-        { label: "Ragione Sociale", x: startX + 56, width: 190 },
-        { label: "P.IVA", x: startX + 250, width: 72 },
-        { label: "Codice Fiscale", x: startX + 326, width: 88 },
-        { label: "UF", x: startX + 418, width: 28 },
-        { label: "PF", x: startX + 448, width: 28 },
-        { label: "UP", x: startX + 478, width: 28 },
-        { label: "PP", x: startX + 508, width: 28 },
-        { label: "UC", x: startX + 538, width: 28 },
-        { label: "PC", x: startX + 568, width: 28 },
-        { label: "Tipo Redditi", x: startX + 600, width: 75 },
-        { label: "Prestazione", x: startX + 680, width: 110 },
+      const pdfColumnDefs = [
+        { key: "cod_cliente", label: "Cod.", width: 52 },
+        { key: "ragione_sociale", label: "Ragione Sociale", width: 190 },
+        { key: "partita_iva", label: "P.IVA", width: 72 },
+        { key: "codice_fiscale", label: "Codice Fiscale", width: 88 },
+        ...colonneResponsabili.map((colonna) => ({
+          key: colonna.key,
+          label: colonna.label,
+          width: 28,
+        })),
+        { key: "tipo_redditi", label: "Tipo Redditi", width: 75 },
+        { key: "prestazione", label: "Prestazione", width: 110 },
       ];
+
+      let currentX = startX;
+      const columns = pdfColumnDefs.map((colonna) => {
+        const result = { ...colonna, x: currentX };
+        currentX += colonna.width + 4;
+        return result;
+      });
+
+      const tableEndX = Math.min(currentX - 4, 810);
 
       const drawHeader = () => {
         doc.fontSize(8).font("Helvetica-Bold");
@@ -459,7 +476,7 @@ settore_fiscale,
         });
 
         y += 16;
-        doc.moveTo(startX, y).lineTo(810, y).stroke();
+        doc.moveTo(startX, y).lineTo(tableEndX, y).stroke();
         y += 6;
         doc.font("Helvetica").fontSize(7);
       };
@@ -473,23 +490,21 @@ settore_fiscale,
           drawHeader();
         }
 
-        const row = [
-          c.cod_cliente || "",
-          c.ragione_sociale || "",
-          c.partita_iva || "",
-          c.codice_fiscale || "",
-          c.utente_fiscale ? aliasUtente(c.utente_fiscale) : "",
-          c.professionista_fiscale ? aliasUtente(c.professionista_fiscale) : "",
-          c.utente_payroll ? aliasUtente(c.utente_payroll) : "",
-          c.professionista_payroll ? aliasUtente(c.professionista_payroll) : "",
-          c.utente_consulenza ? aliasUtente(c.utente_consulenza) : "",
-          c.professionista_consulenza ? aliasUtente(c.professionista_consulenza) : "",
-          c.tipo_redditi || "",
-          c.prestazione?.descrizione || "",
-        ];
+        const row: Record<string, string> = {
+          cod_cliente: c.cod_cliente || "",
+          ragione_sociale: c.ragione_sociale || "",
+          partita_iva: c.partita_iva || "",
+          codice_fiscale: c.codice_fiscale || "",
+          tipo_redditi: c.tipo_redditi || "",
+          prestazione: c.prestazione?.descrizione || "",
+        };
 
-        columns.forEach((col, index) => {
-          doc.text(row[index], col.x, y, {
+        colonneResponsabili.forEach((colonna) => {
+          row[colonna.key] = aliasRelazione(c, colonna.relation);
+        });
+
+        columns.forEach((col) => {
+          doc.text(row[col.key] || "", col.x, y, {
             width: col.width,
             height: 20,
             ellipsis: true,
