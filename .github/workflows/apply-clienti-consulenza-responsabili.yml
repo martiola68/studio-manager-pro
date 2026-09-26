@@ -1,0 +1,39 @@
+name: Apply clienti consulenza responsabili
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/apply-clienti-consulenza-responsabili.yml
+      - supabase/migrations/20260926154500_add_clienti_consulenza_responsabili.sql
+
+jobs:
+  migrate-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply targeted migration
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          jq -Rs '{query: ., read_only: false}'             supabase/migrations/20260926154500_add_clienti_consulenza_responsabili.sql             > /tmp/migration-payload.json
+
+          curl --fail-with-body --silent --show-error             -X POST             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN"             -H "Content-Type: application/json"             --data-binary @/tmp/migration-payload.json             https://api.supabase.com/v1/projects/ngeltlygytupgdjiagve/database/query
+
+      - name: Verify columns
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          jq -n '{query: "select count(*)::int as count from information_schema.columns where table_schema='"'"'public'"'"' and table_name='"'"'tbclienti'"'"' and column_name in ('"'"'utente_consulenza_id'"'"','"'"'professionista_consulenza_id'"'"');", read_only: true}'             > /tmp/verify-payload.json
+
+          response=$(curl --fail-with-body --silent --show-error             -X POST             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN"             -H "Content-Type: application/json"             --data-binary @/tmp/verify-payload.json             https://api.supabase.com/v1/projects/ngeltlygytupgdjiagve/database/query)
+
+          echo "$response"
+          test "$(echo "$response" | jq -r '.[0].count // .count // empty')" = "2"
+
+      - name: Build
+        run: npm ci && npm run build
