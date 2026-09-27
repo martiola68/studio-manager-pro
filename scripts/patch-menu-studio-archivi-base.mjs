@@ -102,6 +102,7 @@ const prefix = `  const menuItems: MenuItem[] = [
           { label: "Agenda", href: "/guide/Manuale_Agenda_SMP.pdf", icon: <Calendar className="h-4 w-4" />, groupLabel: "Manuali" },
           { label: "Promemoria", href: "/guide/Manuale_Promemoria_SMP.pdf", icon: <FileText className="h-4 w-4" />, groupLabel: "Manuali" },
           { label: "Scadenzario", href: "/guide/Manuale_Scadenzario_SMP.pdf", icon: <Calendar className="h-4 w-4" />, groupLabel: "Manuali" },
+          { label: "AmmortaPro", href: "/guide/Manuale_AmmortaPro_SMP.pdf", icon: <Landmark className="h-4 w-4" />, groupLabel: "Manuali" },
           { label: "Pratiche", href: "/guide/Manuale_Pratiche_SMP.pdf", icon: <FolderKanban className="h-4 w-4" />, groupLabel: "Manuali" },
           { label: "Revisione e Controllo", href: "/guide/Manuale_Revisione_e_Controllo_SMP.pdf", icon: <ClipboardCheck className="h-4 w-4" />, groupLabel: "Manuali" },
           { label: "Controllo di Gestione", href: "/guide/Manuale_Controllo_di_Gestione_SMP.pdf", icon: <BriefcaseBusiness className="h-4 w-4" />, groupLabel: "Manuali" },
