@@ -706,7 +706,8 @@ public class MainActivity extends Activity {
         ArrayList<String> userLabels=new ArrayList<>(); ArrayList<String> userIds=new ArrayList<>();
         int currentIndex=0;
         for(int i=0;i<utenti.length();i++){JSONObject u=utenti.optJSONObject(i);if(u==null)continue;String id=clean(u.optString("id"));String label=(clean(u.optString("nome"))+" "+clean(u.optString("cognome"))).trim();userIds.add(id);userLabels.add(label);if(id.equals(userId))currentIndex=userIds.size()-1;}
-        recipient.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,userLabels)); if(!userLabels.isEmpty())recipient.setSelection(currentIndex); recipient.setEnabled(false); content.addView(recipient);
+        final int currentSelectionIndex=currentIndex;
+        recipient.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,userLabels)); if(!userLabels.isEmpty())recipient.setSelection(currentSelectionIndex); recipient.setEnabled(false); content.addView(recipient);
 
         EditText sector=input("Settore"); sector.setEnabled(false); sector.setText(clean(current.optString("settore"))); content.addView(sector);
 
@@ -720,7 +721,7 @@ public class MainActivity extends Activity {
         recipient.setOnItemSelectedListener(recListener);
 
         personal.setOnCheckedChangeListener((b,checked)->{
-            if(checked){multi.setChecked(false);recipient.setEnabled(false);if(currentIndex<recipient.getCount())recipient.setSelection(currentIndex);sector.setText(clean(current.optString("settore")));selectedRecipients.clear();selectedRecipients.add(userId);multiButton.setText("Destinatari multipli · 1");}
+            if(checked){multi.setChecked(false);recipient.setEnabled(false);if(currentSelectionIndex<recipient.getCount())recipient.setSelection(currentSelectionIndex);sector.setText(clean(current.optString("settore")));selectedRecipients.clear();selectedRecipients.add(userId);multiButton.setText("Destinatari multipli · 1");}
             else if(!multi.isChecked())recipient.setEnabled(true);
         });
         multi.setOnCheckedChangeListener((b,checked)->{
