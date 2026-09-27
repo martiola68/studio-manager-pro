@@ -42,6 +42,15 @@ public class SupabaseClient {
         return new JSONObject(raw);
     }
 
+    public static JSONObject apiGet(String token, String path) throws Exception {
+        String raw = requestRaw("GET", "https://studio-manager-pro.vercel.app" + path, token, null, null);
+        return new JSONObject(raw);
+    }
+
+    public static void update(String token, String table, String query, JSONObject body) throws Exception {
+        requestRaw("PATCH", BASE + "/rest/v1/" + table + "?" + query, token, body.toString(), "return=minimal");
+    }
+
     private static JSONObject requestObject(String method, String url, String token, String body) throws Exception {
         return new JSONObject(requestRaw(method, url, token, body, null));
     }
