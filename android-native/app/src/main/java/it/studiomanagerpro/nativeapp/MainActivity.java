@@ -480,10 +480,22 @@ public class MainActivity extends Activity {
         addDetail("Tipo",clean(o.optString("tipo_cliente")));
         addDetail("Codice fiscale",clean(o.optString("codice_fiscale")));
         addDetail("Partita IVA",clean(o.optString("partita_iva")));
+        String address=clean(o.optString("indirizzo"));
+        String cap=clean(o.optString("cap"));
+        String city=clean(o.optString("citta"));
+        String prov=clean(o.optString("provincia"));
+        String fullAddress=address;
+        String cityLine=(cap+" "+city+(prov.isEmpty()?"":" ("+prov+")")).trim();
+        if(!cityLine.isEmpty()) fullAddress+=(fullAddress.isEmpty()?"":" · ")+cityLine;
+        addDetail("Indirizzo",fullAddress);
+        addDetail("REA",clean(o.optString("numero_rea")));
         addDetail("Email",clean(o.optString("email")));
         addDetail("PEC",clean(o.optString("pec")));
         addDetail("Telefono",clean(o.optString("telefono")));
-        String city=(clean(o.optString("citta"))+" "+clean(o.optString("provincia"))).trim(); addDetail("Località",city);
+        addDetail("Utente fiscale",clean(o.optString("utente_fiscale_nome")));
+        addDetail("Utente payroll",clean(o.optString("utente_payroll_nome")));
+        addDetail("Utente consulenza",clean(o.optString("utente_consulenza_nome")));
+        addDetail("Cassetto fiscale",clean(o.optString("cassetto_fiscale_nominativo")));
         addDetail("Stato",o.optBoolean("attivo")?"Attivo":"Inattivo");
     }
 
