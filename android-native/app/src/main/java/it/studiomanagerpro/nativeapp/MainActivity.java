@@ -6,9 +6,6 @@ import android.content.*;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.net.Uri;
-import android.database.Cursor;
-import android.provider.OpenableColumns;
-import java.io.*;
 import android.text.*;
 import android.text.method.TransformationMethod;
 import android.view.*;
@@ -30,9 +27,6 @@ public class MainActivity extends Activity {
     private final LinkedHashSet<String> agendaSelectedSectors = new LinkedHashSet<>();
     private final int blue=Color.rgb(13,111,159), navy=Color.rgb(11,79,125), bg=Color.rgb(244,247,251), ink=Color.rgb(12,26,48);
     private final SimpleDateFormat dayFmt=new SimpleDateFormat("yyyy-MM-dd",Locale.ITALY);
-    private static final int REQ_PROMEMORIA_FILES=4107;
-    private final ArrayList<Uri> promemoriaAttachmentUris=new ArrayList<>();
-    private TextView promemoriaAttachmentStatus;
 
     @Override public void onCreate(Bundle b){
         super.onCreate(b); getWindow().setStatusBarColor(navy);
@@ -43,16 +37,6 @@ public class MainActivity extends Activity {
         userEmail=getPreferences(MODE_PRIVATE).getString("userEmail","");
         canManageLeave=getPreferences(MODE_PRIVATE).getBoolean("canManageLeave",false);
         if(token==null) showLogin(); else { agendaSelectedUsers.add(userId); showHome(); }
-    }
-
-    @Override protected void onActivityResult(int requestCode,int resultCode,Intent data){
-        super.onActivityResult(requestCode,resultCode,data);
-        if(requestCode!=REQ_PROMEMORIA_FILES||resultCode!=RESULT_OK||data==null)return;
-        promemoriaAttachmentUris.clear();
-        if(data.getClipData()!=null){
-            for(int i=0;i<data.getClipData().getItemCount();i++) promemoriaAttachmentUris.add(data.getClipData().getItemAt(i).getUri());
-        }else if(data.getData()!=null) promemoriaAttachmentUris.add(data.getData());
-        if(promemoriaAttachmentStatus!=null) promemoriaAttachmentStatus.setText(promemoriaAttachmentUris.isEmpty()?"Nessun allegato":"Allegati selezionati: "+promemoriaAttachmentUris.size());
     }
 
     private TextView text(String v,int sp,boolean bold){ TextView t=new TextView(this); t.setText(v); t.setTextSize(sp); t.setTextColor(ink); if(bold)t.setTypeface(Typeface.DEFAULT,Typeface.BOLD); t.setPadding(dp(4),dp(4),dp(4),dp(4)); return t; }
@@ -673,7 +657,7 @@ public class MainActivity extends Activity {
     }
 
     private void renderNewPromemoria(JSONArray utenti,JSONArray tipi,JSONObject current){
-        content.removeAllViews(); promemoriaAttachmentUris.clear();
+        content.removeAllViews();
 
         content.addView(text("Tipo Promemoria",14,true));
         Spinner tipoSpinner=new Spinner(this);
@@ -739,11 +723,6 @@ public class MainActivity extends Activity {
 
         CheckBox teams=new CheckBox(this); teams.setText("Invia notifica su Teams"); content.addView(teams);
 
-        content.addView(text("Allegati",14,true));
-        Button attach=button("Seleziona allegati",false); content.addView(attach);
-        promemoriaAttachmentStatus=text("Nessun allegato",13,false); promemoriaAttachmentStatus.setTextColor(Color.GRAY); content.addView(promemoriaAttachmentStatus);
-        attach.setOnClickListener(v->{Intent pick=new Intent(Intent.ACTION_OPEN_DOCUMENT);pick.setType("*/*");pick.putExtra(Intent.EXTRA_ALLOW_MULTIPLE,true);pick.addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(pick,REQ_PROMEMORIA_FILES);});
-
         Button save=button("Crea",true); content.addView(save); TextView status=text("",14,false); content.addView(status);
         save.setOnClickListener(v->{
             String t=title.getText().toString().trim(),ins=inserted.getText().toString().trim(),scad=due.getText().toString().trim();
@@ -767,8 +746,6 @@ public class MainActivity extends Activity {
             io.execute(()->{
                 try{
                     JSONObject result=SupabaseClient.apiPost(token,"/api/mobile/promemoria",body);
-                    JSONArray created=result.optJSONArray("data"); if(created==null)created=new JSONArray();
-                    if(!promemoriaAttachmentUris.isEmpty()&&created.length()>0) uploadPromemoriaAttachments(created);
                     runOnUiThread(()->{Toast.makeText(this,"Promemoria creato",Toast.LENGTH_SHORT).show();showPromemoria();});
                 }catch(Exception ex){runOnUiThread(()->{save.setEnabled(true);status.setText("Errore: "+friendly(ex));});}
             });
@@ -779,29 +756,6 @@ public class MainActivity extends Activity {
         ArrayList<String> labels=new ArrayList<>(),ids=new ArrayList<>(); boolean[] checked=new boolean[utenti.length()];
         for(int i=0;i<utenti.length();i++){JSONObject u=utenti.optJSONObject(i);String id=u==null?"":clean(u.optString("id"));String label=u==null?"":(clean(u.optString("nome"))+" "+clean(u.optString("cognome"))+(clean(u.optString("settore")).isEmpty()?"":" ("+clean(u.optString("settore"))+")")).trim();ids.add(id);labels.add(label);checked[i]=selected.contains(id);}
         new AlertDialog.Builder(this).setTitle("Destinatari multipli").setMultiChoiceItems(labels.toArray(new String[0]),checked,(d,w,c)->{String id=ids.get(w);if(id.equals(userId))return;if(c)selected.add(id);else selected.remove(id);selected.add(userId);}).setPositiveButton("OK",(d,w)->button.setText("Destinatari multipli · "+selected.size())).show();
-    }
-
-    private void uploadPromemoriaAttachments(JSONArray created) throws Exception{
-        for(int c=0;c<created.length();c++){
-            JSONObject p=created.optJSONObject(c);if(p==null)continue;String pid=clean(p.optString("id"));if(pid.isEmpty())continue;JSONArray metas=new JSONArray();
-            JSONArray existing=p.optJSONArray("allegati");if(existing!=null)for(int i=0;i<existing.length();i++)metas.put(existing.get(i));
-            for(Uri uri:promemoriaAttachmentUris){
-                String name=getUriName(uri);String mime=getContentResolver().getType(uri);byte[] bytes=readUriBytes(uri);
-                if(bytes.length>10*1024*1024)throw new Exception("File troppo grande: "+name+" (max 10 MB)");
-                String path=pid+"/"+System.currentTimeMillis()+"_"+name.replace("/","_");
-                String url=SupabaseClient.uploadFile(token,"promemoria-allegati",path,bytes,mime);
-                metas.put(new JSONObject().put("nome",name).put("url",url).put("size",bytes.length).put("tipo",mime==null?"":mime).put("data_upload",new Date().toInstant().toString()));
-            }
-            SupabaseClient.update(token,"tbpromemoria","id=eq."+SupabaseClient.eq(pid),new JSONObject().put("allegati",metas));
-        }
-    }
-
-    private String getUriName(Uri uri){
-        String name="allegato";Cursor cur=null;try{cur=getContentResolver().query(uri,null,null,null,null);if(cur!=null&&cur.moveToFirst()){int idx=cur.getColumnIndex(OpenableColumns.DISPLAY_NAME);if(idx>=0)name=cur.getString(idx);}}catch(Exception ignore){}finally{if(cur!=null)cur.close();}return name==null||name.isEmpty()?"allegato":name;
-    }
-
-    private byte[] readUriBytes(Uri uri) throws Exception{
-        try(InputStream in=getContentResolver().openInputStream(uri);ByteArrayOutputStream out=new ByteArrayOutputStream()){if(in==null)throw new IOException("File non leggibile");byte[] buf=new byte[8192];int n;while((n=in.read(buf))>0)out.write(buf,0,n);return out.toByteArray();}
     }
 
     private String formatDateShort(String d){
