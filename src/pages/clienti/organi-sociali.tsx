@@ -429,9 +429,13 @@ const differenzaQuote = totaleQuote - 100;
         id,
         ragione_sociale,
         codice_fiscale,
-        studio_id
+        studio_id,
+        tipo_cliente,
+        attivo
       `)
-      .eq("cliente", true);
+      .eq("cliente", true)
+      .eq("attivo", true)
+      .eq("tipo_cliente", "Altro");
 
     if (idDaQuery) {
       query = query.eq("id", idDaQuery).limit(1);
