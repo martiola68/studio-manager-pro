@@ -438,8 +438,7 @@ const differenzaQuote = totaleQuote - 100;
         attivo
       `)
       .eq("cliente", true)
-      .eq("attivo", true)
-      .eq("tipo_cliente", "Altro");
+      .eq("attivo", true);
 
     if (idDaQuery) {
       query = query.eq("id", idDaQuery).limit(1);
