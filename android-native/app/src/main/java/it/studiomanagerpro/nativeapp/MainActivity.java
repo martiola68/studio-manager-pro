@@ -48,9 +48,48 @@ public class MainActivity extends Activity {
 
     private void baseScreen(String title,boolean back){
         root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(bg); setContentView(root);
-        LinearLayout top=new LinearLayout(this); top.setGravity(Gravity.CENTER_VERTICAL); top.setPadding(dp(16),dp(14),dp(16),dp(14)); top.setBackgroundColor(navy);
-        if(back){ Button x=new Button(this); x.setText("‹"); x.setTextSize(30); x.setTextColor(Color.WHITE); x.setBackgroundColor(Color.TRANSPARENT); x.setOnClickListener(v->showHome()); top.addView(x,new LinearLayout.LayoutParams(dp(54),dp(54))); }
-        TextView t=text(title,22,true); t.setTextColor(Color.WHITE); top.addView(t,new LinearLayout.LayoutParams(0,-2,1)); root.addView(top);
+        LinearLayout top=new LinearLayout(this); top.setGravity(Gravity.CENTER_VERTICAL); top.setPadding(dp(14),dp(12),dp(12),dp(12)); top.setBackgroundColor(navy);
+
+        if(back){
+            Button x=new Button(this); x.setText("‹"); x.setTextSize(30); x.setTextColor(Color.WHITE); x.setBackgroundColor(Color.TRANSPARENT);
+            x.setOnClickListener(v->showHome()); top.addView(x,new LinearLayout.LayoutParams(dp(50),dp(50)));
+        }
+
+        boolean homeHeader="Studio Manager Pro".equals(title) && !back;
+        if(homeHeader){
+            ImageView logo=new ImageView(this);
+            logo.setImageResource(R.drawable.smp_app_icon);
+            logo.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            LinearLayout.LayoutParams lpLogo=new LinearLayout.LayoutParams(dp(42),dp(42));
+            lpLogo.setMargins(0,0,dp(10),0);
+            top.addView(logo,lpLogo);
+        }
+
+        TextView t=text(title,22,true); t.setTextColor(Color.WHITE); top.addView(t,new LinearLayout.LayoutParams(0,-2,1));
+
+        if(homeHeader){
+            ImageButton logout=new ImageButton(this);
+            logout.setImageResource(R.drawable.ic_logout);
+            logout.setBackgroundColor(Color.TRANSPARENT);
+            logout.setColorFilter(Color.WHITE);
+            logout.setPadding(dp(10),dp(10),dp(10),dp(10));
+            logout.setContentDescription("Esci dall'account");
+            logout.setOnClickListener(v->{
+                new AlertDialog.Builder(this)
+                    .setTitle("Esci dall'account")
+                    .setMessage("Vuoi uscire da Studio Manager Pro?")
+                    .setNegativeButton("Annulla",null)
+                    .setPositiveButton("Esci",(d,w)->{
+                        getPreferences(MODE_PRIVATE).edit().clear().apply();
+                        token=null;
+                        showLogin();
+                    })
+                    .show();
+            });
+            top.addView(logout,new LinearLayout.LayoutParams(dp(50),dp(50)));
+        }
+
+        root.addView(top);
         ScrollView sv=new ScrollView(this); content=new LinearLayout(this); content.setOrientation(LinearLayout.VERTICAL); content.setPadding(dp(18),dp(18),dp(18),dp(28)); sv.addView(content); root.addView(sv,new LinearLayout.LayoutParams(-1,0,1));
     }
 
@@ -81,7 +120,6 @@ public class MainActivity extends Activity {
         baseScreen("Studio Manager Pro",false); content.addView(text("Ciao "+userName,26,true)); TextView sub=text("Cosa vuoi fare?",16,false);sub.setTextColor(Color.GRAY);content.addView(sub);
         String[][] items={{"Agenda","Appuntamenti e attività"},{"Rubrica","Contatti dello studio"},{"Presenze","Presenze, ferie e permessi"},{"Clienti","Anagrafiche clienti"},{"Soci e organi sociali","Soci, amministratori e organi di controllo"},{"Gruppi societari","Partecipazioni e struttura dei gruppi"},{"Promemoria","Attività e scadenze da ricordare"}};
         for(String[] it:items){ LinearLayout c=card(); c.addView(text(it[0],20,true)); TextView d=text(it[1],14,false);d.setTextColor(Color.GRAY);c.addView(d);content.addView(c,cardLp()); c.setOnClickListener(v->{ switch(it[0]){case "Agenda":showAgenda();break;case "Rubrica":showRubrica();break;case "Presenze":showPresenze();break;case "Clienti":showClienti();break;case "Soci e organi sociali":showSociOrgani();break;case "Gruppi societari":showGruppiSocietari();break;case "Promemoria":showPromemoria();break;}}); }
-        Button logout=button("Esci dall'account",false);content.addView(logout);logout.setOnClickListener(v->{getPreferences(MODE_PRIVATE).edit().clear().apply();token=null;showLogin();});
     }
 
     // AGENDA
