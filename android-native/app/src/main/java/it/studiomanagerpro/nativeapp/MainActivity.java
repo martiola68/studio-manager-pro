@@ -188,7 +188,7 @@ public class MainActivity extends Activity {
     private void showParticipantsDialog(LinkedHashSet<String> selected,Button b){ArrayList<String> labels=new ArrayList<>(),ids=new ArrayList<>();boolean[] chk=new boolean[agendaUsers.length()];for(int i=0;i<agendaUsers.length();i++)try{JSONObject u=agendaUsers.getJSONObject(i);labels.add(u.optString("cognome")+" "+u.optString("nome"));ids.add(u.optString("id"));chk[i]=selected.contains(u.optString("id"));}catch(Exception ignore){}new AlertDialog.Builder(this).setTitle("Partecipanti interni").setMultiChoiceItems(labels.toArray(new String[0]),chk,(d,w,c)->{if(c)selected.add(ids.get(w));else selected.remove(ids.get(w));}).setPositiveButton("OK",(d,w)->b.setText("Partecipanti interni · "+selected.size())).show();}
 
     // RUBRICA
-    private void showRubrica(){baseScreen("Rubrica",true);EditText search=input("Cerca nome, cognome, email…");content.addView(search);LinearLayout list=new LinearLayout(this);list.setOrientation(LinearLayout.VERTICAL);content.addView(list);list.addView(text("Caricamento contatti…",16,false));io.execute(()->{try{JSONObject payload=SupabaseClient.apiGet(token,"/api/mobile/rubrica"); JSONArray arr=payload.optJSONArray("data"); if(arr==null)arr=new JSONArray();runOnUiThread(()->{renderContacts(list,arr,"");search.addTextChangedListener(new TextWatcher(){public void beforeTextChanged(CharSequence s,int a,int b,int c){}public void onTextChanged(CharSequence s,int a,int b,int c){renderContacts(list,arr,s.toString());}public void afterTextChanged(Editable e){}});});}catch(Exception ex){runOnUiThread(()->{list.removeAllViews();list.addView(text("Errore: "+friendly(ex),14,false));});}});}
+    private void showRubrica(){baseScreen("Rubrica",true);EditText search=input("Cerca nome, cognome, email…");content.addView(search);LinearLayout list=new LinearLayout(this);list.setOrientation(LinearLayout.VERTICAL);content.addView(list);list.addView(text("Caricamento contatti…",16,false));io.execute(()->{try{JSONObject payload=SupabaseClient.apiGet(token,"/api/mobile/rubrica"); JSONArray arr=payload.optJSONArray("data"); if(arr==null)arr=new JSONArray(); final JSONArray data=arr; runOnUiThread(()->{renderContacts(list,data,"");search.addTextChangedListener(new TextWatcher(){public void beforeTextChanged(CharSequence s,int a,int b,int c){}public void onTextChanged(CharSequence s,int a,int b,int c){renderContacts(list,data,s.toString());}public void afterTextChanged(Editable e){}});});}catch(Exception ex){runOnUiThread(()->{list.removeAllViews();list.addView(text("Errore: "+friendly(ex),14,false));});}});}
     private void renderContacts(LinearLayout list,JSONArray arr,String q){list.removeAllViews();String n=q.toLowerCase(Locale.ITALY).trim();int shown=0;for(int i=0;i<arr.length();i++)try{JSONObject o=arr.getJSONObject(i);String nome=(clean(o.optString("cognome"))+" "+clean(o.optString("nome"))).trim(),email=clean(o.optString("email")),cell=clean(o.optString("cell")),tel=clean(o.optString("tel"));if(!(nome+" "+email+" "+cell+" "+tel).toLowerCase(Locale.ITALY).contains(n))continue;LinearLayout c=card();c.addView(text(nome.isEmpty()?"Contatto":nome,18,true));if(!cell.isEmpty()||!tel.isEmpty()){String p=!cell.isEmpty()?cell:tel;TextView v=text("☎  "+p,15,false);v.setTextColor(blue);v.setOnClickListener(x->startActivity(new Intent(Intent.ACTION_DIAL,Uri.parse("tel:"+p))));c.addView(v);}if(!email.isEmpty()){TextView e=text("✉  "+email,15,false);e.setTextColor(blue);e.setOnClickListener(x->startActivity(new Intent(Intent.ACTION_SENDTO,Uri.parse("mailto:"+email))));c.addView(e);}list.addView(c,cardLp());shown++;if(shown>=150)break;}catch(Exception ignore){}if(shown==0)list.addView(text("Nessun contatto trovato.",16,false));}
 
     // PRESENZE
@@ -217,8 +217,8 @@ public class MainActivity extends Activity {
                 JSONObject payload=SupabaseClient.apiGet(token,"/api/mobile/presenze?from="+from+"&to="+to);
                 JSONArray rows=payload.optJSONArray("presenze"); if(rows==null)rows=new JSONArray();
                 JSONArray codes=payload.optJSONArray("codici"); if(codes==null)codes=new JSONArray();
-                boolean manager=canManageLeave;
-                runOnUiThread(()->renderPresenze(rows,codes,y,m,manager));
+                final JSONArray finalRows=rows; final JSONArray finalCodes=codes; final boolean manager=canManageLeave;
+                runOnUiThread(()->renderPresenze(finalRows,finalCodes,y,m,manager));
             }catch(Exception ex){runOnUiThread(()->showError("Presenze",ex));}
         });
     }
@@ -405,12 +405,12 @@ public class MainActivity extends Activity {
         list.addView(text("Caricamento clienti…",16,false));
         io.execute(()->{
             try{
-                JSONObject payload=SupabaseClient.apiGet(token,"/api/mobile/clienti"); JSONArray arr=payload.optJSONArray("data"); if(arr==null)arr=new JSONArray();
+                JSONObject payload=SupabaseClient.apiGet(token,"/api/mobile/clienti"); JSONArray arr=payload.optJSONArray("data"); if(arr==null)arr=new JSONArray(); final JSONArray data=arr;
                 runOnUiThread(()->{
-                    renderClienti(list,arr,"");
+                    renderClienti(list,data,"");
                     search.addTextChangedListener(new TextWatcher(){
                         public void beforeTextChanged(CharSequence x,int a,int b,int c){}
-                        public void onTextChanged(CharSequence x,int a,int b,int c){renderClienti(list,arr,x.toString());}
+                        public void onTextChanged(CharSequence x,int a,int b,int c){renderClienti(list,data,x.toString());}
                         public void afterTextChanged(Editable e){}
                     });
                 });
@@ -564,8 +564,8 @@ public class MainActivity extends Activity {
         LinearLayout list=new LinearLayout(this);list.setOrientation(LinearLayout.VERTICAL);content.addView(list);list.addView(text("Caricamento promemoria…",16,false));
         io.execute(()->{
             try{
-                JSONObject payload=SupabaseClient.apiGet(token,"/api/mobile/promemoria"); JSONArray arr=payload.optJSONArray("data"); if(arr==null)arr=new JSONArray();
-                runOnUiThread(()->renderPromemoria(list,arr));
+                JSONObject payload=SupabaseClient.apiGet(token,"/api/mobile/promemoria"); JSONArray arr=payload.optJSONArray("data"); if(arr==null)arr=new JSONArray(); final JSONArray data=arr;
+                runOnUiThread(()->renderPromemoria(list,data));
             }catch(Exception ex){runOnUiThread(()->{list.removeAllViews();list.addView(text("Errore: "+friendly(ex),14,false));});}
         });
     }
