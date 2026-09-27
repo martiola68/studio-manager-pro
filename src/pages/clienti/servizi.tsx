@@ -43,6 +43,7 @@ type ServiziCliente = {
   consulenza: boolean;
   paghe: boolean;
   consulenza_lavoro: boolean;
+  ammortamenti: boolean;
   flag_iva: boolean;
   flag_cu: boolean;
   flag_bilancio: boolean;
@@ -64,6 +65,7 @@ const initialServizi: ServiziCliente = {
   consulenza: false,
   paghe: false,
   consulenza_lavoro: false,
+  ammortamenti: false,
   flag_iva: false,
   flag_cu: false,
   flag_bilancio: false,
@@ -79,7 +81,7 @@ const initialServizi: ServiziCliente = {
 };
 
 type BooleanField =
-  | "contabilita" | "consulenza" | "paghe" | "consulenza_lavoro"
+  | "contabilita" | "consulenza" | "paghe" | "consulenza_lavoro" | "ammortamenti"
   | "flag_iva" | "flag_cu" | "flag_bilancio" | "flag_fiscali"
   | "flag_lipe" | "flag_770" | "flag_esterometro" | "flag_ccgg"
   | "flag_imu" | "flag_mail_scadenze" | "gestione_esterometro";
@@ -89,6 +91,7 @@ const serviziOptions: Array<{ key: BooleanField; label: string; description: str
   { key: "consulenza", label: "Consulenza", description: "Attività di consulenza professionale generale." },
   { key: "paghe", label: "Paghe", description: "Elaborazione paghe e adempimenti del personale." },
   { key: "consulenza_lavoro", label: "Consulenza del lavoro", description: "Consulenza e assistenza in materia di lavoro." },
+  { key: "ammortamenti", label: "Ammortamenti", description: "Gestione cespiti, ammortamenti e registro beni ammortizzabili in AmmortaPro." },
 ];
 
 const scadenzariOptions: Array<{ key: BooleanField; label: string }> = [
@@ -153,6 +156,7 @@ export default function ServiziScadenzariClientePage() {
           consulenza: Boolean(serviziData.consulenza),
           paghe: Boolean(serviziData.paghe),
           consulenza_lavoro: Boolean(serviziData.consulenza_lavoro),
+          ammortamenti: Boolean(serviziData.ammortamenti),
           flag_iva: Boolean(serviziData.flag_iva),
           flag_cu: Boolean(serviziData.flag_cu),
           flag_bilancio: Boolean(serviziData.flag_bilancio),
@@ -196,6 +200,7 @@ export default function ServiziScadenzariClientePage() {
         consulenza: formData.consulenza,
         paghe: formData.paghe,
         consulenza_lavoro: formData.consulenza_lavoro,
+        ammortamenti: formData.ammortamenti,
         flag_iva: formData.flag_iva,
         flag_cu: formData.flag_cu,
         flag_bilancio: formData.flag_bilancio,
