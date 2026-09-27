@@ -79,8 +79,8 @@ public class MainActivity extends Activity {
 
     private void showHome(){
         baseScreen("Studio Manager Pro",false); content.addView(text("Ciao "+userName,26,true)); TextView sub=text("Cosa vuoi fare?",16,false);sub.setTextColor(Color.GRAY);content.addView(sub);
-        String[][] items={{"Agenda","Appuntamenti e attività"},{"Rubrica","Contatti dello studio"},{"Presenze","La tua situazione giornaliera"},{"Clienti","Anagrafiche clienti"},{"Scadenze","Adempimenti e calendario"},{"AML","Antiriciclaggio"},{"Revisioni","Attività di revisione"},{"Controllo di gestione","Analisi e reporting"},{"Ammortamenti","Piani e cespiti"}};
-        for(String[] it:items){ LinearLayout c=card(); c.addView(text(it[0],20,true)); TextView d=text(it[1],14,false);d.setTextColor(Color.GRAY);c.addView(d);content.addView(c,cardLp()); c.setOnClickListener(v->{ switch(it[0]){case "Agenda":showAgenda();break;case "Rubrica":showRubrica();break;case "Presenze":showPresenze();break;default:showComing(it[0]);}}); }
+        String[][] items={{"Agenda","Appuntamenti e attività"},{"Rubrica","Contatti dello studio"},{"Presenze","Presenze, ferie e permessi"},{"Clienti","Anagrafiche clienti"},{"Rappresentanti legali","Anagrafiche dei legali rappresentanti"},{"Gruppi societari","Partecipazioni e struttura dei gruppi"},{"Promemoria","Attività e scadenze da ricordare"}};
+        for(String[] it:items){ LinearLayout c=card(); c.addView(text(it[0],20,true)); TextView d=text(it[1],14,false);d.setTextColor(Color.GRAY);c.addView(d);content.addView(c,cardLp()); c.setOnClickListener(v->{ switch(it[0]){case "Agenda":showAgenda();break;case "Rubrica":showRubrica();break;case "Presenze":showPresenze();break;case "Clienti":showClienti();break;case "Rappresentanti legali":showRappresentanti();break;case "Gruppi societari":showGruppiSocietari();break;case "Promemoria":showPromemoria();break;}}); }
         Button logout=button("Esci dall'account",false);content.addView(logout);logout.setOnClickListener(v->{getPreferences(MODE_PRIVATE).edit().clear().apply();token=null;showLogin();});
     }
 
@@ -392,6 +392,162 @@ public class MainActivity extends Activity {
     private String presenceDisplay(String raw){if(raw==null)return "";if("Pp".equals(raw))return "P";if("Ps".equals(raw))return "SW";return raw;}
     private void showPresenceCodeDialog(String date,String current,JSONArray codes){ArrayList<String> labels=new ArrayList<>(),values=new ArrayList<>();for(int i=0;i<codes.length();i++)try{JSONObject o=codes.getJSONObject(i);String raw=o.optString("codice");if(raw.isEmpty())continue;String disp=presenceDisplay(raw),desc=clean(o.optString("descrizione"));if("Pp".equals(raw))desc="Presente in ufficio";if("Ps".equals(raw))desc="Smart working";values.add(raw);labels.add(desc.isEmpty()?disp:disp+" · "+desc);}catch(Exception ignore){}int checked=-1;for(int i=0;i<values.size();i++)if(values.get(i).equals(current))checked=i;new AlertDialog.Builder(this).setTitle("Presenza del "+date.substring(8,10)+"/"+date.substring(5,7)).setSingleChoiceItems(labels.toArray(new String[0]),checked,(d,w)->{d.dismiss();savePresence(date,values.get(w));}).setNegativeButton("Annulla",null).show();}
     private void savePresence(String date,String rawCode){io.execute(()->{try{JSONObject b=new JSONObject().put("utente_id",userId).put("studio_id",studioId).put("data_presenza",date).put("codice_presenza",rawCode).put("inserito_da",userId).put("updated_at",new Date().toInstant().toString());SupabaseClient.upsert(token,"tbpresenze_dipendenti",b);runOnUiThread(()->{Toast.makeText(this,"Presenza salvata",Toast.LENGTH_SHORT).show();showPresenze();});}catch(Exception ex){runOnUiThread(()->Toast.makeText(this,"Errore: "+friendly(ex),Toast.LENGTH_LONG).show());}});}
+
+
+    // CLIENTI
+    private void showClienti(){
+        baseScreen("Clienti",true);
+        EditText search=input("Cerca ragione sociale, CF, P.IVA…"); content.addView(search);
+        LinearLayout list=new LinearLayout(this); list.setOrientation(LinearLayout.VERTICAL); content.addView(list);
+        list.addView(text("Caricamento clienti…",16,false));
+        io.execute(()->{
+            try{
+                JSONArray arr=SupabaseClient.select(token,"tbclienti","select=id,cod_cliente,ragione_sociale,cognome,nome,tipo_cliente,partita_iva,codice_fiscale,email,telefono,pec,citta,provincia,attivo,cliente,settore_fiscale,settore_lavoro,settore_consulenza&studio_id=eq."+SupabaseClient.eq(studioId)+"&cliente=eq.true&order=ragione_sociale.asc&limit=2000");
+                runOnUiThread(()->{
+                    renderClienti(list,arr,"");
+                    search.addTextChangedListener(new TextWatcher(){
+                        public void beforeTextChanged(CharSequence x,int a,int b,int c){}
+                        public void onTextChanged(CharSequence x,int a,int b,int c){renderClienti(list,arr,x.toString());}
+                        public void afterTextChanged(Editable e){}
+                    });
+                });
+            }catch(Exception ex){runOnUiThread(()->{list.removeAllViews();list.addView(text("Errore: "+friendly(ex),14,false));});}
+        });
+    }
+
+    private void renderClienti(LinearLayout list,JSONArray arr,String query){
+        list.removeAllViews(); String q=query.trim().toLowerCase(Locale.ITALY); int shown=0;
+        for(int i=0;i<arr.length();i++)try{
+            JSONObject o=arr.getJSONObject(i);
+            String name=clean(o.optString("ragione_sociale")); if(name.isEmpty()) name=(clean(o.optString("cognome"))+" "+clean(o.optString("nome"))).trim();
+            String cf=clean(o.optString("codice_fiscale")),piva=clean(o.optString("partita_iva")),cod=clean(o.optString("cod_cliente"));
+            String hay=(name+" "+cf+" "+piva+" "+cod).toLowerCase(Locale.ITALY); if(!q.isEmpty()&&!hay.contains(q))continue;
+            LinearLayout c=card(); c.addView(text(name.isEmpty()?"Cliente":name,18,true));
+            String meta=(cod.isEmpty()?"":cod+" · ")+(cf.isEmpty()?piva:cf); if(!meta.isEmpty()){TextView m=text(meta,14,false);m.setTextColor(Color.GRAY);c.addView(m);}
+            ArrayList<String> sett=new ArrayList<>(); if(o.optBoolean("settore_fiscale"))sett.add("Fiscale"); if(o.optBoolean("settore_lavoro"))sett.add("Lavoro"); if(o.optBoolean("settore_consulenza"))sett.add("Consulenza");
+            if(!sett.isEmpty()){TextView st=text(android.text.TextUtils.join(" · ",sett),13,true);st.setTextColor(blue);c.addView(st);}
+            final JSONObject item=o; c.setOnClickListener(v->showClienteDetail(item)); list.addView(c,cardLp()); shown++;
+        }catch(Exception ignore){}
+        if(shown==0)list.addView(text("Nessun cliente trovato.",16,false));
+    }
+
+    private void showClienteDetail(JSONObject o){
+        baseScreen("Scheda cliente",true); ((Button)((LinearLayout)root.getChildAt(0)).getChildAt(0)).setOnClickListener(v->showClienti());
+        String name=clean(o.optString("ragione_sociale")); if(name.isEmpty())name=(clean(o.optString("cognome"))+" "+clean(o.optString("nome"))).trim();
+        content.addView(text(name,25,true));
+        addDetail("Codice cliente",clean(o.optString("cod_cliente")));
+        addDetail("Tipo",clean(o.optString("tipo_cliente")));
+        addDetail("Codice fiscale",clean(o.optString("codice_fiscale")));
+        addDetail("Partita IVA",clean(o.optString("partita_iva")));
+        addDetail("Email",clean(o.optString("email")));
+        addDetail("PEC",clean(o.optString("pec")));
+        addDetail("Telefono",clean(o.optString("telefono")));
+        String city=(clean(o.optString("citta"))+" "+clean(o.optString("provincia"))).trim(); addDetail("Località",city);
+        addDetail("Stato",o.optBoolean("attivo")?"Attivo":"Inattivo");
+    }
+
+    private void addDetail(String label,String value){
+        if(value==null||value.isEmpty())return; LinearLayout c=card(); TextView l=text(label,13,true);l.setTextColor(Color.GRAY);c.addView(l);c.addView(text(value,17,false));content.addView(c,cardLp());
+    }
+
+    // RAPPRESENTANTI LEGALI
+    private void showRappresentanti(){
+        baseScreen("Rappresentanti legali",true);
+        EditText search=input("Cerca nominativo o codice fiscale…"); content.addView(search);
+        LinearLayout list=new LinearLayout(this);list.setOrientation(LinearLayout.VERTICAL);content.addView(list);list.addView(text("Caricamento rappresentanti…",16,false));
+        io.execute(()->{
+            try{
+                JSONObject res=SupabaseClient.apiGet(token,"/api/rapp-legali?studio_id="+SupabaseClient.eq(studioId));
+                JSONArray arr=res.optJSONArray("data"); if(arr==null)arr=new JSONArray(); final JSONArray data=arr;
+                runOnUiThread(()->{
+                    renderRappresentanti(list,data,"");
+                    search.addTextChangedListener(new TextWatcher(){public void beforeTextChanged(CharSequence s,int a,int b,int c){}public void onTextChanged(CharSequence x,int a,int b,int c){renderRappresentanti(list,data,x.toString());}public void afterTextChanged(Editable e){}});
+                });
+            }catch(Exception ex){runOnUiThread(()->{list.removeAllViews();list.addView(text("Errore: "+friendly(ex),14,false));});}
+        });
+    }
+
+    private void renderRappresentanti(LinearLayout list,JSONArray arr,String query){
+        list.removeAllViews();String q=query.toLowerCase(Locale.ITALY).trim();int shown=0;
+        for(int i=0;i<arr.length();i++)try{
+            JSONObject o=arr.getJSONObject(i);String n=clean(o.optString("nome_cognome")),cf=clean(o.optString("codice_fiscale"));
+            if(!q.isEmpty()&&!(n+" "+cf).toLowerCase(Locale.ITALY).contains(q))continue;
+            LinearLayout c=card();c.addView(text(n,18,true));if(!cf.isEmpty()){TextView x=text(cf,14,false);x.setTextColor(Color.GRAY);c.addView(x);}
+            String nascita=(clean(o.optString("luogo_nascita"))+" "+formatDateShort(clean(o.optString("data_nascita")))).trim();if(!nascita.isEmpty())c.addView(text(nascita,14,false));
+            String doc=clean(o.optString("tipo_doc"));String scad=clean(o.optString("scadenza_doc"));if(!doc.isEmpty()){TextView d=text("Documento: "+doc+(scad.isEmpty()?"":" · scad. "+formatDateShort(scad)),13,false);d.setTextColor(blue);c.addView(d);}
+            content.addView(c,cardLp());shown++;
+        }catch(Exception ignore){}
+        if(shown==0)list.addView(text("Nessun rappresentante trovato.",16,false));
+    }
+
+    // GRUPPI SOCIETARI
+    private void showGruppiSocietari(){
+        baseScreen("Gruppi societari",true);content.addView(text("Caricamento gruppi…",16,false));
+        io.execute(()->{
+            try{JSONObject res=SupabaseClient.apiGet(token,"/api/gruppi-societari");runOnUiThread(()->renderGruppi(res));}
+            catch(Exception ex){runOnUiThread(()->showError("Gruppi societari",ex));}
+        });
+    }
+
+    private void renderGruppi(JSONObject res){
+        content.removeAllViews();JSONObject sum=res.optJSONObject("riepilogo");
+        if(sum!=null){LinearLayout c=card();c.addView(text("Gruppi individuati: "+sum.optInt("gruppi_individuati"),17,true));c.addView(text("Partecipazioni: "+sum.optInt("totale_partecipazioni")+" · Società singole: "+sum.optInt("societa_singole"),14,false));content.addView(c,cardLp());}
+        JSONArray groups=res.optJSONArray("gruppi_dettaglio");int count=0;
+        if(groups!=null)for(int i=0;i<groups.length();i++)try{
+            JSONObject g=groups.getJSONObject(i);JSONObject capo=g.optJSONObject("capogruppo");String titolo=capo==null?"Gruppo societario":clean(capo.optString("ragione_sociale"));if(titolo.isEmpty()&&capo!=null)titolo=clean(capo.optString("nome"));if(titolo.isEmpty())titolo="Gruppo societario";
+            LinearLayout c=card();c.addView(text(titolo,19,true));JSONArray soc=g.optJSONArray("societa");if(soc!=null)c.addView(text(soc.length()+" società nel gruppo",14,false));
+            if(soc!=null)for(int j=0;j<Math.min(soc.length(),8);j++){JSONObject x=soc.optJSONObject(j);if(x==null)continue;String n=clean(x.optString("ragione_sociale"));if(n.isEmpty())n=clean(x.optString("nome"));if(n.isEmpty())n=clean(x.optString("societa_nome"));if(!n.isEmpty()){TextView r=text("• "+n,14,false);r.setTextColor(Color.DKGRAY);c.addView(r);}}
+            content.addView(c,cardLp());count++;
+        }catch(Exception ignore){}
+        JSONArray single=res.optJSONArray("societa_singole");if(single!=null&&single.length()>0){content.addView(text("Società con partecipazioni fuori gruppo",20,true));for(int i=0;i<single.length();i++){JSONObject x=single.optJSONObject(i);if(x==null)continue;LinearLayout c=card();c.addView(text(clean(x.optString("ragione_sociale")),17,true));c.addView(text("Soci diretti: "+x.optInt("numero_soci_diretti")+" · Titolari effettivi: "+x.optInt("numero_titolari_effettivi"),13,false));content.addView(c,cardLp());}}
+        if(count==0&&(single==null||single.length()==0))content.addView(text("Nessun gruppo societario individuato.",16,false));
+    }
+
+    // PROMEMORIA
+    private void showPromemoria(){
+        baseScreen("Promemoria",true);Button add=button("+ Nuovo promemoria",true);content.addView(add);add.setOnClickListener(v->showNewPromemoria());
+        LinearLayout list=new LinearLayout(this);list.setOrientation(LinearLayout.VERTICAL);content.addView(list);list.addView(text("Caricamento promemoria…",16,false));
+        io.execute(()->{
+            try{
+                JSONArray arr=SupabaseClient.select(token,"tbpromemoria","select=id,codice_promemoria,titolo,descrizione,data_inserimento,data_scadenza,priorita,working_progress,operatore_id,destinatario_id,settore,eliminato&studio_id=eq."+SupabaseClient.eq(studioId)+"&or=(operatore_id.eq."+SupabaseClient.eq(userId)+",destinatario_id.eq."+SupabaseClient.eq(userId)+")&order=data_scadenza.asc&limit=500");
+                runOnUiThread(()->renderPromemoria(list,arr));
+            }catch(Exception ex){runOnUiThread(()->{list.removeAllViews();list.addView(text("Errore: "+friendly(ex),14,false));});}
+        });
+    }
+
+    private void renderPromemoria(LinearLayout list,JSONArray arr){
+        list.removeAllViews();int shown=0;String today=dayFmt.format(new Date());
+        for(int i=0;i<arr.length();i++)try{
+            JSONObject o=arr.getJSONObject(i);if(o.optBoolean("eliminato",false))continue;
+            LinearLayout c=card();String code=clean(o.optString("codice_promemoria"));c.addView(text((code.isEmpty()?"":code+" · ")+clean(o.optString("titolo")),18,true));
+            String due=clean(o.optString("data_scadenza"));TextView d=text("Scadenza: "+formatDateShort(due),14,false);d.setTextColor(!due.isEmpty()&&due.compareTo(today)<0?Color.RED:blue);c.addView(d);
+            String pr=clean(o.optString("priorita")),st=clean(o.optString("working_progress"));c.addView(text((pr.isEmpty()?"":pr+" · ")+st,13,true));
+            String desc=clean(o.optString("descrizione"));if(!desc.isEmpty()){TextView de=text(desc,14,false);de.setTextColor(Color.DKGRAY);c.addView(de);}
+            list.addView(c,cardLp());shown++;
+        }catch(Exception ignore){}
+        if(shown==0)list.addView(text("Nessun promemoria disponibile.",16,false));
+    }
+
+    private void showNewPromemoria(){
+        baseScreen("Nuovo promemoria",true);((Button)((LinearLayout)root.getChildAt(0)).getChildAt(0)).setOnClickListener(v->showPromemoria());
+        EditText title=input("Titolo");EditText desc=input("Descrizione");EditText due=input("Data scadenza (AAAA-MM-GG)");due.setText(dayFmt.format(new Date()));
+        Spinner priority=new Spinner(this);priority.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"Normale","Alta","Urgente"}));
+        Spinner sector=new Spinner(this);sector.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"","Fiscale","Consulenza","Lavoro"}));
+        content.addView(title);content.addView(desc);content.addView(due);content.addView(text("Priorità",14,true));content.addView(priority);content.addView(text("Settore",14,true));content.addView(sector);
+        Button save=button("Crea promemoria",true);content.addView(save);TextView status=text("",14,false);content.addView(status);
+        save.setOnClickListener(v->{String t=title.getText().toString().trim(),date=due.getText().toString().trim();if(t.isEmpty()||!date.matches("\\d{4}-\\d{2}-\\d{2}")){status.setText("Titolo e data sono obbligatori.");return;}save.setEnabled(false);status.setText("Salvataggio…");
+            io.execute(()->{try{
+                JSONArray tipi=SupabaseClient.select(token,"tbtipopromemoria","select=id,nome&origine=eq.S&nome=ilike.Altro&limit=1");if(tipi.length()==0)throw new Exception("Tipo promemoria 'Altro' non configurato.");
+                String tipoId=tipi.getJSONObject(0).optString("id");String today=dayFmt.format(new Date());int days=Math.max(0,(int)((dayFmt.parse(date).getTime()-dayFmt.parse(today).getTime())/(24L*60L*60L*1000L)));
+                JSONObject b=new JSONObject().put("titolo",t).put("descrizione",emptyNull(desc.getText().toString())).put("data_inserimento",today).put("giorni_scadenza",days).put("data_scadenza",date).put("priorita",String.valueOf(priority.getSelectedItem())).put("working_progress","In lavorazione").put("operatore_id",userId).put("destinatario_id",userId).put("settore",emptyNull(String.valueOf(sector.getSelectedItem()))).put("tipo_promemoria_id",tipoId).put("studio_id",studioId).put("eliminato",false);
+                SupabaseClient.insert(token,"tbpromemoria",b);runOnUiThread(()->{Toast.makeText(this,"Promemoria creato",Toast.LENGTH_SHORT).show();showPromemoria();});
+            }catch(Exception ex){runOnUiThread(()->{save.setEnabled(true);status.setText("Errore: "+friendly(ex));});}});
+        });
+    }
+
+    private String formatDateShort(String d){
+        if(d==null||d.length()<10)return clean(d);try{return d.substring(8,10)+"/"+d.substring(5,7)+"/"+d.substring(0,4);}catch(Exception e){return d;}
+    }
 
     private String userLabel(String id){for(int i=0;i<agendaUsers.length();i++)try{JSONObject u=agendaUsers.getJSONObject(i);if(id.equals(u.optString("id")))return u.optString("cognome")+" "+u.optString("nome");}catch(Exception ignore){}return "";}
     private String userSector(String id){for(int i=0;i<agendaUsers.length();i++)try{JSONObject u=agendaUsers.getJSONObject(i);if(id.equals(u.optString("id")))return clean(u.optString("settore"));}catch(Exception ignore){}return "";}
