@@ -82,6 +82,28 @@ public class SupabaseClient {
         return raw.isEmpty() ? "{}" : raw;
     }
 
+    public static String uploadFile(String token, String bucket, String path, byte[] bytes, String contentType) throws Exception {
+        String url = BASE + "/storage/v1/object/" + bucket + "/" + path;
+        HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+        c.setRequestMethod("POST");
+        c.setConnectTimeout(15000);
+        c.setReadTimeout(30000);
+        c.setRequestProperty("apikey", KEY);
+        c.setRequestProperty("Authorization", "Bearer " + token);
+        c.setRequestProperty("Content-Type", contentType == null || contentType.isEmpty() ? "application/octet-stream" : contentType);
+        c.setRequestProperty("x-upsert", "false");
+        c.setDoOutput(true);
+        try (OutputStream os = c.getOutputStream()) { os.write(bytes); }
+        int code = c.getResponseCode();
+        InputStream is = code >= 200 && code < 300 ? c.getInputStream() : c.getErrorStream();
+        StringBuilder sb = new StringBuilder();
+        if (is != null) try (BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+            String line; while ((line = br.readLine()) != null) sb.append(line);
+        }
+        if (code < 200 || code >= 300) throw new IOException("HTTP " + code + ": " + sb);
+        return BASE + "/storage/v1/object/public/" + bucket + "/" + path;
+    }
+
     public static String eq(String value) {
         return Uri.encode(value == null ? "" : value);
     }
