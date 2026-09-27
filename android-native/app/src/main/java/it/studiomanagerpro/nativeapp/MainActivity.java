@@ -499,10 +499,17 @@ public class MainActivity extends Activity {
         list.addView(text("Caricamento società…",16,false));
         io.execute(()->{
             try{
-                JSONArray clienti=SupabaseClient.select(token,"tbclienti","select=id,ragione_sociale,cod_cliente,codice_fiscale,partita_iva,attivo,cliente&studio_id=eq."+SupabaseClient.eq(studioId)+"&cliente=eq.true&attivo=eq.true&order=ragione_sociale.asc&limit=2000");
+                JSONObject payload=SupabaseClient.apiGet(token,"/api/mobile/soci-organi-societa");
+                JSONArray clienti=payload.optJSONArray("data");
+                if(clienti==null)clienti=new JSONArray();
+                final JSONArray societa=clienti;
                 runOnUiThread(()->{
-                    renderSocietaOrgani(list,clienti,"");
-                    search.addTextChangedListener(new TextWatcher(){public void beforeTextChanged(CharSequence x,int a,int bb,int c){}public void onTextChanged(CharSequence x,int aa,int bb,int cc){renderSocietaOrgani(list,clienti,x.toString());}public void afterTextChanged(Editable e){}});
+                    renderSocietaOrgani(list,societa,"");
+                    search.addTextChangedListener(new TextWatcher(){
+                        public void beforeTextChanged(CharSequence x,int a,int bb,int c){}
+                        public void onTextChanged(CharSequence x,int aa,int bb,int cc){renderSocietaOrgani(list,societa,x.toString());}
+                        public void afterTextChanged(Editable e){}
+                    });
                 });
             }catch(Exception ex){runOnUiThread(()->{list.removeAllViews();list.addView(text("Errore: "+friendly(ex),14,false));});}
         });
