@@ -30,6 +30,13 @@ public class SupabaseClient {
         return arr.length() > 0 ? arr.getJSONObject(0) : body;
     }
 
+    public static JSONObject insert(String token, String table, JSONObject body) throws Exception {
+        String url = BASE + "/rest/v1/" + table;
+        String raw = requestRaw("POST", url, token, body.toString(), "return=representation");
+        JSONArray arr = new JSONArray(raw);
+        return arr.length() > 0 ? arr.getJSONObject(0) : body;
+    }
+
     private static JSONObject requestObject(String method, String url, String token, String body) throws Exception {
         return new JSONObject(requestRaw(method, url, token, body, null));
     }
