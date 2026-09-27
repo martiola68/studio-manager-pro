@@ -11,7 +11,6 @@ export async function GET(request: Request) {
       .eq("studio_id", utente.studio_id)
       .eq("cliente", true)
       .eq("attivo", true)
-      .eq("tipo_cliente", "Altro")
       .order("ragione_sociale", { ascending: true });
 
     if (error) throw error;
