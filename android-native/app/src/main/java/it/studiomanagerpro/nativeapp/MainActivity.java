@@ -484,14 +484,23 @@ public class MainActivity extends Activity {
         io.execute(()->{
             try{
                 JSONObject res=SupabaseClient.apiGet(token,"/api/clienti-organi?cliente_id="+SupabaseClient.eq(clienteId));
-                JSONArray arr=res.optJSONArray("organi");if(arr==null)arr=new JSONArray();final JSONArray data=arr;
-                runOnUiThread(()->renderOrganiSocieta(societaNome,data));
+                JSONArray arr=res.optJSONArray("organi");if(arr==null)arr=new JSONArray();
+                JSONObject teRes=SupabaseClient.apiGet(token,"/api/clienti/"+clienteId+"/titolari-effettivi");
+                JSONArray te=teRes.optJSONArray("titolari_effettivi");if(te==null)te=new JSONArray();
+                final JSONArray data=arr; final JSONArray titolari=te; final String criterio=clean(teRes.optString("criterio_utilizzato"));
+                runOnUiThread(()->renderOrganiSocieta(societaNome,data,titolari,criterio));
             }catch(Exception ex){runOnUiThread(()->showError("Soci e organi sociali",ex));}
         });
     }
 
-    private void renderOrganiSocieta(String societaNome,JSONArray arr){
+    private void renderOrganiSocieta(String societaNome,JSONArray arr,JSONArray titolari,String criterio){
         content.removeAllViews();content.addView(text(societaNome,23,true));
+        content.addView(text("Titolare effettivo",20,true));
+        if(titolari.length()==0){TextView e=text("Nessun titolare effettivo individuato.",14,false);e.setTextColor(Color.GRAY);content.addView(e);}
+        else{
+            for(int i=0;i<titolari.length();i++){JSONObject t=titolari.optJSONObject(i);if(t==null)continue;LinearLayout c=card();String nome=clean(t.optString("persona_nome"));c.addView(text(nome.isEmpty()?"Nominativo":nome,17,true));String cf=clean(t.optString("codice_fiscale"));if(!cf.isEmpty()){TextView x=text(cf,13,false);x.setTextColor(Color.GRAY);c.addView(x);}double q=t.optDouble("quota_complessiva",0);String tipo=clean(t.optString("tipo_titolarita"));String carica=clean(t.optString("carica"));String info="";if(q>0)info="Quota complessiva: "+String.format(Locale.ITALY,"%.2f",q)+"%";if(!tipo.isEmpty())info+=(info.isEmpty()?"":" · ")+tipo;if(!carica.isEmpty())info+=(info.isEmpty()?"":" · ")+carica;if(!info.isEmpty()){TextView z=text(info,14,false);z.setTextColor(blue);c.addView(z);}content.addView(c,cardLp());}
+            if(!criterio.isEmpty()){TextView cr=text("Criterio: "+criterio,13,false);cr.setTextColor(Color.GRAY);content.addView(cr);}
+        }
         renderOrganiSection("Soci",arr,"socio");
         renderOrganiSection("Organo di amministrazione",arr,"amministr");
         renderOrganiSection("Organo di controllo",arr,"controll");
@@ -513,26 +522,37 @@ public class MainActivity extends Activity {
 
     // GRUPPI SOCIETARI
     private void showGruppiSocietari(){
-        baseScreen("Gruppi societari",true);content.addView(text("Caricamento gruppi…",16,false));
+        baseScreen("Gruppi societari",true);
+        EditText search=input("Cerca gruppo o capogruppo…");content.addView(search);
+        LinearLayout holder=new LinearLayout(this);holder.setOrientation(LinearLayout.VERTICAL);content.addView(holder);
+        holder.addView(text("Caricamento gruppi…",16,false));
         io.execute(()->{
-            try{JSONObject res=SupabaseClient.apiGet(token,"/api/gruppi-societari");runOnUiThread(()->renderGruppi(res));}
+            try{
+                JSONObject res=SupabaseClient.apiGet(token,"/api/gruppi-societari");
+                runOnUiThread(()->{
+                    renderGruppi(res,"",holder);
+                    search.addTextChangedListener(new TextWatcher(){public void beforeTextChanged(CharSequence x,int a,int b,int c){}public void onTextChanged(CharSequence x,int a,int b,int c){renderGruppi(res,x.toString(),holder);}public void afterTextChanged(Editable e){}});
+                });
+            }
             catch(Exception ex){runOnUiThread(()->showError("Gruppi societari",ex));}
         });
     }
 
-    private void renderGruppi(JSONObject res){
-        content.removeAllViews();JSONObject sum=res.optJSONObject("riepilogo");
-        if(sum!=null){LinearLayout c=card();c.addView(text("Gruppi individuati: "+sum.optInt("gruppi_individuati"),17,true));c.addView(text("Partecipazioni: "+sum.optInt("totale_partecipazioni")+" · Società singole: "+sum.optInt("societa_singole"),14,false));content.addView(c,cardLp());}
+    private void renderGruppi(JSONObject res,String query,LinearLayout target){
+        target.removeAllViews();String q=query.trim().toLowerCase(Locale.ITALY);
+        JSONObject sum=res.optJSONObject("riepilogo");
+        if(sum!=null&&q.isEmpty()){LinearLayout c=card();c.addView(text("Gruppi individuati: "+sum.optInt("gruppi_individuati"),17,true));c.addView(text("Partecipazioni: "+sum.optInt("totale_partecipazioni")+" · Società singole: "+sum.optInt("societa_singole"),14,false));target.addView(c,cardLp());}
         JSONArray groups=res.optJSONArray("gruppi_dettaglio");int count=0;
         if(groups!=null)for(int i=0;i<groups.length();i++)try{
             JSONObject g=groups.getJSONObject(i);JSONObject capo=g.optJSONObject("capogruppo");String titolo=capo==null?"Gruppo societario":clean(capo.optString("ragione_sociale"));if(titolo.isEmpty()&&capo!=null)titolo=clean(capo.optString("nome"));if(titolo.isEmpty())titolo="Gruppo societario";
+            String denominazione=clean(g.optString("denominazione"));String hay=(titolo+" "+denominazione).toLowerCase(Locale.ITALY);if(!q.isEmpty()&&!hay.contains(q))continue;
             LinearLayout c=card();c.addView(text(titolo,19,true));JSONArray soc=g.optJSONArray("societa");if(soc!=null)c.addView(text(soc.length()+" società nel gruppo",14,false));
             if(soc!=null)for(int j=0;j<soc.length();j++){JSONObject x=soc.optJSONObject(j);if(x==null)continue;String n=clean(x.optString("nome"));if(n.isEmpty())n=clean(x.optString("ragione_sociale"));if(n.isEmpty())n=clean(x.optString("societa_nome"));if(!n.isEmpty()){TextView r=text("• "+n,14,true);r.setTextColor(Color.DKGRAY);c.addView(r);}JSONArray te=x.optJSONArray("titolari_effettivi");if(te!=null&&te.length()>0){for(int k=0;k<te.length();k++){JSONObject t=te.optJSONObject(k);if(t==null)continue;String pn=clean(t.optString("persona_nome"));double quota=t.optDouble("quota_complessiva",0);TextView tv=text("   Titolare effettivo: "+pn+(quota>0?" · "+String.format(Locale.ITALY,"%.2f",quota)+"%":""),13,false);tv.setTextColor(blue);c.addView(tv);}}}
             JSONArray teg=g.optJSONArray("titolari_effettivi_gruppo");if(teg!=null&&teg.length()>0){TextView head=text("Titolari effettivi del gruppo",14,true);head.setTextColor(navy);c.addView(head);for(int k=0;k<teg.length();k++){JSONObject t=teg.optJSONObject(k);if(t!=null)c.addView(text("• "+clean(t.optString("persona_nome")),14,false));}}
-            content.addView(c,cardLp());count++;
+            target.addView(c,cardLp());count++;
         }catch(Exception ignore){}
-        JSONArray single=res.optJSONArray("societa_singole");if(single!=null&&single.length()>0){content.addView(text("Società con partecipazioni fuori gruppo",20,true));for(int i=0;i<single.length();i++){JSONObject x=single.optJSONObject(i);if(x==null)continue;LinearLayout c=card();c.addView(text(clean(x.optString("ragione_sociale")),17,true));c.addView(text("Soci diretti: "+x.optInt("numero_soci_diretti")+" · Titolari effettivi: "+x.optInt("numero_titolari_effettivi"),13,false));content.addView(c,cardLp());}}
-        if(count==0&&(single==null||single.length()==0))content.addView(text("Nessun gruppo societario individuato.",16,false));
+        JSONArray single=res.optJSONArray("societa_singole");if(q.isEmpty()&&single!=null&&single.length()>0){target.addView(text("Società con partecipazioni fuori gruppo",20,true));for(int i=0;i<single.length();i++){JSONObject x=single.optJSONObject(i);if(x==null)continue;LinearLayout c=card();c.addView(text(clean(x.optString("ragione_sociale")),17,true));c.addView(text("Soci diretti: "+x.optInt("numero_soci_diretti")+" · Titolari effettivi: "+x.optInt("numero_titolari_effettivi"),13,false));target.addView(c,cardLp());}}
+        if(count==0)target.addView(text("Nessun gruppo trovato.",16,false));
     }
 
     // PROMEMORIA
@@ -550,7 +570,7 @@ public class MainActivity extends Activity {
     private void renderPromemoria(LinearLayout list,JSONArray arr){
         list.removeAllViews();int shown=0;String today=dayFmt.format(new Date());
         for(int i=0;i<arr.length();i++)try{
-            JSONObject o=arr.getJSONObject(i);
+            JSONObject o=arr.getJSONObject(i);String stato=clean(o.optString("working_progress"));if("Completato".equalsIgnoreCase(stato)||"Annullata".equalsIgnoreCase(stato))continue;
             LinearLayout c=card();String code=clean(o.optString("codice_promemoria"));c.addView(text((code.isEmpty()?"":code+" · ")+clean(o.optString("titolo")),18,true));
             String due=clean(o.optString("data_scadenza"));TextView d=text("Scadenza: "+formatDateShort(due),14,false);d.setTextColor(!due.isEmpty()&&due.compareTo(today)<0?Color.RED:blue);c.addView(d);
             String pr=clean(o.optString("priorita")),st=clean(o.optString("working_progress"));c.addView(text((pr.isEmpty()?"":pr+" · ")+st,13,true));
