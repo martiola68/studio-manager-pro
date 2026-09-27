@@ -6,6 +6,9 @@ import android.content.*;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.net.Uri;
+import android.database.Cursor;
+import android.provider.OpenableColumns;
+import java.io.*;
 import android.text.*;
 import android.text.method.TransformationMethod;
 import android.view.*;
@@ -27,6 +30,9 @@ public class MainActivity extends Activity {
     private final LinkedHashSet<String> agendaSelectedSectors = new LinkedHashSet<>();
     private final int blue=Color.rgb(13,111,159), navy=Color.rgb(11,79,125), bg=Color.rgb(244,247,251), ink=Color.rgb(12,26,48);
     private final SimpleDateFormat dayFmt=new SimpleDateFormat("yyyy-MM-dd",Locale.ITALY);
+    private static final int REQ_PROMEMORIA_FILES=4107;
+    private final ArrayList<Uri> promemoriaAttachmentUris=new ArrayList<>();
+    private TextView promemoriaAttachmentStatus;
 
     @Override public void onCreate(Bundle b){
         super.onCreate(b); getWindow().setStatusBarColor(navy);
@@ -37,6 +43,16 @@ public class MainActivity extends Activity {
         userEmail=getPreferences(MODE_PRIVATE).getString("userEmail","");
         canManageLeave=getPreferences(MODE_PRIVATE).getBoolean("canManageLeave",false);
         if(token==null) showLogin(); else { agendaSelectedUsers.add(userId); showHome(); }
+    }
+
+    @Override protected void onActivityResult(int requestCode,int resultCode,Intent data){
+        super.onActivityResult(requestCode,resultCode,data);
+        if(requestCode!=REQ_PROMEMORIA_FILES||resultCode!=RESULT_OK||data==null)return;
+        promemoriaAttachmentUris.clear();
+        if(data.getClipData()!=null){
+            for(int i=0;i<data.getClipData().getItemCount();i++) promemoriaAttachmentUris.add(data.getClipData().getItemAt(i).getUri());
+        }else if(data.getData()!=null) promemoriaAttachmentUris.add(data.getData());
+        if(promemoriaAttachmentStatus!=null) promemoriaAttachmentStatus.setText(promemoriaAttachmentUris.isEmpty()?"Nessun allegato":"Allegati selezionati: "+promemoriaAttachmentUris.size());
     }
 
     private TextView text(String v,int sp,boolean bold){ TextView t=new TextView(this); t.setText(v); t.setTextSize(sp); t.setTextColor(ink); if(bold)t.setTypeface(Typeface.DEFAULT,Typeface.BOLD); t.setPadding(dp(4),dp(4),dp(4),dp(4)); return t; }
@@ -641,20 +657,150 @@ public class MainActivity extends Activity {
     }
 
     private void showNewPromemoria(){
-        baseScreen("Nuovo promemoria",true);((Button)((LinearLayout)root.getChildAt(0)).getChildAt(0)).setOnClickListener(v->showPromemoria());
-        EditText title=input("Titolo");EditText desc=input("Descrizione");EditText due=input("Data scadenza (AAAA-MM-GG)");due.setText(dayFmt.format(new Date()));
-        Spinner priority=new Spinner(this);priority.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"Normale","Alta","Urgente"}));
-        Spinner sector=new Spinner(this);sector.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"","Fiscale","Consulenza","Lavoro"}));
-        content.addView(title);content.addView(desc);content.addView(due);content.addView(text("Priorità",14,true));content.addView(priority);content.addView(text("Settore",14,true));content.addView(sector);
-        Button save=button("Crea promemoria",true);content.addView(save);TextView status=text("",14,false);content.addView(status);
-        save.setOnClickListener(v->{String t=title.getText().toString().trim(),date=due.getText().toString().trim();if(t.isEmpty()||!date.matches("\\d{4}-\\d{2}-\\d{2}")){status.setText("Titolo e data sono obbligatori.");return;}save.setEnabled(false);status.setText("Salvataggio…");
-            io.execute(()->{try{
-                JSONArray tipi=SupabaseClient.select(token,"tbtipopromemoria","select=id,nome&origine=eq.S&nome=ilike.Altro&limit=1");if(tipi.length()==0)throw new Exception("Tipo promemoria 'Altro' non configurato.");
-                String tipoId=tipi.getJSONObject(0).optString("id");String today=dayFmt.format(new Date());int days=Math.max(0,(int)((dayFmt.parse(date).getTime()-dayFmt.parse(today).getTime())/(24L*60L*60L*1000L)));
-                JSONObject b=new JSONObject().put("titolo",t).put("descrizione",emptyNull(desc.getText().toString())).put("data_inserimento",today).put("giorni_scadenza",days).put("data_scadenza",date).put("priorita",String.valueOf(priority.getSelectedItem())).put("working_progress","In lavorazione").put("operatore_id",userId).put("destinatario_id",userId).put("settore",emptyNull(String.valueOf(sector.getSelectedItem()))).put("tipo_promemoria_id",tipoId).put("studio_id",studioId);
-                SupabaseClient.insert(token,"tbpromemoria",b);runOnUiThread(()->{Toast.makeText(this,"Promemoria creato",Toast.LENGTH_SHORT).show();showPromemoria();});
-            }catch(Exception ex){runOnUiThread(()->{save.setEnabled(true);status.setText("Errore: "+friendly(ex));});}});
+        baseScreen("Nuovo promemoria",true);
+        ((Button)((LinearLayout)root.getChildAt(0)).getChildAt(0)).setOnClickListener(v->showPromemoria());
+        content.addView(text("Caricamento dati…",16,false));
+        io.execute(()->{
+            try{
+                JSONObject payload=SupabaseClient.apiGet(token,"/api/mobile/promemoria");
+                JSONArray utenti=payload.optJSONArray("utenti"); if(utenti==null)utenti=new JSONArray();
+                JSONArray tipi=payload.optJSONArray("tipi_promemoria"); if(tipi==null)tipi=new JSONArray();
+                JSONObject current=payload.optJSONObject("utente_corrente"); if(current==null)current=new JSONObject();
+                final JSONArray finalUtenti=utenti, finalTipi=tipi; final JSONObject finalCurrent=current;
+                runOnUiThread(()->renderNewPromemoria(finalUtenti,finalTipi,finalCurrent));
+            }catch(Exception ex){runOnUiThread(()->showError("Nuovo promemoria",ex));}
         });
+    }
+
+    private void renderNewPromemoria(JSONArray utenti,JSONArray tipi,JSONObject current){
+        content.removeAllViews(); promemoriaAttachmentUris.clear();
+
+        content.addView(text("Tipo Promemoria",14,true));
+        Spinner tipoSpinner=new Spinner(this);
+        ArrayList<String> tipoLabels=new ArrayList<>();
+        int tipoDefault=0;
+        for(int i=0;i<tipi.length();i++){JSONObject t=tipi.optJSONObject(i);String n=t==null?"":clean(t.optString("nome"));tipoLabels.add(n);if("Altro".equalsIgnoreCase(n))tipoDefault=i;}
+        tipoSpinner.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,tipoLabels)); if(!tipoLabels.isEmpty())tipoSpinner.setSelection(tipoDefault); content.addView(tipoSpinner);
+
+        EditText title=input("Titolo *"); content.addView(title);
+        EditText desc=input("Descrizione"); desc.setSingleLine(false); desc.setMinLines(3); desc.setGravity(Gravity.TOP); content.addView(desc);
+
+        EditText inserted=input("Data inserimento (AAAA-MM-GG)"); inserted.setText(dayFmt.format(new Date())); content.addView(inserted);
+        EditText days=input("Giorni scadenza"); days.setInputType(android.text.InputType.TYPE_CLASS_NUMBER); days.setText("0"); content.addView(days);
+        EditText due=input("Data scadenza (calcolata automaticamente)"); due.setEnabled(false); due.setText(dayFmt.format(new Date())); content.addView(due);
+
+        Runnable recalc=()->{
+            try{
+                Date d=dayFmt.parse(inserted.getText().toString().trim()); int n=parseIntSafe(days.getText().toString(),0);
+                Calendar c=Calendar.getInstance(); c.setTime(d); c.add(Calendar.DAY_OF_MONTH,Math.max(0,n)); due.setText(dayFmt.format(c.getTime()));
+            }catch(Exception ignore){}
+        };
+        TextWatcher calcWatcher=new TextWatcher(){public void beforeTextChanged(CharSequence x,int a,int b,int c){}public void onTextChanged(CharSequence x,int a,int b,int c){recalc.run();}public void afterTextChanged(Editable e){}};
+        inserted.addTextChangedListener(calcWatcher); days.addTextChangedListener(calcWatcher);
+
+        CheckBox personal=new CheckBox(this); personal.setText("Personale"); personal.setChecked(true); content.addView(personal);
+        CheckBox multi=new CheckBox(this); multi.setText("Invio a più destinatari"); content.addView(multi);
+
+        content.addView(text("Destinatario",14,true));
+        Spinner recipient=new Spinner(this);
+        ArrayList<String> userLabels=new ArrayList<>(); ArrayList<String> userIds=new ArrayList<>();
+        int currentIndex=0;
+        for(int i=0;i<utenti.length();i++){JSONObject u=utenti.optJSONObject(i);if(u==null)continue;String id=clean(u.optString("id"));String label=(clean(u.optString("nome"))+" "+clean(u.optString("cognome"))).trim();userIds.add(id);userLabels.add(label);if(id.equals(userId))currentIndex=userIds.size()-1;}
+        recipient.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,userLabels)); if(!userLabels.isEmpty())recipient.setSelection(currentIndex); recipient.setEnabled(false); content.addView(recipient);
+
+        EditText sector=input("Settore"); sector.setEnabled(false); sector.setText(clean(current.optString("settore"))); content.addView(sector);
+
+        LinkedHashSet<String> selectedRecipients=new LinkedHashSet<>(); selectedRecipients.add(userId);
+        Button multiButton=button("Destinatari multipli · 1",false); multiButton.setVisibility(View.GONE); content.addView(multiButton);
+
+        AdapterView.OnItemSelectedListener recListener=new AdapterView.OnItemSelectedListener(){
+            public void onItemSelected(AdapterView<?> p,View v,int pos,long id){if(pos>=0&&pos<utenti.length()){JSONObject u=utenti.optJSONObject(pos);if(u!=null)sector.setText(clean(u.optString("settore")));}}
+            public void onNothingSelected(AdapterView<?> p){}
+        };
+        recipient.setOnItemSelectedListener(recListener);
+
+        personal.setOnCheckedChangeListener((b,checked)->{
+            if(checked){multi.setChecked(false);recipient.setEnabled(false);if(currentIndex<recipient.getCount())recipient.setSelection(currentIndex);sector.setText(clean(current.optString("settore")));selectedRecipients.clear();selectedRecipients.add(userId);multiButton.setText("Destinatari multipli · 1");}
+            else if(!multi.isChecked())recipient.setEnabled(true);
+        });
+        multi.setOnCheckedChangeListener((b,checked)->{
+            if(checked){personal.setChecked(false);recipient.setEnabled(false);multiButton.setVisibility(View.VISIBLE);selectedRecipients.add(userId);multiButton.setText("Destinatari multipli · "+selectedRecipients.size());}
+            else{multiButton.setVisibility(View.GONE);if(!personal.isChecked())recipient.setEnabled(true);}
+        });
+
+        multiButton.setOnClickListener(v->showPromemoriaRecipientsDialog(utenti,selectedRecipients,multiButton));
+
+        content.addView(text("Priorità",14,true));
+        Spinner priority=new Spinner(this); priority.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"Bassa","Media","Alta"})); priority.setSelection(1); content.addView(priority);
+
+        content.addView(text("Stato",14,true));
+        Spinner state=new Spinner(this); state.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"Aperto","In lavorazione","Completato","Presa visione","Richiesta confronto","Annullata"})); content.addView(state);
+
+        CheckBox teams=new CheckBox(this); teams.setText("Invia notifica su Teams"); content.addView(teams);
+
+        content.addView(text("Allegati",14,true));
+        Button attach=button("Seleziona allegati",false); content.addView(attach);
+        promemoriaAttachmentStatus=text("Nessun allegato",13,false); promemoriaAttachmentStatus.setTextColor(Color.GRAY); content.addView(promemoriaAttachmentStatus);
+        attach.setOnClickListener(v->{Intent pick=new Intent(Intent.ACTION_OPEN_DOCUMENT);pick.setType("*/*");pick.putExtra(Intent.EXTRA_ALLOW_MULTIPLE,true);pick.addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(pick,REQ_PROMEMORIA_FILES);});
+
+        Button save=button("Crea",true); content.addView(save); TextView status=text("",14,false); content.addView(status);
+        save.setOnClickListener(v->{
+            String t=title.getText().toString().trim(),ins=inserted.getText().toString().trim(),scad=due.getText().toString().trim();
+            if(t.isEmpty()||!ins.matches("\\d{4}-\\d{2}-\\d{2}")||!scad.matches("\\d{4}-\\d{2}-\\d{2}")){status.setText("Titolo e date sono obbligatori.");return;}
+            if(tipi.length()==0){status.setText("Nessun tipo promemoria disponibile.");return;}
+            JSONObject typeObj=tipi.optJSONObject(tipoSpinner.getSelectedItemPosition());String typeId=typeObj==null?"":clean(typeObj.optString("id"));
+            JSONArray dest=new JSONArray();
+            if(multi.isChecked()){for(String id:selectedRecipients)dest.put(id);}
+            else if(personal.isChecked())dest.put(userId);
+            else if(recipient.getSelectedItemPosition()>=0&&recipient.getSelectedItemPosition()<userIds.size())dest.put(userIds.get(recipient.getSelectedItemPosition()));
+
+            JSONObject body=new JSONObject();
+            try{
+                body.put("tipo_promemoria_id",typeId).put("titolo",t).put("descrizione",emptyNull(desc.getText().toString()))
+                    .put("data_inserimento",ins).put("giorni_scadenza",parseIntSafe(days.getText().toString(),0)).put("data_scadenza",scad)
+                    .put("priorita",String.valueOf(priority.getSelectedItem())).put("working_progress",String.valueOf(state.getSelectedItem()))
+                    .put("destinatari",dest).put("settore",emptyNull(sector.getText().toString())).put("invia_teams",teams.isChecked());
+            }catch(Exception e){status.setText("Errore preparazione dati.");return;}
+
+            save.setEnabled(false); status.setText("Salvataggio…");
+            io.execute(()->{
+                try{
+                    JSONObject result=SupabaseClient.apiPost(token,"/api/mobile/promemoria",body);
+                    JSONArray created=result.optJSONArray("data"); if(created==null)created=new JSONArray();
+                    if(!promemoriaAttachmentUris.isEmpty()&&created.length()>0) uploadPromemoriaAttachments(created);
+                    runOnUiThread(()->{Toast.makeText(this,"Promemoria creato",Toast.LENGTH_SHORT).show();showPromemoria();});
+                }catch(Exception ex){runOnUiThread(()->{save.setEnabled(true);status.setText("Errore: "+friendly(ex));});}
+            });
+        });
+    }
+
+    private void showPromemoriaRecipientsDialog(JSONArray utenti,LinkedHashSet<String> selected,Button button){
+        ArrayList<String> labels=new ArrayList<>(),ids=new ArrayList<>(); boolean[] checked=new boolean[utenti.length()];
+        for(int i=0;i<utenti.length();i++){JSONObject u=utenti.optJSONObject(i);String id=u==null?"":clean(u.optString("id"));String label=u==null?"":(clean(u.optString("nome"))+" "+clean(u.optString("cognome"))+(clean(u.optString("settore")).isEmpty()?"":" ("+clean(u.optString("settore"))+")")).trim();ids.add(id);labels.add(label);checked[i]=selected.contains(id);}
+        new AlertDialog.Builder(this).setTitle("Destinatari multipli").setMultiChoiceItems(labels.toArray(new String[0]),checked,(d,w,c)->{String id=ids.get(w);if(id.equals(userId))return;if(c)selected.add(id);else selected.remove(id);selected.add(userId);}).setPositiveButton("OK",(d,w)->button.setText("Destinatari multipli · "+selected.size())).show();
+    }
+
+    private void uploadPromemoriaAttachments(JSONArray created) throws Exception{
+        for(int c=0;c<created.length();c++){
+            JSONObject p=created.optJSONObject(c);if(p==null)continue;String pid=clean(p.optString("id"));if(pid.isEmpty())continue;JSONArray metas=new JSONArray();
+            JSONArray existing=p.optJSONArray("allegati");if(existing!=null)for(int i=0;i<existing.length();i++)metas.put(existing.get(i));
+            for(Uri uri:promemoriaAttachmentUris){
+                String name=getUriName(uri);String mime=getContentResolver().getType(uri);byte[] bytes=readUriBytes(uri);
+                if(bytes.length>10*1024*1024)throw new Exception("File troppo grande: "+name+" (max 10 MB)");
+                String path=pid+"/"+System.currentTimeMillis()+"_"+name.replace("/","_");
+                String url=SupabaseClient.uploadFile(token,"promemoria-allegati",path,bytes,mime);
+                metas.put(new JSONObject().put("nome",name).put("url",url).put("size",bytes.length).put("tipo",mime==null?"":mime).put("data_upload",new Date().toInstant().toString()));
+            }
+            SupabaseClient.update(token,"tbpromemoria","id=eq."+SupabaseClient.eq(pid),new JSONObject().put("allegati",metas));
+        }
+    }
+
+    private String getUriName(Uri uri){
+        String name="allegato";Cursor cur=null;try{cur=getContentResolver().query(uri,null,null,null,null);if(cur!=null&&cur.moveToFirst()){int idx=cur.getColumnIndex(OpenableColumns.DISPLAY_NAME);if(idx>=0)name=cur.getString(idx);}}catch(Exception ignore){}finally{if(cur!=null)cur.close();}return name==null||name.isEmpty()?"allegato":name;
+    }
+
+    private byte[] readUriBytes(Uri uri) throws Exception{
+        try(InputStream in=getContentResolver().openInputStream(uri);ByteArrayOutputStream out=new ByteArrayOutputStream()){if(in==null)throw new IOException("File non leggibile");byte[] buf=new byte[8192];int n;while((n=in.read(buf))>0)out.write(buf,0,n);return out.toByteArray();}
     }
 
     private String formatDateShort(String d){
