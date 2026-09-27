@@ -77,6 +77,7 @@ for (const block of blocks) {
 const ordine = [
   "Dashboard",
   "Operatività",
+  "AmmortaPro",
   "AML",
   "Revisione e controllo",
   "Pratiche",
@@ -104,4 +105,4 @@ if (source.includes('label: "Studio"')) {
 }
 
 fs.writeFileSync(path, source, "utf8");
-console.log("✓ Menu principale: Dashboard | Operatività | AML | Revisione e controllo | Pratiche | Contenzioso | Payroll | Archivi di base");
+console.log("✓ Menu principale: Dashboard | Operatività | AmmortaPro | AML | Revisione e controllo | Pratiche | Contenzioso | Payroll | Archivi di base");

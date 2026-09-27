@@ -1,0 +1,1 @@
+alter table public.tbcespiti_categorie add column if not exists conto_ammortamento text;
