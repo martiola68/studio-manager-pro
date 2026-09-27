@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { isCompanyClient } from "@/lib/isCompanyClient";
 import {
   normalizeCF,
   isValidCF,
@@ -454,21 +455,7 @@ const differenzaQuote = totaleQuote - 100;
       return;
     }
 
-    const clientiSocieta = (data || []).filter((cliente: any) => {
-      const tipo = String(cliente?.tipo_cliente || "").trim().toLowerCase();
-      const cognome = String(cliente?.cognome || "").trim();
-      const nome = String(cliente?.nome || "").trim();
-      const cf = String(cliente?.codice_fiscale || "").trim().toUpperCase();
-
-      const cfPersonaFisica = /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$/.test(cf);
-
-      return (
-        tipo !== "persona fisica" &&
-        !cognome &&
-        !nome &&
-        !cfPersonaFisica
-      );
-    });
+    const clientiSocieta = (data || []).filter(isCompanyClient);
 
     setClienti(clientiSocieta);
   }
