@@ -1,5 +1,11 @@
 plugins { id 'com.android.application' }
 
+def hasReleaseSigning =
+    System.getenv("SMP_KEYSTORE_PATH") &&
+    System.getenv("SMP_KEYSTORE_PASSWORD") &&
+    System.getenv("SMP_KEY_ALIAS") &&
+    System.getenv("SMP_KEY_PASSWORD")
+
 android {
     namespace 'it.studiomanagerpro.nativeapp'
     compileSdk 35
@@ -8,8 +14,29 @@ android {
         applicationId "it.studiomanagerpro.mobile"
         minSdk 26
         targetSdk 35
-        versionCode 13
-        versionName "1.13-native"
+        versionCode 14
+        versionName "1.14-native"
+    }
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            release {
+                storeFile file(System.getenv("SMP_KEYSTORE_PATH"))
+                storePassword System.getenv("SMP_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("SMP_KEY_ALIAS")
+                keyPassword System.getenv("SMP_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            shrinkResources false
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
+        }
     }
 }
 
