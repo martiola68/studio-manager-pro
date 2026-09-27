@@ -53,6 +53,19 @@ const prefix = `  const menuItems: MenuItem[] = [
       ],
     },
     {
+      label: "AmmortaPro",
+      icon: <Landmark className="h-4 w-4" />,
+      children: [
+        { label: "Dashboard AmmortaPro", href: "/cespiti", icon: <BarChart3 className="h-4 w-4" /> },
+        { label: "Cespiti", href: "/cespiti/elenco", icon: <FolderKanban className="h-4 w-4" /> },
+        { label: "Categorie", href: "/cespiti/categorie", icon: <Settings className="h-4 w-4" /> },
+        { label: "Movimenti", href: "/cespiti/movimenti", icon: <RefreshCcw className="h-4 w-4" /> },
+        { label: "Ammortamenti", href: "/cespiti/ammortamenti", icon: <BarChart3 className="h-4 w-4" /> },
+        { label: "Registro cespiti", href: "/cespiti/registro", icon: <BookOpen className="h-4 w-4" /> },
+        { label: "Scritture contabili", href: "/cespiti/scritture", icon: <FileText className="h-4 w-4" /> },
+      ],
+    },
+    {
       label: "Archivi di base",
       icon: <Users className="h-4 w-4" />,
       children: [
