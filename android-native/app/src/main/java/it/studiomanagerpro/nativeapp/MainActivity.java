@@ -58,9 +58,9 @@ public class MainActivity extends Activity {
         boolean homeHeader="Studio Manager Pro".equals(title) && !back;
         if(homeHeader){
             ImageView logo=new ImageView(this);
-            logo.setImageResource(R.drawable.smp_app_icon);
+            logo.setImageResource(R.drawable.logo_smp);
             logo.setScaleType(ImageView.ScaleType.CENTER_CROP);
-            LinearLayout.LayoutParams lpLogo=new LinearLayout.LayoutParams(dp(42),dp(42));
+            LinearLayout.LayoutParams lpLogo=new LinearLayout.LayoutParams(dp(58),dp(42));
             lpLogo.setMargins(0,0,dp(10),0);
             top.addView(logo,lpLogo);
         }
@@ -86,7 +86,7 @@ public class MainActivity extends Activity {
                     })
                     .show();
             });
-            top.addView(logout,new LinearLayout.LayoutParams(dp(50),dp(50)));
+            top.addView(logout,new LinearLayout.LayoutParams(dp(58),dp(58)));
         }
 
         root.addView(top);
