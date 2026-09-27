@@ -37,3 +37,7 @@ WITH CHECK (public.is_amministratore_sistema_generale());
 CREATE POLICY "ammortapro categorie delete admin generale"
 ON public.tbcespiti_categorie FOR DELETE TO authenticated
 USING (public.is_amministratore_sistema_generale());
+
+-- Le funzioni di installazione rispettano le RLS: niente bypass SECURITY DEFINER.
+ALTER FUNCTION public.cespiti_installa_categorie_standard(uuid) SECURITY INVOKER;
+ALTER FUNCTION public.cespiti_installa_categorie_immateriali(uuid) SECURITY INVOKER;
