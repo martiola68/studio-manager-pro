@@ -7,4 +7,5 @@
         <item name="android:statusBarColor">#0B4F7D</item>
         <item name="android:windowLightStatusBar">false</item>
     </style>
+    <color name="smp_icon_bg">#0B4F7D</color>
 </resources>
