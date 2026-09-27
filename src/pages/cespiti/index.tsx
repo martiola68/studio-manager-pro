@@ -27,8 +27,7 @@ export default function CespitiDashboardPage() {
       if(!sid) throw new Error("Studio non disponibile");
       setStudioId(sid);
       const supabase=getSupabaseClient();
-      const {data,error}=await (supabase as any).from("tbclienti")
-        .select("id,ragione_sociale,cod_cliente").eq("studio_id",sid).eq("cliente",true).eq("attivo",true)
+      const {data,error}=await (supabase as any).from("tbclienti").select("id,ragione_sociale,cod_cliente,tbclienti_servizi!inner(ammortamenti)").eq("studio_id",sid).eq("cliente",true).eq("attivo",true).eq("tbclienti_servizi.ammortamenti",true)
         .order("ragione_sociale");
       if(error) throw error;
       setClienti((data||[]) as Cliente[]);
