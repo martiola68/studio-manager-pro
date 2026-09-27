@@ -467,9 +467,24 @@ public class MainActivity extends Activity {
             String meta=(cod.isEmpty()?"":cod+" · ")+(cf.isEmpty()?piva:cf); if(!meta.isEmpty()){TextView m=text(meta,14,false);m.setTextColor(Color.GRAY);c.addView(m);}
             ArrayList<String> sett=new ArrayList<>(); if(o.optBoolean("settore_fiscale"))sett.add("Fiscale"); if(o.optBoolean("settore_lavoro"))sett.add("Lavoro"); if(o.optBoolean("settore_consulenza"))sett.add("Consulenza");
             if(!sett.isEmpty()){TextView st=text(android.text.TextUtils.join(" · ",sett),13,true);st.setTextColor(blue);c.addView(st);}
-            final JSONObject item=o; c.setOnClickListener(v->showClienteDetail(item)); list.addView(c,cardLp()); shown++;
+            final String clienteId=o.optString("id"); final String clienteNome=name; c.setOnClickListener(v->loadClienteDetail(clienteId,clienteNome)); list.addView(c,cardLp()); shown++;
         }catch(Exception ignore){}
         if(shown==0)list.addView(text("Nessun cliente trovato.",16,false));
+    }
+
+    private void loadClienteDetail(String clienteId,String clienteNome){
+        baseScreen("Scheda cliente",true);
+        ((Button)((LinearLayout)root.getChildAt(0)).getChildAt(0)).setOnClickListener(v->showClienti());
+        content.addView(text(clienteNome,25,true));
+        content.addView(text("Caricamento scheda cliente…",15,false));
+        io.execute(()->{
+            try{
+                JSONObject payload=SupabaseClient.apiGet(token,"/api/mobile/clienti/"+clienteId);
+                JSONObject cliente=payload.optJSONObject("data");
+                if(cliente==null)throw new Exception("Scheda cliente non disponibile.");
+                runOnUiThread(()->showClienteDetail(cliente));
+            }catch(Exception ex){runOnUiThread(()->showError("Scheda cliente",ex));}
+        });
     }
 
     private void showClienteDetail(JSONObject o){
