@@ -37,6 +37,11 @@ public class SupabaseClient {
         return arr.length() > 0 ? arr.getJSONObject(0) : body;
     }
 
+    public static JSONObject apiPost(String token, String path, JSONObject body) throws Exception {
+        String raw = requestRaw("POST", "https://studio-manager-pro.vercel.app" + path, token, body == null ? "{}" : body.toString(), null);
+        return new JSONObject(raw);
+    }
+
     private static JSONObject requestObject(String method, String url, String token, String body) throws Exception {
         return new JSONObject(requestRaw(method, url, token, body, null));
     }
