@@ -21,6 +21,9 @@ DROP POLICY IF EXISTS "delete categorie cespiti studio" ON public.tbcespiti_cate
 DROP POLICY IF EXISTS "insert categorie cespiti" ON public.tbcespiti_categorie;
 DROP POLICY IF EXISTS "update categorie cespiti" ON public.tbcespiti_categorie;
 DROP POLICY IF EXISTS "delete categorie cespiti" ON public.tbcespiti_categorie;
+DROP POLICY IF EXISTS "cespiti_insert_tbcespiti_categorie" ON public.tbcespiti_categorie;
+DROP POLICY IF EXISTS "cespiti_update_tbcespiti_categorie" ON public.tbcespiti_categorie;
+DROP POLICY IF EXISTS "cespiti_delete_tbcespiti_categorie" ON public.tbcespiti_categorie;
 DROP POLICY IF EXISTS "ammortapro categorie insert admin generale" ON public.tbcespiti_categorie;
 DROP POLICY IF EXISTS "ammortapro categorie update admin generale" ON public.tbcespiti_categorie;
 DROP POLICY IF EXISTS "ammortapro categorie delete admin generale" ON public.tbcespiti_categorie;
