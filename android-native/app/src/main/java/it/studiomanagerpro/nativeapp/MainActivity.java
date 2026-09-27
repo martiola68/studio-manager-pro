@@ -92,10 +92,12 @@ public class MainActivity extends Activity {
         add.setOnClickListener(v->loadAgendaDataThenNewEvent());
         filter.setOnClickListener(v->loadAgendaDataThenFilter());
         io.execute(()->{ try{
-            agendaUsers=SupabaseClient.select(token,"tbutenti","select=id,nome,cognome,email,settore,attivo,studio_id&attivo=eq.true&studio_id=eq."+SupabaseClient.eq(studioId)+"&order=cognome.asc");
-            agendaClients=SupabaseClient.select(token,"tbclienti","select=id,ragione_sociale,attivo&attivo=eq.true&order=ragione_sociale.asc");
-            JSONArray ev=SupabaseClient.select(token,"tbagenda","select=id,titolo,descrizione,data_inizio,data_fine,ora_inizio,ora_fine,luogo,sala,in_sede,utente_id,studio_id,riunione_teams,link_teams,evento_generico,ricorrente&studio_id=eq."+SupabaseClient.eq(studioId)+"&order=data_inizio.asc&limit=500");
-            runOnUiThread(()->renderAgenda(ev));
+            JSONObject payload=SupabaseClient.apiGet(token,"/api/mobile/agenda");
+            agendaUsers=payload.optJSONArray("utenti"); if(agendaUsers==null)agendaUsers=new JSONArray();
+            agendaClients=payload.optJSONArray("clienti"); if(agendaClients==null)agendaClients=new JSONArray();
+            JSONArray ev=payload.optJSONArray("eventi"); if(ev==null)ev=new JSONArray();
+            final JSONArray events=ev;
+            runOnUiThread(()->renderAgenda(events));
         }catch(Exception ex){runOnUiThread(()->showError("Agenda",ex));}});
     }
 
@@ -186,7 +188,7 @@ public class MainActivity extends Activity {
     private void showParticipantsDialog(LinkedHashSet<String> selected,Button b){ArrayList<String> labels=new ArrayList<>(),ids=new ArrayList<>();boolean[] chk=new boolean[agendaUsers.length()];for(int i=0;i<agendaUsers.length();i++)try{JSONObject u=agendaUsers.getJSONObject(i);labels.add(u.optString("cognome")+" "+u.optString("nome"));ids.add(u.optString("id"));chk[i]=selected.contains(u.optString("id"));}catch(Exception ignore){}new AlertDialog.Builder(this).setTitle("Partecipanti interni").setMultiChoiceItems(labels.toArray(new String[0]),chk,(d,w,c)->{if(c)selected.add(ids.get(w));else selected.remove(ids.get(w));}).setPositiveButton("OK",(d,w)->b.setText("Partecipanti interni · "+selected.size())).show();}
 
     // RUBRICA
-    private void showRubrica(){baseScreen("Rubrica",true);EditText search=input("Cerca nome, cognome, email…");content.addView(search);LinearLayout list=new LinearLayout(this);list.setOrientation(LinearLayout.VERTICAL);content.addView(list);list.addView(text("Caricamento contatti…",16,false));io.execute(()->{try{JSONArray arr=SupabaseClient.select(token,"tbcontatti","select=id,nome,cognome,email,pec,cell,tel&studio_id=eq."+SupabaseClient.eq(studioId)+"&order=cognome.asc&limit=1000");runOnUiThread(()->{renderContacts(list,arr,"");search.addTextChangedListener(new TextWatcher(){public void beforeTextChanged(CharSequence s,int a,int b,int c){}public void onTextChanged(CharSequence s,int a,int b,int c){renderContacts(list,arr,s.toString());}public void afterTextChanged(Editable e){}});});}catch(Exception ex){runOnUiThread(()->{list.removeAllViews();list.addView(text("Errore: "+friendly(ex),14,false));});}});}
+    private void showRubrica(){baseScreen("Rubrica",true);EditText search=input("Cerca nome, cognome, email…");content.addView(search);LinearLayout list=new LinearLayout(this);list.setOrientation(LinearLayout.VERTICAL);content.addView(list);list.addView(text("Caricamento contatti…",16,false));io.execute(()->{try{JSONObject payload=SupabaseClient.apiGet(token,"/api/mobile/rubrica"); JSONArray arr=payload.optJSONArray("data"); if(arr==null)arr=new JSONArray();runOnUiThread(()->{renderContacts(list,arr,"");search.addTextChangedListener(new TextWatcher(){public void beforeTextChanged(CharSequence s,int a,int b,int c){}public void onTextChanged(CharSequence s,int a,int b,int c){renderContacts(list,arr,s.toString());}public void afterTextChanged(Editable e){}});});}catch(Exception ex){runOnUiThread(()->{list.removeAllViews();list.addView(text("Errore: "+friendly(ex),14,false));});}});}
     private void renderContacts(LinearLayout list,JSONArray arr,String q){list.removeAllViews();String n=q.toLowerCase(Locale.ITALY).trim();int shown=0;for(int i=0;i<arr.length();i++)try{JSONObject o=arr.getJSONObject(i);String nome=(clean(o.optString("cognome"))+" "+clean(o.optString("nome"))).trim(),email=clean(o.optString("email")),cell=clean(o.optString("cell")),tel=clean(o.optString("tel"));if(!(nome+" "+email+" "+cell+" "+tel).toLowerCase(Locale.ITALY).contains(n))continue;LinearLayout c=card();c.addView(text(nome.isEmpty()?"Contatto":nome,18,true));if(!cell.isEmpty()||!tel.isEmpty()){String p=!cell.isEmpty()?cell:tel;TextView v=text("☎  "+p,15,false);v.setTextColor(blue);v.setOnClickListener(x->startActivity(new Intent(Intent.ACTION_DIAL,Uri.parse("tel:"+p))));c.addView(v);}if(!email.isEmpty()){TextView e=text("✉  "+email,15,false);e.setTextColor(blue);e.setOnClickListener(x->startActivity(new Intent(Intent.ACTION_SENDTO,Uri.parse("mailto:"+email))));c.addView(e);}list.addView(c,cardLp());shown++;if(shown>=150)break;}catch(Exception ignore){}if(shown==0)list.addView(text("Nessun contatto trovato.",16,false));}
 
     // PRESENZE
@@ -212,8 +214,9 @@ public class MainActivity extends Activity {
                 }catch(Exception ignore){}
                 getPreferences(MODE_PRIVATE).edit().putBoolean("canManageLeave",canManageLeave).apply();
 
-                JSONArray rows=SupabaseClient.select(token,"tbpresenze_dipendenti","select=id,data_presenza,codice_presenza,note&utente_id=eq."+SupabaseClient.eq(userId)+"&data_presenza=gte."+from+"&data_presenza=lte."+to+"&order=data_presenza.asc");
-                JSONArray codes=SupabaseClient.select(token,"tbpresenze_codici","select=codice,descrizione,tipo,ordine,attivo&attivo=eq.true&order=ordine.asc");
+                JSONObject payload=SupabaseClient.apiGet(token,"/api/mobile/presenze?from="+from+"&to="+to);
+                JSONArray rows=payload.optJSONArray("presenze"); if(rows==null)rows=new JSONArray();
+                JSONArray codes=payload.optJSONArray("codici"); if(codes==null)codes=new JSONArray();
                 boolean manager=canManageLeave;
                 runOnUiThread(()->renderPresenze(rows,codes,y,m,manager));
             }catch(Exception ex){runOnUiThread(()->showError("Presenze",ex));}
@@ -402,7 +405,7 @@ public class MainActivity extends Activity {
         list.addView(text("Caricamento clienti…",16,false));
         io.execute(()->{
             try{
-                JSONArray arr=SupabaseClient.select(token,"tbclienti","select=id,cod_cliente,ragione_sociale,cognome,nome,tipo_cliente,partita_iva,codice_fiscale,email,telefono,pec,citta,provincia,attivo,cliente,settore_fiscale,settore_lavoro,settore_consulenza&studio_id=eq."+SupabaseClient.eq(studioId)+"&cliente=eq.true&order=ragione_sociale.asc&limit=2000");
+                JSONObject payload=SupabaseClient.apiGet(token,"/api/mobile/clienti"); JSONArray arr=payload.optJSONArray("data"); if(arr==null)arr=new JSONArray();
                 runOnUiThread(()->{
                     renderClienti(list,arr,"");
                     search.addTextChangedListener(new TextWatcher(){
@@ -561,7 +564,7 @@ public class MainActivity extends Activity {
         LinearLayout list=new LinearLayout(this);list.setOrientation(LinearLayout.VERTICAL);content.addView(list);list.addView(text("Caricamento promemoria…",16,false));
         io.execute(()->{
             try{
-                JSONArray arr=SupabaseClient.select(token,"tbpromemoria","select=id,codice_promemoria,titolo,descrizione,data_inserimento,data_scadenza,priorita,working_progress,operatore_id,destinatario_id,settore&studio_id=eq."+SupabaseClient.eq(studioId)+"&or=(operatore_id.eq."+SupabaseClient.eq(userId)+",destinatario_id.eq."+SupabaseClient.eq(userId)+")&order=data_scadenza.asc&limit=500");
+                JSONObject payload=SupabaseClient.apiGet(token,"/api/mobile/promemoria"); JSONArray arr=payload.optJSONArray("data"); if(arr==null)arr=new JSONArray();
                 runOnUiThread(()->renderPromemoria(list,arr));
             }catch(Exception ex){runOnUiThread(()->{list.removeAllViews();list.addView(text("Errore: "+friendly(ex),14,false));});}
         });
