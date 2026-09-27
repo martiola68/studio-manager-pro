@@ -20,6 +20,7 @@ public class MainActivity extends Activity {
     private final ExecutorService io = Executors.newSingleThreadExecutor();
     private LinearLayout root, content;
     private String token, userId, studioId, userName, userEmail;
+    private boolean canManageLeave = false;
     private JSONArray agendaUsers = new JSONArray();
     private JSONArray agendaClients = new JSONArray();
     private final LinkedHashSet<String> agendaSelectedUsers = new LinkedHashSet<>();
@@ -34,6 +35,7 @@ public class MainActivity extends Activity {
         studioId=getPreferences(MODE_PRIVATE).getString("studioId",null);
         userName=getPreferences(MODE_PRIVATE).getString("userName","");
         userEmail=getPreferences(MODE_PRIVATE).getString("userEmail","");
+        canManageLeave=getPreferences(MODE_PRIVATE).getBoolean("canManageLeave",false);
         if(token==null) showLogin(); else { agendaSelectedUsers.add(userId); showHome(); }
     }
 
@@ -71,7 +73,7 @@ public class MainActivity extends Activity {
         EditText pass=input("Password"); pass.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD); pass.setTransformationMethod(new BulletTransformation()); content.addView(pass);
         Button go=button("Accedi",true); content.addView(go); TextView status=text("",14,false); content.addView(status);
         go.setOnClickListener(v->{ String e=email.getText().toString().trim(), p=pass.getText().toString(); if(e.isEmpty()||p.isEmpty()){status.setText("Inserisci email e password.");return;} go.setEnabled(false); status.setText("Accesso in corso…");
-            io.execute(()->{ try{ JSONObject auth=SupabaseClient.login(e,p); String tok=auth.getString("access_token"); JSONArray rows=SupabaseClient.select(tok,"tbutenti","select=id,nome,cognome,studio_id,tipo_utente,attivo&email=eq."+SupabaseClient.eq(e)+"&limit=1"); if(rows.length()==0)throw new Exception("Profilo utente SMP non trovato"); JSONObject u=rows.getJSONObject(0); token=tok; userId=u.optString("id"); studioId=u.optString("studio_id"); userName=(u.optString("nome")+" "+u.optString("cognome")).trim(); userEmail=e; getPreferences(MODE_PRIVATE).edit().putString("token",token).putString("userId",userId).putString("studioId",studioId).putString("userName",userName).putString("userEmail",userEmail).apply(); agendaSelectedUsers.clear(); agendaSelectedUsers.add(userId); runOnUiThread(this::showHome); }catch(Exception ex){ runOnUiThread(()->{go.setEnabled(true);status.setText("Accesso non riuscito: "+friendly(ex));}); }});
+            io.execute(()->{ try{ JSONObject auth=SupabaseClient.login(e,p); String tok=auth.getString("access_token"); JSONArray rows=SupabaseClient.select(tok,"tbutenti","select=id,nome,cognome,studio_id,tipo_utente,attivo,responsabile_paghe,responsabile_ferie_permessi&email=eq."+SupabaseClient.eq(e)+"&limit=1"); if(rows.length()==0)throw new Exception("Profilo utente SMP non trovato"); JSONObject u=rows.getJSONObject(0); token=tok; userId=u.optString("id"); studioId=u.optString("studio_id"); userName=(u.optString("nome")+" "+u.optString("cognome")).trim(); userEmail=e; canManageLeave=u.optBoolean("responsabile_paghe")||u.optBoolean("responsabile_ferie_permessi"); getPreferences(MODE_PRIVATE).edit().putString("token",token).putString("userId",userId).putString("studioId",studioId).putString("userName",userName).putString("userEmail",userEmail).putBoolean("canManageLeave",canManageLeave).apply(); agendaSelectedUsers.clear(); agendaSelectedUsers.add(userId); runOnUiThread(this::showHome); }catch(Exception ex){ runOnUiThread(()->{go.setEnabled(true);status.setText("Accesso non riuscito: "+friendly(ex));}); }});
         });
     }
 
@@ -188,8 +190,205 @@ public class MainActivity extends Activity {
     private void renderContacts(LinearLayout list,JSONArray arr,String q){list.removeAllViews();String n=q.toLowerCase(Locale.ITALY).trim();int shown=0;for(int i=0;i<arr.length();i++)try{JSONObject o=arr.getJSONObject(i);String nome=(clean(o.optString("cognome"))+" "+clean(o.optString("nome"))).trim(),email=clean(o.optString("email")),cell=clean(o.optString("cell")),tel=clean(o.optString("tel"));if(!(nome+" "+email+" "+cell+" "+tel).toLowerCase(Locale.ITALY).contains(n))continue;LinearLayout c=card();c.addView(text(nome.isEmpty()?"Contatto":nome,18,true));if(!cell.isEmpty()||!tel.isEmpty()){String p=!cell.isEmpty()?cell:tel;TextView v=text("☎  "+p,15,false);v.setTextColor(blue);v.setOnClickListener(x->startActivity(new Intent(Intent.ACTION_DIAL,Uri.parse("tel:"+p))));c.addView(v);}if(!email.isEmpty()){TextView e=text("✉  "+email,15,false);e.setTextColor(blue);e.setOnClickListener(x->startActivity(new Intent(Intent.ACTION_SENDTO,Uri.parse("mailto:"+email))));c.addView(e);}list.addView(c,cardLp());shown++;if(shown>=150)break;}catch(Exception ignore){}if(shown==0)list.addView(text("Nessun contatto trovato.",16,false));}
 
     // PRESENZE
-    private void showPresenze(){baseScreen("Presenze",true);content.addView(text("Caricamento presenze…",16,false));Calendar now=Calendar.getInstance();int y=now.get(Calendar.YEAR),m=now.get(Calendar.MONTH);Calendar first=new GregorianCalendar(y,m,1),last=new GregorianCalendar(y,m,first.getActualMaximum(Calendar.DAY_OF_MONTH));String from=dayFmt.format(first.getTime()),to=dayFmt.format(last.getTime());io.execute(()->{try{JSONArray rows=SupabaseClient.select(token,"tbpresenze_dipendenti","select=id,data_presenza,codice_presenza,note&utente_id=eq."+SupabaseClient.eq(userId)+"&data_presenza=gte."+from+"&data_presenza=lte."+to+"&order=data_presenza.asc");JSONArray codes=SupabaseClient.select(token,"tbpresenze_codici","select=codice,descrizione,tipo,ordine,attivo&attivo=eq.true&order=ordine.asc");runOnUiThread(()->renderPresenze(rows,codes,y,m));}catch(Exception ex){runOnUiThread(()->showError("Presenze",ex));}});}
-    private void renderPresenze(JSONArray rows,JSONArray codes,int y,int m){content.removeAllViews();Map<String,String> saved=new HashMap<>();for(int i=0;i<rows.length();i++)try{JSONObject o=rows.getJSONObject(i);saved.put(o.optString("data_presenza"),o.optString("codice_presenza"));}catch(Exception ignore){}String[] months={"Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"};content.addView(text(months[m]+" "+y,26,true));TextView h=text("Tocca un giorno per scegliere il codice presenza.",14,false);h.setTextColor(Color.GRAY);content.addView(h);Calendar max=Calendar.getInstance();max.add(Calendar.DAY_OF_MONTH,1);String maxKey=dayFmt.format(max.getTime());int days=new GregorianCalendar(y,m,1).getActualMaximum(Calendar.DAY_OF_MONTH);for(int d=1;d<=days;d++){Calendar c=new GregorianCalendar(y,m,d);String key=dayFmt.format(c.getTime());int dow=c.get(Calendar.DAY_OF_WEEK);boolean weekend=dow==Calendar.SATURDAY||dow==Calendar.SUNDAY;String raw=saved.get(key);if((raw==null||raw.isEmpty())&&weekend)raw="N";final String selectedRaw=raw;String display=presenceDisplay(selectedRaw);LinearLayout row=card();row.setOrientation(LinearLayout.HORIZONTAL);row.setGravity(Gravity.CENTER_VERTICAL);row.addView(text(String.format(Locale.ITALY,"%02d/%02d",d,m+1),17,true),new LinearLayout.LayoutParams(0,-2,1));TextView code=text(display.isEmpty()?"—":display,18,true);code.setTextColor(key.compareTo(maxKey)<=0?blue:Color.GRAY);row.addView(code);if(key.compareTo(maxKey)<=0&&!weekend)row.setOnClickListener(v->showPresenceCodeDialog(key,selectedRaw,codes));else row.setAlpha(.7f);content.addView(row,cardLp());}}
+    private void showPresenze(){
+        baseScreen("Presenze",true);
+        content.addView(text("Caricamento presenze…",16,false));
+        Calendar now=Calendar.getInstance(); int y=now.get(Calendar.YEAR),m=now.get(Calendar.MONTH);
+        Calendar first=new GregorianCalendar(y,m,1),last=new GregorianCalendar(y,m,first.getActualMaximum(Calendar.DAY_OF_MONTH));
+        String from=dayFmt.format(first.getTime()),to=dayFmt.format(last.getTime());
+        io.execute(()->{
+            try{
+                JSONArray profile=SupabaseClient.select(token,"tbutenti","select=responsabile_paghe,responsabile_ferie_permessi&email=eq."+SupabaseClient.eq(userEmail)+"&limit=1");
+                if(profile.length()>0){
+                    JSONObject p=profile.getJSONObject(0);
+                    canManageLeave=p.optBoolean("responsabile_paghe")||p.optBoolean("responsabile_ferie_permessi");
+                }
+                try{
+                    JSONArray studio=SupabaseClient.select(token,"tbstudio","select=mail_alert_ferie_permessi&id=eq."+SupabaseClient.eq(studioId)+"&limit=1");
+                    if(studio.length()>0){
+                        String mail=clean(studio.getJSONObject(0).optString("mail_alert_ferie_permessi")).toLowerCase(Locale.ITALY);
+                        if(!mail.isEmpty()&&mail.equals(userEmail.toLowerCase(Locale.ITALY))) canManageLeave=true;
+                    }
+                }catch(Exception ignore){}
+                getPreferences(MODE_PRIVATE).edit().putBoolean("canManageLeave",canManageLeave).apply();
+
+                JSONArray rows=SupabaseClient.select(token,"tbpresenze_dipendenti","select=id,data_presenza,codice_presenza,note&utente_id=eq."+SupabaseClient.eq(userId)+"&data_presenza=gte."+from+"&data_presenza=lte."+to+"&order=data_presenza.asc");
+                JSONArray codes=SupabaseClient.select(token,"tbpresenze_codici","select=codice,descrizione,tipo,ordine,attivo&attivo=eq.true&order=ordine.asc");
+                boolean manager=canManageLeave;
+                runOnUiThread(()->renderPresenze(rows,codes,y,m,manager));
+            }catch(Exception ex){runOnUiThread(()->showError("Presenze",ex));}
+        });
+    }
+
+    private void renderPresenze(JSONArray rows,JSONArray codes,int y,int m,boolean manager){
+        content.removeAllViews();
+        LinearLayout person=card();
+        TextView name=text(userName,20,true); person.addView(name);
+        TextView role=text("Dipendente / utente loggato",14,false); role.setTextColor(Color.GRAY); person.addView(role);
+        content.addView(person,cardLp());
+
+        Button request=button("Richiedi ferie / permesso",true); content.addView(request);
+        request.setOnClickListener(v->showLeaveRequest());
+        if(manager){
+            Button manage=button("Gestione ferie / permessi",false); content.addView(manage);
+            manage.setOnClickListener(v->showLeaveManagement());
+        }
+
+        Map<String,String> saved=new HashMap<>();
+        for(int i=0;i<rows.length();i++)try{JSONObject o=rows.getJSONObject(i);saved.put(o.optString("data_presenza"),o.optString("codice_presenza"));}catch(Exception ignore){}
+        String[] months={"Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"};
+        content.addView(text(months[m]+" "+y,26,true));
+        TextView h=text("Tocca un giorno lavorativo per scegliere il codice presenza.",14,false); h.setTextColor(Color.GRAY); content.addView(h);
+        Calendar max=Calendar.getInstance(); max.add(Calendar.DAY_OF_MONTH,1); String maxKey=dayFmt.format(max.getTime());
+        int days=new GregorianCalendar(y,m,1).getActualMaximum(Calendar.DAY_OF_MONTH);
+        for(int d=1;d<=days;d++){
+            Calendar c=new GregorianCalendar(y,m,d); String key=dayFmt.format(c.getTime()); int dow=c.get(Calendar.DAY_OF_WEEK);
+            boolean weekend=dow==Calendar.SATURDAY||dow==Calendar.SUNDAY;
+            String raw=saved.get(key); if((raw==null||raw.isEmpty())&&weekend)raw="N";
+            final String selectedRaw=raw; String display=presenceDisplay(selectedRaw);
+            LinearLayout row=card(); row.setOrientation(LinearLayout.HORIZONTAL); row.setGravity(Gravity.CENTER_VERTICAL);
+            row.addView(text(String.format(Locale.ITALY,"%02d/%02d",d,m+1),17,true),new LinearLayout.LayoutParams(0,-2,1));
+            TextView code=text(display.isEmpty()?"—":display,18,true); code.setTextColor(key.compareTo(maxKey)<=0?blue:Color.GRAY); row.addView(code);
+            if(key.compareTo(maxKey)<=0&&!weekend) row.setOnClickListener(v->showPresenceCodeDialog(key,selectedRaw,codes)); else row.setAlpha(.7f);
+            content.addView(row,cardLp());
+        }
+    }
+
+    private void showLeaveRequest(){
+        baseScreen("Richiesta ferie / permesso",true);
+        ((Button)((LinearLayout)root.getChildAt(0)).getChildAt(0)).setOnClickListener(v->showPresenze());
+
+        content.addView(text(userName,20,true));
+        TextView sub=text("Inserisci la richiesta come nel gestionale SMP.",14,false); sub.setTextColor(Color.GRAY); content.addView(sub);
+
+        Spinner type=new Spinner(this);
+        type.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"Ferie","Permesso"}));
+        content.addView(text("Tipo richiesta",14,true)); content.addView(type);
+
+        Spinner permitType=new Spinner(this);
+        permitType.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"P","PF","104","AL"}));
+        content.addView(text("Tipo permesso",14,true)); content.addView(permitType);
+
+        EditText start=input("Data inizio (AAAA-MM-GG)"); start.setText(dayFmt.format(new Date())); content.addView(start);
+        EditText end=input("Data fine (AAAA-MM-GG)"); end.setText(dayFmt.format(new Date())); content.addView(end);
+        EditText time=input("Ora richiesta (HH:mm)"); time.setText("09:00"); content.addView(time);
+        EditText hours=input("Ore permesso (es. 2 o 0.25)"); content.addView(hours);
+        EditText reason=input("Motivazione / note"); content.addView(reason);
+
+        Runnable sync=()->{
+            boolean ferie=type.getSelectedItemPosition()==0;
+            permitType.setEnabled(!ferie); time.setEnabled(!ferie); hours.setEnabled(!ferie); end.setEnabled(ferie);
+        };
+        type.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){
+            public void onItemSelected(AdapterView<?> p,View v,int pos,long id){sync.run();}
+            public void onNothingSelected(AdapterView<?> p){}
+        });
+        sync.run();
+
+        Button send=button("Invia richiesta",true); content.addView(send);
+        TextView status=text("",14,false); content.addView(status);
+        send.setOnClickListener(v->{
+            boolean ferie=type.getSelectedItemPosition()==0;
+            String di=start.getText().toString().trim(), df=end.getText().toString().trim();
+            if(!di.matches("\\d{4}-\\d{2}-\\d{2}")){status.setText("Data inizio non valida.");return;}
+            if(ferie&&!df.matches("\\d{4}-\\d{2}-\\d{2}")){status.setText("Data fine non valida.");return;}
+            double ore=0; if(!ferie){try{ore=Double.parseDouble(hours.getText().toString().replace(",","."));}catch(Exception e){status.setText("Inserisci le ore richieste.");return;}}
+            final double finalOre=ore;
+            send.setEnabled(false); status.setText("Invio richiesta…");
+            io.execute(()->{
+                try{
+                    int giorni=ferie?countWorkingDays(di,df):0;
+                    JSONObject body=new JSONObject()
+                        .put("tipo_richiesta",ferie?"ferie":"permesso")
+                        .put("tipo_permesso",ferie?JSONObject.NULL:String.valueOf(permitType.getSelectedItem()))
+                        .put("ora_richiesta",ferie?JSONObject.NULL:time.getText().toString().trim())
+                        .put("data_inizio",di)
+                        .put("data_fine",ferie?df:JSONObject.NULL)
+                        .put("giorni",ferie?giorni:JSONObject.NULL)
+                        .put("ore",ferie?JSONObject.NULL:finalOre)
+                        .put("motivazione",emptyNull(reason.getText().toString()));
+                    JSONObject result=SupabaseClient.apiPost(token,"/api/payroll/ferie-permessi/richieste",body);
+                    if(!result.optBoolean("success",false)) throw new Exception(result.optString("error","Errore invio richiesta"));
+                    runOnUiThread(()->{Toast.makeText(this,"Richiesta inviata",Toast.LENGTH_SHORT).show();showPresenze();});
+                }catch(Exception ex){runOnUiThread(()->{send.setEnabled(true);status.setText("Errore: "+friendly(ex));});}
+            });
+        });
+    }
+
+    private int countWorkingDays(String from,String to){
+        try{
+            Date a=dayFmt.parse(from),b=dayFmt.parse(to); if(a==null||b==null||b.before(a))return 0;
+            Calendar c=Calendar.getInstance(); c.setTime(a); Calendar e=Calendar.getInstance(); e.setTime(b); int n=0;
+            while(!c.after(e)){int d=c.get(Calendar.DAY_OF_WEEK); if(d!=Calendar.SATURDAY&&d!=Calendar.SUNDAY)n++; c.add(Calendar.DAY_OF_MONTH,1);}
+            return n;
+        }catch(Exception e){return 0;}
+    }
+
+    private void showLeaveManagement(){
+        baseScreen("Gestione ferie / permessi",true);
+        ((Button)((LinearLayout)root.getChildAt(0)).getChildAt(0)).setOnClickListener(v->showPresenze());
+        content.addView(text("Caricamento richieste…",16,false));
+        io.execute(()->{
+            try{
+                JSONArray req=SupabaseClient.select(token,"tbferie_permessi_richieste","select=id,utente_id,tipo_richiesta,tipo_permesso,ora_richiesta,data_inizio,data_fine,giorni,ore,motivazione,stato,note_responsabile,created_at&studio_id=eq."+SupabaseClient.eq(studioId)+"&order=created_at.desc&limit=300");
+                JSONArray users=SupabaseClient.select(token,"tbutenti","select=id,nome,cognome,email&studio_id=eq."+SupabaseClient.eq(studioId));
+                runOnUiThread(()->renderLeaveManagement(req,users));
+            }catch(Exception ex){runOnUiThread(()->showError("Gestione ferie / permessi",ex));}
+        });
+    }
+
+    private void renderLeaveManagement(JSONArray req,JSONArray users){
+        content.removeAllViews();
+        int sent=0,approved=0,rejected=0,revoked=0;
+        for(int i=0;i<req.length();i++)try{
+            String st=req.getJSONObject(i).optString("stato");
+            if("inviata".equals(st))sent++; else if("approvata".equals(st))approved++; else if("rifiutata".equals(st))rejected++; else if("revocata".equals(st))revoked++;
+        }catch(Exception ignore){}
+        LinearLayout summary=card();
+        summary.addView(text("Inviate: "+sent+"   ·   Approvate: "+approved,16,true));
+        summary.addView(text("Rifiutate: "+rejected+"   ·   Revocate: "+revoked,15,false));
+        content.addView(summary,cardLp());
+
+        for(int i=0;i<req.length();i++)try{
+            JSONObject r=req.getJSONObject(i); String id=r.optString("id"),uid=r.optString("utente_id"),st=r.optString("stato");
+            LinearLayout c=card(); c.addView(text(lookupUser(users,uid),17,true));
+            String tipo="ferie".equals(r.optString("tipo_richiesta"))?"Ferie":"Permesso "+clean(r.optString("tipo_permesso"));
+            c.addView(text(tipo+" · "+st.toUpperCase(Locale.ITALY),14,true));
+            String date=r.optString("data_inizio"); String fine=clean(r.optString("data_fine")); if(!fine.isEmpty())date+=" - "+fine;
+            c.addView(text(date,14,false));
+            String qty=r.optDouble("giorni",0)>0?r.optDouble("giorni")+" gg":(r.optDouble("ore",0)>0?r.optDouble("ore")+" ore":"");
+            if(!qty.isEmpty())c.addView(text(qty,14,false));
+            String motivo=clean(r.optString("motivazione")); if(!motivo.isEmpty()){TextView m=text("Motivo: "+motivo,14,false);m.setTextColor(Color.DKGRAY);c.addView(m);}
+            if("inviata".equals(st)){
+                LinearLayout actions=new LinearLayout(this); actions.setOrientation(LinearLayout.HORIZONTAL);
+                Button ok=button("Approva",true), no=button("Rifiuta",false);
+                actions.addView(ok,new LinearLayout.LayoutParams(0,dp(56),1)); actions.addView(no,new LinearLayout.LayoutParams(0,dp(56),1)); c.addView(actions);
+                ok.setOnClickListener(v->manageLeaveRequest(id,"approvata"));
+                no.setOnClickListener(v->manageLeaveRequest(id,"rifiutata"));
+            }else if("approvata".equals(st)){
+                Button revoke=button("Revoca",false); c.addView(revoke); revoke.setOnClickListener(v->manageLeaveRequest(id,"revocata"));
+            }
+            content.addView(c,cardLp());
+        }catch(Exception ignore){}
+        if(req.length()==0)content.addView(text("Nessuna richiesta trovata.",16,false));
+    }
+
+    private String lookupUser(JSONArray users,String uid){
+        for(int i=0;i<users.length();i++)try{JSONObject u=users.getJSONObject(i);if(uid.equals(u.optString("id")))return (u.optString("cognome")+" "+u.optString("nome")).trim();}catch(Exception ignore){}
+        return "Dipendente";
+    }
+
+    private void manageLeaveRequest(String id,String action){
+        io.execute(()->{
+            try{
+                JSONObject body=new JSONObject().put("azione",action).put("note_responsabile",JSONObject.NULL);
+                JSONObject result=SupabaseClient.apiPost(token,"/api/payroll/ferie-permessi/richieste/"+id+"/gestisci",body);
+                if(!result.optBoolean("success",true)&&result.has("error"))throw new Exception(result.optString("error"));
+                runOnUiThread(()->{Toast.makeText(this,"Operazione completata",Toast.LENGTH_SHORT).show();showLeaveManagement();});
+            }catch(Exception ex){runOnUiThread(()->Toast.makeText(this,"Errore: "+friendly(ex),Toast.LENGTH_LONG).show());}
+        });
+    }
+
     private String presenceDisplay(String raw){if(raw==null)return "";if("Pp".equals(raw))return "P";if("Ps".equals(raw))return "SW";return raw;}
     private void showPresenceCodeDialog(String date,String current,JSONArray codes){ArrayList<String> labels=new ArrayList<>(),values=new ArrayList<>();for(int i=0;i<codes.length();i++)try{JSONObject o=codes.getJSONObject(i);String raw=o.optString("codice");if(raw.isEmpty())continue;String disp=presenceDisplay(raw),desc=clean(o.optString("descrizione"));if("Pp".equals(raw))desc="Presente in ufficio";if("Ps".equals(raw))desc="Smart working";values.add(raw);labels.add(desc.isEmpty()?disp:disp+" · "+desc);}catch(Exception ignore){}int checked=-1;for(int i=0;i<values.size();i++)if(values.get(i).equals(current))checked=i;new AlertDialog.Builder(this).setTitle("Presenza del "+date.substring(8,10)+"/"+date.substring(5,7)).setSingleChoiceItems(labels.toArray(new String[0]),checked,(d,w)->{d.dismiss();savePresence(date,values.get(w));}).setNegativeButton("Annulla",null).show();}
     private void savePresence(String date,String rawCode){io.execute(()->{try{JSONObject b=new JSONObject().put("utente_id",userId).put("studio_id",studioId).put("data_presenza",date).put("codice_presenza",rawCode).put("inserito_da",userId).put("updated_at",new Date().toInstant().toString());SupabaseClient.upsert(token,"tbpresenze_dipendenti",b);runOnUiThread(()->{Toast.makeText(this,"Presenza salvata",Toast.LENGTH_SHORT).show();showPresenze();});}catch(Exception ex){runOnUiThread(()->Toast.makeText(this,"Errore: "+friendly(ex),Toast.LENGTH_LONG).show());}});}
