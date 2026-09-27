@@ -429,6 +429,9 @@ const differenzaQuote = totaleQuote - 100;
         id,
         ragione_sociale,
         codice_fiscale,
+        partita_iva,
+        cognome,
+        nome,
         studio_id,
         tipo_cliente,
         attivo
@@ -451,7 +454,23 @@ const differenzaQuote = totaleQuote - 100;
       return;
     }
 
-    setClienti(data || []);
+    const clientiSocieta = (data || []).filter((cliente: any) => {
+      const tipo = String(cliente?.tipo_cliente || "").trim().toLowerCase();
+      const cognome = String(cliente?.cognome || "").trim();
+      const nome = String(cliente?.nome || "").trim();
+      const cf = String(cliente?.codice_fiscale || "").trim().toUpperCase();
+
+      const cfPersonaFisica = /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$/.test(cf);
+
+      return (
+        tipo !== "persona fisica" &&
+        !cognome &&
+        !nome &&
+        !cfPersonaFisica
+      );
+    });
+
+    setClienti(clientiSocieta);
   }
 
 async function caricaNominativi() {
