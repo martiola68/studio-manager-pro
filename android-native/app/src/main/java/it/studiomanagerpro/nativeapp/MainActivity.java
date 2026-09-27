@@ -479,7 +479,7 @@ public class MainActivity extends Activity {
         content.addView(text("Caricamento scheda cliente…",15,false));
         io.execute(()->{
             try{
-                JSONObject payload=SupabaseClient.apiGet(token,"/api/mobile/clienti/"+clienteId);
+                JSONObject payload=SupabaseClient.apiGet(token,"/api/mobile/clienti?cliente_id="+clienteId);
                 JSONObject cliente=payload.optJSONObject("data");
                 if(cliente==null)throw new Exception("Scheda cliente non disponibile.");
                 runOnUiThread(()->showClienteDetail(cliente));
