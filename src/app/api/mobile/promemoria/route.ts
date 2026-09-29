@@ -1,6 +1,55 @@
 import { randomUUID } from "crypto";
 import { getMobileUser, mobileError, mobileSupabaseAdmin } from "@/lib/mobileApiAuth";
 import { teamsService } from "@/services/teamsService";
+import { sendEmailServer } from "@/services/sendEmailServer";
+
+
+async function resolveStudioEmailSender(studioId: string, fallbackUserId: string) {
+  const { data: studio } = await mobileSupabaseAdmin
+    .from("tbstudio")
+    .select("email,microsoft_connection_id,email_tenant2,microsoft_connection_id_tenant2")
+    .eq("id", studioId)
+    .maybeSingle();
+
+  const connectionId =
+    studio?.microsoft_connection_id
+      ? String(studio.microsoft_connection_id)
+      : studio?.microsoft_connection_id_tenant2
+      ? String(studio.microsoft_connection_id_tenant2)
+      : null;
+
+  if (!connectionId) return null;
+
+  const { data: tokenOwner } = await mobileSupabaseAdmin
+    .from("tbmicrosoft365_user_tokens")
+    .select("user_id")
+    .eq("studio_id", studioId)
+    .eq("microsoft_connection_id", connectionId)
+    .is("revoked_at", null)
+    .not("token_cache_encrypted", "is", null)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return {
+    senderUserId: tokenOwner?.user_id ? String(tokenOwner.user_id) : fallbackUserId,
+    microsoftConnectionId: connectionId,
+  };
+}
+
+function esc(value: unknown) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function fmtDate(value: unknown) {
+  const s = String(value || "");
+  if (!/^\d{4}-\d{2}-\d{2}/.test(s)) return s || "-";
+  return `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(0, 4)}`;
+}
 
 export async function GET(request: Request) {
   try {
@@ -104,6 +153,45 @@ export async function POST(request: Request) {
 
       if (error) throw error;
       created.push(inserted);
+
+      if (destinatario?.email) {
+        try {
+          const sender = await resolveStudioEmailSender(utente.studio_id, utente.id);
+          if (sender) {
+            const codice = inserted?.codice_promemoria ? String(inserted.codice_promemoria) : "";
+            const priorita = String(body?.priorita || "Media");
+            const subject = `${codice ? `[${codice}] ` : ""}Nuovo promemoria: ${titolo}`;
+            const html = `
+              <div style="font-family:Arial,sans-serif;font-size:14px;color:#111827;line-height:1.6">
+                <p>Gentile ${esc(destinatario.nome)} ${esc(destinatario.cognome)},</p>
+                <p>ti è stato assegnato un nuovo promemoria.</p>
+                <div style="margin:16px 0;padding:16px;border:1px solid #e5e7eb;border-radius:12px;background:#fff">
+                  ${codice ? `<p><strong>Codice:</strong> ${esc(codice)}</p>` : ""}
+                  <p><strong>Titolo:</strong> ${esc(titolo)}</p>
+                  <p><strong>Descrizione:</strong> ${esc(body?.descrizione || "-")}</p>
+                  <p><strong>Data inserimento:</strong> ${esc(fmtDate(body?.data_inserimento))}</p>
+                  <p><strong>Data scadenza:</strong> ${esc(fmtDate(body?.data_scadenza))}</p>
+                  <p><strong>Priorità:</strong> ${esc(priorita)}</p>
+                  <p><strong>Stato:</strong> ${esc(body?.working_progress || "Aperto")}</p>
+                  <p><strong>Operatore:</strong> ${esc(`${utente.nome || ""} ${utente.cognome || ""}`.trim())}</p>
+                </div>
+                <p>Accedi al gestionale per visualizzare il dettaglio completo del promemoria.</p>
+              </div>`;
+            const result = await sendEmailServer({
+              senderUserId: sender.senderUserId,
+              microsoftConnectionId: sender.microsoftConnectionId,
+              to: destinatario.email,
+              subject,
+              html,
+            });
+            if (!result.success) {
+              console.error("Email creazione promemoria mobile non inviata:", result.error);
+            }
+          }
+        } catch (emailError) {
+          console.error("Email creazione promemoria mobile non inviata:", emailError);
+        }
+      }
 
       if (body?.invia_teams && destinatario?.email) {
         try {
