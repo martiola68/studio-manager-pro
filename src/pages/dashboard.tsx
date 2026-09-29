@@ -6,7 +6,7 @@ import { eventoService } from "@/services/eventoService";
 import { scadenzaService } from "@/services/scadenzaService";
 import { scadenzaAlertService, type ScadenzaAlert } from "@/services/scadenzaAlertService";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Calendar, FileText, CheckCircle, Clock, TrendingUp, ArrowRight, BellRing, BriefcaseBusiness, Building2, UserRoundPlus } from "lucide-react";
+import { Users, Calendar, FileText, CheckCircle, Clock, TrendingUp, ArrowRight, BellRing, BriefcaseBusiness, Building2, UserRoundPlus, Smartphone, Download } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { AlertScadenze } from "@/components/AlertScadenze";
@@ -91,6 +91,28 @@ export default function DashboardPage() {
     <div className="-mx-4 min-h-full bg-[#f3f5f7] px-4 py-8 md:-mx-6 md:px-8">
       <div className="mb-8 flex flex-wrap items-start justify-between gap-4"><div><h1 className="text-4xl font-bold tracking-tight text-[#071b36]">Dashboard</h1><p className="mt-1 text-[#315f78]">Panoramica generale dello studio</p></div><UiScaleSelector /></div>
       <SetupWizardCard />
+
+      <Card className="mb-8 overflow-hidden border border-[#8cddff] bg-white shadow-[0_12px_30px_rgba(14,78,112,0.12)]">
+        <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#e8f7ff]">
+              <Smartphone className="h-6 w-6 text-[#0d6f9f]" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-[#071b36]">Studio Manager Pro per Android</p>
+              <p className="mt-1 text-sm text-[#315f78]">
+                Installa l&apos;app ufficiale SMP sul tuo smartphone Android. Il pulsante scarica sempre l&apos;ultima versione disponibile.
+              </p>
+            </div>
+          </div>
+          <Button asChild className="shrink-0 bg-[#0d6f9f] text-white hover:bg-[#0b5e87]">
+            <a href="/api/download/android">
+              <Download className="mr-2 h-4 w-4" />
+              Scarica APK
+            </a>
+          </Button>
+        </CardContent>
+      </Card>
       {scadenzeAlert.length > 0 && <div className="mb-8"><AlertScadenze scadenze={scadenzeAlert} isPartner={isPartner} onDismiss={handleDismissAlert} onViewDetails={(_id, tipo) => { const target = tipo === "IVA" ? "/scadenze/iva" : tipo === "Fiscale" ? "/scadenze/fiscale" : tipo === "Bilancio" ? "/scadenze/bilanci" : "/scadenze/calendario"; window.location.assign(target); }} onNotifyTeams={handleNotifyTeams} /></div>}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
