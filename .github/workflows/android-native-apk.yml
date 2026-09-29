@@ -63,20 +63,20 @@ jobs:
         shell: bash
         run: |
           mkdir -p dist
-          cp app/build/outputs/apk/debug/app-debug.apk dist/Studio-Manager-Pro-v1.16.apk
-          cp app/build/outputs/bundle/release/app-release.aab dist/Studio-Manager-Pro-v1.16.aab
+          cp app/build/outputs/apk/debug/app-debug.apk dist/Studio-Manager-Pro-v1.17.apk
+          cp app/build/outputs/bundle/release/app-release.aab dist/Studio-Manager-Pro-v1.17.aab
 
           if [ "$SMP_SIGNED_RELEASE" = "true" ] && [ -f app/build/outputs/apk/release/app-release.apk ]; then
-            cp app/build/outputs/apk/release/app-release.apk dist/Studio-Manager-Pro-v1.16-release.apk
+            cp app/build/outputs/apk/release/app-release.apk dist/Studio-Manager-Pro-v1.17-release.apk
           elif [ -f app/build/outputs/apk/release/app-release-unsigned.apk ]; then
-            cp app/build/outputs/apk/release/app-release-unsigned.apk dist/Studio-Manager-Pro-v1.16-release-unsigned.apk
+            cp app/build/outputs/apk/release/app-release-unsigned.apk dist/Studio-Manager-Pro-v1.17-release-unsigned.apk
           fi
 
-          printf "Version: 1.16-native\nVersionCode: 16\nPackage: it.studiomanagerpro.mobile\nSigned release configured: %s\n" "$SMP_SIGNED_RELEASE" > dist/BUILD-INFO.txt
+          printf "Version: 1.17-native\nVersionCode: 17\nPackage: it.studiomanagerpro.mobile\nSigned release configured: %s\n" "$SMP_SIGNED_RELEASE" > dist/BUILD-INFO.txt
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Studio-Manager-Pro-Native-v1.16
+          name: Studio-Manager-Pro-Native-v1.17
           path: android-native/dist/*
           if-no-files-found: error
 
@@ -85,6 +85,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp android-native/dist/Studio-Manager-Pro-v1.16.apk Studio-Manager-Pro-Android.apk
+          cp android-native/dist/Studio-Manager-Pro-v1.17.apk Studio-Manager-Pro-Android.apk
           gh release view android-latest >/dev/null 2>&1 || gh release create android-latest --title "Studio Manager Pro Android" --notes "Download ufficiale dell'app Android Studio Manager Pro."
           gh release upload android-latest Studio-Manager-Pro-Android.apk --clobber
