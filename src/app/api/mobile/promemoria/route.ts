@@ -4,37 +4,75 @@ import { teamsService } from "@/services/teamsService";
 import { sendEmailServer } from "@/services/sendEmailServer";
 
 
-async function resolveStudioEmailSender(studioId: string, fallbackUserId: string) {
+async function resolveStudioEmailSender(studioId: string, currentUserId: string) {
   const { data: studio } = await mobileSupabaseAdmin
     .from("tbstudio")
     .select("email,microsoft_connection_id,email_tenant2,microsoft_connection_id_tenant2")
     .eq("id", studioId)
     .maybeSingle();
 
-  const connectionId =
-    studio?.microsoft_connection_id
-      ? String(studio.microsoft_connection_id)
-      : studio?.microsoft_connection_id_tenant2
-      ? String(studio.microsoft_connection_id_tenant2)
-      : null;
+  const connections = [
+    {
+      id: studio?.microsoft_connection_id ? String(studio.microsoft_connection_id) : null,
+      mailbox: studio?.email ? String(studio.email).trim() : null,
+    },
+    {
+      id: studio?.microsoft_connection_id_tenant2 ? String(studio.microsoft_connection_id_tenant2) : null,
+      mailbox: studio?.email_tenant2 ? String(studio.email_tenant2).trim() : null,
+    },
+  ].filter((item) => Boolean(item.id));
 
-  if (!connectionId) return null;
+  // Prima scelta: il token delegato dell'utente che ha creato il promemoria.
+  // In questo modo /me/sendMail parte realmente dal suo account e non da quello
+  // dell'ultimo collega che ha aggiornato il token Microsoft 365.
+  for (const connection of connections) {
+    const { data: ownToken } = await mobileSupabaseAdmin
+      .from("tbmicrosoft365_user_tokens")
+      .select("user_id")
+      .eq("studio_id", studioId)
+      .eq("microsoft_connection_id", connection.id)
+      .eq("user_id", currentUserId)
+      .is("revoked_at", null)
+      .not("token_cache_encrypted", "is", null)
+      .limit(1)
+      .maybeSingle();
 
-  const { data: tokenOwner } = await mobileSupabaseAdmin
-    .from("tbmicrosoft365_user_tokens")
-    .select("user_id")
-    .eq("studio_id", studioId)
-    .eq("microsoft_connection_id", connectionId)
-    .is("revoked_at", null)
-    .not("token_cache_encrypted", "is", null)
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    if (ownToken?.user_id) {
+      return {
+        senderUserId: currentUserId,
+        microsoftConnectionId: String(connection.id),
+        fromMailbox: null as string | null,
+      };
+    }
+  }
 
-  return {
-    senderUserId: tokenOwner?.user_id ? String(tokenOwner.user_id) : fallbackUserId,
-    microsoftConnectionId: connectionId,
-  };
+  // Fallback: usa un token tecnico disponibile per la connessione ma forza
+  // come From la mailbox dello studio. Non deve mai apparire il nome di un
+  // altro collega come mittente del promemoria creato dall'utente corrente.
+  for (const connection of connections) {
+    if (!connection.mailbox) continue;
+
+    const { data: tokenOwner } = await mobileSupabaseAdmin
+      .from("tbmicrosoft365_user_tokens")
+      .select("user_id")
+      .eq("studio_id", studioId)
+      .eq("microsoft_connection_id", connection.id)
+      .is("revoked_at", null)
+      .not("token_cache_encrypted", "is", null)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (tokenOwner?.user_id) {
+      return {
+        senderUserId: String(tokenOwner.user_id),
+        microsoftConnectionId: String(connection.id),
+        fromMailbox: connection.mailbox,
+      };
+    }
+  }
+
+  return null;
 }
 
 function esc(value: unknown) {
@@ -183,6 +221,7 @@ export async function POST(request: Request) {
               to: destinatario.email,
               subject,
               html,
+              fromMailbox: sender.fromMailbox,
             });
             if (!result.success) {
               console.error("Email creazione promemoria mobile non inviata:", result.error);
