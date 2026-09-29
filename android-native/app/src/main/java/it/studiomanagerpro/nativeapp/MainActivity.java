@@ -879,22 +879,59 @@ public class MainActivity extends Activity {
         });
     }
 
+    private void addFormLabel(String label){
+        TextView l=text(label,14,true);
+        l.setTextColor(navy);
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);
+        lp.setMargins(dp(4),dp(14),dp(4),dp(2));
+        l.setLayoutParams(lp);
+        content.addView(l);
+    }
+
+    private void addFormSection(String title,String subtitle){
+        LinearLayout box=card();
+        box.setPadding(dp(16),dp(14),dp(16),dp(14));
+        TextView t=text(title,18,true);t.setTextColor(navy);box.addView(t);
+        if(subtitle!=null&&!subtitle.isEmpty()){TextView st=text(subtitle,13,false);st.setTextColor(Color.GRAY);box.addView(st);}
+        LinearLayout.LayoutParams lp=cardLp();lp.setMargins(0,dp(10),0,dp(8));content.addView(box,lp);
+    }
+
+    private void styleSpinner(Spinner spinner){
+        spinner.setPadding(dp(14),dp(4),dp(14),dp(4));
+        spinner.setBackground(rounded(Color.WHITE,14));
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(58));
+        lp.setMargins(0,dp(4),0,dp(4));
+        spinner.setLayoutParams(lp);
+    }
+
     private void renderNewPromemoria(JSONArray utenti,JSONArray tipi,JSONObject current){
         content.removeAllViews();
 
-        content.addView(text("Tipo Promemoria",14,true));
-        Spinner tipoSpinner=new Spinner(this);
+        addFormSection("Dati del promemoria","Inserisci le informazioni principali");
+
+        addFormLabel("Tipo promemoria");
+        Spinner tipoSpinner=new Spinner(this); styleSpinner(tipoSpinner);
         ArrayList<String> tipoLabels=new ArrayList<>();
         int tipoDefault=0;
         for(int i=0;i<tipi.length();i++){JSONObject t=tipi.optJSONObject(i);String n=t==null?"":clean(t.optString("nome"));tipoLabels.add(n);if("Altro".equalsIgnoreCase(n))tipoDefault=i;}
         tipoSpinner.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,tipoLabels)); if(!tipoLabels.isEmpty())tipoSpinner.setSelection(tipoDefault); content.addView(tipoSpinner);
 
-        EditText title=input("Titolo *"); content.addView(title);
-        EditText desc=input("Descrizione"); desc.setSingleLine(false); desc.setMinLines(3); desc.setGravity(Gravity.TOP); content.addView(desc);
+        addFormLabel("Titolo *");
+        EditText title=input("Inserisci il titolo"); content.addView(title);
 
-        EditText inserted=input("Data inserimento (AAAA-MM-GG)"); inserted.setText(dayFmt.format(new Date())); content.addView(inserted);
-        EditText days=input("Giorni scadenza"); days.setInputType(android.text.InputType.TYPE_CLASS_NUMBER); days.setText("0"); content.addView(days);
-        EditText due=input("Data scadenza (calcolata automaticamente)"); due.setEnabled(false); due.setText(dayFmt.format(new Date())); content.addView(due);
+        addFormLabel("Descrizione");
+        EditText desc=input("Inserisci una descrizione"); desc.setSingleLine(false); desc.setMinLines(4); desc.setGravity(Gravity.TOP); content.addView(desc);
+
+        addFormSection("Scadenza","Definisci data di inserimento e termine");
+
+        addFormLabel("Data inserimento");
+        EditText inserted=input("AAAA-MM-GG"); inserted.setText(dayFmt.format(new Date())); content.addView(inserted);
+
+        addFormLabel("Giorni alla scadenza");
+        EditText days=input("Numero di giorni"); days.setInputType(android.text.InputType.TYPE_CLASS_NUMBER); days.setText("0"); content.addView(days);
+
+        addFormLabel("Data scadenza");
+        EditText due=input("Calcolata automaticamente"); due.setEnabled(false); due.setText(dayFmt.format(new Date())); content.addView(due);
 
         Runnable recalc=()->{
             try{
@@ -905,21 +942,24 @@ public class MainActivity extends Activity {
         TextWatcher calcWatcher=new TextWatcher(){public void beforeTextChanged(CharSequence x,int a,int b,int c){}public void onTextChanged(CharSequence x,int a,int b,int c){recalc.run();}public void afterTextChanged(Editable e){}};
         inserted.addTextChangedListener(calcWatcher); days.addTextChangedListener(calcWatcher);
 
-        CheckBox personal=new CheckBox(this); personal.setText("Personale"); personal.setChecked(true); content.addView(personal);
-        CheckBox multi=new CheckBox(this); multi.setText("Invio a più destinatari"); content.addView(multi);
+        addFormSection("Destinatari","Scegli a chi assegnare il promemoria");
 
-        content.addView(text("Destinatario",14,true));
-        Spinner recipient=new Spinner(this);
+        CheckBox personal=new CheckBox(this); personal.setText("Promemoria personale"); personal.setChecked(true); personal.setTextSize(16); content.addView(personal);
+        CheckBox multi=new CheckBox(this); multi.setText("Invia a più destinatari"); multi.setTextSize(16); content.addView(multi);
+
+        addFormLabel("Destinatario");
+        Spinner recipient=new Spinner(this); styleSpinner(recipient);
         ArrayList<String> userLabels=new ArrayList<>(); ArrayList<String> userIds=new ArrayList<>();
         int currentIndex=0;
         for(int i=0;i<utenti.length();i++){JSONObject u=utenti.optJSONObject(i);if(u==null)continue;String id=clean(u.optString("id"));String label=(clean(u.optString("nome"))+" "+clean(u.optString("cognome"))).trim();userIds.add(id);userLabels.add(label);if(id.equals(userId))currentIndex=userIds.size()-1;}
         final int currentSelectionIndex=currentIndex;
         recipient.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,userLabels)); if(!userLabels.isEmpty())recipient.setSelection(currentSelectionIndex); recipient.setEnabled(false); content.addView(recipient);
 
-        EditText sector=input("Settore"); sector.setEnabled(false); sector.setText(clean(current.optString("settore"))); content.addView(sector);
+        addFormLabel("Settore");
+        EditText sector=input("Settore del destinatario"); sector.setEnabled(false); sector.setText(clean(current.optString("settore"))); content.addView(sector);
 
         LinkedHashSet<String> selectedRecipients=new LinkedHashSet<>(); selectedRecipients.add(userId);
-        Button multiButton=button("Destinatari multipli · 1",false); multiButton.setVisibility(View.GONE); content.addView(multiButton);
+        Button multiButton=button("Seleziona destinatari · 1",false); multiButton.setVisibility(View.GONE); content.addView(multiButton);
 
         AdapterView.OnItemSelectedListener recListener=new AdapterView.OnItemSelectedListener(){
             public void onItemSelected(AdapterView<?> p,View v,int pos,long id){if(pos>=0&&pos<utenti.length()){JSONObject u=utenti.optJSONObject(pos);if(u!=null)sector.setText(clean(u.optString("settore")));}}
@@ -928,25 +968,29 @@ public class MainActivity extends Activity {
         recipient.setOnItemSelectedListener(recListener);
 
         personal.setOnCheckedChangeListener((b,checked)->{
-            if(checked){multi.setChecked(false);recipient.setEnabled(false);if(currentSelectionIndex<recipient.getCount())recipient.setSelection(currentSelectionIndex);sector.setText(clean(current.optString("settore")));selectedRecipients.clear();selectedRecipients.add(userId);multiButton.setText("Destinatari multipli · 1");}
+            if(checked){multi.setChecked(false);recipient.setEnabled(false);if(currentSelectionIndex<recipient.getCount())recipient.setSelection(currentSelectionIndex);sector.setText(clean(current.optString("settore")));selectedRecipients.clear();selectedRecipients.add(userId);multiButton.setText("Seleziona destinatari · 1");}
             else if(!multi.isChecked())recipient.setEnabled(true);
         });
         multi.setOnCheckedChangeListener((b,checked)->{
-            if(checked){personal.setChecked(false);recipient.setEnabled(false);multiButton.setVisibility(View.VISIBLE);selectedRecipients.add(userId);multiButton.setText("Destinatari multipli · "+selectedRecipients.size());}
+            if(checked){personal.setChecked(false);recipient.setEnabled(false);multiButton.setVisibility(View.VISIBLE);selectedRecipients.add(userId);multiButton.setText("Seleziona destinatari · "+selectedRecipients.size());}
             else{multiButton.setVisibility(View.GONE);if(!personal.isChecked())recipient.setEnabled(true);}
         });
 
         multiButton.setOnClickListener(v->showPromemoriaRecipientsDialog(utenti,selectedRecipients,multiButton));
 
-        content.addView(text("Priorità",14,true));
-        Spinner priority=new Spinner(this); priority.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"Bassa","Media","Alta"})); priority.setSelection(1); content.addView(priority);
+        addFormSection("Gestione","Imposta priorità, stato e notifiche");
 
-        content.addView(text("Stato",14,true));
-        Spinner state=new Spinner(this); state.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"Aperto","In lavorazione","Completato","Presa visione","Richiesta confronto","Annullata"})); content.addView(state);
+        addFormLabel("Priorità");
+        Spinner priority=new Spinner(this); styleSpinner(priority);
+        priority.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"Bassa","Media","Alta"})); priority.setSelection(1); content.addView(priority);
 
-        CheckBox teams=new CheckBox(this); teams.setText("Invia notifica su Teams"); content.addView(teams);
+        addFormLabel("Stato");
+        Spinner state=new Spinner(this); styleSpinner(state);
+        state.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"Aperto","In lavorazione","Completato","Presa visione","Richiesta confronto","Annullata"})); content.addView(state);
 
-        Button save=button("Crea",true); content.addView(save); TextView status=text("",14,false); content.addView(status);
+        CheckBox teams=new CheckBox(this); teams.setText("Invia anche notifica su Teams"); teams.setTextSize(16); content.addView(teams);
+
+        Button save=button("Crea promemoria",true); content.addView(save); TextView status=text("",14,false); content.addView(status);
         save.setOnClickListener(v->{
             String t=title.getText().toString().trim(),ins=inserted.getText().toString().trim(),scad=due.getText().toString().trim();
             if(t.isEmpty()||!ins.matches("\\d{4}-\\d{2}-\\d{2}")||!scad.matches("\\d{4}-\\d{2}-\\d{2}")){status.setText("Titolo e date sono obbligatori.");return;}
