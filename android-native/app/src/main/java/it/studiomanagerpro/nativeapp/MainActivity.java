@@ -412,7 +412,17 @@ public class MainActivity extends Activity {
                 String off=new SimpleDateFormat("XXX",Locale.ITALY).format(new Date());
                 String startIso=allDay.isChecked()?sd+"T00:00:00"+off:sd+"T"+st+":00"+off; String endIso=allDay.isChecked()?ed+"T23:59:59"+off:ed+"T"+et+":00"+off;
                 JSONObject body=new JSONObject().put("titolo",t).put("descrizione",emptyNull(desc.getText().toString())).put("data_inizio",startIso).put("data_fine",endIso).put("ora_inizio",allDay.isChecked()?JSONObject.NULL:st).put("ora_fine",allDay.isChecked()?JSONObject.NULL:et).put("tutto_giorno",allDay.isChecked()).put("cliente_id",(generic.isChecked()||clientId.isEmpty())?JSONObject.NULL:clientId).put("utente_id",orgId).put("in_sede",inOffice.isChecked()).put("sala",inOffice.isChecked()?emptyNull(room.getText().toString()):JSONObject.NULL).put("luogo",inOffice.isChecked()?JSONObject.NULL:emptyNull(place.getText().toString())).put("evento_generico",generic.isChecked()).put("riunione_teams",teams.isChecked()).put("link_teams",teams.isChecked()?emptyNull(teamsLink.getText().toString()):JSONObject.NULL).put("partecipanti",participantJson).put("email_partecipanti_esterni",ext).put("ricorrente",recurring.isChecked()).put("frequenza_giorni",recurring.isChecked()?parseIntSafe(frequency.getText().toString(),7):JSONObject.NULL).put("durata_giorni",recurring.isChecked()?parseIntSafe(duration.getText().toString(),180):JSONObject.NULL).put("studio_id",studioId).put("updated_at",new Date().toInstant().toString());
-                SupabaseClient.insert(token,"tbagenda",body);runOnUiThread(()->{Toast.makeText(this,"Evento creato",Toast.LENGTH_SHORT).show();showAgenda();});
+                JSONObject result=SupabaseClient.apiPost(token,"/api/mobile/agenda",body);
+                if(!result.optBoolean("success",false))throw new Exception(result.optString("error","Errore creazione evento"));
+                JSONObject outlook=result.optJSONObject("outlook");
+                int synced=outlook==null?0:outlook.optInt("synced",0);
+                int failed=outlook==null?0:outlook.optInt("failed",0);
+                runOnUiThread(()->{
+                    if(failed>0)Toast.makeText(this,"Evento creato. Sincronizzazione Outlook non riuscita.",Toast.LENGTH_LONG).show();
+                    else if(synced>0)Toast.makeText(this,"Evento creato e sincronizzato con Outlook",Toast.LENGTH_SHORT).show();
+                    else Toast.makeText(this,"Evento creato",Toast.LENGTH_SHORT).show();
+                    showAgenda();
+                });
             }catch(Exception ex){runOnUiThread(()->{save.setEnabled(true);status.setText("Errore: "+friendly(ex));});}});
         });
     }
