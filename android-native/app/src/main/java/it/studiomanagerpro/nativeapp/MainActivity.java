@@ -18,6 +18,9 @@ import java.util.concurrent.*;
 
 public class MainActivity extends Activity {
     private final ExecutorService io = Executors.newSingleThreadExecutor();
+    private final Handler messageHandler = new Handler(Looper.getMainLooper());
+    private boolean messagePollingStarted = false;
+    private static final String MESSAGE_CHANNEL_ID = "smp_messages";
     private LinearLayout root, content;
     private String token, userId, studioId, userName, userEmail;
     private boolean canManageLeave = false;
@@ -36,7 +39,9 @@ public class MainActivity extends Activity {
         userName=getPreferences(MODE_PRIVATE).getString("userName","");
         userEmail=getPreferences(MODE_PRIVATE).getString("userEmail","");
         canManageLeave=getPreferences(MODE_PRIVATE).getBoolean("canManageLeave",false);
-        if(token==null) showLogin(); else { agendaSelectedUsers.add(userId); showHome(); }
+        createMessageNotificationChannel();
+        requestNotificationPermissionIfNeeded();
+        if(token==null) showLogin(); else { agendaSelectedUsers.add(userId); startMessagePolling(); showHome(); }
     }
 
     private TextView text(String v,int sp,boolean bold){ TextView t=new TextView(this); t.setText(v); t.setTextSize(sp); t.setTextColor(ink); if(bold)t.setTypeface(Typeface.DEFAULT,Typeface.BOLD); t.setPadding(dp(4),dp(4),dp(4),dp(4)); return t; }
@@ -82,6 +87,8 @@ public class MainActivity extends Activity {
                     .setPositiveButton("Esci",(d,w)->{
                         getPreferences(MODE_PRIVATE).edit().clear().apply();
                         token=null;
+                        messagePollingStarted=false;
+                        messageHandler.removeCallbacksAndMessages(null);
                         showLogin();
                     })
                     .show();
@@ -112,14 +119,191 @@ public class MainActivity extends Activity {
         EditText pass=input("Password"); pass.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD); pass.setTransformationMethod(new BulletTransformation()); content.addView(pass);
         Button go=button("Accedi",true); content.addView(go); TextView status=text("",14,false); content.addView(status);
         go.setOnClickListener(v->{ String e=email.getText().toString().trim(), p=pass.getText().toString(); if(e.isEmpty()||p.isEmpty()){status.setText("Inserisci email e password.");return;} go.setEnabled(false); status.setText("Accesso in corso…");
-            io.execute(()->{ try{ JSONObject auth=SupabaseClient.login(e,p); String tok=auth.getString("access_token"); JSONArray rows=SupabaseClient.select(tok,"tbutenti","select=id,nome,cognome,studio_id,tipo_utente,attivo,responsabile_paghe,responsabile_ferie_permessi&email=eq."+SupabaseClient.eq(e)+"&limit=1"); if(rows.length()==0)throw new Exception("Profilo utente SMP non trovato"); JSONObject u=rows.getJSONObject(0); token=tok; userId=u.optString("id"); studioId=u.optString("studio_id"); userName=(u.optString("nome")+" "+u.optString("cognome")).trim(); userEmail=e; canManageLeave=u.optBoolean("responsabile_paghe")||u.optBoolean("responsabile_ferie_permessi"); getPreferences(MODE_PRIVATE).edit().putString("token",token).putString("userId",userId).putString("studioId",studioId).putString("userName",userName).putString("userEmail",userEmail).putBoolean("canManageLeave",canManageLeave).apply(); agendaSelectedUsers.clear(); agendaSelectedUsers.add(userId); runOnUiThread(this::showHome); }catch(Exception ex){ runOnUiThread(()->{go.setEnabled(true);status.setText("Accesso non riuscito: "+friendly(ex));}); }});
+            io.execute(()->{ try{ JSONObject auth=SupabaseClient.login(e,p); String tok=auth.getString("access_token"); JSONArray rows=SupabaseClient.select(tok,"tbutenti","select=id,nome,cognome,studio_id,tipo_utente,attivo,responsabile_paghe,responsabile_ferie_permessi&email=eq."+SupabaseClient.eq(e)+"&limit=1"); if(rows.length()==0)throw new Exception("Profilo utente SMP non trovato"); JSONObject u=rows.getJSONObject(0); token=tok; userId=u.optString("id"); studioId=u.optString("studio_id"); userName=(u.optString("nome")+" "+u.optString("cognome")).trim(); userEmail=e; canManageLeave=u.optBoolean("responsabile_paghe")||u.optBoolean("responsabile_ferie_permessi"); getPreferences(MODE_PRIVATE).edit().putString("token",token).putString("userId",userId).putString("studioId",studioId).putString("userName",userName).putString("userEmail",userEmail).putBoolean("canManageLeave",canManageLeave).apply(); agendaSelectedUsers.clear(); agendaSelectedUsers.add(userId); runOnUiThread(()->{startMessagePolling();showHome();}); }catch(Exception ex){ runOnUiThread(()->{go.setEnabled(true);status.setText("Accesso non riuscito: "+friendly(ex));}); }});
         });
     }
 
     private void showHome(){
         baseScreen("Studio Manager Pro",false); content.addView(text("Ciao "+userName,26,true)); TextView sub=text("Cosa vuoi fare?",16,false);sub.setTextColor(Color.GRAY);content.addView(sub);
-        String[][] items={{"Agenda","Appuntamenti e attività"},{"Rubrica","Contatti dello studio"},{"Presenze","Presenze, ferie e permessi"},{"Clienti","Anagrafiche clienti"},{"Soci e organi sociali","Soci, amministratori e organi di controllo"},{"Gruppi societari","Partecipazioni e struttura dei gruppi"},{"Promemoria","Attività e scadenze da ricordare"}};
-        for(String[] it:items){ LinearLayout c=card(); c.addView(text(it[0],20,true)); TextView d=text(it[1],14,false);d.setTextColor(Color.GRAY);c.addView(d);content.addView(c,cardLp()); c.setOnClickListener(v->{ switch(it[0]){case "Agenda":showAgenda();break;case "Rubrica":showRubrica();break;case "Presenze":showPresenze();break;case "Clienti":showClienti();break;case "Soci e organi sociali":showSociOrgani();break;case "Gruppi societari":showGruppiSocietari();break;case "Promemoria":showPromemoria();break;}}); }
+        int unreadMessages=getPreferences(MODE_PRIVATE).getInt("msgUnread",0);
+        String msgDesc=unreadMessages>0?(unreadMessages+" messaggi non letti"):"Chat interna dello studio";
+        String[][] items={{"Agenda","Appuntamenti e attività"},{"Messaggi",msgDesc},{"Rubrica","Contatti dello studio"},{"Presenze","Presenze, ferie e permessi"},{"Clienti","Anagrafiche clienti"},{"Soci e organi sociali","Soci, amministratori e organi di controllo"},{"Gruppi societari","Partecipazioni e struttura dei gruppi"},{"Promemoria","Attività e scadenze da ricordare"}};
+        for(String[] it:items){ LinearLayout c=card(); c.addView(text(it[0],20,true)); TextView d=text(it[1],14,false);d.setTextColor(Color.GRAY);c.addView(d);content.addView(c,cardLp()); c.setOnClickListener(v->{ switch(it[0]){case "Agenda":showAgenda();break;case "Messaggi":showMessaggi();break;case "Rubrica":showRubrica();break;case "Presenze":showPresenze();break;case "Clienti":showClienti();break;case "Soci e organi sociali":showSociOrgani();break;case "Gruppi societari":showGruppiSocietari();break;case "Promemoria":showPromemoria();break;}}); }
+    }
+
+    // MESSAGGI
+    private void createMessageNotificationChannel(){
+        if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.O){
+            NotificationChannel ch=new NotificationChannel(MESSAGE_CHANNEL_ID,"Messaggi SMP",NotificationManager.IMPORTANCE_HIGH);
+            ch.setDescription("Notifiche per nuovi messaggi interni di Studio Manager Pro");
+            ((NotificationManager)getSystemService(NOTIFICATION_SERVICE)).createNotificationChannel(ch);
+        }
+    }
+
+    private void requestNotificationPermissionIfNeeded(){
+        if(Build.VERSION.SDK_INT>=33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS")!=getPackageManager().PERMISSION_GRANTED){
+            requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"},9001);
+        }
+    }
+
+    private void startMessagePolling(){
+        if(messagePollingStarted||token==null||token.isEmpty())return;
+        messagePollingStarted=true;
+        messageHandler.post(new Runnable(){
+            @Override public void run(){
+                if(token==null||token.isEmpty()){messagePollingStarted=false;return;}
+                io.execute(()->{
+                    try{
+                        JSONObject r=SupabaseClient.apiGet(token,"/api/mobile/messaggi?summary=1");
+                        int unread=r.optInt("unread_total",0);
+                        JSONObject latest=r.optJSONObject("latest_received");
+                        String latestId=latest==null?"":clean(latest.optString("id"));
+                        String oldId=getPreferences(MODE_PRIVATE).getString("lastReceivedMessageId","");
+                        getPreferences(MODE_PRIVATE).edit().putInt("msgUnread",unread).apply();
+                        if(!latestId.isEmpty()){
+                            if(!oldId.isEmpty()&&!latestId.equals(oldId)){
+                                String sender=clean(latest.optString("mittente_nome"));
+                                String text=clean(latest.optString("testo"));
+                                showMessageNotification(sender.isEmpty()?"Nuovo messaggio":sender,text,latestId);
+                            }
+                            getPreferences(MODE_PRIVATE).edit().putString("lastReceivedMessageId",latestId).apply();
+                        }
+                    }catch(Exception ignore){}
+                });
+                messageHandler.postDelayed(this,20000);
+            }
+        });
+    }
+
+    private void showMessageNotification(String sender,String message,String messageId){
+        if(Build.VERSION.SDK_INT>=33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS")!=getPackageManager().PERMISSION_GRANTED)return;
+        Intent i=new Intent(this,MainActivity.class);
+        i.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        PendingIntent pi=PendingIntent.getActivity(this,0,i,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+        Notification.Builder b=Build.VERSION.SDK_INT>=26?new Notification.Builder(this,MESSAGE_CHANNEL_ID):new Notification.Builder(this);
+        b.setSmallIcon(android.R.drawable.ic_dialog_email)
+            .setContentTitle(sender)
+            .setContentText(message.isEmpty()?"Hai ricevuto un nuovo messaggio.":message)
+            .setStyle(new Notification.BigTextStyle().bigText(message))
+            .setAutoCancel(true)
+            .setContentIntent(pi);
+        ((NotificationManager)getSystemService(NOTIFICATION_SERVICE)).notify(Math.abs(messageId.hashCode()),b.build());
+    }
+
+    private void showMessaggi(){
+        baseScreen("Messaggi",true);
+        Button nuovo=button("+ Nuovo messaggio",true);content.addView(nuovo);
+        LinearLayout list=new LinearLayout(this);list.setOrientation(LinearLayout.VERTICAL);content.addView(list);
+        list.addView(text("Caricamento conversazioni…",16,false));
+        io.execute(()->{
+            try{
+                JSONObject payload=SupabaseClient.apiGet(token,"/api/mobile/messaggi");
+                JSONArray conv=payload.optJSONArray("conversazioni");if(conv==null)conv=new JSONArray();
+                JSONArray users=payload.optJSONArray("utenti");if(users==null)users=new JSONArray();
+                int unread=payload.optInt("unread_total",0);
+                getPreferences(MODE_PRIVATE).edit().putInt("msgUnread",unread).apply();
+                final JSONArray c=conv,u=users;
+                runOnUiThread(()->{
+                    renderConversations(list,c);
+                    nuovo.setOnClickListener(v->showNewDirectMessage(u));
+                });
+            }catch(Exception ex){runOnUiThread(()->showError("Messaggi",ex));}
+        });
+    }
+
+    private void renderConversations(LinearLayout list,JSONArray conv){
+        list.removeAllViews();
+        if(conv.length()==0){list.addView(text("Nessuna conversazione. Tocca “Nuovo messaggio” per iniziare.",16,false));return;}
+        for(int i=0;i<conv.length();i++)try{
+            JSONObject o=conv.getJSONObject(i);String id=o.optString("id"),nome=clean(o.optString("nome"));
+            int unread=o.optInt("non_letti",0);
+            JSONObject last=o.optJSONObject("ultimo_messaggio");
+            LinearLayout c=card();TextView title=text((unread>0?"●  ":"")+nome,18,true);title.setTextColor(unread>0?blue:ink);c.addView(title);
+            if(last!=null){
+                String msg=clean(last.optString("testo"));if(msg.length()>90)msg=msg.substring(0,90)+"…";
+                TextView preview=text(msg,14,false);preview.setTextColor(Color.DKGRAY);c.addView(preview);
+                String when=formatMessageTime(clean(last.optString("created_at")));if(!when.isEmpty()){TextView tm=text(when,12,false);tm.setTextColor(Color.GRAY);c.addView(tm);}
+            }
+            if(unread>0){TextView badge=text(unread+" non lett"+(unread==1?"o":"i"),13,true);badge.setTextColor(blue);c.addView(badge);}
+            c.setOnClickListener(v->showChat(id,nome));
+            list.addView(c,cardLp());
+        }catch(Exception ignore){}
+    }
+
+    private void showNewDirectMessage(JSONArray users){
+        if(users.length()==0){Toast.makeText(this,"Nessun altro utente attivo nello studio.",Toast.LENGTH_SHORT).show();return;}
+        ArrayList<String> labels=new ArrayList<>(),ids=new ArrayList<>();
+        for(int i=0;i<users.length();i++){JSONObject u=users.optJSONObject(i);if(u==null)continue;ids.add(u.optString("id"));labels.add((clean(u.optString("nome"))+" "+clean(u.optString("cognome"))).trim());}
+        new AlertDialog.Builder(this).setTitle("Nuovo messaggio").setItems(labels.toArray(new String[0]),(d,w)->{
+            String recipient=ids.get(w),name=labels.get(w);
+            io.execute(()->{
+                try{
+                    JSONObject body=new JSONObject().put("action","direct").put("recipient_id",recipient);
+                    JSONObject r=SupabaseClient.apiPost(token,"/api/mobile/messaggi",body);
+                    String cid=r.optString("conversation_id");
+                    runOnUiThread(()->showChat(cid,name));
+                }catch(Exception ex){runOnUiThread(()->Toast.makeText(this,"Errore: "+friendly(ex),Toast.LENGTH_LONG).show());}
+            });
+        }).setNegativeButton("Annulla",null).show();
+    }
+
+    private void showChat(String conversationId,String name){
+        baseScreen(name.isEmpty()?"Conversazione":name,true);
+        ((Button)((LinearLayout)root.getChildAt(0)).getChildAt(0)).setOnClickListener(v->showMessaggi());
+        LinearLayout messages=new LinearLayout(this);messages.setOrientation(LinearLayout.VERTICAL);content.addView(messages);
+        messages.addView(text("Caricamento messaggi…",16,false));
+        EditText compose=input("Scrivi un messaggio…");compose.setSingleLine(false);compose.setMinLines(2);compose.setMaxLines(5);content.addView(compose);
+        Button send=button("Invia",true);content.addView(send);
+        Runnable reload=()->loadChatMessages(conversationId,messages);
+        send.setOnClickListener(v->{
+            String txt=compose.getText().toString().trim();if(txt.isEmpty())return;
+            send.setEnabled(false);
+            io.execute(()->{
+                try{
+                    JSONObject body=new JSONObject().put("action","send").put("conversation_id",conversationId).put("testo",txt);
+                    SupabaseClient.apiPost(token,"/api/mobile/messaggi",body);
+                    runOnUiThread(()->{compose.setText("");send.setEnabled(true);reload.run();});
+                }catch(Exception ex){runOnUiThread(()->{send.setEnabled(true);Toast.makeText(this,"Errore: "+friendly(ex),Toast.LENGTH_LONG).show();});}
+            });
+        });
+        reload.run();
+    }
+
+    private void loadChatMessages(String conversationId,LinearLayout messages){
+        io.execute(()->{
+            try{
+                JSONObject payload=SupabaseClient.apiGet(token,"/api/mobile/messaggi?conversation_id="+SupabaseClient.eq(conversationId));
+                JSONArray arr=payload.optJSONArray("messaggi");if(arr==null)arr=new JSONArray();
+                JSONObject readBody=new JSONObject().put("action","read").put("conversation_id",conversationId);
+                SupabaseClient.apiPost(token,"/api/mobile/messaggi",readBody);
+                getPreferences(MODE_PRIVATE).edit().putInt("msgUnread",Math.max(0,payload.optInt("unread_total",0))).apply();
+                final JSONArray data=arr;
+                runOnUiThread(()->renderChatMessages(messages,data));
+            }catch(Exception ex){runOnUiThread(()->{messages.removeAllViews();messages.addView(text("Errore: "+friendly(ex),14,false));});}
+        });
+    }
+
+    private void renderChatMessages(LinearLayout messages,JSONArray arr){
+        messages.removeAllViews();
+        if(arr.length()==0){messages.addView(text("Nessun messaggio. Scrivi il primo messaggio.",15,false));return;}
+        for(int i=0;i<arr.length();i++)try{
+            JSONObject m=arr.getJSONObject(i);boolean mine=userId.equals(m.optString("mittente_id"));
+            LinearLayout bubble=card();bubble.setGravity(mine?Gravity.RIGHT:Gravity.LEFT);
+            TextView sender=text(mine?"Tu":clean(m.optString("mittente_nome")),13,true);sender.setTextColor(mine?blue:navy);bubble.addView(sender);
+            TextView body=text(clean(m.optString("testo")),16,false);bubble.addView(body);
+            TextView tm=text(formatMessageTime(clean(m.optString("created_at"))),11,false);tm.setTextColor(Color.GRAY);bubble.addView(tm);
+            if(mine)bubble.setBackground(rounded(Color.rgb(230,244,252),16));
+            messages.addView(bubble,cardLp());
+        }catch(Exception ignore){}
+    }
+
+    private String formatMessageTime(String iso){
+        if(iso==null||iso.length()<10)return "";
+        try{
+            String d=iso.substring(8,10)+"/"+iso.substring(5,7)+"/"+iso.substring(0,4);
+            String t=iso.length()>=16?iso.substring(11,16):"";
+            return d+(t.isEmpty()?"":" · "+t);
+        }catch(Exception e){return iso;}
     }
 
     // AGENDA
@@ -784,6 +968,6 @@ public class MainActivity extends Activity {
     private String clean(String s){return s==null||"null".equalsIgnoreCase(s)?"":s.trim();}
     private String friendly(Exception ex){String m=ex.getMessage();if(m==null)return "Errore imprevisto";return m.length()>260?m.substring(0,260):m;}
     private void showComing(String title){baseScreen(title,true);content.addView(text(title,26,true));content.addView(text("Sezione prevista nella versione mobile nativa.",16,false));}
-    private void showError(String area,Exception ex){content.removeAllViews();content.addView(text("Non riesco a caricare "+area+".",20,true));content.addView(text(friendly(ex),14,false));Button r=button("Riprova",true);content.addView(r);if("Agenda".equals(area))r.setOnClickListener(v->showAgenda());else r.setOnClickListener(v->showPresenze());}
+    private void showError(String area,Exception ex){content.removeAllViews();content.addView(text("Non riesco a caricare "+area+".",20,true));content.addView(text(friendly(ex),14,false));Button r=button("Riprova",true);content.addView(r);if("Agenda".equals(area))r.setOnClickListener(v->showAgenda());else if("Messaggi".equals(area))r.setOnClickListener(v->showMessaggi());else r.setOnClickListener(v->showPresenze());}
     private int dp(int v){return (int)(v*getResources().getDisplayMetrics().density+0.5f);}
 }
