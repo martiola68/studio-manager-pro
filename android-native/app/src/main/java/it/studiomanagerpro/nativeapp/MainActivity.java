@@ -15,6 +15,8 @@ import org.json.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.*;
+import java.time.*;
+import java.time.format.DateTimeFormatter;
 
 public class MainActivity extends Activity {
     private final ExecutorService io = Executors.newSingleThreadExecutor();
@@ -298,12 +300,24 @@ public class MainActivity extends Activity {
     }
 
     private String formatMessageTime(String iso){
-        if(iso==null||iso.length()<10)return "";
+        if(iso==null||iso.trim().isEmpty())return "";
         try{
-            String d=iso.substring(8,10)+"/"+iso.substring(5,7)+"/"+iso.substring(0,4);
-            String t=iso.length()>=16?iso.substring(11,16):"";
-            return d+(t.isEmpty()?"":" · "+t);
-        }catch(Exception e){return iso;}
+            Instant instant=Instant.parse(iso);
+            ZonedDateTime local=instant.atZone(ZoneId.systemDefault());
+            return local.format(DateTimeFormatter.ofPattern("dd/MM/yyyy · HH:mm",Locale.ITALY));
+        }catch(Exception first){
+            try{
+                OffsetDateTime odt=OffsetDateTime.parse(iso);
+                ZonedDateTime local=odt.atZoneSameInstant(ZoneId.systemDefault());
+                return local.format(DateTimeFormatter.ofPattern("dd/MM/yyyy · HH:mm",Locale.ITALY));
+            }catch(Exception second){
+                try{
+                    String d=iso.length()>=10?iso.substring(8,10)+"/"+iso.substring(5,7)+"/"+iso.substring(0,4):iso;
+                    String t=iso.length()>=16?iso.substring(11,16):"";
+                    return d+(t.isEmpty()?"":" · "+t);
+                }catch(Exception ignore){return iso;}
+            }
+        }
     }
 
     // AGENDA
