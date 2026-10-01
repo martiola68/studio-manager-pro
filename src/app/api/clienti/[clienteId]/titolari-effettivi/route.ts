@@ -683,7 +683,9 @@ function calcolaSituazioneAllaData(
     quotaVersoCliente: number,
     percorsoIds: string[],
     percorsoNomi: string[],
-    visitati: Set<string>
+    visitati: Set<string>,
+    societaIntermediaNome: string,
+    quotaSocietaIntermedia: number
   ) {
     if (visitati.has(societaId)) {
       return;
@@ -803,6 +805,18 @@ function calcolaSituazioneAllaData(
                 "proprieta",
               tipo_titolarita:
                 "indiretta",
+              criterio_dettaglio:
+                "controllo_societa_intermedia",
+              societa_intermedia_nome:
+                societaIntermediaNome,
+              quota_societa_intermedia:
+                Math.round(
+                  quotaSocietaIntermedia * 10000
+                ) / 10000,
+              quota_controllo_societa_intermedia:
+                Math.round(
+                  quotaControllo * 10000
+                ) / 10000,
               valido_dal:
                 p.valido_dal || null,
               valido_al:
@@ -821,7 +835,9 @@ function calcolaSituazioneAllaData(
         quotaEffettiva,
         ids,
         nomi,
-        nuoviVisitati
+        nuoviVisitati,
+        societaIntermediaNome,
+        quotaSocietaIntermedia
       );
     });
   }
@@ -841,7 +857,9 @@ function calcolaSituazioneAllaData(
           cliente.ragione_sociale ||
             "Società non trovata",
         ],
-        new Set<string>()
+        new Set<string>(),
+        p.partecipante_nome,
+        Number(p.quota_diretta || 0)
       );
     }
   );
@@ -910,6 +928,18 @@ function calcolaSituazioneAllaData(
       ) > 0
         ? "mista"
         : "indiretta";
+
+    esistente.criterio_dettaglio =
+      titolare.criterio_dettaglio;
+
+    esistente.societa_intermedia_nome =
+      titolare.societa_intermedia_nome;
+
+    esistente.quota_societa_intermedia =
+      titolare.quota_societa_intermedia;
+
+    esistente.quota_controllo_societa_intermedia =
+      titolare.quota_controllo_societa_intermedia;
   });
 
   const titolariPerProprieta =
