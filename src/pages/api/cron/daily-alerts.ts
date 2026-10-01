@@ -94,6 +94,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     callInternal(`/api/promemoria/alert?secret=${SECRET}`, "POST"),
     callInternal(`/api/controllo-gestione/alert?secret=${SECRET}`, "POST"),
     callInternal(`/api/revisione-controllo/alert?secret=${SECRET}`, "POST"),
+    callInternal(`/api/presenze/compilazione-automatica?secret=${SECRET}`, "GET"),
   ]);
 
   const errori = results.filter((result) => !result.ok);
