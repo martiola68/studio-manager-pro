@@ -600,11 +600,47 @@ const { data, error } = await supabase
 function isSocietaNominativo(
   nominativo: any
 ): boolean {
-  return !String(
+  if (!nominativo) return false;
+
+  const tipo = String(
     nominativo?.tipo_cliente || ""
   )
-    .toLowerCase()
-    .includes("persona fisica");
+    .trim()
+    .toLowerCase();
+
+  if (
+    tipo &&
+    !tipo.includes("persona fisica")
+  ) {
+    return true;
+  }
+
+  const codiceFiscale = String(
+    nominativo?.codice_fiscale || ""
+  )
+    .trim()
+    .toUpperCase();
+
+  const partitaIva = String(
+    nominativo?.partita_iva || ""
+  )
+    .trim();
+
+  /*
+   * In alcune vecchie anagrafiche tipo_cliente
+   * può essere valorizzato in modo incoerente.
+   * CF/P.IVA numerico di 11 cifre identifica qui
+   * una società/ente ai fini della gestione soci.
+   */
+  if (/^\d{11}$/.test(codiceFiscale)) {
+    return true;
+  }
+
+  if (/^\d{11}$/.test(partitaIva)) {
+    return true;
+  }
+
+  return false;
 }
 
 async function caricaCompagineSocieta(
