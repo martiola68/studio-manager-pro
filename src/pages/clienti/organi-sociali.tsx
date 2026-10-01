@@ -329,6 +329,25 @@ const [modalSezione, setModalSezione] = useState<"soci" | "amministrazione" | "c
 const [ricercaNominativo, setRicercaNominativo] = useState("");
 
 const [showNuovoNominativo, setShowNuovoNominativo] = useState(false);
+const [
+  nuovoNominativoDestinazione,
+  setNuovoNominativoDestinazione,
+] = useState<"principale" | "compagine">("principale");
+
+const [compagineSocietaId, setCompagineSocietaId] = useState("");
+const [compagineStack, setCompagineStack] = useState<string[]>([]);
+const [compagineSoci, setCompagineSoci] = useState<any[]>([]);
+const [loadingCompagine, setLoadingCompagine] = useState(false);
+const [erroreCompagine, setErroreCompagine] = useState("");
+const [socioCompagineForm, setSocioCompagineForm] = useState({
+  soggetto_cliente_id: "",
+  percentuale_partecipazione: "",
+  importo_quota_nominale: "",
+  percentuale_diritti_voto: "",
+  percentuale_diritti_utili: "",
+  data_nomina: "",
+  data_scadenza: "",
+});
 
 const [nuovoNominativo, setNuovoNominativo] = useState({
   nome_cognome: "",
@@ -416,6 +435,62 @@ const totaleQuoteCorretto =
   Math.abs(totaleQuote - 100) < 0.005;
 
 const differenzaQuote = totaleQuote - 100;
+
+const nominativoSocioSelezionato = useMemo(
+  () =>
+    nominativi.find(
+      (n) =>
+        String(n.id) ===
+        String(form.soggetto_cliente_id)
+    ) || null,
+  [nominativi, form.soggetto_cliente_id]
+);
+
+const socioSocietaNonCliente =
+  modalSezione === "soci" &&
+  Boolean(nominativoSocioSelezionato) &&
+  !String(
+    nominativoSocioSelezionato?.tipo_cliente || ""
+  )
+    .toLowerCase()
+    .includes("persona fisica") &&
+  nominativoSocioSelezionato?.cliente !== true;
+
+useEffect(() => {
+  if (!socioSocietaNonCliente) {
+    setCompagineSocietaId("");
+    setCompagineStack([]);
+    setCompagineSoci([]);
+    setErroreCompagine("");
+    return;
+  }
+
+  const rootId = String(
+    nominativoSocioSelezionato?.id || ""
+  );
+
+  if (
+    rootId &&
+    compagineStack.length === 0 &&
+    compagineSocietaId !== rootId
+  ) {
+    setCompagineSocietaId(rootId);
+  }
+}, [
+  socioSocietaNonCliente,
+  nominativoSocioSelezionato?.id,
+]);
+
+useEffect(() => {
+  if (!compagineSocietaId) {
+    setCompagineSoci([]);
+    return;
+  }
+
+  void caricaCompagineSocieta(
+    compagineSocietaId
+  );
+}, [compagineSocietaId]);
 
   async function caricaClienti() {
     const supabase = getSupabaseClient() as any;
@@ -522,6 +597,267 @@ const { data, error } = await supabase
   };
 }
   
+function isSocietaNominativo(
+  nominativo: any
+): boolean {
+  return !String(
+    nominativo?.tipo_cliente || ""
+  )
+    .toLowerCase()
+    .includes("persona fisica");
+}
+
+async function caricaCompagineSocieta(
+  societaId: string
+) {
+  if (!societaId) {
+    setCompagineSoci([]);
+    setErroreCompagine("");
+    return;
+  }
+
+  setLoadingCompagine(true);
+  setErroreCompagine("");
+
+  try {
+    const res = await fetch(
+      `/api/clienti-organi?cliente_id=${encodeURIComponent(
+        societaId
+      )}`,
+      { cache: "no-store" }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(
+        data.error ||
+          "Errore caricamento compagine societaria"
+      );
+    }
+
+    setCompagineSoci(
+      (data.organi || []).filter(
+        (item: any) =>
+          item.ruolo === "socio" &&
+          item.attivo !== false
+      )
+    );
+  } catch (error: any) {
+    console.error(
+      "Errore caricaCompagineSocieta:",
+      error
+    );
+    setCompagineSoci([]);
+    setErroreCompagine(
+      error?.message ||
+        "Errore caricamento compagine societaria"
+    );
+  } finally {
+    setLoadingCompagine(false);
+  }
+}
+
+async function salvaSocioCompagine() {
+  if (!compagineSocietaId) {
+    alert(
+      "Società partecipante non disponibile."
+    );
+    return;
+  }
+
+  if (!socioCompagineForm.soggetto_cliente_id) {
+    alert(
+      "Seleziona il socio della società partecipante."
+    );
+    return;
+  }
+
+  if (
+    String(
+      socioCompagineForm.soggetto_cliente_id
+    ) === String(compagineSocietaId)
+  ) {
+    alert(
+      "Una società non può essere socia di se stessa."
+    );
+    return;
+  }
+
+  const quota = Number(
+    socioCompagineForm.percentuale_partecipazione
+  );
+
+  if (
+    !Number.isFinite(quota) ||
+    quota <= 0 ||
+    quota > 100
+  ) {
+    alert(
+      "Inserisci una quota compresa tra 0 e 100."
+    );
+    return;
+  }
+
+  const nominativo = nominativi.find(
+    (n) =>
+      String(n.id) ===
+      String(
+        socioCompagineForm.soggetto_cliente_id
+      )
+  );
+
+  const res = await fetch(
+    "/api/clienti-organi",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type":
+          "application/json",
+      },
+      body: JSON.stringify({
+        cliente_id: compagineSocietaId,
+        soggetto_cliente_id:
+          socioCompagineForm.soggetto_cliente_id,
+        tipo_soggetto:
+          isSocietaNominativo(nominativo)
+            ? "societa"
+            : "persona_fisica",
+        rappresentante_legale: false,
+        tipo_ruolo: "S",
+        ruolo: "socio",
+        carica: "Socio",
+        percentuale_partecipazione:
+          socioCompagineForm.percentuale_partecipazione,
+        importo_quota_nominale:
+          socioCompagineForm.importo_quota_nominale ||
+          null,
+        titolo_possesso:
+          "piena_proprieta",
+        percentuale_diritti_voto:
+          socioCompagineForm.percentuale_diritti_voto ||
+          socioCompagineForm.percentuale_partecipazione,
+        percentuale_diritti_utili:
+          socioCompagineForm.percentuale_diritti_utili ||
+          socioCompagineForm.percentuale_partecipazione,
+        data_nomina:
+          socioCompagineForm.data_nomina ||
+          null,
+        data_scadenza:
+          socioCompagineForm.data_scadenza ||
+          null,
+        presenza: null,
+        principale: false,
+        attivo: true,
+      }),
+    }
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    alert(
+      data.error ||
+        "Errore salvataggio socio della società partecipante."
+    );
+    return;
+  }
+
+  setSocioCompagineForm({
+    soggetto_cliente_id: "",
+    percentuale_partecipazione: "",
+    importo_quota_nominale: "",
+    percentuale_diritti_voto: "",
+    percentuale_diritti_utili: "",
+    data_nomina: "",
+    data_scadenza: "",
+  });
+
+  await caricaCompagineSocieta(
+    compagineSocietaId
+  );
+  await caricaTitolariEffettivi();
+}
+
+async function eliminaSocioCompagine(
+  socio: any
+) {
+  const ok = confirm(
+    `Eliminare ${socio.nominativo_nome || "questo socio"} dalla compagine?`
+  );
+
+  if (!ok) return;
+
+  const res = await fetch(
+    "/api/clienti-organi",
+    {
+      method: "DELETE",
+      headers: {
+        "Content-Type":
+          "application/json",
+      },
+      body: JSON.stringify({
+        id: socio.id,
+      }),
+    }
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    alert(
+      data.error ||
+        "Errore eliminazione socio della società partecipante."
+    );
+    return;
+  }
+
+  await caricaCompagineSocieta(
+    compagineSocietaId
+  );
+  await caricaTitolariEffettivi();
+}
+
+function apriCompagineFiglia(
+  societaId: string
+) {
+  if (!societaId || !compagineSocietaId) {
+    return;
+  }
+
+  setCompagineStack((prev) => [
+    ...prev,
+    compagineSocietaId,
+  ]);
+  setCompagineSocietaId(societaId);
+  setSocioCompagineForm({
+    soggetto_cliente_id: "",
+    percentuale_partecipazione: "",
+    importo_quota_nominale: "",
+    percentuale_diritti_voto: "",
+    percentuale_diritti_utili: "",
+    data_nomina: "",
+    data_scadenza: "",
+  });
+}
+
+function tornaCompaginePadre() {
+  setCompagineStack((prev) => {
+    if (prev.length === 0) {
+      return prev;
+    }
+
+    const copia = [...prev];
+    const parentId = copia.pop();
+
+    if (parentId) {
+      setCompagineSocietaId(parentId);
+    }
+
+    return copia;
+  });
+}
+
 async function salvaNuovoNominativo() {
   if (!nuovoNominativo.nome_cognome.trim()) {
     alert("Cognome e nome obbligatori.");
@@ -545,6 +881,10 @@ const nominativoSeparato =
     nuovoNominativo.nome_cognome
   );
 
+const nominativoPersonaFisica =
+  nuovoNominativo.tipologia_cliente ===
+  "Persona fisica";
+
 const payload = {
     ...(modalitaModifica
       ? {
@@ -562,12 +902,14 @@ const payload = {
     .replace(/\s+/g, " "),
 
 cognome:
-  nominativoSeparato.cognome ||
-  null,
+  nominativoPersonaFisica
+    ? nominativoSeparato.cognome || null
+    : null,
 
 nome:
-  nominativoSeparato.nome ||
-  null,
+  nominativoPersonaFisica
+    ? nominativoSeparato.nome || null
+    : null,
 
 codice_fiscale:
   nuovoNominativo.codice_fiscale
@@ -602,14 +944,15 @@ codice_fiscale:
       nuovoNominativo.cap.trim() ||
       null,
 
-   tipo_cliente:
-  "Persona fisica",
+tipo_cliente:
+  nominativoPersonaFisica
+    ? "Persona fisica"
+    : "Società",
 
 tipologia_cliente:
-  nuovoNominativo.tipologia_cliente ===
-  "Esterno"
-    ? "Esterno"
-    : "Interno",
+  nominativoPersonaFisica
+    ? "Interno"
+    : "Esterno",
 
 cliente: false,
   };
@@ -708,11 +1051,22 @@ cliente: false,
   await caricaNominativi();
 
 if (idSalvato) {
-  setForm((prev) => ({
-    ...prev,
-    soggetto_cliente_id:
-      String(idSalvato),
-  }));
+  if (
+    nuovoNominativoDestinazione ===
+    "compagine"
+  ) {
+    setSocioCompagineForm((prev) => ({
+      ...prev,
+      soggetto_cliente_id:
+        String(idSalvato),
+    }));
+  } else {
+    setForm((prev) => ({
+      ...prev,
+      soggetto_cliente_id:
+        String(idSalvato),
+    }));
+  }
 }
 
 /*
@@ -725,6 +1079,9 @@ await caricaOrgani();
 
 setShowNuovoNominativo(false);
 setNominativoInModificaId(null);
+setNuovoNominativoDestinazione(
+  "principale"
+);
 
 setNuovoNominativo({
   nome_cognome: "",
@@ -2113,8 +2470,512 @@ return (
 {modalSezione && <div style={{position:"fixed",inset:0,zIndex:10000,display:"flex",alignItems:"center",justifyContent:"center",padding:20,background:"rgba(15,23,42,.55)"}}><div style={{width:"min(900px,96vw)",maxHeight:"92vh",overflowY:"auto",borderRadius:12,background:"#fff",boxShadow:"0 24px 70px rgba(15,23,42,.28)"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 18px",background:"#5b5b5b",color:"#fff"}}><strong style={{fontSize:18}}>{modalSezione==="soci"?"Soci":modalSezione==="amministrazione"?"Organo di amministrazione":"Organo di controllo"}</strong><button type="button" onClick={()=>setModalSezione(null)} style={{border:0,background:"transparent",color:"#fff",fontSize:22,cursor:"pointer"}}>×</button></div><div style={{padding:20}}>
   <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:8,alignItems:"end"}}><div><label style={labelStyle}>Filtro nominativo</label><input style={inputStyle} value={ricercaNominativo} onChange={(e)=>setRicercaNominativo(e.target.value)} placeholder="Cognome e nome, codice fiscale o partita IVA"/></div><button type="button" style={{ ...secondaryButton, width: 140, height: 40, padding: "0 14px" }}>Filtra nomi</button></div>
   <div style={{marginTop:12}}><label style={labelStyle}>Nominativo</label><select style={inputStyle} value={form.soggetto_cliente_id} onChange={(e)=>setForm((p)=>({...p,soggetto_cliente_id:e.target.value}))}><option value="">Seleziona nominativo</option>{nominativi.filter((n)=>!ricercaNominativo.trim() || [n.ragione_sociale,n.codice_fiscale,n.partita_iva].some((v)=>String(v||"").toLowerCase().includes(ricercaNominativo.trim().toLowerCase()))).map((n)=><option key={n.id} value={n.id}>{n.ragione_sociale}{n.codice_fiscale?` — ${n.codice_fiscale}`:""}</option>)}</select></div>
-  <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:10,flexWrap:"wrap"}}><button type="button" style={{ ...secondaryButton, width: 140, height: 40, padding: "0 14px" }} onClick={()=>{setNominativoInModificaId(null);setNuovoNominativo({nome_cognome:"",codice_fiscale:"",email:"",luogo_nascita:"",data_nascita:"",indirizzo:"",citta:"",provincia:"",cap:"",tipologia_cliente:"Persona fisica"});setShowNuovoNominativo(true);}}>Nuovo</button><button type="button" style={{ ...secondaryButton, width: 190, minWidth: 190, height: 40, padding: "0 16px", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", justifyContent: "center" }} disabled={!form.soggetto_cliente_id} onClick={apriModificaNominativo}>Modifica anagrafica</button></div>
-  {modalSezione==="soci" ? <><div style={{marginTop:18,display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}><div><label style={labelStyle}>Tipo</label><input style={{...inputStyle,background:"#f1f5f9"}} value="Socio" disabled/></div><div><label style={labelStyle}>Dal</label><input type="date" style={inputStyle} value={form.data_nomina} onChange={(e)=>{const dataNomina=e.target.value;setForm((p)=>({...p,data_nomina:dataNomina,data_scadenza:p.durata_carica==="Anni n."?calcolaScadenzaDaAnni(dataNomina,p.durata_carica_anni):p.data_scadenza}))}}/></div><div><label style={labelStyle}>Al</label><input type="date" style={inputStyle} value={form.data_scadenza} onChange={(e)=>setForm((p)=>({...p,data_scadenza:e.target.value}))}/></div></div><div style={{marginTop:16,padding:16,border:"1px solid #dbeafe",borderRadius:10,background:"#f8fbff"}}><div style={{display:"grid",gridTemplateColumns:"1.2fr .7fr .7fr",gap:12}}><div><label style={labelStyle}>Tipologia del diritto</label><select style={inputStyle} value={form.titolo_possesso} onChange={(e)=>setForm((p)=>({...p,titolo_possesso:e.target.value}))}><option value="piena_proprieta">Piena proprietà</option><option value="usufrutto">Usufrutto</option><option value="nuda_proprieta">Nuda proprietà</option><option value="pegno">Pegno</option><option value="sequestro">Sequestro</option><option value="intestazione_fiduciaria">Intestazione fiduciaria</option><option value="altro">Altro</option></select></div><div><label style={labelStyle}>Quota %</label><input type="number" min="0" max="100" step="0.01" style={inputStyle} value={form.percentuale_partecipazione} onChange={(e)=>{const v=e.target.value;setForm((p)=>({...p,percentuale_partecipazione:v,percentuale_diritti_voto:p.titolo_possesso==="piena_proprieta"?v:p.percentuale_diritti_voto,percentuale_diritti_utili:p.titolo_possesso==="piena_proprieta"?v:p.percentuale_diritti_utili}))}}/></div><div><label style={labelStyle}>Diritti di voto %</label><input type="number" min="0" max="100" step="0.01" style={inputStyle} value={form.percentuale_diritti_voto} onChange={(e)=>setForm((p)=>({...p,percentuale_diritti_voto:e.target.value}))}/></div></div><div style={{marginTop:12,display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}><div><label style={labelStyle}>Valore nominale</label><input type="number" min="0" step="0.01" style={inputStyle} value={form.importo_quota_nominale} onChange={(e)=>setForm((p)=>({...p,importo_quota_nominale:e.target.value}))}/></div><div><label style={labelStyle}>Partecipazione agli utili %</label><input type="number" min="0" max="100" step="0.01" style={inputStyle} value={form.percentuale_diritti_utili} onChange={(e)=>setForm((p)=>({...p,percentuale_diritti_utili:e.target.value}))}/></div></div></div></> : <div style={{marginTop:18,display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}><div><label style={labelStyle}>Qualifica</label><select style={inputStyle} value={form.ruolo} onChange={(e)=>setForm((p)=>({...p,ruolo:e.target.value,carica:ruoliLabel[e.target.value]||e.target.value}))}>{(modalSezione==="amministrazione"?ruoliAmministrazione:ruoliControllo).map((r)=><option key={r} value={r}>{ruoliLabel[r]||r}</option>)}</select></div><div><label style={labelStyle}>Data nomina</label><input type="date" style={inputStyle} value={form.data_nomina} onChange={(e)=>{const dataNomina=e.target.value;setForm((p)=>({...p,data_nomina:dataNomina,data_scadenza:p.durata_carica==="Anni n."&&p.durata_carica_anni?calcolaScadenzaDaAnni(dataNomina,p.durata_carica_anni):p.data_scadenza}))}}/></div><div><label style={labelStyle}>Scadenza</label><input type="date" style={inputStyle} value={form.data_scadenza} onChange={(e)=>setForm((p)=>({...p,data_scadenza:e.target.value}))}/></div></div>}
+  <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:10,flexWrap:"wrap"}}><button type="button" style={{ ...secondaryButton, width: 140, height: 40, padding: "0 14px" }} onClick={()=>{setNuovoNominativoDestinazione("principale");setNominativoInModificaId(null);setNuovoNominativo({nome_cognome:"",codice_fiscale:"",email:"",luogo_nascita:"",data_nascita:"",indirizzo:"",citta:"",provincia:"",cap:"",tipologia_cliente:"Persona fisica"});setShowNuovoNominativo(true);}}>Nuovo</button><button type="button" style={{ ...secondaryButton, width: 190, minWidth: 190, height: 40, padding: "0 16px", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", justifyContent: "center" }} disabled={!form.soggetto_cliente_id} onClick={apriModificaNominativo}>Modifica anagrafica</button></div>
+  {modalSezione==="soci" ? <><div style={{marginTop:18,display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}><div><label style={labelStyle}>Tipo</label><input style={{...inputStyle,background:"#f1f5f9"}} value="Socio" disabled/></div><div><label style={labelStyle}>Dal</label><input type="date" style={inputStyle} value={form.data_nomina} onChange={(e)=>{const dataNomina=e.target.value;setForm((p)=>({...p,data_nomina:dataNomina,data_scadenza:p.durata_carica==="Anni n."?calcolaScadenzaDaAnni(dataNomina,p.durata_carica_anni):p.data_scadenza}))}}/></div><div><label style={labelStyle}>Al</label><input type="date" style={inputStyle} value={form.data_scadenza} onChange={(e)=>setForm((p)=>({...p,data_scadenza:e.target.value}))}/></div></div><div style={{marginTop:16,padding:16,border:"1px solid #dbeafe",borderRadius:10,background:"#f8fbff"}}><div style={{display:"grid",gridTemplateColumns:"1.2fr .7fr .7fr",gap:12}}><div><label style={labelStyle}>Tipologia del diritto</label><select style={inputStyle} value={form.titolo_possesso} onChange={(e)=>setForm((p)=>({...p,titolo_possesso:e.target.value}))}><option value="piena_proprieta">Piena proprietà</option><option value="usufrutto">Usufrutto</option><option value="nuda_proprieta">Nuda proprietà</option><option value="pegno">Pegno</option><option value="sequestro">Sequestro</option><option value="intestazione_fiduciaria">Intestazione fiduciaria</option><option value="altro">Altro</option></select></div><div><label style={labelStyle}>Quota %</label><input type="number" min="0" max="100" step="0.01" style={inputStyle} value={form.percentuale_partecipazione} onChange={(e)=>{const v=e.target.value;setForm((p)=>({...p,percentuale_partecipazione:v,percentuale_diritti_voto:p.titolo_possesso==="piena_proprieta"?v:p.percentuale_diritti_voto,percentuale_diritti_utili:p.titolo_possesso==="piena_proprieta"?v:p.percentuale_diritti_utili}))}}/></div><div><label style={labelStyle}>Diritti di voto %</label><input type="number" min="0" max="100" step="0.01" style={inputStyle} value={form.percentuale_diritti_voto} onChange={(e)=>setForm((p)=>({...p,percentuale_diritti_voto:e.target.value}))}/></div></div><div style={{marginTop:12,display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}><div><label style={labelStyle}>Valore nominale</label><input type="number" min="0" step="0.01" style={inputStyle} value={form.importo_quota_nominale} onChange={(e)=>setForm((p)=>({...p,importo_quota_nominale:e.target.value}))}/></div><div><label style={labelStyle}>Partecipazione agli utili %</label><input type="number" min="0" max="100" step="0.01" style={inputStyle} value={form.percentuale_diritti_utili} onChange={(e)=>setForm((p)=>({...p,percentuale_diritti_utili:e.target.value}))}/></div></div></div>
+
+{socioSocietaNonCliente && (
+  <div
+    style={{
+      marginTop: 16,
+      padding: 16,
+      border: "1px solid #bae6fd",
+      borderRadius: 10,
+      background: "#f0f9ff",
+    }}
+  >
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: 12,
+        flexWrap: "wrap",
+      }}
+    >
+      <div>
+        <div
+          style={{
+            fontSize: 15,
+            fontWeight: 800,
+            color: "#0c4a6e",
+          }}
+        >
+          Compagine della società partecipante
+        </div>
+        <div
+          style={{
+            marginTop: 3,
+            color: "#475569",
+            fontSize: 12,
+          }}
+        >
+          Per le società non clienti puoi ricostruire anche più livelli di partecipazione. I nominativi già clienti SMP utilizzano invece la compagine già presente nel gestionale.
+        </div>
+      </div>
+
+      {compagineStack.length > 0 && (
+        <button
+          type="button"
+          style={{
+            ...secondaryButton,
+            width: 150,
+            height: 38,
+            padding: "0 12px",
+          }}
+          onClick={tornaCompaginePadre}
+        >
+          ← Livello precedente
+        </button>
+      )}
+    </div>
+
+    <div
+      style={{
+        marginTop: 12,
+        padding: "9px 11px",
+        borderRadius: 8,
+        background: "#e0f2fe",
+        color: "#075985",
+        fontWeight: 700,
+        fontSize: 13,
+      }}
+    >
+      Società corrente:{" "}
+      {nominativi.find(
+        (n) =>
+          String(n.id) ===
+          String(compagineSocietaId)
+      )?.ragione_sociale || "Società partecipante"}
+    </div>
+
+    {loadingCompagine ? (
+      <div
+        style={{
+          marginTop: 12,
+          color: "#64748b",
+        }}
+      >
+        Caricamento compagine...
+      </div>
+    ) : erroreCompagine ? (
+      <div
+        style={{
+          marginTop: 12,
+          color: "#b91c1c",
+          fontWeight: 700,
+        }}
+      >
+        {erroreCompagine}
+      </div>
+    ) : (
+      <div
+        style={{
+          marginTop: 12,
+          overflowX: "auto",
+        }}
+      >
+        <table
+          style={{
+            width: "100%",
+            borderCollapse: "collapse",
+            background: "#fff",
+          }}
+        >
+          <thead>
+            <tr>
+              <th style={thStyle}>Socio</th>
+              <th style={thStyle}>CF / P.IVA</th>
+              <th style={thStyle}>Quota</th>
+              <th style={thStyle}>Azioni</th>
+            </tr>
+          </thead>
+          <tbody>
+            {compagineSoci.map((socio) => {
+              const soggetto =
+                nominativi.find(
+                  (n) =>
+                    String(n.id) ===
+                    String(
+                      socio.soggetto_cliente_id
+                    )
+                ) ||
+                socio.soggetto_cliente ||
+                null;
+
+              const societa =
+                isSocietaNominativo(soggetto);
+
+              const clienteSmp =
+                soggetto?.cliente === true;
+
+              return (
+                <tr key={socio.id}>
+                  <td style={tdStyle}>
+                    {soggetto?.ragione_sociale ||
+                      socio.nominativo_nome ||
+                      "—"}
+                    {societa && clienteSmp && (
+                      <span
+                        style={{
+                          marginLeft: 8,
+                          fontSize: 11,
+                          padding: "2px 6px",
+                          borderRadius: 999,
+                          background: "#dcfce7",
+                          color: "#166534",
+                          fontWeight: 800,
+                        }}
+                      >
+                        CLIENTE SMP
+                      </span>
+                    )}
+                  </td>
+                  <td style={tdStyle}>
+                    {soggetto?.codice_fiscale ||
+                      soggetto?.partita_iva ||
+                      socio.nominativo_codice_fiscale ||
+                      "—"}
+                  </td>
+                  <td style={tdStyle}>
+                    {socio.percentuale_partecipazione !=
+                    null
+                      ? `${Number(
+                          socio.percentuale_partecipazione
+                        ).toLocaleString("it-IT", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}%`
+                      : "—"}
+                  </td>
+                  <td style={tdStyle}>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 8,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      {societa && !clienteSmp && (
+                        <button
+                          type="button"
+                          style={{
+                            ...secondaryButton,
+                            width: 135,
+                            height: 34,
+                            padding: "0 10px",
+                            fontSize: 12,
+                          }}
+                          onClick={() =>
+                            apriCompagineFiglia(
+                              String(
+                                socio.soggetto_cliente_id
+                              )
+                            )
+                          }
+                        >
+                          Apri compagine
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        style={iconDangerButton}
+                        title="Elimina dalla compagine"
+                        onClick={() =>
+                          void eliminaSocioCompagine(
+                            socio
+                          )
+                        }
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+
+            {compagineSoci.length === 0 && (
+              <tr>
+                <td
+                  style={tdStyle}
+                  colSpan={4}
+                >
+                  Nessun socio inserito per questa società.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    )}
+
+    <div
+      style={{
+        marginTop: 14,
+        paddingTop: 14,
+        borderTop: "1px solid #bae6fd",
+      }}
+    >
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns:
+            "2fr .7fr .7fr",
+          gap: 10,
+        }}
+      >
+        <div>
+          <label style={labelStyle}>
+            Socio della società
+          </label>
+          <select
+            style={inputStyle}
+            value={
+              socioCompagineForm.soggetto_cliente_id
+            }
+            onChange={(e) =>
+              setSocioCompagineForm((p) => ({
+                ...p,
+                soggetto_cliente_id:
+                  e.target.value,
+              }))
+            }
+          >
+            <option value="">
+              Seleziona nominativo
+            </option>
+            {nominativi
+              .filter(
+                (n) =>
+                  String(n.id) !==
+                  String(compagineSocietaId)
+              )
+              .map((n) => (
+                <option
+                  key={n.id}
+                  value={n.id}
+                >
+                  {n.ragione_sociale}
+                  {n.codice_fiscale
+                    ? ` — ${n.codice_fiscale}`
+                    : n.partita_iva
+                    ? ` — ${n.partita_iva}`
+                    : ""}
+                </option>
+              ))}
+          </select>
+        </div>
+
+        <div>
+          <label style={labelStyle}>
+            Quota %
+          </label>
+          <input
+            type="number"
+            min="0"
+            max="100"
+            step="0.01"
+            style={inputStyle}
+            value={
+              socioCompagineForm.percentuale_partecipazione
+            }
+            onChange={(e) => {
+              const value = e.target.value;
+              setSocioCompagineForm((p) => ({
+                ...p,
+                percentuale_partecipazione:
+                  value,
+                percentuale_diritti_voto:
+                  p.percentuale_diritti_voto ||
+                  value,
+                percentuale_diritti_utili:
+                  p.percentuale_diritti_utili ||
+                  value,
+              }));
+            }}
+          />
+        </div>
+
+        <div>
+          <label style={labelStyle}>
+            Valore nominale
+          </label>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            style={inputStyle}
+            value={
+              socioCompagineForm.importo_quota_nominale
+            }
+            onChange={(e) =>
+              setSocioCompagineForm((p) => ({
+                ...p,
+                importo_quota_nominale:
+                  e.target.value,
+              }))
+            }
+          />
+        </div>
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns:
+            "1fr 1fr 1fr 1fr",
+          gap: 10,
+          marginTop: 10,
+        }}
+      >
+        <div>
+          <label style={labelStyle}>
+            Voto %
+          </label>
+          <input
+            type="number"
+            min="0"
+            max="100"
+            step="0.01"
+            style={inputStyle}
+            value={
+              socioCompagineForm.percentuale_diritti_voto
+            }
+            onChange={(e) =>
+              setSocioCompagineForm((p) => ({
+                ...p,
+                percentuale_diritti_voto:
+                  e.target.value,
+              }))
+            }
+          />
+        </div>
+
+        <div>
+          <label style={labelStyle}>
+            Utili %
+          </label>
+          <input
+            type="number"
+            min="0"
+            max="100"
+            step="0.01"
+            style={inputStyle}
+            value={
+              socioCompagineForm.percentuale_diritti_utili
+            }
+            onChange={(e) =>
+              setSocioCompagineForm((p) => ({
+                ...p,
+                percentuale_diritti_utili:
+                  e.target.value,
+              }))
+            }
+          />
+        </div>
+
+        <div>
+          <label style={labelStyle}>
+            Dal
+          </label>
+          <input
+            type="date"
+            style={inputStyle}
+            value={
+              socioCompagineForm.data_nomina
+            }
+            onChange={(e) =>
+              setSocioCompagineForm((p) => ({
+                ...p,
+                data_nomina:
+                  e.target.value,
+              }))
+            }
+          />
+        </div>
+
+        <div>
+          <label style={labelStyle}>
+            Al
+          </label>
+          <input
+            type="date"
+            style={inputStyle}
+            value={
+              socioCompagineForm.data_scadenza
+            }
+            onChange={(e) =>
+              setSocioCompagineForm((p) => ({
+                ...p,
+                data_scadenza:
+                  e.target.value,
+              }))
+            }
+          />
+        </div>
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          gap: 8,
+          marginTop: 10,
+          flexWrap: "wrap",
+        }}
+      >
+        <button
+          type="button"
+          style={{
+            ...secondaryButton,
+            width: 170,
+            height: 38,
+            padding: "0 12px",
+          }}
+          onClick={() => {
+            setNuovoNominativoDestinazione(
+              "compagine"
+            );
+            setNominativoInModificaId(null);
+            setNuovoNominativo({
+              nome_cognome: "",
+              codice_fiscale: "",
+              email: "",
+              luogo_nascita: "",
+              data_nascita: "",
+              indirizzo: "",
+              citta: "",
+              provincia: "",
+              cap: "",
+              tipologia_cliente:
+                "Persona fisica",
+            });
+            setShowNuovoNominativo(true);
+          }}
+        >
+          + Nuovo nominativo
+        </button>
+
+        <button
+          type="button"
+          style={{
+            ...blueButton,
+            width: 150,
+            height: 38,
+            padding: "0 12px",
+          }}
+          onClick={() =>
+            void salvaSocioCompagine()
+          }
+        >
+          Aggiungi socio
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+</> : <div style={{marginTop:18,display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}><div><label style={labelStyle}>Qualifica</label><select style={inputStyle} value={form.ruolo} onChange={(e)=>setForm((p)=>({...p,ruolo:e.target.value,carica:ruoliLabel[e.target.value]||e.target.value}))}>{(modalSezione==="amministrazione"?ruoliAmministrazione:ruoliControllo).map((r)=><option key={r} value={r}>{ruoliLabel[r]||r}</option>)}</select></div><div><label style={labelStyle}>Data nomina</label><input type="date" style={inputStyle} value={form.data_nomina} onChange={(e)=>{const dataNomina=e.target.value;setForm((p)=>({...p,data_nomina:dataNomina,data_scadenza:p.durata_carica==="Anni n."&&p.durata_carica_anni?calcolaScadenzaDaAnni(dataNomina,p.durata_carica_anni):p.data_scadenza}))}}/></div><div><label style={labelStyle}>Scadenza</label><input type="date" style={inputStyle} value={form.data_scadenza} onChange={(e)=>setForm((p)=>({...p,data_scadenza:e.target.value}))}/></div></div>}
   {(modalSezione==="amministrazione" || modalSezione==="controllo") && <div style={{marginTop:16,display:"grid",gridTemplateColumns:form.durata_carica==="Anni n."?"1fr 1fr":"1fr",gap:12,alignItems:"end"}}><div><label style={labelStyle}>{modalSezione==="amministrazione"?"Scadenza amministratore":"Scadenza organo di controllo"}</label><select style={inputStyle} value={form.durata_carica} onChange={(e)=>{const durata=e.target.value;setForm((p)=>({...p,durata_carica:durata,durata_carica_anni:durata==="Anni n."?p.durata_carica_anni:"",data_scadenza:durata==="Anni n."&&p.data_nomina&&p.durata_carica_anni?calcolaScadenzaDaAnni(p.data_nomina,p.durata_carica_anni):p.data_scadenza}))}}><option value="A revoca">A revoca</option><option value="A tempo indeterminato">A tempo indeterminato</option><option value="Anni n.">Anni n.</option></select></div>{form.durata_carica==="Anni n." && <div><label style={labelStyle}>Numero anni</label><input type="number" min="1" step="1" style={inputStyle} value={form.durata_carica_anni} onChange={(e)=>{const anni=e.target.value;setForm((p)=>({...p,durata_carica_anni:anni,data_scadenza:p.data_nomina?calcolaScadenzaDaAnni(p.data_nomina,anni):p.data_scadenza}))}}/></div>}</div>}
   {modalSezione==="amministrazione" && <div style={{marginTop:16,display:"flex",alignItems:"center",justifyContent:"flex-start"}}><label style={{display:"inline-flex",alignItems:"center",gap:9,fontSize:14,fontWeight:600,color:"#334155",cursor:form.soggetto_cliente_id?"pointer":"not-allowed",userSelect:"none"}}><input type="checkbox" checked={Boolean(form.principale)} disabled={!form.soggetto_cliente_id} onChange={(e)=>setForm((p)=>({...p,principale:e.target.checked}))} style={{width:17,height:17,accentColor:"#0d6f9f",cursor:form.soggetto_cliente_id?"pointer":"not-allowed"}}/><span>Firmatario</span></label></div>}
   <div style={{display:"flex",justifyContent:"flex-end",gap:10,marginTop:22,borderTop:"1px solid #e2e8f0",paddingTop:16}}><button type="button" style={{ ...secondaryButton, width: 130, height: 40, padding: "0 14px" }} onClick={()=>setModalSezione(null)}>Annulla</button><button type="button" style={{ ...blueButton, width: organoInModificaId ? 190 : 130, minWidth: organoInModificaId ? 190 : 130, height: 40, padding: "0 16px", background: "linear-gradient(110deg, #0b4f7d 0%, #0d6f9f 58%, #1688b7 100%)", border: "1px solid #0d6f9f", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", justifyContent: "center" }} onClick={salvaOrgano}>{organoInModificaId?"Salva modifiche":"OK"}</button></div>
@@ -2388,6 +3249,9 @@ return (
     onClick={() => {
       setShowNuovoNominativo(false);
       setNominativoInModificaId(null);
+      setNuovoNominativoDestinazione(
+        "principale"
+      );
     }}
   >
     Annulla
