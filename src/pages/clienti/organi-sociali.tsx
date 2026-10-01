@@ -163,6 +163,11 @@ type TitolareEffettivoApi = {
   carica?: string | null;
   principale?: boolean;
 
+  criterio_dettaglio?: string | null;
+  societa_intermedia_nome?: string | null;
+  quota_societa_intermedia?: number | null;
+  quota_controllo_societa_intermedia?: number | null;
+
   valido_dal: string | null;
   valido_al: string | null;
 
@@ -2377,6 +2382,20 @@ return (
                               }
                             )}%`}
                       </div>
+
+                      {titolare.criterio_dettaglio ===
+                        "controllo_societa_intermedia" && (
+                        <div
+                          style={{
+                            marginTop: 4,
+                            color: "#64748b",
+                            fontSize: 11,
+                            lineHeight: 1.35,
+                          }}
+                        >
+                          Partecipazione economica indiretta
+                        </div>
+                      )}
                     </div>
 
                     <div>
@@ -2431,6 +2450,105 @@ return (
                       </div>
                     </div>
                   </div>
+
+                  {titolare.criterio_dettaglio ===
+                    "controllo_societa_intermedia" && (
+                    <div
+                      style={{
+                        marginTop: 12,
+                        display: "grid",
+                        gridTemplateColumns:
+                          "repeat(3, minmax(0, 1fr))",
+                        gap: 8,
+                        padding: 10,
+                        borderRadius: 8,
+                        background: "#f8fafc",
+                        border: "1px solid #e2e8f0",
+                      }}
+                    >
+                      <div>
+                        <div
+                          style={{
+                            fontSize: 10,
+                            color: "#64748b",
+                            textTransform: "uppercase",
+                            fontWeight: 800,
+                          }}
+                        >
+                          Società intermedia
+                        </div>
+                        <div
+                          style={{
+                            marginTop: 3,
+                            fontSize: 12,
+                            fontWeight: 700,
+                            color: "#0f172a",
+                          }}
+                        >
+                          {titolare.societa_intermedia_nome ||
+                            "—"}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div
+                          style={{
+                            fontSize: 10,
+                            color: "#64748b",
+                            textTransform: "uppercase",
+                            fontWeight: 800,
+                          }}
+                        >
+                          Quota sul cliente
+                        </div>
+                        <div
+                          style={{
+                            marginTop: 3,
+                            fontSize: 12,
+                            fontWeight: 700,
+                          }}
+                        >
+                          {Number(
+                            titolare.quota_societa_intermedia ||
+                              0
+                          ).toLocaleString("it-IT", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                          %
+                        </div>
+                      </div>
+
+                      <div>
+                        <div
+                          style={{
+                            fontSize: 10,
+                            color: "#64748b",
+                            textTransform: "uppercase",
+                            fontWeight: 800,
+                          }}
+                        >
+                          Controllo della società
+                        </div>
+                        <div
+                          style={{
+                            marginTop: 3,
+                            fontSize: 12,
+                            fontWeight: 700,
+                          }}
+                        >
+                          {Number(
+                            titolare.quota_controllo_societa_intermedia ||
+                              0
+                          ).toLocaleString("it-IT", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                          %
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {titolare
                     .criterio_titolarita ===
