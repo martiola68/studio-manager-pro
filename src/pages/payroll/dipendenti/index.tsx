@@ -30,6 +30,7 @@ data_cessazione: string | null;
 tipo_rapporto: string | null;
 
 attivo: boolean | null;
+compilazione_automatica_presenze?: boolean | null;
 };
 
 type Qualifica = {
@@ -48,6 +49,7 @@ const [qualifiche, setQualifiche] = useState<Qualifica[]>([]);
   const [isDipendente, setIsDipendente] = useState(false);
 const [isResponsabile, setIsResponsabile] = useState(false);
 const [isResponsabilePaghe, setIsResponsabilePaghe] = useState(false);
+const [isGeneralAdmin, setIsGeneralAdmin] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -68,7 +70,8 @@ const [isResponsabilePaghe, setIsResponsabilePaghe] = useState(false);
     studio_id,
     responsabile_paghe,
     responsabile_ferie_permessi,
-    tipo_rapporto
+    tipo_rapporto,
+    amministratore_sistema_generale
   `)
   .eq('email', email)
   .single();
@@ -82,12 +85,14 @@ const responsabileLoggato =
   user?.responsabile_ferie_permessi === true;
 
 const responsabilePagheLoggato = user?.responsabile_paghe === true;
+const generalAdminLoggato = user?.amministratore_sistema_generale === true;
 
 setIsDipendente(dipendenteLoggato);
 setIsResponsabile(responsabileLoggato);
 setIsResponsabilePaghe(responsabilePagheLoggato);
+setIsGeneralAdmin(generalAdminLoggato);
 
-const puoAccedere = dipendenteLoggato || responsabileLoggato;
+const puoAccedere = dipendenteLoggato || responsabileLoggato || generalAdminLoggato;
 
 if (!puoAccedere) {
   alert(
@@ -173,6 +178,9 @@ setQualifiche(qualificheData ?? []);
           data_cessazione: dipendente.data_cessazione || null,
             orario_giornaliero: dipendente.orario_giornaliero,
               attivo: dipendente.attivo,
+              ...(isGeneralAdmin
+                ? { compilazione_automatica_presenze: Boolean(dipendente.compilazione_automatica_presenze) }
+                : {}),
                   updated_at: new Date().toISOString(),
                     })
                   .eq('id', dipendente.id);
@@ -234,6 +242,9 @@ setQualifiche(qualificheData ?? []);
                       <th className="p-2 text-left">Data assunzione</th>
                       <th className="p-2 text-left">Data cessazione</th>
                       <th className="p-2 text-center">Attivo</th>
+                      {isGeneralAdmin && (
+                        <th className="p-2 text-center" title="Compilazione automatica presenze dal planning settimanale">Comp. Aut.</th>
+                      )}
                       <th className="p-2 text-right">Azioni</th>
                     </tr>
                   </thead>
@@ -297,6 +308,24 @@ setQualifiche(qualificheData ?? []);
                           className="h-4 w-4"
                         />
                         </td>
+
+                        {isGeneralAdmin && (
+                          <td className="p-2 text-center">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(dip.compilazione_automatica_presenze)}
+                              onChange={(e) =>
+                                updateField(
+                                  dip.id,
+                                  'compilazione_automatica_presenze',
+                                  e.target.checked,
+                                )
+                              }
+                              className="h-4 w-4"
+                              title="Compila automaticamente la presenza giornaliera dal planning Presenze settimanali"
+                            />
+                          </td>
+                        )}
 
                         <td className="p-2 text-right">
                           <Button size="sm" onClick={() => saveDipendente(dip)} disabled={savingId === dip.id}>
