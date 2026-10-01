@@ -439,9 +439,16 @@ public class MainActivity extends Activity {
 
     // PRESENZE
     private void showPresenze(){
+        Calendar now=Calendar.getInstance();
+        showPresenzeMonth(now.get(Calendar.YEAR),now.get(Calendar.MONTH));
+    }
+
+    private void showPresenzeMonth(int y,int m){
+        Calendar normalized=new GregorianCalendar(y,m,1);
+        y=normalized.get(Calendar.YEAR); m=normalized.get(Calendar.MONTH);
+        final int targetYear=y, targetMonth=m;
         baseScreen("Presenze",true);
         content.addView(text("Caricamento presenze…",16,false));
-        Calendar now=Calendar.getInstance(); int y=now.get(Calendar.YEAR),m=now.get(Calendar.MONTH);
         Calendar first=new GregorianCalendar(y,m,1),last=new GregorianCalendar(y,m,first.getActualMaximum(Calendar.DAY_OF_MONTH));
         String from=dayFmt.format(first.getTime()),to=dayFmt.format(last.getTime());
         io.execute(()->{
@@ -464,7 +471,7 @@ public class MainActivity extends Activity {
                 JSONArray rows=payload.optJSONArray("presenze"); if(rows==null)rows=new JSONArray();
                 JSONArray codes=payload.optJSONArray("codici"); if(codes==null)codes=new JSONArray();
                 final JSONArray finalRows=rows; final JSONArray finalCodes=codes; final boolean manager=canManageLeave;
-                runOnUiThread(()->renderPresenze(finalRows,finalCodes,y,m,manager));
+                runOnUiThread(()->renderPresenze(finalRows,finalCodes,targetYear,targetMonth,manager));
             }catch(Exception ex){runOnUiThread(()->showError("Presenze",ex));}
         });
     }
@@ -486,7 +493,16 @@ public class MainActivity extends Activity {
         Map<String,String> saved=new HashMap<>();
         for(int i=0;i<rows.length();i++)try{JSONObject o=rows.getJSONObject(i);saved.put(o.optString("data_presenza"),o.optString("codice_presenza"));}catch(Exception ignore){}
         String[] months={"Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"};
-        content.addView(text(months[m]+" "+y,26,true));
+        LinearLayout monthNav=new LinearLayout(this); monthNav.setOrientation(LinearLayout.HORIZONTAL); monthNav.setGravity(Gravity.CENTER_VERTICAL);
+        Button prev=button("‹",false), next=button("›",false);
+        TextView monthTitle=text(months[m]+" "+y,24,true); monthTitle.setGravity(Gravity.CENTER);
+        monthNav.addView(prev,new LinearLayout.LayoutParams(dp(64),dp(54)));
+        monthNav.addView(monthTitle,new LinearLayout.LayoutParams(0,dp(54),1));
+        monthNav.addView(next,new LinearLayout.LayoutParams(dp(64),dp(54)));
+        content.addView(monthNav);
+        final int currentYear=y,currentMonth=m;
+        prev.setOnClickListener(v->showPresenzeMonth(currentYear,currentMonth-1));
+        next.setOnClickListener(v->showPresenzeMonth(currentYear,currentMonth+1));
         TextView h=text("Tocca un giorno lavorativo per scegliere il codice presenza.",14,false); h.setTextColor(Color.GRAY); content.addView(h);
         Calendar max=Calendar.getInstance(); max.add(Calendar.DAY_OF_MONTH,1); String maxKey=dayFmt.format(max.getTime());
         int days=new GregorianCalendar(y,m,1).getActualMaximum(Calendar.DAY_OF_MONTH);
@@ -858,9 +874,36 @@ public class MainActivity extends Activity {
             String due=clean(o.optString("data_scadenza"));TextView d=text("Scadenza: "+formatDateShort(due),14,false);d.setTextColor(!due.isEmpty()&&due.compareTo(today)<0?Color.RED:blue);c.addView(d);
             String pr=clean(o.optString("priorita")),st=clean(o.optString("working_progress"));c.addView(text((pr.isEmpty()?"":pr+" · ")+st,13,true));
             String desc=clean(o.optString("descrizione"));if(!desc.isEmpty()){TextView de=text(desc,14,false);de.setTextColor(Color.DKGRAY);c.addView(de);}
+            Button progress=button("Cambia working progress",false);
+            final String promId=clean(o.optString("id")), currentState=st;
+            progress.setOnClickListener(v->showPromemoriaProgressDialog(promId,currentState));
+            c.addView(progress);
             list.addView(c,cardLp());shown++;
         }catch(Exception ignore){}
         if(shown==0)list.addView(text("Nessun promemoria disponibile.",16,false));
+    }
+
+    private void showPromemoriaProgressDialog(String promemoriaId,String currentState){
+        final String[] states={"Aperto","In lavorazione","Completato","Presa visione","Richiesta confronto","Annullata"};
+        int selected=0; for(int i=0;i<states.length;i++)if(states[i].equalsIgnoreCase(currentState))selected=i;
+        new AlertDialog.Builder(this)
+            .setTitle("Working progress")
+            .setSingleChoiceItems(states,selected,null)
+            .setNegativeButton("Annulla",null)
+            .setPositiveButton("Salva",(dialog,which)->{
+                AlertDialog d=(AlertDialog)dialog;
+                int pos=d.getListView().getCheckedItemPosition();
+                if(pos<0)return;
+                String nextState=states[pos];
+                io.execute(()->{
+                    try{
+                        JSONObject body=new JSONObject().put("action","update_working_progress").put("id",promemoriaId).put("working_progress",nextState);
+                        JSONObject result=SupabaseClient.apiPost(token,"/api/mobile/promemoria",body);
+                        if(!result.optBoolean("success",false))throw new Exception(result.optString("error","Aggiornamento non riuscito"));
+                        runOnUiThread(()->{Toast.makeText(this,"Working progress aggiornato",Toast.LENGTH_SHORT).show();showPromemoria();});
+                    }catch(Exception ex){runOnUiThread(()->Toast.makeText(this,"Errore: "+friendly(ex),Toast.LENGTH_LONG).show());}
+                });
+            }).show();
     }
 
     private void showNewPromemoria(){
