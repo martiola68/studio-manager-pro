@@ -136,7 +136,47 @@ async function leggiDatiDaCF(
   cf: string,
   setNuovoNominativo: any
 ) {
-  // ...
+  const codiceFiscale = normalizeCF(cf);
+
+  if (
+    codiceFiscale.length !== 16 ||
+    !isValidCF(codiceFiscale)
+  ) {
+    return;
+  }
+
+  try {
+    const [
+      dataNascita,
+      comuneNascita,
+    ] = await Promise.all([
+      Promise.resolve(
+        extractDataNascitaFromCF(
+          codiceFiscale
+        )
+      ),
+      getComuneFromCF(
+        codiceFiscale
+      ),
+    ]);
+
+    setNuovoNominativo((prev: any) => ({
+      ...prev,
+      data_nascita:
+        dataNascita ||
+        prev.data_nascita ||
+        "",
+      luogo_nascita:
+        comuneNascita?.comune ||
+        prev.luogo_nascita ||
+        "",
+    }));
+  } catch (error) {
+    console.error(
+      "Errore compilazione automatica dati da codice fiscale:",
+      error
+    );
+  }
 }
 
 type TitolareEffettivoApi = {
@@ -3225,228 +3265,347 @@ return (
 
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 10,
-                marginTop: 15,
+                padding: 14,
+                border: "1px solid #bae6fd",
+                borderRadius: 10,
+                background: "#f0f9ff",
               }}
             >
-             <input
-  style={inputStyle}
-  placeholder="Cognome e nome"
-  value={nuovoNominativo.nome_cognome}
-  onChange={(e) =>
-    setNuovoNominativo((p) => ({
-      ...p,
-      nome_cognome: e.target.value,
-    }))
-  }
-/>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 12,
+                }}
+              >
+                <div>
+                  <label style={labelStyle}>
+                    {nuovoNominativo.tipologia_cliente ===
+                    "Persona fisica"
+                      ? "Cognome e nome"
+                      : "Ragione sociale"}
+                  </label>
+                  <input
+                    style={inputStyle}
+                    placeholder={
+                      nuovoNominativo.tipologia_cliente ===
+                      "Persona fisica"
+                        ? "Cognome e nome"
+                        : "Ragione sociale"
+                    }
+                    value={nuovoNominativo.nome_cognome}
+                    onChange={(e) =>
+                      setNuovoNominativo((p) => ({
+                        ...p,
+                        nome_cognome:
+                          e.target.value,
+                      }))
+                    }
+                  />
+                </div>
 
-<select
-  style={inputStyle}
-  value={nuovoNominativo.tipologia_cliente}
-  onChange={(e) => {
-    const tipologia = e.target.value;
+                <div>
+                  <label style={labelStyle}>
+                    Tipologia soggetto
+                  </label>
+                  <select
+                    style={inputStyle}
+                    value={
+                      nuovoNominativo.tipologia_cliente
+                    }
+                    onChange={(e) => {
+                      const tipologia =
+                        e.target.value;
 
-    setNuovoNominativo((p) => ({
-      ...p,
-      tipologia_cliente: tipologia,
+                      setNuovoNominativo((p) => ({
+                        ...p,
+                        tipologia_cliente:
+                          tipologia,
+                        luogo_nascita:
+                          tipologia ===
+                          "Persona fisica"
+                            ? p.luogo_nascita
+                            : "",
+                        data_nascita:
+                          tipologia ===
+                          "Persona fisica"
+                            ? p.data_nascita
+                            : "",
+                      }));
+                    }}
+                  >
+                    <option value="Persona fisica">
+                      Persona fisica
+                    </option>
+                    <option value="Altro">
+                      Società / ente
+                    </option>
+                  </select>
+                </div>
 
-      luogo_nascita:
-        tipologia === "Persona fisica"
-          ? p.luogo_nascita
-          : "",
+                <div>
+                  <label style={labelStyle}>
+                    {nuovoNominativo.tipologia_cliente ===
+                    "Persona fisica"
+                      ? "Codice fiscale"
+                      : "Codice fiscale / P.IVA"}
+                  </label>
 
-      data_nascita:
-        tipologia === "Persona fisica"
-          ? p.data_nascita
-          : "",
-    }));
-  }}
->
-  <option value="Persona fisica">
-    Persona fisica
-  </option>
+                  <input
+                    style={{
+                      ...inputStyle,
+                      border:
+                        nuovoNominativo.codice_fiscale &&
+                        !isCodiceFiscaleNominativoValido()
+                          ? "1.5px solid #dc2626"
+                          : "1.5px solid #94a3b8",
+                      background: "#fff",
+                    }}
+                    placeholder={
+                      nuovoNominativo.tipologia_cliente ===
+                      "Persona fisica"
+                        ? "Codice fiscale"
+                        : "Codice fiscale società / ente"
+                    }
+                    maxLength={
+                      nuovoNominativo.tipologia_cliente ===
+                      "Persona fisica"
+                        ? 16
+                        : 11
+                    }
+                    value={
+                      nuovoNominativo.codice_fiscale
+                    }
+                    onChange={async (e) => {
+                      const cf = normalizeCF(
+                        e.target.value
+                      );
 
-  <option value="Altro">
-    Società / ente
-  </option>
-</select>
+                      setNuovoNominativo((p) => ({
+                        ...p,
+                        codice_fiscale: cf,
+                      }));
 
-<div>
-  <input
-    style={{
-      ...inputStyle,
-      borderColor:
-        nuovoNominativo.codice_fiscale &&
-        !isCodiceFiscaleNominativoValido()
-          ? "#dc2626"
-          : inputStyle.borderColor,
-    }}
-    placeholder={
-      nuovoNominativo.tipologia_cliente ===
-      "Persona fisica"
-        ? "Codice fiscale"
-        : "Codice fiscale società / ente"
-    }
-    maxLength={
-      nuovoNominativo.tipologia_cliente ===
-      "Persona fisica"
-        ? 16
-        : 11
-    }
-    value={nuovoNominativo.codice_fiscale}
-    onChange={async (e) => {
-      const cf = normalizeCF(e.target.value);
+                      if (
+                        nuovoNominativo.tipologia_cliente ===
+                          "Persona fisica" &&
+                        cf.length === 16 &&
+                        isValidCF(cf)
+                      ) {
+                        await leggiDatiDaCF(
+                          cf,
+                          setNuovoNominativo
+                        );
+                      }
+                    }}
+                    onBlur={async (e) => {
+                      const cf = normalizeCF(
+                        e.target.value
+                      );
 
-      setNuovoNominativo((p) => ({
-        ...p,
-        codice_fiscale: cf,
-      }));
+                      if (
+                        nuovoNominativo.tipologia_cliente ===
+                          "Persona fisica" &&
+                        cf.length === 16 &&
+                        isValidCF(cf)
+                      ) {
+                        await leggiDatiDaCF(
+                          cf,
+                          setNuovoNominativo
+                        );
+                      }
+                    }}
+                  />
 
-      if (
-        nuovoNominativo.tipologia_cliente ===
-          "Persona fisica" &&
-        cf.length === 16 &&
-        isValidCF(cf)
-      ) {
-        await leggiDatiDaCF(
-          cf,
-          setNuovoNominativo
-        );
-      }
-    }}
-  />
+                  {nuovoNominativo.codice_fiscale &&
+                    !isCodiceFiscaleNominativoValido() && (
+                      <div
+                        style={{
+                          marginTop: 4,
+                          color: "#dc2626",
+                          fontSize: 12,
+                        }}
+                      >
+                        {nuovoNominativo.tipologia_cliente ===
+                        "Persona fisica"
+                          ? "Codice fiscale della persona fisica non valido"
+                          : "Il codice fiscale della società o ente deve essere composto da 11 cifre"}
+                      </div>
+                    )}
+                </div>
 
-  {nuovoNominativo.codice_fiscale &&
-    !isCodiceFiscaleNominativoValido() && (
-      <div
-        style={{
-          marginTop: 4,
-          color: "#dc2626",
-          fontSize: 12,
-        }}
-      >
-        {nuovoNominativo.tipologia_cliente ===
-        "Persona fisica"
-          ? "Codice fiscale della persona fisica non valido"
-          : "Il codice fiscale della società o ente deve essere composto da 11 cifre"}
-      </div>
-    )}
-</div>
+                <div>
+                  <label style={labelStyle}>
+                    Email
+                  </label>
+                  <input
+                    style={inputStyle}
+                    placeholder="Email"
+                    value={
+                      nuovoNominativo.email
+                    }
+                    onChange={(e) =>
+                      setNuovoNominativo((p) => ({
+                        ...p,
+                        email: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
 
-<input
-  style={inputStyle}
-  placeholder="Email"
-  value={nuovoNominativo.email}
-  onChange={(e) =>
-    setNuovoNominativo((p) => ({
-      ...p,
-      email: e.target.value,
-    }))
-  }
-/>
+                <div>
+                  <label style={labelStyle}>
+                    Luogo di nascita
+                  </label>
+                  <input
+                    style={{
+                      ...inputStyle,
+                      background:
+                        nuovoNominativo.tipologia_cliente ===
+                        "Persona fisica"
+                          ? "#fff"
+                          : "#e2e8f0",
+                    }}
+                    placeholder="Luogo di nascita"
+                    disabled={
+                      nuovoNominativo.tipologia_cliente !==
+                      "Persona fisica"
+                    }
+                    value={
+                      nuovoNominativo.luogo_nascita
+                    }
+                    onChange={(e) =>
+                      setNuovoNominativo((p) => ({
+                        ...p,
+                        luogo_nascita:
+                          e.target.value,
+                      }))
+                    }
+                  />
+                </div>
 
-<input
-  style={{
-    ...inputStyle,
-    background:
-      nuovoNominativo.tipologia_cliente ===
-      "Persona fisica"
-        ? "#fff"
-        : "#f1f5f9",
-  }}
-  placeholder="Luogo nascita"
-  disabled={
-    nuovoNominativo.tipologia_cliente !==
-    "Persona fisica"
-  }
-  value={nuovoNominativo.luogo_nascita}
-  onChange={(e) =>
-    setNuovoNominativo((p) => ({
-      ...p,
-      luogo_nascita: e.target.value,
-    }))
-  }
-/>
+                <div>
+                  <label style={labelStyle}>
+                    Data di nascita
+                  </label>
+                  <input
+                    type="date"
+                    style={{
+                      ...inputStyle,
+                      background:
+                        nuovoNominativo.tipologia_cliente ===
+                        "Persona fisica"
+                          ? "#fff"
+                          : "#e2e8f0",
+                    }}
+                    disabled={
+                      nuovoNominativo.tipologia_cliente !==
+                      "Persona fisica"
+                    }
+                    value={
+                      nuovoNominativo.data_nascita
+                    }
+                    onChange={(e) =>
+                      setNuovoNominativo((p) => ({
+                        ...p,
+                        data_nascita:
+                          e.target.value,
+                      }))
+                    }
+                  />
+                </div>
 
-<input
-  type="date"
-  style={{
-    ...inputStyle,
-    background:
-      nuovoNominativo.tipologia_cliente ===
-      "Persona fisica"
-        ? "#fff"
-        : "#f1f5f9",
-  }}
-  disabled={
-    nuovoNominativo.tipologia_cliente !==
-    "Persona fisica"
-  }
-  value={nuovoNominativo.data_nascita}
-  onChange={(e) =>
-    setNuovoNominativo((p) => ({
-      ...p,
-      data_nascita: e.target.value,
-    }))
-  }
-/>
+                <div
+                  style={{
+                    gridColumn: "1 / -1",
+                  }}
+                >
+                  <label style={labelStyle}>
+                    Indirizzo
+                  </label>
+                  <input
+                    style={inputStyle}
+                    placeholder="Indirizzo"
+                    value={
+                      nuovoNominativo.indirizzo
+                    }
+                    onChange={(e) =>
+                      setNuovoNominativo((p) => ({
+                        ...p,
+                        indirizzo:
+                          e.target.value,
+                      }))
+                    }
+                  />
+                </div>
 
-<input
-  style={inputStyle}
-  placeholder="Indirizzo"
-  value={nuovoNominativo.indirizzo}
-  onChange={(e) =>
-    setNuovoNominativo((p) => ({
-      ...p,
-      indirizzo: e.target.value,
-    }))
-  }
-/>
+                <div>
+                  <label style={labelStyle}>
+                    Città
+                  </label>
+                  <input
+                    style={inputStyle}
+                    placeholder="Città"
+                    value={
+                      nuovoNominativo.citta
+                    }
+                    onChange={(e) =>
+                      setNuovoNominativo((p) => ({
+                        ...p,
+                        citta:
+                          e.target.value,
+                      }))
+                    }
+                  />
+                </div>
 
-<input
-  style={inputStyle}
-  placeholder="Città"
-  value={nuovoNominativo.citta}
-  onChange={(e) =>
-    setNuovoNominativo((p) => ({
-      ...p,
-      citta: e.target.value,
-    }))
-  }
-/>
+                <div>
+                  <label style={labelStyle}>
+                    Provincia
+                  </label>
+                  <input
+                    style={inputStyle}
+                    placeholder="Provincia"
+                    maxLength={2}
+                    value={
+                      nuovoNominativo.provincia
+                    }
+                    onChange={(e) =>
+                      setNuovoNominativo((p) => ({
+                        ...p,
+                        provincia:
+                          e.target.value
+                            .toUpperCase()
+                            .slice(0, 2),
+                      }))
+                    }
+                  />
+                </div>
 
-<input
-  style={inputStyle}
-  placeholder="Provincia"
-  maxLength={2}
-  value={nuovoNominativo.provincia}
-  onChange={(e) =>
-    setNuovoNominativo((p) => ({
-      ...p,
-      provincia: e.target.value
-        .toUpperCase()
-        .slice(0, 2),
-    }))
-  }
-/>
-
-<input
-  style={inputStyle}
-  placeholder="CAP"
-  maxLength={5}
-  value={nuovoNominativo.cap}
-  onChange={(e) =>
-    setNuovoNominativo((p) => ({
-      ...p,
-      cap: e.target.value
-        .replace(/\D/g, "")
-        .slice(0, 5),
-    }))
-  }
-/>
+                <div>
+                  <label style={labelStyle}>
+                    CAP
+                  </label>
+                  <input
+                    style={inputStyle}
+                    placeholder="CAP"
+                    maxLength={5}
+                    value={
+                      nuovoNominativo.cap
+                    }
+                    onChange={(e) =>
+                      setNuovoNominativo((p) => ({
+                        ...p,
+                        cap:
+                          e.target.value
+                            .replace(/\D/g, "")
+                            .slice(0, 5),
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+            </div>
 
 </div>
 
