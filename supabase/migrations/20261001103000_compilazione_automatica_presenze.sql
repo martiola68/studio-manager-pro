@@ -33,3 +33,5 @@ before update of compilazione_automatica_presenze
 on public.tbdipendenti
 for each row
 execute function public.proteggi_compilazione_automatica_presenze();
+
+-- Trigger applicazione via Supabase API
