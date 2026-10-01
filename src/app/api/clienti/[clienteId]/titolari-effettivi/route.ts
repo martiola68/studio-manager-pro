@@ -15,6 +15,7 @@ import {
 import {
   calcolaTitolariEffettiviAllaData,
   filtraOrganiResidualAllaData,
+  filtraPartecipazioniAllaData,
   raccogliDateVariazione,
   type OrganoResidualTemporale,
   type PartecipazioneTemporale,
@@ -25,6 +26,7 @@ type ClienteRow = {
   id: string;
   ragione_sociale: string | null;
   codice_fiscale: string | null;
+  partita_iva: string | null;
   tipo_cliente: string | null;
   cliente: boolean | null;
 };
@@ -165,9 +167,39 @@ function firmeUguali(
 }
 
 function isPersonaFisica(
-  tipoCliente: string | null | undefined
+  soggetto: ClienteRow | null | undefined
 ): boolean {
-  return String(tipoCliente || "")
+  if (!soggetto) return false;
+
+  const cf = String(
+    soggetto.codice_fiscale || ""
+  )
+    .trim()
+    .toUpperCase();
+
+  const partitaIva = String(
+    soggetto.partita_iva || ""
+  ).trim();
+
+  /*
+   * Le vecchie anagrafiche possono avere
+   * tipo_cliente incoerente. Un CF/P.IVA di
+   * 11 cifre prevale e identifica una società.
+   */
+  if (
+    /^\d{11}$/.test(cf) ||
+    /^\d{11}$/.test(partitaIva)
+  ) {
+    return false;
+  }
+
+  if (/^[A-Z0-9]{16}$/.test(cf)) {
+    return true;
+  }
+
+  return String(
+    soggetto.tipo_cliente || ""
+  )
     .toLowerCase()
     .includes("persona fisica");
 }
@@ -269,6 +301,7 @@ export async function GET(
           id,
           ragione_sociale,
           codice_fiscale,
+          partita_iva,
           tipo_cliente,
           cliente
         `)
@@ -281,6 +314,7 @@ export async function GET(
           id,
           ragione_sociale,
           codice_fiscale,
+          partita_iva,
           tipo_cliente,
           cliente
         `),
@@ -447,9 +481,7 @@ export async function GET(
           );
 
           const tipoPartecipante =
-            isPersonaFisica(
-              partecipante.tipo_cliente
-            )
+            isPersonaFisica(partecipante)
               ? "persona_fisica"
               : "societa";
 
@@ -607,7 +639,7 @@ type SituazioneTitolareEffettivo = {
 function calcolaSituazioneAllaData(
   dataCalcolo: string
 ): SituazioneTitolareEffettivo {
-  const titolariPerProprieta =
+  const titolariStandard =
     calcolaTitolariEffettiviAllaData(
       partecipazioniNormalizzate,
       dataCalcolo
@@ -616,6 +648,274 @@ function calcolaSituazioneAllaData(
         String(titolare.societa_id) ===
         String(clienteId)
     );
+
+  /*
+   * Proprietà indiretta tramite controllo.
+   *
+   * Quando una società possiede oltre il 25%
+   * del cliente, risaliamo alla persona fisica
+   * che controlla la società intermedia (>50%).
+   * La persona resta Titolare Effettivo anche
+   * se il prodotto matematico delle quote è
+   * inferiore al 25%.
+   */
+  const partecipazioniValide =
+    filtraPartecipazioniAllaData(
+      partecipazioniNormalizzate,
+      dataCalcolo
+    );
+
+  const titolariControlloMap =
+    new Map<string, any>();
+
+  const societaDiretteRilevanti =
+    partecipazioniValide.filter(
+      (p) =>
+        String(p.partecipata_id) ===
+          String(clienteId) &&
+        p.partecipante_tipo === "societa" &&
+        Number(p.quota_diretta || 0) > 25
+    );
+
+  function risaliControllo(
+    societaId: string,
+    societaNome: string,
+    quotaVersoCliente: number,
+    percorsoIds: string[],
+    percorsoNomi: string[],
+    visitati: Set<string>
+  ) {
+    if (visitati.has(societaId)) {
+      return;
+    }
+
+    const nuoviVisitati =
+      new Set(visitati);
+    nuoviVisitati.add(societaId);
+
+    const proprietari =
+      partecipazioniValide.filter(
+        (p) =>
+          String(p.partecipata_id) ===
+          String(societaId)
+      );
+
+    proprietari.forEach((p) => {
+      const quotaControllo =
+        Number(p.quota_diretta || 0);
+
+      if (quotaControllo <= 50) {
+        return;
+      }
+
+      const quotaEffettiva =
+        (quotaVersoCliente *
+          quotaControllo) /
+        100;
+
+      const ids = [
+        String(p.partecipante_id),
+        ...percorsoIds,
+      ];
+
+      const nomi = [
+        p.partecipante_nome,
+        ...percorsoNomi,
+      ];
+
+      if (
+        p.partecipante_tipo ===
+        "persona_fisica"
+      ) {
+        const personaId =
+          String(p.partecipante_id);
+
+        const esistente =
+          titolariControlloMap.get(
+            personaId
+          );
+
+        const percorso = {
+          titolare_id: personaId,
+          titolare_nome:
+            p.partecipante_nome,
+          titolare_tipo:
+            "persona_fisica" as const,
+          societa_id:
+            String(clienteId),
+          societa_nome:
+            cliente.ragione_sociale ||
+            "Società non trovata",
+          quota_percorso:
+            Math.round(
+              quotaEffettiva * 10000
+            ) / 10000,
+          quota_diretta: 0,
+          livello:
+            ids.length - 1,
+          percorso_ids: ids,
+          percorso_nomi: nomi,
+        };
+
+        if (esistente) {
+          esistente.quota_indiretta =
+            Math.round(
+              (Number(
+                esistente.quota_indiretta ||
+                  0
+              ) +
+                quotaEffettiva) *
+                10000
+            ) / 10000;
+
+          esistente.quota_complessiva =
+            esistente.quota_indiretta;
+
+          esistente.percorsi.push(
+            percorso
+          );
+        } else {
+          titolariControlloMap.set(
+            personaId,
+            {
+              persona_id: personaId,
+              persona_nome:
+                p.partecipante_nome,
+              societa_id:
+                String(clienteId),
+              societa_nome:
+                cliente.ragione_sociale ||
+                "Società non trovata",
+              quota_diretta: 0,
+              quota_indiretta:
+                Math.round(
+                  quotaEffettiva *
+                    10000
+                ) / 10000,
+              quota_complessiva:
+                Math.round(
+                  quotaEffettiva *
+                    10000
+                ) / 10000,
+              candidato_titolare_effettivo:
+                true,
+              criterio_titolarita:
+                "proprieta",
+              tipo_titolarita:
+                "indiretta",
+              valido_dal:
+                p.valido_dal || null,
+              valido_al:
+                p.valido_al || null,
+              percorsi: [percorso],
+            }
+          );
+        }
+
+        return;
+      }
+
+      risaliControllo(
+        String(p.partecipante_id),
+        p.partecipante_nome,
+        quotaEffettiva,
+        ids,
+        nomi,
+        nuoviVisitati
+      );
+    });
+  }
+
+  societaDiretteRilevanti.forEach(
+    (p) => {
+      risaliControllo(
+        String(p.partecipante_id),
+        p.partecipante_nome,
+        Number(p.quota_diretta || 0),
+        [
+          String(p.partecipante_id),
+          String(clienteId),
+        ],
+        [
+          p.partecipante_nome,
+          cliente.ragione_sociale ||
+            "Società non trovata",
+        ],
+        new Set<string>()
+      );
+    }
+  );
+
+  const titolariMap =
+    new Map<string, any>();
+
+  titolariStandard.forEach(
+    (titolare) => {
+      titolariMap.set(
+        String(titolare.persona_id),
+        titolare
+      );
+    }
+  );
+
+  Array.from(
+    titolariControlloMap.values()
+  ).forEach((titolare: any) => {
+    const id = String(
+      titolare.persona_id
+    );
+    const esistente =
+      titolariMap.get(id);
+
+    if (!esistente) {
+      titolariMap.set(id, titolare);
+      return;
+    }
+
+    esistente.percorsi = [
+      ...(esistente.percorsi || []),
+      ...(titolare.percorsi || []),
+    ];
+
+    if (
+      Number(
+        titolare.quota_indiretta || 0
+      ) >
+      Number(
+        esistente.quota_indiretta || 0
+      )
+    ) {
+      esistente.quota_indiretta =
+        titolare.quota_indiretta;
+      esistente.quota_complessiva =
+        Math.max(
+          Number(
+            esistente.quota_complessiva ||
+              0
+          ),
+          Number(
+            titolare.quota_complessiva ||
+              0
+          )
+        );
+    }
+
+    esistente.candidato_titolare_effettivo =
+      true;
+    esistente.criterio_titolarita =
+      "proprieta";
+    esistente.tipo_titolarita =
+      Number(
+        esistente.quota_diretta || 0
+      ) > 0
+        ? "mista"
+        : "indiretta";
+  });
+
+  const titolariPerProprieta =
+    Array.from(
+      titolariMap.values()
+    ) as TitolareEffettivoTemporale[];
 
   let titolariEffettivi:
     TitolareEffettivoTemporale[] =
@@ -656,9 +956,7 @@ function calcolaSituazioneAllaData(
 
       if (
         !soggetto ||
-        !isPersonaFisica(
-          soggetto.tipo_cliente
-        )
+        !isPersonaFisica(soggetto)
       ) {
         return;
       }
