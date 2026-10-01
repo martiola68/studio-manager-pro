@@ -337,6 +337,7 @@ const [
 const [compagineSocietaId, setCompagineSocietaId] = useState("");
 const [compagineStack, setCompagineStack] = useState<string[]>([]);
 const [compagineSoci, setCompagineSoci] = useState<any[]>([]);
+const [compagineInModificaId, setCompagineInModificaId] = useState("");
 const [loadingCompagine, setLoadingCompagine] = useState(false);
 const [erroreCompagine, setErroreCompagine] = useState("");
 const [socioCompagineForm, setSocioCompagineForm] = useState({
@@ -746,12 +747,18 @@ async function salvaSocioCompagine() {
   const res = await fetch(
     "/api/clienti-organi",
     {
-      method: "POST",
+      method:
+        compagineInModificaId
+          ? "PUT"
+          : "POST",
       headers: {
         "Content-Type":
           "application/json",
       },
       body: JSON.stringify({
+        id:
+          compagineInModificaId ||
+          undefined,
         cliente_id: compagineSocietaId,
         soggetto_cliente_id:
           socioCompagineForm.soggetto_cliente_id,
@@ -799,6 +806,7 @@ async function salvaSocioCompagine() {
     return;
   }
 
+  setCompagineInModificaId("");
   setSocioCompagineForm({
     soggetto_cliente_id: "",
     percentuale_partecipazione: "",
@@ -813,6 +821,33 @@ async function salvaSocioCompagine() {
     compagineSocietaId
   );
   await caricaTitolariEffettivi();
+}
+
+function modificaSocioCompagine(
+  socio: any
+) {
+  setCompagineInModificaId(String(socio.id || ""));
+  setSocioCompagineForm({
+    soggetto_cliente_id: String(socio.soggetto_cliente_id || ""),
+    percentuale_partecipazione:
+      socio.percentuale_partecipazione != null
+        ? String(socio.percentuale_partecipazione)
+        : "",
+    importo_quota_nominale:
+      socio.importo_quota_nominale != null
+        ? String(socio.importo_quota_nominale)
+        : "",
+    percentuale_diritti_voto:
+      socio.percentuale_diritti_voto != null
+        ? String(socio.percentuale_diritti_voto)
+        : "",
+    percentuale_diritti_utili:
+      socio.percentuale_diritti_utili != null
+        ? String(socio.percentuale_diritti_utili)
+        : "",
+    data_nomina: socio.data_nomina || "",
+    data_scadenza: socio.data_scadenza || "",
+  });
 }
 
 async function eliminaSocioCompagine(
@@ -866,6 +901,7 @@ function apriCompagineFiglia(
     compagineSocietaId,
   ]);
   setCompagineSocietaId(societaId);
+  setCompagineInModificaId("");
   setSocioCompagineForm({
     soggetto_cliente_id: "",
     percentuale_partecipazione: "",
@@ -2512,10 +2548,10 @@ return (
 {socioSocietaSelezionata && (
   <div
     style={{
-      marginTop: 16,
-      padding: 16,
+      marginTop: 14,
+      padding: 12,
       border: "1px solid #bae6fd",
-      borderRadius: 10,
+      borderRadius: 9,
       background: "#f0f9ff",
     }}
   >
@@ -2531,7 +2567,7 @@ return (
       <div>
         <div
           style={{
-            fontSize: 15,
+            fontSize: 14,
             fontWeight: 800,
             color: "#0c4a6e",
           }}
@@ -2556,9 +2592,11 @@ return (
           type="button"
           style={{
             ...secondaryButton,
-            width: 150,
-            height: 38,
-            padding: "0 12px",
+            width: 145,
+            minWidth: 145,
+            height: 36,
+            padding: "0 10px",
+            fontSize: 12,
           }}
           onClick={tornaCompaginePadre}
         >
@@ -2569,8 +2607,8 @@ return (
 
     <div
       style={{
-        marginTop: 12,
-        padding: "9px 11px",
+        marginTop: 10,
+        padding: "7px 10px",
         borderRadius: 8,
         background: "#e0f2fe",
         color: "#075985",
@@ -2608,8 +2646,11 @@ return (
     ) : (
       <div
         style={{
-          marginTop: 12,
+          marginTop: 10,
           overflowX: "auto",
+          maxWidth: 760,
+          marginLeft: "auto",
+          marginRight: "auto",
         }}
       >
         <table
@@ -2648,7 +2689,7 @@ return (
 
               return (
                 <tr key={socio.id}>
-                  <td style={tdStyle}>
+                  <td style={{...tdStyle,padding:"10px 12px",fontSize:13}}>
                     {soggetto?.ragione_sociale ||
                       socio.nominativo_nome ||
                       "—"}
@@ -2668,13 +2709,13 @@ return (
                       </span>
                     )}
                   </td>
-                  <td style={tdStyle}>
+                  <td style={{...tdStyle,padding:"10px 12px",fontSize:13}}>
                     {soggetto?.codice_fiscale ||
                       soggetto?.partita_iva ||
                       socio.nominativo_codice_fiscale ||
                       "—"}
                   </td>
-                  <td style={tdStyle}>
+                  <td style={{...tdStyle,padding:"10px 12px",fontSize:13}}>
                     {socio.percentuale_partecipazione !=
                     null
                       ? `${Number(
@@ -2685,7 +2726,7 @@ return (
                         })}%`
                       : "—"}
                   </td>
-                  <td style={tdStyle}>
+                  <td style={{...tdStyle,padding:"10px 12px",fontSize:13}}>
                     <div
                       style={{
                         display: "flex",
@@ -2693,15 +2734,24 @@ return (
                         flexWrap: "wrap",
                       }}
                     >
+                      <button
+                        type="button"
+                        style={{ ...iconButton, width: 32, height: 32 }}
+                        title="Modifica"
+                        onClick={() => modificaSocioCompagine(socio)}
+                      >
+                        <Pencil size={15} />
+                      </button>
+
                       {societa && !clienteSmp && (
                         <button
                           type="button"
                           style={{
                             ...secondaryButton,
-                            width: 135,
-                            height: 34,
-                            padding: "0 10px",
-                            fontSize: 12,
+                            width: 118,
+                            height: 32,
+                            padding: "0 8px",
+                            fontSize: 11,
                           }}
                           onClick={() =>
                             apriCompagineFiglia(
@@ -2717,7 +2767,7 @@ return (
 
                       <button
                         type="button"
-                        style={iconDangerButton}
+                        style={{ ...iconDangerButton, width: 32, height: 32 }}
                         title="Elimina dalla compagine"
                         onClick={() =>
                           void eliminaSocioCompagine(
@@ -2736,7 +2786,7 @@ return (
             {compagineSoci.length === 0 && (
               <tr>
                 <td
-                  style={tdStyle}
+                  style={{...tdStyle,padding:"10px 12px",fontSize:13}}
                   colSpan={4}
                 >
                   Nessun socio inserito per questa società.
@@ -2750,8 +2800,8 @@ return (
 
     <div
       style={{
-        marginTop: 14,
-        paddingTop: 14,
+        marginTop: 12,
+        paddingTop: 12,
         borderTop: "1px solid #bae6fd",
       }}
     >
@@ -2759,8 +2809,9 @@ return (
         style={{
           display: "grid",
           gridTemplateColumns:
-            "2fr .7fr .7fr",
-          gap: 10,
+            "2.2fr .65fr .75fr",
+          gap: 8,
+          alignItems: "end",
         }}
       >
         <div>
@@ -2768,7 +2819,7 @@ return (
             Socio della società
           </label>
           <select
-            style={inputStyle}
+            style={{...inputStyle,padding:"8px 10px",fontSize:13}}
             value={
               socioCompagineForm.soggetto_cliente_id
             }
@@ -2814,7 +2865,7 @@ return (
             min="0"
             max="100"
             step="0.01"
-            style={inputStyle}
+            style={{...inputStyle,padding:"8px 10px",fontSize:13}}
             value={
               socioCompagineForm.percentuale_partecipazione
             }
@@ -2843,7 +2894,7 @@ return (
             type="number"
             min="0"
             step="0.01"
-            style={inputStyle}
+            style={{...inputStyle,padding:"8px 10px",fontSize:13}}
             value={
               socioCompagineForm.importo_quota_nominale
             }
@@ -2863,8 +2914,8 @@ return (
           display: "grid",
           gridTemplateColumns:
             "1fr 1fr 1fr 1fr",
-          gap: 10,
-          marginTop: 10,
+          gap: 8,
+          marginTop: 8,
         }}
       >
         <div>
@@ -2876,7 +2927,7 @@ return (
             min="0"
             max="100"
             step="0.01"
-            style={inputStyle}
+            style={{...inputStyle,padding:"8px 10px",fontSize:13}}
             value={
               socioCompagineForm.percentuale_diritti_voto
             }
@@ -2899,7 +2950,7 @@ return (
             min="0"
             max="100"
             step="0.01"
-            style={inputStyle}
+            style={{...inputStyle,padding:"8px 10px",fontSize:13}}
             value={
               socioCompagineForm.percentuale_diritti_utili
             }
@@ -2919,7 +2970,7 @@ return (
           </label>
           <input
             type="date"
-            style={inputStyle}
+            style={{...inputStyle,padding:"8px 10px",fontSize:13}}
             value={
               socioCompagineForm.data_nomina
             }
@@ -2939,7 +2990,7 @@ return (
           </label>
           <input
             type="date"
-            style={inputStyle}
+            style={{...inputStyle,padding:"8px 10px",fontSize:13}}
             value={
               socioCompagineForm.data_scadenza
             }
@@ -2959,17 +3010,20 @@ return (
           display: "flex",
           justifyContent: "flex-end",
           gap: 8,
-          marginTop: 10,
-          flexWrap: "wrap",
+          marginTop: 8,
+          flexWrap: "nowrap",
         }}
       >
         <button
           type="button"
           style={{
             ...secondaryButton,
-            width: 170,
-            height: 38,
-            padding: "0 12px",
+            width: 150,
+            minWidth: 150,
+            height: 36,
+            padding: "0 10px",
+            whiteSpace: "nowrap",
+            fontSize: 12,
           }}
           onClick={() => {
             setNuovoNominativoDestinazione(
@@ -2992,7 +3046,7 @@ return (
             setShowNuovoNominativo(true);
           }}
         >
-          + Nuovo nominativo
+          Nuovo nominativo
         </button>
 
         <button
@@ -3007,7 +3061,9 @@ return (
             void salvaSocioCompagine()
           }
         >
-          Aggiungi socio
+          {compagineInModificaId
+            ? "Salva modifiche"
+            : "Aggiungi socio"}
         </button>
       </div>
     </div>
@@ -3033,18 +3089,21 @@ return (
         >
           <div
             style={{
-              background: "#fff",
-              padding: 24,
+              width: "min(900px,96vw)",
+              maxHeight: "92vh",
+              overflowY: "auto",
               borderRadius: 12,
-              width: 700,
-              maxWidth: "95%",
+              background: "#fff",
+              boxShadow: "0 24px 70px rgba(15,23,42,.28)",
             }}
           >
-           <h2>
-  {nominativoInModificaId
-    ? "Modifica nominativo"
-    : "Nuovo nominativo"}
-</h2>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 18px",background:"#5b5b5b",color:"#fff"}}>
+              <strong style={{fontSize:18}}>
+                {nominativoInModificaId ? "Modifica nominativo" : "Nuovo nominativo"}
+              </strong>
+              <button type="button" onClick={()=>{setShowNuovoNominativo(false);setNominativoInModificaId(null);setNuovoNominativoDestinazione("principale");}} style={{border:0,background:"transparent",color:"#fff",fontSize:22,cursor:"pointer"}}>×</button>
+            </div>
+            <div style={{padding:20}}>
 
             <div
               style={{
@@ -3305,8 +3364,8 @@ return (
       : "Salva nominativo"}
   </button>
 </div>
-
-  </div>
+            </div>
+          </div>
 </div>
 )}
 
