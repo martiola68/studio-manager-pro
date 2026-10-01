@@ -446,18 +446,18 @@ const nominativoSocioSelezionato = useMemo(
   [nominativi, form.soggetto_cliente_id]
 );
 
-const socioSocietaNonCliente =
+const socioSocietaSelezionata =
   modalSezione === "soci" &&
   Boolean(nominativoSocioSelezionato) &&
-  !String(
-    nominativoSocioSelezionato?.tipo_cliente || ""
-  )
-    .toLowerCase()
-    .includes("persona fisica") &&
-  nominativoSocioSelezionato?.cliente !== true;
+  isSocietaNominativo(
+    nominativoSocioSelezionato
+  );
+
+const societaSelezionataClienteSmp =
+  nominativoSocioSelezionato?.cliente === true;
 
 useEffect(() => {
-  if (!socioSocietaNonCliente) {
+  if (!socioSocietaSelezionata) {
     setCompagineSocietaId("");
     setCompagineStack([]);
     setCompagineSoci([]);
@@ -477,7 +477,7 @@ useEffect(() => {
     setCompagineSocietaId(rootId);
   }
 }, [
-  socioSocietaNonCliente,
+  socioSocietaSelezionata,
   nominativoSocioSelezionato?.id,
 ]);
 
@@ -2473,7 +2473,7 @@ return (
   <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:10,flexWrap:"wrap"}}><button type="button" style={{ ...secondaryButton, width: 140, height: 40, padding: "0 14px" }} onClick={()=>{setNuovoNominativoDestinazione("principale");setNominativoInModificaId(null);setNuovoNominativo({nome_cognome:"",codice_fiscale:"",email:"",luogo_nascita:"",data_nascita:"",indirizzo:"",citta:"",provincia:"",cap:"",tipologia_cliente:"Persona fisica"});setShowNuovoNominativo(true);}}>Nuovo</button><button type="button" style={{ ...secondaryButton, width: 190, minWidth: 190, height: 40, padding: "0 16px", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", justifyContent: "center" }} disabled={!form.soggetto_cliente_id} onClick={apriModificaNominativo}>Modifica anagrafica</button></div>
   {modalSezione==="soci" ? <><div style={{marginTop:18,display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}><div><label style={labelStyle}>Tipo</label><input style={{...inputStyle,background:"#f1f5f9"}} value="Socio" disabled/></div><div><label style={labelStyle}>Dal</label><input type="date" style={inputStyle} value={form.data_nomina} onChange={(e)=>{const dataNomina=e.target.value;setForm((p)=>({...p,data_nomina:dataNomina,data_scadenza:p.durata_carica==="Anni n."?calcolaScadenzaDaAnni(dataNomina,p.durata_carica_anni):p.data_scadenza}))}}/></div><div><label style={labelStyle}>Al</label><input type="date" style={inputStyle} value={form.data_scadenza} onChange={(e)=>setForm((p)=>({...p,data_scadenza:e.target.value}))}/></div></div><div style={{marginTop:16,padding:16,border:"1px solid #dbeafe",borderRadius:10,background:"#f8fbff"}}><div style={{display:"grid",gridTemplateColumns:"1.2fr .7fr .7fr",gap:12}}><div><label style={labelStyle}>Tipologia del diritto</label><select style={inputStyle} value={form.titolo_possesso} onChange={(e)=>setForm((p)=>({...p,titolo_possesso:e.target.value}))}><option value="piena_proprieta">Piena proprietà</option><option value="usufrutto">Usufrutto</option><option value="nuda_proprieta">Nuda proprietà</option><option value="pegno">Pegno</option><option value="sequestro">Sequestro</option><option value="intestazione_fiduciaria">Intestazione fiduciaria</option><option value="altro">Altro</option></select></div><div><label style={labelStyle}>Quota %</label><input type="number" min="0" max="100" step="0.01" style={inputStyle} value={form.percentuale_partecipazione} onChange={(e)=>{const v=e.target.value;setForm((p)=>({...p,percentuale_partecipazione:v,percentuale_diritti_voto:p.titolo_possesso==="piena_proprieta"?v:p.percentuale_diritti_voto,percentuale_diritti_utili:p.titolo_possesso==="piena_proprieta"?v:p.percentuale_diritti_utili}))}}/></div><div><label style={labelStyle}>Diritti di voto %</label><input type="number" min="0" max="100" step="0.01" style={inputStyle} value={form.percentuale_diritti_voto} onChange={(e)=>setForm((p)=>({...p,percentuale_diritti_voto:e.target.value}))}/></div></div><div style={{marginTop:12,display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}><div><label style={labelStyle}>Valore nominale</label><input type="number" min="0" step="0.01" style={inputStyle} value={form.importo_quota_nominale} onChange={(e)=>setForm((p)=>({...p,importo_quota_nominale:e.target.value}))}/></div><div><label style={labelStyle}>Partecipazione agli utili %</label><input type="number" min="0" max="100" step="0.01" style={inputStyle} value={form.percentuale_diritti_utili} onChange={(e)=>setForm((p)=>({...p,percentuale_diritti_utili:e.target.value}))}/></div></div></div>
 
-{socioSocietaNonCliente && (
+{socioSocietaSelezionata && (
   <div
     style={{
       marginTop: 16,
@@ -2509,7 +2509,9 @@ return (
             fontSize: 12,
           }}
         >
-          Per le società non clienti puoi ricostruire anche più livelli di partecipazione. I nominativi già clienti SMP utilizzano invece la compagine già presente nel gestionale.
+          {societaSelezionataClienteSmp
+            ? "Società già presente come cliente SMP: qui visualizzi e aggiorni la stessa compagine già registrata nel gestionale."
+            : "Società non cliente: puoi ricostruire qui la compagine anche su più livelli per il calcolo del Titolare Effettivo."}
         </div>
       </div>
 
