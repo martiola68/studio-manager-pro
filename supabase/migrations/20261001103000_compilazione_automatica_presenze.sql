@@ -35,3 +35,5 @@ for each row
 execute function public.proteggi_compilazione_automatica_presenze();
 
 -- Trigger applicazione via Supabase API
+
+-- Trigger direct DB workflow retry
