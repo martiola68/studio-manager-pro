@@ -142,6 +142,37 @@ export async function POST(request: Request) {
     const { utente } = await getMobileUser(request);
     const body = await request.json();
 
+    if (body?.action === "update_working_progress") {
+      const id = String(body?.id || "").trim();
+      const workingProgress = String(body?.working_progress || "").trim();
+      const allowed = ["Aperto", "In lavorazione", "Completato", "Presa visione", "Richiesta confronto", "Annullata"];
+      if (!id || !allowed.includes(workingProgress)) {
+        return Response.json({ success: false, error: "Dati stato non validi." }, { status: 400 });
+      }
+
+      const { data: current, error: currentError } = await mobileSupabaseAdmin
+        .from("tbpromemoria")
+        .select("id,operatore_id,destinatario_id")
+        .eq("id", id)
+        .eq("studio_id", utente.studio_id)
+        .maybeSingle();
+      if (currentError) throw currentError;
+      if (!current || (String(current.operatore_id || "") !== String(utente.id) && String(current.destinatario_id || "") !== String(utente.id))) {
+        return Response.json({ success: false, error: "Promemoria non disponibile." }, { status: 404 });
+      }
+
+      const { data: updated, error: updateError } = await mobileSupabaseAdmin
+        .from("tbpromemoria")
+        .update({ working_progress: workingProgress })
+        .eq("id", id)
+        .eq("studio_id", utente.studio_id)
+        .select("*")
+        .single();
+      if (updateError) throw updateError;
+
+      return Response.json({ success: true, data: updated });
+    }
+
     const titolo = String(body?.titolo || "").trim();
     if (!titolo) {
       return Response.json({ success: false, error: "Titolo obbligatorio." }, { status: 400 });
