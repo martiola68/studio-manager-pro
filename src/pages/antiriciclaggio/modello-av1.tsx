@@ -30,6 +30,7 @@ type PrestazioneAR = {
   RischioTipoPrestAR: string;
   PunteggioPrestAR: number;
   TipoTB?: string | null;
+  RegolaDiCondotta?: string | null;
 };
 
 type ResponsabileAV = {
@@ -310,35 +311,41 @@ export default function ModelloAV1Page() {
     studioId: formData.studio_id || "",
   });
 
-  const tipoTBPrestazione = useMemo(
-  () =>
-    prestazioni.find((p) => p.TipoPrestazioneAR === formData.Prestazione)?.TipoTB || "",
-  [prestazioni, formData.Prestazione]
-);
+  const prestazioneSelezionata = useMemo(
+    () => prestazioni.find((p) => p.TipoPrestazioneAR === formData.Prestazione) || null,
+    [prestazioni, formData.Prestazione]
+  );
 
-const isPrestazioneTabella1 = tipoTBPrestazione === "TB1";
-const includeQuadroB = !isPrestazioneTabella1;
+  const tipoTBPrestazione = prestazioneSelezionata?.TipoTB || "";
+  const regolaDiCondotta = String(prestazioneSelezionata?.RegolaDiCondotta || "").trim();
+  const isPrestazioneTabella1 = tipoTBPrestazione === "TB1";
+  const isNonSignificativoConRegola =
+    prestazioneSelezionata?.RischioTipoPrestAR === "Non significativo" &&
+    regolaDiCondotta.length > 0;
+
+  const includeQuadroA = !isNonSignificativoConRegola;
+  const includeQuadroB = !isPrestazioneTabella1 && !isNonSignificativoConRegola;
 
   const punteggioPrestazione = useMemo(
     () =>
       normalizeScore(
-        prestazioni.find((p) => p.TipoPrestazioneAR === formData.Prestazione)?.PunteggioPrestAR || 0
+        prestazioneSelezionata?.PunteggioPrestAR || 0
       ),
-    [prestazioni, formData.Prestazione]
+    [prestazioneSelezionata]
   );
 
   const rischioInerentePrestazione = useMemo(
   () =>
-    prestazioni.find((p) => p.TipoPrestazioneAR === formData.Prestazione)
-      ?.RischioTipoPrestAR || formData.ValRischioIner || "",
-  [prestazioni, formData.Prestazione, formData.ValRischioIner]
+    prestazioneSelezionata?.RischioTipoPrestAR || formData.ValRischioIner || "",
+  [prestazioneSelezionata, formData.ValRischioIner]
 );
 
-  const TotA =
-    normalizeScore(formData.A1) +
-    normalizeScore(formData.A2) +
-    normalizeScore(formData.A3) +
-    normalizeScore(formData.A4);
+  const TotA = includeQuadroA
+    ? normalizeScore(formData.A1) +
+      normalizeScore(formData.A2) +
+      normalizeScore(formData.A3) +
+      normalizeScore(formData.A4)
+    : 0;
 
 const TotB = includeQuadroB
   ? normalizeScore(formData.B1) +
@@ -350,7 +357,9 @@ const TotB = includeQuadroB
   : 0;
 
 const divisoreMedia = includeQuadroB ? 10 : 4;
-const MediaPunteggio = Number(((TotA + TotB) / divisoreMedia).toFixed(2));
+const MediaPunteggio = isNonSignificativoConRegola
+  ? 1
+  : Number(((TotA + TotB) / divisoreMedia).toFixed(2));
   
   const LivelloRischio = calcolaLivelloRischio(MediaPunteggio);
   const RisInerentePonderato = Number((punteggioPrestazione * 0.3).toFixed(2));
@@ -427,7 +436,7 @@ const refreshEncryptionEnabled = async (studioIdValue?: string) => {
         supabase.from("tbclienti").select("*"),
         supabase
   .from("tbElencoPrestAR")
-  .select("id, TipoPrestazioneAR, RischioTipoPrestAR, PunteggioPrestAR, TipoTB")
+  .select("id, TipoPrestazioneAR, RischioTipoPrestAR, PunteggioPrestAR, TipoTB, RegolaDiCondotta")
   .order("TipoPrestazioneAR", { ascending: true }),
         studioId
           ? supabase
@@ -710,18 +719,45 @@ if (currentAv1Id) {
   }, [router.isReady, id, pratica_id, cliente_id, studio_id]);
 
 const handlePrestazioneChange = (prestazioneValue: string) => {
-  const prestazioneSelezionata = prestazioni.find(
+  const prestazione = prestazioni.find(
     (p) => p.TipoPrestazioneAR === prestazioneValue
   );
 
-  const livello = prestazioneSelezionata?.RischioTipoPrestAR || "";
-  const tipoTB = prestazioneSelezionata?.TipoTB || "";
+  const livello = prestazione?.RischioTipoPrestAR || "";
+  const tipoTB = prestazione?.TipoTB || "";
+  const regola = String(prestazione?.RegolaDiCondotta || "").trim();
+  const nonSignificativoConRegola =
+    livello === "Non significativo" && regola.length > 0;
 
-  setFormData((prev) => ({
-    ...prev,
-    Prestazione: prestazioneValue,
-    ValRischioIner: livello,
-    ...(tipoTB === "TB1"
+  const resetA = nonSignificativoConRegola
+    ? {
+        A1: 0,
+        A2: 0,
+        A3: 0,
+        A4: 0,
+        a1a: false,
+        a1b: false,
+        a1c: false,
+        a1d: false,
+        a1e: false,
+        a1f: false,
+        a2a: false,
+        a2b: false,
+        a2c: false,
+        a2d: false,
+        a3a: false,
+        a3b: false,
+        a3c: false,
+        a3d: false,
+        a3e: false,
+        a4a: false,
+        a4b: false,
+        a4c: false,
+      }
+    : {};
+
+  const resetB =
+    tipoTB === "TB1" || nonSignificativoConRegola
       ? {
           B1: 0,
           B2: 0,
@@ -753,7 +789,15 @@ const handlePrestazioneChange = (prestazioneValue: string) => {
           b6c: false,
           b6d: false,
         }
-      : {}),
+      : {};
+
+  setFormData((prev) => ({
+    ...prev,
+    Prestazione: prestazioneValue,
+    ValRischioIner: livello,
+    ...(nonSignificativoConRegola ? { AV1Conferma: true } : {}),
+    ...resetA,
+    ...resetB,
   }));
 };
 
@@ -1068,11 +1112,17 @@ const handleRinnovoVerifica = async () => {
     }
 
     const sectionKeys = Object.keys(av1Labels);
-    const invalidSection = sectionKeys.find(
-      (sectionKey) =>
+    const invalidSection = sectionKeys.find((sectionKey) => {
+      const sectionDisabled =
+        isNonSignificativoConRegola ||
+        (isPrestazioneTabella1 && sectionKey.startsWith("B"));
+
+      return (
+        !sectionDisabled &&
         sectionHasCheckedFlag(formData, sectionKey) &&
         normalizeScore(formData[sectionKey]) === 1
-    );
+      );
+    });
 
     if (invalidSection) {
       alert(
@@ -1098,66 +1148,66 @@ const handleRinnovoVerifica = async () => {
   allegato_av1_firmato: formData.allegato_av1_firmato || null,
   incaricato_adeguata_verifica_id: formData.incaricato_adeguata_verifica_id || null,
 
-  A1: normalizeScore(formData.A1),
-  a1a: normalizeBoolean(formData.a1a),
-  a1b: normalizeBoolean(formData.a1b),
-  a1c: normalizeBoolean(formData.a1c),
-  a1d: normalizeBoolean(formData.a1d),
-  a1e: normalizeBoolean(formData.a1e),
-  a1f: normalizeBoolean(formData.a1f),
+  A1: isNonSignificativoConRegola ? 0 : normalizeScore(formData.A1),
+  a1a: isNonSignificativoConRegola ? false : normalizeBoolean(formData.a1a),
+  a1b: isNonSignificativoConRegola ? false : normalizeBoolean(formData.a1b),
+  a1c: isNonSignificativoConRegola ? false : normalizeBoolean(formData.a1c),
+  a1d: isNonSignificativoConRegola ? false : normalizeBoolean(formData.a1d),
+  a1e: isNonSignificativoConRegola ? false : normalizeBoolean(formData.a1e),
+  a1f: isNonSignificativoConRegola ? false : normalizeBoolean(formData.a1f),
 
-  A2: normalizeScore(formData.A2),
-  a2a: normalizeBoolean(formData.a2a),
-  a2b: normalizeBoolean(formData.a2b),
-  a2c: normalizeBoolean(formData.a2c),
-  a2d: normalizeBoolean(formData.a2d),
+  A2: isNonSignificativoConRegola ? 0 : normalizeScore(formData.A2),
+  a2a: isNonSignificativoConRegola ? false : normalizeBoolean(formData.a2a),
+  a2b: isNonSignificativoConRegola ? false : normalizeBoolean(formData.a2b),
+  a2c: isNonSignificativoConRegola ? false : normalizeBoolean(formData.a2c),
+  a2d: isNonSignificativoConRegola ? false : normalizeBoolean(formData.a2d),
 
-  A3: normalizeScore(formData.A3),
-  a3a: normalizeBoolean(formData.a3a),
-  a3b: normalizeBoolean(formData.a3b),
-  a3c: normalizeBoolean(formData.a3c),
-  a3d: normalizeBoolean(formData.a3d),
-  a3e: normalizeBoolean(formData.a3e),
+  A3: isNonSignificativoConRegola ? 0 : normalizeScore(formData.A3),
+  a3a: isNonSignificativoConRegola ? false : normalizeBoolean(formData.a3a),
+  a3b: isNonSignificativoConRegola ? false : normalizeBoolean(formData.a3b),
+  a3c: isNonSignificativoConRegola ? false : normalizeBoolean(formData.a3c),
+  a3d: isNonSignificativoConRegola ? false : normalizeBoolean(formData.a3d),
+  a3e: isNonSignificativoConRegola ? false : normalizeBoolean(formData.a3e),
 
-  A4: normalizeScore(formData.A4),
-  a4a: normalizeBoolean(formData.a4a),
-  a4b: normalizeBoolean(formData.a4b),
-  a4c: normalizeBoolean(formData.a4c),
+  A4: isNonSignificativoConRegola ? 0 : normalizeScore(formData.A4),
+  a4a: isNonSignificativoConRegola ? false : normalizeBoolean(formData.a4a),
+  a4b: isNonSignificativoConRegola ? false : normalizeBoolean(formData.a4b),
+  a4c: isNonSignificativoConRegola ? false : normalizeBoolean(formData.a4c),
 
-  B1: normalizeScore(formData.B1),
-  b1a: normalizeBoolean(formData.b1a),
-  b1b: normalizeBoolean(formData.b1b),
-  b1c: normalizeBoolean(formData.b1c),
-  b1d: normalizeBoolean(formData.b1d),
+  B1: !includeQuadroB ? 0 : normalizeScore(formData.B1),
+  b1a: !includeQuadroB ? false : normalizeBoolean(formData.b1a),
+  b1b: !includeQuadroB ? false : normalizeBoolean(formData.b1b),
+  b1c: !includeQuadroB ? false : normalizeBoolean(formData.b1c),
+  b1d: !includeQuadroB ? false : normalizeBoolean(formData.b1d),
 
-  B2: normalizeScore(formData.B2),
-  b2a: normalizeBoolean(formData.b2a),
-  b2b: normalizeBoolean(formData.b2b),
-  b2c: normalizeBoolean(formData.b2c),
-  b2d: normalizeBoolean(formData.b2d),
-  b2e: normalizeBoolean(formData.b2e),
+  B2: !includeQuadroB ? 0 : normalizeScore(formData.B2),
+  b2a: !includeQuadroB ? false : normalizeBoolean(formData.b2a),
+  b2b: !includeQuadroB ? false : normalizeBoolean(formData.b2b),
+  b2c: !includeQuadroB ? false : normalizeBoolean(formData.b2c),
+  b2d: !includeQuadroB ? false : normalizeBoolean(formData.b2d),
+  b2e: !includeQuadroB ? false : normalizeBoolean(formData.b2e),
 
-  B3: normalizeScore(formData.B3),
-  b3a: normalizeBoolean(formData.b3a),
-  b3b: normalizeBoolean(formData.b3b),
-  b3c: normalizeBoolean(formData.b3c),
+  B3: !includeQuadroB ? 0 : normalizeScore(formData.B3),
+  b3a: !includeQuadroB ? false : normalizeBoolean(formData.b3a),
+  b3b: !includeQuadroB ? false : normalizeBoolean(formData.b3b),
+  b3c: !includeQuadroB ? false : normalizeBoolean(formData.b3c),
 
-  B4: normalizeScore(formData.B4),
-  b4a: normalizeBoolean(formData.b4a),
-  b4b: normalizeBoolean(formData.b4b),
-  b4c: normalizeBoolean(formData.b4c),
+  B4: !includeQuadroB ? 0 : normalizeScore(formData.B4),
+  b4a: !includeQuadroB ? false : normalizeBoolean(formData.b4a),
+  b4b: !includeQuadroB ? false : normalizeBoolean(formData.b4b),
+  b4c: !includeQuadroB ? false : normalizeBoolean(formData.b4c),
 
-  B5: normalizeScore(formData.B5),
-  b5a: normalizeBoolean(formData.b5a),
-  b5b: normalizeBoolean(formData.b5b),
-  b5c: normalizeBoolean(formData.b5c),
-  b5d: normalizeBoolean(formData.b5d),
+  B5: !includeQuadroB ? 0 : normalizeScore(formData.B5),
+  b5a: !includeQuadroB ? false : normalizeBoolean(formData.b5a),
+  b5b: !includeQuadroB ? false : normalizeBoolean(formData.b5b),
+  b5c: !includeQuadroB ? false : normalizeBoolean(formData.b5c),
+  b5d: !includeQuadroB ? false : normalizeBoolean(formData.b5d),
 
-  B6: normalizeScore(formData.B6),
-  b6a: normalizeBoolean(formData.b6a),
-  b6b: normalizeBoolean(formData.b6b),
-  b6c: normalizeBoolean(formData.b6c),
-  b6d: normalizeBoolean(formData.b6d),
+  B6: !includeQuadroB ? 0 : normalizeScore(formData.B6),
+  b6a: !includeQuadroB ? false : normalizeBoolean(formData.b6a),
+  b6b: !includeQuadroB ? false : normalizeBoolean(formData.b6b),
+  b6c: !includeQuadroB ? false : normalizeBoolean(formData.b6c),
+  b6d: !includeQuadroB ? false : normalizeBoolean(formData.b6d),
 
   TotA,
   TotB,
@@ -1167,7 +1217,7 @@ const handleRinnovoVerifica = async () => {
   RisSpecificoPonderato,
   RischioEffettivo,
   AdeguataVerifica,
-  AV1Conferma: normalizeBoolean(formData.AV1Conferma),
+  AV1Conferma: isNonSignificativoConRegola ? true : normalizeBoolean(formData.AV1Conferma),
   AV4Generato: normalizeBoolean(formData.AV4Generato),
 };
       let savedId = formData.id || "";
@@ -1248,7 +1298,8 @@ const handleRinnovoVerifica = async () => {
             <label className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
             <input
   type="checkbox"
-  checked={Boolean(formData.AV1Conferma)}
+  checked={isNonSignificativoConRegola || Boolean(formData.AV1Conferma)}
+  disabled={isNonSignificativoConRegola}
   onChange={(e) =>
     setFormData((prev) => ({
       ...prev,
@@ -1371,29 +1422,54 @@ const handleRinnovoVerifica = async () => {
               </CardHeader>
 
               <CardContent>
+                {isNonSignificativoConRegola && (
+                  <div className="mb-6 rounded-lg border-2 border-emerald-400 bg-emerald-50 p-4 shadow-sm">
+                    <div className="text-sm font-semibold uppercase tracking-wide text-emerald-800">
+                      Regola di condotta
+                    </div>
+                    <div className="mt-2 whitespace-pre-wrap text-sm font-medium leading-relaxed text-emerald-950">
+                      {regolaDiCondotta}
+                    </div>
+                  </div>
+                )}
+
+                {isNonSignificativoConRegola && (
+                  <div className="mb-6 rounded-md border border-red-500 bg-red-50 p-4">
+                    <h3 className="text-xl font-semibold text-red-700">
+                      A - Aspetti connessi al cliente
+                    </h3>
+                    <p className="mt-2 text-sm font-medium text-red-700">
+                      Sezione A non obbligatoria per prestazione a rischio non significativo con regola di condotta.
+                    </p>
+                  </div>
+                )}
+
                 <div className="space-y-6">
                  {Object.entries(av1Labels).map(([sectionKey, fields]) => {
   const isBStart = sectionKey === "B1";
   const isBSection = sectionKey.startsWith("B");
-  const disableSection = isPrestazioneTabella1 && isBSection;
+  const disableSection =
+    isNonSignificativoConRegola || (isPrestazioneTabella1 && isBSection);
 
   return (
     <div key={sectionKey}>
       {isBStart && (
         <div
           className={`mb-6 rounded-md border p-4 ${
-            isPrestazioneTabella1
+            isPrestazioneTabella1 || isNonSignificativoConRegola
               ? "border-red-500 bg-red-50"
               : "border-transparent bg-transparent p-0"
           }`}
         >
-          <h3 className={`text-xl font-semibold ${isPrestazioneTabella1 ? "text-red-700" : ""}`}>
+          <h3 className={`text-xl font-semibold ${isPrestazioneTabella1 || isNonSignificativoConRegola ? "text-red-700" : ""}`}>
             B. Aspetti connessi all’operazione e/o prestazione professionale
           </h3>
 
-          {isPrestazioneTabella1 && (
+          {(isPrestazioneTabella1 || isNonSignificativoConRegola) && (
             <p className="mt-2 text-sm font-medium text-red-700">
-              Sezione B non obbligatoria per prestazione rientrante nella tabella 1
+              {isNonSignificativoConRegola
+                ? "Sezione B non obbligatoria per prestazione a rischio non significativo con regola di condotta."
+                : "Sezione B non obbligatoria per prestazione rientrante nella tabella 1"}
             </p>
           )}
         </div>
@@ -1433,7 +1509,7 @@ const handleRinnovoVerifica = async () => {
         type="checkbox"
         className="mt-1"
         checked={Boolean(formData[fieldKey])}
-        disabled={isPrestazioneTabella1 && sectionKey.startsWith("B")}
+        disabled={disableSection}
         onChange={(e) =>
           handleSectionFlagChange(sectionKey, fieldKey, e.target.checked)
         }
