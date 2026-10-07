@@ -2874,6 +2874,15 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
   Stampa Lista Clienti
 </Button>
 
+      <Button
+        variant="outline"
+        onClick={() => setRiepilogoOperazioniOpen(true)}
+        className="gap-2"
+      >
+        <BarChart3 className="h-4 w-4" />
+        Riepilogo carico contabile
+      </Button>
+
       <Button onClick={handleAddNew} className="gap-2">
         <Plus className="h-4 w-4" />
         Nuovo Cliente
@@ -2947,6 +2956,86 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
     </CardContent>
   </Card>
 </div>
+
+{selectedUtenteFiscale !== "all" && (
+  <Card className="mb-8 border-sky-200 bg-sky-50/60">
+    <CardHeader className="pb-3">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <CardTitle className="text-lg">Carico contabile operatore</CardTitle>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {getUtenteNome(selectedUtenteFiscale)} · anno chiuso {annoOperazioniRiferimento}
+          </p>
+        </div>
+        <div className="w-full md:w-[160px]">
+          <Label>Anno chiuso</Label>
+          <Input
+            type="number"
+            min={2000}
+            max={2100}
+            value={annoOperazioniRiferimento}
+            onChange={(e) =>
+              setAnnoOperazioniRiferimento(
+                Math.max(2000, Math.min(2100, Number(e.target.value) || new Date().getFullYear() - 1))
+              )
+            }
+          />
+        </div>
+      </div>
+    </CardHeader>
+    <CardContent>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <div className="rounded-lg border bg-white p-4">
+          <div className="text-xs font-medium uppercase text-muted-foreground">
+            Totale operazioni
+          </div>
+          <div className="mt-1 text-3xl font-bold text-sky-700">
+            {totaleOperazioniOperatore.toLocaleString("it-IT")}
+          </div>
+        </div>
+
+        <div className="rounded-lg border bg-white p-4">
+          <div className="text-xs font-medium uppercase text-muted-foreground">
+            Incidenza numerica
+          </div>
+          <div className="mt-1 text-xl font-bold">
+            {totaleOperazioniOperatore.toLocaleString("it-IT")} / {totaleOperazioniStudio.toLocaleString("it-IT")}
+          </div>
+          <div className="mt-1 text-xs text-muted-foreground">operatore / totale studio</div>
+        </div>
+
+        <div className="rounded-lg border bg-white p-4">
+          <div className="text-xs font-medium uppercase text-muted-foreground">
+            Incidenza %
+          </div>
+          <div className="mt-1 text-3xl font-bold text-violet-700">
+            {incidenzaOperatorePercentuale.toFixed(1)}%
+          </div>
+        </div>
+
+        <div className="rounded-lg border bg-white p-4">
+          <div className="text-xs font-medium uppercase text-muted-foreground">
+            Variazione vs {annoOperazioniPrecedente}
+          </div>
+          <div
+            className={`mt-1 text-xl font-bold ${
+              variazioneOperatoreNumerica > 0
+                ? "text-green-700"
+                : variazioneOperatoreNumerica < 0
+                  ? "text-red-700"
+                  : "text-slate-700"
+            }`}
+          >
+            {variazioneOperatoreNumerica > 0 ? "+" : ""}
+            {variazioneOperatoreNumerica.toLocaleString("it-IT")} ·{" "}
+            {variazioneOperatorePercentuale > 0 ? "+" : ""}
+            {variazioneOperatorePercentuale.toFixed(1)}%
+          </div>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+)}
 
 {/* FILTRI */}
 <Card className="mb-6">
