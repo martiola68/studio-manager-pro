@@ -145,6 +145,7 @@ export default function FascicoloDocumentiPage() {
   const [uploading, setUploading] = useState(false);
   const [workingDocumentId, setWorkingDocumentId] = useState<string | null>(null);
   const [tipoDocumento, setTipoDocumento] = useState("Documento generico");
+  const [regolaDiCondottaRichiesta, setRegolaDiCondottaRichiesta] = useState("");
 
   const [documentiMancanti, setDocumentiMancanti] = useState<string[]>([]);
 
@@ -424,7 +425,8 @@ if (soggettoClienteId) {
  const calcolaStatoFascicolo = (
   docs: DocumentoRow[],
   isSocietaCliente: boolean,
-  visureRichieste: VisuraTeRichiesta[]
+  visureRichieste: VisuraTeRichiesta[],
+  regolaDiCondotta: string
 ) => {
   const normalizza = (value: any) =>
     String(value || "").toLowerCase().trim();
@@ -432,18 +434,26 @@ if (soggettoClienteId) {
   const hasDoc = (check: (doc: DocumentoRow) => boolean) =>
     docs.some(check);
 
-  const hasAV1 = hasDoc((doc) => {
-    const origine = normalizza(doc.origine);
-    const tipo = normalizza(doc.tipo_documento);
+  const av1EsclusoPerRegola = String(regolaDiCondotta || "").trim().length > 0;
 
-    return (
-      origine === "av1_firmato" ||
-      origine === "av1 firmato" ||
-      origine === "av1_pdf" ||
-      tipo === "av1 firmato" ||
-      tipo === "modulo firmato"
-    );
-  });
+  const hasAV1 =
+    av1EsclusoPerRegola ||
+    hasDoc((doc) => {
+      const origine = normalizza(doc.origine);
+      const tipo = normalizza(doc.tipo_documento);
+
+      return (
+        origine === "av1_firmato" ||
+        origine === "av1 firmato" ||
+        origine === "av1_pdf" ||
+        tipo === "av1 firmato" ||
+        tipo === "modulo firmato"
+      );
+    });
+
+  const hasRegolaDiCondotta =
+    !av1EsclusoPerRegola ||
+    hasDoc((doc) => normalizza(doc.tipo_documento) === normalizza(regolaDiCondotta));
 
   const hasAV4 = hasDoc((doc) => {
     const origine = normalizza(doc.origine);
@@ -548,6 +558,7 @@ const isSocieta = isSocietaCliente;
   const mancanti: string[] = [];
 
   if (!hasAV1) mancanti.push("AV1 firmato");
+  if (!hasRegolaDiCondotta) mancanti.push(regolaDiCondotta);
   if (!hasAV4) mancanti.push("AV4 firmato");
  const hasCodiceFiscale = hasDoc((doc) => {
   const origine = normalizza(doc.origine);
@@ -644,6 +655,40 @@ if (clienteIdValue) {
   setVisureTeRichieste(visureRichieste);
 }
 
+const { data: av1PrestazioneData, error: av1PrestazioneError } = await supabase
+  .from("tbAV1")
+  .select("Prestazione")
+  .eq("studio_id", studioId)
+  .eq("pratica_id", pratica_id)
+  .maybeSingle();
+
+if (av1PrestazioneError) {
+  throw av1PrestazioneError;
+}
+
+let regolaDiCondotta = "";
+
+if (av1PrestazioneData?.Prestazione) {
+  const { data: prestazioneArData, error: prestazioneArError } = await supabase
+    .from("tbElencoPrestAR")
+    .select("RischioTipoPrestAR, RegolaDiCondotta")
+    .eq("TipoPrestazioneAR", av1PrestazioneData.Prestazione)
+    .maybeSingle();
+
+  if (prestazioneArError) {
+    throw prestazioneArError;
+  }
+
+  if (
+    prestazioneArData?.RischioTipoPrestAR === "Non significativo" &&
+    String(prestazioneArData?.RegolaDiCondotta || "").trim()
+  ) {
+    regolaDiCondotta = String(prestazioneArData.RegolaDiCondotta).trim();
+  }
+}
+
+setRegolaDiCondottaRichiesta(regolaDiCondotta);
+
 const syncKey = `${studioId}|${pratica_id}|${clienteIdValue || ""}`;
 if (syncedRef.current !== syncKey) {
   syncedRef.current = syncKey;
@@ -713,7 +758,8 @@ const { data, error } = await query;
 calcolaStatoFascicolo(
   data || [],
   isSocietaCliente,
-  visureRichieste
+  visureRichieste,
+  regolaDiCondotta
 );
     } catch (err: any) {
       console.error("Errore loadData fascicolo:", err);
@@ -878,6 +924,12 @@ tipo_documento:
   };
 
 useEffect(() => {
+  if (regolaDiCondottaRichiesta && tipoDocumento === "Documento generico") {
+    setTipoDocumento(regolaDiCondottaRichiesta);
+  }
+}, [regolaDiCondottaRichiesta, tipoDocumento]);
+
+useEffect(() => {
   void loadData();
 }, [router.isReady, pratica_id, cliente_id]);
   
@@ -903,6 +955,18 @@ useEffect(() => {
           Torna all'elenco
         </button>
       </div>
+
+      {regolaDiCondottaRichiesta ? (
+        <div className="mb-4 rounded-lg border-2 border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-950">
+          <div className="font-semibold">Regola di condotta associata alla prestazione</div>
+          <div className="mt-2 whitespace-pre-wrap leading-relaxed">
+            {regolaDiCondottaRichiesta}
+          </div>
+          <div className="mt-2 text-xs font-medium text-emerald-800">
+            Il documento previsto da questa regola deve essere acquisito e conservato nel fascicolo.
+          </div>
+        </div>
+      ) : null}
 
         {loading ? null : fascicoloCompleto ? (
         <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
@@ -951,6 +1015,11 @@ useEffect(() => {
               disabled={uploading}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
             >
+              {regolaDiCondottaRichiesta ? (
+                <option value={regolaDiCondottaRichiesta}>
+                  Regola di condotta: {regolaDiCondottaRichiesta}
+                </option>
+              ) : null}
               {TIPO_DOCUMENTO_OPTIONS.map((option) => (
                 <option key={option} value={option}>
                   {option}
