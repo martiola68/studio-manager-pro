@@ -3212,10 +3212,11 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
                 <TableHead className="w-[95px] px-2 text-center whitespace-nowrap">
                   Scadenzari
                 </TableHead>
-                <TableHead className="w-[300px] px-2">
- <div className="grid grid-cols-5 items-center text-center text-sm font-medium">
+                <TableHead className="w-[360px] px-2">
+ <div className="grid grid-cols-6 items-center text-center text-sm font-medium">
     <span>Organi</span>
     <span>Servizi</span>
+    <span>Contab.</span>
     <span>Attivo</span>
     <span>Modifica</span>
     <span>Elimina</span>
@@ -3291,8 +3292,8 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
     )}
 </TableCell>
 
-<TableCell className="w-[300px] px-2">
-  <div className="grid grid-cols-5 items-center justify-items-center">
+<TableCell className="w-[360px] px-2">
+  <div className="grid grid-cols-6 items-center justify-items-center">
 
     <div className="flex justify-center">
       {cliente.tipo_cliente?.toLowerCase() !== "persona fisica" &&
@@ -3339,6 +3340,20 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
             }
           >
             <CalendarCog className="h-4 w-4" />
+          </Button>
+        )}
+    </div>
+
+    <div className="flex justify-center">
+      {cliente.cliente === true &&
+        cliente.settore_fiscale === true && (
+          <Button
+            variant="ghost"
+            size="icon"
+            title="Operazioni contabili annuali"
+            onClick={() => apriOperazioniCliente(cliente)}
+          >
+            <Calculator className="h-4 w-4" />
           </Button>
         )}
     </div>
