@@ -1027,6 +1027,22 @@ if (filtroClienti === "attivi") {
 
 const totaleClientiFiltrati = filteredClienti.length;
 
+const clientiPersoneFisiche = useMemo(
+  () =>
+    filteredClienti.filter(
+      (c) => String(c.tipo_cliente || "").trim().toLowerCase() === "persona fisica"
+    ).length,
+  [filteredClienti]
+);
+
+const clientiAltro = useMemo(
+  () =>
+    filteredClienti.filter(
+      (c) => String(c.tipo_cliente || "").trim().toLowerCase() === "altro"
+    ).length,
+  [filteredClienti]
+);
+
 const clientiConCassetto = useMemo(
   () => filteredClienti.filter((c) => !!c.cassetto_fiscale_id).length,
   [filteredClienti]
@@ -2649,40 +2665,64 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
 </div>
 
 {/* STATS */}
-<div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+<div className="grid grid-cols-1 gap-4 mb-8 sm:grid-cols-2 xl:grid-cols-5">
   <Card>
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 px-4 pb-1 pt-4">
       <CardTitle className="text-sm font-medium text-muted-foreground">
         Totale Clienti
       </CardTitle>
-      <Users className="h-5 w-5 text-muted-foreground" />
+      <Users className="h-4 w-4 text-muted-foreground" />
     </CardHeader>
-    <CardContent>
-      <div className="text-4xl font-bold">{totaleClientiFiltrati}</div>
+    <CardContent className="px-4 pb-4">
+      <div className="text-3xl font-bold">{totaleClientiFiltrati}</div>
     </CardContent>
   </Card>
 
   <Card>
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 px-4 pb-1 pt-4">
+      <CardTitle className="text-sm font-medium text-muted-foreground">
+        di cui Persone fisiche
+      </CardTitle>
+      <Users className="h-4 w-4 text-sky-600" />
+    </CardHeader>
+    <CardContent className="px-4 pb-4">
+      <div className="text-3xl font-bold text-sky-600">{clientiPersoneFisiche}</div>
+    </CardContent>
+  </Card>
+
+  <Card>
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 px-4 pb-1 pt-4">
+      <CardTitle className="text-sm font-medium text-muted-foreground">
+        di cui Altro
+      </CardTitle>
+      <Users className="h-4 w-4 text-violet-600" />
+    </CardHeader>
+    <CardContent className="px-4 pb-4">
+      <div className="text-3xl font-bold text-violet-600">{clientiAltro}</div>
+    </CardContent>
+  </Card>
+
+  <Card>
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 px-4 pb-1 pt-4">
       <CardTitle className="text-sm font-medium text-muted-foreground">
         Con Cassetto Fiscale
       </CardTitle>
-      <FileSpreadsheet className="h-5 w-5 text-blue-600" />
+      <FileSpreadsheet className="h-4 w-4 text-blue-600" />
     </CardHeader>
-    <CardContent>
-      <div className="text-4xl font-bold text-blue-600">{clientiConCassetto}</div>
+    <CardContent className="px-4 pb-4">
+      <div className="text-3xl font-bold text-blue-600">{clientiConCassetto}</div>
     </CardContent>
   </Card>
 
   <Card>
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 px-4 pb-1 pt-4">
       <CardTitle className="text-sm font-medium text-muted-foreground">
         Percentuale
       </CardTitle>
-      <CheckCircle2 className="h-5 w-5 text-green-600" />
+      <CheckCircle2 className="h-4 w-4 text-green-600" />
     </CardHeader>
-    <CardContent>
-      <div className="text-4xl font-bold text-green-600">
+    <CardContent className="px-4 pb-4">
+      <div className="text-3xl font-bold text-green-600">
         {percentualeCassetto}%
       </div>
     </CardContent>
