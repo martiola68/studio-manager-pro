@@ -295,34 +295,6 @@ const syncDocumentiCollegati = async (
     });
   }
 
-  const { data: av2DocumentoData, error: av2DocumentoError } = await supabase
-  .from("tbAV2")
-  .select("id, allegato_av2_firmato")
-  .eq("studio_id", studioId)
-  .eq("pratica_id", praticaId)
-  .order("created_at", { ascending: false })
-  .limit(1)
-  .maybeSingle();
-
-if (av2DocumentoError) {
-  throw av2DocumentoError;
-}
-
-if (av2DocumentoData?.allegato_av2_firmato) {
-  await ensureDocumentoInFascicolo({
-    supabase,
-    studioId,
-    praticaId,
-    clienteId: effectiveClienteId,
-    tipoDocumento: "Modulo firmato",
-    storagePath: av2DocumentoData.allegato_av2_firmato,
-    bucketName: "allegati",
-    mimeType: getMimeTypeFromPath(av2DocumentoData.allegato_av2_firmato),
-    origine: "av2_firmato",
-    note: "Importato da AV2 firmato",
-  });
-}
-
  const { data: clienteData, error: clienteError } = await supabase
   .from("tbclienti")
   .select("id, ragione_sociale, cod_cliente")
@@ -467,17 +439,6 @@ if (soggettoClienteId) {
     );
   });
 
-   const hasAV2 = hasDoc((doc) => {
-  const origine = normalizza(doc.origine);
-  const tipo = normalizza(doc.tipo_documento);
-
-  return (
-    origine === "av2_firmato" ||
-    origine === "av2 firmato" ||
-    tipo === "av2 firmato"
-  );
-});
-
   const hasDocumentoIdentita = hasDoc((doc) => {
     const origine = normalizza(doc.origine);
     const tipo = normalizza(doc.tipo_documento);
@@ -589,7 +550,6 @@ if (!hasContratto) {
 const opzionaliMancanti: string[] = [];
 
 if (!hasCodiceFiscale) opzionaliMancanti.push("Codice fiscale");
-if (!hasAV2) opzionaliMancanti.push("AV2 firmato");
 
 setDocumentiMancanti(mancanti);
 setDocumentiOpzionaliMancanti(opzionaliMancanti);
