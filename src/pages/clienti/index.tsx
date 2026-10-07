@@ -702,6 +702,22 @@ const [searchTerm, setSearchTerm] = useState("");
   const [annoOperazioniRiferimento, setAnnoOperazioniRiferimento] = useState(
     Math.max(2000, new Date().getFullYear() - 1)
   );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const saved = Number(window.localStorage.getItem("clienti_anno_operazioni_contabili"));
+    if (Number.isFinite(saved) && saved >= 2000 && saved <= 2100) {
+      setAnnoOperazioniRiferimento(saved);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(
+      "clienti_anno_operazioni_contabili",
+      String(annoOperazioniRiferimento)
+    );
+  }, [annoOperazioniRiferimento]);
   const [totaleOperazioniPrecedente, setTotaleOperazioniPrecedente] = useState(0);
   const [totaleOperazioniCorrente, setTotaleOperazioniCorrente] = useState(0);
 
@@ -2892,6 +2908,51 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
   </div>
 </div>
 
+{/* PERIODO OPERAZIONI CONTABILI */}
+<Card className="mb-5 border-sky-200 bg-sky-50/40">
+  <CardContent className="flex flex-col gap-4 py-4 md:flex-row md:items-end md:justify-between">
+    <div>
+      <div className="text-sm font-semibold">Periodo operazioni contabili</div>
+      <div className="mt-1 text-sm text-muted-foreground">
+        Questo periodo viene utilizzato per tutti i clienti, per il riepilogo operatori e per i confronti annuali.
+      </div>
+    </div>
+
+    <div className="grid w-full grid-cols-2 gap-3 md:w-auto">
+      <div>
+        <Label>Anno precedente</Label>
+        <Input
+          value={annoOperazioniRiferimento - 1}
+          disabled
+          className="mt-1 w-full md:w-[150px]"
+        />
+      </div>
+
+      <div>
+        <Label>Anno corrente chiuso</Label>
+        <Input
+          type="number"
+          min={2000}
+          max={2100}
+          value={annoOperazioniRiferimento}
+          onChange={(e) =>
+            setAnnoOperazioniRiferimento(
+              Math.max(
+                2000,
+                Math.min(
+                  2100,
+                  Number(e.target.value) || new Date().getFullYear() - 1
+                )
+              )
+            )
+          }
+          className="mt-1 w-full font-semibold md:w-[170px]"
+        />
+      </div>
+    </div>
+  </CardContent>
+</Card>
+
 {/* STATS */}
 <div className="grid grid-cols-1 gap-4 mb-8 sm:grid-cols-2 xl:grid-cols-5">
   <Card>
@@ -2967,19 +3028,9 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
             {getUtenteNome(selectedUtenteFiscale)} · anno chiuso {annoOperazioniRiferimento}
           </p>
         </div>
-        <div className="w-full md:w-[160px]">
-          <Label>Anno chiuso</Label>
-          <Input
-            type="number"
-            min={2000}
-            max={2100}
-            value={annoOperazioniRiferimento}
-            onChange={(e) =>
-              setAnnoOperazioniRiferimento(
-                Math.max(2000, Math.min(2100, Number(e.target.value) || new Date().getFullYear() - 1))
-              )
-            }
-          />
+        <div className="rounded-md border bg-white px-4 py-2 text-sm">
+          <div className="text-xs text-muted-foreground">Anno chiuso</div>
+          <div className="font-semibold">{annoOperazioniRiferimento}</div>
         </div>
       </div>
     </CardHeader>
@@ -3591,19 +3642,9 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
           </div>
         </div>
 
-        <div className="w-full md:w-[180px]">
-          <Label>Anno corrente chiuso</Label>
-          <Input
-            type="number"
-            min={2000}
-            max={2100}
-            value={annoOperazioniRiferimento}
-            onChange={(e) =>
-              setAnnoOperazioniRiferimento(
-                Math.max(2000, Math.min(2100, Number(e.target.value) || new Date().getFullYear() - 1))
-              )
-            }
-          />
+        <div className="rounded-md border bg-white px-4 py-2">
+          <div className="text-xs text-muted-foreground">Anno corrente chiuso</div>
+          <div className="font-semibold">{annoOperazioniRiferimento}</div>
         </div>
       </div>
 
