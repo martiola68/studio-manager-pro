@@ -132,13 +132,6 @@ export default function AntiriciclaggioPage() {
     return `${d}/${m}/${y}`;
   };
 
-  const formatDateTime = (dateString?: string | null) => {
-    if (!dateString) return "-";
-    const date = new Date(dateString);
-    if (Number.isNaN(date.getTime())) return "-";
-    return date.toLocaleString("it-IT");
-  };
-
   const getScadenzaStatus = (dateString?: string | null) => {
     if (!dateString) return "none";
     const normalized = dateString.includes("T") ? dateString.split("T")[0] : dateString;
@@ -702,9 +695,9 @@ export default function AntiriciclaggioPage() {
       {loading ? <div>Caricamento...</div> : !societaFilter ? <div>Seleziona un soggetto responsabile per visualizzare le pratiche</div> : !canAccessAntiriciclaggio ? <div>Accesso riservato: inserisci la password della società per consultare le pratiche.</div> : (
         <div className="overflow-x-auto rounded-lg border bg-white">
           <table className="w-full text-sm">
-            <thead className="bg-gray-100"><tr><th className="p-3 text-left">Stato</th><th className="p-3 text-left">Cliente</th><th className="p-3 text-left">Utente di riferimento</th><th className="p-3 text-left">Data verifica</th><th className="p-3 text-left">Scadenza verifica</th><th className="p-2 text-center">AV1<br/>conferma</th><th className="p-2 text-center">AV2<br/>confermato</th><th className="p-2 text-center">AV4<br/>inviato</th><th className="p-2 text-center">AV4<br/>manuale</th><th className="p-3 text-center">Data invio AV4</th><th className="p-2 text-center">AV4<br/>confermato</th><th className="p-3 text-center">Azioni</th></tr></thead>
+            <thead className="bg-gray-100"><tr><th className="p-3 text-left">Stato</th><th className="p-3 text-left">Cliente</th><th className="p-3 text-left">Utente di riferimento</th><th className="p-3 text-left">Data verifica</th><th className="p-3 text-left">Scadenza verifica</th><th className="p-2 text-center">AV1<br/>conferma</th><th className="p-2 text-center">AV2<br/>confermato</th><th className="p-2 text-center">AV4<br/>inviato</th><th className="p-2 text-center">AV4<br/>manuale</th><th className="p-2 text-center">AV4<br/>confermato</th><th className="p-3 text-center">Azioni</th></tr></thead>
             <tbody>
-              {filteredRows.length === 0 ? <tr><td colSpan={12} className="p-4 text-center">{ricercaCliente ? "Nessun cliente corrisponde alla ricerca" : "Nessuna pratica trovata per il soggetto responsabile selezionato"}</td></tr> : filteredRows.map((row) => {
+              {filteredRows.length === 0 ? <tr><td colSpan={11} className="p-4 text-center">{ricercaCliente ? "Nessun cliente corrisponde alla ricerca" : "Nessuna pratica trovata per il soggetto responsabile selezionato"}</td></tr> : filteredRows.map((row) => {
                 const cliente = getCliente(row);
                 const av4Info = getAV4Info(row);
                 const nomeCliente = cliente?.ragione_sociale || cliente?.cod_cliente || cliente?.codice_fiscale || "-";
@@ -719,7 +712,6 @@ export default function AntiriciclaggioPage() {
                   <td className="p-2 text-center">{row.AV2Generato ? "Sì" : "No"}</td>
                   <td className="p-2 text-center">{av4Info?.Av4InviatoCL || av4Info?.public_sent_at ? "Sì" : "No"}</td>
                   <td className="p-2 text-center">{av4Info?.av4_caricato_manualmente ? "Sì" : "-"}</td>
-                  <td className="p-3 text-center">{formatDateTime(av4Info?.public_sent_at)}</td>
                   <td className="p-2 text-center">{row.av4_firmato_presente ? "Sì" : "No"}</td>
                   <td className="p-3"><div className="flex items-center justify-center gap-3">
                     <button onClick={() => handleApriAV1(row)} className={`rounded-[28px] bg-white p-1 ${getIconBorderClass(!!row.AV1Conferma)}`}>AV1</button>
