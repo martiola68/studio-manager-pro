@@ -60,6 +60,9 @@ import {
   CalendarCog,
   Lock,
   Unlock,
+  BarChart3,
+  Calculator,
+  TrendingUp,
 } from "lucide-react";
 
 import { useStudio } from "@/contexts/StudioContext";
@@ -104,6 +107,17 @@ type UtenteRow = Database["public"]["Tables"]["tbutenti"]["Row"];
 type CassettoFiscaleRow =
   Database["public"]["Tables"]["tbcassetti_fiscali"]["Row"];
 type PrestazioneRow = Database["public"]["Tables"]["tbprestazioni"]["Row"];
+
+type OperazioniContabiliRow = {
+  id: string;
+  studio_id: string;
+  cliente_id: string;
+  anno: number;
+  numero_operazioni: number;
+  utente_operatore_id?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
 
 type ClienteFormData = {
   cod_cliente: string;
@@ -680,6 +694,17 @@ const [searchTerm, setSearchTerm] = useState("");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
 
+  const [operazioniContabili, setOperazioniContabili] = useState<OperazioniContabiliRow[]>([]);
+  const [operazioniDialogOpen, setOperazioniDialogOpen] = useState(false);
+  const [operazioniCliente, setOperazioniCliente] = useState<ClienteRow | null>(null);
+  const [operazioniSaving, setOperazioniSaving] = useState(false);
+  const [riepilogoOperazioniOpen, setRiepilogoOperazioniOpen] = useState(false);
+  const [annoOperazioniRiferimento, setAnnoOperazioniRiferimento] = useState(
+    Math.max(2000, new Date().getFullYear() - 1)
+  );
+  const [totaleOperazioniPrecedente, setTotaleOperazioniPrecedente] = useState(0);
+  const [totaleOperazioniCorrente, setTotaleOperazioniCorrente] = useState(0);
+
 const [formData, setFormData] =
   useState<ClienteFormData>(initialFormData);
 
@@ -937,6 +962,37 @@ if ((organiRes as Response).ok) {
       setLoading(false);
     }
   }, [toast]);
+
+  const loadOperazioniContabili = useCallback(async () => {
+    if (!studioId) {
+      setOperazioniContabili([]);
+      return;
+    }
+
+    try {
+      const supabase = getSupabaseClient() as any;
+      const { data, error } = await supabase
+        .from("tbclienti_operazioni_contabili")
+        .select("id, studio_id, cliente_id, anno, numero_operazioni, utente_operatore_id, created_at, updated_at")
+        .eq("studio_id", studioId)
+        .order("anno", { ascending: false });
+
+      if (error) {
+        console.warn("Operazioni contabili annuali non disponibili:", error.message);
+        setOperazioniContabili([]);
+        return;
+      }
+
+      setOperazioniContabili((data || []) as OperazioniContabiliRow[]);
+    } catch (error) {
+      console.warn("Errore caricamento operazioni contabili annuali:", error);
+      setOperazioniContabili([]);
+    }
+  }, [studioId]);
+
+  useEffect(() => {
+    void loadOperazioniContabili();
+  }, [loadOperazioniContabili]);
 
   useEffect(() => {
     loadData();
