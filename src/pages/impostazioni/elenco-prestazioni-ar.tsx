@@ -9,6 +9,7 @@ type PrestazioneAR = {
   RischioTipoPrestAR: string;
   PunteggioPrestAR: number;
   TipoTB?: string | null;
+  RegolaDiCondotta?: string | null;
 };
 
 type FormDataType = {
@@ -16,6 +17,7 @@ type FormDataType = {
   RischioTipoPrestAR: string;
   PunteggioPrestAR: number;
   TipoTB: string;
+  RegolaDiCondotta: string;
 };
 
 const initialFormData: FormDataType = {
@@ -23,6 +25,7 @@ const initialFormData: FormDataType = {
   RischioTipoPrestAR: "Non significativo",
   PunteggioPrestAR: 1,
   TipoTB: "",
+  RegolaDiCondotta: "",
 };
 
 export default function ElencoPrestazioniARPage() {
@@ -33,6 +36,8 @@ export default function ElencoPrestazioniARPage() {
 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState<FormDataType>(initialFormData);
+  const [filtroTipoTB, setFiltroTipoTB] = useState("");
+  const [filtroRischio, setFiltroRischio] = useState("");
 
   const loadData = async () => {
     setLoading(true);
@@ -40,7 +45,7 @@ export default function ElencoPrestazioniARPage() {
 
     const { data, error } = await (supabase as any)
       .from("tbElencoPrestAR")
-      .select("id, TipoPrestazioneAR, RischioTipoPrestAR, PunteggioPrestAR, TipoTB")
+      .select("id, TipoPrestazioneAR, RischioTipoPrestAR, PunteggioPrestAR, TipoTB, RegolaDiCondotta")
       .order("TipoPrestazioneAR", { ascending: true });
 
     if (error) {
@@ -76,6 +81,7 @@ export default function ElencoPrestazioniARPage() {
       RischioTipoPrestAR: row.RischioTipoPrestAR,
       PunteggioPrestAR: row.PunteggioPrestAR,
       TipoTB: row.TipoTB || "",
+      RegolaDiCondotta: row.RegolaDiCondotta || "",
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -101,6 +107,7 @@ export default function ElencoPrestazioniARPage() {
           RischioTipoPrestAR: formData.RischioTipoPrestAR,
           PunteggioPrestAR: formData.PunteggioPrestAR,
           TipoTB: formData.TipoTB,
+          RegolaDiCondotta: formData.RegolaDiCondotta.trim() || null,
         },
       ]);
 
@@ -117,6 +124,7 @@ export default function ElencoPrestazioniARPage() {
           RischioTipoPrestAR: formData.RischioTipoPrestAR,
           PunteggioPrestAR: formData.PunteggioPrestAR,
           TipoTB: formData.TipoTB,
+          RegolaDiCondotta: formData.RegolaDiCondotta.trim() || null,
         })
         .eq("id", editingId);
 
@@ -154,6 +162,12 @@ export default function ElencoPrestazioniARPage() {
 
     await loadData();
   };
+
+  const filteredRows = rows.filter((row) => {
+    const matchTipoTB = !filtroTipoTB || (row.TipoTB || "") === filtroTipoTB;
+    const matchRischio = !filtroRischio || row.RischioTipoPrestAR === filtroRischio;
+    return matchTipoTB && matchRischio;
+  });
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8">
@@ -226,6 +240,16 @@ export default function ElencoPrestazioniARPage() {
               </div>
             </div>
 
+            <div>
+              <label className="block text-sm font-medium mb-1">Regola di condotta</label>
+              <textarea
+                value={formData.RegolaDiCondotta}
+                onChange={(e) => handleChange("RegolaDiCondotta", e.target.value)}
+                className="min-h-32 w-full resize-y rounded-md border px-3 py-2"
+                placeholder="Inserisci la regola di condotta associata alla prestazione"
+              />
+            </div>
+
             <div className="flex gap-3 pt-2">
               <Button onClick={handleSave} disabled={saving}>
                 {saving ? "Salvataggio..." : editingId === null ? "Salva" : "Aggiorna"}
@@ -246,6 +270,36 @@ export default function ElencoPrestazioniARPage() {
           <CardTitle>Elenco Prestazioni</CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium">Filtro Tipo TB</label>
+              <select
+                value={filtroTipoTB}
+                onChange={(e) => setFiltroTipoTB(e.target.value)}
+                className="w-full rounded-md border px-3 py-2"
+              >
+                <option value="">Tutti</option>
+                <option value="TB1">TB1</option>
+                <option value="TB2">TB2</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium">Filtro Tipo rischio</label>
+              <select
+                value={filtroRischio}
+                onChange={(e) => setFiltroRischio(e.target.value)}
+                className="w-full rounded-md border px-3 py-2"
+              >
+                <option value="">Tutti</option>
+                <option value="Non significativo">Non significativo</option>
+                <option value="Poco significativo">Poco significativo</option>
+                <option value="Abbastanza significativo">Abbastanza significativo</option>
+                <option value="Molto significativo">Molto significativo</option>
+              </select>
+            </div>
+          </div>
+
           {loading ? (
             <p>Caricamento...</p>
           ) : (
@@ -257,16 +311,18 @@ export default function ElencoPrestazioniARPage() {
                     <th className="border p-3 text-left">Rischio</th>
                     <th className="border p-3 text-left">Punteggio</th>
                     <th className="border p-3 text-left">Tipo TB</th>
+                    <th className="border p-3 text-left">Regola di condotta</th>
                     <th className="border p-3 text-left">Azioni</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((row) => (
+                  {filteredRows.map((row) => (
                     <tr key={row.id}>
                       <td className="border p-3">{row.TipoPrestazioneAR}</td>
                       <td className="border p-3">{row.RischioTipoPrestAR}</td>
                       <td className="border p-3">{row.PunteggioPrestAR}</td>
                       <td className="border p-3">{row.TipoTB || ""}</td>
+                      <td className="max-w-md whitespace-pre-wrap border p-3">{row.RegolaDiCondotta || ""}</td>
                       <td className="border p-3">
                         <div className="flex gap-2">
                           <Button
@@ -289,9 +345,9 @@ export default function ElencoPrestazioniARPage() {
                     </tr>
                   ))}
 
-                  {rows.length === 0 && (
+                  {filteredRows.length === 0 && (
                     <tr>
-                      <td className="border p-3" colSpan={5}>
+                      <td className="border p-3" colSpan={6}>
                         Nessun dato presente
                       </td>
                     </tr>
