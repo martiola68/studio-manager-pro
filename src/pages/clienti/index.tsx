@@ -699,16 +699,6 @@ const [formData, setFormData] =
     [cassettiFiscali]
   );
 
-  const clientiConCassetto = useMemo(
-    () => clienti.filter((c) => !!c.cassetto_fiscale_id).length,
-    [clienti]
-  );
-
-  const percentualeCassetto = useMemo(() => {
-    if (!clienti.length) return 0;
-    return Math.round((clientiConCassetto / clienti.length) * 100);
-  }, [clienti.length, clientiConCassetto]);
-
   const getUtenteNome = useCallback(
     (utenteId: string | null): string => {
       if (!utenteId) return "-";
@@ -1034,6 +1024,18 @@ if (filtroClienti === "attivi") {
   selectedUtenteFiscale,
   selectedUtentePayroll,
 ]);
+
+const totaleClientiFiltrati = filteredClienti.length;
+
+const clientiConCassetto = useMemo(
+  () => filteredClienti.filter((c) => !!c.cassetto_fiscale_id).length,
+  [filteredClienti]
+);
+
+const percentualeCassetto = useMemo(() => {
+  if (!totaleClientiFiltrati) return 0;
+  return Math.round((clientiConCassetto / totaleClientiFiltrati) * 100);
+}, [totaleClientiFiltrati, clientiConCassetto]);
 
 const resetForm = () => {
   setEditingCliente(null);
@@ -2656,7 +2658,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
       <Users className="h-5 w-5 text-muted-foreground" />
     </CardHeader>
     <CardContent>
-      <div className="text-4xl font-bold">{clienti.length}</div>
+      <div className="text-4xl font-bold">{totaleClientiFiltrati}</div>
     </CardContent>
   </Card>
 
