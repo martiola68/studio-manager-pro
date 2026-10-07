@@ -276,6 +276,13 @@ function getCategoriaRischio(value: number) {
   return "molto";
 }
 
+function sectionHasCheckedFlag(formData: FormDataType, sectionKey: string) {
+  const fields = av1Labels[sectionKey as keyof typeof av1Labels];
+  if (!fields) return false;
+
+  return Object.keys(fields).some((fieldKey) => Boolean(formData[fieldKey]));
+}
+
 export default function ModelloAV1Page() {
   const router = useRouter();
   const { id, pratica_id, cliente_id, studio_id } = router.query;
@@ -758,10 +765,35 @@ const handlePrestazioneChange = (prestazioneValue: string) => {
   };
 
   const handleScoreChange = (sectionKey: string, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [sectionKey]: normalizeScore(value),
-    }));
+    setFormData((prev) => {
+      const requestedScore = normalizeScore(value);
+      const hasCheckedFlag = sectionHasCheckedFlag(prev, sectionKey);
+
+      return {
+        ...prev,
+        [sectionKey]: hasCheckedFlag && requestedScore === 1 ? 2 : requestedScore,
+      };
+    });
+  };
+
+  const handleSectionFlagChange = (
+    sectionKey: string,
+    fieldKey: string,
+    checked: boolean
+  ) => {
+    setFormData((prev) => {
+      const next = {
+        ...prev,
+        [fieldKey]: checked,
+      };
+
+      const hasCheckedFlag = sectionHasCheckedFlag(next, sectionKey);
+      if (hasCheckedFlag && normalizeScore(next[sectionKey]) === 1) {
+        next[sectionKey] = 2;
+      }
+
+      return next;
+    });
   };
 
   const handleChiudiModello = () => {
@@ -1032,6 +1064,20 @@ const handleRinnovoVerifica = async () => {
 
     if (!formData.incaricato_adeguata_verifica_id) {
       alert("Seleziona l'incaricato adeguata verifica.");
+      return;
+    }
+
+    const sectionKeys = Object.keys(av1Labels);
+    const invalidSection = sectionKeys.find(
+      (sectionKey) =>
+        sectionHasCheckedFlag(formData, sectionKey) &&
+        normalizeScore(formData[sectionKey]) === 1
+    );
+
+    if (invalidSection) {
+      alert(
+        `Il valore ${invalidSection} non può essere 1 quando è selezionata almeno una voce della sezione. Seleziona un valore da 2 a 4.`
+      );
       return;
     }
 
@@ -1372,7 +1418,7 @@ const handleRinnovoVerifica = async () => {
               disabled={disableSection}
             >
               <option value="0">0</option>
-              <option value="1">1</option>
+              <option value="1" disabled={sectionHasCheckedFlag(formData, sectionKey)}>1</option>
               <option value="2">2</option>
               <option value="3">3</option>
               <option value="4">4</option>
@@ -1389,10 +1435,7 @@ const handleRinnovoVerifica = async () => {
         checked={Boolean(formData[fieldKey])}
         disabled={isPrestazioneTabella1 && sectionKey.startsWith("B")}
         onChange={(e) =>
-          setFormData((prev) => ({
-            ...prev,
-            [fieldKey]: e.target.checked,
-          }))
+          handleSectionFlagChange(sectionKey, fieldKey, e.target.checked)
         }
       />
       <span className="text-sm text-gray-800">{label}</span>
