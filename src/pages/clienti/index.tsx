@@ -3047,7 +3047,14 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
     </CardContent>
   </Card>
 
-  <Card>
+  <Card
+    role={selectedUtenteFiscale !== "all" ? "button" : undefined}
+    tabIndex={selectedUtenteFiscale !== "all" ? 0 : undefined}
+    onClick={() => {
+      if (selectedUtenteFiscale !== "all") setDettaglioTipoCliente("persona fisica");
+    }}
+    className={selectedUtenteFiscale !== "all" ? "cursor-pointer transition-shadow hover:shadow-md" : ""}
+  >
     <CardHeader className="flex flex-row items-center justify-between space-y-0 px-4 pb-1 pt-4">
       <CardTitle className="text-sm font-medium text-muted-foreground">
         di cui Persone fisiche
@@ -3056,10 +3063,37 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
     </CardHeader>
     <CardContent className="px-4 pb-4">
       <div className="text-3xl font-bold text-sky-600">{clientiPersoneFisiche}</div>
+      {selectedUtenteFiscale !== "all" && (
+        <div className="mt-3 space-y-1 border-t pt-3 text-xs">
+          <div>
+            Operazioni {annoOperazioniRiferimento}:{" "}
+            <strong>
+              {operazioniAnnoCorrente
+                .filter((row) => {
+                  const cliente = filteredClienti.find((c) => c.id === row.cliente_id);
+                  return (
+                    row.utente_operatore_id === selectedUtenteFiscale &&
+                    String(cliente?.tipo_cliente || "").trim().toLowerCase() === "persona fisica"
+                  );
+                })
+                .reduce((totale, row) => totale + Number(row.numero_operazioni || 0), 0)
+                .toLocaleString("it-IT")}
+            </strong>
+          </div>
+          <div className="text-muted-foreground">Clicca per il dettaglio società</div>
+        </div>
+      )}
     </CardContent>
   </Card>
 
-  <Card>
+  <Card
+    role={selectedUtenteFiscale !== "all" ? "button" : undefined}
+    tabIndex={selectedUtenteFiscale !== "all" ? 0 : undefined}
+    onClick={() => {
+      if (selectedUtenteFiscale !== "all") setDettaglioTipoCliente("altro");
+    }}
+    className={selectedUtenteFiscale !== "all" ? "cursor-pointer transition-shadow hover:shadow-md" : ""}
+  >
     <CardHeader className="flex flex-row items-center justify-between space-y-0 px-4 pb-1 pt-4">
       <CardTitle className="text-sm font-medium text-muted-foreground">
         di cui Altro
@@ -3068,6 +3102,26 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
     </CardHeader>
     <CardContent className="px-4 pb-4">
       <div className="text-3xl font-bold text-violet-600">{clientiAltro}</div>
+      {selectedUtenteFiscale !== "all" && (
+        <div className="mt-3 space-y-1 border-t pt-3 text-xs">
+          <div>
+            Operazioni {annoOperazioniRiferimento}:{" "}
+            <strong>
+              {operazioniAnnoCorrente
+                .filter((row) => {
+                  const cliente = filteredClienti.find((c) => c.id === row.cliente_id);
+                  return (
+                    row.utente_operatore_id === selectedUtenteFiscale &&
+                    String(cliente?.tipo_cliente || "").trim().toLowerCase() === "altro"
+                  );
+                })
+                .reduce((totale, row) => totale + Number(row.numero_operazioni || 0), 0)
+                .toLocaleString("it-IT")}
+            </strong>
+          </div>
+          <div className="text-muted-foreground">Clicca per il dettaglio società</div>
+        </div>
+      )}
     </CardContent>
   </Card>
 
