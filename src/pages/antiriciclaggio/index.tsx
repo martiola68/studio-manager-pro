@@ -739,13 +739,13 @@ export default function AntiriciclaggioPage() {
                   <td className="p-3">{formatDate(row.DataVerifica)}</td>
                   <td className={`p-3 ${getScadenzaCellClassName(row.ScadenzaVerifica)}`}>{formatDate(row.ScadenzaVerifica)}</td>
                   <td className="p-2 text-center">{row.AV1Conferma ? "Sì" : "No"}</td>
-                  <td className="p-2 text-center">{row.AV2Generato ? "Sì" : "No"}</td>
+                  <td className="p-2 text-center">{row.AV2Confermato ? "Sì" : "No"}</td>
                   <td className="p-2 text-center">{av4Info?.Av4InviatoCL || av4Info?.public_sent_at ? "Sì" : "No"}</td>
                   <td className="p-2 text-center">{av4Info?.av4_caricato_manualmente ? "Sì" : "-"}</td>
                   <td className="p-2 text-center">{row.av4_firmato_presente ? "Sì" : "No"}</td>
                   <td className="p-3"><div className="flex items-center justify-center gap-3">
                     <button onClick={() => handleApriAV1(row)} className={`rounded-[28px] bg-white p-1 ${getIconBorderClass(!!row.AV1Conferma)}`}>AV1</button>
-                    <button onClick={() => handleApriAV2(row)} className={`rounded-[28px] bg-white p-1 ${getIconBorderClass(!!row.AV2Generato)}`}>AV2</button>
+                    <button onClick={() => handleApriAV2(row)} className={`rounded-[28px] bg-white p-1 ${getIconBorderClass(!!row.AV2Confermato)}`}>AV2</button>
                     <button onClick={() => handleApriAV4(row)} className={`rounded-[28px] bg-white p-1 ${getAV4IconBorderClass(row)}`}>AV4</button>
                     <button onClick={() => handleApriDocumenti(row)} className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-blue-500 bg-white"><FolderOpen className="h-4 w-4 text-blue-600"/></button>
                     <button onClick={() => handleEliminaCompleto(row)} className="flex h-8 w-8 items-center justify-center rounded-full bg-white"><Trash2 className="h-4 w-4 text-red-500"/></button>
