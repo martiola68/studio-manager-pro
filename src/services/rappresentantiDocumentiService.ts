@@ -144,7 +144,6 @@ if (!tokenComunicazioni?.user_id) {
 
   const destinatario = String(email).trim();
   const subject = "Richiesta aggiornamento documento di riconoscimento";
-  const bodyPreview = `Richiesta aggiornamento documento inviata a ${destinatario}. Link pubblico: ${url}`;
   const firmaOperatore = String(nomeOperatore || "").trim();
 
   const html = `
@@ -280,28 +279,6 @@ if (documentoAmlError || !documentoAml?.id) {
 }
 
 
-  const { error: logError } = await supabase.from("tbAMLComunicazioni").insert({
-  studio_id: studioId,
-  tipo_comunicazione: "richiesta_documento",
-  cliente_id: clienteId,
-  soggetto_cliente_id: null,
-  av4_id: av4Id,
-  destinatario_email: destinatario,
-  oggetto: subject,
-  body_preview: bodyPreview,
-  stato_invio: "inviata",
-  data_invio: nowIso,
-  utente_id: userId,
-  public_token: token,
-  note,
-});
-    
-    if (logError) {
-      throw new Error(
-        `Email inviata correttamente a ${destinatario}, ma il log AML non è stato salvato.`
-      );
-    }
-
     return { ok: true, url, token };
 } catch (error: any) {
   try {
@@ -335,33 +312,6 @@ if (documentoAmlError || !documentoAml?.id) {
       rollbackError
     );
   }
-try {
-  await supabase
-    .from("tbAMLComunicazioni")
-    .insert({
-      studio_id: studioId,
-      tipo_comunicazione:
-        "richiesta_documento",
-      cliente_id: clienteId,
-      soggetto_cliente_id: null,
-      av4_id: av4Id,
-      destinatario_email:
-        destinatario,
-      oggetto: subject,
-      body_preview:
-        `Errore invio richiesta documento a ${destinatario}.`,
-      stato_invio: "errore",
-      data_invio:
-        new Date().toISOString(),
-      utente_id: userId,
-      public_token:
-        token || null,
-      note:
-        error?.message ||
-        "Errore durante l'invio della richiesta documento.",
-    });
-} catch {}
-
   throw error;
 }
 }
