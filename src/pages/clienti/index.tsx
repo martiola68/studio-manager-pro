@@ -1184,6 +1184,94 @@ const riepilogoOperazioniOperatori = useMemo(() => {
   }).sort((a, b) => b.corrente - a.corrente);
 }, [operazioniAnnoCorrente, operazioniAnnoPrecedente, totaleOperazioniStudio, getUtenteNome]);
 
+const apriOperazioniCliente = (cliente: ClienteRow) => {
+  const corrente = operazioniContabili.find(
+    (row) => row.cliente_id === cliente.id && Number(row.anno) === annoOperazioniRiferimento
+  );
+  const precedente = operazioniContabili.find(
+    (row) => row.cliente_id === cliente.id && Number(row.anno) === annoOperazioniPrecedente
+  );
+
+  setOperazioniCliente(cliente);
+  setTotaleOperazioniCorrente(Number(corrente?.numero_operazioni || 0));
+  setTotaleOperazioniPrecedente(Number(precedente?.numero_operazioni || 0));
+  setOperazioniDialogOpen(true);
+};
+
+const salvaOperazioniCliente = async () => {
+  if (!operazioniCliente || !studioId) return;
+
+  if (totaleOperazioniCorrente < 0 || totaleOperazioniPrecedente < 0) {
+    alert("Il numero delle operazioni non può essere negativo.");
+    return;
+  }
+
+  setOperazioniSaving(true);
+
+  try {
+    const supabase = getSupabaseClient() as any;
+
+    const salvaAnno = async (anno: number, numeroOperazioni: number) => {
+      const { data: existing, error: existingError } = await supabase
+        .from("tbclienti_operazioni_contabili")
+        .select("id, utente_operatore_id")
+        .eq("studio_id", studioId)
+        .eq("cliente_id", operazioniCliente.id)
+        .eq("anno", anno)
+        .limit(1)
+        .maybeSingle();
+
+      if (existingError) throw existingError;
+
+      const payload = {
+        studio_id: studioId,
+        cliente_id: operazioniCliente.id,
+        anno,
+        numero_operazioni: Math.trunc(Number(numeroOperazioni || 0)),
+        utente_operatore_id:
+          existing?.utente_operatore_id ||
+          operazioniCliente.utente_operatore_id ||
+          null,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (existing?.id) {
+        const { error } = await supabase
+          .from("tbclienti_operazioni_contabili")
+          .update(payload)
+          .eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("tbclienti_operazioni_contabili")
+          .insert(payload);
+        if (error) throw error;
+      }
+    };
+
+    await salvaAnno(annoOperazioniPrecedente, totaleOperazioniPrecedente);
+    await salvaAnno(annoOperazioniRiferimento, totaleOperazioniCorrente);
+    await loadOperazioniContabili();
+
+    setOperazioniDialogOpen(false);
+
+    toast({
+      title: "Operazioni contabili salvate",
+      description: "Confronto annuale aggiornato correttamente.",
+    });
+  } catch (error: any) {
+    toast({
+      title: "Errore",
+      description:
+        error?.message ||
+        "Impossibile salvare le operazioni contabili.",
+      variant: "destructive",
+    });
+  } finally {
+    setOperazioniSaving(false);
+  }
+};
+
 const resetForm = () => {
   setEditingCliente(null);
   setFormData(initialFormData);
