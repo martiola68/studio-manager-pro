@@ -699,6 +699,9 @@ const [searchTerm, setSearchTerm] = useState("");
   const [operazioniCliente, setOperazioniCliente] = useState<ClienteRow | null>(null);
   const [operazioniSaving, setOperazioniSaving] = useState(false);
   const [riepilogoOperazioniOpen, setRiepilogoOperazioniOpen] = useState(false);
+  const [dettaglioTipoCliente, setDettaglioTipoCliente] = useState<
+    "persona fisica" | "altro" | null
+  >(null);
   const [annoOperazioniRiferimento, setAnnoOperazioniRiferimento] = useState(
     Math.max(2000, new Date().getFullYear() - 1)
   );
@@ -1199,6 +1202,83 @@ const riepilogoOperazioniOperatori = useMemo(() => {
     };
   }).sort((a, b) => b.corrente - a.corrente);
 }, [operazioniAnnoCorrente, operazioniAnnoPrecedente, totaleOperazioniStudio, getUtenteNome]);
+
+const riepilogoTipoCliente = useMemo(() => {
+  if (!dettaglioTipoCliente || selectedUtenteFiscale === "all") {
+    return {
+      righe: [] as Array<{
+        cliente: ClienteRow;
+        precedente: number;
+        corrente: number;
+        variazione: number;
+        variazionePercentuale: number;
+      }>,
+      precedente: 0,
+      corrente: 0,
+      variazione: 0,
+      variazionePercentuale: 0,
+      incidenzaPercentuale: 0,
+    };
+  }
+
+  const clientiCategoria = filteredClienti.filter(
+    (cliente) =>
+      cliente.settore_fiscale === true &&
+      String(cliente.tipo_cliente || "").trim().toLowerCase() === dettaglioTipoCliente
+  );
+
+  const righe = clientiCategoria
+    .map((cliente) => {
+      const corrente = operazioniAnnoCorrente
+        .filter((row) => row.cliente_id === cliente.id)
+        .reduce((totale, row) => totale + Number(row.numero_operazioni || 0), 0);
+
+      const precedente = operazioniAnnoPrecedente
+        .filter((row) => row.cliente_id === cliente.id)
+        .reduce((totale, row) => totale + Number(row.numero_operazioni || 0), 0);
+
+      const variazione = corrente - precedente;
+      const variazionePercentuale =
+        precedente > 0
+          ? (variazione / precedente) * 100
+          : corrente > 0
+            ? 100
+            : 0;
+
+      return {
+        cliente,
+        precedente,
+        corrente,
+        variazione,
+        variazionePercentuale,
+      };
+    })
+    .filter((row) => row.precedente > 0 || row.corrente > 0)
+    .sort((a, b) => b.corrente - a.corrente);
+
+  const precedente = righe.reduce((totale, row) => totale + row.precedente, 0);
+  const corrente = righe.reduce((totale, row) => totale + row.corrente, 0);
+  const variazione = corrente - precedente;
+  const variazionePercentuale =
+    precedente > 0 ? (variazione / precedente) * 100 : corrente > 0 ? 100 : 0;
+
+  return {
+    righe,
+    precedente,
+    corrente,
+    variazione,
+    variazionePercentuale,
+    incidenzaPercentuale:
+      totaleOperazioniStudio > 0 ? (corrente / totaleOperazioniStudio) * 100 : 0,
+  };
+}, [
+  dettaglioTipoCliente,
+  selectedUtenteFiscale,
+  filteredClienti,
+  operazioniAnnoCorrente,
+  operazioniAnnoPrecedente,
+  totaleOperazioniStudio,
+]);
 
 const apriOperazioniCliente = (cliente: ClienteRow) => {
   const corrente = operazioniContabili.find(
