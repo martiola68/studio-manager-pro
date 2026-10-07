@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { getStudioId } from "@/services/getStudioId";
 import { useRouter } from "next/router";
@@ -29,7 +29,6 @@ type AV2FormState = {
   [key: string]: string | boolean | undefined;
 };
 
-const BUCKET_NAME = "allegati";
 
 const buildInitialForm = (studioId: string): AV2FormState => {
  const base: AV2FormState = {
@@ -77,8 +76,6 @@ export default function ModelloAV2Page() {
   const [saving, setSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fileRef = useRef<HTMLInputElement | null>(null);
-const [uploadingFirmato, setUploadingFirmato] = useState(false);
 
   const clienteSelezionato = useMemo(
     () => clienti.find((c) => c.id === form.cliente_id) || null,
@@ -171,8 +168,6 @@ if (currentAv2Id) {
       av1_id: av2Row.av1_id ? String(av2Row.av1_id) : "",
       av4_id: av2Row.av4_id ? String(av2Row.av4_id) : "",
       data_check: normalizeDateValue(av2Row.data_check),
-      firma_check: av2Row.firma_check || "",
-      allegato_av2_firmato: av2Row.allegato_av2_firmato || "",
     });
     return;
   }
@@ -269,8 +264,6 @@ if (currentAv2Id) {
   av1_id: data.av1_id ? String(data.av1_id) : "",
   av4_id: "",
   data_check: normalizeDateValue(data.data_check),
-  firma_check: data.firma_check || "",
-  allegato_av2_firmato: data.allegato_av2_firmato || "",
 });
             return;
           }
@@ -316,6 +309,9 @@ if (currentAv2Id) {
   }));
 };
 
+  const hasAtLeastOneChecklistFlag = () =>
+    AV2_CHECKLIST.some((item) => form[`spunta${item.id}`] === true);
+
   const handleSave = async () => {
     try {
       setSaving(true);
@@ -333,6 +329,11 @@ if (currentAv2Id) {
         return;
       }
 
+      if (!hasAtLeastOneChecklistFlag()) {
+        alert("Per salvare il modello AV2 devi selezionare almeno una voce della check-list.");
+        return;
+      }
+
 //  if (!form.av4_id) {
 //  alert("AV4 corrente non disponibile. Apri prima o salva il modello AV4 della pratica.");
 //  return;
@@ -345,8 +346,6 @@ if (currentAv2Id) {
  // av1_id: form.av1_id ? Number(form.av1_id) : null,
 //  av4_id: form.av4_id || null,
   data_check: form.data_check || null,
-  firma_check: form.firma_check || null,
-  allegato_av2_firmato: form.allegato_av2_firmato || null,
 
 confermato: !!form.confermato,
 
@@ -441,8 +440,6 @@ if (reloadError) {
     av1_id: savedRow.av1_id ? String(savedRow.av1_id) : form.av1_id || "",
     av4_id: savedRow.av4_id ? String(savedRow.av4_id) : form.av4_id || "",
     data_check: normalizeDateValue(savedRow.data_check),
-    firma_check: savedRow.firma_check || "",
-    allegato_av2_firmato: savedRow.allegato_av2_firmato || "",
   });
 }
 
@@ -477,65 +474,6 @@ alert("Scheda AV2 salvata correttamente.");
     router.push("/antiriciclaggio");
   };
 
-  const handleUploadFirmato = async (file: File) => {
-  try {
-    if (!form.studio_id) {
-      alert("Studio non disponibile.");
-      return;
-    }
-
-    setUploadingFirmato(true);
-    setError(null);
-
-    const supabase = getSupabaseClient() as any;
-    const safeName = file.name.replace(/\s+/g, "_");
-    const path = `av2_firmati/${form.studio_id}/${Date.now()}_${safeName}`;
-
-    const { error } = await supabase.storage
-      .from(BUCKET_NAME)
-      .upload(path, file, { upsert: true });
-
-    if (error) throw error;
-
-    setForm((prev) => ({
-      ...prev,
-      allegato_av2_firmato: path,
-    }));
-
-    alert("File caricato correttamente. Ora premi Salva AV2.");
-  } catch (err: any) {
-    setError(err?.message || "Errore caricamento file firmato.");
-  } finally {
-    setUploadingFirmato(false);
-  }
-};
-
-const handleOpenFirmato = async () => {
-  try {
-    if (!form.allegato_av2_firmato) return;
-
-    const supabase = getSupabaseClient() as any;
-
-    const { data, error } = await supabase.storage
-      .from(BUCKET_NAME)
-      .createSignedUrl(form.allegato_av2_firmato, 60);
-
-    if (error) throw error;
-    if (!data?.signedUrl) throw new Error("URL firmato non disponibile.");
-
-    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
-  } catch (err: any) {
-    setError(err?.message || "Errore apertura file.");
-  }
-};
-
-const handleRemoveFirmato = async () => {
-  setForm((prev) => ({
-  ...prev,
-  allegato_av2_firmato: "",
-}));
-};
-
   return (
     <div className="flex h-[calc(100vh-64px)] flex-col overflow-hidden bg-slate-200/70">
       <FormStickyHeader
@@ -545,6 +483,21 @@ const handleRemoveFirmato = async () => {
         onPrint={handlePrint}
         onClose={handleChiudiModello}
         saving={saving || loading}
+        beforeSaveSlot={
+          <label className="flex h-9 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium text-slate-800">
+            <input
+              type="checkbox"
+              checked={!!form.confermato}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  confermato: e.target.checked,
+                }))
+              }
+            />
+            <span>Conferma AV2</span>
+          </label>
+        }
       />
 
       <div className="flex-1 overflow-hidden border-t border-slate-200 bg-slate-200/70">
@@ -669,127 +622,11 @@ const handleRemoveFirmato = async () => {
             </Card>
 
             <Card className="mt-6 border border-sky-200 bg-slate-50 shadow-sm">
-              <CardHeader>
-                <CardTitle>Allegato AV2 firmato</CardTitle>
-              </CardHeader>
-
-              <CardContent>
-                <div className="space-y-3">
-                  <label className="block text-sm font-medium">
-                    File firmato digitale o autografo
-                  </label>
-
-                  <input
-                    ref={fileRef}
-                    type="file"
-                    accept=".pdf,.p7m,.jpg,.jpeg,.png"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        void handleUploadFirmato(file);
-                      }
-                      e.currentTarget.value = "";
-                    }}
-                  />
-
-                  <input
-                    type="text"
-                    readOnly
-                    value={form.allegato_av2_firmato || ""}
-                    placeholder="Nessun file allegato"
-                    className="w-full cursor-default rounded-md border px-3 py-2"
-                  />
-
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => fileRef.current?.click()}
-                      disabled={uploadingFirmato}
-                      className="rounded bg-gray-200 px-4 py-2 hover:bg-gray-300 disabled:opacity-60"
-                    >
-                      {uploadingFirmato ? "Caricamento..." : "Allega file"}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleOpenFirmato}
-                      disabled={!form.allegato_av2_firmato}
-                      className="rounded border px-4 py-2 hover:bg-gray-50 disabled:opacity-60"
-                    >
-                      Apri
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleRemoveFirmato}
-                      disabled={!form.allegato_av2_firmato || uploadingFirmato}
-                      className="rounded px-4 py-2 text-red-600 hover:bg-red-50 disabled:opacity-60"
-                    >
-                      Rimuovi
-                    </button>
-                  </div>
-
-                  <p className="text-xs text-muted-foreground">
-                    Formati consentiti: PDF, P7M, JPG, JPEG, PNG
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="mt-6 border border-sky-200 bg-slate-50 shadow-sm">
-              <CardHeader>
-                <CardTitle>Chiusura check-list</CardTitle>
-              </CardHeader>
-
-              <CardContent>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div>
-                    <label className="mb-1 block text-sm font-medium">Firma check</label>
-
-                    <input
-                      type="text"
-                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
-                      value={form.firma_check || ""}
-                      onChange={(e) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          firma_check: e.target.value,
-                        }))
-                      }
-                      placeholder="Firma professionista"
-                    />
-                  </div>
-                  
- <div className="flex items-center gap-3 rounded-md border p-3">
-  <input
-    type="checkbox"
-    checked={!!form.confermato}
-    onChange={(e) =>
-      setForm((prev) => ({
-        ...prev,
-        confermato: e.target.checked,
-      }))
-    }
-  />
-
-  <div>
-    <div className="font-medium">
-      Conferma AV2
-    </div>
-
-    <div className="text-xs text-gray-500">
-      Conferma finale check-list AV2
-    </div>
-  </div>
-</div>
-
-                  <div className="md:col-span-2">
-                    <div className="rounded-md border bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                      Usa i pulsanti in alto a destra per <strong>salvare</strong>,{" "}
-                      <strong>stampare</strong> o <strong>chiudere</strong> il modello.
-                    </div>
-                  </div>
+              <CardContent className="pt-6">
+                <div className="rounded-md border bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                  Seleziona almeno una voce della check-list, quindi usa i pulsanti in alto a destra per <strong>salvare</strong>,{" "}
+                  <strong>stampare</strong> o <strong>chiudere</strong> il modello. Per rendere AV2 confermato,
+                  attiva il flag <strong>Conferma AV2</strong> nella barra superiore prima del salvataggio.
                 </div>
               </CardContent>
             </Card>
