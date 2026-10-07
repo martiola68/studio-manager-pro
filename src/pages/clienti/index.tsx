@@ -3451,6 +3451,254 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
 </CardContent>
 </Card>
 
+{/* DIALOG OPERAZIONI CONTABILI CLIENTE */}
+<Dialog open={operazioniDialogOpen} onOpenChange={setOperazioniDialogOpen}>
+  <DialogContent className="max-w-3xl">
+    <DialogHeader>
+      <DialogTitle>Operazioni contabili annuali</DialogTitle>
+    </DialogHeader>
+
+    {operazioniCliente && (
+      <div className="space-y-5">
+        <div className="rounded-lg border bg-slate-50 p-4">
+          <div className="text-sm text-muted-foreground">Cliente</div>
+          <div className="text-lg font-semibold">
+            {operazioniCliente.ragione_sociale || operazioniCliente.cod_cliente || "-"}
+          </div>
+          <div className="mt-2 text-sm text-muted-foreground">Utente fiscale</div>
+          <div className="font-medium">
+            {getUtenteNome(operazioniCliente.utente_operatore_id)}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Anno precedente · {annoOperazioniPrecedente}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Label>Totale operazioni</Label>
+              <Input
+                type="number"
+                min={0}
+                step={1}
+                value={totaleOperazioniPrecedente}
+                onChange={(e) =>
+                  setTotaleOperazioniPrecedente(Math.max(0, Number(e.target.value) || 0))
+                }
+                className="mt-1 text-lg font-semibold"
+              />
+            </CardContent>
+          </Card>
+
+          <Card className="border-sky-200 bg-sky-50/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Anno corrente chiuso · {annoOperazioniRiferimento}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Label>Totale operazioni</Label>
+              <Input
+                type="number"
+                min={0}
+                step={1}
+                value={totaleOperazioniCorrente}
+                onChange={(e) =>
+                  setTotaleOperazioniCorrente(Math.max(0, Number(e.target.value) || 0))
+                }
+                className="mt-1 text-lg font-semibold"
+              />
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="rounded-lg border bg-white p-4">
+          <div className="mb-3 flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" />
+            <span className="font-semibold">Confronto annuale</span>
+          </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <div className="text-xs uppercase text-muted-foreground">Incremento numerico</div>
+              <div
+                className={`text-2xl font-bold ${
+                  totaleOperazioniCorrente - totaleOperazioniPrecedente > 0
+                    ? "text-green-700"
+                    : totaleOperazioniCorrente - totaleOperazioniPrecedente < 0
+                      ? "text-red-700"
+                      : ""
+                }`}
+              >
+                {totaleOperazioniCorrente - totaleOperazioniPrecedente > 0 ? "+" : ""}
+                {(totaleOperazioniCorrente - totaleOperazioniPrecedente).toLocaleString("it-IT")}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs uppercase text-muted-foreground">Variazione %</div>
+              <div
+                className={`text-2xl font-bold ${
+                  totaleOperazioniCorrente - totaleOperazioniPrecedente > 0
+                    ? "text-green-700"
+                    : totaleOperazioniCorrente - totaleOperazioniPrecedente < 0
+                      ? "text-red-700"
+                      : ""
+                }`}
+              >
+                {totaleOperazioniPrecedente > 0
+                  ? `${totaleOperazioniCorrente - totaleOperazioniPrecedente > 0 ? "+" : ""}${(
+                      ((totaleOperazioniCorrente - totaleOperazioniPrecedente) /
+                        totaleOperazioniPrecedente) *
+                      100
+                    ).toFixed(1)}%`
+                  : totaleOperazioniCorrente > 0
+                    ? "+100,0%"
+                    : "0,0%"}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+          Salva il totale delle registrazioni contabili dell'esercizio chiuso. Il dato viene attribuito
+          all'utente fiscale associato al cliente e resta storicizzato per anno.
+        </div>
+
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={() => setOperazioniDialogOpen(false)}>
+            Annulla
+          </Button>
+          <Button onClick={() => void salvaOperazioniCliente()} disabled={operazioniSaving}>
+            {operazioniSaving ? "Salvataggio..." : "Salva operazioni"}
+          </Button>
+        </div>
+      </div>
+    )}
+  </DialogContent>
+</Dialog>
+
+{/* DIALOG RIEPILOGO CARICO CONTABILE */}
+<Dialog open={riepilogoOperazioniOpen} onOpenChange={setRiepilogoOperazioniOpen}>
+  <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+    <DialogHeader>
+      <DialogTitle>Riepilogo carico contabile operatori</DialogTitle>
+    </DialogHeader>
+
+    <div className="space-y-5">
+      <div className="flex flex-col gap-4 rounded-lg border bg-slate-50 p-4 md:flex-row md:items-end md:justify-between">
+        <div>
+          <div className="text-sm text-muted-foreground">Confronto esercizi chiusi</div>
+          <div className="mt-1 text-lg font-semibold">
+            {annoOperazioniPrecedente} → {annoOperazioniRiferimento}
+          </div>
+        </div>
+
+        <div className="w-full md:w-[180px]">
+          <Label>Anno corrente chiuso</Label>
+          <Input
+            type="number"
+            min={2000}
+            max={2100}
+            value={annoOperazioniRiferimento}
+            onChange={(e) =>
+              setAnnoOperazioniRiferimento(
+                Math.max(2000, Math.min(2100, Number(e.target.value) || new Date().getFullYear() - 1))
+              )
+            }
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <Card>
+          <CardContent className="pt-5">
+            <div className="text-xs uppercase text-muted-foreground">Totale studio {annoOperazioniRiferimento}</div>
+            <div className="mt-1 text-3xl font-bold">{totaleOperazioniStudio.toLocaleString("it-IT")}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-5">
+            <div className="text-xs uppercase text-muted-foreground">Totale studio {annoOperazioniPrecedente}</div>
+            <div className="mt-1 text-3xl font-bold">{totaleOperazioniStudioPrecedente.toLocaleString("it-IT")}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-5">
+            <div className="text-xs uppercase text-muted-foreground">Variazione totale</div>
+            <div
+              className={`mt-1 text-3xl font-bold ${
+                totaleOperazioniStudio - totaleOperazioniStudioPrecedente > 0
+                  ? "text-green-700"
+                  : totaleOperazioniStudio - totaleOperazioniStudioPrecedente < 0
+                    ? "text-red-700"
+                    : ""
+              }`}
+            >
+              {totaleOperazioniStudio - totaleOperazioniStudioPrecedente > 0 ? "+" : ""}
+              {(totaleOperazioniStudio - totaleOperazioniStudioPrecedente).toLocaleString("it-IT")}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="overflow-x-auto rounded-lg border">
+        <table className="w-full min-w-[900px] text-sm">
+          <thead className="bg-slate-100">
+            <tr>
+              <th className="p-3 text-left">Operatore</th>
+              <th className="p-3 text-right">Clienti</th>
+              <th className="p-3 text-right">{annoOperazioniPrecedente}</th>
+              <th className="p-3 text-right">{annoOperazioniRiferimento}</th>
+              <th className="p-3 text-right">Incremento</th>
+              <th className="p-3 text-right">Incremento %</th>
+              <th className="p-3 text-right">Incidenza</th>
+            </tr>
+          </thead>
+          <tbody>
+            {riepilogoOperazioniOperatori.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="p-6 text-center text-muted-foreground">
+                  Nessun dato contabile registrato per gli anni selezionati.
+                </td>
+              </tr>
+            ) : (
+              riepilogoOperazioniOperatori.map((row) => (
+                <tr key={row.utenteId} className="border-t">
+                  <td className="p-3 font-medium">{row.nome}</td>
+                  <td className="p-3 text-right">{row.clientiGestiti}</td>
+                  <td className="p-3 text-right">{row.precedente.toLocaleString("it-IT")}</td>
+                  <td className="p-3 text-right font-semibold">{row.corrente.toLocaleString("it-IT")}</td>
+                  <td className={`p-3 text-right font-medium ${row.incremento > 0 ? "text-green-700" : row.incremento < 0 ? "text-red-700" : ""}`}>
+                    {row.incremento > 0 ? "+" : ""}
+                    {row.incremento.toLocaleString("it-IT")}
+                  </td>
+                  <td className={`p-3 text-right ${row.incrementoPercentuale > 0 ? "text-green-700" : row.incrementoPercentuale < 0 ? "text-red-700" : ""}`}>
+                    {row.incrementoPercentuale > 0 ? "+" : ""}
+                    {row.incrementoPercentuale.toFixed(1)}%
+                  </td>
+                  <td className="p-3 text-right font-semibold">{row.incidenza.toFixed(1)}%</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+          <tfoot className="border-t-2 bg-slate-50 font-semibold">
+            <tr>
+              <td className="p-3">Totale studio</td>
+              <td className="p-3"></td>
+              <td className="p-3 text-right">{totaleOperazioniStudioPrecedente.toLocaleString("it-IT")}</td>
+              <td className="p-3 text-right">{totaleOperazioniStudio.toLocaleString("it-IT")}</td>
+              <td className="p-3 text-right">
+                {totaleOperazioniStudio - totaleOperazioniStudioPrecedente > 0 ? "+" : ""}
+                {(totaleOperazioniStudio - totaleOperazioniStudioPrecedente).toLocaleString("it-IT")}
+              </td>
+              <td className="p-3"></td>
+              <td className="p-3 text-right">100,0%</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </DialogContent>
+</Dialog>
+
 {/* DIALOG CREAZIONE/MODIFICA */}
     
 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
