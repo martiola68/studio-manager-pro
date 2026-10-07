@@ -1109,6 +1109,81 @@ const percentualeCassetto = useMemo(() => {
   return Math.round((clientiConCassetto / totaleClientiFiltrati) * 100);
 }, [totaleClientiFiltrati, clientiConCassetto]);
 
+const annoOperazioniPrecedente = annoOperazioniRiferimento - 1;
+
+const operazioniAnnoCorrente = useMemo(
+  () => operazioniContabili.filter((row) => Number(row.anno) === annoOperazioniRiferimento),
+  [operazioniContabili, annoOperazioniRiferimento]
+);
+
+const operazioniAnnoPrecedente = useMemo(
+  () => operazioniContabili.filter((row) => Number(row.anno) === annoOperazioniPrecedente),
+  [operazioniContabili, annoOperazioniPrecedente]
+);
+
+const totaleOperazioniStudio = useMemo(
+  () => operazioniAnnoCorrente.reduce((totale, row) => totale + Number(row.numero_operazioni || 0), 0),
+  [operazioniAnnoCorrente]
+);
+
+const totaleOperazioniStudioPrecedente = useMemo(
+  () => operazioniAnnoPrecedente.reduce((totale, row) => totale + Number(row.numero_operazioni || 0), 0),
+  [operazioniAnnoPrecedente]
+);
+
+const totaleOperazioniOperatore = useMemo(() => {
+  if (selectedUtenteFiscale === "all") return totaleOperazioniStudio;
+  return operazioniAnnoCorrente
+    .filter((row) => row.utente_operatore_id === selectedUtenteFiscale)
+    .reduce((totale, row) => totale + Number(row.numero_operazioni || 0), 0);
+}, [operazioniAnnoCorrente, selectedUtenteFiscale, totaleOperazioniStudio]);
+
+const totaleOperazioniOperatorePrecedente = useMemo(() => {
+  if (selectedUtenteFiscale === "all") return totaleOperazioniStudioPrecedente;
+  return operazioniAnnoPrecedente
+    .filter((row) => row.utente_operatore_id === selectedUtenteFiscale)
+    .reduce((totale, row) => totale + Number(row.numero_operazioni || 0), 0);
+}, [operazioniAnnoPrecedente, selectedUtenteFiscale, totaleOperazioniStudioPrecedente]);
+
+const incidenzaOperatorePercentuale =
+  totaleOperazioniStudio > 0 ? (totaleOperazioniOperatore / totaleOperazioniStudio) * 100 : 0;
+
+const variazioneOperatoreNumerica =
+  totaleOperazioniOperatore - totaleOperazioniOperatorePrecedente;
+
+const variazioneOperatorePercentuale =
+  totaleOperazioniOperatorePrecedente > 0
+    ? (variazioneOperatoreNumerica / totaleOperazioniOperatorePrecedente) * 100
+    : totaleOperazioniOperatore > 0 ? 100 : 0;
+
+const riepilogoOperazioniOperatori = useMemo(() => {
+  const ids = new Set<string>();
+  operazioniAnnoCorrente.forEach((row) => row.utente_operatore_id && ids.add(row.utente_operatore_id));
+  operazioniAnnoPrecedente.forEach((row) => row.utente_operatore_id && ids.add(row.utente_operatore_id));
+
+  return Array.from(ids).map((utenteId) => {
+    const corrente = operazioniAnnoCorrente
+      .filter((row) => row.utente_operatore_id === utenteId)
+      .reduce((totale, row) => totale + Number(row.numero_operazioni || 0), 0);
+    const precedente = operazioniAnnoPrecedente
+      .filter((row) => row.utente_operatore_id === utenteId)
+      .reduce((totale, row) => totale + Number(row.numero_operazioni || 0), 0);
+    const incremento = corrente - precedente;
+    return {
+      utenteId,
+      nome: getUtenteNome(utenteId),
+      clientiGestiti: new Set(
+        operazioniAnnoCorrente.filter((row) => row.utente_operatore_id === utenteId).map((row) => row.cliente_id)
+      ).size,
+      precedente,
+      corrente,
+      incremento,
+      incrementoPercentuale: precedente > 0 ? (incremento / precedente) * 100 : corrente > 0 ? 100 : 0,
+      incidenza: totaleOperazioniStudio > 0 ? (corrente / totaleOperazioniStudio) * 100 : 0,
+    };
+  }).sort((a, b) => b.corrente - a.corrente);
+}, [operazioniAnnoCorrente, operazioniAnnoPrecedente, totaleOperazioniStudio, getUtenteNome]);
+
 const resetForm = () => {
   setEditingCliente(null);
   setFormData(initialFormData);
