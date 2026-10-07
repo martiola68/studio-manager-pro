@@ -1622,9 +1622,17 @@ const safeUrl = String(url || "").trim();
 
     <ol style="padding-left: 18px;">
       <li>compilato in ogni sua parte;</li>
-      <li>sottoscritto dal richiedente, con firma digitale oppure con firma manuale;</li>
+      <li>sottoscritto dal richiedente, con firma digitale oppure con firma autografa;</li>
       <li>ricaricato nella stessa pagina al termine della procedura.</li>
     </ol>
+
+    <p>
+      <strong><u>Il Modello AV4 dovrà essere compilato e restituito entro il termine di 7 giorni dal ricevimento della presente email.</u></strong>
+    </p>
+
+    <p>
+      <strong><u>In caso di firma autografa, il documento firmato in originale dovrà essere consegnato allo Studio entro il medesimo termine di 7 giorni dal ricevimento della presente email.</u></strong>
+    </p>
 
     <p>
       Può accedere alla pagina riservata tramite il seguente collegamento:
@@ -1641,8 +1649,9 @@ const safeUrl = String(url || "").trim();
       <li>apra il link;</li>
       <li>compili i dati richiesti;</li>
       <li>salvi e stampi il PDF;</li>
-      <li>firmi il documento digitalmente oppure manualmente;</li>
+      <li>firmi il documento digitalmente oppure con firma autografa;</li>
       <li>ricarichi il PDF firmato;</li>
+      <li>in caso di firma autografa, consegni anche l'originale firmato allo Studio entro 7 giorni dal ricevimento della presente email;</li>
       <li>clicchi su "Salva e chiudi".</li>
     </ol>
 
@@ -1665,8 +1674,12 @@ la prestazione professionale.
 
 Il modello dovrà essere:
 1. compilato in ogni sua parte;
-2. sottoscritto dal richiedente, con firma digitale oppure con firma manuale;
+2. sottoscritto dal richiedente, con firma digitale oppure con firma autografa;
 3. ricaricato nella stessa pagina al termine della procedura.
+
+IL MODELLO AV4 DOVRÀ ESSERE COMPILATO E RESTITUITO ENTRO IL TERMINE DI 7 GIORNI DAL RICEVIMENTO DELLA PRESENTE EMAIL.
+
+IN CASO DI FIRMA AUTOGRAFA, IL DOCUMENTO FIRMATO IN ORIGINALE DOVRÀ ESSERE CONSEGNATO ALLO STUDIO ENTRO IL MEDESIMO TERMINE DI 7 GIORNI DAL RICEVIMENTO DELLA PRESENTE EMAIL.
 
 Può accedere alla pagina riservata tramite il seguente collegamento:
 
@@ -1676,9 +1689,10 @@ Istruzioni rapide:
 1. apra il link;
 2. compili i dati richiesti;
 3. salvi e stampi il PDF;
-4. firmi il documento digitalmente oppure manualmente;
+4. firmi il documento digitalmente oppure con firma autografa;
 5. ricarichi il PDF firmato;
-6. clicchi su "Salva e chiudi".
+6. in caso di firma autografa, consegni anche l'originale firmato allo Studio entro 7 giorni dal ricevimento della presente email;
+7. clicchi su "Salva e chiudi".
 
 Il collegamento sarà disattivato al completamento della procedura.
 
