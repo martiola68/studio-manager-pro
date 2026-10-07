@@ -1612,30 +1612,23 @@ const safeUrl = String(url || "").trim();
       ai fini degli adempimenti previsti dalla normativa antiriciclaggio
       di cui al D.Lgs. 231/2007 e successive modifiche e integrazioni,
       Le trasmettiamo il <strong>Modello AV4 - Dichiarazione del Cliente</strong>,
-      che deve essere compilato obbligatoriamente dal soggetto richiedente
+      che deve essere obbligatoriamente compilato dal soggetto richiedente
       la prestazione professionale.
     </p>
 
-    <p>
-      Il modello dovrà essere:
-    </p>
+    <p>Il modello dovrà essere:</p>
 
-    <ol style="padding-left: 18px;">
+    <ol style="padding-left: 22px;">
       <li>compilato in ogni sua parte;</li>
-      <li>sottoscritto dal richiedente, con firma digitale oppure con firma autografa;</li>
-      <li>ricaricato nella stessa pagina al termine della procedura.</li>
+      <li>sottoscritto dal richiedente con firma digitale oppure con firma autografa.</li>
     </ol>
 
-    <p>
-      <strong><u>Il Modello AV4 dovrà essere compilato e restituito entro il termine di 7 giorni dal ricevimento della presente email.</u></strong>
+    <p style="margin-top: 22px; font-size: 15px;">
+      <strong>Modalità di compilazione e consegna</strong>
     </p>
 
     <p>
-      <strong><u>In caso di firma autografa, il documento firmato in originale dovrà essere consegnato allo Studio entro il medesimo termine di 7 giorni dal ricevimento della presente email.</u></strong>
-    </p>
-
-    <p>
-      Può accedere alla pagina riservata tramite il seguente collegamento:
+      Per procedere alla compilazione del Modello AV4, utilizzi il seguente collegamento:
     </p>
 
     <p>
@@ -1644,18 +1637,38 @@ const safeUrl = String(url || "").trim();
       </a>
     </p>
 
+    <p style="margin-top: 22px;"><strong>In caso di firma digitale</strong></p>
+
+    <p>
+      <strong><u>Il Modello AV4 dovrà essere compilato, firmato digitalmente e caricato tramite il collegamento sopra indicato entro il termine di 7 giorni dal ricevimento della presente email.</u></strong>
+    </p>
+
     <p><strong>Istruzioni rapide:</strong></p>
-    <ol style="padding-left: 18px;">
+    <ol style="padding-left: 22px;">
       <li>apra il link;</li>
       <li>compili i dati richiesti;</li>
-      <li>salvi e stampi il PDF;</li>
-      <li>firmi il documento digitalmente oppure con firma autografa;</li>
+      <li>salvi il PDF;</li>
+      <li>firmi digitalmente il documento;</li>
       <li>ricarichi il PDF firmato;</li>
-      <li>in caso di firma autografa, consegni anche l'originale firmato allo Studio entro 7 giorni dal ricevimento della presente email;</li>
       <li>clicchi su "Salva e chiudi".</li>
     </ol>
 
+    <p style="margin-top: 22px;"><strong>In caso di firma autografa</strong></p>
+
     <p>
+      <strong><u>Il Modello AV4, sottoscritto con firma autografa, dovrà essere consegnato in originale allo Studio entro il medesimo termine di 7 giorni dal ricevimento della presente email.</u></strong>
+    </p>
+
+    <p><strong>Istruzioni rapide:</strong></p>
+    <ol style="padding-left: 22px;">
+      <li>apra il link;</li>
+      <li>compili i dati richiesti;</li>
+      <li>stampi il PDF;</li>
+      <li>firmi il documento con firma autografa;</li>
+      <li>consegni il documento originale allo Studio entro 7 giorni dal ricevimento della presente email.</li>
+    </ol>
+
+    <p style="margin-top: 22px;">
       ⚠️ Il collegamento sarà disattivato al completamento della procedura.
     </p>
 
@@ -1666,33 +1679,40 @@ const safeUrl = String(url || "").trim();
 const text = `
 Gentile ${nomeDestinatario},
 
-ai fini degli adempimenti previsti dalla normativa antiriciclaggio
-di cui al D.Lgs. 231/2007 e successive modifiche e integrazioni,
-Le trasmettiamo il Modello AV4 - Dichiarazione del Cliente,
-che deve essere compilato obbligatoriamente dal soggetto richiedente
-la prestazione professionale.
+ai fini degli adempimenti previsti dalla normativa antiriciclaggio di cui al D.Lgs. 231/2007 e successive modifiche e integrazioni, Le trasmettiamo il Modello AV4 - Dichiarazione del Cliente, che deve essere obbligatoriamente compilato dal soggetto richiedente la prestazione professionale.
 
 Il modello dovrà essere:
 1. compilato in ogni sua parte;
-2. sottoscritto dal richiedente, con firma digitale oppure con firma autografa;
-3. ricaricato nella stessa pagina al termine della procedura.
+2. sottoscritto dal richiedente con firma digitale oppure con firma autografa.
 
-IL MODELLO AV4 DOVRÀ ESSERE COMPILATO E RESTITUITO ENTRO IL TERMINE DI 7 GIORNI DAL RICEVIMENTO DELLA PRESENTE EMAIL.
+MODALITÀ DI COMPILAZIONE E CONSEGNA
 
-IN CASO DI FIRMA AUTOGRAFA, IL DOCUMENTO FIRMATO IN ORIGINALE DOVRÀ ESSERE CONSEGNATO ALLO STUDIO ENTRO IL MEDESIMO TERMINE DI 7 GIORNI DAL RICEVIMENTO DELLA PRESENTE EMAIL.
-
-Può accedere alla pagina riservata tramite il seguente collegamento:
+Per procedere alla compilazione del Modello AV4, utilizzi il seguente collegamento:
 
 ${url}
+
+IN CASO DI FIRMA DIGITALE
+
+Il Modello AV4 dovrà essere compilato, firmato digitalmente e caricato tramite il collegamento sopra indicato entro il termine di 7 giorni dal ricevimento della presente email.
 
 Istruzioni rapide:
 1. apra il link;
 2. compili i dati richiesti;
-3. salvi e stampi il PDF;
-4. firmi il documento digitalmente oppure con firma autografa;
+3. salvi il PDF;
+4. firmi digitalmente il documento;
 5. ricarichi il PDF firmato;
-6. in caso di firma autografa, consegni anche l'originale firmato allo Studio entro 7 giorni dal ricevimento della presente email;
-7. clicchi su "Salva e chiudi".
+6. clicchi su "Salva e chiudi".
+
+IN CASO DI FIRMA AUTOGRAFA
+
+Il Modello AV4, sottoscritto con firma autografa, dovrà essere consegnato in originale allo Studio entro il medesimo termine di 7 giorni dal ricevimento della presente email.
+
+Istruzioni rapide:
+1. apra il link;
+2. compili i dati richiesti;
+3. stampi il PDF;
+4. firmi il documento con firma autografa;
+5. consegni il documento originale allo Studio entro 7 giorni dal ricevimento della presente email.
 
 Il collegamento sarà disattivato al completamento della procedura.
 
