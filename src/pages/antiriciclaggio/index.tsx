@@ -51,6 +51,7 @@ type AV1Row = {
   AV2Generato?: boolean | null;
   AV2Confermato?: boolean | null;
   AV4Generato?: boolean | null;
+  Prestazione?: string | null;
   tbclienti?: Cliente | Cliente[] | null;
   av4_info?: AV4Info | AV4Info[] | null;
   pratica_id?: string | null;
@@ -268,7 +269,34 @@ export default function AntiriciclaggioPage() {
     const docs = data || [];
     const normalizza = (value: any) => String(value || "").toLowerCase().trim();
     const hasDoc = (check: (doc: any) => boolean) => docs.some(check);
-    const av1 = hasDoc((doc: any) => ["av1_pdf", "av1 firmato"].includes(normalizza(doc.origine)) || ["av1 firmato", "modulo firmato"].includes(normalizza(doc.tipo_documento)));
+
+    let regolaDiCondotta = "";
+    let av1EsclusoPerRegola = false;
+
+    if (row.Prestazione) {
+      const { data: prestazioneData } = await supabase
+        .from("tbElencoPrestAR")
+        .select("RischioTipoPrestAR, RegolaDiCondotta")
+        .eq("TipoPrestazioneAR", row.Prestazione)
+        .maybeSingle();
+
+      regolaDiCondotta = String(prestazioneData?.RegolaDiCondotta || "").trim();
+      av1EsclusoPerRegola =
+        prestazioneData?.RischioTipoPrestAR === "Non significativo" &&
+        regolaDiCondotta.length > 0;
+    }
+
+    const av1 =
+      av1EsclusoPerRegola ||
+      hasDoc((doc: any) =>
+        ["av1_pdf", "av1 firmato"].includes(normalizza(doc.origine)) ||
+        ["av1 firmato", "modulo firmato"].includes(normalizza(doc.tipo_documento))
+      );
+
+    const regolaPresente =
+      !av1EsclusoPerRegola ||
+      hasDoc((doc: any) => normalizza(doc.tipo_documento) === normalizza(regolaDiCondotta));
+
     const av4Info = getAV4Info(row);
     const av4PathPresente = !!String(
       av4Info?.pdf_firmato_cliente || av4Info?.allegato_pdf_cliente || ""
@@ -287,6 +315,7 @@ export default function AntiriciclaggioPage() {
     const contratto = hasDoc((doc: any) => normalizza(doc.origine).includes("contratto") || normalizza(doc.tipo_documento).includes("contratto"));
     const mancanti: string[] = [];
     if (!av1) mancanti.push("AV1 firmato");
+    if (!regolaPresente) mancanti.push(regolaDiCondotta);
     if (!av4) mancanti.push("AV4 firmato");
     if (!documentoIdentita) mancanti.push("Documento identità");
     if (isSocietaCliente && !visura) mancanti.push("Visura camerale");
@@ -304,7 +333,7 @@ export default function AntiriciclaggioPage() {
       const praticheRows = (praticheData as PraticaAMLRow[]) || [];
       const rowsBase: AV1Row[] = await Promise.all(praticheRows.map(async (pratica) => {
         const [{ data: av1 }, { data: av2 }, { data: av4 }] = await Promise.all([
-          supabaseAny.from("tbAV1").select("id, studio_id, cliente_id, societa_id, pratica_id, incaricato_adeguata_verifica_id, DataVerifica, ScadenzaVerifica, AV1Conferma, AV2Generato, AV4Generato").eq("pratica_id", pratica.id).maybeSingle(),
+          supabaseAny.from("tbAV1").select("id, studio_id, cliente_id, societa_id, pratica_id, incaricato_adeguata_verifica_id, DataVerifica, ScadenzaVerifica, AV1Conferma, AV2Generato, AV4Generato, Prestazione").eq("pratica_id", pratica.id).maybeSingle(),
           pratica.av2_corrente_id || pratica.av2_id ? supabaseAny.from("tbAV2").select("id, confermato").eq("id", pratica.av2_corrente_id || pratica.av2_id).maybeSingle() : supabaseAny.from("tbAV2").select("id, confermato").eq("pratica_id", pratica.id).maybeSingle(),
           supabaseAny.from("tbAV4").select("id, av1_id, Av4InviatoCL, public_sent_at, compilato_da_cliente, av4_caricato_manualmente, allegato_pdf_cliente, pdf_firmato_cliente").eq("pratica_id", pratica.id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
         ]);
@@ -321,6 +350,7 @@ export default function AntiriciclaggioPage() {
           AV2Generato: !!av2?.confermato,
           AV2Confermato: !!av2?.confermato,
           AV4Generato: !!av4?.id,
+          Prestazione: av1?.Prestazione || null,
           tbclienti: pratica.tbclienti || null,
           av4_info: av4 || null,
           stato_pratica: pratica.stato || "aperta",
