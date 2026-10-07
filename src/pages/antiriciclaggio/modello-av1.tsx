@@ -38,11 +38,13 @@ type ResponsabileAV = {
   cognome_nome: string;
   codice_fiscale?: string | null;
   TipoSoggetto?: string | null;
+  societa_id?: string | null;
 };
 
 type FormDataType = {
   id?: string;
   pratica_id?: string;
+  societa_id?: string;
   studio_id: string;
   cliente_id: string;
   Prestazione: string;
@@ -170,6 +172,7 @@ const defaultSectionScores = {
 const initialFormData: FormDataType = {
   id: "",
   pratica_id: "",
+  societa_id: "",
   studio_id: "",
   cliente_id: "",
   Prestazione: "",
@@ -286,7 +289,7 @@ function sectionHasCheckedFlag(formData: FormDataType, sectionKey: string) {
 
 export default function ModelloAV1Page() {
   const router = useRouter();
-  const { id, pratica_id, cliente_id, studio_id } = router.query;
+  const { id, pratica_id, cliente_id, studio_id, societa_id } = router.query;
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   const [clienti, setClienti] = useState<Cliente[]>([]);
@@ -379,6 +382,34 @@ const categoriaVulnerabilita = getCategoriaRischio(MediaPunteggio);
     return "";
   };
 
+  const responsabiliSocieta = useMemo(() => {
+    const societaId = String(formData.societa_id || "").trim();
+    if (!societaId) return [];
+
+    return responsabiliAV.filter(
+      (responsabile) => String(responsabile.societa_id || "") === societaId
+    );
+  }, [responsabiliAV, formData.societa_id]);
+
+  useEffect(() => {
+    if (!formData.societa_id || responsabiliSocieta.length === 0) return;
+
+    const selezionatoValido = responsabiliSocieta.some(
+      (responsabile) => responsabile.id === formData.incaricato_adeguata_verifica_id
+    );
+
+    if (!selezionatoValido) {
+      setFormData((prev) => ({
+        ...prev,
+        incaricato_adeguata_verifica_id: responsabiliSocieta[0].id,
+      }));
+    }
+  }, [
+    formData.societa_id,
+    formData.incaricato_adeguata_verifica_id,
+    responsabiliSocieta,
+  ]);
+
   const getClienteLabel = (cliente: Cliente) => {
     return (
       cliente.ragione_sociale ||
@@ -441,7 +472,7 @@ const refreshEncryptionEnabled = async (studioIdValue?: string) => {
         studioId
           ? supabase
               .from("tbRespAV")
-              .select("id, cognome_nome, codice_fiscale, TipoSoggetto")
+              .select("id, cognome_nome, codice_fiscale, TipoSoggetto, societa_id")
               .eq("studio_id", studioId)
               .order("cognome_nome", { ascending: true })
           : Promise.resolve({ data: [], error: null }),
@@ -485,6 +516,11 @@ const refreshEncryptionEnabled = async (studioIdValue?: string) => {
   ...data,
   id: String(data.id),
   pratica_id: data.pratica_id ?? prev.pratica_id ?? "",
+  societa_id:
+    data.societa_id ??
+    prev.societa_id ??
+    (typeof societa_id === "string" ? societa_id : "") ??
+    "",
   studio_id: data.studio_id ?? prev.studio_id ?? "",
   cliente_id: data.cliente_id ?? "",
   Prestazione: data.Prestazione ?? "",
@@ -610,6 +646,11 @@ if (currentAv1Id) {
   ...prev,
   id: "",
   pratica_id: String(data.id),
+      societa_id:
+        data.societa_id ??
+        (typeof societa_id === "string" ? societa_id : "") ??
+        prev.societa_id ??
+        "",
         studio_id:
         data.studio_id ??
         (typeof studio_id === "string" ? studio_id : "") ??
@@ -707,6 +748,10 @@ if (currentAv1Id) {
     setFormData((prev) => ({
       ...prev,
       pratica_id: typeof pratica_id === "string" ? pratica_id : "",
+      societa_id:
+        prev.societa_id ||
+        (typeof societa_id === "string" ? societa_id : "") ||
+        "",
       studio_id:
         prev.studio_id ||
         (typeof studio_id === "string" ? studio_id : "") ||
@@ -716,7 +761,7 @@ if (currentAv1Id) {
         (typeof cliente_id === "string" ? cliente_id : "") ||
         "",
     }));
-  }, [router.isReady, id, pratica_id, cliente_id, studio_id]);
+  }, [router.isReady, id, pratica_id, cliente_id, studio_id, societa_id]);
 
 const handlePrestazioneChange = (prestazioneValue: string) => {
   const prestazione = prestazioni.find(
@@ -1139,6 +1184,7 @@ const handleRinnovoVerifica = async () => {
 
  const payload = {
   pratica_id: formData.pratica_id || null,
+  societa_id: formData.societa_id || null,
   studio_id: formData.studio_id,
   cliente_id: formData.cliente_id,
   Prestazione: formData.Prestazione,
@@ -1541,6 +1587,7 @@ const handleRinnovoVerifica = async () => {
                     <select
                       className="w-full rounded-md border-2 border-red-500 px-3 py-2 focus:border-red-600 focus:outline-none"
                       value={formData.incaricato_adeguata_verifica_id || ""}
+                      disabled={responsabiliSocieta.length === 1}
                       onChange={(e) =>
                         setFormData((prev) => ({
                           ...prev,
@@ -1548,15 +1595,23 @@ const handleRinnovoVerifica = async () => {
                         }))
                       }
                     >
-                      <option value="">Seleziona responsabile</option>
-                      {responsabiliAV.map((responsabile) => (
+                      <option value="">
+                        {responsabiliSocieta.length === 0
+                          ? "Nessun responsabile associato alla società"
+                          : "Seleziona responsabile"}
+                      </option>
+                      {responsabiliSocieta.map((responsabile) => (
                         <option key={responsabile.id} value={responsabile.id}>
                           {getResponsabileAVLabel(responsabile)}
                         </option>
                       ))}
                     </select>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Campo collegato alla tabella dei responsabili adeguata verifica.
+                      {responsabiliSocieta.length === 1
+                        ? "Responsabile associato automaticamente al soggetto responsabile selezionato."
+                        : responsabiliSocieta.length > 1
+                        ? "Sono disponibili solo i responsabili associati al soggetto responsabile selezionato."
+                        : "Nessun responsabile adeguata verifica risulta associato al soggetto responsabile selezionato."}
                     </p>
                   </div>
                 </div>
