@@ -3636,6 +3636,176 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
 </CardContent>
 </Card>
 
+{/* DIALOG DETTAGLIO TIPO CLIENTE */}
+<Dialog
+  open={dettaglioTipoCliente !== null}
+  onOpenChange={(open) => {
+    if (!open) setDettaglioTipoCliente(null);
+  }}
+>
+  <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+    <DialogHeader>
+      <DialogTitle>
+        {dettaglioTipoCliente === "persona fisica" ? "Persone fisiche" : "Altro"} · carico contabile
+      </DialogTitle>
+    </DialogHeader>
+
+    <div className="space-y-5">
+      <div className="rounded-lg border bg-slate-50 p-4">
+        <div className="text-sm text-muted-foreground">Utente fiscale</div>
+        <div className="text-lg font-semibold">{getUtenteNome(selectedUtenteFiscale)}</div>
+        <div className="mt-1 text-sm text-muted-foreground">
+          Confronto {annoOperazioniPrecedente} → {annoOperazioniRiferimento}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <Card>
+          <CardContent className="pt-5">
+            <div className="text-xs uppercase text-muted-foreground">
+              Operazioni {annoOperazioniRiferimento}
+            </div>
+            <div className="mt-1 text-3xl font-bold">
+              {riepilogoTipoCliente.corrente.toLocaleString("it-IT")}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-5">
+            <div className="text-xs uppercase text-muted-foreground">
+              Peso sul totale studio
+            </div>
+            <div className="mt-1 text-3xl font-bold text-violet-700">
+              {riepilogoTipoCliente.incidenzaPercentuale.toFixed(1)}%
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-5">
+            <div className="text-xs uppercase text-muted-foreground">
+              Variazione numerica
+            </div>
+            <div
+              className={`mt-1 text-3xl font-bold ${
+                riepilogoTipoCliente.variazione > 0
+                  ? "text-green-700"
+                  : riepilogoTipoCliente.variazione < 0
+                    ? "text-red-700"
+                    : ""
+              }`}
+            >
+              {riepilogoTipoCliente.variazione > 0 ? "+" : ""}
+              {riepilogoTipoCliente.variazione.toLocaleString("it-IT")}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-5">
+            <div className="text-xs uppercase text-muted-foreground">
+              Variazione %
+            </div>
+            <div
+              className={`mt-1 text-3xl font-bold ${
+                riepilogoTipoCliente.variazionePercentuale > 0
+                  ? "text-green-700"
+                  : riepilogoTipoCliente.variazionePercentuale < 0
+                    ? "text-red-700"
+                    : ""
+              }`}
+            >
+              {riepilogoTipoCliente.variazionePercentuale > 0 ? "+" : ""}
+              {riepilogoTipoCliente.variazionePercentuale.toFixed(1)}%
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="overflow-x-auto rounded-lg border">
+        <table className="w-full min-w-[900px] text-sm">
+          <thead className="bg-slate-100">
+            <tr>
+              <th className="p-3 text-left">Società</th>
+              <th className="p-3 text-right">{annoOperazioniPrecedente}</th>
+              <th className="p-3 text-right">Variazione +/-</th>
+              <th className="p-3 text-right">Variazione %</th>
+              <th className="p-3 text-right">{annoOperazioniRiferimento}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {riepilogoTipoCliente.righe.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="p-6 text-center text-muted-foreground">
+                  Nessuna società con operazioni contabili registrate.
+                </td>
+              </tr>
+            ) : (
+              riepilogoTipoCliente.righe.map((row) => (
+                <tr key={row.cliente.id} className="border-t">
+                  <td className="p-3 font-medium">
+                    {row.cliente.ragione_sociale || row.cliente.cod_cliente || "-"}
+                  </td>
+                  <td className="p-3 text-right">
+                    {row.precedente.toLocaleString("it-IT")}
+                  </td>
+                  <td
+                    className={`p-3 text-right font-semibold ${
+                      row.variazione > 0
+                        ? "text-green-700"
+                        : row.variazione < 0
+                          ? "text-red-700"
+                          : ""
+                    }`}
+                  >
+                    {row.variazione > 0 ? "+" : ""}
+                    {row.variazione.toLocaleString("it-IT")}
+                  </td>
+                  <td
+                    className={`p-3 text-right ${
+                      row.variazionePercentuale > 0
+                        ? "text-green-700"
+                        : row.variazionePercentuale < 0
+                          ? "text-red-700"
+                          : ""
+                    }`}
+                  >
+                    {row.variazionePercentuale > 0 ? "+" : ""}
+                    {row.variazionePercentuale.toFixed(1)}%
+                  </td>
+                  <td className="p-3 text-right font-semibold">
+                    {row.corrente.toLocaleString("it-IT")}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+          <tfoot className="border-t-2 bg-slate-50 font-semibold">
+            <tr>
+              <td className="p-3">Totale</td>
+              <td className="p-3 text-right">
+                {riepilogoTipoCliente.precedente.toLocaleString("it-IT")}
+              </td>
+              <td className="p-3 text-right">
+                {riepilogoTipoCliente.variazione > 0 ? "+" : ""}
+                {riepilogoTipoCliente.variazione.toLocaleString("it-IT")}
+              </td>
+              <td className="p-3 text-right">
+                {riepilogoTipoCliente.variazionePercentuale > 0 ? "+" : ""}
+                {riepilogoTipoCliente.variazionePercentuale.toFixed(1)}%
+              </td>
+              <td className="p-3 text-right">
+                {riepilogoTipoCliente.corrente.toLocaleString("it-IT")}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </DialogContent>
+</Dialog>
+
 {/* DIALOG OPERAZIONI CONTABILI CLIENTE */}
 <Dialog open={operazioniDialogOpen} onOpenChange={setOperazioniDialogOpen}>
   <DialogContent className="max-w-3xl">
