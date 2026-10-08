@@ -100,52 +100,43 @@ export default function ContenziosoIndexPage() {
 
     let risultati: Scadenza[] = [];
 
-    if (archivioFiltro === "all" || archivioFiltro === "avvisi") {
+    const caricaArchivio = async (
+      tabella: string,
+      archivio: "avvisi" | "cartelle" | "processo"
+    ) => {
       const { data, error } = await (supabase as any)
-        .from("tbcontenzioso_avvisi_bonari")
+        .from(tabella)
         .select(selectQuery);
 
-      if (error) throw error;
+      if (error) {
+        console.error(`Errore caricamento archivio ${archivio}:`, error);
+        toast({
+          title: `Errore caricamento ${archivio}`,
+          description: error.message || "Archivio non disponibile.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       risultati = [
         ...risultati,
         ...((data || []).map((row: any) => ({
           ...row,
-          archivio: "avvisi",
+          archivio,
         })) as Scadenza[]),
       ];
+    };
+
+    if (archivioFiltro === "all" || archivioFiltro === "avvisi") {
+      await caricaArchivio("tbcontenzioso_avvisi_bonari", "avvisi");
     }
 
     if (archivioFiltro === "all" || archivioFiltro === "cartelle") {
-      const { data, error } = await (supabase as any)
-        .from("tbcontenzioso_cartelle")
-        .select(selectQuery);
-
-      if (error) throw error;
-
-      risultati = [
-        ...risultati,
-        ...((data || []).map((row: any) => ({
-          ...row,
-          archivio: "cartelle",
-        })) as Scadenza[]),
-      ];
+      await caricaArchivio("tbcontenzioso_cartelle", "cartelle");
     }
 
     if (archivioFiltro === "all" || archivioFiltro === "processo") {
-      const { data, error } = await (supabase as any)
-        .from("tbcontenzioso_processo")
-        .select(selectQuery);
-
-      if (error) throw error;
-
-      risultati = [
-        ...risultati,
-        ...((data || []).map((row: any) => ({
-          ...row,
-          archivio: "processo",
-        })) as Scadenza[]),
-      ];
+      await caricaArchivio("tbcontenzioso_processo", "processo");
     }
 
     risultati.sort((a, b) => {
@@ -196,12 +187,18 @@ export default function ContenziosoIndexPage() {
 }
 
  function getBadgeClass(stato: string) {
-  if (stato === "Chiusa") return "bg-green-600 text-white";
-  if (stato === "Scaduta") return "bg-red-600 text-white";
-  if (stato === "In scadenza") return "bg-red-500 text-white";
-  if (stato === "Senza scadenza") return "bg-gray-400 text-white";
-  return "bg-black text-white";
+  if (stato === "Chiusa") return "!bg-green-600 !text-white border-green-700 font-semibold";
+  if (stato === "Scaduta") return "!bg-red-600 !text-white border-red-700 font-semibold";
+  if (stato === "In scadenza") return "!bg-orange-500 !text-white border-orange-600 font-semibold";
+  if (stato === "Senza scadenza") return "!bg-slate-500 !text-white border-slate-600 font-semibold";
+  return "!bg-blue-700 !text-white border-blue-800 font-semibold";
 }
+
+  function getArchivioLabel(row: Scadenza) {
+    if (row.archivio === "avvisi") return "Avviso bonario";
+    if (row.archivio === "cartelle") return "Cartella esattoriale";
+    return "Processo tributario";
+  }
 
   function getNumero(row: Scadenza) {
     return row.numero_cartella || row.numero_atto || "-";
@@ -219,15 +216,15 @@ export default function ContenziosoIndexPage() {
   const value = responso.toLowerCase();
 
   if (value.includes("sgravio totale")) {
-    return "bg-green-600 text-white";
+    return "!bg-green-600 !text-white border-green-700 font-semibold";
   }
 
   if (value.includes("sgravio parziale")) {
-    return "bg-orange-500 text-white";
+    return "!bg-orange-500 !text-white border-orange-600 font-semibold";
   }
 
   if (value.includes("respinto")) {
-    return "bg-red-600 text-white";
+    return "!bg-red-600 !text-white border-red-700 font-semibold";
   }
 
   return "";
@@ -405,6 +402,7 @@ export default function ContenziosoIndexPage() {
               <SelectItem value="Aperta">Aperta</SelectItem>
               <SelectItem value="In scadenza">In scadenza</SelectItem>
               <SelectItem value="Scaduta">Scaduta</SelectItem>
+              <SelectItem value="Chiusa">Chiusa</SelectItem>
               <SelectItem value="Senza scadenza">Senza scadenza</SelectItem>
             </SelectContent>
           </Select>
@@ -426,18 +424,19 @@ export default function ContenziosoIndexPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Tipo atto</TableHead>
-                    <TableHead>Numero</TableHead>
-                    <TableHead>Imposta</TableHead>
-                    <TableHead>Anno</TableHead>
-                    <TableHead>Ricezione</TableHead>
-                    <TableHead>Scadenza</TableHead>
-                    <TableHead>Stato</TableHead>
-                    <TableHead>Contestazione</TableHead>
-                    <TableHead>Responso</TableHead>
-                    <TableHead>Ricorso</TableHead>
-                    <TableHead className="text-right">Azioni</TableHead>
+                    <TableHead className="text-sm font-semibold">Cliente</TableHead>
+                    <TableHead className="text-sm font-semibold">Archivio</TableHead>
+                    <TableHead className="text-sm font-semibold">Tipo atto</TableHead>
+                    <TableHead className="text-sm font-semibold">Numero</TableHead>
+                    <TableHead className="text-sm font-semibold">Imposta</TableHead>
+                    <TableHead className="text-sm font-semibold">Anno</TableHead>
+                    <TableHead className="text-sm font-semibold">Ricezione</TableHead>
+                    <TableHead className="text-sm font-semibold">Scadenza</TableHead>
+                    <TableHead className="text-sm font-semibold">Stato</TableHead>
+                    <TableHead className="text-sm font-semibold">Contestazione</TableHead>
+                    <TableHead className="text-sm font-semibold">Responso</TableHead>
+                    <TableHead className="text-sm font-semibold">Ricorso</TableHead>
+                    <TableHead className="text-right text-sm font-semibold">Azioni</TableHead>
                   </TableRow>
                 </TableHeader>
 
@@ -446,10 +445,11 @@ export default function ContenziosoIndexPage() {
                     const stato = getStatoScadenza(row);
 
                     return (
-                      <TableRow key={row.id}>
-                        <TableCell>
+                      <TableRow key={`${row.archivio}-${row.id}`} className="text-sm">
+                        <TableCell className="font-medium">
                           {row.tbclienti?.ragione_sociale || "-"}
                         </TableCell>
+                        <TableCell>{getArchivioLabel(row)}</TableCell>
                         <TableCell>
                           {row.tbcontenzioso_tipi_atto?.descrizione || "-"}
                         </TableCell>
