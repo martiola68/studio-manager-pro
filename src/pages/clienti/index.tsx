@@ -2899,7 +2899,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
 <div className="mb-8">
   <div className="flex justify-between items-center mb-2">
     <div>
-      <h1 className="text-2xl font-bold">Gestione Clienti</h1>
+      <h1 className="text-xl font-bold">Gestione Clienti</h1>
       <p className="text-muted-foreground mt-1">
         Anagrafica completa e gestione scadenzari
       </p>
@@ -2994,12 +2994,12 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
 </div>
 
 {/* PERIODO OPERAZIONI CONTABILI */}
-<Card className="mb-4 border-sky-200 bg-sky-50/40">
-  <CardContent className="flex flex-col gap-3 py-3 md:flex-row md:items-center md:justify-between">
+<Card className="mb-3 border-sky-200 bg-sky-50/40">
+  <CardContent className="flex flex-col gap-2 px-3 py-2 md:flex-row md:items-center md:justify-between">
     <div>
-      <div className="text-sm font-semibold">Periodo operazioni contabili</div>
-      <div className="mt-1 text-sm text-muted-foreground">
-        Questo periodo viene utilizzato per tutti i clienti, per il riepilogo operatori e per i confronti annuali.
+      <div className="text-xs font-semibold">Periodo operazioni contabili</div>
+      <div className="text-[11px] text-muted-foreground">
+        Periodo unico per clienti, riepiloghi e confronti.
       </div>
     </div>
 
@@ -3009,7 +3009,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
         <Input
           value={annoOperazioniRiferimento - 1}
           disabled
-          className="mt-1 w-full md:w-[150px]"
+          className="mt-0.5 h-8 w-full text-sm md:w-[120px]"
         />
       </div>
 
@@ -3031,7 +3031,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
               )
             )
           }
-          className="mt-1 w-full font-semibold md:w-[170px]"
+          className="mt-0.5 h-8 w-full font-semibold text-sm md:w-[130px]"
         />
       </div>
     </div>
@@ -3039,16 +3039,16 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
 </Card>
 
 {/* STATS */}
-<div className="grid grid-cols-1 gap-3 mb-5 sm:grid-cols-2 xl:grid-cols-5">
+<div className="grid grid-cols-1 gap-2 mb-3 sm:grid-cols-2 xl:grid-cols-5">
   <Card>
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 px-3 pb-0.5 pt-3">
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 px-3 pb-0 pt-2">
       <CardTitle className="text-sm font-medium text-muted-foreground">
         Totale Clienti
       </CardTitle>
       <Users className="h-4 w-4 text-muted-foreground" />
     </CardHeader>
-    <CardContent className="px-3 pb-3">
-      <div className="text-2xl font-bold">{totaleClientiFiltrati}</div>
+    <CardContent className="px-3 pb-2">
+      <div className="text-xl font-bold">{totaleClientiFiltrati}</div>
     </CardContent>
   </Card>
 
@@ -3060,16 +3060,16 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
     }}
     className={selectedUtenteFiscale !== "all" ? "cursor-pointer transition-shadow hover:shadow-md" : ""}
   >
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 px-3 pb-0.5 pt-3">
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 px-3 pb-0 pt-2">
       <CardTitle className="text-sm font-medium text-muted-foreground">
         di cui Persone fisiche
       </CardTitle>
       <Users className="h-4 w-4 text-sky-600" />
     </CardHeader>
-    <CardContent className="px-3 pb-3">
-      <div className="text-2xl font-bold text-sky-600">{clientiPersoneFisiche}</div>
+    <CardContent className="px-3 pb-2">
+      <div className="text-xl font-bold text-sky-600">{clientiPersoneFisiche}</div>
       {selectedUtenteFiscale !== "all" && (
-        <div className="mt-2 space-y-0.5 border-t pt-2 text-[11px]">
+        <div className="mt-1 border-t pt-1 text-[10px] leading-tight">
           <div>
             Operazioni {annoOperazioniRiferimento}:{" "}
             <strong>
@@ -3085,7 +3085,6 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
                 .toLocaleString("it-IT")}
             </strong>
           </div>
-          <div className="text-muted-foreground">Clicca per il dettaglio società</div>
         </div>
       )}
     </CardContent>
@@ -3099,16 +3098,16 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
     }}
     className={selectedUtenteFiscale !== "all" ? "cursor-pointer transition-shadow hover:shadow-md" : ""}
   >
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 px-3 pb-0.5 pt-3">
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 px-3 pb-0 pt-2">
       <CardTitle className="text-sm font-medium text-muted-foreground">
         di cui Altro
       </CardTitle>
       <Users className="h-4 w-4 text-violet-600" />
     </CardHeader>
-    <CardContent className="px-3 pb-3">
-      <div className="text-2xl font-bold text-violet-600">{clientiAltro}</div>
+    <CardContent className="px-3 pb-2">
+      <div className="text-xl font-bold text-violet-600">{clientiAltro}</div>
       {selectedUtenteFiscale !== "all" && (
-        <div className="mt-2 space-y-0.5 border-t pt-2 text-[11px]">
+        <div className="mt-1 border-t pt-1 text-[10px] leading-tight">
           <div>
             Operazioni {annoOperazioniRiferimento}:{" "}
             <strong>
@@ -3124,33 +3123,32 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
                 .toLocaleString("it-IT")}
             </strong>
           </div>
-          <div className="text-muted-foreground">Clicca per il dettaglio società</div>
         </div>
       )}
     </CardContent>
   </Card>
 
   <Card>
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 px-3 pb-0.5 pt-3">
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 px-3 pb-0 pt-2">
       <CardTitle className="text-sm font-medium text-muted-foreground">
         Con Cassetto Fiscale
       </CardTitle>
       <FileSpreadsheet className="h-4 w-4 text-blue-600" />
     </CardHeader>
-    <CardContent className="px-3 pb-3">
-      <div className="text-2xl font-bold text-blue-600">{clientiConCassetto}</div>
+    <CardContent className="px-3 pb-2">
+      <div className="text-xl font-bold text-blue-600">{clientiConCassetto}</div>
     </CardContent>
   </Card>
 
   <Card>
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 px-3 pb-0.5 pt-3">
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 px-3 pb-0 pt-2">
       <CardTitle className="text-sm font-medium text-muted-foreground">
         Percentuale
       </CardTitle>
       <CheckCircle2 className="h-4 w-4 text-green-600" />
     </CardHeader>
-    <CardContent className="px-3 pb-3">
-      <div className="text-2xl font-bold text-green-600">
+    <CardContent className="px-3 pb-2">
+      <div className="text-xl font-bold text-green-600">
         {percentualeCassetto}%
       </div>
     </CardContent>
@@ -3159,19 +3157,19 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
 
 
 {selectedUtenteFiscale !== "all" && mostraCaricoOperatore && (
-  <Card className="mb-5 border-sky-200 bg-sky-50/60">
-    <CardHeader className="px-4 pb-2 pt-3">
+  <Card className="mb-3 border-sky-200 bg-sky-50/60">
+    <CardHeader className="px-3 pb-1 pt-2">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <CardTitle className="text-base">Carico contabile operatore</CardTitle>
-          <p className="mt-0.5 text-xs text-muted-foreground">
+          <CardTitle className="text-sm">Carico contabile operatore</CardTitle>
+          <p className="text-[11px] text-muted-foreground">
             {getUtenteNome(selectedUtenteFiscale)} · anno chiuso {annoOperazioniRiferimento}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="rounded-md border bg-white px-4 py-2 text-sm">
-            <div className="text-xs text-muted-foreground">Anno chiuso</div>
-            <div className="font-semibold">{annoOperazioniRiferimento}</div>
+          <div className="rounded-md border bg-white px-2.5 py-1 text-xs">
+            <span className="text-muted-foreground">Anno </span>
+            <span className="font-semibold">{annoOperazioniRiferimento}</span>
           </div>
           <Button
             variant="outline"
@@ -3183,42 +3181,42 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
         </div>
       </div>
     </CardHeader>
-    <CardContent className="px-4 pb-3 pt-0">
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-        <div className="rounded-md border bg-white px-3 py-2.5">
+    <CardContent className="px-3 pb-2 pt-0">
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
+        <div className="rounded-md border bg-white px-2.5 py-1.5">
           <div className="text-xs font-medium uppercase text-muted-foreground">
             Totale operazioni
           </div>
-          <div className="mt-0.5 text-2xl font-bold text-sky-700">
+          <div className="text-xl font-bold text-sky-700">
             {totaleOperazioniOperatore.toLocaleString("it-IT")}
           </div>
         </div>
 
-        <div className="rounded-md border bg-white px-3 py-2.5">
+        <div className="rounded-md border bg-white px-2.5 py-1.5">
           <div className="text-xs font-medium uppercase text-muted-foreground">
             Incidenza numerica
           </div>
-          <div className="mt-0.5 text-lg font-bold">
+          <div className="text-base font-bold">
             {totaleOperazioniOperatore.toLocaleString("it-IT")} / {totaleOperazioniStudio.toLocaleString("it-IT")}
           </div>
           <div className="mt-1 text-xs text-muted-foreground">operatore / totale studio</div>
         </div>
 
-        <div className="rounded-md border bg-white px-3 py-2.5">
+        <div className="rounded-md border bg-white px-2.5 py-1.5">
           <div className="text-xs font-medium uppercase text-muted-foreground">
             Incidenza %
           </div>
-          <div className="mt-0.5 text-2xl font-bold text-violet-700">
+          <div className="text-xl font-bold text-violet-700">
             {incidenzaOperatorePercentuale.toFixed(1)}%
           </div>
         </div>
 
-        <div className="rounded-md border bg-white px-3 py-2.5">
+        <div className="rounded-md border bg-white px-2.5 py-1.5">
           <div className="text-xs font-medium uppercase text-muted-foreground">
             Variazione vs {annoOperazioniPrecedente}
           </div>
           <div
-            className={`mt-0.5 text-lg font-bold ${
+            className={`text-base font-bold ${
               variazioneOperatoreNumerica > 0
                 ? "text-green-700"
                 : variazioneOperatoreNumerica < 0
@@ -3239,11 +3237,11 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
 
 
 {/* FILTRI */}
-<Card className="mb-6">
-  <CardHeader>
-    <CardTitle className="text-lg">Ricerca e Filtri</CardTitle>
+<Card className="mb-3">
+  <CardHeader className="px-4 py-2.5">
+    <CardTitle className="text-base">Ricerca e Filtri</CardTitle>
   </CardHeader>
-  <CardContent className="space-y-6">
+  <CardContent className="space-y-3 px-4 pb-3 pt-0">
     <div className="flex flex-col md:flex-row gap-4">
       <div className="relative flex-1">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
@@ -3251,7 +3249,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
           placeholder="Cerca per ragione sociale, P.IVA, CF o Codice Cliente..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10 h-12 text-base"
+          className="pl-10 h-9 text-sm"
         />
      </div>
 
@@ -3268,7 +3266,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
   )
 }
 >
-  <SelectTrigger className="w-full md:w-[230px] h-12">
+  <SelectTrigger className="w-full md:w-[230px] h-9">
     <SelectValue />
   </SelectTrigger>
 
@@ -3299,7 +3297,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
   value={selectedUtenteFiscale}
   onValueChange={setSelectedUtenteFiscale}
 >
-        <SelectTrigger className="w-full md:w-[200px] h-12">
+        <SelectTrigger className="w-full md:w-[200px] h-9">
           <SelectValue placeholder="Utente Fiscale" />
         </SelectTrigger>
         <SelectContent>
@@ -3316,7 +3314,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
         value={selectedUtentePayroll}
         onValueChange={setSelectedUtentePayroll}
       >
-        <SelectTrigger className="w-full md:w-[200px] h-12">
+        <SelectTrigger className="w-full md:w-[200px] h-9">
           <SelectValue placeholder="Utente Payroll" />
         </SelectTrigger>
         <SelectContent>
@@ -3884,7 +3882,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
           </Card>
         </div>
 
-        <div className="rounded-md border bg-white px-3 py-2.5">
+        <div className="rounded-md border bg-white px-2.5 py-1.5">
           <div className="mb-3 flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
             <span className="font-semibold">Confronto annuale</span>
