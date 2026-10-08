@@ -3328,33 +3328,34 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
       </Select>
     </div>
 
-    <div className="flex flex-wrap gap-2">
-  <Button
-  variant="outline"
-  size="sm"
-  onClick={() => setSelectedLetter("Tutti")}
-  className={
-    selectedLetter === "Tutti"
-      ? "px-4 bg-red-600 hover:bg-red-700 text-white border-red-600"
-      : "px-4"
-  }
->
-  Tutti
-</Button>
+    <div className="grid w-full grid-cols-9 gap-2 md:grid-cols-[repeat(27,minmax(0,1fr))]">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setSelectedLetter("Tutti")}
+        className={
+          selectedLetter === "Tutti"
+            ? "h-8 w-full px-0 bg-red-600 hover:bg-red-700 text-white border-red-600"
+            : "h-8 w-full px-0"
+        }
+      >
+        Tutti
+      </Button>
 
       {alphabet.map((letter) => (
-       <Button
-  variant="outline"
-  size="sm"
-  onClick={() => setSelectedLetter(letter)}
-  className={
-    selectedLetter === letter
-      ? "w-10 h-10 p-0 bg-red-600 hover:bg-red-700 text-white border-red-600"
-      : "w-10 h-10 p-0"
-  }
->
-  {letter}
-</Button>
+        <Button
+          key={letter}
+          variant="outline"
+          size="sm"
+          onClick={() => setSelectedLetter(letter)}
+          className={
+            selectedLetter === letter
+              ? "h-8 w-full p-0 bg-red-600 hover:bg-red-700 text-white border-red-600"
+              : "h-8 w-full p-0"
+          }
+        >
+          {letter}
+        </Button>
       ))}
     </div>
   </CardContent>
