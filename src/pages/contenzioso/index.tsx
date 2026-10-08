@@ -73,6 +73,7 @@ export default function ContenziosoIndexPage() {
   const [scadenze, setScadenze] = useState<Scadenza[]>([]);
   const [tipiAtto, setTipiAtto] = useState<TipoAtto[]>([]);
   const [conteggi, setConteggi] = useState({ avvisi: 0, cartelle: 0, processo: 0 });
+  const [erroriArchivi, setErroriArchivi] = useState<string[]>([]);
 
   const [search, setSearch] = useState("");
   const [archivioFiltro, setArchivioFiltro] = useState("all");
@@ -84,6 +85,7 @@ export default function ContenziosoIndexPage() {
 
   try {
     setLoading(true);
+    setErroriArchivi([]);
 
     const {
       data: { session },
@@ -126,6 +128,10 @@ export default function ContenziosoIndexPage() {
 
       if (error) {
         console.error(`Errore caricamento archivio ${archivio}:`, error);
+        setErroriArchivi((prev) => [
+          ...prev,
+          `${archivio}: ${error.message || "Archivio non disponibile"}`,
+        ]);
         toast({
           title: `Errore caricamento ${archivio}`,
           description: error.message || "Archivio non disponibile.",
@@ -533,6 +539,11 @@ export default function ContenziosoIndexPage() {
         </CardHeader>
 
         <CardContent>
+          {erroriArchivi.length > 0 && (
+            <div className="mb-3 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm font-semibold text-red-800">
+              {erroriArchivi.join(" | ")}
+            </div>
+          )}
           {filtered.length === 0 ? (
             <div className="py-12 text-center text-muted-foreground">
               Nessun atto trovato.
@@ -580,8 +591,19 @@ export default function ContenziosoIndexPage() {
                         <TableCell>{formatDate(row.data_scadenza)}</TableCell>
                         <TableCell>
                           <span
-                            className="inline-flex min-w-[72px] justify-center rounded-md border px-2 py-1 text-xs font-semibold"
-                            style={getStatoStyle(stato)}
+                            className="text-sm font-bold"
+                            style={{
+                              color:
+                                stato === "Chiusa"
+                                  ? "#15803d"
+                                  : stato === "Scaduta"
+                                    ? "#b91c1c"
+                                    : stato === "In scadenza"
+                                      ? "#c2410c"
+                                      : stato === "Senza scadenza"
+                                        ? "#475569"
+                                        : "#1d4ed8",
+                            }}
                           >
                             {stato}
                           </span>
@@ -590,8 +612,16 @@ export default function ContenziosoIndexPage() {
                        <TableCell>
   {getResponso(row) !== "-" ? (
     <span
-      className="inline-flex min-w-[90px] justify-center rounded-md border px-2 py-1 text-xs font-semibold"
-      style={getResponsoStyle(getResponso(row))}
+      className="text-sm font-bold"
+      style={{
+        color: getResponso(row).toLowerCase().includes("sgravio totale")
+          ? "#15803d"
+          : getResponso(row).toLowerCase().includes("sgravio parziale")
+            ? "#c2410c"
+            : getResponso(row).toLowerCase().includes("respinto")
+              ? "#b91c1c"
+              : "#334155",
+      }}
     >
       {getResponso(row)}
     </span>
