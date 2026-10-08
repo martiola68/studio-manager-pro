@@ -385,7 +385,7 @@ setTributiConstatazione(
       data_ruolo: form.data_ruolo || null,
       data_ricezione: form.data_ricezione,
       data_scadenza: dataScadenza || null,
-      giorni_residui: giorniResidui,
+      giorni_restanti: giorniResidui,
       importo_dovuto: form.importo_dovuto ? toNumber(form.importo_dovuto) : null,
       importo_sgravato: form.importo_sgravato
         ? toNumber(form.importo_sgravato)
@@ -414,8 +414,10 @@ setTributiConstatazione(
     setSaving(false);
 
     if (error) {
-      console.error(error);
-      setErrore("Errore durante il salvataggio della cartella.");
+      console.error("Errore salvataggio cartella:", error);
+      setErrore(
+        `Errore durante il salvataggio della cartella: ${error.message || "errore sconosciuto"}`
+      );
       return;
     }
 
