@@ -686,6 +686,10 @@ const [searchTerm, setSearchTerm] = useState("");
   const [selectedUtentePayroll, setSelectedUtentePayroll] =
     useState<string>("all");
 
+  useEffect(() => {
+    setMostraCaricoOperatore(selectedUtenteFiscale !== "all");
+  }, [selectedUtenteFiscale]);
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCliente, setEditingCliente] = useState<ClienteRow | null>(null);
 
@@ -699,6 +703,7 @@ const [searchTerm, setSearchTerm] = useState("");
   const [operazioniCliente, setOperazioniCliente] = useState<ClienteRow | null>(null);
   const [operazioniSaving, setOperazioniSaving] = useState(false);
   const [riepilogoOperazioniOpen, setRiepilogoOperazioniOpen] = useState(false);
+  const [mostraCaricoOperatore, setMostraCaricoOperatore] = useState(true);
   const [dettaglioTipoCliente, setDettaglioTipoCliente] = useState<
     "persona fisica" | "altro" | null
   >(null);
@@ -3153,6 +3158,86 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
 </div>
 
 
+{selectedUtenteFiscale !== "all" && mostraCaricoOperatore && (
+  <Card className="mb-8 border-sky-200 bg-sky-50/60">
+    <CardHeader className="pb-3">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <CardTitle className="text-lg">Carico contabile operatore</CardTitle>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {getUtenteNome(selectedUtenteFiscale)} · anno chiuso {annoOperazioniRiferimento}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="rounded-md border bg-white px-4 py-2 text-sm">
+            <div className="text-xs text-muted-foreground">Anno chiuso</div>
+            <div className="font-semibold">{annoOperazioniRiferimento}</div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setMostraCaricoOperatore(false)}
+          >
+            Chiudi
+          </Button>
+        </div>
+      </div>
+    </CardHeader>
+    <CardContent>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <div className="rounded-lg border bg-white p-4">
+          <div className="text-xs font-medium uppercase text-muted-foreground">
+            Totale operazioni
+          </div>
+          <div className="mt-1 text-3xl font-bold text-sky-700">
+            {totaleOperazioniOperatore.toLocaleString("it-IT")}
+          </div>
+        </div>
+
+        <div className="rounded-lg border bg-white p-4">
+          <div className="text-xs font-medium uppercase text-muted-foreground">
+            Incidenza numerica
+          </div>
+          <div className="mt-1 text-xl font-bold">
+            {totaleOperazioniOperatore.toLocaleString("it-IT")} / {totaleOperazioniStudio.toLocaleString("it-IT")}
+          </div>
+          <div className="mt-1 text-xs text-muted-foreground">operatore / totale studio</div>
+        </div>
+
+        <div className="rounded-lg border bg-white p-4">
+          <div className="text-xs font-medium uppercase text-muted-foreground">
+            Incidenza %
+          </div>
+          <div className="mt-1 text-3xl font-bold text-violet-700">
+            {incidenzaOperatorePercentuale.toFixed(1)}%
+          </div>
+        </div>
+
+        <div className="rounded-lg border bg-white p-4">
+          <div className="text-xs font-medium uppercase text-muted-foreground">
+            Variazione vs {annoOperazioniPrecedente}
+          </div>
+          <div
+            className={`mt-1 text-xl font-bold ${
+              variazioneOperatoreNumerica > 0
+                ? "text-green-700"
+                : variazioneOperatoreNumerica < 0
+                  ? "text-red-700"
+                  : "text-slate-700"
+            }`}
+          >
+            {variazioneOperatoreNumerica > 0 ? "+" : ""}
+            {variazioneOperatoreNumerica.toLocaleString("it-IT")} ·{" "}
+            {variazioneOperatorePercentuale > 0 ? "+" : ""}
+            {variazioneOperatorePercentuale.toFixed(1)}%
+          </div>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+)}
+
+
 {/* FILTRI */}
 <Card className="mb-6">
   <CardHeader>
@@ -3567,75 +3652,6 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
 </CardContent>
 </Card>
 
-{selectedUtenteFiscale !== "all" && (
-  <Card className="mb-8 border-sky-200 bg-sky-50/60">
-    <CardHeader className="pb-3">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <CardTitle className="text-lg">Carico contabile operatore</CardTitle>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {getUtenteNome(selectedUtenteFiscale)} · anno chiuso {annoOperazioniRiferimento}
-          </p>
-        </div>
-        <div className="rounded-md border bg-white px-4 py-2 text-sm">
-          <div className="text-xs text-muted-foreground">Anno chiuso</div>
-          <div className="font-semibold">{annoOperazioniRiferimento}</div>
-        </div>
-      </div>
-    </CardHeader>
-    <CardContent>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <div className="rounded-lg border bg-white p-4">
-          <div className="text-xs font-medium uppercase text-muted-foreground">
-            Totale operazioni
-          </div>
-          <div className="mt-1 text-3xl font-bold text-sky-700">
-            {totaleOperazioniOperatore.toLocaleString("it-IT")}
-          </div>
-        </div>
-
-        <div className="rounded-lg border bg-white p-4">
-          <div className="text-xs font-medium uppercase text-muted-foreground">
-            Incidenza numerica
-          </div>
-          <div className="mt-1 text-xl font-bold">
-            {totaleOperazioniOperatore.toLocaleString("it-IT")} / {totaleOperazioniStudio.toLocaleString("it-IT")}
-          </div>
-          <div className="mt-1 text-xs text-muted-foreground">operatore / totale studio</div>
-        </div>
-
-        <div className="rounded-lg border bg-white p-4">
-          <div className="text-xs font-medium uppercase text-muted-foreground">
-            Incidenza %
-          </div>
-          <div className="mt-1 text-3xl font-bold text-violet-700">
-            {incidenzaOperatorePercentuale.toFixed(1)}%
-          </div>
-        </div>
-
-        <div className="rounded-lg border bg-white p-4">
-          <div className="text-xs font-medium uppercase text-muted-foreground">
-            Variazione vs {annoOperazioniPrecedente}
-          </div>
-          <div
-            className={`mt-1 text-xl font-bold ${
-              variazioneOperatoreNumerica > 0
-                ? "text-green-700"
-                : variazioneOperatoreNumerica < 0
-                  ? "text-red-700"
-                  : "text-slate-700"
-            }`}
-          >
-            {variazioneOperatoreNumerica > 0 ? "+" : ""}
-            {variazioneOperatoreNumerica.toLocaleString("it-IT")} ·{" "}
-            {variazioneOperatorePercentuale > 0 ? "+" : ""}
-            {variazioneOperatorePercentuale.toFixed(1)}%
-          </div>
-        </div>
-      </div>
-    </CardContent>
-  </Card>
-)}
 
 
 {/* DIALOG DETTAGLIO TIPO CLIENTE */}
