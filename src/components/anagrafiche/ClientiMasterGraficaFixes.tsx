@@ -35,19 +35,19 @@ export function ClientiMasterGraficaFixes() {
       const root = main.firstElementChild as HTMLElement | null;
       if (!root) return;
 
-      setImportant(document.documentElement, "height", "auto");
-      setImportant(document.documentElement, "overflow-y", "auto");
-      setImportant(document.body, "height", "auto");
-      setImportant(document.body, "overflow-y", "auto");
-      setImportant(main, "height", "auto");
+      setImportant(document.documentElement, "height", "100%");
+      setImportant(document.documentElement, "overflow", "hidden");
+      setImportant(document.body, "height", "100%");
+      setImportant(document.body, "overflow", "hidden");
+      setImportant(main, "height", "100%");
       setImportant(main, "min-height", "0");
-      setImportant(main, "overflow", "visible");
+      setImportant(main, "overflow", "hidden");
 
       setImportant(root, "display", "flex");
       setImportant(root, "flex-direction", "column");
-      setImportant(root, "height", "auto");
+      setImportant(root, "height", "100%");
       setImportant(root, "min-height", "0");
-      setImportant(root, "overflow", "visible");
+      setImportant(root, "overflow", "hidden");
 
       Array.from(root.children).forEach((child) => {
         const element = child as HTMLElement;
@@ -66,18 +66,18 @@ export function ClientiMasterGraficaFixes() {
       chain.forEach((element) => {
         setImportant(element, "display", "flex");
         setImportant(element, "flex-direction", "column");
-        setImportant(element, "flex", "0 0 auto");
+        setImportant(element, "flex", "1 1 0%");
         setImportant(element, "min-height", "0");
         setImportant(element, "max-height", "none");
-        setImportant(element, "overflow", "visible");
+        setImportant(element, "overflow", "hidden");
       });
 
       setImportant(scrollOwner, "display", "block");
-      setImportant(scrollOwner, "flex", "0 0 auto");
+      setImportant(scrollOwner, "flex", "1 1 0%");
       setImportant(scrollOwner, "width", "100%");
-      setImportant(scrollOwner, "height", "auto");
+      setImportant(scrollOwner, "height", "100%");
       setImportant(scrollOwner, "min-height", "0");
-      setImportant(scrollOwner, "max-height", "75vh");
+      setImportant(scrollOwner, "max-height", "none");
       setImportant(scrollOwner, "overflow-x", "auto");
       setImportant(scrollOwner, "overflow-y", "auto");
       setImportant(scrollOwner, "position", "relative");
@@ -86,7 +86,7 @@ export function ClientiMasterGraficaFixes() {
       let ancestor = scrollOwner.parentElement as HTMLElement | null;
       while (ancestor && ancestor !== document.body) {
         if (ancestor !== scrollOwner && ancestor !== main && ancestor !== root) {
-          setImportant(ancestor, "overflow", "visible");
+          setImportant(ancestor, "overflow", "hidden");
           setImportant(ancestor, "min-height", "0");
         }
         if (ancestor === main) break;
@@ -160,12 +160,6 @@ export function ClientiMasterGraficaFixes() {
 
   return (
     <style jsx global>{`
-      body.clienti-master-fixes main.anagrafiche-master-page
-        table[data-clienti-table] {
-        position: relative !important;
-        z-index: 1 !important;
-      }
-
       body.clienti-master-fixes main.anagrafiche-master-page
         table[data-clienti-table] tbody tr > td {
         border-bottom: 1px solid rgb(148 163 184) !important;
