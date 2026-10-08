@@ -393,7 +393,6 @@ setTributiConstatazione(
       importo_residuo: form.importo_residuo
         ? toNumber(form.importo_residuo)
         : null,
-      note: form.note || null,
       contestabile: form.contestabile,
       modalita_contestazione: form.modalita_contestazione || null,
       data_invio: form.data_invio || null,
