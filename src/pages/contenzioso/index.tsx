@@ -55,6 +55,7 @@ type Scadenza = {
   } | null;
 
 tbcontenzioso_codici_tributo?: {
+  id: string;
   descrizione: string | null;
 } | null;
   
@@ -167,14 +168,35 @@ export default function ContenziosoIndexPage() {
         : Promise.resolve({ data: [], error: null }),
     ]);
 
-    const clientiMap = new Map(
-      (clientiRes.data || []).map((row: any) => [row.id, row])
+    const clientiMap = new Map<
+      string,
+      { id: string; ragione_sociale: string | null }
+    >(
+      ((clientiRes.data || []) as Array<{
+        id: string;
+        ragione_sociale: string | null;
+      }>).map((row) => [row.id, row])
     );
-    const tipiMap = new Map(
-      (tipiDettaglioRes.data || []).map((row: any) => [row.id, row])
+
+    const tipiMap = new Map<
+      string,
+      { id: string; descrizione: string; giorni_scadenza: number }
+    >(
+      ((tipiDettaglioRes.data || []) as Array<{
+        id: string;
+        descrizione: string;
+        giorni_scadenza: number;
+      }>).map((row) => [row.id, row])
     );
-    const tributiMap = new Map(
-      (tributiRes.data || []).map((row: any) => [row.id, row])
+
+    const tributiMap = new Map<
+      string,
+      { id: string; descrizione: string | null }
+    >(
+      ((tributiRes.data || []) as Array<{
+        id: string;
+        descrizione: string | null;
+      }>).map((row) => [row.id, row])
     );
 
     risultati = risultati.map((row) => ({
