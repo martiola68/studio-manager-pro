@@ -393,6 +393,7 @@ setTributiConstatazione(
       importo_residuo: form.importo_residuo
         ? toNumber(form.importo_residuo)
         : null,
+      note: form.note || null,
       contestabile: form.contestabile,
       modalita_contestazione: form.modalita_contestazione || null,
       data_invio: form.data_invio || null,
@@ -406,16 +407,29 @@ setTributiConstatazione(
       allegato_esito: form.allegato_esito || null,
     };
 
-    const { error } = await (supabase as any)
-      .from("tbcontenzioso_cartelle")
-      .insert(payload);
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    const response = await fetch("/api/contenzioso/cartelle/create", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(session?.access_token
+          ? { Authorization: `Bearer ${session.access_token}` }
+          : {}),
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const result = await response.json().catch(() => ({}));
 
     setSaving(false);
 
-    if (error) {
-      console.error("Errore salvataggio cartella:", error);
+    if (!response.ok || !result?.ok) {
+      console.error("Errore salvataggio cartella:", result);
       setErrore(
-        `Errore durante il salvataggio della cartella: ${error.message || "errore sconosciuto"}`
+        `Errore durante il salvataggio della cartella: ${result?.error || "errore sconosciuto"}`
       );
       return;
     }
