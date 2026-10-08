@@ -2,11 +2,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  calcolaGiorniResidui,
-  getClasseGiorniResidui,
-} from "@/utils/contenziosoScadenze";
+import { calcolaGiorniResidui } from "@/utils/contenziosoScadenze";
 
 type Scadenza = {
   id: string;
@@ -43,7 +39,7 @@ export default function ScadenzeContenzioso() {
             numero_atto,
             anno_riferimento,
             tbclienti:cliente_id(ragione_sociale),
-            tbcontenzioso_codici_tributo:tributo_constatazione_id(descrizione)
+            tbcontenzioso_tributi_constatazione:tributo_constatazione_id(descrizione)
           )
         `),
 
@@ -98,7 +94,7 @@ const avvisi: Scadenza[] = (avvisiRes.data || []).map((s: any) => ({
   numero_atto: s.numero_atto || "-",
   anno_riferimento: s.anno_riferimento || null,
   tributo:
-    s.tbcontenzioso_codici_tributo?.descrizione ||
+    s.tbcontenzioso_tributi_constatazione?.descrizione ||
     "Tributo non indicato",
 }));
     
@@ -112,7 +108,7 @@ const cartelle: Scadenza[] = (cartelleRes.data || []).map((s: any) => ({
   numero_atto: s.numero_cartella || "-",
   anno_riferimento: s.anno_riferimento || null,
   tributo:
-    s.tbcontenzioso_codici_tributo?.descrizione ||
+    s.tbcontenzioso_tributi_constatazione?.descrizione ||
     "Tributo non indicato",
 }));
 
@@ -180,9 +176,21 @@ const cartelle: Scadenza[] = (cartelleRes.data || []).map((s: any) => ({
                   </div>
                 </div>
 
-                <Badge className={getClasseGiorniResidui(s.giorni_restanti)}>
-  {s.giorni_restanti} gg
-</Badge>
+                <span
+                  className="min-w-[78px] text-right text-sm font-bold"
+                  style={{
+                    color:
+                      s.giorni_restanti < 0
+                        ? "#b91c1c"
+                        : s.giorni_restanti <= 20
+                          ? "#dc2626"
+                          : s.giorni_restanti <= 40
+                            ? "#c2410c"
+                            : "#15803d",
+                  }}
+                >
+                  {s.giorni_restanti} gg
+                </span>
               </div>
             ))
           )}
