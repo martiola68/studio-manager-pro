@@ -91,13 +91,6 @@ export default function ContenziosoIndexPage() {
 
     if (tipiRes.error) throw tipiRes.error;
 
-   const selectQuery = `
-  *,
-  tbclienti:cliente_id(id, ragione_sociale),
-  tbcontenzioso_tipi_atto:tipo_atto_id(id, descrizione, giorni_scadenza),
-  tbcontenzioso_codici_tributo:tributo_constatazione_id(descrizione)
-`;
-
     let risultati: Scadenza[] = [];
 
     const caricaArchivio = async (
@@ -106,7 +99,7 @@ export default function ContenziosoIndexPage() {
     ) => {
       const { data, error } = await (supabase as any)
         .from(tabella)
-        .select(selectQuery);
+        .select("*");
 
       if (error) {
         console.error(`Errore caricamento archivio ${archivio}:`, error);
@@ -138,6 +131,60 @@ export default function ContenziosoIndexPage() {
     if (archivioFiltro === "all" || archivioFiltro === "processo") {
       await caricaArchivio("tbcontenzioso_processo", "processo");
     }
+
+    const clienteIds = Array.from(
+      new Set(risultati.map((row) => row.cliente_id).filter(Boolean))
+    );
+    const tipoIds = Array.from(
+      new Set(risultati.map((row) => row.tipo_atto_id).filter(Boolean))
+    );
+    const tributoIds = Array.from(
+      new Set(
+        risultati
+          .map((row) => row.tributo_constatazione_id)
+          .filter(Boolean)
+      )
+    );
+
+    const [clientiRes, tipiDettaglioRes, tributiRes] = await Promise.all([
+      clienteIds.length
+        ? (supabase as any)
+            .from("tbclienti")
+            .select("id, ragione_sociale")
+            .in("id", clienteIds)
+        : Promise.resolve({ data: [], error: null }),
+      tipoIds.length
+        ? (supabase as any)
+            .from("tbcontenzioso_tipi_atto")
+            .select("id, descrizione, giorni_scadenza")
+            .in("id", tipoIds)
+        : Promise.resolve({ data: [], error: null }),
+      tributoIds.length
+        ? (supabase as any)
+            .from("tbcontenzioso_codici_tributo")
+            .select("id, descrizione")
+            .in("id", tributoIds)
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+
+    const clientiMap = new Map(
+      (clientiRes.data || []).map((row: any) => [row.id, row])
+    );
+    const tipiMap = new Map(
+      (tipiDettaglioRes.data || []).map((row: any) => [row.id, row])
+    );
+    const tributiMap = new Map(
+      (tributiRes.data || []).map((row: any) => [row.id, row])
+    );
+
+    risultati = risultati.map((row) => ({
+      ...row,
+      tbclienti: clientiMap.get(row.cliente_id) || null,
+      tbcontenzioso_tipi_atto: tipiMap.get(row.tipo_atto_id) || null,
+      tbcontenzioso_codici_tributo: row.tributo_constatazione_id
+        ? tributiMap.get(row.tributo_constatazione_id) || null
+        : null,
+    }));
 
     risultati.sort((a, b) => {
       const da = a.data_scadenza || "9999-12-31";
@@ -461,16 +508,22 @@ export default function ContenziosoIndexPage() {
                         <TableCell>{formatDate(row.data_ricezione)}</TableCell>
                         <TableCell>{formatDate(row.data_scadenza)}</TableCell>
                         <TableCell>
-                        <Badge className={getBadgeClass(stato)}>
-  {stato}
-</Badge>
+                          <span
+                            className={`inline-flex min-w-[72px] justify-center rounded-md px-2 py-1 text-xs font-semibold ${getBadgeClass(stato)}`}
+                          >
+                            {stato}
+                          </span>
                         </TableCell>
                         <TableCell>{getContestazione(row)}</TableCell>
                        <TableCell>
   {getResponso(row) !== "-" ? (
-    <Badge className={getResponsoClass(getResponso(row))}>
+    <span
+      className={`inline-flex min-w-[90px] justify-center rounded-md px-2 py-1 text-xs font-semibold ${getResponsoClass(
+        getResponso(row)
+      )}`}
+    >
       {getResponso(row)}
-    </Badge>
+    </span>
   ) : (
     "-"
   )}
