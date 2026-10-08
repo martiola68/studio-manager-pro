@@ -72,6 +72,7 @@ export default function ContenziosoIndexPage() {
   const [loading, setLoading] = useState(true);
   const [scadenze, setScadenze] = useState<Scadenza[]>([]);
   const [tipiAtto, setTipiAtto] = useState<TipoAtto[]>([]);
+  const [conteggi, setConteggi] = useState({ avvisi: 0, cartelle: 0, processo: 0 });
 
   const [search, setSearch] = useState("");
   const [archivioFiltro, setArchivioFiltro] = useState("all");
@@ -83,6 +84,21 @@ export default function ContenziosoIndexPage() {
 
   try {
     setLoading(true);
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    let studioId = "";
+    if (session?.user?.email) {
+      const { data: utente } = await supabase
+        .from("tbutenti")
+        .select("studio_id")
+        .eq("email", session.user.email)
+        .maybeSingle();
+
+      studioId = String((utente as any)?.studio_id || "");
+    }
 
     const tipiRes = await (supabase as any)
       .from("tbcontenzioso_tipi_atto")
@@ -98,9 +114,15 @@ export default function ContenziosoIndexPage() {
       tabella: string,
       archivio: "avvisi" | "cartelle" | "processo"
     ) => {
-      const { data, error } = await (supabase as any)
+      let query = (supabase as any)
         .from(tabella)
         .select("*");
+
+      if (studioId) {
+        query = query.eq("studio_id", studioId);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error(`Errore caricamento archivio ${archivio}:`, error);
@@ -162,7 +184,7 @@ export default function ContenziosoIndexPage() {
         : Promise.resolve({ data: [], error: null }),
       tributoIds.length
         ? (supabase as any)
-            .from("tbcontenzioso_codici_tributo")
+            .from("tbcontenzioso_tributi_constatazione")
             .select("id, descrizione")
             .in("id", tributoIds)
         : Promise.resolve({ data: [], error: null }),
@@ -207,6 +229,12 @@ export default function ContenziosoIndexPage() {
         ? tributiMap.get(row.tributo_constatazione_id) || null
         : null,
     }));
+
+    setConteggi({
+      avvisi: risultati.filter((r) => r.archivio === "avvisi").length,
+      cartelle: risultati.filter((r) => r.archivio === "cartelle").length,
+      processo: risultati.filter((r) => r.archivio === "processo").length,
+    });
 
     risultati.sort((a, b) => {
       const da = a.data_scadenza || "9999-12-31";
@@ -253,6 +281,22 @@ export default function ContenziosoIndexPage() {
   if (diff <= 15) return "In scadenza";
 
   return "Aperta";
+}
+
+ function getStatoStyle(stato: string): React.CSSProperties {
+  if (stato === "Chiusa") return { backgroundColor: "#16a34a", color: "#ffffff", borderColor: "#15803d" };
+  if (stato === "Scaduta") return { backgroundColor: "#dc2626", color: "#ffffff", borderColor: "#b91c1c" };
+  if (stato === "In scadenza") return { backgroundColor: "#f97316", color: "#ffffff", borderColor: "#ea580c" };
+  if (stato === "Senza scadenza") return { backgroundColor: "#64748b", color: "#ffffff", borderColor: "#475569" };
+  return { backgroundColor: "#1d4ed8", color: "#ffffff", borderColor: "#1e40af" };
+}
+
+ function getResponsoStyle(responso: string): React.CSSProperties {
+  const value = responso.toLowerCase();
+  if (value.includes("sgravio totale")) return { backgroundColor: "#16a34a", color: "#ffffff", borderColor: "#15803d" };
+  if (value.includes("sgravio parziale")) return { backgroundColor: "#f97316", color: "#ffffff", borderColor: "#ea580c" };
+  if (value.includes("respinto")) return { backgroundColor: "#dc2626", color: "#ffffff", borderColor: "#b91c1c" };
+  return { backgroundColor: "#334155", color: "#ffffff", borderColor: "#1e293b" };
 }
 
  function getBadgeClass(stato: string) {
@@ -480,7 +524,12 @@ export default function ContenziosoIndexPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Elenco atti</CardTitle>
+          <div className="flex items-center justify-between gap-4">
+            <CardTitle>Elenco atti</CardTitle>
+            <div className="text-xs text-muted-foreground">
+              Totale {scadenze.length} · Avvisi {conteggi.avvisi} · Cartelle {conteggi.cartelle} · Processo {conteggi.processo}
+            </div>
+          </div>
         </CardHeader>
 
         <CardContent>
@@ -531,7 +580,8 @@ export default function ContenziosoIndexPage() {
                         <TableCell>{formatDate(row.data_scadenza)}</TableCell>
                         <TableCell>
                           <span
-                            className={`inline-flex min-w-[72px] justify-center rounded-md px-2 py-1 text-xs font-semibold ${getBadgeClass(stato)}`}
+                            className="inline-flex min-w-[72px] justify-center rounded-md border px-2 py-1 text-xs font-semibold"
+                            style={getStatoStyle(stato)}
                           >
                             {stato}
                           </span>
@@ -540,9 +590,8 @@ export default function ContenziosoIndexPage() {
                        <TableCell>
   {getResponso(row) !== "-" ? (
     <span
-      className={`inline-flex min-w-[90px] justify-center rounded-md px-2 py-1 text-xs font-semibold ${getResponsoClass(
-        getResponso(row)
-      )}`}
+      className="inline-flex min-w-[90px] justify-center rounded-md border px-2 py-1 text-xs font-semibold"
+      style={getResponsoStyle(getResponso(row))}
     >
       {getResponso(row)}
     </span>
