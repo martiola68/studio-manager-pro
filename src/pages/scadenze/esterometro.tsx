@@ -411,10 +411,10 @@ export default function ScadenzeEsterometroPage() {
                       <th
                         key={month.prefix}
                         colSpan={3}
-                        className={`h-9 px-2 text-center align-middle font-semibold text-white border-r border-l-4 ${
+                        className={`h-9 px-2 text-center align-middle font-semibold text-white border-l border-slate-500 border-r-4 border-r-sky-700 ${
                           isBlue
-                            ? "border-sky-900 !bg-sky-700"
-                            : "border-orange-900 !bg-orange-600"
+                            ? "!bg-sky-700"
+                            : "!bg-orange-600"
                         }`}
                       >
                         {month.label}
@@ -446,9 +446,7 @@ export default function ScadenzeEsterometroPage() {
                       >
                         <div className="grid grid-cols-3">
                           <div
-                            className={`px-1 py-1 text-center font-medium border-l-4 ${
-                              isBlue ? "border-sky-900" : "border-orange-900"
-                            }`}
+                            className="px-1 py-1 text-center font-medium border-l border-slate-500"
                             style={{ width: "60px", minWidth: "60px" }}
                           >
                             Prev
@@ -460,7 +458,7 @@ export default function ScadenzeEsterometroPage() {
                             Inv
                           </div>
                           <div
-                            className="px-1 py-1 text-center font-medium border-r border-slate-500"
+                            className="px-1 py-1 text-center font-medium border-r-4 border-r-sky-700"
                             style={{ width: "60px", minWidth: "60px" }}
                           >
                             N. Doc
@@ -505,14 +503,11 @@ export default function ScadenzeEsterometroPage() {
                           : isBlueSection
                             ? "bg-sky-50"
                             : "bg-orange-50";
-                        const monthDividerClass = isBlueSection
-                          ? "border-sky-300"
-                          : "border-orange-300";
 
                         return (
                           <React.Fragment key={`${scadenza.id}-${month.prefix}`}>
                             <td
-                              className={`p-1 align-middle text-center border-l-4 ${monthDividerClass} ${monthBgClass}`}
+                              className={`p-1 align-middle text-center border-l border-slate-200 ${monthBgClass}`}
                               style={{ width: "60px", minWidth: "60px" }}
                             >
                               <BooleanSelect
@@ -558,7 +553,7 @@ export default function ScadenzeEsterometroPage() {
                             </td>
 
                             <td
-                              className={`p-1 align-middle border-r ${monthBgClass}`}
+                              className={`p-1 align-middle border-r-4 border-r-sky-500 ${monthBgClass}`}
                               style={{ width: "60px", minWidth: "60px" }}
                             >
                               <Input
