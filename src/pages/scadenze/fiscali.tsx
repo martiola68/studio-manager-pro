@@ -1132,69 +1132,69 @@ const vars: Record<string, string> = {
                   <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[180px]">
                     Operatore
                   </th>
-                  <th className="h-9 px-2 text-left align-middle font-semibold text-white min-w-[120px] border-l-4 border-sky-900 !bg-sky-700">
+                  <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 min-w-[120px] border-l-4 border-slate-700 !bg-slate-600">
   Tipo Redditi
 </th>
 
-<th className="h-9 px-2 text-center align-middle font-semibold text-white min-w-[120px] !bg-sky-700">
+<th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[120px] !bg-slate-600">
   Soggetto ISA/Equiparati
 </th>
 
-<th className="h-9 px-2 text-center align-middle font-semibold text-white min-w-[80px] !bg-sky-700">
+<th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[80px] !bg-slate-600">
   Comp.
 </th>
-                  <th className="h-9 px-2 text-center align-middle font-semibold text-white min-w-[80px] !bg-sky-700">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[80px] !bg-slate-600">
                     Def.
                   </th>
 
-                  <th className="h-9 px-2 text-center align-middle font-semibold text-white min-w-[170px] border-l-4 border-amber-900 !bg-amber-600">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[170px] border-l-4 border-slate-700 !bg-slate-600">
                     Saldo/1° Acc./CCIAA
                   </th>
-                  <th className="h-9 px-2 text-center align-middle font-semibold text-white min-w-[120px] !bg-amber-600">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[120px] !bg-slate-600">
                     Comunicato
                   </th>
-                  <th className="h-9 px-2 text-center align-middle font-semibold text-white min-w-[150px] !bg-amber-600">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[150px] !bg-slate-600">
                     Data comunicazione
                   </th>
-                  <th className="h-9 px-2 text-center align-middle font-semibold text-white min-w-[120px] !bg-amber-600">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[120px] !bg-slate-600">
                     Email F24
                   </th>
 
-                  <th className="h-9 px-2 text-center align-middle font-semibold text-white min-w-[140px] border-l-4 border-emerald-900 !bg-emerald-700">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[140px] border-l-4 border-slate-700 !bg-slate-600">
                     Invio Redditi
                   </th>
-                  <th className="h-9 px-2 text-center align-middle font-semibold text-white min-w-[130px] !bg-emerald-700">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[130px] !bg-slate-600">
                     Data invio
                   </th>
                  
 
-                  <th className="h-9 px-2 text-center align-middle font-semibold text-white min-w-[100px] border-l-4 border-violet-900 !bg-violet-700">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[100px] border-l-4 border-slate-700 !bg-slate-600">
                     IRAP
                   </th>
-                  <th className="h-9 px-2 text-center align-middle font-semibold text-white min-w-[140px] !bg-violet-700">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[140px] !bg-slate-600">
                     Compilato
                   </th>
-                  <th className="h-9 px-2 text-center align-middle font-semibold text-white min-w-[140px] !bg-violet-700">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[140px] !bg-slate-600">
                     Definitivo
                   </th>
-                  <th className="h-9 px-2 text-center align-middle font-semibold text-white min-w-[140px] !bg-violet-700">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[140px] !bg-slate-600">
                     Invio IRAP
                   </th>
-                  <th className="h-9 px-2 text-center align-middle font-semibold text-white min-w-[130px] !bg-violet-700">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[130px] !bg-slate-600">
                     Data invio
                   </th>
                  
 
-                  <th className="h-9 px-2 text-center align-middle font-semibold text-white min-w-[150px] border-l-4 border-orange-900 !bg-orange-600">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[150px] border-l-4 border-slate-700 !bg-slate-600">
                     2° Acconto
                   </th>
-                  <th className="h-9 px-2 text-center align-middle font-semibold text-white min-w-[120px] !bg-orange-600">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[120px] !bg-slate-600">
                     Comunicato
                   </th>
-                  <th className="h-9 px-2 text-center align-middle font-semibold text-white min-w-[150px] !bg-orange-600">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[150px] !bg-slate-600">
                     Data comunicazione
                   </th>
-                  <th className="h-9 px-2 text-center align-middle font-semibold text-white min-w-[120px] !bg-orange-600">
+                  <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[120px] !bg-slate-600">
                     Email F24
                   </th>
 
@@ -1245,7 +1245,7 @@ const vars: Record<string, string> = {
                         {getUtenteNome(scadenza.utente_operatore_id)}
                       </td>
 
-<td className="px-2 py-1 align-middle min-w-[140px] border-l-4 border-sky-300 bg-sky-50">
+<td className="px-2 py-1 align-middle min-w-[140px] border-l-4 border-slate-700 bg-white">
   <Select
     value={scadenza.tipo_redditi || "__none__"}
     onValueChange={(value) =>
@@ -1272,33 +1272,33 @@ const vars: Record<string, string> = {
   </Select>
 </td>
 
-<td className="px-2 py-1 align-middle text-center min-w-[120px] bg-sky-50">
+<td className="px-2 py-1 align-middle text-center min-w-[120px] bg-white">
   <select value={scadenza.soggetto_isa ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.soggetto_isa)) handleToggleSoggettoIsa(scadenza); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"><option value="NO">NO</option><option value="SI">SI</option></select>
 </td>
 
-<td className="px-2 py-1 align-middle text-center min-w-[80px] bg-sky-50">
+<td className="px-2 py-1 align-middle text-center min-w-[80px] bg-white">
   {renderCheck(scadenza, "mod_r_compilato")}
 </td>
 
-                      <td className="px-2 py-1 align-middle text-center min-w-[80px] bg-sky-50">
+                      <td className="px-2 py-1 align-middle text-center min-w-[80px] bg-white">
                         {renderCheck(scadenza, "mod_r_definitivo")}
                       </td>
 
-                      <td className="px-2 py-1 align-middle min-w-[170px] border-l-4 border-amber-300 bg-amber-50">
+                      <td className="px-2 py-1 align-middle min-w-[170px] border-l-4 border-slate-700 bg-white">
                         {renderSiNoSelect(
                           scadenza,
                           "saldi_primo_acconti_cciaa_dovuti"
                         )}
                       </td>
 
-                      <td className="px-2 py-1 align-middle min-w-[120px] bg-amber-50">
+                      <td className="px-2 py-1 align-middle min-w-[120px] bg-white">
                         {renderCheck(
   scadenza,
   "conferma_ires_saldo_acconto"
 )}
                       </td>
 
-                      <td className="px-2 py-1 align-middle min-w-[150px] bg-amber-50">
+                      <td className="px-2 py-1 align-middle min-w-[150px] bg-white">
                         <Input
                           type="date"
                           value={scadenza.data_com1 || ""}
@@ -1313,7 +1313,7 @@ const vars: Record<string, string> = {
                         />
                       </td>
 
-                      <td className="px-2 py-1 align-middle text-center min-w-[120px] bg-amber-50">
+                      <td className="px-2 py-1 align-middle text-center min-w-[120px] bg-white">
                        {scadenza.saldi_primo_acconti_cciaa_dovuti ? (
 <Button
   type="button"
@@ -1335,11 +1335,11 @@ const vars: Record<string, string> = {
 )}
                       </td>
 
-                      <td className="px-2 py-1 align-middle text-center min-w-[140px] border-l-4 border-emerald-300 bg-emerald-50">
+                      <td className="px-2 py-1 align-middle text-center min-w-[140px] border-l-4 border-slate-700 bg-white">
                         {renderCheck(scadenza, "conferma_invio_dichiarazione")}
                       </td>
 
-                      <td className="px-2 py-1 align-middle min-w-[130px] bg-emerald-50">
+                      <td className="px-2 py-1 align-middle min-w-[130px] bg-white">
                         <Input
                           type="date"
                           value={scadenza.data_r_invio || ""}
@@ -1354,26 +1354,26 @@ const vars: Record<string, string> = {
                         />
                       </td>
 
-                      <td className="px-2 py-1 align-middle text-center min-w-[100px] border-l-4 border-violet-300 bg-violet-50">
+                      <td className="px-2 py-1 align-middle text-center min-w-[100px] border-l-4 border-slate-700 bg-white">
                         {renderCheck(scadenza, "con_irap")}
                       </td>
 
-                      <td className="px-2 py-1 align-middle text-center min-w-[140px] bg-violet-50">
+                      <td className="px-2 py-1 align-middle text-center min-w-[140px] bg-white">
                         {renderCheck(scadenza, "conferma_irap_saldo_acconto")}
                       </td>
 
-                      <td className="px-2 py-1 align-middle text-center min-w-[140px] bg-violet-50">
+                      <td className="px-2 py-1 align-middle text-center min-w-[140px] bg-white">
                         {renderCheck(scadenza, "conferma_irap_secondo_acconto")}
                       </td>
 
-                      <td className="px-2 py-1 align-middle text-center min-w-[140px] bg-violet-50">
+                      <td className="px-2 py-1 align-middle text-center min-w-[140px] bg-white">
                         {renderCheck(
                           scadenza,
                           "conferma_irap_invio_dichiarazione"
                         )}
                       </td>
 
-                      <td className="px-2 py-1 align-middle min-w-[130px] bg-violet-50">
+                      <td className="px-2 py-1 align-middle min-w-[130px] bg-white">
                         <Input
                           type="date"
                           value={scadenza.data_i_invio || ""}
@@ -1388,18 +1388,18 @@ const vars: Record<string, string> = {
                         />
                       </td>
 
-                      <td className="px-2 py-1 align-middle min-w-[150px] border-l-4 border-orange-300 bg-orange-50">
+                      <td className="px-2 py-1 align-middle min-w-[150px] border-l-4 border-slate-700 bg-white">
                         {renderSiNoSelect(scadenza, "secondo_acconti_dovuti")}
                       </td>
 
-                      <td className="px-2 py-1 align-middle min-w-[120px] bg-orange-50">
+                      <td className="px-2 py-1 align-middle min-w-[120px] bg-white">
                         {renderCheck(
   scadenza,
   "conferma_ires_secondo_acconto"
 )}
                       </td>
 
-                      <td className="px-2 py-1 align-middle min-w-[150px] bg-orange-50">
+                      <td className="px-2 py-1 align-middle min-w-[150px] bg-white">
                         <Input
                           type="date"
                           value={scadenza.data_com2 || ""}
@@ -1414,7 +1414,7 @@ const vars: Record<string, string> = {
                         />
                       </td>
 
-                      <td className="px-2 py-1 align-middle text-center min-w-[120px] bg-orange-50">
+                      <td className="px-2 py-1 align-middle text-center min-w-[120px] bg-white">
                         {scadenza.secondo_acconti_dovuti ? (
  <Button
   type="button"
