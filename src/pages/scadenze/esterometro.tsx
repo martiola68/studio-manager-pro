@@ -405,22 +405,15 @@ export default function ScadenzeEsterometroPage() {
                     Operatore
                   </th>
 
-                  {MONTHS.map((month, monthIndex) => {
-                    const isBlue = monthIndex % 2 === 0;
-                    return (
-                      <th
-                        key={month.prefix}
-                        colSpan={3}
-                        className={`h-9 px-2 text-center align-middle font-semibold text-white border-l border-slate-500 border-r-4 border-r-sky-700 ${
-                          isBlue
-                            ? "!bg-sky-700"
-                            : "!bg-orange-600"
-                        }`}
-                      >
-                        {month.label}
-                      </th>
-                    );
-                  })}
+                  {MONTHS.map((month) => (
+                    <th
+                      key={month.prefix}
+                      colSpan={3}
+                      className="h-9 px-2 text-center align-middle font-semibold text-slate-50 border-l border-slate-500 border-r-4 border-r-slate-700 !bg-slate-600"
+                    >
+                      {month.label}
+                    </th>
+                  ))}
 
                   <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 min-w-[80px] bg-slate-600 border-r border-slate-500">
                     Tot Doc
@@ -434,39 +427,34 @@ export default function ScadenzeEsterometroPage() {
                   <th className="sticky left-0 z-40 border-r border-slate-500 !bg-slate-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]"></th>
                   <th className="border-r border-slate-500 bg-slate-700"></th>
 
-                  {MONTHS.map((month, monthIndex) => {
-                    const isBlue = monthIndex % 2 === 0;
-                    return (
-                      <th
-                        key={`head-${month.prefix}`}
-                        colSpan={3}
-                        className={`p-0 text-white ${
-                          isBlue ? "!bg-sky-800" : "!bg-orange-700"
-                        }`}
-                      >
-                        <div className="grid grid-cols-3">
-                          <div
-                            className="px-1 py-1 text-center font-medium border-l border-slate-500"
-                            style={{ width: "60px", minWidth: "60px" }}
-                          >
-                            Prev
-                          </div>
-                          <div
-                            className="px-1 py-1 text-center font-medium"
-                            style={{ width: "60px", minWidth: "60px" }}
-                          >
-                            Inv
-                          </div>
-                          <div
-                            className="px-1 py-1 text-center font-medium border-r-4 border-r-sky-700"
-                            style={{ width: "60px", minWidth: "60px" }}
-                          >
-                            N. Doc
-                          </div>
+                  {MONTHS.map((month) => (
+                    <th
+                      key={`head-${month.prefix}`}
+                      colSpan={3}
+                      className="p-0 text-slate-100 !bg-slate-700"
+                    >
+                      <div className="grid grid-cols-3">
+                        <div
+                          className="px-1 py-1 text-center font-medium border-l border-slate-500"
+                          style={{ width: "60px", minWidth: "60px" }}
+                        >
+                          Prev
                         </div>
-                      </th>
-                    );
-                  })}
+                        <div
+                          className="px-1 py-1 text-center font-medium"
+                          style={{ width: "60px", minWidth: "60px" }}
+                        >
+                          Inv
+                        </div>
+                        <div
+                          className="px-1 py-1 text-center font-medium border-r-4 border-r-slate-700"
+                          style={{ width: "60px", minWidth: "60px" }}
+                        >
+                          N. Doc
+                        </div>
+                      </div>
+                    </th>
+                  ))}
 
                   <th className="bg-slate-700 border-r border-slate-500"></th>
                   <th className="bg-slate-700"></th>
@@ -553,7 +541,7 @@ export default function ScadenzeEsterometroPage() {
                             </td>
 
                             <td
-                              className={`p-1 align-middle border-r-4 border-r-sky-500 ${monthBgClass}`}
+                              className={`p-1 align-middle border-r-4 border-r-slate-700 ${monthBgClass}`}
                               style={{ width: "60px", minWidth: "60px" }}
                             >
                               <Input
