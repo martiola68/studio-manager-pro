@@ -142,7 +142,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           .eq("data", date),
         supabaseAdmin
           .from("tbpresenze_dipendenti")
-          .select("utente_id,codice_presenza,tbpresenze_codici(codice,descrizione,tipo)")
+          .select("utente_id,codice_presenza,note,tbpresenze_codici(codice,descrizione,tipo)")
           .eq("studio_id", config.studio_id)
           .eq("data_presenza", date),
         supabaseAdmin
@@ -177,7 +177,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         (u: any) => u.tipo_rapporto === "Dipendente" || smartMemberIds.has(String(u.id))
       );
 
-      const stato = new Map<string, { codice: string; descrizione: string }>();
+      const stato = new Map<
+        string,
+        { codice: string; descrizione: string; oraPermesso?: string; orePermesso?: number }
+      >();
 
       for (const r of smart || []) {
         stato.set(
@@ -236,6 +239,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
       }
 
+      const oreDaCodicePermesso = (codice: string): number | undefined => {
+        const normalized = String(codice || "").trim().toUpperCase();
+        const match =
+          normalized.match(/^PF(\d+(?:\.\d+)?)$/) ||
+          normalized.match(/^P(\d+(?:\.\d+)?)(?:\.104)?$/) ||
+          normalized.match(/^AL(\d+(?:\.\d+)?)$/);
+
+        if (!match?.[1]) return undefined;
+        const value = Number(match[1]);
+        return Number.isFinite(value) ? value : undefined;
+      };
+
+      const oraDaNotePermesso = (note: unknown): string | undefined => {
+        const text = String(note || "");
+        const match = text.match(/Ora richiesta:\s*([0-2]\d:[0-5]\d)/i);
+        return match?.[1];
+      };
+
       for (const r of actual || []) {
         const codice = String(r.codice_presenza || "").trim();
         if (!codice || codice === "-") continue;
@@ -257,6 +278,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               : codice === "Ps"
                 ? "Smart working"
                 : codice),
+          oraPermesso: oraDaNotePermesso(r.note),
+          orePermesso: oreDaCodicePermesso(codice),
         });
       }
 
@@ -265,8 +288,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         {
           fisiche: any[];
           smart: any[];
-          assenze: Array<{ utente: any; stato: { codice: string; descrizione: string } }>;
-          permessi: Array<{ utente: any; stato: { codice: string; descrizione: string } }>;
+          assenze: Array<{
+            utente: any;
+            stato: { codice: string; descrizione: string; oraPermesso?: string; orePermesso?: number };
+          }>;
+          permessi: Array<{
+            utente: any;
+            stato: { codice: string; descrizione: string; oraPermesso?: string; orePermesso?: number };
+          }>;
         }
       >();
 
@@ -411,13 +440,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         );
 
         const permessiRows = makeRows(
-          gruppo.permessi.map((x) => ({
-            nome: nomeCompleto(x.utente),
-            // La descrizione del codice contiene già le ore richieste,
-            // es. "Permesso L.104 1 ora" per P1.104.
-            stato: x.stato.descrizione || x.stato.codice || "Permesso",
-            colore: "#a16207",
-          }))
+          gruppo.permessi.map((x) => {
+            const descrizione =
+              x.stato.descrizione || x.stato.codice || "Permesso";
+            const dettagli: string[] = [];
+
+            if (x.stato.oraPermesso) {
+              dettagli.push(`dalle ${x.stato.oraPermesso}`);
+            }
+
+            if (x.stato.orePermesso) {
+              dettagli.push(
+                `${x.stato.orePermesso} ${x.stato.orePermesso === 1 ? "ora" : "ore"}`
+              );
+            }
+
+            return {
+              nome: nomeCompleto(x.utente),
+              stato: dettagli.length
+                ? `${descrizione} · ${dettagli.join(" · ")}`
+                : descrizione,
+              colore: "#a16207",
+            };
+          })
         );
 
         const settoreHtml = `
