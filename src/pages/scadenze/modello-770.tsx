@@ -645,7 +645,7 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
             <table className="w-full caption-bottom text-sm">
               <thead className="sticky top-0 z-30 bg-slate-600 text-white shadow-sm [&_tr]:border-b [&_tr]:border-slate-500">
                 <tr className="border-b border-slate-600">
-                  <th className="border-l-4 border-l-slate-700 h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 sticky-col-header min-w-[260px] !bg-slate-600">
+                  <th className="border-l border-l-slate-600 h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 sticky-col-header min-w-[260px] !bg-slate-600">
                     Nominativo
                   </th>
                   <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[120px]">
@@ -657,13 +657,13 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                   <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[180px]">
                     Operatore payroll
                   </th>
-                  <th className="border-l-4 border-l-slate-700 h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[150px]">
+                  <th className="border-l border-l-slate-600 h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[150px]">
                     Tipo invio
                   </th>
                   <th className="h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[180px]">
                     Tipo 770
                   </th>
-                  <th className="border-l-4 border-l-slate-700 h-9 px-2 text-center align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[110px]">
+                  <th className="border-l border-l-slate-600 h-9 px-2 text-center align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[110px]">
                     Mod. Compilato
                   </th>
                   <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[110px]">
@@ -678,13 +678,13 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                   <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[100px]">
                     Ricevuta
                   </th>
-                  <th className="border-l-4 border-l-slate-700 h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[300px]">
+                  <th className="border-l border-l-slate-600 h-9 px-2 text-left align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[300px]">
                     Note
                   </th>
                   <th className="h-9 px-2 text-center align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[120px]">
                     Conferma
                   </th>
-                  <th className="border-r-4 border-r-slate-700 h-9 px-2 text-center align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[100px]">
+                  <th className="border-r border-r-slate-600 h-9 px-2 text-center align-middle font-semibold text-slate-50 border-r border-slate-500 bg-slate-600 min-w-[100px]">
                     Azioni
                   </th>
                 </tr>
@@ -734,7 +734,7 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                       >
                         <td
                           style={{ backgroundColor: rowBackground }}
-                          className="border-l-4 border-l-slate-700 px-2 py-1 align-middle sticky-col-cell border-r font-medium min-w-[260px]"
+                          className="border-l border-l-slate-600 px-2 py-1 align-middle sticky-col-cell border-r font-medium min-w-[260px]"
                         >
                           {scadenza.nominativo}
                         </td>
@@ -775,7 +775,7 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
   </div>
 </td>
 
-                        <td className="border-l-4 border-l-slate-700 px-2 py-1 align-middle min-w-[150px]">
+                        <td className="border-l border-l-slate-600 px-2 py-1 align-middle min-w-[150px]">
                           <Select
                             value={scadenza.tipo_invio || "__none__"}
                             onValueChange={(value) =>
@@ -827,7 +827,7 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                           </Select>
                         </td>
 
-                        <td className="border-l-4 border-l-slate-700 px-2 py-1 align-middle text-center min-w-[110px]">
+                        <td className="border-l border-l-slate-600 px-2 py-1 align-middle text-center min-w-[110px]">
                           <select
                             value={scadenza.mod_compilato ? "SI" : "NO"}
                             onChange={(e) => {
@@ -908,7 +908,7 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                           </select>
                         </td>
 
-                        <td className="border-l-4 border-l-slate-700 px-2 py-1 align-middle min-w-[300px]">
+                        <td className="border-l border-l-slate-600 px-2 py-1 align-middle min-w-[300px]">
                           <Textarea
                             value={localNotes[scadenza.id] ?? scadenza.note ?? ""}
                             onChange={(e) =>
@@ -937,7 +937,7 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                           </select>
                         </td>
 
-                        <td className="border-r-4 border-r-slate-700 px-2 py-1 align-middle text-center min-w-[100px]">
+                        <td className="border-r border-r-slate-600 px-2 py-1 align-middle text-center min-w-[100px]">
                           <Button
                             variant="ghost"
                             size="sm"
