@@ -710,7 +710,7 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                     const rowBackground = isNessunInvio
                       ? "#e5e7eb"
                       : isConfermata
-                        ? "#dbeafe"
+                        ? "#66FF99"
                         : scadenza.mod_definitivo
                           ? "#fef9c3"
                           : "#ffffff";
@@ -765,12 +765,12 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                         </td>
 
           <td className="px-2 py-1 align-middle min-w-[180px]">
-  <div className="flex h-8 w-full items-center rounded-md border border-slate-300 bg-white px-3 text-xs text-slate-900">
+  <div className="flex h-8 w-full items-center rounded-md border border-slate-300 !bg-white px-3 text-xs text-slate-900">
     {operatoreFiscaleLabel || "-"}
   </div>
 </td>
 <td className="px-2 py-1 align-middle min-w-[180px]">
-  <div className="flex h-8 w-full items-center rounded-md border border-slate-300 bg-white px-3 text-xs text-slate-900">
+  <div className="flex h-8 w-full items-center rounded-md border border-slate-300 !bg-white px-3 text-xs text-slate-900">
     {operatorePayrollLabel || "-"}
   </div>
 </td>
@@ -787,7 +787,7 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                             }
                             disabled={isConfermata}
                           >
-                            <SelectTrigger className="h-8 w-full border-slate-300 bg-white text-xs disabled:opacity-100 disabled:bg-white disabled:text-slate-700">
+                            <SelectTrigger className="h-8 w-full border-slate-300 !bg-white text-xs disabled:!opacity-100 disabled:!bg-white disabled:!text-slate-700">
                               <SelectValue placeholder="Seleziona..." />
                             </SelectTrigger>
                             <SelectContent>
@@ -836,7 +836,7 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                                 handleToggleField(scadenza.id, "mod_compilato", scadenza.mod_compilato);
                               }
                             }} disabled={isConfermata}
-                            className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                            className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:!bg-white disabled:!text-slate-700 disabled:!opacity-100"
                           >
                             <option value="NO">NO</option>
                             <option value="SI">SI</option>
@@ -852,7 +852,7 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                                 handleToggleField(scadenza.id, "mod_definitivo", scadenza.mod_definitivo);
                               }
                             }} disabled={isConfermata}
-                            className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                            className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:!bg-white disabled:!text-slate-700 disabled:!opacity-100"
                           >
                             <option value="NO">NO</option>
                             <option value="SI">SI</option>
@@ -868,7 +868,7 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                                 handleToggleField(scadenza.id, "mod_inviato", scadenza.mod_inviato);
                               }
                             }} disabled={isConfermata}
-                            className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                            className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:!bg-white disabled:!text-slate-700 disabled:!opacity-100"
                           >
                             <option value="NO">NO</option>
                             <option value="SI">SI</option>
@@ -886,7 +886,7 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                                 e.target.value
                               )
                             }
-                            className="h-8 w-36 border-slate-300 bg-white text-xs disabled:opacity-100 disabled:bg-white disabled:text-slate-700"
+                            className="h-8 w-36 border-slate-300 !bg-white text-xs disabled:!opacity-100 disabled:!bg-white disabled:!text-slate-700"
                             disabled={isConfermata}
                             placeholder=""
                           />
@@ -901,7 +901,7 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                                 handleToggleField(scadenza.id, "ricevuta", scadenza.ricevuta);
                               }
                             }} disabled={isConfermata}
-                            className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                            className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:!bg-white disabled:!text-slate-700 disabled:!opacity-100"
                           >
                             <option value="NO">NO</option>
                             <option value="SI">SI</option>
@@ -915,7 +915,7 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                               handleNoteChange(scadenza.id, e.target.value)
                             }
                             rows={1}
-                            className="h-8 min-h-8 resize-none border-slate-300 bg-white py-1.5 text-xs disabled:opacity-100 disabled:bg-white disabled:text-slate-700"
+                            className="h-8 min-h-8 resize-none border-slate-300 !bg-white py-1.5 text-xs disabled:!opacity-100 disabled:!bg-white disabled:!text-slate-700"
                             disabled={isConfermata}
                             placeholder="Note..."
                           />
@@ -930,7 +930,7 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                                 handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga);
                               }
                             }}
-                            className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                            className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:!bg-white disabled:!text-slate-700 disabled:!opacity-100"
                           >
                             <option value="NO">NO</option>
                             <option value="SI">SI</option>
