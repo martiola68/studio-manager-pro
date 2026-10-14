@@ -702,8 +702,18 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                   </tr>
                 ) : (
                   filteredScadenze.map((scadenza) => {
-                    const isConfermata = scadenza.conferma_riga || false;
-                    const isRicevuta = scadenza.ricevuta || false;
+                    const isConfermata = Boolean(scadenza.conferma_riga);
+                    const isRicevuta = Boolean(scadenza.ricevuta);
+                    // Priorità: Nessuno (grigio) > Conferma (celeste) > Definitivo (giallo).
+                    const isNessunInvio =
+                      !scadenza.tipo_invio || scadenza.tipo_invio === "Nessuno";
+                    const rowBackground = isNessunInvio
+                      ? "#e5e7eb"
+                      : isConfermata
+                        ? "#dbeafe"
+                        : scadenza.mod_definitivo
+                          ? "#fef9c3"
+                          : "#ffffff";
 
                     const operatoreFiscaleLabel = getUtenteLabelById(
                       scadenza.utente_operatore_id
@@ -719,23 +729,12 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                     return (
                       <tr
                         key={scadenza.id}
-                    className={`border-b border-slate-600 transition-colors ${
-  isConfermata
-    ? "bg-blue-100 hover:bg-blue-100"
-    : "bg-white hover:bg-white"
-} data-[state=selected]:bg-muted`}
+                        className="border-b border-slate-600 transition-colors"
+                        style={{ backgroundColor: rowBackground }}
                       >
                         <td
-                          style={{
-                            backgroundColor: isConfermata
-                              ? "#dbeafe"
-                              : "#ffffff",
-                          }}
-                          className={`px-2 py-1 align-middle sticky-col-cell border-r font-medium min-w-[260px] ${
-                            isConfermata
-                              ? "hover:bg-green-100"
-                              : "hover:bg-green-50"
-                          }`}
+                          style={{ backgroundColor: rowBackground }}
+                          className="px-2 py-1 align-middle sticky-col-cell border-r font-medium min-w-[260px]"
                         >
                           {scadenza.nominativo}
                         </td>
@@ -788,7 +787,7 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                             }
                             disabled={isConfermata}
                           >
-                            <SelectTrigger className="h-8 w-full border-slate-300 bg-white text-xs">
+                            <SelectTrigger className="h-8 w-full border-slate-300 bg-white text-xs disabled:opacity-100 disabled:bg-white disabled:text-slate-700">
                               <SelectValue placeholder="Seleziona..." />
                             </SelectTrigger>
                             <SelectContent>
@@ -814,7 +813,7 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                             }
                             disabled={isConfermata}
                           >
-                            <SelectTrigger className="h-8 w-full border-slate-300 bg-white text-xs">
+                            <SelectTrigger className="h-8 w-full border-slate-300 bg-white text-xs disabled:opacity-100 disabled:bg-white disabled:text-slate-700">
                               <SelectValue placeholder="Seleziona..." />
                             </SelectTrigger>
                             <SelectContent>
@@ -887,7 +886,7 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                                 e.target.value
                               )
                             }
-                            className="h-8 w-36 border-slate-300 bg-white text-xs"
+                            className="h-8 w-36 border-slate-300 bg-white text-xs disabled:opacity-100 disabled:bg-white disabled:text-slate-700"
                             disabled={isConfermata}
                             placeholder=""
                           />
@@ -916,7 +915,7 @@ const loadScadenze = async (): Promise<Scadenza770[]> => {
                               handleNoteChange(scadenza.id, e.target.value)
                             }
                             rows={1}
-                            className="h-8 min-h-8 resize-none border-slate-300 bg-white py-1.5 text-xs"
+                            className="h-8 min-h-8 resize-none border-slate-300 bg-white py-1.5 text-xs disabled:opacity-100 disabled:bg-white disabled:text-slate-700"
                             disabled={isConfermata}
                             placeholder="Note..."
                           />
