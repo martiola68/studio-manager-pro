@@ -1226,15 +1226,13 @@ const vars: Record<string, string> = {
                       key={scadenza.id}
                      className={`border-b border-slate-600 transition-colors data-[state=selected]:bg-muted ${
   scadenza.conferma_riga
-    ? "bg-blue-100 hover:bg-blue-100 [&>td]:!bg-blue-100"
+    ? "bg-white hover:bg-white"
     : "bg-white hover:bg-white"
 }`}
                     >
                       <td
                         style={{
-                          backgroundColor: scadenza.conferma_riga
-                            ? "#dbeafe"
-                            : "#ffffff",
+                          backgroundColor: scadenza.conferma_riga ? "#66FF99" : (scadenza.mod_r_definitivo || (scadenza.con_irap && scadenza.conferma_irap_secondo_acconto)) ? "#FFFF00" : "#ffffff",
                         }}
                         className="px-2 py-1 align-middle sticky-col-cell border-r font-medium min-w-[300px]"
                       >
@@ -1245,7 +1243,7 @@ const vars: Record<string, string> = {
                         {getUtenteNome(scadenza.utente_operatore_id)}
                       </td>
 
-<td className="px-2 py-1 align-middle min-w-[140px] border-l-4 border-slate-700 bg-white">
+<td style={{ backgroundColor: scadenza.mod_r_definitivo ? "#66FF99" : "#ffffff" }} className="px-2 py-1 align-middle min-w-[140px] border-l-4 border-slate-700">
   <Select
     value={scadenza.tipo_redditi || "__none__"}
     onValueChange={(value) =>
@@ -1272,33 +1270,33 @@ const vars: Record<string, string> = {
   </Select>
 </td>
 
-<td className="px-2 py-1 align-middle text-center min-w-[120px] bg-white">
+<td style={{ backgroundColor: scadenza.mod_r_definitivo ? "#66FF99" : "#ffffff" }} className="px-2 py-1 align-middle text-center min-w-[120px]">
   <select value={scadenza.soggetto_isa ? "SI" : "NO"} onChange={(e) => { const nextValue = e.target.value === "SI"; if (nextValue !== Boolean(scadenza.soggetto_isa)) handleToggleSoggettoIsa(scadenza); }} className="h-8 w-[70px] rounded-md border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700"><option value="NO">NO</option><option value="SI">SI</option></select>
 </td>
 
-<td className="px-2 py-1 align-middle text-center min-w-[80px] bg-white">
+<td style={{ backgroundColor: scadenza.mod_r_definitivo ? "#66FF99" : "#ffffff" }} className="px-2 py-1 align-middle text-center min-w-[80px]">
   {renderCheck(scadenza, "mod_r_compilato")}
 </td>
 
-                      <td className="px-2 py-1 align-middle text-center min-w-[80px] bg-white">
+                      <td style={{ backgroundColor: scadenza.mod_r_definitivo ? "#66FF99" : "#ffffff" }} className="px-2 py-1 align-middle text-center min-w-[80px]">
                         {renderCheck(scadenza, "mod_r_definitivo")}
                       </td>
 
-                      <td className="px-2 py-1 align-middle min-w-[170px] border-l-4 border-slate-700 bg-white">
+                      <td style={{ backgroundColor: !scadenza.saldi_primo_acconti_cciaa_dovuti ? "#e5e7eb" : scadenza.conferma_ires_saldo_acconto ? "#66FF99" : "#FFFF00" }} className="px-2 py-1 align-middle min-w-[170px] border-l-4 border-slate-700">
                         {renderSiNoSelect(
                           scadenza,
                           "saldi_primo_acconti_cciaa_dovuti"
                         )}
                       </td>
 
-                      <td className="px-2 py-1 align-middle min-w-[120px] bg-white">
+                      <td style={{ backgroundColor: !scadenza.saldi_primo_acconti_cciaa_dovuti ? "#e5e7eb" : scadenza.conferma_ires_saldo_acconto ? "#66FF99" : "#FFFF00" }} className="px-2 py-1 align-middle min-w-[120px]">
                         {renderCheck(
   scadenza,
   "conferma_ires_saldo_acconto"
 )}
                       </td>
 
-                      <td className="px-2 py-1 align-middle min-w-[150px] bg-white">
+                      <td style={{ backgroundColor: !scadenza.saldi_primo_acconti_cciaa_dovuti ? "#e5e7eb" : scadenza.conferma_ires_saldo_acconto ? "#66FF99" : "#FFFF00" }} className="px-2 py-1 align-middle min-w-[150px]">
                         <Input
                           type="date"
                           value={scadenza.data_com1 || ""}
@@ -1313,7 +1311,7 @@ const vars: Record<string, string> = {
                         />
                       </td>
 
-                      <td className="px-2 py-1 align-middle text-center min-w-[120px] bg-white">
+                      <td style={{ backgroundColor: !scadenza.saldi_primo_acconti_cciaa_dovuti ? "#e5e7eb" : scadenza.conferma_ires_saldo_acconto ? "#66FF99" : "#FFFF00" }} className="px-2 py-1 align-middle text-center min-w-[120px]">
                        {scadenza.saldi_primo_acconti_cciaa_dovuti ? (
 <Button
   type="button"
@@ -1335,11 +1333,11 @@ const vars: Record<string, string> = {
 )}
                       </td>
 
-                      <td className="px-2 py-1 align-middle text-center min-w-[140px] border-l-4 border-slate-700 bg-white">
+                      <td style={{ backgroundColor: scadenza.conferma_invio_dichiarazione ? "#66FF99" : "#ffffff" }} className="px-2 py-1 align-middle text-center min-w-[140px] border-l-4 border-slate-700">
                         {renderCheck(scadenza, "conferma_invio_dichiarazione")}
                       </td>
 
-                      <td className="px-2 py-1 align-middle min-w-[130px] bg-white">
+                      <td style={{ backgroundColor: scadenza.conferma_invio_dichiarazione ? "#66FF99" : "#ffffff" }} className="px-2 py-1 align-middle min-w-[130px]">
                         <Input
                           type="date"
                           value={scadenza.data_r_invio || ""}
@@ -1354,26 +1352,26 @@ const vars: Record<string, string> = {
                         />
                       </td>
 
-                      <td className="px-2 py-1 align-middle text-center min-w-[100px] border-l-4 border-slate-700 bg-white">
+                      <td style={{ backgroundColor: !scadenza.con_irap ? "#e5e7eb" : scadenza.conferma_irap_invio_dichiarazione ? "#66FF99" : scadenza.conferma_irap_secondo_acconto ? "#FFFF00" : "#ffffff" }} className="px-2 py-1 align-middle text-center min-w-[100px] border-l-4 border-slate-700">
                         {renderCheck(scadenza, "con_irap")}
                       </td>
 
-                      <td className="px-2 py-1 align-middle text-center min-w-[140px] bg-white">
+                      <td style={{ backgroundColor: !scadenza.con_irap ? "#e5e7eb" : scadenza.conferma_irap_invio_dichiarazione ? "#66FF99" : scadenza.conferma_irap_secondo_acconto ? "#FFFF00" : "#ffffff" }} className="px-2 py-1 align-middle text-center min-w-[140px]">
                         {renderCheck(scadenza, "conferma_irap_saldo_acconto")}
                       </td>
 
-                      <td className="px-2 py-1 align-middle text-center min-w-[140px] bg-white">
+                      <td style={{ backgroundColor: !scadenza.con_irap ? "#e5e7eb" : scadenza.conferma_irap_invio_dichiarazione ? "#66FF99" : scadenza.conferma_irap_secondo_acconto ? "#FFFF00" : "#ffffff" }} className="px-2 py-1 align-middle text-center min-w-[140px]">
                         {renderCheck(scadenza, "conferma_irap_secondo_acconto")}
                       </td>
 
-                      <td className="px-2 py-1 align-middle text-center min-w-[140px] bg-white">
+                      <td style={{ backgroundColor: !scadenza.con_irap ? "#e5e7eb" : scadenza.conferma_irap_invio_dichiarazione ? "#66FF99" : scadenza.conferma_irap_secondo_acconto ? "#FFFF00" : "#ffffff" }} className="px-2 py-1 align-middle text-center min-w-[140px]">
                         {renderCheck(
                           scadenza,
                           "conferma_irap_invio_dichiarazione"
                         )}
                       </td>
 
-                      <td className="px-2 py-1 align-middle min-w-[130px] bg-white">
+                      <td style={{ backgroundColor: !scadenza.con_irap ? "#e5e7eb" : scadenza.conferma_irap_invio_dichiarazione ? "#66FF99" : scadenza.conferma_irap_secondo_acconto ? "#FFFF00" : "#ffffff" }} className="px-2 py-1 align-middle min-w-[130px]">
                         <Input
                           type="date"
                           value={scadenza.data_i_invio || ""}
@@ -1388,18 +1386,18 @@ const vars: Record<string, string> = {
                         />
                       </td>
 
-                      <td className="px-2 py-1 align-middle min-w-[150px] border-l-4 border-slate-700 bg-white">
+                      <td style={{ backgroundColor: !scadenza.secondo_acconti_dovuti ? "#e5e7eb" : scadenza.conferma_ires_secondo_acconto ? "#66FF99" : "#FFFF00" }} className="px-2 py-1 align-middle min-w-[150px] border-l-4 border-slate-700">
                         {renderSiNoSelect(scadenza, "secondo_acconti_dovuti")}
                       </td>
 
-                      <td className="px-2 py-1 align-middle min-w-[120px] bg-white">
+                      <td style={{ backgroundColor: !scadenza.secondo_acconti_dovuti ? "#e5e7eb" : scadenza.conferma_ires_secondo_acconto ? "#66FF99" : "#FFFF00" }} className="px-2 py-1 align-middle min-w-[120px]">
                         {renderCheck(
   scadenza,
   "conferma_ires_secondo_acconto"
 )}
                       </td>
 
-                      <td className="px-2 py-1 align-middle min-w-[150px] bg-white">
+                      <td style={{ backgroundColor: !scadenza.secondo_acconti_dovuti ? "#e5e7eb" : scadenza.conferma_ires_secondo_acconto ? "#66FF99" : "#FFFF00" }} className="px-2 py-1 align-middle min-w-[150px]">
                         <Input
                           type="date"
                           value={scadenza.data_com2 || ""}
@@ -1414,7 +1412,7 @@ const vars: Record<string, string> = {
                         />
                       </td>
 
-                      <td className="px-2 py-1 align-middle text-center min-w-[120px] bg-white">
+                      <td style={{ backgroundColor: !scadenza.secondo_acconti_dovuti ? "#e5e7eb" : scadenza.conferma_ires_secondo_acconto ? "#66FF99" : "#FFFF00" }} className="px-2 py-1 align-middle text-center min-w-[120px]">
                         {scadenza.secondo_acconti_dovuti ? (
  <Button
   type="button"
