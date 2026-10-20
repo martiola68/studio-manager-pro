@@ -186,15 +186,14 @@ function isPersonaFisica(
    * tipo_cliente incoerente. Un CF/P.IVA di
    * 11 cifre prevale e identifica una società.
    */
-  if (
-    /^\d{11}$/.test(cf) ||
-    /^\d{11}$/.test(partitaIva)
-  ) {
-    return false;
+  // Il codice fiscale personale valido ha priorità sulla P.IVA:
+  // alcune anagrafiche di persone fisiche riportano anche una P.IVA.
+  if (/^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$/.test(cf)) {
+    return true;
   }
 
-  if (/^[A-Z0-9]{16}$/.test(cf)) {
-    return true;
+  if (/^\d{11}$/.test(cf) || /^\d{11}$/.test(partitaIva)) {
+    return false;
   }
 
   return String(
