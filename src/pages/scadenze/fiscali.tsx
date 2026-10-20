@@ -1224,7 +1224,7 @@ const vars: Record<string, string> = {
                   filteredScadenze.map((scadenza) => (
                     <tr
                       key={scadenza.id}
-                     className={`border-b border-slate-600 transition-colors data-[state=selected]:bg-muted ${
+                     className={`border-b border-slate-600 transition-colors hover:!bg-transparent data-[state=selected]:bg-muted ${
   scadenza.conferma_riga
     ? "bg-white hover:bg-white"
     : "bg-white hover:bg-white"
@@ -1234,12 +1234,12 @@ const vars: Record<string, string> = {
                         style={{
                           backgroundColor: scadenza.conferma_riga ? "#66FF99" : (scadenza.mod_r_definitivo || (scadenza.con_irap && scadenza.conferma_irap_secondo_acconto)) ? "#FFFF00" : "#ffffff",
                         }}
-                        className="px-2 py-1 align-middle sticky-col-cell border-r font-medium min-w-[300px]"
+                        className="px-2 py-1 align-middle sticky-col-cell border-r font-medium min-w-[300px] hover:!bg-[inherit]"
                       >
                         {scadenza.nominativo}
                       </td>
 
-                      <td className="px-2 py-1 align-middle min-w-[180px]">
+                      <td style={{ backgroundColor: scadenza.conferma_riga ? "#66FF99" : (scadenza.mod_r_definitivo || (scadenza.con_irap && scadenza.conferma_irap_secondo_acconto)) ? "#FFFF00" : "#ffffff" }} className="px-2 py-1 align-middle min-w-[180px]">
                         {getUtenteNome(scadenza.utente_operatore_id)}
                       </td>
 
