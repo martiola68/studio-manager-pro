@@ -1738,21 +1738,19 @@ if (
   newErrors.settori = true;
   missingFields.push("Selezionare almeno un settore");
 }
-if (
-  formData.cliente === true &&
-  !(
-    (formData.settore_fiscale && formData.utente_operatore_id) ||
-    (formData.settore_lavoro && formData.utente_payroll_id) ||
-    (formData.settore_consulenza && formData.utente_consulenza_id)
-  )
-) {
-  if (formData.settore_fiscale) newErrors.utente_operatore_id = true;
-  if (formData.settore_lavoro) newErrors.utente_payroll_id = true;
-  if (formData.settore_consulenza) newErrors.utente_consulenza_id = true;
-
-  missingFields.push(
-    "Selezionare almeno un Utente per uno dei settori attivi"
-  );
+if (formData.cliente === true) {
+  if (formData.settore_fiscale && !formData.utente_operatore_id) {
+    newErrors.utente_operatore_id = true;
+    missingFields.push("Selezionare Utente Fiscale");
+  }
+  if (formData.settore_lavoro && !formData.utente_payroll_id) {
+    newErrors.utente_payroll_id = true;
+    missingFields.push("Selezionare Utente Payroll");
+  }
+  if (formData.settore_consulenza && !formData.utente_consulenza_id) {
+    newErrors.utente_consulenza_id = true;
+    missingFields.push("Selezionare Utente Consulenza");
+  }
 }
 
         if (missingFields.length > 0) {
