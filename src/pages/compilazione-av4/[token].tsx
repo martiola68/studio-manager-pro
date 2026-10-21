@@ -626,16 +626,14 @@ async function handleUploadSignedPdf(
       await validateTitolariPrimaDelSalvataggio();
 
       const payload = {
-        ...(form.amm_no_associato ? {
-          dichiarante_nome_cognome: form.dichiarante_nome_cognome,
-          dichiarante_codice_fiscale: form.dichiarante_codice_fiscale,
-          dichiarante_luogo_nascita: form.dichiarante_luogo_nascita,
-          dichiarante_data_nascita: form.dichiarante_data_nascita || null,
-          dichiarante_indirizzo_residenza: form.dichiarante_indirizzo_residenza,
-          dichiarante_citta_residenza: form.dichiarante_citta_residenza,
-          dichiarante_cap_residenza: form.dichiarante_cap_residenza,
-          dichiarante_nazionalita: form.dichiarante_nazionalita,
-        } : {}),
+        dichiarante_nome_cognome: form.dichiarante_nome_cognome,
+        dichiarante_codice_fiscale: form.dichiarante_codice_fiscale,
+        dichiarante_luogo_nascita: form.dichiarante_luogo_nascita,
+        dichiarante_data_nascita: form.dichiarante_data_nascita || null,
+        dichiarante_indirizzo_residenza: form.dichiarante_indirizzo_residenza,
+        dichiarante_citta_residenza: form.dichiarante_citta_residenza,
+        dichiarante_cap_residenza: form.dichiarante_cap_residenza,
+        dichiarante_nazionalita: form.dichiarante_nazionalita,
         natura_prestazione: form.natura_prestazione || null,
 
         domanda1: !!form.domanda1,
