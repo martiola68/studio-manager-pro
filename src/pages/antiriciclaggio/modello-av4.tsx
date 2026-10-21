@@ -1487,14 +1487,9 @@ soggetto_cliente_id:
 
 amm_no_associato: !!form.amm_no_associato,
 
-        dichiarante_nome_cognome: form.dichiarante_nome_cognome || null,
-        dichiarante_codice_fiscale: form.dichiarante_codice_fiscale || null,
-        dichiarante_luogo_nascita: form.dichiarante_luogo_nascita || null,
-        dichiarante_data_nascita: form.dichiarante_data_nascita || null,
-        dichiarante_indirizzo_residenza: form.dichiarante_indirizzo_residenza || null,
-        dichiarante_citta_residenza: form.dichiarante_citta_residenza || null,
-        dichiarante_cap_residenza: form.dichiarante_cap_residenza || null,
-        dichiarante_nazionalita: form.dichiarante_nazionalita || null,
+        // La generazione del token non deve sovrascrivere l'anagrafica AV4.
+        // I dati del dichiarante si salvano esclusivamente dal modulo AV4.
+
         
         invia_altra_email: !!form.invia_altra_email,
         email_destinatario_alternativa: form.invia_altra_email
