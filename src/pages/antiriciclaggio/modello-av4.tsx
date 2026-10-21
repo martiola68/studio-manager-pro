@@ -2228,7 +2228,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                         value={form.dichiarante_nome_cognome}
                         onChange={handleChange}
                         className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
-                        readOnly
+                        readOnly={!form.amm_no_associato}
                       />
                     </div>
 
@@ -2239,7 +2239,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                         value={form.dichiarante_codice_fiscale}
                         onChange={handleChange}
                         className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
-                        readOnly
+                        readOnly={!form.amm_no_associato}
                       />
                     </div>
 
@@ -2250,20 +2250,19 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                         value={form.dichiarante_luogo_nascita}
                         onChange={handleChange}
                         className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
-                        readOnly
+                        readOnly={!form.amm_no_associato}
                       />
                     </div>
 
                     <div>
                       <label className="mb-1 block text-sm font-medium">Data di nascita</label>
                       <input
-                        value={
-                          form.dichiarante_data_nascita
-                            ? new Date(form.dichiarante_data_nascita).toLocaleDateString("it-IT")
-                            : ""
-                        }
+                        type="date"
+                        name="dichiarante_data_nascita"
+                        value={form.dichiarante_data_nascita || ""}
+                        onChange={handleChange}
                         className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
-                        readOnly
+                        readOnly={!form.amm_no_associato}
                       />
                     </div>
 
@@ -2274,7 +2273,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                         value={form.dichiarante_indirizzo_residenza}
                         onChange={handleChange}
                         className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
-                        readOnly
+                        readOnly={!form.amm_no_associato}
                       />
                     </div>
 
@@ -2285,7 +2284,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                         value={form.dichiarante_citta_residenza}
                         onChange={handleChange}
                         className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
-                        readOnly
+                        readOnly={!form.amm_no_associato}
                       />
                     </div>
 
@@ -2296,7 +2295,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                         value={form.dichiarante_cap_residenza}
                         onChange={handleChange}
                         className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
-                        readOnly
+                        readOnly={!form.amm_no_associato}
                       />
                     </div>
 
@@ -2307,7 +2306,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                         value={form.dichiarante_nazionalita}
                         onChange={handleChange}
                         className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
-                        readOnly
+                        readOnly={!form.amm_no_associato}
                       />
                     </div>
                   </div>
