@@ -691,11 +691,17 @@ async function handleUploadSignedPdf(
         public_token: null,
       };
 
-      const { error } = await supabase
+      const { data: updatedRows, error } = await supabase
         .from("tbAV4")
         .update(payload)
         .eq("id", form.id)
-        .eq("public_token", token);
+        .eq("public_token", token)
+        .eq("public_enabled", true)
+        .select("id");
+
+      if (!error && (!updatedRows || updatedRows.length !== 1)) {
+        throw new Error("Salvataggio AV4 non eseguito: nessun record aggiornato. Verificare i permessi RLS di tbAV4 per il link pubblico.");
+      }
 
       if (error) {
         console.error("Errore salvataggio pubblico AV4:", error);
