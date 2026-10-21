@@ -891,24 +891,18 @@ async function importaAmministratoreDaCliente() {
             societa_id: mapped.societa_id || societaIdFromQuery || "",
           });
 
+         // Quando si riapre un AV4 già salvato, non sovrascrivere mai
+         // i dati del dichiarante con quelli dell'anagrafica cliente.
          if (mapped.cliente_id) {
-  if (mapped.amm_no_associato) {
-    const supabase = getSupabaseClient() as any;
-
-    const { data: clienteRow } = await supabase
-      .from("tbclienti")
-      .select("*")
-      .eq("id", mapped.cliente_id)
-      .maybeSingle();
-
-    setClienteLabel(clienteRow ? buildClienteLabel(clienteRow) : "");
-  } else {
-    await hydrateClienteAndRappresentante(mapped.cliente_id);
-  }
-} else {
-  setClienteLabel("");
-  clearRappresentanteFields();
-}
+           const { data: clienteRow } = await supabase
+             .from("tbclienti")
+             .select("*")
+             .eq("id", mapped.cliente_id)
+             .maybeSingle();
+           setClienteLabel(clienteRow ? buildClienteLabel(clienteRow) : "");
+         } else {
+           setClienteLabel("");
+         }
         } else {
            await prefillFromPraticaOrAV1(
             studioIdFromQuery,
