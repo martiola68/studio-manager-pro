@@ -818,7 +818,7 @@ async function handleUploadSignedPdf(
                           value={form.dichiarante_nome_cognome}
                           onChange={handleChange}
                           className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
-                          readOnly={!form.amm_no_associato || alreadySubmitted}
+                          readOnly={alreadySubmitted}
                         />
                       </div>
 
@@ -829,7 +829,7 @@ async function handleUploadSignedPdf(
                           value={form.dichiarante_codice_fiscale}
                           onChange={handleChange}
                           className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
-                          readOnly={!form.amm_no_associato || alreadySubmitted}
+                          readOnly={alreadySubmitted}
                         />
                       </div>
 
@@ -840,7 +840,7 @@ async function handleUploadSignedPdf(
                           value={form.dichiarante_luogo_nascita}
                           onChange={handleChange}
                           className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
-                          readOnly={!form.amm_no_associato || alreadySubmitted}
+                          readOnly={alreadySubmitted}
                         />
                       </div>
 
@@ -852,7 +852,7 @@ async function handleUploadSignedPdf(
                           value={form.dichiarante_data_nascita}
                           onChange={handleChange}
                           className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
-                          readOnly={!form.amm_no_associato || alreadySubmitted}
+                          readOnly={alreadySubmitted}
                         />
                       </div>
 
@@ -863,7 +863,7 @@ async function handleUploadSignedPdf(
                           value={form.dichiarante_indirizzo_residenza}
                           onChange={handleChange}
                           className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
-                          readOnly={!form.amm_no_associato || alreadySubmitted}
+                          readOnly={alreadySubmitted}
                         />
                       </div>
 
@@ -874,7 +874,7 @@ async function handleUploadSignedPdf(
                           value={form.dichiarante_citta_residenza}
                           onChange={handleChange}
                           className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
-                          readOnly={!form.amm_no_associato || alreadySubmitted}
+                          readOnly={alreadySubmitted}
                         />
                       </div>
 
@@ -885,7 +885,7 @@ async function handleUploadSignedPdf(
                           value={form.dichiarante_cap_residenza}
                           onChange={handleChange}
                           className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
-                          readOnly={!form.amm_no_associato || alreadySubmitted}
+                          readOnly={alreadySubmitted}
                         />
                       </div>
 
@@ -896,7 +896,7 @@ async function handleUploadSignedPdf(
                           value={form.dichiarante_nazionalita}
                           onChange={handleChange}
                           className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
-                          readOnly={!form.amm_no_associato || alreadySubmitted}
+                          readOnly={alreadySubmitted}
                         />
                       </div>
                     </div>
