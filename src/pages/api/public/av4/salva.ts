@@ -43,7 +43,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { data: av4, error: av4Error } = await supabase
       .from("tbAV4")
-      .select("id,public_token,public_enabled,compilato_da_cliente")
+      .select("id,public_token,public_enabled,compilato_da_cliente,amm_no_associato")
       .eq("id", av4Id)
       .eq("public_token", token)
       .maybeSingle();
@@ -95,6 +95,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const submittedAt = new Date().toISOString();
 
     const updatePayload = {
+      ...(av4.amm_no_associato === true ? {
+        dichiarante_nome_cognome: nullableText(payload.dichiarante_nome_cognome),
+        dichiarante_codice_fiscale: nullableText(payload.dichiarante_codice_fiscale),
+        dichiarante_luogo_nascita: nullableText(payload.dichiarante_luogo_nascita),
+        dichiarante_data_nascita: nullableText(payload.dichiarante_data_nascita),
+        dichiarante_indirizzo_residenza: nullableText(payload.dichiarante_indirizzo_residenza),
+        dichiarante_citta_residenza: nullableText(payload.dichiarante_citta_residenza),
+        dichiarante_cap_residenza: nullableText(payload.dichiarante_cap_residenza),
+        dichiarante_nazionalita: nullableText(payload.dichiarante_nazionalita),
+      } : {}),
       natura_prestazione: nullableText(payload.natura_prestazione),
 
       domanda1: bool(payload.domanda1),
