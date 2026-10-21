@@ -683,11 +683,19 @@ async function handleUploadSignedPdf(
         pdf_firmato_cliente:
           form.pdf_firmato_cliente || form.allegato_pdf_cliente || null,
 
-        compilato_da_cliente: true,
-        public_submitted_at: new Date().toISOString(),
-        public_enabled: false,
-        public_token: null,
+        // Il token resta valido fino alla verifica dei dati persistiti.
       };
+
+      const fields = [
+        "dichiarante_nome_cognome",
+        "dichiarante_codice_fiscale",
+        "dichiarante_luogo_nascita",
+        "dichiarante_data_nascita",
+        "dichiarante_indirizzo_residenza",
+        "dichiarante_citta_residenza",
+        "dichiarante_cap_residenza",
+        "dichiarante_nazionalita",
+      ] as const;
 
       const { data: updatedRows, error } = await supabase
         .from("tbAV4")
@@ -695,16 +703,43 @@ async function handleUploadSignedPdf(
         .eq("id", form.id)
         .eq("public_token", token)
         .eq("public_enabled", true)
-        .select("id");
+        .select("*");
 
-      if (!error && (!updatedRows || updatedRows.length !== 1)) {
-        throw new Error("Salvataggio AV4 non eseguito: nessun record aggiornato. Verificare i permessi RLS di tbAV4 per il link pubblico.");
+      if (error) throw new Error("Errore salvataggio AV4: " + error.message);
+      if (!updatedRows || updatedRows.length !== 1) {
+        throw new Error("Nessun AV4 aggiornato: verifica permessi e collegamento.");
       }
 
-      if (error) {
-        console.error("Errore salvataggio pubblico AV4:", error);
-        alert("Errore durante il salvataggio.");
-        return;
+      const saved = updatedRows[0];
+      const mismatch = fields.filter((field) =>
+        String(saved[field] ?? "").trim() !== String(payload[field] ?? "").trim()
+      );
+      if (mismatch.length) {
+        console.error("AV4: campi non persistiti", mismatch);
+        throw new Error("I dati anagrafici non sono stati salvati. Il link resta attivo.");
+      }
+
+      const { data: completed, error: completeError } = await supabase
+        .from("tbAV4")
+        .update({
+          compilato_da_cliente: true,
+          public_submitted_at: new Date().toISOString(),
+          public_enabled: false,
+        })
+        .eq("id", form.id)
+        .eq("public_token", token)
+        .eq("public_enabled", true)
+        .select("*");
+
+      if (completeError || !completed || completed.length !== 1) {
+        throw new Error("Dati salvati, ma completamento AV4 non confermato. Contattare lo studio.");
+      }
+      const finalMismatch = fields.filter((field) =>
+        String(completed[0][field] ?? "").trim() !== String(payload[field] ?? "").trim()
+      );
+      if (finalMismatch.length) {
+        console.error("AV4: valori alterati al completamento", finalMismatch);
+        throw new Error("Verifica finale fallita: dati anagrafici alterati. Contattare lo studio.");
       }
 
       alert("AV4 completato correttamente. Il link non è più riutilizzabile.");
