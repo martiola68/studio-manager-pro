@@ -2200,9 +2200,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
           amm_no_associato: checked,
         }));
 
-        if (!checked && form.cliente_id) {
-          void hydrateClienteAndRappresentante(form.cliente_id);
-        }
+
       }}
     />
     Amministratore non associato
