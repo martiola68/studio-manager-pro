@@ -1933,9 +1933,36 @@ invia_altra_email: !!form.invia_altra_email,
     let savedId: string | null = av4Id;
 
     if (av4Id) {
+      // Non cancellare dati già salvati dal cliente con campi vuoti
+      // rimasti in una schermata del gestionale non aggiornata.
+      const { data: existingAv4, error: readError } = await supabase
+        .from("tbAV4")
+        .select("dichiarante_nome_cognome,dichiarante_codice_fiscale,dichiarante_luogo_nascita,dichiarante_data_nascita,dichiarante_indirizzo_residenza,dichiarante_citta_residenza,dichiarante_cap_residenza,dichiarante_nazionalita,compilato_da_cliente")
+        .eq("id", av4Id)
+        .single();
+      if (readError || !existingAv4) {
+        throw new Error("Impossibile verificare i dati AV4 già salvati.");
+      }
+      const safePayload: Record<string, unknown> = { ...payload };
+      const declarantFields = [
+        "dichiarante_nome_cognome", "dichiarante_codice_fiscale",
+        "dichiarante_luogo_nascita", "dichiarante_data_nascita",
+        "dichiarante_indirizzo_residenza", "dichiarante_citta_residenza",
+        "dichiarante_cap_residenza", "dichiarante_nazionalita",
+      ];
+      for (const field of declarantFields) {
+        if (existingAv4[field] != null &&
+            String(existingAv4[field]).trim() !== "" &&
+            (safePayload[field] == null || String(safePayload[field]).trim() === "")) {
+          safePayload[field] = existingAv4[field];
+        }
+      }
+      if (existingAv4.compilato_da_cliente && !safePayload.compilato_da_cliente) {
+        safePayload.compilato_da_cliente = true;
+      }
       const { error } = await supabase
         .from("tbAV4")
-        .update(payload)
+        .update(safePayload)
         .eq("id", av4Id);
 
       if (error) {
