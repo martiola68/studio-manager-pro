@@ -49,7 +49,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const check = (row: Record<string, unknown>) => FIELDS.every(field =>
       String(row[field] ?? "").trim() === String(values[field] ?? "").trim()
     );
-    if (!check(updated[0] as Record<string, unknown>)) return res.status(409).json({ ok: false, error: "Anagrafica non salvata. Link ancora attivo." });
+    if (!check(updated[0] as unknown as Record<string, unknown>)) return res.status(409).json({ ok: false, error: "Anagrafica non salvata. Link ancora attivo." });
     const { data: completed, error: completeError } = await db.from("tbAV4")
       .update({ compilato_da_cliente: true, public_submitted_at: new Date().toISOString(), public_enabled: false })
       .eq("id", av4_id).eq("public_token", token).eq("public_enabled", true)
@@ -59,7 +59,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data: final, error: finalError } = await db.from("tbAV4")
       .select(FIELDS.join(",")).eq("id", av4_id).eq("public_token", token).maybeSingle();
     if (finalError) throw finalError;
-    if (!final || !check(final as Record<string, unknown>)) {
+    if (!final || !check(final as unknown as Record<string, unknown>)) {
       await db.from("tbAV4").update({ public_enabled: true, compilato_da_cliente: false, public_submitted_at: null })
         .eq("id", av4_id).eq("public_token", token);
       return res.status(409).json({ ok: false, error: "Verifica finale anagrafica fallita. Contattare lo studio." });
