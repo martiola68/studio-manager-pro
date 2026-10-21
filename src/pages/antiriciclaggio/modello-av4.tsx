@@ -1857,6 +1857,8 @@ ${nomeOperatore}
   societa_id: form.societa_id || null,
   av1_id: form.av1_id ? Number(form.av1_id) : null,
 
+ amm_no_associato: !!form.amm_no_associato,
+
  soggetto_cliente_id:
   form.soggetto_cliente_id || null,
 
