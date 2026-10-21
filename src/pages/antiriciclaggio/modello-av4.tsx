@@ -1487,8 +1487,16 @@ soggetto_cliente_id:
 
 amm_no_associato: !!form.amm_no_associato,
 
-        // La generazione del token non deve sovrascrivere l'anagrafica AV4.
-        // I dati del dichiarante si salvano esclusivamente dal modulo AV4.
+        // Il modulo pubblico deve rispecchiare i campi visibili al momento dell'invio.
+        // I campi lasciati vuoti vanno azzerati, senza riutilizzare dati precedenti.
+        dichiarante_nome_cognome: form.dichiarante_nome_cognome?.trim() || null,
+        dichiarante_codice_fiscale: form.dichiarante_codice_fiscale?.trim() || null,
+        dichiarante_luogo_nascita: form.dichiarante_luogo_nascita?.trim() || null,
+        dichiarante_data_nascita: form.dichiarante_data_nascita || null,
+        dichiarante_indirizzo_residenza: form.dichiarante_indirizzo_residenza?.trim() || null,
+        dichiarante_citta_residenza: form.dichiarante_citta_residenza?.trim() || null,
+        dichiarante_cap_residenza: form.dichiarante_cap_residenza?.trim() || null,
+        dichiarante_nazionalita: form.dichiarante_nazionalita?.trim() || null,
 
         
         invia_altra_email: !!form.invia_altra_email,
