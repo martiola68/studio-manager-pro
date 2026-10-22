@@ -917,6 +917,7 @@ const validateRequiredWorkdays = () => {
 
       const overLimitEmployee = dipendenti.find((dipendente) => {
         const summary = getSummaryForEmployee(dipendente.utente_id);
+      const approvedExtra = (kind: 'ST' | 'LS') => richiesteFeriePermessi.filter(r => r.utente_id === dipendente.utente_id && r.tipo_richiesta === 'extra' && r.stato === 'approvata' && r.tipo_permesso === kind).reduce((sum, r) => sum + Number(r.ore || 0), 0);
         return summary.permessi104Ore > 24;
       });
 
@@ -1047,7 +1048,7 @@ if (rowsToUpsert.length === 0 && rowsToDelete.length === 0) {
           ).flatMap(r => {
             const from = r.ora_richiesta?.slice(0, 5) || '';
             const to = r.ora_fine_extra?.slice(0, 5) || '';
-            if (!/^\\d{2}:\\d{2}$/.test(from) || !/^\\d{2}:\\d{2}$/.test(to)) return [];
+            if (!/^\d{2}:\d{2}$/.test(from) || !/^\\d{2}:\\d{2}$/.test(to)) return [];
             const a = Number(from.slice(0, 2)) * 60 + Number(from.slice(3));
             const b = Number(to.slice(0, 2)) * 60 + Number(to.slice(3));
             if (a === b) return [];
@@ -1064,7 +1065,7 @@ if (rowsToUpsert.length === 0 && rowsToDelete.length === 0) {
                 result.push(createXmlMovimento(date, r.tipo_permesso!, b / 60));
             }
             return result;
-          }).join('\\n');
+          }).join('\n');
 
           const movimenti = days
             .flatMap((day) => {
@@ -1160,7 +1161,7 @@ ${dipendentiXml}
       window.location.href = '/presenze/richiesta-ferie-permessi';
     }}
   >
-    Richiesta ferie/permessi
+    Richiesta ferie/permessi/extra
   </Button>
 )}
             
@@ -1175,7 +1176,7 @@ ${dipendentiXml}
       window.location.href = "/presenze/ferie-permessi";
     }}
   >
-    Gestione Ferie/permessi
+    Gestione ferie/permessi/extra
   </Button>
 )}
 
@@ -1421,7 +1422,7 @@ ${dipendentiXml}
     className="min-w-max text-xs"
     style={{
       display: 'grid',
-      gridTemplateColumns: `220px repeat(${days.length + 8}, 88px)`,
+      gridTemplateColumns: `220px repeat(${days.length + 10}, 88px)`,
     }}
   >
     <div className="sticky left-0 top-0 z-50 border-b bg-background px-2 py-2 font-medium text-muted-foreground">
@@ -1456,7 +1457,9 @@ ${dipendentiXml}
   { top: 'Tot.', bottom: 'N' },
    { top: 'Tot.', bottom: 'Perm.' },
   { top: 'Tot.', bottom: 'AL' },
-  { top: 'Tot.', bottom: 'L.104' },  
+  { top: 'Tot.', bottom: 'L.104' },
+  { top: 'Extra', bottom: 'ST' },
+  { top: 'Extra', bottom: 'LS' },  
 ].map((item) => (
   <div
     key={item.bottom}
@@ -1488,6 +1491,7 @@ ${dipendentiXml}
 
           {days.map((day) => {
             const code = getCode(dipendente.utente_id, day);
+            const dailyExtras = richiesteFeriePermessi.filter(r => r.utente_id === dipendente.utente_id && r.tipo_richiesta === 'extra' && r.stato === 'approvata' && r.data_inizio === day.date);
 
 const todayKey = getTodayKey();
 
@@ -1547,6 +1551,7 @@ const isFutureDay = day.date > maxEditableDateKey;
                   </option>
                   ))}
                 </select>
+                {dailyExtras.map(extra => <div key={extra.id} className={extra.tipo_permesso === 'ST' ? 'mt-0.5 rounded bg-indigo-100 text-indigo-900' : 'mt-0.5 rounded bg-cyan-100 text-cyan-900'} title={String(extra.ora_richiesta || '') + ' - ' + String(extra.ora_fine_extra || '')}>{extra.tipo_permesso} {formatHoursMinutes(Number(extra.ore || 0))}</div>)}
               </div>
             );
           })}
@@ -1602,6 +1607,8 @@ const isFutureDay = day.date > maxEditableDateKey;
     {formatHoursMinutes(summary.permessi104Ore)}
             </div>
           </div>
+          <div className="border-b p-1 text-center"><div className="flex h-8 items-center justify-center rounded-md bg-indigo-100 font-bold text-indigo-900">{formatHoursMinutes(approvedExtra('ST'))}</div></div>
+          <div className="border-b p-1 text-center"><div className="flex h-8 items-center justify-center rounded-md bg-cyan-100 font-bold text-cyan-900">{formatHoursMinutes(approvedExtra('LS'))}</div></div>
         </div>
       );
     })}
