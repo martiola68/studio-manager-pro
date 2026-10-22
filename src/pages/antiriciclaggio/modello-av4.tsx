@@ -1971,7 +1971,14 @@ invia_altra_email: !!form.invia_altra_email,
           "dichiarante_indirizzo_residenza", "dichiarante_citta_residenza",
           "dichiarante_cap_residenza", "dichiarante_nazionalita",
         ];
-        for (const field of protectedFields) finalPayload[field] = persisted[field];
+        // La modifica esplicita nel form interno prevale sui valori pubblici precedenti.
+        // I campi non modificati mantengono i valori persistiti, evitando
+        // che una copia locale obsoleta li cancelli accidentalmente.
+        for (const field of protectedFields) {
+          const local = String((payload as Record<string, unknown>)[field] ?? "").trim();
+          const original = String((persisted as Record<string, unknown>)[field] ?? "").trim();
+          finalPayload[field] = local || original || null;
+        }
         finalPayload.compilato_da_cliente = true;
         finalPayload.stato = "completato";
       }
@@ -1988,7 +1995,7 @@ invia_altra_email: !!form.invia_altra_email,
             "dichiarante_luogo_nascita", "dichiarante_data_nascita",
             "dichiarante_indirizzo_residenza", "dichiarante_citta_residenza",
             "dichiarante_cap_residenza", "dichiarante_nazionalita",
-          ].map((field) => [field, persisted[field] ?? ""])),
+          ].map((field) => [field, finalPayload[field] ?? ""])),
           compilato_da_cliente: true,
           stato: "completato",
         }));
