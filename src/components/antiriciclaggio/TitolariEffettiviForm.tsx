@@ -558,6 +558,37 @@ const { data, error } = await query.maybeSingle();
 
     try {
       const normalizedRows = validation.normalizedRows;
+      if (publicMode) {
+        const id = normalizeId(av4_id);
+        if (!publicToken || !id) throw new Error("Link AV4 pubblico non valido.");
+        const response = await fetch("/api/public/av4/titolari", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            token: publicToken,
+            av4_id: id,
+            sezione,
+            rows: normalizedRows,
+          }),
+        });
+        const result = await response.json();
+        if (!response.ok || !result?.ok) {
+          throw new Error(result?.error || "Errore salvataggio titolari.");
+        }
+        const saved = Array.isArray(result.rows) ? result.rows : [];
+        if (saved.length !== normalizedRows.length) {
+          throw new Error("Numero titolari registrati non corrispondente.");
+        }
+        const verifyParams = new URLSearchParams({ token: publicToken, av4_id: id, sezione });
+        const checkResponse = await fetch("/api/public/av4/titolari?" + verifyParams.toString(), { cache: "no-store" });
+        const checked = await checkResponse.json();
+        if (!checkResponse.ok || !Array.isArray(checked.rows) || checked.rows.length !== normalizedRows.length) {
+          throw new Error("Verifica titolari non riuscita. Riprovare il salvataggio.");
+        }
+        setRighe(checked.rows);
+        alert("Titolari salvati e verificati nel database.");
+        return;
+      }
     const rowsWithSoggettoId: RigaTitolare[] = [];
 
 for (const r of normalizedRows) {
