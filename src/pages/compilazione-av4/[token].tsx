@@ -278,6 +278,7 @@ export default function PublicAV4Page() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [verified, setVerified] = useState(false);
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [disabledLink, setDisabledLink] = useState(false);
@@ -366,6 +367,7 @@ export default function PublicAV4Page() {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
 
+    setVerified(false);
     setForm((prev) => {
       const next = {
         ...prev,
@@ -612,7 +614,7 @@ async function handleUploadSignedPdf(
     }
   }
 
-  async function handleSubmit() {
+  async function handleSubmit(action: "save" | "close") {
     if (!form.id) {
       alert("AV4 non trovato.");
       return;
@@ -702,13 +704,20 @@ async function handleUploadSignedPdf(
       const response = await fetch("/api/av4/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, av4_id: form.id, payload }),
+        body: JSON.stringify({ token, av4_id: form.id, payload, action }),
       });
       const result = await response.json();
       if (!response.ok || !result?.ok) {
         throw new Error(result?.error || "Salvataggio AV4 non confermato.");
       }
 
+      if (!result?.verified || result?.av4_id !== form.id) throw new Error("Verifica salvataggio non confermata.");
+      if (action === "save") {
+        setVerified(true);
+        alert("Dati salvati e verificati nel database. Ora puoi chiudere il link.");
+        return;
+      }
+      if (!result?.linkClosed) throw new Error("Chiusura del link non confermata.");
       alert("AV4 completato correttamente. Il link non è più riutilizzabile.");
       setNotFound(true);
       return;
@@ -1486,11 +1495,19 @@ async function handleUploadSignedPdf(
 
                       <button
                         type="button"
-                        onClick={handleSubmit}
+                        onClick={() => handleSubmit("save")}
                         disabled={saving || alreadySubmitted}
                         className="inline-flex h-9 w-40 items-center justify-center rounded-md border border-sky-700 bg-sky-700 px-3 text-center text-sm font-semibold leading-tight text-white shadow-sm transition-colors hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        {saving ? "Salvataggio..." : "Salva e chiudi"}
+                        {saving ? "Verifica..." : "Salva e verifica"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSubmit("close")}
+                        disabled={saving || alreadySubmitted || !verified}
+                        className="inline-flex h-9 w-40 items-center justify-center rounded-md border border-sky-700 bg-sky-700 px-3 text-center text-sm font-semibold leading-tight text-white shadow-sm transition-colors hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Chiudi link
                       </button>
                     </div>
                   </div>
