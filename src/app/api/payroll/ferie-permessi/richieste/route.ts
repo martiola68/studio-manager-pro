@@ -151,8 +151,8 @@ export async function POST(request: Request) {
     let extraMinutes: number | null = null;
     if (tipoRichiesta === 'extra') {
       if (!['ST', 'LS'].includes(tipoPermesso || '') || !oraRichiesta || !oraFineExtra ||
-          !/^([01]\\d|2[0-3]):[0-5]\\d$/.test(oraRichiesta) ||
-          !/^([01]\\d|2[0-3]):[0-5]\\d$/.test(oraFineExtra)) {
+          !/^([01]\d|2[0-3]):[0-5]\d$/.test(oraRichiesta) ||
+          !/^([01]\d|2[0-3]):[0-5]\d$/.test(oraFineExtra)) {
         return NextResponse.json({ success: false, error: 'Codice ST/LS e orari inizio/fine obbligatori.' }, { status: 400 });
       }
       const minutes = (v: string) => Number(v.slice(0, 2)) * 60 + Number(v.slice(3, 5));
