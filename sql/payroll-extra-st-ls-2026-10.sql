@@ -19,6 +19,19 @@ ALTER TABLE public.tbferie_permessi_richieste
   ADD CONSTRAINT tbferie_permessi_tipo_richiesta_extra_chk
   CHECK (tipo_richiesta IN ('ferie', 'permesso', 'extra'));
 
+
+-- Estende anche eventuali vincoli legacy sul tipo_permesso.
+DO $ DECLARE r record; BEGIN
+  FOR r IN SELECT conname, pg_get_constraintdef(oid) AS def
+    FROM pg_constraint WHERE conrelid = 'public.tbferie_permessi_richieste'::regclass AND contype = 'c'
+  LOOP
+    IF r.def ILIKE '%tipo_permesso%' AND r.def ILIKE '%PF%' AND r.def ILIKE '%104%'
+       AND r.def NOT ILIKE '%ST%' THEN
+      EXECUTE format('ALTER TABLE public.tbferie_permessi_richieste DROP CONSTRAINT %I', r.conname);
+    END IF;
+  END LOOP;
+END $;
+
 -- Richieste extra con codice e orario completo, in step di 15 minuti.
 ALTER TABLE public.tbferie_permessi_richieste
   ADD CONSTRAINT tbferie_permessi_extra_valid_chk CHECK (
