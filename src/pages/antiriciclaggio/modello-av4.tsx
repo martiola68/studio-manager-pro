@@ -115,6 +115,7 @@ microsoft_connection_id: "",
   invia_altra_email: false,
   email_destinatario_alternativa: "",
   amm_no_associato: false,
+  compilato_da_cliente: false,
   
   dichiarante_nome_cognome: "",
   dichiarante_codice_fiscale: "",
