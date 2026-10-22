@@ -355,7 +355,7 @@ export default function ModelloAV4() {
   }
 
  function clearRappresentanteFields() {
- setForm((prev) => ({
+ setForm((prev) => prev.amm_no_associato ? prev : ({
   ...prev,
   amm_no_associato: false,
   soggetto_cliente_id: "",
@@ -818,6 +818,10 @@ async function importaAmministratoreDaCliente() {
         resolvedPraticaId,
         resolvedSocietaId
       ),
+       ...(prev.amm_no_associato ? {
+         amm_no_associato: true,
+         ...Object.fromEntries(["dichiarante_nome_cognome","dichiarante_codice_fiscale","dichiarante_luogo_nascita","dichiarante_data_nascita","dichiarante_indirizzo_residenza","dichiarante_citta_residenza","dichiarante_cap_residenza","dichiarante_nazionalita"].map(key => [key, prev[key as keyof typeof prev]])),
+       } : {}),
       studio_id: resolvedStudioId || prev.studio_id || "",
       pratica_id: resolvedPraticaId || prev.pratica_id || "",
       societa_id: resolvedSocietaId || prev.societa_id || "",
@@ -1507,6 +1511,16 @@ if (form.invia_altra_email && !form.email_destinatario_alternativa.trim()) {
             ? crypto.randomUUID()
             : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
+    const { data: existingDeclarant, error: declarantError } = await supabase
+      .from("tbAV4")
+      .select("dichiarante_nome_cognome,dichiarante_codice_fiscale,dichiarante_luogo_nascita,dichiarante_data_nascita,dichiarante_indirizzo_residenza,dichiarante_citta_residenza,dichiarante_cap_residenza,dichiarante_nazionalita")
+      .eq("id", av4Id)
+      .single();
+    if (declarantError || !existingDeclarant) {
+      alert("Impossibile verificare i dati anagrafici salvati.");
+      return;
+    }
+
     const updatePayload: any = {
   public_token: token,
 
@@ -1517,14 +1531,14 @@ amm_no_associato: !!form.amm_no_associato,
 
         // Il modulo pubblico deve rispecchiare i campi visibili al momento dell'invio.
         // I campi lasciati vuoti vanno azzerati, senza riutilizzare dati precedenti.
-        dichiarante_nome_cognome: form.dichiarante_nome_cognome?.trim() || null,
-        dichiarante_codice_fiscale: form.dichiarante_codice_fiscale?.trim() || null,
-        dichiarante_luogo_nascita: form.dichiarante_luogo_nascita?.trim() || null,
-        dichiarante_data_nascita: form.dichiarante_data_nascita || null,
-        dichiarante_indirizzo_residenza: form.dichiarante_indirizzo_residenza?.trim() || null,
-        dichiarante_citta_residenza: form.dichiarante_citta_residenza?.trim() || null,
-        dichiarante_cap_residenza: form.dichiarante_cap_residenza?.trim() || null,
-        dichiarante_nazionalita: form.dichiarante_nazionalita?.trim() || null,
+        dichiarante_nome_cognome: form.dichiarante_nome_cognome?.trim() || existingDeclarant.dichiarante_nome_cognome || null,
+        dichiarante_codice_fiscale: form.dichiarante_codice_fiscale?.trim() || existingDeclarant.dichiarante_codice_fiscale || null,
+        dichiarante_luogo_nascita: form.dichiarante_luogo_nascita?.trim() || existingDeclarant.dichiarante_luogo_nascita || null,
+        dichiarante_data_nascita: form.dichiarante_data_nascita || existingDeclarant.dichiarante_data_nascita || null,
+        dichiarante_indirizzo_residenza: form.dichiarante_indirizzo_residenza?.trim() || existingDeclarant.dichiarante_indirizzo_residenza || null,
+        dichiarante_citta_residenza: form.dichiarante_citta_residenza?.trim() || existingDeclarant.dichiarante_citta_residenza || null,
+        dichiarante_cap_residenza: form.dichiarante_cap_residenza?.trim() || existingDeclarant.dichiarante_cap_residenza || null,
+        dichiarante_nazionalita: form.dichiarante_nazionalita?.trim() || existingDeclarant.dichiarante_nazionalita || null,
 
         
         invia_altra_email: !!form.invia_altra_email,
