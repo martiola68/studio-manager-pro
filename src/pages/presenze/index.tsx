@@ -147,9 +147,9 @@ const PRESENCE_COLORS: Record<string, string> = {
 // Unica classificazione per tutti i codici attivi, inclusi quelli a quarti d'ora.
 function getPresenceCategory(code: string): string {
   const value = String(code ?? '').trim();
-  if (/^PF\\d+(?:[.,]\\d+)?$/i.test(value)) return 'pf';
-  if (/^P\\d+(?:[.,]\\d+)?\\.104$/i.test(value)) return '104';
-  if (/^P\\d+(?:[.,]\\d+)?$/i.test(value)) return 'p';
+  if (/^PF\d+(?:[.,]\d+)?$/i.test(value)) return 'pf';
+  if (/^P\d+(?:[.,]\d+)?\.104$/i.test(value)) return '104';
+  if (/^P\d+(?:[.,]\d+)?$/i.test(value)) return 'p';
   if (value === 'ST' || value === 'LS') return value.toLowerCase();
   return value;
 }
