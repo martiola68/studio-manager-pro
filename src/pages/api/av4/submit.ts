@@ -41,7 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ...answers
     } = payload;
     const { data: updated, error: updateError } = await db.from("tbAV4")
-      .update({ ...answers, ...values })
+      .update({ ...answers, ...values, amm_no_associato: payload.amm_no_associato === true })
       .eq("id", av4_id).eq("public_token", token).eq("public_enabled", true)
       .select(FIELDS.join(","));
     if (updateError) throw updateError;
