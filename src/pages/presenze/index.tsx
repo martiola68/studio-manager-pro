@@ -657,13 +657,19 @@ const days = useMemo<DayInfo[]>(() => {
         `)
         .eq('studio_id', typedUser.studio_id)
         .lte('data_inizio', endDate)
+        .gte('data_inizio', (() => { const d = new Date(startDate + 'T12:00:00'); d.setDate(d.getDate() - 1); return toDateKey(d.getFullYear(), d.getMonth(), d.getDate()); })())
         .in('utente_id', employeeIds)
         .in('stato', ['inviata', 'approvata']);
 
       if (richiesteError) throw richiesteError;
 
       const loadedRichieste = ((richiesteData ?? []) as RichiestaFeriePermessi[]).filter(
-        (richiesta) => (richiesta.data_fine || richiesta.data_inizio) >= startDate,
+        (richiesta) => (richiesta.data_fine || richiesta.data_inizio) >= startDate ||
+          (richiesta.tipo_richiesta === 'extra' && (() => {
+            const previous = new Date(startDate + 'T12:00:00');
+            previous.setDate(previous.getDate() - 1);
+            return richiesta.data_inizio === toDateKey(previous.getFullYear(), previous.getMonth(), previous.getDate());
+          })()),
       );
       setRichiesteFeriePermessi(loadedRichieste);
 
