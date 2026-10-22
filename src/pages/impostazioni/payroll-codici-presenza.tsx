@@ -4,12 +4,12 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { getSupabaseClient } from '@/lib/supabase/client';
 
-type TipoCodice = 'presenza' | 'assenza' | 'permesso' | 'festivo';
+type TipoCodice = 'presenza' | 'assenza' | 'permesso' | 'festivo' | 'extra';
 type CodicePresenza = { codice: string; descrizione: string; tipo: TipoCodice; ordine: number; attivo: boolean; created_at?: string };
 type FormState = { originalCodice: string | null; codice: string; descrizione: string; tipo: TipoCodice; ordine: string; attivo: boolean };
 
 const emptyForm: FormState = { originalCodice: null, codice: '', descrizione: '', tipo: 'presenza', ordine: '0', attivo: true };
-const tipiCodice: TipoCodice[] = ['presenza', 'assenza', 'permesso', 'festivo'];
+const tipiCodice: TipoCodice[] = ['presenza', 'assenza', 'permesso', 'festivo', 'extra'];
 
 function Button({ children, className = '', variant, disabled, ...props }: any) {
   return <button className={`rounded-md border px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 ${variant === 'outline' ? 'bg-white hover:bg-gray-50' : variant === 'destructive' ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-blue-600 text-white hover:bg-blue-700'} ${className}`} disabled={disabled} {...props}>{children}</button>;
@@ -18,7 +18,7 @@ function Card({ children, className = '' }: any) { return <div className={`round
 function CardHeader({ children, className = '' }: any) { return <div className={`p-6 ${className}`}>{children}</div>; }
 function CardTitle({ children, className = '' }: any) { return <h3 className={`font-semibold ${className}`}>{children}</h3>; }
 function CardContent({ children, className = '' }: any) { return <div className={`p-6 pt-0 ${className}`}>{children}</div>; }
-function getTipoBadgeClass(tipo: TipoCodice) { if (tipo === 'presenza') return 'bg-green-100 text-green-800 border-green-200'; if (tipo === 'assenza') return 'bg-red-100 text-red-800 border-red-200'; if (tipo === 'permesso') return 'bg-orange-100 text-orange-800 border-orange-200'; return 'bg-gray-100 text-gray-700 border-gray-200'; }
+function getTipoBadgeClass(tipo: TipoCodice) { if (tipo === 'presenza') return 'bg-green-100 text-green-800 border-green-200'; if (tipo === 'assenza') return 'bg-red-100 text-red-800 border-red-200'; if (tipo === 'permesso') return 'bg-orange-100 text-orange-800 border-orange-200'; if (tipo === 'extra') return 'bg-indigo-100 text-indigo-800 border-indigo-200'; return 'bg-gray-100 text-gray-700 border-gray-200'; }
 
 export default function PayrollCodiciPresenzaPage() {
   const [items, setItems] = useState<CodicePresenza[]>([]);
