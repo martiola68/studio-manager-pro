@@ -917,7 +917,7 @@ const validateRequiredWorkdays = () => {
 
       const overLimitEmployee = dipendenti.find((dipendente) => {
         const summary = getSummaryForEmployee(dipendente.utente_id);
-      const approvedExtra = (kind: 'ST' | 'LS') => richiesteFeriePermessi.filter(r => r.utente_id === dipendente.utente_id && r.tipo_richiesta === 'extra' && r.stato === 'approvata' && r.tipo_permesso === kind).reduce((sum, r) => sum + Number(r.ore || 0), 0);
+
         return summary.permessi104Ore > 24;
       });
 
@@ -1477,6 +1477,7 @@ ${dipendentiXml}
     
     {dipendenti.map((dipendente) => {
       const summary = getSummaryForEmployee(dipendente.utente_id);
+      const approvedExtra = (kind: 'ST' | 'LS') => richiesteFeriePermessi.filter(r => r.utente_id === dipendente.utente_id && r.tipo_richiesta === 'extra' && r.stato === 'approvata' && r.tipo_permesso === kind).reduce((sum, r) => sum + Number(r.ore || 0), 0);
 
       return (
         <div key={dipendente.utente_id} className="contents">
