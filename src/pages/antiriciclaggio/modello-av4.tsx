@@ -405,6 +405,34 @@ async function hydrateClienteAndRappresentante(clienteId: string) {
     }
 
     setClienteLabel(buildClienteLabel(clienteRow));
+    // Per il cliente persona fisica il dichiarante coincide con il cliente:
+    // non esiste un organo sociale da cercare.
+    const tipoCliente = String(clienteRow.tipo_cliente || "")
+      .trim()
+      .toUpperCase()
+      .replace(/[ _-]+/g, "");
+    if (tipoCliente === "PERSONAFISICA") {
+      const nominativoCliente =
+        [clienteRow.cognome, clienteRow.nome].filter(Boolean).join(" ").trim() ||
+        buildClienteLabel(clienteRow);
+      setForm((prev) => ({
+        ...prev,
+        cliente_id: String(clienteId),
+        soggetto_cliente_id: String(clienteId),
+        microsoft_connection_id: "",
+        amm_no_associato: false,
+        dichiarante_nome_cognome: nominativoCliente,
+        dichiarante_codice_fiscale: clienteRow.codice_fiscale || "",
+        dichiarante_luogo_nascita: clienteRow.luogo_nascita || "",
+        dichiarante_data_nascita: normalizeDateForInput(clienteRow.data_nascita),
+        dichiarante_indirizzo_residenza: clienteRow.indirizzo || "",
+        dichiarante_citta_residenza: clienteRow.citta || "",
+        dichiarante_cap_residenza: clienteRow.cap || "",
+        dichiarante_nazionalita: clienteRow.nazionalita || "",
+      }));
+      return;
+    }
+
 
     /*
      * 2. Il rappresentante non viene più ricavato da
