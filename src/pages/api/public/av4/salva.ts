@@ -95,7 +95,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const submittedAt = new Date().toISOString();
 
     const updatePayload = {
-      ...(av4.amm_no_associato === true ? {
+      ...((av4.amm_no_associato === true || payload.amm_no_associato === true) ? {
         dichiarante_nome_cognome: nullableText(payload.dichiarante_nome_cognome),
         dichiarante_codice_fiscale: nullableText(payload.dichiarante_codice_fiscale),
         dichiarante_luogo_nascita: nullableText(payload.dichiarante_luogo_nascita),
@@ -105,6 +105,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         dichiarante_cap_residenza: nullableText(payload.dichiarante_cap_residenza),
         dichiarante_nazionalita: nullableText(payload.dichiarante_nazionalita),
       } : {}),
+      amm_no_associato: av4.amm_no_associato === true || payload.amm_no_associato === true,
       natura_prestazione: nullableText(payload.natura_prestazione),
 
       domanda1: bool(payload.domanda1),
