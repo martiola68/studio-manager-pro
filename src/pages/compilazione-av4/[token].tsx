@@ -601,13 +601,11 @@ async function handleUploadSignedPdf(
     }
   }
 
-  async function handleSubmit(action: "save" | "close") {
+  async function handleSubmit() {
     if (!form.id) {
       alert("AV4 non trovato.");
       return;
     }
-
-    const supabase = getSupabaseClient() as any;
 
     try {
       setSaving(true);
@@ -686,25 +684,23 @@ async function handleUploadSignedPdf(
         "dichiarante_nazionalita",
       ] as const;
 
-      // Il modulo pubblico salva tramite API server-side con verifica finale.
-      // Nessun aggiornamento diretto di tbAV4 dal browser.
-      const response = await fetch("/api/av4/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, av4_id: form.id, payload, action }),
-      });
-      const result = await response.json();
-      if (!response.ok || !result?.ok) {
-        throw new Error(result?.error || "Salvataggio AV4 non confermato.");
-      }
-
-      if (!result?.verified || result?.av4_id !== form.id) throw new Error("Verifica salvataggio non confermata.");
-      if (action === "save") {
-        setVerified(true);
-        alert("Dati salvati e verificati nel database. Ora puoi chiudere il link.");
-        return;
-      }
-      if (!result?.linkClosed) throw new Error("Chiusura del link non confermata.");
+      // Salva e verifica prima di tentare la chiusura del link.
+      const submit = async (action: "save" | "close") => {
+        const response = await fetch("/api/av4/submit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token, av4_id: form.id, payload, action }),
+        });
+        const result = await response.json();
+        if (!response.ok || !result?.ok || !result?.verified || result?.av4_id !== form.id) {
+          throw new Error(result?.error || "Verifica salvataggio non confermata.");
+        }
+        return result;
+      };
+      const saved = await submit("save");
+      if (saved.linkClosed) throw new Error("Stato del link inatteso dopo il salvataggio.");
+      const closed = await submit("close");
+      if (!closed.linkClosed) throw new Error("Chiusura del link non confermata.");
       alert("AV4 completato correttamente. Il link non è più riutilizzabile.");
       setNotFound(true);
       return;
@@ -1488,19 +1484,11 @@ async function handleUploadSignedPdf(
 
                       <button
                         type="button"
-                        onClick={() => handleSubmit("save")}
+                        onClick={() => handleSubmit()}
                         disabled={saving || alreadySubmitted}
                         className="inline-flex h-9 w-40 items-center justify-center rounded-md border border-sky-700 bg-sky-700 px-3 text-center text-sm font-semibold leading-tight text-white shadow-sm transition-colors hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        {saving ? "Verifica..." : "Salva e verifica"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleSubmit("close")}
-                        disabled={saving || alreadySubmitted || !verified}
-                        className="inline-flex h-9 w-40 items-center justify-center rounded-md border border-sky-700 bg-sky-700 px-3 text-center text-sm font-semibold leading-tight text-white shadow-sm transition-colors hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        Chiudi link
+                        {saving ? "Salvataggio..." : "Salva e chiudi"}
                       </button>
                     </div>
                   </div>
