@@ -13,8 +13,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return res.status(500).json({ ok: false, error: "Configurazione server AV4 mancante." });
-  const { token, av4_id, payload } = req.body ?? {};
-  if (typeof token !== "string" || !token || !av4_id || !payload || typeof payload !== "object" || Array.isArray(payload)) {
+  const { token, av4_id, payload, action } = req.body ?? {};
+  if (!["save", "close"].includes(action) || typeof token !== "string" || !token || !av4_id || !payload || typeof payload !== "object" || Array.isArray(payload)) {
     return res.status(400).json({ ok: false, error: "Richiesta AV4 non valida." });
   }
   const db = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
@@ -40,32 +40,45 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       studio_id: _studio, cliente_id: _client, pratica_id: _practice,
       ...answers
     } = payload;
-    const { data: updated, error: updateError } = await db.from("tbAV4")
-      .update({ ...answers, ...values, amm_no_associato: false })
-      .eq("id", av4_id).eq("public_token", token).eq("public_enabled", true)
-      .select(FIELDS.join(","));
-    if (updateError) throw updateError;
-    if (!updated || updated.length !== 1) return res.status(409).json({ ok: false, error: "Salvataggio non confermato." });
-    // Conferma ogni campo, inclusa la città, prima di chiudere il link.
-    const check = (row: Record<string, unknown>) => FIELDS.every(field =>
-      String(row[field] ?? "").trim() === String(values[field] ?? "").trim()
-    );
-    if (!check(updated[0] as unknown as Record<string, unknown>)) return res.status(409).json({ ok: false, error: "Anagrafica non salvata. Link ancora attivo." });
-    const { data: completed, error: completeError } = await db.from("tbAV4")
-      .update({ compilato_da_cliente: true, public_submitted_at: new Date().toISOString(), public_enabled: false })
-      .eq("id", av4_id).eq("public_token", token).eq("public_enabled", true)
-      .select("id");
-    if (completeError) throw completeError;
-    if (!completed || completed.length !== 1) return res.status(409).json({ ok: false, error: "Dati salvati, chiusura non confermata." });
-    const { data: final, error: finalError } = await db.from("tbAV4")
-      .select(FIELDS.join(",")).eq("id", av4_id).eq("public_token", token).maybeSingle();
-    if (finalError) throw finalError;
-    if (!final || !check(final as unknown as Record<string, unknown>)) {
-      await db.from("tbAV4").update({ public_enabled: true, compilato_da_cliente: false, public_submitted_at: null })
-        .eq("id", av4_id).eq("public_token", token);
-      return res.status(409).json({ ok: false, error: "Verifica finale anagrafica fallita. Contattare lo studio." });
+    // Fase 1: scrivi soltanto, senza chiudere il collegamento.
+    if (action === "save") {
+      const { data: updated, error: updateError } = await db.from("tbAV4")
+        .update({ ...answers, ...values, amm_no_associato: false })
+        .eq("id", av4_id).eq("public_token", token).eq("public_enabled", true)
+        .select("id");
+      if (updateError) throw updateError;
+      if (updated?.length !== 1) return res.status(409).json({ ok: false, error: "Salvataggio non confermato." });
     }
-    return res.status(200).json({ ok: true, av4_id, saved_city: values.dichiarante_citta_residenza });
+    // Fase 2: una lettura autonoma dal database verifica i dati reali.
+    const { data: stored, error: readError } = await db.from("tbAV4")
+      .select(FIELDS.join(",")).eq("id", av4_id).eq("public_token", token)
+      .eq("public_enabled", true).maybeSingle();
+    if (readError) throw readError;
+    const check = (row: Record<string, unknown>) => FIELDS.every(field =>
+      String(row[field] ?? "").trim().slice(0, field === "dichiarante_data_nascita" ? 10 : undefined) ===
+      String(values[field] ?? "").trim().slice(0, field === "dichiarante_data_nascita" ? 10 : undefined)
+    );
+    if (!stored || !check(stored as unknown as Record<string, unknown>)) {
+      return res.status(409).json({ ok: false, error: "Verifica dei dati salvati fallita. Il link resta aperto." });
+    }
+    if (action === "save") {
+      return res.status(200).json({ ok: true, verified: true, linkClosed: false, av4_id });
+    }
+    // Fase 3: chiudi solo dopo una richiesta distinta e una verifica positiva.
+    const { data: closed, error: closeError } = await db.from("tbAV4")
+      .update({ compilato_da_cliente: true, public_submitted_at: new Date().toISOString(), public_enabled: false })
+      .eq("id", av4_id).eq("public_token", token).eq("public_enabled", true).select("id");
+    if (closeError) throw closeError;
+    if (closed?.length !== 1) return res.status(409).json({ ok: false, error: "Chiusura non confermata." });
+    const { data: final, error: finalError } = await db.from("tbAV4")
+      .select(["public_enabled", "compilato_da_cliente", ...FIELDS].join(","))
+      .eq("id", av4_id).eq("public_token", token).maybeSingle();
+    if (finalError) throw finalError;
+    const finalRow = final as unknown as Record<string, unknown> | null;
+    if (!finalRow || finalRow.public_enabled !== false || finalRow.compilato_da_cliente !== true || !check(finalRow)) {
+      return res.status(409).json({ ok: false, error: "Chiusura non verificata. Contattare lo studio." });
+    }
+    return res.status(200).json({ ok: true, verified: true, linkClosed: true, av4_id });
   } catch (err) {
     console.error("AV4 public submit failed:", err);
     return res.status(500).json({ ok: false, error: "Errore server nel salvataggio AV4. Link non confermato." });
