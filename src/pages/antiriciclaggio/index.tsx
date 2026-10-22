@@ -558,12 +558,25 @@ export default function AntiriciclaggioPage() {
     return () => router.events.off("routeChangeStart", handleRouteChangeStart);
   }, [router.events]);
 
+  const [letteraCliente, setLetteraCliente] = useState<string>("Tutte");
+  const lettereAlfabeto = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
+  const lettereDisponibili = useMemo(() => {
+    const nomi = rows
+      .filter((row) => row.societa_id === societaFilter)
+      .map((row) => String(getCliente(row)?.ragione_sociale || "").trim().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toUpperCase());
+    return new Set(nomi.map((nome) => nome.charAt(0)).filter(Boolean));
+  }, [rows, societaFilter]);
+
   const filteredRows = useMemo(() => {
     if (!societaFilter || !canAccessAntiriciclaggio) return [];
     const ricerca = ricercaCliente.trim().toLocaleLowerCase("it");
     return rows
       .filter((row) => {
         if (row.societa_id !== societaFilter) return false;
+        const nomeCliente = String(getCliente(row)?.ragione_sociale || "").trim()
+          .normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toUpperCase();
+        if (letteraCliente !== "Tutte" && !nomeCliente.startsWith(letteraCliente)) return false;
         if (!ricerca) return true;
         const cliente = getCliente(row);
         const valori = [cliente?.ragione_sociale, cliente?.cod_cliente, cliente?.codice_fiscale]
@@ -717,6 +730,28 @@ export default function AntiriciclaggioPage() {
             placeholder="Cerca nominativo, codice cliente o C.F...."
             className="w-full rounded-md border bg-white px-3 py-2 outline-none focus:border-blue-500"
           />
+        </div>
+      )}
+
+      {canAccessAntiriciclaggio && (
+        <div className="mb-4 rounded-md border border-slate-200 bg-white px-3 py-2">
+          <div className="flex flex-wrap items-center justify-center gap-1">
+            {["Tutte", ...lettereAlfabeto].map((lettera) => {
+              const attiva = letteraCliente === lettera;
+              const disponibile = lettera === "Tutte" || lettereDisponibili.has(lettera);
+              return (
+                <button
+                  key={lettera}
+                  type="button"
+                  disabled={!disponibile}
+                  onClick={() => setLetteraCliente(lettera)}
+                  className={`min-w-[30px] rounded px-2 py-1 text-xs font-semibold transition-colors ${attiva ? "bg-sky-700 text-white" : disponibile ? "bg-slate-50 text-slate-700 hover:bg-sky-100" : "cursor-not-allowed text-slate-300"}`}
+                >
+                  {lettera}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
