@@ -41,11 +41,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ...answers
     } = payload;
     const { data: updated, error: updateError } = await db.from("tbAV4")
-      .update({ ...answers, ...values, amm_no_associato: payload.amm_no_associato === true })
+      .update({ ...answers, ...values, amm_no_associato: false })
       .eq("id", av4_id).eq("public_token", token).eq("public_enabled", true)
       .select(FIELDS.join(","));
     if (updateError) throw updateError;
     if (!updated || updated.length !== 1) return res.status(409).json({ ok: false, error: "Salvataggio non confermato." });
+    // Conferma ogni campo, inclusa la città, prima di chiudere il link.
     const check = (row: Record<string, unknown>) => FIELDS.every(field =>
       String(row[field] ?? "").trim() === String(values[field] ?? "").trim()
     );
