@@ -219,7 +219,7 @@ function isPermessoCode(code: string) {
 }
 
 function isPermessoPfCode(code: string) {
-  return /^PF\d+(\.\d+)?$/.test(code);
+  return /^PF\d+(?:[.,]\d+)?$/i.test(String(code ?? '').trim());
 }
 
 function isPermesso104Code(code: string) {
@@ -247,7 +247,7 @@ function buildQuarterHourCodes(suffix = '') {
 
 function getCellClass(code: string) {
   if (isPermesso104Code(code)) return 'bg-pink-100 text-pink-800 border-pink-200';
-  if (isPermessoPfCode(code)) return 'bg-amber-100 text-amber-900 border-amber-200';
+  if (isPermessoPfCode(code)) return 'bg-amber-200 text-amber-950 border-amber-400';
   if (isPermessoCode(code)) return 'bg-orange-100 text-orange-800 border-orange-200';
   return PRESENCE_COLORS[code] ?? 'bg-white text-gray-800 border-gray-200';
 }
