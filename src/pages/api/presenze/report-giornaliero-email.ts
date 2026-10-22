@@ -166,6 +166,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (actualError) throw actualError;
       if (gruppiSmartError) throw gruppiSmartError;
 
+      const { data: richiestePermesso, error: richiestePermessoError } = await supabaseAdmin
+        .from("tbferie_permessi_richieste")
+        .select("utente_id,tipo_richiesta,tipo_permesso,ora_richiesta,ore,stato")
+        .eq("studio_id", config.studio_id)
+        .eq("tipo_richiesta", "permesso")
+        .eq("stato", "approvata")
+        .lte("data_inizio", date)
+        .gte("data_fine", date);
+      if (richiestePermessoError) console.error("Report presenze: orari permessi non disponibili", richiestePermessoError);
+      const permessiApprovati = new Map<string, { ora: string; ore: number }>();
+      for (const richiesta of richiestePermesso || []) {
+        const ora = String(richiesta.ora_richiesta || "").slice(0, 5);
+        if (!/^\\d{2}:\\d{2}$/.test(ora)) continue;
+        permessiApprovati.set(String(richiesta.utente_id), { ora, ore: Number(richiesta.ore || 0) });
+      }
+
       const smartMemberIds = new Set<string>();
       for (const gruppo of gruppiSmart || []) {
         for (const membro of gruppo.utenti || []) {
@@ -278,8 +294,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               : codice === "Ps"
                 ? "Smart working"
                 : codice),
-          oraPermesso: oraDaNotePermesso(r.note),
-          orePermesso: oreDaCodicePermesso(codice),
+          oraPermesso: permessiApprovati.get(userId)?.ora || oraDaNotePermesso(r.note),
+          orePermesso: permessiApprovati.get(userId)?.ore || oreDaCodicePermesso(codice),
         });
       }
 
@@ -311,7 +327,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           permessi: [],
         };
 
-        const isPermesso = /^P\d+(?:\.\d+)?(?:\.104)?$/.test(s.codice) ||
+        const isPermesso = /^PF?\d+(?:\.\d+)?(?:\.104)?$/.test(s.codice) || /^AL[12]$/.test(s.codice) ||
           String(s.descrizione || "").toLowerCase().includes("permesso");
         const isAssenza = s.codice === "F" || s.codice === "M" ||
           ["ferie", "malattia", "assenza"].some((x) =>
