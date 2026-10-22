@@ -65,7 +65,7 @@ const patches = [
   "scripts/fix-pratiche-documenti-visura-cleanup.mjs",
   "scripts/patch-av4-public.mjs",
   "scripts/patch-av4-print-professionale.mjs",
-  "scripts/fix-av4-public-validation-display.mjs",
+  // AV4 public validation is maintained directly in the page; do not overwrite it at build time.
   "scripts/patch-av4-public-print-identica.mjs",
   "scripts/oneoff-riallineamento-distribuzione-utili.mjs",
 ];
