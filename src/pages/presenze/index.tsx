@@ -639,29 +639,27 @@ const days = useMemo<DayInfo[]>(() => {
         return;
       }
 
-      const { data: richiesteData, error: richiesteError } = await supabase
+      // Compatibilita con il database precedente: l'assenza della colonna
+      // degli extra NON deve impedire il caricamento delle presenze esistenti.
+      const queryRichieste = (withExtra: boolean) => supabase
         .from('tbferie_permessi_richieste')
-        .select(`
-          id,
-          studio_id,
-          utente_id,
-          tipo_richiesta,
-          tipo_permesso,
-          ora_richiesta,
-          ora_fine_extra,
-          data_inizio,
-          data_fine,
-          giorni,
-          ore,
-          stato
-        `)
+        .select(withExtra
+          ? 'id,studio_id,utente_id,tipo_richiesta,tipo_permesso,ora_richiesta,ora_fine_extra,data_inizio,data_fine,giorni,ore,stato'
+          : 'id,studio_id,utente_id,tipo_richiesta,tipo_permesso,ora_richiesta,data_inizio,data_fine,giorni,ore,stato')
         .eq('studio_id', typedUser.studio_id)
         .lte('data_inizio', endDate)
-        .gte('data_inizio', (() => { const d = new Date(startDate + 'T12:00:00'); d.setDate(d.getDate() - 1); return toDateKey(d.getFullYear(), d.getMonth(), d.getDate()); })())
         .in('utente_id', employeeIds)
         .in('stato', ['inviata', 'approvata']);
-
-      if (richiesteError) throw richiesteError;
+      let { data: richiesteData, error: richiesteError } = await queryRichieste(true);
+      if (richiesteError && /ora_fine_extra|column|schema cache/i.test(richiesteError.message || '')) {
+        const fallback = await queryRichieste(false);
+        richiesteData = fallback.data as typeof richiesteData;
+        richiesteError = fallback.error;
+      }
+      if (richiesteError) {
+        console.error('Richieste payroll non disponibili, carico comunque le presenze:', richiesteError);
+        richiesteData = [];
+      }
 
       const loadedRichieste = ((richiesteData ?? []) as RichiestaFeriePermessi[]).filter(
         (richiesta) => (richiesta.data_fine || richiesta.data_inizio) >= startDate ||
