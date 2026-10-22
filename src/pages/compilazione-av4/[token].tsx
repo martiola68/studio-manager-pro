@@ -626,6 +626,7 @@ async function handleUploadSignedPdf(
       await validateTitolariPrimaDelSalvataggio();
 
       const payload = {
+        amm_no_associato: !!form.amm_no_associato,
         dichiarante_nome_cognome: form.dichiarante_nome_cognome,
         dichiarante_codice_fiscale: form.dichiarante_codice_fiscale,
         dichiarante_luogo_nascita: form.dichiarante_luogo_nascita,
@@ -810,6 +811,22 @@ async function handleUploadSignedPdf(
                   </p>
 
                   <div className="space-y-6">
+                    <div className="rounded-lg border border-sky-200 bg-sky-50 px-4 py-3">
+                      <label className="flex cursor-pointer items-center gap-3 text-sm font-semibold text-sky-900">
+                        <input
+                          type="checkbox"
+                          checked={form.amm_no_associato}
+                          disabled={alreadySubmitted}
+                          onChange={(event) => setForm((prev) => ({ ...prev, amm_no_associato: event.target.checked }))}
+                          className="h-4 w-4 accent-sky-700"
+                        />
+                        Inserisci amministratore manualmente
+                      </label>
+                      <p className="mt-2 text-xs text-slate-600">
+                        Se l'amministratore non è già presente, seleziona questa opzione e compila i dati anagrafici sottostanti.
+                        I dati inseriti saranno riportati nella dichiarazione AV4.
+                      </p>
+                    </div>
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       <div>
                         <label className="mb-1 block text-sm font-medium">Cognome e nome</label>
