@@ -745,6 +745,13 @@ export default function AntiriciclaggioPage() {
                   type="button"
                   disabled={!disponibile}
                   onClick={() => setLetteraCliente(lettera)}
+                  style={{
+                    backgroundColor: attiva ? "#0369a1" : disponibile ? "#ffffff" : "#e2e8f0",
+                    color: attiva ? "#ffffff" : disponibile ? "#075985" : "#64748b",
+                    borderColor: attiva ? "#075985" : disponibile ? "#7dd3fc" : "#cbd5e1",
+                    opacity: 1,
+                    WebkitTextFillColor: attiva ? "#ffffff" : disponibile ? "#075985" : "#64748b",
+                  }}
                   className={`flex h-9 min-w-0 w-full items-center justify-center rounded-md border px-0 text-[11px] font-bold transition-colors ${attiva ? "border-blue-800 !bg-blue-700 !text-white shadow-sm" : disponibile ? "border-sky-300 bg-white text-sky-800 hover:border-blue-500 hover:bg-sky-100" : "cursor-not-allowed border-slate-200 !bg-slate-200 !text-slate-400"}`}
                 >
                   {lettera}
