@@ -576,39 +576,26 @@ async function handleUploadSignedPdf(
   }
 
   async function validateTitolariPrimaDelSalvataggio() {
-    if (!av4Id) return;
-
-    const supabase = getSupabaseClient() as any;
+    if (!av4Id) throw new Error("AV4 non trovato.");
     const sezioniDaControllare: Array<"domanda7" | "domanda8" | "domanda9"> = [];
-
     if (form.domanda7) sezioniDaControllare.push("domanda7");
     if (form.domanda8) sezioniDaControllare.push("domanda8");
     if (form.domanda9) sezioniDaControllare.push("domanda9");
 
     for (const sezione of sezioniDaControllare) {
-      const { data, error } = await supabase
-        .from("tbAV4_titolari")
-        .select("*")
-        .eq("av4_id", av4Id)
-        .eq("sezione", sezione);
-
-      if (error) {
-        throw new Error(`Errore caricamento titolari ${sezione}.`);
+      const params = new URLSearchParams({ token, av4_id: av4Id, sezione });
+      const response = await fetch(`/api/public/av4/titolari?${params.toString()}`, { cache: "no-store" });
+      const result = await response.json();
+      if (!response.ok || !result?.ok || !Array.isArray(result.rows)) {
+        throw new Error(result?.error || `Errore caricamento titolari ${sezione}.`);
       }
-
-      const titolari = data || [];
-
+      const titolari = result.rows;
       if (!titolari.length) {
         throw new Error(`Inserire e salvare almeno un titolare effettivo per la sezione ${sezione}.`);
       }
-
       for (let i = 0; i < titolari.length; i++) {
-        const titolare = titolari[i];
-
-        if (!titolare?.codice_fiscale || !String(titolare.codice_fiscale).trim()) {
-          throw new Error(
-            `Codice fiscale obbligatorio per il titolare effettivo #${i + 1} della sezione ${sezione}.`
-          );
+        if (!String(titolari[i]?.codice_fiscale ?? "").trim()) {
+          throw new Error(`Codice fiscale obbligatorio per il titolare effettivo #${i + 1} della sezione ${sezione}.`);
         }
       }
     }
