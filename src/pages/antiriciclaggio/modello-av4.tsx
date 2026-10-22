@@ -355,7 +355,7 @@ export default function ModelloAV4() {
   }
 
  function clearRappresentanteFields() {
- setForm((prev) => prev.amm_no_associato ? prev : ({
+ setForm((prev) => ({
   ...prev,
   amm_no_associato: false,
   soggetto_cliente_id: "",
@@ -712,11 +712,6 @@ async function importaAmministratoreDaCliente() {
     return;
   }
 
-  setForm((prev) => ({
-    ...prev,
-    amm_no_associato: false,
-  }));
-
   await hydrateClienteAndRappresentante(clienteId);
 }
  async function prefillFromPraticaOrAV1(
@@ -818,10 +813,7 @@ async function importaAmministratoreDaCliente() {
         resolvedPraticaId,
         resolvedSocietaId
       ),
-       ...(prev.amm_no_associato ? {
-         amm_no_associato: true,
-         ...Object.fromEntries(["dichiarante_nome_cognome","dichiarante_codice_fiscale","dichiarante_luogo_nascita","dichiarante_data_nascita","dichiarante_indirizzo_residenza","dichiarante_citta_residenza","dichiarante_cap_residenza","dichiarante_nazionalita"].map(key => [key, prev[key as keyof typeof prev]])),
-       } : {}),
+
       studio_id: resolvedStudioId || prev.studio_id || "",
       pratica_id: resolvedPraticaId || prev.pratica_id || "",
       societa_id: resolvedSocietaId || prev.societa_id || "",
@@ -831,10 +823,10 @@ async function importaAmministratoreDaCliente() {
     }));
 
     if (resolvedClienteId) {
-      await hydrateClienteAndRappresentante(resolvedClienteId);
+      // Nessuna importazione automatica: il pulsante Importa amministratore
+      // è l'unico punto che può caricare i dati del rappresentante.
     } else {
       setClienteLabel("");
-      clearRappresentanteFields();
     }
   }
 
@@ -964,12 +956,7 @@ async function importaAmministratoreDaCliente() {
     av4IdFromQuery,
   ]);
 
-  useEffect(() => {
-    if (!router.isReady) return;
-    if (router.query.rapp_saved === "1" && form.cliente_id) {
-      void hydrateClienteAndRappresentante(form.cliente_id);
-    }
-  }, [router.isReady, router.query.rapp_saved, form.cliente_id]);
+
 
   useEffect(() => {
     if (form.studio_id) {
@@ -1145,14 +1132,7 @@ function validateBeforeSave() {
     return false;
   }
 
-if (
-  !form.soggetto_cliente_id &&
-  !form.invia_altra_email &&
-  !form.amm_no_associato
-) {
-  alert("Per il cliente selezionato non risulta un rappresentante collegato.");
-  return false;
-}
+
 if (form.invia_altra_email && !form.email_destinatario_alternativa.trim()) {
   alert("Inserisci l'email alternativa a cui inviare l'AV4.");
   return false;
@@ -1511,34 +1491,24 @@ if (form.invia_altra_email && !form.email_destinatario_alternativa.trim()) {
             ? crypto.randomUUID()
             : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-    const { data: existingDeclarant, error: declarantError } = await supabase
-      .from("tbAV4")
-      .select("dichiarante_nome_cognome,dichiarante_codice_fiscale,dichiarante_luogo_nascita,dichiarante_data_nascita,dichiarante_indirizzo_residenza,dichiarante_citta_residenza,dichiarante_cap_residenza,dichiarante_nazionalita")
-      .eq("id", av4Id)
-      .single();
-    if (declarantError || !existingDeclarant) {
-      alert("Impossibile verificare i dati anagrafici salvati.");
-      return;
-    }
-
     const updatePayload: any = {
   public_token: token,
 
 soggetto_cliente_id:
   form.soggetto_cliente_id || null,
 
-amm_no_associato: !!form.amm_no_associato,
+amm_no_associato: false,
 
         // Il modulo pubblico deve rispecchiare i campi visibili al momento dell'invio.
         // I campi lasciati vuoti vanno azzerati, senza riutilizzare dati precedenti.
-        dichiarante_nome_cognome: form.dichiarante_nome_cognome?.trim() || existingDeclarant.dichiarante_nome_cognome || null,
-        dichiarante_codice_fiscale: form.dichiarante_codice_fiscale?.trim() || existingDeclarant.dichiarante_codice_fiscale || null,
-        dichiarante_luogo_nascita: form.dichiarante_luogo_nascita?.trim() || existingDeclarant.dichiarante_luogo_nascita || null,
-        dichiarante_data_nascita: form.dichiarante_data_nascita || existingDeclarant.dichiarante_data_nascita || null,
-        dichiarante_indirizzo_residenza: form.dichiarante_indirizzo_residenza?.trim() || existingDeclarant.dichiarante_indirizzo_residenza || null,
-        dichiarante_citta_residenza: form.dichiarante_citta_residenza?.trim() || existingDeclarant.dichiarante_citta_residenza || null,
-        dichiarante_cap_residenza: form.dichiarante_cap_residenza?.trim() || existingDeclarant.dichiarante_cap_residenza || null,
-        dichiarante_nazionalita: form.dichiarante_nazionalita?.trim() || existingDeclarant.dichiarante_nazionalita || null,
+        dichiarante_nome_cognome: form.dichiarante_nome_cognome?.trim() || null,
+        dichiarante_codice_fiscale: form.dichiarante_codice_fiscale?.trim() || null,
+        dichiarante_luogo_nascita: form.dichiarante_luogo_nascita?.trim() || null,
+        dichiarante_data_nascita: form.dichiarante_data_nascita || null,
+        dichiarante_indirizzo_residenza: form.dichiarante_indirizzo_residenza?.trim() || null,
+        dichiarante_citta_residenza: form.dichiarante_citta_residenza?.trim() || null,
+        dichiarante_cap_residenza: form.dichiarante_cap_residenza?.trim() || null,
+        dichiarante_nazionalita: form.dichiarante_nazionalita?.trim() || null,
 
         
         invia_altra_email: !!form.invia_altra_email,
@@ -1896,7 +1866,7 @@ ${nomeOperatore}
   societa_id: form.societa_id || null,
   av1_id: form.av1_id ? Number(form.av1_id) : null,
 
- amm_no_associato: !!form.amm_no_associato,
+ amm_no_associato: false,
 
  soggetto_cliente_id:
   form.soggetto_cliente_id || null,
@@ -1978,36 +1948,9 @@ invia_altra_email: !!form.invia_altra_email,
     let savedId: string | null = av4Id;
 
     if (av4Id) {
-      // Non cancellare dati già salvati dal cliente con campi vuoti
-      // rimasti in una schermata del gestionale non aggiornata.
-      const { data: existingAv4, error: readError } = await supabase
-        .from("tbAV4")
-        .select("dichiarante_nome_cognome,dichiarante_codice_fiscale,dichiarante_luogo_nascita,dichiarante_data_nascita,dichiarante_indirizzo_residenza,dichiarante_citta_residenza,dichiarante_cap_residenza,dichiarante_nazionalita,compilato_da_cliente")
-        .eq("id", av4Id)
-        .single();
-      if (readError || !existingAv4) {
-        throw new Error("Impossibile verificare i dati AV4 già salvati.");
-      }
-      const safePayload: Record<string, unknown> = { ...payload };
-      const declarantFields = [
-        "dichiarante_nome_cognome", "dichiarante_codice_fiscale",
-        "dichiarante_luogo_nascita", "dichiarante_data_nascita",
-        "dichiarante_indirizzo_residenza", "dichiarante_citta_residenza",
-        "dichiarante_cap_residenza", "dichiarante_nazionalita",
-      ];
-      for (const field of declarantFields) {
-        if (existingAv4[field] != null &&
-            String(existingAv4[field]).trim() !== "" &&
-            (safePayload[field] == null || String(safePayload[field]).trim() === "")) {
-          safePayload[field] = existingAv4[field];
-        }
-      }
-      if (existingAv4.compilato_da_cliente && !safePayload.compilato_da_cliente) {
-        safePayload.compilato_da_cliente = true;
-      }
       const { error } = await supabase
         .from("tbAV4")
-        .update(safePayload)
+        .update(payload)
         .eq("id", av4Id);
 
       if (error) {
@@ -2194,30 +2137,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
                         : "Importa amministratore"}
                     </button>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!form.cliente_id) {
-                          alert("Cliente non valorizzato.");
-                          return;
-                        }
-
-                      const query = new URLSearchParams({
-                          from: "av4",
-                          cliente_id: form.cliente_id,
-                          pratica_id: form.pratica_id || "",
-                          societa_id: form.societa_id || "",
-                          av1_id: form.av1_id,
-                          av4_id: av4Id || "",
-                          returnTo: `/antiriciclaggio/modello-av4?studio_id=${form.studio_id}&pratica_id=${form.pratica_id || ""}&societa_id=${form.societa_id || ""}&av1_id=${form.av1_id}&cliente_id=${form.cliente_id}&id=${av4Id || ""}`,
-                        });
-
-                        router.push(`/antiriciclaggio/rappresentanti/nuovo?${query.toString()}`);
-                      }}
-                      className="rounded bg-green-600 px-4 py-2 text-white shadow hover:bg-green-700"
-                    >
-                      Nuovo rappresentante
-                    </button>
+                    
                     
                     <button
                       type="button"
@@ -2258,30 +2178,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
   )}
 </div>
 
-              <div className="rounded-lg border bg-amber-50 p-4">
- <label className="flex items-center gap-2 text-sm font-medium">
-    <input
-      type="checkbox"
-      name="amm_no_associato"
-      checked={form.amm_no_associato}
-      onChange={(e) => {
-        const checked = e.target.checked;
-
-        setForm((prev) => ({
-          ...prev,
-          amm_no_associato: checked,
-        }));
-
-
-      }}
-    />
-    Amministratore non associato
-  </label>
-
-  <p className="mt-1 text-xs text-gray-500">
-    Se attivo, l’AV4 non ricarica automaticamente il rappresentante dall’anagrafica cliente.
-  </p>
-</div>    
+                  
                   
 
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
