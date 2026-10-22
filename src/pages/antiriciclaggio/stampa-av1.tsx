@@ -149,9 +149,9 @@ function toNumber(value: unknown) {
 }
 
 function getCategoriaRischio(value: number) {
-  if (value <= 1.5) return "non";
-  if (value <= 2.5) return "poco";
-  if (value <= 3.5) return "abbastanza";
+  if (value < 1.6) return "non";
+  if (value < 2.6) return "poco";
+  if (value < 3.6) return "abbastanza";
   return "molto";
 }
 
@@ -211,7 +211,7 @@ export default function StampaAV1Page() {
     const RisSpecificoPonderato = toNumber(record.RisSpecificoPonderato);
     const RischioEffettivo = toNumber(record.RischioEffettivo);
 
-    const categoriaInerente = getCategoriaRischio(RisInerentePonderato);
+    const categoriaInerente = getCategoriaRischio(Number((RisInerentePonderato / 0.3).toFixed(2)));
     const categoriaVulnerabilita = getCategoriaRischio(MediaPunteggio);
 
     return {
@@ -222,6 +222,7 @@ export default function StampaAV1Page() {
       RisInerentePonderato,
       RisSpecificoPonderato,
       RischioEffettivo,
+      LivelloRischioEffettivo: RischioEffettivo < 1.6 ? "Non significativo" : RischioEffettivo < 2.6 ? "Poco significativo" : RischioEffettivo < 3.6 ? "Abbastanza significativo" : "Molto significativo",
       AdeguataVerifica: record.AdeguataVerifica ?? "-",
       categoriaInerente,
       categoriaVulnerabilita,
@@ -363,7 +364,7 @@ export default function StampaAV1Page() {
             border-color: #9ca3af !important;
           }
 
-          .matrix-cell-active {
+          .ring-4 ring-inset ring-blue-700 {
             border: 4px solid #000000 !important;
           }
         }
@@ -528,20 +529,20 @@ export default function StampaAV1Page() {
             <div className="overflow-hidden border border-gray-500">
               <div className="grid grid-cols-5">
                 <div className="flex items-center justify-center border border-gray-400 bg-gray-100 p-4 text-center font-bold">
-                  RISCHIO INERENTE 40%
+                  RISCHIO INERENTE 30%
                 </div>
 
                 <div className="border border-gray-400 bg-green-200 p-3 text-center font-semibold">
                   Non significativo
-                  <div className="text-sm font-normal">1 - 1,5</div>
+                  <div className="text-sm font-normal">1 - 1,59</div>
                 </div>
                 <div className="border border-gray-400 bg-yellow-200 p-3 text-center font-semibold">
                   Poco significativo
-                  <div className="text-sm font-normal">1,6 - 2,5</div>
+                  <div className="text-sm font-normal">1,6 - 2,59</div>
                 </div>
                 <div className="border border-gray-400 bg-orange-300 p-3 text-center font-semibold">
                   Abbastanza significativo
-                  <div className="text-sm font-normal">2,6 - 3,5</div>
+                  <div className="text-sm font-normal">2,6 - 3,59</div>
                 </div>
                 <div className="border border-gray-400 bg-red-400 p-3 text-center font-semibold text-white">
                   Molto significativo
@@ -560,7 +561,7 @@ export default function StampaAV1Page() {
                       matrices?.categoriaInerente || "",
                       matrices?.categoriaVulnerabilita || ""
                     )
-                      ? "matrix-cell-active"
+                      ? "ring-4 ring-inset ring-blue-700"
                       : ""
                   }`}
                 />
@@ -572,7 +573,7 @@ export default function StampaAV1Page() {
                       matrices?.categoriaInerente || "",
                       matrices?.categoriaVulnerabilita || ""
                     )
-                      ? "matrix-cell-active"
+                      ? "ring-4 ring-inset ring-blue-700"
                       : ""
                   }`}
                 />
@@ -584,7 +585,7 @@ export default function StampaAV1Page() {
                       matrices?.categoriaInerente || "",
                       matrices?.categoriaVulnerabilita || ""
                     )
-                      ? "matrix-cell-active"
+                      ? "ring-4 ring-inset ring-blue-700"
                       : ""
                   }`}
                 />
@@ -596,14 +597,14 @@ export default function StampaAV1Page() {
                       matrices?.categoriaInerente || "",
                       matrices?.categoriaVulnerabilita || ""
                     )
-                      ? "matrix-cell-active"
+                      ? "ring-4 ring-inset ring-blue-700"
                       : ""
                   }`}
                 />
 
                 <div className="border border-gray-400 bg-orange-300 p-3 text-center font-semibold">
                   Abbastanza significativo
-                  <div className="text-sm font-normal">2,6 - 3,5</div>
+                  <div className="text-sm font-normal">2,6 - 3,59</div>
                 </div>
                 <div
                   className={`border border-gray-400 bg-yellow-200 h-24 ${
@@ -613,7 +614,7 @@ export default function StampaAV1Page() {
                       matrices?.categoriaInerente || "",
                       matrices?.categoriaVulnerabilita || ""
                     )
-                      ? "matrix-cell-active"
+                      ? "ring-4 ring-inset ring-blue-700"
                       : ""
                   }`}
                 />
@@ -625,7 +626,7 @@ export default function StampaAV1Page() {
                       matrices?.categoriaInerente || "",
                       matrices?.categoriaVulnerabilita || ""
                     )
-                      ? "matrix-cell-active"
+                      ? "ring-4 ring-inset ring-blue-700"
                       : ""
                   }`}
                 />
@@ -637,7 +638,7 @@ export default function StampaAV1Page() {
                       matrices?.categoriaInerente || "",
                       matrices?.categoriaVulnerabilita || ""
                     )
-                      ? "matrix-cell-active"
+                      ? "ring-4 ring-inset ring-blue-700"
                       : ""
                   }`}
                 />
@@ -649,14 +650,14 @@ export default function StampaAV1Page() {
                       matrices?.categoriaInerente || "",
                       matrices?.categoriaVulnerabilita || ""
                     )
-                      ? "matrix-cell-active"
+                      ? "ring-4 ring-inset ring-blue-700"
                       : ""
                   }`}
                 />
 
                 <div className="border border-gray-400 bg-yellow-200 p-3 text-center font-semibold">
                   Poco significativo
-                  <div className="text-sm font-normal">1,6 - 2,5</div>
+                  <div className="text-sm font-normal">1,6 - 2,59</div>
                 </div>
                 <div
                   className={`border border-gray-400 bg-green-300 h-24 ${
@@ -666,7 +667,7 @@ export default function StampaAV1Page() {
                       matrices?.categoriaInerente || "",
                       matrices?.categoriaVulnerabilita || ""
                     )
-                      ? "matrix-cell-active"
+                      ? "ring-4 ring-inset ring-blue-700"
                       : ""
                   }`}
                 />
@@ -678,7 +679,7 @@ export default function StampaAV1Page() {
                       matrices?.categoriaInerente || "",
                       matrices?.categoriaVulnerabilita || ""
                     )
-                      ? "matrix-cell-active"
+                      ? "ring-4 ring-inset ring-blue-700"
                       : ""
                   }`}
                 />
@@ -690,7 +691,7 @@ export default function StampaAV1Page() {
                       matrices?.categoriaInerente || "",
                       matrices?.categoriaVulnerabilita || ""
                     )
-                      ? "matrix-cell-active"
+                      ? "ring-4 ring-inset ring-blue-700"
                       : ""
                   }`}
                 />
@@ -702,14 +703,14 @@ export default function StampaAV1Page() {
                       matrices?.categoriaInerente || "",
                       matrices?.categoriaVulnerabilita || ""
                     )
-                      ? "matrix-cell-active"
+                      ? "ring-4 ring-inset ring-blue-700"
                       : ""
                   }`}
                 />
 
                 <div className="border border-gray-400 bg-green-300 p-3 text-center font-semibold">
                   Non significativo
-                  <div className="text-sm font-normal">1 - 1,5</div>
+                  <div className="text-sm font-normal">1 - 1,59</div>
                 </div>
                 <div
                   className={`border border-gray-400 bg-green-300 h-24 ${
@@ -719,7 +720,7 @@ export default function StampaAV1Page() {
                       matrices?.categoriaInerente || "",
                       matrices?.categoriaVulnerabilita || ""
                     )
-                      ? "matrix-cell-active"
+                      ? "ring-4 ring-inset ring-blue-700"
                       : ""
                   }`}
                 />
@@ -731,7 +732,7 @@ export default function StampaAV1Page() {
                       matrices?.categoriaInerente || "",
                       matrices?.categoriaVulnerabilita || ""
                     )
-                      ? "matrix-cell-active"
+                      ? "ring-4 ring-inset ring-blue-700"
                       : ""
                   }`}
                 />
@@ -743,7 +744,7 @@ export default function StampaAV1Page() {
                       matrices?.categoriaInerente || "",
                       matrices?.categoriaVulnerabilita || ""
                     )
-                      ? "matrix-cell-active"
+                      ? "ring-4 ring-inset ring-blue-700"
                       : ""
                   }`}
                 />
@@ -755,45 +756,21 @@ export default function StampaAV1Page() {
                       matrices?.categoriaInerente || "",
                       matrices?.categoriaVulnerabilita || ""
                     )
-                      ? "matrix-cell-active"
+                      ? "ring-4 ring-inset ring-blue-700"
                       : ""
                   }`}
                 />
               </div>
 
-              <div className="grid grid-cols-5">
-                <div className="border border-gray-400 bg-gray-100 p-4" />
-                <div className="border border-gray-400 bg-green-200 p-3 text-center font-semibold">
-                  Non significativa
-                  <div className="text-sm font-normal">1 - 1,5</div>
-                </div>
-                <div className="border border-gray-400 bg-yellow-200 p-3 text-center font-semibold">
-                  Poco significativa
-                  <div className="text-sm font-normal">1,6 - 2,5</div>
-                </div>
-                <div className="border border-gray-400 bg-orange-300 p-3 text-center font-semibold">
-                  Abbastanza significativa
-                  <div className="text-sm font-normal">2,6 - 3,5</div>
-                </div>
-                <div className="border border-gray-400 bg-red-400 p-3 text-center font-semibold text-white">
-                  Molto significativa
-                  <div className="text-sm font-normal">3,6 - 4</div>
-                </div>
-
-                <div className="col-span-5 border border-gray-400 bg-gray-100 p-4 text-center text-xl font-bold">
-                  VULNERABILITÀ 60%
-                </div>
+              <div className="ml-[20%] border border-gray-400 bg-white p-4 text-center text-xl font-bold">
+                VULNERABILITÀ 70%
               </div>
             </div>
 
-            <div className="mt-4 text-sm">
-              <strong>Rischio inerente ponderato:</strong>{" "}
-              {matrices?.RisInerentePonderato}
-              &nbsp; | &nbsp;
-              <strong>Vulnerabilità:</strong> {matrices?.MediaPunteggio}
+            <div className="mt-4 text-sm text-gray-600">
+              Rischio effettivo calcolato: <strong>{matrices?.RischioEffettivo} - {matrices?.LivelloRischioEffettivo}</strong>
             </div>
           </div>
-
           <div className="print-section mt-10 border-t border-black pt-6">
             <div className="grid grid-cols-2 gap-10">
               <div>
