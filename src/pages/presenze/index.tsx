@@ -140,8 +140,38 @@ const PRESENCE_COLORS: Record<string, string> = {
   Ps: 'bg-violet-100 text-violet-800 border-violet-200',
   AL1: 'bg-teal-100 text-teal-800 border-teal-200',
   AL2: 'bg-teal-100 text-teal-800 border-teal-200',
+  ST: 'bg-indigo-100 text-indigo-900 border-indigo-300',
+  LS: 'bg-cyan-100 text-cyan-900 border-cyan-300',
 };
 
+// Unica classificazione per tutti i codici attivi, inclusi quelli a quarti d'ora.
+function getPresenceCategory(code: string): string {
+  const value = String(code ?? '').trim();
+  if (/^PF\\d+(?:[.,]\\d+)?$/i.test(value)) return 'pf';
+  if (/^P\\d+(?:[.,]\\d+)?\\.104$/i.test(value)) return '104';
+  if (/^P\\d+(?:[.,]\\d+)?$/i.test(value)) return 'p';
+  if (value === 'ST' || value === 'LS') return value.toLowerCase();
+  return value;
+}
+
+function getPresenceInlineColors(code: string): React.CSSProperties {
+  const category = getPresenceCategory(code);
+  const colors: Record<string, { backgroundColor: string; color: string; borderColor: string }> = {
+    pf: { backgroundColor: '#fbbf24', color: '#451a03', borderColor: '#b45309' },
+    p: { backgroundColor: '#ffedd5', color: '#9a3412', borderColor: '#fdba74' },
+    '104': { backgroundColor: '#fce7f3', color: '#9d174d', borderColor: '#f9a8d4' },
+    Pp: { backgroundColor: '#dcfce7', color: '#166534', borderColor: '#86efac' },
+    Ps: { backgroundColor: '#ede9fe', color: '#5b21b6', borderColor: '#c4b5fd' },
+    F: { backgroundColor: '#e0f2fe', color: '#075985', borderColor: '#7dd3fc' },
+    M: { backgroundColor: '#fee2e2', color: '#991b1b', borderColor: '#fca5a5' },
+    N: { backgroundColor: '#f3f4f6', color: '#374151', borderColor: '#cbd5e1' },
+    AL1: { backgroundColor: '#ccfbf1', color: '#115e59', borderColor: '#5eead4' },
+    AL2: { backgroundColor: '#ccfbf1', color: '#115e59', borderColor: '#5eead4' },
+    st: { backgroundColor: '#e0e7ff', color: '#3730a3', borderColor: '#a5b4fc' },
+    ls: { backgroundColor: '#cffafe', color: '#155e75', borderColor: '#67e8f9' },
+  };
+  return colors[category] ?? { backgroundColor: '#ffffff', color: '#374151', borderColor: '#d1d5db' };
+}
 
 function Button({
   children,
@@ -246,9 +276,10 @@ function buildQuarterHourCodes(suffix = '') {
 }
 
 function getCellClass(code: string) {
-  if (isPermesso104Code(code)) return 'bg-pink-100 text-pink-800 border-pink-200';
-  if (isPermessoPfCode(code)) return 'bg-amber-200 text-amber-950 border-amber-400';
-  if (isPermessoCode(code)) return 'bg-orange-100 text-orange-800 border-orange-200';
+  const category = getPresenceCategory(code);
+  if (category === '104') return 'bg-pink-100 text-pink-800 border-pink-200';
+  if (category === 'pf') return 'bg-amber-300 text-amber-950 border-amber-500';
+  if (category === 'p') return 'bg-orange-100 text-orange-800 border-orange-200';
   return PRESENCE_COLORS[code] ?? 'bg-white text-gray-800 border-gray-200';
 }
 
@@ -1525,6 +1556,17 @@ const isFutureDay = day.date > maxEditableDateKey;
                 key={`${dipendente.utente_id}-${day.date}`}
                 className="border-b p-1 text-center"
               >
+                <style jsx>{`
+                  select[data-payroll-code-category="pf"],
+                  select[data-payroll-code-category="pf"]:disabled {
+                    background: #fbbf24 !important;
+                    background-color: #fbbf24 !important;
+                    color: #451a03 !important;
+                    border-color: #b45309 !important;
+                    opacity: 1 !important;
+                    -webkit-text-fill-color: #451a03 !important;
+                  }
+                `}</style>
                 <select
         disabled={
   isLockedPeriod ||
@@ -1545,7 +1587,8 @@ const isFutureDay = day.date > maxEditableDateKey;
       ? 'Presenza generata da richiesta ferie/permessi approvata. Usa Revoca.'
       : day.holidayDescription
 }
-  style={isPermessoPfCode(code) ? { background: '#fbbf24', backgroundColor: '#fbbf24', color: '#451a03', border: '2px solid #d97706', opacity: 1, WebkitAppearance: 'none', appearance: 'none', fontWeight: 700 } : undefined}
+  data-payroll-code-category={getPresenceCategory(code)}
+                  style={{ ...getPresenceInlineColors(code), ...(isPermessoPfCode(code) ? { borderWidth: 2, fontWeight: 700 } : {}) }}
   className={`h-8 w-[82px] rounded-md border px-2 text-xs outline-none ${
   isLockedByRequest || isFutureDay
     ? 'cursor-not-allowed opacity-60'
