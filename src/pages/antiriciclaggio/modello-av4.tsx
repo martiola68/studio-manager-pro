@@ -32,6 +32,7 @@ type FormState = {
   invia_altra_email: boolean;
   email_destinatario_alternativa: string;
   amm_no_associato: boolean;
+  compilato_da_cliente: boolean;
   
   dichiarante_nome_cognome: string;
   dichiarante_codice_fiscale: string;
@@ -225,6 +226,7 @@ microsoft_connection_id: row?.microsoft_connection_id
   invia_altra_email: !!row?.invia_altra_email,
   email_destinatario_alternativa: row?.email_destinatario_alternativa ?? "",
     amm_no_associato: !!row?.amm_no_associato,
+    compilato_da_cliente: !!row?.compilato_da_cliente,
 
     dichiarante_nome_cognome: row?.dichiarante_nome_cognome ?? "",
     dichiarante_codice_fiscale: row?.dichiarante_codice_fiscale ?? "",
