@@ -99,13 +99,14 @@ export async function POST(request: Request) {
     const tipoRichiesta = body.tipo_richiesta;
     const tipoPermesso = body.tipo_permesso ? String(body.tipo_permesso).trim().toUpperCase() : null;
     const oraRichiesta = body.ora_richiesta ? String(body.ora_richiesta).trim() : null;
+    const oraFineExtra = body.ora_fine_extra ? String(body.ora_fine_extra).trim() : null;
     const dataInizio = body.data_inizio;
     const dataFine = body.data_fine || body.data_inizio;
     const giorni = body.giorni ? Number(body.giorni) : null;
     const ore = body.ore ? Number(body.ore) : null;
     const motivazione = body.motivazione || null;
 
-    if (!['ferie', 'permesso'].includes(tipoRichiesta)) {
+    if (!['ferie', 'permesso', 'extra'].includes(tipoRichiesta)) {
       return NextResponse.json({ success: false, error: 'Tipo richiesta non valido.' }, { status: 400 });
     }
 
@@ -147,6 +148,21 @@ export async function POST(request: Request) {
       }
     }
 
+    let extraMinutes: number | null = null;
+    if (tipoRichiesta === 'extra') {
+      if (!['ST', 'LS'].includes(tipoPermesso || '') || !oraRichiesta || !oraFineExtra ||
+          !/^([01]\\d|2[0-3]):[0-5]\\d$/.test(oraRichiesta) ||
+          !/^([01]\\d|2[0-3]):[0-5]\\d$/.test(oraFineExtra)) {
+        return NextResponse.json({ success: false, error: 'Codice ST/LS e orari inizio/fine obbligatori.' }, { status: 400 });
+      }
+      const minutes = (v: string) => Number(v.slice(0, 2)) * 60 + Number(v.slice(3, 5));
+      const from = minutes(oraRichiesta), to = minutes(oraFineExtra);
+      extraMinutes = (to - from + 1440) % 1440;
+      if (!extraMinutes || from % 15 || to % 15 || extraMinutes % 15) {
+        return NextResponse.json({ success: false, error: 'Gli extra richiedono intervalli positivi di 15 minuti.' }, { status: 400 });
+      }
+    }
+
     const { data: utente, error: userError } = await supabaseAdmin
       .from('tbutenti')
       .select('id, studio_id, nome, cognome, email')
@@ -180,12 +196,13 @@ export async function POST(request: Request) {
         studio_id: utente.studio_id,
         utente_id: utente.id,
         tipo_richiesta: tipoRichiesta,
-        tipo_permesso: tipoRichiesta === 'permesso' ? tipoPermesso : null,
-        ora_richiesta: tipoRichiesta === 'permesso' ? oraRichiesta : null,
+        tipo_permesso: tipoRichiesta === 'permesso' || tipoRichiesta === 'extra' ? tipoPermesso : null,
+        ora_richiesta: tipoRichiesta === 'permesso' || tipoRichiesta === 'extra' ? oraRichiesta : null,
+        ora_fine_extra: tipoRichiesta === 'extra' ? oraFineExtra : null,
         data_inizio: dataInizio,
         data_fine: tipoRichiesta === 'ferie' ? dataFine : null,
         giorni: tipoRichiesta === 'ferie' ? giorni : null,
-        ore: tipoRichiesta === 'permesso' ? ore : null,
+        ore: tipoRichiesta === 'permesso' ? ore : tipoRichiesta === 'extra' ? (extraMinutes! / 60) : null,
         motivazione,
         stato: 'inviata',
         email_responsabile: emailResponsabile,
@@ -202,11 +219,13 @@ export async function POST(request: Request) {
 
     const html = `
       <div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#111827;">
-        <p>Nuova richiesta ${tipoRichiesta === 'ferie' ? 'ferie' : 'permesso'}.</p>
+        <p>Nuova richiesta ${tipoRichiesta === 'ferie' ? 'ferie' : tipoRichiesta === 'extra' ? 'extra' : 'permesso'}.</p>
         <p><strong>Richiedente:</strong> ${escapeHtml(richiedente)}</p>
         <p><strong>Data inizio:</strong> ${escapeHtml(formatDateIT(dataInizio))}</p>
         ${
-          tipoRichiesta === 'ferie'
+          tipoRichiesta === 'extra'
+            ? `<p><strong>Extra:</strong> ${escapeHtml(tipoPermesso || '')}</p><p><strong>Orario:</strong> ${escapeHtml(oraRichiesta || '')} - ${escapeHtml(oraFineExtra || '')}</p><p><strong>Ore:</strong> ${extraMinutes! / 60}</p>`
+            : tipoRichiesta === 'ferie'
             ? `<p><strong>Data fine:</strong> ${escapeHtml(formatDateIT(dataFine))}</p><p><strong>Giorni:</strong> ${giorni}</p>`
             : `<p><strong>Tipo permesso:</strong> ${escapeHtml(tipoPermesso || '')}</p><p><strong>Ora richiesta:</strong> ${escapeHtml(oraRichiesta || '')}</p><p><strong>Ore permesso:</strong> ${ore}</p>`
         }
@@ -221,7 +240,7 @@ export async function POST(request: Request) {
       studioId: String(utente.studio_id),
       senderUserId: String(utente.id),
       toEmail: emailResponsabile,
-      subject: `Nuova richiesta ${tipoRichiesta === 'ferie' ? 'ferie' : `permesso ${tipoPermesso}`} - ${richiedente}`,
+      subject: `Nuova richiesta ${tipoRichiesta === 'ferie' ? 'ferie' : tipoRichiesta === 'extra' ? `extra ${tipoPermesso}` : `permesso ${tipoPermesso}`} - ${richiedente}`,
       html,
     });
 
