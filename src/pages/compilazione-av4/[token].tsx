@@ -1070,6 +1070,8 @@ async function handleUploadSignedPdf(
                           av4_id={av4Id || ""}
                           studio_id={form.studio_id}
                           cliente_id={form.cliente_id}
+                          publicMode={true}
+                          publicToken={token}
                         />
                       </div>
                     )}
@@ -1162,6 +1164,8 @@ async function handleUploadSignedPdf(
                             av4_id={av4Id || ""}
                             studio_id={form.studio_id}
                             cliente_id={form.cliente_id}
+                          publicMode={true}
+                          publicToken={token}
                           />
                         </div>
                       </div>
@@ -1267,6 +1271,8 @@ async function handleUploadSignedPdf(
                             av4_id={av4Id || ""}
                             studio_id={form.studio_id}
                             cliente_id={form.cliente_id}
+                          publicMode={true}
+                          publicToken={token}
                           />
                         </div>
                       </div>
