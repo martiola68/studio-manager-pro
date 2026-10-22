@@ -208,7 +208,8 @@ export async function POST(
 
     if (updateError) throw updateError;
 
-    if (azione === 'approvata') {
+    // Gli extra sono movimenti aggiuntivi: non devono sostituire la presenza ordinaria.
+    if (azione === 'approvata' && richiesta.tipo_richiesta !== 'extra') {
       const codicePresenza =
         richiesta.tipo_richiesta === 'ferie'
           ? 'F'
@@ -320,7 +321,9 @@ export async function POST(
         <p><strong>Gestita da:</strong> ${escapeHtml(gestoreNome)}</p>
         <p><strong>Data inizio:</strong> ${escapeHtml(formatDateIT(richiesta.data_inizio))}</p>
         ${
-          richiesta.tipo_richiesta === 'ferie'
+          richiesta.tipo_richiesta === 'extra'
+            ? `<p><strong>Extra:</strong> ${escapeHtml(richiesta.tipo_permesso || '')}</p><p><strong>Orario:</strong> ${escapeHtml(richiesta.ora_richiesta || '')} - ${escapeHtml(richiesta.ora_fine_extra || '')}</p><p><strong>Ore:</strong> ${richiesta.ore}</p>`
+            : richiesta.tipo_richiesta === 'ferie'
             ? `<p><strong>Data fine:</strong> ${escapeHtml(formatDateIT(richiesta.data_fine || richiesta.data_inizio))}</p><p><strong>Giorni:</strong> ${richiesta.giorni}</p>`
             : `<p><strong>Tipo permesso:</strong> ${escapeHtml(richiesta.tipo_permesso || 'P')}</p><p><strong>Ora richiesta:</strong> ${escapeHtml(String(richiesta.ora_richiesta || '').slice(0, 5))}</p><p><strong>Ore permesso:</strong> ${richiesta.ore}</p>`
         }
@@ -334,7 +337,7 @@ export async function POST(
       studioId: String(gestore.studio_id),
       senderUserId: String(gestore.id),
       toEmail: String(richiesta.email_richiedente),
-      subject: `Richiesta ${richiesta.tipo_richiesta === 'permesso' ? `permesso ${richiesta.tipo_permesso || 'P'}` : 'ferie'} ${statoLabel}`,
+      subject: `Richiesta ${richiesta.tipo_richiesta === 'extra' ? `extra ${richiesta.tipo_permesso}` : richiesta.tipo_richiesta === 'permesso' ? `permesso ${richiesta.tipo_permesso || 'P'}` : 'ferie'} ${statoLabel}`,
       html,
     });
 
