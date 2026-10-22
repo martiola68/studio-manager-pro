@@ -1261,6 +1261,14 @@ ${dipendentiXml}
             <CardTitle className="text-base">Periodo</CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
+            <div className="mb-3 rounded-lg border-2 border-indigo-300 bg-indigo-50 px-4 py-3" data-testid="payroll-extra-summary">
+              <div className="mb-2 text-sm font-bold text-indigo-950">Riepilogo extra del mese (ST + LS)</div>
+              <div className="flex flex-wrap gap-5 text-sm text-indigo-950">
+                <span><strong>ST straordinario:</strong> {formatHoursMinutes(riepilogoPermessi.extraStOre)}</span>
+                <span><strong>LS supplementare:</strong> {formatHoursMinutes(riepilogoPermessi.extraLsOre)}</span>
+                <span><strong>Totale extra:</strong> {formatHoursMinutes(riepilogoPermessi.extraStOre + riepilogoPermessi.extraLsOre)}</span>
+              </div>
+            </div>
             <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
               <div className="flex flex-1 flex-wrap gap-2">
                 <div className="min-w-[150px] rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 shadow-sm">
@@ -1292,15 +1300,6 @@ ${dipendentiXml}
                   <div className="mt-1 flex items-end justify-between gap-3">
                     <div><div className="text-[10px] uppercase text-teal-700">Tot. richiesto</div><div className="text-sm font-bold text-teal-950">{formatHoursMinutes(riepilogoPermessi.alRichiesto)}</div></div>
                     <div className="text-right"><div className="text-[10px] uppercase text-teal-700">Tot. mese</div><div className="text-sm font-bold text-teal-950">{formatHoursMinutes(riepilogoPermessi.alMese)}</div></div>
-                  </div>
-                </div>
-
-                <div className="min-w-[180px] rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 shadow-sm">
-                  <div className="text-xs font-semibold text-indigo-900">Extra ST + LS</div>
-                  <div className="mt-1 flex items-end justify-between gap-3">
-                    <div><div className="text-[10px] uppercase text-indigo-700">ST approvate</div><div className="text-sm font-bold text-indigo-950">{formatHoursMinutes(riepilogoPermessi.extraStOre)}</div></div>
-                    <div className="text-right"><div className="text-[10px] uppercase text-indigo-700">LS approvate</div><div className="text-sm font-bold text-indigo-950">{formatHoursMinutes(riepilogoPermessi.extraLsOre)}</div></div>
-                    <div className="text-right"><div className="text-[10px] uppercase text-indigo-700">Totale</div><div className="text-sm font-bold text-indigo-950">{formatHoursMinutes(riepilogoPermessi.extraStOre + riepilogoPermessi.extraLsOre)}</div></div>
                   </div>
                 </div>
 
