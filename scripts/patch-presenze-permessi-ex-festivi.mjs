@@ -94,7 +94,18 @@ const riepilogoProgressivo = `  const riepilogoPermessi = useMemo(() => {
       ferieRichieste: 0,
       feriePrese: 0,
       ferieTotali: 0,
+      extraStOre: 0,
+      extraLsOre: 0,
     };
+
+    // Extra approvati nel mese selezionato: totali di studio,
+    // indipendenti dal riepilogo progressivo personale.
+    richiesteFeriePermessi.forEach((richiesta) => {
+      if (richiesta.tipo_richiesta !== 'extra' || richiesta.stato !== 'approvata') return;
+      if (richiesta.data_inizio < startDate || richiesta.data_inizio > endDate) return;
+      if (richiesta.tipo_permesso === 'ST') totale.extraStOre += Number(richiesta.ore || 0);
+      if (richiesta.tipo_permesso === 'LS') totale.extraLsOre += Number(richiesta.ore || 0);
+    });
 
     if (!currentUser?.id) return totale;
 
@@ -135,7 +146,7 @@ const riepilogoProgressivo = `  const riepilogoPermessi = useMemo(() => {
     totale.ferieTotali = totale.ferieRichieste + totale.feriePrese;
 
     return totale;
-  }, [currentUser?.id, endDate, startDate, values]);
+  }, [currentUser?.id, endDate, startDate, values, richiesteFeriePermessi]);
 
 `;
 
