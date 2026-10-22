@@ -331,6 +331,7 @@ function getXmlGiustificativo(code: string) {
 
   if (code === 'AL1' || code === 'AL2') return 'AL';
 
+  if (isPermessoPfCode(code)) return 'PF';
   if (isPermessoCode(code)) return 'RL';
   if (isPermesso104Code(code)) return 'PG';
 
@@ -1044,10 +1045,11 @@ if (rowsToUpsert.length === 0 && rowsToDelete.length === 0) {
 
               const movements: string[] = [];
              const isPermesso = isPermessoCode(code);
+const isPermessoPf = isPermessoPfCode(code);
 const isPermesso104 = isPermesso104Code(code);
 const isAllattamento = code === 'AL1' || code === 'AL2';
 
-if (isPermesso || isPermesso104 || isAllattamento) {
+if (isPermesso || isPermessoPf || isPermesso104 || isAllattamento) {
                 const orePermesso = getPresenceHours(code, dailyHours);
                 const oreLavorate = Math.max(0, dailyHours - orePermesso);
 
@@ -1058,7 +1060,7 @@ if (isPermesso || isPermesso104 || isAllattamento) {
                 movements.push(
                  createXmlMovimento(
   day.date,
-  isAllattamento ? 'AL' : isPermesso104 ? 'PG' : 'RL',
+  isAllattamento ? 'AL' : isPermesso104 ? 'PG' : isPermessoPf ? 'PF' : 'RL',
   orePermesso,
 ),
                 );
@@ -1314,6 +1316,9 @@ ${dipendentiXml}
                 <Badge className="border bg-orange-100 text-orange-800 hover:bg-orange-100">
                   P0.25-P8 permessi
                 </Badge>
+                <Badge className="border bg-amber-100 text-amber-900 hover:bg-amber-100">
+                  PF0.25-PF8 permessi PF
+                </Badge>
                 <Badge className="border bg-teal-100 text-teal-800 hover:bg-teal-100">
                 AL1/AL2 allattamento
                 </Badge>
@@ -1325,7 +1330,7 @@ ${dipendentiXml}
             <div className="mt-3 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
  <p>
   Per i permessi orari è sufficiente inserire il codice del permesso
-  (es. <strong>P2</strong>, <strong>P4</strong>, <strong>P1.104</strong>,
+  (es. <strong>P2</strong>, <strong>PF2</strong>, <strong>P4</strong>, <strong>P1.104</strong>,
   <strong> AL1</strong>, <strong>AL2</strong>).
   Il sistema calcola automaticamente sia le ore di permesso sia le ore lavorate residue
   ai fini dell’elaborazione payroll ed export paghe.
