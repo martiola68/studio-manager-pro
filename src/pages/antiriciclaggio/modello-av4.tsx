@@ -1951,15 +1951,47 @@ invia_altra_email: !!form.invia_altra_email,
     let savedId: string | null = av4Id;
 
     if (av4Id) {
+      // Rileggi lo stato dal database prima di ogni salvataggio: il modulo
+      // aperto nello studio puo essere precedente alla compilazione pubblica.
+      const { data: persisted, error: readError } = await supabase
+        .from("tbAV4")
+        .select("compilato_da_cliente, public_submitted_at, dichiarante_nome_cognome, dichiarante_codice_fiscale, dichiarante_luogo_nascita, dichiarante_data_nascita, dichiarante_indirizzo_residenza, dichiarante_citta_residenza, dichiarante_cap_residenza, dichiarante_nazionalita")
+        .eq("id", av4Id)
+        .single();
+      if (readError || !persisted) throw readError || new Error("AV4 non trovato.");
+
+      const finalPayload: Record<string, unknown> = { ...payload };
+      const publicCompleted = !!persisted.compilato_da_cliente || !!persisted.public_submitted_at;
+      if (publicCompleted) {
+        // Non sovrascrivere mai i dati arrivati dal modulo pubblico con
+        // una copia locale obsoleta, ne riportare lo stato a bozza.
+        const protectedFields = [
+          "dichiarante_nome_cognome", "dichiarante_codice_fiscale",
+          "dichiarante_luogo_nascita", "dichiarante_data_nascita",
+          "dichiarante_indirizzo_residenza", "dichiarante_citta_residenza",
+          "dichiarante_cap_residenza", "dichiarante_nazionalita",
+        ];
+        for (const field of protectedFields) finalPayload[field] = persisted[field];
+        finalPayload.compilato_da_cliente = true;
+        finalPayload.stato = "completato";
+      }
       const { error } = await supabase
         .from("tbAV4")
-        .update(payload)
+        .update(finalPayload)
         .eq("id", av4Id);
-
-      if (error) {
-        console.error("Errore aggiornamento AV4:", error);
-        alert("Errore durante l'aggiornamento AV4.");
-        return;
+      if (error) throw error;
+      if (publicCompleted) {
+        setForm((prev) => ({
+          ...prev,
+          ...Object.fromEntries([
+            "dichiarante_nome_cognome", "dichiarante_codice_fiscale",
+            "dichiarante_luogo_nascita", "dichiarante_data_nascita",
+            "dichiarante_indirizzo_residenza", "dichiarante_citta_residenza",
+            "dichiarante_cap_residenza", "dichiarante_nazionalita",
+          ].map((field) => [field, persisted[field] ?? ""])),
+          compilato_da_cliente: true,
+          stato: "completato",
+        }));
       }
     } else {
       const { data, error } = await supabase
@@ -2002,8 +2034,8 @@ invia_altra_email: !!form.invia_altra_email,
     setForm((prev) => ({
   ...prev,
   av4_caricato_manualmente: !!form.av4_caricato_manualmente,
-  compilato_da_cliente: !!form.allegato_pdf_cliente,
-  stato: form.allegato_pdf_cliente ? "completato" : "bozza",
+  compilato_da_cliente: Boolean(form.compilato_da_cliente || form.allegato_pdf_cliente),
+  stato: (form.compilato_da_cliente || form.allegato_pdf_cliente) ? "completato" : "bozza",
 }));
 
     alert("AV4 salvato correttamente.");
