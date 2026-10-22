@@ -65,8 +65,10 @@ type RichiestaFeriePermessi = {
   id: string;
   studio_id: string;
   utente_id: string;
-  tipo_richiesta: 'ferie' | 'permesso';
-  tipo_permesso: 'P' | 'PF' | '104' | 'AL' | null;
+  tipo_richiesta: 'ferie' | 'permesso' | 'extra';
+  tipo_permesso: 'P' | 'PF' | '104' | 'AL' | 'ST' | 'LS' | null;
+  ora_richiesta?: string | null;
+  ora_fine_extra?: string | null;
   data_inizio: string;
   data_fine: string | null;
   giorni: number | null;
@@ -645,6 +647,8 @@ const days = useMemo<DayInfo[]>(() => {
           utente_id,
           tipo_richiesta,
           tipo_permesso,
+          ora_richiesta,
+          ora_fine_extra,
           data_inizio,
           data_fine,
           giorni,
@@ -1033,6 +1037,31 @@ if (rowsToUpsert.length === 0 && rowsToDelete.length === 0) {
 
           const dailyHours = Number(dipendente.orario_giornaliero ?? 8);
 
+          const extraMovimenti = richiesteFeriePermessi.filter(r =>
+            r.utente_id === dipendente.utente_id && r.tipo_richiesta === 'extra' && r.stato === 'approvata' &&
+            (r.tipo_permesso === 'ST' || r.tipo_permesso === 'LS')
+          ).flatMap(r => {
+            const from = r.ora_richiesta?.slice(0, 5) || '';
+            const to = r.ora_fine_extra?.slice(0, 5) || '';
+            if (!/^\\d{2}:\\d{2}$/.test(from) || !/^\\d{2}:\\d{2}$/.test(to)) return [];
+            const a = Number(from.slice(0, 2)) * 60 + Number(from.slice(3));
+            const b = Number(to.slice(0, 2)) * 60 + Number(to.slice(3));
+            if (a === b) return [];
+            const crossesMidnight = b < a;
+            const firstMinutes = crossesMidnight ? 1440 - a : b - a;
+            const result: string[] = [];
+            if (r.data_inizio >= startDate && r.data_inizio <= endDate)
+              result.push(createXmlMovimento(r.data_inizio, r.tipo_permesso!, firstMinutes / 60));
+            if (crossesMidnight && b > 0) {
+              const next = new Date(r.data_inizio + 'T12:00:00');
+              next.setDate(next.getDate() + 1);
+              const date = toDateKey(next.getFullYear(), next.getMonth(), next.getDate());
+              if (date >= startDate && date <= endDate)
+                result.push(createXmlMovimento(date, r.tipo_permesso!, b / 60));
+            }
+            return result;
+          }).join('\\n');
+
           const movimenti = days
             .flatMap((day) => {
               let code = getCode(dipendente.utente_id, day);
@@ -1083,6 +1112,7 @@ if (isPermesso || isPermessoPf || isPermesso104 || isAllattamento) {
           )}" CodDipendenteUfficiale="${escapeXml(codiceDipendente)}">
     <Movimenti GenerazioneAutomaticaDaTeorico="N">
 ${movimenti}
+${extraMovimenti}
     </Movimenti>
   </Dipendente>`;
         })
@@ -1319,6 +1349,8 @@ ${dipendentiXml}
                 <Badge className="border bg-amber-100 text-amber-900 hover:bg-amber-100">
                   PF0.25-PF8 permessi PF
                 </Badge>
+                <Badge className="border bg-indigo-100 text-indigo-900 hover:bg-indigo-100">ST straordinario</Badge>
+                <Badge className="border bg-cyan-100 text-cyan-900 hover:bg-cyan-100">LS supplementare</Badge>
                 <Badge className="border bg-teal-100 text-teal-800 hover:bg-teal-100">
                 AL1/AL2 allattamento
                 </Badge>
