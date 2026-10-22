@@ -564,7 +564,7 @@ export default function AntiriciclaggioPage() {
   const lettereDisponibili = useMemo(() => {
     const nomi = rows
       .filter((row) => row.societa_id === societaFilter)
-      .map((row) => String(getCliente(row)?.ragione_sociale || "").trim().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toUpperCase());
+      .map((row) => String(getCliente(row)?.ragione_sociale || "").trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase());
     return new Set(nomi.map((nome) => nome.charAt(0)).filter(Boolean));
   }, [rows, societaFilter]);
 
@@ -575,7 +575,7 @@ export default function AntiriciclaggioPage() {
       .filter((row) => {
         if (row.societa_id !== societaFilter) return false;
         const nomeCliente = String(getCliente(row)?.ragione_sociale || "").trim()
-          .normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toUpperCase();
+          .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
         if (letteraCliente !== "Tutte" && !nomeCliente.startsWith(letteraCliente)) return false;
         if (!ricerca) return true;
         const cliente = getCliente(row);
@@ -590,7 +590,7 @@ export default function AntiriciclaggioPage() {
         const nomeB = String(clienteB?.ragione_sociale || clienteB?.cod_cliente || clienteB?.codice_fiscale || "").toLowerCase();
         return nomeA.localeCompare(nomeB, "it");
       });
-  }, [rows, societaFilter, canAccessAntiriciclaggio, ricercaCliente]);
+  }, [rows, societaFilter, canAccessAntiriciclaggio, ricercaCliente, letteraCliente]);
 
   const handleSocietaChange = (societaId: string) => {
     if (isSocietaSelectionLocked) return;
