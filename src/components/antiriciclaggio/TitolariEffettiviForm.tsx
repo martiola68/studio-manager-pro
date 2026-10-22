@@ -389,8 +389,7 @@ export default function TitolariEffettiviForm({
     cap,
     nazionalita
   `)
-  .eq("codice_fiscale", codiceFiscale)
-  .eq("cliente", false);
+  .ilike("codice_fiscale", codiceFiscale);
 
 if (studio_id) {
   query = query.eq("studio_id", studio_id);
@@ -458,8 +457,7 @@ const { data, error } = await query.maybeSingle();
   let query = supabase
     .from("tbclienti")
     .select("id")
-    .eq("codice_fiscale", codiceFiscale)
-    .eq("cliente", false);
+    .ilike("codice_fiscale", codiceFiscale);
 
   const { data: existing, error: existingError } = studio_id
     ? await query.eq("studio_id", studio_id).maybeSingle()
