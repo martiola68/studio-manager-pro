@@ -374,6 +374,13 @@ export default function RichiestaFeriePermessiPage() {
   const isFerie = form.tipo_richiesta === "ferie";
   const isAllattamento = form.tipo_permesso === "AL";
   const isExtra = form.tipo_richiesta === "extra";
+  const extraDuration = (() => {
+    const from = form.ora_richiesta.split(":").map(Number);
+    const to = form.ora_fine_extra.split(":").map(Number);
+    if (from.length !== 2 || to.length !== 2 || from.some(Number.isNaN) || to.some(Number.isNaN)) return "";
+    const minutes = ((to[0] * 60 + to[1]) - (from[0] * 60 + from[1]) + 1440) % 1440;
+    return minutes ? (minutes / 60).toFixed(2) : "";
+  })();
 
   return (
     <div className="mx-auto max-w-2xl p-6">
@@ -508,7 +515,7 @@ export default function RichiestaFeriePermessiPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Ore permesso</Label>
+                <Label>{isExtra ? "Ore extra (automatiche)" : "Ore permesso"}</Label>
                 <Input
                   type="number"
                   step={isAllattamento ? "1" : "0.25"}
