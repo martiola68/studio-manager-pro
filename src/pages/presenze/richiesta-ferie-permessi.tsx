@@ -338,7 +338,7 @@ export default function RichiestaFeriePermessiPage() {
           data_inizio: form.data_inizio,
           data_fine: form.data_fine,
           giorni: form.giorni,
-          ore: form.ore,
+          ore: form.tipo_richiesta === "extra" ? extraDuration : form.ore,
           motivazione: form.motivazione,
         }),
       });
@@ -520,8 +520,9 @@ export default function RichiestaFeriePermessiPage() {
                   type="number"
                   step={isAllattamento ? "1" : "0.25"}
                   min={isAllattamento ? "1" : "0.25"}
-                  max={isAllattamento ? "2" : "8"}
-                  value={form.ore}
+                  max={isExtra ? "24" : isAllattamento ? "2" : "8"}
+                  value={isExtra ? extraDuration : form.ore}
+                  readOnly={isExtra}
                   onChange={(e) =>
                     setForm({ ...form, ore: e.target.value })
                   }
