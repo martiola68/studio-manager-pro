@@ -446,7 +446,7 @@ const days = useMemo<DayInfo[]>(() => {
 }, [year, monthIndex, holidaysByDate]);
 
   const allowedCodes = useMemo(() => {
-    const withoutOldP = codici.filter((item) => item.codice !== 'P');
+    const withoutOldP = codici.filter((item) => item.codice !== 'P' && item.tipo !== 'extra');
 
     const quarterHourPermessi = buildQuarterHourCodes();
     const quarterHourPermessi104 = buildQuarterHourCodes('.104');
@@ -803,6 +803,8 @@ const getCode = (utenteId: string, day: DayInfo) => {
       alMese: 0,
       ferieRichieste: 0,
       feriePrese: 0,
+      extraStOre: 0,
+      extraLsOre: 0,
     };
 
     dipendenti.forEach((dipendente) => {
@@ -830,6 +832,13 @@ const getCode = (utenteId: string, day: DayInfo) => {
     });
 
     richiesteFeriePermessi.forEach((richiesta) => {
+      if (richiesta.tipo_richiesta === 'extra') {
+        if (richiesta.stato === 'approvata') {
+          if (richiesta.tipo_permesso === 'ST') totale.extraStOre += Number(richiesta.ore || 0);
+          if (richiesta.tipo_permesso === 'LS') totale.extraLsOre += Number(richiesta.ore || 0);
+        }
+        return;
+      }
       if (richiesta.tipo_richiesta === 'permesso') {
         const ore = Number(richiesta.ore || 0);
         if (richiesta.tipo_permesso === 'PF') totale.pfRichiesto += ore;
@@ -1048,7 +1057,7 @@ if (rowsToUpsert.length === 0 && rowsToDelete.length === 0) {
           ).flatMap(r => {
             const from = r.ora_richiesta?.slice(0, 5) || '';
             const to = r.ora_fine_extra?.slice(0, 5) || '';
-            if (!/^\d{2}:\d{2}$/.test(from) || !/^\\d{2}:\\d{2}$/.test(to)) return [];
+            if (!/^\d{2}:\d{2}$/.test(from) || !/^\d{2}:\d{2}$/.test(to)) return [];
             const a = Number(from.slice(0, 2)) * 60 + Number(from.slice(3));
             const b = Number(to.slice(0, 2)) * 60 + Number(to.slice(3));
             if (a === b) return [];
@@ -1283,6 +1292,15 @@ ${dipendentiXml}
                   <div className="mt-1 flex items-end justify-between gap-3">
                     <div><div className="text-[10px] uppercase text-teal-700">Tot. richiesto</div><div className="text-sm font-bold text-teal-950">{formatHoursMinutes(riepilogoPermessi.alRichiesto)}</div></div>
                     <div className="text-right"><div className="text-[10px] uppercase text-teal-700">Tot. mese</div><div className="text-sm font-bold text-teal-950">{formatHoursMinutes(riepilogoPermessi.alMese)}</div></div>
+                  </div>
+                </div>
+
+                <div className="min-w-[180px] rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 shadow-sm">
+                  <div className="text-xs font-semibold text-indigo-900">Extra ST + LS</div>
+                  <div className="mt-1 flex items-end justify-between gap-3">
+                    <div><div className="text-[10px] uppercase text-indigo-700">ST approvate</div><div className="text-sm font-bold text-indigo-950">{formatHoursMinutes(riepilogoPermessi.extraStOre)}</div></div>
+                    <div className="text-right"><div className="text-[10px] uppercase text-indigo-700">LS approvate</div><div className="text-sm font-bold text-indigo-950">{formatHoursMinutes(riepilogoPermessi.extraLsOre)}</div></div>
+                    <div className="text-right"><div className="text-[10px] uppercase text-indigo-700">Totale</div><div className="text-sm font-bold text-indigo-950">{formatHoursMinutes(riepilogoPermessi.extraStOre + riepilogoPermessi.extraLsOre)}</div></div>
                   </div>
                 </div>
 
