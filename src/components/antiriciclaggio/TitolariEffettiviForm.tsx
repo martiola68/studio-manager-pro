@@ -8,6 +8,7 @@ type Props = {
   studio_id: string;
   cliente_id: string;
   publicMode?: boolean;
+  publicToken?: string;
   readOnly?: boolean;
 };
 
@@ -110,6 +111,7 @@ export default function TitolariEffettiviForm({
   studio_id,
   cliente_id,
   publicMode = false,
+  publicToken = "",
   readOnly = false,
 }: Props) {
   const supabase = getSupabaseClient() as any;
