@@ -735,7 +735,7 @@ export default function AntiriciclaggioPage() {
 
       {canAccessAntiriciclaggio && (
         <div className="mb-4 rounded-lg border border-sky-200 bg-sky-50 p-2 shadow-sm">
-          <div className="grid grid-cols-9 gap-1 sm:grid-cols-14 xl:grid-cols-27">
+          <div className="grid w-full grid-cols-[repeat(27,minmax(0,1fr))] gap-1">
             {["Tutte", ...lettereAlfabeto].map((lettera) => {
               const attiva = letteraCliente === lettera;
               const disponibile = lettera === "Tutte" || lettereDisponibili.has(lettera);
@@ -745,7 +745,7 @@ export default function AntiriciclaggioPage() {
                   type="button"
                   disabled={!disponibile}
                   onClick={() => setLetteraCliente(lettera)}
-                  className={`flex min-h-9 w-full items-center justify-center rounded-md border px-1 text-xs font-bold transition-colors ${attiva ? "border-sky-800 bg-sky-700 text-white shadow-sm" : disponibile ? "border-sky-200 bg-white text-sky-800 hover:border-sky-500 hover:bg-sky-100" : "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"}`}
+                  className={`flex h-9 min-w-0 w-full items-center justify-center rounded-md border px-0 text-[11px] font-bold transition-colors ${attiva ? "border-blue-800 !bg-blue-700 !text-white shadow-sm" : disponibile ? "border-sky-300 bg-white text-sky-800 hover:border-blue-500 hover:bg-sky-100" : "cursor-not-allowed border-slate-200 !bg-slate-200 !text-slate-400"}`}
                 >
                   {lettera}
                 </button>
