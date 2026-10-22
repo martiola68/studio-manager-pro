@@ -1935,13 +1935,13 @@ invia_altra_email: !!form.invia_altra_email,
       data_firma_bis: form.data_firma_bis || null,
 
       av4_caricato_manualmente: !!form.av4_caricato_manualmente,
-      // La modalità manuale abilita il caricamento, ma NON equivale a documento ricevuto.
-      compilato_da_cliente: !!form.allegato_pdf_cliente,
+      // Conserva la conferma della compilazione pubblica anche senza PDF allegato.
+      compilato_da_cliente: Boolean(form.compilato_da_cliente || form.allegato_pdf_cliente),
       Av4InviatoCL: form.av4_caricato_manualmente
         ? false
         : Boolean(form.stato === "completato" && !!form.allegato_pdf_cliente),
 
-      stato: form.allegato_pdf_cliente ? "completato" : "bozza",
+      stato: (form.compilato_da_cliente || form.allegato_pdf_cliente) ? "completato" : "bozza",
       versione: form.versione,
     };
 
