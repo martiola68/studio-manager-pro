@@ -222,6 +222,19 @@ export default function TitolariEffettiviForm({
   }
 
   async function loadSavedTitolari(currentAv4Id: string): Promise<RigaTitolare[]> {
+    if (publicMode) {
+      if (!publicToken) throw new Error("Token pubblico AV4 mancante.");
+      const params = new URLSearchParams({ token: publicToken, av4_id: currentAv4Id, sezione });
+      const response = await fetch("/api/public/av4/titolari?" + params.toString(), { cache: "no-store" });
+      const result = await response.json();
+      if (!response.ok || !result?.ok) throw new Error(result?.error || "Caricamento titolari non riuscito.");
+      return (result.rows || []).map((row: any) => ({
+        ...emptyRiga(row?.source_mode === "manual" ? "manual" : "import"),
+        ...row,
+        codice_fiscale: normalizeCF(row?.codice_fiscale),
+        data_nascita: normalizeDateForInput(row?.data_nascita),
+      }));
+    }
     const { data, error } = await supabase
       .from("tbAV4_titolari")
       .select("*")
@@ -341,6 +354,28 @@ export default function TitolariEffettiviForm({
     }
 
     try {
+      if (publicMode) {
+        if (!publicToken || !av4_id) throw new Error("Link AV4 pubblico non valido.");
+        const params = new URLSearchParams({
+          token: publicToken, av4_id: String(av4_id), sezione, action: "lookup", codice_fiscale: codiceFiscale,
+        });
+        const response = await fetch("/api/public/av4/titolari?" + params.toString(), { cache: "no-store" });
+        const result = await response.json();
+        if (!response.ok || !result?.ok) throw new Error(result?.error || "Ricerca codice fiscale non riuscita.");
+        if (!result.found || !result.data) {
+          updateRiga(index, {
+            soggetto_cliente_id: "", source_mode: "manual", import_status: "not_found",
+            import_message: "Nessun dato trovato, inserire i dati manualmente", error_codice_fiscale: "",
+          });
+          return;
+        }
+        updateRiga(index, {
+          ...result.data,
+          source_mode: "import", import_status: "success",
+          import_message: "Importazione avvenuta con successo", error_codice_fiscale: "",
+        });
+        return;
+      }
      let query = supabase
   .from("tbclienti")
   .select(`
