@@ -776,9 +776,10 @@ export default function AntiriciclaggioPage() {
                   data-state={attiva ? "selected" : disponibile ? "available" : "unavailable"}
                   style={{ background: attiva ? "#0369a1" : disponibile ? "#ffffff" : "#cbd5e1", backgroundColor: attiva ? "#0369a1" : disponibile ? "#ffffff" : "#cbd5e1", color: attiva ? "#ffffff" : disponibile ? "#075985" : "#475569", borderColor: attiva ? "#075985" : disponibile ? "#7dd3fc" : "#94a3b8", WebkitTextFillColor: attiva ? "#ffffff" : disponibile ? "#075985" : "#475569", opacity: 1 }}
                   onClick={() => setLetteraCliente(lettera)}
-                  className="aml-letter flex h-9 min-w-0 w-full items-center justify-center rounded-md border px-0 text-[11px] font-bold"
+                  className="aml-letter relative flex h-9 min-w-0 w-full items-center justify-center rounded-md border px-0 text-[11px] font-bold"
                 >
-                  {lettera}
+                  <span className="absolute inset-0 rounded-md" style={{ backgroundColor: attiva ? "#0369a1" : disponibile ? "#ffffff" : "#cbd5e1", border: `1px solid ${attiva ? "#075985" : disponibile ? "#7dd3fc" : "#94a3b8"}` }} />
+                  <span className="relative z-10" style={{ color: attiva ? "#ffffff" : disponibile ? "#075985" : "#475569" }}>{lettera}</span>
                 </button>
               );
             })}
