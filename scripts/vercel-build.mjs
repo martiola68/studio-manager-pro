@@ -63,7 +63,7 @@ const patches = [
   "scripts/patch-pratiche-tipo-organo-controllo.mjs",
   "scripts/patch-pratiche-conferma-prefill-documenti.mjs",
   "scripts/fix-pratiche-documenti-visura-cleanup.mjs",
-  "scripts/patch-av4-public.mjs",
+  // Public AV4 titolari now uses the API directly; obsolete patch disabled.
   "scripts/patch-av4-print-professionale.mjs",
   // AV4 public validation is maintained directly in the page; do not overwrite it at build time.
   "scripts/patch-av4-public-print-identica.mjs",
