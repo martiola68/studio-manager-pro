@@ -65,7 +65,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .eq("id", av4_id).eq("public_token", token);
       return res.status(409).json({ ok: false, error: "Verifica finale anagrafica fallita. Contattare lo studio." });
     }
-    return res.status(200).json({ ok: true });
+    return res.status(200).json({ ok: true, av4_id, saved_city: values.dichiarante_citta_residenza });
   } catch (err) {
     console.error("AV4 public submit failed:", err);
     return res.status(500).json({ ok: false, error: "Errore server nel salvataggio AV4. Link non confermato." });
