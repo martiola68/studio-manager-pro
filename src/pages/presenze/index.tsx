@@ -1545,7 +1545,7 @@ const isFutureDay = day.date > maxEditableDateKey;
       ? 'Presenza generata da richiesta ferie/permessi approvata. Usa Revoca.'
       : day.holidayDescription
 }
-  style={isPermessoPfCode(code) ? { backgroundColor: '#fde68a', color: '#78350f', borderColor: '#f59e0b', borderWidth: '1px', borderStyle: 'solid' } : undefined}
+  style={isPermessoPfCode(code) ? { background: '#fbbf24', backgroundColor: '#fbbf24', color: '#451a03', border: '2px solid #d97706', opacity: 1, WebkitAppearance: 'none', appearance: 'none', fontWeight: 700 } : undefined}
   className={`h-8 w-[82px] rounded-md border px-2 text-xs outline-none ${
   isLockedByRequest || isFutureDay
     ? 'cursor-not-allowed opacity-60'
