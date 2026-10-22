@@ -735,6 +735,35 @@ export default function AntiriciclaggioPage() {
 
       {canAccessAntiriciclaggio && (
         <div className="mb-4 rounded-lg border border-sky-200 bg-sky-50 p-2 shadow-sm">
+          <style jsx global>{`
+            button.aml-letter[data-state="selected"],
+            button.aml-letter[data-state="selected"]:disabled {
+              background: #0369a1 !important;
+              background-color: #0369a1 !important;
+              color: #ffffff !important;
+              -webkit-text-fill-color: #ffffff !important;
+              border-color: #075985 !important;
+              opacity: 1 !important;
+            }
+            button.aml-letter[data-state="available"] {
+              background: #ffffff !important;
+              background-color: #ffffff !important;
+              color: #075985 !important;
+              -webkit-text-fill-color: #075985 !important;
+              border-color: #7dd3fc !important;
+              opacity: 1 !important;
+            }
+            button.aml-letter[data-state="unavailable"],
+            button.aml-letter[data-state="unavailable"]:disabled {
+              background: #cbd5e1 !important;
+              background-color: #cbd5e1 !important;
+              color: #475569 !important;
+              -webkit-text-fill-color: #475569 !important;
+              border-color: #94a3b8 !important;
+              opacity: 1 !important;
+              cursor: not-allowed !important;
+            }
+          `}</style>
           <div className="grid w-full grid-cols-[repeat(27,minmax(0,1fr))] gap-1">
             {["Tutte", ...lettereAlfabeto].map((lettera) => {
               const attiva = letteraCliente === lettera;
@@ -744,15 +773,9 @@ export default function AntiriciclaggioPage() {
                   key={lettera}
                   type="button"
                   disabled={!disponibile}
+                  data-state={attiva ? "selected" : disponibile ? "available" : "unavailable"}
                   onClick={() => setLetteraCliente(lettera)}
-                  style={{
-                    backgroundColor: attiva ? "#0369a1" : disponibile ? "#ffffff" : "#e2e8f0",
-                    color: attiva ? "#ffffff" : disponibile ? "#075985" : "#64748b",
-                    borderColor: attiva ? "#075985" : disponibile ? "#7dd3fc" : "#cbd5e1",
-                    opacity: 1,
-                    WebkitTextFillColor: attiva ? "#ffffff" : disponibile ? "#075985" : "#64748b",
-                  }}
-                  className={`flex h-9 min-w-0 w-full items-center justify-center rounded-md border px-0 text-[11px] font-bold transition-colors ${attiva ? "border-blue-800 !bg-blue-700 !text-white shadow-sm" : disponibile ? "border-sky-300 bg-white text-sky-800 hover:border-blue-500 hover:bg-sky-100" : "cursor-not-allowed border-slate-200 !bg-slate-200 !text-slate-400"}`}
+                  className="aml-letter flex h-9 min-w-0 w-full items-center justify-center rounded-md border px-0 text-[11px] font-bold"
                 >
                   {lettera}
                 </button>
