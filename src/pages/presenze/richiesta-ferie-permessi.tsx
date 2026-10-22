@@ -23,6 +23,7 @@ export default function RichiestaFeriePermessiPage() {
     tipo_richiesta: "ferie",
     tipo_permesso: "P",
     ora_richiesta: "",
+    ora_fine_extra: "",
     data_inizio: "",
     data_fine: "",
     giorni: "",
@@ -261,6 +262,18 @@ export default function RichiestaFeriePermessiPage() {
       return;
     }
 
+    if (form.tipo_richiesta === "extra") {
+      const start = form.ora_richiesta.split(":").map(Number);
+      const end = form.ora_fine_extra.split(":").map(Number);
+      const startMinutes = start.length === 2 ? start[0] * 60 + start[1] : NaN;
+      const endMinutes = end.length === 2 ? end[0] * 60 + end[1] : NaN;
+      const duration = endMinutes <= startMinutes ? endMinutes + 1440 - startMinutes : endMinutes - startMinutes;
+      if (!["ST", "LS"].includes(form.tipo_permesso) || !Number.isFinite(duration) || duration <= 0 || duration > 24 * 60 || startMinutes % 15 !== 0 || endMinutes % 15 !== 0 || duration % 15 !== 0) {
+        toast({ title: "Extra non valido", description: "Seleziona ST o LS e indica orari a intervalli di 15 minuti.", variant: "destructive" });
+        return;
+      }
+    }
+
     if (form.tipo_richiesta === "permesso") {
       if (!form.tipo_permesso) {
         toast({
@@ -318,9 +331,10 @@ export default function RichiestaFeriePermessiPage() {
         body: JSON.stringify({
           tipo_richiesta: form.tipo_richiesta,
           tipo_permesso:
-            form.tipo_richiesta === "permesso" ? form.tipo_permesso : null,
+            form.tipo_richiesta === "permesso" || form.tipo_richiesta === "extra" ? form.tipo_permesso : null,
           ora_richiesta:
-            form.tipo_richiesta === "permesso" ? form.ora_richiesta : null,
+            form.tipo_richiesta === "permesso" || form.tipo_richiesta === "extra" ? form.ora_richiesta : null,
+          ora_fine_extra: form.tipo_richiesta === "extra" ? form.ora_fine_extra : null,
           data_inizio: form.data_inizio,
           data_fine: form.data_fine,
           giorni: form.giorni,
@@ -359,12 +373,13 @@ export default function RichiestaFeriePermessiPage() {
 
   const isFerie = form.tipo_richiesta === "ferie";
   const isAllattamento = form.tipo_permesso === "AL";
+  const isExtra = form.tipo_richiesta === "extra";
 
   return (
     <div className="mx-auto max-w-2xl p-6">
       <Card>
         <CardHeader>
-          <CardTitle>Richiesta ferie/permessi</CardTitle>
+          <CardTitle>Richiesta ferie/permessi/extra</CardTitle>
         </CardHeader>
 
         <CardContent>
@@ -378,8 +393,9 @@ export default function RichiestaFeriePermessiPage() {
                   setForm((prev) => ({
                     ...prev,
                     tipo_richiesta: e.target.value,
-                    tipo_permesso: e.target.value === "permesso" ? prev.tipo_permesso || "P" : "P",
+                    tipo_permesso: e.target.value === "extra" ? "ST" : e.target.value === "permesso" ? "P" : "P",
                     ora_richiesta: "",
+                    ora_fine_extra: "",
                     giorni: "",
                     ore: "",
                   }))
@@ -387,13 +403,14 @@ export default function RichiestaFeriePermessiPage() {
               >
                 <option value="ferie">Ferie</option>
                 <option value="permesso">Permesso</option>
+                <option value="extra">Extra (ST / LS)</option>
               </select>
             </div>
 
             {!isFerie && (
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Tipo permesso richiesto</Label>
+                  <Label>{isExtra ? "Tipo extra" : "Tipo permesso richiesto"}</Label>
                   <select
                     className="w-full rounded-md border px-3 py-2"
                     value={form.tipo_permesso}
@@ -405,15 +422,16 @@ export default function RichiestaFeriePermessiPage() {
                       }))
                     }
                   >
+                    {isExtra ? (<><option value="ST">ST - Straordinario full-time</option><option value="LS">LS - Supplementare part-time</option></>) : (<>
                     <option value="P">P</option>
                     <option value="PF">PF</option>
                     <option value="104">104</option>
-                    <option value="AL">AL</option>
+                    <option value="AL">AL</option></>)}
                   </select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Ora richiesta</Label>
+                  <Label>{isExtra ? "Ora inizio extra" : "Ora richiesta"}</Label>
                   <Input
                     type="time"
                     step="900"
@@ -427,6 +445,15 @@ export default function RichiestaFeriePermessiPage() {
                     required
                   />
                 </div>
+              </div>
+            )}
+
+            {isExtra && (
+              <div className="space-y-2">
+                <Label>Ora fine extra (anche giorno successivo)</Label>
+                <Input type="time" step="900" value={form.ora_fine_extra}
+                  onChange={(e) => setForm(prev => ({ ...prev, ora_fine_extra: e.target.value }))} required />
+                <p className="text-xs text-muted-foreground">Durata calcolata automaticamente, anche oltre mezzanotte. Intervalli di 15 minuti.</p>
               </div>
             )}
 
