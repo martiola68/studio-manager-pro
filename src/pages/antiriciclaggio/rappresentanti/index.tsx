@@ -470,9 +470,9 @@ const [loadingMicrosoftConnections, setLoadingMicrosoftConnections] = useState(f
               Nessun rappresentante trovato.
             </div>
           ) : (
-            <div className="w-full min-w-0 max-w-full overflow-x-auto overscroll-x-contain rounded-md border pb-1" style={{ scrollbarGutter: "stable" }}>
-              <div className="min-w-[1280px] w-full">
-                <div className="sticky top-0 z-10 grid grid-cols-[1.9fr_0.85fr_1.2fr_1.15fr_1fr_1fr_1.15fr_140px] items-center gap-3 border-b bg-muted/80 px-3 py-2 text-xs font-semibold uppercase tracking-wide backdrop-blur">
+            <div className="w-full min-w-0 rounded-md border">
+              <div className="w-full min-w-0">
+                <div className="sticky top-0 z-10 hidden xl:grid-cols-[minmax(0,2.1fr)_minmax(0,0.78fr)_minmax(0,0.9fr)_minmax(0,1.22fr)_minmax(0,1.05fr)_minmax(0,1fr)_minmax(0,1.13fr)_108px] items-center gap-2 border-b bg-muted/80 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide backdrop-blur xl:grid">
                   <div>Cognome e nome</div>
                   <div className="text-center">Rapp. legale</div>
                   <div>Email</div>
@@ -490,17 +490,15 @@ const [loadingMicrosoftConnections, setLoadingMicrosoftConnections] = useState(f
                     return (
                       <div
                         key={r.id}
-                        className={`grid grid-cols-[1.9fr_0.85fr_1.2fr_1.15fr_1fr_1fr_1.15fr_140px] items-center gap-3 border-b px-3 py-2 text-sm last:border-b-0 ${getRowClassName(
+                        className={`grid grid-cols-2 xl:grid-cols-[minmax(0,2.1fr)_minmax(0,0.78fr)_minmax(0,0.9fr)_minmax(0,1.22fr)_minmax(0,1.05fr)_minmax(0,1fr)_minmax(0,1.13fr)_108px] items-center gap-x-4 gap-y-2 border-b px-3 py-3 text-sm last:border-b-0 xl:gap-2 xl:py-2 ${getRowClassName(
                           r
                         )}`}
                       >
-                        <div className="truncate font-medium">{r.nome_cognome || "-"}</div>
+                        <div className="min-w-0 font-medium"><span className="mb-1 block text-[10px] uppercase text-slate-500 xl:hidden">Cognome e nome</span><span className="block truncate" title={r.nome_cognome || "-"}>{r.nome_cognome || "-"}</span></div>
 
-                        <div className="flex justify-center">
-                          <RappLegaleText value={r.rappresentante_legale} />
-                        </div>
+                        <div className="min-w-0 xl:flex xl:justify-center"><span className="mb-1 block text-[10px] uppercase text-slate-500 xl:hidden">Rapp. legale</span><RappLegaleText value={r.rappresentante_legale} /></div>
 
-                        <div>
+                        <div className="min-w-0"><span className="mb-1 block text-[10px] uppercase text-slate-500 xl:hidden">Email</span>
                           {isLegale ? (
                             <PresenzaBadge present={!!r.email?.trim()} />
                           ) : (
@@ -508,13 +506,13 @@ const [loadingMicrosoftConnections, setLoadingMicrosoftConnections] = useState(f
                           )}
                         </div>
 
-                        <div className="truncate">{isLegale ? r.tipo_doc || "-" : "-"}</div>
+                        <div className="min-w-0"><span className="mb-1 block text-[10px] uppercase text-slate-500 xl:hidden">Tipo documento</span><span className="block truncate">{isLegale ? r.tipo_doc || "-" : "-"}</span></div>
 
-                        <div className="min-w-[120px]">
+                        <div className="min-w-0"><span className="mb-1 block text-[10px] uppercase text-slate-500 xl:hidden">Scadenza documento</span>
                           <ScadenzaCell value={r.scadenza_doc} enabled={isLegale} />
                         </div>
 
-                        <div className="min-w-[120px]">
+                        <div className="min-w-0"><span className="mb-1 block text-[10px] uppercase text-slate-500 xl:hidden">Doc. richiesto il</span>
                           {isLegale ? (
                             <span className="text-sm">{formatDateEU(r.doc_richiesto_il)}</span>
                           ) : (
@@ -522,7 +520,7 @@ const [loadingMicrosoftConnections, setLoadingMicrosoftConnections] = useState(f
                           )}
                         </div>
 
-                        <div className="min-w-[120px]">
+                        <div className="min-w-0"><span className="mb-1 block text-[10px] uppercase text-slate-500 xl:hidden">Documento allegato</span>
                           {isLegale ? (
                             <PresenzaBadge present={!!r.allegato_doc?.trim()} />
                           ) : (
@@ -530,7 +528,7 @@ const [loadingMicrosoftConnections, setLoadingMicrosoftConnections] = useState(f
                           )}
                         </div>
 
-                        <div className="flex items-center justify-end gap-1">
+                        <div className="flex min-w-0 items-center justify-start gap-1 xl:justify-end">
                           <Button
                             type="button"
                             variant="outline"
