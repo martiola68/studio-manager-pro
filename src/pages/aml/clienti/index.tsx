@@ -42,7 +42,7 @@ export default function ClientiAmlIndex(){
  }),[rows,query,letter,filter]);
  return <div className="space-y-4">
   <div className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-2xl font-bold">Anagrafiche clienti</h1><p className="text-sm text-slate-500">Anagrafica AML semplificata · stessa tabella clienti SMP</p></div>
-  <Link href="/aml/clienti/nuovo" className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"><Plus className="h-4 w-4"/> Nuovo cliente</Link></div>
+  <Link href="/aml/clienti/nuovo" className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-white px-4 py-2.5 text-sm font-semibold text-blue-700 hover:bg-blue-50"><Plus className="h-4 w-4"/> Nuovo cliente</Link></div>
   <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
     <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_210px]"><label className="relative"><Search className="absolute left-3 top-2.5 h-5 w-5 text-slate-400"/><input aria-label="Cerca cliente" className="w-full rounded-lg border border-slate-200 py-2.5 pl-10 pr-3 text-sm" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Cerca per cliente, codice cliente o codice fiscale..."/></label>
     <select aria-label="Filtro attivi" className="rounded-lg border border-slate-200 bg-white p-2 text-sm" value={filter} onChange={e=>setFilter(e.target.value)}><option value="attivi">Solo clienti attivi</option><option value="tutti">Tutti i clienti</option><option value="non-attivi">Clienti non attivi</option></select></div>
