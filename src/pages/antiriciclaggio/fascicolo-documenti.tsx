@@ -520,7 +520,7 @@ const isSocieta = isSocietaCliente;
 
   if (!hasAV1) mancanti.push("AV1 firmato");
   if (!hasRegolaDiCondotta) mancanti.push(regolaDiCondotta);
-  if (!hasAV4) mancanti.push("AV4 firmato");
+  if (!av1EsclusoPerRegola && !hasAV4) mancanti.push("AV4 firmato");
  const hasCodiceFiscale = hasDoc((doc) => {
   const origine = normalizza(doc.origine);
   const tipo = normalizza(doc.tipo_documento);
