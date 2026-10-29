@@ -1,20 +1,6 @@
 {
   "framework": "nextjs",
   "buildCommand": "node scripts/vercel-build.mjs",
-  "crons": [
-    {
-      "path": "/api/cron/daily-alerts",
-      "schedule": "0 6 * * *"
-    },
-    {
-      "path": "/api/presenze/report-giornaliero-email",
-      "schedule": "15 6 * * 1-5"
-    },
-    {
-      "path": "/api/presenze/sollecito-settimanale",
-      "schedule": "30 6 * * 1"
-    }
-  ],
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
     "deploymentEnabled": {
