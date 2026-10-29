@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import {
   BellRing, Building2, ChevronRight, ClipboardCheck,
-  LayoutDashboard, LogOut, Menu, ShieldCheck, Users, X, ArrowLeftRight, Cloud
+  LayoutDashboard, LogOut, Menu, ShieldCheck, Users, X, Cloud
 } from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { hardLogout } from "@/services/logoutService";
@@ -19,7 +19,7 @@ const navigation = [
   { label: "Società responsabili AV", href: "/aml/societa", icon: Building2 },
   { label: "Responsabili verifica", href: "/antiriciclaggio/responsabili-av", icon: Users },
   { label: "Dati Studio", href: "/impostazioni/studio", icon: Building2, adminOnly: true },
-  { label: "Utenti", href: "/impostazioni/utenti", icon: Users, adminOnly: true },
+  { label: "Utenti", href: "/aml/utenti", icon: Users, adminOnly: true },
   { label: "Microsoft 365", href: "/microsoft365", icon: Cloud },
   { label: "Alert", href: "/aml/alert", icon: BellRing },
 ] as const;
@@ -28,8 +28,6 @@ type Profile = { nome: string; cognome: string; tipo_utente: string; studio_id: 
 
 export function AmlShell({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const { piano } = useStudio();
-  const hasFullLicense = String(piano || "").toLowerCase().includes("full");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
 
@@ -49,17 +47,12 @@ export function AmlShell({ children }: { children: ReactNode }) {
     return () => { active = false; };
   }, []);
 
-  const openFullSmp = () => {
-    sessionStorage.removeItem(AML_INTERFACE_KEY);
-    window.location.assign("/dashboard");
-  };
-
   const nav = (
     <nav aria-label="Navigazione Studio Manager Pro AML" className="space-y-1 px-3 py-4">
       {navigation.filter((item) => !("adminOnly" in item && item.adminOnly) || profile?.tipo_utente === "Admin").map(({ href, label, icon: Icon }) => {
         const pathname = router.asPath.split("?")[0];
         const dest = href.split("?")[0];
-        const active = pathname === dest || (dest === "/antiriciclaggio" && (pathname === "/antiriciclaggio/pratiche/nuovo" || pathname.startsWith("/antiriciclaggio/pratiche/") || pathname.includes("/modello-av") || pathname.includes("/fascicolo-documenti"))) || (dest === "/aml/clienti" && pathname.startsWith("/aml/clienti/")) || (dest === "/aml/societa" && pathname.startsWith("/aml/societa/"));
+        const active = pathname === dest || (dest === "/antiriciclaggio" && (pathname === "/antiriciclaggio/pratiche/nuovo" || pathname.startsWith("/antiriciclaggio/pratiche/") || pathname.includes("/modello-av") || pathname.includes("/fascicolo-documenti"))) || (dest === "/aml/clienti" && pathname.startsWith("/aml/clienti/")) || (dest === "/aml/societa" && pathname.startsWith("/aml/societa/")) || (dest === "/aml/utenti" && pathname.startsWith("/aml/utenti/"));
         return (
           <Link key={label} href={href} onClick={() => setMobileOpen(false)}
             className={"flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors " + (active ? "bg-blue-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-700/70 hover:text-white")}>
@@ -83,9 +76,6 @@ export function AmlShell({ children }: { children: ReactNode }) {
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto">{nav}</div>
         <div className="border-t border-slate-700/70 p-3 space-y-1">
-          {hasFullLicense && <button type="button" onClick={openFullSmp} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white">
-            <ArrowLeftRight className="h-4 w-4" /> Apri SMP completo
-          </button>}
           <button type="button" onClick={() => void hardLogout("/login")} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white">
             <LogOut className="h-4 w-4" /> Esci
           </button>
