@@ -37,9 +37,9 @@ function validateCodiceFiscaleGiuridico(value: string): boolean {
   return sum % 10 === 0;
 }
 
-export default function NuovaSocietaRespAVPage() {
+export default function NuovaSocietaRespAVPage({ returnHref = "/antiriciclaggio/responsabili-av-societa", recordId }: { returnHref?: string; recordId?: string } = {}) {
   const router = useRouter();
-  const { id } = router.query;
+  const id = recordId || router.query.id;
 
   const isEdit = typeof id === "string" && id.length > 0;
 
@@ -319,7 +319,7 @@ const duplicate = await checkDuplicate(
 
       await savePasswordSettings(societaId);
 
-      await router.push("/antiriciclaggio/responsabili-av-societa");
+      await router.push(returnHref);
     } catch (err: any) {
       setError(err?.message || "Errore salvataggio società.");
     } finally {
@@ -342,7 +342,7 @@ const duplicate = await checkDuplicate(
           </div>
 
           <Button asChild variant="outline">
-            <Link href="/antiriciclaggio/responsabili-av-societa">
+            <Link href={returnHref}>
               Torna all’elenco
             </Link>
           </Button>

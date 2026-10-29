@@ -8,6 +8,7 @@ interface StudioContextType {
   isLoading: boolean;
   piano: string | null;
   addons: string[];
+  amlOnly: boolean;
   hasModule: (modulo: ModuloLicenza) => boolean;
   refreshStudio: () => Promise<void>;
 }
@@ -16,6 +17,11 @@ const StudioContext = createContext<StudioContextType | null>(null);
 
 function normalizzaPiano(value: unknown) {
   return String(value || "").trim().toLowerCase().replace(/\s+/g, "_");
+}
+
+/** Piano commerciale dedicato: distinto dai moduli opzionali del piano SMP. */
+export function isAmlStandalonePlan(value: unknown): boolean {
+  return ["aml", "aml_standalone", "solo_aml", "aml_only"].includes(normalizzaPiano(value));
 }
 
 function leggiAddons(note: unknown): string[] {
@@ -155,15 +161,16 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
   const hasModule = useCallback((modulo: ModuloLicenza) => {
     const p = normalizzaPiano(piano);
     if (p.includes("full")) return true;
-    if (modulo === "aml") return addons.includes("aml");
+    if (modulo === "aml") return isAmlStandalonePlan(p) || addons.includes("aml");
     if (modulo === "revisione") return addons.includes("revisione") || addons.includes("revisione_controllo");
     if (modulo === "controllo_gestione") return addons.includes("controllo_gestione");
     return false;
   }, [piano, addons]);
 
+  const amlOnly = isAmlStandalonePlan(piano);
   const value = useMemo(
-    () => ({ studioId, isLoading, piano, addons, hasModule, refreshStudio: loadStudio }),
-    [studioId, isLoading, piano, addons, hasModule, loadStudio]
+    () => ({ studioId, isLoading, piano, addons, amlOnly, hasModule, refreshStudio: loadStudio }),
+    [studioId, isLoading, piano, addons, amlOnly, hasModule, loadStudio]
   );
 
   return <StudioContext.Provider value={value}>{children}</StudioContext.Provider>;

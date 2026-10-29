@@ -39,6 +39,7 @@ const PROTECTED_PREFIXES = [
   "/payroll",
   "/presenze",
   "/antiriciclaggio",
+  "/aml",
   "/scadenze",
   "/impostazioni/utenti",
   "/pratiche",

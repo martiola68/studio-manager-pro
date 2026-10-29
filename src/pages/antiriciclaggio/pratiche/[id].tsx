@@ -104,6 +104,16 @@ const checkFascicoloCompleto = async (
 
   const docs = data || [];
 
+  const {data:av1ForRule}=await supabaseAny.from("tbAV1").select("Prestazione").eq("pratica_id",praticaId).maybeSingle();
+  let regolaDiCondotta = "";
+  if(av1ForRule?.Prestazione){
+    const {data:prestazione}=await supabaseAny.from("tbElencoPrestAR")
+      .select("RischioTipoPrestAR,RegolaDiCondotta").eq("TipoPrestazioneAR",av1ForRule.Prestazione).maybeSingle();
+    if(prestazione?.RischioTipoPrestAR==="Non significativo")
+      regolaDiCondotta=String(prestazione.RegolaDiCondotta||"").trim();
+  }
+  const conRegola=regolaDiCondotta.length>0;
+
   const hasDoc = (predicate: (doc: any) => boolean) =>
     docs.some((doc: any) => predicate(doc));
 
@@ -165,15 +175,16 @@ const contratto = hasDoc((doc) => {
 
   const mancanti: string[] = [];
 
-  if (!av1) mancanti.push("AV1 firmato");
-  if (!av4) mancanti.push("AV4 firmato");
-  if (!documento_identita) mancanti.push("Documento di riconoscimento");
+  if (conRegola && !hasDoc(doc => normalizza(doc.tipo_documento) === normalizza(regolaDiCondotta))) mancanti.push(regolaDiCondotta);
+  if (!conRegola && !av1) mancanti.push("AV1 firmato");
+  if (!conRegola && !av4) mancanti.push("AV4 firmato");
+  if (!conRegola && !documento_identita) mancanti.push("Documento di riconoscimento");
   if (isSocieta && !visura) mancanti.push("Visura camerale");
-  if (!contratto) mancanti.push("Contratto professionale");
+  if (!conRegola && !contratto) mancanti.push("Contratto professionale");
 
   return {
-    av1,
-    av4,
+    av1: conRegola || av1,
+    av4: conRegola || av4,
     documento_identita,
     visura,
     contratto,

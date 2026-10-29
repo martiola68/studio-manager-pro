@@ -33,6 +33,8 @@ import { Toaster } from "@/components/ui/toaster";
 
 import Header from "@/components/Header";
 import { TopNavBar } from "@/components/TopNavBar";
+import { AmlShell, AML_INTERFACE_KEY } from "@/components/aml/AmlShell";
+import { AmlSessionGuard } from "@/components/aml/AmlSessionGuard";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
@@ -65,6 +67,13 @@ const IMPOSTAZIONI_MASTER_ROUTES = new Set([
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
   const [scadenzariCleanupPending, setScadenzariCleanupPending] = useState(false);
+  const [amlMode, setAmlMode] = useState(false);
+  useEffect(() => {
+    if (!router.isReady) return;
+    const amlRoute = router.pathname === "/aml" || router.pathname.startsWith("/aml/");
+    if (amlRoute) sessionStorage.setItem(AML_INTERFACE_KEY, "1");
+    setAmlMode(amlRoute || sessionStorage.getItem(AML_INTERFACE_KEY) === "1");
+  }, [router.isReady, router.pathname]);
   const isScadenzarioPage = router.pathname.startsWith("/scadenze/");
   const isOperationalScadenzario = SCADENZARI_VIEWPORT.has(router.pathname);
   const isMasterGraficaPromemoria = router.pathname === "/promemoria";
@@ -171,7 +180,7 @@ export default function App({ Component, pageProps }: AppProps) {
       {isMasterGraficaControlloGestione && <ControlloGestioneMasterGraficaEnhancer />}
       {isMasterGraficaContenzioso && <ContenziosoMasterGraficaEnhancer />}
       {isMasterGraficaAntiriciclaggio && <AntiriciclaggioMasterGraficaEnhancer />}
-      {isPublicPage ? <>{pageContent}<Toaster /></> : <div className={`flex min-h-screen flex-col bg-gray-50 ${isFixedViewportPage ? "h-screen overflow-hidden" : ""}`}><div className="sticky top-0 z-50 shrink-0"><Header onMenuToggle={() => {}} /><TopNavBar /></div><main className={`flex-1 overflow-y-auto px-4 pb-4 pt-0 md:px-6 md:pb-6 md:pt-0 ${pageClass}`}><ModuleAccessGuard><SensitiveDataMasterGuard>{pageContent}</SensitiveDataMasterGuard></ModuleAccessGuard></main><Toaster /></div>}
+      {isPublicPage ? <>{pageContent}<Toaster /></> : (amlMode || router.pathname === "/aml" || router.pathname.startsWith("/aml/")) ? <AmlShell><AmlSessionGuard><ModuleAccessGuard><SensitiveDataMasterGuard>{pageContent}</SensitiveDataMasterGuard></ModuleAccessGuard></AmlSessionGuard><Toaster /></AmlShell> : <div className={`flex min-h-screen flex-col bg-gray-50 ${isFixedViewportPage ? "h-screen overflow-hidden" : ""}`}><div className="sticky top-0 z-50 shrink-0"><Header onMenuToggle={() => {}} /><TopNavBar /></div><main className={`flex-1 overflow-y-auto px-4 pb-4 pt-0 md:px-6 md:pb-6 md:pt-0 ${pageClass}`}><ModuleAccessGuard><SensitiveDataMasterGuard>{pageContent}</SensitiveDataMasterGuard></ModuleAccessGuard></main><Toaster /></div>}
     </StudioProvider></ThemeProvider>
   );
 }

@@ -28,7 +28,7 @@ export default function LoginPage() {
         if (cancelled) return;
         if (error) console.error("[Login] getSession error:", error);
         if (data?.session?.access_token) {
-          router.replace("/dashboard");
+          router.replace(typeof router.query.next === "string" && router.query.next.startsWith("/aml") ? router.query.next : typeof window !== "undefined" && sessionStorage.getItem("smp_interface_aml") === "1" ? "/aml" : "/dashboard");
           return;
         }
       } finally {
@@ -61,7 +61,7 @@ export default function LoginPage() {
         return;
       }
       toast({ title: "Accesso effettuato", description: "Benvenuto!" });
-      router.replace("/dashboard");
+      router.replace(typeof router.query.next === "string" && router.query.next.startsWith("/aml") ? router.query.next : sessionStorage.getItem("smp_interface_aml") === "1" ? "/aml" : "/dashboard");
     } catch (err: any) {
       toast({ title: "Errore", description: err?.message || "Errore durante il login", variant: "destructive" });
     } finally {

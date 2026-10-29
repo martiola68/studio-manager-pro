@@ -78,15 +78,22 @@ export default function TipoPromemoriaPage() {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault(); if (!canManageSystem || !studioId) return;
     try {
-      if (editingTipo) await tipoPromemoriaService.aggiornaTipoPromemoria(editingTipo.id, { nome: formData.nome.trim(), descrizione: null, colore: formData.colore });
-      else await tipoPromemoriaService.creaTipoPromemoria({ nome: formData.nome.trim(), descrizione: null, colore: formData.colore, studio_id: studioId, origine: "S" });
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("Sessione scaduta: accedi di nuovo.");
+      const response = await fetch("/api/promemoria/tipi-catalogo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + session.access_token },
+        body: JSON.stringify({ operazione: editingTipo ? "modifica" : "crea", id: editingTipo?.id, nome: formData.nome.trim(), colore: formData.colore })
+      });
+      const result = await response.json();
+      if (!response.ok || !result.ok) throw new Error(result.error || "Impossibile salvare il tipo promemoria");
       const wasEditing = Boolean(editingTipo); setShowDialog(false); resetForm(); await fetchTipi(studioId);
       toast({ title: "Successo", description: wasEditing ? "Tipo di sistema aggiornato" : "Tipo di sistema creato" });
     } catch (error) { console.error(error); toast({ title: "Errore", description: error instanceof Error ? error.message : "Impossibile salvare il tipo promemoria", variant: "destructive" }); }
   };
   const handleDelete = async (tipo: TipoPromemoriaCatalogo) => {
     if (!canManageSystem || !confirm("Eliminare questo tipo di sistema?")) return;
-    try { await tipoPromemoriaService.eliminaTipoPromemoria(tipo.id); await fetchTipi(); toast({ title: "Successo", description: "Tipo promemoria eliminato" }); }
+    try { const { data: { session } } = await supabase.auth.getSession(); if (!session?.access_token) throw new Error("Sessione scaduta"); const response = await fetch("/api/promemoria/tipi-catalogo", {method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+session.access_token},body:JSON.stringify({operazione:"elimina",id:tipo.id})});const result=await response.json();if(!response.ok||!result.ok)throw new Error(result.error||"Eliminazione non riuscita"); await fetchTipi(); toast({ title: "Successo", description: "Tipo promemoria eliminato" }); }
     catch (error) { console.error(error); toast({ title: "Errore", description: "Impossibile eliminare il tipo promemoria", variant: "destructive" }); }
   };
 
