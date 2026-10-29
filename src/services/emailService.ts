@@ -29,6 +29,7 @@ export interface ComunicazioneEmailData {
   tipo: "newsletter" | "scadenze" | "singola" | "interna";
   destinatarioId?: string;
   destinatarioEmail?: string;
+  cc?: string[];
   destinatariIds?: string[];
   oggetto: string;
   messaggio: string;
@@ -44,6 +45,7 @@ export interface ComunicazioneEmailData {
 
 export interface EmailData {
   to: string;
+  cc?: string[];
   subject: string;
   html: string;
   text: string;
@@ -291,6 +293,7 @@ async function sendEmailViaMicrosoft(
           },
         },
       ],
+      ...(data.cc?.length ? { ccRecipients: data.cc.map(email => ({ emailAddress: { address: email } })) } : {}),
       ...(attachments.length > 0 ? { attachments } : {}),
     };
 
@@ -1045,6 +1048,14 @@ export async function sendComunicazioneEmail(
       };
     }
 
+    const cc = Array.from(new Set((data.cc || []).map(value => value.trim().toLowerCase()).filter(Boolean)))
+      .filter(value => !recipients.some(r => r.email.toLowerCase() === value));
+    if (cc.some(value => !isValidEmailFormat(value))) {
+      return { success: false, sent: 0, failed: 0, skipped: 0, error: "Uno o più indirizzi CC non sono validi." };
+    }
+    if (data.tipo !== "singola" && cc.length) {
+      return { success: false, sent: 0, failed: 0, skipped: 0, error: "Il campo CC è supportato solo per email singole." };
+    }
     const validRecipients = recipients.filter((r) => isValidEmailFormat(r.email));
     const invalidRecipients = recipients.filter((r) => !isValidEmailFormat(r.email));
 
@@ -1146,6 +1157,7 @@ Questa è una email automatica, non rispondere a questo messaggio
       try {
         const result = await sendEmail({
           to: recipient.email,
+          ...(cc.length ? { cc } : {}),
           subject: data.oggetto,
           html: htmlContent,
           text: textContent,
