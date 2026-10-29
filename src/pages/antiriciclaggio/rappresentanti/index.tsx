@@ -433,9 +433,9 @@ const [loadingMicrosoftConnections, setLoadingMicrosoftConnections] = useState(f
   }
 
   return (
-    <div className="w-full min-w-0 max-w-full overflow-hidden p-3">
-      <Card className="min-w-0 w-full max-w-full overflow-hidden">
-              <CardContent className="min-w-0 w-full max-w-full space-y-3 px-3 pb-3 pt-0">
+    <div className="w-full min-w-0 max-w-full p-0">
+      <Card className="min-w-0 w-full max-w-full">
+              <CardContent className="min-w-0 w-full max-w-full space-y-3 px-2 pb-3 pt-0">
         <div className="flex w-full min-w-0 flex-col gap-2 md:flex-row">
   <Input
     placeholder="Cerca per cognome e nome, email, tipo documento..."
@@ -472,7 +472,7 @@ const [loadingMicrosoftConnections, setLoadingMicrosoftConnections] = useState(f
           ) : (
             <div className="w-full min-w-0 rounded-md border">
               <div className="w-full min-w-0">
-                <div className="sticky top-0 z-10 hidden xl:grid-cols-[minmax(0,2.1fr)_minmax(0,0.78fr)_minmax(0,0.9fr)_minmax(0,1.22fr)_minmax(0,1.05fr)_minmax(0,1fr)_minmax(0,1.13fr)_108px] items-center gap-2 border-b bg-muted/80 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide backdrop-blur xl:grid">
+                <div className="sticky top-0 z-10 hidden lg:grid-cols-[minmax(0,2.05fr)_minmax(0,.63fr)_minmax(0,.82fr)_minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,.91fr)_minmax(0,1.05fr)_104px] items-center gap-2 border-b bg-muted/80 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide backdrop-blur lg:grid">
                   <div>Cognome e nome</div>
                   <div className="text-center">Rapp. legale</div>
                   <div>Email</div>
@@ -490,15 +490,15 @@ const [loadingMicrosoftConnections, setLoadingMicrosoftConnections] = useState(f
                     return (
                       <div
                         key={r.id}
-                        className={`grid grid-cols-2 xl:grid-cols-[minmax(0,2.1fr)_minmax(0,0.78fr)_minmax(0,0.9fr)_minmax(0,1.22fr)_minmax(0,1.05fr)_minmax(0,1fr)_minmax(0,1.13fr)_108px] items-center gap-x-4 gap-y-2 border-b px-3 py-3 text-sm last:border-b-0 xl:gap-2 xl:py-2 ${getRowClassName(
+                        className={`grid grid-cols-2 lg:grid-cols-[minmax(0,2.05fr)_minmax(0,.63fr)_minmax(0,.82fr)_minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,.91fr)_minmax(0,1.05fr)_104px] items-center gap-x-4 gap-y-2 border-b px-3 py-3 text-sm last:border-b-0 lg:gap-2 lg:py-2 ${getRowClassName(
                           r
                         )}`}
                       >
-                        <div className="min-w-0 font-medium"><span className="mb-1 block text-[10px] uppercase text-slate-500 xl:hidden">Cognome e nome</span><span className="block truncate" title={r.nome_cognome || "-"}>{r.nome_cognome || "-"}</span></div>
+                        <div className="min-w-0 font-medium"><span className="mb-1 block text-[10px] uppercase text-slate-500 lg:hidden">Cognome e nome</span><span className="block truncate" title={r.nome_cognome || "-"}>{r.nome_cognome || "-"}</span></div>
 
-                        <div className="min-w-0 xl:flex xl:justify-center"><span className="mb-1 block text-[10px] uppercase text-slate-500 xl:hidden">Rapp. legale</span><RappLegaleText value={r.rappresentante_legale} /></div>
+                        <div className="min-w-0 lg:flex lg:justify-center"><span className="mb-1 block text-[10px] uppercase text-slate-500 lg:hidden">Rapp. legale</span><RappLegaleText value={r.rappresentante_legale} /></div>
 
-                        <div className="min-w-0"><span className="mb-1 block text-[10px] uppercase text-slate-500 xl:hidden">Email</span>
+                        <div className="min-w-0"><span className="mb-1 block text-[10px] uppercase text-slate-500 lg:hidden">Email</span>
                           {isLegale ? (
                             <PresenzaBadge present={!!r.email?.trim()} />
                           ) : (
@@ -506,13 +506,13 @@ const [loadingMicrosoftConnections, setLoadingMicrosoftConnections] = useState(f
                           )}
                         </div>
 
-                        <div className="min-w-0"><span className="mb-1 block text-[10px] uppercase text-slate-500 xl:hidden">Tipo documento</span><span className="block truncate">{isLegale ? r.tipo_doc || "-" : "-"}</span></div>
+                        <div className="min-w-0"><span className="mb-1 block text-[10px] uppercase text-slate-500 lg:hidden">Tipo documento</span><span className="block truncate">{isLegale ? r.tipo_doc || "-" : "-"}</span></div>
 
-                        <div className="min-w-0"><span className="mb-1 block text-[10px] uppercase text-slate-500 xl:hidden">Scadenza documento</span>
+                        <div className="min-w-0"><span className="mb-1 block text-[10px] uppercase text-slate-500 lg:hidden">Scadenza documento</span>
                           <ScadenzaCell value={r.scadenza_doc} enabled={isLegale} />
                         </div>
 
-                        <div className="min-w-0"><span className="mb-1 block text-[10px] uppercase text-slate-500 xl:hidden">Doc. richiesto il</span>
+                        <div className="min-w-0"><span className="mb-1 block text-[10px] uppercase text-slate-500 lg:hidden">Doc. richiesto il</span>
                           {isLegale ? (
                             <span className="text-sm">{formatDateEU(r.doc_richiesto_il)}</span>
                           ) : (
@@ -520,7 +520,7 @@ const [loadingMicrosoftConnections, setLoadingMicrosoftConnections] = useState(f
                           )}
                         </div>
 
-                        <div className="min-w-0"><span className="mb-1 block text-[10px] uppercase text-slate-500 xl:hidden">Documento allegato</span>
+                        <div className="min-w-0"><span className="mb-1 block text-[10px] uppercase text-slate-500 lg:hidden">Documento allegato</span>
                           {isLegale ? (
                             <PresenzaBadge present={!!r.allegato_doc?.trim()} />
                           ) : (
@@ -528,7 +528,7 @@ const [loadingMicrosoftConnections, setLoadingMicrosoftConnections] = useState(f
                           )}
                         </div>
 
-                        <div className="flex min-w-0 items-center justify-start gap-1 xl:justify-end">
+                        <div className="flex min-w-0 items-center justify-start gap-1 lg:justify-end">
                           <Button
                             type="button"
                             variant="outline"
