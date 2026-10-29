@@ -37,9 +37,9 @@ function validateCodiceFiscaleGiuridico(value: string): boolean {
   return sum % 10 === 0;
 }
 
-export default function NuovaSocietaRespAVPage({ returnHref = "/antiriciclaggio/responsabili-av-societa" }: { returnHref?: string } = {}) {
+export default function NuovaSocietaRespAVPage({ returnHref = "/antiriciclaggio/responsabili-av-societa", recordId }: { returnHref?: string; recordId?: string } = {}) {
   const router = useRouter();
-  const { id } = router.query;
+  const id = recordId || router.query.id;
 
   const isEdit = typeof id === "string" && id.length > 0;
 
