@@ -67,7 +67,7 @@ const patches = [
   "scripts/patch-av4-print-professionale.mjs",
   // AV4 public validation is maintained directly in the page; do not overwrite it at build time.
   "scripts/patch-av4-public-print-identica.mjs",
-  "scripts/oneoff-riallineamento-distribuzione-utili.mjs",
+  // Riallineamenti una tantum non devono essere eseguiti durante ogni build.
 ];
 
 for (const script of patches) {
