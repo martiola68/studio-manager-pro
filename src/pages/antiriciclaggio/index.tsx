@@ -73,6 +73,7 @@ type PraticaAMLRow = {
   data_apertura?: string | null;
   stato?: string | null;
   stato_ciclo?: string | null;
+  fascicolo_completo_manuale?: boolean | null;
   av1_id?: string | null;
   av2_id?: string | null;
   av2_corrente_id?: string | null;
@@ -195,7 +196,7 @@ export default function AntiriciclaggioPage() {
     const av4Inviato = !!(av4Info?.Av4InviatoCL || av4Info?.public_sent_at || av4Ricevuto);
     if (!row.regola_condotta && !av4Inviato) return { dotClass: "bg-red-500", text: "AV4 da generare", className: "font-semibold text-red-700" };
     if (!row.regola_condotta && !av4Ricevuto) return { dotClass: "bg-yellow-400", text: "AV4 inviato - in attesa", className: "font-semibold text-yellow-700" };
-    if (row.fascicolo_completo === false) return { dotClass: "bg-yellow-500", text: "Fascicolo incompleto", className: "font-semibold text-yellow-700" };
+    if (row.fascicolo_completo === false || !row.fascicolo_confermato) return { dotClass: "bg-yellow-500", text: "Fascicolo da confermare", className: "font-semibold text-yellow-700" };
     return { dotClass: "bg-green-500", text: "Completa", className: "font-semibold text-green-700" };
   };
 
@@ -330,7 +331,7 @@ export default function AntiriciclaggioPage() {
       setLoading(true);
       setRows([]);
       const supabaseAny = getSupabaseClient() as any;
-      const { data: praticheData, error: praticheError } = await supabaseAny.from("tbPraticheAML").select(`id, studio_id, cliente_id, societa_id, data_apertura, stato, stato_ciclo, av1_id, av2_id, av2_corrente_id, av4_id, av4_corrente_id, tbclienti (id, cod_cliente, ragione_sociale, codice_fiscale, utente_operatore_id, utente_operatore:tbutenti!tbclienti_utente_operatore_id_fkey (nome, cognome))`).eq("societa_id", societaId).order("data_apertura", { ascending: false });
+      const { data: praticheData, error: praticheError } = await supabaseAny.from("tbPraticheAML").select(`id, studio_id, cliente_id, societa_id, data_apertura, stato, stato_ciclo, fascicolo_completo_manuale, av1_id, av2_id, av2_corrente_id, av4_id, av4_corrente_id, tbclienti (id, cod_cliente, ragione_sociale, codice_fiscale, utente_operatore_id, utente_operatore:tbutenti!tbclienti_utente_operatore_id_fkey (nome, cognome))`).eq("societa_id", societaId).order("data_apertura", { ascending: false });
       if (praticheError) throw praticheError;
       const praticheRows = (praticheData as PraticaAMLRow[]) || [];
       const rowsBase: AV1Row[] = await Promise.all(praticheRows.map(async (pratica) => {
@@ -356,6 +357,7 @@ export default function AntiriciclaggioPage() {
           tbclienti: pratica.tbclienti || null,
           av4_info: av4 || null,
           stato_pratica: pratica.stato || "aperta",
+          fascicolo_confermato: pratica.fascicolo_completo_manuale === true,
           is_pratica_only: !av1?.id,
         };
       }));
@@ -652,6 +654,22 @@ export default function AntiriciclaggioPage() {
     router.push(selectedSocieta?.id ? `/antiriciclaggio/pratiche/nuovo?societa_id=${selectedSocieta.id}` : "/antiriciclaggio/pratiche/nuovo");
   };
 
+  const setFascicoloCompletoManualmente = async (row: AV1Row, confermato: boolean) => {
+    if (!row.pratica_id || !canAccessAntiriciclaggio) return;
+    if (confermato && row.fascicolo_completo !== true) {
+      alert("Prima acquisisci visura e verbale previsti: i documenti mancanti impediscono la conferma.");
+      return;
+    }
+    try {
+      const {data:{session}}=await (getSupabaseClient() as any).auth.getSession();
+      if(!session?.access_token)throw new Error("Sessione scaduta");
+      const response=await fetch("/api/aml/fascicolo/conferma",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+session.access_token},body:JSON.stringify({praticaId:row.pratica_id,confermato})});
+      const data=await response.json();
+      if(!response.ok)throw new Error(data?.error||"Errore salvataggio");
+      setRows(prev=>prev.map(item=>item.pratica_id===row.pratica_id?{...item,fascicolo_confermato:confermato}:item));
+    }catch(e){alert(e instanceof Error?e.message:"Errore salvataggio fascicolo");}
+  };
+
   const handleApriAV1 = (row: AV1Row) => {
     if (!canAccessAntiriciclaggio) return;
     if (row.id) return void router.push(`/antiriciclaggio/modello-av1?id=${row.id}`);
@@ -794,9 +812,9 @@ export default function AntiriciclaggioPage() {
       {loading ? <div>Caricamento...</div> : !societaFilter ? <div>Seleziona un soggetto responsabile per visualizzare le pratiche</div> : !canAccessAntiriciclaggio ? <div>Accesso riservato: inserisci la password della società per consultare le pratiche.</div> : (
         <div className="overflow-x-auto rounded-lg border bg-white">
           <table className="w-full text-sm">
-            <thead className="bg-gray-100"><tr><th className="p-3 text-left">Stato</th><th className="p-3 text-left">Cliente</th><th className="p-3 text-left">Utente di riferimento</th><th className="p-3 text-left">Data verifica</th><th className="p-3 text-left">Scadenza verifica</th><th className="p-2 text-center">AV1<br/>conferma</th><th className="p-2 text-center">AV2<br/>confermato</th><th className="p-2 text-center">AV4<br/>inviato</th><th className="p-2 text-center">AV4<br/>manuale</th><th className="p-2 text-center">AV4<br/>confermato</th><th className="p-3 text-center">Azioni</th></tr></thead>
+            <thead className="bg-gray-100"><tr><th className="p-3 text-left">Stato</th><th className="p-3 text-left">Cliente</th><th className="p-3 text-left">Utente di riferimento</th><th className="p-3 text-left">Data verifica</th><th className="p-3 text-left">Scadenza verifica</th><th className="p-2 text-center">AV1<br/>conferma</th><th className="p-2 text-center">AV2<br/>confermato</th><th className="p-2 text-center">AV4<br/>inviato</th><th className="p-2 text-center">AV4<br/>manuale</th><th className="p-2 text-center">AV4<br/>confermato</th><th className="p-3 text-center">Fascicolo<br/>completo</th><th className="p-3 text-center">Azioni</th></tr></thead>
             <tbody>
-              {filteredRows.length === 0 ? <tr><td colSpan={11} className="p-4 text-center">{ricercaCliente ? "Nessun cliente corrisponde alla ricerca" : "Nessuna pratica trovata per il soggetto responsabile selezionato"}</td></tr> : filteredRows.map((row) => {
+              {filteredRows.length === 0 ? <tr><td colSpan={12} className="p-4 text-center">{ricercaCliente ? "Nessun cliente corrisponde alla ricerca" : "Nessuna pratica trovata per il soggetto responsabile selezionato"}</td></tr> : filteredRows.map((row) => {
                 const cliente = getCliente(row);
                 const av4Info = getAV4Info(row);
                 const nomeCliente = cliente?.ragione_sociale || cliente?.cod_cliente || cliente?.codice_fiscale || "-";
@@ -812,7 +830,7 @@ export default function AntiriciclaggioPage() {
                   <td className="p-2 text-center">{row.regola_condotta ? "Esente" : av4Info?.Av4InviatoCL || av4Info?.public_sent_at ? "Sì" : "No"}</td>
                   <td className="p-2 text-center">{av4Info?.av4_caricato_manualmente ? "Sì" : "-"}</td>
                   <td className="p-2 text-center">{row.av4_firmato_presente ? "Sì" : "No"}</td>
-                  <td className="p-3"><div className="flex items-center justify-center gap-3">
+                  <td className="p-3 text-center"><input aria-label="Fascicolo completo" title={row.fascicolo_completo ? "Conferma manuale fascicolo" : "Carica prima i documenti richiesti"} type="checkbox" checked={!!row.fascicolo_confermato} disabled={!row.fascicolo_completo && !row.fascicolo_confermato} onChange={e=>void setFascicoloCompletoManualmente(row,e.target.checked)} className="h-4 w-4 accent-green-600"/></td><td className="p-3"><div className="flex items-center justify-center gap-3">
                     <button onClick={() => handleApriAV1(row)} className={`rounded-[28px] bg-white p-1 ${getIconBorderClass(!!row.AV1Conferma)}`}>AV1</button>
                     <button onClick={() => handleApriAV2(row)} className={`rounded-[28px] bg-white p-1 ${getIconBorderClass(!!row.regola_condotta || !!row.AV2Confermato)}`}>AV2</button>
                     <button onClick={() => handleApriAV4(row)} className={`rounded-[28px] bg-white p-1 ${getAV4IconBorderClass(row)}`}>AV4</button>
