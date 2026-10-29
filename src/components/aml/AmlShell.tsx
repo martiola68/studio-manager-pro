@@ -20,6 +20,7 @@ const navigation = [
   { label: "Responsabili verifica", href: "/antiriciclaggio/responsabili-av", icon: Users },
   { label: "Dati Studio", href: "/impostazioni/studio", icon: Building2, adminOnly: true },
   { label: "Utenti", href: "/aml/utenti", icon: Users, adminOnly: true },
+  { label: "Licenza AML", href: "/aml/licenza", icon: ShieldCheck, adminOnly: true },
   { label: "Microsoft 365", href: "/microsoft365", icon: Cloud },
   { label: "Alert", href: "/aml/alert", icon: BellRing },
 ] as const;
