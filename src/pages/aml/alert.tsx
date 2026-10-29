@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/router";
-import { AlertTriangle, ArrowLeft, BellRing, CalendarClock, CheckCircle2, ExternalLink, Filter, RefreshCw } from "lucide-react";
+import { AlertTriangle, ArrowLeft, BellRing, CalendarClock, CheckCircle2, Filter, RefreshCw } from "lucide-react";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 type Scadenza = {
@@ -18,7 +17,6 @@ function formatDate(value?:string|null) {
  return Number.isNaN(d.getTime()) ? value : d.toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric"});
 }
 export default function CentroAlertAMLPage(){
- const router=useRouter();
  const {ready,session}=useRequireAuth();
  const [state,setState]=useState<AlertResponse|null>(null);
  const [error,setError]=useState("");
@@ -26,7 +24,6 @@ export default function CentroAlertAMLPage(){
  const [filter,setFilter]=useState("");
  const [search,setSearch]=useState("");
  const [reload,setReload]=useState(0);
- const amlOnly=router.query.ambito==="aml";
  useEffect(()=>{
    if(!ready || !session?.access_token)return;
    let live=true;
@@ -44,25 +41,20 @@ export default function CentroAlertAMLPage(){
  },[ready,session?.access_token,reload]);
  const visible=useMemo(()=>{
   return (state?.scadenze||[]).filter(v=>{
-    if(amlOnly&&!isAml(v.origine_modulo))return false;
+    if(!isAml(v.origine_modulo))return false;
     if(filter && v.stato_calcolato!==filter)return false;
     const needle=search.toLocaleLowerCase("it").trim();
     if(!needle)return true;
     return [v.cliente,v.titolo,v.origine_modulo,v.operatore_responsabile].some(x=>String(x||"").toLocaleLowerCase("it").includes(needle));
   }).sort((a,b)=>String(a.data_scadenza||"9999").localeCompare(String(b.data_scadenza||"9999")));
- },[state,amlOnly,filter,search]);
+ },[state,filter,search]);
  const errorStates=new Set(["scaduta","scade_oggi"]);
  return <div className="space-y-5">
    <div className="flex flex-wrap items-start justify-between gap-3">
      <div><Link href="/aml" className="mb-2 inline-flex items-center gap-1 text-sm text-blue-600"><ArrowLeft className="h-4 w-4"/> Cruscotto AML</Link>
      <h1 className="text-3xl font-bold text-slate-900">Centro Alert</h1>
-     <p className="mt-1 text-sm text-slate-500">Motore centrale originale SMP · scadenze, stati, controlli e notifiche</p></div>
+     <p className="mt-1 text-sm text-slate-500">Solo avvisi antiriciclaggio, elaborati dal motore centrale SMP</p></div>
      <button type="button" onClick={()=>setReload(n=>n+1)} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm hover:bg-slate-50"><RefreshCw className={"h-4 w-4 "+(loading?"animate-spin":"")}/> Aggiorna</button>
-   </div>
-   <div className="flex flex-wrap gap-2">
-     <Link href="/aml/alert" className={"rounded-lg border px-4 py-2 text-sm font-semibold "+(!amlOnly?"border-blue-600 bg-blue-600 text-white":"border-slate-200 bg-white text-slate-600")}>Tutti gli alert SMP</Link>
-     <Link href="/aml/alert?ambito=aml" className={"rounded-lg border px-4 py-2 text-sm font-semibold "+(amlOnly?"border-blue-600 bg-blue-600 text-white":"border-slate-200 bg-white text-slate-600")}>Solo AML</Link>
-     <Link href="/scadenze/alert-non-inviati" className="inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-900"><AlertTriangle className="h-4 w-4"/> Avvisi non inviati <ExternalLink className="h-3 w-3"/></Link>
    </div>
    <div className="grid gap-3 sm:grid-cols-3">
      <div className="rounded-xl border border-slate-200 bg-white p-4"><div className="text-sm text-slate-500">Alert nell'elenco</div><div className="mt-1 text-3xl font-bold">{state?visible.length:"—"}</div></div>
