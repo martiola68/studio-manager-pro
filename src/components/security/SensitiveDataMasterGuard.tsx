@@ -23,7 +23,7 @@ import {
   syncEncryptionKeyFromMasterPassword,
 } from "@/lib/security/masterPasswordEncryptionBridge";
 
-const MASTER_UNLOCK_TIMEOUT = 15 * 60 * 1000;
+const MASTER_UNLOCK_TIMEOUT = 20 * 60 * 1000;
 
 const PROTECTED_PREFIXES = [
   "/clienti",
@@ -95,6 +95,14 @@ export function SensitiveDataMasterGuard({ children }: { children: ReactNode }) 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [password, setPassword] = useState("");
   const [unlocking, setUnlocking] = useState(false);
+  // Conserva montato il form già aperto soltanto nel contesto autorizzato
+  // della stessa rotta, dello stesso studio e dello stesso utente.
+  // Non monta mai contenuti sensibili prima del primo sblocco.
+  const [mountedContext, setMountedContext] = useState<{
+    path: string;
+    studioId: string;
+    userId: string;
+  } | null>(null);
 
   const lock = useCallback(() => {
     if (typeof window !== "undefined" && studioId && userId) {
@@ -114,6 +122,7 @@ export function SensitiveDataMasterGuard({ children }: { children: ReactNode }) 
         clearMasterPasswordEncryptionKey();
         setUnlocked(false);
         setUserId(null);
+        setMountedContext(null);
       }
     });
     return () => listener.subscription.unsubscribe();
@@ -226,7 +235,19 @@ export function SensitiveDataMasterGuard({ children }: { children: ReactNode }) 
     const lastActivityKey = activityKey(studioId, userId);
     let lastWrite = 0;
 
+    const checkTimeout = () => {
+      const lastActivity = Number(sessionStorage.getItem(lastActivityKey) || "0");
+      if (!lastActivity || Date.now() - lastActivity > MASTER_UNLOCK_TIMEOUT) {
+        lock();
+        return true;
+      }
+      return false;
+    };
+
     const markActivity = () => {
+      // Prima di registrare l'attività, verifica che la sessione non sia
+      // già scaduta: il primo click dopo un'assenza non deve prolungarla.
+      if (checkTimeout()) return;
       const now = Date.now();
       if (now - lastWrite < 5000) return;
       lastWrite = now;
@@ -234,29 +255,23 @@ export function SensitiveDataMasterGuard({ children }: { children: ReactNode }) 
       sessionStorage.setItem(lastActivityKey, String(now));
     };
 
-    const checkTimeout = () => {
-      const lastActivity = Number(
-        sessionStorage.getItem(lastActivityKey) || "0"
-      );
-      if (!lastActivity || Date.now() - lastActivity > MASTER_UNLOCK_TIMEOUT) {
-        lock();
-      }
-    };
-
-    markActivity();
+    // Focus e ritorno alla scheda controllano la scadenza, non la rinnovano.
     const events: Array<keyof WindowEventMap> = [
       "pointerdown",
       "keydown",
       "scroll",
-      "focus",
     ];
     events.forEach((event) =>
       window.addEventListener(event, markActivity, { passive: true })
     );
+    window.addEventListener("focus", checkTimeout);
+    document.addEventListener("visibilitychange", checkTimeout);
     const timer = window.setInterval(checkTimeout, 30000);
 
     return () => {
       events.forEach((event) => window.removeEventListener(event, markActivity));
+      window.removeEventListener("focus", checkTimeout);
+      document.removeEventListener("visibilitychange", checkTimeout);
       window.clearInterval(timer);
     };
   }, [protectedPath, protectionEnabled, unlocked, studioId, userId, lock]);
@@ -301,7 +316,7 @@ export function SensitiveDataMasterGuard({ children }: { children: ReactNode }) 
       toast({
         title: "Dati sensibili sbloccati",
         description:
-          "La protezione resta attiva fino a 15 minuti di inattività.",
+          "La protezione resta attiva fino a 20 minuti di inattività.",
       });
     } catch (error) {
       console.error("[SensitiveDataMasterGuard] Errore sblocco:", error);
@@ -315,20 +330,59 @@ export function SensitiveDataMasterGuard({ children }: { children: ReactNode }) 
     }
   };
 
+
+  useEffect(() => {
+    if (
+      protectedPath &&
+      !studioLoading &&
+      !checking &&
+      protectionEnabled &&
+      unlocked &&
+      studioId &&
+      userId
+    ) {
+      setMountedContext((current) =>
+        current?.path === router.asPath &&
+        current.studioId === studioId &&
+        current.userId === userId
+          ? current
+          : { path: router.asPath, studioId, userId }
+      );
+    }
+  }, [protectedPath, studioLoading, checking, protectionEnabled, unlocked, studioId, userId, router.asPath]);
+
   if (!protectedPath) return <>{children}</>;
 
-  if (studioLoading || checking) {
-    return (
-      <div className="flex min-h-[240px] items-center justify-center text-sm text-slate-500">
-        Verifica protezione dati sensibili...
-      </div>
-    );
-  }
-
-  if (!protectionEnabled || unlocked) return <>{children}</>;
+  const loadingProtection = studioLoading || checking;
+  const isLocked = !loadingProtection && protectionEnabled && !unlocked;
+  const hasMountedThisRoute =
+    mountedContext?.path === router.asPath &&
+    mountedContext?.studioId === studioId &&
+    mountedContext?.userId === userId;
+  const canShow = !loadingProtection && (!protectionEnabled || unlocked);
+  // Mantenere lo stesso elemento wrapper evita il remount React dopo il
+  // blocco e conserva form non salvati, filtri, scroll e query della rotta.
+  const shouldRenderChildren = canShow || hasMountedThisRoute;
+  const concealContent = !canShow;
 
   return (
     <>
+      {shouldRenderChildren && (
+        <div
+          className={concealContent ? "hidden" : "contents"}
+          inert={concealContent ? true : undefined}
+          aria-hidden={concealContent ? true : undefined}
+        >
+          {children}
+        </div>
+      )}
+      {loadingProtection && !hasMountedThisRoute && (
+        <div className="flex min-h-[240px] items-center justify-center text-sm text-slate-500">
+          Verifica protezione dati sensibili...
+        </div>
+      )}
+
+      {isLocked && (
       <div className="flex min-h-[360px] items-center justify-center px-4 py-10">
         <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
@@ -338,8 +392,8 @@ export function SensitiveDataMasterGuard({ children }: { children: ReactNode }) 
             Dati sensibili protetti
           </h1>
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            Inserisci la Master Password dello studio per aprire quest&apos;area.
-            La pagina resta invariata dopo lo sblocco.
+            Inserisci la Master Password dello studio per riaprire la schermata
+            esattamente dove l&apos;avevi lasciata.
           </p>
           <Button className="mt-6 gap-2" onClick={() => setDialogOpen(true)}>
             <ShieldCheck className="h-4 w-4" />
@@ -347,8 +401,8 @@ export function SensitiveDataMasterGuard({ children }: { children: ReactNode }) 
           </Button>
         </div>
       </div>
-
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      )}
+      <Dialog open={dialogOpen && isLocked} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Master Password</DialogTitle>

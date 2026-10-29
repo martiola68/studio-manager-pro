@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { getStudioId } from "@/services/getStudioId";
@@ -82,8 +82,6 @@ type PraticaAMLRow = {
 
 const AML_SESSION_KEY = "antiriciclaggio_unlocked_societa_id";
 const AML_SELECTED_SOCIETA_KEY = "antiriciclaggio_selected_societa_id";
-const AML_TIMEOUT_MS = 5 * 60 * 1000;
-const AML_WARNING_MS = 60 * 1000;
 
 export default function AntiriciclaggioPage() {
   const router = useRouter();
@@ -105,8 +103,6 @@ export default function AntiriciclaggioPage() {
   const [passwordError, setPasswordError] = useState("");
   const [showForgotPasswordInfo, setShowForgotPasswordInfo] = useState(false);
 
-  const [showTimeoutModal, setShowTimeoutModal] = useState(false);
-  const [timeoutCountdown, setTimeoutCountdown] = useState(Math.floor(AML_WARNING_MS / 1000));
   const [amlAttivo, setAmlAttivo] = useState<boolean | null>(null);
 
   const REVISIONI_BYPASS_ID = "f9d3ca10-6134-4061-a2b4-0be74e8c7654";
@@ -118,12 +114,6 @@ export default function AntiriciclaggioPage() {
     if (savedSelected) setSocietaFilter(savedSelected);
     if (savedUnlocked) setUnlockedSocietaId(savedUnlocked);
   }, []);
-
-  const inactivityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const warningIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const autoCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastActivityRef = useRef<number>(Date.now());
-  const hiddenTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return "-";
@@ -371,26 +361,6 @@ export default function AntiriciclaggioPage() {
     }
   };
 
-  const clearAmlTimers = () => {
-    if (inactivityTimeoutRef.current) clearTimeout(inactivityTimeoutRef.current);
-    if (warningIntervalRef.current) clearInterval(warningIntervalRef.current);
-    if (autoCloseTimeoutRef.current) clearTimeout(autoCloseTimeoutRef.current);
-    if (hiddenTimeoutRef.current) clearTimeout(hiddenTimeoutRef.current);
-    inactivityTimeoutRef.current = null;
-    warningIntervalRef.current = null;
-    autoCloseTimeoutRef.current = null;
-    hiddenTimeoutRef.current = null;
-  };
-
-  const closeTimeoutModal = () => {
-    setShowTimeoutModal(false);
-    setTimeoutCountdown(Math.floor(AML_WARNING_MS / 1000));
-    if (warningIntervalRef.current) clearInterval(warningIntervalRef.current);
-    if (autoCloseTimeoutRef.current) clearTimeout(autoCloseTimeoutRef.current);
-    warningIntervalRef.current = null;
-    autoCloseTimeoutRef.current = null;
-  };
-
   const clearAccessState = () => {
     setUnlockedSocietaId(null);
     setRows([]);
@@ -399,14 +369,12 @@ export default function AntiriciclaggioPage() {
     setPasswordError("");
     setShowPasswordModal(false);
     setShowForgotPasswordInfo(false);
-    setShowTimeoutModal(false);
     setWorkingId(null);
     if (typeof window !== "undefined") sessionStorage.removeItem(AML_SESSION_KEY);
   };
 
+  // Chiusura manuale esplicita: non è un timeout aggiuntivo.
   const handleCloseAccess = () => {
-    clearAmlTimers();
-    closeTimeoutModal();
     clearAccessState();
     setSocietaFilter("");
     setSelectedSocieta(null);
@@ -415,41 +383,6 @@ export default function AntiriciclaggioPage() {
       sessionStorage.removeItem(AML_SELECTED_SOCIETA_KEY);
     }
     router.replace(router.asPath);
-  };
-
-  const startWarningPhase = () => {
-    closeTimeoutModal();
-    const warningStartedAt = Date.now();
-    setShowTimeoutModal(true);
-    setTimeoutCountdown(Math.ceil(AML_WARNING_MS / 1000));
-    warningIntervalRef.current = setInterval(() => {
-      const remainingMs = Math.max(0, AML_WARNING_MS - (Date.now() - warningStartedAt));
-      const remainingSec = Math.ceil(remainingMs / 1000);
-      setTimeoutCountdown(remainingSec);
-      if (remainingSec <= 0 && warningIntervalRef.current) {
-        clearInterval(warningIntervalRef.current);
-        warningIntervalRef.current = null;
-      }
-    }, 1000);
-    autoCloseTimeoutRef.current = setTimeout(() => {
-      closeTimeoutModal();
-      handleCloseAccess();
-    }, AML_WARNING_MS);
-  };
-
-  const resetInactivityTimer = () => {
-    const isProtectedSocieta = !!selectedSocieta?.antiriciclaggio_enabled;
-    const canAccess = !!societaFilter && !!selectedSocieta && (!isProtectedSocieta || unlockedSocietaId === societaFilter);
-    if (!canAccess) return;
-    lastActivityRef.current = Date.now();
-    if (inactivityTimeoutRef.current) clearTimeout(inactivityTimeoutRef.current);
-    inactivityTimeoutRef.current = setTimeout(startWarningPhase, AML_TIMEOUT_MS - AML_WARNING_MS);
-  };
-
-  const handleContinueSession = () => {
-    lastActivityRef.current = Date.now();
-    closeTimeoutModal();
-    resetInactivityTimer();
   };
 
   const unlockSocietaDirectly = async (societa: SocietaOption) => {
@@ -504,50 +437,9 @@ export default function AntiriciclaggioPage() {
   const isSocietaSelectionLocked = !!societaFilter && !!selectedSocieta && !!isProtectedSocieta && unlockedSocietaId === societaFilter;
 
   useEffect(() => {
-    if (typeof window === "undefined" || !canAccessAntiriciclaggio) {
-      clearAmlTimers();
-      closeTimeoutModal();
-      return;
-    }
-    const events: Array<keyof WindowEventMap> = ["mousemove", "mousedown", "keydown", "scroll", "touchstart", "click"];
-    const onActivity = () => {
-      if (!showTimeoutModal) resetInactivityTimer();
-    };
-    events.forEach((eventName) => window.addEventListener(eventName, onActivity));
-    if (!showTimeoutModal) resetInactivityTimer();
-    return () => {
-      events.forEach((eventName) => window.removeEventListener(eventName, onActivity));
-      if (!showTimeoutModal) clearAmlTimers();
-    };
-  }, [canAccessAntiriciclaggio]);
-
-  useEffect(() => {
-    if (typeof window === "undefined" || !canAccessAntiriciclaggio) return;
-    const closeAfterHidden = () => {
-      if (hiddenTimeoutRef.current) clearTimeout(hiddenTimeoutRef.current);
-      hiddenTimeoutRef.current = setTimeout(handleCloseAccess, AML_TIMEOUT_MS);
-    };
-    const cancelHiddenClose = () => {
-      if (hiddenTimeoutRef.current) clearTimeout(hiddenTimeoutRef.current);
-      hiddenTimeoutRef.current = null;
-      resetInactivityTimer();
-    };
-    document.addEventListener("visibilitychange", () => document.hidden ? closeAfterHidden() : cancelHiddenClose());
-    window.addEventListener("blur", closeAfterHidden);
-    window.addEventListener("focus", cancelHiddenClose);
-    return () => {
-      window.removeEventListener("blur", closeAfterHidden);
-      window.removeEventListener("focus", cancelHiddenClose);
-      if (hiddenTimeoutRef.current) clearTimeout(hiddenTimeoutRef.current);
-    };
-  }, [canAccessAntiriciclaggio]);
-
-  useEffect(() => {
     if (typeof window === "undefined") return;
     const handleRouteChangeStart = (url: string) => {
       if (!url.startsWith("/antiriciclaggio")) {
-        clearAmlTimers();
-        closeTimeoutModal();
         clearAccessState();
         setSocietaFilter("");
         setSelectedSocieta(null);
@@ -601,8 +493,6 @@ export default function AntiriciclaggioPage() {
       else sessionStorage.removeItem(AML_SELECTED_SOCIETA_KEY);
       sessionStorage.removeItem(AML_SESSION_KEY);
     }
-    clearAmlTimers();
-    closeTimeoutModal();
     setRows([]);
     setPassword("");
     setPasswordError("");
@@ -636,7 +526,6 @@ export default function AntiriciclaggioPage() {
       setShowPasswordModal(false);
       setShowForgotPasswordInfo(false);
       setPassword("");
-      lastActivityRef.current = Date.now();
       await loadRowsBySocieta(selectedSocieta.id);
     } catch (err: any) {
       setPasswordError(err?.message || "Errore durante la verifica password.");
@@ -826,7 +715,7 @@ export default function AntiriciclaggioPage() {
 
       {showPasswordModal && selectedSocieta && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"><div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl"><div className="mb-4 flex items-start justify-between"><div><h2 className="text-lg font-semibold">Accesso riservato antiriciclaggio</h2><p className="mt-1 text-sm text-gray-600">Inserisci la password per accedere alla società <span className="font-medium">{selectedSocieta.Denominazione}</span>.</p></div><button onClick={() => { setShowPasswordModal(false); setSocietaFilter(""); setSelectedSocieta(null); clearAccessState(); }}><X className="h-5 w-5"/></button></div><input type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !passwordLoading) void handleUnlockSocieta(); }} className="w-full rounded-md border px-3 py-2" autoFocus/>{passwordError && <div className="mt-3 text-sm text-red-700">{passwordError}</div>}<div className="mt-4 flex justify-end gap-2"><button onClick={() => setShowPasswordModal(false)} className="rounded border px-4 py-2">Annulla</button><button onClick={() => void handleUnlockSocieta()} disabled={passwordLoading} className="rounded bg-blue-600 px-4 py-2 text-white">{passwordLoading ? "Verifica..." : "Accedi"}</button></div></div></div>}
 
-      {showTimeoutModal && canAccessAntiriciclaggio && <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4"><div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl"><h2 className="text-lg font-semibold text-red-700">Sessione in scadenza</h2><p className="mt-2 text-sm">La sessione verrà chiusa tra <strong>{timeoutCountdown}</strong> secondi.</p><div className="mt-4 flex justify-end gap-2"><button onClick={handleCloseAccess} className="rounded border px-4 py-2">Chiudi ora</button><button onClick={handleContinueSession} className="rounded bg-blue-600 px-4 py-2 text-white">Continua sessione</button></div></div></div>}
+
     </div>
   );
 }

@@ -107,9 +107,9 @@ export const SESSION_KEYS = {
 } as const;
 
 /**
- * Auto-lock timeout (15 minutes in milliseconds)
+ * Auto-lock timeout (20 minutes in milliseconds)
  */
-export const AUTO_LOCK_TIMEOUT = 15 * 60 * 1000;
+export const AUTO_LOCK_TIMEOUT = 20 * 60 * 1000;
 
 /**
  * Store encryption key in session
