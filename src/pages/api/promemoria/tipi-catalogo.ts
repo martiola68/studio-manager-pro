@@ -16,7 +16,11 @@ export default async function handler(req:NextApiRequest,res:NextApiResponse){
   return res.status(403).json({error:"Solo l'amministratore autorizzato può gestire i tipi"});
  // Il catalogo S è condiviso tra tutti gli studi: non basta essere admin di uno studio.
  // L'autorizzazione privilegiata è esplicita nel profilo utente.
- if(profile.amministratore_sistema_generale!==true)
+ const anon=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+ if(!anon)return res.status(500).json({error:"Chiave applicativa mancante"});
+ const callerDb=createClient(url,anon,{auth:{persistSession:false,autoRefreshToken:false},global:{headers:{Authorization:"Bearer "+token}}});
+ const {data:authorized,error:aclError}=await callerDb.rpc("is_system_catalog_admin");
+ if(aclError||authorized!==true)
   return res.status(403).json({error:"Catalogo condiviso riservato all'amministratore generale di sistema"});
  const {operazione,id,nome,colore}=req.body||{};
  if(!["crea","modifica","elimina"].includes(operazione))return res.status(400).json({error:"Operazione sconosciuta"});
