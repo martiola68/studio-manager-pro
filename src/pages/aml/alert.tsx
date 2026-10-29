@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { AlertTriangle, ArrowLeft, BellRing, CalendarClock, CheckCircle2, ExternalLink, Filter, RefreshCw } from "lucide-react";
-import { getSupabaseClient } from "@/lib/supabase/client";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 type Scadenza = {
@@ -52,7 +51,6 @@ export default function CentroAlertAMLPage(){
     return [v.cliente,v.titolo,v.origine_modulo,v.operatore_responsabile].some(x=>String(x||"").toLocaleLowerCase("it").includes(needle));
   }).sort((a,b)=>String(a.data_scadenza||"9999").localeCompare(String(b.data_scadenza||"9999")));
  },[state,amlOnly,filter,search]);
- const incomplete=(state?.scadenze||[]).filter(item=>item.alert_con_errore).length;
  const errorStates=new Set(["scaduta","scade_oggi"]);
  return <div className="space-y-5">
    <div className="flex flex-wrap items-start justify-between gap-3">
