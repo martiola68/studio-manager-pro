@@ -5,6 +5,7 @@ import { getSupabaseClient } from "@/lib/supabaseClient";
 import { getStudioId } from "@/services/getStudioId";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Pencil, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 type SocietaRel = {
@@ -231,22 +232,24 @@ export default function ResponsabiliAVPage() {
                           <Button
                             type="button"
                             variant="outline"
+                            className="border-blue-200 bg-white text-blue-700 hover:bg-blue-50 hover:text-blue-700"
                             onClick={() =>
                               void router.push(
                                 `/antiriciclaggio/responsabili-av/nuovo?id=${row.id}`
                               )
                             }
                           >
-                            Modifica
+                            <Pencil className="mr-2 h-4 w-4" /> Modifica
                           </Button>
 
                           <Button
                             type="button"
-                            variant="destructive"
+                            variant="outline"
+                            className="border-red-200 bg-white text-red-600 hover:bg-red-50 hover:text-red-700"
                             onClick={() => void handleDelete(row.id)}
                             disabled={deletingId === row.id}
                           >
-                            {deletingId === row.id ? "Eliminazione..." : "Elimina"}
+                            <Trash2 className="mr-2 h-4 w-4" /> {deletingId === row.id ? "Eliminazione..." : "Elimina"}
                           </Button>
                         </div>
                       </td>
