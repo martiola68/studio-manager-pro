@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ElementType } from "react";
 import Link from "next/link";
 import {
   ArrowRight, BellRing, CalendarClock, CheckCircle2, ClipboardCheck,
@@ -34,7 +34,7 @@ const todayYmd = () => {
   return y+"-"+m+"-"+day;
 };
 function StatCard({ label, value, detail, icon: Icon, tone, href }: {
-  label: string; value: number | null; detail: string; icon: React.ElementType;
+  label: string; value: number | null; detail: string; icon: ElementType;
   tone: "blue" | "green" | "amber" | "red"; href: string;
 }) {
   const tones = {
