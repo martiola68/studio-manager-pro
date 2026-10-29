@@ -2090,7 +2090,7 @@ return (
 
         <button
           type="button"
-          onClick={() => router.push("/clienti")}
+          onClick={() => router.push(router.pathname.startsWith("/aml/") && clienteId ? `/aml/clienti/${encodeURIComponent(clienteId)}` : "/clienti")}
           style={secondaryButton}
         >
           ← Torna clienti
@@ -2255,7 +2255,7 @@ return (
       type="button"
       onClick={() =>
         router.push({
-          pathname: "/clienti/titolari-effettivi/verifica",
+          pathname: router.pathname.startsWith("/aml/") ? "/aml/clienti/titolari-effettivi/verifica" : "/clienti/titolari-effettivi/verifica",
           query: { cliente_id: clienteId },
         })
       }
