@@ -11,7 +11,7 @@ import {
   encryptClienteSensitiveData, decryptClienteSensitiveData,
 } from "@/services/encryptionService";
 
-type Operator = { id: string; nome?: string | null; cognome?: string | null; attivo?: boolean | null };
+type Operator = { id: string; nome?: string | null; cognome?: string | null; attivo?: boolean | null; settore?: string | null; };
 type ClientForm = {
   cod_cliente: string;
   tipo_cliente: "Persona fisica" | "Altro";
@@ -103,7 +103,7 @@ export default function AmlClienteForm({ clientId }: { clientId?: string }) {
         setEncrypted(encryption); setLocked(lockedNow);
         if (lockedNow) throw new Error("Dati cifrati: sblocca prima la password master SMP. Nessun dato verrà salvato senza la chiave.");
         const [{ data: users, error: usersError }, row] = await Promise.all([
-          supabase.from("tbutenti").select("id,nome,cognome,attivo")
+          supabase.from("tbutenti").select("id,nome,cognome,attivo,settore")
             .eq("studio_id",studioId).order("cognome"),
           clientId ? clienteService.getClienteById(clientId) : Promise.resolve(null)
         ]);
@@ -113,8 +113,8 @@ export default function AmlClienteForm({ clientId }: { clientId?: string }) {
         if (!clientId) {
           const {data:codes,error:codesError}=await supabase.from("tbclienti").select("cod_cliente").eq("studio_id",studioId);
           if (codesError) throw codesError;
-          const max=(codes||[]).reduce((n,c)=>{const m=/^CL(\\d+)$/i.exec(String(c.cod_cliente||""));return m?Math.max(n,Number(m[1])):n},0);
-          if (active) {setForm(old=>({...old,cod_cliente:"CL"+String(max+1).padStart(6,"0")}));setCodeReady(true);}
+          const max=(codes||[]).reduce((n,c)=>{const m=/^CLI(\\d+)$/i.exec(String(c.cod_cliente||""));return m?Math.max(n,Number(m[1])):n},0);
+          if (active) {setForm(old=>({...old,cod_cliente:"CLI"+String(max+1).padStart(6,"0")}));setCodeReady(true);}
         }
         if (row) {
           const source: any = row;
@@ -209,8 +209,15 @@ export default function AmlClienteForm({ clientId }: { clientId?: string }) {
         });
         Object.assign(payload,values);
       }
-      if (clientId) await clienteService.updateCliente(clientId,payload as any);
-      else await clienteService.createCliente(payload as any);
+      if (!clientId) {
+        // Pre-save collision check. A DB-level atomic sequence is still needed
+        // before concurrent multi-user production onboarding.
+        const {data:existing,error:collisionError}=await getSupabaseClient().from("tbclienti")
+          .select("id").eq("studio_id",studioId).eq("cod_cliente",String(payload.cod_cliente)).limit(1);
+        if(collisionError)throw collisionError;
+        if(existing?.length)throw new Error("Progressivo già assegnato da un altro utente: riapri Nuovo cliente per aggiornare il codice.");
+        await clienteService.createCliente(payload as any);
+      } else await clienteService.updateCliente(clientId,payload as any);
       await router.push("/aml/clienti");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Salvataggio cliente non riuscito.");
@@ -262,12 +269,12 @@ export default function AmlClienteForm({ clientId }: { clientId?: string }) {
           <label><span className={labelClass}>Utente {form.cliente && <span className="text-red-600">*</span>}</span>
             <select className={inputClass} value={form.utente_operatore_id} onChange={e=>update("utente_operatore_id",e.target.value)} required={form.cliente}>
               <option value="">Seleziona utente</option>
-              {operators.filter(u=>u.attivo!==false||u.id===form.utente_operatore_id).map(u=><option key={u.id} value={u.id}>{readonlyName(u)}</option>)}
+              {operators.filter(u=>(u.settore==="Fiscale"||!u.settore)&&(u.attivo!==false||u.id===form.utente_operatore_id)).map(u=><option key={u.id} value={u.id}>{readonlyName(u)}</option>)}
             </select></label>
           <label><span className={labelClass}>Responsabile</span>
             <select className={inputClass} value={form.utente_professionista_id} onChange={e=>update("utente_professionista_id",e.target.value)}>
               <option value="">Seleziona responsabile</option>
-              {operators.filter(u=>u.attivo!==false||u.id===form.utente_professionista_id).map(u=><option key={u.id} value={u.id}>{readonlyName(u)}</option>)}
+              {operators.filter(u=>(u.settore==="Fiscale"||!u.settore)&&(u.attivo!==false||u.id===form.utente_professionista_id)).map(u=><option key={u.id} value={u.id}>{readonlyName(u)}</option>)}
             </select></label>
         </div>
         <label className="md:col-span-2"><span className={labelClass}>Note</span>
