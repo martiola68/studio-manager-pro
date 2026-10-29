@@ -2,9 +2,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import {
-  BellRing, Building2, CalendarDays, ChevronRight, ClipboardCheck,
-  FileCheck2, FileText, FolderOpen, LayoutDashboard, LogOut,
-  Menu, ShieldCheck, Users, X, ArrowLeftRight, Cloud
+  BellRing, Building2, ChevronRight, ClipboardCheck,
+  LayoutDashboard, LogOut, Menu, ShieldCheck, Users, X, ArrowLeftRight, Cloud
 } from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { hardLogout } from "@/services/logoutService";
@@ -14,20 +13,15 @@ export const AML_INTERFACE_KEY = "smp_interface_aml";
 
 const navigation = [
   { label: "Cruscotto AML", href: "/aml", icon: LayoutDashboard },
+  { label: "Pratiche AML", href: "/antiriciclaggio", icon: ClipboardCheck },
+  { label: "Rappresentanti", href: "/antiriciclaggio/rappresentanti", icon: Users },
+  { label: "Anagrafiche clienti", href: "/aml/clienti", icon: Users },
+  { label: "Società responsabili AV", href: "/aml/societa", icon: Building2 },
+  { label: "Responsabili verifica", href: "/antiriciclaggio/responsabili-av", icon: Users },
   { label: "Dati Studio", href: "/impostazioni/studio", icon: Building2, adminOnly: true },
   { label: "Utenti", href: "/impostazioni/utenti", icon: Users, adminOnly: true },
   { label: "Microsoft 365", href: "/microsoft365", icon: Cloud },
-  { label: "Centro Alert", href: "/aml/alert", icon: BellRing },
-  { label: "Anagrafiche clienti", href: "/clienti", icon: Users },
-  { label: "Pratiche AML", href: "/antiriciclaggio", icon: ClipboardCheck },
-  { label: "Rappresentanti", href: "/antiriciclaggio/rappresentanti", icon: Users },
-  { label: "Responsabili verifica", href: "/antiriciclaggio/responsabili-av", icon: Users },
-  { label: "Società responsabili AV", href: "/antiriciclaggio/responsabili-av-societa", icon: Building2 },
-  { label: "Adeguata verifica AV1", href: "/antiriciclaggio/modello-av1", icon: FileCheck2 },
-  { label: "Modello AV2", href: "/antiriciclaggio/modello-av2", icon: FileText },
-  { label: "Modello AV4", href: "/antiriciclaggio/modello-av4", icon: FileText },
-  { label: "Fascicoli e documenti", href: "/antiriciclaggio/fascicolo-documenti", icon: FolderOpen },
-  { label: "Scadenze e controlli", href: "/aml/alert?ambito=aml", icon: CalendarDays },
+  { label: "Alert", href: "/aml/alert", icon: BellRing },
 ] as const;
 
 type Profile = { nome: string; cognome: string; tipo_utente: string; studio_id: string | null };
@@ -65,7 +59,7 @@ export function AmlShell({ children }: { children: ReactNode }) {
       {navigation.filter((item) => !("adminOnly" in item && item.adminOnly) || profile?.tipo_utente === "Admin").map(({ href, label, icon: Icon }) => {
         const pathname = router.asPath.split("?")[0];
         const dest = href.split("?")[0];
-        const active = pathname === dest || (dest === "/antiriciclaggio" && pathname.startsWith("/antiriciclaggio/") && !navigation.some((other) => other.href === pathname));
+        const active = pathname === dest || (dest === "/antiriciclaggio" && (pathname === "/antiriciclaggio/pratiche/nuovo" || pathname.startsWith("/antiriciclaggio/pratiche/") || pathname.includes("/modello-av") || pathname.includes("/fascicolo-documenti"))) || (dest === "/aml/clienti" && pathname.startsWith("/aml/clienti/")) || (dest === "/aml/societa" && pathname.startsWith("/aml/societa/"));
         return (
           <Link key={label} href={href} onClick={() => setMobileOpen(false)}
             className={"flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors " + (active ? "bg-blue-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-700/70 hover:text-white")}>
