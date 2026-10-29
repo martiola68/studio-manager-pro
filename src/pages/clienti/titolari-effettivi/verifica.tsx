@@ -562,12 +562,12 @@ async function confermaVerifica() {
 
   function tornaAgliOrgani() {
     if (!clienteId) {
-      router.push("/clienti");
+      router.push(router.pathname.startsWith("/aml/") ? "/aml/clienti" : "/clienti");
       return;
     }
 
     router.push(
-      `/clienti/organi-sociali?cliente_id=${clienteId}`
+      router.pathname.startsWith("/aml/") ? `/aml/clienti/organi-sociali?cliente_id=${clienteId}` : `/clienti/organi-sociali?cliente_id=${clienteId}`
     );
   }
 
