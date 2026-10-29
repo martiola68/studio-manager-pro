@@ -84,6 +84,7 @@ export default function AmlClienteForm({ clientId }: { clientId?: string }) {
   const [error, setError] = useState("");
   const [encrypted, setEncrypted] = useState(false);
   const [locked, setLocked] = useState(false);
+  const [codeReady, setCodeReady] = useState(false);
 
   const update = <K extends keyof ClientForm>(key: K, value: ClientForm[K]) =>
     setForm(old => ({ ...old, [key]: value }));
@@ -109,6 +110,12 @@ export default function AmlClienteForm({ clientId }: { clientId?: string }) {
         if (usersError) throw usersError;
         if (!active) return;
         setOperators((users||[]) as Operator[]);
+        if (!clientId) {
+          const {data:codes,error:codesError}=await supabase.from("tbclienti").select("cod_cliente").eq("studio_id",studioId);
+          if (codesError) throw codesError;
+          const max=(codes||[]).reduce((n,c)=>{const m=/^CL(\\d+)$/i.exec(String(c.cod_cliente||""));return m?Math.max(n,Number(m[1])):n},0);
+          if (active) {setForm(old=>({...old,cod_cliente:"CL"+String(max+1).padStart(6,"0")}));setCodeReady(true);}
+        }
         if (row) {
           const source: any = row;
           const decrypted = encryption
@@ -117,6 +124,7 @@ export default function AmlClienteForm({ clientId }: { clientId?: string }) {
               })
             : { codice_fiscale:source.codice_fiscale, partita_iva:source.partita_iva, note:source.note };
           if (!active) return;
+          setCodeReady(true);
           setForm({
             cod_cliente: source.cod_cliente || "",
             tipo_cliente: source.tipo_cliente === "Altro" ? "Altro" : "Persona fisica",
@@ -162,6 +170,7 @@ export default function AmlClienteForm({ clientId }: { clientId?: string }) {
       if (!cf) throw new Error("Codice fiscale obbligatorio.");
       if (person && !isValidCF(cf)) throw new Error("Il codice fiscale della persona fisica non è valido.");
       if (!person && !/^[0-9]{11}$/.test(cf)) throw new Error("Per le società il codice fiscale deve contenere 11 cifre.");
+      if (!clientId && !codeReady) throw new Error("Codice cliente progressivo non ancora disponibile.");
       if (form.cliente && !form.utente_operatore_id) throw new Error("Seleziona un Utente per il settore fiscale.");
       if (encrypted && isEncryptionLocked()) throw new Error("Password master scaduta: sblocca i dati cifrati prima di salvare.");
       setSaving(true);
@@ -169,7 +178,7 @@ export default function AmlClienteForm({ clientId }: { clientId?: string }) {
       // preserve every hidden field and the existing sector configuration.
       // The original SMP client form, database, and backend services are untouched.
       const payload: Record<string,unknown> = {
-        cod_cliente: form.cod_cliente.trim() || (clientId ? null : "CL-"+Date.now().toString().slice(-6)),
+        ...(clientId ? {} : {cod_cliente: form.cod_cliente}),
         tipo_cliente: form.tipo_cliente,
         professionista_incaricato: form.professionista_incaricato,
         cliente: form.cliente,
@@ -218,12 +227,17 @@ export default function AmlClienteForm({ clientId }: { clientId?: string }) {
       </div>
       <ShieldCheck className="h-8 w-8 text-blue-600"/>
     </div>
+    <div className="flex gap-2 rounded-xl border border-slate-200 bg-white p-2">
+      <span className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white">Anagrafica</span>
+      {clientId ? <Link href={`/clienti/organi-sociali?cliente_id=${encodeURIComponent(clientId)}`} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50">Organi sociali</Link> :
+        <span className="rounded-lg px-4 py-2 text-sm text-slate-400" title="Disponibile dopo aver salvato il cliente">Organi sociali · salva prima il cliente</span>}
+    </div>
     {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</p>}
     {locked ? <p className="rounded-lg bg-amber-50 p-4 text-sm text-amber-800">Sblocca la password master per visualizzare e modificare i dati cifrati.</p> :
     <form onSubmit={save} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-7">
       <h2 className="mb-6 border-b border-slate-100 pb-4 text-lg font-bold text-slate-900">Anagrafica</h2>
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Codice cliente" value={form.cod_cliente} onChange={v=>update("cod_cliente",v)} />
+        <label><span className={labelClass}>Codice cliente (progressivo automatico)</span><input className={inputClass+" bg-slate-100 font-mono"} value={form.cod_cliente||"Calcolo..."} readOnly disabled/><span className="text-xs text-slate-500">Non modificabile · progressivo del registro SMP</span></label>
         <label><span className={labelClass}>Tipo cliente *</span><select className={inputClass} value={form.tipo_cliente} onChange={e=>update("tipo_cliente",e.target.value as ClientForm["tipo_cliente"])}>
           <option value="Persona fisica">Persona fisica</option><option value="Altro">Altro / Società</option>
         </select></label>
