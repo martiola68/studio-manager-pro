@@ -15,14 +15,7 @@ export default async function handler(req:NextApiRequest,res:NextApiResponse){
  if(pErr||!profile||profile.attivo===false||profile.tipo_utente!=="Admin"||!profile.studio_id)
   return res.status(403).json({error:"Solo l'amministratore autorizzato può gestire i tipi"});
  // Il catalogo S è condiviso tra tutti gli studi: non basta essere admin di uno studio.
- // Manteniamo la stessa autorizzazione del catalogo originale in DB, valutata
- // per l'utente autenticato con RPC, anziché concedere accesso a ogni admin.
- const authClient=createClient(url,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY||"",{auth:{persistSession:false}});
- const {data:{user:checked},error:tokenErr}=await authClient.auth.getUser(token);
- if(tokenErr||!checked)return res.status(401).json({error:"Sessione scaduta"});
- const {data:catalogAllowed,error:rpcError}=await authClient.rpc("is_system_catalog_admin");
- // RPC con anon service context non prova il token: controllo ulteriore sul
- // profilo approvato (identificatore admin generale) e studio responsabile.
+ // L'autorizzazione privilegiata è esplicita nel profilo utente.
  if(profile.amministratore_sistema_generale!==true)
   return res.status(403).json({error:"Catalogo condiviso riservato all'amministratore generale di sistema"});
  const {operazione,id,nome,colore}=req.body||{};
