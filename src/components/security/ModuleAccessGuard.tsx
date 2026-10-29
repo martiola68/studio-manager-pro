@@ -9,7 +9,7 @@ const MODULI: Array<{ modulo: ModuloLicenza; label: string; prefixes: string[] }
   {
     modulo: "aml",
     label: "Antiriciclaggio (AML)",
-    prefixes: ["/antiriciclaggio", "/impostazioni/elenco-prestazioni-ar"],
+    prefixes: ["/aml", "/antiriciclaggio", "/impostazioni/elenco-prestazioni-ar"],
   },
   {
     modulo: "revisione",
