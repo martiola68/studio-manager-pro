@@ -151,6 +151,8 @@ export default function FascicoloDocumentiPage() {
 
   const [documentiOpzionaliMancanti, setDocumentiOpzionaliMancanti] = useState<string[]>([]);
 const [fascicoloCompleto, setFascicoloCompleto] = useState(false);
+const [confermaManuale,setConfermaManuale]=useState(false);
+const [salvandoConferma,setSalvandoConferma]=useState(false);
 
 const [visureTeRichieste, setVisureTeRichieste] =
   useState<VisuraTeRichiesta[]>([]);
@@ -730,6 +732,25 @@ calcolaStatoFascicolo(
     }
   };
 
+  const aggiornaConfermaFascicolo = async (confermato:boolean) => {
+    if(confermato && !fascicoloCompleto){
+      alert("Carica prima tutti i documenti richiesti dalla prestazione.");return;
+    }
+    if(typeof pratica_id!=="string")return;
+    setSalvandoConferma(true);
+    try{
+      const {data:{session}}=await getSupabaseClient().auth.getSession();
+      if(!session?.access_token)throw new Error("Sessione scaduta");
+      const res=await fetch("/api/aml/fascicolo/conferma",{method:"POST",
+        headers:{"Content-Type":"application/json",Authorization:"Bearer "+session.access_token},
+        body:JSON.stringify({praticaId:pratica_id,confermato})});
+      const data=await res.json();
+      if(!res.ok||!data.ok)throw new Error(data.error||"Errore salvataggio");
+      setConfermaManuale(confermato);
+    }catch(e){alert(e instanceof Error?e.message:"Impossibile salvare la conferma");}
+    finally{setSalvandoConferma(false);}
+  };
+
   const handleUploadFile = async (file: File) => {
     try {
      if (!file || typeof pratica_id !== "string" || !pratica_id) return;
@@ -928,7 +949,7 @@ useEffect(() => {
         </div>
       ) : null}
 
-        {loading ? null : fascicoloCompleto ? (
+        {loading ? null : fascicoloCompleto && confermaManuale ? (
         <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
           <div className="font-semibold">Fascicolo AML completo</div>
           <div className="mt-1">
@@ -937,8 +958,8 @@ useEffect(() => {
         </div>
       ) : (
         <div className="mb-4 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-900">
-          <div className="font-semibold">Fascicolo AML incompleto</div>
-          <div className="mt-1">Documenti mancanti:</div>
+          <div className="font-semibold">{fascicoloCompleto ? "Documenti presenti · fascicolo da confermare" : "Fascicolo AML incompleto"}</div>
+          <div className="mt-1">{fascicoloCompleto ? "Conferma manualmente il fascicolo per completare la pratica." : "Documenti mancanti:"}</div>
 
          <ul className="mt-2 list-disc pl-5">
   {documentiMancanti.map((doc) => (
@@ -959,6 +980,11 @@ useEffect(() => {
         </div>
       )}
 
+      <label className="mb-4 inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-white px-4 py-3 text-sm font-semibold text-blue-800">
+        <input type="checkbox" checked={confermaManuale} disabled={salvandoConferma || (!fascicoloCompleto && !confermaManuale)}
+          onChange={e=>void aggiornaConfermaFascicolo(e.target.checked)} className="h-4 w-4 accent-green-600"/>
+        Fascicolo completo (conferma manuale)
+      </label>
       <div className="mb-4 flex items-end justify-between gap-4">
         <div className="text-sm text-gray-600">
           Gestione upload, apertura ed eliminazione documenti del fascicolo.
