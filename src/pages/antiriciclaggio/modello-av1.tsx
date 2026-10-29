@@ -1263,7 +1263,7 @@ const handleRinnovoVerifica = async () => {
   RisSpecificoPonderato,
   RischioEffettivo,
   AdeguataVerifica,
-  AV1Conferma: isNonSignificativoConRegola ? true : normalizeBoolean(formData.AV1Conferma),
+  AV1Conferma: normalizeBoolean(formData.AV1Conferma),
   AV4Generato: normalizeBoolean(formData.AV4Generato),
 };
       let savedId = formData.id || "";
