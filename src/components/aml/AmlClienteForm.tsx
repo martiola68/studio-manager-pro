@@ -216,7 +216,11 @@ export default function AmlClienteForm({ clientId }: { clientId?: string }) {
           .select("id").eq("studio_id",studioId).eq("cod_cliente",String(payload.cod_cliente)).limit(1);
         if(collisionError)throw collisionError;
         if(existing?.length)throw new Error("Progressivo già assegnato da un altro utente: riapri Nuovo cliente per aggiornare il codice.");
-        await clienteService.createCliente(payload as any);
+        const created = await clienteService.createCliente(payload as any);
+        const newId = (created as any)?.data?.id;
+        if (!newId) throw new Error("Cliente salvato, ma ID non restituito: apri la lista per collegare gli organi.");
+        await router.push(`/aml/clienti/${encodeURIComponent(newId)}?nuovo=1`);
+        return;
       } else await clienteService.updateCliente(clientId,payload as any);
       await router.push("/aml/clienti");
     } catch (e) {
@@ -234,10 +238,11 @@ export default function AmlClienteForm({ clientId }: { clientId?: string }) {
       </div>
       <ShieldCheck className="h-8 w-8 text-blue-600"/>
     </div>
+    {clientId && router.query.nuovo === "1" && <p className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">Cliente creato. Ora puoi registrare amministratori e altri organi sociali utilizzando il pulsante qui sotto.</p>}
     <div className="flex gap-2 rounded-xl border border-slate-200 bg-white p-2">
       <span className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white">Anagrafica</span>
-      {clientId ? <Link href={`/clienti/organi-sociali?cliente_id=${encodeURIComponent(clientId)}`} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50">Organi sociali</Link> :
-        <span className="rounded-lg px-4 py-2 text-sm text-slate-400" title="Disponibile dopo aver salvato il cliente">Organi sociali · salva prima il cliente</span>}
+      {clientId ? <Link href={`/aml/clienti/organi-sociali?cliente_id=${encodeURIComponent(clientId)}`} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50">Organi sociali</Link> :
+        <span className="rounded-lg px-4 py-2 text-sm text-slate-400" title="Disponibile dopo aver salvato il cliente">Organi sociali · disponibile dopo il primo salvataggio</span>}
     </div>
     {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</p>}
     {locked ? <p className="rounded-lg bg-amber-50 p-4 text-sm text-amber-800">Sblocca la password master per visualizzare e modificare i dati cifrati.</p> :
