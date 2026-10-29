@@ -1,3 +1,6 @@
+import { studioService } from "@/services/studioService";
+import { tipoScadenzaService } from "@/services/tipoScadenzaService";
+import { resolveEmailScadenza } from "@/services/scadenzeEmailDateService";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/lib/supabase/client";
@@ -89,6 +92,7 @@ export default function ScadenzeFiscaliPage() {
 });
 
 const [emailDestinatario, setEmailDestinatario] = useState("");
+const [emailCc, setEmailCc] = useState("");
 const [searchContatti, setSearchContatti] = useState("");
 const [emailContatti, setEmailContatti] = useState<
   {
@@ -485,6 +489,7 @@ return rows.map((r) => {
   });
 
   setEmailDestinatario("");
+  setEmailCc("");
   setSearchContatti("");
   setEmailContatti([]);
   setF24File(null);
@@ -532,6 +537,7 @@ const chiudiInvioEmail = () => {
   });
 
   setEmailDestinatario("");
+  setEmailCc("");
   setSearchContatti("");
   setEmailContatti([]);
   setF24File(null);
@@ -576,54 +582,18 @@ const inviaEmailFiscali = async () => {
     if (templateError) throw templateError;
     if (!template) throw new Error(`Template ${templateCode} non trovato`);
 
-const nomeScadenzaFiscale =
-  emailModal.tipo === "saldo_primo_acconto_cciaa"
-    ? scadenza.soggetto_isa
-      ? "IMPOSTE ISA"
-      : "IMPOSTE NO ISA"
-    : "2° ACCONTO";
-
-const { data: tipoScadenzaRaw } = await (supabase as any)
-  .from("tbtipi_scadenze")
-  .select("data_scadenza")
-  .eq("tipo_scadenza", "fiscale")
-  .eq("attivo", true)
-  .eq("nome", nomeScadenzaFiscale)
-  .maybeSingle();
-
-const tipoScadenza = tipoScadenzaRaw as {
-  data_scadenza?: string | null;
-} | null;
-    
+const studioId = await studioService.getStudioId();
+const dates = resolveEmailScadenza(await tipoScadenzaService.getAttivi(studioId), emailModal.tipo === "saldo_primo_acconto_cciaa" ? "fiscali_saldo_primo_acconto_cciaa" : "fiscali_secondo_acconto", Number(scadenza.anno_riferimento || annoConsultazione), !!scadenza.soggetto_isa, emailModal.tipo === "saldo_primo_acconto_cciaa");
 const firmaUtente = `${utenteLoggato?.nome || ""} ${
   utenteLoggato?.cognome || ""
 }`.trim();
-
-const dataScadenza = tipoScadenza?.data_scadenza
-  ? new Date(tipoScadenza.data_scadenza)
-  : null;
-
-const dataScadenzaMaggiorata =
-  emailModal.tipo === "saldo_primo_acconto_cciaa" && dataScadenza
-    ? new Date(
-        dataScadenza.getFullYear(),
-        dataScadenza.getMonth(),
-        dataScadenza.getDate() + 31
-      )
-    : null;
 
 const vars: Record<string, string> = {
   CLIENTE: scadenza.nominativo || "Cliente",
   ANNO: String(scadenza.anno_riferimento || new Date().getFullYear()),
 
-  DATA_SCADENZA: dataScadenza
-    ? dataScadenza.toLocaleDateString("it-IT")
-    : "",
-
-  DATA_SCADENZA_MAGGIORATA: dataScadenzaMaggiorata
-    ? dataScadenzaMaggiorata.toLocaleDateString("it-IT")
-    : "",
-
+  DATA_SCADENZA: dates.dataScadenza,
+  DATA_SCADENZA_MAGGIORATA: dates.dataScadenzaMaggiorata,
   TIPO_FISCALE:
     emailModal.tipo === "saldo_primo_acconto_cciaa"
       ? "Saldo / 1° acconto / CCIAA"
@@ -667,6 +637,7 @@ const vars: Record<string, string> = {
       tipo: "singola",
       destinatarioId: scadenza.cliente_id || "",
       destinatarioEmail: emailDestinatario,
+        cc: emailCc.split(/[;,]/).map(v=>v.trim()).filter(Boolean),
       oggetto,
       messaggio,
       allegati,
@@ -1538,6 +1509,7 @@ const vars: Record<string, string> = {
                 />
               </div>
 
+              <div className="mb-3"><label className="text-sm font-medium mb-2 block">CC · indirizzi in copia (facoltativo)</label><Input type="text" value={emailCc} onChange={e=>setEmailCc(e.target.value)} placeholder="email1@esempio.it; email2@esempio.it"/><p className="mt-1 text-xs text-gray-500">Separa più indirizzi con virgola o punto e virgola.</p></div>
               <div>
                 <label className="text-sm font-medium mb-2 block">
                   Allegato F24 *
