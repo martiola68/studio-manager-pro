@@ -1,22 +1,37 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { Search, Plus, Pencil, Users, ArrowRight } from "lucide-react";
+import { Search, Plus, Pencil, Users, Trash2, Building2 } from "lucide-react";
 import { clienteService } from "@/services/clienteService";
 import { useStudio } from "@/contexts/StudioContext";
+import { getSupabaseClient } from "@/lib/supabase/client";
 
 type Cliente = { id:string; cod_cliente?:string|null; ragione_sociale?:string|null; tipo_cliente?:string|null; codice_fiscale?:string|null; attivo?:boolean|null; cliente?:boolean|null; utente_operatore_id?:string|null; utente_professionista_id?:string|null };
 const alphabet="ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 export default function ClientiAmlIndex(){
  const { studioId, isLoading: studioLoading }=useStudio();
  const [rows,setRows]=useState<Cliente[]>([]);
+ const [people,setPeople]=useState<Record<string,string>>({});
  const [query,setQuery]=useState("");
  const [letter,setLetter]=useState("");
  const [filter,setFilter]=useState("attivi");
  const [loading,setLoading]=useState(true);
  const [error,setError]=useState("");
  const router=useRouter();
- useEffect(()=>{if(studioLoading||!studioId)return;let active=true;setLoading(true);clienteService.getClienti().then(data=>{if(active)setRows(data as Cliente[])}).catch(e=>{if(active)setError(e instanceof Error?e.message:"Errore caricamento clienti")}).finally(()=>{if(active)setLoading(false)});return()=>{active=false}},[studioId,studioLoading]);
+ useEffect(()=>{if(studioLoading||!studioId)return;let active=true;setLoading(true);Promise.all([clienteService.getClienti(),getSupabaseClient().from("tbutenti").select("id,nome,cognome,settore").eq("studio_id",studioId)]).then(([data,users])=>{if(active){setRows(data as Cliente[]);if(users.error)throw users.error;setPeople(Object.fromEntries((users.data||[]).filter(u=>String(u.settore||"Fiscale").toLowerCase()==="fiscale").map(u=>[u.id,[u.cognome,u.nome].filter(Boolean).join(" ")])));}}).catch(e=>{if(active)setError(e instanceof Error?e.message:"Errore caricamento clienti")}).finally(()=>{if(active)setLoading(false)});return()=>{active=false}},[studioId,studioLoading]);
+ const remove=async(c:Cliente)=>{
+  if(!window.confirm(`Eliminare definitivamente "${c.ragione_sociale||"il cliente"}"? L'operazione può incidere su moduli collegati.`))return;
+  try{
+    const db=getSupabaseClient() as any;
+    const [{count:orgCount,error:orgErr},{count:prCount,error:prErr}]=await Promise.all([
+      db.from("tbclienti_organi").select("id",{count:"exact",head:true}).eq("cliente_id",c.id),
+      db.from("tbPraticheAML").select("id",{count:"exact",head:true}).eq("cliente_id",c.id)
+    ]);
+    if(orgErr||prErr)throw orgErr||prErr;
+    if(Number(orgCount||0)>0||Number(prCount||0)>0)throw new Error("Cliente collegato a organi sociali o pratiche AML: impossibile eliminarlo. Disattivalo invece.");
+    throw new Error("Eliminazione diretta sospesa: serve un servizio backend che protegga anche gli altri collegamenti SMP. Nessun dato è stato cancellato.");
+  }catch(e){setError(e instanceof Error?e.message:"Eliminazione non riuscita")}
+ };
  const filtered=useMemo(()=>rows.filter(c=>{
    if(filter==="attivi"&&c.attivo===false)return false;
    if(filter==="non-attivi"&&c.attivo!==false)return false;
@@ -38,9 +53,9 @@ export default function ClientiAmlIndex(){
     {error&&<p role="alert" className="p-4 text-sm text-red-700">{error}</p>}
     {loading||studioLoading?<p className="p-8 text-center text-slate-500">Caricamento clienti...</p>:
       !filtered.length?<p className="p-8 text-center text-slate-500">Nessun cliente per i filtri selezionati.</p>:
-      <div className="max-h-[65vh] overflow-auto"><table className="w-full min-w-[620px] text-left text-sm">
-        <thead className="sticky top-0 z-10 bg-slate-100 text-xs uppercase tracking-wide text-slate-600"><tr><th className="px-4 py-3">Codice</th><th className="px-4 py-3">Cliente</th><th className="px-4 py-3">Tipo</th><th className="px-4 py-3">Stato</th><th className="px-4 py-3 text-right">Azioni</th></tr></thead>
-        <tbody className="divide-y divide-slate-100">{filtered.map(c=><tr key={c.id} className="hover:bg-slate-50"><td className="px-4 py-3 text-xs text-slate-500">{c.cod_cliente||"—"}</td><td className="px-4 py-3 font-semibold text-slate-800">{c.ragione_sociale||"—"}</td><td className="px-4 py-3 text-slate-600">{c.tipo_cliente||"—"}</td><td className="px-4 py-3"><span className={"rounded-full px-2 py-1 text-xs font-semibold "+(c.attivo===false?"bg-slate-100 text-slate-600":"bg-emerald-50 text-emerald-700")}>{c.attivo===false?"Non attivo":"Attivo"}</span></td><td className="px-4 py-3 text-right"><Link href={`/aml/clienti/${encodeURIComponent(c.id)}`} className="inline-flex items-center gap-1 rounded-lg border border-blue-200 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50"><Pencil className="h-3.5 w-3.5"/>Modifica</Link></td></tr>)}</tbody>
+      <div className="max-h-[65vh] overflow-auto"><table className="w-full min-w-[1000px] text-left text-sm">
+        <thead className="sticky top-0 z-10 bg-slate-100 text-xs uppercase tracking-wide text-slate-600"><tr><th className="px-4 py-3">Codice</th><th className="px-4 py-3">Cliente</th><th className="px-4 py-3">Tipo</th><th className="px-4 py-3">Stato</th><th className="px-4 py-3">Utente</th><th className="px-4 py-3">Responsabile</th><th className="px-4 py-3 text-right">Azioni</th></tr></thead>
+        <tbody className="divide-y divide-slate-100">{filtered.map(c=><tr key={c.id} className="hover:bg-slate-50"><td className="px-4 py-3 text-xs text-slate-500">{c.cod_cliente||"—"}</td><td className="px-4 py-3 font-semibold text-slate-800">{c.ragione_sociale||"—"}</td><td className="px-4 py-3 text-slate-600">{c.tipo_cliente||"—"}</td><td className="px-4 py-3"><span className={"rounded-full px-2 py-1 text-xs font-semibold "+(c.attivo===false?"bg-slate-100 text-slate-600":"bg-emerald-50 text-emerald-700")}>{c.attivo===false?"Non attivo":"Attivo"}</span></td><td className="px-4 py-3 text-slate-600">{people[c.utente_operatore_id||""]||"—"}</td><td className="px-4 py-3 text-slate-600">{people[c.utente_professionista_id||""]||"—"}</td><td className="px-4 py-3 text-right"><div className="flex justify-end gap-1.5"><Link href={`/aml/clienti/${encodeURIComponent(c.id)}`} className="inline-flex items-center gap-1 rounded-lg border border-blue-200 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50"><Pencil className="h-3.5 w-3.5"/>Modifica</Link><Link href={`/clienti/organi-sociali?cliente_id=${encodeURIComponent(c.id)}`} title="Organi sociali" className="inline-flex items-center rounded-lg border border-blue-200 px-2 text-blue-700 hover:bg-blue-50"><Building2 className="h-4 w-4"/></Link><button type="button" title="Elimina cliente" onClick={()=>void remove(c)} className="rounded-lg border border-red-200 px-2 py-2 text-red-600 hover:bg-red-50"><Trash2 className="h-4 w-4"/></button></div></td></tr>)}</tbody>
       </table></div>}
   </div>
  </div>;
