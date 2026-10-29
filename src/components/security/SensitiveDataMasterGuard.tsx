@@ -23,7 +23,7 @@ import {
   syncEncryptionKeyFromMasterPassword,
 } from "@/lib/security/masterPasswordEncryptionBridge";
 
-const MASTER_UNLOCK_TIMEOUT = 15 * 60 * 1000;
+const MASTER_UNLOCK_TIMEOUT = 20 * 60 * 1000;
 
 const PROTECTED_PREFIXES = [
   "/clienti",
@@ -301,7 +301,7 @@ export function SensitiveDataMasterGuard({ children }: { children: ReactNode }) 
       toast({
         title: "Dati sensibili sbloccati",
         description:
-          "La protezione resta attiva fino a 15 minuti di inattività.",
+          "La protezione resta attiva fino a 20 minuti di inattività.",
       });
     } catch (error) {
       console.error("[SensitiveDataMasterGuard] Errore sblocco:", error);
