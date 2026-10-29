@@ -34,6 +34,7 @@ import { Toaster } from "@/components/ui/toaster";
 import Header from "@/components/Header";
 import { TopNavBar } from "@/components/TopNavBar";
 import { AmlShell, AML_INTERFACE_KEY } from "@/components/aml/AmlShell";
+import { AmlSessionGuard } from "@/components/aml/AmlSessionGuard";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
@@ -179,7 +180,7 @@ export default function App({ Component, pageProps }: AppProps) {
       {isMasterGraficaControlloGestione && <ControlloGestioneMasterGraficaEnhancer />}
       {isMasterGraficaContenzioso && <ContenziosoMasterGraficaEnhancer />}
       {isMasterGraficaAntiriciclaggio && <AntiriciclaggioMasterGraficaEnhancer />}
-      {isPublicPage ? <>{pageContent}<Toaster /></> : (amlMode || router.pathname === "/aml" || router.pathname.startsWith("/aml/")) ? <AmlShell><ModuleAccessGuard><SensitiveDataMasterGuard>{pageContent}</SensitiveDataMasterGuard></ModuleAccessGuard><Toaster /></AmlShell> : <div className={`flex min-h-screen flex-col bg-gray-50 ${isFixedViewportPage ? "h-screen overflow-hidden" : ""}`}><div className="sticky top-0 z-50 shrink-0"><Header onMenuToggle={() => {}} /><TopNavBar /></div><main className={`flex-1 overflow-y-auto px-4 pb-4 pt-0 md:px-6 md:pb-6 md:pt-0 ${pageClass}`}><ModuleAccessGuard><SensitiveDataMasterGuard>{pageContent}</SensitiveDataMasterGuard></ModuleAccessGuard></main><Toaster /></div>}
+      {isPublicPage ? <>{pageContent}<Toaster /></> : (amlMode || router.pathname === "/aml" || router.pathname.startsWith("/aml/")) ? <AmlShell><AmlSessionGuard><ModuleAccessGuard><SensitiveDataMasterGuard>{pageContent}</SensitiveDataMasterGuard></ModuleAccessGuard></AmlSessionGuard><Toaster /></AmlShell> : <div className={`flex min-h-screen flex-col bg-gray-50 ${isFixedViewportPage ? "h-screen overflow-hidden" : ""}`}><div className="sticky top-0 z-50 shrink-0"><Header onMenuToggle={() => {}} /><TopNavBar /></div><main className={`flex-1 overflow-y-auto px-4 pb-4 pt-0 md:px-6 md:pb-6 md:pt-0 ${pageClass}`}><ModuleAccessGuard><SensitiveDataMasterGuard>{pageContent}</SensitiveDataMasterGuard></ModuleAccessGuard></main><Toaster /></div>}
     </StudioProvider></ThemeProvider>
   );
 }
