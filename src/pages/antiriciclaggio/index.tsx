@@ -331,7 +331,7 @@ export default function AntiriciclaggioPage() {
       setLoading(true);
       setRows([]);
       const supabaseAny = getSupabaseClient() as any;
-      const { data: praticheData, error: praticheError } = await supabaseAny.from("tbPraticheAML").select(`id, studio_id, cliente_id, societa_id, data_apertura, stato, stato_ciclo, fascicolo_completo_manuale, av1_id, av2_id, av2_corrente_id, av4_id, av4_corrente_id, tbclienti (id, cod_cliente, ragione_sociale, codice_fiscale, utente_operatore_id, utente_operatore:tbutenti!tbclienti_utente_operatore_id_fkey (nome, cognome))`).eq("societa_id", societaId).order("data_apertura", { ascending: false });
+      const { data: praticheData, error: praticheError } = await supabaseAny.from("tbPraticheAML").select(`id, studio_id, cliente_id, societa_id, data_apertura, stato, stato_ciclo, av1_id, av2_id, av2_corrente_id, av4_id, av4_corrente_id, tbclienti (id, cod_cliente, ragione_sociale, codice_fiscale, utente_operatore_id, utente_operatore:tbutenti!tbclienti_utente_operatore_id_fkey (nome, cognome))`).eq("societa_id", societaId).order("data_apertura", { ascending: false });
       if (praticheError) throw praticheError;
       const praticheRows = (praticheData as PraticaAMLRow[]) || [];
       const rowsBase: AV1Row[] = await Promise.all(praticheRows.map(async (pratica) => {
@@ -357,13 +357,17 @@ export default function AntiriciclaggioPage() {
           tbclienti: pratica.tbclienti || null,
           av4_info: av4 || null,
           stato_pratica: pratica.stato || "aperta",
-          fascicolo_confermato: pratica.fascicolo_completo_manuale === true,
+
           is_pratica_only: !av1?.id,
         };
       }));
       const rowsConFascicolo = await Promise.all(rowsBase.map(async (row) => {
         const check = await checkFascicoloDocumenti(row);
-        return { ...row, fascicolo_completo: check.completo, fascicolo_mancanti: check.mancanti, av4_firmato_presente: !!check.av4Presente, regola_condotta: !!check.regolaCondotta };
+        const {data:manual}=await supabaseAny.from("tbPraticheAML")
+          .select("fascicolo_completo_manuale").eq("id",row.pratica_id).maybeSingle();
+        return { ...row, fascicolo_completo: check.completo, fascicolo_mancanti: check.mancanti,
+          av4_firmato_presente: !!check.av4Presente, regola_condotta: !!check.regolaCondotta,
+          fascicolo_confermato: manual?.fascicolo_completo_manuale===true };
       }));
       setRows(rowsConFascicolo);
     } catch (err: any) {
@@ -832,8 +836,8 @@ export default function AntiriciclaggioPage() {
                   <td className="p-2 text-center">{row.av4_firmato_presente ? "Sì" : "No"}</td>
                   <td className="p-3 text-center"><input aria-label="Fascicolo completo" title={row.fascicolo_completo ? "Conferma manuale fascicolo" : "Carica prima i documenti richiesti"} type="checkbox" checked={!!row.fascicolo_confermato} disabled={!row.fascicolo_completo && !row.fascicolo_confermato} onChange={e=>void setFascicoloCompletoManualmente(row,e.target.checked)} className="h-4 w-4 accent-green-600"/></td><td className="p-3"><div className="flex items-center justify-center gap-3">
                     <button onClick={() => handleApriAV1(row)} className={`rounded-[28px] bg-white p-1 ${getIconBorderClass(!!row.AV1Conferma)}`}>AV1</button>
-                    <button onClick={() => handleApriAV2(row)} className={`rounded-[28px] bg-white p-1 ${getIconBorderClass(!!row.regola_condotta || !!row.AV2Confermato)}`}>AV2</button>
-                    <button onClick={() => handleApriAV4(row)} className={`rounded-[28px] bg-white p-1 ${getAV4IconBorderClass(row)}`}>AV4</button>
+                    <button disabled={!!row.regola_condotta} title={row.regola_condotta?"Esente: regola di condotta":"Apri AV2"} onClick={() => handleApriAV2(row)} className={`rounded-[28px] bg-white p-1 ${getIconBorderClass(!!row.regola_condotta || !!row.AV2Confermato)}`}>AV2</button>
+                    <button disabled={!!row.regola_condotta} title={row.regola_condotta?"Esente: regola di condotta":"Apri AV4"} onClick={() => handleApriAV4(row)} className={`rounded-[28px] bg-white p-1 ${getAV4IconBorderClass(row)}`}>AV4</button>
                     <button onClick={() => handleApriDocumenti(row)} className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-blue-500 bg-white"><FolderOpen className="h-4 w-4 text-blue-600"/></button>
                     <button onClick={() => handleEliminaCompleto(row)} className="flex h-8 w-8 items-center justify-center rounded-full bg-white"><Trash2 className="h-4 w-4 text-red-500"/></button>
                   </div></td>
