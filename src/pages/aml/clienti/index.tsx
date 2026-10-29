@@ -29,7 +29,7 @@ export default function ClientiAmlIndex(){
     ]);
     if(orgErr||prErr)throw orgErr||prErr;
     if(Number(orgCount||0)>0||Number(prCount||0)>0)throw new Error("Cliente collegato a organi sociali o pratiche AML: impossibile eliminarlo. Disattivalo invece.");
-    throw new Error("Eliminazione diretta sospesa: serve un servizio backend che protegga anche gli altri collegamenti SMP. Nessun dato è stato cancellato.");
+    throw new Error("Eliminazione protetta: prima della vendita AML è necessario verificare tutti i collegamenti con le altre sezioni SMP. Nessun dato è stato cancellato.");
   }catch(e){setError(e instanceof Error?e.message:"Eliminazione non riuscita")}
  };
  const filtered=useMemo(()=>rows.filter(c=>{
