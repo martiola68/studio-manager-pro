@@ -173,7 +173,7 @@ export default function AmlDashboardPage() {
         {state.practices === null ? <p className="text-sm text-slate-500">Dati non disponibili</p> :
           statusCounts.length ? <div className="space-y-4">{statusCounts.slice(0,6).map(([label,count],i)=><div key={label}>
             <div className="mb-1 flex justify-between text-sm"><span className="truncate pr-3 text-slate-700">{label}</span><strong>{count}</strong></div>
-            <div className="h-3 rounded-full bg-slate-100"><div className={["h-3 rounded-full bg-blue-500","h-3 rounded-full bg-sky-400","h-3 rounded-full bg-emerald-500","h-3 rounded-full bg-amber-400","h-3 rounded-full bg-indigo-400","h-3 rounded-full bg-slate-400"][i]} style={{width: ((count / Math.max(1,state.practices.length))*100)+"%"}} /></div>
+            <div className="h-3 rounded-full bg-slate-100"><div className={["h-3 rounded-full bg-blue-500","h-3 rounded-full bg-sky-400","h-3 rounded-full bg-emerald-500","h-3 rounded-full bg-amber-400","h-3 rounded-full bg-indigo-400","h-3 rounded-full bg-slate-400"][i]} style={{width: ((count / Math.max(1,state.practices?.length ?? 0))*100)+"%"}} /></div>
           </div>)}</div> : <p className="text-sm text-slate-500">Non sono presenti pratiche AML.</p>}
         <Link href="/antiriciclaggio" className="mt-5 inline-flex items-center gap-1 text-sm font-medium text-blue-600">Apri pratiche <ArrowRight className="h-4 w-4"/></Link>
       </section>
