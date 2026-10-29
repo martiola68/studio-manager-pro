@@ -433,22 +433,22 @@ const [loadingMicrosoftConnections, setLoadingMicrosoftConnections] = useState(f
   }
 
   return (
-    <div className="p-3">
-      <Card>
-              <CardContent className="space-y-3 px-3 pb-3 pt-0">
-        <div className="flex flex-col gap-2 md:flex-row">
+    <div className="w-full min-w-0 max-w-full overflow-hidden p-3">
+      <Card className="min-w-0 w-full max-w-full overflow-hidden">
+              <CardContent className="min-w-0 w-full max-w-full space-y-3 px-3 pb-3 pt-0">
+        <div className="flex w-full min-w-0 flex-col gap-2 md:flex-row">
   <Input
     placeholder="Cerca per cognome e nome, email, tipo documento..."
     value={q}
     onChange={(e) => setQ(e.target.value)}
-    className="h-9 text-sm"
+    className="h-9 min-w-0 flex-1 text-sm"
   />
 
   <Select
     value={documentoFilter}
     onValueChange={(value: any) => setDocumentoFilter(value)}
   >
-    <SelectTrigger className="h-9 w-[220px]">
+    <SelectTrigger className="h-9 w-full shrink-0 md:w-[220px]">
       <SelectValue placeholder="Filtro documento" />
     </SelectTrigger>
 
@@ -470,8 +470,8 @@ const [loadingMicrosoftConnections, setLoadingMicrosoftConnections] = useState(f
               Nessun rappresentante trovato.
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-md border">
-              <div className="min-w-[1540px]">
+            <div className="w-full min-w-0 max-w-full overflow-x-auto overscroll-x-contain rounded-md border pb-1" style={{ scrollbarGutter: "stable" }}>
+              <div className="min-w-[1280px] w-full">
                 <div className="sticky top-0 z-10 grid grid-cols-[1.9fr_0.85fr_1.2fr_1.15fr_1fr_1fr_1.15fr_140px] items-center gap-3 border-b bg-muted/80 px-3 py-2 text-xs font-semibold uppercase tracking-wide backdrop-blur">
                   <div>Cognome e nome</div>
                   <div className="text-center">Rapp. legale</div>
