@@ -840,7 +840,7 @@ const handlePrestazioneChange = (prestazioneValue: string) => {
     ...prev,
     Prestazione: prestazioneValue,
     ValRischioIner: livello,
-    ...(nonSignificativoConRegola ? { AV1Conferma: true } : {}),
+
     ...resetA,
     ...resetB,
   }));
@@ -1344,7 +1344,7 @@ const handleRinnovoVerifica = async () => {
             <label className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
             <input
   type="checkbox"
-  checked={isNonSignificativoConRegola || Boolean(formData.AV1Conferma)}
+  checked={Boolean(formData.AV1Conferma)}
   disabled={isNonSignificativoConRegola}
   onChange={(e) =>
     setFormData((prev) => ({
