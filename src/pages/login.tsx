@@ -28,7 +28,7 @@ export default function LoginPage() {
         if (cancelled) return;
         if (error) console.error("[Login] getSession error:", error);
         if (data?.session?.access_token) {
-          router.replace("/dashboard");
+          router.replace(typeof window !== "undefined" && sessionStorage.getItem("smp_interface_aml") === "1" ? "/aml" : "/dashboard");
           return;
         }
       } finally {
