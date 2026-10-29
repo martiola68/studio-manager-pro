@@ -98,15 +98,10 @@ export default function AmlDashboardPage() {
           const payload = await response.json();
           if (!response.ok || !payload.success) throw new Error(payload.error || "API non disponibile");
           const all: CentralAlert[] = payload.scadenze || [];
-          result.generalAlerts = all.filter(item => openStatus(item.stato_calcolato));
-          result.scadenze = result.generalAlerts.filter(item => isAmlOrigin(item.origine_modulo));
+          result.scadenze = all.filter(item => openStatus(item.stato_calcolato) && isAmlOrigin(item.origine_modulo));
+          result.generalAlerts = result.scadenze;
         }),
-        run("Alert non inviati", async () => {
-          const response = await fetch("/api/scadenze-centrale/alert-non-inviati", { headers: { Authorization: "Bearer " + session.access_token }, cache: "no-store" });
-          const payload = await response.json();
-          if (!response.ok || !payload.success) throw new Error(payload.error || "API non disponibile");
-          result.failedAlerts = Number(payload.numero_errori || 0);
-        }),
+
       ]);
       if (live) { setState(result); setLoading(false); }
     };
@@ -148,7 +143,7 @@ export default function AmlDashboardPage() {
       <StatCard label="Clienti attivi" value={state.clients} detail="Anagrafiche condivise" icon={Users} tone="blue" href="/aml/clienti"/>
       <StatCard label="Pratiche AML" value={state.practices?.length ?? null} detail="Pratiche registrate" icon={ClipboardCheck} tone="green" href="/antiriciclaggio"/>
       <StatCard label="Verifiche in scadenza" value={dueVerifiche} detail="Entro 30 giorni, anche scadute" icon={Clock3} tone="amber" href="/antiriciclaggio"/>
-      <StatCard label="Alert AML aperti" value={state.scadenze?.length ?? null} detail="Motore generale SMP" icon={BellRing} tone="red" href="/aml/alert?ambito=aml"/>
+      <StatCard label="Alert AML aperti" value={state.scadenze?.length ?? null} detail="Motore generale SMP" icon={BellRing} tone="red" href="/aml/alert"/>
       <StatCard label="Fascicoli incompleti" value={state.fascicoliMancanti} detail="Documenti da verificare" icon={FolderOpen} tone="amber" href="/antiriciclaggio/fascicolo-documenti"/>
     </div>
     <div className="grid gap-4 xl:grid-cols-3">
@@ -191,11 +186,10 @@ export default function AmlDashboardPage() {
     </div>
     <div className="grid gap-4 lg:grid-cols-3">
       <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="mb-4 flex justify-between"><h2 className="font-semibold">Centro Alert generale</h2><BellRing className="h-5 w-5 text-blue-500"/></div>
+        <div className="mb-4 flex justify-between"><h2 className="font-semibold">Alert AML</h2><BellRing className="h-5 w-5 text-blue-500"/></div>
         <div className="space-y-3">
-          <p className="flex justify-between text-sm"><span>Scadenze aperte dello studio</span><strong>{state.generalAlerts?.length ?? "—"}</strong></p>
-          <p className="flex justify-between text-sm"><span>Notifiche non inviate</span><strong className={state.failedAlerts ? "text-red-600" : ""}>{state.failedAlerts ?? "—"}</strong></p>
-          <Link href="/aml/alert" className="inline-flex items-center gap-1 text-sm font-semibold text-blue-600">Apri il motore centrale <ArrowRight className="h-4 w-4"/></Link>
+          <p className="flex justify-between text-sm"><span>Scadenze AML aperte</span><strong>{state.generalAlerts?.length ?? "—"}</strong></p>
+          <Link href="/aml/alert" className="inline-flex items-center gap-1 text-sm font-semibold text-blue-600">Apri gli alert AML <ArrowRight className="h-4 w-4"/></Link>
         </div>
       </section>
       <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
