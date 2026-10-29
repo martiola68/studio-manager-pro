@@ -1,3 +1,6 @@
+import { studioService } from "@/services/studioService";
+import { tipoScadenzaService } from "@/services/tipoScadenzaService";
+import { resolveEmailScadenza } from "@/services/scadenzeEmailDateService";
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/lib/supabase/client";
@@ -71,6 +74,7 @@ export default function ImuPage() {
   });
 
   const [emailDestinatario, setEmailDestinatario] = useState("");
+const [emailCc, setEmailCc] = useState("");
   const [searchContatti, setSearchContatti] = useState("");
 
   const [emailContatti, setEmailContatti] = useState<
@@ -531,6 +535,7 @@ export default function ImuPage() {
     });
 
     setEmailDestinatario("");
+  setEmailCc("");
     setSearchContatti("");
     setEmailContatti([]);
   };
@@ -543,6 +548,7 @@ export default function ImuPage() {
     });
 
     setEmailDestinatario("");
+  setEmailCc("");
     setSearchContatti("");
     setEmailContatti([]);
     setF24File(null);
@@ -585,17 +591,8 @@ export default function ImuPage() {
 
       const scadenza = invioEmailModal.scadenza;
 
-      const { data: tipoScadenza } = await supabase
-        .from("tbtipi_scadenze")
-        .select("data_scadenza")
-        .eq("tipo_scadenza", "imu")
-        .eq("attivo", true)
-        .ilike(
-          "nome",
-          invioEmailModal.tipo === "acconto" ? "%acconto%" : "%saldo%"
-        )
-        .maybeSingle();
-
+      const studioId = await studioService.getStudioId();
+      const dates = resolveEmailScadenza(await tipoScadenzaService.getAttivi(studioId), invioEmailModal.tipo === "acconto" ? "imu_acconto" : "imu_saldo", Number(scadenza.anno_riferimento || new Date().getFullYear()));
       const firmaUtente = `${utenteLoggato?.nome || ""} ${
         utenteLoggato?.cognome || ""
       }`.trim();
@@ -603,9 +600,7 @@ export default function ImuPage() {
       const vars: Record<string, string> = {
         CLIENTE: scadenza.nominativo || "Cliente",
         ANNO: String(scadenza.anno_riferimento || new Date().getFullYear()),
-        DATA_SCADENZA: tipoScadenza?.data_scadenza
-          ? new Date(tipoScadenza.data_scadenza).toLocaleDateString("it-IT")
-          : "",
+        DATA_SCADENZA: dates.dataScadenza,
         TIPO_IMU: invioEmailModal.tipo === "acconto" ? "Acconto" : "Saldo",
         FIRMA_UTENTE: firmaUtente,
       };
@@ -645,6 +640,7 @@ export default function ImuPage() {
         tipo: "singola",
         destinatarioId: scadenza.cliente_id || "",
         destinatarioEmail: emailDestinatario,
+        cc: emailCc.split(/[;,]/).map(v=>v.trim()).filter(Boolean),
         oggetto,
         messaggio,
         allegati,
@@ -1145,6 +1141,7 @@ export default function ImuPage() {
                 <Input type="email" value={emailDestinatario} onChange={(e) => setEmailDestinatario(e.target.value)} placeholder="email@cliente.it" />
               </div>
 
+              <div className="mb-3"><label className="text-sm font-medium mb-2 block">CC · indirizzi in copia (facoltativo)</label><Input type="text" value={emailCc} onChange={e=>setEmailCc(e.target.value)} placeholder="email1@esempio.it; email2@esempio.it"/><p className="mt-1 text-xs text-gray-500">Separa più indirizzi con virgola o punto e virgola.</p></div>
               <div>
                 <label className="text-sm font-medium mb-2 block">Allegato F24 *</label>
                 <Input type="file" accept=".pdf" onChange={(e) => setF24File(e.target.files?.[0] || null)} />
