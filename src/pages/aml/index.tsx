@@ -145,7 +145,7 @@ export default function AmlDashboardPage() {
       <AlertTriangle className="mr-2 inline h-4 w-4" />Alcuni indicatori non sono disponibili. {state.errors.join(" · ")}
     </div>}
     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-      <StatCard label="Clienti attivi" value={state.clients} detail="Anagrafiche condivise" icon={Users} tone="blue" href="/clienti"/>
+      <StatCard label="Clienti attivi" value={state.clients} detail="Anagrafiche condivise" icon={Users} tone="blue" href="/aml/clienti"/>
       <StatCard label="Pratiche AML" value={state.practices?.length ?? null} detail="Pratiche registrate" icon={ClipboardCheck} tone="green" href="/antiriciclaggio"/>
       <StatCard label="Verifiche in scadenza" value={dueVerifiche} detail="Entro 30 giorni, anche scadute" icon={Clock3} tone="amber" href="/antiriciclaggio"/>
       <StatCard label="Alert AML aperti" value={state.scadenze?.length ?? null} detail="Motore generale SMP" icon={BellRing} tone="red" href="/aml/alert?ambito=aml"/>
@@ -204,11 +204,11 @@ export default function AmlDashboardPage() {
         <Link href="/microsoft365" className="inline-flex items-center gap-1 text-sm font-semibold text-blue-600">Gestisci Microsoft 365 <ArrowRight className="h-4 w-4"/></Link>
       </section>
       <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="mb-4 flex items-center gap-2"><FileText className="h-5 w-5 text-blue-600"/><h2 className="font-semibold">Moduli originali AML</h2></div>
+        <div className="mb-4 flex items-center gap-2"><FileText className="h-5 w-5 text-blue-600"/><h2 className="font-semibold">Operatività AML</h2></div>
+        <p className="mb-4 text-sm text-slate-600">Apri l'Elenco Antiriciclaggio per creare pratiche, compilare AV1, AV2 e AV4 e gestire i documenti del fascicolo direttamente dalla pratica.</p>
         <div className="grid gap-2 text-sm">
-          <Link href="/antiriciclaggio/modello-av1" className="rounded-lg bg-slate-50 p-2 hover:bg-blue-50">Modello AV1 · Adeguata verifica</Link>
-          <Link href="/antiriciclaggio/modello-av2" className="rounded-lg bg-slate-50 p-2 hover:bg-blue-50">Modello AV2</Link>
-          <Link href="/antiriciclaggio/modello-av4" className="rounded-lg bg-slate-50 p-2 hover:bg-blue-50">Modello AV4</Link>
+          <Link href="/antiriciclaggio" className="rounded-lg bg-slate-50 p-2 font-semibold text-blue-700 hover:bg-blue-50">Elenco Antiriciclaggio →</Link>
+          <Link href="/antiriciclaggio/pratiche/nuovo" className="rounded-lg bg-slate-50 p-2 font-semibold text-blue-700 hover:bg-blue-50">Nuova pratica →</Link>
         </div>
       </section>
     </div>
