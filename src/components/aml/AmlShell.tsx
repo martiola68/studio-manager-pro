@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { hardLogout } from "@/services/logoutService";
+import { useStudio } from "@/contexts/StudioContext";
 
 export const AML_INTERFACE_KEY = "smp_interface_aml";
 
@@ -20,6 +21,7 @@ const navigation = [
   { label: "Anagrafiche clienti", href: "/clienti", icon: Users },
   { label: "Pratiche AML", href: "/antiriciclaggio", icon: ClipboardCheck },
   { label: "Adeguata verifica AV1", href: "/antiriciclaggio/modello-av1", icon: FileCheck2 },
+  { label: "Modello AV2", href: "/antiriciclaggio/modello-av2", icon: FileText },
   { label: "Modello AV4", href: "/antiriciclaggio/modello-av4", icon: FileText },
   { label: "Fascicoli e documenti", href: "/antiriciclaggio/fascicolo-documenti", icon: FolderOpen },
   { label: "Scadenze e controlli", href: "/aml/alert?ambito=aml", icon: CalendarDays },
@@ -29,6 +31,8 @@ type Profile = { nome: string; cognome: string; tipo_utente: string; studio_id: 
 
 export function AmlShell({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const { piano } = useStudio();
+  const hasFullLicense = String(piano || "").toLowerCase().includes("full");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
 
@@ -82,9 +86,9 @@ export function AmlShell({ children }: { children: ReactNode }) {
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto">{nav}</div>
         <div className="border-t border-slate-700/70 p-3 space-y-1">
-          <button type="button" onClick={openFullSmp} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white">
+          {hasFullLicense && <button type="button" onClick={openFullSmp} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white">
             <ArrowLeftRight className="h-4 w-4" /> Apri SMP completo
-          </button>
+          </button>}
           <button type="button" onClick={() => void hardLogout("/login")} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white">
             <LogOut className="h-4 w-4" /> Esci
           </button>
