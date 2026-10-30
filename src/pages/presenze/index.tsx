@@ -1444,13 +1444,13 @@ ${dipendentiXml}
           </div>
         )}
 
-        <Card>
+        <Card className="payroll-presenze-mese-card">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">
               {MONTHS[monthIndex]} {year}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="payroll-presenze-mese-content">
             {loading ? (
               <div className="py-8 text-center text-sm text-muted-foreground">
                 Caricamento presenze...
@@ -1465,7 +1465,7 @@ ${dipendentiXml}
               </div>
             ) : (
 
-<div className="max-h-[320px] w-full overflow-auto rounded-md border">
+<div className="payroll-presenze-grid-scroll max-h-[320px] w-full overflow-auto rounded-md border" role="region" aria-label="Presenze dipendenti: scorrimento verticale e orizzontale" tabIndex={0}>
   <div
     className="min-w-max text-xs"
     style={{
