@@ -470,7 +470,7 @@ const [loadingMicrosoftConnections, setLoadingMicrosoftConnections] = useState(f
               Nessun rappresentante trovato.
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-md border">
+            <div className="max-h-[calc(100dvh-250px)] min-h-[240px] overflow-x-auto overflow-y-auto overscroll-y-contain rounded-md border">
               <div className="min-w-[1540px]">
                 <div className="sticky top-0 z-10 grid grid-cols-[1.9fr_0.85fr_1.2fr_1.15fr_1fr_1fr_1.15fr_140px] items-center gap-3 border-b bg-muted/80 px-3 py-2 text-xs font-semibold uppercase tracking-wide backdrop-blur">
                   <div>Cognome e nome</div>
