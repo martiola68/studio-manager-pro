@@ -49,41 +49,54 @@ export function PayrollMasterGraficaEnhancer() {
         flex: 1 1 auto !important; min-height: 0 !important; overflow-y: auto !important; overflow-x: auto !important; scrollbar-gutter: stable !important;
       }
 
-      .payroll-presenze-page > div.mx-auto.flex.max-w-\[1800px\].flex-col.gap-4.p-4 {
-        height: 100% !important; min-height: 0 !important; max-width: none !important; flex: 1 1 auto !important; overflow: hidden !important;
+      /* Presenze: il Master Guard usa un wrapper .contents tra il main e la pagina.
+         Gli stili per i figli diretti senza questo wrapper lasciavano la tabella
+         fuori dalla viewport, quindi lo scroll risultava invisibile. */
+      .payroll-presenze-page > .contents {
+        display: contents !important;
       }
-      .payroll-presenze-page > div.mx-auto.flex.max-w-\[1800px\].flex-col.gap-4.p-4 > div:last-child,
-      .payroll-presenze-page > div.mx-auto.flex.max-w-\[1800px\].flex-col.gap-4.p-4 > div:last-child > div:last-child {
-        flex: 1 1 auto !important; min-height: 0 !important; display: flex !important; flex-direction: column !important; overflow: hidden !important;
-      }
-      .payroll-presenze-page .max-h-\[320px\].w-full.overflow-auto.rounded-md.border {
-        flex: 1 1 auto !important; min-height: 0 !important; height: 100% !important; max-height: none !important; overflow: auto !important; scrollbar-gutter: stable !important;
-      }
-
-      /* Scorrimento riservato alla griglia delle presenze Payroll, non agli altri moduli. */
-      .payroll-presenze-page .payroll-presenze-mese-card {
-        flex: 1 1 0% !important;
-        min-height: 0 !important;
+      .payroll-presenze-page > .contents > div.mx-auto,
+      .payroll-presenze-page > div.mx-auto {
         display: flex !important;
+        flex: 1 1 0% !important;
         flex-direction: column !important;
+        width: 100% !important;
+        max-width: none !important;
+        height: 100% !important;
+        min-height: 0 !important;
         overflow: hidden !important;
+      }
+      .payroll-presenze-page > .contents > div.mx-auto > :not(.payroll-presenze-mese-card),
+      .payroll-presenze-page > div.mx-auto > :not(.payroll-presenze-mese-card) {
+        flex: 0 0 auto !important;
+      }
+      .payroll-presenze-page .payroll-presenze-mese-card {
+        display: flex !important;
+        flex: 1 1 0% !important;
+        flex-direction: column !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+      }
+      .payroll-presenze-page .payroll-presenze-mese-card > div:first-child {
+        flex: 0 0 auto !important;
       }
       .payroll-presenze-page .payroll-presenze-mese-content {
-        flex: 1 1 0% !important;
-        min-height: 0 !important;
         display: flex !important;
+        flex: 1 1 0% !important;
         flex-direction: column !important;
+        min-height: 0 !important;
         overflow: hidden !important;
       }
-      .payroll-presenze-page .payroll-presenze-grid-scroll {
+      .payroll-presenze-page .payroll-presenze-mese-content > .payroll-presenze-grid-scroll {
+        display: block !important;
         flex: 1 1 auto !important;
         min-height: 0 !important;
-        height: auto !important;
+        height: 100% !important;
         max-height: none !important;
         overflow-x: auto !important;
         overflow-y: scroll !important;
-        scrollbar-gutter: stable !important;
         overscroll-behavior: contain;
+        scrollbar-gutter: stable !important;
       }
 
       /* Creazione gruppi smart working: due blocchi affiancati, tabella sotto a tutta larghezza */
