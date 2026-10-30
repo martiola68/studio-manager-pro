@@ -60,6 +60,32 @@ export function PayrollMasterGraficaEnhancer() {
         flex: 1 1 auto !important; min-height: 0 !important; height: 100% !important; max-height: none !important; overflow: auto !important; scrollbar-gutter: stable !important;
       }
 
+      /* Scorrimento riservato alla griglia delle presenze Payroll, non agli altri moduli. */
+      .payroll-presenze-page .payroll-presenze-mese-card {
+        flex: 1 1 0% !important;
+        min-height: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+      }
+      .payroll-presenze-page .payroll-presenze-mese-content {
+        flex: 1 1 0% !important;
+        min-height: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+      }
+      .payroll-presenze-page .payroll-presenze-grid-scroll {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        height: auto !important;
+        max-height: none !important;
+        overflow-x: auto !important;
+        overflow-y: scroll !important;
+        scrollbar-gutter: stable !important;
+        overscroll-behavior: contain;
+      }
+
       /* Creazione gruppi smart working: due blocchi affiancati, tabella sotto a tutta larghezza */
       .payroll-smart-groups-page > div.p-6.space-y-6 {
         width: 100% !important; max-width: none !important; height: 100% !important; min-height: 0 !important;
