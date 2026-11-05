@@ -63,7 +63,17 @@ returns trigger language plpgsql security definer
 set search_path = public
 as $$
 begin
-  if new.esito = 'nessuna_variazione' then
+  -- L'inserimento retroattivo di un controllo storico non deve spostare
+  -- la scadenza decisa da un controllo più recente.
+  if new.esito = 'nessuna_variazione'
+     and not exists (
+       select 1
+       from public."tbAMLControlliCostanti" c
+       where c.pratica_id = new.pratica_id
+         and c.studio_id = new.studio_id
+         and c.id <> new.id
+         and (c.data_controllo, c.created_at) > (new.data_controllo, new.created_at)
+     ) then
     update public."tbPraticheAML"
     set data_prossimo_rinnovo = new.prossima_scadenza
     where id = new.pratica_id
