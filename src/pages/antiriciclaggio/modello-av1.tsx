@@ -1259,7 +1259,17 @@ const handleRinnovoVerifica = async () => {
         if (verificaCorrenteError) throw new Error(verificaCorrenteError.message);
         const idCorrente = praticaCorrente?.av1_corrente_id ?? praticaCorrente?.av1_id;
         if (idCorrente != null && String(idCorrente) !== String(formData.id)) {
-          throw new Error("Questo AV1 è storico e non può essere modificato. Apri il modulo corrente.");
+          const { data: versione, error: versioneError } = await supabase
+            .from("tbAV1")
+            .select("AV1Conferma")
+            .eq("id", formData.id)
+            .eq("studio_id", formData.studio_id)
+            .eq("pratica_id", formData.pratica_id)
+            .single();
+          if (versioneError) throw new Error(versioneError.message);
+          if (versione?.AV1Conferma) {
+            throw new Error("Questo AV1 è storico e confermato: non può essere modificato.");
+          }
         }
       }
 
@@ -1275,19 +1285,12 @@ const handleRinnovoVerifica = async () => {
     if (formData.pratica_id && savedId && payload.AV1Conferma) {
   const { error: praticaUpdateError } = await supabase
     .from("tbPraticheAML")
-    .update(
-      // Una bozza non sostituisce la versione valida e non rinvia la scadenza.
-      payload.AV1Conferma
-        ? {
-            av1_corrente_id: Number(savedId),
-            stato_ciclo: "chiuso",
-            data_prossimo_rinnovo: ScadenzaVerificaCalcolata || null,
-          }
-        : {
-            // L'AV1 rimane nel fascicolo come bozza identificata dal suo ID.
-            // Non tocchiamo né il corrente, né la scadenza preesistente.
-          }
-    )
+    .update({
+      // Solo una versione confermata diventa corrente.
+      av1_corrente_id: Number(savedId),
+      stato_ciclo: "chiuso",
+      data_prossimo_rinnovo: ScadenzaVerificaCalcolata || null,
+    })
     .eq("id", formData.pratica_id);
 
   if (praticaUpdateError) throw new Error(praticaUpdateError.message);
