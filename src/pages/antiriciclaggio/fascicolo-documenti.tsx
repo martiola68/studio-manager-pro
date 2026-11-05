@@ -144,7 +144,7 @@ export default function FascicoloDocumentiPage() {
   const [documenti, setDocumenti] = useState<DocumentoRow[]>([]);
   const [controlliAV7, setControlliAV7] = useState<Array<{ id: string; data_controllo: string; esito: string }>>([]);
   const [versioniAV1, setVersioniAV1] = useState<Array<{ id: number; DataVerifica: string | null; AV1Conferma: boolean | null; allegato_av1_firmato: string | null }>>([]);
-  const [versioniAV4, setVersioniAV4] = useState<Array<{ id: number; created_at: string | null; compilato_da_cliente: boolean | null; pdf_firmato_cliente: string | null }>>([]);
+  const [versioniAV4, setVersioniAV4] = useState<Array<{ id: string; created_at: string | null; compilato_da_cliente: boolean | null; pdf_firmato_cliente: string | null }>>([]);
   const [uploading, setUploading] = useState(false);
   const [workingDocumentId, setWorkingDocumentId] = useState<string | null>(null);
   const [tipoDocumento, setTipoDocumento] = useState("Documento generico");
