@@ -142,6 +142,9 @@ export default function ControlloCostanteAML() {
           <div className="mt-2 text-sm"><b>Fonti:</b> {c.fonti}</div><div className="mt-2 whitespace-pre-wrap text-sm"><b>Osservazioni:</b> {c.note}</div>
           {c.prossima_scadenza && <div className="mt-2 text-sm"><b>Scadenza successiva:</b> {formatDate(c.prossima_scadenza)}</div>}
           <p className="mt-2 text-xs text-slate-500">Registrazione non modificabile · {formatDate(c.created_at)}</p>
+          <a className="mt-3 inline-block rounded border border-sky-500 bg-white px-3 py-1 text-sm font-semibold text-sky-700"
+            target="_blank" rel="noopener noreferrer"
+            href={`/antiriciclaggio/stampa-av7?pratica_id=${encodeURIComponent(praticaId)}&id=${encodeURIComponent(c.id)}`}>Stampa AV7</a>
         </article>)}</div>}
     </section>
   </div>;
