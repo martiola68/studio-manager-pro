@@ -911,7 +911,7 @@ useEffect(() => {
       if (!session?.access_token) return;
       const response = await fetch(
         `/api/antiriciclaggio/controlli-costanti?pratica_id=${encodeURIComponent(pratica_id)}`,
-        { headers: { Authorization: `Bearer ${session.access_token}` } }
+        { headers: { Authorization: `Bearer ${session.access_token}`, "x-aml-av7-proof": sessionStorage.getItem("antiriciclaggio_av7_access_proof") || "" } }
       );
       if (!response.ok) return;
       const result = await response.json();
