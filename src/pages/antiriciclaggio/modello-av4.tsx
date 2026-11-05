@@ -1873,7 +1873,21 @@ ${nomeOperatore}
       if (verificaError) throw verificaError;
       const idCorrente = pratica?.av4_corrente_id ?? pratica?.av4_id;
       if (idCorrente != null && String(idCorrente) !== String(av4Id)) {
-        throw new Error("AV4 storico: la versione precedente è conservata e non può essere sovrascritta. Apri l'AV4 corrente.");
+        const { data: modulo, error: moduloError } = await supabase
+          .from("tbAV4")
+          .select("stato, compilato_da_cliente, public_submitted_at, pdf_firmato_cliente")
+          .eq("id", av4Id)
+          .eq("studio_id", form.studio_id)
+          .eq("pratica_id", form.pratica_id)
+          .single();
+        if (moduloError) throw moduloError;
+        const finalizzato = modulo?.stato === "completato"
+          || modulo?.compilato_da_cliente
+          || modulo?.public_submitted_at
+          || modulo?.pdf_firmato_cliente;
+        if (finalizzato) {
+          throw new Error("AV4 storico completato: non è consentito modificarlo. Apri il modulo corrente.");
+        }
       }
     }
 
@@ -2035,24 +2049,27 @@ invia_altra_email: !!form.invia_altra_email,
     }
 
     if (savedId && form.pratica_id) {
-     const praticaUpdatePayload: any = {
-  // Mantiene av4_id iniziale e aggiorna solo l'identificativo corrente.
-  av4_corrente_id: savedId,
-  stato_ciclo: "av4_compilato",
-};
-
-      const { error: praticaUpdateError } = await supabase
-        .from("tbPraticheAML")
-        .update(praticaUpdatePayload)
-        .eq("id", form.pratica_id);
-
-      if (praticaUpdateError) {
-        console.error("Errore aggiornamento tbPraticheAML:", praticaUpdateError);
-        alert(
-          `AV4 salvato, ma non è stato possibile aggiornare la pratica AML: ${praticaUpdateError.message}`
-        );
-        return;
-      }
+     // Le bozze restano nello storico e non sostituiscono l'AV4 valido.
+     const av4Completato = Boolean(
+       form.compilato_da_cliente ||
+       form.allegato_pdf_cliente ||
+       form.pdf_firmato_cliente
+     );
+     if (av4Completato) {
+       const { error: praticaUpdateError } = await supabase
+         .from("tbPraticheAML")
+         .update({
+           av4_corrente_id: savedId,
+           stato_ciclo: "av4_compilato",
+         })
+         .eq("id", form.pratica_id)
+         .eq("studio_id", form.studio_id);
+       if (praticaUpdateError) {
+         console.error("Errore aggiornamento tbPraticheAML:", praticaUpdateError);
+         alert(`AV4 salvato, ma aggiornamento pratica fallito: ${praticaUpdateError.message}`);
+         return;
+       }
+     }
     }
 
     setForm((prev) => ({
