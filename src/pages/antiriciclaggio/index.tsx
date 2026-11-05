@@ -328,9 +328,13 @@ export default function AntiriciclaggioPage() {
       const praticheRows = (praticheData as PraticaAMLRow[]) || [];
       const rowsBase: AV1Row[] = await Promise.all(praticheRows.map(async (pratica) => {
         const [{ data: av1 }, { data: av2 }, { data: av4 }, { data: av7 }] = await Promise.all([
-          supabaseAny.from("tbAV1").select("id, studio_id, cliente_id, societa_id, pratica_id, incaricato_adeguata_verifica_id, DataVerifica, ScadenzaVerifica, AV1Conferma, AV2Generato, AV4Generato, Prestazione").eq("pratica_id", pratica.id).order("DataVerifica", { ascending: false }).order("id", { ascending: false }).limit(1).maybeSingle(),
+          pratica.av1_corrente_id || pratica.av1_id
+            ? supabaseAny.from("tbAV1").select("id, studio_id, cliente_id, societa_id, pratica_id, incaricato_adeguata_verifica_id, DataVerifica, ScadenzaVerifica, AV1Conferma, AV2Generato, AV4Generato, Prestazione").eq("id", pratica.av1_corrente_id || pratica.av1_id).eq("pratica_id", pratica.id).maybeSingle()
+            : supabaseAny.from("tbAV1").select("id, studio_id, cliente_id, societa_id, pratica_id, incaricato_adeguata_verifica_id, DataVerifica, ScadenzaVerifica, AV1Conferma, AV2Generato, AV4Generato, Prestazione").eq("pratica_id", pratica.id).order("DataVerifica", { ascending: false }).order("id", { ascending: false }).limit(1).maybeSingle(),
           pratica.av2_corrente_id || pratica.av2_id ? supabaseAny.from("tbAV2").select("id, confermato").eq("id", pratica.av2_corrente_id || pratica.av2_id).maybeSingle() : supabaseAny.from("tbAV2").select("id, confermato").eq("pratica_id", pratica.id).maybeSingle(),
-          supabaseAny.from("tbAV4").select("id, av1_id, Av4InviatoCL, public_sent_at, compilato_da_cliente, av4_caricato_manualmente, allegato_pdf_cliente, pdf_firmato_cliente").eq("pratica_id", pratica.id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+          pratica.av4_corrente_id || pratica.av4_id
+            ? supabaseAny.from("tbAV4").select("id, av1_id, Av4InviatoCL, public_sent_at, compilato_da_cliente, av4_caricato_manualmente, allegato_pdf_cliente, pdf_firmato_cliente").eq("id", pratica.av4_corrente_id || pratica.av4_id).eq("pratica_id", pratica.id).maybeSingle()
+            : supabaseAny.from("tbAV4").select("id, av1_id, Av4InviatoCL, public_sent_at, compilato_da_cliente, av4_caricato_manualmente, allegato_pdf_cliente, pdf_firmato_cliente").eq("pratica_id", pratica.id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
           supabaseAny.from("tbAMLControlliCostanti").select("data_controllo").eq("pratica_id", pratica.id).order("data_controllo", { ascending: false }).limit(1).maybeSingle(),
         ]);
         return {
