@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { verifyAV7AccessProof } from "@/lib/aml/av7AccessProof";
 
 const ESITI = new Set([
   "nessuna_variazione", "variazione_titolare_ppe", "variazione_rischio",
@@ -52,12 +53,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { data: pratica, error: praticaError } = await supabaseAdmin
       .from("tbPraticheAML")
-      .select("id, studio_id, cliente_id, data_prossimo_rinnovo")
+      .select("id, studio_id, cliente_id, societa_id, data_prossimo_rinnovo")
       .eq("id", praticaId)
       .eq("studio_id", user.studio_id)
       .maybeSingle();
     if (praticaError) throw praticaError;
-    if (!pratica?.cliente_id) return res.status(404).json({ error: "Pratica non trovata nello studio" });
+    if (!pratica?.cliente_id || !pratica.societa_id) return res.status(404).json({ error: "Pratica non trovata nello studio" });
+
+    const { data: societa, error: societaError } = await supabaseAdmin
+      .from("tbRespAVSocieta")
+      .select("id, antiriciclaggio_enabled")
+      .eq("id", pratica.societa_id)
+      .eq("studio_id", user.studio_id)
+      .maybeSingle();
+    if (societaError || !societa) return res.status(403).json({ error: "Soggetto AML non autorizzato" });
+    if (societa.antiriciclaggio_enabled) {
+      const proof = String(req.headers["x-aml-av7-proof"] || "");
+      if (!verifyAV7AccessProof(proof, {
+        uid: auth.user.id, studio: user.studio_id, societa: pratica.societa_id,
+      })) return res.status(403).json({ error: "Sblocca di nuovo il soggetto responsabile dall'elenco AML prima di aprire AV7." });
+    }
 
     if (req.method === "GET") {
       const { data, error } = await supabaseAdmin
