@@ -95,8 +95,12 @@ export default function ControlloCostanteAML() {
         : esito === "variazione_rischio" ? "av1"
         : esito === "variazione_titolare_ppe" ? "av4" : "");
       setSelected({}); setNote(""); setFonti(""); setScadenza("");
-      await load();
       window.alert("AV7 archiviato correttamente. I moduli precedenti rimangono nel fascicolo.");
+      try {
+        await load();
+      } catch (refreshError) {
+        console.error("AV7 salvato, impossibile aggiornare la lista", refreshError);
+      }
     } catch (e: any) { setError(e?.message || "Errore salvataggio"); }
     finally { setBusy(false); }
   }
