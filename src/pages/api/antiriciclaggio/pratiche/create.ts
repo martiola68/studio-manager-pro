@@ -184,6 +184,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (av4Error || !av4Data?.id) {
         throw av4Error || new Error("Errore creazione AV4");
       }
+
+      // Fissa gli ID iniziali e quelli correnti: i successivi rinnovi
+      // aggiorneranno solo i puntatori *_corrente_id.
+      const { error: linkError } = await supabaseAdmin
+        .from("tbPraticheAML")
+        .update({
+          av1_id: av1Id,
+          av1_corrente_id: av1Id,
+          av2_id: av2Data.id,
+          av2_corrente_id: av2Data.id,
+          av4_id: av4Data.id,
+          av4_corrente_id: av4Data.id,
+        })
+        .eq("id", praticaId)
+        .eq("studio_id", studioId);
+      if (linkError) throw linkError;
     } catch (childError) {
       await supabaseAdmin.from("tbPraticheAML").delete().eq("id", praticaId);
       throw childError;

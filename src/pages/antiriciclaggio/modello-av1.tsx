@@ -289,7 +289,7 @@ function sectionHasCheckedFlag(formData: FormDataType, sectionKey: string) {
 
 export default function ModelloAV1Page() {
   const router = useRouter();
-  const { id, pratica_id, cliente_id, studio_id, societa_id } = router.query;
+  const { id, pratica_id, cliente_id, studio_id, societa_id, nuovo_av1 } = router.query;
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   const [clienti, setClienti] = useState<Cliente[]>([]);
@@ -638,6 +638,16 @@ const refreshEncryptionEnabled = async (studioIdValue?: string) => {
 
 if (currentAv1Id) {
   await loadRecordById(currentAv1Id);
+  if (nuovo_av1 === "1") {
+    setFormData((prev) => ({
+      ...prev,
+      id: "",
+      DataVerifica: new Date().toISOString().slice(0, 10),
+      ScadenzaVerifica: "",
+      allegato_av1_firmato: "",
+      AV1Conferma: false,
+    }));
+  }
   return;
 }
 
@@ -761,7 +771,7 @@ if (currentAv1Id) {
         (typeof cliente_id === "string" ? cliente_id : "") ||
         "",
     }));
-  }, [router.isReady, id, pratica_id, cliente_id, studio_id, societa_id]);
+  }, [router.isReady, id, pratica_id, cliente_id, studio_id, societa_id, nuovo_av1]);
 
 const handlePrestazioneChange = (prestazioneValue: string) => {
   const prestazione = prestazioni.find(
@@ -1005,6 +1015,13 @@ const handleOpenFirmato = async () => {
 
 const handleRemoveFirmato = async () => {
   const run = async () => {
+    // Gli allegati sottoscritti devono rimanere nel fascicolo storico.
+    // Per una sostituzione occorre acquisire una nuova versione AV1,
+    // senza eliminare il PDF della verifica precedente.
+    if (formData.id && formData.allegato_av1_firmato) {
+      setError("L'allegato AV1 firmato è conservato nel fascicolo storico. Per una rettifica crea una nuova versione del modulo.");
+      return;
+    }
     if (!formData.allegato_av1_firmato) {
       alert("Nessun allegato AV1 da rimuovere.");
       return;
@@ -1073,60 +1090,15 @@ const handleRemoveFirmato = async () => {
 };
 
 const handleRinnovoVerifica = async () => {
-  const run = async () => {
-    if (!formData.studio_id) {
-      alert("Studio non disponibile.");
-      return;
-    }
-
-    if (!formData.cliente_id) {
-      alert("Cliente non disponibile.");
-      return;
-    }
-
-    if (!formData.pratica_id) {
-      alert("Pratica AML non disponibile.");
-      return;
-    }
-
-    try {
-      setSaving(true);
-      setError(null);
-
-      const supabase = getSupabaseClient() as any;
-
-      const { error: praticaUpdateError } = await supabase
-        .from("tbPraticheAML")
-        .update({
-          av2_corrente_id: null,
-          av1_corrente_id: null,
-          stato_ciclo: "av4_da_inviare",
-          data_prossimo_rinnovo: null,
-        })
-        .eq("id", formData.pratica_id);
-
-      if (praticaUpdateError) {
-        throw new Error(praticaUpdateError.message);
-      }
-
-      alert("Rinnovo verifica avviato correttamente. Procedi con il nuovo AV4.");
-
-      void router.push(
-        `/antiriciclaggio/modello-av4?studio_id=${formData.studio_id}&pratica_id=${formData.pratica_id}&cliente_id=${formData.cliente_id}`
-      );
-    } catch (err: any) {
-      setError(err?.message || "Errore durante l'avvio del rinnovo verifica.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (encryptionEnabled && isEncryptionLocked()) {
-    requireUnlock(run);
+  if (!formData.pratica_id) {
+    alert("Salva prima la pratica AML.");
     return;
   }
-
-  await run();
+  // Il rinnovo non deve cancellare gli ID correnti o imporre un AV4.
+  // Il controllo costante è registrato nel fascicolo e decide eventuali aggiornamenti.
+  await router.push(
+    `/antiriciclaggio/controllo-costante?pratica_id=${encodeURIComponent(formData.pratica_id)}`
+  );
 };
 
  const handleSave = async () => {
@@ -1268,6 +1240,31 @@ const handleRinnovoVerifica = async () => {
 };
       let savedId = formData.id || "";
 
+      // Un AV1 storico non può diventare nuovamente un modulo corrente modificabile.
+      if (formData.id && formData.pratica_id) {
+        const { data: praticaCorrente, error: verificaCorrenteError } = await supabase
+          .from("tbPraticheAML")
+          .select("av1_corrente_id, av1_id")
+          .eq("id", formData.pratica_id)
+          .eq("studio_id", formData.studio_id)
+          .single();
+        if (verificaCorrenteError) throw new Error(verificaCorrenteError.message);
+        const idCorrente = praticaCorrente?.av1_corrente_id ?? praticaCorrente?.av1_id;
+        if (idCorrente != null && String(idCorrente) !== String(formData.id)) {
+          const { data: versione, error: versioneError } = await supabase
+            .from("tbAV1")
+            .select("AV1Conferma")
+            .eq("id", formData.id)
+            .eq("studio_id", formData.studio_id)
+            .eq("pratica_id", formData.pratica_id)
+            .single();
+          if (versioneError) throw new Error(versioneError.message);
+          if (versione?.AV1Conferma) {
+            throw new Error("Questo AV1 è storico e confermato: non può essere modificato.");
+          }
+        }
+      }
+
       if (formData.id) {
         const { error } = await supabase.from("tbAV1").update(payload).eq("id", formData.id);
         if (error) throw new Error(error.message);
@@ -1277,11 +1274,11 @@ const handleRinnovoVerifica = async () => {
         savedId = String(data.id);
       }
 
-    if (formData.pratica_id && savedId) {
+    if (formData.pratica_id && savedId && payload.AV1Conferma) {
   const { error: praticaUpdateError } = await supabase
     .from("tbPraticheAML")
     .update({
-     av1_id: Number(savedId),
+      // Solo una versione confermata diventa corrente.
       av1_corrente_id: Number(savedId),
       stato_ciclo: "chiuso",
       data_prossimo_rinnovo: ScadenzaVerificaCalcolata || null,
