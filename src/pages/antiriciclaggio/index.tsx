@@ -80,6 +80,7 @@ type PraticaAMLRow = {
   av4_corrente_id?: string | null;
   av1_corrente_id?: string | null;
   data_prossimo_rinnovo?: string | null;
+  tipo_prestazione?: string | null;
   tbclienti?: Cliente | Cliente[] | null;
   av4_info?: AV4Info | AV4Info[] | null;
 };
@@ -324,7 +325,7 @@ export default function AntiriciclaggioPage() {
       setLoading(true);
       setRows([]);
       const supabaseAny = getSupabaseClient() as any;
-      const { data: praticheData, error: praticheError } = await supabaseAny.from("tbPraticheAML").select(`id, studio_id, cliente_id, societa_id, data_apertura, data_prossimo_rinnovo, stato, stato_ciclo, av1_id, av1_corrente_id, av2_id, av2_corrente_id, av4_id, av4_corrente_id, tbclienti (id, cod_cliente, ragione_sociale, codice_fiscale, utente_operatore_id, utente_operatore:tbutenti!tbclienti_utente_operatore_id_fkey (nome, cognome))`).eq("societa_id", societaId).order("data_apertura", { ascending: false });
+      const { data: praticheData, error: praticheError } = await supabaseAny.from("tbPraticheAML").select(`id, studio_id, cliente_id, societa_id, data_apertura, data_prossimo_rinnovo, tipo_prestazione, stato, stato_ciclo, av1_id, av1_corrente_id, av2_id, av2_corrente_id, av4_id, av4_corrente_id, tbclienti (id, cod_cliente, ragione_sociale, codice_fiscale, utente_operatore_id, utente_operatore:tbutenti!tbclienti_utente_operatore_id_fkey (nome, cognome))`).eq("societa_id", societaId).order("data_apertura", { ascending: false });
       if (praticheError) throw praticheError;
       const praticheRows = (praticheData as PraticaAMLRow[]) || [];
       const rowsBase: AV1Row[] = await Promise.all(praticheRows.map(async (pratica) => {
@@ -353,7 +354,7 @@ export default function AntiriciclaggioPage() {
           AV2Generato: !!av2?.confermato,
           AV2Confermato: !!av2?.confermato,
           AV4Generato: !!av4?.id,
-          Prestazione: av1?.Prestazione || null,
+          Prestazione: av1?.Prestazione || pratica.tipo_prestazione || null,
           tbclienti: pratica.tbclienti || null,
           av4_info: av4 || null,
           stato_pratica: pratica.stato || "aperta",
@@ -512,6 +513,16 @@ export default function AntiriciclaggioPage() {
     return Array.from(grouped.values());
   }, [filteredRows]);
 
+  useEffect(() => {
+    if (!router.isReady || !rows.length) return;
+    const newPraticaId = typeof router.query.pratica_id === "string" ? router.query.pratica_id : "";
+    if (!newPraticaId) return;
+    const matched = rows.find((row) => row.pratica_id === newPraticaId && row.societa_id === societaFilter);
+    if (matched?.cliente_id) {
+      setPraticaSelezionata((prev) => ({ ...prev, [matched.cliente_id!]: newPraticaId }));
+    }
+  }, [router.isReady, router.query.pratica_id, rows, societaFilter]);
+
   const handleSocietaChange = (societaId: string) => {
     if (isSocietaSelectionLocked) return;
     setRicercaCliente("");
@@ -573,6 +584,15 @@ export default function AntiriciclaggioPage() {
   const handleNuovoAV1 = () => {
     if (!canAccessAntiriciclaggio) return;
     router.push(selectedSocieta?.id ? `/antiriciclaggio/pratiche/nuovo?societa_id=${selectedSocieta.id}` : "/antiriciclaggio/pratiche/nuovo");
+  };
+
+  const handleAggiungiPrestazione = (row: AV1Row) => {
+    if (!canAccessAntiriciclaggio || !row.cliente_id || !row.societa_id) return;
+    const params = new URLSearchParams({
+      cliente_id: row.cliente_id,
+      societa_id: row.societa_id,
+    });
+    router.push(`/antiriciclaggio/pratiche/nuovo?${params.toString()}`);
   };
 
   const handleApriAV1 = (row: AV1Row) => {
@@ -742,6 +762,11 @@ export default function AntiriciclaggioPage() {
                   <td className={`p-3 ${statoInfo.className}`}><div className="flex items-center gap-3"><span className={`inline-block h-5 w-5 rounded-full ${statoInfo.dotClass} shadow`}/><span>{statoInfo.text}</span></div></td>
                   <td className="p-3">
                     <div className="font-medium">{nomeCliente}</div>
+                    <button type="button" onClick={() => handleAggiungiPrestazione(row)}
+                      className="mt-2 rounded-md border border-sky-500 bg-white px-2 py-1 text-xs font-semibold text-sky-700 hover:bg-sky-50"
+                      title="Crea una nuova pratica AML per un'altra prestazione dello stesso cliente">
+                      + Aggiungi prestazione
+                    </button>
                     {group.pratiche.length > 1 && (
                       <label className="mt-2 block text-xs text-slate-600">
                         Incarichi AML ({group.pratiche.length})
