@@ -108,7 +108,7 @@ async function getCurrentUserContext(): Promise<{
   const { data, error } = await (supabase as any)
     .from("tbutenti")
     .select("id, email, studio_id, microsoft_connection_id")
-    .eq("id", authUserId)
+    .eq("email", authEmail)
     .single();
 
   if (error || !data?.id || !data?.studio_id || !data?.email) {
@@ -1126,6 +1126,43 @@ if (currentUser?.id) {
   }
 }
 
+// Per le comunicazioni interne il mittente DEVE coincidere con l'utente autenticato.
+    // Nessun fallback sul token dello studio o di un collega.
+    if (data.tipo === "interna") {
+      if (!currentUser?.id || !currentUser.microsoft_connection_id) {
+        return {
+          success: false, sent: 0, failed: 0, skipped: 0,
+          error: "Connetti il tuo account Microsoft 365 personale prima di inviare comunicazioni interne.",
+        };
+      }
+
+      try {
+        const profile = await microsoftGraphService.graphApiCall<{
+          mail?: string | null;
+          userPrincipalName?: string | null;
+        }>(currentUser.id, "/me?$select=mail,userPrincipalName", {
+          method: "GET",
+          microsoftConnectionId: currentUser.microsoft_connection_id,
+        });
+
+        const microsoftAddresses = [profile?.mail, profile?.userPrincipalName]
+          .filter((value): value is string => typeof value === "string" && Boolean(value.trim()))
+          .map((value) => value.trim().toLowerCase());
+
+        if (!microsoftAddresses.includes(currentUser.email.trim().toLowerCase())) {
+          return {
+            success: false, sent: 0, failed: 0, skipped: 0,
+            error: "L'account Microsoft 365 connesso non corrisponde all'email dell'utente autenticato. Riconnetti il tuo account personale.",
+          };
+        }
+      } catch (error) {
+        return {
+          success: false, sent: 0, failed: 0, skipped: 0,
+          error: "Impossibile verificare il mittente Microsoft 365 personale. Controlla la connessione e riprova.",
+        };
+      }
+    }
+
 const htmlContent =
   (isHtmlMessage
     ? data.messaggio
@@ -1161,9 +1198,12 @@ Questa è una email automatica, non rispondere a questo messaggio
           subject: data.oggetto,
           html: htmlContent,
           text: textContent,
-          microsoftConnectionId: data.microsoftConnectionId,
+          microsoftConnectionId: data.tipo === "interna"
+            ? currentUser!.microsoft_connection_id!
+            : data.microsoftConnectionId,
+          senderUserId: data.tipo === "interna" ? currentUser!.id : undefined,
           attachments: Array.isArray(data.allegati) ? data.allegati : [],
-          sendMode: "studio",
+          sendMode: data.tipo === "interna" ? "user" : "studio",
         });
 
         if (result.success) {
