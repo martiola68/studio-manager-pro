@@ -41,6 +41,7 @@ export default function ControlloCostanteAML() {
   const [scadenza, setScadenza] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [azioni, setAzioni] = useState<"" | "av1" | "av4" | "entrambi">("");
   const [loading, setLoading] = useState(true);
 
   async function api(method: "GET" | "POST", payload?: object) {
@@ -90,9 +91,12 @@ export default function ControlloCostanteAML() {
         fonti: fonti.trim(), note: note.trim(),
         prossima_scadenza: esito === "nessuna_variazione" ? scadenza : null,
       });
-      await load();
+      setAzioni(esito === "variazione_entrambi" ? "entrambi"
+        : esito === "variazione_rischio" ? "av1"
+        : esito === "variazione_titolare_ppe" ? "av4" : "");
       setSelected({}); setNote(""); setFonti(""); setScadenza("");
-      window.alert("Controllo costante registrato. Il fascicolo storico è stato aggiornato.");
+      await load();
+      window.alert("AV7 archiviato correttamente. I moduli precedenti rimangono nel fascicolo.");
     } catch (e: any) { setError(e?.message || "Errore salvataggio"); }
     finally { setBusy(false); }
   }
@@ -120,20 +124,27 @@ export default function ControlloCostanteAML() {
       {esito === "nessuna_variazione" ?
         <label className="mt-4 block max-w-sm text-sm font-medium">Prossimo controllo<input type="date" value={scadenza} min={dataControllo} onChange={e=>setScadenza(e.target.value)} className="mt-1 block w-full rounded border p-2"/></label>
         : <div className="mt-4 rounded border border-amber-200 p-3 text-sm text-amber-900">
-            <p>Sono emerse variazioni: il controllo sarà registrato senza spostare la scadenza. Aggiorna i moduli necessari e conferma la nuova valutazione.</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {["variazione_rischio", "variazione_entrambi"].includes(esito) &&
-                <button type="button" onClick={() => router.push(`/antiriciclaggio/modello-av1?pratica_id=${encodeURIComponent(praticaId)}&nuovo_av1=1`)}
-                  className="rounded border border-sky-600 bg-white px-3 py-2 text-sm text-sky-800">Prepara nuovo AV1</button>}
-              {["variazione_titolare_ppe", "variazione_entrambi"].includes(esito) &&
-                <button type="button" onClick={() => router.push(`/antiriciclaggio/modello-av4?pratica_id=${encodeURIComponent(praticaId)}&nuovo_av4=1`)}
-                  className="rounded border border-sky-600 bg-white px-3 py-2 text-sm text-sky-800">Aggiorna AV4</button>}
-            </div>
-            <p className="mt-2 text-xs">Conferma prima il controllo. Ogni nuovo AV1 avrà un ID diverso da quello iniziale.</p>
+            <p>Sono emerse variazioni: il controllo sarà registrato senza spostare la scadenza. Dopo l'archiviazione potrai preparare i nuovi moduli necessari.</p>
           </div>}
       {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
       <div className="mt-4 flex justify-end"><button onClick={save} disabled={busy||loading} className="rounded-md bg-sky-700 px-5 py-2 font-semibold text-white disabled:opacity-50">{busy?"Registrazione...":"Conferma e archivia AV7"}</button></div>
     </section>
+    {azioni && (
+      <section className="rounded-lg border border-amber-300 bg-white p-5 shadow-sm">
+        <h2 className="mb-2 font-semibold">Controllo AV7 archiviato: completa gli aggiornamenti</h2>
+        <p className="mb-3 text-sm text-slate-600">L'AV7 è stato registrato. I nuovi moduli sono versioni distinte: non modificano gli originali.</p>
+        <div className="flex flex-wrap gap-2">
+          {(azioni === "av1" || azioni === "entrambi") && (
+            <button type="button" onClick={() => router.push(`/antiriciclaggio/modello-av1?pratica_id=${encodeURIComponent(praticaId)}&nuovo_av1=1`)}
+              className="rounded border border-sky-600 bg-white px-3 py-2 text-sm text-sky-800">Prepara nuovo AV1</button>
+          )}
+          {(azioni === "av4" || azioni === "entrambi") && (
+            <button type="button" onClick={() => router.push(`/antiriciclaggio/modello-av4?pratica_id=${encodeURIComponent(praticaId)}&nuovo_av4=1`)}
+              className="rounded border border-sky-600 bg-white px-3 py-2 text-sm text-sky-800">Prepara nuovo AV4</button>
+          )}
+        </div>
+      </section>
+    )}
     <section className="rounded-lg border bg-white p-5 shadow-sm">
       <h2 className="mb-3 font-semibold">Storico controlli costanti</h2>
       {loading ? <p>Caricamento...</p> : storico.length===0 ? <p className="text-sm text-slate-500">Nessun AV7 ancora registrato. I precedenti moduli AV1 e AV4 restano nel fascicolo documentale.</p> :
