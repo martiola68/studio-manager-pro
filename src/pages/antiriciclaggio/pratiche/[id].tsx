@@ -11,8 +11,11 @@ type PraticaRow = {
   data_apertura?: string | null;
   stato?: string | null;
   av4_id?: string | null;
+  av4_corrente_id?: string | null;
   av2_id?: string | null;
+  av2_corrente_id?: string | number | null;
   av1_id?: string | number | null;
+  av1_corrente_id?: string | number | null;
   note?: string | null;
 };
 
@@ -265,9 +268,10 @@ if (fascicoloCheck && !fascicoloCheck.completo) {
       const supabase = getSupabaseClient();
       const supabaseAny = supabase as any;
 
-      if (pratica.av4_id) {
+      const av4Corrente = pratica.av4_corrente_id || pratica.av4_id;
+      if (av4Corrente) {
         router.push(
-          `/antiriciclaggio/modello-av4?id=${pratica.av4_id}&pratica_id=${pratica.id}&cliente_id=${pratica.cliente_id || ""}&studio_id=${pratica.studio_id || ""}&societa_id=${pratica.societa_id || ""}`
+          `/antiriciclaggio/modello-av4?id=${av4Corrente}&pratica_id=${pratica.id}&cliente_id=${pratica.cliente_id || ""}&studio_id=${pratica.studio_id || ""}&societa_id=${pratica.societa_id || ""}`
         );
         return;
       }
@@ -322,9 +326,10 @@ if (fascicoloCheck && !fascicoloCheck.completo) {
       const supabase = getSupabaseClient();
       const supabaseAny = supabase as any;
 
-      if (pratica.av2_id) {
+      const av2Corrente = pratica.av2_corrente_id || pratica.av2_id;
+      if (av2Corrente) {
         router.push(
-          `/antiriciclaggio/modello-av2?id=${pratica.av2_id}&pratica_id=${pratica.id}&cliente_id=${pratica.cliente_id || ""}&studio_id=${pratica.studio_id || ""}&societa_id=${pratica.societa_id || ""}`
+          `/antiriciclaggio/modello-av2?id=${av2Corrente}&pratica_id=${pratica.id}&cliente_id=${pratica.cliente_id || ""}&studio_id=${pratica.studio_id || ""}&societa_id=${pratica.societa_id || ""}`
         );
         return;
       }
@@ -377,9 +382,10 @@ if (fascicoloCheck && !fascicoloCheck.completo) {
       const supabase = getSupabaseClient();
       const supabaseAny = supabase as any;
 
-      if (pratica.av1_id) {
+      const av1Corrente = pratica.av1_corrente_id || pratica.av1_id;
+      if (av1Corrente) {
         router.push(
-          `/antiriciclaggio/modello-av1?id=${pratica.av1_id}&pratica_id=${pratica.id}&cliente_id=${pratica.cliente_id || ""}&studio_id=${pratica.studio_id || ""}&societa_id=${pratica.societa_id || ""}`
+          `/antiriciclaggio/modello-av1?id=${av1Corrente}&pratica_id=${pratica.id}&cliente_id=${pratica.cliente_id || ""}&studio_id=${pratica.studio_id || ""}&societa_id=${pratica.societa_id || ""}`
         );
         return;
       }
