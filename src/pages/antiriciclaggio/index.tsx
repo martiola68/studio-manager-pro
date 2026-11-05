@@ -61,6 +61,8 @@ type AV1Row = {
   fascicolo_completo?: boolean | null;
   fascicolo_mancanti?: string[];
   av4_firmato_presente?: boolean;
+  data_prossimo_rinnovo?: string | null;
+  ultimo_av7?: string | null;
 };
 
 type PraticaAMLRow = {
@@ -76,6 +78,8 @@ type PraticaAMLRow = {
   av2_corrente_id?: string | null;
   av4_id?: string | null;
   av4_corrente_id?: string | null;
+  av1_corrente_id?: string | null;
+  data_prossimo_rinnovo?: string | null;
   tbclienti?: Cliente | Cliente[] | null;
   av4_info?: AV4Info | AV4Info[] | null;
 };
@@ -318,14 +322,15 @@ export default function AntiriciclaggioPage() {
       setLoading(true);
       setRows([]);
       const supabaseAny = getSupabaseClient() as any;
-      const { data: praticheData, error: praticheError } = await supabaseAny.from("tbPraticheAML").select(`id, studio_id, cliente_id, societa_id, data_apertura, stato, stato_ciclo, av1_id, av2_id, av2_corrente_id, av4_id, av4_corrente_id, tbclienti (id, cod_cliente, ragione_sociale, codice_fiscale, utente_operatore_id, utente_operatore:tbutenti!tbclienti_utente_operatore_id_fkey (nome, cognome))`).eq("societa_id", societaId).order("data_apertura", { ascending: false });
+      const { data: praticheData, error: praticheError } = await supabaseAny.from("tbPraticheAML").select(`id, studio_id, cliente_id, societa_id, data_apertura, data_prossimo_rinnovo, stato, stato_ciclo, av1_id, av1_corrente_id, av2_id, av2_corrente_id, av4_id, av4_corrente_id, tbclienti (id, cod_cliente, ragione_sociale, codice_fiscale, utente_operatore_id, utente_operatore:tbutenti!tbclienti_utente_operatore_id_fkey (nome, cognome))`).eq("societa_id", societaId).order("data_apertura", { ascending: false });
       if (praticheError) throw praticheError;
       const praticheRows = (praticheData as PraticaAMLRow[]) || [];
       const rowsBase: AV1Row[] = await Promise.all(praticheRows.map(async (pratica) => {
-        const [{ data: av1 }, { data: av2 }, { data: av4 }] = await Promise.all([
-          supabaseAny.from("tbAV1").select("id, studio_id, cliente_id, societa_id, pratica_id, incaricato_adeguata_verifica_id, DataVerifica, ScadenzaVerifica, AV1Conferma, AV2Generato, AV4Generato, Prestazione").eq("pratica_id", pratica.id).maybeSingle(),
+        const [{ data: av1 }, { data: av2 }, { data: av4 }, { data: av7 }] = await Promise.all([
+          supabaseAny.from("tbAV1").select("id, studio_id, cliente_id, societa_id, pratica_id, incaricato_adeguata_verifica_id, DataVerifica, ScadenzaVerifica, AV1Conferma, AV2Generato, AV4Generato, Prestazione").eq("pratica_id", pratica.id).order("DataVerifica", { ascending: false }).order("id", { ascending: false }).limit(1).maybeSingle(),
           pratica.av2_corrente_id || pratica.av2_id ? supabaseAny.from("tbAV2").select("id, confermato").eq("id", pratica.av2_corrente_id || pratica.av2_id).maybeSingle() : supabaseAny.from("tbAV2").select("id, confermato").eq("pratica_id", pratica.id).maybeSingle(),
           supabaseAny.from("tbAV4").select("id, av1_id, Av4InviatoCL, public_sent_at, compilato_da_cliente, av4_caricato_manualmente, allegato_pdf_cliente, pdf_firmato_cliente").eq("pratica_id", pratica.id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+          supabaseAny.from("tbAMLControlliCostanti").select("data_controllo").eq("pratica_id", pratica.id).order("data_controllo", { ascending: false }).limit(1).maybeSingle(),
         ]);
         return {
           id: av1?.id ? String(av1.id) : "",
@@ -335,7 +340,9 @@ export default function AntiriciclaggioPage() {
           cliente_id: pratica.cliente_id || null,
           incaricato_adeguata_verifica_id: av1?.incaricato_adeguata_verifica_id || null,
           DataVerifica: av1?.DataVerifica || pratica.data_apertura || null,
-          ScadenzaVerifica: av1?.ScadenzaVerifica || null,
+          ScadenzaVerifica: pratica.data_prossimo_rinnovo || av1?.ScadenzaVerifica || null,
+          data_prossimo_rinnovo: pratica.data_prossimo_rinnovo || null,
+          ultimo_av7: av7?.data_controllo || null,
           AV1Conferma: !!av1?.AV1Conferma,
           AV2Generato: !!av2?.confermato,
           AV2Confermato: !!av2?.confermato,
@@ -541,7 +548,7 @@ export default function AntiriciclaggioPage() {
 
   const handleApriAV1 = (row: AV1Row) => {
     if (!canAccessAntiriciclaggio) return;
-    if (row.id) return void router.push(`/antiriciclaggio/modello-av1?id=${row.id}`);
+    if (row.id) return void router.push(`/antiriciclaggio/modello-av1?id=${row.id}&pratica_id=${row.pratica_id || ""}`);
     if (row.pratica_id) return void router.push(`/antiriciclaggio/modello-av1?pratica_id=${row.pratica_id}&societa_id=${row.societa_id || ""}&cliente_id=${row.cliente_id || ""}&studio_id=${row.studio_id || ""}`);
   };
 
@@ -553,6 +560,11 @@ export default function AntiriciclaggioPage() {
   const handleApriAV4 = (row: AV1Row) => {
     if (!canAccessAntiriciclaggio) return;
     router.push(`/antiriciclaggio/modello-av4?pratica_id=${row.pratica_id || ""}&societa_id=${row.societa_id || ""}&cliente_id=${row.cliente_id || ""}&studio_id=${row.studio_id || ""}`);
+  };
+
+  const handleApriAV7 = (row: AV1Row) => {
+    if (!canAccessAntiriciclaggio || !row.pratica_id) return;
+    router.push(`/antiriciclaggio/controllo-costante?pratica_id=${row.pratica_id}`);
   };
 
   const handleApriDocumenti = (row: AV1Row) => {
@@ -681,9 +693,9 @@ export default function AntiriciclaggioPage() {
       {loading ? <div>Caricamento...</div> : !societaFilter ? <div>Seleziona un soggetto responsabile per visualizzare le pratiche</div> : !canAccessAntiriciclaggio ? <div>Accesso riservato: inserisci la password della società per consultare le pratiche.</div> : (
         <div className="overflow-x-auto rounded-lg border bg-white">
           <table className="w-full text-sm">
-            <thead className="bg-gray-100"><tr><th className="p-3 text-left">Stato</th><th className="p-3 text-left">Cliente</th><th className="p-3 text-left">Utente di riferimento</th><th className="p-3 text-left">Data verifica</th><th className="p-3 text-left">Scadenza verifica</th><th className="p-2 text-center">AV1<br/>conferma</th><th className="p-2 text-center">AV2<br/>confermato</th><th className="p-2 text-center">AV4<br/>inviato</th><th className="p-2 text-center">AV4<br/>manuale</th><th className="p-2 text-center">AV4<br/>confermato</th><th className="p-3 text-center">Azioni</th></tr></thead>
+            <thead className="bg-gray-100"><tr><th className="p-3 text-left">Stato</th><th className="p-3 text-left">Cliente</th><th className="p-3 text-left">Utente di riferimento</th><th className="p-3 text-left">Data verifica</th><th className="p-3 text-left">Scadenza verifica</th><th className="p-3 text-center">Ultimo AV7</th><th className="p-2 text-center">AV1<br/>conferma</th><th className="p-2 text-center">AV2<br/>confermato</th><th className="p-2 text-center">AV4<br/>inviato</th><th className="p-2 text-center">AV4<br/>manuale</th><th className="p-2 text-center">AV4<br/>confermato</th><th className="p-3 text-center">Azioni</th></tr></thead>
             <tbody>
-              {filteredRows.length === 0 ? <tr><td colSpan={11} className="p-4 text-center">{ricercaCliente ? "Nessun cliente corrisponde alla ricerca" : "Nessuna pratica trovata per il soggetto responsabile selezionato"}</td></tr> : filteredRows.map((row) => {
+              {filteredRows.length === 0 ? <tr><td colSpan={12} className="p-4 text-center">{ricercaCliente ? "Nessun cliente corrisponde alla ricerca" : "Nessuna pratica trovata per il soggetto responsabile selezionato"}</td></tr> : filteredRows.map((row) => {
                 const cliente = getCliente(row);
                 const av4Info = getAV4Info(row);
                 const nomeCliente = cliente?.ragione_sociale || cliente?.cod_cliente || cliente?.codice_fiscale || "-";
@@ -694,6 +706,7 @@ export default function AntiriciclaggioPage() {
                   <td className="p-3">{cliente?.utente_operatore ? `${cliente.utente_operatore.nome || ""} ${cliente.utente_operatore.cognome || ""}`.trim() || "-" : "-"}</td>
                   <td className="p-3">{formatDate(row.DataVerifica)}</td>
                   <td className={`p-3 ${getScadenzaCellClassName(row.ScadenzaVerifica)}`}>{formatDate(row.ScadenzaVerifica)}</td>
+                  <td className="p-3 text-center">{formatDate(row.ultimo_av7)}</td>
                   <td className="p-2 text-center">{row.AV1Conferma ? "Sì" : "No"}</td>
                   <td className="p-2 text-center">{row.AV2Confermato ? "Sì" : "No"}</td>
                   <td className="p-2 text-center">{av4Info?.Av4InviatoCL || av4Info?.public_sent_at ? "Sì" : "No"}</td>
@@ -703,6 +716,7 @@ export default function AntiriciclaggioPage() {
                     <button onClick={() => handleApriAV1(row)} className={`rounded-[28px] bg-white p-1 ${getIconBorderClass(!!row.AV1Conferma)}`}>AV1</button>
                     <button onClick={() => handleApriAV2(row)} className={`rounded-[28px] bg-white p-1 ${getIconBorderClass(!!row.AV2Confermato)}`}>AV2</button>
                     <button onClick={() => handleApriAV4(row)} className={`rounded-[28px] bg-white p-1 ${getAV4IconBorderClass(row)}`}>AV4</button>
+                    <button onClick={() => handleApriAV7(row)} className="rounded border border-sky-500 bg-white px-2 py-1 text-xs font-bold text-sky-700" title="Controllo costante e storico">AV7</button>
                     <button onClick={() => handleApriDocumenti(row)} className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-blue-500 bg-white"><FolderOpen className="h-4 w-4 text-blue-600"/></button>
                     <button onClick={() => handleEliminaCompleto(row)} className="flex h-8 w-8 items-center justify-center rounded-full bg-white"><Trash2 className="h-4 w-4 text-red-500"/></button>
                   </div></td>
