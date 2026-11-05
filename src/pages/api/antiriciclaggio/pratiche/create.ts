@@ -25,12 +25,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ ok: false, error: "Sessione non valida" });
     }
 
-    const { data: utente, error: utenteError } = await supabaseAdmin
+    let { data: utente, error: utenteError } = await supabaseAdmin
       .from("tbutenti")
       .select("id, studio_id")
-      .or(`user_id.eq.${authUser.id},email.eq.${authUser.email || ""}`)
+      .eq("user_id", authUser.id)
+      .eq("attivo", true)
       .limit(1)
       .maybeSingle();
+    if (!utente && !utenteError && authUser.email) {
+      const fallback = await supabaseAdmin.from("tbutenti")
+        .select("id, studio_id")
+        .ilike("email", authUser.email)
+        .eq("attivo", true)
+        .limit(1)
+        .maybeSingle();
+      utente = fallback.data;
+      utenteError = fallback.error;
+    }
 
     if (utenteError || !utente?.studio_id) {
       return res.status(403).json({ ok: false, error: "Studio utente non disponibile" });
@@ -87,13 +98,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    const { data: duplicata, error: duplicataError } = await supabaseAdmin
+    let duplicataQuery = supabaseAdmin
       .from("tbPraticheAML")
       .select("id")
       .eq("studio_id", studioId)
       .eq("cliente_id", cliente_id)
       .eq("tipo_prestazione", tipo_prestazione)
-      .eq("data_apertura", data_apertura)
+      .eq("data_apertura", data_apertura);
+    duplicataQuery = societa_id
+      ? duplicataQuery.eq("societa_id", societa_id)
+      : duplicataQuery.is("societa_id", null);
+    const { data: duplicata, error: duplicataError } = await duplicataQuery
       .limit(1)
       .maybeSingle();
 
