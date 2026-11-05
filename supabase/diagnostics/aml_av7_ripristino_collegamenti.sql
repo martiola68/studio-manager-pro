@@ -9,55 +9,41 @@
 
 BEGIN;
 
+-- Primo aggiornamento: AV1. La cardinalità viene verificata prima di collegare.
 WITH av1_unici AS (
-  SELECT
-    a.pratica_id,
-    a.studio_id,
-    a.cliente_id,
-    (array_agg(a.id ORDER BY a.id))[1] AS modulo_id
-  FROM public."tbAV1" AS a
-  WHERE a.pratica_id IS NOT NULL
-  GROUP BY a.pratica_id, a.studio_id, a.cliente_id
-  HAVING count(*) = 1
-),
-av1_aggiornati AS (
-  UPDATE public."tbPraticheAML" AS p
-  SET
-    av1_id = coalesce(p.av1_id, a.modulo_id),
-    av1_corrente_id = coalesce(p.av1_corrente_id, a.modulo_id)
-  FROM av1_unici AS a
-  WHERE p.id = a.pratica_id
-    AND p.studio_id = a.studio_id
-    AND p.cliente_id = a.cliente_id
-    AND (p.av1_id IS NULL OR p.av1_corrente_id IS NULL)
-  RETURNING p.id
-),
-av4_unici AS (
-  SELECT
-    a.pratica_id,
-    a.studio_id,
-    a.cliente_id,
-    (array_agg(a.id ORDER BY a.id))[1] AS modulo_id
-  FROM public."tbAV4" AS a
-  WHERE a.pratica_id IS NOT NULL
-  GROUP BY a.pratica_id, a.studio_id, a.cliente_id
-  HAVING count(*) = 1
-),
-av4_aggiornati AS (
-  UPDATE public."tbPraticheAML" AS p
-  SET
-    av4_id = coalesce(p.av4_id, a.modulo_id),
-    av4_corrente_id = coalesce(p.av4_corrente_id, a.modulo_id)
-  FROM av4_unici AS a
-  WHERE p.id = a.pratica_id
-    AND p.studio_id = a.studio_id
-    AND p.cliente_id = a.cliente_id
-    AND (p.av4_id IS NULL OR p.av4_corrente_id IS NULL)
-  RETURNING p.id
+ SELECT pratica_id, studio_id, cliente_id, min(id) AS modulo_id
+ FROM public."tbAV1"
+ WHERE pratica_id IS NOT NULL
+ GROUP BY pratica_id, studio_id, cliente_id
+ HAVING count(*) = 1
 )
-SELECT
-  (SELECT count(*) FROM av1_aggiornati) AS pratiche_av1_ricollegate,
-  (SELECT count(*) FROM av4_aggiornati) AS pratiche_av4_ricollegate;
+UPDATE public."tbPraticheAML" p
+SET av1_id = coalesce(p.av1_id, a.modulo_id),
+    av1_corrente_id = coalesce(p.av1_corrente_id, a.modulo_id)
+FROM av1_unici a
+WHERE p.id = a.pratica_id
+  AND p.studio_id = a.studio_id
+  AND p.cliente_id = a.cliente_id
+  AND (p.av1_id IS NULL OR p.av1_corrente_id IS NULL);
+
+-- Secondo aggiornamento: AV4.
+-- È un comando distinto: PostgreSQL non deve aggiornare due volte
+-- la stessa riga in una singola istruzione.
+WITH av4_unici AS (
+ SELECT pratica_id, studio_id, cliente_id, min(id) AS modulo_id
+ FROM public."tbAV4"
+ WHERE pratica_id IS NOT NULL
+ GROUP BY pratica_id, studio_id, cliente_id
+ HAVING count(*) = 1
+)
+UPDATE public."tbPraticheAML" p
+SET av4_id = coalesce(p.av4_id, a.modulo_id),
+    av4_corrente_id = coalesce(p.av4_corrente_id, a.modulo_id)
+FROM av4_unici a
+WHERE p.id = a.pratica_id
+  AND p.studio_id = a.studio_id
+  AND p.cliente_id = a.cliente_id
+  AND (p.av4_id IS NULL OR p.av4_corrente_id IS NULL);
 
 COMMIT;
 
