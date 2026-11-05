@@ -85,6 +85,7 @@ type PraticaAMLRow = {
 };
 
 const AML_SESSION_KEY = "antiriciclaggio_unlocked_societa_id";
+const AML_AV7_PROOF_KEY = "antiriciclaggio_av7_access_proof";
 const AML_SELECTED_SOCIETA_KEY = "antiriciclaggio_selected_societa_id";
 
 export default function AntiriciclaggioPage() {
@@ -382,7 +383,10 @@ export default function AntiriciclaggioPage() {
     setShowPasswordModal(false);
     setShowForgotPasswordInfo(false);
     setWorkingId(null);
-    if (typeof window !== "undefined") sessionStorage.removeItem(AML_SESSION_KEY);
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem(AML_SESSION_KEY);
+      sessionStorage.removeItem(AML_AV7_PROOF_KEY);
+    }
   };
 
   // Chiusura manuale esplicita: non è un timeout aggiuntivo.
@@ -539,13 +543,21 @@ export default function AntiriciclaggioPage() {
       if (!password.trim()) return setPasswordError("Inserisci la password.");
       setPasswordLoading(true);
       setPasswordError("");
-      const res = await fetch("/api/antiriciclaggio/verify-societa-password", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ societaId: selectedSocieta.id, password: password.trim() }) });
+      const supabase = getSupabaseClient() as any;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return setPasswordError("Sessione scaduta. Accedi nuovamente.");
+      const res = await fetch("/api/antiriciclaggio/verify-societa-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ societaId: selectedSocieta.id, password: password.trim() }),
+      });
       const data = await res.json();
       if (!res.ok || !data?.ok) return setPasswordError(data?.error || "Password non corretta.");
       setUnlockedSocietaId(selectedSocieta.id);
       if (typeof window !== "undefined") {
         sessionStorage.setItem(AML_SESSION_KEY, selectedSocieta.id);
         sessionStorage.setItem(AML_SELECTED_SOCIETA_KEY, selectedSocieta.id);
+        if (data.av7AccessProof) sessionStorage.setItem(AML_AV7_PROOF_KEY, data.av7AccessProof);
       }
       setShowPasswordModal(false);
       setShowForgotPasswordInfo(false);
