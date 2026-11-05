@@ -213,7 +213,7 @@ const { data: existing, error: existingError } = await supabase
   .eq("studio_id", studioId)
   .eq("pratica_id", praticaId)
   .eq("origine", origine)
-  .or(`storage_path.eq.${storagePath},nome_file.eq.${nomeFile}`)
+  .eq("storage_path", storagePath)
   .limit(1)
   .maybeSingle();
 
