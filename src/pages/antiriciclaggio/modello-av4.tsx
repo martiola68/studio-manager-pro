@@ -326,6 +326,7 @@ export default function ModelloAV4() {
     typeof router.query.cliente_id === "string" ? router.query.cliente_id : "";
   const av4IdFromQuery =
     typeof router.query.id === "string" ? router.query.id : "";
+  const nuovaVersioneAV4 = router.query.nuovo_av4 === "1";
 
   const [clienteLabel, setClienteLabel] = useState("");
   const [loading, setLoading] = useState(false);
@@ -861,7 +862,7 @@ async function importaAmministratoreDaCliente() {
           }
         }
 
-      if (!existingRow && praticaIdFromQuery) {
+      if (!existingRow && praticaIdFromQuery && !nuovaVersioneAV4) {
   const { data: praticaRow, error: praticaError } = await supabase
     .from("tbPraticheAML")
     .select("id, av4_id, av4_corrente_id")
@@ -894,7 +895,7 @@ async function importaAmministratoreDaCliente() {
   }
 }
 
-        if (!existingRow && av1IdFromQuery) {
+        if (!existingRow && av1IdFromQuery && !nuovaVersioneAV4) {
           const { data, error } = await supabase
             .from("tbAV4")
             .select("*")
@@ -957,6 +958,7 @@ async function importaAmministratoreDaCliente() {
     av1IdFromQuery,
     clienteIdFromQuery,
     av4IdFromQuery,
+    nuovaVersioneAV4,
   ]);
 
 
@@ -2019,7 +2021,7 @@ invia_altra_email: !!form.invia_altra_email,
 
     if (savedId && form.pratica_id) {
      const praticaUpdatePayload: any = {
-  av4_id: savedId,
+  // Mantiene av4_id iniziale e aggiorna solo l'identificativo corrente.
   av4_corrente_id: savedId,
   stato_ciclo: "av4_compilato",
 };
