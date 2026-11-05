@@ -50,6 +50,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(404).json({ ok: false, error: "Pratica AML non trovata" });
     }
 
+    // Una pratica con controlli costanti storicizzati non si elimina:
+    // i documenti devono restare nel fascicolo ai fini della conservazione AML.
+    const { data: storicoAV7, error: storicoError } = await supabaseAdmin
+      .from("tbAMLControlliCostanti")
+      .select("id")
+      .eq("studio_id", utente.studio_id)
+      .eq("pratica_id", praticaId)
+      .limit(1)
+      .maybeSingle();
+    if (storicoError) throw storicoError;
+    if (storicoAV7?.id) {
+      return res.status(409).json({
+        ok: false,
+        error: "Pratica con controlli AV7 storicizzati: non eliminabile. Conserva il fascicolo o gestisci la chiusura dell'incarico.",
+      });
+    }
+
     const { data: docs, error: docsReadError } = await supabaseAdmin
       .from("tbAVFascicoliDocumenti")
       .select("storage_path,bucket_name")
