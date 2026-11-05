@@ -762,8 +762,8 @@ async function importaAmministratoreDaCliente() {
   );
 
   resolvedAv1Id = pickString(
-    praticaRow?.av1_id,
     praticaRow?.av1_corrente_id,
+    praticaRow?.av1_id,
     resolvedAv1Id
   );
 
