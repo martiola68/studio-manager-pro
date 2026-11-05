@@ -142,6 +142,7 @@ export default function FascicoloDocumentiPage() {
   const [clienteIsSocieta, setClienteIsSocieta] = useState(false);
   
   const [documenti, setDocumenti] = useState<DocumentoRow[]>([]);
+  const [controlliAV7, setControlliAV7] = useState<Array<{ id: string; data_controllo: string; esito: string }>>([]);
   const [uploading, setUploading] = useState(false);
   const [workingDocumentId, setWorkingDocumentId] = useState<string | null>(null);
   const [tipoDocumento, setTipoDocumento] = useState("Documento generico");
@@ -894,6 +895,31 @@ useEffect(() => {
 useEffect(() => {
   void loadData();
 }, [router.isReady, pratica_id, cliente_id]);
+
+useEffect(() => {
+  if (!router.isReady || typeof pratica_id !== "string" || !pratica_id) {
+    setControlliAV7([]);
+    return;
+  }
+  let active = true;
+  (async () => {
+    try {
+      const supabase = getSupabaseClient() as any;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+      const response = await fetch(
+        `/api/antiriciclaggio/controlli-costanti?pratica_id=${encodeURIComponent(pratica_id)}`,
+        { headers: { Authorization: `Bearer ${session.access_token}` } }
+      );
+      if (!response.ok) return;
+      const result = await response.json();
+      if (active) setControlliAV7(result.controlli || []);
+    } catch (error) {
+      console.error("Errore caricamento storico AV7", error);
+    }
+  })();
+  return () => { active = false; };
+}, [router.isReady, pratica_id]);
   
   return (
     <div className="p-6">
@@ -968,6 +994,23 @@ useEffect(() => {
             AV7 · Controlli periodici e storico
           </button>
         </div>
+      )}
+
+      {controlliAV7.length > 0 && typeof pratica_id === "string" && (
+        <section className="mb-5 rounded-lg border border-sky-200 bg-white p-4">
+          <h2 className="mb-2 font-semibold">Controlli periodici AV7 ({controlliAV7.length})</h2>
+          <div className="space-y-2">
+            {controlliAV7.map((controllo) => (
+              <div key={controllo.id} className="flex flex-wrap items-center justify-between gap-3 border-b py-2 text-sm">
+                <span>AV7 del {new Date(controllo.data_controllo + "T12:00:00").toLocaleDateString("it-IT")} · {controllo.esito.replaceAll("_", " ")}</span>
+                <a href={`/antiriciclaggio/stampa-av7?pratica_id=${encodeURIComponent(pratica_id)}&id=${encodeURIComponent(controllo.id)}`}
+                  target="_blank" rel="noopener noreferrer" className="rounded border border-sky-500 px-3 py-1 font-semibold text-sky-700">
+                  Apri / Stampa
+                </a>
+              </div>
+            ))}
+          </div>
+        </section>
       )}
 
       <div className="mb-4 flex items-end justify-between gap-4">
