@@ -1015,20 +1015,12 @@ const handleOpenFirmato = async () => {
 
 const handleRemoveFirmato = async () => {
   const run = async () => {
-    if (formData.id && formData.pratica_id) {
-      const supabase = getSupabaseClient() as any;
-      const { data: praticaRow, error: verificaError } = await supabase
-        .from("tbPraticheAML")
-        .select("av1_corrente_id, av1_id")
-        .eq("id", formData.pratica_id)
-        .eq("studio_id", formData.studio_id)
-        .single();
-      if (verificaError) { setError(verificaError.message); return; }
-      const currentId = praticaRow?.av1_corrente_id ?? praticaRow?.av1_id;
-      if (currentId != null && String(currentId) !== String(formData.id)) {
-        setError("L'allegato di un AV1 storico non può essere eliminato.");
-        return;
-      }
+    // Gli allegati sottoscritti devono rimanere nel fascicolo storico.
+    // Per una sostituzione occorre acquisire una nuova versione AV1,
+    // senza eliminare il PDF della verifica precedente.
+    if (formData.id && formData.allegato_av1_firmato) {
+      setError("L'allegato AV1 firmato è conservato nel fascicolo storico. Per una rettifica crea una nuova versione del modulo.");
+      return;
     }
     if (!formData.allegato_av1_firmato) {
       alert("Nessun allegato AV1 da rimuovere.");
