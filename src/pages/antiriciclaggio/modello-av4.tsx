@@ -1862,6 +1862,21 @@ ${nomeOperatore}
   try {
     setLoading(true);
 
+    // I moduli storici possono essere consultati ma non riscritti.
+    if (av4Id && form.pratica_id) {
+      const { data: pratica, error: verificaError } = await supabase
+        .from("tbPraticheAML")
+        .select("av4_id, av4_corrente_id")
+        .eq("id", form.pratica_id)
+        .eq("studio_id", form.studio_id)
+        .single();
+      if (verificaError) throw verificaError;
+      const idCorrente = pratica?.av4_corrente_id ?? pratica?.av4_id;
+      if (idCorrente != null && String(idCorrente) !== String(av4Id)) {
+        throw new Error("AV4 storico: la versione precedente è conservata e non può essere sovrascritta. Apri l'AV4 corrente.");
+      }
+    }
+
     await validaTitolariPrimaDelSalvataggio();
 
   const payload = {
