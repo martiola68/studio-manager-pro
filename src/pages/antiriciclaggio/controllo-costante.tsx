@@ -119,7 +119,18 @@ export default function ControlloCostanteAML() {
       <label className="mt-4 block text-sm font-medium">Osservazioni ed esito motivato<textarea value={note} onChange={e=>setNote(e.target.value)} rows={4} className="mt-1 block w-full rounded border p-2" placeholder="Riporta le evidenze emerse e le eventuali azioni richieste."/></label>
       {esito === "nessuna_variazione" ?
         <label className="mt-4 block max-w-sm text-sm font-medium">Prossimo controllo<input type="date" value={scadenza} min={dataControllo} onChange={e=>setScadenza(e.target.value)} className="mt-1 block w-full rounded border p-2"/></label>
-        : <div className="mt-4 rounded border border-amber-200 p-3 text-sm text-amber-900">Sono emerse variazioni: il controllo verrà registrato, senza spostare la scadenza. Procedi con l'aggiornamento dei moduli necessari (AV1 e/o AV4) e conferma la nuova valutazione.</div>}
+        : <div className="mt-4 rounded border border-amber-200 p-3 text-sm text-amber-900">
+            <p>Sono emerse variazioni: il controllo sarà registrato senza spostare la scadenza. Aggiorna i moduli necessari e conferma la nuova valutazione.</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {["variazione_rischio", "variazione_entrambi"].includes(esito) &&
+                <button type="button" onClick={() => router.push(`/antiriciclaggio/modello-av1?pratica_id=${encodeURIComponent(praticaId)}&nuovo_av1=1`)}
+                  className="rounded border border-sky-600 bg-white px-3 py-2 text-sm text-sky-800">Prepara nuovo AV1</button>}
+              {["variazione_titolare_ppe", "variazione_entrambi"].includes(esito) &&
+                <button type="button" onClick={() => router.push(`/antiriciclaggio/modello-av4?pratica_id=${encodeURIComponent(praticaId)}`)}
+                  className="rounded border border-sky-600 bg-white px-3 py-2 text-sm text-sky-800">Aggiorna AV4</button>}
+            </div>
+            <p className="mt-2 text-xs">Conferma prima il controllo. Ogni nuovo AV1 avrà un ID diverso da quello iniziale.</p>
+          </div>}
       {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
       <div className="mt-4 flex justify-end"><button onClick={save} disabled={busy||loading} className="rounded-md bg-sky-700 px-5 py-2 font-semibold text-white disabled:opacity-50">{busy?"Registrazione...":"Conferma e archivia AV7"}</button></div>
     </section>
