@@ -1,0 +1,38 @@
+name: AML AV7 - verifica build PR
+
+on:
+  pull_request:
+    paths:
+      - 'src/pages/antiriciclaggio/**'
+      - 'src/pages/api/antiriciclaggio/**'
+      - 'supabase/migrations/20261105*'
+      - '.github/workflows/aml-av7-pr-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      # Dati fittizi. Nessun collegamento al database di produzione.
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: example-preview-only-not-a-real-key
+      SUPABASE_URL: https://example.supabase.co
+      SUPABASE_SERVICE_ROLE_KEY: example-preview-only-not-a-real-key
+      NEXTAUTH_SECRET: ci-only-fake-value-not-for-production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Installa dipendenze
+        run: npm ci --no-audit --no-fund
+      - name: Verifica sintassi TypeScript
+        run: npx tsc --noEmit --pretty false
+      - name: Verifica stessa build di Vercel
+        run: node scripts/vercel-build.mjs
