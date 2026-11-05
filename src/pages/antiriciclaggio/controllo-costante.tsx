@@ -126,7 +126,7 @@ export default function ControlloCostanteAML() {
                 <button type="button" onClick={() => router.push(`/antiriciclaggio/modello-av1?pratica_id=${encodeURIComponent(praticaId)}&nuovo_av1=1`)}
                   className="rounded border border-sky-600 bg-white px-3 py-2 text-sm text-sky-800">Prepara nuovo AV1</button>}
               {["variazione_titolare_ppe", "variazione_entrambi"].includes(esito) &&
-                <button type="button" onClick={() => router.push(`/antiriciclaggio/modello-av4?pratica_id=${encodeURIComponent(praticaId)}`)}
+                <button type="button" onClick={() => router.push(`/antiriciclaggio/modello-av4?pratica_id=${encodeURIComponent(praticaId)}&nuovo_av4=1`)}
                   className="rounded border border-sky-600 bg-white px-3 py-2 text-sm text-sky-800">Aggiorna AV4</button>}
             </div>
             <p className="mt-2 text-xs">Conferma prima il controllo. Ogni nuovo AV1 avrà un ID diverso da quello iniziale.</p>
