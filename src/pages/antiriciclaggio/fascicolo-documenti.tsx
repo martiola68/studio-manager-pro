@@ -269,29 +269,29 @@ const syncDocumentiCollegati = async (
     return;
   }
 
-  const { data: av1DocumentoData, error: av1DocumentoError } = await supabase
+  // Ogni rinnovo AV1 è una versione separata: importiamo tutti i firmati.
+  const { data: av1Documenti, error: av1DocumentoError } = await supabase
     .from("tbAV1")
-    .select("id, allegato_av1_firmato")
+    .select("id, DataVerifica, allegato_av1_firmato")
     .eq("studio_id", studioId)
     .eq("pratica_id", praticaId)
-    .maybeSingle();
+    .order("DataVerifica", { ascending: true });
 
-  if (av1DocumentoError) {
-    throw av1DocumentoError;
-  }
+  if (av1DocumentoError) throw av1DocumentoError;
 
-  if (av1DocumentoData?.allegato_av1_firmato) {
+  for (const av1 of av1Documenti || []) {
+    if (!av1.allegato_av1_firmato) continue;
     await ensureDocumentoInFascicolo({
       supabase,
       studioId,
       praticaId,
       clienteId: effectiveClienteId,
       tipoDocumento: "Modulo firmato",
-      storagePath: av1DocumentoData.allegato_av1_firmato,
+      storagePath: av1.allegato_av1_firmato,
       bucketName: "allegati",
-      mimeType: getMimeTypeFromPath(av1DocumentoData.allegato_av1_firmato),
+      mimeType: getMimeTypeFromPath(av1.allegato_av1_firmato),
       origine: "av1_firmato",
-      note: "Importato da AV1 firmato",
+      note: `AV1 versione ${av1.id}, verifica ${av1.DataVerifica || "data non disponibile"}`,
     });
   }
 
@@ -620,6 +620,8 @@ const { data: av1PrestazioneData, error: av1PrestazioneError } = await supabase
   .select("Prestazione")
   .eq("studio_id", studioId)
   .eq("pratica_id", pratica_id)
+  .order("DataVerifica", { ascending: false })
+  .limit(1)
   .maybeSingle();
 
 if (av1PrestazioneError) {
@@ -956,6 +958,15 @@ useEffect(() => {
     </ul>
   </div>
 ) : null}
+        </div>
+      )}
+
+      {typeof pratica_id === "string" && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          <button type="button" onClick={() => router.push(`/antiriciclaggio/controllo-costante?pratica_id=${encodeURIComponent(pratica_id)}`)}
+            className="rounded border border-sky-500 bg-white px-4 py-2 text-sm font-semibold text-sky-700">
+            AV7 · Controlli periodici e storico
+          </button>
         </div>
       )}
 
