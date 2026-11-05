@@ -41,7 +41,7 @@ export default function StampaAV7() {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.access_token) throw new Error("Accedi nuovamente");
         const response = await fetch(`/api/antiriciclaggio/controlli-costanti?pratica_id=${encodeURIComponent(praticaId)}`, {
-          headers: { Authorization: `Bearer ${session.access_token}` },
+          headers: { Authorization: `Bearer ${session.access_token}`, "x-aml-av7-proof": sessionStorage.getItem("antiriciclaggio_av7_access_proof") || "" },
         });
         const json = await response.json();
         if (!response.ok) throw new Error(json.error || "Errore caricamento");
