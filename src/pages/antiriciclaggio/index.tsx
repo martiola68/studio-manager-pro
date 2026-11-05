@@ -91,6 +91,7 @@ export default function AntiriciclaggioPage() {
   const router = useRouter();
 
   const [rows, setRows] = useState<AV1Row[]>([]);
+  const [praticaSelezionata, setPraticaSelezionata] = useState<Record<string, string>>({});
   const [responsabili, setResponsabili] = useState<ResponsabileAV[]>([]);
   const [loading, setLoading] = useState(true);
   const [workingId, setWorkingId] = useState<string | null>(null);
@@ -491,6 +492,18 @@ export default function AntiriciclaggioPage() {
       });
   }, [rows, societaFilter, canAccessAntiriciclaggio, ricercaCliente, letteraCliente]);
 
+  // Una riga per cliente: gli eventuali incarichi diversi sono selezionabili
+  // nella stessa riga, senza duplicare il nominativo.
+  const groupedRows = useMemo(() => {
+    const grouped = new Map<string, { cliente_id: string; pratiche: AV1Row[] }>();
+    for (const row of filteredRows) {
+      const key = row.cliente_id || row.pratica_id || row.id;
+      if (!grouped.has(key)) grouped.set(key, { cliente_id: key, pratiche: [] });
+      grouped.get(key)!.pratiche.push(row);
+    }
+    return Array.from(grouped.values());
+  }, [filteredRows]);
+
   const handleSocietaChange = (societaId: string) => {
     if (isSocietaSelectionLocked) return;
     setRicercaCliente("");
@@ -695,14 +708,36 @@ export default function AntiriciclaggioPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-100"><tr><th className="p-3 text-left">Stato</th><th className="p-3 text-left">Cliente</th><th className="p-3 text-left">Utente di riferimento</th><th className="p-3 text-left">Data verifica</th><th className="p-3 text-left">Scadenza verifica</th><th className="p-3 text-center">Ultimo AV7</th><th className="p-2 text-center">AV1<br/>conferma</th><th className="p-2 text-center">AV2<br/>confermato</th><th className="p-2 text-center">AV4<br/>inviato</th><th className="p-2 text-center">AV4<br/>manuale</th><th className="p-2 text-center">AV4<br/>confermato</th><th className="p-3 text-center">Azioni</th></tr></thead>
             <tbody>
-              {filteredRows.length === 0 ? <tr><td colSpan={12} className="p-4 text-center">{ricercaCliente ? "Nessun cliente corrisponde alla ricerca" : "Nessuna pratica trovata per il soggetto responsabile selezionato"}</td></tr> : filteredRows.map((row) => {
+              {filteredRows.length === 0 ? <tr><td colSpan={12} className="p-4 text-center">{ricercaCliente ? "Nessun cliente corrisponde alla ricerca" : "Nessuna pratica trovata per il soggetto responsabile selezionato"}</td></tr> : groupedRows.map((group) => {
+                const row = group.pratiche.find((pratica) => pratica.pratica_id === praticaSelezionata[group.cliente_id]) || group.pratiche[0];
                 const cliente = getCliente(row);
                 const av4Info = getAV4Info(row);
                 const nomeCliente = cliente?.ragione_sociale || cliente?.cod_cliente || cliente?.codice_fiscale || "-";
                 const statoInfo = getStatoInfo(row);
                 return <tr key={row.pratica_id || row.id} className={`border-t ${getRowClassName(row)}`}>
                   <td className={`p-3 ${statoInfo.className}`}><div className="flex items-center gap-3"><span className={`inline-block h-5 w-5 rounded-full ${statoInfo.dotClass} shadow`}/><span>{statoInfo.text}</span></div></td>
-                  <td className="p-3">{nomeCliente}</td>
+                  <td className="p-3">
+                    <div className="font-medium">{nomeCliente}</div>
+                    {group.pratiche.length > 1 && (
+                      <label className="mt-2 block text-xs text-slate-600">
+                        Incarichi AML ({group.pratiche.length})
+                        <select
+                          className="mt-1 block w-full max-w-xs rounded border border-sky-200 bg-white p-1 text-xs"
+                          value={row.pratica_id || ""}
+                          onChange={(event) => setPraticaSelezionata((prev) => ({
+                            ...prev,
+                            [group.cliente_id]: event.target.value,
+                          }))}
+                        >
+                          {group.pratiche.map((pratica) => (
+                            <option key={pratica.pratica_id || pratica.id} value={pratica.pratica_id || ""}>
+                              {pratica.Prestazione || "Incarico"} · {formatDate(pratica.DataVerifica)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    )}
+                  </td>
                   <td className="p-3">{cliente?.utente_operatore ? `${cliente.utente_operatore.nome || ""} ${cliente.utente_operatore.cognome || ""}`.trim() || "-" : "-"}</td>
                   <td className="p-3">{formatDate(row.DataVerifica)}</td>
                   <td className={`p-3 ${getScadenzaCellClassName(row.ScadenzaVerifica)}`}>{formatDate(row.ScadenzaVerifica)}</td>
