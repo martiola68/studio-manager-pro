@@ -593,6 +593,14 @@ export default function AntiriciclaggioPage() {
 
   const handleApriAV7 = (row: AV1Row) => {
     if (!canAccessAntiriciclaggio || !row.pratica_id) return;
+    // La password già verificata nell'elenco può avere una sessione
+    // precedente al nuovo token AV7: chiedere lo sblocco, non mostrare
+    // una pagina con errore e non aggirare la protezione.
+    if (isProtectedSocieta && !sessionStorage.getItem(AML_AV7_PROOF_KEY)) {
+      setPasswordError("");
+      setShowPasswordModal(true);
+      return;
+    }
     router.push(`/antiriciclaggio/controllo-costante?pratica_id=${row.pratica_id}`);
   };
 

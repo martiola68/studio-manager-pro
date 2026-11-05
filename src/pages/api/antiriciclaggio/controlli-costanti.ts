@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { verifyAV7AccessProof } from "@/lib/aml/av7AccessProof";
+import { mesiControlloAV7, calcolaScadenzaAV7 } from "@/lib/aml/scadenzaAV7";
 
 const ESITI = new Set([
   "nessuna_variazione", "variazione_titolare_ppe", "variazione_rischio",
@@ -74,6 +75,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })) return res.status(403).json({ error: "Sblocca di nuovo il soggetto responsabile dall'elenco AML prima di aprire AV7." });
     }
 
+    // La periodicità è quella già calcolata nell'AV1 corrente.
+    // Non si deduce dalla data del vecchio rinnovo: si legge dal modulo valido.
+    const { data: dettaglioPratica, error: dettaglioError } = await supabaseAdmin
+      .from("tbPraticheAML")
+      .select("av1_corrente_id, av1_id")
+      .eq("id", praticaId)
+      .eq("studio_id", user.studio_id)
+      .single();
+    if (dettaglioError) throw dettaglioError;
+    const av1Id = dettaglioPratica?.av1_corrente_id ?? dettaglioPratica?.av1_id;
+    let adeguataVerifica: string | null = null;
+    if (av1Id != null) {
+      const { data: av1, error: av1Error } = await supabaseAdmin
+        .from("tbAV1")
+        .select("AdeguataVerifica, AV1Conferma")
+        .eq("id", av1Id)
+        .eq("pratica_id", praticaId)
+        .eq("studio_id", user.studio_id)
+        .eq("cliente_id", pratica.cliente_id)
+        .maybeSingle();
+      if (av1Error) throw av1Error;
+      if (av1?.AV1Conferma) adeguataVerifica = av1.AdeguataVerifica || null;
+    }
+    const periodicitaMesi = mesiControlloAV7(adeguataVerifica);
+
     if (req.method === "GET") {
       const { data, error } = await supabaseAdmin
         .from("tbAMLControlliCostanti")
@@ -83,7 +109,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .order("data_controllo", { ascending: false })
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return res.status(200).json({ ok: true, controlli: data || [], pratica });
+      return res.status(200).json({ ok: true, controlli: data || [], pratica, adeguataVerifica, periodicitaMesi });
     }
 
     const payload = req.body || {};
@@ -102,9 +128,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!fonti) return res.status(400).json({ error: "Indicare le fonti delle verifiche effettuate" });
     if (!note) return res.status(400).json({ error: "Descrivere l'esito del controllo" });
 
-    const scadenza = payload.esito === "nessuna_variazione" ? payload.prossima_scadenza : null;
+    const scadenzaCalcolata = periodicitaMesi
+      ? calcolaScadenzaAV7(payload.data_controllo, periodicitaMesi)
+      : "";
+    const scadenza = payload.esito === "nessuna_variazione"
+      ? (payload.prossima_scadenza || scadenzaCalcolata)
+      : null;
     if (payload.esito === "nessuna_variazione" && (!isDate(scadenza) || scadenza <= payload.data_controllo)) {
-      return res.status(400).json({ error: "La prossima scadenza deve essere successiva alla data del controllo" });
+      return res.status(400).json({ error: "Indicare una data successiva al controllo. Se manca un AV1 confermato la scadenza deve essere verificata manualmente." });
+    }
+    if (scadenza && scadenzaCalcolata && scadenza > scadenzaCalcolata) {
+      return res.status(400).json({ error: "La prossima verifica può essere anticipata, ma non posticipata oltre la periodicità dell'AV1 confermato." });
     }
 
     const { data: record, error } = await supabaseAdmin
@@ -118,7 +152,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         verifiche,
         fonti,
         note,
-        adeguata_verifica: String(payload.adeguata_verifica || "").slice(0, 160) || null,
+        adeguata_verifica: adeguataVerifica,
         prossima_scadenza: scadenza,
         created_by: auth.user.id,
       })
