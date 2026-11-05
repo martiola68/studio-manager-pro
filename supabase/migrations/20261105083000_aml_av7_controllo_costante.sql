@@ -32,16 +32,20 @@ alter table public."tbAMLControlliCostanti" enable row level security;
 revoke all on public."tbAMLControlliCostanti" from anon, public;
 grant select, insert on public."tbAMLControlliCostanti" to authenticated;
 
+drop policy if exists "aml_av7_tenant_select" on public."tbAMLControlliCostanti";
 create policy "aml_av7_tenant_select" on public."tbAMLControlliCostanti"
 for select to authenticated
 using (
   studio_id = public.current_studio_id()
   and exists (
     select 1 from public."tbPraticheAML" p
-    where p.id = pratica_id and p.studio_id = studio_id and p.cliente_id = cliente_id
+    where p.id = "tbAMLControlliCostanti".pratica_id
+      and p.studio_id = "tbAMLControlliCostanti".studio_id
+      and p.cliente_id = "tbAMLControlliCostanti".cliente_id
   )
 );
 
+drop policy if exists "aml_av7_tenant_insert" on public."tbAMLControlliCostanti";
 create policy "aml_av7_tenant_insert" on public."tbAMLControlliCostanti"
 for insert to authenticated
 with check (
@@ -49,7 +53,9 @@ with check (
   and created_by = auth.uid()
   and exists (
     select 1 from public."tbPraticheAML" p
-    where p.id = pratica_id and p.studio_id = studio_id and p.cliente_id = cliente_id
+    where p.id = "tbAMLControlliCostanti".pratica_id
+      and p.studio_id = "tbAMLControlliCostanti".studio_id
+      and p.cliente_id = "tbAMLControlliCostanti".cliente_id
   )
 );
 
