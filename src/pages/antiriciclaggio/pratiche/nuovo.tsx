@@ -37,11 +37,14 @@ const preselectedSocietaId =
     : "";
 
 const societaBloccata = !!preselectedSocietaId;
+const preselectedClienteId = typeof router.query.cliente_id === "string" ? router.query.cliente_id : "";
+const clienteBloccato = !!preselectedClienteId;
 
   const [clienti, setClienti] = useState<ClienteOption[]>([]);
   const [societaOptions, setSocietaOptions] = useState<SocietaOption[]>([]);
   const [operatori, setOperatori] = useState<OperatoreOption[]>([]);
   const [prestazioni, setPrestazioni] = useState<PrestazioneOption[]>([]);
+  const [incarichiEsistenti, setIncarichiEsistenti] = useState<Array<{id: string;tipo_prestazione: string | null;data_apertura: string | null;stato: string | null;}>>([]);
 
   const [clienteId, setClienteId] = useState("");
   const [societaId, setSocietaId] = useState("");
@@ -85,6 +88,8 @@ const societaBloccata = !!preselectedSocietaId;
         if (preselectedSocietaId) {
           setSocietaId(preselectedSocietaId);
         }
+        const requestedClienteId = typeof router.query.cliente_id === "string" ? router.query.cliente_id : "";
+        if (requestedClienteId) setClienteId(requestedClienteId);
 
         const { data: clientiData, error: clientiError } = await supabaseAny
           .from("tbclienti")
@@ -127,6 +132,9 @@ const societaBloccata = !!preselectedSocietaId;
           );
         }
 
+        if (requestedClienteId && !(clientiData || []).some((c: any) => c.id === requestedClienteId)) {
+          throw new Error("Il cliente selezionato non appartiene allo studio.");
+        }
         setClienti((clientiData || []) as ClienteOption[]);
         setSocietaOptions((societaData || []) as SocietaOption[]);
         setOperatori((operatoriData || []) as OperatoreOption[]);
@@ -140,7 +148,35 @@ const societaBloccata = !!preselectedSocietaId;
     };
 
     void init();
-  }, [router.query.societa_id]);
+  }, [router.isReady, router.query.societa_id, router.query.cliente_id]);
+
+  useEffect(() => {
+    if (!router.isReady || !clienteId || !societaId) {
+      setIncarichiEsistenti([]);
+      return;
+    }
+    let active = true;
+    (async () => {
+      try {
+        const studioId = await getStudioId();
+        if (!studioId) return;
+        const supabase = getSupabaseClient() as any;
+        const { data, error } = await supabase
+          .from("tbPraticheAML")
+          .select("id, tipo_prestazione, data_apertura, stato")
+          .eq("studio_id", studioId)
+          .eq("cliente_id", clienteId)
+          .eq("societa_id", societaId)
+          .order("data_apertura", { ascending: false });
+        if (error) throw error;
+        if (active) setIncarichiEsistenti(data || []);
+      } catch (error) {
+        console.error("Errore caricamento incarichi AML", error);
+        if (active) setIncarichiEsistenti([]);
+      }
+    })();
+    return () => { active = false; };
+  }, [router.isReady, clienteId, societaId]);
 
   const handleCreate = async () => {
     try {
@@ -209,7 +245,7 @@ const societaBloccata = !!preselectedSocietaId;
         throw new Error(result?.error || "Errore creazione pratica.");
       }
 
-      await router.push("/antiriciclaggio");
+      await router.push(`/antiriciclaggio?pratica_id=${encodeURIComponent(result.id)}`);
     } catch (err: any) {
       console.error("Errore creazione pratica AML:", err);
       alert(err?.message || "Errore creazione pratica.");
@@ -221,9 +257,12 @@ const societaBloccata = !!preselectedSocietaId;
   return (
     <div className="p-6">
       <div className="mx-auto max-w-2xl rounded-lg border bg-white p-6 shadow-sm">
-        <h1 className="mb-6 text-2xl font-bold text-slate-900">
-          Nuova pratica AML
+        <h1 className="mb-2 text-2xl font-bold text-slate-900">
+          {clienteBloccato ? "Aggiungi prestazione AML" : "Nuova pratica AML"}
         </h1>
+        <p className="mb-6 text-sm text-slate-600">
+          {clienteBloccato ? "Stesso nominativo: la nuova prestazione avrà pratica, moduli e scadenze propri." : "Seleziona un cliente esistente: non verrà duplicata l'anagrafica."}
+        </p>
 
         {loading ? (
           <div>Caricamento...</div>
@@ -236,7 +275,8 @@ const societaBloccata = !!preselectedSocietaId;
               <select
                 value={clienteId}
                 onChange={(e) => setClienteId(e.target.value)}
-                className="w-full rounded-md border px-3 py-2"
+                disabled={clienteBloccato}
+                className={`w-full rounded-md border px-3 py-2 ${clienteBloccato ? "cursor-not-allowed bg-gray-100" : ""}`}
               >
                 <option value="">Seleziona cliente</option>
                 {clienti.map((cliente) => (
@@ -246,6 +286,19 @@ const societaBloccata = !!preselectedSocietaId;
                 ))}
               </select>
             </div>
+
+            {clienteId && societaId && (
+              <div className="rounded-md border border-sky-200 bg-sky-50 p-3 text-sm text-slate-800">
+                <div className="font-semibold">Prestazioni già associate ({incarichiEsistenti.length})</div>
+                {incarichiEsistenti.length
+                  ? <ul className="mt-2 list-disc space-y-1 pl-5">
+                      {incarichiEsistenti.map(p => (
+                        <li key={p.id}>{p.tipo_prestazione || "Prestazione non indicata"} · {p.data_apertura || "Data non presente"} · {p.stato || "aperta"}</li>
+                      ))}
+                    </ul>
+                  : <p className="mt-1">Nessuna prestazione già presente per questo soggetto responsabile.</p>}
+              </div>
+            )}
 
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-700">
@@ -266,6 +319,9 @@ const societaBloccata = !!preselectedSocietaId;
                   </option>
                 ))}
               </select>
+              {tipoPrestazione && incarichiEsistenti.some(p => p.tipo_prestazione?.trim().toLocaleLowerCase("it") === tipoPrestazione.trim().toLocaleLowerCase("it")) && (
+                <p className="mt-2 text-sm text-amber-800">Questa prestazione risulta già associata al cliente. Verifica che si tratti di un incarico effettivamente distinto.</p>
+              )}
             </div>
 
             <div>
