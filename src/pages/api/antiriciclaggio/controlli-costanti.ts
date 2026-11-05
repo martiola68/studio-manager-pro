@@ -23,13 +23,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data: auth, error: authError } = await supabaseAdmin.auth.getUser(token);
     if (authError || !auth.user) return res.status(401).json({ error: "Sessione non valida" });
 
-    const { data: user, error: userError } = await supabaseAdmin
+    // Non accettare utenti disattivati e non scegliere utenti di altri studi
+    // tramite una condizione OR che ignora la priorità dello user_id Auth.
+    let { data: user, error: userError } = await supabaseAdmin
       .from("tbutenti")
       .select("id, studio_id")
-      .or(`user_id.eq.${auth.user.id},email.eq.${auth.user.email || ""}`)
+      .eq("user_id", auth.user.id)
+      .eq("attivo", true)
       .limit(1)
       .maybeSingle();
-    if (userError || !user?.studio_id) return res.status(403).json({ error: "Studio non autorizzato" });
+
+    if (!user && !userError && auth.user.email) {
+      const fallback = await supabaseAdmin
+        .from("tbutenti")
+        .select("id, studio_id")
+        .ilike("email", auth.user.email)
+        .eq("attivo", true)
+        .limit(1)
+        .maybeSingle();
+      user = fallback.data;
+      userError = fallback.error;
+    }
+
+    if (userError || !user?.studio_id) return res.status(403).json({ error: "Utente attivo dello studio non disponibile" });
 
     const praticaId = String((req.method === "GET" ? req.query.pratica_id : req.body?.pratica_id) || "").trim();
     if (!praticaId) return res.status(400).json({ error: "Pratica obbligatoria" });
