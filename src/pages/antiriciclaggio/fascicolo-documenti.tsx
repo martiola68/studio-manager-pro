@@ -143,6 +143,8 @@ export default function FascicoloDocumentiPage() {
   
   const [documenti, setDocumenti] = useState<DocumentoRow[]>([]);
   const [controlliAV7, setControlliAV7] = useState<Array<{ id: string; data_controllo: string; esito: string }>>([]);
+  const [versioniAV1, setVersioniAV1] = useState<Array<{ id: number; DataVerifica: string | null; AV1Conferma: boolean | null; allegato_av1_firmato: string | null }>>([]);
+  const [versioniAV4, setVersioniAV4] = useState<Array<{ id: number; created_at: string | null; compilato_da_cliente: boolean | null; pdf_firmato_cliente: string | null }>>([]);
   const [uploading, setUploading] = useState(false);
   const [workingDocumentId, setWorkingDocumentId] = useState<string | null>(null);
   const [tipoDocumento, setTipoDocumento] = useState("Documento generico");
@@ -920,6 +922,38 @@ useEffect(() => {
   })();
   return () => { active = false; };
 }, [router.isReady, pratica_id]);
+
+useEffect(() => {
+  if (!router.isReady || typeof pratica_id !== "string" || !pratica_id) {
+    setVersioniAV1([]); setVersioniAV4([]);
+    return;
+  }
+  let active = true;
+  (async () => {
+    try {
+      const supabase = getSupabaseClient() as any;
+      const studioId = await getStudioId();
+      if (!studioId) return;
+      const [av1, av4] = await Promise.all([
+        supabase.from("tbAV1")
+          .select("id, DataVerifica, AV1Conferma, allegato_av1_firmato")
+          .eq("studio_id", studioId).eq("pratica_id", pratica_id)
+          .order("DataVerifica", { ascending: false }).order("id", { ascending: false }),
+        supabase.from("tbAV4")
+          .select("id, created_at, compilato_da_cliente, pdf_firmato_cliente")
+          .eq("studio_id", studioId).eq("pratica_id", pratica_id)
+          .order("created_at", { ascending: false }),
+      ]);
+      if (av1.error) throw av1.error;
+      if (av4.error) throw av4.error;
+      if (active) {
+        setVersioniAV1(av1.data || []);
+        setVersioniAV4(av4.data || []);
+      }
+    } catch (e) { console.error("Errore storico versioni AML", e); }
+  })();
+  return () => { active = false; };
+}, [router.isReady, pratica_id]);
   
   return (
     <div className="p-6">
@@ -994,6 +1028,36 @@ useEffect(() => {
             AV7 · Controlli periodici e storico
           </button>
         </div>
+      )}
+
+      {typeof pratica_id === "string" && (versioniAV1.length > 0 || versioniAV4.length > 0) && (
+        <section className="mb-5 rounded-lg border border-sky-200 bg-white p-4">
+          <h2 className="mb-3 font-semibold">Storico moduli di adeguata verifica</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <h3 className="mb-2 text-sm font-bold">Versioni AV1 ({versioniAV1.length})</h3>
+              {versioniAV1.map((v, i) => (
+                <div key={v.id} className="flex items-center justify-between gap-2 border-b py-2 text-sm">
+                  <span>AV1 del {v.DataVerifica ? new Date(v.DataVerifica + "T12:00:00").toLocaleDateString("it-IT") : "—"} · {v.AV1Conferma ? "Confermato" : "Da confermare"}</span>
+                  <a className="rounded border border-sky-400 px-2 py-1 text-sky-700"
+                    href={`/antiriciclaggio/modello-av1?id=${v.id}&pratica_id=${encodeURIComponent(pratica_id)}`}
+                    target="_blank" rel="noopener noreferrer">Apri</a>
+                </div>
+              ))}
+            </div>
+            <div>
+              <h3 className="mb-2 text-sm font-bold">Versioni AV4 ({versioniAV4.length})</h3>
+              {versioniAV4.map((v) => (
+                <div key={v.id} className="flex items-center justify-between gap-2 border-b py-2 text-sm">
+                  <span>AV4 del {v.created_at ? new Date(v.created_at).toLocaleDateString("it-IT") : "—"} · {v.compilato_da_cliente ? "Compilato" : "Da completare"}</span>
+                  <a className="rounded border border-sky-400 px-2 py-1 text-sky-700"
+                    href={`/antiriciclaggio/modello-av4?id=${v.id}&pratica_id=${encodeURIComponent(pratica_id)}`}
+                    target="_blank" rel="noopener noreferrer">Apri</a>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
       )}
 
       {controlliAV7.length > 0 && typeof pratica_id === "string" && (
