@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
+import { mesiControlloAV7, calcolaScadenzaAV7 } from "@/lib/aml/scadenzaAV7";
 
 type Controllo = {
   id: string; data_controllo: string; esito: string; fonti: string;
@@ -39,6 +40,9 @@ export default function ControlloCostanteAML() {
   const [fonti, setFonti] = useState("");
   const [note, setNote] = useState("");
   const [scadenza, setScadenza] = useState("");
+  const [scadenzaModificata, setScadenzaModificata] = useState(false);
+  const [periodicitaMesi, setPeriodicitaMesi] = useState<number | null>(null);
+  const [tipologiaAV, setTipologiaAV] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [azioni, setAzioni] = useState<"" | "av1" | "av4" | "entrambi">("");
@@ -67,6 +71,8 @@ export default function ControlloCostanteAML() {
     try {
       const data = await api("GET");
       setStorico(data.controlli || []);
+      setPeriodicitaMesi(data.periodicitaMesi ?? mesiControlloAV7(data.adeguataVerifica));
+      setTipologiaAV(data.adeguataVerifica || null);
       setError("");
     } catch (e: any) {
       setError(e?.message || "Impossibile caricare lo storico");
@@ -74,6 +80,11 @@ export default function ControlloCostanteAML() {
   }
 
   useEffect(() => { void load(); }, [praticaId]);
+
+  useEffect(() => {
+    if (scadenzaModificata) return;
+    setScadenza(periodicitaMesi ? calcolaScadenzaAV7(dataControllo, periodicitaMesi) : "");
+  }, [periodicitaMesi, dataControllo, scadenzaModificata]);
 
   async function save() {
     if (busy || !praticaId) return;
@@ -94,7 +105,7 @@ export default function ControlloCostanteAML() {
       setAzioni(esito === "variazione_entrambi" ? "entrambi"
         : esito === "variazione_rischio" ? "av1"
         : esito === "variazione_titolare_ppe" ? "av4" : "");
-      setSelected({}); setNote(""); setFonti(""); setScadenza("");
+      setSelected({}); setNote(""); setFonti(""); setScadenzaModificata(false);
       window.alert("AV7 archiviato correttamente. I moduli precedenti rimangono nel fascicolo.");
       try {
         await load();
@@ -126,7 +137,19 @@ export default function ControlloCostanteAML() {
       <label className="mt-5 block text-sm font-medium">Fonti e documenti consultati<textarea value={fonti} onChange={e=>setFonti(e.target.value)} rows={2} className="mt-1 block w-full rounded border p-2" placeholder="Es. Visura camerale aggiornata, documenti identificativi, dichiarazioni del cliente"/></label>
       <label className="mt-4 block text-sm font-medium">Osservazioni ed esito motivato<textarea value={note} onChange={e=>setNote(e.target.value)} rows={4} className="mt-1 block w-full rounded border p-2" placeholder="Riporta le evidenze emerse e le eventuali azioni richieste."/></label>
       {esito === "nessuna_variazione" ?
-        <label className="mt-4 block max-w-sm text-sm font-medium">Prossimo controllo<input type="date" value={scadenza} min={dataControllo} onChange={e=>setScadenza(e.target.value)} className="mt-1 block w-full rounded border p-2"/></label>
+        <div className="mt-4 max-w-lg">
+          <label className="block text-sm font-medium">Prossimo controllo
+            <input type="date" value={scadenza} min={dataControllo}
+              max={periodicitaMesi ? calcolaScadenzaAV7(dataControllo, periodicitaMesi) : undefined}
+              onChange={e=>{setScadenza(e.target.value);setScadenzaModificata(true);}}
+              className="mt-1 block w-full rounded border p-2"/>
+          </label>
+          {periodicitaMesi
+            ? <p className="mt-1 text-xs text-slate-600">Calcolata automaticamente dall'AV1 confermato ({tipologiaAV}, {periodicitaMesi} mesi). Puoi anticipare la data; non posticiparla oltre il termine proposto.
+              {scadenzaModificata && <button type="button" className="ml-2 text-sky-700 underline" onClick={()=>{setScadenzaModificata(false);setScadenza(calcolaScadenzaAV7(dataControllo, periodicitaMesi));}}>Ripristina automatico</button>}
+            </p>
+            : <p className="mt-1 text-xs text-amber-700">Non è disponibile una periodicità certa dall'AV1 confermato. Verifica il rischio e indica la scadenza manualmente.</p>}
+        </div>
         : <div className="mt-4 rounded border border-amber-200 p-3 text-sm text-amber-900">
             <p>Sono emerse variazioni: il controllo sarà registrato senza spostare la scadenza. Dopo l'archiviazione potrai preparare i nuovi moduli necessari.</p>
           </div>}
