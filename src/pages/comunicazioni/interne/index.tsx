@@ -171,17 +171,7 @@ export default function ComunicazioniInternePage() {
       const allegati =
         selectedFiles.length > 0 ? await uploadAllegati() : [];
 
-      await comunicazioneService.createComunicazione({
-        tipo: "interna",
-        oggetto: formData.oggetto,
-        messaggio: formData.messaggio,
-        allegati,
-        destinatari_count: selectedDestinatari.length,
-        stato: "Inviata",
-        data_invio: new Date().toISOString(),
-      });
-
-      await emailService.sendComunicazioneEmail({
+      const esito = await emailService.sendComunicazioneEmail({
         tipo: "interna",
         destinatariIds: selectedDestinatari,
         oggetto: formData.oggetto,
@@ -189,8 +179,28 @@ export default function ComunicazioniInternePage() {
         allegati,
       });
 
+      if (!esito.success || esito.failed > 0 || esito.skipped > 0) {
+        toast({
+          title: esito.sent > 0 ? "Invio parziale" : "Invio non riuscito",
+          description: esito.error || `Inviate: ${esito.sent}, fallite: ${esito.failed}, escluse: ${esito.skipped}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      await comunicazioneService.createComunicazione({
+        tipo: "interna",
+        oggetto: formData.oggetto,
+        messaggio: formData.messaggio,
+        allegati,
+        destinatari_count: esito.sent,
+        stato: "Inviata",
+        data_invio: new Date().toISOString(),
+      });
+
       toast({
         title: "Comunicazione inviata",
+        description: `Email inviate: ${esito.sent}`,
       });
 
       setFormData({
