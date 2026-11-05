@@ -53,7 +53,7 @@ export default function ControlloCostanteAML() {
       : "/api/antiriciclaggio/controlli-costanti";
     const response = await fetch(url, {
       method,
-      headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json", "x-aml-av7-proof": sessionStorage.getItem("antiriciclaggio_av7_access_proof") || "" },
       ...(payload ? { body: JSON.stringify(payload) } : {}),
     });
     const json = await response.json().catch(() => ({}));
