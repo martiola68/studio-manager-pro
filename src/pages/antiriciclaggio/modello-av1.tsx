@@ -1015,6 +1015,21 @@ const handleOpenFirmato = async () => {
 
 const handleRemoveFirmato = async () => {
   const run = async () => {
+    if (formData.id && formData.pratica_id) {
+      const supabase = getSupabaseClient() as any;
+      const { data: praticaRow, error: verificaError } = await supabase
+        .from("tbPraticheAML")
+        .select("av1_corrente_id, av1_id")
+        .eq("id", formData.pratica_id)
+        .eq("studio_id", formData.studio_id)
+        .single();
+      if (verificaError) { setError(verificaError.message); return; }
+      const currentId = praticaRow?.av1_corrente_id ?? praticaRow?.av1_id;
+      if (currentId != null && String(currentId) !== String(formData.id)) {
+        setError("L'allegato di un AV1 storico non può essere eliminato.");
+        return;
+      }
+    }
     if (!formData.allegato_av1_firmato) {
       alert("Nessun allegato AV1 da rimuovere.");
       return;
@@ -1257,15 +1272,22 @@ const handleRinnovoVerifica = async () => {
         savedId = String(data.id);
       }
 
-    if (formData.pratica_id && savedId) {
+    if (formData.pratica_id && savedId && payload.AV1Conferma) {
   const { error: praticaUpdateError } = await supabase
     .from("tbPraticheAML")
-    .update({
-     // av1_id è il riferimento iniziale: si conserva anche dopo i rinnovi.
-      av1_corrente_id: Number(savedId),
-      stato_ciclo: "chiuso",
-      data_prossimo_rinnovo: ScadenzaVerificaCalcolata || null,
-    })
+    .update(
+      // Una bozza non sostituisce la versione valida e non rinvia la scadenza.
+      payload.AV1Conferma
+        ? {
+            av1_corrente_id: Number(savedId),
+            stato_ciclo: "chiuso",
+            data_prossimo_rinnovo: ScadenzaVerificaCalcolata || null,
+          }
+        : {
+            // L'AV1 rimane nel fascicolo come bozza identificata dal suo ID.
+            // Non tocchiamo né il corrente, né la scadenza preesistente.
+          }
+    )
     .eq("id", formData.pratica_id);
 
   if (praticaUpdateError) throw new Error(praticaUpdateError.message);
