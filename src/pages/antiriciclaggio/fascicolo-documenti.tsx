@@ -138,6 +138,9 @@ export default function FascicoloDocumentiPage() {
 
   const [loading, setLoading] = useState(true);
   const [clienteNome, setClienteNome] = useState("Cliente");
+  const [prestazionePratica, setPrestazionePratica] = useState("");
+  const [versioniAV1, setVersioniAV1] = useState<Array<{id:number;DataVerifica:string|null;AV1Conferma:boolean|null;Prestazione:string|null}>>([]);
+  const [versioniAV4, setVersioniAV4] = useState<Array<{id:string;created_at:string|null;compilato_da_cliente:boolean|null}>>([]);
   
   const [clienteIsSocieta, setClienteIsSocieta] = useState(false);
   
@@ -591,12 +594,20 @@ body: JSON.stringify({
     ? cliente_id
     : null;
 
+const {data:praticaCorrente,error:praticaError} = await supabase
+ .from("tbPraticheAML").select("id, cliente_id, tipo_prestazione")
+ .eq("studio_id", studioId).eq("id", pratica_id).maybeSingle();
+if(praticaError)throw praticaError;
+if(!praticaCorrente)throw new Error("Pratica AML non trovata.");
+if(clienteIdValue && praticaCorrente.cliente_id!==clienteIdValue)throw new Error("Cliente e pratica AML non corrispondono.");
+const effectiveClienteId=clienteIdValue||praticaCorrente.cliente_id||null;
+setPrestazionePratica(String(praticaCorrente.tipo_prestazione||"").trim());
 let visureRichieste: VisuraTeRichiesta[] = [];
 
-if (clienteIdValue) {
+if (effectiveClienteId) {
   const responseGruppi = await fetch(
     `/api/gruppi-societari?cliente_id=${encodeURIComponent(
-      clienteIdValue
+      effectiveClienteId
     )}`
   );
 
@@ -622,6 +633,8 @@ const { data: av1PrestazioneData, error: av1PrestazioneError } = await supabase
   .select("Prestazione")
   .eq("studio_id", studioId)
   .eq("pratica_id", pratica_id)
+  .order("DataVerifica", { ascending: false })
+  .limit(1)
   .maybeSingle();
 
 if (av1PrestazioneError) {
@@ -630,11 +643,11 @@ if (av1PrestazioneError) {
 
 let regolaDiCondotta = "";
 
-if (av1PrestazioneData?.Prestazione) {
+if (av1PrestazioneData?.Prestazione || praticaCorrente.tipo_prestazione) {
   const { data: prestazioneArData, error: prestazioneArError } = await supabase
     .from("tbElencoPrestAR")
     .select("RischioTipoPrestAR, RegolaDiCondotta")
-    .eq("TipoPrestazioneAR", av1PrestazioneData.Prestazione)
+    .eq("TipoPrestazioneAR", av1PrestazioneData?.Prestazione || praticaCorrente.tipo_prestazione)
     .maybeSingle();
 
   if (prestazioneArError) {
@@ -651,16 +664,16 @@ if (av1PrestazioneData?.Prestazione) {
 
 setRegolaDiCondottaRichiesta(regolaDiCondotta);
 
-const syncKey = `${studioId}|${pratica_id}|${clienteIdValue || ""}`;
+const syncKey = `${studioId}|${pratica_id}|${effectiveClienteId || ""}`;
 if (syncedRef.current !== syncKey) {
   syncedRef.current = syncKey;
-  await syncDocumentiCollegati(supabase, studioId, pratica_id, clienteIdValue);
+  await syncDocumentiCollegati(supabase, studioId, pratica_id, effectiveClienteId);
 }
       
 const { data: clienteCheckData } = await supabase
   .from("tbclienti")
   .select("ragione_sociale, cod_cliente")
-  .eq("id", clienteIdValue)
+  .eq("id", effectiveClienteId)
   .maybeSingle();
 
 const nomeClienteCheck =
@@ -910,9 +923,26 @@ useEffect(() => {
   }
 }, [regolaDiCondottaRichiesta, tipoDocumento]);
 
+useEffect(() => { void loadData(); }, [router.isReady, pratica_id, cliente_id]);
 useEffect(() => {
-  void loadData();
-}, [router.isReady, pratica_id, cliente_id]);
+ if(!router.isReady || typeof pratica_id!=="string" || !pratica_id){setVersioniAV1([]);setVersioniAV4([]);return;}
+ let active=true;
+ (async()=>{
+  try{
+   const studioId=await getStudioId();if(!studioId)return;
+   const supabase=getSupabaseClient() as any;
+   const [av1,av4]=await Promise.all([
+    supabase.from("tbAV1").select("id, DataVerifica, AV1Conferma, Prestazione")
+      .eq("studio_id",studioId).eq("pratica_id",pratica_id).order("DataVerifica",{ascending:false}).order("id",{ascending:false}),
+    supabase.from("tbAV4").select("id, created_at, compilato_da_cliente")
+      .eq("studio_id",studioId).eq("pratica_id",pratica_id).order("created_at",{ascending:false})
+   ]);
+   if(av1.error)throw av1.error;if(av4.error)throw av4.error;
+   if(active){setVersioniAV1(av1.data||[]);setVersioniAV4(av4.data||[]);}
+  }catch(e){console.error("Errore caricamento storico moduli AML",e);}
+ })();
+ return()=>{active=false;};
+},[router.isReady,pratica_id]);
   
   return (
     <div className="p-6">
@@ -925,6 +955,7 @@ useEffect(() => {
 
           <p className="mt-1 text-sm text-gray-600">
            Pratica ID: <span className="font-semibold">{String(pratica_id || "-")}</span>
+            <span className="block mt-2 font-semibold text-sky-800">Prestazione: {prestazionePratica || versioniAV1.find(v=>v.Prestazione)?.Prestazione || "Da definire"}</span>
           </p>
         </div>
 
@@ -980,7 +1011,30 @@ useEffect(() => {
         </div>
       )}
 
-      <label className="mb-4 inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-white px-4 py-3 text-sm font-semibold text-blue-800">
+      {typeof pratica_id==="string" && (versioniAV1.length>0||versioniAV4.length>0) && (
+ <section className="mb-5 rounded-lg border border-sky-200 bg-white p-4">
+  <h2 className="mb-3 font-semibold">Storico moduli della prestazione selezionata</h2>
+  <div className="grid gap-4 md:grid-cols-2">
+   <div><h3 className="mb-2 text-sm font-bold">Versioni AV1 ({versioniAV1.length})</h3>
+   {versioniAV1.map((v,i)=><div key={v.id} className="flex justify-between items-center gap-3 border-b py-2 text-sm">
+    <div><strong>AV1 · Versione {versioniAV1.length-i}</strong>
+     <div>Prestazione: {v.Prestazione||prestazionePratica||"Non indicata"}</div>
+     <div>{v.DataVerifica?new Date(v.DataVerifica+"T12:00:00").toLocaleDateString("it-IT"):"—"} · {v.AV1Conferma?"Confermato":"Da confermare"}</div></div>
+    <button type="button" className="rounded border border-sky-400 px-3 py-1 text-sky-700"
+     onClick={()=>void router.push(`/antiriciclaggio/modello-av1?id=${encodeURIComponent(String(v.id))}&pratica_id=${encodeURIComponent(pratica_id)}&origine=fascicolo`)}>Apri AV1</button>
+   </div>)}</div>
+   <div><h3 className="mb-2 text-sm font-bold">Versioni AV4 ({versioniAV4.length})</h3>
+   {versioniAV4.map((v,i)=><div key={v.id} className="flex justify-between items-center gap-3 border-b py-2 text-sm">
+    <div><strong>AV4 · Versione {versioniAV4.length-i}</strong>
+     <div>Prestazione: {prestazionePratica||versioniAV1.find(x=>x.Prestazione)?.Prestazione||"Non indicata"}</div>
+     <div>{v.created_at?new Date(v.created_at).toLocaleDateString("it-IT"):"—"} · {v.compilato_da_cliente?"Compilato":"Da completare"}</div></div>
+    <button type="button" className="rounded border border-sky-400 px-3 py-1 text-sky-700"
+     onClick={()=>void router.push(`/antiriciclaggio/modello-av4?id=${encodeURIComponent(String(v.id))}&pratica_id=${encodeURIComponent(pratica_id)}&origine=fascicolo`)}>Apri AV4</button>
+   </div>)}</div>
+  </div>
+ </section>
+)}
+<label className="mb-4 inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-white px-4 py-3 text-sm font-semibold text-blue-800">
         <input type="checkbox" checked={confermaManuale} disabled={salvandoConferma || (!fascicoloCompleto && !confermaManuale)}
           onChange={e=>void aggiornaConfermaFascicolo(e.target.checked)} className="h-4 w-4 accent-green-600"/>
         Fascicolo completo (conferma manuale)
