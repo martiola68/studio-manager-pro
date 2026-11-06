@@ -141,6 +141,8 @@ export default function FascicoloDocumentiPage() {
   const [prestazionePratica, setPrestazionePratica] = useState("");
   const [versioniAV1, setVersioniAV1] = useState<Array<{id:number;DataVerifica:string|null;AV1Conferma:boolean|null;Prestazione:string|null}>>([]);
   const [versioniAV4, setVersioniAV4] = useState<Array<{id:string;created_at:string|null;compilato_da_cliente:boolean|null}>>([]);
+  const [controlliAV7, setControlliAV7] = useState<Array<{id:string;data_controllo:string;esito:string}>>([]);
+  const [av7Errore, setAv7Errore] = useState("");
   
   const [clienteIsSocieta, setClienteIsSocieta] = useState(false);
   
@@ -154,8 +156,6 @@ export default function FascicoloDocumentiPage() {
 
   const [documentiOpzionaliMancanti, setDocumentiOpzionaliMancanti] = useState<string[]>([]);
 const [fascicoloCompleto, setFascicoloCompleto] = useState(false);
-const [confermaManuale,setConfermaManuale]=useState(false);
-const [salvandoConferma,setSalvandoConferma]=useState(false);
 
 const [visureTeRichieste, setVisureTeRichieste] =
   useState<VisuraTeRichiesta[]>([]);
@@ -745,25 +745,6 @@ calcolaStatoFascicolo(
     }
   };
 
-  const aggiornaConfermaFascicolo = async (confermato:boolean) => {
-    if(confermato && !fascicoloCompleto){
-      alert("Carica prima tutti i documenti richiesti dalla prestazione.");return;
-    }
-    if(typeof pratica_id!=="string")return;
-    setSalvandoConferma(true);
-    try{
-      const {data:{session}}=await getSupabaseClient().auth.getSession();
-      if(!session?.access_token)throw new Error("Sessione scaduta");
-      const res=await fetch("/api/aml/fascicolo/conferma",{method:"POST",
-        headers:{"Content-Type":"application/json",Authorization:"Bearer "+session.access_token},
-        body:JSON.stringify({praticaId:pratica_id,confermato})});
-      const data=await res.json();
-      if(!res.ok||!data.ok)throw new Error(data.error||"Errore salvataggio");
-      setConfermaManuale(confermato);
-    }catch(e){alert(e instanceof Error?e.message:"Impossibile salvare la conferma");}
-    finally{setSalvandoConferma(false);}
-  };
-
   const handleUploadFile = async (file: File) => {
     try {
      if (!file || typeof pratica_id !== "string" || !pratica_id) return;
@@ -925,7 +906,7 @@ useEffect(() => {
 
 useEffect(() => { void loadData(); }, [router.isReady, pratica_id, cliente_id]);
 useEffect(() => {
- if(!router.isReady || typeof pratica_id!=="string" || !pratica_id){setVersioniAV1([]);setVersioniAV4([]);return;}
+ if(!router.isReady || typeof pratica_id!=="string" || !pratica_id){setVersioniAV1([]);setVersioniAV4([]);setControlliAV7([]);return;}
  let active=true;
  (async()=>{
   try{
@@ -944,6 +925,32 @@ useEffect(() => {
  return()=>{active=false;};
 },[router.isReady,pratica_id]);
   
+
+useEffect(() => {
+  if (!router.isReady || typeof pratica_id !== "string" || !pratica_id) {
+    setControlliAV7([]); setAv7Errore(""); return;
+  }
+  let active = true;
+  (async () => {
+    try {
+      const supabase = getSupabaseClient() as any;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("Sessione non valida");
+      const proof = sessionStorage.getItem("antiriciclaggio_av7_access_proof") || "";
+      const res = await fetch(`/api/antiriciclaggio/controlli-costanti?pratica_id=${encodeURIComponent(pratica_id)}`, {
+        headers: { Authorization: "Bearer " + session.access_token, "x-aml-av7-proof": proof },
+        cache: "no-store"
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Impossibile recuperare lo storico AV7");
+      if (active) { setControlliAV7(data.controlli || []); setAv7Errore(""); }
+    } catch (err) {
+      if (active) { setControlliAV7([]); setAv7Errore(err instanceof Error ? err.message : "Errore AV7"); }
+    }
+  })();
+  return () => { active = false; };
+}, [router.isReady, pratica_id]);
+
   return (
     <div className="p-6">
       <div className="mb-6 flex items-start justify-between gap-4">
@@ -980,7 +987,7 @@ useEffect(() => {
         </div>
       ) : null}
 
-        {loading ? null : fascicoloCompleto && confermaManuale ? (
+        {loading ? null : fascicoloCompleto ? (
         <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
           <div className="font-semibold">Fascicolo AML completo</div>
           <div className="mt-1">
@@ -989,8 +996,8 @@ useEffect(() => {
         </div>
       ) : (
         <div className="mb-4 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-900">
-          <div className="font-semibold">{fascicoloCompleto ? "Documenti presenti · fascicolo da confermare" : "Fascicolo AML incompleto"}</div>
-          <div className="mt-1">{fascicoloCompleto ? "Conferma manualmente il fascicolo per completare la pratica." : "Documenti mancanti:"}</div>
+          <div className="font-semibold">"Fascicolo AML incompleto"</div>
+          <div className="mt-1">"Documenti mancanti:"</div>
 
          <ul className="mt-2 list-disc pl-5">
   {documentiMancanti.map((doc) => (
@@ -1025,7 +1032,7 @@ useEffect(() => {
    </div>)}</div>
    <div><h3 className="mb-2 text-sm font-bold">Versioni AV4 ({versioniAV4.length})</h3>
    {versioniAV4.map((v,i)=><div key={v.id} className="flex justify-between items-center gap-3 border-b py-2 text-sm">
-    <div><strong>AV4 · Versione {versioniAV4.length-i}</strong>
+    <div><strong>AV4 · Versione {versioniAV4.length-i} {i === 0 ? "(più recente)" : "(precedente)"}</strong>
      <div>Prestazione: {prestazionePratica||versioniAV1.find(x=>x.Prestazione)?.Prestazione||"Non indicata"}</div>
      <div>{v.created_at?new Date(v.created_at).toLocaleDateString("it-IT"):"—"} · {v.compilato_da_cliente?"Compilato":"Da completare"}</div></div>
     <button type="button" className="rounded border border-sky-400 px-3 py-1 text-sky-700"
@@ -1034,11 +1041,35 @@ useEffect(() => {
   </div>
  </section>
 )}
-<label className="mb-4 inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-white px-4 py-3 text-sm font-semibold text-blue-800">
-        <input type="checkbox" checked={confermaManuale} disabled={salvandoConferma || (!fascicoloCompleto && !confermaManuale)}
-          onChange={e=>void aggiornaConfermaFascicolo(e.target.checked)} className="h-4 w-4 accent-green-600"/>
-        Fascicolo completo (conferma manuale)
-      </label>
+
+      {typeof pratica_id === "string" && (
+        <section className="mb-5 rounded-lg border border-sky-200 bg-white p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="font-semibold">AV7 · Controlli periodici e storico ({controlliAV7.length})</h2>
+            <button type="button"
+              onClick={() => void router.push(`/antiriciclaggio/controllo-costante?pratica_id=${encodeURIComponent(pratica_id)}`)}
+              className="rounded border border-sky-500 bg-white px-3 py-2 text-sm font-semibold text-sky-700">
+              Apri gestione AV7
+            </button>
+          </div>
+          {av7Errore ? (
+            <p className="mt-2 text-sm text-amber-700">{av7Errore}</p>
+          ) : controlliAV7.length === 0 ? (
+            <p className="mt-2 text-sm text-slate-500">Nessun controllo AV7 archiviato per questa prestazione.</p>
+          ) : (
+            <div className="mt-3 space-y-2">
+              {controlliAV7.map(c => (
+                <div key={c.id} className="flex flex-wrap items-center justify-between gap-3 border-b py-2 text-sm">
+                  <span>AV7 del {c.data_controllo ? new Date(c.data_controllo+"T12:00:00").toLocaleDateString("it-IT") : "—"} · {String(c.esito || "").replaceAll("_", " ")}</span>
+                  <a href={`/antiriciclaggio/stampa-av7?pratica_id=${encodeURIComponent(pratica_id)}&id=${encodeURIComponent(c.id)}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="rounded border border-sky-500 px-3 py-1 text-sky-700">Apri / Stampa</a>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
       <div className="mb-4 flex items-end justify-between gap-4">
         <div className="text-sm text-gray-600">
           Gestione upload, apertura ed eliminazione documenti del fascicolo.
