@@ -67,10 +67,10 @@ const IMPOSTAZIONI_MASTER_ROUTES = new Set([
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
   const [scadenzariCleanupPending, setScadenzariCleanupPending] = useState(false);
-  const [amlHost, setAmlHost] = useState(() => typeof window !== "undefined" && window.location.hostname.toLowerCase() === "aml.studiomanagerpro.it");
+  const [amlHost, setAmlHost] = useState(() => typeof window !== "undefined" && (process.env.NEXT_PUBLIC_AML_STANDALONE === "1" || window.location.hostname.toLowerCase() === "aml.studiomanagerpro.it"));
   useEffect(() => {
     if (!router.isReady) return;
-    const standaloneHost = window.location.hostname.toLowerCase() === "aml.studiomanagerpro.it";
+    const standaloneHost = (process.env.NEXT_PUBLIC_AML_STANDALONE === "1" || window.location.hostname.toLowerCase() === "aml.studiomanagerpro.it");
     const amlRoute = router.pathname === "/aml" || router.pathname.startsWith("/aml/");
     if (standaloneHost || amlRoute) sessionStorage.setItem(AML_INTERFACE_KEY, "1");
     setAmlHost(standaloneHost || amlRoute);
