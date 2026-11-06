@@ -79,6 +79,7 @@ type PraticaAMLRow = {
   av2_corrente_id?: string | null;
   av4_id?: string | null;
   av4_corrente_id?: string | null;
+  tipo_prestazione?: string | null;
   tbclienti?: Cliente | Cliente[] | null;
   av4_info?: AV4Info | AV4Info[] | null;
 };
@@ -92,6 +93,7 @@ export default function AntiriciclaggioPage() {
   const router = useRouter();
 
   const [rows, setRows] = useState<AV1Row[]>([]);
+  const [praticaSelezionata, setPraticaSelezionata] = useState<Record<string, string>>({});
   const [responsabili, setResponsabili] = useState<ResponsabileAV[]>([]);
   const [loading, setLoading] = useState(true);
   const [workingId, setWorkingId] = useState<string | null>(null);
@@ -331,7 +333,7 @@ export default function AntiriciclaggioPage() {
       setLoading(true);
       setRows([]);
       const supabaseAny = getSupabaseClient() as any;
-      const { data: praticheData, error: praticheError } = await supabaseAny.from("tbPraticheAML").select(`id, studio_id, cliente_id, societa_id, data_apertura, stato, stato_ciclo, av1_id, av2_id, av2_corrente_id, av4_id, av4_corrente_id, tbclienti (id, cod_cliente, ragione_sociale, codice_fiscale, utente_operatore_id, utente_operatore:tbutenti!tbclienti_utente_operatore_id_fkey (nome, cognome))`).eq("societa_id", societaId).order("data_apertura", { ascending: false });
+      const { data: praticheData, error: praticheError } = await supabaseAny.from("tbPraticheAML").select(`id, studio_id, cliente_id, societa_id, data_apertura, tipo_prestazione, stato, stato_ciclo, av1_id, av2_id, av2_corrente_id, av4_id, av4_corrente_id, tbclienti (id, cod_cliente, ragione_sociale, codice_fiscale, utente_operatore_id, utente_operatore:tbutenti!tbclienti_utente_operatore_id_fkey (nome, cognome))`).eq("societa_id", societaId).order("data_apertura", { ascending: false });
       if (praticheError) throw praticheError;
       const praticheRows = (praticheData as PraticaAMLRow[]) || [];
       const rowsBase: AV1Row[] = await Promise.all(praticheRows.map(async (pratica) => {
@@ -353,7 +355,7 @@ export default function AntiriciclaggioPage() {
           AV2Generato: !!av2?.confermato,
           AV2Confermato: !!av2?.confermato,
           AV4Generato: !!av4?.id,
-          Prestazione: av1?.Prestazione || null,
+          Prestazione: av1?.Prestazione || pratica.tipo_prestazione || null,
           tbclienti: pratica.tbclienti || null,
           av4_info: av4 || null,
           stato_pratica: pratica.stato || "aperta",
@@ -600,6 +602,30 @@ export default function AntiriciclaggioPage() {
       });
   }, [rows, societaFilter, canAccessAntiriciclaggio, ricercaCliente, letteraCliente]);
 
+  // Una riga per cliente: ogni prestazione conserva la propria pratica e i propri documenti.
+  const gruppiPratiche = useMemo(() => {
+    const gruppi = new Map<string, AV1Row[]>();
+    for (const row of filteredRows) {
+      const key = row.cliente_id || row.pratica_id || row.id || "";
+      if (!gruppi.has(key)) gruppi.set(key, []);
+      gruppi.get(key)!.push(row);
+    }
+    return Array.from(gruppi.entries()).map(([key, pratiche]) => ({
+      key,
+      pratiche,
+      row: pratiche.find(p => p.pratica_id === praticaSelezionata[key]) || pratiche[0],
+    }));
+  }, [filteredRows, praticaSelezionata]);
+
+  useEffect(() => {
+    if (!router.isReady || !rows.length) return;
+    const id = typeof router.query.pratica_id === "string" ? router.query.pratica_id : "";
+    const pratica = rows.find(r => r.pratica_id === id);
+    if (pratica?.cliente_id && pratica.societa_id === societaFilter) {
+      setPraticaSelezionata(prev => prev[pratica.cliente_id!] === id ? prev : { ...prev, [pratica.cliente_id!]: id });
+    }
+  }, [router.isReady, router.query.pratica_id, rows, societaFilter]);
+
   const handleSocietaChange = (societaId: string) => {
     if (isSocietaSelectionLocked) return;
     setRicercaCliente("");
@@ -672,6 +698,12 @@ export default function AntiriciclaggioPage() {
       if(!response.ok)throw new Error(data?.error||"Errore salvataggio");
       setRows(prev=>prev.map(item=>item.pratica_id===row.pratica_id?{...item,fascicolo_confermato:confermato}:item));
     }catch(e){alert(e instanceof Error?e.message:"Errore salvataggio fascicolo");}
+  };
+
+  const handleAggiungiPrestazione = (row: AV1Row) => {
+    if (!canAccessAntiriciclaggio || !row.cliente_id || !row.societa_id) return;
+    const params = new URLSearchParams({ cliente_id: row.cliente_id, societa_id: row.societa_id });
+    void router.push(`/antiriciclaggio/pratiche/nuovo?${params.toString()}`);
   };
 
   const handleApriAV1 = (row: AV1Row) => {
@@ -818,14 +850,31 @@ export default function AntiriciclaggioPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-100"><tr><th className="p-3 text-left">Stato</th><th className="p-3 text-left">Cliente</th><th className="p-3 text-left">Utente di riferimento</th><th className="p-3 text-left">Data verifica</th><th className="p-3 text-left">Scadenza verifica</th><th className="p-2 text-center">AV1<br/>conferma</th><th className="p-2 text-center">AV2<br/>confermato</th><th className="p-2 text-center">AV4<br/>inviato</th><th className="p-2 text-center">AV4<br/>manuale</th><th className="p-2 text-center">AV4<br/>confermato</th><th className="p-3 text-center">Fascicolo<br/>completo</th><th className="p-3 text-center">Azioni</th></tr></thead>
             <tbody>
-              {filteredRows.length === 0 ? <tr><td colSpan={12} className="p-4 text-center">{ricercaCliente ? "Nessun cliente corrisponde alla ricerca" : "Nessuna pratica trovata per il soggetto responsabile selezionato"}</td></tr> : filteredRows.map((row) => {
+              {filteredRows.length === 0 ? <tr><td colSpan={12} className="p-4 text-center">{ricercaCliente ? "Nessun cliente corrisponde alla ricerca" : "Nessuna pratica trovata per il soggetto responsabile selezionato"}</td></tr> : gruppiPratiche.map(({ row, pratiche, key }) => {
                 const cliente = getCliente(row);
                 const av4Info = getAV4Info(row);
                 const nomeCliente = cliente?.ragione_sociale || cliente?.cod_cliente || cliente?.codice_fiscale || "-";
                 const statoInfo = getStatoInfo(row);
                 return <tr key={row.pratica_id || row.id} className={`border-t ${getRowClassName(row)}`}>
                   <td className={`p-3 ${statoInfo.className}`}><div className="flex items-center gap-3"><span className={`inline-block h-5 w-5 rounded-full ${statoInfo.dotClass} shadow`}/><span>{statoInfo.text}</span></div></td>
-                  <td className="p-3">{nomeCliente}</td>
+                  <td className="p-3">
+                    <div className="font-medium">{nomeCliente}</div>
+                    <div className="mt-1 text-xs text-slate-600">Prestazione: <strong>{row.Prestazione || "Da definire"}</strong></div>
+                    {pratiche.length > 1 && <label className="mt-2 block text-xs text-slate-600">
+                      Incarichi AML ({pratiche.length})
+                      <select className="mt-1 w-full max-w-xs rounded border border-sky-300 bg-white p-1 text-xs text-slate-800"
+                        value={row.pratica_id || ""}
+                        onChange={e => setPraticaSelezionata(prev => ({ ...prev, [key]: e.target.value }))}>
+                        {pratiche.map((p, i) => <option key={p.pratica_id || i} value={p.pratica_id || ""}>
+                          {p.Prestazione || `Prestazione ${i+1}`} · {p.pratica_id ? p.pratica_id.slice(0,8) : ""}
+                        </option>)}
+                      </select>
+                    </label>}
+                    <button type="button" onClick={() => handleAggiungiPrestazione(row)}
+                      className="mt-2 rounded-md border border-sky-500 bg-white px-2 py-1 text-xs font-semibold text-sky-700 hover:bg-sky-50">
+                      + Aggiungi prestazione
+                    </button>
+                  </td>
                   <td className="p-3">{cliente?.utente_operatore ? `${cliente.utente_operatore.nome || ""} ${cliente.utente_operatore.cognome || ""}`.trim() || "-" : "-"}</td>
                   <td className="p-3">{formatDate(row.DataVerifica)}</td>
                   <td className={`p-3 ${getScadenzaCellClassName(row.ScadenzaVerifica)}`}>{formatDate(row.ScadenzaVerifica)}</td>
