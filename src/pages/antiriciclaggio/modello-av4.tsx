@@ -327,6 +327,7 @@ export default function ModelloAV4() {
   const av4IdFromQuery =
     typeof router.query.id === "string" ? router.query.id : "";
   const nuovaVersioneAV4 = router.query.nuovo_av4 === "1";
+  const provenienzaFascicolo = router.query.origine === "fascicolo";
 
   const [clienteLabel, setClienteLabel] = useState("");
   const [loading, setLoading] = useState(false);
@@ -1147,7 +1148,16 @@ if (form.invia_altra_email && !form.email_destinatario_alternativa.trim()) {
 }
 
  function handleChiudiModello() {
-    router.push("/antiriciclaggio");
+    if (!provenienzaFascicolo) {
+      void router.push("/antiriciclaggio");
+      return;
+    }
+    const pratica = form.pratica_id || praticaIdFromQuery;
+    if (!pratica) return void router.push("/antiriciclaggio");
+    const params = new URLSearchParams({ pratica_id: pratica });
+    const cliente = form.cliente_id || clienteIdFromQuery;
+    if (cliente) params.set("cliente_id", cliente);
+    void router.push(`/antiriciclaggio/fascicolo-documenti?${params.toString()}`);
   }
   
 function handlePrint() {
@@ -2083,7 +2093,7 @@ invia_altra_email: !!form.invia_altra_email,
 
     if (savedId) {
       await router.replace(
-        `/antiriciclaggio/modello-av4?studio_id=${form.studio_id}&pratica_id=${form.pratica_id || ""}&societa_id=${form.societa_id || ""}&av1_id=${form.av1_id || ""}&cliente_id=${form.cliente_id}&id=${savedId}`
+        `/antiriciclaggio/modello-av4?studio_id=${form.studio_id}&pratica_id=${form.pratica_id || ""}&societa_id=${form.societa_id || ""}&av1_id=${form.av1_id || ""}&cliente_id=${form.cliente_id}&id=${savedId}${provenienzaFascicolo ? "&origine=fascicolo" : ""}`
       );
     }
   } catch (error: any) {
