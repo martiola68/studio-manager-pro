@@ -138,12 +138,13 @@ export default function FascicoloDocumentiPage() {
 
   const [loading, setLoading] = useState(true);
   const [clienteNome, setClienteNome] = useState("Cliente");
+  const [prestazionePratica, setPrestazionePratica] = useState("");
   
   const [clienteIsSocieta, setClienteIsSocieta] = useState(false);
   
   const [documenti, setDocumenti] = useState<DocumentoRow[]>([]);
   const [controlliAV7, setControlliAV7] = useState<Array<{ id: string; data_controllo: string; esito: string }>>([]);
-  const [versioniAV1, setVersioniAV1] = useState<Array<{ id: number; DataVerifica: string | null; AV1Conferma: boolean | null; allegato_av1_firmato: string | null }>>([]);
+  const [versioniAV1, setVersioniAV1] = useState<Array<{ id: number; DataVerifica: string | null; AV1Conferma: boolean | null; allegato_av1_firmato: string | null; Prestazione: string | null }>>([]);
   const [versioniAV4, setVersioniAV4] = useState<Array<{ id: string; created_at: string | null; compilato_da_cliente: boolean | null; pdf_firmato_cliente: string | null }>>([]);
   const [uploading, setUploading] = useState(false);
   const [workingDocumentId, setWorkingDocumentId] = useState<string | null>(null);
@@ -257,7 +258,7 @@ const syncDocumentiCollegati = async (
 ) => {
   const { data: praticaData, error: praticaError } = await supabase
     .from("tbPraticheAML")
-    .select("id, cliente_id")
+    .select("id, cliente_id, tipo_prestazione")
     .eq("studio_id", studioId)
     .eq("id", praticaId)
     .maybeSingle();
@@ -265,6 +266,8 @@ const syncDocumentiCollegati = async (
   if (praticaError) {
     throw praticaError;
   }
+
+  setPrestazionePratica(String(praticaData?.tipo_prestazione || "").trim());
 
   const effectiveClienteId = clienteIdFromQuery || praticaData?.cliente_id || null;
 
@@ -936,7 +939,7 @@ useEffect(() => {
       if (!studioId) return;
       const [av1, av4] = await Promise.all([
         supabase.from("tbAV1")
-          .select("id, DataVerifica, AV1Conferma, allegato_av1_firmato")
+          .select("id, DataVerifica, AV1Conferma, allegato_av1_firmato, Prestazione")
           .eq("studio_id", studioId).eq("pratica_id", pratica_id)
           .order("DataVerifica", { ascending: false }).order("id", { ascending: false }),
         supabase.from("tbAV4")
@@ -1039,7 +1042,8 @@ useEffect(() => {
               {versioniAV1.map((v, i) => (
                 <div key={v.id} className="flex items-center justify-between gap-3 border-b py-2 text-sm">
                   <div className="min-w-0">
-                    <div className="font-semibold text-slate-800">AV1 · Versione {versioniAV1.length - i} · ID {v.id}</div>
+                    <div className="font-semibold text-slate-800">AV1 · Versione {versioniAV1.length - i}</div>
+                    <div className="mt-1 text-sm font-medium text-sky-900">Prestazione: {v.Prestazione || prestazionePratica || "Non indicata"}</div>
                     <div className="text-xs text-slate-600">
                       Verifica: {v.DataVerifica ? new Date(v.DataVerifica + "T12:00:00").toLocaleDateString("it-IT") : "—"}
                       {" · "}{v.AV1Conferma ? "Confermato" : "Da confermare"}
@@ -1061,8 +1065,9 @@ useEffect(() => {
               {versioniAV4.map((v, i) => (
                 <div key={v.id} className="flex items-center justify-between gap-3 border-b py-2 text-sm">
                   <div className="min-w-0">
-                    <div className="font-semibold text-slate-800" title={`AV4 · ID completo: ${v.id}`}>
-                      AV4 · Versione {versioniAV4.length - i} · ID {v.id.slice(0, 8)}
+                    <div className="font-semibold text-slate-800">AV4 · Versione {versioniAV4.length - i}</div>
+                    <div className="mt-1 text-sm font-medium text-sky-900">
+                      Prestazione: {prestazionePratica || versioniAV1.find((av1) => av1.Prestazione)?.Prestazione || "Non indicata"}
                     </div>
                     <div className="text-xs text-slate-600">
                       Creato: {v.created_at ? new Date(v.created_at).toLocaleDateString("it-IT") : "—"}
