@@ -290,6 +290,18 @@ function sectionHasCheckedFlag(formData: FormDataType, sectionKey: string) {
 export default function ModelloAV1Page() {
   const router = useRouter();
   const { id, pratica_id, cliente_id, studio_id, societa_id, nuovo_av1 } = router.query;
+  const provenienzaFascicolo = router.query.origine === "fascicolo";
+  const tornaAlFascicolo = () => {
+    const pratica = String(formData.pratica_id || (typeof pratica_id === "string" ? pratica_id : ""));
+    if (!provenienzaFascicolo || !pratica) {
+      void router.push("/antiriciclaggio");
+      return;
+    }
+    const params = new URLSearchParams({ pratica_id: pratica });
+    const cliente = String(formData.cliente_id || (typeof cliente_id === "string" ? cliente_id : ""));
+    if (cliente) params.set("cliente_id", cliente);
+    void router.push(`/antiriciclaggio/fascicolo-documenti?${params.toString()}`);
+  };
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   const [clienti, setClienti] = useState<Cliente[]>([]);
@@ -895,9 +907,7 @@ const handlePrestazioneChange = (prestazioneValue: string) => {
     });
   };
 
-  const handleChiudiModello = () => {
-    void router.push("/antiriciclaggio");
-  };
+  const handleChiudiModello = tornaAlFascicolo;
 
   const handlePrint = () => {
     const av1Id = router.query.id || formData.id;
@@ -1303,7 +1313,7 @@ const handleRinnovoVerifica = async () => {
 
         void router.replace(
           praticaQuery
-            ? `/antiriciclaggio/modello-av1?id=${savedId}&pratica_id=${praticaQuery}`
+            ? `/antiriciclaggio/modello-av1?id=${savedId}&pratica_id=${encodeURIComponent(praticaQuery)}${provenienzaFascicolo ? "&origine=fascicolo" : ""}${provenienzaFascicolo && formData.cliente_id ? `&cliente_id=${encodeURIComponent(formData.cliente_id)}` : ""}`
             : `/antiriciclaggio/modello-av1?id=${savedId}`
         );
       }
