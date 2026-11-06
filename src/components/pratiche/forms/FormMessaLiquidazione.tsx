@@ -668,21 +668,9 @@ provincia: selected?.soggetto_cliente?.provincia || "",
           return;
         }
 
-await fetch("/api/clienti-organi", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    cliente_id: pratica.cliente_id,
-    soggetto_cliente_id: nuovoSocio.nominativo_id,
-    tipo_ruolo: "S",
-    ruolo: "socio",
-    carica: "Socio",
-    percentuale_partecipazione:
-      nuovoSocio.percentuale_partecipazione || null,
-    presenza: nuovoSocio.presenza || "Presente",
-    attivo: true,
-  }),
-});
+// Il socio esiste già nell'archivio centrale Organi sociali.
+        // Non inserire una seconda relazione tbclienti_organi dal documento.
+
 
         setNuovoSocio({
           nominativo_id: "",
