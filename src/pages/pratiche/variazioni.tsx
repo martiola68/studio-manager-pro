@@ -241,6 +241,56 @@ const payload = {
     await loadData();
   }
 
+  async function apriDeterminaScioglimento(v: any) {
+    try {
+      const supabase = getSupabaseClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("Sessione scaduta. Effettua nuovamente l'accesso.");
+      const response = await fetch("/api/pratiche/variazioni/apri-scioglimento", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ variazione_id: v.id }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.success || !result.pratica_id) {
+        throw new Error(result.error || "Impossibile aprire la determina di scioglimento.");
+      }
+      await router.push(`/pratiche/${result.pratica_id}`);
+    } catch (error: any) {
+      alert(error?.message || "Errore apertura della determina.");
+    }
+  }
+
+  async function apriLiquidazioneScioglimento(v: any) {
+    if (v.pratica_liquidazione_id) {
+      await router.push(`/pratiche/${v.pratica_liquidazione_id}`);
+      return;
+    }
+    if (!v.pratica_determina_id) {
+      alert("La pratica di liquidazione non è ancora stata creata. Apri prima la Determina di scioglimento.");
+      return;
+    }
+    alert("La pratica di messa in liquidazione si crea dalla Determina dopo l'evasione dello scioglimento presso la CCIAA. Ti apro la Determina.");
+    await router.push(`/pratiche/${v.pratica_determina_id}`);
+  }
+
+  async function apriGestioneAdempimento(v: any, step: "accettazione" | "cciaa" | "ade") {
+    if (step === "accettazione") {
+      const praticaId = v.pratica_liquidazione_id || v.pratica_determina_id;
+      if (praticaId) {
+        await router.push(`/pratiche/${praticaId}`);
+        return;
+      }
+      alert("Apri prima la Determina: la pratica documentale non è stata ancora creata.");
+      return;
+    }
+    await modifica(v);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   function resetForm() {
     setEditingId(null);
     setForm(FORM_INIZIALE);
@@ -949,63 +999,36 @@ if (v.tipo_variazione === "Cambio amministratore") {
 
   {v.tipo_variazione === "Scioglimento e liquidazione" && (
     <div className="space-y-1 text-xs">
-      <button
-        type="button"
-        className="block underline"
-        disabled={
-          !(
-            v.pratica_determina_id ||
-            v.pratica_liquidazione_id ||
-            v.pratica_id
-          )
-        }
-        onClick={() => {
-          const praticaDaAprire =
-            v.pratica_determina_id ||
-            v.pratica_liquidazione_id ||
-            v.pratica_id;
-
-          router.push(`/pratiche/${praticaDaAprire}`);
-        }}
-      >
-        Determina:
-        <span className={`ml-1 ${coloreStep(v.step_determina_stato)}`}>
+      <button type="button" className="block text-left underline text-sky-700 hover:text-sky-900"
+        onClick={() => void apriDeterminaScioglimento(v)}>
+        Determina: <span className={coloreStep(v.step_determina_stato)}>
           {(v.step_determina_stato || "da_fare").replaceAll("_", " ")}
         </span>
       </button>
-
-      <button
-        type="button"
-        className="block underline"
-        disabled={!v.pratica_liquidazione_id}
-        onClick={() => router.push(`/pratiche/${v.pratica_liquidazione_id}`)}
-      >
-        Liquidazione:
-        <span className={`ml-1 ${coloreStep(v.step_liquidazione_stato)}`}>
+      <button type="button" className="block text-left underline text-sky-700 hover:text-sky-900"
+        onClick={() => void apriLiquidazioneScioglimento(v)}>
+        Liquidazione: <span className={coloreStep(v.step_liquidazione_stato)}>
           {(v.step_liquidazione_stato || "da_fare").replaceAll("_", " ")}
         </span>
       </button>
-
-      <div>
-        Accettazione:
-        <span className={`ml-1 ${coloreStep(v.step_accettazione_carica_stato)}`}>
+      <button type="button" className="block text-left underline text-sky-700 hover:text-sky-900"
+        onClick={() => void apriGestioneAdempimento(v, "accettazione")}>
+        Accettazione: <span className={coloreStep(v.step_accettazione_carica_stato)}>
           {(v.step_accettazione_carica_stato || "da_fare").replaceAll("_", " ")}
         </span>
-      </div>
-
-      <div>
-        Deposito pratica CCIAA:
-        <span className={`ml-1 ${coloreStep(v.step_cciaa_stato)}`}>
+      </button>
+      <button type="button" className="block text-left underline text-sky-700 hover:text-sky-900"
+        onClick={() => void apriGestioneAdempimento(v, "cciaa")}>
+        Deposito pratica CCIAA: <span className={coloreStep(v.step_cciaa_stato)}>
           {(v.step_cciaa_stato || "da_fare").replaceAll("_", " ")}
         </span>
-      </div>
-
-      <div>
-        Comunicazione AdE:
-        <span className={`ml-1 ${coloreStep(v.step_ade_stato)}`}>
+      </button>
+      {v.obbligo_ade && <button type="button" className="block text-left underline text-sky-700 hover:text-sky-900"
+        onClick={() => void apriGestioneAdempimento(v, "ade")}>
+        Comunicazione AdE: <span className={coloreStep(v.step_ade_stato)}>
           {(v.step_ade_stato || "da_fare").replaceAll("_", " ")}
         </span>
-      </div>
+      </button>}
     </div>
   )}
 
