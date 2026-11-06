@@ -40,7 +40,7 @@ export function ModuleAccessGuard({ children }: { children: ReactNode }) {
   const permitted = ["/aml", "/antiriciclaggio", "/impostazioni/studio", "/microsoft365",
     "/impostazioni/elenco-prestazioni-ar"];
   const isAmlHost = typeof window !== "undefined" &&
-    window.location.hostname.toLowerCase() === "aml.studiomanagerpro.it";
+    (process.env.NEXT_PUBLIC_AML_STANDALONE === "1" || window.location.hostname.toLowerCase() === "aml.studiomanagerpro.it");
   if ((isAmlHost || amlOnly) && !permitted.some(prefix =>
     currentPath === prefix || currentPath.startsWith(prefix + "/")
   )) return <div className="mx-auto mt-8 max-w-xl rounded-lg border bg-white p-6">
